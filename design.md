@@ -3,10 +3,6 @@
 This document is a catch-all
 for ideas relating to
 The [**uFork**](ufork.md) Actor Virtual Machine.
-The blog post
-"[Memory Safety Simplifies Microprocessor Design](http://www.dalnefre.com/wp/2022/08/memory-safety-simplifies-microprocessor-design/)"
-describes the high-level architecture,
-and the rationale behind it.
 
 ## Primitives
 
