@@ -4,7 +4,7 @@
  */
 
 /**
-See further [https://github.com/organix/mycelia/blob/master/ufork.md]
+See further [https://github.com/organix/uFork/blob/master/ufork.md]
 **/
 
 #include <stddef.h>
