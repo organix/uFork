@@ -3916,6 +3916,16 @@ int_t cell_free(int_t addr) {
     return UNDEF;
 }
 
+int_t actor_new(int_t ip, int_t sp) {
+    ASSERT(IS_CODE(ip));
+    ASSERT((sp == NIL) || IS_PAIR(sp));
+    int_t a = cell_new(Actor_T, ip, sp, UNDEF);
+    if (IN_HEAP(a)) {
+        a = TO_CAP(a);
+    }
+    return a;
+}
+
 int_t cons(int_t head, int_t tail) {
     return cell_new(Pair_T, head, tail, UNDEF);
 }
@@ -4777,6 +4787,11 @@ int_t init_global_env() {
  * actor event-queue
  */
 
+int_t event_new(int_t target, int_t message) {
+    ASSERT(IS_ACTOR(target));
+    return cell_new(Event_T, target, message, NIL);
+}
+
 int_t e_queue_head = START;
 int_t e_queue_tail = START;
 #if RUNTIME_STATS
@@ -4834,6 +4849,13 @@ static int_t event_q_dump() {
 /*
  * VM continuation-queue
  */
+
+int_t cont_new(int_t ip, int_t sp, int_t ep) {
+    ASSERT(IS_CODE(ip));
+    ASSERT((sp == NIL) || IS_PAIR(sp));
+    ASSERT(IS_EVENT(ep));
+    return cell_new(ip, sp, ep, NIL);
+}
 
 int_t k_queue_head = NIL;
 int_t k_queue_tail = NIL;
@@ -4974,7 +4996,7 @@ static int_t interrupt() {  // service interrupts (if any)
     }
     int_t sec = TO_FIX(now / CLKS_PER_SEC);
     if (IS_ACTOR(clk_handler)) {
-        int_t ev = cell_new(Event_T, clk_handler, sec, NIL);
+        int_t ev = event_new(clk_handler, sec);
         DEBUG(debug_print("clock event", ev));
         event_q_put(ev);
     }
@@ -5013,7 +5035,7 @@ static int_t dispatch() {  // dispatch next event (if any)
     // begin actor transaction
     set_z(target, NIL);  // start with empty set of new events
     // spawn new "thread" (continuation) to handle event
-    int_t cont = cell_new(ip, sp, event, NIL);
+    int_t cont = cont_new(ip, sp, event);
     cont_q_put(cont);  // enqueue new continuation
 #if INCLUDE_DEBUG
     if (runtime_trace != FALSE) {
@@ -5448,7 +5470,8 @@ PROC_DECL(vm_send) {
     } else {
         return error("vm_send (n < 0) invalid");
     }
-    int_t ev = cell_new(Event_T, a, m, get_z(me));
+    int_t ev = event_new(a, m);
+    set_z(ev, get_z(me));  // append event to actor transaction
     set_z(me, ev);
     //XTRACE(debug_print("vm_send event", ev));
     return GET_CONT();
@@ -5465,7 +5488,7 @@ PROC_DECL(vm_new) {
         int_t v = stack_pop();  // value
         ip = cell_new(Opcode_T, VM_push, v, ip);
     }
-    int_t a = cell_new(Actor_T, ip, NIL, UNDEF);
+    int_t a = actor_new(ip, NIL);
 #else
     int_t sp = NIL;  // initial stack state for new actor
     if (n > 0) {
@@ -5481,7 +5504,7 @@ PROC_DECL(vm_new) {
             SET_SP(NIL);
         }
     }
-    int_t a = cell_new(Actor_T, ip, sp, UNDEF);
+    int_t a = actor_new(ip, sp);
 #endif
     if (IN_HEAP(a)) {
         a = TO_CAP(a);

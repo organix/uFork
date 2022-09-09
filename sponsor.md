@@ -36,7 +36,7 @@ A Sponsor is created with an initial Configuration
 and a _Controller_ to whom it reports life-cycle messages.
 From the perspective of the Controller,
 the new Sponsor is a _Peripheral_.
-A Sponsor begins is an `IDLE` state,
+A Sponsor begins in an `IDLE` state,
 with no initial resources.
 
 The Controller draws from its own resource pool
