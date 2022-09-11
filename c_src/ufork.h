@@ -179,8 +179,8 @@ i32 gc_mark_and_sweep(int_t dump);
 i32 gc_safepoint();
 #endif // MARK_SWEEP_GC
 
-extern int_t sane;  // run-away loop prevention
 #define SANITY (420)
+extern int_t sane;  // run-away loop prevention
 
 #define CELL_MAX NAT(1<<14)  // 16K cells
 
