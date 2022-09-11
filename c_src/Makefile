@@ -29,11 +29,16 @@ SRCS=	ufork.c \
 	runtime.c \
 	debug.c
 
+ASMS=	boot.asm \
+	scheme.asm \
+	peg.asm \
+	ufork.asm
+
 PGM=	ufork
 
 all: $(PGM)
 
-ufork: $(HDRS) $(SRCS)
+ufork: $(HDRS) $(SRCS) $(ASMS)
 	$(CC) -Os -o $(PGM) $(SRCS)
 
 clean:

@@ -88,7 +88,9 @@ cell_t cell_table[CELL_MAX] = {
 #include "boot.asm"
 #define SCHEME_BASE (BOOT_END)
 #include "scheme.asm"
-#define UFORK_BASE (SCHEME_END)
+#define PEG_BASE (SCHEME_END)
+#include "peg.asm"
+#define UFORK_BASE (PEG_END)
 #include "ufork.asm"
 #define CELL_BASE (UFORK_END)
 };
@@ -233,6 +235,34 @@ static struct { int_t addr; char *label; } cell_map[] = {
     { F_LST_SYM, "F_LST_SYM" },
     { F_PRINT, "F_PRINT" },
 
+// peg.asm
+    { G_EMPTY, "G_EMPTY" },
+    { G_FAIL, "G_FAIL" },
+    { G_NEXT_K, "G_NEXT_K" },
+    { G_ANY, "G_ANY" },
+    { G_EQ_B, "G_EQ_B" },
+    { G_FAIL_K, "G_FAIL_K" },
+    { G_OR_B, "G_OR_B" },
+    { G_AND_PR, "G_AND_PR" },
+    { G_AND_OK, "G_AND_OK" },
+    { G_AND_B, "G_AND_B" },
+    { G_NOT_B, "G_NOT_B" },
+    { G_OPT_B, "G_OPT_B" },
+    { G_PLUS_B, "G_PLUS_B" },
+    { G_STAR_B, "G_STAR_B" },
+    { G_ALT_B, "G_ALT_B" },
+    { G_SEQ_B, "G_SEQ_B" },
+    { G_CLS_B, "G_CLS_B" },
+    { G_PRED_K, "G_PRED_K" },
+    { G_PRED_OK, "G_PRED_OK" },
+    { G_PRED_B, "G_PRED_B" },
+    { G_XLAT_K, "G_XLAT_K" },
+    { G_XLAT_OK, "G_XLAT_OK" },
+    { G_XLAT_B, "G_XLAT_B" },
+    { S_CHAIN, "S_CHAIN" },
+    { S_BUSY_C, "S_BUSY_C" },
+    { S_NEXT_C, "S_NEXT_C" },
+
 // ufork.asm
 #if SCM_ASM_TOOLS
     { F_CELL, "F_CELL" },
@@ -263,33 +293,6 @@ static struct { int_t addr; char *label; } cell_map[] = {
     { F_SEND, "F_SEND" },
     { F_CALL, "F_CALL" },
 #endif // META_ACTORS
-
-    { G_EMPTY, "G_EMPTY" },
-    { G_FAIL, "G_FAIL" },
-    { G_NEXT_K, "G_NEXT_K" },
-    { G_ANY, "G_ANY" },
-    { G_EQ_B, "G_EQ_B" },
-    { G_FAIL_K, "G_FAIL_K" },
-    { G_OR_B, "G_OR_B" },
-    { G_AND_PR, "G_AND_PR" },
-    { G_AND_OK, "G_AND_OK" },
-    { G_AND_B, "G_AND_B" },
-    { G_NOT_B, "G_NOT_B" },
-    { G_OPT_B, "G_OPT_B" },
-    { G_PLUS_B, "G_PLUS_B" },
-    { G_STAR_B, "G_STAR_B" },
-    { G_ALT_B, "G_ALT_B" },
-    { G_SEQ_B, "G_SEQ_B" },
-    { G_CLS_B, "G_CLS_B" },
-    { G_PRED_K, "G_PRED_K" },
-    { G_PRED_OK, "G_PRED_OK" },
-    { G_PRED_B, "G_PRED_B" },
-    { G_XLAT_K, "G_XLAT_K" },
-    { G_XLAT_OK, "G_XLAT_OK" },
-    { G_XLAT_B, "G_XLAT_B" },
-    { S_CHAIN, "S_CHAIN" },
-    { S_BUSY_C, "S_BUSY_C" },
-    { S_NEXT_C, "S_NEXT_C" },
 
 #if SCM_PEG_TOOLS
     { F_G_EQ, "F_G_EQ" },
