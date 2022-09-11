@@ -65,12 +65,32 @@ int_t char_in_class(int_t n, int_t c) {
  * heap memory management (cells)
  */
 
+// manually updated assembly references
+#define _A_BOOT TO_CAP(100)
+#define _M_EVAL TO_CAP(231)
+
 cell_t cell_table[CELL_MAX] = {
-#define UFORK_BASE (0)
+    { .t=Literal_T,     .x=UNDEF,       .y=UNDEF,       .z=UNDEF,       },  //  0: UNDEF = #?
+    { .t=Literal_T,     .x=UNDEF,       .y=UNDEF,       .z=UNDEF,       },  //  1: NIL = ()
+    { .t=Literal_T,     .x=UNDEF,       .y=UNDEF,       .z=UNDEF,       },  //  2: FALSE = #f
+    { .t=Literal_T,     .x=UNDEF,       .y=UNDEF,       .z=UNDEF,       },  //  3: TRUE = #t
+    { .t=Literal_T,     .x=UNDEF,       .y=UNDEF,       .z=UNDEF,       },  //  4: UNIT = #unit
+    { .t=Type_T,        .x=UNDEF,       .y=UNDEF,       .z=UNDEF,       },  //  5: Type_T
+    { .t=Type_T,        .x=UNDEF,       .y=UNDEF,       .z=UNDEF,       },  //  6: Event_T
+    { .t=Type_T,        .x=UNDEF,       .y=UNDEF,       .z=UNDEF,       },  //  7: Opcode_T
+    { .t=Type_T,        .x=UNDEF,       .y=UNDEF,       .z=UNDEF,       },  //  8: Actor_T
+    { .t=Type_T,        .x=UNDEF,       .y=UNDEF,       .z=UNDEF,       },  //  9: Fixnum_T
+    { .t=Type_T,        .x=UNDEF,       .y=UNDEF,       .z=UNDEF,       },  // 10: Symbol_T
+    { .t=Type_T,        .x=UNDEF,       .y=UNDEF,       .z=UNDEF,       },  // 11: Pair_T
+    { .t=Type_T,        .x=UNDEF,       .y=UNDEF,       .z=UNDEF,       },  // 12: Fexpr_T
+    { .t=Type_T,        .x=UNDEF,       .y=UNDEF,       .z=UNDEF,       },  // 13: Free_T
+#define BOOT_BASE (START)
+#include "boot.asm"
+#define UFORK_BASE (BOOT_END)
 #include "ufork.asm"
+#define CELL_BASE (UFORK_END)
 };
 
-#define CELL_BASE (UFORK_END)
 cell_t *cell_zero = &cell_table[0];  // base for cell offsets
 int_t cell_next = NIL;  // head of cell free-list (or NIL if empty)
 int_t cell_top = CELL_BASE; // limit of allocated cell memory
