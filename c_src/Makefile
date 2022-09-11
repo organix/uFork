@@ -22,10 +22,12 @@ CFLAGS=	-Wall
 CC=	cc $(CFLAGS)
 
 HDRS=	ufork.h \
-	runtime.h
+	runtime.h \
+	debug.h
 
 SRCS=	ufork.c \
-	runtime.c
+	runtime.c \
+	debug.c
 
 PGM=	ufork
 

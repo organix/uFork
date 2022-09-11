@@ -175,21 +175,17 @@ int_t gc_free_cell(int_t addr);
 #if MARK_SWEEP_GC
 #define MARK_CELL(n) (n)
 #define FREE_CELL(n) (n)
+i32 gc_mark_and_sweep(int_t dump);
 i32 gc_safepoint();
 #endif // MARK_SWEEP_GC
 
 extern int_t sane;  // run-away loop prevention
 #define SANITY (420)
 
-#define list_0  NIL
-#define list_1(v1)  cons((v1), NIL)
-#define list_2(v1,v2)  cons((v1), cons((v2), NIL))
-#define list_3(v1,v2,v3)  cons((v1), cons((v2), cons((v3), NIL)))
-#define list_4(v1,v2,v3,v4)  cons((v1), cons((v2), cons((v3), cons((v4), NIL))))
-#define list_5(v1,v2,v3,v4,v5)  cons((v1), cons((v2), cons((v3), cons((v4), cons((v5), NIL)))))
-#define list_6(v1,v2,v3,v4,v5,v6)  cons((v1), cons((v2), cons((v3), cons((v4), cons((v5), cons((v6), NIL))))))
+#define CELL_MAX NAT(1<<14)  // 16K cells
 
 extern cell_t *cell_zero;  // base for cell offsets
+extern int_t cell_next;  // head of cell free-list (or NIL if empty)
 extern int_t cell_top; // limit of allocated cell memory
 extern i32 gc_free_cnt;  // number of cells in free-list
 
@@ -207,29 +203,18 @@ int_t append_reverse(int_t head, int_t tail);  // destuctive reverse-in-place an
 int_t fixnum(int_t str);  // return integer fixnum for character string
 int_t symbol(int_t str);  // return interned symbol for character string
 int_t char_in_class(int_t n, int_t c);
+void print_symbol(int_t symbol);
+char *get_addr_label(int_t addr);
 
-int_t panic(char *reason);
+int_t console_putc(int_t c);
+int_t console_getc();
 int_t warning(char *reason);
 int_t error(char *reason);
 int_t failure(char *_file_, int _line_);
-int_t console_putc(int_t c);
-int_t console_getc();
-void print_word(char* prefix, int_t word);
-void print_quad(char* prefix, int_t quad);
-void print_sexpr(int_t x);
+int_t panic(char *reason);
 
 #if RUNTIME_STATS
 extern long gc_cycle_count;
 #endif
-
-#if INCLUDE_DEBUG
-void hexdump(char *label, int_t *addr, size_t cnt);
-void debug_print(char *label, int_t addr);
-void print_event(int_t ep);
-void print_inst(int_t ip);
-void print_list(int_t xs);
-void continuation_trace();
-int_t debugger();
-#endif // INCLUDE_DEBUG
 
 #endif // _UFORK_H_

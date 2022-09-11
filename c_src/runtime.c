@@ -5,6 +5,7 @@
 
 #include "ufork.h"
 #include "runtime.h"
+#include "debug.h"
 
 // FORWARD DECLARATIONS
 int_t event_new(int_t target, int_t message);
