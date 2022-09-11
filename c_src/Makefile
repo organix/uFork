@@ -21,17 +21,20 @@ CFLAGS=	-Wall
 
 CC=	cc $(CFLAGS)
 
-all: ufork
+HDRS=	ufork.h \
+	runtime.h
 
-ufork: ufork.c
-	$(CC) -Os -o $@ $<
+SRCS=	ufork.c \
+	runtime.c
 
-ufork.i: ufork.c
-	$(CC) -E -o $@ $<
+PGM=	ufork
+
+all: $(PGM)
+
+ufork: $(HDRS) $(SRCS)
+	$(CC) -Os -o $(PGM) $(SRCS)
 
 clean:
 	rm -f *.o
-	rm -f *.i
 	rm -f *~ core
-	rm -f ufork
-
+	rm -f $(PGM)
