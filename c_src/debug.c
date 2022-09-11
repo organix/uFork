@@ -367,7 +367,7 @@ static void print_fixed(int width, int_t value) {
 void disassemble(int_t ip, int_t n) {
     sane = CELL_MAX;  // a better upper-bound than SANITY...
     while (n-- > 0) {
-        char *label = get_addr_label(ip);
+        char *label = get_cell_label(ip);
         if (*label) {
             fprintf(stderr, "%s\n", label);
         }

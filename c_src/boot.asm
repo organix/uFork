@@ -2,6 +2,9 @@
 #error START required.
 #endif
 
+#ifndef _A_BOOT
+#error #define _A_BOOT TO_CAP(A_BOOT)
+#endif
     { .t=Event_T,       .x=_A_BOOT,     .y=NIL,         .z=NIL          },  // START = (A_BOOT)
 #define RV_SELF (START+1)
     { .t=Opcode_T,      .x=VM_self,     .y=UNDEF,       .z=RV_SELF+1,   },  // value = SELF
@@ -180,7 +183,7 @@
     { .t=Opcode_T,      .x=VM_debug,    .y=TO_FIX(666), .z=COMMIT,      },
 
 #define A_BOOT (REPL_F+3)
-    { .t=Actor_T,       .x=A_BOOT+1,    .y=NIL,         .z=UNDEF        },  // <--- A_BOOT
+    { .t=Actor_T,       .x=A_BOOT+1,    .y=NIL,         .z=UNDEF        },
     { .t=Opcode_T,      .x=VM_push,     .y=G_LANG+1,    .z=A_BOOT+2,    },  // cell to patch
     { .t=Opcode_T,      .x=VM_push,     .y=A_BOOT+5,    .z=A_BOOT+3,    },  // "peg-lang" string
     { .t=Opcode_T,      .x=VM_cvt,      .y=CVT_LST_SYM, .z=A_BOOT+4,    },

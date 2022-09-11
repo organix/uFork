@@ -204,7 +204,7 @@ int_t fixnum(int_t str);  // return integer fixnum for character string
 int_t symbol(int_t str);  // return interned symbol for character string
 int_t char_in_class(int_t n, int_t c);
 void print_symbol(int_t symbol);
-char *get_addr_label(int_t addr);
+char *get_cell_label(int_t addr);
 
 int_t console_putc(int_t c);
 int_t console_getc();

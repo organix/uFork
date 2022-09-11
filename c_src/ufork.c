@@ -86,7 +86,9 @@ cell_t cell_table[CELL_MAX] = {
     { .t=Type_T,        .x=UNDEF,       .y=UNDEF,       .z=UNDEF,       },  // 13: Free_T
 #define BOOT_BASE (START)
 #include "boot.asm"
-#define UFORK_BASE (BOOT_END)
+#define SCHEME_BASE (BOOT_END)
+#include "scheme.asm"
+#define UFORK_BASE (SCHEME_END)
 #include "ufork.asm"
 #define CELL_BASE (UFORK_END)
 };
@@ -95,7 +97,7 @@ cell_t *cell_zero = &cell_table[0];  // base for cell offsets
 int_t cell_next = NIL;  // head of cell free-list (or NIL if empty)
 int_t cell_top = CELL_BASE; // limit of allocated cell memory
 
-static struct { int_t addr; char *label; } addr_table[] = {
+static struct { int_t addr; char *label; } cell_map[] = {
     { UNDEF, "UNDEF" },
     { NIL, "NIL" },
     { FALSE, "FALSE" },
@@ -112,6 +114,7 @@ static struct { int_t addr; char *label; } addr_table[] = {
     { Free_T, "Free_T" },
     { START, "START" },
 
+// boot.asm
     { RV_SELF, "RV_SELF" },
     { CUST_SEND, "CUST_SEND" },
     { SEND_0, "SEND_0" },
@@ -144,7 +147,7 @@ static struct { int_t addr; char *label; } addr_table[] = {
     { REPL_P, "REPL_P" },
     { REPL_L, "REPL_L" },
     { REPL_F, "REPL_F" },
-    { A_BOOT, "A_BOOT" },
+    { A_BOOT, "A_BOOT" },  // <--- used to defined _A_BOOT
 
     { A_CLOCK, "A_CLOCK" },
     { CLOCK_BEH, "CLOCK_BEH" },
@@ -155,6 +158,7 @@ static struct { int_t addr; char *label; } addr_table[] = {
     { JOIN_BEH, "JOIN_BEH" },
     { FORK_BEH, "FORK_BEH" },
 
+// scheme.asm
     { S_IGNORE, "S_IGNORE" },
     { S_QUOTE, "S_QUOTE" },
     { S_QQUOTE, "S_QQUOTE" },
@@ -162,7 +166,7 @@ static struct { int_t addr; char *label; } addr_table[] = {
     { S_QSPLICE, "S_QSPLICE" },
     { S_PLACEH, "S_PLACEH" },
 
-    { M_EVAL, "M_EVAL" },
+    { M_EVAL, "M_EVAL" },  // <--- used to defined _M_EVAL
     { K_COMBINE, "K_COMBINE" },
     { K_APPLY_F, "K_APPLY_F" },
     { M_APPLY, "M_APPLY" },
@@ -229,6 +233,7 @@ static struct { int_t addr; char *label; } addr_table[] = {
     { F_LST_SYM, "F_LST_SYM" },
     { F_PRINT, "F_PRINT" },
 
+// ufork.asm
 #if SCM_ASM_TOOLS
     { F_CELL, "F_CELL" },
     { F_GET_T, "F_GET_T" },
@@ -369,19 +374,19 @@ static struct { int_t addr; char *label; } addr_table[] = {
     { CELL_BASE, "CELL_BASE" },
     { -1, "" },
 };
-void dump_addr_table() {
-    for (int i = 0; addr_table[i].addr >= 0; ++i) {
+void dump_cell_map() {
+    for (int i = 0; cell_map[i].addr >= 0; ++i) {
         fprintf(stderr, "%5"PdI": %s\n",
-            addr_table[i].addr, addr_table[i].label);
+            cell_map[i].addr, cell_map[i].label);
     }
 }
-char *get_addr_label(int_t addr) {
+char *get_cell_label(int_t addr) {
     int i = 0;
-    while (addr_table[i].addr >= 0) {
-        if (addr == addr_table[i].addr) break;
+    while (cell_map[i].addr >= 0) {
+        if (addr == cell_map[i].addr) break;
         ++i;
     }
-    return addr_table[i].label;
+    return cell_map[i].label;
 }
 
 int_t sane = 0;  // run-away loop prevention
@@ -1399,7 +1404,7 @@ int main(int argc, char const *argv[])
 #else
     DEBUG(fprintf(stderr, "CELL_MAX=%"PuI"\n", CELL_MAX));
     DEBUG(hexdump("cell memory", ((int_t *)cell_zero), 16*4));
-    DEBUG(dump_addr_table());
+    DEBUG(dump_cell_map());
     init_global_env();
     gc_add_root(clk_init(_A_CLOCK));
 
