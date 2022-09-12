@@ -94,7 +94,13 @@ cell_t cell_table[CELL_MAX] = {
 #include "peg.asm"
 #define SCM_PEG_BASE (PEG_END)
 #include "scm_peg.asm"
-#define UFORK_BASE (SCM_PEG_END)
+#if SCHEME_ACTORS
+#define SCM_ACT_BASE (PEG_END)
+#include "scm_act.asm"
+#else
+#define SCM_ACT_END (PEG_END)
+#endif
+#define UFORK_BASE (SCM_ACT_END)
 #include "ufork.asm"
 #define CELL_BASE (UFORK_END)
 };
@@ -326,20 +332,8 @@ static struct { int_t addr; char *label; } cell_map[] = {
     { G_EXPR, "G_EXPR" },
     { G_SEXPR, "G_SEXPR" },
 
-// ufork.asm
-#if SCM_ASM_TOOLS
-    { F_CELL, "F_CELL" },
-    { F_GET_T, "F_GET_T" },
-    { F_GET_X, "F_GET_X" },
-    { F_GET_Y, "F_GET_Y" },
-    { F_GET_Z, "F_GET_Z" },
-    { F_SET_T, "F_SET_T" },
-    { F_SET_X, "F_SET_X" },
-    { F_SET_Y, "F_SET_Y" },
-    { F_SET_Z, "F_SET_Z" },
-#endif // SCM_ASM_TOOLS
-
-#if META_ACTORS
+// scm_act.asm
+#if SCHEME_ACTORS
     { S_SEND, "S_SEND" },
     { S_BECOME, "S_BECOME" },
     { S_SELF, "S_SELF" },
@@ -355,7 +349,20 @@ static struct { int_t addr; char *label; } cell_map[] = {
     { F_CREATE, "F_CREATE" },
     { F_SEND, "F_SEND" },
     { F_CALL, "F_CALL" },
-#endif // META_ACTORS
+#endif // SCHEME_ACTORS
+
+// ufork.asm
+#if SCM_ASM_TOOLS
+    { F_CELL, "F_CELL" },
+    { F_GET_T, "F_GET_T" },
+    { F_GET_X, "F_GET_X" },
+    { F_GET_Y, "F_GET_Y" },
+    { F_GET_Z, "F_GET_Z" },
+    { F_SET_T, "F_SET_T" },
+    { F_SET_X, "F_SET_X" },
+    { F_SET_Y, "F_SET_Y" },
+    { F_SET_Z, "F_SET_Z" },
+#endif // SCM_ASM_TOOLS
 
 #if SCM_PEG_TOOLS
     { F_G_EQ, "F_G_EQ" },
@@ -1085,7 +1092,7 @@ int_t init_global_env() {
     sym_install(S_UNQUOTE);
     sym_install(S_QSPLICE);
     sym_install(S_PLACEH);
-#if META_ACTORS
+#if SCHEME_ACTORS
     sym_install(S_SEND);
     sym_install(S_BECOME);
     sym_install(S_SELF);
@@ -1184,6 +1191,13 @@ int_t init_global_env() {
     bind_global("scm-expr", _G_EXPR);
     bind_global("scm-sexpr", _G_SEXPR);
 #endif // SCM_PEG_TOOLS
+
+#if SCHEME_ACTORS
+    bind_global("BEH", FX_M_BEH);
+    bind_global("CREATE", _F_CREATE);
+    bind_global("SEND", _F_SEND);
+    bind_global("CALL", _F_CALL);
+#endif // SCHEME_ACTORS
 
 #if SCM_ASM_TOOLS
     bind_global("UNDEF", UNDEF);
@@ -1287,13 +1301,6 @@ int_t init_global_env() {
     bind_global("set-y", _F_SET_Y);
     bind_global("set-z", _F_SET_Z);
 #endif //SCM_ASM_TOOLS
-
-#if META_ACTORS
-    bind_global("BEH", FX_M_BEH);
-    bind_global("CREATE", _F_CREATE);
-    bind_global("SEND", _F_SEND);
-    bind_global("CALL", _F_CALL);
-#endif // META_ACTORS
 
     bind_global("a-print", _A_PRINT);
     bind_global("quit", _A_QUIT);

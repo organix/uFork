@@ -26,7 +26,7 @@
 #define SCM_ASM_TOOLS 1 // include assembly tools for LISP/Scheme
 #define QQUOTE_SYNTAX 1 // include support for quasiquote, et. al.
 #define PLACEH_SYNTAX 1 // include support for placeholder variables (?x)
-#define META_ACTORS   1 // include meta-actor definitions
+#define SCHEME_ACTORS 1 // include meta-actor definitions for LISP/Scheme
 
 #if INCLUDE_DEBUG
 #define DEBUG(x)    x   // include/exclude debug instrumentation
