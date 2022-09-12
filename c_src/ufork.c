@@ -66,8 +66,8 @@ int_t char_in_class(int_t n, int_t c) {
  */
 
 // manually updated assembly references
-#define _A_BOOT TO_CAP(100)
-#define _M_EVAL TO_CAP(231)
+#define _A_BOOT TO_CAP(102)
+#define _M_EVAL TO_CAP(233)
 
 cell_t cell_table[CELL_MAX] = {
     { .t=Literal_T,     .x=UNDEF,       .y=UNDEF,       .z=UNDEF,       },  //  0: UNDEF = #?
@@ -84,25 +84,55 @@ cell_t cell_table[CELL_MAX] = {
     { .t=Type_T,        .x=UNDEF,       .y=UNDEF,       .z=UNDEF,       },  // 11: Pair_T
     { .t=Type_T,        .x=UNDEF,       .y=UNDEF,       .z=UNDEF,       },  // 12: Fexpr_T
     { .t=Type_T,        .x=UNDEF,       .y=UNDEF,       .z=UNDEF,       },  // 13: Free_T
+
 #define BOOT_BASE (START)
 #include "boot.asm"
+
 #define SCHEME_BASE (BOOT_END)
 #include "scheme.asm"
+
 #define LIB_SCM_BASE (SCHEME_END)
 #include "lib_scm.asm"
+
 #define PEG_BASE (LIB_SCM_END)
 #include "peg.asm"
+
 #define SCM_PEG_BASE (PEG_END)
 #include "scm_peg.asm"
+
+#if PEG_TOOLS_SCM
+#define PEG_SCM_BASE (SCM_PEG_END)
+#include "peg_scm.asm"
+#else
+#define PEG_SCM_END (SCM_PEG_END)
+#endif
+
 #if SCHEME_ACTORS
-#define ACT_SCM_BASE (PEG_END)
+#define ACT_SCM_BASE (PEG_SCM_END)
 #include "act_scm.asm"
 #else
-#define ACT_SCM_END (PEG_END)
+#define ACT_SCM_END (PEG_SCM_END)
 #endif
-#define UFORK_BASE (ACT_SCM_END)
-#include "ufork.asm"
-#define CELL_BASE (UFORK_END)
+
+#if ASM_TOOLS_SCM
+#define ASM_SCM_BASE (ACT_SCM_END)
+#include "asm_scm.asm"
+#else
+#define ASM_SCM_END (ACT_SCM_END)
+#endif
+
+#define A_PRINT (ASM_SCM_END)
+#define _A_PRINT TO_CAP(A_PRINT)
+    { .t=Actor_T,       .x=A_PRINT+1,   .y=NIL,         .z=UNDEF,       },
+    { .t=Opcode_T,      .x=VM_msg,      .y=TO_FIX(0),   .z=A_PRINT+2,   },
+    { .t=Opcode_T,      .x=VM_debug,    .y=TO_FIX(7331),.z=COMMIT,      },
+
+#define A_QUIT (A_PRINT+3)
+#define _A_QUIT TO_CAP(A_QUIT)
+    { .t=Actor_T,       .x=A_QUIT+1,    .y=NIL,         .z=UNDEF,       },
+    { .t=Opcode_T,      .x=VM_end,      .y=END_STOP,    .z=UNDEF,       },  // kill thread
+
+#define CELL_BASE (A_QUIT+2)
 };
 
 cell_t *cell_zero = &cell_table[0];  // base for cell offsets
@@ -143,6 +173,7 @@ static struct { int_t addr; char *label; } cell_map[] = {
     { RV_ONE, "RV_ONE" },
 
     { S_VALUE, "S_VALUE" },
+    { S_EMPTY, "S_EMPTY" },
     { S_GETC, "S_GETC" },
     { S_END_X, "S_END_X" },
     { S_VAL_X, "S_VAL_X" },
@@ -332,6 +363,27 @@ static struct { int_t addr; char *label; } cell_map[] = {
     { G_EXPR, "G_EXPR" },
     { G_SEXPR, "G_SEXPR" },
 
+// peg_scm.asm
+#if PEG_TOOLS_SCM
+    { F_G_EQ, "F_G_EQ" },
+    { F_G_OR, "F_G_OR" },
+    { F_G_AND, "F_G_AND" },
+    { F_G_NOT, "F_G_NOT" },
+    { F_G_CLS, "F_G_CLS" },
+    { F_G_OPT, "F_G_OPT" },
+    { F_G_PLUS, "F_G_PLUS" },
+    { F_G_STAR, "F_G_STAR" },
+    { F_G_ALT, "F_G_ALT" },
+    { F_G_SEQ, "F_G_SEQ" },
+    { FX_G_CALL, "FX_G_CALL" },
+    { OP_G_CALL, "OP_G_CALL" },
+    { F_G_PRED, "F_G_PRED" },
+    { F_G_XFORM, "F_G_XFORM" },
+    { F_S_LIST, "F_S_LIST" },
+    { F_G_START, "F_G_START" },
+    { F_S_CHAIN, "F_S_CHAIN" },
+#endif // PEG_TOOLS_SCM
+
 // act_scm.asm
 #if SCHEME_ACTORS
     { S_SEND, "S_SEND" },
@@ -351,8 +403,8 @@ static struct { int_t addr; char *label; } cell_map[] = {
     { F_CALL, "F_CALL" },
 #endif // SCHEME_ACTORS
 
-// ufork.asm
-#if SCM_ASM_TOOLS
+// asm_scm.asm
+#if ASM_TOOLS_SCM
     { F_CELL, "F_CELL" },
     { F_GET_T, "F_GET_T" },
     { F_GET_X, "F_GET_X" },
@@ -362,29 +414,8 @@ static struct { int_t addr; char *label; } cell_map[] = {
     { F_SET_X, "F_SET_X" },
     { F_SET_Y, "F_SET_Y" },
     { F_SET_Z, "F_SET_Z" },
-#endif // SCM_ASM_TOOLS
+#endif // ASM_TOOLS_SCM
 
-#if SCM_PEG_TOOLS
-    { F_G_EQ, "F_G_EQ" },
-    { F_G_OR, "F_G_OR" },
-    { F_G_AND, "F_G_AND" },
-    { F_G_NOT, "F_G_NOT" },
-    { F_G_CLS, "F_G_CLS" },
-    { F_G_OPT, "F_G_OPT" },
-    { F_G_PLUS, "F_G_PLUS" },
-    { F_G_STAR, "F_G_STAR" },
-    { F_G_ALT, "F_G_ALT" },
-    { F_G_SEQ, "F_G_SEQ" },
-    { FX_G_CALL, "FX_G_CALL" },
-    { OP_G_CALL, "OP_G_CALL" },
-    { F_G_PRED, "F_G_PRED" },
-    { F_G_XFORM, "F_G_XFORM" },
-    { F_S_LIST, "F_S_LIST" },
-    { F_G_START, "F_G_START" },
-    { F_S_CHAIN, "F_S_CHAIN" },
-#endif // SCM_PEG_TOOLS
-
-    { S_EMPTY, "S_EMPTY" },
     { A_PRINT, "A_PRINT" },
     { A_QUIT, "A_QUIT" },
     { CELL_BASE, "CELL_BASE" },
@@ -1139,59 +1170,6 @@ int_t init_global_env() {
     bind_global("list->symbol", _F_LST_SYM);
     bind_global("print", _F_PRINT);
 
-#if (SCM_PEG_TOOLS || SCM_ASM_TOOLS)
-    bind_global("CTL", TO_FIX(CTL));
-    bind_global("DGT", TO_FIX(DGT));
-    bind_global("UPR", TO_FIX(UPR));
-    bind_global("LWR", TO_FIX(LWR));
-    bind_global("DLM", TO_FIX(DLM));
-    bind_global("SYM", TO_FIX(SYM));
-    bind_global("HEX", TO_FIX(HEX));
-    bind_global("WSP", TO_FIX(WSP));
-#endif
-
-#if SCM_PEG_TOOLS
-    bind_global("peg-empty", _G_EMPTY);
-    bind_global("peg-fail", _G_FAIL);
-    bind_global("peg-any", _G_ANY);
-    bind_global("peg-eq", _F_G_EQ);
-    bind_global("peg-or", _F_G_OR);
-    bind_global("peg-and", _F_G_AND);
-    bind_global("peg-not", _F_G_NOT);
-    bind_global("peg-class", _F_G_CLS);
-    bind_global("peg-opt", _F_G_OPT);
-    bind_global("peg-plus", _F_G_PLUS);
-    bind_global("peg-star", _F_G_STAR);
-    bind_global("peg-alt", _F_G_ALT);
-    bind_global("peg-seq", _F_G_SEQ);
-    bind_global("peg-call", FX_G_CALL);
-    bind_global("peg-pred", _F_G_PRED);
-    bind_global("peg-xform", _F_G_XFORM);
-    bind_global("peg-source", _F_S_LIST);
-    bind_global("peg-start", _F_G_START);
-    bind_global("peg-chain", _F_S_CHAIN);
-
-    bind_global("peg-end", _G_END);
-    bind_global("lex-eol", _G_EOL);
-    bind_global("lex-optwsp", _G_WSP_S);
-    bind_global("scm-to-eol", _G_TO_EOL);
-    bind_global("scm-comment", _G_COMMENT);
-    bind_global("scm-optwsp", _G_OPTWSP);
-    bind_global("lex-eot", _G_EOT);
-    bind_global("scm-const", _G_CONST);
-    bind_global("lex-sign", _G_SIGN);
-    bind_global("lex-digit", _G_DIGIT);
-    bind_global("lex-digits", _G_DIGITS);
-    bind_global("lex-number", _G_NUMBER);
-    bind_global("scm-symbol", _G_SYMBOL);
-    bind_global("scm-quoted", _G_QUOTED);
-    bind_global("scm-dotted", _G_DOTTED);
-    bind_global("scm-tail", _G_TAIL);
-    bind_global("scm-list", _G_LIST);
-    bind_global("scm-expr", _G_EXPR);
-    bind_global("scm-sexpr", _G_SEXPR);
-#endif // SCM_PEG_TOOLS
-
 #if SCHEME_ACTORS
     bind_global("BEH", FX_M_BEH);
     bind_global("CREATE", _F_CREATE);
@@ -1199,7 +1177,7 @@ int_t init_global_env() {
     bind_global("CALL", _F_CALL);
 #endif // SCHEME_ACTORS
 
-#if SCM_ASM_TOOLS
+#if ASM_TOOLS_SCM
     bind_global("UNDEF", UNDEF);
     bind_global("NIL", NIL);
     bind_global("FALSE", FALSE);
@@ -1300,7 +1278,60 @@ int_t init_global_env() {
     bind_global("set-x", _F_SET_X);
     bind_global("set-y", _F_SET_Y);
     bind_global("set-z", _F_SET_Z);
-#endif //SCM_ASM_TOOLS
+#endif //ASM_TOOLS_SCM
+
+#if (PEG_TOOLS_SCM || ASM_TOOLS_SCM)
+    bind_global("CTL", TO_FIX(CTL));
+    bind_global("DGT", TO_FIX(DGT));
+    bind_global("UPR", TO_FIX(UPR));
+    bind_global("LWR", TO_FIX(LWR));
+    bind_global("DLM", TO_FIX(DLM));
+    bind_global("SYM", TO_FIX(SYM));
+    bind_global("HEX", TO_FIX(HEX));
+    bind_global("WSP", TO_FIX(WSP));
+#endif
+
+#if PEG_TOOLS_SCM
+    bind_global("peg-empty", _G_EMPTY);
+    bind_global("peg-fail", _G_FAIL);
+    bind_global("peg-any", _G_ANY);
+    bind_global("peg-eq", _F_G_EQ);
+    bind_global("peg-or", _F_G_OR);
+    bind_global("peg-and", _F_G_AND);
+    bind_global("peg-not", _F_G_NOT);
+    bind_global("peg-class", _F_G_CLS);
+    bind_global("peg-opt", _F_G_OPT);
+    bind_global("peg-plus", _F_G_PLUS);
+    bind_global("peg-star", _F_G_STAR);
+    bind_global("peg-alt", _F_G_ALT);
+    bind_global("peg-seq", _F_G_SEQ);
+    bind_global("peg-call", FX_G_CALL);
+    bind_global("peg-pred", _F_G_PRED);
+    bind_global("peg-xform", _F_G_XFORM);
+    bind_global("peg-source", _F_S_LIST);
+    bind_global("peg-start", _F_G_START);
+    bind_global("peg-chain", _F_S_CHAIN);
+
+    bind_global("peg-end", _G_END);
+    bind_global("lex-eol", _G_EOL);
+    bind_global("lex-optwsp", _G_WSP_S);
+    bind_global("scm-to-eol", _G_TO_EOL);
+    bind_global("scm-comment", _G_COMMENT);
+    bind_global("scm-optwsp", _G_OPTWSP);
+    bind_global("lex-eot", _G_EOT);
+    bind_global("scm-const", _G_CONST);
+    bind_global("lex-sign", _G_SIGN);
+    bind_global("lex-digit", _G_DIGIT);
+    bind_global("lex-digits", _G_DIGITS);
+    bind_global("lex-number", _G_NUMBER);
+    bind_global("scm-symbol", _G_SYMBOL);
+    bind_global("scm-quoted", _G_QUOTED);
+    bind_global("scm-dotted", _G_DOTTED);
+    bind_global("scm-tail", _G_TAIL);
+    bind_global("scm-list", _G_LIST);
+    bind_global("scm-expr", _G_EXPR);
+    bind_global("scm-sexpr", _G_SEXPR);
+#endif // PEG_TOOLS_SCM
 
     bind_global("a-print", _A_PRINT);
     bind_global("quit", _A_QUIT);

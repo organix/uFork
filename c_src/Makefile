@@ -34,8 +34,9 @@ ASMS=	boot.asm \
 	lib_scm.asm \
 	peg.asm \
 	scm_peg.asm \
+	peg_scm.asm \
 	act_scm.asm \
-	ufork.asm
+	asm_scm.asm
 
 PGM=	ufork
 

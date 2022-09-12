@@ -20,10 +20,10 @@
 #define MARK_SWEEP_GC 1 // stop-the-world garbage collection
 #define CONCURRENT_GC 0 // concurrent garbage collection
 #define RUNTIME_STATS 1 // collect statistics on the runtime
-#define SCM_PEG_TOOLS 0 // include PEG tools for LISP/Scheme (+232 cells)
+#define PEG_TOOLS_SCM 1 // include PEG tools for LISP/Scheme
 #define BOOTSTRAP_LIB 1 // include bootstrap library definitions
 #define EVLIS_IS_PAR  0 // concurrent argument-list evaluation
-#define SCM_ASM_TOOLS 1 // include assembly tools for LISP/Scheme
+#define ASM_TOOLS_SCM 1 // include assembly tools for LISP/Scheme
 #define QQUOTE_SYNTAX 1 // include support for quasiquote, et. al.
 #define PLACEH_SYNTAX 1 // include support for placeholder variables (?x)
 #define SCHEME_ACTORS 1 // include meta-actor definitions for LISP/Scheme

@@ -44,7 +44,12 @@
     { .t=Opcode_T,      .x=VM_pick,     .y=TO_FIX(1),   .z=S_VALUE+1,   },  // in
     { .t=Opcode_T,      .x=VM_msg,      .y=TO_FIX(0),   .z=SEND_0,      },  // cust
 
-#define S_GETC (S_VALUE+2)
+#define S_EMPTY (S_VALUE+2)
+#define _S_EMPTY TO_CAP(S_EMPTY)
+    { .t=Actor_T,       .x=S_EMPTY+1,   .y=NIL,         .z=UNDEF,       },  // empty stream
+    { .t=Opcode_T,      .x=VM_push,     .y=NIL,         .z=S_VALUE,     },  // () = NIL
+
+#define S_GETC (S_EMPTY+2)
 #define S_END_X (S_GETC+9)
 #define S_VAL_X (S_GETC+10)
     { .t=Opcode_T,      .x=VM_getc,     .y=UNDEF,       .z=S_GETC+1,    },  // ch
