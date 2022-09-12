@@ -31,6 +31,7 @@ SRCS=	ufork.c \
 
 ASMS=	boot.asm \
 	scheme.asm \
+	scm_lib.asm \
 	peg.asm \
 	scm_peg.asm \
 	ufork.asm

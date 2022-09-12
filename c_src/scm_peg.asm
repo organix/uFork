@@ -3,7 +3,7 @@
 #endif
 
 //
-// LISP/Scheme Parsing Expression Grammar (PEG)
+// Parsing Expression Grammar (PEG) for LISP/Scheme
 //
 
 /*

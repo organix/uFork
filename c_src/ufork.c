@@ -88,7 +88,9 @@ cell_t cell_table[CELL_MAX] = {
 #include "boot.asm"
 #define SCHEME_BASE (BOOT_END)
 #include "scheme.asm"
-#define PEG_BASE (SCHEME_END)
+#define SCM_LIB_BASE (SCHEME_END)
+#include "scm_lib.asm"
+#define PEG_BASE (SCM_LIB_END)
 #include "peg.asm"
 #define SCM_PEG_BASE (PEG_END)
 #include "scm_peg.asm"
@@ -212,6 +214,7 @@ static struct { int_t addr; char *label; } cell_map[] = {
     { FX_SEQ, "FX_SEQ" },
     { OP_SEQ, "OP_SEQ" },
 
+// scm_lib.asm
     { F_LIST, "F_LIST" },
     { F_CONS, "F_CONS" },
     { F_CAR, "F_CAR" },
