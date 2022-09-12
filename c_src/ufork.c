@@ -90,7 +90,9 @@ cell_t cell_table[CELL_MAX] = {
 #include "scheme.asm"
 #define PEG_BASE (SCHEME_END)
 #include "peg.asm"
-#define UFORK_BASE (PEG_END)
+#define SCM_PEG_BASE (PEG_END)
+#include "scm_peg.asm"
+#define UFORK_BASE (SCM_PEG_END)
 #include "ufork.asm"
 #define CELL_BASE (UFORK_END)
 };
@@ -263,57 +265,7 @@ static struct { int_t addr; char *label; } cell_map[] = {
     { S_BUSY_C, "S_BUSY_C" },
     { S_NEXT_C, "S_NEXT_C" },
 
-// ufork.asm
-#if SCM_ASM_TOOLS
-    { F_CELL, "F_CELL" },
-    { F_GET_T, "F_GET_T" },
-    { F_GET_X, "F_GET_X" },
-    { F_GET_Y, "F_GET_Y" },
-    { F_GET_Z, "F_GET_Z" },
-    { F_SET_T, "F_SET_T" },
-    { F_SET_X, "F_SET_X" },
-    { F_SET_Y, "F_SET_Y" },
-    { F_SET_Z, "F_SET_Z" },
-#endif // SCM_ASM_TOOLS
-
-#if META_ACTORS
-    { S_SEND, "S_SEND" },
-    { S_BECOME, "S_BECOME" },
-    { S_SELF, "S_SELF" },
-    { M_ACTOR_B, "M_ACTOR_B" },
-    { M_BUSY_B, "M_BUSY_B" },
-    { M_SEND, "M_SEND" },
-    { M_BECOME, "M_BECOME" },
-    { A_META_B, "A_META_B" },
-    { A_EXEC_B, "A_EXEC_B" },
-    { A_COMMIT_B, "A_COMMIT_B" },
-    { FX_M_BEH, "FX_M_BEH" },
-    { OP_M_BEH, "OP_M_BEH" },
-    { F_CREATE, "F_CREATE" },
-    { F_SEND, "F_SEND" },
-    { F_CALL, "F_CALL" },
-#endif // META_ACTORS
-
-#if SCM_PEG_TOOLS
-    { F_G_EQ, "F_G_EQ" },
-    { F_G_OR, "F_G_OR" },
-    { F_G_AND, "F_G_AND" },
-    { F_G_NOT, "F_G_NOT" },
-    { F_G_CLS, "F_G_CLS" },
-    { F_G_OPT, "F_G_OPT" },
-    { F_G_PLUS, "F_G_PLUS" },
-    { F_G_STAR, "F_G_STAR" },
-    { F_G_ALT, "F_G_ALT" },
-    { F_G_SEQ, "F_G_SEQ" },
-    { FX_G_CALL, "FX_G_CALL" },
-    { OP_G_CALL, "OP_G_CALL" },
-    { F_G_PRED, "F_G_PRED" },
-    { F_G_XFORM, "F_G_XFORM" },
-    { F_S_LIST, "F_S_LIST" },
-    { F_G_START, "F_G_START" },
-    { F_S_CHAIN, "F_S_CHAIN" },
-#endif // SCM_PEG_TOOLS
-
+// scm_peg.asm
     { G_END, "G_END" },
     { G_EOL, "G_EOL" },
     { G_WSP, "G_WSP" },
@@ -370,6 +322,57 @@ static struct { int_t addr; char *label; } cell_map[] = {
     { G_LIST, "G_LIST" },
     { G_EXPR, "G_EXPR" },
     { G_SEXPR, "G_SEXPR" },
+
+// ufork.asm
+#if SCM_ASM_TOOLS
+    { F_CELL, "F_CELL" },
+    { F_GET_T, "F_GET_T" },
+    { F_GET_X, "F_GET_X" },
+    { F_GET_Y, "F_GET_Y" },
+    { F_GET_Z, "F_GET_Z" },
+    { F_SET_T, "F_SET_T" },
+    { F_SET_X, "F_SET_X" },
+    { F_SET_Y, "F_SET_Y" },
+    { F_SET_Z, "F_SET_Z" },
+#endif // SCM_ASM_TOOLS
+
+#if META_ACTORS
+    { S_SEND, "S_SEND" },
+    { S_BECOME, "S_BECOME" },
+    { S_SELF, "S_SELF" },
+    { M_ACTOR_B, "M_ACTOR_B" },
+    { M_BUSY_B, "M_BUSY_B" },
+    { M_SEND, "M_SEND" },
+    { M_BECOME, "M_BECOME" },
+    { A_META_B, "A_META_B" },
+    { A_EXEC_B, "A_EXEC_B" },
+    { A_COMMIT_B, "A_COMMIT_B" },
+    { FX_M_BEH, "FX_M_BEH" },
+    { OP_M_BEH, "OP_M_BEH" },
+    { F_CREATE, "F_CREATE" },
+    { F_SEND, "F_SEND" },
+    { F_CALL, "F_CALL" },
+#endif // META_ACTORS
+
+#if SCM_PEG_TOOLS
+    { F_G_EQ, "F_G_EQ" },
+    { F_G_OR, "F_G_OR" },
+    { F_G_AND, "F_G_AND" },
+    { F_G_NOT, "F_G_NOT" },
+    { F_G_CLS, "F_G_CLS" },
+    { F_G_OPT, "F_G_OPT" },
+    { F_G_PLUS, "F_G_PLUS" },
+    { F_G_STAR, "F_G_STAR" },
+    { F_G_ALT, "F_G_ALT" },
+    { F_G_SEQ, "F_G_SEQ" },
+    { FX_G_CALL, "FX_G_CALL" },
+    { OP_G_CALL, "OP_G_CALL" },
+    { F_G_PRED, "F_G_PRED" },
+    { F_G_XFORM, "F_G_XFORM" },
+    { F_S_LIST, "F_S_LIST" },
+    { F_G_START, "F_G_START" },
+    { F_S_CHAIN, "F_S_CHAIN" },
+#endif // SCM_PEG_TOOLS
 
     { S_EMPTY, "S_EMPTY" },
     { A_PRINT, "A_PRINT" },
