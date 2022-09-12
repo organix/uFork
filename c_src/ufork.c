@@ -88,19 +88,19 @@ cell_t cell_table[CELL_MAX] = {
 #include "boot.asm"
 #define SCHEME_BASE (BOOT_END)
 #include "scheme.asm"
-#define SCM_LIB_BASE (SCHEME_END)
-#include "scm_lib.asm"
-#define PEG_BASE (SCM_LIB_END)
+#define LIB_SCM_BASE (SCHEME_END)
+#include "lib_scm.asm"
+#define PEG_BASE (LIB_SCM_END)
 #include "peg.asm"
 #define SCM_PEG_BASE (PEG_END)
 #include "scm_peg.asm"
 #if SCHEME_ACTORS
-#define SCM_ACT_BASE (PEG_END)
-#include "scm_act.asm"
+#define ACT_SCM_BASE (PEG_END)
+#include "act_scm.asm"
 #else
-#define SCM_ACT_END (PEG_END)
+#define ACT_SCM_END (PEG_END)
 #endif
-#define UFORK_BASE (SCM_ACT_END)
+#define UFORK_BASE (ACT_SCM_END)
 #include "ufork.asm"
 #define CELL_BASE (UFORK_END)
 };
@@ -220,7 +220,7 @@ static struct { int_t addr; char *label; } cell_map[] = {
     { FX_SEQ, "FX_SEQ" },
     { OP_SEQ, "OP_SEQ" },
 
-// scm_lib.asm
+// lib_scm.asm
     { F_LIST, "F_LIST" },
     { F_CONS, "F_CONS" },
     { F_CAR, "F_CAR" },
@@ -332,7 +332,7 @@ static struct { int_t addr; char *label; } cell_map[] = {
     { G_EXPR, "G_EXPR" },
     { G_SEXPR, "G_SEXPR" },
 
-// scm_act.asm
+// act_scm.asm
 #if SCHEME_ACTORS
     { S_SEND, "S_SEND" },
     { S_BECOME, "S_BECOME" },

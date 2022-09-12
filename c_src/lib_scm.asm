@@ -1,12 +1,12 @@
-#ifndef SCM_LIB_BASE
-#error SCM_LIB_BASE required.
+#ifndef LIB_SCM_BASE
+#error LIB_SCM_BASE required.
 #endif
 
 //
 // LISP/Scheme "Compiled" Primitives
 //
 
-#define F_LIST (SCM_LIB_BASE)
+#define F_LIST (LIB_SCM_BASE)
 #define _F_LIST TO_CAP(F_LIST)
     { .t=Actor_T,       .x=F_LIST+1,    .y=NIL,         .z=UNDEF        },  // (cust . args)
     { .t=Opcode_T,      .x=VM_msg,      .y=TO_FIX(-1),  .z=CUST_SEND,   },  // args
@@ -340,4 +340,4 @@
     { .t=Opcode_T,      .x=VM_debug,    .y=TO_FIX(555), .z=F_PRINT+3,   },
     { .t=Opcode_T,      .x=VM_msg,      .y=TO_FIX(2),   .z=CUST_SEND,   },
 
-#define SCM_LIB_END (F_PRINT+4)
+#define LIB_SCM_END (F_PRINT+4)

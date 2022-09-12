@@ -1,12 +1,12 @@
-#ifndef SCM_ACT_BASE
-#error SCM_ACT_BASE required.
+#ifndef ACT_SCM_BASE
+#error ACT_SCM_BASE required.
 #endif
 
 //
 // Meta-Actor Procedures for LISP/Scheme
 //
 
-#define S_SEND (SCM_ACT_BASE)
+#define S_SEND (ACT_SCM_BASE)
     { .t=Symbol_T,      .x=0,           .y=S_SEND+1,    .z=UNDEF,       },
     { .t=Pair_T,        .x=TO_FIX('S'), .y=S_SEND+2,    .z=UNDEF        },
     { .t=Pair_T,        .x=TO_FIX('E'), .y=S_SEND+3,    .z=UNDEF        },
@@ -280,4 +280,4 @@
     { .t=Opcode_T,      .x=VM_pair,     .y=TO_FIX(1),   .z=F_CALL+4,    },  // (cust . args)
     { .t=Opcode_T,      .x=VM_msg,      .y=TO_FIX(2),   .z=SEND_0,      },  // actor = arg1
 
-#define SCM_ACT_END (F_CALL+5)
+#define ACT_SCM_END (F_CALL+5)
