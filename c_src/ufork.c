@@ -65,10 +65,6 @@ int_t char_in_class(int_t n, int_t c) {
  * heap memory management (cells)
  */
 
-// manually updated assembly references
-#define _A_BOOT TO_CAP(102)
-#define _M_EVAL TO_CAP(233)
-
 cell_t cell_table[CELL_MAX] = {
     { .t=Literal_T,     .x=UNDEF,       .y=UNDEF,       .z=UNDEF,       },  //  0: UNDEF = #?
     { .t=Literal_T,     .x=UNDEF,       .y=UNDEF,       .z=UNDEF,       },  //  1: NIL = ()
@@ -84,6 +80,10 @@ cell_t cell_table[CELL_MAX] = {
     { .t=Type_T,        .x=UNDEF,       .y=UNDEF,       .z=UNDEF,       },  // 11: Pair_T
     { .t=Type_T,        .x=UNDEF,       .y=UNDEF,       .z=UNDEF,       },  // 12: Fexpr_T
     { .t=Type_T,        .x=UNDEF,       .y=UNDEF,       .z=UNDEF,       },  // 13: Free_T
+
+// manually updated assembly references
+#define _A_BOOT TO_CAP(102)
+#define _M_EVAL TO_CAP(233)
 
 #define BOOT_BASE (START)
 #include "boot.asm"
@@ -1352,7 +1352,7 @@ static char repl_lib[] =
 " (define cadar (lambda (x) (cadr (car x))))"
 " (define cadddr (lambda (x) (nth 4 x))))"
 " (define not (lambda (x) (if x #f #t))))"
-" (define equal? (lambda (x y) (if (pair? x) (if (equal? (car x) (car y)) (equal? (cdr x) (cdr y)) #f) (eq? x y))))"
+" (define equal? (lambda (x y) (if (pair? x) (if (pair? y) (if (equal? (car x) (car y)) (equal? (cdr x) (cdr y)) #f) #f) (eq? x y))))"
 " (define length (lambda (x) (if (pair? x) (+ (length (cdr x)) 1) 0)))"
 " (define list* (lambda (h . t) (if (pair? t) (cons h (apply list* t)) h)))"
 " (define append (lambda x (if (pair? x) (apply (lambda (h . t)"

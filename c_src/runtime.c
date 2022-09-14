@@ -117,6 +117,7 @@ PROC_DECL(vm_get) {
             default:        return error("unknown field");
         }
     } else {
+        TRACE(debug_print("vm_get v", v));
         v = warning("vm_get requires a cell");
     }
     stack_push(v);
@@ -140,6 +141,7 @@ PROC_DECL(vm_set) {
             default:        return error("unknown field");
         }
     } else {
+        TRACE(debug_print("vm_set v", v));
         return error("vm_set requires a cell");
     }
     return GET_CONT();

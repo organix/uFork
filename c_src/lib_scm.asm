@@ -78,18 +78,27 @@
     { .t=Opcode_T,      .x=VM_if,       .y=F_NULL_P+2,  .z=RV_FALSE,    },
 
 #define F_TYPE_P (F_NULL_P+8)
-//  { .t=Opcode_T,      .x=VM_push,     .y=_type_,      .z=F_TYPE_P+0,  },
+//  { .t=Opcode_T,      .x=VM_push,     .y=_type_,      .z=F_TYPE_P+0,  },  // type not in {Fixnum_T, Actor_T}
     { .t=Opcode_T,      .x=VM_msg,      .y=TO_FIX(-1),  .z=F_TYPE_P+1,  },  // args
     { .t=Opcode_T,      .x=VM_pick,     .y=TO_FIX(1),   .z=F_TYPE_P+2,  },  // args args
     { .t=Opcode_T,      .x=VM_typeq,    .y=Pair_T,      .z=F_TYPE_P+3,  },  // args has type Pair_T
     { .t=Opcode_T,      .x=VM_if,       .y=F_TYPE_P+4,  .z=RV_TRUE,     },
     { .t=Opcode_T,      .x=VM_part,     .y=TO_FIX(1),   .z=F_TYPE_P+5,  },  // rest first
-    { .t=Opcode_T,      .x=VM_get,      .y=FLD_T,       .z=F_TYPE_P+6,  },  // get_t(first)
-    { .t=Opcode_T,      .x=VM_pick,     .y=TO_FIX(3),   .z=F_TYPE_P+7,  },  // type
-    { .t=Opcode_T,      .x=VM_cmp,      .y=CMP_EQ,      .z=F_TYPE_P+8,  },  // get_t(first) == type
+
+    { .t=Opcode_T,      .x=VM_pick,     .y=TO_FIX(1),   .z=F_TYPE_P+6,  },  // first first
+    { .t=Opcode_T,      .x=VM_typeq,    .y=Fixnum_T,    .z=F_TYPE_P+7,  },  // first has type Fixnum_T
+    { .t=Opcode_T,      .x=VM_if,       .y=RV_FALSE,    .z=F_TYPE_P+8,  },
+
+    { .t=Opcode_T,      .x=VM_pick,     .y=TO_FIX(1),   .z=F_TYPE_P+9,  },  // first first
+    { .t=Opcode_T,      .x=VM_typeq,    .y=Fixnum_T,    .z=F_TYPE_P+10, },  // first has type Actor_T
+    { .t=Opcode_T,      .x=VM_if,       .y=RV_FALSE,    .z=F_TYPE_P+11, },
+
+    { .t=Opcode_T,      .x=VM_get,      .y=FLD_T,       .z=F_TYPE_P+12, },  // get_t(first)
+    { .t=Opcode_T,      .x=VM_pick,     .y=TO_FIX(3),   .z=F_TYPE_P+13, },  // type
+    { .t=Opcode_T,      .x=VM_cmp,      .y=CMP_EQ,      .z=F_TYPE_P+14, },  // get_t(first) == type
     { .t=Opcode_T,      .x=VM_if,       .y=F_TYPE_P+1,  .z=RV_FALSE,    },
 
-#define F_PAIR_P (F_TYPE_P+9)
+#define F_PAIR_P (F_TYPE_P+15)
 #define _F_PAIR_P TO_CAP(F_PAIR_P)
     { .t=Actor_T,       .x=F_PAIR_P+1,  .y=NIL,         .z=UNDEF        },  // (cust . args)
     { .t=Opcode_T,      .x=VM_push,     .y=Pair_T,      .z=F_TYPE_P,    },  // type = Pair_T
