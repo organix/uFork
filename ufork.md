@@ -288,6 +288,8 @@ COMMIT:     [END,+1,?]        RELEASE:    [END,+2,?]
   * `(= . `_numbers_`)`
   * `(< . `_numbers_`)`
   * `(<= . `_numbers_`)`
+  * `(>= . `_numbers_`)`
+  * `(> . `_numbers_`)`
   * `(not `_bool_`)`
   * `(and . `_bool_`)`
   * `(or . `_bool_`)`

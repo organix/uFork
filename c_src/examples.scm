@@ -14,42 +14,42 @@
 (define fact  ; recursive factorial (inefficient)
   (lambda (n)
     (if (> n 1)
-        (* n (fact (- n 1)))
-        1)))
+      (* n (fact (- n 1)))
+      1)))
 ;(define fact (lambda (n) (if (< n 2) 1 (* n (fact (- n 1))))))
 
 (define fib  ; O(n^3) performance?
   (lambda (n)
     (if (< n 2)
-        n
-        (+ (fib (- n 1)) (fib (- n 2))))))
+      n
+      (+ (fib (- n 1)) (fib (- n 2))))))
 (define fib  ; exercise local `let` bindings
   (lambda (n)
     (if (< n 2)
-        n
-        (let ((x (fib (- n 1)))
-              (y (fib (- n 2))))
-          (+ x y)) )))
+      n
+      (let ((x (fib (- n 1)))
+            (y (fib (- n 2))))
+        (+ x y)) )))
 (define fib  ; exercise local `define` bindings
   (lambda (n)
     (if (< n 2)
-        n
-        (seq
-          (define x (fib (- n 1)))
-          (define y (fib (- n 2)))
-          (+ x y)) )))
+      n
+      (seq
+        (define x (fib (- n 1)))
+        (define y (fib (- n 2)))
+        (+ x y)) )))
 
 ;; mutual recursion example (very inefficient)
 (define even?
   (lambda (n)
     (if (= n 0)
-        #t
-        (odd? (- n 1)) )))
+      #t
+      (odd? (- n 1)) )))
 (define odd?
   (lambda (n)
     (if (= n 0)
-        #f
-        (even? (- n 1)) )))
+      #f
+      (even? (- n 1)) )))
 
 ;; Ackermann function
 (define ack
@@ -65,8 +65,8 @@
 (define member?
   (lambda (x xs)
     (if (pair? xs)
-        (or (eq? x (car xs)) (member? x (cdr xs)))
-        #f)))
+      (or (eq? x (car xs)) (member? x (cdr xs)))
+      #f)))
 
 ;;;
 ;;; macro helpers
@@ -92,15 +92,15 @@
     (define unseal
       (lambda (sealed)
         (if (eq? (get-t sealed) brand)
-            (get-x sealed)
-            #?)))
+          (get-x sealed)
+          #?)))
     (define sealed?
       (lambda objs
         (if (pair? objs)
-            (if (eq? (get-t (car objs)) brand)
-                (apply sealed? (cdr objs))
-                #f)
-            #t)))
+          (if (eq? (get-t (car objs)) brand)
+            (apply sealed? (cdr objs))
+            #f)
+          #t)))
     (list seal unseal sealed?)))
 
 ;;;
@@ -115,22 +115,22 @@
     (define adt?
       (lambda objs
         (if (pair? objs)
-            (if (eq? (get-t (car objs)) dispatch)
-                (apply adt? (cdr objs))
-                #f)
-            #t)))
+          (if (eq? (get-t (car objs)) dispatch)
+            (apply adt? (cdr objs))
+            #f)
+          #t)))
     (define fields
       (lambda (adt)
         (if (eq? (get-t adt) dispatch)
-            (list (get-x adt) (get-y adt) (get-z adt))
-            #?)))
+          (list (get-x adt) (get-y adt) (get-z adt))
+          #?)))
     (list new adt? fields) ))
 (define adt-call
   (lambda (adt . method)
     ;(print 'adt-call: (get-t adt) (get-x adt) (get-y adt) (get-z adt) (cons adt method))  ;; tracing...
     (if (actor? (get-t adt))
-        (CALL (get-t adt) (cons adt method))
-        #?)))
+      (CALL (get-t adt) (cons adt method))
+      #?)))
 
 ;; dict = { t:dict-dispatch, x:key, y:value, z:next }
 (define dict-dispatch
@@ -140,30 +140,30 @@
       (cond
         ((eq? selector 'get)                                  ; (get <key>)
           (if (eq? key (car args))
-              value
-              (if (dict? next)
-                  (adt-call next 'get (car args))
-                  #?)))
+            value
+            (if (dict? next)
+              (adt-call next 'get (car args))
+              #?)))
         ((eq? selector 'has)                                  ; (has <key>)
           (if (eq? key (car args))
-              #t
-              (if (dict? next)
-                  (adt-call next 'has (car args))
-                  #f)))
+            #t
+            (if (dict? next)
+              (adt-call next 'has (car args))
+              #f)))
         ((eq? selector 'set)                                  ; (set <key> <value>)
           (if (adt-call this 'has (car args))
-              (new-dict (car args) (cadr args) (adt-call this 'delete (car args)))
-              (new-dict (car args) (cadr args) this) ))
+            (new-dict (car args) (cadr args) (adt-call this 'delete (car args)))
+            (new-dict (car args) (cadr args) this) ))
         ((eq? selector 'delete)                               ; (delete <key>)
           (if (eq? key (car args))
-              next
-              (if (dict? next)
-                (new-dict key value (adt-call next 'delete (car args)))
-                this)))
+            next
+            (if (dict? next)
+              (new-dict key value (adt-call next 'delete (car args)))
+              this)))
         ((eq? selector 'zip)                                  ; (zip)
           (if (dict? next)
-              (cons (cons key value) (adt-call next 'zip))
-              (cons (cons key value) next) ))
+            (cons (cons key value) (adt-call next 'zip))
+            (cons (cons key value) next) ))
         (#t
           #?) )) ))
 (define (new-dict dict? dict-fields) (new-adt dict-dispatch))

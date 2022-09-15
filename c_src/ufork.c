@@ -270,6 +270,8 @@ static struct { int_t addr; char *label; } cell_map[] = {
     { F_NUM_EQ, "F_NUM_EQ" },
     { F_NUM_LT, "F_NUM_LT" },
     { F_NUM_LE, "F_NUM_LE" },
+    { F_NUM_GE, "F_NUM_GE" },
+    { F_NUM_GT, "F_NUM_GT" },
     { F_NUM_ADD, "F_NUM_ADD" },
     { F_NUM_SUB, "F_NUM_SUB" },
     { F_NUM_MUL, "F_NUM_MUL" },
@@ -1163,6 +1165,8 @@ int_t init_global_env() {
     bind_global("=", _F_NUM_EQ);
     bind_global("<", _F_NUM_LT);
     bind_global("<=", _F_NUM_LE);
+    bind_global(">=", _F_NUM_GE);
+    bind_global(">", _F_NUM_GT);
     bind_global("+", _F_NUM_ADD);
     bind_global("-", _F_NUM_SUB);
     bind_global("*", _F_NUM_MUL);

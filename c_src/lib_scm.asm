@@ -241,7 +241,63 @@
     { .t=Opcode_T,      .x=VM_cmp,      .y=CMP_LE,      .z=F_NUM_LE+20, },  // first <= second
     { .t=Opcode_T,      .x=VM_if,       .y=F_NUM_LE+9,  .z=RV_FALSE,    },
 
-#define F_NUM_ADD (F_NUM_LE+21)
+#define F_NUM_GE (F_NUM_LE+21)
+#define _F_NUM_GE TO_CAP(F_NUM_GE)
+    { .t=Actor_T,       .x=F_NUM_GE+1,  .y=NIL,         .z=UNDEF        },  // (cust . args)
+    { .t=Opcode_T,      .x=VM_msg,      .y=TO_FIX(-1),  .z=F_NUM_GE+2,  },  // args
+    { .t=Opcode_T,      .x=VM_pick,     .y=TO_FIX(1),   .z=F_NUM_GE+3,  },  // args args
+    { .t=Opcode_T,      .x=VM_typeq,    .y=Pair_T,      .z=F_NUM_GE+4,  },  // args has type Pair_T
+    { .t=Opcode_T,      .x=VM_if,       .y=F_NUM_GE+5,  .z=RV_TRUE,     },
+
+    { .t=Opcode_T,      .x=VM_part,     .y=TO_FIX(1),   .z=F_NUM_GE+6,  },  // rest first
+    { .t=Opcode_T,      .x=VM_pick,     .y=TO_FIX(1),   .z=F_NUM_GE+7,  },  // rest first first
+    { .t=Opcode_T,      .x=VM_typeq,    .y=Fixnum_T,    .z=F_NUM_GE+8,  },  // first has type Fixnum_T
+    { .t=Opcode_T,      .x=VM_if,       .y=F_NUM_GE+9,  .z=RV_UNDEF,    },
+
+    { .t=Opcode_T,      .x=VM_pick,     .y=TO_FIX(2),   .z=F_NUM_GE+10, },  // rest
+    { .t=Opcode_T,      .x=VM_typeq,    .y=Pair_T,      .z=F_NUM_GE+11, },  // rest has type Pair_T
+    { .t=Opcode_T,      .x=VM_if,       .y=F_NUM_GE+12, .z=RV_TRUE,     },
+
+    { .t=Opcode_T,      .x=VM_roll,     .y=TO_FIX(2),   .z=F_NUM_GE+13, },  // first rest
+    { .t=Opcode_T,      .x=VM_part,     .y=TO_FIX(1),   .z=F_NUM_GE+14, },  // first rest second
+    { .t=Opcode_T,      .x=VM_pick,     .y=TO_FIX(1),   .z=F_NUM_GE+15, },  // second second
+    { .t=Opcode_T,      .x=VM_typeq,    .y=Fixnum_T,    .z=F_NUM_GE+16, },  // second has type Fixnum_T
+    { .t=Opcode_T,      .x=VM_if,       .y=F_NUM_GE+17, .z=RV_UNDEF,    },
+
+    { .t=Opcode_T,      .x=VM_roll,     .y=TO_FIX(3),   .z=F_NUM_GE+18, },  // rest second first
+    { .t=Opcode_T,      .x=VM_pick,     .y=TO_FIX(2),   .z=F_NUM_GE+19, },  // rest second first second
+    { .t=Opcode_T,      .x=VM_cmp,      .y=CMP_GE,      .z=F_NUM_GE+20, },  // first >= second
+    { .t=Opcode_T,      .x=VM_if,       .y=F_NUM_GE+9,  .z=RV_FALSE,    },
+
+#define F_NUM_GT (F_NUM_GE+21)
+#define _F_NUM_GT TO_CAP(F_NUM_GT)
+    { .t=Actor_T,       .x=F_NUM_GT+1,  .y=NIL,         .z=UNDEF        },  // (cust . args)
+    { .t=Opcode_T,      .x=VM_msg,      .y=TO_FIX(-1),  .z=F_NUM_GT+2,  },  // args
+    { .t=Opcode_T,      .x=VM_pick,     .y=TO_FIX(1),   .z=F_NUM_GT+3,  },  // args args
+    { .t=Opcode_T,      .x=VM_typeq,    .y=Pair_T,      .z=F_NUM_GT+4,  },  // args has type Pair_T
+    { .t=Opcode_T,      .x=VM_if,       .y=F_NUM_GT+5,  .z=RV_TRUE,     },
+
+    { .t=Opcode_T,      .x=VM_part,     .y=TO_FIX(1),   .z=F_NUM_GT+6,  },  // rest first
+    { .t=Opcode_T,      .x=VM_pick,     .y=TO_FIX(1),   .z=F_NUM_GT+7,  },  // rest first first
+    { .t=Opcode_T,      .x=VM_typeq,    .y=Fixnum_T,    .z=F_NUM_GT+8,  },  // first has type Fixnum_T
+    { .t=Opcode_T,      .x=VM_if,       .y=F_NUM_GT+9,  .z=RV_UNDEF,    },
+
+    { .t=Opcode_T,      .x=VM_pick,     .y=TO_FIX(2),   .z=F_NUM_GT+10, },  // rest
+    { .t=Opcode_T,      .x=VM_typeq,    .y=Pair_T,      .z=F_NUM_GT+11, },  // rest has type Pair_T
+    { .t=Opcode_T,      .x=VM_if,       .y=F_NUM_GT+12, .z=RV_TRUE,     },
+
+    { .t=Opcode_T,      .x=VM_roll,     .y=TO_FIX(2),   .z=F_NUM_GT+13, },  // first rest
+    { .t=Opcode_T,      .x=VM_part,     .y=TO_FIX(1),   .z=F_NUM_GT+14, },  // first rest second
+    { .t=Opcode_T,      .x=VM_pick,     .y=TO_FIX(1),   .z=F_NUM_GT+15, },  // second second
+    { .t=Opcode_T,      .x=VM_typeq,    .y=Fixnum_T,    .z=F_NUM_GT+16, },  // second has type Fixnum_T
+    { .t=Opcode_T,      .x=VM_if,       .y=F_NUM_GT+17, .z=RV_UNDEF,    },
+
+    { .t=Opcode_T,      .x=VM_roll,     .y=TO_FIX(3),   .z=F_NUM_GT+18, },  // rest second first
+    { .t=Opcode_T,      .x=VM_pick,     .y=TO_FIX(2),   .z=F_NUM_GT+19, },  // rest second first second
+    { .t=Opcode_T,      .x=VM_cmp,      .y=CMP_GT,      .z=F_NUM_GT+20, },  // first > second
+    { .t=Opcode_T,      .x=VM_if,       .y=F_NUM_GT+9,  .z=RV_FALSE,    },
+
+#define F_NUM_ADD (F_NUM_GT+21)
 #define _F_NUM_ADD TO_CAP(F_NUM_ADD)
     { .t=Actor_T,       .x=F_NUM_ADD+1, .y=NIL,         .z=UNDEF        },  // (cust . args)
     { .t=Opcode_T,      .x=VM_msg,      .y=TO_FIX(-1),  .z=F_NUM_ADD+2, },  // args
