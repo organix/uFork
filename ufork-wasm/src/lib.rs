@@ -9,6 +9,8 @@ use std::fmt;
 #[global_allocator]
 static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 
+type Value = usize;  // univeral value type
+
 #[wasm_bindgen]
 extern {
     fn alert(s: &str);
@@ -29,14 +31,14 @@ pub enum Cell {
 
 #[wasm_bindgen]
 pub struct Universe {
-    width: u32,
-    height: u32,
+    width: Value,
+    height: Value,
     cells: Vec<Cell>,
 }
 
 impl fmt::Display for Universe {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        for line in self.cells.as_slice().chunks(self.width as usize) {
+        for line in self.cells.as_slice().chunks(self.width) {
             for &cell in line {
                 let symbol = if cell == Cell::Dead { '◻' } else { '◼' };
                 write!(f, "{}", symbol)?;
@@ -49,11 +51,11 @@ impl fmt::Display for Universe {
 }
 
 impl Universe {
-    fn get_index(&self, row: u32, column: u32) -> usize {
-        (row * self.width + column) as usize
+    fn get_index(&self, row: Value, column: Value) -> Value {
+        row * self.width + column
     }
 
-    fn live_neighbor_count(&self, row: u32, column: u32) -> u8 {
+    fn live_neighbor_count(&self, row: Value, column: Value) -> u8 {
         let mut count = 0;
         for delta_row in [self.height - 1, 0, 1].iter().cloned() {
             for delta_col in [self.width - 1, 0, 1].iter().cloned() {
@@ -74,7 +76,7 @@ impl Universe {
 /// Public methods, exported to JavaScript.
 #[wasm_bindgen]
 impl Universe {
-    pub fn new(width: u32, height: u32) -> Universe {
+    pub fn new(width: Value, height: Value) -> Universe {
         let cells = (0..width * height).map(|_i| Cell::Dead).collect();
 
         Universe {
@@ -84,11 +86,11 @@ impl Universe {
         }
     }
 
-    pub fn width(&self) -> u32 {
+    pub fn width(&self) -> Value {
         self.width
     }
 
-    pub fn height(&self) -> u32 {
+    pub fn height(&self) -> Value {
         self.height
     }
 
