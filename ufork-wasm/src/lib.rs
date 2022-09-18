@@ -128,6 +128,10 @@ impl Universe {
             .collect();
     }
 
+    pub fn launch_ship(&mut self) {
+        self.set_cells(&[(1,2), (2,3), (3,1), (3,2), (3,3)]);
+    }
+
     pub fn tick(&mut self) {
         let mut next = self.cells.clone();
 

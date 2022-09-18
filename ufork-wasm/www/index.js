@@ -11,6 +11,7 @@ const width = 96;
 const height = 64;
 const universe = Universe.new(width, height);
 universe.pattern_fill();
+//universe.launch_ship();
 
 // Give the canvas room for all of our cells and a 1px border around them.
 const $canvas = document.getElementById("ufork-canvas");
