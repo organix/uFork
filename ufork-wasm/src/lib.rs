@@ -55,6 +55,20 @@ impl Universe {
         row * self.width + column
     }
 
+    /// Get the dead and alive values of the entire universe.
+    pub fn get_cells(&self) -> &[Cell] {
+        &self.cells
+    }
+
+    /// Set cells to be alive in a universe
+    /// by passing the row and column of each cell as an array.
+    pub fn set_cells(&mut self, cells: &[(Value, Value)]) {
+        for (row, col) in cells.iter().cloned() {
+            let idx = self.get_index(row, col);
+            self.cells[idx] = Cell::Live;
+        }
+    }
+
     fn live_neighbor_count(&self, row: Value, column: Value) -> u8 {
         let mut count = 0;
         for delta_row in [self.height - 1, 0, 1].iter().cloned() {
