@@ -74,19 +74,8 @@ impl Universe {
 /// Public methods, exported to JavaScript.
 #[wasm_bindgen]
 impl Universe {
-    pub fn new() -> Universe {
-        let width = 96;
-        let height = 64;
-
-        let cells = (0..width * height)
-            .map(|i| {
-                if i % 2 == 0 || i % 7 == 0 {
-                    Cell::Live
-                } else {
-                    Cell::Dead
-                }
-            })
-            .collect();
+    pub fn new(width: u32, height: u32) -> Universe {
+        let cells = (0..width * height).map(|_i| Cell::Dead).collect();
 
         Universe {
             width,
@@ -109,6 +98,18 @@ impl Universe {
 
     pub fn render(&self) -> String {
         self.to_string()
+    }
+
+    pub fn pattern_fill(&mut self) {
+        self.cells = (0..self.width * self.height)
+            .map(|i| {
+                if i % 2 == 0 || i % 7 == 0 {
+                    Cell::Live
+                } else {
+                    Cell::Dead
+                }
+            })
+            .collect();
     }
 
     pub fn tick(&mut self) {

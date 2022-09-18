@@ -2,19 +2,20 @@ import { Universe, Cell } from "ufork-wasm";
 import { memory } from "ufork-wasm/ufork_wasm_bg";
 
 const CELL_SIZE = 5; // px
-const GRID_COLOR = "#CCCCCC";
-const DEAD_COLOR = "#FFFFFF";
-const LIVE_COLOR = "#000000";
+const GRID_COLOR = "#9CF";
+const DEAD_COLOR = "#FFF";
+const LIVE_COLOR = "#360";
 
 // Construct the universe, and get its width and height.
-const universe = Universe.new();
-const width = universe.width();
-const height = universe.height();
+const width = 96;
+const height = 64;
+const universe = Universe.new(width, height);
+universe.pattern_fill();
 
 // Give the canvas room for all of our cells and a 1px border around them.
 const $canvas = document.getElementById("ufork-canvas");
-$canvas.height = (CELL_SIZE + 1) * height + 1;
 $canvas.width = (CELL_SIZE + 1) * width + 1;
+$canvas.height = (CELL_SIZE + 1) * height + 1;
 
 const ctx = $canvas.getContext('2d');
 
