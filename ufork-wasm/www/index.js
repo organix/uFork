@@ -20,8 +20,12 @@ $canvas.height = (CELL_SIZE + 1) * height + 1;
 
 const ctx = $canvas.getContext('2d');
 
+let paused = false;  // run/pause toggle
+
 const renderLoop = () => {
 	//debugger;
+	if (paused) return;
+
 	universe.tick();
 
 	drawGrid();
@@ -79,8 +83,24 @@ const drawCells = () => {
 	ctx.stroke();
 };
 
+const $pauseButton = document.getElementById("play-pause");
+
+function playAction() {
+	$pauseButton.textContent = "Pause";
+	$pauseButton.onclick = pauseAction;
+	paused = false;
+	renderLoop();
+}
+
+function pauseAction() {
+	$pauseButton.textContent = "Play";
+	$pauseButton.onclick = playAction;
+	paused = true;
+}
+
 // draw initial state
 drawGrid();
 drawCells();
 
-requestAnimationFrame(renderLoop);  // start animation
+//playAction();  // start animation (running)
+pauseAction();  // start animation (paused)
