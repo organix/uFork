@@ -11,6 +11,15 @@ static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 
 type Value = usize;  // univeral value type
 
+extern crate web_sys;
+
+// A macro to provide `println!(..)`-style syntax for `console.log` logging.
+macro_rules! log {
+    ( $( $t:tt )* ) => {
+        web_sys::console::log_1(&format!( $( $t )* ).into());
+    }
+}
+
 #[wasm_bindgen]
 extern {
     fn alert(s: &str);
@@ -91,7 +100,11 @@ impl Universe {
 #[wasm_bindgen]
 impl Universe {
     pub fn new(width: Value, height: Value) -> Universe {
+        utils::set_panic_hook();  // log panic messages to browser console
+
         let cells = (0..width * height).map(|_i| Cell::Dead).collect();
+
+        log!("creating new {}x{} Universe", width, height);
 
         Universe {
             width,
@@ -117,6 +130,7 @@ impl Universe {
     }
 
     pub fn pattern_fill(&mut self) {
+        log!("pattern_fill {}x{}", self.width, self.height);
         self.cells = (0..self.width * self.height)
             .map(|i| {
                 if i % 2 == 0 || i % 7 == 0 {
@@ -129,7 +143,9 @@ impl Universe {
     }
 
     pub fn launch_ship(&mut self) {
-        self.set_cells(&[(1,2), (2,3), (3,1), (3,2), (3,3)]);
+        let ship = [(1,2), (2,3), (3,1), (3,2), (3,3)];
+        log!("launch_ship {:?}", &ship);
+        self.set_cells(&ship);
     }
 
     pub fn tick(&mut self) {
