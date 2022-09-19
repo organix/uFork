@@ -112,6 +112,24 @@ $gliderButton.onclick = () => {
 	drawUniverse();
 }
 
+const $rPentominoButton = document.getElementById("r-pentomino-btn");
+$rPentominoButton.onclick = () => {
+	universe.r_pentomino();
+	drawUniverse();
+}
+
+const $acornButton = document.getElementById("acorn-btn");
+$acornButton.onclick = () => {
+	universe.plant_acorn();
+	drawUniverse();
+}
+
+const $gosperButton = document.getElementById("gosper-btn");
+$gosperButton.onclick = () => {
+	universe.gosper_gun();
+	drawUniverse();
+}
+
 const $patternButton = document.getElementById("pattern-btn");
 $patternButton.onclick = () => {
 	universe.pattern_fill();

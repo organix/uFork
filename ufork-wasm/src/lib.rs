@@ -10,6 +10,8 @@ use std::fmt;
 static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 
 type Value = usize;  // univeral value type
+//type Value = i32;  // univeral value type
+//type Quad = [Value; 4];  // quad-cell value
 
 extern crate js_sys;
 extern crate web_sys;
@@ -115,6 +117,7 @@ impl Universe {
         let cells = (0..width * height).map(|_i| Cell::Dead).collect();
 
         log!("creating new {}x{} Universe", width, height);
+        //log!("Value occupies {} bytes", core::mem::size_of_val(&width));
 
         Universe {
             width,
@@ -155,6 +158,29 @@ impl Universe {
         let ship = [(1,2), (2,3), (3,1), (3,2), (3,3)];
         log!("launch_ship {:?}", &ship);
         self.set_cells(&ship);
+    }
+
+    pub fn r_pentomino(&mut self) {
+        let shape = [(1,2), (1,3), (2,1), (2,2), (3,2)];
+        log!("r_pentomino {:?}", &shape);
+        self.set_cells(&shape);
+    }
+
+    pub fn plant_acorn(&mut self) {
+        let shape = [(1,2), (2,4), (3,1), (3,2), (3,5), (3,6), (3,7)];
+        log!("plant_acorn {:?}", &shape);
+        self.set_cells(&shape);
+    }
+
+    pub fn gosper_gun(&mut self) {
+        let shape = [(5,1), (5,2), (6,1), (6,2),
+            (3,13), (3,14), (4,12), (5,11), (6,11), (7,11), (8,12), (9,13), (9,14),
+            (4,16), (5,17), (6,15), (6,17), (6,18), (7,17), (8,16),
+            (3,21), (3,22), (4,21), (4,22), (5,21), (5,22),
+            (1,25), (2,23), (2,25), (6,23), (6,25), (7,25),
+            (3,35), (3,36), (4,35), (4,36)];
+        log!("gosper_gun {:?}", &shape);
+        self.set_cells(&shape);
     }
 
     pub fn pattern_fill(&mut self) {
