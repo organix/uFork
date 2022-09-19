@@ -10,7 +10,7 @@ const LIVE_COLOR = "#360";
 const width = 96;
 const height = 64;
 const universe = Universe.new(width, height);
-universe.pattern_fill();
+//universe.pattern_fill();
 universe.launch_ship();
 
 // Give the canvas room for all of our cells and a 1px border around them.
@@ -18,21 +18,38 @@ const $canvas = document.getElementById("ufork-canvas");
 $canvas.width = (CELL_SIZE + 1) * width + 1;
 $canvas.height = (CELL_SIZE + 1) * height + 1;
 
-const ctx = $canvas.getContext('2d');
-
 let paused = false;  // run/pause toggle
 
+const drawUniverse = () => {
+	drawGrid();
+	drawCells();
+}
 const renderLoop = () => {
 	//debugger;
 	if (paused) return;
 
 	universe.tick();
-
-	drawGrid();
-	drawCells();
-
+	drawUniverse();
 	requestAnimationFrame(renderLoop);
 }
+
+$canvas.onclick = event => {
+	const boundingRect = $canvas.getBoundingClientRect();
+
+	const scaleX = $canvas.width / boundingRect.width;
+	const scaleY = $canvas.height / boundingRect.height;
+
+	const canvasLeft = (event.clientX - boundingRect.left) * scaleX;
+	const canvasTop = (event.clientY - boundingRect.top) * scaleY;
+
+	const row = Math.min(Math.floor(canvasTop / (CELL_SIZE + 1)), height - 1);
+	const col = Math.min(Math.floor(canvasLeft / (CELL_SIZE + 1)), width - 1);
+
+	universe.toggle_cell(row, col);
+	drawUniverse();
+}
+
+const ctx = $canvas.getContext('2d');
 
 const drawGrid = () => {
 	ctx.beginPath();
@@ -51,11 +68,11 @@ const drawGrid = () => {
 	}
 
 	ctx.stroke();
-};
+}
 
 const getIndex = (row, column) => {
 	return row * width + column;
-};
+}
 
 const drawCells = () => {
 	const cellsPtr = universe.cells();
@@ -81,26 +98,47 @@ const drawCells = () => {
 	}
 
 	ctx.stroke();
-};
+}
+
+const $clearButton = document.getElementById("clear-btn");
+$clearButton.onclick = () => {
+	universe.clear_grid();
+	drawUniverse();
+}
+
+const $gliderButton = document.getElementById("glider-btn");
+$gliderButton.onclick = () => {
+	universe.launch_ship();
+	drawUniverse();
+}
+
+const $patternButton = document.getElementById("pattern-btn");
+$patternButton.onclick = () => {
+	universe.pattern_fill();
+	drawUniverse();
+}
+
+const $randomButton = document.getElementById("random-btn");
+$randomButton.onclick = () => {
+	universe.random_fill();
+	drawUniverse();
+}
 
 const $pauseButton = document.getElementById("play-pause");
-
-function playAction() {
+const playAction = () => {
 	$pauseButton.textContent = "Pause";
 	$pauseButton.onclick = pauseAction;
 	paused = false;
 	renderLoop();
 }
-
-function pauseAction() {
+const pauseAction = () => {
 	$pauseButton.textContent = "Play";
 	$pauseButton.onclick = playAction;
 	paused = true;
 }
 
 // draw initial state
-drawGrid();
-drawCells();
+drawUniverse();
 
-//playAction();  // start animation (running)
-pauseAction();  // start animation (paused)
+playAction();  // start animation (running)
+//pauseAction();  // start animation (paused)

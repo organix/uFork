@@ -24,6 +24,8 @@ console_error_panic_hook = { version = "0.1.6", optional = true }
 # allocator, however.
 wee_alloc = { version = "0.4.5", optional = true }
 
+js-sys = "0.3"
+
 [dependencies.web-sys]
 version = "0.3"
 features = [

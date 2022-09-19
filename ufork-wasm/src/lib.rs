@@ -11,6 +11,7 @@ static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 
 type Value = usize;  // univeral value type
 
+extern crate js_sys;
 extern crate web_sys;
 
 // A macro to provide `println!(..)`-style syntax for `console.log` logging.
@@ -36,6 +37,15 @@ pub fn greet(name: &str) {
 pub enum Cell {
     Dead = 0,
     Live = 1,
+}
+
+impl Cell {
+    fn toggle(&mut self) {
+        *self = match *self {
+            Cell::Dead => Cell::Live,
+            Cell::Live => Cell::Dead,
+        };
+    }
 }
 
 #[wasm_bindgen]
@@ -129,6 +139,24 @@ impl Universe {
         self.to_string()
     }
 
+    pub fn toggle_cell(&mut self, row: Value, column: Value) {
+        let idx = self.get_index(row, column);
+        self.cells[idx].toggle();
+    }
+
+    pub fn clear_grid(&mut self) {
+        log!("clear_grid {}x{}", self.width, self.height);
+        self.cells = (0..self.width * self.height)
+            .map(|_i| Cell::Dead)
+            .collect();
+    }
+
+    pub fn launch_ship(&mut self) {
+        let ship = [(1,2), (2,3), (3,1), (3,2), (3,3)];
+        log!("launch_ship {:?}", &ship);
+        self.set_cells(&ship);
+    }
+
     pub fn pattern_fill(&mut self) {
         log!("pattern_fill {}x{}", self.width, self.height);
         self.cells = (0..self.width * self.height)
@@ -142,10 +170,17 @@ impl Universe {
             .collect();
     }
 
-    pub fn launch_ship(&mut self) {
-        let ship = [(1,2), (2,3), (3,1), (3,2), (3,3)];
-        log!("launch_ship {:?}", &ship);
-        self.set_cells(&ship);
+    pub fn random_fill(&mut self) {
+        log!("random_fill {}x{}", self.width, self.height);
+        self.cells = (0..self.width * self.height)
+            .map(|_i| {
+                if js_sys::Math::random() < 0.375 {
+                    Cell::Live
+                } else {
+                    Cell::Dead
+                }
+            })
+            .collect();
     }
 
     pub fn tick(&mut self) {
