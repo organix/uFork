@@ -19,6 +19,8 @@ $canvas.width = (CELL_SIZE + 1) * width + 1;
 $canvas.height = (CELL_SIZE + 1) * height + 1;
 
 let paused = false;  // run/pause toggle
+const $rate = document.getElementById("frame-rate");
+let frame = 1;  // frame-rate countdown
 
 const drawUniverse = () => {
 	drawGrid();
@@ -28,8 +30,14 @@ const renderLoop = () => {
 	//debugger;
 	if (paused) return;
 
-	universe.tick();
-	drawUniverse();
+	if (--frame > 0) {
+		// skip this frame update
+	} else {
+		frame = +($rate.value);
+
+		universe.tick();
+		drawUniverse();
+	}
 	requestAnimationFrame(renderLoop);
 }
 
