@@ -10,7 +10,7 @@ pub struct Vcpu {
 
 impl Vcpu {
     pub fn new() -> Vcpu {
-        let mut quad_mem =  [
+        let mut quad_mem = [
             Quad::new(UNDEF, UNDEF, UNDEF, UNDEF);
             QUAD_MAX
         ];
@@ -65,7 +65,7 @@ impl Vcpu {
                     let ptr = Ptr::new(cap.raw());  // WARNING: converting Cap to Ptr!
                     match self.addr(ptr) {
                         Some(addr) => {
-                            ACTOR_T == self.quad_mem[addr].t
+                            ACTOR_T == self.quad_mem[addr].t()
                         },
                         None => false,
                     }
@@ -77,7 +77,7 @@ impl Vcpu {
             Some(ptr) => {
                 match self.addr(ptr) {
                     Some(addr) => {
-                        typ == self.quad_mem[addr].t
+                        typ == self.quad_mem[addr].t()
                     },
                     None => false,
                 }
@@ -88,7 +88,7 @@ impl Vcpu {
     fn alloc(&mut self, t: Val, x: Val, y: Val, z: Val) -> Ptr {
         let mut ptr = self.quad_next;
         if self.typeq(FREE_T, ptr.val()) {
-            self.quad_next = self.quad(ptr).z.ptr();
+            self.quad_next = self.quad(ptr).z().ptr();
         } else if self.quad_top.raw() < QUAD_MAX {
             ptr = self.quad_top;
             self.quad_top = Ptr::new(ptr.raw() + 1);
@@ -96,10 +96,10 @@ impl Vcpu {
             panic!("quad-memory exhausted!");
         }
         let quad = self.quad_mut(ptr);
-        quad.t = t;
-        quad.x = x;
-        quad.y = y;
-        quad.z = z;
+        quad.set_t(t);
+        quad.set_x(x);
+        quad.set_y(y);
+        quad.set_z(z);
         ptr
     }
     fn free(&mut self, ptr: Ptr) {
@@ -108,10 +108,10 @@ impl Vcpu {
         assert!(!self.typeq(FREE_T, val));
         let next = self.quad_next;
         let quad = self.quad_mut(ptr);
-        quad.t = FREE_T;
-        quad.x = UNDEF;
-        quad.y = UNDEF;
-        quad.z = next.val();
+        quad.set_t(FREE_T);
+        quad.set_x(UNDEF);
+        quad.set_y(UNDEF);
+        quad.set_z(next.val());
         self.quad_next = ptr;
     }
 }
@@ -123,6 +123,14 @@ impl Quad {
     fn new(t: Val, x: Val, y: Val, z: Val) -> Quad {
         Quad { t, x, y, z }
     }
+    fn t(&self) -> Val { self.t }
+    fn x(&self) -> Val { self.x }
+    fn y(&self) -> Val { self.y }
+    fn z(&self) -> Val { self.z }
+    fn set_t(&mut self, v: Val) { self.t = v; }
+    fn set_x(&mut self, v: Val) { self.x = v; }
+    fn set_y(&mut self, v: Val) { self.y = v; }
+    fn set_z(&mut self, v: Val) { self.z = v; }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -145,7 +153,7 @@ impl Val {
     }
 }
 
-const UNDEF: Val        = Val { raw: 0 }; //Val::new(0);
+const UNDEF: Val        = Val { raw: 0 }; //Val::new(0); -- const generic issue...
 const NIL: Val          = Val { raw: 1 };
 const FALSE: Val        = Val { raw: 2 };
 const TRUE: Val         = Val { raw: 3 };
