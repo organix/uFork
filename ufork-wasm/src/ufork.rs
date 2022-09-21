@@ -54,11 +54,21 @@ impl Vcpu {
         let tval = typ.val();
         if tval == FIXNUM_T {
             let fix = Fix::from(val);
-            return fix != None;
+            return fix.is_some();
         }
         if tval == ACTOR_T {
-            let cap = Cap::from(val);
-            return cap != None;
+            return match Cap::from(val) {
+                Some(cap) => {
+                    let ptr = Ptr::new(cap.raw());  // WARNING: converting Cap to Ptr!
+                    match self.addr(ptr) {
+                        Some(addr) => {
+                            ACTOR_T == self.quad_mem[addr].t
+                        },
+                        None => false,
+                    }
+                },
+                None => false,
+            }
         }
         match Ptr::from(val) {
             Some(ptr) => {
