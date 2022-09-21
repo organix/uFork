@@ -1,33 +1,76 @@
 // uFork virtual CPU
 
-const QUAD_MAX: usize = 1<<12;
+const QUAD_MAX: usize = 1<<12;  // 4K quad-cells
 
 pub struct Vcpu {
     quad_mem: [Quad; QUAD_MAX],
-    quad_top: Val,
-    quad_next: Val,
+    quad_top: Ptr,
+    quad_next: Ptr,
 }
 
 impl Vcpu {
     pub fn new() -> Vcpu {
+        let mut quad_mem =  [
+            Quad { t: UNDEF, x: UNDEF, y: UNDEF, z: UNDEF };
+            QUAD_MAX
+        ];
+        quad_mem[UNDEF.raw()]       = Quad::new(LITERAL_T,  UNDEF,      UNDEF,      UNDEF);
+        quad_mem[NIL.raw()]         = Quad::new(LITERAL_T,  UNDEF,      UNDEF,      UNDEF);
+        quad_mem[FALSE.raw()]       = Quad::new(LITERAL_T,  UNDEF,      UNDEF,      UNDEF);
+        quad_mem[TRUE.raw()]        = Quad::new(LITERAL_T,  UNDEF,      UNDEF,      UNDEF);
+        quad_mem[UNIT.raw()]        = Quad::new(LITERAL_T,  UNDEF,      UNDEF,      UNDEF);
+        quad_mem[TYPE_T.raw()]      = Quad::new(TYPE_T,     UNDEF,      UNDEF,      UNDEF);
+        quad_mem[EVENT_T.raw()]     = Quad::new(TYPE_T,     UNDEF,      UNDEF,      UNDEF);
+        quad_mem[OPCODE_T.raw()]    = Quad::new(TYPE_T,     UNDEF,      UNDEF,      UNDEF);
+        quad_mem[ACTOR_T.raw()]     = Quad::new(TYPE_T,     UNDEF,      UNDEF,      UNDEF);
+        quad_mem[FIXNUM_T.raw()]    = Quad::new(TYPE_T,     UNDEF,      UNDEF,      UNDEF);
+        quad_mem[SYMBOL_T.raw()]    = Quad::new(TYPE_T,     UNDEF,      UNDEF,      UNDEF);
+        quad_mem[PAIR_T.raw()]      = Quad::new(TYPE_T,     UNDEF,      UNDEF,      UNDEF);
+        quad_mem[FEXPR_T.raw()]     = Quad::new(TYPE_T,     UNDEF,      UNDEF,      UNDEF);
+        quad_mem[FREE_T.raw()]      = Quad::new(TYPE_T,     UNDEF,      UNDEF,      UNDEF);
         Vcpu {
-            quad_mem: [
-                Quad::new(UNDEF, UNDEF, UNDEF, UNDEF);
-                QUAD_MAX
-            ],
-            quad_top: START,
-            quad_next: NIL,
+            quad_mem,
+            quad_top: START.ptr(),
+            quad_next: NIL.ptr(),
         }
     }
-    fn addr(&self, raw: usize) -> Option<usize> {
+    fn addr(&self, ptr: Ptr) -> Option<usize> {
+        let raw = ptr.raw();
         if raw < self.quad_top.raw() {
             Some(raw)
         } else {
             None
         }
     }
-    fn quad(&self, ptr: Ref) -> &Quad {
-        &self.quad_mem[self.addr(ptr.raw()).unwrap()]
+    fn quad(&self, ptr: Ptr) -> &Quad {
+        let addr = self.addr(ptr).unwrap();
+        &self.quad_mem[addr]
+    }
+    fn set_quad(&mut self, ptr: Ptr, quad: &Quad) {
+        let addr = self.addr(ptr).unwrap();
+        self.quad_mem[addr] = *quad;
+    }
+    fn typeq(&self, typ: &Ptr, val: &Val) -> bool {
+        let tval = typ.val();
+        if tval == FIXNUM_T {
+            let fix = Fix::from(val);
+            return fix != None;
+        }
+        if tval == ACTOR_T {
+            let cap = Cap::from(val);
+            return cap != None;
+        }
+        match Ptr::from(val) {
+            Some(ptr) => {
+                match self.addr(ptr) {
+                    Some(addr) => {
+                        tval == self.quad_mem[addr].t
+                    },
+                    None => false,
+                }
+            },
+            None => false,
+        }
     }
 }
 
@@ -48,6 +91,15 @@ impl Val {
     }
     fn raw(&self) -> usize {
         self.raw
+    }
+    fn fix(&self) -> Fix {
+        Fix::from(self).unwrap()
+    }
+    fn ptr(&self) -> Ptr {
+        Ptr::from(self).unwrap()
+    }
+    fn cap(&self) -> Cap {
+        Cap::from(self).unwrap()
     }
 }
 
@@ -72,7 +124,7 @@ const START: Val        = Val { raw: 14 };
 
 const MSK_RAW: usize    = 0xC000_0000;
 const DIR_RAW: usize    = 0x8000_0000;
-const CAP_RAW: usize    = 0x4000_0000;
+const OPQ_RAW: usize    = 0x4000_0000;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Fix { num: isize }
@@ -80,7 +132,7 @@ impl Fix {
     fn new(num: isize) -> Fix {
         Fix { num }
     }
-    fn from(val: Val) -> Option<Fix> {
+    fn from(val: &Val) -> Option<Fix> {
         let raw = val.raw();
         if (raw & DIR_RAW) != 0 {
             let num = ((raw << 1) as isize) >> 1;
@@ -98,15 +150,15 @@ impl Fix {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct Ref { raw: usize }
-impl Ref {
-    fn new(raw: usize) -> Ref {
-        Ref { raw: (raw & !MSK_RAW) }
+pub struct Ptr { raw: usize }
+impl Ptr {
+    fn new(raw: usize) -> Ptr {
+        Ptr { raw: (raw & !MSK_RAW) }
     }
-    fn from(val: Val) -> Option<Ref> {
+    fn from(val: &Val) -> Option<Ptr> {
         let raw = val.raw();
         if (raw & MSK_RAW) == 0 {
-            Some(Ref::new(raw))
+            Some(Ptr::new(raw))
         } else {
             None
         }
@@ -125,16 +177,16 @@ impl Cap {
     fn new(raw: usize) -> Cap {
         Cap { raw: (raw & !MSK_RAW) }
     }
-    fn from(val: Val) -> Option<Cap> {
+    fn from(val: &Val) -> Option<Cap> {
         let raw = val.raw();
-        if (raw & MSK_RAW) == CAP_RAW {
+        if (raw & MSK_RAW) == OPQ_RAW {
             Some(Cap::new(raw))
         } else {
             None
         }
     }
     fn val(&self) -> Val {
-        Val::new(self.raw | CAP_RAW)
+        Val::new(self.raw | OPQ_RAW)
     }
     fn raw(&self) -> usize {
         self.raw
