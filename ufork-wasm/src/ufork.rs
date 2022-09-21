@@ -11,7 +11,7 @@ pub struct Vcpu {
 impl Vcpu {
     pub fn new() -> Vcpu {
         let mut quad_mem =  [
-            Quad { t: UNDEF, x: UNDEF, y: UNDEF, z: UNDEF };
+            Quad::new(UNDEF, UNDEF, UNDEF, UNDEF);
             QUAD_MAX
         ];
         quad_mem[UNDEF.raw()]       = Quad::new(LITERAL_T,  UNDEF,      UNDEF,      UNDEF);
@@ -46,16 +46,16 @@ impl Vcpu {
         let addr = self.addr(ptr).unwrap();
         &self.quad_mem[addr]
     }
-    fn set_quad(&mut self, ptr: Ptr, quad: &Quad) {
+    fn quad_mut(&mut self, ptr: Ptr) -> &mut Quad {
         let addr = self.addr(ptr).unwrap();
-        self.quad_mem[addr] = *quad;
+        &mut self.quad_mem[addr]
     }
-    fn typeq(&self, typ: &Val, val: &Val) -> bool {
-        if *typ == FIXNUM_T {
+    fn typeq(&self, typ: Val, val: Val) -> bool {
+        if typ == FIXNUM_T {
             let fix = Fix::from(val);
             return fix.is_some();
         }
-        if *typ == ACTOR_T {
+        if typ == ACTOR_T {
             return match Cap::from(val) {
                 Some(cap) => {
                     let ptr = Ptr::new(cap.raw());  // WARNING: converting Cap to Ptr!
@@ -73,13 +73,26 @@ impl Vcpu {
             Some(ptr) => {
                 match self.addr(ptr) {
                     Some(addr) => {
-                        *typ == self.quad_mem[addr].t
+                        typ == self.quad_mem[addr].t
                     },
                     None => false,
                 }
             },
             None => false,
         }
+    }
+    fn alloc(&mut self, t: Val, x: Val, y: Val, z: Val) -> Ptr {
+        let ptr = self.quad_next;
+        if ptr != NIL.ptr() {
+            let next = self.quad(ptr).z;
+            self.quad_next = next.ptr();
+            let quad = self.quad_mut(ptr);
+            quad.t = t;
+            quad.x = x;
+            quad.y = y;
+            quad.z = z;
+        }
+        ptr
     }
 }
 
@@ -101,24 +114,24 @@ impl Val {
     fn raw(&self) -> usize {
         self.raw
     }
-    fn fix(&self) -> Fix {
+    fn fix(self) -> Fix {  // NOTE: consumes `self`
         Fix::from(self).unwrap()
     }
-    fn ptr(&self) -> Ptr {
+    fn ptr(self) -> Ptr {  // NOTE: consumes `self`
         Ptr::from(self).unwrap()
     }
-    fn cap(&self) -> Cap {
+    fn cap(self) -> Cap {  // NOTE: consumes `self`
         Cap::from(self).unwrap()
     }
 }
 
-const UNDEF: Val        = Val { raw: 0 };
+const UNDEF: Val        = Val { raw: 0 }; //Val::new(0);
 const NIL: Val          = Val { raw: 1 };
 const FALSE: Val        = Val { raw: 2 };
 const TRUE: Val         = Val { raw: 3 };
 const UNIT: Val         = Val { raw: 4 };
 
-const LITERAL_T: Val    = Val { raw: 0 };
+const LITERAL_T: Val    = Val { raw: 0 }; //Val::new(0);
 const TYPE_T: Val       = Val { raw: 5 };
 const EVENT_T: Val      = Val { raw: 6 };
 const OPCODE_T: Val     = Val { raw: 7 };
@@ -141,7 +154,7 @@ impl Fix {
     fn new(num: isize) -> Fix {
         Fix { num }
     }
-    fn from(val: &Val) -> Option<Fix> {
+    fn from(val: Val) -> Option<Fix> {
         let raw = val.raw();
         if (raw & DIR_RAW) != 0 {
             let num = ((raw << 1) as isize) >> 1;
@@ -150,7 +163,7 @@ impl Fix {
             None
         }
     }
-    fn val(&self) -> Val {
+    fn val(self) -> Val {  // NOTE: consumes `self`
         Val::new(self.num as usize | DIR_RAW)
     }
     fn num(&self) -> isize {
@@ -164,7 +177,7 @@ impl Ptr {
     fn new(raw: usize) -> Ptr {
         Ptr { raw: (raw & !MSK_RAW) }
     }
-    fn from(val: &Val) -> Option<Ptr> {
+    fn from(val: Val) -> Option<Ptr> {
         let raw = val.raw();
         if (raw & MSK_RAW) == 0 {
             Some(Ptr::new(raw))
@@ -172,7 +185,7 @@ impl Ptr {
             None
         }
     }
-    fn val(&self) -> Val {
+    fn val(self) -> Val {  // NOTE: consumes `self`
         Val::new(self.raw)
     }
     fn raw(&self) -> usize {
@@ -186,7 +199,7 @@ impl Cap {
     fn new(raw: usize) -> Cap {
         Cap { raw: (raw & !MSK_RAW) }
     }
-    fn from(val: &Val) -> Option<Cap> {
+    fn from(val: Val) -> Option<Cap> {
         let raw = val.raw();
         if (raw & MSK_RAW) == OPQ_RAW {
             Some(Cap::new(raw))
@@ -194,7 +207,7 @@ impl Cap {
             None
         }
     }
-    fn val(&self) -> Val {
+    fn val(self) -> Val {  // NOTE: consumes `self`
         Val::new(self.raw | OPQ_RAW)
     }
     fn raw(&self) -> usize {
