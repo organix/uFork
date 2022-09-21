@@ -34,6 +34,10 @@ impl Vcpu {
             quad_next: NIL.ptr(),
         }
     }
+    fn in_heap(&self, val: Val) -> bool {
+        let raw = val.raw();
+        (raw < self.quad_top.raw()) && (raw >= START.raw())
+    }
     fn addr(&self, ptr: Ptr) -> Option<usize> {
         let raw = ptr.raw();
         if raw < self.quad_top.raw() {
@@ -82,17 +86,33 @@ impl Vcpu {
         }
     }
     fn alloc(&mut self, t: Val, x: Val, y: Val, z: Val) -> Ptr {
-        let ptr = self.quad_next;
-        if ptr != NIL.ptr() {
-            let next = self.quad(ptr).z;
-            self.quad_next = next.ptr();
-            let quad = self.quad_mut(ptr);
-            quad.t = t;
-            quad.x = x;
-            quad.y = y;
-            quad.z = z;
+        let mut ptr = self.quad_next;
+        if self.typeq(FREE_T, ptr.val()) {
+            self.quad_next = self.quad(ptr).z.ptr();
+        } else if self.quad_top.raw() < QUAD_MAX {
+            ptr = self.quad_top;
+            self.quad_top = Ptr::new(ptr.raw() + 1);
+        } else {
+            panic!("quad-memory exhausted!");
         }
+        let quad = self.quad_mut(ptr);
+        quad.t = t;
+        quad.x = x;
+        quad.y = y;
+        quad.z = z;
         ptr
+    }
+    fn free(&mut self, ptr: Ptr) {
+        let val = ptr.val();
+        assert!(self.in_heap(val));
+        assert!(!self.typeq(FREE_T, val));
+        let next = self.quad_next;
+        let quad = self.quad_mut(ptr);
+        quad.t = FREE_T;
+        quad.x = UNDEF;
+        quad.y = UNDEF;
+        quad.z = next.val();
+        self.quad_next = ptr;
     }
 }
 
