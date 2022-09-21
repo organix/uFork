@@ -50,13 +50,12 @@ impl Vcpu {
         let addr = self.addr(ptr).unwrap();
         self.quad_mem[addr] = *quad;
     }
-    fn typeq(&self, typ: &Ptr, val: &Val) -> bool {
-        let tval = typ.val();
-        if tval == FIXNUM_T {
+    fn typeq(&self, typ: &Val, val: &Val) -> bool {
+        if *typ == FIXNUM_T {
             let fix = Fix::from(val);
             return fix.is_some();
         }
-        if tval == ACTOR_T {
+        if *typ == ACTOR_T {
             return match Cap::from(val) {
                 Some(cap) => {
                     let ptr = Ptr::new(cap.raw());  // WARNING: converting Cap to Ptr!
@@ -74,7 +73,7 @@ impl Vcpu {
             Some(ptr) => {
                 match self.addr(ptr) {
                     Some(addr) => {
-                        tval == self.quad_mem[addr].t
+                        *typ == self.quad_mem[addr].t
                     },
                     None => false,
                 }
