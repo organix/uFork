@@ -3,6 +3,8 @@ mod utils;
 use wasm_bindgen::prelude::*;
 use std::fmt;
 
+pub mod ufork;
+
 // When the `wee_alloc` feature is enabled, use `wee_alloc` as the global
 // allocator.
 #[cfg(feature = "wee_alloc")]
@@ -11,8 +13,8 @@ static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 
 type Value = usize;  // univeral value type
 //type Value = i32;  // univeral value type
-//type Quad = [Value; 4];  // quad-cell value
 
+// FIXME: `use js_sys;` instead?
 extern crate js_sys;
 extern crate web_sys;
 
@@ -31,6 +33,16 @@ extern {
 #[wasm_bindgen]
 pub fn greet(name: &str) {
     alert(&format!("Hello, {}!", name));
+}
+
+#[wasm_bindgen]
+pub fn init() {
+    log!("init() called.");
+}
+#[wasm_bindgen]
+pub fn step() -> Value {
+    log!("step() called.");
+    0  // return Undefined Value
 }
 
 #[wasm_bindgen]

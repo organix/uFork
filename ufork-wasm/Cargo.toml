@@ -9,6 +9,10 @@ crate-type = ["cdylib", "rlib"]
 
 [features]
 default = ["console_error_panic_hook"]
+api-old = []
+simulator = []
+websever = []
+# Remove the three lines above when we figure out where the error comes from...
 
 [dependencies]
 wasm-bindgen = "0.2.63"
