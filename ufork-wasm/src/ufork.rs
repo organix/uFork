@@ -2,6 +2,9 @@
 
 use crate::queue::Queue;
 
+type Raw = u32;  // univeral value type
+type Num = i32;  // fixnum integer type
+
 const QUAD_MAX: usize = 1<<12;  // 4K quad-cells
 
 pub struct Core {
@@ -19,20 +22,20 @@ impl Core {
             Quad::new(UNDEF, UNDEF, UNDEF, UNDEF);
             QUAD_MAX
         ];
-        quad_mem[UNDEF.raw()]       = Quad::new(LITERAL_T,  UNDEF,      UNDEF,      UNDEF);
-        quad_mem[NIL.raw()]         = Quad::new(LITERAL_T,  UNDEF,      UNDEF,      UNDEF);
-        quad_mem[FALSE.raw()]       = Quad::new(LITERAL_T,  UNDEF,      UNDEF,      UNDEF);
-        quad_mem[TRUE.raw()]        = Quad::new(LITERAL_T,  UNDEF,      UNDEF,      UNDEF);
-        quad_mem[UNIT.raw()]        = Quad::new(LITERAL_T,  UNDEF,      UNDEF,      UNDEF);
-        quad_mem[TYPE_T.raw()]      = Quad::new(TYPE_T,     UNDEF,      UNDEF,      UNDEF);
-        quad_mem[EVENT_T.raw()]     = Quad::new(TYPE_T,     UNDEF,      UNDEF,      UNDEF);
-        quad_mem[OPCODE_T.raw()]    = Quad::new(TYPE_T,     UNDEF,      UNDEF,      UNDEF);
-        quad_mem[ACTOR_T.raw()]     = Quad::new(TYPE_T,     UNDEF,      UNDEF,      UNDEF);
-        quad_mem[FIXNUM_T.raw()]    = Quad::new(TYPE_T,     UNDEF,      UNDEF,      UNDEF);
-        quad_mem[SYMBOL_T.raw()]    = Quad::new(TYPE_T,     UNDEF,      UNDEF,      UNDEF);
-        quad_mem[PAIR_T.raw()]      = Quad::new(TYPE_T,     UNDEF,      UNDEF,      UNDEF);
-        quad_mem[FEXPR_T.raw()]     = Quad::new(TYPE_T,     UNDEF,      UNDEF,      UNDEF);
-        quad_mem[FREE_T.raw()]      = Quad::new(TYPE_T,     UNDEF,      UNDEF,      UNDEF);
+        quad_mem[UNDEF.addr()]      = Quad::new(LITERAL_T,  UNDEF,      UNDEF,      UNDEF);
+        quad_mem[NIL.addr()]        = Quad::new(LITERAL_T,  UNDEF,      UNDEF,      UNDEF);
+        quad_mem[FALSE.addr()]      = Quad::new(LITERAL_T,  UNDEF,      UNDEF,      UNDEF);
+        quad_mem[TRUE.addr()]       = Quad::new(LITERAL_T,  UNDEF,      UNDEF,      UNDEF);
+        quad_mem[UNIT.addr()]       = Quad::new(LITERAL_T,  UNDEF,      UNDEF,      UNDEF);
+        quad_mem[TYPE_T.addr()]     = Quad::new(TYPE_T,     UNDEF,      UNDEF,      UNDEF);
+        quad_mem[EVENT_T.addr()]    = Quad::new(TYPE_T,     UNDEF,      UNDEF,      UNDEF);
+        quad_mem[OPCODE_T.addr()]   = Quad::new(TYPE_T,     UNDEF,      UNDEF,      UNDEF);
+        quad_mem[ACTOR_T.addr()]    = Quad::new(TYPE_T,     UNDEF,      UNDEF,      UNDEF);
+        quad_mem[FIXNUM_T.addr()]   = Quad::new(TYPE_T,     UNDEF,      UNDEF,      UNDEF);
+        quad_mem[SYMBOL_T.addr()]   = Quad::new(TYPE_T,     UNDEF,      UNDEF,      UNDEF);
+        quad_mem[PAIR_T.addr()]     = Quad::new(TYPE_T,     UNDEF,      UNDEF,      UNDEF);
+        quad_mem[FEXPR_T.addr()]    = Quad::new(TYPE_T,     UNDEF,      UNDEF,      UNDEF);
+        quad_mem[FREE_T.addr()]     = Quad::new(TYPE_T,     UNDEF,      UNDEF,      UNDEF);
         Core {
             quad_mem,
             quad_top: START.ptr(),
@@ -47,9 +50,9 @@ impl Core {
         (raw < self.quad_top.raw()) && (raw >= START.raw())
     }
     pub fn addr(&self, ptr: Ptr) -> Option<usize> {
-        let raw = ptr.raw();
-        if raw < self.quad_top.raw() {
-            Some(raw)
+        let addr = ptr.addr();
+        if addr < self.quad_top.addr() {
+            Some(addr)
         } else {
             None
         }
@@ -100,7 +103,7 @@ impl Core {
             assert!(self.gc_free_cnt > 0);
             self.gc_free_cnt -= 1;
             self.quad_next = self.quad(ptr).z().ptr();
-        } else if self.quad_top.raw() < QUAD_MAX {
+        } else if self.quad_top.addr() < QUAD_MAX {
             ptr = self.quad_top;
             self.quad_top = Ptr::new(ptr.raw() + 1);
         } else {
@@ -170,13 +173,16 @@ impl Quad {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct Val { raw: usize }
+pub struct Val { raw: Raw }
 impl Val {
-    pub fn new(raw: usize) -> Val {
+    pub fn new(raw: Raw) -> Val {
         Val { raw }
     }
-    pub fn raw(&self) -> usize {
+    pub fn raw(&self) -> Raw {
         self.raw
+    }
+    pub fn addr(&self) -> usize {
+        self.ptr().addr()
     }
     pub fn fix(self) -> Fix {  // NOTE: consumes `self`
         Fix::from(self).unwrap()
@@ -208,37 +214,37 @@ pub const FREE_T: Val   = Val { raw: 13 };
 
 pub const START: Val    = Val { raw: 14 };
 
-const MSK_RAW: usize    = 0xC000_0000;
-const DIR_RAW: usize    = 0x8000_0000;
-const OPQ_RAW: usize    = 0x4000_0000;
+const MSK_RAW: Raw      = 0xC000_0000;
+const DIR_RAW: Raw      = 0x8000_0000;
+const OPQ_RAW: Raw      = 0x4000_0000;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct Fix { num: isize }
+pub struct Fix { num: Num }
 impl Fix {
-    pub fn new(num: isize) -> Fix {
-        Fix { num }
+    pub fn new(num: Num) -> Fix {
+        Fix { num: ((num << 1) >> 1) }
     }
     pub fn from(val: Val) -> Option<Fix> {
         let raw = val.raw();
         if (raw & DIR_RAW) != 0 {
-            let num = ((raw << 1) as isize) >> 1;
+            let num = ((raw << 1) as Num) >> 1;
             Some(Fix::new(num))
         } else {
             None
         }
     }
     pub fn val(self) -> Val {  // NOTE: consumes `self`
-        Val::new(self.num as usize | DIR_RAW)
+        Val::new(self.num as Raw | DIR_RAW)
     }
-    pub fn num(&self) -> isize {
+    pub fn num(&self) -> Num {
         self.num
     }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct Ptr { raw: usize }
+pub struct Ptr { raw: Raw }
 impl Ptr {
-    pub fn new(raw: usize) -> Ptr {
+    pub fn new(raw: Raw) -> Ptr {
         Ptr { raw: (raw & !MSK_RAW) }
     }
     pub fn from(val: Val) -> Option<Ptr> {
@@ -252,15 +258,18 @@ impl Ptr {
     pub fn val(self) -> Val {  // NOTE: consumes `self`
         Val::new(self.raw)
     }
-    pub fn raw(&self) -> usize {
+    pub fn raw(&self) -> Raw {
         self.raw
+    }
+    pub fn addr(&self) -> usize {
+        self.raw as usize
     }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct Cap { raw: usize }
+pub struct Cap { raw: Raw }
 impl Cap {
-    pub fn new(raw: usize) -> Cap {
+    pub fn new(raw: Raw) -> Cap {
         Cap { raw: (raw & !MSK_RAW) }
     }
     pub fn from(val: Val) -> Option<Cap> {
@@ -274,19 +283,55 @@ impl Cap {
     pub fn val(self) -> Val {  // NOTE: consumes `self`
         Val::new(self.raw | OPQ_RAW)
     }
-    pub fn raw(&self) -> usize {
+    pub fn raw(&self) -> Raw {
         self.raw
+    }
+    pub fn addr(&self) -> usize {
+        self.raw as usize
     }
 }
 
 //#[cfg(test)] -- use this if/when the tests are in a sub-module
 #[test]
-fn fixnum_value_roundtrips() {
+fn base_types_are_32_bits() {
+    assert_eq!(4, std::mem::size_of::<Raw>());
+    assert_eq!(4, std::mem::size_of::<Num>());
+    assert_eq!(4, std::mem::size_of::<Val>());
+    assert_eq!(4, std::mem::size_of::<Fix>());
+    assert_eq!(4, std::mem::size_of::<Ptr>());
+    assert_eq!(4, std::mem::size_of::<Cap>());
+    assert_eq!(16, std::mem::size_of::<Quad>());
+}
+
+#[test]
+fn fixnum_zero_value_roundtrips() {
+    let n = Fix::new(0);
+    let v = n.val();
+    let o = Fix::from(v);
+    assert!(o.is_some());
+    let m = o.unwrap();
+    assert_eq!(n, m);
+    assert_eq!(0, m.num());
+}
+
+#[test]
+fn fixnum_positive_value_roundtrips() {
+    let n = Fix::new(42);
+    let v = n.val();
+    let o = Fix::from(v);
+    assert!(o.is_some());
+    let m = o.unwrap();
+    assert_eq!(42, m.num());
+    assert_eq!(n, m);
+}
+
+#[test]
+fn fixnum_negative_value_roundtrips() {
     let n = Fix::new(-42);
     let v = n.val();
     let o = Fix::from(v);
     assert!(o.is_some());
     let m = o.unwrap();
-    assert!(n == m);
     assert_eq!(-42, m.num());
+    assert_eq!(n, m);
 }
