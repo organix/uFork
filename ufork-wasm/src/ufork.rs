@@ -51,6 +51,7 @@ impl Vcpu {
         &self.quad_mem[addr]
     }
     fn quad_mut(&mut self, ptr: Ptr) -> &mut Quad {
+        assert!(self.in_heap(ptr.val()));
         let addr = self.addr(ptr).unwrap();
         &mut self.quad_mem[addr]
     }
