@@ -2,15 +2,17 @@
 
 const QUAD_MAX: usize = 1<<12;  // 4K quad-cells
 
-pub struct Vcpu {
+pub struct Core {
     quad_mem: [Quad; QUAD_MAX],
     quad_top: Ptr,
     quad_next: Ptr,
     gc_free_cnt: usize,
+    e_queue: Queue,
+    k_queue: Queue,
 }
 
-impl Vcpu {
-    pub fn new() -> Vcpu {
+impl Core {
+    pub fn new() -> Core {
         let mut quad_mem = [
             Quad::new(UNDEF, UNDEF, UNDEF, UNDEF);
             QUAD_MAX
@@ -29,11 +31,13 @@ impl Vcpu {
         quad_mem[PAIR_T.raw()]      = Quad::new(TYPE_T,     UNDEF,      UNDEF,      UNDEF);
         quad_mem[FEXPR_T.raw()]     = Quad::new(TYPE_T,     UNDEF,      UNDEF,      UNDEF);
         quad_mem[FREE_T.raw()]      = Quad::new(TYPE_T,     UNDEF,      UNDEF,      UNDEF);
-        Vcpu {
+        Core {
             quad_mem,
             quad_top: START.ptr(),
             quad_next: NIL.ptr(),
             gc_free_cnt: 0,
+            e_queue: Queue::init(START.ptr(), START.ptr()),
+            k_queue: Queue::new(),
         }
     }
     fn in_heap(&self, val: Val) -> bool {
@@ -140,6 +144,47 @@ impl Vcpu {
         let quad = self.quad_mut(cons);
         assert!(quad.t() == PAIR_T);
         quad.set_y(cdr);
+    }
+    fn new_event(&mut self, target: Cap, message: Val) -> Ptr {
+        self.alloc(EVENT_T, target.val(), message, NIL)
+    }
+}
+
+struct Queue { head: Ptr, tail: Ptr }
+impl Queue {
+    fn new() -> Queue {
+        Queue::init(NIL.ptr(), NIL.ptr())
+    }
+    fn init(head: Ptr, tail: Ptr) -> Queue {
+        Queue { head, tail }
+    }
+    fn empty(&self, core: &Core) -> bool {
+        !core.typeq(EVENT_T, self.head.val())
+    }
+    fn put(&mut self, core: &mut Core, event: Ptr) {
+        assert!(core.typeq(EVENT_T, event.val()));
+        assert!(core.typeq(ACTOR_T, core.quad(event).x()));
+        let quad = core.quad_mut(event);
+        quad.set_z(NIL);
+        if self.empty(core) {
+            self.head = event;
+        } else {
+            core.quad_mut(self.tail).set_z(event.val());
+        }
+        self.tail = event;
+    }
+    fn take(&mut self, core: &mut Core) -> Ptr {
+        if self.empty(core) {
+            return UNDEF.ptr();
+        }
+        let event = self.head;
+        let quad = core.quad_mut(event);
+        self.head = quad.z().ptr();
+        quad.set_z(NIL);
+        if self.empty(core) {
+            self.tail = NIL.ptr();  // empty queue
+        }
+        event
     }
 }
 
