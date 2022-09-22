@@ -304,7 +304,7 @@ fn base_types_are_32_bits() {
 }
 
 #[test]
-fn fixnum_zero_value_roundtrips() {
+fn fix_zero_value_roundtrips() {
     let n = Fix::new(0);
     let v = n.val();
     let o = Fix::from(v);
@@ -315,7 +315,7 @@ fn fixnum_zero_value_roundtrips() {
 }
 
 #[test]
-fn fixnum_positive_value_roundtrips() {
+fn fix_positive_value_roundtrips() {
     let n = Fix::new(42);
     let v = n.val();
     let o = Fix::from(v);
@@ -326,7 +326,7 @@ fn fixnum_positive_value_roundtrips() {
 }
 
 #[test]
-fn fixnum_negative_value_roundtrips() {
+fn fix_negative_value_roundtrips() {
     let n = Fix::new(-42);
     let v = n.val();
     let o = Fix::from(v);
@@ -334,4 +334,14 @@ fn fixnum_negative_value_roundtrips() {
     let m = o.unwrap();
     assert_eq!(-42, m.num());
     assert_eq!(n, m);
+}
+
+#[test]
+#[should_panic]
+fn fix_cast_to_ptr() {
+    let n = Fix::new(0);
+    let v = n.val();
+    let p = v.ptr();  // should panic!
+    assert_eq!(UNDEF, v);
+    assert_eq!(UNDEF.ptr(), p);
 }
