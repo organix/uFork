@@ -341,7 +341,22 @@ fn fix_negative_value_roundtrips() {
 fn fix_cast_to_ptr() {
     let n = Fix::new(0);
     let v = n.val();
-    let p = v.ptr();  // should panic!
-    assert_eq!(UNDEF, v);
-    assert_eq!(UNDEF.ptr(), p);
+    let _p = v.ptr();  // should panic!
+}
+
+#[test]
+fn ptr_is_distinct_from_cap() {
+    let p = Ptr::new(42);
+    let c = Cap::new(42);
+    assert_eq!(p.raw(), c.raw());
+    assert_ne!(p.val().raw(), c.val().raw());
+    assert_eq!(p.addr(), c.addr());
+}
+
+#[test]
+#[should_panic]
+fn cap_addr_conversion() {
+    let c = Cap::new(42);
+    let v = c.val();
+    let _a = v.addr();  // should panic!
 }
