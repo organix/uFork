@@ -120,6 +120,27 @@ impl Vcpu {
         self.quad_next = ptr;
         self.gc_free_cnt += 1;
     }
+    fn cons(&mut self, car: Val, cdr: Val) -> Ptr {
+        self.alloc(PAIR_T, car, cdr, UNDEF)
+    }
+    fn car(&self, cons: Ptr) -> Val {
+        let quad = self.quad(cons);
+        if quad.t() == PAIR_T { quad.x() } else { UNDEF }
+    }
+    fn cdr(&self, cons: Ptr) -> Val {
+        let quad = self.quad(cons);
+        if quad.t() == PAIR_T { quad.y() } else { UNDEF }
+    }
+    fn set_car(&mut self, cons: Ptr, car: Val) {
+        let quad = self.quad_mut(cons);
+        assert!(quad.t() == PAIR_T);
+        quad.set_x(car);
+    }
+    fn set_cdr(&mut self, cons: Ptr, cdr: Val) {
+        let quad = self.quad_mut(cons);
+        assert!(quad.t() == PAIR_T);
+        quad.set_y(cdr);
+    }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
