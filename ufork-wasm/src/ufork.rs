@@ -6,6 +6,7 @@ pub struct Vcpu {
     quad_mem: [Quad; QUAD_MAX],
     quad_top: Ptr,
     quad_next: Ptr,
+    gc_free_cnt: usize,
 }
 
 impl Vcpu {
@@ -32,6 +33,7 @@ impl Vcpu {
             quad_mem,
             quad_top: START.ptr(),
             quad_next: NIL.ptr(),
+            gc_free_cnt: 0,
         }
     }
     fn in_heap(&self, val: Val) -> bool {
@@ -89,6 +91,8 @@ impl Vcpu {
     fn alloc(&mut self, t: Val, x: Val, y: Val, z: Val) -> Ptr {
         let mut ptr = self.quad_next;
         if self.typeq(FREE_T, ptr.val()) {
+            assert!(self.gc_free_cnt > 0);
+            self.gc_free_cnt -= 1;
             self.quad_next = self.quad(ptr).z().ptr();
         } else if self.quad_top.raw() < QUAD_MAX {
             ptr = self.quad_top;
@@ -114,6 +118,7 @@ impl Vcpu {
         quad.set_y(UNDEF);
         quad.set_z(next.val());
         self.quad_next = ptr;
+        self.gc_free_cnt += 1;
     }
 }
 
