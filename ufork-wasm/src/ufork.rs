@@ -278,3 +278,15 @@ impl Cap {
         self.raw
     }
 }
+
+//#[cfg(test)] -- use this if/when the tests are in a sub-module
+#[test]
+fn fixnum_value_roundtrips() {
+    let n = Fix::new(-42);
+    let v = n.val();
+    let o = Fix::from(v);
+    assert!(o.is_some());
+    let m = o.unwrap();
+    assert!(n == m);
+    assert_eq!(-42, m.num());
+}
