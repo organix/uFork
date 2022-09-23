@@ -36,9 +36,16 @@ impl Core {
         quad_mem[PAIR_T.addr()]     = Quad::new(TYPE_T,     UNDEF,      UNDEF,      UNDEF);
         quad_mem[FEXPR_T.addr()]    = Quad::new(TYPE_T,     UNDEF,      UNDEF,      UNDEF);
         quad_mem[FREE_T.addr()]     = Quad::new(TYPE_T,     UNDEF,      UNDEF,      UNDEF);
-        Core {
+        let a_boot = Cap::new(START.raw()+1).val();
+        let ip_boot = Ptr::new(START.raw()+2).val();
+        let vm_end = Fix::new(22).val();
+        let end_stop = Fix::new(0).val();
+        quad_mem[START.addr()]      = Quad::new(EVENT_T,    a_boot,     NIL,        UNDEF);
+        quad_mem[START.addr()+1]    = Quad::new(ACTOR_T,    ip_boot,    NIL,        UNDEF);
+        quad_mem[START.addr()+2]    = Quad::new(OPCODE_T,   vm_end,     end_stop,   UNDEF);
+            Core {
             quad_mem,
-            quad_top: START.ptr(),
+            quad_top: Ptr::new(START.raw()+3),
             quad_next: NIL.ptr(),
             gc_free_cnt: 0,
             e_queue: Queue::init(START.ptr(), START.ptr()),
@@ -359,4 +366,13 @@ fn cap_addr_conversion() {
     let c = Cap::new(42);
     let v = c.val();
     let _a = v.addr();  // should panic!
+}
+
+#[test]
+fn core_initialization() {
+    let core = Core::new();
+    assert_eq!(0, core.gc_free_cnt);
+    assert_eq!(NIL.ptr(), core.quad_next);
+    assert!(!core.e_queue.empty(&core));
+    assert!(core.k_queue.empty(&core));
 }

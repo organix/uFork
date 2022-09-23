@@ -11,7 +11,8 @@ impl Queue {
         Queue { head, tail }
     }
     pub fn empty(&self, core: &Core) -> bool {
-        !core.typeq(EVENT_T, self.head.val())
+        //NIL.ptr() == self.head
+        !core.in_heap(self.head.val())
     }
     pub fn put(&mut self, core: &mut Core, event: Ptr) {
         assert!(core.typeq(EVENT_T, event.val()));
