@@ -36,8 +36,9 @@ impl Core {
         quad_mem[PAIR_T.addr()]     = Quad::new(TYPE_T,     UNDEF,      UNDEF,      UNDEF);
         quad_mem[FEXPR_T.addr()]    = Quad::new(TYPE_T,     UNDEF,      UNDEF,      UNDEF);
         quad_mem[FREE_T.addr()]     = Quad::new(TYPE_T,     UNDEF,      UNDEF,      UNDEF);
-        let a_boot = Cap::new(START.raw()+1).val();
-        let ip_boot = Ptr::new(START.raw()+2).val();
+        let start = START.raw();
+        let a_boot = Cap::new(start+1).val();
+        let ip_boot = Ptr::new(start+2).val();
         let vm_end = Fix::new(22).val();
         let end_stop = Fix::new(0).val();
         quad_mem[START.addr()]      = Quad::new(EVENT_T,    a_boot,     NIL,        UNDEF);
@@ -248,6 +249,8 @@ impl Fix {
     }
 }
 
+fn fixnum(num: Num) -> Val { Fix::new(num).val() }  // convenience constructor
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Ptr { raw: Raw }
 impl Ptr {
@@ -369,10 +372,41 @@ fn cap_addr_conversion() {
 }
 
 #[test]
+//#[should_panic]  // force output to be displayed
 fn core_initialization() {
     let core = Core::new();
     assert_eq!(0, core.gc_free_cnt);
     assert_eq!(NIL.ptr(), core.quad_next);
     assert!(!core.e_queue.empty(&core));
     assert!(core.k_queue.empty(&core));
+    for addr in 0..16 {
+        println!("{}: {:?}", addr, core.quad(Ptr::new(addr)));
+    }
+}
+
+#[test]
+//#[should_panic]  // force output to be displayed
+fn basic_memory_allocation() {
+    let mut core = Core::new();
+    let top_before = core.quad_top.raw();
+    println!("quad_top: {:?}", core.quad_top);
+    let _m1 = core.alloc(FEXPR_T, fixnum(1), fixnum(1), fixnum(1));
+    println!("quad_top: {:?}", core.quad_top);
+    let m2 = core.alloc(FEXPR_T, fixnum(2), fixnum(2), fixnum(2));
+    println!("quad_top: {:?}", core.quad_top);
+    let m3 = core.alloc(FEXPR_T, fixnum(3), fixnum(3), fixnum(3));
+    println!("quad_top: {:?}", core.quad_top);
+    println!("gc_free_cnt: {}", core.gc_free_cnt);
+    core.free(m2);
+    println!("gc_free_cnt: {}", core.gc_free_cnt);
+    core.free(m3);
+    println!("gc_free_cnt: {}", core.gc_free_cnt);
+    let _m4 = core.alloc(FEXPR_T, fixnum(4), fixnum(4), fixnum(4));
+    println!("quad_top: {:?}", core.quad_top);
+    println!("gc_free_cnt: {}", core.gc_free_cnt);
+    let top_after = core.quad_top.raw();
+    assert_eq!(3, top_after - top_before);
+    assert_eq!(1, core.gc_free_cnt);
+    println!("quad_next: {:?}", core.quad_next);
+    println!("quad_next-> {:?}", core.quad(core.quad_next));
 }
