@@ -1,5 +1,7 @@
 // uFork virtual CPU
 
+use core::fmt;
+
 use crate::queue::Queue;
 
 type Raw = u32;  // univeral value type
@@ -37,16 +39,17 @@ impl Core {
         quad_mem[FEXPR_T.addr()]    = Quad::new(TYPE_T,     UNDEF,      UNDEF,      UNDEF);
         quad_mem[FREE_T.addr()]     = Quad::new(TYPE_T,     UNDEF,      UNDEF,      UNDEF);
         let start = START.raw();
-        let a_boot = capval(start+1);//Cap::new(start+1).val();
-        let ip_boot = ptrval(start+2);//Ptr::new(start+2).val();
-        let vm_end = fixnum(22);//Fix::new(22).val();
-        let end_stop = fixnum(0);//Fix::new(0).val();
+        let a_boot = capval(start+1);
+        let ip_boot = ptrval(start+2);
+        let vm_end = fixnum(22);
+        let end_stop = fixnum(0);
         quad_mem[START.addr()]      = Quad::new(EVENT_T,    a_boot,     NIL,        UNDEF);
         quad_mem[START.addr()+1]    = Quad::new(ACTOR_T,    ip_boot,    NIL,        UNDEF);
         quad_mem[START.addr()+2]    = Quad::new(OPCODE_T,   vm_end,     end_stop,   UNDEF);
-            Core {
+
+        Core {
             quad_mem,
-            quad_top: Ptr::new(START.raw()+3),
+            quad_top: Ptr::new(start+3),
             quad_next: NIL.ptr(),
             gc_free_cnt: 0,
             e_queue: Queue::init(START.ptr(), START.ptr()),
@@ -179,6 +182,11 @@ impl Quad {
     pub fn set_y(&mut self, v: Val) { self.y = v; }
     pub fn set_z(&mut self, v: Val) { self.z = v; }
 }
+impl fmt::Display for Quad {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{{t:{}, x:{}, y:{}, z:{}}}", self.t, self.x, self.y, self.z)
+    }
+}
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Val { raw: Raw }
@@ -200,6 +208,18 @@ impl Val {
     }
     pub fn cap(self) -> Cap {  // NOTE: consumes `self`
         Cap::from(self).unwrap()
+    }
+}
+impl fmt::Display for Val {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let s = if (self.raw & DIR_RAW) != 0 {
+            self.fix().to_string()
+        } else if (self.raw & OPQ_RAW) != 0 {
+            self.cap().to_string()
+        } else {
+            self.ptr().to_string()
+        };
+        write!(f, "{}", s)
     }
 }
 
@@ -248,6 +268,11 @@ impl Fix {
         self.num
     }
 }
+impl fmt::Display for Fix {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{:+}", self.num)
+    }
+}
 
 fn fixnum(num: Num) -> Val { Fix::new(num).val() }  // convenience constructor
 
@@ -275,6 +300,11 @@ impl Ptr {
         self.raw as usize
     }
 }
+impl fmt::Display for Ptr {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "^{}", self.raw)
+    }
+}
 
 fn ptrval(raw: Raw) -> Val { Ptr::new(raw).val() }  // convenience constructor
 
@@ -300,6 +330,11 @@ impl Cap {
     }
     pub fn addr(&self) -> usize {
         self.raw as usize
+    }
+}
+impl fmt::Display for Cap {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "@{}", self.raw)
     }
 }
 
@@ -383,8 +418,8 @@ fn core_initialization() {
     assert_eq!(NIL.ptr(), core.quad_next);
     assert!(!core.e_queue.empty(&core));
     assert!(core.k_queue.empty(&core));
-    for addr in 0..16 {
-        println!("{}: {:?}", addr, core.quad(Ptr::new(addr)));
+    for raw in 0..core.quad_top.raw() {
+        println!("{:5}: {}", raw, core.quad(Ptr::new(raw)));
     }
 }
 
@@ -394,7 +429,8 @@ fn basic_memory_allocation() {
     let mut core = Core::new();
     let top_before = core.quad_top.raw();
     println!("quad_top: {:?}", core.quad_top);
-    let _m1 = core.alloc(FEXPR_T, fixnum(1), fixnum(1), fixnum(1));
+    let m1 = core.alloc(FEXPR_T, fixnum(1), fixnum(1), fixnum(1));
+    println!("m1:{} -> {}", m1, core.quad(m1));
     println!("quad_top: {:?}", core.quad_top);
     let m2 = core.alloc(FEXPR_T, fixnum(2), fixnum(2), fixnum(2));
     println!("quad_top: {:?}", core.quad_top);
@@ -412,5 +448,5 @@ fn basic_memory_allocation() {
     assert_eq!(3, top_after - top_before);
     assert_eq!(1, core.gc_free_cnt);
     println!("quad_next: {:?}", core.quad_next);
-    println!("quad_next-> {:?}", core.quad(core.quad_next));
+    println!("quad_next-> {}", core.quad(core.quad_next));
 }
