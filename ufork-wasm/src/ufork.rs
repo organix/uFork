@@ -37,10 +37,10 @@ impl Core {
         quad_mem[FEXPR_T.addr()]    = Quad::new(TYPE_T,     UNDEF,      UNDEF,      UNDEF);
         quad_mem[FREE_T.addr()]     = Quad::new(TYPE_T,     UNDEF,      UNDEF,      UNDEF);
         let start = START.raw();
-        let a_boot = Cap::new(start+1).val();
-        let ip_boot = Ptr::new(start+2).val();
-        let vm_end = Fix::new(22).val();
-        let end_stop = Fix::new(0).val();
+        let a_boot = capval(start+1);//Cap::new(start+1).val();
+        let ip_boot = ptrval(start+2);//Ptr::new(start+2).val();
+        let vm_end = fixnum(22);//Fix::new(22).val();
+        let end_stop = fixnum(0);//Fix::new(0).val();
         quad_mem[START.addr()]      = Quad::new(EVENT_T,    a_boot,     NIL,        UNDEF);
         quad_mem[START.addr()+1]    = Quad::new(ACTOR_T,    ip_boot,    NIL,        UNDEF);
         quad_mem[START.addr()+2]    = Quad::new(OPCODE_T,   vm_end,     end_stop,   UNDEF);
@@ -276,6 +276,8 @@ impl Ptr {
     }
 }
 
+fn ptrval(raw: Raw) -> Val { Ptr::new(raw).val() }  // convenience constructor
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Cap { raw: Raw }
 impl Cap {
@@ -300,6 +302,8 @@ impl Cap {
         self.raw as usize
     }
 }
+
+fn capval(raw: Raw) -> Val { Cap::new(raw).val() }  // convenience constructor
 
 //#[cfg(test)] -- use this if/when the tests are in a sub-module
 #[test]
