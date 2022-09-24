@@ -14,29 +14,27 @@ impl Queue {
         //NIL.ptr() == self.head
         !core.in_heap(self.head.val())
     }
-    pub fn put(&mut self, core: &mut Core, event: Ptr) {
-        assert!(core.typeq(EVENT_T, event.val()));
-        assert!(core.typeq(ACTOR_T, core.quad(event).x()));
-        let quad = core.quad_mut(event);
+    pub fn put(&mut self, core: &mut Core, ptr: Ptr) {
+        let quad = core.quad_mut(ptr);
         quad.set_z(NIL);
         if self.empty(core) {
-            self.head = event;
+            self.head = ptr;
         } else {
-            core.quad_mut(self.tail).set_z(event.val());
+            core.quad_mut(self.tail).set_z(ptr.val());
         }
-        self.tail = event;
+        self.tail = ptr;
     }
     pub fn take(&mut self, core: &mut Core) -> Ptr {
         if self.empty(core) {
             return UNDEF.ptr();
         }
-        let event = self.head;
-        let quad = core.quad_mut(event);
+        let ptr = self.head;
+        let quad = core.quad_mut(ptr);
         self.head = quad.z().ptr();
         quad.set_z(NIL);
         if self.empty(core) {
             self.tail = NIL.ptr();  // empty queue
         }
-        event
+        ptr
     }
 }
