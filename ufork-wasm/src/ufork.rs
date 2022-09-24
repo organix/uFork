@@ -2,8 +2,6 @@
 
 use core::fmt;
 
-use crate::queue::Queue;
-
 type Raw = u32;  // univeral value type
 type Num = i32;  // fixnum integer type
 
@@ -14,8 +12,10 @@ pub struct Core {
     quad_top: Ptr,
     quad_next: Ptr,
     gc_free_cnt: usize,
-    e_queue: Queue,
-    k_queue: Queue,
+    e_queue_head: Ptr,
+    e_queue_tail: Ptr,
+    k_queue_head: Ptr,
+    k_queue_tail: Ptr,
 }
 
 impl Core {
@@ -52,8 +52,10 @@ impl Core {
             quad_top: Ptr::new(start+3),
             quad_next: NIL.ptr(),
             gc_free_cnt: 0,
-            e_queue: Queue::init(START.ptr(), START.ptr()),
-            k_queue: Queue::new(),
+            e_queue_head: START.ptr(),
+            e_queue_tail: START.ptr(),
+            k_queue_head: NIL.ptr(),
+            k_queue_tail: NIL.ptr(),
         }
     }
 
@@ -70,33 +72,58 @@ impl Core {
         false
     }
     fn dispatch_event(&mut self) -> bool {
-        println!("dispatch_event: head={}", self.e_queue.peek());
-        if self.e_queue.empty(self) {
+        println!("dispatch_event: head={}", self.e_queue_head);
+        if NIL.ptr() == self.e_queue_head {
             return false;  // event queue is empty
         }
-        let ep = self.e_queue.take(self);
+        let ep = self.e_queue_head;
+        self.e_queue_head = self.quad(ep).z().ptr();
+        if NIL.ptr() == self.e_queue_head {
+            self.e_queue_tail = NIL.ptr();  // empty queue
+        }
         let event = self.quad(ep);
+        //event.set_z(NIL);
         println!("dispatch_event: event={} -> {}", ep, event);
         let target = event.x().cap();
-        let actor = self.quad_mut(Ptr::new(target.raw()));  // WARNING: converting Cap to Ptr!
-        if actor.z() != UNDEF {
-            self.e_queue.put(self, ep);
-            return false;  // target actor is busy
+        let a_ptr = Ptr::new(target.raw());  // WARNING: converting Cap to Ptr!
+        if self.quad(a_ptr).z() != UNDEF {
+            // target actor is busy, retry later...
+            self.quad_mut(ep).set_z(NIL);
+            if NIL.ptr() != self.e_queue_tail {
+                self.quad_mut(self.e_queue_tail).set_z(ep.val());
+            }
+            if NIL.ptr() == self.e_queue_head {
+                self.e_queue_head = ep;
+            }
+            self.e_queue_tail = ep;
+            return false;
         }
-        actor.set_z(NIL);  // start with empty set of new events
+        // create continuation to execute actor behavior
+        let actor = self.quad_mut(a_ptr);
+        actor.set_z(NIL);  // start actor transaction
         let ip = actor.x().ptr();
         let sp = actor.y().ptr();
         let cont = self.new_cont(ip, sp, ep);
         println!("dispatch_event: cont={} -> {}", cont, self.quad(cont));
-        self.k_queue.put(self, cont);
+        if NIL.ptr() != self.k_queue_tail {
+            self.quad_mut(self.k_queue_tail).set_z(cont.val());
+        }
+        if NIL.ptr() == self.k_queue_head {
+            self.k_queue_head = cont;
+        }
+        self.k_queue_tail = cont;
         true  // event dispatched
     }
     fn execute_instruction(&mut self) -> bool {
-        println!("execute_instruction: head={}", self.k_queue.peek());
-        if self.k_queue.empty(self) {
+        println!("execute_instruction: head={}", self.k_queue_head);
+        if NIL.ptr() == self.k_queue_head {
             return false;  // continuation queue is empty
         }
-        let cont = self.k_queue.take(self);
+        let cont = self.k_queue_head;
+        self.k_queue_head = self.quad(cont).z().ptr();
+        if NIL.ptr() == self.k_queue_head {
+            self.k_queue_tail = NIL.ptr();  // empty queue
+        }
         println!("execute_instruction: cont={} -> {}", cont, self.quad(cont));
         true  // instruction executed
     }
@@ -470,8 +497,8 @@ fn core_initialization() {
     let core = Core::new();
     assert_eq!(0, core.gc_free_cnt);
     assert_eq!(NIL.ptr(), core.quad_next);
-    assert!(!core.e_queue.empty(&core));
-    assert!(core.k_queue.empty(&core));
+    assert_ne!(NIL.ptr(), core.e_queue_head);
+    assert_eq!(NIL.ptr(), core.k_queue_head);
     for raw in 0..core.quad_top.raw() {
         println!("{:5}: {}", raw, core.quad(Ptr::new(raw)));
     }
