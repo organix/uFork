@@ -72,7 +72,7 @@ impl Core {
         false
     }
     fn dispatch_event(&mut self) -> bool {
-        println!("dispatch_event: head={}", self.e_queue_head);
+        println!("dispatch_event: e_queue_head={}", self.e_queue_head);
         if NIL.ptr() == self.e_queue_head {
             return false;  // event queue is empty
         }
@@ -101,8 +101,8 @@ impl Core {
         // create continuation to execute actor behavior
         let actor = self.quad_mut(a_ptr);
         actor.set_z(NIL);  // start actor transaction
-        let ip = actor.x().ptr();
-        let sp = actor.y().ptr();
+        let ip = actor.x().ptr();  // actor behavior
+        let sp = actor.y().ptr();  // actor state
         let cont = self.new_cont(ip, sp, ep);
         println!("dispatch_event: cont={} -> {}", cont, self.quad(cont));
         if NIL.ptr() != self.k_queue_tail {
@@ -115,16 +115,17 @@ impl Core {
         true  // event dispatched
     }
     fn execute_instruction(&mut self) -> bool {
-        println!("execute_instruction: head={}", self.k_queue_head);
+        println!("execute_instruction: k_queue_head={}", self.k_queue_head);
         if NIL.ptr() == self.k_queue_head {
             return false;  // continuation queue is empty
         }
         let cont = self.k_queue_head;
+        println!("execute_instruction: cont={} -> {}", cont, self.quad(cont));
+        // remove continuation from queue
         self.k_queue_head = self.quad(cont).z().ptr();
         if NIL.ptr() == self.k_queue_head {
             self.k_queue_tail = NIL.ptr();  // empty queue
         }
-        println!("execute_instruction: cont={} -> {}", cont, self.quad(cont));
         true  // instruction executed
     }
 
@@ -537,4 +538,5 @@ fn basic_memory_allocation() {
 fn run_loop_terminates() {
     let mut core = Core::new();
     core.run_loop();
+    assert!(false);  // force output to be displayed
 }
