@@ -56,6 +56,51 @@ impl Core {
             k_queue: Queue::new(),
         }
     }
+
+    pub fn run_loop(&mut self) {
+        loop {
+            self.check_for_interrupt();
+            self.dispatch_event();
+            if !self.execute_instruction() {
+                return;
+            }
+        }
+    }
+    fn check_for_interrupt(&mut self) -> bool {
+        false
+    }
+    fn dispatch_event(&mut self) -> bool {
+        println!("dispatch_event: head={}", self.e_queue.peek());
+        if self.e_queue.empty(self) {
+            return false;  // event queue is empty
+        }
+        let ep = self.e_queue.take(self);
+        let event = self.quad(ep);
+        println!("dispatch_event: event={} -> {}", ep, event);
+        let target = event.x().cap();
+        let actor = self.quad_mut(Ptr::new(target.raw()));  // WARNING: converting Cap to Ptr!
+        if actor.z() != UNDEF {
+            self.e_queue.put(self, ep);
+            return false;  // target actor is busy
+        }
+        actor.set_z(NIL);  // start with empty set of new events
+        let ip = actor.x().ptr();
+        let sp = actor.y().ptr();
+        let cont = self.new_cont(ip, sp, ep);
+        println!("dispatch_event: cont={} -> {}", cont, self.quad(cont));
+        self.k_queue.put(self, cont);
+        true  // event dispatched
+    }
+    fn execute_instruction(&mut self) -> bool {
+        println!("execute_instruction: head={}", self.k_queue.peek());
+        if self.k_queue.empty(self) {
+            return false;  // continuation queue is empty
+        }
+        let cont = self.k_queue.take(self);
+        println!("execute_instruction: cont={} -> {}", cont, self.quad(cont));
+        true  // instruction executed
+    }
+
     pub fn in_heap(&self, val: Val) -> bool {
         let raw = val.raw();
         (raw < self.quad_top.raw()) && (raw >= START.raw())
@@ -68,6 +113,7 @@ impl Core {
             None
         }
     }
+
     pub fn quad(&self, ptr: Ptr) -> &Quad {
         let addr = self.addr(ptr).unwrap();
         &self.quad_mem[addr]
@@ -77,6 +123,7 @@ impl Core {
         let addr = self.addr(ptr).unwrap();
         &mut self.quad_mem[addr]
     }
+
     pub fn typeq(&self, typ: Val, val: Val) -> bool {
         if typ == FIXNUM_T {
             let fix = Fix::from(val);
@@ -108,6 +155,7 @@ impl Core {
             None => false,
         }
     }
+
     pub fn alloc(&mut self, t: Val, x: Val, y: Val, z: Val) -> Ptr {
         let mut ptr = self.quad_next;
         if self.typeq(FREE_T, ptr.val()) {
@@ -140,6 +188,7 @@ impl Core {
         self.quad_next = ptr;
         self.gc_free_cnt += 1;
     }
+
     pub fn new_event(&mut self, target: Cap, message: Val) -> Ptr {
         // FIXME: add sanity-checks...
         self.alloc(EVENT_T, target.val(), message, NIL)
@@ -148,6 +197,7 @@ impl Core {
         // FIXME: add sanity-checks...
         self.alloc(ip.val(), sp.val(), ep.val(), NIL)
     }
+
     pub fn cons(&mut self, car: Val, cdr: Val) -> Ptr {
         self.alloc(PAIR_T, car, cdr, UNDEF)
     }
@@ -416,7 +466,6 @@ fn cap_addr_conversion() {
 }
 
 #[test]
-//#[should_panic]  // force output to be displayed
 fn core_initialization() {
     let core = Core::new();
     assert_eq!(0, core.gc_free_cnt);
@@ -426,10 +475,10 @@ fn core_initialization() {
     for raw in 0..core.quad_top.raw() {
         println!("{:5}: {}", raw, core.quad(Ptr::new(raw)));
     }
+    //assert!(false);  // force output to be displayed
 }
 
 #[test]
-//#[should_panic]  // force output to be displayed
 fn basic_memory_allocation() {
     let mut core = Core::new();
     let top_before = core.quad_top.raw();
@@ -454,4 +503,11 @@ fn basic_memory_allocation() {
     assert_eq!(1, core.gc_free_cnt);
     println!("quad_next: {}", core.quad_next);
     println!("quad_next-> {}", core.quad(core.quad_next));
+    //assert!(false);  // force output to be displayed
+}
+
+#[test]
+fn run_loop_terminates() {
+    let mut core = Core::new();
+    core.run_loop();
 }

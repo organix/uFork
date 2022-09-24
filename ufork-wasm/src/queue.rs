@@ -2,7 +2,10 @@
 
 use crate::ufork::*;
 
-pub struct Queue { head: Ptr, tail: Ptr }
+pub struct Queue {
+    head: Ptr,
+    tail: Ptr,
+}
 impl Queue {
     pub fn new() -> Queue {
         Queue::init(NIL.ptr(), NIL.ptr())
@@ -37,4 +40,5 @@ impl Queue {
         }
         ptr
     }
+    pub fn peek(&self) -> Ptr { self.head }
 }
