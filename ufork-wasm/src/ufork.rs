@@ -5,6 +5,63 @@ use core::fmt;
 type Raw = u32;  // univeral value type
 type Num = i32;  // fixnum integer type
 
+// type-tag bits
+const MSK_RAW: Raw      = 0xC000_0000;
+const DIR_RAW: Raw      = 0x8000_0000;
+const OPQ_RAW: Raw      = 0x4000_0000;
+
+// literal values
+pub const UNDEF: Val    = Val { raw: 0 }; //Val::new(0); -- const generic issue...
+pub const NIL: Val      = Val { raw: 1 };
+pub const FALSE: Val    = Val { raw: 2 };
+pub const TRUE: Val     = Val { raw: 3 };
+pub const UNIT: Val     = Val { raw: 4 };
+
+pub const LITERAL_T: Val= Val { raw: 0 }; //ptrval(0);
+pub const TYPE_T: Val   = Val { raw: 5 };
+pub const EVENT_T: Val  = Val { raw: 6 };
+pub const OPCODE_T: Val = Val { raw: 7 };
+pub const ACTOR_T: Val  = Val { raw: 8 };
+pub const FIXNUM_T: Val = Val { raw: 9 };
+pub const SYMBOL_T: Val = Val { raw: 10 };
+pub const PAIR_T: Val   = Val { raw: 11 };
+pub const FEXPR_T: Val  = Val { raw: 12 };
+pub const FREE_T: Val   = Val { raw: 13 };
+
+pub const START: Val    = Val { raw: 14 };
+
+// opcode values
+pub const OP_TYPEQ: Val = Val { raw: DIR_RAW | 0 }; // fixnum(0)
+pub const OP_CELL: Val  = Val { raw: DIR_RAW | 1 };
+pub const OP_GET: Val   = Val { raw: DIR_RAW | 2 };
+pub const OP_SET: Val   = Val { raw: DIR_RAW | 3 };
+pub const OP_PAIR: Val  = Val { raw: DIR_RAW | 4 };
+pub const OP_PART: Val  = Val { raw: DIR_RAW | 5 };
+pub const OP_NTH: Val   = Val { raw: DIR_RAW | 6 };
+pub const OP_PUSH: Val  = Val { raw: DIR_RAW | 7 };
+pub const OP_DEPTH: Val = Val { raw: DIR_RAW | 8 };
+pub const OP_DROP: Val  = Val { raw: DIR_RAW | 9 };
+pub const OP_PICK: Val  = Val { raw: DIR_RAW | 10 };
+pub const OP_DUP: Val   = Val { raw: DIR_RAW | 11 };
+pub const OP_ROLL: Val  = Val { raw: DIR_RAW | 12 };
+pub const OP_ALU: Val   = Val { raw: DIR_RAW | 13 };
+pub const OP_EQ: Val    = Val { raw: DIR_RAW | 14 };
+pub const OP_CMP: Val   = Val { raw: DIR_RAW | 15 };
+pub const OP_IF: Val    = Val { raw: DIR_RAW | 16 };
+pub const OP_MSG: Val   = Val { raw: DIR_RAW | 17 };
+pub const OP_SELF: Val  = Val { raw: DIR_RAW | 18 };
+pub const OP_SEND: Val  = Val { raw: DIR_RAW | 19 };
+pub const OP_NEW: Val   = Val { raw: DIR_RAW | 20 };
+pub const OP_BEH: Val   = Val { raw: DIR_RAW | 21 };
+pub const OP_END: Val   = Val { raw: DIR_RAW | 22 };
+
+// OP_END thread actions
+pub const END_ABORT: Val    = Val { raw: DIR_RAW | 0 };
+pub const END_STOP: Val     = Val { raw: DIR_RAW | 1 };
+pub const END_COMMIT: Val   = Val { raw: DIR_RAW | 2 };
+pub const END_RELEASE: Val  = Val { raw: DIR_RAW | 3 };
+
+// core memory limit
 const QUAD_MAX: usize = 1<<12;  // 4K quad-cells
 
 pub struct Core {
@@ -41,11 +98,9 @@ impl Core {
         let start = START.raw();
         let a_boot = capval(start+1);
         let ip_boot = ptrval(start+2);
-        let vm_end = fixnum(22);
-        let end_stop = fixnum(0);
         quad_mem[START.addr()]      = Quad::new(EVENT_T,    a_boot,     NIL,        NIL  );
         quad_mem[START.addr()+1]    = Quad::new(ACTOR_T,    ip_boot,    NIL,        UNDEF);
-        quad_mem[START.addr()+2]    = Quad::new(OPCODE_T,   vm_end,     end_stop,   UNDEF);
+        quad_mem[START.addr()+2]    = Quad::new(OPCODE_T,   OP_END,     END_STOP,   UNDEF);
 
         Core {
             quad_mem,
@@ -121,12 +176,81 @@ impl Core {
         }
         let cont = self.k_queue_head;
         println!("execute_instruction: cont={} -> {}", cont, self.quad(cont));
+        println!("execute_instruction: ip={} -> {}", self.ip(), self.quad(self.ip()));
+        println!("execute_instruction: sp={} -> {}", self.sp(), self.quad(self.sp()));
+        let ep = self.ep();
+        println!("execute_instruction: ep={} -> {}", ep, self.quad(ep));
+        let op = self.quad(self.ip()).x();
+        let ip = if OP_TYPEQ == op { self.op_typeq() }
+            else if OP_END == op { self.op_end() }
+            else { panic!("illegal opcode {}", op) };
+        println!("execute_instruction: ip'={} -> {}", ip, self.quad(ip));
+        self.set_ip(ip);
         // remove continuation from queue
         self.k_queue_head = self.quad(cont).z().ptr();
         if NIL.ptr() == self.k_queue_head {
             self.k_queue_tail = NIL.ptr();  // empty queue
         }
+        if self.in_heap(ip.val()) {
+            // re-queue updated continuation
+            self.quad_mut(cont).set_z(NIL);
+            println!("execute_instruction: cont'={} -> {}", cont, self.quad(cont));
+            if NIL.ptr() != self.k_queue_tail {
+                self.quad_mut(self.k_queue_tail).set_z(cont.val());
+            }
+            if NIL.ptr() == self.k_queue_head {
+                self.k_queue_head = cont;
+            }
+            self.k_queue_tail = cont;
+        } else {
+            // free dead continuation and associated event
+            self.free(ep);
+            self.free(cont);
+        }
         true  // instruction executed
+    }
+
+    fn op_typeq(&mut self) -> Ptr {
+        let typ = self.immd();
+        println!("op_typeq: typ={}", typ);
+        self.stack_push(FALSE);
+        self.cont()
+    }
+    fn op_end(&mut self) -> Ptr {
+        let end = self.immd();
+        println!("op_end: end={}", end);
+        UNDEF.ptr()
+    }
+
+    fn stack_push(&mut self, val: Val) {
+        let sp = self.cons(val, self.sp().val());
+        self.set_sp(sp);
+    }
+
+    fn immd(&self) -> Val {  // immediate operand
+        self.quad(self.ip()).y()
+    }
+    fn cont(&self) -> Ptr {  // instruction continuation
+        self.quad(self.ip()).z().ptr()
+    }
+
+    fn ip(&self) -> Ptr {  // instruction pointer
+        self.quad(self.k_queue_head).t().ptr()
+    }
+    fn sp(&self) -> Ptr {  // stack pointer
+        self.quad(self.k_queue_head).x().ptr()
+    }
+    fn ep(&self) -> Ptr {  // event pointer
+        self.quad(self.k_queue_head).y().ptr()
+    }
+    fn set_ip(&mut self, ip: Ptr) {
+        self.quad_mut(self.k_queue_head).set_t(ip.val())
+    }
+    fn set_sp(&mut self, sp: Ptr) {
+        self.quad_mut(self.k_queue_head).set_x(sp.val())
+    }
+    fn _set_ep(&mut self, ep: Ptr) {
+        self.quad_mut(self.k_queue_head).set_y(ep.val())
     }
 
     pub fn in_heap(&self, val: Val) -> bool {
@@ -305,29 +429,6 @@ impl fmt::Display for Val {
         write!(f, "{}", s)
     }
 }
-
-pub const UNDEF: Val    = Val { raw: 0 }; //Val::new(0); -- const generic issue...
-pub const NIL: Val      = Val { raw: 1 };
-pub const FALSE: Val    = Val { raw: 2 };
-pub const TRUE: Val     = Val { raw: 3 };
-pub const UNIT: Val     = Val { raw: 4 };
-
-pub const LITERAL_T: Val= Val { raw: 0 }; //Val::new(0);
-pub const TYPE_T: Val   = Val { raw: 5 };
-pub const EVENT_T: Val  = Val { raw: 6 };
-pub const OPCODE_T: Val = Val { raw: 7 };
-pub const ACTOR_T: Val  = Val { raw: 8 };
-pub const FIXNUM_T: Val = Val { raw: 9 };
-pub const SYMBOL_T: Val = Val { raw: 10 };
-pub const PAIR_T: Val   = Val { raw: 11 };
-pub const FEXPR_T: Val  = Val { raw: 12 };
-pub const FREE_T: Val   = Val { raw: 13 };
-
-pub const START: Val    = Val { raw: 14 };
-
-const MSK_RAW: Raw      = 0xC000_0000;
-const DIR_RAW: Raw      = 0x8000_0000;
-const OPQ_RAW: Raw      = 0x4000_0000;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Fix { num: Num }
