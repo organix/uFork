@@ -98,13 +98,14 @@ impl Core {
         let start = START.raw();
         let a_boot = capval(start+1);
         let ip_boot = ptrval(start+2);
-        quad_mem[START.addr()]      = Quad::new(EVENT_T,    a_boot,     NIL,        NIL  );
+        quad_mem[START.addr()]      = Quad::new(EVENT_T,    a_boot,     NIL,        NIL);
         quad_mem[START.addr()+1]    = Quad::new(ACTOR_T,    ip_boot,    NIL,        UNDEF);
-        quad_mem[START.addr()+2]    = Quad::new(OPCODE_T,   OP_END,     END_STOP,   UNDEF);
+        quad_mem[START.addr()+2]    = Quad::new(OPCODE_T,   OP_PUSH,    UNIT,       ptrval(start+3));
+        quad_mem[START.addr()+3]    = Quad::new(OPCODE_T,   OP_END,     END_STOP,   UNDEF);
 
         Core {
             quad_mem,
-            quad_top: Ptr::new(start+3),
+            quad_top: Ptr::new(start+4),
             quad_next: NIL.ptr(),
             gc_free_cnt: 0,
             e_queue_head: START.ptr(),
@@ -181,7 +182,9 @@ impl Core {
         let ep = self.ep();
         println!("execute_instruction: ep={} -> {}", ep, self.quad(ep));
         let op = self.quad(self.ip()).x();
-        let ip = if OP_TYPEQ == op { self.op_typeq() }
+        let ip =
+            if OP_TYPEQ == op { self.op_typeq() }
+            else if OP_PUSH == op { self.op_push() }
             else if OP_END == op { self.op_end() }
             else { panic!("illegal opcode {}", op) };
         println!("execute_instruction: ip'={} -> {}", ip, self.quad(ip));
@@ -213,7 +216,15 @@ impl Core {
     fn op_typeq(&mut self) -> Ptr {
         let typ = self.immd();
         println!("op_typeq: typ={}", typ);
+        let val = self.stack_pop();
+        println!("op_typeq: val={}", val);
         self.stack_push(FALSE);
+        self.cont()
+    }
+    fn op_push(&mut self) -> Ptr {
+        let val = self.immd();
+        println!("op_push: val={}", val);
+        self.stack_push(val);
         self.cont()
     }
     fn op_end(&mut self) -> Ptr {
@@ -225,6 +236,18 @@ impl Core {
     fn stack_push(&mut self, val: Val) {
         let sp = self.cons(val, self.sp().val());
         self.set_sp(sp);
+    }
+    fn stack_pop(&mut self) -> Val {
+        let sp = self.sp();
+        if self.typeq(PAIR_T, sp.val()) {
+            let item = self.car(sp);
+            self.set_sp(self.cdr(sp).ptr());
+            self.free(sp);  // free pair holding stack item
+            item
+        } else {
+            println!("stack_pop: underflow!");
+            UNDEF
+        }
     }
 
     fn immd(&self) -> Val {  // immediate operand
@@ -604,7 +627,7 @@ fn core_initialization() {
     for raw in 0..core.quad_top.raw() {
         println!("{:5}: {}", raw, core.quad(Ptr::new(raw)));
     }
-    //assert!(false);  // force output to be displayed
+    assert!(false);  // force output to be displayed
 }
 
 #[test]
