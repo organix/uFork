@@ -185,6 +185,7 @@ impl Core {
         let ip =
             if OP_TYPEQ == op { self.op_typeq() }
             else if OP_PUSH == op { self.op_push() }
+            else if OP_EQ == op { self.op_eq() }
             else if OP_END == op { self.op_end() }
             else { panic!("illegal opcode {}", op) };
         println!("execute_instruction: ip'={} -> {}", ip, self.quad(ip));
@@ -218,13 +219,23 @@ impl Core {
         println!("op_typeq: typ={}", typ);
         let val = self.stack_pop();
         println!("op_typeq: val={}", val);
-        self.stack_push(FALSE);
+        let r = if self.typeq(typ, val) { TRUE } else { FALSE };
+        self.stack_push(r);
         self.cont()
     }
     fn op_push(&mut self) -> Ptr {
         let val = self.immd();
         println!("op_push: val={}", val);
         self.stack_push(val);
+        self.cont()
+    }
+    fn op_eq(&mut self) -> Ptr {
+        let x = self.immd();
+        println!("op_typeq: x={}", x);
+        let y = self.stack_pop();
+        println!("op_typeq: y={}", y);
+        let r = if x == y { TRUE } else { FALSE };
+        self.stack_push(r);
         self.cont()
     }
     fn op_end(&mut self) -> Ptr {
