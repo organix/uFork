@@ -184,6 +184,7 @@ impl Core {
         let op = self.quad(self.ip()).x();
         let ip =
             if OP_TYPEQ == op { self.op_typeq() }
+            else if OP_NTH == op { self.op_nth() }
             else if OP_PUSH == op { self.op_push() }
             else if OP_EQ == op { self.op_eq() }
             else if OP_IF == op { self.op_if() }
@@ -224,6 +225,16 @@ impl Core {
         self.stack_push(r);
         self.cont()
     }
+    fn op_nth(&mut self) -> Ptr {
+        let idx = self.immd();
+        println!("op_nth: idx={}", idx);
+        let lst = self.stack_pop();
+        println!("op_nth: lst={}", lst);
+        let r = self.extract_nth(lst.ptr(), idx.fix().num());
+        println!("op_nth: r={}", r);
+        self.stack_push(r);
+        self.cont()
+    }
     fn op_push(&mut self) -> Ptr {
         let val = self.immd();
         println!("op_push: val={}", val);
@@ -236,6 +247,7 @@ impl Core {
         let y = self.stack_pop();
         println!("op_eq: y={}", y);
         let r = if x == y { TRUE } else { FALSE };
+        println!("op_eq: r={}", r);
         self.stack_push(r);
         self.cont()
     }
@@ -252,6 +264,34 @@ impl Core {
         let end = self.immd();
         println!("op_end: end={}", end);
         UNDEF.ptr()
+    }
+
+    fn extract_nth(&self, mut lst: Ptr, mut n: Num) -> Val {
+        let mut v = UNDEF;
+        if n == 0 {  // entire list/message
+            v = lst.val();
+        } else if n > 0 {  // item at n-th index
+            assert!(n < 64);
+            while self.typeq(PAIR_T, lst.val()) {
+                n -= 1;
+                if n <= 0 { break; }
+                lst = self.cdr(lst).ptr();
+            }
+            if n == 0 {
+                v = self.car(lst);
+            }
+        } else {  // `-n` selects the n-th tail
+            assert!(n > -64);
+            while self.typeq(PAIR_T, lst.val()) {
+                n += 1;
+                if n >= 0 { break; }
+                lst = self.cdr(lst).ptr();
+            }
+            if n == 0 {
+                v = self.cdr(lst);
+            }
+        }
+        v
     }
 
     fn stack_push(&mut self, val: Val) {
