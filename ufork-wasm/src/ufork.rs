@@ -230,7 +230,7 @@ impl Core {
         println!("op_nth: idx={}", idx);
         let lst = self.stack_pop();
         println!("op_nth: lst={}", lst);
-        let r = self.extract_nth(lst.ptr(), idx.fix().num());
+        let r = self.extract_nth(lst, idx.fix().num());
         println!("op_nth: r={}", r);
         self.stack_push(r);
         self.cont()
@@ -266,29 +266,29 @@ impl Core {
         UNDEF.ptr()
     }
 
-    fn extract_nth(&self, mut lst: Ptr, mut n: Num) -> Val {
+    fn extract_nth(&self, mut lst: Val, mut n: Num) -> Val {
         let mut v = UNDEF;
         if n == 0 {  // entire list/message
-            v = lst.val();
+            v = lst;
         } else if n > 0 {  // item at n-th index
             assert!(n < 64);
-            while self.typeq(PAIR_T, lst.val()) {
+            while self.typeq(PAIR_T, lst) {
                 n -= 1;
                 if n <= 0 { break; }
-                lst = self.cdr(lst).ptr();
+                lst = self.cdr(lst.ptr());
             }
             if n == 0 {
-                v = self.car(lst);
+                v = self.car(lst.ptr());
             }
         } else {  // `-n` selects the n-th tail
             assert!(n > -64);
-            while self.typeq(PAIR_T, lst.val()) {
+            while self.typeq(PAIR_T, lst) {
                 n += 1;
                 if n >= 0 { break; }
-                lst = self.cdr(lst).ptr();
+                lst = self.cdr(lst.ptr());
             }
             if n == 0 {
-                v = self.cdr(lst);
+                v = self.cdr(lst.ptr());
             }
         }
         v
