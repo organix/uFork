@@ -186,6 +186,7 @@ impl Core {
             if OP_TYPEQ == op { self.op_typeq() }
             else if OP_PUSH == op { self.op_push() }
             else if OP_EQ == op { self.op_eq() }
+            else if OP_IF == op { self.op_if() }
             else if OP_END == op { self.op_end() }
             else { panic!("illegal opcode {}", op) };
         println!("execute_instruction: ip'={} -> {}", ip, self.quad(ip));
@@ -231,12 +232,21 @@ impl Core {
     }
     fn op_eq(&mut self) -> Ptr {
         let x = self.immd();
-        println!("op_typeq: x={}", x);
+        println!("op_eq: x={}", x);
         let y = self.stack_pop();
-        println!("op_typeq: y={}", y);
+        println!("op_eq: y={}", y);
         let r = if x == y { TRUE } else { FALSE };
         self.stack_push(r);
         self.cont()
+    }
+    fn op_if(&mut self) -> Ptr {
+        let b = self.stack_pop();
+        println!("op_if: b={}", b);
+        let t = self.immd().ptr();
+        println!("op_if: t={}", t);
+        let f = self.cont();
+        println!("op_if: f={}", f);
+        if b != FALSE { t } else { f }  // FIXME: what should be considered "falsey"?
     }
     fn op_end(&mut self) -> Ptr {
         let end = self.immd();
