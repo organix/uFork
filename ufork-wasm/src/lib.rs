@@ -5,6 +5,8 @@ use std::fmt;
 
 pub mod ufork;
 
+use crate::ufork::*;
+
 // When the `wee_alloc` feature is enabled, use `wee_alloc` as the global
 // allocator.
 #[cfg(feature = "wee_alloc")]
@@ -36,13 +38,46 @@ pub fn greet(name: &str) {
 }
 
 #[wasm_bindgen]
-pub fn init() {
-    log!("init() called.");
+pub struct Host {
+    core: Core,
 }
+
+impl fmt::Display for Host {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let core = &self.core;
+        for raw in 0..core.quad_top().raw() {
+            write!(f, "{:5}: {}\n", raw, core.quad(Ptr::new(raw)))?;
+        }
+        Ok(())
+    }
+}
+
+/// Public methods, exported to JavaScript.
 #[wasm_bindgen]
-pub fn step() -> Value {
-    log!("step() called.");
-    0  // return Undefined Value
+impl Host {
+    pub fn new() -> Host {
+        utils::set_panic_hook();  // log panic messages to browser console
+        let core = Core::new();
+        Host {
+            core,
+        }
+    }
+/*
+    pub fn width(&self) -> Value {
+        self.width
+    }
+
+    pub fn height(&self) -> Value {
+        self.height
+    }
+
+    pub fn cells(&self) -> *const Cell {
+        self.cells.as_ptr()
+    }
+*/
+    pub fn render(&self) -> String {
+        self.to_string()
+    }
 }
 
 #[wasm_bindgen]

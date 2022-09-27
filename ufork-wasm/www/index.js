@@ -1,4 +1,4 @@
-import { Universe, Cell } from "ufork-wasm";
+import { Universe, Cell, Host } from "ufork-wasm";
 import { memory } from "ufork-wasm/ufork_wasm_bg";
 
 const CELL_SIZE = 5; // px
@@ -13,16 +13,21 @@ const universe = Universe.new(width, height);
 //universe.pattern_fill();
 universe.launch_ship();
 
+const host = Host.new();
+
 // Give the canvas room for all of our cells and a 1px border around them.
 const $canvas = document.getElementById("ufork-canvas");
 $canvas.width = (CELL_SIZE + 1) * width + 1;
 $canvas.height = (CELL_SIZE + 1) * height + 1;
+
+const $output = document.getElementById("ufork-output");
 
 let paused = false;  // run/pause toggle
 const $rate = document.getElementById("frame-rate");
 let frame = 1;  // frame-rate countdown
 
 const drawUniverse = () => {
+	$output.textContent = host.render();
 	drawGrid();
 	drawCells();
 }
@@ -166,5 +171,5 @@ const pauseAction = () => {
 // draw initial state
 drawUniverse();
 
-playAction();  // start animation (running)
-//pauseAction();  // start animation (paused)
+//playAction();  // start animation (running)
+pauseAction();  // start animation (paused)

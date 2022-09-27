@@ -10,6 +10,7 @@ body {
   left: 0;
   width: 100%;
   height: 100%;
+  padding: 1em;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -26,6 +27,12 @@ button {
     This page contains webassembly and javascript content,
     please enable javascript in your browser.
   </noscript>
+  <pre id="ufork-output"></pre>
+  <div style="display: flex">
+    <input type="range" id="frame-rate" min="1" max="60" value="1">
+    <button id="play-pause"></button>
+  </div>
+  <canvas id="ufork-canvas"></canvas>
   <div style="display: flex">
     <button id="clear-btn">Clear</button>
     <button id="glider-btn">Glider</button>
@@ -34,11 +41,6 @@ button {
     <button id="gosper-btn">Gosper</button>
     <button id="pattern-btn">Pattern</button>
     <button id="random-btn">Random</button>
-  </div>
-  <canvas id="ufork-canvas"></canvas>
-  <div style="display: flex">
-    <input type="range" id="frame-rate" min="1" max="60" value="1">
-    <button id="play-pause"></button>
   </div>
   <script src="./bootstrap.js"></script>
 </body>

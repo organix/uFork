@@ -337,6 +337,9 @@ impl Core {
         self.quad_mut(self.k_queue_head).set_y(ep.val())
     }
 
+    pub fn quad_top(&self) -> Ptr {
+        self.quad_top
+    }
     pub fn in_heap(&self, val: Val) -> bool {
         let raw = val.raw();
         (raw < self.quad_top.raw()) && (raw >= START.raw())
@@ -542,7 +545,7 @@ impl fmt::Display for Fix {
     }
 }
 
-fn fixnum(num: Num) -> Val { Fix::new(num).val() }  // convenience constructor
+pub fn fixnum(num: Num) -> Val { Fix::new(num).val() }  // convenience constructor
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Ptr { raw: Raw }
@@ -574,7 +577,7 @@ impl fmt::Display for Ptr {
     }
 }
 
-fn ptrval(raw: Raw) -> Val { Ptr::new(raw).val() }  // convenience constructor
+pub fn ptrval(raw: Raw) -> Val { Ptr::new(raw).val() }  // convenience constructor
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Cap { raw: Raw }
@@ -606,7 +609,7 @@ impl fmt::Display for Cap {
     }
 }
 
-fn capval(raw: Raw) -> Val { Cap::new(raw).val() }  // convenience constructor
+pub fn capval(raw: Raw) -> Val { Cap::new(raw).val() }  // convenience constructor
 
 //#[cfg(test)] -- use this if/when the tests are in a sub-module
 #[test]
@@ -685,7 +688,8 @@ fn core_initialization() {
     assert_eq!(NIL.ptr(), core.quad_next);
     assert_ne!(NIL.ptr(), core.e_queue_head);
     assert_eq!(NIL.ptr(), core.k_queue_head);
-    for raw in 0..core.quad_top.raw() {
+    assert_eq!(core.quad_top(), core.quad_top);
+    for raw in 0..core.quad_top().raw() {
         println!("{:5}: {}", raw, core.quad(Ptr::new(raw)));
     }
     assert!(false);  // force output to be displayed
