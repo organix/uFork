@@ -86,7 +86,7 @@ Quad-cells are used to encode most of the important data-structures in uFork.
 ----------------------------------------|---------------------------------
 {t:Event_T, x:target, y:msg, z:next}    | actor event queue entry
 {t:IP, x:SP, y:EP, z:next}              | continuation queue entry
-{t:Opcode_T, x:opcode, y:data, z:next}  | machine instruction (typical)
+{t:Instr_T, x:opcode, y:data, z:next}   | machine instruction (typical)
 {t:Symbol_T, x:hash, y:string, z:value} | immutable symbolic-name
 {t:Pair_T, x:head, y:tail}              | pair-lists of user data (cons)
 {t:Pair_T, x:item, y:rest}              | stack entry holding _item_
@@ -102,7 +102,7 @@ The uFork instruction execution engine implements a linked-stack machine,
 however the stack is only used for local state in a computation.
 The _input_ for each instruction is taken from the stack
 and the _output_ is placed back onto the stack.
-Instructions all have a `t` field containing `Opcode_T` type marker.
+Instructions all have a `t` field containing `Instr_T` type marker.
 The operation code is carried in the `x` field of the instruction.
 Many instructions also have an immediate value,
 usually carried in the `y` field of the instruction.
@@ -316,7 +316,7 @@ COMMIT:     [END,+1,?]        RELEASE:    [END,+2,?]
 #### Values
 
   * literals: `UNDEF`, `NIL`, `FALSE`, `TRUE`, `UNIT`
-  * type-ids: `Literal_T`, `Type_T`, `Event_T`, `Opcode_T`, `Actor_T`, `Fixnum_T`, `Symbol_T`, `Pair_T`, `Fexpr_T`, `Free_T`
+  * type-ids: `Literal_T`, `Type_T`, `Event_T`, `Instr_T`, `Actor_T`, `Fixnum_T`, `Symbol_T`, `Pair_T`, `Fexpr_T`, `Free_T`
   * op-codes: `VM_typeq`, `VM_cell`, `VM_get`, `VM_set`, `VM_pair`, `VM_part`, `VM_nth`, `VM_push`, `VM_depth`, `VM_drop`, `VM_pick`, `VM_dup`, `VM_roll`, `VM_alu`, `VM_eq`, `VM_cmp`, `VM_if`, `VM_msg`, `VM_self`, `VM_send`, `VM_new`, `VM_beh`, `VM_end`, `VM_cvt`, `VM_putc`, `VM_getc`, `VM_debug`
   * `VM_get`, `VM_set`: `FLD_T`, `FLD_X`, `FLD_Y`, `FLD_Z`
   * `VM_alu`: `ALU_NOT`, `ALU_AND`, `ALU_OR`, `ALU_XOR`, `ALU_ADD`, `ALU_SUB`, `ALU_MUL`
@@ -343,9 +343,9 @@ COMMIT:     [END,+1,?]        RELEASE:    [END,+2,?]
 ```
 (define print
   (cell Actor_T  ; ---DEPRECATED---
-    (cell Opcode_T VM_msg 1
-      (cell Opcode_T VM_push a-print
-        (cell Opcode_T VM_send 0
+    (cell Instr_T VM_msg 1
+      (cell Instr_T VM_push a-print
+        (cell Instr_T VM_send 0
           RV_UNIT)))
     ()))
 

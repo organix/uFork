@@ -16,7 +16,7 @@ static char *cell_label(int_t cell) {
         "#unit",    // UNIT
         "Type_T",
         "Event_T",
-        "Opcode_T",
+        "Instr_T",
         "Actor_T",
         "Fixnum_T",
         "Symbol_T",

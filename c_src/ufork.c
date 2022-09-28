@@ -73,7 +73,7 @@ cell_t cell_table[CELL_MAX] = {
     { .t=Literal_T,     .x=UNDEF,       .y=UNDEF,       .z=UNDEF,       },  //  4: UNIT = #unit
     { .t=Type_T,        .x=UNDEF,       .y=UNDEF,       .z=UNDEF,       },  //  5: Type_T
     { .t=Type_T,        .x=UNDEF,       .y=UNDEF,       .z=UNDEF,       },  //  6: Event_T
-    { .t=Type_T,        .x=UNDEF,       .y=UNDEF,       .z=UNDEF,       },  //  7: Opcode_T
+    { .t=Type_T,        .x=UNDEF,       .y=UNDEF,       .z=UNDEF,       },  //  7: Instr_T
     { .t=Type_T,        .x=UNDEF,       .y=UNDEF,       .z=UNDEF,       },  //  8: Actor_T
     { .t=Type_T,        .x=UNDEF,       .y=UNDEF,       .z=UNDEF,       },  //  9: Fixnum_T
     { .t=Type_T,        .x=UNDEF,       .y=UNDEF,       .z=UNDEF,       },  // 10: Symbol_T
@@ -124,13 +124,13 @@ cell_t cell_table[CELL_MAX] = {
 #define A_PRINT (ASM_SCM_END)
 #define _A_PRINT TO_CAP(A_PRINT)
     { .t=Actor_T,       .x=A_PRINT+1,   .y=NIL,         .z=UNDEF,       },
-    { .t=Opcode_T,      .x=VM_msg,      .y=TO_FIX(0),   .z=A_PRINT+2,   },
-    { .t=Opcode_T,      .x=VM_debug,    .y=TO_FIX(7331),.z=COMMIT,      },
+    { .t=Instr_T,       .x=VM_msg,      .y=TO_FIX(0),   .z=A_PRINT+2,   },
+    { .t=Instr_T,       .x=VM_debug,    .y=TO_FIX(7331),.z=COMMIT,      },
 
 #define A_QUIT (A_PRINT+3)
 #define _A_QUIT TO_CAP(A_QUIT)
     { .t=Actor_T,       .x=A_QUIT+1,    .y=NIL,         .z=UNDEF,       },
-    { .t=Opcode_T,      .x=VM_end,      .y=END_STOP,    .z=UNDEF,       },  // kill thread
+    { .t=Instr_T,       .x=VM_end,      .y=END_STOP,    .z=UNDEF,       },  // kill thread
 
 #define CELL_BASE (A_QUIT+2)
 };
@@ -147,7 +147,7 @@ static struct { int_t addr; char *label; } cell_map[] = {
     { UNIT, "UNIT" },
     { Type_T, "Type_T" },
     { Event_T, "Event_T" },
-    { Opcode_T, "Opcode_T" },
+    { Instr_T, "Instr_T" },
     { Actor_T, "Actor_T" },
     { Fixnum_T, "Fixnum_T" },
     { Symbol_T, "Symbol_T" },
@@ -835,7 +835,7 @@ static void gc_dump_map() {  // dump memory allocation map
             if (t == Literal_T) c = 'l';// literal value
             if (t == Type_T) c = 't';   // type marker
             if (t == Event_T) c = 'E';  // Event_T
-            if (t == Opcode_T) c = 'i';  // Opcode_T
+            if (t == Instr_T) c = 'i';  // Instr_T
             if (t == Actor_T) c = 'A';  // Actor_T
             if (t == Fixnum_T) c = '#';   // Fixnum_T <-- should not happen
             if (t == Symbol_T) c = 'S'; // Symbol_T
@@ -1191,7 +1191,7 @@ int_t init_global_env() {
     bind_global("Literal_T", Literal_T);
     bind_global("Type_T", Type_T);
     bind_global("Event_T", Event_T);
-    bind_global("Opcode_T", Opcode_T);
+    bind_global("Instr_T", Instr_T);
     bind_global("Actor_T", Actor_T);
     bind_global("Fixnum_T", Fixnum_T);
     bind_global("Symbol_T", Symbol_T);

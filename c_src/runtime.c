@@ -452,7 +452,7 @@ PROC_DECL(vm_new) {
     while (n--) {
         // compose behavior
         int_t v = stack_pop();  // value
-        ip = cell_new(Opcode_T, VM_push, v, ip);
+        ip = cell_new(Instr_T, VM_push, v, ip);
     }
     int_t a = actor_new(ip, NIL);
 #else

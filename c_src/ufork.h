@@ -131,7 +131,7 @@ typedef PROC_DECL((*proc_t));
 #define Literal_T   UNDEF
 #define Type_T      (5)
 #define Event_T     (6)
-#define Opcode_T    (7)
+#define Instr_T     (7)
 #define Actor_T     (8)
 #define Fixnum_T    (9)
 #define Symbol_T    (10)
@@ -163,7 +163,7 @@ typedef PROC_DECL((*proc_t));
 #define IS_ACTOR(v) (IS_CAP(v) && TYPEQ(Actor_T,TO_REF(v)))
 #define IS_FEXPR(n) TYPEQ(Fexpr_T,(n))
 #define IS_SYM(n)   TYPEQ(Symbol_T,(n))
-#define IS_CODE(n)  TYPEQ(Opcode_T,(n))
+#define IS_CODE(n)  TYPEQ(Instr_T,(n))
 
 #if CONCURRENT_GC
 #define MARK_CELL(n) gc_mark_cell(n)
