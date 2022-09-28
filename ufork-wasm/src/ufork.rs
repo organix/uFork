@@ -20,7 +20,7 @@ pub const UNIT: Val     = Val { raw: 4 };
 pub const LITERAL_T: Val= Val { raw: 0 }; //ptrval(0);
 pub const TYPE_T: Val   = Val { raw: 5 };
 pub const EVENT_T: Val  = Val { raw: 6 };
-pub const OPCODE_T: Val = Val { raw: 7 };
+pub const INSTR_T: Val  = Val { raw: 7 };
 pub const ACTOR_T: Val  = Val { raw: 8 };
 pub const FIXNUM_T: Val = Val { raw: 9 };
 pub const SYMBOL_T: Val = Val { raw: 10 };
@@ -30,7 +30,7 @@ pub const FREE_T: Val   = Val { raw: 13 };
 
 pub const START: Val    = Val { raw: 14 };
 
-// opcode values
+// instr values
 pub const OP_TYPEQ: Val = Val { raw: DIR_RAW | 0 }; // fixnum(0)
 pub const OP_CELL: Val  = Val { raw: DIR_RAW | 1 };
 pub const OP_GET: Val   = Val { raw: DIR_RAW | 2 };
@@ -56,10 +56,10 @@ pub const OP_BEH: Val   = Val { raw: DIR_RAW | 21 };
 pub const OP_END: Val   = Val { raw: DIR_RAW | 22 };
 
 // OP_END thread actions
-pub const END_ABORT: Val    = Val { raw: DIR_RAW | 0 };
-pub const END_STOP: Val     = Val { raw: DIR_RAW | 1 };
-pub const END_COMMIT: Val   = Val { raw: DIR_RAW | 2 };
-pub const END_RELEASE: Val  = Val { raw: DIR_RAW | 3 };
+pub const END_ABORT: Val    = Val { raw: DIR_RAW | -1 as Num as Raw };
+pub const END_STOP: Val     = Val { raw: DIR_RAW | 0 };
+pub const END_COMMIT: Val   = Val { raw: DIR_RAW | 1 };
+pub const END_RELEASE: Val  = Val { raw: DIR_RAW | 2 };
 
 // core memory limit
 const QUAD_MAX: usize = 1<<12;  // 4K quad-cells
@@ -81,14 +81,14 @@ impl Core {
             Quad::new(UNDEF, UNDEF, UNDEF, UNDEF);
             QUAD_MAX
         ];
-        quad_mem[UNDEF.addr()]      = Quad::new(LITERAL_T,  UNDEF,      UNDEF,      UNDEF);
+        quad_mem[UNDEF.addr()]      = Typed::Literal.quad(); // Quad::new(LITERAL_T,  UNDEF,      UNDEF,      UNDEF);
         quad_mem[NIL.addr()]        = Quad::new(LITERAL_T,  UNDEF,      UNDEF,      UNDEF);
         quad_mem[FALSE.addr()]      = Quad::new(LITERAL_T,  UNDEF,      UNDEF,      UNDEF);
         quad_mem[TRUE.addr()]       = Quad::new(LITERAL_T,  UNDEF,      UNDEF,      UNDEF);
         quad_mem[UNIT.addr()]       = Quad::new(LITERAL_T,  UNDEF,      UNDEF,      UNDEF);
-        quad_mem[TYPE_T.addr()]     = Quad::new(TYPE_T,     UNDEF,      UNDEF,      UNDEF);
+        quad_mem[TYPE_T.addr()]     = Typed::Type.quad(); // Quad::new(TYPE_T,     UNDEF,      UNDEF,      UNDEF);
         quad_mem[EVENT_T.addr()]    = Quad::new(TYPE_T,     UNDEF,      UNDEF,      UNDEF);
-        quad_mem[OPCODE_T.addr()]   = Quad::new(TYPE_T,     UNDEF,      UNDEF,      UNDEF);
+        quad_mem[INSTR_T.addr()]    = Quad::new(TYPE_T,     UNDEF,      UNDEF,      UNDEF);
         quad_mem[ACTOR_T.addr()]    = Quad::new(TYPE_T,     UNDEF,      UNDEF,      UNDEF);
         quad_mem[FIXNUM_T.addr()]   = Quad::new(TYPE_T,     UNDEF,      UNDEF,      UNDEF);
         quad_mem[SYMBOL_T.addr()]   = Quad::new(TYPE_T,     UNDEF,      UNDEF,      UNDEF);
@@ -100,8 +100,8 @@ impl Core {
         let ip_boot = ptrval(start+2);
         quad_mem[START.addr()]      = Quad::new(EVENT_T,    a_boot,     NIL,        NIL);
         quad_mem[START.addr()+1]    = Quad::new(ACTOR_T,    ip_boot,    NIL,        UNDEF);
-        quad_mem[START.addr()+2]    = Quad::new(OPCODE_T,   OP_PUSH,    UNIT,       ptrval(start+3));
-        quad_mem[START.addr()+3]    = Quad::new(OPCODE_T,   OP_END,     END_STOP,   UNDEF);
+        quad_mem[START.addr()+2]    = Quad::new(INSTR_T,    OP_PUSH,    UNIT,       ptrval(start+3));
+        quad_mem[START.addr()+3]    = Quad::new(INSTR_T,    OP_END,     END_STOP,   UNDEF);
 
         Core {
             quad_mem,
@@ -189,7 +189,7 @@ impl Core {
             else if OP_EQ == op { self.op_eq() }
             else if OP_IF == op { self.op_if() }
             else if OP_END == op { self.op_end() }
-            else { panic!("illegal opcode {}", op) };
+            else { panic!("illegal instr {}", op) };
         println!("execute_instruction: ip'={} -> {}", ip, self.quad(ip));
         self.set_ip(ip);
         // remove continuation from queue
@@ -460,6 +460,152 @@ impl Core {
     }
 }
 
+enum Typed {
+    Literal,
+    Type,
+    Event { target: Cap, msg: Val, next: Ptr },
+    Cont { ip: Ptr, sp: Ptr, ep: Ptr, next: Ptr },
+    Instr { op: Op },
+    Actor { beh: Ptr, state: Ptr, events: Option<Ptr> },
+    Symbol { hash: Fix, key: Ptr, val: Val },
+    Pair { car: Ptr, cdr: Ptr },
+    Fexpr { func: Ptr },
+    Free { next: Ptr },
+}
+impl Typed {
+    pub fn from(quad: &Quad) -> Option<Typed> {
+        match quad.t() {
+            LITERAL_T => Some(Typed::Literal),
+            TYPE_T => Some(Typed::Type),
+            EVENT_T => Some(Typed::Event { target: quad.x().cap(), msg: quad.y(), next: quad.z().ptr() }),
+            INSTR_T => Op::from(quad),
+            ACTOR_T => Some(Typed::Actor { beh: quad.x().ptr(), state: quad.y().ptr(), events: match quad.z() {
+                UNDEF => None,
+                val => Some(val.ptr()),
+            }}),
+            SYMBOL_T => Some(Typed::Symbol { hash: quad.x().fix(), key: quad.y().ptr(), val: quad.z() }),
+            PAIR_T => Some(Typed::Pair { car: quad.x().ptr(), cdr: quad.y().ptr() }),
+            FEXPR_T => Some(Typed::Fexpr { func: quad.x().ptr() }),
+            FREE_T => Some(Typed::Free { next: quad.z().ptr() }),
+            t => match Ptr::from(t) {
+                Some(ptr) => Some(Typed::Cont { ip: ptr, sp: quad.x().ptr(), ep: quad.y().ptr(), next: quad.z().ptr() }),
+                None => None,
+            }
+        }
+    }
+    fn quad(&self) -> Quad {
+        match self {
+            Typed::Literal => Quad::new(LITERAL_T, UNDEF, UNDEF, UNDEF),
+            Typed::Type => Quad::new(TYPE_T, UNDEF, UNDEF, UNDEF),
+            Typed::Event { target, msg, next } => Quad::new(EVENT_T, target.val(), msg.val(), next.val()),
+            Typed::Cont { ip, sp, ep, next } => Quad::new(ip.val(), sp.val(), ep.val(), next.val()),
+            Typed::Instr { op } => op.quad(),
+            Typed::Actor { beh, state, events } => Quad::new(ACTOR_T, beh.val(), state.val(), match events {
+                None => UNDEF,
+                Some(ptr) => ptr.val(),
+            }),
+            Typed::Symbol { hash, key, val } => Quad::new(SYMBOL_T, hash.val(), key.val(), val.val()),
+            Typed::Pair { car, cdr } => Quad::new(PAIR_T, car.val(), cdr.val(), UNDEF),
+            Typed::Fexpr { func } => Quad::new(FEXPR_T, func.val(), UNDEF, UNDEF),
+            Typed::Free { next } => Quad::new(FREE_T, UNDEF, UNDEF, next.val()),
+            _ => Quad::new(UNDEF, UNDEF, UNDEF, UNDEF),
+        }
+    }
+    pub fn t(&self) -> Val {
+        match self {
+            Typed::Literal => LITERAL_T,
+            Typed::Type => TYPE_T,
+            Typed::Event { .. } => EVENT_T,
+            Typed::Cont { ip, .. } => ip.val(),
+            _ => UNDEF,
+        }
+    }
+    pub fn x(&self) -> Val {
+        match self {
+            Typed::Event { target, .. } => target.val(),
+            Typed::Cont { sp, .. } => sp.val(),
+            _ => UNDEF,
+        }
+    }
+    pub fn y(&self) -> Val {
+        match self {
+            Typed::Event { msg, .. } => msg.val(),
+            Typed::Cont { ep, .. } => ep.val(),
+            _ => UNDEF,
+        }
+    }
+    pub fn z(&self) -> Val {
+        match self {
+            Typed::Event { next, .. } => next.val(),
+            Typed::Cont { next, .. } => next.val(),
+            _ => UNDEF,
+        }
+    }
+}
+
+enum Op {
+    Typeq { t: Ptr, k: Ptr },
+    Nth { n: Fix, k: Ptr },
+    Push { v: Val, k: Ptr },
+    Eq { v: Val, k: Ptr },
+    If { t: Ptr, f: Ptr },
+    End { x: End },
+}
+impl Op {
+    pub fn from(quad: &Quad) -> Option<Typed> {
+        assert!(quad.t() == INSTR_T);
+        match quad.x() {
+            OP_TYPEQ => Some(Typed::Instr { op: Op::Typeq { t: quad.y().ptr(), k: quad.z().ptr() } }),
+            OP_NTH => Some(Typed::Instr { op: Op::Nth { n: quad.y().fix(), k: quad.z().ptr() } }),
+            OP_PUSH => Some(Typed::Instr { op: Op::Push { v: quad.y().val(), k: quad.z().ptr() } }),
+            OP_EQ => Some(Typed::Instr { op: Op::Eq { v: quad.y().val(), k: quad.z().ptr() } }),
+            OP_IF => Some(Typed::Instr { op: Op::If { t: quad.y().ptr(), f: quad.z().ptr() } }),
+            OP_END => End::from(quad),
+            _ => None,
+        }
+    }
+    fn quad(&self) -> Quad {
+        match self {
+            Op::Typeq { t, k } => Quad::new(INSTR_T, OP_TYPEQ, t.val(), k.val()),
+            Op::Nth { n, k } => Quad::new(INSTR_T, OP_NTH, n.val(), k.val()),
+            Op::Push { v, k } => Quad::new(INSTR_T, OP_PUSH, v.val(), k.val()),
+            Op::Eq { v, k } => Quad::new(INSTR_T, OP_EQ, v.val(), k.val()),
+            Op::If { t, f } => Quad::new(INSTR_T, OP_IF, t.val(), f.val()),
+            Op::End { x } => x.quad(),
+            _ => Quad::new(UNDEF, UNDEF, UNDEF, UNDEF),
+        }
+    }
+}
+
+enum End {
+    Abort,
+    Stop,
+    Commit,
+    Release,
+}
+impl End {
+    pub fn from(quad: &Quad) -> Option<Typed> {
+        assert!(quad.t() == INSTR_T);
+        assert!(quad.x() == OP_END);
+        match quad.y() {
+            END_ABORT => Some(Typed::Instr { op: Op::End { x: End::Abort } }),
+            END_STOP => Some(Typed::Instr { op: Op::End { x: End::Stop } }),
+            END_COMMIT => Some(Typed::Instr { op: Op::End { x: End::Commit } }),
+            END_RELEASE => Some(Typed::Instr { op: Op::End { x: End::Release } }),
+            _ => None,
+        }
+    }
+    fn quad(&self) -> Quad {
+        match self {
+            End::Abort => Quad::new(INSTR_T, OP_END, END_ABORT, UNDEF),
+            End::Stop => Quad::new(INSTR_T, OP_END, END_STOP, UNDEF),
+            End::Commit => Quad::new(INSTR_T, OP_END, END_COMMIT, UNDEF),
+            End::Release => Quad::new(INSTR_T, OP_END, END_RELEASE, UNDEF),
+            _ => Quad::new(UNDEF, UNDEF, UNDEF, UNDEF),
+        }
+    }
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 // quad-cell (minimum addressable unit)
 pub struct Quad { t: Val, x: Val, y: Val, z: Val }
@@ -493,6 +639,9 @@ impl Val {
     }
     pub fn addr(&self) -> usize {
         self.ptr().addr()
+    }
+    pub fn val(self) -> Val {  // NOTE: consumes `self`
+        self
     }
     pub fn fix(self) -> Fix {  // NOTE: consumes `self`
         Fix::from(self).unwrap()
