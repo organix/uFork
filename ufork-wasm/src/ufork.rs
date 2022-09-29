@@ -178,11 +178,14 @@ impl Core {
         let cont = self.k_queue_head;
         println!("execute_instruction: cont={} -> {}", cont, self.quad(cont));
         println!("execute_instruction: ip={} -> {}", self.ip(), self.quad(self.ip()));
-        let instr = Typed::from(self.quad(self.ip())).unwrap();
         println!("execute_instruction: sp={} -> {}", self.sp(), self.quad(self.sp()));
         let ep = self.ep();
         println!("execute_instruction: ep={} -> {}", ep, self.quad(ep));
-        let ip = self.perform_op(&instr);
+        let instr = Typed::from(self.quad(self.ip()));
+        let ip = match instr {
+            Some(Typed::Instr{ op }) => self.perform_op(&op),
+            _ => panic!("Illegal instruction!"),
+        };
         println!("execute_instruction: ip'={} -> {}", ip, self.quad(ip));
         self.set_ip(ip);
         // remove continuation from queue
@@ -208,9 +211,9 @@ impl Core {
         }
         true  // instruction executed
     }
-    fn perform_op(&mut self, instr: &Typed) -> Ptr {
-        match instr {
-            Typed::Instr{ op: Op::Typeq{ t, k } } => {
+    fn perform_op(&mut self, op: &Op) -> Ptr {
+        match op {
+            Op::Typeq{ t, k } => {
                 println!("op_typeq: typ={}", t);
                 let val = self.stack_pop();
                 println!("op_typeq: val={}", val);
@@ -218,7 +221,7 @@ impl Core {
                 self.stack_push(r);
                 *k
             },
-            Typed::Instr{ op: Op::Nth{ n, k } } => {
+            Op::Nth{ n, k } => {
                 println!("op_nth: idx={}", n);
                 let lst = self.stack_pop();
                 println!("op_nth: lst={}", lst);
@@ -227,12 +230,12 @@ impl Core {
                 self.stack_push(r);
                 *k
             },
-            Typed::Instr{ op: Op::Push{ v, k } } => {
+            Op::Push{ v, k } => {
                 println!("op_push: val={}", v);
                 self.stack_push(*v);
                 *k
             },
-            Typed::Instr{ op: Op::Eq{ v, k } } => {
+            Op::Eq{ v, k } => {
                 println!("op_eq: v={}", v);
                 let vv = self.stack_pop();
                 println!("op_eq: vv={}", vv);
@@ -241,18 +244,17 @@ impl Core {
                 self.stack_push(r);
                 *k
             },
-            Typed::Instr{ op: Op::If{ t, f } } => {
+            Op::If{ t, f } => {
                 let b = self.stack_pop();
                 println!("op_if: b={}", b);
                 println!("op_if: t={}", t);
                 println!("op_if: f={}", f);
                 if b != FALSE { *t } else { *f }  // FIXME: what should be considered "falsey"?        
             },
-            Typed::Instr{ op: Op::End{ x } } => {
+            Op::End{ x } => {
                 println!("op_end: x={}", x);
                 UNDEF.ptr()        
             },
-            _ => panic!("Illegal instruction!"),
         }
     }
 
