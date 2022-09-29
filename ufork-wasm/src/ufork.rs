@@ -448,6 +448,7 @@ impl Core {
     }
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Typed {
     Literal,
     Type,
@@ -499,7 +500,27 @@ impl Typed {
         }
     }
 }
+impl fmt::Display for Typed {
+    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Typed::Literal => write!(fmt, "Literal"),
+            Typed::Type => write!(fmt, "Type"),
+            Typed::Event{ target, msg, next } => write!(fmt, "Event{{ target:{}, msg:{}, next:{} }}", target, msg, next),
+            Typed::Cont{ ip, sp, ep, next } => write!(fmt, "Cont{{ ip:{}, sp:{}, ep:{}, next:{} }}", ip, sp, ep, next),
+            Typed::Instr{ op } => write!(fmt, "Instr{{ op:{} }}", op),
+            Typed::Actor{ beh, state, events } => write!(fmt, "Actor{{ beh:{}, state:{}, events:{} }}", beh, state, match events {
+                Some(ptr) => ptr.val(),
+                None => UNDEF,
+            }),
+            Typed::Symbol{ hash, key, val } => write!(fmt, "Symbol{{ hash:{}, key:{}, val:{} }}", hash, key, val),
+            Typed::Pair{ car, cdr } => write!(fmt, "Pair{{ car:{}, cdr:{} }}", car, cdr),
+            Typed::Fexpr{ func } => write!(fmt, "Fexpr{{ func:{} }}", func),
+            Typed::Free{ next } => write!(fmt, "Free{{ next:{} }}", next),
+        }
+    }
+}
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Op {
     Typeq { t: Ptr, k: Ptr },
     Nth { n: Fix, k: Ptr },
@@ -532,7 +553,20 @@ impl Op {
         }
     }
 }
+impl fmt::Display for Op {
+    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Op::Typeq{ t, k } => write!(fmt, "Typeq{{ t:{}, k:{} }}", t, k),
+            Op::Nth{ n, k } => write!(fmt, "Nth{{ n:{}, k:{} }}", n, k),
+            Op::Push{ v, k } => write!(fmt, "Push{{ v:{}, k:{} }}", v, k),
+            Op::Eq{ v, k } => write!(fmt, "Eq{{ v:{}, k:{} }}", v, k),
+            Op::If{ t, f } => write!(fmt, "If{{ t:{}, f:{} }}", t, f),
+            Op::End{ x } => write!(fmt, "End{{ x:{} }}", x),
+        }
+    }
+}
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum End {
     Abort,
     Stop,
@@ -561,12 +595,12 @@ impl End {
     }
 }
 impl fmt::Display for End {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            End::Abort => write!(f, "Abort"),
-            End::Stop => write!(f, "Stop"),
-            End::Commit => write!(f, "Commit"),
-            End::Release => write!(f, "Release"),
+            End::Abort => write!(fmt, "Abort"),
+            End::Stop => write!(fmt, "Stop"),
+            End::Commit => write!(fmt, "Commit"),
+            End::Release => write!(fmt, "Release"),
         }
     }
 }
@@ -804,7 +838,8 @@ fn core_initialization() {
     assert_eq!(NIL.ptr(), core.k_queue_head);
     assert_eq!(core.quad_top(), core.quad_top);
     for raw in 0..core.quad_top().raw() {
-        println!("{:5}: {}", raw, core.quad(Ptr::new(raw)));
+        let quad = core.quad(Ptr::new(raw));
+        println!("{:5}: {} = {}", raw, quad, Typed::from(&quad).unwrap());
     }
     assert!(false);  // force output to be displayed
 }
