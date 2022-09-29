@@ -303,13 +303,13 @@ impl Core {
         }
     }
 
-    fn ip(&self) -> Ptr {  // instruction pointer
+    pub fn ip(&self) -> Ptr {  // instruction pointer
         self.quad(self.k_queue_head).t().ptr()
     }
-    fn sp(&self) -> Ptr {  // stack pointer
+    pub fn sp(&self) -> Ptr {  // stack pointer
         self.quad(self.k_queue_head).x().ptr()
     }
-    fn ep(&self) -> Ptr {  // event pointer
+    pub fn ep(&self) -> Ptr {  // event pointer
         self.quad(self.k_queue_head).y().ptr()
     }
     fn set_ip(&mut self, ip: Ptr) {

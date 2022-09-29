@@ -14,6 +14,7 @@ const universe = Universe.new(width, height);
 universe.launch_ship();
 
 const host = Host.new();
+host.prepare();
 
 // Give the canvas room for all of our cells and a 1px border around them.
 const $canvas = document.getElementById("ufork-canvas");
@@ -31,6 +32,11 @@ const drawUniverse = () => {
 	drawGrid();
 	drawCells();
 }
+const singleStep = () => {
+	host.step();
+	universe.tick();
+	drawUniverse();
+}
 const renderLoop = () => {
 	//debugger;
 	if (paused) return;
@@ -39,9 +45,7 @@ const renderLoop = () => {
 		// skip this frame update
 	} else {
 		frame = +($rate.value);
-
-		universe.tick();
-		drawUniverse();
+		singleStep();
 	}
 	requestAnimationFrame(renderLoop);
 }
@@ -155,16 +159,23 @@ $randomButton.onclick = () => {
 	drawUniverse();
 }
 
+const $stepButton = document.getElementById("single-step");
+$stepButton.onclick = () => {
+	singleStep();
+}
+
 const $pauseButton = document.getElementById("play-pause");
 const playAction = () => {
 	$pauseButton.textContent = "Pause";
 	$pauseButton.onclick = pauseAction;
 	paused = false;
+	$stepButton.disabled = true;
 	renderLoop();
 }
 const pauseAction = () => {
 	$pauseButton.textContent = "Play";
 	$pauseButton.onclick = playAction;
+	$stepButton.disabled = false;
 	paused = true;
 }
 

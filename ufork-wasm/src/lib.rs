@@ -49,6 +49,10 @@ impl fmt::Display for Host {
             let quad = core.quad(Ptr::new(raw));
             write!(fmt, "{:5}: {} = {}\n", raw, quad, Typed::from(&quad).unwrap())?;
         }
+        write!(fmt, "\n")?;
+        write!(fmt, "IP:{} = {}\n", core.ip(), Typed::from(core.quad(core.ip())).unwrap())?;
+        write!(fmt, "SP:{} = {}\n", core.sp(), Typed::from(core.quad(core.sp())).unwrap())?;
+        write!(fmt, "EP:{} = {}\n", core.ep(), Typed::from(core.quad(core.ep())).unwrap())?;
         Ok(())
     }
 }
@@ -63,19 +67,17 @@ impl Host {
             core,
         }
     }
-/*
-    pub fn width(&self) -> Value {
-        self.width
+    pub fn prepare(&mut self) {  // prepare for next instruction
+        self.core.check_for_interrupt();
+        self.core.dispatch_event();
     }
-
-    pub fn height(&self) -> Value {
-        self.height
+    pub fn step(&mut self) -> bool {  // single-step instruction execution
+        let ok = self.core.execute_instruction();
+        if ok {
+            self.prepare();
+        }
+        ok
     }
-
-    pub fn cells(&self) -> *const Cell {
-        self.cells.as_ptr()
-    }
-*/
     pub fn render(&self) -> String {
         self.to_string()
     }
