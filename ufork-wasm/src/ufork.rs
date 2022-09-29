@@ -622,8 +622,8 @@ impl Quad {
     pub fn set_z(&mut self, v: Val) { self.z = v; }
 }
 impl fmt::Display for Quad {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{{t:{}, x:{}, y:{}, z:{}}}", self.t, self.x, self.y, self.z)
+    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(fmt, "{{t:{}, x:{}, y:{}, z:{}}}", self.t, self.x, self.y, self.z)
     }
 }
 
@@ -653,7 +653,7 @@ impl Val {
     }
 }
 impl fmt::Display for Val {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
         let s = if (self.raw & DIR_RAW) != 0 {
             self.fix().to_string()
         } else if (self.raw & OPQ_RAW) != 0 {
@@ -661,7 +661,7 @@ impl fmt::Display for Val {
         } else {
             self.ptr().to_string()
         };
-        write!(f, "{}", s)
+        write!(fmt, "{}", s)
     }
 }
 
@@ -688,8 +688,8 @@ impl Fix {
     }
 }
 impl fmt::Display for Fix {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{:+}", self.num)
+    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(fmt, "{:+}", self.num)
     }
 }
 
@@ -720,8 +720,15 @@ impl Ptr {
     }
 }
 impl fmt::Display for Ptr {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "^{}", self.raw)
+    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self.val() {
+            UNDEF => write!(fmt, "#?"),
+            NIL => write!(fmt, "()"),
+            FALSE => write!(fmt, "#f"),
+            TRUE => write!(fmt, "#t"),
+            UNIT => write!(fmt, "#unit"),
+            _ => write!(fmt, "^{}", self.raw),
+        }
     }
 }
 
@@ -752,8 +759,8 @@ impl Cap {
     }
 }
 impl fmt::Display for Cap {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "@{}", self.raw)
+    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(fmt, "@{}", self.raw)
     }
 }
 

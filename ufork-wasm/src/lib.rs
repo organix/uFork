@@ -43,10 +43,11 @@ pub struct Host {
 }
 
 impl fmt::Display for Host {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         let core = &self.core;
         for raw in 0..core.quad_top().raw() {
-            write!(f, "{:5}: {}\n", raw, core.quad(Ptr::new(raw)))?;
+            let quad = core.quad(Ptr::new(raw));
+            write!(fmt, "{:5}: {} = {}\n", raw, quad, Typed::from(&quad).unwrap())?;
         }
         Ok(())
     }
