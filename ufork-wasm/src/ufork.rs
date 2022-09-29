@@ -96,12 +96,12 @@ impl Core {
         quad_mem[FEXPR_T.addr()]    = Typed::Type.quad();
         quad_mem[FREE_T.addr()]     = Typed::Type.quad();
         let start = START.raw();
-        let a_boot = Cap::new(start+1);//capval(start+1);
-        let ip_boot = Ptr::new(start+2);//ptrval(start+2);
-        quad_mem[START.addr()]      = Typed::Event{ target: a_boot, msg: NIL, next: NIL.ptr() }.quad(); //Quad::new(EVENT_T,    a_boot,     NIL,        NIL);
-        quad_mem[START.addr()+1]    = Typed::Actor{ beh: ip_boot, state: NIL.ptr(), events: None }.quad(); //Quad::new(ACTOR_T,    ip_boot,    NIL,        UNDEF);
-        quad_mem[START.addr()+2]    = Typed::Instr{ op: Op::Push{ v: UNIT, k: Ptr::new(start+3) } }.quad(); //Quad::new(INSTR_T,    OP_PUSH,    UNIT,       ptrval(start+3));
-        quad_mem[START.addr()+3]    = Typed::Instr{ op: Op::End{ x: End::Stop } }.quad(); //Quad::new(INSTR_T,    OP_END,     END_STOP,   UNDEF);
+        let a_boot = Cap::new(start+1);
+        let ip_boot = Ptr::new(start+2);
+        quad_mem[START.addr()]      = Typed::Event{ target: a_boot, msg: NIL, next: NIL.ptr() }.quad();
+        quad_mem[START.addr()+1]    = Typed::Actor{ beh: ip_boot, state: NIL.ptr(), events: None }.quad();
+        quad_mem[START.addr()+2]    = Typed::Instr{ op: Op::Push{ v: UNIT, k: Ptr::new(start+3) } }.quad();
+        quad_mem[START.addr()+3]    = Typed::Instr{ op: Op::End{ x: End::Stop } }.quad();
 
         Core{
             quad_mem,
@@ -124,10 +124,10 @@ impl Core {
             }
         }
     }
-    fn check_for_interrupt(&mut self) -> bool {
+    pub fn check_for_interrupt(&mut self) -> bool {
         false
     }
-    fn dispatch_event(&mut self) -> bool {
+    pub fn dispatch_event(&mut self) -> bool {
         println!("dispatch_event: e_queue_head={}", self.e_queue_head);
         if NIL.ptr() == self.e_queue_head {
             return false;  // event queue is empty
@@ -170,7 +170,7 @@ impl Core {
         self.k_queue_tail = cont;
         true  // event dispatched
     }
-    fn execute_instruction(&mut self) -> bool {
+    pub fn execute_instruction(&mut self) -> bool {
         println!("execute_instruction: k_queue_head={}", self.k_queue_head);
         if NIL.ptr() == self.k_queue_head {
             return false;  // continuation queue is empty
@@ -178,18 +178,11 @@ impl Core {
         let cont = self.k_queue_head;
         println!("execute_instruction: cont={} -> {}", cont, self.quad(cont));
         println!("execute_instruction: ip={} -> {}", self.ip(), self.quad(self.ip()));
+        let instr = Typed::from(self.quad(self.ip())).unwrap();
         println!("execute_instruction: sp={} -> {}", self.sp(), self.quad(self.sp()));
         let ep = self.ep();
         println!("execute_instruction: ep={} -> {}", ep, self.quad(ep));
-        let op = self.quad(self.ip()).x();
-        let ip =
-            if OP_TYPEQ == op { self.op_typeq() }
-            else if OP_NTH == op { self.op_nth() }
-            else if OP_PUSH == op { self.op_push() }
-            else if OP_EQ == op { self.op_eq() }
-            else if OP_IF == op { self.op_if() }
-            else if OP_END == op { self.op_end() }
-            else { panic!("illegal instr {}", op) };
+        let ip = self.perform_op(&instr);
         println!("execute_instruction: ip'={} -> {}", ip, self.quad(ip));
         self.set_ip(ip);
         // remove continuation from queue
@@ -215,55 +208,52 @@ impl Core {
         }
         true  // instruction executed
     }
-
-    fn op_typeq(&mut self) -> Ptr {
-        let typ = self.immd();
-        println!("op_typeq: typ={}", typ);
-        let val = self.stack_pop();
-        println!("op_typeq: val={}", val);
-        let r = if self.typeq(typ, val) { TRUE } else { FALSE };
-        self.stack_push(r);
-        self.cont()
-    }
-    fn op_nth(&mut self) -> Ptr {
-        let idx = self.immd();
-        println!("op_nth: idx={}", idx);
-        let lst = self.stack_pop();
-        println!("op_nth: lst={}", lst);
-        let r = self.extract_nth(lst, idx.fix().num());
-        println!("op_nth: r={}", r);
-        self.stack_push(r);
-        self.cont()
-    }
-    fn op_push(&mut self) -> Ptr {
-        let val = self.immd();
-        println!("op_push: val={}", val);
-        self.stack_push(val);
-        self.cont()
-    }
-    fn op_eq(&mut self) -> Ptr {
-        let x = self.immd();
-        println!("op_eq: x={}", x);
-        let y = self.stack_pop();
-        println!("op_eq: y={}", y);
-        let r = if x == y { TRUE } else { FALSE };
-        println!("op_eq: r={}", r);
-        self.stack_push(r);
-        self.cont()
-    }
-    fn op_if(&mut self) -> Ptr {
-        let b = self.stack_pop();
-        println!("op_if: b={}", b);
-        let t = self.immd().ptr();
-        println!("op_if: t={}", t);
-        let f = self.cont();
-        println!("op_if: f={}", f);
-        if b != FALSE { t } else { f }  // FIXME: what should be considered "falsey"?
-    }
-    fn op_end(&mut self) -> Ptr {
-        let end = self.immd();
-        println!("op_end: end={}", end);
-        UNDEF.ptr()
+    fn perform_op(&mut self, instr: &Typed) -> Ptr {
+        match instr {
+            Typed::Instr{ op: Op::Typeq{ t, k } } => {
+                println!("op_typeq: typ={}", t);
+                let val = self.stack_pop();
+                println!("op_typeq: val={}", val);
+                let r = if self.typeq(*t, val) { TRUE } else { FALSE };
+                self.stack_push(r);
+                *k
+            },
+            Typed::Instr{ op: Op::Nth{ n, k } } => {
+                println!("op_nth: idx={}", n);
+                let lst = self.stack_pop();
+                println!("op_nth: lst={}", lst);
+                let r = self.extract_nth(lst, n.num());
+                println!("op_nth: r={}", r);
+                self.stack_push(r);
+                *k
+            },
+            Typed::Instr{ op: Op::Push{ v, k } } => {
+                println!("op_push: val={}", v);
+                self.stack_push(*v);
+                *k
+            },
+            Typed::Instr{ op: Op::Eq{ v, k } } => {
+                println!("op_eq: v={}", v);
+                let vv = self.stack_pop();
+                println!("op_eq: vv={}", vv);
+                let r = if *v == vv { TRUE } else { FALSE };
+                println!("op_eq: r={}", r);
+                self.stack_push(r);
+                *k
+            },
+            Typed::Instr{ op: Op::If{ t, f } } => {
+                let b = self.stack_pop();
+                println!("op_if: b={}", b);
+                println!("op_if: t={}", t);
+                println!("op_if: f={}", f);
+                if b != FALSE { *t } else { *f }  // FIXME: what should be considered "falsey"?        
+            },
+            Typed::Instr{ op: Op::End{ x } } => {
+                println!("op_end: x={}", x);
+                UNDEF.ptr()        
+            },
+            _ => panic!("Illegal instruction!"),
+        }
     }
 
     fn extract_nth(&self, mut lst: Val, mut n: Num) -> Val {
@@ -272,7 +262,7 @@ impl Core {
             v = lst;
         } else if n > 0 {  // item at n-th index
             assert!(n < 64);
-            while self.typeq(PAIR_T, lst) {
+            while self.typeq(PAIR_T.ptr(), lst) {
                 n -= 1;
                 if n <= 0 { break; }
                 lst = self.cdr(lst.ptr());
@@ -282,7 +272,7 @@ impl Core {
             }
         } else {  // `-n` selects the n-th tail
             assert!(n > -64);
-            while self.typeq(PAIR_T, lst) {
+            while self.typeq(PAIR_T.ptr(), lst) {
                 n += 1;
                 if n >= 0 { break; }
                 lst = self.cdr(lst.ptr());
@@ -300,7 +290,7 @@ impl Core {
     }
     fn stack_pop(&mut self) -> Val {
         let sp = self.sp();
-        if self.typeq(PAIR_T, sp.val()) {
+        if self.typeq(PAIR_T.ptr(), sp.val()) {
             let item = self.car(sp);
             self.set_sp(self.cdr(sp).ptr());
             self.free(sp);  // free pair holding stack item
@@ -309,13 +299,6 @@ impl Core {
             println!("stack_pop: underflow!");
             UNDEF
         }
-    }
-
-    fn immd(&self) -> Val {  // immediate operand
-        self.quad(self.ip()).y()
-    }
-    fn cont(&self) -> Ptr {  // instruction continuation
-        self.quad(self.ip()).z().ptr()
     }
 
     fn ip(&self) -> Ptr {  // instruction pointer
@@ -363,13 +346,12 @@ impl Core {
         &mut self.quad_mem[addr]
     }
 
-    pub fn typeq(&self, typ: Val, val: Val) -> bool {
-        if typ == FIXNUM_T {
+    pub fn typeq(&self, typ: Ptr, val: Val) -> bool {
+        if FIXNUM_T.ptr() == typ {
             let fix = Fix::from(val);
-            return fix.is_some();
-        }
-        if typ == ACTOR_T {
-            return match Cap::from(val) {
+            fix.is_some()
+        } else if ACTOR_T.ptr() == typ {
+            match Cap::from(val) {
                 Some(cap) => {
                     let ptr = Ptr::new(cap.raw());  // WARNING: converting Cap to Ptr!
                     match self.addr(ptr) {
@@ -381,23 +363,24 @@ impl Core {
                 },
                 None => false,
             }
-        }
-        match Ptr::from(val) {
-            Some(ptr) => {
-                match self.addr(ptr) {
-                    Some(addr) => {
-                        typ == self.quad_mem[addr].t()
-                    },
-                    None => false,
-                }
-            },
-            None => false,
+        } else {
+            match Ptr::from(val) {
+                Some(ptr) => {
+                    match self.addr(ptr) {
+                        Some(addr) => {
+                            typ.val() == self.quad_mem[addr].t()
+                        },
+                        None => false,
+                    }
+                },
+                None => false,
+            }
         }
     }
 
-    pub fn alloc(&mut self, t: Val, x: Val, y: Val, z: Val) -> Ptr {
+    pub fn alloc(&mut self, quad: &Quad) -> Ptr {
         let mut ptr = self.quad_next;
-        if self.typeq(FREE_T, ptr.val()) {
+        if self.typeq(FREE_T.ptr(), ptr.val()) {
             assert!(self.gc_free_cnt > 0);
             self.gc_free_cnt -= 1;
             self.quad_next = self.quad(ptr).z().ptr();
@@ -407,60 +390,63 @@ impl Core {
         } else {
             panic!("quad-memory exhausted!");
         }
-        let quad = self.quad_mut(ptr);
-        quad.set_t(t);
-        quad.set_x(x);
-        quad.set_y(y);
-        quad.set_z(z);
+        *self.quad_mut(ptr) = *quad;
         ptr
     }
     pub fn free(&mut self, ptr: Ptr) {
         let val = ptr.val();
         assert!(self.in_heap(val));
-        assert!(!self.typeq(FREE_T, val));
-        let next = self.quad_next;
-        let quad = self.quad_mut(ptr);
-        quad.set_t(FREE_T);
-        quad.set_x(UNDEF);
-        quad.set_y(UNDEF);
-        quad.set_z(next.val());
+        assert!(!self.typeq(FREE_T.ptr(), val));
+        let typed = Typed::Free{ next: self.quad_next };
+        *self.quad_mut(ptr) = typed.quad();
         self.quad_next = ptr;
         self.gc_free_cnt += 1;
     }
 
     pub fn new_event(&mut self, target: Cap, message: Val) -> Ptr {
         // FIXME: add sanity-checks...
-        self.alloc(EVENT_T, target.val(), message, NIL)
+        let event = Typed::Event{ target: target, msg: message, next: NIL.ptr() };
+        self.alloc(&event.quad())
     }
     pub fn new_cont(&mut self, ip: Ptr, sp: Ptr, ep: Ptr) -> Ptr {
         // FIXME: add sanity-checks...
-        self.alloc(ip.val(), sp.val(), ep.val(), NIL)
+        let cont = Typed::Cont{ ip: ip, sp: sp, ep: ep, next: NIL.ptr() };
+        self.alloc(&cont.quad())
     }
 
     pub fn cons(&mut self, car: Val, cdr: Val) -> Ptr {
-        self.alloc(PAIR_T, car, cdr, UNDEF)
+        let pair = Typed::Pair{ car: car, cdr: cdr };
+        self.alloc(&pair.quad())
     }
-    pub fn car(&self, cons: Ptr) -> Val {
-        let quad = self.quad(cons);
-        if quad.t() == PAIR_T { quad.x() } else { UNDEF }
+    pub fn car(&self, pair: Ptr) -> Val {
+        let typed = Typed::from(self.quad(pair));
+        match typed {
+            Some(Typed::Pair{ car: val, .. }) => val,
+            _ => UNDEF
+        }
     }
-    pub fn cdr(&self, cons: Ptr) -> Val {
-        let quad = self.quad(cons);
-        if quad.t() == PAIR_T { quad.y() } else { UNDEF }
+    pub fn cdr(&self, pair: Ptr) -> Val {
+        let typed = Typed::from(self.quad(pair));
+        match typed {
+            Some(Typed::Pair{ cdr: val, .. }) => val,
+            _ => UNDEF
+        }
     }
-    pub fn set_car(&mut self, cons: Ptr, car: Val) {
-        let quad = self.quad_mut(cons);
-        assert!(quad.t() == PAIR_T);
-        quad.set_x(car);
+    pub fn set_car(&mut self, pair: Ptr, car: Val) {
+        let typed = Typed::from(self.quad(pair));
+        if let Some(Typed::Pair{ .. }) = typed {
+            self.quad_mut(pair).set_x(car);  // FIXME: find a type-safe way to do this...
+        }
     }
-    pub fn set_cdr(&mut self, cons: Ptr, cdr: Val) {
-        let quad = self.quad_mut(cons);
-        assert!(quad.t() == PAIR_T);
-        quad.set_y(cdr);
+    pub fn set_cdr(&mut self, pair: Ptr, cdr: Val) {
+        let typed = Typed::from(self.quad(pair));
+        if let Some(Typed::Pair{ .. }) = typed {
+            self.quad_mut(pair).set_y(cdr);  // FIXME: find a type-safe way to do this...
+        }
     }
 }
 
-enum Typed {
+pub enum Typed {
     Literal,
     Type,
     Event { target: Cap, msg: Val, next: Ptr },
@@ -468,7 +454,7 @@ enum Typed {
     Instr { op: Op },
     Actor { beh: Ptr, state: Ptr, events: Option<Ptr> },
     Symbol { hash: Fix, key: Ptr, val: Val },
-    Pair { car: Ptr, cdr: Ptr },
+    Pair { car: Val, cdr: Val },
     Fexpr { func: Ptr },
     Free { next: Ptr },
 }
@@ -484,7 +470,7 @@ impl Typed {
                 val => Some(val.ptr()),
             }}),
             SYMBOL_T => Some(Typed::Symbol{ hash: quad.x().fix(), key: quad.y().ptr(), val: quad.z() }),
-            PAIR_T => Some(Typed::Pair{ car: quad.x().ptr(), cdr: quad.y().ptr() }),
+            PAIR_T => Some(Typed::Pair{ car: quad.x(), cdr: quad.y() }),
             FEXPR_T => Some(Typed::Fexpr{ func: quad.x().ptr() }),
             FREE_T => Some(Typed::Free{ next: quad.z().ptr() }),
             t => match Ptr::from(t) {
@@ -493,7 +479,7 @@ impl Typed {
             }
         }
     }
-    fn quad(&self) -> Quad {
+    pub fn quad(&self) -> Quad {
         match self {
             Typed::Literal => Quad::new(LITERAL_T, UNDEF, UNDEF, UNDEF),
             Typed::Type => Quad::new(TYPE_T, UNDEF, UNDEF, UNDEF),
@@ -508,42 +494,11 @@ impl Typed {
             Typed::Pair{ car, cdr } => Quad::new(PAIR_T, car.val(), cdr.val(), UNDEF),
             Typed::Fexpr{ func } => Quad::new(FEXPR_T, func.val(), UNDEF, UNDEF),
             Typed::Free{ next } => Quad::new(FREE_T, UNDEF, UNDEF, next.val()),
-            //_ => Quad::new(UNDEF, UNDEF, UNDEF, UNDEF),
-        }
-    }
-    pub fn t(&self) -> Val {
-        match self {
-            Typed::Literal => LITERAL_T,
-            Typed::Type => TYPE_T,
-            Typed::Event{ .. } => EVENT_T,
-            Typed::Cont{ ip, .. } => ip.val(),
-            _ => UNDEF,
-        }
-    }
-    pub fn x(&self) -> Val {
-        match self {
-            Typed::Event{ target, .. } => target.val(),
-            Typed::Cont{ sp, .. } => sp.val(),
-            _ => UNDEF,
-        }
-    }
-    pub fn y(&self) -> Val {
-        match self {
-            Typed::Event{ msg, .. } => msg.val(),
-            Typed::Cont{ ep, .. } => ep.val(),
-            _ => UNDEF,
-        }
-    }
-    pub fn z(&self) -> Val {
-        match self {
-            Typed::Event{ next, .. } => next.val(),
-            Typed::Cont{ next, .. } => next.val(),
-            _ => UNDEF,
         }
     }
 }
 
-enum Op {
+pub enum Op {
     Typeq { t: Ptr, k: Ptr },
     Nth { n: Fix, k: Ptr },
     Push { v: Val, k: Ptr },
@@ -564,7 +519,7 @@ impl Op {
             _ => None,
         }
     }
-    fn quad(&self) -> Quad {
+    pub fn quad(&self) -> Quad {
         match self {
             Op::Typeq{ t, k } => Quad::new(INSTR_T, OP_TYPEQ, t.val(), k.val()),
             Op::Nth{ n, k } => Quad::new(INSTR_T, OP_NTH, n.val(), k.val()),
@@ -572,12 +527,11 @@ impl Op {
             Op::Eq{ v, k } => Quad::new(INSTR_T, OP_EQ, v.val(), k.val()),
             Op::If{ t, f } => Quad::new(INSTR_T, OP_IF, t.val(), f.val()),
             Op::End{ x } => x.quad(),
-            //_ => Quad::new(UNDEF, UNDEF, UNDEF, UNDEF),
         }
     }
 }
 
-enum End {
+pub enum End {
     Abort,
     Stop,
     Commit,
@@ -595,13 +549,22 @@ impl End {
             _ => None,
         }
     }
-    fn quad(&self) -> Quad {
+    pub fn quad(&self) -> Quad {
         match self {
             End::Abort => Quad::new(INSTR_T, OP_END, END_ABORT, UNDEF),
             End::Stop => Quad::new(INSTR_T, OP_END, END_STOP, UNDEF),
             End::Commit => Quad::new(INSTR_T, OP_END, END_COMMIT, UNDEF),
             End::Release => Quad::new(INSTR_T, OP_END, END_RELEASE, UNDEF),
-            //_ => Quad::new(UNDEF, UNDEF, UNDEF, UNDEF),
+        }
+    }
+}
+impl fmt::Display for End {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            End::Abort => write!(f, "Abort"),
+            End::Stop => write!(f, "Stop"),
+            End::Commit => write!(f, "Commit"),
+            End::Release => write!(f, "Release"),
         }
     }
 }
@@ -849,19 +812,19 @@ fn basic_memory_allocation() {
     let mut core = Core::new();
     let top_before = core.quad_top.raw();
     println!("quad_top: {}", core.quad_top);
-    let m1 = core.alloc(FEXPR_T, fixnum(1), fixnum(1), fixnum(1));
+    let m1 = core.alloc(&Typed::Pair{ car: fixnum(1), cdr: fixnum(1) }.quad());
     println!("m1:{} -> {}", m1, core.quad(m1));
     println!("quad_top: {}", core.quad_top);
-    let m2 = core.alloc(FEXPR_T, fixnum(2), fixnum(2), fixnum(2));
+    let m2 = core.alloc(&Typed::Pair{ car: fixnum(2), cdr: fixnum(2) }.quad());
     println!("quad_top: {}", core.quad_top);
-    let m3 = core.alloc(FEXPR_T, fixnum(3), fixnum(3), fixnum(3));
+    let m3 = core.alloc(&Typed::Pair{ car: fixnum(3), cdr: fixnum(3) }.quad());
     println!("quad_top: {}", core.quad_top);
     println!("gc_free_cnt: {}", core.gc_free_cnt);
     core.free(m2);
     println!("gc_free_cnt: {}", core.gc_free_cnt);
     core.free(m3);
     println!("gc_free_cnt: {}", core.gc_free_cnt);
-    let _m4 = core.alloc(FEXPR_T, fixnum(4), fixnum(4), fixnum(4));
+    let _m4 = core.alloc(&Typed::Pair{ car: fixnum(4), cdr: fixnum(4) }.quad());
     println!("quad_top: {}", core.quad_top);
     println!("gc_free_cnt: {}", core.gc_free_cnt);
     let top_after = core.quad_top.raw();
