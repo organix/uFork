@@ -65,7 +65,7 @@ pub const END_RELEASE: Val  = Val{ raw: DIR_RAW | 2 };
 const QUAD_MAX: usize = 1<<12;  // 4K quad-cells
 
 pub struct Core {
-    quad_mem: [Quad; QUAD_MAX],
+    quad_mem: [Typed; QUAD_MAX],
     quad_top: Ptr,
     quad_next: Ptr,
     gc_free_cnt: usize,
@@ -78,30 +78,30 @@ pub struct Core {
 impl Core {
     pub fn new() -> Core {
         let mut quad_mem = [
-            Quad::new(UNDEF, UNDEF, UNDEF, UNDEF);
+            Typed::Empty;
             QUAD_MAX
         ];
-        quad_mem[UNDEF.addr()]      = Typed::Literal.quad();
-        quad_mem[NIL.addr()]        = Typed::Literal.quad();
-        quad_mem[FALSE.addr()]      = Typed::Literal.quad();
-        quad_mem[TRUE.addr()]       = Typed::Literal.quad();
-        quad_mem[UNIT.addr()]       = Typed::Literal.quad();
-        quad_mem[TYPE_T.addr()]     = Typed::Type.quad();
-        quad_mem[EVENT_T.addr()]    = Typed::Type.quad();
-        quad_mem[INSTR_T.addr()]    = Typed::Type.quad();
-        quad_mem[ACTOR_T.addr()]    = Typed::Type.quad();
-        quad_mem[FIXNUM_T.addr()]   = Typed::Type.quad();
-        quad_mem[SYMBOL_T.addr()]   = Typed::Type.quad();
-        quad_mem[PAIR_T.addr()]     = Typed::Type.quad();
-        quad_mem[FEXPR_T.addr()]    = Typed::Type.quad();
-        quad_mem[FREE_T.addr()]     = Typed::Type.quad();
+        quad_mem[UNDEF.addr()]      = Typed::Literal;
+        quad_mem[NIL.addr()]        = Typed::Literal;
+        quad_mem[FALSE.addr()]      = Typed::Literal;
+        quad_mem[TRUE.addr()]       = Typed::Literal;
+        quad_mem[UNIT.addr()]       = Typed::Literal;
+        quad_mem[TYPE_T.addr()]     = Typed::Type;
+        quad_mem[EVENT_T.addr()]    = Typed::Type;
+        quad_mem[INSTR_T.addr()]    = Typed::Type;
+        quad_mem[ACTOR_T.addr()]    = Typed::Type;
+        quad_mem[FIXNUM_T.addr()]   = Typed::Type;
+        quad_mem[SYMBOL_T.addr()]   = Typed::Type;
+        quad_mem[PAIR_T.addr()]     = Typed::Type;
+        quad_mem[FEXPR_T.addr()]    = Typed::Type;
+        quad_mem[FREE_T.addr()]     = Typed::Type;
         let start = START.raw();
         let a_boot = Cap::new(start+1);
         let ip_boot = Ptr::new(start+2);
-        quad_mem[START.addr()]      = Typed::Event{ target: a_boot, msg: NIL, next: NIL.ptr() }.quad();
-        quad_mem[START.addr()+1]    = Typed::Actor{ beh: ip_boot, state: NIL.ptr(), events: None }.quad();
-        quad_mem[START.addr()+2]    = Typed::Instr{ op: Op::Push{ v: UNIT, k: Ptr::new(start+3) } }.quad();
-        quad_mem[START.addr()+3]    = Typed::Instr{ op: Op::End{ x: End::Stop } }.quad();
+        quad_mem[START.addr()]      = Typed::Event{ target: a_boot, msg: NIL, next: NIL.ptr() };
+        quad_mem[START.addr()+1]    = Typed::Actor{ beh: ip_boot, state: NIL.ptr(), events: None };
+        quad_mem[START.addr()+2]    = Typed::Instr{ op: Op::Push{ v: UNIT, k: Ptr::new(start+3) } };
+        quad_mem[START.addr()+3]    = Typed::Instr{ op: Op::End{ x: End::Stop } };
 
         Core{
             quad_mem,
@@ -129,87 +129,98 @@ impl Core {
     }
     pub fn dispatch_event(&mut self) -> bool {
         println!("dispatch_event: e_queue_head={}", self.e_queue_head);
-        if NIL.ptr() == self.e_queue_head {
-            return false;  // event queue is empty
-        }
         let ep = self.e_queue_head;
-        self.e_queue_head = self.quad(ep).z().ptr();
-        if NIL.ptr() == self.e_queue_head {
-            self.e_queue_tail = NIL.ptr();  // empty queue
+        let event = self.typed_mut(ep);
+        match event {
+            Typed::Event { target, next, .. } => {
+                // remove event from queue
+                self.e_queue_head = next.ptr();
+                if NIL.ptr() == self.e_queue_head {
+                    self.e_queue_tail = NIL.ptr();  // empty queue
+                }
+                println!("dispatch_event: event={} -> {}", ep, event);
+                let a_ptr = Ptr::new(target.raw());  // WARNING: converting Cap to Ptr!
+                match self.typed(a_ptr) {
+                    Typed::Actor { beh, state, events } => {
+                        match events {
+                            Some(_) => {
+                                // target actor is busy, retry later...
+                                *next = NIL.ptr();
+                                let last = self.typed_mut(self.e_queue_tail);
+                                if let Typed::Event { next, ..  } = last {
+                                    *next = ep;
+                                }
+                                if NIL.ptr() == self.e_queue_head {
+                                    self.e_queue_head = ep;
+                                }
+                                self.e_queue_tail = ep;
+                                false  // no event dispatched
+                            },
+                            None => {
+                                *events = Some(NIL.ptr());
+                                let cont = self.new_cont(beh.ptr(), state.ptr(), ep);
+                                println!("dispatch_event: cont={} -> {}", cont, self.typed(cont));
+                                let last = self.typed_mut(self.k_queue_tail);
+                                if let Typed::Cont { next, ..  } = last {
+                                    *next = cont;
+                                }
+                                if NIL.ptr() == self.k_queue_head {
+                                    self.k_queue_head = cont;
+                                }
+                                self.k_queue_tail = cont;
+                                true  // event dispatched
+                            },
+                        }
+                    },
+                    _ => panic!("Event target is not an actor!"),
+                }
+            },
+            _ => false,  // event queue is empty
         }
-        let event = self.quad(ep);
-        //event.set_z(NIL);
-        println!("dispatch_event: event={} -> {}", ep, event);
-        let target = event.x().cap();
-        let a_ptr = Ptr::new(target.raw());  // WARNING: converting Cap to Ptr!
-        if self.quad(a_ptr).z() != UNDEF {
-            // target actor is busy, retry later...
-            self.quad_mut(ep).set_z(NIL);
-            if NIL.ptr() != self.e_queue_tail {
-                self.quad_mut(self.e_queue_tail).set_z(ep.val());
-            }
-            if NIL.ptr() == self.e_queue_head {
-                self.e_queue_head = ep;
-            }
-            self.e_queue_tail = ep;
-            return false;
-        }
-        // create continuation to execute actor behavior
-        let actor = self.quad_mut(a_ptr);
-        actor.set_z(NIL);  // start actor transaction
-        let ip = actor.x().ptr();  // actor behavior
-        let sp = actor.y().ptr();  // actor state
-        let cont = self.new_cont(ip, sp, ep);
-        println!("dispatch_event: cont={} -> {}", cont, self.quad(cont));
-        if NIL.ptr() != self.k_queue_tail {
-            self.quad_mut(self.k_queue_tail).set_z(cont.val());
-        }
-        if NIL.ptr() == self.k_queue_head {
-            self.k_queue_head = cont;
-        }
-        self.k_queue_tail = cont;
-        true  // event dispatched
     }
     pub fn execute_instruction(&mut self) -> bool {
         println!("execute_instruction: k_queue_head={}", self.k_queue_head);
-        if NIL.ptr() == self.k_queue_head {
-            return false;  // continuation queue is empty
+        let cont = self.typed_mut(self.k_queue_head);
+        match cont {
+            Typed::Cont { ip, sp, ep, next } => {
+                println!("execute_instruction: cont={} event={}", cont, self.typed(ep.ptr()));
+                let instr = self.typed(ip.ptr());
+                println!("execute_instruction: instr={}", instr);
+                match instr {
+                    Typed::Instr { op } => {
+                        let ip_ = self.perform_op(op);
+                        println!("execute_instruction: ip'={} -> {}", ip_, self.typed(ip_));
+                        *ip = ip_;
+                        // remove continuation from queue
+                        let first = self.k_queue_head;
+                        self.k_queue_head = next.ptr();
+                        if NIL.ptr() == self.k_queue_head {
+                            self.k_queue_tail = NIL.ptr();  // empty queue
+                        }
+                        if self.in_heap(ip_.val()) {
+                            // re-queue updated continuation
+                            *next = NIL.ptr();
+                            println!("execute_instruction: cont'={}", cont);
+                            let last = self.typed_mut(self.k_queue_tail);
+                            if let Typed::Cont { next, ..  } = last {
+                                *next = first;
+                            }
+                            if NIL.ptr() == self.k_queue_head {
+                                self.k_queue_head = first;
+                            }
+                            self.k_queue_tail = first;
+                        } else {
+                            // free dead continuation and associated event
+                            self.free(ep.ptr());
+                            self.free(first);
+                        }                
+                    },
+                    _ => panic!("Illegal instruction!"),
+                };
+                true
+            },
+            _ => false,  // continuation queue is empty
         }
-        let cont = self.k_queue_head;
-        println!("execute_instruction: cont={} -> {}", cont, self.quad(cont));
-        println!("execute_instruction: ip={} -> {}", self.ip(), self.quad(self.ip()));
-        println!("execute_instruction: sp={} -> {}", self.sp(), self.quad(self.sp()));
-        let ep = self.ep();
-        println!("execute_instruction: ep={} -> {}", ep, self.quad(ep));
-        let instr = Typed::from(self.quad(self.ip()));
-        let ip = match instr {
-            Some(Typed::Instr{ op }) => self.perform_op(&op),
-            _ => panic!("Illegal instruction!"),
-        };
-        println!("execute_instruction: ip'={} -> {}", ip, self.quad(ip));
-        self.set_ip(ip);
-        // remove continuation from queue
-        self.k_queue_head = self.quad(cont).z().ptr();
-        if NIL.ptr() == self.k_queue_head {
-            self.k_queue_tail = NIL.ptr();  // empty queue
-        }
-        if self.in_heap(ip.val()) {
-            // re-queue updated continuation
-            self.quad_mut(cont).set_z(NIL);
-            println!("execute_instruction: cont'={} -> {}", cont, self.quad(cont));
-            if NIL.ptr() != self.k_queue_tail {
-                self.quad_mut(self.k_queue_tail).set_z(cont.val());
-            }
-            if NIL.ptr() == self.k_queue_head {
-                self.k_queue_head = cont;
-            }
-            self.k_queue_tail = cont;
-        } else {
-            // free dead continuation and associated event
-            self.free(ep);
-            self.free(cont);
-        }
-        true  // instruction executed
     }
     fn perform_op(&mut self, op: &Op) -> Ptr {
         match op {
@@ -304,22 +315,40 @@ impl Core {
     }
 
     pub fn ip(&self) -> Ptr {  // instruction pointer
-        self.quad(self.k_queue_head).t().ptr()
+        match self.typed(self.k_queue_head) {
+            Typed::Cont { ip, .. } => ip.ptr(),
+            _ => UNDEF.ptr()
+        }
     }
     pub fn sp(&self) -> Ptr {  // stack pointer
-        self.quad(self.k_queue_head).x().ptr()
+        match self.typed(self.k_queue_head) {
+            Typed::Cont { sp, .. } => sp.ptr(),
+            _ => UNDEF.ptr()
+        }
     }
     pub fn ep(&self) -> Ptr {  // event pointer
-        self.quad(self.k_queue_head).y().ptr()
+        match self.typed(self.k_queue_head) {
+            Typed::Cont { ep, .. } => ep.ptr(),
+            _ => UNDEF.ptr()
+        }
     }
-    fn set_ip(&mut self, ip: Ptr) {
-        self.quad_mut(self.k_queue_head).set_t(ip.val())
+    fn set_ip(&mut self, ptr: Ptr) {
+        let typed = self.typed_mut(self.k_queue_head);
+        if let Typed::Cont { ip, .. } = typed {
+            *ip = ptr;
+        }
     }
-    fn set_sp(&mut self, sp: Ptr) {
-        self.quad_mut(self.k_queue_head).set_x(sp.val())
+    fn set_sp(&mut self, ptr: Ptr) {
+        let typed = self.typed_mut(self.k_queue_head);
+        if let Typed::Cont { sp, .. } = typed {
+            *sp = ptr;
+        }
     }
-    fn _set_ep(&mut self, ep: Ptr) {
-        self.quad_mut(self.k_queue_head).set_y(ep.val())
+    fn _set_ep(&mut self, ptr: Ptr) {
+        let typed = self.typed_mut(self.k_queue_head);
+        if let Typed::Cont { ep, .. } = typed {
+            *ep = ptr;
+        }
     }
 
     pub fn quad_top(&self) -> Ptr {
@@ -338,11 +367,11 @@ impl Core {
         }
     }
 
-    pub fn quad(&self, ptr: Ptr) -> &Quad {
+    pub fn typed(&self, ptr: Ptr) -> &Typed {
         let addr = self.addr(ptr).unwrap();
         &self.quad_mem[addr]
     }
-    pub fn quad_mut(&mut self, ptr: Ptr) -> &mut Quad {
+    pub fn typed_mut(&mut self, ptr: Ptr) -> &mut Typed {
         assert!(self.in_heap(ptr.val()));
         let addr = self.addr(ptr).unwrap();
         &mut self.quad_mem[addr]
@@ -356,11 +385,10 @@ impl Core {
             match Cap::from(val) {
                 Some(cap) => {
                     let ptr = Ptr::new(cap.raw());  // WARNING: converting Cap to Ptr!
-                    match self.addr(ptr) {
-                        Some(addr) => {
-                            ACTOR_T == self.quad_mem[addr].t()
-                        },
-                        None => false,
+                    match self.typed(ptr) {
+                        Typed::Actor { .. } => true,
+                        //ACTOR_T == self.quad_mem[addr].t()
+                        _ => false,
                     }
                 },
                 None => false,
@@ -368,11 +396,20 @@ impl Core {
         } else {
             match Ptr::from(val) {
                 Some(ptr) => {
-                    match self.addr(ptr) {
-                        Some(addr) => {
-                            typ.val() == self.quad_mem[addr].t()
-                        },
-                        None => false,
+                    match self.typed(ptr) {
+                        Typed::Empty => UNDEF.ptr() == typ,
+                        Typed::Literal => LITERAL_T.ptr() == typ,
+                        Typed::Type => TYPE_T.ptr() == typ,
+                        Typed::Event { .. } => EVENT_T.ptr() == typ,
+                        //Typed::Cont { .. } => false,
+                        Typed::Instr { .. } => INSTR_T.ptr() == typ,
+                        //Typed::Actor { .. } => false,
+                        Typed::Symbol { .. } => SYMBOL_T.ptr() == typ,
+                        Typed::Pair { .. } => PAIR_T.ptr() == typ,
+                        Typed::Fexpr { .. } => FEXPR_T.ptr() == typ,
+                        Typed::Free { .. } => FREE_T.ptr() == typ,
+                        Typed::Quad { t, .. } => t.val() == typ.val(),
+                        _ => false,
                     }
                 },
                 None => false,
@@ -380,27 +417,35 @@ impl Core {
         }
     }
 
-    pub fn alloc(&mut self, quad: &Quad) -> Ptr {
+    pub fn alloc(&mut self, init: &Typed) -> Ptr {
         let mut ptr = self.quad_next;
-        if self.typeq(FREE_T.ptr(), ptr.val()) {
-            assert!(self.gc_free_cnt > 0);
-            self.gc_free_cnt -= 1;
-            self.quad_next = self.quad(ptr).z().ptr();
-        } else if self.quad_top.addr() < QUAD_MAX {
-            ptr = self.quad_top;
-            self.quad_top = Ptr::new(ptr.raw() + 1);
-        } else {
-            panic!("quad-memory exhausted!");
+        match self.typed(ptr) {
+            Typed::Free { next } => {
+                // use quad from free-list
+                assert!(self.gc_free_cnt > 0);
+                self.gc_free_cnt -= 1;
+                self.quad_next = next.ptr();
+            },
+            _ => {
+                // expand top-of-memory
+                if self.quad_top.addr() < QUAD_MAX {
+                    ptr = self.quad_top;
+                    self.quad_top = Ptr::new(ptr.raw() + 1);
+                } else {
+                    panic!("out of memory!");
+                }
+            },
         }
-        *self.quad_mut(ptr) = *quad;
+        *self.typed_mut(ptr) = *init;
         ptr
     }
     pub fn free(&mut self, ptr: Ptr) {
-        let val = ptr.val();
-        assert!(self.in_heap(val));
-        assert!(!self.typeq(FREE_T.ptr(), val));
+        assert!(self.in_heap(ptr.val()));
+        if let Typed::Free { .. } = self.typed(ptr) {
+            panic!("double-free {}", ptr);
+        }
         let typed = Typed::Free{ next: self.quad_next };
-        *self.quad_mut(ptr) = typed.quad();
+        *self.typed_mut(ptr) = typed;
         self.quad_next = ptr;
         self.gc_free_cnt += 1;
     }
@@ -408,48 +453,49 @@ impl Core {
     pub fn new_event(&mut self, target: Cap, message: Val) -> Ptr {
         // FIXME: add sanity-checks...
         let event = Typed::Event{ target: target, msg: message, next: NIL.ptr() };
-        self.alloc(&event.quad())
+        self.alloc(&event)
     }
     pub fn new_cont(&mut self, ip: Ptr, sp: Ptr, ep: Ptr) -> Ptr {
         // FIXME: add sanity-checks...
         let cont = Typed::Cont{ ip: ip, sp: sp, ep: ep, next: NIL.ptr() };
-        self.alloc(&cont.quad())
+        self.alloc(&cont)
     }
 
     pub fn cons(&mut self, car: Val, cdr: Val) -> Ptr {
         let pair = Typed::Pair{ car: car, cdr: cdr };
-        self.alloc(&pair.quad())
+        self.alloc(&pair)
     }
     pub fn car(&self, pair: Ptr) -> Val {
-        let typed = Typed::from(self.quad(pair));
+        let typed = self.typed(pair);
         match typed {
-            Some(Typed::Pair{ car: val, .. }) => val,
+            Typed::Pair{ car: val, .. } => val.val(),
             _ => UNDEF
         }
     }
     pub fn cdr(&self, pair: Ptr) -> Val {
-        let typed = Typed::from(self.quad(pair));
+        let typed = self.typed(pair);
         match typed {
-            Some(Typed::Pair{ cdr: val, .. }) => val,
+            Typed::Pair{ cdr: val, .. } => val.val(),
             _ => UNDEF
         }
     }
-    pub fn set_car(&mut self, pair: Ptr, car: Val) {
-        let typed = Typed::from(self.quad(pair));
-        if let Some(Typed::Pair{ .. }) = typed {
-            self.quad_mut(pair).set_x(car);  // FIXME: find a type-safe way to do this...
+    pub fn set_car(&mut self, pair: Ptr, val: Val) {
+        let typed = self.typed_mut(pair);
+        if let Typed::Pair{ car, .. } = typed {
+            *car = val;
         }
     }
-    pub fn set_cdr(&mut self, pair: Ptr, cdr: Val) {
-        let typed = Typed::from(self.quad(pair));
-        if let Some(Typed::Pair{ .. }) = typed {
-            self.quad_mut(pair).set_y(cdr);  // FIXME: find a type-safe way to do this...
+    pub fn set_cdr(&mut self, pair: Ptr, val: Val) {
+        let typed = self.typed_mut(pair);
+        if let Typed::Pair{ cdr, .. } = typed {
+            *cdr = val;
         }
     }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Typed {
+    Empty,
     Literal,
     Type,
     Event { target: Cap, msg: Val, next: Ptr },
@@ -460,6 +506,7 @@ pub enum Typed {
     Pair { car: Val, cdr: Val },
     Fexpr { func: Ptr },
     Free { next: Ptr },
+    Quad { t: Val, x: Val, y: Val, z: Val },
 }
 impl Typed {
     pub fn from(quad: &Quad) -> Option<Typed> {
@@ -476,14 +523,12 @@ impl Typed {
             PAIR_T => Some(Typed::Pair{ car: quad.x(), cdr: quad.y() }),
             FEXPR_T => Some(Typed::Fexpr{ func: quad.x().ptr() }),
             FREE_T => Some(Typed::Free{ next: quad.z().ptr() }),
-            t => match Ptr::from(t) {
-                Some(ptr) => Some(Typed::Cont{ ip: ptr, sp: quad.x().ptr(), ep: quad.y().ptr(), next: quad.z().ptr() }),
-                None => None,
-            }
+            _ => Some(Typed::Quad{ t: quad.t(), x: quad.x(), y: quad.y(), z: quad.z() }),
         }
     }
     pub fn quad(&self) -> Quad {
         match self {
+            Typed::Empty => Quad::new(UNDEF, UNDEF, UNDEF, UNDEF),
             Typed::Literal => Quad::new(LITERAL_T, UNDEF, UNDEF, UNDEF),
             Typed::Type => Quad::new(TYPE_T, UNDEF, UNDEF, UNDEF),
             Typed::Event{ target, msg, next } => Quad::new(EVENT_T, target.val(), msg.val(), next.val()),
@@ -497,12 +542,14 @@ impl Typed {
             Typed::Pair{ car, cdr } => Quad::new(PAIR_T, car.val(), cdr.val(), UNDEF),
             Typed::Fexpr{ func } => Quad::new(FEXPR_T, func.val(), UNDEF, UNDEF),
             Typed::Free{ next } => Quad::new(FREE_T, UNDEF, UNDEF, next.val()),
+            Typed::Quad{ t, x, y, z } => Quad::new(t.val(), x.val(), y.val(), z.val()),
         }
     }
 }
 impl fmt::Display for Typed {
     fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
+            Typed::Empty => write!(fmt, "Empty"),
             Typed::Literal => write!(fmt, "Literal"),
             Typed::Type => write!(fmt, "Type"),
             Typed::Event{ target, msg, next } => write!(fmt, "Event{{ target:{}, msg:{}, next:{} }}", target, msg, next),
@@ -516,6 +563,7 @@ impl fmt::Display for Typed {
             Typed::Pair{ car, cdr } => write!(fmt, "Pair{{ car:{}, cdr:{} }}", car, cdr),
             Typed::Fexpr{ func } => write!(fmt, "Fexpr{{ func:{} }}", func),
             Typed::Free{ next } => write!(fmt, "Free{{ next:{} }}", next),
+            Typed::Quad{ t, x, y, z } => write!(fmt, "Quad{{ t:{}, x:{}, y:{}, z:{} }}", t, x, y, z),
         }
     }
 }
@@ -680,6 +728,9 @@ impl Fix {
             None
         }
     }
+    pub fn fix(self) -> Fix {  // NOTE: consumes `self`
+        self
+    }
     pub fn val(self) -> Val {  // NOTE: consumes `self`
         Val::new(self.num as Raw | DIR_RAW)
     }
@@ -708,6 +759,9 @@ impl Ptr {
         } else {
             None
         }
+    }
+    pub fn ptr(self) -> Ptr {  // NOTE: consumes `self`
+        self
     }
     pub fn val(self) -> Val {  // NOTE: consumes `self`
         Val::new(self.raw)
@@ -748,6 +802,9 @@ impl Cap {
             None
         }
     }
+    pub fn cap(self) -> Cap {  // NOTE: consumes `self`
+        self
+    }
     pub fn val(self) -> Val {  // NOTE: consumes `self`
         Val::new(self.raw | OPQ_RAW)
     }
@@ -776,6 +833,7 @@ fn base_types_are_32_bits() {
     assert_eq!(4, std::mem::size_of::<Ptr>());
     assert_eq!(4, std::mem::size_of::<Cap>());
     assert_eq!(16, std::mem::size_of::<Quad>());
+    assert_eq!(16, std::mem::size_of::<Typed>());
 }
 
 #[test]
@@ -845,8 +903,8 @@ fn core_initialization() {
     assert_eq!(NIL.ptr(), core.k_queue_head);
     assert_eq!(core.quad_top(), core.quad_top);
     for raw in 0..core.quad_top().raw() {
-        let quad = core.quad(Ptr::new(raw));
-        println!("{:5}: {} = {}", raw, quad, Typed::from(&quad).unwrap());
+        let typed = core.typed(Ptr::new(raw));
+        println!("{:5}: {} = {}", raw, typed.quad(), typed);
     }
     assert!(false);  // force output to be displayed
 }
@@ -856,26 +914,26 @@ fn basic_memory_allocation() {
     let mut core = Core::new();
     let top_before = core.quad_top.raw();
     println!("quad_top: {}", core.quad_top);
-    let m1 = core.alloc(&Typed::Pair{ car: fixnum(1), cdr: fixnum(1) }.quad());
-    println!("m1:{} -> {}", m1, core.quad(m1));
+    let m1 = core.alloc(&Typed::Pair{ car: fixnum(1), cdr: fixnum(1) });
+    println!("m1:{} -> {}", m1, core.typed(m1));
     println!("quad_top: {}", core.quad_top);
-    let m2 = core.alloc(&Typed::Pair{ car: fixnum(2), cdr: fixnum(2) }.quad());
+    let m2 = core.alloc(&Typed::Pair{ car: fixnum(2), cdr: fixnum(2) });
     println!("quad_top: {}", core.quad_top);
-    let m3 = core.alloc(&Typed::Pair{ car: fixnum(3), cdr: fixnum(3) }.quad());
+    let m3 = core.alloc(&Typed::Pair{ car: fixnum(3), cdr: fixnum(3) });
     println!("quad_top: {}", core.quad_top);
     println!("gc_free_cnt: {}", core.gc_free_cnt);
     core.free(m2);
     println!("gc_free_cnt: {}", core.gc_free_cnt);
     core.free(m3);
     println!("gc_free_cnt: {}", core.gc_free_cnt);
-    let _m4 = core.alloc(&Typed::Pair{ car: fixnum(4), cdr: fixnum(4) }.quad());
+    let _m4 = core.alloc(&Typed::Pair{ car: fixnum(4), cdr: fixnum(4) });
     println!("quad_top: {}", core.quad_top);
     println!("gc_free_cnt: {}", core.gc_free_cnt);
     let top_after = core.quad_top.raw();
     assert_eq!(3, top_after - top_before);
     assert_eq!(1, core.gc_free_cnt);
     println!("quad_next: {}", core.quad_next);
-    println!("quad_next-> {}", core.quad(core.quad_next));
+    println!("quad_next-> {}", core.typed(core.quad_next));
     //assert!(false);  // force output to be displayed
 }
 

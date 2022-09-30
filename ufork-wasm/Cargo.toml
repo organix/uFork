@@ -11,7 +11,7 @@ crate-type = ["cdylib", "rlib"]
 default = ["console_error_panic_hook"]
 api-old = []
 simulator = []
-websever = []
+webserver = []
 # Remove the three lines above when we figure out where the error comes from...
 
 [dependencies]

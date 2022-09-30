@@ -46,13 +46,13 @@ impl fmt::Display for Host {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         let core = &self.core;
         for raw in 0..core.quad_top().raw() {
-            let quad = core.quad(Ptr::new(raw));
-            write!(fmt, "{:5}: {} = {}\n", raw, quad, Typed::from(&quad).unwrap())?;
+            let typed = core.typed(Ptr::new(raw));
+            write!(fmt, "{:5}: {} = {}\n", raw, typed.quad(), typed)?;
         }
         write!(fmt, "\n")?;
-        write!(fmt, "IP:{} = {}\n", core.ip(), Typed::from(core.quad(core.ip())).unwrap())?;
-        write!(fmt, "SP:{} = {}\n", core.sp(), Typed::from(core.quad(core.sp())).unwrap())?;
-        write!(fmt, "EP:{} = {}\n", core.ep(), Typed::from(core.quad(core.ep())).unwrap())?;
+        write!(fmt, "IP:{} = {}\n", core.ip(), core.typed(core.ip()))?;
+        write!(fmt, "SP:{} = {}\n", core.sp(), core.typed(core.sp()))?;
+        write!(fmt, "EP:{} = {}\n", core.ep(), core.typed(core.ep()))?;
         Ok(())
     }
 }
