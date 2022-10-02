@@ -132,6 +132,7 @@ impl Core {
         let ep = self.e_queue_head;
         let event = self.typed_mut(ep);
         match event {
+            /* FIXME! does not compile!
             Typed::Event { target, next, .. } => {
                 // remove event from queue
                 self.e_queue_head = next.ptr();
@@ -175,6 +176,7 @@ impl Core {
                     _ => panic!("Event target is not an actor!"),
                 }
             },
+            */
             _ => false,  // event queue is empty
         }
     }
@@ -182,6 +184,7 @@ impl Core {
         println!("execute_instruction: k_queue_head={}", self.k_queue_head);
         let cont = self.typed_mut(self.k_queue_head);
         match cont {
+            /* FIXME! does not compile!
             Typed::Cont { ip, sp, ep, next } => {
                 println!("execute_instruction: cont={} event={}", cont, self.typed(ep.ptr()));
                 let instr = self.typed(ip.ptr());
@@ -219,6 +222,7 @@ impl Core {
                 };
                 true
             },
+            */
             _ => false,  // continuation queue is empty
         }
     }
@@ -423,7 +427,9 @@ impl Core {
             Typed::Free { next } => {
                 // use quad from free-list
                 assert!(self.gc_free_cnt > 0);
+                /* FIXME! does not compile!
                 self.gc_free_cnt -= 1;
+                */
                 self.quad_next = next.ptr();
             },
             _ => {
@@ -469,14 +475,14 @@ impl Core {
         let typed = self.typed(pair);
         match typed {
             Typed::Pair{ car: val, .. } => val.val(),
-            _ => UNDEF
+            _ => UNDEF,
         }
     }
     pub fn cdr(&self, pair: Ptr) -> Val {
         let typed = self.typed(pair);
         match typed {
             Typed::Pair{ cdr: val, .. } => val.val(),
-            _ => UNDEF
+            _ => UNDEF,
         }
     }
     pub fn set_car(&mut self, pair: Ptr, val: Val) {

@@ -4,6 +4,7 @@ use wasm_bindgen::prelude::*;
 use std::fmt;
 
 pub mod ufork;
+pub mod cons;  // FIXME: remove this experimental module!
 
 use crate::ufork::*;
 
