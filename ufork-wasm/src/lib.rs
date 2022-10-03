@@ -48,12 +48,12 @@ impl fmt::Display for Host {
         let core = &self.core;
         for raw in 0..core.quad_top().raw() {
             let typed = core.typed(Ptr::new(raw));
-            write!(fmt, "{:5}: {} = {}\n", raw, typed.quad(), typed)?;
+            write!(fmt, "{:5}: {}\n", raw, typed)?;
         }
         write!(fmt, "\n")?;
-        write!(fmt, "IP:{} = {}\n", core.ip(), core.typed(core.ip()))?;
-        write!(fmt, "SP:{} = {}\n", core.sp(), core.typed(core.sp()))?;
-        write!(fmt, "EP:{} = {}\n", core.ep(), core.typed(core.ep()))?;
+        write!(fmt, "IP:{} -> {}\n", core.ip(), core.typed(core.ip()))?;
+        write!(fmt, "SP:{} -> {}\n", core.sp(), core.typed(core.sp()))?;
+        write!(fmt, "EP:{} -> {}\n", core.ep(), core.typed(core.ep()))?;
         Ok(())
     }
 }
@@ -78,6 +78,9 @@ impl Host {
             self.prepare();
         }
         ok
+    }
+    pub fn disasm(&self, raw: Raw) -> String {
+        self.core.typed(Ptr::new(raw)).to_string()
     }
     pub fn render(&self) -> String {
         self.to_string()

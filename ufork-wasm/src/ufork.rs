@@ -2,8 +2,8 @@
 
 use core::fmt;
 
-type Raw = u32;  // univeral value type
-type Num = i32;  // fixnum integer type
+pub type Raw = u32;  // univeral value type
+pub type Num = i32;  // fixnum integer type
 
 // type-tag bits
 const MSK_RAW: Raw      = 0xC000_0000;
@@ -274,28 +274,28 @@ impl Core {
         }
     }
 
-    fn extract_nth(&self, mut lst: Val, mut n: Num) -> Val {
+    fn extract_nth(&self, mut lst: Val, mut num: Num) -> Val {
         let mut v = UNDEF;
-        if n == 0 {  // entire list/message
+        if num == 0 {  // entire list/message
             v = lst;
-        } else if n > 0 {  // item at n-th index
-            assert!(n < 64);
+        } else if num > 0 {  // item at n-th index
+            assert!(num < 64);
             while self.typeq(PAIR_T, lst) {
-                n -= 1;
-                if n <= 0 { break; }
+                num -= 1;
+                if num <= 0 { break; }
                 lst = self.cdr(lst.ptr());
             }
-            if n == 0 {
+            if num == 0 {
                 v = self.car(lst.ptr());
             }
         } else {  // `-n` selects the n-th tail
-            assert!(n > -64);
+            assert!(num > -64);
             while self.typeq(PAIR_T, lst) {
-                n += 1;
-                if n >= 0 { break; }
+                num += 1;
+                if num >= 0 { break; }
                 lst = self.cdr(lst.ptr());
             }
-            if n == 0 {
+            if num == 0 {
                 v = self.cdr(lst.ptr());
             }
         }
@@ -350,30 +350,44 @@ impl Core {
         }
     }
 
-    pub fn quad_top(&self) -> Ptr {
-        self.quad_top
+    pub fn new_event(&mut self, target: Cap, msg: Val) -> Ptr {
+        let event = Typed::Event{ target, msg, next: NIL.ptr() };
+        self.alloc(&event)
     }
-    pub fn in_heap(&self, val: Val) -> bool {
-        let raw = val.raw();
-        (raw < self.quad_top.raw()) && (raw >= START.raw())
-    }
-    pub fn addr(&self, ptr: Ptr) -> Option<usize> {
-        let addr = ptr.addr();
-        if addr < self.quad_top.addr() {
-            Some(addr)
-        } else {
-            None
-        }
+    pub fn new_cont(&mut self, ip: Ptr, sp: Ptr, ep: Ptr) -> Ptr {
+        let cont = Typed::Cont{ ip, sp, ep, next: NIL.ptr() };
+        self.alloc(&cont)
     }
 
-    pub fn typed(&self, ptr: Ptr) -> &Typed {
-        let addr = self.addr(ptr).unwrap();
-        &self.quad_mem[addr]
+    pub fn cons(&mut self, car: Val, cdr: Val) -> Ptr {
+        let pair = Typed::Pair{ car, cdr };
+        self.alloc(&pair)
     }
-    pub fn typed_mut(&mut self, ptr: Ptr) -> &mut Typed {
-        assert!(self.in_heap(ptr.val()));
-        let addr = self.addr(ptr).unwrap();
-        &mut self.quad_mem[addr]
+    pub fn car(&self, pair: Ptr) -> Val {
+        let typed = *self.typed(pair);
+        match typed {
+            Typed::Pair{ car, .. } => car,
+            _ => UNDEF,
+        }
+    }
+    pub fn cdr(&self, pair: Ptr) -> Val {
+        let typed = *self.typed(pair);
+        match typed {
+            Typed::Pair{ cdr, .. } => cdr,
+            _ => UNDEF,
+        }
+    }
+    pub fn set_car(&mut self, pair: Ptr, val: Val) {
+        assert!(self.in_heap(val));
+        if let Typed::Pair{ car, .. } = self.typed_mut(pair) {
+            *car = val;
+        }
+    }
+    pub fn set_cdr(&mut self, pair: Ptr, val: Val) {
+        assert!(self.in_heap(val));
+        if let Typed::Pair{ cdr, .. } = self.typed_mut(pair) {
+            *cdr = val;
+        }
     }
 
     pub fn typeq(&self, typ: Val, val: Val) -> bool {
@@ -449,45 +463,30 @@ impl Core {
         self.gc_free_cnt += 1;
     }
 
-    pub fn new_event(&mut self, target: Cap, msg: Val) -> Ptr {
-        let event = Typed::Event{ target, msg, next: NIL.ptr() };
-        self.alloc(&event)
+    pub fn typed(&self, ptr: Ptr) -> &Typed {
+        let addr = self.addr(ptr).unwrap();
+        &self.quad_mem[addr]
     }
-    pub fn new_cont(&mut self, ip: Ptr, sp: Ptr, ep: Ptr) -> Ptr {
-        let cont = Typed::Cont{ ip, sp, ep, next: NIL.ptr() };
-        self.alloc(&cont)
+    pub fn typed_mut(&mut self, ptr: Ptr) -> &mut Typed {
+        assert!(self.in_heap(ptr.val()));
+        let addr = self.addr(ptr).unwrap();
+        &mut self.quad_mem[addr]
     }
 
-    pub fn cons(&mut self, car: Val, cdr: Val) -> Ptr {
-        let pair = Typed::Pair{ car, cdr };
-        self.alloc(&pair)
-    }
-    pub fn car(&self, pair: Ptr) -> Val {
-        if let Typed::Pair{ car, .. } = self.typed(pair) {
-            *car
+    pub fn addr(&self, ptr: Ptr) -> Option<usize> {
+        let addr = ptr.addr();
+        if addr < self.quad_top.addr() {
+            Some(addr)
         } else {
-            UNDEF
+            None
         }
     }
-    // FIXME: car() and cdr() represent alternate implementations, evaluate generated code...
-    pub fn cdr(&self, pair: Ptr) -> Val {
-        let typed = *self.typed(pair);
-        match typed {
-            Typed::Pair{ cdr, .. } => cdr,
-            _ => UNDEF,
-        }
+    pub fn in_heap(&self, val: Val) -> bool {
+        let raw = val.raw();
+        (raw < self.quad_top.raw()) && (raw >= START.raw())
     }
-    pub fn set_car(&mut self, pair: Ptr, val: Val) {
-        assert!(self.in_heap(val));
-        if let Typed::Pair{ car, .. } = self.typed_mut(pair) {
-            *car = val;
-        }
-    }
-    pub fn set_cdr(&mut self, pair: Ptr, val: Val) {
-        assert!(self.in_heap(val));
-        if let Typed::Pair{ cdr, .. } = self.typed_mut(pair) {
-            *cdr = val;
-        }
+    pub fn quad_top(&self) -> Ptr {
+        self.quad_top
     }
 }
 
