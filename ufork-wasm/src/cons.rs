@@ -137,7 +137,7 @@ impl Cons {
         let typed = self.typed(addr);
         match typed {
             Typed::Free { next } => {
-                // use quad from free-list
+                // use memory from free-list
                 self.mem_free = *next;
             },
             _ => {
@@ -191,6 +191,7 @@ impl Cons {
     }
 
     pub fn typed(&self, addr: usize) -> &Typed {
+        assert!(addr < self.mem_top());
         &self.mem[addr]
     }
     pub fn typed_mut(&mut self, addr: usize) -> &mut Typed {
@@ -215,9 +216,9 @@ pub enum Typed {
 
  //#[cfg(test)] -- use this if/when the tests are in a sub-module
 #[test]
-fn enum_variant_discriminator_occupies_zero_memory() {
+fn enum_variant_discriminator_occupies_memory() {
     println!("size_of::<Typed> = {}", std::mem::size_of::<Typed>());
-    assert_eq!(2 * std::mem::size_of::<usize>(), std::mem::size_of::<Typed>());
+    assert!(std::mem::size_of::<Typed>() > (std::mem::size_of::<usize>() * 2));
 }
 
 #[test]
@@ -244,7 +245,7 @@ fn basic_memory_allocation() {
     println!("mem_free: {} -> {:?}", core.mem_free(), core.typed(core.mem_free()));
     let top_after = core.mem_top();
     assert_eq!(3, top_after - top_before);
-    assert!(false);  // force output to be displayed
+    //assert!(false);  // force output to be displayed
 }
 
 #[test]

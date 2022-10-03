@@ -128,45 +128,48 @@ impl Core {
         false
     }
     pub fn dispatch_event(&mut self) -> bool {
-        println!("dispatch_event: e_queue_head={}", self.e_queue_head);
         let ep = self.e_queue_head;
-        let event = self.typed_mut(ep);
+        let event = *self.typed(ep);
+        println!("dispatch_event: event={} -> {}", ep, event);
         match event {
             /* FIXME! does not compile!
+            */
             Typed::Event { target, next, .. } => {
                 // remove event from queue
-                self.e_queue_head = next.ptr();
+                self.e_queue_head = next;
                 if NIL.ptr() == self.e_queue_head {
                     self.e_queue_tail = NIL.ptr();  // empty queue
                 }
-                println!("dispatch_event: event={} -> {}", ep, event);
                 let a_ptr = Ptr::new(target.raw());  // WARNING: converting Cap to Ptr!
-                match self.typed(a_ptr) {
+                match *self.typed(a_ptr) {
                     Typed::Actor { beh, state, events } => {
                         match events {
                             Some(_) => {
                                 // target actor is busy, retry later...
-                                *next = NIL.ptr();
-                                let last = self.typed_mut(self.e_queue_tail);
-                                if let Typed::Event { next, ..  } = last {
+                                if let Typed::Event { next, .. } = self.typed_mut(ep) {
+                                    *next = NIL.ptr();
+                                };
+                                let last = self.e_queue_tail;
+                                if let Typed::Event { next, ..  } = self.typed_mut(last) {
                                     *next = ep;
-                                }
-                                if NIL.ptr() == self.e_queue_head {
+                                } else {  // NIL.ptr() == self.e_queue_head
                                     self.e_queue_head = ep;
                                 }
                                 self.e_queue_tail = ep;
                                 false  // no event dispatched
                             },
                             None => {
-                                *events = Some(NIL.ptr());
-                                let cont = self.new_cont(beh.ptr(), state.ptr(), ep);
+                                // begin actor-event transaction
+                                if let Typed::Actor { events, .. } = self.typed_mut(a_ptr) {
+                                    *events = Some(NIL.ptr());
+                                };
+                                let cont = self.new_cont(beh, state, ep);
                                 println!("dispatch_event: cont={} -> {}", cont, self.typed(cont));
-                                let last = self.typed_mut(self.k_queue_tail);
-                                if let Typed::Cont { next, ..  } = last {
-                                    *next = cont;
-                                }
-                                if NIL.ptr() == self.k_queue_head {
+                                let last = self.k_queue_tail;
+                                if !self.in_heap(last.val()) {
                                     self.k_queue_head = cont;
+                                } else if let Typed::Cont { next, ..  } = self.typed_mut(last) {
+                                    *next = cont;
                                 }
                                 self.k_queue_tail = cont;
                                 true  // event dispatched
@@ -176,45 +179,44 @@ impl Core {
                     _ => panic!("Event target is not an actor!"),
                 }
             },
-            */
             _ => false,  // event queue is empty
         }
     }
     pub fn execute_instruction(&mut self) -> bool {
         println!("execute_instruction: k_queue_head={}", self.k_queue_head);
-        let cont = self.typed_mut(self.k_queue_head);
+        let cont = *self.typed(self.k_queue_head);
         match cont {
-            /* FIXME! does not compile!
-            Typed::Cont { ip, sp, ep, next } => {
-                println!("execute_instruction: cont={} event={}", cont, self.typed(ep.ptr()));
-                let instr = self.typed(ip.ptr());
+            Typed::Cont { ip, sp: _, ep, next } => {
+                println!("execute_instruction: cont={} -> event={}", cont, self.typed(ep));
+                let instr = *self.typed(ip);
                 println!("execute_instruction: instr={}", instr);
                 match instr {
                     Typed::Instr { op } => {
-                        let ip_ = self.perform_op(op);
+                        let ip_ = self.perform_op(&op);
                         println!("execute_instruction: ip'={} -> {}", ip_, self.typed(ip_));
-                        *ip = ip_;
+                        self.set_ip(ip_);
                         // remove continuation from queue
                         let first = self.k_queue_head;
-                        self.k_queue_head = next.ptr();
+                        self.k_queue_head = next;
                         if NIL.ptr() == self.k_queue_head {
                             self.k_queue_tail = NIL.ptr();  // empty queue
                         }
                         if self.in_heap(ip_.val()) {
                             // re-queue updated continuation
-                            *next = NIL.ptr();
-                            println!("execute_instruction: cont'={}", cont);
-                            let last = self.typed_mut(self.k_queue_tail);
-                            if let Typed::Cont { next, ..  } = last {
-                                *next = first;
-                            }
-                            if NIL.ptr() == self.k_queue_head {
+                            if let Typed::Cont { next, .. } = self.typed_mut(first) {
+                                *next = NIL.ptr();
+                            };
+                            println!("execute_instruction: cont'={}", self.typed(first));
+                            let last = self.k_queue_tail;
+                            if !self.in_heap(last.val()) {
                                 self.k_queue_head = first;
+                            } else if let Typed::Cont { next, ..  } = self.typed_mut(last) {
+                                *next = first;
                             }
                             self.k_queue_tail = first;
                         } else {
                             // free dead continuation and associated event
-                            self.free(ep.ptr());
+                            self.free(ep);
                             self.free(first);
                         }                
                     },
@@ -222,7 +224,6 @@ impl Core {
                 };
                 true
             },
-            */
             _ => false,  // continuation queue is empty
         }
     }
@@ -422,26 +423,25 @@ impl Core {
     }
 
     pub fn alloc(&mut self, init: &Typed) -> Ptr {
-        let mut ptr = self.quad_next;
-        match self.typed(ptr) {
+        let ptr = match *self.typed(self.quad_next) {
             Typed::Free { next } => {
                 // use quad from free-list
+                let ptr = self.quad_next;
                 assert!(self.gc_free_cnt > 0);
-                /* FIXME! does not compile!
                 self.gc_free_cnt -= 1;
-                */
-                self.quad_next = next.ptr();
+                self.quad_next = next;
+                ptr
             },
             _ => {
                 // expand top-of-memory
-                if self.quad_top.addr() < QUAD_MAX {
-                    ptr = self.quad_top;
-                    self.quad_top = Ptr::new(ptr.raw() + 1);
-                } else {
+                if self.quad_top.addr() >= QUAD_MAX {
                     panic!("out of memory!");
                 }
+                let ptr = self.quad_top;
+                self.quad_top = Ptr::new(ptr.raw() + 1);
+                ptr
             },
-        }
+        };
         *self.typed_mut(ptr) = *init;
         ptr
     }
@@ -486,14 +486,14 @@ impl Core {
         }
     }
     pub fn set_car(&mut self, pair: Ptr, val: Val) {
-        let typed = self.typed_mut(pair);
-        if let Typed::Pair{ car, .. } = typed {
+        assert!(self.in_heap(val));
+        if let Typed::Pair{ car, .. } = self.typed_mut(pair) {
             *car = val;
         }
     }
     pub fn set_cdr(&mut self, pair: Ptr, val: Val) {
-        let typed = self.typed_mut(pair);
-        if let Typed::Pair{ cdr, .. } = typed {
+        assert!(self.in_heap(val));
+        if let Typed::Pair{ cdr, .. } = self.typed_mut(pair) {
             *cdr = val;
         }
     }
@@ -839,7 +839,7 @@ fn base_types_are_32_bits() {
     assert_eq!(4, std::mem::size_of::<Ptr>());
     assert_eq!(4, std::mem::size_of::<Cap>());
     assert_eq!(16, std::mem::size_of::<Quad>());
-    assert_eq!(16, std::mem::size_of::<Typed>());
+    //assert_eq!(16, std::mem::size_of::<Typed>());
 }
 
 #[test]
@@ -912,7 +912,7 @@ fn core_initialization() {
         let typed = core.typed(Ptr::new(raw));
         println!("{:5}: {} = {}", raw, typed.quad(), typed);
     }
-    assert!(false);  // force output to be displayed
+    //assert!(false);  // force output to be displayed
 }
 
 #[test]
