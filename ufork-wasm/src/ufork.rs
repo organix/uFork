@@ -132,8 +132,6 @@ impl Core {
         let event = *self.typed(ep);
         println!("dispatch_event: event={} -> {}", ep, event);
         match event {
-            /* FIXME! does not compile!
-            */
             Typed::Event { target, next, .. } => {
                 // remove event from queue
                 self.e_queue_head = next;
@@ -141,6 +139,7 @@ impl Core {
                     self.e_queue_tail = NIL.ptr();  // empty queue
                 }
                 let a_ptr = Ptr::new(target.raw());  // WARNING: converting Cap to Ptr!
+                println!("dispatch_event: target={} -> {}", a_ptr, self.typed(a_ptr));
                 match *self.typed(a_ptr) {
                     Typed::Actor { beh, state, events } => {
                         match events {
@@ -185,9 +184,10 @@ impl Core {
     pub fn execute_instruction(&mut self) -> bool {
         println!("execute_instruction: k_queue_head={}", self.k_queue_head);
         let cont = *self.typed(self.k_queue_head);
+        println!("execute_instruction: cont={}", cont);
         match cont {
             Typed::Cont { ip, sp: _, ep, next } => {
-                println!("execute_instruction: cont={} -> event={}", cont, self.typed(ep));
+                println!("execute_instruction: event={}", self.typed(ep));
                 let instr = *self.typed(ip);
                 println!("execute_instruction: instr={}", instr);
                 match instr {
@@ -233,7 +233,7 @@ impl Core {
                 println!("op_typeq: typ={}", t);
                 let val = self.stack_pop();
                 println!("op_typeq: val={}", val);
-                let r = if self.typeq(*t, val) { TRUE } else { FALSE };
+                let r = if self.typeq(t.val(), val) { TRUE } else { FALSE };
                 self.stack_push(r);
                 *k
             },
@@ -280,7 +280,7 @@ impl Core {
             v = lst;
         } else if n > 0 {  // item at n-th index
             assert!(n < 64);
-            while self.typeq(PAIR_T.ptr(), lst) {
+            while self.typeq(PAIR_T, lst) {
                 n -= 1;
                 if n <= 0 { break; }
                 lst = self.cdr(lst.ptr());
@@ -290,7 +290,7 @@ impl Core {
             }
         } else {  // `-n` selects the n-th tail
             assert!(n > -64);
-            while self.typeq(PAIR_T.ptr(), lst) {
+            while self.typeq(PAIR_T, lst) {
                 n += 1;
                 if n >= 0 { break; }
                 lst = self.cdr(lst.ptr());
@@ -308,7 +308,7 @@ impl Core {
     }
     fn stack_pop(&mut self) -> Val {
         let sp = self.sp();
-        if self.typeq(PAIR_T.ptr(), sp.val()) {
+        if self.typeq(PAIR_T, sp.val()) {
             let item = self.car(sp);
             self.set_sp(self.cdr(sp).ptr());
             self.free(sp);  // free pair holding stack item
@@ -349,12 +349,6 @@ impl Core {
             *sp = ptr;
         }
     }
-    fn _set_ep(&mut self, ptr: Ptr) {
-        let typed = self.typed_mut(self.k_queue_head);
-        if let Typed::Cont { ep, .. } = typed {
-            *ep = ptr;
-        }
-    }
 
     pub fn quad_top(&self) -> Ptr {
         self.quad_top
@@ -382,17 +376,16 @@ impl Core {
         &mut self.quad_mem[addr]
     }
 
-    pub fn typeq(&self, typ: Ptr, val: Val) -> bool {
-        if FIXNUM_T.ptr() == typ {
+    pub fn typeq(&self, typ: Val, val: Val) -> bool {
+        if FIXNUM_T == typ {
             let fix = Fix::from(val);
             fix.is_some()
-        } else if ACTOR_T.ptr() == typ {
+        } else if ACTOR_T == typ {
             match Cap::from(val) {
                 Some(cap) => {
                     let ptr = Ptr::new(cap.raw());  // WARNING: converting Cap to Ptr!
                     match self.typed(ptr) {
                         Typed::Actor { .. } => true,
-                        //ACTOR_T == self.quad_mem[addr].t()
                         _ => false,
                     }
                 },
@@ -402,18 +395,18 @@ impl Core {
             match Ptr::from(val) {
                 Some(ptr) => {
                     match self.typed(ptr) {
-                        Typed::Empty => UNDEF.ptr() == typ,
-                        Typed::Literal => LITERAL_T.ptr() == typ,
-                        Typed::Type => TYPE_T.ptr() == typ,
-                        Typed::Event { .. } => EVENT_T.ptr() == typ,
+                        Typed::Empty => typ == UNDEF,
+                        Typed::Literal => typ == LITERAL_T,
+                        Typed::Type => typ == TYPE_T,
+                        Typed::Event { .. } => typ == EVENT_T,
                         //Typed::Cont { .. } => false,
-                        Typed::Instr { .. } => INSTR_T.ptr() == typ,
+                        Typed::Instr { .. } => typ == INSTR_T,
                         //Typed::Actor { .. } => false,
-                        Typed::Symbol { .. } => SYMBOL_T.ptr() == typ,
-                        Typed::Pair { .. } => PAIR_T.ptr() == typ,
-                        Typed::Fexpr { .. } => FEXPR_T.ptr() == typ,
-                        Typed::Free { .. } => FREE_T.ptr() == typ,
-                        Typed::Quad { t, .. } => t.val() == typ.val(),
+                        Typed::Symbol { .. } => typ == SYMBOL_T,
+                        Typed::Pair { .. } => typ == PAIR_T,
+                        Typed::Fexpr { .. } => typ == FEXPR_T,
+                        Typed::Free { .. } => typ == FREE_T,
+                        Typed::Quad { t, .. } => typ == *t,
                         _ => false,
                     }
                 },
@@ -456,32 +449,31 @@ impl Core {
         self.gc_free_cnt += 1;
     }
 
-    pub fn new_event(&mut self, target: Cap, message: Val) -> Ptr {
-        // FIXME: add sanity-checks...
-        let event = Typed::Event{ target: target, msg: message, next: NIL.ptr() };
+    pub fn new_event(&mut self, target: Cap, msg: Val) -> Ptr {
+        let event = Typed::Event{ target, msg, next: NIL.ptr() };
         self.alloc(&event)
     }
     pub fn new_cont(&mut self, ip: Ptr, sp: Ptr, ep: Ptr) -> Ptr {
-        // FIXME: add sanity-checks...
-        let cont = Typed::Cont{ ip: ip, sp: sp, ep: ep, next: NIL.ptr() };
+        let cont = Typed::Cont{ ip, sp, ep, next: NIL.ptr() };
         self.alloc(&cont)
     }
 
     pub fn cons(&mut self, car: Val, cdr: Val) -> Ptr {
-        let pair = Typed::Pair{ car: car, cdr: cdr };
+        let pair = Typed::Pair{ car, cdr };
         self.alloc(&pair)
     }
     pub fn car(&self, pair: Ptr) -> Val {
-        let typed = self.typed(pair);
-        match typed {
-            Typed::Pair{ car: val, .. } => val.val(),
-            _ => UNDEF,
+        if let Typed::Pair{ car, .. } = self.typed(pair) {
+            *car
+        } else {
+            UNDEF
         }
     }
+    // FIXME: car() and cdr() represent alternate implementations, evaluate generated code...
     pub fn cdr(&self, pair: Ptr) -> Val {
-        let typed = self.typed(pair);
+        let typed = *self.typed(pair);
         match typed {
-            Typed::Pair{ cdr: val, .. } => val.val(),
+            Typed::Pair{ cdr, .. } => cdr,
             _ => UNDEF,
         }
     }
@@ -947,5 +939,5 @@ fn basic_memory_allocation() {
 fn run_loop_terminates() {
     let mut core = Core::new();
     core.run_loop();
-    assert!(false);  // force output to be displayed
+    //assert!(false);  // force output to be displayed
 }
