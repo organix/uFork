@@ -7,8 +7,8 @@ const DEAD_COLOR = "#FFF";
 const LIVE_COLOR = "#360";
 
 // Construct the universe, and get its width and height.
-const width = 64;//96;
-const height = 48;//64;
+const width = 24;//96;
+const height = 16;//64;
 const universe = Universe.new(width, height);
 //universe.pattern_fill();
 universe.launch_ship();
@@ -44,8 +44,8 @@ const drawHost = () => {
 		let p = sp;
 		let a = [];
 		while (host.is_pair(p)) {
-			//a.push(host.disasm(p));
-			a.push(host.print(host.car(p)));
+			//a.push(host.disasm(p));  // display stack Pair(s)
+			a.push(host.print(host.car(p)));  // display stack item(s)
 			p = host.cdr(p);
 		}
 		$stack.textContent = a.join("\n");

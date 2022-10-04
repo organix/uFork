@@ -296,7 +296,7 @@ PROC_DECL(vm_roll) {
             if (sane-- == 0) return panic("insane vm_roll");
         }
         if (sp == NIL) {  // stack underflow
-            stack_push(NIL);
+            stack_push(UNDEF);
         } else if (sp != pp) {
             set_cdr(pp, cdr(sp));
             set_cdr(sp, GET_SP());

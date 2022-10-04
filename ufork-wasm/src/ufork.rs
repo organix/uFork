@@ -98,17 +98,17 @@ impl Core {
         let start = START.raw();
         let a_boot = Cap::new(start+1);
         let ip_boot = Ptr::new(start+2);
-        let n_m1 = Fix::new(-1);
         quad_mem[START.addr()]      = Typed::Event{ target: a_boot, msg: NIL, next: NIL.ptr() };
         quad_mem[START.addr()+1]    = Typed::Actor{ beh: ip_boot, state: NIL.ptr(), events: None };
         quad_mem[START.addr()+2]    = Typed::Instr{ op: Op::Push{ v: UNIT, k: Ptr::new(start+3) } };
-        quad_mem[START.addr()+3]    = Typed::Instr{ op: Op::Push{ v: n_m1.val(), k: Ptr::new(start+4) } };
-        quad_mem[START.addr()+4]    = Typed::Instr{ op: Op::Typeq { t: PAIR_T.ptr(), k: Ptr::new(start+5) } };
-        quad_mem[START.addr()+5]    = Typed::Instr{ op: Op::End{ x: End::Stop } };
+        quad_mem[START.addr()+3]    = Typed::Instr{ op: Op::Push{ v: fixnum(-1), k: Ptr::new(start+4) } };
+        quad_mem[START.addr()+4]    = Typed::Instr{ op: Op::Typeq { t: FIXNUM_T.ptr(), k: Ptr::new(start+5) } };
+        quad_mem[START.addr()+5]    = Typed::Instr{ op: Op::If { t: Ptr::new(start+4), f: Ptr::new(start+6) } };
+        quad_mem[START.addr()+6]    = Typed::Instr{ op: Op::End{ x: End::Stop } };
 
         Core{
             quad_mem,
-            quad_top: Ptr::new(start+6),
+            quad_top: Ptr::new(start+7),
             quad_next: NIL.ptr(),
             gc_free_cnt: 0,
             e_queue_head: START.ptr(),
@@ -254,6 +254,19 @@ impl Core {
                 self.stack_push(*v);
                 *k
             },
+            Op::Pick{ n, k } => {
+                println!("op_pick: idx={}", n);
+                let num = n.num();
+                let r = if num > 0 {
+                    let lst = self.sp().val();
+                    self.extract_nth(lst, num)
+                } else {
+                    UNDEF
+                };
+                println!("op_pick: r={}", r);
+                self.stack_push(r);
+                *k
+            },
             Op::Eq{ v, k } => {
                 println!("op_eq: v={}", v);
                 let vv = self.stack_pop();
@@ -277,29 +290,42 @@ impl Core {
         }
     }
 
-    fn extract_nth(&self, mut lst: Val, mut num: Num) -> Val {
+    fn split_nth(&self, lst: Val, num: Num) -> (Val, Val) {
+        let mut p = lst;
+        let mut q = UNDEF;
+        let mut n = num;
+        while n > 1 && self.typeq(PAIR_T, p) {
+            q = p;
+            p = self.cdr(p.ptr());
+            n -= 1;
+        }
+        (q, p)
+    }
+    fn extract_nth(&self, lst: Val, num: Num) -> Val {
+        let mut p = lst;
         let mut v = UNDEF;
-        if num == 0 {  // entire list/message
-            v = lst;
-        } else if num > 0 {  // item at n-th index
-            assert!(num < 64);
-            while self.typeq(PAIR_T, lst) {
-                num -= 1;
-                if num <= 0 { break; }
-                lst = self.cdr(lst.ptr());
+        let mut n = num;
+        if n == 0 {  // entire list/message
+            v = p;
+        } else if n > 0 {  // item at n-th index
+            assert!(n < 64);
+            while self.typeq(PAIR_T, p) {
+                n -= 1;
+                if n <= 0 { break; }
+                p = self.cdr(p.ptr());
             }
-            if num == 0 {
-                v = self.car(lst.ptr());
+            if n == 0 {
+                v = self.car(p.ptr());
             }
         } else {  // `-n` selects the n-th tail
-            assert!(num > -64);
-            while self.typeq(PAIR_T, lst) {
-                num += 1;
-                if num >= 0 { break; }
-                lst = self.cdr(lst.ptr());
+            assert!(n > -64);
+            while self.typeq(PAIR_T, p) {
+                n += 1;
+                if n >= 0 { break; }
+                p = self.cdr(p.ptr());
             }
-            if num == 0 {
-                v = self.cdr(lst.ptr());
+            if n == 0 {
+                v = self.cdr(p.ptr());
             }
         }
         v
@@ -583,6 +609,7 @@ pub enum Op {
     Typeq { t: Ptr, k: Ptr },
     Nth { n: Fix, k: Ptr },
     Push { v: Val, k: Ptr },
+    Pick { n: Fix, k: Ptr },
     Eq { v: Val, k: Ptr },
     If { t: Ptr, f: Ptr },
     End { x: End },
@@ -594,6 +621,7 @@ impl Op {
             OP_TYPEQ => Some(Typed::Instr{ op: Op::Typeq{ t: quad.y().ptr(), k: quad.z().ptr() } }),
             OP_NTH => Some(Typed::Instr{ op: Op::Nth{ n: quad.y().fix(), k: quad.z().ptr() } }),
             OP_PUSH => Some(Typed::Instr{ op: Op::Push{ v: quad.y().val(), k: quad.z().ptr() } }),
+            OP_PICK => Some(Typed::Instr{ op: Op::Pick{ n: quad.y().fix(), k: quad.z().ptr() } }),
             OP_EQ => Some(Typed::Instr{ op: Op::Eq{ v: quad.y().val(), k: quad.z().ptr() } }),
             OP_IF => Some(Typed::Instr{ op: Op::If{ t: quad.y().ptr(), f: quad.z().ptr() } }),
             OP_END => End::from(quad),
@@ -605,6 +633,7 @@ impl Op {
             Op::Typeq{ t, k } => Quad::new(INSTR_T, OP_TYPEQ, t.val(), k.val()),
             Op::Nth{ n, k } => Quad::new(INSTR_T, OP_NTH, n.val(), k.val()),
             Op::Push{ v, k } => Quad::new(INSTR_T, OP_PUSH, v.val(), k.val()),
+            Op::Pick{ n, k } => Quad::new(INSTR_T, OP_PICK, n.val(), k.val()),
             Op::Eq{ v, k } => Quad::new(INSTR_T, OP_EQ, v.val(), k.val()),
             Op::If{ t, f } => Quad::new(INSTR_T, OP_IF, t.val(), f.val()),
             Op::End{ x } => x.quad(),
@@ -617,6 +646,7 @@ impl fmt::Display for Op {
             Op::Typeq{ t, k } => write!(fmt, "Typeq{{ t:{}, k:{} }}", t, k),
             Op::Nth{ n, k } => write!(fmt, "Nth{{ n:{}, k:{} }}", n, k),
             Op::Push{ v, k } => write!(fmt, "Push{{ v:{}, k:{} }}", v, k),
+            Op::Pick{ n, k } => write!(fmt, "Pick{{ n:{}, k:{} }}", n, k),
             Op::Eq{ v, k } => write!(fmt, "Eq{{ v:{}, k:{} }}", v, k),
             Op::If{ t, f } => write!(fmt, "If{{ t:{}, f:{} }}", t, f),
             Op::End{ x } => write!(fmt, "End{{ x:{} }}", x),
@@ -951,5 +981,5 @@ fn basic_memory_allocation() {
 fn run_loop_terminates() {
     let mut core = Core::new();
     core.run_loop();
-    //assert!(false);  // force output to be displayed
+    assert!(false);  // force output to be displayed
 }

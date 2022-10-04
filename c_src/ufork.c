@@ -548,6 +548,7 @@ int_t list_len(int_t val) {
 }
 
 // WARNING! destuctive reverse-in-place and append
+//          (appends `tail` to reversed `head`)
 int_t append_reverse(int_t head, int_t tail) {
     sane = SANITY;
     while (IS_PAIR(head)) {
