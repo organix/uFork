@@ -98,14 +98,17 @@ impl Core {
         let start = START.raw();
         let a_boot = Cap::new(start+1);
         let ip_boot = Ptr::new(start+2);
+        let n_m1 = Fix::new(-1);
         quad_mem[START.addr()]      = Typed::Event{ target: a_boot, msg: NIL, next: NIL.ptr() };
         quad_mem[START.addr()+1]    = Typed::Actor{ beh: ip_boot, state: NIL.ptr(), events: None };
         quad_mem[START.addr()+2]    = Typed::Instr{ op: Op::Push{ v: UNIT, k: Ptr::new(start+3) } };
-        quad_mem[START.addr()+3]    = Typed::Instr{ op: Op::End{ x: End::Stop } };
+        quad_mem[START.addr()+3]    = Typed::Instr{ op: Op::Push{ v: n_m1.val(), k: Ptr::new(start+4) } };
+        quad_mem[START.addr()+4]    = Typed::Instr{ op: Op::Typeq { t: PAIR_T.ptr(), k: Ptr::new(start+5) } };
+        quad_mem[START.addr()+5]    = Typed::Instr{ op: Op::End{ x: End::Stop } };
 
         Core{
             quad_mem,
-            quad_top: Ptr::new(start+4),
+            quad_top: Ptr::new(start+6),
             quad_next: NIL.ptr(),
             gc_free_cnt: 0,
             e_queue_head: START.ptr(),
@@ -357,6 +360,16 @@ impl Core {
     pub fn new_cont(&mut self, ip: Ptr, sp: Ptr, ep: Ptr) -> Ptr {
         let cont = Typed::Cont{ ip, sp, ep, next: NIL.ptr() };
         self.alloc(&cont)
+    }
+    pub fn next(&self, ptr: Ptr) -> Ptr {
+        let typed = *self.typed(ptr);
+        match typed {
+            Typed::Event { next, .. } => next,
+            Typed::Cont { next, .. } => next,
+            Typed::Free { next } => next,
+            Typed::Quad { z, .. } => z.ptr(),
+            _ => UNDEF.ptr(),
+        }
     }
 
     pub fn cons(&mut self, car: Val, cdr: Val) -> Ptr {

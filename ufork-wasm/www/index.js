@@ -7,8 +7,8 @@ const DEAD_COLOR = "#FFF";
 const LIVE_COLOR = "#360";
 
 // Construct the universe, and get its width and height.
-const width = 96;
-const height = 64;
+const width = 64;//96;
+const height = 48;//64;
 const universe = Universe.new(width, height);
 //universe.pattern_fill();
 universe.launch_ship();
@@ -22,13 +22,42 @@ $canvas.width = (CELL_SIZE + 1) * width + 1;
 $canvas.height = (CELL_SIZE + 1) * height + 1;
 
 const $output = document.getElementById("ufork-output");
+const $ip = document.getElementById("ufork-ip");
+const $instr = document.getElementById("ufork-instr");
+const $sp = document.getElementById("ufork-sp");
+const $stack = document.getElementById("ufork-stack");
+const $ep = document.getElementById("ufork-ep");
+const $event = document.getElementById("ufork-event");
 
 let paused = false;  // run/pause toggle
 const $rate = document.getElementById("frame-rate");
 let frame = 1;  // frame-rate countdown
 
-const drawUniverse = () => {
+const drawHost = () => {
 	$output.textContent = host.render();
+	const ip = host.ip();
+	$ip.textContent = "" + ip;
+	$instr.textContent = host.disasm(ip);
+	const sp = host.sp();
+	$sp.textContent = "" + sp;
+	if (host.in_heap(sp)) {
+		let p = sp;
+		let a = [];
+		while (host.is_pair(p)) {
+			//a.push(host.disasm(p));
+			a.push(host.print(host.car(p)));
+			p = host.cdr(p);
+		}
+		$stack.textContent = a.join("\n");
+	} else {
+		$stack.innerHTML = "<i>empty</i>";
+	}
+	const ep = host.ep();
+	$ep.textContent = "" + ep;
+	$event.textContent = host.disasm(ep);
+}
+const drawUniverse = () => {
+	drawHost();
 	drawGrid();
 	drawCells();
 }

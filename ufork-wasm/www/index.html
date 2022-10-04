@@ -20,6 +20,9 @@ body {
 button {
   margin: 1ex;
 }
+pre {
+  margin: 2px;
+}
 #ufork-output {
   width: 80ex;
   padding: 1ex;
@@ -35,6 +38,26 @@ button {
     please enable javascript in your browser.
   </noscript>
   <pre id="ufork-output"></pre>
+  <table>
+    <tr>
+      <td><strong>EP</strong>:</td>
+      <td><pre id="ufork-ep">-</pre></td>
+      <td><pre> → </pre></td>
+      <td><pre id="ufork-event"></pre></td>
+    </tr>
+    <tr>
+      <td><strong>IP</strong>:</td>
+      <td><pre id="ufork-ip">-</pre></td>
+      <td><pre> → </pre></td>
+      <td><pre id="ufork-instr"></pre></td>
+    </tr>
+    <tr style="vertical-align: top;">
+      <td><strong>SP</strong>:</td>
+      <td><pre id="ufork-sp">-</pre></td>
+      <td><pre> → </pre></td>
+      <td><pre id="ufork-stack"></pre></td>
+    </tr>
+  </table>
   <div style="display: flex">
     <button id="single-step">Step</button>
     <input type="range" id="frame-rate" min="1" max="60" value="1">

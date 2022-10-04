@@ -50,10 +50,12 @@ impl fmt::Display for Host {
             let typed = core.typed(Ptr::new(raw));
             write!(fmt, "{:5}: {}\n", raw, typed)?;
         }
+        /*
         write!(fmt, "\n")?;
         write!(fmt, "IP:{} -> {}\n", core.ip(), core.typed(core.ip()))?;
         write!(fmt, "SP:{} -> {}\n", core.sp(), core.typed(core.sp()))?;
         write!(fmt, "EP:{} -> {}\n", core.ep(), core.typed(core.ep()))?;
+        */
         Ok(())
     }
 }
@@ -78,6 +80,35 @@ impl Host {
             self.prepare();
         }
         ok
+    }
+    pub fn ip(&self) -> Raw { self.core.ip().raw() }
+    pub fn sp(&self) -> Raw { self.core.sp().raw() }
+    pub fn ep(&self) -> Raw { self.core.ep().raw() }
+    pub fn in_heap(&self, v: Raw) -> bool {
+        self.core.in_heap(Val::new(v))
+    }
+    pub fn is_pair(&self, v: Raw) -> bool {
+        self.core.typeq(PAIR_T, Val::new(v))
+    }
+    pub fn car(&self, p: Raw) -> Raw {
+        if self.is_pair(p) {
+            self.core.car(Ptr::new(p)).raw()
+        } else {
+            UNDEF.raw()
+        }
+    }
+    pub fn cdr(&self, p: Raw) -> Raw {
+        if self.is_pair(p) {
+            self.core.cdr(Ptr::new(p)).raw()
+        } else {
+            UNDEF.raw()
+        }
+    }
+    pub fn next(&self, p: Raw) -> Raw {
+        self.core.next(Ptr::new(p)).raw()
+    }
+    pub fn print(&self, raw: Raw) -> String {
+        Val::new(raw).to_string()
     }
     pub fn disasm(&self, raw: Raw) -> String {
         self.core.typed(Ptr::new(raw)).to_string()
