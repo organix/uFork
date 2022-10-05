@@ -99,16 +99,19 @@ impl Core {
         let a_boot = Cap::new(start+1);
         let ip_boot = Ptr::new(start+2);
         quad_mem[START.addr()]      = Typed::Event{ target: a_boot, msg: NIL, next: NIL.ptr() };
-        quad_mem[START.addr()+1]    = Typed::Actor{ beh: ip_boot, state: NIL.ptr(), events: None };
+        quad_mem[START.addr()+1]    = Typed::Actor{ beh: ip_boot, state: Ptr::new(start+7), events: None };
         quad_mem[START.addr()+2]    = Typed::Instr{ op: Op::Push{ v: UNIT, k: Ptr::new(start+3) } };
         quad_mem[START.addr()+3]    = Typed::Instr{ op: Op::Push{ v: fixnum(-1), k: Ptr::new(start+4) } };
         quad_mem[START.addr()+4]    = Typed::Instr{ op: Op::Typeq { t: FIXNUM_T.ptr(), k: Ptr::new(start+5) } };
         quad_mem[START.addr()+5]    = Typed::Instr{ op: Op::If { t: Ptr::new(start+4), f: Ptr::new(start+6) } };
         quad_mem[START.addr()+6]    = Typed::Instr{ op: Op::End{ x: End::Stop } };
+        quad_mem[START.addr()+7]    = Typed::Pair { car: fixnum(1), cdr: ptrval(start+8) };
+        quad_mem[START.addr()+8]    = Typed::Pair { car: fixnum(2), cdr: ptrval(start+9) };
+        quad_mem[START.addr()+9]    = Typed::Pair { car: fixnum(3), cdr: NIL };
 
         Core{
             quad_mem,
-            quad_top: Ptr::new(start+7),
+            quad_top: Ptr::new(start+10),
             quad_next: NIL.ptr(),
             gc_free_cnt: 0,
             e_queue_head: START.ptr(),
@@ -265,6 +268,32 @@ impl Core {
                 };
                 println!("op_pick: r={}", r);
                 self.stack_push(r);
+                *k
+            },
+            Op::Roll{ n, k } => {
+                println!("op_roll: idx={}", n);
+                let num = n.num();
+                if num > 1 {
+                    let sp = self.sp().val();
+                    let (q, p) = self.split_nth(sp, num);
+                    if self.typeq(PAIR_T, p) {
+                        self.set_cdr(q.ptr(), self.cdr(p.ptr()));
+                        self.set_cdr(p.ptr(), sp);
+                        self.set_sp(p.ptr());
+                    } else {
+                        self.stack_push(UNDEF);  // out of range
+                    }
+                } else if num < -1 {
+                    let sp = self.sp().val();
+                    let (_q, p) = self.split_nth(sp, -num);
+                    if self.typeq(PAIR_T, p) {
+                        self.set_sp(self.cdr(sp.ptr()).ptr());
+                        self.set_cdr(sp.ptr(), self.cdr(p.ptr()));
+                        self.set_cdr(p.ptr(), sp);
+                    } else {
+                        self.stack_pop();  // out of range
+                    }
+                };
                 *k
             },
             Op::Eq{ v, k } => {
@@ -610,6 +639,7 @@ pub enum Op {
     Nth { n: Fix, k: Ptr },
     Push { v: Val, k: Ptr },
     Pick { n: Fix, k: Ptr },
+    Roll { n: Fix, k: Ptr },
     Eq { v: Val, k: Ptr },
     If { t: Ptr, f: Ptr },
     End { x: End },
@@ -622,6 +652,7 @@ impl Op {
             OP_NTH => Some(Typed::Instr{ op: Op::Nth{ n: quad.y().fix(), k: quad.z().ptr() } }),
             OP_PUSH => Some(Typed::Instr{ op: Op::Push{ v: quad.y().val(), k: quad.z().ptr() } }),
             OP_PICK => Some(Typed::Instr{ op: Op::Pick{ n: quad.y().fix(), k: quad.z().ptr() } }),
+            OP_ROLL => Some(Typed::Instr{ op: Op::Roll{ n: quad.y().fix(), k: quad.z().ptr() } }),
             OP_EQ => Some(Typed::Instr{ op: Op::Eq{ v: quad.y().val(), k: quad.z().ptr() } }),
             OP_IF => Some(Typed::Instr{ op: Op::If{ t: quad.y().ptr(), f: quad.z().ptr() } }),
             OP_END => End::from(quad),
@@ -634,6 +665,7 @@ impl Op {
             Op::Nth{ n, k } => Quad::new(INSTR_T, OP_NTH, n.val(), k.val()),
             Op::Push{ v, k } => Quad::new(INSTR_T, OP_PUSH, v.val(), k.val()),
             Op::Pick{ n, k } => Quad::new(INSTR_T, OP_PICK, n.val(), k.val()),
+            Op::Roll{ n, k } => Quad::new(INSTR_T, OP_ROLL, n.val(), k.val()),
             Op::Eq{ v, k } => Quad::new(INSTR_T, OP_EQ, v.val(), k.val()),
             Op::If{ t, f } => Quad::new(INSTR_T, OP_IF, t.val(), f.val()),
             Op::End{ x } => x.quad(),
@@ -643,10 +675,17 @@ impl Op {
 impl fmt::Display for Op {
     fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Op::Typeq{ t, k } => write!(fmt, "Typeq{{ t:{}, k:{} }}", t, k),
+            //Op::Typeq{ t, k } => write!(fmt, "Typeq{{ t:{}, k:{} }}", t, k),
+            Op::Typeq{ t, k } => {
+                match t.val() {
+                    LITERAL_T => write!(fmt, "Typeq{{ t:LITERAL_T, k:{} }}", k),
+                    _ => write!(fmt, "Typeq{{ t:{}, k:{} }}", t, k),
+                }
+            },
             Op::Nth{ n, k } => write!(fmt, "Nth{{ n:{}, k:{} }}", n, k),
             Op::Push{ v, k } => write!(fmt, "Push{{ v:{}, k:{} }}", v, k),
             Op::Pick{ n, k } => write!(fmt, "Pick{{ n:{}, k:{} }}", n, k),
+            Op::Roll{ n, k } => write!(fmt, "Roll{{ n:{}, k:{} }}", n, k),
             Op::Eq{ v, k } => write!(fmt, "Eq{{ v:{}, k:{} }}", v, k),
             Op::If{ t, f } => write!(fmt, "If{{ t:{}, f:{} }}", t, f),
             Op::End{ x } => write!(fmt, "End{{ x:{} }}", x),
@@ -821,6 +860,15 @@ impl fmt::Display for Ptr {
             FALSE => write!(fmt, "#f"),
             TRUE => write!(fmt, "#t"),
             UNIT => write!(fmt, "#unit"),
+            TYPE_T => write!(fmt, "TYPE_T"),
+            EVENT_T => write!(fmt, "EVENT_T"),
+            INSTR_T => write!(fmt, "INSTR_T"),
+            ACTOR_T => write!(fmt, "ACTOR_T"),
+            FIXNUM_T => write!(fmt, "FIXNUM_T"),
+            SYMBOL_T => write!(fmt, "SYMBOL_T"),
+            PAIR_T => write!(fmt, "PAIR_T"),
+            FEXPR_T => write!(fmt, "FEXPR_T"),
+            FREE_T => write!(fmt, "FREE_T"),
             _ => write!(fmt, "^{}", self.raw),
         }
     }

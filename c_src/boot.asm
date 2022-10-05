@@ -48,6 +48,8 @@
 #define _S_EMPTY TO_CAP(S_EMPTY)
     { .t=Actor_T,       .x=S_EMPTY+1,   .y=NIL,         .z=UNDEF,       },  // empty stream
     { .t=Instr_T,       .x=VM_push,     .y=NIL,         .z=S_VALUE,     },  // () = NIL
+//  { .t=Actor_T,       .x=S_VALUE,     .y=S_EMPTY+1    .z=UNDEF,       },
+//  { .t=Pair_T,        .x=NIL,         .y=NIL,         .z=UNDEF,       },
 
 #define S_GETC (S_EMPTY+2)
 #define S_END_X (S_GETC+9)
