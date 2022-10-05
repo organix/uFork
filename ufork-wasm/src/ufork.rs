@@ -102,16 +102,30 @@ impl Core {
         quad_mem[START.addr()+1]    = Typed::Actor{ beh: ip_boot, state: Ptr::new(start+7), events: None };
         quad_mem[START.addr()+2]    = Typed::Instr{ op: Op::Push{ v: UNIT, k: Ptr::new(start+3) } };
         quad_mem[START.addr()+3]    = Typed::Instr{ op: Op::Push{ v: fixnum(-1), k: Ptr::new(start+4) } };
-        quad_mem[START.addr()+4]    = Typed::Instr{ op: Op::Typeq { t: FIXNUM_T.ptr(), k: Ptr::new(start+5) } };
-        quad_mem[START.addr()+5]    = Typed::Instr{ op: Op::If { t: Ptr::new(start+4), f: Ptr::new(start+6) } };
+        quad_mem[START.addr()+4]    = Typed::Instr{ op: Op::Typeq{ t: FIXNUM_T.ptr(), k: Ptr::new(start+5) } };
+        quad_mem[START.addr()+5]    = Typed::Instr{ op: Op::If{ t: Ptr::new(start+4), f: Ptr::new(start+10) } };
         quad_mem[START.addr()+6]    = Typed::Instr{ op: Op::End{ x: End::Stop } };
-        quad_mem[START.addr()+7]    = Typed::Pair { car: fixnum(1), cdr: ptrval(start+8) };
-        quad_mem[START.addr()+8]    = Typed::Pair { car: fixnum(2), cdr: ptrval(start+9) };
-        quad_mem[START.addr()+9]    = Typed::Pair { car: fixnum(3), cdr: NIL };
+        quad_mem[START.addr()+7]    = Typed::Pair{ car: fixnum(1), cdr: ptrval(start+8) };
+        quad_mem[START.addr()+8]    = Typed::Pair{ car: fixnum(2), cdr: ptrval(start+9) };
+        quad_mem[START.addr()+9]    = Typed::Pair{ car: fixnum(3), cdr: NIL };
+        quad_mem[START.addr()+10]   = Typed::Instr{ op: Op::Pick { n: Fix::new(1), k: Ptr::new(start+11) } };
+        quad_mem[START.addr()+11]   = Typed::Instr{ op: Op::Roll { n: Fix::new(-1), k: Ptr::new(start+12) } };
+        quad_mem[START.addr()+12]   = Typed::Instr{ op: Op::Roll { n: Fix::new(1), k: Ptr::new(start+13) } };
+        quad_mem[START.addr()+13]   = Typed::Instr{ op: Op::Pick { n: Fix::new(3), k: Ptr::new(start+14) } };
+        quad_mem[START.addr()+14]   = Typed::Instr{ op: Op::Roll { n: Fix::new(-2), k: Ptr::new(start+15) } };
+        quad_mem[START.addr()+15]   = Typed::Instr{ op: Op::Roll { n: Fix::new(2), k: Ptr::new(start+16) } };
+        quad_mem[START.addr()+16]   = Typed::Instr{ op: Op::Roll { n: Fix::new(-3), k: Ptr::new(start+17) } };
+        quad_mem[START.addr()+17]   = Typed::Instr{ op: Op::Roll { n: Fix::new(3), k: Ptr::new(start+18) } };
+        quad_mem[START.addr()+18]   = Typed::Instr{ op: Op::Pick { n: Fix::new(0), k: Ptr::new(start+19) } };
+        quad_mem[START.addr()+19]   = Typed::Instr{ op: Op::Roll { n: Fix::new(0), k: Ptr::new(start+20) } };
+        quad_mem[START.addr()+20]   = Typed::Instr{ op: Op::Pick { n: Fix::new(10), k: Ptr::new(start+21) } };
+        quad_mem[START.addr()+21]   = Typed::Instr{ op: Op::Roll { n: Fix::new(-10), k: Ptr::new(start+22) } };
+        quad_mem[START.addr()+22]   = Typed::Instr{ op: Op::Roll { n: Fix::new(10), k: Ptr::new(start+23) } };
+        quad_mem[START.addr()+23]   = Typed::Instr{ op: Op::End{ x: End::Stop } };
 
         Core{
             quad_mem,
-            quad_top: Ptr::new(start+10),
+            quad_top: Ptr::new(start+24),
             quad_next: NIL.ptr(),
             gc_free_cnt: 0,
             e_queue_head: START.ptr(),
