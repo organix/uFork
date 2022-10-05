@@ -96,18 +96,16 @@ impl Core {
         quad_mem[FEXPR_T.addr()]    = Typed::Type;
         quad_mem[FREE_T.addr()]     = Typed::Type;
         let start = START.raw();
-        let a_boot = Cap::new(start+1);
-        let ip_boot = Ptr::new(start+2);
-        quad_mem[START.addr()]      = Typed::Event { target: a_boot, msg: NIL, next: NIL.ptr() };
-        quad_mem[START.addr()+1]    = Typed::Actor { beh: ip_boot, state: Ptr::new(start+7), events: None };
-        quad_mem[START.addr()+2]    = Typed::Instr { op: Op::Push { v: UNIT, k: Ptr::new(start+3) } };
-        quad_mem[START.addr()+3]    = Typed::Instr { op: Op::Push { v: fixnum(-1), k: Ptr::new(start+4) } };
-        quad_mem[START.addr()+4]    = Typed::Instr { op: Op::Typeq { t: FIXNUM_T.ptr(), k: Ptr::new(start+5) } };
-        quad_mem[START.addr()+5]    = Typed::Instr { op: Op::If { t: Ptr::new(start+4), f: Ptr::new(start+10) } };
-        quad_mem[START.addr()+6]    = Typed::Instr { op: Op::End { x: End::Stop } };
-        quad_mem[START.addr()+7]    = Typed::Pair { car: fixnum(1), cdr: ptrval(start+8) };
-        quad_mem[START.addr()+8]    = Typed::Pair { car: fixnum(2), cdr: ptrval(start+9) };
-        quad_mem[START.addr()+9]    = Typed::Pair { car: fixnum(3), cdr: NIL };
+        quad_mem[START.addr()+0]    = Typed::Event { target: Cap::new(start+2), msg: ptrval(start+24), next: NIL.ptr() };
+        quad_mem[START.addr()+1]    = Typed::Pair { car: UNIT, cdr: NIL };
+        quad_mem[START.addr()+2]    = Typed::Actor { beh: Ptr::new(start+3), state: Ptr::new(start+1), events: None };
+        quad_mem[START.addr()+3]    = Typed::Instr { op: Op::Push { v: fixnum(3), k: Ptr::new(start+4) } };
+        quad_mem[START.addr()+4]    = Typed::Instr { op: Op::Push { v: fixnum(2), k: Ptr::new(start+5) } };
+        quad_mem[START.addr()+5]    = Typed::Instr { op: Op::Push { v: fixnum(1), k: Ptr::new(start+27) } };
+        quad_mem[START.addr()+6]    = Typed::Instr { op: Op::Typeq { t: FIXNUM_T.ptr(), k: Ptr::new(start+7) } };
+        quad_mem[START.addr()+7]    = Typed::Instr { op: Op::If { t: Ptr::new(start+6), f: Ptr::new(start+8) } };
+        quad_mem[START.addr()+8]    = Typed::Instr { op: Op::Roll { n: Fix::new(0), k: Ptr::new(start+9) } };
+        quad_mem[START.addr()+9]    = Typed::Instr { op: Op::End { x: End::Stop } };
         quad_mem[START.addr()+10]   = Typed::Instr { op: Op::Pick { n: Fix::new(1), k: Ptr::new(start+11) } };
         quad_mem[START.addr()+11]   = Typed::Instr { op: Op::Roll { n: Fix::new(-1), k: Ptr::new(start+12) } };
         quad_mem[START.addr()+12]   = Typed::Instr { op: Op::Roll { n: Fix::new(1), k: Ptr::new(start+13) } };
@@ -122,10 +120,22 @@ impl Core {
         quad_mem[START.addr()+21]   = Typed::Instr { op: Op::Roll { n: Fix::new(-10), k: Ptr::new(start+22) } };
         quad_mem[START.addr()+22]   = Typed::Instr { op: Op::Roll { n: Fix::new(10), k: Ptr::new(start+23) } };
         quad_mem[START.addr()+23]   = Typed::Instr { op: Op::End { x: End::Stop } };
+        quad_mem[START.addr()+24]   = Typed::Pair { car: fixnum(-1), cdr: ptrval(start+25) };
+        quad_mem[START.addr()+25]   = Typed::Pair { car: fixnum(-2), cdr: ptrval(start+26) };
+        quad_mem[START.addr()+26]   = Typed::Pair { car: fixnum(-3), cdr: NIL };
+        quad_mem[START.addr()+27]   = Typed::Instr { op: Op::Part { n: Fix::new(0), k: Ptr::new(start+28) }};
+        quad_mem[START.addr()+28]   = Typed::Instr { op: Op::Pair { n: Fix::new(1), k: Ptr::new(start+29) }};
+        quad_mem[START.addr()+29]   = Typed::Instr { op: Op::Part { n: Fix::new(1), k: Ptr::new(start+30) }};
+        quad_mem[START.addr()+30]   = Typed::Instr { op: Op::Pair { n: Fix::new(2), k: Ptr::new(start+31) }};
+        quad_mem[START.addr()+31]   = Typed::Instr { op: Op::Part { n: Fix::new(2), k: Ptr::new(start+32) }};
+        quad_mem[START.addr()+32]   = Typed::Instr { op: Op::Pair { n: Fix::new(3), k: Ptr::new(start+33) }};
+        quad_mem[START.addr()+33]   = Typed::Instr { op: Op::Part { n: Fix::new(3), k: Ptr::new(start+34) }};
+        quad_mem[START.addr()+34]   = Typed::Instr { op: Op::Part { n: Fix::new(3), k: Ptr::new(start+35) }};
+        quad_mem[START.addr()+35]   = Typed::Instr { op: Op::Pair { n: Fix::new(3), k: Ptr::new(start+6) }};
 
         Core {
             quad_mem,
-            quad_top: Ptr::new(start+24),
+            quad_top: Ptr::new(start+37),
             quad_next: NIL.ptr(),
             gc_free_cnt: 0,
             e_queue_head: START.ptr(),
@@ -255,6 +265,44 @@ impl Core {
                 println!("op_typeq: val={}", val);
                 let r = if self.typeq(t.val(), val) { TRUE } else { FALSE };
                 self.stack_push(r);
+                *k
+            },
+            Op::Pair { n, k } => {
+                println!("op_pair: cnt={}", n);
+                let mut num = n.num();
+                if num > 0 {
+                    let h = self.stack_pop();
+                    let lst = self.cons(h, NIL);
+                    let mut p = lst;
+                    while num > 1 {
+                        let h = self.stack_pop();
+                        let q = self.cons(h, NIL);
+                        self.set_cdr(p, q.val());
+                        p = q;
+                        num -= 1;
+                    }
+                    let t = self.stack_pop();
+                    self.set_cdr(p, t);
+                    self.stack_push(lst.val());
+                };
+                *k
+            },
+            Op::Part { n, k } => {
+                println!("op_part: cnt={}", n);
+                let mut num = n.num();
+                if num > 0 {
+                    let lst = match Ptr::from(self.stack_pop()) {
+                        Some(ptr) => ptr,
+                        None => UNDEF.ptr(),
+                    };
+                    let mut sp = self.sp();
+                    while num > 1 {
+                        num -= 1;
+                    }
+                    sp = self.cons(self.cdr(lst), sp.val());
+                    sp = self.cons(self.car(lst), sp.val());
+                    self.set_sp(sp);
+                }
                 *k
             },
             Op::Nth { n, k } => {
@@ -460,13 +508,13 @@ impl Core {
         }
     }
     pub fn set_car(&mut self, pair: Ptr, val: Val) {
-        assert!(self.in_heap(val));
+        assert!(self.in_heap(pair.val()));
         if let Typed::Pair { car, .. } = self.typed_mut(pair) {
             *car = val;
         }
     }
     pub fn set_cdr(&mut self, pair: Ptr, val: Val) {
-        assert!(self.in_heap(val));
+        assert!(self.in_heap(pair.val()));
         if let Typed::Pair { cdr, .. } = self.typed_mut(pair) {
             *cdr = val;
         }
@@ -650,6 +698,8 @@ impl fmt::Display for Typed {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Op {
     Typeq { t: Ptr, k: Ptr },
+    Pair { n: Fix, k: Ptr },
+    Part { n: Fix, k: Ptr },
     Nth { n: Fix, k: Ptr },
     Push { v: Val, k: Ptr },
     Pick { n: Fix, k: Ptr },
@@ -663,6 +713,8 @@ impl Op {
         assert!(quad.t() == INSTR_T);
         match quad.x() {
             OP_TYPEQ => Some(Typed::Instr { op: Op::Typeq { t: quad.y().ptr(), k: quad.z().ptr() } }),
+            OP_PAIR => Some(Typed::Instr { op: Op::Pair { n: quad.y().fix(), k: quad.z().ptr() } }),
+            OP_PART => Some(Typed::Instr { op: Op::Part { n: quad.y().fix(), k: quad.z().ptr() } }),
             OP_NTH => Some(Typed::Instr { op: Op::Nth { n: quad.y().fix(), k: quad.z().ptr() } }),
             OP_PUSH => Some(Typed::Instr { op: Op::Push { v: quad.y().val(), k: quad.z().ptr() } }),
             OP_PICK => Some(Typed::Instr { op: Op::Pick { n: quad.y().fix(), k: quad.z().ptr() } }),
@@ -676,6 +728,8 @@ impl Op {
     pub fn quad(&self) -> Quad {
         match self {
             Op::Typeq { t, k } => Quad::new(INSTR_T, OP_TYPEQ, t.val(), k.val()),
+            Op::Pair { n, k } => Quad::new(INSTR_T, OP_PAIR, n.val(), k.val()),
+            Op::Part { n, k } => Quad::new(INSTR_T, OP_PART, n.val(), k.val()),
             Op::Nth { n, k } => Quad::new(INSTR_T, OP_NTH, n.val(), k.val()),
             Op::Push { v, k } => Quad::new(INSTR_T, OP_PUSH, v.val(), k.val()),
             Op::Pick { n, k } => Quad::new(INSTR_T, OP_PICK, n.val(), k.val()),
@@ -696,6 +750,8 @@ impl fmt::Display for Op {
                     _ => write!(fmt, "Typeq{{ t:{}, k:{} }}", t, k),
                 }
             },
+            Op::Pair { n, k } => write!(fmt, "Pair{{ n:{}, k:{} }}", n, k),
+            Op::Part { n, k } => write!(fmt, "Part{{ n:{}, k:{} }}", n, k),
             Op::Nth { n, k } => write!(fmt, "Nth{{ n:{}, k:{} }}", n, k),
             Op::Push { v, k } => write!(fmt, "Push{{ v:{}, k:{} }}", v, k),
             Op::Pick { n, k } => write!(fmt, "Pick{{ n:{}, k:{} }}", n, k),

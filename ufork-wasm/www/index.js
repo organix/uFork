@@ -44,13 +44,15 @@ const drawHost = () => {
 		let p = sp;
 		let a = [];
 		while (host.is_pair(p)) {
-			//a.push(host.disasm(p));  // display stack Pair(s)
-			a.push(host.print(host.car(p)));  // display stack item(s)
+			//a.push(host.disasm(p));  // disasm stack Pair(s)
+			//a.push(host.print(host.car(p)));  // print stack item(s)
+			a.push(host.display(host.car(p)));  // display stack item(s)
 			p = host.cdr(p);
 		}
 		$stack.textContent = a.join("\n");
 	} else {
-		$stack.innerHTML = "<i>empty</i>";
+		//$stack.innerHTML = "<i>empty</i>";
+		$stack.textContent = "--";
 	}
 	const ep = host.ep();
 	$ep.textContent = "" + ep;

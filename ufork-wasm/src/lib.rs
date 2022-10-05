@@ -47,8 +47,12 @@ impl fmt::Display for Host {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         let core = &self.core;
         for raw in 0..core.quad_top().raw() {
+            /*
             let typed = core.typed(Ptr::new(raw));
             write!(fmt, "{:5}: {}\n", raw, typed)?;
+            */
+            //write!(fmt, "{}\n", self.display(raw))?;
+            write!(fmt, "{:5}: {}\n", raw, self.display(raw))?;
         }
         /*
         write!(fmt, "\n")?;
@@ -109,6 +113,18 @@ impl Host {
     }
     pub fn print(&self, raw: Raw) -> String {
         Val::new(raw).to_string()
+    }
+    pub fn display(&self, raw: Raw) -> String {
+        let mut s = String::new();
+        s.push_str(self.print(raw).as_str());
+        let val = Val::new(raw);
+        if self.core.in_heap(val) {
+            s.push_str(" → ");
+            let ptr = val.ptr();
+            let typed = self.core.typed(ptr);
+            s.push_str(typed.to_string().as_str());
+        }
+        s
     }
     pub fn disasm(&self, raw: Raw) -> String {
         self.core.typed(Ptr::new(raw)).to_string()
