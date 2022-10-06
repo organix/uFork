@@ -130,7 +130,16 @@ impl Core {
         quad_mem[START.addr()+31]   = Typed::Instr { op: Op::Pair { n: Fix::new(3), k: Ptr::new(start+32) }};
         quad_mem[START.addr()+32]   = Typed::Instr { op: Op::Part { n: Fix::new(3), k: Ptr::new(start+33) }};
         quad_mem[START.addr()+33]   = Typed::Instr { op: Op::Part { n: Fix::new(0), k: Ptr::new(start+6) }};
-        quad_mem[START.addr()+34]   = Typed::Instr { op: Op::Myself { k: Ptr::new(start+6) }};
+        quad_mem[START.addr()+34]   = Typed::Instr { op: Op::Myself { k: Ptr::new(start+35) }};
+        quad_mem[START.addr()+35]   = Typed::Instr { op: Op::Msg { n: Fix::new(0), k: Ptr::new(start+36) }};
+        quad_mem[START.addr()+36]   = Typed::Instr { op: Op::Msg { n: Fix::new(1), k: Ptr::new(start+37) }};
+        quad_mem[START.addr()+37]   = Typed::Instr { op: Op::Msg { n: Fix::new(-1), k: Ptr::new(start+38) }};
+        quad_mem[START.addr()+38]   = Typed::Instr { op: Op::Msg { n: Fix::new(2), k: Ptr::new(start+39) }};
+        quad_mem[START.addr()+39]   = Typed::Instr { op: Op::Msg { n: Fix::new(-2), k: Ptr::new(start+40) }};
+        quad_mem[START.addr()+40]   = Typed::Instr { op: Op::Msg { n: Fix::new(3), k: Ptr::new(start+41) }};
+        quad_mem[START.addr()+41]   = Typed::Instr { op: Op::Msg { n: Fix::new(-3), k: Ptr::new(start+42) }};
+        quad_mem[START.addr()+42]   = Typed::Instr { op: Op::Msg { n: Fix::new(4), k: Ptr::new(start+43) }};
+        quad_mem[START.addr()+43]   = Typed::Instr { op: Op::Msg { n: Fix::new(-4), k: Ptr::new(start+6) }};
 
         Core {
             quad_mem,
@@ -381,11 +390,27 @@ impl Core {
                 println!("op_if: f={}", f);
                 if falsy(b) { *f } else { *t }
             },
+            Op::Msg { n, k } => {
+                println!("op_msg: idx={}", n);
+                let r = match self.typed(self.ep()) {
+                    Typed::Event { msg, .. } => {
+                        let lst = *msg;
+                        println!("op_msg: lst={}", lst);
+                        let r = self.extract_nth(lst, n.num());
+                        r
+                    },
+                    _ => UNDEF,
+                };
+                println!("op_msg: r={}", r);
+                self.stack_push(r);
+                *k
+            },
             Op::Myself { k } => {
                 let a = match self.typed(self.ep()) {
                     Typed::Event { target, .. } => target.val(),
                     _ => UNDEF,
                 };
+                println!("op_self: a={}", a);
                 self.stack_push(a);
                 *k
             }
@@ -725,6 +750,7 @@ pub enum Op {
     Roll { n: Fix, k: Ptr },
     Eq { v: Val, k: Ptr },
     If { t: Ptr, f: Ptr },
+    Msg { n: Fix, k: Ptr },
     Myself { k: Ptr },
     End { x: End },
 }
@@ -741,6 +767,7 @@ impl Op {
             OP_ROLL => Some(Typed::Instr { op: Op::Roll { n: quad.y().fix(), k: quad.z().ptr() } }),
             OP_EQ => Some(Typed::Instr { op: Op::Eq { v: quad.y().val(), k: quad.z().ptr() } }),
             OP_IF => Some(Typed::Instr { op: Op::If { t: quad.y().ptr(), f: quad.z().ptr() } }),
+            OP_MSG => Some(Typed::Instr { op: Op::Msg { n: quad.y().fix(), k: quad.z().ptr() } }),
             OP_SELF => Some(Typed::Instr { op: Op::Myself { k: quad.z().ptr() } }),
             OP_END => End::from(quad),
             _ => None,
@@ -757,6 +784,7 @@ impl Op {
             Op::Roll { n, k } => Quad::new(INSTR_T, OP_ROLL, n.val(), k.val()),
             Op::Eq { v, k } => Quad::new(INSTR_T, OP_EQ, v.val(), k.val()),
             Op::If { t, f } => Quad::new(INSTR_T, OP_IF, t.val(), f.val()),
+            Op::Msg { n, k } => Quad::new(INSTR_T, OP_MSG, n.val(), k.val()),
             Op::Myself { k } => Quad::new(INSTR_T, OP_SELF, UNDEF, k.val()),
             Op::End { x } => x.quad(),
         }
@@ -780,6 +808,7 @@ impl fmt::Display for Op {
             Op::Roll { n, k } => write!(fmt, "Roll{{ n:{}, k:{} }}", n, k),
             Op::Eq { v, k } => write!(fmt, "Eq{{ v:{}, k:{} }}", v, k),
             Op::If { t, f } => write!(fmt, "If{{ t:{}, f:{} }}", t, f),
+            Op::Msg { n, k } => write!(fmt, "Msg{{ n:{}, k:{} }}", n, k),
             Op::Myself { k } => write!(fmt, "Self{{ k:{} }}", k),
             Op::End { x } => write!(fmt, "End{{ x:{} }}", x),
         }
