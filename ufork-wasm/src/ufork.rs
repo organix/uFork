@@ -123,19 +123,17 @@ impl Core {
         quad_mem[START.addr()+24]   = Typed::Pair { car: fixnum(-1), cdr: ptrval(start+25) };
         quad_mem[START.addr()+25]   = Typed::Pair { car: fixnum(-2), cdr: ptrval(start+26) };
         quad_mem[START.addr()+26]   = Typed::Pair { car: fixnum(-3), cdr: NIL };
-        quad_mem[START.addr()+27]   = Typed::Instr { op: Op::Part { n: Fix::new(0), k: Ptr::new(start+28) }};
-        quad_mem[START.addr()+28]   = Typed::Instr { op: Op::Pair { n: Fix::new(1), k: Ptr::new(start+29) }};
-        quad_mem[START.addr()+29]   = Typed::Instr { op: Op::Part { n: Fix::new(1), k: Ptr::new(start+30) }};
-        quad_mem[START.addr()+30]   = Typed::Instr { op: Op::Pair { n: Fix::new(2), k: Ptr::new(start+31) }};
-        quad_mem[START.addr()+31]   = Typed::Instr { op: Op::Part { n: Fix::new(2), k: Ptr::new(start+32) }};
-        quad_mem[START.addr()+32]   = Typed::Instr { op: Op::Pair { n: Fix::new(3), k: Ptr::new(start+33) }};
-        quad_mem[START.addr()+33]   = Typed::Instr { op: Op::Part { n: Fix::new(3), k: Ptr::new(start+34) }};
-        quad_mem[START.addr()+34]   = Typed::Instr { op: Op::Part { n: Fix::new(3), k: Ptr::new(start+35) }};
-        quad_mem[START.addr()+35]   = Typed::Instr { op: Op::Pair { n: Fix::new(3), k: Ptr::new(start+6) }};
+        quad_mem[START.addr()+27]   = Typed::Instr { op: Op::Pair { n: Fix::new(1), k: Ptr::new(start+28) }};
+        quad_mem[START.addr()+28]   = Typed::Instr { op: Op::Part { n: Fix::new(1), k: Ptr::new(start+29) }};
+        quad_mem[START.addr()+29]   = Typed::Instr { op: Op::Pair { n: Fix::new(2), k: Ptr::new(start+30) }};
+        quad_mem[START.addr()+30]   = Typed::Instr { op: Op::Part { n: Fix::new(2), k: Ptr::new(start+31) }};
+        quad_mem[START.addr()+31]   = Typed::Instr { op: Op::Pair { n: Fix::new(3), k: Ptr::new(start+32) }};
+        quad_mem[START.addr()+32]   = Typed::Instr { op: Op::Part { n: Fix::new(3), k: Ptr::new(start+33) }};
+        quad_mem[START.addr()+33]   = Typed::Instr { op: Op::Part { n: Fix::new(0), k: Ptr::new(start+6) }};
 
         Core {
             quad_mem,
-            quad_top: Ptr::new(start+37),
+            quad_top: Ptr::new(start+36),
             quad_next: NIL.ptr(),
             gc_free_cnt: 0,
             e_queue_head: START.ptr(),
@@ -290,11 +288,11 @@ impl Core {
             Op::Part { n, k } => {
                 println!("op_part: cnt={}", n);
                 let mut num = n.num();
+                let mut s = match Ptr::from(self.stack_pop()) {
+                    Some(ptr) => ptr,
+                    None => UNDEF.ptr(),
+                };
                 if num > 0 {
-                    let mut s = match Ptr::from(self.stack_pop()) {
-                        Some(ptr) => ptr,
-                        None => UNDEF.ptr(),
-                    };
                     let lst = self.cons(self.car(s), NIL);
                     let mut p = lst;
                     while num > 1 {
