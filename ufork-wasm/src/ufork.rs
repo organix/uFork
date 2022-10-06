@@ -291,17 +291,25 @@ impl Core {
                 println!("op_part: cnt={}", n);
                 let mut num = n.num();
                 if num > 0 {
-                    let lst = match Ptr::from(self.stack_pop()) {
+                    let mut s = match Ptr::from(self.stack_pop()) {
                         Some(ptr) => ptr,
                         None => UNDEF.ptr(),
                     };
-                    let mut sp = self.sp();
+                    let lst = self.cons(self.car(s), NIL);
+                    let mut p = lst;
                     while num > 1 {
+                        s = match Ptr::from(self.cdr(s)) {
+                            Some(ptr) => ptr,
+                            None => UNDEF.ptr(),
+                        };
+                        let q = self.cons(self.car(s), NIL);
+                        self.set_cdr(p, q.val());
+                        p = q;
                         num -= 1;
                     }
-                    sp = self.cons(self.cdr(lst), sp.val());
-                    sp = self.cons(self.car(lst), sp.val());
-                    self.set_sp(sp);
+                    let t = self.cons(self.cdr(s), self.sp().val());
+                    self.set_cdr(p, t.val());
+                    self.set_sp(lst);
                 }
                 *k
             },
