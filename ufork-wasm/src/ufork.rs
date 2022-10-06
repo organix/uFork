@@ -104,7 +104,7 @@ impl Core {
         quad_mem[START.addr()+5]    = Typed::Instr { op: Op::Push { v: fixnum(1), k: Ptr::new(start+34) } };
         quad_mem[START.addr()+6]    = Typed::Instr { op: Op::Typeq { t: FIXNUM_T.ptr(), k: Ptr::new(start+7) } };
         quad_mem[START.addr()+7]    = Typed::Instr { op: Op::If { t: Ptr::new(start+6), f: Ptr::new(start+8) } };
-        quad_mem[START.addr()+8]    = Typed::Instr { op: Op::Roll { n: Fix::new(0), k: Ptr::new(start+9) } };
+        quad_mem[START.addr()+8]    = Typed::Instr { op: Op::Drop { n: Fix::new(9), k: Ptr::new(start+9) } };
         quad_mem[START.addr()+9]    = Typed::Instr { op: Op::End { x: End::Stop } };
         quad_mem[START.addr()+10]   = Typed::Instr { op: Op::Pick { n: Fix::new(1), k: Ptr::new(start+11) } };
         quad_mem[START.addr()+11]   = Typed::Instr { op: Op::Roll { n: Fix::new(-1), k: Ptr::new(start+12) } };
@@ -278,6 +278,7 @@ impl Core {
             Op::Pair { n, k } => {
                 println!("op_pair: cnt={}", n);
                 let mut num = n.num();
+                assert!(num < 64);
                 if num > 0 {
                     let h = self.stack_pop();
                     let lst = self.cons(h, NIL);
@@ -298,6 +299,7 @@ impl Core {
             Op::Part { n, k } => {
                 println!("op_part: cnt={}", n);
                 let mut num = n.num();
+                assert!(num < 64);
                 let mut s = match Ptr::from(self.stack_pop()) {
                     Some(ptr) => ptr,
                     None => UNDEF.ptr(),
@@ -335,6 +337,16 @@ impl Core {
                 self.stack_push(*v);
                 *k
             },
+            Op::Drop { n, k } => {
+                println!("op_drop: idx={}", n);
+                let mut num = n.num();
+                assert!(num < 64);
+                while num > 0 {
+                    self.stack_pop();
+                    num -= 1;
+                };
+                *k
+            },
             Op::Pick { n, k } => {
                 println!("op_pick: idx={}", n);
                 let num = n.num();
@@ -352,6 +364,7 @@ impl Core {
                 println!("op_roll: idx={}", n);
                 let num = n.num();
                 if num > 1 {
+                    assert!(num < 64);
                     let sp = self.sp().val();
                     let (q, p) = self.split_nth(sp, num);
                     if self.typeq(PAIR_T, p) {
@@ -362,6 +375,7 @@ impl Core {
                         self.stack_push(UNDEF);  // out of range
                     }
                 } else if num < -1 {
+                    assert!(num > -64);
                     let sp = self.sp().val();
                     let (_q, p) = self.split_nth(sp, -num);
                     if self.typeq(PAIR_T, p) {
@@ -425,6 +439,7 @@ impl Core {
         let mut p = lst;
         let mut q = UNDEF;
         let mut n = num;
+        assert!(n < 64);
         while n > 1 && self.typeq(PAIR_T, p) {
             q = p;
             p = self.cdr(p.ptr());
@@ -746,6 +761,7 @@ pub enum Op {
     Part { n: Fix, k: Ptr },
     Nth { n: Fix, k: Ptr },
     Push { v: Val, k: Ptr },
+    Drop { n: Fix, k: Ptr },
     Pick { n: Fix, k: Ptr },
     Roll { n: Fix, k: Ptr },
     Eq { v: Val, k: Ptr },
@@ -763,6 +779,7 @@ impl Op {
             OP_PART => Some(Typed::Instr { op: Op::Part { n: quad.y().fix(), k: quad.z().ptr() } }),
             OP_NTH => Some(Typed::Instr { op: Op::Nth { n: quad.y().fix(), k: quad.z().ptr() } }),
             OP_PUSH => Some(Typed::Instr { op: Op::Push { v: quad.y().val(), k: quad.z().ptr() } }),
+            OP_DROP => Some(Typed::Instr { op: Op::Drop { n: quad.y().fix(), k: quad.z().ptr() } }),
             OP_PICK => Some(Typed::Instr { op: Op::Pick { n: quad.y().fix(), k: quad.z().ptr() } }),
             OP_ROLL => Some(Typed::Instr { op: Op::Roll { n: quad.y().fix(), k: quad.z().ptr() } }),
             OP_EQ => Some(Typed::Instr { op: Op::Eq { v: quad.y().val(), k: quad.z().ptr() } }),
@@ -780,6 +797,7 @@ impl Op {
             Op::Part { n, k } => Quad::new(INSTR_T, OP_PART, n.val(), k.val()),
             Op::Nth { n, k } => Quad::new(INSTR_T, OP_NTH, n.val(), k.val()),
             Op::Push { v, k } => Quad::new(INSTR_T, OP_PUSH, v.val(), k.val()),
+            Op::Drop { n, k } => Quad::new(INSTR_T, OP_DROP, n.val(), k.val()),
             Op::Pick { n, k } => Quad::new(INSTR_T, OP_PICK, n.val(), k.val()),
             Op::Roll { n, k } => Quad::new(INSTR_T, OP_ROLL, n.val(), k.val()),
             Op::Eq { v, k } => Quad::new(INSTR_T, OP_EQ, v.val(), k.val()),
@@ -804,6 +822,7 @@ impl fmt::Display for Op {
             Op::Part { n, k } => write!(fmt, "Part{{ n:{}, k:{} }}", n, k),
             Op::Nth { n, k } => write!(fmt, "Nth{{ n:{}, k:{} }}", n, k),
             Op::Push { v, k } => write!(fmt, "Push{{ v:{}, k:{} }}", v, k),
+            Op::Drop { n, k } => write!(fmt, "Drop{{ n:{}, k:{} }}", n, k),
             Op::Pick { n, k } => write!(fmt, "Pick{{ n:{}, k:{} }}", n, k),
             Op::Roll { n, k } => write!(fmt, "Roll{{ n:{}, k:{} }}", n, k),
             Op::Eq { v, k } => write!(fmt, "Eq{{ v:{}, k:{} }}", v, k),
