@@ -101,7 +101,7 @@ impl Core {
         quad_mem[START.addr()+2]    = Typed::Actor { beh: Ptr::new(start+3), state: Ptr::new(start+1), events: None };
         quad_mem[START.addr()+3]    = Typed::Instr { op: Op::Push { v: fixnum(3), k: Ptr::new(start+4) } };
         quad_mem[START.addr()+4]    = Typed::Instr { op: Op::Push { v: fixnum(2), k: Ptr::new(start+5) } };
-        quad_mem[START.addr()+5]    = Typed::Instr { op: Op::Push { v: fixnum(1), k: Ptr::new(start+34) } };
+        quad_mem[START.addr()+5]    = Typed::Instr { op: Op::Push { v: fixnum(1), k: Ptr::new(start+39) } };
         quad_mem[START.addr()+6]    = Typed::Instr { op: Op::Typeq { t: FIXNUM_T.ptr(), k: Ptr::new(start+7) } };
         quad_mem[START.addr()+7]    = Typed::Instr { op: Op::If { t: Ptr::new(start+6), f: Ptr::new(start+8) } };
         quad_mem[START.addr()+8]    = Typed::Instr { op: Op::Drop { n: Fix::new(9), k: Ptr::new(start+9) } };
@@ -135,11 +135,11 @@ impl Core {
         quad_mem[START.addr()+36]   = Typed::Instr { op: Op::Pick { n: Fix::new(1), k: Ptr::new(start+37) }};
         quad_mem[START.addr()+37]   = Typed::Instr { op: Op::Myself { k: Ptr::new(start+38) }};
         quad_mem[START.addr()+38]   = Typed::Instr { op: Op::Send { n: Fix::new(0), k: Ptr::new(start+6) }};
-        quad_mem[START.addr()+39]   = Typed::Instr { op: Op::Msg { n: Fix::new(-2), k: Ptr::new(start+40) }};
-        quad_mem[START.addr()+40]   = Typed::Instr { op: Op::Msg { n: Fix::new(3), k: Ptr::new(start+41) }};
-        quad_mem[START.addr()+41]   = Typed::Instr { op: Op::Msg { n: Fix::new(-3), k: Ptr::new(start+42) }};
-        quad_mem[START.addr()+42]   = Typed::Instr { op: Op::Msg { n: Fix::new(4), k: Ptr::new(start+43) }};
-        quad_mem[START.addr()+43]   = Typed::Instr { op: Op::Msg { n: Fix::new(-4), k: Ptr::new(start+6) }};
+        quad_mem[START.addr()+39]   = Typed::Instr { op: Op::Push { v: ptrval(start+23), k: Ptr::new(start+40) }};
+        quad_mem[START.addr()+40]   = Typed::Instr { op: Op::New { n: Fix::new(3), k: Ptr::new(start+41) }};
+        quad_mem[START.addr()+41]   = Typed::Instr { op: Op::Pick { n: Fix::new(2), k: Ptr::new(start+42) }};
+        quad_mem[START.addr()+42]   = Typed::Instr { op: Op::Roll { n: Fix::new(-2), k: Ptr::new(start+43) }};
+        quad_mem[START.addr()+43]   = Typed::Instr { op: Op::Send { n: Fix::new(0), k: Ptr::new(start+6) }};
 
         Core {
             quad_mem,
@@ -459,7 +459,6 @@ impl Core {
                 assert!(self.typeq(INSTR_T, ip));
                 let sp = if num > 0 { self.pop_counted(num) } else { NIL };
                 println!("op_new: sp={}", sp);
-                //...
                 let a = self.new_actor(ip.ptr(), sp.ptr());
                 println!("op_new: actor={}", a);
                 self.stack_push(a.val());
