@@ -136,7 +136,7 @@ impl Core {
         quad_mem[START.addr()+37]   = Typed::Instr { op: Op::Myself { k: Ptr::new(start+38) }};
         quad_mem[START.addr()+38]   = Typed::Instr { op: Op::Send { n: Fix::new(0), k: Ptr::new(start+6) }};
         quad_mem[START.addr()+39]   = Typed::Instr { op: Op::Push { v: ptrval(start+23), k: Ptr::new(start+40) }};
-        quad_mem[START.addr()+40]   = Typed::Instr { op: Op::New { n: Fix::new(3), k: Ptr::new(start+41) }};
+        quad_mem[START.addr()+40]   = Typed::Instr { op: Op::Beh { n: Fix::new(3), k: Ptr::new(start+37) }};
         quad_mem[START.addr()+41]   = Typed::Instr { op: Op::Pick { n: Fix::new(2), k: Ptr::new(start+42) }};
         quad_mem[START.addr()+42]   = Typed::Instr { op: Op::Roll { n: Fix::new(-2), k: Ptr::new(start+43) }};
         quad_mem[START.addr()+43]   = Typed::Instr { op: Op::Send { n: Fix::new(0), k: Ptr::new(start+6) }};
@@ -449,6 +449,7 @@ impl Core {
                 if let Typed::Actor { events, .. } = self.typed_mut(me) {
                     *events = Some(ep);
                 }
+                println!("op_send: me'={}", me);
                 *k
             },
             Op::New { n, k } => {
@@ -472,7 +473,13 @@ impl Core {
                 assert!(self.typeq(INSTR_T, ip));
                 let sp = if num > 0 { self.pop_counted(num) } else { NIL };
                 println!("op_beh: sp={}", sp);
-                //...
+                let me = self.self_ptr().unwrap();
+                println!("op_beh: me={}", me);
+                if let Typed::Actor { beh, state, .. } = self.typed_mut(me) {
+                    *beh = ip.ptr();
+                    *state = sp.ptr();
+                }
+                println!("op_beh: me'={}", me);
                 *k
             },
             Op::End { x } => {
