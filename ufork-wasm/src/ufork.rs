@@ -119,7 +119,7 @@ impl Core {
         quad_mem[START.addr()+20]   = Typed::Instr { op: Op::Pick { n: Fix::new(10), k: Ptr::new(start+21) } };
         quad_mem[START.addr()+21]   = Typed::Instr { op: Op::Roll { n: Fix::new(-10), k: Ptr::new(start+22) } };
         quad_mem[START.addr()+22]   = Typed::Instr { op: Op::Roll { n: Fix::new(10), k: Ptr::new(start+23) } };
-        quad_mem[START.addr()+23]   = Typed::Instr { op: Op::End { x: End::Stop } };
+        quad_mem[START.addr()+23]   = Typed::Instr { op: Op::End { x: End::Commit } };
         quad_mem[START.addr()+24]   = Typed::Pair { car: fixnum(-1), cdr: ptrval(start+25) };
         quad_mem[START.addr()+25]   = Typed::Pair { car: fixnum(-2), cdr: ptrval(start+26) };
         quad_mem[START.addr()+26]   = Typed::Pair { car: fixnum(-3), cdr: NIL };
@@ -134,7 +134,7 @@ impl Core {
         quad_mem[START.addr()+35]   = Typed::Instr { op: Op::Send { n: Fix::new(3), k: Ptr::new(start+36) }};
         quad_mem[START.addr()+36]   = Typed::Instr { op: Op::Pick { n: Fix::new(1), k: Ptr::new(start+37) }};
         quad_mem[START.addr()+37]   = Typed::Instr { op: Op::Myself { k: Ptr::new(start+38) }};
-        quad_mem[START.addr()+38]   = Typed::Instr { op: Op::Send { n: Fix::new(0), k: Ptr::new(start+6) }};
+        quad_mem[START.addr()+38]   = Typed::Instr { op: Op::Send { n: Fix::new(0), k: Ptr::new(start+23) }};
         quad_mem[START.addr()+39]   = Typed::Instr { op: Op::Push { v: ptrval(start+23), k: Ptr::new(start+40) }};
         quad_mem[START.addr()+40]   = Typed::Instr { op: Op::Beh { n: Fix::new(3), k: Ptr::new(start+37) }};
         quad_mem[START.addr()+41]   = Typed::Instr { op: Op::Pick { n: Fix::new(2), k: Ptr::new(start+42) }};
@@ -424,7 +424,7 @@ impl Core {
                     Typed::Event { target, .. } => target.val(),
                     _ => UNDEF,
                 };
-                println!("op_self: a={}", a);
+                println!("op_self: a={} -> {}", a, self.typed(Ptr::new(a.raw())));
                 self.stack_push(a);
                 *k
             }
@@ -442,18 +442,18 @@ impl Core {
                 println!("op_send: msg={}", msg);
                 let ep = self.new_event(target.cap(), msg);
                 let me = self.self_ptr().unwrap();
-                println!("op_send: me={}", me);
+                println!("op_send: me={} -> {}", me, self.typed(me));
                 if let Typed::Actor { events, .. } = self.typed(me) {
                     let next_ = events.unwrap();
                     if let Typed::Event { next, .. } = self.typed_mut(ep) {
                         *next = next_;
                     }
                 }
-                println!("op_send: ep={}", ep);
+                println!("op_send: ep={} -> {}", ep, self.typed(ep));
                 if let Typed::Actor { events, .. } = self.typed_mut(me) {
                     *events = Some(ep);
                 }
-                println!("op_send: me'={}", me);
+                println!("op_send: me'={} -> {}", me, self.typed(me));
                 *k
             },
             Op::New { n, k } => {
@@ -465,7 +465,7 @@ impl Core {
                 let sp = self.pop_counted(num);
                 println!("op_new: sp={}", sp);
                 let a = self.new_actor(ip.ptr(), sp.ptr());
-                println!("op_new: actor={}", a);
+                println!("op_new: actor={} -> {}", a, Ptr::new(a.raw()));
                 self.stack_push(a.val());
                 *k
             },
@@ -478,17 +478,22 @@ impl Core {
                 let sp = self.pop_counted(num);
                 println!("op_beh: sp={}", sp);
                 let me = self.self_ptr().unwrap();
-                println!("op_beh: me={}", me);
+                println!("op_beh: me={} -> {}", me, self.typed(me));
                 if let Typed::Actor { beh, state, .. } = self.typed_mut(me) {
                     *beh = ip.ptr();
                     *state = sp.ptr();
                 }
-                println!("op_beh: me'={}", me);
+                println!("op_beh: me'={} -> {}", me, self.typed(me));
                 *k
             },
             Op::End { x } => {
                 println!("op_end: x={}", x);
-                UNDEF.ptr()        
+                match x {
+                    End::Abort => UNIT.ptr(),
+                    End::Stop => UNDEF.ptr(),
+                    End::Commit => TRUE.ptr(),
+                    End::Release => FALSE.ptr(),
+                }
             },
         }
     }
@@ -1276,5 +1281,5 @@ fn basic_memory_allocation() {
 fn run_loop_terminates() {
     let mut core = Core::new();
     core.run_loop();
-    //assert!(false);  // force output to be displayed
+    assert!(false);  // force output to be displayed
 }
