@@ -434,7 +434,11 @@ impl Core {
                 let target = self.stack_pop();
                 println!("op_send: target={}", target);
                 assert!(self.typeq(ACTOR_T, target));
-                let msg = self.pop_counted(num);
+                let msg = if num > 0 {
+                    self.pop_counted(num)
+                } else {
+                    self.stack_pop()
+                };
                 println!("op_send: msg={}", msg);
                 let ep = self.new_event(target.cap(), msg);
                 let me = self.self_ptr().unwrap();
@@ -458,7 +462,7 @@ impl Core {
                 let ip = self.stack_pop();
                 println!("op_new: ip={}", ip);
                 assert!(self.typeq(INSTR_T, ip));
-                let sp = if num > 0 { self.pop_counted(num) } else { NIL };
+                let sp = self.pop_counted(num);
                 println!("op_new: sp={}", sp);
                 let a = self.new_actor(ip.ptr(), sp.ptr());
                 println!("op_new: actor={}", a);
@@ -471,7 +475,7 @@ impl Core {
                 let ip = self.stack_pop();
                 println!("op_beh: ip={}", ip);
                 assert!(self.typeq(INSTR_T, ip));
-                let sp = if num > 0 { self.pop_counted(num) } else { NIL };
+                let sp = self.pop_counted(num);
                 println!("op_beh: sp={}", sp);
                 let me = self.self_ptr().unwrap();
                 println!("op_beh: me={}", me);
@@ -503,7 +507,7 @@ impl Core {
     }
     fn pop_counted(&mut self, num: Num) -> Val {
         let mut n = num;
-        if n > 0 {  // build value from stack
+        if n > 0 {  // build list from stack
             let sp = self.sp().val();
             let mut v = sp;
             let mut p = UNDEF.ptr();
@@ -517,8 +521,8 @@ impl Core {
             }
             self.set_sp(v.ptr());
             sp
-        } else {  // pre-composed value
-            self.stack_pop()
+        } else {  // empty list
+            NIL
         }
     }
     fn split_nth(&self, lst: Val, num: Num) -> (Val, Val) {
