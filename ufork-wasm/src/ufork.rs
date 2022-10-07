@@ -131,10 +131,10 @@ impl Core {
         quad_mem[START.addr()+32]   = Typed::Instr { op: Op::Part { n: Fix::new(3), k: Ptr::new(start+33) }};
         quad_mem[START.addr()+33]   = Typed::Instr { op: Op::Part { n: Fix::new(0), k: Ptr::new(start+6) }};
         quad_mem[START.addr()+34]   = Typed::Instr { op: Op::Myself { k: Ptr::new(start+35) }};
-        quad_mem[START.addr()+35]   = Typed::Instr { op: Op::Msg { n: Fix::new(0), k: Ptr::new(start+36) }};
-        quad_mem[START.addr()+36]   = Typed::Instr { op: Op::Msg { n: Fix::new(1), k: Ptr::new(start+37) }};
-        quad_mem[START.addr()+37]   = Typed::Instr { op: Op::Msg { n: Fix::new(-1), k: Ptr::new(start+38) }};
-        quad_mem[START.addr()+38]   = Typed::Instr { op: Op::Msg { n: Fix::new(2), k: Ptr::new(start+39) }};
+        quad_mem[START.addr()+35]   = Typed::Instr { op: Op::Send { n: Fix::new(3), k: Ptr::new(start+36) }};
+        quad_mem[START.addr()+36]   = Typed::Instr { op: Op::Pick { n: Fix::new(1), k: Ptr::new(start+37) }};
+        quad_mem[START.addr()+37]   = Typed::Instr { op: Op::Myself { k: Ptr::new(start+38) }};
+        quad_mem[START.addr()+38]   = Typed::Instr { op: Op::Send { n: Fix::new(0), k: Ptr::new(start+6) }};
         quad_mem[START.addr()+39]   = Typed::Instr { op: Op::Msg { n: Fix::new(-2), k: Ptr::new(start+40) }};
         quad_mem[START.addr()+40]   = Typed::Instr { op: Op::Msg { n: Fix::new(3), k: Ptr::new(start+41) }};
         quad_mem[START.addr()+41]   = Typed::Instr { op: Op::Msg { n: Fix::new(-3), k: Ptr::new(start+42) }};
@@ -428,6 +428,54 @@ impl Core {
                 self.stack_push(a);
                 *k
             }
+            Op::Send { n, k } => {
+                println!("op_send: idx={}", n);
+                let num = n.num();
+                let target = self.stack_pop();
+                println!("op_send: target={}", target);
+                assert!(self.typeq(ACTOR_T, target));
+                let msg = self.pop_counted(num);
+                println!("op_send: msg={}", msg);
+                let ep = self.new_event(target.cap(), msg);
+                let me = self.self_ptr().unwrap();
+                println!("op_send: me={}", me);
+                if let Typed::Actor { events, .. } = self.typed(me) {
+                    let next_ = events.unwrap();
+                    if let Typed::Event { next, .. } = self.typed_mut(ep) {
+                        *next = next_;
+                    }
+                }
+                println!("op_send: ep={}", ep);
+                if let Typed::Actor { events, .. } = self.typed_mut(me) {
+                    *events = Some(ep);
+                }
+                *k
+            },
+            Op::New { n, k } => {
+                println!("op_new: idx={}", n);
+                let num = n.num();
+                let ip = self.stack_pop();
+                println!("op_new: ip={}", ip);
+                assert!(self.typeq(INSTR_T, ip));
+                let sp = if num > 0 { self.pop_counted(num) } else { NIL };
+                println!("op_new: sp={}", sp);
+                //...
+                let a = self.new_actor(ip.ptr(), sp.ptr());
+                println!("op_new: actor={}", a);
+                self.stack_push(a.val());
+                *k
+            },
+            Op::Beh { n, k } => {
+                println!("op_beh: idx={}", n);
+                let num = n.num();
+                let ip = self.stack_pop();
+                println!("op_beh: ip={}", ip);
+                assert!(self.typeq(INSTR_T, ip));
+                let sp = if num > 0 { self.pop_counted(num) } else { NIL };
+                println!("op_beh: sp={}", sp);
+                //...
+                *k
+            },
             Op::End { x } => {
                 println!("op_end: x={}", x);
                 UNDEF.ptr()        
@@ -435,6 +483,38 @@ impl Core {
         }
     }
 
+    fn self_ptr(&self) -> Option<Ptr> {
+        match self.typed(self.ep()) {
+            Typed::Event { target, .. } => {
+                let ptr = Ptr::new(target.raw());  // WARNING: converting Cap to Ptr!
+                match self.typed(ptr) {
+                    Typed::Actor { .. } => Some(ptr),
+                    _ => None,
+                }
+            },
+            _ => None,
+        }
+    }
+    fn pop_counted(&mut self, num: Num) -> Val {
+        let mut n = num;
+        if n > 0 {  // build value from stack
+            let sp = self.sp().val();
+            let mut v = sp;
+            let mut p = UNDEF.ptr();
+            while n > 0 && self.typeq(PAIR_T, v) {
+                p = v.ptr();
+                v = self.cdr(p);
+                n -= 1;
+            }
+            if self.typeq(PAIR_T, p.val()) {
+                self.set_cdr(p, NIL);
+            }
+            self.set_sp(v.ptr());
+            sp
+        } else {  // pre-composed value
+            self.stack_pop()
+        }
+    }
     fn split_nth(&self, lst: Val, num: Num) -> (Val, Val) {
         let mut p = lst;
         let mut q = UNDEF;
@@ -532,6 +612,10 @@ impl Core {
     pub fn new_cont(&mut self, ip: Ptr, sp: Ptr, ep: Ptr) -> Ptr {
         let cont = Typed::Cont { ip, sp, ep, next: NIL.ptr() };
         self.alloc(&cont)
+    }
+    pub fn new_actor(&mut self, beh: Ptr, state: Ptr) -> Cap {
+        let actor = Typed::Actor { beh, state, events: None };
+        Cap::new(self.alloc(&actor).raw())  // convert from Ptr to Cap!
     }
     pub fn next(&self, ptr: Ptr) -> Ptr {
         let typed = *self.typed(ptr);
@@ -768,6 +852,9 @@ pub enum Op {
     If { t: Ptr, f: Ptr },
     Msg { n: Fix, k: Ptr },
     Myself { k: Ptr },
+    Send { n: Fix, k: Ptr },
+    New { n: Fix, k: Ptr },
+    Beh { n: Fix, k: Ptr },
     End { x: End },
 }
 impl Op {
@@ -786,6 +873,9 @@ impl Op {
             OP_IF => Some(Typed::Instr { op: Op::If { t: quad.y().ptr(), f: quad.z().ptr() } }),
             OP_MSG => Some(Typed::Instr { op: Op::Msg { n: quad.y().fix(), k: quad.z().ptr() } }),
             OP_SELF => Some(Typed::Instr { op: Op::Myself { k: quad.z().ptr() } }),
+            OP_SEND => Some(Typed::Instr { op: Op::Send { n: quad.y().fix(), k: quad.z().ptr() } }),
+            OP_NEW => Some(Typed::Instr { op: Op::New { n: quad.y().fix(), k: quad.z().ptr() } }),
+            OP_BEH => Some(Typed::Instr { op: Op::Beh { n: quad.y().fix(), k: quad.z().ptr() } }),
             OP_END => End::from(quad),
             _ => None,
         }
@@ -804,6 +894,9 @@ impl Op {
             Op::If { t, f } => Quad::new(INSTR_T, OP_IF, t.val(), f.val()),
             Op::Msg { n, k } => Quad::new(INSTR_T, OP_MSG, n.val(), k.val()),
             Op::Myself { k } => Quad::new(INSTR_T, OP_SELF, UNDEF, k.val()),
+            Op::Send { n, k } => Quad::new(INSTR_T, OP_SEND, n.val(), k.val()),
+            Op::New { n, k } => Quad::new(INSTR_T, OP_NEW, n.val(), k.val()),
+            Op::Beh { n, k } => Quad::new(INSTR_T, OP_BEH, n.val(), k.val()),
             Op::End { x } => x.quad(),
         }
     }
@@ -829,6 +922,9 @@ impl fmt::Display for Op {
             Op::If { t, f } => write!(fmt, "If{{ t:{}, f:{} }}", t, f),
             Op::Msg { n, k } => write!(fmt, "Msg{{ n:{}, k:{} }}", n, k),
             Op::Myself { k } => write!(fmt, "Self{{ k:{} }}", k),
+            Op::Send { n, k } => write!(fmt, "Send{{ n:{}, k:{} }}", n, k),
+            Op::New { n, k } => write!(fmt, "New{{ n:{}, k:{} }}", n, k),
+            Op::Beh { n, k } => write!(fmt, "Beh{{ n:{}, k:{} }}", n, k),
             Op::End { x } => write!(fmt, "End{{ x:{} }}", x),
         }
     }
