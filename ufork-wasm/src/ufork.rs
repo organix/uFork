@@ -135,7 +135,7 @@ impl Core {
         quad_mem[START.addr()+36]   = Typed::Instr { op: Op::Pick { n: Fix::new(1), k: Ptr::new(start+37) }};
         quad_mem[START.addr()+37]   = Typed::Instr { op: Op::Myself { k: Ptr::new(start+38) }};
         quad_mem[START.addr()+38]   = Typed::Instr { op: Op::Send { n: Fix::new(0), k: Ptr::new(start+23) }};
-        quad_mem[START.addr()+39]   = Typed::Instr { op: Op::Push { v: ptrval(start+23), k: Ptr::new(start+40) }};
+        quad_mem[START.addr()+39]   = Typed::Instr { op: Op::Push { v: ptrval(start+9), k: Ptr::new(start+40) }};
         quad_mem[START.addr()+40]   = Typed::Instr { op: Op::Beh { n: Fix::new(3), k: Ptr::new(start+37) }};
         quad_mem[START.addr()+41]   = Typed::Instr { op: Op::Pick { n: Fix::new(2), k: Ptr::new(start+42) }};
         quad_mem[START.addr()+42]   = Typed::Instr { op: Op::Roll { n: Fix::new(-2), k: Ptr::new(start+43) }};
@@ -166,103 +166,65 @@ impl Core {
         false
     }
     pub fn dispatch_event(&mut self) -> bool {
-        let ep = self.e_queue_head;
-        let event = *self.typed(ep);
-        println!("dispatch_event: event={} -> {}", ep, event);
-        match event {
-            Typed::Event { target, next, .. } => {
-                // remove event from queue
-                self.e_queue_head = next;
-                if NIL.ptr() == self.e_queue_head {
-                    self.e_queue_tail = NIL.ptr();  // empty queue
-                }
+        if let Some(ep) = self.event_dequeue() {
+            if let Typed::Event { target, .. } = self.typed(ep) {
                 let a_ptr = Ptr::new(target.raw());  // WARNING: converting Cap to Ptr!
                 println!("dispatch_event: target={} -> {}", a_ptr, self.typed(a_ptr));
-                match *self.typed(a_ptr) {
-                    Typed::Actor { beh, state, events } => {
-                        match events {
-                            Some(_) => {
-                                // target actor is busy, retry later...
-                                if let Typed::Event { next, .. } = self.typed_mut(ep) {
-                                    *next = NIL.ptr();
-                                };
-                                let last = self.e_queue_tail;
-                                if let Typed::Event { next, ..  } = self.typed_mut(last) {
-                                    *next = ep;
-                                } else {  // NIL.ptr() == self.e_queue_head
-                                    self.e_queue_head = ep;
-                                }
-                                self.e_queue_tail = ep;
-                                false  // no event dispatched
-                            },
-                            None => {
-                                // begin actor-event transaction
-                                if let Typed::Actor { events, .. } = self.typed_mut(a_ptr) {
-                                    *events = Some(NIL.ptr());
-                                };
-                                let cont = self.new_cont(beh, state, ep);
-                                println!("dispatch_event: cont={} -> {}", cont, self.typed(cont));
-                                let last = self.k_queue_tail;
-                                if !self.in_heap(last.val()) {
-                                    self.k_queue_head = cont;
-                                } else if let Typed::Cont { next, ..  } = self.typed_mut(last) {
-                                    *next = cont;
-                                }
-                                self.k_queue_tail = cont;
-                                true  // event dispatched
-                            },
-                        }
-                    },
-                    _ => panic!("Event target is not an actor!"),
+                if let Typed::Actor { beh, state, events } = *self.typed(a_ptr) {
+                    match events {
+                        Some(_) => {
+                            // target actor is busy, retry later...
+                            self.event_enqueue(ep);
+                            false  // no event dispatched
+                        },
+                        None => {
+                            // begin actor-event transaction
+                            if let Typed::Actor { events, .. } = self.typed_mut(a_ptr) {
+                                *events = Some(NIL.ptr());
+                            };
+                            let kp = self.new_cont(beh, state, ep);
+                            println!("dispatch_event: cont={} -> {}", kp, self.typed(kp));
+                            self.cont_enqueue(kp);
+                            true  // event dispatched
+                        },
+                    }
+                } else {
+                    panic!("dispatch_event: requires actor, got {} -> {}", a_ptr, self.typed(a_ptr));
                 }
-            },
-            _ => false,  // event queue is empty
+            } else {
+                panic!("dispatch_event: requires event, got {} -> {}", ep, self.typed(ep));
+            }
+        } else {
+            println!("dispatch_event: event queue empty");
+            false
         }
     }
     pub fn execute_instruction(&mut self) -> bool {
-        println!("execute_instruction: k_queue_head={}", self.k_queue_head);
-        let cont = *self.typed(self.k_queue_head);
-        println!("execute_instruction: cont={}", cont);
-        match cont {
-            Typed::Cont { ip, sp: _, ep, next } => {
-                println!("execute_instruction: event={}", self.typed(ep));
-                let instr = *self.typed(ip);
-                println!("execute_instruction: instr={}", instr);
-                match instr {
-                    Typed::Instr { op } => {
-                        let ip_ = self.perform_op(&op);
-                        println!("execute_instruction: ip'={} -> {}", ip_, self.typed(ip_));
-                        self.set_ip(ip_);
-                        // remove continuation from queue
-                        let first = self.k_queue_head;
-                        self.k_queue_head = next;
-                        if NIL.ptr() == self.k_queue_head {
-                            self.k_queue_tail = NIL.ptr();  // empty queue
-                        }
-                        if self.in_heap(ip_.val()) {
-                            // re-queue updated continuation
-                            if let Typed::Cont { next, .. } = self.typed_mut(first) {
-                                *next = NIL.ptr();
-                            };
-                            println!("execute_instruction: cont'={}", self.typed(first));
-                            let last = self.k_queue_tail;
-                            if !self.in_heap(last.val()) {
-                                self.k_queue_head = first;
-                            } else if let Typed::Cont { next, ..  } = self.typed_mut(last) {
-                                *next = first;
-                            }
-                            self.k_queue_tail = first;
-                        } else {
-                            // free dead continuation and associated event
-                            self.free(ep);
-                            self.free(first);
-                        }                
-                    },
-                    _ => panic!("Illegal instruction!"),
-                };
-                true
-            },
-            _ => false,  // continuation queue is empty
+        let kp = self.k_queue_head;
+        println!("execute_instruction: kp={} -> {}", kp, self.typed(kp));
+        if let Typed::Cont { ip, ep, .. } = *self.typed(kp) {
+            println!("execute_instruction: ep={} -> {}", ep, self.typed(ep));
+            println!("execute_instruction: ip={} -> {}", ip, self.typed(ip));
+            if let Typed::Instr { op } = *self.typed(ip) {
+                let ip_ = self.perform_op(&op);
+                println!("execute_instruction: ip'={} -> {}", ip_, self.typed(ip_));
+                self.set_ip(ip_);
+                assert_eq!(kp, self.cont_dequeue().unwrap());
+                if self.in_heap(ip_.val()) {
+                    // re-queue updated continuation
+                    self.cont_enqueue(kp);
+                } else {
+                    // free dead continuation and associated event
+                    self.free(ep);
+                    self.free(kp);
+                }
+            } else {
+                panic!("Illegal instruction!");
+            }
+            true  // instruction executed
+        } else {
+            println!("execute_instruction: continuation queue empty");
+            false  // continuation queue is empty
         }
     }
     fn perform_op(&mut self, op: &Op) -> Ptr {
@@ -488,16 +450,129 @@ impl Core {
             },
             Op::End { x } => {
                 println!("op_end: x={}", x);
+                let me = self.self_ptr().unwrap();
+                println!("op_end: me={} -> {}", me, self.typed(me));
                 match x {
-                    End::Abort => UNIT.ptr(),
-                    End::Stop => UNDEF.ptr(),
-                    End::Commit => TRUE.ptr(),
-                    End::Release => FALSE.ptr(),
+                    End::Abort => {
+                        let _r = self.stack_pop();  // reason for abort
+                        println!("op_end: reason={}", _r);
+                        self.actor_abort(me);
+                        UNDEF.ptr()
+                    },
+                    End::Stop => {
+                        UNIT.ptr()
+                    },
+                    End::Commit => {
+                        self.actor_commit(me);
+                        TRUE.ptr()
+                    },
+                    End::Release => {
+                        if let Typed::Actor { state, .. } = self.typed_mut(me) {
+                            *state = NIL.ptr();  // no reserved stack
+                        }
+                        self.actor_commit(me);
+                        self.free(me);  // free actor
+                        FALSE.ptr()
+                    },
                 }
             },
         }
     }
 
+    fn event_enqueue(&mut self, ep: Ptr) {
+        if let Typed::Event { next, .. } = self.typed_mut(ep) {
+            *next = NIL.ptr();
+        } else {
+            panic!("event_enqueue: requires event, got {} -> {}", ep, self.typed(ep));
+        }
+        if NIL.ptr() == self.e_queue_head {
+            self.e_queue_head = ep;
+        } else if let Typed::Event { next, ..  } = self.typed_mut(self.e_queue_tail) {
+            *next = ep;
+        }
+        self.e_queue_tail = ep;
+    }
+    fn event_dequeue(&mut self) -> Option<Ptr> {
+        let ep = self.e_queue_head;
+        if NIL.ptr() == ep {
+            None
+        } else if let Typed::Event { next, .. } = self.typed(ep) {
+            self.e_queue_head = *next;
+            if NIL.ptr() == self.e_queue_head {
+                self.e_queue_tail = NIL.ptr();  // empty queue
+            }
+            Some(ep)
+        } else {
+            panic!("event_dequeue: invalid e_queue_head = {}", ep);
+        }
+    }
+
+    fn cont_enqueue(&mut self, kp: Ptr) {
+        if let Typed::Cont { next, .. } = self.typed_mut(kp) {
+            *next = NIL.ptr();
+        } else {
+            panic!("cont_enqueue: requires continuation, got {} -> {}", kp, self.typed(kp));
+        };
+        if NIL.ptr() == self.k_queue_head {
+            self.k_queue_head = kp;
+        } else if let Typed::Cont { next, ..  } = self.typed_mut(self.k_queue_tail) {
+            *next = kp;
+        }
+        self.k_queue_tail = kp;
+    }
+    fn cont_dequeue(&mut self) -> Option<Ptr> {
+        let kp = self.k_queue_head;
+        if NIL.ptr() == kp {
+            None
+        } else if let Typed::Cont { next, .. } = self.typed(kp) {
+            self.k_queue_head = *next;
+            if NIL.ptr() == self.k_queue_head {
+                self.k_queue_tail = NIL.ptr();  // empty queue
+            }
+            Some(kp)
+        } else {
+            panic!("cont_dequeue: invalid k_queue_head = {}", kp);
+        }
+    }
+
+    fn actor_commit(&mut self, me: Ptr) {
+        if let Typed::Actor { state, .. } = self.typed(me) {
+            let top = *state;
+            self.stack_clear(top);
+        }
+        if let Typed::Actor { events, .. } = self.typed(me) {
+            let mut ep = events.unwrap();
+            // move sent-message events to event queue
+            while let Typed::Event { next, .. } = self.typed(ep) {
+                println!("actor_commit: ep={} -> {}", ep, self.typed(ep));
+                let p = ep;
+                ep = *next;
+                self.event_enqueue(p);
+            }
+        }
+        if let Typed::Actor { events, .. } = self.typed_mut(me) {
+            *events = None;  // end actor transaction
+        }
+    }
+    fn actor_abort(&mut self, me: Ptr) {
+        if let Typed::Actor { state, .. } = self.typed(me) {
+            let top = *state;
+            self.stack_clear(top);
+        }
+        if let Typed::Actor { events, .. } = self.typed(me) {
+            let mut ep = events.unwrap();
+            // free sent-message events
+            while let Typed::Event { next, .. } = self.typed(ep) {
+                println!("actor_abort: ep={} -> {}", ep, self.typed(ep));
+                let p = ep;
+                ep = *next;
+                self.free(p);
+            }
+        }
+        if let Typed::Actor { events, .. } = self.typed_mut(me) {
+            *events = None;  // end actor transaction
+        }
+    }
     fn self_ptr(&self) -> Option<Ptr> {
         match self.typed(self.ep()) {
             Typed::Event { target, .. } => {
@@ -510,6 +585,7 @@ impl Core {
             _ => None,
         }
     }
+
     fn pop_counted(&mut self, num: Num) -> Val {
         let mut n = num;
         if n > 0 {  // build list from stack
@@ -587,6 +663,15 @@ impl Core {
             println!("stack_pop: underflow!");
             UNDEF
         }
+    }
+    fn stack_clear(&mut self, top: Ptr) {
+        let mut sp = self.sp();
+        while sp != top && self.typeq(PAIR_T, sp.val()) {
+            let p = sp;
+            sp = self.cdr(p).ptr();
+            self.free(p);  // free pair holding stack item
+        }
+        self.set_sp(sp);
     }
 
     pub fn ip(&self) -> Ptr {  // instruction pointer
