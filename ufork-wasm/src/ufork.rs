@@ -29,6 +29,7 @@ pub const FEXPR_T: Val  = Val { raw: 12 };
 pub const FREE_T: Val   = Val { raw: 13 };
 
 pub const START: Val    = Val { raw: 14 };
+pub const DDEQUE: Val   = Val { raw: 15 };
 
 // instr values
 pub const OP_TYPEQ: Val = Val { raw: DIR_RAW | 0 }; // fixnum(0)
@@ -66,13 +67,6 @@ const QUAD_MAX: usize = 1<<12;  // 4K quad-cells
 
 pub struct Core {
     quad_mem: [Typed; QUAD_MAX],
-    quad_top: Ptr,
-    quad_next: Ptr,
-    gc_free_cnt: usize,
-    e_queue_head: Ptr,
-    e_queue_tail: Ptr,
-    k_queue_head: Ptr,
-    k_queue_tail: Ptr,
 }
 
 impl Core {
@@ -96,9 +90,10 @@ impl Core {
         quad_mem[FEXPR_T.addr()]    = Typed::Type;
         quad_mem[FREE_T.addr()]     = Typed::Type;
         let start = START.raw();
-        quad_mem[START.addr()+0]    = Typed::Event { target: Cap::new(start+2), msg: ptrval(start+24), next: NIL.ptr() };
-        quad_mem[START.addr()+1]    = Typed::Pair { car: UNIT, cdr: NIL };
-        quad_mem[START.addr()+2]    = Typed::Actor { beh: Ptr::new(start+3), state: Ptr::new(start+1), events: None };
+        let e_boot = Ptr::new(start+44);
+        quad_mem[START.addr()+0]    = Typed::Memory { top: Ptr::new(start+50), next: NIL.ptr(), free: Fix::new(0), root: DDEQUE.ptr() };
+        quad_mem[START.addr()+1]    = Typed::Ddeque { e_first: e_boot, e_last: e_boot, k_first: NIL.ptr(), k_last: NIL.ptr() };
+        quad_mem[START.addr()+2]    = Typed::Actor { beh: Ptr::new(start+3), state: Ptr::new(start+22), events: None };
         quad_mem[START.addr()+3]    = Typed::Instr { op: Op::Push { v: fixnum(3), k: Ptr::new(start+4) } };
         quad_mem[START.addr()+4]    = Typed::Instr { op: Op::Push { v: fixnum(2), k: Ptr::new(start+5) } };
         quad_mem[START.addr()+5]    = Typed::Instr { op: Op::Push { v: fixnum(1), k: Ptr::new(start+39) } };
@@ -118,7 +113,7 @@ impl Core {
         quad_mem[START.addr()+19]   = Typed::Instr { op: Op::Roll { n: Fix::new(0), k: Ptr::new(start+20) } };
         quad_mem[START.addr()+20]   = Typed::Instr { op: Op::Pick { n: Fix::new(10), k: Ptr::new(start+21) } };
         quad_mem[START.addr()+21]   = Typed::Instr { op: Op::Roll { n: Fix::new(-10), k: Ptr::new(start+22) } };
-        quad_mem[START.addr()+22]   = Typed::Instr { op: Op::Roll { n: Fix::new(10), k: Ptr::new(start+23) } };
+        quad_mem[START.addr()+22]   = Typed::Pair { car: UNIT, cdr: NIL };
         quad_mem[START.addr()+23]   = Typed::Instr { op: Op::End { x: End::Commit } };
         quad_mem[START.addr()+24]   = Typed::Pair { car: fixnum(-1), cdr: ptrval(start+25) };
         quad_mem[START.addr()+25]   = Typed::Pair { car: fixnum(-2), cdr: ptrval(start+26) };
@@ -140,16 +135,10 @@ impl Core {
         quad_mem[START.addr()+41]   = Typed::Instr { op: Op::Pick { n: Fix::new(2), k: Ptr::new(start+42) }};
         quad_mem[START.addr()+42]   = Typed::Instr { op: Op::Roll { n: Fix::new(-2), k: Ptr::new(start+43) }};
         quad_mem[START.addr()+43]   = Typed::Instr { op: Op::Send { n: Fix::new(0), k: Ptr::new(start+6) }};
+        quad_mem[START.addr()+44]   = Typed::Event { target: Cap::new(start+2), msg: ptrval(start+24), next: NIL.ptr() };
 
         Core {
             quad_mem,
-            quad_top: Ptr::new(start+50),
-            quad_next: NIL.ptr(),
-            gc_free_cnt: 0,
-            e_queue_head: START.ptr(),
-            e_queue_tail: START.ptr(),
-            k_queue_head: NIL.ptr(),
-            k_queue_tail: NIL.ptr(),
         }
     }
 
@@ -200,7 +189,7 @@ impl Core {
         }
     }
     pub fn execute_instruction(&mut self) -> bool {
-        let kp = self.k_queue_head;
+        let kp = self.k_first();
         println!("execute_instruction: kp={} -> {}", kp, self.typed(kp));
         if let Typed::Cont { ip, ep, .. } = *self.typed(kp) {
             println!("execute_instruction: ep={} -> {}", ep, self.typed(ep));
@@ -485,25 +474,25 @@ impl Core {
         } else {
             panic!("event_enqueue: requires event, got {} -> {}", ep, self.typed(ep));
         }
-        if NIL.ptr() == self.e_queue_head {
-            self.e_queue_head = ep;
-        } else if let Typed::Event { next, ..  } = self.typed_mut(self.e_queue_tail) {
+        if NIL.ptr() == self.e_first() {
+            self.set_e_first(ep);
+        } else if let Typed::Event { next, ..  } = self.typed_mut(self.e_last()) {
             *next = ep;
         }
-        self.e_queue_tail = ep;
+        self.set_e_last(ep);
     }
     fn event_dequeue(&mut self) -> Option<Ptr> {
-        let ep = self.e_queue_head;
+        let ep = self.e_first();
         if NIL.ptr() == ep {
             None
         } else if let Typed::Event { next, .. } = self.typed(ep) {
-            self.e_queue_head = *next;
-            if NIL.ptr() == self.e_queue_head {
-                self.e_queue_tail = NIL.ptr();  // empty queue
+            self.set_e_first(*next);
+            if NIL.ptr() == self.e_first() {
+                self.set_e_last(NIL.ptr());  // empty queue
             }
             Some(ep)
         } else {
-            panic!("event_dequeue: invalid e_queue_head = {}", ep);
+            panic!("event_dequeue: invalid ep = {} -> {}", ep, self.typed(ep));
         }
     }
 
@@ -513,25 +502,25 @@ impl Core {
         } else {
             panic!("cont_enqueue: requires continuation, got {} -> {}", kp, self.typed(kp));
         };
-        if NIL.ptr() == self.k_queue_head {
-            self.k_queue_head = kp;
-        } else if let Typed::Cont { next, ..  } = self.typed_mut(self.k_queue_tail) {
+        if NIL.ptr() == self.k_first() {
+            self.set_k_first(kp);
+        } else if let Typed::Cont { next, ..  } = self.typed_mut(self.k_last()) {
             *next = kp;
         }
-        self.k_queue_tail = kp;
+        self.set_k_last(kp);
     }
     fn cont_dequeue(&mut self) -> Option<Ptr> {
-        let kp = self.k_queue_head;
+        let kp = self.k_first();
         if NIL.ptr() == kp {
             None
         } else if let Typed::Cont { next, .. } = self.typed(kp) {
-            self.k_queue_head = *next;
-            if NIL.ptr() == self.k_queue_head {
-                self.k_queue_tail = NIL.ptr();  // empty queue
+            self.set_k_first(*next);
+            if NIL.ptr() == self.k_first() {
+                self.set_k_last(NIL.ptr());  // empty queue
             }
             Some(kp)
         } else {
-            panic!("cont_dequeue: invalid k_queue_head = {}", kp);
+            panic!("cont_dequeue: invalid kp = {} -> {}", kp, self.typed(kp));
         }
     }
 
@@ -675,31 +664,31 @@ impl Core {
     }
 
     pub fn ip(&self) -> Ptr {  // instruction pointer
-        match self.typed(self.k_queue_head) {
+        match self.typed(self.k_first()) {
             Typed::Cont { ip, .. } => ip.ptr(),
             _ => UNDEF.ptr()
         }
     }
     pub fn sp(&self) -> Ptr {  // stack pointer
-        match self.typed(self.k_queue_head) {
+        match self.typed(self.k_first()) {
             Typed::Cont { sp, .. } => sp.ptr(),
             _ => UNDEF.ptr()
         }
     }
     pub fn ep(&self) -> Ptr {  // event pointer
-        match self.typed(self.k_queue_head) {
+        match self.typed(self.k_first()) {
             Typed::Cont { ep, .. } => ep.ptr(),
             _ => UNDEF.ptr()
         }
     }
     fn set_ip(&mut self, ptr: Ptr) {
-        let typed = self.typed_mut(self.k_queue_head);
+        let typed = self.typed_mut(self.k_first());
         if let Typed::Cont { ip, .. } = typed {
             *ip = ptr;
         }
     }
     fn set_sp(&mut self, ptr: Ptr) {
-        let typed = self.typed_mut(self.k_queue_head);
+        let typed = self.typed_mut(self.k_first());
         if let Typed::Cont { sp, .. } = typed {
             *sp = ptr;
         }
@@ -799,22 +788,23 @@ impl Core {
     }
 
     pub fn alloc(&mut self, init: &Typed) -> Ptr {
-        let ptr = match *self.typed(self.quad_next) {
+        let ptr = match *self.typed(self.mem_next()) {
             Typed::Free { next } => {
                 // use quad from free-list
-                let ptr = self.quad_next;
-                assert!(self.gc_free_cnt > 0);
-                self.gc_free_cnt -= 1;
-                self.quad_next = next;
+                let ptr = self.mem_next();
+                let num = self.mem_free().num();
+                assert!(num > 0);
+                self.set_mem_free(Fix::new(num - 1));
+                self.set_mem_next(next);
                 ptr
             },
             _ => {
                 // expand top-of-memory
-                if self.quad_top.addr() >= QUAD_MAX {
+                if self.mem_top().addr() >= QUAD_MAX {
                     panic!("out of memory!");
                 }
-                let ptr = self.quad_top;
-                self.quad_top = Ptr::new(ptr.raw() + 1);
+                let ptr = self.mem_top();
+                self.set_mem_top(Ptr::new(ptr.raw() + 1));
                 ptr
             },
         };
@@ -826,10 +816,11 @@ impl Core {
         if let Typed::Free { .. } = self.typed(ptr) {
             panic!("double-free {}", ptr);
         }
-        let typed = Typed::Free { next: self.quad_next };
+        let typed = Typed::Free { next: self.mem_next() };
         *self.typed_mut(ptr) = typed;
-        self.quad_next = ptr;
-        self.gc_free_cnt += 1;
+        self.set_mem_next(ptr);
+        let num = self.mem_free().num();
+        self.set_mem_free(Fix::new(num + 1));
     }
 
     pub fn typed(&self, ptr: Ptr) -> &Typed {
@@ -844,7 +835,7 @@ impl Core {
 
     pub fn addr(&self, ptr: Ptr) -> Option<usize> {
         let addr = ptr.addr();
-        if addr < self.quad_top.addr() {
+        if addr < self.mem_top().addr() {
             Some(addr)
         } else {
             None
@@ -852,10 +843,105 @@ impl Core {
     }
     pub fn in_heap(&self, val: Val) -> bool {
         let raw = val.raw();
-        (raw < self.quad_top.raw()) && (raw >= START.raw())
+        (raw < self.mem_top().raw()) && (raw >= START.raw())
     }
-    pub fn quad_top(&self) -> Ptr {
-        self.quad_top
+
+    fn e_first(&self) -> Ptr {
+        match self.typed(DDEQUE.ptr()) {
+            Typed::Ddeque { e_first, .. } => *e_first,
+            _ => panic!("Ddeque required!"),
+        }
+    }
+    fn set_e_first(&mut self, ptr: Ptr) {
+        match self.typed_mut(DDEQUE.ptr()) {
+            Typed::Ddeque { e_first, .. } => { *e_first = ptr; },
+            _ => panic!("Ddeque required!"),
+        }
+    }
+    fn e_last(&self) -> Ptr {
+        match self.typed(DDEQUE.ptr()) {
+            Typed::Ddeque { e_last, .. } => *e_last,
+            _ => panic!("Ddeque required!"),
+        }
+    }
+    fn set_e_last(&mut self, ptr: Ptr) {
+        match self.typed_mut(DDEQUE.ptr()) {
+            Typed::Ddeque { e_last, .. } => { *e_last = ptr; },
+            _ => panic!("Ddeque required!"),
+        }
+    }
+    fn k_first(&self) -> Ptr {
+        match self.typed(DDEQUE.ptr()) {
+            Typed::Ddeque { k_first, .. } => *k_first,
+            _ => panic!("Ddeque required!"),
+        }
+    }
+    fn set_k_first(&mut self, ptr: Ptr) {
+        match self.typed_mut(DDEQUE.ptr()) {
+            Typed::Ddeque { k_first, .. } => { *k_first = ptr; },
+            _ => panic!("Ddeque required!"),
+        }
+    }
+    fn k_last(&self) -> Ptr {
+        match self.typed(DDEQUE.ptr()) {
+            Typed::Ddeque { k_last, .. } => *k_last,
+            _ => panic!("Ddeque required!"),
+        }
+    }
+    fn set_k_last(&mut self, ptr: Ptr) {
+        match self.typed_mut(DDEQUE.ptr()) {
+            Typed::Ddeque { k_last, .. } => { *k_last = ptr; },
+            _ => panic!("Ddeque required!"),
+        }
+    }
+
+    fn mem_top(&self) -> Ptr {
+        match &self.quad_mem[START.addr()] {
+            Typed::Memory { top, .. } => *top,
+            _ => panic!("Memory required!"),
+        }
+    }
+    fn set_mem_top(&mut self, ptr: Ptr) {
+        match &mut self.quad_mem[START.addr()] {
+            Typed::Memory { top, .. } => { *top = ptr; },
+            _ => panic!("Memory required!"),
+        }
+    }
+    fn mem_next(&self) -> Ptr {
+        match &self.quad_mem[START.addr()] {
+            Typed::Memory { next, .. } => *next,
+            _ => panic!("Memory required!"),
+        }
+    }
+    fn set_mem_next(&mut self, ptr: Ptr) {
+        match &mut self.quad_mem[START.addr()] {
+            Typed::Memory { next, .. } => { *next = ptr; },
+            _ => panic!("Memory required!"),
+        }
+    }
+    fn mem_free(&self) -> Fix {
+        match &self.quad_mem[START.addr()] {
+            Typed::Memory { free, .. } => *free,
+            _ => panic!("Memory required!"),
+        }
+    }
+    fn set_mem_free(&mut self, fix: Fix) {
+        match &mut self.quad_mem[START.addr()] {
+            Typed::Memory { free, .. } => { *free = fix; },
+            _ => panic!("Memory required!"),
+        }
+    }
+    fn _mem_root(&self) -> Ptr {
+        match &self.quad_mem[START.addr()] {
+            Typed::Memory { root, .. } => *root,
+            _ => panic!("Memory required!"),
+        }
+    }
+    fn _set_mem_root(&mut self, ptr: Ptr) {
+        match &mut self.quad_mem[START.addr()] {
+            Typed::Memory { root, .. } => { *root = ptr; },
+            _ => panic!("Memory required!"),
+        }
     }
 }
 
@@ -876,6 +962,8 @@ pub enum Typed {
     Pair { car: Val, cdr: Val },
     Fexpr { func: Ptr },
     Free { next: Ptr },
+    Ddeque { e_first: Ptr, e_last: Ptr, k_first: Ptr, k_last: Ptr },
+    Memory { top: Ptr, next: Ptr, free: Fix, root: Ptr },
     Quad { t: Val, x: Val, y: Val, z: Val },
 }
 impl Typed {
@@ -912,6 +1000,8 @@ impl Typed {
             Typed::Pair { car, cdr } => Quad::new(PAIR_T, car.val(), cdr.val(), UNDEF),
             Typed::Fexpr { func } => Quad::new(FEXPR_T, func.val(), UNDEF, UNDEF),
             Typed::Free { next } => Quad::new(FREE_T, UNDEF, UNDEF, next.val()),
+            Typed::Ddeque { e_first, e_last, k_first, k_last } => Quad::new(e_first.val(), e_last.val(), k_first.val(), k_last.val()),
+            Typed::Memory { top, next, free, root } => Quad::new(top.val(), next.val(), free.val(), root.val()),
             Typed::Quad { t, x, y, z } => Quad::new(t.val(), x.val(), y.val(), z.val()),
         }
     }
@@ -933,6 +1023,8 @@ impl fmt::Display for Typed {
             Typed::Pair { car, cdr } => write!(fmt, "Pair{{ car:{}, cdr:{} }}", car, cdr),
             Typed::Fexpr { func } => write!(fmt, "Fexpr{{ func:{} }}", func),
             Typed::Free { next } => write!(fmt, "Free{{ next:{} }}", next),
+            Typed::Ddeque { e_first, e_last, k_first, k_last } => write!(fmt, "Ddeque{{ e_first:{}, e_last:{}, k_first:{}, k_last:{} }}", e_first, e_last, k_first, k_last),
+            Typed::Memory { top, next, free, root } => write!(fmt, "Memory{{ top:{}, next:{}, free:{}, root:{} }}", top, next, free, root),
             Typed::Quad { t, x, y, z } => write!(fmt, "Quad{{ t:{}, x:{}, y:{}, z:{} }}", t, x, y, z),
         }
     }
@@ -1322,12 +1414,11 @@ fn cap_addr_conversion() {
 #[test]
 fn core_initialization() {
     let core = Core::new();
-    assert_eq!(0, core.gc_free_cnt);
-    assert_eq!(NIL.ptr(), core.quad_next);
-    assert_ne!(NIL.ptr(), core.e_queue_head);
-    assert_eq!(NIL.ptr(), core.k_queue_head);
-    assert_eq!(core.quad_top(), core.quad_top);
-    for raw in 0..core.quad_top().raw() {
+    assert_eq!(0, core.mem_free().num());
+    assert_eq!(NIL.ptr(), core.mem_next());
+    assert_ne!(NIL.ptr(), core.e_first());
+    assert_eq!(NIL.ptr(), core.k_first());
+    for raw in 0..core.mem_top().raw() {
         let typed = core.typed(Ptr::new(raw));
         println!("{:5}: {} = {}", raw, typed.quad(), typed);
     }
@@ -1337,28 +1428,27 @@ fn core_initialization() {
 #[test]
 fn basic_memory_allocation() {
     let mut core = Core::new();
-    let top_before = core.quad_top.raw();
-    println!("quad_top: {}", core.quad_top);
+    let top_before = core.mem_top().raw();
+    println!("mem_top: {}", core.mem_top());
     let m1 = core.alloc(&Typed::Pair { car: fixnum(1), cdr: fixnum(1) });
     println!("m1:{} -> {}", m1, core.typed(m1));
-    println!("quad_top: {}", core.quad_top);
+    println!("mem_top: {}", core.mem_top());
     let m2 = core.alloc(&Typed::Pair { car: fixnum(2), cdr: fixnum(2) });
-    println!("quad_top: {}", core.quad_top);
+    println!("mem_top: {}", core.mem_top());
     let m3 = core.alloc(&Typed::Pair { car: fixnum(3), cdr: fixnum(3) });
-    println!("quad_top: {}", core.quad_top);
-    println!("gc_free_cnt: {}", core.gc_free_cnt);
+    println!("mem_top: {}", core.mem_top());
+    println!("mem_free: {}", core.mem_free());
     core.free(m2);
-    println!("gc_free_cnt: {}", core.gc_free_cnt);
+    println!("mem_free: {}", core.mem_free());
     core.free(m3);
-    println!("gc_free_cnt: {}", core.gc_free_cnt);
+    println!("mem_free: {}", core.mem_free());
     let _m4 = core.alloc(&Typed::Pair { car: fixnum(4), cdr: fixnum(4) });
-    println!("quad_top: {}", core.quad_top);
-    println!("gc_free_cnt: {}", core.gc_free_cnt);
-    let top_after = core.quad_top.raw();
+    println!("mem_top: {}", core.mem_top());
+    println!("mem_free: {}", core.mem_free());
+    let top_after = core.mem_top().raw();
     assert_eq!(3, top_after - top_before);
-    assert_eq!(1, core.gc_free_cnt);
-    println!("quad_next: {}", core.quad_next);
-    println!("quad_next-> {}", core.typed(core.quad_next));
+    assert_eq!(1, core.mem_free().num());
+    println!("mem_next: {} -> {}", core.mem_next(), core.typed(core.mem_next()));
     //assert!(false);  // force output to be displayed
 }
 
@@ -1366,5 +1456,5 @@ fn basic_memory_allocation() {
 fn run_loop_terminates() {
     let mut core = Core::new();
     core.run_loop();
-    assert!(false);  // force output to be displayed
+    //assert!(false);  // force output to be displayed
 }
