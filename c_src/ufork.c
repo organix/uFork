@@ -80,10 +80,12 @@ cell_t cell_table[CELL_MAX] = {
     { .t=Type_T,        .x=UNDEF,       .y=UNDEF,       .z=UNDEF,       },  // 11: Pair_T
     { .t=Type_T,        .x=UNDEF,       .y=UNDEF,       .z=UNDEF,       },  // 12: Fexpr_T
     { .t=Type_T,        .x=UNDEF,       .y=UNDEF,       .z=UNDEF,       },  // 13: Free_T
+    { .t=1700,          .x=NIL,         .y=TO_FIX(0),   .z=DDEQUE,      },  // 14: MEMORY
+    { .t=START,         .x=START,       .y=NIL,         .z=NIL,         },  // 15: DDEQUE
 
 // manually updated assembly references
-#define _A_BOOT TO_CAP(102)
-#define _M_EVAL TO_CAP(233)
+#define _A_BOOT TO_CAP(104)
+#define _M_EVAL TO_CAP(235)
 
 #define BOOT_BASE (START)
 #include "boot.asm"
@@ -154,6 +156,8 @@ static struct { int_t addr; char *label; } cell_map[] = {
     { Pair_T, "Pair_T" },
     { Fexpr_T, "Fexpr_T" },
     { Free_T, "Free_T" },
+    { MEMORY, "MEMORY" },
+    { DDEQUE, "DDEQUE" },
     { START, "START" },
 
 // boot.asm

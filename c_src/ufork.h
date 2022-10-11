@@ -138,8 +138,10 @@ typedef PROC_DECL((*proc_t));
 #define Pair_T      (11)
 #define Fexpr_T     (12)
 #define Free_T      (13)
-// entry-point
-#define START       (14)
+// entry-points
+#define MEMORY      (14)
+#define DDEQUE      (15)
+#define START       (16)
 
 #define get_t(n) (cell_zero[(n)].t)
 #define get_x(n) (cell_zero[(n)].x)
