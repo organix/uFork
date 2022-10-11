@@ -28,8 +28,9 @@ pub const PAIR_T: Val   = Val { raw: 11 };
 pub const FEXPR_T: Val  = Val { raw: 12 };
 pub const FREE_T: Val   = Val { raw: 13 };
 
-pub const START: Val    = Val { raw: 14 };
+pub const MEMORY: Val   = Val { raw: 14 };
 pub const DDEQUE: Val   = Val { raw: 15 };
+pub const START: Val    = Val { raw: 16 };
 
 // instr values
 pub const OP_TYPEQ: Val = Val { raw: DIR_RAW | 0 }; // fixnum(0)
@@ -90,10 +91,11 @@ impl Core {
         quad_mem[FEXPR_T.addr()]    = Typed::Type;
         quad_mem[FREE_T.addr()]     = Typed::Type;
         let start = START.raw();
-        let e_boot = Ptr::new(start+44);
-        quad_mem[START.addr()+0]    = Typed::Memory { top: Ptr::new(start+50), next: NIL.ptr(), free: Fix::new(0), root: DDEQUE.ptr() };
-        quad_mem[START.addr()+1]    = Typed::Ddeque { e_first: e_boot, e_last: e_boot, k_first: NIL.ptr(), k_last: NIL.ptr() };
-        quad_mem[START.addr()+2]    = Typed::Actor { beh: Ptr::new(start+3), state: Ptr::new(start+22), events: None };
+        quad_mem[MEMORY.addr()]     = Typed::Memory { top: Ptr::new(start+50), next: NIL.ptr(), free: Fix::new(0), root: DDEQUE.ptr() };
+        quad_mem[DDEQUE.addr()]     = Typed::Ddeque { e_first: Ptr::new(start), e_last: Ptr::new(start), k_first: NIL.ptr(), k_last: NIL.ptr() };
+        quad_mem[START.addr()+0]    = Typed::Event { target: Cap::new(start+2), msg: ptrval(start+24), next: NIL.ptr() };
+        quad_mem[START.addr()+1]    = Typed::Pair { car: UNIT, cdr: NIL };
+        quad_mem[START.addr()+2]    = Typed::Actor { beh: Ptr::new(start+3), state: Ptr::new(start+1), events: None };
         quad_mem[START.addr()+3]    = Typed::Instr { op: Op::Push { v: fixnum(3), k: Ptr::new(start+4) } };
         quad_mem[START.addr()+4]    = Typed::Instr { op: Op::Push { v: fixnum(2), k: Ptr::new(start+5) } };
         quad_mem[START.addr()+5]    = Typed::Instr { op: Op::Push { v: fixnum(1), k: Ptr::new(start+39) } };
@@ -135,7 +137,6 @@ impl Core {
         quad_mem[START.addr()+41]   = Typed::Instr { op: Op::Pick { n: Fix::new(2), k: Ptr::new(start+42) }};
         quad_mem[START.addr()+42]   = Typed::Instr { op: Op::Roll { n: Fix::new(-2), k: Ptr::new(start+43) }};
         quad_mem[START.addr()+43]   = Typed::Instr { op: Op::Send { n: Fix::new(0), k: Ptr::new(start+6) }};
-        quad_mem[START.addr()+44]   = Typed::Event { target: Cap::new(start+2), msg: ptrval(start+24), next: NIL.ptr() };
 
         Core {
             quad_mem,
@@ -843,7 +844,7 @@ impl Core {
     }
     pub fn in_heap(&self, val: Val) -> bool {
         let raw = val.raw();
-        (raw < self.mem_top().raw()) && (raw >= START.raw())
+        (raw < self.mem_top().raw()) && (raw > MEMORY.raw())
     }
 
     fn e_first(&self) -> Ptr {
@@ -896,49 +897,49 @@ impl Core {
     }
 
     fn mem_top(&self) -> Ptr {
-        match &self.quad_mem[START.addr()] {
+        match &self.quad_mem[MEMORY.addr()] {
             Typed::Memory { top, .. } => *top,
             _ => panic!("Memory required!"),
         }
     }
     fn set_mem_top(&mut self, ptr: Ptr) {
-        match &mut self.quad_mem[START.addr()] {
+        match &mut self.quad_mem[MEMORY.addr()] {
             Typed::Memory { top, .. } => { *top = ptr; },
             _ => panic!("Memory required!"),
         }
     }
     fn mem_next(&self) -> Ptr {
-        match &self.quad_mem[START.addr()] {
+        match &self.quad_mem[MEMORY.addr()] {
             Typed::Memory { next, .. } => *next,
             _ => panic!("Memory required!"),
         }
     }
     fn set_mem_next(&mut self, ptr: Ptr) {
-        match &mut self.quad_mem[START.addr()] {
+        match &mut self.quad_mem[MEMORY.addr()] {
             Typed::Memory { next, .. } => { *next = ptr; },
             _ => panic!("Memory required!"),
         }
     }
     fn mem_free(&self) -> Fix {
-        match &self.quad_mem[START.addr()] {
+        match &self.quad_mem[MEMORY.addr()] {
             Typed::Memory { free, .. } => *free,
             _ => panic!("Memory required!"),
         }
     }
     fn set_mem_free(&mut self, fix: Fix) {
-        match &mut self.quad_mem[START.addr()] {
+        match &mut self.quad_mem[MEMORY.addr()] {
             Typed::Memory { free, .. } => { *free = fix; },
             _ => panic!("Memory required!"),
         }
     }
     fn _mem_root(&self) -> Ptr {
-        match &self.quad_mem[START.addr()] {
+        match &self.quad_mem[MEMORY.addr()] {
             Typed::Memory { root, .. } => *root,
             _ => panic!("Memory required!"),
         }
     }
     fn _set_mem_root(&mut self, ptr: Ptr) {
-        match &mut self.quad_mem[START.addr()] {
+        match &mut self.quad_mem[MEMORY.addr()] {
             Typed::Memory { root, .. } => { *root = ptr; },
             _ => panic!("Memory required!"),
         }
