@@ -37,13 +37,21 @@ let paused = false;  // run/pause toggle
 const $rate = document.getElementById("frame-rate");
 let frame = 1;  // frame-rate countdown
 
+const updateElementText = (el, txt) => {
+	if (el.textContent == txt) {
+		el.style.color = '#000';
+	} else {
+		el.style.color = '#C03';
+	}
+	el.textContent = txt;
+}
 const drawHost = () => {
 	$output.textContent = host.render();
 	const ip = host.ip();
-	$ip.textContent = "" + ip;
-	$instr.textContent = host.disasm(ip);
+	updateElementText($ip, "" + ip);
+	updateElementText($instr, host.disasm(ip));
 	const sp = host.sp();
-	$sp.textContent = "" + sp;
+	updateElementText($sp, "" + sp);
 	if (host.in_heap(sp)) {
 		let p = sp;
 		let a = [];
@@ -54,20 +62,20 @@ const drawHost = () => {
 			a.push(host.pprint(host.car(p)));  // pretty-print stack item(s)
 			p = host.cdr(p);
 		}
-		$stack.textContent = a.join("\n");
+		updateElementText($stack, a.join("\n"));
 	} else {
 		//$stack.innerHTML = "<i>empty</i>";
-		$stack.textContent = "--";
+		updateElementText($stack, "--");
 	}
 	const ep = host.ep();
-	$ep.textContent = "" + ep;
-	$event.textContent = host.disasm(ep);
+	updateElementText($ep, "" + ep);
+	updateElementText($event, host.disasm(ep));
 	const ap = host.e_self();
-	$ap.textContent = "" + ap;
-	$self.textContent = host.disasm(ap);
+	updateElementText($ap, "" + ap);
+	updateElementText($self, host.disasm(ap));
 	const mp = host.e_msg();
-	$mp.textContent = "" + mp;
-	$msg.textContent = host.pprint(mp);
+	updateElementText($mp, "" + mp);
+	updateElementText($msg, host.pprint(mp));
 }
 const drawUniverse = () => {
 	drawHost();

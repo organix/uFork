@@ -844,7 +844,7 @@ impl Core {
     }
     pub fn in_heap(&self, val: Val) -> bool {
         let raw = val.raw();
-        (raw < self.mem_top().raw()) && (raw > MEMORY.raw())
+        (raw < self.mem_top().raw()) && (raw >= MEMORY.raw())
     }
 
     fn e_first(&self) -> Ptr {
