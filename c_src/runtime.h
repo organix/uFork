@@ -85,8 +85,15 @@
  * Exports
  */
 
+#if MEM_SAVES_ALL
+#define e_queue_head (cell_zero[DDEQUE].t)
+#define e_queue_tail (cell_zero[DDEQUE].x)
+#define k_queue_head (cell_zero[DDEQUE].y)
+#define k_queue_tail (cell_zero[DDEQUE].z)
+#else
 extern int_t k_queue_head;
 extern int_t k_queue_tail;
+#endif
 
 int_t clk_init(int_t handler);
 int_t runtime();

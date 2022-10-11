@@ -631,8 +631,10 @@ int_t event_new(int_t target, int_t message) {
     return cell_new(Event_T, target, message, NIL);
 }
 
+#if !MEM_SAVES_ALL
 int_t e_queue_head = START;
 int_t e_queue_tail = START;
+#endif
 #if RUNTIME_STATS
 long event_count = 0;
 #endif
@@ -696,8 +698,10 @@ int_t cont_new(int_t ip, int_t sp, int_t ep) {
     return cell_new(ip, sp, ep, NIL);
 }
 
+#if !MEM_SAVES_ALL
 int_t k_queue_head = NIL;
 int_t k_queue_tail = NIL;
+#endif
 #if RUNTIME_STATS
 long instruction_count = 0;
 #endif

@@ -27,6 +27,7 @@
 #define QQUOTE_SYNTAX 1 // include support for quasiquote, et. al.
 #define PLACEH_SYNTAX 1 // include support for placeholder variables (?x)
 #define SCHEME_ACTORS 1 // include meta-actor definitions for LISP/Scheme
+#define MEM_SAVES_ALL 1 // all VM state is stored in cell-memory
 
 #if INCLUDE_DEBUG
 #define DEBUG(x)    x   // include/exclude debug instrumentation
@@ -138,7 +139,7 @@ typedef PROC_DECL((*proc_t));
 #define Pair_T      (11)
 #define Fexpr_T     (12)
 #define Free_T      (13)
-// entry-points
+// reserved addresses
 #define MEMORY      (14)
 #define DDEQUE      (15)
 #define START       (16)
@@ -154,7 +155,7 @@ typedef PROC_DECL((*proc_t));
 #define set_z(n,v) (cell_zero[(n)].z = MARK_CELL(v))
 
 #define IS_CELL(n)  (NAT(n) < cell_top)
-#define IN_HEAP(n)  (((n)>=START) && ((n)<cell_top))
+#define IN_HEAP(n)  (((n)>MEMORY) && ((n)<cell_top))
 
 #define IS_BOOL(n)  (((n) == FALSE) || ((n) == TRUE))
 

@@ -604,10 +604,12 @@ int_t fixnum(int_t str) {  // FIXME: add `base` parameter
 
 // FORWARD DECLARATIONS
 static int_t sym_intern[256];
-int_t e_queue_head;  
-int_t k_queue_head;
 
+#if MEM_SAVES_ALL
+#define gc_root_set (cell_zero[MEMORY].z)
+#else
 static int_t gc_root_set = NIL;
+#endif
 i32 gc_free_cnt = 0;  // number of cells in free-list
 #if RUNTIME_STATS
 long gc_cycle_count = 0;
@@ -639,8 +641,8 @@ static void gc_dump_map() {  // dump memory allocation map
         }
         char m = gc_marks[a];
         char c = mark_label[m];
-        if (a < START) {
-            c = 't';
+        if (a <= MEMORY) {
+            c = 'r';
         } else if (a >= cell_top) {
             c = '-';
         } else if (m == gc_prev_gen) {
@@ -735,8 +737,10 @@ static void gc_increment() {  // perform an incremental GC step
                 gc_next_gen = GC_GENX;
             }
             // mark roots
+#if !MEM_SAVES_ALL
             gc_mark_cell(e_queue_head);
             gc_mark_cell(k_queue_head);
+#endif
             gc_mark_cell(gc_root_set);
             // next state
             gc_state = 1;
@@ -796,7 +800,7 @@ static void gc_increment() {  // perform an incremental GC step
 #define GC_HI_BITS(val) I32(I32(val) >> 5)
 
 #define GC_MAX_BITS GC_HI_BITS(CELL_MAX)
-#define GC_RESERVED (I32(1 << GC_LO_BITS(START)) - 1)
+#define GC_RESERVED (I32(1 << GC_LO_BITS(DDEQUE)) - 1)
 
 i32 gc_bits[GC_MAX_BITS] = { GC_RESERVED };  // in-use mark bits
 
@@ -835,7 +839,7 @@ static void gc_dump_map() {  // dump memory allocation map
         if (a >= cell_top) c = '-';
 #if 1
         /* extra detail */
-        if (c != '.') {
+        if (c == 'x') {
             int_t t = get_t(a);
             if (t == Literal_T) c = 'l';// literal value
             if (t == Type_T) c = 't';   // type marker
@@ -875,21 +879,23 @@ i32 gc_mark_cells(int_t val) {  // mark cells reachable from `val`
         ++cnt;
         cnt += gc_mark_cells(get_t(val));   // recurse on t
         cnt += gc_mark_cells(get_x(val));   // recurse on x
-        cnt += gc_mark_cells(get_z(val));   // recurse on z
-        val = get_y(val);                   // iterate over y
+        cnt += gc_mark_cells(get_y(val));   // recurse on y
+        val = get_z(val);                   // iterate over z
     }
     return cnt;
 }
 
 i32 gc_mark_roots(int_t dump) {  // mark cells reachable from the root-set
-    i32 cnt = START-1;
+    i32 cnt = MEMORY;
     for (int i = 0; i < 256; ++i) {
         if (sym_intern[i]) {
             cnt += gc_mark_cells(sym_intern[i]);
         }
     }
+#if !MEM_SAVES_ALL
     cnt += gc_mark_cells(e_queue_head);
     cnt += gc_mark_cells(k_queue_head);
+#endif
     cnt += gc_mark_cells(gc_root_set);
     if (dump != FALSE) {
         gc_dump_map();

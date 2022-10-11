@@ -24,7 +24,7 @@ static char *cell_label(int_t cell) {
         "Fexpr_T",
         "Free_T",
     };
-    if (NAT(cell) < START) return label[cell];
+    if (NAT(cell) <= Free_T) return label[cell];
     if (IS_FIX(cell)) return "fix";
     if (IS_CAP(cell)) return "cap";
     return "cell";
@@ -35,7 +35,7 @@ void print_word(char* prefix, int_t word) {
         fprintf(stderr, "%s%+"PdI"", prefix, TO_INT(word));
     } else if (IS_CAP(word)) {
         fprintf(stderr, "%s@%"PdI"", prefix, TO_REF(word));
-    } else if (NAT(word) < START) {
+    } else if (NAT(word) <= Free_T) {
         fprintf(stderr, "%s%s", prefix, cell_label(word));
     } else {
         fprintf(stderr, "%s^%"PdI"", prefix, word);
@@ -45,7 +45,7 @@ void print_word(char* prefix, int_t word) {
 static void print_type(char *prefix, int_t word) {
     if (word == Literal_T) {
         fprintf(stderr, "%sLiteral_T", prefix);
-    } else if (NAT(word) < START) {
+    } else if (NAT(word) <= Free_T) {
         fprintf(stderr, "%s%s", prefix, cell_label(word));
     } else {
         print_word(prefix, word);
@@ -69,7 +69,7 @@ void print_quad(char* prefix, int_t quad) {
 void print_sexpr(int_t x) {
     if (IS_FIX(x)) {
         fprintf(stderr, "%+"PdI"", TO_INT(x));
-    } else if (NAT(x) < START) {
+    } else if (NAT(x) <= Free_T) {
         fprintf(stderr, "%s", cell_label(x));
     } else if (IS_FREE(x)) {
         fprintf(stderr, "#FREE-CELL!");
