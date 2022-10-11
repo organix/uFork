@@ -88,6 +88,25 @@ impl Host {
     pub fn ip(&self) -> Raw { self.core.ip().raw() }
     pub fn sp(&self) -> Raw { self.core.sp().raw() }
     pub fn ep(&self) -> Raw { self.core.ep().raw() }
+    pub fn e_self(&self) -> Raw {
+        let ptr = self.core.ep();
+        match self.core.typed(ptr) {
+            Typed::Event { target, .. } => {
+                let a = Ptr::new(target.raw());  // WARNING: converting Cap to Ptr!
+                a.raw()
+            },
+            _ => UNDEF.raw()
+        }
+    }
+    pub fn e_msg(&self) -> Raw {
+        let ptr = self.core.ep();
+        match self.core.typed(ptr) {
+            Typed::Event { msg, .. } => {
+                msg.raw()
+            },
+            _ => UNDEF.raw()
+        }
+    }
     pub fn in_heap(&self, v: Raw) -> bool {
         self.core.in_heap(Val::new(v))
     }
@@ -111,24 +130,49 @@ impl Host {
     pub fn next(&self, p: Raw) -> Raw {
         self.core.next(Ptr::new(p)).raw()
     }
-    pub fn print(&self, raw: Raw) -> String {
-        Val::new(raw).to_string()
+
+    pub fn pprint(&self, raw: Raw) -> String {
+        if self.is_pair(raw) {
+            let mut p = raw;
+            let mut s = String::new();
+            let mut sep = "(";
+            while self.is_pair(p) {
+                s.push_str(sep);
+                let ss = self.pprint(self.car(p));
+                s.push_str(ss.as_str());
+                sep = " ";
+                p = self.cdr(p);
+            }
+            if NIL.raw() != p {
+                s.push_str(" . ");
+                let ss = self.pprint(p);
+                s.push_str(ss.as_str());
+            }
+            s.push_str(")");
+            s
+        } else {
+            self.print(raw)
+        }
     }
     pub fn display(&self, raw: Raw) -> String {
         let mut s = String::new();
-        s.push_str(self.print(raw).as_str());
+        let ss = self.print(raw);
+        s.push_str(ss.as_str());
         let val = Val::new(raw);
         if self.core.in_heap(val) {
             s.push_str(" → ");
-            let ptr = val.ptr();
-            let typed = self.core.typed(ptr);
-            s.push_str(typed.to_string().as_str());
+            let ss = self.disasm(raw);
+            s.push_str(ss.as_str());
         }
         s
     }
     pub fn disasm(&self, raw: Raw) -> String {
         self.core.typed(Ptr::new(raw)).to_string()
     }
+    pub fn print(&self, raw: Raw) -> String {
+        Val::new(raw).to_string()
+    }
+
     pub fn render(&self) -> String {
         self.to_string()
     }

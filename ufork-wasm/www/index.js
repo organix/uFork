@@ -28,6 +28,10 @@ const $sp = document.getElementById("ufork-sp");
 const $stack = document.getElementById("ufork-stack");
 const $ep = document.getElementById("ufork-ep");
 const $event = document.getElementById("ufork-event");
+const $ap = document.getElementById("ufork-ap");
+const $self = document.getElementById("ufork-self");
+const $mp = document.getElementById("ufork-mp");
+const $msg = document.getElementById("ufork-msg");
 
 let paused = false;  // run/pause toggle
 const $rate = document.getElementById("frame-rate");
@@ -46,7 +50,8 @@ const drawHost = () => {
 		while (host.is_pair(p)) {
 			//a.push(host.disasm(p));  // disasm stack Pair(s)
 			//a.push(host.print(host.car(p)));  // print stack item(s)
-			a.push(host.display(host.car(p)));  // display stack item(s)
+			//a.push(host.display(host.car(p)));  // display stack item(s)
+			a.push(host.pprint(host.car(p)));  // pretty-print stack item(s)
 			p = host.cdr(p);
 		}
 		$stack.textContent = a.join("\n");
@@ -57,6 +62,12 @@ const drawHost = () => {
 	const ep = host.ep();
 	$ep.textContent = "" + ep;
 	$event.textContent = host.disasm(ep);
+	const ap = host.e_self();
+	$ap.textContent = "" + ap;
+	$self.textContent = host.disasm(ap);
+	const mp = host.e_msg();
+	$mp.textContent = "" + mp;
+	$msg.textContent = host.pprint(mp);
 }
 const drawUniverse = () => {
 	drawHost();

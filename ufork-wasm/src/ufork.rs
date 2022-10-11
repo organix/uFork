@@ -98,7 +98,7 @@ impl Core {
         quad_mem[START.addr()+2]    = Typed::Actor { beh: Ptr::new(start+3), state: Ptr::new(start+1), events: None };
         quad_mem[START.addr()+3]    = Typed::Instr { op: Op::Push { v: fixnum(3), k: Ptr::new(start+4) } };
         quad_mem[START.addr()+4]    = Typed::Instr { op: Op::Push { v: fixnum(2), k: Ptr::new(start+5) } };
-        quad_mem[START.addr()+5]    = Typed::Instr { op: Op::Push { v: fixnum(1), k: Ptr::new(start+39) } };
+        quad_mem[START.addr()+5]    = Typed::Instr { op: Op::Push { v: fixnum(1), k: Ptr::new(start+27) } };
         quad_mem[START.addr()+6]    = Typed::Instr { op: Op::Typeq { t: FIXNUM_T.ptr(), k: Ptr::new(start+7) } };
         quad_mem[START.addr()+7]    = Typed::Instr { op: Op::If { t: Ptr::new(start+6), f: Ptr::new(start+8) } };
         quad_mem[START.addr()+8]    = Typed::Instr { op: Op::Drop { n: Fix::new(9), k: Ptr::new(start+9) } };
@@ -126,7 +126,7 @@ impl Core {
         quad_mem[START.addr()+30]   = Typed::Instr { op: Op::Part { n: Fix::new(2), k: Ptr::new(start+31) }};
         quad_mem[START.addr()+31]   = Typed::Instr { op: Op::Pair { n: Fix::new(3), k: Ptr::new(start+32) }};
         quad_mem[START.addr()+32]   = Typed::Instr { op: Op::Part { n: Fix::new(3), k: Ptr::new(start+33) }};
-        quad_mem[START.addr()+33]   = Typed::Instr { op: Op::Part { n: Fix::new(0), k: Ptr::new(start+6) }};
+        quad_mem[START.addr()+33]   = Typed::Instr { op: Op::Pair { n: Fix::new(0), k: Ptr::new(start+39) }};
         quad_mem[START.addr()+34]   = Typed::Instr { op: Op::Myself { k: Ptr::new(start+35) }};
         quad_mem[START.addr()+35]   = Typed::Instr { op: Op::Send { n: Fix::new(3), k: Ptr::new(start+36) }};
         quad_mem[START.addr()+36]   = Typed::Instr { op: Op::Pick { n: Fix::new(1), k: Ptr::new(start+37) }};
