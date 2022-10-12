@@ -188,9 +188,16 @@ extern int_t sane;  // run-away loop prevention
 #define CELL_MAX NAT(1<<14)  // 16K cells
 
 extern cell_t *cell_zero;  // base for cell offsets
+#if MEM_SAVES_ALL
+#define cell_top (cell_zero[MEMORY].t)
+#define cell_next (cell_zero[MEMORY].x)
+#define gc_free_cnt (cell_zero[MEMORY].y)
+#define gc_root_set (cell_zero[MEMORY].z)
+#else
 extern int_t cell_next;  // head of cell free-list (or NIL if empty)
 extern int_t cell_top; // limit of allocated cell memory
-extern i32 gc_free_cnt;  // number of cells in free-list
+extern int_t gc_free_cnt;  // number of cells in free-list
+#endif
 
 int_t cell_new(int_t t, int_t x, int_t y, int_t z);
 int_t cell_free(int_t addr);

@@ -138,8 +138,10 @@ cell_t cell_table[CELL_MAX] = {
 };
 
 cell_t *cell_zero = &cell_table[0];  // base for cell offsets
+#if !MEM_SAVES_ALL
 int_t cell_next = NIL;  // head of cell free-list (or NIL if empty)
 int_t cell_top = CELL_BASE; // limit of allocated cell memory
+#endif
 
 static struct { int_t addr; char *label; } cell_map[] = {
     { UNDEF, "UNDEF" },
@@ -605,12 +607,10 @@ int_t fixnum(int_t str) {  // FIXME: add `base` parameter
 // FORWARD DECLARATIONS
 static int_t sym_intern[256];
 
-#if MEM_SAVES_ALL
-#define gc_root_set (cell_zero[MEMORY].z)
-#else
+#if !MEM_SAVES_ALL
 static int_t gc_root_set = NIL;
+int_t gc_free_cnt = TO_FIX(0);  // number of cells in free-list
 #endif
-i32 gc_free_cnt = 0;  // number of cells in free-list
 #if RUNTIME_STATS
 long gc_cycle_count = 0;
 #endif
@@ -656,11 +656,11 @@ static void gc_dump_map() {  // dump memory allocation map
     }
     fprintf(stderr, "\n");
     fprintf(stderr,
-        "gc: top=%"PRId32" gen_%c=%"PRId32" gen_%c=%"PRId32" free=%"PRId32" scan=%"PRId32"\n",
+        "gc: top=%"PRId32" gen_%c=%"PRId32" gen_%c=%"PRId32" free=%"PdI" scan=%"PRId32"\n",
         cell_top,
         mark_label[gc_prev_gen], gc_prev_cnt,
         mark_label[gc_next_gen], gc_next_cnt,
-        gc_free_cnt, gc_scan_cnt);
+        TO_INT(gc_free_cnt), gc_scan_cnt);
 }
 
 static int_t gc_scan_cell(int_t addr) {  // mark cell be scanned
@@ -805,9 +805,9 @@ static void gc_increment() {  // perform an incremental GC step
 i32 gc_bits[GC_MAX_BITS] = { GC_RESERVED };  // in-use mark bits
 
 i32 gc_clear() {  // clear all GC bits (except RESERVED)
-    i32 cnt = gc_free_cnt;
+    i32 cnt = I32(TO_INT(gc_free_cnt));
     cell_next = NIL;  // empty the free-list
-    gc_free_cnt = 0;
+    gc_free_cnt = TO_FIX(0);
     gc_bits[0] = GC_RESERVED;
     for (int_t i = 1; i < GC_MAX_BITS; ++i) {
         gc_bits[i] = 0;
@@ -932,14 +932,14 @@ i32 gc_mark_and_sweep(int_t dump) {
 }
 
 i32 gc_safepoint() {
-    if ((cell_top > (CELL_MAX - 256)) && (gc_free_cnt < 64)) {
+    if ((cell_top > (CELL_MAX - 256)) && (TO_INT(gc_free_cnt) < 64)) {
         gc_mark_and_sweep(FALSE);  // no gc output
         //gc_mark_and_sweep(UNDEF);  // one-line gc summary
-        if (gc_free_cnt < 128) {  // low-memory warning!
+        if (TO_INT(gc_free_cnt) < 128) {  // low-memory warning!
             gc_mark_and_sweep(UNDEF);  // one-line gc summary
         }
     }
-    return gc_free_cnt;
+    return I32(TO_INT(gc_free_cnt));
 }
 #endif // MARK_SWEEP_GC
 
@@ -1480,7 +1480,7 @@ int main(int argc, char const *argv[])
 #if MARK_SWEEP_GC
     gc_mark_and_sweep(TRUE);
 #endif // MARK_SWEEP_GC
-    DEBUG(fprintf(stderr, "cell_top=%"PuI" gc_free_cnt=%"PRId32"\n", cell_top, gc_free_cnt));
+    DEBUG(fprintf(stderr, "cell_top=%"PuI" gc_free_cnt=%"PdI"\n", cell_top, TO_INT(gc_free_cnt)));
 #if RUNTIME_STATS
     fprintf(stderr, "events=%ld instructions=%ld gc_cycles=%ld\n",
         event_count, instruction_count, gc_cycle_count);
