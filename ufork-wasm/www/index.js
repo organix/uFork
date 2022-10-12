@@ -29,15 +29,15 @@ const $equeue = document.getElementById("ufork-equeue");
 const $kqueue = document.getElementById("ufork-kqueue");
 
 const $output = document.getElementById("ufork-output");
-const $ip = document.getElementById("ufork-ip");
+//const $ip = document.getElementById("ufork-ip");
 const $instr = document.getElementById("ufork-instr");
-const $sp = document.getElementById("ufork-sp");
+//const $sp = document.getElementById("ufork-sp");
 const $stack = document.getElementById("ufork-stack");
-const $ep = document.getElementById("ufork-ep");
+//const $ep = document.getElementById("ufork-ep");
 const $event = document.getElementById("ufork-event");
-const $ap = document.getElementById("ufork-ap");
+//const $ap = document.getElementById("ufork-ap");
 const $self = document.getElementById("ufork-self");
-const $mp = document.getElementById("ufork-mp");
+//const $mp = document.getElementById("ufork-mp");
 const $msg = document.getElementById("ufork-msg");
 
 let paused = false;  // run/pause toggle
@@ -55,16 +55,17 @@ const updateElementText = (el, txt) => {
 const drawHost = () => {
 	updateElementText($mem_top, host.print(host.mem_top()));
 	updateElementText($mem_next, host.print(host.mem_next()));
-	$mem_next.title = "" + host.disasm(host.mem_next());
+	$mem_next.title = host.disasm(host.mem_next());
 	updateElementText($mem_free, host.print(host.mem_free()));
 	updateElementText($mem_root, host.print(host.mem_root()));
-	$mem_root.title = "" + host.disasm(host.mem_root());
+	$mem_root.title = host.disasm(host.mem_root());
 	$output.textContent = host.render();
 	const ip = host.ip();
-	updateElementText($ip, "" + ip);
-	updateElementText($instr, host.disasm(ip));
+	//updateElementText($ip, host.print(ip));
+	updateElementText($instr, host.display(ip));
 	const sp = host.sp();
-	updateElementText($sp, "" + sp);
+	//updateElementText($sp, host.print(sp));
+	//$sp.title = host.disasm(sp);
 	if (host.in_heap(sp)) {
 		let p = sp;
 		let a = [];
@@ -80,6 +81,7 @@ const drawHost = () => {
 		//$stack.innerHTML = "<i>empty</i>";
 		updateElementText($stack, "--");
 	}
+	$stack.title = host.display(sp);
 	const kq = host.kqueue();
 	if (host.in_heap(kq)) {
 		let p = kq;
@@ -107,14 +109,16 @@ const drawHost = () => {
 		updateElementText($equeue, "--");
 	}
 	const ep = host.ep();
-	updateElementText($ep, "" + ep);
-	updateElementText($event, host.disasm(ep));
+	//updateElementText($ep, host.print(ep));
+	updateElementText($event, host.display(ep));
 	const ap = host.e_self();
-	updateElementText($ap, "" + ap);
-	updateElementText($self, host.disasm(ap));
+	//updateElementText($ap, host.print(ap));
+	updateElementText($self, host.display(ap));
 	const mp = host.e_msg();
-	updateElementText($mp, "" + mp);
+	//updateElementText($mp, host.print(mp));
+	//$mp.title = host.disasm(mp);
 	updateElementText($msg, host.pprint(mp));
+	$msg.title = host.display(mp);
 }
 const drawUniverse = () => {
 	drawHost();
