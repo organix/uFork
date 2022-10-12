@@ -24,6 +24,9 @@ button {
 pre {
   margin: 2px;
 }
+table {
+  margin: 1ex;
+}
 #ufork-output {
   width: 80ex;
   border-radius: 1.5ex;
@@ -39,7 +42,37 @@ pre {
     This page contains webassembly and javascript content,
     please enable javascript in your browser.
   </noscript>
+  <table border="1">
+    <tr>
+      <th>Top</th>
+      <th>Next</th>
+      <th>Free</th>
+      <th>Root</th>
+    </tr>
+    <tr>
+      <td><pre id="ufork-mem-top"></pre></td>
+      <td><pre id="ufork-mem-next"></pre></td>
+      <td><pre id="ufork-mem-free"></pre></td>
+      <td><pre id="ufork-mem-root"></pre></td>
+    </tr>
+  </table>
   <pre id="ufork-output"></pre>
+  <table border="1">
+    <tr>
+      <th>Event Queue</th>
+    </tr>
+    <tr>
+      <td><pre id="ufork-equeue"></pre></td>
+    </tr>
+  </table>
+  <table border="1">
+    <tr>
+      <th>Continuation Queue</th>
+    </tr>
+    <tr>
+      <td><pre id="ufork-kqueue"></pre></td>
+    </tr>
+  </table>
   <table>
     <tr>
       <td><strong>EP</strong>:</td>

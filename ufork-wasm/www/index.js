@@ -21,6 +21,13 @@ const $canvas = document.getElementById("ufork-canvas");
 $canvas.width = (CELL_SIZE + 1) * width + 1;
 $canvas.height = (CELL_SIZE + 1) * height + 1;
 
+const $mem_top = document.getElementById("ufork-mem-top");
+const $mem_next = document.getElementById("ufork-mem-next");
+const $mem_free = document.getElementById("ufork-mem-free");
+const $mem_root = document.getElementById("ufork-mem-root");
+const $equeue = document.getElementById("ufork-equeue");
+const $kqueue = document.getElementById("ufork-kqueue");
+
 const $output = document.getElementById("ufork-output");
 const $ip = document.getElementById("ufork-ip");
 const $instr = document.getElementById("ufork-instr");
@@ -41,11 +48,17 @@ const updateElementText = (el, txt) => {
 	if (el.textContent == txt) {
 		el.style.color = '#000';
 	} else {
-		el.style.color = '#C03';
+		el.style.color = '#03F';
 	}
 	el.textContent = txt;
 }
 const drawHost = () => {
+	updateElementText($mem_top, host.print(host.mem_top()));
+	updateElementText($mem_next, host.print(host.mem_next()));
+	$mem_next.title = "" + host.disasm(host.mem_next());
+	updateElementText($mem_free, host.print(host.mem_free()));
+	updateElementText($mem_root, host.print(host.mem_root()));
+	$mem_root.title = "" + host.disasm(host.mem_root());
 	$output.textContent = host.render();
 	const ip = host.ip();
 	updateElementText($ip, "" + ip);
@@ -56,16 +69,42 @@ const drawHost = () => {
 		let p = sp;
 		let a = [];
 		while (host.is_pair(p)) {
-			//a.push(host.disasm(p));  // disasm stack Pair(s)
-			//a.push(host.print(host.car(p)));  // print stack item(s)
-			//a.push(host.display(host.car(p)));  // display stack item(s)
-			a.push(host.pprint(host.car(p)));  // pretty-print stack item(s)
+			//a.push(host.disasm(p));  // disasm stack Pair
+			//a.push(host.print(host.car(p)));  // print stack item
+			//a.push(host.display(host.car(p)));  // display stack item
+			a.push(host.pprint(host.car(p)));  // pretty-print stack item
 			p = host.cdr(p);
 		}
 		updateElementText($stack, a.join("\n"));
 	} else {
 		//$stack.innerHTML = "<i>empty</i>";
 		updateElementText($stack, "--");
+	}
+	const kq = host.kqueue();
+	if (host.in_heap(kq)) {
+		let p = kq;
+		let a = [];
+		while (host.in_heap(p)) {
+			a.push(host.display(p));  // display continuation
+			//a.push(host.disasm(p));  // disasm continuation
+			p = host.next(p);
+		}
+		updateElementText($kqueue, a.join("\n"));
+	} else {
+		updateElementText($kqueue, "--");
+	}
+	const eq = host.equeue();
+	if (host.in_heap(eq)) {
+		let p = eq;
+		let a = [];
+		while (host.in_heap(p)) {
+			a.push(host.display(p));  // display event
+			//a.push(host.disasm(p));  // disasm event
+			p = host.next(p);
+		}
+		updateElementText($equeue, a.join("\n"));
+	} else {
+		updateElementText($equeue, "--");
 	}
 	const ep = host.ep();
 	updateElementText($ep, "" + ep);
@@ -99,6 +138,13 @@ const renderLoop = () => {
 	}
 	requestAnimationFrame(renderLoop);
 }
+
+const printClick = event => {
+	//console.log("printClick:", event);
+	const s = event.target.textContent;
+	console.log("printClick:", event, s);
+}
+$mem_root.onclick = printClick;
 
 $canvas.onclick = event => {
 	const boundingRect = $canvas.getBoundingClientRect();

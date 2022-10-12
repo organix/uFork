@@ -85,6 +85,55 @@ impl Host {
         }
         ok
     }
+
+    pub fn mem_top(&self) -> Raw {
+        match self.core.typed(Ptr::new(MEMORY.raw())) {
+            Typed::Memory { top, .. } => {
+                top.raw()
+            },
+            _ => panic!("Typed::Memory required"),
+        }
+    }
+    pub fn mem_next(&self) -> Raw {
+        match self.core.typed(Ptr::new(MEMORY.raw())) {
+            Typed::Memory { next, .. } => {
+                next.raw()
+            },
+            _ => panic!("Typed::Memory required"),
+        }
+    }
+    pub fn mem_free(&self) -> Raw {
+        match self.core.typed(Ptr::new(MEMORY.raw())) {
+            Typed::Memory { free, .. } => {
+                free.val().raw()
+            },
+            _ => panic!("Typed::Memory required"),
+        }
+    }
+    pub fn mem_root(&self) -> Raw {
+        match self.core.typed(Ptr::new(MEMORY.raw())) {
+            Typed::Memory { root, .. } => {
+                root.raw()
+            },
+            _ => panic!("Typed::Memory required"),
+        }
+    }
+    pub fn equeue(&self) -> Raw {
+        match self.core.typed(Ptr::new(DDEQUE.raw())) {
+            Typed::Ddeque { e_first, .. } => {
+                e_first.raw()
+            },
+            _ => panic!("Typed::Ddeque required"),
+        }
+    }
+    pub fn kqueue(&self) -> Raw {
+        match self.core.typed(Ptr::new(DDEQUE.raw())) {
+            Typed::Ddeque { k_first, .. } => {
+                k_first.raw()
+            },
+            _ => panic!("Typed::Ddeque required"),
+        }
+    }
     pub fn ip(&self) -> Raw { self.core.ip().raw() }
     pub fn sp(&self) -> Raw { self.core.sp().raw() }
     pub fn ep(&self) -> Raw { self.core.ep().raw() }
@@ -95,7 +144,7 @@ impl Host {
                 let a = Ptr::new(target.raw());  // WARNING: converting Cap to Ptr!
                 a.raw()
             },
-            _ => UNDEF.raw()
+            _ => UNDEF.raw(),
         }
     }
     pub fn e_msg(&self) -> Raw {
@@ -104,7 +153,7 @@ impl Host {
             Typed::Event { msg, .. } => {
                 msg.raw()
             },
-            _ => UNDEF.raw()
+            _ => UNDEF.raw(),
         }
     }
     pub fn in_heap(&self, v: Raw) -> bool {
@@ -167,7 +216,13 @@ impl Host {
         s
     }
     pub fn disasm(&self, raw: Raw) -> String {
-        self.core.typed(Ptr::new(raw)).to_string()
+        let val = Val::new(raw);
+        if self.core.in_heap(val) {
+            let ptr = val.ptr();
+            self.core.typed(ptr).to_string()
+        } else {
+            self.print(raw)
+        }
     }
     pub fn print(&self, raw: Raw) -> String {
         Val::new(raw).to_string()
