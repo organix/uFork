@@ -46,7 +46,7 @@ pub struct Host {
 impl fmt::Display for Host {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         //let core = &self.core;
-        for raw in 0..96 {
+        for raw in 0..128 {
             /*
             let typed = core.typed(Ptr::new(raw));
             write!(fmt, "{:5}: {}\n", raw, typed)?;

@@ -228,16 +228,16 @@ to be shared by many behaviors.
 K_CALL:     [MSG,+0,k]---+
                          |
                          |
-RESEND:     [MSG,+0,k]   |
-                    |    |
-                    v    |
-            [SELF,?,k]---+
-                         |
-                         |
-RV_SELF:    [SELF,?,k]   |
-                    |    |
-                    v    |
-CUST_SEND:  [MSG,+1,k]   |
+RESEND:     [MSG,+0,k]   |    RV_ZERO:    [PUSH,+0,k]-----+
+                    |    |                                |
+                    v    |                                |
+            [SELF,?,k]---+    RV_NIL:     [PUSH,NIL,k]----+
+                         |                                |
+                         |                                |
+RV_SELF:    [SELF,?,k]   |    RV_UNDEF:   [PUSH,UNDEF,k]--+
+                    |    |                                |
+                    v    |                                |
+CUST_SEND:  [MSG,+1,k]<--|--------------------------------+
                     |    |
                     v    |
 SEND_0:     [SEND,0,k]<--+    RELEASE_0:  [SEND,0,k]

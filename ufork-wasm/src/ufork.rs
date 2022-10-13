@@ -6,56 +6,73 @@ pub type Raw = u32;  // univeral value type
 pub type Num = i32;  // fixnum integer type
 
 // type-tag bits
-const MSK_RAW: Raw      = 0xC000_0000;
-const DIR_RAW: Raw      = 0x8000_0000;
-const OPQ_RAW: Raw      = 0x4000_0000;
+const MSK_RAW: Raw          = 0xC000_0000;
+const DIR_RAW: Raw          = 0x8000_0000;
+const OPQ_RAW: Raw          = 0x4000_0000;
 
 // literal values
-pub const UNDEF: Val    = Val { raw: 0 }; //Val::new(0); -- const generic issue...
-pub const NIL: Val      = Val { raw: 1 };
-pub const FALSE: Val    = Val { raw: 2 };
-pub const TRUE: Val     = Val { raw: 3 };
-pub const UNIT: Val     = Val { raw: 4 };
+pub const UNDEF: Val        = Val { raw: 0 }; //Val::new(0); -- const generic issue...
+pub const NIL: Val          = Val { raw: 1 };
+pub const FALSE: Val        = Val { raw: 2 };
+pub const TRUE: Val         = Val { raw: 3 };
+pub const UNIT: Val         = Val { raw: 4 };
 
-pub const LITERAL_T: Val= Val { raw: 0 }; //ptrval(0);
-pub const TYPE_T: Val   = Val { raw: 5 };
-pub const EVENT_T: Val  = Val { raw: 6 };
-pub const INSTR_T: Val  = Val { raw: 7 };
-pub const ACTOR_T: Val  = Val { raw: 8 };
-pub const FIXNUM_T: Val = Val { raw: 9 };
-pub const SYMBOL_T: Val = Val { raw: 10 };
-pub const PAIR_T: Val   = Val { raw: 11 };
-pub const FEXPR_T: Val  = Val { raw: 12 };
-pub const FREE_T: Val   = Val { raw: 13 };
+pub const LITERAL_T: Val    = Val { raw: 0 }; //ptrval(0);
+pub const TYPE_T: Val       = Val { raw: 5 };
+pub const EVENT_T: Val      = Val { raw: 6 };
+pub const INSTR_T: Val      = Val { raw: 7 };
+pub const ACTOR_T: Val      = Val { raw: 8 };
+pub const FIXNUM_T: Val     = Val { raw: 9 };
+pub const SYMBOL_T: Val     = Val { raw: 10 };
+pub const PAIR_T: Val       = Val { raw: 11 };
+pub const FEXPR_T: Val      = Val { raw: 12 };
+pub const FREE_T: Val       = Val { raw: 13 };
 
-pub const MEMORY: Val   = Val { raw: 14 };
-pub const DDEQUE: Val   = Val { raw: 15 };
-pub const START: Val    = Val { raw: 16 };
+pub const MEMORY: Val       = Val { raw: 14 };
+pub const DDEQUE: Val       = Val { raw: 15 };
+pub const START: Val        = Val { raw: 16 };
+
+pub const COMMIT: Ptr       = Ptr { raw: 16 };
+pub const SEND_0: Ptr       = Ptr { raw: 17 };
+pub const CUST_SEND: Ptr    = Ptr { raw: 18 };
+pub const RV_SELF: Ptr      = Ptr { raw: 19 };
+pub const RV_UNDEF: Ptr     = Ptr { raw: 20 };
+pub const RV_NIL: Ptr       = Ptr { raw: 21 };
+pub const RV_FALSE: Ptr     = Ptr { raw: 22 };
+pub const RV_TRUE: Ptr      = Ptr { raw: 23 };
+pub const RV_UNIT: Ptr      = Ptr { raw: 24 };
+pub const RV_ZERO: Ptr      = Ptr { raw: 25 };
+pub const RV_ONE: Ptr       = Ptr { raw: 26 };
+pub const RESEND: Ptr       = Ptr { raw: 28 };
+pub const RELEASE: Ptr      = Ptr { raw: 29 };
+pub const RELEASE_0: Ptr    = Ptr { raw: 30 };
+pub const K_CALL: Ptr       = Ptr { raw: 31 };
+pub const A_SINK: Cap       = Cap { raw: 32 };
 
 // instr values
-pub const OP_TYPEQ: Val = Val { raw: DIR_RAW | 0 }; // fixnum(0)
-pub const OP_CELL: Val  = Val { raw: DIR_RAW | 1 };
-pub const OP_GET: Val   = Val { raw: DIR_RAW | 2 };
-pub const OP_SET: Val   = Val { raw: DIR_RAW | 3 };
-pub const OP_PAIR: Val  = Val { raw: DIR_RAW | 4 };
-pub const OP_PART: Val  = Val { raw: DIR_RAW | 5 };
-pub const OP_NTH: Val   = Val { raw: DIR_RAW | 6 };
-pub const OP_PUSH: Val  = Val { raw: DIR_RAW | 7 };
-pub const OP_DEPTH: Val = Val { raw: DIR_RAW | 8 };
-pub const OP_DROP: Val  = Val { raw: DIR_RAW | 9 };
-pub const OP_PICK: Val  = Val { raw: DIR_RAW | 10 };
-pub const OP_DUP: Val   = Val { raw: DIR_RAW | 11 };
-pub const OP_ROLL: Val  = Val { raw: DIR_RAW | 12 };
-pub const OP_ALU: Val   = Val { raw: DIR_RAW | 13 };
-pub const OP_EQ: Val    = Val { raw: DIR_RAW | 14 };
-pub const OP_CMP: Val   = Val { raw: DIR_RAW | 15 };
-pub const OP_IF: Val    = Val { raw: DIR_RAW | 16 };
-pub const OP_MSG: Val   = Val { raw: DIR_RAW | 17 };
-pub const OP_SELF: Val  = Val { raw: DIR_RAW | 18 };
-pub const OP_SEND: Val  = Val { raw: DIR_RAW | 19 };
-pub const OP_NEW: Val   = Val { raw: DIR_RAW | 20 };
-pub const OP_BEH: Val   = Val { raw: DIR_RAW | 21 };
-pub const OP_END: Val   = Val { raw: DIR_RAW | 22 };
+pub const OP_TYPEQ: Val     = Val { raw: DIR_RAW | 0 }; // fixnum(0)
+pub const OP_CELL: Val      = Val { raw: DIR_RAW | 1 };
+pub const OP_GET: Val       = Val { raw: DIR_RAW | 2 };
+pub const OP_SET: Val       = Val { raw: DIR_RAW | 3 };
+pub const OP_PAIR: Val      = Val { raw: DIR_RAW | 4 };
+pub const OP_PART: Val      = Val { raw: DIR_RAW | 5 };
+pub const OP_NTH: Val       = Val { raw: DIR_RAW | 6 };
+pub const OP_PUSH: Val      = Val { raw: DIR_RAW | 7 };
+pub const OP_DEPTH: Val     = Val { raw: DIR_RAW | 8 };
+pub const OP_DROP: Val      = Val { raw: DIR_RAW | 9 };
+pub const OP_PICK: Val      = Val { raw: DIR_RAW | 10 };
+pub const OP_DUP: Val       = Val { raw: DIR_RAW | 11 };
+pub const OP_ROLL: Val      = Val { raw: DIR_RAW | 12 };
+pub const OP_ALU: Val       = Val { raw: DIR_RAW | 13 };
+pub const OP_EQ: Val        = Val { raw: DIR_RAW | 14 };
+pub const OP_CMP: Val       = Val { raw: DIR_RAW | 15 };
+pub const OP_IF: Val        = Val { raw: DIR_RAW | 16 };
+pub const OP_MSG: Val       = Val { raw: DIR_RAW | 17 };
+pub const OP_SELF: Val      = Val { raw: DIR_RAW | 18 };
+pub const OP_SEND: Val      = Val { raw: DIR_RAW | 19 };
+pub const OP_NEW: Val       = Val { raw: DIR_RAW | 20 };
+pub const OP_BEH: Val       = Val { raw: DIR_RAW | 21 };
+pub const OP_END: Val       = Val { raw: DIR_RAW | 22 };
 
 // OP_END thread actions
 pub const END_ABORT: Val    = Val { raw: DIR_RAW | -1 as Num as Raw };
@@ -91,25 +108,26 @@ impl Core {
         quad_mem[FEXPR_T.addr()]    = Typed::Type;
         quad_mem[FREE_T.addr()]     = Typed::Type;
         let start = START.raw();
-        quad_mem[MEMORY.addr()]     = Typed::Memory { top: Ptr::new(start+50), next: NIL.ptr(), free: Fix::new(0), root: DDEQUE.ptr() };
-        quad_mem[DDEQUE.addr()]     = Typed::Ddeque { e_first: Ptr::new(start), e_last: Ptr::new(start), k_first: NIL.ptr(), k_last: NIL.ptr() };
-        quad_mem[START.addr()+0]    = Typed::Event { target: Cap::new(start+2), msg: ptrval(start+24), next: NIL.ptr() };
-        quad_mem[START.addr()+1]    = Typed::Pair { car: UNIT, cdr: NIL };
-        quad_mem[START.addr()+2]    = Typed::Actor { beh: Ptr::new(start+21), state: Ptr::new(start+1), events: None };
-        quad_mem[START.addr()+3]    = Typed::Instr { op: Op::Push { v: fixnum(3), k: Ptr::new(start+4) } };
-        quad_mem[START.addr()+4]    = Typed::Instr { op: Op::Push { v: fixnum(2), k: Ptr::new(start+5) } };
-        quad_mem[START.addr()+5]    = Typed::Instr { op: Op::Push { v: fixnum(1), k: Ptr::new(start+27) } };
-        quad_mem[START.addr()+6]    = Typed::Instr { op: Op::Typeq { t: FIXNUM_T.ptr(), k: Ptr::new(start+7) } };
-        quad_mem[START.addr()+7]    = Typed::Instr { op: Op::If { t: Ptr::new(start+6), f: Ptr::new(start+8) } };
-        quad_mem[START.addr()+8]    = Typed::Instr { op: Op::Drop { n: Fix::new(9), k: Ptr::new(start+9) } };
-        quad_mem[START.addr()+9]    = Typed::Instr { op: Op::End { x: End::Stop } };
-        quad_mem[START.addr()+10]   = Typed::Instr { op: Op::Pick { n: Fix::new(1), k: Ptr::new(start+11) } };
-        quad_mem[START.addr()+11]   = Typed::Instr { op: Op::Roll { n: Fix::new(-1), k: Ptr::new(start+12) } };
-        quad_mem[START.addr()+12]   = Typed::Instr { op: Op::Roll { n: Fix::new(1), k: Ptr::new(start+13) } };
-        quad_mem[START.addr()+13]   = Typed::Instr { op: Op::Pick { n: Fix::new(3), k: Ptr::new(start+14) } };
-        quad_mem[START.addr()+14]   = Typed::Instr { op: Op::Roll { n: Fix::new(-2), k: Ptr::new(start+15) } };
-        quad_mem[START.addr()+15]   = Typed::Instr { op: Op::Roll { n: Fix::new(2), k: Ptr::new(start+16) } };
-        quad_mem[START.addr()+16]   = Typed::Instr { op: Op::Roll { n: Fix::new(-3), k: Ptr::new(start+17) } };
+        quad_mem[MEMORY.addr()]     = Typed::Memory { top: Ptr::new(start+80), next: NIL.ptr(), free: Fix::new(0), root: DDEQUE.ptr() };
+        quad_mem[DDEQUE.addr()]     = Typed::Ddeque { e_first: Ptr::new(start+64), e_last: Ptr::new(start+64), k_first: NIL.ptr(), k_last: NIL.ptr() };
+        quad_mem[COMMIT.addr()]     = Typed::Instr { op: Op::End { x: End::Commit } };
+        quad_mem[SEND_0.addr()]     = Typed::Instr { op: Op::Send { n: Fix::new(0), k: COMMIT } };
+        quad_mem[CUST_SEND.addr()]  = Typed::Instr { op: Op::Msg { n: Fix::new(1), k: SEND_0 } };
+        quad_mem[RV_SELF.addr()]    = Typed::Instr { op: Op::Myself { k: CUST_SEND } };
+        quad_mem[RV_UNDEF.addr()]   = Typed::Instr { op: Op::Push { v: UNDEF, k: CUST_SEND } };
+        quad_mem[RV_NIL.addr()]     = Typed::Instr { op: Op::Push { v: NIL, k: CUST_SEND } };
+        quad_mem[RV_FALSE.addr()]   = Typed::Instr { op: Op::Push { v: FALSE, k: CUST_SEND } };
+        quad_mem[RV_TRUE.addr()]    = Typed::Instr { op: Op::Push { v: TRUE, k: CUST_SEND } };
+        quad_mem[RV_UNIT.addr()]    = Typed::Instr { op: Op::Push { v: UNIT, k: CUST_SEND } };
+        quad_mem[RV_ZERO.addr()]    = Typed::Instr { op: Op::Push { v: fixnum(0), k: CUST_SEND } };
+        quad_mem[RV_ONE.addr()]     = Typed::Instr { op: Op::Push { v: fixnum(1), k: CUST_SEND } };
+        quad_mem[RESEND.addr()-1]   = Typed::Instr { op: Op::Myself { k: SEND_0 } };
+        quad_mem[RESEND.addr()]     = Typed::Instr { op: Op::Msg { n: Fix::new(0), k: Ptr::new(RESEND.raw()-1) } };
+        quad_mem[RELEASE.addr()]    = Typed::Instr { op: Op::End { x: End::Release } };
+        quad_mem[RELEASE_0.addr()]  = Typed::Instr { op: Op::Send { n: Fix::new(0), k: RELEASE } };
+        quad_mem[K_CALL.addr()]     = Typed::Instr { op: Op::Msg { n: Fix::new(0), k: SEND_0 } };
+        quad_mem[A_SINK.addr()]     = Typed::Actor { beh: COMMIT, state: NIL.ptr(), events: None };
+
         quad_mem[START.addr()+17]   = Typed::Instr { op: Op::Roll { n: Fix::new(3), k: Ptr::new(start+18) } };
         quad_mem[START.addr()+18]   = Typed::Instr { op: Op::Pick { n: Fix::new(0), k: Ptr::new(start+19) } };
         quad_mem[START.addr()+19]   = Typed::Instr { op: Op::Roll { n: Fix::new(0), k: Ptr::new(start+20) } };
@@ -137,6 +155,21 @@ impl Core {
         quad_mem[START.addr()+41]   = Typed::Instr { op: Op::Pick { n: Fix::new(2), k: Ptr::new(start+42) }};
         quad_mem[START.addr()+42]   = Typed::Instr { op: Op::Roll { n: Fix::new(-2), k: Ptr::new(start+43) }};
         quad_mem[START.addr()+43]   = Typed::Instr { op: Op::Send { n: Fix::new(0), k: Ptr::new(start+6) }};
+
+        quad_mem[START.addr()+64]   = Typed::Event { target: Cap::new(start+69), msg: ptrval(start+65), next: NIL.ptr() };
+        quad_mem[START.addr()+65]   = Typed::Pair { car: fixnum(-1), cdr: ptrval(start+66) };
+        quad_mem[START.addr()+66]   = Typed::Pair { car: fixnum(-2), cdr: ptrval(start+67) };
+        quad_mem[START.addr()+67]   = Typed::Pair { car: fixnum(-3), cdr: NIL };
+        quad_mem[START.addr()+68]   = Typed::Pair { car: UNIT, cdr: NIL };
+        quad_mem[START.addr()+69]   = Typed::Actor { beh: Ptr::new(start+70), state: Ptr::new(start+68), events: None };
+        quad_mem[START.addr()+70]   = Typed::Instr { op: Op::Myself { k: Ptr::new(start+71) } };
+        quad_mem[START.addr()+71]   = Typed::Instr { op: Op::Push { v: fixnum(3), k: Ptr::new(start+72) } };
+        quad_mem[START.addr()+72]   = Typed::Instr { op: Op::Push { v: fixnum(2), k: Ptr::new(start+73) } };
+        quad_mem[START.addr()+73]   = Typed::Instr { op: Op::Push { v: fixnum(1), k: Ptr::new(start+74) } };
+        quad_mem[START.addr()+74]   = Typed::Instr { op: Op::Typeq { t: FIXNUM_T.ptr(), k: Ptr::new(start+75) } };
+        quad_mem[START.addr()+75]   = Typed::Instr { op: Op::If { t: Ptr::new(start+74), f: Ptr::new(start+76) } };
+        quad_mem[START.addr()+76]   = Typed::Instr { op: Op::Pick { n: Fix::new(1), k: Ptr::new(start+77) } };
+        quad_mem[START.addr()+77]   = Typed::Instr { op: Op::Push { v: A_SINK.val(), k: SEND_0 } };
 
         Core {
             quad_mem,
