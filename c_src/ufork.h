@@ -209,7 +209,7 @@ int_t set_car(int_t v, int_t x);
 int_t set_cdr(int_t v, int_t x);
 int_t equal(int_t x, int_t y);
 int_t list_len(int_t val);
-int_t append_reverse(int_t head, int_t tail);  // destuctive reverse-in-place and append
+int_t append_reverse(int_t head, int_t tail);  // destructive reverse-in-place and append
 int_t fixnum(int_t str);  // return integer fixnum for character string
 int_t symbol(int_t str);  // return interned symbol for character string
 int_t char_in_class(int_t n, int_t c);

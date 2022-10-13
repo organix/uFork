@@ -62,7 +62,22 @@ const drawHost = () => {
 	$output.textContent = host.render();
 	const ip = host.ip();
 	//updateElementText($ip, host.print(ip));
-	updateElementText($instr, host.display(ip));
+	if (host.in_heap(ip)) {
+		let p = ip;
+		let n = 5;
+		let a = [];
+		while ((n > 0) && host.in_heap(p)) {
+			a.push(host.display(p));
+			p = host.next(p);
+			n -= 1;
+		}
+		if (host.in_heap(p)) {
+			a.push("...");
+		}
+		updateElementText($instr, a.join("\n"));
+	} else {
+		updateElementText($instr, host.display(ip));
+	}
 	const sp = host.sp();
 	//updateElementText($sp, host.print(sp));
 	//$sp.title = host.disasm(sp);
