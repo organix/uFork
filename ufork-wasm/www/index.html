@@ -6,17 +6,31 @@
 <style>
 body {
   position: absolute;
+  /*
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
+  */
   margin: 0;
   padding: 0;
   display: flex;
-  flex-direction: column;
+  flex-flow: row wrap;
+  /*
+  flex-direction: row;
   align-items: center;
+  */
   justify-content: center;
   background-color: #FFC;
+}
+.panel-center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  /*
+  justify-content: center;
+  */
+  margin: 1ex;
 }
 button {
   margin: 1ex;
@@ -28,7 +42,10 @@ table {
   margin: 1ex;
 }
 #ufork-output {
-  width: 80ex;
+  /*
+  width: 96ex;
+  */
+  height: 32em;
   border-radius: 1.5ex;
   padding: 1ex;
   overflow: scroll;
@@ -42,77 +59,81 @@ table {
     This page contains webassembly and javascript content,
     please enable javascript in your browser.
   </noscript>
-  <table border="1">
-    <tr>
-      <th>Top</th>
-      <th>Next</th>
-      <th>Free</th>
-      <th>Root</th>
-    </tr>
-    <tr>
-      <td><pre id="ufork-mem-top"></pre></td>
-      <td><pre id="ufork-mem-next"></pre></td>
-      <td><pre id="ufork-mem-free"></pre></td>
-      <td><pre id="ufork-mem-root"></pre></td>
-    </tr>
-  </table>
-  <pre id="ufork-output"></pre>
-  <table border="1">
-    <tr>
-      <th>EQ</th>
-      <!--<td></td>-->
-      <td><pre id="ufork-equeue"></pre></td>
-    </tr>
-    <tr>
-      <th>KQ</th>
-      <!--<td></td>-->
-      <td><pre id="ufork-kqueue"></pre></td>
-    </tr>
-    <tr>
-      <th>Event</th>
-      <!--<td><pre id="ufork-ep"></pre></td>-->
-      <td><pre id="ufork-event"></pre></td>
-    </tr>
-    <tr>
-      <th>Self</th>
-      <!--<td><pre id="ufork-ap"></pre></td>-->
-      <td><pre id="ufork-self"></pre></td>
-    </tr>
-    <tr>
-      <th>Msg</th>
-      <!--<td><pre id="ufork-mp"></pre></td>-->
-      <td><pre id="ufork-msg"></pre></td>
-    </tr>
-    <tr style="vertical-align: top;">
-      <th>IP</th>
-      <!--<td><pre id="ufork-ip"></pre></td>-->
-      <td><pre id="ufork-instr"></pre></td>
-    </tr>
-    <tr style="vertical-align: top;">
-      <th>SP</th>
-      <!--<td><pre id="ufork-sp"></pre></td>-->
-      <td><pre id="ufork-stack"></pre></td>
-    </tr>
-  </table>
-  <div style="display: flex;">
-    <label for="text-input" class="sr-only" style="margin: 2px;">Input:</label>
-    <input id="text-input" type="text" style="height: 1em; width: 64ex; padding: 3px;">
-    <button id="enter-btn" style="margin: 0 1ex;">Enter</button>
+  <div id="ufork-monitor" class="panel-center">
+    <table border="1">
+      <tr>
+        <th>Top</th>
+        <th>Next</th>
+        <th>Free</th>
+        <th>Root</th>
+      </tr>
+      <tr>
+        <td><pre id="ufork-mem-top"></pre></td>
+        <td><pre id="ufork-mem-next"></pre></td>
+        <td><pre id="ufork-mem-free"></pre></td>
+        <td><pre id="ufork-mem-root"></pre></td>
+      </tr>
+    </table>
+    <div style="display: flex; margin: 1ex;">
+      <label for="text-input" class="sr-only" style="margin: 2px;">Input:</label>
+      <input id="text-input" type="text" style="height: 1em; width: 64ex; padding: 3px;">
+      <button id="enter-btn" style="margin: 0 1ex;">Enter</button>
+    </div>
+    <div style="display: flex;">
+      <button id="single-step">Step</button>
+      <input type="range" id="frame-rate" min="1" max="60" value="1">
+      <button id="play-pause"></button>
+    </div>
+    <table border="1">
+      <tr>
+        <th>EQ</th>
+        <!--<td></td>-->
+        <td><pre id="ufork-equeue"></pre></td>
+      </tr>
+      <tr>
+        <th>KQ</th>
+        <!--<td></td>-->
+        <td><pre id="ufork-kqueue"></pre></td>
+      </tr>
+      <tr>
+        <th>Event</th>
+        <!--<td><pre id="ufork-ep"></pre></td>-->
+        <td><pre id="ufork-event"></pre></td>
+      </tr>
+      <tr>
+        <th>Self</th>
+        <!--<td><pre id="ufork-ap"></pre></td>-->
+        <td><pre id="ufork-self"></pre></td>
+      </tr>
+      <tr>
+        <th>Msg</th>
+        <!--<td><pre id="ufork-mp"></pre></td>-->
+        <td><pre id="ufork-msg"></pre></td>
+      </tr>
+      <tr style="vertical-align: top;">
+        <th>IP</th>
+        <!--<td><pre id="ufork-ip"></pre></td>-->
+        <td><pre id="ufork-instr"></pre></td>
+      </tr>
+      <tr style="vertical-align: top;">
+        <th>SP</th>
+        <!--<td><pre id="ufork-sp"></pre></td>-->
+        <td><pre id="ufork-stack"></pre></td>
+      </tr>
+    </table>
   </div>
-  <div style="display: flex;">
-    <button id="single-step">Step</button>
-    <input type="range" id="frame-rate" min="1" max="60" value="1">
-    <button id="play-pause"></button>
-  </div>
-  <canvas id="ufork-canvas"></canvas>
-  <div style="display: flex;">
-    <button id="clear-btn">Clear</button>
-    <button id="glider-btn">Glider</button>
-    <button id="r-pentomino-btn">R-pentomino</button>
-    <button id="acorn-btn">Acorn</button>
-    <button id="gosper-btn">Gosper</button>
-    <button id="pattern-btn">Pattern</button>
-    <button id="random-btn">Random</button>
+  <div id="game-monitor" class="panel-center">
+    <pre id="ufork-output"></pre>
+    <div style="display: flex;">
+      <button id="clear-btn">Clear</button>
+      <button id="glider-btn">Glider</button>
+      <button id="r-pentomino-btn">R-pentomino</button>
+      <button id="acorn-btn">Acorn</button>
+      <button id="gosper-btn">Gosper</button>
+      <button id="pattern-btn">Pattern</button>
+      <button id="random-btn">Random</button>
+    </div>
+    <canvas id="ufork-canvas"></canvas>
   </div>
   <script src="./bootstrap.js"></script>
 </body>

@@ -7,8 +7,8 @@ const DEAD_COLOR = "#FFF";
 const LIVE_COLOR = "#360";
 
 // Construct the universe, and get its width and height.
-const width = 24;//96;
-const height = 16;//64;
+const width = 96;
+const height = 64;
 const universe = Universe.new(width, height);
 //universe.pattern_fill();
 universe.launch_ship();
