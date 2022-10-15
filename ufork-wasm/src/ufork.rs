@@ -129,20 +129,55 @@ impl Core {
         quad_mem[RELEASE_0.addr()]  = Typed::Instr { op: Op::Send { n: Fix::new(0), k: RELEASE } };
         quad_mem[K_CALL.addr()]     = Typed::Instr { op: Op::Msg { n: Fix::new(0), k: SEND_0 } };
         quad_mem[A_SINK.addr()]     = Typed::Actor { beh: COMMIT, state: NIL.ptr(), events: None };
-
-        quad_mem[33]                = Typed::Instr { op: Op::Roll { n: Fix::new(3), k: Ptr::new(18) } };
-        quad_mem[34]                = Typed::Instr { op: Op::Pick { n: Fix::new(0), k: Ptr::new(19) } };
-        quad_mem[35]                = Typed::Instr { op: Op::Roll { n: Fix::new(0), k: Ptr::new(20) } };
-        quad_mem[36]                = Typed::Instr { op: Op::Pick { n: Fix::new(10), k: Ptr::new(21) } };
-        quad_mem[37]                = Typed::Instr { op: Op::Push { v: NIL, k: Ptr::new(3) } };
-        quad_mem[38]                = Typed::Pair { car: UNIT, cdr: NIL };
-        quad_mem[39]                = Typed::Instr { op: Op::End { x: End::Commit } };
-        quad_mem[40]                = Typed::Pair { car: fixnum(-1), cdr: ptrval(25) };
-        quad_mem[41]                = Typed::Pair { car: fixnum(-2), cdr: ptrval(26) };
-        quad_mem[42]                = Typed::Pair { car: fixnum(-3), cdr: NIL };
-        quad_mem[43]                = Typed::Instr { op: Op::Pair { n: Fix::new(1), k: Ptr::new(28) }};
-        quad_mem[44]                = Typed::Instr { op: Op::Part { n: Fix::new(1), k: Ptr::new(29) }};
-        quad_mem[45]                = Typed::Instr { op: Op::Pair { n: Fix::new(2), k: Ptr::new(30) }};
+        /*
+        (define fwd-beh
+            (lambda (rcvr)
+                (BEH msg
+                    (SEND rcvr msg) )))
+        */
+        //quad_mem[-1]              = Typed::Instr { op: Op::Push { v: <rcvr>, k: ... } };
+        quad_mem[33]                = Typed::Instr { op: Op::Msg { n: Fix::new(0), k: Ptr::new(34) } };
+        quad_mem[34]                = Typed::Instr { op: Op::Pick { n: Fix::new(2), k: Ptr::new(35) } };
+        quad_mem[35]                = Typed::Instr { op: Op::Send { n: Fix::new(0), k: COMMIT } };
+        /*
+        (define once-beh
+            (lambda (rcvr)
+                (BEH msg
+                    (SEND rcvr msg)
+                    (BECOME sink-beh) )))
+        */
+        //quad_mem[-1]              = Typed::Instr { op: Op::Push { v: <rcvr>, k: ... } };
+        quad_mem[36]                = Typed::Instr { op: Op::Msg { n: Fix::new(0), k: Ptr::new(37) } };
+        quad_mem[37]                = Typed::Instr { op: Op::Pick { n: Fix::new(2), k: Ptr::new(38) } };
+        quad_mem[38]                = Typed::Instr { op: Op::Send { n: Fix::new(0), k: Ptr::new(39) } };
+        quad_mem[39]                = Typed::Instr { op: Op::Push { v: COMMIT.val(), k: Ptr::new(40) } };
+        quad_mem[40]                = Typed::Instr { op: Op::Beh { n: Fix::new(0), k: COMMIT } };
+        /*
+        (define label-beh
+            (lambda (rcvr label)
+                (BEH msg
+                    (SEND rcvr (cons label msg)) )))
+        */
+        //quad_mem[-2]              = Typed::Instr { op: Op::Push { v: <rcvr>, k: ... } };
+        //quad_mem[-1]              = Typed::Instr { op: Op::Push { v: <label>, k: ... } };
+        quad_mem[41]                = Typed::Instr { op: Op::Msg { n: Fix::new(0), k: Ptr::new(42) } };  // rcvr label msg
+        quad_mem[42]                = Typed::Instr { op: Op::Pick { n: Fix::new(2), k: Ptr::new(43) } }; // rcvr label msg label
+        quad_mem[43]                = Typed::Instr { op: Op::Pair { n: Fix::new(1), k: Ptr::new(44) } }; // rcvr label (label . msg)
+        quad_mem[44]                = Typed::Instr { op: Op::Pick { n: Fix::new(3), k: Ptr::new(45) } }; // rcvr label (label . msg) rcvr
+        quad_mem[45]                = Typed::Instr { op: Op::Send { n: Fix::new(0), k: COMMIT } };            // rcvr label
+        /*
+        (define tag-beh
+            (lambda (rcvr)
+                (BEH msg
+                    (SEND rcvr (cons SELF msg)) )))
+        */
+        /*
+        (define once-tag-beh  ;; FIXME: find a better name for this...
+            (lambda (rcvr)
+                (BEH msg
+                    (SEND rcvr (cons SELF msg))
+                    (BECOME sink-beh) )))
+        */
         quad_mem[46]                = Typed::Instr { op: Op::Part { n: Fix::new(2), k: Ptr::new(31) }};
         quad_mem[47]                = Typed::Instr { op: Op::Pair { n: Fix::new(3), k: Ptr::new(32) }};
         quad_mem[48]                = Typed::Instr { op: Op::Part { n: Fix::new(3), k: Ptr::new(33) }};

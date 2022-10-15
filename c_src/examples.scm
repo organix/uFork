@@ -214,28 +214,35 @@
     )))
 
 (define fwd-beh
-  (lambda (cust)
+  (lambda (rcvr)
     (BEH msg
-      (SEND cust msg)
+      (SEND rcvr msg)
     )))
 
 (define once-beh
-  (lambda (cust)
+  (lambda (rcvr)
     (BEH msg
-      (SEND cust msg)
+      (SEND rcvr msg)
       (BECOME sink-beh)
     )))
 
 (define label-beh
-  (lambda (cust label)
+  (lambda (rcvr label)
     (BEH msg
-      (SEND cust (cons label msg))
+      (SEND rcvr (cons label msg))
     )))
 
 (define tag-beh
-  (lambda (cust)
+  (lambda (rcvr)
     (BEH msg
-      (SEND cust (cons SELF msg))
+      (SEND rcvr (cons SELF msg))
+    )))
+
+(define once-tag-beh  ;; FIXME: find a better name for this...
+  (lambda (rcvr)
+    (BEH msg
+      (SEND rcvr (cons SELF msg))
+      (BECOME sink-beh)
     )))
 
 (define a-testcase
