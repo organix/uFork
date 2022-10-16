@@ -94,6 +94,7 @@ Quad-cells are used to encode most of the important data-structures in uFork.
 {t:Actor_T, x:beh', y:sp', z:events}    | busy actor, intially {z:()}
 {t:Fexpr_T, x:actor, y:?, z:?}          | interpreter (cust ast env)
 {t:Fexpr_T, x:self, y:msgs, z:beh}      | meta-actor transaction
+{t:Dict_T, x:key, y:value, z:next }     | dictionary binding entry
 {t:Free_T, z:next}                      | cell in the free-list
 
 #### Instructions
@@ -170,6 +171,10 @@ _chars_           | {x:VM_cvt, y:LST_SYM, z:_K_}  | _symbol_ | convert _chars_ t
 _char_            | {x:VM_putc, z:_K_}            | &mdash;  | write _char_ to console
 &mdash;           | {x:VM_getc, z:_K_}            | _char_   | read _char_ from console
 _value_           | {x:VM_debug, y:_tag_, z:_K_}  | &mdash;  | debug_print _tag_: _value_ to console
+_dict_ _key_      | {x:VM_dict, y:HAS, z:_K_}     | _bool_   | `TRUE` if _dict_ has a binding for _key_, otherwise `FALSE`
+_dict_ _key_      | {x:VM_dict, y:GET, z:_K_}     | _value_  | the _value_ associated with _key_ in _dict_, or `UNDEF`
+_dict_ _key_ _value_ | {x:VM_dict, y:SET, z:_K_}  | _dict'_  | new _dict_ where _key_ is associated with _value_
+_dict_ _key_      | {x:VM_dict, y:DEL, z:_K_}     | _dict'_  | new _dict_ where there is no _value_ associated with _key_
 
 ### Object Graph
 
