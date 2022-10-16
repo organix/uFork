@@ -25,7 +25,8 @@ pub const ACTOR_T: Val      = Val { raw: 8 };
 pub const FIXNUM_T: Val     = Val { raw: 9 };
 pub const SYMBOL_T: Val     = Val { raw: 10 };
 pub const PAIR_T: Val       = Val { raw: 11 };
-pub const FEXPR_T: Val      = Val { raw: 12 };
+//pub const FEXPR_T: Val      = Val { raw: 12 };
+pub const DICT_T: Val       = Val { raw: 12 };
 pub const FREE_T: Val       = Val { raw: 13 };
 
 pub const MEMORY: Val       = Val { raw: 14 };
@@ -106,7 +107,8 @@ impl Core {
         quad_mem[FIXNUM_T.addr()]   = Typed::Type;
         quad_mem[SYMBOL_T.addr()]   = Typed::Type;
         quad_mem[PAIR_T.addr()]     = Typed::Type;
-        quad_mem[FEXPR_T.addr()]    = Typed::Type;
+        //quad_mem[FEXPR_T.addr()]    = Typed::Type;
+        quad_mem[DICT_T.addr()]     = Typed::Type;
         quad_mem[FREE_T.addr()]     = Typed::Type;
 
         quad_mem[MEMORY.addr()]     = Typed::Memory { top: Ptr::new(96), next: NIL.ptr(), free: Fix::new(0), root: DDEQUE.ptr() };
@@ -862,7 +864,8 @@ impl Core {
                         //Typed::Actor { .. } => false,
                         Typed::Symbol { .. } => typ == SYMBOL_T,
                         Typed::Pair { .. } => typ == PAIR_T,
-                        Typed::Fexpr { .. } => typ == FEXPR_T,
+                        //Typed::Fexpr { .. } => typ == FEXPR_T,
+                        Typed::Dict { .. } => typ == DICT_T,
                         Typed::Free { .. } => typ == FREE_T,
                         Typed::Quad { t, .. } => typ == *t,
                         _ => false,
@@ -1032,7 +1035,7 @@ impl Core {
 }
 
 fn falsy(v: Val) -> bool {
-    v == FALSE  // FIXME: what should be considered "falsey" besides FALSE?
+    v == FALSE  // FIXME: what should be considered "falsey" besides FALSE? UNDEF? NIL?
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -1046,7 +1049,8 @@ pub enum Typed {
     Actor { beh: Ptr, state: Ptr, events: Option<Ptr> },
     Symbol { hash: Fix, key: Ptr, val: Val },
     Pair { car: Val, cdr: Val },
-    Fexpr { func: Ptr },
+    //Fexpr { func: Ptr },
+    Dict { key: Val, value: Val, next: Ptr },
     Free { next: Ptr },
     Ddeque { e_first: Ptr, e_last: Ptr, k_first: Ptr, k_last: Ptr },
     Memory { top: Ptr, next: Ptr, free: Fix, root: Ptr },
@@ -1065,7 +1069,8 @@ impl Typed {
             }}),
             SYMBOL_T => Some(Typed::Symbol { hash: quad.x().fix(), key: quad.y().ptr(), val: quad.z() }),
             PAIR_T => Some(Typed::Pair { car: quad.x(), cdr: quad.y() }),
-            FEXPR_T => Some(Typed::Fexpr { func: quad.x().ptr() }),
+            //FEXPR_T => Some(Typed::Fexpr { func: quad.x().ptr() }),
+            DICT_T => Some(Typed::Dict { key: quad.x(), value: quad.y(), next: quad.z().ptr() }),
             FREE_T => Some(Typed::Free { next: quad.z().ptr() }),
             _ => Some(Typed::Quad { t: quad.t(), x: quad.x(), y: quad.y(), z: quad.z() }),
         }
@@ -1084,7 +1089,8 @@ impl Typed {
             }),
             Typed::Symbol { hash, key, val } => Quad::new(SYMBOL_T, hash.val(), key.val(), val.val()),
             Typed::Pair { car, cdr } => Quad::new(PAIR_T, car.val(), cdr.val(), UNDEF),
-            Typed::Fexpr { func } => Quad::new(FEXPR_T, func.val(), UNDEF, UNDEF),
+            //Typed::Fexpr { func } => Quad::new(FEXPR_T, func.val(), UNDEF, UNDEF),
+            Typed::Dict { key, value, next } => Quad::new(DICT_T, key.val(), value.val(), next.val()),
             Typed::Free { next } => Quad::new(FREE_T, UNDEF, UNDEF, next.val()),
             Typed::Ddeque { e_first, e_last, k_first, k_last } => Quad::new(e_first.val(), e_last.val(), k_first.val(), k_last.val()),
             Typed::Memory { top, next, free, root } => Quad::new(top.val(), next.val(), free.val(), root.val()),
@@ -1107,7 +1113,8 @@ impl fmt::Display for Typed {
             }),
             Typed::Symbol { hash, key, val } => write!(fmt, "Symbol{{ hash:{}, key:{}, val:{} }}", hash, key, val),
             Typed::Pair { car, cdr } => write!(fmt, "Pair{{ car:{}, cdr:{} }}", car, cdr),
-            Typed::Fexpr { func } => write!(fmt, "Fexpr{{ func:{} }}", func),
+            //Typed::Fexpr { func } => write!(fmt, "Fexpr{{ func:{} }}", func),
+            Typed::Dict { key, value, next } => write!(fmt, "Dict{{ key:{}, value:{}, next:{} }}", key, value, next),
             Typed::Free { next } => write!(fmt, "Free{{ next:{} }}", next),
             Typed::Ddeque { e_first, e_last, k_first, k_last } => write!(fmt, "Ddeque{{ e_first:{}, e_last:{}, k_first:{}, k_last:{} }}", e_first, e_last, k_first, k_last),
             Typed::Memory { top, next, free, root } => write!(fmt, "Memory{{ top:{}, next:{}, free:{}, root:{} }}", top, next, free, root),
@@ -1119,14 +1126,21 @@ impl fmt::Display for Typed {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Op {
     Typeq { t: Ptr, k: Ptr },
+    //Quad { n: Fix, k: Ptr },
+    //Get { f: Field, k: Ptr },
+    //Set { f: Field, k: Ptr },  // **DEPRECATED**
     Pair { n: Fix, k: Ptr },
     Part { n: Fix, k: Ptr },
     Nth { n: Fix, k: Ptr },
     Push { v: Val, k: Ptr },
+    //Depth { k: Ptr },  // **DEPRECATED**
     Drop { n: Fix, k: Ptr },
     Pick { n: Fix, k: Ptr },
+    //Dup { n: Fix, k: Ptr },
     Roll { n: Fix, k: Ptr },
+    //Alu { op: Alu, k: Ptr },
     Eq { v: Val, k: Ptr },
+    //Cmp { op: Cmp, k: Ptr },
     If { t: Ptr, f: Ptr },
     Msg { n: Fix, k: Ptr },
     Myself { k: Ptr },
@@ -1382,7 +1396,8 @@ impl fmt::Display for Ptr {
             FIXNUM_T => write!(fmt, "FIXNUM_T"),
             SYMBOL_T => write!(fmt, "SYMBOL_T"),
             PAIR_T => write!(fmt, "PAIR_T"),
-            FEXPR_T => write!(fmt, "FEXPR_T"),
+            //FEXPR_T => write!(fmt, "FEXPR_T"),
+            DICT_T => write!(fmt, "DICT_T"),
             FREE_T => write!(fmt, "FREE_T"),
             _ => write!(fmt, "^{}", self.raw),
         }
