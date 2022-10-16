@@ -180,22 +180,17 @@ impl Core {
                     (SEND rcvr (cons SELF msg))
                     (BECOME sink-beh) )))
         */
-        quad_mem[46]                = Typed::Instr { op: Op::Part { n: Fix::new(2), k: Ptr::new(31) }};
-        quad_mem[47]                = Typed::Instr { op: Op::Pair { n: Fix::new(3), k: Ptr::new(32) }};
-        quad_mem[48]                = Typed::Instr { op: Op::Part { n: Fix::new(3), k: Ptr::new(33) }};
-        quad_mem[49]                = Typed::Instr { op: Op::Pair { n: Fix::new(0), k: Ptr::new(34) }};
-        quad_mem[50]                = Typed::Instr { op: Op::Myself { k: Ptr::new(35) }};
-        quad_mem[51]                = Typed::Instr { op: Op::Send { n: Fix::new(3), k: Ptr::new(36) }};
-        quad_mem[52]                = Typed::Instr { op: Op::Pick { n: Fix::new(1), k: Ptr::new(37) }};
-        quad_mem[53]                = Typed::Instr { op: Op::Myself { k: Ptr::new(38) }};
-        quad_mem[54]                = Typed::Instr { op: Op::Send { n: Fix::new(0), k: Ptr::new(39) }};
-        quad_mem[55]                = Typed::Instr { op: Op::Push { v: ptrval(23), k: Ptr::new(40) }};
-        quad_mem[56]                = Typed::Instr { op: Op::Beh { n: Fix::new(1), k: Ptr::new(23) }};
-        quad_mem[57]                = Typed::Instr { op: Op::Pick { n: Fix::new(2), k: Ptr::new(42) }};
-        quad_mem[58]                = Typed::Instr { op: Op::Roll { n: Fix::new(-2), k: Ptr::new(43) }};
-        quad_mem[59]                = Typed::Instr { op: Op::Send { n: Fix::new(0), k: Ptr::new(6) }};
 
-        quad_mem[64]                = Typed::Event { target: Cap::new(69), msg: ptrval(65), next: NIL.ptr() };
+        quad_mem[46]                = Typed::Actor { beh: Ptr::new(47), state: NIL.ptr(), events: None };
+        quad_mem[47]                = Typed::Instr { op: Op::Depth { k: Ptr::new(48) } };
+        quad_mem[48]                = Typed::Instr { op: Op::Depth { k: Ptr::new(49) } };
+        quad_mem[49]                = Typed::Instr { op: Op::Depth { k: Ptr::new(50) } };
+        quad_mem[50]                = Typed::Instr { op: Op::Dup { n: Fix::new(-1), k: Ptr::new(51) } };
+        quad_mem[51]                = Typed::Instr { op: Op::Dup { n: Fix::new(0), k: Ptr::new(52) } };
+        quad_mem[52]                = Typed::Instr { op: Op::Dup { n: Fix::new(1), k: Ptr::new(53) } };
+        quad_mem[53]                = Typed::Instr { op: Op::Dup { n: Fix::new(5), k: COMMIT } };
+
+        quad_mem[64]                = Typed::Event { target: Cap::new(46), msg: ptrval(65), next: NIL.ptr() };
         quad_mem[65]                = Typed::Pair { car: fixnum(-1), cdr: ptrval(66) };
         quad_mem[66]                = Typed::Pair { car: fixnum(-2), cdr: ptrval(67) };
         quad_mem[67]                = Typed::Pair { car: fixnum(-3), cdr: NIL };
@@ -361,8 +356,20 @@ impl Core {
                 self.stack_push(*v);
                 *k
             },
+            Op::Depth { k } => {
+                let mut num: Num = 0;
+                let mut p = self.sp().val();
+                while self.typeq(PAIR_T, p) {
+                    p = self.cdr(p.ptr());
+                    num += 1;
+                };
+                let n = Fix::new(num);
+                println!("op_depth: n={}", n);
+                self.stack_push(n.val());
+                *k
+            },
             Op::Drop { n, k } => {
-                println!("op_drop: idx={}", n);
+                println!("op_drop: n={}", n);
                 let mut num = n.num();
                 assert!(num < 64);
                 while num > 0 {
@@ -382,6 +389,12 @@ impl Core {
                 };
                 println!("op_pick: r={}", r);
                 self.stack_push(r);
+                *k
+            },
+            Op::Dup { n, k } => {
+                println!("op_dup: n={}", n);
+                let num = n.num();
+                self.stack_dup(num);
                 *k
             },
             Op::Roll { n, k } => {
@@ -735,6 +748,25 @@ impl Core {
         }
         self.set_sp(sp);
     }
+    fn stack_dup(&mut self, num: Num) {
+        let mut n = num;
+        if n > 0 {
+            let mut s = self.sp();
+            let sp = self.cons(self.car(s), NIL);
+            let mut p = sp;
+            s = self.cdr(s).ptr();
+            n -= 1;
+            while n > 0 {
+                let q = self.cons(self.car(s), NIL);
+                self.set_cdr(p, q.val());
+                p = q;
+                s = self.cdr(s).ptr();
+                n -= 1;
+            }
+            self.set_cdr(p, self.sp().val());
+            self.set_sp(sp);
+        }
+    }
 
     pub fn ip(&self) -> Ptr {  // instruction pointer
         match self.typed(self.k_first()) {
@@ -784,6 +816,7 @@ impl Core {
         match typed {
             Typed::Event { next, .. } => next,
             Typed::Cont { next, .. } => next,
+            Typed::Dict { next, .. } => next,
             Typed::Free { next } => next,
             Typed::Quad { z, .. } => z.ptr(),
             Typed::Instr { op: Op::Typeq { k, .. } } => k,
@@ -791,8 +824,10 @@ impl Core {
             Typed::Instr { op: Op::Part { k, .. } } => k,
             Typed::Instr { op: Op::Nth { k, .. } } => k,
             Typed::Instr { op: Op::Push { k, .. } } => k,
+            Typed::Instr { op: Op::Depth { k } } => k,
             Typed::Instr { op: Op::Drop { k, .. } } => k,
             Typed::Instr { op: Op::Pick { k, .. } } => k,
+            Typed::Instr { op: Op::Dup { k, .. } } => k,
             Typed::Instr { op: Op::Roll { k, .. } } => k,
             Typed::Instr { op: Op::Eq { k, .. } } => k,
             //Typed::Instr { op: Op::If { f, .. } } => f,
@@ -1133,10 +1168,10 @@ pub enum Op {
     Part { n: Fix, k: Ptr },
     Nth { n: Fix, k: Ptr },
     Push { v: Val, k: Ptr },
-    //Depth { k: Ptr },  // **DEPRECATED**
+    Depth { k: Ptr },
     Drop { n: Fix, k: Ptr },
     Pick { n: Fix, k: Ptr },
-    //Dup { n: Fix, k: Ptr },
+    Dup { n: Fix, k: Ptr },
     Roll { n: Fix, k: Ptr },
     //Alu { op: Alu, k: Ptr },
     Eq { v: Val, k: Ptr },
@@ -1158,8 +1193,10 @@ impl Op {
             OP_PART => Some(Typed::Instr { op: Op::Part { n: quad.y().fix(), k: quad.z().ptr() } }),
             OP_NTH => Some(Typed::Instr { op: Op::Nth { n: quad.y().fix(), k: quad.z().ptr() } }),
             OP_PUSH => Some(Typed::Instr { op: Op::Push { v: quad.y().val(), k: quad.z().ptr() } }),
+            OP_DEPTH => Some(Typed::Instr { op: Op::Depth { k: quad.z().ptr() } }),
             OP_DROP => Some(Typed::Instr { op: Op::Drop { n: quad.y().fix(), k: quad.z().ptr() } }),
             OP_PICK => Some(Typed::Instr { op: Op::Pick { n: quad.y().fix(), k: quad.z().ptr() } }),
+            OP_DUP => Some(Typed::Instr { op: Op::Dup { n: quad.y().fix(), k: quad.z().ptr() } }),
             OP_ROLL => Some(Typed::Instr { op: Op::Roll { n: quad.y().fix(), k: quad.z().ptr() } }),
             OP_EQ => Some(Typed::Instr { op: Op::Eq { v: quad.y().val(), k: quad.z().ptr() } }),
             OP_IF => Some(Typed::Instr { op: Op::If { t: quad.y().ptr(), f: quad.z().ptr() } }),
@@ -1179,8 +1216,10 @@ impl Op {
             Op::Part { n, k } => Quad::new(INSTR_T, OP_PART, n.val(), k.val()),
             Op::Nth { n, k } => Quad::new(INSTR_T, OP_NTH, n.val(), k.val()),
             Op::Push { v, k } => Quad::new(INSTR_T, OP_PUSH, v.val(), k.val()),
+            Op::Depth { k } => Quad::new(INSTR_T, OP_DEPTH, UNDEF, k.val()),
             Op::Drop { n, k } => Quad::new(INSTR_T, OP_DROP, n.val(), k.val()),
             Op::Pick { n, k } => Quad::new(INSTR_T, OP_PICK, n.val(), k.val()),
+            Op::Dup { n, k } => Quad::new(INSTR_T, OP_DUP, n.val(), k.val()),
             Op::Roll { n, k } => Quad::new(INSTR_T, OP_ROLL, n.val(), k.val()),
             Op::Eq { v, k } => Quad::new(INSTR_T, OP_EQ, v.val(), k.val()),
             Op::If { t, f } => Quad::new(INSTR_T, OP_IF, t.val(), f.val()),
@@ -1207,8 +1246,10 @@ impl fmt::Display for Op {
             Op::Part { n, k } => write!(fmt, "Part{{ n:{}, k:{} }}", n, k),
             Op::Nth { n, k } => write!(fmt, "Nth{{ n:{}, k:{} }}", n, k),
             Op::Push { v, k } => write!(fmt, "Push{{ v:{}, k:{} }}", v, k),
+            Op::Depth { k } => write!(fmt, "Depth{{ k:{} }}", k),
             Op::Drop { n, k } => write!(fmt, "Drop{{ n:{}, k:{} }}", n, k),
             Op::Pick { n, k } => write!(fmt, "Pick{{ n:{}, k:{} }}", n, k),
+            Op::Dup { n, k } => write!(fmt, "Dup{{ n:{}, k:{} }}", n, k),
             Op::Roll { n, k } => write!(fmt, "Roll{{ n:{}, k:{} }}", n, k),
             Op::Eq { v, k } => write!(fmt, "Eq{{ v:{}, k:{} }}", v, k),
             Op::If { t, f } => write!(fmt, "If{{ t:{}, f:{} }}", t, f),
