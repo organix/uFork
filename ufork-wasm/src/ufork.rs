@@ -49,6 +49,11 @@ pub const RELEASE: Ptr      = Ptr { raw: 29 };
 pub const RELEASE_0: Ptr    = Ptr { raw: 30 };
 pub const K_CALL: Ptr       = Ptr { raw: 31 };
 pub const A_SINK: Cap       = Cap { raw: 32 };
+pub const FWD_BEH: Ptr      = Ptr { raw: 33 };
+pub const ONCE_BEH: Ptr     = Ptr { raw: 36 };
+pub const LABEL_BEH: Ptr    = Ptr { raw: 41 };
+pub const TAG_BEH: Ptr      = Ptr { raw: 46 };
+pub const ONCE_TAG_BEH: Ptr = Ptr { raw: 47 };
 pub const E_BOOT: Ptr       = Ptr { raw: 64 };
 
 // instr values
@@ -181,6 +186,8 @@ impl Core {
                 (BEH msg
                     (SEND rcvr (cons SELF msg)) )))
         */
+        //quad_mem[-1]              = Typed::Instr { op: Op::Push { v: <rcvr>, k: ... } };
+        quad_mem[46]                = Typed::Instr { op: Op::Myself { k: Ptr::new(41) } };  // rcvr SELF
         /*
         (define once-tag-beh  ;; FIXME: find a better name for this...
             (lambda (rcvr)
@@ -188,6 +195,10 @@ impl Core {
                     (SEND rcvr (cons SELF msg))
                     (BECOME sink-beh) )))
         */
+        //quad_mem[-1]              = Typed::Instr { op: Op::Push { v: <rcvr>, k: ... } };
+        quad_mem[47]                = Typed::Instr { op: Op::Msg { n: Fix::new(0), k: Ptr::new(48) } };
+        quad_mem[48]                = Typed::Instr { op: Op::Myself { k: Ptr::new(49) } };
+        quad_mem[49]                = Typed::Instr { op: Op::Pair { n: Fix::new(1), k: Ptr::new(37) } };
 
         quad_mem[64]                = Typed::Event { target: Cap::new(80), msg: ptrval(65), next: NIL.ptr() };
         quad_mem[65]                = Typed::Pair { car: fixnum(-1), cdr: ptrval(66) };
