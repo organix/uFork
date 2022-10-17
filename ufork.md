@@ -125,6 +125,11 @@ _cell_ _T_        | {x:VM_set, y:T, z:_K_}        | _cell'_  | set _t_ to _T_ in
 _cell_ _X_        | {x:VM_set, y:X, z:_K_}        | _cell'_  | set _x_ to _X_ in _cell_
 _cell_ _Y_        | {x:VM_set, y:Y, z:_K_}        | _cell'_  | set _y_ to _Y_ in _cell_
 _cell_ _Z_        | {x:VM_set, y:Z, z:_K_}        | _cell'_  | set _z_ to _Z_ in _cell_
+_dict_ _key_      | {x:VM_dict, y:HAS, z:_K_}     | _bool_   | `TRUE` if _dict_ has a binding for _key_, otherwise `FALSE`
+_dict_ _key_      | {x:VM_dict, y:GET, z:_K_}     | _value_  | the first _value_ bound to _key_ in _dict_, or `UNDEF`
+_dict_ _key_ _value_ | {x:VM_dict, y:ADD, z:_K_}  | _dict'_  | add a binding from _key_ to _value_ in _dict_
+_dict_ _key_ _value_ | {x:VM_dict, y:SET, z:_K_}  | _dict'_  | replace or add a binding from _key_ to _value_ in _dict_
+_dict_ _key_      | {x:VM_dict, y:DEL, z:_K_}     | _dict'_  | remove a binding from _key_ to _value_ in _dict_
 ... _tail_ _head_ | {x:VM_pair, y:_n_, z:_K_}     | _pair_   | create {t:Pair_T, x:_head_, y:_tail_} (_n_ times)
 _pair_            | {x:VM_part, y:_n_, z:_K_}     | ... _tail_ _head_ | split _pair_ into _head_ and _tail_ (_n_ times)
 _pair_            | {x:VM_nth, y:_n_, z:_K_}      | _item_<sub>_n_</sub> | extract item _n_ from a _pair_ list
@@ -171,11 +176,6 @@ _chars_           | {x:VM_cvt, y:LST_SYM, z:_K_}  | _symbol_ | convert _chars_ t
 _char_            | {x:VM_putc, z:_K_}            | &mdash;  | write _char_ to console
 &mdash;           | {x:VM_getc, z:_K_}            | _char_   | read _char_ from console
 _value_           | {x:VM_debug, y:_tag_, z:_K_}  | &mdash;  | debug_print _tag_: _value_ to console
-_dict_ _key_      | {x:VM_dict, y:HAS, z:_K_}     | _bool_   | `TRUE` if _dict_ has a binding for _key_, otherwise `FALSE`
-_dict_ _key_      | {x:VM_dict, y:GET, z:_K_}     | _value_  | the first _value_ bound to _key_ in _dict_, or `UNDEF`
-_dict_ _key_ _value_ | {x:VM_dict, y:ADD, z:_K_}  | _dict'_  | add a binding from _key_ to _value_ in _dict_
-_dict_ _key_ _value_ | {x:VM_dict, y:SET, z:_K_}  | _dict'_  | add or replace a binding from _key_ to _value_ in _dict_
-_dict_ _key_      | {x:VM_dict, y:DEL, z:_K_}     | _dict'_  | remove a binding from _key_ to _value_ in _dict_
 
 ### Object Graph
 

@@ -46,7 +46,7 @@ pub struct Host {
 impl fmt::Display for Host {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         //let core = &self.core;
-        for raw in 0..128 {
+        for raw in 0..144 {
             /*
             let typed = core.typed(Ptr::new(raw));
             write!(fmt, "{:5}: {}\n", raw, typed)?;
@@ -182,8 +182,8 @@ impl Host {
 
     pub fn pprint(&self, raw: Raw) -> String {
         if self.is_pair(raw) {
-            let mut p = raw;
             let mut s = String::new();
+            let mut p = raw;
             let mut sep = "(";
             while self.is_pair(p) {
                 s.push_str(sep);
@@ -198,6 +198,23 @@ impl Host {
                 s.push_str(ss.as_str());
             }
             s.push_str(")");
+            s
+        } else if self.core.typeq(DICT_T, Val::new(raw)) {
+            let mut s = String::new();
+            let mut p = raw;
+            let mut sep = "{";
+            while let Typed::Dict { key, value, next } = *self.core.typed(Ptr::new(p)) {
+                s.push_str(sep);
+                /*
+                s.push_str(self.disasm(p).as_str());
+                */
+                s.push_str(self.print(key.raw()).as_str());
+                s.push_str(":");
+                s.push_str(self.pprint(value.raw()).as_str());
+                sep = ",";
+                p = next.raw();
+            }
+            s.push_str("}");
             s
         } else {
             self.print(raw)

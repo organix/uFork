@@ -55,7 +55,8 @@ pub const E_BOOT: Ptr       = Ptr { raw: 64 };
 pub const OP_TYPEQ: Val     = Val { raw: DIR_RAW | 0 }; // fixnum(0)
 pub const OP_CELL: Val      = Val { raw: DIR_RAW | 1 };
 pub const OP_GET: Val       = Val { raw: DIR_RAW | 2 };
-pub const OP_SET: Val       = Val { raw: DIR_RAW | 3 };
+//pub const OP_SET: Val       = Val { raw: DIR_RAW | 3 };
+pub const OP_DICT: Val      = Val { raw: DIR_RAW | 3 };
 pub const OP_PAIR: Val      = Val { raw: DIR_RAW | 4 };
 pub const OP_PART: Val      = Val { raw: DIR_RAW | 5 };
 pub const OP_NTH: Val       = Val { raw: DIR_RAW | 6 };
@@ -75,6 +76,13 @@ pub const OP_SEND: Val      = Val { raw: DIR_RAW | 19 };
 pub const OP_NEW: Val       = Val { raw: DIR_RAW | 20 };
 pub const OP_BEH: Val       = Val { raw: DIR_RAW | 21 };
 pub const OP_END: Val       = Val { raw: DIR_RAW | 22 };
+
+// OP_DICT dictionary operations
+pub const DICT_HAS: Val     = Val { raw: DIR_RAW | 0 };
+pub const DICT_GET: Val     = Val { raw: DIR_RAW | 1 };
+pub const DICT_ADD: Val     = Val { raw: DIR_RAW | 2 };
+pub const DICT_SET: Val     = Val { raw: DIR_RAW | 3 };
+pub const DICT_DEL: Val     = Val { raw: DIR_RAW | 4 };
 
 // OP_END thread actions
 pub const END_ABORT: Val    = Val { raw: DIR_RAW | -1 as Num as Raw };
@@ -111,7 +119,7 @@ impl Core {
         quad_mem[DICT_T.addr()]     = Typed::Type;
         quad_mem[FREE_T.addr()]     = Typed::Type;
 
-        quad_mem[MEMORY.addr()]     = Typed::Memory { top: Ptr::new(96), next: NIL.ptr(), free: Fix::new(0), root: DDEQUE.ptr() };
+        quad_mem[MEMORY.addr()]     = Typed::Memory { top: Ptr::new(128), next: NIL.ptr(), free: Fix::new(0), root: DDEQUE.ptr() };
         quad_mem[DDEQUE.addr()]     = Typed::Ddeque { e_first: E_BOOT, e_last: E_BOOT, k_first: NIL.ptr(), k_last: NIL.ptr() };
 
         quad_mem[COMMIT.addr()]     = Typed::Instr { op: Op::End { x: End::Commit } };
@@ -181,16 +189,7 @@ impl Core {
                     (BECOME sink-beh) )))
         */
 
-        quad_mem[46]                = Typed::Actor { beh: Ptr::new(47), state: NIL.ptr(), events: None };
-        quad_mem[47]                = Typed::Instr { op: Op::Depth { k: Ptr::new(48) } };
-        quad_mem[48]                = Typed::Instr { op: Op::Depth { k: Ptr::new(49) } };
-        quad_mem[49]                = Typed::Instr { op: Op::Depth { k: Ptr::new(50) } };
-        quad_mem[50]                = Typed::Instr { op: Op::Dup { n: Fix::new(-1), k: Ptr::new(51) } };
-        quad_mem[51]                = Typed::Instr { op: Op::Dup { n: Fix::new(0), k: Ptr::new(52) } };
-        quad_mem[52]                = Typed::Instr { op: Op::Dup { n: Fix::new(1), k: Ptr::new(53) } };
-        quad_mem[53]                = Typed::Instr { op: Op::Dup { n: Fix::new(5), k: COMMIT } };
-
-        quad_mem[64]                = Typed::Event { target: Cap::new(46), msg: ptrval(65), next: NIL.ptr() };
+        quad_mem[64]                = Typed::Event { target: Cap::new(80), msg: ptrval(65), next: NIL.ptr() };
         quad_mem[65]                = Typed::Pair { car: fixnum(-1), cdr: ptrval(66) };
         quad_mem[66]                = Typed::Pair { car: fixnum(-2), cdr: ptrval(67) };
         quad_mem[67]                = Typed::Pair { car: fixnum(-3), cdr: NIL };
@@ -204,6 +203,25 @@ impl Core {
         quad_mem[75]                = Typed::Instr { op: Op::If { t: Ptr::new(74), f: Ptr::new(76) } };
         quad_mem[76]                = Typed::Instr { op: Op::Pick { n: Fix::new(1), k: Ptr::new(77) } };
         quad_mem[77]                = Typed::Instr { op: Op::Push { v: A_SINK.val(), k: SEND_0 } };
+
+        quad_mem[78]                = Typed::Instr { op: Op::Push { v: UNDEF, k: Ptr::new(79) } };
+        quad_mem[79]                = Typed::Instr { op: Op::End { x: End::Abort } };
+
+        quad_mem[80]                = Typed::Actor { beh: Ptr::new(81), state: NIL.ptr(), events: None };
+        quad_mem[81]                = Typed::Instr { op: Op::Dict { op: Dict::Has, k: Ptr::new(82) } };
+        quad_mem[82]                = Typed::Instr { op: Op::If { t: Ptr::new(78), f: Ptr::new(83) } };
+        quad_mem[83]                = Typed::Instr { op: Op::Push { v: NIL, k: Ptr::new(84) } };
+        quad_mem[84]                = Typed::Instr { op: Op::Push { v: fixnum(0), k: Ptr::new(85) } };
+        quad_mem[85]                = Typed::Instr { op: Op::Dup { n: Fix::new(2), k: Ptr::new(86) } };
+        quad_mem[86]                = Typed::Instr { op: Op::Dict { op: Dict::Has, k: Ptr::new(87) } };
+        quad_mem[87]                = Typed::Instr { op: Op::If { t: Ptr::new(78), f: Ptr::new(88) } };
+        quad_mem[88]                = Typed::Instr { op: Op::Dict { op: Dict::Get, k: Ptr::new(89) } };
+        quad_mem[89]                = Typed::Instr { op: Op::Eq { v: UNDEF, k: Ptr::new(90) } };
+        quad_mem[90]                = Typed::Instr { op: Op::If { t: Ptr::new(91), f: Ptr::new(78) } };
+        quad_mem[91]                = Typed::Instr { op: Op::Push { v: NIL, k: Ptr::new(92) } };
+        quad_mem[92]                = Typed::Instr { op: Op::Push { v: fixnum(0), k: Ptr::new(93) } };
+        quad_mem[93]                = Typed::Instr { op: Op::Push { v: UNIT, k: Ptr::new(94) } };
+        quad_mem[94]                = Typed::Instr { op: Op::Dict { op: Dict::Set, k: COMMIT } };
 
         Core {
             quad_mem,
@@ -292,6 +310,45 @@ impl Core {
                 println!("op_typeq: val={}", val);
                 let r = if self.typeq(t.val(), val) { TRUE } else { FALSE };
                 self.stack_push(r);
+                *k
+            },
+            Op::Dict { op, k } => {
+                println!("op_dict: op={}", op);
+                match op {
+                    Dict::Has => {
+                        let key = self.stack_pop();
+                        let dict = self.stack_pop().ptr();
+                        let b = self.dict_has(dict, key);
+                        let v = if b { TRUE } else { FALSE };
+                        self.stack_push(v);
+                    },
+                    Dict::Get => {
+                        let key = self.stack_pop();
+                        let dict = self.stack_pop().ptr();
+                        let v = self.dict_get(dict, key);
+                        self.stack_push(v);
+                    },
+                    Dict::Add => {
+                        let value = self.stack_pop();
+                        let key = self.stack_pop();
+                        let dict = self.stack_pop().ptr();
+                        let d = self.dict_add(dict, key, value);
+                        self.stack_push(d.val());
+                    },
+                    Dict::Set => {
+                        let value = self.stack_pop();
+                        let key = self.stack_pop();
+                        let dict = self.stack_pop().ptr();
+                        let d = self.dict_set(dict, key, value);
+                        self.stack_push(d.val());
+                    },
+                    Dict::Del => {
+                        let key = self.stack_pop();
+                        let dict = self.stack_pop().ptr();
+                        let d = self.dict_del(dict, key);
+                        self.stack_push(d.val());
+                    },
+                };
                 *k
             },
             Op::Pair { n, k } => {
@@ -820,6 +877,7 @@ impl Core {
             Typed::Free { next } => next,
             Typed::Quad { z, .. } => z.ptr(),
             Typed::Instr { op: Op::Typeq { k, .. } } => k,
+            Typed::Instr { op: Op::Dict { k, .. } } => k,
             Typed::Instr { op: Op::Pair { k, .. } } => k,
             Typed::Instr { op: Op::Part { k, .. } } => k,
             Typed::Instr { op: Op::Nth { k, .. } } => k,
@@ -841,34 +899,41 @@ impl Core {
     }
 
     pub fn dict_has(&self, dict: Ptr, key: Val) -> bool {
-        let typed = *self.typed(dict);
-        match typed {
-            Typed::Dict { key: k, next, .. } => {
-                if key == k {
-                    true
-                } else {
-                    self.dict_has(next, key)  // tail-call becomes iteration
-                }
-            },
-            _ => false,
+        let mut d = dict;
+        while let Typed::Dict { key: k, next, .. } = *self.typed(d) {
+            if key == k {
+                return true
+            }
+            d = next;
         }
+        false
     }
     pub fn dict_get(&self, dict: Ptr, key: Val) -> Val {
-        let typed = *self.typed(dict);
-        match typed {
-            Typed::Dict { key: k, value, next } => {
-                if key == k {
-                    value
-                } else {
-                    self.dict_get(next, key)  // tail-call becomes iteration
-                }
-            },
-            _ => UNDEF,
+        let mut d = dict;
+        while let Typed::Dict { key: k, value, next } = *self.typed(d) {
+            if key == k {
+                return value
+            }
+            d = next;
         }
+        UNDEF
     }
     pub fn dict_add(&mut self, dict: Ptr, key: Val, value: Val) -> Ptr {
         let init = Typed::Dict { key, value, next: dict };
         self.alloc(&init)
+    }
+    pub fn dict_set(&mut self, dict: Ptr, key: Val, value: Val) -> Ptr {
+        let mut d = dict;
+        while let Typed::Dict { key: k, next, .. } = *self.typed(d) {
+            if key == k {
+                if let Typed::Dict { value: v, .. } = self.typed_mut(d) {
+                    *v = value;
+                }
+                return dict
+            }
+            d = next;
+        }
+        self.dict_add(dict, key, value)
     }
     pub fn dict_del(&mut self, dict: Ptr, key: Val) -> Ptr {
         let typed = *self.typed(dict);
@@ -882,14 +947,6 @@ impl Core {
         } else {
             NIL.ptr()
         }
-    }
-    pub fn dict_set(&mut self, dict: Ptr, key: Val, value: Val) -> Ptr {
-        let d = if self.dict_has(dict, key) {
-            self.dict_del(dict, key)
-        } else {
-            dict
-        };
-        self.dict_add(d, key, value)
     }
 
     pub fn cons(&mut self, car: Val, cdr: Val) -> Ptr {
@@ -1216,6 +1273,7 @@ pub enum Op {
     //Quad { n: Fix, k: Ptr },
     //Get { f: Field, k: Ptr },
     //Set { f: Field, k: Ptr },  // **DEPRECATED**
+    Dict { op: Dict, k: Ptr },
     Pair { n: Fix, k: Ptr },
     Part { n: Fix, k: Ptr },
     Nth { n: Fix, k: Ptr },
@@ -1234,13 +1292,14 @@ pub enum Op {
     Send { n: Fix, k: Ptr },
     New { n: Fix, k: Ptr },
     Beh { n: Fix, k: Ptr },
-    End { x: End },
+    End { x: End },  // FIXME: rename `x` to `op`?
 }
 impl Op {
     pub fn from(quad: &Quad) -> Option<Typed> {
         assert!(quad.t() == INSTR_T);
         match quad.x() {
             OP_TYPEQ => Some(Typed::Instr { op: Op::Typeq { t: quad.y().ptr(), k: quad.z().ptr() } }),
+            OP_DICT => Some(Typed::Instr { op: Op::Dict { op: Dict::from(quad.y()).unwrap(), k: quad.z().ptr() } }),
             OP_PAIR => Some(Typed::Instr { op: Op::Pair { n: quad.y().fix(), k: quad.z().ptr() } }),
             OP_PART => Some(Typed::Instr { op: Op::Part { n: quad.y().fix(), k: quad.z().ptr() } }),
             OP_NTH => Some(Typed::Instr { op: Op::Nth { n: quad.y().fix(), k: quad.z().ptr() } }),
@@ -1264,6 +1323,7 @@ impl Op {
     pub fn quad(&self) -> Quad {
         match self {
             Op::Typeq { t, k } => Quad::new(INSTR_T, OP_TYPEQ, t.val(), k.val()),
+            Op::Dict { op, k } => Quad::new(INSTR_T, OP_DICT, op.val(), k.val()),
             Op::Pair { n, k } => Quad::new(INSTR_T, OP_PAIR, n.val(), k.val()),
             Op::Part { n, k } => Quad::new(INSTR_T, OP_PART, n.val(), k.val()),
             Op::Nth { n, k } => Quad::new(INSTR_T, OP_NTH, n.val(), k.val()),
@@ -1294,6 +1354,7 @@ impl fmt::Display for Op {
                     _ => write!(fmt, "Typeq{{ t:{}, k:{} }}", t, k),
                 }
             },
+            Op::Dict { op, k } => write!(fmt, "Dict{{ op:{}, k:{} }}", op, k),
             Op::Pair { n, k } => write!(fmt, "Pair{{ n:{}, k:{} }}", n, k),
             Op::Part { n, k } => write!(fmt, "Part{{ n:{}, k:{} }}", n, k),
             Op::Nth { n, k } => write!(fmt, "Nth{{ n:{}, k:{} }}", n, k),
@@ -1311,6 +1372,47 @@ impl fmt::Display for Op {
             Op::New { n, k } => write!(fmt, "New{{ n:{}, k:{} }}", n, k),
             Op::Beh { n, k } => write!(fmt, "Beh{{ n:{}, k:{} }}", n, k),
             Op::End { x } => write!(fmt, "End{{ x:{} }}", x),
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Dict {
+    Has,
+    Get,
+    Add,
+    Set,
+    Del,
+}
+impl Dict {
+    pub fn from(val: Val) -> Option<Dict> {
+        match val {
+            DICT_HAS => Some(Dict::Has),
+            DICT_GET => Some(Dict::Get),
+            DICT_ADD => Some(Dict::Add),
+            DICT_SET => Some(Dict::Set),
+            DICT_DEL => Some(Dict::Del),
+            _ => None,
+        }
+    }
+    pub fn val(&self) -> Val {
+        match self {
+            Dict::Has => DICT_HAS,
+            Dict::Get => DICT_GET,
+            Dict::Add => DICT_ADD,
+            Dict::Set => DICT_SET,
+            Dict::Del => DICT_DEL,
+        }
+    }
+}
+impl fmt::Display for Dict {
+    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Dict::Has => write!(fmt, "Has"),
+            Dict::Set => write!(fmt, "Set"),
+            Dict::Add => write!(fmt, "Add"),
+            Dict::Get => write!(fmt, "Get"),
+            Dict::Del => write!(fmt, "Del"),
         }
     }
 }
