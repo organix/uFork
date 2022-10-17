@@ -840,6 +840,58 @@ impl Core {
         }
     }
 
+    pub fn dict_has(&self, dict: Ptr, key: Val) -> bool {
+        let typed = *self.typed(dict);
+        match typed {
+            Typed::Dict { key: k, next, .. } => {
+                if key == k {
+                    true
+                } else {
+                    self.dict_has(next, key)  // tail-call becomes iteration
+                }
+            },
+            _ => false,
+        }
+    }
+    pub fn dict_get(&self, dict: Ptr, key: Val) -> Val {
+        let typed = *self.typed(dict);
+        match typed {
+            Typed::Dict { key: k, value, next } => {
+                if key == k {
+                    value
+                } else {
+                    self.dict_get(next, key)  // tail-call becomes iteration
+                }
+            },
+            _ => UNDEF,
+        }
+    }
+    pub fn dict_add(&mut self, dict: Ptr, key: Val, value: Val) -> Ptr {
+        let init = Typed::Dict { key, value, next: dict };
+        self.alloc(&init)
+    }
+    pub fn dict_del(&mut self, dict: Ptr, key: Val) -> Ptr {
+        let typed = *self.typed(dict);
+        if let Typed::Dict { key: k, value, next } = typed {
+            if key == k {
+                next
+            } else {
+                let d = self.dict_del(next, key);
+                self.dict_add(d, key, value)
+            }
+        } else {
+            NIL.ptr()
+        }
+    }
+    pub fn dict_set(&mut self, dict: Ptr, key: Val, value: Val) -> Ptr {
+        let d = if self.dict_has(dict, key) {
+            self.dict_del(dict, key)
+        } else {
+            dict
+        };
+        self.dict_add(d, key, value)
+    }
+
     pub fn cons(&mut self, car: Val, cdr: Val) -> Ptr {
         let pair = Typed::Pair { car, cdr };
         self.alloc(&pair)

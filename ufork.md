@@ -172,9 +172,10 @@ _char_            | {x:VM_putc, z:_K_}            | &mdash;  | write _char_ to c
 &mdash;           | {x:VM_getc, z:_K_}            | _char_   | read _char_ from console
 _value_           | {x:VM_debug, y:_tag_, z:_K_}  | &mdash;  | debug_print _tag_: _value_ to console
 _dict_ _key_      | {x:VM_dict, y:HAS, z:_K_}     | _bool_   | `TRUE` if _dict_ has a binding for _key_, otherwise `FALSE`
-_dict_ _key_      | {x:VM_dict, y:GET, z:_K_}     | _value_  | the _value_ associated with _key_ in _dict_, or `UNDEF`
-_dict_ _key_ _value_ | {x:VM_dict, y:SET, z:_K_}  | _dict'_  | new _dict_ where _key_ is associated with _value_
-_dict_ _key_      | {x:VM_dict, y:DEL, z:_K_}     | _dict'_  | new _dict_ where there is no _value_ associated with _key_
+_dict_ _key_      | {x:VM_dict, y:GET, z:_K_}     | _value_  | the first _value_ bound to _key_ in _dict_, or `UNDEF`
+_dict_ _key_ _value_ | {x:VM_dict, y:ADD, z:_K_}  | _dict'_  | add a binding from _key_ to _value_ in _dict_
+_dict_ _key_ _value_ | {x:VM_dict, y:SET, z:_K_}  | _dict'_  | add or replace a binding from _key_ to _value_ in _dict_
+_dict_ _key_      | {x:VM_dict, y:DEL, z:_K_}     | _dict'_  | remove a binding from _key_ to _value_ in _dict_
 
 ### Object Graph
 
