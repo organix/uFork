@@ -211,7 +211,7 @@ impl Host {
                 s.push_str(self.print(key.raw()).as_str());
                 s.push_str(":");
                 s.push_str(self.pprint(value.raw()).as_str());
-                sep = ",";
+                sep = ", ";
                 p = next.raw();
             }
             s.push_str("}");

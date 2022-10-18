@@ -232,7 +232,37 @@ impl Core {
         quad_mem[91]                = Typed::Instr { op: Op::Push { v: NIL, k: Ptr::new(92) } };
         quad_mem[92]                = Typed::Instr { op: Op::Push { v: fixnum(0), k: Ptr::new(93) } };
         quad_mem[93]                = Typed::Instr { op: Op::Push { v: UNIT, k: Ptr::new(94) } };
-        quad_mem[94]                = Typed::Instr { op: Op::Dict { op: Dict::Set, k: COMMIT } };
+        quad_mem[94]                = Typed::Instr { op: Op::Dict { op: Dict::Set, k: Ptr::new(95) } };
+        quad_mem[95]                = Typed::Instr { op: Op::Pick { n: Fix::new(1), k: Ptr::new(96) } };
+        quad_mem[96]                = Typed::Instr { op: Op::Push { v: fixnum(0), k: Ptr::new(97) } };
+        quad_mem[97]                = Typed::Instr { op: Op::Dict { op: Dict::Get, k: Ptr::new(98) } };
+        quad_mem[98]                = Typed::Instr { op: Op::Eq { v: UNIT, k: Ptr::new(99) } };
+        quad_mem[99]                = Typed::Instr { op: Op::If { t: Ptr::new(100), f: Ptr::new(78) } };
+        quad_mem[100]               = Typed::Instr { op: Op::Push { v: fixnum(1), k: Ptr::new(101) } };
+        quad_mem[101]               = Typed::Instr { op: Op::Push { v: fixnum(-1), k: Ptr::new(102) } };
+        quad_mem[102]               = Typed::Instr { op: Op::Dict { op: Dict::Add, k: Ptr::new(103) } };
+        quad_mem[103]               = Typed::Instr { op: Op::Pick { n: Fix::new(1), k: Ptr::new(104) } };
+        quad_mem[104]               = Typed::Instr { op: Op::Push { v: fixnum(0), k: Ptr::new(105) } };
+        quad_mem[105]               = Typed::Instr { op: Op::Dict { op: Dict::Get, k: Ptr::new(106) } };
+        quad_mem[106]               = Typed::Instr { op: Op::Eq { v: UNIT, k: Ptr::new(107) } };
+        quad_mem[107]               = Typed::Instr { op: Op::If { t: Ptr::new(108), f: Ptr::new(78) } };
+        quad_mem[108]               = Typed::Instr { op: Op::Push { v: fixnum(0), k: Ptr::new(109) } };
+        quad_mem[109]               = Typed::Instr { op: Op::Dict { op: Dict::Del, k: Ptr::new(110) } };
+        quad_mem[110]               = Typed::Instr { op: Op::Pick { n: Fix::new(1), k: Ptr::new(111) } };
+        quad_mem[111]               = Typed::Instr { op: Op::Push { v: UNIT, k: Ptr::new(112) } };
+        quad_mem[112]               = Typed::Instr { op: Op::Dict { op: Dict::Get, k: Ptr::new(113) } };
+        quad_mem[113]               = Typed::Instr { op: Op::Eq { v: UNDEF, k: Ptr::new(114) } };
+        quad_mem[114]               = Typed::Instr { op: Op::If { t: Ptr::new(115), f: Ptr::new(78) } };
+        quad_mem[115]               = Typed::Instr { op: Op::Push { v: fixnum(1), k: Ptr::new(116) } };
+        quad_mem[116]               = Typed::Instr { op: Op::Push { v: FALSE, k: Ptr::new(117) } };
+        quad_mem[117]               = Typed::Instr { op: Op::Dict { op: Dict::Add, k: Ptr::new(118) } };
+        quad_mem[118]               = Typed::Instr { op: Op::Pick { n: Fix::new(1), k: Ptr::new(119) } };
+        quad_mem[119]               = Typed::Instr { op: Op::Push { v: fixnum(1), k: Ptr::new(120) } };
+        quad_mem[120]               = Typed::Instr { op: Op::Push { v: TRUE, k: Ptr::new(121) } };
+        quad_mem[121]               = Typed::Instr { op: Op::Dict { op: Dict::Set, k: Ptr::new(122) } };
+        quad_mem[122]               = Typed::Instr { op: Op::Pick { n: Fix::new(1), k: Ptr::new(123) } };
+        quad_mem[123]               = Typed::Instr { op: Op::Push { v: fixnum(1), k: Ptr::new(124) } };
+        quad_mem[124]               = Typed::Instr { op: Op::Dict { op: Dict::Del, k: Ptr::new(16) } };
 
         Core {
             quad_mem,
@@ -953,7 +983,7 @@ impl Core {
                 next
             } else {
                 let d = self.dict_del(next, key);
-                self.dict_add(d, key, value)
+                self.dict_add(d, k, value)
             }
         } else {
             NIL.ptr()
