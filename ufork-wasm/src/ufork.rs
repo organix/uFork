@@ -127,7 +127,7 @@ impl Core {
         quad_mem[MEMORY.addr()]     = Typed::Memory { top: Ptr::new(128), next: NIL.ptr(), free: Fix::new(0), root: DDEQUE.ptr() };
         quad_mem[DDEQUE.addr()]     = Typed::Ddeque { e_first: E_BOOT, e_last: E_BOOT, k_first: NIL.ptr(), k_last: NIL.ptr() };
 
-        quad_mem[COMMIT.addr()]     = Typed::Instr { op: Op::End { x: End::Commit } };
+        quad_mem[COMMIT.addr()]     = Typed::Instr { op: Op::End { op: End::Commit } };
         quad_mem[SEND_0.addr()]     = Typed::Instr { op: Op::Send { n: Fix::new(0), k: COMMIT } };
         quad_mem[CUST_SEND.addr()]  = Typed::Instr { op: Op::Msg { n: Fix::new(1), k: SEND_0 } };
         quad_mem[RV_SELF.addr()]    = Typed::Instr { op: Op::Myself { k: CUST_SEND } };
@@ -140,7 +140,7 @@ impl Core {
         quad_mem[RV_ONE.addr()]     = Typed::Instr { op: Op::Push { v: fixnum(1), k: CUST_SEND } };
         quad_mem[RESEND.addr()-1]   = Typed::Instr { op: Op::Myself { k: SEND_0 } };
         quad_mem[RESEND.addr()]     = Typed::Instr { op: Op::Msg { n: Fix::new(0), k: Ptr::new(RESEND.raw()-1) } };
-        quad_mem[RELEASE.addr()]    = Typed::Instr { op: Op::End { x: End::Release } };
+        quad_mem[RELEASE.addr()]    = Typed::Instr { op: Op::End { op: End::Release } };
         quad_mem[RELEASE_0.addr()]  = Typed::Instr { op: Op::Send { n: Fix::new(0), k: RELEASE } };
         quad_mem[K_CALL.addr()]     = Typed::Instr { op: Op::Msg { n: Fix::new(0), k: SEND_0 } };
         quad_mem[A_SINK.addr()]     = Typed::Actor { beh: COMMIT, state: NIL.ptr(), events: None };
@@ -216,7 +216,7 @@ impl Core {
         quad_mem[77]                = Typed::Instr { op: Op::Push { v: A_SINK.val(), k: SEND_0 } };
 
         quad_mem[78]                = Typed::Instr { op: Op::Push { v: UNDEF, k: Ptr::new(79) } };
-        quad_mem[79]                = Typed::Instr { op: Op::End { x: End::Abort } };
+        quad_mem[79]                = Typed::Instr { op: Op::End { op: End::Abort } };
 
         quad_mem[80]                = Typed::Actor { beh: Ptr::new(81), state: NIL.ptr(), events: None };
         quad_mem[81]                = Typed::Instr { op: Op::Dict { op: Dict::Has, k: Ptr::new(82) } };
@@ -621,11 +621,11 @@ impl Core {
                 println!("op_beh: me'={} -> {}", me, self.typed(me));
                 *k
             },
-            Op::End { x } => {
-                println!("op_end: x={}", x);
+            Op::End { op } => {
+                println!("op_end: op={}", op);
                 let me = self.self_ptr().unwrap();
                 println!("op_end: me={} -> {}", me, self.typed(me));
-                match x {
+                match op {
                     End::Abort => {
                         let _r = self.stack_pop();  // reason for abort
                         println!("op_end: reason={}", _r);
@@ -641,7 +641,7 @@ impl Core {
                     },
                     End::Release => {
                         if let Typed::Actor { state, .. } = self.typed_mut(me) {
-                            *state = NIL.ptr();  // no reserved stack
+                            *state = NIL.ptr();  // no retained stack
                         }
                         self.actor_commit(me);
                         self.free(me);  // free actor
@@ -1329,11 +1329,11 @@ pub enum Op {
     //Cmp { op: Cmp, k: Ptr },
     If { t: Ptr, f: Ptr },
     Msg { n: Fix, k: Ptr },
-    Myself { k: Ptr },
+    Myself { k: Ptr },  // FIXME: Expand to My.Self, My.Beh, My.State, ...
     Send { n: Fix, k: Ptr },
     New { n: Fix, k: Ptr },
     Beh { n: Fix, k: Ptr },
-    End { x: End },  // FIXME: rename `x` to `op`?
+    End { op: End },
 }
 impl Op {
     pub fn from(quad: &Quad) -> Option<Typed> {
@@ -1357,7 +1357,7 @@ impl Op {
             OP_SEND => Some(Typed::Instr { op: Op::Send { n: quad.y().fix(), k: quad.z().ptr() } }),
             OP_NEW => Some(Typed::Instr { op: Op::New { n: quad.y().fix(), k: quad.z().ptr() } }),
             OP_BEH => Some(Typed::Instr { op: Op::Beh { n: quad.y().fix(), k: quad.z().ptr() } }),
-            OP_END => End::from(quad),
+            OP_END => Some(Typed::Instr { op: Op::End { op: End::from(quad.y()).unwrap() } }),
             _ => None,
         }
     }
@@ -1381,7 +1381,7 @@ impl Op {
             Op::Send { n, k } => Quad::new(INSTR_T, OP_SEND, n.val(), k.val()),
             Op::New { n, k } => Quad::new(INSTR_T, OP_NEW, n.val(), k.val()),
             Op::Beh { n, k } => Quad::new(INSTR_T, OP_BEH, n.val(), k.val()),
-            Op::End { x } => x.quad(),
+            Op::End { op } => Quad::new(INSTR_T, OP_END, op.val(), UNDEF),
         }
     }
 }
@@ -1412,7 +1412,7 @@ impl fmt::Display for Op {
             Op::Send { n, k } => write!(fmt, "Send{{ n:{}, k:{} }}", n, k),
             Op::New { n, k } => write!(fmt, "New{{ n:{}, k:{} }}", n, k),
             Op::Beh { n, k } => write!(fmt, "Beh{{ n:{}, k:{} }}", n, k),
-            Op::End { x } => write!(fmt, "End{{ x:{} }}", x),
+            Op::End { op } => write!(fmt, "End{{ op:{} }}", op),
         }
     }
 }
@@ -1466,23 +1466,21 @@ pub enum End {
     Release,
 }
 impl End {
-    pub fn from(quad: &Quad) -> Option<Typed> {
-        assert!(quad.t() == INSTR_T);
-        assert!(quad.x() == OP_END);
-        match quad.y() {
-            END_ABORT => Some(Typed::Instr { op: Op::End { x: End::Abort } }),
-            END_STOP => Some(Typed::Instr { op: Op::End { x: End::Stop } }),
-            END_COMMIT => Some(Typed::Instr { op: Op::End { x: End::Commit } }),
-            END_RELEASE => Some(Typed::Instr { op: Op::End { x: End::Release } }),
+    pub fn from(val: Val) -> Option<End> {
+        match val {
+            END_ABORT => Some(End::Abort),
+            END_STOP => Some(End::Stop),
+            END_COMMIT => Some(End::Commit),
+            END_RELEASE => Some(End::Release),
             _ => None,
         }
     }
-    pub fn quad(&self) -> Quad {
+    pub fn val(&self) -> Val {
         match self {
-            End::Abort => Quad::new(INSTR_T, OP_END, END_ABORT, UNDEF),
-            End::Stop => Quad::new(INSTR_T, OP_END, END_STOP, UNDEF),
-            End::Commit => Quad::new(INSTR_T, OP_END, END_COMMIT, UNDEF),
-            End::Release => Quad::new(INSTR_T, OP_END, END_RELEASE, UNDEF),
+            End::Abort => END_ABORT,
+            End::Stop => END_STOP,
+            End::Commit => END_COMMIT,
+            End::Release => END_RELEASE,
         }
     }
 }
