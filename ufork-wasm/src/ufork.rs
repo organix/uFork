@@ -76,7 +76,7 @@ pub const OP_EQ: Val        = Val { raw: DIR_RAW | 14 };
 pub const OP_CMP: Val       = Val { raw: DIR_RAW | 15 };
 pub const OP_IF: Val        = Val { raw: DIR_RAW | 16 };
 pub const OP_MSG: Val       = Val { raw: DIR_RAW | 17 };
-pub const OP_SELF: Val      = Val { raw: DIR_RAW | 18 };
+pub const OP_MY: Val        = Val { raw: DIR_RAW | 18 };
 pub const OP_SEND: Val      = Val { raw: DIR_RAW | 19 };
 pub const OP_NEW: Val       = Val { raw: DIR_RAW | 20 };
 pub const OP_BEH: Val       = Val { raw: DIR_RAW | 21 };
@@ -88,6 +88,11 @@ pub const DICT_GET: Val     = Val { raw: DIR_RAW | 1 };
 pub const DICT_ADD: Val     = Val { raw: DIR_RAW | 2 };
 pub const DICT_SET: Val     = Val { raw: DIR_RAW | 3 };
 pub const DICT_DEL: Val     = Val { raw: DIR_RAW | 4 };
+
+// OP_MY actor operations
+pub const MY_SELF: Val      = Val { raw: DIR_RAW | 0 };
+pub const MY_BEH: Val       = Val { raw: DIR_RAW | 1 };
+pub const MY_STATE: Val     = Val { raw: DIR_RAW | 2 };
 
 // OP_END thread actions
 pub const END_ABORT: Val    = Val { raw: DIR_RAW | -1 as Num as Raw };
@@ -130,7 +135,7 @@ impl Core {
         quad_mem[COMMIT.addr()]     = Typed::Instr { op: Op::End { op: End::Commit } };
         quad_mem[SEND_0.addr()]     = Typed::Instr { op: Op::Send { n: Fix::new(0), k: COMMIT } };
         quad_mem[CUST_SEND.addr()]  = Typed::Instr { op: Op::Msg { n: Fix::new(1), k: SEND_0 } };
-        quad_mem[RV_SELF.addr()]    = Typed::Instr { op: Op::Myself { k: CUST_SEND } };
+        quad_mem[RV_SELF.addr()]    = Typed::Instr { op: Op::My { op: My::Addr, k: CUST_SEND } };
         quad_mem[RV_UNDEF.addr()]   = Typed::Instr { op: Op::Push { v: UNDEF, k: CUST_SEND } };
         quad_mem[RV_NIL.addr()]     = Typed::Instr { op: Op::Push { v: NIL, k: CUST_SEND } };
         quad_mem[RV_FALSE.addr()]   = Typed::Instr { op: Op::Push { v: FALSE, k: CUST_SEND } };
@@ -138,7 +143,7 @@ impl Core {
         quad_mem[RV_UNIT.addr()]    = Typed::Instr { op: Op::Push { v: UNIT, k: CUST_SEND } };
         quad_mem[RV_ZERO.addr()]    = Typed::Instr { op: Op::Push { v: fixnum(0), k: CUST_SEND } };
         quad_mem[RV_ONE.addr()]     = Typed::Instr { op: Op::Push { v: fixnum(1), k: CUST_SEND } };
-        quad_mem[RESEND.addr()-1]   = Typed::Instr { op: Op::Myself { k: SEND_0 } };
+        quad_mem[RESEND.addr()-1]   = Typed::Instr { op: Op::My { op: My::Addr, k: SEND_0 } };
         quad_mem[RESEND.addr()]     = Typed::Instr { op: Op::Msg { n: Fix::new(0), k: Ptr::new(RESEND.raw()-1) } };
         quad_mem[RELEASE.addr()]    = Typed::Instr { op: Op::End { op: End::Release } };
         quad_mem[RELEASE_0.addr()]  = Typed::Instr { op: Op::Send { n: Fix::new(0), k: RELEASE } };
@@ -187,7 +192,7 @@ impl Core {
                     (SEND rcvr (cons SELF msg)) )))
         */
         //quad_mem[-1]              = Typed::Instr { op: Op::Push { v: <rcvr>, k: ... } };
-        quad_mem[46]                = Typed::Instr { op: Op::Myself { k: Ptr::new(41) } };  // rcvr SELF
+        quad_mem[46]                = Typed::Instr { op: Op::My { op: My::Addr, k: Ptr::new(41) } };  // rcvr SELF
         /*
         (define once-tag-beh  ;; FIXME: find a better name for this...
             (lambda (rcvr)
@@ -197,16 +202,16 @@ impl Core {
         */
         //quad_mem[-1]              = Typed::Instr { op: Op::Push { v: <rcvr>, k: ... } };
         quad_mem[47]                = Typed::Instr { op: Op::Msg { n: Fix::new(0), k: Ptr::new(48) } };
-        quad_mem[48]                = Typed::Instr { op: Op::Myself { k: Ptr::new(49) } };
+        quad_mem[48]                = Typed::Instr { op: Op::My { op: My::Addr, k: Ptr::new(49) } };
         quad_mem[49]                = Typed::Instr { op: Op::Pair { n: Fix::new(1), k: Ptr::new(37) } };
 
-        quad_mem[64]                = Typed::Event { target: Cap::new(80), msg: ptrval(65), next: NIL.ptr() };
+        quad_mem[64]                = Typed::Event { target: Cap::new(69), msg: ptrval(65), next: NIL.ptr() };
         quad_mem[65]                = Typed::Pair { car: fixnum(-1), cdr: ptrval(66) };
         quad_mem[66]                = Typed::Pair { car: fixnum(-2), cdr: ptrval(67) };
         quad_mem[67]                = Typed::Pair { car: fixnum(-3), cdr: NIL };
         quad_mem[68]                = Typed::Pair { car: UNIT, cdr: NIL };
         quad_mem[69]                = Typed::Actor { beh: Ptr::new(70), state: Ptr::new(68), events: None };
-        quad_mem[70]                = Typed::Instr { op: Op::Myself { k: Ptr::new(71) } };
+        quad_mem[70]                = Typed::Instr { op: Op::My { op: My::Addr, k: Ptr::new(71) } };
         quad_mem[71]                = Typed::Instr { op: Op::Push { v: fixnum(3), k: Ptr::new(72) } };
         quad_mem[72]                = Typed::Instr { op: Op::Push { v: fixnum(2), k: Ptr::new(73) } };
         quad_mem[73]                = Typed::Instr { op: Op::Push { v: fixnum(1), k: Ptr::new(74) } };
@@ -554,13 +559,32 @@ impl Core {
                 self.stack_push(r);
                 *k
             },
-            Op::Myself { k } => {
-                let a = match self.typed(self.ep()) {
-                    Typed::Event { target, .. } => target.val(),
-                    _ => UNDEF,
-                };
-                println!("op_self: a={} -> {}", a, self.typed(Ptr::new(a.raw())));
-                self.stack_push(a);
+            Op::My { op, k } => {
+                println!("op_my: op={}", op);
+                let me = self.self_ptr().unwrap();
+                println!("op_my: me={} -> {}", me, self.typed(me));
+                match op {
+                    My::Addr => {
+                        //self.stack_push(Cap::new(me.raw()).val());
+                        let ep = self.ep();
+                        if let Typed::Event { target, .. } = *self.typed(ep) {
+                            println!("op_my: self={}", target);
+                            self.stack_push(target.val());
+                        }
+                    },
+                    My::Beh => {
+                        if let Typed::Actor { beh, .. } = *self.typed(me) {
+                            println!("op_my: beh={}", beh);
+                            self.stack_push(beh.val());
+                        }
+                    },
+                    My::State => {
+                        if let Typed::Actor { state, .. } = *self.typed(me) {
+                            println!("op_my: state={}", state);
+                            self.push_list(state);
+                        }
+                    },
+                }
                 *k
             }
             Op::Send { n, k } => {
@@ -759,6 +783,12 @@ impl Core {
         }
     }
 
+    fn push_list(&mut self, ptr: Ptr) {
+        if let Typed::Pair { car, cdr } = *self.typed(ptr) {
+            self.push_list(cdr.ptr());
+            self.stack_push(car);
+        }
+    }
     fn pop_counted(&mut self, num: Num) -> Val {
         let mut n = num;
         if n > 0 {  // build list from stack
@@ -931,7 +961,7 @@ impl Core {
             Typed::Instr { op: Op::Eq { k, .. } } => k,
             //Typed::Instr { op: Op::If { f, .. } } => f,
             Typed::Instr { op: Op::Msg { k, .. } } => k,
-            Typed::Instr { op: Op::Myself { k, .. } } => k,
+            Typed::Instr { op: Op::My { k, .. } } => k,
             Typed::Instr { op: Op::Send { k, .. } } => k,
             Typed::Instr { op: Op::New { k, .. } } => k,
             Typed::Instr { op: Op::Beh { k, .. } } => k,
@@ -1329,7 +1359,7 @@ pub enum Op {
     //Cmp { op: Cmp, k: Ptr },
     If { t: Ptr, f: Ptr },
     Msg { n: Fix, k: Ptr },
-    Myself { k: Ptr },  // FIXME: Expand to My.Self, My.Beh, My.State, ...
+    My { op: My, k: Ptr },
     Send { n: Fix, k: Ptr },
     New { n: Fix, k: Ptr },
     Beh { n: Fix, k: Ptr },
@@ -1353,7 +1383,7 @@ impl Op {
             OP_EQ => Some(Typed::Instr { op: Op::Eq { v: quad.y().val(), k: quad.z().ptr() } }),
             OP_IF => Some(Typed::Instr { op: Op::If { t: quad.y().ptr(), f: quad.z().ptr() } }),
             OP_MSG => Some(Typed::Instr { op: Op::Msg { n: quad.y().fix(), k: quad.z().ptr() } }),
-            OP_SELF => Some(Typed::Instr { op: Op::Myself { k: quad.z().ptr() } }),
+            OP_MY => Some(Typed::Instr { op: Op::My { op: My::from(quad.y()).unwrap(), k: quad.z().ptr() } }),
             OP_SEND => Some(Typed::Instr { op: Op::Send { n: quad.y().fix(), k: quad.z().ptr() } }),
             OP_NEW => Some(Typed::Instr { op: Op::New { n: quad.y().fix(), k: quad.z().ptr() } }),
             OP_BEH => Some(Typed::Instr { op: Op::Beh { n: quad.y().fix(), k: quad.z().ptr() } }),
@@ -1377,7 +1407,7 @@ impl Op {
             Op::Eq { v, k } => Quad::new(INSTR_T, OP_EQ, v.val(), k.val()),
             Op::If { t, f } => Quad::new(INSTR_T, OP_IF, t.val(), f.val()),
             Op::Msg { n, k } => Quad::new(INSTR_T, OP_MSG, n.val(), k.val()),
-            Op::Myself { k } => Quad::new(INSTR_T, OP_SELF, UNDEF, k.val()),
+            Op::My { op, k } => Quad::new(INSTR_T, OP_MY, op.val(), k.val()),
             Op::Send { n, k } => Quad::new(INSTR_T, OP_SEND, n.val(), k.val()),
             Op::New { n, k } => Quad::new(INSTR_T, OP_NEW, n.val(), k.val()),
             Op::Beh { n, k } => Quad::new(INSTR_T, OP_BEH, n.val(), k.val()),
@@ -1408,7 +1438,7 @@ impl fmt::Display for Op {
             Op::Eq { v, k } => write!(fmt, "Eq{{ v:{}, k:{} }}", v, k),
             Op::If { t, f } => write!(fmt, "If{{ t:{}, f:{} }}", t, f),
             Op::Msg { n, k } => write!(fmt, "Msg{{ n:{}, k:{} }}", n, k),
-            Op::Myself { k } => write!(fmt, "Self{{ k:{} }}", k),
+            Op::My { op, k } => write!(fmt, "My{{ op:{}, k:{} }}", op, k),
             Op::Send { n, k } => write!(fmt, "Send{{ n:{}, k:{} }}", n, k),
             Op::New { n, k } => write!(fmt, "New{{ n:{}, k:{} }}", n, k),
             Op::Beh { n, k } => write!(fmt, "Beh{{ n:{}, k:{} }}", n, k),
@@ -1454,6 +1484,39 @@ impl fmt::Display for Dict {
             Dict::Add => write!(fmt, "Add"),
             Dict::Get => write!(fmt, "Get"),
             Dict::Del => write!(fmt, "Del"),
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum My {
+    Addr,
+    Beh,
+    State,
+}
+impl My {
+    pub fn from(val: Val) -> Option<My> {
+        match val {
+            MY_SELF => Some(My::Addr),
+            MY_BEH => Some(My::Beh),
+            MY_STATE => Some(My::State),
+            _ => None,
+        }
+    }
+    pub fn val(&self) -> Val {
+        match self {
+            My::Addr => MY_SELF,
+            My::Beh => MY_BEH,
+            My::State => MY_STATE,
+        }
+    }
+}
+impl fmt::Display for My {
+    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            My::Addr => write!(fmt, "Self"),
+            My::Beh => write!(fmt, "Beh"),
+            My::State => write!(fmt, "State"),
         }
     }
 }
