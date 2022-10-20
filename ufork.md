@@ -130,6 +130,13 @@ _dict_ _key_      | {x:VM_dict, y:GET, z:_K_}     | _value_  | the first _value_
 _dict_ _key_ _value_ | {x:VM_dict, y:ADD, z:_K_}  | _dict'_  | add a binding from _key_ to _value_ in _dict_
 _dict_ _key_ _value_ | {x:VM_dict, y:SET, z:_K_}  | _dict'_  | replace or add a binding from _key_ to _value_ in _dict_
 _dict_ _key_      | {x:VM_dict, y:DEL, z:_K_}     | _dict'_  | remove a binding from _key_ to _value_ in _dict_
+&mdash;           | {x:VM_deque, y:NEW, z:_K_}    | _deque_  | create a new empty _deque_
+_deque_           | {x:VM_deque, y:EMPTY, z:_K_}  | _bool_   | `TRUE` if _dict_ is empty, otherwise `FALSE`
+_deque_ _value_   | {x:VM_deque, y:PUSH, z:_K_}   | _deque_  | insert _value_ as the first element of _deque_
+_deque_           | {x:VM_deque, y:POP, z:_K_}    | _deque_  _value_ | remove the first _value_ from _deque_, or `UNDEF`
+_deque_ _value_   | {x:VM_deque, y:PUT, z:_K_}    | _deque_  | insert _value_ as the last element of _deque_
+_deque_           | {x:VM_deque, y:PULL, z:_K_}   | _deque_  _value_ | remove the last _value_ from _deque_, or `UNDEF`
+_deque_           | {x:VM_deque, y:LEN, z:_K_}    | _n_      | count elements in the _deque_
 ... _tail_ _head_ | {x:VM_pair, y:_n_, z:_K_}     | _pair_   | create {t:Pair_T, x:_head_, y:_tail_} (_n_ times)
 _pair_            | {x:VM_part, y:_n_, z:_K_}     | ... _tail_ _head_ | split _pair_ into _head_ and _tail_ (_n_ times)
 _pair_            | {x:VM_nth, y:_n_, z:_K_}      | _item_<sub>_n_</sub> | extract item _n_ from a _pair_ list

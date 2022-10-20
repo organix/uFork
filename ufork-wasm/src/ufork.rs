@@ -81,6 +81,11 @@ pub const OP_SEND: Val      = Val { raw: DIR_RAW | 19 };
 pub const OP_NEW: Val       = Val { raw: DIR_RAW | 20 };
 pub const OP_BEH: Val       = Val { raw: DIR_RAW | 21 };
 pub const OP_END: Val       = Val { raw: DIR_RAW | 22 };
+//pub const OP_CVT: Val       = Val { raw: DIR_RAW | 23 };
+//pub const OP_PUTC: Val      = Val { raw: DIR_RAW | 24 };
+//pub const OP_GETC: Val      = Val { raw: DIR_RAW | 25 };
+//pub const OP_DEBUG: Val     = Val { raw: DIR_RAW | 26 };
+pub const OP_DEQUE: Val     = Val { raw: DIR_RAW | 27 };
 
 // OP_DICT dictionary operations
 pub const DICT_HAS: Val     = Val { raw: DIR_RAW | 0 };
@@ -88,6 +93,15 @@ pub const DICT_GET: Val     = Val { raw: DIR_RAW | 1 };
 pub const DICT_ADD: Val     = Val { raw: DIR_RAW | 2 };
 pub const DICT_SET: Val     = Val { raw: DIR_RAW | 3 };
 pub const DICT_DEL: Val     = Val { raw: DIR_RAW | 4 };
+
+// OP_DEQUE deque operations
+pub const DEQUE_NEW: Val    = Val { raw: DIR_RAW | 0 };
+pub const DEQUE_EMPTY: Val  = Val { raw: DIR_RAW | 1 };
+pub const DEQUE_PUSH: Val   = Val { raw: DIR_RAW | 2 };
+pub const DEQUE_POP: Val    = Val { raw: DIR_RAW | 3 };
+pub const DEQUE_PUT: Val    = Val { raw: DIR_RAW | 4 };
+pub const DEQUE_PULL: Val   = Val { raw: DIR_RAW | 5 };
+pub const DEQUE_LEN: Val    = Val { raw: DIR_RAW | 6 };
 
 // OP_MY actor operations
 pub const MY_SELF: Val      = Val { raw: DIR_RAW | 0 };
@@ -205,7 +219,7 @@ impl Core {
         quad_mem[48]                = Typed::Instr { op: Op::My { op: My::Addr, k: Ptr::new(49) } };
         quad_mem[49]                = Typed::Instr { op: Op::Pair { n: Fix::new(1), k: Ptr::new(37) } };
 
-        quad_mem[64]                = Typed::Event { target: Cap::new(69), msg: ptrval(65), next: NIL.ptr() };
+        quad_mem[64]                = Typed::Event { target: Cap::new(80), msg: ptrval(65), next: NIL.ptr() };
         quad_mem[65]                = Typed::Pair { car: fixnum(-1), cdr: ptrval(66) };
         quad_mem[66]                = Typed::Pair { car: fixnum(-2), cdr: ptrval(67) };
         quad_mem[67]                = Typed::Pair { car: fixnum(-3), cdr: NIL };
@@ -224,50 +238,53 @@ impl Core {
         quad_mem[79]                = Typed::Instr { op: Op::End { op: End::Abort } };
 
         quad_mem[80]                = Typed::Actor { beh: Ptr::new(81), state: NIL.ptr(), events: None };
-        quad_mem[81]                = Typed::Instr { op: Op::Dict { op: Dict::Has, k: Ptr::new(82) } };
-        quad_mem[82]                = Typed::Instr { op: Op::If { t: Ptr::new(78), f: Ptr::new(83) } };
-        quad_mem[83]                = Typed::Instr { op: Op::Push { v: NIL, k: Ptr::new(84) } };
-        quad_mem[84]                = Typed::Instr { op: Op::Push { v: fixnum(0), k: Ptr::new(85) } };
-        quad_mem[85]                = Typed::Instr { op: Op::Dup { n: Fix::new(2), k: Ptr::new(86) } };
-        quad_mem[86]                = Typed::Instr { op: Op::Dict { op: Dict::Has, k: Ptr::new(87) } };
-        quad_mem[87]                = Typed::Instr { op: Op::If { t: Ptr::new(78), f: Ptr::new(88) } };
-        quad_mem[88]                = Typed::Instr { op: Op::Dict { op: Dict::Get, k: Ptr::new(89) } };
-        quad_mem[89]                = Typed::Instr { op: Op::Eq { v: UNDEF, k: Ptr::new(90) } };
-        quad_mem[90]                = Typed::Instr { op: Op::If { t: Ptr::new(91), f: Ptr::new(78) } };
-        quad_mem[91]                = Typed::Instr { op: Op::Push { v: NIL, k: Ptr::new(92) } };
-        quad_mem[92]                = Typed::Instr { op: Op::Push { v: fixnum(0), k: Ptr::new(93) } };
-        quad_mem[93]                = Typed::Instr { op: Op::Push { v: UNIT, k: Ptr::new(94) } };
-        quad_mem[94]                = Typed::Instr { op: Op::Dict { op: Dict::Set, k: Ptr::new(95) } };
-        quad_mem[95]                = Typed::Instr { op: Op::Pick { n: Fix::new(1), k: Ptr::new(96) } };
-        quad_mem[96]                = Typed::Instr { op: Op::Push { v: fixnum(0), k: Ptr::new(97) } };
-        quad_mem[97]                = Typed::Instr { op: Op::Dict { op: Dict::Get, k: Ptr::new(98) } };
-        quad_mem[98]                = Typed::Instr { op: Op::Eq { v: UNIT, k: Ptr::new(99) } };
+        quad_mem[81]                = Typed::Instr { op: Op::Deque { op: Deque::Empty, k: Ptr::new(82) } };
+        quad_mem[82]                = Typed::Instr { op: Op::If { t: Ptr::new(83), f: Ptr::new(78) } };
+        quad_mem[83]                = Typed::Instr { op: Op::Deque { op: Deque::New, k: Ptr::new(84) } };
+        quad_mem[84]                = Typed::Instr { op: Op::Pick { n: Fix::new(1), k: Ptr::new(85) } };
+        quad_mem[85]                = Typed::Instr { op: Op::Deque { op: Deque::Empty, k: Ptr::new(86) } };
+        quad_mem[86]                = Typed::Instr { op: Op::If { t: Ptr::new(87), f: Ptr::new(78) } };
+        quad_mem[87]                = Typed::Instr { op: Op::Push { v: fixnum(1), k: Ptr::new(88) } };
+        quad_mem[88]                = Typed::Instr { op: Op::Deque { op: Deque::Push, k: Ptr::new(89) } };
+        quad_mem[89]                = Typed::Instr { op: Op::Push { v: fixnum(2), k: Ptr::new(90) } };
+        quad_mem[90]                = Typed::Instr { op: Op::Deque { op: Deque::Push, k: Ptr::new(91) } };
+        quad_mem[91]                = Typed::Instr { op: Op::Push { v: fixnum(3), k: Ptr::new(92) } };
+        quad_mem[92]                = Typed::Instr { op: Op::Deque { op: Deque::Push, k: Ptr::new(93) } };
+        quad_mem[93]                = Typed::Instr { op: Op::Pick { n: Fix::new(1), k: Ptr::new(94) } };
+        quad_mem[94]                = Typed::Instr { op: Op::Deque { op: Deque::Empty, k: Ptr::new(95) } };
+        quad_mem[95]                = Typed::Instr { op: Op::If { t: Ptr::new(78), f: Ptr::new(96) } };
+        quad_mem[96]                = Typed::Instr { op: Op::Pick { n: Fix::new(1), k: Ptr::new(97) } };
+        quad_mem[97]                = Typed::Instr { op: Op::Deque { op: Deque::Len, k: Ptr::new(98) } };
+        quad_mem[98]                = Typed::Instr { op: Op::Eq { v: fixnum(3), k: Ptr::new(99) } };
         quad_mem[99]                = Typed::Instr { op: Op::If { t: Ptr::new(100), f: Ptr::new(78) } };
-        quad_mem[100]               = Typed::Instr { op: Op::Push { v: fixnum(1), k: Ptr::new(101) } };
-        quad_mem[101]               = Typed::Instr { op: Op::Push { v: fixnum(-1), k: Ptr::new(102) } };
-        quad_mem[102]               = Typed::Instr { op: Op::Dict { op: Dict::Add, k: Ptr::new(103) } };
-        quad_mem[103]               = Typed::Instr { op: Op::Pick { n: Fix::new(1), k: Ptr::new(104) } };
-        quad_mem[104]               = Typed::Instr { op: Op::Push { v: fixnum(0), k: Ptr::new(105) } };
-        quad_mem[105]               = Typed::Instr { op: Op::Dict { op: Dict::Get, k: Ptr::new(106) } };
-        quad_mem[106]               = Typed::Instr { op: Op::Eq { v: UNIT, k: Ptr::new(107) } };
-        quad_mem[107]               = Typed::Instr { op: Op::If { t: Ptr::new(108), f: Ptr::new(78) } };
-        quad_mem[108]               = Typed::Instr { op: Op::Push { v: fixnum(0), k: Ptr::new(109) } };
-        quad_mem[109]               = Typed::Instr { op: Op::Dict { op: Dict::Del, k: Ptr::new(110) } };
-        quad_mem[110]               = Typed::Instr { op: Op::Pick { n: Fix::new(1), k: Ptr::new(111) } };
-        quad_mem[111]               = Typed::Instr { op: Op::Push { v: UNIT, k: Ptr::new(112) } };
-        quad_mem[112]               = Typed::Instr { op: Op::Dict { op: Dict::Get, k: Ptr::new(113) } };
-        quad_mem[113]               = Typed::Instr { op: Op::Eq { v: UNDEF, k: Ptr::new(114) } };
-        quad_mem[114]               = Typed::Instr { op: Op::If { t: Ptr::new(115), f: Ptr::new(78) } };
-        quad_mem[115]               = Typed::Instr { op: Op::Push { v: fixnum(1), k: Ptr::new(116) } };
-        quad_mem[116]               = Typed::Instr { op: Op::Push { v: FALSE, k: Ptr::new(117) } };
-        quad_mem[117]               = Typed::Instr { op: Op::Dict { op: Dict::Add, k: Ptr::new(118) } };
-        quad_mem[118]               = Typed::Instr { op: Op::Pick { n: Fix::new(1), k: Ptr::new(119) } };
-        quad_mem[119]               = Typed::Instr { op: Op::Push { v: fixnum(1), k: Ptr::new(120) } };
-        quad_mem[120]               = Typed::Instr { op: Op::Push { v: TRUE, k: Ptr::new(121) } };
-        quad_mem[121]               = Typed::Instr { op: Op::Dict { op: Dict::Set, k: Ptr::new(122) } };
-        quad_mem[122]               = Typed::Instr { op: Op::Pick { n: Fix::new(1), k: Ptr::new(123) } };
-        quad_mem[123]               = Typed::Instr { op: Op::Push { v: fixnum(1), k: Ptr::new(124) } };
-        quad_mem[124]               = Typed::Instr { op: Op::Dict { op: Dict::Del, k: Ptr::new(16) } };
+        quad_mem[100]               = Typed::Instr { op: Op::Deque { op: Deque::Pull, k: Ptr::new(101) } };
+        quad_mem[101]               = Typed::Instr { op: Op::Eq { v: fixnum(1), k: Ptr::new(102) } };
+        quad_mem[102]               = Typed::Instr { op: Op::If { t: Ptr::new(103), f: Ptr::new(78) } };
+        quad_mem[103]               = Typed::Instr { op: Op::Deque { op: Deque::Pull, k: Ptr::new(104) } };
+        quad_mem[104]               = Typed::Instr { op: Op::Eq { v: fixnum(2), k: Ptr::new(105) } };
+        quad_mem[105]               = Typed::Instr { op: Op::If { t: Ptr::new(106), f: Ptr::new(78) } };
+        quad_mem[106]               = Typed::Instr { op: Op::Deque { op: Deque::Pull, k: Ptr::new(107) } };
+        quad_mem[107]               = Typed::Instr { op: Op::Eq { v: fixnum(3), k: Ptr::new(108) } };
+        quad_mem[108]               = Typed::Instr { op: Op::If { t: Ptr::new(109), f: Ptr::new(78) } };
+        quad_mem[109]               = Typed::Instr { op: Op::Deque { op: Deque::Pull, k: Ptr::new(110) } };
+        quad_mem[110]               = Typed::Instr { op: Op::Eq { v: UNDEF, k: Ptr::new(111) } };
+        quad_mem[111]               = Typed::Instr { op: Op::If { t: Ptr::new(112), f: Ptr::new(78) } };
+        quad_mem[112]               = Typed::Instr { op: Op::Pick { n: Fix::new(1), k: Ptr::new(113) } };
+        quad_mem[113]               = Typed::Instr { op: Op::Deque { op: Deque::Len, k: Ptr::new(114) } };
+        quad_mem[114]               = Typed::Instr { op: Op::Eq { v: fixnum(0), k: Ptr::new(115) } };
+        quad_mem[115]               = Typed::Instr { op: Op::If { t: Ptr::new(116), f: Ptr::new(78) } };
+        quad_mem[116]               = Typed::Instr { op: Op::Pick { n: Fix::new(1), k: Ptr::new(117) } };
+        quad_mem[117]               = Typed::Instr { op: Op::Msg { n: Fix::new(0), k: Ptr::new(118) } };
+        quad_mem[118]               = Typed::Instr { op: Op::Deque { op: Deque::Put, k: Ptr::new(119) } };
+        quad_mem[119]               = Typed::Instr { op: Op::Msg { n: Fix::new(-1), k: Ptr::new(120) } };
+        quad_mem[120]               = Typed::Instr { op: Op::Deque { op: Deque::Put, k: Ptr::new(121) } };
+        quad_mem[121]               = Typed::Instr { op: Op::Msg { n: Fix::new(-2), k: Ptr::new(122) } };
+        quad_mem[122]               = Typed::Instr { op: Op::Deque { op: Deque::Put, k: Ptr::new(123) } };
+        quad_mem[123]               = Typed::Instr { op: Op::Deque { op: Deque::Pop, k: Ptr::new(124) } };
+        quad_mem[124]               = Typed::Instr { op: Op::Roll { n: Fix::new(-2), k: Ptr::new(125) } };
+        quad_mem[125]               = Typed::Instr { op: Op::Deque { op: Deque::Pop, k: Ptr::new(126) } };
+        quad_mem[126]               = Typed::Instr { op: Op::Roll { n: Fix::new(-3), k: Ptr::new(127) } };
+        quad_mem[127]               = Typed::Instr { op: Op::Deque { op: Deque::Pop, k: Ptr::new(16) } };
 
         Core {
             quad_mem,
@@ -393,6 +410,47 @@ impl Core {
                         let dict = self.stack_pop().ptr();
                         let d = self.dict_del(dict, key);
                         self.stack_push(d.val());
+                    },
+                };
+                *k
+            },
+            Op::Deque { op, k } => {
+                println!("op_deque: op={}", op);
+                match op {
+                    Deque::New => {
+                        let deque = self.deque_new();
+                        self.stack_push(deque.val());
+                    },
+                    Deque::Empty => {
+                        let deque = self.stack_pop().ptr();
+                        let b = self.deque_empty(deque);
+                        let v = if b { TRUE } else { FALSE };
+                        self.stack_push(v);
+                    },
+                    Deque::Push => {
+                        let item = self.stack_pop();
+                        let deque = self.car(self.sp()).ptr();  // leave deque on stack
+                        self.deque_push(deque, item);
+                    },
+                    Deque::Pop => {
+                        let deque = self.car(self.sp()).ptr();  // leave deque on stack
+                        let v = self.deque_pop(deque).unwrap_or(UNDEF);
+                        self.stack_push(v);
+                    },
+                    Deque::Put => {
+                        let item = self.stack_pop();
+                        let deque = self.car(self.sp()).ptr();  // leave deque on stack
+                        self.deque_put(deque, item);
+                    },
+                    Deque::Pull => {
+                        let deque = self.car(self.sp()).ptr();  // leave deque on stack
+                        let v = self.deque_pull(deque).unwrap_or(UNDEF);
+                        self.stack_push(v);
+                    },
+                    Deque::Len => {
+                        let deque = self.stack_pop().ptr();
+                        let n = self.deque_len(deque);
+                        self.stack_push(fixnum(n));
                     },
                 };
                 *k
@@ -654,10 +712,12 @@ impl Core {
                         let _r = self.stack_pop();  // reason for abort
                         println!("op_end: reason={}", _r);
                         self.actor_abort(me);
-                        UNDEF.ptr()
+                        //UNDEF.ptr()
+                        panic!("End::Abort should signal controller")
                     },
                     End::Stop => {
-                        UNIT.ptr()
+                        //UNIT.ptr()
+                        panic!("End::Stop terminated continuation")
                     },
                     End::Commit => {
                         self.actor_commit(me);
@@ -949,6 +1009,7 @@ impl Core {
             Typed::Quad { z, .. } => z.ptr(),
             Typed::Instr { op: Op::Typeq { k, .. } } => k,
             Typed::Instr { op: Op::Dict { k, .. } } => k,
+            Typed::Instr { op: Op::Deque { k, .. } } => k,
             Typed::Instr { op: Op::Pair { k, .. } } => k,
             Typed::Instr { op: Op::Part { k, .. } } => k,
             Typed::Instr { op: Op::Nth { k, .. } } => k,
@@ -1018,6 +1079,78 @@ impl Core {
         } else {
             NIL.ptr()
         }
+    }
+
+    pub fn deque_new(&mut self) -> Ptr {
+        self.cons(NIL, NIL)  // allocate new first/last pointers
+    }
+    pub fn deque_empty(&self, deque: Ptr) -> bool {
+        !self.typeq(PAIR_T, self.car(deque))
+    }
+    pub fn deque_push(&mut self, deque: Ptr, item: Val) {
+        let first = self.car(deque);
+        let next = self.cons(item, first);  // allocate item holder
+        if !self.typeq(PAIR_T, first) {
+            self.set_cdr(deque, next.val());
+        }
+        self.set_car(deque, next.val());
+    }
+    pub fn deque_pop(&mut self, deque: Ptr) -> Option<Val> {
+        let first = self.car(deque);
+        if self.typeq(PAIR_T, first) {
+            let next = self.cdr(first.ptr());
+            self.set_car(deque, next);
+            if !self.typeq(PAIR_T, next) {
+                self.set_cdr(deque, next);  // empty deque
+            }
+            let item = self.car(first.ptr());
+            self.free(first.ptr());  // free pair holding deque item
+            Some(item)
+        } else {
+            None
+        }
+    }
+    pub fn deque_put(&mut self, deque: Ptr, item: Val) {
+        let next = self.cons(item, NIL);  // allocate item holder
+        let last = self.cdr(deque);
+        if self.typeq(PAIR_T, last) {
+            self.set_cdr(last.ptr(), next.val());
+        } else {
+            self.set_car(deque, next.val());
+        }
+        self.set_cdr(deque, next.val());
+    }
+    pub fn deque_pull(&mut self, deque: Ptr) -> Option<Val> {
+        let last = self.cdr(deque);
+        if self.typeq(PAIR_T, last) {
+            let first = self.car(deque);
+            if first == last {
+                // empty deque
+                self.set_car(deque, NIL);
+                self.set_cdr(deque, NIL);
+            } else {
+                let mut p = first;
+                while self.typeq(PAIR_T, p) && self.cdr(p.ptr()) != last {
+                    p = self.cdr(p.ptr());
+                }
+                self.set_cdr(p.ptr(), NIL);
+                self.set_cdr(deque, p);
+            }
+            let item = self.car(last.ptr());
+            self.free(last.ptr());  // free pair holding deque item
+            Some(item)
+        } else {
+            None
+        }
+    }
+    pub fn deque_len(&self, deque: Ptr) -> Num {
+        let mut n = 0;
+        let mut p = self.car(deque);
+        while self.typeq(PAIR_T, p) {
+            n += 1;
+            p = self.cdr(p.ptr());
+        }
+        n
     }
 
     pub fn cons(&mut self, car: Val, cdr: Val) -> Ptr {
@@ -1345,6 +1478,7 @@ pub enum Op {
     //Get { f: Field, k: Ptr },
     //Set { f: Field, k: Ptr },  // **DEPRECATED**
     Dict { op: Dict, k: Ptr },
+    Deque { op: Deque, k: Ptr },
     Pair { n: Fix, k: Ptr },
     Part { n: Fix, k: Ptr },
     Nth { n: Fix, k: Ptr },
@@ -1371,6 +1505,7 @@ impl Op {
         match quad.x() {
             OP_TYPEQ => Some(Typed::Instr { op: Op::Typeq { t: quad.y().ptr(), k: quad.z().ptr() } }),
             OP_DICT => Some(Typed::Instr { op: Op::Dict { op: Dict::from(quad.y()).unwrap(), k: quad.z().ptr() } }),
+            OP_DEQUE => Some(Typed::Instr { op: Op::Deque { op: Deque::from(quad.y()).unwrap(), k: quad.z().ptr() } }),
             OP_PAIR => Some(Typed::Instr { op: Op::Pair { n: quad.y().fix(), k: quad.z().ptr() } }),
             OP_PART => Some(Typed::Instr { op: Op::Part { n: quad.y().fix(), k: quad.z().ptr() } }),
             OP_NTH => Some(Typed::Instr { op: Op::Nth { n: quad.y().fix(), k: quad.z().ptr() } }),
@@ -1395,6 +1530,7 @@ impl Op {
         match self {
             Op::Typeq { t, k } => Quad::new(INSTR_T, OP_TYPEQ, t.val(), k.val()),
             Op::Dict { op, k } => Quad::new(INSTR_T, OP_DICT, op.val(), k.val()),
+            Op::Deque { op, k } => Quad::new(INSTR_T, OP_DEQUE, op.val(), k.val()),
             Op::Pair { n, k } => Quad::new(INSTR_T, OP_PAIR, n.val(), k.val()),
             Op::Part { n, k } => Quad::new(INSTR_T, OP_PART, n.val(), k.val()),
             Op::Nth { n, k } => Quad::new(INSTR_T, OP_NTH, n.val(), k.val()),
@@ -1426,6 +1562,7 @@ impl fmt::Display for Op {
                 }
             },
             Op::Dict { op, k } => write!(fmt, "Dict{{ op:{}, k:{} }}", op, k),
+            Op::Deque { op, k } => write!(fmt, "Deque{{ op:{}, k:{} }}", op, k),
             Op::Pair { n, k } => write!(fmt, "Pair{{ n:{}, k:{} }}", n, k),
             Op::Part { n, k } => write!(fmt, "Part{{ n:{}, k:{} }}", n, k),
             Op::Nth { n, k } => write!(fmt, "Nth{{ n:{}, k:{} }}", n, k),
@@ -1484,6 +1621,55 @@ impl fmt::Display for Dict {
             Dict::Add => write!(fmt, "Add"),
             Dict::Get => write!(fmt, "Get"),
             Dict::Del => write!(fmt, "Del"),
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Deque {
+    New,
+    Empty,
+    Push,
+    Pop,
+    Put,
+    Pull,
+    Len,
+}
+impl Deque {
+    pub fn from(val: Val) -> Option<Deque> {
+        match val {
+            DEQUE_NEW => Some(Deque::New),
+            DEQUE_EMPTY => Some(Deque::Empty),
+            DEQUE_PUSH => Some(Deque::Push),
+            DEQUE_POP => Some(Deque::Pop),
+            DEQUE_PUT => Some(Deque::Put),
+            DEQUE_PULL => Some(Deque::Pull),
+            DEQUE_LEN => Some(Deque::Len),
+            _ => None,
+        }
+    }
+    pub fn val(&self) -> Val {
+        match self {
+            Deque::New => DEQUE_NEW,
+            Deque::Empty => DEQUE_EMPTY,
+            Deque::Push => DEQUE_PUSH,
+            Deque::Pop => DEQUE_POP,
+            Deque::Put => DEQUE_PUT,
+            Deque::Pull => DEQUE_PULL,
+            Deque::Len => DEQUE_LEN,
+        }
+    }
+}
+impl fmt::Display for Deque {
+    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Deque::New => write!(fmt, "New"),
+            Deque::Empty => write!(fmt, "Empty"),
+            Deque::Push => write!(fmt, "Push"),
+            Deque::Pop => write!(fmt, "Pop"),
+            Deque::Put => write!(fmt, "Put"),
+            Deque::Pull => write!(fmt, "Pull"),
+            Deque::Len => write!(fmt, "Len"),
         }
     }
 }
