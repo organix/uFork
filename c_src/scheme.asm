@@ -10,7 +10,7 @@
     { .t=Symbol_T,      .x=0,           .y=S_IGNORE+1,  .z=UNDEF,       },
     { .t=Pair_T,        .x=TO_FIX('_'), .y=NIL,         .z=UNDEF        },
 
-#define S_QUOTE (S_IGNORE+2)
+#define S_QUOTE (SCHEME_BASE+2)
     { .t=Symbol_T,      .x=0,           .y=S_QUOTE+1,   .z=UNDEF,       },
     { .t=Pair_T,        .x=TO_FIX('q'), .y=S_QUOTE+2,   .z=UNDEF        },
     { .t=Pair_T,        .x=TO_FIX('u'), .y=S_QUOTE+3,   .z=UNDEF        },

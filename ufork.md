@@ -131,7 +131,7 @@ _dict_ _key_ _value_ | {x:VM_dict, y:ADD, z:_K_}  | _dict'_  | add a binding fro
 _dict_ _key_ _value_ | {x:VM_dict, y:SET, z:_K_}  | _dict'_  | replace or add a binding from _key_ to _value_ in _dict_
 _dict_ _key_      | {x:VM_dict, y:DEL, z:_K_}     | _dict'_  | remove a binding from _key_ to _value_ in _dict_
 &mdash;           | {x:VM_deque, y:NEW, z:_K_}    | _deque_  | create a new empty _deque_
-_deque_           | {x:VM_deque, y:EMPTY, z:_K_}  | _bool_   | `TRUE` if _dict_ is empty, otherwise `FALSE`
+_deque_           | {x:VM_deque, y:EMPTY, z:_K_}  | _bool_   | `TRUE` if _deque_ is empty, otherwise `FALSE`
 _deque_ _value_   | {x:VM_deque, y:PUSH, z:_K_}   | _deque_  | insert _value_ as the first element of _deque_
 _deque_           | {x:VM_deque, y:POP, z:_K_}    | _deque_  _value_ | remove the first _value_ from _deque_, or `UNDEF`
 _deque_ _value_   | {x:VM_deque, y:PUT, z:_K_}    | _deque_  | insert _value_ as the last element of _deque_
@@ -145,7 +145,7 @@ _pair_            | {x:VM_nth, y:-_n_, z:_K_}     | _tail_<sub>_n_</sub> | extra
 _v_<sub>_n_</sub> ... _v_<sub>1</sub> | {x:VM_depth, z:_K_} | _v_<sub>_n_</sub> ... _v_<sub>1</sub> _n_ | count items on stack
 _v_<sub>_n_</sub> ... _v_<sub>1</sub> | {x:VM_drop, y:_n_, z:_K_} | &mdash; | remove _n_ items from stack
 _v_<sub>_n_</sub> ... _v_<sub>1</sub> | {x:VM_pick, y:_n_, z:_K_} | _v_<sub>_n_</sub> ... _v_<sub>1</sub> _v_<sub>_n_</sub> | copy item _n_ to top of stack
-_v_<sub>_n_</sub> ... _v_<sub>1</sub> | {x:VM_dup, y:_n_, z:_K_} |_v_<sub>_n_</sub> ... _v_<sub>1</sub> _v_<sub>_n_</sub> ... _v_<sub>1</sub> | duplicate _n_ items on stack
+_v_<sub>_n_</sub> ... _v_<sub>1</sub> | {x:VM_dup, y:_n_, z:_K_} |_v_<sub>_n_</sub> ... _v_<sub>1</sub> _v_<sub>_n_</sub> ... _v_<sub>1</sub> | duplicate top _n_ items on stack
 _v_<sub>_n_</sub> ... _v_<sub>1</sub> | {x:VM_roll, y:_n_, z:_K_} | _v_<sub>_n_-1</sub> ... _v_<sub>1</sub> _v_<sub>_n_</sub> | roll item _n_ to top of stack
 _v_<sub>_n_</sub> ... _v_<sub>1</sub> | {x:VM_roll, y:-_n_, z:_K_} | _v_<sub>1</sub> _v_<sub>_n_</sub> ... _v_<sub>2</sub> | roll top of stack to item _n_
 _n_               | {x:VM_alu, y:NOT, z:_K_}      | ~_n_     | bitwise not _n_

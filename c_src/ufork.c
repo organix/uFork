@@ -78,19 +78,24 @@ cell_t cell_table[CELL_MAX] = {
     { .t=Type_T,        .x=UNDEF,       .y=UNDEF,       .z=UNDEF,       },  //  9: Fixnum_T
     { .t=Type_T,        .x=UNDEF,       .y=UNDEF,       .z=UNDEF,       },  // 10: Symbol_T
     { .t=Type_T,        .x=UNDEF,       .y=UNDEF,       .z=UNDEF,       },  // 11: Pair_T
-    { .t=Type_T,        .x=UNDEF,       .y=UNDEF,       .z=UNDEF,       },  // 12: Fexpr_T
+//  { .t=Type_T,        .x=UNDEF,       .y=UNDEF,       .z=UNDEF,       },  // 12: Fexpr_T
+    { .t=Type_T,        .x=UNDEF,       .y=UNDEF,       .z=UNDEF,       },  // 12: Dict_T
     { .t=Type_T,        .x=UNDEF,       .y=UNDEF,       .z=UNDEF,       },  // 13: Free_T
     { .t=1700,          .x=NIL,         .y=TO_FIX(0),   .z=DDEQUE,      },  // 14: MEMORY
     { .t=START,         .x=START,       .y=NIL,         .z=NIL,         },  // 15: DDEQUE
 
 // manually updated assembly references
 #define _A_BOOT TO_CAP(104)
-#define _M_EVAL TO_CAP(235)
+#define _M_EVAL TO_CAP(236)
 
 #define BOOT_BASE (START)
 #include "boot.asm"
 
-#define SCHEME_BASE (BOOT_END)
+#undef Fexpr_T  // <--- remember to manually synchronize the value in `ufork.h`
+#define Fexpr_T (BOOT_END)
+    { .t=Type_T,        .x=UNDEF,       .y=UNDEF,       .z=UNDEF,       },  // Fexpr_T
+
+#define SCHEME_BASE (BOOT_END+1)
 #include "scheme.asm"
 
 #define LIB_SCM_BASE (SCHEME_END)
@@ -156,7 +161,8 @@ static struct { int_t addr; char *label; } cell_map[] = {
     { Fixnum_T, "Fixnum_T" },
     { Symbol_T, "Symbol_T" },
     { Pair_T, "Pair_T" },
-    { Fexpr_T, "Fexpr_T" },
+    //{ Fexpr_T, "Fexpr_T" },
+    { Dict_T, "Dict_T" },
     { Free_T, "Free_T" },
     { MEMORY, "MEMORY" },
     { DDEQUE, "DDEQUE" },
@@ -208,6 +214,7 @@ static struct { int_t addr; char *label; } cell_map[] = {
     { FORK_BEH, "FORK_BEH" },
 
 // scheme.asm
+    { Fexpr_T, "Fexpr_T" },
     { S_IGNORE, "S_IGNORE" },
     { S_QUOTE, "S_QUOTE" },
     { S_QQUOTE, "S_QQUOTE" },
@@ -841,17 +848,18 @@ static void gc_dump_map() {  // dump memory allocation map
         /* extra detail */
         if (c == 'x') {
             int_t t = get_t(a);
-            if (t == Literal_T) c = 'l';// literal value
-            if (t == Type_T) c = 't';   // type marker
-            if (t == Event_T) c = 'E';  // Event_T
-            if (t == Instr_T) c = 'i';  // Instr_T
-            if (t == Actor_T) c = 'A';  // Actor_T
-            if (t == Fixnum_T) c = '#';   // Fixnum_T <-- should not happen
-            if (t == Symbol_T) c = 'S'; // Symbol_T
-            if (t == Pair_T) c = 'p';   // Pair_T
-            if (t == Fexpr_T) c = 'F';  // Fexpr_T
-            if (t == Free_T) c = '?';   // Free_T <-- should not happen
-            if (t >= START) c = 'K';    // continuation
+            if (t == Literal_T) c = 'l';    // literal value
+            if (t == Type_T) c = 't';       // type marker
+            if (t == Event_T) c = 'E';      // Event_T
+            if (t == Instr_T) c = 'i';      // Instr_T
+            if (t == Actor_T) c = 'A';      // Actor_T
+            if (t == Fixnum_T) c = '#';     // Fixnum_T <-- should not happen
+            if (t == Symbol_T) c = 'S';     // Symbol_T
+            if (t == Pair_T) c = 'p';       // Pair_T
+            if (t == Dict_T) c = 'd';       // Dict_T
+            if (t == Free_T) c = '?';       // Free_T <-- should not happen
+            if (t == Fexpr_T) c = 'F';      // Fexpr_T
+            else if (t >= START) c = 'K';   // continuation
         }
 #endif
         fprintf(stderr, "%c", c);
@@ -1208,6 +1216,7 @@ int_t init_global_env() {
     bind_global("Symbol_T", Symbol_T);
     bind_global("Pair_T", Pair_T);
     bind_global("Fexpr_T", Fexpr_T);
+    bind_global("Dict_T", Dict_T);
     bind_global("Free_T", Free_T);
 
     bind_global("VM_typeq", VM_typeq);
