@@ -11,6 +11,7 @@ const DIR_RAW: Raw          = 0x8000_0000;
 const OPQ_RAW: Raw          = 0x4000_0000;
 
 // literal values
+pub const ZERO: Fix         = Fix { num: 0 };
 pub const UNDEF: Val        = Val { raw: 0 }; //Val::new(0); -- const generic issue...
 pub const NIL: Val          = Val { raw: 1 };
 pub const FALSE: Val        = Val { raw: 2 };
@@ -50,11 +51,18 @@ pub const RELEASE_0: Ptr    = Ptr { raw: 30 };
 pub const K_CALL: Ptr       = Ptr { raw: 31 };
 pub const A_SINK: Cap       = Cap { raw: 32 };
 pub const FWD_BEH: Ptr      = Ptr { raw: 33 };
-pub const ONCE_BEH: Ptr     = Ptr { raw: 36 };
-pub const LABEL_BEH: Ptr    = Ptr { raw: 41 };
-pub const TAG_BEH: Ptr      = Ptr { raw: 46 };
-pub const ONCE_TAG_BEH: Ptr = Ptr { raw: 47 };
-pub const E_BOOT: Ptr       = Ptr { raw: 64 };
+pub const ONCE_BEH: Ptr     = Ptr { raw: 35 };
+pub const LABEL_BEH: Ptr    = Ptr { raw: 37 };
+pub const TAG_BEH: Ptr      = Ptr { raw: 41 };
+pub const ONCE_TAG_BEH: Ptr = Ptr { raw: 42 };
+pub const WRAP_BEH: Ptr     = Ptr { raw: 44 };
+pub const UNWRAP_BEH: Ptr   = Ptr { raw: 47 };
+pub const FUTURE_BEH: Ptr   = Ptr { raw: 49 };
+pub const VALUE_BEH: Ptr    = Ptr { raw: 66 };
+pub const E_BOOT: Ptr       = Ptr { raw: 80 };
+pub const ABORT: Ptr        = Ptr { raw: 86 };
+pub const STOP: Ptr         = Ptr { raw: 88 };
+pub const WAIT_BEH: Ptr     = Ptr { raw: 90 };
 
 // instr values
 pub const OP_TYPEQ: Val     = Val { raw: DIR_RAW | 0 }; // fixnum(0)
@@ -102,6 +110,14 @@ pub const DEQUE_POP: Val    = Val { raw: DIR_RAW | 3 };
 pub const DEQUE_PUT: Val    = Val { raw: DIR_RAW | 4 };
 pub const DEQUE_PULL: Val   = Val { raw: DIR_RAW | 5 };
 pub const DEQUE_LEN: Val    = Val { raw: DIR_RAW | 6 };
+
+// OP_CMP comparison operations
+pub const CMP_EQ: Val       = Val { raw: DIR_RAW | 0 };
+pub const CMP_GE: Val       = Val { raw: DIR_RAW | 1 };
+pub const CMP_GT: Val       = Val { raw: DIR_RAW | 2 };
+pub const CMP_LT: Val       = Val { raw: DIR_RAW | 3 };
+pub const CMP_LE: Val       = Val { raw: DIR_RAW | 4 };
+pub const CMP_NE: Val       = Val { raw: DIR_RAW | 5 };
 
 // OP_MY actor operations
 pub const MY_SELF: Val      = Val { raw: DIR_RAW | 0 };
@@ -155,7 +171,7 @@ impl Core {
         quad_mem[RV_FALSE.addr()]   = Typed::Instr { op: Op::Push { v: FALSE, k: CUST_SEND } };
         quad_mem[RV_TRUE.addr()]    = Typed::Instr { op: Op::Push { v: TRUE, k: CUST_SEND } };
         quad_mem[RV_UNIT.addr()]    = Typed::Instr { op: Op::Push { v: UNIT, k: CUST_SEND } };
-        quad_mem[RV_ZERO.addr()]    = Typed::Instr { op: Op::Push { v: fixnum(0), k: CUST_SEND } };
+        quad_mem[RV_ZERO.addr()]    = Typed::Instr { op: Op::Push { v: ZERO.val(), k: CUST_SEND } };
         quad_mem[RV_ONE.addr()]     = Typed::Instr { op: Op::Push { v: fixnum(1), k: CUST_SEND } };
         quad_mem[RESEND.addr()-1]   = Typed::Instr { op: Op::My { op: My::Addr, k: SEND_0 } };
         quad_mem[RESEND.addr()]     = Typed::Instr { op: Op::Msg { n: Fix::new(0), k: Ptr::new(RESEND.raw()-1) } };
@@ -163,6 +179,7 @@ impl Core {
         quad_mem[RELEASE_0.addr()]  = Typed::Instr { op: Op::Send { n: Fix::new(0), k: RELEASE } };
         quad_mem[K_CALL.addr()]     = Typed::Instr { op: Op::Msg { n: Fix::new(0), k: SEND_0 } };
         quad_mem[A_SINK.addr()]     = Typed::Actor { beh: COMMIT, state: NIL.ptr(), events: None };
+
         /*
         (define fwd-beh
             (lambda (rcvr)
@@ -170,22 +187,27 @@ impl Core {
                     (SEND rcvr msg) )))
         */
         //quad_mem[-1]              = Typed::Instr { op: Op::Push { v: <rcvr>, k: ... } };
-        quad_mem[33]                = Typed::Instr { op: Op::Msg { n: Fix::new(0), k: Ptr::new(34) } };
-        quad_mem[34]                = Typed::Instr { op: Op::Pick { n: Fix::new(2), k: Ptr::new(35) } };
-        quad_mem[35]                = Typed::Instr { op: Op::Send { n: Fix::new(0), k: COMMIT } };
+        quad_mem[33]                = Typed::Instr { op: Op::Msg { n: Fix::new(0), k: Ptr::new(34) } };  // rcvr msg
+        quad_mem[34]                = Typed::Instr { op: Op::Pick { n: Fix::new(2), k: SEND_0 } };  // rcvr msg rcvr
+
         /*
         (define once-beh
             (lambda (rcvr)
                 (BEH msg
-                    (SEND rcvr msg)
-                    (BECOME sink-beh) )))
+                    (BECOME sink-beh)
+                    (SEND rcvr msg) )))
         */
         //quad_mem[-1]              = Typed::Instr { op: Op::Push { v: <rcvr>, k: ... } };
-        quad_mem[36]                = Typed::Instr { op: Op::Msg { n: Fix::new(0), k: Ptr::new(37) } };
-        quad_mem[37]                = Typed::Instr { op: Op::Pick { n: Fix::new(2), k: Ptr::new(38) } };
-        quad_mem[38]                = Typed::Instr { op: Op::Send { n: Fix::new(0), k: Ptr::new(39) } };
-        quad_mem[39]                = Typed::Instr { op: Op::Push { v: COMMIT.val(), k: Ptr::new(40) } };
-        quad_mem[40]                = Typed::Instr { op: Op::Beh { n: Fix::new(0), k: COMMIT } };
+        quad_mem[35]                = Typed::Instr { op: Op::Push { v: COMMIT.val(), k: Ptr::new(36) } };  // rcvr sink-beh
+        quad_mem[36]                = Typed::Instr { op: Op::Beh { n: Fix::new(0), k: FWD_BEH } };  // rcvr
+        /*
+        quad_mem[36]                = Typed::Instr { op: Op::Msg { n: Fix::new(0), k: Ptr::new(37) } };  // rcvr msg
+        quad_mem[37]                = Typed::Instr { op: Op::Pick { n: Fix::new(2), k: Ptr::new(38) } };  // rcvr msg rcvr
+        quad_mem[38]                = Typed::Instr { op: Op::Send { n: Fix::new(0), k: Ptr::new(39) } };  // rcvr
+        quad_mem[39]                = Typed::Instr { op: Op::Push { v: COMMIT.val(), k: Ptr::new(40) } };  // rcvr sink-beh
+        quad_mem[40]                = Typed::Instr { op: Op::Beh { n: Fix::new(0), k: COMMIT } };  // rcvr
+        */
+
         /*
         (define label-beh
             (lambda (rcvr label)
@@ -194,11 +216,11 @@ impl Core {
         */
         //quad_mem[-2]              = Typed::Instr { op: Op::Push { v: <rcvr>, k: ... } };
         //quad_mem[-1]              = Typed::Instr { op: Op::Push { v: <label>, k: ... } };
-        quad_mem[41]                = Typed::Instr { op: Op::Msg { n: Fix::new(0), k: Ptr::new(42) } };  // rcvr label msg
-        quad_mem[42]                = Typed::Instr { op: Op::Pick { n: Fix::new(2), k: Ptr::new(43) } }; // rcvr label msg label
-        quad_mem[43]                = Typed::Instr { op: Op::Pair { n: Fix::new(1), k: Ptr::new(44) } }; // rcvr label (label . msg)
-        quad_mem[44]                = Typed::Instr { op: Op::Pick { n: Fix::new(3), k: Ptr::new(45) } }; // rcvr label (label . msg) rcvr
-        quad_mem[45]                = Typed::Instr { op: Op::Send { n: Fix::new(0), k: COMMIT } };            // rcvr label
+        quad_mem[37]                = Typed::Instr { op: Op::Msg { n: Fix::new(0), k: Ptr::new(38) } };  // rcvr label msg
+        quad_mem[38]                = Typed::Instr { op: Op::Pick { n: Fix::new(2), k: Ptr::new(39) } };  // rcvr label msg label
+        quad_mem[39]                = Typed::Instr { op: Op::Pair { n: Fix::new(1), k: Ptr::new(40) } };  // rcvr label (label . msg)
+        quad_mem[40]                = Typed::Instr { op: Op::Pick { n: Fix::new(3), k: SEND_0 } };  // rcvr label (label . msg) rcvr
+
         /*
         (define tag-beh
             (lambda (rcvr)
@@ -206,85 +228,152 @@ impl Core {
                     (SEND rcvr (cons SELF msg)) )))
         */
         //quad_mem[-1]              = Typed::Instr { op: Op::Push { v: <rcvr>, k: ... } };
-        quad_mem[46]                = Typed::Instr { op: Op::My { op: My::Addr, k: Ptr::new(41) } };  // rcvr SELF
+        quad_mem[41]                = Typed::Instr { op: Op::My { op: My::Addr, k: LABEL_BEH } };  // rcvr SELF
+
         /*
         (define once-tag-beh  ;; FIXME: find a better name for this...
             (lambda (rcvr)
                 (BEH msg
-                    (SEND rcvr (cons SELF msg))
-                    (BECOME sink-beh) )))
+                    (BECOME sink-beh)
+                    (SEND rcvr (cons SELF msg)) )))
         */
         //quad_mem[-1]              = Typed::Instr { op: Op::Push { v: <rcvr>, k: ... } };
-        quad_mem[47]                = Typed::Instr { op: Op::Msg { n: Fix::new(0), k: Ptr::new(48) } };
-        quad_mem[48]                = Typed::Instr { op: Op::My { op: My::Addr, k: Ptr::new(49) } };
-        quad_mem[49]                = Typed::Instr { op: Op::Pair { n: Fix::new(1), k: Ptr::new(37) } };
+        quad_mem[42]                = Typed::Instr { op: Op::Push { v: COMMIT.val(), k: Ptr::new(43) } };  // rcvr sink-beh
+        quad_mem[43]                = Typed::Instr { op: Op::Beh { n: Fix::new(0), k: TAG_BEH } };  // rcvr
+        /*
+        quad_mem[47]                = Typed::Instr { op: Op::Msg { n: Fix::new(0), k: Ptr::new(48) } };  // rcvr msg
+        quad_mem[48]                = Typed::Instr { op: Op::My { op: My::Addr, k: Ptr::new(49) } };  // rcvr msg SELF
+        quad_mem[49]                = Typed::Instr { op: Op::Pair { n: Fix::new(1), k: Ptr::new(37) } };  // rcvr (SELF . msg)
+        */
 
-        quad_mem[64]                = Typed::Event { target: Cap::new(80), msg: ptrval(65), next: NIL.ptr() };
-        quad_mem[65]                = Typed::Pair { car: fixnum(-1), cdr: ptrval(66) };
-        quad_mem[66]                = Typed::Pair { car: fixnum(-2), cdr: ptrval(67) };
-        quad_mem[67]                = Typed::Pair { car: fixnum(-3), cdr: NIL };
-        quad_mem[68]                = Typed::Pair { car: UNIT, cdr: NIL };
-        quad_mem[69]                = Typed::Actor { beh: Ptr::new(70), state: Ptr::new(68), events: None };
-        quad_mem[70]                = Typed::Instr { op: Op::My { op: My::Addr, k: Ptr::new(71) } };
-        quad_mem[71]                = Typed::Instr { op: Op::Push { v: fixnum(3), k: Ptr::new(72) } };
-        quad_mem[72]                = Typed::Instr { op: Op::Push { v: fixnum(2), k: Ptr::new(73) } };
-        quad_mem[73]                = Typed::Instr { op: Op::Push { v: fixnum(1), k: Ptr::new(74) } };
-        quad_mem[74]                = Typed::Instr { op: Op::Typeq { t: FIXNUM_T.ptr(), k: Ptr::new(75) } };
-        quad_mem[75]                = Typed::Instr { op: Op::If { t: Ptr::new(74), f: Ptr::new(76) } };
-        quad_mem[76]                = Typed::Instr { op: Op::Pick { n: Fix::new(1), k: Ptr::new(77) } };
-        quad_mem[77]                = Typed::Instr { op: Op::Push { v: A_SINK.val(), k: SEND_0 } };
+        /*
+        (define wrap-beh
+            (lambda (rcvr)
+                (BEH msg
+                    (SEND rcvr (list msg)) )))
+        */
+        //quad_mem[-1]              = Typed::Instr { op: Op::Push { v: <rcvr>, k: ... } };
+        quad_mem[44]                = Typed::Instr { op: Op::Msg { n: Fix::new(0), k: Ptr::new(45) } };  // rcvr msg
+        quad_mem[45]                = Typed::Instr { op: Op::Pick { n: Fix::new(2), k: Ptr::new(46) } };  // rcvr msg rcvr
+        quad_mem[46]                = Typed::Instr { op: Op::Send { n: Fix::new(1), k: COMMIT } };  // rcvr
 
-        quad_mem[78]                = Typed::Instr { op: Op::Push { v: UNDEF, k: Ptr::new(79) } };
-        quad_mem[79]                = Typed::Instr { op: Op::End { op: End::Abort } };
+        /*
+        (define unwrap-beh
+            (lambda (rcvr)
+                (BEH (msg)
+                    (SEND rcvr msg) )))
+        */
+        //quad_mem[-1]              = Typed::Instr { op: Op::Push { v: <rcvr>, k: ... } };
+        quad_mem[47]                = Typed::Instr { op: Op::Msg { n: Fix::new(1), k: Ptr::new(48) } };
+        quad_mem[48]                = Typed::Instr { op: Op::Pick { n: Fix::new(2), k: SEND_0 } };
+        //quad_mem[55]                = Typed::Instr { op: Op::Send { n: Fix::new(0), k: COMMIT } };
 
-        quad_mem[80]                = Typed::Actor { beh: Ptr::new(81), state: NIL.ptr(), events: None };
-        quad_mem[81]                = Typed::Instr { op: Op::Deque { op: Deque::Empty, k: Ptr::new(82) } };
-        quad_mem[82]                = Typed::Instr { op: Op::If { t: Ptr::new(83), f: Ptr::new(78) } };
-        quad_mem[83]                = Typed::Instr { op: Op::Deque { op: Deque::New, k: Ptr::new(84) } };
-        quad_mem[84]                = Typed::Instr { op: Op::Pick { n: Fix::new(1), k: Ptr::new(85) } };
-        quad_mem[85]                = Typed::Instr { op: Op::Deque { op: Deque::Empty, k: Ptr::new(86) } };
-        quad_mem[86]                = Typed::Instr { op: Op::If { t: Ptr::new(87), f: Ptr::new(78) } };
-        quad_mem[87]                = Typed::Instr { op: Op::Push { v: fixnum(1), k: Ptr::new(88) } };
-        quad_mem[88]                = Typed::Instr { op: Op::Deque { op: Deque::Push, k: Ptr::new(89) } };
-        quad_mem[89]                = Typed::Instr { op: Op::Push { v: fixnum(2), k: Ptr::new(90) } };
-        quad_mem[90]                = Typed::Instr { op: Op::Deque { op: Deque::Push, k: Ptr::new(91) } };
-        quad_mem[91]                = Typed::Instr { op: Op::Push { v: fixnum(3), k: Ptr::new(92) } };
-        quad_mem[92]                = Typed::Instr { op: Op::Deque { op: Deque::Push, k: Ptr::new(93) } };
-        quad_mem[93]                = Typed::Instr { op: Op::Pick { n: Fix::new(1), k: Ptr::new(94) } };
-        quad_mem[94]                = Typed::Instr { op: Op::Deque { op: Deque::Empty, k: Ptr::new(95) } };
-        quad_mem[95]                = Typed::Instr { op: Op::If { t: Ptr::new(78), f: Ptr::new(96) } };
-        quad_mem[96]                = Typed::Instr { op: Op::Pick { n: Fix::new(1), k: Ptr::new(97) } };
-        quad_mem[97]                = Typed::Instr { op: Op::Deque { op: Deque::Len, k: Ptr::new(98) } };
-        quad_mem[98]                = Typed::Instr { op: Op::Eq { v: fixnum(3), k: Ptr::new(99) } };
-        quad_mem[99]                = Typed::Instr { op: Op::If { t: Ptr::new(100), f: Ptr::new(78) } };
-        quad_mem[100]               = Typed::Instr { op: Op::Deque { op: Deque::Pull, k: Ptr::new(101) } };
-        quad_mem[101]               = Typed::Instr { op: Op::Eq { v: fixnum(1), k: Ptr::new(102) } };
-        quad_mem[102]               = Typed::Instr { op: Op::If { t: Ptr::new(103), f: Ptr::new(78) } };
-        quad_mem[103]               = Typed::Instr { op: Op::Deque { op: Deque::Pull, k: Ptr::new(104) } };
-        quad_mem[104]               = Typed::Instr { op: Op::Eq { v: fixnum(2), k: Ptr::new(105) } };
-        quad_mem[105]               = Typed::Instr { op: Op::If { t: Ptr::new(106), f: Ptr::new(78) } };
-        quad_mem[106]               = Typed::Instr { op: Op::Deque { op: Deque::Pull, k: Ptr::new(107) } };
-        quad_mem[107]               = Typed::Instr { op: Op::Eq { v: fixnum(3), k: Ptr::new(108) } };
-        quad_mem[108]               = Typed::Instr { op: Op::If { t: Ptr::new(109), f: Ptr::new(78) } };
-        quad_mem[109]               = Typed::Instr { op: Op::Deque { op: Deque::Pull, k: Ptr::new(110) } };
-        quad_mem[110]               = Typed::Instr { op: Op::Eq { v: UNDEF, k: Ptr::new(111) } };
-        quad_mem[111]               = Typed::Instr { op: Op::If { t: Ptr::new(112), f: Ptr::new(78) } };
-        quad_mem[112]               = Typed::Instr { op: Op::Pick { n: Fix::new(1), k: Ptr::new(113) } };
-        quad_mem[113]               = Typed::Instr { op: Op::Deque { op: Deque::Len, k: Ptr::new(114) } };
-        quad_mem[114]               = Typed::Instr { op: Op::Eq { v: fixnum(0), k: Ptr::new(115) } };
-        quad_mem[115]               = Typed::Instr { op: Op::If { t: Ptr::new(116), f: Ptr::new(78) } };
-        quad_mem[116]               = Typed::Instr { op: Op::Pick { n: Fix::new(1), k: Ptr::new(117) } };
-        quad_mem[117]               = Typed::Instr { op: Op::Msg { n: Fix::new(0), k: Ptr::new(118) } };
-        quad_mem[118]               = Typed::Instr { op: Op::Deque { op: Deque::Put, k: Ptr::new(119) } };
-        quad_mem[119]               = Typed::Instr { op: Op::Msg { n: Fix::new(-1), k: Ptr::new(120) } };
-        quad_mem[120]               = Typed::Instr { op: Op::Deque { op: Deque::Put, k: Ptr::new(121) } };
-        quad_mem[121]               = Typed::Instr { op: Op::Msg { n: Fix::new(-2), k: Ptr::new(122) } };
-        quad_mem[122]               = Typed::Instr { op: Op::Deque { op: Deque::Put, k: Ptr::new(123) } };
-        quad_mem[123]               = Typed::Instr { op: Op::Deque { op: Deque::Pop, k: Ptr::new(124) } };
-        quad_mem[124]               = Typed::Instr { op: Op::Roll { n: Fix::new(-2), k: Ptr::new(125) } };
-        quad_mem[125]               = Typed::Instr { op: Op::Deque { op: Deque::Pop, k: Ptr::new(126) } };
-        quad_mem[126]               = Typed::Instr { op: Op::Roll { n: Fix::new(-3), k: Ptr::new(127) } };
-        quad_mem[127]               = Typed::Instr { op: Op::Deque { op: Deque::Pop, k: Ptr::new(16) } };
+        /*
+        (define future-beh
+            (lambda (rcap wcap)
+                (BEH (tag . arg)
+                    (cond
+                        ((eq? tag rcap)
+                            (BECOME (wait-beh rcap wcap (list arg))))
+                        ((eq? tag wcap)
+                            (BECOME (value-beh rcap arg))) ))))
+        */
+        //quad_mem[-2]              = Typed::Instr { op: Op::Push { v: <rcap>, k: ... } };
+        //quad_mem[-1]              = Typed::Instr { op: Op::Push { v: <wcap>, k: ... } };
+        quad_mem[49]                = Typed::Instr { op: Op::Msg { n: Fix::new(1), k: Ptr::new(50) } };  // rcap wcap tag
+        quad_mem[50]                = Typed::Instr { op: Op::Pick { n: Fix::new(3), k: Ptr::new(51) } };  // rcap wcap tag rcap
+        quad_mem[51]                = Typed::Instr { op: Op::Cmp { op: Cmp::Eq, k: Ptr::new(52) } };  // rcap wcap bool
+        quad_mem[52]                = Typed::Instr { op: Op::If { t: Ptr::new(53), f: Ptr::new(58) } };  // rcap wcap
+
+        quad_mem[53]                = Typed::Instr { op: Op::Push { v: NIL, k: Ptr::new(54) } };  // rcap wcap ()
+        quad_mem[54]                = Typed::Instr { op: Op::Msg { n: Fix::new(-1), k: Ptr::new(55) } };  // rcap wcap () arg
+        quad_mem[55]                = Typed::Instr { op: Op::Pair { n: Fix::new(1), k: Ptr::new(56) } };  // rcap wcap (arg)
+        quad_mem[56]                = Typed::Instr { op: Op::Push { v: WAIT_BEH.val(), k: Ptr::new(57) } };  // rcap wcap (arg) wait-beh
+        quad_mem[57]                = Typed::Instr { op: Op::Beh { n: Fix::new(3), k: COMMIT } };  // (wait-beh rcap wcap (arg))
+
+        quad_mem[58]                = Typed::Instr { op: Op::Msg { n: Fix::new(1), k: Ptr::new(59) } };  // rcap wcap tag
+        quad_mem[59]                = Typed::Instr { op: Op::Pick { n: Fix::new(2), k: Ptr::new(60) } };  // rcap wcap tag wcap
+        quad_mem[60]                = Typed::Instr { op: Op::Cmp { op: Cmp::Eq, k: Ptr::new(61) } };  // rcap wcap bool
+        quad_mem[61]                = Typed::Instr { op: Op::If { t: Ptr::new(62), f: ABORT } };  // rcap wcap
+
+        quad_mem[62]                = Typed::Instr { op: Op::Drop { n: Fix::new(1), k: Ptr::new(63) } };  // rcap
+        quad_mem[63]                = Typed::Instr { op: Op::Msg { n: Fix::new(-1), k: Ptr::new(64) } };  // rcap value=arg
+        quad_mem[64]                = Typed::Instr { op: Op::Push { v: VALUE_BEH.val(), k: Ptr::new(65) } };  // rcap value=arg value-beh
+        quad_mem[65]                = Typed::Instr { op: Op::Beh { n: Fix::new(2), k: COMMIT } };  // (value-beh rcap value)
+
+        /*
+        (define value-beh
+            (lambda (rcap value)
+                (BEH (tag . arg)
+                    (cond
+                        ((eq? tag rcap)
+                            (SEND arg value))) )))
+        */
+        //quad_mem[-2]              = Typed::Instr { op: Op::Push { v: <rcap>, k: ... } };
+        //quad_mem[-1]              = Typed::Instr { op: Op::Push { v: <value>, k: ... } };
+        quad_mem[66]                = Typed::Instr { op: Op::Msg { n: Fix::new(1), k: Ptr::new(67) } };  // rcap value tag
+        quad_mem[67]                = Typed::Instr { op: Op::Pick { n: Fix::new(3), k: Ptr::new(68) } };  // rcap value tag rcap
+        quad_mem[68]                = Typed::Instr { op: Op::Cmp { op: Cmp::Eq, k: Ptr::new(69) } };  // rcap value bool
+        quad_mem[69]                = Typed::Instr { op: Op::If { t: Ptr::new(70), f: COMMIT } };  // rcap value
+        quad_mem[70]                = Typed::Instr { op: Op::Pick { n: Fix::new(1), k: Ptr::new(71) } };  // rcap value value
+        quad_mem[71]                = Typed::Instr { op: Op::Msg { n: Fix::new(-1), k: SEND_0 } };  // rcap value value cust=arg
+
+        /* bootstrap event/actor */
+        quad_mem[80]                = Typed::Event { target: Cap::new(85), msg: ptrval(81), next: NIL.ptr() };
+        quad_mem[81]                = Typed::Pair { car: fixnum(-1), cdr: ptrval(82) };
+        quad_mem[82]                = Typed::Pair { car: fixnum(-2), cdr: ptrval(83) };
+        quad_mem[83]                = Typed::Pair { car: fixnum(-3), cdr: NIL };
+        quad_mem[84]                = Typed::Pair { car: UNIT, cdr: NIL };
+        quad_mem[85]                = Typed::Actor { beh: RESEND, state: Ptr::new(84), events: None };
+
+        /* (ABORT #?) */
+        quad_mem[86]                = Typed::Instr { op: Op::Push { v: UNDEF, k: Ptr::new(87) } };
+        quad_mem[87]                = Typed::Instr { op: Op::End { op: End::Abort } };
+
+        /* (STOP) */
+        quad_mem[88]                = Typed::Instr { op: Op::End { op: End::Stop } };
+
+        /*
+        (define wait-beh
+            (lambda (rcap wcap waiting)
+                (BEH (tag . arg)
+                    (cond
+                        ((eq? tag rcap)
+                            (BECOME (wait-beh rcap wcap (cons arg waiting))))
+                        ((eq? tag wcap)
+                            (send-to-all waiting value)
+                            (BECOME (value-beh rcap arg))) ))))
+        */
+        //quad_mem[-3]              = Typed::Instr { op: Op::Push { v: <rcap>, k: ... } };
+        //quad_mem[-2]              = Typed::Instr { op: Op::Push { v: <wcap>, k: ... } };
+        //quad_mem[-1]              = Typed::Instr { op: Op::Push { v: <waiting>, k: ... } };
+        quad_mem[90]                = Typed::Instr { op: Op::Msg { n: Fix::new(1), k: Ptr::new(91) } };  // rcap wcap waiting tag
+        quad_mem[91]                = Typed::Instr { op: Op::Pick { n: Fix::new(4), k: Ptr::new(92) } };  // rcap wcap waiting tag rcap
+        quad_mem[92]                = Typed::Instr { op: Op::Cmp { op: Cmp::Eq, k: Ptr::new(93) } };  // rcap wcap waiting bool
+        quad_mem[93]                = Typed::Instr { op: Op::If { t: Ptr::new(94), f: Ptr::new(98) } };  // rcap wcap waiting
+
+        quad_mem[94]                = Typed::Instr { op: Op::Msg { n: Fix::new(-1), k: Ptr::new(95) } };  // rcap wcap waiting arg
+        quad_mem[95]                = Typed::Instr { op: Op::Pair { n: Fix::new(1), k: Ptr::new(96) } };  // rcap wcap (arg . waiting)
+        quad_mem[96]                = Typed::Instr { op: Op::Push { v: WAIT_BEH.val(), k: Ptr::new(97) } };  // rcap wcap (arg) wait-beh
+        quad_mem[97]                = Typed::Instr { op: Op::Beh { n: Fix::new(3), k: COMMIT } };  // (wait-beh rcap wcap (arg))
+
+        quad_mem[98]                = Typed::Instr { op: Op::Msg { n: Fix::new(1), k: Ptr::new(99) } };  // rcap wcap waiting tag
+        quad_mem[99]                = Typed::Instr { op: Op::Pick { n: Fix::new(2), k: Ptr::new(100) } };  // rcap wcap waiting tag wcap
+        quad_mem[100]               = Typed::Instr { op: Op::Cmp { op: Cmp::Eq, k: Ptr::new(101) } };  // rcap wcap waiting bool
+        quad_mem[101]               = Typed::Instr { op: Op::If { t: Ptr::new(102), f: ABORT } };  // rcap wcap waiting
+
+        quad_mem[102]               = Typed::Instr { op: Op::Dup { n: Fix::new(1), k: Ptr::new(103) } };  // rcap wcap waiting waiting
+        quad_mem[103]               = Typed::Instr { op: Op::Typeq { t: PAIR_T.ptr(), k: Ptr::new(104) } };  // rcap wcap waiting bool
+        quad_mem[104]               = Typed::Instr { op: Op::If { t: Ptr::new(105), f: Ptr::new(109) } };  // rcap wcap waiting
+        quad_mem[105]               = Typed::Instr { op: Op::Part { n: Fix::new(1), k: Ptr::new(106) } };  // rcap wcap rest first
+        quad_mem[106]               = Typed::Instr { op: Op::Msg { n: Fix::new(-1), k: Ptr::new(107) } };  // rcap wcap rest first value=arg
+        quad_mem[107]               = Typed::Instr { op: Op::Roll { n: Fix::new(2), k: Ptr::new(108) } };  // rcap wcap rest value=arg first
+        quad_mem[108]               = Typed::Instr { op: Op::Send { n: Fix::new(0), k: Ptr::new(102) } };  // rcap wcap rest
+
+        quad_mem[109]               = Typed::Instr { op: Op::Drop { n: Fix::new(2), k: Ptr::new(110) } };  // rcap
+        quad_mem[110]               = Typed::Instr { op: Op::Msg { n: Fix::new(-1), k: Ptr::new(111) } };  // rcap value=arg
+        quad_mem[111]               = Typed::Instr { op: Op::Push { v: VALUE_BEH.val(), k: Ptr::new(112) } };  // rcap value=arg value-beh
+        quad_mem[112]               = Typed::Instr { op: Op::Beh { n: Fix::new(2), k: COMMIT } };  // (value-beh rcap value)
 
         Core {
             quad_mem,
@@ -595,12 +684,27 @@ impl Core {
                 self.stack_push(r);
                 *k
             },
+            Op::Cmp { op, k } => {
+                println!("op_cmp: op={}", op);
+                let vv = self.stack_pop();
+                println!("op_cmp: vv={}", vv);
+                let v = self.stack_pop();
+                println!("op_cmp: v={}", v);
+                let b = match op {
+                    Cmp::Eq => v == vv,
+                    Cmp::Ne => v != vv,
+                };
+                let r = if b { TRUE } else { FALSE };
+                println!("op_cmp: r={}", r);
+                self.stack_push(r);
+                *k
+            },
             Op::If { t, f } => {
                 let b = self.stack_pop();
                 println!("op_if: b={}", b);
                 println!("op_if: t={}", t);
                 println!("op_if: f={}", f);
-                if falsy(b) { *f } else { *t }
+                if falsey(b) { *f } else { *t }
             },
             Op::Msg { n, k } => {
                 println!("op_msg: idx={}", n);
@@ -1382,8 +1486,8 @@ impl Core {
     }
 }
 
-fn falsy(v: Val) -> bool {
-    v == FALSE  // FIXME: what should be considered "falsey" besides FALSE? UNDEF? NIL?
+fn falsey(v: Val) -> bool {
+    v == FALSE || v == UNDEF || v == NIL || v == ZERO.val()
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -1490,7 +1594,7 @@ pub enum Op {
     Roll { n: Fix, k: Ptr },
     //Alu { op: Alu, k: Ptr },
     Eq { v: Val, k: Ptr },
-    //Cmp { op: Cmp, k: Ptr },
+    Cmp { op: Cmp, k: Ptr },
     If { t: Ptr, f: Ptr },
     Msg { n: Fix, k: Ptr },
     My { op: My, k: Ptr },
@@ -1516,6 +1620,7 @@ impl Op {
             OP_DUP => Some(Typed::Instr { op: Op::Dup { n: quad.y().fix(), k: quad.z().ptr() } }),
             OP_ROLL => Some(Typed::Instr { op: Op::Roll { n: quad.y().fix(), k: quad.z().ptr() } }),
             OP_EQ => Some(Typed::Instr { op: Op::Eq { v: quad.y().val(), k: quad.z().ptr() } }),
+            OP_CMP => Some(Typed::Instr { op: Op::Cmp { op: Cmp::from(quad.y()).unwrap(), k: quad.z().ptr() } }),
             OP_IF => Some(Typed::Instr { op: Op::If { t: quad.y().ptr(), f: quad.z().ptr() } }),
             OP_MSG => Some(Typed::Instr { op: Op::Msg { n: quad.y().fix(), k: quad.z().ptr() } }),
             OP_MY => Some(Typed::Instr { op: Op::My { op: My::from(quad.y()).unwrap(), k: quad.z().ptr() } }),
@@ -1541,6 +1646,7 @@ impl Op {
             Op::Dup { n, k } => Quad::new(INSTR_T, OP_DUP, n.val(), k.val()),
             Op::Roll { n, k } => Quad::new(INSTR_T, OP_ROLL, n.val(), k.val()),
             Op::Eq { v, k } => Quad::new(INSTR_T, OP_EQ, v.val(), k.val()),
+            Op::Cmp { op, k } => Quad::new(INSTR_T, OP_CMP, op.val(), k.val()),
             Op::If { t, f } => Quad::new(INSTR_T, OP_IF, t.val(), f.val()),
             Op::Msg { n, k } => Quad::new(INSTR_T, OP_MSG, n.val(), k.val()),
             Op::My { op, k } => Quad::new(INSTR_T, OP_MY, op.val(), k.val()),
@@ -1573,6 +1679,7 @@ impl fmt::Display for Op {
             Op::Dup { n, k } => write!(fmt, "Dup{{ n:{}, k:{} }}", n, k),
             Op::Roll { n, k } => write!(fmt, "Roll{{ n:{}, k:{} }}", n, k),
             Op::Eq { v, k } => write!(fmt, "Eq{{ v:{}, k:{} }}", v, k),
+            Op::Cmp { op, k } => write!(fmt, "Cmp{{ op:{}, k:{} }}", op, k),
             Op::If { t, f } => write!(fmt, "If{{ t:{}, f:{} }}", t, f),
             Op::Msg { n, k } => write!(fmt, "Msg{{ n:{}, k:{} }}", n, k),
             Op::My { op, k } => write!(fmt, "My{{ op:{}, k:{} }}", op, k),
@@ -1670,6 +1777,35 @@ impl fmt::Display for Deque {
             Deque::Put => write!(fmt, "Put"),
             Deque::Pull => write!(fmt, "Pull"),
             Deque::Len => write!(fmt, "Len"),
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Cmp {
+    Eq,
+    Ne,
+}
+impl Cmp {
+    pub fn from(val: Val) -> Option<Cmp> {
+        match val {
+            CMP_EQ => Some(Cmp::Eq),
+            CMP_NE => Some(Cmp::Ne),
+            _ => None,
+        }
+    }
+    pub fn val(&self) -> Val {
+        match self {
+            Cmp::Eq => MY_SELF,
+            Cmp::Ne => MY_BEH,
+        }
+    }
+}
+impl fmt::Display for Cmp {
+    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Cmp::Eq => write!(fmt, "Eq"),
+            Cmp::Ne => write!(fmt, "Ne"),
         }
     }
 }
