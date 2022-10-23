@@ -1237,7 +1237,7 @@ int_t init_global_env() {
     bind_global("VM_cmp", VM_cmp);
     bind_global("VM_if", VM_if);
     bind_global("VM_msg", VM_msg);
-    bind_global("VM_self", VM_self);
+    bind_global("VM_my", VM_my);
     bind_global("VM_send", VM_send);
     bind_global("VM_new", VM_new);
     bind_global("VM_beh", VM_beh);
@@ -1267,6 +1267,10 @@ int_t init_global_env() {
     bind_global("CMP_LE", CMP_LE);
     bind_global("CMP_NE", CMP_NE);
     bind_global("CMP_CLS", CMP_CLS);
+
+    bind_global("MY_SELF", MY_SELF);
+    bind_global("MY_BEH", MY_BEH);
+    bind_global("MY_STATE", MY_STATE);
 
     bind_global("END_ABORT", END_ABORT);
     bind_global("END_STOP", END_STOP);

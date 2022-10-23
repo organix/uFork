@@ -28,7 +28,7 @@
 #define VM_cmp      TO_FIX(15)
 #define VM_if       TO_FIX(16)
 #define VM_msg      TO_FIX(17)
-#define VM_self     TO_FIX(18)
+#define VM_my       TO_FIX(18)
 #define VM_send     TO_FIX(19)
 #define VM_new      TO_FIX(20)
 #define VM_beh      TO_FIX(21)
@@ -62,6 +62,11 @@
 #define CMP_LE      TO_FIX(4)
 #define CMP_NE      TO_FIX(5)
 #define CMP_CLS     TO_FIX(6)
+
+// VM_my fields
+#define MY_SELF     TO_FIX(0)
+#define MY_BEH      TO_FIX(1)
+#define MY_STATE    TO_FIX(2)
 
 // VM_end thread action
 #define END_ABORT   TO_FIX(-1)

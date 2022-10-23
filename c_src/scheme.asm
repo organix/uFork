@@ -297,7 +297,7 @@
     { .t=Instr_T,       .x=VM_msg,      .y=TO_FIX(0),   .z=M_EVLIS_K+1, },  // head
     { .t=Instr_T,       .x=VM_push,     .y=M_EVLIS_P,   .z=M_EVLIS_K+2, },  // M_EVLIS_P
     { .t=Instr_T,       .x=VM_beh,      .y=TO_FIX(2),   .z=M_EVLIS_K+3, },  // BECOME (M_EVLIS_P cust head)
-    { .t=Instr_T,       .x=VM_self,     .y=UNDEF,       .z=M_EVLIS_K+4, },  // SELF
+    { .t=Instr_T,       .x=VM_my,       .y=MY_SELF,     .z=M_EVLIS_K+4, },  // SELF
     { .t=Instr_T,       .x=VM_push,     .y=_M_EVLIS,    .z=M_EVLIS_K+5, },  // M_EVLIS
     { .t=Instr_T,       .x=VM_send,     .y=TO_FIX(3),   .z=COMMIT,      },  // (M_EVLIS SELF rest env)
 
@@ -553,7 +553,7 @@
 
     { .t=Instr_T,       .x=VM_pick,     .y=TO_FIX(3),   .z=K_SEQ_B+8,   },  // env
     { .t=Instr_T,       .x=VM_roll,     .y=TO_FIX(2),   .z=K_SEQ_B+9,   },  // expr = first
-    { .t=Instr_T,       .x=VM_self,     .y=UNDEF,       .z=K_SEQ_B+10,  },  // cust = SELF
+    { .t=Instr_T,       .x=VM_my,       .y=MY_SELF,     .z=K_SEQ_B+10,  },  // cust = SELF
     { .t=Instr_T,       .x=VM_push,     .y=_M_EVAL,     .z=K_SEQ_B+11,  },  // M_EVAL
     { .t=Instr_T,       .x=VM_send,     .y=TO_FIX(3),   .z=K_SEQ_B+12,  },  // (M_EVAL SELF first env)
 
@@ -727,7 +727,7 @@
     { .t=Instr_T,       .x=VM_push,     .y=NIL,         .z=K_DEFINE_B+1,},  // ()
     { .t=Instr_T,       .x=VM_msg,      .y=TO_FIX(0),   .z=K_DEFINE_B+2,},  // value
     { .t=Instr_T,       .x=VM_roll,     .y=TO_FIX(3),   .z=K_DEFINE_B+3,},  // frml
-    { .t=Instr_T,       .x=VM_self,     .y=UNDEF,       .z=K_DEFINE_B+4,},  // SELF
+    { .t=Instr_T,       .x=VM_my,       .y=MY_SELF,     .z=K_DEFINE_B+4,},  // SELF
     { .t=Instr_T,       .x=VM_push,     .y=_M_ZIP,      .z=K_DEFINE_B+5,},  // M_ZIP
     { .t=Instr_T,       .x=VM_send,     .y=TO_FIX(4),   .z=K_DEFINE_B+6,},  // (M_ZIP SELF frml value NIL)
 
@@ -758,7 +758,7 @@
     { .t=Instr_T,       .x=VM_part,     .y=TO_FIX(1),   .z=K_DZIP_B+9,  },  // value symbol
     { .t=Instr_T,       .x=VM_pick,     .y=TO_FIX(4),   .z=K_DZIP_B+10, },  // env
     { .t=Instr_T,       .x=VM_roll,     .y=TO_FIX(-3),  .z=K_DZIP_B+11, },  // rest env value symbol
-    { .t=Instr_T,       .x=VM_self,     .y=UNDEF,       .z=K_DZIP_B+12, },  // SELF
+    { .t=Instr_T,       .x=VM_my,       .y=MY_SELF,     .z=K_DZIP_B+12, },  // SELF
     { .t=Instr_T,       .x=VM_push,     .y=_M_BIND_E,   .z=K_DZIP_B+13, },  // M_BIND_E
     { .t=Instr_T,       .x=VM_send,     .y=TO_FIX(4),   .z=K_DZIP_B+14, },  // (M_BIND_E SELF symbol value env)
 
@@ -776,7 +776,7 @@
 //  { .t=Instr_T,       .x=VM_push,     .y=_alist_,     .z=K_BIND_B-1,  },
 //  { .t=Instr_T,       .x=VM_push,     .y=_env_,       .z=K_BIND_B+0,  },
     { .t=Instr_T,       .x=VM_roll,     .y=TO_FIX(2),   .z=K_BIND_B+1,  },  // alist
-    { .t=Instr_T,       .x=VM_self,     .y=UNDEF,       .z=K_BIND_B+2,  },  // SELF
+    { .t=Instr_T,       .x=VM_my,       .y=MY_SELF,     .z=K_BIND_B+2,  },  // SELF
     { .t=Instr_T,       .x=VM_send,     .y=TO_FIX(0),   .z=K_BIND_B+3,  },  // (SELF alist)
 
     { .t=Instr_T,       .x=VM_push,     .y=K_DZIP_B,    .z=K_BIND_B+4,  },  // K_DZIP_B
@@ -894,7 +894,7 @@
     { .t=Instr_T,       .x=VM_beh,      .y=TO_FIX(3),   .z=K_COND+5,    },  // BECOME (K_SEQ_B cust body env)
 
     { .t=Instr_T,       .x=VM_push,     .y=UNIT,        .z=K_COND+6,    },  // UNIT
-    { .t=Instr_T,       .x=VM_self,     .y=UNDEF,       .z=SEND_0,      },  // (SELF . UNIT)
+    { .t=Instr_T,       .x=VM_my,       .y=MY_SELF,     .z=SEND_0,      },  // (SELF . UNIT)
 
     { .t=Instr_T,       .x=VM_roll,     .y=TO_FIX(4),   .z=K_COND+8,    },  // body env opnds cust
     { .t=Instr_T,       .x=VM_push,     .y=_OP_COND,    .z=K_COND+9,    },  // OP_COND

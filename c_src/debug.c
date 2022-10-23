@@ -217,7 +217,7 @@ static char *proc_label(int_t proc) {
         "VM_cmp",
         "VM_if",
         "VM_msg",
-        "VM_self",
+        "VM_my",
         "VM_send",
         "VM_new",
         "VM_beh",
@@ -268,6 +268,15 @@ static char *relation_label(int_t r) {
     return "<unknown>";
 }
 
+static char *my_label(int_t f) {
+    switch (f) {
+        case MY_SELF:   return "SELF";
+        case MY_BEH:    return "BEH";
+        case MY_STATE:  return "STATE";
+    }
+    return "<unknown>";
+}
+
 static char *end_label(int_t t) {
     switch (t) {
         case END_ABORT:     return "ABORT";
@@ -311,15 +320,15 @@ void print_inst(int_t ip) {
         case VM_roll: fprintf(stderr, "{n:%+"PdI",k:%"PdI"}", TO_INT(immd), cont); break;
         case VM_alu:  fprintf(stderr, "{op:%s,k:%"PdI"}", operation_label(immd), cont); break;
         case VM_eq:   print_word("{v:", immd); fprintf(stderr, ",k:%"PdI"}", cont); break;
-        case VM_cmp:  fprintf(stderr, "{r:%s,k:%"PdI"}", relation_label(immd), cont); break;
+        case VM_cmp:  fprintf(stderr, "{op:%s,k:%"PdI"}", relation_label(immd), cont); break;
         case VM_if:   fprintf(stderr, "{t:%"PdI",f:%"PdI"}", immd, cont); break;
         case VM_msg:  fprintf(stderr, "{n:%+"PdI",k:%"PdI"}", TO_INT(immd), cont); break;
-        case VM_self: fprintf(stderr, "{k:%"PdI"}", cont); break;
+        case VM_my:   fprintf(stderr, "{op:%s,k:%"PdI"}", my_label(immd), cont); break;
         case VM_send: fprintf(stderr, "{n:%+"PdI",k:%"PdI"}", TO_INT(immd), cont); break;
         case VM_new:  fprintf(stderr, "{n:%+"PdI",k:%"PdI"}", TO_INT(immd), cont); break;
         case VM_beh:  fprintf(stderr, "{n:%+"PdI",k:%"PdI"}", TO_INT(immd), cont); break;
-        case VM_end:  fprintf(stderr, "{t:%s}", end_label(immd)); break;
-        case VM_cvt:  fprintf(stderr, "{c:%s}", conversion_label(immd)); break;
+        case VM_end:  fprintf(stderr, "{op:%s}", end_label(immd)); break;
+        case VM_cvt:  fprintf(stderr, "{op:%s}", conversion_label(immd)); break;
         case VM_putc: fprintf(stderr, "{k:%"PdI"}", cont); break;
         case VM_getc: fprintf(stderr, "{k:%"PdI"}", cont); break;
         case VM_debug:print_word("{l:", immd); fprintf(stderr, ",k:%"PdI"}", cont); break;

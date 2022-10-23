@@ -7,7 +7,7 @@
 #endif
     { .t=Event_T,       .x=_A_BOOT,     .y=NIL,         .z=NIL          },  // START = (A_BOOT)
 #define RV_SELF (START+1)
-    { .t=Instr_T,       .x=VM_self,     .y=UNDEF,       .z=RV_SELF+1,   },  // value = SELF
+    { .t=Instr_T,       .x=VM_my,       .y=MY_SELF,     .z=RV_SELF+1,   },  // value = SELF
 #define CUST_SEND (RV_SELF+1)
     { .t=Instr_T,       .x=VM_msg,      .y=TO_FIX(1),   .z=CUST_SEND+1, },  // cust
 #define SEND_0 (CUST_SEND+1)
@@ -17,7 +17,7 @@
 
 #define RESEND (COMMIT+1)
     { .t=Instr_T,       .x=VM_msg,      .y=TO_FIX(0),   .z=RESEND+1,    },  // msg
-    { .t=Instr_T,       .x=VM_self,     .y=UNDEF,       .z=SEND_0,      },  // SELF
+    { .t=Instr_T,       .x=VM_my,       .y=MY_SELF,     .z=SEND_0,      },  // SELF
 
 #define RELEASE_0 (RESEND+2)
     { .t=Instr_T,       .x=VM_send,     .y=TO_FIX(0),   .z=RELEASE_0+1, },  // (cust . msg)
@@ -238,7 +238,7 @@
 #define TAG_BEH (A_CLOCK+5)
 //  { .t=Instr_T,       .x=VM_push,     .y=_cust_,      .z=TAG_BEH+0,   },
     { .t=Instr_T,       .x=VM_msg,      .y=TO_FIX(0),   .z=TAG_BEH+1,   },  // msg
-    { .t=Instr_T,       .x=VM_self,     .y=UNDEF,       .z=TAG_BEH+2,   },  // SELF
+    { .t=Instr_T,       .x=VM_my,       .y=MY_SELF,     .z=TAG_BEH+2,   },  // SELF
     { .t=Instr_T,       .x=VM_pair,     .y=TO_FIX(1),   .z=TAG_BEH+3,   },  // (SELF . msg)
     { .t=Instr_T,       .x=VM_pick,     .y=TO_FIX(2),   .z=SEND_0,      },  // cust
 
@@ -315,7 +315,7 @@
 //  { .t=Instr_T,       .x=VM_push,     .y=_head_,      .z=FORK_BEH-1,  },
 //  { .t=Instr_T,       .x=VM_push,     .y=_cust_,      .z=FORK_BEH+0,  },
 
-    { .t=Instr_T,       .x=VM_self,     .y=UNDEF,       .z=FORK_BEH+1,  },  // self
+    { .t=Instr_T,       .x=VM_my,       .y=MY_SELF,     .z=FORK_BEH+1,  },  // self
     { .t=Instr_T,       .x=VM_push,     .y=TAG_BEH,     .z=FORK_BEH+2,  },  // TAG_BEH
     { .t=Instr_T,       .x=VM_new,      .y=TO_FIX(1),   .z=FORK_BEH+3,  },  // k_head
 
@@ -325,7 +325,7 @@
     { .t=Instr_T,       .x=VM_roll,     .y=TO_FIX(4),   .z=FORK_BEH+7,  },  // tail cust k_head msg head
     { .t=Instr_T,       .x=VM_send,     .y=TO_FIX(0),   .z=FORK_BEH+8,  },  // (head . msg)
 
-    { .t=Instr_T,       .x=VM_self,     .y=UNDEF,       .z=FORK_BEH+9,  },  // self
+    { .t=Instr_T,       .x=VM_my,       .y=MY_SELF,     .z=FORK_BEH+9,  },  // self
     { .t=Instr_T,       .x=VM_push,     .y=TAG_BEH,     .z=FORK_BEH+10, },  // TAG_BEH
     { .t=Instr_T,       .x=VM_new,      .y=TO_FIX(1),   .z=FORK_BEH+11, },  // k_tail
 

@@ -41,7 +41,7 @@
 #define M_BUSY_B (M_ACTOR_B+13)
 //  { .t=Instr_T,       .x=VM_push,     .y=_beh_,       .z=M_ACTOR_B+0, },
     { .t=Instr_T,       .x=VM_push,     .y=Fexpr_T,     .z=M_ACTOR_B+1, },  // T = Fexpr_T
-    { .t=Instr_T,       .x=VM_self,     .y=UNDEF,       .z=M_ACTOR_B+2, },  // X = SELF
+    { .t=Instr_T,       .x=VM_my,       .y=MY_SELF,     .z=M_ACTOR_B+2, },  // X = SELF
     { .t=Instr_T,       .x=VM_push,     .y=NIL,         .z=M_ACTOR_B+3, },  // Y = ()
     { .t=Instr_T,       .x=VM_pick,     .y=TO_FIX(4),   .z=M_ACTOR_B+4, },  // Z = beh
     { .t=Instr_T,       .x=VM_cell,     .y=TO_FIX(4),   .z=M_ACTOR_B+5, },  // txn = cell(T, X, Y, Z)
@@ -110,7 +110,7 @@
     { .t=Instr_T,       .x=VM_part,     .y=TO_FIX(1),   .z=M_BUSY_B+26, },  // beh' tail head
 
     { .t=Instr_T,       .x=VM_push,     .y=Fexpr_T,     .z=M_BUSY_B+27, },  // T = Fexpr_T
-    { .t=Instr_T,       .x=VM_self,     .y=UNDEF,       .z=M_BUSY_B+28, },  // X = SELF
+    { .t=Instr_T,       .x=VM_my,       .y=MY_SELF,     .z=M_BUSY_B+28, },  // X = SELF
     { .t=Instr_T,       .x=VM_push,     .y=NIL,         .z=M_BUSY_B+29, },  // Y = ()
     { .t=Instr_T,       .x=VM_pick,     .y=TO_FIX(6),   .z=M_BUSY_B+30, },  // Z = beh'
     { .t=Instr_T,       .x=VM_cell,     .y=TO_FIX(4),   .z=M_BUSY_B+31, },  // txn' = cell(T, X, Y, Z)
@@ -217,7 +217,7 @@
     { .t=Instr_T,       .x=VM_beh,      .y=TO_FIX(1),   .z=A_EXEC_B+3,  },  // BECOME (A_COMMIT_B txn)
 
     { .t=Instr_T,       .x=VM_push,     .y=UNIT,        .z=A_EXEC_B+4,  },  // #unit
-    { .t=Instr_T,       .x=VM_self,     .y=UNDEF,       .z=A_EXEC_B+5,  },  // SELF
+    { .t=Instr_T,       .x=VM_my,       .y=MY_SELF,     .z=A_EXEC_B+5,  },  // SELF
     { .t=Instr_T,       .x=VM_roll,     .y=TO_FIX(3),   .z=A_EXEC_B+6,  },  // #unit SELF body
 
     { .t=Instr_T,       .x=VM_msg,      .y=TO_FIX(0),   .z=A_EXEC_B+7,  },  // env

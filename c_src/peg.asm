@@ -118,7 +118,7 @@
     { .t=Instr_T,       .x=VM_beh,      .y=TO_FIX(2),   .z=G_AND_OK+3,  },  // BECOME (G_AND_PR ok value)
     { .t=Instr_T,       .x=VM_msg,      .y=TO_FIX(0),   .z=G_AND_OK+4,  },  // resume = (value . in)
     { .t=Instr_T,       .x=VM_roll,     .y=TO_FIX(2),   .z=G_AND_OK+5,  },  // and_fail
-    { .t=Instr_T,       .x=VM_self,     .y=UNDEF,       .z=G_AND_OK+6,  },  // and_pair = SELF
+    { .t=Instr_T,       .x=VM_my,       .y=MY_SELF,     .z=G_AND_OK+6,  },  // and_pair = SELF
     { .t=Instr_T,       .x=VM_pair,     .y=TO_FIX(1),   .z=G_AND_OK+7,  },  // (and_pair . and_fail)
     { .t=Instr_T,       .x=VM_pair,     .y=TO_FIX(1),   .z=G_AND_OK+8,  },  // ((and_pair . and_fail) . resume)
     { .t=Instr_T,       .x=VM_roll,     .y=TO_FIX(2),   .z=SEND_0,      },  // rest
@@ -291,7 +291,7 @@ Star(pattern) = Or(Plus(pattern), Empty)
     { .t=Instr_T,       .x=VM_roll,     .y=TO_FIX(4),   .z=G_PRED_OK+3, },  // msg0
     { .t=Instr_T,       .x=VM_push,     .y=G_PRED_K,    .z=G_PRED_OK+4, },  // G_PRED_K
     { .t=Instr_T,       .x=VM_beh,      .y=TO_FIX(2),   .z=G_PRED_OK+5, },  // BECOME (G_PRED_K more msg0)
-    { .t=Instr_T,       .x=VM_self,     .y=UNDEF,       .z=G_PRED_OK+6, },  // k_pred = SELF
+    { .t=Instr_T,       .x=VM_my,       .y=MY_SELF,     .z=G_PRED_OK+6, },  // k_pred = SELF
 
     { .t=Instr_T,       .x=VM_roll,     .y=TO_FIX(3),   .z=G_PRED_OK+7, },  // pred
     { .t=Instr_T,       .x=VM_send,     .y=TO_FIX(2),   .z=COMMIT,      },  // (pred k_pred value)
@@ -329,7 +329,7 @@ Star(pattern) = Or(Plus(pattern), Empty)
     { .t=Instr_T,       .x=VM_msg,      .y=TO_FIX(-1),  .z=G_XLAT_OK+3, },  // in
     { .t=Instr_T,       .x=VM_push,     .y=G_XLAT_K,    .z=G_XLAT_OK+4, },  // G_XLAT_K
     { .t=Instr_T,       .x=VM_beh,      .y=TO_FIX(2),   .z=G_XLAT_OK+5, },  // BECOME (G_XLAT_K cust in)
-    { .t=Instr_T,       .x=VM_self,     .y=UNDEF,       .z=G_XLAT_OK+6, },  // k_xlat = SELF
+    { .t=Instr_T,       .x=VM_my,       .y=MY_SELF,     .z=G_XLAT_OK+6, },  // k_xlat = SELF
 
     { .t=Instr_T,       .x=VM_roll,     .y=TO_FIX(3),   .z=G_XLAT_OK+7, },  // func
     { .t=Instr_T,       .x=VM_send,     .y=TO_FIX(2),   .z=COMMIT,      },  // (func k_xlat value)
@@ -359,8 +359,8 @@ Star(pattern) = Or(Plus(pattern), Empty)
     { .t=Instr_T,       .x=VM_push,     .y=S_BUSY_C,    .z=S_CHAIN+3,   },  // S_BUSY_C
     { .t=Instr_T,       .x=VM_beh,      .y=TO_FIX(2),   .z=S_CHAIN+4,   },  // BECOME (S_BUSY_C cust ptrn)
 
-    { .t=Instr_T,       .x=VM_self,     .y=UNDEF,       .z=S_CHAIN+5,   },  // fail = SELF
-    { .t=Instr_T,       .x=VM_self,     .y=UNDEF,       .z=S_CHAIN+6,   },  // ok = SELF
+    { .t=Instr_T,       .x=VM_my,       .y=MY_SELF,     .z=S_CHAIN+5,   },  // fail = SELF
+    { .t=Instr_T,       .x=VM_my,       .y=MY_SELF,     .z=S_CHAIN+6,   },  // ok = SELF
     { .t=Instr_T,       .x=VM_pair,     .y=TO_FIX(1),   .z=S_CHAIN+7,   },  // custs = (ok . fail)
     { .t=Instr_T,       .x=VM_roll,     .y=TO_FIX(3),   .z=S_CHAIN+8,   },  // ptrn
     { .t=Instr_T,       .x=VM_push,     .y=G_START,     .z=S_CHAIN+9,   },  // G_START
@@ -389,7 +389,7 @@ Star(pattern) = Or(Plus(pattern), Empty)
     { .t=Instr_T,       .x=VM_push,     .y=S_VALUE,     .z=S_BUSY_C+14, },  // S_VALUE
     { .t=Instr_T,       .x=VM_beh,      .y=TO_FIX(1),   .z=S_BUSY_C+15, },  // BECOME (S_VALUE in)
     { .t=Instr_T,       .x=VM_roll,     .y=TO_FIX(2),   .z=S_BUSY_C+16, },  // cust
-    { .t=Instr_T,       .x=VM_self,     .y=UNDEF,       .z=SEND_0,      },  // (SELF . cust)
+    { .t=Instr_T,       .x=VM_my,       .y=MY_SELF,     .z=SEND_0,      },  // (SELF . cust)
 
 //  { .t=Instr_T,       .x=VM_push,     .y=_ptrn_,      .z=S_NEXT_C-1,  },
 //  { .t=Instr_T,       .x=VM_push,     .y=_in_,        .z=S_NEXT_C+0,  },
@@ -399,8 +399,8 @@ Star(pattern) = Or(Plus(pattern), Empty)
     { .t=Instr_T,       .x=VM_beh,      .y=TO_FIX(2),   .z=S_NEXT_C+4,  },  // BECOME (S_BUSY_C cust ptrn)
 
     { .t=Instr_T,       .x=VM_push,     .y=UNDEF,       .z=S_NEXT_C+5,  },  // value = UNDEF
-    { .t=Instr_T,       .x=VM_self,     .y=UNDEF,       .z=S_NEXT_C+6,  },  // fail = SELF
-    { .t=Instr_T,       .x=VM_self,     .y=UNDEF,       .z=S_NEXT_C+7,  },  // ok = SELF
+    { .t=Instr_T,       .x=VM_my,       .y=MY_SELF,     .z=S_NEXT_C+6,  },  // fail = SELF
+    { .t=Instr_T,       .x=VM_my,       .y=MY_SELF,     .z=S_NEXT_C+7,  },  // ok = SELF
     { .t=Instr_T,       .x=VM_pair,     .y=TO_FIX(1),   .z=S_NEXT_C+8,  },  // custs = (ok . fail)
     { .t=Instr_T,       .x=VM_pair,     .y=TO_FIX(2),   .z=S_NEXT_C+9,  },  // (custs value . in)
     { .t=Instr_T,       .x=VM_roll,     .y=TO_FIX(2),   .z=SEND_0,      },  // ptrn

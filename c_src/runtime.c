@@ -394,11 +394,18 @@ PROC_DECL(vm_msg) {
     return GET_CONT();
 }
 
-PROC_DECL(vm_self) {
+PROC_DECL(vm_my) {
+    int_t op = GET_IMMD();
     int_t ep = GET_EP();
     int_t me = get_x(ep);
     ASSERT(IS_ACTOR(me));
-    stack_push(me);
+    me = TO_REF(me);
+    switch (op) {
+        case MY_SELF:   stack_push(TO_CAP(me));     break;
+        case MY_BEH:    stack_push(get_x(me));      break;
+        case MY_STATE:  stack_push(get_y(me));      break;
+        default:        return error("unknown operation");
+    }
     return GET_CONT();
 }
 
@@ -611,7 +618,7 @@ static proc_t proc_table[VM_OPCODES] = {
     vm_cmp,
     vm_if,
     vm_msg,
-    vm_self,
+    vm_my,
     vm_send,
     vm_new,
     vm_beh,
