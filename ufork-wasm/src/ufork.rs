@@ -59,10 +59,12 @@ pub const WRAP_BEH: Ptr     = Ptr { raw: 44 };
 pub const UNWRAP_BEH: Ptr   = Ptr { raw: 47 };
 pub const FUTURE_BEH: Ptr   = Ptr { raw: 49 };
 pub const VALUE_BEH: Ptr    = Ptr { raw: 66 };
-pub const E_BOOT: Ptr       = Ptr { raw: 80 };
+pub const SERIAL_BEH: Ptr   = Ptr { raw: 72 };
 pub const ABORT: Ptr        = Ptr { raw: 86 };
 pub const STOP: Ptr         = Ptr { raw: 88 };
 pub const WAIT_BEH: Ptr     = Ptr { raw: 90 };
+pub const BUSY_BEH: Ptr     = Ptr { raw: 113 };
+pub const E_BOOT: Ptr       = Ptr { raw: 190 };
 
 // instr values
 pub const OP_TYPEQ: Val     = Val { raw: DIR_RAW | 0 }; // fixnum(0)
@@ -131,7 +133,8 @@ pub const END_COMMIT: Val   = Val { raw: DIR_RAW | 1 };
 pub const END_RELEASE: Val  = Val { raw: DIR_RAW | 2 };
 
 // core memory limit
-const QUAD_MAX: usize = 1<<12;  // 4K quad-cells
+const QUAD_MAX: usize = 1<<10;  // 1K quad-cells
+//const QUAD_MAX: usize = 1<<12;  // 4K quad-cells
 
 pub struct Core {
     quad_mem: [Typed; QUAD_MAX],
@@ -159,7 +162,7 @@ impl Core {
         quad_mem[DICT_T.addr()]     = Typed::Type;
         quad_mem[FREE_T.addr()]     = Typed::Type;
 
-        quad_mem[MEMORY.addr()]     = Typed::Memory { top: Ptr::new(128), next: NIL.ptr(), free: Fix::new(0), root: DDEQUE.ptr() };
+        quad_mem[MEMORY.addr()]     = Typed::Memory { top: Ptr::new(192), next: NIL.ptr(), free: Fix::new(0), root: DDEQUE.ptr() };
         quad_mem[DDEQUE.addr()]     = Typed::Ddeque { e_first: E_BOOT, e_last: E_BOOT, k_first: NIL.ptr(), k_last: NIL.ptr() };
 
         quad_mem[COMMIT.addr()]     = Typed::Instr { op: Op::End { op: End::Commit } };
@@ -318,13 +321,29 @@ impl Core {
         quad_mem[70]                = Typed::Instr { op: Op::Pick { n: Fix::new(1), k: Ptr::new(71) } };  // rcap value value
         quad_mem[71]                = Typed::Instr { op: Op::Msg { n: Fix::new(-1), k: SEND_0 } };  // rcap value value cust=arg
 
-        /* bootstrap event/actor */
-        quad_mem[80]                = Typed::Event { target: Cap::new(85), msg: ptrval(81), next: NIL.ptr() };
-        quad_mem[81]                = Typed::Pair { car: fixnum(-1), cdr: ptrval(82) };
-        quad_mem[82]                = Typed::Pair { car: fixnum(-2), cdr: ptrval(83) };
-        quad_mem[83]                = Typed::Pair { car: fixnum(-3), cdr: NIL };
-        quad_mem[84]                = Typed::Pair { car: UNIT, cdr: NIL };
-        quad_mem[85]                = Typed::Actor { beh: RESEND, state: Ptr::new(84), events: None };
+        /*
+        (define serial-beh
+            (lambda (svc)
+                (BEH (cust . req)
+                    (define tag (CREATE (once-tag-beh SELF)))
+                    (SEND svc (tag . req))
+                    (BECOME (busy-beh svc cust tag (deque-new))) )))
+        */
+        //quad_mem[-1]              = Typed::Instr { op: Op::Push { v: <svc>, k: ... } };
+        quad_mem[72]                = Typed::Instr { op: Op::Msg { n: Fix::new(1), k: Ptr::new(73) } };  // svc cust
+        quad_mem[73]                = Typed::Instr { op: Op::My { op: My::Addr, k: Ptr::new(74) } };  // svc cust SELF
+        quad_mem[74]                = Typed::Instr { op: Op::Push { v: ONCE_TAG_BEH.val(), k: Ptr::new(75) } };  // svc cust SELF once-tag-beh
+        quad_mem[75]                = Typed::Instr { op: Op::New { n: Fix::new(1), k: Ptr::new(76) } };  // svc cust tag=(once-tag-beh SELF)
+
+        quad_mem[76]                = Typed::Instr { op: Op::Msg { n: Fix::new(-1), k: Ptr::new(77) } };  // svc cust tag req
+        quad_mem[77]                = Typed::Instr { op: Op::Pick { n: Fix::new(2), k: Ptr::new(78) } };  // svc cust tag req tag
+        quad_mem[78]                = Typed::Instr { op: Op::Pair { n: Fix::new(1), k: Ptr::new(79) } };  // svc cust tag (tag . req)
+        quad_mem[79]                = Typed::Instr { op: Op::Pick { n: Fix::new(4), k: Ptr::new(80) } };  // svc cust tag (tag . req) svc
+        quad_mem[80]                = Typed::Instr { op: Op::Send { n: Fix::new(0), k: Ptr::new(81) } };  // svc cust tag
+
+        quad_mem[81]                = Typed::Instr { op: Op::Deque { op: Deque::New, k: Ptr::new(82) } };  // svc cust tag pending
+        quad_mem[82]                = Typed::Instr { op: Op::Push { v: BUSY_BEH.val(), k: Ptr::new(83) } };  // svc cust tag pending busy-beh
+        quad_mem[83]                = Typed::Instr { op: Op::Beh { n: Fix::new(4), k: COMMIT } };  // (busy-beh svc cust tag pending)
 
         /* (ABORT #?) */
         quad_mem[86]                = Typed::Instr { op: Op::Push { v: UNDEF, k: Ptr::new(87) } };
@@ -374,6 +393,41 @@ impl Core {
         quad_mem[110]               = Typed::Instr { op: Op::Msg { n: Fix::new(-1), k: Ptr::new(111) } };  // rcap value=arg
         quad_mem[111]               = Typed::Instr { op: Op::Push { v: VALUE_BEH.val(), k: Ptr::new(112) } };  // rcap value=arg value-beh
         quad_mem[112]               = Typed::Instr { op: Op::Beh { n: Fix::new(2), k: COMMIT } };  // (value-beh rcap value)
+
+        /*
+        (define busy-beh
+            (lambda (svc cust tag pending)
+                (BEH (cust0 . req0)
+                    (cond
+                        ((eq? cust0 tag)
+                            (SEND cust req0)
+                            (define next (deque-pop pending))
+                            (cond
+                                ((eq? next #?)
+                                    (BECOME (serial-beh svc)))  ; return to "ready" state
+                                (#t
+                                    (define (cust1 . req1) next)
+                                    (define tag1 (CREATE (once-tag-beh SELF)))
+                                    (SEND svc (tag1 . req1))
+                                    (BECOME (busy-beh svc cust1 tag1 pending)) )))
+                        (#t
+                            (deque-put pending (cons cust0 req0))
+                            (BECOME (busy-beh svc cust tag pending))) ))))
+                    )))
+        */
+        //quad_mem[-4]              = Typed::Instr { op: Op::Push { v: <svc>, k: ... } };
+        //quad_mem[-3]              = Typed::Instr { op: Op::Push { v: <cust>, k: ... } };
+        //quad_mem[-2]              = Typed::Instr { op: Op::Push { v: <tag>, k: ... } };
+        //quad_mem[-1]              = Typed::Instr { op: Op::Push { v: <pending>, k: ... } };
+        quad_mem[113]               = Typed::Instr { op: Op::End { op: End::Stop } };
+
+        /* bootstrap event/actor */
+        quad_mem[186]               = Typed::Pair { car: fixnum(-3), cdr: NIL };
+        quad_mem[187]               = Typed::Pair { car: fixnum(-2), cdr: ptrval(186) };
+        quad_mem[188]               = Typed::Pair { car: fixnum(-1), cdr: ptrval(187) };
+        quad_mem[189]               = Typed::Pair { car: UNIT, cdr: NIL };
+        quad_mem[190]               = Typed::Event { target: Cap::new(191), msg: ptrval(188), next: NIL.ptr() };
+        quad_mem[191]               = Typed::Actor { beh: RESEND, state: Ptr::new(189), events: None };
 
         Core {
             quad_mem,
