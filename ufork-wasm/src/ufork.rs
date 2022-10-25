@@ -96,6 +96,8 @@ pub const OP_END: Val       = Val { raw: DIR_RAW | 22 };
 //pub const OP_GETC: Val      = Val { raw: DIR_RAW | 25 };
 //pub const OP_DEBUG: Val     = Val { raw: DIR_RAW | 26 };
 pub const OP_DEQUE: Val     = Val { raw: DIR_RAW | 27 };
+pub const OP_IS_EQ: Val     = Val { raw: DIR_RAW | 30 };
+pub const OP_IS_NE: Val     = Val { raw: DIR_RAW | 31 };
 
 // OP_DICT dictionary operations
 pub const DICT_HAS: Val     = Val { raw: DIR_RAW | 0 };
@@ -447,8 +449,110 @@ impl Core {
         quad_mem[187]               = Typed::Pair { car: fixnum(-2), cdr: ptrval(186) };
         quad_mem[188]               = Typed::Pair { car: fixnum(-1), cdr: ptrval(187) };
         quad_mem[189]               = Typed::Pair { car: UNIT, cdr: NIL };
-        quad_mem[190]               = Typed::Event { target: Cap::new(191), msg: ptrval(188), next: NIL.ptr() };
+        //quad_mem[190]               = Typed::Event { target: Cap::new(191), msg: ptrval(188), next: NIL.ptr() };  // run loop demo
+        quad_mem[190]               = Typed::Event { target: Cap::new(100), msg: ptrval(188), next: NIL.ptr() };  // run test suite
         quad_mem[191]               = Typed::Actor { beh: RESEND, state: Ptr::new(189), events: None };
+
+        /* Op::Dict test suite */
+        /*
+        */
+        quad_mem[100]               = Typed::Actor { beh: Ptr::new(101), state: NIL.ptr(), events: None };
+        quad_mem[101]               = Typed::Instr { op: Op::Dict { op: Dict::Has, k: Ptr::new(102) } };
+        quad_mem[102]               = Typed::Instr { op: Op::IsEq { v: FALSE, k: Ptr::new(103) } };
+        quad_mem[103]               = Typed::Instr { op: Op::Push { v: NIL, k: Ptr::new(104) } };
+        quad_mem[104]               = Typed::Instr { op: Op::Push { v: fixnum(0), k: Ptr::new(105) } };
+        quad_mem[105]               = Typed::Instr { op: Op::Dup { n: Fix::new(2), k: Ptr::new(106) } };
+        quad_mem[106]               = Typed::Instr { op: Op::Dict { op: Dict::Has, k: Ptr::new(107) } };
+        quad_mem[107]               = Typed::Instr { op: Op::IsEq { v: FALSE, k: Ptr::new(108) } };
+        quad_mem[108]               = Typed::Instr { op: Op::Dict { op: Dict::Get, k: Ptr::new(109) } };
+        quad_mem[109]               = Typed::Instr { op: Op::IsEq { v: UNDEF, k: Ptr::new(110) } };
+        quad_mem[110]               = Typed::Instr { op: Op::Push { v: NIL, k: Ptr::new(111) } };
+        quad_mem[111]               = Typed::Instr { op: Op::Push { v: fixnum(0), k: Ptr::new(112) } };
+        quad_mem[112]               = Typed::Instr { op: Op::Push { v: UNIT, k: Ptr::new(113) } };
+        quad_mem[113]               = Typed::Instr { op: Op::Dict { op: Dict::Set, k: Ptr::new(114) } };
+        quad_mem[114]               = Typed::Instr { op: Op::Pick { n: Fix::new(1), k: Ptr::new(115) } };
+        quad_mem[115]               = Typed::Instr { op: Op::Push { v: fixnum(0), k: Ptr::new(116) } };
+        quad_mem[116]               = Typed::Instr { op: Op::Dict { op: Dict::Get, k: Ptr::new(117) } };
+        quad_mem[117]               = Typed::Instr { op: Op::IsEq { v: UNIT, k: Ptr::new(118) } };
+        quad_mem[118]               = Typed::Instr { op: Op::Push { v: fixnum(1), k: Ptr::new(119) } };
+        quad_mem[119]               = Typed::Instr { op: Op::Push { v: fixnum(-1), k: Ptr::new(120) } };
+        quad_mem[120]               = Typed::Instr { op: Op::Dict { op: Dict::Add, k: Ptr::new(121) } };
+        quad_mem[121]               = Typed::Instr { op: Op::Pick { n: Fix::new(1), k: Ptr::new(122) } };
+        quad_mem[122]               = Typed::Instr { op: Op::Push { v: fixnum(0), k: Ptr::new(123) } };
+        quad_mem[123]               = Typed::Instr { op: Op::Dict { op: Dict::Get, k: Ptr::new(124) } };
+        quad_mem[124]               = Typed::Instr { op: Op::IsEq { v: UNIT, k: Ptr::new(125) } };
+        quad_mem[125]               = Typed::Instr { op: Op::Push { v: fixnum(0), k: Ptr::new(126) } };
+        quad_mem[126]               = Typed::Instr { op: Op::Dict { op: Dict::Del, k: Ptr::new(127) } };
+        quad_mem[127]               = Typed::Instr { op: Op::Pick { n: Fix::new(1), k: Ptr::new(128) } };
+        quad_mem[128]               = Typed::Instr { op: Op::Push { v: UNIT, k: Ptr::new(129) } };
+        quad_mem[129]               = Typed::Instr { op: Op::Dict { op: Dict::Get, k: Ptr::new(130) } };
+        quad_mem[130]               = Typed::Instr { op: Op::IsEq { v: UNDEF, k: Ptr::new(131) } };
+        quad_mem[131]               = Typed::Instr { op: Op::Push { v: fixnum(1), k: Ptr::new(132) } };
+        quad_mem[132]               = Typed::Instr { op: Op::Push { v: FALSE, k: Ptr::new(133) } };
+        quad_mem[133]               = Typed::Instr { op: Op::Dict { op: Dict::Add, k: Ptr::new(134) } };
+        quad_mem[134]               = Typed::Instr { op: Op::Pick { n: Fix::new(1), k: Ptr::new(135) } };
+        quad_mem[135]               = Typed::Instr { op: Op::Push { v: fixnum(1), k: Ptr::new(136) } };
+        quad_mem[136]               = Typed::Instr { op: Op::Push { v: TRUE, k: Ptr::new(137) } };
+        quad_mem[137]               = Typed::Instr { op: Op::Dict { op: Dict::Set, k: Ptr::new(138) } };
+        quad_mem[138]               = Typed::Instr { op: Op::Pick { n: Fix::new(1), k: Ptr::new(139) } };
+        quad_mem[139]               = Typed::Instr { op: Op::Push { v: fixnum(1), k: Ptr::new(140) } };
+        quad_mem[140]               = Typed::Instr { op: Op::Dict { op: Dict::Del, k: Ptr::new(141) } };
+        quad_mem[141]               = Typed::Instr { op: Op::Dup { n: Fix::new(1), k: Ptr::new(142) } };
+        quad_mem[142]               = Typed::Instr { op: Op::Push { v: fixnum(1), k: Ptr::new(143) } };
+        quad_mem[143]               = Typed::Instr { op: Op::Dict { op: Dict::Get, k: Ptr::new(144) } };
+        quad_mem[144]               = Typed::Instr { op: Op::IsEq { v: fixnum(-1), k: Ptr::new(16) } };
+
+        /* Op::Deque test suite */
+        /*
+        quad_mem[100]               = Typed::Actor { beh: Ptr::new(101), state: NIL.ptr(), events: None };
+        quad_mem[101]               = Typed::Instr { op: Op::Deque { op: Deque::Empty, k: Ptr::new(102) } };
+        quad_mem[82]                = Typed::Instr { op: Op::If { t: Ptr::new(83), f: Ptr::new(78) } };
+        quad_mem[83]                = Typed::Instr { op: Op::Deque { op: Deque::New, k: Ptr::new(84) } };
+        quad_mem[84]                = Typed::Instr { op: Op::Pick { n: Fix::new(1), k: Ptr::new(85) } };
+        quad_mem[85]                = Typed::Instr { op: Op::Deque { op: Deque::Empty, k: Ptr::new(86) } };
+        quad_mem[86]                = Typed::Instr { op: Op::If { t: Ptr::new(87), f: Ptr::new(78) } };
+        quad_mem[87]                = Typed::Instr { op: Op::Push { v: fixnum(1), k: Ptr::new(88) } };
+        quad_mem[88]                = Typed::Instr { op: Op::Deque { op: Deque::Push, k: Ptr::new(89) } };
+        quad_mem[89]                = Typed::Instr { op: Op::Push { v: fixnum(2), k: Ptr::new(90) } };
+        quad_mem[90]                = Typed::Instr { op: Op::Deque { op: Deque::Push, k: Ptr::new(91) } };
+        quad_mem[91]                = Typed::Instr { op: Op::Push { v: fixnum(3), k: Ptr::new(92) } };
+        quad_mem[92]                = Typed::Instr { op: Op::Deque { op: Deque::Push, k: Ptr::new(93) } };
+        quad_mem[93]                = Typed::Instr { op: Op::Pick { n: Fix::new(1), k: Ptr::new(94) } };
+        quad_mem[94]                = Typed::Instr { op: Op::Deque { op: Deque::Empty, k: Ptr::new(95) } };
+        quad_mem[95]                = Typed::Instr { op: Op::If { t: Ptr::new(78), f: Ptr::new(96) } };
+        quad_mem[96]                = Typed::Instr { op: Op::Pick { n: Fix::new(1), k: Ptr::new(97) } };
+        quad_mem[97]                = Typed::Instr { op: Op::Deque { op: Deque::Len, k: Ptr::new(98) } };
+        quad_mem[98]                = Typed::Instr { op: Op::Eq { v: fixnum(3), k: Ptr::new(99) } };
+        quad_mem[99]                = Typed::Instr { op: Op::If { t: Ptr::new(100), f: Ptr::new(78) } };
+        quad_mem[100]               = Typed::Instr { op: Op::Deque { op: Deque::Pull, k: Ptr::new(101) } };
+        quad_mem[101]               = Typed::Instr { op: Op::Eq { v: fixnum(1), k: Ptr::new(102) } };
+        quad_mem[102]               = Typed::Instr { op: Op::If { t: Ptr::new(103), f: Ptr::new(78) } };
+        quad_mem[103]               = Typed::Instr { op: Op::Deque { op: Deque::Pull, k: Ptr::new(104) } };
+        quad_mem[104]               = Typed::Instr { op: Op::Eq { v: fixnum(2), k: Ptr::new(105) } };
+        quad_mem[105]               = Typed::Instr { op: Op::If { t: Ptr::new(106), f: Ptr::new(78) } };
+        quad_mem[106]               = Typed::Instr { op: Op::Deque { op: Deque::Pull, k: Ptr::new(107) } };
+        quad_mem[107]               = Typed::Instr { op: Op::Eq { v: fixnum(3), k: Ptr::new(108) } };
+        quad_mem[108]               = Typed::Instr { op: Op::If { t: Ptr::new(109), f: Ptr::new(78) } };
+        quad_mem[109]               = Typed::Instr { op: Op::Deque { op: Deque::Pull, k: Ptr::new(110) } };
+        quad_mem[110]               = Typed::Instr { op: Op::Eq { v: UNDEF, k: Ptr::new(111) } };
+        quad_mem[111]               = Typed::Instr { op: Op::If { t: Ptr::new(112), f: Ptr::new(78) } };
+        quad_mem[112]               = Typed::Instr { op: Op::Pick { n: Fix::new(1), k: Ptr::new(113) } };
+        quad_mem[113]               = Typed::Instr { op: Op::Deque { op: Deque::Len, k: Ptr::new(114) } };
+        quad_mem[114]               = Typed::Instr { op: Op::Eq { v: fixnum(0), k: Ptr::new(115) } };
+        quad_mem[115]               = Typed::Instr { op: Op::If { t: Ptr::new(116), f: Ptr::new(78) } };
+        quad_mem[116]               = Typed::Instr { op: Op::Pick { n: Fix::new(1), k: Ptr::new(117) } };
+        quad_mem[117]               = Typed::Instr { op: Op::Msg { n: Fix::new(0), k: Ptr::new(118) } };
+        quad_mem[118]               = Typed::Instr { op: Op::Deque { op: Deque::Put, k: Ptr::new(119) } };
+        quad_mem[119]               = Typed::Instr { op: Op::Msg { n: Fix::new(-1), k: Ptr::new(120) } };
+        quad_mem[120]               = Typed::Instr { op: Op::Deque { op: Deque::Put, k: Ptr::new(121) } };
+        quad_mem[121]               = Typed::Instr { op: Op::Msg { n: Fix::new(-2), k: Ptr::new(122) } };
+        quad_mem[122]               = Typed::Instr { op: Op::Deque { op: Deque::Put, k: Ptr::new(123) } };
+        quad_mem[123]               = Typed::Instr { op: Op::Deque { op: Deque::Pop, k: Ptr::new(124) } };
+        quad_mem[124]               = Typed::Instr { op: Op::Roll { n: Fix::new(-2), k: Ptr::new(125) } };
+        quad_mem[125]               = Typed::Instr { op: Op::Deque { op: Deque::Pop, k: Ptr::new(126) } };
+        quad_mem[126]               = Typed::Instr { op: Op::Roll { n: Fix::new(-3), k: Ptr::new(127) } };
+        quad_mem[127]               = Typed::Instr { op: Op::Deque { op: Deque::Pop, k: Ptr::new(16) } };
+        */
 
         Core {
             quad_mem,
@@ -911,6 +1015,20 @@ impl Core {
                         FALSE.ptr()
                     },
                 }
+            },
+            Op::IsEq { v, k } => {
+                println!("op_is_eq: expect={}", v);
+                let vv = self.stack_pop();
+                println!("op_is_eq: actual={}", vv);
+                assert_eq!(*v, vv);
+                *k
+            },
+            Op::IsNe { v, k } => {
+                println!("op_is_ne: expect={}", v);
+                let vv = self.stack_pop();
+                println!("op_is_ne: actual={}", vv);
+                assert_ne!(*v, vv);
+                *k
             },
         }
     }
@@ -1677,6 +1795,8 @@ pub enum Op {
     New { n: Fix, k: Ptr },
     Beh { n: Fix, k: Ptr },
     End { op: End },
+    IsEq { v: Val, k: Ptr },
+    IsNe { v: Val, k: Ptr },
 }
 impl Op {
     pub fn from(quad: &Quad) -> Option<Typed> {
@@ -1703,6 +1823,8 @@ impl Op {
             OP_NEW => Some(Typed::Instr { op: Op::New { n: quad.y().fix(), k: quad.z().ptr() } }),
             OP_BEH => Some(Typed::Instr { op: Op::Beh { n: quad.y().fix(), k: quad.z().ptr() } }),
             OP_END => Some(Typed::Instr { op: Op::End { op: End::from(quad.y()).unwrap() } }),
+            OP_IS_EQ => Some(Typed::Instr { op: Op::IsEq { v: quad.y().val(), k: quad.z().ptr() } }),
+            OP_IS_NE => Some(Typed::Instr { op: Op::IsNe { v: quad.y().val(), k: quad.z().ptr() } }),
             _ => None,
         }
     }
@@ -1729,6 +1851,8 @@ impl Op {
             Op::New { n, k } => Quad::new(INSTR_T, OP_NEW, n.val(), k.val()),
             Op::Beh { n, k } => Quad::new(INSTR_T, OP_BEH, n.val(), k.val()),
             Op::End { op } => Quad::new(INSTR_T, OP_END, op.val(), UNDEF),
+            Op::IsEq { v, k } => Quad::new(INSTR_T, OP_IS_EQ, v.val(), k.val()),
+            Op::IsNe { v, k } => Quad::new(INSTR_T, OP_IS_NE, v.val(), k.val()),
         }
     }
 }
@@ -1762,6 +1886,8 @@ impl fmt::Display for Op {
             Op::New { n, k } => write!(fmt, "New{{ n:{}, k:{} }}", n, k),
             Op::Beh { n, k } => write!(fmt, "Beh{{ n:{}, k:{} }}", n, k),
             Op::End { op } => write!(fmt, "End{{ op:{} }}", op),
+            Op::IsEq { v, k } => write!(fmt, "IsEq{{ v:{}, k:{} }}", v, k),
+            Op::IsNe { v, k } => write!(fmt, "IsNe{{ v:{}, k:{} }}", v, k),
         }
     }
 }
