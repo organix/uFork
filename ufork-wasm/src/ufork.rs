@@ -203,13 +203,6 @@ impl Core {
         //quad_mem[-1]              = Typed::Instr { op: Op::Push { v: <rcvr>, k: ... } };
         quad_mem[35]                = Typed::Instr { op: Op::Push { v: COMMIT.val(), k: Ptr::new(36) } };  // rcvr sink-beh
         quad_mem[36]                = Typed::Instr { op: Op::Beh { n: Fix::new(0), k: FWD_BEH } };  // rcvr
-        /*
-        quad_mem[36]                = Typed::Instr { op: Op::Msg { n: Fix::new(0), k: Ptr::new(37) } };  // rcvr msg
-        quad_mem[37]                = Typed::Instr { op: Op::Pick { n: Fix::new(2), k: Ptr::new(38) } };  // rcvr msg rcvr
-        quad_mem[38]                = Typed::Instr { op: Op::Send { n: Fix::new(0), k: Ptr::new(39) } };  // rcvr
-        quad_mem[39]                = Typed::Instr { op: Op::Push { v: COMMIT.val(), k: Ptr::new(40) } };  // rcvr sink-beh
-        quad_mem[40]                = Typed::Instr { op: Op::Beh { n: Fix::new(0), k: COMMIT } };  // rcvr
-        */
 
         /*
         (define label-beh
@@ -243,11 +236,6 @@ impl Core {
         //quad_mem[-1]              = Typed::Instr { op: Op::Push { v: <rcvr>, k: ... } };
         quad_mem[42]                = Typed::Instr { op: Op::Push { v: COMMIT.val(), k: Ptr::new(43) } };  // rcvr sink-beh
         quad_mem[43]                = Typed::Instr { op: Op::Beh { n: Fix::new(0), k: TAG_BEH } };  // rcvr
-        /*
-        quad_mem[47]                = Typed::Instr { op: Op::Msg { n: Fix::new(0), k: Ptr::new(48) } };  // rcvr msg
-        quad_mem[48]                = Typed::Instr { op: Op::My { op: My::Addr, k: Ptr::new(49) } };  // rcvr msg SELF
-        quad_mem[49]                = Typed::Instr { op: Op::Pair { n: Fix::new(1), k: Ptr::new(37) } };  // rcvr (SELF . msg)
-        */
 
         /*
         (define wrap-beh
@@ -267,9 +255,8 @@ impl Core {
                     (SEND rcvr msg) )))
         */
         //quad_mem[-1]              = Typed::Instr { op: Op::Push { v: <rcvr>, k: ... } };
-        quad_mem[47]                = Typed::Instr { op: Op::Msg { n: Fix::new(1), k: Ptr::new(48) } };
-        quad_mem[48]                = Typed::Instr { op: Op::Pick { n: Fix::new(2), k: SEND_0 } };
-        //quad_mem[55]                = Typed::Instr { op: Op::Send { n: Fix::new(0), k: COMMIT } };
+        quad_mem[47]                = Typed::Instr { op: Op::Msg { n: Fix::new(1), k: Ptr::new(48) } };  // rcvr msg
+        quad_mem[48]                = Typed::Instr { op: Op::Pick { n: Fix::new(2), k: SEND_0 } };  // rcvr msg rcvr
 
         /*
         (define future-beh
@@ -360,7 +347,7 @@ impl Core {
                         ((eq? tag rcap)
                             (BECOME (wait-beh rcap wcap (cons arg waiting))))
                         ((eq? tag wcap)
-                            (send-to-all waiting value)
+                            (send-to-all waiting arg)
                             (BECOME (value-beh rcap arg))) ))))
         */
         //quad_mem[-3]              = Typed::Instr { op: Op::Push { v: <rcap>, k: ... } };
@@ -401,7 +388,7 @@ impl Core {
                     (cond
                         ((eq? cust0 tag)
                             (SEND cust req0)
-                            (define next (deque-pop pending))
+                            (define (next pending1) (deque-pop pending))
                             (cond
                                 ((eq? next #?)
                                     (BECOME (serial-beh svc)))  ; return to "ready" state
@@ -409,17 +396,51 @@ impl Core {
                                     (define (cust1 . req1) next)
                                     (define tag1 (CREATE (once-tag-beh SELF)))
                                     (SEND svc (tag1 . req1))
-                                    (BECOME (busy-beh svc cust1 tag1 pending)) )))
+                                    (BECOME (busy-beh svc cust1 tag1 pending1)) )))
                         (#t
-                            (deque-put pending (cons cust0 req0))
-                            (BECOME (busy-beh svc cust tag pending))) ))))
+                            (define pending1 (deque-put pending (cons cust0 req0)))
+                            (BECOME (busy-beh svc cust tag pending1))) ))))
                     )))
         */
         //quad_mem[-4]              = Typed::Instr { op: Op::Push { v: <svc>, k: ... } };
         //quad_mem[-3]              = Typed::Instr { op: Op::Push { v: <cust>, k: ... } };
         //quad_mem[-2]              = Typed::Instr { op: Op::Push { v: <tag>, k: ... } };
         //quad_mem[-1]              = Typed::Instr { op: Op::Push { v: <pending>, k: ... } };
-        quad_mem[113]               = Typed::Instr { op: Op::End { op: End::Stop } };
+        quad_mem[113]               = Typed::Instr { op: Op::Msg { n: Fix::new(1), k: Ptr::new(114) } };  // svc cust tag pending cust0
+        quad_mem[114]               = Typed::Instr { op: Op::Pick { n: Fix::new(3), k: Ptr::new(115) } };  // svc cust tag pending cust0 tag
+        quad_mem[115]               = Typed::Instr { op: Op::Cmp { op: Cmp::Eq, k: Ptr::new(116) } };  // svc cust tag pending bool
+        quad_mem[116]               = Typed::Instr { op: Op::If { t: Ptr::new(117), f: Ptr::new(141) } };  // svc cust tag pending
+
+        quad_mem[117]               = Typed::Instr { op: Op::Msg { n: Fix::new(-1), k: Ptr::new(118) } };  // svc cust tag pending req0
+        quad_mem[118]               = Typed::Instr { op: Op::Roll { n: Fix::new(4), k: Ptr::new(119) } };  // svc tag pending req0 cust
+        quad_mem[119]               = Typed::Instr { op: Op::Send { n: Fix::new(0), k: Ptr::new(120) } };  // svc tag pending
+        quad_mem[120]               = Typed::Instr { op: Op::Deque { op: Deque::Pop, k: Ptr::new(121) } };  // svc tag pending1 next
+        quad_mem[121]               = Typed::Instr { op: Op::Dup { n: Fix::new(1), k: Ptr::new(122) } };  // svc tag pending1 next next
+        quad_mem[122]               = Typed::Instr { op: Op::Eq { v: UNDEF, k: Ptr::new(123) } };  // svc tag pending1 next bool
+        quad_mem[123]               = Typed::Instr { op: Op::If { t: Ptr::new(124), f: Ptr::new(127) } };  // svc tag pending1 next
+
+        quad_mem[124]               = Typed::Instr { op: Op::Drop { n: Fix::new(3), k: Ptr::new(112) } };  // svc
+        quad_mem[125]               = Typed::Instr { op: Op::Push { v: SERIAL_BEH.val(), k: Ptr::new(112) } };  // svc serial-beh
+        quad_mem[126]               = Typed::Instr { op: Op::Beh { n: Fix::new(1), k: COMMIT } };  // (serial-beh svc)
+
+        quad_mem[127]               = Typed::Instr { op: Op::Part { n: Fix::new(1), k: Ptr::new(128) } };  // svc tag pending1 req1 cust1
+        quad_mem[128]               = Typed::Instr { op: Op::My { op: My::Addr, k: Ptr::new(129) } };  // svc tag pending1 req1 cust1 SELF
+        quad_mem[129]               = Typed::Instr { op: Op::Push { v: ONCE_TAG_BEH.val(), k: Ptr::new(130) } };  // svc tag pending1 req1 cust1 SELF once-tag-beh
+        quad_mem[130]               = Typed::Instr { op: Op::New { n: Fix::new(1), k: Ptr::new(131) } };  // svc tag pending1 req1 cust1 tag1=(once-tag-beh SELF)
+        quad_mem[131]               = Typed::Instr { op: Op::Roll { n: Fix::new(3), k: Ptr::new(132) } };  // svc tag pending1 cust1 tag1 req1
+        quad_mem[132]               = Typed::Instr { op: Op::Pick { n: Fix::new(2), k: Ptr::new(133) } };  // svc tag pending1 cust1 tag1 req1 tag1
+        quad_mem[133]               = Typed::Instr { op: Op::Pair { n: Fix::new(1), k: Ptr::new(134) } };  // svc tag pending1 cust1 tag1 (tag1 . req1)
+        quad_mem[134]               = Typed::Instr { op: Op::Pick { n: Fix::new(6), k: Ptr::new(135) } };  // svc tag pending1 cust1 tag1 (tag1 . req1) svc
+        quad_mem[135]               = Typed::Instr { op: Op::Send { n: Fix::new(0), k: Ptr::new(136) } };  // svc tag pending1 cust1 tag1
+        quad_mem[136]               = Typed::Instr { op: Op::Roll { n: Fix::new(5), k: Ptr::new(137) } };  // tag pending1 cust1 tag1 svc
+        quad_mem[137]               = Typed::Instr { op: Op::Roll { n: Fix::new(-3), k: Ptr::new(138) } };  // tag pending1 svc cust1 tag1
+        quad_mem[138]               = Typed::Instr { op: Op::Roll { n: Fix::new(4), k: Ptr::new(139) } };  // tag svc cust1 tag1 pending1
+
+        quad_mem[139]               = Typed::Instr { op: Op::Push { v: BUSY_BEH.val(), k: Ptr::new(140) } };  // ... svc cust1 tag1 pending1 busy-beh
+        quad_mem[140]               = Typed::Instr { op: Op::Beh { n: Fix::new(4), k: COMMIT } };  // (busy-beh svc cust1 tag1 pending1)
+
+        quad_mem[141]               = Typed::Instr { op: Op::Msg { n: Fix::new(0), k: Ptr::new(142) } };  // svc cust tag pending (cust0 . req0)
+        quad_mem[142]               = Typed::Instr { op: Op::Deque { op: Deque::Put, k: Ptr::new(139) } };  // svc cust tag pending1
 
         /* bootstrap event/actor */
         quad_mem[186]               = Typed::Pair { car: fixnum(-3), cdr: NIL };
