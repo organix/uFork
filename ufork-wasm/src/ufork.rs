@@ -455,7 +455,6 @@ impl Core {
 
         /* Op::Dict test suite */
         /*
-        */
         quad_mem[100]               = Typed::Actor { beh: Ptr::new(101), state: NIL.ptr(), events: None };
         quad_mem[101]               = Typed::Instr { op: Op::Dict { op: Dict::Has, k: Ptr::new(102) } };
         quad_mem[102]               = Typed::Instr { op: Op::IsEq { v: FALSE, k: Ptr::new(103) } };
@@ -501,58 +500,77 @@ impl Core {
         quad_mem[142]               = Typed::Instr { op: Op::Push { v: fixnum(1), k: Ptr::new(143) } };
         quad_mem[143]               = Typed::Instr { op: Op::Dict { op: Dict::Get, k: Ptr::new(144) } };
         quad_mem[144]               = Typed::Instr { op: Op::IsEq { v: fixnum(-1), k: Ptr::new(16) } };
+        */
 
         /* Op::Deque test suite */
         /*
+        */
         quad_mem[100]               = Typed::Actor { beh: Ptr::new(101), state: NIL.ptr(), events: None };
         quad_mem[101]               = Typed::Instr { op: Op::Deque { op: Deque::Empty, k: Ptr::new(102) } };
-        quad_mem[82]                = Typed::Instr { op: Op::If { t: Ptr::new(83), f: Ptr::new(78) } };
-        quad_mem[83]                = Typed::Instr { op: Op::Deque { op: Deque::New, k: Ptr::new(84) } };
-        quad_mem[84]                = Typed::Instr { op: Op::Pick { n: Fix::new(1), k: Ptr::new(85) } };
-        quad_mem[85]                = Typed::Instr { op: Op::Deque { op: Deque::Empty, k: Ptr::new(86) } };
-        quad_mem[86]                = Typed::Instr { op: Op::If { t: Ptr::new(87), f: Ptr::new(78) } };
-        quad_mem[87]                = Typed::Instr { op: Op::Push { v: fixnum(1), k: Ptr::new(88) } };
-        quad_mem[88]                = Typed::Instr { op: Op::Deque { op: Deque::Push, k: Ptr::new(89) } };
-        quad_mem[89]                = Typed::Instr { op: Op::Push { v: fixnum(2), k: Ptr::new(90) } };
-        quad_mem[90]                = Typed::Instr { op: Op::Deque { op: Deque::Push, k: Ptr::new(91) } };
-        quad_mem[91]                = Typed::Instr { op: Op::Push { v: fixnum(3), k: Ptr::new(92) } };
-        quad_mem[92]                = Typed::Instr { op: Op::Deque { op: Deque::Push, k: Ptr::new(93) } };
-        quad_mem[93]                = Typed::Instr { op: Op::Pick { n: Fix::new(1), k: Ptr::new(94) } };
-        quad_mem[94]                = Typed::Instr { op: Op::Deque { op: Deque::Empty, k: Ptr::new(95) } };
-        quad_mem[95]                = Typed::Instr { op: Op::If { t: Ptr::new(78), f: Ptr::new(96) } };
-        quad_mem[96]                = Typed::Instr { op: Op::Pick { n: Fix::new(1), k: Ptr::new(97) } };
-        quad_mem[97]                = Typed::Instr { op: Op::Deque { op: Deque::Len, k: Ptr::new(98) } };
-        quad_mem[98]                = Typed::Instr { op: Op::Eq { v: fixnum(3), k: Ptr::new(99) } };
-        quad_mem[99]                = Typed::Instr { op: Op::If { t: Ptr::new(100), f: Ptr::new(78) } };
-        quad_mem[100]               = Typed::Instr { op: Op::Deque { op: Deque::Pull, k: Ptr::new(101) } };
-        quad_mem[101]               = Typed::Instr { op: Op::Eq { v: fixnum(1), k: Ptr::new(102) } };
-        quad_mem[102]               = Typed::Instr { op: Op::If { t: Ptr::new(103), f: Ptr::new(78) } };
-        quad_mem[103]               = Typed::Instr { op: Op::Deque { op: Deque::Pull, k: Ptr::new(104) } };
-        quad_mem[104]               = Typed::Instr { op: Op::Eq { v: fixnum(2), k: Ptr::new(105) } };
-        quad_mem[105]               = Typed::Instr { op: Op::If { t: Ptr::new(106), f: Ptr::new(78) } };
-        quad_mem[106]               = Typed::Instr { op: Op::Deque { op: Deque::Pull, k: Ptr::new(107) } };
-        quad_mem[107]               = Typed::Instr { op: Op::Eq { v: fixnum(3), k: Ptr::new(108) } };
-        quad_mem[108]               = Typed::Instr { op: Op::If { t: Ptr::new(109), f: Ptr::new(78) } };
-        quad_mem[109]               = Typed::Instr { op: Op::Deque { op: Deque::Pull, k: Ptr::new(110) } };
-        quad_mem[110]               = Typed::Instr { op: Op::Eq { v: UNDEF, k: Ptr::new(111) } };
-        quad_mem[111]               = Typed::Instr { op: Op::If { t: Ptr::new(112), f: Ptr::new(78) } };
-        quad_mem[112]               = Typed::Instr { op: Op::Pick { n: Fix::new(1), k: Ptr::new(113) } };
-        quad_mem[113]               = Typed::Instr { op: Op::Deque { op: Deque::Len, k: Ptr::new(114) } };
-        quad_mem[114]               = Typed::Instr { op: Op::Eq { v: fixnum(0), k: Ptr::new(115) } };
-        quad_mem[115]               = Typed::Instr { op: Op::If { t: Ptr::new(116), f: Ptr::new(78) } };
+        quad_mem[102]               = Typed::Instr { op: Op::IsEq { v: TRUE, k: Ptr::new(103) } };
+        quad_mem[103]               = Typed::Instr { op: Op::Deque { op: Deque::New, k: Ptr::new(104) } };
+        quad_mem[104]               = Typed::Instr { op: Op::Pick { n: Fix::new(1), k: Ptr::new(105) } };
+        quad_mem[105]               = Typed::Instr { op: Op::Deque { op: Deque::Empty, k: Ptr::new(106) } };
+        quad_mem[106]               = Typed::Instr { op: Op::IsEq { v: TRUE, k: Ptr::new(107) } };
+        quad_mem[107]               = Typed::Instr { op: Op::Push { v: fixnum(1), k: Ptr::new(108) } };
+        quad_mem[108]               = Typed::Instr { op: Op::Deque { op: Deque::Push, k: Ptr::new(109) } };
+        quad_mem[109]               = Typed::Instr { op: Op::Push { v: fixnum(2), k: Ptr::new(110) } };
+        quad_mem[110]               = Typed::Instr { op: Op::Deque { op: Deque::Push, k: Ptr::new(111) } };
+        quad_mem[111]               = Typed::Instr { op: Op::Push { v: fixnum(3), k: Ptr::new(112) } };
+        quad_mem[112]               = Typed::Instr { op: Op::Deque { op: Deque::Push, k: Ptr::new(113) } };
+        quad_mem[113]               = Typed::Instr { op: Op::Pick { n: Fix::new(1), k: Ptr::new(114) } };
+        quad_mem[114]               = Typed::Instr { op: Op::Deque { op: Deque::Empty, k: Ptr::new(115) } };
+        quad_mem[115]               = Typed::Instr { op: Op::IsEq { v: FALSE, k: Ptr::new(116) } };
         quad_mem[116]               = Typed::Instr { op: Op::Pick { n: Fix::new(1), k: Ptr::new(117) } };
-        quad_mem[117]               = Typed::Instr { op: Op::Msg { n: Fix::new(0), k: Ptr::new(118) } };
-        quad_mem[118]               = Typed::Instr { op: Op::Deque { op: Deque::Put, k: Ptr::new(119) } };
-        quad_mem[119]               = Typed::Instr { op: Op::Msg { n: Fix::new(-1), k: Ptr::new(120) } };
-        quad_mem[120]               = Typed::Instr { op: Op::Deque { op: Deque::Put, k: Ptr::new(121) } };
-        quad_mem[121]               = Typed::Instr { op: Op::Msg { n: Fix::new(-2), k: Ptr::new(122) } };
-        quad_mem[122]               = Typed::Instr { op: Op::Deque { op: Deque::Put, k: Ptr::new(123) } };
-        quad_mem[123]               = Typed::Instr { op: Op::Deque { op: Deque::Pop, k: Ptr::new(124) } };
-        quad_mem[124]               = Typed::Instr { op: Op::Roll { n: Fix::new(-2), k: Ptr::new(125) } };
-        quad_mem[125]               = Typed::Instr { op: Op::Deque { op: Deque::Pop, k: Ptr::new(126) } };
-        quad_mem[126]               = Typed::Instr { op: Op::Roll { n: Fix::new(-3), k: Ptr::new(127) } };
-        quad_mem[127]               = Typed::Instr { op: Op::Deque { op: Deque::Pop, k: Ptr::new(16) } };
-        */
+        quad_mem[117]               = Typed::Instr { op: Op::Deque { op: Deque::Len, k: Ptr::new(118) } };
+        quad_mem[118]               = Typed::Instr { op: Op::IsEq { v: fixnum(3), k: Ptr::new(119) } };
+        quad_mem[119]               = Typed::Instr { op: Op::Deque { op: Deque::Pull, k: Ptr::new(120) } };
+        quad_mem[120]               = Typed::Instr { op: Op::IsEq { v: fixnum(1), k: Ptr::new(121) } };
+        quad_mem[121]               = Typed::Instr { op: Op::Deque { op: Deque::Pull, k: Ptr::new(122) } };
+        quad_mem[122]               = Typed::Instr { op: Op::IsEq { v: fixnum(2), k: Ptr::new(123) } };
+        quad_mem[123]               = Typed::Instr { op: Op::Deque { op: Deque::Pull, k: Ptr::new(124) } };
+        quad_mem[124]               = Typed::Instr { op: Op::IsEq { v: fixnum(3), k: Ptr::new(125) } };
+        quad_mem[125]               = Typed::Instr { op: Op::Deque { op: Deque::Pull, k: Ptr::new(126) } };
+        quad_mem[126]               = Typed::Instr { op: Op::IsEq { v: UNDEF, k: Ptr::new(127) } };
+        quad_mem[127]               = Typed::Instr { op: Op::Dup { n: Fix::new(1), k: Ptr::new(128) } };
+        quad_mem[128]               = Typed::Instr { op: Op::Deque { op: Deque::Len, k: Ptr::new(129) } };
+        quad_mem[129]               = Typed::Instr { op: Op::IsEq { v: fixnum(0), k: Ptr::new(130) } };
+        quad_mem[130]               = Typed::Instr { op: Op::Dup { n: Fix::new(1), k: Ptr::new(131) } };
+        quad_mem[131]               = Typed::Instr { op: Op::Msg { n: Fix::new(0), k: Ptr::new(132) } };
+        quad_mem[132]               = Typed::Instr { op: Op::Deque { op: Deque::Put, k: Ptr::new(133) } };
+        quad_mem[133]               = Typed::Instr { op: Op::Msg { n: Fix::new(-1), k: Ptr::new(134) } };
+        quad_mem[134]               = Typed::Instr { op: Op::Deque { op: Deque::Put, k: Ptr::new(135) } };
+        quad_mem[135]               = Typed::Instr { op: Op::Msg { n: Fix::new(-2), k: Ptr::new(136) } };
+        quad_mem[136]               = Typed::Instr { op: Op::Deque { op: Deque::Put, k: Ptr::new(137) } };
+        quad_mem[137]               = Typed::Instr { op: Op::Deque { op: Deque::Pop, k: Ptr::new(138) } };
+        quad_mem[138]               = Typed::Instr { op: Op::Roll { n: Fix::new(-2), k: Ptr::new(139) } };
+        quad_mem[139]               = Typed::Instr { op: Op::Deque { op: Deque::Pop, k: Ptr::new(140) } };
+        quad_mem[140]               = Typed::Instr { op: Op::Roll { n: Fix::new(-3), k: Ptr::new(141) } };
+        quad_mem[141]               = Typed::Instr { op: Op::Deque { op: Deque::Pop, k: Ptr::new(142) } };
+        quad_mem[142]               = Typed::Instr { op: Op::IsNe { v: NIL, k: Ptr::new(143) } };
+        quad_mem[143]               = Typed::Instr { op: Op::Push { v: fixnum(1), k: Ptr::new(144) } };
+        quad_mem[144]               = Typed::Instr { op: Op::Deque { op: Deque::Put, k: Ptr::new(145) } };
+        quad_mem[145]               = Typed::Instr { op: Op::Push { v: fixnum(2), k: Ptr::new(146) } };
+        quad_mem[146]               = Typed::Instr { op: Op::Deque { op: Deque::Put, k: Ptr::new(147) } };
+        quad_mem[147]               = Typed::Instr { op: Op::Push { v: fixnum(3), k: Ptr::new(148) } };
+        quad_mem[148]               = Typed::Instr { op: Op::Deque { op: Deque::Put, k: Ptr::new(149) } };
+        quad_mem[149]               = Typed::Instr { op: Op::Pick { n: Fix::new(1), k: Ptr::new(150) } };
+        quad_mem[150]               = Typed::Instr { op: Op::Deque { op: Deque::Empty, k: Ptr::new(151) } };
+        quad_mem[151]               = Typed::Instr { op: Op::IsEq { v: FALSE, k: Ptr::new(152) } };
+        quad_mem[152]               = Typed::Instr { op: Op::Pick { n: Fix::new(1), k: Ptr::new(153) } };
+        quad_mem[153]               = Typed::Instr { op: Op::Deque { op: Deque::Len, k: Ptr::new(154) } };
+        quad_mem[154]               = Typed::Instr { op: Op::IsEq { v: fixnum(3), k: Ptr::new(155) } };
+        quad_mem[155]               = Typed::Instr { op: Op::Deque { op: Deque::Pop, k: Ptr::new(156) } };
+        quad_mem[156]               = Typed::Instr { op: Op::IsEq { v: fixnum(1), k: Ptr::new(157) } };
+        quad_mem[157]               = Typed::Instr { op: Op::Deque { op: Deque::Pop, k: Ptr::new(158) } };
+        quad_mem[158]               = Typed::Instr { op: Op::IsEq { v: fixnum(2), k: Ptr::new(159) } };
+        quad_mem[159]               = Typed::Instr { op: Op::Deque { op: Deque::Pop, k: Ptr::new(160) } };
+        quad_mem[160]               = Typed::Instr { op: Op::IsEq { v: fixnum(3), k: Ptr::new(161) } };
+        quad_mem[161]               = Typed::Instr { op: Op::Deque { op: Deque::Pop, k: Ptr::new(162) } };
+        quad_mem[162]               = Typed::Instr { op: Op::IsEq { v: UNDEF, k: Ptr::new(163) } };
+        quad_mem[163]               = Typed::Instr { op: Op::Dup { n: Fix::new(1), k: Ptr::new(164) } };
+        quad_mem[164]               = Typed::Instr { op: Op::Deque { op: Deque::Len, k: Ptr::new(165) } };
+        quad_mem[165]               = Typed::Instr { op: Op::IsEq { v: fixnum(0), k: Ptr::new(16) } };
 
         Core {
             quad_mem,
