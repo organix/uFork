@@ -115,6 +115,15 @@ pub const DEQUE_PUT: Val    = Val { raw: DIR_RAW | 4 };
 pub const DEQUE_PULL: Val   = Val { raw: DIR_RAW | 5 };
 pub const DEQUE_LEN: Val    = Val { raw: DIR_RAW | 6 };
 
+// OP_ALU arithmetic/logical operations
+pub const ALU_NOT: Val      = Val { raw: DIR_RAW | 0 };
+pub const ALU_AND: Val      = Val { raw: DIR_RAW | 1 };
+pub const ALU_OR: Val       = Val { raw: DIR_RAW | 2 };
+pub const ALU_XOR: Val      = Val { raw: DIR_RAW | 3 };
+pub const ALU_ADD: Val      = Val { raw: DIR_RAW | 4 };
+pub const ALU_SUB: Val      = Val { raw: DIR_RAW | 5 };
+pub const ALU_MUL: Val      = Val { raw: DIR_RAW | 6 };
+
 // OP_CMP comparison operations
 pub const CMP_EQ: Val       = Val { raw: DIR_RAW | 0 };
 pub const CMP_GE: Val       = Val { raw: DIR_RAW | 1 };
@@ -872,6 +881,39 @@ impl Core {
                 };
                 *k
             },
+            Op::Alu { op, k } => {
+                println!("op_alu: op={}", op);
+                let r = if *op == Alu::Not {
+                    let v = self.stack_pop();
+                    println!("op_alu: v={}", v);
+                    match Fix::from(v) {
+                        Some(n) => Fix::new(!n.num()).val(),
+                        _ => UNDEF,
+                    }
+                } else {
+                    let vv = self.stack_pop();
+                    println!("op_alu: vv={}", vv);
+                    let v = self.stack_pop();
+                    println!("op_alu: v={}", v);
+                        match (Fix::from(v), Fix::from(vv)) {
+                        (Some(n), Some(nn)) => {
+                            match op {
+                                Alu::And => Fix::new(n.num() & nn.num()).val(),
+                                Alu::Or => Fix::new(n.num() | nn.num()).val(),
+                                Alu::Xor => Fix::new(n.num() ^ nn.num()).val(),
+                                Alu::Add => Fix::new(n.num() + nn.num()).val(),
+                                Alu::Sub => Fix::new(n.num() - nn.num()).val(),
+                                Alu::Mul => Fix::new(n.num() * nn.num()).val(),
+                                _ => UNDEF,
+                            }
+                        }
+                        _ => UNDEF
+                    }
+                };
+                println!("op_alu: r={}", r);
+                self.stack_push(r);
+                *k
+            },
             Op::Eq { v, k } => {
                 println!("op_eq: v={}", v);
                 let vv = self.stack_pop();
@@ -887,9 +929,23 @@ impl Core {
                 println!("op_cmp: vv={}", vv);
                 let v = self.stack_pop();
                 println!("op_cmp: v={}", v);
-                let b = match op {
-                    Cmp::Eq => v == vv,
-                    Cmp::Ne => v != vv,
+                let b = if *op == Cmp::Eq {
+                    v == vv
+                } else if *op == Cmp::Ne {
+                    v != vv
+                } else {
+                    match (Fix::from(v), Fix::from(vv)) {
+                        (Some(n), Some(nn)) => {
+                            match op {
+                                Cmp::Ge => n.num() >= nn.num(),
+                                Cmp::Gt => n.num() > nn.num(),
+                                Cmp::Lt => n.num() < nn.num(),
+                                Cmp::Le => n.num() <= nn.num(),
+                                _ => false,
+                            }
+                        }
+                        _ => false
+                    }
                 };
                 let r = if b { TRUE } else { FALSE };
                 println!("op_cmp: r={}", r);
@@ -1803,7 +1859,7 @@ pub enum Op {
     Pick { n: Fix, k: Ptr },
     Dup { n: Fix, k: Ptr },
     Roll { n: Fix, k: Ptr },
-    //Alu { op: Alu, k: Ptr },
+    Alu { op: Alu, k: Ptr },
     Eq { v: Val, k: Ptr },
     Cmp { op: Cmp, k: Ptr },
     If { t: Ptr, f: Ptr },
@@ -1832,6 +1888,7 @@ impl Op {
             OP_PICK => Some(Typed::Instr { op: Op::Pick { n: quad.y().fix(), k: quad.z().ptr() } }),
             OP_DUP => Some(Typed::Instr { op: Op::Dup { n: quad.y().fix(), k: quad.z().ptr() } }),
             OP_ROLL => Some(Typed::Instr { op: Op::Roll { n: quad.y().fix(), k: quad.z().ptr() } }),
+            OP_ALU => Some(Typed::Instr { op: Op::Alu { op: Alu::from(quad.y()).unwrap(), k: quad.z().ptr() } }),
             OP_EQ => Some(Typed::Instr { op: Op::Eq { v: quad.y().val(), k: quad.z().ptr() } }),
             OP_CMP => Some(Typed::Instr { op: Op::Cmp { op: Cmp::from(quad.y()).unwrap(), k: quad.z().ptr() } }),
             OP_IF => Some(Typed::Instr { op: Op::If { t: quad.y().ptr(), f: quad.z().ptr() } }),
@@ -1860,6 +1917,7 @@ impl Op {
             Op::Pick { n, k } => Quad::new(INSTR_T, OP_PICK, n.val(), k.val()),
             Op::Dup { n, k } => Quad::new(INSTR_T, OP_DUP, n.val(), k.val()),
             Op::Roll { n, k } => Quad::new(INSTR_T, OP_ROLL, n.val(), k.val()),
+            Op::Alu { op, k } => Quad::new(INSTR_T, OP_ALU, op.val(), k.val()),
             Op::Eq { v, k } => Quad::new(INSTR_T, OP_EQ, v.val(), k.val()),
             Op::Cmp { op, k } => Quad::new(INSTR_T, OP_CMP, op.val(), k.val()),
             Op::If { t, f } => Quad::new(INSTR_T, OP_IF, t.val(), f.val()),
@@ -1895,6 +1953,7 @@ impl fmt::Display for Op {
             Op::Pick { n, k } => write!(fmt, "Pick{{ n:{}, k:{} }}", n, k),
             Op::Dup { n, k } => write!(fmt, "Dup{{ n:{}, k:{} }}", n, k),
             Op::Roll { n, k } => write!(fmt, "Roll{{ n:{}, k:{} }}", n, k),
+            Op::Alu { op, k } => write!(fmt, "Alu{{ op:{}, k:{} }}", op, k),
             Op::Eq { v, k } => write!(fmt, "Eq{{ v:{}, k:{} }}", v, k),
             Op::Cmp { op, k } => write!(fmt, "Cmp{{ op:{}, k:{} }}", op, k),
             Op::If { t, f } => write!(fmt, "If{{ t:{}, f:{} }}", t, f),
@@ -2001,22 +2060,83 @@ impl fmt::Display for Deque {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Alu {
+    Not,
+    And,
+    Or,
+    Xor,
+    Add,
+    Sub,
+    Mul,
+}
+impl Alu {
+    pub fn from(val: Val) -> Option<Alu> {
+        match val {
+            ALU_NOT => Some(Alu::Not),
+            ALU_AND => Some(Alu::And),
+            ALU_OR => Some(Alu::Or),
+            ALU_XOR => Some(Alu::Xor),
+            ALU_ADD => Some(Alu::Add),
+            ALU_SUB => Some(Alu::Sub),
+            ALU_MUL => Some(Alu::Mul),
+            _ => None,
+        }
+    }
+    pub fn val(&self) -> Val {
+        match self {
+            Alu::Not => ALU_NOT,
+            Alu::And => ALU_AND,
+            Alu::Or => ALU_OR,
+            Alu::Xor => ALU_XOR,
+            Alu::Add => ALU_ADD,
+            Alu::Sub => ALU_SUB,
+            Alu::Mul => ALU_MUL,
+        }
+    }
+}
+impl fmt::Display for Alu {
+    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Alu::Not => write!(fmt, "Not"),
+            Alu::And => write!(fmt, "And"),
+            Alu::Or => write!(fmt, "Or"),
+            Alu::Xor => write!(fmt, "Xor"),
+            Alu::Add => write!(fmt, "Add"),
+            Alu::Sub => write!(fmt, "Sub"),
+            Alu::Mul => write!(fmt, "Mul"),
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Cmp {
     Eq,
+    Ge,
+    Gt,
+    Lt,
+    Le,
     Ne,
 }
 impl Cmp {
     pub fn from(val: Val) -> Option<Cmp> {
         match val {
             CMP_EQ => Some(Cmp::Eq),
+            CMP_GE => Some(Cmp::Ge),
+            CMP_GT => Some(Cmp::Gt),
+            CMP_LT => Some(Cmp::Lt),
+            CMP_LE => Some(Cmp::Le),
             CMP_NE => Some(Cmp::Ne),
             _ => None,
         }
     }
     pub fn val(&self) -> Val {
         match self {
-            Cmp::Eq => MY_SELF,
-            Cmp::Ne => MY_BEH,
+            Cmp::Eq => CMP_EQ,
+            Cmp::Ge => CMP_GE,
+            Cmp::Gt => CMP_GT,
+            Cmp::Lt => CMP_LT,
+            Cmp::Le => CMP_LE,
+            Cmp::Ne => CMP_NE,
         }
     }
 }
@@ -2024,6 +2144,10 @@ impl fmt::Display for Cmp {
     fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Cmp::Eq => write!(fmt, "Eq"),
+            Cmp::Ge => write!(fmt, "Ge"),
+            Cmp::Gt => write!(fmt, "Gt"),
+            Cmp::Lt => write!(fmt, "Lt"),
+            Cmp::Le => write!(fmt, "Le"),
             Cmp::Ne => write!(fmt, "Ne"),
         }
     }
