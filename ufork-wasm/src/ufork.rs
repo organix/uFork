@@ -503,6 +503,52 @@ pub const F_FIB_K2: Ptr             = Ptr { raw: F_FIB_RAW+24 };
         quad_mem[F_FIB_ADDR+25]     = Typed::Instr { op: Op::Alu { op: Alu::Add, k: Ptr::new(F_FIB_RAW+26) } };  // cust m+n
         quad_mem[F_FIB_ADDR+26]     = Typed::Instr { op: Op::Roll { n: Fix::new(2), k: SEND_0 } };  // m+n cust
 
+        /*
+        (define COMMIT
+          (asm-end-commit))
+        (define SEND-0  ; msg target
+          (asm-send 0 COMMIT))
+        (define CUST-SEND  ; msg
+          (asm-msg 1 SEND-0))
+        (define fib-k2  ; cust m
+          (asm-msg 0  ; cust m n
+            (asm-alu-add  ; cust m+n
+              (asm-roll 2  ; m+n cust
+                SEND-0))))
+        (define fib-k  ; cust
+          (asm-msg 0  ; cust m
+            (asm-push fib-k2  ; cust m fib-k2
+              (asm-beh 2  ; (fib-k2 cust m)
+                COMMIT))))
+        (define fib  ; (n)
+          (CREATE  ; (cust n)
+            (asm-msg 2  ; n
+              (asm-dup 1  ; n n
+                (asm-push 2  ; n n 2
+                  (asm-cmp-lt  ; n n<2
+                    (asm-if  ; n
+                      CUST-SEND
+                      (asm-msg 1  ; n cust
+                        (asm-push fib-k  ; n cust fib-k
+                          (asm-new 1  ; n k=(fib-k cust)
+                            (asm-pick 2  ; n k n
+                              (asm-push 1  ; n k n 1
+                                (asm-alu-sub  ; n k n-1
+                                  (asm-pick 2  ; n k n-1 k
+                                    (asm-push fib  ; n k n-1 k fib
+                                      (asm-send 2  ; n k
+                                        (asm-roll 2  ; k n
+                                          (asm-push 2  ; k n 2
+                                            (asm-alu-sub  ; k n-2
+                                              (asm-roll 2  ; n-2 k
+                                                (asm-my-self  ; n-2 k fib
+                                                  (asm-send 2  ; --
+                                                    COMMIT))))))
+                                      ))))))
+                          )))
+                    )))))))
+        */
+
         /* bootstrap event/actor */
         quad_mem[184]               = Typed::Pair { car: fixnum(6), cdr: NIL };
         quad_mem[185]               = Typed::Pair { car: A_STOP.val(), cdr: ptrval(184) };
