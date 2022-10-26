@@ -173,7 +173,7 @@ impl Core {
         quad_mem[DICT_T.addr()]     = Typed::Type;
         quad_mem[FREE_T.addr()]     = Typed::Type;
 
-        quad_mem[MEMORY.addr()]     = Typed::Memory { top: Ptr::new(192), next: NIL.ptr(), free: Fix::new(0), root: DDEQUE.ptr() };
+        quad_mem[MEMORY.addr()]     = Typed::Memory { top: Ptr::new(256), next: NIL.ptr(), free: Fix::new(0), root: DDEQUE.ptr() };
         quad_mem[DDEQUE.addr()]     = Typed::Ddeque { e_first: E_BOOT, e_last: E_BOOT, k_first: NIL.ptr(), k_last: NIL.ptr() };
 
         quad_mem[COMMIT.addr()]     = Typed::Instr { op: Op::End { op: End::Commit } };
@@ -349,6 +349,8 @@ impl Core {
 
         /* (STOP) */
         quad_mem[88]                = Typed::Instr { op: Op::End { op: End::Stop } };
+pub const A_STOP: Cap               = Cap { raw: 89 };
+        quad_mem[89]                = Typed::Actor { beh: STOP.ptr(), state: NIL.ptr(), events: None };
 
         /*
         (define wait-beh
@@ -453,13 +455,64 @@ impl Core {
         quad_mem[141]               = Typed::Instr { op: Op::Msg { n: Fix::new(0), k: Ptr::new(142) } };  // svc cust tag pending (cust0 . req0)
         quad_mem[142]               = Typed::Instr { op: Op::Deque { op: Deque::Put, k: Ptr::new(139) } };  // svc cust tag pending1
 
+        /*
+        (define fib                 ; O(n^3) performance?
+          (lambda (n)               ; msg: (cust n)
+            (if (< n 2)
+                n
+                (+ (fib (- n 1)) (fib (- n 2))))))
+        */
+pub const F_FIB_RAW: Raw            = 150;
+pub const F_FIB_ADDR: usize         = F_FIB_RAW as usize;
+pub const F_FIB: Cap                = Cap { raw: F_FIB_RAW };
+pub const F_FIB_K: Ptr              = Ptr { raw: F_FIB_RAW+21 };
+pub const F_FIB_K2: Ptr             = Ptr { raw: F_FIB_RAW+24 };
+        quad_mem[F_FIB_ADDR+0]      = Typed::Actor { beh: Ptr::new(F_FIB_RAW+1), state: NIL.ptr(), events: None };
+        quad_mem[F_FIB_ADDR+1]      = Typed::Instr { op: Op::Msg { n: Fix::new(2), k: Ptr::new(F_FIB_RAW+2) } };  // n
+        quad_mem[F_FIB_ADDR+2]      = Typed::Instr { op: Op::Dup { n: Fix::new(1), k: Ptr::new(F_FIB_RAW+3) } };  // n n
+        quad_mem[F_FIB_ADDR+3]      = Typed::Instr { op: Op::Push { v: fixnum(2), k: Ptr::new(F_FIB_RAW+4) } };  // n n 2
+        quad_mem[F_FIB_ADDR+4]      = Typed::Instr { op: Op::Cmp { op: Cmp::Lt, k: Ptr::new(F_FIB_RAW+5) } };  // n n<2
+        quad_mem[F_FIB_ADDR+5]      = Typed::Instr { op: Op::If { t: CUST_SEND, f: Ptr::new(F_FIB_RAW+6) } };  // n
+
+        quad_mem[F_FIB_ADDR+6]      = Typed::Instr { op: Op::Msg { n: Fix::new(1), k: Ptr::new(F_FIB_RAW+7) } };  // n cust
+        quad_mem[F_FIB_ADDR+7]      = Typed::Instr { op: Op::Push { v: F_FIB_K.val(), k: Ptr::new(F_FIB_RAW+8) } };  // n cust fib-k
+        quad_mem[F_FIB_ADDR+8]      = Typed::Instr { op: Op::New { n: Fix::new(1), k: Ptr::new(F_FIB_RAW+9) } };  // n k=(fib-k cust)
+
+        quad_mem[F_FIB_ADDR+9]      = Typed::Instr { op: Op::Pick { n: Fix::new(2), k: Ptr::new(F_FIB_RAW+10) } };  // n k n
+        quad_mem[F_FIB_ADDR+10]     = Typed::Instr { op: Op::Push { v: fixnum(1), k: Ptr::new(F_FIB_RAW+11) } };  // n k n 1
+        quad_mem[F_FIB_ADDR+11]     = Typed::Instr { op: Op::Alu { op: Alu::Sub, k: Ptr::new(F_FIB_RAW+12) } };  // n k n-1
+        quad_mem[F_FIB_ADDR+12]     = Typed::Instr { op: Op::Pick { n: Fix::new(2), k: Ptr::new(F_FIB_RAW+13) } };  // n k n-1 k
+        quad_mem[F_FIB_ADDR+13]     = Typed::Instr { op: Op::Push { v: F_FIB.val(), k: Ptr::new(F_FIB_RAW+14) } };  // n k n-1 k fib
+        quad_mem[F_FIB_ADDR+14]     = Typed::Instr { op: Op::Send { n: Fix::new(2), k: Ptr::new(F_FIB_RAW+15) } };  // n k
+
+        quad_mem[F_FIB_ADDR+15]     = Typed::Instr { op: Op::Roll { n: Fix::new(2), k: Ptr::new(F_FIB_RAW+16) } };  // k n
+        quad_mem[F_FIB_ADDR+16]     = Typed::Instr { op: Op::Push { v: fixnum(2), k: Ptr::new(F_FIB_RAW+17) } };  // k n 2
+        quad_mem[F_FIB_ADDR+17]     = Typed::Instr { op: Op::Alu { op: Alu::Sub, k: Ptr::new(F_FIB_RAW+18) } };  // k n-2
+        quad_mem[F_FIB_ADDR+18]     = Typed::Instr { op: Op::Roll { n: Fix::new(2), k: Ptr::new(F_FIB_RAW+19) } };  // n-2 k
+        quad_mem[F_FIB_ADDR+19]     = Typed::Instr { op: Op::My { op: My::Addr, k: Ptr::new(F_FIB_RAW+20) } };  // n-2 k fib
+        quad_mem[F_FIB_ADDR+20]     = Typed::Instr { op: Op::Send { n: Fix::new(2), k: COMMIT } };  // --
+
+        //quad_mem[-1]              = Typed::Instr { op: Op::Push { v: <cust>, k: ... } };
+        quad_mem[F_FIB_ADDR+21]     = Typed::Instr { op: Op::Msg { n: Fix::new(0), k: Ptr::new(F_FIB_RAW+22) } };  // cust m
+        quad_mem[F_FIB_ADDR+22]     = Typed::Instr { op: Op::Push { v: F_FIB_K2.val(), k: Ptr::new(F_FIB_RAW+23) } };  // cust m fib-k2
+        quad_mem[F_FIB_ADDR+23]     = Typed::Instr { op: Op::Beh { n: Fix::new(2), k: COMMIT } };  // (fib-k2 cust m)
+
+        //quad_mem[-2]              = Typed::Instr { op: Op::Push { v: <cust>, k: ... } };
+        //quad_mem[-1]              = Typed::Instr { op: Op::Push { v: <m>, k: ... } };
+        quad_mem[F_FIB_ADDR+24]     = Typed::Instr { op: Op::Msg { n: Fix::new(0), k: Ptr::new(F_FIB_RAW+25) } };  // cust m n
+        quad_mem[F_FIB_ADDR+25]     = Typed::Instr { op: Op::Alu { op: Alu::Add, k: Ptr::new(F_FIB_RAW+26) } };  // cust m+n
+        quad_mem[F_FIB_ADDR+26]     = Typed::Instr { op: Op::Roll { n: Fix::new(2), k: SEND_0 } };  // m+n cust
+
         /* bootstrap event/actor */
+        quad_mem[184]               = Typed::Pair { car: fixnum(6), cdr: NIL };
+        quad_mem[185]               = Typed::Pair { car: A_STOP.val(), cdr: ptrval(184) };
         quad_mem[186]               = Typed::Pair { car: fixnum(-3), cdr: NIL };
         quad_mem[187]               = Typed::Pair { car: fixnum(-2), cdr: ptrval(186) };
         quad_mem[188]               = Typed::Pair { car: fixnum(-1), cdr: ptrval(187) };
         quad_mem[189]               = Typed::Pair { car: UNIT, cdr: NIL };
         //quad_mem[190]               = Typed::Event { target: Cap::new(191), msg: ptrval(188), next: NIL.ptr() };  // run loop demo
-        quad_mem[190]               = Typed::Event { target: Cap::new(100), msg: ptrval(188), next: NIL.ptr() };  // run test suite
+        //quad_mem[190]               = Typed::Event { target: Cap::new(100), msg: ptrval(188), next: NIL.ptr() };  // run test suite
+        quad_mem[190]               = Typed::Event { target: F_FIB, msg: ptrval(185), next: NIL.ptr() };  // run (fib 6)
         quad_mem[191]               = Typed::Actor { beh: RESEND, state: Ptr::new(189), events: None };
 
         /* Op::Dict test suite */
@@ -513,7 +566,6 @@ impl Core {
 
         /* Op::Deque test suite */
         /*
-        */
         quad_mem[100]               = Typed::Actor { beh: Ptr::new(101), state: NIL.ptr(), events: None };
         quad_mem[101]               = Typed::Instr { op: Op::Deque { op: Deque::Empty, k: Ptr::new(102) } };
         quad_mem[102]               = Typed::Instr { op: Op::IsEq { v: TRUE, k: Ptr::new(103) } };
@@ -580,6 +632,7 @@ impl Core {
         quad_mem[163]               = Typed::Instr { op: Op::Dup { n: Fix::new(1), k: Ptr::new(164) } };
         quad_mem[164]               = Typed::Instr { op: Op::Deque { op: Deque::Len, k: Ptr::new(165) } };
         quad_mem[165]               = Typed::Instr { op: Op::IsEq { v: fixnum(0), k: Ptr::new(16) } };
+        */
 
         Core {
             quad_mem,
@@ -1390,13 +1443,18 @@ impl Core {
             Typed::Instr { op: Op::Pick { k, .. } } => k,
             Typed::Instr { op: Op::Dup { k, .. } } => k,
             Typed::Instr { op: Op::Roll { k, .. } } => k,
+            Typed::Instr { op: Op::Alu { k, .. } } => k,
             Typed::Instr { op: Op::Eq { k, .. } } => k,
+            Typed::Instr { op: Op::Cmp { k, .. } } => k,
             //Typed::Instr { op: Op::If { f, .. } } => f,
             Typed::Instr { op: Op::Msg { k, .. } } => k,
             Typed::Instr { op: Op::My { k, .. } } => k,
             Typed::Instr { op: Op::Send { k, .. } } => k,
             Typed::Instr { op: Op::New { k, .. } } => k,
             Typed::Instr { op: Op::Beh { k, .. } } => k,
+            //Typed::Instr { op: Op::End { .. } } => UNDEF.ptr(),
+            //Typed::Instr { op: Op::IsEq { k, .. } } => k,
+            //Typed::Instr { op: Op::IsNe { k, .. } } => k,
             _ => UNDEF.ptr(),
         }
     }
