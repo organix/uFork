@@ -6,9 +6,11 @@ pub type Raw = u32;  // univeral value type
 pub type Num = i32;  // fixnum integer type
 
 // type-tag bits
-const MSK_RAW: Raw          = 0xC000_0000;
-const DIR_RAW: Raw          = 0x8000_0000;
-const OPQ_RAW: Raw          = 0x4000_0000;
+const MSK_RAW: Raw          = 0xF000_0000;  // mask for type-tag bits
+const DIR_RAW: Raw          = 0x8000_0000;  // 1=direct (value), 0=indirect (pointer)
+const OPQ_RAW: Raw          = 0x4000_0000;  // 1=opaque (capability), 0=transparent (navigable)
+const MUT_RAW: Raw          = 0x2000_0000;  // 1=read-write (mutable),  0=read-only (immutable)
+const BNK_RAW: Raw          = 0x1000_0000;  // 1=bank 1, 0=bank 0 (half-space GC phase)
 
 // literal values
 pub const ZERO: Fix         = Fix { num: 0 };
@@ -456,7 +458,7 @@ pub const A_STOP: Cap               = Cap { raw: 89 };
         quad_mem[142]               = Typed::Instr { op: Op::Deque { op: Deque::Put, k: Ptr::new(139) } };  // svc cust tag pending1
 
         /*
-        (define fib                 ; O(n^3) performance?
+        (define fib                 ; O(n!) performance?
           (lambda (n)               ; msg: (cust n)
             (if (< n 2)
                 n
