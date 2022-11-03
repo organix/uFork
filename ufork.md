@@ -233,6 +233,31 @@ k_queue: [head,tail]--------------------+
                                    ...
 ```
 
+#### List Indexing
+
+Instructions like `VM_nth` and `VM_msg` have an immediate index argument (_n_)
+to succinctly designate parts of a pair-list.
+Positive _n_ designates elements of the list, starting at `1`.
+Negative _n_ designates list tails, starting at `-1`.
+Zero designates the whole list/value (for messages).
+
+```
+  0        -1        -2        -3
+---->[*|*]---->[*|*]---->[*|*]---->...
+   +1 |      +2 |      +3 |
+      V         V         V
+```
+
+...or more compactly...
+
+```
+0-->[1,-1]-->[2,-2]-->[3,-3]--> ...
+     |        |        |
+     V        V        V
+```
+
+If the index is out-of-bounds, the result is `?` (undefined).
+
 ### Common Code Structures
 
 Many instruction streams end with a common suffix.
