@@ -9,8 +9,8 @@ pub type Num = i32;  // fixnum integer type
 const MSK_RAW: Raw          = 0xF000_0000;  // mask for type-tag bits
 const DIR_RAW: Raw          = 0x8000_0000;  // 1=direct (value), 0=indirect (pointer)
 const OPQ_RAW: Raw          = 0x4000_0000;  // 1=opaque (capability), 0=transparent (navigable)
-const MUT_RAW: Raw          = 0x2000_0000;  // 1=read-write (mutable),  0=read-only (immutable)
-const BNK_RAW: Raw          = 0x1000_0000;  // 1=bank 1, 0=bank 0 (half-space GC phase)
+//const MUT_RAW: Raw          = 0x2000_0000;  // 1=read-write (mutable),  0=read-only (immutable)
+//const BNK_RAW: Raw          = 0x1000_0000;  // 1=bank 1, 0=bank 0 (half-space GC phase)
 
 // literal values
 pub const ZERO: Fix         = Fix { num: 0 };
@@ -559,12 +559,13 @@ pub const F_FIB_K2: Ptr             = Ptr { raw: F_FIB_RAW+24 };
         quad_mem[188]               = Typed::Pair { car: fixnum(-1), cdr: ptrval(187) };
         quad_mem[189]               = Typed::Pair { car: UNIT, cdr: NIL };
         //quad_mem[190]               = Typed::Event { target: Cap::new(191), msg: ptrval(188), next: NIL.ptr() };  // run loop demo
-        //quad_mem[190]               = Typed::Event { target: Cap::new(100), msg: ptrval(188), next: NIL.ptr() };  // run test suite
-        quad_mem[190]               = Typed::Event { target: F_FIB, msg: ptrval(185), next: NIL.ptr() };  // run (fib 6)
+        quad_mem[190]               = Typed::Event { target: Cap::new(100), msg: ptrval(188), next: NIL.ptr() };  // run test suite
+        //quad_mem[190]               = Typed::Event { target: F_FIB, msg: ptrval(185), next: NIL.ptr() };  // run (fib 6)
         quad_mem[191]               = Typed::Actor { beh: RESEND, state: Ptr::new(189), events: None };
 
         /* Op::Dict test suite */
         /*
+        */
         quad_mem[100]               = Typed::Actor { beh: Ptr::new(101), state: NIL.ptr(), events: None };
         quad_mem[101]               = Typed::Instr { op: Op::Dict { op: Dict::Has, k: Ptr::new(102) } };
         quad_mem[102]               = Typed::Instr { op: Op::IsEq { v: FALSE, k: Ptr::new(103) } };
@@ -610,7 +611,6 @@ pub const F_FIB_K2: Ptr             = Ptr { raw: F_FIB_RAW+24 };
         quad_mem[142]               = Typed::Instr { op: Op::Push { v: fixnum(1), k: Ptr::new(143) } };
         quad_mem[143]               = Typed::Instr { op: Op::Dict { op: Dict::Get, k: Ptr::new(144) } };
         quad_mem[144]               = Typed::Instr { op: Op::IsEq { v: fixnum(-1), k: Ptr::new(16) } };
-        */
 
         /* Op::Deque test suite */
         /*
@@ -1532,17 +1532,12 @@ pub const F_FIB_K2: Ptr             = Ptr { raw: F_FIB_RAW+24 };
         self.alloc(&init)
     }
     pub fn dict_set(&mut self, dict: Ptr, key: Val, value: Val) -> Ptr {
-        let mut d = dict;
-        while let Typed::Dict { key: k, next, .. } = *self.typed(d) {
-            if key == k {
-                if let Typed::Dict { value: v, .. } = self.typed_mut(d) {
-                    *v = value;
-                }
-                return dict
-            }
-            d = next;
-        }
-        self.dict_add(dict, key, value)
+        let d = if self.dict_has(dict, key) {
+            self.dict_del(dict, key)
+        } else {
+            dict
+        };
+        self.dict_add(d, key, value)
     }
     pub fn dict_del(&mut self, dict: Ptr, key: Val) -> Ptr {
         let typed = *self.typed(dict);
