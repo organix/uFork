@@ -62,6 +62,8 @@ pub const UNWRAP_BEH: Ptr   = Ptr { raw: 47 };
 pub const FUTURE_BEH: Ptr   = Ptr { raw: 49 };
 pub const VALUE_BEH: Ptr    = Ptr { raw: 66 };
 pub const SERIAL_BEH: Ptr   = Ptr { raw: 72 };
+pub const DQ_GC_ROOT: Ptr   = Ptr { raw: 84 };
+pub const DQ_EMPTY: Ptr     = Ptr { raw: 85 };
 pub const ABORT: Ptr        = Ptr { raw: 86 };
 pub const STOP: Ptr         = Ptr { raw: 88 };
 pub const WAIT_BEH: Ptr     = Ptr { raw: 90 };
@@ -175,7 +177,7 @@ impl Core {
         quad_mem[DICT_T.addr()]     = Typed::Type;
         quad_mem[FREE_T.addr()]     = Typed::Type;
 
-        quad_mem[MEMORY.addr()]     = Typed::Memory { top: Ptr::new(256), next: NIL.ptr(), free: Fix::new(0), root: DDEQUE.ptr() };
+        quad_mem[MEMORY.addr()]     = Typed::Memory { top: Ptr::new(256), next: NIL.ptr(), free: Fix::new(0), root: DQ_GC_ROOT };
         quad_mem[DDEQUE.addr()]     = Typed::Ddeque { e_first: E_BOOT, e_last: E_BOOT, k_first: NIL.ptr(), k_last: NIL.ptr() };
 
         quad_mem[COMMIT.addr()]     = Typed::Instr { op: Op::End { op: End::Commit } };
@@ -344,6 +346,10 @@ impl Core {
         quad_mem[81]                = Typed::Instr { op: Op::Deque { op: Deque::New, k: Ptr::new(82) } };  // svc cust tag pending
         quad_mem[82]                = Typed::Instr { op: Op::Push { v: BUSY_BEH.val(), k: Ptr::new(83) } };  // svc cust tag pending busy-beh
         quad_mem[83]                = Typed::Instr { op: Op::Beh { n: Fix::new(4), k: COMMIT } };  // (busy-beh svc cust tag pending)
+
+        /* DQ_EMPTY */
+        quad_mem[84]                = Typed::Pair { car: DQ_EMPTY.val(), cdr: DDEQUE };
+        quad_mem[85]                = Typed::Pair { car: NIL, cdr: NIL };
 
         /* (ABORT #?) */
         quad_mem[86]                = Typed::Instr { op: Op::Push { v: UNDEF, k: Ptr::new(87) } };
@@ -568,13 +574,12 @@ pub const FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // worke
         quad_mem[188]               = Typed::Pair { car: fixnum(-1), cdr: ptrval(187) };
         quad_mem[189]               = Typed::Pair { car: UNIT, cdr: NIL };
         //quad_mem[190]               = Typed::Event { target: Cap::new(191), msg: ptrval(188), next: NIL.ptr() };  // run loop demo
-        //quad_mem[190]               = Typed::Event { target: Cap::new(100), msg: ptrval(188), next: NIL.ptr() };  // run test suite
-        quad_mem[190]               = Typed::Event { target: FN_FIB, msg: ptrval(185), next: NIL.ptr() };  // run (fib 6)
+        quad_mem[190]               = Typed::Event { target: Cap::new(100), msg: ptrval(188), next: NIL.ptr() };  // run test suite
+        //quad_mem[190]               = Typed::Event { target: FN_FIB, msg: ptrval(185), next: NIL.ptr() };  // run (fib 6)
         quad_mem[191]               = Typed::Actor { beh: RESEND, state: Ptr::new(189), events: None };
 
         /* Op::Dict test suite */
         /*
-        */
         quad_mem[100]               = Typed::Actor { beh: Ptr::new(101), state: NIL.ptr(), events: None };
         quad_mem[101]               = Typed::Instr { op: Op::Dict { op: Dict::Has, k: Ptr::new(102) } };
         quad_mem[102]               = Typed::Instr { op: Op::IsEq { v: FALSE, k: Ptr::new(103) } };
@@ -620,9 +625,11 @@ pub const FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // worke
         quad_mem[142]               = Typed::Instr { op: Op::Push { v: fixnum(1), k: Ptr::new(143) } };
         quad_mem[143]               = Typed::Instr { op: Op::Dict { op: Dict::Get, k: Ptr::new(144) } };
         quad_mem[144]               = Typed::Instr { op: Op::IsEq { v: fixnum(-1), k: Ptr::new(16) } };
+        */
 
         /* Op::Deque test suite */
         /*
+        */
         quad_mem[100]               = Typed::Actor { beh: Ptr::new(101), state: NIL.ptr(), events: None };
         quad_mem[101]               = Typed::Instr { op: Op::Deque { op: Deque::Empty, k: Ptr::new(102) } };
         quad_mem[102]               = Typed::Instr { op: Op::IsEq { v: TRUE, k: Ptr::new(103) } };
@@ -689,7 +696,6 @@ pub const FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // worke
         quad_mem[163]               = Typed::Instr { op: Op::Dup { n: Fix::new(1), k: Ptr::new(164) } };
         quad_mem[164]               = Typed::Instr { op: Op::Deque { op: Deque::Len, k: Ptr::new(165) } };
         quad_mem[165]               = Typed::Instr { op: Op::IsEq { v: fixnum(0), k: Ptr::new(16) } };
-        */
 
         Core {
             quad_mem,
@@ -834,23 +840,27 @@ pub const FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // worke
                     },
                     Deque::Push => {
                         let item = self.stack_pop();
-                        let deque = self.car(self.sp()).ptr();  // leave deque on stack
-                        self.deque_push(deque, item);
+                        let old = self.stack_pop().ptr();
+                        let new = self.deque_push(old, item);
+                        self.stack_push(new.val());
                     },
                     Deque::Pop => {
-                        let deque = self.car(self.sp()).ptr();  // leave deque on stack
-                        let v = self.deque_pop(deque).unwrap_or(UNDEF);
-                        self.stack_push(v);
+                        let old = self.stack_pop().ptr();
+                        let (new, item) = self.deque_pop(old);
+                        self.stack_push(new.val());
+                        self.stack_push(item);
                     },
                     Deque::Put => {
                         let item = self.stack_pop();
-                        let deque = self.car(self.sp()).ptr();  // leave deque on stack
-                        self.deque_put(deque, item);
+                        let old = self.stack_pop().ptr();
+                        let new = self.deque_put(old, item);
+                        self.stack_push(new.val());
                     },
                     Deque::Pull => {
-                        let deque = self.car(self.sp()).ptr();  // leave deque on stack
-                        let v = self.deque_pull(deque).unwrap_or(UNDEF);
-                        self.stack_push(v);
+                        let old = self.stack_pop().ptr();
+                        let (new, item) = self.deque_pull(old);
+                        self.stack_push(new.val());
+                        self.stack_push(item);
                     },
                     Deque::Len => {
                         let deque = self.stack_pop().ptr();
@@ -1563,20 +1573,32 @@ pub const FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // worke
     }
 
     pub fn deque_new(&mut self) -> Ptr {
+        /*
         self.cons(NIL, NIL)  // allocate new first/last pointers
+        */
+        DQ_EMPTY
     }
     pub fn deque_empty(&self, deque: Ptr) -> bool {
-        !self.typeq(PAIR_T, self.car(deque))
+        if let Typed::Pair { car: front, cdr: back } = *self.typed(deque) {
+            !self.typeq(PAIR_T, front) && !self.typeq(PAIR_T, back)
+        } else {
+            true  // default = empty
+        }
     }
-    pub fn deque_push(&mut self, deque: Ptr, item: Val) {
+    pub fn deque_push(&mut self, deque: Ptr, item: Val) -> Ptr {
+        /*
         let first = self.car(deque);
         let next = self.cons(item, first);  // allocate item holder
         if !self.typeq(PAIR_T, first) {
             self.set_cdr(deque, next.val());
         }
         self.set_car(deque, next.val());
+        */
+        let front = self.cons(item, self.car(deque));
+        self.cons(front.val(), self.cdr(deque))
     }
-    pub fn deque_pop(&mut self, deque: Ptr) -> Option<Val> {
+    pub fn deque_pop(&mut self, deque: Ptr) -> (Ptr, Val) {
+        /*
         let first = self.car(deque);
         if self.typeq(PAIR_T, first) {
             let next = self.cdr(first.ptr());
@@ -1590,8 +1612,33 @@ pub const FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // worke
         } else {
             None
         }
+        */
+        if let Typed::Pair { car, cdr } = *self.typed(deque) {
+            let mut front = car;
+            let mut back = cdr;
+            if !self.typeq(PAIR_T, front) {
+                if self.typeq(PAIR_T, back) {
+                    // transfer back to front
+                    while let Typed::Pair { car: item, cdr: rest } = *self.typed(back.ptr()) {
+                        front = self.cons(item, front).val();
+                        back = rest;
+                    }
+                } else {
+                    return (deque, UNDEF)
+                }
+            }
+            if let Typed::Pair { car: item, cdr: rest } = *self.typed(front.ptr()) {
+                let new = self.cons(rest, back);
+                (new, item)
+            } else {
+                (deque, UNDEF)
+            }
+        } else {
+            (deque, UNDEF)
+        }
     }
-    pub fn deque_put(&mut self, deque: Ptr, item: Val) {
+    pub fn deque_put(&mut self, deque: Ptr, item: Val) -> Ptr {
+        /*
         let next = self.cons(item, NIL);  // allocate item holder
         let last = self.cdr(deque);
         if self.typeq(PAIR_T, last) {
@@ -1600,8 +1647,12 @@ pub const FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // worke
             self.set_car(deque, next.val());
         }
         self.set_cdr(deque, next.val());
+        */
+        let back = self.cons(item, self.cdr(deque));
+        self.cons(self.car(deque), back.val())
     }
-    pub fn deque_pull(&mut self, deque: Ptr) -> Option<Val> {
+    pub fn deque_pull(&mut self, deque: Ptr) -> (Ptr, Val) {
+        /*
         let last = self.cdr(deque);
         if self.typeq(PAIR_T, last) {
             let first = self.car(deque);
@@ -1623,6 +1674,30 @@ pub const FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // worke
         } else {
             None
         }
+        */
+        if let Typed::Pair { car, cdr } = *self.typed(deque) {
+            let mut front = car;
+            let mut back = cdr;
+            if !self.typeq(PAIR_T, back) {
+                if self.typeq(PAIR_T, front) {
+                    // transfer front to back
+                    while let Typed::Pair { car: item, cdr: rest } = *self.typed(front.ptr()) {
+                        back = self.cons(item, back).val();
+                        front = rest;
+                    }
+                } else {
+                    return (deque, UNDEF)
+                }
+            }
+            if let Typed::Pair { car: item, cdr: rest } = *self.typed(back.ptr()) {
+                let new = self.cons(front, rest);
+                (new, item)
+            } else {
+                (deque, UNDEF)
+            }
+        } else {
+            (deque, UNDEF)
+        }
     }
     pub fn deque_len(&self, deque: Ptr) -> Num {
         let mut n = 0;
@@ -1630,6 +1705,11 @@ pub const FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // worke
         while self.typeq(PAIR_T, p) {
             n += 1;
             p = self.cdr(p.ptr());
+        }
+        let mut q = self.cdr(deque);
+        while self.typeq(PAIR_T, q) {
+            n += 1;
+            q = self.cdr(q.ptr());
         }
         n
     }
