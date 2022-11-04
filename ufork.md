@@ -199,30 +199,30 @@ form the root-set of objects for garbage-collection.
 e_queue: [head,tail]--------------------------+
           |                                   V
           +-->[Event,to,msg,next]---> ... -->[Event,to,msg,NIL]
-                     |  |
-                     |  +--> actor message content
+                     |   |
+                     |   +--> actor message content
                      V
                     [Actor,beh,sp,?]
-                           |   |
-                           |   +--> actor state (initial SP)
-                           |
-                           +--> actor behavior (initial IP)
+                            |  |
+                            |  +--> actor state (initial SP)
+                            |
+                            +--> actor behavior (initial IP)
 
 k_queue: [head,tail]--------------------+
           |                             V
           +-->[ip,sp,ep,kp]---> ... -->[ip,sp,ep,NIL]
                |  |  |
                |  |  +-->[Event,to,msg,NIL]
-               |  |             |  |
-               |  |             |  +--> ...
+               |  |             |   |
+               |  |             |   +--> ...
                |  |             V
                |  |            [Actor,beh',sp',events]---> ... -->[Event,to,msg,NIL]
                |  V
                | [Pair,car,cdr,?]
-               |       |   |
-               |       |   +--> ... -->[Pair,car,NIL,?]
-               |       V
-               |      item
+               |        |   |
+               |        |   +--> ... -->[Pair,car,NIL,?]
+               |        V
+               |       item
                V
               [Op,EQ,0,k]
                        |
@@ -243,10 +243,10 @@ to succinctly designate parts of a pair-list.
   * Zero designates the whole list/value (for messages).
 
 ```
-  0        -1        -2        -3
----->[*|*]---->[*|*]---->[*|*]---->...
-   +1 |      +2 |      +3 |
-      V         V         V
+  0            -1            -2            -3
+---->[car,cdr]---->[car,cdr]---->[car,cdr]---->...
+    +1 |          +2 |          +3 |
+       V             V             V
 ```
 
 ...or more compactly...
