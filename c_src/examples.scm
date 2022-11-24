@@ -80,6 +80,35 @@
     `(seq ,@(map defsym syms) ,@body) ))
 
 ;;;
+;;; sealer/unsealer examples
+;;;
+
+;;
+;; [https://community.spritely.institute/t/rights-amplification-term-alternate/141/28]
+;;
+; const makeSealerAndUnseler = (brandmark) => {
+;   let cell = undefined;
+;   const sealer = (specimen) => {
+;     const box = () => {
+;       cell = specimen;
+;       return undefined;
+;     };
+;     return box;
+;   };
+;   const unsealer = (box) => {
+;     try {
+;       box();
+;       const specimen = cell;
+;       cell = undefined;
+;       return specimen;
+;     } catch (err) {
+;       throw new Error(“unsuccessfull unsealing”);
+;     }
+;   };
+;   return [sealer, unsealer];
+; }
+
+;;;
 ;;; encapsulated (sealed) data-types
 ;;;
 
