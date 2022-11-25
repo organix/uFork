@@ -19,13 +19,6 @@ impl Any {
     pub fn new(raw: Raw) -> Any {
         Any { raw }
     }
-    pub fn val(val: Val) -> Any {  // FIXME: temporary Val->Any constructor
-        /*
-        let raw = val.raw();
-        Any { raw }
-        */
-        Any::new(val.raw())
-    }
     pub fn fix(num: isize) -> Any {
         Any::new(DIR_RAW | (num as Raw))
     }
@@ -78,6 +71,9 @@ impl Any {
             None
         }
     }
+    pub fn val(self) -> Val {  // NOTE: consumes `self`
+        Val::new(self.raw)
+    }
 }
 impl fmt::Display for Any {
     fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -107,13 +103,16 @@ impl Quad {
     /*
     */
     pub fn empty_t() -> Quad {
-        Quad::init(UNDEF, UNDEF, UNDEF, UNDEF)
+        //Quad::init(UNDEF, UNDEF, UNDEF, UNDEF)
+        Quad::new(UNDEF_V, UNDEF_V, UNDEF_V, UNDEF_V)
     }
     pub fn literal_t() -> Quad {
-        Quad::init(LITERAL_T, UNDEF, UNDEF, UNDEF)
+        //Quad::init(LITERAL_T, UNDEF, UNDEF, UNDEF)
+        Quad::new(LITERAL_V, UNDEF_V, UNDEF_V, UNDEF_V)
     }
     pub fn type_t() -> Quad {
-        Quad::init(TYPE_T, UNDEF, UNDEF, UNDEF)
+        //Quad::init(TYPE_T, UNDEF, UNDEF, UNDEF)
+        Quad::new(TYPE_V, UNDEF_V, UNDEF_V, UNDEF_V)
     }
     pub fn pair_t(car: Any, cdr: Any) -> Quad {
         //Quad::init(PAIR_T, Val::new(car.raw()), Val::new(cdr.raw()), UNDEF)
@@ -127,21 +126,21 @@ impl Quad {
     */
     pub fn init(t: Val, x: Val, y: Val, z: Val) -> Quad {
         Quad {
-            t: Any::val(t),
-            x: Any::val(x),
-            y: Any::val(y),
-            z: Any::val(z)
+            t: t.any(),
+            x: x.any(),
+            y: y.any(),
+            z: z.any(),
         }
     }
-    pub fn get_t(&self) -> Val { Val::new(self.t.raw()) }
-    pub fn get_x(&self) -> Val { Val::new(self.x.raw()) }
-    pub fn get_y(&self) -> Val { Val::new(self.y.raw()) }
-    pub fn get_z(&self) -> Val { Val::new(self.z.raw()) }
+    pub fn get_t(&self) -> Val { self.t.val() }
+    pub fn get_x(&self) -> Val { self.x.val() }
+    pub fn get_y(&self) -> Val { self.y.val() }
+    pub fn get_z(&self) -> Val { self.z.val() }
     /*
-    pub fn set_t(&mut self, v: Val) { self.t = Any::val(v); }
-    pub fn set_x(&mut self, v: Val) { self.x = Any::val(v); }
-    pub fn set_y(&mut self, v: Val) { self.y = Any::val(v); }
-    pub fn set_z(&mut self, v: Val) { self.z = Any::val(v); }
+    pub fn set_t(&mut self, v: Val) { self.t = v.any(); }
+    pub fn set_x(&mut self, v: Val) { self.x = v.any(); }
+    pub fn set_y(&mut self, v: Val) { self.y = v.any(); }
+    pub fn set_z(&mut self, v: Val) { self.z = v.any(); }
     */
 }
 impl fmt::Display for Quad {
@@ -1996,9 +1995,12 @@ pub const FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // worke
         self.set_mem_free(Fix::new(num + 1));
     }
 
-    pub fn rom(&self, ptr: Any) -> &Quad {
+    pub fn rom(&self, ptr: Any) -> Quad {  // FIXME: should return &Quad to avoid copy
+        /*
         let addr = ptr.addr();
-        &self.quad_rom[addr]
+        self.quad_rom[addr]
+        */
+        self.typed(ptr.val().ptr()).quad()
     }
 
     pub fn typed(&self, ptr: Ptr) -> &Typed {
@@ -2618,7 +2620,7 @@ impl Val {
         Cap::from(self).unwrap()
     }
     pub fn any(self) -> Any {  // NOTE: consumes `self`
-        Any::val(self)
+        Any::new(self.raw)
     }
 }
 impl fmt::Display for Val {
