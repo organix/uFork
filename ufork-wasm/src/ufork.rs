@@ -103,24 +103,99 @@ impl Quad {
     /*
     */
     pub fn empty_t() -> Quad {
-        //Quad::init(UNDEF, UNDEF, UNDEF, UNDEF)
-        Quad::new(UNDEF_V, UNDEF_V, UNDEF_V, UNDEF_V)
+        Quad::new(UNDEF.any(), UNDEF.any(), UNDEF.any(), UNDEF.any())
     }
     pub fn literal_t() -> Quad {
-        //Quad::init(LITERAL_T, UNDEF, UNDEF, UNDEF)
-        Quad::new(LITERAL_V, UNDEF_V, UNDEF_V, UNDEF_V)
+        Quad::new(LITERAL_T.any(), UNDEF.any(), UNDEF.any(), UNDEF.any())
     }
     pub fn type_t() -> Quad {
-        //Quad::init(TYPE_T, UNDEF, UNDEF, UNDEF)
-        Quad::new(TYPE_V, UNDEF_V, UNDEF_V, UNDEF_V)
+        Quad::new(TYPE_T.any(), UNDEF.any(), UNDEF.any(), UNDEF.any())
+    }
+    pub fn event_t(target: Any, msg: Any, next: Any) -> Quad {
+        assert!(target.is_cap());
+        assert!(next.is_ptr());
+        Quad::new(EVENT_T.any(), target, msg, next)
+    }
+    pub fn cont_t(ip: Any, sp: Any, ep: Any, next: Any) -> Quad {
+        assert!(ip.is_ptr());
+        assert!(sp.is_ptr());
+        assert!(ep.is_ptr());
+        assert!(next.is_ptr());
+        Quad::new(ip, sp, ep, next)
+    }
+    pub fn instr_t(op: Any, v: Any, k: Any) -> Quad {
+        assert!(op.is_fix());
+        assert!(k.is_ptr());
+        Quad::new(INSTR_T.any(), op, v, k)
+    }
+    /*
+    */
+    pub fn op_typeq(t: Any, k: Any) -> Quad {
+        assert!(t.is_ptr());
+        assert!(k.is_ptr());
+        Quad::new(INSTR_T.any(), OP_TYPEQ.any(), t, k)
+    }
+    pub fn op_cmp(q: Any, k: Any) -> Quad {
+        assert!(q.is_fix());
+        assert!(k.is_ptr());
+        Quad::new(INSTR_T.any(), OP_CMP.any(), q, k)
+    }
+    pub fn op_if(t: Any, f: Any) -> Quad {
+        assert!(t.is_ptr());
+        assert!(f.is_ptr());
+        Quad::new(INSTR_T.any(), OP_IF.any(), t, f)
+    }
+    pub fn op_end(q: Any) -> Quad {
+        assert!(q.is_fix());
+        Quad::new(INSTR_T.any(), OP_END.any(), q, UNDEF.any())
+    }
+    /*
+    */
+    pub fn op_cmp_eq(k: Any) -> Quad {
+        assert!(k.is_ptr());
+        Quad::new(INSTR_T.any(), OP_CMP.any(), CMP_EQ.any(), k)
+    }
+    pub fn op_end_commit() -> Quad {
+        Quad::new(INSTR_T.any(), OP_END.any(), END_COMMIT.any(), UNDEF.any())
+    }
+    /*
+    */
+    pub fn actor_t(beh: Any, state: Any, events: Any) -> Quad {
+        assert!(beh.is_ptr());
+        assert!(events.is_ptr());
+        Quad::new(ACTOR_T.any(), beh, state, events)
+    }
+    pub fn symbol_t(hash: Any, key: Any, value: Any) -> Quad {
+        assert!(hash.is_fix());
+        assert!(key.is_ptr());
+        Quad::new(SYMBOL_T.any(), hash, key, value)
     }
     pub fn pair_t(car: Any, cdr: Any) -> Quad {
-        //Quad::init(PAIR_T, Val::new(car.raw()), Val::new(cdr.raw()), UNDEF)
         Quad::new(PAIR_T.any(), car, cdr, UNDEF.any())
     }
+    pub fn dict_t(key: Any, value: Any, next: Any) -> Quad {
+        assert!(next.is_ptr());
+        Quad::new(DICT_T.any(), key, value, next)
+    }
     pub fn free_t(next: Any) -> Quad {
-        //Quad::init(FREE_T, UNDEF, UNDEF, Val::new(next.raw()))
-        Quad::new(FREE_V, UNDEF_V, UNDEF_V, next)
+        Quad::new(FREE_T.any(), UNDEF.any(), UNDEF.any(), next)
+    }
+    pub fn ddeque_t(e_first: Any, e_last: Any, k_first: Any, k_last: Any) -> Quad {
+        assert!(e_first.is_ptr());
+        assert!(e_last.is_ptr());
+        assert!(k_first.is_ptr());
+        assert!(k_last.is_ptr());
+        Quad::new(e_first, e_last, k_first, k_last)
+    }
+    pub fn memory_t(top: Any, next: Any, free: Any, root: Any) -> Quad {
+        assert!(top.is_ptr());
+        assert!(next.is_ptr());
+        assert!(free.is_fix());
+        assert!(root.is_ptr());
+        Quad::new(top, next, free, root)
+    }
+    pub fn untyped_t(t: Any, x: Any, y: Any, z: Any) -> Quad {  // pass-thru for Quad::new()
+        Quad::new(t, x, y, z)
     }
     /*
     */
@@ -150,25 +225,26 @@ impl fmt::Display for Quad {
 }
 
 // literal values
-pub const ZERO_V: Any       = Any { raw: DIR_RAW | 0 };
-pub const UNDEF_V: Any      = Any { raw: 0 };
-pub const NIL_V: Any        = Any { raw: 1 };
-pub const FALSE_V: Any      = Any { raw: 2 };
-pub const TRUE_V: Any       = Any { raw: 3 };
-pub const UNIT_V: Any       = Any { raw: 4 };
-
-pub const LITERAL_V: Any    = Any { raw: 0 };  // == UNDEF_V
-pub const TYPE_V: Any       = Any { raw: 5 };
-pub const EVENT_V: Any      = Any { raw: 6 };
-pub const INSTR_V: Any      = Any { raw: 7 };
-pub const ACTOR_V: Any      = Any { raw: 8 };
-pub const FIXNUM_V: Any     = Any { raw: 9 };
-pub const SYMBOL_V: Any     = Any { raw: 10 };
-pub const PAIR_V: Any       = Any { raw: 11 };
-//pub const FEXPR_V: Any      = Any { raw: 12 };
-pub const DICT_V: Any       = Any { raw: 12 };
-pub const FREE_V: Any       = Any { raw: 13 };
 /*
+pub const ZERO: Any         = Any { raw: DIR_RAW | 0 };
+pub const UNDEF: Any        = Any { raw: 0 };
+pub const NIL: Any          = Any { raw: 1 };
+pub const FALSE: Any        = Any { raw: 2 };
+pub const TRUE: Any         = Any { raw: 3 };
+pub const UNIT: Any         = Any { raw: 4 };
+
+pub const LITERAL: Any      = Any { raw: 0 };  // == UNDEF
+pub const TYPE: Any         = Any { raw: 5 };
+pub const EVENT: Any        = Any { raw: 6 };
+pub const INSTR: Any        = Any { raw: 7 };
+pub const ACTOR: Any        = Any { raw: 8 };
+pub const FIXNUM: Any       = Any { raw: 9 };
+pub const SYMBOL: Any       = Any { raw: 10 };
+pub const PAIR: Any         = Any { raw: 11 };
+//pub const FEXPR: Any        = Any { raw: 12 };
+pub const DICT: Any         = Any { raw: 12 };
+pub const FREE: Any         = Any { raw: 13 };
+
 pub const MEMORY: Any       = Any { raw: 14 };
 pub const DDEQUE: Any       = Any { raw: 15 };
 pub const START: Any        = Any { raw: 16 };
@@ -314,21 +390,22 @@ const QUAD_MAX: usize = 1<<10;  // 1K quad-cells
 //const QUAD_MAX: usize = 1<<12;  // 4K quad-cells
 
 pub struct Core {
-    quad_rom: [Quad; QUAD_MAX],
+    quad_ram: [Quad; QUAD_MAX],
     quad_mem: [Typed; QUAD_MAX],
 }
 
 impl Core {
     pub fn new() -> Core {
-        let mut quad_rom = [
+        let mut quad_ram = [
             Quad::empty_t();
             QUAD_MAX
         ];
-        quad_rom[UNDEF.addr()]      = Quad::literal_t();
-        quad_rom[NIL.addr()]        = Quad::literal_t();
-        quad_rom[FALSE.addr()]      = Quad::literal_t();
-        quad_rom[TRUE.addr()]       = Quad::literal_t();
-        quad_rom[UNIT.addr()]       = Quad::literal_t();
+        /*
+        quad_mem[MEMORY.addr()]     = Typed::Memory { top: Ptr::new(256), next: NIL.ptr(), free: Fix::new(0), root: DQ_GC_ROOT };
+        quad_mem[DDEQUE.addr()]     = Typed::Ddeque { e_first: E_BOOT, e_last: E_BOOT, k_first: NIL.ptr(), k_last: NIL.ptr() };
+        */
+        quad_ram[MEMORY.addr()]     = Quad::untyped_t(Any::ptr(256), NIL.any(), Any::fix(0), DQ_GC_ROOT.any());
+        quad_ram[DDEQUE.addr()]     = Quad::untyped_t(E_BOOT.any(), E_BOOT.any(), NIL.any(), NIL.any());
         let mut quad_mem = [
             Typed::Empty;
             QUAD_MAX
@@ -871,7 +948,7 @@ pub const FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // worke
         quad_mem[165]               = Typed::Instr { op: Op::IsEq { v: fixnum(0), k: Ptr::new(16) } };
 
         Core {
-            quad_rom,
+            quad_ram,
             quad_mem,
         }
     }
@@ -2002,6 +2079,14 @@ pub const FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // worke
         */
         self.typed(ptr.val().ptr()).quad()
     }
+    pub fn ram(&self, ptr: Any) -> &Quad {
+        let addr = ptr.addr();
+        &self.quad_ram[addr]
+    }
+    pub fn ram_mut(&mut self, ptr: Any) -> &mut Quad {
+        let addr = ptr.addr();
+        &mut self.quad_ram[addr]
+    }
 
     pub fn typed(&self, ptr: Ptr) -> &Typed {
         let addr = self.addr(ptr).unwrap();
@@ -2657,6 +2742,9 @@ impl Fix {
     pub fn val(self) -> Val {  // NOTE: consumes `self`
         Val::new(self.num as Raw | DIR_RAW)
     }
+    pub fn any(self) -> Any {  // NOTE: consumes `self`
+        self.val().any()
+    }
     pub fn num(&self) -> Num {
         self.num
     }
@@ -2688,6 +2776,9 @@ impl Ptr {
     }
     pub fn val(self) -> Val {  // NOTE: consumes `self`
         Val::new(self.raw)
+    }
+    pub fn any(self) -> Any {  // NOTE: consumes `self`
+        self.val().any()
     }
     pub fn raw(&self) -> Raw {
         self.raw
@@ -2740,6 +2831,9 @@ impl Cap {
     }
     pub fn val(self) -> Val {  // NOTE: consumes `self`
         Val::new(self.raw | OPQ_RAW)
+    }
+    pub fn any(self) -> Any {  // NOTE: consumes `self`
+        self.val().any()
     }
     pub fn raw(&self) -> Raw {
         self.raw
