@@ -157,10 +157,10 @@ impl Host {
         }
     }
     pub fn in_heap(&self, v: Raw) -> bool {
-        self.core.in_heap(Val::new(v))
+        self.core.in_heap(Any::new(v))
     }
     pub fn is_pair(&self, v: Raw) -> bool {
-        self.core.typeq(PAIR_T, Val::new(v))
+        self.core.typeq(PAIR_T, Any::new(v))
     }
     pub fn car(&self, p: Raw) -> Raw {
         if self.is_pair(p) {
@@ -199,7 +199,7 @@ impl Host {
             }
             s.push_str(")");
             s
-        } else if self.core.typeq(DICT_T, Val::new(raw)) {
+        } else if self.core.typeq(DICT_T, Any::new(raw)) {
             let mut s = String::new();
             let mut p = raw;
             let mut sep = "{";
@@ -224,7 +224,7 @@ impl Host {
         let mut s = String::new();
         let ss = self.print(raw);
         s.push_str(ss.as_str());
-        let val = Val::new(raw);
+        let val = Any::new(raw);
         if self.core.in_heap(val) {
             s.push_str(" → ");
             let ss = self.disasm(raw);
@@ -233,16 +233,16 @@ impl Host {
         s
     }
     pub fn disasm(&self, raw: Raw) -> String {
-        let val = Val::new(raw);
+        let val = Any::new(raw);
         if self.core.in_heap(val) {
-            let ptr = val.ptr();
+            let ptr = val.val().ptr();
             self.core.typed(ptr).to_string()
         } else {
             self.print(raw)
         }
     }
     pub fn print(&self, raw: Raw) -> String {
-        Val::new(raw).to_string()
+        Any::new(raw).to_string()
     }
 
     pub fn render(&self) -> String {

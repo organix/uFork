@@ -9,7 +9,7 @@ pub type Num = i32;  // fixnum integer type
 const MSK_RAW: Raw          = 0xF000_0000;  // mask for type-tag bits
 const DIR_RAW: Raw          = 0x8000_0000;  // 1=direct (fixnum), 0=indirect (pointer)
 const OPQ_RAW: Raw          = 0x4000_0000;  // 1=opaque (capability), 0=transparent (navigable)
-//const MUT_RAW: Raw          = 0x2000_0000;  // 1=read-write (mutable), 0=read-only (immutable)
+const MUT_RAW: Raw          = 0x2000_0000;  // 1=read-write (mutable), 0=read-only (immutable)
 //const BNK_RAW: Raw          = 0x1000_0000;  // 1=bank_1, 0=bank_0 (half-space GC phase)
 
 // type-tagged value
@@ -25,8 +25,11 @@ impl Any {
     pub fn cap(ofs: usize) -> Any {
         Any::new(OPQ_RAW | ((ofs as Raw) & !MSK_RAW))
     }
-    pub fn ptr(ofs: usize) -> Any {
+    pub fn rom(ofs: usize) -> Any {
         Any::new((ofs as Raw) & !MSK_RAW)
+    }
+    pub fn ram(ofs: usize) -> Any {
+        Any::new(MUT_RAW | ((ofs as Raw) & !MSK_RAW))
     }
     pub fn raw(&self) -> Raw {
         self.raw
@@ -45,7 +48,13 @@ impl Any {
         (self.raw & MSK_RAW) == OPQ_RAW
     }
     pub fn is_ptr(&self) -> bool {
+        (self.raw & (DIR_RAW | OPQ_RAW)) == 0
+    }
+    pub fn is_rom(&self) -> bool {
         (self.raw & MSK_RAW) == 0
+    }
+    pub fn is_ram(&self) -> bool {
+        (self.raw & (DIR_RAW | OPQ_RAW | MUT_RAW)) == MUT_RAW
     }
     pub fn fix_num(&self) -> Option<isize> {
         if self.is_fix() {
@@ -81,10 +90,12 @@ impl fmt::Display for Any {
             write!(fmt, "{:+}", self.fix_num().unwrap())
         } else if self.is_cap() {
             write!(fmt, "@{}", self.cap_ofs().unwrap())
-        } else if self.is_ptr() {
+        } else if self.is_rom() {
+            write!(fmt, "*{}", self.ptr_ofs().unwrap())
+        } else if self.is_ram() {
             write!(fmt, "^{}", self.ptr_ofs().unwrap())
         } else {
-            write!(fmt, "?{:08x}", self.raw)
+            write!(fmt, "${:08x}", self.raw)
         }
     }
 }
@@ -177,6 +188,10 @@ impl Quad {
     pub fn x(&self) -> Any { self.x }
     pub fn y(&self) -> Any { self.y }
     pub fn z(&self) -> Any { self.z }
+    pub fn set_t(&mut self, v: Any) { self.t = v; }
+    pub fn set_x(&mut self, v: Any) { self.x = v; }
+    pub fn set_y(&mut self, v: Any) { self.y = v; }
+    pub fn set_z(&mut self, v: Any) { self.z = v; }
 
     // construct basic Quad types
     pub fn empty_t() -> Quad {
@@ -293,12 +308,9 @@ impl Quad {
     pub fn get_x(&self) -> Val { self.x.val() }
     pub fn get_y(&self) -> Val { self.y.val() }
     pub fn get_z(&self) -> Val { self.z.val() }
-    /*
-    pub fn set_t(&mut self, v: Val) { self.t = v.any(); }
-    pub fn set_x(&mut self, v: Val) { self.x = v.any(); }
-    pub fn set_y(&mut self, v: Val) { self.y = v.any(); }
-    pub fn set_z(&mut self, v: Val) { self.z = v.any(); }
-    */
+    pub fn typed(&self) -> Typed {
+        Typed::from(self).unwrap()
+    }
 }
 impl fmt::Display for Quad {
     fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -326,8 +338,10 @@ pub const PAIR: Any         = Any { raw: 11 };
 //pub const FEXPR: Any        = Any { raw: 12 };
 pub const DICT: Any         = Any { raw: 12 };
 pub const FREE: Any         = Any { raw: 13 };
+*/
 
 pub const MEMORY: Any       = Any { raw: MUT_RAW | 14 };
+/*
 pub const DDEQUE: Any       = Any { raw: MUT_RAW | 15 };
 pub const START: Any        = Any { raw: 16 };
 */
@@ -352,7 +366,9 @@ pub const PAIR_T: Val       = Val { raw: 11 };
 pub const DICT_T: Val       = Val { raw: 12 };
 pub const FREE_T: Val       = Val { raw: 13 };
 
+/*
 pub const MEMORY: Val       = Val { raw: 14 };
+*/
 pub const DDEQUE: Val       = Val { raw: 15 };
 pub const START: Val        = Val { raw: 16 };
 
@@ -395,6 +411,7 @@ const QUAD_MAX: usize = 1<<10;  // 1K quad-cells
 //const QUAD_MAX: usize = 1<<12;  // 4K quad-cells
 
 pub struct Core {
+    quad_rom: [Quad; QUAD_MAX],
     quad_ram: [Quad; QUAD_MAX],
     quad_mem: [Typed; QUAD_MAX],
 }
@@ -412,7 +429,7 @@ impl Core {
 pub const A_STOP: Cap               = Cap { raw: 89 };
         quad_mem[89]                = Typed::Actor { beh: STOP.ptr(), state: NIL.ptr(), events: None };
         */
-        quad_ram[MEMORY.addr()]     = Quad::memory_t(Any::ptr(256), NIL.any(), Any::fix(0), DQ_GC_ROOT.any());
+        quad_ram[MEMORY.addr()]     = Quad::memory_t(Any::ram(256), NIL.any(), Any::fix(0), DQ_GC_ROOT.any());
         quad_ram[DDEQUE.addr()]     = Quad::ddeque_t(E_BOOT.any(), E_BOOT.any(), NIL.any(), NIL.any());
         quad_ram[A_SINK.addr()]     = Quad::actor_t(COMMIT.any(), NIL.any(), UNDEF.any());
         quad_ram[89]                = Quad::new_actor(STOP.any(), NIL.any());
@@ -958,7 +975,17 @@ pub const FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // worke
         quad_mem[164]               = Typed::Instr { op: Op::Deque { op: Deque::Len, k: Ptr::new(165) } };
         quad_mem[165]               = Typed::Instr { op: Op::IsEq { v: fixnum(0), k: Ptr::new(16) } };
 
+        let mut quad_rom = [
+            Quad::empty_t();
+            QUAD_MAX
+        ];
+        for addr in 0..256 {
+            let q = &quad_mem[addr];
+            quad_rom[addr] = q.quad();
+        }
+
         Core {
+            quad_rom,
             quad_ram,
             quad_mem,
         }
@@ -1021,7 +1048,7 @@ pub const FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // worke
                 println!("execute_instruction: ip'={} -> {}", ip_, self.typed(ip_));
                 self.set_ip(ip_);
                 assert_eq!(kp, self.cont_dequeue().unwrap());
-                if self.in_heap(ip_.val()) {
+                if self.in_heap(ip_.any()) {
                     // re-queue updated continuation
                     self.cont_enqueue(kp);
                 } else {
@@ -1044,7 +1071,7 @@ pub const FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // worke
                 println!("vm_typeq: typ={}", t);
                 let val = self.stack_pop();
                 println!("vm_typeq: val={}", val);
-                let r = if self.typeq(t.val(), val) { TRUE } else { FALSE };
+                let r = if self.typeq(t.val(), val.any()) { TRUE } else { FALSE };
                 self.stack_push(r);
                 *k
             },
@@ -1197,7 +1224,7 @@ pub const FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // worke
             Op::Depth { k } => {
                 let mut num: Num = 0;
                 let mut p = self.sp().val();
-                while self.typeq(PAIR_T, p) {
+                while self.typeq(PAIR_T, p.any()) {
                     p = self.cdr(p.ptr());
                     num += 1;
                 };
@@ -1242,7 +1269,7 @@ pub const FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // worke
                     assert!(num < 64);
                     let sp = self.sp().val();
                     let (q, p) = self.split_nth(sp, num);
-                    if self.typeq(PAIR_T, p) {
+                    if self.typeq(PAIR_T, p.any()) {
                         self.set_cdr(q.ptr(), self.cdr(p.ptr()));
                         self.set_cdr(p.ptr(), sp);
                         self.set_sp(p.ptr());
@@ -1253,7 +1280,7 @@ pub const FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // worke
                     assert!(num > -64);
                     let sp = self.sp().val();
                     let (_q, p) = self.split_nth(sp, -num);
-                    if self.typeq(PAIR_T, p) {
+                    if self.typeq(PAIR_T, p.any()) {
                         self.set_sp(self.cdr(sp.ptr()).ptr());
                         self.set_cdr(sp.ptr(), self.cdr(p.ptr()));
                         self.set_cdr(p.ptr(), sp);
@@ -1389,7 +1416,7 @@ pub const FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // worke
                 let num = n.num();
                 let target = self.stack_pop();
                 println!("vm_send: target={}", target);
-                assert!(self.typeq(ACTOR_T, target));
+                assert!(self.typeq(ACTOR_T, target.any()));
                 let msg = if num > 0 {
                     self.pop_counted(num)
                 } else {
@@ -1417,7 +1444,7 @@ pub const FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // worke
                 let num = n.num();
                 let ip = self.stack_pop();
                 println!("vm_new: ip={}", ip);
-                assert!(self.typeq(INSTR_T, ip));
+                assert!(self.typeq(INSTR_T, ip.any()));
                 let sp = self.pop_counted(num);
                 println!("vm_new: sp={}", sp);
                 let a = self.new_actor(ip.ptr(), sp.ptr());
@@ -1430,7 +1457,7 @@ pub const FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // worke
                 let num = n.num();
                 let ip = self.stack_pop();
                 println!("vm_beh: ip={}", ip);
-                assert!(self.typeq(INSTR_T, ip));
+                assert!(self.typeq(INSTR_T, ip.any()));
                 let sp = self.pop_counted(num);
                 println!("vm_beh: sp={}", sp);
                 let me = self.self_ptr().unwrap();
@@ -1608,12 +1635,12 @@ pub const FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // worke
             let sp = self.sp().val();
             let mut v = sp;
             let mut p = UNDEF.ptr();
-            while n > 0 && self.typeq(PAIR_T, v) {
+            while n > 0 && self.typeq(PAIR_T, v.any()) {
                 p = v.ptr();
                 v = self.cdr(p);
                 n -= 1;
             }
-            if self.typeq(PAIR_T, p.val()) {
+            if self.typeq(PAIR_T, p.any()) {
                 self.set_cdr(p, NIL);
             }
             self.set_sp(v.ptr());
@@ -1627,7 +1654,7 @@ pub const FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // worke
         let mut q = UNDEF;
         let mut n = num;
         assert!(n < 64);
-        while n > 1 && self.typeq(PAIR_T, p) {
+        while n > 1 && self.typeq(PAIR_T, p.any()) {
             q = p;
             p = self.cdr(p.ptr());
             n -= 1;
@@ -1642,7 +1669,7 @@ pub const FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // worke
             v = p;
         } else if n > 0 {  // item at n-th index
             assert!(n < 64);
-            while self.typeq(PAIR_T, p) {
+            while self.typeq(PAIR_T, p.any()) {
                 n -= 1;
                 if n <= 0 { break; }
                 p = self.cdr(p.ptr());
@@ -1652,7 +1679,7 @@ pub const FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // worke
             }
         } else {  // `-n` selects the n-th tail
             assert!(n > -64);
-            while self.typeq(PAIR_T, p) {
+            while self.typeq(PAIR_T, p.any()) {
                 n += 1;
                 if n >= 0 { break; }
                 p = self.cdr(p.ptr());
@@ -1670,7 +1697,7 @@ pub const FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // worke
     }
     fn stack_pop(&mut self) -> Val {
         let sp = self.sp();
-        if self.typeq(PAIR_T, sp.val()) {
+        if self.typeq(PAIR_T, sp.any()) {
             let item = self.car(sp);
             self.set_sp(self.cdr(sp).ptr());
             self.free(sp);  // free pair holding stack item
@@ -1682,7 +1709,7 @@ pub const FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // worke
     }
     fn stack_clear(&mut self, top: Ptr) {
         let mut sp = self.sp();
-        while sp != top && self.typeq(PAIR_T, sp.val()) {
+        while sp != top && self.typeq(PAIR_T, sp.any()) {
             let p = sp;
             sp = self.cdr(p).ptr();
             self.free(p);  // free pair holding stack item
@@ -1741,16 +1768,17 @@ pub const FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // worke
     }
 
     pub fn new_event(&mut self, target: Cap, msg: Val) -> Ptr {
-        let event = Typed::Event { target, msg, next: NIL.ptr() };
+        let event = Quad::event_t(target.any(), msg.any(), NIL.any());
         self.alloc(&event)
     }
     pub fn new_cont(&mut self, ip: Ptr, sp: Ptr, ep: Ptr) -> Ptr {
-        let cont = Typed::Cont { ip, sp, ep, next: NIL.ptr() };
+        let cont = Quad::cont_t(ip.any(), sp.any(), ep.any(), NIL.any());
         self.alloc(&cont)
     }
     pub fn new_actor(&mut self, beh: Ptr, state: Ptr) -> Cap {
-        let actor = Typed::Actor { beh, state, events: None };
-        Cap::new(self.alloc(&actor).raw())  // convert from Ptr to Cap!
+        let actor = Quad::new_actor(beh.any(), state.any());
+        let ptr = self.alloc(&actor);
+        Cap::new(ptr.raw())  // convert from Ptr to Cap!
     }
     pub fn next(&self, ptr: Ptr) -> Ptr {
         let typed = *self.typed(ptr);
@@ -1809,8 +1837,8 @@ pub const FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // worke
         UNDEF
     }
     pub fn dict_add(&mut self, dict: Ptr, key: Val, value: Val) -> Ptr {
-        let init = Typed::Dict { key, value, next: dict };
-        self.alloc(&init)
+        let dict = Quad::dict_t(key.any(), value.any(), dict.any());
+        self.alloc(&dict)
     }
     pub fn dict_set(&mut self, dict: Ptr, key: Val, value: Val) -> Ptr {
         let d = if self.dict_has(dict, key) {
@@ -1842,7 +1870,7 @@ pub const FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // worke
     }
     pub fn deque_empty(&self, deque: Ptr) -> bool {
         if let Typed::Pair { car: front, cdr: back } = *self.typed(deque) {
-            !self.typeq(PAIR_T, front) && !self.typeq(PAIR_T, back)
+            !self.typeq(PAIR_T, front.any()) && !self.typeq(PAIR_T, back.any())
         } else {
             true  // default = empty
         }
@@ -1878,8 +1906,8 @@ pub const FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // worke
         if let Typed::Pair { car, cdr } = *self.typed(deque) {
             let mut front = car;
             let mut back = cdr;
-            if !self.typeq(PAIR_T, front) {
-                if self.typeq(PAIR_T, back) {
+            if !self.typeq(PAIR_T, front.any()) {
+                if self.typeq(PAIR_T, back.any()) {
                     // transfer back to front
                     while let Typed::Pair { car: item, cdr: rest } = *self.typed(back.ptr()) {
                         front = self.cons(item, front).val();
@@ -1940,8 +1968,8 @@ pub const FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // worke
         if let Typed::Pair { car, cdr } = *self.typed(deque) {
             let mut front = car;
             let mut back = cdr;
-            if !self.typeq(PAIR_T, back) {
-                if self.typeq(PAIR_T, front) {
+            if !self.typeq(PAIR_T, back.any()) {
+                if self.typeq(PAIR_T, front.any()) {
                     // transfer front to back
                     while let Typed::Pair { car: item, cdr: rest } = *self.typed(front.ptr()) {
                         back = self.cons(item, back).val();
@@ -1964,12 +1992,12 @@ pub const FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // worke
     pub fn deque_len(&self, deque: Ptr) -> Num {
         let mut n = 0;
         let mut p = self.car(deque);
-        while self.typeq(PAIR_T, p) {
+        while self.typeq(PAIR_T, p.any()) {
             n += 1;
             p = self.cdr(p.ptr());
         }
         let mut q = self.cdr(deque);
-        while self.typeq(PAIR_T, q) {
+        while self.typeq(PAIR_T, q.any()) {
             n += 1;
             q = self.cdr(q.ptr());
         }
@@ -1977,7 +2005,7 @@ pub const FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // worke
     }
 
     pub fn cons(&mut self, car: Val, cdr: Val) -> Ptr {
-        let pair = Typed::Pair { car, cdr };
+        let pair = Quad::pair_t(car.any(), cdr.any());
         self.alloc(&pair)
     }
     pub fn car(&self, pair: Ptr) -> Val {
@@ -1995,131 +2023,117 @@ pub const FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // worke
         }
     }
     pub fn set_car(&mut self, pair: Ptr, val: Val) {
-        assert!(self.in_heap(pair.val()));
+        assert!(self.in_heap(pair.any()));
         if let Typed::Pair { car, .. } = self.typed_mut(pair) {
             *car = val;
         }
     }
     pub fn set_cdr(&mut self, pair: Ptr, val: Val) {
-        assert!(self.in_heap(pair.val()));
+        assert!(self.in_heap(pair.any()));
         if let Typed::Pair { cdr, .. } = self.typed_mut(pair) {
             *cdr = val;
         }
     }
 
-    pub fn typeq(&self, typ: Val, val: Val) -> bool {
-        if FIXNUM_T == typ {
-            let fix = Fix::from(val);
-            fix.is_some()
-        } else if ACTOR_T == typ {
-            match Cap::from(val) {
-                Some(cap) => {
-                    let ptr = Ptr::new(cap.raw());  // WARNING: converting Cap to Ptr!
-                    match self.typed(ptr) {
-                        Typed::Actor { .. } => true,
-                        _ => false,
-                    }
-                },
-                None => false,
+    pub fn typeq(&self, typ: Val, val: Any) -> bool {
+        if typ == FIXNUM_T {
+            val.is_fix()
+        } else if typ == ACTOR_T {
+            if val.is_cap() {
+                let ptr = Any::ram(val.addr());  // WARNING: converting Cap to Ptr!
+                self.ram(ptr).t() == ACTOR_T.any()
+            } else {
+                false
             }
+        } else if val.is_ptr() {
+            self.quad(val).t() == typ.any()
         } else {
-            match Ptr::from(val) {
-                Some(ptr) => {
-                    match self.typed(ptr) {
-                        Typed::Empty => typ == UNDEF,
-                        Typed::Literal => typ == LITERAL_T,
-                        Typed::Type => typ == TYPE_T,
-                        Typed::Event { .. } => typ == EVENT_T,
-                        //Typed::Cont { .. } => false,
-                        Typed::Instr { .. } => typ == INSTR_T,
-                        //Typed::Actor { .. } => false,
-                        Typed::Symbol { .. } => typ == SYMBOL_T,
-                        Typed::Pair { .. } => typ == PAIR_T,
-                        //Typed::Fexpr { .. } => typ == FEXPR_T,
-                        Typed::Dict { .. } => typ == DICT_T,
-                        Typed::Free { .. } => typ == FREE_T,
-                        Typed::Quad { t, .. } => typ == *t,
-                        _ => false,
-                    }
-                },
-                None => false,
-            }
+            false
         }
     }
 
-    pub fn alloc(&mut self, init: &Typed) -> Ptr {
-        let ptr = match *self.typed(self.mem_next()) {
-            Typed::Free { next } => {
-                // use quad from free-list
-                let ptr = self.mem_next();
-                let num = self.mem_free().num();
-                assert!(num > 0);
-                self.set_mem_free(Fix::new(num - 1));
-                self.set_mem_next(next);
-                ptr
-            },
-            _ => {
-                // expand top-of-memory
-                if self.mem_top().addr() >= QUAD_MAX {
-                    panic!("out of memory!");
-                }
-                let ptr = self.mem_top();
-                self.set_mem_top(Ptr::new(ptr.raw() + 1));
-                ptr
-            },
+    pub fn alloc(&mut self, quad: &Quad) -> Ptr {
+        let next = self.mem_next();
+        let ptr = if self.typeq(FREE_T, next) {
+            // use quad from free-list
+            let n = self.mem_free().fix_num().unwrap();
+            assert!(n > 0);  // number of free cells available
+            self.set_mem_free(Any::fix(n - 1));  // decrement cells available
+            self.set_mem_next(self.ram(next).z());  // update free-list
+            next
+        } else {
+            // expand top-of-memory
+            let next = self.mem_top();
+            let top = next.addr();
+            if top >= QUAD_MAX {
+                panic!("out of memory!");
+            }
+            self.set_mem_top(Any::ram(top + 1));
+            next
         };
-        *self.typed_mut(ptr) = *init;
-        ptr
+        *self.ram_mut(ptr) = *quad;  // copy initial value
+        ptr.val().ptr()
     }
     pub fn free(&mut self, ptr: Ptr) {
-        assert!(self.in_heap(ptr.val()));
-        if let Typed::Free { .. } = self.typed(ptr) {
+        let ptr = ptr.any();
+        assert!(self.in_heap(ptr));
+        if self.typeq(FREE_T, ptr) {
             panic!("double-free {}", ptr);
         }
-        let typed = Typed::Free { next: self.mem_next() };
-        *self.typed_mut(ptr) = typed;
-        self.set_mem_next(ptr);
-        let num = self.mem_free().num();
-        self.set_mem_free(Fix::new(num + 1));
+        *self.ram_mut(ptr) = Quad::free_t(self.mem_next());  // clear cell to "free"
+        self.set_mem_next(ptr);  // link into free-list
+        let n = self.mem_free().fix_num().unwrap();
+        self.set_mem_free(Any::fix(n + 1));  // increment cells available
     }
 
-    pub fn rom(&self, ptr: Any) -> Quad {  // FIXME: should return &Quad to avoid copy
-        /*
+    pub fn quad(&self, ptr: Any) -> &Quad {
+        if !ptr.is_ptr() {
+            panic!("invalid ptr=${:08x}", ptr.raw());
+        }
+        if ptr.is_ram() {
+            self.ram(ptr)
+        } else {
+            self.rom(ptr)
+        }
+    }
+    pub fn rom(&self, ptr: Any) -> &Quad {
+        if !ptr.is_rom() {
+            panic!("invalid ROM ptr=${:08x}", ptr.raw());
+        }
         let addr = ptr.addr();
-        self.quad_rom[addr]
-        */
-        self.typed(ptr.val().ptr()).quad()
+        &self.quad_rom[addr]
     }
     pub fn ram(&self, ptr: Any) -> &Quad {
+        if !ptr.is_ram() {
+            panic!("invalid RAM ptr=${:08x}", ptr.raw());
+        }
         let addr = ptr.addr();
         &self.quad_ram[addr]
     }
     pub fn ram_mut(&mut self, ptr: Any) -> &mut Quad {
+        if !ptr.is_ram() {
+            panic!("invalid RAM ptr=${:08x}", ptr.raw());
+        }
         let addr = ptr.addr();
         &mut self.quad_ram[addr]
     }
 
     pub fn typed(&self, ptr: Ptr) -> &Typed {
-        let addr = self.addr(ptr).unwrap();
+        let addr = ptr.addr();  // FIXME! CONFLATES ROM AND RAM!!
         &self.quad_mem[addr]
     }
     pub fn typed_mut(&mut self, ptr: Ptr) -> &mut Typed {
-        assert!(self.in_heap(ptr.val()));
-        let addr = self.addr(ptr).unwrap();
+        assert!(self.in_heap(ptr.any()));
+        let addr = ptr.addr();
         &mut self.quad_mem[addr]
     }
 
-    pub fn addr(&self, ptr: Ptr) -> Option<usize> {
-        let addr = ptr.addr();
-        if addr < self.mem_top().addr() {
-            Some(addr)
-        } else {
-            None
-        }
-    }
-    pub fn in_heap(&self, val: Val) -> bool {
+    pub fn in_heap(&self, val: Any) -> bool {
+        val.is_ram() && (val.addr() < self.mem_top().addr())
+        /*
         let raw = val.raw();
         (raw < self.mem_top().raw()) && (raw >= MEMORY.raw())
+        */
     }
 
     fn e_first(&self) -> Ptr {
@@ -2171,53 +2185,77 @@ pub const FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // worke
         }
     }
 
-    fn mem_top(&self) -> Ptr {
+    fn mem_top(&self) -> Any {
+        self.ram(MEMORY).t()
+        /*
         match &self.quad_mem[MEMORY.addr()] {
             Typed::Memory { top, .. } => *top,
             _ => panic!("Memory required!"),
         }
+        */
     }
-    fn set_mem_top(&mut self, ptr: Ptr) {
+    fn set_mem_top(&mut self, ptr: Any) {
+        self.ram_mut(MEMORY).set_t(ptr);
+        /*
         match &mut self.quad_mem[MEMORY.addr()] {
             Typed::Memory { top, .. } => { *top = ptr; },
             _ => panic!("Memory required!"),
         }
+        */
     }
-    fn mem_next(&self) -> Ptr {
+    fn mem_next(&self) -> Any {
+        self.ram(MEMORY).x()
+        /*
         match &self.quad_mem[MEMORY.addr()] {
             Typed::Memory { next, .. } => *next,
             _ => panic!("Memory required!"),
         }
+        */
     }
-    fn set_mem_next(&mut self, ptr: Ptr) {
+    fn set_mem_next(&mut self, ptr: Any) {
+        self.ram_mut(MEMORY).set_x(ptr);
+        /*
         match &mut self.quad_mem[MEMORY.addr()] {
             Typed::Memory { next, .. } => { *next = ptr; },
             _ => panic!("Memory required!"),
         }
+        */
     }
-    fn mem_free(&self) -> Fix {
+    fn mem_free(&self) -> Any {
+        self.ram(MEMORY).y()
+        /*
         match &self.quad_mem[MEMORY.addr()] {
             Typed::Memory { free, .. } => *free,
             _ => panic!("Memory required!"),
         }
+        */
     }
-    fn set_mem_free(&mut self, fix: Fix) {
+    fn set_mem_free(&mut self, fix: Any) {
+        self.ram_mut(MEMORY).set_y(fix);
+        /*
         match &mut self.quad_mem[MEMORY.addr()] {
             Typed::Memory { free, .. } => { *free = fix; },
             _ => panic!("Memory required!"),
         }
+        */
     }
-    fn _mem_root(&self) -> Ptr {
+    fn _mem_root(&self) -> Any {
+        self.ram(MEMORY).z()
+        /*
         match &self.quad_mem[MEMORY.addr()] {
             Typed::Memory { root, .. } => *root,
             _ => panic!("Memory required!"),
         }
+        */
     }
-    fn _set_mem_root(&mut self, ptr: Ptr) {
+    fn _set_mem_root(&mut self, ptr: Any) {
+        self.ram_mut(MEMORY).set_z(ptr);
+        /*
         match &mut self.quad_mem[MEMORY.addr()] {
             Typed::Memory { root, .. } => { *root = ptr; },
             _ => panic!("Memory required!"),
         }
+        */
     }
 }
 
@@ -2772,11 +2810,11 @@ pub fn fixnum(num: Num) -> Val { Fix::new(num).val() }  // convenience construct
 pub struct Ptr { raw: Raw }
 impl Ptr {
     pub fn new(raw: Raw) -> Ptr {
-        Ptr { raw: (raw & !MSK_RAW) }
+        Ptr { raw: (raw & !(DIR_RAW | OPQ_RAW)) }
     }
     pub fn from(val: Val) -> Option<Ptr> {
         let raw = val.raw();
-        if (raw & MSK_RAW) == 0 {
+        if (raw & (DIR_RAW | OPQ_RAW)) == 0 {
             Some(Ptr::new(raw))
         } else {
             None
@@ -2795,7 +2833,7 @@ impl Ptr {
         self.raw
     }
     pub fn addr(&self) -> usize {
-        self.raw as usize
+        (self.raw & !MSK_RAW) as usize
     }
 }
 impl fmt::Display for Ptr {
@@ -2827,7 +2865,7 @@ pub fn ptrval(raw: Raw) -> Val { Ptr::new(raw).val() }  // convenience construct
 pub struct Cap { raw: Raw }
 impl Cap {
     pub fn new(raw: Raw) -> Cap {
-        Cap { raw: (raw & !MSK_RAW) }
+        Cap { raw: (raw & !(DIR_RAW | OPQ_RAW)) }
     }
     pub fn from(val: Val) -> Option<Cap> {
         let raw = val.raw();
@@ -2850,7 +2888,7 @@ impl Cap {
         self.raw
     }
     pub fn addr(&self) -> usize {
-        self.raw as usize
+        (self.raw & !MSK_RAW) as usize
     }
 }
 impl fmt::Display for Cap {
@@ -2935,11 +2973,12 @@ fn cap_addr_conversion() {
 #[test]
 fn core_initialization() {
     let core = Core::new();
-    assert_eq!(0, core.mem_free().num());
-    assert_eq!(NIL.ptr(), core.mem_next());
+    //assert_eq!(0, core.mem_free().fix_num().unwrap());
+    assert_eq!(Any::fix(0), core.mem_free());
+    assert_eq!(NIL.any(), core.mem_next());
     assert_ne!(NIL.ptr(), core.e_first());
     assert_eq!(NIL.ptr(), core.k_first());
-    for raw in 0..core.mem_top().raw() {
+    for raw in 0..256 {
         let typed = core.typed(Ptr::new(raw));
         println!("{:5}: {} = {}", raw, typed.quad(), typed);
     }
@@ -2949,27 +2988,28 @@ fn core_initialization() {
 #[test]
 fn basic_memory_allocation() {
     let mut core = Core::new();
-    let top_before = core.mem_top().raw();
+    let top_before = core.mem_top().addr();
     println!("mem_top: {}", core.mem_top());
-    let m1 = core.alloc(&Typed::Pair { car: fixnum(1), cdr: fixnum(1) });
-    println!("m1:{} -> {}", m1, core.typed(m1));
+    let m1 = core.alloc(&Quad::pair_t(Any::fix(1), Any::fix(1)));
+    println!("m1:{} -> {}", m1, core.quad(m1.any()));
     println!("mem_top: {}", core.mem_top());
-    let m2 = core.alloc(&Typed::Pair { car: fixnum(2), cdr: fixnum(2) });
+    let m2 = core.alloc(&Quad::pair_t(Any::fix(2), Any::fix(2)));
     println!("mem_top: {}", core.mem_top());
-    let m3 = core.alloc(&Typed::Pair { car: fixnum(3), cdr: fixnum(3) });
+    let m3 = core.alloc(&Quad::pair_t(Any::fix(3), Any::fix(3)));
     println!("mem_top: {}", core.mem_top());
     println!("mem_free: {}", core.mem_free());
     core.free(m2);
     println!("mem_free: {}", core.mem_free());
     core.free(m3);
     println!("mem_free: {}", core.mem_free());
-    let _m4 = core.alloc(&Typed::Pair { car: fixnum(4), cdr: fixnum(4) });
+    let _m4 = core.alloc(&Quad::pair_t(Any::fix(4), Any::fix(4)));
     println!("mem_top: {}", core.mem_top());
     println!("mem_free: {}", core.mem_free());
-    let top_after = core.mem_top().raw();
+    let top_after = core.mem_top().addr();
     assert_eq!(3, top_after - top_before);
-    assert_eq!(1, core.mem_free().num());
-    println!("mem_next: {} -> {}", core.mem_next(), core.typed(core.mem_next()));
+    //assert_eq!(1, core.mem_free().fix_num().unwrap());
+    assert_eq!(Any::fix(1), core.mem_free());
+    println!("mem_next: {} -> {}", core.mem_next(), core.quad(core.mem_next()));
     //assert!(false);  // force output to be displayed
 }
 
