@@ -1530,19 +1530,6 @@ pub const FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // worke
             self.ram_mut(self.e_last()).set_z(ep);
         }
         self.set_e_last(ep);
-        /*
-        if let Typed::Event { next, .. } = self.typed_mut(ep) {
-            *next = NIL.ptr();
-        } else {
-            panic!("event_enqueue: requires event, got {} -> {}", ep, self.typed(ep));
-        }
-        if NIL.ptr() == self.e_first() {
-            self.set_e_first(ep);
-        } else if let Typed::Event { next, ..  } = self.typed_mut(self.e_last()) {
-            *next = ep;
-        }
-        self.set_e_last(ep);
-        */
     }
     fn event_dequeue(&mut self) -> Option<Ptr> {
         let ep = self.e_first();
@@ -1557,20 +1544,6 @@ pub const FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // worke
         } else {
             None
         }
-        /*
-        let ep = self.e_first();
-        if NIL.ptr() == ep {
-            None
-        } else if let Typed::Event { next, .. } = self.typed(ep) {
-            self.set_e_first(*next);
-            if NIL.ptr() == self.e_first() {
-                self.set_e_last(NIL.ptr());  // empty queue
-            }
-            Some(ep)
-        } else {
-            panic!("event_dequeue: invalid ep = {} -> {}", ep, self.typed(ep));
-        }
-        */
     }
 
     fn cont_enqueue(&mut self, kp: Ptr) {
@@ -1582,19 +1555,6 @@ pub const FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // worke
             self.ram_mut(self.k_last()).set_z(kp);
         }
         self.set_k_last(kp);
-        /*
-        if let Typed::Cont { next, .. } = self.typed_mut(kp) {
-            *next = NIL.ptr();
-        } else {
-            panic!("cont_enqueue: requires continuation, got {} -> {}", kp, self.typed(kp));
-        };
-        if NIL.ptr() == self.k_first() {
-            self.set_k_first(kp);
-        } else if let Typed::Cont { next, ..  } = self.typed_mut(self.k_last()) {
-            *next = kp;
-        }
-        self.set_k_last(kp);
-        */
     }
     fn cont_dequeue(&mut self) -> Option<Ptr> {
         let kp = self.k_first();
@@ -1609,20 +1569,6 @@ pub const FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // worke
         } else {
             None
         }
-        /*
-        let kp = self.k_first();
-        if NIL.ptr() == kp {
-            None
-        } else if let Typed::Cont { next, .. } = self.typed(kp) {
-            self.set_k_first(*next);
-            if NIL.ptr() == self.k_first() {
-                self.set_k_last(NIL.ptr());  // empty queue
-            }
-            Some(kp)
-        } else {
-            panic!("cont_dequeue: invalid kp = {} -> {}", kp, self.typed(kp));
-        }
-        */
     }
 
     fn actor_commit(&mut self, me: Ptr) {
@@ -1792,52 +1738,22 @@ pub const FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // worke
     pub fn ip(&self) -> Ptr {  // instruction pointer
         let quad = self.ram(self.k_first());
         quad.t().val().ptr()  // FIXME: should return Any...
-        /*
-        match self.typed(self.k_first()) {
-            Typed::Cont { ip, .. } => ip.ptr(),
-            _ => UNDEF.ptr()
-        }
-        */
     }
     pub fn sp(&self) -> Ptr {  // stack pointer
         let quad = self.ram(self.k_first());
         quad.x().val().ptr()  // FIXME: should return Any...
-        /*
-        match self.typed(self.k_first()) {
-            Typed::Cont { sp, .. } => sp.ptr(),
-            _ => UNDEF.ptr()
-        }
-        */
     }
     pub fn ep(&self) -> Ptr {  // event pointer
         let quad = self.ram(self.k_first());
         quad.y().val().ptr()  // FIXME: should return Any...
-        /*
-        match self.typed(self.k_first()) {
-            Typed::Cont { ep, .. } => ep.ptr(),
-            _ => UNDEF.ptr()
-        }
-        */
     }
     fn set_ip(&mut self, ptr: Ptr) {
         let quad = self.ram_mut(self.k_first());
         quad.set_t(ptr.any())  // FIXME: `ptr` should be Any...
-        /*
-        let typed = self.typed_mut(self.k_first());
-        if let Typed::Cont { ip, .. } = typed {
-            *ip = ptr;
-        }
-        */
     }
     fn set_sp(&mut self, ptr: Ptr) {
         let quad = self.ram_mut(self.k_first());
         quad.set_x(ptr.any())  // FIXME: `ptr` should be Any...
-        /*
-        let typed = self.typed_mut(self.k_first());
-        if let Typed::Cont { sp, .. } = typed {
-            *sp = ptr;
-        }
-        */
     }
 
     pub fn new_event(&mut self, target: Cap, msg: Val) -> Ptr {
@@ -1936,9 +1852,6 @@ pub const FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // worke
     }
 
     pub fn deque_new(&mut self) -> Ptr {
-        /*
-        self.cons(NIL, NIL)  // allocate new first/last pointers
-        */
         DQ_EMPTY
     }
     pub fn deque_empty(&self, deque: Ptr) -> bool {
@@ -1949,33 +1862,10 @@ pub const FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // worke
         }
     }
     pub fn deque_push(&mut self, deque: Ptr, item: Val) -> Ptr {
-        /*
-        let first = self.car(deque);
-        let next = self.cons(item, first);  // allocate item holder
-        if !self.typeq(PAIR_T, first) {
-            self.set_cdr(deque, next.val());
-        }
-        self.set_car(deque, next.val());
-        */
         let front = self.cons(item, self.car(deque));
         self.cons(front.val(), self.cdr(deque))
     }
     pub fn deque_pop(&mut self, deque: Ptr) -> (Ptr, Val) {
-        /*
-        let first = self.car(deque);
-        if self.typeq(PAIR_T, first) {
-            let next = self.cdr(first.ptr());
-            self.set_car(deque, next);
-            if !self.typeq(PAIR_T, next) {
-                self.set_cdr(deque, next);  // empty deque
-            }
-            let item = self.car(first.ptr());
-            self.free(first.ptr());  // free pair holding deque item
-            Some(item)
-        } else {
-            None
-        }
-        */
         if let Typed::Pair { car, cdr } = *self.typed(deque) {
             let mut front = car;
             let mut back = cdr;
@@ -2001,43 +1891,10 @@ pub const FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // worke
         }
     }
     pub fn deque_put(&mut self, deque: Ptr, item: Val) -> Ptr {
-        /*
-        let next = self.cons(item, NIL);  // allocate item holder
-        let last = self.cdr(deque);
-        if self.typeq(PAIR_T, last) {
-            self.set_cdr(last.ptr(), next.val());
-        } else {
-            self.set_car(deque, next.val());
-        }
-        self.set_cdr(deque, next.val());
-        */
         let back = self.cons(item, self.cdr(deque));
         self.cons(self.car(deque), back.val())
     }
     pub fn deque_pull(&mut self, deque: Ptr) -> (Ptr, Val) {
-        /*
-        let last = self.cdr(deque);
-        if self.typeq(PAIR_T, last) {
-            let first = self.car(deque);
-            if first == last {
-                // empty deque
-                self.set_car(deque, NIL);
-                self.set_cdr(deque, NIL);
-            } else {
-                let mut p = first;
-                while self.typeq(PAIR_T, p) && self.cdr(p.ptr()) != last {
-                    p = self.cdr(p.ptr());
-                }
-                self.set_cdr(p.ptr(), NIL);
-                self.set_cdr(deque, p);
-            }
-            let item = self.car(last.ptr());
-            self.free(last.ptr());  // free pair holding deque item
-            Some(item)
-        } else {
-            None
-        }
-        */
         if let Typed::Pair { car, cdr } = *self.typed(deque) {
             let mut front = car;
             let mut back = cdr;
@@ -2203,156 +2060,56 @@ pub const FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // worke
 
     pub fn in_heap(&self, val: Any) -> bool {
         val.is_ram() && (val.addr() < self.mem_top().addr())
-        /*
-        let raw = val.raw();
-        (raw < self.mem_top().raw()) && (raw >= MEMORY.raw())
-        */
     }
 
     fn e_first(&self) -> Any {
         self.ram(DDEQUE).t()
-        /*
-        match self.typed(DDEQUE.ptr()) {
-            Typed::Ddeque { e_first, .. } => *e_first,
-            _ => panic!("Ddeque required!"),
-        }
-        */
     }
     fn set_e_first(&mut self, ptr: Any) {
         self.ram_mut(DDEQUE).set_t(ptr);
-        /*
-        match self.typed_mut(DDEQUE.ptr()) {
-            Typed::Ddeque { e_first, .. } => { *e_first = ptr; },
-            _ => panic!("Ddeque required!"),
-        }
-        */
     }
     fn e_last(&self) -> Any {
         self.ram(DDEQUE).x()
-        /*
-        match self.typed(DDEQUE.ptr()) {
-            Typed::Ddeque { e_last, .. } => *e_last,
-            _ => panic!("Ddeque required!"),
-        }
-        */
     }
     fn set_e_last(&mut self, ptr: Any) {
         self.ram_mut(DDEQUE).set_x(ptr);
-        /*
-        match self.typed_mut(DDEQUE.ptr()) {
-            Typed::Ddeque { e_last, .. } => { *e_last = ptr; },
-            _ => panic!("Ddeque required!"),
-        }
-        */
     }
     fn k_first(&self) -> Any {
         self.ram(DDEQUE).y()
-        /*
-        match self.typed(DDEQUE.ptr()) {
-            Typed::Ddeque { k_first, .. } => *k_first,
-            _ => panic!("Ddeque required!"),
-        }
-        */
     }
     fn set_k_first(&mut self, ptr: Any) {
         self.ram_mut(DDEQUE).set_y(ptr);
-        /*
-        match self.typed_mut(DDEQUE.ptr()) {
-            Typed::Ddeque { k_first, .. } => { *k_first = ptr; },
-            _ => panic!("Ddeque required!"),
-        }
-        */
     }
     fn k_last(&self) -> Any {
         self.ram(DDEQUE).z()
-        /*
-        match self.typed(DDEQUE.ptr()) {
-            Typed::Ddeque { k_last, .. } => *k_last,
-            _ => panic!("Ddeque required!"),
-        }
-        */
     }
     fn set_k_last(&mut self, ptr: Any) {
         self.ram_mut(DDEQUE).set_z(ptr);
-        /*
-        match self.typed_mut(DDEQUE.ptr()) {
-            Typed::Ddeque { k_last, .. } => { *k_last = ptr; },
-            _ => panic!("Ddeque required!"),
-        }
-        */
     }
 
     fn mem_top(&self) -> Any {
         self.ram(MEMORY).t()
-        /*
-        match &self.quad_mem[MEMORY.addr()] {
-            Typed::Memory { top, .. } => *top,
-            _ => panic!("Memory required!"),
-        }
-        */
     }
     fn set_mem_top(&mut self, ptr: Any) {
         self.ram_mut(MEMORY).set_t(ptr);
-        /*
-        match &mut self.quad_mem[MEMORY.addr()] {
-            Typed::Memory { top, .. } => { *top = ptr; },
-            _ => panic!("Memory required!"),
-        }
-        */
     }
     fn mem_next(&self) -> Any {
         self.ram(MEMORY).x()
-        /*
-        match &self.quad_mem[MEMORY.addr()] {
-            Typed::Memory { next, .. } => *next,
-            _ => panic!("Memory required!"),
-        }
-        */
     }
     fn set_mem_next(&mut self, ptr: Any) {
         self.ram_mut(MEMORY).set_x(ptr);
-        /*
-        match &mut self.quad_mem[MEMORY.addr()] {
-            Typed::Memory { next, .. } => { *next = ptr; },
-            _ => panic!("Memory required!"),
-        }
-        */
     }
     fn mem_free(&self) -> Any {
         self.ram(MEMORY).y()
-        /*
-        match &self.quad_mem[MEMORY.addr()] {
-            Typed::Memory { free, .. } => *free,
-            _ => panic!("Memory required!"),
-        }
-        */
     }
     fn set_mem_free(&mut self, fix: Any) {
         self.ram_mut(MEMORY).set_y(fix);
-        /*
-        match &mut self.quad_mem[MEMORY.addr()] {
-            Typed::Memory { free, .. } => { *free = fix; },
-            _ => panic!("Memory required!"),
-        }
-        */
     }
     fn _mem_root(&self) -> Any {
         self.ram(MEMORY).z()
-        /*
-        match &self.quad_mem[MEMORY.addr()] {
-            Typed::Memory { root, .. } => *root,
-            _ => panic!("Memory required!"),
-        }
-        */
     }
     fn _set_mem_root(&mut self, ptr: Any) {
         self.ram_mut(MEMORY).set_z(ptr);
-        /*
-        match &mut self.quad_mem[MEMORY.addr()] {
-            Typed::Memory { root, .. } => { *root = ptr; },
-            _ => panic!("Memory required!"),
-        }
-        */
     }
 }
 
