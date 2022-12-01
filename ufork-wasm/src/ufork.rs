@@ -341,8 +341,8 @@ pub const FREE: Any         = Any { raw: 13 };
 */
 
 pub const MEMORY: Any       = Any { raw: MUT_RAW | 14 };
-/*
 pub const DDEQUE: Any       = Any { raw: MUT_RAW | 15 };
+/*
 pub const START: Any        = Any { raw: 16 };
 */
 
@@ -368,8 +368,8 @@ pub const FREE_T: Val       = Val { raw: 13 };
 
 /*
 pub const MEMORY: Val       = Val { raw: 14 };
-*/
 pub const DDEQUE: Val       = Val { raw: 15 };
+*/
 pub const START: Val        = Val { raw: 16 };
 
 pub const COMMIT: Ptr       = Ptr { raw: 16 };
@@ -626,7 +626,7 @@ pub const A_STOP: Cap               = Cap { raw: 89 };
         quad_mem[83]                = Typed::Instr { op: Op::Beh { n: Fix::new(4), k: COMMIT } };  // busy-beh[svc cust tag pending]
 
         /* DQ_EMPTY */
-        quad_mem[84]                = Typed::Pair { car: DQ_EMPTY.val(), cdr: DDEQUE };
+        quad_mem[84]                = Typed::Pair { car: DQ_EMPTY.val(), cdr: DDEQUE.val() };
         quad_mem[85]                = Typed::Pair { car: NIL, cdr: NIL };
 
         /* (ABORT #?) */
@@ -1039,22 +1039,27 @@ pub const FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // worke
     }
     pub fn execute_instruction(&mut self) -> bool {
         let kp = self.k_first();
-        println!("execute_instruction: kp={} -> {}", kp, self.typed(kp));
-        if let Typed::Cont { ip, ep, .. } = *self.typed(kp) {
-            println!("execute_instruction: ep={} -> {}", ep, self.typed(ep));
-            println!("execute_instruction: ip={} -> {}", ip, self.typed(ip));
-            if let Typed::Instr { op } = *self.typed(ip) {
+        println!("execute_instruction: kp={} -> {}", kp, self.quad(kp));
+        if kp.is_ram() {
+            let cont = self.ram(kp);
+            let ep = cont.y();
+            println!("execute_instruction: ep={} -> {}", ep, self.quad(ep));
+            let ip = cont.t();
+            println!("execute_instruction: ip={} -> {}", ip, self.quad(ip));
+            if let Typed::Instr { op } = *self.typed(ip.val().ptr()) {
                 let ip_ = self.perform_op(&op);
                 println!("execute_instruction: ip'={} -> {}", ip_, self.typed(ip_));
                 self.set_ip(ip_);
-                assert_eq!(kp, self.cont_dequeue().unwrap());
+                let kp_ = self.cont_dequeue().unwrap();
+                assert_eq!(kp, kp_.any());
                 if self.in_heap(ip_.any()) {
                     // re-queue updated continuation
-                    self.cont_enqueue(kp);
+                    self.cont_enqueue(kp_);
                 } else {
                     // free dead continuation and associated event
-                    self.free(ep);
-                    self.free(kp);
+                    let ep_ = ep.val().ptr();
+                    self.free(ep_);
+                    self.free(kp_);
                 }
             } else {
                 panic!("Illegal instruction!");
@@ -1517,6 +1522,15 @@ pub const FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // worke
     }
 
     fn event_enqueue(&mut self, ep: Ptr) {
+        let ep = ep.any();
+        self.ram_mut(ep).set_z(NIL.any());
+        if !self.e_first().is_ram() {
+            self.set_e_first(ep);
+        } else if self.e_last().is_ram() {
+            self.ram_mut(self.e_last()).set_z(ep);
+        }
+        self.set_e_last(ep);
+        /*
         if let Typed::Event { next, .. } = self.typed_mut(ep) {
             *next = NIL.ptr();
         } else {
@@ -1528,8 +1542,22 @@ pub const FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // worke
             *next = ep;
         }
         self.set_e_last(ep);
+        */
     }
     fn event_dequeue(&mut self) -> Option<Ptr> {
+        let ep = self.e_first();
+        if ep.is_ram() {
+            let event = self.ram(ep);
+            let next = event.z();
+            self.set_e_first(next);
+            if !next.is_ram() {
+                self.set_e_last(NIL.any())
+            }
+            Some(ep.val().ptr())  // FIXME: should return Option<Any>
+        } else {
+            None
+        }
+        /*
         let ep = self.e_first();
         if NIL.ptr() == ep {
             None
@@ -1542,9 +1570,19 @@ pub const FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // worke
         } else {
             panic!("event_dequeue: invalid ep = {} -> {}", ep, self.typed(ep));
         }
+        */
     }
 
     fn cont_enqueue(&mut self, kp: Ptr) {
+        let kp = kp.any();
+        self.ram_mut(kp).set_z(NIL.any());
+        if !self.k_first().is_ram() {
+            self.set_k_first(kp);
+        } else if self.k_last().is_ram() {
+            self.ram_mut(self.k_last()).set_z(kp);
+        }
+        self.set_k_last(kp);
+        /*
         if let Typed::Cont { next, .. } = self.typed_mut(kp) {
             *next = NIL.ptr();
         } else {
@@ -1556,8 +1594,22 @@ pub const FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // worke
             *next = kp;
         }
         self.set_k_last(kp);
+        */
     }
     fn cont_dequeue(&mut self) -> Option<Ptr> {
+        let kp = self.k_first();
+        if kp.is_ram() {
+            let cont = self.ram(kp);
+            let next = cont.z();
+            self.set_k_first(next);
+            if !next.is_ram() {
+                self.set_k_last(NIL.any())
+            }
+            Some(kp.val().ptr())  // FIXME: should return Option<Any>
+        } else {
+            None
+        }
+        /*
         let kp = self.k_first();
         if NIL.ptr() == kp {
             None
@@ -1570,6 +1622,7 @@ pub const FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // worke
         } else {
             panic!("cont_dequeue: invalid kp = {} -> {}", kp, self.typed(kp));
         }
+        */
     }
 
     fn actor_commit(&mut self, me: Ptr) {
@@ -1737,34 +1790,54 @@ pub const FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // worke
     }
 
     pub fn ip(&self) -> Ptr {  // instruction pointer
+        let quad = self.ram(self.k_first());
+        quad.t().val().ptr()  // FIXME: should return Any...
+        /*
         match self.typed(self.k_first()) {
             Typed::Cont { ip, .. } => ip.ptr(),
             _ => UNDEF.ptr()
         }
+        */
     }
     pub fn sp(&self) -> Ptr {  // stack pointer
+        let quad = self.ram(self.k_first());
+        quad.x().val().ptr()  // FIXME: should return Any...
+        /*
         match self.typed(self.k_first()) {
             Typed::Cont { sp, .. } => sp.ptr(),
             _ => UNDEF.ptr()
         }
+        */
     }
     pub fn ep(&self) -> Ptr {  // event pointer
+        let quad = self.ram(self.k_first());
+        quad.y().val().ptr()  // FIXME: should return Any...
+        /*
         match self.typed(self.k_first()) {
             Typed::Cont { ep, .. } => ep.ptr(),
             _ => UNDEF.ptr()
         }
+        */
     }
     fn set_ip(&mut self, ptr: Ptr) {
+        let quad = self.ram_mut(self.k_first());
+        quad.set_t(ptr.any())  // FIXME: `ptr` should be Any...
+        /*
         let typed = self.typed_mut(self.k_first());
         if let Typed::Cont { ip, .. } = typed {
             *ip = ptr;
         }
+        */
     }
     fn set_sp(&mut self, ptr: Ptr) {
+        let quad = self.ram_mut(self.k_first());
+        quad.set_x(ptr.any())  // FIXME: `ptr` should be Any...
+        /*
         let typed = self.typed_mut(self.k_first());
         if let Typed::Cont { sp, .. } = typed {
             *sp = ptr;
         }
+        */
     }
 
     pub fn new_event(&mut self, target: Cap, msg: Val) -> Ptr {
@@ -2136,53 +2209,77 @@ pub const FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // worke
         */
     }
 
-    fn e_first(&self) -> Ptr {
+    fn e_first(&self) -> Any {
+        self.ram(DDEQUE).t()
+        /*
         match self.typed(DDEQUE.ptr()) {
             Typed::Ddeque { e_first, .. } => *e_first,
             _ => panic!("Ddeque required!"),
         }
+        */
     }
-    fn set_e_first(&mut self, ptr: Ptr) {
+    fn set_e_first(&mut self, ptr: Any) {
+        self.ram_mut(DDEQUE).set_t(ptr);
+        /*
         match self.typed_mut(DDEQUE.ptr()) {
             Typed::Ddeque { e_first, .. } => { *e_first = ptr; },
             _ => panic!("Ddeque required!"),
         }
+        */
     }
-    fn e_last(&self) -> Ptr {
+    fn e_last(&self) -> Any {
+        self.ram(DDEQUE).x()
+        /*
         match self.typed(DDEQUE.ptr()) {
             Typed::Ddeque { e_last, .. } => *e_last,
             _ => panic!("Ddeque required!"),
         }
+        */
     }
-    fn set_e_last(&mut self, ptr: Ptr) {
+    fn set_e_last(&mut self, ptr: Any) {
+        self.ram_mut(DDEQUE).set_x(ptr);
+        /*
         match self.typed_mut(DDEQUE.ptr()) {
             Typed::Ddeque { e_last, .. } => { *e_last = ptr; },
             _ => panic!("Ddeque required!"),
         }
+        */
     }
-    fn k_first(&self) -> Ptr {
+    fn k_first(&self) -> Any {
+        self.ram(DDEQUE).y()
+        /*
         match self.typed(DDEQUE.ptr()) {
             Typed::Ddeque { k_first, .. } => *k_first,
             _ => panic!("Ddeque required!"),
         }
+        */
     }
-    fn set_k_first(&mut self, ptr: Ptr) {
+    fn set_k_first(&mut self, ptr: Any) {
+        self.ram_mut(DDEQUE).set_y(ptr);
+        /*
         match self.typed_mut(DDEQUE.ptr()) {
             Typed::Ddeque { k_first, .. } => { *k_first = ptr; },
             _ => panic!("Ddeque required!"),
         }
+        */
     }
-    fn k_last(&self) -> Ptr {
+    fn k_last(&self) -> Any {
+        self.ram(DDEQUE).z()
+        /*
         match self.typed(DDEQUE.ptr()) {
             Typed::Ddeque { k_last, .. } => *k_last,
             _ => panic!("Ddeque required!"),
         }
+        */
     }
-    fn set_k_last(&mut self, ptr: Ptr) {
+    fn set_k_last(&mut self, ptr: Any) {
+        self.ram_mut(DDEQUE).set_z(ptr);
+        /*
         match self.typed_mut(DDEQUE.ptr()) {
             Typed::Ddeque { k_last, .. } => { *k_last = ptr; },
             _ => panic!("Ddeque required!"),
         }
+        */
     }
 
     fn mem_top(&self) -> Any {
@@ -2976,8 +3073,8 @@ fn core_initialization() {
     //assert_eq!(0, core.mem_free().fix_num().unwrap());
     assert_eq!(Any::fix(0), core.mem_free());
     assert_eq!(NIL.any(), core.mem_next());
-    assert_ne!(NIL.ptr(), core.e_first());
-    assert_eq!(NIL.ptr(), core.k_first());
+    assert_ne!(NIL.any(), core.e_first());
+    assert_eq!(NIL.any(), core.k_first());
     for raw in 0..256 {
         let typed = core.typed(Ptr::new(raw));
         println!("{:5}: {} = {}", raw, typed.quad(), typed);
@@ -2991,7 +3088,7 @@ fn basic_memory_allocation() {
     let top_before = core.mem_top().addr();
     println!("mem_top: {}", core.mem_top());
     let m1 = core.alloc(&Quad::pair_t(Any::fix(1), Any::fix(1)));
-    println!("m1:{} -> {}", m1, core.quad(m1.any()));
+    println!("m1:{}={} -> {}", m1, m1.any(), core.quad(m1.any()));
     println!("mem_top: {}", core.mem_top());
     let m2 = core.alloc(&Quad::pair_t(Any::fix(2), Any::fix(2)));
     println!("mem_top: {}", core.mem_top());
