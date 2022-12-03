@@ -1930,30 +1930,32 @@ pub const FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // worke
         self.alloc(&pair).val().ptr()
     }
     pub fn car(&self, pair: Ptr) -> Val {
-        let typed = *self.typed(pair);
-        match typed {
-            Typed::Pair { car, .. } => car,
-            _ => UNDEF,
+        let pair = pair.any();
+        if self.typeq(PAIR_T, pair) {
+            self.quad(pair).x().val()
+        } else {
+            UNDEF
         }
     }
     pub fn cdr(&self, pair: Ptr) -> Val {
-        let typed = *self.typed(pair);
-        match typed {
-            Typed::Pair { cdr, .. } => cdr,
-            _ => UNDEF,
+        let pair = pair.any();
+        if self.typeq(PAIR_T, pair) {
+            self.quad(pair).y().val()
+        } else {
+            UNDEF
         }
     }
-    pub fn set_car(&mut self, pair: Ptr, val: Val) {
-        assert!(self.in_heap(pair.any()));
-        if let Typed::Pair { car, .. } = self.typed_mut(pair) {
-            *car = val;
-        }
+    fn _set_car(&mut self, pair: Ptr, val: Val) {
+        let pair = pair.any();
+        assert!(self.in_heap(pair));
+        assert!(self.ram(pair).t() == PAIR_T.any());
+        self.ram_mut(pair).set_x(val.any());
     }
-    pub fn set_cdr(&mut self, pair: Ptr, val: Val) {
-        assert!(self.in_heap(pair.any()));
-        if let Typed::Pair { cdr, .. } = self.typed_mut(pair) {
-            *cdr = val;
-        }
+    fn set_cdr(&mut self, pair: Ptr, val: Val) {
+        let pair = pair.any();
+        assert!(self.in_heap(pair));
+        assert!(self.ram(pair).t() == PAIR_T.any());
+        self.ram_mut(pair).set_y(val.any());
     }
 
     pub fn ip(&self) -> Ptr {  // instruction pointer
