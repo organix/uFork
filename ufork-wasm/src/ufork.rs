@@ -1365,7 +1365,7 @@ pub const FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // worke
                 *k
             },
             Op::If { t, f } => {
-                let b = self.stack_pop();
+                let b = self.stack_pop().any();
                 println!("vm_if: b={}", b);
                 println!("vm_if: t={}", t);
                 println!("vm_if: f={}", f);
@@ -1389,27 +1389,23 @@ pub const FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // worke
             Op::My { op, k } => {
                 println!("vm_my: op={}", op);
                 let me = self.self_ptr();
-                println!("vm_my: me={} -> {}", me, self.typed(me));
+                println!("vm_my: me={} -> {}", me, self.ram(me));
                 match op {
                     My::Addr => {
-                        //self.stack_push(Cap::new(me.raw()).val());
                         let ep = self.ep();
-                        if let Typed::Event { target, .. } = *self.typed(ep) {
-                            println!("vm_my: self={}", target);
-                            self.stack_push(target.val());
-                        }
+                        let target = self.ram(ep.any()).get_x();
+                        println!("vm_my: self={}", target);
+                        self.stack_push(target);
                     },
                     My::Beh => {
-                        if let Typed::Actor { beh, .. } = *self.typed(me) {
-                            println!("vm_my: beh={}", beh);
-                            self.stack_push(beh.val());
-                        }
+                        let beh = self.ram(me).get_x();
+                        println!("vm_my: beh={}", beh);
+                        self.stack_push(beh);
                     },
                     My::State => {
-                        if let Typed::Actor { state, .. } = *self.typed(me) {
-                            println!("vm_my: state={}", state);
-                            self.push_list(state);
-                        }
+                        let state = self.ram(me).get_y();
+                        println!("vm_my: state={}", state);
+                        self.push_list(state.ptr());
                     },
                 }
                 *k
@@ -1427,8 +1423,8 @@ pub const FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // worke
                 };
                 println!("vm_send: msg={}", msg);
                 let ep = self.new_event(target.cap(), msg);
-                let me = self.self_ptr().any();
-                println!("vm_send: me={} -> {}", me, self.mem(me));
+                let me = self.self_ptr();
+                println!("vm_send: me={} -> {}", me, self.ram(me));
                 let next = self.ram(me).z();
                 if next.is_ram() {
                     self.ram_mut(ep).set_z(next);
@@ -1460,18 +1456,17 @@ pub const FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // worke
                 let sp = self.pop_counted(num);
                 println!("vm_beh: sp={}", sp);
                 let me = self.self_ptr();
-                println!("vm_beh: me={} -> {}", me, self.typed(me));
-                if let Typed::Actor { beh, state, .. } = self.typed_mut(me) {
-                    *beh = ip.ptr();
-                    *state = sp.ptr();
-                }
-                println!("vm_beh: me'={} -> {}", me, self.typed(me));
+                let actor = self.ram_mut(me);
+                println!("vm_beh: me={} -> {}", me, actor);
+                actor.set_x(ip.any());  // replace behavior function
+                actor.set_y(ip.any());  // replace state data
+                println!("vm_beh: me'={} -> {}", me, self.ram(me));
                 *k
             },
             Op::End { op } => {
                 println!("vm_end: op={}", op);
                 let me = self.self_ptr();
-                println!("vm_end: me={} -> {}", me, self.typed(me));
+                println!("vm_my: me={} -> {}", me, self.ram(me));
                 match op {
                     End::Abort => {
                         let _r = self.stack_pop();  // reason for abort
@@ -1489,11 +1484,9 @@ pub const FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // worke
                         TRUE.ptr()
                     },
                     End::Release => {
-                        if let Typed::Actor { state, .. } = self.typed_mut(me) {
-                            *state = NIL.ptr();  // no retained stack
-                        }
+                        self.ram_mut(me).set_y(NIL.any());  // no retained stack
                         self.actor_commit(me);
-                        self.free(me.any());  // free actor
+                        self.free(me);  // free actor
                         FALSE.ptr()
                     },
                 }
@@ -1563,49 +1556,41 @@ pub const FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // worke
         }
     }
 
-    fn actor_commit(&mut self, me: Ptr) {
-        if let Typed::Actor { state, .. } = self.typed(me) {
-            let top = *state;
-            self.stack_clear(top);
+    fn actor_commit(&mut self, me: Any) {
+        let state = self.ram(me).y();
+        self.stack_clear(state.val().ptr());
+        // move sent-message events to event queue
+        let mut ep = self.ram(me).get_z().any();
+        while ep.is_ram() {
+            let event = self.ram(ep);
+            println!("actor_commit: ep={} -> {}", ep, event);
+            let next = event.get_z().any();
+            self.event_enqueue(ep);
+            ep = next;
         }
-        if let Typed::Actor { events, .. } = self.typed(me) {
-            let mut ep = events.unwrap();
-            // move sent-message events to event queue
-            while let Typed::Event { next, .. } = self.typed(ep) {
-                println!("actor_commit: ep={} -> {}", ep, self.typed(ep));
-                let p = ep;
-                ep = *next;
-                self.event_enqueue(p.any());
-            }
-        }
-        if let Typed::Actor { events, .. } = self.typed_mut(me) {
-            *events = None;  // end actor transaction
-        }
+        // end actor transaction
+        self.ram_mut(me).set_z(UNDEF.any());
     }
-    fn actor_abort(&mut self, me: Ptr) {
-        if let Typed::Actor { state, .. } = self.typed(me) {
-            let top = *state;
-            self.stack_clear(top);
+    fn actor_abort(&mut self, me: Any) {
+        let state = self.ram(me).y();
+        self.stack_clear(state.val().ptr());
+        // free sent-message events
+        let mut ep = self.ram(me).get_z().any();
+        while ep.is_ram() {
+            let event = self.ram(ep);
+            println!("actor_abort: ep={} -> {}", ep, event);
+            let next = event.get_z().any();
+            self.free(ep);
+            ep = next;
         }
-        if let Typed::Actor { events, .. } = self.typed(me) {
-            let mut ep = events.unwrap();
-            // free sent-message events
-            while let Typed::Event { next, .. } = self.typed(ep) {
-                println!("actor_abort: ep={} -> {}", ep, self.typed(ep));
-                let p = ep;
-                ep = *next;
-                self.free(p.any());
-            }
-        }
-        if let Typed::Actor { events, .. } = self.typed_mut(me) {
-            *events = None;  // end actor transaction
-        }
+        // end actor transaction
+        self.ram_mut(me).set_z(UNDEF.any());
     }
-    fn self_ptr(&self) -> Ptr {
+    fn self_ptr(&self) -> Any {
         let ep = self.ep().any();
         let target = self.ram(ep).x();
         let a_ptr = self.cap_to_ptr(target);
-        a_ptr.val().ptr()  // FIXME: should return Any
+        a_ptr
     }
 
     fn push_list(&mut self, ptr: Ptr) {
@@ -2106,8 +2091,8 @@ pub const FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // worke
     }
 }
 
-fn falsey(v: Val) -> bool {
-    v == FALSE || v == UNDEF || v == NIL || v == ZERO.val()
+fn falsey(v: Any) -> bool {
+    v == FALSE.any() || v == UNDEF.any() || v == NIL.any() || v == ZERO
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
