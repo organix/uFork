@@ -1617,18 +1617,6 @@ pub const FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // worke
         let target = self.ram(ep).x();
         let a_ptr = self.cap_to_ptr(target);
         a_ptr.val().ptr()  // FIXME: should return Any
-        /*
-        match self.typed(self.ep()) {
-            Typed::Event { target, .. } => {
-                let ptr = Ptr::new(target.raw());  // WARNING: converting Cap to Ptr!
-                match self.typed(ptr) {
-                    Typed::Actor { .. } => Some(ptr),
-                    _ => None,
-                }
-            },
-            _ => None,
-        }
-        */
     }
 
     fn push_list(&mut self, ptr: Ptr) {
@@ -1697,121 +1685,6 @@ pub const FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // worke
             }
         }
         v
-    }
-
-    fn stack_push(&mut self, val: Val) {
-        let sp = self.cons(val, self.sp().val());
-        self.set_sp(sp);
-    }
-    fn stack_pop(&mut self) -> Val {
-        let sp = self.sp();
-        if self.typeq(PAIR_T, sp.any()) {
-            let item = self.car(sp);
-            self.set_sp(self.cdr(sp).ptr());
-            self.free(sp.any());  // free pair holding stack item
-            item
-        } else {
-            println!("stack_pop: underflow!");
-            UNDEF
-        }
-    }
-    fn stack_clear(&mut self, top: Ptr) {
-        let mut sp = self.sp();
-        while sp != top && self.typeq(PAIR_T, sp.any()) {
-            let p = sp;
-            sp = self.cdr(p).ptr();
-            self.free(p.any());  // free pair holding stack item
-        }
-        self.set_sp(sp);
-    }
-    fn stack_dup(&mut self, num: Num) {
-        let mut n = num;
-        if n > 0 {
-            let mut s = self.sp();
-            let sp = self.cons(self.car(s), NIL);
-            let mut p = sp;
-            s = self.cdr(s).ptr();
-            n -= 1;
-            while n > 0 {
-                let q = self.cons(self.car(s), NIL);
-                self.set_cdr(p, q.val());
-                p = q;
-                s = self.cdr(s).ptr();
-                n -= 1;
-            }
-            self.set_cdr(p, self.sp().val());
-            self.set_sp(sp);
-        }
-    }
-
-    pub fn ip(&self) -> Ptr {  // instruction pointer
-        let quad = self.ram(self.k_first());
-        quad.t().val().ptr()  // FIXME: should return Any...
-    }
-    pub fn sp(&self) -> Ptr {  // stack pointer
-        let quad = self.ram(self.k_first());
-        quad.x().val().ptr()  // FIXME: should return Any...
-    }
-    pub fn ep(&self) -> Ptr {  // event pointer
-        let quad = self.ram(self.k_first());
-        quad.y().val().ptr()  // FIXME: should return Any...
-    }
-    fn set_ip(&mut self, ptr: Ptr) {
-        let quad = self.ram_mut(self.k_first());
-        quad.set_t(ptr.any())  // FIXME: `ptr` should be Any...
-    }
-    fn set_sp(&mut self, ptr: Ptr) {
-        let quad = self.ram_mut(self.k_first());
-        quad.set_x(ptr.any())  // FIXME: `ptr` should be Any...
-    }
-
-    pub fn new_event(&mut self, target: Cap, msg: Val) -> Any {
-        let event = Quad::event_t(target.any(), msg.any(), NIL.any());
-        self.alloc(&event)
-    }
-    pub fn new_cont(&mut self, ip: Any, sp: Any, ep: Any) -> Any {
-        let cont = Quad::cont_t(ip, sp, ep, NIL.any());
-        self.alloc(&cont)
-    }
-    pub fn new_actor(&mut self, beh: Ptr, state: Ptr) -> Cap {
-        let actor = Quad::new_actor(beh.any(), state.any());
-        let ptr = self.alloc(&actor);
-        Cap::new(ptr.raw())  // convert from Ptr to Cap!
-    }
-    pub fn next(&self, ptr: Ptr) -> Ptr {
-        let typed = *self.typed(ptr);
-        match typed {
-            Typed::Event { next, .. } => next,
-            Typed::Cont { next, .. } => next,
-            Typed::Dict { next, .. } => next,
-            Typed::Free { next } => next,
-            Typed::Quad { z, .. } => z.ptr(),
-            Typed::Instr { op: Op::Typeq { k, .. } } => k,
-            Typed::Instr { op: Op::Dict { k, .. } } => k,
-            Typed::Instr { op: Op::Deque { k, .. } } => k,
-            Typed::Instr { op: Op::Pair { k, .. } } => k,
-            Typed::Instr { op: Op::Part { k, .. } } => k,
-            Typed::Instr { op: Op::Nth { k, .. } } => k,
-            Typed::Instr { op: Op::Push { k, .. } } => k,
-            Typed::Instr { op: Op::Depth { k } } => k,
-            Typed::Instr { op: Op::Drop { k, .. } } => k,
-            Typed::Instr { op: Op::Pick { k, .. } } => k,
-            Typed::Instr { op: Op::Dup { k, .. } } => k,
-            Typed::Instr { op: Op::Roll { k, .. } } => k,
-            Typed::Instr { op: Op::Alu { k, .. } } => k,
-            Typed::Instr { op: Op::Eq { k, .. } } => k,
-            Typed::Instr { op: Op::Cmp { k, .. } } => k,
-            //Typed::Instr { op: Op::If { f, .. } } => f,
-            Typed::Instr { op: Op::Msg { k, .. } } => k,
-            Typed::Instr { op: Op::My { k, .. } } => k,
-            Typed::Instr { op: Op::Send { k, .. } } => k,
-            Typed::Instr { op: Op::New { k, .. } } => k,
-            Typed::Instr { op: Op::Beh { k, .. } } => k,
-            //Typed::Instr { op: Op::End { .. } } => UNDEF.ptr(),
-            //Typed::Instr { op: Op::IsEq { k, .. } } => k,
-            //Typed::Instr { op: Op::IsNe { k, .. } } => k,
-            _ => UNDEF.ptr(),
-        }
     }
 
     pub fn dict_has(&self, dict: Ptr, key: Val) -> bool {
@@ -1943,6 +1816,115 @@ pub const FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // worke
         n
     }
 
+    fn e_first(&self) -> Any {
+        self.ram(DDEQUE).t()
+    }
+    fn set_e_first(&mut self, ptr: Any) {
+        self.ram_mut(DDEQUE).set_t(ptr);
+    }
+    fn e_last(&self) -> Any {
+        self.ram(DDEQUE).x()
+    }
+    fn set_e_last(&mut self, ptr: Any) {
+        self.ram_mut(DDEQUE).set_x(ptr);
+    }
+    fn k_first(&self) -> Any {
+        self.ram(DDEQUE).y()
+    }
+    fn set_k_first(&mut self, ptr: Any) {
+        self.ram_mut(DDEQUE).set_y(ptr);
+    }
+    fn k_last(&self) -> Any {
+        self.ram(DDEQUE).z()
+    }
+    fn set_k_last(&mut self, ptr: Any) {
+        self.ram_mut(DDEQUE).set_z(ptr);
+    }
+
+    fn mem_top(&self) -> Any {
+        self.ram(MEMORY).t()
+    }
+    fn set_mem_top(&mut self, ptr: Any) {
+        self.ram_mut(MEMORY).set_t(ptr);
+    }
+    fn mem_next(&self) -> Any {
+        self.ram(MEMORY).x()
+    }
+    fn set_mem_next(&mut self, ptr: Any) {
+        self.ram_mut(MEMORY).set_x(ptr);
+    }
+    fn mem_free(&self) -> Any {
+        self.ram(MEMORY).y()
+    }
+    fn set_mem_free(&mut self, fix: Any) {
+        self.ram_mut(MEMORY).set_y(fix);
+    }
+    fn _mem_root(&self) -> Any {
+        self.ram(MEMORY).z()
+    }
+    fn _set_mem_root(&mut self, ptr: Any) {
+        self.ram_mut(MEMORY).set_z(ptr);
+    }
+
+    pub fn new_event(&mut self, target: Cap, msg: Val) -> Any {
+        let event = Quad::event_t(target.any(), msg.any(), NIL.any());
+        self.alloc(&event)
+    }
+    pub fn new_cont(&mut self, ip: Any, sp: Any, ep: Any) -> Any {
+        let cont = Quad::cont_t(ip, sp, ep, NIL.any());
+        self.alloc(&cont)
+    }
+    pub fn new_actor(&mut self, beh: Ptr, state: Ptr) -> Cap {
+        let actor = Quad::new_actor(beh.any(), state.any());
+        let ptr = self.alloc(&actor);
+        Cap::new(ptr.raw())  // convert from Ptr to Cap!
+    }
+
+    fn stack_push(&mut self, val: Val) {
+        let sp = self.cons(val, self.sp().val());
+        self.set_sp(sp);
+    }
+    fn stack_pop(&mut self) -> Val {
+        let sp = self.sp();
+        if self.typeq(PAIR_T, sp.any()) {
+            let item = self.car(sp);
+            self.set_sp(self.cdr(sp).ptr());
+            self.free(sp.any());  // free pair holding stack item
+            item
+        } else {
+            println!("stack_pop: underflow!");
+            UNDEF
+        }
+    }
+    fn stack_clear(&mut self, top: Ptr) {
+        let mut sp = self.sp();
+        while sp != top && self.typeq(PAIR_T, sp.any()) {
+            let p = sp;
+            sp = self.cdr(p).ptr();
+            self.free(p.any());  // free pair holding stack item
+        }
+        self.set_sp(sp);
+    }
+    fn stack_dup(&mut self, num: Num) {
+        let mut n = num;
+        if n > 0 {
+            let mut s = self.sp();
+            let sp = self.cons(self.car(s), NIL);
+            let mut p = sp;
+            s = self.cdr(s).ptr();
+            n -= 1;
+            while n > 0 {
+                let q = self.cons(self.car(s), NIL);
+                self.set_cdr(p, q.val());
+                p = q;
+                s = self.cdr(s).ptr();
+                n -= 1;
+            }
+            self.set_cdr(p, self.sp().val());
+            self.set_sp(sp);
+        }
+    }
+
     pub fn cons(&mut self, car: Val, cdr: Val) -> Ptr {
         let pair = Quad::pair_t(car.any(), cdr.any());
         self.alloc(&pair).val().ptr()
@@ -1972,6 +1954,27 @@ pub const FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // worke
         if let Typed::Pair { cdr, .. } = self.typed_mut(pair) {
             *cdr = val;
         }
+    }
+
+    pub fn ip(&self) -> Ptr {  // instruction pointer
+        let quad = self.ram(self.k_first());
+        quad.t().val().ptr()  // FIXME: should return Any...
+    }
+    pub fn sp(&self) -> Ptr {  // stack pointer
+        let quad = self.ram(self.k_first());
+        quad.x().val().ptr()  // FIXME: should return Any...
+    }
+    pub fn ep(&self) -> Ptr {  // event pointer
+        let quad = self.ram(self.k_first());
+        quad.y().val().ptr()  // FIXME: should return Any...
+    }
+    fn set_ip(&mut self, ptr: Ptr) {
+        let quad = self.ram_mut(self.k_first());
+        quad.set_t(ptr.any())  // FIXME: `ptr` should be Any...
+    }
+    fn set_sp(&mut self, ptr: Ptr) {
+        let quad = self.ram_mut(self.k_first());
+        quad.set_x(ptr.any())  // FIXME: `ptr` should be Any...
     }
 
     pub fn typeq(&self, typ: Val, val: Any) -> bool {
@@ -2079,54 +2082,40 @@ pub const FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // worke
         &mut self.quad_mem[addr]
     }
 
-    fn e_first(&self) -> Any {
-        self.ram(DDEQUE).t()
-    }
-    fn set_e_first(&mut self, ptr: Any) {
-        self.ram_mut(DDEQUE).set_t(ptr);
-    }
-    fn e_last(&self) -> Any {
-        self.ram(DDEQUE).x()
-    }
-    fn set_e_last(&mut self, ptr: Any) {
-        self.ram_mut(DDEQUE).set_x(ptr);
-    }
-    fn k_first(&self) -> Any {
-        self.ram(DDEQUE).y()
-    }
-    fn set_k_first(&mut self, ptr: Any) {
-        self.ram_mut(DDEQUE).set_y(ptr);
-    }
-    fn k_last(&self) -> Any {
-        self.ram(DDEQUE).z()
-    }
-    fn set_k_last(&mut self, ptr: Any) {
-        self.ram_mut(DDEQUE).set_z(ptr);
-    }
-
-    fn mem_top(&self) -> Any {
-        self.ram(MEMORY).t()
-    }
-    fn set_mem_top(&mut self, ptr: Any) {
-        self.ram_mut(MEMORY).set_t(ptr);
-    }
-    fn mem_next(&self) -> Any {
-        self.ram(MEMORY).x()
-    }
-    fn set_mem_next(&mut self, ptr: Any) {
-        self.ram_mut(MEMORY).set_x(ptr);
-    }
-    fn mem_free(&self) -> Any {
-        self.ram(MEMORY).y()
-    }
-    fn set_mem_free(&mut self, fix: Any) {
-        self.ram_mut(MEMORY).set_y(fix);
-    }
-    fn _mem_root(&self) -> Any {
-        self.ram(MEMORY).z()
-    }
-    fn _set_mem_root(&mut self, ptr: Any) {
-        self.ram_mut(MEMORY).set_z(ptr);
+    pub fn next(&self, ptr: Ptr) -> Ptr {
+        let typed = *self.typed(ptr);
+        match typed {
+            Typed::Event { next, .. } => next,
+            Typed::Cont { next, .. } => next,
+            Typed::Dict { next, .. } => next,
+            Typed::Free { next } => next,
+            Typed::Quad { z, .. } => z.ptr(),
+            Typed::Instr { op: Op::Typeq { k, .. } } => k,
+            Typed::Instr { op: Op::Dict { k, .. } } => k,
+            Typed::Instr { op: Op::Deque { k, .. } } => k,
+            Typed::Instr { op: Op::Pair { k, .. } } => k,
+            Typed::Instr { op: Op::Part { k, .. } } => k,
+            Typed::Instr { op: Op::Nth { k, .. } } => k,
+            Typed::Instr { op: Op::Push { k, .. } } => k,
+            Typed::Instr { op: Op::Depth { k } } => k,
+            Typed::Instr { op: Op::Drop { k, .. } } => k,
+            Typed::Instr { op: Op::Pick { k, .. } } => k,
+            Typed::Instr { op: Op::Dup { k, .. } } => k,
+            Typed::Instr { op: Op::Roll { k, .. } } => k,
+            Typed::Instr { op: Op::Alu { k, .. } } => k,
+            Typed::Instr { op: Op::Eq { k, .. } } => k,
+            Typed::Instr { op: Op::Cmp { k, .. } } => k,
+            //Typed::Instr { op: Op::If { f, .. } } => f,
+            Typed::Instr { op: Op::Msg { k, .. } } => k,
+            Typed::Instr { op: Op::My { k, .. } } => k,
+            Typed::Instr { op: Op::Send { k, .. } } => k,
+            Typed::Instr { op: Op::New { k, .. } } => k,
+            Typed::Instr { op: Op::Beh { k, .. } } => k,
+            //Typed::Instr { op: Op::End { .. } } => UNDEF.ptr(),
+            //Typed::Instr { op: Op::IsEq { k, .. } } => k,
+            //Typed::Instr { op: Op::IsNe { k, .. } } => k,
+            _ => UNDEF.ptr(),
+        }
     }
 }
 
