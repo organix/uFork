@@ -319,8 +319,8 @@ impl fmt::Display for Quad {
 }
 
 // literal values
-/*
 pub const ZERO: Any         = Any { raw: DIR_RAW | 0 };
+/*
 pub const UNDEF: Any        = Any { raw: 0 };
 pub const NIL: Any          = Any { raw: 1 };
 pub const FALSE: Any        = Any { raw: 2 };
@@ -347,7 +347,9 @@ pub const START: Any        = Any { raw: 16 };
 */
 
 // literal values {Val, Fix, Ptr, Cap} -- DEPRECATED
+/*
 pub const ZERO: Fix         = Fix { num: 0 };
+*/
 pub const UNDEF: Val        = Val { raw: 0 }; //Val::new(0); -- const generic issue...
 pub const NIL: Val          = Val { raw: 1 };
 pub const FALSE: Val        = Val { raw: 2 };
@@ -1005,32 +1007,30 @@ pub const FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // worke
     }
     pub fn dispatch_event(&mut self) -> bool {
         if let Some(ep) = self.event_dequeue() {
-            if let Typed::Event { target, .. } = self.typed(ep) {
-                let a_ptr = Ptr::new(target.raw());  // WARNING: converting Cap to Ptr!
-                println!("dispatch_event: target={} -> {}", a_ptr, self.typed(a_ptr));
-                if let Typed::Actor { beh, state, events } = *self.typed(a_ptr) {
-                    match events {
-                        Some(_) => {
-                            // target actor is busy, retry later...
-                            self.event_enqueue(ep);
-                            false  // no event dispatched
-                        },
-                        None => {
-                            // begin actor-event transaction
-                            if let Typed::Actor { events, .. } = self.typed_mut(a_ptr) {
-                                *events = Some(NIL.ptr());
-                            };
-                            let kp = self.new_cont(beh, state, ep);
-                            println!("dispatch_event: cont={} -> {}", kp, self.typed(kp));
-                            self.cont_enqueue(kp);
-                            true  // event dispatched
-                        },
-                    }
-                } else {
-                    panic!("dispatch_event: requires actor, got {} -> {}", a_ptr, self.typed(a_ptr));
+            let target = self.ram(ep).x();
+            let a_ptr = self.cap_to_ptr(target).val().ptr();
+            //let a_ptr = Ptr::new(target.raw());  // WARNING: converting Cap to Ptr!
+            println!("dispatch_event: target={} -> {}", a_ptr, self.typed(a_ptr));
+            if let Typed::Actor { beh, state, events } = *self.typed(a_ptr) {
+                match events {
+                    Some(_) => {
+                        // target actor is busy, retry later...
+                        self.event_enqueue(ep);
+                        false  // no event dispatched
+                    },
+                    None => {
+                        // begin actor-event transaction
+                        if let Typed::Actor { events, .. } = self.typed_mut(a_ptr) {
+                            *events = Some(NIL.ptr());
+                        };
+                        let kp = self.new_cont(beh.any(), state.any(), ep);
+                        println!("dispatch_event: cont={} -> {}", kp, self.quad(kp));
+                        self.cont_enqueue(kp);
+                        true  // event dispatched
+                    },
                 }
             } else {
-                panic!("dispatch_event: requires event, got {} -> {}", ep, self.typed(ep));
+                panic!("dispatch_event: requires actor, got {} -> {}", a_ptr, self.typed(a_ptr));
             }
         } else {
             println!("dispatch_event: event queue empty");
@@ -1051,15 +1051,14 @@ pub const FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // worke
                 println!("execute_instruction: ip'={} -> {}", ip_, self.typed(ip_));
                 self.set_ip(ip_);
                 let kp_ = self.cont_dequeue().unwrap();
-                assert_eq!(kp, kp_.any());
+                assert_eq!(kp, kp_);
                 if self.in_heap(ip_.any()) {
                     // re-queue updated continuation
                     self.cont_enqueue(kp_);
                 } else {
                     // free dead continuation and associated event
-                    let ep_ = ep.val().ptr();
-                    self.free(ep_);
-                    self.free(kp_);
+                    self.free(ep);
+                    self.free(kp);
                 }
             } else {
                 panic!("Illegal instruction!");
@@ -1390,7 +1389,7 @@ pub const FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // worke
             },
             Op::My { op, k } => {
                 println!("vm_my: op={}", op);
-                let me = self.self_ptr().unwrap();
+                let me = self.self_ptr();
                 println!("vm_my: me={} -> {}", me, self.typed(me));
                 match op {
                     My::Addr => {
@@ -1429,8 +1428,16 @@ pub const FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // worke
                 };
                 println!("vm_send: msg={}", msg);
                 let ep = self.new_event(target.cap(), msg);
-                let me = self.self_ptr().unwrap();
-                println!("vm_send: me={} -> {}", me, self.typed(me));
+                let me = self.self_ptr().any();
+                println!("vm_send: me={} -> {}", me, self.quad(me));
+                let next = self.ram(me).z();
+                if next.is_ram() {
+                    self.ram_mut(ep).set_z(next);
+                    println!("vm_send: ep={} -> {}", ep, self.quad(ep));
+                }
+                self.ram_mut(me).set_z(ep);
+                println!("vm_send: me'={} -> {}", me, self.quad(me));
+                /*
                 if let Typed::Actor { events, .. } = self.typed(me) {
                     let next_ = events.unwrap();
                     if let Typed::Event { next, .. } = self.typed_mut(ep) {
@@ -1442,6 +1449,7 @@ pub const FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // worke
                     *events = Some(ep);
                 }
                 println!("vm_send: me'={} -> {}", me, self.typed(me));
+                */
                 *k
             },
             Op::New { n, k } => {
@@ -1465,7 +1473,7 @@ pub const FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // worke
                 assert!(self.typeq(INSTR_T, ip.any()));
                 let sp = self.pop_counted(num);
                 println!("vm_beh: sp={}", sp);
-                let me = self.self_ptr().unwrap();
+                let me = self.self_ptr();
                 println!("vm_beh: me={} -> {}", me, self.typed(me));
                 if let Typed::Actor { beh, state, .. } = self.typed_mut(me) {
                     *beh = ip.ptr();
@@ -1476,7 +1484,7 @@ pub const FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // worke
             },
             Op::End { op } => {
                 println!("vm_end: op={}", op);
-                let me = self.self_ptr().unwrap();
+                let me = self.self_ptr();
                 println!("vm_end: me={} -> {}", me, self.typed(me));
                 match op {
                     End::Abort => {
@@ -1499,7 +1507,7 @@ pub const FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // worke
                             *state = NIL.ptr();  // no retained stack
                         }
                         self.actor_commit(me);
-                        self.free(me);  // free actor
+                        self.free(me.any());  // free actor
                         FALSE.ptr()
                     },
                 }
@@ -1521,8 +1529,7 @@ pub const FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // worke
         }
     }
 
-    fn event_enqueue(&mut self, ep: Ptr) {
-        let ep = ep.any();
+    fn event_enqueue(&mut self, ep: Any) {
         self.ram_mut(ep).set_z(NIL.any());
         if !self.e_first().is_ram() {
             self.set_e_first(ep);
@@ -1531,7 +1538,7 @@ pub const FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // worke
         }
         self.set_e_last(ep);
     }
-    fn event_dequeue(&mut self) -> Option<Ptr> {
+    fn event_dequeue(&mut self) -> Option<Any> {
         let ep = self.e_first();
         if ep.is_ram() {
             let event = self.ram(ep);
@@ -1540,14 +1547,13 @@ pub const FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // worke
             if !next.is_ram() {
                 self.set_e_last(NIL.any())
             }
-            Some(ep.val().ptr())  // FIXME: should return Option<Any>
+            Some(ep)
         } else {
             None
         }
     }
 
-    fn cont_enqueue(&mut self, kp: Ptr) {
-        let kp = kp.any();
+    fn cont_enqueue(&mut self, kp: Any) {
         self.ram_mut(kp).set_z(NIL.any());
         if !self.k_first().is_ram() {
             self.set_k_first(kp);
@@ -1556,7 +1562,7 @@ pub const FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // worke
         }
         self.set_k_last(kp);
     }
-    fn cont_dequeue(&mut self) -> Option<Ptr> {
+    fn cont_dequeue(&mut self) -> Option<Any> {
         let kp = self.k_first();
         if kp.is_ram() {
             let cont = self.ram(kp);
@@ -1565,7 +1571,7 @@ pub const FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // worke
             if !next.is_ram() {
                 self.set_k_last(NIL.any())
             }
-            Some(kp.val().ptr())  // FIXME: should return Option<Any>
+            Some(kp)
         } else {
             None
         }
@@ -1583,7 +1589,7 @@ pub const FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // worke
                 println!("actor_commit: ep={} -> {}", ep, self.typed(ep));
                 let p = ep;
                 ep = *next;
-                self.event_enqueue(p);
+                self.event_enqueue(p.any());
             }
         }
         if let Typed::Actor { events, .. } = self.typed_mut(me) {
@@ -1602,14 +1608,19 @@ pub const FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // worke
                 println!("actor_abort: ep={} -> {}", ep, self.typed(ep));
                 let p = ep;
                 ep = *next;
-                self.free(p);
+                self.free(p.any());
             }
         }
         if let Typed::Actor { events, .. } = self.typed_mut(me) {
             *events = None;  // end actor transaction
         }
     }
-    fn self_ptr(&self) -> Option<Ptr> {
+    fn self_ptr(&self) -> Ptr {
+        let ep = self.ep().any();
+        let target = self.ram(ep).x();
+        let a_ptr = self.cap_to_ptr(target);
+        a_ptr.val().ptr()  // FIXME: should return Any
+        /*
         match self.typed(self.ep()) {
             Typed::Event { target, .. } => {
                 let ptr = Ptr::new(target.raw());  // WARNING: converting Cap to Ptr!
@@ -1620,6 +1631,7 @@ pub const FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // worke
             },
             _ => None,
         }
+        */
     }
 
     fn push_list(&mut self, ptr: Ptr) {
@@ -1699,7 +1711,7 @@ pub const FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // worke
         if self.typeq(PAIR_T, sp.any()) {
             let item = self.car(sp);
             self.set_sp(self.cdr(sp).ptr());
-            self.free(sp);  // free pair holding stack item
+            self.free(sp.any());  // free pair holding stack item
             item
         } else {
             println!("stack_pop: underflow!");
@@ -1711,7 +1723,7 @@ pub const FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // worke
         while sp != top && self.typeq(PAIR_T, sp.any()) {
             let p = sp;
             sp = self.cdr(p).ptr();
-            self.free(p);  // free pair holding stack item
+            self.free(p.any());  // free pair holding stack item
         }
         self.set_sp(sp);
     }
@@ -1756,12 +1768,12 @@ pub const FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // worke
         quad.set_x(ptr.any())  // FIXME: `ptr` should be Any...
     }
 
-    pub fn new_event(&mut self, target: Cap, msg: Val) -> Ptr {
+    pub fn new_event(&mut self, target: Cap, msg: Val) -> Any {
         let event = Quad::event_t(target.any(), msg.any(), NIL.any());
         self.alloc(&event)
     }
-    pub fn new_cont(&mut self, ip: Ptr, sp: Ptr, ep: Ptr) -> Ptr {
-        let cont = Quad::cont_t(ip.any(), sp.any(), ep.any(), NIL.any());
+    pub fn new_cont(&mut self, ip: Any, sp: Any, ep: Any) -> Any {
+        let cont = Quad::cont_t(ip, sp, ep, NIL.any());
         self.alloc(&cont)
     }
     pub fn new_actor(&mut self, beh: Ptr, state: Ptr) -> Cap {
@@ -1827,7 +1839,7 @@ pub const FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // worke
     }
     pub fn dict_add(&mut self, dict: Ptr, key: Val, value: Val) -> Ptr {
         let dict = Quad::dict_t(key.any(), value.any(), dict.any());
-        self.alloc(&dict)
+        self.alloc(&dict).val().ptr()
     }
     pub fn dict_set(&mut self, dict: Ptr, key: Val, value: Val) -> Ptr {
         let d = if self.dict_has(dict, key) {
@@ -1936,7 +1948,7 @@ pub const FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // worke
 
     pub fn cons(&mut self, car: Val, cdr: Val) -> Ptr {
         let pair = Quad::pair_t(car.any(), cdr.any());
-        self.alloc(&pair)
+        self.alloc(&pair).val().ptr()
     }
     pub fn car(&self, pair: Ptr) -> Val {
         let typed = *self.typed(pair);
@@ -1981,8 +1993,21 @@ pub const FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // worke
             false
         }
     }
+    pub fn in_heap(&self, val: Any) -> bool {
+        val.is_ram() && (val.addr() < self.mem_top().addr())
+    }
+    fn _ptr_to_cap(&self, ptr: Any) -> Any {
+        assert!(self.ram(ptr).t() == ACTOR_T.any());
+        let cap = Any::cap(ptr.addr());
+        cap
+    }
+    fn cap_to_ptr(&self, cap: Any) -> Any {
+        let ptr = Any::ram(cap.addr());
+        assert!(self.ram(ptr).t() == ACTOR_T.any());
+        ptr
+    }
 
-    pub fn alloc(&mut self, quad: &Quad) -> Ptr {
+    pub fn alloc(&mut self, quad: &Quad) -> Any {
         let next = self.mem_next();
         let ptr = if self.typeq(FREE_T, next) {
             // use quad from free-list
@@ -2002,10 +2027,9 @@ pub const FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // worke
             next
         };
         *self.ram_mut(ptr) = *quad;  // copy initial value
-        ptr.val().ptr()
+        ptr
     }
-    pub fn free(&mut self, ptr: Ptr) {
-        let ptr = ptr.any();
+    pub fn free(&mut self, ptr: Any) {
         assert!(self.in_heap(ptr));
         if self.typeq(FREE_T, ptr) {
             panic!("double-free {}", ptr);
@@ -2056,10 +2080,6 @@ pub const FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // worke
         assert!(self.in_heap(ptr.any()));
         let addr = ptr.addr();
         &mut self.quad_mem[addr]
-    }
-
-    pub fn in_heap(&self, val: Any) -> bool {
-        val.is_ram() && (val.addr() < self.mem_top().addr())
     }
 
     fn e_first(&self) -> Any {
@@ -2845,7 +2865,7 @@ fn basic_memory_allocation() {
     let top_before = core.mem_top().addr();
     println!("mem_top: {}", core.mem_top());
     let m1 = core.alloc(&Quad::pair_t(Any::fix(1), Any::fix(1)));
-    println!("m1:{}={} -> {}", m1, m1.any(), core.quad(m1.any()));
+    println!("m1:{} -> {}", m1, core.quad(m1));
     println!("mem_top: {}", core.mem_top());
     let m2 = core.alloc(&Quad::pair_t(Any::fix(2), Any::fix(2)));
     println!("mem_top: {}", core.mem_top());
