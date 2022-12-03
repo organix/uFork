@@ -1011,7 +1011,7 @@ pub const FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // worke
             println!("dispatch_event: event={} -> {}", ep, event);
             let target = event.x();
             let a_ptr = self.cap_to_ptr(target);
-            let a_quad = self.quad(a_ptr);
+            let a_quad = self.mem(a_ptr);
             println!("dispatch_event: target={} -> {}", a_ptr, a_quad);
             let beh = a_quad.x();
             let state = a_quad.y();
@@ -1020,7 +1020,7 @@ pub const FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // worke
                 // begin actor-event transaction
                 self.ram_mut(a_ptr).set_z(NIL.any());
                 let kp = self.new_cont(beh, state, ep);
-                println!("dispatch_event: cont={} -> {}", kp, self.quad(kp));
+                println!("dispatch_event: cont={} -> {}", kp, self.mem(kp));
                 self.cont_enqueue(kp);
                 true  // event dispatched
             } else {
@@ -1039,9 +1039,9 @@ pub const FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // worke
             let cont = self.ram(kp);
             println!("execute_instruction: kp={} -> {}", kp, cont);
             let ep = self.ep().any();//cont.y();
-            println!("execute_instruction: ep={} -> {}", ep, self.quad(ep));
+            println!("execute_instruction: ep={} -> {}", ep, self.mem(ep));
             let ip = self.ip().any();//cont.t();
-            let instr = self.quad(ip);
+            let instr = self.mem(ip);
             println!("execute_instruction: ip={} -> {}", ip, instr);
             if let Some(Typed::Instr { op }) = Typed::from(instr) {
                 let ip_ = self.perform_op(&op);
@@ -1426,14 +1426,14 @@ pub const FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // worke
                 println!("vm_send: msg={}", msg);
                 let ep = self.new_event(target.cap(), msg);
                 let me = self.self_ptr().any();
-                println!("vm_send: me={} -> {}", me, self.quad(me));
+                println!("vm_send: me={} -> {}", me, self.mem(me));
                 let next = self.ram(me).z();
                 if next.is_ram() {
                     self.ram_mut(ep).set_z(next);
-                    println!("vm_send: ep={} -> {}", ep, self.quad(ep));
+                    println!("vm_send: ep={} -> {}", ep, self.mem(ep));
                 }
                 self.ram_mut(me).set_z(ep);
-                println!("vm_send: me'={} -> {}", me, self.quad(me));
+                println!("vm_send: me'={} -> {}", me, self.mem(me));
                 /*
                 if let Typed::Actor { events, .. } = self.typed(me) {
                     let next_ = events.unwrap();
@@ -1932,7 +1932,7 @@ pub const FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // worke
     pub fn car(&self, pair: Ptr) -> Val {
         let pair = pair.any();
         if self.typeq(PAIR_T, pair) {
-            self.quad(pair).x().val()
+            self.mem(pair).x().val()
         } else {
             UNDEF
         }
@@ -1940,7 +1940,7 @@ pub const FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // worke
     pub fn cdr(&self, pair: Ptr) -> Val {
         let pair = pair.any();
         if self.typeq(PAIR_T, pair) {
-            self.quad(pair).y().val()
+            self.mem(pair).y().val()
         } else {
             UNDEF
         }
@@ -1990,7 +1990,7 @@ pub const FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // worke
                 false
             }
         } else if val.is_ptr() {
-            self.quad(val).t() == typ.any()
+            self.mem(val).t() == typ.any()
         } else {
             false
         }
@@ -2042,7 +2042,7 @@ pub const FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // worke
         self.set_mem_free(Any::fix(n + 1));  // increment cells available
     }
 
-    pub fn quad(&self, ptr: Any) -> &Quad {
+    pub fn mem(&self, ptr: Any) -> &Quad {
         if !ptr.is_ptr() {
             panic!("invalid ptr=${:08x}", ptr.raw());
         }
@@ -2853,7 +2853,7 @@ fn basic_memory_allocation() {
     let top_before = core.mem_top().addr();
     println!("mem_top: {}", core.mem_top());
     let m1 = core.alloc(&Quad::pair_t(Any::fix(1), Any::fix(1)));
-    println!("m1:{} -> {}", m1, core.quad(m1));
+    println!("m1:{} -> {}", m1, core.mem(m1));
     println!("mem_top: {}", core.mem_top());
     let m2 = core.alloc(&Quad::pair_t(Any::fix(2), Any::fix(2)));
     println!("mem_top: {}", core.mem_top());
@@ -2871,7 +2871,7 @@ fn basic_memory_allocation() {
     assert_eq!(3, top_after - top_before);
     //assert_eq!(1, core.mem_free().fix_num().unwrap());
     assert_eq!(Any::fix(1), core.mem_free());
-    println!("mem_next: {} -> {}", core.mem_next(), core.quad(core.mem_next()));
+    println!("mem_next: {} -> {}", core.mem_next(), core.mem(core.mem_next()));
     //assert!(false);  // force output to be displayed
 }
 
