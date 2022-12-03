@@ -406,7 +406,7 @@ pub const ABORT: Ptr        = Ptr { raw: 86 };
 pub const STOP: Ptr         = Ptr { raw: 88 };
 pub const WAIT_BEH: Ptr     = Ptr { raw: 90 };
 pub const BUSY_BEH: Ptr     = Ptr { raw: 113 };
-pub const E_BOOT: Ptr       = Ptr { raw: 190 };
+//pub const E_BOOT: Ptr       = Ptr { raw: 190 };
 
 // core memory limit
 const QUAD_MAX: usize = 1<<10;  // 1K quad-cells
@@ -424,17 +424,17 @@ impl Core {
             Quad::empty_t();
             QUAD_MAX
         ];
-        /*
-        quad_mem[MEMORY.addr()]     = Typed::Memory { top: Ptr::new(256), next: NIL.ptr(), free: Fix::new(0), root: DQ_GC_ROOT };
-        quad_mem[DDEQUE.addr()]     = Typed::Ddeque { e_first: E_BOOT, e_last: E_BOOT, k_first: NIL.ptr(), k_last: NIL.ptr() };
-        quad_mem[A_SINK.addr()]     = Typed::Actor { beh: COMMIT, state: NIL.ptr(), events: None };
-pub const A_STOP: Cap               = Cap { raw: 89 };
-        quad_mem[89]                = Typed::Actor { beh: STOP.ptr(), state: NIL.ptr(), events: None };
-        */
         quad_ram[MEMORY.addr()]     = Quad::memory_t(Any::ram(256), NIL.any(), Any::fix(0), DQ_GC_ROOT.any());
-        quad_ram[DDEQUE.addr()]     = Quad::ddeque_t(E_BOOT.any(), E_BOOT.any(), NIL.any(), NIL.any());
+        quad_ram[DDEQUE.addr()]     = Quad::ddeque_t(E_BOOT, E_BOOT, NIL.any(), NIL.any());
         quad_ram[A_SINK.addr()]     = Quad::actor_t(COMMIT.any(), NIL.any(), UNDEF.any());
         quad_ram[89]                = Quad::new_actor(STOP.any(), NIL.any());
+        /* bootstrap event/actor */
+        quad_ram[100]               = Quad::new_actor(Any::rom(101), NIL.any());
+pub const E_BOOT: Any       = Any { raw: MUT_RAW | 190 };
+        //quad_ram[190]               = Quad::event_t(Any::cap(191), Any::rom(188), NIL.any());  // run loop demo
+        quad_ram[190]               = Quad::event_t(Any::cap(100), Any::rom(188), NIL.any());  // run test suite
+        //quad_ram[190]               = Quad::event_t(FN_FIB.any(), Any::rom(185), NIL.any());  // run (fib 6)
+        quad_ram[191]               = Quad::new_actor(RESEND.any(), Any::rom(189));
 
         let mut quad_mem = [
             Typed::Empty;
@@ -457,7 +457,7 @@ pub const A_STOP: Cap               = Cap { raw: 89 };
         quad_mem[FREE_T.addr()]     = Typed::Type;
 
         quad_mem[MEMORY.addr()]     = Typed::Memory { top: Ptr::new(256), next: NIL.ptr(), free: Fix::new(0), root: DQ_GC_ROOT };
-        quad_mem[DDEQUE.addr()]     = Typed::Ddeque { e_first: E_BOOT, e_last: E_BOOT, k_first: NIL.ptr(), k_last: NIL.ptr() };
+        quad_mem[DDEQUE.addr()]     = Typed::Ddeque { e_first: Ptr::new(190), e_last: Ptr::new(190), k_first: NIL.ptr(), k_last: NIL.ptr() };
 
         quad_mem[COMMIT.addr()]     = Typed::Instr { op: Op::End { op: End::Commit } };
         quad_mem[SEND_0.addr()]     = Typed::Instr { op: Op::Send { n: Fix::new(0), k: COMMIT } };
@@ -1007,30 +1007,26 @@ pub const FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // worke
     }
     pub fn dispatch_event(&mut self) -> bool {
         if let Some(ep) = self.event_dequeue() {
-            let target = self.ram(ep).x();
-            let a_ptr = self.cap_to_ptr(target).val().ptr();
-            //let a_ptr = Ptr::new(target.raw());  // WARNING: converting Cap to Ptr!
-            println!("dispatch_event: target={} -> {}", a_ptr, self.typed(a_ptr));
-            if let Typed::Actor { beh, state, events } = *self.typed(a_ptr) {
-                match events {
-                    Some(_) => {
-                        // target actor is busy, retry later...
-                        self.event_enqueue(ep);
-                        false  // no event dispatched
-                    },
-                    None => {
-                        // begin actor-event transaction
-                        if let Typed::Actor { events, .. } = self.typed_mut(a_ptr) {
-                            *events = Some(NIL.ptr());
-                        };
-                        let kp = self.new_cont(beh.any(), state.any(), ep);
-                        println!("dispatch_event: cont={} -> {}", kp, self.quad(kp));
-                        self.cont_enqueue(kp);
-                        true  // event dispatched
-                    },
-                }
+            let event = self.ram(ep);
+            println!("dispatch_event: event={} -> {}", ep, event);
+            let target = event.x();
+            let a_ptr = self.cap_to_ptr(target);
+            let a_quad = self.quad(a_ptr);
+            println!("dispatch_event: target={} -> {}", a_ptr, a_quad);
+            let beh = a_quad.x();
+            let state = a_quad.y();
+            let events = a_quad.z();
+            if events == UNDEF.any() {
+                // begin actor-event transaction
+                self.ram_mut(a_ptr).set_z(NIL.any());
+                let kp = self.new_cont(beh, state, ep);
+                println!("dispatch_event: cont={} -> {}", kp, self.quad(kp));
+                self.cont_enqueue(kp);
+                true  // event dispatched
             } else {
-                panic!("dispatch_event: requires actor, got {} -> {}", a_ptr, self.typed(a_ptr));
+                // target actor is busy, retry later...
+                self.event_enqueue(ep);
+                false  // no event dispatched
             }
         } else {
             println!("dispatch_event: event queue empty");
@@ -1039,14 +1035,15 @@ pub const FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // worke
     }
     pub fn execute_instruction(&mut self) -> bool {
         let kp = self.k_first();
-        println!("execute_instruction: kp={} -> {}", kp, self.quad(kp));
         if kp.is_ram() {
             let cont = self.ram(kp);
-            let ep = cont.y();
+            println!("execute_instruction: kp={} -> {}", kp, cont);
+            let ep = self.ep().any();//cont.y();
             println!("execute_instruction: ep={} -> {}", ep, self.quad(ep));
-            let ip = cont.t();
-            println!("execute_instruction: ip={} -> {}", ip, self.quad(ip));
-            if let Typed::Instr { op } = *self.typed(ip.val().ptr()) {
+            let ip = self.ip().any();//cont.t();
+            let instr = self.quad(ip);
+            println!("execute_instruction: ip={} -> {}", ip, instr);
+            if let Some(Typed::Instr { op }) = Typed::from(instr) {
                 let ip_ = self.perform_op(&op);
                 println!("execute_instruction: ip'={} -> {}", ip_, self.typed(ip_));
                 self.set_ip(ip_);
@@ -2891,5 +2888,5 @@ fn basic_memory_allocation() {
 fn run_loop_terminates() {
     let mut core = Core::new();
     core.run_loop();
-    //assert!(false);  // force output to be displayed
+    assert!(false);  // force output to be displayed
 }
