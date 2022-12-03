@@ -164,14 +164,14 @@ impl Host {
     }
     pub fn car(&self, p: Raw) -> Raw {
         if self.is_pair(p) {
-            self.core.car(Ptr::new(p)).raw()
+            self.core.car(Ptr::new(p).any()).raw()
         } else {
             UNDEF.raw()
         }
     }
     pub fn cdr(&self, p: Raw) -> Raw {
         if self.is_pair(p) {
-            self.core.cdr(Ptr::new(p)).raw()
+            self.core.cdr(Ptr::new(p).any()).raw()
         } else {
             UNDEF.raw()
         }
