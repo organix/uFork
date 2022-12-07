@@ -1212,9 +1212,10 @@ pub const FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // worke
             },
             Op::Nth { n, k } => {
                 println!("vm_nth: idx={}", n);
-                let lst = self.stack_pop();
+                let lst = self.stack_pop().any();
                 println!("vm_nth: lst={}", lst);
-                let r = self.extract_nth(lst, n.num());
+                let num = n.any().fix_num().unwrap();
+                let r = self.extract_nth(lst, num);
                 println!("vm_nth: r={}", r);
                 self.stack_push(r.any());
                 *k
@@ -1248,9 +1249,9 @@ pub const FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // worke
             },
             Op::Pick { n, k } => {
                 println!("vm_pick: idx={}", n);
-                let num = n.num();
+                let num = n.any().fix_num().unwrap();
                 let r = if num > 0 {
-                    let lst = self.sp().val();
+                    let lst = self.sp().any();
                     self.extract_nth(lst, num)
                 } else {
                     UNDEF
@@ -1267,26 +1268,26 @@ pub const FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // worke
             },
             Op::Roll { n, k } => {
                 println!("vm_roll: idx={}", n);
-                let num = n.num();
+                let num = n.any().fix_num().unwrap();
                 if num > 1 {
                     assert!(num < 64);
-                    let sp = self.sp().val();
+                    let sp = self.sp().any();
                     let (q, p) = self.split_nth(sp, num);
                     if self.typeq(PAIR_T, p.any()) {
                         self.set_cdr(q.any(), self.cdr(p.any()).any());
-                        self.set_cdr(p.any(), sp.any());
+                        self.set_cdr(p.any(), sp);
                         self.set_sp(p.any());
                     } else {
                         self.stack_push(UNDEF.any());  // out of range
                     }
                 } else if num < -1 {
                     assert!(num > -64);
-                    let sp = self.sp().val();
+                    let sp = self.sp().any();
                     let (_q, p) = self.split_nth(sp, -num);
                     if self.typeq(PAIR_T, p.any()) {
-                        self.set_sp(self.cdr(sp.any()).any());
-                        self.set_cdr(sp.any(), self.cdr(p.any()).any());
-                        self.set_cdr(p.any(), sp.any());
+                        self.set_sp(self.cdr(sp).any());
+                        self.set_cdr(sp, self.cdr(p.any()).any());
+                        self.set_cdr(p.any(), sp);
                     } else {
                         self.stack_pop();  // out of range
                     }
@@ -1375,9 +1376,10 @@ pub const FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // worke
                 println!("vm_msg: idx={}", n);
                 let r = match self.typed(self.ep()) {
                     Typed::Event { msg, .. } => {
-                        let lst = *msg;
+                        let lst = msg.any();
                         println!("vm_msg: lst={}", lst);
-                        let r = self.extract_nth(lst, n.num());
+                        let num = n.any().fix_num().unwrap();
+                        let r = self.extract_nth(lst, num);
                         r
                     },
                     _ => UNDEF,
@@ -1405,14 +1407,14 @@ pub const FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // worke
                     My::State => {
                         let state = self.ram(me).get_y();
                         println!("vm_my: state={}", state);
-                        self.push_list(state.ptr());
+                        self.push_list(state.any());
                     },
                 }
                 *k
             }
             Op::Send { n, k } => {
                 println!("vm_send: idx={}", n);
-                let num = n.num();
+                let num = n.any().fix_num().unwrap();
                 let target = self.stack_pop();
                 println!("vm_send: target={}", target);
                 assert!(self.typeq(ACTOR_T, target.any()));
@@ -1436,7 +1438,7 @@ pub const FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // worke
             },
             Op::New { n, k } => {
                 println!("vm_new: idx={}", n);
-                let num = n.num();
+                let num = n.any().fix_num().unwrap();
                 let ip = self.stack_pop();
                 println!("vm_new: ip={}", ip);
                 assert!(self.typeq(INSTR_T, ip.any()));
@@ -1449,7 +1451,7 @@ pub const FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // worke
             },
             Op::Beh { n, k } => {
                 println!("vm_beh: idx={}", n);
-                let num = n.num();
+                let num = n.any().fix_num().unwrap();
                 let ip = self.stack_pop();
                 println!("vm_beh: ip={}", ip);
                 assert!(self.typeq(INSTR_T, ip.any()));
@@ -1593,13 +1595,13 @@ pub const FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // worke
         a_ptr
     }
 
-    fn push_list(&mut self, ptr: Ptr) {
-        if let Typed::Pair { car, cdr } = *self.typed(ptr) {
-            self.push_list(cdr.ptr());
-            self.stack_push(car.any());
+    fn push_list(&mut self, ptr: Any) {
+        if self.typeq(PAIR_T, ptr) {
+            self.push_list(self.cdr(ptr).any());
+            self.stack_push(self.car(ptr).any());
         }
     }
-    fn pop_counted(&mut self, num: Num) -> Val {
+    fn pop_counted(&mut self, num: isize) -> Val {
         let mut n = num;
         if n > 0 {  // build list from stack
             let sp = self.sp().val();
@@ -1619,46 +1621,46 @@ pub const FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // worke
             NIL
         }
     }
-    fn split_nth(&self, lst: Val, num: Num) -> (Val, Val) {
+    fn split_nth(&self, lst: Any, num: isize) -> (Val, Val) {
         let mut p = lst;
-        let mut q = UNDEF;
+        let mut q = UNDEF.any();
         let mut n = num;
         assert!(n < 64);
-        while n > 1 && self.typeq(PAIR_T, p.any()) {
+        while n > 1 && self.typeq(PAIR_T, p) {
             q = p;
-            p = self.cdr(p.any());
+            p = self.cdr(p).any();
             n -= 1;
         }
-        (q, p)
+        (q.val(), p.val())
     }
-    fn extract_nth(&self, lst: Val, num: Num) -> Val {
+    fn extract_nth(&self, lst: Any, num: isize) -> Val {
         let mut p = lst;
-        let mut v = UNDEF;
+        let mut v = UNDEF.any();
         let mut n = num;
         if n == 0 {  // entire list/message
             v = p;
         } else if n > 0 {  // item at n-th index
             assert!(n < 64);
-            while self.typeq(PAIR_T, p.any()) {
+            while self.typeq(PAIR_T, p) {
                 n -= 1;
                 if n <= 0 { break; }
-                p = self.cdr(p.any());
+                p = self.cdr(p).any();
             }
             if n == 0 {
-                v = self.car(p.any());
+                v = self.car(p).any();
             }
         } else {  // `-n` selects the n-th tail
             assert!(n > -64);
-            while self.typeq(PAIR_T, p.any()) {
+            while self.typeq(PAIR_T, p) {
                 n += 1;
                 if n >= 0 { break; }
-                p = self.cdr(p.any());
+                p = self.cdr(p).any();
             }
             if n == 0 {
-                v = self.cdr(p.any());
+                v = self.cdr(p).any();
             }
         }
-        v
+        v.val()
     }
 
     pub fn dict_has(&self, dict: Ptr, key: Val) -> bool {

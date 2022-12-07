@@ -107,6 +107,26 @@
 ;   };
 ;   return [sealer, unsealer];
 ; }
+;;
+;; [https://community.spritely.institute/t/rights-amplification-term-alternate/141/29]
+;;
+;; This is just constructed to be a unique value, eq? to nothing,
+;; which can be compared by a user to see if the unsealing failed.
+;; The sealer and unsealer do not themselves use it.
+; (define the-nothing (cons '*the* '*nothing*))
+; 
+; (define (make-sealer-and-unsealer)
+;   (define cell the-nothing)    ; Shared, temp private register
+;   (define (sealer specimen)    ; Sealer procedure
+;     (define (box run-me)       ; New sealed box procedure
+;       (set! cell specimen))    ; Set to temp register
+;     box)                       ; Return procedure
+;   (define (unsealer box)       ; Unsealer procedure
+;     (set! cell the-nothing)    ; Clear the register
+;     (box)                      ; Move sealed val to register
+;     cell)                      ; Return value from register
+;   (values sealer unsealer))    ; Return sealer, unsealer
+
 
 ;;;
 ;;; encapsulated (sealed) data-types
