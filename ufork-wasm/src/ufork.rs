@@ -434,9 +434,9 @@ impl Core {
         quad_ram[F_FIB_ADDR+27]     = Quad::new_actor(Any::rom(F_FIB_ADDR+28), NIL.any());
 pub const E_BOOT: Any       = Any { raw: MUT_RAW | 190 };
         //quad_ram[190]               = Quad::event_t(Any::cap(89), Any::rom(188), NIL.any());  // stop actor
-        quad_ram[190]               = Quad::event_t(Any::cap(191), Any::rom(188), NIL.any());  // run loop demo
+        //quad_ram[190]               = Quad::event_t(Any::cap(191), Any::rom(188), NIL.any());  // run loop demo
         //quad_ram[190]               = Quad::event_t(Any::cap(100), Any::rom(188), NIL.any());  // run test suite
-        //quad_ram[190]               = Quad::event_t(Any::cap(F_FIB_ADDR+0), Any::rom(185), NIL.any());  // run (fib 2)
+        quad_ram[190]               = Quad::event_t(Any::cap(F_FIB_ADDR+0), Any::rom(185), NIL.any());  // run (fib 2)
         //quad_ram[190]               = Quad::event_t(FN_FIB.any(), Any::rom(185), NIL.any());  // run (fib 6)
         quad_ram[191]               = Quad::new_actor(RESEND.any(), Any::rom(189));
 
@@ -1043,28 +1043,21 @@ pub const _FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // work
         if kp.is_ram() {
             let cont = self.ram(kp);
             println!("execute_instruction: kp={} -> {}", kp, cont);
-            let ep = self.ep().any();//cont.y();
+            let ep = self.ep();//cont.y();
             println!("execute_instruction: ep={} -> {}", ep, self.mem(ep));
-            let ip = self.ip().any();//cont.t();
-            let instr = self.mem(ip);
-            println!("execute_instruction: ip={} -> {}", ip, instr);
-            if let Some(Typed::Instr { op }) = Typed::from(instr) {
-                let ip_ = self.perform_op(&op).any();
-                println!("execute_instruction: ip'={} -> {}", ip_, self.mem(ip_));
-                self.set_ip(ip_);
-                let kp_ = self.cont_dequeue().unwrap();
-                assert_eq!(kp, kp_);
-                if self.typeq(INSTR_T, ip_) {
-                    // re-queue updated continuation
-                    println!("execute_instruction: kp'={} -> {}", kp_, self.ram(kp_));
-                    self.cont_enqueue(kp_);
-                } else {
-                    // free dead continuation and associated event
-                    self.free(ep);
-                    self.free(kp);
-                }
+            let ip = self.ip();//cont.t();
+            let ip_ = self.perform_op(ip);
+            self.set_ip(ip_);
+            let kp_ = self.cont_dequeue().unwrap();
+            assert_eq!(kp, kp_);
+            if self.typeq(INSTR_T, ip_) {
+                // re-queue updated continuation
+                println!("execute_instruction: kp'={} -> {}", kp_, self.ram(kp_));
+                self.cont_enqueue(kp_);
             } else {
-                panic!("Illegal instruction!");
+                // free dead continuation and associated event
+                self.free(ep);
+                self.free(kp);
             }
             true  // instruction executed
         } else {
@@ -1072,446 +1065,452 @@ pub const _FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // work
             false  // continuation queue is empty
         }
     }
-    fn perform_op(&mut self, op: &Op) -> Ptr {
-        match op {
-            Op::Typeq { t, k } => {
-                println!("vm_typeq: typ={}", t);
-                let val = self.stack_pop();
-                println!("vm_typeq: val={}", val);
-                let r = if self.typeq(t.val(), val.any()) { TRUE } else { FALSE };
-                self.stack_push(r.any());
-                *k
-            },
-            Op::Dict { op, k } => {
-                println!("vm_dict: op={}", op);
-                match op {
-                    Dict::Has => {
-                        let key = self.stack_pop();
-                        let dict = self.stack_pop().ptr();
-                        let b = self.dict_has(dict, key);
-                        let v = if b { TRUE } else { FALSE };
-                        self.stack_push(v.any());
-                    },
-                    Dict::Get => {
-                        let key = self.stack_pop();
-                        let dict = self.stack_pop().ptr();
-                        let v = self.dict_get(dict, key);
-                        self.stack_push(v.any());
-                    },
-                    Dict::Add => {
-                        let value = self.stack_pop();
-                        let key = self.stack_pop();
-                        let dict = self.stack_pop().ptr();
-                        let d = self.dict_add(dict, key, value);
-                        self.stack_push(d.any());
-                    },
-                    Dict::Set => {
-                        let value = self.stack_pop();
-                        let key = self.stack_pop();
-                        let dict = self.stack_pop().ptr();
-                        let d = self.dict_set(dict, key, value);
-                        self.stack_push(d.any());
-                    },
-                    Dict::Del => {
-                        let key = self.stack_pop();
-                        let dict = self.stack_pop().ptr();
-                        let d = self.dict_del(dict, key);
-                        self.stack_push(d.any());
-                    },
-                };
-                *k
-            },
-            Op::Deque { op, k } => {
-                println!("vm_deque: op={}", op);
-                match op {
-                    Deque::New => {
-                        let deque = self.deque_new();
-                        self.stack_push(deque.any());
-                    },
-                    Deque::Empty => {
-                        let deque = self.stack_pop().ptr();
-                        let b = self.deque_empty(deque);
-                        let v = if b { TRUE } else { FALSE };
-                        self.stack_push(v.any());
-                    },
-                    Deque::Push => {
-                        let item = self.stack_pop();
-                        let old = self.stack_pop().ptr();
-                        let new = self.deque_push(old, item);
-                        self.stack_push(new.any());
-                    },
-                    Deque::Pop => {
-                        let old = self.stack_pop().ptr();
-                        let (new, item) = self.deque_pop(old);
-                        self.stack_push(new.any());
-                        self.stack_push(item.any());
-                    },
-                    Deque::Put => {
-                        let item = self.stack_pop();
-                        let old = self.stack_pop().ptr();
-                        let new = self.deque_put(old, item);
-                        self.stack_push(new.any());
-                    },
-                    Deque::Pull => {
-                        let old = self.stack_pop().ptr();
-                        let (new, item) = self.deque_pull(old);
-                        self.stack_push(new.any());
-                        self.stack_push(item.any());
-                    },
-                    Deque::Len => {
-                        let deque = self.stack_pop().ptr();
-                        let n = self.deque_len(deque);
-                        self.stack_push(Any::fix(n));
-                    },
-                };
-                *k
-            },
-            Op::Pair { n, k } => {
-                println!("vm_pair: cnt={}", n);
-                let mut num = n.num();
-                assert!(num < 64);
-                if num > 0 {
-                    let h = self.stack_pop();
-                    let lst = self.cons(h.any(), NIL.any());
-                    let mut p = lst;
-                    while num > 1 {
-                        let h = self.stack_pop();
-                        let q = self.cons(h.any(), NIL.any());
-                        self.set_cdr(p.any(), q.any());
-                        p = q;
-                        num -= 1;
-                    }
-                    let t = self.stack_pop();
-                    self.set_cdr(p.any(), t.any());
-                    self.stack_push(lst.any());
-                };
-                *k
-            },
-            Op::Part { n, k } => {
-                println!("vm_part: cnt={}", n);
-                let mut num = n.num();
-                assert!(num < 64);
-                let mut s = match Ptr::from(self.stack_pop()) {
-                    Some(ptr) => ptr,
-                    None => UNDEF.ptr(),
-                };
-                if num > 0 {
-                    let lst = self.cons(self.car(s.any()).any(), NIL.any());
-                    let mut p = lst;
-                    while num > 1 {
-                        s = match Ptr::from(self.cdr(s.any())) {
-                            Some(ptr) => ptr,
-                            None => UNDEF.ptr(),
-                        };
-                        let q = self.cons(self.car(s.any()).any(), NIL.any());
-                        self.set_cdr(p.any(), q.any());
-                        p = q;
-                        num -= 1;
-                    }
-                    let t = self.cons(self.cdr(s.any()).any(), self.sp().any());
-                    self.set_cdr(p.any(), t.any());
-                    self.set_sp(lst.any());
-                }
-                *k
-            },
-            Op::Nth { n, k } => {
-                println!("vm_nth: idx={}", n);
-                let lst = self.stack_pop().any();
-                println!("vm_nth: lst={}", lst);
-                let num = n.any().fix_num().unwrap();
-                let r = self.extract_nth(lst, num);
-                println!("vm_nth: r={}", r);
-                self.stack_push(r.any());
-                *k
-            },
-            Op::Push { v, k } => {
-                println!("vm_push: val={}", v);
-                self.stack_push(v.any());
-                *k
-            },
-            Op::Depth { k } => {
-                let mut num: Num = 0;
-                let mut p = self.sp().val();
-                while self.typeq(PAIR_T, p.any()) {
-                    p = self.cdr(p.any());
-                    num += 1;
-                };
-                let n = Fix::new(num);
-                println!("vm_depth: n={}", n);
-                self.stack_push(n.any());
-                *k
-            },
-            Op::Drop { n, k } => {
-                println!("vm_drop: n={}", n);
-                let mut num = n.num();
-                assert!(num < 64);
-                while num > 0 {
-                    self.stack_pop();
-                    num -= 1;
-                };
-                *k
-            },
-            Op::Pick { n, k } => {
-                println!("vm_pick: idx={}", n);
-                let num = n.any().fix_num().unwrap();
-                let r = if num > 0 {
-                    let lst = self.sp().any();
-                    self.extract_nth(lst, num)
-                } else {
-                    UNDEF
-                };
-                println!("vm_pick: r={}", r);
-                self.stack_push(r.any());
-                *k
-            },
-            Op::Dup { n, k } => {
-                println!("vm_dup: n={}", n);
-                let num = n.num();
-                self.stack_dup(num);
-                *k
-            },
-            Op::Roll { n, k } => {
-                println!("vm_roll: idx={}", n);
-                let num = n.any().fix_num().unwrap();
-                if num > 1 {
+    fn perform_op(&mut self, ip: Any) -> Any {
+        let instr = self.mem(ip);
+        println!("perform_op: ip={} -> {}", ip, instr);
+        assert!(instr.t() == INSTR_T.any());
+        let _opr = instr.x();  // operation code
+        let imm = instr.y();  // immediate argument
+        let kip = instr.z();  // next instruction
+        let ip_ = if let Some(Typed::Instr { op }) = Typed::from(instr) {
+            match op {
+                Op::Typeq { t, .. } => {
+                    println!("vm_typeq: typ={}", t);
+                    let val = self.stack_pop();
+                    println!("vm_typeq: val={}", val);
+                    let r = if self.typeq(t.val(), val.any()) { TRUE } else { FALSE };
+                    self.stack_push(r.any());
+                    kip
+                },
+                Op::Dict { op, .. } => {
+                    println!("vm_dict: op={}", op);
+                    match op {
+                        Dict::Has => {
+                            let key = self.stack_pop();
+                            let dict = self.stack_pop().ptr();
+                            let b = self.dict_has(dict, key);
+                            let v = if b { TRUE } else { FALSE };
+                            self.stack_push(v.any());
+                        },
+                        Dict::Get => {
+                            let key = self.stack_pop();
+                            let dict = self.stack_pop().ptr();
+                            let v = self.dict_get(dict, key);
+                            self.stack_push(v.any());
+                        },
+                        Dict::Add => {
+                            let value = self.stack_pop();
+                            let key = self.stack_pop();
+                            let dict = self.stack_pop().ptr();
+                            let d = self.dict_add(dict, key, value);
+                            self.stack_push(d.any());
+                        },
+                        Dict::Set => {
+                            let value = self.stack_pop();
+                            let key = self.stack_pop();
+                            let dict = self.stack_pop().ptr();
+                            let d = self.dict_set(dict, key, value);
+                            self.stack_push(d.any());
+                        },
+                        Dict::Del => {
+                            let key = self.stack_pop();
+                            let dict = self.stack_pop().ptr();
+                            let d = self.dict_del(dict, key);
+                            self.stack_push(d.any());
+                        },
+                    };
+                    kip
+                },
+                Op::Deque { op, .. } => {
+                    println!("vm_deque: op={}", op);
+                    match op {
+                        Deque::New => {
+                            let deque = self.deque_new();
+                            self.stack_push(deque.any());
+                        },
+                        Deque::Empty => {
+                            let deque = self.stack_pop().ptr();
+                            let b = self.deque_empty(deque);
+                            let v = if b { TRUE } else { FALSE };
+                            self.stack_push(v.any());
+                        },
+                        Deque::Push => {
+                            let item = self.stack_pop();
+                            let old = self.stack_pop().ptr();
+                            let new = self.deque_push(old, item);
+                            self.stack_push(new.any());
+                        },
+                        Deque::Pop => {
+                            let old = self.stack_pop().ptr();
+                            let (new, item) = self.deque_pop(old);
+                            self.stack_push(new.any());
+                            self.stack_push(item.any());
+                        },
+                        Deque::Put => {
+                            let item = self.stack_pop();
+                            let old = self.stack_pop().ptr();
+                            let new = self.deque_put(old, item);
+                            self.stack_push(new.any());
+                        },
+                        Deque::Pull => {
+                            let old = self.stack_pop().ptr();
+                            let (new, item) = self.deque_pull(old);
+                            self.stack_push(new.any());
+                            self.stack_push(item.any());
+                        },
+                        Deque::Len => {
+                            let deque = self.stack_pop().ptr();
+                            let n = self.deque_len(deque);
+                            self.stack_push(Any::fix(n));
+                        },
+                    };
+                    kip
+                },
+                Op::Pair { n, .. } => {
+                    println!("vm_pair: cnt={}", n);
+                    let mut num = n.num();
                     assert!(num < 64);
-                    let sp = self.sp().any();
-                    let (q, p) = self.split_nth(sp, num);
-                    if self.typeq(PAIR_T, p.any()) {
-                        self.set_cdr(q.any(), self.cdr(p.any()).any());
-                        self.set_cdr(p.any(), sp);
-                        self.set_sp(p.any());
+                    if num > 0 {
+                        let h = self.stack_pop();
+                        let lst = self.cons(h.any(), NIL.any());
+                        let mut p = lst;
+                        while num > 1 {
+                            let h = self.stack_pop();
+                            let q = self.cons(h.any(), NIL.any());
+                            self.set_cdr(p.any(), q.any());
+                            p = q;
+                            num -= 1;
+                        }
+                        let t = self.stack_pop();
+                        self.set_cdr(p.any(), t.any());
+                        self.stack_push(lst.any());
+                    };
+                    kip
+                },
+                Op::Part { n, .. } => {
+                    println!("vm_part: cnt={}", n);
+                    let mut num = n.num();
+                    assert!(num < 64);
+                    let mut s = match Ptr::from(self.stack_pop()) {
+                        Some(ptr) => ptr,
+                        None => UNDEF.ptr(),
+                    };
+                    if num > 0 {
+                        let lst = self.cons(self.car(s.any()).any(), NIL.any());
+                        let mut p = lst;
+                        while num > 1 {
+                            s = match Ptr::from(self.cdr(s.any())) {
+                                Some(ptr) => ptr,
+                                None => UNDEF.ptr(),
+                            };
+                            let q = self.cons(self.car(s.any()).any(), NIL.any());
+                            self.set_cdr(p.any(), q.any());
+                            p = q;
+                            num -= 1;
+                        }
+                        let t = self.cons(self.cdr(s.any()).any(), self.sp());
+                        self.set_cdr(p.any(), t.any());
+                        self.set_sp(lst.any());
+                    }
+                    kip
+                },
+                Op::Nth { n, .. } => {
+                    println!("vm_nth: idx={}", n);
+                    let lst = self.stack_pop().any();
+                    println!("vm_nth: lst={}", lst);
+                    let num = n.any().fix_num().unwrap();
+                    let r = self.extract_nth(lst, num);
+                    println!("vm_nth: r={}", r);
+                    self.stack_push(r.any());
+                    kip
+                },
+                Op::Push { v, .. } => {
+                    println!("vm_push: val={}", v);
+                    self.stack_push(v.any());
+                    kip
+                },
+                Op::Depth { .. } => {
+                    let mut num: Num = 0;
+                    let mut p = self.sp();
+                    while self.typeq(PAIR_T, p) {
+                        p = self.cdr(p).any();
+                        num += 1;
+                    };
+                    let n = Fix::new(num);
+                    println!("vm_depth: n={}", n);
+                    self.stack_push(n.any());
+                    kip
+                },
+                Op::Drop { n, .. } => {
+                    println!("vm_drop: n={}", n);
+                    let mut num = n.num();
+                    assert!(num < 64);
+                    while num > 0 {
+                        self.stack_pop();
+                        num -= 1;
+                    };
+                    kip
+                },
+                Op::Pick { n, .. } => {
+                    println!("vm_pick: idx={}", n);
+                    let num = n.any().fix_num().unwrap();
+                    let r = if num > 0 {
+                        let lst = self.sp();
+                        self.extract_nth(lst, num)
                     } else {
-                        self.stack_push(UNDEF.any());  // out of range
-                    }
-                } else if num < -1 {
-                    assert!(num > -64);
-                    let sp = self.sp().any();
-                    let (_q, p) = self.split_nth(sp, -num);
-                    if self.typeq(PAIR_T, p.any()) {
-                        self.set_sp(self.cdr(sp).any());
-                        self.set_cdr(sp, self.cdr(p.any()).any());
-                        self.set_cdr(p.any(), sp);
+                        UNDEF
+                    };
+                    println!("vm_pick: r={}", r);
+                    self.stack_push(r.any());
+                    kip
+                },
+                Op::Dup { n, .. } => {
+                    println!("vm_dup: n={}", n);
+                    let num = n.num();
+                    self.stack_dup(num);
+                    kip
+                },
+                Op::Roll { n, .. } => {
+                    println!("vm_roll: idx={}", n);
+                    let num = n.any().fix_num().unwrap();
+                    if num > 1 {
+                        assert!(num < 64);
+                        let sp = self.sp();
+                        let (q, p) = self.split_nth(sp, num);
+                        if self.typeq(PAIR_T, p.any()) {
+                            self.set_cdr(q.any(), self.cdr(p.any()).any());
+                            self.set_cdr(p.any(), sp);
+                            self.set_sp(p.any());
+                        } else {
+                            self.stack_push(UNDEF.any());  // out of range
+                        }
+                    } else if num < -1 {
+                        assert!(num > -64);
+                        let sp = self.sp();
+                        let (_q, p) = self.split_nth(sp, -num);
+                        if self.typeq(PAIR_T, p.any()) {
+                            self.set_sp(self.cdr(sp).any());
+                            self.set_cdr(sp, self.cdr(p.any()).any());
+                            self.set_cdr(p.any(), sp);
+                        } else {
+                            self.stack_pop();  // out of range
+                        }
+                    };
+                    kip
+                },
+                Op::Alu { op, .. } => {
+                    println!("vm_alu: op={}", op);
+                    let r = if op == Alu::Not {
+                        let v = self.stack_pop();
+                        println!("vm_alu: v={}", v);
+                        match Fix::from(v) {
+                            Some(n) => Fix::new(!n.num()).val(),
+                            _ => UNDEF,
+                        }
                     } else {
-                        self.stack_pop();  // out of range
-                    }
-                };
-                *k
-            },
-            Op::Alu { op, k } => {
-                println!("vm_alu: op={}", op);
-                let r = if *op == Alu::Not {
-                    let v = self.stack_pop();
-                    println!("vm_alu: v={}", v);
-                    match Fix::from(v) {
-                        Some(n) => Fix::new(!n.num()).val(),
-                        _ => UNDEF,
-                    }
-                } else {
+                        let vv = self.stack_pop();
+                        println!("vm_alu: vv={}", vv);
+                        let v = self.stack_pop();
+                        println!("vm_alu: v={}", v);
+                            match (Fix::from(v), Fix::from(vv)) {
+                            (Some(n), Some(nn)) => {
+                                match op {
+                                    Alu::And => Fix::new(n.num() & nn.num()).val(),
+                                    Alu::Or => Fix::new(n.num() | nn.num()).val(),
+                                    Alu::Xor => Fix::new(n.num() ^ nn.num()).val(),
+                                    Alu::Add => Fix::new(n.num() + nn.num()).val(),
+                                    Alu::Sub => Fix::new(n.num() - nn.num()).val(),
+                                    Alu::Mul => Fix::new(n.num() * nn.num()).val(),
+                                    _ => UNDEF,
+                                }
+                            }
+                            _ => UNDEF
+                        }
+                    };
+                    println!("vm_alu: r={}", r);
+                    self.stack_push(r.any());
+                    kip
+                },
+                Op::Eq { v, .. } => {
+                    println!("vm_eq: v={}", v);
                     let vv = self.stack_pop();
-                    println!("vm_alu: vv={}", vv);
+                    println!("vm_eq: vv={}", vv);
+                    let r = if imm == vv.any() { TRUE } else { FALSE };
+                    println!("vm_eq: r={}", r);
+                    self.stack_push(r.any());
+                    kip
+                },
+                Op::Cmp { op, .. } => {
+                    println!("vm_cmp: op={}", op);
+                    let vv = self.stack_pop();
+                    println!("vm_cmp: vv={}", vv);
                     let v = self.stack_pop();
-                    println!("vm_alu: v={}", v);
+                    println!("vm_cmp: v={}", v);
+                    let b = if op == Cmp::Eq {
+                        v == vv
+                    } else if op == Cmp::Ne {
+                        v != vv
+                    } else {
                         match (Fix::from(v), Fix::from(vv)) {
-                        (Some(n), Some(nn)) => {
-                            match op {
-                                Alu::And => Fix::new(n.num() & nn.num()).val(),
-                                Alu::Or => Fix::new(n.num() | nn.num()).val(),
-                                Alu::Xor => Fix::new(n.num() ^ nn.num()).val(),
-                                Alu::Add => Fix::new(n.num() + nn.num()).val(),
-                                Alu::Sub => Fix::new(n.num() - nn.num()).val(),
-                                Alu::Mul => Fix::new(n.num() * nn.num()).val(),
-                                _ => UNDEF,
+                            (Some(n), Some(nn)) => {
+                                match op {
+                                    Cmp::Ge => n.num() >= nn.num(),
+                                    Cmp::Gt => n.num() > nn.num(),
+                                    Cmp::Lt => n.num() < nn.num(),
+                                    Cmp::Le => n.num() <= nn.num(),
+                                    _ => false,
+                                }
                             }
+                            _ => false
                         }
-                        _ => UNDEF
+                    };
+                    let r = if b { TRUE } else { FALSE };
+                    println!("vm_cmp: r={}", r);
+                    self.stack_push(r.any());
+                    kip
+                },
+                Op::If { t, f } => {
+                    let b = self.stack_pop().any();
+                    println!("vm_if: b={}", b);
+                    println!("vm_if: t={}", t);
+                    println!("vm_if: f={}", f);
+                    //if falsey(b) { f.any() } else { t.any() }
+                    if falsey(b) { kip } else { imm }
+                },
+                Op::Msg { n, .. } => {
+                    println!("vm_msg: idx={}", n);
+                    let ep = self.ep();
+                    let event = self.mem(ep);
+                    let r = event.y();
+                    println!("vm_msg: r={}", r);
+                    self.stack_push(r);
+                    kip
+                },
+                Op::My { op, .. } => {
+                    println!("vm_my: op={}", op);
+                    let me = self.self_ptr();
+                    println!("vm_my: me={} -> {}", me, self.ram(me));
+                    match op {
+                        My::Addr => {
+                            let ep = self.ep();
+                            let target = self.ram(ep).x();
+                            println!("vm_my: self={}", target);
+                            self.stack_push(target);
+                        },
+                        My::Beh => {
+                            let beh = self.ram(me).x();
+                            println!("vm_my: beh={}", beh);
+                            self.stack_push(beh);
+                        },
+                        My::State => {
+                            let state = self.ram(me).y();
+                            println!("vm_my: state={}", state);
+                            self.push_list(state);
+                        },
                     }
-                };
-                println!("vm_alu: r={}", r);
-                self.stack_push(r.any());
-                *k
-            },
-            Op::Eq { v, k } => {
-                println!("vm_eq: v={}", v);
-                let vv = self.stack_pop();
-                println!("vm_eq: vv={}", vv);
-                let r = if *v == vv { TRUE } else { FALSE };
-                println!("vm_eq: r={}", r);
-                self.stack_push(r.any());
-                *k
-            },
-            Op::Cmp { op, k } => {
-                println!("vm_cmp: op={}", op);
-                let vv = self.stack_pop();
-                println!("vm_cmp: vv={}", vv);
-                let v = self.stack_pop();
-                println!("vm_cmp: v={}", v);
-                let b = if *op == Cmp::Eq {
-                    v == vv
-                } else if *op == Cmp::Ne {
-                    v != vv
-                } else {
-                    match (Fix::from(v), Fix::from(vv)) {
-                        (Some(n), Some(nn)) => {
-                            match op {
-                                Cmp::Ge => n.num() >= nn.num(),
-                                Cmp::Gt => n.num() > nn.num(),
-                                Cmp::Lt => n.num() < nn.num(),
-                                Cmp::Le => n.num() <= nn.num(),
-                                _ => false,
-                            }
-                        }
-                        _ => false
-                    }
-                };
-                let r = if b { TRUE } else { FALSE };
-                println!("vm_cmp: r={}", r);
-                self.stack_push(r.any());
-                *k
-            },
-            Op::If { t, f } => {
-                let b = self.stack_pop().any();
-                println!("vm_if: b={}", b);
-                println!("vm_if: t={}", t);
-                println!("vm_if: f={}", f);
-                if falsey(b) { *f } else { *t }
-            },
-            Op::Msg { n, k } => {
-                println!("vm_msg: idx={}", n);
-                let r = match self.typed(self.ep()) {
-                    Typed::Event { msg, .. } => {
-                        let lst = msg.any();
-                        println!("vm_msg: lst={}", lst);
-                        let num = n.any().fix_num().unwrap();
-                        let r = self.extract_nth(lst, num);
-                        r
-                    },
-                    _ => UNDEF,
-                };
-                println!("vm_msg: r={}", r);
-                self.stack_push(r.any());
-                *k
-            },
-            Op::My { op, k } => {
-                println!("vm_my: op={}", op);
-                let me = self.self_ptr();
-                println!("vm_my: me={} -> {}", me, self.ram(me));
-                match op {
-                    My::Addr => {
-                        let ep = self.ep();
-                        let target = self.ram(ep.any()).get_x();
-                        println!("vm_my: self={}", target);
-                        self.stack_push(target.any());
-                    },
-                    My::Beh => {
-                        let beh = self.ram(me).get_x();
-                        println!("vm_my: beh={}", beh);
-                        self.stack_push(beh.any());
-                    },
-                    My::State => {
-                        let state = self.ram(me).get_y();
-                        println!("vm_my: state={}", state);
-                        self.push_list(state.any());
-                    },
+                    kip
                 }
-                *k
+                Op::Send { n, .. } => {
+                    println!("vm_send: idx={}", n);
+                    let num = n.any().fix_num().unwrap();
+                    let target = self.stack_pop().any();
+                    println!("vm_send: target={}", target);
+                    assert!(self.typeq(ACTOR_T, target));
+                    let msg = if num > 0 {
+                        self.pop_counted(num)
+                    } else {
+                        self.stack_pop().any()
+                    };
+                    println!("vm_send: msg={}", msg);
+                    let ep = self.new_event(target, msg);
+                    let me = self.self_ptr();
+                    println!("vm_send: me={} -> {}", me, self.ram(me));
+                    let next = self.ram(me).z();
+                    if next.is_ram() {
+                        self.ram_mut(ep).set_z(next);
+                        println!("vm_send: ep={} -> {}", ep, self.mem(ep));
+                    }
+                    self.ram_mut(me).set_z(ep);
+                    println!("vm_send: me'={} -> {}", me, self.mem(me));
+                    kip
+                },
+                Op::New { n, .. } => {
+                    println!("vm_new: idx={}", n);
+                    let num = n.any().fix_num().unwrap();
+                    let ip = self.stack_pop();
+                    println!("vm_new: ip={}", ip);
+                    assert!(self.typeq(INSTR_T, ip.any()));
+                    let sp = self.pop_counted(num);
+                    println!("vm_new: sp={}", sp);
+                    let a = self.new_actor(ip.any(), sp);
+                    println!("vm_new: actor={}", a);
+                    self.stack_push(a);
+                    kip
+                },
+                Op::Beh { n, .. } => {
+                    println!("vm_beh: idx={}", n);
+                    let num = n.any().fix_num().unwrap();
+                    let ip = self.stack_pop().any();
+                    println!("vm_beh: ip={}", ip);
+                    assert!(self.typeq(INSTR_T, ip));
+                    let sp = self.pop_counted(num);
+                    println!("vm_beh: sp={}", sp);
+                    let me = self.self_ptr();
+                    let actor = self.ram_mut(me);
+                    println!("vm_beh: me={} -> {}", me, actor);
+                    actor.set_x(ip);  // replace behavior function
+                    actor.set_y(sp);  // replace state data
+                    println!("vm_beh: me'={} -> {}", me, self.ram(me));
+                    kip
+                },
+                Op::End { op } => {
+                    println!("vm_end: op={}", op);
+                    let me = self.self_ptr();
+                    println!("vm_my: me={} -> {}", me, self.ram(me));
+                    match op {
+                        End::Abort => {
+                            let _r = self.stack_pop();  // reason for abort
+                            println!("vm_end: reason={}", _r);
+                            self.actor_abort(me);
+                            //UNDEF.any()
+                            panic!("End::Abort should signal controller")
+                        },
+                        End::Stop => {
+                            //UNIT.any()
+                            panic!("End::Stop terminated continuation")
+                        },
+                        End::Commit => {
+                            self.actor_commit(me);
+                            TRUE.any()
+                        },
+                        End::Release => {
+                            self.ram_mut(me).set_y(NIL.any());  // no retained stack
+                            self.actor_commit(me);
+                            self.free(me);  // free actor
+                            FALSE.any()
+                        },
+                    }
+                },
+                Op::IsEq { v, .. } => {
+                    println!("vm_is_eq: expect={}", v);
+                    let vv = self.stack_pop();
+                    println!("vm_is_eq: actual={}", vv);
+                    assert_eq!(imm, vv.any());
+                    kip
+                },
+                Op::IsNe { v, .. } => {
+                    println!("vm_is_ne: expect={}", v);
+                    let vv = self.stack_pop();
+                    println!("vm_is_ne: actual={}", vv);
+                    assert_ne!(imm, vv.any());
+                    kip
+                },
             }
-            Op::Send { n, k } => {
-                println!("vm_send: idx={}", n);
-                let num = n.any().fix_num().unwrap();
-                let target = self.stack_pop().any();
-                println!("vm_send: target={}", target);
-                assert!(self.typeq(ACTOR_T, target));
-                let msg = if num > 0 {
-                    self.pop_counted(num).any()
-                } else {
-                    self.stack_pop().any()
-                };
-                println!("vm_send: msg={}", msg);
-                let ep = self.new_event(target, msg);
-                let me = self.self_ptr();
-                println!("vm_send: me={} -> {}", me, self.ram(me));
-                let next = self.ram(me).z();
-                if next.is_ram() {
-                    self.ram_mut(ep).set_z(next);
-                    println!("vm_send: ep={} -> {}", ep, self.mem(ep));
-                }
-                self.ram_mut(me).set_z(ep);
-                println!("vm_send: me'={} -> {}", me, self.mem(me));
-                *k
-            },
-            Op::New { n, k } => {
-                println!("vm_new: idx={}", n);
-                let num = n.any().fix_num().unwrap();
-                let ip = self.stack_pop();
-                println!("vm_new: ip={}", ip);
-                assert!(self.typeq(INSTR_T, ip.any()));
-                let sp = self.pop_counted(num);
-                println!("vm_new: sp={}", sp);
-                let a = self.new_actor(ip.any(), sp.any());
-                println!("vm_new: actor={}", a);
-                self.stack_push(a);
-                *k
-            },
-            Op::Beh { n, k } => {
-                println!("vm_beh: idx={}", n);
-                let num = n.any().fix_num().unwrap();
-                let ip = self.stack_pop();
-                println!("vm_beh: ip={}", ip);
-                assert!(self.typeq(INSTR_T, ip.any()));
-                let sp = self.pop_counted(num);
-                println!("vm_beh: sp={}", sp);
-                let me = self.self_ptr();
-                let actor = self.ram_mut(me);
-                println!("vm_beh: me={} -> {}", me, actor);
-                actor.set_x(ip.any());  // replace behavior function
-                actor.set_y(ip.any());  // replace state data
-                println!("vm_beh: me'={} -> {}", me, self.ram(me));
-                *k
-            },
-            Op::End { op } => {
-                println!("vm_end: op={}", op);
-                let me = self.self_ptr();
-                println!("vm_my: me={} -> {}", me, self.ram(me));
-                match op {
-                    End::Abort => {
-                        let _r = self.stack_pop();  // reason for abort
-                        println!("vm_end: reason={}", _r);
-                        self.actor_abort(me);
-                        //UNDEF.ptr()
-                        panic!("End::Abort should signal controller")
-                    },
-                    End::Stop => {
-                        //UNIT.ptr()
-                        panic!("End::Stop terminated continuation")
-                    },
-                    End::Commit => {
-                        self.actor_commit(me);
-                        TRUE.ptr()
-                    },
-                    End::Release => {
-                        self.ram_mut(me).set_y(NIL.any());  // no retained stack
-                        self.actor_commit(me);
-                        self.free(me);  // free actor
-                        FALSE.ptr()
-                    },
-                }
-            },
-            Op::IsEq { v, k } => {
-                println!("vm_is_eq: expect={}", v);
-                let vv = self.stack_pop();
-                println!("vm_is_eq: actual={}", vv);
-                assert_eq!(*v, vv);
-                *k
-            },
-            Op::IsNe { v, k } => {
-                println!("vm_is_ne: expect={}", v);
-                let vv = self.stack_pop();
-                println!("vm_is_ne: actual={}", vv);
-                assert_ne!(*v, vv);
-                *k
-            },
-        }
+        } else {
+            panic!("Illegal instruction!");
+        };
+        println!("perform_op: ip'={} -> {}", ip_, self.mem(ip_));
+        ip_
     }
 
     fn event_enqueue(&mut self, ep: Any) {
@@ -1593,7 +1592,7 @@ pub const _FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // work
         self.ram_mut(me).set_z(UNDEF.any());
     }
     fn self_ptr(&self) -> Any {
-        let ep = self.ep().any();
+        let ep = self.ep();
         let target = self.ram(ep).x();
         let a_ptr = self.cap_to_ptr(target);
         a_ptr
@@ -1605,24 +1604,24 @@ pub const _FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // work
             self.stack_push(self.car(ptr).any());
         }
     }
-    fn pop_counted(&mut self, num: isize) -> Val {
+    fn pop_counted(&mut self, num: isize) -> Any {
         let mut n = num;
         if n > 0 {  // build list from stack
-            let sp = self.sp().val();
+            let sp = self.sp();
             let mut v = sp;
-            let mut p = UNDEF.ptr();
-            while n > 0 && self.typeq(PAIR_T, v.any()) {
-                p = v.ptr();
-                v = self.cdr(p.any());
+            let mut p = UNDEF.any();
+            while n > 0 && self.typeq(PAIR_T, v) {
+                p = v;
+                v = self.cdr(p).any();
                 n -= 1;
             }
-            if self.typeq(PAIR_T, p.any()) {
-                self.set_cdr(p.any(), NIL.any());
+            if self.typeq(PAIR_T, p) {
+                self.set_cdr(p, NIL.any());
             }
-            self.set_sp(v.any());
+            self.set_sp(v);
             sp
         } else {  // empty list
-            NIL
+            NIL.any()
         }
     }
     fn split_nth(&self, lst: Any, num: isize) -> (Val, Val) {
@@ -1862,11 +1861,11 @@ pub const _FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // work
     }
 
     fn stack_push(&mut self, val: Any) {
-        let sp = self.cons(val, self.sp().any());
+        let sp = self.cons(val, self.sp());
         self.set_sp(sp.any());
     }
     fn stack_pop(&mut self) -> Val {
-        let sp = self.sp().any();
+        let sp = self.sp();
         if self.typeq(PAIR_T, sp) {
             let item = self.car(sp);
             self.set_sp(self.cdr(sp).any());
@@ -1878,7 +1877,7 @@ pub const _FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // work
         }
     }
     fn stack_clear(&mut self, top: Any) {
-        let mut sp = self.sp().any();
+        let mut sp = self.sp();
         while sp != top && self.typeq(PAIR_T, sp) {
             let p = sp;
             sp = self.cdr(p).any();
@@ -1889,7 +1888,7 @@ pub const _FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // work
     fn stack_dup(&mut self, num: Num) {
         let mut n = num;
         if n > 0 {
-            let mut s = self.sp().any();
+            let mut s = self.sp();
             let sp = self.cons(self.car(s).any(), NIL.any()).any();
             let mut p = sp;
             s = self.cdr(s).any();
@@ -1901,7 +1900,7 @@ pub const _FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // work
                 s = self.cdr(s).any();
                 n -= 1;
             }
-            self.set_cdr(p, self.sp().any());
+            self.set_cdr(p, self.sp());
             self.set_sp(sp);
         }
     }
@@ -1935,17 +1934,17 @@ pub const _FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // work
         self.ram_mut(pair).set_y(val);
     }
 
-    pub fn ip(&self) -> Ptr {  // instruction pointer
+    pub fn ip(&self) -> Any {  // instruction pointer
         let quad = self.ram(self.k_first());
-        quad.t().val().ptr()  // FIXME: should return Any...
+        quad.t()
     }
-    pub fn sp(&self) -> Ptr {  // stack pointer
+    pub fn sp(&self) -> Any {  // stack pointer
         let quad = self.ram(self.k_first());
-        quad.x().val().ptr()  // FIXME: should return Any...
+        quad.x()
     }
-    pub fn ep(&self) -> Ptr {  // event pointer
+    pub fn ep(&self) -> Any {  // event pointer
         let quad = self.ram(self.k_first());
-        quad.y().val().ptr()  // FIXME: should return Any...
+        quad.y()
     }
     fn set_ip(&mut self, ptr: Any) {
         let quad = self.ram_mut(self.k_first());

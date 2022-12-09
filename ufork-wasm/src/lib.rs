@@ -138,23 +138,14 @@ impl Host {
     pub fn sp(&self) -> Raw { self.core.sp().raw() }
     pub fn ep(&self) -> Raw { self.core.ep().raw() }
     pub fn e_self(&self) -> Raw {
-        let ptr = self.core.ep();
-        match self.core.typed(ptr) {
-            Typed::Event { target, .. } => {
-                let a = Ptr::new(target.raw());  // WARNING: converting Cap to Ptr!
-                a.raw()
-            },
-            _ => UNDEF.raw(),
-        }
+        let ep = self.core.ep();
+        let event = self.core.mem(ep);
+        event.x().raw()  // FIXME: convert from Cap to Ptr?
     }
     pub fn e_msg(&self) -> Raw {
-        let ptr = self.core.ep();
-        match self.core.typed(ptr) {
-            Typed::Event { msg, .. } => {
-                msg.raw()
-            },
-            _ => UNDEF.raw(),
-        }
+        let ep = self.core.ep();
+        let event = self.core.mem(ep);
+        event.y().raw()
     }
     pub fn in_heap(&self, v: Raw) -> bool {
         self.core.in_heap(Any::new(v))
