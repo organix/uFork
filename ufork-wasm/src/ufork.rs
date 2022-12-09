@@ -1078,43 +1078,43 @@ pub const _FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // work
                     println!("vm_typeq: typ={}", t);
                     let val = self.stack_pop();
                     println!("vm_typeq: val={}", val);
-                    let r = if self.typeq(t.val(), val.any()) { TRUE } else { FALSE };
-                    self.stack_push(r.any());
+                    let r = if self.typeq(t.val(), val) { TRUE.any() } else { FALSE.any() };
+                    self.stack_push(r);
                     kip
                 },
                 Op::Dict { op, .. } => {
                     println!("vm_dict: op={}", op);
                     match op {
                         Dict::Has => {
-                            let key = self.stack_pop();
-                            let dict = self.stack_pop().ptr();
+                            let key = self.stack_pop().val();
+                            let dict = self.stack_pop().val().ptr();
                             let b = self.dict_has(dict, key);
-                            let v = if b { TRUE } else { FALSE };
-                            self.stack_push(v.any());
+                            let v = if b { TRUE.any() } else { FALSE.any() };
+                            self.stack_push(v);
                         },
                         Dict::Get => {
-                            let key = self.stack_pop();
-                            let dict = self.stack_pop().ptr();
+                            let key = self.stack_pop().val();
+                            let dict = self.stack_pop().val().ptr();
                             let v = self.dict_get(dict, key);
                             self.stack_push(v.any());
                         },
                         Dict::Add => {
-                            let value = self.stack_pop();
-                            let key = self.stack_pop();
-                            let dict = self.stack_pop().ptr();
+                            let value = self.stack_pop().val();
+                            let key = self.stack_pop().val();
+                            let dict = self.stack_pop().val().ptr();
                             let d = self.dict_add(dict, key, value);
                             self.stack_push(d.any());
                         },
                         Dict::Set => {
-                            let value = self.stack_pop();
-                            let key = self.stack_pop();
-                            let dict = self.stack_pop().ptr();
+                            let value = self.stack_pop().val();
+                            let key = self.stack_pop().val();
+                            let dict = self.stack_pop().val().ptr();
                             let d = self.dict_set(dict, key, value);
                             self.stack_push(d.any());
                         },
                         Dict::Del => {
-                            let key = self.stack_pop();
-                            let dict = self.stack_pop().ptr();
+                            let key = self.stack_pop().val();
+                            let dict = self.stack_pop().val().ptr();
                             let d = self.dict_del(dict, key);
                             self.stack_push(d.any());
                         },
@@ -1129,37 +1129,37 @@ pub const _FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // work
                             self.stack_push(deque.any());
                         },
                         Deque::Empty => {
-                            let deque = self.stack_pop().ptr();
+                            let deque = self.stack_pop().val().ptr();
                             let b = self.deque_empty(deque);
-                            let v = if b { TRUE } else { FALSE };
-                            self.stack_push(v.any());
+                            let v = if b { TRUE.any() } else { FALSE.any() };
+                            self.stack_push(v);
                         },
                         Deque::Push => {
-                            let item = self.stack_pop();
-                            let old = self.stack_pop().ptr();
+                            let item = self.stack_pop().val();
+                            let old = self.stack_pop().val().ptr();
                             let new = self.deque_push(old, item);
                             self.stack_push(new.any());
                         },
                         Deque::Pop => {
-                            let old = self.stack_pop().ptr();
+                            let old = self.stack_pop().val().ptr();
                             let (new, item) = self.deque_pop(old);
                             self.stack_push(new.any());
                             self.stack_push(item.any());
                         },
                         Deque::Put => {
-                            let item = self.stack_pop();
-                            let old = self.stack_pop().ptr();
+                            let item = self.stack_pop().val();
+                            let old = self.stack_pop().val().ptr();
                             let new = self.deque_put(old, item);
                             self.stack_push(new.any());
                         },
                         Deque::Pull => {
-                            let old = self.stack_pop().ptr();
+                            let old = self.stack_pop().val().ptr();
                             let (new, item) = self.deque_pull(old);
                             self.stack_push(new.any());
                             self.stack_push(item.any());
                         },
                         Deque::Len => {
-                            let deque = self.stack_pop().ptr();
+                            let deque = self.stack_pop().val().ptr();
                             let n = self.deque_len(deque);
                             self.stack_push(Any::fix(n));
                         },
@@ -1172,17 +1172,17 @@ pub const _FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // work
                     assert!(num < 64);
                     if num > 0 {
                         let h = self.stack_pop();
-                        let lst = self.cons(h.any(), NIL.any());
+                        let lst = self.cons(h, NIL.any());
                         let mut p = lst;
                         while num > 1 {
                             let h = self.stack_pop();
-                            let q = self.cons(h.any(), NIL.any());
+                            let q = self.cons(h, NIL.any());
                             self.set_cdr(p.any(), q.any());
                             p = q;
                             num -= 1;
                         }
                         let t = self.stack_pop();
-                        self.set_cdr(p.any(), t.any());
+                        self.set_cdr(p.any(), t);
                         self.stack_push(lst.any());
                     };
                     kip
@@ -1191,24 +1191,18 @@ pub const _FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // work
                     println!("vm_part: cnt={}", n);
                     let mut num = n.num();
                     assert!(num < 64);
-                    let mut s = match Ptr::from(self.stack_pop()) {
-                        Some(ptr) => ptr,
-                        None => UNDEF.ptr(),
-                    };
+                    let mut s = self.stack_pop();
                     if num > 0 {
-                        let lst = self.cons(self.car(s.any()).any(), NIL.any());
+                        let lst = self.cons(self.car(s).any(), NIL.any());
                         let mut p = lst;
                         while num > 1 {
-                            s = match Ptr::from(self.cdr(s.any())) {
-                                Some(ptr) => ptr,
-                                None => UNDEF.ptr(),
-                            };
-                            let q = self.cons(self.car(s.any()).any(), NIL.any());
+                            s = self.cdr(s).any();
+                            let q = self.cons(self.car(s).any(), NIL.any());
                             self.set_cdr(p.any(), q.any());
                             p = q;
                             num -= 1;
                         }
-                        let t = self.cons(self.cdr(s.any()).any(), self.sp());
+                        let t = self.cons(self.cdr(s).any(), self.sp());
                         self.set_cdr(p.any(), t.any());
                         self.set_sp(lst.any());
                     }
@@ -1216,7 +1210,7 @@ pub const _FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // work
                 },
                 Op::Nth { n, .. } => {
                     println!("vm_nth: idx={}", n);
-                    let lst = self.stack_pop().any();
+                    let lst = self.stack_pop();
                     println!("vm_nth: lst={}", lst);
                     let num = n.any().fix_num().unwrap();
                     let r = self.extract_nth(lst, num);
@@ -1303,41 +1297,41 @@ pub const _FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // work
                     let r = if op == Alu::Not {
                         let v = self.stack_pop();
                         println!("vm_alu: v={}", v);
-                        match Fix::from(v) {
-                            Some(n) => Fix::new(!n.num()).val(),
-                            _ => UNDEF,
+                        match v.fix_num() {
+                            Some(n) => Any::fix(!n),
+                            _ => UNDEF.any(),
                         }
                     } else {
                         let vv = self.stack_pop();
                         println!("vm_alu: vv={}", vv);
                         let v = self.stack_pop();
                         println!("vm_alu: v={}", v);
-                            match (Fix::from(v), Fix::from(vv)) {
+                            match (v.fix_num(), vv.fix_num()) {
                             (Some(n), Some(nn)) => {
                                 match op {
-                                    Alu::And => Fix::new(n.num() & nn.num()).val(),
-                                    Alu::Or => Fix::new(n.num() | nn.num()).val(),
-                                    Alu::Xor => Fix::new(n.num() ^ nn.num()).val(),
-                                    Alu::Add => Fix::new(n.num() + nn.num()).val(),
-                                    Alu::Sub => Fix::new(n.num() - nn.num()).val(),
-                                    Alu::Mul => Fix::new(n.num() * nn.num()).val(),
-                                    _ => UNDEF,
+                                    Alu::And => Any::fix(n & nn),
+                                    Alu::Or => Any::fix(n | nn),
+                                    Alu::Xor => Any::fix(n ^ nn),
+                                    Alu::Add => Any::fix(n + nn),
+                                    Alu::Sub => Any::fix(n - nn),
+                                    Alu::Mul => Any::fix(n * nn),
+                                    _ => UNDEF.any(),
                                 }
                             }
-                            _ => UNDEF
+                            _ => UNDEF.any()
                         }
                     };
                     println!("vm_alu: r={}", r);
-                    self.stack_push(r.any());
+                    self.stack_push(r);
                     kip
                 },
                 Op::Eq { v, .. } => {
                     println!("vm_eq: v={}", v);
                     let vv = self.stack_pop();
                     println!("vm_eq: vv={}", vv);
-                    let r = if imm == vv.any() { TRUE } else { FALSE };
+                    let r = if imm == vv { TRUE.any() } else { FALSE.any() };
                     println!("vm_eq: r={}", r);
-                    self.stack_push(r.any());
+                    self.stack_push(r);
                     kip
                 },
                 Op::Cmp { op, .. } => {
@@ -1351,29 +1345,29 @@ pub const _FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // work
                     } else if op == Cmp::Ne {
                         v != vv
                     } else {
-                        match (Fix::from(v), Fix::from(vv)) {
+                        match (v.fix_num(), vv.fix_num()) {
                             (Some(n), Some(nn)) => {
                                 match op {
-                                    Cmp::Ge => n.num() >= nn.num(),
-                                    Cmp::Gt => n.num() > nn.num(),
-                                    Cmp::Lt => n.num() < nn.num(),
-                                    Cmp::Le => n.num() <= nn.num(),
+                                    Cmp::Ge => n >= nn,
+                                    Cmp::Gt => n > nn,
+                                    Cmp::Lt => n < nn,
+                                    Cmp::Le => n <= nn,
                                     _ => false,
                                 }
                             }
                             _ => false
                         }
                     };
-                    let r = if b { TRUE } else { FALSE };
+                    let r = if b { TRUE.any() } else { FALSE.any() };
                     println!("vm_cmp: r={}", r);
-                    self.stack_push(r.any());
+                    self.stack_push(r);
                     kip
                 },
-                Op::If { t, f } => {
-                    let b = self.stack_pop().any();
+                Op::If { .. } => {
+                    let b = self.stack_pop();
                     println!("vm_if: b={}", b);
-                    println!("vm_if: t={}", t);
-                    println!("vm_if: f={}", f);
+                    println!("vm_if: t={}", imm);
+                    println!("vm_if: f={}", kip);
                     //if falsey(b) { f.any() } else { t.any() }
                     if falsey(b) { kip } else { imm }
                 },
@@ -1413,13 +1407,13 @@ pub const _FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // work
                 Op::Send { n, .. } => {
                     println!("vm_send: idx={}", n);
                     let num = n.any().fix_num().unwrap();
-                    let target = self.stack_pop().any();
+                    let target = self.stack_pop();
                     println!("vm_send: target={}", target);
                     assert!(self.typeq(ACTOR_T, target));
                     let msg = if num > 0 {
                         self.pop_counted(num)
                     } else {
-                        self.stack_pop().any()
+                        self.stack_pop()
                     };
                     println!("vm_send: msg={}", msg);
                     let ep = self.new_event(target, msg);
@@ -1439,10 +1433,10 @@ pub const _FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // work
                     let num = n.any().fix_num().unwrap();
                     let ip = self.stack_pop();
                     println!("vm_new: ip={}", ip);
-                    assert!(self.typeq(INSTR_T, ip.any()));
+                    assert!(self.typeq(INSTR_T, ip));
                     let sp = self.pop_counted(num);
                     println!("vm_new: sp={}", sp);
-                    let a = self.new_actor(ip.any(), sp);
+                    let a = self.new_actor(ip, sp);
                     println!("vm_new: actor={}", a);
                     self.stack_push(a);
                     kip
@@ -1450,7 +1444,7 @@ pub const _FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // work
                 Op::Beh { n, .. } => {
                     println!("vm_beh: idx={}", n);
                     let num = n.any().fix_num().unwrap();
-                    let ip = self.stack_pop().any();
+                    let ip = self.stack_pop();
                     println!("vm_beh: ip={}", ip);
                     assert!(self.typeq(INSTR_T, ip));
                     let sp = self.pop_counted(num);
@@ -1491,18 +1485,18 @@ pub const _FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // work
                         },
                     }
                 },
-                Op::IsEq { v, .. } => {
-                    println!("vm_is_eq: expect={}", v);
+                Op::IsEq { .. } => {
+                    println!("vm_is_eq: expect={}", imm);
                     let vv = self.stack_pop();
                     println!("vm_is_eq: actual={}", vv);
-                    assert_eq!(imm, vv.any());
+                    assert_eq!(imm, vv);
                     kip
                 },
-                Op::IsNe { v, .. } => {
-                    println!("vm_is_ne: expect={}", v);
+                Op::IsNe { .. } => {
+                    println!("vm_is_ne: expect={}", imm);
                     let vv = self.stack_pop();
                     println!("vm_is_ne: actual={}", vv);
-                    assert_ne!(imm, vv.any());
+                    assert_ne!(imm, vv);
                     kip
                 },
             }
@@ -1864,16 +1858,16 @@ pub const _FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // work
         let sp = self.cons(val, self.sp());
         self.set_sp(sp.any());
     }
-    fn stack_pop(&mut self) -> Val {
+    fn stack_pop(&mut self) -> Any {
         let sp = self.sp();
         if self.typeq(PAIR_T, sp) {
-            let item = self.car(sp);
+            let item = self.car(sp).any();
             self.set_sp(self.cdr(sp).any());
             self.free(sp);  // free pair holding stack item
             item
         } else {
             println!("stack_pop: underflow!");
-            UNDEF
+            UNDEF.any()
         }
     }
     fn stack_clear(&mut self, top: Any) {
