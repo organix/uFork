@@ -435,8 +435,8 @@ impl Core {
 pub const E_BOOT: Any       = Any { raw: MUT_RAW | 190 };
         //quad_ram[190]               = Quad::event_t(Any::cap(89), Any::rom(188), NIL.any());  // stop actor
         //quad_ram[190]               = Quad::event_t(Any::cap(191), Any::rom(188), NIL.any());  // run loop demo
-        //quad_ram[190]               = Quad::event_t(Any::cap(100), Any::rom(188), NIL.any());  // run test suite
-        quad_ram[190]               = Quad::event_t(Any::cap(F_FIB_ADDR+0), Any::rom(185), NIL.any());  // run (fib 2)
+        quad_ram[190]               = Quad::event_t(Any::cap(100), Any::rom(188), NIL.any());  // run test suite
+        //quad_ram[190]               = Quad::event_t(Any::cap(F_FIB_ADDR+0), Any::rom(185), NIL.any());  // run (fib 2)
         //quad_ram[190]               = Quad::event_t(FN_FIB.any(), Any::rom(185), NIL.any());  // run (fib 6)
         quad_ram[191]               = Quad::new_actor(RESEND.any(), Any::rom(189));
 
@@ -866,6 +866,7 @@ pub const _FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // work
         /* Op::Dict test suite */
         /*
         quad_mem[100]               = Typed::Actor { beh: Ptr::new(101), state: NIL.ptr(), events: None };
+        */
         quad_mem[101]               = Typed::Instr { op: Op::Dict { op: Dict::Has, k: Ptr::new(102) } };
         quad_mem[102]               = Typed::Instr { op: Op::IsEq { v: FALSE, k: Ptr::new(103) } };
         quad_mem[103]               = Typed::Instr { op: Op::Push { v: NIL, k: Ptr::new(104) } };
@@ -910,7 +911,6 @@ pub const _FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // work
         quad_mem[142]               = Typed::Instr { op: Op::Push { v: fixnum(1), k: Ptr::new(143) } };
         quad_mem[143]               = Typed::Instr { op: Op::Dict { op: Dict::Get, k: Ptr::new(144) } };
         quad_mem[144]               = Typed::Instr { op: Op::IsEq { v: fixnum(-1), k: Ptr::new(16) } };
-        */
 
         /* Op::Deque test suite */
         /*
@@ -1086,37 +1086,37 @@ pub const _FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // work
                     println!("vm_dict: op={}", op);
                     match op {
                         Dict::Has => {
-                            let key = self.stack_pop().val();
-                            let dict = self.stack_pop().val().ptr();
+                            let key = self.stack_pop();
+                            let dict = self.stack_pop();
                             let b = self.dict_has(dict, key);
                             let v = if b { TRUE.any() } else { FALSE.any() };
                             self.stack_push(v);
                         },
                         Dict::Get => {
-                            let key = self.stack_pop().val();
-                            let dict = self.stack_pop().val().ptr();
+                            let key = self.stack_pop();
+                            let dict = self.stack_pop();
                             let v = self.dict_get(dict, key);
-                            self.stack_push(v.any());
+                            self.stack_push(v);
                         },
                         Dict::Add => {
-                            let value = self.stack_pop().val();
-                            let key = self.stack_pop().val();
-                            let dict = self.stack_pop().val().ptr();
+                            let value = self.stack_pop();
+                            let key = self.stack_pop();
+                            let dict = self.stack_pop();
                             let d = self.dict_add(dict, key, value);
-                            self.stack_push(d.any());
+                            self.stack_push(d);
                         },
                         Dict::Set => {
-                            let value = self.stack_pop().val();
-                            let key = self.stack_pop().val();
-                            let dict = self.stack_pop().val().ptr();
+                            let value = self.stack_pop();
+                            let key = self.stack_pop();
+                            let dict = self.stack_pop();
                             let d = self.dict_set(dict, key, value);
-                            self.stack_push(d.any());
+                            self.stack_push(d);
                         },
                         Dict::Del => {
-                            let key = self.stack_pop().val();
-                            let dict = self.stack_pop().val().ptr();
+                            let key = self.stack_pop();
+                            let dict = self.stack_pop();
                             let d = self.dict_del(dict, key);
-                            self.stack_push(d.any());
+                            self.stack_push(d);
                         },
                     };
                     kip
@@ -1608,31 +1608,35 @@ pub const _FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // work
         v
     }
 
-    pub fn dict_has(&self, dict: Ptr, key: Val) -> bool {
+    pub fn dict_has(&self, dict: Any, key: Any) -> bool {
         let mut d = dict;
-        while let Typed::Dict { key: k, next, .. } = *self.typed(d) {
+        while self.typeq(DICT_T, d) {
+            let entry = self.mem(d);
+            let k = entry.x();  // key
             if key == k {
                 return true
             }
-            d = next;
+            d = entry.z();  // next
         }
         false
     }
-    pub fn dict_get(&self, dict: Ptr, key: Val) -> Val {
+    pub fn dict_get(&self, dict: Any, key: Any) -> Any {
         let mut d = dict;
-        while let Typed::Dict { key: k, value, next } = *self.typed(d) {
+        while self.typeq(DICT_T, d) {
+            let entry = self.mem(d);
+            let k = entry.x();  // key
             if key == k {
-                return value
+                return entry.y()  // value
             }
-            d = next;
+            d = entry.z();  // next
         }
-        UNDEF
+        UNDEF.any()
     }
-    pub fn dict_add(&mut self, dict: Ptr, key: Val, value: Val) -> Ptr {
-        let dict = Quad::dict_t(key.any(), value.any(), dict.any());
-        self.alloc(&dict).val().ptr()
+    pub fn dict_add(&mut self, dict: Any, key: Any, value: Any) -> Any {
+        let dict = Quad::dict_t(key, value, dict);
+        self.alloc(&dict)
     }
-    pub fn dict_set(&mut self, dict: Ptr, key: Val, value: Val) -> Ptr {
+    pub fn dict_set(&mut self, dict: Any, key: Any, value: Any) -> Any {
         let d = if self.dict_has(dict, key) {
             self.dict_del(dict, key)
         } else {
@@ -1640,9 +1644,12 @@ pub const _FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // work
         };
         self.dict_add(d, key, value)
     }
-    pub fn dict_del(&mut self, dict: Ptr, key: Val) -> Ptr {
-        let typed = *self.typed(dict);
-        if let Typed::Dict { key: k, value, next } = typed {
+    pub fn dict_del(&mut self, dict: Any, key: Any) -> Any {
+        if self.typeq(DICT_T, dict) {
+            let entry = self.mem(dict);
+            let k = entry.x();  // key
+            let value = entry.y();
+            let next = entry.z();
             if key == k {
                 next
             } else {
@@ -1650,7 +1657,7 @@ pub const _FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // work
                 self.dict_add(d, k, value)
             }
         } else {
-            NIL.ptr()
+            NIL.any()
         }
     }
 
@@ -2860,5 +2867,5 @@ fn basic_memory_allocation() {
 fn run_loop_terminates() {
     let mut core = Core::new();
     core.run_loop();
-    assert!(false);  // force output to be displayed
+    //assert!(false);  // force output to be displayed
 }
