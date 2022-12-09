@@ -1185,7 +1185,7 @@ pub const _FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // work
                     let n = n.any().fix_num().unwrap();
                     let r = self.extract_nth(lst, n);
                     println!("vm_nth: r={}", r);
-                    self.stack_push(r.any());
+                    self.stack_push(r);
                     kip
                 },
                 Op::Push { v, .. } => {
@@ -1222,10 +1222,10 @@ pub const _FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // work
                         let lst = self.sp();
                         self.extract_nth(lst, n)
                     } else {
-                        UNDEF
+                        UNDEF.any()
                     };
                     println!("vm_pick: r={}", r);
-                    self.stack_push(r.any());
+                    self.stack_push(r);
                     kip
                 },
                 Op::Dup { n, .. } => {
@@ -1566,7 +1566,7 @@ pub const _FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // work
             NIL.any()
         }
     }
-    fn split_nth(&self, lst: Any, n: isize) -> (Val, Val) {
+    fn split_nth(&self, lst: Any, n: isize) -> (Any, Any) {
         let mut p = lst;
         let mut q = UNDEF.any();
         let mut n = n;
@@ -1576,9 +1576,9 @@ pub const _FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // work
             p = self.cdr(p);
             n -= 1;
         }
-        (q.val(), p.val())
+        (q, p)
     }
-    fn extract_nth(&self, lst: Any, n: isize) -> Val {
+    fn extract_nth(&self, lst: Any, n: isize) -> Any {
         let mut p = lst;
         let mut v = UNDEF.any();
         let mut n = n;
@@ -1605,7 +1605,7 @@ pub const _FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // work
                 v = self.cdr(p);
             }
         }
-        v.val()
+        v
     }
 
     pub fn dict_has(&self, dict: Ptr, key: Val) -> bool {
@@ -1845,10 +1845,10 @@ pub const _FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // work
             assert!(n < 64);  // FIXME: replace with cycle-limit(s) in Sponsor
             let sp = self.sp();
             let (q, p) = self.split_nth(sp, n);
-            if self.typeq(PAIR_T, p.any()) {
-                self.set_cdr(q.any(), self.cdr(p.any()));
-                self.set_cdr(p.any(), sp);
-                self.set_sp(p.any());
+            if self.typeq(PAIR_T, p) {
+                self.set_cdr(q, self.cdr(p));
+                self.set_cdr(p, sp);
+                self.set_sp(p);
             } else {
                 self.stack_push(UNDEF.any());  // out of range
             }
@@ -1856,10 +1856,10 @@ pub const _FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // work
             assert!(n > -64);  // FIXME: replace with cycle-limit(s) in Sponsor
             let sp = self.sp();
             let (_q, p) = self.split_nth(sp, -n);
-            if self.typeq(PAIR_T, p.any()) {
+            if self.typeq(PAIR_T, p) {
                 self.set_sp(self.cdr(sp));
-                self.set_cdr(sp, self.cdr(p.any()));
-                self.set_cdr(p.any(), sp);
+                self.set_cdr(sp, self.cdr(p));
+                self.set_cdr(p, sp);
             } else {
                 self.stack_pop();  // out of range
             }
