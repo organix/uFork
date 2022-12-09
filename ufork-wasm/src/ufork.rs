@@ -431,10 +431,12 @@ impl Core {
         /* bootstrap event/actor */
         quad_ram[100]               = Quad::new_actor(Any::rom(101), NIL.any());
         quad_ram[F_FIB_ADDR+0]      = Quad::new_actor(F_FIB_BEH.any(), NIL.any());
+        quad_ram[F_FIB_ADDR+27]     = Quad::new_actor(Any::rom(F_FIB_ADDR+28), NIL.any());
 pub const E_BOOT: Any       = Any { raw: MUT_RAW | 190 };
         //quad_ram[190]               = Quad::event_t(Any::cap(89), Any::rom(188), NIL.any());  // stop actor
         quad_ram[190]               = Quad::event_t(Any::cap(191), Any::rom(188), NIL.any());  // run loop demo
         //quad_ram[190]               = Quad::event_t(Any::cap(100), Any::rom(188), NIL.any());  // run test suite
+        //quad_ram[190]               = Quad::event_t(Any::cap(F_FIB_ADDR+0), Any::rom(185), NIL.any());  // run (fib 2)
         //quad_ram[190]               = Quad::event_t(FN_FIB.any(), Any::rom(185), NIL.any());  // run (fib 6)
         quad_ram[191]               = Quad::new_actor(RESEND.any(), Any::rom(189));
 
@@ -771,16 +773,16 @@ pub const F_FIB_BEH: Ptr            = Ptr { raw: F_FIB_RAW+1 };
         quad_mem[F_FIB_ADDR+10]     = Typed::Instr { op: Op::Push { v: fixnum(1), k: Ptr::new(F_FIB_RAW+11) } };  // n k n 1
         quad_mem[F_FIB_ADDR+11]     = Typed::Instr { op: Op::Alu { op: Alu::Sub, k: Ptr::new(F_FIB_RAW+12) } };  // n k n-1
         quad_mem[F_FIB_ADDR+12]     = Typed::Instr { op: Op::Pick { n: Fix::new(2), k: Ptr::new(F_FIB_RAW+13) } };  // n k n-1 k
-        //quad_mem[F_FIB_ADDR+13]     = Typed::Instr { op: Op::Push { v: F_FIB.val(), k: Ptr::new(F_FIB_RAW+14) } };  // n k n-1 k fib
-        quad_mem[F_FIB_ADDR+13]     = Typed::Instr { op: Op::Push { v: FN_FIB.val(), k: Ptr::new(F_FIB_RAW+14) } };  // n k n-1 k fn-fib
+        quad_mem[F_FIB_ADDR+13]     = Typed::Instr { op: Op::My { op: My::Addr, k: Ptr::new(F_FIB_RAW+14) } };  // n k n-1 k fib
+        //quad_mem[F_FIB_ADDR+13]     = Typed::Instr { op: Op::Push { v: _FN_FIB.val(), k: Ptr::new(F_FIB_RAW+14) } };  // n k n-1 k fn-fib
         quad_mem[F_FIB_ADDR+14]     = Typed::Instr { op: Op::Send { n: Fix::new(2), k: Ptr::new(F_FIB_RAW+15) } };  // n k
 
         quad_mem[F_FIB_ADDR+15]     = Typed::Instr { op: Op::Roll { n: Fix::new(2), k: Ptr::new(F_FIB_RAW+16) } };  // k n
         quad_mem[F_FIB_ADDR+16]     = Typed::Instr { op: Op::Push { v: fixnum(2), k: Ptr::new(F_FIB_RAW+17) } };  // k n 2
         quad_mem[F_FIB_ADDR+17]     = Typed::Instr { op: Op::Alu { op: Alu::Sub, k: Ptr::new(F_FIB_RAW+18) } };  // k n-2
         quad_mem[F_FIB_ADDR+18]     = Typed::Instr { op: Op::Roll { n: Fix::new(2), k: Ptr::new(F_FIB_RAW+19) } };  // n-2 k
-        //quad_mem[F_FIB_ADDR+19]     = Typed::Instr { op: Op::My { op: My::Addr, k: Ptr::new(F_FIB_RAW+20) } };  // n-2 k fib
-        quad_mem[F_FIB_ADDR+19]     = Typed::Instr { op: Op::Push { v: FN_FIB.val(), k: Ptr::new(F_FIB_RAW+20) } };  // n-2 k fn-fib
+        quad_mem[F_FIB_ADDR+19]     = Typed::Instr { op: Op::My { op: My::Addr, k: Ptr::new(F_FIB_RAW+20) } };  // n-2 k fib
+        //quad_mem[F_FIB_ADDR+19]     = Typed::Instr { op: Op::Push { v: _FN_FIB.val(), k: Ptr::new(F_FIB_RAW+20) } };  // n-2 k fn-fib
         quad_mem[F_FIB_ADDR+20]     = Typed::Instr { op: Op::Send { n: Fix::new(2), k: COMMIT } };  // --
 
 pub const F_FIB_K: Ptr              = Ptr { raw: F_FIB_RAW+21 };
@@ -796,7 +798,7 @@ pub const F_FIB_K2: Ptr             = Ptr { raw: F_FIB_RAW+24 };
         quad_mem[F_FIB_ADDR+25]     = Typed::Instr { op: Op::Alu { op: Alu::Add, k: Ptr::new(F_FIB_RAW+26) } };  // cust m+n
         quad_mem[F_FIB_ADDR+26]     = Typed::Instr { op: Op::Roll { n: Fix::new(2), k: SEND_0 } };  // m+n cust
 
-pub const FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // worker-generator facade for `fib`
+pub const _FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // worker-generator facade for `fib`
         quad_mem[F_FIB_ADDR+27]     = Typed::Actor { beh: Ptr::new(F_FIB_RAW+28), state: NIL.ptr(), events: None };
         quad_mem[F_FIB_ADDR+28]     = Typed::Instr { op: Op::Msg { n: Fix::new(0), k: Ptr::new(F_FIB_RAW+29) } };  // msg
         quad_mem[F_FIB_ADDR+29]     = Typed::Instr { op: Op::Push { v: F_FIB_BEH.val(), k: Ptr::new(F_FIB_RAW+30) } };  // msg fib-beh
@@ -849,7 +851,8 @@ pub const FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // worke
         */
 
         /* bootstrap event/actor */
-        quad_mem[184]               = Typed::Pair { car: fixnum(6), cdr: NIL };
+        //quad_mem[184]               = Typed::Pair { car: fixnum(6), cdr: NIL };  // argument to `fib`
+        quad_mem[184]               = Typed::Pair { car: fixnum(2), cdr: NIL };  // argument to `fib`
         quad_mem[185]               = Typed::Pair { car: A_STOP.val(), cdr: ptrval(184) };
         quad_mem[186]               = Typed::Pair { car: fixnum(-3), cdr: NIL };
         quad_mem[187]               = Typed::Pair { car: fixnum(-2), cdr: ptrval(186) };
@@ -911,7 +914,6 @@ pub const FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // worke
 
         /* Op::Deque test suite */
         /*
-        */
         quad_mem[100]               = Typed::Actor { beh: Ptr::new(101), state: NIL.ptr(), events: None };
         quad_mem[101]               = Typed::Instr { op: Op::Deque { op: Deque::Empty, k: Ptr::new(102) } };
         quad_mem[102]               = Typed::Instr { op: Op::IsEq { v: TRUE, k: Ptr::new(103) } };
@@ -978,6 +980,7 @@ pub const FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // worke
         quad_mem[163]               = Typed::Instr { op: Op::Dup { n: Fix::new(1), k: Ptr::new(164) } };
         quad_mem[164]               = Typed::Instr { op: Op::Deque { op: Deque::Len, k: Ptr::new(165) } };
         quad_mem[165]               = Typed::Instr { op: Op::IsEq { v: fixnum(0), k: Ptr::new(16) } };
+        */
 
         let mut quad_rom = [
             Quad::empty_t();
@@ -1046,13 +1049,14 @@ pub const FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // worke
             let instr = self.mem(ip);
             println!("execute_instruction: ip={} -> {}", ip, instr);
             if let Some(Typed::Instr { op }) = Typed::from(instr) {
-                let ip_ = self.perform_op(&op);
-                println!("execute_instruction: ip'={} -> {}", ip_, self.typed(ip_));
-                self.set_ip(ip_.any());
+                let ip_ = self.perform_op(&op).any();
+                println!("execute_instruction: ip'={} -> {}", ip_, self.mem(ip_));
+                self.set_ip(ip_);
                 let kp_ = self.cont_dequeue().unwrap();
                 assert_eq!(kp, kp_);
-                if self.in_heap(ip_.any()) {
+                if self.typeq(INSTR_T, ip_) {
                     // re-queue updated continuation
+                    println!("execute_instruction: kp'={} -> {}", kp_, self.ram(kp_));
                     self.cont_enqueue(kp_);
                 } else {
                     // free dead continuation and associated event
@@ -1415,16 +1419,16 @@ pub const FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // worke
             Op::Send { n, k } => {
                 println!("vm_send: idx={}", n);
                 let num = n.any().fix_num().unwrap();
-                let target = self.stack_pop();
+                let target = self.stack_pop().any();
                 println!("vm_send: target={}", target);
-                assert!(self.typeq(ACTOR_T, target.any()));
+                assert!(self.typeq(ACTOR_T, target));
                 let msg = if num > 0 {
-                    self.pop_counted(num)
+                    self.pop_counted(num).any()
                 } else {
-                    self.stack_pop()
+                    self.stack_pop().any()
                 };
                 println!("vm_send: msg={}", msg);
-                let ep = self.new_event(target.cap(), msg);
+                let ep = self.new_event(target, msg);
                 let me = self.self_ptr();
                 println!("vm_send: me={} -> {}", me, self.ram(me));
                 let next = self.ram(me).z();
@@ -1842,8 +1846,9 @@ pub const FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // worke
         self.ram_mut(MEMORY).set_z(ptr);
     }
 
-    pub fn new_event(&mut self, target: Cap, msg: Val) -> Any {
-        let event = Quad::event_t(target.any(), msg.any(), NIL.any());
+    pub fn new_event(&mut self, target: Any, msg: Any) -> Any {
+        assert!(self.typeq(ACTOR_T, target));
+        let event = Quad::event_t(target, msg, NIL.any());
         self.alloc(&event)
     }
     pub fn new_cont(&mut self, ip: Any, sp: Any, ep: Any) -> Any {
