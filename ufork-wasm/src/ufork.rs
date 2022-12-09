@@ -1168,52 +1168,22 @@ pub const _FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // work
                 },
                 Op::Pair { n, .. } => {
                     println!("vm_pair: cnt={}", n);
-                    let mut num = n.num();
-                    assert!(num < 64);
-                    if num > 0 {
-                        let h = self.stack_pop();
-                        let lst = self.cons(h, NIL.any());
-                        let mut p = lst;
-                        while num > 1 {
-                            let h = self.stack_pop();
-                            let q = self.cons(h, NIL.any());
-                            self.set_cdr(p.any(), q.any());
-                            p = q;
-                            num -= 1;
-                        }
-                        let t = self.stack_pop();
-                        self.set_cdr(p.any(), t);
-                        self.stack_push(lst.any());
-                    };
+                    let n = n.any().fix_num().unwrap();
+                    self.stack_pairs(n);
                     kip
                 },
                 Op::Part { n, .. } => {
                     println!("vm_part: cnt={}", n);
-                    let mut num = n.num();
-                    assert!(num < 64);
-                    let mut s = self.stack_pop();
-                    if num > 0 {
-                        let lst = self.cons(self.car(s).any(), NIL.any());
-                        let mut p = lst;
-                        while num > 1 {
-                            s = self.cdr(s).any();
-                            let q = self.cons(self.car(s).any(), NIL.any());
-                            self.set_cdr(p.any(), q.any());
-                            p = q;
-                            num -= 1;
-                        }
-                        let t = self.cons(self.cdr(s).any(), self.sp());
-                        self.set_cdr(p.any(), t.any());
-                        self.set_sp(lst.any());
-                    }
+                    let n = n.any().fix_num().unwrap();
+                    self.stack_parts(n);
                     kip
                 },
                 Op::Nth { n, .. } => {
                     println!("vm_nth: idx={}", n);
                     let lst = self.stack_pop();
                     println!("vm_nth: lst={}", lst);
-                    let num = n.any().fix_num().unwrap();
-                    let r = self.extract_nth(lst, num);
+                    let n = n.any().fix_num().unwrap();
+                    let r = self.extract_nth(lst, n);
                     println!("vm_nth: r={}", r);
                     self.stack_push(r.any());
                     kip
@@ -1224,33 +1194,33 @@ pub const _FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // work
                     kip
                 },
                 Op::Depth { .. } => {
-                    let mut num: Num = 0;
+                    let mut n: isize = 0;
                     let mut p = self.sp();
                     while self.typeq(PAIR_T, p) {
-                        p = self.cdr(p).any();
-                        num += 1;
+                        p = self.cdr(p);
+                        n += 1;
                     };
-                    let n = Fix::new(num);
+                    let n = Any::fix(n);
                     println!("vm_depth: n={}", n);
-                    self.stack_push(n.any());
+                    self.stack_push(n);
                     kip
                 },
                 Op::Drop { n, .. } => {
                     println!("vm_drop: n={}", n);
-                    let mut num = n.num();
-                    assert!(num < 64);
-                    while num > 0 {
+                    let mut n = n.any().fix_num().unwrap();
+                    assert!(n < 64);  // FIXME: replace with cycle-limit(s) in Sponsor
+                    while n > 0 {
                         self.stack_pop();
-                        num -= 1;
+                        n -= 1;
                     };
                     kip
                 },
                 Op::Pick { n, .. } => {
                     println!("vm_pick: idx={}", n);
-                    let num = n.any().fix_num().unwrap();
-                    let r = if num > 0 {
+                    let n = n.any().fix_num().unwrap();
+                    let r = if n > 0 {
                         let lst = self.sp();
-                        self.extract_nth(lst, num)
+                        self.extract_nth(lst, n)
                     } else {
                         UNDEF
                     };
@@ -1260,36 +1230,14 @@ pub const _FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // work
                 },
                 Op::Dup { n, .. } => {
                     println!("vm_dup: n={}", n);
-                    let num = n.num();
-                    self.stack_dup(num);
+                    let n = n.any().fix_num().unwrap();
+                    self.stack_dup(n);
                     kip
                 },
                 Op::Roll { n, .. } => {
                     println!("vm_roll: idx={}", n);
-                    let num = n.any().fix_num().unwrap();
-                    if num > 1 {
-                        assert!(num < 64);
-                        let sp = self.sp();
-                        let (q, p) = self.split_nth(sp, num);
-                        if self.typeq(PAIR_T, p.any()) {
-                            self.set_cdr(q.any(), self.cdr(p.any()).any());
-                            self.set_cdr(p.any(), sp);
-                            self.set_sp(p.any());
-                        } else {
-                            self.stack_push(UNDEF.any());  // out of range
-                        }
-                    } else if num < -1 {
-                        assert!(num > -64);
-                        let sp = self.sp();
-                        let (_q, p) = self.split_nth(sp, -num);
-                        if self.typeq(PAIR_T, p.any()) {
-                            self.set_sp(self.cdr(sp).any());
-                            self.set_cdr(sp, self.cdr(p.any()).any());
-                            self.set_cdr(p.any(), sp);
-                        } else {
-                            self.stack_pop();  // out of range
-                        }
-                    };
+                    let n = n.any().fix_num().unwrap();
+                    self.stack_roll(n);
                     kip
                 },
                 Op::Alu { op, .. } => {
@@ -1594,19 +1542,19 @@ pub const _FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // work
 
     fn push_list(&mut self, ptr: Any) {
         if self.typeq(PAIR_T, ptr) {
-            self.push_list(self.cdr(ptr).any());
-            self.stack_push(self.car(ptr).any());
+            self.push_list(self.cdr(ptr));
+            self.stack_push(self.car(ptr));
         }
     }
-    fn pop_counted(&mut self, num: isize) -> Any {
-        let mut n = num;
+    fn pop_counted(&mut self, n: isize) -> Any {
+        let mut n = n;
         if n > 0 {  // build list from stack
             let sp = self.sp();
             let mut v = sp;
             let mut p = UNDEF.any();
             while n > 0 && self.typeq(PAIR_T, v) {
                 p = v;
-                v = self.cdr(p).any();
+                v = self.cdr(p);
                 n -= 1;
             }
             if self.typeq(PAIR_T, p) {
@@ -1618,22 +1566,22 @@ pub const _FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // work
             NIL.any()
         }
     }
-    fn split_nth(&self, lst: Any, num: isize) -> (Val, Val) {
+    fn split_nth(&self, lst: Any, n: isize) -> (Val, Val) {
         let mut p = lst;
         let mut q = UNDEF.any();
-        let mut n = num;
+        let mut n = n;
         assert!(n < 64);
         while n > 1 && self.typeq(PAIR_T, p) {
             q = p;
-            p = self.cdr(p).any();
+            p = self.cdr(p);
             n -= 1;
         }
         (q.val(), p.val())
     }
-    fn extract_nth(&self, lst: Any, num: isize) -> Val {
+    fn extract_nth(&self, lst: Any, n: isize) -> Val {
         let mut p = lst;
         let mut v = UNDEF.any();
-        let mut n = num;
+        let mut n = n;
         if n == 0 {  // entire list/message
             v = p;
         } else if n > 0 {  // item at n-th index
@@ -1641,20 +1589,20 @@ pub const _FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // work
             while self.typeq(PAIR_T, p) {
                 n -= 1;
                 if n <= 0 { break; }
-                p = self.cdr(p).any();
+                p = self.cdr(p);
             }
             if n == 0 {
-                v = self.car(p).any();
+                v = self.car(p);
             }
         } else {  // `-n` selects the n-th tail
             assert!(n > -64);
             while self.typeq(PAIR_T, p) {
                 n += 1;
                 if n >= 0 { break; }
-                p = self.cdr(p).any();
+                p = self.cdr(p);
             }
             if n == 0 {
-                v = self.cdr(p).any();
+                v = self.cdr(p);
             }
         }
         v.val()
@@ -1717,8 +1665,8 @@ pub const _FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // work
         }
     }
     pub fn deque_push(&mut self, deque: Ptr, item: Val) -> Ptr {
-        let front = self.cons(item.any(), self.car(deque.any()).any());
-        self.cons(front.any(), self.cdr(deque.any()).any())
+        let front = self.cons(item.any(), self.car(deque.any()));
+        self.cons(front, self.cdr(deque.any())).val().ptr()
     }
     pub fn deque_pop(&mut self, deque: Ptr) -> (Ptr, Val) {
         if let Typed::Pair { car, cdr } = *self.typed(deque) {
@@ -1736,7 +1684,7 @@ pub const _FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // work
                 }
             }
             if let Typed::Pair { car: item, cdr: rest } = *self.typed(front.ptr()) {
-                let new = self.cons(rest.any(), back.any());
+                let new = self.cons(rest.any(), back.any()).val().ptr();
                 (new, item)
             } else {
                 (deque, UNDEF)
@@ -1746,8 +1694,8 @@ pub const _FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // work
         }
     }
     pub fn deque_put(&mut self, deque: Ptr, item: Val) -> Ptr {
-        let back = self.cons(item.any(), self.cdr(deque.any()).any());
-        self.cons(self.car(deque.any()).any(), back.any())
+        let back = self.cons(item.any(), self.cdr(deque.any()));
+        self.cons(self.car(deque.any()), back).val().ptr()
     }
     pub fn deque_pull(&mut self, deque: Ptr) -> (Ptr, Val) {
         if let Typed::Pair { car, cdr } = *self.typed(deque) {
@@ -1765,7 +1713,7 @@ pub const _FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // work
                 }
             }
             if let Typed::Pair { car: item, cdr: rest } = *self.typed(back.ptr()) {
-                let new = self.cons(front.any(), rest.any());
+                let new = self.cons(front.any(), rest.any()).val().ptr();
                 (new, item)
             } else {
                 (deque, UNDEF)
@@ -1777,14 +1725,14 @@ pub const _FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // work
     pub fn deque_len(&self, deque: Ptr) -> isize {
         let mut n = 0;
         let mut p = self.car(deque.any());
-        while self.typeq(PAIR_T, p.any()) {
+        while self.typeq(PAIR_T, p) {
             n += 1;
-            p = self.cdr(p.any());
+            p = self.cdr(p);
         }
         let mut q = self.cdr(deque.any());
-        while self.typeq(PAIR_T, q.any()) {
+        while self.typeq(PAIR_T, q) {
             n += 1;
-            q = self.cdr(q.any());
+            q = self.cdr(q);
         }
         n
     }
@@ -1854,67 +1802,130 @@ pub const _FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // work
         self.ptr_to_cap(ptr)
     }
 
-    fn stack_push(&mut self, val: Any) {
-        let sp = self.cons(val, self.sp());
-        self.set_sp(sp.any());
-    }
-    fn stack_pop(&mut self) -> Any {
-        let sp = self.sp();
-        if self.typeq(PAIR_T, sp) {
-            let item = self.car(sp).any();
-            self.set_sp(self.cdr(sp).any());
-            self.free(sp);  // free pair holding stack item
-            item
-        } else {
-            println!("stack_pop: underflow!");
-            UNDEF.any()
-        }
-    }
-    fn stack_clear(&mut self, top: Any) {
-        let mut sp = self.sp();
-        while sp != top && self.typeq(PAIR_T, sp) {
-            let p = sp;
-            sp = self.cdr(p).any();
-            self.free(p);  // free pair holding stack item
-        }
-        self.set_sp(sp);
-    }
-    fn stack_dup(&mut self, num: Num) {
-        let mut n = num;
+    fn stack_pairs(&mut self, n: isize) {
+        assert!(n < 64);  // FIXME: replace with cycle-limit(s) in Sponsor
         if n > 0 {
-            let mut s = self.sp();
-            let sp = self.cons(self.car(s).any(), NIL.any()).any();
-            let mut p = sp;
-            s = self.cdr(s).any();
-            n -= 1;
-            while n > 0 {
-                let q = self.cons(self.car(s).any(), NIL.any()).any();
+            let mut n = n;
+            let h = self.stack_pop();
+            let lst = self.cons(h, NIL.any());
+            let mut p = lst;
+            while n > 1 {
+                let h = self.stack_pop();
+                let q = self.cons(h, NIL.any());
                 self.set_cdr(p, q);
                 p = q;
-                s = self.cdr(s).any();
+                n -= 1;
+            }
+            let t = self.stack_pop();
+            self.set_cdr(p, t);
+            self.stack_push(lst);
+        };
+    }
+    fn stack_parts(&mut self, n: isize) {
+        assert!(n < 64);  // FIXME: replace with cycle-limit(s) in Sponsor
+        let mut s = self.stack_pop();  // list to destructure
+        if n > 0 {
+            let mut n = n;
+            let lst = self.cons(self.car(s), NIL.any());
+            let mut p = lst;
+            while n > 1 {
+                s = self.cdr(s);
+                let q = self.cons(self.car(s), NIL.any());
+                self.set_cdr(p, q);
+                p = q;
+                n -= 1;
+            }
+            let t = self.cons(self.cdr(s), self.sp());
+            self.set_cdr(p, t);
+            self.set_sp(lst);
+        }
+    }
+    fn stack_roll(&mut self, n: isize) {
+        if n > 1 {
+            assert!(n < 64);  // FIXME: replace with cycle-limit(s) in Sponsor
+            let sp = self.sp();
+            let (q, p) = self.split_nth(sp, n);
+            if self.typeq(PAIR_T, p.any()) {
+                self.set_cdr(q.any(), self.cdr(p.any()));
+                self.set_cdr(p.any(), sp);
+                self.set_sp(p.any());
+            } else {
+                self.stack_push(UNDEF.any());  // out of range
+            }
+        } else if n < -1 {
+            assert!(n > -64);  // FIXME: replace with cycle-limit(s) in Sponsor
+            let sp = self.sp();
+            let (_q, p) = self.split_nth(sp, -n);
+            if self.typeq(PAIR_T, p.any()) {
+                self.set_sp(self.cdr(sp));
+                self.set_cdr(sp, self.cdr(p.any()));
+                self.set_cdr(p.any(), sp);
+            } else {
+                self.stack_pop();  // out of range
+            }
+        };
+    }
+    fn stack_dup(&mut self, n: isize) {
+        let mut n = n;
+        if n > 0 {
+            let mut s = self.sp();
+            let sp = self.cons(self.car(s), NIL.any());
+            let mut p = sp;
+            s = self.cdr(s);
+            n -= 1;
+            while n > 0 {
+                let q = self.cons(self.car(s), NIL.any());
+                self.set_cdr(p, q);
+                p = q;
+                s = self.cdr(s);
                 n -= 1;
             }
             self.set_cdr(p, self.sp());
             self.set_sp(sp);
         }
     }
-
-    pub fn cons(&mut self, car: Any, cdr: Any) -> Ptr {
-        let pair = Quad::pair_t(car, cdr);
-        self.alloc(&pair).val().ptr()  // FIXME: should return `Any`
+    fn stack_clear(&mut self, top: Any) {
+        let mut sp = self.sp();
+        while sp != top && self.typeq(PAIR_T, sp) {
+            let p = sp;
+            sp = self.cdr(p);
+            self.free(p);  // free pair holding stack item
+        }
+        self.set_sp(sp);
     }
-    pub fn car(&self, pair: Any) -> Val {
-        if self.typeq(PAIR_T, pair) {
-            self.mem(pair).x().val()  // FIXME: should return `Any`
+    fn stack_pop(&mut self) -> Any {
+        let sp = self.sp();
+        if self.typeq(PAIR_T, sp) {
+            let item = self.car(sp);
+            self.set_sp(self.cdr(sp));
+            self.free(sp);  // free pair holding stack item
+            item
         } else {
-            UNDEF
+            println!("stack_pop: underflow!");  // NOTE: this is just a warning, returning UNDEF...
+            UNDEF.any()
         }
     }
-    pub fn cdr(&self, pair: Any) -> Val {
+    fn stack_push(&mut self, val: Any) {
+        let sp = self.cons(val, self.sp());
+        self.set_sp(sp);
+    }
+
+    pub fn cons(&mut self, car: Any, cdr: Any) -> Any {
+        let pair = Quad::pair_t(car, cdr);
+        self.alloc(&pair)
+    }
+    pub fn car(&self, pair: Any) -> Any {
         if self.typeq(PAIR_T, pair) {
-            self.mem(pair).y().val()  // FIXME: should return `Any`
+            self.mem(pair).x()
         } else {
-            UNDEF
+            UNDEF.any()
+        }
+    }
+    pub fn cdr(&self, pair: Any) -> Any {
+        if self.typeq(PAIR_T, pair) {
+            self.mem(pair).y()
+        } else {
+            UNDEF.any()
         }
     }
     fn _set_car(&mut self, pair: Any, val: Any) {
