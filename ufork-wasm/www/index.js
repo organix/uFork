@@ -62,16 +62,16 @@ const drawHost = () => {
 	$output.textContent = host.render();
 	const ip = host.ip();
 	//updateElementText($ip, host.print(ip));
-	if (host.in_heap(ip)) {
+	if (host.in_mem(ip)) {
 		let p = ip;
 		let n = 5;
 		let a = [];
-		while ((n > 0) && host.in_heap(p)) {
+		while ((n > 0) && host.in_mem(p)) {
 			a.push(host.display(p));
 			p = host.next(p);
 			n -= 1;
 		}
-		if (host.in_heap(p)) {
+		if (host.in_mem(p)) {
 			a.push("...");
 		}
 		updateElementText($instr, a.join("\n"));
@@ -81,7 +81,7 @@ const drawHost = () => {
 	const sp = host.sp();
 	//updateElementText($sp, host.print(sp));
 	//$sp.title = host.disasm(sp);
-	if (host.in_heap(sp)) {
+	if (host.in_mem(sp)) {
 		let p = sp;
 		let a = [];
 		while (host.is_pair(p)) {
@@ -98,10 +98,10 @@ const drawHost = () => {
 	}
 	$stack.title = host.display(sp);
 	const kq = host.kqueue();
-	if (host.in_heap(kq)) {
+	if (host.in_mem(kq)) {
 		let p = kq;
 		let a = [];
-		while (host.in_heap(p)) {
+		while (host.in_mem(p)) {
 			a.push(host.display(p));  // display continuation
 			//a.push(host.disasm(p));  // disasm continuation
 			p = host.next(p);
@@ -111,10 +111,10 @@ const drawHost = () => {
 		updateElementText($kqueue, "--");
 	}
 	const eq = host.equeue();
-	if (host.in_heap(eq)) {
+	if (host.in_mem(eq)) {
 		let p = eq;
 		let a = [];
-		while (host.in_heap(p)) {
+		while (host.in_mem(p)) {
 			a.push(host.display(p));  // display event
 			//a.push(host.disasm(p));  // disasm event
 			p = host.next(p);

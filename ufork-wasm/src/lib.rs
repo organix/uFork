@@ -4,7 +4,7 @@ use wasm_bindgen::prelude::*;
 use std::fmt;
 
 pub mod ufork;
-pub mod cons;  // FIXME: remove this experimental module!
+//pub mod cons;  // FIXME: remove this experimental module!
 
 use crate::ufork::*;
 
@@ -13,9 +13,6 @@ use crate::ufork::*;
 #[cfg(feature = "wee_alloc")]
 #[global_allocator]
 static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
-
-type Value = usize;  // univeral value type
-//type Value = i32;  // univeral value type
 
 // FIXME: `use js_sys;` instead?
 extern crate js_sys;
@@ -86,89 +83,47 @@ impl Host {
         ok
     }
 
-    pub fn mem_top(&self) -> Raw {
-        match self.core.typed(Ptr::new(MEMORY.raw())) {
-            Typed::Memory { top, .. } => {
-                top.raw()
-            },
-            _ => panic!("Typed::Memory required"),
-        }
-    }
-    pub fn mem_next(&self) -> Raw {
-        match self.core.typed(Ptr::new(MEMORY.raw())) {
-            Typed::Memory { next, .. } => {
-                next.raw()
-            },
-            _ => panic!("Typed::Memory required"),
-        }
-    }
-    pub fn mem_free(&self) -> Raw {
-        match self.core.typed(Ptr::new(MEMORY.raw())) {
-            Typed::Memory { free, .. } => {
-                free.val().raw()
-            },
-            _ => panic!("Typed::Memory required"),
-        }
-    }
-    pub fn mem_root(&self) -> Raw {
-        match self.core.typed(Ptr::new(MEMORY.raw())) {
-            Typed::Memory { root, .. } => {
-                root.raw()
-            },
-            _ => panic!("Typed::Memory required"),
-        }
-    }
-    pub fn equeue(&self) -> Raw {
-        match self.core.typed(Ptr::new(DDEQUE.raw())) {
-            Typed::Ddeque { e_first, .. } => {
-                e_first.raw()
-            },
-            _ => panic!("Typed::Ddeque required"),
-        }
-    }
-    pub fn kqueue(&self) -> Raw {
-        match self.core.typed(Ptr::new(DDEQUE.raw())) {
-            Typed::Ddeque { k_first, .. } => {
-                k_first.raw()
-            },
-            _ => panic!("Typed::Ddeque required"),
-        }
-    }
+    pub fn mem_top(&self) -> Raw { self.core.ram(MEMORY).t().raw() }
+    pub fn mem_next(&self) -> Raw { self.core.ram(MEMORY).x().raw() }
+    pub fn mem_free(&self) -> Raw { self.core.ram(MEMORY).y().raw() }
+    pub fn mem_root(&self) -> Raw { self.core.ram(MEMORY).z().raw() }
+    pub fn equeue(&self) -> Raw { self.core.ram(DDEQUE).t().raw() }
+    pub fn kqueue(&self) -> Raw { self.core.ram(DDEQUE).y().raw() }
     pub fn ip(&self) -> Raw { self.core.ip().raw() }
     pub fn sp(&self) -> Raw { self.core.sp().raw() }
     pub fn ep(&self) -> Raw { self.core.ep().raw() }
-    pub fn e_self(&self) -> Raw {
-        let ep = self.core.ep();
-        let event = self.core.mem(ep);
-        event.x().raw()  // FIXME: convert from Cap to Ptr?
-    }
+    pub fn e_self(&self) -> Raw { self.core.self_ptr().raw() }
     pub fn e_msg(&self) -> Raw {
         let ep = self.core.ep();
-        let event = self.core.mem(ep);
+        let event = self.core.ram(ep);
         event.y().raw()
     }
-    pub fn in_heap(&self, v: Raw) -> bool {
-        self.core.in_heap(Any::new(v))
+    pub fn in_mem(&self, v: Raw) -> bool {  // excludes built-in constants and types
+        let a = Any::new(v);
+        a.is_ptr() && (a.raw() > FREE_T.raw())
+    }
+    pub fn is_dict(&self, v: Raw) -> bool {
+        self.core.typeq(DICT_T, Any::new(v))
     }
     pub fn is_pair(&self, v: Raw) -> bool {
         self.core.typeq(PAIR_T, Any::new(v))
     }
     pub fn car(&self, p: Raw) -> Raw {
         if self.is_pair(p) {
-            self.core.car(Ptr::new(p).any()).raw()
+            self.core.car(Any::new(p)).raw()
         } else {
             UNDEF.raw()
         }
     }
     pub fn cdr(&self, p: Raw) -> Raw {
         if self.is_pair(p) {
-            self.core.cdr(Ptr::new(p).any()).raw()
+            self.core.cdr(Any::new(p)).raw()
         } else {
             UNDEF.raw()
         }
     }
     pub fn next(&self, p: Raw) -> Raw {
-        self.core.next(Ptr::new(p)).raw()
+        self.core.next(Any::new(p)).raw()
     }
 
     pub fn pprint(&self, raw: Raw) -> String {
@@ -190,11 +145,15 @@ impl Host {
             }
             s.push_str(")");
             s
-        } else if self.core.typeq(DICT_T, Any::new(raw)) {
+        } else if self.is_dict(raw) {
             let mut s = String::new();
             let mut p = raw;
             let mut sep = "{";
-            while let Typed::Dict { key, value, next } = *self.core.typed(Ptr::new(p)) {
+            while self.is_dict(p) {
+                let entry = self.core.mem(Any::new(p));
+                let key = entry.x();
+                let value = entry.y();
+                let next = entry.z();
                 s.push_str(sep);
                 /*
                 s.push_str(self.disasm(p).as_str());
@@ -216,7 +175,7 @@ impl Host {
         let ss = self.print(raw);
         s.push_str(ss.as_str());
         let val = Any::new(raw);
-        if self.core.in_heap(val) {
+        if val.is_ptr() {
             s.push_str(" → ");
             let ss = self.disasm(raw);
             s.push_str(ss.as_str());
@@ -225,9 +184,13 @@ impl Host {
     }
     pub fn disasm(&self, raw: Raw) -> String {
         let val = Any::new(raw);
-        if self.core.in_heap(val) {
-            let ptr = val.val().ptr();
-            self.core.typed(ptr).to_string()
+        if val.is_ptr() {
+            let quad = self.core.mem(val);
+            if let Some(typed) = Typed::from(quad) {
+                typed.to_string()
+            } else {
+                quad.to_string()
+            }
         } else {
             self.print(raw)
         }
@@ -257,6 +220,9 @@ impl Cell {
         };
     }
 }
+
+type Value = usize;  // univeral value type
+//type Value = i32;  // univeral value type
 
 #[wasm_bindgen]
 pub struct Universe {

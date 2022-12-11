@@ -91,7 +91,25 @@ impl fmt::Display for Any {
         } else if self.is_cap() {
             write!(fmt, "@{}", self.cap_ofs().unwrap())
         } else if self.is_rom() {
-            write!(fmt, "*{}", self.ptr_ofs().unwrap())
+            match self.val() {
+                UNDEF => write!(fmt, "#?"),
+                NIL => write!(fmt, "()"),
+                FALSE => write!(fmt, "#f"),
+                TRUE => write!(fmt, "#t"),
+                UNIT => write!(fmt, "#unit"),
+                TYPE_T => write!(fmt, "TYPE_T"),
+                EVENT_T => write!(fmt, "EVENT_T"),
+                INSTR_T => write!(fmt, "INSTR_T"),
+                ACTOR_T => write!(fmt, "ACTOR_T"),
+                FIXNUM_T => write!(fmt, "FIXNUM_T"),
+                SYMBOL_T => write!(fmt, "SYMBOL_T"),
+                PAIR_T => write!(fmt, "PAIR_T"),
+                //FEXPR_T => write!(fmt, "FEXPR_T"),
+                DICT_T => write!(fmt, "DICT_T"),
+                FREE_T => write!(fmt, "FREE_T"),
+                _ => write!(fmt, "*{}", self.ptr_ofs().unwrap()),
+            }
+            //write!(fmt, "*{}", self.ptr_ofs().unwrap())
         } else if self.is_ram() {
             write!(fmt, "^{}", self.ptr_ofs().unwrap())
         } else {
@@ -1536,7 +1554,7 @@ pub const _FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // work
         // end actor transaction
         self.ram_mut(me).set_z(UNDEF.any());
     }
-    fn self_ptr(&self) -> Any {
+    pub fn self_ptr(&self) -> Any {
         let ep = self.ep();
         let target = self.ram(ep).x();
         let a_ptr = self.cap_to_ptr(target);
@@ -1745,55 +1763,23 @@ pub const _FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // work
         self.list_len(front) + self.list_len(back)
     }
 
-    fn e_first(&self) -> Any {
-        self.ram(DDEQUE).t()
-    }
-    fn set_e_first(&mut self, ptr: Any) {
-        self.ram_mut(DDEQUE).set_t(ptr);
-    }
-    fn e_last(&self) -> Any {
-        self.ram(DDEQUE).x()
-    }
-    fn set_e_last(&mut self, ptr: Any) {
-        self.ram_mut(DDEQUE).set_x(ptr);
-    }
-    fn k_first(&self) -> Any {
-        self.ram(DDEQUE).y()
-    }
-    fn set_k_first(&mut self, ptr: Any) {
-        self.ram_mut(DDEQUE).set_y(ptr);
-    }
-    fn k_last(&self) -> Any {
-        self.ram(DDEQUE).z()
-    }
-    fn set_k_last(&mut self, ptr: Any) {
-        self.ram_mut(DDEQUE).set_z(ptr);
-    }
+    fn e_first(&self) -> Any { self.ram(DDEQUE).t() }
+    fn set_e_first(&mut self, ptr: Any) { self.ram_mut(DDEQUE).set_t(ptr); }
+    fn e_last(&self) -> Any { self.ram(DDEQUE).x() }
+    fn set_e_last(&mut self, ptr: Any) { self.ram_mut(DDEQUE).set_x(ptr); }
+    fn k_first(&self) -> Any { self.ram(DDEQUE).y() }
+    fn set_k_first(&mut self, ptr: Any) { self.ram_mut(DDEQUE).set_y(ptr); }
+    fn k_last(&self) -> Any { self.ram(DDEQUE).z() }
+    fn set_k_last(&mut self, ptr: Any) { self.ram_mut(DDEQUE).set_z(ptr); }
 
-    fn mem_top(&self) -> Any {
-        self.ram(MEMORY).t()
-    }
-    fn set_mem_top(&mut self, ptr: Any) {
-        self.ram_mut(MEMORY).set_t(ptr);
-    }
-    fn mem_next(&self) -> Any {
-        self.ram(MEMORY).x()
-    }
-    fn set_mem_next(&mut self, ptr: Any) {
-        self.ram_mut(MEMORY).set_x(ptr);
-    }
-    fn mem_free(&self) -> Any {
-        self.ram(MEMORY).y()
-    }
-    fn set_mem_free(&mut self, fix: Any) {
-        self.ram_mut(MEMORY).set_y(fix);
-    }
-    fn _mem_root(&self) -> Any {
-        self.ram(MEMORY).z()
-    }
-    fn _set_mem_root(&mut self, ptr: Any) {
-        self.ram_mut(MEMORY).set_z(ptr);
-    }
+    fn mem_top(&self) -> Any { self.ram(MEMORY).t() }
+    fn set_mem_top(&mut self, ptr: Any) { self.ram_mut(MEMORY).set_t(ptr); }
+    fn mem_next(&self) -> Any { self.ram(MEMORY).x() }
+    fn set_mem_next(&mut self, ptr: Any) { self.ram_mut(MEMORY).set_x(ptr); }
+    fn mem_free(&self) -> Any { self.ram(MEMORY).y() }
+    fn set_mem_free(&mut self, fix: Any) { self.ram_mut(MEMORY).set_y(fix); }
+    fn _mem_root(&self) -> Any { self.ram(MEMORY).z() }
+    fn _set_mem_root(&mut self, ptr: Any) { self.ram_mut(MEMORY).set_z(ptr); }
 
     pub fn new_event(&mut self, target: Any, msg: Any) -> Any {
         assert!(self.typeq(ACTOR_T, target));
@@ -1998,7 +1984,7 @@ pub const _FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // work
         ptr
     }
 
-    pub fn alloc(&mut self, quad: &Quad) -> Any {
+    pub fn alloc(&mut self, init: &Quad) -> Any {
         let next = self.mem_next();
         let ptr = if self.typeq(FREE_T, next) {
             // use quad from free-list
@@ -2017,7 +2003,7 @@ pub const _FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // work
             self.set_mem_top(Any::ram(top + 1));
             next
         };
-        *self.ram_mut(ptr) = *quad;  // copy initial value
+        *self.ram_mut(ptr) = *init;  // copy initial value
         ptr
     }
     pub fn free(&mut self, ptr: Any) {
@@ -2073,39 +2059,21 @@ pub const _FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // work
         &mut self.quad_mem[addr]
     }
 
-    pub fn next(&self, ptr: Ptr) -> Ptr {
-        let typed = *self.typed(ptr);
-        match typed {
-            Typed::Event { next, .. } => next,
-            Typed::Cont { next, .. } => next,
-            Typed::Dict { next, .. } => next,
-            Typed::Free { next } => next,
-            Typed::Quad { z, .. } => z.ptr(),
-            Typed::Instr { op: Op::Typeq { k, .. } } => k,
-            Typed::Instr { op: Op::Dict { k, .. } } => k,
-            Typed::Instr { op: Op::Deque { k, .. } } => k,
-            Typed::Instr { op: Op::Pair { k, .. } } => k,
-            Typed::Instr { op: Op::Part { k, .. } } => k,
-            Typed::Instr { op: Op::Nth { k, .. } } => k,
-            Typed::Instr { op: Op::Push { k, .. } } => k,
-            Typed::Instr { op: Op::Depth { k } } => k,
-            Typed::Instr { op: Op::Drop { k, .. } } => k,
-            Typed::Instr { op: Op::Pick { k, .. } } => k,
-            Typed::Instr { op: Op::Dup { k, .. } } => k,
-            Typed::Instr { op: Op::Roll { k, .. } } => k,
-            Typed::Instr { op: Op::Alu { k, .. } } => k,
-            Typed::Instr { op: Op::Eq { k, .. } } => k,
-            Typed::Instr { op: Op::Cmp { k, .. } } => k,
-            //Typed::Instr { op: Op::If { f, .. } } => f,
-            Typed::Instr { op: Op::Msg { k, .. } } => k,
-            Typed::Instr { op: Op::My { k, .. } } => k,
-            Typed::Instr { op: Op::Send { k, .. } } => k,
-            Typed::Instr { op: Op::New { k, .. } } => k,
-            Typed::Instr { op: Op::Beh { k, .. } } => k,
-            //Typed::Instr { op: Op::End { .. } } => UNDEF.ptr(),
-            //Typed::Instr { op: Op::IsEq { k, .. } } => k,
-            //Typed::Instr { op: Op::IsNe { k, .. } } => k,
-            _ => UNDEF.ptr(),
+    pub fn next(&self, ptr: Any) -> Any {
+        if ptr.is_ptr() {
+            let quad = self.mem(ptr);
+            if quad.t() == INSTR_T.any() {
+                let op = quad.x();
+                if op == VM_IF.any() || op == VM_END.any() {
+                    UNDEF.any()
+                } else {
+                    quad.z()
+                }
+            } else {
+                quad.z()
+            }
+        } else {
+            UNDEF.any()
         }
     }
 }
@@ -2705,7 +2673,14 @@ impl fmt::Display for Ptr {
             //FEXPR_T => write!(fmt, "FEXPR_T"),
             DICT_T => write!(fmt, "DICT_T"),
             FREE_T => write!(fmt, "FREE_T"),
-            _ => write!(fmt, "^{}", self.raw),
+            _ => {
+                let ofs = self.raw & !MSK_RAW;
+                if self.raw == ofs {
+                    write!(fmt, "*{}", ofs)
+                } else {
+                    write!(fmt, "^{}", ofs)
+                }
+            },
         }
     }
 }
