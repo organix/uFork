@@ -90,8 +90,8 @@ impl fmt::Display for Any {
             write!(fmt, "{:+}", self.fix_num().unwrap())
         } else if self.is_cap() {
             write!(fmt, "@{}", self.cap_ofs().unwrap())
-        } else if self.is_rom() {
-            match self.val() {
+        } else if self.raw() < START.raw() {
+            match *self {
                 UNDEF => write!(fmt, "#?"),
                 NIL => write!(fmt, "()"),
                 FALSE => write!(fmt, "#f"),
@@ -107,9 +107,10 @@ impl fmt::Display for Any {
                 //FEXPR_T => write!(fmt, "FEXPR_T"),
                 DICT_T => write!(fmt, "DICT_T"),
                 FREE_T => write!(fmt, "FREE_T"),
-                _ => write!(fmt, "*{}", self.ptr_ofs().unwrap()),
+                _ => write!(fmt, "#{}", self.raw()),  // FIXME: should not occur
             }
-            //write!(fmt, "*{}", self.ptr_ofs().unwrap())
+        } else if self.is_rom() {
+            write!(fmt, "*{}", self.ptr_ofs().unwrap())
         } else if self.is_ram() {
             write!(fmt, "^{}", self.ptr_ofs().unwrap())
         } else {
@@ -213,18 +214,18 @@ impl Quad {
 
     // construct basic Quad types
     pub fn empty_t() -> Quad {
-        Self::new(UNDEF.any(), UNDEF.any(), UNDEF.any(), UNDEF.any())
+        Self::new(UNDEF, UNDEF, UNDEF, UNDEF)
     }
     pub fn literal_t() -> Quad {
-        Self::new(LITERAL_T.any(), UNDEF.any(), UNDEF.any(), UNDEF.any())
+        Self::new(LITERAL_T, UNDEF, UNDEF, UNDEF)
     }
     pub fn type_t() -> Quad {
-        Self::new(TYPE_T.any(), UNDEF.any(), UNDEF.any(), UNDEF.any())
+        Self::new(TYPE_T, UNDEF, UNDEF, UNDEF)
     }
     pub fn event_t(target: Any, msg: Any, next: Any) -> Quad {
         assert!(target.is_cap());
         assert!(next.is_ptr());
-        Self::new(EVENT_T.any(), target, msg, next)
+        Self::new(EVENT_T, target, msg, next)
     }
     pub fn cont_t(ip: Any, sp: Any, ep: Any, next: Any) -> Quad {
         assert!(ip.is_ptr());
@@ -236,27 +237,27 @@ impl Quad {
     pub fn instr_t(vm: Any, v: Any, k: Any) -> Quad {
         assert!(vm.is_fix());
         assert!(k.is_ptr());
-        Self::new(INSTR_T.any(), vm, v, k)
+        Self::new(INSTR_T, vm, v, k)
     }
     pub fn actor_t(beh: Any, state: Any, events: Any) -> Quad {
         assert!(beh.is_ptr());
         assert!(events.is_ptr());
-        Self::new(ACTOR_T.any(), beh, state, events)
+        Self::new(ACTOR_T, beh, state, events)
     }
     pub fn symbol_t(hash: Any, key: Any, value: Any) -> Quad {
         assert!(hash.is_fix());
         assert!(key.is_ptr());
-        Self::new(SYMBOL_T.any(), hash, key, value)
+        Self::new(SYMBOL_T, hash, key, value)
     }
     pub fn pair_t(car: Any, cdr: Any) -> Quad {
-        Self::new(PAIR_T.any(), car, cdr, UNDEF.any())
+        Self::new(PAIR_T, car, cdr, UNDEF)
     }
     pub fn dict_t(key: Any, value: Any, next: Any) -> Quad {
         assert!(next.is_ptr());
-        Self::new(DICT_T.any(), key, value, next)
+        Self::new(DICT_T, key, value, next)
     }
     pub fn free_t(next: Any) -> Quad {
-        Self::new(FREE_T.any(), UNDEF.any(), UNDEF.any(), next)
+        Self::new(FREE_T, UNDEF, UNDEF, next)
     }
     pub fn ddeque_t(e_first: Any, e_last: Any, k_first: Any, k_last: Any) -> Quad {
         assert!(e_first.is_ptr());
@@ -294,7 +295,7 @@ impl Quad {
     }
     pub fn vm_end(op: Any) -> Quad {
         assert!(op.is_fix());
-        Self::instr_t(VM_END.any(), op, UNDEF.any())
+        Self::instr_t(VM_END.any(), op, UNDEF)
     }
 
     // construct VM_CMP instructions
@@ -310,7 +311,7 @@ impl Quad {
 
     // construct idle Actor
     pub fn new_actor(beh: Any, state: Any) -> Quad {
-        Self::actor_t(beh, state, UNDEF.any())
+        Self::actor_t(beh, state, UNDEF)
     }
 
     // inter-op with Val type-hierarchy
@@ -332,53 +333,80 @@ impl Quad {
 }
 impl fmt::Display for Quad {
     fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let typ = if self.t() == UNDEF.any() {
+        let t = if self.t() == UNDEF {
             String::from("LITERAL_T")
         } else {
             self.t().to_string()
         };
-        write!(fmt, "{{t:{}, x:{}, y:{}, z:{}}}", typ, self.x(), self.y(), self.z())
+        let x = if self.t() == INSTR_T {
+            match self.x().val() {
+                VM_TYPEQ => String::from("TYPEQ"),
+                VM_CELL => String::from("CELL"),
+                VM_GET => String::from("GET"),
+                //VM_GET => String::from("SET"),
+                VM_DICT => String::from("DICT"),
+                VM_PAIR => String::from("PAIR"),
+                VM_PART => String::from("PART"),
+                VM_NTH => String::from("NTH"),
+                VM_PUSH => String::from("PUSH"),
+                VM_DEPTH => String::from("DEPTH"),
+                VM_DROP => String::from("DROP"),
+                VM_PICK => String::from("PICK"),
+                VM_DUP => String::from("DUP"),
+                VM_ROLL => String::from("ROLL"),
+                VM_ALU => String::from("ALU"),
+                VM_EQ => String::from("EQ"),
+                VM_CMP => String::from("CMP"),
+                VM_IF => String::from("IF"),
+                VM_MSG => String::from("MSG"),
+                VM_MY => String::from("MY"),
+                VM_SEND => String::from("SEND"),
+                VM_NEW => String::from("NEW"),
+                VM_BEH => String::from("BEH"),
+                VM_END => String::from("END"),
+                VM_DEQUE => String::from("DEQUE"),
+                VM_IS_EQ => String::from("IS_EQ"),
+                VM_IS_NE => String::from("IS_NE"),
+                _ => String::from("UNKNOWN"),
+            }
+        } else {
+            self.x().to_string()
+        };
+        write!(fmt, "{{t:{}, x:{}, y:{}, z:{}}}", t, x, self.y(), self.z())
     }
 }
 
-// literal values
+// literal values (`Any` type)
 pub const ZERO: Any         = Any { raw: DIR_RAW | 0 };
-/*
 pub const UNDEF: Any        = Any { raw: 0 };
 pub const NIL: Any          = Any { raw: 1 };
 pub const FALSE: Any        = Any { raw: 2 };
 pub const TRUE: Any         = Any { raw: 3 };
 pub const UNIT: Any         = Any { raw: 4 };
-
-pub const LITERAL: Any      = Any { raw: 0 };  // == UNDEF
-pub const TYPE: Any         = Any { raw: 5 };
-pub const EVENT: Any        = Any { raw: 6 };
-pub const INSTR: Any        = Any { raw: 7 };
-pub const ACTOR: Any        = Any { raw: 8 };
-pub const FIXNUM: Any       = Any { raw: 9 };
-pub const SYMBOL: Any       = Any { raw: 10 };
-pub const PAIR: Any         = Any { raw: 11 };
-//pub const FEXPR: Any        = Any { raw: 12 };
-pub const DICT: Any         = Any { raw: 12 };
-pub const FREE: Any         = Any { raw: 13 };
-*/
+pub const LITERAL_T: Any    = Any { raw: 0 };  // == UNDEF
+pub const TYPE_T: Any       = Any { raw: 5 };
+pub const EVENT_T: Any      = Any { raw: 6 };
+pub const INSTR_T: Any      = Any { raw: 7 };
+pub const ACTOR_T: Any      = Any { raw: 8 };
+pub const FIXNUM_T: Any     = Any { raw: 9 };
+pub const SYMBOL_T: Any     = Any { raw: 10 };
+pub const PAIR_T: Any       = Any { raw: 11 };
+//pub const FEXPR_T: Any      = Any { raw: 12 };
+pub const DICT_T: Any       = Any { raw: 12 };
+pub const FREE_T: Any       = Any { raw: 13 };
 
 pub const MEMORY: Any       = Any { raw: MUT_RAW | 14 };
 pub const DDEQUE: Any       = Any { raw: MUT_RAW | 15 };
-/*
 pub const START: Any        = Any { raw: 16 };
-*/
 
 // literal values {Val, Fix, Ptr, Cap} -- DEPRECATED
 /*
 pub const ZERO: Fix         = Fix { num: 0 };
-*/
 pub const UNDEF: Val        = Val { raw: 0 }; //Val::new(0); -- const generic issue...
 pub const NIL: Val          = Val { raw: 1 };
 pub const FALSE: Val        = Val { raw: 2 };
 pub const TRUE: Val         = Val { raw: 3 };
 pub const UNIT: Val         = Val { raw: 4 };
-
 pub const LITERAL_T: Val    = Val { raw: 0 }; //ptrval(0);
 pub const TYPE_T: Val       = Val { raw: 5 };
 pub const EVENT_T: Val      = Val { raw: 6 };
@@ -391,11 +419,10 @@ pub const PAIR_T: Val       = Val { raw: 11 };
 pub const DICT_T: Val       = Val { raw: 12 };
 pub const FREE_T: Val       = Val { raw: 13 };
 
-/*
 pub const MEMORY: Val       = Val { raw: 14 };
 pub const DDEQUE: Val       = Val { raw: 15 };
-*/
 pub const START: Val        = Val { raw: 16 };
+*/
 
 pub const COMMIT: Ptr       = Ptr { raw: 16 };
 pub const SEND_0: Ptr       = Ptr { raw: 17 };
@@ -446,21 +473,21 @@ impl Core {
             Quad::empty_t();
             QUAD_MAX
         ];
-        quad_ram[MEMORY.addr()]     = Quad::memory_t(Any::ram(256), NIL.any(), Any::fix(0), DQ_GC_ROOT.any());
-        quad_ram[DDEQUE.addr()]     = Quad::ddeque_t(E_BOOT, E_BOOT, NIL.any(), NIL.any());
-        quad_ram[A_SINK.addr()]     = Quad::actor_t(COMMIT.any(), NIL.any(), UNDEF.any());
-        quad_ram[89]                = Quad::new_actor(STOP.any(), NIL.any());
+        quad_ram[MEMORY.addr()]     = Quad::memory_t(Any::ram(256), NIL, Any::fix(0), DQ_GC_ROOT.any());
+        quad_ram[DDEQUE.addr()]     = Quad::ddeque_t(E_BOOT, E_BOOT, NIL, NIL);
+        quad_ram[A_SINK.addr()]     = Quad::new_actor(COMMIT.any(), NIL);
+        quad_ram[89]                = Quad::new_actor(STOP.any(), NIL);
         /* bootstrap event/actor */
-        quad_ram[100]               = Quad::new_actor(Any::rom(101), NIL.any());
-        quad_ram[F_FIB_ADDR+0]      = Quad::new_actor(F_FIB_BEH.any(), NIL.any());
-        quad_ram[F_FIB_ADDR+27]     = Quad::new_actor(Any::rom(F_FIB_ADDR+28), NIL.any());
+        quad_ram[100]               = Quad::new_actor(Any::rom(101), NIL);
+        quad_ram[F_FIB_ADDR+0]      = Quad::new_actor(F_FIB_BEH.any(), NIL);
+        quad_ram[F_FIB_ADDR+27]     = Quad::new_actor(Any::rom(F_FIB_ADDR+28), NIL);
 pub const E_BOOT: Any       = Any { raw: MUT_RAW | 190 };
-        //quad_ram[190]               = Quad::event_t(Any::cap(89), Any::rom(188), NIL.any());  // stop actor
-        //quad_ram[190]               = Quad::event_t(Any::cap(191), Any::rom(188), NIL.any());  // run loop demo
-        //quad_ram[190]               = Quad::event_t(Any::cap(100), Any::rom(188), NIL.any());  // run test suite
-        //quad_ram[190]               = Quad::event_t(Any::cap(F_FIB_ADDR+0), Any::rom(183), NIL.any());  // run (fib 3) => 2
-        quad_ram[190]               = Quad::event_t(Any::cap(F_FIB_ADDR+0), Any::rom(185), NIL.any());  // run (fib 6) => 8
-        //quad_ram[190]               = Quad::event_t(FN_FIB.any(), Any::rom(185), NIL.any());  // run (fib 6)
+        //quad_ram[190]               = Quad::event_t(Any::cap(89), Any::rom(188), NIL);  // stop actor
+        //quad_ram[190]               = Quad::event_t(Any::cap(191), Any::rom(188), NIL);  // run loop demo
+        //quad_ram[190]               = Quad::event_t(Any::cap(100), Any::rom(188), NIL);  // run test suite
+        //quad_ram[190]               = Quad::event_t(Any::cap(F_FIB_ADDR+0), Any::rom(183), NIL);  // run (fib 3) => 2
+        quad_ram[190]               = Quad::event_t(Any::cap(F_FIB_ADDR+0), Any::rom(185), NIL);  // run (fib 6) => 8
+        //quad_ram[190]               = Quad::event_t(FN_FIB.any(), Any::rom(185), NIL);  // run (fib 6)
         quad_ram[191]               = Quad::new_actor(RESEND.any(), Any::rom(189));
 
         let mut quad_mem = [
@@ -483,18 +510,18 @@ pub const E_BOOT: Any       = Any { raw: MUT_RAW | 190 };
         quad_mem[DICT_T.addr()]     = Typed::Type;
         quad_mem[FREE_T.addr()]     = Typed::Type;
 
-        quad_mem[MEMORY.addr()]     = Typed::Memory { top: Ptr::new(256), next: NIL.ptr(), free: Fix::new(0), root: DQ_GC_ROOT };
-        quad_mem[DDEQUE.addr()]     = Typed::Ddeque { e_first: Ptr::new(190), e_last: Ptr::new(190), k_first: NIL.ptr(), k_last: NIL.ptr() };
+        quad_mem[MEMORY.addr()]     = Typed::Memory { top: Ptr::new(256), next: NIL.val().ptr(), free: Fix::new(0), root: DQ_GC_ROOT };
+        quad_mem[DDEQUE.addr()]     = Typed::Ddeque { e_first: Ptr::new(190), e_last: Ptr::new(190), k_first: NIL.val().ptr(), k_last: NIL.val().ptr() };
 
         quad_mem[COMMIT.addr()]     = Typed::Instr { op: Op::End { op: End::Commit } };
         quad_mem[SEND_0.addr()]     = Typed::Instr { op: Op::Send { n: Fix::new(0), k: COMMIT } };
         quad_mem[CUST_SEND.addr()]  = Typed::Instr { op: Op::Msg { n: Fix::new(1), k: SEND_0 } };
         quad_mem[RV_SELF.addr()]    = Typed::Instr { op: Op::My { op: My::Addr, k: CUST_SEND } };
-        quad_mem[RV_UNDEF.addr()]   = Typed::Instr { op: Op::Push { v: UNDEF, k: CUST_SEND } };
-        quad_mem[RV_NIL.addr()]     = Typed::Instr { op: Op::Push { v: NIL, k: CUST_SEND } };
-        quad_mem[RV_FALSE.addr()]   = Typed::Instr { op: Op::Push { v: FALSE, k: CUST_SEND } };
-        quad_mem[RV_TRUE.addr()]    = Typed::Instr { op: Op::Push { v: TRUE, k: CUST_SEND } };
-        quad_mem[RV_UNIT.addr()]    = Typed::Instr { op: Op::Push { v: UNIT, k: CUST_SEND } };
+        quad_mem[RV_UNDEF.addr()]   = Typed::Instr { op: Op::Push { v: UNDEF.val(), k: CUST_SEND } };
+        quad_mem[RV_NIL.addr()]     = Typed::Instr { op: Op::Push { v: NIL.val(), k: CUST_SEND } };
+        quad_mem[RV_FALSE.addr()]   = Typed::Instr { op: Op::Push { v: FALSE.val(), k: CUST_SEND } };
+        quad_mem[RV_TRUE.addr()]    = Typed::Instr { op: Op::Push { v: TRUE.val(), k: CUST_SEND } };
+        quad_mem[RV_UNIT.addr()]    = Typed::Instr { op: Op::Push { v: UNIT.val(), k: CUST_SEND } };
         quad_mem[RV_ZERO.addr()]    = Typed::Instr { op: Op::Push { v: ZERO.val(), k: CUST_SEND } };
         quad_mem[RV_ONE.addr()]     = Typed::Instr { op: Op::Push { v: fixnum(1), k: CUST_SEND } };
         quad_mem[RESEND.addr()-1]   = Typed::Instr { op: Op::My { op: My::Addr, k: SEND_0 } };
@@ -503,7 +530,7 @@ pub const E_BOOT: Any       = Any { raw: MUT_RAW | 190 };
         quad_mem[RELEASE_0.addr()]  = Typed::Instr { op: Op::Send { n: Fix::new(0), k: RELEASE } };
         //quad_mem[-1]              = Typed::Instr { op: Op::Push { v: <value>, k: ... } };
         quad_mem[MEMO_BEH.addr()]   = Typed::Instr { op: Op::Dup { n: Fix::new(1), k: CUST_SEND } };
-        quad_mem[A_SINK.addr()]     = Typed::Actor { beh: COMMIT, state: NIL.ptr(), events: None };
+        quad_mem[A_SINK.addr()]     = Typed::Actor { beh: COMMIT, state: NIL.val().ptr(), events: None };
 
         /*
         (define fwd-beh
@@ -597,7 +624,7 @@ pub const E_BOOT: Any       = Any { raw: MUT_RAW | 190 };
         quad_mem[51]                = Typed::Instr { op: Op::Cmp { op: Cmp::Eq, k: Ptr::new(52) } };  // rcap wcap bool
         quad_mem[52]                = Typed::Instr { op: Op::If { t: Ptr::new(53), f: Ptr::new(58) } };  // rcap wcap
 
-        quad_mem[53]                = Typed::Instr { op: Op::Push { v: NIL, k: Ptr::new(54) } };  // rcap wcap ()
+        quad_mem[53]                = Typed::Instr { op: Op::Push { v: NIL.val(), k: Ptr::new(54) } };  // rcap wcap ()
         quad_mem[54]                = Typed::Instr { op: Op::Msg { n: Fix::new(-1), k: Ptr::new(55) } };  // rcap wcap () arg
         quad_mem[55]                = Typed::Instr { op: Op::Pair { n: Fix::new(1), k: Ptr::new(56) } };  // rcap wcap (arg)
         quad_mem[56]                = Typed::Instr { op: Op::Push { v: WAIT_BEH.val(), k: Ptr::new(57) } };  // rcap wcap (arg) wait-beh
@@ -656,16 +683,16 @@ pub const E_BOOT: Any       = Any { raw: MUT_RAW | 190 };
 
         /* DQ_EMPTY */
         quad_mem[84]                = Typed::Pair { car: DQ_EMPTY.val(), cdr: DDEQUE.val() };
-        quad_mem[85]                = Typed::Pair { car: NIL, cdr: NIL };
+        quad_mem[85]                = Typed::Pair { car: NIL.val(), cdr: NIL.val() };
 
         /* (ABORT #?) */
-        quad_mem[86]                = Typed::Instr { op: Op::Push { v: UNDEF, k: Ptr::new(87) } };
+        quad_mem[86]                = Typed::Instr { op: Op::Push { v: UNDEF.val(), k: Ptr::new(87) } };
         quad_mem[87]                = Typed::Instr { op: Op::End { op: End::Abort } };
 
         /* (STOP) */
         quad_mem[88]                = Typed::Instr { op: Op::End { op: End::Stop } };
 pub const A_STOP: Cap               = Cap { raw: 89 };
-        quad_mem[89]                = Typed::Actor { beh: STOP.ptr(), state: NIL.ptr(), events: None };
+        quad_mem[89]                = Typed::Actor { beh: STOP.ptr(), state: NIL.val().ptr(), events: None };
 
         /*
         (define wait-beh
@@ -697,7 +724,7 @@ pub const A_STOP: Cap               = Cap { raw: 89 };
         quad_mem[101]               = Typed::Instr { op: Op::If { t: Ptr::new(102), f: ABORT } };  // rcap wcap waiting
 
         quad_mem[102]               = Typed::Instr { op: Op::Dup { n: Fix::new(1), k: Ptr::new(103) } };  // rcap wcap waiting waiting
-        quad_mem[103]               = Typed::Instr { op: Op::Typeq { t: PAIR_T.ptr(), k: Ptr::new(104) } };  // rcap wcap waiting bool
+        quad_mem[103]               = Typed::Instr { op: Op::Typeq { t: PAIR_T.val().ptr(), k: Ptr::new(104) } };  // rcap wcap waiting bool
         quad_mem[104]               = Typed::Instr { op: Op::If { t: Ptr::new(105), f: Ptr::new(109) } };  // rcap wcap waiting
         quad_mem[105]               = Typed::Instr { op: Op::Part { n: Fix::new(1), k: Ptr::new(106) } };  // rcap wcap rest first
         quad_mem[106]               = Typed::Instr { op: Op::Msg { n: Fix::new(-1), k: Ptr::new(107) } };  // rcap wcap rest first value=arg
@@ -744,7 +771,7 @@ pub const A_STOP: Cap               = Cap { raw: 89 };
         quad_mem[119]               = Typed::Instr { op: Op::Send { n: Fix::new(0), k: Ptr::new(120) } };  // svc tag pending
         quad_mem[120]               = Typed::Instr { op: Op::Deque { op: Deque::Pop, k: Ptr::new(121) } };  // svc tag pending1 next
         quad_mem[121]               = Typed::Instr { op: Op::Dup { n: Fix::new(1), k: Ptr::new(122) } };  // svc tag pending1 next next
-        quad_mem[122]               = Typed::Instr { op: Op::Eq { v: UNDEF, k: Ptr::new(123) } };  // svc tag pending1 next bool
+        quad_mem[122]               = Typed::Instr { op: Op::Eq { v: UNDEF.val(), k: Ptr::new(123) } };  // svc tag pending1 next bool
         quad_mem[123]               = Typed::Instr { op: Op::If { t: Ptr::new(124), f: Ptr::new(127) } };  // svc tag pending1 next
 
         quad_mem[124]               = Typed::Instr { op: Op::Drop { n: Fix::new(3), k: Ptr::new(112) } };  // svc
@@ -780,7 +807,7 @@ pub const A_STOP: Cap               = Cap { raw: 89 };
 pub const F_FIB_RAW: Raw            = 150;
 pub const F_FIB_ADDR: usize         = F_FIB_RAW as usize;
 //pub const F_FIB: Cap                = Cap { raw: F_FIB_RAW };
-        quad_mem[F_FIB_ADDR+0]      = Typed::Actor { beh: F_FIB_BEH, state: NIL.ptr(), events: None };
+        quad_mem[F_FIB_ADDR+0]      = Typed::Actor { beh: F_FIB_BEH, state: NIL.val().ptr(), events: None };
 pub const F_FIB_BEH: Ptr            = Ptr { raw: F_FIB_RAW+1 };
         quad_mem[F_FIB_ADDR+1]      = Typed::Instr { op: Op::Msg { n: Fix::new(2), k: Ptr::new(F_FIB_RAW+2) } };  // n
         quad_mem[F_FIB_ADDR+2]      = Typed::Instr { op: Op::Dup { n: Fix::new(1), k: Ptr::new(F_FIB_RAW+3) } };  // n n
@@ -822,7 +849,7 @@ pub const F_FIB_K2: Ptr             = Ptr { raw: F_FIB_RAW+24 };
         quad_mem[F_FIB_ADDR+26]     = Typed::Instr { op: Op::Roll { n: Fix::new(2), k: SEND_0 } };  // m+n cust
 
 pub const _FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // worker-generator facade for `fib`
-        quad_mem[F_FIB_ADDR+27]     = Typed::Actor { beh: Ptr::new(F_FIB_RAW+28), state: NIL.ptr(), events: None };
+        quad_mem[F_FIB_ADDR+27]     = Typed::Actor { beh: Ptr::new(F_FIB_RAW+28), state: NIL.val().ptr(), events: None };
         quad_mem[F_FIB_ADDR+28]     = Typed::Instr { op: Op::Msg { n: Fix::new(0), k: Ptr::new(F_FIB_RAW+29) } };  // msg
         quad_mem[F_FIB_ADDR+29]     = Typed::Instr { op: Op::Push { v: F_FIB_BEH.val(), k: Ptr::new(F_FIB_RAW+30) } };  // msg fib-beh
         quad_mem[F_FIB_ADDR+30]     = Typed::Instr { op: Op::New { n: Fix::new(0), k: SEND_0 } };  // msg fn=fib-beh[]
@@ -874,16 +901,16 @@ pub const _FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // work
         */
 
         /* bootstrap event/actor */
-        quad_mem[182]               = Typed::Pair { car: fixnum(3), cdr: NIL };  // argument to `fib` (3)
+        quad_mem[182]               = Typed::Pair { car: fixnum(3), cdr: NIL.val() };  // argument to `fib` (3)
         quad_mem[183]               = Typed::Pair { car: A_STOP.val(), cdr: ptrval(182) };
-        quad_mem[184]               = Typed::Pair { car: fixnum(6), cdr: NIL };  // argument to `fib` (6)
+        quad_mem[184]               = Typed::Pair { car: fixnum(6), cdr: NIL.val() };  // argument to `fib` (6)
         quad_mem[185]               = Typed::Pair { car: A_STOP.val(), cdr: ptrval(184) };
-        quad_mem[186]               = Typed::Pair { car: fixnum(-3), cdr: NIL };
+        quad_mem[186]               = Typed::Pair { car: fixnum(-3), cdr: NIL.val() };
         quad_mem[187]               = Typed::Pair { car: fixnum(-2), cdr: ptrval(186) };
         quad_mem[188]               = Typed::Pair { car: fixnum(-1), cdr: ptrval(187) };
-        quad_mem[189]               = Typed::Pair { car: UNIT, cdr: NIL };
+        quad_mem[189]               = Typed::Pair { car: UNIT.val(), cdr: NIL.val() };
         //quad_mem[190]               = Typed::Event { target: Cap::new(191), msg: ptrval(188), next: NIL.ptr() };  // run loop demo
-        quad_mem[190]               = Typed::Event { target: Cap::new(100), msg: ptrval(188), next: NIL.ptr() };  // run test suite
+        quad_mem[190]               = Typed::Event { target: Cap::new(100), msg: ptrval(188), next: NIL.val().ptr() };  // run test suite
         //quad_mem[190]               = Typed::Event { target: FN_FIB, msg: ptrval(185), next: NIL.ptr() };  // run (fib 6)
         quad_mem[191]               = Typed::Actor { beh: RESEND, state: Ptr::new(189), events: None };
 
@@ -1044,9 +1071,9 @@ pub const _FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // work
             let beh = a_quad.x();
             let state = a_quad.y();
             let events = a_quad.z();
-            if events == UNDEF.any() {
+            if events == UNDEF {
                 // begin actor-event transaction
-                self.ram_mut(a_ptr).set_z(NIL.any());
+                self.ram_mut(a_ptr).set_z(NIL);
                 let kp = self.new_cont(beh, state, ep);
                 println!("dispatch_event: cont={} -> {}", kp, self.mem(kp));
                 self.cont_enqueue(kp);
@@ -1091,7 +1118,7 @@ pub const _FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // work
     fn perform_op(&mut self, ip: Any) -> Any {
         let instr = self.mem(ip);
         println!("perform_op: ip={} -> {}", ip, instr);
-        assert!(instr.t() == INSTR_T.any());
+        assert!(instr.t() == INSTR_T);
         let _opr = instr.x();  // operation code
         let imm = instr.y();  // immediate argument
         let kip = instr.z();  // next instruction
@@ -1102,7 +1129,7 @@ pub const _FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // work
                     println!("vm_typeq: typ={}", t);
                     let val = self.stack_pop();
                     println!("vm_typeq: val={}", val);
-                    let r = if self.typeq(t.val(), val) { TRUE.any() } else { FALSE.any() };
+                    let r = if self.typeq(t.any(), val) { TRUE } else { FALSE };
                     self.stack_push(r);
                     kip
                 },
@@ -1113,7 +1140,7 @@ pub const _FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // work
                             let key = self.stack_pop();
                             let dict = self.stack_pop();
                             let b = self.dict_has(dict, key);
-                            let v = if b { TRUE.any() } else { FALSE.any() };
+                            let v = if b { TRUE } else { FALSE };
                             self.stack_push(v);
                         },
                         Dict::Get => {
@@ -1155,7 +1182,7 @@ pub const _FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // work
                         Deque::Empty => {
                             let deque = self.stack_pop();
                             let b = self.deque_empty(deque);
-                            let v = if b { TRUE.any() } else { FALSE.any() };
+                            let v = if b { TRUE } else { FALSE };
                             self.stack_push(v);
                         },
                         Deque::Push => {
@@ -1243,7 +1270,7 @@ pub const _FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // work
                         let lst = self.sp();
                         self.extract_nth(lst, n)
                     } else {
-                        UNDEF.any()
+                        UNDEF
                     };
                     println!("vm_pick: r={}", r);
                     self.stack_push(r);
@@ -1268,7 +1295,7 @@ pub const _FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // work
                         println!("vm_alu: v={}", v);
                         match v.fix_num() {
                             Some(n) => Any::fix(!n),
-                            _ => UNDEF.any(),
+                            _ => UNDEF,
                         }
                     } else {
                         let vv = self.stack_pop();
@@ -1284,10 +1311,10 @@ pub const _FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // work
                                     Alu::Add => Any::fix(n + nn),
                                     Alu::Sub => Any::fix(n - nn),
                                     Alu::Mul => Any::fix(n * nn),
-                                    _ => UNDEF.any(),
+                                    _ => UNDEF,
                                 }
                             }
-                            _ => UNDEF.any()
+                            _ => UNDEF
                         }
                     };
                     println!("vm_alu: r={}", r);
@@ -1298,7 +1325,7 @@ pub const _FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // work
                     println!("vm_eq: v={}", v);
                     let vv = self.stack_pop();
                     println!("vm_eq: vv={}", vv);
-                    let r = if imm == vv { TRUE.any() } else { FALSE.any() };
+                    let r = if imm == vv { TRUE } else { FALSE };
                     println!("vm_eq: r={}", r);
                     self.stack_push(r);
                     kip
@@ -1327,7 +1354,7 @@ pub const _FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // work
                             _ => false
                         }
                     };
-                    let r = if b { TRUE.any() } else { FALSE.any() };
+                    let r = if b { TRUE } else { FALSE };
                     println!("vm_cmp: r={}", r);
                     self.stack_push(r);
                     kip
@@ -1437,23 +1464,23 @@ pub const _FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // work
                             let _r = self.stack_pop();  // reason for abort
                             println!("vm_end: reason={}", _r);
                             self.actor_abort(me);
-                            //UNDEF.any()
+                            //UNDEF
                             panic!("End::Abort should signal controller")
                         },
                         End::Stop => {
                             println!("vm_end: MEMORY={}", self.ram(MEMORY));
-                            //UNIT.any()
+                            //UNIT
                             panic!("End::Stop terminated continuation")
                         },
                         End::Commit => {
                             self.actor_commit(me);
-                            TRUE.any()
+                            TRUE
                         },
                         End::Release => {
-                            self.ram_mut(me).set_y(NIL.any());  // no retained stack
+                            self.ram_mut(me).set_y(NIL);  // no retained stack
                             self.actor_commit(me);
                             self.free(me);  // free actor
-                            FALSE.any()
+                            FALSE
                         },
                     }
                 },
@@ -1480,7 +1507,7 @@ pub const _FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // work
     }
 
     fn event_enqueue(&mut self, ep: Any) {
-        self.ram_mut(ep).set_z(NIL.any());
+        self.ram_mut(ep).set_z(NIL);
         if !self.e_first().is_ram() {
             self.set_e_first(ep);
         } else if self.e_last().is_ram() {
@@ -1495,7 +1522,7 @@ pub const _FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // work
             let next = event.z();
             self.set_e_first(next);
             if !next.is_ram() {
-                self.set_e_last(NIL.any())
+                self.set_e_last(NIL)
             }
             Some(ep)
         } else {
@@ -1504,7 +1531,7 @@ pub const _FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // work
     }
 
     fn cont_enqueue(&mut self, kp: Any) {
-        self.ram_mut(kp).set_z(NIL.any());
+        self.ram_mut(kp).set_z(NIL);
         if !self.k_first().is_ram() {
             self.set_k_first(kp);
         } else if self.k_last().is_ram() {
@@ -1519,7 +1546,7 @@ pub const _FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // work
             let next = cont.z();
             self.set_k_first(next);
             if !next.is_ram() {
-                self.set_k_last(NIL.any())
+                self.set_k_last(NIL)
             }
             Some(kp)
         } else {
@@ -1540,7 +1567,7 @@ pub const _FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // work
             ep = next;
         }
         // end actor transaction
-        self.ram_mut(me).set_z(UNDEF.any());
+        self.ram_mut(me).set_z(UNDEF);
     }
     fn actor_abort(&mut self, me: Any) {
         let state = self.ram(me).y();
@@ -1555,7 +1582,7 @@ pub const _FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // work
             ep = next;
         }
         // end actor transaction
-        self.ram_mut(me).set_z(UNDEF.any());
+        self.ram_mut(me).set_z(UNDEF);
     }
     pub fn self_ptr(&self) -> Any {
         let ep = self.ep();
@@ -1584,24 +1611,24 @@ pub const _FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // work
         if n > 0 {  // build list from stack
             let sp = self.sp();
             let mut v = sp;
-            let mut p = UNDEF.any();
+            let mut p = UNDEF;
             while n > 0 && self.typeq(PAIR_T, v) {
                 p = v;
                 v = self.cdr(p);
                 n -= 1;
             }
             if self.typeq(PAIR_T, p) {
-                self.set_cdr(p, NIL.any());
+                self.set_cdr(p, NIL);
             }
             self.set_sp(v);
             sp
         } else {  // empty list
-            NIL.any()
+            NIL
         }
     }
     fn split_nth(&self, lst: Any, n: isize) -> (Any, Any) {
         let mut p = lst;
-        let mut q = UNDEF.any();
+        let mut q = UNDEF;
         let mut n = n;
         assert!(n < 64);
         while n > 1 && self.typeq(PAIR_T, p) {
@@ -1613,7 +1640,7 @@ pub const _FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // work
     }
     fn extract_nth(&self, lst: Any, n: isize) -> Any {
         let mut p = lst;
-        let mut v = UNDEF.any();
+        let mut v = UNDEF;
         let mut n = n;
         if n == 0 {  // entire list/message
             v = p;
@@ -1663,7 +1690,7 @@ pub const _FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // work
             }
             d = entry.z();  // next
         }
-        UNDEF.any()
+        UNDEF
     }
     pub fn dict_add(&mut self, dict: Any, key: Any, value: Any) -> Any {
         let dict = Quad::dict_t(key, value, dict);
@@ -1690,7 +1717,7 @@ pub const _FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // work
                 self.dict_add(d, k, value)
             }
         } else {
-            NIL.any()
+            NIL
         }
     }
 
@@ -1731,7 +1758,7 @@ pub const _FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // work
                 return (deque, item)
             }
         }
-        (deque, UNDEF.any())
+        (deque, UNDEF)
     }
     pub fn deque_put(&mut self, deque: Any, item: Any) -> Any {
         let front = self.car(deque);
@@ -1758,7 +1785,7 @@ pub const _FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // work
                 return (deque, item)
             }
         }
-        (deque, UNDEF.any())
+        (deque, UNDEF)
     }
     pub fn deque_len(&self, deque: Any) -> isize {
         let front = self.car(deque);
@@ -1786,11 +1813,11 @@ pub const _FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // work
 
     pub fn new_event(&mut self, target: Any, msg: Any) -> Any {
         assert!(self.typeq(ACTOR_T, target));
-        let event = Quad::event_t(target, msg, NIL.any());
+        let event = Quad::event_t(target, msg, NIL);
         self.alloc(&event)
     }
     pub fn new_cont(&mut self, ip: Any, sp: Any, ep: Any) -> Any {
-        let cont = Quad::cont_t(ip, sp, ep, NIL.any());
+        let cont = Quad::cont_t(ip, sp, ep, NIL);
         self.alloc(&cont)
     }
     pub fn new_actor(&mut self, beh: Any, state: Any) -> Any {
@@ -1804,11 +1831,11 @@ pub const _FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // work
         if n > 0 {
             let mut n = n;
             let h = self.stack_pop();
-            let lst = self.cons(h, NIL.any());
+            let lst = self.cons(h, NIL);
             let mut p = lst;
             while n > 1 {
                 let h = self.stack_pop();
-                let q = self.cons(h, NIL.any());
+                let q = self.cons(h, NIL);
                 self.set_cdr(p, q);
                 p = q;
                 n -= 1;
@@ -1823,11 +1850,11 @@ pub const _FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // work
         let mut s = self.stack_pop();  // list to destructure
         if n > 0 {
             let mut n = n;
-            let lst = self.cons(self.car(s), NIL.any());
+            let lst = self.cons(self.car(s), NIL);
             let mut p = lst;
             while n > 1 {
                 s = self.cdr(s);
-                let q = self.cons(self.car(s), NIL.any());
+                let q = self.cons(self.car(s), NIL);
                 self.set_cdr(p, q);
                 p = q;
                 n -= 1;
@@ -1847,7 +1874,7 @@ pub const _FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // work
                 self.set_cdr(p, sp);
                 self.set_sp(p);
             } else {
-                self.stack_push(UNDEF.any());  // out of range
+                self.stack_push(UNDEF);  // out of range
             }
         } else if n < -1 {
             assert!(n > -64);  // FIXME: replace with cycle-limit(s) in Sponsor
@@ -1866,12 +1893,12 @@ pub const _FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // work
         let mut n = n;
         if n > 0 {
             let mut s = self.sp();
-            let sp = self.cons(self.car(s), NIL.any());
+            let sp = self.cons(self.car(s), NIL);
             let mut p = sp;
             s = self.cdr(s);
             n -= 1;
             while n > 0 {
-                let q = self.cons(self.car(s), NIL.any());
+                let q = self.cons(self.car(s), NIL);
                 self.set_cdr(p, q);
                 p = q;
                 s = self.cdr(s);
@@ -1899,7 +1926,7 @@ pub const _FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // work
             item
         } else {
             println!("stack_pop: underflow!");  // NOTE: this is just a warning, returning UNDEF...
-            UNDEF.any()
+            UNDEF
         }
     }
     fn stack_push(&mut self, val: Any) {
@@ -1915,24 +1942,24 @@ pub const _FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // work
         if self.typeq(PAIR_T, pair) {
             self.mem(pair).x()
         } else {
-            UNDEF.any()
+            UNDEF
         }
     }
     pub fn cdr(&self, pair: Any) -> Any {
         if self.typeq(PAIR_T, pair) {
             self.mem(pair).y()
         } else {
-            UNDEF.any()
+            UNDEF
         }
     }
     fn _set_car(&mut self, pair: Any, val: Any) {
         assert!(self.in_heap(pair));
-        assert!(self.ram(pair).t() == PAIR_T.any());
+        assert!(self.ram(pair).t() == PAIR_T);
         self.ram_mut(pair).set_x(val);
     }
     fn set_cdr(&mut self, pair: Any, val: Any) {
         assert!(self.in_heap(pair));
-        assert!(self.ram(pair).t() == PAIR_T.any());
+        assert!(self.ram(pair).t() == PAIR_T);
         self.ram_mut(pair).set_y(val);
     }
 
@@ -1957,18 +1984,18 @@ pub const _FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // work
         quad.set_x(ptr)
     }
 
-    pub fn typeq(&self, typ: Val, val: Any) -> bool {
+    pub fn typeq(&self, typ: Any, val: Any) -> bool {
         if typ == FIXNUM_T {
             val.is_fix()
         } else if typ == ACTOR_T {
             if val.is_cap() {
                 let ptr = Any::ram(val.addr());  // WARNING: converting Cap to Ptr!
-                self.ram(ptr).t() == ACTOR_T.any()
+                self.ram(ptr).t() == ACTOR_T
             } else {
                 false
             }
         } else if val.is_ptr() {
-            self.mem(val).t() == typ.any()
+            self.mem(val).t() == typ
         } else {
             false
         }
@@ -1977,13 +2004,13 @@ pub const _FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // work
         val.is_ram() && (val.addr() < self.mem_top().addr())
     }
     fn ptr_to_cap(&self, ptr: Any) -> Any {
-        assert!(self.ram(ptr).t() == ACTOR_T.any());
+        assert!(self.ram(ptr).t() == ACTOR_T);
         let cap = Any::cap(ptr.addr());
         cap
     }
     fn cap_to_ptr(&self, cap: Any) -> Any {
         let ptr = Any::ram(cap.addr());
-        assert!(self.ram(ptr).t() == ACTOR_T.any());
+        assert!(self.ram(ptr).t() == ACTOR_T);
         ptr
     }
 
@@ -2055,10 +2082,10 @@ pub const _FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // work
     pub fn next(&self, ptr: Any) -> Any {
         if ptr.is_ptr() {
             let quad = self.mem(ptr);
-            if quad.t() == INSTR_T.any() {
+            if quad.t() == INSTR_T {
                 let op = quad.x();
                 if op == VM_IF.any() || op == VM_END.any() {
-                    UNDEF.any()
+                    UNDEF
                 } else {
                     quad.z()
                 }
@@ -2066,13 +2093,13 @@ pub const _FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // work
                 quad.z()
             }
         } else {
-            UNDEF.any()
+            UNDEF
         }
     }
 }
 
 fn falsey(v: Any) -> bool {
-    v == FALSE.any() || v == UNDEF.any() || v == NIL.any() || v == ZERO
+    v == FALSE || v == UNDEF || v == NIL || v == ZERO
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -2095,14 +2122,14 @@ pub enum Typed {
 }
 impl Typed {
     pub fn from(quad: &Quad) -> Option<Typed> {
-        match quad.get_t() {
+        match quad.t() {
             LITERAL_T => Some(Typed::Literal),
             TYPE_T => Some(Typed::Type),
             EVENT_T => Some(Typed::Event { target: quad.get_x().cap(), msg: quad.get_y(), next: quad.get_z().ptr() }),
             INSTR_T => Op::from(quad),
-            ACTOR_T => Some(Typed::Actor { beh: quad.get_x().ptr(), state: quad.get_y().ptr(), events: match quad.get_z() {
+            ACTOR_T => Some(Typed::Actor { beh: quad.get_x().ptr(), state: quad.get_y().ptr(), events: match quad.z() {
                 UNDEF => None,
-                val => Some(val.ptr()),
+                val => Some(val.val().ptr()),
             }}),
             SYMBOL_T => Some(Typed::Symbol { hash: quad.get_x().fix(), key: quad.get_y().ptr(), val: quad.get_z() }),
             PAIR_T => Some(Typed::Pair { car: quad.get_x(), cdr: quad.get_y() }),
@@ -2114,21 +2141,21 @@ impl Typed {
     }
     pub fn quad(&self) -> Quad {
         match self {
-            Typed::Empty => Quad::init(UNDEF, UNDEF, UNDEF, UNDEF),
-            Typed::Literal => Quad::init(LITERAL_T, UNDEF, UNDEF, UNDEF),
-            Typed::Type => Quad::init(TYPE_T, UNDEF, UNDEF, UNDEF),
-            Typed::Event { target, msg, next } => Quad::init(EVENT_T, target.val(), msg.val(), next.val()),
+            Typed::Empty => Quad::new(UNDEF, UNDEF, UNDEF, UNDEF),
+            Typed::Literal => Quad::new(LITERAL_T, UNDEF, UNDEF, UNDEF),
+            Typed::Type => Quad::new(TYPE_T, UNDEF, UNDEF, UNDEF),
+            Typed::Event { target, msg, next } => Quad::init(EVENT_T.val(), target.val(), msg.val(), next.val()),
             Typed::Cont { ip, sp, ep, next } => Quad::init(ip.val(), sp.val(), ep.val(), next.val()),
             Typed::Instr { op } => op.quad(),
-            Typed::Actor { beh, state, events } => Quad::init(ACTOR_T, beh.val(), state.val(), match events {
-                None => UNDEF,
+            Typed::Actor { beh, state, events } => Quad::init(ACTOR_T.val(), beh.val(), state.val(), match events {
+                None => UNDEF.val(),
                 Some(ptr) => ptr.val(),
             }),
-            Typed::Symbol { hash, key, val } => Quad::init(SYMBOL_T, hash.val(), key.val(), val.val()),
-            Typed::Pair { car, cdr } => Quad::init(PAIR_T, car.val(), cdr.val(), UNDEF),
-            //Typed::Fexpr { func } => Quad::new(FEXPR_T, func.val(), UNDEF, UNDEF),
-            Typed::Dict { key, value, next } => Quad::init(DICT_T, key.val(), value.val(), next.val()),
-            Typed::Free { next } => Quad::init(FREE_T, UNDEF, UNDEF, next.val()),
+            Typed::Symbol { hash, key, val } => Quad::init(SYMBOL_T.val(), hash.val(), key.val(), val.val()),
+            Typed::Pair { car, cdr } => Quad::new(PAIR_T, car.any(), cdr.any(), UNDEF),
+            //Typed::Fexpr { func } => Quad::new(FEXPR_T.val(), func.val(), UNDEF, UNDEF),
+            Typed::Dict { key, value, next } => Quad::init(DICT_T.val(), key.val(), value.val(), next.val()),
+            Typed::Free { next } => Quad::new(FREE_T, UNDEF, UNDEF, next.any()),
             Typed::Ddeque { e_first, e_last, k_first, k_last } => Quad::init(e_first.val(), e_last.val(), k_first.val(), k_last.val()),
             Typed::Memory { top, next, free, root } => Quad::init(top.val(), next.val(), free.val(), root.val()),
             Typed::Quad { t, x, y, z } => Quad::init(t.val(), x.val(), y.val(), z.val()),
@@ -2146,7 +2173,7 @@ impl fmt::Display for Typed {
             Typed::Instr { op } => write!(fmt, "Instr{{ op:{} }}", op),
             Typed::Actor { beh, state, events } => write!(fmt, "Actor{{ beh:{}, state:{}, events:{} }}", beh, state, match events {
                 Some(ptr) => ptr.val(),
-                None => UNDEF,
+                None => UNDEF.val(),
             }),
             Typed::Symbol { hash, key, val } => write!(fmt, "Symbol{{ hash:{}, key:{}, val:{} }}", hash, key, val),
             Typed::Pair { car, cdr } => write!(fmt, "Pair{{ car:{}, cdr:{} }}", car, cdr),
@@ -2192,7 +2219,7 @@ pub enum Op {
 }
 impl Op {
     pub fn from(quad: &Quad) -> Option<Typed> {
-        assert!(quad.get_t() == INSTR_T);
+        assert!(quad.t() == INSTR_T);
         match quad.get_x() {
             VM_TYPEQ => Some(Typed::Instr { op: Op::Typeq { t: quad.get_y().ptr(), k: quad.get_z().ptr() } }),
             VM_DICT => Some(Typed::Instr { op: Op::Dict { op: Dict::from(quad.get_y()).unwrap(), k: quad.get_z().ptr() } }),
@@ -2223,30 +2250,30 @@ impl Op {
     }
     pub fn quad(&self) -> Quad {
         match self {
-            Op::Typeq { t, k } => Quad::init(INSTR_T, VM_TYPEQ, t.val(), k.val()),
-            Op::Dict { op, k } => Quad::init(INSTR_T, VM_DICT, op.val(), k.val()),
-            Op::Deque { op, k } => Quad::init(INSTR_T, VM_DEQUE, op.val(), k.val()),
-            Op::Pair { n, k } => Quad::init(INSTR_T, VM_PAIR, n.val(), k.val()),
-            Op::Part { n, k } => Quad::init(INSTR_T, VM_PART, n.val(), k.val()),
-            Op::Nth { n, k } => Quad::init(INSTR_T, VM_NTH, n.val(), k.val()),
-            Op::Push { v, k } => Quad::init(INSTR_T, VM_PUSH, v.val(), k.val()),
-            Op::Depth { k } => Quad::init(INSTR_T, VM_DEPTH, UNDEF, k.val()),
-            Op::Drop { n, k } => Quad::init(INSTR_T, VM_DROP, n.val(), k.val()),
-            Op::Pick { n, k } => Quad::init(INSTR_T, VM_PICK, n.val(), k.val()),
-            Op::Dup { n, k } => Quad::init(INSTR_T, VM_DUP, n.val(), k.val()),
-            Op::Roll { n, k } => Quad::init(INSTR_T, VM_ROLL, n.val(), k.val()),
-            Op::Alu { op, k } => Quad::init(INSTR_T, VM_ALU, op.val(), k.val()),
-            Op::Eq { v, k } => Quad::init(INSTR_T, VM_EQ, v.val(), k.val()),
-            Op::Cmp { op, k } => Quad::init(INSTR_T, VM_CMP, op.val(), k.val()),
-            Op::If { t, f } => Quad::init(INSTR_T, VM_IF, t.val(), f.val()),
-            Op::Msg { n, k } => Quad::init(INSTR_T, VM_MSG, n.val(), k.val()),
-            Op::My { op, k } => Quad::init(INSTR_T, VM_MY, op.val(), k.val()),
-            Op::Send { n, k } => Quad::init(INSTR_T, VM_SEND, n.val(), k.val()),
-            Op::New { n, k } => Quad::init(INSTR_T, VM_NEW, n.val(), k.val()),
-            Op::Beh { n, k } => Quad::init(INSTR_T, VM_BEH, n.val(), k.val()),
-            Op::End { op } => Quad::init(INSTR_T, VM_END, op.val(), UNDEF),
-            Op::IsEq { v, k } => Quad::init(INSTR_T, VM_IS_EQ, v.val(), k.val()),
-            Op::IsNe { v, k } => Quad::init(INSTR_T, VM_IS_NE, v.val(), k.val()),
+            Op::Typeq { t, k } => Quad::init(INSTR_T.val(), VM_TYPEQ, t.val(), k.val()),
+            Op::Dict { op, k } => Quad::init(INSTR_T.val(), VM_DICT, op.val(), k.val()),
+            Op::Deque { op, k } => Quad::init(INSTR_T.val(), VM_DEQUE, op.val(), k.val()),
+            Op::Pair { n, k } => Quad::init(INSTR_T.val(), VM_PAIR, n.val(), k.val()),
+            Op::Part { n, k } => Quad::init(INSTR_T.val(), VM_PART, n.val(), k.val()),
+            Op::Nth { n, k } => Quad::init(INSTR_T.val(), VM_NTH, n.val(), k.val()),
+            Op::Push { v, k } => Quad::init(INSTR_T.val(), VM_PUSH, v.val(), k.val()),
+            Op::Depth { k } => Quad::init(INSTR_T.val(), VM_DEPTH, UNDEF.val(), k.val()),
+            Op::Drop { n, k } => Quad::init(INSTR_T.val(), VM_DROP, n.val(), k.val()),
+            Op::Pick { n, k } => Quad::init(INSTR_T.val(), VM_PICK, n.val(), k.val()),
+            Op::Dup { n, k } => Quad::init(INSTR_T.val(), VM_DUP, n.val(), k.val()),
+            Op::Roll { n, k } => Quad::init(INSTR_T.val(), VM_ROLL, n.val(), k.val()),
+            Op::Alu { op, k } => Quad::init(INSTR_T.val(), VM_ALU, op.val(), k.val()),
+            Op::Eq { v, k } => Quad::init(INSTR_T.val(), VM_EQ, v.val(), k.val()),
+            Op::Cmp { op, k } => Quad::init(INSTR_T.val(), VM_CMP, op.val(), k.val()),
+            Op::If { t, f } => Quad::init(INSTR_T.val(), VM_IF, t.val(), f.val()),
+            Op::Msg { n, k } => Quad::init(INSTR_T.val(), VM_MSG, n.val(), k.val()),
+            Op::My { op, k } => Quad::init(INSTR_T.val(), VM_MY, op.val(), k.val()),
+            Op::Send { n, k } => Quad::init(INSTR_T.val(), VM_SEND, n.val(), k.val()),
+            Op::New { n, k } => Quad::init(INSTR_T.val(), VM_NEW, n.val(), k.val()),
+            Op::Beh { n, k } => Quad::init(INSTR_T.val(), VM_BEH, n.val(), k.val()),
+            Op::End { op } => Quad::init(INSTR_T.val(), VM_END, op.val(), UNDEF.val()),
+            Op::IsEq { v, k } => Quad::init(INSTR_T.val(), VM_IS_EQ, v.val(), k.val()),
+            Op::IsNe { v, k } => Quad::init(INSTR_T.val(), VM_IS_NE, v.val(), k.val()),
         }
     }
 }
@@ -2255,7 +2282,7 @@ impl fmt::Display for Op {
         match self {
             //Op::Typeq { t, k } => write!(fmt, "Typeq{{ t:{}, k:{} }}", t, k),
             Op::Typeq { t, k } => {
-                match t.val() {
+                match t.any() {
                     LITERAL_T => write!(fmt, "Typeq{{ t:LITERAL_T, k:{} }}", k),
                     _ => write!(fmt, "Typeq{{ t:{}, k:{} }}", t, k),
                 }
@@ -2650,7 +2677,7 @@ impl Ptr {
 }
 impl fmt::Display for Ptr {
     fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self.val() {
+        match self.any() {
             UNDEF => write!(fmt, "#?"),
             NIL => write!(fmt, "()"),
             FALSE => write!(fmt, "#f"),
@@ -2794,9 +2821,9 @@ fn core_initialization() {
     let core = Core::new();
     //assert_eq!(0, core.mem_free().fix_num().unwrap());
     assert_eq!(Any::fix(0), core.mem_free());
-    assert_eq!(NIL.any(), core.mem_next());
-    assert_ne!(NIL.any(), core.e_first());
-    assert_eq!(NIL.any(), core.k_first());
+    assert_eq!(NIL, core.mem_next());
+    assert_ne!(NIL, core.e_first());
+    assert_eq!(NIL, core.k_first());
     for raw in 0..256 {
         let quad = core.mem(Any::new(raw));
         let typed = Typed::from(quad).unwrap();
