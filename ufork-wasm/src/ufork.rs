@@ -332,7 +332,12 @@ impl Quad {
 }
 impl fmt::Display for Quad {
     fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(fmt, "{{t:{}, x:{}, y:{}, z:{}}}", self.t, self.x, self.y, self.z)
+        let typ = if self.t() == UNDEF.any() {
+            String::from("LITERAL_T")
+        } else {
+            self.t().to_string()
+        };
+        write!(fmt, "{{t:{}, x:{}, y:{}, z:{}}}", typ, self.x(), self.y(), self.z())
     }
 }
 
@@ -433,7 +438,6 @@ const QUAD_MAX: usize = 1<<10;  // 1K quad-cells
 pub struct Core {
     quad_rom: [Quad; QUAD_MAX],
     quad_ram: [Quad; QUAD_MAX],
-    quad_mem: [Typed; QUAD_MAX],
 }
 
 impl Core {
@@ -1014,7 +1018,6 @@ pub const _FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // work
         Core {
             quad_rom,
             quad_ram,
-            quad_mem,
         }
     }
 
@@ -2049,16 +2052,6 @@ pub const _FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // work
         &mut self.quad_ram[addr]
     }
 
-    pub fn typed(&self, ptr: Ptr) -> &Typed {
-        let addr = ptr.addr();  // FIXME! CONFLATES ROM AND RAM!!
-        &self.quad_mem[addr]
-    }
-    pub fn typed_mut(&mut self, ptr: Ptr) -> &mut Typed {
-        assert!(self.in_heap(ptr.any()));
-        let addr = ptr.addr();
-        &mut self.quad_mem[addr]
-    }
-
     pub fn next(&self, ptr: Any) -> Any {
         if ptr.is_ptr() {
             let quad = self.mem(ptr);
@@ -2805,8 +2798,9 @@ fn core_initialization() {
     assert_ne!(NIL.any(), core.e_first());
     assert_eq!(NIL.any(), core.k_first());
     for raw in 0..256 {
-        let typed = core.typed(Ptr::new(raw));
-        println!("{:5}: {} = {}", raw, typed.quad(), typed);
+        let quad = core.mem(Any::new(raw));
+        let typed = Typed::from(quad).unwrap();
+        println!("{:5}: {} = {}", raw, quad, typed);
     }
     //assert!(false);  // force output to be displayed
 }
