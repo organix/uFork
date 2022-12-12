@@ -20,16 +20,20 @@ impl Any {
         Any { raw }
     }
     pub fn fix(num: isize) -> Any {
-        Any::new(DIR_RAW | (num as Raw))
+        let raw = num as Raw;
+        Any::new(DIR_RAW | raw)
     }
     pub fn cap(ofs: usize) -> Any {
-        Any::new(OPQ_RAW | ((ofs as Raw) & !MSK_RAW))
+        let raw = (ofs as Raw) & !MSK_RAW;
+        Any::new(OPQ_RAW | MUT_RAW | raw)
     }
     pub fn rom(ofs: usize) -> Any {
-        Any::new((ofs as Raw) & !MSK_RAW)
+        let raw = (ofs as Raw) & !MSK_RAW;
+        Any::new(raw)
     }
     pub fn ram(ofs: usize) -> Any {
-        Any::new(MUT_RAW | ((ofs as Raw) & !MSK_RAW))
+        let raw = (ofs as Raw) & !MSK_RAW;
+        Any::new(MUT_RAW | raw)
     }
     pub fn raw(&self) -> Raw {
         self.raw
@@ -45,7 +49,7 @@ impl Any {
         (self.raw & DIR_RAW) != 0
     }
     pub fn is_cap(&self) -> bool {
-        (self.raw & MSK_RAW) == OPQ_RAW
+        (self.raw & (DIR_RAW | OPQ_RAW)) == OPQ_RAW
     }
     pub fn is_ptr(&self) -> bool {
         (self.raw & (DIR_RAW | OPQ_RAW)) == 0
@@ -659,6 +663,7 @@ impl fmt::Display for Quad {
 
 // literal values (`Any` type)
 pub const ZERO: Any         = Any { raw: DIR_RAW | 0 };
+
 pub const UNDEF: Any        = Any { raw: 0 };
 pub const NIL: Any          = Any { raw: 1 };
 pub const FALSE: Any        = Any { raw: 2 };
@@ -676,9 +681,10 @@ pub const PAIR_T: Any       = Any { raw: 11 };
 pub const DICT_T: Any       = Any { raw: 12 };
 pub const FREE_T: Any       = Any { raw: 13 };
 
+pub const START: Any        = Any { raw: 16 };
+
 pub const MEMORY: Any       = Any { raw: MUT_RAW | 0 };
 pub const DDEQUE: Any       = Any { raw: MUT_RAW | 1 };
-pub const START: Any        = Any { raw: 16 };
 
 // literal values {Val, Fix, Ptr, Cap} -- DEPRECATED
 /*
@@ -704,23 +710,6 @@ pub const MEMORY: Val       = Val { raw: 14 };
 pub const DDEQUE: Val       = Val { raw: 15 };
 pub const START: Val        = Val { raw: 16 };
 */
-
-pub const COMMIT: Ptr       = Ptr { raw: 16 };
-pub const SEND_0: Ptr       = Ptr { raw: 17 };
-pub const CUST_SEND: Ptr    = Ptr { raw: 18 };
-pub const RV_SELF: Ptr      = Ptr { raw: 19 };
-pub const RV_UNDEF: Ptr     = Ptr { raw: 20 };
-pub const RV_NIL: Ptr       = Ptr { raw: 21 };
-pub const RV_FALSE: Ptr     = Ptr { raw: 22 };
-pub const RV_TRUE: Ptr      = Ptr { raw: 23 };
-pub const RV_UNIT: Ptr      = Ptr { raw: 24 };
-pub const RV_ZERO: Ptr      = Ptr { raw: 25 };
-pub const RV_ONE: Ptr       = Ptr { raw: 26 };
-pub const RESEND: Ptr       = Ptr { raw: 28 };
-pub const RELEASE: Ptr      = Ptr { raw: 29 };
-pub const RELEASE_0: Ptr    = Ptr { raw: 30 };
-pub const MEMO_BEH: Ptr     = Ptr { raw: 31 };
-pub const A_SINK: Cap       = Cap { raw: 32 };
 pub const FWD_BEH: Ptr      = Ptr { raw: 33 };
 pub const ONCE_BEH: Ptr     = Ptr { raw: 35 };
 pub const LABEL_BEH: Ptr    = Ptr { raw: 37 };
@@ -731,13 +720,12 @@ pub const UNWRAP_BEH: Ptr   = Ptr { raw: 47 };
 pub const FUTURE_BEH: Ptr   = Ptr { raw: 49 };
 pub const VALUE_BEH: Ptr    = Ptr { raw: 66 };
 pub const SERIAL_BEH: Ptr   = Ptr { raw: 72 };
-pub const DQ_GC_ROOT: Ptr   = Ptr { raw: 84 };
+//pub const DQ_GC_ROOT: Ptr   = Ptr { raw: 84 };
 pub const DQ_EMPTY: Ptr     = Ptr { raw: 85 };
 pub const ABORT: Ptr        = Ptr { raw: 86 };
 pub const STOP: Ptr         = Ptr { raw: 88 };
 pub const WAIT_BEH: Ptr     = Ptr { raw: 90 };
 pub const BUSY_BEH: Ptr     = Ptr { raw: 113 };
-//pub const E_BOOT: Ptr       = Ptr { raw: 190 };
 
 // core memory limit
 const QUAD_MAX: usize = 1<<10;  // 1K quad-cells
@@ -754,21 +742,23 @@ impl Core {
             Quad::empty_t();
             QUAD_MAX
         ];
-        quad_ram[MEMORY.addr()]     = Quad::memory_t(Any::ram(256), NIL, Any::fix(0), NIL);
+        quad_ram[MEMORY.addr()]     = Quad::memory_t(Any::ram(256), NIL, Any::fix(0), DDEQUE);
         quad_ram[DDEQUE.addr()]     = Quad::ddeque_t(E_BOOT, E_BOOT, NIL, NIL);
+pub const E_BOOT: Any       = Any { raw: MUT_RAW | 2 };
+        //quad_ram[E_BOOT.addr()]     = Quad::event_t(Any::cap(89), Any::rom(188), NIL);  // stop actor
+        //quad_ram[E_BOOT.addr()]     = Quad::event_t(Any::cap(191), Any::rom(188), NIL);  // run loop demo
+        //quad_ram[E_BOOT.addr()]     = Quad::event_t(Any::cap(100), Any::rom(188), NIL);  // run test suite
+        //quad_ram[E_BOOT.addr()]     = Quad::event_t(Any::cap(F_FIB_ADDR+0), Any::rom(183), NIL);  // run (fib 3) => 2
+        quad_ram[E_BOOT.addr()]     = Quad::event_t(Any::cap(F_FIB_ADDR+0), Any::rom(185), NIL);  // run (fib 6) => 8
+        //quad_ram[E_BOOT.addr()]     = Quad::event_t(FN_FIB.any(), Any::rom(185), NIL);  // run (fib 6)
+pub const A_SINK: Any       = Any { raw: OPQ_RAW | MUT_RAW | 3 };
         quad_ram[A_SINK.addr()]     = Quad::new_actor(COMMIT.any(), NIL);
-        quad_ram[89]                = Quad::new_actor(STOP.any(), NIL);
-        /* bootstrap event/actor */
+pub const A_STOP: Any       = Any { raw: OPQ_RAW | MUT_RAW | 89 };
+        quad_ram[A_STOP.addr()]     = Quad::new_actor(STOP.any(), NIL);
+
         quad_ram[100]               = Quad::new_actor(Any::rom(101), NIL);
         quad_ram[F_FIB_ADDR+0]      = Quad::new_actor(F_FIB_BEH.any(), NIL);
         quad_ram[F_FIB_ADDR+27]     = Quad::new_actor(Any::rom(F_FIB_ADDR+28), NIL);
-pub const E_BOOT: Any       = Any { raw: MUT_RAW | 190 };
-        //quad_ram[190]               = Quad::event_t(Any::cap(89), Any::rom(188), NIL);  // stop actor
-        //quad_ram[190]               = Quad::event_t(Any::cap(191), Any::rom(188), NIL);  // run loop demo
-        //quad_ram[190]               = Quad::event_t(Any::cap(100), Any::rom(188), NIL);  // run test suite
-        //quad_ram[190]               = Quad::event_t(Any::cap(F_FIB_ADDR+0), Any::rom(183), NIL);  // run (fib 3) => 2
-        quad_ram[190]               = Quad::event_t(Any::cap(F_FIB_ADDR+0), Any::rom(185), NIL);  // run (fib 6) => 8
-        //quad_ram[190]               = Quad::event_t(FN_FIB.any(), Any::rom(185), NIL);  // run (fib 6)
         quad_ram[191]               = Quad::new_actor(RESEND.any(), Any::rom(189));
 
         let mut quad_mem = [
@@ -811,7 +801,7 @@ pub const E_BOOT: Any       = Any { raw: MUT_RAW | 190 };
         quad_mem[RELEASE_0.addr()]  = Typed::Instr { op: Op::Send { n: Fix::new(0), k: RELEASE } };
         //quad_mem[-1]              = Typed::Instr { op: Op::Push { v: <value>, k: ... } };
         quad_mem[MEMO_BEH.addr()]   = Typed::Instr { op: Op::Dup { n: Fix::new(1), k: CUST_SEND } };
-        quad_mem[A_SINK.addr()]     = Typed::Actor { beh: COMMIT, state: NIL.val().ptr(), events: None };
+        //quad_mem[A_SINK.addr()]     = Typed::Actor { beh: COMMIT, state: NIL.val().ptr(), events: None };
 
         /*
         (define fwd-beh
@@ -963,7 +953,7 @@ pub const E_BOOT: Any       = Any { raw: MUT_RAW | 190 };
         quad_mem[83]                = Typed::Instr { op: Op::Beh { n: Fix::new(4), k: COMMIT } };  // busy-beh[svc cust tag pending]
 
         /* DQ_EMPTY */
-        quad_mem[84]                = Typed::Pair { car: DQ_EMPTY.val(), cdr: DDEQUE.val() };
+        //quad_mem[84]                = Typed::Pair { car: DQ_EMPTY.val(), cdr: DDEQUE.val() };
         quad_mem[85]                = Typed::Pair { car: NIL.val(), cdr: NIL.val() };
 
         /* (ABORT #?) */
@@ -972,8 +962,7 @@ pub const E_BOOT: Any       = Any { raw: MUT_RAW | 190 };
 
         /* (STOP) */
         quad_mem[88]                = Typed::Instr { op: Op::End { op: End::Stop } };
-pub const A_STOP: Cap               = Cap { raw: 89 };
-        quad_mem[89]                = Typed::Actor { beh: STOP.ptr(), state: NIL.val().ptr(), events: None };
+        //quad_mem[89]                = Typed::Actor { beh: STOP.ptr(), state: NIL.val().ptr(), events: None };
 
         /*
         (define wait-beh
@@ -1191,9 +1180,9 @@ pub const _FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // work
         quad_mem[188]               = Typed::Pair { car: fixnum(-1), cdr: ptrval(187) };
         quad_mem[189]               = Typed::Pair { car: UNIT.val(), cdr: NIL.val() };
         //quad_mem[190]               = Typed::Event { target: Cap::new(191), msg: ptrval(188), next: NIL.ptr() };  // run loop demo
-        quad_mem[190]               = Typed::Event { target: Cap::new(100), msg: ptrval(188), next: NIL.val().ptr() };  // run test suite
+        //quad_mem[190]               = Typed::Event { target: Cap::new(100), msg: ptrval(188), next: NIL.val().ptr() };  // run test suite
         //quad_mem[190]               = Typed::Event { target: FN_FIB, msg: ptrval(185), next: NIL.ptr() };  // run (fib 6)
-        quad_mem[191]               = Typed::Actor { beh: RESEND, state: Ptr::new(189), events: None };
+        //quad_mem[191]               = Typed::Actor { beh: RESEND, state: Ptr::new(189), events: None };
 
         /* Op::Dict test suite */
         /*
@@ -1322,6 +1311,38 @@ pub const _FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // work
             let q = &quad_mem[addr];
             quad_rom[addr] = q.quad();
         }
+pub const COMMIT: Ptr       = Ptr { raw: 16 };
+        quad_rom[COMMIT.addr()]     = Quad::vm_end_commit();
+pub const SEND_0: Ptr       = Ptr { raw: 17 };
+        quad_rom[SEND_0.addr()]     = Quad::vm_send(Any::fix(0), COMMIT.any());
+pub const CUST_SEND: Ptr    = Ptr { raw: 18 };
+        quad_rom[CUST_SEND.addr()]  = Quad::vm_msg(Any::fix(1), SEND_0.any());
+pub const RV_SELF: Ptr      = Ptr { raw: 19 };
+        quad_rom[RV_SELF.addr()]    = Quad::vm_my_self(CUST_SEND.any());
+pub const RV_UNDEF: Ptr     = Ptr { raw: 20 };
+        quad_rom[RV_UNDEF.addr()]   = Quad::vm_push(UNDEF, CUST_SEND.any());
+pub const RV_NIL: Ptr       = Ptr { raw: 21 };
+        quad_rom[RV_NIL.addr()]     = Quad::vm_push(NIL, CUST_SEND.any());
+pub const RV_FALSE: Ptr     = Ptr { raw: 22 };
+        quad_rom[RV_FALSE.addr()]   = Quad::vm_push(FALSE, CUST_SEND.any());
+pub const RV_TRUE: Ptr      = Ptr { raw: 23 };
+        quad_rom[RV_TRUE.addr()]    = Quad::vm_push(TRUE, CUST_SEND.any());
+pub const RV_UNIT: Ptr      = Ptr { raw: 24 };
+        quad_rom[RV_UNIT.addr()]    = Quad::vm_push(UNIT, CUST_SEND.any());
+pub const RV_ZERO: Ptr      = Ptr { raw: 25 };
+        quad_rom[RV_ZERO.addr()]    = Quad::vm_push(ZERO, CUST_SEND.any());
+pub const RV_ONE: Ptr       = Ptr { raw: 26 };
+        quad_rom[RV_ONE.addr()]     = Quad::vm_push(Any::fix(1), CUST_SEND.any());
+pub const RESEND: Ptr       = Ptr { raw: 28 };
+        quad_rom[RESEND.addr()-1]   = Quad::vm_my_self(SEND_0.any());
+        quad_rom[RESEND.addr()]     = Quad::vm_msg(Any::fix(0), Any::rom(RESEND.addr()-1));
+pub const RELEASE: Ptr      = Ptr { raw: 29 };
+        quad_rom[RELEASE.addr()]    = Quad::vm_end_release();
+pub const RELEASE_0: Ptr    = Ptr { raw: 30 };
+        quad_rom[RELEASE_0.addr()]  = Quad::vm_send(Any::fix(0), RELEASE.any());
+pub const MEMO_BEH: Ptr     = Ptr { raw: 31 };
+        // stack: value
+        quad_rom[MEMO_BEH.addr()]   = Quad::vm_dup(Any::fix(1), CUST_SEND.any());  // value value
 
         Core {
             quad_rom,

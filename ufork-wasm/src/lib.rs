@@ -186,11 +186,14 @@ impl Host {
         let val = Any::new(raw);
         if val.is_ptr() {
             let quad = self.core.mem(val);
+            /*
             if let Some(typed) = Typed::from(quad) {
                 typed.to_string()
             } else {
                 quad.to_string()
             }
+            */
+            quad.to_string()
         } else {
             self.print(raw)
         }
