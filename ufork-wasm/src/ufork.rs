@@ -283,6 +283,67 @@ impl Quad {
         assert!(k.is_ptr());
         Self::instr_t(VM_TYPEQ.any(), t, k)
     }
+    pub fn vm_dict(op: Any, k: Any) -> Quad {
+        assert!(op.is_fix());
+        assert!(k.is_ptr());
+        Self::instr_t(VM_DICT.any(), op, k)
+    }
+    pub fn vm_deque(op: Any, k: Any) -> Quad {
+        assert!(op.is_fix());
+        assert!(k.is_ptr());
+        Self::instr_t(VM_DEQUE.any(), op, k)
+    }
+    pub fn vm_pair(n: Any, k: Any) -> Quad {
+        assert!(n.is_fix());
+        assert!(k.is_ptr());
+        Self::instr_t(VM_PAIR.any(), n, k)
+    }
+    pub fn vm_part(n: Any, k: Any) -> Quad {
+        assert!(n.is_fix());
+        assert!(k.is_ptr());
+        Self::instr_t(VM_PART.any(), n, k)
+    }
+    pub fn vm_nth(n: Any, k: Any) -> Quad {
+        assert!(n.is_fix());
+        assert!(k.is_ptr());
+        Self::instr_t(VM_NTH.any(), n, k)
+    }
+    pub fn vm_push(v: Any, k: Any) -> Quad {
+        assert!(k.is_ptr());
+        Self::instr_t(VM_PUSH.any(), v, k)
+    }
+    pub fn vm_depth(k: Any) -> Quad {
+        Self::instr_t(VM_DEPTH.any(), UNDEF, k)
+    }
+    pub fn vm_drop(n: Any, k: Any) -> Quad {
+        assert!(n.is_fix());
+        assert!(k.is_ptr());
+        Self::instr_t(VM_DROP.any(), n, k)
+    }
+    pub fn vm_pick(n: Any, k: Any) -> Quad {
+        assert!(n.is_fix());
+        assert!(k.is_ptr());
+        Self::instr_t(VM_PICK.any(), n, k)
+    }
+    pub fn vm_dup(n: Any, k: Any) -> Quad {
+        assert!(n.is_fix());
+        assert!(k.is_ptr());
+        Self::instr_t(VM_DUP.any(), n, k)
+    }
+    pub fn vm_roll(n: Any, k: Any) -> Quad {
+        assert!(n.is_fix());
+        assert!(k.is_ptr());
+        Self::instr_t(VM_ROLL.any(), n, k)
+    }
+    pub fn vm_alu(op: Any, k: Any) -> Quad {
+        assert!(op.is_fix());
+        assert!(k.is_ptr());
+        Self::instr_t(VM_ALU.any(), op, k)
+    }
+    pub fn vm_eq(v: Any, k: Any) -> Quad {
+        assert!(k.is_ptr());
+        Self::instr_t(VM_EQ.any(), v, k)
+    }
     pub fn vm_cmp(op: Any, k: Any) -> Quad {
         assert!(op.is_fix());
         assert!(k.is_ptr());
@@ -293,9 +354,124 @@ impl Quad {
         assert!(f.is_ptr());
         Self::instr_t(VM_IF.any(), t, f)
     }
+    pub fn vm_msg(n: Any, k: Any) -> Quad {
+        assert!(n.is_fix());
+        assert!(k.is_ptr());
+        Self::instr_t(VM_MSG.any(), n, k)
+    }
+    pub fn vm_my(op: Any, k: Any) -> Quad {
+        assert!(op.is_fix());
+        assert!(k.is_ptr());
+        Self::instr_t(VM_MY.any(), op, k)
+    }
+    pub fn vm_send(n: Any, k: Any) -> Quad {
+        assert!(n.is_fix());
+        assert!(k.is_ptr());
+        Self::instr_t(VM_SEND.any(), n, k)
+    }
+    pub fn vm_new(n: Any, k: Any) -> Quad {
+        assert!(n.is_fix());
+        assert!(k.is_ptr());
+        Self::instr_t(VM_NEW.any(), n, k)
+    }
+    pub fn vm_beh(n: Any, k: Any) -> Quad {
+        assert!(n.is_fix());
+        assert!(k.is_ptr());
+        Self::instr_t(VM_BEH.any(), n, k)
+    }
     pub fn vm_end(op: Any) -> Quad {
         assert!(op.is_fix());
         Self::instr_t(VM_END.any(), op, UNDEF)
+    }
+    pub fn vm_is_eq(v: Any, k: Any) -> Quad {
+        assert!(k.is_ptr());
+        Self::instr_t(VM_IS_EQ.any(), v, k)
+    }
+    pub fn vm_is_ne(v: Any, k: Any) -> Quad {
+        assert!(k.is_ptr());
+        Self::instr_t(VM_IS_NE.any(), v, k)
+    }
+
+    // construct VM_DICT instructions
+    pub fn vm_dict_has(k: Any) -> Quad {
+        assert!(k.is_ptr());
+        Self::vm_dict(DICT_HAS.any(), k)
+    }
+    pub fn vm_dict_get(k: Any) -> Quad {
+        assert!(k.is_ptr());
+        Self::vm_dict(DICT_GET.any(), k)
+    }
+    pub fn vm_dict_add(k: Any) -> Quad {
+        assert!(k.is_ptr());
+        Self::vm_dict(DICT_ADD.any(), k)
+    }
+    pub fn vm_dict_set(k: Any) -> Quad {
+        assert!(k.is_ptr());
+        Self::vm_dict(DICT_SET.any(), k)
+    }
+    pub fn vm_dict_del(k: Any) -> Quad {
+        assert!(k.is_ptr());
+        Self::vm_dict(DICT_DEL.any(), k)
+    }
+
+    // construct VM_DEQUE instructions
+    pub fn vm_deque_new(k: Any) -> Quad {
+        assert!(k.is_ptr());
+        Self::vm_deque(DEQUE_NEW.any(), k)
+    }
+    pub fn vm_deque_empty(k: Any) -> Quad {
+        assert!(k.is_ptr());
+        Self::vm_deque(DEQUE_EMPTY.any(), k)
+    }
+    pub fn vm_deque_push(k: Any) -> Quad {
+        assert!(k.is_ptr());
+        Self::vm_deque(DEQUE_PUSH.any(), k)
+    }
+    pub fn vm_deque_pop(k: Any) -> Quad {
+        assert!(k.is_ptr());
+        Self::vm_deque(DEQUE_POP.any(), k)
+    }
+    pub fn vm_deque_put(k: Any) -> Quad {
+        assert!(k.is_ptr());
+        Self::vm_deque(DEQUE_PUT.any(), k)
+    }
+    pub fn vm_deque_pull(k: Any) -> Quad {
+        assert!(k.is_ptr());
+        Self::vm_deque(DEQUE_PULL.any(), k)
+    }
+    pub fn vm_deque_len(k: Any) -> Quad {
+        assert!(k.is_ptr());
+        Self::vm_deque(DEQUE_LEN.any(), k)
+    }
+
+    // construct VM_ALU instructions
+    pub fn vm_alu_not(k: Any) -> Quad {
+        assert!(k.is_ptr());
+        Self::vm_alu(ALU_NOT.any(), k)
+    }
+    pub fn vm_alu_and(k: Any) -> Quad {
+        assert!(k.is_ptr());
+        Self::vm_alu(ALU_AND.any(), k)
+    }
+    pub fn vm_alu_or(k: Any) -> Quad {
+        assert!(k.is_ptr());
+        Self::vm_alu(ALU_OR.any(), k)
+    }
+    pub fn vm_alu_xor(k: Any) -> Quad {
+        assert!(k.is_ptr());
+        Self::vm_alu(ALU_XOR.any(), k)
+    }
+    pub fn vm_alu_add(k: Any) -> Quad {
+        assert!(k.is_ptr());
+        Self::vm_alu(ALU_ADD.any(), k)
+    }
+    pub fn vm_alu_sub(k: Any) -> Quad {
+        assert!(k.is_ptr());
+        Self::vm_alu(ALU_SUB.any(), k)
+    }
+    pub fn vm_alu_mul(k: Any) -> Quad {
+        assert!(k.is_ptr());
+        Self::vm_alu(ALU_MUL.any(), k)
     }
 
     // construct VM_CMP instructions
@@ -303,10 +479,53 @@ impl Quad {
         assert!(k.is_ptr());
         Self::vm_cmp(CMP_EQ.any(), k)
     }
+    pub fn vm_cmp_ge(k: Any) -> Quad {
+        assert!(k.is_ptr());
+        Self::vm_cmp(CMP_GE.any(), k)
+    }
+    pub fn vm_cmp_gt(k: Any) -> Quad {
+        assert!(k.is_ptr());
+        Self::vm_cmp(CMP_GT.any(), k)
+    }
+    pub fn vm_cmp_lt(k: Any) -> Quad {
+        assert!(k.is_ptr());
+        Self::vm_cmp(CMP_LT.any(), k)
+    }
+    pub fn vm_cmp_le(k: Any) -> Quad {
+        assert!(k.is_ptr());
+        Self::vm_cmp(CMP_LE.any(), k)
+    }
+    pub fn vm_cmp_ne(k: Any) -> Quad {
+        assert!(k.is_ptr());
+        Self::vm_cmp(CMP_NE.any(), k)
+    }
+
+    // construct VM_MY instructions
+    pub fn vm_my_self(k: Any) -> Quad {
+        assert!(k.is_ptr());
+        Self::vm_my(MY_SELF.any(), k)
+    }
+    pub fn vm_my_beh(k: Any) -> Quad {
+        assert!(k.is_ptr());
+        Self::vm_my(MY_BEH.any(), k)
+    }
+    pub fn vm_my_state(k: Any) -> Quad {
+        assert!(k.is_ptr());
+        Self::vm_my(MY_STATE.any(), k)
+    }
 
     // construct VM_END instructions
+    pub fn vm_end_abort() -> Quad {
+        Self::vm_end(END_ABORT.any())
+    }
+    pub fn vm_end_stop() -> Quad {
+        Self::vm_end(END_STOP.any())
+    }
     pub fn vm_end_commit() -> Quad {
         Self::vm_end(END_COMMIT.any())
+    }
+    pub fn vm_end_release() -> Quad {
+        Self::vm_end(END_RELEASE.any())
     }
 
     // construct idle Actor
@@ -333,46 +552,108 @@ impl Quad {
 }
 impl fmt::Display for Quad {
     fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let t = if self.t() == UNDEF {
-            String::from("LITERAL_T")
-        } else {
-            self.t().to_string()
-        };
-        let x = if self.t() == INSTR_T {
+        let mut t = self.t().to_string();
+        if self.t() == UNDEF {
+            t = String::from("LITERAL_T");
+        }
+        let mut x = self.x().to_string();
+        let mut y = self.y().to_string();
+        if self.t() == INSTR_T {
             match self.x().val() {
-                VM_TYPEQ => String::from("TYPEQ"),
-                VM_CELL => String::from("CELL"),
-                VM_GET => String::from("GET"),
-                //VM_GET => String::from("SET"),
-                VM_DICT => String::from("DICT"),
-                VM_PAIR => String::from("PAIR"),
-                VM_PART => String::from("PART"),
-                VM_NTH => String::from("NTH"),
-                VM_PUSH => String::from("PUSH"),
-                VM_DEPTH => String::from("DEPTH"),
-                VM_DROP => String::from("DROP"),
-                VM_PICK => String::from("PICK"),
-                VM_DUP => String::from("DUP"),
-                VM_ROLL => String::from("ROLL"),
-                VM_ALU => String::from("ALU"),
-                VM_EQ => String::from("EQ"),
-                VM_CMP => String::from("CMP"),
-                VM_IF => String::from("IF"),
-                VM_MSG => String::from("MSG"),
-                VM_MY => String::from("MY"),
-                VM_SEND => String::from("SEND"),
-                VM_NEW => String::from("NEW"),
-                VM_BEH => String::from("BEH"),
-                VM_END => String::from("END"),
-                VM_DEQUE => String::from("DEQUE"),
-                VM_IS_EQ => String::from("IS_EQ"),
-                VM_IS_NE => String::from("IS_NE"),
-                _ => String::from("UNKNOWN"),
+                VM_TYPEQ => x = String::from("TYPEQ"),
+                VM_CELL => x = String::from("CELL"),
+                VM_GET => x = String::from("GET"),
+                //VM_GET => x = String::from("SET"),
+                VM_DICT => {
+                    x = String::from("DICT");
+                    match self.y().val() {
+                        DICT_HAS => y = String::from("HAS"),
+                        DICT_GET => y = String::from("GET"),
+                        DICT_ADD => y = String::from("ADD"),
+                        DICT_SET => y = String::from("SET"),
+                        DICT_DEL => y = String::from("DEL"),
+                        _ => {},
+                    }
+                },
+                VM_PAIR => x = String::from("PAIR"),
+                VM_PART => x = String::from("PART"),
+                VM_NTH => x = String::from("NTH"),
+                VM_PUSH => x = String::from("PUSH"),
+                VM_DEPTH => x = String::from("DEPTH"),
+                VM_DROP => x = String::from("DROP"),
+                VM_PICK => x = String::from("PICK"),
+                VM_DUP => x = String::from("DUP"),
+                VM_ROLL => x = String::from("ROLL"),
+                VM_ALU => {
+                    x = String::from("ALU");
+                    match self.y().val() {
+                        ALU_NOT => y = String::from("NOT"),
+                        ALU_AND => y = String::from("AND"),
+                        ALU_OR => y = String::from("OR"),
+                        ALU_XOR => y = String::from("XOR"),
+                        ALU_ADD => y = String::from("ADD"),
+                        ALU_SUB => y = String::from("SUB"),
+                        ALU_MUL => y = String::from("MUL"),
+                        _ => {},
+                    }
+                },
+                VM_EQ => x = String::from("EQ"),
+                VM_CMP => {
+                    x = String::from("CMP");
+                    match self.y().val() {
+                        CMP_EQ => y = String::from("EQ"),
+                        CMP_GE => y = String::from("GE"),
+                        CMP_GT => y = String::from("GT"),
+                        CMP_LT => y = String::from("LT"),
+                        CMP_LE => y = String::from("LE"),
+                        CMP_NE => y = String::from("NE"),
+                        _ => {},
+                    }
+                },
+                VM_IF => x = String::from("IF"),
+                VM_MSG => x = String::from("MSG"),
+                VM_MY => {
+                    x = String::from("MY");
+                    match self.y().val() {
+                        MY_SELF => y = String::from("SELF"),
+                        MY_BEH => y = String::from("BEH"),
+                        MY_STATE => y = String::from("STATE"),
+                        _ => {},
+                    }
+                },
+                VM_SEND => x = String::from("SEND"),
+                VM_NEW => x = String::from("NEW"),
+                VM_BEH => x = String::from("BEH"),
+                VM_END => {
+                    x = String::from("END");
+                    match self.y().val() {
+                        END_ABORT => y = String::from("ABORT"),
+                        END_STOP => y = String::from("STOP"),
+                        END_COMMIT => y = String::from("COMMIT"),
+                        END_RELEASE => y = String::from("RELEASE"),
+                        _ => {},
+                    }
+                },
+                VM_DEQUE => {
+                    x = String::from("DEQUE");
+                    match self.y().val() {
+                        DEQUE_NEW => y = String::from("NEW"),
+                        DEQUE_EMPTY => y = String::from("EMPTY"),
+                        DEQUE_PUSH => y = String::from("PUSH"),
+                        DEQUE_POP => y = String::from("POP"),
+                        DEQUE_PUT => y = String::from("PUT"),
+                        DEQUE_PULL => y = String::from("PULL"),
+                        DEQUE_LEN => y = String::from("LEN"),
+                        _ => {},
+                    }
+                },
+                VM_IS_EQ => x = String::from("IS_EQ"),
+                VM_IS_NE => x = String::from("IS_NE"),
+                _ => {},
             }
-        } else {
-            self.x().to_string()
         };
-        write!(fmt, "{{t:{}, x:{}, y:{}, z:{}}}", t, x, self.y(), self.z())
+        let z = self.z().to_string();
+        write!(fmt, "{{t:{}, x:{}, y:{}, z:{}}}", t, x, y, z)
     }
 }
 
@@ -395,8 +676,8 @@ pub const PAIR_T: Any       = Any { raw: 11 };
 pub const DICT_T: Any       = Any { raw: 12 };
 pub const FREE_T: Any       = Any { raw: 13 };
 
-pub const MEMORY: Any       = Any { raw: MUT_RAW | 14 };
-pub const DDEQUE: Any       = Any { raw: MUT_RAW | 15 };
+pub const MEMORY: Any       = Any { raw: MUT_RAW | 0 };
+pub const DDEQUE: Any       = Any { raw: MUT_RAW | 1 };
 pub const START: Any        = Any { raw: 16 };
 
 // literal values {Val, Fix, Ptr, Cap} -- DEPRECATED
@@ -473,7 +754,7 @@ impl Core {
             Quad::empty_t();
             QUAD_MAX
         ];
-        quad_ram[MEMORY.addr()]     = Quad::memory_t(Any::ram(256), NIL, Any::fix(0), DQ_GC_ROOT.any());
+        quad_ram[MEMORY.addr()]     = Quad::memory_t(Any::ram(256), NIL, Any::fix(0), NIL);
         quad_ram[DDEQUE.addr()]     = Quad::ddeque_t(E_BOOT, E_BOOT, NIL, NIL);
         quad_ram[A_SINK.addr()]     = Quad::new_actor(COMMIT.any(), NIL);
         quad_ram[89]                = Quad::new_actor(STOP.any(), NIL);
@@ -510,8 +791,8 @@ pub const E_BOOT: Any       = Any { raw: MUT_RAW | 190 };
         quad_mem[DICT_T.addr()]     = Typed::Type;
         quad_mem[FREE_T.addr()]     = Typed::Type;
 
-        quad_mem[MEMORY.addr()]     = Typed::Memory { top: Ptr::new(256), next: NIL.val().ptr(), free: Fix::new(0), root: DQ_GC_ROOT };
-        quad_mem[DDEQUE.addr()]     = Typed::Ddeque { e_first: Ptr::new(190), e_last: Ptr::new(190), k_first: NIL.val().ptr(), k_last: NIL.val().ptr() };
+        //quad_mem[MEMORY.addr()]     = Typed::Memory { top: Ptr::new(256), next: NIL.val().ptr(), free: Fix::new(0), root: DQ_GC_ROOT };
+        //quad_mem[DDEQUE.addr()]     = Typed::Ddeque { e_first: Ptr::new(190), e_last: Ptr::new(190), k_first: NIL.val().ptr(), k_last: NIL.val().ptr() };
 
         quad_mem[COMMIT.addr()]     = Typed::Instr { op: Op::End { op: End::Commit } };
         quad_mem[SEND_0.addr()]     = Typed::Instr { op: Op::Send { n: Fix::new(0), k: COMMIT } };
@@ -2826,7 +3107,7 @@ fn core_initialization() {
     assert_eq!(NIL, core.k_first());
     for raw in 0..256 {
         let quad = core.mem(Any::new(raw));
-        let typed = Typed::from(quad).unwrap();
+        let typed = quad.typed();
         println!("{:5}: {} = {}", raw, quad, typed);
     }
     //assert!(false);  // force output to be displayed
