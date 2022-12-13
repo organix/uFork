@@ -745,14 +745,14 @@ impl Core {
             Quad::empty_t();
             QUAD_MAX
         ];
-        quad_ram[MEMORY.addr()]     = Quad::memory_t(Any::ram(10), NIL, Any::fix(0), DDEQUE);
+        quad_ram[MEMORY.addr()]     = Quad::memory_t(Any::ram(MEM_TOP_ADDR), NIL, Any::fix(0), DDEQUE);
         quad_ram[DDEQUE.addr()]     = Quad::ddeque_t(E_BOOT, E_BOOT, NIL, NIL);
 pub const E_BOOT: Any       = Any { raw: MUT_RAW | 2 };
         //quad_ram[E_BOOT.addr()]     = Quad::event_t(A_STOP, Any::rom(188), NIL);  // stop actor
         //quad_ram[E_BOOT.addr()]     = Quad::event_t(A_LOOP, Any::rom(188), NIL);  // run loop demo
         //quad_ram[E_BOOT.addr()]     = Quad::event_t(A_TEST, Any::rom(188), NIL);  // run test suite
-        quad_ram[E_BOOT.addr()]     = Quad::event_t(FN_FIB, Any::rom(183), NIL);  // run (fib 3) => 2
-        //quad_ram[E_BOOT.addr()]     = Quad::event_t(FN_FIB, Any::rom(185), NIL);  // run (fib 6) => 8
+        //quad_ram[E_BOOT.addr()]     = Quad::event_t(FN_FIB, Any::rom(183), NIL);  // run (fib 3) => 2
+        quad_ram[E_BOOT.addr()]     = Quad::event_t(FN_FIB, FIB_6_ARGS, NIL);  // run (fib 6) => 8
 pub const A_SINK: Any       = Any { raw: OPQ_RAW | MUT_RAW | 3 };
         quad_ram[A_SINK.addr()]     = Quad::new_actor(COMMIT.any(), NIL);
 pub const A_STOP: Any       = Any { raw: OPQ_RAW | MUT_RAW | 4 };
@@ -761,9 +761,20 @@ pub const A_TEST: Any       = Any { raw: OPQ_RAW | MUT_RAW | 5 };
         quad_ram[A_TEST.addr()]     = Quad::new_actor(Any::rom(101), NIL);
 pub const A_LOOP: Any       = Any { raw: OPQ_RAW | MUT_RAW | 6 };
         quad_ram[A_LOOP.addr()]     = Quad::new_actor(RESEND.any(), Any::rom(189));
-pub const FN_FIB: Any       = Any { raw: OPQ_RAW | MUT_RAW | 7 };
-        quad_ram[FN_FIB.addr()]     = Quad::new_actor(F_FIB_BEH.any(), NIL);  // function-actor
-        //quad_ram[FN_FIB.addr()]     = Quad::new_actor(F_FIB_GEN.any(), NIL);  // worker-generator
+pub const FN_FIB_ADDR: usize = 7;
+pub const FN_FIB: Any       = Any { raw: OPQ_RAW | MUT_RAW | (FN_FIB_ADDR as Raw) };
+        quad_ram[FN_FIB_ADDR+0]     = Quad::new_actor(F_FIB_BEH.any(), NIL);  // function-actor
+        //quad_ram[FN_FIB_ADDR+0]     = Quad::new_actor(F_FIB_GEN.any(), NIL);  // worker-generator
+pub const FIB_6_ADDR: usize = FN_FIB_ADDR+1;
+pub const FIB_6_ARGS: Any   = Any { raw: MUT_RAW | (FIB_6_ADDR as Raw) };
+        quad_ram[FIB_6_ADDR+0]      = Quad::pair_t(A_IS_EQ_8, Any::ram(FIB_6_ADDR+1));  // cust
+        quad_ram[FIB_6_ADDR+1]      = Quad::pair_t(Any::fix(6), NIL);  // n=6
+pub const IS_EQ_8_ADDR: usize = FIB_6_ADDR+2;
+pub const A_IS_EQ_8: Any    = Any { raw: OPQ_RAW | MUT_RAW | (IS_EQ_8_ADDR as Raw) };
+        quad_ram[IS_EQ_8_ADDR+0]    = Quad::new_actor(Any::ram(IS_EQ_8_ADDR+1), NIL);
+        quad_ram[IS_EQ_8_ADDR+1]    = Quad::vm_msg(Any::fix(0), Any::ram(IS_EQ_8_ADDR+2));
+        quad_ram[IS_EQ_8_ADDR+2]    = Quad::vm_is_eq(Any::fix(8), COMMIT.any());
+pub const MEM_TOP_ADDR: usize = IS_EQ_8_ADDR+6;
 
         let mut quad_mem = [
             Typed::Empty;
@@ -1080,8 +1091,8 @@ pub const FN_FIB: Any       = Any { raw: OPQ_RAW | MUT_RAW | 7 };
                 n
                 (+ (fib (- n 1)) (fib (- n 2))))))
         */
-pub const F_FIB_RAW: Raw            = 150;
-pub const F_FIB_ADDR: usize         = F_FIB_RAW as usize;
+pub const F_FIB_ADDR: usize         = 150;
+pub const F_FIB_RAW: Raw            = F_FIB_ADDR as Raw;
 //pub const F_FIB: Cap                = Cap { raw: F_FIB_RAW };
         //quad_mem[F_FIB_ADDR+0]      = Typed::Actor { beh: F_FIB_BEH, state: NIL.val().ptr(), events: None };
 pub const F_FIB_BEH: Ptr            = Ptr { raw: F_FIB_RAW+1 };
@@ -1370,6 +1381,20 @@ pub const RELEASE_0: Ptr    = Ptr { raw: 30 };
 pub const MEMO_BEH: Ptr     = Ptr { raw: 31 };
         // stack: value
         quad_rom[MEMO_BEH.addr()]   = Quad::vm_dup(Any::fix(1), CUST_SEND.any());  // value value
+
+pub const IS_EQ_ADDR: usize = F_FIB_ADDR + 40;
+//pub const IS_EQ_BEH: Any    = Any { raw: IS_EQ_ADDR as Raw };
+        /*
+        (define is-eq-beh
+            (lambda (expect)
+                (BEH actual
+                    (assert-eq expect actual) )))
+        */
+        // stack: expect
+        quad_rom[IS_EQ_ADDR+0]      = Quad::vm_dup(Any::fix(1), Any::rom(IS_EQ_ADDR+1));  // expect expect
+        quad_rom[IS_EQ_ADDR+1]      = Quad::vm_msg(Any::fix(0), Any::rom(IS_EQ_ADDR+2));  // expect expect actual
+        quad_rom[IS_EQ_ADDR+2]      = Quad::vm_cmp_eq(Any::rom(IS_EQ_ADDR+3));  // expect (expect == actual)
+        quad_rom[IS_EQ_ADDR+3]      = Quad::vm_is_eq(TRUE, COMMIT.any());  // expect
 
         Core {
             quad_rom,
