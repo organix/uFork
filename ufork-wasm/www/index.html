@@ -42,10 +42,10 @@ table {
   margin: 1ex;
 }
 #ufork-rom {
-  /*
   width: 96ex;
-  */
   height: 24em;
+  /*
+  */
   border-radius: 1.5ex;
   padding: 1ex;
   overflow: scroll;
@@ -53,10 +53,10 @@ table {
   color: #3F0;
 }
 #ufork-ram {
-  /*
   width: 96ex;
-  */
   height: 24em;
+  /*
+  */
   border-radius: 1.5ex;
   padding: 1ex;
   overflow: scroll;
@@ -70,31 +70,13 @@ table {
     This page contains webassembly and javascript content,
     please enable javascript in your browser.
   </noscript>
+  <div id="rom-monitor" class="panel-center">
+    <pre id="ufork-rom"></pre>
+  </div>
+  <div id="ram-monitor" class="panel-center">
+    <pre id="ufork-ram"></pre>
+  </div>
   <div id="ufork-monitor" class="panel-center">
-    <table border="1">
-      <tr>
-        <th>Top</th>
-        <th>Next</th>
-        <th>Free</th>
-        <th>Root</th>
-      </tr>
-      <tr>
-        <td><pre id="ufork-mem-top"></pre></td>
-        <td><pre id="ufork-mem-next"></pre></td>
-        <td><pre id="ufork-mem-free"></pre></td>
-        <td><pre id="ufork-mem-root"></pre></td>
-      </tr>
-    </table>
-    <div style="display: flex; margin: 1ex;">
-      <label for="text-input" class="sr-only" style="margin: 2px;">Input:</label>
-      <input id="text-input" type="text" style="height: 1em; width: 64ex; padding: 3px;">
-      <button id="enter-btn" style="margin: 0 1ex;">Enter</button>
-    </div>
-    <div style="display: flex;">
-      <button id="play-pause"></button>
-      <input type="range" id="frame-rate" min="1" max="60" value="1">
-      <button id="single-step">Step</button>
-    </div>
     <table border="1">
       <tr>
         <th>EQ</th>
@@ -132,12 +114,30 @@ table {
         <td><pre id="ufork-stack"></pre></td>
       </tr>
     </table>
-  </div>
-  <div id="rom-monitor" class="panel-center">
-    <pre id="ufork-rom"></pre>
-  </div>
-  <div id="ram-monitor" class="panel-center">
-    <pre id="ufork-ram"></pre>
+    <div style="display: flex;">
+      <button id="play-pause"></button>
+      <input type="range" id="frame-rate" min="1" max="60" value="1">
+      <button id="single-step">Step</button>
+    </div>
+    <table border="1">
+      <tr>
+        <th>Top</th>
+        <th>Next</th>
+        <th>Free</th>
+        <th>Root</th>
+      </tr>
+      <tr>
+        <td><pre id="ufork-mem-top"></pre></td>
+        <td><pre id="ufork-mem-next"></pre></td>
+        <td><pre id="ufork-mem-free"></pre></td>
+        <td><pre id="ufork-mem-root"></pre></td>
+      </tr>
+    </table>
+    <div style="display: flex; margin: 1ex;">
+      <label for="text-input" class="sr-only" style="margin: 2px;">Input:</label>
+      <input id="text-input" type="text" style="height: 1em; width: 64ex; padding: 3px;">
+      <button id="enter-btn" style="margin: 0 1ex;">Enter</button>
+    </div>
   </div>
   <div id="game-monitor" class="panel-center">
     <div style="display: flex;">

@@ -55,18 +55,32 @@ const updateElementText = (el, txt) => {
 	el.textContent = txt;
 }
 const drawHost = () => {
+	var a;
+
 	updateElementText($mem_top, host.print(host.mem_top()));
 	updateElementText($mem_next, host.print(host.mem_next()));
 	$mem_next.title = host.disasm(host.mem_next());
 	updateElementText($mem_free, host.print(host.mem_free()));
 	updateElementText($mem_root, host.print(host.mem_root()));
 	$mem_root.title = host.disasm(host.mem_root());
-	$mem_rom.textContent = host.render();
-	let a = [];
+	//$mem_rom.textContent = host.render();
+	a = [];
 	for (let addr = 0; addr < 512; addr++) {
-		let line = ('     ' + addr).slice(-5)
+		let raw = host.rom_addr(addr);
+		let line = '$'
+			+ ('00000000' + raw.toString(16)).slice(-8)
 			+ ': '
-			+ host.display(host.ram_addr(addr));
+			+ host.display(raw);
+		a.push(line);
+		$mem_rom.textContent = a.join("\n");
+	}
+	a = [];
+	for (let addr = 0; addr < 512; addr++) {
+		let raw = host.ram_addr(addr);
+		let line = '$'
+			+ ('00000000' + raw.toString(16)).slice(-8)
+			+ ': '
+			+ host.display(raw);
 		a.push(line);
 		$mem_ram.textContent = a.join("\n");
 	}

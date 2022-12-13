@@ -111,6 +111,7 @@ impl fmt::Display for Any {
                 //FEXPR_T => write!(fmt, "FEXPR_T"),
                 DICT_T => write!(fmt, "DICT_T"),
                 FREE_T => write!(fmt, "FREE_T"),
+                EMPTY_DQ => write!(fmt, "EMPTY_DQ"),
                 _ => write!(fmt, "#{}", self.raw()),  // FIXME: should not occur
             }
         } else if self.is_rom() {
@@ -680,6 +681,7 @@ pub const PAIR_T: Any       = Any { raw: 11 };
 //pub const FEXPR_T: Any      = Any { raw: 12 };
 pub const DICT_T: Any       = Any { raw: 12 };
 pub const FREE_T: Any       = Any { raw: 13 };
+pub const EMPTY_DQ: Any     = Any { raw: 15 };
 
 pub const START: Any        = Any { raw: 16 };
 
@@ -694,6 +696,7 @@ pub const NIL: Val          = Val { raw: 1 };
 pub const FALSE: Val        = Val { raw: 2 };
 pub const TRUE: Val         = Val { raw: 3 };
 pub const UNIT: Val         = Val { raw: 4 };
+
 pub const LITERAL_T: Val    = Val { raw: 0 }; //ptrval(0);
 pub const TYPE_T: Val       = Val { raw: 5 };
 pub const EVENT_T: Val      = Val { raw: 6 };
@@ -766,6 +769,7 @@ pub const FN_FIB: Any       = Any { raw: OPQ_RAW | MUT_RAW | 7 };
             Typed::Empty;
             QUAD_MAX
         ];
+        /*
         quad_mem[UNDEF.addr()]      = Typed::Literal;
         quad_mem[NIL.addr()]        = Typed::Literal;
         quad_mem[FALSE.addr()]      = Typed::Literal;
@@ -803,6 +807,7 @@ pub const FN_FIB: Any       = Any { raw: OPQ_RAW | MUT_RAW | 7 };
         //quad_mem[-1]              = Typed::Instr { op: Op::Push { v: <value>, k: ... } };
         quad_mem[MEMO_BEH.addr()]   = Typed::Instr { op: Op::Dup { n: Fix::new(1), k: CUST_SEND } };
         //quad_mem[A_SINK.addr()]     = Typed::Actor { beh: COMMIT, state: NIL.val().ptr(), events: None };
+        */
 
         /*
         (define fwd-beh
@@ -1313,6 +1318,26 @@ pub const F_FIB_GEN: Ptr            = Ptr { raw: F_FIB_RAW+28 };
             let q = &quad_mem[addr];
             quad_rom[addr] = q.quad();
         }
+
+        quad_rom[UNDEF.addr()]      = Quad::literal_t();
+        quad_rom[NIL.addr()]        = Quad::literal_t();
+        quad_rom[FALSE.addr()]      = Quad::literal_t();
+        quad_rom[TRUE.addr()]       = Quad::literal_t();
+        quad_rom[UNIT.addr()]       = Quad::literal_t();
+
+        quad_rom[TYPE_T.addr()]     = Quad::type_t();
+        quad_rom[EVENT_T.addr()]    = Quad::type_t();
+        quad_rom[INSTR_T.addr()]    = Quad::type_t();
+        quad_rom[ACTOR_T.addr()]    = Quad::type_t();
+        quad_rom[FIXNUM_T.addr()]   = Quad::type_t();
+        quad_rom[SYMBOL_T.addr()]   = Quad::type_t();
+        quad_rom[PAIR_T.addr()]     = Quad::type_t();
+        //quad_rom[FEXPR_T.addr()]    = Quad::type_t();
+        quad_rom[DICT_T.addr()]     = Quad::type_t();
+        quad_rom[FREE_T.addr()]     = Quad::type_t();
+
+        quad_rom[EMPTY_DQ.addr()]   = Quad::pair_t(NIL, NIL);
+
 pub const COMMIT: Ptr       = Ptr { raw: 16 };
         quad_rom[COMMIT.addr()]     = Quad::vm_end_commit();
 pub const SEND_0: Ptr       = Ptr { raw: 17 };
@@ -2025,9 +2050,7 @@ pub const MEMO_BEH: Ptr     = Ptr { raw: 31 };
         }
     }
 
-    pub fn deque_new(&mut self) -> Any {
-        DQ_EMPTY.any()
-    }
+    pub fn deque_new(&mut self) -> Any { EMPTY_DQ }
     pub fn deque_empty(&self, deque: Any) -> bool {
         if self.typeq(PAIR_T, deque) {
             let front = self.car(deque);
