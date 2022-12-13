@@ -41,16 +41,27 @@ pre {
 table {
   margin: 1ex;
 }
-#ufork-output {
+#ufork-rom {
   /*
   width: 96ex;
   */
-  height: 32em;
+  height: 24em;
   border-radius: 1.5ex;
   padding: 1ex;
   overflow: scroll;
   background: #333;
   color: #3F0;
+}
+#ufork-ram {
+  /*
+  width: 96ex;
+  */
+  height: 24em;
+  border-radius: 1.5ex;
+  padding: 1ex;
+  overflow: scroll;
+  background: #333;
+  color: #3CF;
 }
 </style>
 </head>
@@ -122,8 +133,13 @@ table {
       </tr>
     </table>
   </div>
+  <div id="rom-monitor" class="panel-center">
+    <pre id="ufork-rom"></pre>
+  </div>
+  <div id="ram-monitor" class="panel-center">
+    <pre id="ufork-ram"></pre>
+  </div>
   <div id="game-monitor" class="panel-center">
-    <pre id="ufork-output"></pre>
     <div style="display: flex;">
       <button id="clear-btn">Clear</button>
       <button id="glider-btn">Glider</button>

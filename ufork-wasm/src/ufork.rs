@@ -742,24 +742,25 @@ impl Core {
             Quad::empty_t();
             QUAD_MAX
         ];
-        quad_ram[MEMORY.addr()]     = Quad::memory_t(Any::ram(256), NIL, Any::fix(0), DDEQUE);
+        quad_ram[MEMORY.addr()]     = Quad::memory_t(Any::ram(10), NIL, Any::fix(0), DDEQUE);
         quad_ram[DDEQUE.addr()]     = Quad::ddeque_t(E_BOOT, E_BOOT, NIL, NIL);
 pub const E_BOOT: Any       = Any { raw: MUT_RAW | 2 };
-        //quad_ram[E_BOOT.addr()]     = Quad::event_t(Any::cap(89), Any::rom(188), NIL);  // stop actor
-        //quad_ram[E_BOOT.addr()]     = Quad::event_t(Any::cap(191), Any::rom(188), NIL);  // run loop demo
-        //quad_ram[E_BOOT.addr()]     = Quad::event_t(Any::cap(100), Any::rom(188), NIL);  // run test suite
-        //quad_ram[E_BOOT.addr()]     = Quad::event_t(Any::cap(F_FIB_ADDR+0), Any::rom(183), NIL);  // run (fib 3) => 2
-        quad_ram[E_BOOT.addr()]     = Quad::event_t(Any::cap(F_FIB_ADDR+0), Any::rom(185), NIL);  // run (fib 6) => 8
-        //quad_ram[E_BOOT.addr()]     = Quad::event_t(FN_FIB.any(), Any::rom(185), NIL);  // run (fib 6)
+        //quad_ram[E_BOOT.addr()]     = Quad::event_t(A_STOP, Any::rom(188), NIL);  // stop actor
+        //quad_ram[E_BOOT.addr()]     = Quad::event_t(A_LOOP, Any::rom(188), NIL);  // run loop demo
+        //quad_ram[E_BOOT.addr()]     = Quad::event_t(A_TEST, Any::rom(188), NIL);  // run test suite
+        quad_ram[E_BOOT.addr()]     = Quad::event_t(FN_FIB, Any::rom(183), NIL);  // run (fib 3) => 2
+        //quad_ram[E_BOOT.addr()]     = Quad::event_t(FN_FIB, Any::rom(185), NIL);  // run (fib 6) => 8
 pub const A_SINK: Any       = Any { raw: OPQ_RAW | MUT_RAW | 3 };
         quad_ram[A_SINK.addr()]     = Quad::new_actor(COMMIT.any(), NIL);
-pub const A_STOP: Any       = Any { raw: OPQ_RAW | MUT_RAW | 89 };
+pub const A_STOP: Any       = Any { raw: OPQ_RAW | MUT_RAW | 4 };
         quad_ram[A_STOP.addr()]     = Quad::new_actor(STOP.any(), NIL);
-
-        quad_ram[100]               = Quad::new_actor(Any::rom(101), NIL);
-        quad_ram[F_FIB_ADDR+0]      = Quad::new_actor(F_FIB_BEH.any(), NIL);
-        quad_ram[F_FIB_ADDR+27]     = Quad::new_actor(Any::rom(F_FIB_ADDR+28), NIL);
-        quad_ram[191]               = Quad::new_actor(RESEND.any(), Any::rom(189));
+pub const A_TEST: Any       = Any { raw: OPQ_RAW | MUT_RAW | 5 };
+        quad_ram[A_TEST.addr()]     = Quad::new_actor(Any::rom(101), NIL);
+pub const A_LOOP: Any       = Any { raw: OPQ_RAW | MUT_RAW | 6 };
+        quad_ram[A_LOOP.addr()]     = Quad::new_actor(RESEND.any(), Any::rom(189));
+pub const FN_FIB: Any       = Any { raw: OPQ_RAW | MUT_RAW | 7 };
+        quad_ram[FN_FIB.addr()]     = Quad::new_actor(F_FIB_BEH.any(), NIL);  // function-actor
+        //quad_ram[FN_FIB.addr()]     = Quad::new_actor(F_FIB_GEN.any(), NIL);  // worker-generator
 
         let mut quad_mem = [
             Typed::Empty;
@@ -1077,7 +1078,7 @@ pub const A_STOP: Any       = Any { raw: OPQ_RAW | MUT_RAW | 89 };
 pub const F_FIB_RAW: Raw            = 150;
 pub const F_FIB_ADDR: usize         = F_FIB_RAW as usize;
 //pub const F_FIB: Cap                = Cap { raw: F_FIB_RAW };
-        quad_mem[F_FIB_ADDR+0]      = Typed::Actor { beh: F_FIB_BEH, state: NIL.val().ptr(), events: None };
+        //quad_mem[F_FIB_ADDR+0]      = Typed::Actor { beh: F_FIB_BEH, state: NIL.val().ptr(), events: None };
 pub const F_FIB_BEH: Ptr            = Ptr { raw: F_FIB_RAW+1 };
         quad_mem[F_FIB_ADDR+1]      = Typed::Instr { op: Op::Msg { n: Fix::new(2), k: Ptr::new(F_FIB_RAW+2) } };  // n
         quad_mem[F_FIB_ADDR+2]      = Typed::Instr { op: Op::Dup { n: Fix::new(1), k: Ptr::new(F_FIB_RAW+3) } };  // n n
@@ -1094,7 +1095,7 @@ pub const F_FIB_BEH: Ptr            = Ptr { raw: F_FIB_RAW+1 };
         quad_mem[F_FIB_ADDR+11]     = Typed::Instr { op: Op::Alu { op: Alu::Sub, k: Ptr::new(F_FIB_RAW+12) } };  // n k n-1
         quad_mem[F_FIB_ADDR+12]     = Typed::Instr { op: Op::Pick { n: Fix::new(2), k: Ptr::new(F_FIB_RAW+13) } };  // n k n-1 k
         quad_mem[F_FIB_ADDR+13]     = Typed::Instr { op: Op::My { op: My::Addr, k: Ptr::new(F_FIB_RAW+14) } };  // n k n-1 k fib
-        //quad_mem[F_FIB_ADDR+13]     = Typed::Instr { op: Op::Push { v: _FN_FIB.val(), k: Ptr::new(F_FIB_RAW+14) } };  // n k n-1 k fn-fib
+        //quad_mem[F_FIB_ADDR+13]     = Typed::Instr { op: Op::Push { v: FN_FIB.val(), k: Ptr::new(F_FIB_RAW+14) } };  // n k n-1 k fn-fib
         quad_mem[F_FIB_ADDR+14]     = Typed::Instr { op: Op::Send { n: Fix::new(2), k: Ptr::new(F_FIB_RAW+15) } };  // n k
 
         quad_mem[F_FIB_ADDR+15]     = Typed::Instr { op: Op::Roll { n: Fix::new(2), k: Ptr::new(F_FIB_RAW+16) } };  // k n
@@ -1102,7 +1103,7 @@ pub const F_FIB_BEH: Ptr            = Ptr { raw: F_FIB_RAW+1 };
         quad_mem[F_FIB_ADDR+17]     = Typed::Instr { op: Op::Alu { op: Alu::Sub, k: Ptr::new(F_FIB_RAW+18) } };  // k n-2
         quad_mem[F_FIB_ADDR+18]     = Typed::Instr { op: Op::Roll { n: Fix::new(2), k: Ptr::new(F_FIB_RAW+19) } };  // n-2 k
         quad_mem[F_FIB_ADDR+19]     = Typed::Instr { op: Op::My { op: My::Addr, k: Ptr::new(F_FIB_RAW+20) } };  // n-2 k fib
-        //quad_mem[F_FIB_ADDR+19]     = Typed::Instr { op: Op::Push { v: _FN_FIB.val(), k: Ptr::new(F_FIB_RAW+20) } };  // n-2 k fn-fib
+        //quad_mem[F_FIB_ADDR+19]     = Typed::Instr { op: Op::Push { v: FN_FIB.val(), k: Ptr::new(F_FIB_RAW+20) } };  // n-2 k fn-fib
         quad_mem[F_FIB_ADDR+20]     = Typed::Instr { op: Op::Send { n: Fix::new(2), k: COMMIT } };  // --
 
 pub const F_FIB_K: Ptr              = Ptr { raw: F_FIB_RAW+21 };
@@ -1118,8 +1119,9 @@ pub const F_FIB_K2: Ptr             = Ptr { raw: F_FIB_RAW+24 };
         quad_mem[F_FIB_ADDR+25]     = Typed::Instr { op: Op::Alu { op: Alu::Add, k: Ptr::new(F_FIB_RAW+26) } };  // cust m+n
         quad_mem[F_FIB_ADDR+26]     = Typed::Instr { op: Op::Roll { n: Fix::new(2), k: SEND_0 } };  // m+n cust
 
-pub const _FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // worker-generator facade for `fib`
-        quad_mem[F_FIB_ADDR+27]     = Typed::Actor { beh: Ptr::new(F_FIB_RAW+28), state: NIL.val().ptr(), events: None };
+//pub const FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // worker-generator facade for `fib`
+        quad_mem[F_FIB_ADDR+27]     = Typed::Actor { beh: F_FIB_GEN, state: NIL.val().ptr(), events: None };
+pub const F_FIB_GEN: Ptr            = Ptr { raw: F_FIB_RAW+28 };
         quad_mem[F_FIB_ADDR+28]     = Typed::Instr { op: Op::Msg { n: Fix::new(0), k: Ptr::new(F_FIB_RAW+29) } };  // msg
         quad_mem[F_FIB_ADDR+29]     = Typed::Instr { op: Op::Push { v: F_FIB_BEH.val(), k: Ptr::new(F_FIB_RAW+30) } };  // msg fib-beh
         quad_mem[F_FIB_ADDR+30]     = Typed::Instr { op: Op::New { n: Fix::new(0), k: SEND_0 } };  // msg fn=fib-beh[]
@@ -1186,7 +1188,7 @@ pub const _FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // work
 
         /* Op::Dict test suite */
         /*
-        quad_mem[100]               = Typed::Actor { beh: Ptr::new(101), state: NIL.ptr(), events: None };
+        //quad_mem[100]               = Typed::Actor { beh: Ptr::new(101), state: NIL.ptr(), events: None };
         quad_mem[101]               = Typed::Instr { op: Op::Dict { op: Dict::Has, k: Ptr::new(102) } };
         quad_mem[102]               = Typed::Instr { op: Op::IsEq { v: FALSE, k: Ptr::new(103) } };
         quad_mem[103]               = Typed::Instr { op: Op::Push { v: NIL, k: Ptr::new(104) } };
@@ -1235,7 +1237,7 @@ pub const _FN_FIB: Cap               = Cap { raw: F_FIB_RAW+27 };        // work
 
         /* Op::Deque test suite */
         /*
-        quad_mem[100]               = Typed::Actor { beh: Ptr::new(101), state: NIL.ptr(), events: None };
+        //quad_mem[100]               = Typed::Actor { beh: Ptr::new(101), state: NIL.ptr(), events: None };
         quad_mem[101]               = Typed::Instr { op: Op::Deque { op: Deque::Empty, k: Ptr::new(102) } };
         quad_mem[102]               = Typed::Instr { op: Op::IsEq { v: TRUE, k: Ptr::new(103) } };
         quad_mem[103]               = Typed::Instr { op: Op::Deque { op: Deque::New, k: Ptr::new(104) } };
@@ -3017,7 +3019,7 @@ impl Cap {
     }
     pub fn from(val: Val) -> Option<Cap> {
         let raw = val.raw();
-        if (raw & MSK_RAW) == OPQ_RAW {
+        if (raw & (DIR_RAW | OPQ_RAW)) == OPQ_RAW {
             Some(Cap::new(raw))
         } else {
             None

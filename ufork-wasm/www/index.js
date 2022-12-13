@@ -28,7 +28,9 @@ const $mem_root = document.getElementById("ufork-mem-root");
 const $equeue = document.getElementById("ufork-equeue");
 const $kqueue = document.getElementById("ufork-kqueue");
 
-const $output = document.getElementById("ufork-output");
+const $mem_rom = document.getElementById("ufork-rom");
+const $mem_ram = document.getElementById("ufork-ram");
+
 //const $ip = document.getElementById("ufork-ip");
 const $instr = document.getElementById("ufork-instr");
 //const $sp = document.getElementById("ufork-sp");
@@ -59,7 +61,15 @@ const drawHost = () => {
 	updateElementText($mem_free, host.print(host.mem_free()));
 	updateElementText($mem_root, host.print(host.mem_root()));
 	$mem_root.title = host.disasm(host.mem_root());
-	$output.textContent = host.render();
+	$mem_rom.textContent = host.render();
+	let a = [];
+	for (let addr = 0; addr < 512; addr++) {
+		let line = ('     ' + addr).slice(-5)
+			+ ': '
+			+ host.display(host.ram_addr(addr));
+		a.push(line);
+		$mem_ram.textContent = a.join("\n");
+	}
 	const ip = host.ip();
 	//updateElementText($ip, host.print(ip));
 	if (host.in_mem(ip)) {
