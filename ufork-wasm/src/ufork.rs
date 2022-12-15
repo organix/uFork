@@ -754,7 +754,7 @@ pub const E_BOOT: Any       = Any { raw: MUT_RAW | 2 };
         //quad_ram[E_BOOT.addr()]     = Quad::event_t(FN_FIB, Any::rom(183), NIL);  // run (fib 3) => 2
         quad_ram[E_BOOT.addr()]     = Quad::event_t(FN_FIB, FIB_6_ARGS, NIL);  // run (fib 6) => 8
 pub const A_SINK: Any       = Any { raw: OPQ_RAW | MUT_RAW | 3 };
-        quad_ram[A_SINK.addr()]     = Quad::new_actor(COMMIT.any(), NIL);
+        quad_ram[A_SINK.addr()]     = Quad::new_actor(SINK_BEH, NIL);
 pub const A_STOP: Any       = Any { raw: OPQ_RAW | MUT_RAW | 4 };
         quad_ram[A_STOP.addr()]     = Quad::new_actor(STOP.any(), NIL);
 pub const A_TEST: Any       = Any { raw: OPQ_RAW | MUT_RAW | 5 };
@@ -1350,6 +1350,7 @@ pub const F_FIB_GEN: Ptr            = Ptr { raw: F_FIB_RAW+28 };
         quad_rom[EMPTY_DQ.addr()]   = Quad::pair_t(NIL, NIL);
 
 pub const COMMIT: Ptr       = Ptr { raw: 16 };
+pub const SINK_BEH: Any     = Any { raw: 16 };
         quad_rom[COMMIT.addr()]     = Quad::vm_end_commit();
 pub const SEND_0: Ptr       = Ptr { raw: 17 };
         quad_rom[SEND_0.addr()]     = Quad::vm_send(Any::fix(0), COMMIT.any());
@@ -1378,12 +1379,87 @@ pub const RELEASE: Ptr      = Ptr { raw: 29 };
         quad_rom[RELEASE.addr()]    = Quad::vm_end_release();
 pub const RELEASE_0: Ptr    = Ptr { raw: 30 };
         quad_rom[RELEASE_0.addr()]  = Quad::vm_send(Any::fix(0), RELEASE.any());
-pub const MEMO_BEH: Ptr     = Ptr { raw: 31 };
+//pub const MEMO_BEH: Ptr     = Ptr { raw: 31 };
+pub const MEMO_ADDR: usize = 31;
+pub const _MEMO_BEH: Any    = Any { raw: MEMO_ADDR as Raw };
+        /*
+        (define memo-beh
+            (lambda (value)
+                (BEH (cust . _)
+                    (SEND cust value) )))
+        */
         // stack: value
-        quad_rom[MEMO_BEH.addr()]   = Quad::vm_dup(Any::fix(1), CUST_SEND.any());  // value value
+        quad_rom[MEMO_ADDR+0]   = Quad::vm_dup(Any::fix(1), CUST_SEND.any());  // value value
+
+pub const FWD_ADDR: usize = MEMO_ADDR + 1;
+pub const _FWD_BEH: Any     = Any { raw: FWD_ADDR as Raw };
+        /*
+        (define fwd-beh
+            (lambda (rcvr)
+                (BEH msg
+                    (SEND rcvr msg) )))
+        */
+        // stack: rcvr
+        quad_rom[FWD_ADDR+0]        = Quad::vm_msg(Any::fix(0), Any::rom(FWD_ADDR+1));  // rcvr msg
+        quad_rom[FWD_ADDR+1]        = Quad::vm_pick(Any::fix(2), SEND_0.any());  // rcvr msg rcvr
+
+pub const ONCE_ADDR: usize = FWD_ADDR + 2;
+pub const _ONCE_BEH: Any    = Any { raw: ONCE_ADDR as Raw };
+        /*
+        (define once-beh
+            (lambda (rcvr)
+                (BEH msg
+                    (BECOME sink-beh)
+                    (SEND rcvr msg) )))
+        */
+        // stack: rcvr
+        quad_rom[ONCE_ADDR+0]       = Quad::vm_push(SINK_BEH, Any::rom(ONCE_ADDR+1));  // rcvr sink-beh
+        quad_rom[ONCE_ADDR+1]       = Quad::vm_beh(Any::fix(0), _FWD_BEH);  // rcvr
+
+pub const LABEL_ADDR: usize = ONCE_ADDR + 2;
+pub const _LABEL_BEH: Any   = Any { raw: LABEL_ADDR as Raw };
+        /*
+        (define label-beh
+            (lambda (rcvr label)
+                (BEH msg
+                    (SEND rcvr (cons label msg)) )))
+        */
+        // stack: rcvr label
+        quad_rom[LABEL_ADDR+0]      = Quad::vm_msg(Any::fix(0), Any::rom(LABEL_ADDR+1));  // rcvr label msg
+        quad_rom[LABEL_ADDR+1]      = Quad::vm_pick(Any::fix(2), Any::rom(LABEL_ADDR+2));  // rcvr label msg label
+        quad_rom[LABEL_ADDR+2]      = Quad::vm_pair(Any::fix(1), Any::rom(LABEL_ADDR+3));  // rcvr label (label . msg)
+        quad_rom[LABEL_ADDR+3]      = Quad::vm_pick(Any::fix(3), SEND_0.any());  // rcvr label (label . msg) rcvr
+
+pub const TAG_ADDR: usize = LABEL_ADDR + 4;
+pub const _TAG_BEH: Any     = Any { raw: TAG_ADDR as Raw };
+        /*
+        (define tag-beh
+            (lambda (rcvr)
+                (BEH msg
+                    (SEND rcvr (cons SELF msg)) )))
+        */
+        // stack: rcvr
+        quad_rom[TAG_ADDR+0]        = Quad::vm_my(MY_SELF.any(), _LABEL_BEH);  // rcvr SELF
+
+pub const ONCE_TAG_ADDR: usize = TAG_ADDR + 1;
+pub const ONCE_TAG_BEH: Any = Any { raw: ONCE_TAG_ADDR as Raw };
+        /*
+        (define once-tag-beh  ;; FIXME: find a better name for this?
+            (lambda (rcvr)
+                (BEH msg
+                    (BECOME sink-beh)
+                    (SEND rcvr (cons SELF msg)) )))
+        */
+        // stack: rcvr
+        quad_rom[ONCE_TAG_ADDR+0]   = Quad::vm_push(SINK_BEH, Any::rom(ONCE_TAG_ADDR+1));  // rcvr sink-beh
+        quad_rom[ONCE_TAG_ADDR+1]   = Quad::vm_beh(Any::fix(0), _TAG_BEH);  // rcvr
+
+/*
+...
+*/
 
 pub const IS_EQ_ADDR: usize = F_FIB_ADDR + 40;
-//pub const IS_EQ_BEH: Any    = Any { raw: IS_EQ_ADDR as Raw };
+pub const _IS_EQ_BEH: Any    = Any { raw: IS_EQ_ADDR as Raw };
         /*
         (define is-eq-beh
             (lambda (expect)
