@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="utf-8">
-<title>uFork Virtual Machine</title>
+<title>uFork</title>
 <style>
 body {
   position: absolute;
@@ -133,24 +133,7 @@ table {
         <td><pre id="ufork-mem-root"></pre></td>
       </tr>
     </table>
-    <div style="display: flex; margin: 1ex;">
-      <label for="text-input" class="sr-only" style="margin: 2px;">Input:</label>
-      <input id="text-input" type="text" style="height: 1em; width: 64ex; padding: 3px;">
-      <button id="enter-btn" style="margin: 0 1ex;">Enter</button>
-    </div>
   </div>
-  <div id="game-monitor" class="panel-center">
-    <div style="display: flex;">
-      <button id="clear-btn">Clear</button>
-      <button id="glider-btn">Glider</button>
-      <button id="r-pentomino-btn">R-pentomino</button>
-      <button id="acorn-btn">Acorn</button>
-      <button id="gosper-btn">Gosper</button>
-      <button id="pattern-btn">Pattern</button>
-      <button id="random-btn">Random</button>
-    </div>
-    <canvas id="ufork-canvas"></canvas>
-  </div>
-  <script src="./bootstrap.js"></script>
+  <script type="module" src="./demo.js"></script>
 </body>
 </html>
