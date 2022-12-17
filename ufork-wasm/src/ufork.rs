@@ -720,11 +720,9 @@ impl Core {
         quad_ram[MEMORY.addr()]     = Quad::memory_t(Any::ram(MEM_TOP_ADDR), NIL, ZERO, DDEQUE);
         quad_ram[DDEQUE.addr()]     = Quad::ddeque_t(E_BOOT, E_BOOT, NIL, NIL);
 pub const E_BOOT: Any       = Any { raw: MUT_RAW | 2 };
-        //quad_ram[E_BOOT.addr()]     = Quad::event_t(A_STOP, Any::rom(188), NIL);  // stop actor
-        //quad_ram[E_BOOT.addr()]     = Quad::event_t(A_LOOP, Any::rom(188), NIL);  // run loop demo
+        //quad_ram[E_BOOT.addr()]     = Quad::event_t(A_STOP, TEST_MSG, NIL);  // stop actor
+        //quad_ram[E_BOOT.addr()]     = Quad::event_t(A_LOOP, TEST_MSG, NIL);  // run loop demo
         quad_ram[E_BOOT.addr()]     = Quad::event_t(A_TEST, TEST_MSG, NIL);  // run test suite
-        //quad_ram[E_BOOT.addr()]     = Quad::event_t(FN_FIB, Any::rom(183), NIL);  // run (fib 3) => 2
-        //quad_ram[E_BOOT.addr()]     = Quad::event_t(F_FIB, FIB_6_ARGS, NIL);  // run (fib 6) => 8
 pub const A_SINK: Any       = Any { raw: OPQ_RAW | MUT_RAW | 3 };
         quad_ram[A_SINK.addr()]     = Quad::new_actor(SINK_BEH, NIL);
 pub const A_STOP: Any       = Any { raw: OPQ_RAW | MUT_RAW | 4 };
@@ -732,60 +730,18 @@ pub const A_STOP: Any       = Any { raw: OPQ_RAW | MUT_RAW | 4 };
 pub const A_TEST: Any       = Any { raw: OPQ_RAW | MUT_RAW | 5 };
         quad_ram[A_TEST.addr()]     = Quad::new_actor(TEST_BEH, TEST_SP);
 pub const A_LOOP: Any       = Any { raw: OPQ_RAW | MUT_RAW | 6 };
-        quad_ram[A_LOOP.addr()]     = Quad::new_actor(RESEND, Any::rom(189));
+        quad_ram[A_LOOP.addr()]     = Quad::new_actor(RESEND, TEST_SP);
 pub const F_FIB: Any        = Any { raw: OPQ_RAW | MUT_RAW | 7 };
         //quad_ram[7]                 = Quad::new_actor(F_FIB_BEH, NIL);  // function-actor
         quad_ram[7]                 = Quad::new_actor(_F_FIB_GEN, NIL);  // worker-generator
+pub const TEST_MSG: Any     = Any { raw: MUT_RAW | 8 };
+        quad_ram[8]                 = Quad::pair_t(A_STOP, Any::ram(9));
+        quad_ram[9]                 = Quad::pair_t(UNIT, NIL);
+pub const TEST_SP: Any      = Any { raw: MUT_RAW | 10 };
+        quad_ram[10]                = Quad::pair_t(MINUS_1, Any::ram(11));
+        quad_ram[11]                = Quad::pair_t(MINUS_2, Any::ram(12));
+        quad_ram[12]                = Quad::pair_t(MINUS_3, NIL);
 pub const MEM_TOP_ADDR: usize = 16;
-
-        /* Op::Dict test suite */
-        /*
-        //quad_mem[100]               = Typed::Actor { beh: Ptr::new(101), state: NIL.ptr(), events: None };
-        quad_mem[101]               = Typed::Instr { op: Op::Dict { op: Dict::Has, k: Ptr::new(102) } };
-        quad_mem[102]               = Typed::Instr { op: Op::IsEq { v: FALSE, k: Ptr::new(103) } };
-        quad_mem[103]               = Typed::Instr { op: Op::Push { v: NIL, k: Ptr::new(104) } };
-        quad_mem[104]               = Typed::Instr { op: Op::Push { v: fixnum(0), k: Ptr::new(105) } };
-        quad_mem[105]               = Typed::Instr { op: Op::Dup { n: Fix::new(2), k: Ptr::new(106) } };
-        quad_mem[106]               = Typed::Instr { op: Op::Dict { op: Dict::Has, k: Ptr::new(107) } };
-        quad_mem[107]               = Typed::Instr { op: Op::IsEq { v: FALSE, k: Ptr::new(108) } };
-        quad_mem[108]               = Typed::Instr { op: Op::Dict { op: Dict::Get, k: Ptr::new(109) } };
-        quad_mem[109]               = Typed::Instr { op: Op::IsEq { v: UNDEF, k: Ptr::new(110) } };
-        quad_mem[110]               = Typed::Instr { op: Op::Push { v: NIL, k: Ptr::new(111) } };
-        quad_mem[111]               = Typed::Instr { op: Op::Push { v: fixnum(0), k: Ptr::new(112) } };
-        quad_mem[112]               = Typed::Instr { op: Op::Push { v: UNIT, k: Ptr::new(113) } };
-        quad_mem[113]               = Typed::Instr { op: Op::Dict { op: Dict::Set, k: Ptr::new(114) } };
-        quad_mem[114]               = Typed::Instr { op: Op::Pick { n: Fix::new(1), k: Ptr::new(115) } };
-        quad_mem[115]               = Typed::Instr { op: Op::Push { v: fixnum(0), k: Ptr::new(116) } };
-        quad_mem[116]               = Typed::Instr { op: Op::Dict { op: Dict::Get, k: Ptr::new(117) } };
-        quad_mem[117]               = Typed::Instr { op: Op::IsEq { v: UNIT, k: Ptr::new(118) } };
-        quad_mem[118]               = Typed::Instr { op: Op::Push { v: fixnum(1), k: Ptr::new(119) } };
-        quad_mem[119]               = Typed::Instr { op: Op::Push { v: fixnum(-1), k: Ptr::new(120) } };
-        quad_mem[120]               = Typed::Instr { op: Op::Dict { op: Dict::Add, k: Ptr::new(121) } };
-        quad_mem[121]               = Typed::Instr { op: Op::Pick { n: Fix::new(1), k: Ptr::new(122) } };
-        quad_mem[122]               = Typed::Instr { op: Op::Push { v: fixnum(0), k: Ptr::new(123) } };
-        quad_mem[123]               = Typed::Instr { op: Op::Dict { op: Dict::Get, k: Ptr::new(124) } };
-        quad_mem[124]               = Typed::Instr { op: Op::IsEq { v: UNIT, k: Ptr::new(125) } };
-        quad_mem[125]               = Typed::Instr { op: Op::Push { v: fixnum(0), k: Ptr::new(126) } };
-        quad_mem[126]               = Typed::Instr { op: Op::Dict { op: Dict::Del, k: Ptr::new(127) } };
-        quad_mem[127]               = Typed::Instr { op: Op::Pick { n: Fix::new(1), k: Ptr::new(128) } };
-        quad_mem[128]               = Typed::Instr { op: Op::Push { v: UNIT, k: Ptr::new(129) } };
-        quad_mem[129]               = Typed::Instr { op: Op::Dict { op: Dict::Get, k: Ptr::new(130) } };
-        quad_mem[130]               = Typed::Instr { op: Op::IsEq { v: UNDEF, k: Ptr::new(131) } };
-        quad_mem[131]               = Typed::Instr { op: Op::Push { v: fixnum(1), k: Ptr::new(132) } };
-        quad_mem[132]               = Typed::Instr { op: Op::Push { v: FALSE, k: Ptr::new(133) } };
-        quad_mem[133]               = Typed::Instr { op: Op::Dict { op: Dict::Add, k: Ptr::new(134) } };
-        quad_mem[134]               = Typed::Instr { op: Op::Pick { n: Fix::new(1), k: Ptr::new(135) } };
-        quad_mem[135]               = Typed::Instr { op: Op::Push { v: fixnum(1), k: Ptr::new(136) } };
-        quad_mem[136]               = Typed::Instr { op: Op::Push { v: TRUE, k: Ptr::new(137) } };
-        quad_mem[137]               = Typed::Instr { op: Op::Dict { op: Dict::Set, k: Ptr::new(138) } };
-        quad_mem[138]               = Typed::Instr { op: Op::Pick { n: Fix::new(1), k: Ptr::new(139) } };
-        quad_mem[139]               = Typed::Instr { op: Op::Push { v: fixnum(1), k: Ptr::new(140) } };
-        quad_mem[140]               = Typed::Instr { op: Op::Dict { op: Dict::Del, k: Ptr::new(141) } };
-        quad_mem[141]               = Typed::Instr { op: Op::Dup { n: Fix::new(1), k: Ptr::new(142) } };
-        quad_mem[142]               = Typed::Instr { op: Op::Push { v: fixnum(1), k: Ptr::new(143) } };
-        quad_mem[143]               = Typed::Instr { op: Op::Dict { op: Dict::Get, k: Ptr::new(144) } };
-        quad_mem[144]               = Typed::Instr { op: Op::IsEq { v: fixnum(-1), k: Ptr::new(16) } };
-        */
 
         /* Op::Deque test suite */
         /*
@@ -1309,7 +1265,9 @@ pub const _IS_EQ_BEH: Any    = Any { raw: IS_EQ_ADDR as Raw };
 
 pub const TEST_ADDR: usize = IS_EQ_ADDR+4;
 pub const TEST_BEH: Any    = Any { raw: TEST_ADDR as Raw };
-        quad_rom[TEST_ADDR+0]       = Quad::vm_dup(ZERO, Any::rom(TEST_ADDR+1));  // --
+        //quad_rom[TEST_ADDR+0]       = Quad::vm_drop(PLUS_3, Any::rom(T_DEQUE_ADDR));  // --
+        quad_rom[TEST_ADDR+0]       = Quad::vm_drop(PLUS_3, Any::rom(T_DICT_ADDR));  // --
+        //quad_rom[TEST_ADDR+0]       = Quad::vm_drop(PLUS_3, Any::rom(TEST_ADDR+1));  // --
         quad_rom[TEST_ADDR+1]       = Quad::vm_push(PLUS_6, Any::rom(TEST_ADDR+2));  // 6
         quad_rom[TEST_ADDR+2]       = Quad::vm_push(EQ_8_BEH, Any::rom(TEST_ADDR+3));  // 6 eq-8-beh
         quad_rom[TEST_ADDR+3]       = Quad::vm_new(ZERO, Any::rom(TEST_ADDR+4));  // 6 eq-8
@@ -1318,13 +1276,60 @@ pub const TEST_BEH: Any    = Any { raw: TEST_ADDR as Raw };
 pub const EQ_8_BEH: Any = Any { raw: (TEST_ADDR+6) as Raw };
         quad_rom[TEST_ADDR+6]       = Quad::vm_msg(ZERO, Any::rom(TEST_ADDR+7));  // msg
         quad_rom[TEST_ADDR+7]       = Quad::vm_is_eq(PLUS_8, COMMIT);  // assert_eq(8, msg)
-pub const TEST_MSG: Any = Any { raw: (TEST_ADDR+8) as Raw };
-        quad_rom[TEST_ADDR+8]       = Quad::pair_t(A_STOP, Any::rom(TEST_ADDR+9));
-        quad_rom[TEST_ADDR+9]       = Quad::pair_t(UNIT, NIL);
-pub const TEST_SP: Any = Any { raw: (TEST_ADDR+10) as Raw };
-        quad_rom[TEST_ADDR+10]      = Quad::pair_t(MINUS_1, Any::rom(TEST_ADDR+11));
-        quad_rom[TEST_ADDR+11]      = Quad::pair_t(MINUS_2, Any::rom(TEST_ADDR+12));
-        quad_rom[TEST_ADDR+12]      = Quad::pair_t(MINUS_3, NIL);
+
+        /* VM_DICT test suite */
+pub const T_DICT_ADDR: usize = TEST_ADDR+8;
+pub const _T_DICT_BEH: Any  = Any { raw: T_DICT_ADDR as Raw };
+        quad_rom[T_DICT_ADDR+0]     = Quad::vm_dict_has(Any::rom(T_DICT_ADDR+1));  // #f
+        quad_rom[T_DICT_ADDR+1]     = Quad::vm_is_eq(FALSE, Any::rom(T_DICT_ADDR+2));  // --
+        quad_rom[T_DICT_ADDR+2]     = Quad::vm_push(NIL, Any::rom(T_DICT_ADDR+3));  // ()
+        quad_rom[T_DICT_ADDR+3]     = Quad::vm_push(ZERO, Any::rom(T_DICT_ADDR+4));  // () 0
+        quad_rom[T_DICT_ADDR+4]     = Quad::vm_dup(PLUS_2, Any::rom(T_DICT_ADDR+5));  // () 0 () 0
+        quad_rom[T_DICT_ADDR+5]     = Quad::vm_dict_has(Any::rom(T_DICT_ADDR+6));  // #f
+        quad_rom[T_DICT_ADDR+6]     = Quad::vm_is_eq(FALSE, Any::rom(T_DICT_ADDR+7));  // --
+        quad_rom[T_DICT_ADDR+7]     = Quad::vm_dict_get(Any::rom(T_DICT_ADDR+8));  // #?
+        quad_rom[T_DICT_ADDR+8]     = Quad::vm_is_eq(UNDEF, Any::rom(T_DICT_ADDR+9));  // --
+
+        quad_rom[T_DICT_ADDR+9]     = Quad::vm_push(NIL, Any::rom(T_DICT_ADDR+10));  // ()
+        quad_rom[T_DICT_ADDR+10]    = Quad::vm_push(ZERO, Any::rom(T_DICT_ADDR+11));  // () 0
+        quad_rom[T_DICT_ADDR+11]    = Quad::vm_push(UNIT, Any::rom(T_DICT_ADDR+12));  // () 0 #unit
+        quad_rom[T_DICT_ADDR+12]    = Quad::vm_dict_set(Any::rom(T_DICT_ADDR+13));  // {0:#unit}
+        quad_rom[T_DICT_ADDR+13]    = Quad::vm_pick(PLUS_1, Any::rom(T_DICT_ADDR+14));  // {0:#unit} {0:#unit}
+        quad_rom[T_DICT_ADDR+14]    = Quad::vm_push(ZERO, Any::rom(T_DICT_ADDR+15));  // {0:#unit} {0:#unit} 0
+        quad_rom[T_DICT_ADDR+15]    = Quad::vm_dict_get(Any::rom(T_DICT_ADDR+16));  // {0:#unit} #unit
+        quad_rom[T_DICT_ADDR+16]    = Quad::vm_is_eq(UNIT, Any::rom(T_DICT_ADDR+17));  // {0:#unit}
+
+        quad_rom[T_DICT_ADDR+17]    = Quad::vm_push(PLUS_1, Any::rom(T_DICT_ADDR+18));  // {0:#unit} 1
+        quad_rom[T_DICT_ADDR+18]    = Quad::vm_push(MINUS_1, Any::rom(T_DICT_ADDR+19));  // {0:#unit} 1 -1
+        quad_rom[T_DICT_ADDR+19]    = Quad::vm_dict_add(Any::rom(T_DICT_ADDR+20));  // {1:-1, 0:#unit}
+        quad_rom[T_DICT_ADDR+20]    = Quad::vm_pick(PLUS_1, Any::rom(T_DICT_ADDR+21));  // {1:-1, 0:#unit} {1:-1, 0:#unit}
+        quad_rom[T_DICT_ADDR+21]    = Quad::vm_push(ZERO, Any::rom(T_DICT_ADDR+22));  // {1:-1, 0:#unit} {1:-1, 0:#unit} 0
+        quad_rom[T_DICT_ADDR+22]    = Quad::vm_dict_get(Any::rom(T_DICT_ADDR+23));  // {1:-1, 0:#unit} #unit
+        quad_rom[T_DICT_ADDR+23]    = Quad::vm_is_eq(UNIT, Any::rom(T_DICT_ADDR+24));  // {1:-1, 0:#unit}
+
+        quad_rom[T_DICT_ADDR+24]    = Quad::vm_push(ZERO, Any::rom(T_DICT_ADDR+25));  // {1:-1, 0:#unit} 0
+        quad_rom[T_DICT_ADDR+25]    = Quad::vm_dict_del(Any::rom(T_DICT_ADDR+26));  // {1:-1}
+        quad_rom[T_DICT_ADDR+26]    = Quad::vm_pick(PLUS_1, Any::rom(T_DICT_ADDR+27));  // {1:-1} {1:-1}
+        quad_rom[T_DICT_ADDR+27]    = Quad::vm_push(ZERO, Any::rom(T_DICT_ADDR+28));  // {1:-1} {1:-1} 0
+        quad_rom[T_DICT_ADDR+28]    = Quad::vm_dict_get(Any::rom(T_DICT_ADDR+29));  // {1:-1} #undef
+        quad_rom[T_DICT_ADDR+29]    = Quad::vm_is_eq(UNDEF, Any::rom(T_DICT_ADDR+30));  // {1:-1}
+
+        quad_rom[T_DICT_ADDR+30]    = Quad::vm_push(PLUS_1, Any::rom(T_DICT_ADDR+31));  // {1:-1} 1
+        quad_rom[T_DICT_ADDR+31]    = Quad::vm_push(FALSE, Any::rom(T_DICT_ADDR+32));  // {1:-1} 1 #f
+        quad_rom[T_DICT_ADDR+32]    = Quad::vm_dict_add(Any::rom(T_DICT_ADDR+33));  // {1:#f, 1:-1}
+        quad_rom[T_DICT_ADDR+33]    = Quad::vm_pick(PLUS_1, Any::rom(T_DICT_ADDR+34));  // {1:#f, 1:-1} {1:#f, 1:-1}
+        quad_rom[T_DICT_ADDR+34]    = Quad::vm_push(PLUS_1, Any::rom(T_DICT_ADDR+35));  // {1:#f, 1:-1} {1:#f, 1:-1} 1
+        quad_rom[T_DICT_ADDR+35]    = Quad::vm_push(TRUE, Any::rom(T_DICT_ADDR+36));  // {1:#f, 1:-1} {1:#f, 1:-1} 1 #t
+        quad_rom[T_DICT_ADDR+36]    = Quad::vm_dict_set(Any::rom(T_DICT_ADDR+37));  // {1:#f, 1:-1} {1:#t, 1:-1}
+        quad_rom[T_DICT_ADDR+37]    = Quad::vm_pick(PLUS_1, Any::rom(T_DICT_ADDR+38));  // {1:#f, 1:-1} {1:#t, 1:-1} {1:#t, 1:-1}
+        quad_rom[T_DICT_ADDR+38]    = Quad::vm_push(PLUS_1, Any::rom(T_DICT_ADDR+39));  // {1:#f, 1:-1} {1:#t, 1:-1} {1:#t, 1:-1} 1
+        quad_rom[T_DICT_ADDR+39]    = Quad::vm_dict_del(Any::rom(T_DICT_ADDR+40));  // {1:#f, 1:-1} {1:#t, 1:-1} {1:-1}
+
+        quad_rom[T_DICT_ADDR+40]    = Quad::vm_dup(PLUS_1, Any::rom(T_DICT_ADDR+41));  // {1:#f, 1:-1} {1:#t, 1:-1} {1:-1} {1:-1}
+        quad_rom[T_DICT_ADDR+41]    = Quad::vm_push(PLUS_1, Any::rom(T_DICT_ADDR+42));  // {1:#f, 1:-1} {1:#t, 1:-1} {1:-1} {1:-1} 1
+        quad_rom[T_DICT_ADDR+42]    = Quad::vm_dict_get(Any::rom(T_DICT_ADDR+43));  // {1:#f, 1:-1} {1:#t, 1:-1} {1:-1} -1
+        quad_rom[T_DICT_ADDR+43]    = Quad::vm_is_eq(MINUS_1, COMMIT);  // {1:#f, 1:-1} {1:#t, 1:-1} {1:-1}
+
 
         Core {
             quad_rom,
