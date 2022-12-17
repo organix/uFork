@@ -125,82 +125,82 @@ impl fmt::Display for Any {
     }
 }
 
-// instr values
-pub const VM_TYPEQ: Val     = Val { raw: DIR_RAW | 0 }; // fixnum(0)
-pub const VM_CELL: Val      = Val { raw: DIR_RAW | 1 };
-pub const VM_GET: Val       = Val { raw: DIR_RAW | 2 };
-//pub const VM_SET: Val       = Val { raw: DIR_RAW | 3 };
-pub const VM_DICT: Val      = Val { raw: DIR_RAW | 3 };
-pub const VM_PAIR: Val      = Val { raw: DIR_RAW | 4 };
-pub const VM_PART: Val      = Val { raw: DIR_RAW | 5 };
-pub const VM_NTH: Val       = Val { raw: DIR_RAW | 6 };
-pub const VM_PUSH: Val      = Val { raw: DIR_RAW | 7 };
-pub const VM_DEPTH: Val     = Val { raw: DIR_RAW | 8 };
-pub const VM_DROP: Val      = Val { raw: DIR_RAW | 9 };
-pub const VM_PICK: Val      = Val { raw: DIR_RAW | 10 };
-pub const VM_DUP: Val       = Val { raw: DIR_RAW | 11 };
-pub const VM_ROLL: Val      = Val { raw: DIR_RAW | 12 };
-pub const VM_ALU: Val       = Val { raw: DIR_RAW | 13 };
-pub const VM_EQ: Val        = Val { raw: DIR_RAW | 14 };
-pub const VM_CMP: Val       = Val { raw: DIR_RAW | 15 };
-pub const VM_IF: Val        = Val { raw: DIR_RAW | 16 };
-pub const VM_MSG: Val       = Val { raw: DIR_RAW | 17 };
-pub const VM_MY: Val        = Val { raw: DIR_RAW | 18 };
-pub const VM_SEND: Val      = Val { raw: DIR_RAW | 19 };
-pub const VM_NEW: Val       = Val { raw: DIR_RAW | 20 };
-pub const VM_BEH: Val       = Val { raw: DIR_RAW | 21 };
-pub const VM_END: Val       = Val { raw: DIR_RAW | 22 };
-//pub const VM_CVT: Val       = Val { raw: DIR_RAW | 23 };
-//pub const VM_PUTC: Val      = Val { raw: DIR_RAW | 24 };
-//pub const VM_GETC: Val      = Val { raw: DIR_RAW | 25 };
-//pub const VM_DEBUG: Val     = Val { raw: DIR_RAW | 26 };
-pub const VM_DEQUE: Val     = Val { raw: DIR_RAW | 27 };
-pub const VM_IS_EQ: Val     = Val { raw: DIR_RAW | 30 };
-pub const VM_IS_NE: Val     = Val { raw: DIR_RAW | 31 };
+// INSTR_T values
+pub const VM_TYPEQ: Any     = Any { raw: DIR_RAW | 0 };
+pub const VM_CELL: Any      = Any { raw: DIR_RAW | 1 };
+pub const VM_GET: Any       = Any { raw: DIR_RAW | 2 };
+//pub const VM_SET: Any     = Any { raw: DIR_RAW | 3 };
+pub const VM_DICT: Any      = Any { raw: DIR_RAW | 3 };
+pub const VM_PAIR: Any      = Any { raw: DIR_RAW | 4 };
+pub const VM_PART: Any      = Any { raw: DIR_RAW | 5 };
+pub const VM_NTH: Any       = Any { raw: DIR_RAW | 6 };
+pub const VM_PUSH: Any      = Any { raw: DIR_RAW | 7 };
+pub const VM_DEPTH: Any     = Any { raw: DIR_RAW | 8 };
+pub const VM_DROP: Any      = Any { raw: DIR_RAW | 9 };
+pub const VM_PICK: Any      = Any { raw: DIR_RAW | 10 };
+pub const VM_DUP: Any       = Any { raw: DIR_RAW | 11 };
+pub const VM_ROLL: Any      = Any { raw: DIR_RAW | 12 };
+pub const VM_ALU: Any       = Any { raw: DIR_RAW | 13 };
+pub const VM_EQ: Any        = Any { raw: DIR_RAW | 14 };
+pub const VM_CMP: Any       = Any { raw: DIR_RAW | 15 };
+pub const VM_IF: Any        = Any { raw: DIR_RAW | 16 };
+pub const VM_MSG: Any       = Any { raw: DIR_RAW | 17 };
+pub const VM_MY: Any        = Any { raw: DIR_RAW | 18 };
+pub const VM_SEND: Any      = Any { raw: DIR_RAW | 19 };
+pub const VM_NEW: Any       = Any { raw: DIR_RAW | 20 };
+pub const VM_BEH: Any       = Any { raw: DIR_RAW | 21 };
+pub const VM_END: Any       = Any { raw: DIR_RAW | 22 };
+//pub const VM_CVT: Any       = Any { raw: DIR_RAW | 23 };
+//pub const VM_PUTC: Any      = Any { raw: DIR_RAW | 24 };
+//pub const VM_GETC: Any      = Any { raw: DIR_RAW | 25 };
+//pub const VM_DEBUG: Any     = Any { raw: DIR_RAW | 26 };
+pub const VM_DEQUE: Any     = Any { raw: DIR_RAW | 27 };
+pub const VM_IS_EQ: Any     = Any { raw: DIR_RAW | 30 };
+pub const VM_IS_NE: Any     = Any { raw: DIR_RAW | 31 };
 
 // VM_DICT dictionary operations
-pub const DICT_HAS: Val     = Val { raw: DIR_RAW | 0 };
-pub const DICT_GET: Val     = Val { raw: DIR_RAW | 1 };
-pub const DICT_ADD: Val     = Val { raw: DIR_RAW | 2 };
-pub const DICT_SET: Val     = Val { raw: DIR_RAW | 3 };
-pub const DICT_DEL: Val     = Val { raw: DIR_RAW | 4 };
+pub const DICT_HAS: Any     = Any { raw: DIR_RAW | 0 };
+pub const DICT_GET: Any     = Any { raw: DIR_RAW | 1 };
+pub const DICT_ADD: Any     = Any { raw: DIR_RAW | 2 };
+pub const DICT_SET: Any     = Any { raw: DIR_RAW | 3 };
+pub const DICT_DEL: Any     = Any { raw: DIR_RAW | 4 };
 
 // VM_DEQUE deque operations
-pub const DEQUE_NEW: Val    = Val { raw: DIR_RAW | 0 };
-pub const DEQUE_EMPTY: Val  = Val { raw: DIR_RAW | 1 };
-pub const DEQUE_PUSH: Val   = Val { raw: DIR_RAW | 2 };
-pub const DEQUE_POP: Val    = Val { raw: DIR_RAW | 3 };
-pub const DEQUE_PUT: Val    = Val { raw: DIR_RAW | 4 };
-pub const DEQUE_PULL: Val   = Val { raw: DIR_RAW | 5 };
-pub const DEQUE_LEN: Val    = Val { raw: DIR_RAW | 6 };
+pub const DEQUE_NEW: Any    = Any { raw: DIR_RAW | 0 };
+pub const DEQUE_EMPTY: Any  = Any { raw: DIR_RAW | 1 };
+pub const DEQUE_PUSH: Any   = Any { raw: DIR_RAW | 2 };
+pub const DEQUE_POP: Any    = Any { raw: DIR_RAW | 3 };
+pub const DEQUE_PUT: Any    = Any { raw: DIR_RAW | 4 };
+pub const DEQUE_PULL: Any   = Any { raw: DIR_RAW | 5 };
+pub const DEQUE_LEN: Any    = Any { raw: DIR_RAW | 6 };
 
 // VM_ALU arithmetic/logical operations
-pub const ALU_NOT: Val      = Val { raw: DIR_RAW | 0 };
-pub const ALU_AND: Val      = Val { raw: DIR_RAW | 1 };
-pub const ALU_OR: Val       = Val { raw: DIR_RAW | 2 };
-pub const ALU_XOR: Val      = Val { raw: DIR_RAW | 3 };
-pub const ALU_ADD: Val      = Val { raw: DIR_RAW | 4 };
-pub const ALU_SUB: Val      = Val { raw: DIR_RAW | 5 };
-pub const ALU_MUL: Val      = Val { raw: DIR_RAW | 6 };
+pub const ALU_NOT: Any      = Any { raw: DIR_RAW | 0 };
+pub const ALU_AND: Any      = Any { raw: DIR_RAW | 1 };
+pub const ALU_OR: Any       = Any { raw: DIR_RAW | 2 };
+pub const ALU_XOR: Any      = Any { raw: DIR_RAW | 3 };
+pub const ALU_ADD: Any      = Any { raw: DIR_RAW | 4 };
+pub const ALU_SUB: Any      = Any { raw: DIR_RAW | 5 };
+pub const ALU_MUL: Any      = Any { raw: DIR_RAW | 6 };
 
 // VM_CMP comparison operations
-pub const CMP_EQ: Val       = Val { raw: DIR_RAW | 0 };
-pub const CMP_GE: Val       = Val { raw: DIR_RAW | 1 };
-pub const CMP_GT: Val       = Val { raw: DIR_RAW | 2 };
-pub const CMP_LT: Val       = Val { raw: DIR_RAW | 3 };
-pub const CMP_LE: Val       = Val { raw: DIR_RAW | 4 };
-pub const CMP_NE: Val       = Val { raw: DIR_RAW | 5 };
+pub const CMP_EQ: Any       = Any { raw: DIR_RAW | 0 };
+pub const CMP_GE: Any       = Any { raw: DIR_RAW | 1 };
+pub const CMP_GT: Any       = Any { raw: DIR_RAW | 2 };
+pub const CMP_LT: Any       = Any { raw: DIR_RAW | 3 };
+pub const CMP_LE: Any       = Any { raw: DIR_RAW | 4 };
+pub const CMP_NE: Any       = Any { raw: DIR_RAW | 5 };
 
 // VM_MY actor operations
-pub const MY_SELF: Val      = Val { raw: DIR_RAW | 0 };
-pub const MY_BEH: Val       = Val { raw: DIR_RAW | 1 };
-pub const MY_STATE: Val     = Val { raw: DIR_RAW | 2 };
+pub const MY_SELF: Any      = Any { raw: DIR_RAW | 0 };
+pub const MY_BEH: Any       = Any { raw: DIR_RAW | 1 };
+pub const MY_STATE: Any     = Any { raw: DIR_RAW | 2 };
 
 // VM_END thread actions
-pub const END_ABORT: Val    = Val { raw: DIR_RAW | -1 as Num as Raw };
-pub const END_STOP: Val     = Val { raw: DIR_RAW | 0 };
-pub const END_COMMIT: Val   = Val { raw: DIR_RAW | 1 };
-pub const END_RELEASE: Val  = Val { raw: DIR_RAW | 2 };
+pub const END_ABORT: Any    = Any { raw: DIR_RAW | -1 as Num as Raw };
+pub const END_STOP: Any     = Any { raw: DIR_RAW | 0 };
+pub const END_COMMIT: Any   = Any { raw: DIR_RAW | 1 };
+pub const END_RELEASE: Any  = Any { raw: DIR_RAW | 2 };
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 // quad-cell (minimum addressable unit)
@@ -287,251 +287,251 @@ impl Quad {
     pub fn vm_typeq(t: Any, k: Any) -> Quad {
         assert!(t.is_ptr());
         assert!(k.is_ptr());
-        Self::instr_t(VM_TYPEQ.any(), t, k)
+        Self::instr_t(VM_TYPEQ, t, k)
     }
     pub fn vm_dict(op: Any, k: Any) -> Quad {
         assert!(op.is_fix());
         assert!(k.is_ptr());
-        Self::instr_t(VM_DICT.any(), op, k)
+        Self::instr_t(VM_DICT, op, k)
     }
     pub fn vm_deque(op: Any, k: Any) -> Quad {
         assert!(op.is_fix());
         assert!(k.is_ptr());
-        Self::instr_t(VM_DEQUE.any(), op, k)
+        Self::instr_t(VM_DEQUE, op, k)
     }
     pub fn vm_pair(n: Any, k: Any) -> Quad {
         assert!(n.is_fix());
         assert!(k.is_ptr());
-        Self::instr_t(VM_PAIR.any(), n, k)
+        Self::instr_t(VM_PAIR, n, k)
     }
     pub fn vm_part(n: Any, k: Any) -> Quad {
         assert!(n.is_fix());
         assert!(k.is_ptr());
-        Self::instr_t(VM_PART.any(), n, k)
+        Self::instr_t(VM_PART, n, k)
     }
     pub fn vm_nth(n: Any, k: Any) -> Quad {
         assert!(n.is_fix());
         assert!(k.is_ptr());
-        Self::instr_t(VM_NTH.any(), n, k)
+        Self::instr_t(VM_NTH, n, k)
     }
     pub fn vm_push(v: Any, k: Any) -> Quad {
         assert!(k.is_ptr());
-        Self::instr_t(VM_PUSH.any(), v, k)
+        Self::instr_t(VM_PUSH, v, k)
     }
     pub fn vm_depth(k: Any) -> Quad {
-        Self::instr_t(VM_DEPTH.any(), UNDEF, k)
+        Self::instr_t(VM_DEPTH, UNDEF, k)
     }
     pub fn vm_drop(n: Any, k: Any) -> Quad {
         assert!(n.is_fix());
         assert!(k.is_ptr());
-        Self::instr_t(VM_DROP.any(), n, k)
+        Self::instr_t(VM_DROP, n, k)
     }
     pub fn vm_pick(n: Any, k: Any) -> Quad {
         assert!(n.is_fix());
         assert!(k.is_ptr());
-        Self::instr_t(VM_PICK.any(), n, k)
+        Self::instr_t(VM_PICK, n, k)
     }
     pub fn vm_dup(n: Any, k: Any) -> Quad {
         assert!(n.is_fix());
         assert!(k.is_ptr());
-        Self::instr_t(VM_DUP.any(), n, k)
+        Self::instr_t(VM_DUP, n, k)
     }
     pub fn vm_roll(n: Any, k: Any) -> Quad {
         assert!(n.is_fix());
         assert!(k.is_ptr());
-        Self::instr_t(VM_ROLL.any(), n, k)
+        Self::instr_t(VM_ROLL, n, k)
     }
     pub fn vm_alu(op: Any, k: Any) -> Quad {
         assert!(op.is_fix());
         assert!(k.is_ptr());
-        Self::instr_t(VM_ALU.any(), op, k)
+        Self::instr_t(VM_ALU, op, k)
     }
     pub fn vm_eq(v: Any, k: Any) -> Quad {
         assert!(k.is_ptr());
-        Self::instr_t(VM_EQ.any(), v, k)
+        Self::instr_t(VM_EQ, v, k)
     }
     pub fn vm_cmp(op: Any, k: Any) -> Quad {
         assert!(op.is_fix());
         assert!(k.is_ptr());
-        Self::instr_t(VM_CMP.any(), op, k)
+        Self::instr_t(VM_CMP, op, k)
     }
     pub fn vm_if(t: Any, f: Any) -> Quad {
         assert!(t.is_ptr());
         assert!(f.is_ptr());
-        Self::instr_t(VM_IF.any(), t, f)
+        Self::instr_t(VM_IF, t, f)
     }
     pub fn vm_msg(n: Any, k: Any) -> Quad {
         assert!(n.is_fix());
         assert!(k.is_ptr());
-        Self::instr_t(VM_MSG.any(), n, k)
+        Self::instr_t(VM_MSG, n, k)
     }
     pub fn vm_my(op: Any, k: Any) -> Quad {
         assert!(op.is_fix());
         assert!(k.is_ptr());
-        Self::instr_t(VM_MY.any(), op, k)
+        Self::instr_t(VM_MY, op, k)
     }
     pub fn vm_send(n: Any, k: Any) -> Quad {
         assert!(n.is_fix());
         assert!(k.is_ptr());
-        Self::instr_t(VM_SEND.any(), n, k)
+        Self::instr_t(VM_SEND, n, k)
     }
     pub fn vm_new(n: Any, k: Any) -> Quad {
         assert!(n.is_fix());
         assert!(k.is_ptr());
-        Self::instr_t(VM_NEW.any(), n, k)
+        Self::instr_t(VM_NEW, n, k)
     }
     pub fn vm_beh(n: Any, k: Any) -> Quad {
         assert!(n.is_fix());
         assert!(k.is_ptr());
-        Self::instr_t(VM_BEH.any(), n, k)
+        Self::instr_t(VM_BEH, n, k)
     }
     pub fn vm_end(op: Any) -> Quad {
         assert!(op.is_fix());
-        Self::instr_t(VM_END.any(), op, UNDEF)
+        Self::instr_t(VM_END, op, UNDEF)
     }
     pub fn vm_is_eq(v: Any, k: Any) -> Quad {
         assert!(k.is_ptr());
-        Self::instr_t(VM_IS_EQ.any(), v, k)
+        Self::instr_t(VM_IS_EQ, v, k)
     }
     pub fn vm_is_ne(v: Any, k: Any) -> Quad {
         assert!(k.is_ptr());
-        Self::instr_t(VM_IS_NE.any(), v, k)
+        Self::instr_t(VM_IS_NE, v, k)
     }
 
     // construct VM_DICT instructions
     pub fn vm_dict_has(k: Any) -> Quad {
         assert!(k.is_ptr());
-        Self::vm_dict(DICT_HAS.any(), k)
+        Self::vm_dict(DICT_HAS, k)
     }
     pub fn vm_dict_get(k: Any) -> Quad {
         assert!(k.is_ptr());
-        Self::vm_dict(DICT_GET.any(), k)
+        Self::vm_dict(DICT_GET, k)
     }
     pub fn vm_dict_add(k: Any) -> Quad {
         assert!(k.is_ptr());
-        Self::vm_dict(DICT_ADD.any(), k)
+        Self::vm_dict(DICT_ADD, k)
     }
     pub fn vm_dict_set(k: Any) -> Quad {
         assert!(k.is_ptr());
-        Self::vm_dict(DICT_SET.any(), k)
+        Self::vm_dict(DICT_SET, k)
     }
     pub fn vm_dict_del(k: Any) -> Quad {
         assert!(k.is_ptr());
-        Self::vm_dict(DICT_DEL.any(), k)
+        Self::vm_dict(DICT_DEL, k)
     }
 
     // construct VM_DEQUE instructions
     pub fn vm_deque_new(k: Any) -> Quad {
         assert!(k.is_ptr());
-        Self::vm_deque(DEQUE_NEW.any(), k)
+        Self::vm_deque(DEQUE_NEW, k)
     }
     pub fn vm_deque_empty(k: Any) -> Quad {
         assert!(k.is_ptr());
-        Self::vm_deque(DEQUE_EMPTY.any(), k)
+        Self::vm_deque(DEQUE_EMPTY, k)
     }
     pub fn vm_deque_push(k: Any) -> Quad {
         assert!(k.is_ptr());
-        Self::vm_deque(DEQUE_PUSH.any(), k)
+        Self::vm_deque(DEQUE_PUSH, k)
     }
     pub fn vm_deque_pop(k: Any) -> Quad {
         assert!(k.is_ptr());
-        Self::vm_deque(DEQUE_POP.any(), k)
+        Self::vm_deque(DEQUE_POP, k)
     }
     pub fn vm_deque_put(k: Any) -> Quad {
         assert!(k.is_ptr());
-        Self::vm_deque(DEQUE_PUT.any(), k)
+        Self::vm_deque(DEQUE_PUT, k)
     }
     pub fn vm_deque_pull(k: Any) -> Quad {
         assert!(k.is_ptr());
-        Self::vm_deque(DEQUE_PULL.any(), k)
+        Self::vm_deque(DEQUE_PULL, k)
     }
     pub fn vm_deque_len(k: Any) -> Quad {
         assert!(k.is_ptr());
-        Self::vm_deque(DEQUE_LEN.any(), k)
+        Self::vm_deque(DEQUE_LEN, k)
     }
 
     // construct VM_ALU instructions
     pub fn vm_alu_not(k: Any) -> Quad {
         assert!(k.is_ptr());
-        Self::vm_alu(ALU_NOT.any(), k)
+        Self::vm_alu(ALU_NOT, k)
     }
     pub fn vm_alu_and(k: Any) -> Quad {
         assert!(k.is_ptr());
-        Self::vm_alu(ALU_AND.any(), k)
+        Self::vm_alu(ALU_AND, k)
     }
     pub fn vm_alu_or(k: Any) -> Quad {
         assert!(k.is_ptr());
-        Self::vm_alu(ALU_OR.any(), k)
+        Self::vm_alu(ALU_OR, k)
     }
     pub fn vm_alu_xor(k: Any) -> Quad {
         assert!(k.is_ptr());
-        Self::vm_alu(ALU_XOR.any(), k)
+        Self::vm_alu(ALU_XOR, k)
     }
     pub fn vm_alu_add(k: Any) -> Quad {
         assert!(k.is_ptr());
-        Self::vm_alu(ALU_ADD.any(), k)
+        Self::vm_alu(ALU_ADD, k)
     }
     pub fn vm_alu_sub(k: Any) -> Quad {
         assert!(k.is_ptr());
-        Self::vm_alu(ALU_SUB.any(), k)
+        Self::vm_alu(ALU_SUB, k)
     }
     pub fn vm_alu_mul(k: Any) -> Quad {
         assert!(k.is_ptr());
-        Self::vm_alu(ALU_MUL.any(), k)
+        Self::vm_alu(ALU_MUL, k)
     }
 
     // construct VM_CMP instructions
     pub fn vm_cmp_eq(k: Any) -> Quad {
         assert!(k.is_ptr());
-        Self::vm_cmp(CMP_EQ.any(), k)
+        Self::vm_cmp(CMP_EQ, k)
     }
     pub fn vm_cmp_ge(k: Any) -> Quad {
         assert!(k.is_ptr());
-        Self::vm_cmp(CMP_GE.any(), k)
+        Self::vm_cmp(CMP_GE, k)
     }
     pub fn vm_cmp_gt(k: Any) -> Quad {
         assert!(k.is_ptr());
-        Self::vm_cmp(CMP_GT.any(), k)
+        Self::vm_cmp(CMP_GT, k)
     }
     pub fn vm_cmp_lt(k: Any) -> Quad {
         assert!(k.is_ptr());
-        Self::vm_cmp(CMP_LT.any(), k)
+        Self::vm_cmp(CMP_LT, k)
     }
     pub fn vm_cmp_le(k: Any) -> Quad {
         assert!(k.is_ptr());
-        Self::vm_cmp(CMP_LE.any(), k)
+        Self::vm_cmp(CMP_LE, k)
     }
     pub fn vm_cmp_ne(k: Any) -> Quad {
         assert!(k.is_ptr());
-        Self::vm_cmp(CMP_NE.any(), k)
+        Self::vm_cmp(CMP_NE, k)
     }
 
     // construct VM_MY instructions
     pub fn vm_my_self(k: Any) -> Quad {
         assert!(k.is_ptr());
-        Self::vm_my(MY_SELF.any(), k)
+        Self::vm_my(MY_SELF, k)
     }
     pub fn vm_my_beh(k: Any) -> Quad {
         assert!(k.is_ptr());
-        Self::vm_my(MY_BEH.any(), k)
+        Self::vm_my(MY_BEH, k)
     }
     pub fn vm_my_state(k: Any) -> Quad {
         assert!(k.is_ptr());
-        Self::vm_my(MY_STATE.any(), k)
+        Self::vm_my(MY_STATE, k)
     }
 
     // construct VM_END instructions
     pub fn vm_end_abort() -> Quad {
-        Self::vm_end(END_ABORT.any())
+        Self::vm_end(END_ABORT)
     }
     pub fn vm_end_stop() -> Quad {
-        Self::vm_end(END_STOP.any())
+        Self::vm_end(END_STOP)
     }
     pub fn vm_end_commit() -> Quad {
-        Self::vm_end(END_COMMIT.any())
+        Self::vm_end(END_COMMIT)
     }
     pub fn vm_end_release() -> Quad {
-        Self::vm_end(END_RELEASE.any())
+        Self::vm_end(END_RELEASE)
     }
 
     // construct idle Actor
@@ -565,14 +565,14 @@ impl fmt::Display for Quad {
         let mut x = self.x().to_string();
         let mut y = self.y().to_string();
         if self.t() == INSTR_T {
-            match self.x().val() {
+            match self.x() {
                 VM_TYPEQ => x = String::from("TYPEQ"),
                 VM_CELL => x = String::from("CELL"),
                 VM_GET => x = String::from("GET"),
                 //VM_GET => x = String::from("SET"),
                 VM_DICT => {
                     x = String::from("DICT");
-                    match self.y().val() {
+                    match self.y() {
                         DICT_HAS => y = String::from("HAS"),
                         DICT_GET => y = String::from("GET"),
                         DICT_ADD => y = String::from("ADD"),
@@ -592,7 +592,7 @@ impl fmt::Display for Quad {
                 VM_ROLL => x = String::from("ROLL"),
                 VM_ALU => {
                     x = String::from("ALU");
-                    match self.y().val() {
+                    match self.y() {
                         ALU_NOT => y = String::from("NOT"),
                         ALU_AND => y = String::from("AND"),
                         ALU_OR => y = String::from("OR"),
@@ -606,7 +606,7 @@ impl fmt::Display for Quad {
                 VM_EQ => x = String::from("EQ"),
                 VM_CMP => {
                     x = String::from("CMP");
-                    match self.y().val() {
+                    match self.y() {
                         CMP_EQ => y = String::from("EQ"),
                         CMP_GE => y = String::from("GE"),
                         CMP_GT => y = String::from("GT"),
@@ -620,7 +620,7 @@ impl fmt::Display for Quad {
                 VM_MSG => x = String::from("MSG"),
                 VM_MY => {
                     x = String::from("MY");
-                    match self.y().val() {
+                    match self.y() {
                         MY_SELF => y = String::from("SELF"),
                         MY_BEH => y = String::from("BEH"),
                         MY_STATE => y = String::from("STATE"),
@@ -632,7 +632,7 @@ impl fmt::Display for Quad {
                 VM_BEH => x = String::from("BEH"),
                 VM_END => {
                     x = String::from("END");
-                    match self.y().val() {
+                    match self.y() {
                         END_ABORT => y = String::from("ABORT"),
                         END_STOP => y = String::from("STOP"),
                         END_COMMIT => y = String::from("COMMIT"),
@@ -642,7 +642,7 @@ impl fmt::Display for Quad {
                 },
                 VM_DEQUE => {
                     x = String::from("DEQUE");
-                    match self.y().val() {
+                    match self.y() {
                         DEQUE_NEW => y = String::from("NEW"),
                         DEQUE_EMPTY => y = String::from("EMPTY"),
                         DEQUE_PUSH => y = String::from("PUSH"),
@@ -2380,11 +2380,13 @@ pub const _T_DEQUE_BEH: Any  = Any { raw: T_DEQUE_ADDR as Raw };
             let quad = self.mem(ptr);
             if quad.t() == INSTR_T {
                 let op = quad.x();
-                if op == VM_IF.any() || op == VM_END.any() {
+                if op == VM_IF || op == VM_END {
                     UNDEF
                 } else {
                     quad.z()
                 }
+            } else if quad.t() == PAIR_T {
+                quad.y()
             } else {
                 quad.z()
             }
@@ -2516,7 +2518,7 @@ pub enum Op {
 impl Op {
     pub fn from(quad: &Quad) -> Option<Typed> {
         assert!(quad.t() == INSTR_T);
-        match quad.get_x() {
+        match quad.x() {
             VM_TYPEQ => Some(Typed::Instr { op: Op::Typeq { t: quad.get_y().ptr(), k: quad.get_z().ptr() } }),
             VM_DICT => Some(Typed::Instr { op: Op::Dict { op: Dict::from(quad.get_y()).unwrap(), k: quad.get_z().ptr() } }),
             VM_DEQUE => Some(Typed::Instr { op: Op::Deque { op: Deque::from(quad.get_y()).unwrap(), k: quad.get_z().ptr() } }),
@@ -2546,30 +2548,30 @@ impl Op {
     }
     pub fn quad(&self) -> Quad {
         match self {
-            Op::Typeq { t, k } => Quad::init(INSTR_T.val(), VM_TYPEQ, t.val(), k.val()),
-            Op::Dict { op, k } => Quad::init(INSTR_T.val(), VM_DICT, op.val(), k.val()),
-            Op::Deque { op, k } => Quad::init(INSTR_T.val(), VM_DEQUE, op.val(), k.val()),
-            Op::Pair { n, k } => Quad::init(INSTR_T.val(), VM_PAIR, n.val(), k.val()),
-            Op::Part { n, k } => Quad::init(INSTR_T.val(), VM_PART, n.val(), k.val()),
-            Op::Nth { n, k } => Quad::init(INSTR_T.val(), VM_NTH, n.val(), k.val()),
-            Op::Push { v, k } => Quad::init(INSTR_T.val(), VM_PUSH, v.val(), k.val()),
-            Op::Depth { k } => Quad::init(INSTR_T.val(), VM_DEPTH, UNDEF.val(), k.val()),
-            Op::Drop { n, k } => Quad::init(INSTR_T.val(), VM_DROP, n.val(), k.val()),
-            Op::Pick { n, k } => Quad::init(INSTR_T.val(), VM_PICK, n.val(), k.val()),
-            Op::Dup { n, k } => Quad::init(INSTR_T.val(), VM_DUP, n.val(), k.val()),
-            Op::Roll { n, k } => Quad::init(INSTR_T.val(), VM_ROLL, n.val(), k.val()),
-            Op::Alu { op, k } => Quad::init(INSTR_T.val(), VM_ALU, op.val(), k.val()),
-            Op::Eq { v, k } => Quad::init(INSTR_T.val(), VM_EQ, v.val(), k.val()),
-            Op::Cmp { op, k } => Quad::init(INSTR_T.val(), VM_CMP, op.val(), k.val()),
-            Op::If { t, f } => Quad::init(INSTR_T.val(), VM_IF, t.val(), f.val()),
-            Op::Msg { n, k } => Quad::init(INSTR_T.val(), VM_MSG, n.val(), k.val()),
-            Op::My { op, k } => Quad::init(INSTR_T.val(), VM_MY, op.val(), k.val()),
-            Op::Send { n, k } => Quad::init(INSTR_T.val(), VM_SEND, n.val(), k.val()),
-            Op::New { n, k } => Quad::init(INSTR_T.val(), VM_NEW, n.val(), k.val()),
-            Op::Beh { n, k } => Quad::init(INSTR_T.val(), VM_BEH, n.val(), k.val()),
-            Op::End { op } => Quad::init(INSTR_T.val(), VM_END, op.val(), UNDEF.val()),
-            Op::IsEq { v, k } => Quad::init(INSTR_T.val(), VM_IS_EQ, v.val(), k.val()),
-            Op::IsNe { v, k } => Quad::init(INSTR_T.val(), VM_IS_NE, v.val(), k.val()),
+            Op::Typeq { t, k } => Quad::new(INSTR_T, VM_TYPEQ, t.any(), k.any()),
+            Op::Dict { op, k } => Quad::new(INSTR_T, VM_DICT, op.any(), k.any()),
+            Op::Deque { op, k } => Quad::new(INSTR_T, VM_DEQUE, op.any(), k.any()),
+            Op::Pair { n, k } => Quad::new(INSTR_T, VM_PAIR, n.any(), k.any()),
+            Op::Part { n, k } => Quad::new(INSTR_T, VM_PART, n.any(), k.any()),
+            Op::Nth { n, k } => Quad::new(INSTR_T, VM_NTH, n.any(), k.any()),
+            Op::Push { v, k } => Quad::new(INSTR_T, VM_PUSH, v.any(), k.any()),
+            Op::Depth { k } => Quad::new(INSTR_T, VM_DEPTH, UNDEF, k.any()),
+            Op::Drop { n, k } => Quad::new(INSTR_T, VM_DROP, n.any(), k.any()),
+            Op::Pick { n, k } => Quad::new(INSTR_T, VM_PICK, n.any(), k.any()),
+            Op::Dup { n, k } => Quad::new(INSTR_T, VM_DUP, n.any(), k.any()),
+            Op::Roll { n, k } => Quad::new(INSTR_T, VM_ROLL, n.any(), k.any()),
+            Op::Alu { op, k } => Quad::new(INSTR_T, VM_ALU, op.any(), k.any()),
+            Op::Eq { v, k } => Quad::new(INSTR_T, VM_EQ, v.any(), k.any()),
+            Op::Cmp { op, k } => Quad::new(INSTR_T, VM_CMP, op.any(), k.any()),
+            Op::If { t, f } => Quad::new(INSTR_T, VM_IF, t.any(), f.any()),
+            Op::Msg { n, k } => Quad::new(INSTR_T, VM_MSG, n.any(), k.any()),
+            Op::My { op, k } => Quad::new(INSTR_T, VM_MY, op.any(), k.any()),
+            Op::Send { n, k } => Quad::new(INSTR_T, VM_SEND, n.any(), k.any()),
+            Op::New { n, k } => Quad::new(INSTR_T, VM_NEW, n.any(), k.any()),
+            Op::Beh { n, k } => Quad::new(INSTR_T, VM_BEH, n.any(), k.any()),
+            Op::End { op } => Quad::new(INSTR_T, VM_END, op.any(), UNDEF),
+            Op::IsEq { v, k } => Quad::new(INSTR_T, VM_IS_EQ, v.any(), k.any()),
+            Op::IsNe { v, k } => Quad::new(INSTR_T, VM_IS_NE, v.any(), k.any()),
         }
     }
 }
@@ -2620,7 +2622,7 @@ pub enum Dict {
 }
 impl Dict {
     pub fn from(val: Val) -> Option<Dict> {
-        match val {
+        match val.any() {
             DICT_HAS => Some(Dict::Has),
             DICT_GET => Some(Dict::Get),
             DICT_ADD => Some(Dict::Add),
@@ -2629,7 +2631,7 @@ impl Dict {
             _ => None,
         }
     }
-    pub fn val(&self) -> Val {
+    pub fn any(self) -> Any {  // NOTE: consumes `self`
         match self {
             Dict::Has => DICT_HAS,
             Dict::Get => DICT_GET,
@@ -2637,6 +2639,9 @@ impl Dict {
             Dict::Set => DICT_SET,
             Dict::Del => DICT_DEL,
         }
+    }
+    pub fn val(self) -> Val {  // NOTE: consumes `self`
+        self.any().val()
     }
 }
 impl fmt::Display for Dict {
@@ -2663,7 +2668,7 @@ pub enum Deque {
 }
 impl Deque {
     pub fn from(val: Val) -> Option<Deque> {
-        match val {
+        match val.any() {
             DEQUE_NEW => Some(Deque::New),
             DEQUE_EMPTY => Some(Deque::Empty),
             DEQUE_PUSH => Some(Deque::Push),
@@ -2674,7 +2679,7 @@ impl Deque {
             _ => None,
         }
     }
-    pub fn val(&self) -> Val {
+    pub fn any(self) -> Any {  // NOTE: consumes `self`
         match self {
             Deque::New => DEQUE_NEW,
             Deque::Empty => DEQUE_EMPTY,
@@ -2684,6 +2689,9 @@ impl Deque {
             Deque::Pull => DEQUE_PULL,
             Deque::Len => DEQUE_LEN,
         }
+    }
+    pub fn val(self) -> Val {  // NOTE: consumes `self`
+        self.any().val()
     }
 }
 impl fmt::Display for Deque {
@@ -2712,7 +2720,7 @@ pub enum Alu {
 }
 impl Alu {
     pub fn from(val: Val) -> Option<Alu> {
-        match val {
+        match val.any() {
             ALU_NOT => Some(Alu::Not),
             ALU_AND => Some(Alu::And),
             ALU_OR => Some(Alu::Or),
@@ -2723,7 +2731,7 @@ impl Alu {
             _ => None,
         }
     }
-    pub fn val(&self) -> Val {
+    pub fn any(self) -> Any {  // NOTE: consumes `self`
         match self {
             Alu::Not => ALU_NOT,
             Alu::And => ALU_AND,
@@ -2733,6 +2741,9 @@ impl Alu {
             Alu::Sub => ALU_SUB,
             Alu::Mul => ALU_MUL,
         }
+    }
+    pub fn val(self) -> Val {  // NOTE: consumes `self`
+        self.any().val()
     }
 }
 impl fmt::Display for Alu {
@@ -2760,7 +2771,7 @@ pub enum Cmp {
 }
 impl Cmp {
     pub fn from(val: Val) -> Option<Cmp> {
-        match val {
+        match val.any() {
             CMP_EQ => Some(Cmp::Eq),
             CMP_GE => Some(Cmp::Ge),
             CMP_GT => Some(Cmp::Gt),
@@ -2770,7 +2781,7 @@ impl Cmp {
             _ => None,
         }
     }
-    pub fn val(&self) -> Val {
+    pub fn any(self) -> Any {  // NOTE: consumes `self`
         match self {
             Cmp::Eq => CMP_EQ,
             Cmp::Ge => CMP_GE,
@@ -2779,6 +2790,9 @@ impl Cmp {
             Cmp::Le => CMP_LE,
             Cmp::Ne => CMP_NE,
         }
+    }
+    pub fn val(self) -> Val {  // NOTE: consumes `self`
+        self.any().val()
     }
 }
 impl fmt::Display for Cmp {
@@ -2802,19 +2816,22 @@ pub enum My {
 }
 impl My {
     pub fn from(val: Val) -> Option<My> {
-        match val {
+        match val.any() {
             MY_SELF => Some(My::Addr),
             MY_BEH => Some(My::Beh),
             MY_STATE => Some(My::State),
             _ => None,
         }
     }
-    pub fn val(&self) -> Val {
+    pub fn any(self) -> Any {  // NOTE: consumes `self`
         match self {
             My::Addr => MY_SELF,
             My::Beh => MY_BEH,
             My::State => MY_STATE,
         }
+    }
+    pub fn val(self) -> Val {  // NOTE: consumes `self`
+        self.any().val()
     }
 }
 impl fmt::Display for My {
@@ -2836,7 +2853,7 @@ pub enum End {
 }
 impl End {
     pub fn from(val: Val) -> Option<End> {
-        match val {
+        match val.any() {
             END_ABORT => Some(End::Abort),
             END_STOP => Some(End::Stop),
             END_COMMIT => Some(End::Commit),
@@ -2844,13 +2861,16 @@ impl End {
             _ => None,
         }
     }
-    pub fn val(&self) -> Val {
+    pub fn any(self) -> Any {  // NOTE: consumes `self`
         match self {
             End::Abort => END_ABORT,
             End::Stop => END_STOP,
             End::Commit => END_COMMIT,
             End::Release => END_RELEASE,
         }
+    }
+    pub fn val(self) -> Val {  // NOTE: consumes `self`
+        self.any().val()
     }
 }
 impl fmt::Display for End {
@@ -2939,8 +2959,6 @@ impl fmt::Display for Fix {
     }
 }
 
-pub fn fixnum(num: Num) -> Val { Fix::new(num).val() }  // convenience constructor
-
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Ptr { raw: Raw }
 impl Ptr {
@@ -3001,8 +3019,6 @@ impl fmt::Display for Ptr {
     }
 }
 
-pub fn ptrval(raw: Raw) -> Val { Ptr::new(raw).val() }  // convenience constructor
-
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Cap { raw: Raw }
 impl Cap {
@@ -3039,8 +3055,6 @@ impl fmt::Display for Cap {
     }
 }
 
-pub fn capval(raw: Raw) -> Val { Cap::new(raw).val() }  // convenience constructor
-
 //#[cfg(test)] -- use this if/when the tests are in a sub-module
 #[test]
 fn base_types_are_32_bits() {
@@ -3050,8 +3064,9 @@ fn base_types_are_32_bits() {
     assert_eq!(4, std::mem::size_of::<Fix>());
     assert_eq!(4, std::mem::size_of::<Ptr>());
     assert_eq!(4, std::mem::size_of::<Cap>());
+    assert_eq!(4, std::mem::size_of::<Any>());
     assert_eq!(16, std::mem::size_of::<Quad>());
-    //assert_eq!(16, std::mem::size_of::<Typed>());
+    //assert_eq!(16, std::mem::size_of::<Typed>());  // enumeration discriminator adds +4...
 }
 
 #[test]
