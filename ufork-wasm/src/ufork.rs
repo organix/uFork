@@ -540,6 +540,7 @@ impl Quad {
     }
 
     // inter-op with Val type-hierarchy
+    /*
     pub fn init(t: Val, x: Val, y: Val, z: Val) -> Quad {
         Quad {
             t: t.any(),
@@ -548,6 +549,7 @@ impl Quad {
             z: z.any(),
         }
     }
+    */
     pub fn get_t(&self) -> Val { self.t.val() }
     pub fn get_x(&self) -> Val { self.x.val() }
     pub fn get_y(&self) -> Val { self.y.val() }
@@ -719,7 +721,7 @@ impl Core {
             Quad::empty_t();
             QUAD_MAX
         ];
-        quad_ram[MEMORY.addr()]     = Quad::memory_t(Any::ram(MEM_TOP_ADDR), NIL, ZERO, DDEQUE);
+        quad_ram[MEMORY.addr()]     = Quad::memory_t(Any::ram(_RAM_TOP_ADDR), NIL, ZERO, DDEQUE);
         quad_ram[DDEQUE.addr()]     = Quad::ddeque_t(E_BOOT, E_BOOT, NIL, NIL);
 pub const E_BOOT: Any       = Any { raw: MUT_RAW | 2 };
         //quad_ram[E_BOOT.addr()]     = Quad::event_t(A_STOP, TEST_MSG, NIL);  // stop actor
@@ -743,7 +745,7 @@ pub const TEST_SP: Any      = Any { raw: MUT_RAW | 10 };
         quad_ram[10]                = Quad::pair_t(MINUS_1, Any::ram(11));
         quad_ram[11]                = Quad::pair_t(MINUS_2, Any::ram(12));
         quad_ram[12]                = Quad::pair_t(MINUS_3, NIL);
-pub const MEM_TOP_ADDR: usize = 16;
+pub const _RAM_TOP_ADDR: usize = 16;
 
         let mut quad_rom = [
             Quad::empty_t();
@@ -1135,7 +1137,6 @@ pub const _F_FIB_GEN: Any = Any { raw: (F_FIB_ADDR+26) as Raw };  // worker-gene
         quad_rom[F_FIB_ADDR+27]     = Quad::vm_push(F_FIB_BEH, Any::rom(F_FIB_ADDR+28));  // msg fib-beh
         quad_rom[F_FIB_ADDR+28]     = Quad::vm_new(ZERO, SEND_0);  // msg fib
 
-pub const _F_FIB_END: usize = F_FIB_ADDR+29;
 /*
 (define COMMIT
     (vm-end-commit))
@@ -1182,7 +1183,7 @@ pub const _F_FIB_END: usize = F_FIB_ADDR+29;
             )))))))
 */
 
-pub const IS_EQ_ADDR: usize = _F_FIB_END;
+pub const IS_EQ_ADDR: usize = F_FIB_ADDR+29;
 pub const _IS_EQ_BEH: Any    = Any { raw: IS_EQ_ADDR as Raw };
         /*
         (define is-eq-beh
@@ -1198,9 +1199,9 @@ pub const _IS_EQ_BEH: Any    = Any { raw: IS_EQ_ADDR as Raw };
 
 pub const TEST_ADDR: usize = IS_EQ_ADDR+4;
 pub const TEST_BEH: Any    = Any { raw: TEST_ADDR as Raw };
-        quad_rom[TEST_ADDR+0]       = Quad::vm_drop(PLUS_3, Any::rom(T_DEQUE_ADDR));  // --
+        //quad_rom[TEST_ADDR+0]       = Quad::vm_drop(PLUS_3, Any::rom(T_DEQUE_ADDR));  // --
         //quad_rom[TEST_ADDR+0]       = Quad::vm_drop(PLUS_3, Any::rom(T_DICT_ADDR));  // --
-        //quad_rom[TEST_ADDR+0]       = Quad::vm_drop(PLUS_3, Any::rom(TEST_ADDR+1));  // --
+        quad_rom[TEST_ADDR+0]       = Quad::vm_drop(PLUS_3, Any::rom(TEST_ADDR+1));  // --
         quad_rom[TEST_ADDR+1]       = Quad::vm_push(PLUS_6, Any::rom(TEST_ADDR+2));  // 6
         quad_rom[TEST_ADDR+2]       = Quad::vm_push(EQ_8_BEH, Any::rom(TEST_ADDR+3));  // 6 eq-8-beh
         quad_rom[TEST_ADDR+3]       = Quad::vm_new(ZERO, Any::rom(TEST_ADDR+4));  // 6 eq-8
@@ -1340,6 +1341,8 @@ pub const _T_DEQUE_BEH: Any  = Any { raw: T_DEQUE_ADDR as Raw };
         quad_rom[T_DEQUE_ADDR+63]   = Quad::vm_deque_len(Any::rom(T_DEQUE_ADDR+64));  // (()) (#unit) (@4 #unit) (()) 0
         quad_rom[T_DEQUE_ADDR+64]   = Quad::vm_is_eq(ZERO, COMMIT);  // (()) (#unit) (@4 #unit) (())
 
+pub const _ROM_TOP_ADDR: usize = T_DEQUE_ADDR+64;
+
         Core {
             quad_rom,
             quad_ram,
@@ -1417,388 +1420,397 @@ pub const _T_DEQUE_BEH: Any  = Any { raw: T_DEQUE_ADDR as Raw };
         let instr = self.mem(ip);
         println!("perform_op: ip={} -> {}", ip, instr);
         assert!(instr.t() == INSTR_T);
-        let _opr = instr.x();  // operation code
+        let opr = instr.x();  // operation code
         let imm = instr.y();  // immediate argument
         let kip = instr.z();  // next instruction
-        let ip_ = if let Some(Typed::Instr { op }) = Typed::from(instr) {
-            println!("perform_op: op={}", op);
-            match op {
-                Op::Typeq { t, .. } => {
-                    println!("vm_typeq: typ={}", t);
-                    let val = self.stack_pop();
-                    println!("vm_typeq: val={}", val);
-                    let r = if self.typeq(t.any(), val) { TRUE } else { FALSE };
-                    self.stack_push(r);
-                    kip
-                },
-                Op::Dict { op, .. } => {
-                    println!("vm_dict: op={}", op);
-                    match op {
-                        Dict::Has => {
-                            let key = self.stack_pop();
-                            let dict = self.stack_pop();
-                            let b = self.dict_has(dict, key);
-                            let v = if b { TRUE } else { FALSE };
-                            self.stack_push(v);
-                        },
-                        Dict::Get => {
-                            let key = self.stack_pop();
-                            let dict = self.stack_pop();
-                            let v = self.dict_get(dict, key);
-                            self.stack_push(v);
-                        },
-                        Dict::Add => {
-                            let value = self.stack_pop();
-                            let key = self.stack_pop();
-                            let dict = self.stack_pop();
-                            let d = self.dict_add(dict, key, value);
-                            self.stack_push(d);
-                        },
-                        Dict::Set => {
-                            let value = self.stack_pop();
-                            let key = self.stack_pop();
-                            let dict = self.stack_pop();
-                            let d = self.dict_set(dict, key, value);
-                            self.stack_push(d);
-                        },
-                        Dict::Del => {
-                            let key = self.stack_pop();
-                            let dict = self.stack_pop();
-                            let d = self.dict_del(dict, key);
-                            self.stack_push(d);
-                        },
-                    };
-                    kip
-                },
-                Op::Deque { op, .. } => {
-                    println!("vm_deque: op={}", op);
-                    match op {
-                        Deque::New => {
-                            let deque = self.deque_new();
-                            self.stack_push(deque);
-                        },
-                        Deque::Empty => {
-                            let deque = self.stack_pop();
-                            let b = self.deque_empty(deque);
-                            let v = if b { TRUE } else { FALSE };
-                            self.stack_push(v);
-                        },
-                        Deque::Push => {
-                            let item = self.stack_pop();
-                            let old = self.stack_pop();
-                            let new = self.deque_push(old, item);
-                            self.stack_push(new);
-                        },
-                        Deque::Pop => {
-                            let old = self.stack_pop();
-                            let (new, item) = self.deque_pop(old);
-                            self.stack_push(new);
-                            self.stack_push(item);
-                        },
-                        Deque::Put => {
-                            let item = self.stack_pop();
-                            let old = self.stack_pop();
-                            let new = self.deque_put(old, item);
-                            self.stack_push(new);
-                        },
-                        Deque::Pull => {
-                            let old = self.stack_pop();
-                            let (new, item) = self.deque_pull(old);
-                            self.stack_push(new);
-                            self.stack_push(item);
-                        },
-                        Deque::Len => {
-                            let deque = self.stack_pop();
-                            let n = self.deque_len(deque);
-                            self.stack_push(Any::fix(n));
-                        },
-                    };
-                    kip
-                },
-                Op::Pair { n, .. } => {
-                    println!("vm_pair: cnt={}", n);
-                    let n = n.any().fix_num().unwrap();
-                    self.stack_pairs(n);
-                    kip
-                },
-                Op::Part { n, .. } => {
-                    println!("vm_part: cnt={}", n);
-                    let n = n.any().fix_num().unwrap();
-                    self.stack_parts(n);
-                    kip
-                },
-                Op::Nth { n, .. } => {
-                    println!("vm_nth: idx={}", n);
-                    let lst = self.stack_pop();
-                    println!("vm_nth: lst={}", lst);
-                    let n = n.any().fix_num().unwrap();
-                    let r = self.extract_nth(lst, n);
-                    println!("vm_nth: r={}", r);
-                    self.stack_push(r);
-                    kip
-                },
-                Op::Push { v, .. } => {
-                    println!("vm_push: val={}", v);
-                    self.stack_push(v.any());
-                    kip
-                },
-                Op::Depth { .. } => {
+        let ip_ = match opr {
+            VM_TYPEQ => {
+                println!("vm_typeq: typ={}", imm);
+                let val = self.stack_pop();
+                println!("vm_typeq: val={}", val);
+                let r = if self.typeq(imm, val) { TRUE } else { FALSE };
+                self.stack_push(r);
+                kip
+            },
+            VM_DICT => {
+                println!("vm_dict: op={}", imm);
+                match imm {
+                    DICT_HAS => {
+                        let key = self.stack_pop();
+                        let dict = self.stack_pop();
+                        let b = self.dict_has(dict, key);
+                        let v = if b { TRUE } else { FALSE };
+                        self.stack_push(v);
+                    },
+                    DICT_GET => {
+                        let key = self.stack_pop();
+                        let dict = self.stack_pop();
+                        let v = self.dict_get(dict, key);
+                        self.stack_push(v);
+                    },
+                    DICT_ADD => {
+                        let value = self.stack_pop();
+                        let key = self.stack_pop();
+                        let dict = self.stack_pop();
+                        let d = self.dict_add(dict, key, value);
+                        self.stack_push(d);
+                    },
+                    DICT_SET => {
+                        let value = self.stack_pop();
+                        let key = self.stack_pop();
+                        let dict = self.stack_pop();
+                        let d = self.dict_set(dict, key, value);
+                        self.stack_push(d);
+                    },
+                    DICT_DEL => {
+                        let key = self.stack_pop();
+                        let dict = self.stack_pop();
+                        let d = self.dict_del(dict, key);
+                        self.stack_push(d);
+                    },
+                    _ => {
+                        panic!("Unknown op {}!", imm);
+                    }
+                };
+                kip
+            },
+            VM_DEQUE => {
+                println!("vm_deque: op={}", imm);
+                match imm {
+                    DEQUE_NEW => {
+                        let deque = self.deque_new();
+                        self.stack_push(deque);
+                    },
+                    DEQUE_EMPTY => {
+                        let deque = self.stack_pop();
+                        let b = self.deque_empty(deque);
+                        let v = if b { TRUE } else { FALSE };
+                        self.stack_push(v);
+                    },
+                    DEQUE_PUSH => {
+                        let item = self.stack_pop();
+                        let old = self.stack_pop();
+                        let new = self.deque_push(old, item);
+                        self.stack_push(new);
+                    },
+                    DEQUE_POP => {
+                        let old = self.stack_pop();
+                        let (new, item) = self.deque_pop(old);
+                        self.stack_push(new);
+                        self.stack_push(item);
+                    },
+                    DEQUE_PUT => {
+                        let item = self.stack_pop();
+                        let old = self.stack_pop();
+                        let new = self.deque_put(old, item);
+                        self.stack_push(new);
+                    },
+                    DEQUE_PULL => {
+                        let old = self.stack_pop();
+                        let (new, item) = self.deque_pull(old);
+                        self.stack_push(new);
+                        self.stack_push(item);
+                    },
+                    DEQUE_LEN => {
+                        let deque = self.stack_pop();
+                        let n = self.deque_len(deque);
+                        self.stack_push(Any::fix(n));
+                    },
+                    _ => {
+                        panic!("Unknown op {}!", imm);
+                    }
+                };
+                kip
+            },
+            VM_PAIR => {
+                println!("vm_pair: cnt={}", imm);
+                let n = imm.fix_num().unwrap();
+                self.stack_pairs(n);
+                kip
+            },
+            VM_PART => {
+                println!("vm_part: cnt={}", imm);
+                let n = imm.fix_num().unwrap();
+                self.stack_parts(n);
+                kip
+            },
+            VM_NTH => {
+                println!("vm_nth: idx={}", imm);
+                let lst = self.stack_pop();
+                println!("vm_nth: lst={}", lst);
+                let n = imm.fix_num().unwrap();
+                let r = self.extract_nth(lst, n);
+                println!("vm_nth: r={}", r);
+                self.stack_push(r);
+                kip
+            },
+            VM_PUSH => {
+                println!("vm_push: val={}", imm);
+                self.stack_push(imm);
+                kip
+            },
+            VM_DEPTH => {
+                let lst = self.sp();
+                println!("vm_depth: lst={}", lst);
+                let n = self.list_len(lst);
+                let n = Any::fix(n);
+                println!("vm_depth: n={}", n);
+                self.stack_push(n);
+                kip
+            },
+            VM_DROP => {
+                println!("vm_drop: n={}", imm);
+                let mut n = imm.fix_num().unwrap();
+                assert!(n < 64);  // FIXME: replace with cycle-limit(s) in Sponsor
+                while n > 0 {
+                    self.stack_pop();
+                    n -= 1;
+                };
+                kip
+            },
+            VM_PICK => {
+                println!("vm_pick: idx={}", imm);
+                let n = imm.fix_num().unwrap();
+                let r = if n > 0 {
                     let lst = self.sp();
-                    println!("vm_depth: lst={}", lst);
-                    let n = self.list_len(lst);
-                    let n = Any::fix(n);
-                    println!("vm_depth: n={}", n);
-                    self.stack_push(n);
-                    kip
-                },
-                Op::Drop { n, .. } => {
-                    println!("vm_drop: n={}", n);
-                    let mut n = n.any().fix_num().unwrap();
-                    assert!(n < 64);  // FIXME: replace with cycle-limit(s) in Sponsor
-                    while n > 0 {
-                        self.stack_pop();
-                        n -= 1;
-                    };
-                    kip
-                },
-                Op::Pick { n, .. } => {
-                    println!("vm_pick: idx={}", n);
-                    let n = n.any().fix_num().unwrap();
-                    let r = if n > 0 {
-                        let lst = self.sp();
-                        self.extract_nth(lst, n)
-                    } else {
-                        UNDEF
-                    };
-                    println!("vm_pick: r={}", r);
-                    self.stack_push(r);
-                    kip
-                },
-                Op::Dup { n, .. } => {
-                    println!("vm_dup: n={}", n);
-                    let n = n.any().fix_num().unwrap();
-                    self.stack_dup(n);
-                    kip
-                },
-                Op::Roll { n, .. } => {
-                    println!("vm_roll: idx={}", n);
-                    let n = n.any().fix_num().unwrap();
-                    self.stack_roll(n);
-                    kip
-                },
-                Op::Alu { op, .. } => {
-                    println!("vm_alu: op={}", op);
-                    let r = if op == Alu::Not {
-                        let v = self.stack_pop();
-                        println!("vm_alu: v={}", v);
-                        match v.fix_num() {
-                            Some(n) => Any::fix(!n),
-                            _ => UNDEF,
-                        }
-                    } else {
-                        let vv = self.stack_pop();
-                        println!("vm_alu: vv={}", vv);
-                        let v = self.stack_pop();
-                        println!("vm_alu: v={}", v);
-                            match (v.fix_num(), vv.fix_num()) {
-                            (Some(n), Some(nn)) => {
-                                match op {
-                                    Alu::And => Any::fix(n & nn),
-                                    Alu::Or => Any::fix(n | nn),
-                                    Alu::Xor => Any::fix(n ^ nn),
-                                    Alu::Add => Any::fix(n + nn),
-                                    Alu::Sub => Any::fix(n - nn),
-                                    Alu::Mul => Any::fix(n * nn),
-                                    _ => UNDEF,
-                                }
-                            }
-                            _ => UNDEF
-                        }
-                    };
-                    println!("vm_alu: r={}", r);
-                    self.stack_push(r);
-                    kip
-                },
-                Op::Eq { v, .. } => {
-                    println!("vm_eq: v={}", v);
-                    let vv = self.stack_pop();
-                    println!("vm_eq: vv={}", vv);
-                    let r = if imm == vv { TRUE } else { FALSE };
-                    println!("vm_eq: r={}", r);
-                    self.stack_push(r);
-                    kip
-                },
-                Op::Cmp { op, .. } => {
-                    println!("vm_cmp: op={}", op);
-                    let vv = self.stack_pop();
-                    println!("vm_cmp: vv={}", vv);
+                    self.extract_nth(lst, n)
+                } else {
+                    UNDEF
+                };
+                println!("vm_pick: r={}", r);
+                self.stack_push(r);
+                kip
+            },
+            VM_DUP => {
+                println!("vm_dup: n={}", imm);
+                let n = imm.fix_num().unwrap();
+                self.stack_dup(n);
+                kip
+            },
+            VM_ROLL => {
+                println!("vm_roll: idx={}", imm);
+                let n = imm.fix_num().unwrap();
+                self.stack_roll(n);
+                kip
+            },
+            VM_ALU => {
+                println!("vm_alu: op={}", imm);
+                let r = if imm == ALU_NOT {
                     let v = self.stack_pop();
-                    println!("vm_cmp: v={}", v);
-                    let b = if op == Cmp::Eq {
-                        v == vv
-                    } else if op == Cmp::Ne {
-                        v != vv
-                    } else {
+                    println!("vm_alu: v={}", v);
+                    match v.fix_num() {
+                        Some(n) => Any::fix(!n),
+                        _ => UNDEF,
+                    }
+                } else {
+                    let vv = self.stack_pop();
+                    println!("vm_alu: vv={}", vv);
+                    let v = self.stack_pop();
+                    println!("vm_alu: v={}", v);
                         match (v.fix_num(), vv.fix_num()) {
-                            (Some(n), Some(nn)) => {
-                                match op {
-                                    Cmp::Ge => n >= nn,
-                                    Cmp::Gt => n > nn,
-                                    Cmp::Lt => n < nn,
-                                    Cmp::Le => n <= nn,
-                                    _ => false,
-                                }
+                        (Some(n), Some(nn)) => {
+                            match imm {
+                                ALU_AND => Any::fix(n & nn),
+                                ALU_OR => Any::fix(n | nn),
+                                ALU_XOR => Any::fix(n ^ nn),
+                                ALU_ADD => Any::fix(n + nn),
+                                ALU_SUB => Any::fix(n - nn),
+                                ALU_MUL => Any::fix(n * nn),
+                                _ => UNDEF,
                             }
-                            _ => false
                         }
-                    };
-                    let r = if b { TRUE } else { FALSE };
-                    println!("vm_cmp: r={}", r);
-                    self.stack_push(r);
-                    kip
-                },
-                Op::If { .. } => {
-                    let b = self.stack_pop();
-                    println!("vm_if: b={}", b);
-                    println!("vm_if: t={}", imm);
-                    println!("vm_if: f={}", kip);
-                    //if falsey(b) { f.any() } else { t.any() }
-                    if falsey(b) { kip } else { imm }
-                },
-                Op::Msg { n, .. } => {
-                    println!("vm_msg: idx={}", n);
-                    let n = n.any().fix_num().unwrap();
-                    let ep = self.ep();
-                    let event = self.mem(ep);
-                    let msg = event.y();
-                    let r = self.extract_nth(msg, n);
-                    println!("vm_msg: r={}", r);
-                    self.stack_push(r);
-                    kip
-                },
-                Op::My { op, .. } => {
-                    println!("vm_my: op={}", op);
-                    let me = self.self_ptr();
-                    println!("vm_my: me={} -> {}", me, self.ram(me));
-                    match op {
-                        My::Addr => {
-                            let ep = self.ep();
-                            let target = self.ram(ep).x();
-                            println!("vm_my: self={}", target);
-                            self.stack_push(target);
-                        },
-                        My::Beh => {
-                            let beh = self.ram(me).x();
-                            println!("vm_my: beh={}", beh);
-                            self.stack_push(beh);
-                        },
-                        My::State => {
-                            let state = self.ram(me).y();
-                            println!("vm_my: state={}", state);
-                            self.push_list(state);
-                        },
+                        _ => UNDEF
                     }
-                    kip
+                };
+                println!("vm_alu: r={}", r);
+                self.stack_push(r);
+                kip
+            },
+            VM_EQ => {
+                println!("vm_eq: v={}", imm);
+                let vv = self.stack_pop();
+                println!("vm_eq: vv={}", vv);
+                let r = if imm == vv { TRUE } else { FALSE };
+                println!("vm_eq: r={}", r);
+                self.stack_push(r);
+                kip
+            },
+            VM_CMP => {
+                println!("vm_cmp: op={}", imm);
+                let vv = self.stack_pop();
+                println!("vm_cmp: vv={}", vv);
+                let v = self.stack_pop();
+                println!("vm_cmp: v={}", v);
+                let b = if imm == CMP_EQ {
+                    v == vv
+                } else if imm == CMP_NE {
+                    v != vv
+                } else {
+                    match (v.fix_num(), vv.fix_num()) {
+                        (Some(n), Some(nn)) => {
+                            match imm {
+                                CMP_GE => n >= nn,
+                                CMP_GT => n > nn,
+                                CMP_LT => n < nn,
+                                CMP_LE => n <= nn,
+                                _ => false,
+                            }
+                        }
+                        _ => false
+                    }
+                };
+                let r = if b { TRUE } else { FALSE };
+                println!("vm_cmp: r={}", r);
+                self.stack_push(r);
+                kip
+            },
+            VM_IF => {
+                let b = self.stack_pop();
+                println!("vm_if: b={}", b);
+                println!("vm_if: t={}", imm);
+                println!("vm_if: f={}", kip);
+                if falsey(b) { kip } else { imm }
+            },
+            VM_MSG => {
+                println!("vm_msg: idx={}", imm);
+                let n = imm.fix_num().unwrap();
+                let ep = self.ep();
+                let event = self.mem(ep);
+                let msg = event.y();
+                let r = self.extract_nth(msg, n);
+                println!("vm_msg: r={}", r);
+                self.stack_push(r);
+                kip
+            },
+            VM_MY => {
+                println!("vm_my: op={}", imm);
+                let me = self.self_ptr();
+                println!("vm_my: me={} -> {}", me, self.ram(me));
+                match imm {
+                    MY_SELF => {
+                        let ep = self.ep();
+                        let target = self.ram(ep).x();
+                        println!("vm_my: self={}", target);
+                        self.stack_push(target);
+                    },
+                    MY_BEH => {
+                        let beh = self.ram(me).x();
+                        println!("vm_my: beh={}", beh);
+                        self.stack_push(beh);
+                    },
+                    MY_STATE => {
+                        let state = self.ram(me).y();
+                        println!("vm_my: state={}", state);
+                        self.push_list(state);
+                    },
+                    _ => {
+                        panic!("Unknown op {}!", imm);
+                    }
                 }
-                Op::Send { n, .. } => {
-                    println!("vm_send: idx={}", n);
-                    let num = n.any().fix_num().unwrap();
-                    let target = self.stack_pop();
-                    println!("vm_send: target={}", target);
-                    assert!(self.typeq(ACTOR_T, target));
-                    let msg = if num > 0 {
-                        self.pop_counted(num)
-                    } else {
-                        self.stack_pop()
-                    };
-                    println!("vm_send: msg={}", msg);
-                    let ep = self.new_event(target, msg);
-                    let me = self.self_ptr();
-                    println!("vm_send: me={} -> {}", me, self.ram(me));
-                    let next = self.ram(me).z();
-                    if next.is_ram() {
-                        self.ram_mut(ep).set_z(next);
-                        println!("vm_send: ep={} -> {}", ep, self.mem(ep));
-                    }
-                    self.ram_mut(me).set_z(ep);
-                    println!("vm_send: me'={} -> {}", me, self.mem(me));
-                    kip
-                },
-                Op::New { n, .. } => {
-                    println!("vm_new: idx={}", n);
-                    let num = n.any().fix_num().unwrap();
-                    let ip = self.stack_pop();
-                    println!("vm_new: ip={}", ip);
-                    assert!(self.typeq(INSTR_T, ip));
-                    let sp = self.pop_counted(num);
-                    println!("vm_new: sp={}", sp);
-                    let a = self.new_actor(ip, sp);
-                    println!("vm_new: actor={}", a);
-                    self.stack_push(a);
-                    kip
-                },
-                Op::Beh { n, .. } => {
-                    println!("vm_beh: idx={}", n);
-                    let num = n.any().fix_num().unwrap();
-                    let ip = self.stack_pop();
-                    println!("vm_beh: ip={}", ip);
-                    assert!(self.typeq(INSTR_T, ip));
-                    let sp = self.pop_counted(num);
-                    println!("vm_beh: sp={}", sp);
-                    let me = self.self_ptr();
-                    let actor = self.ram_mut(me);
-                    println!("vm_beh: me={} -> {}", me, actor);
-                    actor.set_x(ip);  // replace behavior function
-                    actor.set_y(sp);  // replace state data
-                    println!("vm_beh: me'={} -> {}", me, self.ram(me));
-                    kip
-                },
-                Op::End { op } => {
-                    println!("vm_end: op={}", op);
-                    let me = self.self_ptr();
-                    println!("vm_end: me={} -> {}", me, self.ram(me));
-                    match op {
-                        End::Abort => {
-                            let _r = self.stack_pop();  // reason for abort
-                            println!("vm_end: reason={}", _r);
-                            self.actor_abort(me);
-                            //UNDEF
-                            panic!("End::Abort should signal controller")
-                        },
-                        End::Stop => {
-                            println!("vm_end: MEMORY={}", self.ram(MEMORY));
-                            //UNIT
-                            panic!("End::Stop terminated continuation")
-                        },
-                        End::Commit => {
-                            self.actor_commit(me);
-                            TRUE
-                        },
-                        End::Release => {
-                            self.ram_mut(me).set_y(NIL);  // no retained stack
-                            self.actor_commit(me);
-                            self.free(me);  // free actor
-                            FALSE
-                        },
-                    }
-                },
-                Op::IsEq { .. } => {
-                    println!("vm_is_eq: expect={}", imm);
-                    let vv = self.stack_pop();
-                    println!("vm_is_eq: actual={}", vv);
-                    assert_eq!(imm, vv);
-                    kip
-                },
-                Op::IsNe { .. } => {
-                    println!("vm_is_ne: expect={}", imm);
-                    let vv = self.stack_pop();
-                    println!("vm_is_ne: actual={}", vv);
-                    assert_ne!(imm, vv);
-                    kip
-                },
+                kip
             }
-        } else {
-            panic!("Illegal instruction!");
+            VM_SEND => {
+                println!("vm_send: cnt={}", imm);
+                let num = imm.fix_num().unwrap();
+                let target = self.stack_pop();
+                println!("vm_send: target={}", target);
+                assert!(self.typeq(ACTOR_T, target));
+                let msg = if num > 0 {
+                    self.pop_counted(num)
+                } else {
+                    self.stack_pop()
+                };
+                println!("vm_send: msg={}", msg);
+                let ep = self.new_event(target, msg);
+                let me = self.self_ptr();
+                println!("vm_send: me={} -> {}", me, self.ram(me));
+                let next = self.ram(me).z();
+                if next.is_ram() {
+                    self.ram_mut(ep).set_z(next);
+                    println!("vm_send: ep={} -> {}", ep, self.mem(ep));
+                }
+                self.ram_mut(me).set_z(ep);
+                println!("vm_send: me'={} -> {}", me, self.mem(me));
+                kip
+            },
+            VM_NEW => {
+                println!("vm_new: cnt={}", imm);
+                let num = imm.fix_num().unwrap();
+                let ip = self.stack_pop();
+                println!("vm_new: ip={}", ip);
+                assert!(self.typeq(INSTR_T, ip));
+                let sp = self.pop_counted(num);
+                println!("vm_new: sp={}", sp);
+                let a = self.new_actor(ip, sp);
+                println!("vm_new: actor={}", a);
+                self.stack_push(a);
+                kip
+            },
+            VM_BEH => {
+                println!("vm_beh: cnt={}", imm);
+                let num = imm.fix_num().unwrap();
+                let ip = self.stack_pop();
+                println!("vm_beh: ip={}", ip);
+                assert!(self.typeq(INSTR_T, ip));
+                let sp = self.pop_counted(num);
+                println!("vm_beh: sp={}", sp);
+                let me = self.self_ptr();
+                let actor = self.ram_mut(me);
+                println!("vm_beh: me={} -> {}", me, actor);
+                actor.set_x(ip);  // replace behavior function
+                actor.set_y(sp);  // replace state data
+                println!("vm_beh: me'={} -> {}", me, self.ram(me));
+                kip
+            },
+            VM_END => {
+                println!("vm_end: op={}", imm);
+                let me = self.self_ptr();
+                println!("vm_end: me={} -> {}", me, self.ram(me));
+                match imm {
+                    END_ABORT => {
+                        let _r = self.stack_pop();  // reason for abort
+                        println!("vm_end: reason={}", _r);
+                        self.actor_abort(me);
+                        //UNDEF
+                        panic!("End::Abort should signal controller")
+                    },
+                    END_STOP => {
+                        println!("vm_end: MEMORY={}", self.ram(MEMORY));
+                        //UNIT
+                        panic!("End::Stop terminated continuation")
+                    },
+                    END_COMMIT => {
+                        self.actor_commit(me);
+                        TRUE
+                    },
+                    END_RELEASE => {
+                        self.ram_mut(me).set_y(NIL);  // no retained stack
+                        self.actor_commit(me);
+                        self.free(me);  // free actor
+                        FALSE
+                    },
+                    _ => {
+                        panic!("Unknown op {}!", imm);
+                    }
+                }
+            },
+            VM_IS_EQ => {
+                println!("vm_is_eq: expect={}", imm);
+                let vv = self.stack_pop();
+                println!("vm_is_eq: actual={}", vv);
+                assert_eq!(imm, vv);
+                kip
+            },
+            VM_IS_NE => {
+                println!("vm_is_ne: expect={}", imm);
+                let vv = self.stack_pop();
+                println!("vm_is_ne: actual={}", vv);
+                assert_ne!(imm, vv);
+                kip
+            },
+            _ => {
+                panic!("Illegal instruction {}!", opr)
+            }
         };
         println!("perform_op: ip'={} -> {}", ip_, self.mem(ip_));
         ip_
@@ -1856,11 +1868,11 @@ pub const _T_DEQUE_BEH: Any  = Any { raw: T_DEQUE_ADDR as Raw };
         let state = self.ram(me).y();
         self.stack_clear(state);
         // move sent-message events to event queue
-        let mut ep = self.ram(me).get_z().any();
+        let mut ep = self.ram(me).z();
         while ep.is_ram() {
             let event = self.ram(ep);
             println!("actor_commit: ep={} -> {}", ep, event);
-            let next = event.get_z().any();
+            let next = event.z();
             self.event_enqueue(ep);
             ep = next;
         }
@@ -1871,11 +1883,11 @@ pub const _T_DEQUE_BEH: Any  = Any { raw: T_DEQUE_ADDR as Raw };
         let state = self.ram(me).y();
         self.stack_clear(state);
         // free sent-message events
-        let mut ep = self.ram(me).get_z().any();
+        let mut ep = self.ram(me).z();
         while ep.is_ram() {
             let event = self.ram(ep);
             println!("actor_abort: ep={} -> {}", ep, event);
-            let next = event.get_z().any();
+            let next = event.z();
             self.free(ep);
             ep = next;
         }
@@ -2442,21 +2454,21 @@ impl Typed {
             Typed::Empty => Quad::new(UNDEF, UNDEF, UNDEF, UNDEF),
             Typed::Literal => Quad::new(LITERAL_T, UNDEF, UNDEF, UNDEF),
             Typed::Type => Quad::new(TYPE_T, UNDEF, UNDEF, UNDEF),
-            Typed::Event { target, msg, next } => Quad::init(EVENT_T.val(), target.val(), msg.val(), next.val()),
-            Typed::Cont { ip, sp, ep, next } => Quad::init(ip.val(), sp.val(), ep.val(), next.val()),
+            Typed::Event { target, msg, next } => Quad::new(EVENT_T, target.any(), msg.any(), next.any()),
+            Typed::Cont { ip, sp, ep, next } => Quad::new(ip.any(), sp.any(), ep.any(), next.any()),
             Typed::Instr { op } => op.quad(),
-            Typed::Actor { beh, state, events } => Quad::init(ACTOR_T.val(), beh.val(), state.val(), match events {
-                None => UNDEF.val(),
-                Some(ptr) => ptr.val(),
+            Typed::Actor { beh, state, events } => Quad::new(ACTOR_T, beh.any(), state.any(), match events {
+                None => UNDEF,
+                Some(ptr) => ptr.any(),
             }),
-            Typed::Symbol { hash, key, val } => Quad::init(SYMBOL_T.val(), hash.val(), key.val(), val.val()),
+            Typed::Symbol { hash, key, val } => Quad::new(SYMBOL_T, hash.any(), key.any(), val.any()),
             Typed::Pair { car, cdr } => Quad::new(PAIR_T, car.any(), cdr.any(), UNDEF),
             //Typed::Fexpr { func } => Quad::new(FEXPR_T.val(), func.val(), UNDEF, UNDEF),
-            Typed::Dict { key, value, next } => Quad::init(DICT_T.val(), key.val(), value.val(), next.val()),
+            Typed::Dict { key, value, next } => Quad::new(DICT_T, key.any(), value.any(), next.any()),
             Typed::Free { next } => Quad::new(FREE_T, UNDEF, UNDEF, next.any()),
-            Typed::Ddeque { e_first, e_last, k_first, k_last } => Quad::init(e_first.val(), e_last.val(), k_first.val(), k_last.val()),
-            Typed::Memory { top, next, free, root } => Quad::init(top.val(), next.val(), free.val(), root.val()),
-            Typed::Quad { t, x, y, z } => Quad::init(t.val(), x.val(), y.val(), z.val()),
+            Typed::Ddeque { e_first, e_last, k_first, k_last } => Quad::new(e_first.any(), e_last.any(), k_first.any(), k_last.any()),
+            Typed::Memory { top, next, free, root } => Quad::new(top.any(), next.any(), free.any(), root.any()),
+            Typed::Quad { t, x, y, z } => Quad::new(t.any(), x.any(), y.any(), z.any()),
         }
     }
 }
