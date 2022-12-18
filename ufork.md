@@ -41,7 +41,19 @@ The blog post
 describes this architecture,
 and the rationale behind it.
 
-## Representation
+## Virtual Machine Semantics
+
+The **uFork** _virtual machine_ is designed to support machine-level actors.
+All instructions execute within the context of an actor handling a message-event.
+There is no support for procedure/function call/return.
+Instead actors are used to implement procedure/function abstractions.
+There is no support for address arithmetic or load/store of arbitrary memory.
+Mutation is always local to an actor's private state.
+Immutable values are passed between actors via message-events.
+External events (such as "interrupts")
+are turned into message-events.
+
+### Representation
 
 The quad-cell is the primary internal data-structure in **uFork**.
 It consists of four integers (current compile options are 16, 32, and 64 bits).
@@ -50,33 +62,38 @@ It consists of four integers (current compile options are 16, 32, and 64 bits).
 ----------|----------|----------|----------
 type/proc | head/car | tail/cdr | link/next
 
-The integers in each field encode three basic types of value,
-based on their 2 most-significant bits (MSBs).
-The 1st MSB is {0=indirect-reference, 1=direct-value}
-The 2nd MSB is {0=transparent, 1=opaque},
-and only applies to references.
+The integers in each field carry a _type tag_
+in their 4 most-significant bits (MSBs).
+The 1st MSB is {0=indirect-reference, 1=direct-value}.
+The 2nd MSB is {0=transparent, 1=opaque}.
+The 3rd MSB is {0=immutable, 1=mutable}.
+The 4th MSB is reserved for a garbage-collection phase/generation marker.
+The resulting type-heirarchy looks like this:
 
-2-MSB | Interpretation
-------|---------------
-2#00  | quad-cell reference (with fields {_t_, _x_, _y_, _z_})
-2#01  | capability (opaque reference value)
-2#10  | positive direct integer (fixnum)
-2#11  | negative direct integer (fixnum)
+```
+                   any-value
+                  0 /     \ 1
+              indirect   direct (fixnum)
+             0 /    \ 1
+      transparent  opaque (ocap)
+     0 /       \ 1
+immutable     mutable
+  (rom)      0 /   \ 1
+           (ram0) (ram1)
+```
 
-Direct integer values (fixnums) are stored in 2's-complement representation,
+Direct values (fixnums) are stored in 2's-complement representation,
 where the 2nd MSB is the sign bit of the integer value.
 
-### Virtual Machine
+Indirect values (references) desigate quad-cells (with fields {_t_, _x_, _y_, _z_}).
 
-The **uFork** _virtual machine_ is designed to support machine-level actors.
-All instructions execute within the context of an actor handling a message-event.
-There is no support for procedure/function call/return.
-Instead actors are used to implement procedure/function abstractions.
-There is no support for address arithmatic or load/store of arbitrary memory.
-Mutation is always local to an actor's private state.
-Immutable values are passed between actors via message-events.
-External events (such as "interrupts")
-are turned into message-events.
+Opaque values (object-capabilities) cannot be dereferenced
+except by the virtual-processor (to implement _actor_ primitive operations).
+
+Mutable values designate quad that may be written as well as read.
+Since actor-state is mutable, the quad representing the actor must stored in writable memory.
+
+The assembly language semantics provide no way to convert _fixnums_ or _ocaps_ to quad-cell references.
 
 #### Data Structures
 
@@ -121,10 +138,10 @@ _cell_            | {x:VM_get, y:T, z:_K_}        | _t_      | get _t_ from _cel
 _cell_            | {x:VM_get, y:X, z:_K_}        | _x_      | get _x_ from _cell_
 _cell_            | {x:VM_get, y:Y, z:_K_}        | _y_      | get _y_ from _cell_
 _cell_            | {x:VM_get, y:Z, z:_K_}        | _z_      | get _z_ from _cell_
-_cell_ _T_        | {x:VM_set, y:T, z:_K_}        | _cell'_  | set _t_ to _T_ in _cell_
-_cell_ _X_        | {x:VM_set, y:X, z:_K_}        | _cell'_  | set _x_ to _X_ in _cell_
-_cell_ _Y_        | {x:VM_set, y:Y, z:_K_}        | _cell'_  | set _y_ to _Y_ in _cell_
-_cell_ _Z_        | {x:VM_set, y:Z, z:_K_}        | _cell'_  | set _z_ to _Z_ in _cell_
+_cell_ _T_        | {x:VM_set, y:T, z:_K_}        | _cell'_  | set _t_ to _T_ in _cell_ **[DEPRECATED]**
+_cell_ _X_        | {x:VM_set, y:X, z:_K_}        | _cell'_  | set _x_ to _X_ in _cell_ **[DEPRECATED]**
+_cell_ _Y_        | {x:VM_set, y:Y, z:_K_}        | _cell'_  | set _y_ to _Y_ in _cell_ **[DEPRECATED]**
+_cell_ _Z_        | {x:VM_set, y:Z, z:_K_}        | _cell'_  | set _z_ to _Z_ in _cell_ **[DEPRECATED]**
 _dict_ _key_      | {x:VM_dict, y:HAS, z:_K_}     | _bool_   | `TRUE` if _dict_ has a binding for _key_, otherwise `FALSE`
 _dict_ _key_      | {x:VM_dict, y:GET, z:_K_}     | _value_  | the first _value_ bound to _key_ in _dict_, or `UNDEF`
 _dict_ _key_ _value_ | {x:VM_dict, y:ADD, z:_K_}  | _dict'_  | add a binding from _key_ to _value_ in _dict_
@@ -180,11 +197,13 @@ _reason_          | {x:VM_end, y:ABORT}           | &mdash;  | abort actor trans
 &mdash;           | {x:VM_end, y:STOP}            | &mdash;  | stop current continuation (thread)
 &mdash;           | {x:VM_end, y:COMMIT}          | &mdash;  | commit actor transaction
 &mdash;           | {x:VM_end, y:RELEASE}         | &mdash;  | commit transaction and free actor
-_chars_           | {x:VM_cvt, y:LST_NUM, z:_K_}  | _fixnum_ | convert _chars_ to _fixnum_
-_chars_           | {x:VM_cvt, y:LST_SYM, z:_K_}  | _symbol_ | convert _chars_ to _symbol_
-_char_            | {x:VM_putc, z:_K_}            | &mdash;  | write _char_ to console
-&mdash;           | {x:VM_getc, z:_K_}            | _char_   | read _char_ from console
-_value_           | {x:VM_debug, y:_tag_, z:_K_}  | &mdash;  | debug_print _tag_: _value_ to console
+_chars_           | {x:VM_cvt, y:LST_NUM, z:_K_}  | _fixnum_ | convert _chars_ to _fixnum_ **[DEPRECATED]**
+_chars_           | {x:VM_cvt, y:LST_SYM, z:_K_}  | _symbol_ | convert _chars_ to _symbol_ **[DEPRECATED]**
+_char_            | {x:VM_putc, z:_K_}            | &mdash;  | write _char_ to console **[DEPRECATED]**
+&mdash;           | {x:VM_getc, z:_K_}            | _char_   | read _char_ from console **[DEPRECATED]**
+_value_           | {x:VM_debug, y:_tag_, z:_K_}  | &mdash;  | debug_print _tag_: _value_ to console **[DEPRECATED]**
+_actual_          | {x:VM_is_eq, y:_expect_, z:_K_} | &mdash; | assert `actual` == `expect`, otherwise halt!
+_actual_          | {x:VM_is_ne, y:_expect_, z:_K_} | &mdash; | assert `actual` != `expect`, otherwise halt!
 
 ### Object Graph
 
@@ -374,10 +393,10 @@ COMMIT:     [END,+1,?]        RELEASE:    [END,+2,?]
   * `(get-x `_cell_`)`
   * `(get-y `_cell_`)`
   * `(get-z `_cell_`)`
-  * `(set-t `_cell_` `_T_`)`
-  * `(set-x `_cell_` `_X_`)`
-  * `(set-y `_cell_` `_Y_`)`
-  * `(set-z `_cell_` `_Z_`)`
+  * `(set-t `_cell_` `_T_`)` **[DEPRECATED]**
+  * `(set-x `_cell_` `_X_`)` **[DEPRECATED]**
+  * `(set-y `_cell_` `_Y_`)` **[DEPRECATED]**
+  * `(set-z `_cell_` `_Z_`)` **[DEPRECATED]**
 
 #### Examples
 
