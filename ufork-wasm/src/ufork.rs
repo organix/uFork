@@ -84,9 +84,6 @@ impl Any {
             None
         }
     }
-    pub fn val(self) -> Val {  // NOTE: consumes `self`
-        Val::new(self.raw)
-    }
 }
 impl fmt::Display for Any {
     fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -538,25 +535,6 @@ impl Quad {
     pub fn new_actor(beh: Any, state: Any) -> Quad {
         Self::actor_t(beh, state, UNDEF)
     }
-
-    // inter-op with Val type-hierarchy
-    /*
-    pub fn init(t: Val, x: Val, y: Val, z: Val) -> Quad {
-        Quad {
-            t: t.any(),
-            x: x.any(),
-            y: y.any(),
-            z: z.any(),
-        }
-    }
-    pub fn typed(&self) -> Typed {
-        Typed::from(self).unwrap()
-    }
-    */
-    pub fn get_t(&self) -> Val { self.t.val() }
-    pub fn get_x(&self) -> Val { self.x.val() }
-    pub fn get_y(&self) -> Val { self.y.val() }
-    pub fn get_z(&self) -> Val { self.z.val() }
 }
 impl fmt::Display for Quad {
     fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -717,36 +695,6 @@ pub struct Core {
 
 impl Core {
     pub fn new() -> Core {
-        let mut quad_ram = [
-            Quad::empty_t();
-            QUAD_MAX
-        ];
-        quad_ram[MEMORY.addr()]     = Quad::memory_t(Any::ram(_RAM_TOP_ADDR), NIL, ZERO, DDEQUE);
-        quad_ram[DDEQUE.addr()]     = Quad::ddeque_t(E_BOOT, E_BOOT, NIL, NIL);
-pub const E_BOOT: Any       = Any { raw: MUT_RAW | 2 };
-        //quad_ram[E_BOOT.addr()]     = Quad::event_t(A_STOP, TEST_MSG, NIL);  // stop actor
-        //quad_ram[E_BOOT.addr()]     = Quad::event_t(A_LOOP, TEST_MSG, NIL);  // run loop demo
-        quad_ram[E_BOOT.addr()]     = Quad::event_t(A_TEST, TEST_MSG, NIL);  // run test suite
-pub const A_SINK: Any       = Any { raw: OPQ_RAW | MUT_RAW | 3 };
-        quad_ram[A_SINK.addr()]     = Quad::new_actor(SINK_BEH, NIL);
-pub const A_STOP: Any       = Any { raw: OPQ_RAW | MUT_RAW | 4 };
-        quad_ram[A_STOP.addr()]     = Quad::new_actor(STOP, NIL);
-pub const A_TEST: Any       = Any { raw: OPQ_RAW | MUT_RAW | 5 };
-        quad_ram[A_TEST.addr()]     = Quad::new_actor(TEST_BEH, TEST_SP);
-pub const A_LOOP: Any       = Any { raw: OPQ_RAW | MUT_RAW | 6 };
-        quad_ram[A_LOOP.addr()]     = Quad::new_actor(RESEND, TEST_SP);
-pub const F_FIB: Any        = Any { raw: OPQ_RAW | MUT_RAW | 7 };
-        //quad_ram[7]                 = Quad::new_actor(F_FIB_BEH, NIL);  // function-actor
-        quad_ram[7]                 = Quad::new_actor(_F_FIB_GEN, NIL);  // worker-generator
-pub const TEST_MSG: Any     = Any { raw: MUT_RAW | 8 };
-        quad_ram[8]                 = Quad::pair_t(A_STOP, Any::ram(9));
-        quad_ram[9]                 = Quad::pair_t(UNIT, NIL);
-pub const TEST_SP: Any      = Any { raw: MUT_RAW | 10 };
-        quad_ram[10]                = Quad::pair_t(MINUS_1, Any::ram(11));
-        quad_ram[11]                = Quad::pair_t(MINUS_2, Any::ram(12));
-        quad_ram[12]                = Quad::pair_t(MINUS_3, NIL);
-pub const _RAM_TOP_ADDR: usize = 16;
-
         let mut quad_rom = [
             Quad::empty_t();
             QUAD_MAX
@@ -1342,6 +1290,37 @@ pub const _T_DEQUE_BEH: Any  = Any { raw: T_DEQUE_ADDR as Raw };
         quad_rom[T_DEQUE_ADDR+64]   = Quad::vm_is_eq(ZERO, COMMIT);  // (()) (#unit) (@4 #unit) (())
 
 pub const _ROM_TOP_ADDR: usize = T_DEQUE_ADDR+64;
+
+        let mut quad_ram = [
+            Quad::empty_t();
+            QUAD_MAX
+        ];
+        quad_ram[MEMORY.addr()]     = Quad::memory_t(Any::ram(_RAM_TOP_ADDR), NIL, ZERO, DDEQUE);
+        quad_ram[DDEQUE.addr()]     = Quad::ddeque_t(E_BOOT, E_BOOT, NIL, NIL);
+pub const E_BOOT: Any       = Any { raw: MUT_RAW | 2 };
+        //quad_ram[E_BOOT.addr()]     = Quad::event_t(A_STOP, TEST_MSG, NIL);  // stop actor
+        //quad_ram[E_BOOT.addr()]     = Quad::event_t(A_LOOP, TEST_MSG, NIL);  // run loop demo
+        quad_ram[E_BOOT.addr()]     = Quad::event_t(A_TEST, TEST_MSG, NIL);  // run test suite
+pub const A_SINK: Any       = Any { raw: OPQ_RAW | MUT_RAW | 3 };
+        quad_ram[A_SINK.addr()]     = Quad::new_actor(SINK_BEH, NIL);
+pub const A_STOP: Any       = Any { raw: OPQ_RAW | MUT_RAW | 4 };
+        quad_ram[A_STOP.addr()]     = Quad::new_actor(STOP, NIL);
+pub const A_TEST: Any       = Any { raw: OPQ_RAW | MUT_RAW | 5 };
+        quad_ram[A_TEST.addr()]     = Quad::new_actor(TEST_BEH, TEST_SP);
+pub const A_LOOP: Any       = Any { raw: OPQ_RAW | MUT_RAW | 6 };
+        quad_ram[A_LOOP.addr()]     = Quad::new_actor(RESEND, TEST_SP);
+pub const F_FIB: Any        = Any { raw: OPQ_RAW | MUT_RAW | 7 };
+        //quad_ram[7]                 = Quad::new_actor(F_FIB_BEH, NIL);  // function-actor
+        quad_ram[7]                 = Quad::new_actor(_F_FIB_GEN, NIL);  // worker-generator
+pub const TEST_MSG: Any     = Any { raw: MUT_RAW | 8 };
+        quad_ram[8]                 = Quad::pair_t(A_STOP, Any::ram(9));
+        quad_ram[9]                 = Quad::pair_t(UNIT, NIL);
+pub const TEST_SP: Any      = Any { raw: MUT_RAW | 10 };
+        quad_ram[10]                = Quad::pair_t(MINUS_1, Any::ram(11));
+        quad_ram[11]                = Quad::pair_t(MINUS_2, Any::ram(12));
+        quad_ram[12]                = Quad::pair_t(MINUS_3, NIL);
+
+pub const _RAM_TOP_ADDR: usize = 16;
 
         Core {
             quad_rom,
@@ -2412,247 +2391,70 @@ fn falsey(v: Any) -> bool {
     v == FALSE || v == UNDEF || v == NIL || v == ZERO
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct Val { raw: Raw }
-impl Val {
-    pub fn new(raw: Raw) -> Val {
-        Val { raw }
-    }
-    pub fn raw(&self) -> Raw {
-        self.raw
-    }
-    pub fn addr(&self) -> usize {
-        self.ptr().addr()
-    }
-    pub fn val(self) -> Val {  // NOTE: consumes `self`
-        self
-    }
-    pub fn fix(self) -> Fix {  // NOTE: consumes `self`
-        Fix::from(self).unwrap()
-    }
-    pub fn ptr(self) -> Ptr {  // NOTE: consumes `self`
-        Ptr::from(self).unwrap()
-    }
-    pub fn cap(self) -> Cap {  // NOTE: consumes `self`
-        Cap::from(self).unwrap()
-    }
-    pub fn any(self) -> Any {  // NOTE: consumes `self`
-        Any::new(self.raw)
-    }
-}
-impl fmt::Display for Val {
-    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let s = if (self.raw & DIR_RAW) != 0 {
-            self.fix().to_string()
-        } else if (self.raw & OPQ_RAW) != 0 {
-            self.cap().to_string()
-        } else {
-            self.ptr().to_string()
-        };
-        write!(fmt, "{}", s)
-    }
-}
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct Fix { num: Num }
-impl Fix {
-    pub fn new(num: Num) -> Fix {
-        Fix { num: ((num << 1) >> 1) }
-    }
-    pub fn from(val: Val) -> Option<Fix> {
-        let raw = val.raw();
-        if (raw & DIR_RAW) != 0 {
-            let num = ((raw << 1) as Num) >> 1;
-            Some(Fix::new(num))
-        } else {
-            None
-        }
-    }
-    pub fn fix(self) -> Fix {  // NOTE: consumes `self`
-        self
-    }
-    pub fn val(self) -> Val {  // NOTE: consumes `self`
-        Val::new(self.num as Raw | DIR_RAW)
-    }
-    pub fn any(self) -> Any {  // NOTE: consumes `self`
-        self.val().any()
-    }
-    pub fn num(&self) -> Num {
-        self.num
-    }
-}
-impl fmt::Display for Fix {
-    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(fmt, "{:+}", self.num)
-    }
-}
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct Ptr { raw: Raw }
-impl Ptr {
-    pub fn new(raw: Raw) -> Ptr {
-        Ptr { raw: (raw & !(DIR_RAW | OPQ_RAW)) }
-    }
-    pub fn from(val: Val) -> Option<Ptr> {
-        let raw = val.raw();
-        if (raw & (DIR_RAW | OPQ_RAW)) == 0 {
-            Some(Ptr::new(raw))
-        } else {
-            None
-        }
-    }
-    pub fn ptr(self) -> Ptr {  // NOTE: consumes `self`
-        self
-    }
-    pub fn val(self) -> Val {  // NOTE: consumes `self`
-        Val::new(self.raw)
-    }
-    pub fn any(self) -> Any {  // NOTE: consumes `self`
-        self.val().any()
-    }
-    pub fn raw(&self) -> Raw {
-        self.raw
-    }
-    pub fn addr(&self) -> usize {
-        (self.raw & !MSK_RAW) as usize
-    }
-}
-impl fmt::Display for Ptr {
-    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self.any() {
-            UNDEF => write!(fmt, "#?"),
-            NIL => write!(fmt, "()"),
-            FALSE => write!(fmt, "#f"),
-            TRUE => write!(fmt, "#t"),
-            UNIT => write!(fmt, "#unit"),
-            TYPE_T => write!(fmt, "TYPE_T"),
-            EVENT_T => write!(fmt, "EVENT_T"),
-            INSTR_T => write!(fmt, "INSTR_T"),
-            ACTOR_T => write!(fmt, "ACTOR_T"),
-            FIXNUM_T => write!(fmt, "FIXNUM_T"),
-            SYMBOL_T => write!(fmt, "SYMBOL_T"),
-            PAIR_T => write!(fmt, "PAIR_T"),
-            //FEXPR_T => write!(fmt, "FEXPR_T"),
-            DICT_T => write!(fmt, "DICT_T"),
-            FREE_T => write!(fmt, "FREE_T"),
-            _ => {
-                let ofs = self.raw & !MSK_RAW;
-                if self.raw == ofs {
-                    write!(fmt, "*{}", ofs)
-                } else {
-                    write!(fmt, "^{}", ofs)
-                }
-            },
-        }
-    }
-}
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct Cap { raw: Raw }
-impl Cap {
-    pub fn new(raw: Raw) -> Cap {
-        Cap { raw: (raw & !(DIR_RAW | OPQ_RAW)) }
-    }
-    pub fn from(val: Val) -> Option<Cap> {
-        let raw = val.raw();
-        if (raw & (DIR_RAW | OPQ_RAW)) == OPQ_RAW {
-            Some(Cap::new(raw))
-        } else {
-            None
-        }
-    }
-    pub fn cap(self) -> Cap {  // NOTE: consumes `self`
-        self
-    }
-    pub fn val(self) -> Val {  // NOTE: consumes `self`
-        Val::new(self.raw | OPQ_RAW)
-    }
-    pub fn any(self) -> Any {  // NOTE: consumes `self`
-        self.val().any()
-    }
-    pub fn raw(&self) -> Raw {
-        self.raw
-    }
-    pub fn addr(&self) -> usize {
-        (self.raw & !MSK_RAW) as usize
-    }
-}
-impl fmt::Display for Cap {
-    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(fmt, "@{}", self.raw)
-    }
-}
-
 //#[cfg(test)] -- use this if/when the tests are in a sub-module
 #[test]
 fn base_types_are_32_bits() {
     assert_eq!(4, std::mem::size_of::<Raw>());
     assert_eq!(4, std::mem::size_of::<Num>());
-    assert_eq!(4, std::mem::size_of::<Val>());
-    assert_eq!(4, std::mem::size_of::<Fix>());
-    assert_eq!(4, std::mem::size_of::<Ptr>());
-    assert_eq!(4, std::mem::size_of::<Cap>());
     assert_eq!(4, std::mem::size_of::<Any>());
     assert_eq!(16, std::mem::size_of::<Quad>());
-    //assert_eq!(16, std::mem::size_of::<Typed>());  // enumeration discriminator adds +4...
 }
 
 #[test]
 fn fix_zero_value_roundtrips() {
-    let n = Fix::new(0);
-    let v = n.val();
-    let o = Fix::from(v);
+    let n = Any::fix(0);
+    let r = n.raw();
+    let v = Any::new(r);
+    assert!(v.is_fix());
+    let o = v.fix_num();
     assert!(o.is_some());
-    let m = o.unwrap();
+    let i = o.unwrap();
+    let m = Any::fix(i);
     assert_eq!(n, m);
-    assert_eq!(0, m.num());
+    assert_eq!(0, m.fix_num().unwrap());
 }
 
 #[test]
 fn fix_positive_value_roundtrips() {
-    let n = Fix::new(42);
-    let v = n.val();
-    let o = Fix::from(v);
+    let n = Any::fix(42);
+    let r = n.raw();
+    let v = Any::new(r);
+    assert!(v.is_fix());
+    let o = v.fix_num();
     assert!(o.is_some());
-    let m = o.unwrap();
-    assert_eq!(42, m.num());
+    let i = o.unwrap();
+    let m = Any::fix(i);
     assert_eq!(n, m);
+    assert_eq!(42, m.fix_num().unwrap());
 }
 
 #[test]
 fn fix_negative_value_roundtrips() {
-    let n = Fix::new(-42);
-    let v = n.val();
-    let o = Fix::from(v);
+    let n = Any::fix(-42);
+    let r = n.raw();
+    let v = Any::new(r);
+    assert!(v.is_fix());
+    let o = v.fix_num();
     assert!(o.is_some());
-    let m = o.unwrap();
-    assert_eq!(-42, m.num());
+    let i = o.unwrap();
+    let m = Any::fix(i);
     assert_eq!(n, m);
+    assert_eq!(-42, m.fix_num().unwrap());
 }
 
 #[test]
 #[should_panic]
-fn fix_cast_to_ptr() {
-    let n = Fix::new(0);
-    let v = n.val();
-    let _p = v.ptr();  // should panic!
+fn fix_cast_to_addr() {
+    let n = Any::fix(0);
+    let _p = n.addr();  // should panic!
 }
 
 #[test]
 fn ptr_is_distinct_from_cap() {
-    let p = Ptr::new(42);
-    let c = Cap::new(42);
-    assert_eq!(p.raw(), c.raw());
-    assert_ne!(p.val().raw(), c.val().raw());
+    let p = Any::ram(42);
+    let c = Any::cap(42);
+    assert_ne!(p.raw(), c.raw());
     assert_eq!(p.addr(), c.addr());
-}
-
-#[test]
-#[should_panic]
-fn cap_addr_conversion() {
-    let c = Cap::new(42);
-    let v = c.val();
-    let _a = v.addr();  // should panic!
 }
 
 #[test]
