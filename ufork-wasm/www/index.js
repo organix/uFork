@@ -1,4 +1,11 @@
-import init, { Host } from "./pkg/ufork_wasm.js";
+import init, { Universe, Cell, Host } from "../pkg/ufork_wasm.js";
+
+const CELL_SIZE = 5; // px
+const GRID_COLOR = "#9CF";
+const DEAD_COLOR = "#FFF";
+const LIVE_COLOR = "#360";
+const width = 96;
+const height = 64;
 
 const $mem_top = document.getElementById("ufork-mem-top");
 const $mem_next = document.getElementById("ufork-mem-next");
@@ -21,7 +28,14 @@ const $self = document.getElementById("ufork-self");
 //const $mp = document.getElementById("ufork-mp");
 const $msg = document.getElementById("ufork-msg");
 
+// Give the canvas room for all of our cells and a 1px border around them.
+const $canvas = document.getElementById("ufork-canvas");
+$canvas.width = (CELL_SIZE + 1) * width + 1;
+$canvas.height = (CELL_SIZE + 1) * height + 1;
+
+let memory;
 let host;
+let universe;
 let paused = false;  // run/pause toggle
 const $rate = document.getElementById("frame-rate");
 let frame = 1;  // frame-rate countdown
@@ -139,9 +153,15 @@ const drawHost = () => {
 	updateElementText($msg, host.pprint(mp));
 	$msg.title = host.display(mp);
 }
+const drawUniverse = () => {
+	drawHost();
+	drawGrid();
+	drawCells();
+}
 const singleStep = () => {
 	host.step();
-	drawHost();
+	universe.tick();
+	drawUniverse();
 };
 const renderLoop = () => {
 	//debugger;
@@ -163,6 +183,115 @@ const printClick = event => {
 }
 $mem_root.onclick = printClick;
 
+$canvas.onclick = event => {
+	const boundingRect = $canvas.getBoundingClientRect();
+
+	const scaleX = $canvas.width / boundingRect.width;
+	const scaleY = $canvas.height / boundingRect.height;
+
+	const canvasLeft = (event.clientX - boundingRect.left) * scaleX;
+	const canvasTop = (event.clientY - boundingRect.top) * scaleY;
+
+	const row = Math.min(Math.floor(canvasTop / (CELL_SIZE + 1)), height - 1);
+	const col = Math.min(Math.floor(canvasLeft / (CELL_SIZE + 1)), width - 1);
+
+	universe.toggle_cell(row, col);
+	drawUniverse();
+}
+
+const ctx = $canvas.getContext('2d');
+
+const drawGrid = () => {
+	ctx.beginPath();
+	ctx.strokeStyle = GRID_COLOR;
+
+	// Vertical lines.
+	for (let i = 0; i <= width; i++) {
+		ctx.moveTo(i * (CELL_SIZE + 1) + 1, 0);
+		ctx.lineTo(i * (CELL_SIZE + 1) + 1, (CELL_SIZE + 1) * height + 1);
+	}
+
+	// Horizontal lines.
+	for (let j = 0; j <= height; j++) {
+		ctx.moveTo(0,                           j * (CELL_SIZE + 1) + 1);
+		ctx.lineTo((CELL_SIZE + 1) * width + 1, j * (CELL_SIZE + 1) + 1);
+	}
+
+	ctx.stroke();
+}
+
+const getIndex = (row, column) => {
+	return row * width + column;
+}
+
+const drawCells = () => {
+	const cellsPtr = universe.cells();
+	const cells = new Uint8Array(memory.buffer, cellsPtr, width * height);
+
+	ctx.beginPath();
+
+	for (let row = 0; row < height; row++) {
+		for (let col = 0; col < width; col++) {
+			const idx = getIndex(row, col);
+
+		ctx.fillStyle =
+			cells[idx] === Cell.Dead
+			? DEAD_COLOR
+			: LIVE_COLOR;
+
+		ctx.fillRect(
+			col * (CELL_SIZE + 1) + 1,
+			row * (CELL_SIZE + 1) + 1,
+			CELL_SIZE,
+			CELL_SIZE);
+		}
+	}
+
+	ctx.stroke();
+}
+
+const $clearButton = document.getElementById("clear-btn");
+$clearButton.onclick = () => {
+	universe.clear_grid();
+	drawUniverse();
+}
+
+const $gliderButton = document.getElementById("glider-btn");
+$gliderButton.onclick = () => {
+	universe.launch_ship();
+	drawUniverse();
+}
+
+const $rPentominoButton = document.getElementById("r-pentomino-btn");
+$rPentominoButton.onclick = () => {
+	universe.r_pentomino();
+	drawUniverse();
+}
+
+const $acornButton = document.getElementById("acorn-btn");
+$acornButton.onclick = () => {
+	universe.plant_acorn();
+	drawUniverse();
+}
+
+const $gosperButton = document.getElementById("gosper-btn");
+$gosperButton.onclick = () => {
+	universe.gosper_gun();
+	drawUniverse();
+}
+
+const $patternButton = document.getElementById("pattern-btn");
+$patternButton.onclick = () => {
+	universe.pattern_fill();
+	drawUniverse();
+}
+
+const $randomButton = document.getElementById("random-btn");
+$randomButton.onclick = () => {
+	universe.random_fill();
+	drawUniverse();
+}
+
 const $stepButton = document.getElementById("single-step");
 $stepButton.onclick = singleStep;
 
@@ -181,12 +310,16 @@ const pauseAction = () => {
 	paused = true;
 }
 
-init().then(function () {
+init().then(function (wasm) {
+	memory = wasm.memory;
 	host = Host.new();
 	host.prepare();
+	universe = Universe.new(width, height);
+	//universe.pattern_fill();
+	universe.launch_ship();
 
 	// draw initial state
-	drawHost();
+	drawUniverse();
 
 	//playAction();  // start animation (running)
 	pauseAction();  // start animation (paused)

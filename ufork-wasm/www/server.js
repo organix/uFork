@@ -9,11 +9,7 @@ const mime_types = {
 };
 
 const server = http.createServer(function on_request(req, res) {
-	const file_path = path.join(process.cwd(), (
-		req.url === "/"
-		? "/demo.html"
-		: req.url
-	));
+	const file_path = path.join(process.cwd(), req.url);
 	if (!file_path.startsWith(process.cwd())) {
 		res.statusCode = 400;
 		return res.end("Escapee.");
@@ -29,5 +25,9 @@ const server = http.createServer(function on_request(req, res) {
 });
 
 server.listen(7273, "localhost", function on_listening() {
-	console.log("Listening on http://localhost:" + server.address().port);
+	console.log(
+		"Navigate to http://localhost:"
+		+ server.address().port
+		+ "/www/index.html"
+	);
 });
