@@ -138,10 +138,10 @@ _cell_            | {x:VM_get, y:T, z:_K_}        | _t_      | get _t_ from _cel
 _cell_            | {x:VM_get, y:X, z:_K_}        | _x_      | get _x_ from _cell_
 _cell_            | {x:VM_get, y:Y, z:_K_}        | _y_      | get _y_ from _cell_
 _cell_            | {x:VM_get, y:Z, z:_K_}        | _z_      | get _z_ from _cell_
-_cell_ _T_        | {x:VM_set, y:T, z:_K_}        | _cell'_  | set _t_ to _T_ in _cell_ **[DEPRECATED]**
-_cell_ _X_        | {x:VM_set, y:X, z:_K_}        | _cell'_  | set _x_ to _X_ in _cell_ **[DEPRECATED]**
-_cell_ _Y_        | {x:VM_set, y:Y, z:_K_}        | _cell'_  | set _y_ to _Y_ in _cell_ **[DEPRECATED]**
-_cell_ _Z_        | {x:VM_set, y:Z, z:_K_}        | _cell'_  | set _z_ to _Z_ in _cell_ **[DEPRECATED]**
+_cell_ _T_        | {x:VM_set, y:T, z:_K_}        | _cell'_  | set _t_ to _T_ in _cell_ **--DEPRECATED--**
+_cell_ _X_        | {x:VM_set, y:X, z:_K_}        | _cell'_  | set _x_ to _X_ in _cell_ **--DEPRECATED--**
+_cell_ _Y_        | {x:VM_set, y:Y, z:_K_}        | _cell'_  | set _y_ to _Y_ in _cell_ **--DEPRECATED--**
+_cell_ _Z_        | {x:VM_set, y:Z, z:_K_}        | _cell'_  | set _z_ to _Z_ in _cell_ **--DEPRECATED--**
 _dict_ _key_      | {x:VM_dict, y:HAS, z:_K_}     | _bool_   | `TRUE` if _dict_ has a binding for _key_, otherwise `FALSE`
 _dict_ _key_      | {x:VM_dict, y:GET, z:_K_}     | _value_  | the first _value_ bound to _key_ in _dict_, or `UNDEF`
 _dict_ _key_ _value_ | {x:VM_dict, y:ADD, z:_K_}  | _dict'_  | add a binding from _key_ to _value_ in _dict_
@@ -197,11 +197,11 @@ _reason_          | {x:VM_end, y:ABORT}           | &mdash;  | abort actor trans
 &mdash;           | {x:VM_end, y:STOP}            | &mdash;  | stop current continuation (thread)
 &mdash;           | {x:VM_end, y:COMMIT}          | &mdash;  | commit actor transaction
 &mdash;           | {x:VM_end, y:RELEASE}         | &mdash;  | commit transaction and free actor
-_chars_           | {x:VM_cvt, y:LST_NUM, z:_K_}  | _fixnum_ | convert _chars_ to _fixnum_ **[DEPRECATED]**
-_chars_           | {x:VM_cvt, y:LST_SYM, z:_K_}  | _symbol_ | convert _chars_ to _symbol_ **[DEPRECATED]**
-_char_            | {x:VM_putc, z:_K_}            | &mdash;  | write _char_ to console **[DEPRECATED]**
-&mdash;           | {x:VM_getc, z:_K_}            | _char_   | read _char_ from console **[DEPRECATED]**
-_value_           | {x:VM_debug, y:_tag_, z:_K_}  | &mdash;  | debug_print _tag_: _value_ to console **[DEPRECATED]**
+_chars_           | {x:VM_cvt, y:LST_NUM, z:_K_}  | _fixnum_ | convert _chars_ to _fixnum_ **--DEPRECATED--**
+_chars_           | {x:VM_cvt, y:LST_SYM, z:_K_}  | _symbol_ | convert _chars_ to _symbol_ **--DEPRECATED--**
+_char_            | {x:VM_putc, z:_K_}            | &mdash;  | write _char_ to console **--DEPRECATED--**
+&mdash;           | {x:VM_getc, z:_K_}            | _char_   | read _char_ from console **--DEPRECATED--**
+_value_           | {x:VM_debug, y:_tag_, z:_K_}  | &mdash;  | debug_print _tag_: _value_ to console **--DEPRECATED--**
 _actual_          | {x:VM_is_eq, y:_expect_, z:_K_} | &mdash; | assert `actual` == `expect`, otherwise halt!
 _actual_          | {x:VM_is_ne, y:_expect_, z:_K_} | &mdash; | assert `actual` != `expect`, otherwise halt!
 
@@ -393,16 +393,16 @@ COMMIT:     [END,+1,?]        RELEASE:    [END,+2,?]
   * `(get-x `_cell_`)`
   * `(get-y `_cell_`)`
   * `(get-z `_cell_`)`
-  * `(set-t `_cell_` `_T_`)` **[DEPRECATED]**
-  * `(set-x `_cell_` `_X_`)` **[DEPRECATED]**
-  * `(set-y `_cell_` `_Y_`)` **[DEPRECATED]**
-  * `(set-z `_cell_` `_Z_`)` **[DEPRECATED]**
+  * `(set-t `_cell_` `_T_`)` **--DEPRECATED--**
+  * `(set-x `_cell_` `_X_`)` **--DEPRECATED--**
+  * `(set-y `_cell_` `_Y_`)` **--DEPRECATED--**
+  * `(set-z `_cell_` `_Z_`)` **--DEPRECATED--**
 
 #### Examples
 
 ```
 (define print
-  (cell Actor_T  ; ---DEPRECATED---
+  (cell Actor_T  ; --DEPRECATED--
     (cell Instr_T VM_msg 1
       (cell Instr_T VM_push a-print
         (cell Instr_T VM_send 0
