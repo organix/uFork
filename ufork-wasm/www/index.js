@@ -1,25 +1,11 @@
-import { Universe, Cell, Host } from "ufork-wasm";
-import { memory } from "ufork-wasm/ufork_wasm_bg";
+import init, { Universe, Cell, Host } from "../pkg/ufork_wasm.js";
 
 const CELL_SIZE = 5; // px
 const GRID_COLOR = "#9CF";
 const DEAD_COLOR = "#FFF";
 const LIVE_COLOR = "#360";
-
-// Construct the universe, and get its width and height.
 const width = 96;
 const height = 64;
-const universe = Universe.new(width, height);
-//universe.pattern_fill();
-universe.launch_ship();
-
-const host = Host.new();
-host.prepare();
-
-// Give the canvas room for all of our cells and a 1px border around them.
-const $canvas = document.getElementById("ufork-canvas");
-$canvas.width = (CELL_SIZE + 1) * width + 1;
-$canvas.height = (CELL_SIZE + 1) * height + 1;
 
 const $mem_top = document.getElementById("ufork-mem-top");
 const $mem_next = document.getElementById("ufork-mem-next");
@@ -42,6 +28,14 @@ const $self = document.getElementById("ufork-self");
 //const $mp = document.getElementById("ufork-mp");
 const $msg = document.getElementById("ufork-msg");
 
+// Give the canvas room for all of our cells and a 1px border around them.
+const $canvas = document.getElementById("ufork-canvas");
+$canvas.width = (CELL_SIZE + 1) * width + 1;
+$canvas.height = (CELL_SIZE + 1) * height + 1;
+
+let memory;
+let host;
+let universe;
 let paused = false;  // run/pause toggle
 const $rate = document.getElementById("frame-rate");
 let frame = 1;  // frame-rate countdown
@@ -168,7 +162,7 @@ const singleStep = () => {
 	host.step();
 	universe.tick();
 	drawUniverse();
-}
+};
 const renderLoop = () => {
 	//debugger;
 	if (paused) return;
@@ -299,9 +293,7 @@ $randomButton.onclick = () => {
 }
 
 const $stepButton = document.getElementById("single-step");
-$stepButton.onclick = () => {
-	singleStep();
-}
+$stepButton.onclick = singleStep;
 
 const $pauseButton = document.getElementById("play-pause");
 const playAction = () => {
@@ -318,8 +310,17 @@ const pauseAction = () => {
 	paused = true;
 }
 
-// draw initial state
-drawUniverse();
+init().then(function (wasm) {
+	memory = wasm.memory;
+	host = Host.new();
+	host.prepare();
+	universe = Universe.new(width, height);
+	//universe.pattern_fill();
+	universe.launch_ship();
 
-//playAction();  // start animation (running)
-pauseAction();  // start animation (paused)
+	// draw initial state
+	drawUniverse();
+
+	//playAction();  // start animation (running)
+	pauseAction();  // start animation (paused)
+});
