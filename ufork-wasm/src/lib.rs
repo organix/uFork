@@ -84,6 +84,9 @@ impl Host {
 
     pub fn rom_addr(&self, ofs: Raw) -> Raw { Any::rom(ofs as usize).raw() }
     pub fn ram_addr(&self, ofs: Raw) -> Raw { Any::ram(ofs as usize).raw() }
+    pub fn sponsor_memory(&self) -> Raw { self.core.sponsor_memory().raw() }
+    pub fn sponsor_events(&self) -> Raw { self.core.sponsor_events().raw() }
+    pub fn sponsor_instrs(&self) -> Raw { self.core.sponsor_instrs().raw() }
     pub fn mem_top(&self) -> Raw { self.core.ram(MEMORY).t().raw() }
     pub fn mem_next(&self) -> Raw { self.core.ram(MEMORY).x().raw() }
     pub fn mem_free(&self) -> Raw { self.core.ram(MEMORY).y().raw() }

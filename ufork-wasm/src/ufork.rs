@@ -99,7 +99,7 @@ impl fmt::Display for Any {
                 TRUE => write!(fmt, "#t"),
                 UNIT => write!(fmt, "#unit"),
                 TYPE_T => write!(fmt, "TYPE_T"),
-                EVENT_T => write!(fmt, "EVENT_T"),
+                //EVENT_T => write!(fmt, "EVENT_T"),
                 INSTR_T => write!(fmt, "INSTR_T"),
                 ACTOR_T => write!(fmt, "ACTOR_T"),
                 FIXNUM_T => write!(fmt, "FIXNUM_T"),
@@ -225,10 +225,10 @@ impl Quad {
     pub fn type_t() -> Quad {
         Self::new(TYPE_T, UNDEF, UNDEF, UNDEF)
     }
-    pub fn event_t(target: Any, msg: Any, next: Any) -> Quad {
+    pub fn event_t(sponsor: Any, target: Any, msg: Any, next: Any) -> Quad {
         assert!(target.is_cap());
         assert!(next.is_ptr());
-        Self::new(EVENT_T, target, msg, next)
+        Self::new(sponsor, target, msg, next)
     }
     pub fn cont_t(ip: Any, sp: Any, ep: Any, next: Any) -> Quad {
         assert!(ip.is_ptr());
@@ -275,6 +275,12 @@ impl Quad {
         assert!(free.is_fix());
         assert!(root.is_ptr());
         Self::new(top, next, free, root)
+    }
+    pub fn sponsor_t(memory: Any, events: Any, instrs: Any) -> Quad {
+        assert!(memory.is_fix());
+        assert!(events.is_fix());
+        assert!(instrs.is_fix());
+        Self::new(memory, events, instrs, UNDEF)
     }
     pub fn untyped_t(t: Any, x: Any, y: Any, z: Any) -> Quad {  // pass-thru for Quad::new()
         Self::new(t, x, y, z)
@@ -531,6 +537,16 @@ impl Quad {
         Self::vm_end(END_RELEASE)
     }
 
+    // construct detached Event
+    pub fn new_event(sponsor: Any, target: Any, msg: Any) -> Quad {
+        Self::event_t(sponsor, target, msg, NIL)
+    }
+
+    // construct detached Continuation
+    pub fn new_cont(ip: Any, sp: Any, ep: Any) -> Quad {
+        Self::cont_t(ip, sp, ep, NIL)
+    }
+
     // construct idle Actor
     pub fn new_actor(beh: Any, state: Any) -> Quad {
         Self::actor_t(beh, state, UNDEF)
@@ -666,7 +682,7 @@ pub const TRUE: Any         = Any { raw: 3 };
 pub const UNIT: Any         = Any { raw: 4 };
 pub const LITERAL_T: Any    = Any { raw: 0 };  // == UNDEF
 pub const TYPE_T: Any       = Any { raw: 5 };
-pub const EVENT_T: Any      = Any { raw: 6 };
+//pub const EVENT_T: Any      = Any { raw: 6 };
 pub const INSTR_T: Any      = Any { raw: 7 };
 pub const ACTOR_T: Any      = Any { raw: 8 };
 pub const FIXNUM_T: Any     = Any { raw: 9 };
@@ -707,7 +723,7 @@ impl Core {
         quad_rom[UNIT.addr()]       = Quad::literal_t();
 
         quad_rom[TYPE_T.addr()]     = Quad::type_t();
-        quad_rom[EVENT_T.addr()]    = Quad::type_t();
+        //quad_rom[EVENT_T.addr()]    = Quad::type_t();
         quad_rom[INSTR_T.addr()]    = Quad::type_t();
         quad_rom[ACTOR_T.addr()]    = Quad::type_t();
         quad_rom[FIXNUM_T.addr()]   = Quad::type_t();
@@ -1300,25 +1316,27 @@ pub const _ROM_TOP_ADDR: usize = T_DEQUE_ADDR+64;
 pub const E_BOOT: Any       = Any { raw: MUT_RAW | 2 };
         //quad_ram[E_BOOT.addr()]     = Quad::event_t(A_STOP, TEST_MSG, NIL);  // stop actor
         //quad_ram[E_BOOT.addr()]     = Quad::event_t(A_LOOP, TEST_MSG, NIL);  // run loop demo
-        quad_ram[E_BOOT.addr()]     = Quad::event_t(A_TEST, TEST_MSG, NIL);  // run test suite
-pub const A_SINK: Any       = Any { raw: OPQ_RAW | MUT_RAW | 3 };
+        quad_ram[E_BOOT.addr()]     = Quad::new_event(SPONSOR, A_TEST, TEST_MSG);  // run test suite
+pub const SPONSOR: Any      = Any { raw: MUT_RAW | 3 };
+        quad_ram[SPONSOR.addr()]    = Quad::sponsor_t(ZERO, ZERO, ZERO);  // root configuration sponsor
+pub const A_SINK: Any       = Any { raw: OPQ_RAW | MUT_RAW | 4 };
         quad_ram[A_SINK.addr()]     = Quad::new_actor(SINK_BEH, NIL);
-pub const A_STOP: Any       = Any { raw: OPQ_RAW | MUT_RAW | 4 };
+pub const A_STOP: Any       = Any { raw: OPQ_RAW | MUT_RAW | 5 };
         quad_ram[A_STOP.addr()]     = Quad::new_actor(STOP, NIL);
-pub const A_TEST: Any       = Any { raw: OPQ_RAW | MUT_RAW | 5 };
+pub const A_TEST: Any       = Any { raw: OPQ_RAW | MUT_RAW | 6 };
         quad_ram[A_TEST.addr()]     = Quad::new_actor(TEST_BEH, TEST_SP);
-pub const A_LOOP: Any       = Any { raw: OPQ_RAW | MUT_RAW | 6 };
-        quad_ram[A_LOOP.addr()]     = Quad::new_actor(RESEND, TEST_SP);
 pub const F_FIB: Any        = Any { raw: OPQ_RAW | MUT_RAW | 7 };
         //quad_ram[7]                 = Quad::new_actor(F_FIB_BEH, NIL);  // function-actor
         quad_ram[7]                 = Quad::new_actor(_F_FIB_GEN, NIL);  // worker-generator
-pub const TEST_MSG: Any     = Any { raw: MUT_RAW | 8 };
-        quad_ram[8]                 = Quad::pair_t(A_STOP, Any::ram(9));
-        quad_ram[9]                 = Quad::pair_t(UNIT, NIL);
-pub const TEST_SP: Any      = Any { raw: MUT_RAW | 10 };
-        quad_ram[10]                = Quad::pair_t(MINUS_1, Any::ram(11));
-        quad_ram[11]                = Quad::pair_t(MINUS_2, Any::ram(12));
-        quad_ram[12]                = Quad::pair_t(MINUS_3, NIL);
+pub const A_LOOP: Any       = Any { raw: OPQ_RAW | MUT_RAW | 8 };
+        quad_ram[A_LOOP.addr()]     = Quad::new_actor(RESEND, TEST_SP);
+pub const TEST_MSG: Any     = Any { raw: MUT_RAW | 10 };
+        quad_ram[10]                = Quad::pair_t(A_STOP, Any::ram(9));
+        quad_ram[11]                = Quad::pair_t(UNIT, NIL);
+pub const TEST_SP: Any      = Any { raw: MUT_RAW | 12 };
+        quad_ram[12]                = Quad::pair_t(MINUS_1, Any::ram(11));
+        quad_ram[13]                = Quad::pair_t(MINUS_2, Any::ram(12));
+        quad_ram[14]                = Quad::pair_t(MINUS_3, NIL);
 
 pub const _RAM_TOP_ADDR: usize = 16;
 
@@ -1353,9 +1371,9 @@ pub const _RAM_TOP_ADDR: usize = 16;
             let events = a_quad.z();
             if events == UNDEF {
                 // begin actor-event transaction
-                self.ram_mut(a_ptr).set_z(NIL);
                 let kp = self.new_cont(beh, state, ep);
                 println!("dispatch_event: cont={} -> {}", kp, self.mem(kp));
+                self.ram_mut(a_ptr).set_z(NIL);
                 self.cont_enqueue(kp);
                 true  // event dispatched
             } else {
@@ -1880,6 +1898,17 @@ pub const _RAM_TOP_ADDR: usize = 16;
         a_ptr
     }
 
+    pub fn sponsor_memory(&self) -> Any { self.ram(self.sponsor()).t() }
+    fn _set_sponsor_memory(&mut self, num: Any) { self.ram_mut(self.sponsor()).set_t(num); }
+    pub fn sponsor_events(&self) -> Any { self.ram(self.sponsor()).x() }
+    fn _set_sponsor_events(&mut self, num: Any) { self.ram_mut(self.sponsor()).set_x(num); }
+    pub fn sponsor_instrs(&self) -> Any { self.ram(self.sponsor()).y() }
+    fn _set_sponsor_instrs(&mut self, num: Any) { self.ram_mut(self.sponsor()).set_y(num); }
+    pub fn sponsor(&self) -> Any {
+        let ep = self.ep();
+        self.ram(ep).t()
+    }
+
     fn list_len(&self, list: Any) -> isize {
         let mut n: isize = 0;
         let mut p = list;
@@ -2100,11 +2129,11 @@ pub const _RAM_TOP_ADDR: usize = 16;
 
     pub fn new_event(&mut self, target: Any, msg: Any) -> Any {
         assert!(self.typeq(ACTOR_T, target));
-        let event = Quad::event_t(target, msg, NIL);
+        let event = Quad::new_event(self.sponsor(), target, msg);
         self.alloc(&event)
     }
     pub fn new_cont(&mut self, ip: Any, sp: Any, ep: Any) -> Any {
-        let cont = Quad::cont_t(ip, sp, ep, NIL);
+        let cont = Quad::new_cont(ip, sp, ep);
         self.alloc(&cont)
     }
     pub fn new_actor(&mut self, beh: Any, state: Any) -> Any {

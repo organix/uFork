@@ -28,7 +28,7 @@ as a transaction on the Configuration.
 The Configuration state is consistent
 between Event dispatches.
 This can provide a stable checkpoint
-for persistence, suspension, migration, and restart.
+for persistence, suspension, migration, upgrade, and restart.
 
 ## Sponsor Life-Cycle
 
@@ -67,7 +67,7 @@ If a Configuration has no more pending Events to dispatch,
 it enters `IDLE` state
 and notifies its _Controller_ with a `Stopped` message.
 
-The Controller can send the following messages to a Periperal:
+The Controller can send the following messages to a Peripheral:
 
   * Run(Resources)
   * Pause
