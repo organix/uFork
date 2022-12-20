@@ -1387,7 +1387,7 @@ pub const _RAM_TOP_ADDR: usize = 16;
         }
     }
     pub fn execute_instruction(&mut self) -> bool {
-        let kp = self.k_first();
+        let kp = self.kp();
         if kp.is_ram() {
             let cont = self.ram(kp);
             println!("execute_instruction: kp={} -> {}", kp, cont);
@@ -2279,24 +2279,28 @@ pub const _RAM_TOP_ADDR: usize = 16;
         self.ram_mut(pair).set_y(val);
     }
 
+    pub fn kp(&self) -> Any {  // continuation pointer
+        let kp = self.k_first();
+        if kp.is_ram() { kp } else { UNDEF }
+    }
     pub fn ip(&self) -> Any {  // instruction pointer
-        let quad = self.ram(self.k_first());
+        let quad = self.mem(self.kp());
         quad.t()
     }
     pub fn sp(&self) -> Any {  // stack pointer
-        let quad = self.ram(self.k_first());
+        let quad = self.mem(self.kp());
         quad.x()
     }
     pub fn ep(&self) -> Any {  // event pointer
-        let quad = self.ram(self.k_first());
+        let quad = self.mem(self.kp());
         quad.y()
     }
     fn set_ip(&mut self, ptr: Any) {
-        let quad = self.ram_mut(self.k_first());
+        let quad = self.ram_mut(self.kp());
         quad.set_t(ptr)
     }
     fn set_sp(&mut self, ptr: Any) {
-        let quad = self.ram_mut(self.k_first());
+        let quad = self.ram_mut(self.kp());
         quad.set_x(ptr)
     }
 
@@ -2494,9 +2498,18 @@ fn core_initialization() {
     assert_eq!(NIL, core.mem_next());
     assert_ne!(NIL, core.e_first());
     assert_eq!(NIL, core.k_first());
-    for raw in 0..256 {
-        let quad = core.mem(Any::new(raw));
-        println!("{:5}: {}", raw, quad);
+    assert_ne!(core.kp(), core.k_first());
+    println!("RAM");
+    for ofs in 0..32 {
+        let ptr = Any::ram(ofs);
+        let quad = core.ram(ptr);
+        println!("{:5}: {} -> {}", ofs, ptr, quad);
+    }
+    println!("ROM");
+    for ofs in 0..32 {
+        let ptr = Any::rom(ofs);
+        let quad = core.rom(ptr);
+        println!("{:5}: {} -> {}", ofs, ptr, quad);
     }
     //assert!(false);  // force output to be displayed
 }
