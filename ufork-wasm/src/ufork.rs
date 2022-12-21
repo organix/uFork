@@ -15,6 +15,9 @@ const BNK_RAW: Raw          = 0x1000_0000;  // 1=bank_1, 0=bank_0 (half-space GC
 const BNK_0: Raw            = 0;
 const BNK_1: Raw            = BNK_RAW;
 
+//const BNK_INI: Raw          = BNK_0;
+const BNK_INI: Raw          = BNK_1;
+
 // type-tagged value
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Any { raw: Raw }
@@ -705,8 +708,8 @@ pub const EMPTY_DQ: Any     = Any { raw: 15 };
 
 pub const START: Any        = Any { raw: 16 };
 
-pub const MEMORY: Any       = Any { raw: MUT_RAW | 0 };
-pub const DDEQUE: Any       = Any { raw: MUT_RAW | 1 };
+pub const MEMORY: Any       = Any { raw: MUT_RAW | BNK_INI | 0 };
+pub const DDEQUE: Any       = Any { raw: MUT_RAW | BNK_INI | 1 };
 
 
 // core memory limit
@@ -1322,29 +1325,29 @@ pub const _ROM_TOP_ADDR: usize = T_DEQUE_ADDR+64;
             Quad::empty_t();
             QUAD_MAX
         ];
-        quad_ram[MEMORY.addr()]     = Quad::memory_t(Any::ram(BNK_0, _RAM_TOP_ADDR), NIL, ZERO, DDEQUE);
+        quad_ram[MEMORY.addr()]     = Quad::memory_t(Any::ram(BNK_INI, _RAM_TOP_ADDR), NIL, ZERO, DDEQUE);
         quad_ram[DDEQUE.addr()]     = Quad::ddeque_t(E_BOOT, E_BOOT, NIL, NIL);
-pub const SPONSOR: Any      = Any { raw: MUT_RAW | 2 };
+pub const SPONSOR: Any      = Any { raw: MUT_RAW | BNK_INI | 2 };
         quad_ram[SPONSOR.addr()]    = Quad::sponsor_t(ZERO, ZERO, ZERO);  // root configuration sponsor
-pub const A_SINK: Any       = Any { raw: OPQ_RAW | MUT_RAW | 3 };
+pub const A_SINK: Any       = Any { raw: OPQ_RAW | MUT_RAW | BNK_INI | 3 };
         quad_ram[A_SINK.addr()]     = Quad::new_actor(SINK_BEH, NIL);
-pub const A_STOP: Any       = Any { raw: OPQ_RAW | MUT_RAW | 4 };
+pub const A_STOP: Any       = Any { raw: OPQ_RAW | MUT_RAW | BNK_INI | 4 };
         quad_ram[A_STOP.addr()]     = Quad::new_actor(STOP, NIL);
-pub const A_TEST: Any       = Any { raw: OPQ_RAW | MUT_RAW | 5 };
+pub const A_TEST: Any       = Any { raw: OPQ_RAW | MUT_RAW | BNK_INI | 5 };
         quad_ram[A_TEST.addr()]     = Quad::new_actor(TEST_BEH, TEST_SP);
-pub const F_FIB: Any        = Any { raw: OPQ_RAW | MUT_RAW | 6 };
+pub const F_FIB: Any        = Any { raw: OPQ_RAW | MUT_RAW | BNK_INI | 6 };
         //quad_ram[F_FIB.addr()]      = Quad::new_actor(F_FIB_BEH, NIL);  // function-actor
         quad_ram[F_FIB.addr()]      = Quad::new_actor(_F_FIB_GEN, NIL);  // worker-generator
-pub const A_LOOP: Any       = Any { raw: OPQ_RAW | MUT_RAW | 7 };
+pub const A_LOOP: Any       = Any { raw: OPQ_RAW | MUT_RAW | BNK_INI | 7 };
         quad_ram[A_LOOP.addr()]     = Quad::new_actor(RESEND, TEST_SP);
-pub const TEST_MSG: Any     = Any { raw: MUT_RAW | 8 };
-        quad_ram[TEST_MSG.addr()+0] = Quad::pair_t(A_STOP, Any::ram(BNK_0, TEST_MSG.addr()+1));
+pub const TEST_MSG: Any     = Any { raw: MUT_RAW | BNK_INI | 8 };
+        quad_ram[TEST_MSG.addr()+0] = Quad::pair_t(A_STOP, Any::ram(BNK_INI, TEST_MSG.addr()+1));
         quad_ram[TEST_MSG.addr()+1] = Quad::pair_t(UNIT, NIL);
-pub const TEST_SP: Any      = Any { raw: MUT_RAW | 10 };
-        quad_ram[TEST_SP.addr()+0]  = Quad::pair_t(MINUS_1, Any::ram(BNK_0, TEST_SP.addr()+1));
-        quad_ram[TEST_SP.addr()+1]  = Quad::pair_t(MINUS_2, Any::ram(BNK_0, TEST_SP.addr()+2));
+pub const TEST_SP: Any      = Any { raw: MUT_RAW | BNK_INI | 10 };
+        quad_ram[TEST_SP.addr()+0]  = Quad::pair_t(MINUS_1, Any::ram(BNK_INI, TEST_SP.addr()+1));
+        quad_ram[TEST_SP.addr()+1]  = Quad::pair_t(MINUS_2, Any::ram(BNK_INI, TEST_SP.addr()+2));
         quad_ram[TEST_SP.addr()+2]  = Quad::pair_t(MINUS_3, NIL);
-pub const E_BOOT: Any       = Any { raw: MUT_RAW | 15 };
+pub const E_BOOT: Any       = Any { raw: MUT_RAW | BNK_INI | 15 };
         //quad_ram[E_BOOT.addr()]     = Quad::event_t(A_STOP, TEST_MSG, NIL);  // stop actor
         //quad_ram[E_BOOT.addr()]     = Quad::event_t(A_LOOP, TEST_MSG, NIL);  // run loop demo
         quad_ram[E_BOOT.addr()]     = Quad::new_event(SPONSOR, A_TEST, TEST_MSG);  // run test suite
@@ -1353,9 +1356,9 @@ pub const _RAM_TOP_ADDR: usize = 16;
 
         Core {
             quad_rom,
-            quad_ram0: quad_ram,
-            quad_ram1: [ Quad::empty_t(); QUAD_MAX ],
-            gc_phase: BNK_0,
+            quad_ram0: if BNK_INI == BNK_0 { quad_ram } else { [ Quad::empty_t(); QUAD_MAX ] },
+            quad_ram1: if BNK_INI == BNK_1 { quad_ram } else { [ Quad::empty_t(); QUAD_MAX ] },
+            gc_phase: BNK_INI,
         }
     }
 
@@ -2122,23 +2125,25 @@ pub const _RAM_TOP_ADDR: usize = 16;
         self.list_len(front) + self.list_len(back)
     }
 
-    fn e_first(&self) -> Any { self.ram(DDEQUE).t() }
-    fn set_e_first(&mut self, ptr: Any) { self.ram_mut(DDEQUE).set_t(ptr); }
-    fn e_last(&self) -> Any { self.ram(DDEQUE).x() }
-    fn set_e_last(&mut self, ptr: Any) { self.ram_mut(DDEQUE).set_x(ptr); }
-    fn k_first(&self) -> Any { self.ram(DDEQUE).y() }
-    fn set_k_first(&mut self, ptr: Any) { self.ram_mut(DDEQUE).set_y(ptr); }
-    fn k_last(&self) -> Any { self.ram(DDEQUE).z() }
-    fn set_k_last(&mut self, ptr: Any) { self.ram_mut(DDEQUE).set_z(ptr); }
+    fn e_first(&self) -> Any { self.ram(self.ddeque()).t() }
+    fn set_e_first(&mut self, ptr: Any) { self.ram_mut(self.ddeque()).set_t(ptr); }
+    fn e_last(&self) -> Any { self.ram(self.ddeque()).x() }
+    fn set_e_last(&mut self, ptr: Any) { self.ram_mut(self.ddeque()).set_x(ptr); }
+    fn k_first(&self) -> Any { self.ram(self.ddeque()).y() }
+    fn set_k_first(&mut self, ptr: Any) { self.ram_mut(self.ddeque()).set_y(ptr); }
+    fn k_last(&self) -> Any { self.ram(self.ddeque()).z() }
+    fn set_k_last(&mut self, ptr: Any) { self.ram_mut(self.ddeque()).set_z(ptr); }
+    fn ddeque(&self) -> Any { self.ptr_to_mem(DDEQUE) }
 
-    fn mem_top(&self) -> Any { self.ram(MEMORY).t() }
-    fn set_mem_top(&mut self, ptr: Any) { self.ram_mut(MEMORY).set_t(ptr); }
-    fn mem_next(&self) -> Any { self.ram(MEMORY).x() }
-    fn set_mem_next(&mut self, ptr: Any) { self.ram_mut(MEMORY).set_x(ptr); }
-    fn mem_free(&self) -> Any { self.ram(MEMORY).y() }
-    fn set_mem_free(&mut self, fix: Any) { self.ram_mut(MEMORY).set_y(fix); }
-    fn _mem_root(&self) -> Any { self.ram(MEMORY).z() }
-    fn _set_mem_root(&mut self, ptr: Any) { self.ram_mut(MEMORY).set_z(ptr); }
+    fn mem_top(&self) -> Any { self.ram(self.memory()).t() }
+    fn set_mem_top(&mut self, ptr: Any) { self.ram_mut(self.memory()).set_t(ptr); }
+    fn mem_next(&self) -> Any { self.ram(self.memory()).x() }
+    fn set_mem_next(&mut self, ptr: Any) { self.ram_mut(self.memory()).set_x(ptr); }
+    fn mem_free(&self) -> Any { self.ram(self.memory()).y() }
+    fn set_mem_free(&mut self, fix: Any) { self.ram_mut(self.memory()).set_y(fix); }
+    fn _mem_root(&self) -> Any { self.ram(self.memory()).z() }
+    fn _set_mem_root(&mut self, ptr: Any) { self.ram_mut(self.memory()).set_z(ptr); }
+    fn memory(&self) -> Any { self.ptr_to_mem(MEMORY) }
 
     pub fn new_event(&mut self, target: Any, msg: Any) -> Any {
         assert!(self.typeq(ACTOR_T, target));
@@ -2337,6 +2342,15 @@ pub const _RAM_TOP_ADDR: usize = 16;
     pub fn in_heap(&self, val: Any) -> bool {
         val.is_ram() && (val.addr() < self.mem_top().addr())
     }
+    fn ptr_to_mem(&self, ptr: Any) -> Any {  // convert ptr to current gc_phase
+        assert!(ptr.is_ptr());
+        if ptr.is_rom() {
+            ptr
+        } else {
+            let raw = ptr.raw() & !BNK_RAW;
+            Any::new(self.gc_phase() | raw)
+        }
+    }
     fn ptr_to_cap(&self, ptr: Any) -> Any {
         assert!(self.ram(ptr).t() == ACTOR_T);
         let raw = ptr.raw() | OPQ_RAW;
@@ -2384,7 +2398,7 @@ pub const _RAM_TOP_ADDR: usize = 16;
     }
 
     pub fn gc_mark_and_sweep(&mut self) {
-        self.gc_phase = if self.gc_phase == BNK_0 {BNK_1 } else { BNK_0 };  // toggle GC phase
+        self.gc_phase = if self.gc_phase == BNK_0 { BNK_1 } else { BNK_0 };  // toggle GC phase
     }
     pub fn gc_phase(&self) -> Raw { self.gc_phase }
 
@@ -2530,7 +2544,7 @@ fn core_initialization() {
     assert_ne!(core.kp(), core.k_first());
     println!("RAM");
     for ofs in 0..32 {
-        let ptr = Any::ram(BNK_0, ofs);
+        let ptr = Any::ram(core.gc_phase(), ofs);
         let quad = core.ram(ptr);
         println!("{:5}: {} -> {}", ofs, ptr, quad);
     }
