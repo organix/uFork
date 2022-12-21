@@ -39,6 +39,7 @@ $canvas.height = (CELL_SIZE + 1) * height + 1;
 let memory;
 let host;
 let universe;
+let prepared = false;  // host initialized
 let paused = false;  // run/pause toggle
 const $rate = document.getElementById("frame-rate");
 let frame = 1;  // frame-rate countdown
@@ -165,7 +166,12 @@ const drawUniverse = () => {
 	drawCells();
 }
 const singleStep = () => {
-	host.step();
+	if (!prepared) {
+		host.prepare();
+		prepared = true;
+	} else {
+		host.step();
+	}
 	universe.tick();
 	drawUniverse();
 };
@@ -319,13 +325,13 @@ const pauseAction = () => {
 init().then(function (wasm) {
 	memory = wasm.memory;
 	host = Host.new();
-	host.prepare();
+	//host.prepare(); // this is now done in singleStep()
 	universe = Universe.new(width, height);
 	//universe.pattern_fill();
 	universe.launch_ship();
 
 	// draw initial state
-	drawUniverse();
+	singleStep(); //drawUniverse();
 
 	//playAction();  // start animation (running)
 	pauseAction();  // start animation (paused)
