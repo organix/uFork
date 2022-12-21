@@ -76,7 +76,7 @@ const drawHost = () => {
 	}
 	a = [];
 	for (let addr = 0; addr < 512; addr++) {
-		let raw = host.ram_addr(addr);
+		let raw = host.ram_addr(host.gc_phase(), addr);
 		let line = '$'
 			+ ('00000000' + raw.toString(16)).slice(-8)
 			+ ': '
