@@ -2409,23 +2409,7 @@ pub const _RAM_TOP_ADDR: usize = 16;
         self.set_mem_free(Any::fix(n + 1));  // increment cells available
     }
 
-    pub fn gc_mark_and_sweep(&mut self) {
-        let ddeque = self.ddeque();
-        //let top = self.mem_top();
-        //let next = self.mem_next();
-        //let free = self.mem_free();
-        let root = self.mem_root();
-        let bank = if self.gc_phase == BNK_0 { BNK_1 } else { BNK_0 };  // determine new phase
-        self.gc_phase = bank;  // toggle GC phase
-        //self.set_mem_top(self.ptr_to_mem(DDEQUE));
-        //self.set_mem_next(NIL);
-        //self.set_mem_free(ZERO);
-        *self.ram_mut(self.ptr_to_mem(MEMORY)) =
-            Quad::memory_t(self.ptr_to_mem(DDEQUE), NIL, ZERO, root);
-        let ddeque = self.gc_mark(ddeque);
-        assert_eq!(self.ddeque(), ddeque);
-        let root = self.gc_mark(root);
-        self.set_mem_root(root);
+    pub fn gc_stop_the_world(&mut self) {
         /*
         1. Swap generations (`GC_GENX` <--> `GC_GENY`)
         2. Mark each cell in the root-set with `GC_SCAN`
@@ -2438,6 +2422,21 @@ pub const _RAM_TOP_ADDR: usize = 16;
         5. For each cell marked with the _previous_ generation,
             1. Mark the cell `GC_FREE` and add it to the free-cell chain
         */
+        let ddeque = self.ddeque();
+        let root = self.mem_root();
+        let bank = if self.gc_phase == BNK_0 { BNK_1 } else { BNK_0 };  // determine new phase
+        self.gc_phase = bank;  // toggle GC phase
+        *self.ram_mut(self.ptr_to_mem(MEMORY)) =
+            Quad::memory_t(self.ptr_to_mem(DDEQUE), NIL, ZERO, root);
+        let ddeque = self.gc_mark(ddeque);
+        assert_eq!(self.ddeque(), ddeque);
+        let root = self.gc_mark(root);
+        self.set_mem_root(root);
+        let mut scan = ddeque;
+        while scan != self.mem_top() {
+            self.gc_scan(scan);
+            scan = Any::new(scan.raw() + 1);
+        }
     }
     fn gc_mark(&mut self, val: Any) -> Any {
         if let Some(bank) = val.bank() {
@@ -2447,12 +2446,31 @@ pub const _RAM_TOP_ADDR: usize = 16;
                 } else {
                     *self.ram(self.cap_to_ptr(val))
                 };
-                let dup = self.alloc(&quad);
+                if quad.t() == GC_FWD_T {  // follow "broken heart"
+                    return quad.z();
+                }
+                // copy quad to new-space
+                let ptr = self.alloc(&quad);
+                let dup = if val.is_ram() {
+                    ptr
+                } else {
+                    self.ptr_to_cap(ptr)
+                };
                 *self.ram_mut(val) = Quad::gc_fwd_t(dup);  // leave "broken heart" behind
-                return dup
+                return dup;
             }
         }
         val
+    }
+    fn gc_scan(&mut self, ptr: Any) {
+        assert_eq!(Some(self.gc_phase()), ptr.bank());
+        let mem = self.ptr_to_mem(ptr);
+        let quad = *self.ram(mem);
+        let t = self.gc_mark(quad.t());
+        let x = self.gc_mark(quad.x());
+        let y = self.gc_mark(quad.y());
+        let z = self.gc_mark(quad.z());
+        *self.ram_mut(mem) = Quad::new(t, x, y, z);
     }
     pub fn gc_phase(&self) -> Raw { self.gc_phase }
 
@@ -2645,5 +2663,18 @@ fn basic_memory_allocation() {
 fn run_loop_terminates() {
     let mut core = Core::new();
     core.run_loop();
+    //assert!(false);  // force output to be displayed
+}
+
+#[test]
+fn gc_before_and_after_run() {
+    let mut core = Core::new();
+    assert_eq!(BNK_0, core.gc_phase());
+    core.gc_stop_the_world();
+    assert_eq!(BNK_1, core.gc_phase());
+    core.run_loop();
+    assert_eq!(BNK_1, core.gc_phase());
+    core.gc_stop_the_world();
+    assert_eq!(BNK_0, core.gc_phase());
     //assert!(false);  // force output to be displayed
 }

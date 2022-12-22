@@ -167,6 +167,10 @@ const drawUniverse = () => {
 	drawGrid();
 	drawCells();
 }
+const gcHost = () => {
+	host.gc_run();
+	drawUniverse();
+}
 const singleStep = () => {
 	if (!prepared) {
 		host.prepare();
@@ -305,6 +309,9 @@ $randomButton.onclick = () => {
 	universe.random_fill();
 	drawUniverse();
 }
+
+const $gcButton = document.getElementById("ufork-gc-btn");
+$gcButton.onclick = gcHost;
 
 const $stepButton = document.getElementById("single-step");
 $stepButton.onclick = singleStep;
