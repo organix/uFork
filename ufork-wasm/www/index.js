@@ -62,7 +62,7 @@ const drawHost = () => {
 	updateElementText($mem_free, host.print(host.mem_free()));
 	updateElementText($mem_root, host.print(host.mem_root()));
 	$mem_root.title = host.disasm(host.mem_root());
-	updateElementText($gc_phase, host.gc_phase() == 0 ? "0" : "1");
+	updateElementText($gc_phase, host.gc_phase() == 0 ? "Bank 0" : "Bank 1");
 	updateElementText($sponsor_memory, host.print(host.sponsor_memory()));
 	updateElementText($sponsor_events, host.print(host.sponsor_events()));
 	updateElementText($sponsor_instrs, host.print(host.sponsor_instrs()));

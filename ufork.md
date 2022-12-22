@@ -865,9 +865,9 @@ The overall algorithm is roughly the following:
     1. If a new cell is added to the root-set, mark it with `GC_SCAN`
 3. Mark each newly-allocated cell with `GC_SCAN`
 4. While there are cells marked `GC_SCAN`:
-    1. Mark a cell with the _current_ generation
-    2. Scan the cell, for each field of the cell:
+    1. Scan a cell, for each field of the cell:
         1. If it points to the heap, and is marked with the _previous_ generation, mark it `GC_SCAN`
+    2. Mark the cell with the _current_ generation
 5. For each cell marked with the _previous_ generation,
     1. Mark the cell `GC_FREE` and add it to the free-cell chain
 

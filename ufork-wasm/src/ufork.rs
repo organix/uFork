@@ -15,8 +15,8 @@ const BNK_RAW: Raw          = 0x1000_0000;  // 1=bank_1, 0=bank_0 (half-space GC
 const BNK_0: Raw            = 0;
 const BNK_1: Raw            = BNK_RAW;
 
-//const BNK_INI: Raw          = BNK_0;
-const BNK_INI: Raw          = BNK_1;
+const BNK_INI: Raw          = BNK_0;
+//const BNK_INI: Raw          = BNK_1;
 
 // type-tagged value
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -66,11 +66,12 @@ impl Any {
     pub fn is_ram(&self) -> bool {
         (self.raw & (DIR_RAW | OPQ_RAW | MUT_RAW)) == MUT_RAW
     }
-    pub fn bank(&self) -> Raw {
-        if !self.is_ram() {
-            panic!("bank only applies to RAM");
+    pub fn bank(&self) -> Option<Raw> {
+        if (self.raw & (DIR_RAW | MUT_RAW)) == MUT_RAW {  // include CAPs
+            Some(self.raw & BNK_RAW)
+        } else {
+            None
         }
-        self.raw & BNK_RAW
     }
     pub fn fix_num(&self) -> Option<isize> {
         if self.is_fix() {
@@ -112,6 +113,7 @@ impl fmt::Display for Any {
                 UNIT => write!(fmt, "#unit"),
                 TYPE_T => write!(fmt, "TYPE_T"),
                 //EVENT_T => write!(fmt, "EVENT_T"),
+                GC_FWD_T => write!(fmt, "GC_FWD_T"),
                 INSTR_T => write!(fmt, "INSTR_T"),
                 ACTOR_T => write!(fmt, "ACTOR_T"),
                 FIXNUM_T => write!(fmt, "FIXNUM_T"),
@@ -293,6 +295,9 @@ impl Quad {
         assert!(events.is_fix());
         assert!(instrs.is_fix());
         Self::new(memory, events, instrs, UNDEF)
+    }
+    pub fn gc_fwd_t(to: Any) -> Quad {
+        Self::new(GC_FWD_T, UNDEF, UNDEF, to)
     }
     pub fn untyped_t(t: Any, x: Any, y: Any, z: Any) -> Quad {  // pass-thru for Quad::new()
         Self::new(t, x, y, z)
@@ -695,6 +700,7 @@ pub const UNIT: Any         = Any { raw: 4 };
 pub const LITERAL_T: Any    = Any { raw: 0 };  // == UNDEF
 pub const TYPE_T: Any       = Any { raw: 5 };
 //pub const EVENT_T: Any      = Any { raw: 6 };
+pub const GC_FWD_T: Any     = Any { raw: 6 };
 pub const INSTR_T: Any      = Any { raw: 7 };
 pub const ACTOR_T: Any      = Any { raw: 8 };
 pub const FIXNUM_T: Any     = Any { raw: 9 };
@@ -738,6 +744,7 @@ impl Core {
 
         quad_rom[TYPE_T.addr()]     = Quad::type_t();
         //quad_rom[EVENT_T.addr()]    = Quad::type_t();
+        quad_rom[GC_FWD_T.addr()]   = Quad::type_t();
         quad_rom[INSTR_T.addr()]    = Quad::type_t();
         quad_rom[ACTOR_T.addr()]    = Quad::type_t();
         quad_rom[FIXNUM_T.addr()]   = Quad::type_t();
@@ -2141,8 +2148,8 @@ pub const _RAM_TOP_ADDR: usize = 16;
     fn set_mem_next(&mut self, ptr: Any) { self.ram_mut(self.memory()).set_x(ptr); }
     fn mem_free(&self) -> Any { self.ram(self.memory()).y() }
     fn set_mem_free(&mut self, fix: Any) { self.ram_mut(self.memory()).set_y(fix); }
-    fn _mem_root(&self) -> Any { self.ram(self.memory()).z() }
-    fn _set_mem_root(&mut self, ptr: Any) { self.ram_mut(self.memory()).set_z(ptr); }
+    fn mem_root(&self) -> Any { self.ram(self.memory()).z() }
+    fn set_mem_root(&mut self, ptr: Any) { self.ram_mut(self.memory()).set_z(ptr); }
     fn memory(&self) -> Any { self.ptr_to_mem(MEMORY) }
 
     pub fn new_event(&mut self, target: Any, msg: Any) -> Any {
@@ -2342,9 +2349,9 @@ pub const _RAM_TOP_ADDR: usize = 16;
     pub fn in_heap(&self, val: Any) -> bool {
         val.is_ram() && (val.addr() < self.mem_top().addr())
     }
-    fn ptr_to_mem(&self, ptr: Any) -> Any {  // convert ptr to current gc_phase
-        assert!(ptr.is_ptr());
-        if ptr.is_rom() {
+    fn ptr_to_mem(&self, ptr: Any) -> Any {  // convert ptr/cap to current gc_phase
+        let bank = ptr.bank();
+        if bank.is_none() {
             ptr
         } else {
             let raw = ptr.raw() & !BNK_RAW;
@@ -2398,7 +2405,49 @@ pub const _RAM_TOP_ADDR: usize = 16;
     }
 
     pub fn gc_mark_and_sweep(&mut self) {
-        self.gc_phase = if self.gc_phase == BNK_0 { BNK_1 } else { BNK_0 };  // toggle GC phase
+        let ddeque = self.ddeque();
+        //let top = self.mem_top();
+        //let next = self.mem_next();
+        //let free = self.mem_free();
+        let root = self.mem_root();
+        let bank = if self.gc_phase == BNK_0 { BNK_1 } else { BNK_0 };  // determine new phase
+        self.gc_phase = bank;  // toggle GC phase
+        //self.set_mem_top(self.ptr_to_mem(DDEQUE));
+        //self.set_mem_next(NIL);
+        //self.set_mem_free(ZERO);
+        *self.ram_mut(self.ptr_to_mem(MEMORY)) =
+            Quad::memory_t(self.ptr_to_mem(DDEQUE), NIL, ZERO, root);
+        let ddeque = self.gc_mark(ddeque);
+        assert_eq!(self.ddeque(), ddeque);
+        let root = self.gc_mark(root);
+        self.set_mem_root(root);
+        /*
+        1. Swap generations (`GC_GENX` <--> `GC_GENY`)
+        2. Mark each cell in the root-set with `GC_SCAN`
+            1. If a new cell is added to the root-set, mark it with `GC_SCAN`
+        3. Mark each newly-allocated cell with `GC_SCAN`
+        4. While there are cells marked `GC_SCAN`:
+            1. Scan a cell, for each field of the cell:
+                1. If it points to the heap, and is marked with the _previous_ generation, mark it `GC_SCAN`
+            2. Mark the cell with the _current_ generation
+        5. For each cell marked with the _previous_ generation,
+            1. Mark the cell `GC_FREE` and add it to the free-cell chain
+        */
+    }
+    fn gc_mark(&mut self, val: Any) -> Any {
+        if let Some(bank) = val.bank() {
+            if bank != self.gc_phase() {
+                let quad = if val.is_ram() {
+                    *self.ram(val)
+                } else {
+                    *self.ram(self.cap_to_ptr(val))
+                };
+                let dup = self.alloc(&quad);
+                *self.ram_mut(val) = Quad::gc_fwd_t(dup);  // leave "broken heart" behind
+                return dup
+            }
+        }
+        val
     }
     pub fn gc_phase(&self) -> Raw { self.gc_phase }
 
@@ -2420,25 +2469,27 @@ pub const _RAM_TOP_ADDR: usize = 16;
         &self.quad_rom[addr]
     }
     pub fn ram(&self, ptr: Any) -> &Quad {
-        if !ptr.is_ram() {
-            panic!("invalid RAM ptr=${:08x}", ptr.raw());
-        }
-        let addr = ptr.addr();
-        if ptr.bank() == BNK_0 {
-            &self.quad_ram0[addr]
+        if let Some(bank) = ptr.bank() {
+            let addr = ptr.addr();
+            if bank == BNK_0 {
+                &self.quad_ram0[addr]
+            } else {
+                &self.quad_ram1[addr]
+            }
         } else {
-            &self.quad_ram1[addr]
+            panic!("invalid RAM ptr=${:08x}", ptr.raw());
         }
     }
     pub fn ram_mut(&mut self, ptr: Any) -> &mut Quad {
-        if !ptr.is_ram() {
-            panic!("invalid RAM ptr=${:08x}", ptr.raw());
-        }
-        let addr = ptr.addr();
-        if ptr.bank() == BNK_0 {
-            &mut self.quad_ram0[addr]
+        if let Some(bank) = ptr.bank() {
+            let addr = ptr.addr();
+            if bank == BNK_0 {
+                &mut self.quad_ram0[addr]
+            } else {
+                &mut self.quad_ram1[addr]
+            }
         } else {
-            &mut self.quad_ram1[addr]
+            panic!("invalid RAM ptr=${:08x}", ptr.raw());
         }
     }
 
