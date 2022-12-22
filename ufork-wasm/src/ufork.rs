@@ -2,6 +2,9 @@
 
 use core::fmt;
 
+//pub type Error = &'static str;
+pub type Error = String;
+
 pub type Raw = u32;  // univeral value type
 pub type Num = i32;  // fixnum integer type
 
@@ -1371,15 +1374,17 @@ pub const _RAM_TOP_ADDR: usize = 16;
 
     pub fn run_loop(&mut self) {
         loop {
-            self.check_for_interrupt();
+            let _ = self.check_for_interrupt();
             self.dispatch_event();
             if !self.execute_instruction() {
                 return;
             }
         }
     }
-    pub fn check_for_interrupt(&mut self) -> bool {
-        false
+    pub fn check_for_interrupt(&mut self) -> Result<bool, Error> {
+        Ok(false)
+        //Err(String::from("Boom!"))
+        //Err(format!("result={}", false))
     }
     pub fn dispatch_event(&mut self) -> bool {
         if let Some(ep) = self.event_dequeue() {

@@ -71,7 +71,7 @@ impl Host {
         }
     }
     pub fn prepare(&mut self) {  // prepare for next instruction
-        self.core.check_for_interrupt();
+        let _ = self.core.check_for_interrupt();
         self.core.dispatch_event();
     }
     pub fn step(&mut self) -> bool {  // single-step instruction execution
