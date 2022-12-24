@@ -584,8 +584,8 @@ The extended reference-implementation looks like this:
       (SEND cust (evbody #unit body (zip frml args (scope env)))) )))
 
 (define fexpr-beh                                             ; lexically-bound operative procedure
-  (lambda (frml body denv)
-    (BEH (cust opnds senv)
+  (lambda (frml body senv)
+    (BEH (cust opnds denv)
       (SEND cust (evbody #unit body (zip frml (cons denv opnds) (scope senv)))) )))
 
 (define op-quote                                              ; (quote <form>)
@@ -672,16 +672,16 @@ The extended reference-implementation looks like this:
     (if (pair? x)
         (if (eq? (car x) 'unquote)
             (eval (cadr x) e)
-            (quasi-list x))
+            (quasi-list x e))
         x)))
 (define quasi-list
-  (lambda (x)
+  (lambda (x e)
     (if (pair? x)
         (if (pair? (car x))
             (if (eq? (caar x) 'unquote-splicing)
-                (append (eval (cadar x) e) (quasi-list (cdr x)))
-                (cons (apply quasiquote (car x) e) (quasi-list (cdr x))))
-            (cons (car x) (quasi-list (cdr x))))
+                (append (eval (cadar x) e) (quasi-list (cdr x) e))
+                (cons (apply quasiquote (car x) e) (quasi-list (cdr x) e)))
+            (cons (car x) (quasi-list (cdr x) e)))
         x)))
 
 (define gensym

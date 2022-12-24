@@ -500,8 +500,8 @@
 
 /*
 (define fexpr-beh                       ; lexically-bound operative procedure
-  (lambda (frml body denv)
-    (BEH (cust opnds senv)
+  (lambda (frml body senv)
+    (BEH (cust opnds denv)
       (SEND cust
         (evbody #unit body (zip frml (cons denv opnds) (scope senv)))))))
 */

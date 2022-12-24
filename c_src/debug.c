@@ -328,7 +328,7 @@ void print_inst(int_t ip) {
         case VM_new:  fprintf(stderr, "{n:%+"PdI",k:%"PdI"}", TO_INT(immd), cont); break;
         case VM_beh:  fprintf(stderr, "{n:%+"PdI",k:%"PdI"}", TO_INT(immd), cont); break;
         case VM_end:  fprintf(stderr, "{op:%s}", end_label(immd)); break;
-        case VM_cvt:  fprintf(stderr, "{op:%s}", conversion_label(immd)); break;
+        case VM_cvt:  fprintf(stderr, "{op:%s,k:%"PdI"}", conversion_label(immd), cont); break;
         case VM_putc: fprintf(stderr, "{k:%"PdI"}", cont); break;
         case VM_getc: fprintf(stderr, "{k:%"PdI"}", cont); break;
         case VM_debug:print_word("{l:", immd); fprintf(stderr, ",k:%"PdI"}", cont); break;
