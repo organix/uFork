@@ -1099,18 +1099,18 @@ pub const F_FIB_BEH: Any = Any { raw: F_FIB_ADDR as Raw };
         quad_rom[F_FIB_ADDR+9]      = Quad::vm_push(PLUS_1, Any::rom(F_FIB_ADDR+10));  // n k n 1
         quad_rom[F_FIB_ADDR+10]     = Quad::vm_alu_sub(Any::rom(F_FIB_ADDR+11));  // n k n-1
         quad_rom[F_FIB_ADDR+11]     = Quad::vm_pick(PLUS_2, Any::rom(F_FIB_ADDR+12));  // n k n-1 k
-        quad_rom[F_FIB_ADDR+12]     = Quad::vm_my_self(Any::rom(F_FIB_ADDR+14));  // n k n-1 k fib
-        //quad_rom[F_FIB_ADDR+12]     = Quad::vm_push(F_FIB_BEH, Any::rom(F_FIB_ADDR+13));  // n k n-1 k fib-beh
-        //quad_rom[F_FIB_ADDR+13]     = Quad::vm_new(ZERO, Any::rom(F_FIB_ADDR+14));  // n k n-1 k fib
+        //quad_rom[F_FIB_ADDR+12]     = Quad::vm_my_self(Any::rom(F_FIB_ADDR+14));  // n k n-1 k fib
+        quad_rom[F_FIB_ADDR+12]     = Quad::vm_push(F_FIB_BEH, Any::rom(F_FIB_ADDR+13));  // n k n-1 k fib-beh
+        quad_rom[F_FIB_ADDR+13]     = Quad::vm_new(ZERO, Any::rom(F_FIB_ADDR+14));  // n k n-1 k fib
         quad_rom[F_FIB_ADDR+14]     = Quad::vm_send(PLUS_2, Any::rom(F_FIB_ADDR+15));  // n k
 
         quad_rom[F_FIB_ADDR+15]     = Quad::vm_roll(PLUS_2, Any::rom(F_FIB_ADDR+16));  // k n
         quad_rom[F_FIB_ADDR+16]     = Quad::vm_push(PLUS_2, Any::rom(F_FIB_ADDR+17));  // k n 2
         quad_rom[F_FIB_ADDR+17]     = Quad::vm_alu_sub(Any::rom(F_FIB_ADDR+18));  // k n-2
         quad_rom[F_FIB_ADDR+18]     = Quad::vm_roll(PLUS_2, Any::rom(F_FIB_ADDR+19));  // n-2 k
-        quad_rom[F_FIB_ADDR+19]     = Quad::vm_my_self(Any::rom(F_FIB_ADDR+21));  // n-2 k fib
-        //quad_rom[F_FIB_ADDR+19]     = Quad::vm_push(F_FIB_BEH, Any::rom(F_FIB_ADDR+20));  // n-2 k fib-beh
-        //quad_rom[F_FIB_ADDR+20]     = Quad::vm_new(ZERO, Any::rom(F_FIB_ADDR+21));  // n-2 k fib
+        //quad_rom[F_FIB_ADDR+19]     = Quad::vm_my_self(Any::rom(F_FIB_ADDR+21));  // n-2 k fib
+        quad_rom[F_FIB_ADDR+19]     = Quad::vm_push(F_FIB_BEH, Any::rom(F_FIB_ADDR+20));  // n-2 k fib-beh
+        quad_rom[F_FIB_ADDR+20]     = Quad::vm_new(ZERO, Any::rom(F_FIB_ADDR+21));  // n-2 k fib
         quad_rom[F_FIB_ADDR+21]     = Quad::vm_send(PLUS_2, COMMIT);  // --
 
 pub const F_FIB_K: Any = Any { raw: (F_FIB_ADDR+22) as Raw };
