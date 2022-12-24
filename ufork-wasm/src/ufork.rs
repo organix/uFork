@@ -243,6 +243,7 @@ impl Quad {
         Self::new(TYPE_T, UNDEF, UNDEF, UNDEF)
     }
     pub fn event_t(sponsor: Any, target: Any, msg: Any, next: Any) -> Quad {
+        assert!(sponsor.is_ram());
         assert!(target.is_cap());
         assert!(next.is_ptr());
         Self::new(sponsor, target, msg, next)
@@ -250,7 +251,7 @@ impl Quad {
     pub fn cont_t(ip: Any, sp: Any, ep: Any, next: Any) -> Quad {
         assert!(ip.is_ptr());
         assert!(sp.is_ptr());
-        assert!(ep.is_ptr());
+        assert!(ep.is_ram());
         assert!(next.is_ptr());
         Self::new(ip, sp, ep, next)
     }
@@ -1075,7 +1076,7 @@ pub const _BUSY_BEH: Any = Any { raw: BUSY_ADDR as Raw };
         quad_rom[BUSY_ADDR+28]      = Quad::vm_msg(ZERO, Any::rom(BUSY_ADDR+29));  // svc cust tag pending (cust0 . req0)
         quad_rom[BUSY_ADDR+29]      = Quad::vm_deque_put(Any::rom(BUSY_ADDR+26));  // svc cust tag pending1
 
-pub const F_FIB_ADDR: usize = BUSY_ADDR+30; //was 150;
+pub const F_FIB_ADDR: usize = BUSY_ADDR+30;
 pub const F_FIB_BEH: Any = Any { raw: F_FIB_ADDR as Raw };
         /*
         (define fib                 ; O(n!) performance?
@@ -1098,32 +1099,31 @@ pub const F_FIB_BEH: Any = Any { raw: F_FIB_ADDR as Raw };
         quad_rom[F_FIB_ADDR+9]      = Quad::vm_push(PLUS_1, Any::rom(F_FIB_ADDR+10));  // n k n 1
         quad_rom[F_FIB_ADDR+10]     = Quad::vm_alu_sub(Any::rom(F_FIB_ADDR+11));  // n k n-1
         quad_rom[F_FIB_ADDR+11]     = Quad::vm_pick(PLUS_2, Any::rom(F_FIB_ADDR+12));  // n k n-1 k
-        quad_rom[F_FIB_ADDR+12]     = Quad::vm_push(F_FIB, Any::rom(F_FIB_ADDR+13));  // n k n-1 k fib
-        quad_rom[F_FIB_ADDR+13]     = Quad::vm_send(PLUS_2, Any::rom(F_FIB_ADDR+14));  // n k
+        quad_rom[F_FIB_ADDR+12]     = Quad::vm_my_self(Any::rom(F_FIB_ADDR+14));  // n k n-1 k fib
+        //quad_rom[F_FIB_ADDR+12]     = Quad::vm_push(F_FIB_BEH, Any::rom(F_FIB_ADDR+13));  // n k n-1 k fib-beh
+        //quad_rom[F_FIB_ADDR+13]     = Quad::vm_new(ZERO, Any::rom(F_FIB_ADDR+14));  // n k n-1 k fib
+        quad_rom[F_FIB_ADDR+14]     = Quad::vm_send(PLUS_2, Any::rom(F_FIB_ADDR+15));  // n k
 
-        quad_rom[F_FIB_ADDR+14]     = Quad::vm_roll(PLUS_2, Any::rom(F_FIB_ADDR+15));  // k n
-        quad_rom[F_FIB_ADDR+15]     = Quad::vm_push(PLUS_2, Any::rom(F_FIB_ADDR+16));  // k n 2
-        quad_rom[F_FIB_ADDR+16]     = Quad::vm_alu_sub(Any::rom(F_FIB_ADDR+17));  // k n-2
-        quad_rom[F_FIB_ADDR+17]     = Quad::vm_roll(PLUS_2, Any::rom(F_FIB_ADDR+18));  // n-2 k
-        quad_rom[F_FIB_ADDR+18]     = Quad::vm_push(F_FIB, Any::rom(F_FIB_ADDR+19));  // n-2 k fib
-        quad_rom[F_FIB_ADDR+19]     = Quad::vm_send(PLUS_2, COMMIT);  // --
+        quad_rom[F_FIB_ADDR+15]     = Quad::vm_roll(PLUS_2, Any::rom(F_FIB_ADDR+16));  // k n
+        quad_rom[F_FIB_ADDR+16]     = Quad::vm_push(PLUS_2, Any::rom(F_FIB_ADDR+17));  // k n 2
+        quad_rom[F_FIB_ADDR+17]     = Quad::vm_alu_sub(Any::rom(F_FIB_ADDR+18));  // k n-2
+        quad_rom[F_FIB_ADDR+18]     = Quad::vm_roll(PLUS_2, Any::rom(F_FIB_ADDR+19));  // n-2 k
+        quad_rom[F_FIB_ADDR+19]     = Quad::vm_my_self(Any::rom(F_FIB_ADDR+21));  // n-2 k fib
+        //quad_rom[F_FIB_ADDR+19]     = Quad::vm_push(F_FIB_BEH, Any::rom(F_FIB_ADDR+20));  // n-2 k fib-beh
+        //quad_rom[F_FIB_ADDR+20]     = Quad::vm_new(ZERO, Any::rom(F_FIB_ADDR+21));  // n-2 k fib
+        quad_rom[F_FIB_ADDR+21]     = Quad::vm_send(PLUS_2, COMMIT);  // --
 
-pub const F_FIB_K: Any = Any { raw: (F_FIB_ADDR+20) as Raw };
+pub const F_FIB_K: Any = Any { raw: (F_FIB_ADDR+22) as Raw };
         // stack: cust
-        quad_rom[F_FIB_ADDR+20]     = Quad::vm_msg(ZERO, Any::rom(F_FIB_ADDR+21));  // cust m
-        quad_rom[F_FIB_ADDR+21]     = Quad::vm_push(F_FIB_K2, Any::rom(F_FIB_ADDR+22));  // cust m fib-k2
-        quad_rom[F_FIB_ADDR+22]     = Quad::vm_beh(PLUS_2, COMMIT);  // fib-k2[cust m]
+        quad_rom[F_FIB_ADDR+22]     = Quad::vm_msg(ZERO, Any::rom(F_FIB_ADDR+23));  // cust m
+        quad_rom[F_FIB_ADDR+23]     = Quad::vm_push(F_FIB_K2, Any::rom(F_FIB_ADDR+24));  // cust m fib-k2
+        quad_rom[F_FIB_ADDR+24]     = Quad::vm_beh(PLUS_2, COMMIT);  // fib-k2[cust m]
 
-pub const F_FIB_K2: Any = Any { raw: (F_FIB_ADDR+23) as Raw };
+pub const F_FIB_K2: Any = Any { raw: (F_FIB_ADDR+25) as Raw };
         // stack: cust m
-        quad_rom[F_FIB_ADDR+23]     = Quad::vm_msg(ZERO, Any::rom(F_FIB_ADDR+24));  // cust m n
-        quad_rom[F_FIB_ADDR+24]     = Quad::vm_alu_add(Any::rom(F_FIB_ADDR+25));  // cust m+n
-        quad_rom[F_FIB_ADDR+25]     = Quad::vm_roll(PLUS_2, SEND_0);  // m+n cust
-
-pub const _F_FIB_GEN: Any = Any { raw: (F_FIB_ADDR+26) as Raw };  // worker-generator facade for `fib`
-        quad_rom[F_FIB_ADDR+26]     = Quad::vm_msg(ZERO, Any::rom(F_FIB_ADDR+27));  // msg
-        quad_rom[F_FIB_ADDR+27]     = Quad::vm_push(F_FIB_BEH, Any::rom(F_FIB_ADDR+28));  // msg fib-beh
-        quad_rom[F_FIB_ADDR+28]     = Quad::vm_new(ZERO, SEND_0);  // msg fib
+        quad_rom[F_FIB_ADDR+25]     = Quad::vm_msg(ZERO, Any::rom(F_FIB_ADDR+26));  // cust m n
+        quad_rom[F_FIB_ADDR+26]     = Quad::vm_alu_add(Any::rom(F_FIB_ADDR+27));  // cust m+n
+        quad_rom[F_FIB_ADDR+27]     = Quad::vm_roll(PLUS_2, SEND_0);  // m+n cust
 
 /*
 (define COMMIT
@@ -1157,13 +1157,13 @@ pub const _F_FIB_GEN: Any = Any { raw: (F_FIB_ADDR+26) as Raw };  // worker-gene
                         (vm-push 1  ; n k n 1
                           (vm-alu-sub  ; n k n-1
                             (vm-pick 2  ; n k n-1 k
-                              (vm-push fib  ; n k n-1 k fib
+                              (vm-my-self  ; n k n-1 k fib
                                 (vm-send 2  ; n k
                                   (vm-roll 2  ; k n
                                     (vm-push 2  ; k n 2
                                       (vm-alu-sub  ; k n-2
                                         (vm-roll 2  ; n-2 k
-                                          (vm-push fib  ; n-2 k fib
+                                          (vm-my-self  ; n-2 k fib
                                             (vm-send 2  ; --
                                               COMMIT))))))
                                 ))))))
@@ -1171,7 +1171,7 @@ pub const _F_FIB_GEN: Any = Any { raw: (F_FIB_ADDR+26) as Raw };  // worker-gene
             )))))))
 */
 
-pub const IS_EQ_ADDR: usize = F_FIB_ADDR+29;
+pub const IS_EQ_ADDR: usize = F_FIB_ADDR+28;
 pub const _IS_EQ_BEH: Any    = Any { raw: IS_EQ_ADDR as Raw };
         /*
         (define is-eq-beh
@@ -1193,14 +1193,16 @@ pub const TEST_BEH: Any    = Any { raw: TEST_ADDR as Raw };
         quad_rom[TEST_ADDR+1]       = Quad::vm_push(PLUS_6, Any::rom(TEST_ADDR+2));  // 6
         quad_rom[TEST_ADDR+2]       = Quad::vm_push(EQ_8_BEH, Any::rom(TEST_ADDR+3));  // 6 eq-8-beh
         quad_rom[TEST_ADDR+3]       = Quad::vm_new(ZERO, Any::rom(TEST_ADDR+4));  // 6 eq-8
-        quad_rom[TEST_ADDR+4]       = Quad::vm_push(F_FIB, Any::rom(TEST_ADDR+5));  // 6 eq-8 f-fib
-        quad_rom[TEST_ADDR+5]       = Quad::vm_send(PLUS_2, COMMIT);  // --
-pub const EQ_8_BEH: Any = Any { raw: (TEST_ADDR+6) as Raw };
-        quad_rom[TEST_ADDR+6]       = Quad::vm_msg(ZERO, Any::rom(TEST_ADDR+7));  // msg
-        quad_rom[TEST_ADDR+7]       = Quad::vm_is_eq(PLUS_8, COMMIT);  // assert_eq(8, msg)
+        //quad_rom[TEST_ADDR+4]       = Quad::vm_push(F_FIB, Any::rom(TEST_ADDR+6));  // 6 eq-8 f-fib
+        quad_rom[TEST_ADDR+4]       = Quad::vm_push(F_FIB_BEH, Any::rom(TEST_ADDR+5));  // 6 eq-8 fib-beh
+        quad_rom[TEST_ADDR+5]       = Quad::vm_new(ZERO, Any::rom(TEST_ADDR+6));  // 6 eq-8 fib
+        quad_rom[TEST_ADDR+6]       = Quad::vm_send(PLUS_2, COMMIT);  // --
+pub const EQ_8_BEH: Any = Any { raw: (TEST_ADDR+7) as Raw };
+        quad_rom[TEST_ADDR+7]       = Quad::vm_msg(ZERO, Any::rom(TEST_ADDR+8));  // msg
+        quad_rom[TEST_ADDR+8]       = Quad::vm_is_eq(PLUS_8, COMMIT);  // assert_eq(8, msg)
 
         /* VM_DICT test suite */
-pub const T_DICT_ADDR: usize = TEST_ADDR+8;
+pub const T_DICT_ADDR: usize = TEST_ADDR+9;
 pub const _T_DICT_BEH: Any  = Any { raw: T_DICT_ADDR as Raw };
         quad_rom[T_DICT_ADDR+0]     = Quad::vm_dict_has(Any::rom(T_DICT_ADDR+1));  // #f
         quad_rom[T_DICT_ADDR+1]     = Quad::vm_is_eq(FALSE, Any::rom(T_DICT_ADDR+2));  // --
@@ -1339,15 +1341,24 @@ pub const _ROM_TOP_ADDR: usize = T_DEQUE_ADDR+64;
         quad_ram[DDEQUE.addr()]     = Quad::ddeque_t(E_BOOT, E_BOOT, NIL, NIL);
 pub const SPONSOR: Any      = Any { raw: MUT_RAW | BNK_INI | 2 };
         quad_ram[SPONSOR.addr()]    = Quad::sponsor_t(ZERO, ZERO, ZERO);  // root configuration sponsor
-pub const A_SINK: Any       = Any { raw: OPQ_RAW | MUT_RAW | BNK_INI | 3 };
+        /*
+pub const BOOT_ADDR: usize = 4;
+pub const BOOT_BEH: Any    = Any { raw: MUT_RAW | BNK_INI | (BOOT_ADDR as Raw) };
+        //quad_rom[BOOT_ADDR+0]       = Quad::vm_drop(PLUS_3, Any::rom(T_DEQUE_ADDR));  // --
+        //quad_rom[BOOT_ADDR+0]       = Quad::vm_drop(PLUS_3, Any::rom(T_DICT_ADDR));  // --
+        quad_rom[BOOT_ADDR+0]       = Quad::vm_drop(PLUS_3, Any::ram(BNK_INI, BOOT_ADDR+1));  // --
+        quad_rom[BOOT_ADDR+1]       = Quad::vm_push(PLUS_6, Any::ram(BNK_INI, BOOT_ADDR+2));  // 6
+        quad_rom[BOOT_ADDR+2]       = Quad::vm_push(EQ_8_BEH, Any::ram(BNK_INI, BOOT_ADDR+3));  // 6 eq-8-beh
+        quad_rom[BOOT_ADDR+3]       = Quad::vm_new(ZERO, Any::ram(BNK_INI, BOOT_ADDR+4));  // 6 eq-8
+        quad_rom[BOOT_ADDR+4]       = Quad::vm_push(F_FIB, Any::ram(BNK_INI, BOOT_ADDR+5));  // 6 eq-8 f-fib
+        quad_rom[BOOT_ADDR+5]       = Quad::vm_send(PLUS_2, COMMIT);  // --
+        */
+        pub const A_SINK: Any       = Any { raw: OPQ_RAW | MUT_RAW | BNK_INI | 3 };
         quad_ram[A_SINK.addr()]     = Quad::new_actor(SINK_BEH, NIL);
 pub const A_STOP: Any       = Any { raw: OPQ_RAW | MUT_RAW | BNK_INI | 4 };
         quad_ram[A_STOP.addr()]     = Quad::new_actor(STOP, NIL);
 pub const A_TEST: Any       = Any { raw: OPQ_RAW | MUT_RAW | BNK_INI | 5 };
         quad_ram[A_TEST.addr()]     = Quad::new_actor(TEST_BEH, TEST_SP);
-pub const F_FIB: Any        = Any { raw: OPQ_RAW | MUT_RAW | BNK_INI | 6 };
-        //quad_ram[F_FIB.addr()]      = Quad::new_actor(F_FIB_BEH, NIL);  // function-actor
-        quad_ram[F_FIB.addr()]      = Quad::new_actor(_F_FIB_GEN, NIL);  // worker-generator
 pub const A_LOOP: Any       = Any { raw: OPQ_RAW | MUT_RAW | BNK_INI | 7 };
         quad_ram[A_LOOP.addr()]     = Quad::new_actor(RESEND, TEST_SP);
 pub const TEST_MSG: Any     = Any { raw: MUT_RAW | BNK_INI | 8 };
