@@ -1185,10 +1185,9 @@ pub const _IS_EQ_BEH: Any    = Any { raw: IS_EQ_ADDR as Raw };
         quad_rom[IS_EQ_ADDR+2]      = Quad::vm_cmp_eq(Any::rom(IS_EQ_ADDR+3));  // expect (expect == actual)
         quad_rom[IS_EQ_ADDR+3]      = Quad::vm_is_eq(TRUE, COMMIT);  // expect
 
+        /* testcase: fib(6) => 8 */
 pub const TEST_ADDR: usize = IS_EQ_ADDR+4;
-pub const TEST_BEH: Any    = Any { raw: TEST_ADDR as Raw };
-        //quad_rom[TEST_ADDR+0]       = Quad::vm_drop(PLUS_3, Any::rom(T_DEQUE_ADDR));  // --
-        //quad_rom[TEST_ADDR+0]       = Quad::vm_drop(PLUS_3, Any::rom(T_DICT_ADDR));  // --
+pub const _TEST_BEH: Any    = Any { raw: TEST_ADDR as Raw };
         quad_rom[TEST_ADDR+0]       = Quad::vm_drop(PLUS_3, Any::rom(TEST_ADDR+1));  // --
         quad_rom[TEST_ADDR+1]       = Quad::vm_push(PLUS_6, Any::rom(TEST_ADDR+2));  // 6
         quad_rom[TEST_ADDR+2]       = Quad::vm_push(EQ_8_BEH, Any::rom(TEST_ADDR+3));  // 6 eq-8-beh
@@ -1341,39 +1340,28 @@ pub const _ROM_TOP_ADDR: usize = T_DEQUE_ADDR+64;
         quad_ram[DDEQUE.addr()]     = Quad::ddeque_t(E_BOOT, E_BOOT, NIL, NIL);
 pub const SPONSOR: Any      = Any { raw: MUT_RAW | BNK_INI | 2 };
         quad_ram[SPONSOR.addr()]    = Quad::sponsor_t(ZERO, ZERO, ZERO);  // root configuration sponsor
-        /*
-pub const BOOT_ADDR: usize = 4;
-pub const BOOT_BEH: Any    = Any { raw: MUT_RAW | BNK_INI | (BOOT_ADDR as Raw) };
-        //quad_rom[BOOT_ADDR+0]       = Quad::vm_drop(PLUS_3, Any::rom(T_DEQUE_ADDR));  // --
-        //quad_rom[BOOT_ADDR+0]       = Quad::vm_drop(PLUS_3, Any::rom(T_DICT_ADDR));  // --
-        quad_rom[BOOT_ADDR+0]       = Quad::vm_drop(PLUS_3, Any::ram(BNK_INI, BOOT_ADDR+1));  // --
-        quad_rom[BOOT_ADDR+1]       = Quad::vm_push(PLUS_6, Any::ram(BNK_INI, BOOT_ADDR+2));  // 6
-        quad_rom[BOOT_ADDR+2]       = Quad::vm_push(EQ_8_BEH, Any::ram(BNK_INI, BOOT_ADDR+3));  // 6 eq-8-beh
-        quad_rom[BOOT_ADDR+3]       = Quad::vm_new(ZERO, Any::ram(BNK_INI, BOOT_ADDR+4));  // 6 eq-8
-        quad_rom[BOOT_ADDR+4]       = Quad::vm_push(F_FIB, Any::ram(BNK_INI, BOOT_ADDR+5));  // 6 eq-8 f-fib
-        quad_rom[BOOT_ADDR+5]       = Quad::vm_send(PLUS_2, COMMIT);  // --
-        */
-        pub const A_SINK: Any       = Any { raw: OPQ_RAW | MUT_RAW | BNK_INI | 3 };
-        quad_ram[A_SINK.addr()]     = Quad::new_actor(SINK_BEH, NIL);
-pub const A_STOP: Any       = Any { raw: OPQ_RAW | MUT_RAW | BNK_INI | 4 };
-        quad_ram[A_STOP.addr()]     = Quad::new_actor(STOP, NIL);
-pub const A_TEST: Any       = Any { raw: OPQ_RAW | MUT_RAW | BNK_INI | 5 };
-        quad_ram[A_TEST.addr()]     = Quad::new_actor(TEST_BEH, TEST_SP);
-pub const A_LOOP: Any       = Any { raw: OPQ_RAW | MUT_RAW | BNK_INI | 7 };
-        quad_ram[A_LOOP.addr()]     = Quad::new_actor(RESEND, TEST_SP);
-pub const TEST_MSG: Any     = Any { raw: MUT_RAW | BNK_INI | 8 };
-        quad_ram[TEST_MSG.addr()+0] = Quad::pair_t(A_STOP, Any::ram(BNK_INI, TEST_MSG.addr()+1));
-        quad_ram[TEST_MSG.addr()+1] = Quad::pair_t(UNIT, NIL);
-pub const TEST_SP: Any      = Any { raw: MUT_RAW | BNK_INI | 10 };
-        quad_ram[TEST_SP.addr()+0]  = Quad::pair_t(MINUS_1, Any::ram(BNK_INI, TEST_SP.addr()+1));
-        quad_ram[TEST_SP.addr()+1]  = Quad::pair_t(MINUS_2, Any::ram(BNK_INI, TEST_SP.addr()+2));
-        quad_ram[TEST_SP.addr()+2]  = Quad::pair_t(MINUS_3, NIL);
-pub const E_BOOT: Any       = Any { raw: MUT_RAW | BNK_INI | 15 };
-        //quad_ram[E_BOOT.addr()]     = Quad::event_t(A_STOP, TEST_MSG, NIL);  // stop actor
-        //quad_ram[E_BOOT.addr()]     = Quad::event_t(A_LOOP, TEST_MSG, NIL);  // run loop demo
-        quad_ram[E_BOOT.addr()]     = Quad::new_event(SPONSOR, A_TEST, TEST_MSG);  // run test suite
+pub const BOOT_ADDR: usize = 3;
+pub const A_BOOT: Any       = Any { raw: OPQ_RAW | MUT_RAW | BNK_INI | (BOOT_ADDR+0) as Raw };
+        //quad_ram[BOOT_ADDR+0]       = Quad::new_actor(SINK_BEH, NIL);
+        //quad_ram[BOOT_ADDR+0]       = Quad::new_actor(STOP, _BOOT_SP);
+        //quad_ram[BOOT_ADDR+0]       = Quad::new_actor(_BOOT_BEH, _BOOT_SP);
+        quad_ram[BOOT_ADDR+0]       = Quad::new_actor(_TEST_BEH, NIL);
+pub const _BOOT_BEH: Any     = Any { raw: MUT_RAW | BNK_INI | (BOOT_ADDR+1) as Raw };
+        quad_ram[BOOT_ADDR+1]       = Quad::vm_push(UNIT, Any::ram(BNK_INI, BOOT_ADDR+2));  // #unit
+        quad_ram[BOOT_ADDR+2]       = Quad::vm_my_self(Any::ram(BNK_INI, BOOT_ADDR+3));  // #unit SELF
+        quad_ram[BOOT_ADDR+3]       = Quad::vm_push(RESEND, Any::ram(BNK_INI, BOOT_ADDR+4));  // #unit SELF resend
+        //quad_ram[BOOT_ADDR+3]       = Quad::vm_push(_T_DEQUE_BEH, Any::ram(BNK_INI, BOOT_ADDR+4));  // #unit SELF test-deque-beh
+        //quad_ram[BOOT_ADDR+3]       = Quad::vm_push(_T_DICT_BEH, Any::ram(BNK_INI, BOOT_ADDR+4));  // #unit SELF test-dict-beh
+        quad_ram[BOOT_ADDR+4]       = Quad::vm_new(ZERO, Any::ram(BNK_INI, BOOT_ADDR+5));  // #unit SELF actor
+        quad_ram[BOOT_ADDR+5]       = Quad::vm_send(PLUS_2, COMMIT);  // --
+pub const _BOOT_SP: Any     = Any { raw: MUT_RAW | BNK_INI | (BOOT_ADDR+6) as Raw };
+        quad_ram[BOOT_ADDR+6]       = Quad::pair_t(PLUS_1, Any::ram(BNK_INI, BOOT_ADDR+7));
+        quad_ram[BOOT_ADDR+7]       = Quad::pair_t(PLUS_2, Any::ram(BNK_INI, BOOT_ADDR+8));
+        quad_ram[BOOT_ADDR+8]       = Quad::pair_t(PLUS_3, NIL);
+pub const E_BOOT: Any       = Any { raw: MUT_RAW | BNK_INI | (BOOT_ADDR+9) as Raw };
+        quad_ram[E_BOOT.addr()]     = Quad::new_event(SPONSOR, A_BOOT, NIL);  // bootstrap event
 
-pub const _RAM_TOP_ADDR: usize = 16;
+pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 12;
 
         Core {
             quad_rom,
@@ -2156,7 +2144,7 @@ pub const _RAM_TOP_ADDR: usize = 16;
     fn set_k_first(&mut self, ptr: Any) { self.ram_mut(self.ddeque()).set_y(ptr); }
     fn k_last(&self) -> Any { self.ram(self.ddeque()).z() }
     fn set_k_last(&mut self, ptr: Any) { self.ram_mut(self.ddeque()).set_z(ptr); }
-    fn ddeque(&self) -> Any { self.ptr_to_mem(DDEQUE) }
+    pub fn ddeque(&self) -> Any { self.ptr_to_mem(DDEQUE) }
 
     fn mem_top(&self) -> Any { self.ram(self.memory()).t() }
     fn set_mem_top(&mut self, ptr: Any) { self.ram_mut(self.memory()).set_t(ptr); }
@@ -2166,7 +2154,7 @@ pub const _RAM_TOP_ADDR: usize = 16;
     fn set_mem_free(&mut self, fix: Any) { self.ram_mut(self.memory()).set_y(fix); }
     fn mem_root(&self) -> Any { self.ram(self.memory()).z() }
     fn set_mem_root(&mut self, ptr: Any) { self.ram_mut(self.memory()).set_z(ptr); }
-    fn memory(&self) -> Any { self.ptr_to_mem(MEMORY) }
+    pub fn memory(&self) -> Any { self.ptr_to_mem(MEMORY) }
 
     pub fn new_event(&mut self, target: Any, msg: Any) -> Any {
         assert!(self.typeq(ACTOR_T, target));

@@ -89,12 +89,12 @@ impl Host {
     pub fn sponsor_memory(&self) -> Raw { self.core.sponsor_memory().raw() }
     pub fn sponsor_events(&self) -> Raw { self.core.sponsor_events().raw() }
     pub fn sponsor_instrs(&self) -> Raw { self.core.sponsor_instrs().raw() }
-    pub fn mem_top(&self) -> Raw { self.core.ram(MEMORY).t().raw() }
-    pub fn mem_next(&self) -> Raw { self.core.ram(MEMORY).x().raw() }
-    pub fn mem_free(&self) -> Raw { self.core.ram(MEMORY).y().raw() }
-    pub fn mem_root(&self) -> Raw { self.core.ram(MEMORY).z().raw() }
-    pub fn equeue(&self) -> Raw { self.core.ram(DDEQUE).t().raw() }
-    pub fn kqueue(&self) -> Raw { self.core.ram(DDEQUE).y().raw() }
+    pub fn mem_top(&self) -> Raw { self.core.ram(self.core.memory()).t().raw() }
+    pub fn mem_next(&self) -> Raw { self.core.ram(self.core.memory()).x().raw() }
+    pub fn mem_free(&self) -> Raw { self.core.ram(self.core.memory()).y().raw() }
+    pub fn mem_root(&self) -> Raw { self.core.ram(self.core.memory()).z().raw() }
+    pub fn equeue(&self) -> Raw { self.core.ram(self.core.ddeque()).t().raw() }
+    pub fn kqueue(&self) -> Raw { self.core.ram(self.core.ddeque()).y().raw() }
     pub fn ip(&self) -> Raw { self.core.ip().raw() }
     pub fn sp(&self) -> Raw { self.core.sp().raw() }
     pub fn ep(&self) -> Raw { self.core.ep().raw() }
@@ -105,8 +105,7 @@ impl Host {
         event.y().raw()
     }
     pub fn in_mem(&self, v: Raw) -> bool {  // excludes built-in constants and types
-        let a = Any::new(v);
-        a.is_ptr() && (a.raw() > FREE_T.raw())
+        (v > FREE_T.raw()) && !Any::new(v).is_fix()
     }
     pub fn is_dict(&self, v: Raw) -> bool {
         self.core.typeq(DICT_T, Any::new(v))
@@ -182,7 +181,11 @@ impl Host {
         s.push_str(ss.as_str());
         let val = Any::new(raw);
         if val.is_ptr() {
-            s.push_str(" → ");
+            if raw < self.mem_top() {
+                s.push_str(" → ");
+            } else {
+                s.push_str(" × ");
+            }
             let ss = self.disasm(raw);
             s.push_str(ss.as_str());
         }

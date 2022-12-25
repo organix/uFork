@@ -21,15 +21,10 @@ const $kqueue = document.getElementById("ufork-kqueue");
 const $mem_rom = document.getElementById("ufork-rom");
 const $mem_ram = document.getElementById("ufork-ram");
 
-//const $ip = document.getElementById("ufork-ip");
 const $instr = document.getElementById("ufork-instr");
-//const $sp = document.getElementById("ufork-sp");
 const $stack = document.getElementById("ufork-stack");
-//const $ep = document.getElementById("ufork-ep");
 const $event = document.getElementById("ufork-event");
-//const $ap = document.getElementById("ufork-ap");
 const $self = document.getElementById("ufork-self");
-//const $mp = document.getElementById("ufork-mp");
 const $msg = document.getElementById("ufork-msg");
 
 // Give the canvas room for all of our cells and a 1px border around them.
