@@ -1373,8 +1373,10 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 12;
 
     pub fn run_loop(&mut self) {
         loop {
+            self.gc_stop_the_world();  // FIXME!! REMOVE FORCED GC...
             let _ = self.check_for_interrupt();
             self.dispatch_event();
+            //self.gc_stop_the_world();  // FIXME!! REMOVE FORCED GC...
             if !self.execute_instruction() {
                 return;
             }
@@ -2424,9 +2426,10 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 12;
         let ddeque = self.ddeque();
         let root = self.mem_root();
         let bank = if self.gc_phase == BNK_0 { BNK_1 } else { BNK_0 };  // determine new phase
+        println!("gc_stop_the_world: phase={} -> {}", self.gc_phase, bank);
         self.gc_phase = bank;  // toggle GC phase
-        *self.ram_mut(self.ptr_to_mem(MEMORY)) =
-            Quad::memory_t(self.ptr_to_mem(DDEQUE), NIL, ZERO, root);
+        self.gc_store(self.ptr_to_mem(MEMORY),
+            Quad::memory_t(self.ptr_to_mem(DDEQUE), NIL, ZERO, root));
         let ddeque = self.gc_mark(ddeque);
         assert_eq!(self.ddeque(), ddeque);
         let root = self.gc_mark(root);
@@ -2436,40 +2439,62 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 12;
             self.gc_scan(scan);
             scan = Any::new(scan.raw() + 1);
         }
+        println!("gc_stop_the_world: mem_top={}", scan);
     }
     fn gc_mark(&mut self, val: Any) -> Any {
         if let Some(bank) = val.bank() {
             if bank != self.gc_phase() {
-                let quad = if val.is_ram() {
-                    *self.ram(val)
-                } else {
-                    *self.ram(self.cap_to_ptr(val))
-                };
+                let quad = self.gc_load(val);
                 if quad.t() == GC_FWD_T {  // follow "broken heart"
                     return quad.z();
                 }
                 // copy quad to new-space
-                let ptr = self.alloc(&quad);
-                let dup = if val.is_ram() {
-                    ptr
-                } else {
-                    self.ptr_to_cap(ptr)
+                let mut dup = self.alloc(&quad);
+                if val.is_cap() {
+                    dup = self.ptr_to_cap(dup);  // restore CAP marker
                 };
-                *self.ram_mut(val) = Quad::gc_fwd_t(dup);  // leave "broken heart" behind
+                self.gc_store(val, Quad::gc_fwd_t(dup));  // leave "broken heart" behind
                 return dup;
             }
         }
         val
     }
     fn gc_scan(&mut self, ptr: Any) {
-        assert_eq!(Some(self.gc_phase()), ptr.bank());
-        let mem = self.ptr_to_mem(ptr);
-        let quad = *self.ram(mem);
+        let bank = self.gc_phase();
+        assert_eq!(Some(bank), ptr.bank());
+        let quad = self.gc_load(ptr);
         let t = self.gc_mark(quad.t());
         let x = self.gc_mark(quad.x());
         let y = self.gc_mark(quad.y());
         let z = self.gc_mark(quad.z());
-        *self.ram_mut(mem) = Quad::new(t, x, y, z);
+        let quad = Quad::new(t, x, y, z);
+        self.gc_store(ptr, quad);
+    }
+    fn gc_load(&self, ptr: Any) -> Quad {  // load quad directly
+        match ptr.bank() {
+            Some(bank) => {
+                let addr = ptr.addr();
+                if bank == BNK_0 {
+                    self.quad_ram0[addr]
+                } else {
+                    self.quad_ram1[addr]
+                }
+            },
+            None => panic!("invalid gc_load=${:08x}", ptr.raw()),
+        }
+    }
+    fn gc_store(&mut self, ptr: Any, quad: Quad) {  // store quad directly
+        match ptr.bank() {
+            Some(bank) => {
+                let addr = ptr.addr();
+                if bank == BNK_0 {
+                    self.quad_ram0[addr] = quad;
+                } else {
+                    self.quad_ram1[addr] = quad;
+                }
+            },
+            None => panic!("invalid gc_store=${:08x}", ptr.raw()),
+        }
     }
     pub fn gc_phase(&self) -> Raw { self.gc_phase }
 
@@ -2491,6 +2516,9 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 12;
         &self.quad_rom[addr]
     }
     pub fn ram(&self, ptr: Any) -> &Quad {
+        if ptr.is_cap() {
+            panic!("opaque ptr=${:08x}", ptr.raw());
+        }
         if let Some(bank) = ptr.bank() {
             let addr = ptr.addr();
             if bank == BNK_0 {
@@ -2503,6 +2531,9 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 12;
         }
     }
     pub fn ram_mut(&mut self, ptr: Any) -> &mut Quad {
+        if ptr.is_cap() {
+            panic!("opaque ptr=${:08x}", ptr.raw());
+        }
         if let Some(bank) = ptr.bank() {
             let addr = ptr.addr();
             if bank == BNK_0 {
@@ -2672,8 +2703,8 @@ fn gc_before_and_after_run() {
     core.gc_stop_the_world();
     assert_eq!(BNK_1, core.gc_phase());
     core.run_loop();
-    assert_eq!(BNK_1, core.gc_phase());
+    let bank = core.gc_phase();
     core.gc_stop_the_world();
-    assert_eq!(BNK_0, core.gc_phase());
+    assert_ne!(bank, core.gc_phase());
     //assert!(false);  // force output to be displayed
 }
