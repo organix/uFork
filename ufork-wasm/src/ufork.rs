@@ -203,10 +203,10 @@ pub const MY_BEH: Any       = Any { raw: DIR_RAW | 1 };
 pub const MY_STATE: Any     = Any { raw: DIR_RAW | 2 };
 
 // VM_END thread actions
-pub const END_ABORT: Any    = Any { raw: DIR_RAW | -1 as Num as Raw };
-pub const END_STOP: Any     = Any { raw: DIR_RAW | 0 };
-pub const END_COMMIT: Any   = Any { raw: DIR_RAW | 1 };
-pub const END_RELEASE: Any  = Any { raw: DIR_RAW | 2 };
+pub const END_ABORT: Any    = Any { raw: DIR_RAW | 0 };
+pub const END_STOP: Any     = Any { raw: DIR_RAW | 1 };
+pub const END_COMMIT: Any   = Any { raw: DIR_RAW | 2 };
+pub const END_RELEASE: Any  = Any { raw: DIR_RAW | 3 };
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 // quad-cell (minimum addressable unit)
