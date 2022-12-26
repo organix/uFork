@@ -126,7 +126,7 @@ impl fmt::Display for Any {
         } else if self.is_ram() {
             write!(fmt, "^{}", self.addr())
         } else {
-            write!(fmt, "${:08x}", self.raw)
+            panic!("unreachable")
         }
     }
 }
