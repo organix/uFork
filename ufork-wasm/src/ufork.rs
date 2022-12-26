@@ -92,29 +92,13 @@ impl Any {
             None
         }
     }
-    pub fn cap_ofs(&self) -> Option<usize> {
-        if self.is_cap() {
-            let ofs = self.raw & !MSK_RAW;
-            Some(ofs as usize)
-        } else {
-            None
-        }
-    }
-    pub fn ptr_ofs(&self) -> Option<usize> {
-        if self.is_ptr() {
-            let ofs = self.raw & !MSK_RAW;
-            Some(ofs as usize)
-        } else {
-            None
-        }
-    }
 }
 impl fmt::Display for Any {
     fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
         if self.is_fix() {
             write!(fmt, "{:+}", self.fix_num().unwrap())
         } else if self.is_cap() {
-            write!(fmt, "@{}", self.cap_ofs().unwrap())
+            write!(fmt, "@{}", self.addr())
         } else if self.raw() < START.raw() {
             match *self {
                 UNDEF => write!(fmt, "#?"),
@@ -138,9 +122,9 @@ impl fmt::Display for Any {
                 _ => write!(fmt, "#{}", self.raw()),  // FIXME: should not occur
             }
         } else if self.is_rom() {
-            write!(fmt, "*{}", self.ptr_ofs().unwrap())
+            write!(fmt, "*{}", self.addr())
         } else if self.is_ram() {
-            write!(fmt, "^{}", self.ptr_ofs().unwrap())
+            write!(fmt, "^{}", self.addr())
         } else {
             write!(fmt, "${:08x}", self.raw)
         }
