@@ -1373,16 +1373,15 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 12;
 
     pub fn run_loop(&mut self) {
         loop {
-            self.gc_stop_the_world();  // FIXME!! REMOVE FORCED GC...
             let _ = self.check_for_interrupt();
             self.dispatch_event();
-            //self.gc_stop_the_world();  // FIXME!! REMOVE FORCED GC...
             if !self.execute_instruction() {
                 return;
             }
         }
     }
     pub fn check_for_interrupt(&mut self) -> Result<bool, Error> {
+        self.gc_stop_the_world();  // FIXME!! REMOVE FORCED GC...
         Ok(false)
         //Err(String::from("Boom!"))
         //Err(format!("result={}", false))
@@ -2460,8 +2459,7 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 12;
         val
     }
     fn gc_scan(&mut self, ptr: Any) {
-        let bank = self.gc_phase();
-        assert_eq!(Some(bank), ptr.bank());
+        assert_eq!(Some(self.gc_phase()), ptr.bank());
         let quad = self.gc_load(ptr);
         let t = self.gc_mark(quad.t());
         let x = self.gc_mark(quad.x());

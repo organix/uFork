@@ -7,6 +7,7 @@ const LIVE_COLOR = "#360";
 const width = 96;
 const height = 64;
 
+const $mem_max = document.getElementById("ufork-mem-max");
 const $mem_top = document.getElementById("ufork-mem-top");
 const $mem_next = document.getElementById("ufork-mem-next");
 const $mem_free = document.getElementById("ufork-mem-free");
@@ -39,6 +40,7 @@ let prepared = false;  // host initialized
 let paused = false;  // run/pause toggle
 const $rate = document.getElementById("frame-rate");
 let frame = 1;  // frame-rate countdown
+let mem_max = 0;
 
 const updateElementText = (el, txt) => {
 	if (el.textContent == txt) {
@@ -51,6 +53,11 @@ const updateElementText = (el, txt) => {
 const drawHost = () => {
 	var a;
 
+	const top = host.rom_addr(host.mem_top());
+	if (top > mem_max) {
+		mem_max = top;
+	}
+	updateElementText($mem_max, mem_max.toString());
 	updateElementText($mem_top, host.print(host.mem_top()));
 	updateElementText($mem_next, host.print(host.mem_next()));
 	$mem_next.title = host.disasm(host.mem_next());
@@ -64,8 +71,8 @@ const drawHost = () => {
 	//$mem_rom.textContent = host.render();
 	a = [];
 	for (let addr = 0; addr < 512; addr++) {
-		let raw = host.rom_addr(addr);
-		let line = '$'
+		const raw = host.rom_addr(addr);
+		const line = '$'
 			+ ('00000000' + raw.toString(16)).slice(-8)
 			+ ': '
 			+ host.display(raw);
@@ -74,8 +81,8 @@ const drawHost = () => {
 	}
 	a = [];
 	for (let addr = 0; addr < 512; addr++) {
-		let raw = host.ram_addr(host.gc_phase(), addr);
-		let line = '$'
+		const raw = host.ram_addr(host.gc_phase(), addr);
+		const line = '$'
 			+ ('00000000' + raw.toString(16)).slice(-8)
 			+ ': '
 			+ host.display(raw);
