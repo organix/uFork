@@ -101,7 +101,7 @@ Quad-cells are used to encode most of the important data-structures in uFork.
 
  Structure                              | Description
 ----------------------------------------|---------------------------------
-{t:Event_T, x:target, y:msg, z:next}    | actor event queue entry
+{t:sponsor, x:target, y:msg, z:next}    | actor event queue entry
 {t:IP, x:SP, y:EP, z:next}              | continuation queue entry
 {t:Instr_T, x:opcode, y:data, z:next}   | machine instruction (typical)
 {t:Symbol_T, x:hash, y:string, z:value} | immutable symbolic-name

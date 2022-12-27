@@ -1,6 +1,11 @@
-A Rust implementation of the uFork virtual machine that compiles to WASM.
+# uFork Simulator in Rust
 
-To run uFork in the browser:
+This implementation of the [**uFork** virtual machine](../ufork.md)
+is written in [Rust](https://www.rust-lang.org/)
+and targets the browser's [WASM engine](https://webassembly.org/).
+A browser-based GUI implements a debugger for a uFork processor core.
+
+## Running the browser-based demo
 
 1. Run `wasm-pack build --target web`.
 2. Run `node www/server.mjs`.
