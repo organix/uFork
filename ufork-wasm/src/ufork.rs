@@ -295,9 +295,6 @@ impl Quad {
     pub fn gc_fwd_t(to: Any) -> Quad {
         Self::new(GC_FWD_T, UNDEF, UNDEF, to)
     }
-    pub fn untyped_t(t: Any, x: Any, y: Any, z: Any) -> Quad {  // pass-thru for Quad::new()
-        Self::new(t, x, y, z)
-    }
 
     // construct VM instructions types
     pub fn vm_typeq(t: Any, k: Any) -> Quad {
