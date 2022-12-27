@@ -576,7 +576,7 @@ impl fmt::Display for Quad {
                 VM_TYPEQ => x = String::from("TYPEQ"),
                 VM_CELL => x = String::from("CELL"),
                 VM_GET => x = String::from("GET"),
-                //VM_GET => x = String::from("SET"),
+                //VM_SET => x = String::from("SET"),
                 VM_DICT => {
                     x = String::from("DICT");
                     match self.y() {
