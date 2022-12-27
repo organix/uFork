@@ -720,7 +720,10 @@ pub const START: Any        = Any { raw: 16 };
 
 pub const MEMORY: Any       = Any { raw: MUT_RAW | BNK_INI | 0 };
 pub const DDEQUE: Any       = Any { raw: MUT_RAW | BNK_INI | 1 };
-
+pub const A_CLOCK: Any      = Any { raw: OPQ_RAW | MUT_RAW | BNK_INI | 2 };
+pub const A_STDIN: Any      = Any { raw: OPQ_RAW | MUT_RAW | BNK_INI | 3 };
+pub const A_STDOUT: Any     = Any { raw: OPQ_RAW | MUT_RAW | BNK_INI | 4 };
+pub const SPONSOR: Any      = Any { raw: MUT_RAW | BNK_INI | 5 };
 
 // core memory limit
 const QUAD_MAX: usize = 1<<10;  // 1K quad-cells
@@ -1338,9 +1341,11 @@ pub const _ROM_TOP_ADDR: usize = T_DEQUE_ADDR+64;
         ];
         quad_ram[MEMORY.addr()]     = Quad::memory_t(Any::ram(BNK_INI, _RAM_TOP_ADDR), NIL, ZERO, DDEQUE);
         quad_ram[DDEQUE.addr()]     = Quad::ddeque_t(E_BOOT, E_BOOT, NIL, NIL);
-pub const SPONSOR: Any      = Any { raw: MUT_RAW | BNK_INI | 2 };
+        quad_ram[A_CLOCK.addr()]    = Quad::new_actor(SINK_BEH, NIL);  // clock device
+        quad_ram[A_STDIN.addr()]    = Quad::new_actor(SINK_BEH, NIL);  // console input device
+        quad_ram[A_STDOUT.addr()]   = Quad::new_actor(SINK_BEH, NIL);  // console output device
         quad_ram[SPONSOR.addr()]    = Quad::sponsor_t(ZERO, ZERO, ZERO);  // root configuration sponsor
-pub const BOOT_ADDR: usize = 3;
+pub const BOOT_ADDR: usize = 6;
 pub const A_BOOT: Any       = Any { raw: OPQ_RAW | MUT_RAW | BNK_INI | (BOOT_ADDR+0) as Raw };
         //quad_ram[BOOT_ADDR+0]       = Quad::new_actor(SINK_BEH, NIL);
         //quad_ram[BOOT_ADDR+0]       = Quad::new_actor(STOP, _BOOT_SP);
@@ -1359,9 +1364,9 @@ pub const _BOOT_SP: Any     = Any { raw: MUT_RAW | BNK_INI | (BOOT_ADDR+6) as Ra
         quad_ram[BOOT_ADDR+7]       = Quad::pair_t(PLUS_2, Any::ram(BNK_INI, BOOT_ADDR+8));
         quad_ram[BOOT_ADDR+8]       = Quad::pair_t(PLUS_3, NIL);
 pub const E_BOOT: Any       = Any { raw: MUT_RAW | BNK_INI | (BOOT_ADDR+9) as Raw };
-        quad_ram[E_BOOT.addr()]     = Quad::new_event(SPONSOR, A_BOOT, NIL);  // bootstrap event
+        quad_ram[BOOT_ADDR+9]       = Quad::new_event(SPONSOR, A_BOOT, NIL);  // bootstrap event
 
-pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 12;
+pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 10;
 
         Core {
             quad_rom,
@@ -1381,7 +1386,7 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 12;
         }
     }
     pub fn check_for_interrupt(&mut self) -> Result<bool, Error> {
-        self.gc_stop_the_world();  // FIXME!! REMOVE FORCED GC...
+        //self.gc_stop_the_world();  // FIXME!! REMOVE FORCED GC...
         Ok(false)
         //Err(String::from("Boom!"))
         //Err(format!("result={}", false))
@@ -1434,6 +1439,7 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 12;
                 // free dead continuation and associated event
                 self.free(ep);
                 self.free(kp);
+                self.gc_stop_the_world();  // FIXME!! REMOVE FORCED GC...
             }
             true  // instruction executed
         } else {
@@ -1791,7 +1797,7 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 12;
                 println!("vm_end: op={}", imm);
                 let me = self.self_ptr();
                 println!("vm_end: me={} -> {}", me, self.ram(me));
-                match imm {
+                let rv = match imm {
                     END_ABORT => {
                         let _r = self.stack_pop();  // reason for abort
                         println!("vm_end: reason={}", _r);
@@ -1817,7 +1823,9 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 12;
                     _ => {
                         panic!("Unknown op {}!", imm);
                     }
-                }
+                };
+                println!("vm_end: rv={}", rv);
+                rv
             },
             VM_IS_EQ => {
                 println!("vm_is_eq: expect={}", imm);
@@ -2428,12 +2436,15 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 12;
         println!("gc_stop_the_world: phase={} -> {}", self.gc_phase, bank);
         self.gc_phase = bank;  // toggle GC phase
         self.gc_store(self.ptr_to_mem(MEMORY),
-            Quad::memory_t(self.ptr_to_mem(DDEQUE), NIL, ZERO, root));
-        let ddeque = self.gc_mark(ddeque);
-        assert_eq!(self.ddeque(), ddeque);
+            Quad::memory_t(self.ptr_to_mem(ddeque), NIL, ZERO, root));
+        let mut scan = ddeque;
+        while scan.addr() <= SPONSOR.addr() {
+            self.gc_mark(scan);
+            scan = Any::new(scan.raw() + 1);
+        }
         let root = self.gc_mark(root);
         self.set_mem_root(root);
-        let mut scan = ddeque;
+        scan = self.ddeque();
         while scan != self.mem_top() {
             self.gc_scan(scan);
             scan = Any::new(scan.raw() + 1);
