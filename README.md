@@ -16,7 +16,7 @@ and the rationale behind it.
 The initial prototype is [implemented in **C**](c_src/README.md)
 and hosts a Scheme REPL with actor extensions.
 
-The [Rust/WASM version](ufork-warm/README.md)
+The [Rust/WASM version](ufork-wasm/README.md)
 is intended to be a more-robust implementation.
 Multiple instances of the WASM component
 can be instantiated to simulate a multi-core

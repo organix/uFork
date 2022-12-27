@@ -15,7 +15,7 @@ $ ./ufork
 
 NOTE: This is a simulator implementation is a prototype for proof-of-concept.
 It produces significant amounts of debugging/tracing output.
-The [Rust/WASM version](../ufork-warm/README.md) is intended to be a more-robust implementation.
+The [Rust/WASM version](../ufork-wasm/README.md) is intended to be a more-robust implementation.
 
 ## Assembly-Language Debugger
 
@@ -44,7 +44,7 @@ and generates S-expressions for evaluation.
 Lines beginning with `[+888]` display the parsed S-expression.
 Lines beginning with `[+999]` display the result of evaluation.
 Once the built-in definitions have been parsed and evaluated,
-the REPL displays '>', the interactive Scheme prompt.
+the REPL displays `>`, the interactive Scheme prompt.
 Enter complete S-expressions at the prompt to experiment with this actor-based Scheme.
 
 ```
