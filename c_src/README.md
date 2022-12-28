@@ -6,14 +6,14 @@ It features a gdb-style debugger capable of single-stepping virtual machine inst
 Implemented on this platform are a PEG-parser toolkit
 and a concurrent Scheme dialect with actor extensions.
 An assembler for virtual-machine instructions is also available from Scheme.
-The following commands should build and run the simulator.
+The following commands build and run the simulator.
 
 ```
 $ make clean all
 $ ./ufork
 ```
 
-NOTE: This is a simulator implementation is a prototype for proof-of-concept.
+NOTE: This is a simulator implementation of a prototype for proof-of-concept.
 It produces significant amounts of debugging/tracing output.
 The [Rust/WASM version](../ufork-wasm/README.md) is intended to be a more-robust implementation.
 
@@ -33,6 +33,53 @@ thread spawn: 3232{ip=105,sp=1,ep=16}
 instruction tracing off
 (@104) 105: VM_push{v:^66,k:106}
 @ c
+```
+### Debugger Commands
+
+This table summarizes the commands available at the debugger prompt.
+
+ Command                | Description
+------------------------|-----------------------------------------------
+`h[elp]` _command_      | get help on _command_
+`b[reak]` _inst_        | set breakpoint at _inst_ (0=none, default: IP)
+`w[atch]` _addr_        | set watchpoint on _addr_ (0=none)
+`c[ontinue]`            | continue running freely
+`s[tep]` _n_            | step _n_ instructions (default: 1)
+`n[ext]` _n_            | next _n_ instructions in thread (default: 1)
+`d[isasm]` _n_ _inst_   | disassemble _n_ instructions (defaults: 1 IP)
+`p[rint]` _addr_        | print value at _addr_
+`t[race]`               | toggle instruction tracing (default: on)
+`i[nfo]`                | list information topics
+`i[nfo]` `r[egs]`       | get information on registers (IP, SP, EP, ...)
+`i[nfo]` `t[hreads]`    | get information on threads (continuations)
+`i[nfo]` `e[vents]`     | get information on pending events
+`q[uit]`                | quit runtime
+
+Commands can be abbreviated to their first letter.
+If a command is not recognized (including a blank line),
+a one-line command menu is displayed.
+
+```
+b[reak] w[atch] c[ontinue] s[tep] n[ext] d[isasm] p[rint] t[race] i[nfo] q[uit]
+```
+
+If instruction tracing is on,
+a one-line context summary is displayed
+before each instruction is executed.
+Here is an annotated example:
+
+```
+(@3237 +32 . @3233) 61: ^3234 @65 ^16 VM_pick{n:+2,k:19}
+------ ------------ --  ------------- ------- ---- ----
+^      ^            ^   ^             ^       ^    ^
+|      |            |   |             |       |    |
+|      |            |   |             |       |    next IP
+|      |            |   |             |       immediate arg
+|      |            |   |             assembly instruction
+|      |            |   stack values (bottom to top)
+|      |            current IP
+|      actor message
+target actor
 ```
 
 ## Scheme Read-Eval-Print Loop (REPL)
