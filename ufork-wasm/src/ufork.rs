@@ -733,7 +733,6 @@ pub struct Core {
     quad_rom: [Quad; QUAD_MAX],
     quad_ram0:[Quad; QUAD_MAX],
     quad_ram1:[Quad; QUAD_MAX],
-    gc_phase: Raw,
 }
 
 impl Core {
@@ -1372,7 +1371,6 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 10;
             quad_rom,
             quad_ram0: if BNK_INI == BNK_0 { quad_ram } else { [ Quad::empty_t(); QUAD_MAX ] },
             quad_ram1: if BNK_INI == BNK_1 { quad_ram } else { [ Quad::empty_t(); QUAD_MAX ] },
-            gc_phase: BNK_INI,
         }
     }
 
@@ -2432,20 +2430,20 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 10;
         */
         let ddeque = self.ddeque();
         let root = self.mem_root();
-        let bank = if self.gc_phase == BNK_0 { BNK_1 } else { BNK_0 };  // determine new phase
-        println!("gc_stop_the_world: phase={} -> {}", self.gc_phase, bank);
-        self.gc_phase = bank;  // toggle GC phase
-        self.gc_store(self.ptr_to_mem(MEMORY),
-            Quad::memory_t(self.ptr_to_mem(ddeque), NIL, ZERO, root));
+        let bank = if self.gc_phase() == BNK_0 { BNK_1 } else { BNK_0 };  // determine new phase
+        println!("gc_stop_the_world: phase {} -> {}", self.gc_phase(), bank);
+        self.set_mem_top(UNDEF);  // toggle GC phase
+        self.gc_store(Any::ram(bank, MEMORY.addr()),
+            Quad::memory_t(Any::ram(bank, ddeque.addr()), NIL, ZERO, root));
         let mut scan = ddeque;
-        while scan.addr() <= SPONSOR.addr() {
+        while scan.addr() <= SPONSOR.addr() {  // mark reserved RAM
             self.gc_mark(scan);
             scan = Any::new(scan.raw() + 1);
         }
         let root = self.gc_mark(root);
         self.set_mem_root(root);
         scan = self.ddeque();
-        while scan != self.mem_top() {
+        while scan != self.mem_top() {  // scan marked quads
             self.gc_scan(scan);
             scan = Any::new(scan.raw() + 1);
         }
@@ -2505,7 +2503,13 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 10;
             None => panic!("invalid gc_store=${:08x}", ptr.raw()),
         }
     }
-    pub fn gc_phase(&self) -> Raw { self.gc_phase }
+    pub fn gc_phase(&self) -> Raw {
+        if self.gc_load(Any::ram(BNK_0, MEMORY.addr())).t() == UNDEF {
+            BNK_1
+        } else {
+            BNK_0
+        }
+    }
 
     pub fn mem(&self, ptr: Any) -> &Quad {
         if !ptr.is_ptr() {
