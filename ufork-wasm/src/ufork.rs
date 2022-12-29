@@ -1339,17 +1339,14 @@ pub const _ROM_TOP_ADDR: usize = T_DEQUE_ADDR+64;
             QUAD_MAX
         ];
         quad_ram[MEMORY.addr()]     = Quad::memory_t(Any::ram(BNK_INI, _RAM_TOP_ADDR), NIL, ZERO, DDEQUE);
-        quad_ram[DDEQUE.addr()]     = Quad::ddeque_t(E_BOOT, E_BOOT, NIL, NIL);
+        quad_ram[DDEQUE.addr()]     = Quad::ddeque_t(NIL, NIL, K_BOOT, K_BOOT);
         quad_ram[A_CLOCK.addr()]    = Quad::new_actor(SINK_BEH, NIL);  // clock device
         quad_ram[A_STDIN.addr()]    = Quad::new_actor(SINK_BEH, NIL);  // console input device
         quad_ram[A_STDOUT.addr()]   = Quad::new_actor(SINK_BEH, NIL);  // console output device
         quad_ram[SPONSOR.addr()]    = Quad::sponsor_t(ZERO, ZERO, ZERO);  // root configuration sponsor
 pub const BOOT_ADDR: usize = 6;
 pub const A_BOOT: Any       = Any { raw: OPQ_RAW | MUT_RAW | BNK_INI | (BOOT_ADDR+0) as Raw };
-        //quad_ram[BOOT_ADDR+0]       = Quad::new_actor(SINK_BEH, NIL);
-        //quad_ram[BOOT_ADDR+0]       = Quad::new_actor(STOP, _BOOT_SP);
-        //quad_ram[BOOT_ADDR+0]       = Quad::new_actor(_BOOT_BEH, _BOOT_SP);
-        quad_ram[BOOT_ADDR+0]       = Quad::new_actor(_TEST_BEH, NIL);
+        quad_ram[BOOT_ADDR+0]       = Quad::new_actor(SINK_BEH, NIL);
 pub const _BOOT_BEH: Any     = Any { raw: MUT_RAW | BNK_INI | (BOOT_ADDR+1) as Raw };
         quad_ram[BOOT_ADDR+1]       = Quad::vm_push(UNIT, Any::ram(BNK_INI, BOOT_ADDR+2));  // #unit
         quad_ram[BOOT_ADDR+2]       = Quad::vm_my_self(Any::ram(BNK_INI, BOOT_ADDR+3));  // #unit SELF
@@ -1363,9 +1360,14 @@ pub const _BOOT_SP: Any     = Any { raw: MUT_RAW | BNK_INI | (BOOT_ADDR+6) as Ra
         quad_ram[BOOT_ADDR+7]       = Quad::pair_t(PLUS_2, Any::ram(BNK_INI, BOOT_ADDR+8));
         quad_ram[BOOT_ADDR+8]       = Quad::pair_t(PLUS_3, NIL);
 pub const E_BOOT: Any       = Any { raw: MUT_RAW | BNK_INI | (BOOT_ADDR+9) as Raw };
-        quad_ram[BOOT_ADDR+9]       = Quad::new_event(SPONSOR, A_BOOT, NIL);  // bootstrap event
+        quad_ram[BOOT_ADDR+9]       = Quad::new_event(SPONSOR, A_BOOT, NIL);
+pub const K_BOOT: Any       = Any { raw: MUT_RAW | BNK_INI | (BOOT_ADDR+10) as Raw };
+        //quad_ram[BOOT_ADDR+10]      = Quad::new_cont(SINK_BEH, NIL, E_BOOT);
+        //quad_ram[BOOT_ADDR+10]      = Quad::new_cont(STOP, _BOOT_SP, E_BOOT);
+        //quad_ram[BOOT_ADDR+10]      = Quad::new_cont(_BOOT_BEH, _BOOT_SP, E_BOOT);
+        quad_ram[BOOT_ADDR+10]      = Quad::new_cont(_TEST_BEH, NIL, E_BOOT);
 
-pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 10;
+pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 11;
 
         Core {
             quad_rom,
@@ -1376,11 +1378,11 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 10;
 
     pub fn run_loop(&mut self) {
         loop {
-            let _ = self.check_for_interrupt();
-            self.dispatch_event();
             if !self.execute_instruction() {
                 return;
             }
+            let _ = self.check_for_interrupt();
+            self.dispatch_event();
         }
     }
     pub fn check_for_interrupt(&mut self) -> Result<bool, Error> {
@@ -2656,9 +2658,9 @@ fn core_initialization() {
     //assert_eq!(0, core.mem_free().fix_num().unwrap());
     assert_eq!(ZERO, core.mem_free());
     assert_eq!(NIL, core.mem_next());
-    assert_ne!(NIL, core.e_first());
-    assert_eq!(NIL, core.k_first());
-    assert_ne!(core.kp(), core.k_first());
+    assert_eq!(NIL, core.e_first());
+    assert_ne!(NIL, core.k_first());
+    assert_eq!(core.kp(), core.k_first());
     println!("RAM");
     for ofs in 0..32 {
         let ptr = Any::ram(core.gc_phase(), ofs);
