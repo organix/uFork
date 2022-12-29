@@ -22,6 +22,8 @@ Multiple instances of the WASM component
 can be instantiated to simulate a multi-core
 or distributed system.
 
+An FPGA implementation is planned for the future.
+
 ## Documentation
 
   * [uFork Virtual Machine](ufork.md) Reference Manual
