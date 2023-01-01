@@ -70,37 +70,39 @@ impl Host {
             core,
         }
     }
-    pub fn prepare(&mut self) {  // prepare for next instruction
-        let _ = self.core.check_for_interrupt();
-        self.core.dispatch_event();
-    }
     pub fn step(&mut self) -> bool {  // single-step instruction execution
-        let ok = self.core.execute_instruction();
-        if ok {
-            self.prepare();
+        if self.core.kp().is_ram() {
+            let ep = self.core.ep();
+            self.core.set_sponsor_memory(ep, Any::fix(0));
+            self.core.set_sponsor_events(ep, Any::fix(1));
+            self.core.set_sponsor_instrs(ep, Any::fix(1));
+            self.core.run_loop()
+        } else {
+            true  // done! no more work to do...
         }
-        ok
     }
 
+    pub fn fixnum(&self, num: Num) -> Raw { Any::fix(num as isize).raw() }
     pub fn rom_addr(&self, ofs: Raw) -> Raw { Any::rom(ofs as usize).raw() }
     pub fn ram_addr(&self, bank: Raw, ofs: Raw) -> Raw { Any::ram(bank, ofs as usize).raw() }
     pub fn gc_phase(&self) -> Raw { self.core.gc_phase() }
     pub fn gc_run(&mut self) { self.core.gc_stop_the_world() }
-    pub fn sponsor_memory(&self) -> Raw { self.core.sponsor_memory().raw() }
-    pub fn sponsor_events(&self) -> Raw { self.core.sponsor_events().raw() }
-    pub fn sponsor_instrs(&self) -> Raw { self.core.sponsor_instrs().raw() }
-    pub fn mem_top(&self) -> Raw { self.core.ram(self.core.memory()).t().raw() }
-    pub fn mem_next(&self) -> Raw { self.core.ram(self.core.memory()).x().raw() }
-    pub fn mem_free(&self) -> Raw { self.core.ram(self.core.memory()).y().raw() }
-    pub fn mem_root(&self) -> Raw { self.core.ram(self.core.memory()).z().raw() }
-    pub fn equeue(&self) -> Raw { self.core.ram(self.core.ddeque()).t().raw() }
-    pub fn kqueue(&self) -> Raw { self.core.ram(self.core.ddeque()).y().raw() }
+    pub fn sponsor_memory(&self) -> Raw { self.core.sponsor_memory(self.core.ep()).raw() }
+    pub fn sponsor_events(&self) -> Raw { self.core.sponsor_events(self.core.ep()).raw() }
+    pub fn sponsor_instrs(&self) -> Raw { self.core.sponsor_instrs(self.core.ep()).raw() }
+    pub fn mem_top(&self) -> Raw { self.core.mem_top().raw() }
+    pub fn mem_next(&self) -> Raw { self.core.mem_next().raw() }
+    pub fn mem_free(&self) -> Raw { self.core.mem_free().raw() }
+    pub fn mem_root(&self) -> Raw { self.core.mem_root().raw() }
+    pub fn equeue(&self) -> Raw { self.core.e_first().raw() }
+    pub fn kqueue(&self) -> Raw { self.core.k_first().raw() }
     pub fn ip(&self) -> Raw { self.core.ip().raw() }
     pub fn sp(&self) -> Raw { self.core.sp().raw() }
     pub fn ep(&self) -> Raw { self.core.ep().raw() }
     pub fn e_self(&self) -> Raw { self.core.self_ptr().raw() }
     pub fn e_msg(&self) -> Raw {
         let ep = self.core.ep();
+        if !ep.is_ram() { return UNDEF.raw() }
         let event = self.core.ram(ep);
         event.y().raw()
     }

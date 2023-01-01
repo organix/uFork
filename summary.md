@@ -30,7 +30,7 @@ with sandboxed instances of the virtual processor.
 A browser-based debugger will be the first host-application.
 The JavaScript host can provide
 controlled access to virtual devices,
-including network connectivity, if desired.
+including network connectivity if desired.
 This would allow a distributed mesh of nodes to collaborate.
 
 The bare-metal Rust implementation
@@ -45,17 +45,17 @@ uFork processor core(s) could be implemented in the FPGA!
 ## Key Implementation Mechanisms
 
 Traditional processors make pervasive use of mutable shared state,
-which leads to a wide range of security and privacy vulnerabilities.
-Instead, uFork shares immutable data among actors
+which leads to a wide variety of security and privacy vulnerabilities.
+Instead, uFork shares _immutable_ data among actors
 via asynchronous message-events.
-And each actor manages their own private mutable state.
+And each actor manages their own _private_ mutable state.
 A configuration of actors,
 their pending messages,
 and all executing instruction-streams,
-are captured in a coherent memory image.
+are captured in a self-contained coherent memory image.
 
-Data elements are tagged to distinguish raw bits
-from dereferencable pointers
+Data elements are tagged to distinguish raw bits,
+from dereferencable pointers,
 from opaque object-capabilities (ocaps),
 with no way to convert between them.
 There are no general load/store instructions.
@@ -65,7 +65,8 @@ is implemented in hardware.
 Actor references are ocaps
 which give the bearer the authority
 to send asynchronous messages
-to the actor.
+to the actor,
+but do not expose the actor's private state.
 
 ## License
 

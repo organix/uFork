@@ -1343,10 +1343,10 @@ pub const _ROM_TOP_ADDR: usize = T_DEQUE_ADDR+64;
         quad_ram[A_CLOCK.addr()]    = Quad::new_actor(SINK_BEH, NIL);  // clock device
         quad_ram[A_STDIN.addr()]    = Quad::new_actor(SINK_BEH, NIL);  // console input device
         quad_ram[A_STDOUT.addr()]   = Quad::new_actor(SINK_BEH, NIL);  // console output device
-        quad_ram[SPONSOR.addr()]    = Quad::sponsor_t(ZERO, ZERO, ZERO);  // root configuration sponsor
+        quad_ram[SPONSOR.addr()]    = Quad::sponsor_t(ZERO, Any::fix(420), Any::fix(1337));  // root configuration sponsor
 pub const BOOT_ADDR: usize = 6;
 pub const A_BOOT: Any       = Any { raw: OPQ_RAW | MUT_RAW | BNK_INI | (BOOT_ADDR+0) as Raw };
-        quad_ram[BOOT_ADDR+0]       = Quad::new_actor(SINK_BEH, NIL);
+        quad_ram[BOOT_ADDR+0]       = Quad::actor_t(SINK_BEH, NIL, NIL);
 pub const _BOOT_BEH: Any     = Any { raw: MUT_RAW | BNK_INI | (BOOT_ADDR+1) as Raw };
         quad_ram[BOOT_ADDR+1]       = Quad::vm_push(UNIT, Any::ram(BNK_INI, BOOT_ADDR+2));  // #unit
         quad_ram[BOOT_ADDR+2]       = Quad::vm_my_self(Any::ram(BNK_INI, BOOT_ADDR+3));  // #unit SELF
@@ -1376,13 +1376,29 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 11;
         }
     }
 
-    pub fn run_loop(&mut self) {
+    pub fn run_loop(&mut self) -> bool {
         loop {
-            if !self.execute_instruction() {
-                return;
+            let sponsor = self.sponsor(self.ep());
+            println!("run_loop: sponsor={} -> {}", sponsor, self.mem(sponsor));
+            match self.execute_instruction() {
+                Ok(more) => {
+                    if !more {
+                        return true;  // no more instructions to execute...
+                    }
+                },
+                Err(error) => {
+                    println!("run_loop: execute ERROR! {}", error);
+                    return false;  // limit reached, or error condition signalled...
+                },
             }
-            let _ = self.check_for_interrupt();
-            self.dispatch_event();
+            if let Err(error) = self.check_for_interrupt() {
+                println!("run_loop: interrupt ERROR! {}", error);
+                return false;  // interrupt handler failed...
+            }
+            if let Err(error) = self.dispatch_event() {
+                println!("run_loop: dispatch ERROR! {}", error);
+                return false;  // event dispatch failed...
+            }
         }
     }
     pub fn check_for_interrupt(&mut self) -> Result<bool, Error> {
@@ -1391,61 +1407,80 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 11;
         //Err(String::from("Boom!"))
         //Err(format!("result={}", false))
     }
-    pub fn dispatch_event(&mut self) -> bool {
-        if let Some(ep) = self.event_dequeue() {
-            let event = self.ram(ep);
-            println!("dispatch_event: event={} -> {}", ep, event);
-            let target = event.x();
-            let a_ptr = self.cap_to_ptr(target);
-            let a_quad = self.mem(a_ptr);
-            println!("dispatch_event: target={} -> {}", a_ptr, a_quad);
-            let beh = a_quad.x();
-            let state = a_quad.y();
-            let events = a_quad.z();
-            if events == UNDEF {
-                // begin actor-event transaction
-                let kp = self.new_cont(beh, state, ep);
-                println!("dispatch_event: cont={} -> {}", kp, self.mem(kp));
-                self.ram_mut(a_ptr).set_z(NIL);
-                self.cont_enqueue(kp);
-                true  // event dispatched
-            } else {
-                // target actor is busy, retry later...
-                self.event_enqueue(ep);
-                false  // no event dispatched
-            }
-        } else {
+    pub fn dispatch_event(&mut self) -> Result<bool, Error> {
+        let ep = self.e_first();
+        let event = self.mem(ep);
+        println!("dispatch_event: event={} -> {}", ep, event);
+        if !ep.is_ram() {
             println!("dispatch_event: event queue empty");
-            false
+            return Ok(false);  // event queue empty
+        }
+        let target = event.x();
+        let sponsor = self.sponsor(ep);
+        println!("dispatch_event: sponsor={} -> {}", sponsor, self.mem(sponsor));
+        let limit = self.sponsor_events(ep).fix_num().unwrap_or(0);
+        println!("dispatch_event: limit={}", limit);
+        if limit <= 0 {
+            return Err(String::from("event limit reached"));
+        }
+        let a_ptr = self.cap_to_ptr(target);
+        let a_quad = self.mem(a_ptr);
+        println!("dispatch_event: target={} -> {}", a_ptr, a_quad);
+        let beh = a_quad.x();
+        let state = a_quad.y();
+        let events = a_quad.z();
+        if events == UNDEF {
+            // begin actor-event transaction
+            let kp = self.new_cont(beh, state, ep);
+            println!("dispatch_event: cont={} -> {}", kp, self.mem(kp));
+            self.ram_mut(a_ptr).set_z(NIL);
+            self.cont_enqueue(kp);
+            let ep_ = self.event_dequeue().unwrap();
+            assert_eq!(ep, ep_);
+            self.set_sponsor_events(ep, Any::fix(limit - 1));  // decrement event limit
+            Ok(true)  // event dispatched
+        } else {
+            // target actor is busy, retry later...
+            let ep_ = self.event_dequeue().unwrap();
+            assert_eq!(ep, ep_);
+            self.event_enqueue(ep);  // move event to back of queue
+            Ok(false)  // no event dispatched
         }
     }
-    pub fn execute_instruction(&mut self) -> bool {
+    pub fn execute_instruction(&mut self) -> Result<bool, Error> {
         let kp = self.kp();
-        if kp.is_ram() {
-            let cont = self.ram(kp);
-            println!("execute_instruction: kp={} -> {}", kp, cont);
-            let ep = self.ep();//cont.y();
-            println!("execute_instruction: ep={} -> {}", ep, self.mem(ep));
-            let ip = self.ip();//cont.t();
-            let ip_ = self.perform_op(ip);
-            self.set_ip(ip_);
-            let kp_ = self.cont_dequeue().unwrap();
-            assert_eq!(kp, kp_);
-            if self.typeq(INSTR_T, ip_) {
-                // re-queue updated continuation
-                println!("execute_instruction: kp'={} -> {}", kp_, self.ram(kp_));
-                self.cont_enqueue(kp_);
-            } else {
-                // free dead continuation and associated event
-                self.free(ep);
-                self.free(kp);
-                self.gc_stop_the_world();  // FIXME!! REMOVE FORCED GC...
-            }
-            true  // instruction executed
-        } else {
+        let cont = self.mem(kp);
+        println!("execute_instruction: kp={} -> {}", kp, cont);
+        if !kp.is_ram() {
             println!("execute_instruction: continuation queue empty");
-            false  // continuation queue is empty
+            return Ok(false);  // continuation queue is empty
         }
+        let ep = self.ep();
+        println!("execute_instruction: ep={} -> {}", ep, self.mem(ep));
+        let sponsor = self.sponsor(ep);
+        println!("execute_instruction: sponsor={} -> {}", sponsor, self.mem(sponsor));
+        let limit = self.sponsor_instrs(ep).fix_num().unwrap_or(0);
+        println!("execute_instruction: limit={}", limit);
+        if limit <= 0 {
+            return Err(String::from("instruction limit reached"));
+        }
+        let ip = self.ip();
+        let ip_ = self.perform_op(ip);
+        self.set_ip(ip_);
+        self.set_sponsor_instrs(ep, Any::fix(limit - 1));
+        let kp_ = self.cont_dequeue().unwrap();
+        assert_eq!(kp, kp_);
+        if self.typeq(INSTR_T, ip_) {
+            // re-queue updated continuation
+            println!("execute_instruction: kp'={} -> {}", kp_, self.ram(kp_));
+            self.cont_enqueue(kp_);
+        } else {
+            // free dead continuation and associated event
+            self.free(ep);
+            self.free(kp);
+            self.gc_stop_the_world();  // FIXME!! REMOVE FORCED GC...
+        }
+        Ok(true)  // instruction executed
     }
     fn perform_op(&mut self, ip: Any) -> Any {
         let instr = self.mem(ip);
@@ -1929,20 +1964,38 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 11;
     }
     pub fn self_ptr(&self) -> Any {
         let ep = self.ep();
+        if !ep.is_ram() { return UNDEF }
         let target = self.ram(ep).x();
         let a_ptr = self.cap_to_ptr(target);
         a_ptr
     }
 
-    pub fn sponsor_memory(&self) -> Any { self.ram(self.sponsor()).t() }
-    fn _set_sponsor_memory(&mut self, num: Any) { self.ram_mut(self.sponsor()).set_t(num); }
-    pub fn sponsor_events(&self) -> Any { self.ram(self.sponsor()).x() }
-    fn _set_sponsor_events(&mut self, num: Any) { self.ram_mut(self.sponsor()).set_x(num); }
-    pub fn sponsor_instrs(&self) -> Any { self.ram(self.sponsor()).y() }
-    fn _set_sponsor_instrs(&mut self, num: Any) { self.ram_mut(self.sponsor()).set_y(num); }
-    pub fn sponsor(&self) -> Any {
-        let ep = self.ep();
-        self.ram(ep).t()
+    pub fn sponsor_memory(&self, ep: Any) -> Any {
+        let sponsor = self.sponsor(ep);
+        self.mem(sponsor).t()
+    }
+    pub fn set_sponsor_memory(&mut self, ep: Any, num: Any) {
+        let sponsor = self.sponsor(ep);
+        self.ram_mut(sponsor).set_t(num);
+    }
+    pub fn sponsor_events(&self, ep: Any) -> Any {
+        let sponsor = self.sponsor(ep);
+        self.mem(sponsor).x()
+    }
+    pub fn set_sponsor_events(&mut self, ep: Any, num: Any) {
+        let sponsor = self.sponsor(ep);
+        self.ram_mut(sponsor).set_x(num);
+    }
+    pub fn sponsor_instrs(&self, ep: Any) -> Any {
+        let sponsor = self.sponsor(ep);
+        self.mem(sponsor).y()
+    }
+    pub fn set_sponsor_instrs(&mut self, ep: Any, num: Any) {
+        let sponsor = self.sponsor(ep);
+        self.ram_mut(sponsor).set_y(num);
+    }
+    pub fn sponsor(&self, ep: Any) -> Any {
+        self.mem(ep).t()
     }
 
     fn list_len(&self, list: Any) -> isize {
@@ -2145,29 +2198,30 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 11;
         self.list_len(front) + self.list_len(back)
     }
 
-    fn e_first(&self) -> Any { self.ram(self.ddeque()).t() }
+    pub fn e_first(&self) -> Any { self.ram(self.ddeque()).t() }
     fn set_e_first(&mut self, ptr: Any) { self.ram_mut(self.ddeque()).set_t(ptr); }
     fn e_last(&self) -> Any { self.ram(self.ddeque()).x() }
     fn set_e_last(&mut self, ptr: Any) { self.ram_mut(self.ddeque()).set_x(ptr); }
-    fn k_first(&self) -> Any { self.ram(self.ddeque()).y() }
+    pub fn k_first(&self) -> Any { self.ram(self.ddeque()).y() }
     fn set_k_first(&mut self, ptr: Any) { self.ram_mut(self.ddeque()).set_y(ptr); }
     fn k_last(&self) -> Any { self.ram(self.ddeque()).z() }
     fn set_k_last(&mut self, ptr: Any) { self.ram_mut(self.ddeque()).set_z(ptr); }
     pub fn ddeque(&self) -> Any { self.ptr_to_mem(DDEQUE) }
 
-    fn mem_top(&self) -> Any { self.ram(self.memory()).t() }
+    pub fn mem_top(&self) -> Any { self.ram(self.memory()).t() }
     fn set_mem_top(&mut self, ptr: Any) { self.ram_mut(self.memory()).set_t(ptr); }
-    fn mem_next(&self) -> Any { self.ram(self.memory()).x() }
+    pub fn mem_next(&self) -> Any { self.ram(self.memory()).x() }
     fn set_mem_next(&mut self, ptr: Any) { self.ram_mut(self.memory()).set_x(ptr); }
-    fn mem_free(&self) -> Any { self.ram(self.memory()).y() }
+    pub fn mem_free(&self) -> Any { self.ram(self.memory()).y() }
     fn set_mem_free(&mut self, fix: Any) { self.ram_mut(self.memory()).set_y(fix); }
-    fn mem_root(&self) -> Any { self.ram(self.memory()).z() }
+    pub fn mem_root(&self) -> Any { self.ram(self.memory()).z() }
     fn set_mem_root(&mut self, ptr: Any) { self.ram_mut(self.memory()).set_z(ptr); }
     pub fn memory(&self) -> Any { self.ptr_to_mem(MEMORY) }
 
     pub fn new_event(&mut self, target: Any, msg: Any) -> Any {
         assert!(self.typeq(ACTOR_T, target));
-        let event = Quad::new_event(self.sponsor(), target, msg);
+        let sponsor = self.sponsor(self.ep());
+        let event = Quad::new_event(sponsor, target, msg);
         self.alloc(&event)
     }
     pub fn new_cont(&mut self, ip: Any, sp: Any, ep: Any) -> Any {
@@ -2319,18 +2373,25 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 11;
 
     pub fn kp(&self) -> Any {  // continuation pointer
         let kp = self.k_first();
-        if kp.is_ram() { kp } else { UNDEF }
+        if !kp.is_ram() { return UNDEF }
+        kp
     }
     pub fn ip(&self) -> Any {  // instruction pointer
-        let quad = self.mem(self.kp());
+        let kp = self.kp();
+        if !kp.is_ram() { return UNDEF }
+        let quad = self.mem(kp);
         quad.t()
     }
     pub fn sp(&self) -> Any {  // stack pointer
-        let quad = self.mem(self.kp());
+        let kp = self.kp();
+        if !kp.is_ram() { return UNDEF }
+        let quad = self.mem(kp);
         quad.x()
     }
     pub fn ep(&self) -> Any {  // event pointer
-        let quad = self.mem(self.kp());
+        let kp = self.kp();
+        if !kp.is_ram() { return UNDEF }
+        let quad = self.mem(kp);
         quad.y()
     }
     fn set_ip(&mut self, ptr: Any) {
@@ -2707,7 +2768,10 @@ fn basic_memory_allocation() {
 #[test]
 fn run_loop_terminates() {
     let mut core = Core::new();
-    core.run_loop();
+    let _ep = core.ep();
+    //core.set_sponsor_events(_ep, Any::fix(0));  // FIXME: forcing "out-of-events" error...
+    let ok = core.run_loop();
+    assert!(ok);
     //assert!(false);  // force output to be displayed
 }
 

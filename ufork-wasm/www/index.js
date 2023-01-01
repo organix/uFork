@@ -36,7 +36,6 @@ $canvas.height = (CELL_SIZE + 1) * height + 1;
 let memory;
 let host;
 let universe;
-let prepared = true;  // host initialized
 let paused = false;  // run/pause toggle
 const $rate = document.getElementById("frame-rate");
 let frame = 1;  // frame-rate countdown
@@ -174,14 +173,10 @@ const gcHost = () => {
 	drawUniverse();
 }
 const singleStep = () => {
-	if (!prepared) {
-		host.prepare();
-		prepared = true;
-	} else {
-		host.step();
-	}
+	const done = host.step();
 	universe.tick();
 	drawUniverse();
+	return done;
 };
 const renderLoop = () => {
 	//debugger;
@@ -191,7 +186,10 @@ const renderLoop = () => {
 		// skip this frame update
 	} else {
 		frame = +($rate.value);
-		singleStep();
+		if (singleStep()) {  // pause when there is no more work to do
+			pauseAction();
+			return;
+		}
 	}
 	requestAnimationFrame(renderLoop);
 }
@@ -336,13 +334,13 @@ const pauseAction = () => {
 init().then(function (wasm) {
 	memory = wasm.memory;
 	host = Host.new();
-	//host.prepare(); // this is now done in singleStep()
+
 	universe = Universe.new(width, height);
 	//universe.pattern_fill();
 	universe.launch_ship();
 
 	// draw initial state
-	singleStep(); //drawUniverse();
+	drawUniverse();
 
 	//playAction();  // start animation (running)
 	pauseAction();  // start animation (paused)
