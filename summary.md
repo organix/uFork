@@ -33,11 +33,50 @@ This would allow a distributed mesh of nodes to collaborate.
 
 ## Project Roadmap
 
+Milestones:
 
+  * Load/store VM images from browser
+  * Sponsor configuration and control
+  * Crash-proof exception handling
+  * Concurrent garbage-collection
+  * Blob-memory device
+  * Console i/o device(s)
+  * Network device(s)
 
-## Related Work
+## Historical Context
 
+Traditional processors make pervasive use of mutable shared state,
+which leads to a wide variety of security and privacy vulnerabilities.
+Instead, uFork shares _immutable_ data among actors
+via asynchronous message-events.
+And each actor manages their own _private_ mutable state.
+A configuration of actors,
+their pending messages,
+and all executing instruction-streams,
+are captured in a self-contained memory image.
+Coherent restartable snapshots
+may be taken between any two instructions.
 
+Data elements are tagged to distinguish raw bits
+from dereferencable pointers
+from opaque object-capabilities (ocaps),
+with no way to convert between them.
+There are no general load/store instructions.
+Allocation and garbage-collection
+of pointer-referenced objects
+is implemented in hardware.
+Actor references are ocaps
+which give the bearer the authority
+to send asynchronous messages
+to the actor,
+but do not expose the actor's private state.
+
+Although capability-machines have been implemented in the past,
+none have been actor-oriented ocap systems to the core.
+This design builds on ideas from
+many sources, including
+secure message-passing microkernels (such as L4)
+and the LISP processor architecture.
 
 ## Technical Challenges
 
@@ -59,31 +98,13 @@ such as the [Raspberry Pi](https://www.raspberrypi.com/).
 On the [Betrusted Precursor](https://www.crowdsupply.com/sutajio-kosagi/precursor) platform,
 uFork processor core(s) could be implemented in the FPGA!
 
-## Key Implementation Mechanisms
-
-Traditional processors make pervasive use of mutable shared state,
-which leads to a wide variety of security and privacy vulnerabilities.
-Instead, uFork shares _immutable_ data among actors
-via asynchronous message-events.
-And each actor manages their own _private_ mutable state.
-A configuration of actors,
-their pending messages,
-and all executing instruction-streams,
-are captured in a self-contained coherent memory image.
-
-Data elements are tagged to distinguish raw bits,
-from dereferencable pointers,
-from opaque object-capabilities (ocaps),
-with no way to convert between them.
-There are no general load/store instructions.
-Allocation and garbage-collection
-of pointer-referenced objects
-is implemented in hardware.
-Actor references are ocaps
-which give the bearer the authority
-to send asynchronous messages
-to the actor,
-but do not expose the actor's private state.
+This project collaborates
+at the level of ocap patterns and network protocols
+with technology leaders at
+[Agoric](https://agoric.com/) and [The Spritely Institute](https://community.spritely.institute/).
+It is an example of the "actors all the way down" approach
+cited by Douglas Crockford in his **code::dive 2022** talk
+[_The Next Programming Language_](https://youtu.be/R2idkNdKqpQ?t=2360).
 
 ## License
 
