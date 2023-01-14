@@ -10,10 +10,8 @@ featuring:
   * Automatic Memory-Management
   * Fine-Grained Resource Limits
 
-The VM specification is designed to be suitable
-for efficient implementation in an FPGA or ASIC.
-The result is a secure independent computational element
-that can be integrated into larger designs.
+These features allow easier creation of safe programs,
+and easier proofs of correctness and security properties.
 
 A working prototype, written in C,
 has been developed as a proof-of-concept.
@@ -32,6 +30,25 @@ The JavaScript host can provide
 controlled access to virtual devices,
 including network connectivity if desired.
 This would allow a distributed mesh of nodes to collaborate.
+
+## Project Roadmap
+
+
+
+## Related Work
+
+
+
+## Technical Challenges
+
+
+
+## Project Ecosystem
+
+The VM specification is designed to be suitable
+for efficient implementation in an FPGA or ASIC.
+The result is a secure independent computational element
+that can be integrated into larger designs.
 
 The bare-metal Rust implementation
 can be compiled for various existing processors.
