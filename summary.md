@@ -39,7 +39,8 @@ Milestones:
   * Sponsor configuration and control
   * Crash-proof exception handling
   * Concurrent garbage-collection
-  * Blob-memory device
+  * Clock/Timer device(s)
+  * Blob-memory device(s)
   * Console i/o device(s)
   * Network device(s)
 
@@ -75,12 +76,38 @@ Although capability-machines have been implemented in the past,
 none have been actor-oriented ocap systems to the core.
 This design builds on ideas from
 many sources, including
-secure message-passing microkernels (such as L4)
-and the LISP processor architecture.
+secure message-passing microkernels
+(such as [L4](https://doi.org/10.1145/2893177))
+and the [LISP processor](https://dspace.mit.edu/handle/1721.1/5731) architecture.
 
 ## Technical Challenges
 
+Sponsors sets strict limits on
+the resources used by a computation,
+including memory and processor time.
+These limits are enforced
+by the processor directly.
+Proper implementation of this mechanism
+is key to providing a safe environment
+for executing untrusted code.
+APIs and protocols must be established
+to create and manage
+sponsored configurations of actors.
 
+Devices are the interface between
+an actor configuation
+and the outside world.
+Although devices are represented by callable actors,
+their implementation is part of the hosting "hardware".
+Devices inject message-events
+(representing interrupts)
+into running configurations.
+Devices react to messages
+(represeting control registers)
+from other actors.
+Several devices must be implemented
+to demonstrate the techniques
+used to constuct these critical interfaces.
 
 ## Project Ecosystem
 
