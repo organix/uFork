@@ -74,9 +74,9 @@ but do not expose the actor's private state.
 
 Although capability-machines have been implemented in the past,
 none have been actor-oriented ocap systems to the core.
-This design builds on ideas from
-many sources, including
-secure message-passing microkernels
+The design of uFork
+builds on ideas from many sources,
+including secure message-passing microkernels
 (such as [L4](https://doi.org/10.1145/2893177))
 and the [LISP processor](https://dspace.mit.edu/handle/1721.1/5731) architecture.
 
@@ -103,7 +103,7 @@ Devices inject message-events
 (representing interrupts)
 into running configurations.
 Devices react to messages
-(represeting control registers)
+(representing control registers)
 from other actors.
 Several devices must be implemented
 to demonstrate the techniques
@@ -134,5 +134,8 @@ cited by Douglas Crockford in his **code::dive 2022** talk
 [_The Next Programming Language_](https://youtu.be/R2idkNdKqpQ?t=2360).
 
 ## License
+
+This technology is being shared freely
+for the betterment of the planet.
 
 [Apache License](LICENSE), Version 2.0
