@@ -77,12 +77,12 @@ none have been actor-oriented ocap systems to the core.
 The design of uFork
 builds on ideas from many sources,
 including secure message-passing microkernels
-(such as [L4](https://doi.org/10.1145/2893177))
+(such as [seL4](https://doi.org/10.1145/2893177))
 and the [LISP processor](https://dspace.mit.edu/handle/1721.1/5731) architecture.
 
 ## Technical Challenges
 
-Sponsors sets strict limits on
+Sponsors set strict limits on
 the resources used by a computation,
 including memory and processor time.
 These limits are enforced
@@ -95,7 +95,7 @@ to create and manage
 sponsored configurations of actors.
 
 Devices are the interface between
-an actor configuation
+an actor configuration
 and the outside world.
 Although devices are represented by callable actors,
 their implementation is part of the hosting "hardware".
@@ -107,7 +107,7 @@ Devices react to messages
 from other actors.
 Several devices must be implemented
 to demonstrate the techniques
-used to constuct these critical interfaces.
+used to construct these critical interfaces.
 
 ## Project Ecosystem
 
