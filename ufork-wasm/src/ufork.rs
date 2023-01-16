@@ -124,9 +124,9 @@ impl fmt::Display for Any {
                 PAIR_T => write!(fmt, "PAIR_T"),
                 //FEXPR_T => write!(fmt, "FEXPR_T"),
                 DICT_T => write!(fmt, "DICT_T"),
+                PROXY_T => write!(fmt, "PROXY_T"),
+                STUB_T => write!(fmt, "STUB_T"),
                 FREE_T => write!(fmt, "FREE_T"),
-                //DEQUE_T => write!(fmt, "DEQUE_T"),
-                //EMPTY_DQ => write!(fmt, "EMPTY_DQ"),
                 _ => write!(fmt, "#{}", self.raw()),  // FIXME: should not occur
             }
         } else if self.is_rom() {
@@ -712,9 +712,9 @@ pub const SYMBOL_T: Any     = Any { raw: 10 };
 pub const PAIR_T: Any       = Any { raw: 11 };
 //pub const FEXPR_T: Any      = Any { raw: 12 };
 pub const DICT_T: Any       = Any { raw: 12 };
-pub const FREE_T: Any       = Any { raw: 13 };
-//pub const DEQUE_T: Any      = Any { raw: 14 };
-//pub const EMPTY_DQ: Any     = Any { raw: 15 };
+pub const PROXY_T: Any      = Any { raw: 13 };
+pub const STUB_T: Any       = Any { raw: 14 };
+pub const FREE_T: Any       = Any { raw: 15 };
 
 pub const START: Any        = Any { raw: 16 };
 pub const EMPTY_DQ: Any     = Any { raw: 31 };
@@ -759,8 +759,9 @@ impl Core {
         quad_rom[PAIR_T.addr()]     = Quad::type_t();
         //quad_rom[FEXPR_T.addr()]    = Quad::type_t();
         quad_rom[DICT_T.addr()]     = Quad::type_t();
+        quad_rom[PROXY_T.addr()]    = Quad::type_t();
+        quad_rom[STUB_T.addr()]     = Quad::type_t();
         quad_rom[FREE_T.addr()]     = Quad::type_t();
-        //quad_rom[DEQUE_T.addr()]    = Quad::type_t();
 
 pub const SINK_BEH: Any     = Any { raw: 16 };  // alias for no-op behavior
 pub const COMMIT: Any       = Any { raw: 16 };
@@ -792,7 +793,7 @@ pub const RELEASE: Any      = Any { raw: 29 };
         quad_rom[RELEASE.addr()]    = Quad::vm_end_release();
 pub const RELEASE_0: Any    = Any { raw: 30 };
         quad_rom[RELEASE_0.addr()]  = Quad::vm_send(ZERO, RELEASE);
-//pub const EMPTY_DQ: Any     = Any { raw: 31 };
+//pub const EMPTY_DQ: Any     = Any { raw: 31 };  // defined globally...
         quad_rom[EMPTY_DQ.addr()]   = Quad::pair_t(NIL, NIL);
 pub const STOP: Any         = Any { raw: 32 };
         quad_rom[STOP.addr()]       = Quad::vm_end_stop();
@@ -1351,8 +1352,8 @@ pub const A_BOOT: Any       = Any { raw: OPQ_RAW | MUT_RAW | BNK_INI | (BOOT_ADD
 pub const _BOOT_BEH: Any     = Any { raw: MUT_RAW | BNK_INI | (BOOT_ADDR+1) as Raw };
         quad_ram[BOOT_ADDR+1]       = Quad::vm_push(UNIT, Any::ram(BNK_INI, BOOT_ADDR+2));  // #unit
         quad_ram[BOOT_ADDR+2]       = Quad::vm_my_self(Any::ram(BNK_INI, BOOT_ADDR+3));  // #unit SELF
-        //quad_ram[BOOT_ADDR+3]       = Quad::vm_push(RESEND, Any::ram(BNK_INI, BOOT_ADDR+4));  // #unit SELF resend
-        quad_ram[BOOT_ADDR+3]       = Quad::vm_push(_T_DEQUE_BEH, Any::ram(BNK_INI, BOOT_ADDR+4));  // #unit SELF test-deque-beh
+        quad_ram[BOOT_ADDR+3]       = Quad::vm_push(RESEND, Any::ram(BNK_INI, BOOT_ADDR+4));  // #unit SELF resend
+        //quad_ram[BOOT_ADDR+3]       = Quad::vm_push(_T_DEQUE_BEH, Any::ram(BNK_INI, BOOT_ADDR+4));  // #unit SELF test-deque-beh
         //quad_ram[BOOT_ADDR+3]       = Quad::vm_push(_T_DICT_BEH, Any::ram(BNK_INI, BOOT_ADDR+4));  // #unit SELF test-dict-beh
         quad_ram[BOOT_ADDR+4]       = Quad::vm_new(ZERO, Any::ram(BNK_INI, BOOT_ADDR+5));  // #unit SELF actor
         quad_ram[BOOT_ADDR+5]       = Quad::vm_send(PLUS_2, COMMIT);  // --
@@ -1365,8 +1366,8 @@ pub const E_BOOT: Any       = Any { raw: MUT_RAW | BNK_INI | (BOOT_ADDR+9) as Ra
 pub const K_BOOT: Any       = Any { raw: MUT_RAW | BNK_INI | (BOOT_ADDR+10) as Raw };
         //quad_ram[BOOT_ADDR+10]      = Quad::new_cont(SINK_BEH, NIL, E_BOOT);
         //quad_ram[BOOT_ADDR+10]      = Quad::new_cont(STOP, _BOOT_SP, E_BOOT);
-        quad_ram[BOOT_ADDR+10]      = Quad::new_cont(_BOOT_BEH, _BOOT_SP, E_BOOT);
-        //quad_ram[BOOT_ADDR+10]      = Quad::new_cont(_TEST_BEH, NIL, E_BOOT);
+        //quad_ram[BOOT_ADDR+10]      = Quad::new_cont(_BOOT_BEH, _BOOT_SP, E_BOOT);
+        quad_ram[BOOT_ADDR+10]      = Quad::new_cont(_TEST_BEH, NIL, E_BOOT);
 
 pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 11;
 
