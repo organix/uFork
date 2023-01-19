@@ -727,20 +727,20 @@ pub const A_STDOUT: Any     = Any { raw: OPQ_RAW | MUT_RAW | BNK_INI | 4 };
 pub const SPONSOR: Any      = Any { raw: MUT_RAW | BNK_INI | 5 };
 
 // core memory limit
-const QUAD_MAX: usize = 1<<10;  // 1K quad-cells
-//const QUAD_MAX: usize = 1<<12;  // 4K quad-cells
+const QUAD_ROM_MAX: usize = 1<<12;  // 4K quad-cells of ROM
+const QUAD_RAM_MAX: usize = 1<<10;  // 1K quad-cells of RAM
 
 pub struct Core {
-    quad_rom: [Quad; QUAD_MAX],
-    quad_ram0:[Quad; QUAD_MAX],
-    quad_ram1:[Quad; QUAD_MAX],
+    quad_rom: [Quad; QUAD_ROM_MAX],
+    quad_ram0:[Quad; QUAD_RAM_MAX],
+    quad_ram1:[Quad; QUAD_RAM_MAX],
 }
 
 impl Core {
     pub fn new() -> Core {
         let mut quad_rom = [
             Quad::empty_t();
-            QUAD_MAX
+            QUAD_ROM_MAX
         ];
 
         quad_rom[UNDEF.addr()]      = Quad::literal_t();
@@ -1338,7 +1338,7 @@ pub const _ROM_TOP_ADDR: usize = T_DEQUE_ADDR+64;
 
         let mut quad_ram = [
             Quad::empty_t();
-            QUAD_MAX
+            QUAD_RAM_MAX
         ];
         quad_ram[MEMORY.addr()]     = Quad::memory_t(Any::ram(BNK_INI, _RAM_TOP_ADDR), NIL, ZERO, DDEQUE);
         quad_ram[DDEQUE.addr()]     = Quad::ddeque_t(NIL, NIL, K_BOOT, K_BOOT);
@@ -1373,8 +1373,8 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 11;
 
         Core {
             quad_rom,
-            quad_ram0: if BNK_INI == BNK_0 { quad_ram } else { [ Quad::empty_t(); QUAD_MAX ] },
-            quad_ram1: if BNK_INI == BNK_1 { quad_ram } else { [ Quad::empty_t(); QUAD_MAX ] },
+            quad_ram0: if BNK_INI == BNK_0 { quad_ram } else { [ Quad::empty_t(); QUAD_RAM_MAX ] },
+            quad_ram1: if BNK_INI == BNK_1 { quad_ram } else { [ Quad::empty_t(); QUAD_RAM_MAX ] },
         }
     }
 
@@ -2460,7 +2460,7 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 11;
             // expand top-of-memory
             let next = self.mem_top();
             let top = next.addr();
-            if top >= QUAD_MAX {
+            if top >= QUAD_RAM_MAX {
                 panic!("out of memory!");
             }
             self.set_mem_top(Any::ram(self.gc_phase(), top + 1));
