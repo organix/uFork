@@ -1433,12 +1433,14 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 11;
         let events = a_quad.z();
         if events == UNDEF {
             // begin actor-event transaction
-            let kp = self.new_cont(beh, state, ep);
+            let rollback = self.new_actor(beh, state);  // snapshot actor state
+            let kp = self.new_cont(beh, state, ep);  // create continuation
             println!("dispatch_event: cont={} -> {}", kp, self.mem(kp));
             self.ram_mut(a_ptr).set_z(NIL);
             self.cont_enqueue(kp);
             let ep_ = self.event_dequeue().unwrap();
             assert_eq!(ep, ep_);
+            self.ram_mut(ep).set_z(rollback);  // store rollback in event
             self.set_sponsor_events(ep, Any::fix(limit - 1));  // decrement event limit
             Ok(true)  // event dispatched
         } else {
@@ -1840,13 +1842,11 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 11;
                         println!("vm_end: reason={}", _r);
                         // FIXME: where should `reason` be recorded/reported?
                         self.actor_abort(me);
-                        // FIXME: ACTOR ABORT SHOULD ROLL BACK TRANSACTION AND CONTINUE RUNNING!
-                        //UNDEF
-                        return Err(String::from("End::Abort terminated continuation"));
+                        UNIT
                     },
                     END_STOP => {
                         println!("vm_end: MEMORY={}", self.ram(MEMORY));
-                        //UNIT
+                        //UNDEF
                         return Err(String::from("End::Stop terminated continuation"));
                     },
                     END_COMMIT => {
@@ -1937,6 +1937,10 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 11;
     }
 
     fn actor_commit(&mut self, me: Any) {
+        let rollback = self.mem(self.ep()).z();
+        if rollback.is_ram() {
+            self.free(rollback);  // release rollback snapshot
+        }
         let state = self.ram(me).y();
         self.stack_clear(state);
         // move sent-message events to event queue
@@ -1963,8 +1967,13 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 11;
             self.free(ep);
             ep = next;
         }
-        // end actor transaction
-        self.ram_mut(me).set_z(UNDEF);
+        // roll back actor transaction
+        let rollback = self.cap_to_ptr(self.mem(self.ep()).z());
+        if rollback.is_ram() {
+            let quad = *self.mem(rollback);
+            *self.ram_mut(me) = quad;  // restore actor from rollback
+            self.free(rollback);  // release rollback snapshot
+        }
     }
     pub fn self_ptr(&self) -> Any {
         let ep = self.ep();
