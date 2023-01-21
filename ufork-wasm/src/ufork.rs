@@ -1467,7 +1467,7 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 11;
             return Err(String::from("instruction limit reached"));
         }
         let ip = self.ip();
-        let ip_ = self.perform_op(ip);
+        let ip_ = self.perform_op(ip)?;
         self.set_ip(ip_);
         self.set_sponsor_instrs(ep, Any::fix(limit - 1));
         let kp_ = self.cont_dequeue().unwrap();
@@ -1484,7 +1484,7 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 11;
         }
         Ok(true)  // instruction executed
     }
-    fn perform_op(&mut self, ip: Any) -> Any {
+    fn perform_op(&mut self, ip: Any) -> Result<Any, Error> {
         let instr = self.mem(ip);
         println!("perform_op: ip={} -> {}", ip, instr);
         assert!(instr.t() == INSTR_T);
@@ -1537,7 +1537,7 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 11;
                         self.stack_push(d);
                     },
                     _ => {
-                        panic!("Unknown op {}!", imm);
+                        return Err(format!("Unknown dict op {}!", imm));
                     }
                 };
                 kip
@@ -1585,7 +1585,7 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 11;
                         self.stack_push(Any::fix(n));
                     },
                     _ => {
-                        panic!("Unknown op {}!", imm);
+                        return Err(format!("Unknown deque op {}!", imm));
                     }
                 };
                 kip
@@ -1772,7 +1772,7 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 11;
                         self.push_list(state);
                     },
                     _ => {
-                        panic!("Unknown op {}!", imm);
+                        return Err(format!("Unknown my op {}!", imm));
                     }
                 }
                 kip
@@ -1838,14 +1838,16 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 11;
                     END_ABORT => {
                         let _r = self.stack_pop();  // reason for abort
                         println!("vm_end: reason={}", _r);
+                        // FIXME: where should `reason` be recorded/reported?
                         self.actor_abort(me);
+                        // FIXME: ACTOR ABORT SHOULD ROLL BACK TRANSACTION AND CONTINUE RUNNING!
                         //UNDEF
-                        panic!("End::Abort should signal controller")
+                        return Err(String::from("End::Abort terminated continuation"));
                     },
                     END_STOP => {
                         println!("vm_end: MEMORY={}", self.ram(MEMORY));
                         //UNIT
-                        panic!("End::Stop terminated continuation")
+                        return Err(String::from("End::Stop terminated continuation"));
                     },
                     END_COMMIT => {
                         self.actor_commit(me);
@@ -1858,7 +1860,7 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 11;
                         FALSE
                     },
                     _ => {
-                        panic!("Unknown op {}!", imm);
+                        return Err(format!("Unknown end op {}!", imm));
                     }
                 };
                 println!("vm_end: rv={}", rv);
@@ -1879,11 +1881,11 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 11;
                 kip
             },
             _ => {
-                panic!("Illegal instruction {}!", opr)
+                return Err(format!("Illegal instruction {}!", opr));
             }
         };
         println!("perform_op: ip'={} -> {}", ip_, self.mem(ip_));
-        ip_
+        Ok(ip_)
     }
 
     fn event_enqueue(&mut self, ep: Any) {
