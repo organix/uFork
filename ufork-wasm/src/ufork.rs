@@ -76,6 +76,12 @@ impl Any {
             None
         }
     }
+    pub fn get_fix(&self) -> Result<isize, Error> {
+        match self.fix_num() {
+            Some(num) => Ok(num),
+            None => Err(format!("Fixnum required! {}", self)),
+        }
+    }
     pub fn fix_num(&self) -> Option<isize> {
         if self.is_fix() {
             let num = ((self.raw << 1) as Num) >> 1;
@@ -1594,13 +1600,13 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 11;
             },
             VM_PAIR => {
                 println!("vm_pair: cnt={}", imm);
-                let n = imm.fix_num().unwrap();
+                let n = imm.get_fix()?;
                 self.stack_pairs(n);
                 kip
             },
             VM_PART => {
                 println!("vm_part: cnt={}", imm);
-                let n = imm.fix_num().unwrap();
+                let n = imm.get_fix()?;
                 self.stack_parts(n);
                 kip
             },
@@ -1608,7 +1614,7 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 11;
                 println!("vm_nth: idx={}", imm);
                 let lst = self.stack_pop();
                 println!("vm_nth: lst={}", lst);
-                let n = imm.fix_num().unwrap();
+                let n = imm.get_fix()?;
                 let r = self.extract_nth(lst, n);
                 println!("vm_nth: r={}", r);
                 self.stack_push(r);
@@ -1630,7 +1636,7 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 11;
             },
             VM_DROP => {
                 println!("vm_drop: n={}", imm);
-                let mut n = imm.fix_num().unwrap();
+                let mut n = imm.get_fix()?;
                 assert!(n < 64);  // FIXME: replace with cycle-limit(s) in Sponsor
                 while n > 0 {
                     self.stack_pop();
@@ -1640,7 +1646,7 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 11;
             },
             VM_PICK => {
                 println!("vm_pick: idx={}", imm);
-                let n = imm.fix_num().unwrap();
+                let n = imm.get_fix()?;
                 let r = if n > 0 {
                     let lst = self.sp();
                     self.extract_nth(lst, n)
@@ -1653,13 +1659,13 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 11;
             },
             VM_DUP => {
                 println!("vm_dup: n={}", imm);
-                let n = imm.fix_num().unwrap();
+                let n = imm.get_fix()?;
                 self.stack_dup(n);
                 kip
             },
             VM_ROLL => {
                 println!("vm_roll: idx={}", imm);
-                let n = imm.fix_num().unwrap();
+                let n = imm.get_fix()?;
                 self.stack_roll(n);
                 kip
             },
@@ -1743,7 +1749,7 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 11;
             },
             VM_MSG => {
                 println!("vm_msg: idx={}", imm);
-                let n = imm.fix_num().unwrap();
+                let n = imm.get_fix()?;
                 let ep = self.ep();
                 let event = self.mem(ep);
                 let msg = event.y();
@@ -1781,7 +1787,7 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 11;
             }
             VM_SEND => {
                 println!("vm_send: cnt={}", imm);
-                let num = imm.fix_num().unwrap();
+                let num = imm.get_fix()?;
                 let target = self.stack_pop();
                 println!("vm_send: target={}", target);
                 assert!(self.typeq(ACTOR_T, target));
@@ -1805,7 +1811,7 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 11;
             },
             VM_NEW => {
                 println!("vm_new: cnt={}", imm);
-                let num = imm.fix_num().unwrap();
+                let num = imm.get_fix()?;
                 let ip = self.stack_pop();
                 println!("vm_new: ip={}", ip);
                 assert!(self.typeq(INSTR_T, ip));
@@ -1818,7 +1824,7 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 11;
             },
             VM_BEH => {
                 println!("vm_beh: cnt={}", imm);
-                let num = imm.fix_num().unwrap();
+                let num = imm.get_fix()?;
                 let ip = self.stack_pop();
                 println!("vm_beh: ip={}", ip);
                 assert!(self.typeq(INSTR_T, ip));
