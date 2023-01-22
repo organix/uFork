@@ -73,9 +73,10 @@ impl Host {
     pub fn step(&mut self) -> bool {  // single-step instruction execution
         if self.core.kp().is_ram() {
             let ep = self.core.ep();
-            self.core.set_sponsor_memory(ep, Any::fix(0));
-            self.core.set_sponsor_events(ep, Any::fix(1));
-            self.core.set_sponsor_instrs(ep, Any::fix(1));
+            let sponsor = self.core.event_sponsor(ep);
+            self.core.set_sponsor_memory(sponsor, Any::fix(0));
+            self.core.set_sponsor_events(sponsor, Any::fix(1));
+            self.core.set_sponsor_instrs(sponsor, Any::fix(1));
             self.core.run_loop()
         } else {
             true  // done! no more work to do...
@@ -87,9 +88,21 @@ impl Host {
     pub fn ram_addr(&self, bank: Raw, ofs: Raw) -> Raw { Any::ram(bank, ofs as usize).raw() }
     pub fn gc_phase(&self) -> Raw { self.core.gc_phase() }
     pub fn gc_run(&mut self) { self.core.gc_stop_the_world() }
-    pub fn sponsor_memory(&self) -> Raw { self.core.sponsor_memory(self.core.ep()).raw() }
-    pub fn sponsor_events(&self) -> Raw { self.core.sponsor_events(self.core.ep()).raw() }
-    pub fn sponsor_instrs(&self) -> Raw { self.core.sponsor_instrs(self.core.ep()).raw() }
+    pub fn sponsor_memory(&self) -> Raw {
+        let ep = self.core.ep();
+        let sponsor = self.core.event_sponsor(ep);
+        self.core.sponsor_memory(sponsor).raw()
+    }
+    pub fn sponsor_events(&self) -> Raw {
+        let ep = self.core.ep();
+        let sponsor = self.core.event_sponsor(ep);
+        self.core.sponsor_events(sponsor).raw()
+    }
+    pub fn sponsor_instrs(&self) -> Raw {
+        let ep = self.core.ep();
+        let sponsor = self.core.event_sponsor(ep);
+        self.core.sponsor_instrs(sponsor).raw()
+    }
     pub fn mem_top(&self) -> Raw { self.core.mem_top().raw() }
     pub fn mem_next(&self) -> Raw { self.core.mem_next().raw() }
     pub fn mem_free(&self) -> Raw { self.core.mem_free().raw() }

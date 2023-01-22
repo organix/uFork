@@ -1351,7 +1351,7 @@ pub const _ROM_TOP_ADDR: usize = T_DEQUE_ADDR+64;
         quad_ram[A_CLOCK.addr()]    = Quad::new_actor(SINK_BEH, NIL);  // clock device
         quad_ram[A_STDIN.addr()]    = Quad::new_actor(SINK_BEH, NIL);  // console input device
         quad_ram[A_STDOUT.addr()]   = Quad::new_actor(SINK_BEH, NIL);  // console output device
-        quad_ram[SPONSOR.addr()]    = Quad::sponsor_t(ZERO, Any::fix(420), Any::fix(1337));  // root configuration sponsor
+        quad_ram[SPONSOR.addr()]    = Quad::sponsor_t(Any::fix(1024), Any::fix(128), Any::fix(512));  // root configuration sponsor
 pub const BOOT_ADDR: usize = 6;
 pub const A_BOOT: Any       = Any { raw: OPQ_RAW | MUT_RAW | BNK_INI | (BOOT_ADDR+0) as Raw };
         quad_ram[BOOT_ADDR+0]       = Quad::actor_t(SINK_BEH, NIL, NIL);
@@ -1386,7 +1386,7 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 11;
 
     pub fn run_loop(&mut self) -> bool {
         loop {
-            let sponsor = self.sponsor(self.ep());
+            let sponsor = self.event_sponsor(self.ep());
             println!("run_loop: sponsor={} -> {}", sponsor, self.mem(sponsor));
             match self.execute_instruction() {
                 Ok(more) => {
@@ -1424,30 +1424,30 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 11;
             return Ok(false);  // event queue empty
         }
         let target = event.x();
-        let sponsor = self.sponsor(ep);
+        let sponsor = self.event_sponsor(ep);
         println!("dispatch_event: sponsor={} -> {}", sponsor, self.mem(sponsor));
-        let limit = self.sponsor_events(ep).fix_num().unwrap_or(0);
+        let limit = self.sponsor_events(sponsor).fix_num().unwrap_or(0);
         println!("dispatch_event: limit={}", limit);
         if limit <= 0 {
             return Err(String::from("event limit reached"));
         }
         let a_ptr = self.cap_to_ptr(target);
-        let a_quad = self.mem(a_ptr);
+        let a_quad = *self.mem(a_ptr);
         println!("dispatch_event: target={} -> {}", a_ptr, a_quad);
         let beh = a_quad.x();
         let state = a_quad.y();
         let events = a_quad.z();
         if events == UNDEF {
             // begin actor-event transaction
-            let rollback = self.new_actor(beh, state);  // snapshot actor state
-            let kp = self.new_cont(beh, state, ep);  // create continuation
+            let rollback = self.reserve(&a_quad)?;  // snapshot actor state
+            let kp = self.new_cont(beh, state, ep)?;  // create continuation
             println!("dispatch_event: cont={} -> {}", kp, self.mem(kp));
             self.ram_mut(a_ptr).set_z(NIL);
             self.cont_enqueue(kp);
             let ep_ = self.event_dequeue().unwrap();
             assert_eq!(ep, ep_);
             self.ram_mut(ep).set_z(rollback);  // store rollback in event
-            self.set_sponsor_events(ep, Any::fix(limit - 1));  // decrement event limit
+            self.set_sponsor_events(sponsor, Any::fix(limit - 1));  // decrement event limit
             Ok(true)  // event dispatched
         } else {
             // target actor is busy, retry later...
@@ -1467,9 +1467,9 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 11;
         }
         let ep = self.ep();
         println!("execute_instruction: ep={} -> {}", ep, self.mem(ep));
-        let sponsor = self.sponsor(ep);
+        let sponsor = self.event_sponsor(ep);
         println!("execute_instruction: sponsor={} -> {}", sponsor, self.mem(sponsor));
-        let limit = self.sponsor_instrs(ep).fix_num().unwrap_or(0);
+        let limit = self.sponsor_instrs(sponsor).fix_num().unwrap_or(0);
         println!("execute_instruction: limit={}", limit);
         if limit <= 0 {
             return Err(String::from("instruction limit reached"));
@@ -1477,7 +1477,7 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 11;
         let ip = self.ip();
         let ip_ = self.perform_op(ip)?;
         self.set_ip(ip_);
-        self.set_sponsor_instrs(ep, Any::fix(limit - 1));
+        self.set_sponsor_instrs(sponsor, Any::fix(limit - 1));
         let kp_ = self.cont_dequeue().unwrap();
         assert_eq!(kp, kp_);
         if self.typeq(INSTR_T, ip_) {
@@ -1528,20 +1528,20 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 11;
                         let value = self.stack_pop();
                         let key = self.stack_pop();
                         let dict = self.stack_pop();
-                        let d = self.dict_add(dict, key, value);
+                        let d = self.dict_add(dict, key, value)?;
                         self.stack_push(d);
                     },
                     DICT_SET => {
                         let value = self.stack_pop();
                         let key = self.stack_pop();
                         let dict = self.stack_pop();
-                        let d = self.dict_set(dict, key, value);
+                        let d = self.dict_set(dict, key, value)?;
                         self.stack_push(d);
                     },
                     DICT_DEL => {
                         let key = self.stack_pop();
                         let dict = self.stack_pop();
-                        let d = self.dict_del(dict, key);
+                        let d = self.dict_del(dict, key)?;
                         self.stack_push(d);
                     },
                     _ => {
@@ -1797,7 +1797,7 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 11;
                     self.stack_pop()
                 };
                 println!("vm_send: msg={}", msg);
-                let ep = self.new_event(target, msg);
+                let ep = self.new_event(target, msg)?;
                 let me = self.self_ptr();
                 println!("vm_send: me={} -> {}", me, self.ram(me));
                 let next = self.ram(me).z();
@@ -1817,7 +1817,7 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 11;
                 assert!(self.typeq(INSTR_T, ip));
                 let sp = self.pop_counted(num);
                 println!("vm_new: sp={}", sp);
-                let a = self.new_actor(ip, sp);
+                let a = self.new_actor(ip, sp)?;
                 println!("vm_new: actor={}", a);
                 self.stack_push(a);
                 kip
@@ -1974,7 +1974,8 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 11;
             ep = next;
         }
         // roll back actor transaction
-        let rollback = self.cap_to_ptr(self.mem(self.ep()).z());
+        ep = self.ep();
+        let rollback = self.mem(ep).z();
         if rollback.is_ram() {
             let quad = *self.mem(rollback);
             *self.ram_mut(me) = quad;  // restore actor from rollback
@@ -1989,31 +1990,25 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 11;
         a_ptr
     }
 
-    pub fn sponsor_memory(&self, ep: Any) -> Any {
-        let sponsor = self.sponsor(ep);
+    pub fn sponsor_memory(&self, sponsor: Any) -> Any {
         self.mem(sponsor).t()
     }
-    pub fn set_sponsor_memory(&mut self, ep: Any, num: Any) {
-        let sponsor = self.sponsor(ep);
+    pub fn set_sponsor_memory(&mut self, sponsor: Any, num: Any) {
         self.ram_mut(sponsor).set_t(num);
     }
-    pub fn sponsor_events(&self, ep: Any) -> Any {
-        let sponsor = self.sponsor(ep);
+    pub fn sponsor_events(&self, sponsor: Any) -> Any {
         self.mem(sponsor).x()
     }
-    pub fn set_sponsor_events(&mut self, ep: Any, num: Any) {
-        let sponsor = self.sponsor(ep);
+    pub fn set_sponsor_events(&mut self, sponsor: Any, num: Any) {
         self.ram_mut(sponsor).set_x(num);
     }
-    pub fn sponsor_instrs(&self, ep: Any) -> Any {
-        let sponsor = self.sponsor(ep);
+    pub fn sponsor_instrs(&self, sponsor: Any) -> Any {
         self.mem(sponsor).y()
     }
-    pub fn set_sponsor_instrs(&mut self, ep: Any, num: Any) {
-        let sponsor = self.sponsor(ep);
+    pub fn set_sponsor_instrs(&mut self, sponsor: Any, num: Any) {
         self.ram_mut(sponsor).set_y(num);
     }
-    pub fn sponsor(&self, ep: Any) -> Any {
+    pub fn event_sponsor(&self, ep: Any) -> Any {
         self.mem(ep).t()
     }
 
@@ -2118,32 +2113,32 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 11;
         }
         UNDEF
     }
-    pub fn dict_add(&mut self, dict: Any, key: Any, value: Any) -> Any {
+    pub fn dict_add(&mut self, dict: Any, key: Any, value: Any) -> Result<Any, Error> {
         let dict = Quad::dict_t(key, value, dict);
         self.alloc(&dict)
     }
-    pub fn dict_set(&mut self, dict: Any, key: Any, value: Any) -> Any {
+    pub fn dict_set(&mut self, dict: Any, key: Any, value: Any) -> Result<Any, Error> {
         let d = if self.dict_has(dict, key) {
-            self.dict_del(dict, key)
+            self.dict_del(dict, key)?
         } else {
             dict
         };
         self.dict_add(d, key, value)
     }
-    pub fn dict_del(&mut self, dict: Any, key: Any) -> Any {
+    pub fn dict_del(&mut self, dict: Any, key: Any) -> Result<Any, Error> {
         if self.typeq(DICT_T, dict) {
             let entry = self.mem(dict);
             let k = entry.x();  // key
             let value = entry.y();
             let next = entry.z();
             if key == k {
-                next
+                Ok(next)
             } else {
-                let d = self.dict_del(next, key);
+                let d = self.dict_del(next, key)?;
                 self.dict_add(d, k, value)
             }
         } else {
-            NIL
+            Ok(NIL)
         }
     }
 
@@ -2237,20 +2232,20 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 11;
     fn set_mem_root(&mut self, ptr: Any) { self.ram_mut(self.memory()).set_z(ptr); }
     pub fn memory(&self) -> Any { self.ptr_to_mem(MEMORY) }
 
-    pub fn new_event(&mut self, target: Any, msg: Any) -> Any {
+    pub fn new_event(&mut self, target: Any, msg: Any) -> Result<Any, Error> {
         assert!(self.typeq(ACTOR_T, target));
-        let sponsor = self.sponsor(self.ep());
+        let sponsor = self.event_sponsor(self.ep());
         let event = Quad::new_event(sponsor, target, msg);
         self.alloc(&event)
     }
-    pub fn new_cont(&mut self, ip: Any, sp: Any, ep: Any) -> Any {
+    pub fn new_cont(&mut self, ip: Any, sp: Any, ep: Any) -> Result<Any, Error> {
         let cont = Quad::new_cont(ip, sp, ep);
-        self.alloc(&cont)
+        self.reserve(&cont)  // no Sponsor needed
     }
-    pub fn new_actor(&mut self, beh: Any, state: Any) -> Any {
+    pub fn new_actor(&mut self, beh: Any, state: Any) -> Result<Any, Error> {
         let actor = Quad::new_actor(beh, state);
-        let ptr = self.alloc(&actor);
-        self.ptr_to_cap(ptr)
+        let ptr = self.alloc(&actor)?;
+        Ok(self.ptr_to_cap(ptr))
     }
 
     fn stack_pairs(&mut self, n: isize) {
@@ -2349,7 +2344,8 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 11;
         if self.typeq(PAIR_T, sp) {
             let item = self.car(sp);
             self.set_sp(self.cdr(sp));
-            self.free(sp);  // free pair holding stack item
+            // FIXME: avoid inconsistent stack state when hitting memory limits
+            //self.free(sp);  // free pair holding stack item
             item
         } else {
             println!("stack_pop: underflow!");  // NOTE: this is just a warning, returning UNDEF...
@@ -2363,7 +2359,7 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 11;
 
     pub fn cons(&mut self, car: Any, cdr: Any) -> Any {
         let pair = Quad::pair_t(car, cdr);
-        self.alloc(&pair)
+        self.alloc(&pair).unwrap()  // FIXME: handle Error Result!
     }
     pub fn car(&self, pair: Any) -> Any {
         if self.typeq(PAIR_T, pair) {
@@ -2464,7 +2460,20 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 11;
         ptr
     }
 
-    pub fn alloc(&mut self, init: &Quad) -> Any {
+    pub fn alloc(&mut self, init: &Quad) -> Result<Any, Error> {
+        let ep = self.ep();
+        let sponsor = self.event_sponsor(ep);
+        println!("alloc: sponsor={} -> {}", sponsor, self.mem(sponsor));
+        let limit = self.sponsor_memory(sponsor).fix_num().unwrap_or(0);
+        println!("alloc: limit={}", limit);
+        if limit <= 0 {
+            return Err(String::from("memory limit reached"));
+        }
+        let ptr = self.reserve(init)?;
+        self.set_sponsor_memory(sponsor, Any::fix(limit - 1));
+        Ok(ptr)
+    }
+    fn reserve(&mut self, init: &Quad) -> Result<Any, Error> {
         let next = self.mem_next();
         let ptr = if self.typeq(FREE_T, next) {
             // use quad from free-list
@@ -2478,13 +2487,13 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 11;
             let next = self.mem_top();
             let top = next.addr();
             if top >= QUAD_RAM_MAX {
-                panic!("out of memory!");
+                return Err(String::from("out of memory!"));
             }
             self.set_mem_top(Any::ram(self.gc_phase(), top + 1));
             next
         };
         *self.ram_mut(ptr) = *init;  // copy initial value
-        ptr
+        Ok(ptr)
     }
     pub fn free(&mut self, ptr: Any) {
         assert!(self.in_heap(ptr));
@@ -2539,7 +2548,7 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 11;
                     return quad.z();
                 }
                 // copy quad to new-space
-                let mut dup = self.alloc(&quad);
+                let mut dup = self.reserve(&quad).unwrap();  // FIXME: handle Error result...
                 if val.is_cap() {
                     dup = self.ptr_to_cap(dup);  // restore CAP marker
                 };
@@ -2761,19 +2770,19 @@ fn basic_memory_allocation() {
     let mut core = Core::new();
     let top_before = core.mem_top().addr();
     println!("mem_top: {}", core.mem_top());
-    let m1 = core.alloc(&Quad::pair_t(PLUS_1, PLUS_1));
+    let m1 = core.alloc(&Quad::pair_t(PLUS_1, PLUS_1)).unwrap();
     println!("m1:{} -> {}", m1, core.mem(m1));
     println!("mem_top: {}", core.mem_top());
-    let m2 = core.alloc(&Quad::pair_t(PLUS_2, PLUS_2));
+    let m2 = core.alloc(&Quad::pair_t(PLUS_2, PLUS_2)).unwrap();
     println!("mem_top: {}", core.mem_top());
-    let m3 = core.alloc(&Quad::pair_t(PLUS_3, PLUS_3));
+    let m3 = core.alloc(&Quad::pair_t(PLUS_3, PLUS_3)).unwrap();
     println!("mem_top: {}", core.mem_top());
     println!("mem_free: {}", core.mem_free());
     core.free(m2);
     println!("mem_free: {}", core.mem_free());
     core.free(m3);
     println!("mem_free: {}", core.mem_free());
-    let _m4 = core.alloc(&Quad::pair_t(PLUS_4, PLUS_4));
+    let _m4 = core.alloc(&Quad::pair_t(PLUS_4, PLUS_4)).unwrap();
     println!("mem_top: {}", core.mem_top());
     println!("mem_free: {}", core.mem_free());
     let top_after = core.mem_top().addr();
