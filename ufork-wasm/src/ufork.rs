@@ -1505,7 +1505,7 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 11;
                 let val = self.stack_pop();
                 println!("vm_typeq: val={}", val);
                 let r = if self.typeq(imm, val) { TRUE } else { FALSE };
-                self.stack_push(r);
+                self.stack_push(r)?;
                 kip
             },
             VM_DICT => {
@@ -1516,33 +1516,33 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 11;
                         let dict = self.stack_pop();
                         let b = self.dict_has(dict, key);
                         let v = if b { TRUE } else { FALSE };
-                        self.stack_push(v);
+                        self.stack_push(v)?;
                     },
                     DICT_GET => {
                         let key = self.stack_pop();
                         let dict = self.stack_pop();
                         let v = self.dict_get(dict, key);
-                        self.stack_push(v);
+                        self.stack_push(v)?;
                     },
                     DICT_ADD => {
                         let value = self.stack_pop();
                         let key = self.stack_pop();
                         let dict = self.stack_pop();
                         let d = self.dict_add(dict, key, value)?;
-                        self.stack_push(d);
+                        self.stack_push(d)?;
                     },
                     DICT_SET => {
                         let value = self.stack_pop();
                         let key = self.stack_pop();
                         let dict = self.stack_pop();
                         let d = self.dict_set(dict, key, value)?;
-                        self.stack_push(d);
+                        self.stack_push(d)?;
                     },
                     DICT_DEL => {
                         let key = self.stack_pop();
                         let dict = self.stack_pop();
                         let d = self.dict_del(dict, key)?;
-                        self.stack_push(d);
+                        self.stack_push(d)?;
                     },
                     _ => {
                         return Err(format!("Unknown dict op {}!", imm));
@@ -1555,42 +1555,42 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 11;
                 match imm {
                     DEQUE_NEW => {
                         let deque = self.deque_new();
-                        self.stack_push(deque);
+                        self.stack_push(deque)?;
                     },
                     DEQUE_EMPTY => {
                         let deque = self.stack_pop();
                         let b = self.deque_empty(deque);
                         let v = if b { TRUE } else { FALSE };
-                        self.stack_push(v);
+                        self.stack_push(v)?;
                     },
                     DEQUE_PUSH => {
                         let item = self.stack_pop();
                         let old = self.stack_pop();
-                        let new = self.deque_push(old, item);
-                        self.stack_push(new);
+                        let new = self.deque_push(old, item)?;
+                        self.stack_push(new)?;
                     },
                     DEQUE_POP => {
                         let old = self.stack_pop();
-                        let (new, item) = self.deque_pop(old);
-                        self.stack_push(new);
-                        self.stack_push(item);
+                        let (new, item) = self.deque_pop(old)?;
+                        self.stack_push(new)?;
+                        self.stack_push(item)?;
                     },
                     DEQUE_PUT => {
                         let item = self.stack_pop();
                         let old = self.stack_pop();
-                        let new = self.deque_put(old, item);
-                        self.stack_push(new);
+                        let new = self.deque_put(old, item)?;
+                        self.stack_push(new)?;
                     },
                     DEQUE_PULL => {
                         let old = self.stack_pop();
-                        let (new, item) = self.deque_pull(old);
-                        self.stack_push(new);
-                        self.stack_push(item);
+                        let (new, item) = self.deque_pull(old)?;
+                        self.stack_push(new)?;
+                        self.stack_push(item)?;
                     },
                     DEQUE_LEN => {
                         let deque = self.stack_pop();
                         let n = self.deque_len(deque);
-                        self.stack_push(Any::fix(n));
+                        self.stack_push(Any::fix(n))?;
                     },
                     _ => {
                         return Err(format!("Unknown deque op {}!", imm));
@@ -1601,13 +1601,13 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 11;
             VM_PAIR => {
                 println!("vm_pair: cnt={}", imm);
                 let n = imm.get_fix()?;
-                self.stack_pairs(n);
+                self.stack_pairs(n)?;
                 kip
             },
             VM_PART => {
                 println!("vm_part: cnt={}", imm);
                 let n = imm.get_fix()?;
-                self.stack_parts(n);
+                self.stack_parts(n)?;
                 kip
             },
             VM_NTH => {
@@ -1617,12 +1617,12 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 11;
                 let n = imm.get_fix()?;
                 let r = self.extract_nth(lst, n);
                 println!("vm_nth: r={}", r);
-                self.stack_push(r);
+                self.stack_push(r)?;
                 kip
             },
             VM_PUSH => {
                 println!("vm_push: val={}", imm);
-                self.stack_push(imm);
+                self.stack_push(imm)?;
                 kip
             },
             VM_DEPTH => {
@@ -1631,7 +1631,7 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 11;
                 let n = self.list_len(lst);
                 let n = Any::fix(n);
                 println!("vm_depth: n={}", n);
-                self.stack_push(n);
+                self.stack_push(n)?;
                 kip
             },
             VM_DROP => {
@@ -1654,19 +1654,19 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 11;
                     UNDEF
                 };
                 println!("vm_pick: r={}", r);
-                self.stack_push(r);
+                self.stack_push(r)?;
                 kip
             },
             VM_DUP => {
                 println!("vm_dup: n={}", imm);
                 let n = imm.get_fix()?;
-                self.stack_dup(n);
+                self.stack_dup(n)?;
                 kip
             },
             VM_ROLL => {
                 println!("vm_roll: idx={}", imm);
                 let n = imm.get_fix()?;
-                self.stack_roll(n);
+                self.stack_roll(n)?;
                 kip
             },
             VM_ALU => {
@@ -1699,7 +1699,7 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 11;
                     }
                 };
                 println!("vm_alu: r={}", r);
-                self.stack_push(r);
+                self.stack_push(r)?;
                 kip
             },
             VM_EQ => {
@@ -1708,7 +1708,7 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 11;
                 println!("vm_eq: vv={}", vv);
                 let r = if imm == vv { TRUE } else { FALSE };
                 println!("vm_eq: r={}", r);
-                self.stack_push(r);
+                self.stack_push(r)?;
                 kip
             },
             VM_CMP => {
@@ -1737,7 +1737,7 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 11;
                 };
                 let r = if b { TRUE } else { FALSE };
                 println!("vm_cmp: r={}", r);
-                self.stack_push(r);
+                self.stack_push(r)?;
                 kip
             },
             VM_IF => {
@@ -1755,7 +1755,7 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 11;
                 let msg = event.y();
                 let r = self.extract_nth(msg, n);
                 println!("vm_msg: r={}", r);
-                self.stack_push(r);
+                self.stack_push(r)?;
                 kip
             },
             VM_MY => {
@@ -1767,17 +1767,17 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 11;
                         let ep = self.ep();
                         let target = self.ram(ep).x();
                         println!("vm_my: self={}", target);
-                        self.stack_push(target);
+                        self.stack_push(target)?;
                     },
                     MY_BEH => {
                         let beh = self.ram(me).x();
                         println!("vm_my: beh={}", beh);
-                        self.stack_push(beh);
+                        self.stack_push(beh)?;
                     },
                     MY_STATE => {
                         let state = self.ram(me).y();
                         println!("vm_my: state={}", state);
-                        self.push_list(state);
+                        self.push_list(state)?;
                     },
                     _ => {
                         return Err(format!("Unknown my op {}!", imm));
@@ -1819,7 +1819,7 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 11;
                 println!("vm_new: sp={}", sp);
                 let a = self.new_actor(ip, sp)?;
                 println!("vm_new: actor={}", a);
-                self.stack_push(a);
+                self.stack_push(a)?;
                 kip
             },
             VM_BEH => {
@@ -2021,11 +2021,12 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 11;
         };
         n
     }
-    fn push_list(&mut self, ptr: Any) {
+    fn push_list(&mut self, ptr: Any) -> Result<(), Error> {
         if self.typeq(PAIR_T, ptr) {
-            self.push_list(self.cdr(ptr));
-            self.stack_push(self.car(ptr));
+            self.push_list(self.cdr(ptr))?;
+            self.stack_push(self.car(ptr))?;
         }
+        Ok(())
     }
     fn pop_counted(&mut self, n: isize) -> Any {
         let mut n = n;
@@ -2152,13 +2153,13 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 11;
             true  // default = empty
         }
     }
-    pub fn deque_push(&mut self, deque: Any, item: Any) -> Any {
+    pub fn deque_push(&mut self, deque: Any, item: Any) -> Result<Any, Error> {
         let front = self.car(deque);
-        let front = self.cons(item, front);
+        let front = self.cons(item, front)?;
         let back = self.cdr(deque);
         self.cons(front, back)
     }
-    pub fn deque_pop(&mut self, deque: Any) -> (Any, Any) {
+    pub fn deque_pop(&mut self, deque: Any) -> Result<(Any, Any), Error> {
         if self.typeq(PAIR_T, deque) {
             let mut front = self.car(deque);
             let mut back = self.cdr(deque);
@@ -2167,25 +2168,25 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 11;
                     // transfer back to front
                     let item = self.car(back);
                     back = self.cdr(back);
-                    front = self.cons(item, front);
+                    front = self.cons(item, front)?;
                 }
             }
             if self.typeq(PAIR_T, front) {
                 let item = self.car(front);
                 front = self.cdr(front);
-                let deque = self.cons(front, back);
-                return (deque, item)
+                let deque = self.cons(front, back)?;
+                return Ok((deque, item))
             }
         }
-        (deque, UNDEF)
+        Ok((deque, UNDEF))
     }
-    pub fn deque_put(&mut self, deque: Any, item: Any) -> Any {
+    pub fn deque_put(&mut self, deque: Any, item: Any) -> Result<Any, Error> {
         let front = self.car(deque);
         let back = self.cdr(deque);
-        let back = self.cons(item, back);
+        let back = self.cons(item, back)?;
         self.cons(front, back)
     }
-    pub fn deque_pull(&mut self, deque: Any) -> (Any, Any) {
+    pub fn deque_pull(&mut self, deque: Any) -> Result<(Any, Any), Error> {
         if self.typeq(PAIR_T, deque) {
             let mut front = self.car(deque);
             let mut back = self.cdr(deque);
@@ -2194,17 +2195,17 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 11;
                     // transfer front to back
                     let item = self.car(front);
                     front = self.cdr(front);
-                    back = self.cons(item, back);
+                    back = self.cons(item, back)?;
                 }
             }
             if self.typeq(PAIR_T, back) {
                 let item = self.car(back);
                 back = self.cdr(back);
-                let deque = self.cons(front, back);
-                return (deque, item)
+                let deque = self.cons(front, back)?;
+                return Ok((deque, item))
             }
         }
-        (deque, UNDEF)
+        Ok((deque, UNDEF))
     }
     pub fn deque_len(&self, deque: Any) -> isize {
         let front = self.car(deque);
@@ -2248,45 +2249,47 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 11;
         Ok(self.ptr_to_cap(ptr))
     }
 
-    fn stack_pairs(&mut self, n: isize) {
+    fn stack_pairs(&mut self, n: isize) -> Result<(), Error> {
         assert!(n < 64);  // FIXME: replace with cycle-limit(s) in Sponsor
         if n > 0 {
             let mut n = n;
             let h = self.stack_pop();
-            let lst = self.cons(h, NIL);
+            let lst = self.cons(h, NIL)?;
             let mut p = lst;
             while n > 1 {
                 let h = self.stack_pop();
-                let q = self.cons(h, NIL);
+                let q = self.cons(h, NIL)?;
                 self.set_cdr(p, q);
                 p = q;
                 n -= 1;
             }
             let t = self.stack_pop();
             self.set_cdr(p, t);
-            self.stack_push(lst);
+            self.stack_push(lst)?;
         };
+        Ok(())
     }
-    fn stack_parts(&mut self, n: isize) {
+    fn stack_parts(&mut self, n: isize) -> Result<(), Error> {
         assert!(n < 64);  // FIXME: replace with cycle-limit(s) in Sponsor
         let mut s = self.stack_pop();  // list to destructure
         if n > 0 {
             let mut n = n;
-            let lst = self.cons(self.car(s), NIL);
+            let lst = self.cons(self.car(s), NIL)?;
             let mut p = lst;
             while n > 1 {
                 s = self.cdr(s);
-                let q = self.cons(self.car(s), NIL);
+                let q = self.cons(self.car(s), NIL)?;
                 self.set_cdr(p, q);
                 p = q;
                 n -= 1;
             }
-            let t = self.cons(self.cdr(s), self.sp());
+            let t = self.cons(self.cdr(s), self.sp())?;
             self.set_cdr(p, t);
             self.set_sp(lst);
         }
+        Ok(())
     }
-    fn stack_roll(&mut self, n: isize) {
+    fn stack_roll(&mut self, n: isize) -> Result<(), Error> {
         if n > 1 {
             assert!(n < 64);  // FIXME: replace with cycle-limit(s) in Sponsor
             let sp = self.sp();
@@ -2296,7 +2299,7 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 11;
                 self.set_cdr(p, sp);
                 self.set_sp(p);
             } else {
-                self.stack_push(UNDEF);  // out of range
+                self.stack_push(UNDEF)?;  // out of range
             }
         } else if n < -1 {
             assert!(n > -64);  // FIXME: replace with cycle-limit(s) in Sponsor
@@ -2310,17 +2313,18 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 11;
                 self.stack_pop();  // out of range
             }
         };
+        Ok(())
     }
-    fn stack_dup(&mut self, n: isize) {
+    fn stack_dup(&mut self, n: isize) -> Result<(), Error> {
         let mut n = n;
         if n > 0 {
             let mut s = self.sp();
-            let sp = self.cons(self.car(s), NIL);
+            let sp = self.cons(self.car(s), NIL)?;
             let mut p = sp;
             s = self.cdr(s);
             n -= 1;
             while n > 0 {
-                let q = self.cons(self.car(s), NIL);
+                let q = self.cons(self.car(s), NIL)?;
                 self.set_cdr(p, q);
                 p = q;
                 s = self.cdr(s);
@@ -2329,6 +2333,7 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 11;
             self.set_cdr(p, self.sp());
             self.set_sp(sp);
         }
+        Ok(())
     }
     fn stack_clear(&mut self, top: Any) {
         let mut sp = self.sp();
@@ -2352,14 +2357,15 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 11;
             UNDEF
         }
     }
-    fn stack_push(&mut self, val: Any) {
-        let sp = self.cons(val, self.sp());
+    fn stack_push(&mut self, val: Any) -> Result<(), Error> {
+        let sp = self.cons(val, self.sp())?;
         self.set_sp(sp);
+        Ok(())
     }
 
-    pub fn cons(&mut self, car: Any, cdr: Any) -> Any {
+    pub fn cons(&mut self, car: Any, cdr: Any) -> Result<Any, Error> {
         let pair = Quad::pair_t(car, cdr);
-        self.alloc(&pair).unwrap()  // FIXME: handle Error Result!
+        self.alloc(&pair)
     }
     pub fn car(&self, pair: Any) -> Any {
         if self.typeq(PAIR_T, pair) {
