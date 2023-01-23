@@ -1895,6 +1895,7 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 11;
     }
 
     fn event_enqueue(&mut self, ep: Any) {
+        // add event to the back of the queue
         self.ram_mut(ep).set_z(NIL);
         if !self.e_first().is_ram() {
             self.set_e_first(ep);
@@ -1904,6 +1905,7 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 11;
         self.set_e_last(ep);
     }
     fn event_dequeue(&mut self) -> Option<Any> {
+        // remove event from the front of the queue
         let ep = self.e_first();
         if ep.is_ram() {
             let event = self.ram(ep);
@@ -1917,8 +1919,18 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 11;
             None
         }
     }
+    fn event_inject(&mut self, ep: Any) {
+        // add event to the front of the queue (e.g.: for interrupts)
+        let first = self.e_first();
+        self.ram_mut(ep).set_z(first);
+        if !first.is_ram() {
+            self.set_e_last(ep);
+        }
+        self.set_e_first(ep);
+    }
 
     fn cont_enqueue(&mut self, kp: Any) {
+        // add continuation to the back of the queue
         self.ram_mut(kp).set_z(NIL);
         if !self.k_first().is_ram() {
             self.set_k_first(kp);
@@ -1928,6 +1940,7 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 11;
         self.set_k_last(kp);
     }
     fn cont_dequeue(&mut self) -> Option<Any> {
+        // remove continuation from the front of the queue
         let kp = self.k_first();
         if kp.is_ram() {
             let cont = self.ram(kp);
@@ -1980,6 +1993,19 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 11;
             let quad = *self.mem(rollback);
             *self.ram_mut(me) = quad;  // restore actor from rollback
             self.free(rollback);  // release rollback snapshot
+        }
+    }
+    pub fn actor_revert(&mut self) -> bool {
+        // revert actor/event to pre-dispatch state
+        if let Some(kp) = self.cont_dequeue() {
+            let ep = self.mem(kp).y();
+            let target = self.mem(ep).x();
+            let me = self.cap_to_ptr(target);
+            self.actor_abort(me);
+            self.event_inject(ep);
+            true
+        } else {
+            false
         }
     }
     pub fn self_ptr(&self) -> Any {
