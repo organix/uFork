@@ -28,6 +28,8 @@ const $event = document.getElementById("ufork-event");
 const $self = document.getElementById("ufork-self");
 const $msg = document.getElementById("ufork-msg");
 
+const $fault = document.getElementById("fault-led");
+
 // Give the canvas room for all of our cells and a 1px border around them.
 const $canvas = document.getElementById("ufork-canvas");
 $canvas.width = (CELL_SIZE + 1) * width + 1;
@@ -37,6 +39,7 @@ let memory;
 let host;
 let universe;
 let paused = false;  // run/pause toggle
+let fault = false;  // execution fault flag
 const $rate = document.getElementById("frame-rate");
 let frame = 1;  // frame-rate countdown
 let mem_max = 0;
@@ -52,6 +55,13 @@ const updateElementText = (el, txt) => {
 const drawHost = () => {
 	var a;
 
+	if (fault) {
+		$fault.setAttribute("fill", "#F30");
+		$fault.setAttribute("stroke", "#900");
+	} else {
+		$fault.setAttribute("fill", "#0F3");
+		$fault.setAttribute("stroke", "#090");
+	}
 	const top = host.rom_addr(host.mem_top());
 	if (top > mem_max) {
 		mem_max = top;
@@ -173,10 +183,11 @@ const gcHost = () => {
 	drawUniverse();
 }
 const singleStep = () => {
-	const done = host.step();
+	const ok = host.step();
+	fault = !ok;
 	universe.tick();
 	drawUniverse();
-	return done;
+	return ok;
 };
 const renderLoop = () => {
 	//debugger;
@@ -186,7 +197,7 @@ const renderLoop = () => {
 		// skip this frame update
 	} else {
 		frame = +($rate.value);
-		if (singleStep()) {  // pause when there is no more work to do
+		if (singleStep() == false) {  // pause on fault signal
 			pauseAction();
 			return;
 		}

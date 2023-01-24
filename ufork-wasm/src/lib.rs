@@ -71,16 +71,27 @@ impl Host {
         }
     }
     pub fn step(&mut self) -> bool {  // single-step instruction execution
-        if self.core.kp().is_ram() {
-            let ep = self.core.ep();
-            let sponsor = self.core.event_sponsor(ep);
-            self.core.set_sponsor_memory(sponsor, Any::fix(0));
-            self.core.set_sponsor_events(sponsor, Any::fix(1));
-            self.core.set_sponsor_instrs(sponsor, Any::fix(1));
-            self.core.run_loop()
-        } else {
-            true  // done! no more work to do...
+        match self.core.execute_instruction() {
+            Ok(more) => {
+                if !more {
+                    println!("continuation queue empty!");
+                    return false;  // no more instructions...
+                }
+            },
+            Err(error) => {
+                println!("execution ERROR! {}", error);
+                return false;  // execute instruction failed...
+            },
         }
+        if let Err(error) = self.core.check_for_interrupt() {
+            println!("interrupt ERROR! {}", error);
+            return false;  // interrupt handler failed...
+        }
+        if let Err(error) = self.core.dispatch_event() {
+            println!("dispatch ERROR! {}", error);
+            return false;  // event dispatch failed...
+        }
+        true  // step successful
     }
 
     pub fn fixnum(&self, num: Num) -> Raw { Any::fix(num as isize).raw() }
