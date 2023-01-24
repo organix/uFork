@@ -89,7 +89,7 @@ const drawHost = () => {
 		$mem_rom.textContent = a.join("\n");
 	}
 	a = [];
-	for (let addr = 0; addr < 512; addr++) {
+	for (let addr = 0; addr < 256; addr++) {
 		const raw = host.ram_addr(host.gc_phase(), addr);
 		const line = '$'
 			+ ('00000000' + raw.toString(16)).slice(-8)

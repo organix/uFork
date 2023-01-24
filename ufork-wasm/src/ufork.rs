@@ -733,8 +733,8 @@ pub const A_STDOUT: Any     = Any { raw: OPQ_RAW | MUT_RAW | BNK_INI | 4 };
 pub const SPONSOR: Any      = Any { raw: MUT_RAW | BNK_INI | 5 };
 
 // core memory limit
-const QUAD_ROM_MAX: usize = 1<<12;  // 4K quad-cells of ROM
-const QUAD_RAM_MAX: usize = 1<<10;  // 1K quad-cells of RAM
+const QUAD_ROM_MAX: usize = 1<<10;  // 1K quad-cells of ROM
+const QUAD_RAM_MAX: usize = 1<<8;   // 256 quad-cells of RAM
 
 pub struct Core {
     quad_rom: [Quad; QUAD_ROM_MAX],
@@ -1208,7 +1208,8 @@ pub const _TEST_BEH: Any    = Any { raw: TEST_ADDR as Raw };
         quad_rom[TEST_ADDR+6]       = Quad::vm_send(PLUS_2, COMMIT);  // --
 pub const EQ_8_BEH: Any = Any { raw: (TEST_ADDR+7) as Raw };
         quad_rom[TEST_ADDR+7]       = Quad::vm_msg(ZERO, Any::rom(TEST_ADDR+8));  // msg
-        quad_rom[TEST_ADDR+8]       = Quad::vm_is_eq(PLUS_8, COMMIT);  // assert_eq(8, msg)
+        //quad_rom[TEST_ADDR+8]       = Quad::vm_is_eq(PLUS_8, COMMIT);  // assert_eq(8, msg)
+        quad_rom[TEST_ADDR+8]       = Quad::vm_is_eq(PLUS_8, STOP);  // assert_eq(8, msg)
 
         /* VM_DICT test suite */
 pub const T_DICT_ADDR: usize = TEST_ADDR+9;
@@ -1351,7 +1352,7 @@ pub const _ROM_TOP_ADDR: usize = T_DEQUE_ADDR+64;
         quad_ram[A_CLOCK.addr()]    = Quad::new_actor(SINK_BEH, NIL);  // clock device
         quad_ram[A_STDIN.addr()]    = Quad::new_actor(SINK_BEH, NIL);  // console input device
         quad_ram[A_STDOUT.addr()]   = Quad::new_actor(SINK_BEH, NIL);  // console output device
-        quad_ram[SPONSOR.addr()]    = Quad::sponsor_t(Any::fix(1024), Any::fix(128), Any::fix(512));  // root configuration sponsor
+        quad_ram[SPONSOR.addr()]    = Quad::sponsor_t(Any::fix(512), Any::fix(64), Any::fix(512));  // root configuration sponsor
 pub const BOOT_ADDR: usize = 6;
 pub const A_BOOT: Any       = Any { raw: OPQ_RAW | MUT_RAW | BNK_INI | (BOOT_ADDR+0) as Raw };
         quad_ram[BOOT_ADDR+0]       = Quad::actor_t(SINK_BEH, NIL, NIL);
@@ -2499,6 +2500,7 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 11;
         let limit = self.sponsor_memory(sponsor).fix_num().unwrap_or(0);
         println!("alloc: limit={}", limit);
         if limit <= 0 {
+            //panic!("memory limit reached");
             return Err(String::from("memory limit reached"));
         }
         let ptr = self.reserve(init)?;
@@ -2519,6 +2521,7 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 11;
             let next = self.mem_top();
             let top = next.addr();
             if top >= QUAD_RAM_MAX {
+                //panic!("out of memory!");
                 return Err(String::from("out of memory!"));
             }
             self.set_mem_top(Any::ram(self.gc_phase(), top + 1));
