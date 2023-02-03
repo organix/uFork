@@ -2,6 +2,8 @@
 
 use core::fmt;
 
+use crate::device::*;
+
 //pub type Error = &'static str;
 pub type Error = String;
 
@@ -267,7 +269,7 @@ impl Quad {
         Self::new(INSTR_T, vm, v, k)
     }
     pub fn actor_t(beh: Any, state: Any, events: Any) -> Quad {
-        assert!(beh.is_ptr());
+        //assert!(beh.is_ptr()); --- moved test to new_actor() so we can create devices
         assert!(events.is_ptr());
         Self::new(ACTOR_T, beh, state, events)
     }
@@ -576,6 +578,7 @@ impl Quad {
 
     // construct idle Actor
     pub fn new_actor(beh: Any, state: Any) -> Quad {
+        assert!(beh.is_ptr());
         Self::actor_t(beh, state, UNDEF)
     }
 }
@@ -727,19 +730,21 @@ pub const EMPTY_DQ: Any     = Any { raw: 31 };
 
 pub const MEMORY: Any       = Any { raw: MUT_RAW | BNK_INI | 0 };
 pub const DDEQUE: Any       = Any { raw: MUT_RAW | BNK_INI | 1 };
-pub const A_CLOCK: Any      = Any { raw: OPQ_RAW | MUT_RAW | BNK_INI | 2 };
-pub const A_STDIN: Any      = Any { raw: OPQ_RAW | MUT_RAW | BNK_INI | 3 };
-pub const A_STDOUT: Any     = Any { raw: OPQ_RAW | MUT_RAW | BNK_INI | 4 };
+pub const NULL_DEV: Any     = Any { raw: OPQ_RAW | MUT_RAW | BNK_INI | 2 };
+pub const CLOCK_DEV: Any    = Any { raw: OPQ_RAW | MUT_RAW | BNK_INI | 3 };
+pub const IO_DEV: Any       = Any { raw: OPQ_RAW | MUT_RAW | BNK_INI | 4 };
 pub const SPONSOR: Any      = Any { raw: MUT_RAW | BNK_INI | 5 };
 
 // core memory limit
 const QUAD_ROM_MAX: usize = 1<<10;  // 1K quad-cells of ROM
 const QUAD_RAM_MAX: usize = 1<<8;   // 256 quad-cells of RAM
+const DEVICE_MAX:   usize = 3;      // number of Core devices
 
 pub struct Core {
-    quad_rom: [Quad; QUAD_ROM_MAX],
-    quad_ram0:[Quad; QUAD_RAM_MAX],
-    quad_ram1:[Quad; QUAD_RAM_MAX],
+    quad_rom:   [Quad; QUAD_ROM_MAX],
+    quad_ram0:  [Quad; QUAD_RAM_MAX],
+    quad_ram1:  [Quad; QUAD_RAM_MAX],
+    device:     [Option<Box<dyn Device>>; DEVICE_MAX],
 }
 
 impl Core {
@@ -1208,8 +1213,8 @@ pub const _TEST_BEH: Any    = Any { raw: TEST_ADDR as Raw };
         quad_rom[TEST_ADDR+6]       = Quad::vm_send(PLUS_2, COMMIT);  // --
 pub const EQ_8_BEH: Any = Any { raw: (TEST_ADDR+7) as Raw };
         quad_rom[TEST_ADDR+7]       = Quad::vm_msg(ZERO, Any::rom(TEST_ADDR+8));  // msg
-        //quad_rom[TEST_ADDR+8]       = Quad::vm_is_eq(PLUS_8, COMMIT);  // assert_eq(8, msg)
-        quad_rom[TEST_ADDR+8]       = Quad::vm_is_eq(PLUS_8, STOP);  // assert_eq(8, msg)
+        quad_rom[TEST_ADDR+8]       = Quad::vm_is_eq(PLUS_8, COMMIT);  // assert_eq(8, msg)
+        //quad_rom[TEST_ADDR+8]       = Quad::vm_is_eq(PLUS_8, STOP);  // assert_eq(8, msg)
 
         /* VM_DICT test suite */
 pub const T_DICT_ADDR: usize = TEST_ADDR+9;
@@ -1341,7 +1346,39 @@ pub const _T_DEQUE_BEH: Any  = Any { raw: T_DEQUE_ADDR as Raw };
         quad_rom[T_DEQUE_ADDR+63]   = Quad::vm_deque_len(Any::rom(T_DEQUE_ADDR+64));  // (()) (#unit) (@4 #unit) (()) 0
         quad_rom[T_DEQUE_ADDR+64]   = Quad::vm_is_eq(ZERO, COMMIT);  // (()) (#unit) (@4 #unit) (())
 
-pub const _ROM_TOP_ADDR: usize = T_DEQUE_ADDR+64;
+        /* device test suite */
+pub const T_DEV_ADDR: usize = T_DEQUE_ADDR+65;
+pub const _T_DEV_BEH: Any  = Any { raw: T_DEV_ADDR as Raw };
+        quad_rom[T_DEV_ADDR+0]      = Quad::vm_push(PLUS_1, Any::rom(T_DEV_ADDR+1));  // 1
+        quad_rom[T_DEV_ADDR+1]      = Quad::vm_push(NULL_DEV, Any::rom(T_DEV_ADDR+2));  // 1 null_device
+        quad_rom[T_DEV_ADDR+2]      = Quad::vm_send(ZERO, Any::rom(T_DEV_ADDR+3));  // --
+        quad_rom[T_DEV_ADDR+3]      = Quad::vm_push(PLUS_2, Any::rom(T_DEV_ADDR+4));  // 2
+        quad_rom[T_DEV_ADDR+4]      = Quad::vm_push(NULL_DEV, Any::rom(T_DEV_ADDR+5));  // 2 null_device
+        quad_rom[T_DEV_ADDR+5]      = Quad::vm_send(ZERO, Any::rom(T_DEV_ADDR+6));  // --
+        quad_rom[T_DEV_ADDR+6]      = Quad::vm_push(PLUS_3, Any::rom(T_DEV_ADDR+7));  // 3
+        quad_rom[T_DEV_ADDR+7]      = Quad::vm_push(NULL_DEV, Any::rom(T_DEV_ADDR+8));  // 3 null_device
+        quad_rom[T_DEV_ADDR+8]      = Quad::vm_send(ZERO, Any::rom(T_DEV_ADDR+9));  // --
+        quad_rom[T_DEV_ADDR+9]      = Quad::vm_push(MINUS_1, Any::rom(T_DEV_ADDR+10));  // -1
+        quad_rom[T_DEV_ADDR+10]     = Quad::vm_push(CLOCK_DEV, Any::rom(T_DEV_ADDR+11));  // -1 clock_device
+        quad_rom[T_DEV_ADDR+11]     = Quad::vm_send(ZERO, Any::rom(T_DEV_ADDR+12));  // --
+        quad_rom[T_DEV_ADDR+12]     = Quad::vm_push(PLUS_5, Any::rom(T_DEV_ADDR+13));  // 5
+        quad_rom[T_DEV_ADDR+13]     = Quad::vm_push(_COUNT_BEH, Any::rom(T_DEV_ADDR+14));  // 5 count-beh
+        quad_rom[T_DEV_ADDR+14]     = Quad::vm_new(ZERO, Any::rom(T_DEV_ADDR+15));  // 5 a-count
+        quad_rom[T_DEV_ADDR+15]     = Quad::vm_send(ZERO, COMMIT);  // --
+
+pub const COUNT_ADDR: usize = T_DEV_ADDR+16;
+pub const _COUNT_BEH: Any  = Any { raw: COUNT_ADDR as Raw };
+        quad_rom[COUNT_ADDR+0]      = Quad::vm_msg(ZERO, Any::rom(COUNT_ADDR+1));  // n
+        quad_rom[COUNT_ADDR+1]      = Quad::vm_dup(PLUS_1, Any::rom(COUNT_ADDR+2));  // n n
+        quad_rom[COUNT_ADDR+2]      = Quad::vm_eq(ZERO, Any::rom(COUNT_ADDR+3));  // n n==0
+        quad_rom[COUNT_ADDR+3]      = Quad::vm_if(ABORT, Any::rom(COUNT_ADDR+4));  // n
+
+        quad_rom[COUNT_ADDR+4]      = Quad::vm_push(PLUS_1, Any::rom(COUNT_ADDR+5));  // n 1
+        quad_rom[COUNT_ADDR+5]      = Quad::vm_alu_sub(Any::rom(COUNT_ADDR+6));  // n-1
+        quad_rom[COUNT_ADDR+6]      = Quad::vm_my_self(Any::rom(COUNT_ADDR+7));  // n-1 self
+        quad_rom[COUNT_ADDR+7]      = Quad::vm_send(ZERO, COMMIT);  // --
+
+pub const _ROM_TOP_ADDR: usize = COUNT_ADDR+8;
 
         let mut quad_ram = [
             Quad::empty_t();
@@ -1349,13 +1386,13 @@ pub const _ROM_TOP_ADDR: usize = T_DEQUE_ADDR+64;
         ];
         quad_ram[MEMORY.addr()]     = Quad::memory_t(Any::ram(BNK_INI, _RAM_TOP_ADDR), NIL, ZERO, DDEQUE);
         quad_ram[DDEQUE.addr()]     = Quad::ddeque_t(NIL, NIL, K_BOOT, K_BOOT);
-        quad_ram[A_CLOCK.addr()]    = Quad::new_actor(SINK_BEH, NIL);  // clock device
-        quad_ram[A_STDIN.addr()]    = Quad::new_actor(SINK_BEH, NIL);  // console input device
-        quad_ram[A_STDOUT.addr()]   = Quad::new_actor(SINK_BEH, NIL);  // console output device
+        quad_ram[NULL_DEV.addr()]   = Quad::actor_t(ZERO, NIL, UNDEF);  // null device #0
+        quad_ram[CLOCK_DEV.addr()]  = Quad::actor_t(PLUS_1, NIL, UNDEF);  // clock device #1
+        quad_ram[IO_DEV.addr()]     = Quad::actor_t(PLUS_2, NIL, UNDEF);  // i/o device #2
         quad_ram[SPONSOR.addr()]    = Quad::sponsor_t(Any::fix(512), Any::fix(64), Any::fix(512));  // root configuration sponsor
 pub const BOOT_ADDR: usize = 6;
 pub const A_BOOT: Any       = Any { raw: OPQ_RAW | MUT_RAW | BNK_INI | (BOOT_ADDR+0) as Raw };
-        quad_ram[BOOT_ADDR+0]       = Quad::actor_t(SINK_BEH, NIL, NIL);
+        quad_ram[BOOT_ADDR+0]       = Quad::new_actor(SINK_BEH, NIL);
 pub const _BOOT_BEH: Any     = Any { raw: MUT_RAW | BNK_INI | (BOOT_ADDR+1) as Raw };
         quad_ram[BOOT_ADDR+1]       = Quad::vm_push(UNIT, Any::ram(BNK_INI, BOOT_ADDR+2));  // #unit
         quad_ram[BOOT_ADDR+2]       = Quad::vm_my_self(Any::ram(BNK_INI, BOOT_ADDR+3));  // #unit SELF
@@ -1374,7 +1411,8 @@ pub const K_BOOT: Any       = Any { raw: MUT_RAW | BNK_INI | (BOOT_ADDR+10) as R
         //quad_ram[BOOT_ADDR+10]      = Quad::new_cont(SINK_BEH, NIL, E_BOOT);
         //quad_ram[BOOT_ADDR+10]      = Quad::new_cont(STOP, _BOOT_SP, E_BOOT);
         //quad_ram[BOOT_ADDR+10]      = Quad::new_cont(_BOOT_BEH, _BOOT_SP, E_BOOT);
-        quad_ram[BOOT_ADDR+10]      = Quad::new_cont(_TEST_BEH, NIL, E_BOOT);
+        //quad_ram[BOOT_ADDR+10]      = Quad::new_cont(_TEST_BEH, NIL, E_BOOT);
+        quad_ram[BOOT_ADDR+10]      = Quad::new_cont(_T_DEV_BEH, NIL, E_BOOT);
 
 pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 11;
 
@@ -1382,6 +1420,11 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 11;
             quad_rom,
             quad_ram0: if BNK_INI == BNK_0 { quad_ram } else { [ Quad::empty_t(); QUAD_RAM_MAX ] },
             quad_ram1: if BNK_INI == BNK_1 { quad_ram } else { [ Quad::empty_t(); QUAD_RAM_MAX ] },
+            device: [
+                Some(Box::new(NullDevice::new())),
+                Some(Box::new(NullDevice::new())),
+                Some(Box::new(NullDevice::new())),
+            ],
         }
     }
 
@@ -1408,6 +1451,7 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 11;
                 println!("run_loop: dispatch ERROR! {}", error);
                 return false;  // event dispatch failed...
             }
+            // FIXME: if dispatch_event() returns Ok(true), ignore empty k-queue...
         }
     }
     pub fn check_for_interrupt(&mut self) -> Result<bool, Error> {
@@ -1438,7 +1482,19 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 11;
         let beh = a_quad.x();
         let state = a_quad.y();
         let events = a_quad.z();
-        if events == UNDEF {
+        if let Some(index) = beh.fix_num() {
+            // message-event to device
+            let id = index as usize;
+            if id >= DEVICE_MAX {
+                return Err(format!("device id {} must be less than {}", index, DEVICE_MAX));
+            }
+            let ep_ = self.event_dequeue().unwrap();
+            assert_eq!(ep, ep_);
+            let mut dev_mut = self.device[id].take().unwrap();
+            let result = dev_mut.handle_event(self, ep);
+            let _ = self.device[id].insert(dev_mut);
+            result  // should normally be Ok(true)
+        } else if events == UNDEF {
             // begin actor-event transaction
             let rollback = self.reserve(&a_quad)?;  // snapshot actor state
             let kp = self.new_cont(beh, state, ep)?;  // create continuation
@@ -2835,7 +2891,7 @@ fn run_loop_terminates() {
     //core.set_sponsor_events(_ep, Any::fix(0));  // FIXME: forcing "out-of-events" error...
     let ok = core.run_loop();
     assert!(ok);
-    //assert!(false);  // force output to be displayed
+    assert!(false);  // force output to be displayed
 }
 
 #[test]
