@@ -1679,7 +1679,8 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 11;
             },
             VM_PUSH => {
                 println!("vm_push: val={} ${:08x}", imm, imm.raw());
-                self.stack_push(imm)?;
+                let val = self.follow_fwd(imm);  // FIXME: may be redundant with low-level memory redirection
+                self.stack_push(val)?;
                 kip
             },
             VM_DEPTH => {
@@ -2528,6 +2529,19 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 11;
     pub fn in_heap(&self, val: Any) -> bool {
         val.is_ram() && (val.addr() < self.mem_top().addr())
     }
+    fn follow_fwd(&self, val: Any) -> Any {
+        let raw = val.raw();
+        if (raw & (DIR_RAW | MUT_RAW)) == MUT_RAW {  // any RAM reference
+            let ptr = Any::new(raw & !OPQ_RAW);  // WARNING: may convert Cap to Ptr!
+            let quad = self.ram(ptr);
+            if quad.t() == GC_FWD_T {
+                let fwd = quad.z();
+                println!("follow_fwd: {} ${:08x} --> {} ${:08x}", val, val.raw(), fwd, fwd.raw());
+                return fwd;
+            }
+        }
+        val
+    }
     fn ptr_to_mem(&self, ptr: Any) -> Any {  // convert ptr/cap to current gc_phase
         let bank = ptr.bank();
         if bank.is_none() {
@@ -2620,8 +2634,12 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 11;
             Quad::memory_t(Any::ram(bank, ddeque.addr()), NIL, ZERO, root));
         let mut scan = ddeque;
         while scan.addr() <= SPONSOR.addr() {  // mark reserved RAM
+            let raw = scan.raw();
+            if self.gc_load(scan).t() == ACTOR_T {
+                scan = Any::new(raw | OPQ_RAW);  // inferred capability
+            }
             self.gc_mark(scan);
-            scan = Any::new(scan.raw() + 1);
+            scan = Any::new(raw + 1);
         }
         let root = self.gc_mark(root);
         self.set_mem_root(root);
@@ -2644,6 +2662,7 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 11;
                 if val.is_cap() {
                     dup = self.ptr_to_cap(dup);  // restore CAP marker
                 };
+                //println!("gc_mark: {} ${:08x} --> {} ${:08x}", val, val.raw(), dup, dup.raw());
                 self.gc_store(val, Quad::gc_fwd_t(dup));  // leave "broken heart" behind
                 return dup;
             }
