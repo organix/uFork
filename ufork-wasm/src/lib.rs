@@ -74,7 +74,7 @@ impl Host {
     pub fn step(&mut self) -> bool {  // single-step instruction execution
         match self.core.execute_instruction() {
             Ok(more) => {
-                if !more {
+                if !more && !self.core.e_first().is_ram() {  // EQ must also be empty.
                     println!("continuation queue empty!");
                     return false;  // no more instructions...
                 }

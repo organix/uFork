@@ -1361,6 +1361,7 @@ pub const _T_DEV_BEH: Any  = Any { raw: T_DEV_ADDR as Raw };
         quad_rom[T_DEV_ADDR+9]      = Quad::vm_push(MINUS_1, Any::rom(T_DEV_ADDR+10));  // -1
         quad_rom[T_DEV_ADDR+10]     = Quad::vm_push(CLOCK_DEV, Any::rom(T_DEV_ADDR+11));  // -1 clock_device
         quad_rom[T_DEV_ADDR+11]     = Quad::vm_send(ZERO, Any::rom(T_DEV_ADDR+12));  // --
+        //quad_rom[T_DEV_ADDR+11]     = Quad::vm_send(ZERO, COMMIT);  // --
         quad_rom[T_DEV_ADDR+12]     = Quad::vm_push(PLUS_5, Any::rom(T_DEV_ADDR+13));  // 5
         quad_rom[T_DEV_ADDR+13]     = Quad::vm_push(_COUNT_BEH, Any::rom(T_DEV_ADDR+14));  // 5 count-beh
         quad_rom[T_DEV_ADDR+14]     = Quad::vm_new(ZERO, Any::rom(T_DEV_ADDR+15));  // 5 a-count
@@ -1434,7 +1435,7 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 11;
             println!("run_loop: sponsor={} -> {}", sponsor, self.mem(sponsor));
             match self.execute_instruction() {
                 Ok(more) => {
-                    if !more {
+                    if !more && !self.e_first().is_ram() {  // EQ must also be empty.
                         return true;  // no more instructions to execute...
                     }
                 },
