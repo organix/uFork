@@ -1486,13 +1486,13 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 11;
             // message-event to device
             let id = index as usize;
             if id >= DEVICE_MAX {
-                return Err(format!("device id {} must be less than {}", index, DEVICE_MAX));
+                return Err(format!("device id {} must be less than {}", id, DEVICE_MAX));
             }
             let ep_ = self.event_dequeue().unwrap();
             assert_eq!(ep, ep_);
             let mut dev_mut = self.device[id].take().unwrap();
             let result = dev_mut.handle_event(self, ep);
-            let _ = self.device[id].insert(dev_mut);
+            self.device[id] = Some(dev_mut);
             result  // should normally be Ok(true)
         } else if events == UNDEF {
             // begin actor-event transaction
@@ -1551,7 +1551,7 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 11;
     }
     fn perform_op(&mut self, ip: Any) -> Result<Any, Error> {
         let instr = self.mem(ip);
-        println!("perform_op: ip={} -> {}", ip, instr);
+        println!("perform_op: ip={} ${:08x} -> {}", ip, ip.raw(), instr);
         assert!(instr.t() == INSTR_T);
         let opr = instr.x();  // operation code
         let imm = instr.y();  // immediate argument
@@ -1678,7 +1678,7 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 11;
                 kip
             },
             VM_PUSH => {
-                println!("vm_push: val={}", imm);
+                println!("vm_push: val={} ${:08x}", imm, imm.raw());
                 self.stack_push(imm)?;
                 kip
             },
@@ -1760,9 +1760,9 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 11;
                 kip
             },
             VM_EQ => {
-                println!("vm_eq: v={}", imm);
+                println!("vm_eq: v={} ${:08x}", imm, imm.raw());
                 let vv = self.stack_pop();
-                println!("vm_eq: vv={}", vv);
+                println!("vm_eq: vv={} ${:08x}", vv, vv.raw());
                 let r = if imm == vv { TRUE } else { FALSE };
                 println!("vm_eq: r={}", r);
                 self.stack_push(r)?;
@@ -1771,9 +1771,9 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 11;
             VM_CMP => {
                 println!("vm_cmp: op={}", imm);
                 let vv = self.stack_pop();
-                println!("vm_cmp: vv={}", vv);
+                println!("vm_cmp: vv={} ${:08x}", vv, vv.raw());
                 let v = self.stack_pop();
-                println!("vm_cmp: v={}", v);
+                println!("vm_cmp: v={} ${:08x}", v, v.raw());
                 let b = if imm == CMP_EQ {
                     v == vv
                 } else if imm == CMP_NE {
@@ -1818,12 +1818,12 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 11;
             VM_MY => {
                 println!("vm_my: op={}", imm);
                 let me = self.self_ptr();
-                println!("vm_my: me={} -> {}", me, self.ram(me));
+                println!("vm_my: me={} ${:08x} -> {}", me, me.raw(), self.ram(me));
                 match imm {
                     MY_SELF => {
                         let ep = self.ep();
                         let target = self.ram(ep).x();
-                        println!("vm_my: self={}", target);
+                        println!("vm_my: self={} ${:08x}", target, target.raw());
                         self.stack_push(target)?;
                     },
                     MY_BEH => {
@@ -1846,7 +1846,7 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 11;
                 println!("vm_send: cnt={}", imm);
                 let num = imm.get_fix()?;
                 let target = self.stack_pop();
-                println!("vm_send: target={}", target);
+                println!("vm_send: target={} ${:08x}", target, target.raw());
                 assert!(self.typeq(ACTOR_T, target));
                 let msg = if num > 0 {
                     self.pop_counted(num)
@@ -1875,7 +1875,7 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 11;
                 let sp = self.pop_counted(num);
                 println!("vm_new: sp={}", sp);
                 let a = self.new_actor(ip, sp)?;
-                println!("vm_new: actor={}", a);
+                println!("vm_new: actor={} ${:08x}", a, a.raw());
                 self.stack_push(a)?;
                 kip
             },
@@ -2512,9 +2512,10 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 11;
             val.is_fix()
         } else if typ == ACTOR_T {
             if val.is_cap() {
+                // NOTE: we don't use `cap_to_ptr` here to avoid the type assertion.
                 let raw = val.raw() & !OPQ_RAW;  // WARNING: converting Cap to Ptr!
                 let ptr = Any::new(raw);
-                self.ram(ptr).t() == ACTOR_T
+                self.mem(ptr).t() == ACTOR_T
             } else {
                 false
             }
@@ -2537,7 +2538,7 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 11;
         }
     }
     fn ptr_to_cap(&self, ptr: Any) -> Any {
-        assert!(self.ram(ptr).t() == ACTOR_T);
+        assert!(self.mem(ptr).t() == ACTOR_T);
         let raw = ptr.raw() | OPQ_RAW;
         let cap = Any::new(raw);
         cap
@@ -2545,7 +2546,7 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 11;
     fn cap_to_ptr(&self, cap: Any) -> Any {
         let raw = cap.raw() & !OPQ_RAW;
         let ptr = Any::new(raw);
-        assert!(self.ram(ptr).t() == ACTOR_T);
+        assert!(self.mem(ptr).t() == ACTOR_T);
         ptr
     }
 
@@ -2613,7 +2614,7 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 11;
         let ddeque = self.ddeque();
         let root = self.mem_root();
         let bank = if self.gc_phase() == BNK_0 { BNK_1 } else { BNK_0 };  // determine new phase
-        println!("gc_stop_the_world: phase {} -> {}", self.gc_phase(), bank);
+        println!("gc_stop_the_world: phase ${:08x} -> ${:08x}", self.gc_phase(), bank);
         self.set_mem_top(UNDEF);  // toggle GC phase
         self.gc_store(Any::ram(bank, MEMORY.addr()),
             Quad::memory_t(Any::ram(bank, ddeque.addr()), NIL, ZERO, root));
@@ -2891,7 +2892,7 @@ fn run_loop_terminates() {
     //core.set_sponsor_events(_ep, Any::fix(0));  // FIXME: forcing "out-of-events" error...
     let ok = core.run_loop();
     assert!(ok);
-    assert!(false);  // force output to be displayed
+    //assert!(false);  // force output to be displayed
 }
 
 #[test]
