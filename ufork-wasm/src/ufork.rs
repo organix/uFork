@@ -1355,11 +1355,11 @@ pub const _T_DEV_BEH: Any  = Any { raw: T_DEV_ADDR as Raw };
         quad_rom[T_DEV_ADDR+3]      = Quad::vm_push(PLUS_2, Any::rom(T_DEV_ADDR+4));  // 2
         quad_rom[T_DEV_ADDR+4]      = Quad::vm_push(NULL_DEV, Any::rom(T_DEV_ADDR+5));  // 2 null_device
         quad_rom[T_DEV_ADDR+5]      = Quad::vm_send(ZERO, Any::rom(T_DEV_ADDR+6));  // --
-        quad_rom[T_DEV_ADDR+6]      = Quad::vm_push(PLUS_3, Any::rom(T_DEV_ADDR+7));  // 3
-        quad_rom[T_DEV_ADDR+7]      = Quad::vm_push(NULL_DEV, Any::rom(T_DEV_ADDR+8));  // 3 null_device
+        quad_rom[T_DEV_ADDR+6]      = Quad::vm_push(IO_DEV, Any::rom(T_DEV_ADDR+7));  // io_device
+        quad_rom[T_DEV_ADDR+7]      = Quad::vm_push(CLOCK_DEV, Any::rom(T_DEV_ADDR+8));  // io_device clock_device
         quad_rom[T_DEV_ADDR+8]      = Quad::vm_send(ZERO, Any::rom(T_DEV_ADDR+9));  // --
         quad_rom[T_DEV_ADDR+9]      = Quad::vm_push(MINUS_1, Any::rom(T_DEV_ADDR+10));  // -1
-        quad_rom[T_DEV_ADDR+10]     = Quad::vm_push(CLOCK_DEV, Any::rom(T_DEV_ADDR+11));  // -1 clock_device
+        quad_rom[T_DEV_ADDR+10]     = Quad::vm_push(IO_DEV, Any::rom(T_DEV_ADDR+11));  // -1 io_device
         quad_rom[T_DEV_ADDR+11]     = Quad::vm_send(ZERO, Any::rom(T_DEV_ADDR+12));  // --
         //quad_rom[T_DEV_ADDR+11]     = Quad::vm_send(ZERO, COMMIT);  // --
         quad_rom[T_DEV_ADDR+12]     = Quad::vm_push(PLUS_5, Any::rom(T_DEV_ADDR+13));  // 5
@@ -1423,8 +1423,8 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 11;
             quad_ram1: if BNK_INI == BNK_1 { quad_ram } else { [ Quad::empty_t(); QUAD_RAM_MAX ] },
             device: [
                 Some(Box::new(NullDevice::new())),
-                Some(Box::new(NullDevice::new())),
-                Some(Box::new(NullDevice::new())),
+                Some(Box::new(ClockDevice::new())),
+                Some(Box::new(IoDevice::new())),
             ],
         }
     }
@@ -1978,7 +1978,7 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 11;
             None
         }
     }
-    fn event_inject(&mut self, ep: Any) {
+    pub fn event_inject(&mut self, ep: Any) {
         // add event to the front of the queue (e.g.: for interrupts)
         let first = self.e_first();
         self.ram_mut(ep).set_z(first);

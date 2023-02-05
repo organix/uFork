@@ -35,6 +35,11 @@ pub fn greet(name: &str) {
     alert(&format!("Hello, {}!", name));
 }
 
+#[wasm_bindgen(module = "/ufork.js")]
+extern {
+    fn raw_clock() -> Raw;
+}
+
 #[wasm_bindgen]
 pub struct Host {
     core: Core,
