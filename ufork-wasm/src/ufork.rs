@@ -1412,8 +1412,8 @@ pub const K_BOOT: Any       = Any { raw: MUT_RAW | BNK_INI | (BOOT_ADDR+10) as R
         //quad_ram[BOOT_ADDR+10]      = Quad::new_cont(SINK_BEH, NIL, E_BOOT);
         //quad_ram[BOOT_ADDR+10]      = Quad::new_cont(STOP, _BOOT_SP, E_BOOT);
         //quad_ram[BOOT_ADDR+10]      = Quad::new_cont(_BOOT_BEH, _BOOT_SP, E_BOOT);
-        //quad_ram[BOOT_ADDR+10]      = Quad::new_cont(_TEST_BEH, NIL, E_BOOT);
-        quad_ram[BOOT_ADDR+10]      = Quad::new_cont(_T_DEV_BEH, NIL, E_BOOT);
+        quad_ram[BOOT_ADDR+10]      = Quad::new_cont(_TEST_BEH, NIL, E_BOOT);
+        //quad_ram[BOOT_ADDR+10]      = Quad::new_cont(_T_DEV_BEH, NIL, E_BOOT);
 
 pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 11;
 
