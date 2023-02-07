@@ -1,0 +1,6 @@
+[package]
+name = "minimal-wasm"
+version = "1.0.0"
+
+[lib]
+crate-type = ["cdylib"]
