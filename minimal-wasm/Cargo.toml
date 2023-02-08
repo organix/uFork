@@ -4,3 +4,11 @@ version = "1.0.0"
 
 [lib]
 crate-type = ["cdylib"]
+
+[dependencies]
+lol_alloc = "0.3.0"     # Used in no_std mode.
+
+[profile.release]
+strip = true            # Strip debug symbols.
+opt-level = "z"         # Optimize for small code size.
+lto = true              # Link time optimization.

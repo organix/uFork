@@ -11,4 +11,11 @@ window.WebAssembly.instantiateStreaming(
     }
 ).then(function (wasm) {
     console.log(wasm.instance.exports.call_double(21));
+    wasm.instance.exports.init();
+    console.log(wasm.instance.exports.ip());
+    console.log(wasm.instance.exports.step());
+    console.log(wasm.instance.exports.ip());
+    console.log(wasm.instance.exports.step());
+    console.log(wasm.instance.exports.ip());
+    console.log(wasm.instance.exports.fixnum(12));
 });
