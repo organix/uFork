@@ -7,18 +7,18 @@
 
 pkgs.mkShell {
     buildInputs = [
-        pkgs.rustup         # cargo and rustc
-        pkgs.nodejs-19_x    # node
-        pkgs.fswatch        # file change watcher
-        pkgs.twiggy         # WASM code size profiler
+        pkgs.rustup                     # cargo and rustc
+        pkgs.nodejs-19_x                # node
+        pkgs.fswatch                    # file change watcher
+        pkgs.twiggy                     # WASM code size profiler
     ];
 
     shellHook = ''
+        rustup default nightly          # no_std support
         rustup target add wasm32-unknown-unknown
 
         alias s="./serve.sh"
         alias b="./build.sh"
         alias w="./watch.sh"
-        alias p="./profile_size.sh"
     '';
 }
