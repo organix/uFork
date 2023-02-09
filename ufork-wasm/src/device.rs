@@ -40,11 +40,11 @@ impl ClockDevice {
 impl Device for ClockDevice {
     fn handle_event(&mut self, core: &mut Core, ep: Any) -> Result<bool, Error> {
         let event = core.mem(ep);
+        let sponsor = event.t();
         let cust = event.y();
         let now = raw_clock();
         let msg = Any::fix(now as isize);
-        let ep = core.new_event(cust, msg)?;
-        core.event_inject(ep);
+        core.event_inject(sponsor, cust, msg)?;
         Ok(true)  // event handled.
     }
 }

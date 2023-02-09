@@ -1412,8 +1412,8 @@ pub const K_BOOT: Any       = Any { raw: MUT_RAW | BNK_INI | (BOOT_ADDR+10) as R
         //quad_ram[BOOT_ADDR+10]      = Quad::new_cont(SINK_BEH, NIL, E_BOOT);
         //quad_ram[BOOT_ADDR+10]      = Quad::new_cont(STOP, _BOOT_SP, E_BOOT);
         //quad_ram[BOOT_ADDR+10]      = Quad::new_cont(_BOOT_BEH, _BOOT_SP, E_BOOT);
-        quad_ram[BOOT_ADDR+10]      = Quad::new_cont(_TEST_BEH, NIL, E_BOOT);
-        //quad_ram[BOOT_ADDR+10]      = Quad::new_cont(_T_DEV_BEH, NIL, E_BOOT);
+        //quad_ram[BOOT_ADDR+10]      = Quad::new_cont(_TEST_BEH, NIL, E_BOOT);
+        quad_ram[BOOT_ADDR+10]      = Quad::new_cont(_T_DEV_BEH, NIL, E_BOOT);
 
 pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 11;
 
@@ -1978,14 +1978,17 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 11;
             None
         }
     }
-    pub fn event_inject(&mut self, ep: Any) {
+    pub fn event_inject(&mut self, sponsor: Any, target: Any, msg: Any) -> Result<(), Error> {
         // add event to the front of the queue (e.g.: for interrupts)
+        let event = Quad::new_event(sponsor, target, msg);
+        let ep = self.reserve(&event)?;  // no Sponsor needed
         let first = self.e_first();
         self.ram_mut(ep).set_z(first);
         if !first.is_ram() {
             self.set_e_last(ep);
         }
         self.set_e_first(ep);
+        Ok(())
     }
 
     fn cont_enqueue(&mut self, kp: Any) {
@@ -2061,7 +2064,7 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 11;
             let target = self.mem(ep).x();
             let me = self.cap_to_ptr(target);
             self.actor_abort(me);
-            self.event_inject(ep);
+            self.event_enqueue(ep);
             true
         } else {
             false
