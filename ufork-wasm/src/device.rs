@@ -10,23 +10,16 @@ pub trait Device {
     fn handle_event(&mut self, core: &mut Core, ep: Any) -> Result<bool, Error>;
 }
 
-pub struct NullDevice {
-    // Null device has no device-specific data
-    call_count: usize,
-}
+pub struct NullDevice {}
 impl NullDevice {
     pub fn new() -> NullDevice {
-        NullDevice {
-            call_count: 0,
-        }
+        NullDevice {}
     }
 }
 impl Device for NullDevice {
     fn handle_event(&mut self, core: &mut Core, ep: Any) -> Result<bool, Error> {
         let event = core.mem(ep);
-        let count = self.call_count + 1;
-        println!("NullDevice::handle_event: event({})={} -> {}", count, ep, event);
-        self.call_count = count;
+        println!("NullDevice::handle_event: event={} -> {}", ep, event);
         Ok(true)  // event handled.
         //Err(String::from("NullDevice::failure!"))  // force failure...
     }
@@ -74,7 +67,6 @@ impl Device for ClockDevice {
 }
 
 pub struct IoDevice {
-    // I/O device has no device-specific data
     call_count: usize,
 }
 impl IoDevice {
@@ -87,11 +79,10 @@ impl IoDevice {
 impl Device for IoDevice {
     fn handle_event(&mut self, core: &mut Core, ep: Any) -> Result<bool, Error> {
         let event = core.mem(ep);
-        println!("IoDevice::handle_event: event={} -> {}", ep, event);
+        let count = self.call_count + 1;
+        println!("IoDevice::handle_event: event({})={} -> {}", count, ep, event);
         let myself = event.x();
         let message = event.y();
-        let count = self.call_count + 1;
-        //greet("IO");
         let greeting = format!("IO: count={} self={} message={}", count, myself, message);
         greet(greeting.as_str());
         self.call_count = count;
