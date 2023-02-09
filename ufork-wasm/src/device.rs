@@ -2,6 +2,8 @@
 
 use crate::ufork::*;
 use crate::greet;
+
+#[cfg(target_arch = "wasm32")]
 use crate::raw_clock;
 
 pub trait Device {
@@ -31,11 +33,31 @@ impl Device for NullDevice {
 }
 
 pub struct ClockDevice {
-    // Clock device has no device-specific data
+    clock_ticks: Any,
 }
 impl ClockDevice {
     pub fn new() -> ClockDevice {
-        ClockDevice {}
+        ClockDevice {
+            clock_ticks: ZERO,
+        }
+    }
+    #[cfg(target_arch = "wasm32")]
+    fn read_clock(&mut self) -> Any {
+        let raw = raw_clock();
+        let now = Any::fix(raw as isize);
+        self.clock_ticks = now;
+        now
+    }
+    #[cfg(not(target_arch = "wasm32"))]
+    fn read_clock(&mut self) -> Any {
+        match self.clock_ticks.fix_num() {
+            Some(t) => {
+                let now = Any::fix(t + 13);  // arbitrary advance on each call
+                self.clock_ticks = now;
+                now
+            }
+            None => ZERO,
+        }
     }
 }
 impl Device for ClockDevice {
@@ -44,10 +66,9 @@ impl Device for ClockDevice {
         println!("ClockDevice::handle_event: event={} -> {}", ep, event);
         let sponsor = event.t();
         let cust = event.y();
-        let now = raw_clock();
-        let msg = Any::fix(now as isize);
-        println!("ClockDevice::handle_event: now={}", msg);
-        core.event_inject(sponsor, cust, msg)?;
+        let now = self.read_clock();
+        println!("ClockDevice::handle_event: now={}", now);
+        core.event_inject(sponsor, cust, now)?;
         Ok(true)  // event handled.
     }
 }

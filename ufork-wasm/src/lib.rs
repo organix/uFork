@@ -45,14 +45,6 @@ pub fn greet(name: &str) {
 extern {
     fn raw_clock() -> Raw;
 }
-#[cfg(not(target_arch = "wasm32"))]
-pub fn raw_clock() -> Raw {
-    static mut TICKS: isize = 0;
-    unsafe {
-        TICKS = TICKS + 13;  // arbitrary advance on each call
-        Any::fix(TICKS).raw()
-    }
-}
 
 #[wasm_bindgen]
 pub struct Host {
