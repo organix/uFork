@@ -22,6 +22,7 @@ impl Device for NullDevice {
         println!("NullDevice::handle_event: event={} -> {}", ep, event);
         Ok(true)  // event handled.
         //Err(String::from("NullDevice::failure!"))  // force failure...
+        //panic!();  // terminate simulator!
     }
 }
 

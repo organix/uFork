@@ -1,16 +1,26 @@
-mod utils;
-
-use wasm_bindgen::prelude::*;
-use std::fmt;
+/*
+#![no_std]
+use core::panic::PanicInfo;
+#[cfg(target_arch = "wasm32")]
+use core::arch::wasm32::unreachable;
+#[cfg(target_arch = "wasm32")]
+#[panic_handler]
+fn panic(_: &PanicInfo) -> ! {
+    unreachable()
+}
+*/
 
 pub mod ufork;
 pub mod device;
 
-use crate::ufork::*;
-
 // FIXME: `use js_sys;` instead?
 extern crate js_sys;
 extern crate web_sys;
+
+use wasm_bindgen::prelude::*;
+use std::fmt;
+
+use crate::ufork::*;
 
 // A macro to provide `println!(..)`-style syntax for `console.log` logging.
 macro_rules! log {
@@ -70,7 +80,6 @@ impl fmt::Display for Host {
 #[wasm_bindgen]
 impl Host {
     pub fn new() -> Host {
-        utils::set_panic_hook();  // log panic messages to browser console
         let core = Core::new();
         Host {
             core,
@@ -330,7 +339,7 @@ impl Universe {
 #[wasm_bindgen]
 impl Universe {
     pub fn new(width: Value, height: Value) -> Universe {
-        utils::set_panic_hook();  // log panic messages to browser console
+        //utils::set_panic_hook();  // log panic messages to browser console
 
         let cells = (0..width * height).map(|_i| Cell::Dead).collect();
 
