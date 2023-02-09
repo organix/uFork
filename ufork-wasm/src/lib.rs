@@ -25,9 +25,14 @@ macro_rules! log {
     }
 }
 
+#[cfg(target_arch = "wasm32")]
 #[wasm_bindgen]
 extern {
     fn alert(s: &str);
+}
+#[cfg(not(target_arch = "wasm32"))]
+pub fn alert(s: &str) {
+    println!("alert: {}", s);
 }
 
 #[wasm_bindgen]
@@ -35,9 +40,18 @@ pub fn greet(name: &str) {
     alert(&format!("Hello, {}!", name));
 }
 
+#[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(module = "/ufork.js")]
 extern {
     fn raw_clock() -> Raw;
+}
+#[cfg(not(target_arch = "wasm32"))]
+pub fn raw_clock() -> Raw {
+    static mut TICKS: isize = 0;
+    unsafe {
+        TICKS = TICKS + 13;  // arbitrary advance on each call
+        Any::fix(TICKS).raw()
+    }
 }
 
 #[wasm_bindgen]
@@ -80,21 +94,21 @@ impl Host {
         match self.core.execute_instruction() {
             Ok(more) => {
                 if !more && !self.core.e_first().is_ram() {  // EQ must also be empty.
-                    println!("continuation queue empty!");
+                    log!("continuation queue empty!");
                     return false;  // no more instructions...
                 }
             },
             Err(error) => {
-                println!("execution ERROR! {}", error);
+                log!("execution ERROR! {}", error);
                 return false;  // execute instruction failed...
             },
         }
         if let Err(error) = self.core.check_for_interrupt() {
-            println!("interrupt ERROR! {}", error);
+            log!("interrupt ERROR! {}", error);
             return false;  // interrupt handler failed...
         }
         if let Err(error) = self.core.dispatch_event() {
-            println!("dispatch ERROR! {}", error);
+            log!("dispatch ERROR! {}", error);
             return false;  // event dispatch failed...
         }
         true  // step successful

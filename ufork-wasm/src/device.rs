@@ -26,6 +26,7 @@ impl Device for NullDevice {
         println!("NullDevice::handle_event: event({})={} -> {}", count, ep, event);
         self.call_count = count;
         Ok(true)  // event handled.
+        //Err(String::from("NullDevice::failure!"))  // force failure...
     }
 }
 
@@ -40,10 +41,12 @@ impl ClockDevice {
 impl Device for ClockDevice {
     fn handle_event(&mut self, core: &mut Core, ep: Any) -> Result<bool, Error> {
         let event = core.mem(ep);
+        println!("ClockDevice::handle_event: event={} -> {}", ep, event);
         let sponsor = event.t();
         let cust = event.y();
         let now = raw_clock();
         let msg = Any::fix(now as isize);
+        println!("ClockDevice::handle_event: now={}", msg);
         core.event_inject(sponsor, cust, msg)?;
         Ok(true)  // event handled.
     }
@@ -63,6 +66,7 @@ impl IoDevice {
 impl Device for IoDevice {
     fn handle_event(&mut self, core: &mut Core, ep: Any) -> Result<bool, Error> {
         let event = core.mem(ep);
+        println!("IoDevice::handle_event: event={} -> {}", ep, event);
         let myself = event.x();
         let message = event.y();
         let count = self.call_count + 1;
