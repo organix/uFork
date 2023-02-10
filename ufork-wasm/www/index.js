@@ -1,4 +1,4 @@
-import init, { Universe, Cell, Host } from "../pkg/ufork_wasm.js";
+import init, { Universe, Cell, Host, h_step, h_fixnum } from "../pkg/ufork_wasm.js";
 
 const CELL_SIZE = 5; // px
 const GRID_COLOR = "#9CF";
@@ -183,7 +183,7 @@ const gcHost = () => {
 	drawUniverse();
 }
 const singleStep = () => {
-	const ok = host.step();
+	const ok = h_step(); //host.step();
 	fault = !ok;
 	universe.tick();
 	drawUniverse();
@@ -343,6 +343,11 @@ const pauseAction = () => {
 }
 
 init().then(function (wasm) {
+	console.log("fixnum(0) = ", h_fixnum(0), h_fixnum(0).toString(16));
+	console.log("fixnum(1) = ", h_fixnum(1), h_fixnum(1).toString(16));
+	console.log("fixnum(-1) = ", h_fixnum(-1), h_fixnum(-1).toString(16));
+	console.log("fixnum(-2) = ", h_fixnum(-2), h_fixnum(-2).toString(16));
+
 	memory = wasm.memory;
 	host = Host.new();
 

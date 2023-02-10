@@ -19,6 +19,7 @@ extern crate web_sys;
 
 use wasm_bindgen::prelude::*;
 use std::fmt;
+use core::cell::RefCell;
 
 use crate::ufork::*;
 
@@ -48,6 +49,32 @@ pub fn greet(name: &str) {
 #[wasm_bindgen(module = "/ufork.js")]
 extern {
     fn raw_clock() -> Raw;
+}
+
+unsafe fn the_host() -> &'static RefCell<Host> {
+    static mut THE_HOST: Option<RefCell<Host>> = None;
+
+    match &THE_HOST {
+        Some(host) => host,
+        None => {
+            THE_HOST = Some(RefCell::new(Host::new()));
+            the_host()
+        },
+    }
+}
+
+#[wasm_bindgen]
+pub fn h_step() -> bool {
+    unsafe {
+        the_host().borrow_mut().step()
+    }
+}
+
+#[wasm_bindgen]
+pub fn h_fixnum(n: Num) -> Raw {
+    unsafe {
+        the_host().borrow().fixnum(n)
+    }
 }
 
 #[wasm_bindgen]
