@@ -1,4 +1,8 @@
-import init, { Universe, Cell, Host, h_step, h_fixnum } from "../pkg/ufork_wasm.js";
+import init, {
+    Universe, Cell, Host,
+    h_step, h_gc_phase,
+    h_mem_top, h_mem_next, h_mem_free, h_mem_root,
+} from "../pkg/ufork_wasm.js";
 
 const CELL_SIZE = 5; // px
 const GRID_COLOR = "#9CF";
@@ -44,281 +48,356 @@ const $rate = document.getElementById("frame-rate");
 let frame = 1;  // frame-rate countdown
 let mem_max = 0;
 
+// type-tag bits
+const MSK_RAW   = 0xF000_0000;  // mask for type-tag bits
+const DIR_RAW   = 0x8000_0000;  // 1=direct (fixnum), 0=indirect (pointer)
+const OPQ_RAW   = 0x4000_0000;  // 1=opaque (capability), 0=transparent (navigable)
+const MUT_RAW   = 0x2000_0000;  // 1=read-write (mutable), 0=read-only (immutable)
+const BNK_RAW   = 0x1000_0000;  // 1=bank_1, 0=bank_0 (half-space GC phase)
+const BNK_0_RAW = 0;
+const BNK_1_RAW = BNK_RAW;
+// raw constants
+const UNDEF_RAW = 0x0000_0000;
+const NIL_RAW   = 0x0000_0001;
+const FALSE_RAW = 0x0000_0002;
+const TRUE_RAW  = 0x0000_0003;
+const UNIT_RAW 	= 0x0000_0004;
+// helper functions
+function h_warning(message) {
+    console.log("WARNING!", message);
+    return UNDEF_RAW;
+}
+function h_is_fix(raw) {
+    return ((raw & DIR_RAW) === 0);
+}
+function h_is_cap(raw) {
+    return ((raw & (DIR_RAW | OPQ_RAW)) === OPQ_RAW);
+}
+function h_is_ptr(raw) {
+    return ((raw & (DIR_RAW | OPQ_RAW)) === 0);
+}
+function h_is_rom(raw) {
+    return ((raw & (DIR_RAW | OPQ_RAW | MUT_RAW)) === 0);
+}
+function h_is_ram(raw) {
+    return ((raw & (DIR_RAW | OPQ_RAW | MUT_RAW)) === MUT_RAW);
+}
+function h_fixnum(i32) {
+    return (i32 | DIR_RAW) >>> 0;
+}
+function h_rawofs(raw) {
+    return (raw & ~MSK_RAW);
+}
+function h_romptr(ofs) {
+    return h_rawofs(ofs);
+}
+function h_ramptr(ofs, bnk) {
+    if (typeof bnk !== "number") {
+        bnk = h_gc_phase();
+    }
+    return (h_rawofs(ofs) | MUT_RAW | bnk);
+}
+function h_cap_to_ptr(cap) {
+    return (h_is_fix(cap)
+        ? h_warning("cap_to_ptr: can't convert fixnum")
+        : (cap & ~OPQ_RAW));
+}
+function h_ptr_to_cap(ptr) {
+    return (h_is_fix(cap)
+        ? h_warning("cap_to_ptr: can't convert fixnum")
+        : (ptr | OPQ_RAW));
+}
+function h_print(raw) {
+    if (typeof raw !== "number") {
+        return "" + raw;
+    }
+    if (raw & DIR_RAW) {  // fixnum
+        raw = (raw << 1) >> 1;
+        if (raw < 0) {
+            return "" + raw;
+        } else {
+            return "+" + raw;
+        }
+    }
+    const prefix = (raw & OPQ_RAW) ? "@" : "^";
+    return prefix + ("00000000" + raw.toString(16)).slice(-8);
+}
+
 const updateElementText = (el, txt) => {
-	if (el.textContent == txt) {
-		el.style.color = '#000';
-	} else {
-		el.style.color = '#03F';
-	}
-	el.textContent = txt;
+    if (el.textContent == txt) {
+        el.style.color = '#000';
+    } else {
+        el.style.color = '#03F';
+    }
+    el.textContent = txt;
 }
 const drawHost = () => {
-	var a;
+    var a;
 
-	if (fault) {
-		$fault.setAttribute("fill", "#F30");
-		$fault.setAttribute("stroke", "#900");
-	} else {
-		$fault.setAttribute("fill", "#0F3");
-		$fault.setAttribute("stroke", "#090");
-	}
-	const top = host.rom_addr(host.mem_top());
-	if (top > mem_max) {
-		mem_max = top;
-	}
-	updateElementText($mem_max, mem_max.toString());
-	updateElementText($mem_top, host.print(host.mem_top()));
-	updateElementText($mem_next, host.print(host.mem_next()));
-	$mem_next.title = host.disasm(host.mem_next());
-	updateElementText($mem_free, host.print(host.mem_free()));
-	updateElementText($mem_root, host.print(host.mem_root()));
-	$mem_root.title = host.disasm(host.mem_root());
-	updateElementText($gc_phase, host.gc_phase() == 0 ? "Bank 0" : "Bank 1");
-	updateElementText($sponsor_memory, host.print(host.sponsor_memory()));
-	updateElementText($sponsor_events, host.print(host.sponsor_events()));
-	updateElementText($sponsor_instrs, host.print(host.sponsor_instrs()));
-	//$mem_rom.textContent = host.render();
-	a = [];
-	for (let addr = 0; addr < 512; addr++) {
-		const raw = host.rom_addr(addr);
-		const line = '$'
-			+ ('00000000' + raw.toString(16)).slice(-8)
-			+ ': '
-			+ host.display(raw);
-		a.push(line);
-		$mem_rom.textContent = a.join("\n");
-	}
-	a = [];
-	for (let addr = 0; addr < 256; addr++) {
-		const raw = host.ram_addr(host.gc_phase(), addr);
-		const line = '$'
-			+ ('00000000' + raw.toString(16)).slice(-8)
-			+ ': '
-			+ host.display(raw);
-		a.push(line);
-		$mem_ram.textContent = a.join("\n");
-	}
-	const ip = host.ip();
-	//updateElementText($ip, host.print(ip));
-	if (host.in_mem(ip)) {
-		let p = ip;
-		let n = 5;
-		let a = [];
-		while ((n > 0) && host.in_mem(p)) {
-			a.push(host.display(p));
-			p = host.next(p);
-			n -= 1;
-		}
-		if (host.in_mem(p)) {
-			a.push("...");
-		}
-		updateElementText($instr, a.join("\n"));
-	} else {
-		updateElementText($instr, host.display(ip));
-	}
-	const sp = host.sp();
-	//updateElementText($sp, host.print(sp));
-	//$sp.title = host.disasm(sp);
-	if (host.in_mem(sp)) {
-		let p = sp;
-		let a = [];
-		while (host.is_pair(p)) {
-			//a.push(host.disasm(p));  // disasm stack Pair
-			//a.push(host.print(host.car(p)));  // print stack item
-			//a.push(host.display(host.car(p)));  // display stack item
-			a.push(host.pprint(host.car(p)));  // pretty-print stack item
-			p = host.cdr(p);
-		}
-		updateElementText($stack, a.join("\n"));
-	} else {
-		//$stack.innerHTML = "<i>empty</i>";
-		updateElementText($stack, "--");
-	}
-	$stack.title = host.display(sp);
-	const kq = host.kqueue();
-	if (host.in_mem(kq)) {
-		let p = kq;
-		let a = [];
-		while (host.in_mem(p)) {
-			a.push(host.display(p));  // display continuation
-			//a.push(host.disasm(p));  // disasm continuation
-			p = host.next(p);
-		}
-		updateElementText($kqueue, a.join("\n"));
-	} else {
-		updateElementText($kqueue, "--");
-	}
-	const eq = host.equeue();
-	if (host.in_mem(eq)) {
-		let p = eq;
-		let a = [];
-		while (host.in_mem(p)) {
-			a.push(host.display(p));  // display event
-			//a.push(host.disasm(p));  // disasm event
-			p = host.next(p);
-		}
-		updateElementText($equeue, a.join("\n"));
-	} else {
-		updateElementText($equeue, "--");
-	}
-	const ep = host.ep();
-	//updateElementText($ep, host.print(ep));
-	updateElementText($event, host.display(ep));
-	const ap = host.e_self();
-	//updateElementText($ap, host.print(ap));
-	updateElementText($self, host.display(ap));
-	const mp = host.e_msg();
-	//updateElementText($mp, host.print(mp));
-	//$mp.title = host.disasm(mp);
-	updateElementText($msg, host.pprint(mp));
-	$msg.title = host.display(mp);
+    if (fault) {
+        $fault.setAttribute("fill", "#F30");
+        $fault.setAttribute("stroke", "#900");
+    } else {
+        $fault.setAttribute("fill", "#0F3");
+        $fault.setAttribute("stroke", "#090");
+    }
+    const top = host.rom_addr(host.mem_top());
+    if (top > mem_max) {
+        mem_max = top;
+    }
+    updateElementText($mem_max, mem_max.toString());
+    updateElementText($mem_top, host.print(host.mem_top()));
+    updateElementText($mem_next, host.print(host.mem_next()));
+    $mem_next.title = host.disasm(host.mem_next());
+    updateElementText($mem_free, host.print(host.mem_free()));
+    updateElementText($mem_root, host.print(host.mem_root()));
+    $mem_root.title = host.disasm(host.mem_root());
+    updateElementText($gc_phase, host.gc_phase() == 0 ? "Bank 0" : "Bank 1");
+    updateElementText($sponsor_memory, host.print(host.sponsor_memory()));
+    updateElementText($sponsor_events, host.print(host.sponsor_events()));
+    updateElementText($sponsor_instrs, host.print(host.sponsor_instrs()));
+    //$mem_rom.textContent = host.render();
+    a = [];
+    for (let addr = 0; addr < 512; addr++) {
+        const raw = host.rom_addr(addr);
+        const line = '$'
+            + ('00000000' + raw.toString(16)).slice(-8)
+            + ': '
+            + host.display(raw);
+        a.push(line);
+        $mem_rom.textContent = a.join("\n");
+    }
+    a = [];
+    for (let addr = 0; addr < 256; addr++) {
+        const raw = host.ram_addr(host.gc_phase(), addr);
+        const line = '$'
+            + ('00000000' + raw.toString(16)).slice(-8)
+            + ': '
+            + host.display(raw);
+        a.push(line);
+        $mem_ram.textContent = a.join("\n");
+    }
+    const ip = host.ip();
+    //updateElementText($ip, host.print(ip));
+    if (host.in_mem(ip)) {
+        let p = ip;
+        let n = 5;
+        let a = [];
+        while ((n > 0) && host.in_mem(p)) {
+            a.push(host.display(p));
+            p = host.next(p);
+            n -= 1;
+        }
+        if (host.in_mem(p)) {
+            a.push("...");
+        }
+        updateElementText($instr, a.join("\n"));
+    } else {
+        updateElementText($instr, host.display(ip));
+    }
+    const sp = host.sp();
+    //updateElementText($sp, host.print(sp));
+    //$sp.title = host.disasm(sp);
+    if (host.in_mem(sp)) {
+        let p = sp;
+        let a = [];
+        while (host.is_pair(p)) {
+            //a.push(host.disasm(p));  // disasm stack Pair
+            //a.push(host.print(host.car(p)));  // print stack item
+            //a.push(host.display(host.car(p)));  // display stack item
+            a.push(host.pprint(host.car(p)));  // pretty-print stack item
+            p = host.cdr(p);
+        }
+        updateElementText($stack, a.join("\n"));
+    } else {
+        //$stack.innerHTML = "<i>empty</i>";
+        updateElementText($stack, "--");
+    }
+    $stack.title = host.display(sp);
+    const kq = host.kqueue();
+    if (host.in_mem(kq)) {
+        let p = kq;
+        let a = [];
+        while (host.in_mem(p)) {
+            a.push(host.display(p));  // display continuation
+            //a.push(host.disasm(p));  // disasm continuation
+            p = host.next(p);
+        }
+        updateElementText($kqueue, a.join("\n"));
+    } else {
+        updateElementText($kqueue, "--");
+    }
+    const eq = host.equeue();
+    if (host.in_mem(eq)) {
+        let p = eq;
+        let a = [];
+        while (host.in_mem(p)) {
+            a.push(host.display(p));  // display event
+            //a.push(host.disasm(p));  // disasm event
+            p = host.next(p);
+        }
+        updateElementText($equeue, a.join("\n"));
+    } else {
+        updateElementText($equeue, "--");
+    }
+    const ep = host.ep();
+    //updateElementText($ep, host.print(ep));
+    updateElementText($event, host.display(ep));
+    const ap = host.e_self();
+    //updateElementText($ap, host.print(ap));
+    updateElementText($self, host.display(ap));
+    const mp = host.e_msg();
+    //updateElementText($mp, host.print(mp));
+    //$mp.title = host.disasm(mp);
+    updateElementText($msg, host.pprint(mp));
+    $msg.title = host.display(mp);
 }
 const drawUniverse = () => {
-	drawHost();
-	drawGrid();
-	drawCells();
+    drawHost();
+    drawGrid();
+    drawCells();
 }
 const gcHost = () => {
-	host.gc_run();
-	drawUniverse();
+    host.gc_run();
+    drawUniverse();
 }
 const singleStep = () => {
-	const ok = h_step(); //host.step();
-	fault = !ok;
-	universe.tick();
-	drawUniverse();
-	return ok;
+    const ok = h_step(); //host.step();
+    fault = !ok;
+    universe.tick();
+    drawUniverse();
+    return ok;
 };
 const renderLoop = () => {
-	//debugger;
-	if (paused) return;
+    //debugger;
+    if (paused) return;
 
-	if (--frame > 0) {
-		// skip this frame update
-	} else {
-		frame = +($rate.value);
-		if (singleStep() == false) {  // pause on fault signal
-			pauseAction();
-			return;
-		}
-	}
-	requestAnimationFrame(renderLoop);
+    if (--frame > 0) {
+        // skip this frame update
+    } else {
+        frame = +($rate.value);
+        if (singleStep() == false) {  // pause on fault signal
+            pauseAction();
+            return;
+        }
+    }
+    requestAnimationFrame(renderLoop);
 }
 
 const printClick = event => {
-	//console.log("printClick:", event);
-	const s = event.target.textContent;
-	console.log("printClick:", event, s);
+    //console.log("printClick:", event);
+    const s = event.target.textContent;
+    console.log("printClick:", event, s);
 }
 $mem_root.onclick = printClick;
 
 $canvas.onclick = event => {
-	const boundingRect = $canvas.getBoundingClientRect();
+    const boundingRect = $canvas.getBoundingClientRect();
 
-	const scaleX = $canvas.width / boundingRect.width;
-	const scaleY = $canvas.height / boundingRect.height;
+    const scaleX = $canvas.width / boundingRect.width;
+    const scaleY = $canvas.height / boundingRect.height;
 
-	const canvasLeft = (event.clientX - boundingRect.left) * scaleX;
-	const canvasTop = (event.clientY - boundingRect.top) * scaleY;
+    const canvasLeft = (event.clientX - boundingRect.left) * scaleX;
+    const canvasTop = (event.clientY - boundingRect.top) * scaleY;
 
-	const row = Math.min(Math.floor(canvasTop / (CELL_SIZE + 1)), height - 1);
-	const col = Math.min(Math.floor(canvasLeft / (CELL_SIZE + 1)), width - 1);
+    const row = Math.min(Math.floor(canvasTop / (CELL_SIZE + 1)), height - 1);
+    const col = Math.min(Math.floor(canvasLeft / (CELL_SIZE + 1)), width - 1);
 
-	universe.toggle_cell(row, col);
-	drawUniverse();
+    universe.toggle_cell(row, col);
+    drawUniverse();
 }
 
 const ctx = $canvas.getContext('2d');
 
 const drawGrid = () => {
-	ctx.beginPath();
-	ctx.strokeStyle = GRID_COLOR;
+    ctx.beginPath();
+    ctx.strokeStyle = GRID_COLOR;
 
-	// Vertical lines.
-	for (let i = 0; i <= width; i++) {
-		ctx.moveTo(i * (CELL_SIZE + 1) + 1, 0);
-		ctx.lineTo(i * (CELL_SIZE + 1) + 1, (CELL_SIZE + 1) * height + 1);
-	}
+    // Vertical lines.
+    for (let i = 0; i <= width; i++) {
+        ctx.moveTo(i * (CELL_SIZE + 1) + 1, 0);
+        ctx.lineTo(i * (CELL_SIZE + 1) + 1, (CELL_SIZE + 1) * height + 1);
+    }
 
-	// Horizontal lines.
-	for (let j = 0; j <= height; j++) {
-		ctx.moveTo(0,                           j * (CELL_SIZE + 1) + 1);
-		ctx.lineTo((CELL_SIZE + 1) * width + 1, j * (CELL_SIZE + 1) + 1);
-	}
+    // Horizontal lines.
+    for (let j = 0; j <= height; j++) {
+        ctx.moveTo(0,                           j * (CELL_SIZE + 1) + 1);
+        ctx.lineTo((CELL_SIZE + 1) * width + 1, j * (CELL_SIZE + 1) + 1);
+    }
 
-	ctx.stroke();
+    ctx.stroke();
 }
 
 const getIndex = (row, column) => {
-	return row * width + column;
+    return row * width + column;
 }
 
 const drawCells = () => {
-	const cellsPtr = universe.cells();
-	const cells = new Uint8Array(memory.buffer, cellsPtr, width * height);
+    const cellsPtr = universe.cells();
+    const cells = new Uint8Array(memory.buffer, cellsPtr, width * height);
 
-	ctx.beginPath();
+    ctx.beginPath();
 
-	for (let row = 0; row < height; row++) {
-		for (let col = 0; col < width; col++) {
-			const idx = getIndex(row, col);
+    for (let row = 0; row < height; row++) {
+        for (let col = 0; col < width; col++) {
+            const idx = getIndex(row, col);
 
-		ctx.fillStyle =
-			cells[idx] === Cell.Dead
-			? DEAD_COLOR
-			: LIVE_COLOR;
+        ctx.fillStyle =
+            cells[idx] === Cell.Dead
+            ? DEAD_COLOR
+            : LIVE_COLOR;
 
-		ctx.fillRect(
-			col * (CELL_SIZE + 1) + 1,
-			row * (CELL_SIZE + 1) + 1,
-			CELL_SIZE,
-			CELL_SIZE);
-		}
-	}
+        ctx.fillRect(
+            col * (CELL_SIZE + 1) + 1,
+            row * (CELL_SIZE + 1) + 1,
+            CELL_SIZE,
+            CELL_SIZE);
+        }
+    }
 
-	ctx.stroke();
+    ctx.stroke();
 }
 
 const $clearButton = document.getElementById("clear-btn");
 $clearButton.onclick = () => {
-	universe.clear_grid();
-	drawUniverse();
+    universe.clear_grid();
+    drawUniverse();
 }
 
 const $gliderButton = document.getElementById("glider-btn");
 $gliderButton.onclick = () => {
-	universe.launch_ship();
-	drawUniverse();
+    universe.launch_ship();
+    drawUniverse();
 }
 
 const $rPentominoButton = document.getElementById("r-pentomino-btn");
 $rPentominoButton.onclick = () => {
-	universe.r_pentomino();
-	drawUniverse();
+    universe.r_pentomino();
+    drawUniverse();
 }
 
 const $acornButton = document.getElementById("acorn-btn");
 $acornButton.onclick = () => {
-	universe.plant_acorn();
-	drawUniverse();
+    universe.plant_acorn();
+    drawUniverse();
 }
 
 const $gosperButton = document.getElementById("gosper-btn");
 $gosperButton.onclick = () => {
-	universe.gosper_gun();
-	drawUniverse();
+    universe.gosper_gun();
+    drawUniverse();
 }
 
 const $patternButton = document.getElementById("pattern-btn");
 $patternButton.onclick = () => {
-	universe.pattern_fill();
-	drawUniverse();
+    universe.pattern_fill();
+    drawUniverse();
 }
 
 const $randomButton = document.getElementById("random-btn");
 $randomButton.onclick = () => {
-	universe.random_fill();
-	drawUniverse();
+    universe.random_fill();
+    drawUniverse();
 }
 
 const $gcButton = document.getElementById("ufork-gc-btn");
@@ -329,35 +408,44 @@ $stepButton.onclick = singleStep;
 
 const $pauseButton = document.getElementById("play-pause");
 const playAction = () => {
-	$pauseButton.textContent = "Pause";
-	$pauseButton.onclick = pauseAction;
-	paused = false;
-	$stepButton.disabled = true;
-	renderLoop();
+    $pauseButton.textContent = "Pause";
+    $pauseButton.onclick = pauseAction;
+    paused = false;
+    $stepButton.disabled = true;
+    renderLoop();
 }
 const pauseAction = () => {
-	$pauseButton.textContent = "Play";
-	$pauseButton.onclick = playAction;
-	$stepButton.disabled = false;
-	paused = true;
+    $pauseButton.textContent = "Play";
+    $pauseButton.onclick = playAction;
+    $stepButton.disabled = false;
+    paused = true;
 }
 
 init().then(function (wasm) {
-	console.log("fixnum(0) = ", h_fixnum(0), h_fixnum(0).toString(16));
-	console.log("fixnum(1) = ", h_fixnum(1), h_fixnum(1).toString(16));
-	console.log("fixnum(-1) = ", h_fixnum(-1), h_fixnum(-1).toString(16));
-	console.log("fixnum(-2) = ", h_fixnum(-2), h_fixnum(-2).toString(16));
+    test_suite();
 
-	memory = wasm.memory;
-	host = Host.new();
+    memory = wasm.memory;
+    host = Host.new();
 
-	universe = Universe.new(width, height);
-	//universe.pattern_fill();
-	universe.launch_ship();
+    universe = Universe.new(width, height);
+    //universe.pattern_fill();
+    universe.launch_ship();
 
-	// draw initial state
-	drawUniverse();
+    // draw initial state
+    drawUniverse();
 
-	//playAction();  // start animation (running)
-	pauseAction();  // start animation (paused)
+    //playAction();  // start animation (running)
+    pauseAction();  // start animation (paused)
 });
+
+function test_suite() {
+    console.log("h_fixnum(0) = ", h_fixnum(0), h_fixnum(0).toString(16), h_print(h_fixnum(0)));
+    console.log("h_fixnum(1) = ", h_fixnum(1), h_fixnum(1).toString(16), h_print(h_fixnum(1)));
+    console.log("h_fixnum(-1) = ", h_fixnum(-1), h_fixnum(-1).toString(16), h_print(h_fixnum(-1)));
+    console.log("h_fixnum(-2) = ", h_fixnum(-2), h_fixnum(-2).toString(16), h_print(h_fixnum(-2)));
+    console.log("h_mem_top() = ", h_mem_top(), h_print(h_mem_top()));
+    console.log("h_mem_next() = ", h_mem_next(), h_print(h_mem_next()));
+    console.log("h_mem_free() = ", h_mem_free(), h_print(h_mem_free()));
+    console.log("h_mem_root() = ", h_mem_root(), h_print(h_mem_root()));
+    console.log("h_ramptr(5) = ", h_ramptr(5), h_print(h_ramptr(5)));
+}

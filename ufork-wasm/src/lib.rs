@@ -71,9 +71,37 @@ pub fn h_step() -> bool {
 }
 
 #[wasm_bindgen]
-pub fn h_fixnum(n: Num) -> Raw {
+pub fn h_mem_top() -> Raw {
     unsafe {
-        the_host().borrow().fixnum(n)
+        the_host().borrow().mem_top()
+    }
+}
+
+#[wasm_bindgen]
+pub fn h_mem_next() -> Raw {
+    unsafe {
+        the_host().borrow().mem_next()
+    }
+}
+
+#[wasm_bindgen]
+pub fn h_mem_free() -> Raw {
+    unsafe {
+        the_host().borrow().mem_free()
+    }
+}
+
+#[wasm_bindgen]
+pub fn h_mem_root() -> Raw {
+    unsafe {
+        the_host().borrow().mem_root()
+    }
+}
+
+#[wasm_bindgen]
+pub fn h_gc_phase() -> Raw {
+    unsafe {
+        the_host().borrow().gc_phase()
     }
 }
 
