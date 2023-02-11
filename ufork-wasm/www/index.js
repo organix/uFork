@@ -1,7 +1,7 @@
 import init, {
     Universe, Cell, Host,
-    h_step, h_gc_phase,
-    h_mem_top, h_mem_next, h_mem_free, h_mem_root,
+    h_step, h_gc_phase, h_rom_buffer, h_ram_buffer,
+    h_ram_top, h_ram_next, h_ram_free, h_ram_root,
 } from "../pkg/ufork_wasm.js";
 
 const CELL_SIZE = 5; // px
@@ -68,7 +68,7 @@ function h_warning(message) {
     return UNDEF_RAW;
 }
 function h_is_fix(raw) {
-    return ((raw & DIR_RAW) === 0);
+    return ((raw & DIR_RAW) !== 0);
 }
 function h_is_cap(raw) {
     return ((raw & (DIR_RAW | OPQ_RAW)) === OPQ_RAW);
@@ -83,7 +83,7 @@ function h_is_ram(raw) {
     return ((raw & (DIR_RAW | OPQ_RAW | MUT_RAW)) === MUT_RAW);
 }
 function h_fixnum(i32) {
-    return (i32 | DIR_RAW) >>> 0;
+    return ((i32 | DIR_RAW) >>> 0);
 }
 function h_rawofs(raw) {
     return (raw & ~MSK_RAW);
@@ -99,12 +99,12 @@ function h_ramptr(ofs, bnk) {
 }
 function h_cap_to_ptr(cap) {
     return (h_is_fix(cap)
-        ? h_warning("cap_to_ptr: can't convert fixnum")
+        ? h_warning("cap_to_ptr: can't convert fixnum "+h_print(cap))
         : (cap & ~OPQ_RAW));
 }
 function h_ptr_to_cap(ptr) {
-    return (h_is_fix(cap)
-        ? h_warning("cap_to_ptr: can't convert fixnum")
+    return (h_is_fix(ptr)
+        ? h_warning("ptr_to_cap: can't convert fixnum "+h_print(ptr))
         : (ptr | OPQ_RAW));
 }
 function h_print(raw) {
@@ -422,7 +422,7 @@ const pauseAction = () => {
 }
 
 init().then(function (wasm) {
-    test_suite();
+    test_suite(wasm);
 
     memory = wasm.memory;
     host = Host.new();
@@ -438,14 +438,35 @@ init().then(function (wasm) {
     pauseAction();  // start animation (paused)
 });
 
-function test_suite() {
+function test_suite(wasm) {
     console.log("h_fixnum(0) = ", h_fixnum(0), h_fixnum(0).toString(16), h_print(h_fixnum(0)));
     console.log("h_fixnum(1) = ", h_fixnum(1), h_fixnum(1).toString(16), h_print(h_fixnum(1)));
     console.log("h_fixnum(-1) = ", h_fixnum(-1), h_fixnum(-1).toString(16), h_print(h_fixnum(-1)));
     console.log("h_fixnum(-2) = ", h_fixnum(-2), h_fixnum(-2).toString(16), h_print(h_fixnum(-2)));
-    console.log("h_mem_top() = ", h_mem_top(), h_print(h_mem_top()));
-    console.log("h_mem_next() = ", h_mem_next(), h_print(h_mem_next()));
-    console.log("h_mem_free() = ", h_mem_free(), h_print(h_mem_free()));
-    console.log("h_mem_root() = ", h_mem_root(), h_print(h_mem_root()));
+    console.log("h_ram_top() = ", h_ram_top(), h_print(h_ram_top()));
+    console.log("h_ram_next() = ", h_ram_next(), h_print(h_ram_next()));
+    console.log("h_ram_free() = ", h_ram_free(), h_print(h_ram_free()));
+    console.log("h_ram_root() = ", h_ram_root(), h_print(h_ram_root()));
     console.log("h_ramptr(5) = ", h_ramptr(5), h_print(h_ramptr(5)));
+    console.log("h_ptr_to_cap(h_ramptr(3)) = ", h_ptr_to_cap(h_ramptr(3)), h_print(h_ptr_to_cap(h_ramptr(3))));
+
+    const rom_ofs = h_rom_buffer();
+    const rom = new Uint32Array(wasm.memory.buffer, rom_ofs);
+    console.log("ROM:", rom);
+
+    const ram_ofs = h_ram_buffer(h_gc_phase());
+    const ram = new Uint32Array(wasm.memory.buffer, ram_ofs, (h_rawofs(h_ram_top()) << 2));
+    console.log("RAM:", ram);
+    ram.forEach((raw, index) => {
+        const f_num = index & 0x3;
+        const field = f_num == 0
+            ? "t"
+            : f_num == 1
+                ? "x"
+                : f_num == 2
+                    ? "y"
+                    : "z";
+        index = index >> 2;
+        console.log(h_print(h_ramptr(index))+"."+field+":", h_print(raw));
+    });
 }

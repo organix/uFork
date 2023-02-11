@@ -71,28 +71,28 @@ pub fn h_step() -> bool {
 }
 
 #[wasm_bindgen]
-pub fn h_mem_top() -> Raw {
+pub fn h_ram_top() -> Raw {
     unsafe {
         the_host().borrow().mem_top()
     }
 }
 
 #[wasm_bindgen]
-pub fn h_mem_next() -> Raw {
+pub fn h_ram_next() -> Raw {
     unsafe {
         the_host().borrow().mem_next()
     }
 }
 
 #[wasm_bindgen]
-pub fn h_mem_free() -> Raw {
+pub fn h_ram_free() -> Raw {
     unsafe {
         the_host().borrow().mem_free()
     }
 }
 
 #[wasm_bindgen]
-pub fn h_mem_root() -> Raw {
+pub fn h_ram_root() -> Raw {
     unsafe {
         the_host().borrow().mem_root()
     }
@@ -102,6 +102,20 @@ pub fn h_mem_root() -> Raw {
 pub fn h_gc_phase() -> Raw {
     unsafe {
         the_host().borrow().gc_phase()
+    }
+}
+
+#[wasm_bindgen]
+pub fn h_rom_buffer() -> *const Quad {
+    unsafe {
+        the_host().borrow().rom_buffer()
+    }
+}
+
+#[wasm_bindgen]
+pub fn h_ram_buffer(bank: Raw) -> *const Quad {
+    unsafe {
+        the_host().borrow().ram_buffer(bank)
     }
 }
 
@@ -309,6 +323,18 @@ impl Host {
 
     pub fn render(&self) -> String {
         self.to_string()
+    }
+
+    /*
+     *  WARNING! The methods below give _unsafe_ access
+     *  to the underlying buffers. They are intended
+     *  to provide access (read/write) to JavaScript.
+     */
+    pub fn rom_buffer(&self) -> *const Quad {
+        self.core.rom_buffer().as_ptr()
+    }
+    pub fn ram_buffer(&self, bank: Raw) -> *const Quad {
+        self.core.ram_buffer(bank).as_ptr()
     }
 }
 

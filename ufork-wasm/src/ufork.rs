@@ -2765,6 +2765,17 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 11;
         }
     }
 
+    pub fn rom_buffer(&self) -> &[Quad] {
+        &self.quad_rom
+    }
+    pub fn ram_buffer(&self, bank: Raw) -> &[Quad] {
+        if bank == BNK_0 {
+            &self.quad_ram0
+        } else {
+            &self.quad_ram1
+        }
+    }
+
     pub fn next(&self, ptr: Any) -> Any {
         if ptr.is_ptr() {
             let quad = self.mem(ptr);
