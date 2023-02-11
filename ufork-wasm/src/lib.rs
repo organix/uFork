@@ -71,30 +71,37 @@ pub fn h_step() -> bool {
 }
 
 #[wasm_bindgen]
+pub fn h_rom_top() -> Raw {
+    unsafe {
+        the_host().borrow().rom_top()
+    }
+}
+
+#[wasm_bindgen]
 pub fn h_ram_top() -> Raw {
     unsafe {
-        the_host().borrow().mem_top()
+        the_host().borrow().ram_top()
     }
 }
 
 #[wasm_bindgen]
 pub fn h_ram_next() -> Raw {
     unsafe {
-        the_host().borrow().mem_next()
+        the_host().borrow().ram_next()
     }
 }
 
 #[wasm_bindgen]
 pub fn h_ram_free() -> Raw {
     unsafe {
-        the_host().borrow().mem_free()
+        the_host().borrow().ram_free()
     }
 }
 
 #[wasm_bindgen]
 pub fn h_ram_root() -> Raw {
     unsafe {
-        the_host().borrow().mem_root()
+        the_host().borrow().ram_root()
     }
 }
 
@@ -198,10 +205,11 @@ impl Host {
         let sponsor = self.core.event_sponsor(ep);
         self.core.sponsor_instrs(sponsor).raw()
     }
-    pub fn mem_top(&self) -> Raw { self.core.mem_top().raw() }
-    pub fn mem_next(&self) -> Raw { self.core.mem_next().raw() }
-    pub fn mem_free(&self) -> Raw { self.core.mem_free().raw() }
-    pub fn mem_root(&self) -> Raw { self.core.mem_root().raw() }
+    pub fn rom_top(&self) -> Raw { self.core.rom_top().raw() }
+    pub fn ram_top(&self) -> Raw { self.core.ram_top().raw() }
+    pub fn ram_next(&self) -> Raw { self.core.ram_next().raw() }
+    pub fn ram_free(&self) -> Raw { self.core.ram_free().raw() }
+    pub fn ram_root(&self) -> Raw { self.core.ram_root().raw() }
     pub fn equeue(&self) -> Raw { self.core.e_first().raw() }
     pub fn kqueue(&self) -> Raw { self.core.k_first().raw() }
     pub fn ip(&self) -> Raw { self.core.ip().raw() }
@@ -291,7 +299,7 @@ impl Host {
         s.push_str(ss.as_str());
         let val = Any::new(raw);
         if val.is_ptr() {
-            if raw < self.mem_top() {
+            if raw < self.ram_top() {
                 s.push_str(" → ");
             } else {
                 s.push_str(" × ");

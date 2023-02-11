@@ -1,7 +1,7 @@
 import init, {
     Universe, Cell, Host,
-    h_step, h_gc_phase, h_rom_buffer, h_ram_buffer,
-    h_ram_top, h_ram_next, h_ram_free, h_ram_root,
+    h_step, h_rom_buffer, h_ram_buffer, h_gc_phase,
+    h_rom_top, h_ram_top, h_ram_next, h_ram_free, h_ram_root,
 } from "../pkg/ufork_wasm.js";
 
 const CELL_SIZE = 5; // px
@@ -46,7 +46,7 @@ let paused = false;  // run/pause toggle
 let fault = false;  // execution fault flag
 const $rate = document.getElementById("frame-rate");
 let frame = 1;  // frame-rate countdown
-let mem_max = 0;
+let ram_max = 0;
 
 // type-tag bits
 const MSK_RAW   = 0xF000_0000;  // mask for type-tag bits
@@ -107,21 +107,58 @@ function h_ptr_to_cap(ptr) {
         ? h_warning("ptr_to_cap: can't convert fixnum "+h_print(ptr))
         : (ptr | OPQ_RAW));
 }
+function h_fix_to_i32(fix) {
+    return (fix << 1) >> 1;
+}
+const rom_label = [
+    "#?",
+    "()",
+    "#f",
+    "#t",
+    "#unit",
+    "TYPE_T",
+    "GC_FWD_T",
+    "INSTR_T",
+    "ACTOR_T",
+    "FIXNUM_T",
+    "SYMBOL_T",
+    "PAIR_T",
+    "DICT_T",
+    "PROXY_T",
+    "STUB_T",
+    "FREE_T"
+];
 function h_print(raw) {
     if (typeof raw !== "number") {
         return "" + raw;
     }
-    if (raw & DIR_RAW) {  // fixnum
-        raw = (raw << 1) >> 1;
-        if (raw < 0) {
-            return "" + raw;
+    if (h_is_fix(raw)) {  // fixnum
+        const i32 = h_fix_to_i32(raw);
+        if (i32 < 0) {
+            return "" + i32;
         } else {
-            return "+" + raw;
+            return "+" + i32;
         }
+    }
+    if (raw < rom_label.length) {
+        return rom_label[raw];
     }
     const prefix = (raw & OPQ_RAW) ? "@" : "^";
     return prefix + ("00000000" + raw.toString(16)).slice(-8);
 }
+function q_print(quad) {
+    return ("{ "+
+        "t:"+h_print(quad.t)+", "+
+        "x:"+h_print(quad.x)+", "+
+        "y:"+h_print(quad.y)+", "+
+        "z:"+h_print(quad.z)+" }");
+}
+let h_read_quad = function(ptr) {
+    return h_warning("h_read_quad: WASM not initialized.");
+};
+let h_write_quad = function(ptr, quad) {
+    return h_warning("h_write_quad: WASM not initialized.");
+};
 
 const updateElementText = (el, txt) => {
     if (el.textContent == txt) {
@@ -141,17 +178,17 @@ const drawHost = () => {
         $fault.setAttribute("fill", "#0F3");
         $fault.setAttribute("stroke", "#090");
     }
-    const top = host.rom_addr(host.mem_top());
-    if (top > mem_max) {
-        mem_max = top;
+    const top = h_rawofs(host.ram_top());
+    if (top > ram_max) {
+        ram_max = top;
     }
-    updateElementText($mem_max, mem_max.toString());
-    updateElementText($mem_top, host.print(host.mem_top()));
-    updateElementText($mem_next, host.print(host.mem_next()));
-    $mem_next.title = host.disasm(host.mem_next());
-    updateElementText($mem_free, host.print(host.mem_free()));
-    updateElementText($mem_root, host.print(host.mem_root()));
-    $mem_root.title = host.disasm(host.mem_root());
+    updateElementText($mem_max, ram_max.toString());
+    updateElementText($mem_top, host.print(host.ram_top()));
+    updateElementText($mem_next, host.print(host.ram_next()));
+    $mem_next.title = host.disasm(host.ram_next());
+    updateElementText($mem_free, host.print(host.ram_free()));
+    updateElementText($mem_root, host.print(host.ram_root()));
+    $mem_root.title = host.disasm(host.ram_root());
     updateElementText($gc_phase, host.gc_phase() == 0 ? "Bank 0" : "Bank 1");
     updateElementText($sponsor_memory, host.print(host.sponsor_memory()));
     updateElementText($sponsor_events, host.print(host.sponsor_events()));
@@ -284,12 +321,12 @@ const renderLoop = () => {
     requestAnimationFrame(renderLoop);
 }
 
-const printClick = event => {
-    //console.log("printClick:", event);
+const logClick = event => {
+    //console.log("logClick:", event);
     const s = event.target.textContent;
-    console.log("printClick:", event, s);
+    console.log("logClick:", event, s);
 }
-$mem_root.onclick = printClick;
+//$mem_root.onclick = logClick;
 
 $canvas.onclick = event => {
     const boundingRect = $canvas.getBoundingClientRect();
@@ -422,6 +459,72 @@ const pauseAction = () => {
 }
 
 init().then(function (wasm) {
+    h_read_quad = function(ptr) {
+        if (h_is_ram(ptr)) {
+            // WARNING! The WASM memory buffer can move if it is resized.
+            //          We get a fresh pointer each time for safety.
+            const ofs = h_rawofs(ptr);
+            const ram_ofs = h_ram_buffer(h_gc_phase());
+            const ram_top = h_rawofs(h_ram_top());
+            if (ofs < ram_top) {
+                const ram_len = ram_top << 2;
+                const ram = new Uint32Array(wasm.memory.buffer, ram_ofs, ram_len);
+                const idx = ofs << 2;  // convert quad address to Uint32Array index
+                const quad = {
+                    t: ram[idx + 0],
+                    x: ram[idx + 1],
+                    y: ram[idx + 2],
+                    z: ram[idx + 3]
+                };
+                return quad;
+            } else {
+                return h_warning("h_read_quad: RAM ptr out of bounds "+h_print(ptr));
+            }
+        }
+        if (h_is_rom(ptr)) {
+            // WARNING! The WASM memory buffer can move if it is resized.
+            //          We get a fresh pointer each time for safety.
+            const ofs = h_rawofs(ptr);
+            const rom_ofs = h_rom_buffer();
+            const rom_top = h_rawofs(h_rom_top());
+            if (ofs < rom_top) {
+                const rom_len = rom_top << 2;
+                const rom = new Uint32Array(wasm.memory.buffer, rom_ofs, rom_len);
+                const idx = ofs << 2;  // convert quad address to Uint32Array index
+                const quad = {
+                    t: rom[idx + 0],
+                    x: rom[idx + 1],
+                    y: rom[idx + 2],
+                    z: rom[idx + 3]
+                };
+                return quad;
+            } else {
+                return h_warning("h_read_quad: ROM ptr out of bounds "+h_print(ptr));
+            }
+        }
+        return h_warning("h_read_quad: required ptr, got "+h_print(ptr));
+    };
+    h_write_quad = function(ptr, quad) {
+        if (h_is_ram(ptr)) {
+            // WARNING! The WASM memory buffer can move if it is resized.
+            //          We get a fresh pointer each time for safety.
+            const ram_ofs = h_ram_buffer(h_gc_phase());
+            const ram_top = h_rawofs(h_ram_top());
+            if (ofs < ram_top) {
+                const ram_len = ram_top << 2;
+                const ram = new Uint32Array(wasm.memory.buffer, ram_ofs, ram_len);
+                const ofs = h_rawofs(ptr);
+                const idx = ofs << 2;  // convert quad address to Uint32Array index
+                ram[idx + 0] = quad.t;
+                ram[idx + 1] = quad.x;
+                ram[idx + 2] = quad.y;
+                ram[idx + 3] = quad.z;
+            } else {
+                return h_warning("h_write_quad: RAM ptr out of bounds "+h_print(ptr));
+            }
+        }
+        return h_warning("h_write_quad: required RAM ptr, got "+h_print(ptr));
+    };
     test_suite(wasm);
 
     memory = wasm.memory;
@@ -439,34 +542,28 @@ init().then(function (wasm) {
 });
 
 function test_suite(wasm) {
-    console.log("h_fixnum(0) = ", h_fixnum(0), h_fixnum(0).toString(16), h_print(h_fixnum(0)));
-    console.log("h_fixnum(1) = ", h_fixnum(1), h_fixnum(1).toString(16), h_print(h_fixnum(1)));
-    console.log("h_fixnum(-1) = ", h_fixnum(-1), h_fixnum(-1).toString(16), h_print(h_fixnum(-1)));
-    console.log("h_fixnum(-2) = ", h_fixnum(-2), h_fixnum(-2).toString(16), h_print(h_fixnum(-2)));
-    console.log("h_ram_top() = ", h_ram_top(), h_print(h_ram_top()));
-    console.log("h_ram_next() = ", h_ram_next(), h_print(h_ram_next()));
-    console.log("h_ram_free() = ", h_ram_free(), h_print(h_ram_free()));
-    console.log("h_ram_root() = ", h_ram_root(), h_print(h_ram_root()));
-    console.log("h_ramptr(5) = ", h_ramptr(5), h_print(h_ramptr(5)));
-    console.log("h_ptr_to_cap(h_ramptr(3)) = ", h_ptr_to_cap(h_ramptr(3)), h_print(h_ptr_to_cap(h_ramptr(3))));
+    console.log("h_fixnum(0) =", h_fixnum(0), h_fixnum(0).toString(16), h_print(h_fixnum(0)));
+    console.log("h_fixnum(1) =", h_fixnum(1), h_fixnum(1).toString(16), h_print(h_fixnum(1)));
+    console.log("h_fixnum(-1) =", h_fixnum(-1), h_fixnum(-1).toString(16), h_print(h_fixnum(-1)));
+    console.log("h_fixnum(-2) =", h_fixnum(-2), h_fixnum(-2).toString(16), h_print(h_fixnum(-2)));
+    console.log("h_rom_top() =", h_rom_top(), h_print(h_rom_top()));
+    console.log("h_ram_top() =", h_ram_top(), h_print(h_ram_top()));
+    console.log("h_ram_next() =", h_ram_next(), h_print(h_ram_next()));
+    console.log("h_ram_free() =", h_ram_free(), h_print(h_ram_free()));
+    console.log("h_ram_root() =", h_ram_root(), h_print(h_ram_root()));
+    console.log("h_ramptr(5) =", h_ramptr(5), h_print(h_ramptr(5)));
+    console.log("h_ptr_to_cap(h_ramptr(3)) =", h_ptr_to_cap(h_ramptr(3)), h_print(h_ptr_to_cap(h_ramptr(3))));
 
     const rom_ofs = h_rom_buffer();
-    const rom = new Uint32Array(wasm.memory.buffer, rom_ofs);
+    const rom = new Uint32Array(wasm.memory.buffer, rom_ofs, (h_rawofs(h_rom_top()) << 2));
     console.log("ROM:", rom);
 
     const ram_ofs = h_ram_buffer(h_gc_phase());
     const ram = new Uint32Array(wasm.memory.buffer, ram_ofs, (h_rawofs(h_ram_top()) << 2));
     console.log("RAM:", ram);
-    ram.forEach((raw, index) => {
-        const f_num = index & 0x3;
-        const field = f_num == 0
-            ? "t"
-            : f_num == 1
-                ? "x"
-                : f_num == 2
-                    ? "y"
-                    : "z";
-        index = index >> 2;
-        console.log(h_print(h_ramptr(index))+"."+field+":", h_print(raw));
-    });
+    for (let ofs = 0; ofs < h_rawofs(h_ram_top()); ofs += 1) {
+        const ptr = h_ramptr(ofs);
+        const quad = h_read_quad(ptr);
+        console.log(h_print(ptr)+":", q_print(quad));
+    }
 }

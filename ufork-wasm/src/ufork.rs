@@ -2311,14 +2311,15 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 11;
     fn set_k_last(&mut self, ptr: Any) { self.ram_mut(self.ddeque()).set_z(ptr); }
     pub fn ddeque(&self) -> Any { self.ptr_to_mem(DDEQUE) }
 
-    pub fn mem_top(&self) -> Any { self.ram(self.memory()).t() }
-    fn set_mem_top(&mut self, ptr: Any) { self.ram_mut(self.memory()).set_t(ptr); }
-    pub fn mem_next(&self) -> Any { self.ram(self.memory()).x() }
-    fn set_mem_next(&mut self, ptr: Any) { self.ram_mut(self.memory()).set_x(ptr); }
-    pub fn mem_free(&self) -> Any { self.ram(self.memory()).y() }
-    fn set_mem_free(&mut self, fix: Any) { self.ram_mut(self.memory()).set_y(fix); }
-    pub fn mem_root(&self) -> Any { self.ram(self.memory()).z() }
-    fn set_mem_root(&mut self, ptr: Any) { self.ram_mut(self.memory()).set_z(ptr); }
+    pub fn rom_top(&self) -> Any { Any::rom(QUAD_ROM_MAX) }  // FIXME: should probably use `_ROM_TOP_ADDR`
+    pub fn ram_top(&self) -> Any { self.ram(self.memory()).t() }
+    fn set_ram_top(&mut self, ptr: Any) { self.ram_mut(self.memory()).set_t(ptr); }
+    pub fn ram_next(&self) -> Any { self.ram(self.memory()).x() }
+    fn set_ram_next(&mut self, ptr: Any) { self.ram_mut(self.memory()).set_x(ptr); }
+    pub fn ram_free(&self) -> Any { self.ram(self.memory()).y() }
+    fn set_ram_free(&mut self, fix: Any) { self.ram_mut(self.memory()).set_y(fix); }
+    pub fn ram_root(&self) -> Any { self.ram(self.memory()).z() }
+    fn set_ram_root(&mut self, ptr: Any) { self.ram_mut(self.memory()).set_z(ptr); }
     pub fn memory(&self) -> Any { self.ptr_to_mem(MEMORY) }
 
     pub fn new_event(&mut self, target: Any, msg: Any) -> Result<Any, Error> {
@@ -2531,7 +2532,7 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 11;
         }
     }
     pub fn in_heap(&self, val: Any) -> bool {
-        val.is_ram() && (val.addr() < self.mem_top().addr())
+        val.is_ram() && (val.addr() < self.ram_top().addr())
     }
     fn follow_fwd(&self, val: Any) -> Any {
         let raw = val.raw();
@@ -2583,23 +2584,23 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 11;
         Ok(ptr)
     }
     fn reserve(&mut self, init: &Quad) -> Result<Any, Error> {
-        let next = self.mem_next();
+        let next = self.ram_next();
         let ptr = if self.typeq(FREE_T, next) {
             // use quad from free-list
-            let n = self.mem_free().fix_num().unwrap();
+            let n = self.ram_free().fix_num().unwrap();
             assert!(n > 0);  // number of free cells available
-            self.set_mem_free(Any::fix(n - 1));  // decrement cells available
-            self.set_mem_next(self.ram(next).z());  // update free-list
+            self.set_ram_free(Any::fix(n - 1));  // decrement cells available
+            self.set_ram_next(self.ram(next).z());  // update free-list
             next
         } else {
             // expand top-of-memory
-            let next = self.mem_top();
+            let next = self.ram_top();
             let top = next.addr();
             if top >= QUAD_RAM_MAX {
                 //panic!("out of memory!");
                 return Err(String::from("out of memory!"));
             }
-            self.set_mem_top(Any::ram(self.gc_phase(), top + 1));
+            self.set_ram_top(Any::ram(self.gc_phase(), top + 1));
             next
         };
         *self.ram_mut(ptr) = *init;  // copy initial value
@@ -2610,10 +2611,10 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 11;
         if self.typeq(FREE_T, ptr) {
             panic!("double-free {}", ptr);
         }
-        *self.ram_mut(ptr) = Quad::free_t(self.mem_next());  // clear cell to "free"
-        self.set_mem_next(ptr);  // link into free-list
-        let n = self.mem_free().fix_num().unwrap();
-        self.set_mem_free(Any::fix(n + 1));  // increment cells available
+        *self.ram_mut(ptr) = Quad::free_t(self.ram_next());  // clear cell to "free"
+        self.set_ram_next(ptr);  // link into free-list
+        let n = self.ram_free().fix_num().unwrap();
+        self.set_ram_free(Any::fix(n + 1));  // increment cells available
     }
 
     pub fn gc_stop_the_world(&mut self) {
@@ -2630,10 +2631,10 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 11;
             1. Mark the cell `GC_FREE` and add it to the free-cell chain
         */
         let ddeque = self.ddeque();
-        let root = self.mem_root();
+        let root = self.ram_root();
         let bank = if self.gc_phase() == BNK_0 { BNK_1 } else { BNK_0 };  // determine new phase
         println!("gc_stop_the_world: phase ${:08x} -> ${:08x}", self.gc_phase(), bank);
-        self.set_mem_top(UNDEF);  // toggle GC phase
+        self.set_ram_top(UNDEF);  // toggle GC phase
         self.gc_store(Any::ram(bank, MEMORY.addr()),
             Quad::memory_t(Any::ram(bank, ddeque.addr()), NIL, ZERO, root));
         let mut scan = ddeque;
@@ -2646,13 +2647,13 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 11;
             scan = Any::new(raw + 1);
         }
         let root = self.gc_mark(root);
-        self.set_mem_root(root);
+        self.set_ram_root(root);
         scan = self.ddeque();
-        while scan != self.mem_top() {  // scan marked quads
+        while scan != self.ram_top() {  // scan marked quads
             self.gc_scan(scan);
             scan = Any::new(scan.raw() + 1);
         }
-        println!("gc_stop_the_world: mem_top={}", scan);
+        println!("gc_stop_the_world: ram_top={}", scan);
     }
     fn gc_mark(&mut self, val: Any) -> Any {
         if let Some(bank) = val.bank() {
@@ -2870,9 +2871,9 @@ fn ptr_is_distinct_from_cap() {
 #[test]
 fn core_initialization() {
     let core = Core::new();
-    //assert_eq!(0, core.mem_free().fix_num().unwrap());
-    assert_eq!(ZERO, core.mem_free());
-    assert_eq!(NIL, core.mem_next());
+    //assert_eq!(0, core.ram_free().fix_num().unwrap());
+    assert_eq!(ZERO, core.ram_free());
+    assert_eq!(NIL, core.ram_next());
     assert_eq!(NIL, core.e_first());
     assert_ne!(NIL, core.k_first());
     assert_eq!(core.kp(), core.k_first());
@@ -2894,28 +2895,28 @@ fn core_initialization() {
 #[test]
 fn basic_memory_allocation() {
     let mut core = Core::new();
-    let top_before = core.mem_top().addr();
-    println!("mem_top: {}", core.mem_top());
+    let top_before = core.ram_top().addr();
+    println!("ram_top: {}", core.ram_top());
     let m1 = core.alloc(&Quad::pair_t(PLUS_1, PLUS_1)).unwrap();
     println!("m1:{} -> {}", m1, core.mem(m1));
-    println!("mem_top: {}", core.mem_top());
+    println!("ram_top: {}", core.ram_top());
     let m2 = core.alloc(&Quad::pair_t(PLUS_2, PLUS_2)).unwrap();
-    println!("mem_top: {}", core.mem_top());
+    println!("ram_top: {}", core.ram_top());
     let m3 = core.alloc(&Quad::pair_t(PLUS_3, PLUS_3)).unwrap();
-    println!("mem_top: {}", core.mem_top());
-    println!("mem_free: {}", core.mem_free());
+    println!("ram_top: {}", core.ram_top());
+    println!("ram_free: {}", core.ram_free());
     core.free(m2);
-    println!("mem_free: {}", core.mem_free());
+    println!("ram_free: {}", core.ram_free());
     core.free(m3);
-    println!("mem_free: {}", core.mem_free());
+    println!("ram_free: {}", core.ram_free());
     let _m4 = core.alloc(&Quad::pair_t(PLUS_4, PLUS_4)).unwrap();
-    println!("mem_top: {}", core.mem_top());
-    println!("mem_free: {}", core.mem_free());
-    let top_after = core.mem_top().addr();
+    println!("ram_top: {}", core.ram_top());
+    println!("ram_free: {}", core.ram_free());
+    let top_after = core.ram_top().addr();
     assert_eq!(3, top_after - top_before);
-    //assert_eq!(1, core.mem_free().fix_num().unwrap());
-    assert_eq!(PLUS_1, core.mem_free());
-    println!("mem_next: {} -> {}", core.mem_next(), core.mem(core.mem_next()));
+    //assert_eq!(1, core.ram_free().fix_num().unwrap());
+    assert_eq!(PLUS_1, core.ram_free());
+    println!("ram_next: {} -> {}", core.ram_next(), core.mem(core.ram_next()));
     //assert!(false);  // force output to be displayed
 }
 
