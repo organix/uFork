@@ -63,6 +63,50 @@ const NIL_RAW   = 0x0000_0001;
 const FALSE_RAW = 0x0000_0002;
 const TRUE_RAW  = 0x0000_0003;
 const UNIT_RAW 	= 0x0000_0004;
+const TYPE_T    = 0x0000_0005;
+const GC_FWD_T  = 0x0000_0006;
+const INSTR_T   = 0x0000_0007;
+const ACTOR_T   = 0x0000_0008;
+const FIXNUM_T  = 0x0000_0009;
+const SYMBOL_T  = 0x0000_000A;
+const PAIR_T    = 0x0000_000B;
+const DICT_T    = 0x0000_000C;
+const PROXY_T   = 0x0000_000D;
+const STUB_T    = 0x0000_000E;
+const FREE_T    = 0x0000_000F;
+// instr constants
+const VM_TYPEQ  = 0x8000_0000;
+const VM_CELL   = 0x8000_0001;  // reserved
+const VM_GET    = 0x8000_0002;  // reserved
+const VM_DICT   = 0x8000_0003;  // was "VM_SET"
+const VM_PAIR   = 0x8000_0004;
+const VM_PART   = 0x8000_0005;
+const VM_NTH    = 0x8000_0006;
+const VM_PUSH   = 0x8000_0007;
+const VM_DEPTH  = 0x8000_0008;
+const VM_DROP   = 0x8000_0009;
+const VM_PICK   = 0x8000_000A;
+const VM_DUP    = 0x8000_000B;
+const VM_ROLL   = 0x8000_000C;
+const VM_ALU    = 0x8000_000D;
+const VM_EQ     = 0x8000_000E;
+const VM_CMP    = 0x8000_000F;
+const VM_IF     = 0x8000_0010;
+const VM_MSG    = 0x8000_0011;
+const VM_MY     = 0x8000_0012;
+const VM_SEND   = 0x8000_0013;
+const VM_NEW    = 0x8000_0014;
+const VM_BEH    = 0x8000_0015;
+const VM_END    = 0x8000_0016;
+const VM_CVT    = 0x8000_0017;  // deprecated
+const VM_PUTC   = 0x8000_0018;  // deprecated
+const VM_GETC   = 0x8000_0019;  // deprecated
+const VM_DEBUG  = 0x8000_001A;  // deprecated
+const VM_DEQUE  = 0x8000_001B;
+const VM_001C   = 0x8000_001C;  // reserved
+const VM_001D   = 0x8000_001D;  // reserved
+const VM_IS_EQ  = 0x8000_001E;
+const VM_IS_NE  = 0x8000_001F;
 // ram offets
 const MEMORY_OFS = 0;
 const DDEQUE_OFS = 1;
@@ -156,24 +200,181 @@ function h_print(raw) {
     const prefix = (raw & OPQ_RAW) ? "@" : "^";
     return prefix + ("00000000" + raw.toString(16)).slice(-8);
 }
+const instr_label = [
+    "VM_TYPEQ",
+    "VM_CELL",  // reserved
+    "VM_GET",  // reserved
+    "VM_DICT",  // was "VM_SET"
+    "VM_PAIR",
+    "VM_PART",
+    "VM_NTH",
+    "VM_PUSH",
+    "VM_DEPTH",
+    "VM_DROP",
+    "VM_PICK",
+    "VM_DUP",
+    "VM_ROLL",
+    "VM_ALU",
+    "VM_EQ",
+    "VM_CMP",
+    "VM_IF",
+    "VM_MSG",
+    "VM_MY",
+    "VM_SEND",
+    "VM_NEW",
+    "VM_BEH",
+    "VM_END",
+    "VM_CVT",  // deprecated
+    "VM_PUTC",  // deprecated
+    "VM_GETC",  // deprecated
+    "VM_DEBUG",  // deprecated
+    "VM_DEQUE",
+    "VM_001C",  // reserved
+    "VM_001D",  // reserved
+    "VM_IS_EQ",
+    "VM_IS_NE"
+];
+const dict_imm_label = [
+    "HAS",
+    "GET",
+    "ADD",
+    "SET",
+    "DEL"
+];
+const alu_imm_label = [
+    "NOT",
+    "AND",
+    "OR",
+    "XOR",
+    "ADD",
+    "SUB",
+    "MUL"
+];
+const cmp_imm_label = [
+    "EQ",
+    "GE",
+    "GT",
+    "LT",
+    "LE",
+    "NE"
+];
+const my_imm_label = [
+    "SELF",
+    "BEH",
+    "STATE"
+];
+const deque_imm_label = [
+    "NEW",
+    "EMPTY",
+    "PUSH",
+    "POP",
+    "PUT",
+    "PULL",
+    "LEN"
+];
+const end_imm_label = [
+    "ABORT",
+    "STOP",
+    "COMMIT",
+    "RELEASE"
+];
 function q_print(quad) {
-    return ("{ "+
-        "t:"+h_print(quad.t)+", "+
-        "x:"+h_print(quad.x)+", "+
-        "y:"+h_print(quad.y)+", "+
-        "z:"+h_print(quad.z)+" }");
+    let s = "{ ";
+    if (quad.t === INSTR_T) {
+        s += "t:INSTR_T, x:";
+        const op = quad.x ^ DIR_RAW;  // translate opcode
+        if (op < instr_label.length) {
+            const imm = quad.y ^ DIR_RAW;  // translate immediate
+            if ((quad.x === VM_DICT) && (imm < dict_imm_label.length)) {
+                s += "VM_DICT, y:";
+                s += dict_imm_label[imm];
+            } else if ((quad.x === VM_ALU) && (imm < alu_imm_label.length)) {
+                s += "VM_ALU, y:";
+                s += alu_imm_label[imm];
+            } else if ((quad.x === VM_CMP) && (imm < cmp_imm_label.length)) {
+                s += "VM_CMP, y:";
+                s += cmp_imm_label[imm];
+            } else if ((quad.x === VM_MY) && (imm < my_imm_label.length)) {
+                s += "VM_MY, y:";
+                s += my_imm_label[imm];
+            } else if ((quad.x === VM_DEQUE) && (imm < deque_imm_label.length)) {
+                s += "VM_DEQUE, y:";
+                s += deque_imm_label[imm];
+            } else if (quad.x === VM_END) {
+                s += "VM_END, y:";
+                s += end_imm_label[h_fix_to_i32(quad.y) + 1];  // END_ABORT === -1
+            } else {
+                s += instr_label[op];
+                s += ", y:";
+                s += h_print(quad.y);
+            }
+        } else {
+            s += h_print(quad.x);
+            s += ", y:";
+            s += h_print(quad.y);
+        }
+    } else {
+        s += "t:";
+        s += h_print(quad.t);
+        s += ", x:";
+        s += h_print(quad.x);
+        s += ", y:";
+        s += h_print(quad.y);
+    }
+    s += ", z:";
+    s += h_print(quad.z);
+    s += " }";
+    return s;
 }
 function h_disasm(ptr) {
-    let str = h_print(ptr);
+    let s = h_print(ptr);
     if (h_is_cap(ptr)) {
         ptr = h_cap_to_ptr(ptr);
     }
     if (h_is_ptr(ptr)) {
-        str += ": ";
+        s += ": ";
         const quad = h_read_quad(ptr);
-        str += q_print(quad);
+        s += q_print(quad);
     }
-    return str;
+    return s;
+}
+function h_pprint(raw) {
+    if (h_is_ptr(raw)) {
+        let quad = h_read_quad(raw);
+        if (quad.t === PAIR_T) {
+            let s = "";
+            let p = raw;
+            let sep = "(";
+            while (quad.t === PAIR_T) {
+                s += sep;
+                s += h_pprint(quad.x);  // car
+                sep = " ";
+                p = quad.y;  // cdr
+                quad = h_read_quad(p);
+            }
+            if (p !== NIL_RAW) {
+                s += " . ";
+                s += h_pprint(p);
+            }
+            s += ")";
+            return s;
+        }
+        if (quad.t === DICT_T) {
+            let s = "";
+            let sep = "{";
+            while (quad.t === DICT_T) {
+                s += sep;
+                s += h_pprint(quad.x);  // key
+                s += ":";
+                s += h_pprint(quad.y);  // value
+                sep = ", ";
+                quad = h_read_quad(quad.z);  // next
+            }
+            s += "}";
+            return s;
+        }
+    }
+    return h_print(raw);
 }
 
 const updateElementText = (el, txt) => {
@@ -277,8 +478,8 @@ const drawHost = () => {
         let a = [];
         while (h_in_mem(p)) {
             //a.push(h_disasm(p));  // disasm stack Pair
-            a.push(h_print(h_car(p)));  // print stack item
-            //a.push(h_pprint(h_car(p)));  // pretty-print stack item
+            //a.push(h_print(h_car(p)));  // print stack item
+            a.push(h_pprint(h_car(p)));  // pretty-print stack item
             p = h_cdr(p);
         }
         updateElementText($stack, a.join("\n"));
@@ -293,7 +494,7 @@ const drawHost = () => {
     const message = event_quad.y;
     const rollback =  event_quad.z;
     updateElementText($self, h_disasm(target));
-    updateElementText($msg, h_disasm(message));
+    updateElementText($msg, h_pprint(message));  // pretty-print message
     const sponsor_quad = h_read_quad(sponsor);
     updateElementText($sponsor_memory, h_print(sponsor_quad.t));
     updateElementText($sponsor_events, h_print(sponsor_quad.x));

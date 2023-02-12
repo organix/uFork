@@ -1398,9 +1398,9 @@ pub const A_BOOT: Any       = Any { raw: OPQ_RAW | MUT_RAW | BNK_INI | (BOOT_ADD
 pub const _BOOT_BEH: Any     = Any { raw: MUT_RAW | BNK_INI | (BOOT_ADDR+1) as Raw };
         quad_ram[BOOT_ADDR+1]       = Quad::vm_push(UNIT, Any::ram(BNK_INI, BOOT_ADDR+2));  // #unit
         quad_ram[BOOT_ADDR+2]       = Quad::vm_my_self(Any::ram(BNK_INI, BOOT_ADDR+3));  // #unit SELF
-        quad_ram[BOOT_ADDR+3]       = Quad::vm_push(RESEND, Any::ram(BNK_INI, BOOT_ADDR+4));  // #unit SELF resend
+        //quad_ram[BOOT_ADDR+3]       = Quad::vm_push(RESEND, Any::ram(BNK_INI, BOOT_ADDR+4));  // #unit SELF resend
         //quad_ram[BOOT_ADDR+3]       = Quad::vm_push(_T_DEQUE_BEH, Any::ram(BNK_INI, BOOT_ADDR+4));  // #unit SELF test-deque-beh
-        //quad_ram[BOOT_ADDR+3]       = Quad::vm_push(_T_DICT_BEH, Any::ram(BNK_INI, BOOT_ADDR+4));  // #unit SELF test-dict-beh
+        quad_ram[BOOT_ADDR+3]       = Quad::vm_push(_T_DICT_BEH, Any::ram(BNK_INI, BOOT_ADDR+4));  // #unit SELF test-dict-beh
         quad_ram[BOOT_ADDR+4]       = Quad::vm_new(ZERO, Any::ram(BNK_INI, BOOT_ADDR+5));  // #unit SELF actor
         quad_ram[BOOT_ADDR+5]       = Quad::vm_send(PLUS_2, COMMIT);  // --
 pub const _BOOT_SP: Any     = Any { raw: MUT_RAW | BNK_INI | (BOOT_ADDR+6) as Raw };
@@ -1412,9 +1412,9 @@ pub const E_BOOT: Any       = Any { raw: MUT_RAW | BNK_INI | (BOOT_ADDR+9) as Ra
 pub const K_BOOT: Any       = Any { raw: MUT_RAW | BNK_INI | (BOOT_ADDR+10) as Raw };
         //quad_ram[BOOT_ADDR+10]      = Quad::new_cont(SINK_BEH, NIL, E_BOOT);
         //quad_ram[BOOT_ADDR+10]      = Quad::new_cont(STOP, _BOOT_SP, E_BOOT);
-        //quad_ram[BOOT_ADDR+10]      = Quad::new_cont(_BOOT_BEH, _BOOT_SP, E_BOOT);
+        quad_ram[BOOT_ADDR+10]      = Quad::new_cont(_BOOT_BEH, _BOOT_SP, E_BOOT);
         //quad_ram[BOOT_ADDR+10]      = Quad::new_cont(_TEST_BEH, NIL, E_BOOT);
-        quad_ram[BOOT_ADDR+10]      = Quad::new_cont(_T_DEV_BEH, NIL, E_BOOT);
+        //quad_ram[BOOT_ADDR+10]      = Quad::new_cont(_T_DEV_BEH, NIL, E_BOOT);
 
 pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 11;
 
