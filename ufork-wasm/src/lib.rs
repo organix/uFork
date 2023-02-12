@@ -71,6 +71,13 @@ pub fn h_step() -> bool {
 }
 
 #[wasm_bindgen]
+pub fn h_gc_run() {
+    unsafe {
+        the_host().borrow_mut().gc_run()
+    }
+}
+
+#[wasm_bindgen]
 pub fn h_rom_top() -> Raw {
     unsafe {
         the_host().borrow().rom_top()
@@ -109,6 +116,34 @@ pub fn h_ram_root() -> Raw {
 pub fn h_gc_phase() -> Raw {
     unsafe {
         the_host().borrow().gc_phase()
+    }
+}
+
+#[wasm_bindgen]
+pub fn h_in_mem(raw: Raw) -> bool {
+    unsafe {
+        the_host().borrow().in_mem(raw)
+    }
+}
+
+#[wasm_bindgen]
+pub fn h_car(raw: Raw) -> Raw {
+    unsafe {
+        the_host().borrow().car(raw)
+    }
+}
+
+#[wasm_bindgen]
+pub fn h_cdr(raw: Raw) -> Raw {
+    unsafe {
+        the_host().borrow().cdr(raw)
+    }
+}
+
+#[wasm_bindgen]
+pub fn h_next(raw: Raw) -> Raw {
+    unsafe {
+        the_host().borrow().next(raw)
     }
 }
 
@@ -232,18 +267,10 @@ impl Host {
         self.core.typeq(PAIR_T, Any::new(v))
     }
     pub fn car(&self, p: Raw) -> Raw {
-        if self.is_pair(p) {
-            self.core.car(Any::new(p)).raw()
-        } else {
-            UNDEF.raw()
-        }
+        self.core.car(Any::new(p)).raw()
     }
     pub fn cdr(&self, p: Raw) -> Raw {
-        if self.is_pair(p) {
-            self.core.cdr(Any::new(p)).raw()
-        } else {
-            UNDEF.raw()
-        }
+        self.core.cdr(Any::new(p)).raw()
     }
     pub fn next(&self, p: Raw) -> Raw {
         self.core.next(Any::new(p)).raw()

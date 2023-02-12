@@ -727,6 +727,7 @@ pub const FREE_T: Any       = Any { raw: 15 };
 
 pub const START: Any        = Any { raw: 16 };
 pub const EMPTY_DQ: Any     = Any { raw: 31 };
+pub const ROM_TOP: Any      = Any { raw: 314 };  // MUST BE KEPT IN SYNC WITH `_ROM_TOP_ADDR`
 
 pub const MEMORY: Any       = Any { raw: MUT_RAW | BNK_INI | 0 };
 pub const DDEQUE: Any       = Any { raw: MUT_RAW | BNK_INI | 1 };
@@ -1379,7 +1380,7 @@ pub const _COUNT_BEH: Any  = Any { raw: COUNT_ADDR as Raw };
         quad_rom[COUNT_ADDR+6]      = Quad::vm_my_self(Any::rom(COUNT_ADDR+7));  // n-1 self
         quad_rom[COUNT_ADDR+7]      = Quad::vm_send(ZERO, COMMIT);  // --
 
-pub const _ROM_TOP_ADDR: usize = COUNT_ADDR+8;
+pub const _ROM_TOP_ADDR: usize = COUNT_ADDR+8;  // UPDATE `ROM_TOP` WHEN THIS VALUE CHANGES!
 
         let mut quad_ram = [
             Quad::empty_t();
@@ -2311,7 +2312,7 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 11;
     fn set_k_last(&mut self, ptr: Any) { self.ram_mut(self.ddeque()).set_z(ptr); }
     pub fn ddeque(&self) -> Any { self.ptr_to_mem(DDEQUE) }
 
-    pub fn rom_top(&self) -> Any { Any::rom(QUAD_ROM_MAX) }  // FIXME: should probably use `_ROM_TOP_ADDR`
+    pub fn rom_top(&self) -> Any { ROM_TOP }
     pub fn ram_top(&self) -> Any { self.ram(self.memory()).t() }
     fn set_ram_top(&mut self, ptr: Any) { self.ram_mut(self.memory()).set_t(ptr); }
     pub fn ram_next(&self) -> Any { self.ram(self.memory()).x() }

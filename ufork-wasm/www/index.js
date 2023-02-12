@@ -1,6 +1,7 @@
 import init, {
     Universe, Cell, Host,
-    h_step, h_rom_buffer, h_ram_buffer, h_gc_phase,
+    h_step, h_gc_run, h_rom_buffer, h_ram_buffer,
+    h_gc_phase, h_in_mem, h_car, h_cdr, h_next,
     h_rom_top, h_ram_top, h_ram_next, h_ram_free, h_ram_root,
 } from "../pkg/ufork_wasm.js";
 
@@ -40,7 +41,7 @@ $canvas.width = (CELL_SIZE + 1) * width + 1;
 $canvas.height = (CELL_SIZE + 1) * height + 1;
 
 let memory;
-let host;
+//let host;
 let universe;
 let paused = false;  // run/pause toggle
 let fault = false;  // execution fault flag
@@ -62,6 +63,9 @@ const NIL_RAW   = 0x0000_0001;
 const FALSE_RAW = 0x0000_0002;
 const TRUE_RAW  = 0x0000_0003;
 const UNIT_RAW 	= 0x0000_0004;
+// ram offets
+const MEMORY_OFS = 0;
+const DDEQUE_OFS = 1;
 // helper functions
 function h_warning(message) {
     console.log("WARNING!", message);
@@ -110,6 +114,12 @@ function h_ptr_to_cap(ptr) {
 function h_fix_to_i32(fix) {
     return (fix << 1) >> 1;
 }
+let h_read_quad = function(ptr) {
+    return h_warning("h_read_quad: WASM not initialized.");
+};
+let h_write_quad = function(ptr, quad) {
+    return h_warning("h_write_quad: WASM not initialized.");
+};
 const rom_label = [
     "#?",
     "()",
@@ -153,12 +163,18 @@ function q_print(quad) {
         "y:"+h_print(quad.y)+", "+
         "z:"+h_print(quad.z)+" }");
 }
-let h_read_quad = function(ptr) {
-    return h_warning("h_read_quad: WASM not initialized.");
-};
-let h_write_quad = function(ptr, quad) {
-    return h_warning("h_write_quad: WASM not initialized.");
-};
+function h_disasm(ptr) {
+    let str = h_print(ptr);
+    if (h_is_cap(ptr)) {
+        ptr = h_cap_to_ptr(ptr);
+    }
+    if (h_is_ptr(ptr)) {
+        str += ": ";
+        const quad = h_read_quad(ptr);
+        str += q_print(quad);
+    }
+    return str;
+}
 
 const updateElementText = (el, txt) => {
     if (el.textContent == txt) {
@@ -168,9 +184,27 @@ const updateElementText = (el, txt) => {
     }
     el.textContent = txt;
 }
+function updateRomMonitor() {
+    let a = [];
+    for (let ofs = 0; ofs < h_rawofs(h_rom_top()); ofs += 1) {
+        const ptr = h_romptr(ofs);
+        const quad = h_read_quad(ptr);
+        const line = ("         " + h_print(ptr)).slice(-9)
+            + ": " + q_print(quad);
+        a.push(line);
+    }
+    $mem_rom.textContent = a.join("\n");
+}
+function updateRamMonitor() {
+    let a = [];
+    for (let ofs = 0; ofs < h_rawofs(h_ram_top()); ofs += 1) {
+        const ptr = h_ramptr(ofs);
+        const line = h_disasm(ptr);
+        a.push(line);
+    }
+    $mem_ram.textContent = a.join("\n");
+}
 const drawHost = () => {
-    var a;
-
     if (fault) {
         $fault.setAttribute("fill", "#F30");
         $fault.setAttribute("stroke", "#900");
@@ -178,116 +212,92 @@ const drawHost = () => {
         $fault.setAttribute("fill", "#0F3");
         $fault.setAttribute("stroke", "#090");
     }
-    const top = h_rawofs(host.ram_top());
+    updateRamMonitor();
+    const top = h_rawofs(h_ram_top());
     if (top > ram_max) {
         ram_max = top;
     }
     updateElementText($mem_max, ram_max.toString());
-    updateElementText($mem_top, host.print(host.ram_top()));
-    updateElementText($mem_next, host.print(host.ram_next()));
-    $mem_next.title = host.disasm(host.ram_next());
-    updateElementText($mem_free, host.print(host.ram_free()));
-    updateElementText($mem_root, host.print(host.ram_root()));
-    $mem_root.title = host.disasm(host.ram_root());
-    updateElementText($gc_phase, host.gc_phase() == 0 ? "Bank 0" : "Bank 1");
-    updateElementText($sponsor_memory, host.print(host.sponsor_memory()));
-    updateElementText($sponsor_events, host.print(host.sponsor_events()));
-    updateElementText($sponsor_instrs, host.print(host.sponsor_instrs()));
-    //$mem_rom.textContent = host.render();
-    a = [];
-    for (let addr = 0; addr < 512; addr++) {
-        const raw = host.rom_addr(addr);
-        const line = '$'
-            + ('00000000' + raw.toString(16)).slice(-8)
-            + ': '
-            + host.display(raw);
-        a.push(line);
-        $mem_rom.textContent = a.join("\n");
-    }
-    a = [];
-    for (let addr = 0; addr < 256; addr++) {
-        const raw = host.ram_addr(host.gc_phase(), addr);
-        const line = '$'
-            + ('00000000' + raw.toString(16)).slice(-8)
-            + ': '
-            + host.display(raw);
-        a.push(line);
-        $mem_ram.textContent = a.join("\n");
-    }
-    const ip = host.ip();
-    //updateElementText($ip, host.print(ip));
-    if (host.in_mem(ip)) {
-        let p = ip;
-        let n = 5;
+    updateElementText($mem_top, h_print(h_ram_top()));
+    updateElementText($mem_next, h_print(h_ram_next()));
+    //$mem_next.title = h_disasm(h_ram_next());
+    updateElementText($mem_free, h_print(h_ram_free()));
+    updateElementText($mem_root, h_print(h_ram_root()));
+    //$mem_root.title = h_disasm(h_ram_root());
+    updateElementText($gc_phase, h_gc_phase() == 0 ? "Bank 0" : "Bank 1");
+    const ddqeue_quad = h_read_quad(h_ramptr(DDEQUE_OFS));
+    const e_first = ddqeue_quad.t;
+    const e_last = ddqeue_quad.x;
+    const k_first = ddqeue_quad.y;
+    const k_last = ddqeue_quad.z;
+    if (h_in_mem(k_first)) {
+        let p = k_first;
         let a = [];
-        while ((n > 0) && host.in_mem(p)) {
-            a.push(host.display(p));
-            p = host.next(p);
-            n -= 1;
-        }
-        if (host.in_mem(p)) {
-            a.push("...");
-        }
-        updateElementText($instr, a.join("\n"));
-    } else {
-        updateElementText($instr, host.display(ip));
-    }
-    const sp = host.sp();
-    //updateElementText($sp, host.print(sp));
-    //$sp.title = host.disasm(sp);
-    if (host.in_mem(sp)) {
-        let p = sp;
-        let a = [];
-        while (host.is_pair(p)) {
-            //a.push(host.disasm(p));  // disasm stack Pair
-            //a.push(host.print(host.car(p)));  // print stack item
-            //a.push(host.display(host.car(p)));  // display stack item
-            a.push(host.pprint(host.car(p)));  // pretty-print stack item
-            p = host.cdr(p);
-        }
-        updateElementText($stack, a.join("\n"));
-    } else {
-        //$stack.innerHTML = "<i>empty</i>";
-        updateElementText($stack, "--");
-    }
-    $stack.title = host.display(sp);
-    const kq = host.kqueue();
-    if (host.in_mem(kq)) {
-        let p = kq;
-        let a = [];
-        while (host.in_mem(p)) {
-            a.push(host.display(p));  // display continuation
-            //a.push(host.disasm(p));  // disasm continuation
-            p = host.next(p);
+        while (h_in_mem(p)) {
+            a.push(h_disasm(p));  // disasm continuation
+            p = h_next(p);
         }
         updateElementText($kqueue, a.join("\n"));
     } else {
         updateElementText($kqueue, "--");
     }
-    const eq = host.equeue();
-    if (host.in_mem(eq)) {
-        let p = eq;
+    if (h_in_mem(e_first)) {
+        let p = e_first;
         let a = [];
-        while (host.in_mem(p)) {
-            a.push(host.display(p));  // display event
-            //a.push(host.disasm(p));  // disasm event
-            p = host.next(p);
+        while (h_in_mem(p)) {
+            a.push(h_disasm(p));  // disasm event
+            p = h_next(p);
         }
         updateElementText($equeue, a.join("\n"));
     } else {
         updateElementText($equeue, "--");
     }
-    const ep = host.ep();
-    //updateElementText($ep, host.print(ep));
-    updateElementText($event, host.display(ep));
-    const ap = host.e_self();
-    //updateElementText($ap, host.print(ap));
-    updateElementText($self, host.display(ap));
-    const mp = host.e_msg();
-    //updateElementText($mp, host.print(mp));
-    //$mp.title = host.disasm(mp);
-    updateElementText($msg, host.pprint(mp));
-    $msg.title = host.display(mp);
+    const cont_quad = h_read_quad(k_first);
+    const ip = cont_quad.t;
+    const sp = cont_quad.x;
+    const ep = cont_quad.y;
+    if (h_in_mem(ip)) {
+        let p = ip;
+        let n = 5;
+        let a = [];
+        while ((n > 0) && h_in_mem(p)) {
+            a.push(h_disasm(p));
+            p = h_next(p);
+            n -= 1;
+        }
+        if (h_in_mem(p)) {
+            a.push("...");
+        }
+        updateElementText($instr, a.join("\n"));
+    } else {
+        updateElementText($instr, "--");
+    }
+    if (h_in_mem(sp)) {
+        let p = sp;
+        let a = [];
+        while (h_in_mem(p)) {
+            //a.push(h_disasm(p));  // disasm stack Pair
+            a.push(h_print(h_car(p)));  // print stack item
+            //a.push(h_pprint(h_car(p)));  // pretty-print stack item
+            p = h_cdr(p);
+        }
+        updateElementText($stack, a.join("\n"));
+    } else {
+        updateElementText($stack, "--");
+    }
+    $stack.title = h_disasm(sp);
+    updateElementText($event, h_disasm(ep));
+    const event_quad = h_read_quad(ep);
+    const sponsor = event_quad.t;
+    const target = event_quad.x;
+    const message = event_quad.y;
+    const rollback =  event_quad.z;
+    updateElementText($self, h_disasm(target));
+    updateElementText($msg, h_disasm(message));
+    const sponsor_quad = h_read_quad(sponsor);
+    updateElementText($sponsor_memory, h_print(sponsor_quad.t));
+    updateElementText($sponsor_events, h_print(sponsor_quad.x));
+    updateElementText($sponsor_instrs, h_print(sponsor_quad.y));
 }
 const drawUniverse = () => {
     drawHost();
@@ -295,11 +305,11 @@ const drawUniverse = () => {
     drawCells();
 }
 const gcHost = () => {
-    host.gc_run();
+    h_gc_run();
     drawUniverse();
 }
 const singleStep = () => {
-    const ok = h_step(); //host.step();
+    const ok = h_step();
     fault = !ok;
     universe.tick();
     drawUniverse();
@@ -528,7 +538,8 @@ init().then(function (wasm) {
     test_suite(wasm);
 
     memory = wasm.memory;
-    host = Host.new();
+    //host = Host.new();  // FIXME: remove this in favor of static singleton `Host`
+    updateRomMonitor();
 
     universe = Universe.new(width, height);
     //universe.pattern_fill();
@@ -561,9 +572,4 @@ function test_suite(wasm) {
     const ram_ofs = h_ram_buffer(h_gc_phase());
     const ram = new Uint32Array(wasm.memory.buffer, ram_ofs, (h_rawofs(h_ram_top()) << 2));
     console.log("RAM:", ram);
-    for (let ofs = 0; ofs < h_rawofs(h_ram_top()); ofs += 1) {
-        const ptr = h_ramptr(ofs);
-        const quad = h_read_quad(ptr);
-        console.log(h_print(ptr)+":", q_print(quad));
-    }
 }
