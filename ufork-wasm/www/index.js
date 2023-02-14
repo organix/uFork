@@ -1,5 +1,4 @@
 import init, {
-    Universe, Cell, Host,
     h_step, h_gc_run, h_rom_buffer, h_ram_buffer,
     h_gc_phase, h_in_mem, h_car, h_cdr, h_next,
     h_rom_top, h_ram_top, h_ram_next, h_ram_free, h_ram_root,
@@ -26,6 +25,7 @@ const $kqueue = document.getElementById("ufork-kqueue");
 
 const $mem_rom = document.getElementById("ufork-rom");
 const $mem_ram = document.getElementById("ufork-ram");
+const $mem_blob = document.getElementById("ufork-blob");
 
 const $instr = document.getElementById("ufork-instr");
 const $stack = document.getElementById("ufork-stack");
@@ -35,14 +35,6 @@ const $msg = document.getElementById("ufork-msg");
 
 const $fault = document.getElementById("fault-led");
 
-// Give the canvas room for all of our cells and a 1px border around them.
-const $canvas = document.getElementById("ufork-canvas");
-$canvas.width = (CELL_SIZE + 1) * width + 1;
-$canvas.height = (CELL_SIZE + 1) * height + 1;
-
-let memory;
-//let host;
-let universe;
 let paused = false;  // run/pause toggle
 let fault = false;  // execution fault flag
 const $rate = document.getElementById("frame-rate");
@@ -500,20 +492,14 @@ const drawHost = () => {
     updateElementText($sponsor_events, h_print(sponsor_quad.x));
     updateElementText($sponsor_instrs, h_print(sponsor_quad.y));
 }
-const drawUniverse = () => {
-    drawHost();
-    drawGrid();
-    drawCells();
-}
 const gcHost = () => {
     h_gc_run();
-    drawUniverse();
+    drawHost();
 }
 const singleStep = () => {
     const ok = h_step();
     fault = !ok;
-    universe.tick();
-    drawUniverse();
+    drawHost();
     return ok;
 };
 const renderLoop = () => {
@@ -538,115 +524,6 @@ const logClick = event => {
     console.log("logClick:", event, s);
 }
 //$mem_root.onclick = logClick;
-
-$canvas.onclick = event => {
-    const boundingRect = $canvas.getBoundingClientRect();
-
-    const scaleX = $canvas.width / boundingRect.width;
-    const scaleY = $canvas.height / boundingRect.height;
-
-    const canvasLeft = (event.clientX - boundingRect.left) * scaleX;
-    const canvasTop = (event.clientY - boundingRect.top) * scaleY;
-
-    const row = Math.min(Math.floor(canvasTop / (CELL_SIZE + 1)), height - 1);
-    const col = Math.min(Math.floor(canvasLeft / (CELL_SIZE + 1)), width - 1);
-
-    universe.toggle_cell(row, col);
-    drawUniverse();
-}
-
-const ctx = $canvas.getContext('2d');
-
-const drawGrid = () => {
-    ctx.beginPath();
-    ctx.strokeStyle = GRID_COLOR;
-
-    // Vertical lines.
-    for (let i = 0; i <= width; i++) {
-        ctx.moveTo(i * (CELL_SIZE + 1) + 1, 0);
-        ctx.lineTo(i * (CELL_SIZE + 1) + 1, (CELL_SIZE + 1) * height + 1);
-    }
-
-    // Horizontal lines.
-    for (let j = 0; j <= height; j++) {
-        ctx.moveTo(0,                           j * (CELL_SIZE + 1) + 1);
-        ctx.lineTo((CELL_SIZE + 1) * width + 1, j * (CELL_SIZE + 1) + 1);
-    }
-
-    ctx.stroke();
-}
-
-const getIndex = (row, column) => {
-    return row * width + column;
-}
-
-const drawCells = () => {
-    const cellsPtr = universe.cells();
-    const cells = new Uint8Array(memory.buffer, cellsPtr, width * height);
-
-    ctx.beginPath();
-
-    for (let row = 0; row < height; row++) {
-        for (let col = 0; col < width; col++) {
-            const idx = getIndex(row, col);
-
-        ctx.fillStyle =
-            cells[idx] === Cell.Dead
-            ? DEAD_COLOR
-            : LIVE_COLOR;
-
-        ctx.fillRect(
-            col * (CELL_SIZE + 1) + 1,
-            row * (CELL_SIZE + 1) + 1,
-            CELL_SIZE,
-            CELL_SIZE);
-        }
-    }
-
-    ctx.stroke();
-}
-
-const $clearButton = document.getElementById("clear-btn");
-$clearButton.onclick = () => {
-    universe.clear_grid();
-    drawUniverse();
-}
-
-const $gliderButton = document.getElementById("glider-btn");
-$gliderButton.onclick = () => {
-    universe.launch_ship();
-    drawUniverse();
-}
-
-const $rPentominoButton = document.getElementById("r-pentomino-btn");
-$rPentominoButton.onclick = () => {
-    universe.r_pentomino();
-    drawUniverse();
-}
-
-const $acornButton = document.getElementById("acorn-btn");
-$acornButton.onclick = () => {
-    universe.plant_acorn();
-    drawUniverse();
-}
-
-const $gosperButton = document.getElementById("gosper-btn");
-$gosperButton.onclick = () => {
-    universe.gosper_gun();
-    drawUniverse();
-}
-
-const $patternButton = document.getElementById("pattern-btn");
-$patternButton.onclick = () => {
-    universe.pattern_fill();
-    drawUniverse();
-}
-
-const $randomButton = document.getElementById("random-btn");
-$randomButton.onclick = () => {
-    universe.random_fill();
-    drawUniverse();
-}
 
 const $gcButton = document.getElementById("ufork-gc-btn");
 $gcButton.onclick = gcHost;
@@ -738,16 +615,9 @@ init().then(function (wasm) {
     };
     test_suite(wasm);
 
-    memory = wasm.memory;
-    //host = Host.new();  // FIXME: remove this in favor of static singleton `Host`
-    updateRomMonitor();
-
-    universe = Universe.new(width, height);
-    //universe.pattern_fill();
-    universe.launch_ship();
-
     // draw initial state
-    drawUniverse();
+    updateRomMonitor();
+    drawHost();
 
     //playAction();  // start animation (running)
     pauseAction();  // start animation (paused)
