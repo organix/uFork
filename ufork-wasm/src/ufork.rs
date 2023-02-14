@@ -731,7 +731,7 @@ pub const ROM_TOP: Any      = Any { raw: 314 };  // MUST BE KEPT IN SYNC WITH `_
 
 pub const MEMORY: Any       = Any { raw: MUT_RAW | BNK_INI | 0 };
 pub const DDEQUE: Any       = Any { raw: MUT_RAW | BNK_INI | 1 };
-pub const NULL_DEV: Any     = Any { raw: OPQ_RAW | MUT_RAW | BNK_INI | 2 };
+pub const BLOB_DEV: Any     = Any { raw: OPQ_RAW | MUT_RAW | BNK_INI | 2 };
 pub const CLOCK_DEV: Any    = Any { raw: OPQ_RAW | MUT_RAW | BNK_INI | 3 };
 pub const IO_DEV: Any       = Any { raw: OPQ_RAW | MUT_RAW | BNK_INI | 4 };
 pub const SPONSOR: Any      = Any { raw: MUT_RAW | BNK_INI | 5 };
@@ -1216,6 +1216,7 @@ pub const EQ_8_BEH: Any = Any { raw: (TEST_ADDR+7) as Raw };
         quad_rom[TEST_ADDR+7]       = Quad::vm_msg(ZERO, Any::rom(TEST_ADDR+8));  // msg
         quad_rom[TEST_ADDR+8]       = Quad::vm_is_eq(PLUS_8, COMMIT);  // assert_eq(8, msg)
         //quad_rom[TEST_ADDR+8]       = Quad::vm_is_eq(PLUS_8, STOP);  // assert_eq(8, msg)
+        //quad_rom[TEST_ADDR+8]       = Quad::vm_is_eq(MINUS_1, COMMIT);  // assert_eq(-1, msg)  <-- this should fail!
 
         /* VM_DICT test suite */
 pub const T_DICT_ADDR: usize = TEST_ADDR+9;
@@ -1350,12 +1351,12 @@ pub const _T_DEQUE_BEH: Any  = Any { raw: T_DEQUE_ADDR as Raw };
         /* device test suite */
 pub const T_DEV_ADDR: usize = T_DEQUE_ADDR+65;
 pub const _T_DEV_BEH: Any  = Any { raw: T_DEV_ADDR as Raw };
-        quad_rom[T_DEV_ADDR+0]      = Quad::vm_push(PLUS_1, Any::rom(T_DEV_ADDR+1));  // 1
-        quad_rom[T_DEV_ADDR+1]      = Quad::vm_push(NULL_DEV, Any::rom(T_DEV_ADDR+2));  // 1 null_device
-        quad_rom[T_DEV_ADDR+2]      = Quad::vm_send(ZERO, Any::rom(T_DEV_ADDR+3));  // --
-        quad_rom[T_DEV_ADDR+3]      = Quad::vm_push(PLUS_2, Any::rom(T_DEV_ADDR+4));  // 2
-        quad_rom[T_DEV_ADDR+4]      = Quad::vm_push(NULL_DEV, Any::rom(T_DEV_ADDR+5));  // 2 null_device
-        quad_rom[T_DEV_ADDR+5]      = Quad::vm_send(ZERO, Any::rom(T_DEV_ADDR+6));  // --
+        quad_rom[T_DEV_ADDR+0]      = Quad::vm_push(PLUS_3, Any::rom(T_DEV_ADDR+1));  // 3
+        quad_rom[T_DEV_ADDR+1]      = Quad::vm_push(IO_DEV, Any::rom(T_DEV_ADDR+2));  // 3 io_device
+        quad_rom[T_DEV_ADDR+2]      = Quad::vm_push(BLOB_DEV, Any::rom(T_DEV_ADDR+3));  // 3 io_device blob_device
+        quad_rom[T_DEV_ADDR+3]      = Quad::vm_send(PLUS_2, Any::rom(T_DEV_ADDR+4));  // --
+        quad_rom[T_DEV_ADDR+4]      = Quad::vm_drop(ZERO, Any::rom(T_DEV_ADDR+5));  // --
+        quad_rom[T_DEV_ADDR+5]      = Quad::vm_drop(ZERO, Any::rom(T_DEV_ADDR+6));  // --
         quad_rom[T_DEV_ADDR+6]      = Quad::vm_push(IO_DEV, Any::rom(T_DEV_ADDR+7));  // io_device
         quad_rom[T_DEV_ADDR+7]      = Quad::vm_push(CLOCK_DEV, Any::rom(T_DEV_ADDR+8));  // io_device clock_device
         quad_rom[T_DEV_ADDR+8]      = Quad::vm_send(ZERO, Any::rom(T_DEV_ADDR+9));  // --
@@ -1388,7 +1389,7 @@ pub const _ROM_TOP_ADDR: usize = COUNT_ADDR+8;  // UPDATE `ROM_TOP` WHEN THIS VA
         ];
         quad_ram[MEMORY.addr()]     = Quad::memory_t(Any::ram(BNK_INI, _RAM_TOP_ADDR), NIL, ZERO, DDEQUE);
         quad_ram[DDEQUE.addr()]     = Quad::ddeque_t(NIL, NIL, K_BOOT, K_BOOT);
-        quad_ram[NULL_DEV.addr()]   = Quad::actor_t(ZERO, NIL, UNDEF);  // null device #0
+        quad_ram[BLOB_DEV.addr()]   = Quad::actor_t(ZERO, NIL, UNDEF);  // blob device #0
         quad_ram[CLOCK_DEV.addr()]  = Quad::actor_t(PLUS_1, NIL, UNDEF);  // clock device #1
         quad_ram[IO_DEV.addr()]     = Quad::actor_t(PLUS_2, NIL, UNDEF);  // i/o device #2
         quad_ram[SPONSOR.addr()]    = Quad::sponsor_t(Any::fix(512), Any::fix(64), Any::fix(512));  // root configuration sponsor
@@ -1412,9 +1413,9 @@ pub const E_BOOT: Any       = Any { raw: MUT_RAW | BNK_INI | (BOOT_ADDR+9) as Ra
 pub const K_BOOT: Any       = Any { raw: MUT_RAW | BNK_INI | (BOOT_ADDR+10) as Raw };
         //quad_ram[BOOT_ADDR+10]      = Quad::new_cont(SINK_BEH, NIL, E_BOOT);
         //quad_ram[BOOT_ADDR+10]      = Quad::new_cont(STOP, _BOOT_SP, E_BOOT);
-        quad_ram[BOOT_ADDR+10]      = Quad::new_cont(_BOOT_BEH, _BOOT_SP, E_BOOT);
+        //quad_ram[BOOT_ADDR+10]      = Quad::new_cont(_BOOT_BEH, _BOOT_SP, E_BOOT);
         //quad_ram[BOOT_ADDR+10]      = Quad::new_cont(_TEST_BEH, NIL, E_BOOT);
-        //quad_ram[BOOT_ADDR+10]      = Quad::new_cont(_T_DEV_BEH, NIL, E_BOOT);
+        quad_ram[BOOT_ADDR+10]      = Quad::new_cont(_T_DEV_BEH, NIL, E_BOOT);
 
 pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 11;
 
@@ -1423,7 +1424,7 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 11;
             quad_ram0: if BNK_INI == BNK_0 { quad_ram } else { [ Quad::empty_t(); QUAD_RAM_MAX ] },
             quad_ram1: if BNK_INI == BNK_1 { quad_ram } else { [ Quad::empty_t(); QUAD_RAM_MAX ] },
             device: [
-                Some(Box::new(NullDevice::new())),
+                Some(Box::new(BlobDevice::new())),
                 Some(Box::new(ClockDevice::new())),
                 Some(Box::new(IoDevice::new())),
             ],
