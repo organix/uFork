@@ -1,7 +1,7 @@
 import init, {
-    h_step, h_gc_run, h_rom_buffer, h_ram_buffer,
+    h_step, h_gc_run, h_rom_buffer, h_ram_buffer, h_blob_buffer,
     h_gc_phase, h_in_mem, h_car, h_cdr, h_next,
-    h_rom_top, h_ram_top, h_ram_next, h_ram_free, h_ram_root,
+    h_rom_top, h_ram_top, h_ram_next, h_ram_free, h_ram_root, h_blob_top,
 } from "../pkg/ufork_wasm.js";
 
 const CELL_SIZE = 5; // px
@@ -155,6 +155,9 @@ let h_read_quad = function(ptr) {
 };
 let h_write_quad = function(ptr, quad) {
     return h_warning("h_write_quad: WASM not initialized.");
+};
+let h_blob_mem = function() {
+    return h_warning("h_blob_mem: WASM not initialized.");
 };
 const rom_label = [
     "#?",
@@ -397,6 +400,9 @@ function updateRamMonitor() {
     }
     $mem_ram.textContent = a.join("\n");
 }
+function updateBlobMonitor() {
+    $mem_blob.textContent = hexdump(h_blob_mem());
+}
 const drawHost = () => {
     if (fault) {
         $fault.setAttribute("fill", "#F30");
@@ -405,6 +411,7 @@ const drawHost = () => {
         $fault.setAttribute("fill", "#0F3");
         $fault.setAttribute("stroke", "#090");
     }
+    updateBlobMonitor();
     updateRamMonitor();
     const top = h_rawofs(h_ram_top());
     if (top > ram_max) {
@@ -546,6 +553,42 @@ const pauseAction = () => {
     paused = true;
 }
 
+/*
+0000:  06 10 82 38  01 81 07 10  82 32 01 84  0b 84 6b 69  ···8·····2····ki
+0130:  09 08 09 14  09 0a 0a 85  48 65 6c 6c  6f           ········Hello   
+*/
+function hexdump(u8buf, ofs, len, xlt) {
+    ofs = ofs ?? 0;
+    len = len ?? u8buf.length;
+    xlt = xlt ?? function (code) {
+        // translate control codes to center-dot
+        if ((code < 0x20) || ((0x7F <= code) && (code < 0xA0))) {
+          return 0xB7;  //  "·"
+        }
+        return code;
+    }
+    let out = "";
+    while (ofs < len) {
+        let str = "";
+        out += ("0000" + ofs.toString(16)).slice(-4) + ":";
+        for (let cnt = 0; cnt < 16; cnt += 1) {
+            out += ((cnt & 0x3) === 0) ? "  " : " ";
+            const idx = ofs + cnt;
+            if (idx < len) {
+                const code = u8buf[idx];
+                out += ("00" + code.toString(16)).slice(-2);
+                str += String.fromCodePoint(xlt(code));
+            } else {
+                out += "  ";
+                str += " ";
+            }
+        }
+        out += "  " + str + "\n";
+        ofs += 16;
+    }
+    return out;
+}
+
 init().then(function (wasm) {
     h_read_quad = function(ptr) {
         if (h_is_ram(ptr)) {
@@ -613,6 +656,14 @@ init().then(function (wasm) {
         }
         return h_warning("h_write_quad: required RAM ptr, got "+h_print(ptr));
     };
+    h_blob_mem = function() {
+        // WARNING! The WASM memory buffer can move if it is resized.
+        //          We get a fresh pointer each time for safety.
+        const blob_ofs = h_blob_buffer();
+        const blob_len = h_fix_to_i32(h_blob_top());
+        const blob = new Uint8Array(wasm.memory.buffer, blob_ofs, blob_len);
+        return blob;
+    };
     test_suite(wasm);
 
     // draw initial state
@@ -643,4 +694,8 @@ function test_suite(wasm) {
     const ram_ofs = h_ram_buffer(h_gc_phase());
     const ram = new Uint32Array(wasm.memory.buffer, ram_ofs, (h_rawofs(h_ram_top()) << 2));
     console.log("RAM:", ram);
+
+    const blob_ofs = h_blob_buffer();
+    const blob = new Uint8Array(wasm.memory.buffer, blob_ofs, h_fix_to_i32(h_blob_top()));
+    console.log("BLOB:", blob);
 }

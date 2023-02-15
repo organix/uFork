@@ -740,11 +740,22 @@ pub const SPONSOR: Any      = Any { raw: MUT_RAW | BNK_INI | 5 };
 const QUAD_ROM_MAX: usize = 1<<10;  // 1K quad-cells of ROM
 const QUAD_RAM_MAX: usize = 1<<8;   // 256 quad-cells of RAM
 const DEVICE_MAX:   usize = 3;      // number of Core devices
+const BLOB_RAM_MAX: usize = 64;     // 64 octets of Blob RAM (for testing)
+//const BLOB_RAM_MAX: usize = 1<<12;  // 4K octets of Blob RAM
+//const BLOB_RAM_MAX: usize = 1<<16;  // 64K octets of Blob RAM
+
+fn u16_lsb(nat: usize) -> u8 {
+    (nat & 0xFF) as u8
+}
+fn u16_msb(nat: usize) -> u8 {
+    ((nat >> 8) & 0xFF) as u8
+}
 
 pub struct Core {
     quad_rom:   [Quad; QUAD_ROM_MAX],
     quad_ram0:  [Quad; QUAD_RAM_MAX],
     quad_ram1:  [Quad; QUAD_RAM_MAX],
+    blob_ram:   [u8; BLOB_RAM_MAX],
     device:     [Option<Box<dyn Device>>; DEVICE_MAX],
 }
 
@@ -1351,17 +1362,17 @@ pub const _T_DEQUE_BEH: Any  = Any { raw: T_DEQUE_ADDR as Raw };
         /* device test suite */
 pub const T_DEV_ADDR: usize = T_DEQUE_ADDR+65;
 pub const _T_DEV_BEH: Any  = Any { raw: T_DEV_ADDR as Raw };
-        quad_rom[T_DEV_ADDR+0]      = Quad::vm_push(PLUS_3, Any::rom(T_DEV_ADDR+1));  // 3
-        quad_rom[T_DEV_ADDR+1]      = Quad::vm_push(IO_DEV, Any::rom(T_DEV_ADDR+2));  // 3 io_device
-        quad_rom[T_DEV_ADDR+2]      = Quad::vm_push(BLOB_DEV, Any::rom(T_DEV_ADDR+3));  // 3 io_device blob_device
+        quad_rom[T_DEV_ADDR+0]      = Quad::vm_push(Any::fix(13), Any::rom(T_DEV_ADDR+1));  // 13
+        quad_rom[T_DEV_ADDR+1]      = Quad::vm_push(IO_DEV, Any::rom(T_DEV_ADDR+2));  // 13 io_device
+        quad_rom[T_DEV_ADDR+2]      = Quad::vm_push(BLOB_DEV, Any::rom(T_DEV_ADDR+3));  // 13 io_device blob_device
         quad_rom[T_DEV_ADDR+3]      = Quad::vm_send(PLUS_2, Any::rom(T_DEV_ADDR+4));  // --
-        quad_rom[T_DEV_ADDR+4]      = Quad::vm_drop(ZERO, Any::rom(T_DEV_ADDR+5));  // --
-        quad_rom[T_DEV_ADDR+5]      = Quad::vm_drop(ZERO, Any::rom(T_DEV_ADDR+6));  // --
-        quad_rom[T_DEV_ADDR+6]      = Quad::vm_push(IO_DEV, Any::rom(T_DEV_ADDR+7));  // io_device
-        quad_rom[T_DEV_ADDR+7]      = Quad::vm_push(CLOCK_DEV, Any::rom(T_DEV_ADDR+8));  // io_device clock_device
-        quad_rom[T_DEV_ADDR+8]      = Quad::vm_send(ZERO, Any::rom(T_DEV_ADDR+9));  // --
-        quad_rom[T_DEV_ADDR+9]      = Quad::vm_push(MINUS_1, Any::rom(T_DEV_ADDR+10));  // -1
-        quad_rom[T_DEV_ADDR+10]     = Quad::vm_push(IO_DEV, Any::rom(T_DEV_ADDR+11));  // -1 io_device
+        quad_rom[T_DEV_ADDR+4]      = Quad::vm_push(Any::fix(3), Any::rom(T_DEV_ADDR+5));  // 3
+        quad_rom[T_DEV_ADDR+5]      = Quad::vm_push(IO_DEV, Any::rom(T_DEV_ADDR+6));  // 3 io_device
+        quad_rom[T_DEV_ADDR+6]      = Quad::vm_push(BLOB_DEV, Any::rom(T_DEV_ADDR+7));  // 3 io_device blob_device
+        quad_rom[T_DEV_ADDR+7]      = Quad::vm_send(PLUS_2, Any::rom(T_DEV_ADDR+8));  // --
+        quad_rom[T_DEV_ADDR+8]      = Quad::vm_drop(ZERO, Any::rom(T_DEV_ADDR+9));  // --
+        quad_rom[T_DEV_ADDR+9]      = Quad::vm_push(IO_DEV, Any::rom(T_DEV_ADDR+10));  // io_device
+        quad_rom[T_DEV_ADDR+10]     = Quad::vm_push(CLOCK_DEV, Any::rom(T_DEV_ADDR+11));  // io_device clock_device
         quad_rom[T_DEV_ADDR+11]     = Quad::vm_send(ZERO, Any::rom(T_DEV_ADDR+12));  // --
         //quad_rom[T_DEV_ADDR+11]     = Quad::vm_send(ZERO, COMMIT);  // --
         quad_rom[T_DEV_ADDR+12]     = Quad::vm_push(PLUS_5, Any::rom(T_DEV_ADDR+13));  // 5
@@ -1419,10 +1430,40 @@ pub const K_BOOT: Any       = Any { raw: MUT_RAW | BNK_INI | (BOOT_ADDR+10) as R
 
 pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 11;
 
+        /*
+         * OED-encoded blob memory (64kB maximum)
+         */
+        let mut blob_ram = [
+            0x8F as u8;  // fill with OED-encoded `null` octets
+            BLOB_RAM_MAX
+        ];
+        let mut nat = BLOB_RAM_MAX;
+        nat -= 9;
+        blob_ram[0] = 0x88;             // Array
+        blob_ram[1] = 0x82;             //   length: +Integer elements
+        blob_ram[2] = 16;               //     length.size = 16 bits
+        blob_ram[3] = 1;                //     length[0] = 1 (lsb)
+        blob_ram[4] = 0;                //     length[1] = 0 (msb)
+        blob_ram[5] = 0x82;             //   size: +Integer octets
+        blob_ram[6] = 16;               //     size.size = 16 bits
+        blob_ram[7] = u16_lsb(nat);     //     size[0] (lsb)
+        blob_ram[8] = u16_msb(nat);     //     size[1] (msb)
+        nat -= 9;
+        blob_ram[9] = 0x8B;             //   [0] = Extension Blob
+        blob_ram[10] = 0x82;            //       meta: +Integer offset
+        blob_ram[11] = 16;              //         meta.size = 16 bits
+        blob_ram[12] = 0;               //         meta[0] = 0 (lsb)
+        blob_ram[13] = 0;               //         meta[1] = 0 (msb)
+        blob_ram[14] = 0x82;            //       size: +Integer octets
+        blob_ram[15] = 16;              //         size.size = 16 bits
+        blob_ram[16] = u16_lsb(nat);    //         size[0] (lsb)
+        blob_ram[17] = u16_msb(nat);    //         size[1] (msb)
+
         Core {
             quad_rom,
             quad_ram0: if BNK_INI == BNK_0 { quad_ram } else { [ Quad::empty_t(); QUAD_RAM_MAX ] },
             quad_ram1: if BNK_INI == BNK_1 { quad_ram } else { [ Quad::empty_t(); QUAD_RAM_MAX ] },
+            blob_ram,
             device: [
                 Some(Box::new(BlobDevice::new())),
                 Some(Box::new(ClockDevice::new())),
@@ -2323,6 +2364,7 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 11;
     pub fn ram_root(&self) -> Any { self.ram(self.memory()).z() }
     fn set_ram_root(&mut self, ptr: Any) { self.ram_mut(self.memory()).set_z(ptr); }
     pub fn memory(&self) -> Any { self.ptr_to_mem(MEMORY) }
+    pub fn blob_top(&self) -> Any { Any::fix(BLOB_RAM_MAX as isize) }
 
     pub fn new_event(&mut self, target: Any, msg: Any) -> Result<Any, Error> {
         assert!(self.typeq(ACTOR_T, target));
@@ -2777,6 +2819,15 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 11;
         } else {
             &self.quad_ram1
         }
+    }
+    pub fn blob_buffer(&self) -> &[u8] {
+        &self.blob_ram
+    }
+    pub fn blob_read(&self, ofs: usize) -> u8 {
+        self.blob_ram[ofs]
+    }
+    pub fn blob_write(&mut self, ofs: usize, data: u8) {
+        self.blob_ram[ofs] = data;
     }
 
     pub fn next(&self, ptr: Any) -> Any {

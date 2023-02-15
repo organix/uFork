@@ -161,6 +161,20 @@ pub fn h_ram_buffer(bank: Raw) -> *const Quad {
     }
 }
 
+#[wasm_bindgen]
+pub fn h_blob_buffer() -> *const u8 {
+    unsafe {
+        the_host().borrow().blob_buffer()
+    }
+}
+
+#[wasm_bindgen]
+pub fn h_blob_top() -> Raw {
+    unsafe {
+        the_host().borrow().blob_top()
+    }
+}
+
 //#[wasm_bindgen]
 pub struct Host {
     core: Core,
@@ -245,6 +259,7 @@ impl Host {
     pub fn ram_next(&self) -> Raw { self.core.ram_next().raw() }
     pub fn ram_free(&self) -> Raw { self.core.ram_free().raw() }
     pub fn ram_root(&self) -> Raw { self.core.ram_root().raw() }
+    pub fn blob_top(&self) -> Raw { self.core.blob_top().raw() }
     pub fn equeue(&self) -> Raw { self.core.e_first().raw() }
     pub fn kqueue(&self) -> Raw { self.core.k_first().raw() }
     pub fn ip(&self) -> Raw { self.core.ip().raw() }
@@ -370,5 +385,8 @@ impl Host {
     }
     pub fn ram_buffer(&self, bank: Raw) -> *const Quad {
         self.core.ram_buffer(bank).as_ptr()
+    }
+    pub fn blob_buffer(&self) -> *const u8 {
+        self.core.blob_buffer().as_ptr()
     }
 }

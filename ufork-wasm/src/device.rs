@@ -97,18 +97,19 @@ fn u16_lsb(nat: usize) -> u8 {
 fn u16_msb(nat: usize) -> u8 {
     ((nat >> 8) & 0xFF) as u8
 }
-const BLOB_RAM_MAX: usize = 64;  // 64 octets of BLOB RAM (for testing)
-//const BLOB_RAM_MAX: usize = 1<<12;  // 4K octets of BLOB RAM
-//const BLOB_RAM_MAX: usize = 1<<16;  // 64K octets of BLOB RAM
-pub struct BlobDevice {
-    blob_ram: [u8; BLOB_RAM_MAX],
+fn get_u16(core: &mut Core, ofs: usize) -> usize {
+    assert_eq!(0x82, core.blob_read(ofs + 0));  // +Integer
+    assert_eq!(16, core.blob_read(ofs + 1));  // size = 16 bits
+    let lsb = core.blob_read(ofs + 2) as usize;
+    let msb = core.blob_read(ofs + 3) as usize;
+    (msb << 8) | lsb
 }
-impl BlobDevice {
-    pub fn new() -> BlobDevice {
-        let mut blob_ram = [
-            0x8F as u8;  // fill with OED-encoded `null` octets
-            BLOB_RAM_MAX
-        ];
+fn set_u16(core: &mut Core, ofs: usize, data: usize) {
+    core.blob_write(ofs + 0, 0x82);  // +Integer
+    core.blob_write(ofs + 1, 16);  // size = 16 bits
+    core.blob_write(ofs + 2, u16_lsb(data));
+    core.blob_write(ofs + 3, u16_msb(data));
+}
 /*
 let buf = new Uint8Array([              // buffer (9 + 22 = 31 octets)
     0x88,                               // Array
@@ -122,79 +123,46 @@ let buf = new Uint8Array([              // buffer (9 + 22 = 31 octets)
     0x82, 16, 4, 0,                     //       size (4 octets)
     0xCA, 0xFE, 0xBA, 0xBE]);           //       data (4 octets)
 */
-    let mut nat = BLOB_RAM_MAX;
-    nat -= 9;
-    blob_ram[0] = 0x88;                 // Array
-    blob_ram[1] = 0x82;                 //   length: +Integer elements
-    blob_ram[2] = 16;                   //     length.size = 16 bits
-    blob_ram[3] = 1;                    //     length[0] = 1 (lsb)
-    blob_ram[4] = 0;                    //     length[1] = 0 (msb)
-    blob_ram[5] = 0x82;                 //   size: +Integer octets
-    blob_ram[6] = 16;                   //     size.size = 16 bits
-    blob_ram[7] = u16_lsb(nat);         //     size[0] (lsb)
-    blob_ram[8] = u16_msb(nat);         //     size[1] (msb)
-    nat -= 9;
-    blob_ram[9] = 0x8B;                 //   [0] = Extension Blob
-    blob_ram[10] = 0x82;                //       meta: +Integer offset
-    blob_ram[11] = 16;                  //         meta.size = 16 bits
-    blob_ram[12] = 0;                   //         meta[0] = 0 (lsb)
-    blob_ram[13] = 0;                   //         meta[1] = 0 (msb)
-    blob_ram[14] = 0x82;                //       size: +Integer octets
-    blob_ram[15] = 16;                  //         size.size = 16 bits
-    blob_ram[16] = u16_lsb(nat);        //         size[0] (lsb)
-    blob_ram[17] = u16_msb(nat);        //         size[1] (msb)
-    BlobDevice {
-            blob_ram,
-        }
+fn blob_reserve(core: &mut Core, size: Any) -> Result<Any, Error> {
+    let mut need = size.get_fix()? as usize;
+    if need < 4 {
+        need = 4;  // minimum allocation is 4 octets
     }
-    fn get_u16(&self, ofs: usize) -> usize {
-        assert_eq!(0x82, self.blob_ram[ofs + 0]);  // +Integer
-        assert_eq!(16, self.blob_ram[ofs + 1]);  // size = 16 bits
-        let lsb = self.blob_ram[ofs + 2] as usize;
-        let msb = self.blob_ram[ofs + 3] as usize;
-        (msb << 8) | lsb
-    }
-    fn set_u16(&mut self, ofs: usize, data: usize) {
-        self.blob_ram[ofs + 0] = 0x82;  // +Integer
-        self.blob_ram[ofs + 1] = 16;  // size = 16 bits
-        self.blob_ram[ofs + 2] = u16_lsb(data);
-        self.blob_ram[ofs + 3] = u16_msb(data);
-    }
-    fn reserve(&mut self, size: Any) -> Result<Any, Error> {
-        let mut need = size.get_fix()? as usize;
-        if need < 4 {
-            need = 4;  // minimum allocation is 4 octets
-        }
-        need += 5;  // adjust for Blob header
-        let mut ofs: usize = 9;  // start after Array header
-        while ofs > 0 {
-            assert_eq!(0x8B, self.blob_ram[ofs]);  // Extension Blob
-            ofs += 1;
-            let next = self.get_u16(ofs);  // `meta` field is offset of next free Blob (or zero)
+    need += 5;  // adjust for Blob header
+    let mut ofs: usize = 9;  // start after Array header
+    while ofs > 0 {
+        assert_eq!(0x8B, core.blob_read(ofs));  // Extension Blob
+        ofs += 1;
+        let next = get_u16(core, ofs);  // `meta` field is offset of next free Blob (or zero)
+        ofs += 4;
+        let free = get_u16(core, ofs);  // `size` field is the number of free octets in this Blob
+        if need <= free {
             ofs += 4;
-            let free = self.get_u16(ofs);  // `size` field is the number of free octets in this Blob
-            if need <= free {
-                ofs += 4;
-                let end = ofs + free;
-                let split = free - need;
-                self.set_u16(ofs - 4, split);  // adjust `size` field for Blob splitting
-                ofs += split;
-                self.blob_ram[ofs] = 0x8A;  // Blob
+            let end = ofs + free;
+            let split = free - need;
+            set_u16(core, ofs - 4, split);  // adjust `size` field for Blob splitting
+            ofs += split;
+            core.blob_write(ofs, 0x8A);  // Blob
+            ofs += 1;
+            set_u16(core, ofs, need - 5);
+            ofs += 4;
+            let blob = Any::fix(ofs as isize);  // capture offset to user-managed data
+            while ofs < end {
+                core.blob_write(ofs, 0);  // fill with zero octets
                 ofs += 1;
-                self.set_u16(ofs, need - 5);
-                ofs += 4;
-                let blob = Any::fix(ofs as isize);  // capture offset to user-managed data
-                while ofs < end {
-                    self.blob_ram[ofs] = 0;  // fill with zero octets
-                    ofs += 1;
-                }
-                let count = self.get_u16(1);  // get number of Array elements
-                self.set_u16(1, count + 1);  // add element for new Blob
-                return Ok(blob)
             }
-            ofs = next;
+            let count = get_u16(core, 1);  // get number of Array elements
+            set_u16(core, 1, count + 1);  // add element for new Blob
+            return Ok(blob)
         }
-        Err(String::from("BLOB memory exhausted"))
+        ofs = next;
+    }
+    Err(String::from("BLOB memory exhausted"))
+}
+pub struct BlobDevice {}
+impl BlobDevice {
+    pub fn new() -> BlobDevice {
+        BlobDevice {}
     }
 }
 impl Device for BlobDevice {
@@ -206,7 +174,7 @@ impl Device for BlobDevice {
         let cust = core.car(msg);
         let size = core.car(core.cdr(msg));
         println!("BlobDevice::handle_event: cust={}, size={}", cust, size);
-        let reply = self.reserve(size)?;
+        let reply = blob_reserve(core, size)?;
         core.event_inject(sponsor, cust, reply)?;
         Ok(true)  // event handled.
     }
