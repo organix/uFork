@@ -1,5 +1,7 @@
 // uFork virtual CPU
 
+// Should we lint with 'cargo clippy'?
+
 use core::fmt;
 
 use crate::device::*;
@@ -1524,7 +1526,7 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 11;
             let rollback = self.reserve(&a_quad)?;  // snapshot actor state
             let kp = self.new_cont(beh, state, ep)?;  // create continuation
             println!("dispatch_event: cont={} -> {}", kp, self.mem(kp));
-            self.ram_mut(a_ptr).set_z(NIL);
+            self.ram_mut(a_ptr).set_z(NIL); // mark the actor as busy
             self.cont_enqueue(kp);
             let ep_ = self.event_dequeue().unwrap();
             assert_eq!(ep, ep_);
@@ -1683,6 +1685,7 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 11;
             VM_PAIR => {
                 println!("vm_pair: cnt={}", imm);
                 let n = imm.get_fix()?;
+                // Should 'stack_pairs', and methods like it, be inlined here?
                 self.stack_pairs(n)?;
                 kip
             },
@@ -1690,6 +1693,7 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 11;
                 println!("vm_part: cnt={}", imm);
                 let n = imm.get_fix()?;
                 self.stack_parts(n)?;
+                // Damn, this error propagation is nice.
                 kip
             },
             VM_NTH => {
@@ -1766,7 +1770,8 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 11;
                     println!("vm_alu: vv={}", vv);
                     let v = self.stack_pop();
                     println!("vm_alu: v={}", v);
-                        match (v.fix_num(), vv.fix_num()) {
+                    match (v.fix_num(), vv.fix_num()) {
+                        // What isn't nn named m, like the spec?
                         (Some(n), Some(nn)) => {
                             match imm {
                                 ALU_AND => Any::fix(n & nn),
@@ -1775,6 +1780,7 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 11;
                                 ALU_ADD => Any::fix(n + nn),
                                 ALU_SUB => Any::fix(n - nn),
                                 ALU_MUL => Any::fix(n * nn),
+                                // What, no divide?
                                 _ => UNDEF,
                             }
                         }
@@ -1787,6 +1793,7 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 11;
             },
             VM_EQ => {
                 println!("vm_eq: v={} ${:08x}", imm, imm.raw());
+                // Why vv and not v?
                 let vv = self.stack_pop();
                 println!("vm_eq: vv={} ${:08x}", vv, vv.raw());
                 let r = if imm == vv { TRUE } else { FALSE };
@@ -1812,6 +1819,7 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 11;
                                 CMP_GT => n > nn,
                                 CMP_LT => n < nn,
                                 CMP_LE => n <= nn,
+                                // Missing CMP_CLS...
                                 _ => false,
                             }
                         }
@@ -1880,6 +1888,8 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 11;
                     self.stack_pop()
                 };
                 println!("vm_send: msg={}", msg);
+                // So the sponsor only limits the dispatching of events, not
+                // their creation?
                 let ep = self.new_event(target, msg)?;
                 let me = self.self_ptr();
                 println!("vm_send: me={} -> {}", me, self.ram(me));
@@ -1906,7 +1916,7 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 11;
                 kip
             },
             VM_BEH => {
-                println!("vm_beh: cnt={}", imm);
+                println!("vm_beh: cnt={}", imm); // count or continuation?
                 let num = imm.get_fix()?;
                 let ip = self.stack_pop();
                 println!("vm_beh: ip={}", ip);
@@ -1927,12 +1937,14 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 11;
                 println!("vm_end: me={} -> {}", me, self.ram(me));
                 let rv = match imm {
                     END_ABORT => {
+                        // Why _r and not just r?
                         let _r = self.stack_pop();  // reason for abort
                         println!("vm_end: reason={}", _r);
                         // FIXME: where should `reason` be recorded/reported?
                         self.actor_abort(me);
                         UNIT
                     },
+                    // What is STOP for?
                     END_STOP => {
                         println!("vm_end: MEMORY={}", self.ram(MEMORY));
                         //UNDEF
@@ -1942,6 +1954,8 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 11;
                         self.actor_commit(me);
                         TRUE
                     },
+                    // Is it possible for references to a released actor to
+                    // point to an actor created in its place?
                     END_RELEASE => {
                         self.ram_mut(me).set_y(NIL);  // no retained stack
                         self.actor_commit(me);
@@ -1953,6 +1967,7 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 11;
                     }
                 };
                 println!("vm_end: rv={}", rv);
+                // What's with the TRUE/FALSE/UNIT/Err return types?
                 rv
             },
             VM_IS_EQ => {
@@ -1990,6 +2005,7 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 11;
     fn event_dequeue(&mut self) -> Option<Any> {
         // remove event from the front of the queue
         let ep = self.e_first();
+        // Is is_ram() the best way to check for UNDEF/NIL?
         if ep.is_ram() {
             let event = self.ram(ep);
             let next = event.z();
@@ -2020,6 +2036,8 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 11;
         self.ram_mut(kp).set_z(NIL);
         if !self.k_first().is_ram() {
             self.set_k_first(kp);
+        // If k_first is not nil that should mean k_last is not nil, so there
+        // is no need to check k_last for nilness.
         } else if self.k_last().is_ram() {
             self.ram_mut(self.k_last()).set_z(kp);
         }
@@ -2043,6 +2061,7 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 11;
 
     fn actor_commit(&mut self, me: Any) {
         let rollback = self.mem(self.ep()).z();
+        // Could rollback ever not be defined?
         if rollback.is_ram() {
             self.free(rollback);  // release rollback snapshot
         }
@@ -2081,6 +2100,7 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 11;
             self.free(rollback);  // release rollback snapshot
         }
     }
+    // This method is unused.
     pub fn actor_revert(&mut self) -> bool {
         // revert actor/event to pre-dispatch state
         if let Some(kp) = self.cont_dequeue() {
@@ -2096,6 +2116,7 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 11;
     }
     pub fn self_ptr(&self) -> Any {
         let ep = self.ep();
+        // Rather than returning UNDEF, could this method return None?
         if !ep.is_ram() { return UNDEF }
         let target = self.ram(ep).x();
         let a_ptr = self.cap_to_ptr(target);
@@ -2120,6 +2141,7 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 11;
     pub fn set_sponsor_instrs(&mut self, sponsor: Any, num: Any) {
         self.ram_mut(sponsor).set_y(num);
     }
+    // Are 'cycles' going to be stored in sponsor.z()?
     pub fn event_sponsor(&self, ep: Any) -> Any {
         self.mem(ep).t()
     }
@@ -2133,6 +2155,7 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 11;
         };
         n
     }
+    // Is this kind of recursion hard to implement in hardware?
     fn push_list(&mut self, ptr: Any) -> Result<(), Error> {
         if self.typeq(PAIR_T, ptr) {
             self.push_list(self.cdr(ptr))?;
@@ -2160,17 +2183,19 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 11;
             NIL
         }
     }
+    // Would it be worth documenting what some methods do? It's not always
+    // obvious from their signature or usage alone.
     fn split_nth(&self, lst: Any, n: isize) -> (Any, Any) {
-        let mut p = lst;
-        let mut q = UNDEF;
-        let mut n = n;
+        let mut p = lst;   // (a b c d) -> (b c d)   -> (c d)
+        let mut q = UNDEF; //           -> (a b c d) -> (b c d)
+        let mut n = n;     // 3         -> 2         -> 1
         assert!(n < 64);
         while n > 1 && self.typeq(PAIR_T, p) {
             q = p;
             p = self.cdr(p);
             n -= 1;
         }
-        (q, p)
+        (q, p)              // (b, c)
     }
     fn extract_nth(&self, lst: Any, n: isize) -> Any {
         let mut p = lst;
@@ -2255,6 +2280,9 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 11;
         }
     }
 
+    // This function does not even need to be a method of Core, let alone a
+    // mutable method. Also, it is only used once, so perhaps it should just be
+    // inlined.
     pub fn deque_new(&mut self) -> Any { EMPTY_DQ }
     pub fn deque_empty(&self, deque: Any) -> bool {
         if self.typeq(PAIR_T, deque) {
@@ -2275,12 +2303,12 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 11;
         if self.typeq(PAIR_T, deque) {
             let mut front = self.car(deque);
             let mut back = self.cdr(deque);
-            if !self.typeq(PAIR_T, front) {
-                while self.typeq(PAIR_T, back) {
+            if !self.typeq(PAIR_T, front) {          // nil
+                while self.typeq(PAIR_T, back) {     // (c b a)
                     // transfer back to front
-                    let item = self.car(back);
-                    back = self.cdr(back);
-                    front = self.cons(item, front)?;
+                    let item = self.car(back);       // c     -> b     -> a
+                    back = self.cdr(back);           // (b a) -> (a)   -> ()
+                    front = self.cons(item, front)?; // (c)   -> (b c) -> (a b c)
                 }
             }
             if self.typeq(PAIR_T, front) {
@@ -2295,6 +2323,8 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 11;
     pub fn deque_put(&mut self, deque: Any, item: Any) -> Result<Any, Error> {
         let front = self.car(deque);
         let back = self.cdr(deque);
+        // Oh wow, so the car of a deque is a list going one way and the cdr is
+        // a list going the other way? Is overlap allowed?
         let back = self.cons(item, back)?;
         self.cons(front, back)
     }
@@ -2312,8 +2342,8 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 11;
             }
             if self.typeq(PAIR_T, back) {
                 let item = self.car(back);
-                back = self.cdr(back);
-                let deque = self.cons(front, back)?;
+                // Are nested function calls bad style?
+                let deque = self.cons(front, self.cdr(back))?;
                 return Ok((deque, item))
             }
         }
@@ -2325,6 +2355,7 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 11;
         self.list_len(front) + self.list_len(back)
     }
 
+    // Why is e_first public, but e_last not?
     pub fn e_first(&self) -> Any { self.ram(self.ddeque()).t() }
     fn set_e_first(&mut self, ptr: Any) { self.ram_mut(self.ddeque()).set_t(ptr); }
     fn e_last(&self) -> Any { self.ram(self.ddeque()).x() }
@@ -2349,6 +2380,8 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 11;
 
     pub fn new_event(&mut self, target: Any, msg: Any) -> Result<Any, Error> {
         assert!(self.typeq(ACTOR_T, target));
+        // So an event is sponsored by whoever sponsored the event that caused
+        // it. Is a sponsor confined to a single core, or can they "travel"?
         let sponsor = self.event_sponsor(self.ep());
         let event = Quad::new_event(sponsor, target, msg);
         self.alloc(&event)
@@ -2356,6 +2389,7 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 11;
     pub fn new_cont(&mut self, ip: Any, sp: Any, ep: Any) -> Result<Any, Error> {
         let cont = Quad::new_cont(ip, sp, ep);
         self.reserve(&cont)  // no Sponsor needed
+        // Are some continuations exempt from sponsorship rules?
     }
     pub fn new_actor(&mut self, beh: Any, state: Any) -> Result<Any, Error> {
         let actor = Quad::new_actor(beh, state);
@@ -2365,41 +2399,41 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 11;
 
     fn stack_pairs(&mut self, n: isize) -> Result<(), Error> {
         assert!(n < 64);  // FIXME: replace with cycle-limit(s) in Sponsor
-        if n > 0 {
-            let mut n = n;
-            let h = self.stack_pop();
-            let lst = self.cons(h, NIL)?;
+        if n > 0 {                          // (a b c d e)
+            let mut n = n;                  // 3
+            let h = self.stack_pop();       // a, (b c d e)
+            let lst = self.cons(h, NIL)?;   // (a)
             let mut p = lst;
             while n > 1 {
-                let h = self.stack_pop();
-                let q = self.cons(h, NIL)?;
-                self.set_cdr(p, q);
-                p = q;
-                n -= 1;
+                let h = self.stack_pop();   // b, (c d e) -> c, (d e)
+                let q = self.cons(h, NIL)?; // (b)        -> (c)
+                self.set_cdr(p, q);         // (a b)      -> (b c)
+                p = q;                      // (b)        -> (c)
+                n -= 1;                     // 2          -> 1
             }
-            let t = self.stack_pop();
-            self.set_cdr(p, t);
-            self.stack_push(lst)?;
+            let t = self.stack_pop();       // d, (e)
+            self.set_cdr(p, t);             // (c d)
+            self.stack_push(lst)?;          // (a b c d)
         };
         Ok(())
     }
     fn stack_parts(&mut self, n: isize) -> Result<(), Error> {
         assert!(n < 64);  // FIXME: replace with cycle-limit(s) in Sponsor
         let mut s = self.stack_pop();  // list to destructure
-        if n > 0 {
-            let mut n = n;
-            let lst = self.cons(self.car(s), NIL)?;
-            let mut p = lst;
+        if n > 0 {                                      // (a b c d e)
+            let mut n = n;                              // 3
+            let lst = self.cons(self.car(s), NIL)?;     // (a)       -> (a b)   -> (a b c)
+            let mut p = lst;                            // (a)
             while n > 1 {
-                s = self.cdr(s);
-                let q = self.cons(self.car(s), NIL)?;
-                self.set_cdr(p, q);
-                p = q;
-                n -= 1;
+                s = self.cdr(s);                        // (b c d e) -> (c d e)
+                let q = self.cons(self.car(s), NIL)?;   // (b)       -> (c)
+                self.set_cdr(p, q);                     // (a b)     -> (b c)
+                p = q;                                  // (b)       -> (c)
+                n -= 1;                                 // 2         -> 1
             }
-            let t = self.cons(self.cdr(s), self.sp())?;
-            self.set_cdr(p, t);
-            self.set_sp(lst);
+            let t = self.cons(self.cdr(s), self.sp())?; // ((d e) . sp)
+            self.set_cdr(p, t);                         // (c (d e) . sp)
+            self.set_sp(lst);                           // ((a b c (d e) . sp)
         }
         Ok(())
     }
@@ -2407,7 +2441,7 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 11;
         if n > 1 {
             assert!(n < 64);  // FIXME: replace with cycle-limit(s) in Sponsor
             let sp = self.sp();
-            let (q, p) = self.split_nth(sp, n);
+            let (q, p) = self.split_nth(sp, n); // q = v[n-1], p = v[n]
             if self.typeq(PAIR_T, p) {
                 self.set_cdr(q, self.cdr(p));
                 self.set_cdr(p, sp);
@@ -2418,12 +2452,14 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 11;
         } else if n < -1 {
             assert!(n > -64);  // FIXME: replace with cycle-limit(s) in Sponsor
             let sp = self.sp();
-            let (_q, p) = self.split_nth(sp, -n);
+            let (_q, p) = self.split_nth(sp, -n); // p = v[n]
             if self.typeq(PAIR_T, p) {
                 self.set_sp(self.cdr(sp));
                 self.set_cdr(sp, self.cdr(p));
                 self.set_cdr(p, sp);
             } else {
+                // The top of the stack is discarded. Is this the right way to
+                // handle what is clearly a mistake made by the assembler?
                 self.stack_pop();  // out of range
             }
         };
@@ -2451,6 +2487,8 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 11;
     }
     fn stack_clear(&mut self, top: Any) {
         let mut sp = self.sp();
+        // Ah, so this is why it is not safe to pop items off an actor's initial
+        // stack.
         while sp != top && self.typeq(PAIR_T, sp) {
             let p = sp;
             sp = self.cdr(p);
@@ -2543,9 +2581,7 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 11;
             val.is_fix()
         } else if typ == ACTOR_T {
             if val.is_cap() {
-                // NOTE: we don't use `cap_to_ptr` here to avoid the type assertion.
-                let raw = val.raw() & !OPQ_RAW;  // WARNING: converting Cap to Ptr!
-                let ptr = Any::new(raw);
+                let ptr = self.cap_to_ptr(val);
                 self.mem(ptr).t() == ACTOR_T
             } else {
                 false
@@ -2559,8 +2595,10 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 11;
     pub fn in_heap(&self, val: Any) -> bool {
         val.is_ram() && (val.addr() < self.ram_top().addr())
     }
+    // What does this method do?
     fn follow_fwd(&self, val: Any) -> Any {
         let raw = val.raw();
+        // Should there be a method for this check? It is duplicated in bank().
         if (raw & (DIR_RAW | MUT_RAW)) == MUT_RAW {  // any RAM reference
             let ptr = Any::new(raw & !OPQ_RAW);  // WARNING: may convert Cap to Ptr!
             let quad = self.ram(ptr);
@@ -2583,9 +2621,7 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 11;
     }
     fn ptr_to_cap(&self, ptr: Any) -> Any {
         assert!(self.mem(ptr).t() == ACTOR_T);
-        let raw = ptr.raw() | OPQ_RAW;
-        let cap = Any::new(raw);
-        cap
+        Any::new(ptr.raw() | OPQ_RAW)
     }
     fn cap_to_ptr(&self, cap: Any) -> Any {
         let raw = cap.raw() & !OPQ_RAW;
@@ -2643,6 +2679,8 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 11;
     }
 
     pub fn gc_stop_the_world(&mut self) {
+        // Is this description still accurate? For example, I can't see any
+        // cells being marked GC_FREE.
         /*
         1. Swap generations (`GC_GENX` <--> `GC_GENY`)
         2. Mark each cell in the root-set with `GC_SCAN`
@@ -2660,8 +2698,11 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 11;
         let bank = if self.gc_phase() == BNK_0 { BNK_1 } else { BNK_0 };  // determine new phase
         println!("gc_stop_the_world: phase ${:08x} -> ${:08x}", self.gc_phase(), bank);
         self.set_ram_top(UNDEF);  // toggle GC phase
-        self.gc_store(Any::ram(bank, MEMORY.addr()),
-            Quad::memory_t(Any::ram(bank, ddeque.addr()), NIL, ZERO, root));
+        self.gc_store(
+            Any::ram(bank, MEMORY.addr()),
+            Quad::memory_t(Any::ram(bank, ddeque.addr()), NIL, ZERO, root)
+        );
+        // Should there be RESERVED_RAM_TOP and RESERVED_RAM_BOTTOM constants?
         let mut scan = ddeque;
         while scan.addr() <= SPONSOR.addr() {  // mark reserved RAM
             let raw = scan.raw();
@@ -2699,6 +2740,7 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 11;
         }
         val
     }
+    // Inline this function?
     fn gc_scan(&mut self, ptr: Any) {
         assert_eq!(Some(self.gc_phase()), ptr.bank());
         let quad = self.gc_load(ptr);
@@ -2722,6 +2764,7 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 11;
             None => panic!("invalid gc_load=${:08x}", ptr.raw()),
         }
     }
+    // What is the difference between a ptr, an addr, a raw, and a mem?
     fn gc_store(&mut self, ptr: Any, quad: Quad) {  // store quad directly
         match ptr.bank() {
             Some(bank) => {
@@ -2744,6 +2787,7 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 11;
     }
 
     pub fn mem(&self, ptr: Any) -> &Quad {
+        // Should this be an 'assert!'?
         if !ptr.is_ptr() {
             panic!("invalid ptr=${:08x}", ptr.raw());
         }
@@ -2760,6 +2804,7 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 11;
         let addr = ptr.addr();
         &self.quad_rom[addr]
     }
+    // Why does 'ram' return a &Quad, but 'gc_load' return a Quad?
     pub fn ram(&self, ptr: Any) -> &Quad {
         if ptr.is_cap() {
             panic!("opaque ptr=${:08x}", ptr.raw());
@@ -2832,6 +2877,7 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 11;
     }
 }
 
+// I thought there were only 3 falsey values: FALSE, UNDEF, and NIL.
 fn falsey(v: Any) -> bool {
     v == FALSE || v == UNDEF || v == NIL || v == ZERO
 }
