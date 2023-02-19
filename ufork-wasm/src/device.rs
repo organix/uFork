@@ -1,5 +1,8 @@
 // uFork device interfaces
 
+// The 'handle_event' method is blocking. Does that mean that devices can not
+// respond asynchronously?
+
 use crate::ufork::*;
 use crate::greet;
 
