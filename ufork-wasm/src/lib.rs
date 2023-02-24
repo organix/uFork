@@ -18,7 +18,7 @@ extern crate js_sys;
 extern crate web_sys;
 
 use wasm_bindgen::prelude::*;
-use std::fmt;
+//use std::fmt;
 use core::cell::RefCell;
 
 use crate::ufork::*;
@@ -180,26 +180,18 @@ pub struct Host {
     core: Core,
 }
 
+/*
 impl fmt::Display for Host {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         //let core = &self.core;
         for raw in 0..512 {
-            /*
-            let typed = core.typed(Ptr::new(raw));
-            write!(fmt, "{:5}: {}\n", raw, typed)?;
-            */
             //write!(fmt, "{}\n", self.display(raw))?;
             write!(fmt, "{:5}: {}\n", raw, self.display(raw))?;
         }
-        /*
-        write!(fmt, "\n")?;
-        write!(fmt, "IP:{} -> {}\n", core.ip(), core.typed(core.ip()))?;
-        write!(fmt, "SP:{} -> {}\n", core.sp(), core.typed(core.sp()))?;
-        write!(fmt, "EP:{} -> {}\n", core.ep(), core.typed(core.ep()))?;
-        */
         Ok(())
     }
 }
+*/
 
 /// Public methods, exported to JavaScript.
 //#[wasm_bindgen]
@@ -234,11 +226,12 @@ impl Host {
         true  // step successful
     }
 
-    pub fn fixnum(&self, num: Num) -> Raw { Any::fix(num as isize).raw() }
-    pub fn rom_addr(&self, ofs: Raw) -> Raw { Any::rom(ofs as usize).raw() }
-    pub fn ram_addr(&self, bank: Raw, ofs: Raw) -> Raw { Any::ram(bank, ofs as usize).raw() }
+    //pub fn fixnum(&self, num: Num) -> Raw { Any::fix(num as isize).raw() }
+    //pub fn rom_addr(&self, ofs: Raw) -> Raw { Any::rom(ofs as usize).raw() }
+    //pub fn ram_addr(&self, bank: Raw, ofs: Raw) -> Raw { Any::ram(bank, ofs as usize).raw() }
     pub fn gc_phase(&self) -> Raw { self.core.gc_phase() }
     pub fn gc_run(&mut self) { self.core.gc_stop_the_world() }
+    /*
     pub fn sponsor_memory(&self) -> Raw {
         let ep = self.core.ep();
         let sponsor = self.core.event_sponsor(ep);
@@ -254,12 +247,14 @@ impl Host {
         let sponsor = self.core.event_sponsor(ep);
         self.core.sponsor_instrs(sponsor).raw()
     }
+    */
     pub fn rom_top(&self) -> Raw { self.core.rom_top().raw() }
     pub fn ram_top(&self) -> Raw { self.core.ram_top().raw() }
     pub fn ram_next(&self) -> Raw { self.core.ram_next().raw() }
     pub fn ram_free(&self) -> Raw { self.core.ram_free().raw() }
     pub fn ram_root(&self) -> Raw { self.core.ram_root().raw() }
     pub fn blob_top(&self) -> Raw { self.core.blob_top().raw() }
+    /*
     pub fn equeue(&self) -> Raw { self.core.e_first().raw() }
     pub fn kqueue(&self) -> Raw { self.core.k_first().raw() }
     pub fn ip(&self) -> Raw { self.core.ip().raw() }
@@ -272,15 +267,18 @@ impl Host {
         let event = self.core.ram(ep);
         event.y().raw()
     }
+    */
     pub fn in_mem(&self, v: Raw) -> bool {  // excludes built-in constants and types
         (v > FREE_T.raw()) && !Any::new(v).is_fix()
     }
+    /*
     pub fn is_dict(&self, v: Raw) -> bool {
         self.core.typeq(DICT_T, Any::new(v))
     }
     pub fn is_pair(&self, v: Raw) -> bool {
         self.core.typeq(PAIR_T, Any::new(v))
     }
+    */
     pub fn car(&self, p: Raw) -> Raw {
         self.core.car(Any::new(p)).raw()
     }
@@ -291,6 +289,7 @@ impl Host {
         self.core.next(Any::new(p)).raw()
     }
 
+    /*
     pub fn pprint(&self, raw: Raw) -> String {
         if self.is_pair(raw) {
             let mut s = String::new();
@@ -374,6 +373,7 @@ impl Host {
     pub fn render(&self) -> String {
         self.to_string()
     }
+    */
 
     /*
      *  WARNING! The methods below give _unsafe_ access

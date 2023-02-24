@@ -97,7 +97,7 @@ fn u16_lsb(nat: usize) -> u8 {
 fn u16_msb(nat: usize) -> u8 {
     ((nat >> 8) & 0xFF) as u8
 }
-fn get_u16(core: &mut Core, ofs: usize) -> usize {
+fn get_u16(core: &Core, ofs: usize) -> usize {
     assert_eq!(0x82, core.blob_read(ofs + 0));  // +Integer
     assert_eq!(16, core.blob_read(ofs + 1));  // size = 16 bits
     let lsb = core.blob_read(ofs + 2) as usize;
@@ -147,6 +147,7 @@ fn blob_reserve(core: &mut Core, size: Any) -> Result<Any, Error> {
             set_u16(core, ofs, need - 5);
             ofs += 4;
             let blob = Any::fix(ofs as isize);  // capture offset to user-managed data
+            // FIXME: consider clearing memory (to `null`) during de-allocation instead...
             while ofs < end {
                 core.blob_write(ofs, 0);  // fill with zero octets
                 ofs += 1;
