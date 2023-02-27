@@ -18,7 +18,6 @@ extern crate js_sys;
 extern crate web_sys;
 
 use wasm_bindgen::prelude::*;
-//use std::fmt;
 use core::cell::RefCell;
 
 use crate::ufork::*;
@@ -78,9 +77,23 @@ pub fn h_gc_run() {
 }
 
 #[wasm_bindgen]
+pub fn h_rom_buffer() -> *const Quad {
+    unsafe {
+        the_host().borrow().rom_buffer()
+    }
+}
+
+#[wasm_bindgen]
 pub fn h_rom_top() -> Raw {
     unsafe {
         the_host().borrow().rom_top()
+    }
+}
+
+#[wasm_bindgen]
+pub fn h_ram_buffer(bank: Raw) -> *const Quad {
+    unsafe {
+        the_host().borrow().ram_buffer(bank)
     }
 }
 
@@ -92,23 +105,16 @@ pub fn h_ram_top() -> Raw {
 }
 
 #[wasm_bindgen]
-pub fn h_ram_next() -> Raw {
+pub fn h_blob_buffer() -> *const u8 {
     unsafe {
-        the_host().borrow().ram_next()
+        the_host().borrow().blob_buffer()
     }
 }
 
 #[wasm_bindgen]
-pub fn h_ram_free() -> Raw {
+pub fn h_blob_top() -> Raw {
     unsafe {
-        the_host().borrow().ram_free()
-    }
-}
-
-#[wasm_bindgen]
-pub fn h_ram_root() -> Raw {
-    unsafe {
-        the_host().borrow().ram_root()
+        the_host().borrow().blob_top()
     }
 }
 
@@ -147,65 +153,23 @@ pub fn h_next(raw: Raw) -> Raw {
     }
 }
 
-#[wasm_bindgen]
-pub fn h_rom_buffer() -> *const Quad {
-    unsafe {
-        the_host().borrow().rom_buffer()
-    }
-}
-
-#[wasm_bindgen]
-pub fn h_ram_buffer(bank: Raw) -> *const Quad {
-    unsafe {
-        the_host().borrow().ram_buffer(bank)
-    }
-}
-
-#[wasm_bindgen]
-pub fn h_blob_buffer() -> *const u8 {
-    unsafe {
-        the_host().borrow().blob_buffer()
-    }
-}
-
-#[wasm_bindgen]
-pub fn h_blob_top() -> Raw {
-    unsafe {
-        the_host().borrow().blob_top()
-    }
-}
-
-//#[wasm_bindgen]
-pub struct Host {
+/*
+ * JavaScript interface adapter for ufork::Core
+ */
+struct Host {
     core: Core,
 }
-
-/*
-impl fmt::Display for Host {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        //let core = &self.core;
-        for raw in 0..512 {
-            //write!(fmt, "{}\n", self.display(raw))?;
-            write!(fmt, "{:5}: {}\n", raw, self.display(raw))?;
-        }
-        Ok(())
-    }
-}
-*/
-
-/// Public methods, exported to JavaScript.
-//#[wasm_bindgen]
 impl Host {
-    pub fn new() -> Host {
+    fn new() -> Host {
         let core = Core::new();
         Host {
             core,
         }
     }
-    pub fn step(&mut self) -> bool {  // single-step instruction execution
+    fn step(&mut self) -> bool {  // single-step instruction execution
         match self.core.execute_instruction() {
             Ok(more) => {
-                if !more && !self.core.e_first().is_ram() {  // EQ must also be empty.
+                if !more && !self.core.event_pending() {
                     log!("continuation queue empty!");
                     return false;  // no more instructions...
                 }
@@ -226,167 +190,36 @@ impl Host {
         true  // step successful
     }
 
-    //pub fn fixnum(&self, num: Num) -> Raw { Any::fix(num as isize).raw() }
-    //pub fn rom_addr(&self, ofs: Raw) -> Raw { Any::rom(ofs as usize).raw() }
-    //pub fn ram_addr(&self, bank: Raw, ofs: Raw) -> Raw { Any::ram(bank, ofs as usize).raw() }
-    pub fn gc_phase(&self) -> Raw { self.core.gc_phase() }
-    pub fn gc_run(&mut self) { self.core.gc_stop_the_world() }
-    /*
-    pub fn sponsor_memory(&self) -> Raw {
-        let ep = self.core.ep();
-        let sponsor = self.core.event_sponsor(ep);
-        self.core.sponsor_memory(sponsor).raw()
-    }
-    pub fn sponsor_events(&self) -> Raw {
-        let ep = self.core.ep();
-        let sponsor = self.core.event_sponsor(ep);
-        self.core.sponsor_events(sponsor).raw()
-    }
-    pub fn sponsor_instrs(&self) -> Raw {
-        let ep = self.core.ep();
-        let sponsor = self.core.event_sponsor(ep);
-        self.core.sponsor_instrs(sponsor).raw()
-    }
-    */
-    pub fn rom_top(&self) -> Raw { self.core.rom_top().raw() }
-    pub fn ram_top(&self) -> Raw { self.core.ram_top().raw() }
-    pub fn ram_next(&self) -> Raw { self.core.ram_next().raw() }
-    pub fn ram_free(&self) -> Raw { self.core.ram_free().raw() }
-    pub fn ram_root(&self) -> Raw { self.core.ram_root().raw() }
-    pub fn blob_top(&self) -> Raw { self.core.blob_top().raw() }
-    /*
-    pub fn equeue(&self) -> Raw { self.core.e_first().raw() }
-    pub fn kqueue(&self) -> Raw { self.core.k_first().raw() }
-    pub fn ip(&self) -> Raw { self.core.ip().raw() }
-    pub fn sp(&self) -> Raw { self.core.sp().raw() }
-    pub fn ep(&self) -> Raw { self.core.ep().raw() }
-    pub fn e_self(&self) -> Raw { self.core.self_ptr().raw() }
-    pub fn e_msg(&self) -> Raw {
-        let ep = self.core.ep();
-        if !ep.is_ram() { return UNDEF.raw() }
-        let event = self.core.ram(ep);
-        event.y().raw()
-    }
-    */
-    pub fn in_mem(&self, v: Raw) -> bool {  // excludes built-in constants and types
+    fn gc_phase(&self) -> Raw { self.core.gc_phase() }
+    fn gc_run(&mut self) { self.core.gc_stop_the_world() }
+    fn rom_top(&self) -> Raw { self.core.rom_top().raw() }
+    fn ram_top(&self) -> Raw { self.core.ram_top().raw() }
+    fn blob_top(&self) -> Raw { self.core.blob_top().raw() }
+    fn in_mem(&self, v: Raw) -> bool {  // excludes built-in constants and types
         (v > FREE_T.raw()) && !Any::new(v).is_fix()
     }
-    /*
-    pub fn is_dict(&self, v: Raw) -> bool {
-        self.core.typeq(DICT_T, Any::new(v))
-    }
-    pub fn is_pair(&self, v: Raw) -> bool {
-        self.core.typeq(PAIR_T, Any::new(v))
-    }
-    */
-    pub fn car(&self, p: Raw) -> Raw {
+    fn car(&self, p: Raw) -> Raw {
         self.core.car(Any::new(p)).raw()
     }
-    pub fn cdr(&self, p: Raw) -> Raw {
+    fn cdr(&self, p: Raw) -> Raw {
         self.core.cdr(Any::new(p)).raw()
     }
-    pub fn next(&self, p: Raw) -> Raw {
+    fn next(&self, p: Raw) -> Raw {
         self.core.next(Any::new(p)).raw()
     }
-
-    /*
-    pub fn pprint(&self, raw: Raw) -> String {
-        if self.is_pair(raw) {
-            let mut s = String::new();
-            let mut p = raw;
-            let mut sep = "(";
-            while self.is_pair(p) {
-                s.push_str(sep);
-                let ss = self.pprint(self.car(p));
-                s.push_str(ss.as_str());
-                sep = " ";
-                p = self.cdr(p);
-            }
-            if NIL.raw() != p {
-                s.push_str(" . ");
-                let ss = self.pprint(p);
-                s.push_str(ss.as_str());
-            }
-            s.push_str(")");
-            s
-        } else if self.is_dict(raw) {
-            let mut s = String::new();
-            let mut p = raw;
-            let mut sep = "{";
-            while self.is_dict(p) {
-                let entry = self.core.mem(Any::new(p));
-                let key = entry.x();
-                let value = entry.y();
-                let next = entry.z();
-                s.push_str(sep);
-                /*
-                s.push_str(self.disasm(p).as_str());
-                */
-                s.push_str(self.print(key.raw()).as_str());
-                s.push_str(":");
-                s.push_str(self.pprint(value.raw()).as_str());
-                sep = ", ";
-                p = next.raw();
-            }
-            s.push_str("}");
-            s
-        } else {
-            self.print(raw)
-        }
-    }
-    pub fn display(&self, raw: Raw) -> String {
-        let mut s = String::new();
-        let ss = self.print(raw);
-        s.push_str(ss.as_str());
-        let val = Any::new(raw);
-        if val.is_ptr() {
-            if raw < self.ram_top() {
-                s.push_str(" → ");
-            } else {
-                s.push_str(" × ");
-            }
-            let ss = self.disasm(raw);
-            s.push_str(ss.as_str());
-        }
-        s
-    }
-    pub fn disasm(&self, raw: Raw) -> String {
-        let val = Any::new(raw);
-        if val.is_ptr() {
-            let quad = self.core.mem(val);
-            /*
-            if let Some(typed) = Typed::from(quad) {
-                typed.to_string()
-            } else {
-                quad.to_string()
-            }
-            */
-            quad.to_string()
-        } else {
-            self.print(raw)
-        }
-    }
-    pub fn print(&self, raw: Raw) -> String {
-        Any::new(raw).to_string()
-    }
-
-    pub fn render(&self) -> String {
-        self.to_string()
-    }
-    */
 
     /*
      *  WARNING! The methods below give _unsafe_ access
      *  to the underlying buffers. They are intended
      *  to provide access (read/write) to JavaScript.
      */
-    pub fn rom_buffer(&self) -> *const Quad {
+    fn rom_buffer(&self) -> *const Quad {
         self.core.rom_buffer().as_ptr()
     }
-    pub fn ram_buffer(&self, bank: Raw) -> *const Quad {
+    fn ram_buffer(&self, bank: Raw) -> *const Quad {
         self.core.ram_buffer(bank).as_ptr()
     }
-    pub fn blob_buffer(&self) -> *const u8 {
+    fn blob_buffer(&self) -> *const u8 {
         self.core.blob_buffer().as_ptr()
     }
 }

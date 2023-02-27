@@ -172,8 +172,8 @@ impl Device for BlobDevice {
         println!("BlobDevice::handle_event: event={} -> {}", ep, event);
         let sponsor = event.t();
         let msg = event.y();
-        let cust = core.car(msg);
-        let size = core.car(core.cdr(msg));
+        let cust = core.nth(msg, PLUS_1);
+        let size = core.nth(msg, PLUS_2);
         println!("BlobDevice::handle_event: cust={}, size={}", cust, size);
         let reply = blob_reserve(core, size)?;
         core.event_inject(sponsor, cust, reply)?;

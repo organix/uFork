@@ -1,15 +1,11 @@
 import init, {
-    h_step, h_gc_run, h_rom_buffer, h_ram_buffer, h_blob_buffer,
-    h_gc_phase, h_in_mem, h_car, h_cdr, h_next,
-    h_rom_top, h_ram_top, h_ram_next, h_ram_free, h_ram_root, h_blob_top,
+    h_step, h_gc_run,
+    h_rom_buffer, h_rom_top,
+    h_ram_buffer, h_ram_top,
+    h_blob_buffer, h_blob_top,
+    h_gc_phase, h_in_mem,
+    h_car, h_cdr, h_next,
 } from "../pkg/ufork_wasm.js";
-
-const CELL_SIZE = 5; // px
-const GRID_COLOR = "#9CF";
-const DEAD_COLOR = "#FFF";
-const LIVE_COLOR = "#360";
-const width = 96;
-const height = 64;
 
 const $mem_max = document.getElementById("ufork-mem-max");
 const $mem_top = document.getElementById("ufork-mem-top");
@@ -418,18 +414,21 @@ const drawHost = () => {
         ram_max = top;
     }
     updateElementText($mem_max, ram_max.toString());
-    updateElementText($mem_top, h_print(h_ram_top()));
-    updateElementText($mem_next, h_print(h_ram_next()));
-    //$mem_next.title = h_disasm(h_ram_next());
-    updateElementText($mem_free, h_print(h_ram_free()));
-    updateElementText($mem_root, h_print(h_ram_root()));
-    //$mem_root.title = h_disasm(h_ram_root());
+    const memory_quad = h_read_quad(h_ramptr(MEMORY_OFS));
+    const ram_top = memory_quad.t;
+    const ram_next = memory_quad.x;
+    const ram_free = memory_quad.y;
+    const ram_root = memory_quad.z;
+    updateElementText($mem_top, h_print(ram_top));
+    updateElementText($mem_next, h_print(ram_next));
+    updateElementText($mem_free, h_print(ram_free));
+    updateElementText($mem_root, h_print(ram_root));
     updateElementText($gc_phase, h_gc_phase() == 0 ? "Bank 0" : "Bank 1");
-    const ddqeue_quad = h_read_quad(h_ramptr(DDEQUE_OFS));
-    const e_first = ddqeue_quad.t;
-    const e_last = ddqeue_quad.x;
-    const k_first = ddqeue_quad.y;
-    const k_last = ddqeue_quad.z;
+    const ddeque_quad = h_read_quad(h_ramptr(DDEQUE_OFS));
+    const e_first = ddeque_quad.t;
+    //const e_last = ddeque_quad.x;
+    const k_first = ddeque_quad.y;
+    //const k_last = ddeque_quad.z;
     if (h_in_mem(k_first)) {
         let p = k_first;
         let a = [];
@@ -681,9 +680,6 @@ function test_suite(wasm) {
     console.log("h_fixnum(-2) =", h_fixnum(-2), h_fixnum(-2).toString(16), h_print(h_fixnum(-2)));
     console.log("h_rom_top() =", h_rom_top(), h_print(h_rom_top()));
     console.log("h_ram_top() =", h_ram_top(), h_print(h_ram_top()));
-    console.log("h_ram_next() =", h_ram_next(), h_print(h_ram_next()));
-    console.log("h_ram_free() =", h_ram_free(), h_print(h_ram_free()));
-    console.log("h_ram_root() =", h_ram_root(), h_print(h_ram_root()));
     console.log("h_ramptr(5) =", h_ramptr(5), h_print(h_ramptr(5)));
     console.log("h_ptr_to_cap(h_ramptr(3)) =", h_ptr_to_cap(h_ramptr(3)), h_print(h_ptr_to_cap(h_ramptr(3))));
 

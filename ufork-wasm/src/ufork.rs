@@ -92,24 +92,6 @@ impl Any {
             None
         }
     }
-    /*
-    pub fn cap_ofs(&self) -> Option<usize> {  // FIXME: replace with .addr()
-        if self.is_cap() {
-            let ofs = self.raw & !MSK_RAW;
-            Some(ofs as usize)
-        } else {
-            None
-        }
-    }
-    pub fn ptr_ofs(&self) -> Option<usize> {  // FIXME: replace with .addr()
-        if self.is_ptr() {
-            let ofs = self.raw & !MSK_RAW;
-            Some(ofs as usize)
-        } else {
-            None
-        }
-    }
-    */
 }
 impl fmt::Display for Any {
     fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -221,7 +203,7 @@ pub const MY_BEH: Any       = Any { raw: DIR_RAW | 1 };
 pub const MY_STATE: Any     = Any { raw: DIR_RAW | 2 };
 
 // VM_END thread actions
-pub const END_ABORT: Any    = Any { raw: DIR_RAW | -1 as Num as Raw };
+pub const END_ABORT: Any    = Any { raw: DIR_RAW | -1i32 as Raw };
 pub const END_STOP: Any     = Any { raw: DIR_RAW | 0 };
 pub const END_COMMIT: Any   = Any { raw: DIR_RAW | 1 };
 pub const END_RELEASE: Any  = Any { raw: DIR_RAW | 2 };
@@ -692,11 +674,11 @@ impl fmt::Display for Quad {
 }
 
 // literal values (`Any` type)
-pub const MINUS_5: Any      = Any { raw: DIR_RAW | -5 as Num as Raw };
-pub const MINUS_4: Any      = Any { raw: DIR_RAW | -4 as Num as Raw };
-pub const MINUS_3: Any      = Any { raw: DIR_RAW | -3 as Num as Raw };
-pub const MINUS_2: Any      = Any { raw: DIR_RAW | -2 as Num as Raw };
-pub const MINUS_1: Any      = Any { raw: DIR_RAW | -1 as Num as Raw };
+pub const MINUS_5: Any      = Any { raw: DIR_RAW | -5i32 as Raw };
+pub const MINUS_4: Any      = Any { raw: DIR_RAW | -4i32 as Raw };
+pub const MINUS_3: Any      = Any { raw: DIR_RAW | -3i32 as Raw };
+pub const MINUS_2: Any      = Any { raw: DIR_RAW | -2i32 as Raw };
+pub const MINUS_1: Any      = Any { raw: DIR_RAW | -1i32 as Raw };
 pub const ZERO: Any         = Any { raw: DIR_RAW | 0 };
 pub const PLUS_1: Any       = Any { raw: DIR_RAW | 1 };
 pub const PLUS_2: Any       = Any { raw: DIR_RAW | 2 };
@@ -829,7 +811,7 @@ pub const RELEASE_0: Any    = Any { raw: 30 };
 pub const STOP: Any         = Any { raw: 32 };
         quad_rom[STOP.ofs()]        = Quad::vm_end_stop();
 pub const ABORT: Any        = Any { raw: 33 };
-        quad_rom[ABORT.ofs()+0]     = Quad::vm_push(UNDEF, Any::rom(ABORT.ofs()+1));  // #?
+        quad_rom[ABORT.ofs()+0]     = Quad::vm_push(UNDEF, Any::rom(ABORT.ofs()+1));  // reason=#?
         quad_rom[ABORT.ofs()+1]     = Quad::vm_end_abort();
 
 pub const MEMO_ADDR: usize = 35;    // FIXME: rename _ADDR to _OFS consistently to match `.addr()` -> `.ofs()` change...
@@ -841,7 +823,7 @@ pub const _MEMO_BEH: Any = Any { raw: MEMO_ADDR as Raw };
                     (SEND cust value) )))
         */
         // stack: value
-        quad_rom[MEMO_ADDR+0]   = Quad::vm_dup(PLUS_1, CUST_SEND);  // value value
+        quad_rom[MEMO_ADDR+0]       = Quad::vm_dup(PLUS_1, CUST_SEND);  // value value
 
 pub const FWD_ADDR: usize = MEMO_ADDR+1;
 pub const _FWD_BEH: Any = Any { raw: FWD_ADDR as Raw };
@@ -1486,7 +1468,7 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 11;
             println!("run_loop: sponsor={} -> {}", sponsor, self.mem(sponsor));
             match self.execute_instruction() {
                 Ok(more) => {
-                    if !more && !self.e_first().is_ram() {  // EQ must also be empty.
+                    if !more && !self.event_pending() {
                         return true;  // no more instructions to execute...
                     }
                 },
@@ -1513,13 +1495,13 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 11;
         //Err(format!("result={}", false))
     }
     pub fn dispatch_event(&mut self) -> Result<bool, Error> {
-        let ep = self.e_first();
-        let event = self.mem(ep);
-        println!("dispatch_event: event={} -> {}", ep, event);
-        if !ep.is_ram() {
+        if !self.event_pending() {
             println!("dispatch_event: event queue empty");
             return Ok(false);  // event queue empty
         }
+        let ep = self.e_first();
+        let event = self.mem(ep);
+        println!("dispatch_event: event={} -> {}", ep, event);
         let target = event.x();
         let sponsor = self.event_sponsor(ep);
         println!("dispatch_event: sponsor={} -> {}", sponsor, self.mem(sponsor));
@@ -2004,6 +1986,9 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 11;
         Ok(ip_)
     }
 
+    pub fn event_pending(&self) -> bool {
+        self.e_first().is_ram()
+    }
     fn event_enqueue(&mut self, ep: Any) {
         // add event to the back of the queue
         self.ram_mut(ep).set_z(NIL);
@@ -2360,11 +2345,11 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 11;
         self.list_len(front) + self.list_len(back)
     }
 
-    pub fn e_first(&self) -> Any { self.ram(self.ddeque()).t() }
+    fn e_first(&self) -> Any { self.ram(self.ddeque()).t() }
     fn set_e_first(&mut self, ptr: Any) { self.ram_mut(self.ddeque()).set_t(ptr); }
     fn e_last(&self) -> Any { self.ram(self.ddeque()).x() }
     fn set_e_last(&mut self, ptr: Any) { self.ram_mut(self.ddeque()).set_x(ptr); }
-    pub fn k_first(&self) -> Any { self.ram(self.ddeque()).y() }
+    fn k_first(&self) -> Any { self.ram(self.ddeque()).y() }
     fn set_k_first(&mut self, ptr: Any) { self.ram_mut(self.ddeque()).set_y(ptr); }
     fn k_last(&self) -> Any { self.ram(self.ddeque()).z() }
     fn set_k_last(&mut self, ptr: Any) { self.ram_mut(self.ddeque()).set_z(ptr); }
@@ -2373,11 +2358,11 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 11;
     pub fn rom_top(&self) -> Any { ROM_TOP }
     pub fn ram_top(&self) -> Any { self.ram(self.memory()).t() }
     fn set_ram_top(&mut self, ptr: Any) { self.ram_mut(self.memory()).set_t(ptr); }
-    pub fn ram_next(&self) -> Any { self.ram(self.memory()).x() }
+    fn ram_next(&self) -> Any { self.ram(self.memory()).x() }
     fn set_ram_next(&mut self, ptr: Any) { self.ram_mut(self.memory()).set_x(ptr); }
-    pub fn ram_free(&self) -> Any { self.ram(self.memory()).y() }
+    fn ram_free(&self) -> Any { self.ram(self.memory()).y() }
     fn set_ram_free(&mut self, fix: Any) { self.ram_mut(self.memory()).set_y(fix); }
-    pub fn ram_root(&self) -> Any { self.ram(self.memory()).z() }
+    fn ram_root(&self) -> Any { self.ram(self.memory()).z() }
     fn set_ram_root(&mut self, ptr: Any) { self.ram_mut(self.memory()).set_z(ptr); }
     pub fn memory(&self) -> Any { self.ptr_to_mem(MEMORY) }
     pub fn blob_top(&self) -> Any { Any::fix(BLOB_RAM_MAX as isize) }
@@ -2515,6 +2500,13 @@ pub const _RAM_TOP_ADDR: usize = BOOT_ADDR + 11;
     pub fn cons(&mut self, car: Any, cdr: Any) -> Result<Any, Error> {
         let pair = Quad::pair_t(car, cdr);
         self.alloc(&pair)
+    }
+    pub fn nth(&self, list: Any, index: Any) -> Any {
+        if let Some(n) = index.fix_num() {
+            self.extract_nth(list, n)
+        } else {
+            UNDEF
+        }
     }
     pub fn car(&self, pair: Any) -> Any {
         if self.typeq(PAIR_T, pair) {
@@ -2942,7 +2934,6 @@ fn ptr_is_distinct_from_cap() {
 #[test]
 fn core_initialization() {
     let core = Core::new();
-    //assert_eq!(0, core.ram_free().fix_num().unwrap());
     assert_eq!(ZERO, core.ram_free());
     assert_eq!(NIL, core.ram_next());
     assert_eq!(NIL, core.e_first());
@@ -2985,7 +2976,6 @@ fn basic_memory_allocation() {
     println!("ram_free: {}", core.ram_free());
     let top_after = core.ram_top().ofs();
     assert_eq!(3, top_after - top_before);
-    //assert_eq!(1, core.ram_free().fix_num().unwrap());
     assert_eq!(PLUS_1, core.ram_free());
     println!("ram_next: {} -> {}", core.ram_next(), core.mem(core.ram_next()));
     //assert!(false);  // force output to be displayed
