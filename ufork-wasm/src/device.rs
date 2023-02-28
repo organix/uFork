@@ -3,9 +3,6 @@
 use crate::ufork::*;
 use crate::greet;
 
-#[cfg(target_arch = "wasm32")]
-use crate::raw_clock;
-
 pub trait Device {
     fn handle_event(&mut self, core: &mut Core, ep: Any) -> Result<bool, Error>;
 }
@@ -35,14 +32,16 @@ impl ClockDevice {
             clock_ticks: ZERO,
         }
     }
+    /*
     #[cfg(target_arch = "wasm32")]
     fn read_clock(&mut self) -> Any {
-        let raw = raw_clock();
+        let raw = crate::raw_clock();
         let now = Any::fix(raw as isize);
         self.clock_ticks = now;
         now
     }
     #[cfg(not(target_arch = "wasm32"))]
+    */
     fn read_clock(&mut self) -> Any {
         match self.clock_ticks.fix_num() {
             Some(t) => {

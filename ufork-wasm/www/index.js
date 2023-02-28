@@ -1,11 +1,4 @@
-import init, {
-    h_step, h_gc_run,
-    h_rom_buffer, h_rom_top,
-    h_ram_buffer, h_ram_top,
-    h_blob_buffer, h_blob_top,
-    h_gc_phase, h_in_mem,
-    h_car, h_cdr, h_next,
-} from "../pkg/ufork_wasm.js";
+// uFork debugger
 
 const $mem_max = document.getElementById("ufork-mem-max");
 const $mem_top = document.getElementById("ufork-mem-top");
@@ -98,7 +91,7 @@ const VM_IS_NE  = 0x8000_001F;
 // ram offets
 const MEMORY_OFS = 0;
 const DDEQUE_OFS = 1;
-// helper functions
+// local helper functions
 function h_warning(message) {
     console.log("WARNING!", message);
     return UNDEF_RAW;
@@ -146,15 +139,28 @@ function h_ptr_to_cap(ptr) {
 function h_fix_to_i32(fix) {
     return (fix << 1) >> 1;
 }
-let h_read_quad = function(ptr) {
-    return h_warning("h_read_quad: WASM not initialized.");
+// functions bound during WASM initialization
+const h_no_init = function uninitialized() {
+    return h_warning("WASM not initialized.");
 };
-let h_write_quad = function(ptr, quad) {
-    return h_warning("h_write_quad: WASM not initialized.");
-};
-let h_blob_mem = function() {
-    return h_warning("h_blob_mem: WASM not initialized.");
-};
+let h_read_quad = h_no_init;
+let h_write_quad = h_no_init;
+let h_blob_mem = h_no_init;
+// functions imported from uFork WASM module
+let h_step = h_no_init;
+let h_gc_run = h_no_init;
+let h_rom_buffer = h_no_init;
+let h_rom_top = h_no_init;
+let h_ram_buffer = h_no_init;
+let h_ram_top = h_no_init;
+let h_blob_buffer = h_no_init;
+let h_blob_top = h_no_init;
+let h_gc_phase = h_no_init;
+let h_in_mem = h_no_init;
+let h_car = h_no_init;
+let h_cdr = h_no_init;
+let h_next = h_no_init;
+
 const rom_label = [
     "#?",
     "()",
@@ -588,8 +594,63 @@ function hexdump(u8buf, ofs, len, xlt) {
     return out;
 }
 
-init().then(function (wasm) {
-    h_read_quad = function(ptr) {
+function test_suite(exports) {
+    console.log("h_fixnum(0) =", h_fixnum(0), h_fixnum(0).toString(16), h_print(h_fixnum(0)));
+    console.log("h_fixnum(1) =", h_fixnum(1), h_fixnum(1).toString(16), h_print(h_fixnum(1)));
+    console.log("h_fixnum(-1) =", h_fixnum(-1), h_fixnum(-1).toString(16), h_print(h_fixnum(-1)));
+    console.log("h_fixnum(-2) =", h_fixnum(-2), h_fixnum(-2).toString(16), h_print(h_fixnum(-2)));
+    console.log("h_rom_top() =", h_rom_top(), h_print(h_rom_top()));
+    console.log("h_ram_top() =", h_ram_top(), h_print(h_ram_top()));
+    console.log("h_ramptr(5) =", h_ramptr(5), h_print(h_ramptr(5)));
+    console.log("h_ptr_to_cap(h_ramptr(3)) =", h_ptr_to_cap(h_ramptr(3)), h_print(h_ptr_to_cap(h_ramptr(3))));
+
+    const rom_ofs = h_rom_buffer();
+    const rom = new Uint32Array(exports.memory.buffer, rom_ofs, (h_rawofs(h_rom_top()) << 2));
+    console.log("ROM:", rom);
+
+    const ram_ofs = h_ram_buffer(h_gc_phase());
+    const ram = new Uint32Array(exports.memory.buffer, ram_ofs, (h_rawofs(h_ram_top()) << 2));
+    console.log("RAM:", ram);
+
+    const blob_ofs = h_blob_buffer();
+    const blob = new Uint8Array(exports.memory.buffer, blob_ofs, h_fix_to_i32(h_blob_top()));
+    console.log("BLOB:", blob);
+}
+
+WebAssembly.instantiateStreaming(
+    fetch("../target/wasm32-unknown-unknown/release/ufork_wasm.wasm"),
+    {
+        imports: {
+            raw_clock() {
+                return performance.now();
+            },
+            double(x) {
+                return 2 * x;
+            }
+        }
+    }
+).then(function (wasm) {
+    console.log("wasm =", wasm);
+    const exports = wasm.instance.exports;
+    //debugger;
+
+    h_step = exports.h_step;
+    h_gc_run = exports.h_gc_run;
+    h_rom_buffer = exports.h_rom_buffer;
+    h_rom_top = exports.h_rom_top;
+    h_ram_buffer = exports.h_ram_buffer;
+    h_ram_top = exports.h_ram_top;
+    h_blob_buffer = exports.h_blob_buffer;
+    h_blob_top = exports.h_blob_top;
+    h_gc_phase = exports.h_gc_phase;
+    h_in_mem = exports.h_in_mem;
+    h_car = exports.h_car;
+    h_cdr = exports.h_cdr;
+    h_next = exports.h_next;
+
+    test_suite(exports);
+
+    h_read_quad = function read_quad(ptr) {
         if (h_is_ram(ptr)) {
             // WARNING! The WASM memory buffer can move if it is resized.
             //          We get a fresh pointer each time for safety.
@@ -598,7 +659,7 @@ init().then(function (wasm) {
             const ram_top = h_rawofs(h_ram_top());
             if (ofs < ram_top) {
                 const ram_len = ram_top << 2;
-                const ram = new Uint32Array(wasm.memory.buffer, ram_ofs, ram_len);
+                const ram = new Uint32Array(exports.memory.buffer, ram_ofs, ram_len);
                 const idx = ofs << 2;  // convert quad address to Uint32Array index
                 const quad = {
                     t: ram[idx + 0],
@@ -619,7 +680,7 @@ init().then(function (wasm) {
             const rom_top = h_rawofs(h_rom_top());
             if (ofs < rom_top) {
                 const rom_len = rom_top << 2;
-                const rom = new Uint32Array(wasm.memory.buffer, rom_ofs, rom_len);
+                const rom = new Uint32Array(exports.memory.buffer, rom_ofs, rom_len);
                 const idx = ofs << 2;  // convert quad address to Uint32Array index
                 const quad = {
                     t: rom[idx + 0],
@@ -634,7 +695,7 @@ init().then(function (wasm) {
         }
         return h_warning("h_read_quad: required ptr, got "+h_print(ptr));
     };
-    h_write_quad = function(ptr, quad) {
+    h_write_quad = function write_quad(ptr, quad) {
         if (h_is_ram(ptr)) {
             // WARNING! The WASM memory buffer can move if it is resized.
             //          We get a fresh pointer each time for safety.
@@ -642,7 +703,7 @@ init().then(function (wasm) {
             const ram_top = h_rawofs(h_ram_top());
             if (ofs < ram_top) {
                 const ram_len = ram_top << 2;
-                const ram = new Uint32Array(wasm.memory.buffer, ram_ofs, ram_len);
+                const ram = new Uint32Array(exports.memory.buffer, ram_ofs, ram_len);
                 const ofs = h_rawofs(ptr);
                 const idx = ofs << 2;  // convert quad address to Uint32Array index
                 ram[idx + 0] = quad.t;
@@ -655,15 +716,14 @@ init().then(function (wasm) {
         }
         return h_warning("h_write_quad: required RAM ptr, got "+h_print(ptr));
     };
-    h_blob_mem = function() {
+    h_blob_mem = function blob_mem() {
         // WARNING! The WASM memory buffer can move if it is resized.
         //          We get a fresh pointer each time for safety.
         const blob_ofs = h_blob_buffer();
         const blob_len = h_fix_to_i32(h_blob_top());
-        const blob = new Uint8Array(wasm.memory.buffer, blob_ofs, blob_len);
+        const blob = new Uint8Array(exports.memory.buffer, blob_ofs, blob_len);
         return blob;
     };
-    test_suite(wasm);
 
     // draw initial state
     updateRomMonitor();
@@ -672,26 +732,3 @@ init().then(function (wasm) {
     //playAction();  // start animation (running)
     pauseAction();  // start animation (paused)
 });
-
-function test_suite(wasm) {
-    console.log("h_fixnum(0) =", h_fixnum(0), h_fixnum(0).toString(16), h_print(h_fixnum(0)));
-    console.log("h_fixnum(1) =", h_fixnum(1), h_fixnum(1).toString(16), h_print(h_fixnum(1)));
-    console.log("h_fixnum(-1) =", h_fixnum(-1), h_fixnum(-1).toString(16), h_print(h_fixnum(-1)));
-    console.log("h_fixnum(-2) =", h_fixnum(-2), h_fixnum(-2).toString(16), h_print(h_fixnum(-2)));
-    console.log("h_rom_top() =", h_rom_top(), h_print(h_rom_top()));
-    console.log("h_ram_top() =", h_ram_top(), h_print(h_ram_top()));
-    console.log("h_ramptr(5) =", h_ramptr(5), h_print(h_ramptr(5)));
-    console.log("h_ptr_to_cap(h_ramptr(3)) =", h_ptr_to_cap(h_ramptr(3)), h_print(h_ptr_to_cap(h_ramptr(3))));
-
-    const rom_ofs = h_rom_buffer();
-    const rom = new Uint32Array(wasm.memory.buffer, rom_ofs, (h_rawofs(h_rom_top()) << 2));
-    console.log("ROM:", rom);
-
-    const ram_ofs = h_ram_buffer(h_gc_phase());
-    const ram = new Uint32Array(wasm.memory.buffer, ram_ofs, (h_rawofs(h_ram_top()) << 2));
-    console.log("RAM:", ram);
-
-    const blob_ofs = h_blob_buffer();
-    const blob = new Uint8Array(wasm.memory.buffer, blob_ofs, h_fix_to_i32(h_blob_top()));
-    console.log("BLOB:", blob);
-}

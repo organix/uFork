@@ -13,41 +13,17 @@ fn panic(_: &PanicInfo) -> ! {
 pub mod ufork;
 pub mod device;
 
-// FIXME: `use js_sys;` instead?
-extern crate js_sys;
-extern crate web_sys;
-
-use wasm_bindgen::prelude::*;
 use core::cell::RefCell;
 
 use crate::ufork::*;
 
-// A macro to provide `println!(..)`-style syntax for `console.log` logging.
-macro_rules! log {
-    ( $( $t:tt )* ) => {
-        web_sys::console::log_1(&format!( $( $t )* ).into());
-    }
-}
-
-#[cfg(target_arch = "wasm32")]
-#[wasm_bindgen]
-extern {
-    fn alert(s: &str);
-}
-#[cfg(not(target_arch = "wasm32"))]
+// FIXME: find a better way to send information to WASM Host environment
 pub fn alert(s: &str) {
     println!("alert: {}", s);
 }
 
-#[wasm_bindgen]
 pub fn greet(name: &str) {
     alert(&format!("Hello, {}!", name));
-}
-
-#[cfg(target_arch = "wasm32")]
-#[wasm_bindgen(module = "/ufork.js")]
-extern {
-    fn raw_clock() -> Raw;
 }
 
 unsafe fn the_host() -> &'static RefCell<Host> {
@@ -62,91 +38,91 @@ unsafe fn the_host() -> &'static RefCell<Host> {
     }
 }
 
-#[wasm_bindgen]
-pub fn h_step() -> bool {
+#[no_mangle]
+pub /*extern "C"*/ fn h_step() -> bool {
     unsafe {
         the_host().borrow_mut().step()
     }
 }
 
-#[wasm_bindgen]
+#[no_mangle]
 pub fn h_gc_run() {
     unsafe {
         the_host().borrow_mut().gc_run()
     }
 }
 
-#[wasm_bindgen]
+#[no_mangle]
 pub fn h_rom_buffer() -> *const Quad {
     unsafe {
         the_host().borrow().rom_buffer()
     }
 }
 
-#[wasm_bindgen]
+#[no_mangle]
 pub fn h_rom_top() -> Raw {
     unsafe {
         the_host().borrow().rom_top()
     }
 }
 
-#[wasm_bindgen]
+#[no_mangle]
 pub fn h_ram_buffer(bank: Raw) -> *const Quad {
     unsafe {
         the_host().borrow().ram_buffer(bank)
     }
 }
 
-#[wasm_bindgen]
+#[no_mangle]
 pub fn h_ram_top() -> Raw {
     unsafe {
         the_host().borrow().ram_top()
     }
 }
 
-#[wasm_bindgen]
+#[no_mangle]
 pub fn h_blob_buffer() -> *const u8 {
     unsafe {
         the_host().borrow().blob_buffer()
     }
 }
 
-#[wasm_bindgen]
+#[no_mangle]
 pub fn h_blob_top() -> Raw {
     unsafe {
         the_host().borrow().blob_top()
     }
 }
 
-#[wasm_bindgen]
+#[no_mangle]
 pub fn h_gc_phase() -> Raw {
     unsafe {
         the_host().borrow().gc_phase()
     }
 }
 
-#[wasm_bindgen]
+#[no_mangle]
 pub fn h_in_mem(raw: Raw) -> bool {
     unsafe {
         the_host().borrow().in_mem(raw)
     }
 }
 
-#[wasm_bindgen]
+#[no_mangle]
 pub fn h_car(raw: Raw) -> Raw {
     unsafe {
         the_host().borrow().car(raw)
     }
 }
 
-#[wasm_bindgen]
+#[no_mangle]
 pub fn h_cdr(raw: Raw) -> Raw {
     unsafe {
         the_host().borrow().cdr(raw)
     }
 }
 
-#[wasm_bindgen]
+#[no_mangle]
 pub fn h_next(raw: Raw) -> Raw {
     unsafe {
         the_host().borrow().next(raw)
@@ -170,21 +146,21 @@ impl Host {
         match self.core.execute_instruction() {
             Ok(more) => {
                 if !more && !self.core.event_pending() {
-                    log!("continuation queue empty!");
+                    //log!("continuation queue empty!");
                     return false;  // no more instructions...
                 }
             },
-            Err(error) => {
-                log!("execution ERROR! {}", error);
+            Err(_error) => {
+                //log!("execution ERROR! {}", _error);
                 return false;  // execute instruction failed...
             },
         }
-        if let Err(error) = self.core.check_for_interrupt() {
-            log!("interrupt ERROR! {}", error);
+        if let Err(_error) = self.core.check_for_interrupt() {
+            //log!("interrupt ERROR! {}", _error);
             return false;  // interrupt handler failed...
         }
-        if let Err(error) = self.core.dispatch_event() {
-            log!("dispatch ERROR! {}", error);
+        if let Err(_error) = self.core.dispatch_event() {
+            //log!("dispatch ERROR! {}", _error);
             return false;  // event dispatch failed...
         }
         true  // step successful
@@ -211,7 +187,7 @@ impl Host {
     /*
      *  WARNING! The methods below give _unsafe_ access
      *  to the underlying buffers. They are intended
-     *  to provide access (read/write) to JavaScript.
+     *  to provide access (read/write) to WASM Host.
      */
     fn rom_buffer(&self) -> *const Quad {
         self.core.rom_buffer().as_ptr()
