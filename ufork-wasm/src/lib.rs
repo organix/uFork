@@ -39,7 +39,7 @@ unsafe fn the_host() -> &'static RefCell<Host> {
 }
 
 #[no_mangle]
-pub /*extern "C"*/ fn h_step() -> bool {
+pub /*extern "C"*/ fn h_step() -> Error {
     unsafe {
         the_host().borrow_mut().step()
     }
@@ -142,28 +142,28 @@ impl Host {
             core,
         }
     }
-    fn step(&mut self) -> bool {  // single-step instruction execution
+    fn step(&mut self) -> Error {  // single-step instruction execution
         match self.core.execute_instruction() {
             Ok(more) => {
                 if !more && !self.core.event_pending() {
                     //log!("continuation queue empty!");
-                    return false;  // no more instructions...
+                    return E_FAIL;  // no more instructions...
                 }
             },
-            Err(_error) => {
+            Err(error) => {
                 //log!("execution ERROR! {}", _error);
-                return false;  // execute instruction failed...
+                return error;  // execute instruction failed...
             },
         }
-        if let Err(_error) = self.core.check_for_interrupt() {
-            //log!("interrupt ERROR! {}", _error);
-            return false;  // interrupt handler failed...
+        if let Err(error) = self.core.check_for_interrupt() {
+            //log!("interrupt ERROR! {}", error);
+            return error;  // interrupt handler failed...
         }
-        if let Err(_error) = self.core.dispatch_event() {
-            //log!("dispatch ERROR! {}", _error);
-            return false;  // event dispatch failed...
+        if let Err(error) = self.core.dispatch_event() {
+            //log!("dispatch ERROR! {}", error);
+            return error;  // event dispatch failed...
         }
-        true  // step successful
+        E_OK  // step successful
     }
 
     fn gc_phase(&self) -> Raw { self.core.gc_phase() }

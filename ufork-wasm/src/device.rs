@@ -157,7 +157,7 @@ fn blob_reserve(core: &mut Core, size: Any) -> Result<Any, Error> {
         }
         ofs = next;
     }
-    Err(String::from("BLOB memory exhausted"))
+    Err(E_NO_MEM)  // BLOB memory exhausted
 }
 pub struct BlobDevice {}
 impl BlobDevice {

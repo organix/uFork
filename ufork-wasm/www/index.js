@@ -509,10 +509,15 @@ const gcHost = () => {
     drawHost();
 }
 const singleStep = () => {
-    const ok = h_step();
-    fault = !ok;
+    const err = h_step();
+    if (err === 0) {  // 0 = E_OK = no error
+        fault = false;
+    } else {
+        fault = true;
+        console.log("singleStep: error = ", err);
+    }
     drawHost();
-    return ok;
+    return !fault;
 };
 const renderLoop = () => {
     //debugger;

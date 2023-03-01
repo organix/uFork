@@ -4,8 +4,19 @@ use core::fmt;
 
 use crate::device::*;
 
-//pub type Error = &'static str;
-pub type Error = String;
+pub type Error = i32;
+pub const E_OK: i32         = 0;    // not an error
+pub const E_FAIL: i32       = -1;   // general failure
+pub const E_BOUNDS: i32     = -2;   // out of bounds
+pub const E_NO_MEM: i32     = -3;   // no memory available
+pub const E_NOT_FIX: i32    = -4;   // fixnum required
+pub const E_NOT_CAP: i32    = -5;   // capability required
+pub const E_NOT_PTR: i32    = -6;   // memory pointer required
+pub const E_NOT_ROM: i32    = -7;   // ROM pointer required
+pub const E_NOT_RAM: i32    = -8;   // RAM pointer required
+pub const E_MEM_LIM: i32    = -9;   // Sponsor memory limit reached
+pub const E_CPU_LIM: i32    = -10;  // Sponsor instruction limit reached
+pub const E_MSG_LIM: i32    = -11;  // Sponsor event limit reached
 
 pub type Raw = u32;  // univeral value type
 pub type Num = i32;  // fixnum integer type
@@ -81,7 +92,7 @@ impl Any {
     pub fn get_fix(&self) -> Result<isize, Error> {
         match self.fix_num() {
             Some(num) => Ok(num),
-            None => Err(format!("Fixnum required! {}", self)),
+            None => Err(E_NOT_FIX),  // fixnum required
         }
     }
     pub fn fix_num(&self) -> Option<isize> {
@@ -1515,7 +1526,7 @@ pub const _RAM_TOP_OFS: usize = BOOT_OFS + 11;
         let limit = self.sponsor_events(sponsor).fix_num().unwrap_or(0);
         println!("dispatch_event: limit={}", limit);
         if limit <= 0 {
-            return Err(String::from("event limit reached"));
+            return Err(E_MSG_LIM);  // Sponsor event limit reached
         }
         let a_ptr = self.cap_to_ptr(target);
         let a_quad = *self.mem(a_ptr);
@@ -1527,7 +1538,7 @@ pub const _RAM_TOP_OFS: usize = BOOT_OFS + 11;
             // message-event to device
             let id = index as usize;
             if id >= DEVICE_MAX {
-                return Err(format!("device id {} must be less than {}", id, DEVICE_MAX));
+                return Err(E_BOUNDS);  // device id must be less than DEVICE_MAX
             }
             let ep_ = self.event_dequeue().unwrap();
             assert_eq!(ep, ep_);
@@ -1570,7 +1581,7 @@ pub const _RAM_TOP_OFS: usize = BOOT_OFS + 11;
         let limit = self.sponsor_instrs(sponsor).fix_num().unwrap_or(0);
         println!("execute_instruction: limit={}", limit);
         if limit <= 0 {
-            return Err(String::from("instruction limit reached"));
+            return Err(E_CPU_LIM);  // Sponsor instruction limit reached
         }
         let ip = self.ip();
         let ip_ = self.perform_op(ip)?;
@@ -1643,7 +1654,7 @@ pub const _RAM_TOP_OFS: usize = BOOT_OFS + 11;
                         self.stack_push(d)?;
                     },
                     _ => {
-                        return Err(format!("Unknown dict op {}!", imm));
+                        return Err(E_BOUNDS);  // unknown DICT op
                     }
                 };
                 kip
@@ -1691,7 +1702,7 @@ pub const _RAM_TOP_OFS: usize = BOOT_OFS + 11;
                         self.stack_push(Any::fix(n))?;
                     },
                     _ => {
-                        return Err(format!("Unknown deque op {}!", imm));
+                        return Err(E_BOUNDS);  // unknown DEQUE op
                     }
                 };
                 kip
@@ -1879,7 +1890,7 @@ pub const _RAM_TOP_OFS: usize = BOOT_OFS + 11;
                         self.push_list(state)?;
                     },
                     _ => {
-                        return Err(format!("Unknown my op {}!", imm));
+                        return Err(E_BOUNDS);  // unknown MY op
                     }
                 }
                 kip
@@ -1952,7 +1963,7 @@ pub const _RAM_TOP_OFS: usize = BOOT_OFS + 11;
                     END_STOP => {
                         println!("vm_end: MEMORY={}", self.ram(MEMORY));
                         //UNDEF
-                        return Err(String::from("End::Stop terminated continuation"));
+                        return Err(E_FAIL);  // End::Stop terminated continuation
                     },
                     END_COMMIT => {
                         self.actor_commit(me);
@@ -1965,7 +1976,7 @@ pub const _RAM_TOP_OFS: usize = BOOT_OFS + 11;
                         FALSE
                     },
                     _ => {
-                        return Err(format!("Unknown end op {}!", imm));
+                        return Err(E_BOUNDS);  // unknown END op
                     }
                 };
                 println!("vm_end: rv={}", rv);
@@ -1975,18 +1986,18 @@ pub const _RAM_TOP_OFS: usize = BOOT_OFS + 11;
                 println!("vm_is_eq: expect={}", imm);
                 let vv = self.stack_pop();
                 println!("vm_is_eq: actual={}", vv);
-                assert_eq!(imm, vv);
+                assert_eq!(imm, vv);  // FIXME: this should probably be Result::Error
                 kip
             },
             VM_IS_NE => {
                 println!("vm_is_ne: expect={}", imm);
                 let vv = self.stack_pop();
                 println!("vm_is_ne: actual={}", vv);
-                assert_ne!(imm, vv);
+                assert_ne!(imm, vv);  // FIXME: this should probably be Result::Error
                 kip
             },
             _ => {
-                return Err(format!("Illegal instruction {}!", opr));
+                return Err(E_BOUNDS);  // illegal instruction
             }
         };
         println!("perform_op: ip'={} -> {}", ip_, self.mem(ip_));
@@ -2636,7 +2647,7 @@ pub const _RAM_TOP_OFS: usize = BOOT_OFS + 11;
         println!("alloc: limit={}", limit);
         if limit <= 0 {
             //panic!("memory limit reached");
-            return Err(String::from("memory limit reached"));
+            return Err(E_MEM_LIM);  // Sponsor memory limit reached
         }
         let ptr = self.reserve(init)?;
         self.set_sponsor_memory(sponsor, Any::fix(limit - 1));
@@ -2657,7 +2668,7 @@ pub const _RAM_TOP_OFS: usize = BOOT_OFS + 11;
             let top = next.ofs();
             if top >= QUAD_RAM_MAX {
                 //panic!("out of memory!");
-                return Err(String::from("out of memory!"));
+                return Err(E_NO_MEM);  // no memory available
             }
             self.set_ram_top(Any::ram(self.gc_phase(), top + 1));
             next
