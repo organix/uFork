@@ -1,29 +1,40 @@
-/*
-#![no_std]
-use core::panic::PanicInfo;
-#[cfg(target_arch = "wasm32")]
-use core::arch::wasm32::unreachable;
-#[cfg(target_arch = "wasm32")]
-#[panic_handler]
-fn panic(_: &PanicInfo) -> ! {
-    unreachable()
-}
-*/
+//#![no_std]
+//#![feature(default_alloc_error_handler)]
+//#![feature(alloc_error_handler)]
 
-pub mod ufork;
-pub mod device;
+extern crate alloc;
 
 use core::cell::RefCell;
 
 use crate::ufork::*;
 
-// FIXME: find a better way to send information to WASM Host environment
-pub fn alert(s: &str) {
-    println!("alert: {}", s);
+pub mod ufork;
+pub mod device;
+
+/*
+#[cfg(target_arch = "wasm32")]
+#[panic_handler]
+fn panic(_: &core::panic::PanicInfo) -> ! {
+    core::arch::wasm32::unreachable()
 }
 
-pub fn greet(name: &str) {
-    alert(&format!("Hello, {}!", name));
+#[cfg(target_arch = "wasm32")]
+#[global_allocator]
+//static ALLOCATOR: lol_alloc::LeakingPageAllocator = lol_alloc::LeakingPageAllocator;
+static ALLOCATOR: lol_alloc::AssumeSingleThreaded<lol_alloc::FreeListAllocator> = unsafe {
+    lol_alloc::AssumeSingleThreaded::new(lol_alloc::FreeListAllocator::new())
+};
+
+#[cfg(target_arch = "wasm32")]
+#[alloc_error_handler]
+fn out_of_memory(_: core::alloc::Layout) -> ! {
+    core::arch::wasm32::unreachable()
+}
+*/
+
+pub fn greet(_msg: Any) {
+    //alert(&format!("Hello, {}!", _msg));
+    // FIXME: find a better way to send information to WASM Host environment
 }
 
 unsafe fn the_host() -> &'static RefCell<Host> {

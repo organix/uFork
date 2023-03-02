@@ -15,11 +15,10 @@ impl NullDevice {
 }
 impl Device for NullDevice {
     fn handle_event(&mut self, core: &mut Core, ep: Any) -> Result<bool, Error> {
-        let event = core.mem(ep);
-        println!("NullDevice::handle_event: event={} -> {}", ep, event);
-        Ok(true)  // event handled.
-        //Err(String::from("NullDevice::failure!"))  // force failure...
+        let _event = core.mem(ep);
         //panic!();  // terminate simulator!
+        //Err(E_FAIL)  // force failure...
+        Ok(true)  // event handled.
     }
 }
 
@@ -56,11 +55,9 @@ impl ClockDevice {
 impl Device for ClockDevice {
     fn handle_event(&mut self, core: &mut Core, ep: Any) -> Result<bool, Error> {
         let event = core.mem(ep);
-        println!("ClockDevice::handle_event: event={} -> {}", ep, event);
         let sponsor = event.t();
         let cust = event.y();
         let now = self.read_clock();
-        println!("ClockDevice::handle_event: now={}", now);
         core.event_inject(sponsor, cust, now)?;
         Ok(true)  // event handled.
     }
@@ -80,11 +77,9 @@ impl Device for IoDevice {
     fn handle_event(&mut self, core: &mut Core, ep: Any) -> Result<bool, Error> {
         let event = core.mem(ep);
         let count = self.call_count + 1;
-        println!("IoDevice::handle_event: event({})={} -> {}", count, ep, event);
-        let myself = event.x();
+        let _myself = event.x();
         let message = event.y();
-        let greeting = format!("IO: count={} self={} message={}", count, myself, message);
-        greet(greeting.as_str());
+        greet(message);
         self.call_count = count;
         Ok(true)  // event handled.
     }
@@ -168,12 +163,10 @@ impl BlobDevice {
 impl Device for BlobDevice {
     fn handle_event(&mut self, core: &mut Core, ep: Any) -> Result<bool, Error> {
         let event = core.mem(ep);
-        println!("BlobDevice::handle_event: event={} -> {}", ep, event);
         let sponsor = event.t();
         let msg = event.y();
         let cust = core.nth(msg, PLUS_1);
         let size = core.nth(msg, PLUS_2);
-        println!("BlobDevice::handle_event: cust={}, size={}", cust, size);
         let reply = blob_reserve(core, size)?;
         core.event_inject(sponsor, cust, reply)?;
         Ok(true)  // event handled.

@@ -1,6 +1,8 @@
 // uFork virtual CPU
 
-use core::fmt;
+extern crate alloc;
+
+use alloc::boxed::Box;
 
 use crate::device::*;
 
@@ -101,43 +103,6 @@ impl Any {
             Some(num as isize)
         } else {
             None
-        }
-    }
-}
-impl fmt::Display for Any {
-    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
-        if self.is_fix() {
-            write!(fmt, "{:+}", self.fix_num().unwrap())
-        } else if self.is_cap() {
-            write!(fmt, "@{}", self.ofs())
-        } else if self.raw() <= FREE_T.raw() {
-            match *self {
-                UNDEF => write!(fmt, "#?"),
-                NIL => write!(fmt, "()"),
-                FALSE => write!(fmt, "#f"),
-                TRUE => write!(fmt, "#t"),
-                UNIT => write!(fmt, "#unit"),
-                TYPE_T => write!(fmt, "TYPE_T"),
-                //EVENT_T => write!(fmt, "EVENT_T"),
-                GC_FWD_T => write!(fmt, "GC_FWD_T"),
-                INSTR_T => write!(fmt, "INSTR_T"),
-                ACTOR_T => write!(fmt, "ACTOR_T"),
-                FIXNUM_T => write!(fmt, "FIXNUM_T"),
-                SYMBOL_T => write!(fmt, "SYMBOL_T"),
-                PAIR_T => write!(fmt, "PAIR_T"),
-                //FEXPR_T => write!(fmt, "FEXPR_T"),
-                DICT_T => write!(fmt, "DICT_T"),
-                PROXY_T => write!(fmt, "PROXY_T"),
-                STUB_T => write!(fmt, "STUB_T"),
-                FREE_T => write!(fmt, "FREE_T"),
-                _ => write!(fmt, "#{}", self.raw()),  // FIXME: should not occur
-            }
-        } else if self.is_rom() {
-            write!(fmt, "*{}", self.ofs())
-        } else if self.is_ram() {
-            write!(fmt, "^{}", self.ofs())
-        } else {
-            write!(fmt, "${:08x}", self.raw)
         }
     }
 }
@@ -575,112 +540,6 @@ impl Quad {
     pub fn new_actor(beh: Any, state: Any) -> Quad {
         assert!(beh.is_ptr());
         Self::actor_t(beh, state, UNDEF)
-    }
-}
-impl fmt::Display for Quad {
-    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let mut t = self.t().to_string();
-        if self.t() == UNDEF {
-            t = String::from("LITERAL_T");
-        }
-        let mut x = self.x().to_string();
-        let mut y = self.y().to_string();
-        if self.t() == INSTR_T {
-            match self.x() {
-                VM_TYPEQ => x = String::from("TYPEQ"),
-                VM_CELL => x = String::from("CELL"),
-                VM_GET => x = String::from("GET"),
-                //VM_SET => x = String::from("SET"),
-                VM_DICT => {
-                    x = String::from("DICT");
-                    match self.y() {
-                        DICT_HAS => y = String::from("HAS"),
-                        DICT_GET => y = String::from("GET"),
-                        DICT_ADD => y = String::from("ADD"),
-                        DICT_SET => y = String::from("SET"),
-                        DICT_DEL => y = String::from("DEL"),
-                        _ => {},
-                    }
-                },
-                VM_PAIR => x = String::from("PAIR"),
-                VM_PART => x = String::from("PART"),
-                VM_NTH => x = String::from("NTH"),
-                VM_PUSH => x = String::from("PUSH"),
-                VM_DEPTH => x = String::from("DEPTH"),
-                VM_DROP => x = String::from("DROP"),
-                VM_PICK => x = String::from("PICK"),
-                VM_DUP => x = String::from("DUP"),
-                VM_ROLL => x = String::from("ROLL"),
-                VM_ALU => {
-                    x = String::from("ALU");
-                    match self.y() {
-                        ALU_NOT => y = String::from("NOT"),
-                        ALU_AND => y = String::from("AND"),
-                        ALU_OR => y = String::from("OR"),
-                        ALU_XOR => y = String::from("XOR"),
-                        ALU_ADD => y = String::from("ADD"),
-                        ALU_SUB => y = String::from("SUB"),
-                        ALU_MUL => y = String::from("MUL"),
-                        _ => {},
-                    }
-                },
-                VM_EQ => x = String::from("EQ"),
-                VM_CMP => {
-                    x = String::from("CMP");
-                    match self.y() {
-                        CMP_EQ => y = String::from("EQ"),
-                        CMP_GE => y = String::from("GE"),
-                        CMP_GT => y = String::from("GT"),
-                        CMP_LT => y = String::from("LT"),
-                        CMP_LE => y = String::from("LE"),
-                        CMP_NE => y = String::from("NE"),
-                        _ => {},
-                    }
-                },
-                VM_IF => x = String::from("IF"),
-                VM_MSG => x = String::from("MSG"),
-                VM_MY => {
-                    x = String::from("MY");
-                    match self.y() {
-                        MY_SELF => y = String::from("SELF"),
-                        MY_BEH => y = String::from("BEH"),
-                        MY_STATE => y = String::from("STATE"),
-                        _ => {},
-                    }
-                },
-                VM_SEND => x = String::from("SEND"),
-                VM_NEW => x = String::from("NEW"),
-                VM_BEH => x = String::from("BEH"),
-                VM_END => {
-                    x = String::from("END");
-                    match self.y() {
-                        END_ABORT => y = String::from("ABORT"),
-                        END_STOP => y = String::from("STOP"),
-                        END_COMMIT => y = String::from("COMMIT"),
-                        END_RELEASE => y = String::from("RELEASE"),
-                        _ => {},
-                    }
-                },
-                VM_DEQUE => {
-                    x = String::from("DEQUE");
-                    match self.y() {
-                        DEQUE_NEW => y = String::from("NEW"),
-                        DEQUE_EMPTY => y = String::from("EMPTY"),
-                        DEQUE_PUSH => y = String::from("PUSH"),
-                        DEQUE_POP => y = String::from("POP"),
-                        DEQUE_PUT => y = String::from("PUT"),
-                        DEQUE_PULL => y = String::from("PULL"),
-                        DEQUE_LEN => y = String::from("LEN"),
-                        _ => {},
-                    }
-                },
-                VM_IS_EQ => x = String::from("IS_EQ"),
-                VM_IS_NE => x = String::from("IS_NE"),
-                _ => {},
-            }
-        };
-        let z = self.z().to_string();
-        write!(fmt, "{{t:{}, x:{}, y:{}, z:{}}}", t, x, y, z)
     }
 }
 
@@ -1480,27 +1339,22 @@ pub const _RAM_TOP_OFS: usize = BOOT_OFS + 11;
         }
     }
 
-    pub fn run_loop(&mut self) -> bool {
+    pub fn run_loop(&mut self) -> bool {  // FIXME: return `Error` instead of `bool`
         loop {
-            let sponsor = self.event_sponsor(self.ep());
-            println!("run_loop: sponsor={} -> {}", sponsor, self.mem(sponsor));
             match self.execute_instruction() {
                 Ok(more) => {
                     if !more && !self.event_pending() {
                         return true;  // no more instructions to execute...
                     }
                 },
-                Err(error) => {
-                    println!("run_loop: execute ERROR! {}", error);
+                Err(_error) => {
                     return false;  // limit reached, or error condition signalled...
                 },
             }
-            if let Err(error) = self.check_for_interrupt() {
-                println!("run_loop: interrupt ERROR! {}", error);
+            if let Err(_error) = self.check_for_interrupt() {
                 return false;  // interrupt handler failed...
             }
-            if let Err(error) = self.dispatch_event() {
-                println!("run_loop: dispatch ERROR! {}", error);
+            if let Err(_error) = self.dispatch_event() {
                 return false;  // event dispatch failed...
             }
             // FIXME: if dispatch_event() returns Ok(true), ignore empty k-queue...
@@ -1509,28 +1363,22 @@ pub const _RAM_TOP_OFS: usize = BOOT_OFS + 11;
     pub fn check_for_interrupt(&mut self) -> Result<bool, Error> {
         //self.gc_stop_the_world();  // FIXME!! REMOVE FORCED GC...
         Ok(false)
-        //Err(String::from("Boom!"))
-        //Err(format!("result={}", false))
+        //Err(E_FAIL)
     }
     pub fn dispatch_event(&mut self) -> Result<bool, Error> {
         if !self.event_pending() {
-            println!("dispatch_event: event queue empty");
             return Ok(false);  // event queue empty
         }
         let ep = self.e_first();
         let event = self.mem(ep);
-        println!("dispatch_event: event={} -> {}", ep, event);
         let target = event.x();
         let sponsor = self.event_sponsor(ep);
-        println!("dispatch_event: sponsor={} -> {}", sponsor, self.mem(sponsor));
         let limit = self.sponsor_events(sponsor).fix_num().unwrap_or(0);
-        println!("dispatch_event: limit={}", limit);
         if limit <= 0 {
             return Err(E_MSG_LIM);  // Sponsor event limit reached
         }
         let a_ptr = self.cap_to_ptr(target);
         let a_quad = *self.mem(a_ptr);
-        println!("dispatch_event: target={} -> {}", a_ptr, a_quad);
         let beh = a_quad.x();
         let state = a_quad.y();
         let events = a_quad.z();
@@ -1550,7 +1398,6 @@ pub const _RAM_TOP_OFS: usize = BOOT_OFS + 11;
             // begin actor-event transaction
             let rollback = self.reserve(&a_quad)?;  // snapshot actor state
             let kp = self.new_cont(beh, state, ep)?;  // create continuation
-            println!("dispatch_event: cont={} -> {}", kp, self.mem(kp));
             self.ram_mut(a_ptr).set_z(NIL);  // indicate actor is busy
             self.cont_enqueue(kp);
             let ep_ = self.event_dequeue().unwrap();
@@ -1568,18 +1415,12 @@ pub const _RAM_TOP_OFS: usize = BOOT_OFS + 11;
     }
     pub fn execute_instruction(&mut self) -> Result<bool, Error> {
         let kp = self.kp();
-        let cont = self.mem(kp);
-        println!("execute_instruction: kp={} -> {}", kp, cont);
         if !kp.is_ram() {
-            println!("execute_instruction: continuation queue empty");
             return Ok(false);  // continuation queue is empty
         }
         let ep = self.ep();
-        println!("execute_instruction: ep={} -> {}", ep, self.mem(ep));
         let sponsor = self.event_sponsor(ep);
-        println!("execute_instruction: sponsor={} -> {}", sponsor, self.mem(sponsor));
         let limit = self.sponsor_instrs(sponsor).fix_num().unwrap_or(0);
-        println!("execute_instruction: limit={}", limit);
         if limit <= 0 {
             return Err(E_CPU_LIM);  // Sponsor instruction limit reached
         }
@@ -1591,7 +1432,6 @@ pub const _RAM_TOP_OFS: usize = BOOT_OFS + 11;
         assert_eq!(kp, kp_);
         if self.typeq(INSTR_T, ip_) {
             // re-queue updated continuation
-            println!("execute_instruction: kp'={} -> {}", kp_, self.ram(kp_));
             self.cont_enqueue(kp_);
         } else {
             // free dead continuation and associated event
@@ -1603,22 +1443,18 @@ pub const _RAM_TOP_OFS: usize = BOOT_OFS + 11;
     }
     fn perform_op(&mut self, ip: Any) -> Result<Any, Error> {
         let instr = self.mem(ip);
-        println!("perform_op: ip={} ${:08x} -> {}", ip, ip.raw(), instr);
         assert!(instr.t() == INSTR_T);
         let opr = instr.x();  // operation code
         let imm = instr.y();  // immediate argument
         let kip = instr.z();  // next instruction
         let ip_ = match opr {
             VM_TYPEQ => {
-                println!("vm_typeq: typ={}", imm);
                 let val = self.stack_pop();
-                println!("vm_typeq: val={}", val);
                 let r = if self.typeq(imm, val) { TRUE } else { FALSE };
                 self.stack_push(r)?;
                 kip
             },
             VM_DICT => {
-                println!("vm_dict: op={}", imm);
                 match imm {
                     DICT_HAS => {
                         let key = self.stack_pop();
@@ -1660,7 +1496,6 @@ pub const _RAM_TOP_OFS: usize = BOOT_OFS + 11;
                 kip
             },
             VM_DEQUE => {
-                println!("vm_deque: op={}", imm);
                 match imm {
                     DEQUE_NEW => {
                         let deque = self.deque_new();
@@ -1708,44 +1543,35 @@ pub const _RAM_TOP_OFS: usize = BOOT_OFS + 11;
                 kip
             },
             VM_PAIR => {
-                println!("vm_pair: cnt={}", imm);
                 let n = imm.get_fix()?;
                 self.stack_pairs(n)?;
                 kip
             },
             VM_PART => {
-                println!("vm_part: cnt={}", imm);
                 let n = imm.get_fix()?;
                 self.stack_parts(n)?;
                 kip
             },
             VM_NTH => {
-                println!("vm_nth: idx={}", imm);
                 let lst = self.stack_pop();
-                println!("vm_nth: lst={}", lst);
                 let n = imm.get_fix()?;
                 let r = self.extract_nth(lst, n);
-                println!("vm_nth: r={}", r);
                 self.stack_push(r)?;
                 kip
             },
             VM_PUSH => {
-                println!("vm_push: val={} ${:08x}", imm, imm.raw());
                 let val = self.follow_fwd(imm);  // FIXME: may be redundant with low-level memory redirection
                 self.stack_push(val)?;
                 kip
             },
             VM_DEPTH => {
                 let lst = self.sp();
-                println!("vm_depth: lst={}", lst);
                 let n = self.list_len(lst);
                 let n = Any::fix(n);
-                println!("vm_depth: n={}", n);
                 self.stack_push(n)?;
                 kip
             },
             VM_DROP => {
-                println!("vm_drop: n={}", imm);
                 let mut n = imm.get_fix()?;
                 assert!(n < 64);  // FIXME: replace with cycle-limit(s) in Sponsor
                 while n > 0 {
@@ -1755,7 +1581,6 @@ pub const _RAM_TOP_OFS: usize = BOOT_OFS + 11;
                 kip
             },
             VM_PICK => {
-                println!("vm_pick: idx={}", imm);
                 let n = imm.get_fix()?;
                 let r = if n > 0 {
                     let lst = self.sp();
@@ -1763,36 +1588,29 @@ pub const _RAM_TOP_OFS: usize = BOOT_OFS + 11;
                 } else {
                     UNDEF
                 };
-                println!("vm_pick: r={}", r);
                 self.stack_push(r)?;
                 kip
             },
             VM_DUP => {
-                println!("vm_dup: n={}", imm);
                 let n = imm.get_fix()?;
                 self.stack_dup(n)?;
                 kip
             },
             VM_ROLL => {
-                println!("vm_roll: idx={}", imm);
                 let n = imm.get_fix()?;
                 self.stack_roll(n)?;
                 kip
             },
             VM_ALU => {
-                println!("vm_alu: op={}", imm);
                 let r = if imm == ALU_NOT {
                     let v = self.stack_pop();
-                    println!("vm_alu: v={}", v);
                     match v.fix_num() {
                         Some(n) => Any::fix(!n),
                         _ => UNDEF,
                     }
                 } else {
                     let vv = self.stack_pop();
-                    println!("vm_alu: vv={}", vv);
                     let v = self.stack_pop();
-                    println!("vm_alu: v={}", v);
                     match (v.fix_num(), vv.fix_num()) {
                         (Some(n), Some(nn)) => {
                             match imm {
@@ -1808,25 +1626,18 @@ pub const _RAM_TOP_OFS: usize = BOOT_OFS + 11;
                         _ => UNDEF
                     }
                 };
-                println!("vm_alu: r={}", r);
                 self.stack_push(r)?;
                 kip
             },
             VM_EQ => {
-                println!("vm_eq: v={} ${:08x}", imm, imm.raw());
                 let vv = self.stack_pop();
-                println!("vm_eq: vv={} ${:08x}", vv, vv.raw());
                 let r = if imm == vv { TRUE } else { FALSE };
-                println!("vm_eq: r={}", r);
                 self.stack_push(r)?;
                 kip
             },
             VM_CMP => {
-                println!("vm_cmp: op={}", imm);
                 let vv = self.stack_pop();
-                println!("vm_cmp: vv={} ${:08x}", vv, vv.raw());
                 let v = self.stack_pop();
-                println!("vm_cmp: v={} ${:08x}", v, v.raw());
                 let b = if imm == CMP_EQ {
                     v == vv
                 } else if imm == CMP_NE {
@@ -1846,47 +1657,36 @@ pub const _RAM_TOP_OFS: usize = BOOT_OFS + 11;
                     }
                 };
                 let r = if b { TRUE } else { FALSE };
-                println!("vm_cmp: r={}", r);
                 self.stack_push(r)?;
                 kip
             },
             VM_IF => {
                 let b = self.stack_pop();
-                println!("vm_if: b={}", b);
-                println!("vm_if: t={}", imm);
-                println!("vm_if: f={}", kip);
                 if falsey(b) { kip } else { imm }
             },
             VM_MSG => {
-                println!("vm_msg: idx={}", imm);
                 let n = imm.get_fix()?;
                 let ep = self.ep();
                 let event = self.mem(ep);
                 let msg = event.y();
                 let r = self.extract_nth(msg, n);
-                println!("vm_msg: r={}", r);
                 self.stack_push(r)?;
                 kip
             },
             VM_MY => {
-                println!("vm_my: op={}", imm);
                 let me = self.self_ptr();
-                println!("vm_my: me={} ${:08x} -> {}", me, me.raw(), self.ram(me));
                 match imm {
                     MY_SELF => {
                         let ep = self.ep();
                         let target = self.ram(ep).x();
-                        println!("vm_my: self={} ${:08x}", target, target.raw());
                         self.stack_push(target)?;
                     },
                     MY_BEH => {
                         let beh = self.ram(me).x();
-                        println!("vm_my: beh={}", beh);
                         self.stack_push(beh)?;
                     },
                     MY_STATE => {
                         let state = self.ram(me).y();
-                        println!("vm_my: state={}", state);
                         self.push_list(state)?;
                     },
                     _ => {
@@ -1896,72 +1696,53 @@ pub const _RAM_TOP_OFS: usize = BOOT_OFS + 11;
                 kip
             }
             VM_SEND => {
-                println!("vm_send: cnt={}", imm);
                 let num = imm.get_fix()?;
                 let target = self.stack_pop();
-                println!("vm_send: target={} ${:08x}", target, target.raw());
                 assert!(self.typeq(ACTOR_T, target));
                 let msg = if num > 0 {
                     self.pop_counted(num)
                 } else {
                     self.stack_pop()
                 };
-                println!("vm_send: msg={}", msg);
                 let ep = self.new_event(target, msg)?;
                 let me = self.self_ptr();
-                println!("vm_send: me={} -> {}", me, self.ram(me));
                 let next = self.ram(me).z();
                 if next.is_ram() {
                     self.ram_mut(ep).set_z(next);
-                    println!("vm_send: ep={} -> {}", ep, self.mem(ep));
                 }
                 self.ram_mut(me).set_z(ep);
-                println!("vm_send: me'={} -> {}", me, self.mem(me));
                 kip
             },
             VM_NEW => {
-                println!("vm_new: cnt={}", imm);
                 let num = imm.get_fix()?;
                 let ip = self.stack_pop();
-                println!("vm_new: ip={}", ip);
                 assert!(self.typeq(INSTR_T, ip));
                 let sp = self.pop_counted(num);
-                println!("vm_new: sp={}", sp);
                 let a = self.new_actor(ip, sp)?;
-                println!("vm_new: actor={} ${:08x}", a, a.raw());
                 self.stack_push(a)?;
                 kip
             },
             VM_BEH => {
-                println!("vm_beh: cnt={}", imm);
                 let num = imm.get_fix()?;
                 let ip = self.stack_pop();
-                println!("vm_beh: ip={}", ip);
                 assert!(self.typeq(INSTR_T, ip));
                 let sp = self.pop_counted(num);
-                println!("vm_beh: sp={}", sp);
                 let me = self.self_ptr();
                 let actor = self.ram_mut(me);
-                println!("vm_beh: me={} -> {}", me, actor);
                 actor.set_x(ip);  // replace behavior function
                 actor.set_y(sp);  // replace state data
-                println!("vm_beh: me'={} -> {}", me, self.ram(me));
                 kip
             },
             VM_END => {
-                println!("vm_end: op={}", imm);
                 let me = self.self_ptr();
-                println!("vm_end: me={} -> {}", me, self.ram(me));
                 let rv = match imm {
                     END_ABORT => {
                         let _r = self.stack_pop();  // reason for abort
-                        println!("vm_end: reason={}", _r);
                         // FIXME: where should `reason` be recorded/reported?
                         self.actor_abort(me);
                         UNIT
                     },
                     END_STOP => {
-                        println!("vm_end: MEMORY={}", self.ram(MEMORY));
                         //UNDEF
                         return Err(E_FAIL);  // End::Stop terminated continuation
                     },
@@ -1979,20 +1760,15 @@ pub const _RAM_TOP_OFS: usize = BOOT_OFS + 11;
                         return Err(E_BOUNDS);  // unknown END op
                     }
                 };
-                println!("vm_end: rv={}", rv);
                 rv
             },
             VM_IS_EQ => {
-                println!("vm_is_eq: expect={}", imm);
                 let vv = self.stack_pop();
-                println!("vm_is_eq: actual={}", vv);
                 assert_eq!(imm, vv);  // FIXME: this should probably be Result::Error
                 kip
             },
             VM_IS_NE => {
-                println!("vm_is_ne: expect={}", imm);
                 let vv = self.stack_pop();
-                println!("vm_is_ne: actual={}", vv);
                 assert_ne!(imm, vv);  // FIXME: this should probably be Result::Error
                 kip
             },
@@ -2000,7 +1776,6 @@ pub const _RAM_TOP_OFS: usize = BOOT_OFS + 11;
                 return Err(E_BOUNDS);  // illegal instruction
             }
         };
-        println!("perform_op: ip'={} -> {}", ip_, self.mem(ip_));
         Ok(ip_)
     }
 
@@ -2082,7 +1857,6 @@ pub const _RAM_TOP_OFS: usize = BOOT_OFS + 11;
         let mut ep = self.ram(me).z();
         while ep.is_ram() {
             let event = self.ram(ep);
-            println!("actor_commit: ep={} -> {}", ep, event);
             let next = event.z();
             self.event_enqueue(ep);
             ep = next;
@@ -2097,7 +1871,6 @@ pub const _RAM_TOP_OFS: usize = BOOT_OFS + 11;
         let mut ep = self.ram(me).z();
         while ep.is_ram() {
             let event = self.ram(ep);
-            println!("actor_abort: ep={} -> {}", ep, event);
             let next = event.z();
             self.free(ep);
             ep = next;
@@ -2505,8 +2278,7 @@ pub const _RAM_TOP_OFS: usize = BOOT_OFS + 11;
             //self.free(sp);  // free pair holding stack item
             item
         } else {
-            println!("stack_pop: underflow!");  // NOTE: this is just a warning, returning UNDEF...
-            UNDEF
+            UNDEF  // stack underflow
         }
     }
     fn stack_push(&mut self, val: Any) -> Result<(), Error> {
@@ -2611,7 +2383,6 @@ pub const _RAM_TOP_OFS: usize = BOOT_OFS + 11;
             let quad = self.ram(ptr);
             if quad.t() == GC_FWD_T {
                 let fwd = quad.z();
-                println!("follow_fwd: {} ${:08x} --> {} ${:08x}", val, val.raw(), fwd, fwd.raw());
                 return fwd;
             }
         }
@@ -2642,9 +2413,7 @@ pub const _RAM_TOP_OFS: usize = BOOT_OFS + 11;
     pub fn alloc(&mut self, init: &Quad) -> Result<Any, Error> {
         let ep = self.ep();
         let sponsor = self.event_sponsor(ep);
-        println!("alloc: sponsor={} -> {}", sponsor, self.mem(sponsor));
         let limit = self.sponsor_memory(sponsor).fix_num().unwrap_or(0);
-        println!("alloc: limit={}", limit);
         if limit <= 0 {
             //panic!("memory limit reached");
             return Err(E_MEM_LIM);  // Sponsor memory limit reached
@@ -2679,7 +2448,7 @@ pub const _RAM_TOP_OFS: usize = BOOT_OFS + 11;
     pub fn free(&mut self, ptr: Any) {
         assert!(self.in_heap(ptr));
         if self.typeq(FREE_T, ptr) {
-            panic!("double-free {}", ptr);
+            panic!("double-free {}", ptr.raw());
         }
         *self.ram_mut(ptr) = Quad::free_t(self.ram_next());  // clear cell to "free"
         self.set_ram_next(ptr);  // link into free-list
@@ -2703,7 +2472,6 @@ pub const _RAM_TOP_OFS: usize = BOOT_OFS + 11;
         let ddeque = self.ddeque();
         let root = self.ram_root();
         let bank = if self.gc_phase() == BNK_0 { BNK_1 } else { BNK_0 };  // determine new phase
-        println!("gc_stop_the_world: phase ${:08x} -> ${:08x}", self.gc_phase(), bank);
         self.set_ram_top(UNDEF);  // toggle GC phase
         self.gc_store(
             Any::ram(bank, MEMORY.ofs()),
@@ -2724,7 +2492,6 @@ pub const _RAM_TOP_OFS: usize = BOOT_OFS + 11;
             self.gc_scan(scan);
             scan = Any::new(scan.raw() + 1);
         }
-        println!("gc_stop_the_world: ram_top={}", scan);
     }
     fn gc_mark(&mut self, val: Any) -> Any {
         if let Some(bank) = val.bank() {
@@ -2886,10 +2653,11 @@ fn falsey(v: Any) -> bool {
 //#[cfg(test)] -- use this if/when the tests are in a sub-module
 #[test]
 fn base_types_are_32_bits() {
-    assert_eq!(4, std::mem::size_of::<Raw>());
-    assert_eq!(4, std::mem::size_of::<Num>());
-    assert_eq!(4, std::mem::size_of::<Any>());
-    assert_eq!(16, std::mem::size_of::<Quad>());
+    assert_eq!(4, core::mem::size_of::<Error>());
+    assert_eq!(4, core::mem::size_of::<Raw>());
+    assert_eq!(4, core::mem::size_of::<Num>());
+    assert_eq!(4, core::mem::size_of::<Any>());
+    assert_eq!(16, core::mem::size_of::<Quad>());
 }
 
 #[test]
@@ -2957,46 +2725,22 @@ fn core_initialization() {
     assert_eq!(NIL, core.e_first());
     assert_ne!(NIL, core.k_first());
     assert_eq!(core.kp(), core.k_first());
-    println!("RAM");
-    for ofs in 0..32 {
-        let ptr = Any::ram(core.gc_phase(), ofs);
-        let quad = core.ram(ptr);
-        println!("{:5}: {} -> {}", ofs, ptr, quad);
-    }
-    println!("ROM");
-    for ofs in 0..32 {
-        let ptr = Any::rom(ofs);
-        let quad = core.rom(ptr);
-        println!("{:5}: {} -> {}", ofs, ptr, quad);
-    }
-    //assert!(false);  // force output to be displayed
 }
 
 #[test]
 fn basic_memory_allocation() {
     let mut core = Core::new();
     let top_before = core.ram_top().ofs();
-    println!("ram_top: {}", core.ram_top());
     let m1 = core.alloc(&Quad::pair_t(PLUS_1, PLUS_1)).unwrap();
-    println!("m1:{} -> {}", m1, core.mem(m1));
-    println!("ram_top: {}", core.ram_top());
+    assert!(m1.is_ptr());
     let m2 = core.alloc(&Quad::pair_t(PLUS_2, PLUS_2)).unwrap();
-    println!("ram_top: {}", core.ram_top());
     let m3 = core.alloc(&Quad::pair_t(PLUS_3, PLUS_3)).unwrap();
-    println!("ram_top: {}", core.ram_top());
-    println!("ram_free: {}", core.ram_free());
     core.free(m2);
-    println!("ram_free: {}", core.ram_free());
     core.free(m3);
-    println!("ram_free: {}", core.ram_free());
     let _m4 = core.alloc(&Quad::pair_t(PLUS_4, PLUS_4)).unwrap();
-    println!("ram_top: {}", core.ram_top());
-    println!("ram_free: {}", core.ram_free());
     let top_after = core.ram_top().ofs();
     assert_eq!(3, top_after - top_before);
     assert_eq!(PLUS_1, core.ram_free());
-    println!("ram_next: {} -> {}", core.ram_next(), core.mem(core.ram_next()));
-    //assert!(false);  // force output to be displayed
 }
 
 #[test]
@@ -3006,7 +2750,6 @@ fn run_loop_terminates() {
     //core.set_sponsor_events(_ep, Any::fix(0));  // FIXME: forcing "out-of-events" error...
     let ok = core.run_loop();
     assert!(ok);
-    //assert!(false);  // force output to be displayed
 }
 
 #[test]
@@ -3019,5 +2762,4 @@ fn gc_before_and_after_run() {
     let bank = core.gc_phase();
     core.gc_stop_the_world();
     assert_ne!(bank, core.gc_phase());
-    //assert!(false);  // force output to be displayed
 }
