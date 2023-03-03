@@ -5,6 +5,7 @@ const $mem_top = document.getElementById("ufork-mem-top");
 const $mem_next = document.getElementById("ufork-mem-next");
 const $mem_free = document.getElementById("ufork-mem-free");
 const $mem_root = document.getElementById("ufork-mem-root");
+const $mem_pages = document.getElementById("ufork-mem-pages");
 const $gc_phase = document.getElementById("ufork-gc-phase");
 const $sponsor_memory = document.getElementById("ufork-sponsor-memory");
 const $sponsor_events = document.getElementById("ufork-sponsor-events");
@@ -143,6 +144,7 @@ function h_fix_to_i32(fix) {
 const h_no_init = function uninitialized() {
     return h_warning("WASM not initialized.");
 };
+let h_mem_pages = h_no_init;
 let h_read_quad = h_no_init;
 let h_write_quad = h_no_init;
 let h_blob_mem = h_no_init;
@@ -429,6 +431,7 @@ const drawHost = () => {
     updateElementText($mem_next, h_print(ram_next));
     updateElementText($mem_free, h_print(ram_free));
     updateElementText($mem_root, h_print(ram_root));
+    updateElementText($mem_pages, h_mem_pages());
     updateElementText($gc_phase, h_gc_phase() == 0 ? "Bank 0" : "Bank 1");
     const ddeque_quad = h_read_quad(h_ramptr(DDEQUE_OFS));
     const e_first = ddeque_quad.t;
@@ -625,12 +628,15 @@ function test_suite(exports) {
 WebAssembly.instantiateStreaming(
     fetch("../target/wasm32-unknown-unknown/release/ufork_wasm.wasm"),
     {
-        imports: {
-            raw_clock() {
+        js: {
+            host_clock() {
                 return performance.now();
             },
-            double(x) {
-                return 2 * x;
+            host_log(x) {
+                if (Number.isSafeInteger(x)) {
+                    x = "$" + ("00000000" + x.toString(16)).slice(-8);
+                }
+                console.log("LOG:", x);
             }
         }
     }
@@ -655,6 +661,9 @@ WebAssembly.instantiateStreaming(
 
     test_suite(exports);
 
+    h_mem_pages = function mem_pages() {
+        return exports.memory.buffer.byteLength / 65536;
+    }
     h_read_quad = function read_quad(ptr) {
         if (h_is_ram(ptr)) {
             // WARNING! The WASM memory buffer can move if it is resized.

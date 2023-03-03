@@ -32,19 +32,21 @@ impl ClockDevice {
         }
     }
     /*
+    */
     #[cfg(target_arch = "wasm32")]
     fn read_clock(&mut self) -> Any {
-        let raw = crate::raw_clock();
-        let now = Any::fix(raw as isize);
-        self.clock_ticks = now;
-        now
+        unsafe {
+            let raw = crate::host_clock();
+            let now = Any::fix(raw as isize);
+            self.clock_ticks = now;
+            now
+        }
     }
     #[cfg(not(target_arch = "wasm32"))]
-    */
     fn read_clock(&mut self) -> Any {
         match self.clock_ticks.fix_num() {
             Some(t) => {
-                let now = Any::fix(t + 13);  // arbitrary advance on each call
+                let now = Any::fix(t + 5);  // arbitrary advance on each call
                 self.clock_ticks = now;
                 now
             }

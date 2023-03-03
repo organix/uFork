@@ -22,4 +22,4 @@ lol_alloc = "0.3.0"     		# a size-efficient allocator crate
 panic = "abort"					# abort on panic!()
 opt-level = "s"					# optimize for small code size
 lto = true              		# enable link time optimization
-# strip = true            		# strip debug symbols
+strip = true            		# strip debug symbols
