@@ -1,5 +1,7 @@
 // uFork debugger
 
+import OED from "./oed.js";
+
 const $mem_max = document.getElementById("ufork-mem-max");
 const $mem_top = document.getElementById("ufork-mem-top");
 const $mem_next = document.getElementById("ufork-mem-next");
@@ -623,6 +625,18 @@ function test_suite(exports) {
     const blob_ofs = h_blob_buffer();
     const blob = new Uint8Array(exports.memory.buffer, blob_ofs, h_fix_to_i32(h_blob_top()));
     console.log("BLOB:", blob);
+
+    const decoded = {
+        space: {origin: [-40, -200], extent: [600, 460]},
+        shapes: [
+            {origin: [5, 3], extent: [21, 13]},
+            {origin: [8, 5], extent: [13, 8]}
+        ]
+    };
+    const encoded = OED.encode(decoded);
+    console.log("OED encoded:", encoded);
+    console.log("OED decoded:", OED.decode(encoded));
+    console.log("OED seek:", OED.decode(encoded, undefined, 11));
 }
 
 WebAssembly.instantiateStreaming(
