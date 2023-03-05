@@ -643,14 +643,11 @@ WebAssembly.instantiateStreaming(
     fetch("../target/wasm32-unknown-unknown/release/ufork_wasm.wasm"),
     {
         js: {
-            host_clock() {
+            host_clock() {  // WASM type: () -> i32
                 return performance.now();
             },
-            host_log(x) {
-                if (Number.isSafeInteger(x)) {
-                    x = "$" + ("00000000" + x.toString(16)).slice(-8);
-                }
-                console.log("LOG:", x);
+            host_log(x) {  // WASM type: (i32) -> nil
+                console.log("LOG:", x, "=", h_print(x));
             }
         }
     }
