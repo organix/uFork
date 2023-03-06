@@ -1,6 +1,7 @@
 // uFork debugger
 
 import OED from "./oed.js";
+import oed from "./oed_lite.js";
 
 const $mem_max = document.getElementById("ufork-mem-max");
 const $mem_top = document.getElementById("ufork-mem-top");
@@ -701,9 +702,16 @@ function test_suite(exports) {
         ]
     };
     const encoded = OED.encode(decoded);
-    console.log("OED encoded:", encoded);
-    console.log("OED decoded:", OED.decode(encoded));
-    console.log("OED seek:", OED.decode(encoded, undefined, 11));
+    const enc_lite = oed.encode(decoded);
+    console.log("OED encoded:", encoded, enc_lite);
+    let dec_encoded = OED.decode(encoded);
+    let dec_enc_lite = OED.decode(enc_lite);
+    let dec_lite_encoded = oed.decode(encoded);
+    let dec_lite_enc_lite = oed.decode(enc_lite);
+    console.log("OED decoded:", dec_encoded, dec_enc_lite, dec_lite_encoded, dec_lite_enc_lite);
+    let dec_at11_encoded = OED.decode(encoded, undefined, 11);
+    let dec_at11_enc_lite = oed.decode({ octets: enc_lite, offset: 11 });
+    console.log("OED seek:", dec_at11_encoded, dec_at11_enc_lite);
 }
 
 WebAssembly.instantiateStreaming(
