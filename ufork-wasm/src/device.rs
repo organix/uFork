@@ -81,7 +81,10 @@ impl Device for IoDevice {
         let count = self.call_count + 1;
         let _myself = event.x();
         let message = event.y();
-        greet(message);
+        let buf = core.blob_buffer();
+        let ptr = buf.as_ptr();
+        let ofs = message.get_fix()? as usize;
+        greet(ptr, ofs);
         self.call_count = count;
         Ok(true)  // event handled.
     }

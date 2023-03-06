@@ -146,10 +146,76 @@ function h_fix_to_i32(fix) {
 const h_no_init = function uninitialized() {
     return h_warning("WASM not initialized.");
 };
-let h_mem_pages = h_no_init;
-let h_read_quad = h_no_init;
-let h_write_quad = h_no_init;
-let h_blob_mem = h_no_init;
+let h_memory = h_no_init;
+function h_mem_pages() {
+    return h_memory().byteLength / 65536;
+}
+function h_read_quad(ptr) {
+    if (h_is_ram(ptr)) {
+        const ofs = h_rawofs(ptr);
+        const ram_ofs = h_ram_buffer(h_gc_phase());
+        const ram_top = h_rawofs(h_ram_top());
+        if (ofs < ram_top) {
+            const ram_len = ram_top << 2;
+            const ram = new Uint32Array(h_memory(), ram_ofs, ram_len);
+            const idx = ofs << 2;  // convert quad address to Uint32Array index
+            const quad = {
+                t: ram[idx + 0],
+                x: ram[idx + 1],
+                y: ram[idx + 2],
+                z: ram[idx + 3]
+            };
+            return quad;
+        } else {
+            return h_warning("h_read_quad: RAM ptr out of bounds "+h_print(ptr));
+        }
+    }
+    if (h_is_rom(ptr)) {
+        const ofs = h_rawofs(ptr);
+        const rom_ofs = h_rom_buffer();
+        const rom_top = h_rawofs(h_rom_top());
+        if (ofs < rom_top) {
+            const rom_len = rom_top << 2;
+            const rom = new Uint32Array(h_memory(), rom_ofs, rom_len);
+            const idx = ofs << 2;  // convert quad address to Uint32Array index
+            const quad = {
+                t: rom[idx + 0],
+                x: rom[idx + 1],
+                y: rom[idx + 2],
+                z: rom[idx + 3]
+            };
+            return quad;
+        } else {
+            return h_warning("h_read_quad: ROM ptr out of bounds "+h_print(ptr));
+        }
+    }
+    return h_warning("h_read_quad: required ptr, got "+h_print(ptr));
+}
+function h_write_quad(ptr, quad) {
+    if (h_is_ram(ptr)) {
+        const ram_ofs = h_ram_buffer(h_gc_phase());
+        const ram_top = h_rawofs(h_ram_top());
+        if (ofs < ram_top) {
+            const ram_len = ram_top << 2;
+            const ram = new Uint32Array(h_memory(), ram_ofs, ram_len);
+            const ofs = h_rawofs(ptr);
+            const idx = ofs << 2;  // convert quad address to Uint32Array index
+            ram[idx + 0] = quad.t;
+            ram[idx + 1] = quad.x;
+            ram[idx + 2] = quad.y;
+            ram[idx + 3] = quad.z;
+        } else {
+            return h_warning("h_write_quad: RAM ptr out of bounds "+h_print(ptr));
+        }
+    }
+    return h_warning("h_write_quad: required RAM ptr, got "+h_print(ptr));
+}
+function h_blob_mem() {
+    const blob_ofs = h_blob_buffer();
+    const blob_len = h_fix_to_i32(h_blob_top());
+    const blob = new Uint8Array(h_memory(), blob_ofs, blob_len);
+    return blob;
+}
 // functions imported from uFork WASM module
 let h_step = h_no_init;
 let h_gc_run = h_no_init;
@@ -613,17 +679,18 @@ function test_suite(exports) {
     console.log("h_ram_top() =", h_ram_top(), h_print(h_ram_top()));
     console.log("h_ramptr(5) =", h_ramptr(5), h_print(h_ramptr(5)));
     console.log("h_ptr_to_cap(h_ramptr(3)) =", h_ptr_to_cap(h_ramptr(3)), h_print(h_ptr_to_cap(h_ramptr(3))));
+    console.log("h_memory() =", h_memory());
 
     const rom_ofs = h_rom_buffer();
-    const rom = new Uint32Array(exports.memory.buffer, rom_ofs, (h_rawofs(h_rom_top()) << 2));
+    const rom = new Uint32Array(h_memory(), rom_ofs, (h_rawofs(h_rom_top()) << 2));
     console.log("ROM:", rom);
 
     const ram_ofs = h_ram_buffer(h_gc_phase());
-    const ram = new Uint32Array(exports.memory.buffer, ram_ofs, (h_rawofs(h_ram_top()) << 2));
+    const ram = new Uint32Array(h_memory(), ram_ofs, (h_rawofs(h_ram_top()) << 2));
     console.log("RAM:", ram);
 
     const blob_ofs = h_blob_buffer();
-    const blob = new Uint8Array(exports.memory.buffer, blob_ofs, h_fix_to_i32(h_blob_top()));
+    const blob = new Uint8Array(h_memory(), blob_ofs, h_fix_to_i32(h_blob_top()));
     console.log("BLOB:", blob);
 
     const decoded = {
@@ -646,9 +713,15 @@ WebAssembly.instantiateStreaming(
             host_clock() {  // WASM type: () -> i32
                 return performance.now();
             },
+            host_print(base, ofs) {  // WASM type: (i32, i32) -> nil
+                const mem = new Uint8Array(h_memory(), base);
+                const buf = mem.subarray(ofs - 5);  // blob allocation has a 5-octet header
+                const blob = OED.decode(buf, undefined, 0);  // decode a single OED value
+                console.log("PRINT:", blob);
+            },
             host_log(x) {  // WASM type: (i32) -> nil
                 console.log("LOG:", x, "=", h_print(x));
-            }
+            },
         }
     }
 ).then(function (wasm) {
@@ -670,85 +743,13 @@ WebAssembly.instantiateStreaming(
     h_cdr = exports.h_cdr;
     h_next = exports.h_next;
 
-    test_suite(exports);
-
-    h_mem_pages = function mem_pages() {
-        return exports.memory.buffer.byteLength / 65536;
-    }
-    h_read_quad = function read_quad(ptr) {
-        if (h_is_ram(ptr)) {
-            // WARNING! The WASM memory buffer can move if it is resized.
-            //          We get a fresh pointer each time for safety.
-            const ofs = h_rawofs(ptr);
-            const ram_ofs = h_ram_buffer(h_gc_phase());
-            const ram_top = h_rawofs(h_ram_top());
-            if (ofs < ram_top) {
-                const ram_len = ram_top << 2;
-                const ram = new Uint32Array(exports.memory.buffer, ram_ofs, ram_len);
-                const idx = ofs << 2;  // convert quad address to Uint32Array index
-                const quad = {
-                    t: ram[idx + 0],
-                    x: ram[idx + 1],
-                    y: ram[idx + 2],
-                    z: ram[idx + 3]
-                };
-                return quad;
-            } else {
-                return h_warning("h_read_quad: RAM ptr out of bounds "+h_print(ptr));
-            }
-        }
-        if (h_is_rom(ptr)) {
-            // WARNING! The WASM memory buffer can move if it is resized.
-            //          We get a fresh pointer each time for safety.
-            const ofs = h_rawofs(ptr);
-            const rom_ofs = h_rom_buffer();
-            const rom_top = h_rawofs(h_rom_top());
-            if (ofs < rom_top) {
-                const rom_len = rom_top << 2;
-                const rom = new Uint32Array(exports.memory.buffer, rom_ofs, rom_len);
-                const idx = ofs << 2;  // convert quad address to Uint32Array index
-                const quad = {
-                    t: rom[idx + 0],
-                    x: rom[idx + 1],
-                    y: rom[idx + 2],
-                    z: rom[idx + 3]
-                };
-                return quad;
-            } else {
-                return h_warning("h_read_quad: ROM ptr out of bounds "+h_print(ptr));
-            }
-        }
-        return h_warning("h_read_quad: required ptr, got "+h_print(ptr));
-    };
-    h_write_quad = function write_quad(ptr, quad) {
-        if (h_is_ram(ptr)) {
-            // WARNING! The WASM memory buffer can move if it is resized.
-            //          We get a fresh pointer each time for safety.
-            const ram_ofs = h_ram_buffer(h_gc_phase());
-            const ram_top = h_rawofs(h_ram_top());
-            if (ofs < ram_top) {
-                const ram_len = ram_top << 2;
-                const ram = new Uint32Array(exports.memory.buffer, ram_ofs, ram_len);
-                const ofs = h_rawofs(ptr);
-                const idx = ofs << 2;  // convert quad address to Uint32Array index
-                ram[idx + 0] = quad.t;
-                ram[idx + 1] = quad.x;
-                ram[idx + 2] = quad.y;
-                ram[idx + 3] = quad.z;
-            } else {
-                return h_warning("h_write_quad: RAM ptr out of bounds "+h_print(ptr));
-            }
-        }
-        return h_warning("h_write_quad: required RAM ptr, got "+h_print(ptr));
-    };
-    h_blob_mem = function blob_mem() {
+    h_memory = function wasm_memory() {
         // WARNING! The WASM memory buffer can move if it is resized.
         //          We get a fresh pointer each time for safety.
-        const blob_ofs = h_blob_buffer();
-        const blob_len = h_fix_to_i32(h_blob_top());
-        const blob = new Uint8Array(exports.memory.buffer, blob_ofs, blob_len);
-        return blob;
-    };
+        return exports.memory.buffer;
+    }
+
+    test_suite();
 
     // draw initial state
     updateRomMonitor();

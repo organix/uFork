@@ -1234,11 +1234,13 @@ pub const _T_DEV_BEH: Any  = Any { raw: T_DEV_OFS as Raw };
         quad_rom[T_DEV_OFS+5]       = Quad::vm_push(IO_DEV, Any::rom(T_DEV_OFS+6));  // 3 io_device
         quad_rom[T_DEV_OFS+6]       = Quad::vm_push(BLOB_DEV, Any::rom(T_DEV_OFS+7));  // 3 io_device blob_device
         quad_rom[T_DEV_OFS+7]       = Quad::vm_send(PLUS_2, Any::rom(T_DEV_OFS+8));  // --
-        quad_rom[T_DEV_OFS+8]       = Quad::vm_drop(ZERO, Any::rom(T_DEV_OFS+9));  // --
+        quad_rom[T_DEV_OFS+8]       = Quad::vm_drop(ZERO, Any::rom(T_DEV_OFS+12));  // --
+
         quad_rom[T_DEV_OFS+9]       = Quad::vm_push(IO_DEV, Any::rom(T_DEV_OFS+10));  // io_device
         quad_rom[T_DEV_OFS+10]      = Quad::vm_push(CLOCK_DEV, Any::rom(T_DEV_OFS+11));  // io_device clock_device
         quad_rom[T_DEV_OFS+11]      = Quad::vm_send(ZERO, Any::rom(T_DEV_OFS+12));  // --
         //quad_rom[T_DEV_OFS+11]      = Quad::vm_send(ZERO, COMMIT);  // --
+
         quad_rom[T_DEV_OFS+12]      = Quad::vm_push(PLUS_5, Any::rom(T_DEV_OFS+13));  // 5
         quad_rom[T_DEV_OFS+13]      = Quad::vm_push(_COUNT_BEH, Any::rom(T_DEV_OFS+14));  // 5 count-beh
         quad_rom[T_DEV_OFS+14]      = Quad::vm_new(ZERO, Any::rom(T_DEV_OFS+15));  // 5 a-count

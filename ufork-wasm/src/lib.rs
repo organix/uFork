@@ -35,21 +35,22 @@ fn out_of_memory(_: core::alloc::Layout) -> ! {
 #[cfg(target_arch = "wasm32")]
 #[link(wasm_import_module = "js")]
 extern {
-    fn host_clock() -> Raw;
-    fn host_log(x: Raw);
+    pub fn host_clock() -> Raw;
+    pub fn host_print(base: *const u8, ofs: usize);
+    pub fn host_log(x: Raw);
 }
 
 #[cfg(target_arch = "wasm32")]
-pub fn greet(msg: Any) {
+pub fn greet(base: *const u8, ofs: usize) {
     unsafe {
-        host_log(msg.raw());
+        //host_log(msg.raw());
+        host_print(base, ofs);
     }
 }
 
 #[cfg(not(target_arch = "wasm32"))]
-pub fn greet(msg: Any) {
-    println!("LOG: {}", msg.raw());
-    // FIXME: find a better way to send information to the Host environment
+pub fn greet(base: *const u8, ofs: usize) {
+    println!("LOG: {}[{}]", base as usize, ofs);
 }
 
 unsafe fn the_host() -> &'static RefCell<Host> {
