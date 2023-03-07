@@ -722,9 +722,12 @@ WebAssembly.instantiateStreaming(
                 return performance.now();
             },
             host_print(base, ofs) {  // WASM type: (i32, i32) -> nil
-                const mem = new Uint8Array(h_memory(), base);
+                const mem = new Uint8Array(h_memory(), base);  // u8[] view of blob memory
                 const buf = mem.subarray(ofs - 5);  // blob allocation has a 5-octet header
-                const blob = OED.decode(buf, undefined, 0);  // decode a single OED value
+                //const buf = mem.subarray(ofs);  // create window into application-managed memory
+                //const blob = OED.decode(buf, undefined, 0);  // decode a single OED value
+                //const blob = oed.decode(buf).value;  // decode a single OED value
+                const blob = oed.decode(buf);  // decode value and return OED structure
                 console.log("PRINT:", blob);
             },
             host_log(x) {  // WASM type: (i32) -> nil
