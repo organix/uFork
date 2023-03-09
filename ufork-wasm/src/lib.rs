@@ -1,4 +1,4 @@
-//#![no_std]
+#![no_std]
 //#![feature(default_alloc_error_handler)]
 //#![feature(alloc_error_handler)]
 
@@ -11,7 +11,6 @@ use crate::ufork::*;
 pub mod ufork;
 pub mod device;
 
-/*
 #[cfg(target_arch = "wasm32")]
 #[panic_handler]
 fn panic(_: &core::panic::PanicInfo) -> ! {
@@ -25,6 +24,7 @@ static ALLOCATOR: lol_alloc::AssumeSingleThreaded<lol_alloc::FreeListAllocator> 
     lol_alloc::AssumeSingleThreaded::new(lol_alloc::FreeListAllocator::new())
 };
 
+/*
 #[cfg(target_arch = "wasm32")]
 #[alloc_error_handler]
 fn out_of_memory(_: core::alloc::Layout) -> ! {
@@ -49,8 +49,9 @@ pub fn greet(base: *const u8, ofs: usize) {
 }
 
 #[cfg(not(target_arch = "wasm32"))]
-pub fn greet(base: *const u8, ofs: usize) {
-    println!("LOG: {}[{}]", base as usize, ofs);
+pub fn greet(_base: *const u8, _ofs: usize) {
+    //println!("LOG: {}[{}]", base as usize, ofs);
+    // FIXME: console i/o not available in `#![no_std]` build
 }
 
 unsafe fn the_host() -> &'static RefCell<Host> {
