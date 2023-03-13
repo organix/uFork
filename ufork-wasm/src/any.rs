@@ -190,60 +190,65 @@ impl Any {
     }
 }
 
-//#[cfg(test)] -- use this if/when the tests are in a sub-module
-#[test]
-fn zero_fix_value_roundtrips() {
-    let n = Any::fix(0);
-    let r = n.raw();
-    let v = Any::new(r);
-    assert!(v.is_fix());
-    let o = v.fix_num();
-    assert!(o.is_some());
-    let i = o.unwrap();
-    let m = Any::fix(i);
-    assert_eq!(n, m);
-    assert_eq!(0, m.fix_num().unwrap());
-}
+#[cfg(test)]
+mod tests {
+    use super::*;
 
-#[test]
-fn positive_fix_value_roundtrips() {
-    let n = Any::fix(42);
-    let r = n.raw();
-    let v = Any::new(r);
-    assert!(v.is_fix());
-    let o = v.fix_num();
-    assert!(o.is_some());
-    let i = o.unwrap();
-    let m = Any::fix(i);
-    assert_eq!(n, m);
-    assert_eq!(42, m.fix_num().unwrap());
-}
+    #[test]
+    fn zero_fix_value_roundtrips() {
+        let n = Any::fix(0);
+        let r = n.raw();
+        let v = Any::new(r);
+        assert!(v.is_fix());
+        let o = v.fix_num();
+        assert!(o.is_some());
+        let i = o.unwrap();
+        let m = Any::fix(i);
+        assert_eq!(n, m);
+        assert_eq!(0, m.fix_num().unwrap());
+    }
 
-#[test]
-fn negative_fix_value_roundtrips() {
-    let n = Any::fix(-42);
-    let r = n.raw();
-    let v = Any::new(r);
-    assert!(v.is_fix());
-    let o = v.fix_num();
-    assert!(o.is_some());
-    let i = o.unwrap();
-    let m = Any::fix(i);
-    assert_eq!(n, m);
-    assert_eq!(-42, m.fix_num().unwrap());
-}
+    #[test]
+    fn positive_fix_value_roundtrips() {
+        let n = Any::fix(42);
+        let r = n.raw();
+        let v = Any::new(r);
+        assert!(v.is_fix());
+        let o = v.fix_num();
+        assert!(o.is_some());
+        let i = o.unwrap();
+        let m = Any::fix(i);
+        assert_eq!(n, m);
+        assert_eq!(42, m.fix_num().unwrap());
+    }
 
-#[test]
-#[should_panic]
-fn cast_fix_to_ofs() {
-    let n = Any::fix(0);
-    let _p = n.ofs();  // should panic!
-}
+    #[test]
+    fn negative_fix_value_roundtrips() {
+        let n = Any::fix(-42);
+        let r = n.raw();
+        let v = Any::new(r);
+        assert!(v.is_fix());
+        let o = v.fix_num();
+        assert!(o.is_some());
+        let i = o.unwrap();
+        let m = Any::fix(i);
+        assert_eq!(n, m);
+        assert_eq!(-42, m.fix_num().unwrap());
+    }
 
-#[test]
-fn ptr_is_distinct_from_cap() {
-    let p = Any::ram(BNK_0, 42);
-    let c = Any::cap(42);
-    assert_ne!(p.raw(), c.raw());
-    assert_eq!(p.ofs(), c.ofs());
+    #[test]
+    #[should_panic]
+    fn cast_fix_to_ofs() {
+        let n = Any::fix(0);
+        let _p = n.ofs();  // should panic!
+    }
+
+    #[test]
+    fn ptr_is_distinct_from_cap() {
+        let p = Any::ram(BNK_0, 42);
+        let c = Any::cap(42);
+        assert_ne!(p.raw(), c.raw());
+        assert_eq!(p.ofs(), c.ofs());
+    }
+
 }

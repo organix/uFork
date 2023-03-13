@@ -2082,59 +2082,64 @@ fn falsey(v: Any) -> bool {
     v == FALSE || v == UNDEF || v == NIL || v == ZERO
 }
 
-//#[cfg(test)] -- use this if/when the tests are in a sub-module
-#[test]
-fn base_types_are_32_bits() {
-    assert_eq!(4, ::core::mem::size_of::<Error>());
-    assert_eq!(4, ::core::mem::size_of::<Raw>());
-    assert_eq!(4, ::core::mem::size_of::<Num>());
-    assert_eq!(4, ::core::mem::size_of::<Any>());
-    assert_eq!(16, ::core::mem::size_of::<Quad>());
-}
+#[cfg(test)]
+mod tests {
+    use super::*;
 
-#[test]
-fn core_initialization() {
-    let core = Core::new();
-    assert_eq!(ZERO, core.ram_free());
-    assert_eq!(NIL, core.ram_next());
-    assert_eq!(NIL, core.e_first());
-    assert_ne!(NIL, core.k_first());
-    assert_eq!(core.kp(), core.k_first());
-}
+    #[test]
+    fn base_types_are_32_bits() {
+        assert_eq!(4, ::core::mem::size_of::<Error>());
+        assert_eq!(4, ::core::mem::size_of::<Raw>());
+        assert_eq!(4, ::core::mem::size_of::<Num>());
+        assert_eq!(4, ::core::mem::size_of::<Any>());
+        assert_eq!(16, ::core::mem::size_of::<Quad>());
+    }
 
-#[test]
-fn basic_memory_allocation() {
-    let mut core = Core::new();
-    let top_before = core.ram_top().ofs();
-    let m1 = core.alloc(&Quad::pair_t(PLUS_1, PLUS_1)).unwrap();
-    assert!(m1.is_ptr());
-    let m2 = core.alloc(&Quad::pair_t(PLUS_2, PLUS_2)).unwrap();
-    let m3 = core.alloc(&Quad::pair_t(PLUS_3, PLUS_3)).unwrap();
-    core.free(m2);
-    core.free(m3);
-    let _m4 = core.alloc(&Quad::pair_t(PLUS_4, PLUS_4)).unwrap();
-    let top_after = core.ram_top().ofs();
-    assert_eq!(3, top_after - top_before);
-    assert_eq!(PLUS_1, core.ram_free());
-}
+    #[test]
+    fn core_initialization() {
+        let core = Core::new();
+        assert_eq!(ZERO, core.ram_free());
+        assert_eq!(NIL, core.ram_next());
+        assert_eq!(NIL, core.e_first());
+        assert_ne!(NIL, core.k_first());
+        assert_eq!(core.kp(), core.k_first());
+    }
 
-#[test]
-fn run_loop_terminates() {
-    let mut core = Core::new();
-    let _ep = core.ep();
-    //core.set_sponsor_events(_ep, Any::fix(0));  // FIXME: forcing "out-of-events" error...
-    let ok = core.run_loop();
-    assert!(ok);
-}
+    #[test]
+    fn basic_memory_allocation() {
+        let mut core = Core::new();
+        let top_before = core.ram_top().ofs();
+        let m1 = core.alloc(&Quad::pair_t(PLUS_1, PLUS_1)).unwrap();
+        assert!(m1.is_ptr());
+        let m2 = core.alloc(&Quad::pair_t(PLUS_2, PLUS_2)).unwrap();
+        let m3 = core.alloc(&Quad::pair_t(PLUS_3, PLUS_3)).unwrap();
+        core.free(m2);
+        core.free(m3);
+        let _m4 = core.alloc(&Quad::pair_t(PLUS_4, PLUS_4)).unwrap();
+        let top_after = core.ram_top().ofs();
+        assert_eq!(3, top_after - top_before);
+        assert_eq!(PLUS_1, core.ram_free());
+    }
 
-#[test]
-fn gc_before_and_after_run() {
-    let mut core = Core::new();
-    assert_eq!(BNK_0, core.gc_phase());
-    core.gc_stop_the_world();
-    assert_eq!(BNK_1, core.gc_phase());
-    core.run_loop();
-    let bank = core.gc_phase();
-    core.gc_stop_the_world();
-    assert_ne!(bank, core.gc_phase());
+    #[test]
+    fn run_loop_terminates() {
+        let mut core = Core::new();
+        let _ep = core.ep();
+        //core.set_sponsor_events(_ep, Any::fix(0));  // FIXME: forcing "out-of-events" error...
+        let ok = core.run_loop();
+        assert!(ok);
+    }
+
+    #[test]
+    fn gc_before_and_after_run() {
+        let mut core = Core::new();
+        assert_eq!(BNK_0, core.gc_phase());
+        core.gc_stop_the_world();
+        assert_eq!(BNK_1, core.gc_phase());
+        core.run_loop();
+        let bank = core.gc_phase();
+        core.gc_stop_the_world();
+        assert_ne!(bank, core.gc_phase());
+    }
+
 }
