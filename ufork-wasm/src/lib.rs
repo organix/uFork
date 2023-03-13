@@ -4,17 +4,23 @@
 
 extern crate alloc;
 
-use core::cell::RefCell;
+use ::core::cell::RefCell;
 
-use crate::ufork::*;
-
-pub mod ufork;
+pub mod any;
+pub mod core;
 pub mod device;
+pub mod host;
+pub mod quad;
+
+use crate::any::*;
+use crate::core::*;
+use crate::host::*;
+use crate::quad::*;
 
 #[cfg(target_arch = "wasm32")]
 #[panic_handler]
-fn panic(_: &core::panic::PanicInfo) -> ! {
-    core::arch::wasm32::unreachable()
+fn panic(_: &::core::panic::PanicInfo) -> ! {
+    ::core::arch::wasm32::unreachable()
 }
 
 #[cfg(target_arch = "wasm32")]
@@ -27,10 +33,37 @@ static ALLOCATOR: lol_alloc::AssumeSingleThreaded<lol_alloc::FreeListAllocator> 
 /*
 #[cfg(target_arch = "wasm32")]
 #[alloc_error_handler]
-fn out_of_memory(_: core::alloc::Layout) -> ! {
-    core::arch::wasm32::unreachable()
+fn out_of_memory(_: ::core::alloc::Layout) -> ! {
+    ::core::arch::wasm32::unreachable()
 }
 */
+
+pub type Error = i32;
+pub const E_OK: Error       = 0;    // not an error
+pub const E_FAIL: Error     = -1;   // general failure
+pub const E_BOUNDS: Error   = -2;   // out of bounds
+pub const E_NO_MEM: Error   = -3;   // no memory available
+pub const E_NOT_FIX: Error  = -4;   // fixnum required
+pub const E_NOT_CAP: Error  = -5;   // capability required
+pub const E_NOT_PTR: Error  = -6;   // memory pointer required
+pub const E_NOT_ROM: Error  = -7;   // ROM pointer required
+pub const E_NOT_RAM: Error  = -8;   // RAM pointer required
+pub const E_MEM_LIM: Error  = -9;   // Sponsor memory limit reached
+pub const E_CPU_LIM: Error  = -10;  // Sponsor instruction limit reached
+pub const E_MSG_LIM: Error  = -11;  // Sponsor event limit reached
+
+pub type Raw = u32;  // univeral value type
+pub type Num = i32;  // fixnum integer type
+
+// type-tag bits
+const MSK_RAW: Raw          = 0xF000_0000;  // mask for type-tag bits
+const DIR_RAW: Raw          = 0x8000_0000;  // 1=direct (fixnum), 0=indirect (pointer)
+const OPQ_RAW: Raw          = 0x4000_0000;  // 1=opaque (capability), 0=transparent (navigable)
+const MUT_RAW: Raw          = 0x2000_0000;  // 1=read-write (mutable), 0=read-only (immutable)
+const BNK_RAW: Raw          = 0x1000_0000;  // 1=bank_1, 0=bank_0 (half-space GC phase)
+
+const BNK_0: Raw            = 0;
+const BNK_1: Raw            = BNK_RAW;
 
 #[cfg(target_arch = "wasm32")]
 #[link(wasm_import_module = "js")]
@@ -154,76 +187,5 @@ pub fn h_cdr(raw: Raw) -> Raw {
 pub fn h_next(raw: Raw) -> Raw {
     unsafe {
         the_host().borrow().next(raw)
-    }
-}
-
-/*
- * JavaScript interface adapter for ufork::Core
- */
-struct Host {
-    core: Core,
-}
-impl Host {
-    fn new() -> Host {
-        let core = Core::new();
-        Host {
-            core,
-        }
-    }
-    fn step(&mut self) -> Error {  // single-step instruction execution
-        match self.core.execute_instruction() {
-            Ok(more) => {
-                if !more && !self.core.event_pending() {
-                    //log!("continuation queue empty!");
-                    return E_FAIL;  // no more instructions...
-                }
-            },
-            Err(error) => {
-                //log!("execution ERROR! {}", _error);
-                return error;  // execute instruction failed...
-            },
-        }
-        if let Err(error) = self.core.check_for_interrupt() {
-            //log!("interrupt ERROR! {}", error);
-            return error;  // interrupt handler failed...
-        }
-        if let Err(error) = self.core.dispatch_event() {
-            //log!("dispatch ERROR! {}", error);
-            return error;  // event dispatch failed...
-        }
-        E_OK  // step successful
-    }
-
-    fn gc_phase(&self) -> Raw { self.core.gc_phase() }
-    fn gc_run(&mut self) { self.core.gc_stop_the_world() }
-    fn rom_top(&self) -> Raw { self.core.rom_top().raw() }
-    fn ram_top(&self) -> Raw { self.core.ram_top().raw() }
-    fn blob_top(&self) -> Raw { self.core.blob_top().raw() }
-    fn in_mem(&self, v: Raw) -> bool {  // excludes built-in constants and types
-        (v > FREE_T.raw()) && !Any::new(v).is_fix()
-    }
-    fn car(&self, p: Raw) -> Raw {
-        self.core.car(Any::new(p)).raw()
-    }
-    fn cdr(&self, p: Raw) -> Raw {
-        self.core.cdr(Any::new(p)).raw()
-    }
-    fn next(&self, p: Raw) -> Raw {
-        self.core.next(Any::new(p)).raw()
-    }
-
-    /*
-     *  WARNING! The methods below give _unsafe_ access
-     *  to the underlying buffers. They are intended
-     *  to provide access (read/write) to WASM Host.
-     */
-    fn rom_buffer(&self) -> *const Quad {
-        self.core.rom_buffer().as_ptr()
-    }
-    fn ram_buffer(&self, bank: Raw) -> *const Quad {
-        self.core.ram_buffer(bank).as_ptr()
-    }
-    fn blob_buffer(&self) -> *const u8 {
-        self.core.blob_buffer().as_ptr()
     }
 }

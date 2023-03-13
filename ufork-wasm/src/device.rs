@@ -1,7 +1,6 @@
 // uFork device interfaces
 
-use crate::ufork::*;
-use crate::greet;
+use crate::*;
 
 pub trait Device {
     fn handle_event(&mut self, core: &mut Core, ep: Any) -> Result<bool, Error>;
