@@ -1,0 +1,181 @@
+{
+    "lang": "uFork",
+    "ast": {
+        "type": "module",
+        "import": {"std": "./std.json"},
+        "define": {
+            "k2": {
+                "kind": "instr",
+                "op": "msg",
+                "imm": 0,
+                "k": {
+                    "kind": "instr",
+                    "op": "alu",
+                    "imm": "add",
+                    "k": {
+                        "kind": "instr",
+                        "op": "roll",
+                        "imm": 2,
+                        "k": {
+                            "kind": "ref",
+                            "module": "std",
+                            "name": "send_0"
+                        }
+                    }
+                }
+            },
+            "k": {
+                "kind": "instr",
+                "op": "msg",
+                "imm": 0,
+                "k": {
+                    "kind": "instr",
+                    "op": "push",
+                    "imm": {
+                        "kind": "ref",
+                        "name": "k2"
+                    },
+                    "k": {
+                        "kind": "instr",
+                        "op": "beh",
+                        "imm": 2,
+                        "k": {
+                            "kind": "ref",
+                            "module": "std",
+                            "name": "commit"
+                        }
+                    }
+                }
+            },
+            "beh": {
+                "kind": "instr",
+                "op": "msg",
+                "imm": 2,
+                "k": {
+                    "kind": "instr",
+                    "op": "dup",
+                    "imm": 1,
+                    "k": {
+                        "kind": "instr",
+                        "op": "push",
+                        "imm": 2,
+                        "k": {
+                            "kind": "instr",
+                            "op": "cmp",
+                            "imm": "lt",
+                            "k": {
+                                "kind": "instr",
+                                "op": "if",
+                                "t": {
+                                    "kind": "ref",
+                                    "module": "std",
+                                    "name": "cust_send"
+                                },
+                                "f": {
+                                    "kind": "instr",
+                                    "op": "msg",
+                                    "imm": 1,
+                                    "k": {
+                                        "kind": "instr",
+                                        "op": "push",
+                                        "imm": {
+                                            "kind": "ref",
+                                            "name": "k"
+                                        },
+                                        "k": {
+                                            "kind": "instr",
+                                            "op": "new",
+                                            "imm": 1,
+                                            "k": {
+                                                "kind": "instr",
+                                                "op": "pick",
+                                                "imm": 2,
+                                                "k": {
+                                                    "kind": "instr",
+                                                    "op": "push",
+                                                    "imm": 1,
+                                                    "k": {
+                                                        "kind": "instr",
+                                                        "op": "alu",
+                                                        "imm": "sub",
+                                                        "k": {
+                                                            "kind": "instr",
+                                                            "op": "pick",
+                                                            "imm": 2,
+                                                            "k": {
+                                                                "kind": "instr",
+                                                                "op": "push",
+                                                                "imm": {
+                                                                    "kind": "ref",
+                                                                    "name": "beh"
+                                                                },
+                                                                "k": {
+                                                                    "kind": "instr",
+                                                                    "op": "new",
+                                                                    "imm": 0,
+                                                                    "k": {
+                                                                        "kind": "instr",
+                                                                        "op": "send",
+                                                                        "imm": 2,
+                                                                        "k": {
+                                                                            "kind": "instr",
+                                                                            "op": "roll",
+                                                                            "imm": 2,
+                                                                            "k": {
+                                                                                "kind": "instr",
+                                                                                "op": "push",
+                                                                                "imm": 2,
+                                                                                "k": {
+                                                                                    "kind": "instr",
+                                                                                    "op": "alu",
+                                                                                    "imm": "sub",
+                                                                                    "k": {
+                                                                                        "kind": "instr",
+                                                                                        "op": "roll",
+                                                                                        "imm": 2,
+                                                                                        "k": {
+                                                                                            "kind": "instr",
+                                                                                            "op": "push",
+                                                                                            "imm": {
+                                                                                                "kind": "ref",
+                                                                                                "name": "beh"
+                                                                                            },
+                                                                                            "k": {
+                                                                                                "kind": "instr",
+                                                                                                "op": "new",
+                                                                                                "imm": 0,
+                                                                                                "k": {
+                                                                                                    "kind": "instr",
+                                                                                                    "op": "send",
+                                                                                                    "imm": 2,
+                                                                                                    "k": {
+                                                                                                        "kind": "ref",
+                                                                                                        "module": "std",
+                                                                                                        "name": "commit"
+                                                                                                    }
+                                                                                                }
+                                                                                            }
+                                                                                        }
+                                                                                    }
+                                                                                }
+                                                                            }
+                                                                        }
+                                                                    }
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "export": ["beh"]
+    }
+}

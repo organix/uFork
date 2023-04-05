@@ -49,6 +49,9 @@ impl Host {
     pub fn ram_top(&self) -> Raw {
         self.core.ram_top().raw()
     }
+    pub fn reserve(&mut self) -> Raw {
+        self.core.reserve(&Quad::empty_t()).unwrap().raw()
+    }
     pub fn blob_top(&self) -> Raw {
         self.core.blob_top().raw()
     }

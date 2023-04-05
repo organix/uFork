@@ -1846,7 +1846,7 @@ pub const _RAM_TOP_OFS: usize = BOOT_OFS + 11;
         self.set_sponsor_memory(sponsor, Any::fix(limit - 1));
         Ok(ptr)
     }
-    fn reserve(&mut self, init: &Quad) -> Result<Any, Error> {
+    pub fn reserve(&mut self, init: &Quad) -> Result<Any, Error> {
         let next = self.ram_next();
         let ptr = if self.typeq(FREE_T, next) {
             // use quad from free-list
