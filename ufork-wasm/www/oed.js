@@ -1153,7 +1153,7 @@ function decode(octets, unpack, seek) {
         return fail(
             position,
             "Unexpected octet 0b{a}",
-            octets[0].toString(2).padStart(8, 0)
+            octets[0].toString(2).padStart(8, "0")
         );
     }
     return value;

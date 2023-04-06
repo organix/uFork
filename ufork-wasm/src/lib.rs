@@ -142,6 +142,13 @@ pub fn h_ram_top() -> Raw {
 }
 
 #[no_mangle]
+pub fn h_reserve() -> Raw {
+    unsafe {
+        the_host().borrow_mut().reserve()
+    }
+}
+
+#[no_mangle]
 pub fn h_blob_buffer() -> *const u8 {
     unsafe {
         the_host().borrow().blob_buffer()

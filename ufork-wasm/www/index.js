@@ -2,6 +2,7 @@
 
 import OED from "./oed.js";
 import oed from "./oed_lite.js";
+import assemble from "./assemble.js";
 
 const $mem_max = document.getElementById("ufork-mem-max");
 const $mem_top = document.getElementById("ufork-mem-top");
@@ -47,7 +48,8 @@ const UNDEF_RAW = 0x0000_0000;
 const NIL_RAW   = 0x0000_0001;
 const FALSE_RAW = 0x0000_0002;
 const TRUE_RAW  = 0x0000_0003;
-const UNIT_RAW 	= 0x0000_0004;
+const UNIT_RAW  = 0x0000_0004;
+const LITERAL_T = 0x0000_0000; // == UNDEF
 const TYPE_T    = 0x0000_0005;
 const GC_FWD_T  = 0x0000_0006;
 const INSTR_T   = 0x0000_0007;
@@ -92,13 +94,21 @@ const VM_001C   = 0x8000_001C;  // reserved
 const VM_001D   = 0x8000_001D;  // reserved
 const VM_IS_EQ  = 0x8000_001E;
 const VM_IS_NE  = 0x8000_001F;
-// ram offets
+// memory layout
+const QUAD_ROM_MAX = 1 << 10;
 const MEMORY_OFS = 0;
 const DDEQUE_OFS = 1;
+const BLOB_DEV_OFS = 2;
+const CLOCK_DEV_OFS = 3;
+const IO_DEV_OFS = 4;
+const SPONSOR_OFS = 5;
 // local helper functions
 function h_warning(message) {
     console.log("WARNING!", message);
     return UNDEF_RAW;
+}
+function h_is_raw(value) {
+    return (Number.isSafeInteger(value) && value >= 0 && value < 2 ** 32);
 }
 function h_is_fix(raw) {
     return ((raw & DIR_RAW) !== 0);
@@ -148,6 +158,7 @@ const h_no_init = function uninitialized() {
     return h_warning("WASM not initialized.");
 };
 let h_memory = h_no_init;
+let h_rom_top; // must not exceed QUAD_ROM_MAX
 function h_mem_pages() {
     return h_memory().byteLength / 65536;
 }
@@ -174,7 +185,7 @@ function h_read_quad(ptr) {
     if (h_is_rom(ptr)) {
         const ofs = h_rawofs(ptr);
         const rom_ofs = h_rom_buffer();
-        const rom_top = h_rawofs(h_rom_top());
+        const rom_top = h_rawofs(h_rom_top);
         if (ofs < rom_top) {
             const rom_len = rom_top << 2;
             const rom = new Uint32Array(h_memory(), rom_ofs, rom_len);
@@ -194,17 +205,18 @@ function h_read_quad(ptr) {
 }
 function h_write_quad(ptr, quad) {
     if (h_is_ram(ptr)) {
+        const ofs = h_rawofs(ptr);
         const ram_ofs = h_ram_buffer(h_gc_phase());
         const ram_top = h_rawofs(h_ram_top());
         if (ofs < ram_top) {
             const ram_len = ram_top << 2;
             const ram = new Uint32Array(h_memory(), ram_ofs, ram_len);
-            const ofs = h_rawofs(ptr);
             const idx = ofs << 2;  // convert quad address to Uint32Array index
             ram[idx + 0] = quad.t;
             ram[idx + 1] = quad.x;
             ram[idx + 2] = quad.y;
             ram[idx + 3] = quad.z;
+            return;
         } else {
             return h_warning("h_write_quad: RAM ptr out of bounds "+h_print(ptr));
         }
@@ -221,9 +233,9 @@ function h_blob_mem() {
 let h_step = h_no_init;
 let h_gc_run = h_no_init;
 let h_rom_buffer = h_no_init;
-let h_rom_top = h_no_init;
 let h_ram_buffer = h_no_init;
 let h_ram_top = h_no_init;
+let h_reserve = h_no_init;
 let h_blob_buffer = h_no_init;
 let h_blob_top = h_no_init;
 let h_gc_phase = h_no_init;
@@ -394,6 +406,295 @@ function q_print(quad) {
     s += " }";
     return s;
 }
+// Load a module.
+const crlf_literals = {
+    undef: UNDEF_RAW,
+    nil: NIL_RAW,
+    false: FALSE_RAW,
+    true: TRUE_RAW,
+    unit: UNIT_RAW
+};
+const crlf_types = {
+    literal: LITERAL_T,
+    fixnum: FIXNUM_T,
+    type: TYPE_T,
+    pair: PAIR_T,
+    dict: DICT_T,
+    instr: INSTR_T,
+    actor: ACTOR_T
+};
+function h_load(specifier, crlf, imports, alloc) {
+    let definitions = Object.create(null);
+    function fail(message, ...data) {
+        throw new Error(
+            message + ": " + data.map(function (the_data) {
+                return JSON.stringify(the_data, undefined, 4);
+            }).join(" ")
+        );
+    }
+    function definition_raw(name) {
+        return (
+            definitions[name] !== undefined
+            ? (
+                h_is_raw(definitions[name])
+                ? definitions[name]
+                : definitions[name].raw()
+            )
+            : fail("Not defined: ", name)
+        );
+    }
+    function lookup(ref) {
+        return (
+            ref.module === undefined
+            ? definition_raw(ref.name)
+            : (
+                imports[ref.module] !== undefined
+                ? (
+                    h_is_raw(imports[ref.module][ref.name])
+                    ? imports[ref.module][ref.name]
+                    : fail("Not exported: " + ref.module + "." + ref.name)
+                )
+                : fail("Not imported: ", ref.module)
+            )
+        );
+    }
+    function label(name, labels, prefix_length = 0, offset = 0) {
+        const index = labels.findIndex(function (label) {
+            return label.slice(prefix_length).toLowerCase() === name;
+        }) + offset;
+        return (
+            Number.isSafeInteger(index)
+            ? h_fixnum(index)
+            : fail("Bad label", name)
+        );
+    }
+    function kind(node) {
+        return (
+            Number.isSafeInteger(node) // FIXME: check integer bounds?
+            ? "fixnum"
+            : node.kind
+        );
+    }
+    function literal(node) {
+        const raw = crlf_literals[node?.value];
+        return (
+            h_is_raw(raw)
+            ? raw
+            : fail("Not a literal", node)
+        );
+    }
+    function fixnum(node) {
+        return (
+            kind(node) === "fixnum"
+            ? h_fixnum(node)
+            : fail("Not a fixnum", node)
+        );
+    }
+    function type(node) {
+        const raw = crlf_types[node?.name];
+        return (
+            h_is_raw(raw)
+            ? raw
+            : fail("Unknown type", node)
+        );
+    }
+    function value(node, allowed_kinds) {
+        const the_kind = kind(node);
+        if (allowed_kinds !== undefined && !allowed_kinds.includes(the_kind)) {
+            return fail("Unexpected", node);
+        }
+        if (the_kind === "literal") {
+            return literal(node);
+        }
+        if (the_kind === "fixnum") {
+            return fixnum(node);
+        }
+        if (the_kind === "type") {
+            return type(node);
+        }
+        if (the_kind === "ref") {
+            return lookup(node);
+        }
+        if (
+            the_kind === "pair"
+            || the_kind === "dict"
+            || the_kind === "instr"
+        ) {
+            return populate(alloc(node.debug), node);
+        }
+        return fail("Not a value", node);
+    }
+    // FIXME: dynamic type checking for refs
+    const definite_quad = ["pair", "dict", "instr"];
+    const possible_quad = definite_quad.concat("ref");
+    function populate(quad, node) {
+        const the_kind = kind(node);
+        let fields = {};
+        if (the_kind === "pair") {
+            fields.t = PAIR_T;
+            fields.x = value(node.head);
+            fields.y = value(node.tail);
+        } else if (the_kind === "dict") {
+            fields.t = DICT_T;
+            fields.x = value(node.key);
+            fields.y = value(node.value);
+            fields.z = value(node.next, ["literal", "dict", "ref"]); // dict/nil
+        } else if (the_kind === "instr") {
+            fields.t = INSTR_T;
+            fields.x = label(node.op, instr_label, 3);
+            if (node.op === "typeq") {
+                fields.y = type(node.imm);
+                fields.z = value(node.k, possible_quad);
+            } else if (
+                node.op === "pair"
+                || node.op === "part"
+                || node.op === "nth"
+                || node.op === "drop"
+                || node.op === "pick"
+                || node.op === "dup"
+                || node.op === "roll"
+                || node.op === "eq"
+                || node.op === "msg"
+                || node.op === "send"
+                || node.op === "new"
+                || node.op === "beh"
+            ) {
+                fields.y = fixnum(node.imm);
+                fields.z = value(node.k, possible_quad);
+            } else if (
+                node.op === "push"
+                || node.op === "is_eq"
+                || node.op === "is_ne"
+            ) {
+                fields.y = value(node.imm);
+                fields.z = value(node.k, possible_quad);
+            } else if (node.op === "depth") {
+                fields.y = value(node.k, possible_quad);
+            } else if (node.op === "if") {
+                fields.y = value(node.t, possible_quad);
+                fields.z = value(node.f, possible_quad);
+            } else if (node.op === "dict") {
+                fields.y = label(node.imm, dict_imm_label);
+                fields.z = value(node.k, possible_quad);
+            } else if (node.op === "deque") {
+                fields.y = label(node.imm, deque_imm_label);
+                fields.z = value(node.k, possible_quad);
+            } else if (node.op === "alu") {
+                fields.y = label(node.imm, alu_imm_label);
+                fields.z = value(node.k, possible_quad);
+            } else if (node.op === "cmp") {
+                fields.y = label(node.imm, cmp_imm_label);
+                fields.z = value(node.k, possible_quad);
+            } else if (node.op === "my") {
+                fields.y = label(node.imm, my_imm_label);
+                fields.z = value(node.k, possible_quad);
+            } else if (node.op === "end") {
+                fields.y = label(node.imm, end_imm_label, 0, -1);
+            } else {
+                return fail("Not an op", node);
+            }
+        } else {
+            return fail("Not a quad", node);
+        }
+        quad.write(fields);
+        return quad.raw();
+    }
+    // Allocate a placeholder quad for each definition that requires one, or
+    // set the raw directly.
+    Object.keys(crlf.ast.define).forEach(function (name) {
+        const node = crlf.ast.define[name];
+        definitions[name] = (
+            definite_quad.includes(kind(node))
+            ? alloc(node.debug)
+            : (
+                kind(node) === "ref"
+                ? lookup(node)
+                : value(node)
+            )
+        );
+    });
+    // Populate each placeholder quad.
+    Object.keys(crlf.ast.define).forEach(function (name) {
+        const node = crlf.ast.define[name];
+        if (definite_quad.includes(kind(node))) {
+            populate(definitions[name], node);
+        }
+    });
+    // Populate the exports object.
+    let exports = Object.create(null);
+    crlf.ast.export.forEach(function (name) {
+        exports[name] = definition_raw(name);
+    });
+    return exports;
+}
+// Import and load a module, along with its dependencies.
+let import_promises = Object.create(null);
+function h_import(specifier, alloc) {
+    if (import_promises[specifier] === undefined) {
+        import_promises[specifier] = fetch(specifier).then(function (response) {
+            return (
+                specifier.endsWith(".asm")
+                ? response.text().then(function (source) {
+                    return assemble(source, specifier);
+                })
+                : response.json()
+            );
+        }).then(function (crlf) {
+            if (crlf.kind === "error") {
+                return Promise.reject(crlf);
+            }
+            return Promise.all(
+                Object.values(crlf.ast.import).map(function (import_specifier) {
+                    // FIXME: cyclic dependencies cause a deadlock, but they
+                    // should instead fail with an error.
+                    return h_import(
+                        new URL(import_specifier, specifier).href,
+                        alloc
+                    );
+                })
+            ).then(function (imported_modules) {
+                const imports = Object.create(null);
+                Object.keys(crlf.ast.import).forEach(function (name, nr) {
+                    imports[name] = imported_modules[nr];
+                });
+                return h_load(specifier, crlf, imports, alloc);
+            });
+        });
+    }
+    return import_promises[specifier];
+}
+// Allocates a quad in ROM.
+let rom_sourcemap = Object.create(null);
+function rom_alloc(debug_info) {
+    const ofs = h_rawofs(h_rom_top);
+    if (ofs >= QUAD_ROM_MAX) {
+        throw new Error("ROM exhausted.");
+    }
+    h_rom_top = ofs + 1;
+    const raw = h_romptr(ofs);
+    rom_sourcemap[raw] = debug_info;
+    return Object.freeze({
+        raw() {
+            return raw;
+        },
+        write({t, x, y, z}) {
+            const bofs = ofs << 4; // convert quad offset to byte offset
+            const quad = new Uint32Array(h_memory(), h_rom_buffer() + bofs, 4);
+            if (t !== undefined) {
+                quad[0] = t;
+            }
+            if (x !== undefined) {
+                quad[1] = x;
+            }
+            if (y !== undefined) {
+                quad[2] = y;
+            }
+            if (z !== undefined) {
+                quad[3] = z;
+            }
+        }
+    });
+}
 function h_disasm(ptr) {
     let s = h_print(ptr);
     if (h_is_cap(ptr)) {
@@ -455,7 +756,7 @@ const updateElementText = (el, txt) => {
 }
 function updateRomMonitor() {
     let a = [];
-    for (let ofs = 0; ofs < h_rawofs(h_rom_top()); ofs += 1) {
+    for (let ofs = 0; ofs < h_rawofs(h_rom_top); ofs += 1) {
         const ptr = h_romptr(ofs);
         const quad = h_read_quad(ptr);
         const line = ("         " + h_print(ptr)).slice(-9)
@@ -676,14 +977,14 @@ function test_suite(exports) {
     console.log("h_fixnum(1) =", h_fixnum(1), h_fixnum(1).toString(16), h_print(h_fixnum(1)));
     console.log("h_fixnum(-1) =", h_fixnum(-1), h_fixnum(-1).toString(16), h_print(h_fixnum(-1)));
     console.log("h_fixnum(-2) =", h_fixnum(-2), h_fixnum(-2).toString(16), h_print(h_fixnum(-2)));
-    console.log("h_rom_top() =", h_rom_top(), h_print(h_rom_top()));
+    console.log("h_rom_top =", h_rom_top, h_print(h_rom_top));
     console.log("h_ram_top() =", h_ram_top(), h_print(h_ram_top()));
     console.log("h_ramptr(5) =", h_ramptr(5), h_print(h_ramptr(5)));
     console.log("h_ptr_to_cap(h_ramptr(3)) =", h_ptr_to_cap(h_ramptr(3)), h_print(h_ptr_to_cap(h_ramptr(3))));
     console.log("h_memory() =", h_memory());
 
     const rom_ofs = h_rom_buffer();
-    const rom = new Uint32Array(h_memory(), rom_ofs, (h_rawofs(h_rom_top()) << 2));
+    const rom = new Uint32Array(h_memory(), rom_ofs, (h_rawofs(h_rom_top) << 2));
     console.log("ROM:", rom);
 
     const ram_ofs = h_ram_buffer(h_gc_phase());
@@ -714,6 +1015,40 @@ function test_suite(exports) {
     console.log("OED seek:", dec_at11_encoded, dec_at11_enc_lite);
 }
 
+function preboot() {
+    return h_import(
+        new URL("../lib/fib.asm", window.location.href).href,
+        rom_alloc
+    ).then(function (fib) {
+        // Boot by sending a fibonnacci actor a message. The result is sent to
+        // the IO device.
+        const cust = h_ramptr(IO_DEV_OFS);
+        const n = h_fixnum(6);
+        const tail = h_reserve();
+        h_write_quad(tail, {t: PAIR_T, x: n, y: NIL_RAW, z: UNDEF_RAW});
+        const msg = h_reserve();
+        h_write_quad(msg, {t: PAIR_T, x: cust, y: tail, z: UNDEF_RAW});
+        const a_fib = h_reserve();
+        h_write_quad(a_fib, {t: ACTOR_T, x: fib.beh, y: NIL_RAW, z: UNDEF_RAW});
+        const e_fib = h_reserve();
+        h_write_quad(e_fib, {
+            t: h_ramptr(SPONSOR_OFS),
+            x: a_fib,
+            y: msg,
+            z: NIL_RAW
+        });
+        // We fudge the continuation queue for now.
+        const k_fib = h_reserve();
+        h_write_quad(k_fib, {t: fib.beh, x: NIL_RAW, y: e_fib, z: NIL_RAW});
+        h_write_quad(h_ramptr(DDEQUE_OFS), {
+            t: NIL_RAW,
+            x: NIL_RAW,
+            y: k_fib,
+            z: k_fib
+        });
+    });
+}
+
 WebAssembly.instantiateStreaming(
     fetch("../target/wasm32-unknown-unknown/release/ufork_wasm.wasm"),
     {
@@ -728,7 +1063,7 @@ WebAssembly.instantiateStreaming(
                 //const blob = OED.decode(buf, undefined, 0);  // decode a single OED value
                 //const blob = oed.decode(buf).value;  // decode a single OED value
                 const blob = oed.decode(buf);  // decode value and return OED structure
-                console.log("PRINT:", blob);
+                console.log("PRINT:", blob, base, ofs);
             },
             host_log(x) {  // WASM type: (i32) -> nil
                 console.log("LOG:", x, "=", h_print(x));
@@ -743,9 +1078,10 @@ WebAssembly.instantiateStreaming(
     h_step = exports.h_step;
     h_gc_run = exports.h_gc_run;
     h_rom_buffer = exports.h_rom_buffer;
-    h_rom_top = exports.h_rom_top;
+    h_rom_top = exports.h_rom_top();
     h_ram_buffer = exports.h_ram_buffer;
     h_ram_top = exports.h_ram_top;
+    h_reserve = exports.h_reserve;
     h_blob_buffer = exports.h_blob_buffer;
     h_blob_top = exports.h_blob_top;
     h_gc_phase = exports.h_gc_phase;
@@ -761,7 +1097,8 @@ WebAssembly.instantiateStreaming(
     }
 
     test_suite();
-
+    return preboot();
+}).then(function () {
     // draw initial state
     updateRomMonitor();
     drawHost();

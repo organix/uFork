@@ -1,0 +1,137 @@
+{
+    "lang": "uFork",
+    "ast": {
+        "kind": "module",
+        "import": {},
+        "define": {
+            "commit": {
+                "kind": "instr",
+                "op": "end",
+                "imm": "commit"
+            },
+            "sink_beh": {"kind": "ref", "name": "commit"},
+            "send_0": {
+                "kind": "instr",
+                "op": "send",
+                "imm": 0,
+                "k": {"kind": "ref", "name": "commit"}
+            },
+            "cust_send": {
+                "kind": "instr",
+                "op": "msg",
+                "imm": 1,
+                "k": {"kind": "ref", "name": "send_0"}
+            },
+            "rv_self": {
+                "kind": "instr",
+                "op": "my",
+                "imm": "self",
+                "k": {"kind": "ref", "name": "cust_send"}
+            },
+            "rv_undef": {
+                "kind": "instr",
+                "op": "push",
+                "imm": {"kind": "literal", "value": "undef"},
+                "k": {"kind": "ref", "name": "cust_send"}
+            },
+            "rv_nil": {
+                "kind": "instr",
+                "op": "push",
+                "imm": {"kind": "literal", "value": "nil"},
+                "k": {"kind": "ref", "name": "cust_send"}
+            },
+            "rv_false": {
+                "kind": "instr",
+                "op": "push",
+                "imm": {"kind": "literal", "value": "false"},
+                "k": {"kind": "ref", "name": "cust_send"}
+            },
+            "rv_true": {
+                "kind": "instr",
+                "op": "push",
+                "imm": {"kind": "literal", "value": "true"},
+                "k": {"kind": "ref", "name": "cust_send"}
+            },
+            "rv_unit": {
+                "kind": "instr",
+                "op": "push",
+                "imm": {"kind": "literal", "value": "unit"},
+                "k": {"kind": "ref", "name": "cust_send"}
+            },
+            "rv_zero": {
+                "kind": "instr",
+                "op": "push",
+                "imm": 0,
+                "k": {"kind": "ref", "name": "cust_send"}
+            },
+            "rv_one": {
+                "kind": "instr",
+                "op": "push",
+                "imm": 1,
+                "k": {"kind": "ref", "name": "cust_send"}
+            },
+            "resend": {
+                "kind": "instr",
+                "op": "msg",
+                "imm": 0,
+                "k": {
+                    "kind": "instr",
+                    "op": "my",
+                    "imm": "self",
+                    "k": {"kind": "ref", "name": "send_0"}
+                }
+            },
+            "release": {
+                "kind": "instr",
+                "op": "end",
+                "imm": "release"
+            },
+            "release_0": {
+                "kind": "instr",
+                "op": "send",
+                "imm": 0,
+                "k": {"kind": "ref", "name": "release"}
+            },
+            "empty_dq": {
+                "kind": "pair",
+                "head": {"kind": "literal", "value": "nil"},
+                "tail": {"kind": "literal", "value": "nil"}
+            },
+            "stop": {
+                "kind": "instr",
+                "op": "end",
+                "imm": "stop"
+            },
+            "abort": {
+                "kind": "instr",
+                "op": "push",
+                "imm": {"kind": "literal", "value": "undef"},
+                "k": {
+                    "kind": "instr",
+                    "op": "end",
+                    "imm": "abort"
+                }
+            }
+        },
+        "export": [
+            "commit",
+            "sink_beh",
+            "send_0",
+            "cust_send",
+            "rv_self",
+            "rv_undef",
+            "rv_nil",
+            "rv_false",
+            "rv_true",
+            "rv_unit",
+            "rv_zero",
+            "rv_one",
+            "resend",
+            "release",
+            "release_0",
+            "empty_dq",
+            "stop",
+            "abort"
+        ]
+    }
+}
