@@ -2,6 +2,7 @@
 
 import OED from "./oed.js";
 import oed from "./oed_lite.js";
+import assemble from "./assemble.js";
 
 const $mem_max = document.getElementById("ufork-mem-max");
 const $mem_top = document.getElementById("ufork-mem-top");
@@ -631,8 +632,17 @@ let import_promises = Object.create(null);
 function h_import(specifier, alloc) {
     if (import_promises[specifier] === undefined) {
         import_promises[specifier] = fetch(specifier).then(function (response) {
-            return response.json();
+            return (
+                specifier.endsWith(".asm")
+                ? response.text().then(function (source) {
+                    return assemble(source, specifier);
+                })
+                : response.json()
+            );
         }).then(function (crlf) {
+            if (crlf.kind === "error") {
+                return Promise.reject(crlf);
+            }
             return Promise.all(
                 Object.values(crlf.ast.import).map(function (import_specifier) {
                     // FIXME: cyclic dependencies cause a deadlock, but they
@@ -1007,13 +1017,13 @@ function test_suite(exports) {
 
 function preboot() {
     return h_import(
-        new URL("../lib/fib.json", window.location.href).href,
+        new URL("../lib/fib.asm", window.location.href).href,
         rom_alloc
     ).then(function (fib) {
         // Boot by sending a fibonnacci actor a message. The result is sent to
         // the IO device.
         const cust = h_ramptr(IO_DEV_OFS);
-        const n = h_fixnum(1);
+        const n = h_fixnum(6);
         const tail = h_reserve();
         h_write_quad(tail, {t: PAIR_T, x: n, y: NIL_RAW, z: UNDEF_RAW});
         const msg = h_reserve();

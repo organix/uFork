@@ -5,7 +5,9 @@ import http from "http";
 const mime_types = {
 	html: "text/html",
 	js: "text/javascript",
-	wasm: "application/wasm"
+	wasm: "application/wasm",
+	json: "application/json",
+	asm: "text/plain"
 };
 
 const server = http.createServer(function on_request(req, res) {
