@@ -1022,8 +1022,9 @@ function preboot() {
     ).then(function (fib) {
         // Boot by sending a fibonnacci actor a message. The result is sent to
         // the IO device.
-        const cust = h_ramptr(IO_DEV_OFS);
-        const n = h_fixnum(6);
+        const cust = h_ptr_to_cap(h_ramptr(IO_DEV_OFS));
+        const n = h_fixnum(5);
+        // TODO h_reserve(t, x, y, z)
         const tail = h_reserve();
         h_write_quad(tail, {t: PAIR_T, x: n, y: NIL_RAW, z: UNDEF_RAW});
         const msg = h_reserve();
@@ -1033,18 +1034,16 @@ function preboot() {
         const e_fib = h_reserve();
         h_write_quad(e_fib, {
             t: h_ramptr(SPONSOR_OFS),
-            x: a_fib,
+            x: h_ptr_to_cap(a_fib),
             y: msg,
             z: NIL_RAW
         });
-        // We fudge the continuation queue for now.
-        const k_fib = h_reserve();
-        h_write_quad(k_fib, {t: fib.beh, x: NIL_RAW, y: e_fib, z: NIL_RAW});
+        // TODO event_inject
         h_write_quad(h_ramptr(DDEQUE_OFS), {
-            t: NIL_RAW,
-            x: NIL_RAW,
-            y: k_fib,
-            z: k_fib
+            t: e_fib,
+            x: e_fib,
+            y: NIL_RAW,
+            z: NIL_RAW
         });
     });
 }

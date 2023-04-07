@@ -1,7 +1,0 @@
-LIMITATIONS
-
-No use of println! allowed
-String arguments can not be passed to panic!
-No use of format! allowed
-Error type can not be String
-No fmt::Display traits

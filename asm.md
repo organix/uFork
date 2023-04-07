@@ -259,7 +259,7 @@ comments or blank lines. It must contain at least one labelled _statement_,
 declare at least one _export_, and end in a newline character.
 
     module
-        maybe_newlines import_declaration definitions export_declaration newlines
+        maybe_newlines import_declaration definitions export_declaration
 
 The _import_declaration_ is optional.
 
