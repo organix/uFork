@@ -1,5 +1,11 @@
 // uFork assembler
 
+// Assembles uFork assembly source code into an intermediate representation,
+// suitable for loading.
+
+// The assembly language is described in asm.md.
+// The intermediate representation is described in crlf.md.
+
 // Tokenizer ///////////////////////////////////////////////////////////////////
 
 function tag_regexp(strings) {
@@ -11,13 +17,12 @@ function tag_regexp(strings) {
     return new RegExp(strings.raw[0].replace(/\s/g, ""), "");
 }
 
-const rx_crlf = tag_regexp `
-    \n
-  | \r \n?
-`;
-
-const rx_token = tag_regexp `
-    ( \u0020+ )
+const rx_token_raw = tag_regexp `
+    (
+        \n
+      | \r \n?
+    )
+  | ( \u0020+ )
   | ( ; .* )
   | (
         [ a-z A-Z ]
@@ -45,58 +50,53 @@ const rx_token = tag_regexp `
 `;
 
 // Capturing groups:
-//  [1] Whitespace
-//  [2] Comment
-//  [3] Name
-//  [4] Literal
-//  [5] Fixnum
-//  [6] String
-//  [7] Punctuator
+//  [1] Newline
+//  [2] Whitespace
+//  [3] Comment
+//  [4] Name
+//  [5] Literal
+//  [6] Fixnum
+//  [7] String
+//  [8] Punctuator
 
 function tokenize(source) {
-    const lines = (
-        Array.isArray(source)
-        ? source
-        : source.split(rx_crlf)
-    );
+    let rx_token = new RegExp(rx_token_raw, "y"); // sticky
     let line_nr = 0;
-    let line = lines[0];
     let column_to = 0;
     return function token_generator() {
-        if (line === undefined) {
-            return;
-        }
-        let column_nr = column_to;
-        if (column_nr >= line.length) {
-            column_to = 0;
-            line_nr += 1;
-            line = lines[line_nr];
-            return (
-                line === undefined
-                ? undefined
-                : {
-                    id: "\n",
-                    line_nr: line_nr - 1,
-                    column_nr
-                }
-            );
-        }
 
         function error() {
+            source = undefined;
             return {
                 id: ":error:",
                 line_nr,
-                column_nr,
-                string: line.slice(column_nr)
+                column_nr: column_to
             };
         }
 
-        let captives = line.slice(column_nr).match(rx_token);
+        if (source === undefined) {
+            return error();
+        }
+        if (rx_token.lastIndex >= source.length) {
+            return;
+        }
+        let captives = rx_token.exec(source);
         if (!captives) {
             return error();
         }
-        column_to += captives[0].length;
+        let column_nr = column_to;
+        column_to = column_nr + captives[0].length;
         if (captives[1]) {
+            const token = {
+                id: "\n",
+                line_nr,
+                column_nr
+            };
+            line_nr += 1;
+            column_to = 0;
+            return token;
+        }
+        if (captives[2]) {
             return {
                 id: " ",
                 line_nr,
@@ -104,19 +104,10 @@ function tokenize(source) {
                 column_to
             };
         }
-        if (captives[2]) {
-            return {
-                id: ":comment:",
-                comment: captives[2].slice(1),
-                line_nr,
-                column_nr,
-                column_to
-            };
-        }
         if (captives[3]) {
             return {
-                id: captives[3],
-                alphameric: true,
+                id: ":comment:",
+                comment: captives[3].slice(1),
                 line_nr,
                 column_nr,
                 column_to
@@ -124,21 +115,30 @@ function tokenize(source) {
         }
         if (captives[4]) {
             return {
-                id: ":literal:",
-                name: captives[4].slice(1),
+                id: captives[4],
+                alphameric: true,
                 line_nr,
                 column_nr,
                 column_to
             };
         }
         if (captives[5]) {
-            const number = parseInt(captives[5], 10);
+            return {
+                id: ":literal:",
+                name: captives[5].slice(1),
+                line_nr,
+                column_nr,
+                column_to
+            };
+        }
+        if (captives[6]) {
+            const number = parseInt(captives[6], 10);
             return (
                 Number.isSafeInteger(number)
                 ? {
                     id: ":number:",
                     number,
-                    text: captives[5],
+                    text: captives[6],
                     line_nr,
                     column_nr,
                     column_to
@@ -146,18 +146,18 @@ function tokenize(source) {
                 : error()
             );
         }
-        if (captives[6]) {
+        if (captives[7]) {
             return {
                 id: ":string:",
-                string: captives[6].slice(1, -1),
+                string: captives[7].slice(1, -1),
                 line_nr,
                 column_nr,
                 column_to
             };
         }
-        if (captives[7]) {
+        if (captives[8]) {
             return {
-                id: captives[7],
+                id: captives[8],
                 line_nr,
                 column_nr,
                 column_to
@@ -229,10 +229,6 @@ function and(matcher_array) {
     };
 }
 
-function optional(matcher) {
-    return or([matcher, zero()]);
-}
-
 function repeat(matcher) {
     return function repeat_matcher(input) {
         let nodes = [];
@@ -260,6 +256,10 @@ function many(matcher) {
         input = tail[0];
         return [input, [head[1], ...tail[1]]];
     };
+}
+
+function optional(matcher) {
+    return or([matcher, zero()]);
 }
 
 // Now we build our language grammar.
@@ -411,8 +411,7 @@ function module() {
         repeat(newline()),
         optional(import_declaration()),
         many(definition()),
-        export_declaration(),
-        repeat(newline())
+        export_declaration()
     ]);
 }
 
@@ -751,7 +750,7 @@ function generate_crlf(tree, file) {
     if (!Array.isArray(tree)) {
         throw tree;
     }
-    const [ignore, imports, define, exports] = tree;
+    const [imports, define, exports] = tree.slice(1); // ignore leading newlines
     if (imports !== undefined) {
         imports[2].forEach(function (importation) {
             const the_name = importation[1];
