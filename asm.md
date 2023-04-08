@@ -56,30 +56,23 @@ object-capabilities and memory-safety.
 
 ## Overview
 
-In many ways, the language is similar to traditional assembly languages.
+In many ways, the language is similar to traditional assembly languages:
 
 - At the top level it has directives (such as `.import`), labels and statements.
-
 - Each statement consists of an operator followed by its operands.
-
 - Linear execution is expressed by writing instruction statements one after
   another.
-
 - A semicolon (`;`) marks the remainder of the line as a comment. Blank lines
   and comments may be injected between any two lines.
 
-In some ways, however, it is quite different.
+In some ways, however, it is quite different:
 
 - Code is always within a module. Imports and exports are declared explicitly.
   There is potential for modules to be fetched from the filesystem or via the
   network.
-
 - Statements always produce a value. Often the value is an instruction, but it
   can also be a literal, number, or data structure. Values are immutable. Data
   structures can contain instructions.
-
-- What appears to be linear execution is actually syntactic sugar, where
-  omitting the continuation operand falls through to the next instruction.
 
 ## Statements
 
@@ -216,6 +209,14 @@ two instructions could more easily be written
         msg 1
         end commit
 
+In contrast to traditional assembly languages, instructions will not continue
+through a label. This means that it is not possible to write
+
+    beh:
+        msg 1
+    done:
+        end commit
+
 ## Data
 
 The `pair_t` and `dict_t` statements construct data structures from their
@@ -261,7 +262,8 @@ declare at least one _export_, and end in a newline character.
     module
         maybe_newlines import_declaration definitions export_declaration
 
-The _import_declaration_ is optional.
+The _import_declaration_, _definitions_ and _export_declaration_ are all
+optional.
 
     import_declaration
         ""
@@ -282,7 +284,7 @@ The _import_declaration_ is optional.
         character - '"'
 
     definitions
-        definition
+        ""
         definition definitions
 
     definition
@@ -401,6 +403,7 @@ https://unicode.org/reports/tr31/.
 The module must declare at least one export.
 
     export_declaration
+        ""
         ".export" newlines exports
 
     exports

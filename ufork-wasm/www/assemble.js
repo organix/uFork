@@ -410,35 +410,28 @@ function module() {
     return and([
         repeat(newline()),
         optional(import_declaration()),
-        many(definition()),
-        export_declaration()
+        repeat(definition()),
+        optional(export_declaration())
     ]);
 }
 
-function first(generator) {
-    let memo;
-    return function (...args) {
-        if (generator !== undefined) {
-            memo = generator(...args);
-            generator = undefined;
-            return memo;
+function make_input(token_generator) {
+    let tokens = [];
+    return (function seek(position = 0) {
+        while (tokens.length <= position) {
+            tokens.push(token_generator());
         }
-        return memo;
-    };
-}
-
-function streamify(token_generator) {
-    const token = token_generator();
-    return {
-        token,
-        next: first(function () {
-            return streamify(token_generator);
-        })
-    };
+        return {
+            token: tokens[position],
+            next() {
+                return seek(position + 1);
+            }
+        };
+    }());
 }
 
 function parse(token_generator) {
-    const result = module()(streamify(token_generator));
+    const result = module()(make_input(token_generator));
     if (!Array.isArray(result)) {
         return result;
     }
@@ -466,17 +459,31 @@ const imm_labels = {
 function generate_crlf(tree, file) {
     let import_object = Object.create(null);
     let define_object = Object.create(null);
+    let export_array = [];
+    let supposed_instructions = [];
 
     function fail(message, token) {
         throw {message, token};
     }
 
-    function is_defined(name) {
+    function is_label(name) {
         return tree[2].some(function ([labels]) {
             return labels.some(function ([name_token]) {
                 return name_token.id === name;
             });
         });
+    }
+
+    function maybe_kind(node, kind) {
+        return (
+            node.kind === "ref"
+            ? (
+                node.module === undefined
+                ? maybe_kind(define_object[node.name], kind)
+                : true // external
+            )
+            : node.kind === kind
+        );
     }
 
     function gen_label(operand, labels) {
@@ -536,7 +543,7 @@ function generate_crlf(tree, file) {
         );
     }
 
-    function gen_ref(operand) {
+    function gen_ref(operand, as_instruction = false) {
         const token = operand[1];
         if (Array.isArray(token)) {
             const module_name = token[0].id;
@@ -547,18 +554,29 @@ function generate_crlf(tree, file) {
             return {
                 kind: "ref",
                 module: module_name,
-                name: export_name
+                name: export_name,
+                debug: {
+                    file,
+                    line: token[0].line_nr
+                }
             };
         }
         if (token.alphameric !== true) {
-            return fail("Expected a name");
+            return fail("Expected a name", token);
         }
-        if (!is_defined(token.id)) {
+        if (!is_label(token.id)) {
             return fail("Not defined", token);
+        }
+        if (as_instruction) {
+            supposed_instructions.push(token);
         }
         return {
             kind: "ref",
-            name: token.id
+            name: token.id,
+            debug: {
+                file,
+                line: token.line_nr
+            }
         };
     }
 
@@ -577,19 +595,14 @@ function generate_crlf(tree, file) {
         return gen_ref(operand);
     }
 
-    function gen_instruction(operand) {
-        // TODO forbid literals, etc
-        return gen_expression(operand);
-    }
-
-    function gen_value(statements) {
+    function gen_value(statements, as_instruction = false) {
         const [ignore, operator, operands] = statements[0];
         const debug = {
             file,
             line: operator.line_nr
         };
 
-        function args_check(nr_required, nr_optional) {
+        function operand_check(nr_required, nr_optional) {
             if (operands.length < nr_required) {
                 return fail("Too few operands", operator);
             }
@@ -604,24 +617,35 @@ function generate_crlf(tree, file) {
             }
         }
 
+        function gen_continuation_expression(operand) {
+            return (
+                as_instruction
+                ? gen_ref(operand, true)
+                : gen_expression(operand)
+            );
+        }
+
         function gen_continuation(operand_nr) {
             return (
                 operands[operand_nr] !== undefined
                 ? (
                     statements.length <= 1
-                    ? gen_instruction(operands[operand_nr])
-                    : fail("Unexpected", statements[1][1])
+                    ? gen_continuation_expression(operands[operand_nr])
+                    : fail("Unexpected statement", statements[1][1])
                 )
                 : (
                     statements.length > 1
-                    ? gen_value(statements.slice(1))
-                    : fail("Expected a continuation", operator)
+                    ? gen_value(statements.slice(1), as_instruction)
+                    : fail("Missing continuation", operator)
                 )
             );
         }
 
         if (operator.id === "pair_t") {
-            args_check(1, 1);
+            if (as_instruction) {
+                return fail("Expected an instruction, not data", operator);
+            }
+            operand_check(1, 1);
             return {
                 kind: "pair",
                 head: gen_expression(operands[0]),
@@ -630,22 +654,34 @@ function generate_crlf(tree, file) {
             };
         }
         if (operator.id === "dict_t") {
-            args_check(2, 1);
+            if (as_instruction) {
+                return fail("Expected an instruction, not data", operator);
+            }
+            operand_check(2, 1);
             return {
                 kind: "dict",
                 key: gen_expression(operands[0]),
                 value: gen_expression(operands[1]),
-                next: gen_continuation(2), // TODO ref/dict/nil only
+                next: gen_continuation(2),
                 debug
             };
         }
+        if (operator.id === "ref") {
+            operand_check(1, 0);
+            return gen_continuation_expression(operands[0]);
+        }
+
+// The statement is an instruction. From here on in, the continuation stream
+// should consist solely of instructions, and never data.
+
+        as_instruction = true;
         if (operator.id === "typeq") {
-            args_check(1, 1);
+            operand_check(1, 1);
             return {
                 kind: "instr",
                 op: "typeq",
                 imm: gen_type(operands[0]),
-                k: gen_continuation(1), // TODO ref/instr only
+                k: gen_continuation(1),
                 debug
             };
         }
@@ -663,7 +699,7 @@ function generate_crlf(tree, file) {
             || operator.id === "new"
             || operator.id === "beh"
         ) {
-            args_check(1, 1);
+            operand_check(1, 1);
             return {
                 kind: "instr",
                 op: operator.id,
@@ -677,7 +713,7 @@ function generate_crlf(tree, file) {
             || operator.id === "is_eq"
             || operator.id === "is_ne"
         ) {
-            args_check(1, 1);
+            operand_check(1, 1);
             return {
                 kind: "instr",
                 op: operator.id,
@@ -687,7 +723,7 @@ function generate_crlf(tree, file) {
             };
         }
         if (operator.id === "depth") {
-            args_check(0, 1);
+            operand_check(0, 1);
             return {
                 kind: "instr",
                 op: "depth",
@@ -696,21 +732,21 @@ function generate_crlf(tree, file) {
             };
         }
         if (operator.id === "if") {
-            args_check(1, 1);
+            operand_check(1, 1);
             return {
                 kind: "instr",
                 op: "if",
-                t: gen_instruction(operands[0]),
+                t: gen_ref(operands[0], true),
                 f: gen_continuation(1),
                 debug
             };
         }
         if (operator.id === "if_not") {
-            args_check(1, 1);
+            operand_check(1, 1);
             return {
                 kind: "instr",
                 op: "if",
-                f: gen_instruction(operands[0]),
+                f: gen_ref(operands[0], true),
                 t: gen_continuation(1),
                 debug
             };
@@ -722,7 +758,7 @@ function generate_crlf(tree, file) {
             || operator.id === "cmp"
             || operator.id === "my"
         ) {
-            args_check(1, 1);
+            operand_check(1, 1);
             return {
                 kind: "instr",
                 op: operator.id,
@@ -732,17 +768,13 @@ function generate_crlf(tree, file) {
             };
         }
         if (operator.id === "end") {
-            args_check(1, 0);
+            operand_check(1, 0);
             return {
                 kind: "instr",
                 op: "end",
                 imm: gen_label(operands[0], imm_labels.end),
                 debug
             };
-        }
-        if (operator.id === "ref") {
-            args_check(1, 0);
-            return gen_expression(operands[0]);
         }
         return fail("Bad op", operator);
     }
@@ -755,11 +787,20 @@ function generate_crlf(tree, file) {
         imports[2].forEach(function (importation) {
             const the_name = importation[1];
             const the_specifier = importation[4];
+            if (import_object[the_name.id] !== undefined) {
+                return fail("Redefinition of '" + the_name.id + "'", the_name);
+            }
             import_object[the_name.id] = the_specifier.string;
         });
     }
     define.forEach(function ([labels, statements]) {
         const [the_name] = labels[0];
+        if (
+            define_object[the_name.id] !== undefined
+            || import_object[the_name.id] !== undefined
+        ) {
+            return fail("Redefinition of '" + the_name.id + "'", the_name);
+        }
         define_object[the_name.id] = gen_value(statements);
         labels.slice(1).forEach(function (label) {
             define_object[label[0].id] = {
@@ -768,15 +809,27 @@ function generate_crlf(tree, file) {
             };
         });
     });
+    supposed_instructions.forEach(function (name_token) {
+        if (!maybe_kind(define_object[name_token.id], "instr")) {
+            return fail("Expected an instruction, not data", name_token);
+        }
+    });
+    if (exports !== undefined) {
+        export_array = exports[2].map(function (the_export) {
+            const the_name = the_export[1];
+            if (!is_label(the_name.id)) {
+                return fail("Not defined", the_name);
+            }
+            return the_name.id;
+        });
+    }
     return {
         lang: "uFork",
         ast: {
             kind: "module",
             import: import_object,
             define: define_object,
-            export: exports[2].map(function (the_export) {
-                return the_export[1].id;
-            })
+            export: export_array
         }
     };
 }
