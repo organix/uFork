@@ -46,6 +46,9 @@ impl Host {
     pub fn rom_top(&self) -> Raw {
         self.core.rom_top().raw()
     }
+    pub fn reserve_rom(&mut self) -> Raw {
+        self.core.reserve_rom().unwrap().raw()
+    }
     pub fn ram_top(&self) -> Raw {
         self.core.ram_top().raw()
     }

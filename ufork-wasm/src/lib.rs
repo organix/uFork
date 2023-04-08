@@ -128,6 +128,13 @@ pub fn h_rom_top() -> Raw {
 }
 
 #[no_mangle]
+pub fn h_reserve_rom() -> Raw {
+    unsafe {
+        the_host().borrow_mut().reserve_rom()
+    }
+}
+
+#[no_mangle]
 pub fn h_ram_buffer(bank: Raw) -> *const Quad {
     unsafe {
         the_host().borrow().ram_buffer(bank)

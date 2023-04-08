@@ -102,6 +102,26 @@ const BLOB_DEV_OFS = 2;
 const CLOCK_DEV_OFS = 3;
 const IO_DEV_OFS = 4;
 const SPONSOR_OFS = 5;
+const h_no_init = function uninitialized() {
+    return h_warning("WASM not initialized.");
+};
+// functions imported from uFork WASM module
+let h_step = h_no_init;
+let h_gc_run = h_no_init;
+let h_rom_buffer = h_no_init;
+let h_rom_top = h_no_init;
+let h_reserve_rom = h_no_init;
+let h_ram_buffer = h_no_init;
+let h_ram_top = h_no_init;
+let h_reserve = h_no_init;
+let h_blob_buffer = h_no_init;
+let h_blob_top = h_no_init;
+let h_gc_phase = h_no_init;
+let h_in_mem = h_no_init;
+let h_car = h_no_init;
+let h_cdr = h_no_init;
+let h_next = h_no_init;
+let h_memory = h_no_init;
 // local helper functions
 function h_warning(message) {
     console.log("WARNING!", message);
@@ -153,12 +173,6 @@ function h_ptr_to_cap(ptr) {
 function h_fix_to_i32(fix) {
     return (fix << 1) >> 1;
 }
-// functions bound during WASM initialization
-const h_no_init = function uninitialized() {
-    return h_warning("WASM not initialized.");
-};
-let h_memory = h_no_init;
-let h_rom_top; // must not exceed QUAD_ROM_MAX
 function h_mem_pages() {
     return h_memory().byteLength / 65536;
 }
@@ -185,7 +199,7 @@ function h_read_quad(ptr) {
     if (h_is_rom(ptr)) {
         const ofs = h_rawofs(ptr);
         const rom_ofs = h_rom_buffer();
-        const rom_top = h_rawofs(h_rom_top);
+        const rom_top = h_rawofs(h_rom_top());
         if (ofs < rom_top) {
             const rom_len = rom_top << 2;
             const rom = new Uint32Array(h_memory(), rom_ofs, rom_len);
@@ -229,20 +243,6 @@ function h_blob_mem() {
     const blob = new Uint8Array(h_memory(), blob_ofs, blob_len);
     return blob;
 }
-// functions imported from uFork WASM module
-let h_step = h_no_init;
-let h_gc_run = h_no_init;
-let h_rom_buffer = h_no_init;
-let h_ram_buffer = h_no_init;
-let h_ram_top = h_no_init;
-let h_reserve = h_no_init;
-let h_blob_buffer = h_no_init;
-let h_blob_top = h_no_init;
-let h_gc_phase = h_no_init;
-let h_in_mem = h_no_init;
-let h_car = h_no_init;
-let h_cdr = h_no_init;
-let h_next = h_no_init;
 
 const rom_label = [
     "#?",
@@ -729,20 +729,15 @@ function h_import(specifier, alloc) {
 // Allocates a quad in ROM.
 let rom_sourcemap = Object.create(null);
 function rom_alloc(debug_info) {
-    const ofs = h_rawofs(h_rom_top);
-    if (ofs >= QUAD_ROM_MAX) {
-        throw new Error("ROM exhausted.");
-    }
-    h_rom_top = ofs + 1;
-    const raw = h_romptr(ofs);
+    const raw = h_reserve_rom();
     rom_sourcemap[raw] = debug_info;
     return Object.freeze({
         raw() {
             return raw;
         },
         write({t, x, y, z}) {
-            const bofs = ofs << 4; // convert quad offset to byte offset
-            const quad = new Uint32Array(h_memory(), h_rom_buffer() + bofs, 4);
+            const ofs = h_rawofs(raw) << 4; // convert quad offset to byte offset
+            const quad = new Uint32Array(h_memory(), h_rom_buffer() + ofs, 4);
             if (t !== undefined) {
                 quad[0] = t;
             }
@@ -819,7 +814,8 @@ const updateElementText = (el, txt) => {
 }
 function updateRomMonitor() {
     let a = [];
-    for (let ofs = 0; ofs < h_rawofs(h_rom_top); ofs += 1) {
+    const top = h_rawofs(h_rom_top());
+    for (let ofs = 0; ofs < top; ofs += 1) {
         const ptr = h_romptr(ofs);
         const quad = h_read_quad(ptr);
         const line = ("         " + h_print(ptr)).slice(-9)
@@ -830,7 +826,8 @@ function updateRomMonitor() {
 }
 function updateRamMonitor() {
     let a = [];
-    for (let ofs = 0; ofs < h_rawofs(h_ram_top()); ofs += 1) {
+    const top = h_rawofs(h_ram_top());
+    for (let ofs = 0; ofs < top; ofs += 1) {
         const ptr = h_ramptr(ofs);
         const line = h_disasm(ptr);
         a.push(line);
@@ -1040,14 +1037,14 @@ function test_suite(exports) {
     console.log("h_fixnum(1) =", h_fixnum(1), h_fixnum(1).toString(16), h_print(h_fixnum(1)));
     console.log("h_fixnum(-1) =", h_fixnum(-1), h_fixnum(-1).toString(16), h_print(h_fixnum(-1)));
     console.log("h_fixnum(-2) =", h_fixnum(-2), h_fixnum(-2).toString(16), h_print(h_fixnum(-2)));
-    console.log("h_rom_top =", h_rom_top, h_print(h_rom_top));
+    console.log("h_rom_top() =", h_rom_top(), h_print(h_rom_top()));
     console.log("h_ram_top() =", h_ram_top(), h_print(h_ram_top()));
     console.log("h_ramptr(5) =", h_ramptr(5), h_print(h_ramptr(5)));
     console.log("h_ptr_to_cap(h_ramptr(3)) =", h_ptr_to_cap(h_ramptr(3)), h_print(h_ptr_to_cap(h_ramptr(3))));
     console.log("h_memory() =", h_memory());
 
     const rom_ofs = h_rom_buffer();
-    const rom = new Uint32Array(h_memory(), rom_ofs, (h_rawofs(h_rom_top) << 2));
+    const rom = new Uint32Array(h_memory(), rom_ofs, (h_rawofs(h_rom_top()) << 2));
     console.log("ROM:", rom);
 
     const ram_ofs = h_ram_buffer(h_gc_phase());
@@ -1140,7 +1137,8 @@ WebAssembly.instantiateStreaming(
     h_step = exports.h_step;
     h_gc_run = exports.h_gc_run;
     h_rom_buffer = exports.h_rom_buffer;
-    h_rom_top = exports.h_rom_top();
+    h_rom_top = exports.h_rom_top;
+    h_reserve_rom = exports.h_reserve_rom;
     h_ram_buffer = exports.h_ram_buffer;
     h_ram_top = exports.h_ram_top;
     h_reserve = exports.h_reserve;
