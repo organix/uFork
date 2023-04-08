@@ -11,7 +11,6 @@ const BNK_INI: Raw          = BNK_0;
 pub const ROM_BASE_OFS: usize = 16;  // ROM offsets below this value are reserved
 
 pub const START: Any        = Any { raw: 16 };
-pub const ROM_TOP: Any      = Any { raw: 314 };  // MUST BE KEPT IN SYNC WITH `_ROM_TOP_OFS`
 
 pub const MEMORY: Any       = Any { raw: MUT_RAW | BNK_INI | 0 };
 pub const DDEQUE: Any       = Any { raw: MUT_RAW | BNK_INI | 1 };
@@ -38,6 +37,7 @@ pub struct Core {
     quad_ram1:  [Quad; QUAD_RAM_MAX],
     blob_ram:   [u8; BLOB_RAM_MAX],
     device:     [Option<Box<dyn Device>>; DEVICE_MAX],
+    rom_top:    Any,
 }
 
 impl Core {
@@ -676,7 +676,7 @@ pub const _COUNT_BEH: Any  = Any { raw: COUNT_OFS as Raw };
         quad_rom[COUNT_OFS+6]       = Quad::vm_my_self(Any::rom(COUNT_OFS+7));  // n-1 self
         quad_rom[COUNT_OFS+7]       = Quad::vm_send(ZERO, COMMIT);  // --
 
-pub const _ROM_TOP_OFS: usize = COUNT_OFS+8;  // UPDATE `ROM_TOP` WHEN THIS VALUE CHANGES!
+pub const _ROM_TOP_OFS: usize = COUNT_OFS+8;
 
         /*
          * Random-Access Memory (RAM) image (read/write + GC)
@@ -756,6 +756,7 @@ pub const _RAM_TOP_OFS: usize = BOOT_OFS + 11;
                 Some(Box::new(ClockDevice::new())),
                 Some(Box::new(IoDevice::new())),
             ],
+            rom_top: Any::rom(_ROM_TOP_OFS),
         }
     }
 
@@ -1566,7 +1567,8 @@ pub const _RAM_TOP_OFS: usize = BOOT_OFS + 11;
     fn set_k_last(&mut self, ptr: Any) { self.ram_mut(self.ddeque()).set_z(ptr); }
     pub fn ddeque(&self) -> Any { self.ptr_to_mem(DDEQUE) }
 
-    pub fn rom_top(&self) -> Any { ROM_TOP }
+    pub fn rom_top(&self) -> Any { self.rom_top }
+    fn set_rom_top(&mut self, ptr: Any) { self.rom_top = ptr }
     pub fn ram_top(&self) -> Any { self.ram(self.memory()).t() }
     fn set_ram_top(&mut self, ptr: Any) { self.ram_mut(self.memory()).set_t(ptr); }
     fn ram_next(&self) -> Any { self.ram(self.memory()).x() }
@@ -1828,6 +1830,18 @@ pub const _RAM_TOP_OFS: usize = BOOT_OFS + 11;
         let ptr = Any::new(raw);
         assert!(self.mem(ptr).t() == ACTOR_T);
         ptr
+    }
+
+    pub fn reserve_rom(&mut self) -> Result<Any, Error> {
+        // expand read-only memory
+        let next = self.rom_top();
+        let top = next.ofs();
+        if top >= QUAD_ROM_MAX {
+            //panic!("out of memory!");
+            return Err(E_NO_MEM);  // no memory available
+        }
+        self.set_rom_top(Any::rom(top + 1));
+        Ok(next)
     }
 
     pub fn alloc(&mut self, init: &Quad) -> Result<Any, Error> {
