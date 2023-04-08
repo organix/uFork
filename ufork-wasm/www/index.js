@@ -406,7 +406,6 @@ function q_print(quad) {
     s += " }";
     return s;
 }
-// Load a module.
 const crlf_literals = {
     undef: UNDEF_RAW,
     nil: NIL_RAW,
@@ -423,8 +422,11 @@ const crlf_types = {
     instr: INSTR_T,
     actor: ACTOR_T
 };
-function h_load(specifier, crlf, imports, alloc) {
+function h_load(specifier, crlf, imports, alloc, read) {
+    // Load a module.
     let definitions = Object.create(null);
+    let continuation_type_checks = [];
+    let cyclic_data_checks = [];
     function fail(message, ...data) {
         throw new Error(
             message + ": " + data.map(function (the_data) {
@@ -440,7 +442,7 @@ function h_load(specifier, crlf, imports, alloc) {
                 ? definitions[name]
                 : definitions[name].raw()
             )
-            : fail("Not defined: ", name)
+            : fail("Not defined", name)
         );
     }
     function lookup(ref) {
@@ -452,9 +454,9 @@ function h_load(specifier, crlf, imports, alloc) {
                 ? (
                     h_is_raw(imports[ref.module][ref.name])
                     ? imports[ref.module][ref.name]
-                    : fail("Not exported: " + ref.module + "." + ref.name)
+                    : fail("Not exported", ref.module + "." + ref.name, ref)
                 )
-                : fail("Not imported: ", ref.module)
+                : fail("Not imported", ref.module, ref)
             )
         );
     }
@@ -470,13 +472,13 @@ function h_load(specifier, crlf, imports, alloc) {
     }
     function kind(node) {
         return (
-            Number.isSafeInteger(node) // FIXME: check integer bounds?
+            Number.isSafeInteger(node)
             ? "fixnum"
             : node.kind
         );
     }
     function literal(node) {
-        const raw = crlf_literals[node?.value];
+        const raw = crlf_literals[node.value];
         return (
             h_is_raw(raw)
             ? raw
@@ -486,23 +488,20 @@ function h_load(specifier, crlf, imports, alloc) {
     function fixnum(node) {
         return (
             kind(node) === "fixnum"
-            ? h_fixnum(node)
+            ? h_fixnum(node) // FIXME: check integer bounds?
             : fail("Not a fixnum", node)
         );
     }
     function type(node) {
-        const raw = crlf_types[node?.name];
+        const raw = crlf_types[node.name];
         return (
             h_is_raw(raw)
             ? raw
             : fail("Unknown type", node)
         );
     }
-    function value(node, allowed_kinds) {
+    function value(node) {
         const the_kind = kind(node);
-        if (allowed_kinds !== undefined && !allowed_kinds.includes(the_kind)) {
-            return fail("Unexpected", node);
-        }
         if (the_kind === "literal") {
             return literal(node);
         }
@@ -524,9 +523,11 @@ function h_load(specifier, crlf, imports, alloc) {
         }
         return fail("Not a value", node);
     }
-    // FIXME: dynamic type checking for refs
-    const definite_quad = ["pair", "dict", "instr"];
-    const possible_quad = definite_quad.concat("ref");
+    function instruction(node) {
+        const raw = value(node);
+        continuation_type_checks.push([raw, INSTR_T, node]);
+        return raw;
+    }
     function populate(quad, node) {
         const the_kind = kind(node);
         let fields = {};
@@ -534,17 +535,26 @@ function h_load(specifier, crlf, imports, alloc) {
             fields.t = PAIR_T;
             fields.x = value(node.head);
             fields.y = value(node.tail);
+            if (node.tail.kind === "ref" && node.tail.module === undefined) {
+                cyclic_data_checks.push([fields.y, PAIR_T, "y", node.tail]);
+            }
         } else if (the_kind === "dict") {
             fields.t = DICT_T;
             fields.x = value(node.key);
             fields.y = value(node.value);
-            fields.z = value(node.next, ["literal", "dict", "ref"]); // dict/nil
+            fields.z = value(node.next); // dict/nil
+            if (fields.z !== NIL_RAW) {
+                continuation_type_checks.push([fields.z, DICT_T, node.next]);
+            }
+            if (node.next.kind === "ref" && node.next.module === undefined) {
+                cyclic_data_checks.push([fields.z, DICT_T, "z", node.next]);
+            }
         } else if (the_kind === "instr") {
             fields.t = INSTR_T;
             fields.x = label(node.op, instr_label, 3);
             if (node.op === "typeq") {
                 fields.y = type(node.imm);
-                fields.z = value(node.k, possible_quad);
+                fields.z = instruction(node.k);
             } else if (
                 node.op === "pair"
                 || node.op === "part"
@@ -560,34 +570,34 @@ function h_load(specifier, crlf, imports, alloc) {
                 || node.op === "beh"
             ) {
                 fields.y = fixnum(node.imm);
-                fields.z = value(node.k, possible_quad);
+                fields.z = instruction(node.k);
             } else if (
                 node.op === "push"
                 || node.op === "is_eq"
                 || node.op === "is_ne"
             ) {
                 fields.y = value(node.imm);
-                fields.z = value(node.k, possible_quad);
+                fields.z = instruction(node.k);
             } else if (node.op === "depth") {
-                fields.y = value(node.k, possible_quad);
+                fields.y = instruction(node.k);
             } else if (node.op === "if") {
-                fields.y = value(node.t, possible_quad);
-                fields.z = value(node.f, possible_quad);
+                fields.y = instruction(node.t);
+                fields.z = instruction(node.f);
             } else if (node.op === "dict") {
                 fields.y = label(node.imm, dict_imm_label);
-                fields.z = value(node.k, possible_quad);
+                fields.z = instruction(node.k);
             } else if (node.op === "deque") {
                 fields.y = label(node.imm, deque_imm_label);
-                fields.z = value(node.k, possible_quad);
+                fields.z = instruction(node.k);
             } else if (node.op === "alu") {
                 fields.y = label(node.imm, alu_imm_label);
-                fields.z = value(node.k, possible_quad);
+                fields.z = instruction(node.k);
             } else if (node.op === "cmp") {
                 fields.y = label(node.imm, cmp_imm_label);
-                fields.z = value(node.k, possible_quad);
+                fields.z = instruction(node.k);
             } else if (node.op === "my") {
                 fields.y = label(node.imm, my_imm_label);
-                fields.z = value(node.k, possible_quad);
+                fields.z = instruction(node.k);
             } else if (node.op === "end") {
                 fields.y = label(node.imm, end_imm_label, 0, -1);
             } else {
@@ -599,25 +609,78 @@ function h_load(specifier, crlf, imports, alloc) {
         quad.write(fields);
         return quad.raw();
     }
-    // Allocate a placeholder quad for each definition that requires one, or
-    // set the raw directly.
-    Object.keys(crlf.ast.define).forEach(function (name) {
-        const node = crlf.ast.define[name];
-        definitions[name] = (
-            definite_quad.includes(kind(node))
-            ? alloc(node.debug)
-            : (
-                kind(node) === "ref"
-                ? lookup(node)
-                : value(node)
-            )
+    function is_quad(node) {
+        return (
+            kind(node) === "pair"
+            || kind(node) === "dict"
+            || kind(node) === "instr"
         );
+    }
+    // Allocate a placeholder quad for each definition that requires one, or set
+    // the raw directly. Only resolve refs that refer to imports, not
+    // definitions.
+    Object.entries(crlf.ast.define).forEach(function ([name, node]) {
+        if (is_quad(node)) {
+            definitions[name] = alloc(node.debug);
+        } else if (kind(node) === "ref") {
+            if (node.module !== undefined) {
+                definitions[name] = lookup(node);
+            }
+        } else {
+            definitions[name] = value(node);
+        }
+    });
+    // Now we resolve any refs that refer to definitions. This is tricky because
+    // they could be cyclic. If they are not cyclic, we resolve them in order of
+    // dependency.
+    let ref_deps = Object.create(null);
+    Object.entries(crlf.ast.define).forEach(function ([name, node]) {
+        if (kind(node) === "ref" && node.module === undefined) {
+            ref_deps[name] = node.name;
+        }
+    });
+    function ref_depth(name, seen = []) {
+        const dep_name = ref_deps[name];
+        if (seen.includes(name)) {
+            return fail("Cyclic refs", crlf.ast.define[name]);
+        }
+        return (
+            ref_deps[dep_name] === undefined
+            ? 0
+            : 1 + ref_depth(dep_name, seen.concat(name))
+        );
+    }
+    Object.keys(ref_deps).sort(function (a, b) {
+        return ref_depth(a) - ref_depth(b);
+    }).forEach(function (name) {
+        definitions[name] = lookup(crlf.ast.define[name]);
     });
     // Populate each placeholder quad.
-    Object.keys(crlf.ast.define).forEach(function (name) {
-        const node = crlf.ast.define[name];
-        if (definite_quad.includes(kind(node))) {
+    Object.entries(crlf.ast.define).forEach(function ([name, node]) {
+        if (is_quad(node)) {
             populate(definitions[name], node);
+        }
+    });
+    // Check the type of dubious continuations.
+    continuation_type_checks.forEach(function ([raw, t, node]) {
+        if (!h_is_ptr(raw) || read(raw).t !== t) {
+            return fail("Bad continuation", node);
+        }
+    });
+    // Check for cyclic data structures, which are pathological for some
+    // instructions.
+    cyclic_data_checks.forEach(function ([raw, t, k_field, node]) {
+        let seen = [];
+        while (h_is_ptr(raw)) {
+            if (seen.includes(raw)) {
+                return fail("Cyclic", node);
+            }
+            const quad = read(raw);
+            if (quad.t !== t) {
+                break;
+            }
+            seen.push(raw);
+            raw = quad[k_field];
         }
     });
     // Populate the exports object.
@@ -627,9 +690,9 @@ function h_load(specifier, crlf, imports, alloc) {
     });
     return exports;
 }
-// Import and load a module, along with its dependencies.
 let import_promises = Object.create(null);
 function h_import(specifier, alloc) {
+    // Import and load a module, along with its dependencies.
     if (import_promises[specifier] === undefined) {
         import_promises[specifier] = fetch(specifier).then(function (response) {
             return (
@@ -645,8 +708,8 @@ function h_import(specifier, alloc) {
             }
             return Promise.all(
                 Object.values(crlf.ast.import).map(function (import_specifier) {
-                    // FIXME: cyclic dependencies cause a deadlock, but they
-                    // should instead fail with an error.
+                    // FIXME: cyclic module dependencies cause a deadlock, but
+                    // they should instead fail with an error.
                     return h_import(
                         new URL(import_specifier, specifier).href,
                         alloc
@@ -657,7 +720,7 @@ function h_import(specifier, alloc) {
                 Object.keys(crlf.ast.import).forEach(function (name, nr) {
                     imports[name] = imported_modules[nr];
                 });
-                return h_load(specifier, crlf, imports, alloc);
+                return h_load(specifier, crlf, imports, alloc, h_read_quad);
             });
         });
     }
