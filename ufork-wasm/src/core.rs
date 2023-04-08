@@ -11,7 +11,6 @@ const BNK_INI: Raw          = BNK_0;
 pub const ROM_BASE_OFS: usize = 16;  // ROM offsets below this value are reserved
 
 pub const START: Any        = Any { raw: 16 };
-pub const EMPTY_DQ: Any     = Any { raw: 31 };
 pub const ROM_TOP: Any      = Any { raw: 314 };  // MUST BE KEPT IN SYNC WITH `_ROM_TOP_OFS`
 
 pub const MEMORY: Any       = Any { raw: MUT_RAW | BNK_INI | 0 };
@@ -58,18 +57,17 @@ impl Core {
         quad_rom[TRUE.ofs()]        = Quad::literal_t();
         quad_rom[UNIT.ofs()]        = Quad::literal_t();
 
+        quad_rom[EMPTY_DQ.ofs()]    = Quad::pair_t(NIL, NIL);
+
         quad_rom[TYPE_T.ofs()]      = Quad::type_t();
-        //quad_rom[EVENT_T.ofs()]     = Quad::type_t();
-        quad_rom[GC_FWD_T.ofs()]    = Quad::type_t();
-        quad_rom[INSTR_T.ofs()]     = Quad::type_t();
-        quad_rom[ACTOR_T.ofs()]     = Quad::type_t();
         quad_rom[FIXNUM_T.ofs()]    = Quad::type_t();
-        quad_rom[SYMBOL_T.ofs()]    = Quad::type_t();
-        quad_rom[PAIR_T.ofs()]      = Quad::type_t();
-        //quad_rom[FEXPR_T.addr()]    = Quad::type_t();
-        quad_rom[DICT_T.ofs()]      = Quad::type_t();
+        quad_rom[ACTOR_T.ofs()]     = Quad::type_t();
         quad_rom[PROXY_T.ofs()]     = Quad::type_t();
         quad_rom[STUB_T.ofs()]      = Quad::type_t();
+        quad_rom[INSTR_T.ofs()]     = Quad::type_t();
+        quad_rom[PAIR_T.ofs()]      = Quad::type_t();
+        quad_rom[DICT_T.ofs()]      = Quad::type_t();
+        quad_rom[GC_FWD_T.ofs()]    = Quad::type_t();
         quad_rom[FREE_T.ofs()]      = Quad::type_t();
 
 pub const SINK_BEH: Any     = Any { raw: 16 };  // alias for no-op behavior
@@ -102,15 +100,13 @@ pub const RELEASE: Any      = Any { raw: 29 };
         quad_rom[RELEASE.ofs()]     = Quad::vm_end_release();
 pub const RELEASE_0: Any    = Any { raw: 30 };
         quad_rom[RELEASE_0.ofs()]   = Quad::vm_send(ZERO, RELEASE);
-//pub const EMPTY_DQ: Any     = Any { raw: 31 };  // defined globally...
-        quad_rom[EMPTY_DQ.ofs()]    = Quad::pair_t(NIL, NIL);
-pub const STOP: Any         = Any { raw: 32 };
+pub const STOP: Any         = Any { raw: 31 };
         quad_rom[STOP.ofs()]        = Quad::vm_end_stop();
-pub const ABORT: Any        = Any { raw: 33 };
+pub const ABORT: Any        = Any { raw: 32 };
         quad_rom[ABORT.ofs()+0]     = Quad::vm_push(UNDEF, Any::rom(ABORT.ofs()+1));  // reason=#?
         quad_rom[ABORT.ofs()+1]     = Quad::vm_end_abort();
 
-pub const MEMO_OFS: usize = 35;
+pub const MEMO_OFS: usize = 34;
 pub const _MEMO_BEH: Any = Any { raw: MEMO_OFS as Raw };
         /*
         (define memo-beh

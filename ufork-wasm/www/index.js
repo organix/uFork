@@ -49,17 +49,17 @@ const NIL_RAW   = 0x0000_0001;
 const FALSE_RAW = 0x0000_0002;
 const TRUE_RAW  = 0x0000_0003;
 const UNIT_RAW  = 0x0000_0004;
+const EMPTY_DQ  = 0x0000_0005;
 const LITERAL_T = 0x0000_0000; // == UNDEF
-const TYPE_T    = 0x0000_0005;
-const GC_FWD_T  = 0x0000_0006;
-const INSTR_T   = 0x0000_0007;
+const TYPE_T    = 0x0000_0006;
+const FIXNUM_T  = 0x0000_0007;
 const ACTOR_T   = 0x0000_0008;
-const FIXNUM_T  = 0x0000_0009;
-const SYMBOL_T  = 0x0000_000A;
-const PAIR_T    = 0x0000_000B;
-const DICT_T    = 0x0000_000C;
-const PROXY_T   = 0x0000_000D;
-const STUB_T    = 0x0000_000E;
+const PROXY_T   = 0x0000_0009;
+const STUB_T    = 0x0000_000A;
+const INSTR_T   = 0x0000_000B;
+const PAIR_T    = 0x0000_000C;
+const DICT_T    = 0x0000_000D;
+const GC_FWD_T  = 0x0000_000E;
 const FREE_T    = 0x0000_000F;
 // instr constants
 const VM_TYPEQ  = 0x8000_0000;
@@ -250,16 +250,16 @@ const rom_label = [
     "#f",
     "#t",
     "#unit",
+    "EMPTY_DQ",
     "TYPE_T",
-    "GC_FWD_T",
-    "INSTR_T",
-    "ACTOR_T",
     "FIXNUM_T",
-    "SYMBOL_T",
-    "PAIR_T",
-    "DICT_T",
+    "ACTOR_T",
     "PROXY_T",
     "STUB_T",
+    "INSTR_T",
+    "PAIR_T",
+    "DICT_T",
+    "GC_FWD_T",
     "FREE_T"
 ];
 function h_print(raw) {

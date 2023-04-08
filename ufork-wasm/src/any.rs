@@ -23,19 +23,17 @@ pub const NIL: Any          = Any { raw: 1 };
 pub const FALSE: Any        = Any { raw: 2 };
 pub const TRUE: Any         = Any { raw: 3 };
 pub const UNIT: Any         = Any { raw: 4 };
+pub const EMPTY_DQ: Any     = Any { raw: 5 };
 pub const LITERAL_T: Any    = Any { raw: 0 };  // == UNDEF
-pub const TYPE_T: Any       = Any { raw: 5 };
-//pub const EVENT_T: Any      = Any { raw: 6 };
-pub const GC_FWD_T: Any     = Any { raw: 6 };
-pub const INSTR_T: Any      = Any { raw: 7 };
+pub const TYPE_T: Any       = Any { raw: 6 };
+pub const FIXNUM_T: Any     = Any { raw: 7 };
 pub const ACTOR_T: Any      = Any { raw: 8 };
-pub const FIXNUM_T: Any     = Any { raw: 9 };
-pub const SYMBOL_T: Any     = Any { raw: 10 };
-pub const PAIR_T: Any       = Any { raw: 11 };
-//pub const FEXPR_T: Any      = Any { raw: 12 };
-pub const DICT_T: Any       = Any { raw: 12 };
-pub const PROXY_T: Any      = Any { raw: 13 };
-pub const STUB_T: Any       = Any { raw: 14 };
+pub const PROXY_T: Any      = Any { raw: 9 };
+pub const STUB_T: Any       = Any { raw: 10 };
+pub const INSTR_T: Any      = Any { raw: 11 };
+pub const PAIR_T: Any       = Any { raw: 12 };
+pub const DICT_T: Any       = Any { raw: 13 };
+pub const GC_FWD_T: Any     = Any { raw: 14 };
 pub const FREE_T: Any       = Any { raw: 15 };  // MUST BE (ROM_BASE_OFS - 1)
 
 // INSTR_T values
