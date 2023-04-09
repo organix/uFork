@@ -6,31 +6,12 @@
 <style>
 body {
   position: absolute;
-  /*
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  */
   margin: 0;
   padding: 0;
   display: flex;
   flex-flow: row wrap;
-  /*
-  flex-direction: row;
-  align-items: center;
-  */
   justify-content: center;
   background-color: #FFC;
-}
-.panel-center {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  /*
-  justify-content: center;
-  */
-  margin: 1ex;
 }
 button {
   margin: 1ex;
@@ -41,31 +22,27 @@ pre {
 table {
   margin: 1ex;
 }
-#ufork-rom {
-  width: 96ex;
-  height: 24em;
-  border-radius: 1.5ex;
-  padding: 1ex;
-  overflow: scroll;
-  background: #333;
-  color: #3F0;
+#ufork-monitor {
+  display: flex;
+  align-items: center;
+  flex-direction: column;
 }
-#ufork-ram {
-  width: 96ex;
-  height: 24em;
-  border-radius: 1.5ex;
-  padding: 1ex;
-  overflow: scroll;
-  background: #333;
-  color: #3CF;
-}
-#ufork-blob {
+.panel {
+  margin: 1ex;
   width: 100ex;
   height: 24em;
   border-radius: 1.5ex;
-  padding: 1ex;
+  padding: 1.2ex 2ex;
   overflow: scroll;
   background: #333;
+}
+#ufork-rom {
+  color: #3F0;
+}
+#ufork-ram {
+  color: #3CF;
+}
+#ufork-blob {
   color: #FE3;
 }
 </style>
@@ -75,13 +52,9 @@ table {
     This page contains webassembly and javascript content,
     please enable javascript in your browser.
   </noscript>
-  <div id="rom-monitor" class="panel-center">
-    <pre id="ufork-rom" title="ROM Image"></pre>
-  </div>
-  <div id="ram-monitor" class="panel-center">
-    <pre id="ufork-ram" title="RAM Image"></pre>
-  </div>
-  <div id="ufork-monitor" class="panel-center">
+  <pre id="ufork-rom" class="panel" title="ROM Image"></pre>
+  <pre id="ufork-ram" class="panel" title="RAM Image"></pre>
+  <div id="ufork-monitor">
     <div style="display: flex;">
       <svg width="36" height="36" viewBox="-18 -18 36 36">
         <g stroke-width="1">
@@ -156,8 +129,7 @@ table {
       </tr>
     </table>
   </div>
-  <div id="blob-monitor" class="panel-center">
-    <pre id="ufork-blob" title="BLOB Image">
+  <pre id="ufork-blob" class="panel" title="BLOB Image">
 0000:  06 10 82 38  01 81 07 10  82 32 01 84  0b 84 6b 69  ···8·····2····ki
 0010:  6e 64 0b 8d  61 63 74 6f  72 5f 73 70  6f 6e 73 6f  nd··actor_sponso
 0020:  72 0b 86 61  63 74 6f 72  73 81 0b 86  65 76 65 6e  r··actors···even
@@ -178,8 +150,7 @@ table {
 0110:  72 69 6e 67  09 0a 0a 85  57 6f 72 6c  64 07 9e 83  ring····World···
 0120:  09 00 09 11  09 12 81 09  13 07 92 83  09 00 09 07  ················
 0130:  09 08 09 14  09 0a 0a 85  48 65 6c 6c  6f           ········Hello   
-      </pre>
-  </div>
+  </pre>
   <script type="module" src="./index.js"></script>
 </body>
 </html>
