@@ -56,9 +56,6 @@ release_0:
     send 0
     ref release
 
-empty_dq:
-    pair_t #nil #nil
-
 stop:
     end stop
 
@@ -82,6 +79,5 @@ abort:
     resend
     release
     release_0
-    empty_dq
     stop
     abort
