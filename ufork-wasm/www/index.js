@@ -20,6 +20,7 @@ const $kqueue = document.getElementById("ufork-kqueue");
 const $mem_rom = document.getElementById("ufork-rom");
 const $mem_ram = document.getElementById("ufork-ram");
 const $mem_blob = document.getElementById("ufork-blob");
+const $source_monitor = document.getElementById("ufork-source");
 
 const $instr = document.getElementById("ufork-instr");
 const $stack = document.getElementById("ufork-stack");
@@ -691,6 +692,7 @@ function h_load(specifier, crlf, imports, alloc, read) {
     return exports;
 }
 let import_promises = Object.create(null);
+let module_source = Object.create(null);
 function h_import(specifier, alloc) {
     // Import and load a module, along with its dependencies.
     if (import_promises[specifier] === undefined) {
@@ -698,6 +700,7 @@ function h_import(specifier, alloc) {
             return (
                 specifier.endsWith(".asm")
                 ? response.text().then(function (source) {
+                    module_source[specifier] = source;
                     return assemble(source, specifier);
                 })
                 : response.json()
@@ -837,6 +840,45 @@ function updateRamMonitor() {
 function updateBlobMonitor() {
     $mem_blob.textContent = hexdump(h_blob_mem());
 }
+function keep_in_view(parent, child) {
+    const child_rect = child.getBoundingClientRect();
+    const parent_rect = parent.getBoundingClientRect();
+    const offset = parent.scrollTop + child_rect.top - parent_rect.top;
+    if (child_rect.top < parent_rect.top) {
+        parent.scrollTop = offset;
+    }
+    if (child_rect.bottom > parent_rect.bottom) {
+        parent.scrollTop = offset - parent_rect.height + child_rect.height;
+    }
+}
+function updateSourceMonitor(ip) {
+    if (h_is_rom(ip) && ip !== UNDEF_RAW && rom_sourcemap[ip] !== undefined) {
+        const debug = rom_sourcemap[ip];
+        const source = module_source[debug.file];
+        if (source !== undefined) {
+            $source_monitor.href = debug.file;
+            $source_monitor.innerHTML = "";
+            let highlighted;
+            source.split(/\n|\r\n?/).forEach(function (line, line_nr) {
+                const line_element = document.createElement("span");
+                line_element.textContent = (
+                    String(line_nr).padStart(4, " ") + "  " + line
+                );
+                if (line_nr === debug.line) {
+                    line_element.className = "highlighted";
+                    highlighted = line_element;
+                }
+                $source_monitor.append(line_element);
+            });
+            if (highlighted !== undefined) {
+                keep_in_view($source_monitor, highlighted);
+            }
+            return;
+        }
+    }
+    $source_monitor.textContent = "No source available.";
+    delete $source_monitor.href;
+}
 const drawHost = () => {
     if (fault) {
         $fault.setAttribute("fill", "#F30");
@@ -910,6 +952,7 @@ const drawHost = () => {
     } else {
         updateElementText($instr, "--");
     }
+    updateSourceMonitor(ip);
     if (h_in_mem(sp)) {
         let p = sp;
         let a = [];
@@ -995,6 +1038,23 @@ const pauseAction = () => {
     $stepButton.disabled = false;
     paused = true;
 }
+
+// Keybindings
+$pauseButton.title = "⌘+\\ or ctrl+\\";
+$stepButton.title = "⌘+' or ctrl+'";
+document.onkeydown = function (event) {
+    if (event.metaKey || event.ctrlKey) {
+        if (event.key === "\\") {
+            if (paused) {
+                playAction();
+            } else {
+                pauseAction();
+            }
+        } else if (event.key === "'") {
+            singleStep();
+        }
+    }
+};
 
 /*
 0000:  06 10 82 38  01 81 07 10  82 32 01 84  0b 84 6b 69  ···8·····2····ki

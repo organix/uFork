@@ -35,6 +35,8 @@ table {
   padding: 1.2ex 2ex;
   overflow: scroll;
   background: #333;
+  font-family: monospace;
+  white-space: pre;
 }
 #ufork-rom {
   color: #3F0;
@@ -45,6 +47,19 @@ table {
 #ufork-blob {
   color: #FE3;
 }
+#ufork-source {
+  color: tomato;
+  text-decoration: none;
+}
+#ufork-source span {
+  display: block;
+  height: 1em;
+  padding-bottom: 0.4ex;
+}
+#ufork-source span.highlighted {
+  background: rgba(103, 201, 117, 0.2);
+  outline: 1px solid rgba(103, 201, 117);
+}
 </style>
 </head>
 <body>
@@ -54,6 +69,29 @@ table {
   </noscript>
   <pre id="ufork-rom" class="panel" title="ROM Image"></pre>
   <pre id="ufork-ram" class="panel" title="RAM Image"></pre>
+  <pre id="ufork-blob" class="panel" title="BLOB Image">
+0000:  06 10 82 38  01 81 07 10  82 32 01 84  0b 84 6b 69  ···8·····2····ki
+0010:  6e 64 0b 8d  61 63 74 6f  72 5f 73 70  6f 6e 73 6f  nd··actor_sponso
+0020:  72 0b 86 61  63 74 6f 72  73 81 0b 86  65 76 65 6e  r··actors···even
+0030:  74 73 81 0b  86 73 63 72  69 70 74 06  10 82 fd 00  ts···script···ý·
+0040:  82 07 10 82  d7 00 83 09  00 0b 8a 61  63 74 6f 72  ····×······actor
+0050:  5f 73 65 6e  64 0b 87 6d  65 73 73 61  67 65 07 a7  _send··message·§
+0060:  83 09 00 0b  8c 65 78 70  72 5f 6c 69  74 65 72 61  ·····expr_litera
+0070:  6c 0b 84 74  79 70 65 0b  86 4f 62 6a  65 63 74 0b  l··type··Object·
+0080:  85 63 6f 6e  73 74 03 0b  85 61 63 74  6f 72 07 10  ·const···actor··
+0090:  82 8a 00 83  09 00 0b 8c  61 63 74 6f  72 5f 63 72  ········actor_cr
+00a0:  65 61 74 65  0b 85 73 74  61 74 65 07  8c 83 09 00  eate··state·····
+00b0:  09 07 09 08  09 09 09 0a  03 0b 88 62  65 68 61 76  ···········behav
+00c0:  69 6f 72 07  d8 83 09 00  0b 8e 61 63  74 6f 72 5f  ior·Ø·····actor_
+00d0:  62 65 68 61  76 69 6f 72  0b 84 6e 61  6d 65 0f 09  behavior··name··
+00e0:  04 06 ba 81  07 b7 83 09  00 0b 89 6c  6f 67 5f 70  ··º········log_p
+00f0:  72 69 6e 74  0b 85 6c 65  76 65 6c 81  0b 85 76 61  rint··level···va
+0100:  6c 75 65 07  98 83 09 00  09 07 09 08  0b 86 53 74  lue···········St
+0110:  72 69 6e 67  09 0a 0a 85  57 6f 72 6c  64 07 9e 83  ring····World···
+0120:  09 00 09 11  09 12 81 09  13 07 92 83  09 00 09 07  ················
+0130:  09 08 09 14  09 0a 0a 85  48 65 6c 6c  6f           ········Hello   
+  </pre>
+  <a id="ufork-source" class="panel" title="Source code" target="_blank"></a>
   <div id="ufork-monitor">
     <div style="display: flex;">
       <svg width="36" height="36" viewBox="-18 -18 36 36">
@@ -129,28 +167,6 @@ table {
       </tr>
     </table>
   </div>
-  <pre id="ufork-blob" class="panel" title="BLOB Image">
-0000:  06 10 82 38  01 81 07 10  82 32 01 84  0b 84 6b 69  ···8·····2····ki
-0010:  6e 64 0b 8d  61 63 74 6f  72 5f 73 70  6f 6e 73 6f  nd··actor_sponso
-0020:  72 0b 86 61  63 74 6f 72  73 81 0b 86  65 76 65 6e  r··actors···even
-0030:  74 73 81 0b  86 73 63 72  69 70 74 06  10 82 fd 00  ts···script···ý·
-0040:  82 07 10 82  d7 00 83 09  00 0b 8a 61  63 74 6f 72  ····×······actor
-0050:  5f 73 65 6e  64 0b 87 6d  65 73 73 61  67 65 07 a7  _send··message·§
-0060:  83 09 00 0b  8c 65 78 70  72 5f 6c 69  74 65 72 61  ·····expr_litera
-0070:  6c 0b 84 74  79 70 65 0b  86 4f 62 6a  65 63 74 0b  l··type··Object·
-0080:  85 63 6f 6e  73 74 03 0b  85 61 63 74  6f 72 07 10  ·const···actor··
-0090:  82 8a 00 83  09 00 0b 8c  61 63 74 6f  72 5f 63 72  ········actor_cr
-00a0:  65 61 74 65  0b 85 73 74  61 74 65 07  8c 83 09 00  eate··state·····
-00b0:  09 07 09 08  09 09 09 0a  03 0b 88 62  65 68 61 76  ···········behav
-00c0:  69 6f 72 07  d8 83 09 00  0b 8e 61 63  74 6f 72 5f  ior·Ø·····actor_
-00d0:  62 65 68 61  76 69 6f 72  0b 84 6e 61  6d 65 0f 09  behavior··name··
-00e0:  04 06 ba 81  07 b7 83 09  00 0b 89 6c  6f 67 5f 70  ··º········log_p
-00f0:  72 69 6e 74  0b 85 6c 65  76 65 6c 81  0b 85 76 61  rint··level···va
-0100:  6c 75 65 07  98 83 09 00  09 07 09 08  0b 86 53 74  lue···········St
-0110:  72 69 6e 67  09 0a 0a 85  57 6f 72 6c  64 07 9e 83  ring····World···
-0120:  09 00 09 11  09 12 81 09  13 07 92 83  09 00 09 07  ················
-0130:  09 08 09 14  09 0a 0a 85  48 65 6c 6c  6f           ········Hello   
-  </pre>
   <script type="module" src="./index.js"></script>
 </body>
 </html>
