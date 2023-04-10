@@ -11,6 +11,8 @@ The blog post
 describes the high-level architecture,
 and the rationale behind it.
 
+![uFork Rust/WASM debugger](screenshot20230410.png)
+
 ## Implementations
 
 The initial prototype is [implemented in **C**](c_src/README.md)
