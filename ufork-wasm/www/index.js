@@ -987,7 +987,9 @@ const gcHost = () => {
     h_gc_run();
     drawHost();
 }
+let next_event = undefined;
 const singleStep = () => {
+    next_event = undefined;  // clear "next" event
     const err = h_step();
     if (err === 0) {  // 0 = E_OK = no error
         fault = false;
@@ -995,6 +997,45 @@ const singleStep = () => {
         fault = true;
         console.log("singleStep: error = ", err);
     }
+    drawHost();
+    return !fault;
+};
+const currentContinuation = () => {
+    const ddeque_quad = h_read_quad(h_ramptr(DDEQUE_OFS));
+    const k_first = ddeque_quad.y;
+    if (h_in_mem(k_first)) {
+        const cont_quad = h_read_quad(k_first);
+        return {
+            ip: cont_quad.t,
+            sp: cont_quad.x,
+            ep: cont_quad.y,
+        };
+    }
+};
+const nextStep = () => {
+    // execute next instruction for current event
+    let cc = currentContinuation();
+    if (!cc) return singleStep();
+    next_event = cc.ep;
+    const instr = h_read_quad(cc.ip);
+    if ((instr.t === INSTR_T) && (instr.x === VM_END)) {
+        next_event = undefined;  // clear "next" event
+    }
+    while (true) {
+        const err = h_step();
+        if (err === 0) {  // 0 = E_OK = no error
+            fault = false;
+        } else {
+            fault = true;
+            console.log("nextStep: error = ", err);
+            break;
+        }
+        if (!next_event) break;  // no "next" event
+        cc = currentContinuation();
+        if (!cc) break;
+        if (cc.ep === next_event) break;
+    }
+    next_event = undefined;  // clear "next" event
     drawHost();
     return !fault;
 };
@@ -1024,6 +1065,9 @@ const logClick = event => {
 const $gcButton = document.getElementById("ufork-gc-btn");
 $gcButton.onclick = gcHost;
 
+const $nextButton = document.getElementById("next-step");
+$nextButton.onclick = nextStep;
+
 const $stepButton = document.getElementById("single-step");
 $stepButton.onclick = singleStep;
 
@@ -1032,18 +1076,21 @@ const playAction = () => {
     $pauseButton.textContent = "Pause";
     $pauseButton.onclick = pauseAction;
     paused = false;
+    $nextButton.disabled = true;
     $stepButton.disabled = true;
     renderLoop();
 }
 const pauseAction = () => {
     $pauseButton.textContent = "Play";
     $pauseButton.onclick = playAction;
+    $nextButton.disabled = false;
     $stepButton.disabled = false;
     paused = true;
 }
 
 // Keybindings
 $pauseButton.title = "⌘+\\ or ctrl+\\";
+$nextButton.title = "next instruction for this event";
 $stepButton.title = "⌘+' or ctrl+'";
 document.onkeydown = function (event) {
     if (event.metaKey || event.ctrlKey) {
@@ -1146,7 +1193,7 @@ function preboot() {
         // Boot by sending a fibonnacci actor a message. The result is sent to
         // the IO device.
         const cust = h_ptr_to_cap(h_ramptr(IO_DEV_OFS));
-        const n = h_fixnum(5);
+        const n = h_fixnum(6);
         // TODO h_reserve(t, x, y, z)
         const tail = h_reserve();
         h_write_quad(tail, {t: PAIR_T, x: n, y: NIL_RAW, z: UNDEF_RAW});

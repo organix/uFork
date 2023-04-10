@@ -36,7 +36,8 @@ rv_one:
 
 resend:
     msg 0
-    my self send_0
+    my self
+    ref send_0
 
 release:
     end release
