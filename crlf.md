@@ -83,10 +83,10 @@ Otherwise it refers to one of the definitions. For example,
     {
         "kind": "ref",
         "module": "std",
-        "name": "EMPTY_DQ"
+        "name": "commit"
     }
 
-refers to the "std" module's `EMPTY_DQ` export, and
+refers to the "std" module's `commit` export, and
 
     {
         "kind": "ref",

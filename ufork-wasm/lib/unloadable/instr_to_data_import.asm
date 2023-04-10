@@ -1,5 +1,5 @@
 .import
-    std: "../std.asm"
+    fixture: "./fixtures/data.asm"
 
 a:
-    new 3 std.empty_dq
+    new 3 fixture.data
