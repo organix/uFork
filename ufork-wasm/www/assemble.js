@@ -61,8 +61,8 @@ const rx_token_raw = tag_regexp `
 
 function tokenize(source) {
     let rx_token = new RegExp(rx_token_raw, "y"); // sticky
-    let line_nr = 0;
-    let column_to = 0;
+    let line_nr = 1;
+    let column_to = 1;
     return function token_generator() {
 
         function error() {
@@ -93,7 +93,7 @@ function tokenize(source) {
                 column_nr
             };
             line_nr += 1;
-            column_to = 0;
+            column_to = 1;
             return token;
         }
         if (captives[2]) {
@@ -842,8 +842,8 @@ function assemble(source, file) {
             kind: "error",
             message: exception.message,
             file,
-            line: exception.token?.line_nr,
-            column: exception.token?.column_nr
+            line: exception.token?.line_nr ?? 1,
+            column: exception.token?.column_nr ?? 1
         };
     }
 }

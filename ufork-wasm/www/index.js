@@ -862,9 +862,9 @@ function updateSourceMonitor(ip) {
             source.split(/\n|\r\n?/).forEach(function (line, line_nr) {
                 const line_element = document.createElement("span");
                 line_element.textContent = (
-                    String(line_nr).padStart(4, " ") + "  " + line
+                    String(line_nr + 1).padStart(4, " ") + "  " + line
                 );
-                if (line_nr === debug.line) {
+                if (debug.line === line_nr + 1) {
                     line_element.className = "highlighted";
                     highlighted = line_element;
                 }
