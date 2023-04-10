@@ -88,7 +88,7 @@ function tokenize(source) {
         column_to = column_nr + captives[0].length;
         if (captives[1]) {
             const token = {
-                id: "\n",
+                id: ":linebreak:",
                 line_nr,
                 column_nr
             };
@@ -98,7 +98,7 @@ function tokenize(source) {
         }
         if (captives[2]) {
             return {
-                id: " ",
+                id: ":space:",
                 line_nr,
                 column_nr,
                 column_to
@@ -177,7 +177,7 @@ function zero() {
     };
 }
 
-function one(make_node) {
+function one(make_node, message = "Unexpected.") {
     return function one_matcher(input) {
         if (input.token === undefined) {
             return {message: "Unexpected end of stream."};
@@ -187,45 +187,51 @@ function one(make_node) {
             node !== undefined
             ? [input.next(), node]
             : {
-                message: "Unexpected.",
+                message,
                 token: input.token
             }
         );
     };
 }
 
-function or(matcher_array) {
+function or(matcher_array, message = "Unexpected.") {
     return function or_matcher(input) {
-        let ok;
-        matcher_array.some(function (matcher) {
-            const result = matcher(input);
-            if (Array.isArray(result)) {
-                ok = result;
-                return true;
-            }
-            return false;
-        });
-        return ok ?? {message: "Unexpected", token: input.token};
+        let result;
+        if (matcher_array.some(function (matcher) {
+            result = matcher(input);
+            return Array.isArray(result) || result.is_definite_match === true;
+        })) {
+            return result;
+        }
+        return {
+            message,
+            token: input.token
+        };
     };
 }
 
-function and(matcher_array) {
+function and(matcher_array, definite_match_threshold = Infinity) {
     return function and_matcher(input) {
         let nodes = [];
         let result;
-        return (
-            matcher_array.every(function (matcher) {
-                result = matcher(input);
-                if (Array.isArray(result)) {
-                    input = result[0];
-                    nodes.push(result[1]);
-                    return true;
-                }
-                return false;
-            })
-            ? [input, nodes]
-            : result
+        let nr_matched = 0;
+        if (matcher_array.every(function (matcher) {
+            result = matcher(input);
+            if (Array.isArray(result)) {
+                nr_matched += 1;
+                input = result[0];
+                nodes.push(result[1]);
+                return true;
+            }
+            return false;
+        })) {
+            return [input, nodes];
+        }
+        result.is_definite_match = (
+            result.is_definite_match === true
+            || nr_matched >= definite_match_threshold
         );
+        return result;
     };
 }
 
@@ -235,6 +241,9 @@ function repeat(matcher) {
         while (true) {
             const result = matcher(input);
             if (!Array.isArray(result)) {
+                if (result.is_definite_match === true) {
+                    return result;
+                }
                 break;
             }
             input = result[0];
@@ -253,6 +262,9 @@ function many(matcher) {
         }
         input = head[0];
         const tail = repeat_matcher(input);
+        if (!Array.isArray(tail)) {
+            return tail;
+        }
         input = tail[0];
         return [input, [head[1], ...tail[1]]];
     };
@@ -265,17 +277,24 @@ function optional(matcher) {
 // Now we build our language grammar.
 
 function id(the_id) {
-    return one(function predicate(token) {
-        return (
-            token.id === the_id
-            ? token
-            : undefined
-        );
-    });
+    return one(
+        function predicate(token) {
+            return (
+                token.id === the_id
+                ? token
+                : undefined
+            );
+        },
+        "Expected " + (
+            (the_id[0] === ":" && the_id.length > 1)
+            ? "a " + the_id.slice(1, -1)
+            : "'" + the_id + "'"
+        ) + "."
+    );
 }
 
 function spaces() {
-    return id(" ");
+    return id(":space:");
 }
 
 function indent() {
@@ -290,7 +309,7 @@ function newline() {
                 id(":comment:")
             ])
         ),
-        id("\n")
+        id(":linebreak:")
     ]);
 }
 
@@ -301,14 +320,17 @@ function directive(name) {
     ]);
 }
 
-function name() {
-    return one(function predicate(token) {
-        return (
-            token.alphameric === true
-            ? token
-            : undefined
-        );
-    });
+function name(message = "Expected a name.") {
+    return one(
+        function predicate(token) {
+            return (
+                token.alphameric === true
+                ? token
+                : undefined
+            );
+        },
+        message
+    );
 }
 
 function importation() {
@@ -319,7 +341,7 @@ function importation() {
         spaces(),
         id(":string:"),
         many(newline())
-    ]);
+    ], 1);
 }
 
 function import_declaration() {
@@ -327,7 +349,7 @@ function import_declaration() {
         directive("import"),
         many(newline()),
         many(importation())
-    ]);
+    ], 1);
 }
 
 function label() {
@@ -335,7 +357,7 @@ function label() {
         name(),
         id(":"),
         many(newline())
-    ]);
+    ], 1);
 }
 
 function pound() {
@@ -377,17 +399,17 @@ function operand() {
 function statement() {
     return and([
         indent(),
-        name(),
+        name("Expected an operator."),
         repeat(operand()),
         many(newline())
-    ]);
+    ], 1);
 }
 
 function definition() {
     return and([
         many(label()),
         many(statement())
-    ]);
+    ], 1);
 }
 
 function exportation() {
@@ -395,7 +417,7 @@ function exportation() {
         indent(),
         name(),
         many(newline())
-    ]);
+    ], 1);
 }
 
 function export_declaration() {
@@ -403,7 +425,7 @@ function export_declaration() {
         directive("export"),
         many(newline()),
         many(exportation())
-    ]);
+    ], 1);
 }
 
 function module() {
@@ -415,30 +437,40 @@ function module() {
     ]);
 }
 
-function make_input(token_generator) {
+function parse(token_generator) {
     let tokens = [];
-    return (function seek(position = 0) {
+    let error_token;
+
+    function make_input(position) {
         while (tokens.length <= position) {
             tokens.push(token_generator());
         }
+        const token = tokens[position];
+        if (token?.id === ":error:" && error_token === undefined) {
+            error_token = token;
+        }
         return {
-            token: tokens[position],
+            token,
             next() {
-                return seek(position + 1);
+                return make_input(position + 1);
             }
         };
-    }());
-}
+    }
 
-function parse(token_generator) {
-    const result = module()(make_input(token_generator));
+    let result = module()(make_input(0));
+    if (error_token !== undefined) {
+        return {
+            message: "Unexpected.",
+            token: error_token
+        };
+    }
     if (!Array.isArray(result)) {
         return result;
     }
     const [input, tree] = result;
     if (input.token !== undefined) {
         return {
-            message: "Unexpected token.",
+            message: "Unexpected.",
             token: input.token
         };
     }
