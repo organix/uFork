@@ -982,25 +982,9 @@ const drawHost = () => {
     updateElementText($sponsor_memory, h_print(sponsor_quad.t));
     updateElementText($sponsor_events, h_print(sponsor_quad.x));
     updateElementText($sponsor_instrs, h_print(sponsor_quad.y));
+    enableNext();
 }
-const gcHost = () => {
-    h_gc_run();
-    drawHost();
-}
-let next_event = undefined;
-const singleStep = () => {
-    next_event = undefined;  // clear "next" event
-    const err = h_step();
-    if (err === 0) {  // 0 = E_OK = no error
-        fault = false;
-    } else {
-        fault = true;
-        console.log("singleStep: error = ", err);
-    }
-    drawHost();
-    return !fault;
-};
-const currentContinuation = () => {
+function currentContinuation() {
     const ddeque_quad = h_read_quad(h_ramptr(DDEQUE_OFS));
     const k_first = ddeque_quad.y;
     if (h_in_mem(k_first)) {
@@ -1011,16 +995,40 @@ const currentContinuation = () => {
             ep: cont_quad.y,
         };
     }
+}
+function enableNext() {
+    if (paused) {
+        const cc = currentContinuation();
+        if (cc) {
+            const instr = h_read_quad(cc.ip);
+            if ((instr.t === INSTR_T) && (instr.x !== VM_END)) {
+                $nextButton.disabled = false;
+                return;
+            }
+        }
+    }
+    $nextButton.disabled = true;
+}
+const gcHost = () => {
+    h_gc_run();
+    drawHost();
+}
+const singleStep = () => {
+    const err = h_step();
+    if (err === 0) {  // 0 = E_OK = no error
+        fault = false;
+    } else {
+        fault = true;
+        console.log("singleStep: error = ", err);
+    }
+    drawHost();
+    return !fault;
 };
 const nextStep = () => {
     // execute next instruction for current event
     let cc = currentContinuation();
     if (!cc) return singleStep();
-    next_event = cc.ep;
-    const instr = h_read_quad(cc.ip);
-    if ((instr.t === INSTR_T) && (instr.x === VM_END)) {
-        next_event = undefined;  // clear "next" event
-    }
+    let next_event = cc.ep;
     while (true) {
         const err = h_step();
         if (err === 0) {  // 0 = E_OK = no error
@@ -1030,12 +1038,10 @@ const nextStep = () => {
             console.log("nextStep: error = ", err);
             break;
         }
-        if (!next_event) break;  // no "next" event
         cc = currentContinuation();
         if (!cc) break;
         if (cc.ep === next_event) break;
     }
-    next_event = undefined;  // clear "next" event
     drawHost();
     return !fault;
 };
@@ -1076,16 +1082,15 @@ const playAction = () => {
     $pauseButton.textContent = "Pause";
     $pauseButton.onclick = pauseAction;
     paused = false;
-    $nextButton.disabled = true;
     $stepButton.disabled = true;
     renderLoop();
 }
 const pauseAction = () => {
     $pauseButton.textContent = "Play";
     $pauseButton.onclick = playAction;
-    $nextButton.disabled = false;
     $stepButton.disabled = false;
     paused = true;
+    drawHost();
 }
 
 // Keybindings
