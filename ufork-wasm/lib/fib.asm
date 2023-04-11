@@ -12,9 +12,11 @@ beh:                    ; (cust n)
     push 2              ; n n 2
     cmp lt              ; n n<2
     if std.cust_send    ; n
+
     msg 1               ; n cust
     push k              ; n cust k
     new 1               ; n k=(k cust)
+
     pick 2              ; n k n
     push 1              ; n k n 1
     alu sub             ; n k n-1
@@ -22,6 +24,7 @@ beh:                    ; (cust n)
     push beh            ; n k n-1 k beh
     new 0               ; n k n-1 k fib
     send 2              ; n k
+
     roll 2              ; k n
     push 2              ; k n 2
     alu sub             ; k n-2
@@ -43,5 +46,19 @@ k2:                     ; cust m
     roll 2              ; m+n cust
     ref std.send_0
 
+eq8:
+    msg 0               ; msg
+    is_eq 8             ; assert_eq[8, msg]
+    ref std.commit
+
+boot:
+    push 6              ; 6
+    push eq8            ; 6 eq8
+    new 0               ; 6 cust
+    push beh            ; 6 cust beh
+    new 0               ; 6 cust fib
+    send 2 std.commit
+
 .export
     beh
+    boot

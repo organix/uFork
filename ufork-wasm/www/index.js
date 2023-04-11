@@ -1205,7 +1205,7 @@ function preboot() {
         const msg = h_reserve();
         h_write_quad(msg, {t: PAIR_T, x: cust, y: tail, z: UNDEF_RAW});
         const a_fib = h_reserve();
-        h_write_quad(a_fib, {t: ACTOR_T, x: fib.beh, y: NIL_RAW, z: UNDEF_RAW});
+        h_write_quad(a_fib, {t: ACTOR_T, x: fib.boot, y: NIL_RAW, z: UNDEF_RAW});
         const e_fib = h_reserve();
         h_write_quad(e_fib, {
             t: h_ramptr(SPONSOR_OFS),
