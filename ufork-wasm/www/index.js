@@ -840,19 +840,11 @@ function updateRamMonitor() {
 function updateBlobMonitor() {
     $mem_blob.textContent = hexdump(h_blob_mem());
 }
-function keep_in_view(parent, child) {
+function keep_centered(child, parent) {
     const child_rect = child.getBoundingClientRect();
     const parent_rect = parent.getBoundingClientRect();
     const offset = parent.scrollTop + child_rect.top - parent_rect.top;
-    const pad = 20; // account for possible scroll bars
-    if (child_rect.top < parent_rect.top - pad) {
-        parent.scrollTop = offset - pad;
-    }
-    if (child_rect.bottom > parent_rect.bottom - pad) {
-        parent.scrollTop = (
-            offset + pad - parent_rect.height + child_rect.height
-        );
-    }
+    parent.scrollTop = offset - parent_rect.height / 2 + child_rect.height / 2;
 }
 function updateSourceMonitor(ip) {
     if (h_is_rom(ip) && ip !== UNDEF_RAW && rom_sourcemap[ip] !== undefined) {
@@ -874,7 +866,7 @@ function updateSourceMonitor(ip) {
                 $source_monitor.append(line_element);
             });
             if (highlighted !== undefined) {
-                keep_in_view($source_monitor, highlighted);
+                keep_centered(highlighted, $source_monitor);
             }
             return;
         }
