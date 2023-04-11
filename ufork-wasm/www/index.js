@@ -1065,14 +1065,17 @@ $gcButton.onclick = gcHost;
 
 const $nextButton = document.getElementById("next-step");
 $nextButton.onclick = nextStep;
+$nextButton.title = "Next instruction for this event (n)";
 
 const $stepButton = document.getElementById("single-step");
 $stepButton.onclick = singleStep;
+$stepButton.title = "Next instruction in KQ (s)";
 
 const $pauseButton = document.getElementById("play-pause");
 const playAction = () => {
     $pauseButton.textContent = "Pause";
     $pauseButton.onclick = pauseAction;
+    $pauseButton.title = "Pause execution (c)";
     paused = false;
     $stepButton.disabled = true;
     renderLoop();
@@ -1080,26 +1083,24 @@ const playAction = () => {
 const pauseAction = () => {
     $pauseButton.textContent = "Play";
     $pauseButton.onclick = playAction;
+    $pauseButton.title = "Continue execution (c)";
     $stepButton.disabled = false;
     paused = true;
     drawHost();
 }
 
 // Keybindings
-$pauseButton.title = "⌘+\\ or ctrl+\\";
-$nextButton.title = "next instruction for this event";
-$stepButton.title = "⌘+' or ctrl+'";
 document.onkeydown = function (event) {
-    if (event.metaKey || event.ctrlKey) {
-        if (event.key === "\\") {
-            if (paused) {
-                playAction();
-            } else {
-                pauseAction();
-            }
-        } else if (event.key === "'") {
-            singleStep();
+    if (event.key === "c") {
+        if (paused) {
+            playAction();
+        } else {
+            pauseAction();
         }
+    } else if (event.key === "s" && !$stepButton.disabled) {
+        singleStep();
+    } else if (event.key === "n" && !$nextButton.disabled) {
+        nextStep();
     }
 };
 
@@ -1182,7 +1183,7 @@ function test_suite(exports) {
     console.log("OED seek:", dec_at11_encoded, dec_at11_enc_lite);
 }
 
-function preboot() {
+function boot() {
     return h_import(
         new URL("../lib/fib.asm", window.location.href).href,
         rom_alloc
@@ -1190,7 +1191,6 @@ function preboot() {
         // Boot by sending a fibonnacci actor a message.
         const cust = h_ptr_to_cap(h_ramptr(IO_DEV_OFS));
         const n = h_fixnum(6);
-        // TODO h_reserve(t, x, y, z)
         const tail = h_reserve();
         h_write_quad(tail, {t: PAIR_T, x: n, y: NIL_RAW, z: UNDEF_RAW});
         const msg = h_reserve();
@@ -1263,7 +1263,7 @@ WebAssembly.instantiateStreaming(
     }
 
     test_suite();
-    return preboot();
+    return boot();
 }).then(function () {
     // draw initial state
     updateRomMonitor();
