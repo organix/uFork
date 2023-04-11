@@ -46,19 +46,19 @@ k2:                     ; cust m
     roll 2              ; m+n cust
     ref std.send_0
 
-eq8:
-    msg 0               ; msg
-    is_eq 8             ; assert_eq[8, msg]
-    ref std.commit
-
 boot:
-;    push 5              ; n=5 -- will caused assert failure
+;    push 5              ; n=5 -- will lead to assert failure
     push 6              ; n=6
     push eq8            ; n eq8
     new 0               ; n cust
     push beh            ; n cust beh
     new 0               ; n cust fib
     send 2 std.commit
+
+eq8:
+    msg 0               ; msg
+    is_eq 8             ; assert_eq[8, msg]
+    ref std.commit
 
 .export
     beh
