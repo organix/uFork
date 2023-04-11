@@ -28,6 +28,7 @@ An FPGA implementation is planned for the future.
 
 ## Documentation
 
+  * [uFork Project Summary](summary.md)
   * [uFork Virtual Machine](ufork.md) Reference Manual
   * Specification for [Sponsor](sponsor.md) semantics
   * Meta-circular [LISP/Scheme interpreter](lisp.md) evolution
