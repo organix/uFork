@@ -1195,8 +1195,7 @@ function preboot() {
         new URL("../lib/fib.asm", window.location.href).href,
         rom_alloc
     ).then(function (fib) {
-        // Boot by sending a fibonnacci actor a message. The result is sent to
-        // the IO device.
+        // Boot by sending a fibonnacci actor a message.
         const cust = h_ptr_to_cap(h_ramptr(IO_DEV_OFS));
         const n = h_fixnum(6);
         // TODO h_reserve(t, x, y, z)

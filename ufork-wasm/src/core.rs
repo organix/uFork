@@ -1185,12 +1185,16 @@ pub const _RAM_TOP_OFS: usize = BOOT_OFS + 11;
             },
             VM_IS_EQ => {
                 let vv = self.stack_pop();
-                assert_eq!(imm, vv);  // FIXME: this should probably be Result::Error
+                if imm != vv {
+                    return Err(E_ASSERT);  // assertion failed
+                }
                 kip
             },
             VM_IS_NE => {
                 let vv = self.stack_pop();
-                assert_ne!(imm, vv);  // FIXME: this should probably be Result::Error
+                if imm == vv {
+                    return Err(E_ASSERT);  // assertion failed
+                }
                 kip
             },
             _ => {

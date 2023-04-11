@@ -52,11 +52,12 @@ eq8:
     ref std.commit
 
 boot:
-    push 6              ; 6
-    push eq8            ; 6 eq8
-    new 0               ; 6 cust
-    push beh            ; 6 cust beh
-    new 0               ; 6 cust fib
+;    push 5              ; n=5 -- will caused assert failure
+    push 6              ; n=6
+    push eq8            ; n eq8
+    new 0               ; n cust
+    push beh            ; n cust beh
+    new 0               ; n cust fib
     send 2 std.commit
 
 .export
