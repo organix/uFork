@@ -37,6 +37,13 @@ impl Host {
         E_OK  // step successful
     }
 
+    pub fn event_inject(&mut self, sponsor: Raw, target: Raw, msg: Raw) {
+        self.core.event_inject(
+            Any::new(sponsor),
+            Any::new(target),
+            Any::new(msg)
+        ).unwrap()
+    }
     pub fn gc_phase(&self) -> Raw {
         self.core.gc_phase()
     }

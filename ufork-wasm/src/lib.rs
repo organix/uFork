@@ -108,6 +108,13 @@ pub /*extern "C"*/ fn h_step() -> Error {
 }
 
 #[no_mangle]
+pub fn h_event_inject(sponsor: Raw, target: Raw, msg: Raw) {
+    unsafe {
+        the_host().borrow_mut().event_inject(sponsor, target, msg)
+    }
+}
+
+#[no_mangle]
 pub fn h_gc_run() {
     unsafe {
         the_host().borrow_mut().gc_run()

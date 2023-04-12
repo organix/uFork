@@ -108,6 +108,7 @@ const h_no_init = function uninitialized() {
 };
 // functions imported from uFork WASM module
 let h_step = h_no_init;
+let h_event_inject = h_no_init;
 let h_gc_run = h_no_init;
 let h_rom_buffer = h_no_init;
 let h_rom_top = h_no_init;
@@ -1183,34 +1184,49 @@ function test_suite(exports) {
     console.log("OED seek:", dec_at11_encoded, dec_at11_enc_lite);
 }
 
+function cap_dict(...device_offsets) {
+    return device_offsets.reduce(function (next, ofs) {
+        const dict = h_reserve();
+        h_write_quad(dict, {
+            t: DICT_T,
+            x: h_fixnum(ofs),
+            y: h_ptr_to_cap(h_ramptr(ofs)),
+            z: next
+        });
+        return dict;
+    }, NIL_RAW);
+}
+
 function boot() {
     return h_import(
-        new URL("../lib/fib.asm", window.location.href).href,
+        new URL("../lib/test.asm", window.location.href).href,
         rom_alloc
-    ).then(function (fib) {
-        // Boot by sending a fibonnacci actor a message.
-        const cust = h_ptr_to_cap(h_ramptr(IO_DEV_OFS));
-        const n = h_fixnum(6);
-        const tail = h_reserve();
-        h_write_quad(tail, {t: PAIR_T, x: n, y: NIL_RAW, z: UNDEF_RAW});
-        const msg = h_reserve();
-        h_write_quad(msg, {t: PAIR_T, x: cust, y: tail, z: UNDEF_RAW});
-        const a_fib = h_reserve();
-        h_write_quad(a_fib, {t: ACTOR_T, x: fib.boot, y: NIL_RAW, z: UNDEF_RAW});
-        const e_fib = h_reserve();
-        h_write_quad(e_fib, {
-            t: h_ramptr(SPONSOR_OFS),
-            x: h_ptr_to_cap(a_fib),
-            y: msg,
-            z: NIL_RAW
-        });
-        // TODO event_inject
+    ).then(function (test) {
+        if (test.boot === undefined) {
+            return Promise.reject("Module does not support booting.");
+        }
+        // Discard K_BOOT, hardcoded in core.rs.
         h_write_quad(h_ramptr(DDEQUE_OFS), {
-            t: e_fib,
-            x: e_fib,
+            t: NIL_RAW,
+            x: NIL_RAW,
             y: NIL_RAW,
             z: NIL_RAW
         });
+        // Make a boot actor, to be sent the boot message.
+        const actor = h_reserve();
+        h_write_quad(actor, {
+            t: ACTOR_T,
+            x: test.boot,
+            y: NIL_RAW,
+            z: UNDEF_RAW
+        });
+        // Inject the boot event (with a message holding the capabilities) to
+        // the front of the event queue.
+        h_event_inject(
+            h_ramptr(SPONSOR_OFS),
+            h_ptr_to_cap(actor),
+            cap_dict(BLOB_DEV_OFS, CLOCK_DEV_OFS, IO_DEV_OFS)
+        );
     });
 }
 
@@ -1241,6 +1257,7 @@ WebAssembly.instantiateStreaming(
     //debugger;
 
     h_step = exports.h_step;
+    h_event_inject = exports.h_event_inject;
     h_gc_run = exports.h_gc_run;
     h_rom_buffer = exports.h_rom_buffer;
     h_rom_top = exports.h_rom_top;
