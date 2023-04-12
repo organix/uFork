@@ -10,8 +10,6 @@ const BNK_INI: Raw          = BNK_0;
 
 pub const ROM_BASE_OFS: usize = 16;  // ROM offsets below this value are reserved
 
-pub const START: Any        = Any { raw: 16 };
-
 pub const MEMORY: Any       = Any { raw: MUT_RAW | BNK_INI | 0 };
 pub const DDEQUE: Any       = Any { raw: MUT_RAW | BNK_INI | 1 };
 pub const BLOB_DEV: Any     = Any { raw: OPQ_RAW | MUT_RAW | BNK_INI | 2 };
@@ -2101,6 +2099,129 @@ fn falsey(v: Any) -> bool {
 mod tests {
     use super::*;
 
+    /*
+    (define fib                 ; O(n!) performance?
+        (lambda (n)             ; msg: (cust n)
+        (if (< n 2)
+            n
+            (+ (fib (- n 1)) (fib (- n 2))) )))
+    */
+    fn load_fib_test(core: &mut Core) -> Any {
+        // prepare ROM with fib(6) => 8 test case
+pub const LIB_OFS: usize = ROM_BASE_OFS;
+        let quad_rom = &mut core.quad_rom;
+
+pub const COMMIT: Any = Any { raw: (LIB_OFS+0) as Raw };
+        quad_rom[COMMIT.ofs()]      = Quad::vm_end_commit();
+pub const SEND_0: Any = Any { raw: (LIB_OFS+1) as Raw };
+        quad_rom[SEND_0.ofs()]      = Quad::vm_send(ZERO, COMMIT);
+pub const CUST_SEND: Any = Any { raw: (LIB_OFS+2) as Raw };
+        quad_rom[CUST_SEND.ofs()]   = Quad::vm_msg(PLUS_1, SEND_0);
+
+pub const F_FIB_OFS: usize = LIB_OFS+3;
+pub const F_FIB_BEH: Any = Any { raw: F_FIB_OFS as Raw };
+        quad_rom[F_FIB_OFS+0]       = Quad::vm_msg(PLUS_2, Any::rom(F_FIB_OFS+1));  // n
+        quad_rom[F_FIB_OFS+1]       = Quad::vm_dup(PLUS_1, Any::rom(F_FIB_OFS+2));  // n n
+        quad_rom[F_FIB_OFS+2]       = Quad::vm_push(PLUS_2, Any::rom(F_FIB_OFS+3));  // n n 2
+        quad_rom[F_FIB_OFS+3]       = Quad::vm_cmp_lt(Any::rom(F_FIB_OFS+4));  // n n<2
+        quad_rom[F_FIB_OFS+4]       = Quad::vm_if(CUST_SEND, Any::rom(F_FIB_OFS+5));  // n
+
+        quad_rom[F_FIB_OFS+5]       = Quad::vm_msg(PLUS_1, Any::rom(F_FIB_OFS+6));  // n cust
+        quad_rom[F_FIB_OFS+6]       = Quad::vm_push(F_FIB_K, Any::rom(F_FIB_OFS+7));  // n cust fib-k
+        quad_rom[F_FIB_OFS+7]       = Quad::vm_new(PLUS_1, Any::rom(F_FIB_OFS+8));  // n k=fib-k[cust]
+
+        quad_rom[F_FIB_OFS+8]       = Quad::vm_pick(PLUS_2, Any::rom(F_FIB_OFS+9));  // n k n
+        quad_rom[F_FIB_OFS+9]       = Quad::vm_push(PLUS_1, Any::rom(F_FIB_OFS+10));  // n k n 1
+        quad_rom[F_FIB_OFS+10]      = Quad::vm_alu_sub(Any::rom(F_FIB_OFS+11));  // n k n-1
+        quad_rom[F_FIB_OFS+11]      = Quad::vm_pick(PLUS_2, Any::rom(F_FIB_OFS+12));  // n k n-1 k
+        //quad_rom[F_FIB_OFS+12]      = Quad::vm_my_self(Any::rom(F_FIB_OFS+14));  // n k n-1 k fib
+        quad_rom[F_FIB_OFS+12]      = Quad::vm_push(F_FIB_BEH, Any::rom(F_FIB_OFS+13));  // n k n-1 k fib-beh
+        quad_rom[F_FIB_OFS+13]      = Quad::vm_new(ZERO, Any::rom(F_FIB_OFS+14));  // n k n-1 k fib
+        quad_rom[F_FIB_OFS+14]      = Quad::vm_send(PLUS_2, Any::rom(F_FIB_OFS+15));  // n k
+
+        quad_rom[F_FIB_OFS+15]      = Quad::vm_roll(PLUS_2, Any::rom(F_FIB_OFS+16));  // k n
+        quad_rom[F_FIB_OFS+16]      = Quad::vm_push(PLUS_2, Any::rom(F_FIB_OFS+17));  // k n 2
+        quad_rom[F_FIB_OFS+17]      = Quad::vm_alu_sub(Any::rom(F_FIB_OFS+18));  // k n-2
+        quad_rom[F_FIB_OFS+18]      = Quad::vm_roll(PLUS_2, Any::rom(F_FIB_OFS+19));  // n-2 k
+        //quad_rom[F_FIB_OFS+19]      = Quad::vm_my_self(Any::rom(F_FIB_OFS+21));  // n-2 k fib
+        quad_rom[F_FIB_OFS+19]      = Quad::vm_push(F_FIB_BEH, Any::rom(F_FIB_OFS+20));  // n-2 k fib-beh
+        quad_rom[F_FIB_OFS+20]      = Quad::vm_new(ZERO, Any::rom(F_FIB_OFS+21));  // n-2 k fib
+        quad_rom[F_FIB_OFS+21]      = Quad::vm_send(PLUS_2, COMMIT);  // --
+
+pub const F_FIB_K: Any = Any { raw: (F_FIB_OFS+22) as Raw };
+        // stack: cust
+        quad_rom[F_FIB_OFS+22]      = Quad::vm_msg(ZERO, Any::rom(F_FIB_OFS+23));  // cust m
+        quad_rom[F_FIB_OFS+23]      = Quad::vm_push(F_FIB_K2, Any::rom(F_FIB_OFS+24));  // cust m fib-k2
+        quad_rom[F_FIB_OFS+24]      = Quad::vm_beh(PLUS_2, COMMIT);  // fib-k2[cust m]
+
+pub const F_FIB_K2: Any = Any { raw: (F_FIB_OFS+25) as Raw };
+        // stack: cust m
+        quad_rom[F_FIB_OFS+25]      = Quad::vm_msg(ZERO, Any::rom(F_FIB_OFS+26));  // cust m n
+        quad_rom[F_FIB_OFS+26]      = Quad::vm_alu_add(Any::rom(F_FIB_OFS+27));  // cust m+n
+        quad_rom[F_FIB_OFS+27]      = Quad::vm_roll(PLUS_2, SEND_0);  // m+n cust
+
+pub const TEST_OFS: usize = F_FIB_OFS+28;
+pub const TEST_BEH: Any    = Any { raw: TEST_OFS as Raw };
+        quad_rom[TEST_OFS+0]        = Quad::vm_push(PLUS_6, Any::rom(TEST_OFS+1));  // 6
+        quad_rom[TEST_OFS+1]        = Quad::vm_push(EQ_8_BEH, Any::rom(TEST_OFS+2));  // 6 eq-8-beh
+        quad_rom[TEST_OFS+2]        = Quad::vm_new(ZERO, Any::rom(TEST_OFS+3));  // 6 eq-8
+        quad_rom[TEST_OFS+3]        = Quad::vm_push(F_FIB_BEH, Any::rom(TEST_OFS+4));  // 6 eq-8 fib-beh
+        quad_rom[TEST_OFS+4]        = Quad::vm_new(ZERO, Any::rom(TEST_OFS+5));  // 6 eq-8 fib
+        quad_rom[TEST_OFS+5]        = Quad::vm_send(PLUS_2, COMMIT);  // --
+
+pub const EQ_8_BEH: Any = Any { raw: (TEST_OFS+7) as Raw };
+        quad_rom[TEST_OFS+6]        = Quad::vm_msg(ZERO, Any::rom(TEST_OFS+8));  // msg
+        quad_rom[TEST_OFS+7]        = Quad::vm_is_eq(PLUS_8, COMMIT);  // assert_eq(8, msg)
+
+        core.rom_top = Any::rom(TEST_OFS+8);
+        TEST_BEH
+    }
+/*
+(define COMMIT
+    (vm-end-commit))
+(define SEND-0  ; msg target
+    (vm-send 0 COMMIT))
+(define CUST-SEND  ; msg
+    (vm-msg 1 SEND-0))
+(define fib-k2  ; cust m
+    (vm-msg 0  ; cust m n
+        (vm-alu-add  ; cust m+n
+        (vm-roll 2  ; m+n cust
+            SEND-0))))
+(define fib-k  ; cust
+    (vm-msg 0  ; cust m
+        (vm-push fib-k2  ; cust m fib-k2
+        (vm-beh 2  ; (fib-k2 cust m)
+            COMMIT))))
+(define fib  ; (n)
+    (CREATE  ; (cust n)
+        (vm-msg 2  ; n
+        (vm-dup 1  ; n n
+            (vm-push 2  ; n n 2
+            (vm-cmp-lt  ; n n<2
+                (vm-if  ; n
+                CUST-SEND
+                (vm-msg 1  ; n cust
+                    (vm-push fib-k  ; n cust fib-k
+                    (vm-new 1  ; n k=(fib-k cust)
+                        (vm-pick 2  ; n k n
+                        (vm-push 1  ; n k n 1
+                            (vm-alu-sub  ; n k n-1
+                            (vm-pick 2  ; n k n-1 k
+                                (vm-my-self  ; n k n-1 k fib
+                                (vm-send 2  ; n k
+                                    (vm-roll 2  ; k n
+                                    (vm-push 2  ; k n 2
+                                        (vm-alu-sub  ; k n-2
+                                        (vm-roll 2  ; n-2 k
+                                            (vm-my-self  ; n-2 k fib
+                                            (vm-send 2  ; --
+                                                COMMIT))))))
+                                ))))))
+                    )))
+            )))))))
+*/
+
     #[test]
     fn base_types_are_32_bits() {
         assert_eq!(4, ::core::mem::size_of::<Error>());
@@ -2152,6 +2273,10 @@ mod tests {
     #[test]
     fn gc_before_and_after_run() {
         let mut core = Core::new();
+        let boot_beh = load_fib_test(&mut core);
+        let boot_ptr = core.reserve(&Quad::new_actor(boot_beh, NIL)).unwrap();
+        let a_boot = core.ptr_to_cap(boot_ptr);
+        core.event_inject(SPONSOR, a_boot, UNDEF).unwrap();
         assert_eq!(BNK_0, core.gc_phase());
         core.gc_stop_the_world();
         assert_eq!(BNK_1, core.gc_phase());
