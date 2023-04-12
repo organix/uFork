@@ -108,6 +108,7 @@ const h_no_init = function uninitialized() {
 };
 // functions imported from uFork WASM module
 let h_step = h_no_init;
+let h_event_inject = h_no_init;
 let h_gc_run = h_no_init;
 let h_rom_buffer = h_no_init;
 let h_rom_top = h_no_init;
@@ -840,19 +841,11 @@ function updateRamMonitor() {
 function updateBlobMonitor() {
     $mem_blob.textContent = hexdump(h_blob_mem());
 }
-function keep_in_view(parent, child) {
+function keep_centered(child, parent) {
     const child_rect = child.getBoundingClientRect();
     const parent_rect = parent.getBoundingClientRect();
     const offset = parent.scrollTop + child_rect.top - parent_rect.top;
-    const pad = 20; // account for possible scroll bars
-    if (child_rect.top < parent_rect.top - pad) {
-        parent.scrollTop = offset - pad;
-    }
-    if (child_rect.bottom > parent_rect.bottom - pad) {
-        parent.scrollTop = (
-            offset + pad - parent_rect.height + child_rect.height
-        );
-    }
+    parent.scrollTop = offset - parent_rect.height / 2 + child_rect.height / 2;
 }
 function updateSourceMonitor(ip) {
     if (h_is_rom(ip) && ip !== UNDEF_RAW && rom_sourcemap[ip] !== undefined) {
@@ -874,7 +867,7 @@ function updateSourceMonitor(ip) {
                 $source_monitor.append(line_element);
             });
             if (highlighted !== undefined) {
-                keep_in_view($source_monitor, highlighted);
+                keep_centered(highlighted, $source_monitor);
             }
             return;
         }
@@ -1073,14 +1066,17 @@ $gcButton.onclick = gcHost;
 
 const $nextButton = document.getElementById("next-step");
 $nextButton.onclick = nextStep;
+$nextButton.title = "Next instruction for this event (n)";
 
 const $stepButton = document.getElementById("single-step");
 $stepButton.onclick = singleStep;
+$stepButton.title = "Next instruction in KQ (s)";
 
 const $pauseButton = document.getElementById("play-pause");
 const playAction = () => {
     $pauseButton.textContent = "Pause";
     $pauseButton.onclick = pauseAction;
+    $pauseButton.title = "Pause execution (c)";
     paused = false;
     $stepButton.disabled = true;
     renderLoop();
@@ -1088,26 +1084,24 @@ const playAction = () => {
 const pauseAction = () => {
     $pauseButton.textContent = "Play";
     $pauseButton.onclick = playAction;
+    $pauseButton.title = "Continue execution (c)";
     $stepButton.disabled = false;
     paused = true;
     drawHost();
 }
 
 // Keybindings
-$pauseButton.title = "⌘+\\ or ctrl+\\";
-$nextButton.title = "next instruction for this event";
-$stepButton.title = "⌘+' or ctrl+'";
 document.onkeydown = function (event) {
-    if (event.metaKey || event.ctrlKey) {
-        if (event.key === "\\") {
-            if (paused) {
-                playAction();
-            } else {
-                pauseAction();
-            }
-        } else if (event.key === "'") {
-            singleStep();
+    if (event.key === "c") {
+        if (paused) {
+            playAction();
+        } else {
+            pauseAction();
         }
+    } else if (event.key === "s" && !$stepButton.disabled) {
+        singleStep();
+    } else if (event.key === "n" && !$nextButton.disabled) {
+        nextStep();
     }
 };
 
@@ -1190,35 +1184,49 @@ function test_suite(exports) {
     console.log("OED seek:", dec_at11_encoded, dec_at11_enc_lite);
 }
 
-function preboot() {
-    return h_import(
-        new URL("../lib/fib.asm", window.location.href).href,
-        rom_alloc
-    ).then(function (fib) {
-        // Boot by sending a fibonnacci actor a message.
-        const cust = h_ptr_to_cap(h_ramptr(IO_DEV_OFS));
-        const n = h_fixnum(6);
-        // TODO h_reserve(t, x, y, z)
-        const tail = h_reserve();
-        h_write_quad(tail, {t: PAIR_T, x: n, y: NIL_RAW, z: UNDEF_RAW});
-        const msg = h_reserve();
-        h_write_quad(msg, {t: PAIR_T, x: cust, y: tail, z: UNDEF_RAW});
-        const a_fib = h_reserve();
-        h_write_quad(a_fib, {t: ACTOR_T, x: fib.boot, y: NIL_RAW, z: UNDEF_RAW});
-        const e_fib = h_reserve();
-        h_write_quad(e_fib, {
-            t: h_ramptr(SPONSOR_OFS),
-            x: h_ptr_to_cap(a_fib),
-            y: msg,
-            z: NIL_RAW
+function cap_dict(...device_offsets) {
+    return device_offsets.reduce(function (next, ofs) {
+        const dict = h_reserve();
+        h_write_quad(dict, {
+            t: DICT_T,
+            x: h_fixnum(ofs),
+            y: h_ptr_to_cap(h_ramptr(ofs)),
+            z: next
         });
-        // TODO event_inject
+        return dict;
+    }, NIL_RAW);
+}
+
+function boot() {
+    return h_import(
+        new URL("../lib/test.asm", window.location.href).href,
+        rom_alloc
+    ).then(function (test) {
+        if (test.boot === undefined) {
+            return Promise.reject("Module does not support booting.");
+        }
+        // Discard K_BOOT, hardcoded in core.rs.
         h_write_quad(h_ramptr(DDEQUE_OFS), {
-            t: e_fib,
-            x: e_fib,
+            t: NIL_RAW,
+            x: NIL_RAW,
             y: NIL_RAW,
             z: NIL_RAW
         });
+        // Make a boot actor, to be sent the boot message.
+        const actor = h_reserve();
+        h_write_quad(actor, {
+            t: ACTOR_T,
+            x: test.boot,
+            y: NIL_RAW,
+            z: UNDEF_RAW
+        });
+        // Inject the boot event (with a message holding the capabilities) to
+        // the front of the event queue.
+        h_event_inject(
+            h_ramptr(SPONSOR_OFS),
+            h_ptr_to_cap(actor),
+            cap_dict(BLOB_DEV_OFS, CLOCK_DEV_OFS, IO_DEV_OFS)
+        );
     });
 }
 
@@ -1249,6 +1257,7 @@ WebAssembly.instantiateStreaming(
     //debugger;
 
     h_step = exports.h_step;
+    h_event_inject = exports.h_event_inject;
     h_gc_run = exports.h_gc_run;
     h_rom_buffer = exports.h_rom_buffer;
     h_rom_top = exports.h_rom_top;
@@ -1271,7 +1280,7 @@ WebAssembly.instantiateStreaming(
     }
 
     test_suite();
-    return preboot();
+    return boot();
 }).then(function () {
     // draw initial state
     updateRomMonitor();
