@@ -686,7 +686,8 @@ pub const _ROM_TOP_OFS: usize = COUNT_OFS+8;
             QUAD_RAM_MAX
         ];
         quad_ram[MEMORY.ofs()]      = Quad::memory_t(Any::ram(BNK_INI, _RAM_TOP_OFS), NIL, ZERO, DDEQUE);
-        quad_ram[DDEQUE.ofs()]      = Quad::ddeque_t(NIL, NIL, K_BOOT, K_BOOT);
+        //quad_ram[DDEQUE.ofs()]      = Quad::ddeque_t(NIL, NIL, _K_BOOT, _K_BOOT);
+        quad_ram[DDEQUE.ofs()]      = Quad::ddeque_t(NIL, NIL, NIL, NIL);  // no events, no continuations
         quad_ram[BLOB_DEV.ofs()]    = Quad::actor_t(ZERO, NIL, UNDEF);  // blob device #0
         quad_ram[CLOCK_DEV.ofs()]   = Quad::actor_t(PLUS_1, NIL, UNDEF);  // clock device #1
         quad_ram[IO_DEV.ofs()]      = Quad::actor_t(PLUS_2, NIL, UNDEF);  // i/o device #2
@@ -708,7 +709,7 @@ pub const _BOOT_SP: Any     = Any { raw: MUT_RAW | BNK_INI | (BOOT_OFS+6) as Raw
         quad_ram[BOOT_OFS+8]        = Quad::pair_t(PLUS_3, NIL);
 pub const E_BOOT: Any       = Any { raw: MUT_RAW | BNK_INI | (BOOT_OFS+9) as Raw };
         quad_ram[BOOT_OFS+9]        = Quad::new_event(SPONSOR, A_BOOT, NIL);
-pub const K_BOOT: Any       = Any { raw: MUT_RAW | BNK_INI | (BOOT_OFS+10) as Raw };
+pub const _K_BOOT: Any       = Any { raw: MUT_RAW | BNK_INI | (BOOT_OFS+10) as Raw };
         //quad_ram[BOOT_OFS+10]       = Quad::new_cont(SINK_BEH, NIL, E_BOOT);
         //quad_ram[BOOT_OFS+10]       = Quad::new_cont(STOP, _BOOT_SP, E_BOOT);
         //quad_ram[BOOT_OFS+10]       = Quad::new_cont(_BOOT_BEH, _BOOT_SP, E_BOOT);
@@ -1584,17 +1585,17 @@ pub const _RAM_TOP_OFS: usize = BOOT_OFS + 11;
     pub fn memory(&self) -> Any { self.ptr_to_mem(MEMORY) }
     pub fn blob_top(&self) -> Any { Any::fix(BLOB_RAM_MAX as isize) }
 
-    pub fn new_event(&mut self, target: Any, msg: Any) -> Result<Any, Error> {
+    fn new_event(&mut self, target: Any, msg: Any) -> Result<Any, Error> {
         assert!(self.typeq(ACTOR_T, target));
         let sponsor = self.event_sponsor(self.ep());
         let event = Quad::new_event(sponsor, target, msg);
         self.alloc(&event)
     }
-    pub fn new_cont(&mut self, ip: Any, sp: Any, ep: Any) -> Result<Any, Error> {
+    fn new_cont(&mut self, ip: Any, sp: Any, ep: Any) -> Result<Any, Error> {
         let cont = Quad::new_cont(ip, sp, ep);
         self.reserve(&cont)  // no Sponsor needed
     }
-    pub fn new_actor(&mut self, beh: Any, state: Any) -> Result<Any, Error> {
+    fn new_actor(&mut self, beh: Any, state: Any) -> Result<Any, Error> {
         let actor = Quad::new_actor(beh, state);
         let ptr = self.alloc(&actor)?;
         Ok(self.ptr_to_cap(ptr))
@@ -2115,21 +2116,21 @@ mod tests {
         assert_eq!(ZERO, core.ram_free());
         assert_eq!(NIL, core.ram_next());
         assert_eq!(NIL, core.e_first());
-        assert_ne!(NIL, core.k_first());
-        assert_eq!(core.kp(), core.k_first());
+        assert_eq!(NIL, core.k_first());
+        assert_eq!(UNDEF, core.kp());
     }
 
     #[test]
     fn basic_memory_allocation() {
         let mut core = Core::new();
         let top_before = core.ram_top().ofs();
-        let m1 = core.alloc(&Quad::pair_t(PLUS_1, PLUS_1)).unwrap();
+        let m1 = core.reserve(&Quad::pair_t(PLUS_1, PLUS_1)).unwrap();
         assert!(m1.is_ptr());
-        let m2 = core.alloc(&Quad::pair_t(PLUS_2, PLUS_2)).unwrap();
-        let m3 = core.alloc(&Quad::pair_t(PLUS_3, PLUS_3)).unwrap();
+        let m2 = core.reserve(&Quad::pair_t(PLUS_2, PLUS_2)).unwrap();
+        let m3 = core.reserve(&Quad::pair_t(PLUS_3, PLUS_3)).unwrap();
         core.free(m2);
         core.free(m3);
-        let _m4 = core.alloc(&Quad::pair_t(PLUS_4, PLUS_4)).unwrap();
+        let _m4 = core.reserve(&Quad::pair_t(PLUS_4, PLUS_4)).unwrap();
         let top_after = core.ram_top().ofs();
         assert_eq!(3, top_after - top_before);
         assert_eq!(PLUS_1, core.ram_free());
@@ -2140,6 +2141,10 @@ mod tests {
         let mut core = Core::new();
         let _ep = core.ep();
         //core.set_sponsor_events(_ep, Any::fix(0));  // FIXME: forcing "out-of-events" error...
+        let boot_beh = core.reserve(&Quad::vm_end_commit()).unwrap();
+        let boot_ptr = core.reserve(&Quad::new_actor(boot_beh, NIL)).unwrap();
+        let a_boot = core.ptr_to_cap(boot_ptr);
+        core.event_inject(SPONSOR, a_boot, UNDEF).unwrap();
         let ok = core.run_loop();
         assert!(ok);
     }

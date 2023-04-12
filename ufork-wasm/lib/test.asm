@@ -10,13 +10,13 @@
 n:
     ref 6
 
-IO_DEV_OFS:
+IO_DEV_KEY:
     ref 4
 
-boot:                   ; caps
+boot:                   ; {caps}
     push n              ; n
-    msg 0               ; n caps
-    push IO_DEV_OFS     ; n caps IO_DEV_OFS
+    msg 0               ; n {caps}
+    push IO_DEV_KEY     ; n {caps} IO_DEV_KEY
     dict get            ; n IO_DEV
     pair 2              ; (IO_DEV n)
     push fib.beh        ; (IO_DEV n) beh

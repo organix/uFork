@@ -1205,13 +1205,6 @@ function boot() {
         if (test.boot === undefined) {
             return Promise.reject("Module does not support booting.");
         }
-        // Discard K_BOOT, hardcoded in core.rs.
-        h_write_quad(h_ramptr(DDEQUE_OFS), {
-            t: NIL_RAW,
-            x: NIL_RAW,
-            y: NIL_RAW,
-            z: NIL_RAW
-        });
         // Make a boot actor, to be sent the boot message.
         const actor = h_reserve();
         h_write_quad(actor, {
