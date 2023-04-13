@@ -1131,8 +1131,8 @@ const pauseAction = () => {
     drawHost();
 }
 
-const $bootForm = document.getElementById("ufork-boot");
-const $bootInput = document.getElementById("ufork-boot-url");
+const $bootForm = document.getElementById("boot-form");
+const $bootInput = document.getElementById("boot-url");
 $bootForm.onsubmit = function (event) {
     boot($bootInput.value);
     event.preventDefault();

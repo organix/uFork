@@ -19,11 +19,6 @@ pre {
 table {
   margin: 1ex;
 }
-#monitor {
-  display: flex;
-  align-items: center;
-  flex-direction: column;
-}
 .panel {
   margin: 1ex;
   width: 100ex;
@@ -34,6 +29,14 @@ table {
   font-family: monospace;
   white-space: pre;
   overflow: auto;
+}
+#loader {
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+  width: 100%;
+  margin: 1ex;
+  margin-top: 1em;
 }
 #rom {
   color: #3F0;
@@ -57,6 +60,11 @@ table {
   background: rgba(0, 102, 255, 0.2);
   outline: 1px solid #06F;
 }
+#monitor {
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+}
 #controls {
   display: flex;
   align-items: center;
@@ -71,6 +79,12 @@ table {
     This page contains webassembly and javascript content,
     please enable javascript in your browser.
   </noscript>
+  <div id="loader">
+    <form id="boot-form">
+      <input id="boot-url" type="text" size="42" value="../lib/test.asm" />
+      <input type="submit" value="Boot" />
+    </form>
+  </div>
   <pre id="rom" class="panel" title="ROM Image"></pre>
   <pre id="ram" class="panel" title="RAM Image"></pre>
   <pre id="blob" class="panel" title="BLOB Image"></pre>
@@ -82,10 +96,6 @@ table {
           <circle id="fault-led" cx="0" cy="0" r="5" fill="#FF3" stroke="#990"></circle>
         </g>
       </svg>
-      <form id="ufork-boot">
-        <input id="ufork-boot-url" type="text" value="../lib/test.asm" />
-        <input type="submit" value="Boot" />
-      </form>
       <button id="play-pause"></button>
       <input type="range" id="frame-rate" min="1" max="60" value="1">
       <button id="next-step">Next</button>
