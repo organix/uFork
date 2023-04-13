@@ -4,29 +4,29 @@ import OED from "./oed.js";
 import oed from "./oed_lite.js";
 import assemble from "./assemble.js";
 
-const $mem_max = document.getElementById("ufork-mem-max");
-const $mem_top = document.getElementById("ufork-mem-top");
-const $mem_next = document.getElementById("ufork-mem-next");
-const $mem_free = document.getElementById("ufork-mem-free");
-const $mem_root = document.getElementById("ufork-mem-root");
-const $mem_pages = document.getElementById("ufork-mem-pages");
-const $gc_phase = document.getElementById("ufork-gc-phase");
-const $sponsor_memory = document.getElementById("ufork-sponsor-memory");
-const $sponsor_events = document.getElementById("ufork-sponsor-events");
-const $sponsor_instrs = document.getElementById("ufork-sponsor-instrs");
-const $equeue = document.getElementById("ufork-equeue");
-const $kqueue = document.getElementById("ufork-kqueue");
+const $mem_max = document.getElementById("mem-max");
+const $mem_top = document.getElementById("mem-top");
+const $mem_next = document.getElementById("mem-next");
+const $mem_free = document.getElementById("mem-free");
+const $mem_root = document.getElementById("mem-root");
+const $mem_pages = document.getElementById("mem-pages");
+const $gc_phase = document.getElementById("gc-phase");
+const $sponsor_memory = document.getElementById("sponsor-memory");
+const $sponsor_events = document.getElementById("sponsor-events");
+const $sponsor_instrs = document.getElementById("sponsor-instrs");
+const $equeue = document.getElementById("equeue");
+const $kqueue = document.getElementById("kqueue");
 
-const $mem_rom = document.getElementById("ufork-rom");
-const $mem_ram = document.getElementById("ufork-ram");
-const $mem_blob = document.getElementById("ufork-blob");
-const $source_monitor = document.getElementById("ufork-source");
+const $mem_rom = document.getElementById("rom");
+const $mem_ram = document.getElementById("ram");
+const $mem_blob = document.getElementById("blob");
+const $source_monitor = document.getElementById("source");
 
-const $instr = document.getElementById("ufork-instr");
-const $stack = document.getElementById("ufork-stack");
-const $event = document.getElementById("ufork-event");
-const $self = document.getElementById("ufork-self");
-const $msg = document.getElementById("ufork-msg");
+const $instr = document.getElementById("instr");
+const $stack = document.getElementById("stack");
+const $event = document.getElementById("event");
+const $self = document.getElementById("self");
+const $msg = document.getElementById("msg");
 
 const $fault = document.getElementById("fault-led");
 
@@ -1061,7 +1061,48 @@ const logClick = event => {
 }
 //$mem_root.onclick = logClick;
 
-const $gcButton = document.getElementById("ufork-gc-btn");
+function cap_dict(device_offsets) {
+    return device_offsets.reduce(function (next, ofs) {
+        const dict = h_reserve();
+        h_write_quad(dict, {
+            t: DICT_T,
+            x: h_fixnum(ofs),
+            y: h_ptr_to_cap(h_ramptr(ofs)),
+            z: next
+        });
+        return dict;
+    }, NIL_RAW);
+}
+
+function boot(module_specifier) {
+    return h_import(
+        new URL(module_specifier, window.location.href).href,
+        rom_alloc
+    ).then(function (module) {
+        if (module.boot === undefined) {
+            return Promise.reject("Module does not support booting.");
+        }
+        // Make a boot actor, to be sent the boot message.
+        const actor = h_reserve();
+        h_write_quad(actor, {
+            t: ACTOR_T,
+            x: module.boot,
+            y: NIL_RAW,
+            z: UNDEF_RAW
+        });
+        // Inject the boot event (with a message holding the capabilities) to
+        // the front of the event queue.
+        h_event_inject(
+            h_ramptr(SPONSOR_OFS),
+            h_ptr_to_cap(actor),
+            cap_dict([BLOB_DEV_OFS, CLOCK_DEV_OFS, IO_DEV_OFS])
+        );
+        updateRomMonitor();
+        drawHost();
+    });
+}
+
+const $gcButton = document.getElementById("gc-btn");
 $gcButton.onclick = gcHost;
 
 const $nextButton = document.getElementById("next-step");
@@ -1089,6 +1130,13 @@ const pauseAction = () => {
     paused = true;
     drawHost();
 }
+
+const $bootForm = document.getElementById("ufork-boot");
+const $bootInput = document.getElementById("ufork-boot-url");
+$bootForm.onsubmit = function (event) {
+    boot($bootInput.value);
+    event.preventDefault();
+};
 
 // Keybindings
 document.onkeydown = function (event) {
@@ -1184,45 +1232,6 @@ function test_suite(exports) {
     console.log("OED seek:", dec_at11_encoded, dec_at11_enc_lite);
 }
 
-function cap_dict(...device_offsets) {
-    return device_offsets.reduce(function (next, ofs) {
-        const dict = h_reserve();
-        h_write_quad(dict, {
-            t: DICT_T,
-            x: h_fixnum(ofs),
-            y: h_ptr_to_cap(h_ramptr(ofs)),
-            z: next
-        });
-        return dict;
-    }, NIL_RAW);
-}
-
-function boot() {
-    return h_import(
-        new URL("../lib/test.asm", window.location.href).href,
-        rom_alloc
-    ).then(function (test) {
-        if (test.boot === undefined) {
-            return Promise.reject("Module does not support booting.");
-        }
-        // Make a boot actor, to be sent the boot message.
-        const actor = h_reserve();
-        h_write_quad(actor, {
-            t: ACTOR_T,
-            x: test.boot,
-            y: NIL_RAW,
-            z: UNDEF_RAW
-        });
-        // Inject the boot event (with a message holding the capabilities) to
-        // the front of the event queue.
-        h_event_inject(
-            h_ramptr(SPONSOR_OFS),
-            h_ptr_to_cap(actor),
-            cap_dict(BLOB_DEV_OFS, CLOCK_DEV_OFS, IO_DEV_OFS)
-        );
-    });
-}
-
 WebAssembly.instantiateStreaming(
     fetch("../target/wasm32-unknown-unknown/release/ufork_wasm.wasm"),
     {
@@ -1273,8 +1282,7 @@ WebAssembly.instantiateStreaming(
     }
 
     test_suite();
-    return boot();
-}).then(function () {
+
     // draw initial state
     updateRomMonitor();
     drawHost();

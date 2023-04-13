@@ -13,16 +13,13 @@ body {
   justify-content: center;
   background-color: #FFC;
 }
-button {
-  margin: 1ex;
-}
 pre {
   margin: 2px;
 }
 table {
   margin: 1ex;
 }
-#ufork-monitor {
+#monitor {
   display: flex;
   align-items: center;
   flex-direction: column;
@@ -38,27 +35,34 @@ table {
   white-space: pre;
   overflow: auto;
 }
-#ufork-rom {
+#rom {
   color: #3F0;
 }
-#ufork-ram {
+#ram {
   color: #3CF;
 }
-#ufork-blob {
+#blob {
   color: #FE3;
 }
-#ufork-source {
+#source {
   color: #F6F;
   text-decoration: none;
 }
-#ufork-source span {
+#source span {
   display: block;
   height: 1em;
   padding-bottom: 0.4ex;
 }
-#ufork-source span.highlighted {
+#source span.highlighted {
   background: rgba(0, 102, 255, 0.2);
   outline: 1px solid #06F;
+}
+#controls {
+  display: flex;
+  align-items: center;
+}
+#controls > * {
+  margin: 1ex;
 }
 </style>
 </head>
@@ -67,51 +71,55 @@ table {
     This page contains webassembly and javascript content,
     please enable javascript in your browser.
   </noscript>
-  <pre id="ufork-rom" class="panel" title="ROM Image"></pre>
-  <pre id="ufork-ram" class="panel" title="RAM Image"></pre>
-  <pre id="ufork-blob" class="panel" title="BLOB Image"></pre>
-  <a id="ufork-source" class="panel" title="Source code" target="_blank"></a>
-  <div id="ufork-monitor">
-    <div style="display: flex;">
+  <pre id="rom" class="panel" title="ROM Image"></pre>
+  <pre id="ram" class="panel" title="RAM Image"></pre>
+  <pre id="blob" class="panel" title="BLOB Image"></pre>
+  <a id="source" class="panel" title="Source code" target="_blank"></a>
+  <div id="monitor">
+    <div id="controls">
       <svg width="36" height="36" viewBox="-18 -18 36 36">
         <g stroke-width="1">
           <circle id="fault-led" cx="0" cy="0" r="5" fill="#FF3" stroke="#990"></circle>
         </g>
       </svg>
+      <form id="ufork-boot">
+        <input id="ufork-boot-url" type="text" value="../lib/test.asm" />
+        <input type="submit" value="Boot" />
+      </form>
       <button id="play-pause"></button>
       <input type="range" id="frame-rate" min="1" max="60" value="1">
       <button id="next-step">Next</button>
       <button id="single-step">Step</button>
-      <button id="ufork-gc-btn">GC</button>
+      <button id="gc-btn">GC</button>
     </div>
     <table border="1">
       <tr>
         <th>EQ</th>
-        <td><pre id="ufork-equeue"></pre></td>
+        <td><pre id="equeue"></pre></td>
       </tr>
       <tr>
         <th>KQ</th>
-        <td><pre id="ufork-kqueue"></pre></td>
+        <td><pre id="kqueue"></pre></td>
       </tr>
       <tr>
         <th>Event</th>
-        <td><pre id="ufork-event"></pre></td>
+        <td><pre id="event"></pre></td>
       </tr>
       <tr>
         <th>Self</th>
-        <td><pre id="ufork-self"></pre></td>
+        <td><pre id="self"></pre></td>
       </tr>
       <tr>
         <th>Msg</th>
-        <td><pre id="ufork-msg"></pre></td>
+        <td><pre id="msg"></pre></td>
       </tr>
       <tr style="vertical-align: top;">
         <th>IP</th>
-        <td><pre id="ufork-instr"></pre></td>
+        <td><pre id="instr"></pre></td>
       </tr>
       <tr style="vertical-align: top;">
         <th>SP</th>
-        <td><pre id="ufork-stack"></pre></td>
+        <td><pre id="stack"></pre></td>
       </tr>
     </table>
     <table border="1">
@@ -123,11 +131,11 @@ table {
         <th>Root</th>
       </tr>
       <tr>
-        <td><pre id="ufork-mem-max"></pre></td>
-        <td><pre id="ufork-mem-top"></pre></td>
-        <td><pre id="ufork-mem-next"></pre></td>
-        <td><pre id="ufork-mem-free"></pre></td>
-        <td><pre id="ufork-mem-root"></pre></td>
+        <td><pre id="mem-max"></pre></td>
+        <td><pre id="mem-top"></pre></td>
+        <td><pre id="mem-next"></pre></td>
+        <td><pre id="mem-free"></pre></td>
+        <td><pre id="mem-root"></pre></td>
       </tr>
     </table>
     <table border="1">
@@ -139,11 +147,11 @@ table {
         <th>Pages</th>
       </tr>
       <tr>
-        <td><pre id="ufork-gc-phase"></pre></td>
-        <td><pre id="ufork-sponsor-memory"></pre></td>
-        <td><pre id="ufork-sponsor-events"></pre></td>
-        <td><pre id="ufork-sponsor-instrs"></pre></td>
-        <td><pre id="ufork-mem-pages"></pre></td>
+        <td><pre id="gc-phase"></pre></td>
+        <td><pre id="sponsor-memory"></pre></td>
+        <td><pre id="sponsor-events"></pre></td>
+        <td><pre id="sponsor-instrs"></pre></td>
+        <td><pre id="mem-pages"></pre></td>
       </tr>
     </table>
   </div>
