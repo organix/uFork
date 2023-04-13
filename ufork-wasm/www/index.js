@@ -4,29 +4,29 @@ import OED from "./oed.js";
 import oed from "./oed_lite.js";
 import assemble from "./assemble.js";
 
-const $mem_max = document.getElementById("ufork-mem-max");
-const $mem_top = document.getElementById("ufork-mem-top");
-const $mem_next = document.getElementById("ufork-mem-next");
-const $mem_free = document.getElementById("ufork-mem-free");
-const $mem_root = document.getElementById("ufork-mem-root");
-const $mem_pages = document.getElementById("ufork-mem-pages");
-const $gc_phase = document.getElementById("ufork-gc-phase");
-const $sponsor_memory = document.getElementById("ufork-sponsor-memory");
-const $sponsor_events = document.getElementById("ufork-sponsor-events");
-const $sponsor_instrs = document.getElementById("ufork-sponsor-instrs");
-const $equeue = document.getElementById("ufork-equeue");
-const $kqueue = document.getElementById("ufork-kqueue");
+const $mem_max = document.getElementById("mem-max");
+const $mem_top = document.getElementById("mem-top");
+const $mem_next = document.getElementById("mem-next");
+const $mem_free = document.getElementById("mem-free");
+const $mem_root = document.getElementById("mem-root");
+const $mem_pages = document.getElementById("mem-pages");
+const $gc_phase = document.getElementById("gc-phase");
+const $sponsor_memory = document.getElementById("sponsor-memory");
+const $sponsor_events = document.getElementById("sponsor-events");
+const $sponsor_instrs = document.getElementById("sponsor-instrs");
+const $equeue = document.getElementById("equeue");
+const $kqueue = document.getElementById("kqueue");
 
-const $mem_rom = document.getElementById("ufork-rom");
-const $mem_ram = document.getElementById("ufork-ram");
-const $mem_blob = document.getElementById("ufork-blob");
-const $source_monitor = document.getElementById("ufork-source");
+const $mem_rom = document.getElementById("rom");
+const $mem_ram = document.getElementById("ram");
+const $mem_blob = document.getElementById("blob");
+const $source_monitor = document.getElementById("source");
 
-const $instr = document.getElementById("ufork-instr");
-const $stack = document.getElementById("ufork-stack");
-const $event = document.getElementById("ufork-event");
-const $self = document.getElementById("ufork-self");
-const $msg = document.getElementById("ufork-msg");
+const $instr = document.getElementById("instr");
+const $stack = document.getElementById("stack");
+const $event = document.getElementById("event");
+const $self = document.getElementById("self");
+const $msg = document.getElementById("msg");
 
 const $fault = document.getElementById("fault-led");
 
@@ -1061,7 +1061,7 @@ const logClick = event => {
 }
 //$mem_root.onclick = logClick;
 
-const $gcButton = document.getElementById("ufork-gc-btn");
+const $gcButton = document.getElementById("gc-btn");
 $gcButton.onclick = gcHost;
 
 const $nextButton = document.getElementById("next-step");
