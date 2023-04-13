@@ -68,92 +68,7 @@ impl Core {
         quad_rom[GC_FWD_T.ofs()]    = Quad::type_t();
         quad_rom[FREE_T.ofs()]      = Quad::type_t();
 
-pub const SINK_BEH: Any     = Any { raw: 16 };  // alias for no-op behavior
-pub const COMMIT: Any       = Any { raw: 16 };
-        quad_rom[COMMIT.ofs()]      = Quad::vm_end_commit();
-pub const SEND_0: Any       = Any { raw: 17 };
-        quad_rom[SEND_0.ofs()]      = Quad::vm_send(ZERO, COMMIT);
-pub const CUST_SEND: Any    = Any { raw: 18 };
-        quad_rom[CUST_SEND.ofs()]   = Quad::vm_msg(PLUS_1, SEND_0);
-pub const RV_SELF: Any      = Any { raw: 19 };
-        quad_rom[RV_SELF.ofs()]     = Quad::vm_my_self(CUST_SEND);
-pub const RV_UNDEF: Any     = Any { raw: 20 };
-        quad_rom[RV_UNDEF.ofs()]    = Quad::vm_push(UNDEF, CUST_SEND);
-pub const RV_NIL: Any       = Any { raw: 21 };
-        quad_rom[RV_NIL.ofs()]      = Quad::vm_push(NIL, CUST_SEND);
-pub const RV_FALSE: Any     = Any { raw: 22 };
-        quad_rom[RV_FALSE.ofs()]    = Quad::vm_push(FALSE, CUST_SEND);
-pub const RV_TRUE: Any      = Any { raw: 23 };
-        quad_rom[RV_TRUE.ofs()]     = Quad::vm_push(TRUE, CUST_SEND);
-pub const RV_UNIT: Any      = Any { raw: 24 };
-        quad_rom[RV_UNIT.ofs()]     = Quad::vm_push(UNIT, CUST_SEND);
-pub const RV_ZERO: Any      = Any { raw: 25 };
-        quad_rom[RV_ZERO.ofs()]     = Quad::vm_push(ZERO, CUST_SEND);
-pub const RV_ONE: Any       = Any { raw: 26 };
-        quad_rom[RV_ONE.ofs()]      = Quad::vm_push(PLUS_1, CUST_SEND);
-pub const RESEND: Any       = Any { raw: 27 };
-        quad_rom[RESEND.ofs()+0]    = Quad::vm_msg(ZERO, Any::rom(RESEND.ofs()+1));
-        quad_rom[RESEND.ofs()+1]    = Quad::vm_my_self(SEND_0);
-pub const RELEASE: Any      = Any { raw: 29 };
-        quad_rom[RELEASE.ofs()]     = Quad::vm_end_release();
-pub const RELEASE_0: Any    = Any { raw: 30 };
-        quad_rom[RELEASE_0.ofs()]   = Quad::vm_send(ZERO, RELEASE);
-pub const STOP: Any         = Any { raw: 31 };
-        quad_rom[STOP.ofs()]        = Quad::vm_end_stop();
-pub const ABORT: Any        = Any { raw: 32 };
-        quad_rom[ABORT.ofs()+0]     = Quad::vm_push(UNDEF, Any::rom(ABORT.ofs()+1));  // reason=#?
-        quad_rom[ABORT.ofs()+1]     = Quad::vm_end_abort();
-
-pub const IS_EQ_OFS: usize = 34;
-pub const _IS_EQ_BEH: Any    = Any { raw: IS_EQ_OFS as Raw };
-        /*
-        (define is-eq-beh
-            (lambda (expect)
-                (BEH actual
-                    (assert-eq expect actual) )))
-        */
-        // stack: expect
-        quad_rom[IS_EQ_OFS+0]       = Quad::vm_dup(PLUS_1, Any::rom(IS_EQ_OFS+1));  // expect expect
-        quad_rom[IS_EQ_OFS+1]       = Quad::vm_msg(ZERO, Any::rom(IS_EQ_OFS+2));  // expect expect actual
-        quad_rom[IS_EQ_OFS+2]       = Quad::vm_cmp_eq(Any::rom(IS_EQ_OFS+3));  // expect (expect == actual)
-        quad_rom[IS_EQ_OFS+3]       = Quad::vm_is_eq(TRUE, COMMIT);  // expect
-
-        /* device test suite */
-pub const T_DEV_OFS: usize = IS_EQ_OFS+4;
-pub const _T_DEV_BEH: Any  = Any { raw: T_DEV_OFS as Raw };
-        quad_rom[T_DEV_OFS+0]       = Quad::vm_push(Any::fix(13), Any::rom(T_DEV_OFS+1));  // 13
-        quad_rom[T_DEV_OFS+1]       = Quad::vm_push(IO_DEV, Any::rom(T_DEV_OFS+2));  // 13 io_device
-        quad_rom[T_DEV_OFS+2]       = Quad::vm_push(BLOB_DEV, Any::rom(T_DEV_OFS+3));  // 13 io_device blob_device
-        quad_rom[T_DEV_OFS+3]       = Quad::vm_send(PLUS_2, Any::rom(T_DEV_OFS+4));  // --
-        quad_rom[T_DEV_OFS+4]       = Quad::vm_push(Any::fix(3), Any::rom(T_DEV_OFS+5));  // 3
-        quad_rom[T_DEV_OFS+5]       = Quad::vm_push(IO_DEV, Any::rom(T_DEV_OFS+6));  // 3 io_device
-        quad_rom[T_DEV_OFS+6]       = Quad::vm_push(BLOB_DEV, Any::rom(T_DEV_OFS+7));  // 3 io_device blob_device
-        quad_rom[T_DEV_OFS+7]       = Quad::vm_send(PLUS_2, Any::rom(T_DEV_OFS+8));  // --
-        quad_rom[T_DEV_OFS+8]       = Quad::vm_drop(ZERO, Any::rom(T_DEV_OFS+12));  // --
-
-        quad_rom[T_DEV_OFS+9]       = Quad::vm_push(IO_DEV, Any::rom(T_DEV_OFS+10));  // io_device
-        quad_rom[T_DEV_OFS+10]      = Quad::vm_push(CLOCK_DEV, Any::rom(T_DEV_OFS+11));  // io_device clock_device
-        quad_rom[T_DEV_OFS+11]      = Quad::vm_send(ZERO, Any::rom(T_DEV_OFS+12));  // --
-        //quad_rom[T_DEV_OFS+11]      = Quad::vm_send(ZERO, COMMIT);  // --
-
-        quad_rom[T_DEV_OFS+12]      = Quad::vm_push(PLUS_5, Any::rom(T_DEV_OFS+13));  // 5
-        quad_rom[T_DEV_OFS+13]      = Quad::vm_push(_COUNT_BEH, Any::rom(T_DEV_OFS+14));  // 5 count-beh
-        quad_rom[T_DEV_OFS+14]      = Quad::vm_new(ZERO, Any::rom(T_DEV_OFS+15));  // 5 a-count
-        quad_rom[T_DEV_OFS+15]      = Quad::vm_send(ZERO, COMMIT);  // --
-
-pub const COUNT_OFS: usize = T_DEV_OFS+16;
-pub const _COUNT_BEH: Any  = Any { raw: COUNT_OFS as Raw };
-        quad_rom[COUNT_OFS+0]       = Quad::vm_msg(ZERO, Any::rom(COUNT_OFS+1));  // n
-        quad_rom[COUNT_OFS+1]       = Quad::vm_dup(PLUS_1, Any::rom(COUNT_OFS+2));  // n n
-        quad_rom[COUNT_OFS+2]       = Quad::vm_eq(ZERO, Any::rom(COUNT_OFS+3));  // n n==0
-        quad_rom[COUNT_OFS+3]       = Quad::vm_if(ABORT, Any::rom(COUNT_OFS+4));  // n
-
-        quad_rom[COUNT_OFS+4]       = Quad::vm_push(PLUS_1, Any::rom(COUNT_OFS+5));  // n 1
-        quad_rom[COUNT_OFS+5]       = Quad::vm_alu_sub(Any::rom(COUNT_OFS+6));  // n-1
-        quad_rom[COUNT_OFS+6]       = Quad::vm_my_self(Any::rom(COUNT_OFS+7));  // n-1 self
-        quad_rom[COUNT_OFS+7]       = Quad::vm_send(ZERO, COMMIT);  // --
-
-pub const _ROM_TOP_OFS: usize = COUNT_OFS+8;
+pub const ROM_TOP_OFS: usize = ROM_BASE_OFS;
 
         /*
          * Random-Access Memory (RAM) image (read/write + GC)
@@ -162,38 +77,15 @@ pub const _ROM_TOP_OFS: usize = COUNT_OFS+8;
             Quad::empty_t();
             QUAD_RAM_MAX
         ];
-        quad_ram[MEMORY.ofs()]      = Quad::memory_t(Any::ram(BNK_INI, _RAM_TOP_OFS), NIL, ZERO, DDEQUE);
+        quad_ram[MEMORY.ofs()]      = Quad::memory_t(Any::ram(BNK_INI, RAM_TOP_OFS), NIL, ZERO, DDEQUE);
         //quad_ram[DDEQUE.ofs()]      = Quad::ddeque_t(NIL, NIL, _K_BOOT, _K_BOOT);
         quad_ram[DDEQUE.ofs()]      = Quad::ddeque_t(NIL, NIL, NIL, NIL);  // no events, no continuations
         quad_ram[BLOB_DEV.ofs()]    = Quad::actor_t(ZERO, NIL, UNDEF);  // blob device #0
         quad_ram[CLOCK_DEV.ofs()]   = Quad::actor_t(PLUS_1, NIL, UNDEF);  // clock device #1
         quad_ram[IO_DEV.ofs()]      = Quad::actor_t(PLUS_2, NIL, UNDEF);  // i/o device #2
         quad_ram[SPONSOR.ofs()]     = Quad::sponsor_t(Any::fix(512), Any::fix(64), Any::fix(512));  // root configuration sponsor
-pub const BOOT_OFS: usize = RAM_BASE_OFS;
-pub const A_BOOT: Any       = Any { raw: OPQ_RAW | MUT_RAW | BNK_INI | (BOOT_OFS+0) as Raw };
-        quad_ram[BOOT_OFS+0]        = Quad::new_actor(SINK_BEH, NIL);
-pub const _BOOT_BEH: Any     = Any { raw: MUT_RAW | BNK_INI | (BOOT_OFS+1) as Raw };
-        quad_ram[BOOT_OFS+1]        = Quad::vm_push(UNIT, Any::ram(BNK_INI, BOOT_OFS+2));  // #unit
-        quad_ram[BOOT_OFS+2]        = Quad::vm_my_self(Any::ram(BNK_INI, BOOT_OFS+3));  // #unit SELF
-        quad_ram[BOOT_OFS+3]        = Quad::vm_push(RESEND, Any::ram(BNK_INI, BOOT_OFS+4));  // #unit SELF resend
-        //quad_ram[BOOT_OFS+3]        = Quad::vm_push(_T_DEQUE_BEH, Any::ram(BNK_INI, BOOT_OFS+4));  // #unit SELF test-deque-beh
-        //quad_ram[BOOT_OFS+3]        = Quad::vm_push(_T_DICT_BEH, Any::ram(BNK_INI, BOOT_OFS+4));  // #unit SELF test-dict-beh
-        quad_ram[BOOT_OFS+4]        = Quad::vm_new(ZERO, Any::ram(BNK_INI, BOOT_OFS+5));  // #unit SELF actor
-        quad_ram[BOOT_OFS+5]        = Quad::vm_send(PLUS_2, COMMIT);  // --
-pub const _BOOT_SP: Any     = Any { raw: MUT_RAW | BNK_INI | (BOOT_OFS+6) as Raw };
-        quad_ram[BOOT_OFS+6]        = Quad::pair_t(PLUS_1, Any::ram(BNK_INI, BOOT_OFS+7));
-        quad_ram[BOOT_OFS+7]        = Quad::pair_t(PLUS_2, Any::ram(BNK_INI, BOOT_OFS+8));
-        quad_ram[BOOT_OFS+8]        = Quad::pair_t(PLUS_3, NIL);
-pub const E_BOOT: Any       = Any { raw: MUT_RAW | BNK_INI | (BOOT_OFS+9) as Raw };
-        quad_ram[BOOT_OFS+9]        = Quad::new_event(SPONSOR, A_BOOT, NIL);
-pub const _K_BOOT: Any       = Any { raw: MUT_RAW | BNK_INI | (BOOT_OFS+10) as Raw };
-        //quad_ram[BOOT_OFS+10]       = Quad::new_cont(SINK_BEH, NIL, E_BOOT);
-        //quad_ram[BOOT_OFS+10]       = Quad::new_cont(STOP, _BOOT_SP, E_BOOT);
-        //quad_ram[BOOT_OFS+10]       = Quad::new_cont(_BOOT_BEH, _BOOT_SP, E_BOOT);
-        //quad_ram[BOOT_OFS+10]       = Quad::new_cont(_TEST_BEH, NIL, E_BOOT);
-        quad_ram[BOOT_OFS+10]       = Quad::new_cont(_T_DEV_BEH, NIL, E_BOOT);
 
-pub const _RAM_TOP_OFS: usize = BOOT_OFS + 11;
+pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
 
         /*
          * OED-encoded Blob Memory (64kB maximum)
@@ -234,7 +126,7 @@ pub const _RAM_TOP_OFS: usize = BOOT_OFS + 11;
                 Some(Box::new(ClockDevice::new())),
                 Some(Box::new(IoDevice::new())),
             ],
-            rom_top: Any::rom(_ROM_TOP_OFS),
+            rom_top: Any::rom(ROM_TOP_OFS),
         }
     }
 
