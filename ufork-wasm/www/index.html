@@ -13,9 +13,6 @@ body {
   justify-content: center;
   background-color: #FFC;
 }
-button {
-  margin: 1ex;
-}
 pre {
   margin: 2px;
 }
@@ -60,6 +57,13 @@ table {
   background: rgba(0, 102, 255, 0.2);
   outline: 1px solid #06F;
 }
+#controls {
+  display: flex;
+  align-items: center;
+}
+#controls > * {
+  margin: 1ex;
+}
 </style>
 </head>
 <body>
@@ -72,12 +76,16 @@ table {
   <pre id="blob" class="panel" title="BLOB Image"></pre>
   <a id="source" class="panel" title="Source code" target="_blank"></a>
   <div id="monitor">
-    <div style="display: flex;">
+    <div id="controls">
       <svg width="36" height="36" viewBox="-18 -18 36 36">
         <g stroke-width="1">
           <circle id="fault-led" cx="0" cy="0" r="5" fill="#FF3" stroke="#990"></circle>
         </g>
       </svg>
+      <form id="ufork-boot">
+        <input id="ufork-boot-url" type="text" value="../lib/test.asm" />
+        <input type="submit" value="Boot" />
+      </form>
       <button id="play-pause"></button>
       <input type="range" id="frame-rate" min="1" max="60" value="1">
       <button id="next-step">Next</button>

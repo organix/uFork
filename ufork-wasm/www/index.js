@@ -1061,6 +1061,47 @@ const logClick = event => {
 }
 //$mem_root.onclick = logClick;
 
+function cap_dict(device_offsets) {
+    return device_offsets.reduce(function (next, ofs) {
+        const dict = h_reserve();
+        h_write_quad(dict, {
+            t: DICT_T,
+            x: h_fixnum(ofs),
+            y: h_ptr_to_cap(h_ramptr(ofs)),
+            z: next
+        });
+        return dict;
+    }, NIL_RAW);
+}
+
+function boot(module_specifier) {
+    return h_import(
+        new URL(module_specifier, window.location.href).href,
+        rom_alloc
+    ).then(function (module) {
+        if (module.boot === undefined) {
+            return Promise.reject("Module does not support booting.");
+        }
+        // Make a boot actor, to be sent the boot message.
+        const actor = h_reserve();
+        h_write_quad(actor, {
+            t: ACTOR_T,
+            x: module.boot,
+            y: NIL_RAW,
+            z: UNDEF_RAW
+        });
+        // Inject the boot event (with a message holding the capabilities) to
+        // the front of the event queue.
+        h_event_inject(
+            h_ramptr(SPONSOR_OFS),
+            h_ptr_to_cap(actor),
+            cap_dict([BLOB_DEV_OFS, CLOCK_DEV_OFS, IO_DEV_OFS])
+        );
+        updateRomMonitor();
+        drawHost();
+    });
+}
+
 const $gcButton = document.getElementById("gc-btn");
 $gcButton.onclick = gcHost;
 
@@ -1089,6 +1130,13 @@ const pauseAction = () => {
     paused = true;
     drawHost();
 }
+
+const $bootForm = document.getElementById("ufork-boot");
+const $bootInput = document.getElementById("ufork-boot-url");
+$bootForm.onsubmit = function (event) {
+    boot($bootInput.value);
+    event.preventDefault();
+};
 
 // Keybindings
 document.onkeydown = function (event) {
@@ -1184,45 +1232,6 @@ function test_suite(exports) {
     console.log("OED seek:", dec_at11_encoded, dec_at11_enc_lite);
 }
 
-function cap_dict(...device_offsets) {
-    return device_offsets.reduce(function (next, ofs) {
-        const dict = h_reserve();
-        h_write_quad(dict, {
-            t: DICT_T,
-            x: h_fixnum(ofs),
-            y: h_ptr_to_cap(h_ramptr(ofs)),
-            z: next
-        });
-        return dict;
-    }, NIL_RAW);
-}
-
-function boot() {
-    return h_import(
-        new URL("../lib/test.asm", window.location.href).href,
-        rom_alloc
-    ).then(function (test) {
-        if (test.boot === undefined) {
-            return Promise.reject("Module does not support booting.");
-        }
-        // Make a boot actor, to be sent the boot message.
-        const actor = h_reserve();
-        h_write_quad(actor, {
-            t: ACTOR_T,
-            x: test.boot,
-            y: NIL_RAW,
-            z: UNDEF_RAW
-        });
-        // Inject the boot event (with a message holding the capabilities) to
-        // the front of the event queue.
-        h_event_inject(
-            h_ramptr(SPONSOR_OFS),
-            h_ptr_to_cap(actor),
-            cap_dict(BLOB_DEV_OFS, CLOCK_DEV_OFS, IO_DEV_OFS)
-        );
-    });
-}
-
 WebAssembly.instantiateStreaming(
     fetch("../target/wasm32-unknown-unknown/release/ufork_wasm.wasm"),
     {
@@ -1273,8 +1282,7 @@ WebAssembly.instantiateStreaming(
     }
 
     test_suite();
-    return boot();
-}).then(function () {
+
     // draw initial state
     updateRomMonitor();
     drawHost();
