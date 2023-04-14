@@ -1321,7 +1321,7 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
         self.gc_store(ptr, quad);
         Ok(ptr)
     }
-   fn gc_load(&self, ptr: Any) -> Quad {  // load quad directly
+    fn gc_load(&self, ptr: Any) -> Quad {  // load quad directly
         match ptr.bank() {
             Some(bank) => {
                 let ofs = ptr.ofs();
