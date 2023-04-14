@@ -1104,6 +1104,7 @@ function boot(module_specifier) {
 
 const $gcButton = document.getElementById("gc-btn");
 $gcButton.onclick = gcHost;
+$gcButton.title = "Run garbage collection (g)";
 
 const $nextButton = document.getElementById("next-step");
 $nextButton.onclick = nextStep;
@@ -1131,15 +1132,25 @@ const pauseAction = () => {
     drawHost();
 }
 
-const $bootForm = document.getElementById("boot-form");
 const $bootInput = document.getElementById("boot-url");
+const $bootForm = document.getElementById("boot-form");
 $bootForm.onsubmit = function (event) {
     boot($bootInput.value);
     event.preventDefault();
 };
+const $bootButton = document.getElementById("boot");
+$bootButton.title = "Boot from module (b)";
 
 // Keybindings
 document.onkeydown = function (event) {
+    if (
+        event.metaKey
+        || event.ctrlKey
+        || event.altKey
+        || document.activeElement !== document.body // focused <input> etc
+    ) {
+        return;
+    }
     if (event.key === "c") {
         if (paused) {
             playAction();
@@ -1150,6 +1161,10 @@ document.onkeydown = function (event) {
         singleStep();
     } else if (event.key === "n" && !$nextButton.disabled) {
         nextStep();
+    } else if (event.key === "b") {
+        boot($bootInput.value);
+    } else if (event.key === "g") {
+        gcHost();
     }
 };
 
