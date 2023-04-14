@@ -65,7 +65,7 @@ impl Core {
         quad_rom[INSTR_T.ofs()]     = Quad::type_t();
         quad_rom[PAIR_T.ofs()]      = Quad::type_t();
         quad_rom[DICT_T.ofs()]      = Quad::type_t();
-        quad_rom[GC_FWD_T.ofs()]    = Quad::type_t();
+        quad_rom[FWD_REF_T.ofs()]    = Quad::type_t();
         quad_rom[FREE_T.ofs()]      = Quad::type_t();
 
 pub const ROM_TOP_OFS: usize = ROM_BASE_OFS;
@@ -351,7 +351,7 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
                 kip
             },
             VM_PUSH => {
-                let val = self.follow_fwd(imm);  // FIXME: may be redundant with low-level memory redirection
+                let val = self.follow_fwd(imm)?;  // eagerly dereference any "promise"
                 self.stack_push(val)?;
                 kip
             },
@@ -1172,18 +1172,6 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
     pub fn in_heap(&self, val: Any) -> bool {
         val.is_ram() && (val.ofs() < self.ram_top().ofs())
     }
-    fn follow_fwd(&self, val: Any) -> Any {
-        let raw = val.raw();
-        if (raw & (DIR_RAW | MUT_RAW)) == MUT_RAW {  // any RAM reference
-            let ptr = Any::new(raw & !OPQ_RAW);  // WARNING: may convert Cap to Ptr!
-            let quad = self.ram(ptr);
-            if quad.t() == GC_FWD_T {
-                let fwd = quad.z();
-                return fwd;
-            }
-        }
-        val
-    }
     fn ptr_to_mem(&self, ptr: Any) -> Any {  // convert ptr/cap to current gc_phase
         let bank = ptr.bank();
         if bank.is_none() {
@@ -1241,16 +1229,16 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
             next
         } else {
             // expand top-of-memory
-            let next = self.ram_top();
-            let top = next.ofs();
-            if top >= QUAD_RAM_MAX {
+            let top = self.ram_top();
+            let ofs = top.ofs() + 1;
+            if ofs > QUAD_RAM_MAX {
                 //panic!("out of memory!");
                 return Err(E_NO_MEM);  // no memory available
             }
-            self.set_ram_top(Any::ram(self.gc_phase(), top + 1));
-            next
+            self.set_ram_top(Any::ram(self.gc_phase(), ofs));
+            top
         };
-        *self.ram_mut(ptr) = *init;  // copy initial value
+        self.gc_store(ptr, *init);  // copy initial value
         Ok(ptr)
     }
     pub fn free(&mut self, ptr: Any) {
@@ -1287,50 +1275,53 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
         let mut scan = ddeque;
         while scan.ofs() < RAM_BASE_OFS {  // mark reserved RAM
             let raw = scan.raw();
-            if self.gc_load(scan).t() == ACTOR_T {
+            let t = self.gc_load(scan).t();
+            if (t == ACTOR_T) || (t == PROXY_T) || (t == STUB_T) {
                 scan = Any::new(raw | OPQ_RAW);  // inferred capability
             }
-            self.gc_mark(scan);
+            self.gc_mark(scan).unwrap();  // FIXME: report error?
             scan = Any::new(raw + 1);
         }
-        let root = self.gc_mark(root);
+        let root = self.gc_mark(root).unwrap();  // FIXME: report error?
         self.set_ram_root(root);
         scan = self.ddeque();
         while scan != self.ram_top() {  // scan marked quads
-            self.gc_scan(scan);
+            self.gc_scan(scan).unwrap();  // FIXME: report error?
             scan = Any::new(scan.raw() + 1);
         }
     }
-    fn gc_mark(&mut self, val: Any) -> Any {
+    fn gc_mark(&mut self, val: Any) -> Result<Any, Error> {
         if let Some(bank) = val.bank() {
             if bank != self.gc_phase() {
                 let quad = self.gc_load(val);
-                if quad.t() == GC_FWD_T {  // follow "broken heart"
-                    return quad.z();
+                if quad.is_fwd_ref() {
+                    return Ok(quad.z());  // follow "broken heart"
                 }
                 // copy quad to new-space
-                let mut dup = self.reserve(&quad).unwrap();  // FIXME: handle Error result...
+                let mut dup = self.reserve(&quad)?;
                 if val.is_cap() {
                     dup = self.ptr_to_cap(dup);  // restore CAP marker
                 };
-                //println!("gc_mark: {} ${:08x} --> {} ${:08x}", val, val.raw(), dup, dup.raw());
-                self.gc_store(val, Quad::gc_fwd_t(dup));  // leave "broken heart" behind
-                return dup;
+                //println!("gc_mark: ${:08x} --> ${:08x}", val.raw(), dup.raw());
+                assert_ne!(val.raw(), dup.raw());
+                self.gc_store(val, Quad::fwd_ref_t(dup));  // leave "broken heart" behind
+                return Ok(dup);
             }
         }
-        val
+        Ok(val)
     }
-    fn gc_scan(&mut self, ptr: Any) {
+    fn gc_scan(&mut self, ptr: Any) -> Result<Any, Error> {
         assert_eq!(Some(self.gc_phase()), ptr.bank());
         let quad = self.gc_load(ptr);
-        let t = self.gc_mark(quad.t());
-        let x = self.gc_mark(quad.x());
-        let y = self.gc_mark(quad.y());
-        let z = self.gc_mark(quad.z());
+        let t = self.gc_mark(quad.t())?;
+        let x = self.gc_mark(quad.x())?;
+        let y = self.gc_mark(quad.y())?;
+        let z = self.gc_mark(quad.z())?;
         let quad = Quad::new(t, x, y, z);
         self.gc_store(ptr, quad);
+        Ok(ptr)
     }
-    fn gc_load(&self, ptr: Any) -> Quad {  // load quad directly
+   fn gc_load(&self, ptr: Any) -> Quad {  // load quad directly
         match ptr.bank() {
             Some(bank) => {
                 let ofs = ptr.ofs();
@@ -1365,6 +1356,42 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
         }
     }
 
+    fn follow_fwd(&self, val: Any) -> Result<Any, Error> {
+        let mut fwd = val;
+        if !fwd.is_fix() {
+            let mut hop = 0;
+            let mut quad = self.quad(fwd);
+            while quad.is_fwd_ref() {
+                fwd = quad.z();
+                if fwd == UNDEF {  // unresolved "promise"
+                    return Err(E_NOT_PTR);
+                }
+                hop += 1;
+                if hop > 3 {
+                    return Err(E_BOUNDS);
+                }
+                if !fwd.is_fix() {
+                    quad = self.quad(fwd);
+                }
+            }
+        }
+        Ok(fwd)
+    }
+    fn quad(&self, ptr: Any) -> &Quad {  // non-forwarding quad access
+        if ptr.is_rom() {
+            let ofs = ptr.ofs();
+            &self.quad_rom[ofs]
+        } else if let Some(bank) = ptr.bank() {
+            let ofs = ptr.ofs();
+            if bank == BNK_0 {
+                &self.quad_ram0[ofs]
+            } else {
+                &self.quad_ram1[ofs]
+            }
+        } else {
+            panic!("invalid ptr=${:08x}", ptr.raw());
+        }
+    }
     pub fn mem(&self, ptr: Any) -> &Quad {
         if !ptr.is_ptr() {
             panic!("invalid ptr=${:08x}", ptr.raw());
@@ -1379,37 +1406,40 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
         if !ptr.is_rom() {
             panic!("invalid ROM ptr=${:08x}", ptr.raw());
         }
-        let ofs = ptr.ofs();
+        let fwd = self.follow_fwd(ptr).unwrap();  // FIXME: report error?
+        let ofs = fwd.ofs();
         &self.quad_rom[ofs]
     }
     pub fn ram(&self, ptr: Any) -> &Quad {
         if ptr.is_cap() {
             panic!("opaque ptr=${:08x}", ptr.raw());
         }
-        if let Some(bank) = ptr.bank() {
-            let ofs = ptr.ofs();
+        let fwd = self.follow_fwd(ptr).unwrap();  // FIXME: report error?
+        if let Some(bank) = fwd.bank() {
+            let ofs = fwd.ofs();
             if bank == BNK_0 {
                 &self.quad_ram0[ofs]
             } else {
                 &self.quad_ram1[ofs]
             }
         } else {
-            panic!("invalid RAM ptr=${:08x}", ptr.raw());
+            panic!("invalid RAM ptr=${:08x}", fwd.raw());
         }
     }
     pub fn ram_mut(&mut self, ptr: Any) -> &mut Quad {
         if ptr.is_cap() {
             panic!("opaque ptr=${:08x}", ptr.raw());
         }
-        if let Some(bank) = ptr.bank() {
-            let ofs = ptr.ofs();
+        let fwd = self.follow_fwd(ptr).unwrap();  // FIXME: report error?
+        if let Some(bank) = fwd.bank() {
+            let ofs = fwd.ofs();
             if bank == BNK_0 {
                 &mut self.quad_ram0[ofs]
             } else {
                 &mut self.quad_ram1[ofs]
             }
         } else {
-            panic!("invalid RAM ptr=${:08x}", ptr.raw());
+            panic!("invalid RAM ptr=${:08x}", fwd.raw());
         }
     }
 

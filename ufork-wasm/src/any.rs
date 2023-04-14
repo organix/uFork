@@ -33,7 +33,7 @@ pub const STUB_T: Any       = Any { raw: 10 };
 pub const INSTR_T: Any      = Any { raw: 11 };
 pub const PAIR_T: Any       = Any { raw: 12 };
 pub const DICT_T: Any       = Any { raw: 13 };
-pub const GC_FWD_T: Any     = Any { raw: 14 };
+pub const FWD_REF_T: Any    = Any { raw: 14 };
 pub const FREE_T: Any       = Any { raw: 15 };  // MUST BE (ROM_BASE_OFS - 1)
 
 // INSTR_T values

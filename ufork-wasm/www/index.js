@@ -60,7 +60,7 @@ const STUB_T    = 0x0000_000A;
 const INSTR_T   = 0x0000_000B;
 const PAIR_T    = 0x0000_000C;
 const DICT_T    = 0x0000_000D;
-const GC_FWD_T  = 0x0000_000E;
+const FWD_REF_T = 0x0000_000E;
 const FREE_T    = 0x0000_000F;
 // instr constants
 const VM_TYPEQ  = 0x8000_0000;
@@ -261,7 +261,7 @@ const rom_label = [
     "INSTR_T",
     "PAIR_T",
     "DICT_T",
-    "GC_FWD_T",
+    "FWD_REF_T",
     "FREE_T"
 ];
 function h_print(raw) {

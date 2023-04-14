@@ -94,8 +94,8 @@ impl Quad {
         assert!(instrs.is_fix());
         Self::new(memory, events, instrs, UNDEF)
     }
-    pub fn gc_fwd_t(to: Any) -> Quad {
-        Self::new(GC_FWD_T, UNDEF, UNDEF, to)
+    pub fn fwd_ref_t(to: Any) -> Quad {
+        Self::new(FWD_REF_T, UNDEF, UNDEF, to)
     }
     pub fn untyped_t(t: Any, x: Any, y: Any, z: Any) -> Quad {  // pass-thru for Quad::new()
         Self::new(t, x, y, z)
@@ -366,5 +366,10 @@ impl Quad {
     pub fn new_actor(beh: Any, state: Any) -> Quad {
         assert!(beh.is_ptr());
         Self::actor_t(beh, state, UNDEF)
+    }
+
+    // check for Forward Reference
+    pub fn is_fwd_ref(&self) -> bool {
+        (self.t() == FWD_REF_T) && (self.x() == UNDEF) && (self.y() == UNDEF) && !self.z().is_fix()
     }
 }
