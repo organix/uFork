@@ -887,4 +887,184 @@ function assemble(source, file) {
     }
 }
 
+// function good(description, source) {
+//     const result = assemble(source);
+//     if (result.kind === "error") {
+//         console.log("FAIL", description, result);
+//     }
+// }
+
+// function bad(description, source) {
+//     const result = assemble(source);
+//     if (result.kind !== "error") {
+//         console.log("FAIL", description, source);
+//     }
+// }
+
+// good("fib", `
+// ; A fibonnacci service behavior.
+// .import
+//     std: "./std.asm"
+// beh:                    ; (cust n)
+//     msg 2               ; n
+//     dup 1               ; n n
+//     push 2              ; n n 2
+//     cmp lt              ; n n<2
+//     if std.cust_send    ; n
+//     msg 1               ; n cust
+//     push k              ; n cust k
+//     new 1               ; n k=(k cust)
+//     pick 2              ; n k n
+//     push 1              ; n k n 1
+//     alu sub             ; n k n-1
+//     pick 2              ; n k n-1 k
+//     push beh            ; n k n-1 k beh
+//     new 0               ; n k n-1 k fib
+//     send 2              ; n k
+//     roll 2              ; k n
+//     push 2              ; k n 2
+//     alu sub             ; k n-2
+//     roll 2              ; n-2 k
+//     push beh            ; n-2 k beh
+//     new 0               ; n-2 k fib
+//     send 2              ;
+//     ref std.commit
+// k:                      ; cust
+//     msg 0               ; cust m
+//     push k2             ; cust m k2
+//     beh 2               ; (k2 cust m)
+//     ref std.commit
+// k2:                     ; cust m
+//     msg 0               ; cust m n
+//     alu add             ; cust m+n
+//     roll 2              ; m+n cust
+//     ref std.send_0
+// .export
+//     beh
+// `);
+
+// bad("bad label", `
+// ab$c:
+//     end commit
+// `);
+
+// bad("instruction continuation is data", `
+// a:
+//     cmp le b
+// b:
+//     pair_t 1 2
+// `);
+
+// bad("instruction continuation is data, via a chain of refs", `
+// a:
+//     ref 42
+// b:
+//     ref a
+// d:
+//     alu xor c
+// c:
+//     alu not
+//     ref b
+// `);
+
+// bad("too few operands", `
+// a:
+//     dict_t 1
+// `);
+
+// bad("too many operands", `
+// a:
+//     depth 1 a
+// `);
+
+// bad("undefined ref", `
+// a:
+//     ref b
+// `);
+
+// bad("missing import", `
+// a:
+//     ref x.y
+// `);
+
+// bad("export undefined", `
+// .export
+//     a
+// `);
+
+// bad("'if' operand is fixnum", `
+// a:
+//     if 1 a
+// `);
+
+// bad("'typeq' of a fixnum", `
+// a:
+//     typeq 42 a
+// `);
+
+// bad("instruction missing continuation", `
+// a:
+//     dict has
+//     pair 2
+// `);
+
+// bad("exportation at margin", `
+// .export
+// a
+// `);
+
+// bad("label is indented", `
+//  a:
+//     nth 5 a
+// `);
+
+// bad("label is redefined", `
+// a:
+// a:
+//     end commit
+// `);
+
+// bad("instruction continuation is a module name", `
+// .import
+//     i: "i"
+// a:
+//     drop 4 i
+// `);
+
+// bad("instruction continuation is fixnum", `
+// a:
+//     msg 1 0
+// `);
+
+// bad("instruction continuation is data", `
+// a:
+//     cmp le
+//     ref b
+// b:
+//     pair_t 1 2
+// `);
+
+// bad("undefined continuation operand", `
+// a:
+//     drop 4
+//     my self b
+// `);
+
+// bad("instruction at margin", `
+// a:
+// nth 5 a
+// `);
+
+// bad("directive indented", `
+//  .export
+//     a
+// `);
+
+// bad("import is exported", `
+// .import
+//     i: "i"
+// .export
+//     i
+// `);
+
 export default Object.freeze(assemble);
