@@ -518,6 +518,16 @@ function generate_crlf(tree, file) {
         );
     }
 
+    function redefinition_check(label) {
+        const the_name = label[0];
+        if (
+            define_object[the_name.id] !== undefined
+            || import_object[the_name.id] !== undefined
+        ) {
+            return fail("Redefinition of '" + the_name.id + "'", the_name);
+        }
+    }
+
     function gen_label(operand, labels) {
         const token = operand[1];
         return (
@@ -826,15 +836,12 @@ function generate_crlf(tree, file) {
         });
     }
     define.forEach(function ([labels, statements]) {
-        const [the_name] = labels[0];
-        if (
-            define_object[the_name.id] !== undefined
-            || import_object[the_name.id] !== undefined
-        ) {
-            return fail("Redefinition of '" + the_name.id + "'", the_name);
-        }
+        const canonical_label = labels[0];
+        redefinition_check(canonical_label);
+        const the_name = canonical_label[0];
         define_object[the_name.id] = gen_value(statements);
         labels.slice(1).forEach(function (label) {
+            redefinition_check(label);
             define_object[label[0].id] = {
                 kind: "ref",
                 name: the_name.id
