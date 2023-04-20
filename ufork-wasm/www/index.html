@@ -30,6 +30,11 @@ table {
   white-space: pre;
   overflow: auto;
 }
+.input-text {
+  border: 0;
+  margin: 2px;
+  font-family: monospace;
+}
 #loader {
   display: flex;
   align-items: center;
@@ -170,9 +175,9 @@ table {
       </tr>
       <tr>
         <td><pre id="gc-phase"></pre></td>
-        <td><pre id="sponsor-memory"></pre></td>
-        <td><pre id="sponsor-events"></pre></td>
-        <td><pre id="sponsor-instrs"></pre></td>
+        <td><input id="sponsor-memory" class="input-text" size="8" /></td>
+        <td><input id="sponsor-events" class="input-text" size="8" /></td>
+        <td><input id="sponsor-instrs" class="input-text" size="8" /></td>
         <td><pre id="mem-pages"></pre></td>
       </tr>
     </table>

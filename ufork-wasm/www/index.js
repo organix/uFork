@@ -812,13 +812,22 @@ function h_pprint(raw) {
     return h_print(raw);
 }
 
-const updateElementText = (el, txt) => {
-    if (el.textContent == txt) {
+function updateElementText(el, txt) {
+    if (el.textContent === txt) {
         el.style.color = '#000';
     } else {
         el.style.color = '#03F';
     }
     el.textContent = txt;
+}
+function updateElementValue(el, val) {
+    const txt = "" + val;
+    if (el.value === txt) {
+        el.style.color = '#000';
+    } else {
+        el.style.color = '#03F';
+    }
+    el.value = txt;
 }
 function updateRomMonitor() {
     let a = [];
@@ -980,9 +989,9 @@ const drawHost = () => {
     updateElementText($self, h_disasm(target));
     updateElementText($msg, h_pprint(message));  // pretty-print message
     const sponsor_quad = h_read_quad(sponsor);
-    updateElementText($sponsor_memory, h_print(sponsor_quad.t));
-    updateElementText($sponsor_events, h_print(sponsor_quad.x));
-    updateElementText($sponsor_instrs, h_print(sponsor_quad.y));
+    updateElementValue($sponsor_memory, h_fix_to_i32(sponsor_quad.t));
+    updateElementValue($sponsor_events, h_fix_to_i32(sponsor_quad.x));
+    updateElementValue($sponsor_instrs, h_fix_to_i32(sponsor_quad.y));
     enableNext();
 }
 function currentContinuation() {
@@ -1283,6 +1292,46 @@ $snapshotButton.title = "Snapshot VM state";
 const $restoreButton = document.getElementById("restore-btn");
 $restoreButton.onclick = h_restore;
 $restoreButton.title = "Restore from snapshot";
+
+$sponsor_memory.oninput = function () {
+    const num = +($sponsor_memory.value);
+    if (Number.isSafeInteger(num) && (num >= 0)) {
+        const cc = currentContinuation();
+        if (cc) {
+            const event = h_read_quad(cc.ep);
+            const sponsor = h_read_quad(event.t);
+            sponsor.t = h_fixnum(num);
+            h_write_quad(event.t, sponsor);
+            drawHost();
+        }
+    }
+};
+$sponsor_events.oninput = function () {
+    const num = +($sponsor_events.value);
+    if (Number.isSafeInteger(num) && (num >= 0)) {
+        const cc = currentContinuation();
+        if (cc) {
+            const event = h_read_quad(cc.ep);
+            const sponsor = h_read_quad(event.t);
+            sponsor.x = h_fixnum(num);
+            h_write_quad(event.t, sponsor);
+            drawHost();
+        }
+    }
+};
+$sponsor_instrs.oninput = function () {
+    const num = +($sponsor_instrs.value);
+    if (Number.isSafeInteger(num) && (num >= 0)) {
+        const cc = currentContinuation();
+        if (cc) {
+            const event = h_read_quad(cc.ep);
+            const sponsor = h_read_quad(event.t);
+            sponsor.y = h_fixnum(num);
+            h_write_quad(event.t, sponsor);
+            drawHost();
+        }
+    }
+};
 
 function test_suite(exports) {
     console.log("h_fixnum(0) =", h_fixnum(0), h_fixnum(0).toString(16), h_print(h_fixnum(0)));
