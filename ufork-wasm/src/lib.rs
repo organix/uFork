@@ -115,6 +115,13 @@ pub fn h_event_inject(sponsor: Raw, target: Raw, msg: Raw) {
 }
 
 #[no_mangle]
+pub fn h_revert() -> bool {
+    unsafe {
+        the_host().borrow_mut().actor_revert()
+    }
+}
+
+#[no_mangle]
 pub fn h_gc_run() {
     unsafe {
         the_host().borrow_mut().gc_run()

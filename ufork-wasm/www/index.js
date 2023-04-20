@@ -111,6 +111,7 @@ const h_no_init = function uninitialized() {
 // functions imported from uFork WASM module
 let h_step = h_no_init;
 let h_event_inject = h_no_init;
+let h_revert = h_no_init;
 let h_gc_run = h_no_init;
 let h_rom_buffer = h_no_init;
 let h_rom_top = h_no_init;
@@ -879,6 +880,8 @@ function updateSourceMonitor(ip) {
     delete $source_monitor.href;
 }
 const drawHost = () => {
+    $restoreButton.disabled = (typeof snapshot !== "object");
+    $revertButton.disabled = !fault;
     if (fault) {
         $fault.setAttribute("fill", "#F30");
         $fault.setAttribute("stroke", "#900");
@@ -1110,6 +1113,14 @@ const $gcButton = document.getElementById("gc-btn");
 $gcButton.onclick = gcHost;
 $gcButton.title = "Run garbage collection (g)";
 
+const $revertButton = document.getElementById("revert-btn");
+$revertButton.disabled = true;
+$revertButton.onclick = () => {
+    h_revert();  // FIXME: check `bool` result...
+    drawHost();
+};
+$revertButton.title = "Revert actor message-event";
+
 const $nextButton = document.getElementById("next-step");
 $nextButton.onclick = nextStep;
 $nextButton.title = "Next instruction for this event (n)";
@@ -1229,6 +1240,8 @@ function h_snapshot() {
         ram: Array.from(ram),
         blob: blob.slice(),
     };
+    $restoreButton.disabled = false;
+
     console.log("snapshot:", snapshot);
     const as_oed = OED.encode(snapshot);
     console.log("..as OED:", as_oed);
@@ -1237,9 +1250,6 @@ function h_snapshot() {
 }
 function h_restore(/*snapshot*/) {
     // restore uFork VM state from snapshot
-    if (typeof snapshot !== "object") {
-        throw("no snapshot to restore");
-    }
     const mem_base = h_memory();
 
     const rom_ofs = h_rom_buffer();
@@ -1345,6 +1355,7 @@ WebAssembly.instantiateStreaming(
 
     h_step = exports.h_step;
     h_event_inject = exports.h_event_inject;
+    h_revert = exports.h_revert;
     h_gc_run = exports.h_gc_run;
     h_rom_buffer = exports.h_rom_buffer;
     h_rom_top = exports.h_rom_top;

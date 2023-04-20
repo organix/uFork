@@ -44,6 +44,9 @@ impl Host {
             Any::new(msg)
         ).unwrap()
     }
+    pub fn actor_revert(&mut self) -> bool {
+        self.core.actor_revert()
+    }
     pub fn gc_phase(&self) -> Raw {
         self.core.gc_phase()
     }
