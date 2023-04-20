@@ -53,6 +53,11 @@ impl Host {
     pub fn rom_top(&self) -> Raw {
         self.core.rom_top().raw()
     }
+    pub fn set_rom_top(&mut self, top: Raw) {
+        let ptr = Any::new(top);
+        assert!(ptr.is_rom());
+        self.core.set_rom_top(ptr);
+    }
     pub fn reserve_rom(&mut self) -> Raw {
         self.core.reserve_rom().unwrap().raw()
     }

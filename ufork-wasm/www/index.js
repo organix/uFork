@@ -4,13 +4,14 @@ import OED from "./oed.js";
 import oed from "./oed_lite.js";
 import assemble from "./assemble.js";
 
-const $mem_max = document.getElementById("mem-max");
-const $mem_top = document.getElementById("mem-top");
-const $mem_next = document.getElementById("mem-next");
-const $mem_free = document.getElementById("mem-free");
-const $mem_root = document.getElementById("mem-root");
-const $mem_pages = document.getElementById("mem-pages");
+const $ram_max = document.getElementById("ram-max");
+const $ram_top = document.getElementById("ram-top");
+const $ram_next = document.getElementById("ram-next");
+const $ram_free = document.getElementById("ram-free");
+const $gc_root = document.getElementById("gc-root");
 const $gc_phase = document.getElementById("gc-phase");
+const $rom_top = document.getElementById("rom-top");
+const $mem_pages = document.getElementById("mem-pages");
 const $sponsor_memory = document.getElementById("sponsor-memory");
 const $sponsor_events = document.getElementById("sponsor-events");
 const $sponsor_instrs = document.getElementById("sponsor-instrs");
@@ -35,6 +36,7 @@ let fault = false;  // execution fault flag
 const $rate = document.getElementById("frame-rate");
 let frame = 1;  // frame-rate countdown
 let ram_max = 0;
+let snapshot;  // last snapshot state
 
 // type-tag bits
 const MSK_RAW   = 0xF000_0000;  // mask for type-tag bits
@@ -112,6 +114,7 @@ let h_event_inject = h_no_init;
 let h_gc_run = h_no_init;
 let h_rom_buffer = h_no_init;
 let h_rom_top = h_no_init;
+let h_set_rom_top = h_no_init;
 let h_reserve_rom = h_no_init;
 let h_ram_buffer = h_no_init;
 let h_ram_top = h_no_init;
@@ -889,16 +892,18 @@ const drawHost = () => {
     if (top > ram_max) {
         ram_max = top;
     }
-    updateElementText($mem_max, ram_max.toString());
+    updateElementText($ram_max, ram_max.toString());
     const memory_quad = h_read_quad(h_ramptr(MEMORY_OFS));
     const ram_top = memory_quad.t;
     const ram_next = memory_quad.x;
     const ram_free = memory_quad.y;
-    const ram_root = memory_quad.z;
-    updateElementText($mem_top, h_print(ram_top));
-    updateElementText($mem_next, h_print(ram_next));
-    updateElementText($mem_free, h_print(ram_free));
-    updateElementText($mem_root, h_print(ram_root));
+    const gc_root = memory_quad.z;
+    const rom_top = h_rawofs(h_rom_top());
+    updateElementText($ram_top, h_print(ram_top));
+    updateElementText($ram_next, h_print(ram_next));
+    updateElementText($ram_free, h_print(ram_free));
+    updateElementText($gc_root, h_print(gc_root));
+    updateElementText($rom_top, h_print(rom_top));
     updateElementText($mem_pages, h_mem_pages());
     updateElementText($gc_phase, h_gc_phase() == 0 ? "Bank 0" : "Bank 1");
     const ddeque_quad = h_read_quad(h_ramptr(DDEQUE_OFS));
@@ -1059,7 +1064,6 @@ const logClick = event => {
     const s = event.target.textContent;
     console.log("logClick:", event, s);
 }
-//$mem_root.onclick = logClick;
 
 function cap_dict(device_offsets) {
     return device_offsets.reduce(function (next, ofs) {
@@ -1204,6 +1208,74 @@ function hexdump(u8buf, ofs, len, xlt) {
     return out;
 }
 
+function h_snapshot() {
+    // create snapshot of the uFork VM state
+    const mem_base = h_memory();
+
+    const rom_ofs = h_rom_buffer();
+    const rom_top = h_rawofs(h_rom_top());
+    const rom = new Uint32Array(mem_base, rom_ofs, rom_top << 2);
+
+    const ram_ofs = h_ram_buffer(h_gc_phase());
+    const ram_top = h_rawofs(h_ram_top());
+    const ram = new Uint32Array(mem_base, ram_ofs, ram_top << 2);
+
+    const blob_ofs = h_blob_buffer();
+    const blob_top = h_fix_to_i32(h_blob_top());
+    const blob = new Uint8Array(mem_base, blob_ofs, blob_top);
+
+    snapshot = {
+        rom_top,
+        rom: Array.from(rom),
+        ram_top,
+        ram: Array.from(ram),
+        blob_top,
+        blob: blob.slice(),
+    };
+    console.log("snapshot:", snapshot);
+    const as_oed = OED.encode(snapshot);
+    console.log("..as OED:", as_oed);
+    console.log("..decoded:", OED.decode(as_oed));
+    return snapshot;
+}
+function h_restore(/*snapshot*/) {
+    // restore uFork VM state from snapshot
+    if (typeof snapshot !== "object") {
+        throw("no snapshot to restore");
+    }
+    const mem_base = h_memory();
+
+    const rom_ofs = h_rom_buffer();
+    const rom_len = snapshot.rom_top << 2;
+    const rom = new Uint32Array(mem_base, rom_ofs, rom_len);
+    rom.set(snapshot.rom);
+
+    //const old_phase = h_gc_phase();
+    const old_ram = h_ramptr(MEMORY_OFS);
+    h_write_quad(old_ram, { t: UNDEF_RAW, x: UNDEF_RAW, y: UNDEF_RAW, z: UNDEF_RAW });
+    const gc_phase = snapshot.ram[0] & BNK_RAW;
+    const ram_ofs = h_ram_buffer(gc_phase);
+    const ram_len = snapshot.ram_top << 2;
+    const ram = new Uint32Array(mem_base, ram_ofs, ram_len);
+    ram.set(snapshot.ram);
+    //const new_phase = h_gc_phase();
+
+    const blob_ofs = h_blob_buffer();
+    const blob_len = snapshot.blob_top;
+    const blob = new Uint8Array(mem_base, blob_ofs, blob_len);
+    blob.set(snapshot.blob);
+
+    h_set_rom_top(h_romptr(snapshot.rom_top));  // register new top-of-ROM
+    updateRomMonitor();
+    drawHost();
+}
+const $snapshotButton = document.getElementById("snapshot-btn");
+$snapshotButton.onclick = h_snapshot;
+$snapshotButton.title = "Snapshot VM state";
+const $restoreButton = document.getElementById("restore-btn");
+$restoreButton.onclick = h_restore;
+$restoreButton.title = "Restore from snapshot";
+
 function test_suite(exports) {
     console.log("h_fixnum(0) =", h_fixnum(0), h_fixnum(0).toString(16), h_print(h_fixnum(0)));
     console.log("h_fixnum(1) =", h_fixnum(1), h_fixnum(1).toString(16), h_print(h_fixnum(1)));
@@ -1278,6 +1350,7 @@ WebAssembly.instantiateStreaming(
     h_gc_run = exports.h_gc_run;
     h_rom_buffer = exports.h_rom_buffer;
     h_rom_top = exports.h_rom_top;
+    h_set_rom_top = exports.h_set_rom_top;
     h_reserve_rom = exports.h_reserve_rom;
     h_ram_buffer = exports.h_ram_buffer;
     h_ram_top = exports.h_ram_top;

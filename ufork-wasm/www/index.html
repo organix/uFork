@@ -33,10 +33,16 @@ table {
 #loader {
   display: flex;
   align-items: center;
-  flex-direction: column;
+  flex-direction: row;
   width: 100%;
   margin: 1ex;
   margin-top: 1em;
+}
+#loader > * {
+  margin: 1ex;
+}
+#loader-center {
+  flex: 1;
 }
 #rom {
   color: #3F0;
@@ -80,6 +86,9 @@ table {
     please enable javascript in your browser.
   </noscript>
   <div id="loader">
+    <button id="snapshot-btn">Snapshot</button>
+    <button id="restore-btn">Restore</button>
+    <div id="loader-center"></div>
     <form id="boot-form">
       <input id="boot-url" type="text" size="42" value="../lib/test.asm" />
       <input id="boot" type="submit" value="Boot" />
@@ -139,13 +148,15 @@ table {
         <th>Next</th>
         <th>Free</th>
         <th>Root</th>
+        <th>ROM</th>
       </tr>
       <tr>
-        <td><pre id="mem-max"></pre></td>
-        <td><pre id="mem-top"></pre></td>
-        <td><pre id="mem-next"></pre></td>
-        <td><pre id="mem-free"></pre></td>
-        <td><pre id="mem-root"></pre></td>
+        <td><pre id="ram-max"></pre></td>
+        <td><pre id="ram-top"></pre></td>
+        <td><pre id="ram-next"></pre></td>
+        <td><pre id="ram-free"></pre></td>
+        <td><pre id="gc-root"></pre></td>
+        <td><pre id="rom-top"></pre></td>
       </tr>
     </table>
     <table border="1">

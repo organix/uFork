@@ -136,6 +136,13 @@ pub fn h_rom_top() -> Raw {
 }
 
 #[no_mangle]
+pub fn h_set_rom_top(top: Raw) {
+    unsafe {
+        the_host().borrow_mut().set_rom_top(top)
+    }
+}
+
+#[no_mangle]
 pub fn h_reserve_rom() -> Raw {
     unsafe {
         the_host().borrow_mut().reserve_rom()

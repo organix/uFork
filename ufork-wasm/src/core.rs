@@ -942,7 +942,7 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
     pub fn ddeque(&self) -> Any { self.ptr_to_mem(DDEQUE) }
 
     pub fn rom_top(&self) -> Any { self.rom_top }
-    fn set_rom_top(&mut self, ptr: Any) { self.rom_top = ptr }
+    pub fn set_rom_top(&mut self, ptr: Any) { self.rom_top = ptr }
     pub fn ram_top(&self) -> Any { self.ram(self.memory()).t() }
     fn set_ram_top(&mut self, ptr: Any) { self.ram_mut(self.memory()).set_t(ptr); }
     fn ram_next(&self) -> Any { self.ram(self.memory()).x() }
