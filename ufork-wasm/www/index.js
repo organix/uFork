@@ -569,7 +569,6 @@ function h_load(specifier, crlf, imports, alloc, read) {
                 || node.op === "pick"
                 || node.op === "dup"
                 || node.op === "roll"
-                || node.op === "eq"
                 || node.op === "msg"
                 || node.op === "send"
                 || node.op === "new"
@@ -578,7 +577,8 @@ function h_load(specifier, crlf, imports, alloc, read) {
                 fields.y = fixnum(node.imm);
                 fields.z = instruction(node.k);
             } else if (
-                node.op === "push"
+                node.op === "eq"
+                || node.op === "push"
                 || node.op === "is_eq"
                 || node.op === "is_ne"
             ) {

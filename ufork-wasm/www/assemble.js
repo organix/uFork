@@ -735,7 +735,6 @@ function generate_crlf(tree, file) {
             || operator.id === "pick"
             || operator.id === "dup"
             || operator.id === "roll"
-            || operator.id === "eq"
             || operator.id === "msg"
             || operator.id === "send"
             || operator.id === "new"
@@ -751,7 +750,8 @@ function generate_crlf(tree, file) {
             };
         }
         if (
-            operator.id === "push"
+            operator.id === "eq"
+            || operator.id === "push"
             || operator.id === "is_eq"
             || operator.id === "is_ne"
         ) {

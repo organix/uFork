@@ -179,7 +179,7 @@ the stack.
 `dup`        | _n_                                           | [_k_]
 `roll`       | _n_                                           | [_k_]
 `alu`        | `not`/`and`/`or`/`xor`/`add`/`sub`/`mul`      | [_k_]
-`eq`         | _n_                                           | [_k_]
+`eq`         | _value_                                       | [_k_]
 `cmp`        | `eq`/`ge`/`gt`/`lt`/`le`/`ne`                 | [_k_]
 `msg`        | _n_                                           | [_k_]
 `my`         | `self`/`beh`/`state`                          | [_k_]
