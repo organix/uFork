@@ -36,7 +36,6 @@ let fault = false;  // execution fault flag
 const $rate = document.getElementById("frame-rate");
 let frame = 1;  // frame-rate countdown
 let ram_max = 0;
-let snapshot;  // last snapshot state
 
 // type-tag bits
 const MSK_RAW   = 0xF000_0000;  // mask for type-tag bits
@@ -569,7 +568,6 @@ function h_load(specifier, crlf, imports, alloc, read) {
                 || node.op === "pick"
                 || node.op === "dup"
                 || node.op === "roll"
-                || node.op === "eq"
                 || node.op === "msg"
                 || node.op === "send"
                 || node.op === "new"
@@ -578,7 +576,8 @@ function h_load(specifier, crlf, imports, alloc, read) {
                 fields.y = fixnum(node.imm);
                 fields.z = instruction(node.k);
             } else if (
-                node.op === "push"
+                node.op === "eq"
+                || node.op === "push"
                 || node.op === "is_eq"
                 || node.op === "is_ne"
             ) {
@@ -889,7 +888,6 @@ function updateSourceMonitor(ip) {
     delete $source_monitor.href;
 }
 const drawHost = () => {
-    $restoreButton.disabled = (typeof snapshot !== "object");
     $revertButton.disabled = !fault;
     if (fault) {
         $fault.setAttribute("fill", "#F30");
@@ -1229,7 +1227,7 @@ function hexdump(u8buf, ofs, len, xlt) {
 }
 
 function h_snapshot() {
-    // create snapshot of the uFork VM state
+    // create a snapshot with the uFork VM state
     const mem_base = h_memory();
 
     const rom_ofs = h_rom_buffer();
@@ -1244,20 +1242,13 @@ function h_snapshot() {
     const blob_len = h_fix_to_i32(h_blob_top());
     const blob = new Uint8Array(mem_base, blob_ofs, blob_len);
 
-    snapshot = {
+    return {
         rom: Array.from(rom),
         ram: Array.from(ram),
         blob: blob.slice(),
     };
-    $restoreButton.disabled = false;
-
-    console.log("snapshot:", snapshot);
-    const as_oed = OED.encode(snapshot);
-    console.log("..as OED:", as_oed);
-    console.log("..decoded:", OED.decode(as_oed));
-    return snapshot;
 }
-function h_restore(/*snapshot*/) {
+function h_restore(snapshot) {
     // restore uFork VM state from snapshot
     const mem_base = h_memory();
 
@@ -1287,11 +1278,27 @@ function h_restore(/*snapshot*/) {
     drawHost();
 }
 const $snapshotButton = document.getElementById("snapshot-btn");
-$snapshotButton.onclick = h_snapshot;
+$snapshotButton.onclick = function download_snapshot_file() {
+    const snapshot_blob = new Blob(
+        [OED.encode(h_snapshot())],
+        {type: "application/octet-stream"}
+    );
+    const snapshot_url = URL.createObjectURL(snapshot_blob);
+    const $anchor = document.createElement("a");
+    $anchor.download = "ufork_snapshot.bin";
+    $anchor.href = snapshot_url;
+    $anchor.click();
+    URL.revokeObjectURL(snapshot_url);
+};
 $snapshotButton.title = "Snapshot VM state";
-const $restoreButton = document.getElementById("restore-btn");
-$restoreButton.onclick = h_restore;
-$restoreButton.title = "Restore from snapshot";
+const $restoreInput = document.getElementById("restore-btn");
+$restoreInput.onchange = function restore_snapshot_file() {
+    $restoreInput.files[0].arrayBuffer().then(function (array_buffer) {
+        h_restore(OED.decode(new Uint8Array(array_buffer)));
+    });
+    $restoreInput.value = ""; // reset
+};
+$restoreInput.title = "Restore from snapshot";
 
 $sponsor_memory.oninput = function () {
     const num = +($sponsor_memory.value);

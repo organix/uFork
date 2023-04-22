@@ -518,6 +518,16 @@ function generate_crlf(tree, file) {
         );
     }
 
+    function redefinition_check(label) {
+        const the_name = label[0];
+        if (
+            define_object[the_name.id] !== undefined
+            || import_object[the_name.id] !== undefined
+        ) {
+            return fail("Redefinition of '" + the_name.id + "'", the_name);
+        }
+    }
+
     function gen_label(operand, labels) {
         const token = operand[1];
         return (
@@ -575,7 +585,21 @@ function generate_crlf(tree, file) {
         );
     }
 
-    function gen_ref(operand, as_instruction = false) {
+    function gen_local_ref(name_token, instruction_only = false) {
+        if (instruction_only) {
+            supposed_instructions.push(name_token);
+        }
+        return {
+            kind: "ref",
+            name: name_token.id,
+            debug: {
+                file,
+                line: name_token.line_nr
+            }
+        };
+    }
+
+    function gen_ref_expression(operand, instruction_only = false) {
         const token = operand[1];
         if (Array.isArray(token)) {
             const module_name = token[0].id;
@@ -599,17 +623,7 @@ function generate_crlf(tree, file) {
         if (!is_label(token.id)) {
             return fail("Not defined", token);
         }
-        if (as_instruction) {
-            supposed_instructions.push(token);
-        }
-        return {
-            kind: "ref",
-            name: token.id,
-            debug: {
-                file,
-                line: token.line_nr
-            }
-        };
+        return gen_local_ref(token, instruction_only);
     }
 
     function gen_expression(operand) {
@@ -624,10 +638,10 @@ function generate_crlf(tree, file) {
                 : gen_literal(operand)
             );
         }
-        return gen_ref(operand);
+        return gen_ref_expression(operand);
     }
 
-    function gen_value(statements, as_instruction = false) {
+    function gen_value(statements, fallthru_label, instruction_only = false) {
         const [ignore, operator, operands] = statements[0];
         const debug = {
             file,
@@ -651,8 +665,8 @@ function generate_crlf(tree, file) {
 
         function gen_continuation_expression(operand) {
             return (
-                as_instruction
-                ? gen_ref(operand, true)
+                instruction_only
+                ? gen_ref_expression(operand, true)
                 : gen_expression(operand)
             );
         }
@@ -667,14 +681,22 @@ function generate_crlf(tree, file) {
                 )
                 : (
                     statements.length > 1
-                    ? gen_value(statements.slice(1), as_instruction)
-                    : fail("Missing continuation", operator)
+                    ? gen_value(
+                        statements.slice(1),
+                        fallthru_label,
+                        instruction_only
+                    )
+                    : (
+                        fallthru_label !== undefined
+                        ? gen_local_ref(fallthru_label[0], instruction_only)
+                        : fail("Missing continuation", operator)
+                    )
                 )
             );
         }
 
         if (operator.id === "pair_t") {
-            if (as_instruction) {
+            if (instruction_only) {
                 return fail("Expected an instruction, not data", operator);
             }
             operand_check(1, 1);
@@ -686,7 +708,7 @@ function generate_crlf(tree, file) {
             };
         }
         if (operator.id === "dict_t") {
-            if (as_instruction) {
+            if (instruction_only) {
                 return fail("Expected an instruction, not data", operator);
             }
             operand_check(2, 1);
@@ -706,7 +728,7 @@ function generate_crlf(tree, file) {
 // The statement is an instruction. From here on in, the continuation stream
 // should consist solely of instructions, and never data.
 
-        as_instruction = true;
+        instruction_only = true;
         if (operator.id === "typeq") {
             operand_check(1, 1);
             return {
@@ -725,7 +747,6 @@ function generate_crlf(tree, file) {
             || operator.id === "pick"
             || operator.id === "dup"
             || operator.id === "roll"
-            || operator.id === "eq"
             || operator.id === "msg"
             || operator.id === "send"
             || operator.id === "new"
@@ -741,7 +762,8 @@ function generate_crlf(tree, file) {
             };
         }
         if (
-            operator.id === "push"
+            operator.id === "eq"
+            || operator.id === "push"
             || operator.id === "is_eq"
             || operator.id === "is_ne"
         ) {
@@ -768,7 +790,7 @@ function generate_crlf(tree, file) {
             return {
                 kind: "instr",
                 op: "if",
-                t: gen_ref(operands[0], true),
+                t: gen_ref_expression(operands[0], true),
                 f: gen_continuation(1),
                 debug
             };
@@ -778,7 +800,7 @@ function generate_crlf(tree, file) {
             return {
                 kind: "instr",
                 op: "if",
-                f: gen_ref(operands[0], true),
+                f: gen_ref_expression(operands[0], true),
                 t: gen_continuation(1),
                 debug
             };
@@ -825,16 +847,18 @@ function generate_crlf(tree, file) {
             import_object[the_name.id] = the_specifier.string;
         });
     }
-    define.forEach(function ([labels, statements]) {
-        const [the_name] = labels[0];
-        if (
-            define_object[the_name.id] !== undefined
-            || import_object[the_name.id] !== undefined
-        ) {
-            return fail("Redefinition of '" + the_name.id + "'", the_name);
-        }
-        define_object[the_name.id] = gen_value(statements);
+    define.forEach(function (definition, definition_nr) {
+        const [labels, statements] = definition;
+        const canonical_label = labels[0];
+        redefinition_check(canonical_label);
+        const the_name = canonical_label[0];
+        define_object[the_name.id] = (
+            definition_nr + 1 < define.length
+            ? gen_value(statements, define[definition_nr + 1][0][0])
+            : gen_value(statements)
+        );
         labels.slice(1).forEach(function (label) {
+            redefinition_check(label);
             define_object[label[0].id] = {
                 kind: "ref",
                 name: the_name.id
@@ -879,5 +903,199 @@ function assemble(source, file) {
         };
     }
 }
+
+// function good(description, source) {
+//     const result = assemble(source);
+//     if (result.kind === "error") {
+//         console.log("FAIL", description, result);
+//     }
+// }
+
+// function bad(description, source) {
+//     const result = assemble(source);
+//     if (result.kind !== "error") {
+//         console.log("FAIL", description, source);
+//     }
+// }
+
+// good("continuation separated by labels", `
+// a:
+//     msg 2
+// b:
+//     end commit
+// `);
+
+// good("fib", `
+// ; A fibonnacci service behavior.
+// .import
+//     std: "./std.asm"
+// beh:                    ; (cust n)
+//     msg 2               ; n
+//     dup 1               ; n n
+//     push 2              ; n n 2
+//     cmp lt              ; n n<2
+//     if std.cust_send    ; n
+//     msg 1               ; n cust
+//     push k              ; n cust k
+//     new 1               ; n k=(k cust)
+//     pick 2              ; n k n
+//     push 1              ; n k n 1
+//     alu sub             ; n k n-1
+//     pick 2              ; n k n-1 k
+//     push beh            ; n k n-1 k beh
+//     new 0               ; n k n-1 k fib
+//     send 2              ; n k
+//     roll 2              ; k n
+//     push 2              ; k n 2
+//     alu sub             ; k n-2
+//     roll 2              ; n-2 k
+//     push beh            ; n-2 k beh
+//     new 0               ; n-2 k fib
+//     send 2              ;
+//     ref std.commit
+// k:                      ; cust
+//     msg 0               ; cust m
+//     push k2             ; cust m k2
+//     beh 2               ; (k2 cust m)
+//     ref std.commit
+// k2:                     ; cust m
+//     msg 0               ; cust m n
+//     alu add             ; cust m+n
+//     roll 2              ; m+n cust
+//     ref std.send_0
+// .export
+//     beh
+// `);
+
+// bad("bad label", `
+// ab$c:
+//     end commit
+// `);
+
+// bad("instruction continuation is data", `
+// a:
+//     cmp le b
+// b:
+//     pair_t 1 2
+// `);
+
+// bad("instruction continuation is data, separated by label", `
+// a:
+//     cmp le
+// b:
+//     pair_t 1 2
+// `);
+
+// bad("instruction continuation is data, via a chain of refs", `
+// a:
+//     ref 42
+// b:
+//     ref a
+// d:
+//     alu xor c
+// c:
+//     alu not
+//     ref b
+// `);
+
+// bad("too few operands", `
+// a:
+//     dict_t 1
+// `);
+
+// bad("too many operands", `
+// a:
+//     depth 1 a
+// `);
+
+// bad("undefined ref", `
+// a:
+//     ref b
+// `);
+
+// bad("missing import", `
+// a:
+//     ref x.y
+// `);
+
+// bad("export undefined", `
+// .export
+//     a
+// `);
+
+// bad("'if' operand is fixnum", `
+// a:
+//     if 1 a
+// `);
+
+// bad("'typeq' of a fixnum", `
+// a:
+//     typeq 42 a
+// `);
+
+// bad("instruction missing continuation", `
+// a:
+//     dict has
+//     pair 2
+// `);
+
+// bad("exportation at margin", `
+// .export
+// a
+// `);
+
+// bad("label is indented", `
+//  a:
+//     nth 5 a
+// `);
+
+// bad("label is redefined", `
+// a:
+// a:
+//     end commit
+// `);
+
+// bad("instruction continuation is a module name", `
+// .import
+//     i: "i"
+// a:
+//     drop 4 i
+// `);
+
+// bad("instruction continuation is fixnum", `
+// a:
+//     msg 1 0
+// `);
+
+// bad("instruction continuation is data", `
+// a:
+//     cmp le
+//     ref b
+// b:
+//     pair_t 1 2
+// `);
+
+// bad("undefined continuation operand", `
+// a:
+//     drop 4
+//     my self b
+// `);
+
+// bad("instruction at margin", `
+// a:
+// nth 5 a
+// `);
+
+// bad("directive indented", `
+//  .export
+//     a
+// `);
+
+// bad("import is exported", `
+// .import
+//     i: "i"
+// .export
+//     i
+// `);
 
 export default Object.freeze(assemble);

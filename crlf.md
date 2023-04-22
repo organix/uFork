@@ -232,7 +232,7 @@ value points to the next instruction, and is not present on "end" instructions.
 "dup"           | _fixnum_
 "roll"          | _fixnum_
 "alu"           | "not", "and", "or", "xor", "add", "sub", "mul"
-"eq"            | _fixnum_
+"eq"            | _value_
 "cmp"           | "eq", "ge", "gt", "lt", "le", "ne"
 "msg"           | _fixnum_
 "my"            | "self", "beh", "state"
