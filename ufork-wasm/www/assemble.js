@@ -561,17 +561,21 @@ function generate_crlf(tree, file) {
 
     function gen_type(operand) {
         const token = operand[1];
+        let name = token.name;
+        if (name.endsWith("_t")) {
+            name = name.slice(0, -2);
+        }
         return (
             (token.id === ":literal:" && (
-                token.name === "literal_t"
-                || token.name === "fixnum_t"
-                || token.name === "type_t"
-                || token.name === "pair_t"
-                || token.name === "dict_t"
-                || token.name === "instr_t"
-                || token.name === "actor_t"
+                name === "literal"
+                || name === "fixnum"
+                || name === "type"
+                || name === "pair"
+                || name === "dict"
+                || name === "instr"
+                || name === "actor"
             ))
-            ? {kind: "type", name: token.name}
+            ? {kind: "type", name}
             : fail("Expected a type", token)
         );
     }
