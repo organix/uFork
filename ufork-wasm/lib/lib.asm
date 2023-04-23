@@ -256,12 +256,9 @@ busy_4:
     ref busy_3
 
 ; unit test suite
-boot:
-    msg 0               ; {caps}
-loop:
-again:
-    dup 0               ; {caps}
-    ref loop            ; {caps}
+;boot:
+;    msg 0               ; {caps}
+;    ref std.commit
 
 .export
     sink_beh
@@ -278,4 +275,4 @@ again:
     value_beh
     serial_beh
     busy_beh
-    boot
+;    boot
