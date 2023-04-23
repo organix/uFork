@@ -784,6 +784,7 @@ function h_pprint(raw) {
                 s += h_pprint(quad.x);  // car
                 sep = " ";
                 p = quad.y;  // cdr
+                if (!h_is_ptr(p)) break;
                 quad = h_read_quad(p);
             }
             if (p !== NIL_RAW) {
