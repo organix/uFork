@@ -12,12 +12,14 @@ pub const ROM_BASE_OFS: usize = 16;  // ROM offsets below this value are reserve
 
 pub const MEMORY: Any       = Any { raw: MUT_RAW | BNK_INI | 0 };
 pub const DDEQUE: Any       = Any { raw: MUT_RAW | BNK_INI | 1 };
-pub const BLOB_DEV: Any     = Any { raw: OPQ_RAW | MUT_RAW | BNK_INI | 2 };
+pub const DEBUG_DEV: Any    = Any { raw: OPQ_RAW | MUT_RAW | BNK_INI | 2 };
 pub const CLOCK_DEV: Any    = Any { raw: OPQ_RAW | MUT_RAW | BNK_INI | 3 };
 pub const IO_DEV: Any       = Any { raw: OPQ_RAW | MUT_RAW | BNK_INI | 4 };
-pub const SPONSOR: Any      = Any { raw: MUT_RAW | BNK_INI | 5 };
+pub const BLOB_DEV: Any     = Any { raw: OPQ_RAW | MUT_RAW | BNK_INI | 5 };
+pub const MEMO_DEV: Any     = Any { raw: OPQ_RAW | MUT_RAW | BNK_INI | 6 };
+pub const SPONSOR: Any      = Any { raw: MUT_RAW | BNK_INI | 7 };
 
-pub const RAM_BASE_OFS: usize = 6;  // RAM offsets below this value are reserved
+pub const RAM_BASE_OFS: usize = 8;  // RAM offsets below this value are reserved
 
 // core limits
 const QUAD_ROM_MAX: usize = 1<<10;  // 1K quad-cells of ROM
@@ -27,7 +29,7 @@ const BLOB_RAM_MAX: usize = 1<<8;   // 256 octets of Blob RAM (for testing)
 //const BLOB_RAM_MAX: usize = 1<<10;  // 1K octets of Blob RAM
 //const BLOB_RAM_MAX: usize = 1<<12;  // 4K octets of Blob RAM
 //const BLOB_RAM_MAX: usize = 1<<16;  // 64K octets of Blob RAM
-const DEVICE_MAX:   usize = 3;      // number of Core devices
+const DEVICE_MAX:   usize = 5;      // number of Core devices
 
 pub struct Core {
     quad_rom:   [Quad; QUAD_ROM_MAX],
@@ -80,9 +82,11 @@ pub const ROM_TOP_OFS: usize = ROM_BASE_OFS;
         quad_ram[MEMORY.ofs()]      = Quad::memory_t(Any::ram(BNK_INI, RAM_TOP_OFS), NIL, ZERO, DDEQUE);
         //quad_ram[DDEQUE.ofs()]      = Quad::ddeque_t(NIL, NIL, _K_BOOT, _K_BOOT);
         quad_ram[DDEQUE.ofs()]      = Quad::ddeque_t(NIL, NIL, NIL, NIL);  // no events, no continuations
-        quad_ram[BLOB_DEV.ofs()]    = Quad::actor_t(ZERO, NIL, UNDEF);  // blob device #0
+        quad_ram[DEBUG_DEV.ofs()]   = Quad::actor_t(ZERO, NIL, UNDEF);    // debug device #0
         quad_ram[CLOCK_DEV.ofs()]   = Quad::actor_t(PLUS_1, NIL, UNDEF);  // clock device #1
         quad_ram[IO_DEV.ofs()]      = Quad::actor_t(PLUS_2, NIL, UNDEF);  // i/o device #2
+        quad_ram[BLOB_DEV.ofs()]    = Quad::actor_t(PLUS_3, NIL, UNDEF);  // blob device #3
+        quad_ram[MEMO_DEV.ofs()]    = Quad::actor_t(PLUS_4, NIL, UNDEF);  // memo device #4
         quad_ram[SPONSOR.ofs()]     = Quad::sponsor_t(Any::fix(512), Any::fix(64), Any::fix(512));  // root configuration sponsor
 
 pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
@@ -122,9 +126,11 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
             quad_ram1: if BNK_INI == BNK_1 { quad_ram } else { [ Quad::empty_t(); QUAD_RAM_MAX ] },
             blob_ram,
             device: [
-                Some(Box::new(BlobDevice::new())),
+                Some(Box::new(NullDevice::new())),
                 Some(Box::new(ClockDevice::new())),
                 Some(Box::new(IoDevice::new())),
+                Some(Box::new(BlobDevice::new())),
+                Some(Box::new(NullDevice::new())),
             ],
             rom_top: Any::rom(ROM_TOP_OFS),
         }
@@ -1159,7 +1165,8 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
                 // NOTE: we don't use `cap_to_ptr` here to avoid the type assertion.
                 let raw = val.raw() & !OPQ_RAW;  // WARNING: converting Cap to Ptr!
                 let ptr = Any::new(raw);
-                self.mem(ptr).t() == ACTOR_T
+                let t = self.mem(ptr).t();
+                (t == ACTOR_T) || (t == PROXY_T)  // proxies count as actors for message addressing
             } else {
                 false
             }

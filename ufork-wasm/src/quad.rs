@@ -57,13 +57,12 @@ impl Quad {
         assert!(events.is_ptr());
         Self::new(ACTOR_T, beh, state, events)
     }
-    /*
-    pub fn symbol_t(hash: Any, key: Any, value: Any) -> Quad {
-        assert!(hash.is_fix());
-        assert!(key.is_ptr());
-        Self::new(SYMBOL_T, hash, key, value)
+    pub fn proxy_t(x: Any, y: Any, z: Any) -> Quad {
+        Self::new(PROXY_T, x, y, z)
     }
-    */
+    pub fn stub_t(x: Any, y: Any, z: Any) -> Quad {
+        Self::new(STUB_T, x, y, z)
+    }
     pub fn pair_t(car: Any, cdr: Any) -> Quad {
         Self::new(PAIR_T, car, cdr, UNDEF)
     }
