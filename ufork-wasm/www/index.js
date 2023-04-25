@@ -100,10 +100,12 @@ const VM_IS_NE  = 0x8000_001F;
 const QUAD_ROM_MAX = 1 << 10;
 const MEMORY_OFS = 0;
 const DDEQUE_OFS = 1;
-const BLOB_DEV_OFS = 2;
+const DEBUG_DEV_OFS = 2;
 const CLOCK_DEV_OFS = 3;
 const IO_DEV_OFS = 4;
-const SPONSOR_OFS = 5;
+const BLOB_DEV_OFS = 5;
+const MEMO_DEV_OFS = 6;
+const SPONSOR_OFS = 7;
 const h_no_init = function uninitialized() {
     return h_warning("WASM not initialized.");
 };
@@ -1110,7 +1112,7 @@ function boot(module_specifier) {
         h_event_inject(
             h_ramptr(SPONSOR_OFS),
             h_ptr_to_cap(actor),
-            cap_dict([BLOB_DEV_OFS, CLOCK_DEV_OFS, IO_DEV_OFS])
+            cap_dict([DEBUG_DEV_OFS, CLOCK_DEV_OFS, IO_DEV_OFS, BLOB_DEV_OFS, MEMO_DEV_OFS])
         );
         updateRomMonitor();
         drawHost();
@@ -1401,7 +1403,7 @@ WebAssembly.instantiateStreaming(
                 console.log("PRINT:", blob, base, ofs);
             },
             host_log(x) {  // WASM type: (i32) -> nil
-                console.log("LOG:", x, "=", h_print(x));
+                console.log("LOG:", x, "=", h_print(x), "->", h_pprint(x));
             },
         }
     }

@@ -21,6 +21,33 @@ impl Device for NullDevice {
     }
 }
 
+pub struct DebugDevice {}
+impl DebugDevice {
+    pub fn new() -> DebugDevice {
+        DebugDevice {}
+    }
+    #[cfg(target_arch = "wasm32")]
+    fn debug_print(&mut self, value: Any) {
+        let raw = value.raw();
+        unsafe {
+            crate::host_log(raw);
+        }
+    }
+    #[cfg(not(target_arch = "wasm32"))]
+    fn debug_print(&mut self, value: Any) {
+        // debug output not available...
+        let _ = value.raw();  // place a breakpoint on this assignment
+    }
+}
+impl Device for DebugDevice {
+    fn handle_event(&mut self, core: &mut Core, ep: Any) -> Result<bool, Error> {
+        let event = core.mem(ep);
+        let message = event.y();
+        self.debug_print(message);
+        Ok(true)  // event handled.
+    }
+}
+
 pub struct ClockDevice {
     clock_ticks: Any,
 }

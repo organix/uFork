@@ -126,7 +126,7 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
             quad_ram1: if BNK_INI == BNK_1 { quad_ram } else { [ Quad::empty_t(); QUAD_RAM_MAX ] },
             blob_ram,
             device: [
-                Some(Box::new(NullDevice::new())),
+                Some(Box::new(DebugDevice::new())),
                 Some(Box::new(ClockDevice::new())),
                 Some(Box::new(IoDevice::new())),
                 Some(Box::new(BlobDevice::new())),
