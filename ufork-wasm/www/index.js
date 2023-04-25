@@ -1343,6 +1343,22 @@ $sponsor_instrs.oninput = function () {
     }
 };
 
+let wasm_call_in_progress = false;
+function wasm_mutex_call(wasm_fn) {
+    return (...args) => {
+        if (wasm_call_in_progress) {
+            console.log("ERROR! re-entrant WASM call", wasm_fn, args);
+            throw new Error("re-entrant WASM call");
+        }
+        try {
+            wasm_call_in_progress = true;  // obtain "mutex"
+            return wasm_fn(...args);
+        } finally {
+            wasm_call_in_progress = false;  // release "mutex"
+        }
+    }
+}
+
 function test_suite(exports) {
     console.log("h_fixnum(0) =", h_fixnum(0), h_fixnum(0).toString(16), h_print(h_fixnum(0)));
     console.log("h_fixnum(1) =", h_fixnum(1), h_fixnum(1).toString(16), h_print(h_fixnum(1)));
@@ -1412,24 +1428,24 @@ WebAssembly.instantiateStreaming(
     const exports = wasm.instance.exports;
     //debugger;
 
-    h_step = exports.h_step;
-    h_event_inject = exports.h_event_inject;
-    h_revert = exports.h_revert;
-    h_gc_run = exports.h_gc_run;
-    h_rom_buffer = exports.h_rom_buffer;
-    h_rom_top = exports.h_rom_top;
-    h_set_rom_top = exports.h_set_rom_top;
-    h_reserve_rom = exports.h_reserve_rom;
-    h_ram_buffer = exports.h_ram_buffer;
-    h_ram_top = exports.h_ram_top;
-    h_reserve = exports.h_reserve;
-    h_blob_buffer = exports.h_blob_buffer;
-    h_blob_top = exports.h_blob_top;
-    h_gc_phase = exports.h_gc_phase;
-    h_in_mem = exports.h_in_mem;
-    h_car = exports.h_car;
-    h_cdr = exports.h_cdr;
-    h_next = exports.h_next;
+    h_step = wasm_mutex_call(exports.h_step);
+    h_event_inject = wasm_mutex_call(exports.h_event_inject);
+    h_revert = wasm_mutex_call(exports.h_revert);
+    h_gc_run = wasm_mutex_call(exports.h_gc_run);
+    h_rom_buffer = wasm_mutex_call(exports.h_rom_buffer);
+    h_rom_top = wasm_mutex_call(exports.h_rom_top);
+    h_set_rom_top = wasm_mutex_call(exports.h_set_rom_top);
+    h_reserve_rom = wasm_mutex_call(exports.h_reserve_rom);
+    h_ram_buffer = wasm_mutex_call(exports.h_ram_buffer);
+    h_ram_top = wasm_mutex_call(exports.h_ram_top);
+    h_reserve = wasm_mutex_call(exports.h_reserve);
+    h_blob_buffer = wasm_mutex_call(exports.h_blob_buffer);
+    h_blob_top = wasm_mutex_call(exports.h_blob_top);
+    h_gc_phase = wasm_mutex_call(exports.h_gc_phase);
+    h_in_mem = wasm_mutex_call(exports.h_in_mem);
+    h_car = wasm_mutex_call(exports.h_car);
+    h_cdr = wasm_mutex_call(exports.h_cdr);
+    h_next = wasm_mutex_call(exports.h_next);
 
     h_memory = function wasm_memory() {
         // WARNING! The WASM memory buffer can move if it is resized.

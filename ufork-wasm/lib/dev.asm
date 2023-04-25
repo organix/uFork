@@ -39,12 +39,12 @@ boot:
     new 0               ; 5 counter
     send 0              ; --
 
-    push 42             ; msg=42
-;    push #nil           ; ()
-;    push -3             ; () -3
-;    push -2             ; () -3 -2
-;    push -1             ; () -3 -2 -1
-;    pair 3              ; msg=(-1 -2 -3)
+;    push 42             ; msg=42
+    push #nil           ; ()
+    push -3             ; () -3
+    push -2             ; () -3 -2
+    push -1             ; () -3 -2 -1
+    pair 3              ; msg=(-1 -2 -3)
     msg 0               ; msg {caps}
     push DEBUG_DEV_KEY  ; msg {caps} DEBUG_DEV_KEY
     dict get            ; msg DEBUG_DEV
