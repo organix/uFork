@@ -561,21 +561,20 @@ function generate_crlf(tree, file) {
 
     function gen_type(operand) {
         const token = operand[1];
-        let name = token.name;
-        if (name.endsWith("_t")) {
-            name = name.slice(0, -2);
-        }
         return (
             (token.id === ":literal:" && (
-                name === "literal"
-                || name === "fixnum"
-                || name === "type"
-                || name === "pair"
-                || name === "dict"
-                || name === "instr"
-                || name === "actor"
+                token.name === "literal_t"
+                || token.name === "fixnum_t"
+                || token.name === "type_t"
+                || token.name === "pair_t"
+                || token.name === "dict_t"
+                || token.name === "instr_t"
+                || token.name === "actor_t"
             ))
-            ? {kind: "type", name}
+            ? {
+                kind: "type",
+                name: token.name.slice(0, -2)
+            }
             : fail("Expected a type", token)
         );
     }
@@ -804,8 +803,8 @@ function generate_crlf(tree, file) {
             return {
                 kind: "instr",
                 op: "if",
-                f: gen_ref_expression(operands[0], true),
                 t: gen_continuation(1),
+                f: gen_ref_expression(operands[0], true),
                 debug
             };
         }
@@ -926,6 +925,12 @@ function assemble(source, file) {
 // a:
 //     msg 2
 // b:
+//     end commit
+// `);
+
+// good("type literal", `
+// a:
+//     push #actor_t
 //     end commit
 // `);
 
