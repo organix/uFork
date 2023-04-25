@@ -203,3 +203,37 @@ impl Device for BlobDevice {
         Ok(true)  // event handled.
     }
 }
+
+pub struct TimerDevice {}
+impl TimerDevice {
+    pub fn new() -> TimerDevice {
+        TimerDevice {}
+    }
+    #[cfg(target_arch = "wasm32")]
+    fn set_timer(&mut self, delay: Any, target: Any, message: Any) {
+        unsafe {
+            crate::host_timer(delay.raw(), target.raw(), message.raw());
+        }
+    }
+    #[cfg(not(target_arch = "wasm32"))]
+    fn set_timer(&mut self, _delay: Any, _target: Any, _message: Any) {
+        // timer device not available...
+    }
+}
+impl Device for TimerDevice {
+    fn handle_event(&mut self, core: &mut Core, ep: Any) -> Result<bool, Error> {
+        let event = core.mem(ep);
+        let msg = event.y();
+        let delay = core.nth(msg, PLUS_1);
+        if !delay.is_fix() {
+            return Err(E_NOT_FIX);
+        }
+        let target = core.nth(msg, PLUS_2);
+        if !target.is_cap() {
+            return Err(E_NOT_CAP);
+        }
+        let message = core.nth(msg, PLUS_3);
+        self.set_timer(delay, target, message);
+        Ok(true)  // event handled.
+    }
+}

@@ -72,6 +72,7 @@ extern {
     pub fn host_clock() -> Raw;
     pub fn host_print(base: *const u8, ofs: usize);
     pub fn host_log(x: Raw);
+    pub fn host_timer(delay: Raw, target: Raw, message: Raw);
 }
 
 #[cfg(target_arch = "wasm32")]

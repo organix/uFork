@@ -1,7 +1,7 @@
 ; Boot into the test suite.
 
 ; Expects to receive a dictionary containing capabilities, like
-; {2: DEBUG_DEV, 3: CLOCK_DEV, 4: IO_DEV, 5: BLOB_DEV, 6: BLOB_DEV}.
+; {2: DEBUG_DEV, 3: CLOCK_DEV, 4: IO_DEV, 5: BLOB_DEV, 6: TIMER_DEV, 7: MEMO_DEV}.
 
 .import
     std: "./std.asm"

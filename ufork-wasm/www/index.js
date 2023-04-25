@@ -104,8 +104,9 @@ const DEBUG_DEV_OFS = 2;
 const CLOCK_DEV_OFS = 3;
 const IO_DEV_OFS = 4;
 const BLOB_DEV_OFS = 5;
-const MEMO_DEV_OFS = 6;
-const SPONSOR_OFS = 7;
+const TIMER_DEV_OFS = 6;
+const MEMO_DEV_OFS = 7;
+const SPONSOR_OFS = 15;
 const h_no_init = function uninitialized() {
     return h_warning("WASM not initialized.");
 };
@@ -285,7 +286,7 @@ function h_print(raw) {
         return rom_label[raw];
     }
     const prefix = (raw & OPQ_RAW) ? "@" : "^";
-    return prefix + ("00000000" + raw.toString(16)).slice(-8);
+    return prefix + raw.toString(16).padStart(8, "0");
 }
 const instr_label = [
     "VM_TYPEQ",
@@ -1112,7 +1113,13 @@ function boot(module_specifier) {
         h_event_inject(
             h_ramptr(SPONSOR_OFS),
             h_ptr_to_cap(actor),
-            cap_dict([DEBUG_DEV_OFS, CLOCK_DEV_OFS, IO_DEV_OFS, BLOB_DEV_OFS, MEMO_DEV_OFS])
+            cap_dict([
+                DEBUG_DEV_OFS,
+                CLOCK_DEV_OFS,
+                IO_DEV_OFS,
+                BLOB_DEV_OFS,
+                TIMER_DEV_OFS,
+                MEMO_DEV_OFS])
         );
         updateRomMonitor();
         drawHost();
@@ -1210,13 +1217,13 @@ function hexdump(u8buf, ofs, len, xlt) {
     let out = "";
     while (ofs < len) {
         let str = "";
-        out += ("0000" + ofs.toString(16)).slice(-4) + ":";
+        out += ofs.toString(16).padStart(4, "0") + ":";
         for (let cnt = 0; cnt < 16; cnt += 1) {
             out += ((cnt & 0x3) === 0) ? "  " : " ";
             const idx = ofs + cnt;
             if (idx < len) {
                 const code = u8buf[idx];
-                out += ("00" + code.toString(16)).slice(-2);
+                out += code.toString(16).padStart(2, "0");
                 str += String.fromCodePoint(xlt(code));
             } else {
                 out += "  ";
@@ -1420,9 +1427,21 @@ WebAssembly.instantiateStreaming(
             },
             host_log(x) {  // WASM type: (i32) -> nil
                 // process asynchronously to avoid WASM re-entrancy
+                x = (x >>> 0);  // convert i32 -> u32
                 setTimeout(() => {
                     console.log("LOG:", x, "=", h_print(x), "->", h_pprint(x));
                 });
+            },
+            host_timer(delay, target, message) {  // WASM type: (i32, i32, i32) -> nil
+                if (h_is_fix(delay) && h_is_cap(target)) {
+                    setTimeout(() => {
+                        // FIXME: how do we ensure that `target` and `message` remain valid!?
+                        console.log("TIMER:", h_print(delay), h_print(target), h_pprint(message));
+                        const sponsor = h_ramptr(SPONSOR_OFS);  // use "global" sponsor
+                        h_event_inject(sponsor, target, message);
+                        drawHost();
+                    }, h_fix_to_i32(delay));
+                }
             },
         }
     }

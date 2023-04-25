@@ -1,7 +1,7 @@
 ; device test suite.
 
 ; Expects to receive a dictionary containing capabilities, like
-; {2: DEBUG_DEV, 3: CLOCK_DEV, 4: IO_DEV, 5: BLOB_DEV, 6: BLOB_DEV}.
+; {2: DEBUG_DEV, 3: CLOCK_DEV, 4: IO_DEV, 5: BLOB_DEV, 6: TIMER_DEV, 7: MEMO_DEV}.
 
 .import
     std: "./std.asm"
@@ -14,8 +14,10 @@ IO_DEV_KEY:
     ref 4
 BLOB_DEV_KEY:
     ref 5
-MEMO_DEV_KEY:
+TIMER_DEV_KEY:
     ref 6
+MEMO_DEV_KEY:
+    ref 7
 
 boot:
     msg 0               ; {caps}
@@ -39,7 +41,16 @@ boot:
     new 0               ; 5 counter
     send 0              ; --
 
-;    push 42             ; msg=42
+    push 42             ; msg=42
+    msg 0               ; msg {caps}
+    push DEBUG_DEV_KEY  ; msg {caps} DEBUG_DEV_KEY
+    dict get            ; msg DEBUG_DEV
+    push 0              ; msg DEBUG_DEV delay=0
+    msg 0               ; msg DEBUG_DEV delay {caps}
+    push TIMER_DEV_KEY  ; msg DEBUG_DEV delay {caps} TIMER_DEV_KEY
+    dict get            ; msg DEBUG_DEV delay TIMER_DEV
+    send 3              ; --
+
     push #nil           ; ()
     push -3             ; () -3
     push -2             ; () -3 -2
