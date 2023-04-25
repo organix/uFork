@@ -1419,7 +1419,10 @@ WebAssembly.instantiateStreaming(
                 console.log("PRINT:", blob, base, ofs);
             },
             host_log(x) {  // WASM type: (i32) -> nil
-                console.log("LOG:", x, "=", h_print(x), "->", h_pprint(x));
+                // process asynchronously to avoid WASM re-entrancy
+                setTimeout(() => {
+                    console.log("LOG:", x, "=", h_print(x), "->", h_pprint(x));
+                });
             },
         }
     }
