@@ -29,7 +29,7 @@ domain0:                          domain1:
 |    v           |                |           |    |
 | ( ping )       |                |       ( pong ) |
 |    |      pong |           pong |           ^    |
-|    +-> ( proxy ] . . . . ] stub ) ----------+    |
+|    +-> ( proxy ] . . . . [ stub ) ----------+    |
 |                |                |                |
 +----------------+                +----------------+
 ```
@@ -39,6 +39,8 @@ between actors, stubs, and proxies
 spanning separate domains.
 The `ping` actor lives in `domain0`.
 The `pong` actor lives in `domain1`.
+There are two independent one-way links
+between `ping` and `pong`.
 Each _actor_ has a corresponding _stub_
 that allows injection of messages
 for that actor into the domain.
