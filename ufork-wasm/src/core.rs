@@ -1275,6 +1275,7 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
             1. Mark the cell `GC_FREE` and add it to the free-cell chain
         */
         let ddeque = self.ddeque();
+        let mut sweep = self.ram_top();
         let root = self.ram_root();
         let bank = if self.gc_phase() == BNK_0 { BNK_1 } else { BNK_0 };  // determine new phase
         self.set_ram_root(UNDEF);  // toggle GC phase
@@ -1297,6 +1298,21 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
         while scan != self.ram_top() {  // scan marked quads
             self.gc_scan(scan).unwrap();  // FIXME: report error?
             scan = Any::new(scan.raw() + 1);
+        }
+        while sweep.ofs() >= RAM_BASE_OFS {  // sweep free Proxy_T references
+            let quad = self.gc_load(sweep);
+            if quad.t() == PROXY_T {
+                // notify device that proxy is not referenced
+                let id = quad.x().get_fix().unwrap() as usize;
+                if id < DEVICE_MAX {
+                    let mut dev_mut = self.device[id].take().unwrap();
+                    dev_mut.drop_proxy(sweep);
+                    self.device[id] = Some(dev_mut);
+//                } else {
+//                    return Err(E_BOUNDS);  // device id must be less than DEVICE_MAX
+                }
+            }
+            sweep = Any::new(sweep.raw() - 1);
         }
     }
     fn gc_mark(&mut self, val: Any) -> Result<Any, Error> {
