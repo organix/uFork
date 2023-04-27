@@ -1310,7 +1310,17 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
                 let mut dup = self.reserve(&quad)?;
                 if val.is_cap() {
                     dup = self.ptr_to_cap(dup);  // restore CAP marker
-                };
+                }
+                if quad.t() == STUB_T {
+                    // notify device that stub is being relocated
+                    let id = quad.x().get_fix()? as usize;
+                    if id >= DEVICE_MAX {
+                        return Err(E_BOUNDS);  // device id must be less than DEVICE_MAX
+                    }
+                    let mut dev_mut = self.device[id].take().unwrap();
+                    dev_mut.move_stub(val, dup);
+                    self.device[id] = Some(dev_mut);
+                }
                 //println!("gc_mark: ${:08x} --> ${:08x}", val.raw(), dup.raw());
                 assert_ne!(val.raw(), dup.raw());
                 self.gc_store(val, Quad::fwd_ref_t(dup));  // leave "broken heart" behind
