@@ -47,21 +47,23 @@ impl Quad {
         assert!(next.is_ptr());
         Self::new(ip, sp, ep, next)
     }
-    pub fn instr_t(vm: Any, v: Any, k: Any) -> Quad {
-        assert!(vm.is_fix());
+    pub fn instr_t(op: Any, imm: Any, k: Any) -> Quad {
+        assert!(op.is_fix());
         assert!(k.is_ptr());
-        Self::new(INSTR_T, vm, v, k)
+        Self::new(INSTR_T, op, imm, k)
     }
     pub fn actor_t(beh: Any, state: Any, events: Any) -> Quad {
         //assert!(beh.is_ptr()); --- moved test to new_actor() so we can create devices
         assert!(events.is_ptr());
         Self::new(ACTOR_T, beh, state, events)
     }
-    pub fn proxy_t(x: Any, y: Any, z: Any) -> Quad {
-        Self::new(PROXY_T, x, y, z)
+    pub fn proxy_t(dev: Any, y: Any, z: Any) -> Quad {
+        assert!(dev.is_fix());
+        Self::new(PROXY_T, dev, y, z)
     }
-    pub fn stub_t(x: Any, y: Any, z: Any) -> Quad {
-        Self::new(STUB_T, x, y, z)
+    pub fn stub_t(dev: Any, y: Any, z: Any) -> Quad {
+        assert!(dev.is_fix());
+        Self::new(STUB_T, dev, y, z)
     }
     pub fn pair_t(car: Any, cdr: Any) -> Quad {
         Self::new(PAIR_T, car, cdr, UNDEF)

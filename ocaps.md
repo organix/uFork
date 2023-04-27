@@ -45,12 +45,12 @@ Each _actor_ has a corresponding _stub_
 that allows injection of messages
 for that actor into the domain.
 For any given _stub_ there may be several _proxies_
-that represent remote-references to an actor.
+that represent remote-references to that stub/actor.
 Note that not all actors will necessarily have proxies or stubs.
 
 ## Garbage Collection
 
-Within a _domain_ it is possible to traces all active references
+Within a _domain_ it is possible to trace all active references
 and determine when an actor (or other storage) is unreachable,
 at which time the storage can be reclaimed and reused.
 However, once a reference crosses domain boundaries,
