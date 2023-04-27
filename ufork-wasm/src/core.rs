@@ -1277,7 +1277,7 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
         let ddeque = self.ddeque();
         let root = self.ram_root();
         let bank = if self.gc_phase() == BNK_0 { BNK_1 } else { BNK_0 };  // determine new phase
-        self.set_ram_top(UNDEF);  // toggle GC phase
+        self.set_ram_root(UNDEF);  // toggle GC phase
         self.gc_store(
             Any::ram(bank, MEMORY.ofs()),
             Quad::memory_t(Any::ram(bank, ddeque.ofs()), NIL, ZERO, root));
@@ -1368,7 +1368,9 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
     }
     pub fn gc_phase(&self) -> Raw {
         let mem = Any::ram(BNK_0, MEMORY.ofs());
-        if self.gc_load(mem).t() == UNDEF {
+        // The RAM/GC root pointer is also used to indicate which RAM bank is active.
+        // The inactive bank has `UNDEF` in this field.
+        if self.gc_load(mem).z() == UNDEF {
             BNK_1
         } else {
             BNK_0
