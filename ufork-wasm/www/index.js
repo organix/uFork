@@ -29,7 +29,8 @@ const $event = document.getElementById("event");
 const $self = document.getElementById("self");
 const $msg = document.getElementById("msg");
 
-const $fault = document.getElementById("fault-led");
+const $fault_ctl = document.getElementById("fault-ctl");
+const $fault_led = document.getElementById("fault-led");
 
 let paused = false;  // run/pause toggle
 let fault = false;  // execution fault flag
@@ -107,6 +108,30 @@ const BLOB_DEV_OFS = 5;
 const TIMER_DEV_OFS = 6;
 const MEMO_DEV_OFS = 7;
 const SPONSOR_OFS = 15;
+
+const e_msg = [
+    "no error",                             // E_OK = 0
+    "general failure",                      // E_FAIL = -1
+    "out of bounds",                        // E_BOUNDS = -2
+    "no memory available",                  // E_NO_MEM = -3
+    "fixnum required",                      // E_NOT_FIX = -4
+    "capability required",                  // E_NOT_CAP = -5
+    "memory pointer required",              // E_NOT_PTR = -6
+    "ROM pointer required",                 // E_NOT_ROM = -7
+    "RAM pointer required",                 // E_NOT_RAM = -8
+    "Sponsor memory limit reached",         // E_MEM_LIM = -9
+    "Sponsor instruction limit reached",    // E_CPU_LIM = -10
+    "Sponsor event limit reached",          // E_MSG_LIM = -11
+    "assertion failed",                     // E_ASSERT = -12
+];
+function faultMsg(e_code) {
+    e_code = Math.abs(e_code);
+    if ((typeof e_code === 'number') || (e_code < e_msg.length)) {
+        return e_msg[e_code];
+    }
+    return "unknown fault";
+}
+
 const h_no_init = function uninitialized() {
     return h_warning("WASM not initialized.");
 };
@@ -894,11 +919,11 @@ function updateSourceMonitor(ip) {
 const drawHost = () => {
     $revertButton.disabled = !fault;
     if (fault) {
-        $fault.setAttribute("fill", "#F30");
-        $fault.setAttribute("stroke", "#900");
+        $fault_led.setAttribute("fill", "#F30");
+        $fault_led.setAttribute("stroke", "#900");
     } else {
-        $fault.setAttribute("fill", "#0F3");
-        $fault.setAttribute("stroke", "#090");
+        $fault_led.setAttribute("fill", "#0F3");
+        $fault_led.setAttribute("stroke", "#090");
     }
     updateBlobMonitor();
     updateRamMonitor();
@@ -1027,6 +1052,7 @@ const gcHost = () => {
 }
 const singleStep = () => {
     const err = h_step();
+    $fault_ctl.title = faultMsg(err);
     if (err === 0) {  // 0 = E_OK = no error
         fault = false;
     } else {
@@ -1043,6 +1069,7 @@ const nextStep = () => {
     let next_event = cc.ep;
     while (true) {
         const err = h_step();
+        $fault_ctl.title = faultMsg(err);
         if (err === 0) {  // 0 = E_OK = no error
             fault = false;
         } else {

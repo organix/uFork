@@ -106,11 +106,13 @@ table {
   <div id="monitor">
     <div id="controls">
       <button id="revert-btn">Revert</button>
-      <svg width="36" height="36" viewBox="-18 -18 36 36">
-        <g stroke-width="1">
-          <circle id="fault-led" cx="0" cy="0" r="5" fill="#FF3" stroke="#990"></circle>
-        </g>
-      </svg>
+      <div id="fault-ctl" title="ready">
+        <svg width="36" height="36" viewBox="-18 -18 36 36">
+          <g stroke-width="1">
+            <circle id="fault-led" cx="0" cy="0" r="5" fill="#FF3" stroke="#990"></circle>
+          </g>
+        </svg>
+      </div>
       <button id="play-pause"></button>
       <input type="range" id="frame-rate" min="1" max="60" value="1">
       <button id="next-step">Next</button>
