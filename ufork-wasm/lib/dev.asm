@@ -1,39 +1,36 @@
-; device test suite.
-
-; Expects to receive a dictionary containing capabilities, like
-; {2: DEBUG_DEV, 3: CLOCK_DEV, 4: IO_DEV, 5: BLOB_DEV, 6: TIMER_DEV, 7: MEMO_DEV}.
+; Device constants, and test suite.
 
 .import
     std: "./std.asm"
 
-DEBUG_DEV_KEY:
+debug_key:
     ref 2
-CLOCK_DEV_KEY:
+clock_key:
     ref 3
-IO_DEV_KEY:
+io_key:
     ref 4
-BLOB_DEV_KEY:
+blob_key:
     ref 5
-TIMER_DEV_KEY:
+timer_key:
     ref 6
-MEMO_DEV_KEY:
+memo_key:
     ref 7
 
 boot:
     msg 0               ; {caps}
-    push IO_DEV_KEY     ; {caps} IO_DEV_KEY
-    dict get            ; IO_DEV
-    msg 0               ; IO_DEV {caps}
-    push BLOB_DEV_KEY   ; IO_DEV {caps} BLOB_DEV_KEY
-    dict get            ; IO_DEV BLOB_DEV
+    push io_key         ; {caps} io_key
+    dict get            ; io_dev
+    msg 0               ; io_dev {caps}
+    push blob_key       ; io_dev {caps} blob_key
+    dict get            ; io_dev blob_dev
 
-    dup 2               ; IO_DEV BLOB_DEV IO_DEV BLOB_DEV
-    push 13             ; IO_DEV BLOB_DEV IO_DEV BLOB_DEV 13
-    roll -3             ; IO_DEV BLOB_DEV 13 IO_DEV BLOB_DEV
-    send 2              ; IO_DEV BLOB_DEV
+    dup 2               ; io_dev blob_dev io_dev blob_dev
+    push 13             ; io_dev blob_dev io_dev blob_dev 13
+    roll -3             ; io_dev blob_dev 13 io_dev blob_dev
+    send 2              ; io_dev blob_dev
 
-    push 3              ; IO_DEV BLOB_DEV 3
-    roll -3             ; 3 IO_DEV BLOB_DEV
+    push 3              ; io_dev blob_dev 3
+    roll -3             ; 3 io_dev blob_dev
     send 2              ; --
 
     push 5              ; 5
@@ -43,12 +40,12 @@ boot:
 
     push 42             ; msg=42
     msg 0               ; msg {caps}
-    push DEBUG_DEV_KEY  ; msg {caps} DEBUG_DEV_KEY
-    dict get            ; msg DEBUG_DEV
-    push 0              ; msg DEBUG_DEV delay=0
-    msg 0               ; msg DEBUG_DEV delay {caps}
-    push TIMER_DEV_KEY  ; msg DEBUG_DEV delay {caps} TIMER_DEV_KEY
-    dict get            ; msg DEBUG_DEV delay TIMER_DEV
+    push debug_key      ; msg {caps} debug_key
+    dict get            ; msg debug_dev
+    push 0              ; msg debug_dev delay=0
+    msg 0               ; msg debug_dev delay {caps}
+    push timer_key      ; msg debug_dev delay {caps} timer_key
+    dict get            ; msg debug_dev delay timer_dev
     send 3              ; --
 
     push #nil           ; ()
@@ -57,8 +54,8 @@ boot:
     push -1             ; () -3 -2 -1
     pair 3              ; msg=(-1 -2 -3)
     msg 0               ; msg {caps}
-    push DEBUG_DEV_KEY  ; msg {caps} DEBUG_DEV_KEY
-    dict get            ; msg DEBUG_DEV
+    push debug_key      ; msg {caps} debug_key
+    dict get            ; msg debug_dev
     send 0              ; --
 
     ref std.commit
@@ -76,4 +73,10 @@ count:
     ref std.send_0
 
 .export
+    debug_key
+    clock_key
+    io_key
+    blob_key
+    timer_key
+    memo_key
     boot

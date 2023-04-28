@@ -1,25 +1,22 @@
 ; Boot into the test suite.
 
-; Expects to receive a dictionary containing capabilities, like
-; {2: DEBUG_DEV, 3: CLOCK_DEV, 4: IO_DEV, 5: BLOB_DEV, 6: TIMER_DEV, 7: MEMO_DEV}.
+; Expects to receive a dictionary containing capabilities.
 
 .import
     std: "./std.asm"
     fib: "./fib.asm"
+    dev: "./dev.asm"
 
 n:
     ref 6
 
-DEBUG_DEV_KEY:
-    ref 2
-
 boot:                   ; {caps}
     push n              ; n
     msg 0               ; n {caps}
-    push DEBUG_DEV_KEY  ; n {caps} DEBUG_DEV_KEY
-    dict get            ; n DEBUG_DEV
-    push fib.beh        ; n DEBUG_DEV beh
-    new 0               ; n DEBUG_DEV actor
+    push dev.debug_key  ; n {caps} dev.debug_key
+    dict get            ; n debug_dev
+    push fib.beh        ; n debug_dev beh
+    new 0               ; n debug_dev actor
     send 2 std.commit
 
 .export
