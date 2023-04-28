@@ -1240,21 +1240,22 @@ function h_snapshot() {
     // create a snapshot with the uFork VM state
     const mem_base = h_memory();
 
+    // WASM mandates little-endian byte ordering
     const rom_ofs = h_rom_buffer();
-    const rom_len = h_rawofs(h_rom_top()) << 2;
-    const rom = new Uint32Array(mem_base, rom_ofs, rom_len);
+    const rom_len = h_rawofs(h_rom_top()) << 4;
+    const rom = new Uint8Array(mem_base, rom_ofs, rom_len);
 
     const ram_ofs = h_ram_buffer(h_gc_phase());
-    const ram_len = h_rawofs(h_ram_top()) << 2;
-    const ram = new Uint32Array(mem_base, ram_ofs, ram_len);
+    const ram_len = h_rawofs(h_ram_top()) << 4;
+    const ram = new Uint8Array(mem_base, ram_ofs, ram_len);
 
     const blob_ofs = h_blob_buffer();
     const blob_len = h_fix_to_i32(h_blob_top());
     const blob = new Uint8Array(mem_base, blob_ofs, blob_len);
 
     return {
-        rom: Array.from(rom),
-        ram: Array.from(ram),
+        rom: rom.slice(),
+        ram: ram.slice(),
         blob: blob.slice(),
     };
 }
@@ -1263,8 +1264,8 @@ function h_restore(snapshot) {
     const mem_base = h_memory();
 
     const rom_ofs = h_rom_buffer();
-    const rom_len = snapshot.rom.length;
-    const rom = new Uint32Array(mem_base, rom_ofs, rom_len);
+    const rom_len = snapshot.rom.byteLength;
+    const rom = new Uint8Array(mem_base, rom_ofs, rom_len);
     rom.set(snapshot.rom);
 
     //const old_phase = h_gc_phase();
@@ -1272,8 +1273,8 @@ function h_restore(snapshot) {
     h_write_quad(old_ram, { t: UNDEF_RAW, x: UNDEF_RAW, y: UNDEF_RAW, z: UNDEF_RAW });
     const gc_phase = snapshot.ram[0] & BNK_RAW;
     const ram_ofs = h_ram_buffer(gc_phase);
-    const ram_len = snapshot.ram.length;
-    const ram = new Uint32Array(mem_base, ram_ofs, ram_len);
+    const ram_len = snapshot.ram.byteLength;
+    const ram = new Uint8Array(mem_base, ram_ofs, ram_len);
     ram.set(snapshot.ram);
     //const new_phase = h_gc_phase();
 
