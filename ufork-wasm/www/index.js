@@ -126,7 +126,7 @@ const e_msg = [
 ];
 function faultMsg(e_code) {
     e_code = Math.abs(e_code);
-    if ((typeof e_code === 'number') || (e_code < e_msg.length)) {
+    if ((typeof e_code === 'number') && (e_code < e_msg.length)) {
         return e_msg[e_code];
     }
     return "unknown fault";
