@@ -1,51 +1,63 @@
-; A behavior that delays the sending of a message to an actor.
+; The timer actor delays the sending of a message to an actor. It can be used
+; multiple times.
 
-; The initial stack holds the clock device. The message is a list containing the
-; delay in millseconds, the target actor, and the message.
+; The timer actor's initial stack holds the clock device. It accepts a message
+; that is a list containing the delay in milliseconds, the target actor, and the
+; message.
 
 .import
     std: "./std.asm"
     dev: "./dev.asm"
 
-; The timer actor begins by asking the clock device for the current time. The
-; current time is stored as the start time.
+; Initially, the actor has no awareness of time. A customer is created to
+; receive the current time from the clock device.
 
-beh:                    ; clock
-    dup 1               ; clock clock
-    msg 3               ; clock clock message
-    msg 2               ; clock clock message target
-    msg 1               ; clock clock message target delay
-    push wait_beh       ; clock clock message target delay wait_beh
-    beh 4               ; clock
-    ref ask
-
-wait_beh:               ; clock message target delay
-    msg 0               ; clock message target delay start
-    pick 5              ; clock message target delay start clock
-    roll -6             ; clock clock message target delay start
-    push poll_beh       ; clock clock message target delay start poll_beh
-    beh 5               ; clock
-    ref ask
-
-; Once the start time is known, the actor repeatedly polls the clock device
-; until the time elapsed exceeds the delay, at which point the message is sent
-; to the target and polling ceases.
-
-poll_beh:               ; clock message target delay start
-    msg 0               ; clock message target delay start now
-    roll 2              ; clock message target delay now start
-    alu sub             ; clock message target delay elapsed
-    cmp le              ; clock message target fire?
-    if std.send_0       ; clock message target
-    drop 2              ; clock
-    ref ask
-
-ask:                    ; clock
-    my self             ; clock SELF
-    pick 2              ; clock SELF clock
+beh:                    ; clock                        <- (delay target message)
+    msg 3               ; clock message
+    msg 2               ; clock message target
+    pair 1              ; clock (target . message)
+    pick 2              ; clock (target . message) clock
+    msg 1               ; clock (target . message) clock delay
+    push cust_beh       ; clock (target . message) clock delay cust_beh
+    new 3               ; clock cust
+    pick 2              ; clock cust clock
     ref std.send_0
 
-; The demo simply delays the printing of the number 1729 to the debug device.
+; Once the current time is known, it is added to the delay to yield the end
+; time.
+
+cust_beh:               ; (target . message) clock delay                  <- now
+    msg 0               ; ... now
+    pick 2              ; ... now delay
+    alu add             ; ... end_time
+    pick 4              ; ... end_time (target . message)
+    roll 2              ; ... (target . message) end_time
+    pick 4              ; ... (target . message) end_time clock
+    push poll_beh       ; ... (target . message) end_time clock poll_beh
+    beh 3               ; ...
+    my self             ; ... SELF
+    pick 3              ; ... SELF clock
+    ref std.send_0
+
+; The clock device is then repeatedly polled until the end time is reached, at
+; which point the message is sent to the target.
+
+poll_beh:               ; (target . message) end_time clock               <- now
+    msg 0               ; ... now
+    pick 3              ; ... now end_time
+    cmp ge              ; ... expired?
+    if_not retry        ; ...
+    pick 3              ; ... (target . message)
+    part 1              ; ... message target
+    ref std.send_0
+
+retry:                  ; ... clock
+    my self             ; ... clock SELF
+    pick 2              ; ... clock SELF clock
+    ref std.send_0
+
+; The demo simply delays the sending of the numbers 42 and 1729 to the debug
+; device.
 
 boot:                   ;
     msg 0               ; {caps}
@@ -57,11 +69,16 @@ boot:                   ;
     dict get            ; debug_dev clock_dev
     push beh            ; debug_dev clock_dev timer_beh
     new 1               ; debug_dev timer
-    push 1729           ; debug_dev timer message
-    roll -3             ; message debug_dev timer
-    push 3000           ; message debug_dev timer delay
-    roll 2              ; message debug_dev delay timer
-    send 3              ;
+    push 42             ; debug_dev timer 42
+    pick 3              ; debug_dev timer 42 debug_dev
+    push 1000           ; debug_dev timer 42 debug_dev 1000
+    pick 4              ; debug_dev timer 42 debug_dev 1000 timer
+    send 3              ; debug_dev timer
+    push 1729           ; debug_dev timer 1729
+    pick 3              ; debug_dev timer 1729 debug_dev
+    push 2000           ; debug_dev timer 1729 debug_dev 2000
+    pick 4              ; debug_dev timer 1729 debug_dev 2000 timer
+    send 3              ; debug_dev timer
     ref std.commit
 
 .export
