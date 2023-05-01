@@ -788,14 +788,14 @@ function rom_alloc(debug_info) {
         }
     });
 }
-function h_disasm(ptr) {
-    let s = h_print(ptr);
-    if (h_is_cap(ptr)) {
-        ptr = h_cap_to_ptr(ptr);
+function h_disasm(raw) {
+    let s = h_print(raw);
+    if (h_is_cap(raw)) {
+        raw = h_cap_to_ptr(raw);
     }
-    if (h_is_ptr(ptr)) {
+    if (h_is_ptr(raw)) {
         s += ": ";
-        const quad = h_read_quad(ptr);
+        const quad = h_read_quad(raw);
         s += q_print(quad);
     }
     return s;
@@ -834,6 +834,20 @@ function h_pprint(raw) {
                 quad = h_read_quad(quad.z);  // next
             }
             s += "}";
+            return s;
+        }
+    }
+    if (h_is_cap(raw)) {
+        const ptr = h_cap_to_ptr(raw);
+        const quad = h_read_quad(ptr);
+        if (quad.t !== ACTOR_T) {
+            let s = "";
+            s += h_print(quad.t);
+            s += "[";
+            s += h_print(quad.x);
+            s += ",";
+            s += h_print(quad.y);
+            s += "]";
             return s;
         }
     }

@@ -110,9 +110,20 @@ impl Device for IoDevice {
         let _myself = event.x();
         let message = event.y();
         let buf = core.blob_buffer();
-        let ptr = buf.as_ptr();
-        let ofs = message.get_fix()? as usize;
-        greet(ptr, ofs);
+        let base = buf.as_ptr();
+        if !message.is_cap() {
+            return Err(E_NOT_CAP);
+        }
+        let ptr = core.cap_to_ptr(message);
+        let proxy = core.ram(ptr);
+        if proxy.t() != PROXY_T {
+            return Err(E_NOT_PTR);
+        }
+        if proxy.x() != core.ptr_to_mem(BLOB_DEV) {
+            return Err(E_BOUNDS);
+        }
+        let ofs = proxy.y().get_fix()? as usize;
+        greet(base, ofs);
         self.call_count = count;
         Ok(true)  // event handled.
     }
@@ -197,11 +208,15 @@ impl Device for BlobDevice {
     fn handle_event(&mut self, core: &mut Core, ep: Any) -> Result<bool, Error> {
         let event = core.mem(ep);
         let sponsor = event.t();
+        let dev = event.x();
         let msg = event.y();
         let cust = core.nth(msg, PLUS_1);
         let size = core.nth(msg, PLUS_2);
-        let reply = blob_reserve(core, size)?;
-        core.event_inject(sponsor, cust, reply)?;
+        let handle = blob_reserve(core, size)?;
+        let proxy = Quad::proxy_t(dev, handle);
+        let ptr = core.reserve(&proxy)?;  // no Sponsor needed
+        let cap = core.ptr_to_cap(ptr);
+        core.event_inject(sponsor, cust, cap)?;
         Ok(true)  // event handled.
     }
 }

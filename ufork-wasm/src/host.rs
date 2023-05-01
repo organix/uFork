@@ -51,7 +51,7 @@ impl Host {
         self.core.gc_phase()
     }
     pub fn gc_run(&mut self) {
-        self.core.gc_stop_the_world()
+        self.core.gc_stop_the_world().unwrap()
     }
     pub fn rom_top(&self) -> Raw {
         self.core.rom_top().raw()

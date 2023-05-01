@@ -176,40 +176,38 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
         if limit <= 0 {
             return Err(E_MSG_LIM);  // Sponsor event limit reached
         }
-        let a_ptr = self.cap_to_ptr(target);
-        let a_quad = *self.mem(a_ptr);
-        let beh = a_quad.x();
-        let state = a_quad.y();
-        let events = a_quad.z();
-        if let Some(index) = beh.fix_num() {
+        if let Ok(id) = self.device_id(target) {
             // message-event to device
-            let id = index as usize;
-            if id >= DEVICE_MAX {
-                return Err(E_BOUNDS);  // device id must be less than DEVICE_MAX
-            }
             let ep_ = self.event_dequeue().unwrap();
             assert_eq!(ep, ep_);
             let mut dev_mut = self.device[id].take().unwrap();
             let result = dev_mut.handle_event(self, ep);
             self.device[id] = Some(dev_mut);
             result  // should normally be Ok(true)
-        } else if events == UNDEF {
-            // begin actor-event transaction
-            let rollback = self.reserve(&a_quad)?;  // snapshot actor state
-            let kp = self.new_cont(beh, state, ep)?;  // create continuation
-            self.ram_mut(a_ptr).set_z(NIL);  // indicate actor is busy
-            self.cont_enqueue(kp);
-            let ep_ = self.event_dequeue().unwrap();
-            assert_eq!(ep, ep_);
-            self.ram_mut(ep).set_z(rollback);  // store rollback in event
-            self.set_sponsor_events(sponsor, Any::fix(limit - 1));  // decrement event limit
-            Ok(true)  // event dispatched
         } else {
-            // target actor is busy, retry later...
-            let ep_ = self.event_dequeue().unwrap();
-            assert_eq!(ep, ep_);
-            self.event_enqueue(ep);  // move event to back of queue
-            Ok(false)  // no event dispatched
+            let a_ptr = self.cap_to_ptr(target);
+            let a_quad = *self.mem(a_ptr);
+            let beh = a_quad.x();
+            let state = a_quad.y();
+            let events = a_quad.z();
+            if events == UNDEF {
+                // begin actor-event transaction
+                let rollback = self.reserve(&a_quad)?;  // snapshot actor state
+                let kp = self.new_cont(beh, state, ep)?;  // create continuation
+                self.ram_mut(a_ptr).set_z(NIL);  // indicate actor is busy
+                self.cont_enqueue(kp);
+                let ep_ = self.event_dequeue().unwrap();
+                assert_eq!(ep, ep_);
+                self.ram_mut(ep).set_z(rollback);  // store rollback in event
+                self.set_sponsor_events(sponsor, Any::fix(limit - 1));  // decrement event limit
+                Ok(true)  // event dispatched
+            } else {
+                // target actor is busy, retry later...
+                let ep_ = self.event_dequeue().unwrap();
+                assert_eq!(ep, ep_);
+                self.event_enqueue(ep);  // move event to back of queue
+                Ok(false)  // no event dispatched
+            }
         }
     }
     pub fn execute_instruction(&mut self) -> Result<bool, Error> {
@@ -236,7 +234,7 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
             // free dead continuation and associated event
             self.free(ep);
             self.free(kp);
-            self.gc_stop_the_world();  // FIXME!! REMOVE FORCED GC...
+            self.gc_stop_the_world()?;  // FIXME! REMOVE FORCED GC...
         }
         Ok(true)  // instruction executed
     }
@@ -497,7 +495,7 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
             VM_SEND => {
                 let num = imm.get_fix()?;
                 let target = self.stack_pop();
-                assert!(self.typeq(ACTOR_T, target));
+                //assert!(self.typeq(ACTOR_T, target));
                 let msg = if num > 0 {
                     self.pop_counted(num)
                 } else {
@@ -963,7 +961,10 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
     pub fn blob_top(&self) -> Any { Any::fix(BLOB_RAM_MAX as isize) }
 
     fn new_event(&mut self, target: Any, msg: Any) -> Result<Any, Error> {
-        assert!(self.typeq(ACTOR_T, target));
+        //assert!(self.typeq(ACTOR_T, target));
+        if !self.typeq(ACTOR_T, target) {
+            return Err(E_NOT_CAP);
+        }
         let sponsor = self.event_sponsor(self.ep());
         let event = Quad::new_event(sponsor, target, msg);
         self.alloc(&event)
@@ -1181,7 +1182,7 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
     pub fn in_heap(&self, val: Any) -> bool {
         val.is_ram() && (val.ofs() < self.ram_top().ofs())
     }
-    fn ptr_to_mem(&self, ptr: Any) -> Any {  // convert ptr/cap to current gc_phase
+    pub fn ptr_to_mem(&self, ptr: Any) -> Any {  // convert ptr/cap to current gc_phase
         let bank = ptr.bank();
         if bank.is_none() {
             ptr
@@ -1190,16 +1191,18 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
             Any::new(self.gc_phase() | raw)
         }
     }
-    fn ptr_to_cap(&self, ptr: Any) -> Any {
-        assert!(self.mem(ptr).t() == ACTOR_T);
+    pub fn ptr_to_cap(&self, ptr: Any) -> Any {
+        let t = self.mem(ptr).t();
+        assert!((t == ACTOR_T) || (t == PROXY_T) || (t == STUB_T));
         let raw = ptr.raw() | OPQ_RAW;
         let cap = Any::new(raw);
         cap
     }
-    fn cap_to_ptr(&self, cap: Any) -> Any {
+    pub fn cap_to_ptr(&self, cap: Any) -> Any {
         let raw = cap.raw() & !OPQ_RAW;
         let ptr = Any::new(raw);
-        assert!(self.mem(ptr).t() == ACTOR_T);
+        let t = self.mem(ptr).t();
+        assert!((t == ACTOR_T) || (t == PROXY_T) || (t == STUB_T));
         ptr
     }
 
@@ -1261,7 +1264,7 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
         self.set_ram_free(Any::fix(n + 1));  // increment cells available
     }
 
-    pub fn gc_stop_the_world(&mut self) {
+    pub fn gc_stop_the_world(&mut self) -> Result<(), Error> {
         /*
         1. Swap generations (`GC_GENX` <--> `GC_GENY`)
         2. Mark each cell in the root-set with `GC_SCAN`
@@ -1289,31 +1292,28 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
             if (t == ACTOR_T) || (t == PROXY_T) || (t == STUB_T) {
                 scan = Any::new(raw | OPQ_RAW);  // inferred capability
             }
-            self.gc_mark(scan).unwrap();  // FIXME: report error?
+            self.gc_mark(scan)?;
             scan = Any::new(raw + 1);
         }
-        let root = self.gc_mark(root).unwrap();  // FIXME: report error?
+        let root = self.gc_mark(root)?;
         self.set_ram_root(root);
         scan = self.ddeque();
         while scan != self.ram_top() {  // scan marked quads
-            self.gc_scan(scan).unwrap();  // FIXME: report error?
+            self.gc_scan(scan)?;
             scan = Any::new(scan.raw() + 1);
         }
         while sweep.ofs() >= RAM_BASE_OFS {  // sweep free Proxy_T references
             let quad = self.gc_load(sweep);
             if quad.t() == PROXY_T {
                 // notify device that proxy is not referenced
-                let id = quad.x().get_fix().unwrap() as usize;
-                if id < DEVICE_MAX {
-                    let mut dev_mut = self.device[id].take().unwrap();
-                    dev_mut.drop_proxy(sweep);
-                    self.device[id] = Some(dev_mut);
-//                } else {
-//                    return Err(E_BOUNDS);  // device id must be less than DEVICE_MAX
-                }
+                let id = self.device_id(sweep)?;
+                let mut dev_mut = self.device[id].take().unwrap();
+                dev_mut.drop_proxy(sweep);
+                self.device[id] = Some(dev_mut);
             }
             sweep = Any::new(sweep.raw() - 1);
         }
+        Ok(())
     }
     fn gc_mark(&mut self, val: Any) -> Result<Any, Error> {
         if let Some(bank) = val.bank() {
@@ -1329,10 +1329,7 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
                 }
                 if quad.t() == STUB_T {
                     // notify device that stub is being relocated
-                    let id = quad.x().get_fix()? as usize;
-                    if id >= DEVICE_MAX {
-                        return Err(E_BOUNDS);  // device id must be less than DEVICE_MAX
-                    }
+                    let id = self.device_id(val)?;
                     let mut dev_mut = self.device[id].take().unwrap();
                     dev_mut.move_stub(val, dup);
                     self.device[id] = Some(dev_mut);
@@ -1390,6 +1387,28 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
             BNK_1
         } else {
             BNK_0
+        }
+    }
+
+    fn device_id(&self, cap: Any) -> Result<usize, Error> {
+        if cap.is_fix() {
+            return Err(E_NOT_PTR);
+        }
+        let mut ptr = self.cap_to_ptr(cap);
+        let mut quad = self.mem(ptr);
+        if quad.t() == PROXY_T {
+            ptr = self.cap_to_ptr(quad.x());
+            quad = self.mem(ptr);
+        }
+        if quad.t() == ACTOR_T {
+            let id = quad.x().get_fix()? as usize;
+            if id < DEVICE_MAX {
+                Ok(id)
+            } else {
+                Err(E_BOUNDS)
+            }
+        } else {
+            Err(E_NOT_CAP)
         }
     }
 
@@ -2148,6 +2167,29 @@ pub const T_DEQUE_BEH: Any  = Any { raw: T_DEQUE_OFS as Raw };
         T_DEQUE_BEH
     }
 
+    fn load_device_test(core: &mut Core) -> Any {
+        // prepare ROM with device operations test
+pub const LIB_OFS: usize = ROM_BASE_OFS;
+        let quad_rom = &mut core.quad_rom;
+
+pub const COMMIT: Any = Any { raw: (LIB_OFS+0) as Raw };
+        quad_rom[COMMIT.ofs()]      = Quad::vm_end_commit();
+pub const SEND_0: Any = Any { raw: (LIB_OFS+1) as Raw };
+        quad_rom[SEND_0.ofs()]      = Quad::vm_send(ZERO, COMMIT);
+pub const CUST_SEND: Any = Any { raw: (LIB_OFS+2) as Raw };
+        quad_rom[CUST_SEND.ofs()]   = Quad::vm_msg(PLUS_1, SEND_0);
+
+pub const T_DEV_OFS: usize = LIB_OFS+3;
+pub const T_DEV_BEH: Any = Any { raw: T_DEV_OFS as Raw };
+        quad_rom[T_DEV_OFS+0]       = Quad::vm_push(Any::fix(13), Any::rom(T_DEV_OFS+1));  // 13
+        quad_rom[T_DEV_OFS+1]       = Quad::vm_push(DEBUG_DEV, Any::rom(T_DEV_OFS+2));  // 13 DEBUG_DEV
+        quad_rom[T_DEV_OFS+2]       = Quad::vm_push(BLOB_DEV, Any::rom(T_DEV_OFS+3));  // 13 DEBUG_DEV BLOB_DEV
+        quad_rom[T_DEV_OFS+3]       = Quad::vm_send(PLUS_2, COMMIT);  // --
+
+        core.rom_top = Any::rom(T_DEV_OFS+4);
+        T_DEV_BEH
+    }
+
     #[test]
     fn base_types_are_32_bits() {
         assert_eq!(4, ::core::mem::size_of::<Error>());
@@ -2203,11 +2245,11 @@ pub const T_DEQUE_BEH: Any  = Any { raw: T_DEQUE_OFS as Raw };
         let a_boot = core.ptr_to_cap(boot_ptr);
         core.event_inject(SPONSOR, a_boot, UNDEF).unwrap();
         assert_eq!(BNK_0, core.gc_phase());
-        core.gc_stop_the_world();
+        core.gc_stop_the_world().unwrap();
         assert_eq!(BNK_1, core.gc_phase());
         core.run_loop();
         let bank = core.gc_phase();
-        core.gc_stop_the_world();
+        core.gc_stop_the_world().unwrap();
         assert_ne!(bank, core.gc_phase());
     }
 
@@ -2231,6 +2273,17 @@ pub const T_DEQUE_BEH: Any  = Any { raw: T_DEQUE_OFS as Raw };
         let msg = core.reserve(&Quad::pair_t(UNIT, NIL)).unwrap();
         let msg = core.reserve(&Quad::pair_t(a_boot, msg)).unwrap();
         core.event_inject(SPONSOR, a_boot, msg).unwrap();
+        let ok = core.run_loop();
+        assert!(ok);
+    }
+
+    #[test]
+    fn device_operations() {
+        let mut core = Core::new();
+        let boot_beh = load_device_test(&mut core);
+        let boot_ptr = core.reserve(&Quad::new_actor(boot_beh, NIL)).unwrap();
+        let a_boot = core.ptr_to_cap(boot_ptr);
+        core.event_inject(SPONSOR, a_boot, NIL).unwrap();
         let ok = core.run_loop();
         assert!(ok);
     }
