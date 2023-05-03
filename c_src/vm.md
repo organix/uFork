@@ -372,3 +372,31 @@ The tables below define which characters are included in each class.
 | }  | 125 |  7d |     |     |     |     |  x  |     |     |     |
 | ~  | 126 |  7e |     |     |     |     |     |  x  |     |     |
 | ^? | 127 |  7f |  x  |     |     |     |     |     |     |     |
+
+### Common Code Structures
+
+Many instruction streams end with a common suffix.
+These immutable continuation sequences are available
+to be shared by many behaviors.
+
+```
+K_CALL:     [MSG,+0,k]---+
+                         |
+                         |
+RESEND:     [MSG,+0,k]   |    RV_ZERO:    [PUSH,+0,k]-----+
+                    |    |                                |
+                    v    |                                |
+            [SELF,?,k]---+    RV_NIL:     [PUSH,NIL,k]----+
+                         |                                |
+                         |                                |
+RV_SELF:    [SELF,?,k]   |    RV_UNDEF:   [PUSH,UNDEF,k]--+
+                    |    |                                |
+                    v    |                                |
+CUST_SEND:  [MSG,+1,k]<--|--------------------------------+
+                    |    |
+                    v    |
+SEND_0:     [SEND,0,k]<--+    RELEASE_0:  [SEND,0,k]
+                    |                             |
+                    v                             v
+COMMIT:     [END,+1,?]        RELEASE:    [END,+2,?]
+```

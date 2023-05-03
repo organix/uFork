@@ -1,8 +1,18 @@
-# uFork LISP/Scheme Dialect
+# uFork LISP/Scheme Derivation
 
-A LISP/Scheme dialect is implemented
+A LISP/Scheme dialect is [implemented](scheme.md)
 as a surface-syntax for **uFork** programs.
 It handles both "interpreted" and "compiled" code.
+The semantics of this dialect
+are derived from LISP 1.5 (over several incremental steps).
+Important features include:
+
+  * Mostly-functional semantics, with controlled mutability
+  * Lexical scope in `lambda` definition and evaluation (ala Scheme)
+  * General destructuring bindings and multi-value returns
+  * Explicit-evaluation operative definition with `vau` (ala Kernel)
+  * Classical `macro` definition with `quasiquote` support
+  * Smoothly-interoperable Actor primitives
 
 ## Meta-circular LISP Interpreter
 
