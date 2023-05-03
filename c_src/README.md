@@ -1,6 +1,6 @@
 # uFork Simulator in C
 
-This implementation of the [**uFork** virtual machine](../ufork.md)
+This [implementation](vm.md) of the [**uFork** virtual machine](../ufork.md)
 is written in C and compilable for 16, 32, or 64-bits words.
 It features a gdb-style debugger capable of single-stepping virtual machine instructions.
 Implemented on this platform are a PEG-parser toolkit

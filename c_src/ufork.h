@@ -166,7 +166,7 @@ typedef PROC_DECL((*proc_t));
 #define IS_PAIR(n)  TYPEQ(Pair_T,(n))
 #define IS_ACTOR(v) (IS_CAP(v) && TYPEQ(Actor_T,TO_REF(v)))
 #define IS_FEXPR(n) TYPEQ(Fexpr_T,(n))
-#define IS_DICT(n) TYPEQ(Dict_T,(n))
+#define IS_DICT(n)  TYPEQ(Dict_T,(n))
 #define IS_SYM(n)   TYPEQ(Symbol_T,(n))
 #define IS_CODE(n)  TYPEQ(Instr_T,(n))
 
