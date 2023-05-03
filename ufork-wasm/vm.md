@@ -134,15 +134,18 @@ _bool_            | {x:VM_if, y:_T_, z:_F_}       | &mdash;  | continue _F_ if "
 &mdash;           | {x:VM_msg, y:0, z:_K_}        | _msg_    | copy event message to stack
 &mdash;           | {x:VM_msg, y:_n_, z:_K_}      | _msg_<sub>_n_</sub> | copy message item _n_ to stack
 &mdash;           | {x:VM_msg, y:-_n_, z:_K_}     | _tail_<sub>_n_</sub> | copy message tail _n_ to stack
-&mdash;           | {x:VM_my, y:SELF, z:_K_}      | _actor_  | push current _actor_ address on stack
-&mdash;           | {x:VM_my, y:BEH, z:_K_}       | _beh_    | push current _actor_ behavior on stack
-&mdash;           | {x:VM_my, y:STATE, z:_K_}     | _v_<sub>1</sub> ... _v_<sub>_n_</sub> | push current _actor_ state on stack
+&mdash;           | {x:VM_state, y:0, z:_K_}      | _state_  | copy _actor_ state to stack
+&mdash;           | {x:VM_state, y:_n_, z:_K_}    | _state_<sub>_n_</sub> | copy state item _n_ to stack
+&mdash;           | {x:VM_state, y:-_n_, z:_K_}   | _tail_<sub>_n_</sub> | copy state tail _n_ to stack
+&mdash;           | {x:VM_my, y:SELF, z:_K_}      | _actor_  | push _actor_ address on stack
+&mdash;           | {x:VM_my, y:BEH, z:_K_}       | _beh_    | push _actor_ behavior on stack
+&mdash;           | {x:VM_my, y:STATE, z:_K_}     | _v_<sub>_n_</sub> ... _v_<sub>1</sub> | flatten _actor_ state onto stack
 _msg_ _actor_     | {x:VM_send, y:0, z:_K_}       | &mdash;  | send _msg_ to _actor_
 _m_<sub>_n_</sub> ... _m_<sub>1</sub> _actor_ | {x:VM_send, y:_n_, z:_K_}   | &mdash; | send (_m_<sub>1</sub> ... _m_<sub>_n_</sub>) to _actor_
-_beh_             | {x:VM_new, y:0, z:_K_}        | _actor_  | create new _actor_ with behavior _beh_
-_v_<sub>1</sub> ... _v_<sub>_n_</sub> _beh_ | {x:VM_new, y:_n_, z:_K_} | _actor_ | create new _actor_ with (_v_<sub>1</sub> ... _v_<sub>_n_</sub> . _beh_)
-_beh_             | {x:VM_beh, y:0, z:_K_}        | &mdash;  | replace behavior with _beh_
-_v_<sub>1</sub> ... _v_<sub>_n_</sub> _beh_ | {x:VM_beh, y:_n_, z:_K_} | &mdash; | replace behavior with (_v_<sub>1</sub> ... _v_<sub>_n_</sub> . _beh_)
+_state_ _beh_     | {x:VM_new, y:0, z:_K_}        | _actor_  | create new _actor_ with code _beh_ and data _state_
+_v_<sub>_n_</sub> ... _v_<sub>1</sub> _beh_ | {x:VM_new, y:_n_, z:_K_} | _actor_ | create new _actor_ code _beh_ and state (_v_<sub>1</sub> ... _v_<sub>_n_</sub>)
+_state_ _beh_     | {x:VM_beh, y:0, z:_K_}        | &mdash;  | replace code with _beh_ and data with _state_
+_v_<sub>_n_</sub> ... _v_<sub>1</sub> _beh_ | {x:VM_beh, y:_n_, z:_K_} | &mdash; | replace code with _beh_ and state with (_v_<sub>1</sub> ... _v_<sub>_n_</sub>)
 _reason_          | {x:VM_end, y:ABORT}           | &mdash;  | abort actor transaction with _reason_
 &mdash;           | {x:VM_end, y:STOP}            | &mdash;  | stop current continuation (thread)
 &mdash;           | {x:VM_end, y:COMMIT}          | &mdash;  | commit actor transaction
@@ -165,21 +168,21 @@ e_queue: [head,tail]----------------------------+
                        |   |
                        |   +--> actor message content
                        V
-                      [Actor,beh,sp,?]
-                              |  |
-                              |  +--> actor state (initial SP)
+                      [Actor,code,data,?]
+                              |    |
+                              |    +--> actor state
                               |
-                              +--> actor behavior (initial IP)
+                              +--> actor behavior
 
 k_queue: [head,tail]--------------------+
           |                             V
           +-->[ip,sp,ep,kp]---> ... -->[ip,sp,ep,NIL]
                |  |  |
-               |  |  +-->[sponsor,to,msg,rollback]--->[Actor,beh,sp,?]
+               |  |  +-->[sponsor,to,msg,NIL]
                |  |               |   |
                |  |               |   +--> ...
                |  |               V
-               |  |              [Actor,beh',sp',events]---> ... -->[sponsor,to,msg,NIL]
+               |  |              [Actor,code,data,effects]--->[Actor,code',data',events]---> ... -->[sponsor,to,msg,NIL]
                |  V
                | [Pair,car,cdr,?]
                |        |   |
@@ -198,12 +201,13 @@ k_queue: [head,tail]--------------------+
 
 ### Pair-List Indexing
 
-Instructions like `VM_nth` and `VM_msg` have an immediate index argument (_n_)
+Instructions like `VM_msg`, `VM_state`, and `VM_nth`
+have an immediate index argument (_n_)
 to succinctly designate parts of a pair-list.
 
-  * Positive _n_ designates elements of the list, starting at `1`.
-  * Negative _n_ designates list tails, starting at `-1`.
-  * Zero designates the whole list/value (for messages).
+  * Positive _n_ designates elements of the list, starting at `1`
+  * Negative _n_ designates list tails, starting at `-1`
+  * Zero designates the whole list/value
 
 ```
   0            -1            -2            -3
