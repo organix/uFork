@@ -227,19 +227,21 @@ impl TimerDevice {
         TimerDevice {}
     }
     #[cfg(target_arch = "wasm32")]
-    fn set_timer(&mut self, delay: Any, target: Any, message: Any) {
+    fn set_timer(&mut self, delay: Any, stub: Any) {
         unsafe {
-            crate::host_timer(delay.raw(), target.raw(), message.raw());
+            crate::host_timer(delay.raw(), stub.raw());
         }
     }
     #[cfg(not(target_arch = "wasm32"))]
-    fn set_timer(&mut self, _delay: Any, _target: Any, _message: Any) {
+    fn set_timer(&mut self, _delay: Any, _stub: Any) {
         // timer device not available...
     }
 }
 impl Device for TimerDevice {
     fn handle_event(&mut self, core: &mut Core, ep: Any) -> Result<bool, Error> {
         let event = core.mem(ep);
+        let sponsor = event.t();
+        let device = event.x();
         let msg = event.y();
         let delay = core.nth(msg, PLUS_1);
         if !delay.is_fix() {
@@ -249,8 +251,11 @@ impl Device for TimerDevice {
         if !target.is_cap() {
             return Err(E_NOT_CAP);
         }
-        let message = core.nth(msg, PLUS_3);
-        self.set_timer(delay, target, message);
+        let msg = core.nth(msg, PLUS_3);
+        let delayed = Quad::new_event(sponsor, target, msg);
+        let ptr = core.reserve(&delayed)?;
+        let stub = core.reserve_stub(device, ptr)?;
+        self.set_timer(delay, stub);
         Ok(true)  // event handled.
     }
 }

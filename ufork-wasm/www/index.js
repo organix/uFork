@@ -836,17 +836,25 @@ function h_pprint(raw) {
             s += "}";
             return s;
         }
+        if (quad.t === STUB_T) {
+            let s = "";
+            s += "STUB[";
+            s += h_print(quad.x);  // device
+            s += ",";
+            s += h_print(quad.y);  // target
+            s += "]";
+            return s;
+        }
     }
     if (h_is_cap(raw)) {
         const ptr = h_cap_to_ptr(raw);
         const quad = h_read_quad(ptr);
-        if (quad.t !== ACTOR_T) {
+        if (quad.t === PROXY_T) {
             let s = "";
-            s += h_print(quad.t);
-            s += "[";
-            s += h_print(quad.x);
+            s += "PROXY[";
+            s += h_print(quad.x);  // device
             s += ",";
-            s += h_print(quad.y);
+            s += h_print(quad.y);  // handle
             s += "]";
             return s;
         }
@@ -1474,12 +1482,16 @@ WebAssembly.instantiateStreaming(
                     console.log("LOG:", x, "=", h_print(x), "->", h_pprint(x));
                 });
             },
-            host_timer(delay, target, message) {  // WASM type: (i32, i32, i32) -> nil
-                if (h_is_fix(delay) && h_is_cap(target)) {
+            host_timer(delay, stub) {  // WASM type: (i32, i32) -> nil
+                if (h_is_fix(delay)) {
                     setTimeout(() => {
-                        // FIXME: how do we ensure that `target` and `message` remain valid!?
-                        console.log("TIMER:", h_print(delay), h_print(target), h_pprint(message));
-                        const sponsor = h_ramptr(SPONSOR_OFS);  // use "global" sponsor
+                        // FIXME: we need to ensure that `stub` remains valid!
+                        console.log("TIMER:", h_pprint(delay), h_pprint(stub));
+                        const quad = h_read_quad(stub);
+                        const event = h_read_quad(quad.y);  // get target event
+                        const sponsor = event.t;
+                        const target = event.x;
+                        const message = event.y;
                         h_event_inject(sponsor, target, message);
                         drawHost();
                     }, h_fix_to_i32(delay));

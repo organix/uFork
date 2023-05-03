@@ -57,13 +57,13 @@ impl Quad {
         assert!(events.is_ptr());
         Self::new(ACTOR_T, beh, state, events)
     }
-    pub fn proxy_t(dev: Any, handle: Any) -> Quad {
-        assert!(dev.is_cap());
-        Self::new(PROXY_T, dev, handle, UNDEF)
+    pub fn proxy_t(device: Any, handle: Any) -> Quad {
+        assert!(device.is_cap());
+        Self::new(PROXY_T, device, handle, UNDEF)
     }
-    pub fn stub_t(dev: Any, handle: Any) -> Quad {
-        assert!(dev.is_cap());
-        Self::new(STUB_T, dev, handle, UNDEF)
+    pub fn stub_t(device: Any, target: Any) -> Quad {
+        assert!(device.is_cap());
+        Self::new(STUB_T, device, target, NIL)
     }
     pub fn pair_t(car: Any, cdr: Any) -> Quad {
         Self::new(PAIR_T, car, cdr, UNDEF)

@@ -68,7 +68,7 @@ impl Core {
         quad_rom[INSTR_T.ofs()]     = Quad::type_t();
         quad_rom[PAIR_T.ofs()]      = Quad::type_t();
         quad_rom[DICT_T.ofs()]      = Quad::type_t();
-        quad_rom[FWD_REF_T.ofs()]    = Quad::type_t();
+        quad_rom[FWD_REF_T.ofs()]   = Quad::type_t();
         quad_rom[FREE_T.ofs()]      = Quad::type_t();
 
 pub const ROM_TOP_OFS: usize = ROM_BASE_OFS;
@@ -1193,7 +1193,7 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
     }
     pub fn ptr_to_cap(&self, ptr: Any) -> Any {
         let t = self.mem(ptr).t();
-        assert!((t == ACTOR_T) || (t == PROXY_T) || (t == STUB_T));
+        assert!((t == ACTOR_T) || (t == PROXY_T));
         let raw = ptr.raw() | OPQ_RAW;
         let cap = Any::new(raw);
         cap
@@ -1202,8 +1202,34 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
         let raw = cap.raw() & !OPQ_RAW;
         let ptr = Any::new(raw);
         let t = self.mem(ptr).t();
-        assert!((t == ACTOR_T) || (t == PROXY_T) || (t == STUB_T));
+        assert!((t == ACTOR_T) || (t == PROXY_T));
         ptr
+    }
+
+    pub fn reserve_stub(&mut self, device: Any, target: Any) -> Result<Any, Error> {
+        if !device.is_cap() {
+            return Err(E_NOT_CAP);
+        }
+        let mut stub = Quad::stub_t(device, target);
+        stub.set_z(self.ram_root());
+        let ptr = self.reserve(&stub)?;
+        self.set_ram_root(ptr);  // link stub into GC root-set
+        Ok(ptr)
+    }
+    pub fn release_stub(&mut self, ptr: Any) {
+        let stub = self.ram(ptr);
+        assert!(stub.t() == STUB_T);
+        let skip = stub.z();
+        let mut root = self.memory();  // WARNING: we are counting on the fact that `z` is the GC root!
+        while root.is_ram() {
+            let next = self.ram(root).z();
+            if next == ptr {
+                self.ram_mut(root).set_z(skip);  // remove stub from GC root-set
+                break;
+            }
+            root = next;
+        }
+        self.free(ptr);
     }
 
     pub fn reserve_rom(&mut self) -> Result<Any, Error> {
@@ -1289,7 +1315,7 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
         while scan.ofs() < RAM_BASE_OFS {  // mark reserved RAM
             let raw = scan.raw();
             let t = self.gc_load(scan).t();
-            if (t == ACTOR_T) || (t == PROXY_T) || (t == STUB_T) {
+            if (t == ACTOR_T) || (t == PROXY_T) {
                 scan = Any::new(raw | OPQ_RAW);  // inferred capability
             }
             self.gc_mark(scan)?;
@@ -1390,15 +1416,16 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
         }
     }
 
-    fn device_id(&self, cap: Any) -> Result<usize, Error> {
-        if cap.is_fix() {
+    fn device_id(&self, dev: Any) -> Result<usize, Error> {
+        if dev.is_fix() {
             return Err(E_NOT_PTR);
         }
-        let mut ptr = self.cap_to_ptr(cap);
-        let mut quad = self.mem(ptr);
-        if quad.t() == PROXY_T {
+        let mut ptr = Any::new(dev.raw() & !OPQ_RAW);  // ignore opaque bit
+        let mut quad = self.ram(ptr);
+        if quad.t() == PROXY_T || quad.t() == STUB_T {
+            // follow device reference...
             ptr = self.cap_to_ptr(quad.x());
-            quad = self.mem(ptr);
+            quad = self.ram(ptr);
         }
         if quad.t() == ACTOR_T {
             let id = quad.x().get_fix()? as usize;
