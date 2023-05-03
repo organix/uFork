@@ -1459,8 +1459,10 @@ function test_suite(exports) {
     console.log("OED seek:", dec_at11_encoded, dec_at11_enc_lite);
 }
 
+const wasm_source = "../target/wasm32-unknown-unknown/release/ufork_wasm.wasm";
+//const wasm_source = "../target/wasm32-unknown-unknown/debug/ufork_wasm.wasm";
 WebAssembly.instantiateStreaming(
-    fetch("../target/wasm32-unknown-unknown/release/ufork_wasm.wasm"),
+    fetch(wasm_source),
     {
         js: {
             host_clock() {  // WASM type: () -> i32

@@ -18,8 +18,11 @@ lol_alloc = "0.3.0"     		# a size-efficient allocator crate
 
 [dev-dependencies]
 
+[profile.dev]
+panic = "abort"					# abort on panic!()
+
 [profile.release]
 panic = "abort"					# abort on panic!()
-# opt-level = "s"					# optimize for small code size
-# lto = true              		# enable link time optimization
-# strip = true            		# strip debug symbols
+opt-level = "s"					# optimize for small code size
+lto = true              		# enable link time optimization
+strip = true            		# strip debug symbols
