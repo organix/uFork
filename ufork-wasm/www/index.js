@@ -93,7 +93,7 @@ const VM_PUTC   = 0x8000_0018;  // deprecated
 const VM_GETC   = 0x8000_0019;  // deprecated
 const VM_DEBUG  = 0x8000_001A;  // deprecated
 const VM_DEQUE  = 0x8000_001B;
-const VM_001C   = 0x8000_001C;  // reserved
+const VM_STATE  = 0x8000_001C;  // reserved
 const VM_001D   = 0x8000_001D;  // reserved
 const VM_IS_EQ  = 0x8000_001E;
 const VM_IS_NE  = 0x8000_001F;
@@ -342,7 +342,7 @@ const instr_label = [
     "VM_GETC",  // deprecated
     "VM_DEBUG",  // deprecated
     "VM_DEQUE",
-    "VM_001C",  // reserved
+    "VM_STATE",
     "VM_001D",  // reserved
     "VM_IS_EQ",
     "VM_IS_NE"

@@ -40,7 +40,7 @@ pub const FREE_T: Any       = Any { raw: 15 };  // MUST BE (ROM_BASE_OFS - 1)
 pub const VM_TYPEQ: Any     = Any { raw: DIR_RAW | 0 };
 pub const VM_CELL: Any      = Any { raw: DIR_RAW | 1 };
 pub const VM_GET: Any       = Any { raw: DIR_RAW | 2 };
-//pub const VM_SET: Any     = Any { raw: DIR_RAW | 3 };
+//pub const VM_SET: Any       = Any { raw: DIR_RAW | 3 };
 pub const VM_DICT: Any      = Any { raw: DIR_RAW | 3 };
 pub const VM_PAIR: Any      = Any { raw: DIR_RAW | 4 };
 pub const VM_PART: Any      = Any { raw: DIR_RAW | 5 };
@@ -66,6 +66,7 @@ pub const VM_END: Any       = Any { raw: DIR_RAW | 22 };
 //pub const VM_GETC: Any      = Any { raw: DIR_RAW | 25 };
 //pub const VM_DEBUG: Any     = Any { raw: DIR_RAW | 26 };
 pub const VM_DEQUE: Any     = Any { raw: DIR_RAW | 27 };
+pub const VM_STATE: Any     = Any { raw: DIR_RAW | 28 };
 pub const VM_IS_EQ: Any     = Any { raw: DIR_RAW | 30 };
 pub const VM_IS_NE: Any     = Any { raw: DIR_RAW | 31 };
 
