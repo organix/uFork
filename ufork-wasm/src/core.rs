@@ -1591,10 +1591,10 @@ pub const LIB_OFS: usize = ROM_BASE_OFS;
 pub const SINK_BEH: Any = Any { raw: (LIB_OFS+0) as Raw };  // alias for no-op behavior
 pub const COMMIT: Any = Any { raw: (LIB_OFS+0) as Raw };
         quad_rom[COMMIT.ofs()]      = Quad::vm_end_commit();
-pub const SEND_0: Any = Any { raw: (LIB_OFS+1) as Raw };
-        quad_rom[SEND_0.ofs()]      = Quad::vm_send(ZERO, COMMIT);
+pub const SEND_MSG: Any = Any { raw: (LIB_OFS+1) as Raw };
+        quad_rom[SEND_MSG.ofs()]      = Quad::vm_send(MINUS_1, COMMIT);
 pub const CUST_SEND: Any = Any { raw: (LIB_OFS+2) as Raw };
-        quad_rom[CUST_SEND.ofs()]   = Quad::vm_msg(PLUS_1, SEND_0);
+        quad_rom[CUST_SEND.ofs()]   = Quad::vm_msg(PLUS_1, SEND_MSG);
 pub const RV_SELF: Any = Any { raw: (LIB_OFS+3) as Raw };
         quad_rom[RV_SELF.ofs()]     = Quad::vm_my_self(CUST_SEND);
 pub const RV_UNDEF: Any = Any { raw: (LIB_OFS+4) as Raw };
@@ -1613,7 +1613,7 @@ pub const RV_ONE: Any = Any { raw: (LIB_OFS+10) as Raw };
         quad_rom[RV_ONE.ofs()]      = Quad::vm_push(PLUS_1, CUST_SEND);
 pub const RESEND: Any = Any { raw: (LIB_OFS+11) as Raw };
         quad_rom[RESEND.ofs()+0]    = Quad::vm_msg(ZERO, Any::rom(RESEND.ofs()+1));
-        quad_rom[RESEND.ofs()+1]    = Quad::vm_my_self(SEND_0);
+        quad_rom[RESEND.ofs()+1]    = Quad::vm_my_self(SEND_MSG);
 pub const RELEASE: Any = Any { raw: (LIB_OFS+13) as Raw };
         quad_rom[RELEASE.ofs()]     = Quad::vm_end_release();
 pub const RELEASE_0: Any = Any { raw: (LIB_OFS+14) as Raw };
@@ -1645,7 +1645,7 @@ pub const FWD_BEH: Any = Any { raw: FWD_OFS as Raw };
         */
         // stack: rcvr
         quad_rom[FWD_OFS+0]         = Quad::vm_msg(ZERO, Any::rom(FWD_OFS+1));  // rcvr msg
-        quad_rom[FWD_OFS+1]         = Quad::vm_pick(PLUS_2, SEND_0);  // rcvr msg rcvr
+        quad_rom[FWD_OFS+1]         = Quad::vm_pick(PLUS_2, SEND_MSG);  // rcvr msg rcvr
 
 pub const ONCE_OFS: usize = FWD_OFS+2;
 pub const ONCE_BEH: Any = Any { raw: ONCE_OFS as Raw };
@@ -1672,7 +1672,7 @@ pub const LABEL_BEH: Any = Any { raw: LABEL_OFS as Raw };
         quad_rom[LABEL_OFS+0]       = Quad::vm_msg(ZERO, Any::rom(LABEL_OFS+1));  // rcvr label msg
         quad_rom[LABEL_OFS+1]       = Quad::vm_pick(PLUS_2, Any::rom(LABEL_OFS+2));  // rcvr label msg label
         quad_rom[LABEL_OFS+2]       = Quad::vm_pair(PLUS_1, Any::rom(LABEL_OFS+3));  // rcvr label (label . msg)
-        quad_rom[LABEL_OFS+3]       = Quad::vm_pick(PLUS_3, SEND_0);  // rcvr label (label . msg) rcvr
+        quad_rom[LABEL_OFS+3]       = Quad::vm_pick(PLUS_3, SEND_MSG);  // rcvr label (label . msg) rcvr
 
 pub const TAG_OFS: usize = LABEL_OFS+4;
 pub const TAG_BEH: Any = Any { raw: TAG_OFS as Raw };
@@ -1721,7 +1721,7 @@ pub const UNWRAP_BEH: Any = Any { raw: UNWRAP_OFS as Raw };
         */
         // stack: rcvr
         quad_rom[UNWRAP_OFS+0]      = Quad::vm_msg(PLUS_1, Any::rom(UNWRAP_OFS+1));  // rcvr msg
-        quad_rom[UNWRAP_OFS+1]      = Quad::vm_pick(PLUS_2, SEND_0);  // rcvr msg rcvr
+        quad_rom[UNWRAP_OFS+1]      = Quad::vm_pick(PLUS_2, SEND_MSG);  // rcvr msg rcvr
 
 pub const FUTURE_OFS: usize = UNWRAP_OFS+2;
 pub const FUTURE_BEH: Any = Any { raw: FUTURE_OFS as Raw };
@@ -1815,7 +1815,7 @@ pub const VALUE_BEH: Any = Any { raw: VALUE_OFS as Raw };
         quad_rom[VALUE_OFS+2]       = Quad::vm_cmp_eq(Any::rom(VALUE_OFS+3));  // rcap value tag==rcap
         quad_rom[VALUE_OFS+3]       = Quad::vm_if(Any::rom(VALUE_OFS+4), COMMIT);  // rcap value
         quad_rom[VALUE_OFS+4]       = Quad::vm_pick(PLUS_1, Any::rom(VALUE_OFS+5));  // rcap value value
-        quad_rom[VALUE_OFS+5]       = Quad::vm_msg(MINUS_1, SEND_0);  // rcap value value cust=arg
+        quad_rom[VALUE_OFS+5]       = Quad::vm_msg(MINUS_1, SEND_MSG);  // rcap value value cust=arg
 
 pub const SERIAL_OFS: usize = VALUE_OFS+6;
 pub const SERIAL_BEH: Any = Any { raw: SERIAL_OFS as Raw };
@@ -1937,10 +1937,10 @@ pub const LIB_OFS: usize = ROM_BASE_OFS;
 
 pub const COMMIT: Any = Any { raw: (LIB_OFS+0) as Raw };
         quad_rom[COMMIT.ofs()]      = Quad::vm_end_commit();
-pub const SEND_0: Any = Any { raw: (LIB_OFS+1) as Raw };
-        quad_rom[SEND_0.ofs()]      = Quad::vm_send(ZERO, COMMIT);
+pub const SEND_MSG: Any = Any { raw: (LIB_OFS+1) as Raw };
+        quad_rom[SEND_MSG.ofs()]    = Quad::vm_send(MINUS_1, COMMIT);
 pub const CUST_SEND: Any = Any { raw: (LIB_OFS+2) as Raw };
-        quad_rom[CUST_SEND.ofs()]   = Quad::vm_msg(PLUS_1, SEND_0);
+        quad_rom[CUST_SEND.ofs()]   = Quad::vm_msg(PLUS_1, SEND_MSG);
 
 pub const F_FIB_OFS: usize = LIB_OFS+3;
 pub const F_FIB_BEH: Any = Any { raw: F_FIB_OFS as Raw };
@@ -1952,49 +1952,49 @@ pub const F_FIB_BEH: Any = Any { raw: F_FIB_OFS as Raw };
 
         quad_rom[F_FIB_OFS+5]       = Quad::vm_msg(PLUS_1, Any::rom(F_FIB_OFS+6));  // n cust
         quad_rom[F_FIB_OFS+6]       = Quad::vm_push(F_FIB_K, Any::rom(F_FIB_OFS+7));  // n cust fib-k
-        quad_rom[F_FIB_OFS+7]       = Quad::vm_new(PLUS_1, Any::rom(F_FIB_OFS+8));  // n k=fib-k[cust]
+        quad_rom[F_FIB_OFS+7]       = Quad::vm_new(MINUS_1, Any::rom(F_FIB_OFS+8));  // n k=fib-k.cust
 
         quad_rom[F_FIB_OFS+8]       = Quad::vm_pick(PLUS_2, Any::rom(F_FIB_OFS+9));  // n k n
         quad_rom[F_FIB_OFS+9]       = Quad::vm_push(PLUS_1, Any::rom(F_FIB_OFS+10));  // n k n 1
         quad_rom[F_FIB_OFS+10]      = Quad::vm_alu_sub(Any::rom(F_FIB_OFS+11));  // n k n-1
         quad_rom[F_FIB_OFS+11]      = Quad::vm_pick(PLUS_2, Any::rom(F_FIB_OFS+12));  // n k n-1 k
-        //quad_rom[F_FIB_OFS+12]      = Quad::vm_my_self(Any::rom(F_FIB_OFS+14));  // n k n-1 k fib
         quad_rom[F_FIB_OFS+12]      = Quad::vm_push(F_FIB_BEH, Any::rom(F_FIB_OFS+13));  // n k n-1 k fib-beh
-        quad_rom[F_FIB_OFS+13]      = Quad::vm_new(ZERO, Any::rom(F_FIB_OFS+14));  // n k n-1 k fib
+        quad_rom[F_FIB_OFS+13]      = Quad::vm_new(ZERO, Any::rom(F_FIB_OFS+14));  // n k n-1 k fib.()
         quad_rom[F_FIB_OFS+14]      = Quad::vm_send(PLUS_2, Any::rom(F_FIB_OFS+15));  // n k
 
         quad_rom[F_FIB_OFS+15]      = Quad::vm_roll(PLUS_2, Any::rom(F_FIB_OFS+16));  // k n
         quad_rom[F_FIB_OFS+16]      = Quad::vm_push(PLUS_2, Any::rom(F_FIB_OFS+17));  // k n 2
         quad_rom[F_FIB_OFS+17]      = Quad::vm_alu_sub(Any::rom(F_FIB_OFS+18));  // k n-2
         quad_rom[F_FIB_OFS+18]      = Quad::vm_roll(PLUS_2, Any::rom(F_FIB_OFS+19));  // n-2 k
-        //quad_rom[F_FIB_OFS+19]      = Quad::vm_my_self(Any::rom(F_FIB_OFS+21));  // n-2 k fib
         quad_rom[F_FIB_OFS+19]      = Quad::vm_push(F_FIB_BEH, Any::rom(F_FIB_OFS+20));  // n-2 k fib-beh
-        quad_rom[F_FIB_OFS+20]      = Quad::vm_new(ZERO, Any::rom(F_FIB_OFS+21));  // n-2 k fib
+        quad_rom[F_FIB_OFS+20]      = Quad::vm_new(ZERO, Any::rom(F_FIB_OFS+21));  // n-2 k fib.()
         quad_rom[F_FIB_OFS+21]      = Quad::vm_send(PLUS_2, COMMIT);  // --
 
 pub const F_FIB_K: Any = Any { raw: (F_FIB_OFS+22) as Raw };
-        // stack: cust
-        quad_rom[F_FIB_OFS+22]      = Quad::vm_msg(ZERO, Any::rom(F_FIB_OFS+23));  // cust m
-        quad_rom[F_FIB_OFS+23]      = Quad::vm_push(F_FIB_K2, Any::rom(F_FIB_OFS+24));  // cust m fib-k2
-        quad_rom[F_FIB_OFS+24]      = Quad::vm_beh(PLUS_2, COMMIT);  // fib-k2[cust m]
+        // state: cust
+        quad_rom[F_FIB_OFS+22]      = Quad::vm_state(ZERO, Any::rom(F_FIB_OFS+23));  // cust
+        quad_rom[F_FIB_OFS+23]      = Quad::vm_msg(ZERO, Any::rom(F_FIB_OFS+24));  // cust m
+        quad_rom[F_FIB_OFS+24]      = Quad::vm_push(F_FIB_K2, Any::rom(F_FIB_OFS+25));  // cust m fib-k2
+        quad_rom[F_FIB_OFS+25]      = Quad::vm_beh(PLUS_2, COMMIT);  // fib-k2.(cust m)
 
-pub const F_FIB_K2: Any = Any { raw: (F_FIB_OFS+25) as Raw };
-        // stack: cust m
-        quad_rom[F_FIB_OFS+25]      = Quad::vm_msg(ZERO, Any::rom(F_FIB_OFS+26));  // cust m n
-        quad_rom[F_FIB_OFS+26]      = Quad::vm_alu_add(Any::rom(F_FIB_OFS+27));  // cust m+n
-        quad_rom[F_FIB_OFS+27]      = Quad::vm_roll(PLUS_2, SEND_0);  // m+n cust
+pub const F_FIB_K2: Any = Any { raw: (F_FIB_OFS+26) as Raw };
+        // state: (cust m)
+        quad_rom[F_FIB_OFS+26]      = Quad::vm_state(PLUS_2, Any::rom(F_FIB_OFS+27));  // m
+        quad_rom[F_FIB_OFS+27]      = Quad::vm_msg(ZERO, Any::rom(F_FIB_OFS+28));  // m n
+        quad_rom[F_FIB_OFS+28]      = Quad::vm_alu_add(Any::rom(F_FIB_OFS+29));  // m+n
+        quad_rom[F_FIB_OFS+29]      = Quad::vm_state(PLUS_1, SEND_MSG);  // m+n cust
 
-pub const TEST_OFS: usize = F_FIB_OFS+28;
+pub const TEST_OFS: usize = F_FIB_OFS+30;
 pub const TEST_BEH: Any    = Any { raw: TEST_OFS as Raw };
         quad_rom[TEST_OFS+0]        = Quad::vm_push(PLUS_6, Any::rom(TEST_OFS+1));  // 6
         quad_rom[TEST_OFS+1]        = Quad::vm_push(EQ_8_BEH, Any::rom(TEST_OFS+2));  // 6 eq-8-beh
-        quad_rom[TEST_OFS+2]        = Quad::vm_new(ZERO, Any::rom(TEST_OFS+3));  // 6 eq-8
-        quad_rom[TEST_OFS+3]        = Quad::vm_push(F_FIB_BEH, Any::rom(TEST_OFS+4));  // 6 eq-8 fib-beh
-        quad_rom[TEST_OFS+4]        = Quad::vm_new(ZERO, Any::rom(TEST_OFS+5));  // 6 eq-8 fib
+        quad_rom[TEST_OFS+2]        = Quad::vm_new(MINUS_1, Any::rom(TEST_OFS+3));  // 6 eq-8.()
+        quad_rom[TEST_OFS+3]        = Quad::vm_push(F_FIB_BEH, Any::rom(TEST_OFS+4));  // 6 eq-8.() fib-beh
+        quad_rom[TEST_OFS+4]        = Quad::vm_new(MINUS_1, Any::rom(TEST_OFS+5));  // 6 eq-8.() fib.()
         quad_rom[TEST_OFS+5]        = Quad::vm_send(PLUS_2, COMMIT);  // --
 
-pub const EQ_8_BEH: Any = Any { raw: (TEST_OFS+7) as Raw };
-        quad_rom[TEST_OFS+6]        = Quad::vm_msg(ZERO, Any::rom(TEST_OFS+8));  // msg
+pub const EQ_8_BEH: Any = Any { raw: (TEST_OFS+6) as Raw };
+        quad_rom[TEST_OFS+6]        = Quad::vm_msg(ZERO, Any::rom(TEST_OFS+7));  // msg
         quad_rom[TEST_OFS+7]        = Quad::vm_is_eq(PLUS_8, COMMIT);  // assert_eq(8, msg)
 
         core.rom_top = Any::rom(TEST_OFS+8);
@@ -2003,15 +2003,15 @@ pub const EQ_8_BEH: Any = Any { raw: (TEST_OFS+7) as Raw };
 /*
 (define COMMIT
     (vm-end-commit))
-(define SEND-0  ; msg target
+(define SEND-MSG  ; msg target
     (vm-send 0 COMMIT))
 (define CUST-SEND  ; msg
-    (vm-msg 1 SEND-0))
+    (vm-msg 1 SEND-MSG))
 (define fib-k2  ; cust m
     (vm-msg 0  ; cust m n
         (vm-alu-add  ; cust m+n
         (vm-roll 2  ; m+n cust
-            SEND-0))))
+            SEND-MSG))))
 (define fib-k  ; cust
     (vm-msg 0  ; cust m
         (vm-push fib-k2  ; cust m fib-k2
@@ -2201,10 +2201,10 @@ pub const LIB_OFS: usize = ROM_BASE_OFS;
 
 pub const COMMIT: Any = Any { raw: (LIB_OFS+0) as Raw };
         quad_rom[COMMIT.ofs()]      = Quad::vm_end_commit();
-pub const SEND_0: Any = Any { raw: (LIB_OFS+1) as Raw };
-        quad_rom[SEND_0.ofs()]      = Quad::vm_send(ZERO, COMMIT);
+pub const SEND_MSG: Any = Any { raw: (LIB_OFS+1) as Raw };
+        quad_rom[SEND_MSG.ofs()]    = Quad::vm_send(MINUS_1, COMMIT);
 pub const CUST_SEND: Any = Any { raw: (LIB_OFS+2) as Raw };
-        quad_rom[CUST_SEND.ofs()]   = Quad::vm_msg(PLUS_1, SEND_0);
+        quad_rom[CUST_SEND.ofs()]   = Quad::vm_msg(PLUS_1, SEND_MSG);
 
 pub const T_DEV_OFS: usize = LIB_OFS+3;
 pub const T_DEV_BEH: Any = Any { raw: T_DEV_OFS as Raw };

@@ -70,7 +70,7 @@ count:
     alu sub             ; n-1
     my self             ; n-1 self
 
-    ref std.send_0
+    ref std.send_msg
 
 .export
     debug_key

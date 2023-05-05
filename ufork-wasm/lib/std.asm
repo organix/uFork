@@ -4,11 +4,11 @@ sink_beh:
 commit:
     end commit
 
-send_0:
+send_msg:
     send 0 commit
 
 cust_send:
-    msg 1 send_0
+    msg 1 send_msg
 
 rv_self:
     my self cust_send
@@ -37,7 +37,7 @@ rv_one:
 resend:
     msg 0
     my self
-    ref send_0
+    ref send_msg
 
 release:
     end release
@@ -55,7 +55,7 @@ abort:
 .export
     commit
     sink_beh
-    send_0
+    send_msg
     cust_send
     rv_self
     rv_undef

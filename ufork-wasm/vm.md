@@ -140,11 +140,11 @@ _bool_            | {x:VM_if, y:_T_, z:_F_}       | &mdash;  | continue _F_ if "
 &mdash;           | {x:VM_my, y:SELF, z:_K_}      | _actor_  | push _actor_ address on stack
 &mdash;           | {x:VM_my, y:BEH, z:_K_}       | _beh_    | push _actor_ behavior on stack
 &mdash;           | {x:VM_my, y:STATE, z:_K_}     | _v_<sub>_n_</sub> ... _v_<sub>1</sub> | flatten _actor_ state onto stack
-_msg_ _actor_     | {x:VM_send, y:0, z:_K_}       | &mdash;  | send _msg_ to _actor_
+_msg_ _actor_     | {x:VM_send, y:-1, z:_K_}      | &mdash;  | send _msg_ to _actor_
 _m_<sub>_n_</sub> ... _m_<sub>1</sub> _actor_ | {x:VM_send, y:_n_, z:_K_}   | &mdash; | send (_m_<sub>1</sub> ... _m_<sub>_n_</sub>) to _actor_
-_state_ _beh_     | {x:VM_new, y:0, z:_K_}        | _actor_  | create new _actor_ with code _beh_ and data _state_
+_state_ _beh_     | {x:VM_new, y:-1, z:_K_}       | _actor_  | create new _actor_ with code _beh_ and data _state_
 _v_<sub>_n_</sub> ... _v_<sub>1</sub> _beh_ | {x:VM_new, y:_n_, z:_K_} | _actor_ | create new _actor_ code _beh_ and state (_v_<sub>1</sub> ... _v_<sub>_n_</sub>)
-_state_ _beh_     | {x:VM_beh, y:0, z:_K_}        | &mdash;  | replace code with _beh_ and data with _state_
+_state_ _beh_     | {x:VM_beh, y:-1, z:_K_}       | &mdash;  | replace code with _beh_ and data with _state_
 _v_<sub>_n_</sub> ... _v_<sub>1</sub> _beh_ | {x:VM_beh, y:_n_, z:_K_} | &mdash; | replace code with _beh_ and state with (_v_<sub>1</sub> ... _v_<sub>_n_</sub>)
 _reason_          | {x:VM_end, y:ABORT}           | &mdash;  | abort actor transaction with _reason_
 &mdash;           | {x:VM_end, y:STOP}            | &mdash;  | stop current continuation (thread)

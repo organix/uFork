@@ -24,7 +24,7 @@ memo_beh:               ; value
 fwd_beh:                ; rcvr
     msg 0               ; rcvr msg
     pick 2              ; rcvr msg rcvr
-    ref std.send_0
+    ref std.send_msg
 
 ;;  (define once-beh
 ;;      (lambda (rcvr)
@@ -45,7 +45,7 @@ label_beh:              ; rcvr label
     pick 2              ; rcvr label msg label
     pair 1              ; rcvr label (label . msg)
     pick 3              ; rcvr label (label . msg) rcvr
-    ref std.send_0
+    ref std.send_msg
 
 ;;  (define tag-beh
 ;;      (lambda (rcvr)
@@ -82,7 +82,7 @@ wrap_beh:               ; rcvr
 unwrap_beh:             ; rcvr
     msg 1               ; rcvr msg
     pick 2              ; rcvr msg rcvr
-    ref std.send_0
+    ref std.send_msg
 
 ; unit test suite
 ;boot:

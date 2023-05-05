@@ -184,6 +184,11 @@ impl Quad {
         assert!(k.is_ptr());
         Self::instr_t(VM_MSG, n, k)
     }
+    pub fn vm_state(n: Any, k: Any) -> Quad {
+        assert!(n.is_fix());
+        assert!(k.is_ptr());
+        Self::instr_t(VM_STATE, n, k)
+    }
     pub fn vm_my(op: Any, k: Any) -> Quad {
         assert!(op.is_fix());
         assert!(k.is_ptr());

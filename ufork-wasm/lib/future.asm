@@ -93,7 +93,7 @@ value_beh:              ; rcap value
     if_not std.commit   ; rcap value
     pick 1              ; rcap value value
     msg -1              ; rcap value value cust=arg
-    ref std.send_0
+    ref std.send_msg
 
 ; unit test suite
 boot:
