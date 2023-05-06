@@ -1977,9 +1977,9 @@ pub const F_FIB_BEH: Any = Any { raw: F_FIB_OFS as Raw };
 
 pub const F_FIB_K: Any = Any { raw: (F_FIB_OFS+22) as Raw };
         // state: cust
-        quad_rom[F_FIB_OFS+22]      = Quad::vm_state(ZERO, Any::rom(F_FIB_OFS+23));  // cust
-        quad_rom[F_FIB_OFS+23]      = Quad::vm_msg(ZERO, Any::rom(F_FIB_OFS+24));  // cust m
-        quad_rom[F_FIB_OFS+24]      = Quad::vm_push(F_FIB_K2, Any::rom(F_FIB_OFS+25));  // cust m fib-k2
+        quad_rom[F_FIB_OFS+22]      = Quad::vm_msg(ZERO, Any::rom(F_FIB_OFS+23));  // m
+        quad_rom[F_FIB_OFS+23]      = Quad::vm_state(ZERO, Any::rom(F_FIB_OFS+24));  // m cust
+        quad_rom[F_FIB_OFS+24]      = Quad::vm_push(F_FIB_K2, Any::rom(F_FIB_OFS+25));  // m cust fib-k2
         quad_rom[F_FIB_OFS+25]      = Quad::vm_beh(PLUS_2, COMMIT);  // fib-k2.(cust m)
 
 pub const F_FIB_K2: Any = Any { raw: (F_FIB_OFS+26) as Raw };
@@ -1993,9 +1993,9 @@ pub const TEST_OFS: usize = F_FIB_OFS+30;
 pub const TEST_BEH: Any    = Any { raw: TEST_OFS as Raw };
         quad_rom[TEST_OFS+0]        = Quad::vm_push(PLUS_6, Any::rom(TEST_OFS+1));  // 6
         quad_rom[TEST_OFS+1]        = Quad::vm_push(EQ_8_BEH, Any::rom(TEST_OFS+2));  // 6 eq-8-beh
-        quad_rom[TEST_OFS+2]        = Quad::vm_new(MINUS_1, Any::rom(TEST_OFS+3));  // 6 eq-8.()
-        quad_rom[TEST_OFS+3]        = Quad::vm_push(F_FIB_BEH, Any::rom(TEST_OFS+4));  // 6 eq-8.() fib-beh
-        quad_rom[TEST_OFS+4]        = Quad::vm_new(MINUS_1, Any::rom(TEST_OFS+5));  // 6 eq-8.() fib.()
+        quad_rom[TEST_OFS+2]        = Quad::vm_new(MINUS_1, Any::rom(TEST_OFS+3));  // 6 cust=eq-8.()
+        quad_rom[TEST_OFS+3]        = Quad::vm_push(F_FIB_BEH, Any::rom(TEST_OFS+4));  // 6 cust fib-beh
+        quad_rom[TEST_OFS+4]        = Quad::vm_new(MINUS_1, Any::rom(TEST_OFS+5));  // 6 cust fib.()
         quad_rom[TEST_OFS+5]        = Quad::vm_send(PLUS_2, COMMIT);  // --
 
 pub const EQ_8_BEH: Any = Any { raw: (TEST_OFS+6) as Raw };
@@ -2005,51 +2005,6 @@ pub const EQ_8_BEH: Any = Any { raw: (TEST_OFS+6) as Raw };
         core.rom_top = Any::rom(TEST_OFS+8);
         TEST_BEH
     }
-/*
-(define COMMIT
-    (vm-end-commit))
-(define SEND-MSG  ; msg target
-    (vm-send 0 COMMIT))
-(define CUST-SEND  ; msg
-    (vm-msg 1 SEND-MSG))
-(define fib-k2  ; cust m
-    (vm-msg 0  ; cust m n
-        (vm-alu-add  ; cust m+n
-        (vm-roll 2  ; m+n cust
-            SEND-MSG))))
-(define fib-k  ; cust
-    (vm-msg 0  ; cust m
-        (vm-push fib-k2  ; cust m fib-k2
-        (vm-beh 2  ; (fib-k2 cust m)
-            COMMIT))))
-(define fib  ; (n)
-    (CREATE  ; (cust n)
-        (vm-msg 2  ; n
-        (vm-dup 1  ; n n
-            (vm-push 2  ; n n 2
-            (vm-cmp-lt  ; n n<2
-                (vm-if  ; n
-                CUST-SEND
-                (vm-msg 1  ; n cust
-                    (vm-push fib-k  ; n cust fib-k
-                    (vm-new 1  ; n k=(fib-k cust)
-                        (vm-pick 2  ; n k n
-                        (vm-push 1  ; n k n 1
-                            (vm-alu-sub  ; n k n-1
-                            (vm-pick 2  ; n k n-1 k
-                                (vm-my-self  ; n k n-1 k fib
-                                (vm-send 2  ; n k
-                                    (vm-roll 2  ; k n
-                                    (vm-push 2  ; k n 2
-                                        (vm-alu-sub  ; k n-2
-                                        (vm-roll 2  ; n-2 k
-                                            (vm-my-self  ; n-2 k fib
-                                            (vm-send 2  ; --
-                                                COMMIT))))))
-                                ))))))
-                    )))
-            )))))))
-*/
 
     fn load_dict_test(core: &mut Core) -> Any {
         // prepare ROM with VM_DICT test suite
@@ -2279,7 +2234,8 @@ pub const T_DEV_BEH: Any = Any { raw: T_DEV_OFS as Raw };
         assert_eq!(BNK_0, core.gc_phase());
         core.gc_stop_the_world().unwrap();
         assert_eq!(BNK_1, core.gc_phase());
-        core.run_loop();
+        let ok = core.run_loop();
+        assert!(ok);
         let bank = core.gc_phase();
         core.gc_stop_the_world().unwrap();
         assert_ne!(bank, core.gc_phase());

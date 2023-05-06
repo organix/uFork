@@ -6,7 +6,7 @@
 .import
     std: "./std.asm"
 
-beh:                    ; () <== (cust n)
+beh:                    ; () <- (cust n)
     msg 2               ; n
     dup 1               ; n n
     push 2              ; n n 2
@@ -15,7 +15,7 @@ beh:                    ; () <== (cust n)
 
     msg 1               ; n cust
     push k              ; n cust k
-    new -1              ; n k.cust
+    new -1              ; n k=k.cust
 
     pick 2              ; n k n
     push 1              ; n k n 1
@@ -34,30 +34,30 @@ beh:                    ; () <== (cust n)
     send 2              ;
     ref std.commit
 
-k:                      ; cust <== m
-    state 0             ; cust
-    msg 0               ; cust m
+k:                      ; cust <- m
+    msg 0               ; m
+    state 0             ; m cust
     push k2             ; cust m k2
     beh 2               ; k2.(cust m)
     ref std.commit
 
-k2:                     ; (cust m) <== n
+k2:                     ; (cust m) <- n
     state 2             ; m
     msg 0               ; m n
     alu add             ; m+n
     state 1             ; m+n cust
     ref std.send_msg
 
-boot:                   ; () <== ()
-;    push 5              ; n=5 -- will lead to assert failure
+boot:                   ; () <- ()
     push 6              ; n=6
+;    push 5              ; n=5 -- will lead to assert failure
     push eq8            ; n eq8
-    new 0               ; n cust.()
-    push beh            ; n cust.() beh
+    new 0               ; n cust=eq8.()
+    push beh            ; n cust beh
     new 0               ; n cust fib.()
     send 2 std.commit
 
-eq8:                    ; () <== m
+eq8:                    ; () <- m
     msg 0               ; m
     is_eq 8             ; assert_eq[8, m]
     ref std.commit

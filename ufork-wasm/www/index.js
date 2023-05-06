@@ -27,6 +27,8 @@ const $instr = document.getElementById("instr");
 const $stack = document.getElementById("stack");
 const $event = document.getElementById("event");
 const $self = document.getElementById("self");
+const $effect = document.getElementById("effect");
+const $state = document.getElementById("state");
 const $msg = document.getElementById("msg");
 
 const $fault_ctl = document.getElementById("fault-ctl");
@@ -1035,8 +1037,23 @@ const drawHost = () => {
     const sponsor = event_quad.t;
     const target = event_quad.x;
     const message = event_quad.y;
-    const rollback =  event_quad.z;
+    const actor = h_read_quad(h_cap_to_ptr(target));
+    const effect = actor.z;
+    const state = actor.y;
     updateElementText($self, h_disasm(target));
+    //updateElementText($effect, h_disasm(effect));
+    if (h_in_mem(effect)) {
+        let p = effect;
+        let a = [];
+        while (h_in_mem(p)) {
+            a.push(h_disasm(p));  // disasm event
+            p = h_next(p);
+        }
+        updateElementText($effect, a.join("\n"));
+    } else {
+        updateElementText($effect, "--");
+    }
+    updateElementText($state, h_pprint(state));  // pretty-print state
     updateElementText($msg, h_pprint(message));  // pretty-print message
     const sponsor_quad = h_read_quad(sponsor);
     updateElementValue($sponsor_memory, h_fix_to_i32(sponsor_quad.t));

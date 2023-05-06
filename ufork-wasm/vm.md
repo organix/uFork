@@ -65,7 +65,8 @@ Quad-cells are used to encode most of the important data-structures in uFork.
 {t:Pair_T, x:head, y:tail}              | pair-lists of user data (cons)
 {t:Pair_T, x:item, y:rest}              | stack entry holding _item_
 {t:Actor_T, x:beh, y:sp, z:?}           | idle actor
-{t:Actor_T, x:beh', y:sp', z:events}    | busy actor, intially {z:()}
+{t:Actor_T, x:beh, y:sp, z:effect}      | busy actor
+{t:Actor_T, x:beh', y:sp', z:events}    | effect accumulator, intially z: ()
 {t:Dict_T, x:key, y:value, z:next }     | dictionary binding entry
 {t:Free_T, z:next}                      | cell in the free-list
 
@@ -98,7 +99,7 @@ _dict_ _key_      | {x:VM_dict, y:GET, z:_K_}       | _value_  | the first _valu
 _dict_ _key_ _value_ | {x:VM_dict, y:ADD, z:_K_}    | _dict'_  | add a binding from _key_ to _value_ in _dict_
 _dict_ _key_ _value_ | {x:VM_dict, y:SET, z:_K_}    | _dict'_  | replace or add a binding from _key_ to _value_ in _dict_
 _dict_ _key_      | {x:VM_dict, y:DEL, z:_K_}       | _dict'_  | remove a binding from _key_ to _value_ in _dict_
-&mdash;           | {x:VM_deque, y:NEW, z:_K_}      | _deque_  | create a new empty _deque_
+—                 | {x:VM_deque, y:NEW, z:_K_}      | _deque_  | create a new empty _deque_
 _deque_           | {x:VM_deque, y:EMPTY, z:_K_}    | _bool_   | `TRUE` if _deque_ is empty, otherwise `FALSE`
 _deque_ _value_   | {x:VM_deque, y:PUSH, z:_K_}     | _deque'_ | insert _value_ as the first element of _deque_
 _deque_           | {x:VM_deque, y:POP, z:_K_}      | _deque'_ _value_ | remove the first _value_ from _deque_, or `UNDEF`
@@ -109,9 +110,9 @@ _deque_           | {x:VM_deque, y:LEN, z:_K_}      | _n_      | count elements 
 _pair_            | {x:VM_part, y:_n_, z:_K_}       | … _tail_ _head_ | split _pair_ into _head_ and _tail_ (_n_ times)
 _pair_            | {x:VM_nth, y:_n_, z:_K_}        | _itemₙ_  | extract item _n_ from a _pair_ list
 _pair_            | {x:VM_nth, y:-_n_, z:_K_}       | _tailₙ_  | extract tail _n_ from a _pair_ list
-&mdash;           | {x:VM_push, y:_value_, z:_K_}   | _value_  | push literal _value_ on stack
+—                 | {x:VM_push, y:_value_, z:_K_}   | _value_  | push literal _value_ on stack
 _vₙ_ … _v₁_       | {x:VM_depth, z:_K_}             | _vₙ_ … _v₁_ _n_ | count items on stack
-_vₙ_ … _v₁_       | {x:VM_drop, y:_n_, z:_K_}       | &mdash;  | remove _n_ items from stack
+_vₙ_ … _v₁_       | {x:VM_drop, y:_n_, z:_K_}       | —        | remove _n_ items from stack
 _vₙ_ … _v₁_       | {x:VM_pick, y:_n_, z:_K_}       | _vₙ_ … _v₁_ _vₙ_ | copy item _n_ to top of stack
 _vₙ_ … _v₁_       | {x:VM_dup, y:_n_, z:_K_}        |_vₙ_ … _v₁_ _vₙ_ … _v₁_ | duplicate top _n_ items on stack
 _vₙ_ … _v₁_       | {x:VM_roll, y:_n_, z:_K_}       | _vₙ₋₁_ … _v₁_ _vₙ_ | roll item _n_ to top of stack
@@ -130,28 +131,28 @@ _n_ _m_           | {x:VM_cmp, y:GT, z:_K_}         | _bool_   | `TRUE` if _n_ >
 _n_ _m_           | {x:VM_cmp, y:LT, z:_K_}         | _bool_   | `TRUE` if _n_ < _m_, otherwise `FALSE`
 _n_ _m_           | {x:VM_cmp, y:LE, z:_K_}         | _bool_   | `TRUE` if _n_ <= _m_, otherwise `FALSE`
 _n_ _m_           | {x:VM_cmp, y:NE, z:_K_}         | _bool_   | `TRUE` if _n_ != _m_, otherwise `FALSE`
-_bool_            | {x:VM_if, y:_T_, z:_F_}         | &mdash;  | continue _F_ if "falsey", otherwise continue _T_
-&mdash;           | {x:VM_msg, y:0, z:_K_}          | _msg_    | copy event message to stack
-&mdash;           | {x:VM_msg, y:_n_, z:_K_}        | _msgₙ_   | copy message item _n_ to stack
-&mdash;           | {x:VM_msg, y:-_n_, z:_K_}       | _tailₙ_  | copy message tail _n_ to stack
-&mdash;           | {x:VM_state, y:0, z:_K_}        | _state_  | copy _actor_ state to stack
-&mdash;           | {x:VM_state, y:_n_, z:_K_}      | _stateₙ_ | copy state item _n_ to stack
-&mdash;           | {x:VM_state, y:-_n_, z:_K_}     | _tailₙ_  | copy state tail _n_ to stack
-&mdash;           | {x:VM_my, y:SELF, z:_K_}        | _actor_  | push _actor_ address on stack
-&mdash;           | {x:VM_my, y:BEH, z:_K_}         | _beh_    | push _actor_ behavior on stack
-&mdash;           | {x:VM_my, y:STATE, z:_K_}       | _vₙ_ … _v₁_ | flatten _actor_ state onto stack
-_msg_ _actor_     | {x:VM_send, y:-1, z:_K_}        | &mdash;  | send _msg_ to _actor_
-_mₙ_ … _m₁_ _actor_ | {x:VM_send, y:_n_, z:_K_}     | &mdash;  | send (_m₁_ … _mₙ_) to _actor_
+_bool_            | {x:VM_if, y:_T_, z:_F_}         | —        | continue _F_ if "falsey", otherwise continue _T_
+—                 | {x:VM_msg, y:0, z:_K_}          | _msg_    | copy event message to stack
+—                 | {x:VM_msg, y:_n_, z:_K_}        | _msgₙ_   | copy message item _n_ to stack
+—                 | {x:VM_msg, y:-_n_, z:_K_}       | _tailₙ_  | copy message tail _n_ to stack
+—                 | {x:VM_state, y:0, z:_K_}        | _state_  | copy _actor_ state to stack
+—                 | {x:VM_state, y:_n_, z:_K_}      | _stateₙ_ | copy state item _n_ to stack
+—                 | {x:VM_state, y:-_n_, z:_K_}     | _tailₙ_  | copy state tail _n_ to stack
+—                 | {x:VM_my, y:SELF, z:_K_}        | _actor_  | push _actor_ address on stack
+—                 | {x:VM_my, y:BEH, z:_K_}         | _beh_    | push _actor_ behavior on stack
+—                 | {x:VM_my, y:STATE, z:_K_}       | _vₙ_ … _v₁_ | flatten _actor_ state onto stack
+_msg_ _actor_     | {x:VM_send, y:-1, z:_K_}        | —        | send _msg_ to _actor_
+_mₙ_ … _m₁_ _actor_ | {x:VM_send, y:_n_, z:_K_}     | —        | send (_m₁_ … _mₙ_) to _actor_
 _state_ _beh_     | {x:VM_new, y:-1, z:_K_}         | _actor_  | create new _actor_ with code _beh_ and data _state_
 _vₙ_ … _v₁_ _beh_ | {x:VM_new, y:_n_, z:_K_}        | _actor_  | create new _actor_ code _beh_ and state (_v₁_ … _vₙ_)
-_state_ _beh_     | {x:VM_beh, y:-1, z:_K_}         | &mdash;  | replace code with _beh_ and data with _state_
-_vₙ_ … _v₁_ _beh_ | {x:VM_beh, y:_n_, z:_K_}        | &mdash;  | replace code with _beh_ and state with (_v₁_ … _vₙ_)
-_reason_          | {x:VM_end, y:ABORT}             | &mdash;  | abort actor transaction with _reason_
-&mdash;           | {x:VM_end, y:STOP}              | &mdash;  | stop current continuation (thread)
-&mdash;           | {x:VM_end, y:COMMIT}            | &mdash;  | commit actor transaction
-&mdash;           | {x:VM_end, y:RELEASE}           | &mdash;  | commit transaction and free actor **--DEPRECATED--**
-_actual_          | {x:VM_is_eq, y:_expect_, z:_K_} | &mdash;  | assert `actual` == `expect`, otherwise halt!
-_actual_          | {x:VM_is_ne, y:_expect_, z:_K_} | &mdash;  | assert `actual` != `expect`, otherwise halt!
+_state_ _beh_     | {x:VM_beh, y:-1, z:_K_}         | —        | replace code with _beh_ and data with _state_
+_vₙ_ … _v₁_ _beh_ | {x:VM_beh, y:_n_, z:_K_}        | —        | replace code with _beh_ and state with (_v₁_ … _vₙ_)
+_reason_          | {x:VM_end, y:ABORT}             | —        | abort actor transaction with _reason_
+—                 | {x:VM_end, y:STOP}              | —        | stop current continuation (thread)
+—                 | {x:VM_end, y:COMMIT}            | —        | commit actor transaction
+—                 | {x:VM_end, y:RELEASE}           | —        | commit transaction and free actor **--DEPRECATED--**
+_actual_          | {x:VM_is_eq, y:_expect_, z:_K_} | —        | assert `actual` == `expect`, otherwise halt!
+_actual_          | {x:VM_is_ne, y:_expect_, z:_K_} | —        | assert `actual` != `expect`, otherwise halt!
 
 ### Object Graph
 
