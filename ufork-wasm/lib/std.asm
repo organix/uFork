@@ -5,7 +5,7 @@ commit:
     end commit
 
 send_msg:
-    send 0 commit
+    send -1 commit
 
 cust_send:
     msg 1 send_msg
@@ -39,12 +39,6 @@ resend:
     my self
     ref send_msg
 
-release:
-    end release
-
-release_0:
-    send 0 release
-
 stop:
     end stop
 
@@ -66,7 +60,5 @@ abort:
     rv_zero
     rv_one
     resend
-    release
-    release_0
     stop
     abort
