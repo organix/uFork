@@ -1142,6 +1142,7 @@ function cap_dict(device_offsets) {
 }
 
 function boot(module_specifier) {
+    localStorage.setItem("boot", module_specifier);
     return h_import(
         new URL(module_specifier, window.location.href).href,
         rom_alloc
@@ -1214,6 +1215,7 @@ const pauseAction = () => {
 }
 
 const $bootInput = document.getElementById("boot-url");
+$bootInput.value =  localStorage.getItem("boot") ?? "../lib/test.asm";
 const $bootForm = document.getElementById("boot-form");
 $bootForm.onsubmit = function (event) {
     boot($bootInput.value);
