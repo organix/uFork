@@ -186,19 +186,19 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
             result  // should normally be Ok(true)
         } else {
             let a_ptr = self.cap_to_ptr(target);
-            let a_quad = *self.mem(a_ptr);
+            let a_quad = self.mem(a_ptr);
             let beh = a_quad.x();
             let state = a_quad.y();
-            let events = a_quad.z();
-            if events == UNDEF {
+            let txn = a_quad.z();
+            if txn == UNDEF {
                 // begin actor-event transaction
-                let rollback = self.reserve(&a_quad)?;  // snapshot actor state
-                let kp = self.new_cont(beh, state, ep)?;  // create continuation
-                self.ram_mut(a_ptr).set_z(NIL);  // indicate actor is busy
+                let effect = self.reserve(&Quad::actor_t(beh, state, NIL))?;  // event-effect accumulator
+                let kp = self.new_cont(beh, NIL, ep)?;  // create continuation
+                self.ram_mut(a_ptr).set_z(effect);  // indicate actor is busy
                 self.cont_enqueue(kp);
                 let ep_ = self.event_dequeue().unwrap();
                 assert_eq!(ep, ep_);
-                self.ram_mut(ep).set_z(rollback);  // store rollback in event
+                self.ram_mut(ep).set_z(NIL);  // disconnect event from queue
                 self.set_sponsor_events(sponsor, Any::fix(limit - 1));  // decrement event limit
                 Ok(true)  // event dispatched
             } else {
@@ -470,6 +470,14 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
                 self.stack_push(r)?;
                 kip
             },
+            VM_STATE => {
+                let n = imm.get_fix()?;
+                let me = self.self_ptr();
+                let state = self.ram(me).y();
+                let r = self.extract_nth(state, n);
+                self.stack_push(r)?;
+                kip
+            },
             VM_MY => {
                 let me = self.self_ptr();
                 match imm {
@@ -493,41 +501,39 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
                 kip
             }
             VM_SEND => {
-                let num = imm.get_fix()?;
+                let n = imm.get_fix()?;
                 let target = self.stack_pop();
-                //assert!(self.typeq(ACTOR_T, target));
-                let msg = if num > 0 {
-                    self.pop_counted(num)
-                } else {
-                    self.stack_pop()
-                };
+                if !self.typeq(ACTOR_T, target) {
+                    return Err(E_NOT_CAP);
+                }
+                let msg = self.pop_counted(n);
                 let ep = self.new_event(target, msg)?;
                 let me = self.self_ptr();
-                let next = self.ram(me).z();
-                if next.is_ram() {
-                    self.ram_mut(ep).set_z(next);
-                }
-                self.ram_mut(me).set_z(ep);
+                let effect = self.ram(me).z();
+                let next = self.ram(effect).z();
+                self.ram_mut(ep).set_z(next);
+                self.ram_mut(effect).set_z(ep);
                 kip
             },
             VM_NEW => {
-                let num = imm.get_fix()?;
-                let ip = self.stack_pop();
-                assert!(self.typeq(INSTR_T, ip));
-                let sp = self.pop_counted(num);
-                let a = self.new_actor(ip, sp)?;
+                let n = imm.get_fix()?;
+                let beh = self.stack_pop();
+                assert!(self.typeq(INSTR_T, beh));  // FIXME: return Err(E_NOT_CODE)
+                let state = self.pop_counted(n);
+                let a = self.new_actor(beh, state)?;
                 self.stack_push(a)?;
                 kip
             },
             VM_BEH => {
-                let num = imm.get_fix()?;
-                let ip = self.stack_pop();
-                assert!(self.typeq(INSTR_T, ip));
-                let sp = self.pop_counted(num);
+                let n = imm.get_fix()?;
+                let beh = self.stack_pop();
+                assert!(self.typeq(INSTR_T, beh));  // FIXME: return Err(E_NOT_CODE)
+                let state = self.pop_counted(n);
                 let me = self.self_ptr();
-                let actor = self.ram_mut(me);
-                actor.set_x(ip);  // replace behavior function
-                actor.set_y(sp);  // replace state data
+                let effect = self.ram(me).z();
+                let quad = self.ram_mut(effect);
+                quad.set_x(beh);  // replace behavior function
+                quad.set_y(state);  // replace state data
                 kip
             },
             VM_END => {
@@ -548,7 +554,6 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
                         TRUE
                     },
                     END_RELEASE => {
-                        self.ram_mut(me).set_y(NIL);  // no retained stack
                         self.actor_commit(me);
                         self.free(me);  // free actor
                         FALSE
@@ -648,48 +653,46 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
     }
 
     fn actor_commit(&mut self, me: Any) {
-        let rollback = self.mem(self.ep()).z();
-        if rollback.is_ram() {
-            self.free(rollback);  // release rollback snapshot
-        }
-        let state = self.ram(me).y();
-        self.stack_clear(state);
+        self.stack_clear(NIL);
+        let effect = self.ram(me).z();
+        let quad = self.ram(effect);
+        let beh = quad.x();
+        let state = quad.y();
+        let mut ep = quad.z();
         // move sent-message events to event queue
-        let mut ep = self.ram(me).z();
         while ep.is_ram() {
             let event = self.ram(ep);
             let next = event.z();
             self.event_enqueue(ep);
             ep = next;
         }
-        // end actor transaction
-        self.ram_mut(me).set_z(UNDEF);
+        self.free(effect);
+        // commit actor transaction
+        let actor = self.ram_mut(me);
+        actor.set_x(beh);
+        actor.set_y(state);
+        actor.set_z(UNDEF);
     }
     fn actor_abort(&mut self, me: Any) {
-        let state = self.ram(me).y();
-        self.stack_clear(state);
+        self.stack_clear(NIL);
+        let effect = self.ram(me).z();
+        let mut ep = self.ram(effect).z();
         // free sent-message events
-        let mut ep = self.ram(me).z();
         while ep.is_ram() {
             let event = self.ram(ep);
             let next = event.z();
             self.free(ep);
             ep = next;
         }
-        // roll back actor transaction
-        ep = self.ep();
-        let rollback = self.mem(ep).z();
-        if rollback.is_ram() {
-            let quad = *self.mem(rollback);
-            *self.ram_mut(me) = quad;  // restore actor from rollback
-            self.free(rollback);  // release rollback snapshot
-        }
+        self.free(effect);
+        // abort actor transaction
+        self.ram_mut(me).set_z(UNDEF);
     }
     pub fn actor_revert(&mut self) -> bool {
         // revert actor/event to pre-dispatch state
         if let Some(kp) = self.cont_dequeue() {
-            let ep = self.mem(kp).y();
-            let target = self.mem(ep).x();
+            let ep = self.ram(kp).y();
+            let target = self.ram(ep).x();
             let me = self.cap_to_ptr(target);
             self.actor_abort(me);
             self.event_enqueue(ep);
@@ -745,8 +748,8 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
         Ok(())
     }
     fn pop_counted(&mut self, n: isize) -> Any {
-        let mut n = n;
         if n > 0 {  // build list from stack
+            let mut n = n;
             let sp = self.sp();
             let mut v = sp;
             let mut p = UNDEF;
@@ -760,6 +763,8 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
             }
             self.set_sp(v);
             sp
+        } else if n == -1 {  // pre-composed
+            self.stack_pop()
         } else {  // empty list
             NIL
         }
