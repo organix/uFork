@@ -751,6 +751,7 @@ function generate_crlf(tree, file) {
             || operator.id === "dup"
             || operator.id === "roll"
             || operator.id === "msg"
+            || operator.id === "state"
             || operator.id === "send"
             || operator.id === "new"
             || operator.id === "beh"

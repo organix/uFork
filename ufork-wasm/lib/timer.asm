@@ -12,49 +12,47 @@
 ; Initially, the actor has no awareness of time. A customer is created to
 ; receive the current time from the clock device.
 
-beh:                    ; clock                        <- (delay target message)
-    msg 3               ; clock message
-    msg 2               ; clock message target
-    pair 1              ; clock (target . message)
-    pick 2              ; clock (target . message) clock
-    msg 1               ; clock (target . message) clock delay
-    push cust_beh       ; clock (target . message) clock delay cust_beh
-    new 3               ; clock cust
-    pick 2              ; clock cust clock
-    ref std.send_0
+beh:                    ; clock <- (delay target message)
+    msg 0               ; (delay target message)
+    state 0             ; (delay target message) clock
+    pair 1              ; (clock delay target message)
+    push cust_beh       ; (clock delay target message) cust_beh
+    new -1              ; cust
+    state 0             ; cust clock
+    ref std.send_msg
 
 ; Once the current time is known, it is added to the delay to yield the end
 ; time.
 
-cust_beh:               ; (target . message) clock delay                  <- now
-    msg 0               ; ... now
-    pick 2              ; ... now delay
-    alu add             ; ... end_time
-    pick 4              ; ... end_time (target . message)
-    roll 2              ; ... (target . message) end_time
-    pick 4              ; ... (target . message) end_time clock
-    push poll_beh       ; ... (target . message) end_time clock poll_beh
-    beh 3               ; ...
-    my self             ; ... SELF
-    pick 3              ; ... SELF clock
-    ref std.send_0
+cust_beh:               ; (clock delay target message) <- now
+    state 4             ; message
+    state 3             ; message target
+    msg 0               ; message target now
+    state 2             ; message target now delay
+    alu add             ; message target end_time
+    state 1             ; message target end_time clock
+    push poll_beh       ; message target end_time clock poll_beh
+    beh 4               ;
+    my self             ; SELF
+    state 1             ; SELF clock
+    ref std.send_msg
 
 ; The clock device is then repeatedly polled until the end time is reached, at
 ; which point the message is sent to the target.
 
-poll_beh:               ; (target . message) end_time clock               <- now
-    msg 0               ; ... now
-    pick 3              ; ... now end_time
-    cmp ge              ; ... expired?
-    if_not retry        ; ...
-    pick 3              ; ... (target . message)
-    part 1              ; ... message target
-    ref std.send_0
+poll_beh:               ; (clock end_time target message) <- now
+    msg 0               ; now
+    state 2             ; now end_time
+    cmp ge              ; expired?
+    if_not retry        ;
+    state 4             ; message
+    state 3             ; message target
+    ref std.send_msg
 
-retry:                  ; ... clock
-    my self             ; ... clock SELF
-    pick 2              ; ... clock SELF clock
-    ref std.send_0
+retry:                  ; (clock ...)
+    my self             ; SELF
+    state 1             ; SELF clock
+    ref std.send_msg
 
 ; The demo simply delays the sending of the numbers 42 and 1729 to the debug
 ; device.
@@ -68,7 +66,7 @@ boot:                   ;
     push dev.clock_key  ; debug_dev {caps} dev.clock_key
     dict get            ; debug_dev clock_dev
     push beh            ; debug_dev clock_dev timer_beh
-    new 1               ; debug_dev timer
+    new -1              ; debug_dev timer
     push 42             ; debug_dev timer 42
     pick 3              ; debug_dev timer 42 debug_dev
     push 1000           ; debug_dev timer 42 debug_dev 1000

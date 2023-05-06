@@ -235,6 +235,7 @@ value points to the next instruction, and is not present on "end" instructions.
 "eq"            | _value_
 "cmp"           | "eq", "ge", "gt", "lt", "le", "ne"
 "msg"           | _fixnum_
+"state"         | _fixnum_
 "my"            | "self", "beh", "state"
 "send"          | _fixnum_
 "new"           | _fixnum_

@@ -456,7 +456,7 @@ const crlf_types = {
     actor: ACTOR_T
 };
 function h_load(specifier, crlf, imports, alloc, read) {
-    // Load a module.
+    // Load a module after its imports have been loaded.
     let definitions = Object.create(null);
     let continuation_type_checks = [];
     let cyclic_data_checks = [];
@@ -597,6 +597,7 @@ function h_load(specifier, crlf, imports, alloc, read) {
                 || node.op === "dup"
                 || node.op === "roll"
                 || node.op === "msg"
+                || node.op === "state"
                 || node.op === "send"
                 || node.op === "new"
                 || node.op === "beh"
