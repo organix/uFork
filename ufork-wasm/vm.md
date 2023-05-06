@@ -183,7 +183,7 @@ k_queue: [head,tail]--------------------+
                |  |               |   |
                |  |               |   +--> ...
                |  |               V
-               |  |              [Actor,code,data,effects]--->[Actor,code',data',events]---> ... -->[sponsor,to,msg,NIL]
+               |  |              [Actor,code,data,effect]--->[Actor,code',data',events]---> ... -->[sponsor,to,msg,NIL]
                |  V
                | [Pair,car,cdr,?]
                |        |   |

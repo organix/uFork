@@ -88,7 +88,7 @@ pub const ROM_TOP_OFS: usize = ROM_BASE_OFS;
         quad_ram[BLOB_DEV.ofs()]    = Quad::actor_t(PLUS_3, NIL, UNDEF);  // blob device #3
         quad_ram[TIMER_DEV.ofs()]   = Quad::actor_t(PLUS_4, NIL, UNDEF);  // timer device #4
         quad_ram[MEMO_DEV.ofs()]    = Quad::actor_t(PLUS_5, NIL, UNDEF);  // memo device #5
-        quad_ram[SPONSOR.ofs()]     = Quad::sponsor_t(Any::fix(512), Any::fix(64), Any::fix(512));  // root configuration sponsor
+        quad_ram[SPONSOR.ofs()]     = Quad::sponsor_t(Any::fix(512), Any::fix(64), Any::fix(768));  // root configuration sponsor
 
 pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
 
@@ -138,25 +138,24 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
         }
     }
 
-    pub fn run_loop(&mut self) -> bool {  // FIXME: return `Error` instead of `bool`
+    pub fn run_loop(&mut self) -> Error {
         loop {
             match self.execute_instruction() {
                 Ok(more) => {
                     if !more && !self.event_pending() {
-                        return true;  // no more instructions to execute...
+                        return E_OK;  // no more instructions to execute...
                     }
                 },
-                Err(_error) => {
-                    return false;  // limit reached, or error condition signalled...
+                Err(error) => {
+                    return error;  // limit reached, or error condition signalled...
                 },
             }
-            if let Err(_error) = self.check_for_interrupt() {
-                return false;  // interrupt handler failed...
+            if let Err(error) = self.check_for_interrupt() {
+                return error;  // interrupt handler failed...
             }
-            if let Err(_error) = self.dispatch_event() {
-                return false;  // event dispatch failed...
+            if let Err(error) = self.dispatch_event() {
+                return error;  // event dispatch failed...
             }
-            // FIXME: if dispatch_event() returns Ok(true), ignore empty k-queue...
         }
     }
     pub fn check_for_interrupt(&mut self) -> Result<bool, Error> {
@@ -1993,9 +1992,9 @@ pub const TEST_OFS: usize = F_FIB_OFS+30;
 pub const TEST_BEH: Any    = Any { raw: TEST_OFS as Raw };
         quad_rom[TEST_OFS+0]        = Quad::vm_push(PLUS_6, Any::rom(TEST_OFS+1));  // 6
         quad_rom[TEST_OFS+1]        = Quad::vm_push(EQ_8_BEH, Any::rom(TEST_OFS+2));  // 6 eq-8-beh
-        quad_rom[TEST_OFS+2]        = Quad::vm_new(MINUS_1, Any::rom(TEST_OFS+3));  // 6 cust=eq-8.()
+        quad_rom[TEST_OFS+2]        = Quad::vm_new(ZERO, Any::rom(TEST_OFS+3));  // 6 cust=eq-8.()
         quad_rom[TEST_OFS+3]        = Quad::vm_push(F_FIB_BEH, Any::rom(TEST_OFS+4));  // 6 cust fib-beh
-        quad_rom[TEST_OFS+4]        = Quad::vm_new(MINUS_1, Any::rom(TEST_OFS+5));  // 6 cust fib.()
+        quad_rom[TEST_OFS+4]        = Quad::vm_new(ZERO, Any::rom(TEST_OFS+5));  // 6 cust fib.()
         quad_rom[TEST_OFS+5]        = Quad::vm_send(PLUS_2, COMMIT);  // --
 
 pub const EQ_8_BEH: Any = Any { raw: (TEST_OFS+6) as Raw };
@@ -2220,8 +2219,8 @@ pub const T_DEV_BEH: Any = Any { raw: T_DEV_OFS as Raw };
         let boot_ptr = core.reserve(&Quad::new_actor(boot_beh, NIL)).unwrap();
         let a_boot = core.ptr_to_cap(boot_ptr);
         core.event_inject(SPONSOR, a_boot, UNDEF).unwrap();
-        let ok = core.run_loop();
-        assert!(ok);
+        let err = core.run_loop();
+        assert_eq!(E_OK, err);
     }
 
     #[test]
@@ -2234,8 +2233,8 @@ pub const T_DEV_BEH: Any = Any { raw: T_DEV_OFS as Raw };
         assert_eq!(BNK_0, core.gc_phase());
         core.gc_stop_the_world().unwrap();
         assert_eq!(BNK_1, core.gc_phase());
-        let ok = core.run_loop();
-        assert!(ok);
+        let err = core.run_loop();
+        assert_eq!(E_OK, err);
         let bank = core.gc_phase();
         core.gc_stop_the_world().unwrap();
         assert_ne!(bank, core.gc_phase());
@@ -2248,8 +2247,8 @@ pub const T_DEV_BEH: Any = Any { raw: T_DEV_OFS as Raw };
         let boot_ptr = core.reserve(&Quad::new_actor(boot_beh, NIL)).unwrap();
         let a_boot = core.ptr_to_cap(boot_ptr);
         core.event_inject(SPONSOR, a_boot, UNDEF).unwrap();
-        let ok = core.run_loop();
-        assert!(ok);
+        let err = core.run_loop();
+        assert_eq!(E_OK, err);
     }
 
     #[test]
@@ -2261,8 +2260,8 @@ pub const T_DEV_BEH: Any = Any { raw: T_DEV_OFS as Raw };
         let msg = core.reserve(&Quad::pair_t(UNIT, NIL)).unwrap();
         let msg = core.reserve(&Quad::pair_t(a_boot, msg)).unwrap();
         core.event_inject(SPONSOR, a_boot, msg).unwrap();
-        let ok = core.run_loop();
-        assert!(ok);
+        let err = core.run_loop();
+        assert_eq!(E_OK, err);
     }
 
     #[test]
@@ -2272,8 +2271,8 @@ pub const T_DEV_BEH: Any = Any { raw: T_DEV_OFS as Raw };
         let boot_ptr = core.reserve(&Quad::new_actor(boot_beh, NIL)).unwrap();
         let a_boot = core.ptr_to_cap(boot_ptr);
         core.event_inject(SPONSOR, a_boot, NIL).unwrap();
-        let ok = core.run_loop();
-        assert!(ok);
+        let err = core.run_loop();
+        assert_eq!(E_OK, err);
     }
 
 }
