@@ -456,7 +456,7 @@ const crlf_types = {
     actor: ACTOR_T
 };
 function h_load(specifier, crlf, imports, alloc, read) {
-    // Load a module.
+    // Load a module after its imports have been loaded.
     let definitions = Object.create(null);
     let continuation_type_checks = [];
     let cyclic_data_checks = [];
@@ -597,6 +597,7 @@ function h_load(specifier, crlf, imports, alloc, read) {
                 || node.op === "dup"
                 || node.op === "roll"
                 || node.op === "msg"
+                || node.op === "state"
                 || node.op === "send"
                 || node.op === "new"
                 || node.op === "beh"
@@ -1142,6 +1143,7 @@ function cap_dict(device_offsets) {
 }
 
 function boot(module_specifier) {
+    localStorage.setItem("boot", module_specifier);
     return h_import(
         new URL(module_specifier, window.location.href).href,
         rom_alloc
@@ -1214,9 +1216,11 @@ const pauseAction = () => {
 }
 
 const $bootInput = document.getElementById("boot-url");
+$bootInput.value =  localStorage.getItem("boot") ?? "../lib/test.asm";
 const $bootForm = document.getElementById("boot-form");
 $bootForm.onsubmit = function (event) {
     boot($bootInput.value);
+    $bootInput.blur(); // become responsive to keybindings
     event.preventDefault();
 };
 const $bootButton = document.getElementById("boot");
