@@ -1217,6 +1217,7 @@ const $bootInput = document.getElementById("boot-url");
 const $bootForm = document.getElementById("boot-form");
 $bootForm.onsubmit = function (event) {
     boot($bootInput.value);
+    $bootInput.blur(); // become responsive to keybindings
     event.preventDefault();
 };
 const $bootButton = document.getElementById("boot");
