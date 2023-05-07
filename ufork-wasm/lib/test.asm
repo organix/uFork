@@ -10,7 +10,7 @@
 n:
     ref 6
 
-boot:                   ; {caps}
+boot:                   ; () <- {caps}
     push n              ; n
     msg 0               ; n {caps}
     push dev.debug_key  ; n {caps} dev.debug_key

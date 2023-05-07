@@ -57,7 +57,7 @@ retry:                  ; (clock ...)
 ; The demo simply delays the sending of the numbers 42 and 1729 to the debug
 ; device.
 
-boot:                   ;
+boot:                   ; () <- {caps}
     msg 0               ; {caps}
     dup 1               ; {caps} {caps}
     push dev.debug_key  ; {caps} {caps} dev.debug_key

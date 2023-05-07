@@ -16,7 +16,7 @@ timer_key:
 memo_key:
     ref 7
 
-boot:
+boot:                   ; () <- {caps}
     msg 0               ; {caps}
     push io_key         ; {caps} io_key
     dict get            ; io_dev

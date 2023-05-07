@@ -92,7 +92,7 @@ busy_4:
     ref busy_3
 
 ; unit test suite
-boot:
+boot:                   ; () <- {caps}
     msg 0               ; {caps}
     ref std.commit
 

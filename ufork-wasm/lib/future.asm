@@ -96,7 +96,7 @@ value_beh:              ; rcap value
     ref std.send_msg
 
 ; unit test suite
-boot:
+boot:                   ; () <- {caps}
     msg 0               ; {caps}
     ref std.commit
 

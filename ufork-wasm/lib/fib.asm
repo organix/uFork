@@ -48,7 +48,7 @@ k2:                     ; (cust m) <- n
     state 1             ; m+n cust
     ref std.send_msg
 
-boot:                   ; () <- ()
+boot:                   ; () <- _
     push 6              ; n=6
 ;    push 5              ; n=5 -- will lead to assert failure
     push eq8            ; n eq8
