@@ -1587,344 +1587,45 @@ fn falsey(v: Any) -> bool {
 mod tests {
     use super::*;
 
-    fn load_lib(core: &mut Core) -> Any {
+    fn load_std(core: &mut Core) -> Any {
         // prepare ROM with library of idioms
-pub const LIB_OFS: usize = ROM_BASE_OFS;
+pub const STD_OFS: usize = ROM_BASE_OFS;
         let quad_rom = &mut core.quad_rom;
 
-pub const SINK_BEH: Any = Any { raw: (LIB_OFS+0) as Raw };  // alias for no-op behavior
-pub const COMMIT: Any = Any { raw: (LIB_OFS+0) as Raw };
+pub const SINK_BEH: Any = Any { raw: (STD_OFS+0) as Raw };  // alias for no-op behavior
+pub const COMMIT: Any = Any { raw: (STD_OFS+0) as Raw };
         quad_rom[COMMIT.ofs()]      = Quad::vm_end_commit();
-pub const SEND_MSG: Any = Any { raw: (LIB_OFS+1) as Raw };
+pub const SEND_MSG: Any = Any { raw: (STD_OFS+1) as Raw };
         quad_rom[SEND_MSG.ofs()]      = Quad::vm_send(MINUS_1, COMMIT);
-pub const CUST_SEND: Any = Any { raw: (LIB_OFS+2) as Raw };
+pub const CUST_SEND: Any = Any { raw: (STD_OFS+2) as Raw };
         quad_rom[CUST_SEND.ofs()]   = Quad::vm_msg(PLUS_1, SEND_MSG);
-pub const RV_SELF: Any = Any { raw: (LIB_OFS+3) as Raw };
+pub const RV_SELF: Any = Any { raw: (STD_OFS+3) as Raw };
         quad_rom[RV_SELF.ofs()]     = Quad::vm_my_self(CUST_SEND);
-pub const RV_UNDEF: Any = Any { raw: (LIB_OFS+4) as Raw };
+pub const RV_UNDEF: Any = Any { raw: (STD_OFS+4) as Raw };
         quad_rom[RV_UNDEF.ofs()]    = Quad::vm_push(UNDEF, CUST_SEND);
-pub const RV_NIL: Any = Any { raw: (LIB_OFS+5) as Raw };
+pub const RV_NIL: Any = Any { raw: (STD_OFS+5) as Raw };
         quad_rom[RV_NIL.ofs()]      = Quad::vm_push(NIL, CUST_SEND);
-pub const RV_FALSE: Any = Any { raw: (LIB_OFS+6) as Raw };
+pub const RV_FALSE: Any = Any { raw: (STD_OFS+6) as Raw };
         quad_rom[RV_FALSE.ofs()]    = Quad::vm_push(FALSE, CUST_SEND);
-pub const RV_TRUE: Any = Any { raw: (LIB_OFS+7) as Raw };
+pub const RV_TRUE: Any = Any { raw: (STD_OFS+7) as Raw };
         quad_rom[RV_TRUE.ofs()]     = Quad::vm_push(TRUE, CUST_SEND);
-pub const RV_UNIT: Any = Any { raw: (LIB_OFS+8) as Raw };
+pub const RV_UNIT: Any = Any { raw: (STD_OFS+8) as Raw };
         quad_rom[RV_UNIT.ofs()]     = Quad::vm_push(UNIT, CUST_SEND);
-pub const RV_ZERO: Any = Any { raw: (LIB_OFS+9) as Raw };
+pub const RV_ZERO: Any = Any { raw: (STD_OFS+9) as Raw };
         quad_rom[RV_ZERO.ofs()]     = Quad::vm_push(ZERO, CUST_SEND);
-pub const RV_ONE: Any = Any { raw: (LIB_OFS+10) as Raw };
+pub const RV_ONE: Any = Any { raw: (STD_OFS+10) as Raw };
         quad_rom[RV_ONE.ofs()]      = Quad::vm_push(PLUS_1, CUST_SEND);
-pub const RESEND: Any = Any { raw: (LIB_OFS+11) as Raw };
+pub const RESEND: Any = Any { raw: (STD_OFS+11) as Raw };
         quad_rom[RESEND.ofs()+0]    = Quad::vm_msg(ZERO, Any::rom(RESEND.ofs()+1));
         quad_rom[RESEND.ofs()+1]    = Quad::vm_my_self(SEND_MSG);
-pub const RELEASE: Any = Any { raw: (LIB_OFS+13) as Raw };
-        quad_rom[RELEASE.ofs()]     = Quad::vm_end_release();
-pub const RELEASE_0: Any = Any { raw: (LIB_OFS+14) as Raw };
-        quad_rom[RELEASE_0.ofs()]   = Quad::vm_send(ZERO, RELEASE);
-pub const STOP: Any = Any { raw: (LIB_OFS+15) as Raw };
+pub const STOP: Any = Any { raw: (STD_OFS+13) as Raw };
         quad_rom[STOP.ofs()]        = Quad::vm_end_stop();
-pub const ABORT: Any = Any { raw: (LIB_OFS+16) as Raw };
+pub const ABORT: Any = Any { raw: (STD_OFS+14) as Raw };
         quad_rom[ABORT.ofs()+0]     = Quad::vm_push(UNDEF, Any::rom(ABORT.ofs()+1));  // reason=#?
         quad_rom[ABORT.ofs()+1]     = Quad::vm_end_abort();
 
-pub const MEMO_OFS: usize = LIB_OFS+18;
-pub const MEMO_BEH: Any = Any { raw: MEMO_OFS as Raw };
-        /*
-        (define memo-beh
-            (lambda (value)
-                (BEH (cust . _)
-                    (SEND cust value) )))
-        */
-        // stack: value
-        quad_rom[MEMO_OFS+0]        = Quad::vm_dup(PLUS_1, CUST_SEND);  // value value
-
-pub const FWD_OFS: usize = MEMO_OFS+1;
-pub const FWD_BEH: Any = Any { raw: FWD_OFS as Raw };
-        /*
-        (define fwd-beh
-            (lambda (rcvr)
-                (BEH msg
-                    (SEND rcvr msg) )))
-        */
-        // stack: rcvr
-        quad_rom[FWD_OFS+0]         = Quad::vm_msg(ZERO, Any::rom(FWD_OFS+1));  // rcvr msg
-        quad_rom[FWD_OFS+1]         = Quad::vm_pick(PLUS_2, SEND_MSG);  // rcvr msg rcvr
-
-pub const ONCE_OFS: usize = FWD_OFS+2;
-pub const ONCE_BEH: Any = Any { raw: ONCE_OFS as Raw };
-        /*
-        (define once-beh
-            (lambda (rcvr)
-                (BEH msg
-                    (BECOME sink-beh)
-                    (SEND rcvr msg) )))
-        */
-        // stack: rcvr
-        quad_rom[ONCE_OFS+0]        = Quad::vm_push(SINK_BEH, Any::rom(ONCE_OFS+1));  // rcvr sink-beh
-        quad_rom[ONCE_OFS+1]        = Quad::vm_beh(ZERO, FWD_BEH);  // rcvr
-
-pub const LABEL_OFS: usize = ONCE_OFS+2;
-pub const LABEL_BEH: Any = Any { raw: LABEL_OFS as Raw };
-        /*
-        (define label-beh
-            (lambda (rcvr label)
-                (BEH msg
-                    (SEND rcvr (cons label msg)) )))
-        */
-        // stack: rcvr label
-        quad_rom[LABEL_OFS+0]       = Quad::vm_msg(ZERO, Any::rom(LABEL_OFS+1));  // rcvr label msg
-        quad_rom[LABEL_OFS+1]       = Quad::vm_pick(PLUS_2, Any::rom(LABEL_OFS+2));  // rcvr label msg label
-        quad_rom[LABEL_OFS+2]       = Quad::vm_pair(PLUS_1, Any::rom(LABEL_OFS+3));  // rcvr label (label . msg)
-        quad_rom[LABEL_OFS+3]       = Quad::vm_pick(PLUS_3, SEND_MSG);  // rcvr label (label . msg) rcvr
-
-pub const TAG_OFS: usize = LABEL_OFS+4;
-pub const TAG_BEH: Any = Any { raw: TAG_OFS as Raw };
-        /*
-        (define tag-beh
-            (lambda (rcvr)
-                (BEH msg
-                    (SEND rcvr (cons SELF msg)) )))
-        */
-        // stack: rcvr
-        quad_rom[TAG_OFS+0]         = Quad::vm_my_self(LABEL_BEH);  // rcvr SELF
-
-pub const ONCE_TAG_OFS: usize = TAG_OFS+1;
-pub const ONCE_TAG_BEH: Any = Any { raw: ONCE_TAG_OFS as Raw };
-        /*
-        (define once-tag-beh  ;; FIXME: find a better name for this?
-            (lambda (rcvr)
-                (BEH msg
-                    (BECOME sink-beh)
-                    (SEND rcvr (cons SELF msg)) )))
-        */
-        // stack: rcvr
-        quad_rom[ONCE_TAG_OFS+0]    = Quad::vm_push(SINK_BEH, Any::rom(ONCE_TAG_OFS+1));  // rcvr sink-beh
-        quad_rom[ONCE_TAG_OFS+1]    = Quad::vm_beh(ZERO, TAG_BEH);  // rcvr
-
-pub const WRAP_OFS: usize = ONCE_TAG_OFS+2;
-pub const WRAP_BEH: Any = Any { raw: WRAP_OFS as Raw };
-        /*
-        (define wrap-beh
-            (lambda (rcvr)
-                (BEH msg
-                    (SEND rcvr (list msg)) )))
-        */
-        // stack: rcvr
-        quad_rom[WRAP_OFS+0]        = Quad::vm_msg(ZERO, Any::rom(WRAP_OFS+1));  // rcvr msg
-        quad_rom[WRAP_OFS+1]        = Quad::vm_pick(PLUS_2, Any::rom(WRAP_OFS+2));  // rcvr msg rcvr
-        quad_rom[WRAP_OFS+2]        = Quad::vm_send(PLUS_1, COMMIT);  // rcvr
-
-pub const UNWRAP_OFS: usize = WRAP_OFS+3;
-pub const UNWRAP_BEH: Any = Any { raw: UNWRAP_OFS as Raw };
-        /*
-        (define unwrap-beh
-            (lambda (rcvr)
-                (BEH (msg)
-                    (SEND rcvr msg) )))
-        */
-        // stack: rcvr
-        quad_rom[UNWRAP_OFS+0]      = Quad::vm_msg(PLUS_1, Any::rom(UNWRAP_OFS+1));  // rcvr msg
-        quad_rom[UNWRAP_OFS+1]      = Quad::vm_pick(PLUS_2, SEND_MSG);  // rcvr msg rcvr
-
-pub const FUTURE_OFS: usize = UNWRAP_OFS+2;
-pub const FUTURE_BEH: Any = Any { raw: FUTURE_OFS as Raw };
-        /*
-        (define future-beh
-            (lambda (rcap wcap)
-                (BEH (tag . arg)
-                    (cond
-                        ((eq? tag rcap)
-                            (BECOME (wait-beh rcap wcap (list arg))))
-                        ((eq? tag wcap)
-                            (BECOME (value-beh rcap arg))) ))))
-        */
-        // stack: rcap wcap
-        quad_rom[FUTURE_OFS+0]      = Quad::vm_msg(PLUS_1, Any::rom(FUTURE_OFS+1));  // rcap wcap tag
-        quad_rom[FUTURE_OFS+1]      = Quad::vm_pick(PLUS_3, Any::rom(FUTURE_OFS+2));  // rcap wcap tag rcap
-        quad_rom[FUTURE_OFS+2]      = Quad::vm_cmp_eq(Any::rom(FUTURE_OFS+3));  // rcap wcap tag==rcap
-        quad_rom[FUTURE_OFS+3]      = Quad::vm_if(Any::rom(FUTURE_OFS+4), Any::rom(FUTURE_OFS+9));  // rcap wcap
-
-        quad_rom[FUTURE_OFS+4]      = Quad::vm_push(NIL, Any::rom(FUTURE_OFS+5));  // rcap wcap ()
-        quad_rom[FUTURE_OFS+5]      = Quad::vm_msg(MINUS_1, Any::rom(FUTURE_OFS+6));  // rcap wcap () arg
-        quad_rom[FUTURE_OFS+6]      = Quad::vm_pair(PLUS_1, Any::rom(FUTURE_OFS+7));  // rcap wcap (arg)
-        quad_rom[FUTURE_OFS+7]      = Quad::vm_push(WAIT_BEH, Any::rom(FUTURE_OFS+8));  // rcap wcap (arg) wait-beh
-        quad_rom[FUTURE_OFS+8]      = Quad::vm_beh(PLUS_3, COMMIT);  // wait-beh[rcap wcap (arg)]
-
-        quad_rom[FUTURE_OFS+9]      = Quad::vm_msg(PLUS_1, Any::rom(FUTURE_OFS+10));  // rcap wcap tag
-        quad_rom[FUTURE_OFS+10]     = Quad::vm_pick(PLUS_2, Any::rom(FUTURE_OFS+11));  // rcap wcap tag wcap
-        quad_rom[FUTURE_OFS+11]     = Quad::vm_cmp_eq(Any::rom(FUTURE_OFS+12));  // rcap wcap tag==wcap
-        quad_rom[FUTURE_OFS+12]     = Quad::vm_if(Any::rom(FUTURE_OFS+13), ABORT);  // rcap wcap
-
-        quad_rom[FUTURE_OFS+13]     = Quad::vm_drop(PLUS_1, Any::rom(FUTURE_OFS+14));  // rcap
-        quad_rom[FUTURE_OFS+14]     = Quad::vm_msg(MINUS_1, Any::rom(FUTURE_OFS+15));  // rcap value=arg
-        quad_rom[FUTURE_OFS+15]     = Quad::vm_push(VALUE_BEH, Any::rom(FUTURE_OFS+16));  // rcap value=arg value-beh
-        quad_rom[FUTURE_OFS+16]     = Quad::vm_beh(PLUS_2, COMMIT);  // value-beh[rcap value]
-
-pub const WAIT_OFS: usize = FUTURE_OFS+17;
-pub const WAIT_BEH: Any = Any { raw: WAIT_OFS as Raw };
-        /*
-        (define wait-beh
-            (lambda (rcap wcap waiting)
-                (BEH (tag . arg)
-                    (cond
-                        ((eq? tag rcap)
-                            (BECOME (wait-beh rcap wcap (cons arg waiting))))
-                        ((eq? tag wcap)
-                            (send-to-all waiting arg)
-                            (BECOME (value-beh rcap arg))) ))))
-        */
-        // stack: rcap wcap waiting
-        quad_rom[WAIT_OFS+0]        = Quad::vm_msg(PLUS_1, Any::rom(WAIT_OFS+1));  // rcap wcap waiting tag
-        quad_rom[WAIT_OFS+1]        = Quad::vm_pick(PLUS_4, Any::rom(WAIT_OFS+2));  // rcap wcap waiting tag rcap
-        quad_rom[WAIT_OFS+2]        = Quad::vm_cmp_eq(Any::rom(WAIT_OFS+3));  // rcap wcap waiting tag==rcap
-        quad_rom[WAIT_OFS+3]        = Quad::vm_if(Any::rom(WAIT_OFS+4), Any::rom(WAIT_OFS+8));  // rcap wcap waiting
-
-        quad_rom[WAIT_OFS+4]        = Quad::vm_msg(MINUS_1, Any::rom(WAIT_OFS+5));  // rcap wcap waiting arg
-        quad_rom[WAIT_OFS+5]        = Quad::vm_pair(PLUS_1, Any::rom(WAIT_OFS+6));  // rcap wcap (arg . waiting)
-        quad_rom[WAIT_OFS+6]        = Quad::vm_push(WAIT_BEH, Any::rom(WAIT_OFS+7));  // rcap wcap (arg . waiting) wait-beh
-        quad_rom[WAIT_OFS+7]        = Quad::vm_beh(PLUS_3, COMMIT);  // wait-beh[rcap wcap (arg . waiting)]
-
-        quad_rom[WAIT_OFS+8]        = Quad::vm_msg(PLUS_1, Any::rom(WAIT_OFS+9));  // rcap wcap waiting tag
-        quad_rom[WAIT_OFS+9]        = Quad::vm_pick(PLUS_2, Any::rom(WAIT_OFS+10));  // rcap wcap waiting tag wcap
-        quad_rom[WAIT_OFS+10]       = Quad::vm_cmp_eq(Any::rom(WAIT_OFS+11));  // rcap wcap waiting tag==wcap
-        quad_rom[WAIT_OFS+11]       = Quad::vm_if(Any::rom(WAIT_OFS+12), ABORT);  // rcap wcap waiting
-
-        quad_rom[WAIT_OFS+12]       = Quad::vm_dup(PLUS_1, Any::rom(WAIT_OFS+13));  // rcap wcap waiting waiting
-        quad_rom[WAIT_OFS+13]       = Quad::vm_typeq(PAIR_T, Any::rom(WAIT_OFS+14));  // rcap wcap waiting is_pair(waiting)
-        quad_rom[WAIT_OFS+14]       = Quad::vm_if(Any::rom(WAIT_OFS+15), Any::rom(WAIT_OFS+19));  // rcap wcap waiting
-        quad_rom[WAIT_OFS+15]       = Quad::vm_part(PLUS_1, Any::rom(WAIT_OFS+16));  // rcap wcap rest first
-        quad_rom[WAIT_OFS+16]       = Quad::vm_msg(MINUS_1, Any::rom(WAIT_OFS+17));  // rcap wcap rest first value=arg
-        quad_rom[WAIT_OFS+17]       = Quad::vm_roll(PLUS_2, Any::rom(WAIT_OFS+18));  // rcap wcap rest value=arg first
-        quad_rom[WAIT_OFS+18]       = Quad::vm_send(ZERO, Any::rom(WAIT_OFS+12));  // rcap wcap rest
-
-        quad_rom[WAIT_OFS+19]       = Quad::vm_drop(PLUS_2, Any::rom(WAIT_OFS+20));  // rcap
-        quad_rom[WAIT_OFS+20]       = Quad::vm_msg(MINUS_1, Any::rom(WAIT_OFS+21));  // rcap value=arg
-        quad_rom[WAIT_OFS+21]       = Quad::vm_push(VALUE_BEH, Any::rom(WAIT_OFS+22));  // rcap value=arg value-beh
-        quad_rom[WAIT_OFS+22]       = Quad::vm_beh(PLUS_2, COMMIT);  // value-beh[rcap value]
-
-pub const VALUE_OFS: usize = WAIT_OFS+23;
-pub const VALUE_BEH: Any = Any { raw: VALUE_OFS as Raw };
-        /*
-        (define value-beh
-            (lambda (rcap value)
-                (BEH (tag . arg)
-                    (cond
-                        ((eq? tag rcap)
-                            (SEND arg value))) )))
-        */
-        // stack: rcap value
-        quad_rom[VALUE_OFS+0]       = Quad::vm_msg(PLUS_1, Any::rom(VALUE_OFS+1));  // rcap value tag
-        quad_rom[VALUE_OFS+1]       = Quad::vm_pick(PLUS_3, Any::rom(VALUE_OFS+2));  // rcap value tag rcap
-        quad_rom[VALUE_OFS+2]       = Quad::vm_cmp_eq(Any::rom(VALUE_OFS+3));  // rcap value tag==rcap
-        quad_rom[VALUE_OFS+3]       = Quad::vm_if(Any::rom(VALUE_OFS+4), COMMIT);  // rcap value
-        quad_rom[VALUE_OFS+4]       = Quad::vm_pick(PLUS_1, Any::rom(VALUE_OFS+5));  // rcap value value
-        quad_rom[VALUE_OFS+5]       = Quad::vm_msg(MINUS_1, SEND_MSG);  // rcap value value cust=arg
-
-pub const SERIAL_OFS: usize = VALUE_OFS+6;
-pub const SERIAL_BEH: Any = Any { raw: SERIAL_OFS as Raw };
-        /*
-        (define serial-beh
-            (lambda (svc)
-                (BEH (cust . req)
-                    (define tag (CREATE (once-tag-beh SELF)))
-                    (SEND svc (tag . req))
-                    (BECOME (busy-beh svc cust tag (deque-new))) )))
-        */
-        // stack: svc
-        quad_rom[SERIAL_OFS+0]      = Quad::vm_msg(PLUS_1, Any::rom(SERIAL_OFS+1));  // svc cust
-        quad_rom[SERIAL_OFS+1]      = Quad::vm_my_self(Any::rom(SERIAL_OFS+2));  // svc cust SELF
-        quad_rom[SERIAL_OFS+2]      = Quad::vm_push(ONCE_TAG_BEH, Any::rom(SERIAL_OFS+3));  // svc cust SELF once-tag-beh
-        quad_rom[SERIAL_OFS+3]      = Quad::vm_new(PLUS_1, Any::rom(SERIAL_OFS+4));  // svc cust tag=once-tag-beh[SELF]
-
-        quad_rom[SERIAL_OFS+4]      = Quad::vm_msg(MINUS_1, Any::rom(SERIAL_OFS+5));  // svc cust tag req
-        quad_rom[SERIAL_OFS+5]      = Quad::vm_pick(PLUS_2, Any::rom(SERIAL_OFS+6));  // svc cust tag req tag
-        quad_rom[SERIAL_OFS+6]      = Quad::vm_pair(PLUS_1, Any::rom(SERIAL_OFS+7));  // svc cust tag (tag . req)
-        quad_rom[SERIAL_OFS+7]      = Quad::vm_pick(PLUS_4, Any::rom(SERIAL_OFS+8));  // svc cust tag (tag . req) svc
-        quad_rom[SERIAL_OFS+8]      = Quad::vm_send(ZERO, Any::rom(SERIAL_OFS+9));  // svc cust tag
-
-        quad_rom[SERIAL_OFS+9]      = Quad::vm_deque_new(Any::rom(SERIAL_OFS+10));  // svc cust tag pending
-        quad_rom[SERIAL_OFS+10]     = Quad::vm_push(BUSY_BEH, Any::rom(SERIAL_OFS+11));  // svc cust tag pending busy-beh
-        quad_rom[SERIAL_OFS+11]     = Quad::vm_beh(PLUS_4, COMMIT);  // busy-beh[svc cust tag pending]
-
-pub const BUSY_OFS: usize = SERIAL_OFS+12;
-pub const BUSY_BEH: Any = Any { raw: BUSY_OFS as Raw };
-        /*
-        (define busy-beh
-            (lambda (svc cust tag pending)
-                (BEH (cust0 . req0)
-                    (cond
-                        ((eq? cust0 tag)
-                            (SEND cust req0)
-                            (define (next pending1) (deque-pop pending))
-                            (cond
-                                ((eq? next #?)
-                                    (BECOME (serial-beh svc)))  ; return to "ready" state
-                                (#t
-                                    (define (cust1 . req1) next)
-                                    (define tag1 (CREATE (once-tag-beh SELF)))
-                                    (SEND svc (tag1 . req1))
-                                    (BECOME (busy-beh svc cust1 tag1 pending1)) )))
-                        (#t
-                            (define pending1 (deque-put pending (cons cust0 req0)))
-                            (BECOME (busy-beh svc cust tag pending1))) ))))
-                    )))
-        */
-        // stack: svc cust tag pending
-        quad_rom[BUSY_OFS+0]        = Quad::vm_msg(PLUS_1, Any::rom(BUSY_OFS+1));  // svc cust tag pending cust0
-        quad_rom[BUSY_OFS+1]        = Quad::vm_pick(PLUS_3, Any::rom(BUSY_OFS+2));  // svc cust tag pending cust0 tag
-        quad_rom[BUSY_OFS+2]        = Quad::vm_cmp_eq(Any::rom(BUSY_OFS+3));  // svc cust tag pending cust0==tag
-        quad_rom[BUSY_OFS+3]        = Quad::vm_if(Any::rom(BUSY_OFS+4), Any::rom(BUSY_OFS+28));  // svc cust tag pending
-
-        quad_rom[BUSY_OFS+4]        = Quad::vm_msg(MINUS_1, Any::rom(BUSY_OFS+5));  // svc cust tag pending req0
-        quad_rom[BUSY_OFS+5]        = Quad::vm_roll(PLUS_4, Any::rom(BUSY_OFS+6));  // svc tag pending req0 cust
-        quad_rom[BUSY_OFS+6]        = Quad::vm_send(ZERO, Any::rom(BUSY_OFS+7));  // svc tag pending
-        quad_rom[BUSY_OFS+7]        = Quad::vm_deque_pop(Any::rom(BUSY_OFS+8));  // svc tag pending1 next
-        quad_rom[BUSY_OFS+8]        = Quad::vm_dup(PLUS_1, Any::rom(BUSY_OFS+9));  // svc tag pending1 next next
-        quad_rom[BUSY_OFS+9]        = Quad::vm_eq(UNDEF, Any::rom(BUSY_OFS+10));  // svc tag pending1 next next==#?
-        quad_rom[BUSY_OFS+10]       = Quad::vm_if(Any::rom(BUSY_OFS+11), Any::rom(BUSY_OFS+14));  // svc tag pending1 next
-
-        quad_rom[BUSY_OFS+11]       = Quad::vm_drop(PLUS_3, Any::rom(BUSY_OFS+12));  // svc
-        quad_rom[BUSY_OFS+12]       = Quad::vm_push(SERIAL_BEH, Any::rom(BUSY_OFS+13));  // svc serial-beh
-        quad_rom[BUSY_OFS+13]       = Quad::vm_beh(PLUS_1, COMMIT);  // serial-beh[svc]
-
-        quad_rom[BUSY_OFS+14]       = Quad::vm_part(PLUS_1, Any::rom(BUSY_OFS+15));  // svc tag pending1 req1 cust1
-        quad_rom[BUSY_OFS+15]       = Quad::vm_my_self(Any::rom(BUSY_OFS+16));  // svc tag pending1 req1 cust1 SELF
-        quad_rom[BUSY_OFS+16]       = Quad::vm_push(ONCE_TAG_BEH, Any::rom(BUSY_OFS+17));  // svc tag pending1 req1 cust1 SELF once-tag-beh
-        quad_rom[BUSY_OFS+17]       = Quad::vm_new(PLUS_1, Any::rom(BUSY_OFS+18));  // svc tag pending1 req1 cust1 tag1=once-tag-beh[SELF]
-        quad_rom[BUSY_OFS+18]       = Quad::vm_roll(PLUS_3, Any::rom(BUSY_OFS+19));  // svc tag pending1 cust1 tag1 req1
-        quad_rom[BUSY_OFS+19]       = Quad::vm_pick(PLUS_2, Any::rom(BUSY_OFS+20));  // svc tag pending1 cust1 tag1 req1 tag1
-        quad_rom[BUSY_OFS+20]       = Quad::vm_pair(PLUS_1, Any::rom(BUSY_OFS+21));  // svc tag pending1 cust1 tag1 (tag1 . req1)
-        quad_rom[BUSY_OFS+21]       = Quad::vm_pick(PLUS_6, Any::rom(BUSY_OFS+22));  // svc tag pending1 cust1 tag1 (tag1 . req1) svc
-        quad_rom[BUSY_OFS+22]       = Quad::vm_send(ZERO, Any::rom(BUSY_OFS+23));  // svc tag pending1 cust1 tag1
-        quad_rom[BUSY_OFS+23]       = Quad::vm_roll(PLUS_5, Any::rom(BUSY_OFS+24));  // tag pending1 cust1 tag1 svc
-        quad_rom[BUSY_OFS+24]       = Quad::vm_roll(MINUS_3, Any::rom(BUSY_OFS+25));  // tag pending1 svc cust1 tag1
-        quad_rom[BUSY_OFS+25]       = Quad::vm_roll(PLUS_4, Any::rom(BUSY_OFS+26));  // tag svc cust1 tag1 pending1
-
-        quad_rom[BUSY_OFS+26]       = Quad::vm_push(BUSY_BEH, Any::rom(BUSY_OFS+27));  // ... svc cust1 tag1 pending1 busy-beh
-        quad_rom[BUSY_OFS+27]       = Quad::vm_beh(PLUS_4, COMMIT);  // busy-beh[svc cust1 tag1 pending1]
-
-        quad_rom[BUSY_OFS+28]       = Quad::vm_msg(ZERO, Any::rom(BUSY_OFS+29));  // svc cust tag pending (cust0 . req0)
-        quad_rom[BUSY_OFS+29]       = Quad::vm_deque_put(Any::rom(BUSY_OFS+26));  // svc cust tag pending1
-
-pub const DATA_OFS: usize = BUSY_OFS+30;
-pub const DATA_PTR: Any = Any { raw: DATA_OFS as Raw };
-        quad_rom[DATA_OFS+0]        = Quad::pair_t(MEMO_BEH, Any::rom(DATA_OFS+1));
-        quad_rom[DATA_OFS+1]        = Quad::pair_t(FWD_BEH, Any::rom(DATA_OFS+2));
-        quad_rom[DATA_OFS+2]        = Quad::pair_t(ONCE_BEH, Any::rom(DATA_OFS+3));
-        quad_rom[DATA_OFS+3]        = Quad::pair_t(LABEL_BEH, Any::rom(DATA_OFS+4));
-        quad_rom[DATA_OFS+4]        = Quad::pair_t(TAG_BEH, Any::rom(DATA_OFS+5));
-        quad_rom[DATA_OFS+5]        = Quad::pair_t(ONCE_TAG_BEH, Any::rom(DATA_OFS+6));
-        quad_rom[DATA_OFS+6]        = Quad::pair_t(WRAP_BEH, Any::rom(DATA_OFS+7));
-        quad_rom[DATA_OFS+7]        = Quad::pair_t(UNWRAP_BEH, Any::rom(DATA_OFS+8));
-        quad_rom[DATA_OFS+8]        = Quad::pair_t(FUTURE_BEH, Any::rom(DATA_OFS+9));
-        quad_rom[DATA_OFS+9]        = Quad::pair_t(WAIT_BEH, Any::rom(DATA_OFS+10));
-        quad_rom[DATA_OFS+10]       = Quad::pair_t(VALUE_BEH, Any::rom(DATA_OFS+11));
-        quad_rom[DATA_OFS+11]       = Quad::pair_t(SERIAL_BEH, Any::rom(DATA_OFS+12));
-        quad_rom[DATA_OFS+12]       = Quad::pair_t(BUSY_BEH, NIL);
-
-        core.rom_top = Any::rom(DATA_OFS+13);
-        DATA_PTR
+        core.rom_top = Any::rom(STD_OFS+16);
+        SINK_BEH
     }
 
     /*
@@ -2214,8 +1915,7 @@ pub const T_DEV_BEH: Any = Any { raw: T_DEV_OFS as Raw };
     #[test]
     fn run_loop_terminates() {
         let mut core = Core::new();
-        load_lib(&mut core);
-        let boot_beh = core.reserve(&Quad::vm_end_commit()).unwrap();
+        let boot_beh = load_std(&mut core);
         let boot_ptr = core.reserve(&Quad::new_actor(boot_beh, NIL)).unwrap();
         let a_boot = core.ptr_to_cap(boot_ptr);
         core.event_inject(SPONSOR, a_boot, UNDEF).unwrap();
