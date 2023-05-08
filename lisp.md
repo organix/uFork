@@ -552,7 +552,7 @@ The extended reference-implementation looks like this:
   (lambda (opnds env)
     (if (pair? opnds)
         (cons (eval (car opnds) env) (evlis (cdr opnds) env))
-        () )))                                                ; value is NIL
+        () )))                                                ; value is NIL -- FIXME: maybe this should be `opnds`?
 
 (define op-par                                                ; (par . <exprs>)
   (CREATE

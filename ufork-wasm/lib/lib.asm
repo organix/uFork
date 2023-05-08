@@ -95,6 +95,25 @@ unwrap_beh:             ; (rcvr) <- (msg)
     state 1             ; msg rcvr
     ref std.send_msg
 
+;;  (define broadcast-beh
+;;      (lambda (value)
+;;          (BEH actors
+;;              (if (pair? actors)
+;;                  (seq
+;;                      (SEND (car actors) value)
+;;                      (SEND SELF (cdr actors))) ))))
+broadcast_beh:          ; (value) <- actors
+    msg 0               ; actors
+    typeq #pair_t       ; is_pair(actors)
+    if_not std.commit   ; --
+    msg 0               ; actors
+    part 1              ; rest first
+    state 1             ; rest first value
+    roll 2              ; rest value first
+    send -1             ; rest
+    my self             ; rest SELF
+    ref std.send_msg
+
 ; unit test suite
 boot:                   ; () <- {caps}
     msg 0               ; {caps}
@@ -111,4 +130,5 @@ boot:                   ; () <- {caps}
     once_tag_beh
     wrap_beh
     unwrap_beh
+    broadcast_beh
     boot
