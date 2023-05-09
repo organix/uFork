@@ -1,10 +1,14 @@
 ;;;
 ;;; one-at-a-time request handler (serializer)
 ;;;
+;;; (c.f.: http://www.dalnefre.com/wp/2020/08/serializers-revisited/)
+;;;
 
 .import
-    std: "./std.asm"
-    lib: "./lib.asm"
+    std:  "./std.asm"
+    lib:  "./lib.asm"
+    cell: "./cell.asm"
+    dev:  "./dev.asm"
 
 once_tag_beh:
     ref lib.once_tag_beh
@@ -75,9 +79,9 @@ busy_1:
     eq #?               ; pending1 next next==#?
     if_not busy_2       ; pending1 next
 
-    state 4             ; svc
-    push serial_beh     ; svc serial-beh
-    beh 1               ; --
+    state 4             ; ... svc
+    push serial_beh     ; ... svc serial-beh
+    beh 1               ; ... --
     ref std.commit
 
 busy_2:
@@ -94,16 +98,112 @@ busy_2:
 
     roll 3              ; cust1 tag1 pending1
     state 4             ; cust1 tag1 pending1 svc
-    roll 4              ; svc cust1 tag1 pending1
+    roll -4             ; svc cust1 tag1 pending1
 
 busy_3:
     push busy_beh       ; svc cust tag pending busy-beh
     beh 4               ; --
     ref std.commit
 
+;;  LET counter_init(value) = \msg.[
+;;      CREATE cell WITH cell_beh(value)
+;;      CREATE svc WITH counter_svc(cell)
+;;      BECOME serial_beh(svc)
+;;      SEND msg TO SELF
+;;  ]
+counter_init:           ; (value) <- msg
+    state 1             ; value
+    push cell.cell_beh  ; value cell_beh
+    new 1               ; cell=cell_beh.(value)
+
+    push counter_svc    ; cell counter_svc
+    new 1               ; svc=counter_svc.(cell)
+
+    push serial_beh     ; svc serial_beh
+    beh 1               ; --
+
+    msg 0               ; msg
+    my self             ; msg SELF
+    ref std.send_msg
+
+;;  # WARNING! `counter_svc` must be protected by a serializer!
+;;  LET counter_svc(cell) = \(cust, change).[
+;;      SEND (SELF, #read) TO cell
+;;      BECOME \count.[
+;;          LET count' = $add(count, change)
+;;          SEND (SELF, #write, count') TO cell
+;;          BECOME \$cell.[
+;;              SEND count' TO cust
+;;              BECOME counter_svc(cell)
+;;          ]
+;;      ]
+;;  ]
+counter_svc:            ; (cell) <- (cust change)
+    my self             ; SELF
+    push 0              ; SELF read=0
+    state 1             ; SELF read cell
+    send 2              ; --
+
+    msg 0               ; (cust change)
+    state 1             ; (cust change) cell
+    pair 1              ; (cell cust change)
+    push counter_k1     ; (cell cust change) counter_k1
+    beh -1              ; --
+    ref std.commit
+
+counter_k1:             ; (cell cust change) <- count
+    msg 0               ; count
+    state 3             ; change
+    alu add             ; count'=count+change
+
+    dup 1               ; count' count'
+    my self             ; count' count' SELF
+    push 1              ; count' count' SELF write=1
+    state 1             ; count' count' SELF write cell
+    send 3              ; count'
+
+    state 2             ; count' cust
+    push counter_k2     ; count' cust counter_k2
+    beh 2               ; --
+    ref std.commit
+
+counter_k2:             ; (cust count') <- cell
+    my state            ; count' cust
+    send -1             ; --
+
+    msg 0               ; cell
+    push counter_svc    ; cell counter_svc
+    beh 1               ; --
+    ref std.commit
+
 ; unit test suite
+;;  CREATE counter WITH counter_init(0)
+;;  SEND (println, 7) TO counter
+;;  SEND (println, 70) TO counter
+;;  SEND (println, 700) TO counter
 boot:                   ; () <- {caps}
     msg 0               ; {caps}
+    push dev.debug_key  ; {caps} dev.debug_key
+    dict get            ; debug_dev
+
+    push 0              ; debug_dev 0
+    push counter_init   ; debug_dev 0 counter_init
+    new 1               ; debug_dev counter=counter_init.(0)
+
+    dup 2               ; debug_dev counter debug_dev counter
+    push 7              ; debug_dev counter debug_dev counter 7
+    roll -3             ; debug_dev counter 7 debug_dev counter
+    send 2              ; debug_dev counter
+
+    push 70             ; debug_dev counter 70
+    pick 3              ; debug_dev counter 70 debug_dev
+    pick 3              ; debug_dev counter 70 debug_dev counter
+    send 2              ; debug_dev counter
+
+    push 700            ; debug_dev counter 700
+    roll -3             ; 700 debug_dev counter
+    send 2              ; --
+
     ref std.commit
 
 .export
