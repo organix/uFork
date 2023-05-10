@@ -5,7 +5,6 @@
 .import
     std: "./std.asm"
     lib: "./lib.asm"
-    dev: "./dev.asm"
 
 ;;  LET fork_beh(cust, h_svc, t_svc) = \(h_req, t_req).[
 ;;      CREATE t_tag WITH tag_beh(SELF)
@@ -103,18 +102,18 @@ join_2:                 ; tail head
     state 2             ; (head . tail) cust
     ref std.send_msg
 
+; unit test suite
 boot:                   ; () <- {caps}
-    push -1             ; -1
+    push -42            ; -42
     push lib.const_beh  ; -1 const_beh
-    new -1              ; t_svc=const.-1
+    new -1              ; t_svc=const.-42
 
-    push 1              ; t_svc 1
+    push 42             ; t_svc 42
     push lib.memo_beh   ; t_svc 1 memo_beh
-    new 1               ; t_svc h_svc=memo.(1)
+    new 1               ; t_svc h_svc=memo.(42)
 
-    msg 0               ; t_svc h_svc {caps}
-    push dev.debug_key  ; t_svc h_svc {caps} dev.debug_key
-    dict get            ; t_svc h_svc cust=debug_dev
+    push verify         ; t_svc h_svc verify
+    new 0               ; t_svc h_svc cust=verify.()
 
     push fork_beh       ; t_svc h_svc cust fork_beh
     new 3               ; fork.(cust h_svc t_svc)
@@ -123,6 +122,13 @@ boot:                   ; () <- {caps}
     pair 1              ; fork (() . ())
     roll 2              ; (() . ()) fork
     ref std.send_msg
+
+verify:                 ; () <- (42 . -42)
+    msg 1               ; 42
+    is_eq 42            ; --
+    msg -1              ; -42
+    is_eq -42           ; --
+    ref std.commit
 
 .export
     fork_beh
