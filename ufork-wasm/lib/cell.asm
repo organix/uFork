@@ -4,6 +4,7 @@
 
 .import
     std: "./std.asm"
+    fork: "./fork.asm"
 
 read_tag:
     ref 0
@@ -74,6 +75,9 @@ boot:
     send 0              ; --
     push test_miss_beh  ; test_miss_beh
     new 0               ; test_miss
+    send 0              ; --
+    push test_overlap   ; test_overlap
+    new 0               ; test_overlap.()
     send 0              ; --
     ref std.commit
 
@@ -146,6 +150,78 @@ assert_eq_beh:          ; expect <- value
     state 0             ; value expect
     cmp eq              ; value==expect
     is_eq #t            ; --
+    ref std.commit
+
+test_overlap:           ; () <- ()
+    push 4              ; 4
+    push beh            ; 4 beh
+    new 1               ; cell=beh.(4)
+    dup 1               ; cell cell
+    push cell_set_bit   ; cell cell cell_set_bit
+    new 1               ; cell svc1=cell_set_bit.(cell)
+    pick 2              ; cell svc1 cell
+    push cell_set_bit   ; cell svc1 cell cell_set_bit
+    new 1               ; cell svc1 svc2=cell_set_bit.(cell)
+    push 7              ; cell svc1 svc2 7
+    roll 4              ; svc1 svc2 7 cell
+    push cell_verify    ; svc1 svc2 7 cell cell_verify
+    new 2               ; t_svc=svc1 h_svc=svc2 cust=cell_verify(cell 7)
+
+    push fork.fork_beh  ; t_svc h_svc cust fork_beh
+    new 3               ; fork.(cust h_svc t_svc)
+    push #nil           ; fork ()
+    push 2              ; fork () 2
+    pair 1              ; fork (2)
+    push #nil           ; fork (2) ()
+    push 1              ; fork (2) () 1
+    pair 1              ; fork (2) (1)
+    pair 1              ; fork ((1) . (2))
+    roll 2              ; ((1) . (2)) fork
+    ref std.send_msg
+
+cell_set_bit:           ; (cell) <- (cust bit)
+    msg 1               ; cust
+    state 1             ; cust cell
+    msg 2               ; cell cust bit
+    push #?             ; cell cust bit old=#?
+    push cell_try_bit   ; cell cust bit old cell_try_bit
+    new 4               ; cust'=cell_try_bit.(old bit cell cust)
+    push read_tag       ; cust' tag=read_tag
+    state 1             ; cust' tag cell
+    send 2              ; --
+    ref std.commit
+
+cell_try_bit:           ; (old bit cell cust) <- val
+    msg 0               ; val
+    state 1             ; val old
+    cmp eq              ; val==old
+    if set_bit_done
+    msg 0               ; val
+    state 2             ; val bit
+    alu or              ; new=val|bit
+    msg 0               ; new old=val
+    my self             ; new old cust=SELF
+    push CAS_tag        ; new old cust tag=CAS_tag
+    state 3             ; new old cust tag cell
+    send 4              ; --
+    state -1            ; (bit cell cust)
+    msg 0               ; (bit cell cust) old'=val
+    pair 1              ; (old' bit cell cust)
+    my beh              ; (old' bit cell cust) beh
+    beh -1              ; --
+    ref std.commit
+set_bit_done:
+    msg 0               ; val
+    state 4             ; val cust
+    ref std.send_msg
+
+cell_verify:            ; (cell expect) <- _
+    state 2             ; expect
+    push assert_eq_beh  ; expect assert_eq_beh
+    new -1              ; cust=assert_eq_beh.expect
+    push read_tag       ; cust tag=read_tag
+    state 1             ; cust tag cell
+    send 2              ; --
     ref std.commit
 
 .export
