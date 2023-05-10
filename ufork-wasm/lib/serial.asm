@@ -113,7 +113,7 @@ busy_3:
 ;;  ]
 counter_init:           ; (value) <- msg
     state 1             ; value
-    push cell.cell_beh  ; value cell_beh
+    push cell.beh       ; value cell_beh
     new 1               ; cell=cell_beh.(value)
 
     push counter_svc    ; cell counter_svc
@@ -140,8 +140,8 @@ counter_init:           ; (value) <- msg
 ;;  ]
 counter_svc:            ; (cell) <- (cust change)
     my self             ; SELF
-    push 0              ; SELF read=0
-    state 1             ; SELF read cell
+    push cell.read_tag  ; SELF #read
+    state 1             ; SELF #read cell
     send 2              ; --
 
     msg 0               ; (cust change)
@@ -158,8 +158,8 @@ counter_k1:             ; (cell cust change) <- count
 
     dup 1               ; count' count'
     my self             ; count' count' SELF
-    push 1              ; count' count' SELF write=1
-    state 1             ; count' count' SELF write cell
+    push cell.write_tag ; count' count' SELF #write
+    state 1             ; count' count' SELF #write cell
     send 3              ; count'
 
     state 2             ; count' cust
