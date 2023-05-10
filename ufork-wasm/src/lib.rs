@@ -52,6 +52,7 @@ pub const E_MEM_LIM: Error  = -9;   // Sponsor memory limit reached
 pub const E_CPU_LIM: Error  = -10;  // Sponsor instruction limit reached
 pub const E_MSG_LIM: Error  = -11;  // Sponsor event limit reached
 pub const E_ASSERT: Error   = -12;  // assertion failed
+pub const E_STOP: Error     = -13;  // actor stopped
 
 pub type Raw = u32;  // univeral value type
 pub type Num = i32;  // fixnum integer type

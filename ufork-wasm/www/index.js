@@ -125,6 +125,7 @@ const e_msg = [
     "Sponsor instruction limit reached",    // E_CPU_LIM = -10
     "Sponsor event limit reached",          // E_MSG_LIM = -11
     "assertion failed",                     // E_ASSERT = -12
+    "actor stopped",                        // E_STOP = -13
 ];
 function faultMsg(e_code) {
     e_code = Math.abs(e_code);

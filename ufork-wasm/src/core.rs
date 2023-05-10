@@ -546,7 +546,7 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
                     },
                     END_STOP => {
                         //UNDEF
-                        return Err(E_FAIL);  // End::Stop terminated continuation
+                        return Err(E_STOP);  // End::Stop terminated continuation
                     },
                     END_COMMIT => {
                         self.actor_commit(me);
@@ -554,6 +554,7 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
                     },
                     END_RELEASE => {
                         self.actor_commit(me);
+                        // FIXME: End::Release is DEPRECATED due to potential use-after-free hazards!
                         self.free(me);  // free actor
                         FALSE
                     },
