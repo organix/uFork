@@ -182,9 +182,9 @@ test_overlap:           ; () <- ()
 cell_set_bit:           ; (cell) <- (cust bit)
     msg 1               ; cust
     state 1             ; cust cell
-    msg 2               ; cell cust bit
-    push #?             ; cell cust bit old=#?
-    push cell_try_bit   ; cell cust bit old cell_try_bit
+    msg 2               ; cust cell bit
+    push #?             ; cust cell bit old=#?
+    push cell_try_bit   ; cust cell bit old cell_try_bit
     new 4               ; cust'=cell_try_bit.(old bit cell cust)
     push read_tag       ; cust' tag=read_tag
     state 1             ; cust' tag cell
