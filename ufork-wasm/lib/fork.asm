@@ -13,6 +13,7 @@
 ;;      SEND (h_tag, h_req) TO h_svc
 ;;      BECOME join_beh(cust, h_tag, t_tag)
 ;;  ]
+beh:
 fork_beh:               ; (cust h_svc t_svc) <- (h_req . t_req)
     my self             ; SELF
     push lib.tag_beh    ; SELF tag_beh
@@ -131,5 +132,5 @@ verify:                 ; () <- (42 . -42)
     ref std.commit
 
 .export
-    fork_beh
+    beh
     boot

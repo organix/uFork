@@ -19,6 +19,7 @@ once_tag_beh:
 ;;              (define tag (CREATE (once-tag-beh SELF)))
 ;;              (SEND svc (tag . req))
 ;;              (BECOME (busy-beh (deque-new) tag cust svc)) )))
+beh:
 serial_beh:             ; (svc) <- (cust . req)
     my self             ; SELF
     push once_tag_beh   ; SELF once-tag-beh
@@ -207,5 +208,5 @@ boot:                   ; () <- {caps}
     ref std.commit
 
 .export
-    serial_beh
+    beh
     boot
