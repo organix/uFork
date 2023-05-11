@@ -15,6 +15,7 @@
 ;;                      (BECOME (wait-beh (list arg) rcap wcap)))
 ;;                  ((eq? tag wcap)
 ;;                      (BECOME (value-beh rcap arg))) ))))
+beh:
 future_beh:             ; (rcap wcap) <- (tag . arg)
     msg 1               ; tag
     state 1             ; tag rcap
@@ -137,5 +138,5 @@ boot:                   ; () <- {caps}
     ref std.commit
 
 .export
-    future_beh
+    beh
     boot

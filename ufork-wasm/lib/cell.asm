@@ -27,7 +27,8 @@ CAS_tag:
 ;;      END
 ;;  ]
 ;;  CREATE cell WITH cell_beh(0)
-beh:                    ; (value) <- (tag cust . req)
+beh:
+cell_beh:               ; (value) <- (tag cust . req)
     msg 1               ; tag
     eq read_tag         ; tag==read
     if read             ; --
@@ -57,9 +58,9 @@ CAS:                    ; <- (tag cust old new)
     state 1             ; old value
     cmp eq              ; old==value
     if_not read         ; --
-    msg 4               ; new
-    my beh              ; new beh
-    beh 1               ; --
+    msg -3              ; (new)
+    my beh              ; (new) beh
+    beh -1              ; --
     ref read
 
 ; unit test suite
@@ -83,7 +84,7 @@ boot:
 
 test_read_beh:
     push 5              ; 5
-    push beh            ; 5 beh
+    push cell_beh       ; 5 cell_beh
     new 1               ; cell(5)
     push 5              ; cell(5) 5
     push check_read_beh ; cell(5) 5 check_read_beh
@@ -97,7 +98,7 @@ test_write_beh:
     new -1              ; 5 check_read(5)
     push write_tag      ; 5 check_read(5) #write
     push 4              ; 5 check_read(5) #write 4
-    push beh            ; 5 check_read(5) #write 4 beh
+    push cell_beh       ; 5 check_read(5) #write 4 cell_beh
     new 1               ; 5 check_read(5) #write cell(4)
     send 3              ; --
     ref std.commit
@@ -116,7 +117,7 @@ test_miss_beh:
 
 test_CAS:               ; new old expect
     push 4              ; new old expect 4
-    push beh            ; new old expect 4 beh
+    push cell_beh       ; new old expect 4 cell_beh
     new 1               ; new old expect cell(4)
     roll 2              ; new old cell(4) expect
     pick 2              ; new old cell(4) expect cell(4)
@@ -154,8 +155,8 @@ assert_eq_beh:          ; expect <- value
 
 test_overlap:           ; () <- ()
     push 4              ; 4
-    push beh            ; 4 beh
-    new 1               ; cell=beh.(4)
+    push cell_beh       ; 4 cell_beh
+    new 1               ; cell=cell_beh.(4)
     dup 1               ; cell cell
     push cell_set_bit   ; cell cell cell_set_bit
     new 1               ; cell svc1=cell_set_bit.(cell)
@@ -167,7 +168,7 @@ test_overlap:           ; () <- ()
     push cell_verify    ; svc1 svc2 7 cell cell_verify
     new 2               ; t_svc=svc1 h_svc=svc2 cust=cell_verify(cell 7)
 
-    push fork.fork_beh  ; t_svc h_svc cust fork_beh
+    push fork.beh       ; t_svc h_svc cust fork_beh
     new 3               ; fork.(cust h_svc t_svc)
     push #nil           ; fork ()
     push 2              ; fork () 2
@@ -182,9 +183,9 @@ test_overlap:           ; () <- ()
 cell_set_bit:           ; (cell) <- (cust bit)
     msg 1               ; cust
     state 1             ; cust cell
-    msg 2               ; cell cust bit
-    push #?             ; cell cust bit old=#?
-    push cell_try_bit   ; cell cust bit old cell_try_bit
+    msg 2               ; cust cell bit
+    push #?             ; cust cell bit old=#?
+    push cell_try_bit   ; cust cell bit old cell_try_bit
     new 4               ; cust'=cell_try_bit.(old bit cell cust)
     push read_tag       ; cust' tag=read_tag
     state 1             ; cust' tag cell
