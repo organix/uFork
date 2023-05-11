@@ -57,9 +57,9 @@ CAS:                    ; <- (tag cust old new)
     state 1             ; old value
     cmp eq              ; old==value
     if_not read         ; --
-    msg 4               ; new
-    my beh              ; new beh
-    beh 1               ; --
+    msg -3              ; (new)
+    my beh              ; (new) beh
+    beh -1              ; --
     ref read
 
 ; unit test suite
