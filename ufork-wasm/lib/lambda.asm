@@ -1,5 +1,5 @@
 ;;;
-;;; Lambda Calculus (pure-function interpreter)
+;;; Lambda Calculus (pure-function evaluator)
 ;;;
 
 .import
@@ -131,12 +131,12 @@ closure:                ; (env var . body) <- (arg cust . _)
 
 ; unit test suite
 boot:                   ; () <- {caps}
-;    push test_const     ; test_const
-;    new 0               ; test_const.()
-;    send 0              ; --
-;    push test_var       ; test_var
-;    new 0               ; test_var.()
-;    send 0              ; --
+    push test_const     ; test_const
+    new 0               ; test_const.()
+    send 0              ; --
+    push test_var       ; test_var
+    new 0               ; test_var.()
+    send 0              ; --
     push test_identity  ; test_identity
     new 0               ; test_identity.()
     send 0              ; --
