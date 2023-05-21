@@ -225,6 +225,19 @@ We still need a _customer_ to receive the _result_,
 so prepending the selector to the argument-list
 produces the message pattern `(selector customer . request)`.
 
+There is no shared mutable state in an actor system.
+There can be lots of shared **immutable** state,
+and each actor manages their own **private** mutable state.
+In uFork, the actor's state isn't _directly_ mutable,
+but it can be replaced (along with the behavior)
+as part of a message-handling transaction.
+This suggests an _object-oriented_ representation
+where a single actor is the _state holder_,
+and messages with _methods selectors_ may cause
+the actor's state to change.
+
+Consider the behavior of an actor representing a "mutable" storage-cell:
+
 ```
 read_tag:
     ref 0
@@ -245,6 +258,12 @@ cell_beh:               ; (value) <- (tag cust . req)
     if CAS              ; --
     end abort
 ```
+
+The first part of the behavior is essentially a _method dispatch table_
+comparing the methods selector _tag_ against three pre-defined fixnum constants.
+If a match is found, the behavior branches to the appropriate handler code.
+If no match is found, the message-event transaction is aborted.
+
 ```
 read:                   ; (value) <- (tag cust)
     state 1             ; value
@@ -252,6 +271,13 @@ read:                   ; (value) <- (tag cust)
     send -1             ; --
     end commit
 ```
+
+The "read" handler expects a message matching `(tag cust)`.
+Note that this is a subset of the top-level pattern `(tag cust . req)`
+where `req` is `()`.
+Reading the cell entails sending the current state `value`
+to the customer actor `cust`.
+
 ```
 write:                  ; (value) <- (tag cust value')
     msg -2              ; (value')
@@ -262,6 +288,29 @@ write:                  ; (value) <- (tag cust value')
     send -1             ; --
     end commit
 ```
+
+The "write" handler expects a message matching `(tag cust value')`.
+Writing the cell entails updating the actor's state
+with the new `value'`,
+while maintaining the same behavior (instructions).
+In addition, the actor sends a reference to itself
+to the designated customer `cust`.
+The provides a _synchronization signal_.
+The `cust` will receive this message
+only **after** the "write" has completed.
+Also note that the transactional one-at-a-time processing
+of message-events ensures atomic access to the "shared" state.
+
+However, this does **not** prevent dangerous interleaving
+of "read" and "write" events!
+Although the _cell_ actor is never in an inconsistent state,
+and mutation is hidden safely within the actor,
+two _clients_ of the cell may execute
+overlapping read/modify/write sequences
+and cause corruption.
+The (compare-and-swap)[https://en.wikipedia.org/wiki/Compare-and-swap]
+"CAS" request provides a mechanism to avoid this corruption.
+
 ```
 CAS:                    ; (value) <- (tag cust old new)
     msg 3               ; old
@@ -273,6 +322,34 @@ CAS:                    ; (value) <- (tag cust old new)
     beh -1              ; --
     ref read
 ```
+
+The "CAS" handler expects a message matching `(tag cust old new)`.
+If `old` does not match the state `value`,
+treat this as "read" request
+(returning the _current_ `value` to `cust`).
+If `old` **does** match the state `value`,
+update the `value` to `new`
+and branch the the "read" handler
+(returning the _previous_ `value` to `cust`).
+Notice that the state update only takes effect
+when the event-handling transaction commits.
+
+Now that we have an object-oriented state-holder,
+let consider how to control the availability
+of various operations to different clients.
+If multiple clients have direct access to the cell,
+they each have the authority to perform
+all of the available operations.
+Instead we will provide _facets_
+for each available operation on this cell.
+
+Each _facet_ is represented by a distinct actor,
+separate from each other and from the state-holder.
+The behavior of a facet is an idiomatic `label_beh`,
+which expects the state to be a list containing
+the receiver and the label.
+The message is arbitrary (simple or complex).
+
 ```
 label_beh:              ; (rcvr label) <- msg
     msg 0               ; msg
@@ -282,3 +359,19 @@ label_beh:              ; (rcvr label) <- msg
     send -1             ; --
     end commit
 ```
+
+An actor with "label" behavior
+prepends the `label` to the `msg`
+and sends it to the `rcvr`.
+By configuring the cell as the `rcvr`,
+and the method-selector as the `label`,
+we have a _facet_ actor that performs
+a particular operation on a particular object.
+We can control the authority to perform
+specific operations
+by passing the appropriate facet(s)
+to potential clients,
+without exposing the state-holder directly.
+From the client's perspective,
+the facet **is** the cell,
+with the desired operation encoded in the reference.
