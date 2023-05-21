@@ -215,11 +215,11 @@ to the _customer_ at the head of the argument-list.
 The `. _)` at the end of the message-pattern
 indicates that the tail of the argument-list is ignored.
 
-### Object-Oriented Facets
+### Object-Oriented Protocols
 
 While an _explicit customer_
-is appropriate for _functional_ or _procedural_ actor APIs,
-an _object-oriented_ actor API requires the addition
+is appropriate for _functional_ or _procedural_ actor protocols,
+an _object-oriented_ actor protocol requires the addition
 of a _method selector_ to the message.
 We still need a _customer_ to receive the _result_,
 so prepending the selector to the argument-list
@@ -234,7 +234,7 @@ as part of a message-handling transaction.
 This suggests an _object-oriented_ representation
 where a single actor is the _state holder_,
 and messages with _methods selectors_ may cause
-the actor's state to change.
+changes to the actor's private state.
 
 Consider the behavior of an actor representing a "mutable" storage-cell:
 
@@ -260,7 +260,7 @@ cell_beh:               ; (value) <- (tag cust . req)
 ```
 
 The first part of the behavior is essentially a _method dispatch table_
-comparing the methods selector _tag_ against three pre-defined fixnum constants.
+comparing the method-selector _tag_ against an enumeration of fixnum constants.
 If a match is found, the behavior branches to the appropriate handler code.
 If no match is found, the message-event transaction is aborted.
 
@@ -308,7 +308,7 @@ and mutation is hidden safely within the actor,
 two _clients_ of the cell may execute
 overlapping read/modify/write sequences
 and cause corruption.
-The (compare-and-swap)[https://en.wikipedia.org/wiki/Compare-and-swap]
+The [compare-and-swap](https://en.wikipedia.org/wiki/Compare-and-swap)
 "CAS" request provides a mechanism to avoid this corruption.
 
 ```
@@ -329,19 +329,30 @@ treat this as "read" request
 (returning the _current_ `value` to `cust`).
 If `old` **does** match the state `value`,
 update the `value` to `new`
-and branch the the "read" handler
+and branch to the "read" handler
 (returning the _previous_ `value` to `cust`).
 Notice that the state update only takes effect
-when the event-handling transaction commits.
+when the event-handling transaction commits,
+so the "read" handler always returns the original `value`.
+
+The "CAS" handler demonstrates an important design principle.
+State-changing operations should generally
+determine a new value and update the private state
+in one atomic transaction.
+Also, the state-changing operation must be defined
+on the actor holding the state,
+since no actor can mutate another actor's state directly.
+
+#### Object-Oriented Facets
 
 Now that we have an object-oriented state-holder,
-let consider how to control the availability
+lets consider how to control the availability
 of various operations to different clients.
 If multiple clients have direct access to the cell,
 they each have the authority to perform
 all of the available operations.
 Instead we will provide _facets_
-for each available operation on this cell.
+for each available operation on a particular cell.
 
 Each _facet_ is represented by a distinct actor,
 separate from each other and from the state-holder.
@@ -374,4 +385,44 @@ to potential clients,
 without exposing the state-holder directly.
 From the client's perspective,
 the facet **is** the cell,
-with the desired operation encoded in the reference.
+with the desired operation encoded in the capability.
+
+The `factory` behavior below
+(with an empty state)
+expects a message containing
+a customer `cust` and
+an initial cell value `init`:
+
+```
+factory:                ; () <- (cust init)
+    msg 2               ; init
+    push cell_beh       ; init cell_beh
+    new 1               ; cell=cell_beh.(init)
+
+    push CAS_tag        ; cell "CAS"
+    pick 2              ; cell "CAS" cell
+    push label_beh      ; cell "CAS" cell label_beh
+    new 2               ; cell CAS_facet=label_beh.(cell "CAS")
+    roll -2             ; CAS_facet cell
+
+    push write_tag      ; CAS_facet cell "write"
+    pick 2              ; CAS_facet cell "write" cell
+    push label_beh      ; CAS_facet cell "write" cell label_beh
+    new 2               ; CAS_facet cell write_facet=label_beh.(cell "write")
+    roll -2             ; CAS_facet write_facet cell
+
+    push CAS_tag        ; CAS_facet write_facet cell "read"
+    roll 2              ; CAS_facet write_facet "read" cell
+    push label_beh      ; CAS_facet write_facet "read" cell label_beh
+    new 2               ; CAS_facet write_facet read_facet=label_beh.(cell "read")
+    msg 1               ; CAS_facet write_facet read_facet cust
+    send 3              ; --
+    end commit
+```
+
+An actor with "factory" behavior
+creates a _cell_ with value `init`.
+Then it creates _facets_ for each cell operation.
+A list of the facets `(read write CAS)`
+is sent to the customer `cust`.
+The cell is never directly exposed.
