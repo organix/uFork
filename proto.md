@@ -5,7 +5,7 @@ All computation in uFork is driven by
 the execution of an actor's behavior
 as a reaction to the dispatch of a message-event.
 A particular actor will only process
-on message-event at a time.
+one message-event at a time.
 The effects of the event are applied transactionally
 when (and if) the actor behavior terminates with a commit.
 Effects are limited to:
@@ -37,7 +37,7 @@ is a single primitive value.
 Since message-events are asynchronous,
 sending is decoupled from receiving.
 The sender never knows when (or if) a message arrives.
-The receiver doesn't when a message was sent,
+The receiver doesn't know when a message was sent,
 or the identity of the sender.
 
 The most common use of single-value messages
@@ -116,7 +116,8 @@ As an example, consider indexing into the list `(1 2 3)`:
  4     | `#?`
 -4     | `#?`
 
-The uFork instructions for sending a message
+The [uFork instructions](ufork-wasm/vm.md#instructions)
+for sending a message
 or defining an actor's behavior/state
 provide convenient support
 for creating pair-lists from stack elements.
@@ -131,9 +132,10 @@ It is used for sequencing
 when a computation is dependent on
 the result of another computation.
 A _call_ is a normal one-way asynchronous message
-which contains an actor who will receive the _return_ value.
+containing an actor who will receive the _return_ value.
 The receiving actor is referred to as the _customer_.
-This pattern is sometimes called "continuation-passing style".
+This pattern is sometimes called
+"[continuation-passing style](https://en.wikipedia.org/wiki/Continuation-passing_style)".
 This actor protocol is strictly more flexible
 than synchronous call-return
 because the customer does not have to be the caller.
@@ -148,22 +150,22 @@ This convention is most appropriate
 for representing arguments lists
 in function/procedure calls.
 
-Note, that some services
+Note that some services
 (like the _clock_ device described above)
 expect the entire message to be just the _customer_.
-The idioms in `lib.asm` include adapters
+The idioms in [`lib.asm`](ufork-wasm/lib/lib.asm) include adapters
 to convert between these conventions.
 
 ### Behavior Signatures
 
-All processing in uFork is performed by executing instructions
+All processing in uFork is performed by executing [instructions](ufork-wasm/vm.md#instructions)
 in the context of handling an actor message-event.
 An instruction graph defines the _behavior_ of an actor.
 The _signature_ of a behavior describes
 the expected actor _state_ structure and _message_ structure.
 We write a behavior signature as `state <- message`.
 
-Consider the adapter `wrap_beh`,
+Consider the adapter [`wrap_beh`](ufork-wasm/lib/lib.asm),
 which expects the state to be a single-element list designating the receiver
 and the message to be a single value:
 
@@ -180,7 +182,7 @@ creates a single-element list
 containing the message
 and sends it to the receiver.
 
-Now consider the adapter `unwrap_beh`,
+Now consider the adapter [`unwrap_beh`](ufork-wasm/lib/lib.asm),
 which expects the state to be a single-element list designating the receiver
 and the message to be a single-element list:
 
@@ -196,7 +198,7 @@ An actor with "unwrap" behavior
 extracts the message from a single-element list
 and sends it to the receiver.
 
-Finally, consider a constant-function `const_beh`,
+Finally, consider a constant-function [`const_beh`](ufork-wasm/lib/lib.asm),
 which expects the state to be a single value,
 and the message to be a pair-list
 with the _customer_ as the first element:
@@ -236,7 +238,7 @@ where a single actor is the _state holder_,
 and messages with _methods selectors_ may cause
 changes to the actor's private state.
 
-Consider the behavior of an actor representing a "mutable" storage-cell:
+Consider the behavior of an actor representing a "mutable" [storage-cell](ufork-wasm/lib/cell.asm):
 
 ```
 read_tag:
@@ -308,8 +310,9 @@ and mutation is hidden safely within the actor,
 two _clients_ of the cell may execute
 overlapping read/modify/write sequences
 and cause corruption.
-The [compare-and-swap](https://en.wikipedia.org/wiki/Compare-and-swap)
-"CAS" request provides a mechanism to avoid this corruption.
+The "CAS" request
+([compare-and-swap](https://en.wikipedia.org/wiki/Compare-and-swap))
+provides a mechanism to avoid this corruption.
 
 ```
 CAS:                    ; (value) <- (tag cust old new)
@@ -356,7 +359,7 @@ for each available operation on a particular cell.
 
 Each _facet_ is represented by a distinct actor,
 separate from each other and from the state-holder.
-The behavior of a facet is an idiomatic `label_beh`,
+The behavior of a facet is an idiomatic [`label_beh`](ufork-wasm/lib/lib.asm),
 which expects the state to be a list containing
 the receiver and the label.
 The message is arbitrary (simple or complex).
@@ -426,3 +429,30 @@ Then it creates _facets_ for each cell operation.
 A list of the facets `(read write CAS)`
 is sent to the customer `cust`.
 The cell is never directly exposed.
+
+## Summary
+
+[Turing Machines](https://en.wikipedia.org/wiki/Turing_machine)
+and the
+[Lambda Calculus](https://en.wikipedia.org/wiki/Lambda_calculus)
+are considered to be
+"[universal](https://en.wikipedia.org/wiki/Computability_theory)"
+[models of computation](https://en.wikipedia.org/wiki/Model_of_computation).
+This is true if we only consider
+[deterministic algorithms](https://en.wikipedia.org/wiki/Deterministic_algorithm).
+However,
+[Actors](https://en.wikipedia.org/wiki/Actor_model)
+are strictly more powerful
+because they allow us to capture the semantics of
+[Open Systems](https://en.wikipedia.org/wiki/Open_system_(systems_theory))
+with
+[non-determinism](https://en.wikipedia.org/wiki/Unbounded_nondeterminism)
+and useful forms of
+[non-termination](https://en.wikipedia.org/wiki/Divergence_(computer_science)).
+We have shown how several commonly-used computational models
+(including
+[Procedural](https://en.wikipedia.org/wiki/Procedural_programming),
+[Functional](https://en.wikipedia.org/wiki/Functional_programming),
+and
+[Object-Oriented](https://en.wikipedia.org/wiki/Object-oriented_programming))
+can be expressed with Actors.
