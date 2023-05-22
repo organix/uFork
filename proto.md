@@ -158,7 +158,7 @@ to convert between these conventions.
 
 ### Behavior Signatures
 
-All processing in uFork is performed by executing [instructions](ufork-wasm/vm.md#instructions)
+All processing in uFork is performed by executing [instructions](asm.md)
 in the context of handling an actor message-event.
 An instruction graph defines the _behavior_ of an actor.
 The _signature_ of a behavior describes
@@ -310,8 +310,7 @@ and mutation is hidden safely within the actor,
 two _clients_ of the cell may execute
 overlapping read/modify/write sequences
 and cause corruption.
-The "CAS" request
-([compare-and-swap](https://en.wikipedia.org/wiki/Compare-and-swap))
+The "CAS" ([compare-and-swap](https://en.wikipedia.org/wiki/Compare-and-swap)) request
 provides a mechanism to avoid this corruption.
 
 ```

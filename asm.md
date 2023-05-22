@@ -78,6 +78,9 @@ In some ways, however, it is quite different:
 - Statements always produce a value. Often the value is an instruction, but it
   can also be a literal, number, or data structure. Values are immutable. Data
   structures can contain instructions.
+- By convention, end-of-line comments often show a picture of the stack
+  after an instruction executes, to clarify the effect. The top of the stack
+  is the right-most element.
 
 ## Statements
 
@@ -165,7 +168,7 @@ following are equivalent:
 ## Instructions
 
 The following table just describes the syntax of instruction statements. Refer
-to the [instruction set](https://github.com/organix/uFork/blob/main/ufork.md#instructions)
+to the [instruction set](ufork-wasm/vm.md#instructions)
 for a detailed description of each instruction, including how they manipulate
 the stack.
 
