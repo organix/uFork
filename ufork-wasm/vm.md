@@ -160,7 +160,7 @@ The diagram below shows a typical graph of quad-cells
 representing the contents of the `e_queue` (event queue)
 and the `k_queue` (continuation queue).
 These two queues, and the interrupt-handling actors,
-form the root-set of objects for garbage-collection.
+form the root-set of objects for [garbage-collection](gc.md).
 
 ```
 e_queue: [head,tail]----------------------------+

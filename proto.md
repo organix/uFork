@@ -153,7 +153,8 @@ in function/procedure calls.
 Note that some services
 (like the _clock_ device described above)
 expect the entire message to be just the _customer_.
-The idioms in [`lib.asm`](ufork-wasm/lib/lib.asm) include adapters
+The idioms in [`lib.asm`](ufork-wasm/lib/lib.asm)
+include adapters (`wrap`/`unwrap`)
 to convert between these conventions.
 
 ### Behavior Signatures
