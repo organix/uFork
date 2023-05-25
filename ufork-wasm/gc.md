@@ -39,8 +39,9 @@ and the rest of GC memory is set to UNDEF
 --------|-------------------|-------------------|-------------------|-------------------|-------------------|---------------
  0      | ram_top = 20      | next_free = 17    | free_cnt = 1      | gc_root = NIL     | RAM Descriptor    | gc_first = NIL
  1      | event_first = 19  | event_last = 19   | cont_first = NIL  | cont_last = NIL   | Double-Deque      | gc_last = NIL
- 2 - 15 | ...               | ...               | ...               | ...               | Reserved RAM      | UNDEF
- 16     | alloc_limit       | event_limit       | instr_limit       | --                | Root Sponsor      | UNDEF
+ 2 - 14 | ...               | ...               | ...               | ...               | Reserved RAM      | UNDEF
+ 15     | alloc_limit       | event_limit       | instr_limit       | --                | Root Sponsor      | UNDEF
+ 16     | Pair_T            | car = 42          | cdr = NIL         | UNDEF             | Cons Cell         | UNDEF
  17     | Free_T            | UNDEF             | UNDEF             | NIL               | Free Cell         | UNDEF
  18     | Actor_T           | code = boot_beh   | data = NIL        | effect = UNDEF    | Bootstrap Actor   | UNDEF
  19     | sponsor = 16      | target = 18       | message = NIL     | next = NIL        | Bootstrap Event   | UNDEF
@@ -54,8 +55,9 @@ adding any referenced cells to the GC queue
 --------|-------------------|-------------------|-------------------|-------------------|-------------------|---------------
  0      | ram_top = 20      | next_free = 17    | free_cnt = 1      | gc_root = NIL     | RAM Descriptor    | gc_first = _19_
  1      | event_first = 19  | event_last = 19   | cont_first = NIL  | cont_last = NIL   | Double-Deque      | gc_last = _19_
- 2 - 15 | ...               | ...               | ...               | ...               | Reserved RAM      | UNDEF
- 16     | alloc_limit       | event_limit       | instr_limit       | --                | Root Sponsor      | UNDEF
+ 2 - 14 | ...               | ...               | ...               | ...               | Reserved RAM      | UNDEF
+ 15     | alloc_limit       | event_limit       | instr_limit       | --                | Root Sponsor      | UNDEF
+ 16     | Pair_T            | car = 42          | cdr = NIL         | UNDEF             | Cons Cell         | UNDEF
  17     | Free_T            | UNDEF             | UNDEF             | NIL               | Free Cell         | UNDEF
  18     | Actor_T           | code = boot_beh   | data = NIL        | effect = UNDEF    | Bootstrap Actor   | UNDEF
  19     | sponsor = 16      | target = 18       | message = NIL     | next = NIL        | Bootstrap Event   | _NIL_
@@ -70,8 +72,9 @@ The first item is removed from the GC queue
 --------|-------------------|-------------------|-------------------|-------------------|-------------------|---------------
  0      | ram_top = 20      | next_free = 17    | free_cnt = 1      | gc_root = NIL     | RAM Descriptor    | gc_first = _16_
  1      | event_first = 19  | event_last = 19   | cont_first = NIL  | cont_last = NIL   | Double-Deque      | gc_last = _18_
- 2 - 15 | ...               | ...               | ...               | ...               | Reserved RAM      | UNDEF
- 16     | alloc_limit       | event_limit       | instr_limit       | --                | Root Sponsor      | _18_
+ 2 - 14 | ...               | ...               | ...               | ...               | Reserved RAM      | UNDEF
+ 15     | alloc_limit       | event_limit       | instr_limit       | --                | Root Sponsor      | _18_
+ 16     | Pair_T            | car = 42          | cdr = NIL         | UNDEF             | Cons Cell         | UNDEF
  17     | Free_T            | UNDEF             | UNDEF             | NIL               | Free Cell         | UNDEF
  18     | Actor_T           | code = boot_beh   | data = NIL        | effect = UNDEF    | Bootstrap Actor   | _NIL_
  19     | sponsor = 16      | target = 18       | message = NIL     | next = NIL        | Bootstrap Event   | _UNIT_
@@ -83,8 +86,9 @@ This process is repeated until the GC queue is empty.
 --------|-------------------|-------------------|-------------------|-------------------|-------------------|---------------
  0      | ram_top = 20      | next_free = 17    | free_cnt = 1      | gc_root = NIL     | RAM Descriptor    | gc_first = _NIL_
  1      | event_first = 19  | event_last = 19   | cont_first = NIL  | cont_last = NIL   | Double-Deque      | gc_last = _NIL_
- 2 - 15 | ...               | ...               | ...               | ...               | Reserved RAM      | UNDEF
- 16     | alloc_limit       | event_limit       | instr_limit       | --                | Root Sponsor      | _UNIT_
+ 2 - 14 | ...               | ...               | ...               | ...               | Reserved RAM      | UNDEF
+ 15     | alloc_limit       | event_limit       | instr_limit       | --                | Root Sponsor      | _UNIT_
+ 16     | Pair_T            | car = 42          | cdr = NIL         | UNDEF             | Cons Cell         | UNDEF
  17     | Free_T            | UNDEF             | UNDEF             | NIL               | Free Cell         | UNDEF
  18     | Actor_T           | code = boot_beh   | data = NIL        | effect = UNDEF    | Bootstrap Actor   | _UNIT_
  19     | sponsor = 16      | target = 18       | message = NIL     | next = NIL        | Bootstrap Event   | UNIT

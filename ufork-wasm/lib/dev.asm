@@ -36,7 +36,7 @@ boot:                   ; () <- {caps}
     push 5              ; 5
     push count          ; 5 count
     new 0               ; 5 counter
-    send 0              ; --
+    send -1             ; --
 
     push 42             ; msg=42
     msg 0               ; msg {caps}
@@ -56,7 +56,7 @@ boot:                   ; () <- {caps}
     msg 0               ; msg {caps}
     push debug_key      ; msg {caps} debug_key
     dict get            ; msg debug_dev
-    send 0              ; --
+    send -1             ; --
 
     ref std.commit
 

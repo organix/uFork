@@ -22,6 +22,9 @@ pub const SPONSOR: Any      = Any { raw: MUT_RAW | BNK_INI | 15 };
 
 pub const RAM_BASE_OFS: usize = 16;  // RAM offsets below this value are reserved
 
+pub const GC_FIRST: usize   = 0;  // offset of "first" in gc_queue[]
+pub const GC_LAST: usize    = 1;  // offset of "last" in gc_queue[]
+
 // core limits
 const QUAD_ROM_MAX: usize = 1<<10;  // 1K quad-cells of ROM
 const QUAD_RAM_MAX: usize = 1<<8;   // 256 quad-cells of RAM
@@ -36,6 +39,7 @@ pub struct Core {
     quad_rom:   [Quad; QUAD_ROM_MAX],
     quad_ram0:  [Quad; QUAD_RAM_MAX],
     quad_ram1:  [Quad; QUAD_RAM_MAX],
+    gc_queue:   [Any; QUAD_RAM_MAX],
     blob_ram:   [u8; BLOB_RAM_MAX],
     device:     [Option<Box<dyn Device>>; DEVICE_MAX],
     rom_top:    Any,
@@ -80,7 +84,7 @@ pub const ROM_TOP_OFS: usize = ROM_BASE_OFS;
             Quad::empty_t();
             QUAD_RAM_MAX
         ];
-        quad_ram[MEMORY.ofs()]      = Quad::memory_t(Any::ram(BNK_INI, RAM_TOP_OFS), NIL, ZERO, DDEQUE);
+        quad_ram[MEMORY.ofs()]      = Quad::memory_t(Any::ram(BNK_INI, RAM_TOP_OFS), NIL, ZERO, NIL);
         quad_ram[DDEQUE.ofs()]      = Quad::ddeque_t(NIL, NIL, NIL, NIL);  // no events, no continuations
         quad_ram[DEBUG_DEV.ofs()]   = Quad::actor_t(ZERO, NIL, UNDEF);    // debug device #0
         quad_ram[CLOCK_DEV.ofs()]   = Quad::actor_t(PLUS_1, NIL, UNDEF);  // clock device #1
@@ -91,6 +95,10 @@ pub const ROM_TOP_OFS: usize = ROM_BASE_OFS;
         quad_ram[SPONSOR.ofs()]     = Quad::sponsor_t(Any::fix(512), Any::fix(64), Any::fix(768));  // root configuration sponsor
 
 pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
+
+        let mut gc_queue = [ UNDEF; QUAD_RAM_MAX ];
+        gc_queue[GC_FIRST] = NIL;
+        gc_queue[GC_LAST] = NIL;
 
         /*
          * OED-encoded Blob Memory (64kB maximum)
@@ -125,6 +133,7 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
             quad_rom,
             quad_ram0: if BNK_INI == BNK_0 { quad_ram } else { [ Quad::empty_t(); QUAD_RAM_MAX ] },
             quad_ram1: if BNK_INI == BNK_1 { quad_ram } else { [ Quad::empty_t(); QUAD_RAM_MAX ] },
+            gc_queue,
             blob_ram,
             device: [
                 Some(Box::new(DebugDevice::new())),
@@ -1295,7 +1304,96 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
         self.set_ram_free(Any::fix(n + 1));  // increment cells available
     }
 
+    pub fn gcq_collect(&mut self) {
+        // clear gc queue
+        self.gc_queue[GC_FIRST] = NIL;
+        self.gc_queue[GC_LAST] = NIL;
+        let mut ofs = GC_LAST + 1;
+        while ofs < BLOB_RAM_MAX {
+            self.gc_queue[ofs] = UNDEF;  // mark "white"
+            ofs += 1;
+        }
+        // scan reserved RAM
+        let bank = self.gc_phase();  // FIXME: remove the concept of phase/bank!
+        ofs = DDEQUE.ofs();
+        while ofs < RAM_BASE_OFS {
+            let ptr = Any::ram(bank, ofs);
+            self.gcq_scan(ptr);
+            ofs += 1;
+        }
+        self.gcq_mark(self.ram_root());
+        // scan items in gc queue
+        while let Some(item) = self.gcq_dequeue() {
+            self.gcq_scan(item);
+        }
+        // sweep unreachable cells into free-list
+        ofs = self.ram_top().ofs();
+        while ofs > RAM_BASE_OFS {
+            ofs -= 1;
+            if self.gc_queue[ofs] == UNDEF {  // still "white"
+                let ptr = Any::ram(bank, ofs);
+                if self.ram(ptr).t() != FREE_T {  // not already free
+                    // add to free-list
+                    self.free(ptr);
+                }
+            }
+        }
+    }
+    fn gcq_mark(&mut self, val: Any) {
+        let ptr = if val.is_cap() {
+            self.cap_to_ptr(val)
+        } else {
+            val
+        };
+        if ptr.is_ram() {
+            let ofs = ptr.ofs();
+            if self.gc_queue[ofs] == UNDEF {
+                // change "white" to "grey"
+                self.gcq_enqueue(ptr);
+            }
+        }
+    }
+    fn gcq_scan(&mut self, ptr: Any) {
+        let quad = self.gc_load(ptr);
+        self.gcq_mark(quad.t());
+        self.gcq_mark(quad.x());
+        self.gcq_mark(quad.y());
+        self.gcq_mark(quad.z());
+    }
+    fn gcq_enqueue(&mut self, ptr: Any) {
+        // add location to the back of the queue
+        let queue = &mut self.gc_queue;
+        queue[ptr.ofs()] = NIL;
+        if !queue[GC_FIRST].is_ram() {
+            queue[GC_FIRST] = ptr;
+        } else {
+            let last = queue[GC_LAST];
+            queue[last.ofs()] = ptr;
+        }
+        queue[GC_LAST] = ptr;
+    }
+    fn gcq_dequeue(&mut self) -> Option<Any> {
+        // remove location from the front of the queue
+        let queue = &mut self.gc_queue;
+        let first = queue[GC_FIRST];
+        if first.is_ram() {
+            let next = queue[first.ofs()];
+            queue[GC_FIRST] = next;
+            if !next.is_ram() {
+                queue[GC_LAST] = NIL;
+            }
+            queue[first.ofs()] = UNIT;  // mark "black"
+            Some(first)
+        } else {
+            None
+        }
+    }
+
     pub fn gc_stop_the_world(&mut self) -> Result<(), Error> {
+        if true {
+            self.gcq_collect();  // redirect to new GC algorithm
+            return Ok(())
+        }
         /*
         1. Swap generations (`GC_GENX` <--> `GC_GENY`)
         2. Mark each cell in the root-set with `GC_SCAN`
@@ -1932,13 +2030,16 @@ pub const T_DEV_BEH: Any = Any { raw: T_DEV_OFS as Raw };
         let a_boot = core.ptr_to_cap(boot_ptr);
         core.event_inject(SPONSOR, a_boot, UNDEF).unwrap();
         assert_eq!(BNK_0, core.gc_phase());
-        core.gc_stop_the_world().unwrap();
-        assert_eq!(BNK_1, core.gc_phase());
+        let mut result;
+        result = core.gc_stop_the_world();
+        assert!(result.is_ok());
+        //assert_eq!(BNK_1, core.gc_phase()); -- new GC doesn't switch phase/bank
         let err = core.run_loop();
         assert_eq!(E_OK, err);
-        let bank = core.gc_phase();
-        core.gc_stop_the_world().unwrap();
-        assert_ne!(bank, core.gc_phase());
+        let _bank = core.gc_phase();
+        result = core.gc_stop_the_world();
+        assert!(result.is_ok());
+        //assert_ne!(_bank, core.gc_phase()); -- new GC doesn't switch phase/bank
     }
 
     #[test]
