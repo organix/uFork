@@ -97,6 +97,11 @@ pub const ROM_TOP_OFS: usize = ROM_BASE_OFS;
 pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
 
         let mut gc_queue = [ UNDEF; QUAD_RAM_MAX ];
+        let mut ofs = 0;
+        while ofs < RAM_BASE_OFS {
+            gc_queue[ofs] = UNIT;  // mark "black" (reachable)
+            ofs += 1;
+        }
         gc_queue[GC_FIRST] = NIL;
         gc_queue[GC_LAST] = NIL;
 
@@ -1308,14 +1313,9 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
         // clear gc queue
         self.gc_queue[GC_FIRST] = NIL;
         self.gc_queue[GC_LAST] = NIL;
-        let mut ofs = GC_LAST + 1;
-        while ofs < BLOB_RAM_MAX {
-            self.gc_queue[ofs] = UNDEF;  // mark "white"
-            ofs += 1;
-        }
         // scan reserved RAM
         let bank = self.gc_phase();  // FIXME: remove the concept of phase/bank!
-        ofs = DDEQUE.ofs();
+        let mut ofs = DDEQUE.ofs();
         while ofs < RAM_BASE_OFS {
             let ptr = Any::ram(bank, ofs);
             self.gcq_scan(ptr);
@@ -1336,6 +1336,8 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
                     // add to free-list
                     self.free(ptr);
                 }
+            } else {
+                self.gc_queue[ofs] = UNDEF;  // mark "white"
             }
         }
     }
