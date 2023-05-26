@@ -190,13 +190,6 @@ pub fn h_blob_top() -> Raw {
 }
 
 #[no_mangle]
-pub fn h_in_mem(raw: Raw) -> bool {
-    unsafe {
-        the_host().borrow().in_mem(raw)
-    }
-}
-
-#[no_mangle]
 pub fn h_car(raw: Raw) -> Raw {
     unsafe {
         the_host().borrow().car(raw)

@@ -148,7 +148,6 @@ let h_ram_top = h_no_init;
 let h_reserve = h_no_init;
 let h_blob_buffer = h_no_init;
 let h_blob_top = h_no_init;
-let h_in_mem = h_no_init;
 let h_car = h_no_init;
 let h_cdr = h_no_init;
 let h_memory = h_no_init;
@@ -187,18 +186,21 @@ function u_romptr(ofs) {
 function u_ramptr(ofs) {
     return (u_rawofs(ofs) | MUT_RAW);
 }
-function h_cap_to_ptr(cap) {
+function u_cap_to_ptr(cap) {
     return (u_is_fix(cap)
         ? u_warning("cap_to_ptr: can't convert fixnum "+u_print(cap))
         : (cap & ~OPQ_RAW));
 }
-function h_ptr_to_cap(ptr) {
+function u_ptr_to_cap(ptr) {
     return (u_is_fix(ptr)
         ? u_warning("ptr_to_cap: can't convert fixnum "+u_print(ptr))
         : (ptr | OPQ_RAW));
 }
 function u_fix_to_i32(fix) {
     return (fix << 1) >> 1;
+}
+function u_in_mem(ptr) {
+    return (ptr > FREE_T) && !u_is_fix(ptr);
 }
 function h_next(ptr) {
     if (u_is_ptr(ptr)) {
@@ -803,7 +805,7 @@ function rom_alloc(debug_info) {
 function h_disasm(raw) {
     let s = u_print(raw);
     if (u_is_cap(raw)) {
-        raw = h_cap_to_ptr(raw);
+        raw = u_cap_to_ptr(raw);
     }
     if (u_is_ptr(raw)) {
         s += ": ";
@@ -859,7 +861,7 @@ function h_pprint(raw) {
         }
     }
     if (u_is_cap(raw)) {
-        const ptr = h_cap_to_ptr(raw);
+        const ptr = u_cap_to_ptr(raw);
         const quad = h_read_quad(ptr);
         if (quad.t === PROXY_T) {
             let s = "";
@@ -983,10 +985,10 @@ const drawHost = () => {
     //const e_last = ddeque_quad.x;
     const k_first = ddeque_quad.y;
     //const k_last = ddeque_quad.z;
-    if (h_in_mem(k_first)) {
+    if (u_in_mem(k_first)) {
         let p = k_first;
         let a = [];
-        while (h_in_mem(p)) {
+        while (u_in_mem(p)) {
             a.push(h_disasm(p));  // disasm continuation
             p = h_next(p);
         }
@@ -994,10 +996,10 @@ const drawHost = () => {
     } else {
         updateElementText($kqueue, "--");
     }
-    if (h_in_mem(e_first)) {
+    if (u_in_mem(e_first)) {
         let p = e_first;
         let a = [];
-        while (h_in_mem(p)) {
+        while (u_in_mem(p)) {
             a.push(h_disasm(p));  // disasm event
             p = h_next(p);
         }
@@ -1009,16 +1011,16 @@ const drawHost = () => {
     const ip = cont_quad.t;
     const sp = cont_quad.x;
     const ep = cont_quad.y;
-    if (h_in_mem(ip)) {
+    if (u_in_mem(ip)) {
         let p = ip;
         let n = 5;
         let a = [];
-        while ((n > 0) && h_in_mem(p)) {
+        while ((n > 0) && u_in_mem(p)) {
             a.push(h_disasm(p));
             p = h_next(p);
             n -= 1;
         }
-        if (h_in_mem(p)) {
+        if (u_in_mem(p)) {
             a.push("...");
         }
         updateElementText($instr, a.join("\n"));
@@ -1026,10 +1028,10 @@ const drawHost = () => {
         updateElementText($instr, "--");
     }
     updateSourceMonitor(ip);
-    if (h_in_mem(sp)) {
+    if (u_in_mem(sp)) {
         let p = sp;
         let a = [];
-        while (h_in_mem(p)) {
+        while (u_in_mem(p)) {
             //a.push(h_disasm(p));  // disasm stack Pair
             //a.push(h_print(h_car(p)));  // print stack item
             a.push(h_pprint(h_car(p)));  // pretty-print stack item
@@ -1045,15 +1047,15 @@ const drawHost = () => {
     const sponsor = event_quad.t;
     const target = event_quad.x;
     const message = event_quad.y;
-    const actor = h_read_quad(h_cap_to_ptr(target));
+    const actor = h_read_quad(u_cap_to_ptr(target));
     const effect = actor.z;
     const state = actor.y;
     updateElementText($self, h_disasm(target));
     //updateElementText($effect, h_disasm(effect));
-    if (h_in_mem(effect)) {
+    if (u_in_mem(effect)) {
         let p = effect;
         let a = [];
-        while (h_in_mem(p)) {
+        while (u_in_mem(p)) {
             a.push(h_disasm(p));  // disasm event
             p = h_next(p);
         }
@@ -1072,7 +1074,7 @@ const drawHost = () => {
 function currentContinuation() {
     const ddeque_quad = h_read_quad(u_ramptr(DDEQUE_OFS));
     const k_first = ddeque_quad.y;
-    if (h_in_mem(k_first)) {
+    if (u_in_mem(k_first)) {
         const cont_quad = h_read_quad(k_first);
         return {
             ip: cont_quad.t,
@@ -1160,7 +1162,7 @@ function cap_dict(device_offsets) {
         h_write_quad(dict, {
             t: DICT_T,
             x: u_fixnum(ofs),
-            y: h_ptr_to_cap(u_ramptr(ofs)),
+            y: u_ptr_to_cap(u_ramptr(ofs)),
             z: next
         });
         return dict;
@@ -1188,7 +1190,7 @@ function boot(module_specifier) {
         // the front of the event queue.
         h_event_inject(
             u_ramptr(SPONSOR_OFS),
-            h_ptr_to_cap(actor),
+            u_ptr_to_cap(actor),
             cap_dict([
                 DEBUG_DEV_OFS,
                 CLOCK_DEV_OFS,
@@ -1448,7 +1450,7 @@ function test_suite(exports) {
     console.log("h_rom_top() =", h_rom_top(), u_print(h_rom_top()));
     console.log("h_ram_top() =", h_ram_top(), u_print(h_ram_top()));
     console.log("h_ramptr(5) =", u_ramptr(5), u_print(u_ramptr(5)));
-    console.log("h_ptr_to_cap(h_ramptr(3)) =", h_ptr_to_cap(u_ramptr(3)), u_print(h_ptr_to_cap(u_ramptr(3))));
+    console.log("h_ptr_to_cap(h_ramptr(3)) =", u_ptr_to_cap(u_ramptr(3)), u_print(u_ptr_to_cap(u_ramptr(3))));
     console.log("h_memory() =", h_memory());
 
     const rom_ofs = h_rom_buffer();
@@ -1543,7 +1545,6 @@ WebAssembly.instantiateStreaming(
     h_reserve = wasm_mutex_call(exports.h_reserve);
     h_blob_buffer = wasm_mutex_call(exports.h_blob_buffer);
     h_blob_top = wasm_mutex_call(exports.h_blob_top);
-    h_in_mem = wasm_mutex_call(exports.h_in_mem);
     h_car = wasm_mutex_call(exports.h_car);
     h_cdr = wasm_mutex_call(exports.h_cdr);
 

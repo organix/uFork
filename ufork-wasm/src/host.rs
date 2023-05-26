@@ -70,9 +70,6 @@ impl Host {
     pub fn blob_top(&self) -> Raw {
         self.core.blob_top().raw()
     }
-    pub fn in_mem(&self, v: Raw) -> bool {  // excludes built-in constants and types
-        (v > FREE_T.raw()) && !Any::new(v).is_fix()
-    }
     pub fn car(&self, p: Raw) -> Raw {
         self.core.car(Any::new(p)).raw()
     }
