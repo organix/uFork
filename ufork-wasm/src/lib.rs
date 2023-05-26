@@ -209,10 +209,3 @@ pub fn h_cdr(raw: Raw) -> Raw {
         the_host().borrow().cdr(raw)
     }
 }
-
-#[no_mangle]
-pub fn h_next(raw: Raw) -> Raw {
-    unsafe {
-        the_host().borrow().next(raw)
-    }
-}

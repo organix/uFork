@@ -132,7 +132,7 @@ function faultMsg(e_code) {
 }
 
 const h_no_init = function uninitialized() {
-    return h_warning("WASM not initialized.");
+    return u_warning("WASM not initialized.");
 };
 // functions imported from uFork WASM module
 let h_step = h_no_init;
@@ -151,64 +151,80 @@ let h_blob_top = h_no_init;
 let h_in_mem = h_no_init;
 let h_car = h_no_init;
 let h_cdr = h_no_init;
-let h_next = h_no_init;
 let h_memory = h_no_init;
 // local helper functions
-function h_warning(message) {
+function u_warning(message) {
     console.log("WARNING!", message);
     return UNDEF_RAW;
 }
-function h_is_raw(value) {
+function u_is_raw(value) {
     return (Number.isSafeInteger(value) && value >= 0 && value < 2 ** 32);
 }
-function h_is_fix(raw) {
+function u_is_fix(raw) {
     return ((raw & DIR_RAW) !== 0);
 }
-function h_is_cap(raw) {
+function u_is_cap(raw) {
     return ((raw & (DIR_RAW | OPQ_RAW)) === OPQ_RAW);
 }
-function h_is_ptr(raw) {
+function u_is_ptr(raw) {
     return ((raw & (DIR_RAW | OPQ_RAW)) === 0);
 }
-function h_is_rom(raw) {
+function u_is_rom(raw) {
     return ((raw & (DIR_RAW | OPQ_RAW | MUT_RAW)) === 0);
 }
-function h_is_ram(raw) {
+function u_is_ram(raw) {
     return ((raw & (DIR_RAW | OPQ_RAW | MUT_RAW)) === MUT_RAW);
 }
-function h_fixnum(i32) {
+function u_fixnum(i32) {
     return ((i32 | DIR_RAW) >>> 0);
 }
-function h_rawofs(raw) {
+function u_rawofs(raw) {
     return (raw & ~MSK_RAW);
 }
-function h_romptr(ofs) {
-    return h_rawofs(ofs);
+function u_romptr(ofs) {
+    return u_rawofs(ofs);
 }
-function h_ramptr(ofs) {
-    return (h_rawofs(ofs) | MUT_RAW);
+function u_ramptr(ofs) {
+    return (u_rawofs(ofs) | MUT_RAW);
 }
 function h_cap_to_ptr(cap) {
-    return (h_is_fix(cap)
-        ? h_warning("cap_to_ptr: can't convert fixnum "+h_print(cap))
+    return (u_is_fix(cap)
+        ? u_warning("cap_to_ptr: can't convert fixnum "+u_print(cap))
         : (cap & ~OPQ_RAW));
 }
 function h_ptr_to_cap(ptr) {
-    return (h_is_fix(ptr)
-        ? h_warning("ptr_to_cap: can't convert fixnum "+h_print(ptr))
+    return (u_is_fix(ptr)
+        ? u_warning("ptr_to_cap: can't convert fixnum "+u_print(ptr))
         : (ptr | OPQ_RAW));
 }
-function h_fix_to_i32(fix) {
+function u_fix_to_i32(fix) {
     return (fix << 1) >> 1;
+}
+function h_next(ptr) {
+    if (u_is_ptr(ptr)) {
+        const quad = h_read_quad(ptr);
+        const t = quad.t;
+        if (t === INSTR_T) {
+            const op = quad.x;
+            if ((op != VM_IF) && (op != VM_END)) {
+                return quad.z;
+            }
+        } else if (t === PAIR_T) {
+            return quad.y;
+        } else {
+            return quad.z;
+        }
+    }
+    return UNDEF_RAW;
 }
 function h_mem_pages() {
     return h_memory().byteLength / 65536;
 }
 function h_read_quad(ptr) {
-    if (h_is_ram(ptr)) {
-        const ofs = h_rawofs(ptr);
+    if (u_is_ram(ptr)) {
+        const ofs = u_rawofs(ptr);
         const ram_ofs = h_ram_buffer();
-        const ram_top = h_rawofs(h_ram_top());
+        const ram_top = u_rawofs(h_ram_top());
         if (ofs < ram_top) {
             const ram_len = ram_top << 2;
             const ram = new Uint32Array(h_memory(), ram_ofs, ram_len);
@@ -221,13 +237,13 @@ function h_read_quad(ptr) {
             };
             return quad;
         } else {
-            return h_warning("h_read_quad: RAM ptr out of bounds "+h_print(ptr));
+            return u_warning("h_read_quad: RAM ptr out of bounds "+u_print(ptr));
         }
     }
-    if (h_is_rom(ptr)) {
-        const ofs = h_rawofs(ptr);
+    if (u_is_rom(ptr)) {
+        const ofs = u_rawofs(ptr);
         const rom_ofs = h_rom_buffer();
-        const rom_top = h_rawofs(h_rom_top());
+        const rom_top = u_rawofs(h_rom_top());
         if (ofs < rom_top) {
             const rom_len = rom_top << 2;
             const rom = new Uint32Array(h_memory(), rom_ofs, rom_len);
@@ -240,16 +256,16 @@ function h_read_quad(ptr) {
             };
             return quad;
         } else {
-            return h_warning("h_read_quad: ROM ptr out of bounds "+h_print(ptr));
+            return u_warning("h_read_quad: ROM ptr out of bounds "+u_print(ptr));
         }
     }
-    return h_warning("h_read_quad: required ptr, got "+h_print(ptr));
+    return u_warning("h_read_quad: required ptr, got "+u_print(ptr));
 }
 function h_write_quad(ptr, quad) {
-    if (h_is_ram(ptr)) {
-        const ofs = h_rawofs(ptr);
+    if (u_is_ram(ptr)) {
+        const ofs = u_rawofs(ptr);
         const ram_ofs = h_ram_buffer();
-        const ram_top = h_rawofs(h_ram_top());
+        const ram_top = u_rawofs(h_ram_top());
         if (ofs < ram_top) {
             const ram_len = ram_top << 2;
             const ram = new Uint32Array(h_memory(), ram_ofs, ram_len);
@@ -260,14 +276,14 @@ function h_write_quad(ptr, quad) {
             ram[idx + 3] = quad.z;
             return;
         } else {
-            return h_warning("h_write_quad: RAM ptr out of bounds "+h_print(ptr));
+            return u_warning("h_write_quad: RAM ptr out of bounds "+u_print(ptr));
         }
     }
-    return h_warning("h_write_quad: required RAM ptr, got "+h_print(ptr));
+    return u_warning("h_write_quad: required RAM ptr, got "+u_print(ptr));
 }
 function h_blob_mem() {
     const blob_ofs = h_blob_buffer();
-    const blob_len = h_fix_to_i32(h_blob_top());
+    const blob_len = u_fix_to_i32(h_blob_top());
     const blob = new Uint8Array(h_memory(), blob_ofs, blob_len);
     return blob;
 }
@@ -290,12 +306,12 @@ const rom_label = [
     "FWD_REF_T",
     "FREE_T"
 ];
-function h_print(raw) {
+function u_print(raw) {
     if (typeof raw !== "number") {
         return "" + raw;
     }
-    if (h_is_fix(raw)) {  // fixnum
-        const i32 = h_fix_to_i32(raw);
+    if (u_is_fix(raw)) {  // fixnum
+        const i32 = u_fix_to_i32(raw);
         if (i32 < 0) {
             return "" + i32;
         } else {
@@ -410,27 +426,27 @@ function q_print(quad) {
                 s += deque_imm_label[imm];
             } else if (quad.x === VM_END) {
                 s += "VM_END, y:";
-                s += end_imm_label[h_fix_to_i32(quad.y) + 1];  // END_ABORT === -1
+                s += end_imm_label[u_fix_to_i32(quad.y) + 1];  // END_ABORT === -1
             } else {
                 s += instr_label[op];
                 s += ", y:";
-                s += h_print(quad.y);
+                s += u_print(quad.y);
             }
         } else {
-            s += h_print(quad.x);
+            s += u_print(quad.x);
             s += ", y:";
-            s += h_print(quad.y);
+            s += u_print(quad.y);
         }
     } else {
         s += "t:";
-        s += h_print(quad.t);
+        s += u_print(quad.t);
         s += ", x:";
-        s += h_print(quad.x);
+        s += u_print(quad.x);
         s += ", y:";
-        s += h_print(quad.y);
+        s += u_print(quad.y);
     }
     s += ", z:";
-    s += h_print(quad.z);
+    s += u_print(quad.z);
     s += " }";
     return s;
 }
@@ -466,7 +482,7 @@ function h_load(specifier, crlf, imports, alloc, read) {
         return (
             definitions[name] !== undefined
             ? (
-                h_is_raw(definitions[name])
+                u_is_raw(definitions[name])
                 ? definitions[name]
                 : definitions[name].raw()
             )
@@ -480,7 +496,7 @@ function h_load(specifier, crlf, imports, alloc, read) {
             : (
                 imports[ref.module] !== undefined
                 ? (
-                    h_is_raw(imports[ref.module][ref.name])
+                    u_is_raw(imports[ref.module][ref.name])
                     ? imports[ref.module][ref.name]
                     : fail("Not exported", ref.module + "." + ref.name, ref)
                 )
@@ -494,7 +510,7 @@ function h_load(specifier, crlf, imports, alloc, read) {
         }) + offset;
         return (
             Number.isSafeInteger(index)
-            ? h_fixnum(index)
+            ? u_fixnum(index)
             : fail("Bad label", name)
         );
     }
@@ -508,7 +524,7 @@ function h_load(specifier, crlf, imports, alloc, read) {
     function literal(node) {
         const raw = crlf_literals[node.value];
         return (
-            h_is_raw(raw)
+            u_is_raw(raw)
             ? raw
             : fail("Not a literal", node)
         );
@@ -516,14 +532,14 @@ function h_load(specifier, crlf, imports, alloc, read) {
     function fixnum(node) {
         return (
             kind(node) === "fixnum"
-            ? h_fixnum(node) // FIXME: check integer bounds?
+            ? u_fixnum(node) // FIXME: check integer bounds?
             : fail("Not a fixnum", node)
         );
     }
     function type(node) {
         const raw = crlf_types[node.name];
         return (
-            h_is_raw(raw)
+            u_is_raw(raw)
             ? raw
             : fail("Unknown type", node)
         );
@@ -692,7 +708,7 @@ function h_load(specifier, crlf, imports, alloc, read) {
     });
     // Check the type of dubious continuations.
     continuation_type_checks.forEach(function ([raw, t, node]) {
-        if (!h_is_ptr(raw) || read(raw).t !== t) {
+        if (!u_is_ptr(raw) || read(raw).t !== t) {
             return fail("Bad continuation", node);
         }
     });
@@ -700,7 +716,7 @@ function h_load(specifier, crlf, imports, alloc, read) {
     // instructions.
     cyclic_data_checks.forEach(function ([raw, t, k_field, node]) {
         let seen = [];
-        while (h_is_ptr(raw)) {
+        while (u_is_ptr(raw)) {
             if (seen.includes(raw)) {
                 return fail("Cyclic", node);
             }
@@ -767,7 +783,7 @@ function rom_alloc(debug_info) {
             return raw;
         },
         write({t, x, y, z}) {
-            const ofs = h_rawofs(raw) << 4; // convert quad offset to byte offset
+            const ofs = u_rawofs(raw) << 4; // convert quad offset to byte offset
             const quad = new Uint32Array(h_memory(), h_rom_buffer() + ofs, 4);
             if (t !== undefined) {
                 quad[0] = t;
@@ -785,11 +801,11 @@ function rom_alloc(debug_info) {
     });
 }
 function h_disasm(raw) {
-    let s = h_print(raw);
-    if (h_is_cap(raw)) {
+    let s = u_print(raw);
+    if (u_is_cap(raw)) {
         raw = h_cap_to_ptr(raw);
     }
-    if (h_is_ptr(raw)) {
+    if (u_is_ptr(raw)) {
         s += ": ";
         const quad = h_read_quad(raw);
         s += q_print(quad);
@@ -797,7 +813,7 @@ function h_disasm(raw) {
     return s;
 }
 function h_pprint(raw) {
-    if (h_is_ptr(raw)) {
+    if (u_is_ptr(raw)) {
         let quad = h_read_quad(raw);
         if (quad.t === PAIR_T) {
             let s = "";
@@ -808,7 +824,7 @@ function h_pprint(raw) {
                 s += h_pprint(quad.x);  // car
                 sep = " ";
                 p = quad.y;  // cdr
-                if (!h_is_ptr(p)) break;
+                if (!u_is_ptr(p)) break;
                 quad = h_read_quad(p);
             }
             if (p !== NIL_RAW) {
@@ -835,27 +851,27 @@ function h_pprint(raw) {
         if (quad.t === STUB_T) {
             let s = "";
             s += "STUB[";
-            s += h_print(quad.x);  // device
+            s += u_print(quad.x);  // device
             s += ",";
-            s += h_print(quad.y);  // target
+            s += u_print(quad.y);  // target
             s += "]";
             return s;
         }
     }
-    if (h_is_cap(raw)) {
+    if (u_is_cap(raw)) {
         const ptr = h_cap_to_ptr(raw);
         const quad = h_read_quad(ptr);
         if (quad.t === PROXY_T) {
             let s = "";
             s += "PROXY[";
-            s += h_print(quad.x);  // device
+            s += u_print(quad.x);  // device
             s += ",";
-            s += h_print(quad.y);  // handle
+            s += u_print(quad.y);  // handle
             s += "]";
             return s;
         }
     }
-    return h_print(raw);
+    return u_print(raw);
 }
 
 function updateElementText(el, txt) {
@@ -877,11 +893,11 @@ function updateElementValue(el, val) {
 }
 function updateRomMonitor() {
     let a = [];
-    const top = h_rawofs(h_rom_top());
+    const top = u_rawofs(h_rom_top());
     for (let ofs = 0; ofs < top; ofs += 1) {
-        const ptr = h_romptr(ofs);
+        const ptr = u_romptr(ofs);
         const quad = h_read_quad(ptr);
-        const line = ("         " + h_print(ptr)).slice(-9)
+        const line = ("         " + u_print(ptr)).slice(-9)
             + ": " + q_print(quad);
         a.push(line);
     }
@@ -889,9 +905,9 @@ function updateRomMonitor() {
 }
 function updateRamMonitor() {
     let a = [];
-    const top = h_rawofs(h_ram_top());
+    const top = u_rawofs(h_ram_top());
     for (let ofs = 0; ofs < top; ofs += 1) {
-        const ptr = h_ramptr(ofs);
+        const ptr = u_ramptr(ofs);
         const line = h_disasm(ptr);
         a.push(line);
     }
@@ -907,7 +923,7 @@ function keep_centered(child, parent) {
     parent.scrollTop = offset - parent_rect.height / 2 + child_rect.height / 2;
 }
 function updateSourceMonitor(ip) {
-    if (h_is_rom(ip) && ip !== UNDEF_RAW && rom_sourcemap[ip] !== undefined) {
+    if (u_is_rom(ip) && ip !== UNDEF_RAW && rom_sourcemap[ip] !== undefined) {
         const debug = rom_sourcemap[ip];
         const source = module_source[debug.file];
         if (source !== undefined) {
@@ -945,24 +961,24 @@ const drawHost = () => {
     }
     updateBlobMonitor();
     updateRamMonitor();
-    const top = h_rawofs(h_ram_top());
+    const top = u_rawofs(h_ram_top());
     if (top > ram_max) {
         ram_max = top;
     }
     updateElementText($ram_max, ram_max.toString());
-    const memory_quad = h_read_quad(h_ramptr(MEMORY_OFS));
+    const memory_quad = h_read_quad(u_ramptr(MEMORY_OFS));
     const ram_top = memory_quad.t;
     const ram_next = memory_quad.x;
     const ram_free = memory_quad.y;
     const gc_root = memory_quad.z;
-    const rom_top = h_rawofs(h_rom_top());
-    updateElementText($ram_top, h_print(ram_top));
-    updateElementText($ram_next, h_print(ram_next));
-    updateElementText($ram_free, h_print(ram_free));
-    updateElementText($gc_root, h_print(gc_root));
-    updateElementText($rom_top, h_print(rom_top));
+    const rom_top = u_rawofs(h_rom_top());
+    updateElementText($ram_top, u_print(ram_top));
+    updateElementText($ram_next, u_print(ram_next));
+    updateElementText($ram_free, u_print(ram_free));
+    updateElementText($gc_root, u_print(gc_root));
+    updateElementText($rom_top, u_print(rom_top));
     updateElementText($mem_pages, h_mem_pages());
-    const ddeque_quad = h_read_quad(h_ramptr(DDEQUE_OFS));
+    const ddeque_quad = h_read_quad(u_ramptr(DDEQUE_OFS));
     const e_first = ddeque_quad.t;
     //const e_last = ddeque_quad.x;
     const k_first = ddeque_quad.y;
@@ -1048,13 +1064,13 @@ const drawHost = () => {
     updateElementText($state, h_pprint(state));  // pretty-print state
     updateElementText($msg, h_pprint(message));  // pretty-print message
     const sponsor_quad = h_read_quad(sponsor);
-    updateElementValue($sponsor_memory, h_fix_to_i32(sponsor_quad.t));
-    updateElementValue($sponsor_events, h_fix_to_i32(sponsor_quad.x));
-    updateElementValue($sponsor_instrs, h_fix_to_i32(sponsor_quad.y));
+    updateElementValue($sponsor_memory, u_fix_to_i32(sponsor_quad.t));
+    updateElementValue($sponsor_events, u_fix_to_i32(sponsor_quad.x));
+    updateElementValue($sponsor_instrs, u_fix_to_i32(sponsor_quad.y));
     enableNext();
 }
 function currentContinuation() {
-    const ddeque_quad = h_read_quad(h_ramptr(DDEQUE_OFS));
+    const ddeque_quad = h_read_quad(u_ramptr(DDEQUE_OFS));
     const k_first = ddeque_quad.y;
     if (h_in_mem(k_first)) {
         const cont_quad = h_read_quad(k_first);
@@ -1143,8 +1159,8 @@ function cap_dict(device_offsets) {
         const dict = h_reserve();
         h_write_quad(dict, {
             t: DICT_T,
-            x: h_fixnum(ofs),
-            y: h_ptr_to_cap(h_ramptr(ofs)),
+            x: u_fixnum(ofs),
+            y: h_ptr_to_cap(u_ramptr(ofs)),
             z: next
         });
         return dict;
@@ -1171,7 +1187,7 @@ function boot(module_specifier) {
         // Inject the boot event (with a message holding the capabilities) to
         // the front of the event queue.
         h_event_inject(
-            h_ramptr(SPONSOR_OFS),
+            u_ramptr(SPONSOR_OFS),
             h_ptr_to_cap(actor),
             cap_dict([
                 DEBUG_DEV_OFS,
@@ -1304,15 +1320,15 @@ function h_snapshot() {
 
     // WASM mandates little-endian byte ordering
     const rom_ofs = h_rom_buffer();
-    const rom_len = h_rawofs(h_rom_top()) << 4;
+    const rom_len = u_rawofs(h_rom_top()) << 4;
     const rom = new Uint8Array(mem_base, rom_ofs, rom_len);
 
     const ram_ofs = h_ram_buffer();
-    const ram_len = h_rawofs(h_ram_top()) << 4;
+    const ram_len = u_rawofs(h_ram_top()) << 4;
     const ram = new Uint8Array(mem_base, ram_ofs, ram_len);
 
     const blob_ofs = h_blob_buffer();
-    const blob_len = h_fix_to_i32(h_blob_top());
+    const blob_len = u_fix_to_i32(h_blob_top());
     const blob = new Uint8Array(mem_base, blob_ofs, blob_len);
 
     return {
@@ -1330,7 +1346,7 @@ function h_restore(snapshot) {
     const rom = new Uint8Array(mem_base, rom_ofs, rom_len);
     rom.set(snapshot.rom);
 
-    const ram_ofs = h_ramptr(MEMORY_OFS);
+    const ram_ofs = u_ramptr(MEMORY_OFS);
     const ram_len = snapshot.ram.byteLength;
     const ram = new Uint8Array(mem_base, ram_ofs, ram_len);
     ram.set(snapshot.ram);
@@ -1340,7 +1356,7 @@ function h_restore(snapshot) {
     const blob = new Uint8Array(mem_base, blob_ofs, blob_len);
     blob.set(snapshot.blob);
 
-    const rom_top = h_romptr(rom_len >> 2);
+    const rom_top = u_romptr(rom_len >> 2);
     h_set_rom_top(rom_top);  // register new top-of-ROM
     updateRomMonitor();
     drawHost();
@@ -1375,7 +1391,7 @@ $sponsor_memory.oninput = function () {
         if (cc) {
             const event = h_read_quad(cc.ep);
             const sponsor = h_read_quad(event.t);
-            sponsor.t = h_fixnum(num);
+            sponsor.t = u_fixnum(num);
             h_write_quad(event.t, sponsor);
             drawHost();
         }
@@ -1388,7 +1404,7 @@ $sponsor_events.oninput = function () {
         if (cc) {
             const event = h_read_quad(cc.ep);
             const sponsor = h_read_quad(event.t);
-            sponsor.x = h_fixnum(num);
+            sponsor.x = u_fixnum(num);
             h_write_quad(event.t, sponsor);
             drawHost();
         }
@@ -1401,7 +1417,7 @@ $sponsor_instrs.oninput = function () {
         if (cc) {
             const event = h_read_quad(cc.ep);
             const sponsor = h_read_quad(event.t);
-            sponsor.y = h_fixnum(num);
+            sponsor.y = u_fixnum(num);
             h_write_quad(event.t, sponsor);
             drawHost();
         }
@@ -1425,26 +1441,26 @@ function wasm_mutex_call(wasm_fn) {
 }
 
 function test_suite(exports) {
-    console.log("h_fixnum(0) =", h_fixnum(0), h_fixnum(0).toString(16), h_print(h_fixnum(0)));
-    console.log("h_fixnum(1) =", h_fixnum(1), h_fixnum(1).toString(16), h_print(h_fixnum(1)));
-    console.log("h_fixnum(-1) =", h_fixnum(-1), h_fixnum(-1).toString(16), h_print(h_fixnum(-1)));
-    console.log("h_fixnum(-2) =", h_fixnum(-2), h_fixnum(-2).toString(16), h_print(h_fixnum(-2)));
-    console.log("h_rom_top() =", h_rom_top(), h_print(h_rom_top()));
-    console.log("h_ram_top() =", h_ram_top(), h_print(h_ram_top()));
-    console.log("h_ramptr(5) =", h_ramptr(5), h_print(h_ramptr(5)));
-    console.log("h_ptr_to_cap(h_ramptr(3)) =", h_ptr_to_cap(h_ramptr(3)), h_print(h_ptr_to_cap(h_ramptr(3))));
+    console.log("h_fixnum(0) =", u_fixnum(0), u_fixnum(0).toString(16), u_print(u_fixnum(0)));
+    console.log("h_fixnum(1) =", u_fixnum(1), u_fixnum(1).toString(16), u_print(u_fixnum(1)));
+    console.log("h_fixnum(-1) =", u_fixnum(-1), u_fixnum(-1).toString(16), u_print(u_fixnum(-1)));
+    console.log("h_fixnum(-2) =", u_fixnum(-2), u_fixnum(-2).toString(16), u_print(u_fixnum(-2)));
+    console.log("h_rom_top() =", h_rom_top(), u_print(h_rom_top()));
+    console.log("h_ram_top() =", h_ram_top(), u_print(h_ram_top()));
+    console.log("h_ramptr(5) =", u_ramptr(5), u_print(u_ramptr(5)));
+    console.log("h_ptr_to_cap(h_ramptr(3)) =", h_ptr_to_cap(u_ramptr(3)), u_print(h_ptr_to_cap(u_ramptr(3))));
     console.log("h_memory() =", h_memory());
 
     const rom_ofs = h_rom_buffer();
-    const rom = new Uint32Array(h_memory(), rom_ofs, (h_rawofs(h_rom_top()) << 2));
+    const rom = new Uint32Array(h_memory(), rom_ofs, (u_rawofs(h_rom_top()) << 2));
     console.log("ROM:", rom);
 
     const ram_ofs = h_ram_buffer();
-    const ram = new Uint32Array(h_memory(), ram_ofs, (h_rawofs(h_ram_top()) << 2));
+    const ram = new Uint32Array(h_memory(), ram_ofs, (u_rawofs(h_ram_top()) << 2));
     console.log("RAM:", ram);
 
     const blob_ofs = h_blob_buffer();
-    const blob = new Uint8Array(h_memory(), blob_ofs, h_fix_to_i32(h_blob_top()));
+    const blob = new Uint8Array(h_memory(), blob_ofs, u_fix_to_i32(h_blob_top()));
     console.log("BLOB:", blob);
 
     const decoded = {
@@ -1489,11 +1505,11 @@ WebAssembly.instantiateStreaming(
                 // process asynchronously to avoid WASM re-entrancy
                 x = (x >>> 0);  // convert i32 -> u32
                 setTimeout(() => {
-                    console.log("LOG:", x, "=", h_print(x), "->", h_pprint(x));
+                    console.log("LOG:", x, "=", u_print(x), "->", h_pprint(x));
                 });
             },
             host_timer(delay, stub) {  // WASM type: (i32, i32) -> nil
-                if (h_is_fix(delay)) {
+                if (u_is_fix(delay)) {
                     setTimeout(() => {
                         // FIXME: we need to ensure that `stub` remains valid!
                         console.log("TIMER:", h_pprint(delay), h_pprint(stub));
@@ -1504,7 +1520,7 @@ WebAssembly.instantiateStreaming(
                         const message = event.y;
                         h_event_inject(sponsor, target, message);
                         drawHost();
-                    }, h_fix_to_i32(delay));
+                    }, u_fix_to_i32(delay));
                 }
             },
         }
@@ -1530,7 +1546,6 @@ WebAssembly.instantiateStreaming(
     h_in_mem = wasm_mutex_call(exports.h_in_mem);
     h_car = wasm_mutex_call(exports.h_car);
     h_cdr = wasm_mutex_call(exports.h_cdr);
-    h_next = wasm_mutex_call(exports.h_next);
 
     h_memory = function wasm_memory() {
         // WARNING! The WASM memory buffer can move if it is resized.

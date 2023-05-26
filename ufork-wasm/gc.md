@@ -73,7 +73,7 @@ The first item is removed from the GC queue
 
  Offset | Quad.T            | Quad.X            | Quad.Y            | Quad.Z            | Description       | GC queue
 --------|-------------------|-------------------|-------------------|-------------------|-------------------|---------------
- 0      | ram_top = 20      | next_free = 17    | free_cnt = 1      | gc_root = NIL     | RAM Descriptor    | gc_first = _16_
+ 0      | ram_top = 20      | next_free = 17    | free_cnt = 1      | gc_root = NIL     | RAM Descriptor    | gc_first = _15_
  1      | event_first = 19  | event_last = 19   | cont_first = NIL  | cont_last = NIL   | Double-Deque      | gc_last = _18_
  2 - 14 | ...               | ...               | ...               | ...               | Reserved RAM      | UNIT
  15     | alloc_limit       | event_limit       | instr_limit       | --                | Root Sponsor      | _18_

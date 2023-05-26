@@ -79,9 +79,6 @@ impl Host {
     pub fn cdr(&self, p: Raw) -> Raw {
         self.core.cdr(Any::new(p)).raw()
     }
-    pub fn next(&self, p: Raw) -> Raw {
-        self.core.next(Any::new(p)).raw()
-    }
 
     /*
      *  WARNING! The methods below give _unsafe_ access

@@ -1502,26 +1502,6 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
     pub fn blob_write(&mut self, ofs: usize, data: u8) {
         self.blob_ram[ofs] = data;
     }
-
-    pub fn next(&self, ptr: Any) -> Any {
-        if ptr.is_ptr() {
-            let quad = self.mem(ptr);
-            if quad.t() == INSTR_T {
-                let op = quad.x();
-                if op == VM_IF || op == VM_END {
-                    UNDEF
-                } else {
-                    quad.z()
-                }
-            } else if quad.t() == PAIR_T {
-                quad.y()
-            } else {
-                quad.z()
-            }
-        } else {
-            UNDEF
-        }
-    }
 }
 
 fn u16_lsb(nat: usize) -> u8 {
