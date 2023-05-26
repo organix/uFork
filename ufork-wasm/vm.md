@@ -21,11 +21,10 @@ It consists of four integers (current WASM target is 32 bits).
 type/proc | head/car | tail/cdr | link/next
 
 The integers in each field carry a _type tag_
-in their 4 most-significant bits (MSBs).
+in their 3 most-significant bits (MSBs).
 The 1st MSB is {0=indirect-reference, 1=direct-value}.
 The 2nd MSB is {0=transparent, 1=opaque}.
 The 3rd MSB is {0=immutable, 1=mutable}.
-The 4th MSB is reserved for a garbage-collection phase/generation marker.
 The resulting type-heirarchy looks like this:
 
 ```
@@ -36,8 +35,7 @@ The resulting type-heirarchy looks like this:
       transparent  opaque (ocap)
      0 /       \ 1
 immutable     mutable
-  (rom)      0 /   \ 1
-           (ram0) (ram1)
+  (rom)        (ram)
 ```
 
 Direct values (fixnums) are stored in 2's-complement representation,

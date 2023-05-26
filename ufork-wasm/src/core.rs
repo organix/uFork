@@ -5,20 +5,17 @@ use alloc::boxed::Box;
 use crate::*;
 use crate::device::*;
 
-const BNK_INI: Raw          = BNK_0;
-//const BNK_INI: Raw          = BNK_1;
-
 pub const ROM_BASE_OFS: usize = 16;  // ROM offsets below this value are reserved
 
-pub const MEMORY: Any       = Any { raw: MUT_RAW | BNK_INI | 0 };
-pub const DDEQUE: Any       = Any { raw: MUT_RAW | BNK_INI | 1 };
-pub const DEBUG_DEV: Any    = Any { raw: OPQ_RAW | MUT_RAW | BNK_INI | 2 };
-pub const CLOCK_DEV: Any    = Any { raw: OPQ_RAW | MUT_RAW | BNK_INI | 3 };
-pub const IO_DEV: Any       = Any { raw: OPQ_RAW | MUT_RAW | BNK_INI | 4 };
-pub const BLOB_DEV: Any     = Any { raw: OPQ_RAW | MUT_RAW | BNK_INI | 5 };
-pub const TIMER_DEV: Any    = Any { raw: OPQ_RAW | MUT_RAW | BNK_INI | 6 };
-pub const MEMO_DEV: Any     = Any { raw: OPQ_RAW | MUT_RAW | BNK_INI | 7 };
-pub const SPONSOR: Any      = Any { raw: MUT_RAW | BNK_INI | 15 };
+pub const MEMORY: Any       = Any { raw: MUT_RAW | 0 };
+pub const DDEQUE: Any       = Any { raw: MUT_RAW | 1 };
+pub const DEBUG_DEV: Any    = Any { raw: OPQ_RAW | MUT_RAW | 2 };
+pub const CLOCK_DEV: Any    = Any { raw: OPQ_RAW | MUT_RAW | 3 };
+pub const IO_DEV: Any       = Any { raw: OPQ_RAW | MUT_RAW | 4 };
+pub const BLOB_DEV: Any     = Any { raw: OPQ_RAW | MUT_RAW | 5 };
+pub const TIMER_DEV: Any    = Any { raw: OPQ_RAW | MUT_RAW | 6 };
+pub const MEMO_DEV: Any     = Any { raw: OPQ_RAW | MUT_RAW | 7 };
+pub const SPONSOR: Any      = Any { raw: MUT_RAW | 15 };
 
 pub const RAM_BASE_OFS: usize = 16;  // RAM offsets below this value are reserved
 
@@ -37,8 +34,7 @@ const DEVICE_MAX:   usize = 6;      // number of Core devices
 
 pub struct Core {
     quad_rom:   [Quad; QUAD_ROM_MAX],
-    quad_ram0:  [Quad; QUAD_RAM_MAX],
-    quad_ram1:  [Quad; QUAD_RAM_MAX],
+    quad_ram:   [Quad; QUAD_RAM_MAX],
     gc_queue:   [Any; QUAD_RAM_MAX],
     blob_ram:   [u8; BLOB_RAM_MAX],
     device:     [Option<Box<dyn Device>>; DEVICE_MAX],
@@ -84,7 +80,7 @@ pub const ROM_TOP_OFS: usize = ROM_BASE_OFS;
             Quad::empty_t();
             QUAD_RAM_MAX
         ];
-        quad_ram[MEMORY.ofs()]      = Quad::memory_t(Any::ram(BNK_INI, RAM_TOP_OFS), NIL, ZERO, NIL);
+        quad_ram[MEMORY.ofs()]      = Quad::memory_t(Any::ram(RAM_TOP_OFS), NIL, ZERO, NIL);
         quad_ram[DDEQUE.ofs()]      = Quad::ddeque_t(NIL, NIL, NIL, NIL);  // no events, no continuations
         quad_ram[DEBUG_DEV.ofs()]   = Quad::actor_t(ZERO, NIL, UNDEF);    // debug device #0
         quad_ram[CLOCK_DEV.ofs()]   = Quad::actor_t(PLUS_1, NIL, UNDEF);  // clock device #1
@@ -136,8 +132,7 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
 
         Core {
             quad_rom,
-            quad_ram0: if BNK_INI == BNK_0 { quad_ram } else { [ Quad::empty_t(); QUAD_RAM_MAX ] },
-            quad_ram1: if BNK_INI == BNK_1 { quad_ram } else { [ Quad::empty_t(); QUAD_RAM_MAX ] },
+            quad_ram,
             gc_queue,
             blob_ram,
             device: [
@@ -964,7 +959,7 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
     fn set_k_first(&mut self, ptr: Any) { self.ram_mut(self.ddeque()).set_y(ptr); }
     fn k_last(&self) -> Any { self.ram(self.ddeque()).z() }
     fn set_k_last(&mut self, ptr: Any) { self.ram_mut(self.ddeque()).set_z(ptr); }
-    pub fn ddeque(&self) -> Any { self.ptr_to_mem(DDEQUE) }
+    pub fn ddeque(&self) -> Any { DDEQUE }
 
     pub fn rom_top(&self) -> Any { self.rom_top }
     pub fn set_rom_top(&mut self, ptr: Any) { self.rom_top = ptr }
@@ -976,7 +971,7 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
     fn set_ram_free(&mut self, fix: Any) { self.ram_mut(self.memory()).set_y(fix); }
     fn ram_root(&self) -> Any { self.ram(self.memory()).z() }
     fn set_ram_root(&mut self, ptr: Any) { self.ram_mut(self.memory()).set_z(ptr); }
-    pub fn memory(&self) -> Any { self.ptr_to_mem(MEMORY) }
+    pub fn memory(&self) -> Any { MEMORY }
     pub fn blob_top(&self) -> Any { Any::fix(BLOB_RAM_MAX as isize) }
 
     fn new_event(&mut self, target: Any, msg: Any) -> Result<Any, Error> {
@@ -1201,15 +1196,6 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
     pub fn in_heap(&self, val: Any) -> bool {
         val.is_ram() && (val.ofs() < self.ram_top().ofs())
     }
-    pub fn ptr_to_mem(&self, ptr: Any) -> Any {  // convert ptr/cap to current gc_phase
-        let bank = ptr.bank();
-        if bank.is_none() {
-            ptr
-        } else {
-            let raw = ptr.raw() & !BNK_RAW;
-            Any::new(self.gc_phase() | raw)
-        }
-    }
     pub fn ptr_to_cap(&self, ptr: Any) -> Any {
         let t = self.mem(ptr).t();
         assert!((t == ACTOR_T) || (t == PROXY_T));
@@ -1292,7 +1278,7 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
                 //panic!("out of memory!");
                 return Err(E_NO_MEM);  // no memory available
             }
-            self.set_ram_top(Any::ram(self.gc_phase(), ofs));
+            self.set_ram_top(Any::ram(ofs));
             top
         };
         self.gc_store(ptr, *init);  // copy initial value
@@ -1314,10 +1300,9 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
         self.gc_queue[GC_FIRST] = NIL;
         self.gc_queue[GC_LAST] = NIL;
         // scan reserved RAM
-        let bank = self.gc_phase();  // FIXME: remove the concept of phase/bank!
         let mut ofs = DDEQUE.ofs();
         while ofs < RAM_BASE_OFS {
-            let ptr = Any::ram(bank, ofs);
+            let ptr = Any::ram(ofs);
             self.gcq_scan(ptr);
             ofs += 1;
         }
@@ -1331,7 +1316,7 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
         while ofs > RAM_BASE_OFS {
             ofs -= 1;
             if self.gc_queue[ofs] == UNDEF {  // still "white"
-                let ptr = Any::ram(bank, ofs);
+                let ptr = Any::ram(ofs);
                 if self.ram(ptr).t() != FREE_T {  // not already free
                     // add to free-list
                     self.free(ptr);
@@ -1392,133 +1377,24 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
     }
 
     pub fn gc_stop_the_world(&mut self) -> Result<(), Error> {
-        if true {
-            self.gcq_collect();  // redirect to new GC algorithm
-            return Ok(())
-        }
-        /*
-        1. Swap generations (`GC_GENX` <--> `GC_GENY`)
-        2. Mark each cell in the root-set with `GC_SCAN`
-            1. If a new cell is added to the root-set, mark it with `GC_SCAN`
-        3. Mark each newly-allocated cell with `GC_SCAN`
-        4. While there are cells marked `GC_SCAN`:
-            1. Scan a cell, for each field of the cell:
-                1. If it points to the heap, and is marked with the _previous_ generation, mark it `GC_SCAN`
-            2. Mark the cell with the _current_ generation
-        5. For each cell marked with the _previous_ generation,
-            1. Mark the cell `GC_FREE` and add it to the free-cell chain
-        */
-        let ddeque = self.ddeque();
-        let mut sweep = self.ram_top();
-        let root = self.ram_root();
-        let bank = if self.gc_phase() == BNK_0 { BNK_1 } else { BNK_0 };  // determine new phase
-        self.set_ram_root(UNDEF);  // toggle GC phase
-        self.gc_store(
-            Any::ram(bank, MEMORY.ofs()),
-            Quad::memory_t(Any::ram(bank, ddeque.ofs()), NIL, ZERO, root));
-        let mut scan = ddeque;
-        while scan.ofs() < RAM_BASE_OFS {  // mark reserved RAM
-            let raw = scan.raw();
-            let t = self.gc_load(scan).t();
-            if (t == ACTOR_T) || (t == PROXY_T) {
-                scan = Any::new(raw | OPQ_RAW);  // inferred capability
-            }
-            self.gc_mark(scan)?;
-            scan = Any::new(raw + 1);
-        }
-        let root = self.gc_mark(root)?;
-        self.set_ram_root(root);
-        scan = self.ddeque();
-        while scan != self.ram_top() {  // scan marked quads
-            self.gc_scan(scan)?;
-            scan = Any::new(scan.raw() + 1);
-        }
-        while sweep.ofs() >= RAM_BASE_OFS {  // sweep free Proxy_T references
-            let quad = self.gc_load(sweep);
-            if quad.t() == PROXY_T {
-                // notify device that proxy is not referenced
-                let id = self.device_id(sweep)?;
-                let mut dev_mut = self.device[id].take().unwrap();
-                dev_mut.drop_proxy(sweep);
-                self.device[id] = Some(dev_mut);
-            }
-            sweep = Any::new(sweep.raw() - 1);
-        }
-        Ok(())
-    }
-    fn gc_mark(&mut self, val: Any) -> Result<Any, Error> {
-        if let Some(bank) = val.bank() {
-            if bank != self.gc_phase() {
-                let quad = self.gc_load(val);
-                if quad.is_fwd_ref() {
-                    return Ok(quad.z());  // follow "broken heart"
-                }
-                // copy quad to new-space
-                let mut dup = self.reserve(&quad)?;
-                if val.is_cap() {
-                    dup = self.ptr_to_cap(dup);  // restore CAP marker
-                }
-                if quad.t() == STUB_T {
-                    // notify device that stub is being relocated
-                    let id = self.device_id(val)?;
-                    let mut dev_mut = self.device[id].take().unwrap();
-                    dev_mut.move_stub(val, dup);
-                    self.device[id] = Some(dev_mut);
-                }
-                //println!("gc_mark: ${:08x} --> ${:08x}", val.raw(), dup.raw());
-                assert_ne!(val.raw(), dup.raw());
-                self.gc_store(val, Quad::fwd_ref_t(dup));  // leave "broken heart" behind
-                return Ok(dup);
-            }
-        }
-        Ok(val)
-    }
-    fn gc_scan(&mut self, ptr: Any) -> Result<Any, Error> {
-        assert_eq!(Some(self.gc_phase()), ptr.bank());
-        let quad = self.gc_load(ptr);
-        let t = self.gc_mark(quad.t())?;
-        let x = self.gc_mark(quad.x())?;
-        let y = self.gc_mark(quad.y())?;
-        let z = self.gc_mark(quad.z())?;
-        let quad = Quad::new(t, x, y, z);
-        self.gc_store(ptr, quad);
-        Ok(ptr)
+        self.gcq_collect();  // redirect to new GC algorithm
+        return Ok(())
     }
     fn gc_load(&self, ptr: Any) -> Quad {  // load quad directly
-        match ptr.bank() {
-            Some(bank) => {
-                let ofs = ptr.ofs();
-                if bank == BNK_0 {
-                    self.quad_ram0[ofs]
-                } else {
-                    self.quad_ram1[ofs]
-                }
-            },
-            None => panic!("invalid gc_load=${:08x}", ptr.raw()),
+        let raw = ptr.raw();
+        if (raw & (DIR_RAW | MUT_RAW)) != MUT_RAW {  // must be ram or cap
+            panic!("invalid gc_load=${:08x}", raw)
         }
+        let ofs = (raw & !MSK_RAW) as usize;
+        self.quad_ram[ofs]
     }
     fn gc_store(&mut self, ptr: Any, quad: Quad) {  // store quad directly
-        match ptr.bank() {
-            Some(bank) => {
-                let ofs = ptr.ofs();
-                if bank == BNK_0 {
-                    self.quad_ram0[ofs] = quad;
-                } else {
-                    self.quad_ram1[ofs] = quad;
-                }
-            },
-            None => panic!("invalid gc_store=${:08x}", ptr.raw()),
+        let raw = ptr.raw();
+        if (raw & (DIR_RAW | MUT_RAW)) != MUT_RAW {  // must be ram or cap
+            panic!("invalid gc_store=${:08x}", raw)
         }
-    }
-    pub fn gc_phase(&self) -> Raw {
-        let mem = Any::ram(BNK_0, MEMORY.ofs());
-        // The RAM/GC root pointer is also used to indicate which RAM bank is active.
-        // The inactive bank has `UNDEF` in this field.
-        if self.gc_load(mem).z() == UNDEF {
-            BNK_1
-        } else {
-            BNK_0
-        }
+        let ofs = (raw & !MSK_RAW) as usize;
+        self.quad_ram[ofs] = quad;
     }
 
     fn device_id(&self, dev: Any) -> Result<usize, Error> {
@@ -1566,28 +1442,24 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
         Ok(fwd)
     }
     fn quad(&self, ptr: Any) -> &Quad {  // non-forwarding quad access
-        if ptr.is_rom() {
-            let ofs = ptr.ofs();
-            &self.quad_rom[ofs]
-        } else if let Some(bank) = ptr.bank() {
-            let ofs = ptr.ofs();
-            if bank == BNK_0 {
-                &self.quad_ram0[ofs]
-            } else {
-                &self.quad_ram1[ofs]
-            }
-        } else {
+        if ptr.is_fix() {
             panic!("invalid ptr=${:08x}", ptr.raw());
+        }
+        let ofs = ptr.ofs();
+        if ptr.is_rom() {
+            &self.quad_rom[ofs]
+        } else {
+            &self.quad_ram[ofs]
         }
     }
     pub fn mem(&self, ptr: Any) -> &Quad {
         if !ptr.is_ptr() {
             panic!("invalid ptr=${:08x}", ptr.raw());
         }
-        if ptr.is_ram() {
-            self.ram(ptr)
-        } else {
+        if ptr.is_rom() {
             self.rom(ptr)
+        } else {
+            self.ram(ptr)
         }
     }
     pub fn rom(&self, ptr: Any) -> &Quad {
@@ -1599,47 +1471,27 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
         &self.quad_rom[ofs]
     }
     pub fn ram(&self, ptr: Any) -> &Quad {
-        if ptr.is_cap() {
-            panic!("opaque ptr=${:08x}", ptr.raw());
-        }
         let fwd = self.follow_fwd(ptr).unwrap();  // FIXME: report error?
-        if let Some(bank) = fwd.bank() {
-            let ofs = fwd.ofs();
-            if bank == BNK_0 {
-                &self.quad_ram0[ofs]
-            } else {
-                &self.quad_ram1[ofs]
-            }
-        } else {
+        if !ptr.is_ram() {
             panic!("invalid RAM ptr=${:08x}", fwd.raw());
         }
+        let ofs = fwd.ofs();
+        &self.quad_ram[ofs]
     }
     pub fn ram_mut(&mut self, ptr: Any) -> &mut Quad {
-        if ptr.is_cap() {
-            panic!("opaque ptr=${:08x}", ptr.raw());
-        }
         let fwd = self.follow_fwd(ptr).unwrap();  // FIXME: report error?
-        if let Some(bank) = fwd.bank() {
-            let ofs = fwd.ofs();
-            if bank == BNK_0 {
-                &mut self.quad_ram0[ofs]
-            } else {
-                &mut self.quad_ram1[ofs]
-            }
-        } else {
+        if !ptr.is_ram() {
             panic!("invalid RAM ptr=${:08x}", fwd.raw());
         }
+        let ofs = fwd.ofs();
+        &mut self.quad_ram[ofs]
     }
 
     pub fn rom_buffer(&self) -> &[Quad] {
         &self.quad_rom
     }
-    pub fn ram_buffer(&self, bank: Raw) -> &[Quad] {
-        if bank == BNK_0 {
-            &self.quad_ram0
-        } else {
-            &self.quad_ram1
-        }
+    pub fn ram_buffer(&self) -> &[Quad] {
+        &self.quad_ram
     }
     pub fn blob_buffer(&self) -> &[u8] {
         &self.blob_ram
@@ -2031,17 +1883,13 @@ pub const T_DEV_BEH: Any = Any { raw: T_DEV_OFS as Raw };
         let boot_ptr = core.reserve(&Quad::new_actor(boot_beh, NIL)).unwrap();
         let a_boot = core.ptr_to_cap(boot_ptr);
         core.event_inject(SPONSOR, a_boot, UNDEF).unwrap();
-        assert_eq!(BNK_0, core.gc_phase());
         let mut result;
         result = core.gc_stop_the_world();
         assert!(result.is_ok());
-        //assert_eq!(BNK_1, core.gc_phase()); -- new GC doesn't switch phase/bank
         let err = core.run_loop();
         assert_eq!(E_OK, err);
-        let _bank = core.gc_phase();
         result = core.gc_stop_the_world();
         assert!(result.is_ok());
-        //assert_ne!(_bank, core.gc_phase()); -- new GC doesn't switch phase/bank
     }
 
     #[test]

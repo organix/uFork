@@ -47,9 +47,6 @@ impl Host {
     pub fn actor_revert(&mut self) -> bool {
         self.core.actor_revert()
     }
-    pub fn gc_phase(&self) -> Raw {
-        self.core.gc_phase()
-    }
     pub fn gc_run(&mut self) {
         self.core.gc_stop_the_world().unwrap()
     }
@@ -94,8 +91,8 @@ impl Host {
     pub fn rom_buffer(&self) -> *const Quad {
         self.core.rom_buffer().as_ptr()
     }
-    pub fn ram_buffer(&self, bank: Raw) -> *const Quad {
-        self.core.ram_buffer(bank).as_ptr()
+    pub fn ram_buffer(&self) -> *const Quad {
+        self.core.ram_buffer().as_ptr()
     }
     pub fn blob_buffer(&self) -> *const u8 {
         self.core.blob_buffer().as_ptr()

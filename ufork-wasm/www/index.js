@@ -9,7 +9,6 @@ const $ram_top = document.getElementById("ram-top");
 const $ram_next = document.getElementById("ram-next");
 const $ram_free = document.getElementById("ram-free");
 const $gc_root = document.getElementById("gc-root");
-const $gc_phase = document.getElementById("gc-phase");
 const $rom_top = document.getElementById("rom-top");
 const $mem_pages = document.getElementById("mem-pages");
 const $sponsor_memory = document.getElementById("sponsor-memory");
@@ -45,9 +44,6 @@ const MSK_RAW   = 0xF000_0000;  // mask for type-tag bits
 const DIR_RAW   = 0x8000_0000;  // 1=direct (fixnum), 0=indirect (pointer)
 const OPQ_RAW   = 0x4000_0000;  // 1=opaque (capability), 0=transparent (navigable)
 const MUT_RAW   = 0x2000_0000;  // 1=read-write (mutable), 0=read-only (immutable)
-const BNK_RAW   = 0x1000_0000;  // 1=bank_1, 0=bank_0 (half-space GC phase)
-const BNK_0_RAW = 0;
-const BNK_1_RAW = BNK_RAW;
 // raw constants
 const UNDEF_RAW = 0x0000_0000;
 const NIL_RAW   = 0x0000_0001;
@@ -152,7 +148,6 @@ let h_ram_top = h_no_init;
 let h_reserve = h_no_init;
 let h_blob_buffer = h_no_init;
 let h_blob_top = h_no_init;
-let h_gc_phase = h_no_init;
 let h_in_mem = h_no_init;
 let h_car = h_no_init;
 let h_cdr = h_no_init;
@@ -190,11 +185,8 @@ function h_rawofs(raw) {
 function h_romptr(ofs) {
     return h_rawofs(ofs);
 }
-function h_ramptr(ofs, bnk) {
-    if (typeof bnk !== "number") {
-        bnk = h_gc_phase();
-    }
-    return (h_rawofs(ofs) | MUT_RAW | bnk);
+function h_ramptr(ofs) {
+    return (h_rawofs(ofs) | MUT_RAW);
 }
 function h_cap_to_ptr(cap) {
     return (h_is_fix(cap)
@@ -215,7 +207,7 @@ function h_mem_pages() {
 function h_read_quad(ptr) {
     if (h_is_ram(ptr)) {
         const ofs = h_rawofs(ptr);
-        const ram_ofs = h_ram_buffer(h_gc_phase());
+        const ram_ofs = h_ram_buffer();
         const ram_top = h_rawofs(h_ram_top());
         if (ofs < ram_top) {
             const ram_len = ram_top << 2;
@@ -256,7 +248,7 @@ function h_read_quad(ptr) {
 function h_write_quad(ptr, quad) {
     if (h_is_ram(ptr)) {
         const ofs = h_rawofs(ptr);
-        const ram_ofs = h_ram_buffer(h_gc_phase());
+        const ram_ofs = h_ram_buffer();
         const ram_top = h_rawofs(h_ram_top());
         if (ofs < ram_top) {
             const ram_len = ram_top << 2;
@@ -970,7 +962,6 @@ const drawHost = () => {
     updateElementText($gc_root, h_print(gc_root));
     updateElementText($rom_top, h_print(rom_top));
     updateElementText($mem_pages, h_mem_pages());
-    updateElementText($gc_phase, h_gc_phase() == 0 ? "Bank 0" : "Bank 1");
     const ddeque_quad = h_read_quad(h_ramptr(DDEQUE_OFS));
     const e_first = ddeque_quad.t;
     //const e_last = ddeque_quad.x;
@@ -1316,7 +1307,7 @@ function h_snapshot() {
     const rom_len = h_rawofs(h_rom_top()) << 4;
     const rom = new Uint8Array(mem_base, rom_ofs, rom_len);
 
-    const ram_ofs = h_ram_buffer(h_gc_phase());
+    const ram_ofs = h_ram_buffer();
     const ram_len = h_rawofs(h_ram_top()) << 4;
     const ram = new Uint8Array(mem_base, ram_ofs, ram_len);
 
@@ -1339,15 +1330,10 @@ function h_restore(snapshot) {
     const rom = new Uint8Array(mem_base, rom_ofs, rom_len);
     rom.set(snapshot.rom);
 
-    //const old_phase = h_gc_phase();
-    const old_ram = h_ramptr(MEMORY_OFS);
-    h_write_quad(old_ram, { t: UNDEF_RAW, x: UNDEF_RAW, y: UNDEF_RAW, z: UNDEF_RAW });
-    const gc_phase = snapshot.ram[0] & BNK_RAW;
-    const ram_ofs = h_ram_buffer(gc_phase);
+    const ram_ofs = h_ramptr(MEMORY_OFS);
     const ram_len = snapshot.ram.byteLength;
     const ram = new Uint8Array(mem_base, ram_ofs, ram_len);
     ram.set(snapshot.ram);
-    //const new_phase = h_gc_phase();
 
     const blob_ofs = h_blob_buffer();
     const blob_len = snapshot.blob.length;
@@ -1453,7 +1439,7 @@ function test_suite(exports) {
     const rom = new Uint32Array(h_memory(), rom_ofs, (h_rawofs(h_rom_top()) << 2));
     console.log("ROM:", rom);
 
-    const ram_ofs = h_ram_buffer(h_gc_phase());
+    const ram_ofs = h_ram_buffer();
     const ram = new Uint32Array(h_memory(), ram_ofs, (h_rawofs(h_ram_top()) << 2));
     console.log("RAM:", ram);
 
@@ -1541,7 +1527,6 @@ WebAssembly.instantiateStreaming(
     h_reserve = wasm_mutex_call(exports.h_reserve);
     h_blob_buffer = wasm_mutex_call(exports.h_blob_buffer);
     h_blob_top = wasm_mutex_call(exports.h_blob_top);
-    h_gc_phase = wasm_mutex_call(exports.h_gc_phase);
     h_in_mem = wasm_mutex_call(exports.h_in_mem);
     h_car = wasm_mutex_call(exports.h_car);
     h_cdr = wasm_mutex_call(exports.h_cdr);

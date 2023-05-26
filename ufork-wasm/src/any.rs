@@ -137,9 +137,9 @@ impl Any {
         let raw = (ofs as Raw) & !MSK_RAW;
         Any::new(raw)
     }
-    pub fn ram(bank: Raw, ofs: usize) -> Any {
+    pub fn ram(ofs: usize) -> Any {
         let raw = (ofs as Raw) & !MSK_RAW;
-        Any::new(MUT_RAW | bank | raw)
+        Any::new(MUT_RAW | raw)
     }
     pub fn raw(&self) -> Raw {
         self.raw
@@ -164,14 +164,7 @@ impl Any {
         (self.raw & MSK_RAW) == 0
     }
     pub fn is_ram(&self) -> bool {
-        (self.raw & (DIR_RAW | OPQ_RAW | MUT_RAW)) == MUT_RAW
-    }
-    pub fn bank(&self) -> Option<Raw> {
-        if (self.raw & (DIR_RAW | MUT_RAW)) == MUT_RAW {  // include CAPs
-            Some(self.raw & BNK_RAW)
-        } else {
-            None
-        }
+        (self.raw & MSK_RAW) == MUT_RAW
     }
     pub fn get_fix(&self) -> Result<isize, Error> {
         match self.fix_num() {
@@ -244,7 +237,7 @@ mod tests {
 
     #[test]
     fn ptr_is_distinct_from_cap() {
-        let p = Any::ram(BNK_0, 42);
+        let p = Any::ram(42);
         let c = Any::cap(42);
         assert_ne!(p.raw(), c.raw());
         assert_eq!(p.ofs(), c.ofs());

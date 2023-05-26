@@ -62,10 +62,6 @@ const MSK_RAW: Raw          = 0xF000_0000;  // mask for type-tag bits
 const DIR_RAW: Raw          = 0x8000_0000;  // 1=direct (fixnum), 0=indirect (pointer)
 const OPQ_RAW: Raw          = 0x4000_0000;  // 1=opaque (capability), 0=transparent (navigable)
 const MUT_RAW: Raw          = 0x2000_0000;  // 1=read-write (mutable), 0=read-only (immutable)
-const BNK_RAW: Raw          = 0x1000_0000;  // 1=bank_1, 0=bank_0 (half-space GC phase)
-
-const BNK_0: Raw            = 0;
-const BNK_1: Raw            = BNK_RAW;
 
 #[cfg(target_arch = "wasm32")]
 #[link(wasm_import_module = "js")]
@@ -159,9 +155,9 @@ pub fn h_reserve_rom() -> Raw {
 }
 
 #[no_mangle]
-pub fn h_ram_buffer(bank: Raw) -> *const Quad {
+pub fn h_ram_buffer() -> *const Quad {
     unsafe {
-        the_host().borrow().ram_buffer(bank)
+        the_host().borrow().ram_buffer()
     }
 }
 
@@ -190,13 +186,6 @@ pub fn h_blob_buffer() -> *const u8 {
 pub fn h_blob_top() -> Raw {
     unsafe {
         the_host().borrow().blob_top()
-    }
-}
-
-#[no_mangle]
-pub fn h_gc_phase() -> Raw {
-    unsafe {
-        the_host().borrow().gc_phase()
     }
 }
 

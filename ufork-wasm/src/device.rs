@@ -119,7 +119,7 @@ impl Device for IoDevice {
         if proxy.t() != PROXY_T {
             return Err(E_NOT_PTR);
         }
-        if proxy.x() != core.ptr_to_mem(BLOB_DEV) {
+        if proxy.x() != BLOB_DEV {
             return Err(E_BOUNDS);
         }
         let ofs = proxy.y().get_fix()? as usize;
