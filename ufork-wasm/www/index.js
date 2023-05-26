@@ -208,7 +208,7 @@ function h_next(ptr) {
         const t = quad.t;
         if (t === INSTR_T) {
             const op = quad.x;
-            if ((op != VM_IF) && (op != VM_END)) {
+            if ((op !== VM_IF) && (op !== VM_END)) {
                 return quad.z;
             }
         } else if (t === PAIR_T) {
@@ -1443,14 +1443,14 @@ function wasm_mutex_call(wasm_fn) {
 }
 
 function test_suite(exports) {
-    console.log("h_fixnum(0) =", u_fixnum(0), u_fixnum(0).toString(16), u_print(u_fixnum(0)));
-    console.log("h_fixnum(1) =", u_fixnum(1), u_fixnum(1).toString(16), u_print(u_fixnum(1)));
-    console.log("h_fixnum(-1) =", u_fixnum(-1), u_fixnum(-1).toString(16), u_print(u_fixnum(-1)));
-    console.log("h_fixnum(-2) =", u_fixnum(-2), u_fixnum(-2).toString(16), u_print(u_fixnum(-2)));
+    console.log("u_fixnum(0) =", u_fixnum(0), u_fixnum(0).toString(16), u_print(u_fixnum(0)));
+    console.log("u_fixnum(1) =", u_fixnum(1), u_fixnum(1).toString(16), u_print(u_fixnum(1)));
+    console.log("u_fixnum(-1) =", u_fixnum(-1), u_fixnum(-1).toString(16), u_print(u_fixnum(-1)));
+    console.log("u_fixnum(-2) =", u_fixnum(-2), u_fixnum(-2).toString(16), u_print(u_fixnum(-2)));
     console.log("h_rom_top() =", h_rom_top(), u_print(h_rom_top()));
     console.log("h_ram_top() =", h_ram_top(), u_print(h_ram_top()));
-    console.log("h_ramptr(5) =", u_ramptr(5), u_print(u_ramptr(5)));
-    console.log("h_ptr_to_cap(h_ramptr(3)) =", u_ptr_to_cap(u_ramptr(3)), u_print(u_ptr_to_cap(u_ramptr(3))));
+    console.log("u_ramptr(5) =", u_ramptr(5), u_print(u_ramptr(5)));
+    console.log("u_ptr_to_cap(u_ramptr(3)) =", u_ptr_to_cap(u_ramptr(3)), u_print(u_ptr_to_cap(u_ramptr(3))));
     console.log("h_memory() =", h_memory());
 
     const rom_ofs = h_rom_buffer();
