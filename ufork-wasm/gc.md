@@ -46,7 +46,7 @@ and the rest of GC memory is set to UNDEF
  16     | Pair_T            | car = 42          | cdr = NIL         | UNDEF             | Cons Cell         | UNDEF
  17     | Free_T            | UNDEF             | UNDEF             | NIL               | Free Cell         | UNDEF
  18     | Actor_T           | code = boot_beh   | data = NIL        | effect = UNDEF    | Bootstrap Actor   | UNDEF
- 19     | sponsor = 16      | target = 18       | message = NIL     | next = NIL        | Bootstrap Event   | UNDEF
+ 19     | sponsor = 15      | target = 18       | message = NIL     | next = NIL        | Bootstrap Event   | UNDEF
  20     | ...               | ...               | ...               | ...               | Top of RAM        | UNDEF
 
 Reserved RAM is scanned
@@ -63,7 +63,7 @@ adding any referenced cells to the GC queue
  16     | Pair_T            | car = 42          | cdr = NIL         | UNDEF             | Cons Cell         | UNDEF
  17     | Free_T            | UNDEF             | UNDEF             | NIL               | Free Cell         | UNDEF
  18     | Actor_T           | code = boot_beh   | data = NIL        | effect = UNDEF    | Bootstrap Actor   | UNDEF
- 19     | sponsor = 16      | target = 18       | message = NIL     | next = NIL        | Bootstrap Event   | _NIL_
+ 19     | sponsor = 15      | target = 18       | message = NIL     | next = NIL        | Bootstrap Event   | _NIL_
  20     | ...               | ...               | ...               | ...               | Top of RAM        | UNDEF
 
 The first item in the GC queue is scanned,
@@ -80,7 +80,7 @@ The first item is removed from the GC queue
  16     | Pair_T            | car = 42          | cdr = NIL         | UNDEF             | Cons Cell         | UNDEF
  17     | Free_T            | UNDEF             | UNDEF             | NIL               | Free Cell         | UNDEF
  18     | Actor_T           | code = boot_beh   | data = NIL        | effect = UNDEF    | Bootstrap Actor   | _NIL_
- 19     | sponsor = 16      | target = 18       | message = NIL     | next = NIL        | Bootstrap Event   | _UNIT_
+ 19     | sponsor = 15      | target = 18       | message = NIL     | next = NIL        | Bootstrap Event   | _UNIT_
  20     | ...               | ...               | ...               | ...               | Top of RAM        | UNDEF
 
 This process is repeated until the GC queue is empty.
@@ -94,7 +94,7 @@ This process is repeated until the GC queue is empty.
  16     | Pair_T            | car = 42          | cdr = NIL         | UNDEF             | Cons Cell         | UNDEF
  17     | Free_T            | UNDEF             | UNDEF             | NIL               | Free Cell         | UNDEF
  18     | Actor_T           | code = boot_beh   | data = NIL        | effect = UNDEF    | Bootstrap Actor   | _UNIT_
- 19     | sponsor = 16      | target = 18       | message = NIL     | next = NIL        | Bootstrap Event   | UNIT
+ 19     | sponsor = 15      | target = 18       | message = NIL     | next = NIL        | Bootstrap Event   | UNIT
  20     | ...               | ...               | ...               | ...               | Top of RAM        | UNDEF
 
 Cells that are still set to UNDEF
@@ -110,5 +110,5 @@ from the Top of RAM down to Reserved RAM.
  16     | _Free_T_          | _UNDEF_           | _UNDEF_           | _17_              | _Free Cell_       | _UNDEF_
  17     | Free_T            | UNDEF             | UNDEF             | NIL               | Free Cell         | UNDEF
  18     | Actor_T           | code = boot_beh   | data = NIL        | effect = UNDEF    | Bootstrap Actor   | UNIT
- 19     | sponsor = 16      | target = 18       | message = NIL     | next = NIL        | Bootstrap Event   | UNIT
+ 19     | sponsor = 15      | target = 18       | message = NIL     | next = NIL        | Bootstrap Event   | UNIT
  20     | ...               | ...               | ...               | ...               | Top of RAM        | UNDEF
