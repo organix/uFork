@@ -1496,11 +1496,8 @@ WebAssembly.instantiateStreaming(
                 console.log("PRINT:", blob, base, ofs);
             },
             host_log(x) {  // WASM type: (i32) -> nil
-                // process asynchronously to avoid WASM re-entrancy
-                x = (x >>> 0);  // convert i32 -> u32
-                setTimeout(() => {
-                    console.log("LOG:", x, "=", u_print(x), "->", u_pprint(x));
-                });
+                const u = (x >>> 0);  // convert i32 -> u32
+                console.log("LOG:", u, "=", u_print(u), "->", u_pprint(u));
             },
             host_timer(delay, stub) {  // WASM type: (i32, i32) -> nil
                 if (u_is_fix(delay)) {
