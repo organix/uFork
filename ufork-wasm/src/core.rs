@@ -22,7 +22,7 @@ pub const RAM_BASE_OFS: usize = 16;  // RAM offsets below this value are reserve
 pub const GC_FIRST: usize   = 0;  // offset of "first" in gc_queue[]
 pub const GC_LAST: usize    = 1;  // offset of "last" in gc_queue[]
 
-// core limits
+// core limits (repeated in `index.js`)
 const QUAD_ROM_MAX: usize = 1<<10;  // 1K quad-cells of ROM
 const QUAD_RAM_MAX: usize = 1<<8;   // 256 quad-cells of RAM
 //const BLOB_RAM_MAX: usize = 64;     // 64 octets of Blob RAM (for testing)

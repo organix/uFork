@@ -95,8 +95,11 @@ const VM_STATE  = 0x8000_001C;  // reserved
 const VM_001D   = 0x8000_001D;  // reserved
 const VM_IS_EQ  = 0x8000_001E;
 const VM_IS_NE  = 0x8000_001F;
-// memory layout
+// memory limits (from `core.rs`)
 const QUAD_ROM_MAX = 1 << 10;
+const QUAD_RAM_MAX = 1 << 8;
+const BLOB_RAM_MAX = 1 << 8;
+// memory layout (from `core.rs`)
 const MEMORY_OFS = 0;
 const DDEQUE_OFS = 1;
 const DEBUG_DEV_OFS = 2;
@@ -131,26 +134,26 @@ function faultMsg(e_code) {
     return "unknown fault";
 }
 
-const h_no_init = function uninitialized() {
+const u_no_init = function uninitialized() {
     return u_warning("WASM not initialized.");
 };
 // functions imported from uFork WASM module
-let h_step = h_no_init;
-let h_event_inject = h_no_init;
-let h_revert = h_no_init;
-let h_gc_run = h_no_init;
-let h_rom_buffer = h_no_init;
-let h_rom_top = h_no_init;
-let h_set_rom_top = h_no_init;
-let h_reserve_rom = h_no_init;
-let h_ram_buffer = h_no_init;
-let h_ram_top = h_no_init;
-let h_reserve = h_no_init;
-let h_blob_buffer = h_no_init;
-let h_blob_top = h_no_init;
-let h_car = h_no_init;
-let h_cdr = h_no_init;
-let h_memory = h_no_init;
+let h_step = u_no_init;
+let h_event_inject = u_no_init;
+let h_revert = u_no_init;
+let h_gc_run = u_no_init;
+let u_rom_ofs = u_no_init;
+let h_rom_top = u_no_init;
+let h_set_rom_top = u_no_init;
+let h_reserve_rom = u_no_init;
+let u_ram_ofs = u_no_init;
+let h_ram_top = u_no_init;
+let h_reserve = u_no_init;
+let u_blob_ofs = u_no_init;
+let h_blob_top = u_no_init;
+let h_car = u_no_init;
+let h_cdr = u_no_init;
+let u_memory = u_no_init;
 // local helper functions
 function u_warning(message) {
     console.log("WARNING!", message);
@@ -202,9 +205,9 @@ function u_fix_to_i32(fix) {
 function u_in_mem(ptr) {
     return (ptr > FREE_T) && !u_is_fix(ptr);
 }
-function h_next(ptr) {
+function u_next(ptr) {
     if (u_is_ptr(ptr)) {
-        const quad = h_read_quad(ptr);
+        const quad = u_read_quad(ptr);
         const t = quad.t;
         if (t === INSTR_T) {
             const op = quad.x;
@@ -219,17 +222,14 @@ function h_next(ptr) {
     }
     return UNDEF_RAW;
 }
-function h_mem_pages() {
-    return h_memory().byteLength / 65536;
+function u_mem_pages() {
+    return u_memory().byteLength / 65536;
 }
-function h_read_quad(ptr) {
+function u_read_quad(ptr) {
     if (u_is_ram(ptr)) {
         const ofs = u_rawofs(ptr);
-        const ram_ofs = h_ram_buffer();
-        const ram_top = u_rawofs(h_ram_top());
-        if (ofs < ram_top) {
-            const ram_len = ram_top << 2;
-            const ram = new Uint32Array(h_memory(), ram_ofs, ram_len);
+        if (ofs < QUAD_RAM_MAX) {
+            const ram = new Uint32Array(u_memory(), u_ram_ofs(), (QUAD_RAM_MAX << 2));
             const idx = ofs << 2;  // convert quad address to Uint32Array index
             const quad = {
                 t: ram[idx + 0],
@@ -244,11 +244,8 @@ function h_read_quad(ptr) {
     }
     if (u_is_rom(ptr)) {
         const ofs = u_rawofs(ptr);
-        const rom_ofs = h_rom_buffer();
-        const rom_top = u_rawofs(h_rom_top());
-        if (ofs < rom_top) {
-            const rom_len = rom_top << 2;
-            const rom = new Uint32Array(h_memory(), rom_ofs, rom_len);
+        if (ofs < QUAD_ROM_MAX) {
+            const rom = new Uint32Array(u_memory(), u_rom_ofs(), (QUAD_ROM_MAX << 2));
             const idx = ofs << 2;  // convert quad address to Uint32Array index
             const quad = {
                 t: rom[idx + 0],
@@ -263,14 +260,11 @@ function h_read_quad(ptr) {
     }
     return u_warning("h_read_quad: required ptr, got "+u_print(ptr));
 }
-function h_write_quad(ptr, quad) {
+function u_write_quad(ptr, quad) {
     if (u_is_ram(ptr)) {
         const ofs = u_rawofs(ptr);
-        const ram_ofs = h_ram_buffer();
-        const ram_top = u_rawofs(h_ram_top());
-        if (ofs < ram_top) {
-            const ram_len = ram_top << 2;
-            const ram = new Uint32Array(h_memory(), ram_ofs, ram_len);
+        if (ofs < QUAD_RAM_MAX) {
+            const ram = new Uint32Array(u_memory(), u_ram_ofs(), (QUAD_RAM_MAX << 2));
             const idx = ofs << 2;  // convert quad address to Uint32Array index
             ram[idx + 0] = quad.t;
             ram[idx + 1] = quad.x;
@@ -283,10 +277,8 @@ function h_write_quad(ptr, quad) {
     }
     return u_warning("h_write_quad: required RAM ptr, got "+u_print(ptr));
 }
-function h_blob_mem() {
-    const blob_ofs = h_blob_buffer();
-    const blob_len = u_fix_to_i32(h_blob_top());
-    const blob = new Uint8Array(h_memory(), blob_ofs, blob_len);
+function u_blob_mem() {
+    const blob = new Uint8Array(u_memory(), u_blob_ofs(), BLOB_RAM_MAX);
     return blob;
 }
 
@@ -769,7 +761,7 @@ function h_import(specifier, alloc) {
                 Object.keys(crlf.ast.import).forEach(function (name, nr) {
                     imports[name] = imported_modules[nr];
                 });
-                return h_load(specifier, crlf, imports, alloc, h_read_quad);
+                return h_load(specifier, crlf, imports, alloc, u_read_quad);
             });
         });
     }
@@ -785,8 +777,9 @@ function rom_alloc(debug_info) {
             return raw;
         },
         write({t, x, y, z}) {
+            // FIXME: could we use `u_write_quad()` directly here?
             const ofs = u_rawofs(raw) << 4; // convert quad offset to byte offset
-            const quad = new Uint32Array(h_memory(), h_rom_buffer() + ofs, 4);
+            const quad = new Uint32Array(u_memory(), u_rom_ofs() + ofs, 4);
             if (t !== undefined) {
                 quad[0] = t;
             }
@@ -802,36 +795,36 @@ function rom_alloc(debug_info) {
         }
     });
 }
-function h_disasm(raw) {
+function u_disasm(raw) {
     let s = u_print(raw);
     if (u_is_cap(raw)) {
         raw = u_cap_to_ptr(raw);
     }
     if (u_is_ptr(raw)) {
         s += ": ";
-        const quad = h_read_quad(raw);
+        const quad = u_read_quad(raw);
         s += q_print(quad);
     }
     return s;
 }
-function h_pprint(raw) {
+function u_pprint(raw) {
     if (u_is_ptr(raw)) {
-        let quad = h_read_quad(raw);
+        let quad = u_read_quad(raw);
         if (quad.t === PAIR_T) {
             let s = "";
             let p = raw;
             let sep = "(";
             while (quad.t === PAIR_T) {
                 s += sep;
-                s += h_pprint(quad.x);  // car
+                s += u_pprint(quad.x);  // car
                 sep = " ";
                 p = quad.y;  // cdr
                 if (!u_is_ptr(p)) break;
-                quad = h_read_quad(p);
+                quad = u_read_quad(p);
             }
             if (p !== NIL_RAW) {
                 s += " . ";
-                s += h_pprint(p);
+                s += u_pprint(p);
             }
             s += ")";
             return s;
@@ -841,11 +834,11 @@ function h_pprint(raw) {
             let sep = "{";
             while (quad.t === DICT_T) {
                 s += sep;
-                s += h_pprint(quad.x);  // key
+                s += u_pprint(quad.x);  // key
                 s += ":";
-                s += h_pprint(quad.y);  // value
+                s += u_pprint(quad.y);  // value
                 sep = ", ";
-                quad = h_read_quad(quad.z);  // next
+                quad = u_read_quad(quad.z);  // next
             }
             s += "}";
             return s;
@@ -862,7 +855,7 @@ function h_pprint(raw) {
     }
     if (u_is_cap(raw)) {
         const ptr = u_cap_to_ptr(raw);
-        const quad = h_read_quad(ptr);
+        const quad = u_read_quad(ptr);
         if (quad.t === PROXY_T) {
             let s = "";
             s += "PROXY[";
@@ -898,9 +891,8 @@ function updateRomMonitor() {
     const top = u_rawofs(h_rom_top());
     for (let ofs = 0; ofs < top; ofs += 1) {
         const ptr = u_romptr(ofs);
-        const quad = h_read_quad(ptr);
-        const line = ("         " + u_print(ptr)).slice(-9)
-            + ": " + q_print(quad);
+        const quad = u_read_quad(ptr);
+        const line = u_print(ptr).padStart(9) + ": " + q_print(quad);
         a.push(line);
     }
     $mem_rom.textContent = a.join("\n");
@@ -910,13 +902,13 @@ function updateRamMonitor() {
     const top = u_rawofs(h_ram_top());
     for (let ofs = 0; ofs < top; ofs += 1) {
         const ptr = u_ramptr(ofs);
-        const line = h_disasm(ptr);
+        const line = u_disasm(ptr);
         a.push(line);
     }
     $mem_ram.textContent = a.join("\n");
 }
 function updateBlobMonitor() {
-    $mem_blob.textContent = hexdump(h_blob_mem());
+    $mem_blob.textContent = hexdump(u_blob_mem());
 }
 function keep_centered(child, parent) {
     const child_rect = child.getBoundingClientRect();
@@ -968,7 +960,7 @@ const drawHost = () => {
         ram_max = top;
     }
     updateElementText($ram_max, ram_max.toString());
-    const memory_quad = h_read_quad(u_ramptr(MEMORY_OFS));
+    const memory_quad = u_read_quad(u_ramptr(MEMORY_OFS));
     const ram_top = memory_quad.t;
     const ram_next = memory_quad.x;
     const ram_free = memory_quad.y;
@@ -979,8 +971,8 @@ const drawHost = () => {
     updateElementText($ram_free, u_print(ram_free));
     updateElementText($gc_root, u_print(gc_root));
     updateElementText($rom_top, u_print(rom_top));
-    updateElementText($mem_pages, h_mem_pages());
-    const ddeque_quad = h_read_quad(u_ramptr(DDEQUE_OFS));
+    updateElementText($mem_pages, u_mem_pages());
+    const ddeque_quad = u_read_quad(u_ramptr(DDEQUE_OFS));
     const e_first = ddeque_quad.t;
     //const e_last = ddeque_quad.x;
     const k_first = ddeque_quad.y;
@@ -989,8 +981,8 @@ const drawHost = () => {
         let p = k_first;
         let a = [];
         while (u_in_mem(p)) {
-            a.push(h_disasm(p));  // disasm continuation
-            p = h_next(p);
+            a.push(u_disasm(p));  // disasm continuation
+            p = u_next(p);
         }
         updateElementText($kqueue, a.join("\n"));
     } else {
@@ -1000,14 +992,14 @@ const drawHost = () => {
         let p = e_first;
         let a = [];
         while (u_in_mem(p)) {
-            a.push(h_disasm(p));  // disasm event
-            p = h_next(p);
+            a.push(u_disasm(p));  // disasm event
+            p = u_next(p);
         }
         updateElementText($equeue, a.join("\n"));
     } else {
         updateElementText($equeue, "--");
     }
-    const cont_quad = h_read_quad(k_first);
+    const cont_quad = u_read_quad(k_first);
     const ip = cont_quad.t;
     const sp = cont_quad.x;
     const ep = cont_quad.y;
@@ -1016,8 +1008,8 @@ const drawHost = () => {
         let n = 5;
         let a = [];
         while ((n > 0) && u_in_mem(p)) {
-            a.push(h_disasm(p));
-            p = h_next(p);
+            a.push(u_disasm(p));
+            p = u_next(p);
             n -= 1;
         }
         if (u_in_mem(p)) {
@@ -1034,48 +1026,48 @@ const drawHost = () => {
         while (u_in_mem(p)) {
             //a.push(h_disasm(p));  // disasm stack Pair
             //a.push(h_print(h_car(p)));  // print stack item
-            a.push(h_pprint(h_car(p)));  // pretty-print stack item
+            a.push(u_pprint(h_car(p)));  // pretty-print stack item
             p = h_cdr(p);
         }
         updateElementText($stack, a.join("\n"));
     } else {
         updateElementText($stack, "--");
     }
-    $stack.title = h_disasm(sp);
-    updateElementText($event, h_disasm(ep));
-    const event_quad = h_read_quad(ep);
+    $stack.title = u_disasm(sp);
+    updateElementText($event, u_disasm(ep));
+    const event_quad = u_read_quad(ep);
     const sponsor = event_quad.t;
     const target = event_quad.x;
     const message = event_quad.y;
-    const actor = h_read_quad(u_cap_to_ptr(target));
+    const actor = u_read_quad(u_cap_to_ptr(target));
     const effect = actor.z;
     const state = actor.y;
-    updateElementText($self, h_disasm(target));
+    updateElementText($self, u_disasm(target));
     //updateElementText($effect, h_disasm(effect));
     if (u_in_mem(effect)) {
         let p = effect;
         let a = [];
         while (u_in_mem(p)) {
-            a.push(h_disasm(p));  // disasm event
-            p = h_next(p);
+            a.push(u_disasm(p));  // disasm event
+            p = u_next(p);
         }
         updateElementText($effect, a.join("\n"));
     } else {
         updateElementText($effect, "--");
     }
-    updateElementText($state, h_pprint(state));  // pretty-print state
-    updateElementText($msg, h_pprint(message));  // pretty-print message
-    const sponsor_quad = h_read_quad(sponsor);
+    updateElementText($state, u_pprint(state));  // pretty-print state
+    updateElementText($msg, u_pprint(message));  // pretty-print message
+    const sponsor_quad = u_read_quad(sponsor);
     updateElementValue($sponsor_memory, u_fix_to_i32(sponsor_quad.t));
     updateElementValue($sponsor_events, u_fix_to_i32(sponsor_quad.x));
     updateElementValue($sponsor_instrs, u_fix_to_i32(sponsor_quad.y));
     enableNext();
 }
 function currentContinuation() {
-    const ddeque_quad = h_read_quad(u_ramptr(DDEQUE_OFS));
+    const ddeque_quad = u_read_quad(u_ramptr(DDEQUE_OFS));
     const k_first = ddeque_quad.y;
     if (u_in_mem(k_first)) {
-        const cont_quad = h_read_quad(k_first);
+        const cont_quad = u_read_quad(k_first);
         return {
             ip: cont_quad.t,
             sp: cont_quad.x,
@@ -1087,7 +1079,7 @@ function enableNext() {
     if (paused) {
         const cc = currentContinuation();
         if (cc) {
-            const instr = h_read_quad(cc.ip);
+            const instr = u_read_quad(cc.ip);
             if ((instr.t === INSTR_T) && (instr.x !== VM_END)) {
                 $nextButton.disabled = false;
                 return;
@@ -1159,7 +1151,7 @@ const logClick = event => {
 function cap_dict(device_offsets) {
     return device_offsets.reduce(function (next, ofs) {
         const dict = h_reserve();
-        h_write_quad(dict, {
+        u_write_quad(dict, {
             t: DICT_T,
             x: u_fixnum(ofs),
             y: u_ptr_to_cap(u_ramptr(ofs)),
@@ -1180,7 +1172,7 @@ function boot(module_specifier) {
         }
         // Make a boot actor, to be sent the boot message.
         const actor = h_reserve();
-        h_write_quad(actor, {
+        u_write_quad(actor, {
             t: ACTOR_T,
             x: module.boot,
             y: NIL_RAW,
@@ -1318,18 +1310,18 @@ function hexdump(u8buf, ofs, len, xlt) {
 
 function h_snapshot() {
     // create a snapshot with the uFork VM state
-    const mem_base = h_memory();
+    const mem_base = u_memory();
 
     // WASM mandates little-endian byte ordering
-    const rom_ofs = h_rom_buffer();
+    const rom_ofs = u_rom_ofs();
     const rom_len = u_rawofs(h_rom_top()) << 4;
     const rom = new Uint8Array(mem_base, rom_ofs, rom_len);
 
-    const ram_ofs = h_ram_buffer();
+    const ram_ofs = u_ram_ofs();
     const ram_len = u_rawofs(h_ram_top()) << 4;
     const ram = new Uint8Array(mem_base, ram_ofs, ram_len);
 
-    const blob_ofs = h_blob_buffer();
+    const blob_ofs = u_blob_ofs();
     const blob_len = u_fix_to_i32(h_blob_top());
     const blob = new Uint8Array(mem_base, blob_ofs, blob_len);
 
@@ -1341,9 +1333,9 @@ function h_snapshot() {
 }
 function h_restore(snapshot) {
     // restore uFork VM state from snapshot
-    const mem_base = h_memory();
+    const mem_base = u_memory();
 
-    const rom_ofs = h_rom_buffer();
+    const rom_ofs = u_rom_ofs();
     const rom_len = snapshot.rom.byteLength;
     const rom = new Uint8Array(mem_base, rom_ofs, rom_len);
     rom.set(snapshot.rom);
@@ -1353,7 +1345,7 @@ function h_restore(snapshot) {
     const ram = new Uint8Array(mem_base, ram_ofs, ram_len);
     ram.set(snapshot.ram);
 
-    const blob_ofs = h_blob_buffer();
+    const blob_ofs = u_blob_ofs();
     const blob_len = snapshot.blob.length;
     const blob = new Uint8Array(mem_base, blob_ofs, blob_len);
     blob.set(snapshot.blob);
@@ -1391,10 +1383,10 @@ $sponsor_memory.oninput = function () {
     if (Number.isSafeInteger(num) && (num >= 0)) {
         const cc = currentContinuation();
         if (cc) {
-            const event = h_read_quad(cc.ep);
-            const sponsor = h_read_quad(event.t);
+            const event = u_read_quad(cc.ep);
+            const sponsor = u_read_quad(event.t);
             sponsor.t = u_fixnum(num);
-            h_write_quad(event.t, sponsor);
+            u_write_quad(event.t, sponsor);
             drawHost();
         }
     }
@@ -1404,10 +1396,10 @@ $sponsor_events.oninput = function () {
     if (Number.isSafeInteger(num) && (num >= 0)) {
         const cc = currentContinuation();
         if (cc) {
-            const event = h_read_quad(cc.ep);
-            const sponsor = h_read_quad(event.t);
+            const event = u_read_quad(cc.ep);
+            const sponsor = u_read_quad(event.t);
             sponsor.x = u_fixnum(num);
-            h_write_quad(event.t, sponsor);
+            u_write_quad(event.t, sponsor);
             drawHost();
         }
     }
@@ -1417,10 +1409,10 @@ $sponsor_instrs.oninput = function () {
     if (Number.isSafeInteger(num) && (num >= 0)) {
         const cc = currentContinuation();
         if (cc) {
-            const event = h_read_quad(cc.ep);
-            const sponsor = h_read_quad(event.t);
+            const event = u_read_quad(cc.ep);
+            const sponsor = u_read_quad(event.t);
             sponsor.y = u_fixnum(num);
-            h_write_quad(event.t, sponsor);
+            u_write_quad(event.t, sponsor);
             drawHost();
         }
     }
@@ -1451,18 +1443,18 @@ function test_suite(exports) {
     console.log("h_ram_top() =", h_ram_top(), u_print(h_ram_top()));
     console.log("u_ramptr(5) =", u_ramptr(5), u_print(u_ramptr(5)));
     console.log("u_ptr_to_cap(u_ramptr(3)) =", u_ptr_to_cap(u_ramptr(3)), u_print(u_ptr_to_cap(u_ramptr(3))));
-    console.log("h_memory() =", h_memory());
+    console.log("u_memory() =", u_memory());
 
-    const rom_ofs = h_rom_buffer();
-    const rom = new Uint32Array(h_memory(), rom_ofs, (u_rawofs(h_rom_top()) << 2));
+    const rom_ofs = u_rom_ofs();
+    const rom = new Uint32Array(u_memory(), rom_ofs, (u_rawofs(h_rom_top()) << 2));
     console.log("ROM:", rom);
 
-    const ram_ofs = h_ram_buffer();
-    const ram = new Uint32Array(h_memory(), ram_ofs, (u_rawofs(h_ram_top()) << 2));
+    const ram_ofs = u_ram_ofs();
+    const ram = new Uint32Array(u_memory(), ram_ofs, (u_rawofs(h_ram_top()) << 2));
     console.log("RAM:", ram);
 
-    const blob_ofs = h_blob_buffer();
-    const blob = new Uint8Array(h_memory(), blob_ofs, u_fix_to_i32(h_blob_top()));
+    const blob_ofs = u_blob_ofs();
+    const blob = new Uint8Array(u_memory(), blob_ofs, u_fix_to_i32(h_blob_top()));
     console.log("BLOB:", blob);
 
     const decoded = {
@@ -1495,7 +1487,7 @@ WebAssembly.instantiateStreaming(
                 return performance.now();
             },
             host_print(base, ofs) {  // WASM type: (i32, i32) -> nil
-                const mem = new Uint8Array(h_memory(), base);  // u8[] view of blob memory
+                const mem = new Uint8Array(u_memory(), base);  // u8[] view of blob memory
                 const buf = mem.subarray(ofs - 5);  // blob allocation has a 5-octet header
                 //const buf = mem.subarray(ofs);  // create window into application-managed memory
                 //const blob = OED.decode(buf, undefined, 0);  // decode a single OED value
@@ -1507,16 +1499,16 @@ WebAssembly.instantiateStreaming(
                 // process asynchronously to avoid WASM re-entrancy
                 x = (x >>> 0);  // convert i32 -> u32
                 setTimeout(() => {
-                    console.log("LOG:", x, "=", u_print(x), "->", h_pprint(x));
+                    console.log("LOG:", x, "=", u_print(x), "->", u_pprint(x));
                 });
             },
             host_timer(delay, stub) {  // WASM type: (i32, i32) -> nil
                 if (u_is_fix(delay)) {
                     setTimeout(() => {
                         // FIXME: we need to ensure that `stub` remains valid!
-                        console.log("TIMER:", h_pprint(delay), h_pprint(stub));
-                        const quad = h_read_quad(stub);
-                        const event = h_read_quad(quad.y);  // get target event
+                        console.log("TIMER:", u_pprint(delay), u_pprint(stub));
+                        const quad = u_read_quad(stub);
+                        const event = u_read_quad(quad.y);  // get target event
                         const sponsor = event.t;
                         const target = event.x;
                         const message = event.y;
@@ -1536,23 +1528,35 @@ WebAssembly.instantiateStreaming(
     h_event_inject = wasm_mutex_call(exports.h_event_inject);
     h_revert = wasm_mutex_call(exports.h_revert);
     h_gc_run = wasm_mutex_call(exports.h_gc_run);
-    h_rom_buffer = wasm_mutex_call(exports.h_rom_buffer);
+    //h_rom_buffer = wasm_mutex_call(exports.h_rom_buffer);
     h_rom_top = wasm_mutex_call(exports.h_rom_top);
     h_set_rom_top = wasm_mutex_call(exports.h_set_rom_top);
     h_reserve_rom = wasm_mutex_call(exports.h_reserve_rom);
-    h_ram_buffer = wasm_mutex_call(exports.h_ram_buffer);
+    //h_ram_buffer = wasm_mutex_call(exports.h_ram_buffer);
     h_ram_top = wasm_mutex_call(exports.h_ram_top);
     h_reserve = wasm_mutex_call(exports.h_reserve);
-    h_blob_buffer = wasm_mutex_call(exports.h_blob_buffer);
+    //h_blob_buffer = wasm_mutex_call(exports.h_blob_buffer);
     h_blob_top = wasm_mutex_call(exports.h_blob_top);
     h_car = wasm_mutex_call(exports.h_car);
     h_cdr = wasm_mutex_call(exports.h_cdr);
 
-    h_memory = function wasm_memory() {
+    u_memory = function wasm_memory() {
         // WARNING! The WASM memory buffer can move if it is resized.
         //          We get a fresh pointer each time for safety.
         return exports.memory.buffer;
-    }
+    };
+    const rom_ofs = exports.h_rom_buffer();
+    u_rom_ofs = function wasm_rom_ofs() {
+        return rom_ofs;  // return cached offset
+    };
+    const ram_ofs = exports.h_ram_buffer();
+    u_ram_ofs = function wasm_ram_ofs() {
+        return ram_ofs;  // return cached offset
+    };
+    const blob_ofs = exports.h_blob_buffer();
+    u_blob_ofs = function wasm_blob_ofs() {
+        return blob_ofs;  // return cached offset
+    };
 
     test_suite();
 
