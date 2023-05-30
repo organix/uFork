@@ -21,6 +21,7 @@ pub const RAM_BASE_OFS: usize = 16;  // RAM offsets below this value are reserve
 
 pub const GC_FIRST: usize   = 0;  // offset of "first" in gc_queue[]
 pub const GC_LAST: usize    = 1;  // offset of "last" in gc_queue[]
+pub const GC_STRIDE: usize  = 16;  // number of steps to take for each GC increment
 
 // core limits (repeated in `index.js`)
 const QUAD_ROM_MAX: usize = 1<<10;  // 1K quad-cells of ROM
@@ -242,7 +243,7 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
             // free dead continuation and associated event
             self.free(ep);
             self.free(kp);
-            self.gc_stop_the_world()?;  // FIXME! REMOVE FORCED GC...
+            self.gc_collect();  // FIXME! REMOVE FORCED GC...
         }
         Ok(true)  // instruction executed
     }
@@ -1295,7 +1296,16 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
         self.set_ram_free(Any::fix(n + 1));  // increment cells available
     }
 
-    pub fn gcq_collect(&mut self) {
+    pub fn gc_collect(&mut self) {
+        self.gc_init_phase();
+        while self.gc_scan_phase(GC_STRIDE) == 0
+            {}
+        let mut ofs = self.ram_top().ofs() - 1;
+        while ofs >= RAM_BASE_OFS {
+            ofs = self.gc_sweep_phase(GC_STRIDE, ofs);
+        }
+    }
+    pub fn gc_init_phase(&mut self) {
         // clear gc queue
         self.gc_queue[GC_FIRST] = NIL;
         self.gc_queue[GC_LAST] = NIL;
@@ -1303,18 +1313,26 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
         let mut ofs = DDEQUE.ofs();
         while ofs < RAM_BASE_OFS {
             let ptr = Any::ram(ofs);
-            self.gcq_scan(ptr);
+            self.gc_scan(ptr);
             ofs += 1;
         }
-        self.gcq_mark(self.ram_root());
+        self.gc_mark(self.ram_root());
+    }
+    pub fn gc_scan_phase(&mut self, mut steps: usize) -> usize {
         // scan items in gc queue
-        while let Some(item) = self.gcq_dequeue() {
-            self.gcq_scan(item);
+        while steps > 0 {
+            steps -= 1;
+            match self.gc_dequeue() {
+                Some(item) => self.gc_scan(item),
+                None => break,
+            }
         }
+        steps
+    }
+    pub fn gc_sweep_phase(&mut self, mut steps: usize, mut ofs: usize) -> usize {
         // sweep unreachable cells into free-list
-        ofs = self.ram_top().ofs();
-        while ofs > RAM_BASE_OFS {
-            ofs -= 1;
+        while steps > 0 && ofs >= RAM_BASE_OFS {
+            steps -= 1;
             if self.gc_queue[ofs] == UNDEF {  // still "white"
                 let ptr = Any::ram(ofs);
                 if self.ram(ptr).t() != FREE_T {  // not already free
@@ -1324,9 +1342,12 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
             } else {
                 self.gc_queue[ofs] = UNDEF;  // mark "white"
             }
+            ofs -= 1;
         }
+        ofs
     }
-    fn gcq_mark(&mut self, val: Any) {
+
+    fn gc_mark(&mut self, val: Any) {
         let ptr = if val.is_cap() {
             self.cap_to_ptr(val)
         } else {
@@ -1336,18 +1357,18 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
             let ofs = ptr.ofs();
             if self.gc_queue[ofs] == UNDEF {
                 // change "white" to "grey"
-                self.gcq_enqueue(ptr);
+                self.gc_enqueue(ptr);
             }
         }
     }
-    fn gcq_scan(&mut self, ptr: Any) {
+    fn gc_scan(&mut self, ptr: Any) {
         let quad = self.gc_load(ptr);
-        self.gcq_mark(quad.t());
-        self.gcq_mark(quad.x());
-        self.gcq_mark(quad.y());
-        self.gcq_mark(quad.z());
+        self.gc_mark(quad.t());
+        self.gc_mark(quad.x());
+        self.gc_mark(quad.y());
+        self.gc_mark(quad.z());
     }
-    fn gcq_enqueue(&mut self, ptr: Any) {
+    fn gc_enqueue(&mut self, ptr: Any) {
         // add location to the back of the queue
         let queue = &mut self.gc_queue;
         queue[ptr.ofs()] = NIL;
@@ -1359,7 +1380,7 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
         }
         queue[GC_LAST] = ptr;
     }
-    fn gcq_dequeue(&mut self) -> Option<Any> {
+    fn gc_dequeue(&mut self) -> Option<Any> {
         // remove location from the front of the queue
         let queue = &mut self.gc_queue;
         let first = queue[GC_FIRST];
@@ -1376,10 +1397,6 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
         }
     }
 
-    pub fn gc_stop_the_world(&mut self) -> Result<(), Error> {
-        self.gcq_collect();  // redirect to new GC algorithm
-        return Ok(())
-    }
     fn gc_load(&self, ptr: Any) -> Quad {  // load quad directly
         let raw = ptr.raw();
         if (raw & (DIR_RAW | MUT_RAW)) != MUT_RAW {  // must be ram or cap
@@ -1863,13 +1880,10 @@ pub const T_DEV_BEH: Any = Any { raw: T_DEV_OFS as Raw };
         let boot_ptr = core.reserve(&Quad::new_actor(boot_beh, NIL)).unwrap();
         let a_boot = core.ptr_to_cap(boot_ptr);
         core.event_inject(SPONSOR, a_boot, UNDEF).unwrap();
-        let mut result;
-        result = core.gc_stop_the_world();
-        assert!(result.is_ok());
+        core.gc_collect();
         let err = core.run_loop();
         assert_eq!(E_OK, err);
-        result = core.gc_stop_the_world();
-        assert!(result.is_ok());
+        core.gc_collect();
     }
 
     #[test]

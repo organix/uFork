@@ -48,7 +48,7 @@ impl Host {
         self.core.actor_revert()
     }
     pub fn gc_run(&mut self) {
-        self.core.gc_stop_the_world().unwrap()
+        self.core.gc_collect()
     }
     pub fn rom_top(&self) -> Raw {
         self.core.rom_top().raw()
