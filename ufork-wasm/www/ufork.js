@@ -1179,7 +1179,9 @@ function make_ufork(wasm_instance, on_error) {
 }
 
 //debug WebAssembly.instantiateStreaming(
-//debug     fetch(import.meta.resolve("../target/wasm32-unknown-unknown/release/ufork_wasm.wasm")),
+//debug     fetch(import.meta.resolve(
+//debug         "../target/wasm32-unknown-unknown/debug/ufork_wasm.wasm"
+//debug     )),
 //debug     {
 //debug         capabilities: {
 //debug             host_clock() {

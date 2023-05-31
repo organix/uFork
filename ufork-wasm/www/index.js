@@ -521,7 +521,7 @@ $sponsor_instrs.oninput = function () {
 };
 
 WebAssembly.instantiateStreaming(
-    fetch("../target/wasm32-unknown-unknown/release/ufork_wasm.wasm"),
+    fetch("../target/wasm32-unknown-unknown/debug/ufork_wasm.wasm"),
     {
         capabilities: {
             host_clock() { // () -> i32
