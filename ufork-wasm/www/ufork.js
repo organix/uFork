@@ -1202,9 +1202,13 @@ function make_ufork(wasm_instance, on_error) {
 //debug ).then(function (wasm) {
 //debug     const {
 //debug         h_blob_top,
+//debug         h_boot,
+//debug         h_import,
 //debug         h_ram_top,
 //debug         h_rom_top,
+//debug         h_step,
 //debug         u_blob_ofs,
+//debug         u_fault_msg,
 //debug         u_fix_to_i32,
 //debug         u_fixnum,
 //debug         u_memory,
@@ -1234,6 +1238,16 @@ function make_ufork(wasm_instance, on_error) {
 //debug     const blob_ofs = u_blob_ofs();
 //debug     const blob = new Uint8Array(u_memory(), blob_ofs, u_fix_to_i32(h_blob_top()));
 //debug     console.log("BLOB:", blob);
+//debug     return h_import(
+//debug         import.meta.resolve("../lib/dev.asm")
+//debug     ).then(function (device_module) {
+//debug         h_boot(device_module.boot);
+//debug         let error_code;
+//debug         do {
+//debug             error_code = h_step();
+//debug         } while (error_code === 0);
+//debug         console.log(u_fault_msg(error_code));
+//debug     });
 //debug });
 
 export default Object.freeze(make_ufork);
