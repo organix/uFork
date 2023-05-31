@@ -1,7 +1,7 @@
 // uFork assembler
 
-// Assembles uFork assembly source code into an intermediate representation,
-// suitable for loading.
+// Transforms uFork assembly source code into an intermediate representation
+// that is suitable for loading.
 
 // The assembly language is described in asm.md.
 // The intermediate representation is described in crlf.md.

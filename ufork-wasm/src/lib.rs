@@ -64,7 +64,7 @@ const OPQ_RAW: Raw          = 0x4000_0000;  // 1=opaque (capability), 0=transpar
 const MUT_RAW: Raw          = 0x2000_0000;  // 1=read-write (mutable), 0=read-only (immutable)
 
 #[cfg(target_arch = "wasm32")]
-#[link(wasm_import_module = "js")]
+#[link(wasm_import_module = "capabilities")]
 extern {
     pub fn host_clock() -> Raw;
     pub fn host_print(base: *const u8, ofs: usize);
