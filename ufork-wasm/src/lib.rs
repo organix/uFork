@@ -202,3 +202,17 @@ pub fn h_cdr(raw: Raw) -> Raw {
         the_host().borrow().cdr(raw)
     }
 }
+
+#[no_mangle]
+pub fn h_gc_color(raw: Raw) -> Raw {
+    unsafe {
+        the_host().borrow().gc_color(raw)
+    }
+}
+
+#[no_mangle]
+pub fn h_gc_state() -> Raw {
+    unsafe {
+        the_host().borrow().gc_state()
+    }
+}

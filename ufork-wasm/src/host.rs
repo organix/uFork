@@ -76,6 +76,12 @@ impl Host {
     pub fn cdr(&self, p: Raw) -> Raw {
         self.core.cdr(Any::new(p)).raw()
     }
+    pub fn gc_color(&self, p: Raw) -> Raw {
+        self.core.gc_color(Any::new(p)).raw()
+    }
+    pub fn gc_state(&self) -> Raw {
+        self.core.gc_state().raw()
+    }
 
     /*
      *  WARNING! The methods below give _unsafe_ access

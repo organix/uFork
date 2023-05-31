@@ -9,6 +9,7 @@ const $ram_top = document.getElementById("ram-top");
 const $ram_next = document.getElementById("ram-next");
 const $ram_free = document.getElementById("ram-free");
 const $gc_root = document.getElementById("gc-root");
+const $gc_state = document.getElementById("gc-state");
 const $rom_top = document.getElementById("rom-top");
 const $mem_pages = document.getElementById("mem-pages");
 const $sponsor_memory = document.getElementById("sponsor-memory");
@@ -153,6 +154,8 @@ let u_blob_ofs = u_no_init;
 let h_blob_top = u_no_init;
 let h_car = u_no_init;
 let h_cdr = u_no_init;
+let h_gc_color = u_no_init;
+let h_gc_state = u_no_init;
 let u_memory = u_no_init;
 // local helper functions
 function u_warning(message) {
@@ -902,7 +905,8 @@ function updateRamMonitor() {
     const top = u_rawofs(h_ram_top());
     for (let ofs = 0; ofs < top; ofs += 1) {
         const ptr = u_ramptr(ofs);
-        const line = u_disasm(ptr);
+        const color = h_gc_color(ptr);
+        const line = u_disasm(ptr) + " -- " + u_print(color);
         a.push(line);
     }
     $mem_ram.textContent = a.join("\n");
@@ -965,11 +969,13 @@ const drawHost = () => {
     const ram_next = memory_quad.x;
     const ram_free = memory_quad.y;
     const gc_root = memory_quad.z;
+    const gc_state = h_gc_state();
     const rom_top = u_rawofs(h_rom_top());
     updateElementText($ram_top, u_print(ram_top));
     updateElementText($ram_next, u_print(ram_next));
     updateElementText($ram_free, u_print(ram_free));
     updateElementText($gc_root, u_print(gc_root));
+    updateElementText($gc_state, u_print(gc_state));
     updateElementText($rom_top, u_print(rom_top));
     updateElementText($mem_pages, u_mem_pages());
     const ddeque_quad = u_read_quad(u_ramptr(DDEQUE_OFS));
@@ -1536,6 +1542,8 @@ WebAssembly.instantiateStreaming(
     h_blob_top = wasm_mutex_call(exports.h_blob_top);
     h_car = wasm_mutex_call(exports.h_car);
     h_cdr = wasm_mutex_call(exports.h_cdr);
+    h_gc_color = wasm_mutex_call(exports.h_gc_color);
+    h_gc_state = wasm_mutex_call(exports.h_gc_state);
 
     u_memory = function wasm_memory() {
         // WARNING! The WASM memory buffer can move if it is resized.

@@ -40,6 +40,7 @@ pub struct Core {
     blob_ram:   [u8; BLOB_RAM_MAX],
     device:     [Option<Box<dyn Device>>; DEVICE_MAX],
     rom_top:    Any,
+    gc_state:   Any,
 }
 
 impl Core {
@@ -145,6 +146,7 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
                 Some(Box::new(NullDevice::new())),
             ],
             rom_top: Any::rom(ROM_TOP_OFS),
+            gc_state: UNDEF,
         }
     }
 
@@ -243,8 +245,9 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
             // free dead continuation and associated event
             self.free(ep);
             self.free(kp);
-            self.gc_collect();  // FIXME! REMOVE FORCED GC...
+            //self.gc_collect();  // FIXME! REMOVE FORCED GC...
         }
+        self.gc_increment();  // WARNING! incremental and stop-the-world GC are incompatible!
         Ok(true)  // instruction executed
     }
     fn perform_op(&mut self, ip: Any) -> Result<Any, Error> {
@@ -1283,6 +1286,7 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
             top
         };
         self.gc_store(ptr, *init);  // copy initial value
+        self.gc_reserve(ptr);
         Ok(ptr)
     }
     pub fn free(&mut self, ptr: Any) {
@@ -1290,13 +1294,35 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
         if self.typeq(FREE_T, ptr) {
             panic!("double-free {}", ptr.raw());
         }
+        self.gc_release(ptr);
         *self.ram_mut(ptr) = Quad::free_t(self.ram_next());  // clear cell to "free"
         self.set_ram_next(ptr);  // link into free-list
         let n = self.ram_free().fix_num().unwrap();
         self.set_ram_free(Any::fix(n + 1));  // increment cells available
     }
 
+    fn gc_increment(&mut self) {
+        if self.gc_state.is_rom() {
+            self.gc_init_phase();
+            self.gc_state = Any::fix(0);
+        } else if self.gc_state.is_fix() {
+            let steps = self.gc_scan_phase(GC_STRIDE);
+            if steps > 0 {
+                let ofs = self.ram_top().ofs() - 1;
+                self.gc_state = Any::ram(ofs);
+            }
+        } else if self.gc_state.is_ram() {
+            let mut ofs = self.gc_state.ofs();
+            if ofs >= RAM_BASE_OFS {
+                ofs = self.gc_sweep_phase(GC_STRIDE, ofs);
+                self.gc_state = Any::ram(ofs);
+            } else {
+                self.gc_state = UNDEF;
+            }
+        }
+    }
     pub fn gc_collect(&mut self) {
+        assert_eq!(UNDEF, self.gc_state);  // WARNING! cannot overlap with `gc_increment` phases
         self.gc_init_phase();
         while self.gc_scan_phase(GC_STRIDE) == 0
             {}
@@ -1305,7 +1331,7 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
             ofs = self.gc_sweep_phase(GC_STRIDE, ofs);
         }
     }
-    pub fn gc_init_phase(&mut self) {
+    fn gc_init_phase(&mut self) {
         // clear gc queue
         self.gc_queue[GC_FIRST] = NIL;
         self.gc_queue[GC_LAST] = NIL;
@@ -1318,7 +1344,7 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
         }
         self.gc_mark(self.ram_root());
     }
-    pub fn gc_scan_phase(&mut self, mut steps: usize) -> usize {
+    fn gc_scan_phase(&mut self, mut steps: usize) -> usize {
         // scan items in gc queue
         while steps > 0 {
             steps -= 1;
@@ -1329,7 +1355,7 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
         }
         steps
     }
-    pub fn gc_sweep_phase(&mut self, mut steps: usize, mut ofs: usize) -> usize {
+    fn gc_sweep_phase(&mut self, mut steps: usize, mut ofs: usize) -> usize {
         // sweep unreachable cells into free-list
         while steps > 0 && ofs >= RAM_BASE_OFS {
             steps -= 1;
@@ -1345,6 +1371,32 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
             ofs -= 1;
         }
         ofs
+    }
+    fn gc_reserve(&mut self, ptr: Any) {
+        // sync reservation with GC
+        let ofs = ptr.ofs();
+        if self.gc_state.is_rom() {
+            // between GC passes, new allocations are assumed to be unreachable
+            self.gc_queue[ofs] = UNDEF;  // mark "white"
+        } else if self.gc_state.is_fix() {
+            // during GC scanning, new allocations are added to the scan queue
+            if self.gc_queue[ofs] == UNDEF {
+                // change "white" to "grey"
+                self.gc_enqueue(ptr);
+            }
+        } else if self.gc_state.is_ram() {
+            // during GC sweeping, new allocations are assumed to be reachable
+            let sweep = self.gc_state.ofs();
+            self.gc_queue[ofs] = if ofs > sweep {
+                UNDEF  // mark "white"
+            } else {
+                UNIT  // mark "black"
+            }
+        }
+    }
+    fn gc_release(&mut self, ptr: Any) {
+        // sync release with GC
+        self.gc_remove(ptr);
     }
 
     fn gc_mark(&mut self, val: Any) {
@@ -1396,7 +1448,37 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
             None
         }
     }
+    fn gc_remove(&mut self, ptr: Any) {
+        // remove `ptr` from queue (if present), and mark it "white"
+        let queue = &mut self.gc_queue;
+        let ofs = ptr.ofs();
+        let next = queue[ofs];
+        let mut curr = GC_FIRST;
+        let mut item = queue[curr];
+        while item.is_ram() {
+            if ptr == item {
+                queue[curr] = next;
+                if next == NIL {
+                    queue[GC_LAST] = NIL;
+                }
+                break;
+            }
+            curr = item.ofs();
+            item = queue[curr];
+        }
+        queue[ofs] = UNDEF;  // mark "white"
+    }
 
+    pub fn gc_color(&self, ptr: Any) -> Any {
+        if ptr.is_ram() {
+            self.gc_queue[ptr.ofs()]
+        } else {
+            FALSE  // since UNDEF="white", FALSE="no color"
+        }
+    }
+    pub fn gc_state(&self) -> Any {
+        self.gc_state
+    }
     fn gc_load(&self, ptr: Any) -> Quad {  // load quad directly
         let raw = ptr.raw();
         if (raw & (DIR_RAW | MUT_RAW)) != MUT_RAW {  // must be ram or cap
