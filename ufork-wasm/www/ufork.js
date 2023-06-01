@@ -239,6 +239,7 @@ function make_ufork(wasm_instance, on_error) {
         };
     }
 
+    const h_run_loop = wasm_mutex_call(wasm_instance.exports.h_run_loop);
     const h_step = wasm_mutex_call(wasm_instance.exports.h_step);
     const h_event_inject = wasm_mutex_call(wasm_instance.exports.h_event_inject);
     const h_revert = wasm_mutex_call(wasm_instance.exports.h_revert);
@@ -302,7 +303,11 @@ function make_ufork(wasm_instance, on_error) {
     }
 
     function u_fault_msg(error_code) {
-        return error_messages[Math.abs(error_code)] ?? "unknown fault";
+        return (
+            error_code < 0
+            ? error_messages[-error_code] ?? "unknown fault"
+            : error_messages[0]
+        );
     }
 
     function u_is_raw(value) {
@@ -1140,6 +1145,7 @@ function make_ufork(wasm_instance, on_error) {
         h_restore,
         h_revert,
         h_rom_top,
+        h_run_loop,
         h_set_rom_top,
         h_snapshot,
         h_step,
@@ -1206,6 +1212,7 @@ function make_ufork(wasm_instance, on_error) {
 //debug         h_import,
 //debug         h_ram_top,
 //debug         h_rom_top,
+//debug         h_run_loop,
 //debug         h_step,
 //debug         u_blob_ofs,
 //debug         u_fault_msg,
@@ -1228,25 +1235,18 @@ function make_ufork(wasm_instance, on_error) {
 //debug     console.log("h_ram_top() =", h_ram_top(), u_print(h_ram_top()));
 //debug     console.log("u_ramptr(5) =", u_ramptr(5), u_print(u_ramptr(5)));
 //debug     console.log("u_ptr_to_cap(u_ramptr(3)) =", u_ptr_to_cap(u_ramptr(3)), u_print(u_ptr_to_cap(u_ramptr(3))));
-//debug     console.log("u_memory() =", u_memory());
-//debug     const rom_ofs = u_rom_ofs();
-//debug     const rom = new Uint32Array(u_memory(), rom_ofs, (u_rawofs(h_rom_top()) << 2));
-//debug     console.log("ROM:", rom);
-//debug     const ram_ofs = u_ram_ofs();
-//debug     const ram = new Uint32Array(u_memory(), ram_ofs, (u_rawofs(h_ram_top()) << 2));
-//debug     console.log("RAM:", ram);
-//debug     const blob_ofs = u_blob_ofs();
-//debug     const blob = new Uint8Array(u_memory(), blob_ofs, u_fix_to_i32(h_blob_top()));
-//debug     console.log("BLOB:", blob);
 //debug     return h_import(
-//debug         import.meta.resolve("../lib/dev.asm")
+//debug         import.meta.resolve("../lib/e_ring.asm")
 //debug     ).then(function (device_module) {
 //debug         h_boot(device_module.boot);
-//debug         let error_code;
-//debug         do {
-//debug             error_code = h_step();
-//debug         } while (error_code === 0);
-//debug         console.log(u_fault_msg(error_code));
+//debug         const start = performance.now();
+//debug         const error_code = h_run_loop();
+//debug         const duration = performance.now() - start;
+//debug         console.log(
+//debug             error_code,
+//debug             u_fault_msg(error_code),
+//debug             duration.toFixed(3) + "ms"
+//debug         );
 //debug     });
 //debug });
 

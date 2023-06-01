@@ -99,7 +99,13 @@ unsafe fn the_host() -> &'static RefCell<Host> {
 }
 
 #[no_mangle]
-pub /*extern "C"*/ fn h_step() -> Error {
+pub fn h_run_loop() -> Error {
+    unsafe {
+        the_host().borrow_mut().run_loop()
+    }
+}
+#[no_mangle]
+pub fn h_step() -> Error {
     unsafe {
         the_host().borrow_mut().step()
     }

@@ -151,11 +151,12 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
     }
 
     pub fn run_loop(&mut self) -> Error {
+        let mut steps = 0;
         loop {
             match self.execute_instruction() {
                 Ok(more) => {
                     if !more && !self.event_pending() {
-                        return E_OK;  // no more instructions to execute...
+                        return steps;  // no more instructions to execute...
                     }
                 },
                 Err(error) => {
@@ -168,6 +169,7 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
             if let Err(error) = self.dispatch_event() {
                 return error;  // event dispatch failed...
             }
+            steps += 1;
         }
     }
     pub fn check_for_interrupt(&mut self) -> Result<bool, Error> {
