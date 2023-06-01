@@ -247,7 +247,7 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
             self.free(kp);
             //self.gc_collect();  // FIXME! REMOVE FORCED GC...
         }
-        self.gc_increment();  // WARNING! incremental and stop-the-world GC are incompatible!
+        //self.gc_increment();  // WARNING! incremental and stop-the-world GC are incompatible!
         Ok(true)  // instruction executed
     }
     fn perform_op(&mut self, ip: Any) -> Result<Any, Error> {
@@ -1280,6 +1280,12 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
             let ofs = top.ofs() + 1;
             if ofs > QUAD_RAM_MAX {
                 //panic!("out of memory!");
+                self.gc_collect();
+                if let Some(m) = self.ram_free().fix_num() {
+                    if m >= 16 {  // ensure some margin after GC
+                        return self.reserve(init);
+                    }
+                }
                 return Err(E_NO_MEM);  // no memory available
             }
             self.set_ram_top(Any::ram(ofs));
@@ -1301,7 +1307,7 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
         self.set_ram_free(Any::fix(n + 1));  // increment cells available
     }
 
-    fn gc_increment(&mut self) {
+    pub fn gc_increment(&mut self) {
         if self.gc_state.is_rom() {
             self.gc_init_phase();
             self.gc_state = Any::fix(0);
@@ -1437,6 +1443,7 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
         let queue = &mut self.gc_queue;
         let first = queue[GC_FIRST];
         if first.is_ram() {
+            //assert_ne!(self.quad_ram[first.ofs()].t(), FREE_T);  // FIXME: this should be impossible...
             let next = queue[first.ofs()];
             queue[GC_FIRST] = next;
             if !next.is_ram() {
