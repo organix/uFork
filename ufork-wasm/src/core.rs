@@ -1907,12 +1907,32 @@ pub const CUST_SEND: Any = Any { raw: (LIB_OFS+2) as Raw };
 
 pub const T_DEV_OFS: usize = LIB_OFS+3;
 pub const T_DEV_BEH: Any = Any { raw: T_DEV_OFS as Raw };
-        quad_rom[T_DEV_OFS+0]       = Quad::vm_push(Any::fix(13), Any::rom(T_DEV_OFS+1));  // 13
-        quad_rom[T_DEV_OFS+1]       = Quad::vm_push(DEBUG_DEV, Any::rom(T_DEV_OFS+2));  // 13 DEBUG_DEV
-        quad_rom[T_DEV_OFS+2]       = Quad::vm_push(BLOB_DEV, Any::rom(T_DEV_OFS+3));  // 13 DEBUG_DEV BLOB_DEV
-        quad_rom[T_DEV_OFS+3]       = Quad::vm_send(PLUS_2, COMMIT);  // --
+        quad_rom[T_DEV_OFS+0]       = Quad::vm_push(PLUS_7, Any::rom(T_DEV_OFS+1));  // 7
+        quad_rom[T_DEV_OFS+1]       = Quad::vm_push(COUNT_TO, Any::rom(T_DEV_OFS+2));  // 7 count_to
+        quad_rom[T_DEV_OFS+2]       = Quad::vm_beh(PLUS_1, Any::rom(T_DEV_OFS+3));  // --
+        quad_rom[T_DEV_OFS+3]       = Quad::vm_push(PLUS_3, Any::rom(T_DEV_OFS+4));  // 3
+        quad_rom[T_DEV_OFS+4]       = Quad::vm_my(MY_SELF, Any::rom(T_DEV_OFS+5));  // 3 SELF
+        quad_rom[T_DEV_OFS+5]       = Quad::vm_send(PLUS_1, Any::rom(T_DEV_OFS+6));  // --
 
-        core.rom_top = Any::rom(T_DEV_OFS+4);
+        quad_rom[T_DEV_OFS+6]       = Quad::vm_push(Any::fix(13), Any::rom(T_DEV_OFS+7));  // 13
+        quad_rom[T_DEV_OFS+7]       = Quad::vm_push(DEBUG_DEV, Any::rom(T_DEV_OFS+8));  // 13 DEBUG_DEV
+        quad_rom[T_DEV_OFS+8]       = Quad::vm_push(BLOB_DEV, Any::rom(T_DEV_OFS+9));  // 13 DEBUG_DEV BLOB_DEV
+        quad_rom[T_DEV_OFS+9]       = Quad::vm_send(PLUS_2, COMMIT);  // --
+
+pub const COUNT_TO: Any = Any { raw: (T_DEV_OFS+10) as Raw };
+        // (m) <- (n)
+        quad_rom[T_DEV_OFS+10]      = Quad::vm_msg(PLUS_1, Any::rom(T_DEV_OFS+11));  // n
+        quad_rom[T_DEV_OFS+11]      = Quad::vm_state(PLUS_1, Any::rom(T_DEV_OFS+12));  // n m
+        quad_rom[T_DEV_OFS+12]      = Quad::vm_cmp_lt(Any::rom(T_DEV_OFS+13));  // n<m
+        quad_rom[T_DEV_OFS+13]      = Quad::vm_if(Any::rom(T_DEV_OFS+14), COMMIT);  // --
+
+        quad_rom[T_DEV_OFS+14]      = Quad::vm_msg(PLUS_1, Any::rom(T_DEV_OFS+15));  // n
+        quad_rom[T_DEV_OFS+15]      = Quad::vm_push(PLUS_1, Any::rom(T_DEV_OFS+16));  // n 1
+        quad_rom[T_DEV_OFS+16]      = Quad::vm_alu_add(Any::rom(T_DEV_OFS+17));  // n+1
+        quad_rom[T_DEV_OFS+17]      = Quad::vm_my(MY_SELF, Any::rom(T_DEV_OFS+18));  // n+1 SELF
+        quad_rom[T_DEV_OFS+18]      = Quad::vm_send(PLUS_1, COMMIT);  // --
+
+        core.rom_top = Any::rom(T_DEV_OFS+19);
         T_DEV_BEH
     }
 
