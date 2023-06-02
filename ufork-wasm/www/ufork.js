@@ -441,10 +441,10 @@ function make_ufork(wasm_instance, on_error) {
             if (ofs < QUAD_RAM_MAX) {
                 const ram = new Uint32Array(u_memory(), u_ram_ofs(), (QUAD_RAM_MAX << 2));
                 const idx = ofs << 2;  // convert quad address to Uint32Array index
-                ram[idx + 0] = quad.t;
-                ram[idx + 1] = quad.x;
-                ram[idx + 2] = quad.y;
-                ram[idx + 3] = quad.z;
+                ram[idx + 0] = quad.t ?? UNDEF_RAW;
+                ram[idx + 1] = quad.x ?? UNDEF_RAW;
+                ram[idx + 2] = quad.y ?? UNDEF_RAW;
+                ram[idx + 3] = quad.z ?? UNDEF_RAW;
                 return;
             } else {
                 return u_warning("h_write_quad: RAM ptr out of bounds "+u_print(ptr));
