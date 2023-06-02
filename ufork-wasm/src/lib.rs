@@ -70,6 +70,7 @@ extern {
     pub fn host_print(base: *const u8, ofs: usize);
     pub fn host_log(x: Raw);
     pub fn host_timer(delay: Raw, stub: Raw);
+    pub fn host_awp(event_stub: Raw) -> Error;
 }
 
 #[cfg(target_arch = "wasm32")]
@@ -178,6 +179,20 @@ pub fn h_ram_top() -> Raw {
 pub fn h_reserve() -> Raw {
     unsafe {
         the_host().borrow_mut().reserve()
+    }
+}
+
+#[no_mangle]
+pub fn h_reserve_stub(device: Raw, target: Raw) -> Raw {
+    unsafe {
+        the_host().borrow_mut().reserve_stub(device, target)
+    }
+}
+
+#[no_mangle]
+pub fn h_release_stub(ptr: Raw) {
+    unsafe {
+        the_host().borrow_mut().release_stub(ptr)
     }
 }
 

@@ -1018,7 +1018,7 @@ function decode(octets, unpack, seek) {
         consume(1);
         let length = consume_magnitude("length");
         if (length === 0) {
-            return [];
+            return unpack_value([]);
         }
         let size_position = position;
         let size = consume_magnitude("size");

@@ -15,6 +15,7 @@ pub const IO_DEV: Any       = Any { raw: OPQ_RAW | MUT_RAW | 4 };
 pub const BLOB_DEV: Any     = Any { raw: OPQ_RAW | MUT_RAW | 5 };
 pub const TIMER_DEV: Any    = Any { raw: OPQ_RAW | MUT_RAW | 6 };
 pub const MEMO_DEV: Any     = Any { raw: OPQ_RAW | MUT_RAW | 7 };
+pub const AWP_DEV: Any      = Any { raw: OPQ_RAW | MUT_RAW | 8 };
 pub const SPONSOR: Any      = Any { raw: MUT_RAW | 15 };
 
 pub const RAM_BASE_OFS: usize = 16;  // RAM offsets below this value are reserved
@@ -31,7 +32,7 @@ const BLOB_RAM_MAX: usize = 1<<8;   // 256 octets of Blob RAM (for testing)
 //const BLOB_RAM_MAX: usize = 1<<10;  // 1K octets of Blob RAM
 //const BLOB_RAM_MAX: usize = 1<<12;  // 4K octets of Blob RAM
 //const BLOB_RAM_MAX: usize = 1<<16;  // 64K octets of Blob RAM
-const DEVICE_MAX:   usize = 6;      // number of Core devices
+const DEVICE_MAX:   usize = 7;      // number of Core devices
 
 pub struct Core {
     quad_rom:   [Quad; QUAD_ROM_MAX],
@@ -90,6 +91,7 @@ pub const ROM_TOP_OFS: usize = ROM_BASE_OFS;
         quad_ram[BLOB_DEV.ofs()]    = Quad::actor_t(PLUS_3, NIL, UNDEF);  // blob device #3
         quad_ram[TIMER_DEV.ofs()]   = Quad::actor_t(PLUS_4, NIL, UNDEF);  // timer device #4
         quad_ram[MEMO_DEV.ofs()]    = Quad::actor_t(PLUS_5, NIL, UNDEF);  // memo device #5
+        quad_ram[AWP_DEV.ofs()]     = Quad::actor_t(PLUS_6, NIL, UNDEF);  // transport device #6
         quad_ram[SPONSOR.ofs()]     = Quad::sponsor_t(Any::fix(512), Any::fix(64), Any::fix(768));  // root configuration sponsor
 
 pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
@@ -144,6 +146,7 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
                 Some(Box::new(BlobDevice::new())),
                 Some(Box::new(TimerDevice::new())),
                 Some(Box::new(NullDevice::new())),
+                Some(Box::new(AwpDevice::new())),
             ],
             rom_top: Any::rom(ROM_TOP_OFS),
             gc_state: UNDEF,

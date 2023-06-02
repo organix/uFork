@@ -259,3 +259,35 @@ impl Device for TimerDevice {
         Ok(true)  // event handled.
     }
 }
+
+pub struct AwpDevice {}
+impl AwpDevice {
+    pub fn new() -> AwpDevice {
+        AwpDevice {}
+    }
+    #[cfg(target_arch = "wasm32")]
+    fn forward_event(&mut self, event_stub_or_proxy: Any) -> Error {
+        unsafe {
+            crate::host_awp(event_stub_or_proxy.raw())
+        }
+    }
+    #[cfg(not(target_arch = "wasm32"))]
+    fn forward_event(&mut self, _event_stub_or_proxy: Any) -> Error {
+        // AWP device not available...
+        E_OK
+    }
+}
+impl Device for AwpDevice {
+    fn handle_event(&mut self, core: &mut Core, ep: Any) -> Result<bool, Error> {
+        let event = core.mem(ep);
+        let device = event.x();
+        let event_stub = core.reserve_stub(device, ep)?;
+        match self.forward_event(event_stub) {
+            E_OK => Ok(true),
+            code => Err(code)
+        }
+    }
+    fn drop_proxy(&mut self, proxy: Any) {
+        self.forward_event(proxy);
+    }
+}

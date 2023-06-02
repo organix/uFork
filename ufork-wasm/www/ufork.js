@@ -82,7 +82,27 @@ const IO_DEV_OFS = 4;
 const BLOB_DEV_OFS = 5;
 const TIMER_DEV_OFS = 6;
 const MEMO_DEV_OFS = 7;
+const AWP_DEV_OFS = 8;
 const SPONSOR_OFS = 15;
+
+// Error codes (from core.rs)
+
+// TODO should these be here? They seem pretty Rust-centric.
+
+const E_OK = 0;
+const E_FAIL = -1;
+const E_BOUNDS = -2;
+const E_NO_MEM = -3;
+const E_NOT_FIX = -4;
+const E_NOT_CAP = -5;
+const E_NOT_PTR = -6;
+const E_NOT_ROM = -7;
+const E_NOT_RAM = -8;
+const E_MEM_LIM = -9;
+const E_CPU_LIM = -10;
+const E_MSG_LIM = -11;
+const E_ASSERT = -12;
+const E_STOP = -13;
 
 // Strings
 
@@ -218,7 +238,7 @@ const crlf_types = {
     actor: ACTOR_T
 };
 
-function make_ufork(wasm_instance, on_error) {
+function make_ufork(wasm_instance, on_warning) {
     let import_promises = Object.create(null);
     let module_source = Object.create(null);
     let rom_sourcemap = Object.create(null);
@@ -227,7 +247,9 @@ function make_ufork(wasm_instance, on_error) {
     function wasm_mutex_call(wasm_fn) {
         return function (...args) {
             if (wasm_call_in_progress) {
-                on_error("ERROR! re-entrant WASM call", wasm_fn, args);
+                if (on_warning !== undefined) {
+                    on_warning("ERROR! re-entrant WASM call", wasm_fn, args);
+                }
                 throw new Error("re-entrant WASM call");
             }
             try {
@@ -251,6 +273,8 @@ function make_ufork(wasm_instance, on_error) {
     //const h_ram_buffer = wasm_mutex_call(wasm_instance.exports.h_ram_buffer);
     const h_ram_top = wasm_mutex_call(wasm_instance.exports.h_ram_top);
     const h_reserve = wasm_mutex_call(wasm_instance.exports.h_reserve);
+    const h_reserve_stub = wasm_mutex_call(wasm_instance.exports.h_reserve_stub);
+    const h_release_stub = wasm_mutex_call(wasm_instance.exports.h_release_stub);
     //const h_blob_buffer = wasm_mutex_call(wasm_instance.exports.h_blob_buffer);
     const h_blob_top = wasm_mutex_call(wasm_instance.exports.h_blob_top);
     const h_car = wasm_mutex_call(wasm_instance.exports.h_car);
@@ -296,8 +320,8 @@ function make_ufork(wasm_instance, on_error) {
     }
 
     function u_warning(message) {
-        if (on_error !== undefined) {
-            on_error("WARNING!", message);
+        if (on_warning !== undefined) {
+            on_warning("WARNING!", message);
         }
         return UNDEF_RAW;
     }
@@ -453,6 +477,35 @@ function make_ufork(wasm_instance, on_error) {
         return u_warning("h_write_quad: required RAM ptr, got "+u_print(ptr));
     }
 
+    function u_nth(list_ptr, n) {
+
+// Safely extract the 'nth' item from a list of pairs.
+
+//           0          -1          -2          -3
+//      lst -->[car,cdr]-->[car,cdr]-->[car,cdr]-->...
+//            +1 |        +2 |        +3 |
+//               V           V           V
+
+        if (n === 0) {
+            return list_ptr;
+        }
+        if (!u_is_ptr(list_ptr)) {
+            return UNDEF_RAW;
+        }
+        const pair = u_read_quad(list_ptr);
+        if (pair.t !== PAIR_T) {
+            return UNDEF_RAW;
+        }
+        if (n === 1) {
+            return pair.x;
+        }
+        return (
+            n < 0
+            ? u_nth(pair.y, n + 1)
+            : u_nth(pair.y, n - 1)
+        );
+    }
+
     function u_next(ptr) {
         if (u_is_ptr(ptr)) {
             const quad = u_read_quad(ptr);
@@ -524,6 +577,12 @@ function make_ufork(wasm_instance, on_error) {
         return s;
     }
 
+    function h_reserve_ram(quad = {}) {
+        const ptr = h_reserve();
+        u_write_quad(ptr, quad);
+        return ptr;
+    }
+
     function h_rom_alloc(debug_info) {
         const raw = h_reserve_rom();
         rom_sourcemap[raw] = debug_info;
@@ -553,7 +612,7 @@ function make_ufork(wasm_instance, on_error) {
         });
     }
 
-    function h_load(specifier, crlf, imports, read) {
+    function h_load(crlf, imports) {
 
 // Load a module after its imports have been loaded.
 
@@ -818,7 +877,7 @@ function make_ufork(wasm_instance, on_error) {
 // Check the type of dubious continuations.
 
         continuation_type_checks.forEach(function ([raw, t, node]) {
-            if (!u_is_ptr(raw) || read(raw).t !== t) {
+            if (!u_is_ptr(raw) || u_read_quad(raw).t !== t) {
                 return fail("Bad continuation", node);
             }
         });
@@ -832,7 +891,7 @@ function make_ufork(wasm_instance, on_error) {
                 if (seen.includes(raw)) {
                     return fail("Cyclic", node);
                 }
-                const quad = read(raw);
+                const quad = u_read_quad(raw);
                 if (quad.t !== t) {
                     break;
                 }
@@ -883,7 +942,7 @@ function make_ufork(wasm_instance, on_error) {
                     Object.keys(crlf.ast.import).forEach(function (name, nr) {
                         imports[name] = imported_modules[nr];
                     });
-                    return h_load(specifier, crlf, imports, u_read_quad);
+                    return h_load(crlf, imports);
                 });
             });
         }
@@ -967,26 +1026,23 @@ function make_ufork(wasm_instance, on_error) {
 
     function h_cap_dict(device_offsets) {
         return device_offsets.reduce(function (next, ofs) {
-            const dict = h_reserve();
-            u_write_quad(dict, {
+            return h_reserve_ram({
                 t: DICT_T,
                 x: u_fixnum(ofs),
                 y: u_ptr_to_cap(u_ramptr(ofs)),
                 z: next
             });
-            return dict;
         }, NIL_RAW);
     }
 
     function h_boot(instr_ptr) {
-        if (!u_is_ptr(instr_ptr)) {
+        if (instr_ptr === undefined || !u_is_ptr(instr_ptr)) {
             throw new Error("Not an instruction: " + u_print(instr_ptr));
         }
 
 // Make a boot actor, to be sent the boot message.
 
-        const actor = h_reserve();
-        u_write_quad(actor, {
+        const actor = h_reserve_ram({
             t: ACTOR_T,
             x: instr_ptr,
             y: NIL_RAW,
@@ -1005,7 +1061,8 @@ function make_ufork(wasm_instance, on_error) {
                 IO_DEV_OFS,
                 BLOB_DEV_OFS,
                 TIMER_DEV_OFS,
-                MEMO_DEV_OFS
+                MEMO_DEV_OFS,
+                AWP_DEV_OFS
             ])
         );
     }
@@ -1124,7 +1181,22 @@ function make_ufork(wasm_instance, on_error) {
         BLOB_DEV_OFS,
         TIMER_DEV_OFS,
         MEMO_DEV_OFS,
+        AWP_DEV_OFS,
         SPONSOR_OFS,
+        E_OK,
+        E_FAIL,
+        E_BOUNDS,
+        E_NO_MEM,
+        E_NOT_FIX,
+        E_NOT_CAP,
+        E_NOT_PTR,
+        E_NOT_ROM,
+        E_NOT_RAM,
+        E_MEM_LIM,
+        E_CPU_LIM,
+        E_MSG_LIM,
+        E_ASSERT,
+        E_STOP,
 
 // The non-reentrant methods.
 
@@ -1140,8 +1212,10 @@ function make_ufork(wasm_instance, on_error) {
         h_import,
         h_load,
         h_ram_top,
-        h_reserve,
+        h_release_stub,
+        h_reserve_ram,
         h_reserve_rom,
+        h_reserve_stub,
         h_restore,
         h_revert,
         h_rom_top,
@@ -1169,6 +1243,7 @@ function make_ufork(wasm_instance, on_error) {
         u_mem_pages,
         u_memory,
         u_next,
+        u_nth,
         u_pprint,
         u_print,
         u_ptr_to_cap,
