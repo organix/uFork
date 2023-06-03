@@ -250,7 +250,7 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
             // free dead continuation and associated event
             self.free(ep);
             self.free(kp);
-            //self.gc_collect();  // FIXME! REMOVE FORCED GC...
+            self.gc_collect();  // FIXME! REMOVE FORCED GC...
         }
         //self.gc_increment();  // WARNING! incremental and stop-the-world GC are incompatible!
         Ok(true)  // instruction executed
@@ -1285,12 +1285,14 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
             let ofs = top.ofs() + 1;
             if ofs > QUAD_RAM_MAX {
                 //panic!("out of memory!");
+                /*
                 self.gc_collect();
                 if let Some(m) = self.ram_free().fix_num() {
                     if m >= 16 {  // ensure some margin after GC
                         return self.reserve(init);
                     }
                 }
+                */
                 return Err(E_NO_MEM);  // no memory available
             }
             self.set_ram_top(Any::ram(ofs));
