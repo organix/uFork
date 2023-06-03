@@ -1984,7 +1984,7 @@ pub const COUNT_TO: Any = Any { raw: (T_DEV_OFS+10) as Raw };
         let a_boot = core.ptr_to_cap(boot_ptr);
         core.event_inject(SPONSOR, a_boot, UNDEF).unwrap();
         let err = core.run_loop();
-        assert_eq!(E_OK, err);
+        if err < 0 { assert_eq!(E_OK, err); }  // positive values are number of steps executed
     }
 
     #[test]
@@ -1996,7 +1996,7 @@ pub const COUNT_TO: Any = Any { raw: (T_DEV_OFS+10) as Raw };
         core.event_inject(SPONSOR, a_boot, UNDEF).unwrap();
         core.gc_collect();
         let err = core.run_loop();
-        assert_eq!(E_OK, err);
+        if err < 0 { assert_eq!(E_OK, err); }  // positive values are number of steps executed
         core.gc_collect();
     }
 
@@ -2008,7 +2008,7 @@ pub const COUNT_TO: Any = Any { raw: (T_DEV_OFS+10) as Raw };
         let a_boot = core.ptr_to_cap(boot_ptr);
         core.event_inject(SPONSOR, a_boot, UNDEF).unwrap();
         let err = core.run_loop();
-        assert_eq!(E_OK, err);
+        if err < 0 { assert_eq!(E_OK, err); }  // positive values are number of steps executed
     }
 
     #[test]
@@ -2021,7 +2021,7 @@ pub const COUNT_TO: Any = Any { raw: (T_DEV_OFS+10) as Raw };
         let msg = core.reserve(&Quad::pair_t(a_boot, msg)).unwrap();
         core.event_inject(SPONSOR, a_boot, msg).unwrap();
         let err = core.run_loop();
-        assert_eq!(E_OK, err);
+        if err < 0 { assert_eq!(E_OK, err); }  // positive values are number of steps executed
     }
 
     #[test]
@@ -2032,7 +2032,7 @@ pub const COUNT_TO: Any = Any { raw: (T_DEV_OFS+10) as Raw };
         let a_boot = core.ptr_to_cap(boot_ptr);
         core.event_inject(SPONSOR, a_boot, NIL).unwrap();
         let err = core.run_loop();
-        assert_eq!(E_OK, err);
+        if err < 0 { assert_eq!(E_OK, err); }  // positive values are number of steps executed
     }
 
 }
