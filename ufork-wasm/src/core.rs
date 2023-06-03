@@ -1365,13 +1365,15 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
         // sweep unreachable cells into free-list
         while steps > 0 && ofs >= RAM_BASE_OFS {
             steps -= 1;
-            if self.gc_queue[ofs] == UNDEF {  // still "white"
+            let color = self.gc_queue[ofs];
+            if color == UNDEF {  // still "white"
                 let ptr = Any::ram(ofs);
                 if self.ram(ptr).t() != FREE_T {  // not already free
                     // add to free-list
                     self.free(ptr);
                 }
             } else {
+                assert_eq!(UNIT, color);  // must be "black"
                 self.gc_queue[ofs] = UNDEF;  // mark "white"
             }
             ofs -= 1;
@@ -1406,11 +1408,8 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
     }
 
     fn gc_mark(&mut self, val: Any) {
-        let ptr = if val.is_cap() {
-            self.cap_to_ptr(val)
-        } else {
-            val
-        };
+        let raw = val.raw() & !OPQ_RAW;
+        let ptr = Any::new(raw);  // strip opaque bit
         if ptr.is_ram() {
             let ofs = ptr.ofs();
             if self.gc_queue[ofs] == UNDEF {
@@ -1930,9 +1929,10 @@ pub const COUNT_TO: Any = Any { raw: (T_DEV_OFS+10) as Raw };
         quad_rom[T_DEV_OFS+15]      = Quad::vm_push(PLUS_1, Any::rom(T_DEV_OFS+16));  // n 1
         quad_rom[T_DEV_OFS+16]      = Quad::vm_alu_add(Any::rom(T_DEV_OFS+17));  // n+1
         quad_rom[T_DEV_OFS+17]      = Quad::vm_my(MY_SELF, Any::rom(T_DEV_OFS+18));  // n+1 SELF
-        quad_rom[T_DEV_OFS+18]      = Quad::vm_send(PLUS_1, COMMIT);  // --
+        quad_rom[T_DEV_OFS+18]      = Quad::vm_send(PLUS_1, Any::rom(T_DEV_OFS+19));  // --
+        quad_rom[T_DEV_OFS+19]      = Quad::vm_dup(ZERO, COMMIT);  // --
 
-        core.rom_top = Any::rom(T_DEV_OFS+19);
+        core.rom_top = Any::rom(T_DEV_OFS+20);
         T_DEV_BEH
     }
 

@@ -112,3 +112,89 @@ from the Top of RAM down to Reserved RAM.
  18     | Actor_T           | code = boot_beh   | data = NIL        | effect = UNDEF    | Bootstrap Actor   | UNIT
  19     | sponsor = 15      | target = 18       | message = NIL     | next = NIL        | Bootstrap Event   | UNIT
  20     | ...               | ...               | ...               | ...               | Top of RAM        | UNDEF
+
+## Concurrent/Incremental GC
+
+The initial implementation of this GC algorithm
+runs in a stop-the-world fashion,
+usually triggered by completely exhausting available RAM.
+This creates a "pause" between instructions
+that occurs at unpredictable times.
+It is desirable to perform garbage collection
+in an incremental fashion,
+concurrent (or interleaved) with normal mutation
+resulting from executing instructions.
+
+### GC Phase Descriptions
+
+There are three phases to the current GC algorithm:
+
+  1. Preparation
+  2. Scanning
+  3. Sweeping
+
+In _preparation_ the _GC scan-queue_ is empty
+and all non-reserved RAM quad-cells are marked "white".
+The reserved cells are scanned
+starting with the double-queue structure
+and the _GC root_ pointer (if in RAM) is marked "grey".
+This marks "grey" the first and last entries
+of both the _event queue_ and the _continuation queue_.
+
+In _scanning_ entries are removed from the GC scan-queue and marked "black".
+Each field of the designated quad is scanned,
+adding any "white" RAM reference to the GC scan-queue,
+thus marking them "grey".
+This process continues until the GC scan-queue is empty,
+at which point all cells should be
+either "white" (unreachable) or "black" (reachable).
+
+In _sweeping_ a linear-address sweep considers
+all non-reserved RAM starting at the top of memory.
+Any "white" cells that are not already in the free-list
+are added to the free list.
+Any "black" cells are marked "white"
+in preparation for the next GC pass.
+
+### Mutation During Collection
+
+Mutation interacts with garbage-collection
+via the _reserve_ (allocate) and _release_ (free) primitives.
+When a cell is released,
+it is added to the free-list
+and the cell is marked "white".
+If the cell was in the GC scan-queue
+(marked "grey"),
+which can only occur during _scanning_,
+it is removed from the queue.
+
+When a cell is reserved,
+it is assumed to be reachable
+until a future GC pass finds otherwise.
+During _preparation_ the cell is marked "white"
+because that's the initial condition for all cells.
+During _scanning_,
+if the cell is still "white"
+it is added to the GC scan-queue (marked "grey").
+During _sweeping_,
+if the cell is above the sweep address
+(the sweep has already passed it)
+it is marked "white",
+otherwise it is marked "black"
+and thus protected from collection.
+
+#### A Fatal Flaw
+
+The preceeding algorithm for handling mutation has a **fatal flaw**!
+During _scanning_ it is possible
+for an object not-yet-marked as "black" (reachable)
+to be unlinked from one cell
+and relinked into another that has already been scanned.
+If the original parent is then released,
+the relinked child may never appear in the GC scan-queue
+and thus may remain "white",
+causing it to be collected into the free-list during _sweeping_.
+Until a more robust mechanism is developed
+for detecting this kind of migration,
+the incremental GC cannot be trusted
+and the stop-the-world GC must be used instead.
