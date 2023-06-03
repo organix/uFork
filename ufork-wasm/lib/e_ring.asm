@@ -80,16 +80,21 @@ ring:                   ; next <- m
 ;;  # CREATE countdown WITH countdown_builder_beh(123456)
 ;;  # SEND (countdown, 789) TO countdown
 
-; Create a ring of 5 actors, and send a message around 3 times.
+; Create a ring of n actors, and send a message around m times.
+
+n:
+    ref 5
+m:
+    ref 3
 
 boot:                   ; () <- {caps}
-    push 5              ; 5
-    push build          ; 5 build
-    new -1              ; first=build.5
-    push 3              ; first 3
-    pick 2              ; first 3 first
-    pair 1              ; first (first . 3)
-    roll 2              ; (first . 3) first
+    push n              ; n
+    push build          ; n build
+    new -1              ; first=build.n
+    push m              ; first m
+    pick 2              ; first m first
+    pair 1              ; first (first . m)
+    roll 2              ; (first . m) first
     ref std.send_msg
 
 .export

@@ -3,6 +3,7 @@
 /*jslint browser, bitwise, long, devel */
 
 import make_ufork from "./ufork.js";
+import make_awp_device from "./awp_device.js";
 import OED from "./oed.js";
 import oed from "./oed_lite.js";
 
@@ -520,8 +521,10 @@ $sponsor_instrs.oninput = function () {
     }
 };
 
+let awp_device;
+
 WebAssembly.instantiateStreaming(
-    fetch("../target/wasm32-unknown-unknown/release/ufork_wasm.wasm"),
+    fetch("../target/wasm32-unknown-unknown/debug/ufork_wasm.wasm"),
     {
         capabilities: {
             host_clock() { // () -> i32
@@ -554,11 +557,15 @@ WebAssembly.instantiateStreaming(
                         draw_host();
                     }, core.u_fix_to_i32(delay));
                 }
+            },
+            host_awp(...args) {
+                return awp_device.handle_event(...args);
             }
         }
     }
 ).then(function (wasm) {
     core = make_ufork(wasm.instance, console.log);
+    awp_device = make_awp_device(core, single_step);
 
     // draw initial state
     update_rom_monitor();

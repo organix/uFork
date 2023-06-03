@@ -1,6 +1,6 @@
 // oed.js
 // James Diacono
-// 2023-03-05
+// 2023-06-02
 // Public Domain
 
 // A JavaScript encoder and decoder for the Octet-Encoded Data (OED) format.
@@ -41,10 +41,12 @@
 //          - transformed prior to encoding, or
 //          - omitted.
 
-//      The 'key' parameter locates the value within its parent. If the parent
-//      in an object, the key is a string. If the parent is an array, the key is
-//      a number. If the value has no parent, or is itself an object key, or is
-//      the meta-data value of an Extension BLOB, then the key is undefined.
+//      The 'key' parameter provides some context for 'value'.
+//      If the parent is an object, 'key' is a string.
+//      If the parent is an array, 'key' is a number.
+//      If the value is the meta value of an Extension BLOB, 'key' is true.
+//      If the value is itself an object key, 'key' is false.
+//      If the value has no parent, 'key' is undefined.
 
 //      The pack function returns an object:
 
@@ -90,7 +92,7 @@
 //              Encode an object. The "entries" is an array of [key, value]
 //              elements. Keys may be any value.
 
-//          {value, context}
+//          {value}
 //              Encode a value normally.
 
 //              The "value" is the value to encode. If "value" is unsupported,
@@ -572,7 +574,7 @@ function encode(value, pack) {
     function encode_extension_blob(meta, data = buffer()) {
         return buffer([
             extension_blob_octet,
-            encode_value(meta) ?? null_octet,
+            encode_value(meta, true) ?? null_octet,
             encode_integer(data.length),
             data
         ]);
@@ -611,7 +613,7 @@ function encode(value, pack) {
 
             const value_octets = encode_value(value, key);
             if (value_octets !== undefined) {
-                const key_octets = encode_value(key);
+                const key_octets = encode_value(key, false);
                 if (key_octets !== undefined) {
                     keys_and_values.push(key_octets, value_octets);
                     size += key_octets.length + value_octets.length;
@@ -944,7 +946,7 @@ function decode(octets, unpack, seek) {
 // The value we push onto the path here becomes the unpack function's 'key'
 // parameter.
 
-        path.push(undefined);
+        path.push(true);
         const meta = consume_value();
         path.pop();
         const size = consume_magnitude("size");
@@ -1016,7 +1018,7 @@ function decode(octets, unpack, seek) {
         consume(1);
         let length = consume_magnitude("length");
         if (length === 0) {
-            return [];
+            return unpack_value([]);
         }
         let size_position = position;
         let size = consume_magnitude("size");
@@ -1057,7 +1059,7 @@ function decode(octets, unpack, seek) {
         let entries = [];
         while (length > 0) {
             let recover = mark();
-            path.push(undefined);
+            path.push(false);
             let key = consume_value();
             path.pop();
             raw_keys.push(recover());

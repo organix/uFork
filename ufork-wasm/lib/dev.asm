@@ -15,6 +15,13 @@ timer_key:
     ref 6
 memo_key:
     ref 7
+awp_key:
+    ref 8
+
+intro_tag:
+    ref 0
+listen_tag:
+    ref 1
 
 boot:                   ; () <- {caps}
     msg 0               ; {caps}
@@ -79,4 +86,7 @@ count:
     blob_key
     timer_key
     memo_key
+    awp_key
+    intro_tag
+    listen_tag
     boot

@@ -13,6 +13,9 @@ impl Host {
             core,
         }
     }
+    pub fn run_loop(&mut self) -> Error {
+        self.core.run_loop()
+    }
     pub fn step(&mut self) -> Error {  // single-step instruction execution
         match self.core.execute_instruction() {
             Ok(more) => {
@@ -66,6 +69,15 @@ impl Host {
     }
     pub fn reserve(&mut self) -> Raw {
         self.core.reserve(&Quad::empty_t()).unwrap().raw()
+    }
+    pub fn reserve_stub(&mut self, device: Raw, target: Raw) -> Raw {
+        let device_ptr = Any::new(device);
+        assert!(device_ptr.is_cap());
+        let target_ptr = Any::new(target);
+        self.core.reserve_stub(device_ptr, target_ptr).unwrap().raw()
+    }
+    pub fn release_stub(&mut self, ptr: Raw) {
+        self.core.release_stub(Any::new(ptr))
     }
     pub fn blob_top(&self) -> Raw {
         self.core.blob_top().raw()
