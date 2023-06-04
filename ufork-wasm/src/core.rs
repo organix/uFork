@@ -573,7 +573,7 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
                     END_RELEASE => {
                         self.actor_commit(me);
                         // FIXME: End::Release is DEPRECATED due to potential use-after-free hazards!
-                        self.free(me);  // free actor
+                        //self.free(me);  // free actor
                         FALSE
                     },
                     _ => {
@@ -1303,6 +1303,10 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
         Ok(ptr)
     }
     pub fn free(&mut self, ptr: Any) {
+        // NOTE: comment out the next line to remove "proactive" calls to `release`
+        self.release(ptr)
+    }
+    fn release(&mut self, ptr: Any) {
         assert!(self.in_heap(ptr));
         if self.typeq(FREE_T, ptr) {
             panic!("double-free {}", ptr.raw());
@@ -1377,7 +1381,7 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
                 let ptr = Any::ram(ofs);
                 if self.ram(ptr).t() != FREE_T {  // not already free
                     // add to free-list
-                    self.free(ptr);
+                    self.release(ptr);
                 }
             } else {
                 assert_eq!(UNIT, color);  // must be "black"
@@ -1472,7 +1476,11 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
             if ptr == item {
                 queue[curr] = next;
                 if next == NIL {
-                    queue[GC_LAST] = NIL;
+                    queue[GC_LAST] = if curr == GC_FIRST {
+                        NIL
+                    } else {
+                        Any::ram(curr)
+                    }
                 }
                 break;
             }
@@ -1970,8 +1978,8 @@ pub const COUNT_TO: Any = Any { raw: (T_DEV_OFS+10) as Raw };
         assert!(m1.is_ptr());
         let m2 = core.reserve(&Quad::pair_t(PLUS_2, PLUS_2)).unwrap();
         let m3 = core.reserve(&Quad::pair_t(PLUS_3, PLUS_3)).unwrap();
-        core.free(m2);
-        core.free(m3);
+        core.release(m2);
+        core.release(m3);
         let _m4 = core.reserve(&Quad::pair_t(PLUS_4, PLUS_4)).unwrap();
         let top_after = core.ram_top().ofs();
         assert_eq!(3, top_after - top_before);
@@ -2035,6 +2043,36 @@ pub const COUNT_TO: Any = Any { raw: (T_DEV_OFS+10) as Raw };
         core.event_inject(SPONSOR, a_boot, NIL).unwrap();
         let err = core.run_loop();
         if err < 0 { assert_eq!(E_OK, err); }  // positive values are number of steps executed
+    }
+
+    #[test]
+    fn gc_queue_management() {
+        let mut core = Core::new();
+        assert_eq!(NIL, core.gc_queue[GC_FIRST]);
+        assert_eq!(NIL, core.gc_queue[GC_LAST]);
+        let mut item;
+        let a = Any::ram(23);
+        let b = Any::ram(45);
+        let c = Any::ram(67);
+        let d = Any::ram(89);
+        core.gc_enqueue(a);
+        core.gc_remove(a);
+        core.gc_enqueue(a);
+        core.gc_enqueue(b);
+        core.gc_remove(b);
+        core.gc_enqueue(c);
+        core.gc_enqueue(d);
+        core.gc_remove(b);
+        item = core.gc_dequeue();
+        assert_eq!(Some(a), item);
+        //item = core.gc_dequeue();
+        //assert_eq!(Some(b), item);
+        item = core.gc_dequeue();
+        assert_eq!(Some(c), item);
+        item = core.gc_dequeue();
+        assert_eq!(Some(d), item);
+        item = core.gc_dequeue();
+        assert_eq!(None, item);
     }
 
 }
