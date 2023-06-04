@@ -250,9 +250,9 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
             // free dead continuation and associated event
             self.free(ep);
             self.free(kp);
-            //self.gc_collect();  // FIXME! REMOVE FORCED GC...
+            self.gc_collect();  // FIXME! REMOVE FORCED GC...
         }
-        self.gc_increment();  // WARNING! incremental and stop-the-world GC are incompatible!
+        //self.gc_increment();  // WARNING! incremental and stop-the-world GC are incompatible!
         Ok(true)  // instruction executed
     }
     fn perform_op(&mut self, ip: Any) -> Result<Any, Error> {
