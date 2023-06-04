@@ -250,9 +250,9 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
             // free dead continuation and associated event
             self.free(ep);
             self.free(kp);
-            self.gc_collect();  // FIXME! REMOVE FORCED GC...
+            //self.gc_collect();  // FIXME! REMOVE FORCED GC...
         }
-        //self.gc_increment();  // WARNING! incremental and stop-the-world GC are incompatible!
+        self.gc_increment();  // WARNING! incremental and stop-the-world GC are incompatible!
         Ok(true)  // instruction executed
     }
     fn perform_op(&mut self, ip: Any) -> Result<Any, Error> {
@@ -1604,6 +1604,9 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
             panic!("invalid RAM ptr=${:08x}", fwd.raw());
         }
         let ofs = fwd.ofs();
+        if ofs >= RAM_BASE_OFS {
+            self.gc_reserve(fwd);  // FIXME: this is conservative, but it could be fairly expensive.
+        }
         &mut self.quad_ram[ofs]
     }
 
