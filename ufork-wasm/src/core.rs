@@ -1302,9 +1302,9 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
         self.gc_reserve(ptr);
         Ok(ptr)
     }
-    pub fn free(&mut self, ptr: Any) {
+    pub fn free(&mut self, _ptr: Any) {
         // NOTE: comment out the next line to remove "proactive" calls to `release`
-        self.release(ptr)
+        //self.release(_ptr)
     }
     fn release(&mut self, ptr: Any) {
         assert!(self.in_heap(ptr));
