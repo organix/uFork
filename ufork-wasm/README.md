@@ -11,6 +11,6 @@ A browser-based GUI implements a debugger for a uFork processor core.
 
 ## Running the browser-based demo
 
-1. Run `cargo build --target wasm32-unknown-unknown --release`
+1. Run `cargo build --target wasm32-unknown-unknown`
 2. Run `node www/server.mjs`
 3. Navigate to the printed URL

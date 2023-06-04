@@ -1,5 +1,4 @@
-; A simple demonstration of the in-memory transport device, a simple
-; implementation of the Actor Wire Protocol (AWP).
+; A demonstration of the AWP device.
 
 ; Alice requests an introduction from Bob. Bob's greeter sends her a ping
 ; capability, to whom Alice sends a pong capability. Alice's pong actor
