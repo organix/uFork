@@ -1399,8 +1399,9 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
             self.gc_queue[ofs] = UNDEF;  // mark "white"
         } else if self.gc_state.is_fix() {
             // during GC scanning, new allocations are added to the scan queue
-            if self.gc_queue[ofs] == UNDEF {
-                // change "white" to "grey"
+            let color = self.gc_queue[ofs];
+            if color == UNDEF || color == UNIT {
+                // change "white" or "black" to "grey"
                 self.gc_enqueue(ptr);
             }
         } else if self.gc_state.is_ram() {
@@ -1470,6 +1471,13 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
         let queue = &mut self.gc_queue;
         let ofs = ptr.ofs();
         let next = queue[ofs];
+        if next == UNDEF {
+            return;  // already "white"
+        }
+        if next == UNIT {
+            queue[ofs] = UNDEF;  // change "black" to "white"
+            return;
+        }
         let mut curr = GC_FIRST;
         let mut item = queue[curr];
         while item.is_ram() {
@@ -1487,7 +1495,7 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
             curr = item.ofs();
             item = queue[curr];
         }
-        queue[ofs] = UNDEF;  // mark "white"
+        queue[ofs] = UNDEF;  // change "grey" to "white"
     }
 
     pub fn gc_color(&self, ptr: Any) -> Any {
