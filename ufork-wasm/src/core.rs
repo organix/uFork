@@ -91,7 +91,7 @@ pub const ROM_TOP_OFS: usize = ROM_BASE_OFS;
         quad_ram[BLOB_DEV.ofs()]    = Quad::actor_t(PLUS_3, NIL, UNDEF);  // blob device #3
         quad_ram[TIMER_DEV.ofs()]   = Quad::actor_t(PLUS_4, NIL, UNDEF);  // timer device #4
         quad_ram[MEMO_DEV.ofs()]    = Quad::actor_t(PLUS_5, NIL, UNDEF);  // memo device #5
-        quad_ram[AWP_DEV.ofs()]     = Quad::actor_t(PLUS_6, NIL, UNDEF);  // transport device #6
+        quad_ram[AWP_DEV.ofs()]     = Quad::actor_t(PLUS_6, NIL, UNDEF);  // AWP device #6
         quad_ram[SPONSOR.ofs()]     = Quad::sponsor_t(Any::fix(512), Any::fix(64), Any::fix(768));  // root configuration sponsor
 
 pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
