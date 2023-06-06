@@ -1,11 +1,23 @@
-// A uFork device that talks AWP (Actor Wire Protocol).
+// A uFork device that speaks the Actor Wire Protocol (AWP).
 
-/*jslint browser, null */
+/*jslint browser, null, devel */
 
 import OED from "./oed.js";
 import dummy_transport from "./dummy_transport.js";
 
 //debug import make_ufork from "./ufork.js";
+
+function identity(connection_info) {
+    return connection_info; // TODO connection_info === identity for dummy transport
+}
+
+function proxy_key(connection_info, swiss) {
+    return (
+        swiss !== undefined
+        ? identity(connection_info) + ":" + swiss
+        : identity(connection_info)
+    );
+}
 
 function make_awp_device(core, resume) {
     const sponsor = core.u_ramptr(core.SPONSOR_OFS);
@@ -15,6 +27,7 @@ function make_awp_device(core, resume) {
     let listeners = Object.create(null);
     let connections = Object.create(null);
     let stubs = Object.create(null); // TODO release at some point
+    let proxies = Object.create(null); // TODO drop_proxy
     let frame_id = -1;
 
     function next_frame_id() {
@@ -22,12 +35,26 @@ function make_awp_device(core, resume) {
         return frame_id;
     }
 
-    function make_proxy(identity, swiss_raw = core.UNDEF_RAW) {
-        return core.u_ptr_to_cap(core.h_reserve_ram({
-            t: core.PROXY_T,
-            x: device,
-            y: core.h_reserve_ram({t: core.PAIR_T, x: identity, y: swiss_raw})
-        }));
+    function make_proxy(connection_info, swiss) {
+        const key = proxy_key(connection_info, swiss);
+        let proxy = proxies[key];
+        if (proxy === undefined) {
+            proxy = core.u_ptr_to_cap(core.h_reserve_ram({
+                t: core.PROXY_T,
+                x: device,
+                y: core.h_reserve_ram({
+                    t: core.PAIR_T,
+                    x: core.u_fixnum(connection_info), // TODO address + identity
+                    y: (
+                        swiss !== undefined
+                        ? core.u_fixnum(swiss)
+                        : core.UNDEF_RAW
+                    )
+                })
+            }));
+            proxies[key] = proxy;
+        }
+        return proxy;
     }
 
 //  uFork           | OED
@@ -39,6 +66,7 @@ function make_awp_device(core, resume) {
 //  #nil            | []
 //  (a . b)         | [a, b]
 //  fixnum          | integer
+//  capability      | ext(integer, connection_info)
 
     function marshall(value) {
         return OED.encode(value, function pack(raw, key) {
@@ -64,23 +92,38 @@ function make_awp_device(core, resume) {
                 return {value: core.u_fix_to_i32(raw)};
             }
             if (core.u_is_ptr(raw)) {
-                const quad = core.u_read_quad(raw);
-                if (quad.t === core.PAIR_T) {
-                    return {value: [quad.x, quad.y]};
+                const pair = core.u_read_quad(raw);
+                if (pair.t === core.PAIR_T) {
+                    return {value: [pair.x, pair.y]};
                 }
             }
             if (core.u_is_cap(raw)) {
-                const swiss = core.u_rawofs(raw); // discard the type-tag bits
-                if (stubs[swiss] === undefined) {
-                    stubs[swiss] = core.h_reserve_stub(device, raw);
+
+// The actor is either local (ACTOR_T) or remote (PROXY_T).
+
+                const cap_quad = core.u_read_quad(core.u_cap_to_ptr(raw));
+                if (cap_quad.t === core.ACTOR_T) {
+                    const swiss = core.u_rawofs(raw); // discard the type-tag
+                    if (stubs[swiss] === undefined) {
+                        stubs[swiss] = core.h_reserve_stub(device, raw);
+                    }
+                    return {meta: swiss};
                 }
-                return {meta: swiss};
+                if (cap_quad.t === core.PROXY_T) {
+                    const handle = core.u_read_quad(cap_quad.y);
+                    const connection_info_raw = handle.x;
+                    const swiss_raw = handle.y;
+                    return {
+                        meta: core.u_fix_to_i32(swiss_raw),
+                        data: OED.encode(connection_info_raw, pack)
+                    };
+                }
             }
             throw new Error("Failed to marshall " + core.u_pprint(value));
         });
     }
 
-    function unmarshall(buffer, default_identity) {
+    function unmarshall(buffer, current_connection_info) {
         return OED.decode(buffer, function unpack(object, canonical, key) {
             if (key === true) {
                 return canonical(); // meta
@@ -116,8 +159,18 @@ function make_awp_device(core, resume) {
                 return core.u_fixnum(canonical());
             }
             if (Number.isSafeInteger(object.meta)) {
-                // TODO check for non-default identities
-                return make_proxy(default_identity, core.u_fixnum(object.meta));
+                return make_proxy(
+
+// If the Extension BLOB has no connection info, we assume it refers to an actor
+// living on the remote end of the current connection.
+
+                    (
+                        object.data.length > 0
+                        ? OED.decode(object.data, unpack)
+                        : current_connection_info
+                    ),
+                    object.meta
+                );
             }
             throw new Error("Failed to unmarshall " + JSON.stringify(object));
         });
@@ -162,10 +215,11 @@ function make_awp_device(core, resume) {
 
 // TODO connection pooling
 
-            const to = core.u_fix_to_i32(connect_info_quad.x);
-            const from = core.u_fix_to_i32(connect_info_quad.y);
             const close = transport.connect(
-                {to, from},
+                {
+                    to: core.u_fix_to_i32(connect_info_quad.x),
+                    from: core.u_fix_to_i32(connect_info_quad.y)
+                },
                 function on_open(connection) {
                     console.log("connect on_open", connection.info());
                     connections[connection.info()] = connection;
@@ -179,13 +233,16 @@ function make_awp_device(core, resume) {
                 },
                 function on_receive(connection, frame_buffer) {
                     const frame = OED.decode(frame_buffer);
-                    console.log("connect on_receive", to, frame);
+                    console.log("connect on_receive", connection.info(), frame);
                     if (frame.to === undefined) {
                         if (event_stub_ptr !== undefined) {
 
 // This is the greeting we have been waiting for.
 
-                            resolve(unmarshall(frame.message, to));
+                            resolve(unmarshall(
+                                frame.message,
+                                connection.info()
+                            ));
                             return resume();
                         }
                     } else {
@@ -197,15 +254,23 @@ function make_awp_device(core, resume) {
                             core.h_event_inject(
                                 sponsor,
                                 core.u_read_quad(stub).y,
-                                unmarshall(frame.message, connection.info())
+                                unmarshall(
+                                    frame.message,
+                                    connection.info()
+                                )
                             );
                             return resume();
                         }
                     }
+                    console.log("connect on_receive unhandled");
                 },
                 function on_close(connection, reason) {
                     if (connection !== undefined) {
-                        console.log("connect on_close", connection.info(), reason);
+                        console.log(
+                            "connect on_close",
+                            connection.info(),
+                            reason
+                        );
                         delete connections[connection.info()];
                     }
                     if (event_stub_ptr !== undefined) {
@@ -361,6 +426,18 @@ function make_awp_device(core, resume) {
         if (core.u_is_cap(raw)) {
 
 // A proxy has been garbage collected.
+
+            const proxy = core.u_read_quad(core.u_cap_to_ptr(raw));
+            const handle = core.u_read_quad(proxy.y);
+            const connection_info = core.u_fix_to_i32(handle.x); // TODO complex info
+            const swiss = (
+                handle.y === core.UNDEF_RAW
+                ? undefined
+                : core.u_fix_to_i32(handle.y)
+            );
+            const key = proxy_key(connection_info, swiss);
+            delete proxies[key];
+
 // TODO inform the relevant party.
 
             return core.E_OK;
@@ -441,7 +518,9 @@ function make_awp_device(core, resume) {
 //debug ).then(function (wasm) {
 //debug     core = make_ufork(wasm.instance, console.log);
 //debug     awp_device = make_awp_device(core, resume);
-//debug     return core.h_import(import.meta.resolve("../lib/awp_demo.asm"));
+//debug     return core.h_import(
+//debug         import.meta.resolve("../lib/grant_matcher.asm")
+//debug     );
 //debug }).then(function (transport_module) {
 //debug     core.h_boot(transport_module.boot);
 //debug     resume();

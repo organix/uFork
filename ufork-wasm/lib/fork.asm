@@ -106,7 +106,7 @@ join_2:                 ; tail head
 ; unit test suite
 boot:                   ; () <- {caps}
     push -42            ; -42
-    push lib.const_beh  ; -1 const_beh
+    push lib.const_beh  ; -42 const_beh
     new -1              ; t_svc=const.-42
 
     push 42             ; t_svc 42
