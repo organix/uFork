@@ -1017,28 +1017,27 @@ function decode(octets, unpack, seek) {
 
         consume(1);
         let length = consume_magnitude("length");
-        if (length === 0) {
-            return unpack_value([]);
-        }
-        let size_position = position;
-        let size = consume_magnitude("size");
-        let elements_position = position;
         let elements = new Array(length);
-        let element_nr = 0;
-        while (element_nr < length) {
-            path.push(element_nr);
-            elements[element_nr] = consume_value();
-            path.pop();
-            element_nr += 1;
-        }
-        let actual_size = position - elements_position;
-        if (actual_size !== size) {
-            return fail(
-                size_position,
-                "Expected array size {a}, got {b}",
-                size,
-                actual_size
-            );
+        if (length > 0) {
+            let size_position = position;
+            let size = consume_magnitude("size");
+            let elements_position = position;
+            let element_nr = 0;
+            while (element_nr < length) {
+                path.push(element_nr);
+                elements[element_nr] = consume_value();
+                path.pop();
+                element_nr += 1;
+            }
+            let actual_size = position - elements_position;
+            if (actual_size !== size) {
+                return fail(
+                    size_position,
+                    "Expected array size {a}, got {b}",
+                    size,
+                    actual_size
+                );
+            }
         }
         return unpack_value(elements);
     }
@@ -1049,34 +1048,33 @@ function decode(octets, unpack, seek) {
 
         consume(1);
         let length = consume_magnitude("length");
-        if (length === 0) {
-            return {};
-        }
-        let size_position = position;
-        let size = consume_magnitude("size");
-        let raw_keys = [];
-        let entries_position = position;
         let entries = [];
-        while (length > 0) {
-            let recover = mark();
-            path.push(false);
-            let key = consume_value();
-            path.pop();
-            raw_keys.push(recover());
-            path.push(key);
-            let value = consume_value();
-            path.pop();
-            entries.push([key, value]);
-            length -= 1;
-        }
-        let actual = position - entries_position;
-        if (actual !== size) {
-            return fail(
-                size_position,
-                "Expected object size {a}, got {b}",
-                size,
-                actual
-            );
+        let raw_keys = [];
+        if (length > 0) {
+            let size_position = position;
+            let size = consume_magnitude("size");
+            let entries_position = position;
+            while (length > 0) {
+                let recover = mark();
+                path.push(false);
+                let key = consume_value();
+                path.pop();
+                raw_keys.push(recover());
+                path.push(key);
+                let value = consume_value();
+                path.pop();
+                entries.push([key, value]);
+                length -= 1;
+            }
+            let actual = position - entries_position;
+            if (actual !== size) {
+                return fail(
+                    size_position,
+                    "Expected object size {a}, got {b}",
+                    size,
+                    actual
+                );
+            }
         }
         return unpack_any({entries}, function canonical() {
             let object = {};

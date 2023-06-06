@@ -33,6 +33,7 @@ function make_awp_device(core, resume) {
 //  uFork           | OED
 //  ----------------|---------------
 //  #?              | null
+//  #unit           | ext(null)
 //  #t              | true
 //  #f              | false
 //  #nil            | []
@@ -46,6 +47,9 @@ function make_awp_device(core, resume) {
             }
             if (raw === core.UNDEF_RAW) {
                 return {value: null};
+            }
+            if (raw === core.UNIT_RAW) {
+                return {meta: null};
             }
             if (raw === core.TRUE_RAW) {
                 return {value: true};
@@ -83,6 +87,9 @@ function make_awp_device(core, resume) {
             }
             if (object.value === null) {
                 return core.UNDEF_RAW;
+            }
+            if (object.meta === null) {
+                return core.UNIT_RAW;
             }
             if (object.value === true) {
                 return core.TRUE_RAW;

@@ -80,10 +80,11 @@ introduced_beh:         ; {caps} <- (ping . reason)
 ping_beh:               ; () <- pong
     push #f             ; #f
     push #t             ; #f #t
-    push #?             ; #f #t #?
-    push 123            ; #f #t #? 123
-    msg 0               ; #f #t #? 123 pong
-    send 4              ; --
+    push #unit          ; #f #t #unit
+    push #?             ; #f #t #unit #?
+    push 123            ; #f #t #unit #? 123
+    msg 0               ; #f #t #unit #? 123 pong
+    send 5              ; --
     ref std.commit
 
 ; The pong actor sends the message to the debug device.
