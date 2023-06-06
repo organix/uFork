@@ -19,6 +19,10 @@ function proxy_key(connection_info, swiss) {
     );
 }
 
+function random_swiss() {
+    return Math.floor(Math.random() * 2 ** 30); // TODO 128-bit Uint8Array
+}
+
 function make_awp_device(core, resume) {
     const sponsor = core.u_ramptr(core.SPONSOR_OFS);
     const device = core.u_ptr_to_cap(core.u_ramptr(core.AWP_DEV_OFS));
@@ -26,6 +30,7 @@ function make_awp_device(core, resume) {
     let transport = dummy_transport();
     let listeners = Object.create(null);
     let connections = Object.create(null);
+    let raw_to_swiss = Object.create(null);
     let stubs = Object.create(null); // TODO release at some point
     let proxies = Object.create(null); // TODO drop_proxy
     let frame_id = -1;
@@ -99,14 +104,23 @@ function make_awp_device(core, resume) {
             }
             if (core.u_is_cap(raw)) {
 
-// The actor is either local (ACTOR_T) or remote (PROXY_T).
+// The quad is either a local actor (an ACTOR_T) or a remote actor (a PROXY_T).
 
                 const cap_quad = core.u_read_quad(core.u_cap_to_ptr(raw));
                 if (cap_quad.t === core.ACTOR_T) {
-                    const swiss = core.u_rawofs(raw); // discard the type-tag
+                    let swiss = raw_to_swiss[raw];
                     if (stubs[swiss] === undefined) {
+
+// There is no stub corresponding to this capability, making it vulnerable to
+// garbage collection. Generate a new Swiss number and reserve a stub.
+
+                        swiss = random_swiss();
                         stubs[swiss] = core.h_reserve_stub(device, raw);
+                        raw_to_swiss[raw] = swiss;
                     }
+
+// TODO what if the capability refers to a local greeter actor?
+
                     return {meta: swiss};
                 }
                 if (cap_quad.t === core.PROXY_T) {
