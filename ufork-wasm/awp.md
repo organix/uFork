@@ -92,34 +92,34 @@ support cancellation and failure notification. They take an optional `request`
 value, and produce a value on success. The requestor pattern is based on the
 parseq library (https://github.com/douglascrockford/parseq).
 
-    (cancel_customer result_customer . request) -> requestor
+    (cancel_customer callback . request) -> requestor
 
 If `cancel_customer` is an actor, the requestor _may_ send it a `cancel` actor.
 
     cancel -> cancel_customer
 
-If there comes a time that the result is no longer needed, the `cancel` actor
+If there comes a time when the reply is no longer needed, the `cancel` actor
 can be used to cancel the operation. Its sole purpose is to avoid unnecessary
 work. It is not an undo.
 
     -> cancel
 
-The `result_customer` receives a pair when the request completes (which may be
+The `callback` receives a pair when the request completes (which may be
 never). The tail of the pair indicates success or failure.
 
 On success, the tail of the pair is `#?` and the head of the pair is the
 resulting value.
 
-    (value . #?) -> result_customer
+    (value . #?) -> callback
 
 On failure, the tail is the reason for failure (guaranteed not to be `#?`) and
 the head is `#?`.
 
-    (#? . reason) -> result_customer
+    (#? . reason) -> callback
 
 ### Introduction
 
-    (#intro cancel_customer result_customer connect_info . hello_data) -> awp_device
+    (#intro cancel_customer callback connect_info . hello_data) -> awp_device
 
 Requests an introduction to a remote party, producing a greeting.
 
@@ -132,7 +132,7 @@ greeter is available, the request fails.
 
 ### Listening
 
-    (#listen cancel_customer result_customer listen_info . greeter_requestor) -> awp_device
+    (#listen cancel_customer callback listen_info . greeter_requestor) -> awp_device
 
 Listens for introduction requests, producing a value like `stop` on success.
 The `stop` capability stops the listener.
@@ -147,7 +147,7 @@ The `greeter_requestor`, if it is an actor, responds to introduction requests.
 It produces a "greeting" value, which might contain capabilities. In this way,
 the greeter lets remote parties bootstrap a relationship from scratch.
 
-    (cancel_customer result_customer connection_info . hello_data) -> greeter_requestor
+    (cancel_customer callback connection_info . hello_data) -> greeter_requestor
 
 The `connection_info` describes the connection over which the request was
 received, perhaps useful for authentication and logging (for example, it might
@@ -171,7 +171,7 @@ actor.
 
 It is possible to perform a _reliable_ send using the AWP device directly:
 
-    (#send cancel_customer result_customer proxy . message) -> awp_device
+    (#send cancel_customer callback proxy . message) -> awp_device
 
 This requestor produces an acknowledgement if it becomes known that the
 `message` was received by the remote transport. An acknowledgement does not
