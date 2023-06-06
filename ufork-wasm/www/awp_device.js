@@ -177,15 +177,15 @@ function make_awp_device(core, resume) {
     }
 
     function intro(event_stub_ptr, request) {
-        const on_introduced_customer = core.u_nth(request, 2);
+        const intro_callback = core.u_nth(request, 2);
         const connect_info = core.u_nth(request, 3);
         const hello_data = core.u_nth(request, -3);
 
         function resolve(reply) {
 
-// (stop . reason) -> on_introduced_customer
+// (stop . reason) -> intro_callback
 
-            core.h_event_inject(sponsor, on_introduced_customer, reply);
+            core.h_event_inject(sponsor, intro_callback, reply);
             core.h_release_stub(event_stub_ptr);
             event_stub_ptr = undefined;
         }
@@ -193,7 +193,7 @@ function make_awp_device(core, resume) {
 // Validate the message.
 
         if (
-            !core.u_is_cap(on_introduced_customer)
+            !core.u_is_cap(intro_callback)
             || !core.u_is_ptr(connect_info)
         ) {
             return core.E_FAIL;
@@ -292,17 +292,17 @@ function make_awp_device(core, resume) {
     }
 
     function listen(event_stub_ptr, request) {
-        const on_listening_customer = core.u_nth(request, 2);
+        const listen_callback = core.u_nth(request, 2);
         const listen_info = core.u_nth(request, 3);
         const greeter = core.u_nth(request, -3);
 
         function resolve(stop, reason) {
 
-// (stop . reason) -> on_listening_customer
+// (stop . reason) -> listen_callback
 
             core.h_event_inject(
                 sponsor,
-                on_listening_customer,
+                listen_callback,
                 core.h_reserve_ram({
                     t: core.PAIR_T,
                     x: stop,
@@ -314,9 +314,9 @@ function make_awp_device(core, resume) {
         }
 
         if (
-            !core.u_is_cap(on_listening_customer)
+            !core.u_is_cap(listen_callback)
             || !core.u_is_fix(listen_info)
-            || !core.u_is_cap(on_listening_customer)
+            || !core.u_is_cap(listen_callback)
         ) {
             return core.E_FAIL;
         }
@@ -340,9 +340,9 @@ function make_awp_device(core, resume) {
 
 // The frame is an introduction request. Forward it to the greeter.
 
-                        const greeting_customer = make_proxy(connection.info());
+                        const greeting_callback = make_proxy(connection.info());
 
-// (cancel_customer greeting_customer connection_info . hello) -> greeter
+// (cancel_customer greeting_callback connection_info . hello) -> greeter
 
                         core.h_event_inject(
                             sponsor,
@@ -352,7 +352,7 @@ function make_awp_device(core, resume) {
                                 x: core.UNDEF_RAW, // TODO cancel_customer
                                 y: core.h_reserve_ram({
                                     t: core.PAIR_T,
-                                    x: greeting_customer,
+                                    x: greeting_callback,
                                     y: core.h_reserve_ram({
                                         t: core.PAIR_T,
                                         x: core.u_fixnum(connection.info()),
