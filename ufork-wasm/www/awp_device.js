@@ -308,7 +308,7 @@ function make_awp_device(core, resume) {
     function listen(event_stub_ptr, request) {
         const listen_callback = core.u_nth(request, 2);
         const listen_info = core.u_nth(request, 3);
-        const greeter = core.u_nth(request, -3);
+        const greeter = core.u_nth(request, 4);
 
         function resolve(stop, reason) {
 
@@ -408,7 +408,7 @@ function make_awp_device(core, resume) {
             );
             listeners[bind_address] = {greeter_stub, stop};
             if (event_stub_ptr !== undefined) {
-                resolve(core.UNDEF_RAW, core.UNDEF_RAW); // TODO provide stop cap
+                resolve(core.UNDEF_RAW, core.NIL_RAW); // TODO provide stop cap
             }
             return resume();
         });
