@@ -1,7 +1,7 @@
 ; A uFork implementation of the Grant Matcher Puzzle, described at
 ; http://erights.org/elib/equality/grant-matcher/index.html.
 
-; It tests several features of uFork's AWP device, including:
+; It tests several aspects of uFork's AWP device, including:
 ;   - capability marshalling
 ;   - 3-party introductions
 ;   - proxy equality
@@ -66,13 +66,13 @@ listen_svc_beh:             ; awp_dev <- (cust address . greeter)
     new -1                  ; greeter address listen_cb
     push #?                 ; greeter address listen_cb #?
     push dev.listen_tag     ; greeter address listen_cb #? #listen
-    pair 4                  ; (#listen #? listen_cb address . greeter)
-    state 0                 ; (#listen #? listen_cb address . greeter) awp_dev
-    ref std.send_msg
+    state 0                 ; greeter address listen_cb #? #listen awp_dev
+    send 5                  ; --
+    ref std.commit
 
 listen_cb_beh:              ; cust <- (stop . reason)
     msg -1                  ; reason
-    is_eq #?                ; --
+    is_eq #nil              ; --
     msg 1                   ; stop
     state 0                 ; stop cust
     ref std.send_msg
@@ -127,20 +127,19 @@ intro_svc_beh:              ; awp_dev <- (cust @to @from hello)
     new -1                  ; hello connect_info intro_cb
     push #?                 ; hello connect_info intro_cb #?
     push dev.intro_tag      ; hello connect_info intro_cb #? #intro
-    pair 4                  ; (#intro #? intro_cb connect_info . hello)
-    state 0                 ; (#intro #? intro_cb connect_info . hello) awp_dev
-    ref std.send_msg
+    state 0                 ; hello connect_info intro_cb #? #intro awp_dev
+    send 5                  ; --
+    ref std.commit
 
 KEQD_greeter_beh:           ; deposit <- (cancel_customer greeting_callback)
-    push #?                 ; #?
-    state 0                 ; #? deposit
-    pair 1                  ; (deposit . #?)
-    msg 2                   ; (deposit . #?) greeting_callback
-    ref std.send_msg
+    state 0                 ; deposit
+    msg 2                   ; deposit greeting_callback
+    send 1                  ; --
+    ref std.commit
 
 intro_cb_beh:               ; cust <- (greeting . reason)
     msg -1                  ; reason
-    is_eq #?                ; --
+    is_eq #nil              ; --
     msg 1                   ; greeting
     state 0                 ; greeting cust
     ref std.send_msg
@@ -167,8 +166,8 @@ donor_k_beh:                ; (intro_svc address withdraw) <- deposit
 ; When a second pledge to a particular charity arrives, the charity is sent a
 ; list of donors.
 
-GM_greeter_beh:             ; {pledges} <- (cancel_cust cb info . pledge)
-    msg -3                  ; pledge
+GM_greeter_beh:             ; {pledges} <- (cancel_cust cb info pledge)
+    msg 4                   ; pledge
     part 1                  ; new_donor deposit
     state 0                 ; new_donor deposit {pledges}
     pick 2                  ; new_donor deposit {pledges} deposit

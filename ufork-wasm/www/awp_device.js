@@ -19,6 +19,10 @@ function proxy_key(connection_info, swiss) {
     );
 }
 
+function random_swiss() {
+    return Math.floor(Math.random() * 2 ** 30); // TODO 128-bit Uint8Array
+}
+
 function make_awp_device(core, resume) {
     const sponsor = core.u_ramptr(core.SPONSOR_OFS);
     const device = core.u_ptr_to_cap(core.u_ramptr(core.AWP_DEV_OFS));
@@ -26,6 +30,7 @@ function make_awp_device(core, resume) {
     let transport = dummy_transport();
     let listeners = Object.create(null);
     let connections = Object.create(null);
+    let raw_to_swiss = Object.create(null);
     let stubs = Object.create(null); // TODO release at some point
     let proxies = Object.create(null); // TODO drop_proxy
     let frame_id = -1;
@@ -99,14 +104,23 @@ function make_awp_device(core, resume) {
             }
             if (core.u_is_cap(raw)) {
 
-// The actor is either local (ACTOR_T) or remote (PROXY_T).
+// The quad is either a local actor (an ACTOR_T) or a remote actor (a PROXY_T).
 
                 const cap_quad = core.u_read_quad(core.u_cap_to_ptr(raw));
                 if (cap_quad.t === core.ACTOR_T) {
-                    const swiss = core.u_rawofs(raw); // discard the type-tag
+                    let swiss = raw_to_swiss[raw];
                     if (stubs[swiss] === undefined) {
+
+// There is no stub corresponding to this capability, making it vulnerable to
+// garbage collection. Generate a new Swiss number and reserve a stub.
+
+                        swiss = random_swiss();
                         stubs[swiss] = core.h_reserve_stub(device, raw);
+                        raw_to_swiss[raw] = swiss;
                     }
+
+// TODO what if the capability refers to a local greeter actor?
+
                     return {meta: swiss};
                 }
                 if (cap_quad.t === core.PROXY_T) {
@@ -177,15 +191,15 @@ function make_awp_device(core, resume) {
     }
 
     function intro(event_stub_ptr, request) {
-        const on_introduced_customer = core.u_nth(request, 2);
+        const intro_callback = core.u_nth(request, 2);
         const connect_info = core.u_nth(request, 3);
         const hello_data = core.u_nth(request, -3);
 
         function resolve(reply) {
 
-// (stop . reason) -> on_introduced_customer
+// (stop . reason) -> intro_callback
 
-            core.h_event_inject(sponsor, on_introduced_customer, reply);
+            core.h_event_inject(sponsor, intro_callback, reply);
             core.h_release_stub(event_stub_ptr);
             event_stub_ptr = undefined;
         }
@@ -193,7 +207,7 @@ function make_awp_device(core, resume) {
 // Validate the message.
 
         if (
-            !core.u_is_cap(on_introduced_customer)
+            !core.u_is_cap(intro_callback)
             || !core.u_is_ptr(connect_info)
         ) {
             return core.E_FAIL;
@@ -292,17 +306,17 @@ function make_awp_device(core, resume) {
     }
 
     function listen(event_stub_ptr, request) {
-        const on_listening_customer = core.u_nth(request, 2);
+        const listen_callback = core.u_nth(request, 2);
         const listen_info = core.u_nth(request, 3);
-        const greeter = core.u_nth(request, -3);
+        const greeter = core.u_nth(request, 4);
 
         function resolve(stop, reason) {
 
-// (stop . reason) -> on_listening_customer
+// (stop . reason) -> listen_callback
 
             core.h_event_inject(
                 sponsor,
-                on_listening_customer,
+                listen_callback,
                 core.h_reserve_ram({
                     t: core.PAIR_T,
                     x: stop,
@@ -314,9 +328,9 @@ function make_awp_device(core, resume) {
         }
 
         if (
-            !core.u_is_cap(on_listening_customer)
+            !core.u_is_cap(listen_callback)
             || !core.u_is_fix(listen_info)
-            || !core.u_is_cap(on_listening_customer)
+            || !core.u_is_cap(listen_callback)
         ) {
             return core.E_FAIL;
         }
@@ -340,9 +354,9 @@ function make_awp_device(core, resume) {
 
 // The frame is an introduction request. Forward it to the greeter.
 
-                        const greeting_customer = make_proxy(connection.info());
+                        const greeting_callback = make_proxy(connection.info());
 
-// (cancel_customer greeting_customer connection_info . hello) -> greeter
+// (cancel_customer greeting_callback connection_info . hello) -> greeter
 
                         core.h_event_inject(
                             sponsor,
@@ -352,7 +366,7 @@ function make_awp_device(core, resume) {
                                 x: core.UNDEF_RAW, // TODO cancel_customer
                                 y: core.h_reserve_ram({
                                     t: core.PAIR_T,
-                                    x: greeting_customer,
+                                    x: greeting_callback,
                                     y: core.h_reserve_ram({
                                         t: core.PAIR_T,
                                         x: core.u_fixnum(connection.info()),
@@ -394,7 +408,7 @@ function make_awp_device(core, resume) {
             );
             listeners[bind_address] = {greeter_stub, stop};
             if (event_stub_ptr !== undefined) {
-                resolve(core.UNDEF_RAW, core.UNDEF_RAW); // TODO provide stop cap
+                resolve(core.UNDEF_RAW, core.NIL_RAW); // TODO provide stop cap
             }
             return resume();
         });

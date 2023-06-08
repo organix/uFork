@@ -105,14 +105,14 @@ work. It is not an undo.
     -> cancel
 
 The `callback` receives a pair when the request completes (which may be
-never). The tail of the pair indicates success or failure.
+never). The value of the tail indicates success or failure.
 
-On success, the tail of the pair is `#?` and the head of the pair is the
+On success, the tail of the pair is `#nil` and the head of the pair is the
 resulting value.
 
-    (value . #?) -> callback
+    (value) -> callback
 
-On failure, the tail is the reason for failure (guaranteed not to be `#?`) and
+On failure, the tail is the reason for failure (guaranteed not to be `#nil`) and
 the head is `#?`.
 
     (#? . reason) -> callback
@@ -132,7 +132,7 @@ greeter is available, the request fails.
 
 ### Listening
 
-    (#listen cancel_customer callback listen_info . greeter_requestor) -> awp_device
+    (#listen cancel_customer callback listen_info greeter) -> awp_device
 
 Listens for introduction requests, producing a value like `stop` on success.
 The `stop` capability stops the listener.
@@ -143,11 +143,12 @@ Information required to listen for remote connections is provided in
 `listen_info`. Such information might include an IP address, a port, and a
 private key.
 
-The `greeter_requestor`, if it is an actor, responds to introduction requests.
-It produces a "greeting" value, which might contain capabilities. In this way,
-the greeter lets remote parties bootstrap a relationship from scratch.
+The `greeter`, if provided, is a requestor actor that responds to introduction
+requests. It produces a "greeting" value, which might contain capabilities. In
+this way, the greeter lets remote parties bootstrap a relationship from
+scratch.
 
-    (cancel_customer callback connection_info . hello_data) -> greeter_requestor
+    (cancel_customer callback connection_info . hello_data) -> greeter
 
 The `connection_info` describes the connection over which the request was
 received, perhaps useful for authentication and logging (for example, it might
