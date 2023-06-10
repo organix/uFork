@@ -2,10 +2,14 @@
 
 /*jslint browser, bitwise, long, devel */
 
-import make_ufork from "./ufork.js";
-import make_awp_device from "./awp_device.js";
+import instantiate_core from "./ufork.js";
 import OED from "./oed.js";
-import oed from "./oed_lite.js";
+import debug_device from "./devices/debug_device.js";
+import clock_device from "./devices/clock_device.js";
+import io_device from "./devices/io_device.js";
+import blob_device from "./devices/blob_device.js";
+import timer_device from "./devices/timer_device.js";
+import awp_device from "./devices/awp_device.js";
 
 /*
 0000:  06 10 82 38  01 81 07 10  82 32 01 84  0b 84 6b 69  ···8·····2····ki
@@ -521,51 +525,19 @@ $sponsor_instrs.oninput = function () {
     }
 };
 
-let awp_device;
+instantiate_core(
+    "../target/wasm32-unknown-unknown/debug/ufork_wasm.wasm",
+    console.log
+).then(function (the_core) {
+    core = the_core;
 
-WebAssembly.instantiateStreaming(
-    fetch("../target/wasm32-unknown-unknown/debug/ufork_wasm.wasm"),
-    {
-        capabilities: {
-            host_clock() { // () -> i32
-                return window.performance.now();
-            },
-            host_print(base, ofs) { // (i32, i32) -> nil
-                const mem = new Uint8Array(core.u_memory(), base);  // u8[] view of blob memory
-                const buf = mem.subarray(ofs - 5);  // blob allocation has a 5-octet header
-                //const buf = mem.subarray(ofs);  // create window into application-managed memory
-                //const blob = OED.decode(buf, undefined, 0);  // decode a single OED value
-                //const blob = oed.decode(buf).value;  // decode a single OED value
-                const blob = oed.decode(buf);  // decode value and return OED structure
-                console.log("PRINT:", blob, base, ofs);
-            },
-            host_log(x) { // (i32) -> nil
-                const u = (x >>> 0);  // convert i32 -> u32
-                console.log("LOG:", u, "=", core.u_print(u), "->", core.u_pprint(u));
-            },
-            host_timer(delay, stub) { // (i32, i32) -> nil
-                if (core.u_is_fix(delay)) {
-                    setTimeout(function () {
-                        // FIXME: we need to ensure that `stub` remains valid!
-                        console.log("TIMER:", core.u_pprint(delay), core.u_pprint(stub));
-                        const quad = core.u_read_quad(stub);
-                        const event = core.u_read_quad(quad.y);  // get target event
-                        const sponsor = event.t;
-                        const target = event.x;
-                        const message = event.y;
-                        core.h_event_inject(sponsor, target, message);
-                        draw_host();
-                    }, core.u_fix_to_i32(delay));
-                }
-            },
-            host_awp(...args) {
-                return awp_device.handle_event(...args);
-            }
-        }
-    }
-).then(function (wasm) {
-    core = make_ufork(wasm.instance, console.log);
-    awp_device = make_awp_device(core, single_step);
+    // install devices
+    debug_device(core);
+    clock_device(core);
+    io_device(core);
+    blob_device(core);
+    timer_device(core, single_step);
+    awp_device(core, single_step);
 
     // draw initial state
     update_rom_monitor();

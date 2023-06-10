@@ -1,5 +1,9 @@
 // A JavaScript wrapper for a uFork WASM core.
 
+// The 'instantiate_core' function takes a URL to the uFork WASM binary and an
+// optional 'on_warning' callback. It returns a Promise that resolves to a core
+// object containing a bunch of methods.
+
 /*jslint browser, long, bitwise */
 
 import assemble from "./assemble.js";
@@ -238,7 +242,8 @@ const crlf_types = {
     actor: ACTOR_T
 };
 
-function make_ufork(wasm_instance, on_warning) {
+function make_core(wasm_exports, on_warning, mutable_wasm_caps) {
+    let boot_caps_raw = NIL_RAW; // empty dict
     let import_promises = Object.create(null);
     let module_source = Object.create(null);
     let rom_sourcemap = Object.create(null);
@@ -261,41 +266,41 @@ function make_ufork(wasm_instance, on_warning) {
         };
     }
 
-    const h_run_loop = wasm_mutex_call(wasm_instance.exports.h_run_loop);
-    const h_step = wasm_mutex_call(wasm_instance.exports.h_step);
-    const h_event_inject = wasm_mutex_call(wasm_instance.exports.h_event_inject);
-    const h_revert = wasm_mutex_call(wasm_instance.exports.h_revert);
-    const h_gc_run = wasm_mutex_call(wasm_instance.exports.h_gc_run);
-    //const h_rom_buffer = wasm_mutex_call(wasm_instance.exports.h_rom_buffer);
-    const h_rom_top = wasm_mutex_call(wasm_instance.exports.h_rom_top);
-    const h_set_rom_top = wasm_mutex_call(wasm_instance.exports.h_set_rom_top);
-    const h_reserve_rom = wasm_mutex_call(wasm_instance.exports.h_reserve_rom);
-    //const h_ram_buffer = wasm_mutex_call(wasm_instance.exports.h_ram_buffer);
-    const h_ram_top = wasm_mutex_call(wasm_instance.exports.h_ram_top);
-    const h_reserve = wasm_mutex_call(wasm_instance.exports.h_reserve);
-    const h_reserve_stub = wasm_mutex_call(wasm_instance.exports.h_reserve_stub);
-    const h_release_stub = wasm_mutex_call(wasm_instance.exports.h_release_stub);
-    //const h_blob_buffer = wasm_mutex_call(wasm_instance.exports.h_blob_buffer);
-    const h_blob_top = wasm_mutex_call(wasm_instance.exports.h_blob_top);
-    const h_car = wasm_mutex_call(wasm_instance.exports.h_car);
-    const h_cdr = wasm_mutex_call(wasm_instance.exports.h_cdr);
-    const h_gc_color = wasm_mutex_call(wasm_instance.exports.h_gc_color);
-    const h_gc_state = wasm_mutex_call(wasm_instance.exports.h_gc_state);
+    const h_run_loop = wasm_mutex_call(wasm_exports.h_run_loop);
+    const h_step = wasm_mutex_call(wasm_exports.h_step);
+    const h_event_inject = wasm_mutex_call(wasm_exports.h_event_inject);
+    const h_revert = wasm_mutex_call(wasm_exports.h_revert);
+    const h_gc_run = wasm_mutex_call(wasm_exports.h_gc_run);
+    //const h_rom_buffer = wasm_mutex_call(wasm_exports.h_rom_buffer);
+    const h_rom_top = wasm_mutex_call(wasm_exports.h_rom_top);
+    const h_set_rom_top = wasm_mutex_call(wasm_exports.h_set_rom_top);
+    const h_reserve_rom = wasm_mutex_call(wasm_exports.h_reserve_rom);
+    //const h_ram_buffer = wasm_mutex_call(wasm_exports.h_ram_buffer);
+    const h_ram_top = wasm_mutex_call(wasm_exports.h_ram_top);
+    const h_reserve = wasm_mutex_call(wasm_exports.h_reserve);
+    const h_reserve_stub = wasm_mutex_call(wasm_exports.h_reserve_stub);
+    const h_release_stub = wasm_mutex_call(wasm_exports.h_release_stub);
+    //const h_blob_buffer = wasm_mutex_call(wasm_exports.h_blob_buffer);
+    const h_blob_top = wasm_mutex_call(wasm_exports.h_blob_top);
+    const h_car = wasm_mutex_call(wasm_exports.h_car);
+    const h_cdr = wasm_mutex_call(wasm_exports.h_cdr);
+    const h_gc_color = wasm_mutex_call(wasm_exports.h_gc_color);
+    const h_gc_state = wasm_mutex_call(wasm_exports.h_gc_state);
 
     function u_memory() {
 
 // WARNING! The WASM memory buffer can move if it is resized. We get a fresh
 // pointer each time for safety.
 
-        return wasm_instance.exports.memory.buffer;
+        return wasm_exports.memory.buffer;
     }
 
 // We avoid unnecessary reentrancy by caching the offsets. Even if the WASM
 // memory is rearranged, offsets should not change.
 
-    const initial_rom_ofs = wasm_instance.exports.h_rom_buffer();
-    const initial_ram_ofs = wasm_instance.exports.h_ram_buffer();
-    const initial_blob_ofs = wasm_instance.exports.h_blob_buffer();
+    const initial_rom_ofs = wasm_exports.h_rom_buffer();
+    const initial_ram_ofs = wasm_exports.h_ram_buffer();
+    const initial_blob_ofs = wasm_exports.h_blob_buffer();
 
     function u_rom_ofs() {
         return initial_rom_ofs;
@@ -1024,20 +1029,9 @@ function make_ufork(wasm_instance, on_warning) {
         return u_print(raw);
     }
 
-    function h_cap_dict(device_offsets) {
-        return device_offsets.reduce(function (next, ofs) {
-            return h_reserve_ram({
-                t: DICT_T,
-                x: u_fixnum(ofs),
-                y: u_ptr_to_cap(u_ramptr(ofs)),
-                z: next
-            });
-        }, NIL_RAW);
-    }
-
     function h_boot(instr_ptr) {
         if (instr_ptr === undefined || !u_is_ptr(instr_ptr)) {
-            throw new Error("Not an instruction: " + u_print(instr_ptr));
+            throw new Error("Not an instruction: " + u_pprint(instr_ptr));
         }
 
 // Make a boot actor, to be sent the boot message.
@@ -1055,15 +1049,7 @@ function make_ufork(wasm_instance, on_warning) {
         h_event_inject(
             u_ramptr(SPONSOR_OFS),
             u_ptr_to_cap(actor),
-            h_cap_dict([
-                DEBUG_DEV_OFS,
-                CLOCK_DEV_OFS,
-                IO_DEV_OFS,
-                BLOB_DEV_OFS,
-                TIMER_DEV_OFS,
-                MEMO_DEV_OFS,
-                AWP_DEV_OFS
-            ])
+            boot_caps_raw
         );
     }
 
@@ -1111,6 +1097,34 @@ function make_ufork(wasm_instance, on_warning) {
 
         const rom_top = u_romptr(rom_len >> 2);
         h_set_rom_top(rom_top);  // register new top-of-ROM
+    }
+
+    function h_install(boot_caps, wasm_imports) {
+
+// Extends the boot capabilities dictionary and provide capability functions to
+// the WASM instance.
+
+// The 'boot_caps' parameter is an array of entries to add to the "caps"
+// dictionary provided to boot actors (created via the 'h_boot' method). Each
+// entry is an array containing two values like [key, value]. The key is an
+// integer, see dev.asm for a list of assigned numbers. The value can be
+// any raw value.
+
+// The 'wasm_imports' parameter is an object with functions to provide to the
+// WASM instance. The names of these functions are hard coded into the built
+// WASM, e.g. "host_clock".
+
+        if (boot_caps !== undefined) {
+            boot_caps.forEach(function ([integer, value_raw]) {
+                boot_caps_raw = h_reserve_ram({
+                    t: DICT_T,
+                    x: u_fixnum(integer),
+                    y: value_raw,
+                    z: boot_caps_raw
+                });
+            });
+        }
+        Object.assign(mutable_wasm_caps, wasm_imports);
     }
 
     return Object.freeze({
@@ -1202,7 +1216,6 @@ function make_ufork(wasm_instance, on_warning) {
 
         h_blob_top,
         h_boot,
-        h_cap_dict,
         h_car,
         h_cdr,
         h_event_inject,
@@ -1210,6 +1223,7 @@ function make_ufork(wasm_instance, on_warning) {
         h_gc_run,
         h_gc_state,
         h_import,
+        h_install,
         h_load,
         h_ram_top,
         h_release_stub,
@@ -1259,70 +1273,79 @@ function make_ufork(wasm_instance, on_warning) {
     });
 }
 
-//debug WebAssembly.instantiateStreaming(
-//debug     fetch(import.meta.resolve(
+function instantiate_core(wasm_url, on_warning) {
+    let mutable_wasm_caps = Object.create(null);
+    return WebAssembly.instantiateStreaming(
+        fetch(wasm_url),
+        {
+            capabilities: {
+                host_clock(...args) {
+                    return mutable_wasm_caps.host_clock(...args);
+                },
+                host_print(...args) {
+                    return mutable_wasm_caps.host_print(...args);
+                },
+                host_log(...args) {
+                    return mutable_wasm_caps.host_log(...args);
+                },
+                host_timer(...args) {
+                    return mutable_wasm_caps.host_timer(...args);
+                },
+                host_awp(...args) {
+                    return mutable_wasm_caps.host_awp(...args);
+                }
+            }
+        }
+    ).then(function (wasm) {
+        return make_core(
+            wasm.instance.exports,
+            on_warning,
+            mutable_wasm_caps
+        );
+    });
+}
+
+//debug import debug_device from "./devices/debug_device.js";
+//debug import clock_device from "./devices/clock_device.js";
+//debug import io_device from "./devices/io_device.js";
+//debug import blob_device from "./devices/blob_device.js";
+//debug import timer_device from "./devices/timer_device.js";
+//debug instantiate_core(
+//debug     import.meta.resolve(
 //debug         "../target/wasm32-unknown-unknown/debug/ufork_wasm.wasm"
-//debug     )),
-//debug     {
-//debug         capabilities: {
-//debug             host_clock() {
-//debug                 console.log("host_clock");
-//debug                 return performance.now();
-//debug             },
-//debug             host_print(base, ofs) {
-//debug                 console.log("host_print", base, ofs);
-//debug             },
-//debug             host_log(x) {
-//debug                 console.log("host_log", x);
-//debug             },
-//debug             host_timer(delay, stub) {
-//debug                 console.log("host_timer", delay, stub);
-//debug             }
-//debug         }
-//debug     }
-//debug ).then(function (wasm) {
-//debug     const {
-//debug         h_blob_top,
-//debug         h_boot,
-//debug         h_import,
-//debug         h_ram_top,
-//debug         h_rom_top,
-//debug         h_run_loop,
-//debug         h_step,
-//debug         u_blob_ofs,
-//debug         u_fault_msg,
-//debug         u_fix_to_i32,
-//debug         u_fixnum,
-//debug         u_memory,
-//debug         u_print,
-//debug         u_ptr_to_cap,
-//debug         u_ram_ofs,
-//debug         u_ramptr,
-//debug         u_rawofs,
-//debug         u_rom_ofs
-//debug     } = make_ufork(wasm.instance, console.log);
+//debug     ),
+//debug     console.log
+//debug ).then(function (core) {
+//debug     // Install devices
+//debug     debug_device(core);
+//debug     clock_device(core);
+//debug     io_device(core);
+//debug     blob_device(core);
+//debug     timer_device(core, function resume() {
+//debug         console.log("HALT:", core.u_fault_msg(core.h_run_loop()));
+//debug     });
 //debug     // Test suite
-//debug     console.log("u_fixnum(0) =", u_fixnum(0), u_fixnum(0).toString(16), u_print(u_fixnum(0)));
-//debug     console.log("u_fixnum(1) =", u_fixnum(1), u_fixnum(1).toString(16), u_print(u_fixnum(1)));
-//debug     console.log("u_fixnum(-1) =", u_fixnum(-1), u_fixnum(-1).toString(16), u_print(u_fixnum(-1)));
-//debug     console.log("u_fixnum(-2) =", u_fixnum(-2), u_fixnum(-2).toString(16), u_print(u_fixnum(-2)));
-//debug     console.log("h_rom_top() =", h_rom_top(), u_print(h_rom_top()));
-//debug     console.log("h_ram_top() =", h_ram_top(), u_print(h_ram_top()));
-//debug     console.log("u_ramptr(5) =", u_ramptr(5), u_print(u_ramptr(5)));
-//debug     console.log("u_ptr_to_cap(u_ramptr(3)) =", u_ptr_to_cap(u_ramptr(3)), u_print(u_ptr_to_cap(u_ramptr(3))));
-//debug     return h_import(
-//debug         import.meta.resolve("../lib/e_ring.asm")
-//debug     ).then(function (device_module) {
-//debug         h_boot(device_module.boot);
+//debug     console.log("u_fixnum(0) =", core.u_fixnum(0), core.u_fixnum(0).toString(16), core.u_print(core.u_fixnum(0)));
+//debug     console.log("u_fixnum(1) =", core.u_fixnum(1), core.u_fixnum(1).toString(16), core.u_print(core.u_fixnum(1)));
+//debug     console.log("u_fixnum(-1) =", core.u_fixnum(-1), core.u_fixnum(-1).toString(16), core.u_print(core.u_fixnum(-1)));
+//debug     console.log("u_fixnum(-2) =", core.u_fixnum(-2), core.u_fixnum(-2).toString(16), core.u_print(core.u_fixnum(-2)));
+//debug     console.log("h_rom_top() =", core.h_rom_top(), core.u_print(core.h_rom_top()));
+//debug     console.log("h_ram_top() =", core.h_ram_top(), core.u_print(core.h_ram_top()));
+//debug     console.log("u_ramptr(5) =", core.u_ramptr(5), core.u_print(core.u_ramptr(5)));
+//debug     console.log("u_ptr_to_cap(u_ramptr(3)) =", core.u_ptr_to_cap(core.u_ramptr(3)), core.u_print(core.u_ptr_to_cap(core.u_ramptr(3))));
+//debug     return core.h_import(
+//debug         import.meta.resolve("../lib/dev.asm")
+//debug     ).then(function (asm_module) {
+//debug         core.h_boot(asm_module.boot);
 //debug         const start = performance.now();
-//debug         const error_code = h_run_loop();
+//debug         const error_code = core.h_run_loop();
 //debug         const duration = performance.now() - start;
 //debug         console.log(
 //debug             error_code,
-//debug             u_fault_msg(error_code),
+//debug             core.u_fault_msg(error_code),
 //debug             duration.toFixed(3) + "ms"
 //debug         );
 //debug     });
 //debug });
 
-export default Object.freeze(make_ufork);
+export default Object.freeze(instantiate_core);
