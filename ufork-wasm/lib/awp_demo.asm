@@ -8,25 +8,32 @@
     dev: "./dev.asm"
     std: "./std.asm"
 
-alice_address:
-    ref 1111
-bob_address:
-    ref 2222
+; Alice is acquainted with Bob.
+
+alice_store:
+    ref 0
+bob_petname:
+    ref 0
+
+; Bob is not acquainted with Alice.
+
+bob_store:
+    ref 1
 
 ; Bob starts listening.
 
 boot:                   ; () <- {caps}
     push greeter_beh    ; greeter_beh
     new 0               ; greeter
-    push bob_address    ; greeter @bob
-    msg 0               ; greeter @bob {caps}
-    push listening_beh  ; greeter @bob {caps} listening_beh
-    new -1              ; greeter @bob listening
-    push #?             ; greeter @bob listening #?
-    push dev.listen_tag ; greeter @bob listening #? #listen
-    msg 0               ; greeter @bob listening #? #listen {caps}
-    push dev.awp_key    ; greeter @bob listening #? #listen {caps} awp_key
-    dict get            ; greeter @bob listening #? #listen awp_dev
+    push bob_store      ; greeter bob
+    msg 0               ; greeter bob {caps}
+    push listening_beh  ; greeter bob {caps} listening_beh
+    new -1              ; greeter bob listening
+    push #?             ; greeter bob listening #?
+    push dev.listen_tag ; greeter bob listening #? #listen
+    msg 0               ; greeter bob listening #? #listen {caps}
+    push dev.awp_key    ; greeter bob listening #? #listen {caps} awp_key
+    dict get            ; greeter bob listening #? #listen awp_dev
     send 5              ; --
     ref std.commit
 
@@ -35,29 +42,28 @@ boot:                   ; () <- {caps}
 listening_beh:          ; {caps} <- (stop . reason)
     msg -1              ; reason
     is_eq #nil          ; --
-    push 42             ; password
-    push alice_address  ; password @alice
-    push bob_address    ; password @alice @bob
-    pair 1              ; password info=(@bob . @alice)
-    state 0             ; password info {caps}
-    push introduced_beh ; password info {caps} introduced_beh
-    new -1              ; password info introduced
-    push #?             ; password info introduced #?
-    push dev.intro_tag  ; password info introduced #? #intro
-    state 0             ; password info introduced #? #intro {caps}
-    push dev.awp_key    ; password info introduced #? #intro {caps} awp_key
-    dict get            ; password info introduced #? #intro awp_dev
-    send 5              ; --
+    push 42             ; hello
+    push bob_petname    ; hello @bob
+    push alice_store    ; hello @bob alice
+    state 0             ; hello @bob alice {caps}
+    push introduced_beh ; hello @bob alice {caps} introduced_beh
+    new -1              ; hello @bob alice introduced
+    push #?             ; hello @bob alice introduced #?
+    push dev.intro_tag  ; hello @bob alice introduced #? #intro
+    state 0             ; hello @bob alice introduced #? #intro {caps}
+    push dev.awp_key    ; hello @bob alice introduced #? #intro {caps} awp_key
+    dict get            ; hello @bob alice introduced #? #intro awp_dev
+    send 6              ; --
     ref std.commit
 
-; Bob's greeter authenticates Alice (although authentication should really only
-; occur at the transport layer) and responds with a ping capability.
+; Bob's greeter authenticates Alice, checks that they have been acquainted, then
+; responds with a ping capability.
 
-greeter_beh:            ; () <- (cancel result connection_info password)
-    msg 3               ; connection_info
-    is_eq alice_address ; --
-    msg 4               ; password
+greeter_beh:            ; () <- (cancel result petname hello)
+    msg 4               ; hello
     is_eq 42            ; --
+    msg 3               ; petname
+    is_eq 0             ; --
     push ping_beh       ; ping_beh
     new 0               ; ping
     msg 2               ; ping result
