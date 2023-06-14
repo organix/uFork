@@ -54,7 +54,7 @@ function awp_device(
     const device = core.u_ptr_to_cap(core.u_ramptr(core.AWP_DEV_OFS));
 
     let connections = Object.create(null);  // src:dest -> connection object
-    let cancels = Object.create(null);      // src:dest -> cancel function
+    let opening = Object.create(null);      // src:dest -> cancel function
     let outbox = Object.create(null);       // src:dest -> messages
     let lost = Object.create(null);         // src:dest -> functions // TODO are these ever cleaned up?
     let frame_ids = Object.create(null);    // src:dest -> integer
@@ -360,7 +360,7 @@ function awp_device(
             delete outbox[key];
             return;
         }
-        if (cancels[key] !== undefined) {
+        if (opening[key] !== undefined) {
 
 // A connection is currently being opened.
 
@@ -389,9 +389,8 @@ function awp_device(
                 ));
             }
         );
-        // TODO forward cancel capability to cancel_customer
-        cancels[key] = connect_requestor(function (connection, reason) {
-            delete cancels[key];
+        const cancel = connect_requestor(function (connection, reason) {
+            delete opening[key];
             if (connection === undefined) {
                 console.log("connect fail", reason);
                 lose(key);
@@ -400,19 +399,25 @@ function awp_device(
                 register(store, connection);
             }
         });
+        // TODO forward cancel capability to cancel_customer
+        opening[key] = function () {
+            if (typeof cancel === "function") {
+                cancel();
+            }
+            delete opening[key];
+        };
     }
 
     function register(store, connection) {
         const key = duplex_key(store, connection.public_key());
-        if (connections[key] === undefined) {
 
 // If we have been trying to connect, give up.
 
-            const cancel = cancels[key];
-            if (cancel !== undefined) {
-                cancel();
-            }
-            delete cancels[key];
+        const cancel = opening[key];
+        if (cancel !== undefined) {
+            cancel();
+        }
+        if (connections[key] === undefined) {
 
 // Use the connection object to send any pending messages.
 

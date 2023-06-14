@@ -70,8 +70,7 @@ It returns a requestor that takes a `connect_callback`:
         Otherwise 'connection' is undefined and 'reason' provides an
         explanation.
 
-The requestor must return a `cancel` function that cancels the attempt to
-connect.
+The requestor may return a `cancel` function that cancels the connect attempt.
 
 #### Listening
 
@@ -109,8 +108,7 @@ It returns a requestor that takes a `listen_callback`:
         If successful, the 'stop' parameter is a function that stops listening.
         Otherwise 'stop' is undefined and 'reason' provides an explanation.
 
-The requestor must return a `cancel` function that cancels the attempt to
-listen.
+The requestor may return a `cancel` function that cancels the listen attempt.
 
 Once closed, stopped or cancelled, the `on_open`, `on_receive`, and `on_close`
 callbacks are not called again.
