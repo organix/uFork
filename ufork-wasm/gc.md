@@ -175,6 +175,7 @@ During _preparation_ the cell is marked "white"
 because that's the initial condition for all cells.
 During _scanning_,
 if the cell is still "white"
+(or "black"?)
 it is added to the GC scan-queue (marked "grey").
 During _sweeping_,
 if the cell is above the sweep address

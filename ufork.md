@@ -1,4 +1,4 @@
-# uFork (Actor Virtual Machine)
+# μFork (Actor Virtual Machine)
 
 The **uFork** Actor Virtual Machine performs
 interleaved execution of threaded instruction streams.

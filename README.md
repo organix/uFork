@@ -1,10 +1,12 @@
-# uFork
+# μFork
 
 A pure-actor virtual machine with object-capabilities and memory-safety.
 The **uFork** processor architecture features
 instruction-level concurrency,
 automatic memory-management,
 and fine-grained resource limits.
+
+![μFork logo](ufork-wasm/www/favicon-128.png)
 
 The blog post
 "[Memory Safety Simplifies Microprocessor Design](http://www.dalnefre.com/wp/2022/08/memory-safety-simplifies-microprocessor-design/)"
