@@ -42,7 +42,8 @@ An FPGA implementation is planned for the future.
 
 ## Project Support
 
-![Logo NLnet: abstract logo of four people seen from above](NLnet_banner.png){width=128} ![Logo NGI Zero: letterlogo shaped like a tag](NGI0Entrust_tag.svg){width=25%}
+<img src="NLnet_banner.png" alt="Logo NLnet: abstract logo of four people seen from above" style="width: 128px; height: 48px; padding: 1ex 1em; background: #FFF;" />
+<img src="NGI0Entrust_tag.svg" alt="Logo NGI Zero: letterlogo shaped like a tag" style="width: 128px; height: 48px; padding: 1ex 1em; background: inherit;" />
 
 [This project](https://nlnet.nl/project/uFork/)
 was funded through the [NGI0 Entrust](https://nlnet.nl/entrust) Fund,
