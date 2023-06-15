@@ -39,3 +39,14 @@ An FPGA implementation is planned for the future.
 ## License
 
 [Apache License](LICENSE), Version 2.0
+
+## Project Support
+
+![Logo NLnet: abstract logo of four people seen from above](NLnet_banner.png){width=128} ![Logo NGI Zero: letterlogo shaped like a tag](NGI0Entrust_tag.svg){width=25%}
+
+[This project](https://nlnet.nl/project/uFork/)
+was funded through the [NGI0 Entrust](https://nlnet.nl/entrust) Fund,
+a fund established by [NLnet](https://nlnet.nl/) with financial support from
+the European Commission's [Next Generation Internet](https://ngi.eu/) programme,
+under the aegis of DG Communications Networks,
+Content and Technology under grant agreement N<sup>o</sup> 101069594.
