@@ -3,6 +3,8 @@
 
 // TODO:
 // - distributed garbage collection
+// - swiss interning
+// - cancel/stop capabilities
 
 /*jslint browser, null, devel, long */
 
