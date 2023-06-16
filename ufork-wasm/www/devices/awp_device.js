@@ -1,6 +1,9 @@
 // Installs the AWP device, allowing cores to communicate over the network via
 // the Actor Wire Protocol.
 
+// TODO:
+// - distributed garbage collection
+
 /*jslint browser, null, devel, long */
 
 import OED from "../oed.js";
@@ -17,29 +20,31 @@ function stringify(value) {
 // The Grant Matcher configuration. This will be removed eventually.
 
 const alice_store = {
-    public_key: 4000,
-    private_key: 4000,
+    name: "alice",
+    identity: "alice",
     acquaintances: [
-        {public_key: 4001, address: 4001},
-        {public_key: 4002, address: 4002}
+        {name: "bob", address: "@bob"},
+        {name: "carol", address: "@carol"}
     ]
 };
 const bob_store = {
-    public_key: 4001,
-    private_key: 4001,
-    bind_address: 4001
+    name: "bob",
+    identity: "bob",
+    address: "@bob",
+    bind_info: "@bob"
 };
 const carol_store = {
-    public_key: 4002,
-    private_key: 4002,
-    bind_address: 4002
+    name: "carol",
+    identity: "carol",
+    address: "@carol",
+    bind_info: "@carol"
 };
 const dana_store = {
-    public_key: 4003,
-    private_key: 4003,
+    name: "dana",
+    identity: "dana",
     acquaintances: [
-        {public_key: 4001, address: 4001},
-        {public_key: 4002, address: 4002}
+        {name: "bob", address: "@bob"},
+        {name: "carol", address: "@carol"}
     ]
 };
 
@@ -48,17 +53,17 @@ function awp_device(
     resume,
     transport = dummy_transport(),
     stores = [alice_store, bob_store, carol_store, dana_store],
-    webcrypto = crypto // Node.js does not provide the 'crypto' global variable.
+    webcrypto = crypto // Node.js does not have a 'crypto' global
 ) {
     const sponsor = core.u_ramptr(core.SPONSOR_OFS);
     const device = core.u_ptr_to_cap(core.u_ramptr(core.AWP_DEV_OFS));
 
-    let connections = Object.create(null);  // src:dest -> connection object
-    let opening = Object.create(null);      // src:dest -> cancel function
-    let outbox = Object.create(null);       // src:dest -> messages
-    let lost = Object.create(null);         // src:dest -> functions // TODO are these ever cleaned up?
-    let frame_ids = Object.create(null);    // src:dest -> integer
-    let greeters = Object.create(null);     // src -> greeter stub raw
+    let connections = Object.create(null);  // local:remote -> connection object
+    let opening = Object.create(null);      // local:remote -> cancel function
+    let outbox = Object.create(null);       // local:remote -> messages
+    let lost = Object.create(null);         // local:remote -> functions // TODO are these ever cleaned up?
+    let frame_ids = Object.create(null);    // local:remote -> integer
+    let greeters = Object.create(null);     // local -> greeter stub raw
     let raw_to_swiss = Object.create(null); // raw -> swiss
     let stubs = Object.create(null);        // swiss -> stub raw    // TODO release at some point
     let handle_to_proxy_key = [];           // handle -> proxy key  // TODO release
@@ -95,12 +100,12 @@ function awp_device(
 // Determine the petname of an acquaintance, adding them to the store if
 // necessary.
 
-        const key = stringify(acquaintance.public_key);
+        const key = stringify(acquaintance.name);
         if (store.acquaintances === undefined) {
             store.acquaintances = [];
         }
         const match = store.acquaintances.find(function (the_acquaintance) {
-            return key === stringify(the_acquaintance.public_key);
+            return key === stringify(the_acquaintance.name);
         });
         if (match !== undefined && acquaintance.address !== undefined) {
 
@@ -182,19 +187,23 @@ function awp_device(
                     return {
                         meta: swiss,
                         data: OED.encode({
-                            public_key: store.public_key,
-                            address: store.bind_address // optional
+                            name: store.name,
+                            address: store.address // optional
                         })
                     };
                 }
                 if (quad.t === core.PROXY_T) {
                     const handle = core.u_fix_to_i32(quad.y);
                     const proxy = proxies[handle_to_proxy_key[handle]];
+                    const acquaintance = proxy.store.acquaintances[
+                        proxy.petname
+                    ];
                     return {
                         meta: proxy.swiss,
-                        data: OED.encode(
-                            proxy.store.acquaintances[proxy.petname]
-                        )
+                        data: OED.encode({
+                            name: acquaintance.name,
+                            address: acquaintance.address
+                        })
                     };
                 }
             }
@@ -248,8 +257,8 @@ function awp_device(
         });
     }
 
-    function duplex_key(store, public_key) {
-        return stringify(store.public_key) + ":" + stringify(public_key);
+    function duplex_key(local_name, remote_name) {
+        return stringify(local_name) + ":" + stringify(remote_name);
     }
 
     function lose(key) {
@@ -277,13 +286,13 @@ function awp_device(
 
 // The frame is an introduction request. Forward it to the greeter.
 
-            const greeter_stub = greeters[stringify(store.public_key)];
+            const greeter_stub = greeters[stringify(store.name)];
             if (greeter_stub === undefined) {
                 console.log("No greeter", store, frame);
                 return;
             }
             const greeter = core.u_read_quad(greeter_stub).y;
-            const acquaintance = {public_key: connection.public_key()};
+            const acquaintance = {name: connection.name()};
             const petname = get_petname(store, acquaintance);
             const message = unmarshall(store, frame.message);
             const greeting_callback = core.u_nth(message, 1);
@@ -371,21 +380,19 @@ function awp_device(
 
         const {store, petname} = outbox[key][0];
         const connect_requestor = transport.connect(
-            {
-                public_key: store.public_key,
-                private_key: store.private_key
-            },
-            store.acquaintances[petname],
+            store.identity,
+            store.acquaintances[petname].name,
+            store.acquaintances[petname].address,
             function on_receive(connection, frame_buffer) {
                 const frame = OED.decode(frame_buffer);
-                console.log("connect on_receive", connection.public_key(), frame);
-                return receive(store, connection.public_key(), frame);
+                console.log("connect on_receive", connection.name(), frame);
+                return receive(store, connection.name(), frame);
             },
             function on_close(connection, reason) {
-                console.log("connect on_close", connection.public_key(), reason);
+                console.log("connect on_close", connection.name(), reason);
                 return unregister(duplex_key(
-                    store,
-                    connection.public_key()
+                    store.name,
+                    connection.name()
                 ));
             }
         );
@@ -395,7 +402,7 @@ function awp_device(
                 console.log("connect fail", reason);
                 lose(key);
             } else {
-                console.log("connect open", connection.public_key());
+                console.log("connect open", connection.name());
                 register(store, connection);
             }
         });
@@ -409,7 +416,7 @@ function awp_device(
     }
 
     function register(store, connection) {
-        const key = duplex_key(store, connection.public_key());
+        const key = duplex_key(store.name, connection.name());
 
 // If we have been trying to connect, give up.
 
@@ -448,7 +455,7 @@ function awp_device(
 
     function enqueue(store, petname, swiss, message) {
         const acquaintance = store.acquaintances[petname];
-        const key = duplex_key(store, acquaintance.public_key);
+        const key = duplex_key(store.name, acquaintance.name);
         add(outbox, key, {store, petname, swiss, message});
         return flush(key);
     }
@@ -543,8 +550,8 @@ function awp_device(
                 }))
             );
             const key = duplex_key(
-                store,
-                store.acquaintances[petname].public_key
+                store.name,
+                store.acquaintances[petname].name
             );
             add(lost, key, function on_lost() {
                 console.log("intro fail");
@@ -587,7 +594,7 @@ function awp_device(
             return core.E_FAIL;
         }
         const store = stores[core.u_fix_to_i32(store_fix)];
-        if (store === undefined || store.bind_address === undefined) {
+        if (store === undefined) {
             return core.E_BOUNDS; // TODO inform callback instead of failing
         }
 
@@ -600,7 +607,7 @@ function awp_device(
 
         function resolve(reply) {
 
-// (stop . reason) -> listen_callback
+// ((stop . info) . reason) -> listen_callback
 
             core.h_event_inject(sponsor, listen_callback, reply);
             release_event_stub();
@@ -611,32 +618,29 @@ function awp_device(
 
         setTimeout(function () {
             const listen_requestor = transport.listen(
-                {
-                    public_key: store.public_key,
-                    private_key: store.private_key
-                },
-                store.bind_address,
+                store.identity,
+                store.bind_info,
                 function on_open(connection) {
-                    console.log("listen on_open", connection.public_key());
+                    console.log("listen on_open", connection.name());
                     return register(store, connection);
                 },
                 function on_receive(connection, frame_buffer) {
                     const frame = OED.decode(frame_buffer);
-                    console.log("listen on_receive", connection.public_key(), frame);
+                    console.log("listen on_receive", connection.name(), frame);
                     return receive(store, connection, frame);
                 },
                 function on_close(connection, reason) {
-                    console.log("listen on_close", connection.public_key(), reason);
+                    console.log("listen on_close", connection.name(), reason);
                     return unregister(duplex_key(
-                        store,
-                        connection.public_key()
+                        store.name,
+                        connection.name()
                     ));
                 }
             );
 
             // TODO send cancel to cancel_customer
-            const cancel = listen_requestor(function (stop, reason) {
-                if (stop === undefined) {
+            const cancel = listen_requestor(function (result, reason) {
+                if (result === undefined) {
                     console.log("listen fail", reason);
                     return resolve(core.h_reserve_ram({
                         t: core.PAIR_T,
@@ -648,9 +652,9 @@ function awp_device(
 // A store may not register more than one greeter. That would get very
 // confusing.
 
-                const key = stringify(store.public_key);
+                const key = stringify(store.name);
                 if (greeters[key] !== undefined) {
-                    stop();
+                    result.stop();
                     return resolve(core.h_reserve_ram({
                         t: core.PAIR_T,
                         x: core.UNDEF_RAW,
@@ -664,12 +668,12 @@ function awp_device(
                         core.h_release_stub(greeters[key]);
                         delete greeters[key];
                     }
-                    return stop();
+                    return result.stop();
                 }
 
                 return resolve(core.h_reserve_ram({
                     t: core.PAIR_T,
-                    x: core.UNDEF_RAW, // TODO safe_stop
+                    x: core.UNDEF_RAW, // TODO (safe_stop . info)
                     y: core.NIL_RAW
                 }));
             });
@@ -771,8 +775,20 @@ function awp_device(
     );
 }
 
+//debug import {webcrypto} from "node:crypto";
 //debug import instantiate_core from "../ufork.js";
 //debug import debug_device from "./debug_device.js";
+//debug import node_tls_transport from "./node_tls_transport.js";
+//debug const bob_address = {host: "localhost", port: 4001};
+//debug const carol_address = {host: "localhost", port: 4002};
+//debug const alice_cert = "-----BEGIN CERTIFICATE-----\nMIIBlzCB+QIJAKdXgQPMUTS5MAoGCCqGSM49BAMCMBAxDjAMBgNVBAMMBXVmb3JrMB4XDTIzMDYxNTAxMzEzOVoXDTIzMDcxNTAxMzEzOVowEDEOMAwGA1UEAwwFdWZvcmswgZswEAYHKoZIzj0CAQYFK4EEACMDgYYABABAO06FL/42NDAfp8YFC7KZs0ArEM6ocluQe+u7IPkis0kl1O8/6B3FmnR7GfTXQubdc0EFcueKjMyR8D/JY9wDhQAqUjXzVIePzADbfo8vUjrPQ9TBzl+T85XjeBKbDiKZQb8QxeyYlqO246/XksSZJl0vn91gXTbBAR1ZgYeTPd44ljAKBggqhkjOPQQDAgOBjAAwgYgCQgHvlQMSDNJpJTT9/0PsiQIkI2Ui4fJpBDJr1fzYQgVMmnqx5Uvng9DHr1+AU7DDU9+2X1V2OaRsgJAymv1om/vz5wJCAKoHuyWggL9LGkTPUiUqm3dA/JS5dOnKGmdDEqMbEeiofFpt/joV8sdTAw2uigkliw+9vfLMLkJyr2sW3fjiWTBo\n-----END CERTIFICATE-----";
+//debug const alice_key = "-----BEGIN EC PRIVATE KEY-----\nMIHbAgEBBEFCXfqEm5o/WBTMWkHpyz4f+6xqJv7GF+AajgBkyRYMncp6lZInDOKk2aC6oNerZdcDTXnqZ/TKZl1z9OSPkwIsd6AHBgUrgQQAI6GBiQOBhgAEAEA7ToUv/jY0MB+nxgULspmzQCsQzqhyW5B767sg+SKzSSXU7z/oHcWadHsZ9NdC5t1zQQVy54qMzJHwP8lj3AOFACpSNfNUh4/MANt+jy9SOs9D1MHOX5PzleN4EpsOIplBvxDF7JiWo7bjr9eSxJkmXS+f3WBdNsEBHVmBh5M93jiW\n-----END EC PRIVATE KEY-----";
+//debug const bob_cert = "-----BEGIN CERTIFICATE-----\nMIIBlzCB+QIJAMfPBllRxdANMAoGCCqGSM49BAMCMBAxDjAMBgNVBAMMBXVmb3JrMB4XDTIzMDYxNTAxMjYzM1oXDTIzMDcxNTAxMjYzM1owEDEOMAwGA1UEAwwFdWZvcmswgZswEAYHKoZIzj0CAQYFK4EEACMDgYYABACCfQXDKhuHQUQIzpU2HsgZK1n5eziSRHu+/tl67Pso6mSNSiWdhDwObikaOplnFO10IdGaoflbWn+qV3tSXTMYTABd6K9nN7ki/8/Ppoz0It9cqLn60u3RHHPpgrcAEFHpNA/LqItP/t55f6XPArvnt0xIfxjaI4gdwb2uUfnzITruSTAKBggqhkjOPQQDAgOBjAAwgYgCQgEqJCq5FDRvWYC8dMhzzcObvMJJ4FriVRlaEPH94FV1eZIvWLhpSkpzh02+KfiwclO0YJVzGAh7tFEBFZ1U+0A1BAJCAZ9ugBLIqRZXOR+ndUIAs917W9Dw+imQkbiHlKdU8rhGZgA7r29VAfx3A7l+1BmXUrvQRBuU6BoBMxW2BRTQ4wQ1\n-----END CERTIFICATE-----";
+//debug const bob_key = "-----BEGIN EC PRIVATE KEY-----\nMIHbAgEBBEE8BpKem+dZRCbbI33kCwXCADskDId/WhAE7RFRttOnV0m2kxwkad/bDpd20I7dNdUSD5VRk0GsVQacoHtMxdsBlKAHBgUrgQQAI6GBiQOBhgAEAIJ9BcMqG4dBRAjOlTYeyBkrWfl7OJJEe77+2Xrs+yjqZI1KJZ2EPA5uKRo6mWcU7XQh0Zqh+Vtaf6pXe1JdMxhMAF3or2c3uSL/z8+mjPQi31youfrS7dEcc+mCtwAQUek0D8uoi0/+3nl/pc8Cu+e3TEh/GNojiB3Bva5R+fMhOu5J\n-----END EC PRIVATE KEY-----";
+//debug const carol_cert = "-----BEGIN CERTIFICATE-----\nMIIBlzCB+QIJAKXgK2B3FNUbMAoGCCqGSM49BAMCMBAxDjAMBgNVBAMMBXVmb3JrMB4XDTIzMDYxNTAxMDExNFoXDTIzMDcxNTAxMDExNFowEDEOMAwGA1UEAwwFdWZvcmswgZswEAYHKoZIzj0CAQYFK4EEACMDgYYABAD/K8/8lKykhrjH8R6VlEKg2leMjkxBZe/6mzzsymuvD9bn4kDsIj6wjRRaiErlcYisw8ZiJOKlGGAjrIU1ISzitACOZDZ50Xj63N6LQ8rpkoKmbDhWuoD1v0uClMr7IhjG26nsPiHjhJ5UB4FIY/gVu4cci/tkCPgNu4KQUnyYU1SgXTAKBggqhkjOPQQDAgOBjAAwgYgCQgHcMCYkwLybOyQ7ErtE5ucY2CjHStIJWOhgHD/RYrTX4uoXOVl2ISb7F4COQ8Xm1vepNvlWA9PfTbHjXopB6f2D+wJCAZ/Vzcnjsf8wSpm8x34uNYlvo0K+LZNFlQ7EuImKk33QbVR30KAS3y+Ok8yNAucg3Zh1243k09iCFLXmyclcUZgk\n-----END CERTIFICATE-----";
+//debug const carol_key = "-----BEGIN EC PRIVATE KEY-----\nMIHbAgEBBEErmNL2SxVE8Mi13BclwRfR1j/OWNDrt8fMXT8VTzVwfhFBV1XmIXRCB+s4VkQEQWfi69xgA1J1nz/4eWAOuieFoqAHBgUrgQQAI6GBiQOBhgAEAP8rz/yUrKSGuMfxHpWUQqDaV4yOTEFl7/qbPOzKa68P1ufiQOwiPrCNFFqISuVxiKzDxmIk4qUYYCOshTUhLOK0AI5kNnnRePrc3otDyumSgqZsOFa6gPW/S4KUyvsiGMbbqew+IeOEnlQHgUhj+BW7hxyL+2QI+A27gpBSfJhTVKBd\n-----END EC PRIVATE KEY-----";
+//debug const dana_cert = "-----BEGIN CERTIFICATE-----\nMIIBlzCB+QIJAPLWr8RQKQBGMAoGCCqGSM49BAMCMBAxDjAMBgNVBAMMBXVmb3JrMB4XDTIzMDYxNTAxMzIwOVoXDTIzMDcxNTAxMzIwOVowEDEOMAwGA1UEAwwFdWZvcmswgZswEAYHKoZIzj0CAQYFK4EEACMDgYYABAAGfk1CmCfXy63+jOA/S2HgjWiILtTI5R14khfnxzo17+CxdmgiVd3nBtlw8JSP7epZN79Bb+v8sstpBpXPsdJAsQCLEczVVhPA4s32qXM5cPqeua2hOeJAIWs2T2gmJY5NmMsWEksyWKAJRqyks/T37rrCbJXla6r5EtWkDi+zFwVFUDAKBggqhkjOPQQDAgOBjAAwgYgCQgFQMwTdOqg3jFTKcnKagjd6YAFVFsFPEVaZWkLFbpzb7PGOGu8mpB3MGp5381jFjIUK3TEZpvuH54AfWaajtBKCqwJCAdloA77rsAnqlFsz0buZ4nGXSu8eNokvztuDQcFoiCeNtke4NVSdbdclj3xa0LMbLj7ts1sDI/R4t2QT1T2XgFvm\n-----END CERTIFICATE-----";
+//debug const dana_key = "-----BEGIN EC PRIVATE KEY-----\nMIHbAgEBBEGdbH0ztVSCg/8231sFBl07WGdEt26fuMauXcU3Gp24luV+MwaegTDYG7M9CG7LrMvuZipiQPVOgai40b41RzNOjKAHBgUrgQQAI6GBiQOBhgAEAAZ+TUKYJ9fLrf6M4D9LYeCNaIgu1MjlHXiSF+fHOjXv4LF2aCJV3ecG2XDwlI/t6lk3v0Fv6/yyy2kGlc+x0kCxAIsRzNVWE8Dizfapczlw+p65raE54kAhazZPaCYljk2YyxYSSzJYoAlGrKSz9PfuusJsleVrqvkS1aQOL7MXBUVQ\n-----END EC PRIVATE KEY-----";
 //debug instantiate_core(
 //debug     import.meta.resolve(
 //debug         "../../target/wasm32-unknown-unknown/debug/ufork_wasm.wasm"
@@ -782,8 +798,47 @@ function awp_device(
 //debug     function resume() {
 //debug         console.log("HALT:", core.u_fault_msg(core.h_run_loop()));
 //debug     }
+//debug     const transport = node_tls_transport();
+//debug     const acquaintances = [
+//debug         {
+//debug             name: transport.extract_public_key(bob_cert),
+//debug             address: bob_address
+//debug         },
+//debug         {
+//debug             name: transport.extract_public_key(carol_cert),
+//debug             address: carol_address
+//debug         }
+//debug     ];
+//debug     const alice = {
+//debug         identity: {cert: alice_cert, key: alice_key},
+//debug         name: transport.extract_public_key(alice_cert),
+//debug         acquaintances
+//debug     };
+//debug     const bob = {
+//debug         identity: {cert: bob_cert, key: bob_key},
+//debug         name: transport.extract_public_key(bob_cert),
+//debug         address: bob_address,
+//debug         bind_info: bob_address
+//debug     };
+//debug     const carol = {
+//debug         identity: {cert: carol_cert, key: carol_key},
+//debug         name: transport.extract_public_key(carol_cert),
+//debug         address: carol_address,
+//debug         bind_info: carol_address
+//debug     };
+//debug     const dana = {
+//debug         identity: {cert: dana_cert, key: dana_key},
+//debug         name: transport.extract_public_key(dana_cert),
+//debug         acquaintances
+//debug     };
 //debug     debug_device(core);
-//debug     awp_device(core, resume);
+//debug     awp_device(
+//debug         core,
+//debug         resume,
+//debug         transport,
+//debug         [alice, bob, carol, dana],
+//debug         webcrypto
+//debug     );
 //debug     return core.h_import(
 //debug         import.meta.resolve("../../lib/grant_matcher.asm")
 //debug     ).then(function (asm_module) {

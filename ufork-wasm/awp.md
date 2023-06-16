@@ -4,8 +4,11 @@ The Actor Wire Protocol facilitates secure, unordered delivery of messages
 between actors over the network.
 
 A __party__ is an actor configuration that speaks AWP, living on a machine
-somewhere. A party is securely identified by its keypair. Parties find each
-other by use of network addresses.
+somewhere.
+
+Every party has a secure __name__ that it can prove it owns.
+
+Parties find each other by use of network __addresses__.
 
 ## Specification
 
@@ -15,9 +18,10 @@ BLOBs between parties.
 
 ### Transports
 
-The transport is responsible for authenticating remote parties based on the
-public and private keys provided, and encrypting frame traffic. Network
-addresses are used solely for routing, and are not relied upon for security.
+The transport is responsible for providing secure connections. This includes
+authenticating remote parties and encrypting frame traffic. Note that network
+addresses are used solely for routing, and should not be relied upon for
+security.
 
 Underlying transports provide an interface made up of two requestor factories
 (see https://github.com/douglascrockford/parseq), `connect` and `listen`.
@@ -26,7 +30,8 @@ Underlying transports provide an interface made up of two requestor factories
 
     connect(
         identity,
-        acquaintance,
+        name,
+        address,
         on_receive,
         on_close
     ) -> requestor(connect_callback) -> cancel
@@ -34,10 +39,14 @@ Underlying transports provide an interface made up of two requestor factories
 The `connect` factory takes the following parameters:
 
     identity
-        An object like {public_key, private_key}.
+        Used to prove ownership of the local party's name and secure the
+        connection. For example, a private key.
 
-    acquaintance
-        An object like {public_key, address}.
+    name
+        The remote party's secure name. For example, a public key.
+
+    address
+        The remote party's network address.
 
     on_receive(connection, frame)
         A function that is called for each frame that arrives over the
@@ -48,9 +57,9 @@ The `connect` factory takes the following parameters:
             connection.send(frame)
                 Sends a frame over the connection. The 'frame' is a Uint8Array.
 
-            connection.public_key()
-                Returns the authenticated public key of the remote party,
-                as an OED-encodable value.
+            connection.name()
+                Returns the authenticated name of the remote party, as an
+                OED-encodable value.
 
             connection.close()
                 Close the connection.
@@ -64,8 +73,8 @@ The `connect` factory takes the following parameters:
 It returns a requestor that takes a `connect_callback`:
 
     connect_callback(connection, reason)
-        If successful, 'connection' is an object like that described
-        for 'on_receive'.
+        If successful, 'connection' is an object like that described for
+        'on_receive'.
 
         Otherwise 'connection' is undefined and 'reason' provides an
         explanation.
@@ -76,19 +85,23 @@ The requestor may return a `cancel` function that cancels the connect attempt.
 
     listen(
         identity,
-        acquaintance,
+        bind_info,
         on_open,
-        on_frame,
+        on_receive,
         on_close
     ) -> requestor(listen_callback) -> cancel
 
 The `listen` factory takes the following parameters:
 
     identity
-        An object like {public_key, private_key}.
+        Used to prove ownership of the local party's name and secure the
+        connection. For example, a cryptographic keypair.
 
-    bind_address
-        The address to bind to.
+    bind_info
+        Network-related configuration. For example, an address to bind to.
+
+        The value of 'identity' and 'bind_info' depend on the needs of the
+        transport. They do not have to be OED-encodable.
 
     on_open(connection)
         A function that is called when a connection is opened. The 'connection'
@@ -104,9 +117,13 @@ The `listen` factory takes the following parameters:
 
 It returns a requestor that takes a `listen_callback`:
 
-    listen_callback(stop, reason)
-        If successful, the 'stop' parameter is a function that stops listening.
-        Otherwise 'stop' is undefined and 'reason' provides an explanation.
+    listen_callback(result, reason)
+        If successful, the 'result' parameter is an object like {stop, info}.
+        Otherwise 'result' is undefined and 'reason' provides an explanation.
+
+        The "stop" property is a function that stops listening.
+        The "info" property provides additional information, such as the
+        resolved address.
 
 The requestor may return a `cancel` function that cancels the listen attempt.
 
@@ -171,16 +188,16 @@ the head is `#?`.
 
 ### Stores
 
-A store holds a party's public key, private key, bind address, and
+A store holds a party's identity, secure name, address, bind info, and
 acquaintances.
 
 Each acquaintance has:
-- a petname
-- a public key
+- a petname (unique within the store)
+- a secure name (globally unique)
 - an address (optional)
 
 An acquaintance is selected from a store using its petname. Petnames are
-non-negative integers. Public keys and addresses must be OED-encodable values.
+non-negative integers. Names and addresses must be OED-encodable values.
 
 It is possible to become acquainted with a party that does not disclose an
 address. In such cases, communication is only possible whilst that party is
@@ -190,19 +207,20 @@ Currently, stores are managed entirely by the AWP device. Zero or more stores
 are preconfigured upon creation of the AWP device. In the future, it will be
 possible to create and modify stores via uFork instructions.
 
-A store's configuration might look something like this:
+A store's contents might look something like this:
 
     {
-        public_key: "3081EE020100301006072A8648CE3D020106052B810400230481D6...",
-        private_key: "0400A84D1FE2AB031BE95356171FDD33ADA2723A6CC4991ACD5C1...",
-        bind_address: "0.0.0.0:3000",
+        identity: "0400A84D1FE2AB031BE95356171FDD33ADA...", // private key
+        name: "3081EE020100301006072A8648CE3D020106052...", // public key
+        address: "2.2.2.2:3000",                            // network address
+        bind_info: "0.0.0.0:3000",                          // bind address
         acquaintances: [
             {
-                public_key: "0401D11E26A35297D1F60DD1D252A62859C7B08820B55A...",
-                address: "1.2.3.4:5678"
+                name: "0401D11E26A35297D1F60DD1D252A62...", // public key
+                address: "3.3.3.3:3000"                     // network address
             },
             {
-                public_key: "042461B5967B66CFED3D2CB23CC1026CE500191E0CBF9B..."
+                name: "042461B5967B66CFED3D2CB23CC1026..."  // public key
             }
         ]
     }
@@ -226,8 +244,9 @@ greeter is available, the request fails.
 
     (#listen cancel_customer callback store greeter) -> awp_device
 
-Listens for introduction requests, producing a value like `stop` on success.
-The `stop` capability stops the listener.
+Listens for introduction requests, producing a value like `(stop . info)` on
+success. The `info` value is transport-dependent. The `stop` capability stops
+the listener.
 
     -> stop
 
