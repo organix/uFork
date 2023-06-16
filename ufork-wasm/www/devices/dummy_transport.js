@@ -1,6 +1,9 @@
 // A dummy AWP transport. It simulates a private network in memory. Latency is
 // randomised. The 'flakiness' parameter, between 0 and 1, controls the
-// propensity for network errors. Addresses are arbitrary strings or numbers.
+// propensity for network errors.
+
+// Names and addresses are arbitrary numbers or strings. The bind_info equals
+// the address, the identity equals the name.
 
 /*jslint browser */
 
@@ -18,21 +21,21 @@ function dummy_transport(flakiness = 0) {
         return Math.random() < flakiness;
     }
 
-    function listen(identity, bind_address, on_open, on_receive, on_close) {
+    function listen(identity, bind_info, on_open, on_receive, on_close) {
         let connections = [];
         return function listen_requestor(callback) {
 
             function stop() {
-                delete listeners[bind_address];
+                delete listeners[identity + ":" + bind_info];
                 connections.forEach(function (connection) {
                     connection.close();
                 });
             }
 
             function make_connection(
-                initiator_public_key,
+                initiator_name,
                 on_initiator_close,
-                on_listener_frame,
+                on_listener_receive,
                 on_listener_close
             ) {
                 let connection = Object.create(null);
@@ -66,11 +69,11 @@ function dummy_transport(flakiness = 0) {
                         if (flake()) {
                             return simulate_failure("Send failed.");
                         }
-                        on_listener_frame(frame);
+                        on_listener_receive(frame);
                     });
                 };
-                connection.public_key = function () {
-                    return initiator_public_key;
+                connection.name = function () {
+                    return initiator_name;
                 };
                 connection.close = function () {
                     if (!connections.includes(connection)) {
@@ -102,8 +105,8 @@ function dummy_transport(flakiness = 0) {
                             on_receive(connection, frame);
                         });
                     },
-                    public_key: function () {
-                        return identity.public_key;
+                    name: function () {
+                        return identity;
                     },
                     close: function close_from_initiating_party() {
                         on_initiator_close();
@@ -120,28 +123,28 @@ function dummy_transport(flakiness = 0) {
             }
 
             return delay(function () {
-                if (listeners[bind_address] !== undefined) {
+                if (listeners[identity + ":" + bind_info] !== undefined) {
                     return callback(undefined, "Address in use.");
                 }
-                listeners[bind_address] = make_connection;
-                return callback(stop);
+                listeners[identity + ":" + bind_info] = make_connection;
+                return callback({stop});
             });
         };
     }
 
-    function connect(identity, acquaintance, on_receive, on_close) {
+    function connect(identity, name, address, on_receive, on_close) {
         return function connect_requestor(callback) {
             return delay(function () {
                 let closed = false;
-                if (flake() || listeners[acquaintance.address] === undefined) {
+                if (flake() || listeners[name + ":" + address] === undefined) {
                     return callback(undefined, "Connect failed.");
                 }
-                const connection = listeners[acquaintance.address](
-                    identity.public_key,
+                const connection = listeners[name + ":" + address](
+                    identity,
                     function on_initiator_close() {
                         closed = true;
                     },
-                    function on_listener_frame(frame) {
+                    function on_listener_receive(frame) {
                         if (!closed) {
                             on_receive(connection, frame);
                         }
@@ -153,7 +156,7 @@ function dummy_transport(flakiness = 0) {
                         }
                     }
                 );
-                if (connection.public_key() !== acquaintance.public_key) {
+                if (connection.name() !== name) {
                     connection.close();
                     return callback(undefined, "Authentication failed.");
                 }
@@ -168,10 +171,10 @@ function dummy_transport(flakiness = 0) {
 //debug const flake = 0.1;
 //debug const transport = dummy_transport(flake);
 //debug const cancel_listen = transport.listen(
-//debug     {public_key: "bob"},
+//debug     "bob",
 //debug     "@bob",
 //debug     function on_open(connection) {
-//debug         console.log("bob on_open", connection.public_key());
+//debug         console.log("bob on_open", connection.name());
 //debug     },
 //debug     function on_receive(connection, frame) {
 //debug         console.log("bob on_receive", frame);
@@ -184,13 +187,18 @@ function dummy_transport(flakiness = 0) {
 //debug     function on_close(ignore, reason) {
 //debug         console.log("bob on_close", reason);
 //debug     }
-//debug )(function listen_callback(stop, reason) {
-//debug     if (stop === undefined) {
+//debug )(function listen_callback(result, reason) {
+//debug     if (result === undefined) {
 //debug         return console.log("bob failed", reason);
 //debug     }
+//debug     if (Math.random() < flake) {
+//debug         console.log("bob stop");
+//debug         return result.stop();
+//debug     }
 //debug     const cancel_connect = transport.connect(
-//debug         {public_key: "alice"},
-//debug         {public_key: "bob", address: "@bob"},
+//debug         "alice",
+//debug         "bob",
+//debug         "@bob",
 //debug         function on_receive(connection, frame) {
 //debug             console.log("alice on_receive", frame);
 //debug             if (frame > 0) {
@@ -206,7 +214,7 @@ function dummy_transport(flakiness = 0) {
 //debug         if (connection === undefined) {
 //debug             return console.log("alice failed", reason);
 //debug         }
-//debug         console.log("alice on_open", connection.public_key());
+//debug         console.log("alice on_open", connection.name());
 //debug         connection.send(Math.floor(Math.random() * 10));
 //debug     });
 //debug     if (cancel_connect !== undefined && Math.random() < flake) {

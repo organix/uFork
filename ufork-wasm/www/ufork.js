@@ -243,7 +243,7 @@ const crlf_types = {
 };
 
 function make_core(wasm_exports, on_warning, mutable_wasm_caps) {
-    let boot_caps_raw = NIL_RAW; // empty dict
+    let boot_caps_dict = []; // empty
     let import_promises = Object.create(null);
     let module_source = Object.create(null);
     let rom_sourcemap = Object.create(null);
@@ -1049,7 +1049,14 @@ function make_core(wasm_exports, on_warning, mutable_wasm_caps) {
         h_event_inject(
             u_ramptr(SPONSOR_OFS),
             u_ptr_to_cap(actor),
-            boot_caps_raw
+            boot_caps_dict.reduce(function (dict, [integer, value_raw]) {
+                return h_reserve_ram({
+                    t: DICT_T,
+                    x: u_fixnum(integer),
+                    y: value_raw,
+                    z: dict
+                });
+            }, NIL_RAW)
         );
     }
 
@@ -1115,14 +1122,7 @@ function make_core(wasm_exports, on_warning, mutable_wasm_caps) {
 // WASM, e.g. "host_clock".
 
         if (boot_caps !== undefined) {
-            boot_caps.forEach(function ([integer, value_raw]) {
-                boot_caps_raw = h_reserve_ram({
-                    t: DICT_T,
-                    x: u_fixnum(integer),
-                    y: value_raw,
-                    z: boot_caps_raw
-                });
-            });
+            boot_caps_dict.push(...boot_caps);
         }
         Object.assign(mutable_wasm_caps, wasm_imports);
     }

@@ -345,6 +345,7 @@ function decode_blob(octets, offset) {
         const size = decode_integer(octets, offset + 1);
         if (size.error) return size;  // report error
         offset = size.offset + size.value;
+        if (offset > octets.length) return { error: "offset out-of-bounds", octets, offset };
         const value = octets.subarray(size.offset, offset);
         return { value, octets, offset };
     }
