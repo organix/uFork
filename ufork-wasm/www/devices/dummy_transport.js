@@ -127,7 +127,7 @@ function dummy_transport(flakiness = 0) {
                     return callback(undefined, "Address in use.");
                 }
                 listeners[identity + ":" + bind_info] = make_connection;
-                return callback({stop});
+                return callback(stop);
             });
         };
     }
@@ -187,13 +187,13 @@ function dummy_transport(flakiness = 0) {
 //debug     function on_close(ignore, reason) {
 //debug         console.log("bob on_close", reason);
 //debug     }
-//debug )(function listen_callback(result, reason) {
-//debug     if (result === undefined) {
+//debug )(function listen_callback(stop, reason) {
+//debug     if (stop === undefined) {
 //debug         return console.log("bob failed", reason);
 //debug     }
 //debug     if (Math.random() < flake) {
 //debug         console.log("bob stop");
-//debug         return result.stop();
+//debug         return stop();
 //debug     }
 //debug     const cancel_connect = transport.connect(
 //debug         "alice",

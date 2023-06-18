@@ -227,10 +227,7 @@ function listen(identity, bind_info, on_open, on_receive, on_close) {
                 if (cancelled) {
                     return server.close();
                 }
-                callback({
-                    stop,
-                    info: server.address()
-                });
+                callback(stop);
             });
             return function cancel() {
                 cancelled = true;
@@ -328,7 +325,7 @@ function node_tls_transport() {
 //debug     [generate_identity(), generate_identity()]
 //debug )(function ([alice_identity, bob_identity], ignore) {
 //debug     const bob_address = {host: "localhost", port: 4444};
-//debug     const flake = 0;
+//debug     const flake = 0.1;
 //debug     const cancel_listen = listen(
 //debug         bob_identity,
 //debug         bob_address,
@@ -346,11 +343,11 @@ function node_tls_transport() {
 //debug         function on_close(ignore, reason) {
 //debug             console.log("bob on_close", reason);
 //debug         }
-//debug     )(function listen_callback(result, reason) {
-//debug         if (result === undefined) {
+//debug     )(function listen_callback(stop, reason) {
+//debug         if (stop === undefined) {
 //debug             return console.log("bob failed", reason);
 //debug         }
-//debug         console.log("bob listening", result.info);
+//debug         console.log("bob listening");
 //debug         const cancel_connect = connect(
 //debug             alice_identity,
 //debug             get_name(bob_identity),
@@ -364,7 +361,7 @@ function node_tls_transport() {
 //debug                 }
 //debug                 if (Math.random() < flake) {
 //debug                     console.log("bob stop");
-//debug                     result.stop();
+//debug                     stop();
 //debug                 }
 //debug             },
 //debug             function on_close(ignore, reason) {

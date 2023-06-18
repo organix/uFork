@@ -613,7 +613,7 @@ function awp_device(
 
         function resolve(reply) {
 
-// ((stop . info) . reason) -> listen_callback
+// (stop . reason) -> listen_callback
 
             core.h_event_inject(sponsor, listen_callback, reply);
             release_event_stub();
@@ -645,8 +645,8 @@ function awp_device(
             );
 
             // TODO send cancel to cancel_customer
-            const cancel = listen_requestor(function (result, reason) {
-                if (result === undefined) {
+            const cancel = listen_requestor(function (stop, reason) {
+                if (stop === undefined) {
                     console.log("listen fail", reason);
                     return resolve(core.h_reserve_ram({
                         t: core.PAIR_T,
@@ -660,7 +660,7 @@ function awp_device(
 
                 const key = stringify(store.name);
                 if (greeters[key] !== undefined) {
-                    result.stop();
+                    stop();
                     return resolve(core.h_reserve_ram({
                         t: core.PAIR_T,
                         x: core.UNDEF_RAW,
@@ -674,13 +674,13 @@ function awp_device(
                         core.h_release_stub(greeters[key]);
                         delete greeters[key];
                     }
-                    return result.stop();
+                    return stop();
                 }
 
                 stops.push(safe_stop);
                 return resolve(core.h_reserve_ram({
                     t: core.PAIR_T,
-                    x: core.UNDEF_RAW, // TODO (safe_stop . info)
+                    x: core.UNDEF_RAW, // TODO safe_stop
                     y: core.NIL_RAW
                 }));
             });
