@@ -1,6 +1,9 @@
 // Installs the AWP device, allowing cores to communicate over the network via
 // the Actor Wire Protocol.
 
+// Returns a disposal function that destroys all connections and stops
+// listening.
+
 // TODO:
 // - distributed garbage collection
 // - swiss interning
@@ -70,6 +73,7 @@ function awp_device(
     let stubs = Object.create(null);        // swiss -> stub raw    // TODO release at some point
     let handle_to_proxy_key = [];           // handle -> proxy key  // TODO release
     let proxies = Object.create(null);      // proxy key -> data    // TODO drop_proxy
+    let stops = [];                         // listen stop functions // TODO release
 
     function random_swiss() {
         let swiss = new Uint8Array(16); // 128 bits
@@ -609,7 +613,7 @@ function awp_device(
 
         function resolve(reply) {
 
-// ((stop . info) . reason) -> listen_callback
+// (stop . reason) -> listen_callback
 
             core.h_event_inject(sponsor, listen_callback, reply);
             release_event_stub();
@@ -641,8 +645,8 @@ function awp_device(
             );
 
             // TODO send cancel to cancel_customer
-            const cancel = listen_requestor(function (result, reason) {
-                if (result === undefined) {
+            const cancel = listen_requestor(function (stop, reason) {
+                if (stop === undefined) {
                     console.log("listen fail", reason);
                     return resolve(core.h_reserve_ram({
                         t: core.PAIR_T,
@@ -656,7 +660,7 @@ function awp_device(
 
                 const key = stringify(store.name);
                 if (greeters[key] !== undefined) {
-                    result.stop();
+                    stop();
                     return resolve(core.h_reserve_ram({
                         t: core.PAIR_T,
                         x: core.UNDEF_RAW,
@@ -670,12 +674,13 @@ function awp_device(
                         core.h_release_stub(greeters[key]);
                         delete greeters[key];
                     }
-                    return result.stop();
+                    return stop();
                 }
 
+                stops.push(safe_stop);
                 return resolve(core.h_reserve_ram({
                     t: core.PAIR_T,
-                    x: core.UNDEF_RAW, // TODO (safe_stop . info)
+                    x: core.UNDEF_RAW, // TODO safe_stop
                     y: core.NIL_RAW
                 }));
             });
@@ -775,78 +780,93 @@ function awp_device(
             }
         }
     );
+
+    return function dispose() {
+        Object.values(connections).forEach(function (connection) {
+            connection.close();
+        });
+        stops.forEach(function (stop_listening) {
+            stop_listening();
+        });
+    };
 }
 
 //debug import {webcrypto} from "node:crypto";
+//debug import parseq from "../parseq.js";
 //debug import instantiate_core from "../ufork.js";
 //debug import debug_device from "./debug_device.js";
 //debug import node_tls_transport from "./node_tls_transport.js";
-//debug const bob_address = {host: "localhost", port: 4001};
-//debug const carol_address = {host: "localhost", port: 4002};
-//debug const alice_cert = "-----BEGIN CERTIFICATE-----\nMIIBlzCB+QIJAKdXgQPMUTS5MAoGCCqGSM49BAMCMBAxDjAMBgNVBAMMBXVmb3JrMB4XDTIzMDYxNTAxMzEzOVoXDTIzMDcxNTAxMzEzOVowEDEOMAwGA1UEAwwFdWZvcmswgZswEAYHKoZIzj0CAQYFK4EEACMDgYYABABAO06FL/42NDAfp8YFC7KZs0ArEM6ocluQe+u7IPkis0kl1O8/6B3FmnR7GfTXQubdc0EFcueKjMyR8D/JY9wDhQAqUjXzVIePzADbfo8vUjrPQ9TBzl+T85XjeBKbDiKZQb8QxeyYlqO246/XksSZJl0vn91gXTbBAR1ZgYeTPd44ljAKBggqhkjOPQQDAgOBjAAwgYgCQgHvlQMSDNJpJTT9/0PsiQIkI2Ui4fJpBDJr1fzYQgVMmnqx5Uvng9DHr1+AU7DDU9+2X1V2OaRsgJAymv1om/vz5wJCAKoHuyWggL9LGkTPUiUqm3dA/JS5dOnKGmdDEqMbEeiofFpt/joV8sdTAw2uigkliw+9vfLMLkJyr2sW3fjiWTBo\n-----END CERTIFICATE-----";
-//debug const alice_key = "-----BEGIN EC PRIVATE KEY-----\nMIHbAgEBBEFCXfqEm5o/WBTMWkHpyz4f+6xqJv7GF+AajgBkyRYMncp6lZInDOKk2aC6oNerZdcDTXnqZ/TKZl1z9OSPkwIsd6AHBgUrgQQAI6GBiQOBhgAEAEA7ToUv/jY0MB+nxgULspmzQCsQzqhyW5B767sg+SKzSSXU7z/oHcWadHsZ9NdC5t1zQQVy54qMzJHwP8lj3AOFACpSNfNUh4/MANt+jy9SOs9D1MHOX5PzleN4EpsOIplBvxDF7JiWo7bjr9eSxJkmXS+f3WBdNsEBHVmBh5M93jiW\n-----END EC PRIVATE KEY-----";
-//debug const bob_cert = "-----BEGIN CERTIFICATE-----\nMIIBlzCB+QIJAMfPBllRxdANMAoGCCqGSM49BAMCMBAxDjAMBgNVBAMMBXVmb3JrMB4XDTIzMDYxNTAxMjYzM1oXDTIzMDcxNTAxMjYzM1owEDEOMAwGA1UEAwwFdWZvcmswgZswEAYHKoZIzj0CAQYFK4EEACMDgYYABACCfQXDKhuHQUQIzpU2HsgZK1n5eziSRHu+/tl67Pso6mSNSiWdhDwObikaOplnFO10IdGaoflbWn+qV3tSXTMYTABd6K9nN7ki/8/Ppoz0It9cqLn60u3RHHPpgrcAEFHpNA/LqItP/t55f6XPArvnt0xIfxjaI4gdwb2uUfnzITruSTAKBggqhkjOPQQDAgOBjAAwgYgCQgEqJCq5FDRvWYC8dMhzzcObvMJJ4FriVRlaEPH94FV1eZIvWLhpSkpzh02+KfiwclO0YJVzGAh7tFEBFZ1U+0A1BAJCAZ9ugBLIqRZXOR+ndUIAs917W9Dw+imQkbiHlKdU8rhGZgA7r29VAfx3A7l+1BmXUrvQRBuU6BoBMxW2BRTQ4wQ1\n-----END CERTIFICATE-----";
-//debug const bob_key = "-----BEGIN EC PRIVATE KEY-----\nMIHbAgEBBEE8BpKem+dZRCbbI33kCwXCADskDId/WhAE7RFRttOnV0m2kxwkad/bDpd20I7dNdUSD5VRk0GsVQacoHtMxdsBlKAHBgUrgQQAI6GBiQOBhgAEAIJ9BcMqG4dBRAjOlTYeyBkrWfl7OJJEe77+2Xrs+yjqZI1KJZ2EPA5uKRo6mWcU7XQh0Zqh+Vtaf6pXe1JdMxhMAF3or2c3uSL/z8+mjPQi31youfrS7dEcc+mCtwAQUek0D8uoi0/+3nl/pc8Cu+e3TEh/GNojiB3Bva5R+fMhOu5J\n-----END EC PRIVATE KEY-----";
-//debug const carol_cert = "-----BEGIN CERTIFICATE-----\nMIIBlzCB+QIJAKXgK2B3FNUbMAoGCCqGSM49BAMCMBAxDjAMBgNVBAMMBXVmb3JrMB4XDTIzMDYxNTAxMDExNFoXDTIzMDcxNTAxMDExNFowEDEOMAwGA1UEAwwFdWZvcmswgZswEAYHKoZIzj0CAQYFK4EEACMDgYYABAD/K8/8lKykhrjH8R6VlEKg2leMjkxBZe/6mzzsymuvD9bn4kDsIj6wjRRaiErlcYisw8ZiJOKlGGAjrIU1ISzitACOZDZ50Xj63N6LQ8rpkoKmbDhWuoD1v0uClMr7IhjG26nsPiHjhJ5UB4FIY/gVu4cci/tkCPgNu4KQUnyYU1SgXTAKBggqhkjOPQQDAgOBjAAwgYgCQgHcMCYkwLybOyQ7ErtE5ucY2CjHStIJWOhgHD/RYrTX4uoXOVl2ISb7F4COQ8Xm1vepNvlWA9PfTbHjXopB6f2D+wJCAZ/Vzcnjsf8wSpm8x34uNYlvo0K+LZNFlQ7EuImKk33QbVR30KAS3y+Ok8yNAucg3Zh1243k09iCFLXmyclcUZgk\n-----END CERTIFICATE-----";
-//debug const carol_key = "-----BEGIN EC PRIVATE KEY-----\nMIHbAgEBBEErmNL2SxVE8Mi13BclwRfR1j/OWNDrt8fMXT8VTzVwfhFBV1XmIXRCB+s4VkQEQWfi69xgA1J1nz/4eWAOuieFoqAHBgUrgQQAI6GBiQOBhgAEAP8rz/yUrKSGuMfxHpWUQqDaV4yOTEFl7/qbPOzKa68P1ufiQOwiPrCNFFqISuVxiKzDxmIk4qUYYCOshTUhLOK0AI5kNnnRePrc3otDyumSgqZsOFa6gPW/S4KUyvsiGMbbqew+IeOEnlQHgUhj+BW7hxyL+2QI+A27gpBSfJhTVKBd\n-----END EC PRIVATE KEY-----";
-//debug const dana_cert = "-----BEGIN CERTIFICATE-----\nMIIBlzCB+QIJAPLWr8RQKQBGMAoGCCqGSM49BAMCMBAxDjAMBgNVBAMMBXVmb3JrMB4XDTIzMDYxNTAxMzIwOVoXDTIzMDcxNTAxMzIwOVowEDEOMAwGA1UEAwwFdWZvcmswgZswEAYHKoZIzj0CAQYFK4EEACMDgYYABAAGfk1CmCfXy63+jOA/S2HgjWiILtTI5R14khfnxzo17+CxdmgiVd3nBtlw8JSP7epZN79Bb+v8sstpBpXPsdJAsQCLEczVVhPA4s32qXM5cPqeua2hOeJAIWs2T2gmJY5NmMsWEksyWKAJRqyks/T37rrCbJXla6r5EtWkDi+zFwVFUDAKBggqhkjOPQQDAgOBjAAwgYgCQgFQMwTdOqg3jFTKcnKagjd6YAFVFsFPEVaZWkLFbpzb7PGOGu8mpB3MGp5381jFjIUK3TEZpvuH54AfWaajtBKCqwJCAdloA77rsAnqlFsz0buZ4nGXSu8eNokvztuDQcFoiCeNtke4NVSdbdclj3xa0LMbLj7ts1sDI/R4t2QT1T2XgFvm\n-----END CERTIFICATE-----";
-//debug const dana_key = "-----BEGIN EC PRIVATE KEY-----\nMIHbAgEBBEGdbH0ztVSCg/8231sFBl07WGdEt26fuMauXcU3Gp24luV+MwaegTDYG7M9CG7LrMvuZipiQPVOgai40b41RzNOjKAHBgUrgQQAI6GBiQOBhgAEAAZ+TUKYJ9fLrf6M4D9LYeCNaIgu1MjlHXiSF+fHOjXv4LF2aCJV3ecG2XDwlI/t6lk3v0Fv6/yyy2kGlc+x0kCxAIsRzNVWE8Dizfapczlw+p65raE54kAhazZPaCYljk2YyxYSSzJYoAlGrKSz9PfuusJsleVrqvkS1aQOL7MXBUVQ\n-----END EC PRIVATE KEY-----";
-//debug instantiate_core(
-//debug     import.meta.resolve(
-//debug         "../../target/wasm32-unknown-unknown/debug/ufork_wasm.wasm"
-//debug     ),
-//debug     console.log
-//debug ).then(function (core) {
-//debug     function resume() {
-//debug         console.log("HALT:", core.u_fault_msg(core.h_run_loop()));
-//debug     }
-//debug     const transport = node_tls_transport();
-//debug     const acquaintances = [
-//debug         {
-//debug             name: transport.extract_public_key(bob_cert),
-//debug             address: bob_address
-//debug         },
-//debug         {
-//debug             name: transport.extract_public_key(carol_cert),
-//debug             address: carol_address
+//debug let transport = node_tls_transport();
+//debug let dispose;
+//debug parseq.parallel([
+//debug     transport.generate_identity(),
+//debug     transport.generate_identity(),
+//debug     transport.generate_identity(),
+//debug     transport.generate_identity()
+//debug ])(function callback(
+//debug     [
+//debug         alice_identity,
+//debug         bob_identity,
+//debug         carol_identity,
+//debug         dana_identity
+//debug     ],
+//debug     ignore
+//debug ) {
+//debug     const bob_address = {host: "localhost", port: 5001};
+//debug     const carol_address = {host: "localhost", port: 5002};
+//debug     instantiate_core(
+//debug         import.meta.resolve(
+//debug             "../../target/wasm32-unknown-unknown/debug/ufork_wasm.wasm"
+//debug         ),
+//debug         console.log
+//debug     ).then(function (core) {
+//debug         function resume() {
+//debug             console.log("HALT:", core.u_fault_msg(core.h_run_loop()));
 //debug         }
-//debug     ];
-//debug     const alice = {
-//debug         identity: {cert: alice_cert, key: alice_key},
-//debug         name: transport.extract_public_key(alice_cert),
-//debug         acquaintances
-//debug     };
-//debug     const bob = {
-//debug         identity: {cert: bob_cert, key: bob_key},
-//debug         name: transport.extract_public_key(bob_cert),
-//debug         address: bob_address,
-//debug         bind_info: bob_address
-//debug     };
-//debug     const carol = {
-//debug         identity: {cert: carol_cert, key: carol_key},
-//debug         name: transport.extract_public_key(carol_cert),
-//debug         address: carol_address,
-//debug         bind_info: carol_address
-//debug     };
-//debug     const dana = {
-//debug         identity: {cert: dana_cert, key: dana_key},
-//debug         name: transport.extract_public_key(dana_cert),
-//debug         acquaintances
-//debug     };
-//debug     debug_device(core);
-//debug     awp_device(
-//debug         core,
-//debug         resume,
-//debug         transport,
-//debug         [alice, bob, carol, dana],
-//debug         webcrypto
-//debug     );
-//debug     return core.h_import(
-//debug         import.meta.resolve("../../lib/grant_matcher.asm")
-//debug     ).then(function (asm_module) {
-//debug         core.h_boot(asm_module.boot);
-//debug         resume();
+//debug         const acquaintances = [
+//debug             {
+//debug                 name: transport.get_name(bob_identity),
+//debug                 address: bob_address
+//debug             },
+//debug             {
+//debug                 name: transport.get_name(carol_identity),
+//debug                 address: carol_address
+//debug             }
+//debug         ];
+//debug         const store = [
+//debug             {
+//debug                 identity: alice_identity,
+//debug                 name: transport.get_name(alice_identity),
+//debug                 acquaintances
+//debug             },
+//debug             {
+//debug                 identity: bob_identity,
+//debug                 name: transport.get_name(bob_identity),
+//debug                 address: bob_address,
+//debug                 bind_info: bob_address
+//debug             },
+//debug             {
+//debug                 identity: carol_identity,
+//debug                 name: transport.get_name(carol_identity),
+//debug                 address: carol_address,
+//debug                 bind_info: carol_address
+//debug             },
+//debug             {
+//debug                 identity: dana_identity,
+//debug                 name: transport.get_name(dana_identity),
+//debug                 acquaintances
+//debug             }
+//debug         ];
+//debug         debug_device(core);
+//debug         dispose = awp_device(core, resume, transport, store, webcrypto);
+//debug         return core.h_import(
+//debug             import.meta.resolve("../../lib/grant_matcher.asm")
+//debug         ).then(function (asm_module) {
+//debug             core.h_boot(asm_module.boot);
+//debug             resume();
+//debug         });
 //debug     });
 //debug });
+//debug // dispose();
 
 export default Object.freeze(awp_device);

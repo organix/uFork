@@ -117,13 +117,11 @@ The `listen` factory takes the following parameters:
 
 It returns a requestor that takes a `listen_callback`:
 
-    listen_callback(result, reason)
-        If successful, the 'result' parameter is an object like {stop, info}.
-        Otherwise 'result' is undefined and 'reason' provides an explanation.
+    listen_callback(stop, reason)
 
-        The "stop" property is a function that stops listening.
-        The "info" property provides additional information, such as the
-        resolved address.
+        If successful, the 'stop' parameter is a function that stops listening
+        when called. Otherwise 'stop' is undefined and 'reason' provides an
+        explanation.
 
 The requestor may return a `cancel` function that cancels the listen attempt.
 
@@ -244,9 +242,8 @@ greeter is available, the request fails.
 
     (#listen cancel_customer callback store greeter) -> awp_device
 
-Listens for introduction requests, producing a value like `(stop . info)` on
-success. The `info` value is transport-dependent. The `stop` capability stops
-the listener.
+Listens for introduction requests, producing a `stop` capability on success that
+can be used to stop listening:
 
     -> stop
 

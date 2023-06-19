@@ -74,11 +74,10 @@ listen_svc_beh:             ; awp_dev <- (cust store . greeter)
     send 5                  ; --
     ref std.commit
 
-listen_cb_beh:              ; cust <- ((stop . info) . reason)
+listen_cb_beh:              ; cust <- (stop . reason)
     msg -1                  ; reason
     is_eq #nil              ; --
-    msg 1                   ; (stop . info)
-    nth 1                   ; stop
+    msg 1                   ; stop
     state 0                 ; stop cust
     ref std.send_msg
 
