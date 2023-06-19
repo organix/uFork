@@ -5,7 +5,9 @@ use crate::*;
 pub trait Device {
     fn handle_event(&mut self, core: &mut Core, ep: Any) -> Result<bool, Error>;
     fn drop_proxy(&mut self, _ptr: Any) {}  // default: no-op
-    fn move_stub(&mut self, _old: Any, _new: Any) {}  // default: no-op
+    fn move_stub(&mut self, _old: Any, _new: Any) {  // default: fail!
+        panic!("should never be called with no-motion GC");
+    }
 }
 
 pub struct NullDevice {}
@@ -44,7 +46,7 @@ impl DebugDevice {
 impl Device for DebugDevice {
     fn handle_event(&mut self, core: &mut Core, ep: Any) -> Result<bool, Error> {
         let event = core.mem(ep);
-        let message = event.y();
+        let message = event.y();  // message
         self.debug_print(message);
         Ok(true)  // event handled.
     }
@@ -59,8 +61,6 @@ impl ClockDevice {
             clock_ticks: ZERO,
         }
     }
-    /*
-    */
     #[cfg(target_arch = "wasm32")]
     fn read_clock(&mut self) -> Any {
         unsafe {
@@ -86,7 +86,7 @@ impl Device for ClockDevice {
     fn handle_event(&mut self, core: &mut Core, ep: Any) -> Result<bool, Error> {
         let event = core.mem(ep);
         let sponsor = event.t();
-        let cust = event.y();
+        let cust = event.y();  // cust
         let now = self.read_clock();
         core.event_inject(sponsor, cust, now)?;
         Ok(true)  // event handled.
@@ -108,7 +108,7 @@ impl Device for IoDevice {
         let event = core.mem(ep);
         let count = self.call_count + 1;
         let _myself = event.x();
-        let message = event.y();
+        let message = event.y();  // blob
         let buf = core.blob_buffer();
         let base = buf.as_ptr();
         if !message.is_cap() {
@@ -209,7 +209,7 @@ impl Device for BlobDevice {
         let event = core.mem(ep);
         let sponsor = event.t();
         let dev = event.x();
-        let msg = event.y();
+        let msg = event.y();  // (cust size)
         let cust = core.nth(msg, PLUS_1);
         let size = core.nth(msg, PLUS_2);
         let handle = blob_reserve(core, size)?;
@@ -242,7 +242,7 @@ impl Device for TimerDevice {
         let event = core.mem(ep);
         let sponsor = event.t();
         let device = event.x();
-        let msg = event.y();
+        let msg = event.y();  // (delay target message)
         let delay = core.nth(msg, PLUS_1);
         if !delay.is_fix() {
             return Err(E_NOT_FIX);
