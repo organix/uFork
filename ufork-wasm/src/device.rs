@@ -5,9 +5,6 @@ use crate::*;
 pub trait Device {
     fn handle_event(&mut self, core: &mut Core, ep: Any) -> Result<bool, Error>;
     fn drop_proxy(&mut self, _ptr: Any) {}  // default: no-op
-    fn move_stub(&mut self, _old: Any, _new: Any) {  // default: fail!
-        panic!("should never be called with no-motion GC");
-    }
 }
 
 pub struct NullDevice {}
