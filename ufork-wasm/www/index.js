@@ -70,7 +70,6 @@ const $kqueue = document.getElementById("kqueue");
 const $mem_rom = document.getElementById("rom");
 const $mem_ram = document.getElementById("ram");
 const $mem_blob = document.getElementById("blob");
-//const $stdio_console = document.getElementById("stdio");
 const $source_monitor = document.getElementById("source");
 
 const $instr = document.getElementById("instr");
@@ -373,6 +372,18 @@ function render_loop() {
         }
     }
     requestAnimationFrame(render_loop);
+}
+
+const textEncoder = new TextEncoder();
+const utf8 = new Uint8Array(256);
+const $stdin = document.getElementById("stdin");
+const $send_button = document.getElementById("send-btn");
+$send_button.onclick = function () {
+    const text = $stdin.value;
+    const encodedResults = textEncoder.encodeInto(text, utf8);
+    //console.log(text, encodedResults, utf8);
+    console.log("Send", hexdump(utf8, 0, encodedResults.written));
+    $stdin.value = "";
 }
 
 const $gc_button = document.getElementById("gc-btn");
