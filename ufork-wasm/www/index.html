@@ -60,9 +60,27 @@ table {
   color: #FE3;
 }
 #stdio {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+#stdout {
+  background-color: #000;
   color: #FFF;
-  width: 98ex;
-  height: 23em;
+  font-family: monospace;
+  overflow: scroll;
+}
+#input-ctls {
+  margin: 4px;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+}
+#stdin {
+  background-color: #FFF;
+  color: #000;
+  font-family: monospace;
 }
 #source {
   color: #F6F;
@@ -108,7 +126,16 @@ table {
   <pre id="rom" class="panel" title="ROM Image"></pre>
   <pre id="ram" class="panel" title="RAM Image"></pre>
   <pre id="blob" class="panel" title="BLOB Image"></pre>
-  <textarea id="stdio" class="panel" title="Console I/O">Ready Player 1...</textarea>
+  <div id="stdio" class="panel" title="Console I/O">
+    <textarea id="stdout" cols="70" rows="16" readonly="readonly">
+        1        2        3        4        5        6        7        8
+123456790123456790123456790123456790123456790123456790123456790123456790
+    </textarea>
+    <div id="input-ctls">
+      <input id="stdin" type="text" size="66" />
+      <button id="send-btn">Send</button>
+    </div>
+  </div>
   <a id="source" class="panel" title="Source code" target="_blank"></a>
   <div id="monitor">
     <div id="controls">

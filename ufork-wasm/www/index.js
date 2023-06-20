@@ -70,7 +70,7 @@ const $kqueue = document.getElementById("kqueue");
 const $mem_rom = document.getElementById("rom");
 const $mem_ram = document.getElementById("ram");
 const $mem_blob = document.getElementById("blob");
-const $stdio_console = document.getElementById("stdio");
+//const $stdio_console = document.getElementById("stdio");
 const $source_monitor = document.getElementById("source");
 
 const $instr = document.getElementById("instr");
@@ -459,12 +459,6 @@ document.onkeydown = function (event) {
     } else if (event.key === "g") {
         gc_host();
     }
-};
-
-$stdio_console.onkeydown = function (event) {
-    const key = event.key;
-    const code = event.keyCode;
-    console.log("stdio: key =", key, " code =", code);
 };
 
 const $snapshot_button = document.getElementById("snapshot-btn");
