@@ -23,20 +23,12 @@ authenticating remote parties and encrypting frame traffic. Note that network
 addresses are used solely for routing, and should not be relied upon for
 security.
 
-Underlying transports provide an interface made up of two requestor factories
+Underlying transports provide an interface made up of two requestor functions
 (see https://github.com/douglascrockford/parseq), `connect` and `listen`.
 
 #### Connecting
 
-    connect(
-        identity,
-        name,
-        address,
-        on_receive,
-        on_close
-    ) -> requestor(connect_callback) -> cancel
-
-The `connect` factory takes the following parameters:
+The `connect` requestor takes an object with the following properties:
 
     identity
         Used to prove ownership of the local party's name and secure the
@@ -70,28 +62,15 @@ The `connect` factory takes the following parameters:
         A function that is called when the connection closes. If the connection
         failed, the 'reason' parameter explains why, otherwise it is undefined.
 
-It returns a requestor that takes a `connect_callback`:
+It produces a connection object like that described for `on_receive`, and may
+return a `cancel` function that cancels the connect attempt.
 
-    connect_callback(connection, reason)
-        If successful, 'connection' is an object like that described for
-        'on_receive'.
-
-        Otherwise 'connection' is undefined and 'reason' provides an
-        explanation.
-
-The requestor may return a `cancel` function that cancels the connect attempt.
+Once closed or cancelled, the `on_receive`, and `on_close` functions are not
+called again.
 
 #### Listening
 
-    listen(
-        identity,
-        bind_info,
-        on_open,
-        on_receive,
-        on_close
-    ) -> requestor(listen_callback) -> cancel
-
-The `listen` factory takes the following parameters:
+The `listen` requestor takes an object with the following properties:
 
     identity
         Used to prove ownership of the local party's name and secure the
@@ -115,18 +94,11 @@ The `listen` factory takes the following parameters:
         A function that is called when a connection is closed. If the connection
         failed, the 'reason' parameter should explain why.
 
-It returns a requestor that takes a `listen_callback`:
+It produces a `stop` function that stops listening when called, and may return a
+`cancel` function that cancels the listen attempt.
 
-    listen_callback(stop, reason)
-
-        If successful, the 'stop' parameter is a function that stops listening
-        when called. Otherwise 'stop' is undefined and 'reason' provides an
-        explanation.
-
-The requestor may return a `cancel` function that cancels the listen attempt.
-
-Once closed, stopped or cancelled, the `on_open`, `on_receive`, and `on_close`
-callbacks are not called again.
+Once stopped or cancelled, the `on_open`, `on_receive`, and `on_close` callbacks
+are not called again.
 
 ### Frames
 

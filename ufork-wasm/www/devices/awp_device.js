@@ -385,33 +385,35 @@ function awp_device(
 // There is no connection opened or opening. Connect.
 
         const {store, petname} = outbox[key][0];
-        const connect_requestor = transport.connect(
-            store.identity,
-            store.acquaintances[petname].name,
-            store.acquaintances[petname].address,
-            function on_receive(connection, frame_buffer) {
-                const frame = OED.decode(frame_buffer);
-                console.log("connect on_receive", connection.name(), frame);
-                return receive(store, connection.name(), frame);
+        const cancel = transport.connect(
+            function connected_callback(connection, reason) {
+                delete opening[key];
+                if (connection === undefined) {
+                    console.log("connect fail", reason);
+                    lose(key);
+                } else {
+                    console.log("connect open", connection.name());
+                    register(store, connection);
+                }
             },
-            function on_close(connection, reason) {
-                console.log("connect on_close", connection.name(), reason);
-                return unregister(duplex_key(
-                    store.name,
-                    connection.name()
-                ));
+            {
+                identity: store.identity,
+                name: store.acquaintances[petname].name,
+                address: store.acquaintances[petname].address,
+                on_receive(connection, frame_buffer) {
+                    const frame = OED.decode(frame_buffer);
+                    console.log("connect on_receive", connection.name(), frame);
+                    return receive(store, connection.name(), frame);
+                },
+                on_close(connection, reason) {
+                    console.log("connect on_close", connection.name(), reason);
+                    return unregister(duplex_key(
+                        store.name,
+                        connection.name()
+                    ));
+                }
             }
         );
-        const cancel = connect_requestor(function (connection, reason) {
-            delete opening[key];
-            if (connection === undefined) {
-                console.log("connect fail", reason);
-                lose(key);
-            } else {
-                console.log("connect open", connection.name());
-                register(store, connection);
-            }
-        });
         // TODO forward cancel capability to cancel_customer
         opening[key] = function () {
             if (typeof cancel === "function") {
@@ -623,68 +625,68 @@ function awp_device(
 // Wait a turn so we can safely use the non-reentrant core methods.
 
         setTimeout(function () {
-            const listen_requestor = transport.listen(
-                store.identity,
-                store.bind_info,
-                function on_open(connection) {
-                    console.log("listen on_open", connection.name());
-                    return register(store, connection);
-                },
-                function on_receive(connection, frame_buffer) {
-                    const frame = OED.decode(frame_buffer);
-                    console.log("listen on_receive", connection.name(), frame);
-                    return receive(store, connection, frame);
-                },
-                function on_close(connection, reason) {
-                    console.log("listen on_close", connection.name(), reason);
-                    return unregister(duplex_key(
-                        store.name,
-                        connection.name()
-                    ));
-                }
-            );
-
             // TODO send cancel to cancel_customer
-            const cancel = listen_requestor(function (stop, reason) {
-                if (stop === undefined) {
-                    console.log("listen fail", reason);
-                    return resolve(core.h_reserve_ram({
-                        t: core.PAIR_T,
-                        x: core.UNDEF_RAW,
-                        y: core.u_fixnum(-1) // TODO error codes
-                    }));
-                }
+            const cancel = transport.listen(
+                function listening_callback(stop, reason) {
+                    if (stop === undefined) {
+                        console.log("listen fail", reason);
+                        return resolve(core.h_reserve_ram({
+                            t: core.PAIR_T,
+                            x: core.UNDEF_RAW,
+                            y: core.u_fixnum(-1) // TODO error codes
+                        }));
+                    }
 
 // A store may not register more than one greeter. That would get very
 // confusing.
 
-                const key = stringify(store.name);
-                if (greeters[key] !== undefined) {
-                    stop();
+                    const key = stringify(store.name);
+                    if (greeters[key] !== undefined) {
+                        stop();
+                        return resolve(core.h_reserve_ram({
+                            t: core.PAIR_T,
+                            x: core.UNDEF_RAW,
+                            y: core.u_fixnum(-1) // TODO error codes
+                        }));
+                    }
+                    greeters[key] = core.h_reserve_stub(device, greeter);
+
+                    function safe_stop() {
+                        if (greeters[key] !== undefined) {
+                            core.h_release_stub(greeters[key]);
+                            delete greeters[key];
+                        }
+                        return stop();
+                    }
+
+                    stops.push(safe_stop);
                     return resolve(core.h_reserve_ram({
                         t: core.PAIR_T,
-                        x: core.UNDEF_RAW,
-                        y: core.u_fixnum(-1) // TODO error codes
+                        x: core.UNDEF_RAW, // TODO safe_stop
+                        y: core.NIL_RAW
                     }));
-                }
-                greeters[key] = core.h_reserve_stub(device, greeter);
-
-                function safe_stop() {
-                    if (greeters[key] !== undefined) {
-                        core.h_release_stub(greeters[key]);
-                        delete greeters[key];
+                },
+                {
+                    identity: store.identity,
+                    bind_info: store.bind_info,
+                    on_open(connection) {
+                        console.log("listen on_open", connection.name());
+                        return register(store, connection);
+                    },
+                    on_receive(connection, frame_buffer) {
+                        const frame = OED.decode(frame_buffer);
+                        console.log("listen on_receive", connection.name(), frame);
+                        return receive(store, connection, frame);
+                    },
+                    on_close(connection, reason) {
+                        console.log("listen on_close", connection.name(), reason);
+                        return unregister(duplex_key(
+                            store.name,
+                            connection.name()
+                        ));
                     }
-                    return stop();
                 }
-
-                stops.push(safe_stop);
-                return resolve(core.h_reserve_ram({
-                    t: core.PAIR_T,
-                    x: core.UNDEF_RAW, // TODO safe_stop
-                    y: core.NIL_RAW
-                }));
-            });
-
+            );
             // TODO provide to cancel_customer
             function safe_cancel() {
                 release_event_stub();
@@ -799,17 +801,12 @@ function awp_device(
 //debug let transport = node_tls_transport();
 //debug let dispose;
 //debug parseq.parallel([
-//debug     transport.generate_identity(),
-//debug     transport.generate_identity(),
-//debug     transport.generate_identity(),
-//debug     transport.generate_identity()
+//debug     transport.generate_identity,
+//debug     transport.generate_identity,
+//debug     transport.generate_identity,
+//debug     transport.generate_identity
 //debug ])(function callback(
-//debug     [
-//debug         alice_identity,
-//debug         bob_identity,
-//debug         carol_identity,
-//debug         dana_identity
-//debug     ],
+//debug     [alice_identity, bob_identity, carol_identity, dana_identity],
 //debug     ignore
 //debug ) {
 //debug     const bob_address = {host: "localhost", port: 5001};
