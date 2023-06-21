@@ -17,6 +17,12 @@ function io_device(core) {
                     undefined,
                     base + ofs - 5 // blobs have a 5-octet header
                 ));
+            },
+            host_write(code) { // (i32) -> nil
+                code &= 0x1FFFFF;  // interpret as a Unicode code point
+                console.log(
+                    "WRITE: " + code + " = " + String.fromCodePoint([code])
+                );
             }
         }
     );

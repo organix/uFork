@@ -90,38 +90,93 @@ impl Device for ClockDevice {
     }
 }
 
-pub struct IoDevice {
-    call_count: usize,
-}
+pub struct IoDevice {}
 impl IoDevice {
     pub fn new() -> IoDevice {
-        IoDevice {
-            call_count: 0,
+        IoDevice {}
+    }
+    #[cfg(target_arch = "wasm32")]
+    fn write(&mut self, code: isize) {
+        unsafe {
+            crate::host_write(code);
         }
     }
+    #[cfg(not(target_arch = "wasm32"))]
+    fn write(&mut self, code: isize) {
+        // console output not available...
+        let _ = code;  // place a breakpoint on this assignment
+    }
 }
+/*
+    The present `IoDevice` is an experimental place-holder
+    used to dump a _blob_ proxy to the debugger console.
+    For backward compatibility, when the message is just a capability
+    we retain the previous behavior.
+
+    The new `IoDevice` interface follows the _Requestor_ pattern
+    and provides a simple fixnum read/write API.
+
+    A _read_ request looks like `(to_cancel callback)`,
+    where `to_cancel` is the optional customer for a cancel capability,
+    and `callback` is the customer that will receive the result.
+    The result looks like `(fixnum)` on success,
+    and `(#? . reason)` on failure.
+
+    A _write_ request looks like `(to_cancel callback fixnum)`,
+    where `to_cancel` is the optional customer for a cancel capability,
+    and `callback` is the customer that will receive the result.
+    The result looks like `(#unit)` on success,
+    and `(#? . reason)` on failure.
+
+    In either request, if `to_cancel` is a capability,
+    the device **may** send a _cancel_ capability to that customer.
+    If the _cancel_ capability is sent a message (any message),
+    the request **may** be cancelled, if it has not already sent a result.
+    NOTE: The initial implementation doesn't send a _cancel_ capability.
+*/
 impl Device for IoDevice {
     fn handle_event(&mut self, core: &mut Core, ep: Any) -> Result<bool, Error> {
         let event = core.mem(ep);
-        let count = self.call_count + 1;
+        let sponsor = event.t();
         let _myself = event.x();
-        let message = event.y();  // blob
-        let buf = core.blob_buffer();
-        let base = buf.as_ptr();
-        if !message.is_cap() {
-            return Err(E_NOT_CAP);
+        let msg = event.y();  // blob | (to_cancel callback) | (to_cancel callback fixnum)
+        if msg.is_cap() {  // blob
+            let buf = core.blob_buffer();
+            let base = buf.as_ptr();
+            let ptr = core.cap_to_ptr(msg);
+            let proxy = core.ram(ptr);
+            if proxy.t() != PROXY_T {
+                return Err(E_NOT_PTR);
+            }
+            if proxy.x() != BLOB_DEV {
+                return Err(E_BOUNDS);
+            }
+            let ofs = proxy.y().get_fix()? as usize;
+            greet(base, ofs);
+        } else if core.typeq(PAIR_T, msg) {
+            let _to_cancel = core.nth(msg, PLUS_1);
+            // FIXME: cancel option not implemented
+            let callback = core.nth(msg, PLUS_2);
+            if !callback.is_cap() {
+                return Err(E_NOT_CAP);
+            }
+            let data = core.nth(msg, PLUS_3);
+            if data == UNDEF {  // (to_cancel callback)
+                // read request
+                // FIXME: read not implemented! reply immediately with failure
+                let reason = core.reserve(&Quad::pair_t(Any::fix(E_FAIL as isize), NIL))?;
+                let result = core.reserve(&Quad::pair_t(UNDEF, reason))?;  // (#undef error_code)
+                core.event_inject(sponsor, callback, result)?;
+            } else if data.is_fix() {  // (to_cancel callback fixnum)
+                // write request
+                let code = data.get_fix()?;
+                self.write(code);
+                // in the current implementation, `write` is synchronous, so we reply immediately
+                let result = core.reserve(&Quad::pair_t(UNIT, NIL))?;  // (#unit)
+                core.event_inject(sponsor, callback, result)?;
+            }
         }
-        let ptr = core.cap_to_ptr(message);
-        let proxy = core.ram(ptr);
-        if proxy.t() != PROXY_T {
-            return Err(E_NOT_PTR);
-        }
-        if proxy.x() != BLOB_DEV {
-            return Err(E_BOUNDS);
-        }
-        let ofs = proxy.y().get_fix()? as usize;
-        greet(base, ofs);
-        self.call_count = count;
+        // NOTE: unrecognized messages may be ignored
         Ok(true)  // event handled.
     }
 }

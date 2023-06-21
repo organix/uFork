@@ -11,13 +11,13 @@ function timer_device(core, resume) {
         {
             host_timer(delay, stub) { // (i32, i32) -> nil
                 if (core.u_is_fix(delay)) {
+                    // FIXME: we need to ensure that stub remains valid!
+                    const quad = core.u_read_quad(stub);
+                    const event = core.u_read_quad(quad.y);
+                    const sponsor = event.t;
+                    const target = event.x;
+                    const message = event.y;
                     setTimeout(function () {
-                        // FIXME: we need to ensure that stub remains valid!
-                        const quad = core.u_read_quad(stub);
-                        const event = core.u_read_quad(quad.y);
-                        const sponsor = event.t;
-                        const target = event.x;
-                        const message = event.y;
                         core.h_event_inject(sponsor, target, message);
                         if (resume !== undefined) {
                             resume();
