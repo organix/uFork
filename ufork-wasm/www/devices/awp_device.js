@@ -138,11 +138,11 @@ function awp_device(
 //  #nil            | []
 //  (a . b)         | [a, b]
 //  fixnum          | integer
-//  capability      | ext(swiss, acquaintance)
+//  capability      | ext(acquaintance, swiss)
 
     function marshall(store, value) {
-        return OED.encode(value, function pack(raw, key) {
-            if (key === true) {
+        return OED.encode(value, function pack(raw, path) {
+            if (path.includes(false)) {
                 return {value: raw}; // meta
             }
             if (raw === core.UNDEF_RAW) {
@@ -191,11 +191,11 @@ function awp_device(
                         raw_to_swiss[raw] = swiss;
                     }
                     return {
-                        meta: swiss,
-                        data: OED.encode({
+                        meta: {
                             name: store.name,
                             address: store.address // optional
-                        })
+                        },
+                        data: swiss
                     };
                 }
                 if (quad.t === core.PROXY_T) {
@@ -205,11 +205,11 @@ function awp_device(
                         proxy.petname
                     ];
                     return {
-                        meta: proxy.swiss,
-                        data: OED.encode({
+                        meta: {
                             name: acquaintance.name,
                             address: acquaintance.address
-                        })
+                        },
+                        data: proxy.swiss
                     };
                 }
             }
@@ -218,8 +218,8 @@ function awp_device(
     }
 
     function unmarshall(store, buffer) {
-        return OED.decode(buffer, function unpack(object, canonical, key) {
-            if (key === true) {
+        return OED.decode(buffer, function unpack(object, canonical, path) {
+            if (path.includes(false)) {
                 return canonical(); // meta
             }
             if (object.value === null) {
@@ -252,11 +252,11 @@ function awp_device(
             ) {
                 return core.u_fixnum(canonical());
             }
-            if (object.meta?.constructor === Uint8Array) {
+            if (typeof object.meta === "object") {
                 return get_proxy(
                     store,
-                    get_petname(store, OED.decode(object.data)),
-                    object.meta
+                    get_petname(store, object.meta),
+                    object.data
                 );
             }
             throw new Error("Failed to unmarshall " + JSON.stringify(object));

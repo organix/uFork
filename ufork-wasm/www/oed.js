@@ -1,6 +1,6 @@
 // oed.js
 // James Diacono
-// 2023-06-02
+// 2023-06-22
 // Public Domain
 
 // A JavaScript encoder and decoder for the Octet-Encoded Data (OED) format.
@@ -17,23 +17,23 @@
 
 //  OED.encode(value, pack)
 
-//      Encodes the 'value' as a Uint8Array. Without the aid of a 'pack'
+//      Encodes the 'value' as a Uint8Array. Without the aid of a pack
 //      function, only the following types are supported:
 
 //          null, Boolean, Number, String, Array, Object, Uint8Array
 
 //      Some JavaScript values, such as 'undefined', are not directly supported
 //      by OED. When unsupported values are encountered by the encoder, and a
-//      'pack' function is not provided, then the value is omitted (when it is a
+//      pack function is not provided, then the value is omitted (when it is a
 //      property value) or encoded as null (when it is an array element). If
 //      'value' itself is unsupported, OED.encode returns undefined.
 
-//      The 'pack' function, if provided, controls how individual values are
-//      encoded. It is called with each value encountered during encoding.
+//      The 'pack' function, if provided, is called with each value encountered
+//      during encoding. Each of these values is a subvalue of 'value'.
 
-//          pack(value, key)
+//          pack(subvalue, path)
 
-//      The pack function decides whether the 'value' is
+//      The return value of the pack function controls whether 'subvalue' is
 //          - encoded normally,
 //          - encoded as an Extension BLOB,
 //          - encoded as an arbitrary-precision number,
@@ -41,12 +41,24 @@
 //          - transformed prior to encoding, or
 //          - omitted.
 
-//      The 'key' parameter provides some context for 'value'.
-//      If the parent is an object, 'key' is a string.
-//      If the parent is an array, 'key' is a number.
-//      If the value is the meta value of an Extension BLOB, 'key' is true.
-//      If the value is itself an object key, 'key' is false.
-//      If the value has no parent, 'key' is undefined.
+//      The 'path' parameter is an array that locates the subvalue within
+//      'value'. When the subvalue is 'value', the path is an empty array.
+//      Otherwise the path is an array of keys, the last of which pertains to
+//      the current subvalue. The pack function should never modify this
+//      array.
+
+//      A subvalue's key depends on its context:
+
+//      Key       | Subvalue's context
+//      ----------|-------------------------------------------------------------
+//      false     | Meta-data of an Extension BLOB.
+//      number    | Element of an array.
+//      true      | Key of an object.
+//      string    | Value of an object, keyed by a string.
+//      function  | Value of an object, keyed by a non-string.
+
+//      In the last case, a function wraps the non-string key value. OED objects
+//      can have keys of any type, so this is just to avoid ambiguity.
 
 //      The pack function returns an object:
 
@@ -127,10 +139,10 @@
 //      Decodes the 'octets' Uint8Array, returning the value.
 
 //      The 'unpack' function, if provided, controls how values are decoded. It
-//      is called each time a value is encountered. It returns the decoded
+//      is called with each subvalue that is encountered. It returns the decoded
 //      value, which can be anything.
 
-//          unpack(object, canonical, key)
+//          unpack(object, canonical, path)
 
 //      The 'object' parameter is one of:
 
@@ -171,7 +183,7 @@
 
 //          return canonical();
 
-//      The 'key' parameter is the same as for the 'pack' function.
+//      The 'path' parameter is the same as for the 'pack' function.
 
 //      The capability from the previous example can be recovered like so:
 
@@ -347,6 +359,16 @@ function construct({sign, coefficient, base, exponent}) {
 // number from its components.
 
     return sign * coefficient * (base ** exponent);
+}
+
+function pathify(key) {
+    return (
+        typeof key === "string"
+        ? key
+        : function unwrap_key() {
+            return key;
+        }
+    );
 }
 
 // Encoding ////////////////////////////////////////////////////////////////////
@@ -570,11 +592,15 @@ function pack_float({coefficient, exponent, base}) {
 }
 
 function encode(value, pack) {
+    let path = [];
 
     function encode_extension_blob(meta, data = buffer()) {
+        path.push(false);
+        const encoded = encode_value(meta) ?? null_octet;
+        path.pop();
         return buffer([
             extension_blob_octet,
-            encode_value(meta, true) ?? null_octet,
+            encoded,
             encode_integer(data.length),
             data
         ]);
@@ -589,7 +615,9 @@ function encode(value, pack) {
 
         let size = 0;
         let elements = array.map(function (element, key) {
-            const octets = encode_value(element, key) ?? buffer([null_octet]);
+            path.push(key);
+            const octets = encode_value(element) ?? buffer([null_octet]);
+            path.pop();
             size += octets.length;
             return octets;
         });
@@ -608,16 +636,18 @@ function encode(value, pack) {
         let size = 0;
         let keys_and_values = [];
         entries.forEach(function ([key, value]) {
+            path.push(true);
+            const key_octets = encode_value(key);
+            path.pop();
+            path.push(pathify(key));
+            const value_octets = encode_value(value);
+            path.pop();
 
 // The property is omitted if its key or value is unsupported.
 
-            const value_octets = encode_value(value, key);
-            if (value_octets !== undefined) {
-                const key_octets = encode_value(key, false);
-                if (key_octets !== undefined) {
-                    keys_and_values.push(key_octets, value_octets);
-                    size += key_octets.length + value_octets.length;
-                }
+            if (value_octets !== undefined && key_octets !== undefined) {
+                keys_and_values.push(key_octets, value_octets);
+                size += key_octets.length + value_octets.length;
             }
         });
         return (
@@ -632,12 +662,12 @@ function encode(value, pack) {
         );
     }
 
-    function encode_value(value, key) {
+    function encode_value(value) {
         if (typeof pack === "function") {
 
 // A 'pack' function has been provided. See what it makes of the value.
 
-            const object = pack(value, key);
+            const object = pack(value, path);
             if (object.sign !== undefined) {
                 return pack_integer(object);
             }
@@ -763,7 +793,7 @@ function decode(octets, unpack, seek) {
     function unpack_any(object, canonical) {
         return (
             typeof unpack === "function"
-            ? unpack(object, canonical, path[path.length - 1])
+            ? unpack(object, canonical, path)
             : canonical()
         );
     }
@@ -942,11 +972,7 @@ function decode(octets, unpack, seek) {
 // prefix::Octet meta::Value size::Number data::Octet*
 
         consume(1);
-
-// The value we push onto the path here becomes the unpack function's 'key'
-// parameter.
-
-        path.push(true);
+        path.push(false);
         const meta = consume_value();
         path.pop();
         const size = consume_magnitude("size");
@@ -1056,11 +1082,11 @@ function decode(octets, unpack, seek) {
             let entries_position = position;
             while (length > 0) {
                 let recover = mark();
-                path.push(false);
+                path.push(true);
                 let key = consume_value();
                 path.pop();
                 raw_keys.push(recover());
-                path.push(key);
+                path.push(pathify(key));
                 let value = consume_value();
                 path.pop();
                 entries.push([key, value]);
