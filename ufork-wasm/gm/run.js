@@ -25,35 +25,35 @@ MC4CAQAwBQYDK2VwBCIEINTatAbnOgcatVHstpOCLskSHU5nogWEpe7fiDQUMZIF
 -----END PRIVATE KEY-----`);
 const acquaintances = [
     {
-        name: transport.get_name(bob_identity),
+        name: transport.identity_to_name(bob_identity),
         address: bob_address
     },
     {
-        name: transport.get_name(carol_identity),
+        name: transport.identity_to_name(carol_identity),
         address: carol_address
     }
 ];
 const stores = {
     alice: {
         identity: alice_identity,
-        name: transport.get_name(alice_identity),
+        name: transport.identity_to_name(alice_identity),
         acquaintances
     },
     bob: {
         identity: bob_identity,
-        name: transport.get_name(bob_identity),
+        name: transport.identity_to_name(bob_identity),
         address: bob_address,
         bind_info: bob_address
     },
     carol: {
         identity: carol_identity,
-        name: transport.get_name(carol_identity),
+        name: transport.identity_to_name(carol_identity),
         address: carol_address,
         bind_info: carol_address
     },
     dana: {
         identity: dana_identity,
-        name: transport.get_name(dana_identity),
+        name: transport.identity_to_name(dana_identity),
         acquaintances
     }
 };

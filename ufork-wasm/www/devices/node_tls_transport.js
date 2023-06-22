@@ -10,11 +10,11 @@
 //  identity:
 //      A Node.js KeyObject representing a Ed25519 private key.
 
-//      The transport's 'generate_identity' method is a requestor factory that
-//      produces new identities.
+//      The transport's 'generate_identity' method is a requestor function that
+//      produces a new identity.
 
-//      The transport's 'get_name' method takes an identity and returns the
-//      corresponding name.
+//      The transport's 'identity_to_name' method takes an identity and returns
+//      the corresponding name.
 
 /*jslint node, long, bitwise */
 
@@ -115,7 +115,7 @@ function cert_to_pub(buffer) {
 // Since we are constructing certificates manually, we can reliably predict
 // where the public key will be.
 
-    return refine_der(buffer, [0, 5, 1, 0]).slice(1); // bit string pad byte
+    return refine_der(buffer, [0, 5, 1, 0]).slice(1); // bit string padding byte
 }
 
 function get_certificate_pem(private_key_object) {
@@ -173,7 +173,7 @@ function get_certificate_pem(private_key_object) {
     );
 }
 
-function get_name(private_key_object) {
+function identity_to_name(private_key_object) {
     return new Uint8Array(refine_der(
         crypto.createPublicKey(
             private_key_object
@@ -385,7 +385,7 @@ function node_tls_transport() {
         listen: listen_requestor,
         connect: connect_requestor,
         generate_identity: generate_identity_requestor,
-        get_name
+        identity_to_name
     });
 }
 
@@ -416,7 +416,7 @@ function node_tls_transport() {
 //debug         console.log("bob listening");
 //debug         const cancel_connect = connect_requestor(connect_callback, {
 //debug             identity: alice_identity,
-//debug             name: get_name(bob_identity),
+//debug             name: identity_to_name(bob_identity),
 //debug             address: bob_address,
 //debug             on_receive(connection, frame_buffer) {
 //debug                 console.log("alice on_receive", frame_buffer);

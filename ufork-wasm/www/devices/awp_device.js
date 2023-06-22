@@ -263,7 +263,7 @@ function awp_device(
         });
     }
 
-    function duplex_key(local_name, remote_name) {
+    function convo_key(local_name, remote_name) {
         return stringify(local_name) + ":" + stringify(remote_name);
     }
 
@@ -392,7 +392,7 @@ function awp_device(
                     console.log("connect fail", reason);
                     lose(key);
                 } else {
-                    console.log("connect open", connection.name());
+                    console.log("connect open");
                     register(store, connection);
                 }
             },
@@ -402,12 +402,12 @@ function awp_device(
                 address: store.acquaintances[petname].address,
                 on_receive(connection, frame_buffer) {
                     const frame = OED.decode(frame_buffer);
-                    console.log("connect on_receive", connection.name(), frame);
+                    console.log("connect on_receive");
                     return receive(store, connection.name(), frame);
                 },
                 on_close(connection, reason) {
-                    console.log("connect on_close", connection.name(), reason);
-                    return unregister(duplex_key(
+                    console.log("connect on_close", reason);
+                    return unregister(convo_key(
                         store.name,
                         connection.name()
                     ));
@@ -424,7 +424,7 @@ function awp_device(
     }
 
     function register(store, connection) {
-        const key = duplex_key(store.name, connection.name());
+        const key = convo_key(store.name, connection.name());
 
 // If we have been trying to connect, give up.
 
@@ -463,7 +463,7 @@ function awp_device(
 
     function enqueue(store, petname, swiss, message) {
         const acquaintance = store.acquaintances[petname];
-        const key = duplex_key(store.name, acquaintance.name);
+        const key = convo_key(store.name, acquaintance.name);
         add(outbox, key, {store, petname, swiss, message});
         return flush(key);
     }
@@ -557,7 +557,7 @@ function awp_device(
                     y: hello_data
                 }))
             );
-            const key = duplex_key(
+            const key = convo_key(
                 store.name,
                 store.acquaintances[petname].name
             );
@@ -670,17 +670,17 @@ function awp_device(
                     identity: store.identity,
                     bind_info: store.bind_info,
                     on_open(connection) {
-                        console.log("listen on_open", connection.name());
+                        console.log("listen on_open");
                         return register(store, connection);
                     },
                     on_receive(connection, frame_buffer) {
                         const frame = OED.decode(frame_buffer);
-                        console.log("listen on_receive", connection.name(), frame);
+                        console.log("listen on_receive");
                         return receive(store, connection, frame);
                     },
                     on_close(connection, reason) {
-                        console.log("listen on_close", connection.name(), reason);
-                        return unregister(duplex_key(
+                        console.log("listen on_close", reason);
+                        return unregister(convo_key(
                             store.name,
                             connection.name()
                         ));
@@ -822,35 +822,35 @@ function awp_device(
 //debug         }
 //debug         const acquaintances = [
 //debug             {
-//debug                 name: transport.get_name(bob_identity),
+//debug                 name: transport.identity_to_name(bob_identity),
 //debug                 address: bob_address
 //debug             },
 //debug             {
-//debug                 name: transport.get_name(carol_identity),
+//debug                 name: transport.identity_to_name(carol_identity),
 //debug                 address: carol_address
 //debug             }
 //debug         ];
 //debug         const store = [
 //debug             {
 //debug                 identity: alice_identity,
-//debug                 name: transport.get_name(alice_identity),
+//debug                 name: transport.identity_to_name(alice_identity),
 //debug                 acquaintances
 //debug             },
 //debug             {
 //debug                 identity: bob_identity,
-//debug                 name: transport.get_name(bob_identity),
+//debug                 name: transport.identity_to_name(bob_identity),
 //debug                 address: bob_address,
 //debug                 bind_info: bob_address
 //debug             },
 //debug             {
 //debug                 identity: carol_identity,
-//debug                 name: transport.get_name(carol_identity),
+//debug                 name: transport.identity_to_name(carol_identity),
 //debug                 address: carol_address,
 //debug                 bind_info: carol_address
 //debug             },
 //debug             {
 //debug                 identity: dana_identity,
-//debug                 name: transport.get_name(dana_identity),
+//debug                 name: transport.identity_to_name(dana_identity),
 //debug                 acquaintances
 //debug             }
 //debug         ];
