@@ -10,8 +10,8 @@ All communications between actors are secured with TLS.
 
 ## Running the demo
 
-Make sure you have the development server running (./serve.sh), then run each of
-the following commands in separate terminal windows:
+Make sure you have the development server running (../serve.sh), then run each
+of the following commands in separate terminal windows:
 
     node run.js bob gm.asm
     node run.js carol keqd.asm

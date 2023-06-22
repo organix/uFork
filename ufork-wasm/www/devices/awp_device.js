@@ -138,11 +138,11 @@ function awp_device(
 //  #nil            | []
 //  (a . b)         | [a, b]
 //  fixnum          | integer
-//  capability      | ext(swiss, acquaintance)
+//  capability      | ext(acquaintance, swiss)
 
     function marshall(store, value) {
-        return OED.encode(value, function pack(raw, key) {
-            if (key === true) {
+        return OED.encode(value, function pack(raw, path) {
+            if (path.includes(false)) {
                 return {value: raw}; // meta
             }
             if (raw === core.UNDEF_RAW) {
@@ -191,11 +191,11 @@ function awp_device(
                         raw_to_swiss[raw] = swiss;
                     }
                     return {
-                        meta: swiss,
-                        data: OED.encode({
+                        meta: {
                             name: store.name,
                             address: store.address // optional
-                        })
+                        },
+                        data: swiss
                     };
                 }
                 if (quad.t === core.PROXY_T) {
@@ -205,11 +205,11 @@ function awp_device(
                         proxy.petname
                     ];
                     return {
-                        meta: proxy.swiss,
-                        data: OED.encode({
+                        meta: {
                             name: acquaintance.name,
                             address: acquaintance.address
-                        })
+                        },
+                        data: proxy.swiss
                     };
                 }
             }
@@ -218,8 +218,8 @@ function awp_device(
     }
 
     function unmarshall(store, buffer) {
-        return OED.decode(buffer, function unpack(object, canonical, key) {
-            if (key === true) {
+        return OED.decode(buffer, function unpack(object, canonical, path) {
+            if (path.includes(false)) {
                 return canonical(); // meta
             }
             if (object.value === null) {
@@ -252,18 +252,18 @@ function awp_device(
             ) {
                 return core.u_fixnum(canonical());
             }
-            if (object.meta?.constructor === Uint8Array) {
+            if (typeof object.meta === "object") {
                 return get_proxy(
                     store,
-                    get_petname(store, OED.decode(object.data)),
-                    object.meta
+                    get_petname(store, object.meta),
+                    object.data
                 );
             }
             throw new Error("Failed to unmarshall " + JSON.stringify(object));
         });
     }
 
-    function duplex_key(local_name, remote_name) {
+    function convo_key(local_name, remote_name) {
         return stringify(local_name) + ":" + stringify(remote_name);
     }
 
@@ -385,33 +385,35 @@ function awp_device(
 // There is no connection opened or opening. Connect.
 
         const {store, petname} = outbox[key][0];
-        const connect_requestor = transport.connect(
-            store.identity,
-            store.acquaintances[petname].name,
-            store.acquaintances[petname].address,
-            function on_receive(connection, frame_buffer) {
-                const frame = OED.decode(frame_buffer);
-                console.log("connect on_receive", connection.name(), frame);
-                return receive(store, connection.name(), frame);
+        const cancel = transport.connect(
+            function connected_callback(connection, reason) {
+                delete opening[key];
+                if (connection === undefined) {
+                    console.log("connect fail", reason);
+                    lose(key);
+                } else {
+                    console.log("connect open");
+                    register(store, connection);
+                }
             },
-            function on_close(connection, reason) {
-                console.log("connect on_close", connection.name(), reason);
-                return unregister(duplex_key(
-                    store.name,
-                    connection.name()
-                ));
+            {
+                identity: store.identity,
+                name: store.acquaintances[petname].name,
+                address: store.acquaintances[petname].address,
+                on_receive(connection, frame_buffer) {
+                    const frame = OED.decode(frame_buffer);
+                    console.log("connect on_receive");
+                    return receive(store, connection.name(), frame);
+                },
+                on_close(connection, reason) {
+                    console.log("connect on_close", reason);
+                    return unregister(convo_key(
+                        store.name,
+                        connection.name()
+                    ));
+                }
             }
         );
-        const cancel = connect_requestor(function (connection, reason) {
-            delete opening[key];
-            if (connection === undefined) {
-                console.log("connect fail", reason);
-                lose(key);
-            } else {
-                console.log("connect open", connection.name());
-                register(store, connection);
-            }
-        });
         // TODO forward cancel capability to cancel_customer
         opening[key] = function () {
             if (typeof cancel === "function") {
@@ -422,7 +424,7 @@ function awp_device(
     }
 
     function register(store, connection) {
-        const key = duplex_key(store.name, connection.name());
+        const key = convo_key(store.name, connection.name());
 
 // If we have been trying to connect, give up.
 
@@ -461,7 +463,7 @@ function awp_device(
 
     function enqueue(store, petname, swiss, message) {
         const acquaintance = store.acquaintances[petname];
-        const key = duplex_key(store.name, acquaintance.name);
+        const key = convo_key(store.name, acquaintance.name);
         add(outbox, key, {store, petname, swiss, message});
         return flush(key);
     }
@@ -555,7 +557,7 @@ function awp_device(
                     y: hello_data
                 }))
             );
-            const key = duplex_key(
+            const key = convo_key(
                 store.name,
                 store.acquaintances[petname].name
             );
@@ -623,68 +625,68 @@ function awp_device(
 // Wait a turn so we can safely use the non-reentrant core methods.
 
         setTimeout(function () {
-            const listen_requestor = transport.listen(
-                store.identity,
-                store.bind_info,
-                function on_open(connection) {
-                    console.log("listen on_open", connection.name());
-                    return register(store, connection);
-                },
-                function on_receive(connection, frame_buffer) {
-                    const frame = OED.decode(frame_buffer);
-                    console.log("listen on_receive", connection.name(), frame);
-                    return receive(store, connection, frame);
-                },
-                function on_close(connection, reason) {
-                    console.log("listen on_close", connection.name(), reason);
-                    return unregister(duplex_key(
-                        store.name,
-                        connection.name()
-                    ));
-                }
-            );
-
             // TODO send cancel to cancel_customer
-            const cancel = listen_requestor(function (stop, reason) {
-                if (stop === undefined) {
-                    console.log("listen fail", reason);
-                    return resolve(core.h_reserve_ram({
-                        t: core.PAIR_T,
-                        x: core.UNDEF_RAW,
-                        y: core.u_fixnum(-1) // TODO error codes
-                    }));
-                }
+            const cancel = transport.listen(
+                function listening_callback(stop, reason) {
+                    if (stop === undefined) {
+                        console.log("listen fail", reason);
+                        return resolve(core.h_reserve_ram({
+                            t: core.PAIR_T,
+                            x: core.UNDEF_RAW,
+                            y: core.u_fixnum(-1) // TODO error codes
+                        }));
+                    }
 
 // A store may not register more than one greeter. That would get very
 // confusing.
 
-                const key = stringify(store.name);
-                if (greeters[key] !== undefined) {
-                    stop();
+                    const key = stringify(store.name);
+                    if (greeters[key] !== undefined) {
+                        stop();
+                        return resolve(core.h_reserve_ram({
+                            t: core.PAIR_T,
+                            x: core.UNDEF_RAW,
+                            y: core.u_fixnum(-1) // TODO error codes
+                        }));
+                    }
+                    greeters[key] = core.h_reserve_stub(device, greeter);
+
+                    function safe_stop() {
+                        if (greeters[key] !== undefined) {
+                            core.h_release_stub(greeters[key]);
+                            delete greeters[key];
+                        }
+                        return stop();
+                    }
+
+                    stops.push(safe_stop);
                     return resolve(core.h_reserve_ram({
                         t: core.PAIR_T,
-                        x: core.UNDEF_RAW,
-                        y: core.u_fixnum(-1) // TODO error codes
+                        x: core.UNDEF_RAW, // TODO safe_stop
+                        y: core.NIL_RAW
                     }));
-                }
-                greeters[key] = core.h_reserve_stub(device, greeter);
-
-                function safe_stop() {
-                    if (greeters[key] !== undefined) {
-                        core.h_release_stub(greeters[key]);
-                        delete greeters[key];
+                },
+                {
+                    identity: store.identity,
+                    bind_info: store.bind_info,
+                    on_open(connection) {
+                        console.log("listen on_open");
+                        return register(store, connection);
+                    },
+                    on_receive(connection, frame_buffer) {
+                        const frame = OED.decode(frame_buffer);
+                        console.log("listen on_receive");
+                        return receive(store, connection, frame);
+                    },
+                    on_close(connection, reason) {
+                        console.log("listen on_close", reason);
+                        return unregister(convo_key(
+                            store.name,
+                            connection.name()
+                        ));
                     }
-                    return stop();
                 }
-
-                stops.push(safe_stop);
-                return resolve(core.h_reserve_ram({
-                    t: core.PAIR_T,
-                    x: core.UNDEF_RAW, // TODO safe_stop
-                    y: core.NIL_RAW
-                }));
-            });
-
+            );
             // TODO provide to cancel_customer
             function safe_cancel() {
                 release_event_stub();
@@ -791,82 +793,117 @@ function awp_device(
     };
 }
 
-//debug import {webcrypto} from "node:crypto";
 //debug import parseq from "../parseq.js";
 //debug import instantiate_core from "../ufork.js";
 //debug import debug_device from "./debug_device.js";
-//debug import node_tls_transport from "./node_tls_transport.js";
-//debug let transport = node_tls_transport();
 //debug let dispose;
-//debug parseq.parallel([
-//debug     transport.generate_identity(),
-//debug     transport.generate_identity(),
-//debug     transport.generate_identity(),
-//debug     transport.generate_identity()
-//debug ])(function callback(
-//debug     [
-//debug         alice_identity,
-//debug         bob_identity,
-//debug         carol_identity,
-//debug         dana_identity
-//debug     ],
-//debug     ignore
-//debug ) {
-//debug     const bob_address = {host: "localhost", port: 5001};
-//debug     const carol_address = {host: "localhost", port: 5002};
-//debug     instantiate_core(
-//debug         import.meta.resolve(
+//debug function run_demo({transport, bob_address, carol_address, webcrypto}) {
+//debug     parseq.parallel([
+//debug         transport.generate_identity,
+//debug         transport.generate_identity,
+//debug         transport.generate_identity,
+//debug         transport.generate_identity
+//debug     ])(function callback(
+//debug         [alice_identity, bob_identity, carol_identity, dana_identity],
+//debug         ignore
+//debug     ) {
+//debug         instantiate_core(import.meta.resolve(
 //debug             "../../target/wasm32-unknown-unknown/debug/ufork_wasm.wasm"
-//debug         ),
-//debug         console.log
-//debug     ).then(function (core) {
-//debug         function resume() {
-//debug             console.log("HALT:", core.u_fault_msg(core.h_run_loop()));
-//debug         }
-//debug         const acquaintances = [
-//debug             {
-//debug                 name: transport.get_name(bob_identity),
-//debug                 address: bob_address
-//debug             },
-//debug             {
-//debug                 name: transport.get_name(carol_identity),
-//debug                 address: carol_address
+//debug         ), console.log).then(function (core) {
+//debug             function resume() {
+//debug                 console.log("HALT:", core.u_fault_msg(
+//debug                     core.h_run_loop()
+//debug                 ));
 //debug             }
-//debug         ];
-//debug         const store = [
-//debug             {
-//debug                 identity: alice_identity,
-//debug                 name: transport.get_name(alice_identity),
-//debug                 acquaintances
-//debug             },
-//debug             {
-//debug                 identity: bob_identity,
-//debug                 name: transport.get_name(bob_identity),
-//debug                 address: bob_address,
-//debug                 bind_info: bob_address
-//debug             },
-//debug             {
-//debug                 identity: carol_identity,
-//debug                 name: transport.get_name(carol_identity),
-//debug                 address: carol_address,
-//debug                 bind_info: carol_address
-//debug             },
-//debug             {
-//debug                 identity: dana_identity,
-//debug                 name: transport.get_name(dana_identity),
-//debug                 acquaintances
-//debug             }
-//debug         ];
-//debug         debug_device(core);
-//debug         dispose = awp_device(core, resume, transport, store, webcrypto);
-//debug         return core.h_import(
-//debug             import.meta.resolve("../../lib/grant_matcher.asm")
-//debug         ).then(function (asm_module) {
-//debug             core.h_boot(asm_module.boot);
-//debug             resume();
+//debug             const acquaintances = [
+//debug                 {
+//debug                     name: transport.identity_to_name(bob_identity),
+//debug                     address: bob_address
+//debug                 },
+//debug                 {
+//debug                     name: transport.identity_to_name(carol_identity),
+//debug                     address: carol_address
+//debug                 }
+//debug             ];
+//debug             const store = [
+//debug                 {
+//debug                     identity: alice_identity,
+//debug                     name: transport.identity_to_name(alice_identity),
+//debug                     acquaintances
+//debug                 },
+//debug                 {
+//debug                     identity: bob_identity,
+//debug                     name: transport.identity_to_name(bob_identity),
+//debug                     address: bob_address,
+//debug                     bind_info: bob_address
+//debug                 },
+//debug                 {
+//debug                     identity: carol_identity,
+//debug                     name: transport.identity_to_name(carol_identity),
+//debug                     address: carol_address,
+//debug                     bind_info: carol_address
+//debug                 },
+//debug                 {
+//debug                     identity: dana_identity,
+//debug                     name: transport.identity_to_name(dana_identity),
+//debug                     acquaintances
+//debug                 }
+//debug             ];
+//debug             debug_device(core);
+//debug             dispose = awp_device(
+//debug                 core,
+//debug                 resume,
+//debug                 transport,
+//debug                 store,
+//debug                 webcrypto
+//debug             );
+//debug             return core.h_import(
+//debug                 import.meta.resolve("../../lib/grant_matcher.asm")
+//debug             ).then(function (asm_module) {
+//debug                 core.h_boot(asm_module.boot);
+//debug                 resume();
+//debug             });
 //debug         });
 //debug     });
-//debug });
-//debug // dispose();
+//debug }
+
+// Browser demo.
+
+//debug import dummy_webrtc_signaller from "./dummy_webrtc_signaller.js";
+//debug import webrtc_transport from "./webrtc_transport.js";
+//debug if (typeof window === "object") {
+//debug     run_demo({
+//debug         transport: webrtc_transport(
+//debug             dummy_webrtc_signaller(),
+//debug             console.log
+//debug         ),
+//debug         bob_address: "ws://ufork.org",
+//debug         carol_address: "ws://ufork.org",
+//debug         webcrypto: crypto
+//debug     });
+//debug }
+
+// Node.js demo.
+
+//debug if (typeof process === "object") {
+//debug     Promise.all([
+//debug         import("node:crypto"),
+//debug         import("./node_tls_transport.js")
+//debug     ]).then(function ([
+//debug         crypto_module,
+//debug         transport_module
+//debug     ]) {
+//debug         run_demo({
+//debug             transport: transport_module.default(),
+//debug             bob_address: {host: "localhost", port: 5001},
+//debug             carol_address: {host: "localhost", port: 5002},
+//debug             webcrypto: crypto_module.webcrypto
+//debug         });
+//debug     });
+//debug }
+
+// Clean up.
+
+// dispose();
 
 export default Object.freeze(awp_device);
