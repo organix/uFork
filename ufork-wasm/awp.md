@@ -26,6 +26,10 @@ security.
 Underlying transports provide an interface made up of two requestor functions
 (see https://github.com/douglascrockford/parseq), `connect` and `listen`.
 
+The transport interface may also have a `generate_identity` requestor function
+that produces new identities, and an `identity_to_name` function that takes an
+identity and returns the corresponding name.
+
 #### Connecting
 
 The `connect` requestor takes an object with the following properties:
@@ -143,7 +147,7 @@ work. It is not an undo.
 
     -> cancel
 
-The `callback` receives a pair when the request completes (which may be
+The `callback` receives a pair when the request completes (which could be
 never). The value of the tail indicates success or failure.
 
 On success, the tail of the pair is `#nil` and the head of the pair is the

@@ -1,20 +1,16 @@
 // A TLS-over-TCP AWP transport for Node.js.
 
-//  name:
+// It expects the following types as its parameters:
+
+//  name
 //      An Ed25519 public key as a 32-byte Uint8Array.
 
-//  address:
-//  bind_info:
+//  address
+//  bind_info
 //      An object like {host, port}.
 
-//  identity:
+//  identity
 //      A Node.js KeyObject representing a Ed25519 private key.
-
-//      The transport's 'generate_identity' method is a requestor function that
-//      produces a new identity.
-
-//      The transport's 'identity_to_name' method takes an identity and returns
-//      the corresponding name.
 
 /*jslint node, long, bitwise */
 

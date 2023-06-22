@@ -793,77 +793,117 @@ function awp_device(
     };
 }
 
-//debug import {webcrypto} from "node:crypto";
 //debug import parseq from "../parseq.js";
 //debug import instantiate_core from "../ufork.js";
 //debug import debug_device from "./debug_device.js";
-//debug import node_tls_transport from "./node_tls_transport.js";
-//debug let transport = node_tls_transport();
 //debug let dispose;
-//debug parseq.parallel([
-//debug     transport.generate_identity,
-//debug     transport.generate_identity,
-//debug     transport.generate_identity,
-//debug     transport.generate_identity
-//debug ])(function callback(
-//debug     [alice_identity, bob_identity, carol_identity, dana_identity],
-//debug     ignore
-//debug ) {
-//debug     const bob_address = {host: "localhost", port: 5001};
-//debug     const carol_address = {host: "localhost", port: 5002};
-//debug     instantiate_core(
-//debug         import.meta.resolve(
+//debug function run_demo({transport, bob_address, carol_address, webcrypto}) {
+//debug     parseq.parallel([
+//debug         transport.generate_identity,
+//debug         transport.generate_identity,
+//debug         transport.generate_identity,
+//debug         transport.generate_identity
+//debug     ])(function callback(
+//debug         [alice_identity, bob_identity, carol_identity, dana_identity],
+//debug         ignore
+//debug     ) {
+//debug         instantiate_core(import.meta.resolve(
 //debug             "../../target/wasm32-unknown-unknown/debug/ufork_wasm.wasm"
-//debug         ),
-//debug         console.log
-//debug     ).then(function (core) {
-//debug         function resume() {
-//debug             console.log("HALT:", core.u_fault_msg(core.h_run_loop()));
-//debug         }
-//debug         const acquaintances = [
-//debug             {
-//debug                 name: transport.identity_to_name(bob_identity),
-//debug                 address: bob_address
-//debug             },
-//debug             {
-//debug                 name: transport.identity_to_name(carol_identity),
-//debug                 address: carol_address
+//debug         ), console.log).then(function (core) {
+//debug             function resume() {
+//debug                 console.log("HALT:", core.u_fault_msg(
+//debug                     core.h_run_loop()
+//debug                 ));
 //debug             }
-//debug         ];
-//debug         const store = [
-//debug             {
-//debug                 identity: alice_identity,
-//debug                 name: transport.identity_to_name(alice_identity),
-//debug                 acquaintances
-//debug             },
-//debug             {
-//debug                 identity: bob_identity,
-//debug                 name: transport.identity_to_name(bob_identity),
-//debug                 address: bob_address,
-//debug                 bind_info: bob_address
-//debug             },
-//debug             {
-//debug                 identity: carol_identity,
-//debug                 name: transport.identity_to_name(carol_identity),
-//debug                 address: carol_address,
-//debug                 bind_info: carol_address
-//debug             },
-//debug             {
-//debug                 identity: dana_identity,
-//debug                 name: transport.identity_to_name(dana_identity),
-//debug                 acquaintances
-//debug             }
-//debug         ];
-//debug         debug_device(core);
-//debug         dispose = awp_device(core, resume, transport, store, webcrypto);
-//debug         return core.h_import(
-//debug             import.meta.resolve("../../lib/grant_matcher.asm")
-//debug         ).then(function (asm_module) {
-//debug             core.h_boot(asm_module.boot);
-//debug             resume();
+//debug             const acquaintances = [
+//debug                 {
+//debug                     name: transport.identity_to_name(bob_identity),
+//debug                     address: bob_address
+//debug                 },
+//debug                 {
+//debug                     name: transport.identity_to_name(carol_identity),
+//debug                     address: carol_address
+//debug                 }
+//debug             ];
+//debug             const store = [
+//debug                 {
+//debug                     identity: alice_identity,
+//debug                     name: transport.identity_to_name(alice_identity),
+//debug                     acquaintances
+//debug                 },
+//debug                 {
+//debug                     identity: bob_identity,
+//debug                     name: transport.identity_to_name(bob_identity),
+//debug                     address: bob_address,
+//debug                     bind_info: bob_address
+//debug                 },
+//debug                 {
+//debug                     identity: carol_identity,
+//debug                     name: transport.identity_to_name(carol_identity),
+//debug                     address: carol_address,
+//debug                     bind_info: carol_address
+//debug                 },
+//debug                 {
+//debug                     identity: dana_identity,
+//debug                     name: transport.identity_to_name(dana_identity),
+//debug                     acquaintances
+//debug                 }
+//debug             ];
+//debug             debug_device(core);
+//debug             dispose = awp_device(
+//debug                 core,
+//debug                 resume,
+//debug                 transport,
+//debug                 store,
+//debug                 webcrypto
+//debug             );
+//debug             return core.h_import(
+//debug                 import.meta.resolve("../../lib/grant_matcher.asm")
+//debug             ).then(function (asm_module) {
+//debug                 core.h_boot(asm_module.boot);
+//debug                 resume();
+//debug             });
 //debug         });
 //debug     });
-//debug });
-//debug // dispose();
+//debug }
+
+// Browser demo.
+
+//debug import dummy_webrtc_signaller from "./dummy_webrtc_signaller.js";
+//debug import webrtc_transport from "./webrtc_transport.js";
+//debug if (typeof window === "object") {
+//debug     run_demo({
+//debug         transport: webrtc_transport(
+//debug             dummy_webrtc_signaller(),
+//debug             console.log
+//debug         ),
+//debug         bob_address: "ws://ufork.org",
+//debug         carol_address: "ws://ufork.org",
+//debug         webcrypto: crypto
+//debug     });
+//debug }
+
+// Node.js demo.
+
+//debug if (typeof process === "object") {
+//debug     Promise.all([
+//debug         import("node:crypto"),
+//debug         import("./node_tls_transport.js")
+//debug     ]).then(function ([
+//debug         crypto_module,
+//debug         transport_module
+//debug     ]) {
+//debug         run_demo({
+//debug             transport: transport_module.default(),
+//debug             bob_address: {host: "localhost", port: 5001},
+//debug             carol_address: {host: "localhost", port: 5002},
+//debug             webcrypto: crypto_module.webcrypto
+//debug         });
+//debug     });
+//debug }
+
+// Clean up.
+
+// dispose();
 
 export default Object.freeze(awp_device);
