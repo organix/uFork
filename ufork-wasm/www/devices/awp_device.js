@@ -12,8 +12,8 @@
 /*jslint browser, null, devel, long */
 
 import OED from "../oed.js";
-import hex from "./hex.js";
-import dummy_transport from "./dummy_transport.js";
+import hex from "../hex.js";
+import dummy_transport from "../transports/dummy_transport.js";
 
 function stringify(value) {
 
@@ -869,12 +869,12 @@ function awp_device(
 
 // Browser demo.
 
-//debug import dummy_webrtc_signaller from "./dummy_webrtc_signaller.js";
-//debug import webrtc_transport from "./webrtc_transport.js";
+//debug import dummy_signaller from "../transports/dummy_signaller.js";
+//debug import webrtc_transport from "../transports/webrtc_transport.js";
 //debug if (typeof window === "object") {
 //debug     run_demo({
 //debug         transport: webrtc_transport(
-//debug             dummy_webrtc_signaller(),
+//debug             dummy_signaller(),
 //debug             console.log
 //debug         ),
 //debug         bob_address: "ws://ufork.org",
@@ -888,7 +888,7 @@ function awp_device(
 //debug if (typeof process === "object") {
 //debug     Promise.all([
 //debug         import("node:crypto"),
-//debug         import("./node_tls_transport.js")
+//debug         import("../transports/node_tls_transport.js")
 //debug     ]).then(function ([
 //debug         crypto_module,
 //debug         transport_module

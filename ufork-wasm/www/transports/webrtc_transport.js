@@ -3,60 +3,62 @@
 // The 'webrtc_transport' function takes a signaller requestor, and an optional
 // logging function that is called with detailed debugging info.
 
-// Types ///////////////////////////////////////////////////////////////////////
+// Types
 
-//  name
-//      The SHA-256 fingerprint of an RTCCertificate as a 32-byte Uint8Array.
+//      name
+//          The SHA-256 fingerprint of an RTCCertificate as a 32-byte
+//          Uint8Array.
 
-//  address
-//  bind_info
-//      The URL string of a signalling server.
+//      address
+//      bind_info
+//          The URL string of a signalling server.
 
-//  identity
-//      An RTCCertificate generated with a P-256 ECDSA private key.
+//      identity
+//          An RTCCertificate object associated with a P-256 ECDSA keypair.
 
-// Signalling //////////////////////////////////////////////////////////////////
+// Signalling
 
-// Peer-to-peer discovery is facilitated by a "signalling server".
+//      Peer-to-peer discovery is facilitated by a "signalling server".
 
-// The signaller requestor attempts to establish a connection with a signalling
-// server. It takes a spec object with the following properties:
+//      The signaller requestor attempts to establish a connection with a
+//      signalling server. It takes a spec object with the following
+//      properties:
 
-//  name
-//      The local party's name.
+//          name
+//              The local party's name.
 
-//  address
-//      The signalling server's address as a string.
+//          address
+//              The signalling server's address as a string.
 
-//  on_receive(from, message)
-//      A callback function that is called each time a message is received from
-//      the signalling server. The 'from' parameter is the remote party's name,
-//      and the 'message' is an object.
+//          on_receive(from, message)
+//              A callback function that is called each time a message is
+//              received from the signalling server. The 'from' parameter is
+//              the remote party's name, and the 'message' is an object.
 
-// It produces an object with the following properties:
+//      It produces an object with the following properties:
 
-//  send(to, message)
-//      A function that sends a 'message' object to all parties with the
-//      name 'to'.
+//          send(to, message)
+//              A function that sends a 'message' object to all parties with the
+//              name 'to'.
 
-//  close()
-//      Closes the connection to the signalling server.
+//          close()
+//              Closes the connection to the signalling server.
 
-// Debugging ///////////////////////////////////////////////////////////////////
+// Debugging
 
-// WebRTC is tricky to get right. A lot can go wrong in establishing
-// peer-to-peer connections, and the browser's WebRTC interface is extremely
-// complicated and asynchronous.
+//      WebRTC is tricky to get right. A lot can go wrong in establishing
+//      peer-to-peer connections, and the browser's WebRTC interface is
+//      fiendishly intricate and very asynchronous.
 
-// There is a comprehensive guide to debugging WebRTC connections at
-// https://www.cloudbees.com/blog/webrtc-issues-and-how-to-debug-them.
+//      There is a comprehensive guide to debugging WebRTC connections at
+//      https://www.cloudbees.com/blog/webrtc-issues-and-how-to-debug-them.
 
-// For realtime info on the browser's WebRTC connections, navigate to
-// chrome://webrtc-internals in Google Chrome.
+//      For realtime info on the browser's WebRTC connections, navigate to
+//      chrome://webrtc-internals in Google Chrome.
 
 /*jslint browser */
 
-import hex from "./hex.js";
+import hex from "../hex.js";
 import parseq from "../parseq.js";
 
 const ice_servers = [{
@@ -293,20 +295,24 @@ function webrtc_transport(signaller_requestor, log) {
             }, signalling_time_limit);
         }
 
-        const cancel_signaller = signaller_requestor(signaller_callback, {
-            name: identity_to_name(identity),
-            address,
-            on_receive: on_signaller_receive
-        });
-        return function cancel() {
-            debug("cancel");
-            callback = undefined;
-            if (signaller === undefined) {
-                cancel_signaller();
-            } else {
-                destroy();
-            }
-        };
+        try {
+            const cancel_signaller = signaller_requestor(signaller_callback, {
+                name: identity_to_name(identity),
+                address,
+                on_receive: on_signaller_receive
+            });
+            return function cancel() {
+                debug("cancel");
+                callback = undefined;
+                if (signaller === undefined) {
+                    cancel_signaller();
+                } else {
+                    destroy();
+                }
+            };
+        } catch (exception) {
+            return callback(undefined, exception);
+        }
     }
 
     function listen_requestor(
@@ -430,7 +436,7 @@ function webrtc_transport(signaller_requestor, log) {
                     destroy(key);
                 });
 
-// Drop the peer if no ICE candidates are communicated in a reasonable amount of
+// Drop the peer if no ICE candidates are received in a reasonable amount of
 // time.
 
                 setTimeout(function () {
@@ -461,18 +467,22 @@ function webrtc_transport(signaller_requestor, log) {
             signaller.close();
         }
 
-        const signaller_spec = {
-            name: identity_to_name(identity),
-            address: bind_info,
-            on_receive: on_signaller_receive
-        };
-        return parseq.sequence([
-            signaller_requestor,
-            function (callback, the_signaller) {
-                signaller = the_signaller;
-                callback(stop);
-            }
-        ])(callback, signaller_spec);
+        try {
+            const signaller_spec = {
+                name: identity_to_name(identity),
+                address: bind_info,
+                on_receive: on_signaller_receive
+            };
+            return parseq.sequence([
+                signaller_requestor,
+                function (callback, the_signaller) {
+                    signaller = the_signaller;
+                    callback(stop);
+                }
+            ])(callback, signaller_spec);
+        } catch (exception) {
+            return callback(undefined, exception);
+        }
     }
 
     return Object.freeze({
@@ -483,7 +493,7 @@ function webrtc_transport(signaller_requestor, log) {
     });
 }
 
-//debug import dummy_webrtc_signaller from "./dummy_webrtc_signaller.js";
+//debug import dummy_signaller from "./dummy_signaller.js";
 //debug function halve(buffer) {
 //debug     return new Uint8Array(buffer).slice(
 //debug         0,
@@ -492,7 +502,7 @@ function webrtc_transport(signaller_requestor, log) {
 //debug }
 //debug const signalling_url = "ws://blah";
 //debug const transport = webrtc_transport(
-//debug     dummy_webrtc_signaller(),
+//debug     dummy_signaller(),
 //debug     console.log
 //debug );
 //debug const flake = 0;

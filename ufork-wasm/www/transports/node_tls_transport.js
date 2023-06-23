@@ -385,7 +385,7 @@ function node_tls_transport() {
     });
 }
 
-//debug import hex from "./hex.js";
+//debug import hex from "../hex.js";
 //debug import parseq from "../parseq.js";
 //debug function halve(buffer) {
 //debug     return new Uint8Array(buffer).slice(

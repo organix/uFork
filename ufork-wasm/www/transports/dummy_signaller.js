@@ -1,6 +1,6 @@
 /*jslint browser */
 
-import hex from "./hex.js";
+import hex from "../hex.js";
 
 function delay(callback, ...args) {
     const timer = setTimeout(callback, 50 * Math.random(), ...args);
@@ -9,9 +9,9 @@ function delay(callback, ...args) {
     };
 }
 
-function dummy_webrtc_signaller() {
+function dummy_signaller() {
     const registrations = Object.create(null);
-    return function dummy_webrtc_signaller_requestor(callback, spec) {
+    return function dummy_signaller_requestor(callback, spec) {
 
 // Signalling messages must be delivered in order, for example an offer must
 // preceed a related ICE candidate.
@@ -57,7 +57,7 @@ function dummy_webrtc_signaller() {
     };
 }
 
-//debug const signaller_requestor = dummy_webrtc_signaller();
+//debug const signaller_requestor = dummy_signaller();
 //debug let bob_connection;
 //debug signaller_requestor(
 //debug     function (connection, ignore) {
@@ -87,4 +87,4 @@ function dummy_webrtc_signaller() {
 //debug     }
 //debug );
 
-export default Object.freeze(dummy_webrtc_signaller);
+export default Object.freeze(dummy_signaller);
