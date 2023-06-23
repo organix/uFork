@@ -1,3 +1,5 @@
+// An in-memory signaller for use with the WebRTC transport.
+
 /*jslint browser */
 
 import hex from "../hex.js";

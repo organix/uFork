@@ -489,7 +489,7 @@ function awp_device(
         if (
             store === undefined
             || store.acquaintances[petname] === undefined
-            || store.acquaintances[petname].address === undefined
+            || store.acquaintances[petname].name === undefined
         ) {
             return core.E_BOUNDS; // TODO inform callback instead of failing
         }
@@ -873,12 +873,9 @@ function awp_device(
 //debug import webrtc_transport from "../transports/webrtc_transport.js";
 //debug if (typeof window === "object") {
 //debug     run_demo({
-//debug         transport: webrtc_transport(
-//debug             dummy_signaller(),
-//debug             console.log
-//debug         ),
-//debug         bob_address: "ws://ufork.org",
-//debug         carol_address: "ws://ufork.org",
+//debug         transport: webrtc_transport(dummy_signaller(), console.log),
+//debug         bob_address: "ws://127.0.0.1:4455",
+//debug         carol_address: "ws://127.0.0.1:4455",
 //debug         webcrypto: crypto
 //debug     });
 //debug }

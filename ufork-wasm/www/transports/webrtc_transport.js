@@ -493,16 +493,18 @@ function webrtc_transport(signaller_requestor, log) {
     });
 }
 
-//debug import dummy_signaller from "./dummy_signaller.js";
+//debug // import dummy_signaller from "./dummy_signaller.js";
+//debug import websockets_signaller from "./websockets_signaller.js";
 //debug function halve(buffer) {
 //debug     return new Uint8Array(buffer).slice(
 //debug         0,
 //debug         Math.floor(buffer.length / 2)
 //debug     );
 //debug }
-//debug const signalling_url = "ws://blah";
+//debug const signalling_url = "ws://127.0.0.1:4455";
 //debug const transport = webrtc_transport(
-//debug     dummy_signaller(),
+//debug     // dummy_signaller(),
+//debug     websockets_signaller(),
 //debug     console.log
 //debug );
 //debug const flake = 0;

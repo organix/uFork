@@ -1,4 +1,5 @@
-// Runs the distributed Grant Matcher demo.
+// Runs the distributed Grant Matcher demo on Node.js, using TLS to encrypt
+// communications.
 
 /*jslint node, long */
 
@@ -60,7 +61,7 @@ const stores = {
 const store_name = process.argv[2];
 const asm_url = new URL(
     process.argv[3],
-    "http://localhost:7273/examples/node_tls_grant_matcher/"
+    "http://localhost:7273/examples/grant_matcher/"
 ).href;
 instantiate_core(
     "http://localhost:7273/target/wasm32-unknown-unknown/debug/ufork_wasm.wasm",
