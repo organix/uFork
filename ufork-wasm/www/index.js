@@ -379,7 +379,10 @@ const utf8 = new Uint8Array(256);
 const $stdin = document.getElementById("stdin");
 const $send_button = document.getElementById("send-btn");
 $send_button.onclick = function () {
-    const text = $stdin.value;
+    let text = $stdin.value;
+    if (text.length) {
+        text += '\n';
+    }
     const encodedResults = textEncoder.encodeInto(text, utf8);
     //console.log(text, encodedResults, utf8);
     console.log("Send", hexdump(utf8, 0, encodedResults.written));

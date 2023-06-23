@@ -68,13 +68,13 @@ boot:                   ; () <- {caps}
     ; "Hello?" = [72, 101, 108, 108, 111, 63]
     push #nil           ; ()
     push #?             ; () to_cancel=#?
-    push 63             ; '?'=63
-    push std.sink_beh   ; '?' sink_beh
-    new 0               ; '?' callback=sink.()
-    push #?             ; '?' callback to_cancel=#?
-    msg 0               ; '?' callback to_cancel {caps}
-    push io_key         ; '?' callback to_cancel {caps} io_key
-    dict get            ; '?' callback to_cancel io_dev
+    push 62             ; '>'=62
+    push std.sink_beh   ; '>' sink_beh
+    new 0               ; '>' callback=sink.()
+    push #?             ; '>' callback to_cancel=#?
+    msg 0               ; '>' callback to_cancel {caps}
+    push io_key         ; '>' callback to_cancel {caps} io_key
+    dict get            ; '>' callback to_cancel io_dev
     send 3              ; --
 
     ref std.commit

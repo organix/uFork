@@ -20,9 +20,18 @@ function io_device(core) {
             },
             host_write(code) { // (i32) -> nil
                 code &= 0x1FFFFF;  // interpret as a Unicode code point
+                const char = String.fromCodePoint([code]);
                 console.log(
-                    "WRITE: " + code + " = " + String.fromCodePoint([code])
+                    "WRITE: " + code + " = " + char
                 );
+                const $stdout = document.getElementById("stdout");
+                if ($stdout) {
+                    const text = $stdout.value;
+                    //console.log("$stdout.value =", text);
+                    if (typeof text === "string") {
+                        $stdout.value = text + char;
+                    }
+                }
             }
         }
     );
