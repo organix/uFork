@@ -6,7 +6,7 @@ instruction-level concurrency,
 automatic memory-management,
 and fine-grained resource limits.
 
-![μFork logo](ufork-wasm/www/favicon-128.png)
+![μFork logo](ufork-wasm/www/ufork_logo.svg)
 
 The blog post
 "[Memory Safety Simplifies Microprocessor Design](http://www.dalnefre.com/wp/2022/08/memory-safety-simplifies-microprocessor-design/)"
