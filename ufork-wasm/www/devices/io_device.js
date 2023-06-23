@@ -20,7 +20,7 @@ function io_device(core) {
             },
             host_write(code) { // (i32) -> nil
                 code &= 0x1FFFFF;  // interpret as a Unicode code point
-                const char = String.fromCodePoint([code]);
+                const char = String.fromCodePoint(code);
                 console.log(
                     "WRITE: " + code + " = " + char
                 );

@@ -49,7 +49,7 @@ boot:                   ; () <- {caps}
     msg 0               ; msg {caps}
     push debug_key      ; msg {caps} debug_key
     dict get            ; msg debug_dev
-    push 0              ; msg debug_dev delay=0
+    push 6000           ; msg debug_dev delay=6000
     msg 0               ; msg debug_dev delay {caps}
     push timer_key      ; msg debug_dev delay {caps} timer_key
     dict get            ; msg debug_dev delay timer_dev
