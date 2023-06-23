@@ -26,8 +26,10 @@ const ciphers = "TLS_CHACHA20_POLY1305_SHA256"; // no negotiation
 const INTEGER = "02";
 const BIT_STRING = "03";
 const OBJECT_IDENTIFIER = "06";
+const UTF8_STRING = "0C";
 const UTC_TIME = "17";
 const SEQUENCE = "30";
+const SET = "31";
 
 function der(tag, ...elements) {
     const body = Buffer.concat(elements.map(function (element) {
@@ -124,9 +126,8 @@ function get_certificate_pem(private_key_object) {
 
 // allowing us to construct valid certificates in an ad hoc fashion.
 
-// I found https://lapo.it/asn1js very handy in reverse-engineering the
-// certificate format. The template material is based on the output of the
-// following commands:
+// https://lapo.it/asn1js helped me understand the certificate format. The
+// equivalent openssl commands are something like:
 
 //      openssl genpkey -algorithm Ed25519 > key.pem
 //      openssl req -new -subj /CN=ufork -x509 -key key.pem > cert.pem
@@ -135,17 +136,22 @@ function get_certificate_pem(private_key_object) {
         SEQUENCE,
         der(OBJECT_IDENTIFIER, "2B6570") // curveEd25519
     );
+    const self = der(SEQUENCE, der(SET, der(
+        SEQUENCE,
+        der(OBJECT_IDENTIFIER, "55 04 03"), // commonName
+        der(UTF8_STRING, Buffer.from("ufork"))
+    )));
     const tbs_certificate = der(
         SEQUENCE,
         der(INTEGER, crypto.randomBytes(8)),        // CertificateSerialNumber
         signature_algorithm,                        // AlgorithmIdentifier
-        der(SEQUENCE),                              // issuer (unused)
+        self,                                       // issuer (ignored)
         der(                                        // validity
             SEQUENCE,
             der(UTC_TIME, Buffer.from("200101000000Z")), // 2020
             der(UTC_TIME, Buffer.from("400101000000Z"))  // 2040
         ),
-        der(SEQUENCE),                              // subject (unused)
+        self,                                       // subject (ignored)
         crypto.createPublicKey(                     // subjectPublicKeyInfo
             private_key_object
         ).export(
