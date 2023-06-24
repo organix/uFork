@@ -88,7 +88,7 @@ let fault = false;  // execution fault flag
 const $rate = document.getElementById("frame-rate");
 let frame = 1;  // frame-rate countdown
 let ram_max = 0;
-let core;
+let core = { UNDEF_RAW: 0 };  // uFork wasm processor core
 
 function update_element_text(el, txt) {
     if (el.textContent === txt) {
@@ -374,21 +374,6 @@ function render_loop() {
     requestAnimationFrame(render_loop);
 }
 
-const textEncoder = new TextEncoder();
-const utf8 = new Uint8Array(256);
-const $stdin = document.getElementById("stdin");
-const $send_button = document.getElementById("send-btn");
-$send_button.onclick = function () {
-    let text = $stdin.value;
-    if (text.length) {
-        text += '\n';
-    }
-    const encodedResults = textEncoder.encodeInto(text, utf8);
-    //console.log(text, encodedResults, utf8);
-    console.log("Send", hexdump(utf8, 0, encodedResults.written));
-    $stdin.value = "";
-}
-
 const $gc_button = document.getElementById("gc-btn");
 $gc_button.onclick = gc_host;
 $gc_button.title = "Run garbage collection (g)";
@@ -540,8 +525,78 @@ $sponsor_instrs.oninput = function () {
     }
 };
 
+let stdin_buffer = "";
+let stdin_stub = core.UNDEF_RAW;
+function read_stdin(stub) {
+    if (core.u_is_ram(stdin_stub)) {
+        throw new Error("stdin_stub already set to " + core.u_pprint(stdin_stub));
+    }
+    stdin_stub = stub;
+    poll_stdin();
+}
+function poll_stdin() {
+    if (core.u_is_ram(stdin_stub)) {
+        if (stdin_buffer.length > 0) {
+            const first = stdin_buffer.slice(0, 1);
+            const rest = stdin_buffer.slice(1);
+            const code = first.codePointAt(0);
+            const char = core.u_fixnum(code);  // character read
+            stdin_buffer = rest;
+            const quad = core.u_read_quad(stdin_stub);
+            const event = core.u_read_quad(quad.y);
+            const sponsor = event.t;
+            const target = event.x;
+            //const message = event.y;
+            console.log(
+                "READ: " + code + " = " + first
+            );
+            const message = core.h_reserve_ram({  // (char)
+                t: core.PAIR_T,
+                x: char,
+                y: core.NIL_RAW,
+                z: core.UNDEF_RAW
+            });
+            core.h_event_inject(sponsor, target, message);
+            core.h_release_stub(stdin_stub);
+            stdin_stub = core.UNDEF_RAW;
+            core.h_wakeup(core.IO_DEV_OFS);
+        }
+    }
+}
+const textEncoder = new TextEncoder();
+const utf8 = new Uint8Array(256);
+const $stdin = document.getElementById("stdin");
+const $send_button = document.getElementById("send-btn");
+$send_button.onclick = function () {
+    let text = $stdin.value;
+    if (text.length) {
+        text += '\n';
+        stdin_buffer += text;  // append text to buffer
+    }
+    const encodedResults = textEncoder.encodeInto(text, utf8);
+    //console.log(text, encodedResults, utf8);
+    console.log("Send", hexdump(utf8, 0, encodedResults.written));
+    $stdin.value = "";
+    poll_stdin();
+}
+const $stdout = document.getElementById("stdout");
+function write_stdout(char) {
+    if ($stdout) {
+        const text = $stdout.value;
+        //console.log("$stdout.value =", text);
+        if (typeof text === "string") {
+            $stdout.value = text + char;
+        }
+    }
+}
+
+function on_wakeup(device_offset) {
+    console.log("WAKE:", device_offset);
+    //console.log("IDLE:", core.u_fault_msg(core.h_run_loop()));
+}
 instantiate_core(
     "../target/wasm32-unknown-unknown/debug/ufork_wasm.wasm",
+    on_wakeup,
     console.log
 ).then(function (the_core) {
     core = the_core;
@@ -549,7 +604,7 @@ instantiate_core(
     // install devices
     debug_device(core);
     clock_device(core);
-    io_device(core);
+    io_device(core, read_stdin, write_stdout);
     blob_device(core);
     timer_device(core, single_step);
     awp_device(core, single_step);

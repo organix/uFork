@@ -19,7 +19,7 @@ function timer_device(core) {
                         const message = event.y;
                         core.h_release_stub(stub);
                         core.h_event_inject(sponsor, target, message);
-                        core.h_wake_up(core.TIMER_DEV_OFS);
+                        core.h_wakeup(core.TIMER_DEV_OFS);
                     }, core.u_fix_to_i32(delay));
                 }
             }

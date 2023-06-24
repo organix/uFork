@@ -4,7 +4,7 @@
 
 import OED from "../oed.js";
 
-function io_device(core) {
+function io_device(core, read, write) {
     core.h_install(
         [[
             core.IO_DEV_OFS,
@@ -18,21 +18,29 @@ function io_device(core) {
                     base + ofs - 5 // blobs have a 5-octet header
                 ));
             },
+            host_read(stub) { // (i32) -> bool
+                console.log(
+                    "READ: " + stub + " = " + core.u_print(stub)
+                    + " -> " + core.u_pprint(stub)
+                );
+                if (typeof read === "function") {
+                    setTimeout(function () {
+                        read(stub);
+                    }, 0);
+                    return true;  // request scheduled
+                }
+                return false;  // request failed
+            },
             host_write(code) { // (i32) -> nil
                 code &= 0x1FFFFF;  // interpret as a Unicode code point
                 const char = String.fromCodePoint(code);
                 console.log(
                     "WRITE: " + code + " = " + char
                 );
-                const $stdout = document.getElementById("stdout");
-                if ($stdout) {
-                    const text = $stdout.value;
-                    //console.log("$stdout.value =", text);
-                    if (typeof text === "string") {
-                        $stdout.value = text + char;
-                    }
+                if (typeof write === "function") {
+                    write(char);
                 }
-            }
+            },
         }
     );
 }

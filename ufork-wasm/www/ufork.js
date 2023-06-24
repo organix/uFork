@@ -5,9 +5,9 @@
 //  wasm_url
 //      The URL of the uFork WASM binary, as a string.
 //
-//  on_wake_up(device_offset)
+//  on_wakeup(device_offset)
 //      A callback function that is called whenever the core wakes up from a
-//      dormant state, generally due to its 'h_wake_up' method being called by
+//      dormant state, generally due to its 'h_wakeup' method being called by
 //      a device. This callback is responsible for resuming execution of the
 //      core. Optional.
 
@@ -256,7 +256,7 @@ const crlf_types = {
     actor: ACTOR_T
 };
 
-function make_core(wasm_exports, on_wake_up, on_warning, mutable_wasm_caps) {
+function make_core(wasm_exports, on_wakeup, on_warning, mutable_wasm_caps) {
     let boot_caps_dict = []; // empty
     let import_promises = Object.create(null);
     let module_source = Object.create(null);
@@ -1138,9 +1138,9 @@ function make_core(wasm_exports, on_wake_up, on_warning, mutable_wasm_caps) {
         Object.assign(mutable_wasm_caps, wasm_imports);
     }
 
-    function h_wake_up(device_offset) {
-        if (on_wake_up !== undefined) {
-            on_wake_up(device_offset);
+    function h_wakeup(device_offset) {
+        if (on_wakeup !== undefined) {
+            on_wakeup(device_offset);
         }
     }
 
@@ -1254,7 +1254,7 @@ function make_core(wasm_exports, on_wake_up, on_warning, mutable_wasm_caps) {
         h_set_rom_top,
         h_snapshot,
         h_step,
-        h_wake_up,
+        h_wakeup,
 
 // The reentrant methods.
 
@@ -1291,7 +1291,7 @@ function make_core(wasm_exports, on_wake_up, on_warning, mutable_wasm_caps) {
     });
 }
 
-function instantiate_core(wasm_url, on_wake_up, on_warning) {
+function instantiate_core(wasm_url, on_wakeup, on_warning) {
     let mutable_wasm_caps = Object.create(null);
     return WebAssembly.instantiateStreaming(
         fetch(wasm_url),
@@ -1309,6 +1309,9 @@ function instantiate_core(wasm_url, on_wake_up, on_warning) {
                 host_timer(...args) {
                     return mutable_wasm_caps.host_timer(...args);
                 },
+                host_read(...args) {
+                    return mutable_wasm_caps.host_read(...args);
+                },
                 host_write(...args) {
                     return mutable_wasm_caps.host_write(...args);
                 },
@@ -1320,7 +1323,7 @@ function instantiate_core(wasm_url, on_wake_up, on_warning) {
     ).then(function (wasm) {
         return make_core(
             wasm.instance.exports,
-            on_wake_up,
+            on_wakeup,
             on_warning,
             mutable_wasm_caps
         );
@@ -1337,7 +1340,7 @@ function instantiate_core(wasm_url, on_wake_up, on_warning) {
 //debug     import.meta.resolve(
 //debug         "../target/wasm32-unknown-unknown/debug/ufork_wasm.wasm"
 //debug     ),
-//debug     function on_wake_up(device_offset) {
+//debug     function on_wakeup(device_offset) {
 //debug         console.log("WAKE:", device_offset);
 //debug         console.log("IDLE:", core.u_fault_msg(core.h_run_loop()));
 //debug     },

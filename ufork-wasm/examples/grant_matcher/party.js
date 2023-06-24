@@ -35,7 +35,7 @@ function party(asm_url, acquaintance_names = []) {
             import.meta.resolve(
                 "../../target/wasm32-unknown-unknown/debug/ufork_wasm.wasm"
             ),
-            function on_wake_up() {
+            function on_wakeup() {
                 print("IDLE:", core.u_fault_msg(core.h_run_loop()));
             },
             print

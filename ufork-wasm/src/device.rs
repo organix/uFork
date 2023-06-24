@@ -106,6 +106,17 @@ impl IoDevice {
         // console output not available...
         let _ = code;  // place a breakpoint on this assignment
     }
+    #[cfg(target_arch = "wasm32")]
+    fn read(&mut self, stub: Any) -> bool {
+        unsafe {
+            crate::host_read(stub.raw())
+        }
+    }
+    #[cfg(not(target_arch = "wasm32"))]
+    fn read(&mut self, _stub: Any) -> bool {
+        // console input not available...
+        false
+    }
 }
 /*
     The present `IoDevice` is an experimental place-holder
@@ -138,7 +149,7 @@ impl Device for IoDevice {
     fn handle_event(&mut self, core: &mut Core, ep: Any) -> Result<bool, Error> {
         let event = core.mem(ep);
         let sponsor = event.t();
-        let _myself = event.x();
+        let dev = event.x();
         let msg = event.y();  // blob | (to_cancel callback) | (to_cancel callback fixnum)
         if msg.is_cap() {  // blob
             let buf = core.blob_buffer();
@@ -163,10 +174,16 @@ impl Device for IoDevice {
             let data = core.nth(msg, PLUS_3);
             if data == UNDEF {  // (to_cancel callback)
                 // read request
-                // FIXME: read not implemented! reply immediately with failure
-                let reason = core.reserve(&Quad::pair_t(Any::fix(E_FAIL as isize), NIL))?;
-                let result = core.reserve(&Quad::pair_t(UNDEF, reason))?;  // (#undef error_code)
-                core.event_inject(sponsor, callback, result)?;
+                let delayed = Quad::new_event(sponsor, callback, UNDEF);
+                let ptr = core.reserve(&delayed)?;
+                let stub = core.reserve_stub(dev, ptr)?;
+                if !self.read(stub) {
+                    // reply immediately with failure
+                    let reason = core.reserve(&Quad::pair_t(Any::fix(E_FAIL as isize), NIL))?;
+                    let result = core.reserve(&Quad::pair_t(UNDEF, reason))?;  // (#undef error_code)
+                    core.event_inject(sponsor, callback, result)?;
+                    core.release_stub(stub);
+                }
             } else if data.is_fix() {  // (to_cancel callback fixnum)
                 // write request
                 let code = data.get_fix()?;
@@ -293,7 +310,7 @@ impl Device for TimerDevice {
     fn handle_event(&mut self, core: &mut Core, ep: Any) -> Result<bool, Error> {
         let event = core.mem(ep);
         let sponsor = event.t();
-        let device = event.x();
+        let dev = event.x();
         let msg = event.y();  // (delay target message)
         let delay = core.nth(msg, PLUS_1);
         if !delay.is_fix() {
@@ -306,7 +323,7 @@ impl Device for TimerDevice {
         let msg = core.nth(msg, PLUS_3);
         let delayed = Quad::new_event(sponsor, target, msg);
         let ptr = core.reserve(&delayed)?;
-        let stub = core.reserve_stub(device, ptr)?;
+        let stub = core.reserve_stub(dev, ptr)?;
         self.set_timer(delay, stub);
         Ok(true)  // event handled.
     }

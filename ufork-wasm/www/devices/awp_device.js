@@ -279,7 +279,7 @@ function awp_device(
     }
 
     function resume() {
-        core.h_wake_up(core.AWP_DEV_OFS);
+        core.h_wakeup(core.AWP_DEV_OFS);
     }
 
     function unregister(key) {
@@ -511,7 +511,7 @@ function awp_device(
             const callback_fwd = core.u_ptr_to_cap(core.h_reserve_ram({
                 t: core.ACTOR_T,
 
-//  fwd_beh:                ; callback <- message
+//  once_fwd_beh:           ; callback <- message
 //      msg 0               ; message
 //      state 0             ; message callback
 //      send -1             ; --
@@ -816,7 +816,7 @@ function awp_device(
 //debug     ) {
 //debug         instantiate_core(
 //debug             wasm_url,
-//debug             function on_wake_up(device_offset) {
+//debug             function on_wakeup(device_offset) {
 //debug                 console.log("WAKE:", device_offset);
 //debug                 console.log("IDLE:", core.u_fault_msg(
 //debug                     core.h_run_loop()
