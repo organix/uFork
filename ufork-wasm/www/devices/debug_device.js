@@ -2,7 +2,7 @@
 
 /*jslint bitwise, devel */
 
-function debug_device(core) {
+function debug_device(core, log = console.log) {
     core.h_install(
         [[
             core.DEBUG_DEV_OFS,
@@ -11,7 +11,7 @@ function debug_device(core) {
         {
             host_log(x) { // (i32) -> nil
                 const u = (x >>> 0);  // convert i32 -> u32
-                console.log(
+                log(
                     "LOG: " + u + " = " + core.u_print(u)
                     + " -> " + core.u_pprint(u)
                 );

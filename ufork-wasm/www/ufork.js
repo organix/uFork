@@ -1,8 +1,22 @@
 // A JavaScript wrapper for a uFork WASM core.
 
-// The 'instantiate_core' function takes a URL to the uFork WASM binary and an
-// optional 'on_warning' callback. It returns a Promise that resolves to a core
-// object containing a bunch of methods.
+// The 'instantiate_core' function takes the following parameters:
+
+//  wasm_url
+//      The URL of the uFork WASM binary, as a string.
+//
+//  on_wake_up(device_offset)
+//      A callback function that is called whenever the core wakes up from a
+//      dormant state, generally due to its 'h_wake_up' method being called by
+//      a device. This callback is responsible for resuming execution of the
+//      core. Optional.
+
+//  on_warning(...info)
+//      A callback function that is called with a warning whenever a core
+//      method bottoms out to UNDEF. Optional.
+
+// It returns a Promise that resolves to a core object containing a bunch of
+// methods and constants.
 
 /*jslint browser, long, bitwise */
 
@@ -242,7 +256,7 @@ const crlf_types = {
     actor: ACTOR_T
 };
 
-function make_core(wasm_exports, on_warning, mutable_wasm_caps) {
+function make_core(wasm_exports, on_wake_up, on_warning, mutable_wasm_caps) {
     let boot_caps_dict = []; // empty
     let import_promises = Object.create(null);
     let module_source = Object.create(null);
@@ -252,9 +266,6 @@ function make_core(wasm_exports, on_warning, mutable_wasm_caps) {
     function wasm_mutex_call(wasm_fn) {
         return function (...args) {
             if (wasm_call_in_progress) {
-                if (on_warning !== undefined) {
-                    on_warning("ERROR! re-entrant WASM call", wasm_fn, args);
-                }
                 throw new Error("re-entrant WASM call");
             }
             try {
@@ -1127,6 +1138,12 @@ function make_core(wasm_exports, on_warning, mutable_wasm_caps) {
         Object.assign(mutable_wasm_caps, wasm_imports);
     }
 
+    function h_wake_up(device_offset) {
+        if (on_wake_up !== undefined) {
+            on_wake_up(device_offset);
+        }
+    }
+
     return Object.freeze({
 
 // The constants.
@@ -1237,6 +1254,7 @@ function make_core(wasm_exports, on_warning, mutable_wasm_caps) {
         h_set_rom_top,
         h_snapshot,
         h_step,
+        h_wake_up,
 
 // The reentrant methods.
 
@@ -1273,7 +1291,7 @@ function make_core(wasm_exports, on_warning, mutable_wasm_caps) {
     });
 }
 
-function instantiate_core(wasm_url, on_warning) {
+function instantiate_core(wasm_url, on_wake_up, on_warning) {
     let mutable_wasm_caps = Object.create(null);
     return WebAssembly.instantiateStreaming(
         fetch(wasm_url),
@@ -1302,6 +1320,7 @@ function instantiate_core(wasm_url, on_warning) {
     ).then(function (wasm) {
         return make_core(
             wasm.instance.exports,
+            on_wake_up,
             on_warning,
             mutable_wasm_caps
         );
@@ -1313,20 +1332,24 @@ function instantiate_core(wasm_url, on_warning) {
 //debug import io_device from "./devices/io_device.js";
 //debug import blob_device from "./devices/blob_device.js";
 //debug import timer_device from "./devices/timer_device.js";
+//debug let core;
 //debug instantiate_core(
 //debug     import.meta.resolve(
 //debug         "../target/wasm32-unknown-unknown/debug/ufork_wasm.wasm"
 //debug     ),
+//debug     function on_wake_up(device_offset) {
+//debug         console.log("WAKE:", device_offset);
+//debug         console.log("HALT:", core.u_fault_msg(core.h_run_loop()));
+//debug     },
 //debug     console.log
-//debug ).then(function (core) {
+//debug ).then(function (the_core) {
+//debug     core = the_core;
 //debug     // Install devices
 //debug     debug_device(core);
 //debug     clock_device(core);
 //debug     io_device(core);
 //debug     blob_device(core);
-//debug     timer_device(core, function resume() {
-//debug         console.log("HALT:", core.u_fault_msg(core.h_run_loop()));
-//debug     });
+//debug     timer_device(core);
 //debug     // Test suite
 //debug     console.log("u_fixnum(0) =", core.u_fixnum(0), core.u_fixnum(0).toString(16), core.u_print(core.u_fixnum(0)));
 //debug     console.log("u_fixnum(1) =", core.u_fixnum(1), core.u_fixnum(1).toString(16), core.u_print(core.u_fixnum(1)));

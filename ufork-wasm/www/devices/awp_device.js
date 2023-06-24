@@ -12,8 +12,8 @@
 /*jslint browser, null, devel, long */
 
 import OED from "../oed.js";
-import hex from "./hex.js";
-import dummy_transport from "./dummy_transport.js";
+import hex from "../hex.js";
+import dummy_transport from "../transports/dummy_transport.js";
 
 function stringify(value) {
 
@@ -55,7 +55,6 @@ const dana_store = {
 
 function awp_device(
     core,
-    resume,
     transport = dummy_transport(),
     stores = [alice_store, bob_store, carol_store, dana_store],
     webcrypto = crypto // Node.js does not have a 'crypto' global
@@ -279,6 +278,10 @@ function awp_device(
         }
     }
 
+    function resume() {
+        core.h_wake_up(core.AWP_DEV_OFS);
+    }
+
     function unregister(key) {
         lose(key);
         delete frame_ids[key]; // TODO is this safe?
@@ -489,7 +492,7 @@ function awp_device(
         if (
             store === undefined
             || store.acquaintances[petname] === undefined
-            || store.acquaintances[petname].address === undefined
+            || store.acquaintances[petname].name === undefined
         ) {
             return core.E_BOUNDS; // TODO inform callback instead of failing
         }
@@ -796,7 +799,11 @@ function awp_device(
 //debug import parseq from "../parseq.js";
 //debug import instantiate_core from "../ufork.js";
 //debug import debug_device from "./debug_device.js";
+//debug const wasm_url = import.meta.resolve(
+//debug     "../../target/wasm32-unknown-unknown/debug/ufork_wasm.wasm"
+//debug );
 //debug let dispose;
+//debug let core;
 //debug function run_demo({transport, bob_address, carol_address, webcrypto}) {
 //debug     parseq.parallel([
 //debug         transport.generate_identity,
@@ -807,14 +814,17 @@ function awp_device(
 //debug         [alice_identity, bob_identity, carol_identity, dana_identity],
 //debug         ignore
 //debug     ) {
-//debug         instantiate_core(import.meta.resolve(
-//debug             "../../target/wasm32-unknown-unknown/debug/ufork_wasm.wasm"
-//debug         ), console.log).then(function (core) {
-//debug             function resume() {
+//debug         instantiate_core(
+//debug             wasm_url,
+//debug             function on_wake_up(device_offset) {
+//debug                 console.log("WAKE:", device_offset);
 //debug                 console.log("HALT:", core.u_fault_msg(
 //debug                     core.h_run_loop()
 //debug                 ));
-//debug             }
+//debug             },
+//debug             console.log
+//debug         ).then(function (the_core) {
+//debug             core = the_core;
 //debug             const acquaintances = [
 //debug                 {
 //debug                     name: transport.identity_to_name(bob_identity),
@@ -850,18 +860,14 @@ function awp_device(
 //debug                 }
 //debug             ];
 //debug             debug_device(core);
-//debug             dispose = awp_device(
-//debug                 core,
-//debug                 resume,
-//debug                 transport,
-//debug                 store,
-//debug                 webcrypto
-//debug             );
+//debug             dispose = awp_device(core, transport, store, webcrypto);
 //debug             return core.h_import(
 //debug                 import.meta.resolve("../../lib/grant_matcher.asm")
 //debug             ).then(function (asm_module) {
 //debug                 core.h_boot(asm_module.boot);
-//debug                 resume();
+//debug                 console.log("HALT:", core.u_fault_msg(
+//debug                     core.h_run_loop()
+//debug                 ));
 //debug             });
 //debug         });
 //debug     });
@@ -869,16 +875,13 @@ function awp_device(
 
 // Browser demo.
 
-//debug import dummy_webrtc_signaller from "./dummy_webrtc_signaller.js";
-//debug import webrtc_transport from "./webrtc_transport.js";
+//debug import dummy_signaller from "../transports/dummy_signaller.js";
+//debug import webrtc_transport from "../transports/webrtc_transport.js";
 //debug if (typeof window === "object") {
 //debug     run_demo({
-//debug         transport: webrtc_transport(
-//debug             dummy_webrtc_signaller(),
-//debug             console.log
-//debug         ),
-//debug         bob_address: "ws://ufork.org",
-//debug         carol_address: "ws://ufork.org",
+//debug         transport: webrtc_transport(dummy_signaller(), console.log),
+//debug         bob_address: "ws://127.0.0.1:4455",
+//debug         carol_address: "ws://127.0.0.1:4455",
 //debug         webcrypto: crypto
 //debug     });
 //debug }
@@ -888,7 +891,7 @@ function awp_device(
 //debug if (typeof process === "object") {
 //debug     Promise.all([
 //debug         import("node:crypto"),
-//debug         import("./node_tls_transport.js")
+//debug         import("../transports/node_tls_transport.js")
 //debug     ]).then(function ([
 //debug         crypto_module,
 //debug         transport_module

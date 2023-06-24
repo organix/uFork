@@ -1,3 +1,7 @@
+// Runs the development server.
+
+/*jslint node */
+
 import fs from "fs";
 import path from "path";
 import http from "http";

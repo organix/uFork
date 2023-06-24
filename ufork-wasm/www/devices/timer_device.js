@@ -2,7 +2,7 @@
 
 /*jslint browser, devel */
 
-function timer_device(core, resume) {
+function timer_device(core) {
     core.h_install(
         [[
             core.TIMER_DEV_OFS,
@@ -19,9 +19,7 @@ function timer_device(core, resume) {
                         const message = event.y;
                         core.h_release_stub(stub);
                         core.h_event_inject(sponsor, target, message);
-                        if (resume !== undefined) {
-                            resume();
-                        }
+                        core.h_wake_up(core.TIMER_DEV_OFS);
                     }, core.u_fix_to_i32(delay));
                 }
             }
