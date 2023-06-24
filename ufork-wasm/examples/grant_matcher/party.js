@@ -30,15 +30,17 @@ function party(asm_url, acquaintance_names = []) {
         }
         const name = transport.identity_to_name(identity);
         print("Name", hex.encode(name));
+        let core;
         instantiate_core(
             import.meta.resolve(
                 "../../target/wasm32-unknown-unknown/debug/ufork_wasm.wasm"
             ),
-            print
-        ).then(function (core) {
-            function resume() {
+            function on_wake_up() {
                 print("HALT:", core.u_fault_msg(core.h_run_loop()));
-            }
+            },
+            print
+        ).then(function (the_core) {
+            core = the_core;
             debug_device(core, function (...args) {
                 print(...args);
                 const div = document.createElement("div");
@@ -46,7 +48,7 @@ function party(asm_url, acquaintance_names = []) {
                 div.style.fontSize = "100px";
                 document.body.append(div);
             });
-            awp_device(core, resume, transport, [
+            awp_device(core, transport, [
                 {
                     identity,
                     name,
@@ -62,7 +64,7 @@ function party(asm_url, acquaintance_names = []) {
             ]);
             return core.h_import(asm_url).then(function (asm_module) {
                 core.h_boot(asm_module.boot);
-                resume();
+                print("HALT:", core.u_fault_msg(core.h_run_loop()));
             });
         }).catch(
             print

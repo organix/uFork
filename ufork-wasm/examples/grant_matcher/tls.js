@@ -63,17 +63,19 @@ const asm_url = new URL(
     process.argv[3],
     "http://localhost:7273/examples/grant_matcher/"
 ).href;
+let core;
+function resume() {
+    console.log("HALT", store_name, core.u_fault_msg(core.h_run_loop()));
+}
 instantiate_core(
     "http://localhost:7273/target/wasm32-unknown-unknown/debug/ufork_wasm.wasm",
+    resume,
     console.log
-).then(function (core) {
-    function resume() {
-        console.log("HALT", store_name, core.u_fault_msg(core.h_run_loop()));
-    }
+).then(function (the_core) {
+    core = the_core;
     debug_device(core);
     awp_device(
         core,
-        resume,
         transport,
         [stores[store_name]],
         crypto.webcrypto

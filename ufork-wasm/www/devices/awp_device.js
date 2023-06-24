@@ -55,7 +55,6 @@ const dana_store = {
 
 function awp_device(
     core,
-    resume,
     transport = dummy_transport(),
     stores = [alice_store, bob_store, carol_store, dana_store],
     webcrypto = crypto // Node.js does not have a 'crypto' global
@@ -277,6 +276,10 @@ function awp_device(
             });
             delete lost[key];
         }
+    }
+
+    function resume() {
+        core.h_wake_up(core.AWP_DEV_OFS);
     }
 
     function unregister(key) {
@@ -796,7 +799,11 @@ function awp_device(
 //debug import parseq from "../parseq.js";
 //debug import instantiate_core from "../ufork.js";
 //debug import debug_device from "./debug_device.js";
+//debug const wasm_url = import.meta.resolve(
+//debug     "../../target/wasm32-unknown-unknown/debug/ufork_wasm.wasm"
+//debug );
 //debug let dispose;
+//debug let core;
 //debug function run_demo({transport, bob_address, carol_address, webcrypto}) {
 //debug     parseq.parallel([
 //debug         transport.generate_identity,
@@ -807,14 +814,17 @@ function awp_device(
 //debug         [alice_identity, bob_identity, carol_identity, dana_identity],
 //debug         ignore
 //debug     ) {
-//debug         instantiate_core(import.meta.resolve(
-//debug             "../../target/wasm32-unknown-unknown/debug/ufork_wasm.wasm"
-//debug         ), console.log).then(function (core) {
-//debug             function resume() {
+//debug         instantiate_core(
+//debug             wasm_url,
+//debug             function on_wake_up(device_offset) {
+//debug                 console.log("WAKE:", device_offset);
 //debug                 console.log("HALT:", core.u_fault_msg(
 //debug                     core.h_run_loop()
 //debug                 ));
-//debug             }
+//debug             },
+//debug             console.log
+//debug         ).then(function (the_core) {
+//debug             core = the_core;
 //debug             const acquaintances = [
 //debug                 {
 //debug                     name: transport.identity_to_name(bob_identity),
@@ -850,18 +860,14 @@ function awp_device(
 //debug                 }
 //debug             ];
 //debug             debug_device(core);
-//debug             dispose = awp_device(
-//debug                 core,
-//debug                 resume,
-//debug                 transport,
-//debug                 store,
-//debug                 webcrypto
-//debug             );
+//debug             dispose = awp_device(core, transport, store, webcrypto);
 //debug             return core.h_import(
 //debug                 import.meta.resolve("../../lib/grant_matcher.asm")
 //debug             ).then(function (asm_module) {
 //debug                 core.h_boot(asm_module.boot);
-//debug                 resume();
+//debug                 console.log("HALT:", core.u_fault_msg(
+//debug                     core.h_run_loop()
+//debug                 ));
 //debug             });
 //debug         });
 //debug     });
