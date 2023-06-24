@@ -65,7 +65,7 @@ const asm_url = new URL(
 ).href;
 let core;
 function resume() {
-    console.log("HALT", store_name, core.u_fault_msg(core.h_run_loop()));
+    console.log("IDLE", store_name, core.u_fault_msg(core.h_run_loop()));
 }
 instantiate_core(
     "http://localhost:7273/target/wasm32-unknown-unknown/debug/ufork_wasm.wasm",

@@ -1339,7 +1339,7 @@ function instantiate_core(wasm_url, on_wake_up, on_warning) {
 //debug     ),
 //debug     function on_wake_up(device_offset) {
 //debug         console.log("WAKE:", device_offset);
-//debug         console.log("HALT:", core.u_fault_msg(core.h_run_loop()));
+//debug         console.log("IDLE:", core.u_fault_msg(core.h_run_loop()));
 //debug     },
 //debug     console.log
 //debug ).then(function (the_core) {

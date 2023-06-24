@@ -36,7 +36,7 @@ function party(asm_url, acquaintance_names = []) {
                 "../../target/wasm32-unknown-unknown/debug/ufork_wasm.wasm"
             ),
             function on_wake_up() {
-                print("HALT:", core.u_fault_msg(core.h_run_loop()));
+                print("IDLE:", core.u_fault_msg(core.h_run_loop()));
             },
             print
         ).then(function (the_core) {
@@ -64,7 +64,7 @@ function party(asm_url, acquaintance_names = []) {
             ]);
             return core.h_import(asm_url).then(function (asm_module) {
                 core.h_boot(asm_module.boot);
-                print("HALT:", core.u_fault_msg(core.h_run_loop()));
+                print("IDLE:", core.u_fault_msg(core.h_run_loop()));
             });
         }).catch(
             print

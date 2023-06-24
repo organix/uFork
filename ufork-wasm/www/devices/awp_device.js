@@ -818,7 +818,7 @@ function awp_device(
 //debug             wasm_url,
 //debug             function on_wake_up(device_offset) {
 //debug                 console.log("WAKE:", device_offset);
-//debug                 console.log("HALT:", core.u_fault_msg(
+//debug                 console.log("IDLE:", core.u_fault_msg(
 //debug                     core.h_run_loop()
 //debug                 ));
 //debug             },
@@ -865,7 +865,7 @@ function awp_device(
 //debug                 import.meta.resolve("../../lib/grant_matcher.asm")
 //debug             ).then(function (asm_module) {
 //debug                 core.h_boot(asm_module.boot);
-//debug                 console.log("HALT:", core.u_fault_msg(
+//debug                 console.log("IDLE:", core.u_fault_msg(
 //debug                     core.h_run_loop()
 //debug                 ));
 //debug             });
