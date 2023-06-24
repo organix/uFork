@@ -70,7 +70,6 @@ const ice_servers = [{
         "stun:stun4.l.google.com:19302"
     ]
 }];
-const signalling_time_limit = 5000;
 const ice_time_limit = 10000;
 const rx_sdp_fingerprint = /a=fingerprint:sha-256\u0020([0-9A-F:]+)/;
 
@@ -199,15 +198,9 @@ function webrtc_transport(signaller_requestor, log) {
 
                 peer.setRemoteDescription(message.answer).catch(fail);
 
-// The ICE candidates should now be flowing in both directions. With any luck we
-// will establish a direct peer-to-peer connection. This could fail if the ICE
-// candidate messages are lost in transit, so we set a timer.
+// The ICE candidates should now be flowing in both directions. With any luck a
+// direct peer-to-peer connection will soon be established.
 
-                setTimeout(function () {
-                    if (peer.connectionState === "new") {
-                        fail("ICE timed out.");
-                    }
-                }, ice_time_limit);
             } else if (message.kind === "ice_candidate") {
                 if (peer.signalingState !== "closed") {
                     debug("addIceCandidate");
@@ -285,14 +278,6 @@ function webrtc_transport(signaller_requestor, log) {
                 });
                 return peer.setLocalDescription(offer);
             }).catch(fail);
-
-// Fail if we do not receive an answer in a reasonable amount of time.
-
-            setTimeout(function () {
-                if (peer.signalingState === "have-local-offer") {
-                    fail("No answer.");
-                }
-            }, signalling_time_limit);
         }
 
         try {

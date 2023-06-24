@@ -1,5 +1,8 @@
 // A Deno signalling server, for use with the WebSockets signaller.
 
+// Messages addressed to unknown peers are buffered for the lifetime of the
+// sender's connection, just in case the peer joins at a later time.
+
 /*jslint deno */
 
 function websockets_signalling_server(
@@ -10,32 +13,78 @@ function websockets_signalling_server(
     }
 ) {
     const listener = Deno.listen(listen_options);
-    let sockets = Object.create(null);
+    let sockets = Object.create(null);      // name -> WebSocket
+    let waiting_buffer = [];                // {to, from, message, socket}
 
     function broadcast(to, from, message) {
-        if (sockets[to] === undefined) {
-            return;
-        }
-        sockets[to].forEach(function (socket) {
+        let delivered = false;
+        if (sockets[to] !== undefined) {
+            sockets[to].forEach(function (socket) {
 
 // The socket.onclose handler seems to be called some time after the socket is
 // actually closed. This means that there is potential for an exception to be
 // thrown here if 'send' is called on a connection that is thought to be open,
 // but is actually closed.
 
-// Until Deno fixes this issue, we silently drop the buffer if the socket is
+// Until Deno fixes this issue, we silently drop the message if the socket is
 // closed.
 
-            if (socket.readyState !== 3) {
-                socket.send(JSON.stringify({from, message}));
-            }
-        });
+                if (socket.readyState !== 3) {
+                    delivered = true;
+                    socket.send(JSON.stringify({from, message}));
+                }
+            });
+        }
+        return delivered;
     }
 
     function fail(reason) {
         if (on_error !== undefined) {
             on_error(reason);
         }
+    }
+
+    function register(name, socket) {
+        if (sockets[name] === undefined) {
+            sockets[name] = [];
+        }
+        if (!sockets[name].includes(socket)) {
+            sockets[name].push(socket);
+        }
+
+// See if there are any undelivered messages addressed to the new socket. If
+// there are, send them and remove them from the buffer.
+
+        waiting_buffer = waiting_buffer.filter(function (entry) {
+            if (entry.to === name) {
+                socket.send(JSON.stringify({
+                    from: entry.from,
+                    message: entry.message
+                }));
+                return false;
+            }
+            return true;
+        });
+    }
+
+    function unregister(name, socket) {
+        if (
+            sockets[name] !== undefined
+            && sockets[name].includes(socket)
+        ) {
+            sockets[name] = sockets[name].filter(function (element) {
+                return element !== socket;
+            });
+            if (sockets[name].length === 0) {
+                delete sockets[name];
+            }
+        }
+
+// Drop any undelivered messages associated with this socket.
+
+        waiting_buffer = waiting_buffer.filter(function (entry) {
+            return entry.socket !== socket;
+        });
     }
 
     (function wait_for_next_connection() {
@@ -52,30 +101,30 @@ function websockets_signalling_server(
             }
             const {socket, response} = Deno.upgradeWebSocket(request);
             const name = new URL(request.url).pathname.slice(1);
-            if (sockets[name] === undefined) {
-                sockets[name] = [];
-            }
-
-            function unregister() {
-                if (sockets[name].includes(socket)) {
-                    sockets[name] = sockets[name].filter(function (element) {
-                        return element !== socket;
-                    });
-                    if (sockets[name].length === 0) {
-                        delete sockets[name];
-                    }
-                }
-            }
-
             socket.onopen = function () {
-                sockets[name].push(socket);
+                register(name, socket);
             };
             socket.onmessage = function (event) {
+
+// We have received a message. Broadcast it to any connected parties with
+// matching names, or buffer it if none are connected.
+
                 const {to, message} = JSON.parse(event.data);
-                return broadcast(to, name, message);
+                if (!broadcast(to, name, message)) {
+                    waiting_buffer.push({
+                        to,
+                        from: name,
+                        message,
+                        socket
+                    });
+                }
             };
-            socket.onclose = unregister;
-            socket.onerror = unregister;
+            socket.onclose = function () {
+                unregister(name, socket);
+            };
+            socket.onerror = function () {
+                unregister(name, socket);
+            };
             return respondWith(response);
         }
 

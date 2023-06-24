@@ -1,4 +1,4 @@
-// Runs a Deno server supporting the Grant Matcher demo in the browser.
+// Runs a Deno server supporting the Grant Matcher browser demo.
 
 /*jslint deno, devel */
 
