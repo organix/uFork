@@ -357,10 +357,15 @@ optional.
         "#f"
 
     fixnum
-        one_to_nine
-        one_to_nine digits
         '-' one_to_nine
         '-' one_to_nine digits
+        base_ten
+        base_ten '#' base_any
+        '0027' char_esc '0027'
+
+    base_ten
+        digit
+        one_to_nine digits
 
     digits
         digit
@@ -372,6 +377,22 @@ optional.
 
     one_to_nine
         '1' . '9'
+
+    base_any
+        alphameric
+        alphameric base_any
+
+    char_esc
+        "\b"
+        "\t"
+        "\n"
+        "\r"
+        '0020' . '0026'
+        "\'"
+        '0028' . '005B'
+        "\\"
+        '005D' . '007E'
+        '00A0' . '10FFFF'
 
     type
         "#literal_t"
