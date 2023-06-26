@@ -204,6 +204,7 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
             assert_eq!(ep, ep_);
             let mut dev_mut = self.device[id].take().unwrap();
             let result = dev_mut.handle_event(self, ep);
+            trace_event(ep, UNDEF);  // trace transactional effect(s)
             self.device[id] = Some(dev_mut);
             result  // should normally be Ok(true)
         } else {
@@ -245,15 +246,18 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
         }
         let ip = self.ip();
         let ip_ = self.perform_op(ip)?;
-        self.set_ip(ip_);
         self.set_sponsor_instrs(sponsor, Any::fix(limit - 1));
-        let kp_ = self.cont_dequeue().unwrap();
-        assert_eq!(kp, kp_);
         if self.typeq(INSTR_T, ip_) {
             // re-queue updated continuation
+            self.set_ip(ip_);
+            let kp_ = self.cont_dequeue().unwrap();
+            assert_eq!(kp, kp_);
             self.cont_enqueue(kp_);
         } else {
             // free dead continuation and associated event
+            let kp_ = self.cont_dequeue().unwrap();
+            assert_eq!(kp, kp_);
+            trace_event(ep, kp);  // trace transactional effect(s)
             self.free(ep);
             self.free(kp);
             self.gc_collect();  // FIXME! REMOVE FORCED GC...

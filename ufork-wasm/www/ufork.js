@@ -1317,6 +1317,12 @@ function instantiate_core(wasm_url, on_wakeup, on_warning) {
                 },
                 host_awp(...args) {
                     return mutable_wasm_caps.host_awp(...args);
+                },
+                host_trace(...args) {
+                    const trace = mutable_wasm_caps.host_trace;
+                    if (typeof trace === "function") {
+                        return trace(...args);
+                    }
                 }
             }
         }

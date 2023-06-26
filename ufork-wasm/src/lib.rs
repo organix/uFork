@@ -73,23 +73,21 @@ extern {
     pub fn host_write(code: isize);
     pub fn host_read(stub: Raw) -> bool;
     pub fn host_awp(event_stub: Raw) -> Error;
+    pub fn host_trace(event: Raw);
 }
 
-/*
+// trace transactional effect(s)
 #[cfg(target_arch = "wasm32")]
-pub fn greet(base: *const u8, ofs: usize) {
+pub fn trace_event(ep: Any, _kp: Any) {
     unsafe {
-        //host_log(msg.raw());
-        host_print(base, ofs);
+        host_trace(ep.raw());
     }
 }
-
 #[cfg(not(target_arch = "wasm32"))]
-pub fn greet(_base: *const u8, _ofs: usize) {
-    //println!("LOG: {}[{}]", base as usize, ofs);
-    // FIXME: console i/o not available in `#![no_std]` build
+pub fn trace_event(ep: Any, _kp: Any) {
+    // event tracing not available
+    let _ = ep;  // place a breakpoint on this assignment
 }
-*/
 
 unsafe fn the_host() -> &'static RefCell<Host> {
     static mut THE_HOST: Option<RefCell<Host>> = None;
