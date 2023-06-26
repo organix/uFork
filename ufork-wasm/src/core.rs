@@ -257,7 +257,6 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
             // free dead continuation and associated event
             let kp_ = self.cont_dequeue().unwrap();
             assert_eq!(kp, kp_);
-            trace_event(ep, kp);  // trace transactional effect(s)
             self.free(ep);
             self.free(kp);
             self.gc_collect();  // FIXME! REMOVE FORCED GC...
@@ -564,6 +563,7 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
                 kip
             },
             VM_END => {
+                trace_event(self.ep(), self.kp());  // trace transactional effect(s)
                 let me = self.self_ptr();
                 let rv = match imm {
                     END_ABORT => {

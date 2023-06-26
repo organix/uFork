@@ -15,10 +15,30 @@ function debug_device(core, log = console.log) {
                 const sponsor = event.t;
                 const target = event.x;
                 const message = event.y;
-                log(
-                    "TRACE: " + core.u_pprint(target)
-                    + " <- " + core.u_pprint(message)
-                );
+                const prev = core.u_read_quad(core.u_cap_to_ptr(target));
+                if (core.u_is_ram(prev.z)) {
+                    // actor effect
+                    const next = core.u_read_quad(prev.z);
+                    let messages = [];
+                    let sent = next.z;
+                    while (core.u_is_ram(sent)) {
+                        let pending = core.u_read_quad(sent);
+                        messages.push(core.u_pprint(pending.y) + "->" + core.u_print(pending.x));
+                        sent = pending.z;
+                    }
+                    log(
+                        "TRACE: " + core.u_pprint(message) + "->" + core.u_print(target)
+                        + " " + core.u_print(prev.x) + "." + core.u_pprint(prev.y)
+                        + " => " + core.u_print(next.x) + "." + core.u_pprint(next.y)
+                        + " " + messages.join(" ")
+                    );
+                } else {
+                    // device effect
+                    log(
+                        "TRACE: " + core.u_pprint(message) + "->" + core.u_print(target)
+                        + " " + core.u_print(prev.x) + "." + core.u_pprint(prev.y)
+                    );
+                }
             },
             host_log(x) { // (i32) -> nil
                 const u = (x >>> 0);  // convert i32 -> u32
