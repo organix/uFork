@@ -13,8 +13,8 @@ impl Host {
             core,
         }
     }
-    pub fn run_loop(&mut self) -> Error {
-        self.core.run_loop()
+    pub fn run_loop(&mut self, limit: i32) -> Error {
+        self.core.run_loop(limit)
     }
     pub fn step(&mut self) -> Error {  // single-step instruction execution
         match self.core.execute_instruction() {

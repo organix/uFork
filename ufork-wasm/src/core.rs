@@ -156,7 +156,7 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
         }
     }
 
-    pub fn run_loop(&mut self) -> Error {
+    pub fn run_loop(&mut self, limit: i32) -> Error {
         let mut steps = 0;
         loop {
             match self.execute_instruction() {
@@ -169,13 +169,16 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
                     return error;  // limit reached, or error condition signalled...
                 },
             }
+            steps += 1;
+            if (limit > 0) && (steps >= limit) {
+                return steps;  // step limit reached
+            }
             if let Err(error) = self.check_for_interrupt() {
                 return error;  // interrupt handler failed...
             }
             if let Err(error) = self.dispatch_event() {
                 return error;  // event dispatch failed...
             }
-            steps += 1;
         }
     }
     pub fn check_for_interrupt(&mut self) -> Result<bool, Error> {
@@ -2007,7 +2010,7 @@ pub const COUNT_TO: Any = Any { raw: (T_DEV_OFS+10) as Raw };
         let boot_ptr = core.reserve(&Quad::new_actor(boot_beh, NIL)).unwrap();
         let a_boot = core.ptr_to_cap(boot_ptr);
         core.event_inject(SPONSOR, a_boot, UNDEF).unwrap();
-        let err = core.run_loop();
+        let err = core.run_loop(0);
         if err < 0 { assert_eq!(E_OK, err); }  // positive values are number of steps executed
     }
 
@@ -2019,7 +2022,7 @@ pub const COUNT_TO: Any = Any { raw: (T_DEV_OFS+10) as Raw };
         let a_boot = core.ptr_to_cap(boot_ptr);
         core.event_inject(SPONSOR, a_boot, UNDEF).unwrap();
         core.gc_collect();
-        let err = core.run_loop();
+        let err = core.run_loop(1024);
         if err < 0 { assert_eq!(E_OK, err); }  // positive values are number of steps executed
         core.gc_collect();
     }
@@ -2031,7 +2034,7 @@ pub const COUNT_TO: Any = Any { raw: (T_DEV_OFS+10) as Raw };
         let boot_ptr = core.reserve(&Quad::new_actor(boot_beh, NIL)).unwrap();
         let a_boot = core.ptr_to_cap(boot_ptr);
         core.event_inject(SPONSOR, a_boot, UNDEF).unwrap();
-        let err = core.run_loop();
+        let err = core.run_loop(1024);
         if err < 0 { assert_eq!(E_OK, err); }  // positive values are number of steps executed
     }
 
@@ -2044,7 +2047,7 @@ pub const COUNT_TO: Any = Any { raw: (T_DEV_OFS+10) as Raw };
         let msg = core.reserve(&Quad::pair_t(UNIT, NIL)).unwrap();
         let msg = core.reserve(&Quad::pair_t(a_boot, msg)).unwrap();
         core.event_inject(SPONSOR, a_boot, msg).unwrap();
-        let err = core.run_loop();
+        let err = core.run_loop(1024);
         if err < 0 { assert_eq!(E_OK, err); }  // positive values are number of steps executed
     }
 
@@ -2055,7 +2058,7 @@ pub const COUNT_TO: Any = Any { raw: (T_DEV_OFS+10) as Raw };
         let boot_ptr = core.reserve(&Quad::new_actor(boot_beh, NIL)).unwrap();
         let a_boot = core.ptr_to_cap(boot_ptr);
         core.event_inject(SPONSOR, a_boot, NIL).unwrap();
-        let err = core.run_loop();
+        let err = core.run_loop(1024);
         if err < 0 { assert_eq!(E_OK, err); }  // positive values are number of steps executed
     }
 

@@ -104,7 +104,7 @@ unsafe fn the_host() -> &'static RefCell<Host> {
 #[no_mangle]
 pub fn h_run_loop() -> Error {
     unsafe {
-        the_host().borrow_mut().run_loop()
+        the_host().borrow_mut().run_loop(0)  // FIXME: expose run-limit in API
     }
 }
 #[no_mangle]
