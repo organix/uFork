@@ -75,6 +75,7 @@ extern {
     pub fn host_awp(event_stub: Raw) -> Error;
 }
 
+/*
 #[cfg(target_arch = "wasm32")]
 pub fn greet(base: *const u8, ofs: usize) {
     unsafe {
@@ -88,6 +89,7 @@ pub fn greet(_base: *const u8, _ofs: usize) {
     //println!("LOG: {}[{}]", base as usize, ofs);
     // FIXME: console i/o not available in `#![no_std]` build
 }
+*/
 
 unsafe fn the_host() -> &'static RefCell<Host> {
     static mut THE_HOST: Option<RefCell<Host>> = None;

@@ -95,6 +95,19 @@ impl IoDevice {
     pub fn new() -> IoDevice {
         IoDevice {}
     }
+
+    #[cfg(target_arch = "wasm32")]
+    fn dump_blob(&mut self, base: *const u8, ofs: usize) {
+        unsafe {
+            crate::host_print(base, ofs);
+        }
+    }
+    #[cfg(not(target_arch = "wasm32"))]
+    fn dump_blob(&mut self, _base: *const u8, _ofs: usize) {
+        //println!("LOG: {}[{}]", base as usize, ofs);
+        // FIXME: console i/o not available in `#![no_std]` build
+    }
+
     #[cfg(target_arch = "wasm32")]
     fn write(&mut self, code: isize) {
         unsafe {
@@ -106,6 +119,7 @@ impl IoDevice {
         // console output not available...
         let _ = code;  // place a breakpoint on this assignment
     }
+
     #[cfg(target_arch = "wasm32")]
     fn read(&mut self, stub: Any) -> bool {
         unsafe {
@@ -163,7 +177,7 @@ impl Device for IoDevice {
                 return Err(E_BOUNDS);
             }
             let ofs = proxy.y().get_fix()? as usize;
-            greet(base, ofs);
+            self.dump_blob(base, ofs);
         } else if core.typeq(PAIR_T, msg) {
             let _to_cancel = core.nth(msg, PLUS_1);
             // FIXME: cancel option not implemented
