@@ -47,6 +47,14 @@ const rx_token_raw = tag_regexp `
   | (
         [ \. : # \? ]
     )
+  | (
+        '
+        (
+            ( \\ [\\'btnr] )
+          | [ ^ \\' ]
+        )
+        '
+    )
 `;
 
 // Capturing groups:
@@ -58,6 +66,16 @@ const rx_token_raw = tag_regexp `
 //  [6] Fixnum
 //  [7] String
 //  [8] Punctuator
+//  [9] Character
+
+const char_esc = {
+    "\\\\": 0x5C,
+    "\\\'": 0x27,
+    "\\b":  0x08,
+    "\\t":  0x09,
+    "\\n":  0x0A,
+    "\\r":  0x0D,
+};
 
 function tokenize(source) {
     let rx_token = new RegExp(rx_token_raw, "y"); // sticky
@@ -162,6 +180,26 @@ function tokenize(source) {
                 column_nr,
                 column_to
             };
+        }
+        if (captives[9]) {
+            const char = captives[9].slice(1, -1);
+            const number = (
+                char.startsWith("\\")
+                ? char_esc[char]
+                : char.codePointAt(0)
+            );
+            return (
+                Number.isSafeInteger(number)
+                ? {
+                    id: ":number:",
+                    number,
+                    text: char,
+                    line_nr,
+                    column_nr,
+                    column_to
+                }
+                : error()
+            );
         }
     };
 }

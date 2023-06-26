@@ -66,7 +66,7 @@ boot:                   ; () <- {caps}
     send -1             ; --
 
     ; "Hello?" = [72, 101, 108, 108, 111, 63]
-    push 62             ; '>'=62
+    push '>'            ; '>'=62
     push std.sink_beh   ; '>' sink_beh
     new 0               ; '>' callback=sink.()
     push #?             ; '>' callback to_cancel=#?

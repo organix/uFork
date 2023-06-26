@@ -361,7 +361,7 @@ optional.
         '-' one_to_nine digits
         base_ten
         base_ten '#' base_any
-        '0027' char_esc '0027'
+        quote char_esc quote
 
     base_ten
         digit
@@ -381,6 +381,9 @@ optional.
     base_any
         alphameric
         alphameric base_any
+
+    quote
+        '0027'
 
     char_esc
         "\b"
