@@ -159,6 +159,9 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
     pub fn run_loop(&mut self, limit: i32) -> Error {
         let mut steps = 0;
         loop {
+            if let Err(error) = self.dispatch_event() {
+                return error;  // event dispatch failed...
+            }
             match self.execute_instruction() {
                 Ok(more) => {
                     if !more && !self.event_pending() {
@@ -173,18 +176,7 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
             if (limit > 0) && (steps >= limit) {
                 return steps;  // step limit reached
             }
-            if let Err(error) = self.check_for_interrupt() {
-                return error;  // interrupt handler failed...
-            }
-            if let Err(error) = self.dispatch_event() {
-                return error;  // event dispatch failed...
-            }
         }
-    }
-    pub fn check_for_interrupt(&mut self) -> Result<bool, Error> {
-        //self.gc_stop_the_world();  // FIXME!! REMOVE FORCED GC...
-        Ok(false)
-        //Err(E_FAIL)
     }
     pub fn dispatch_event(&mut self) -> Result<bool, Error> {
         if !self.event_pending() {
