@@ -49,9 +49,9 @@ const rx_token_raw = tag_regexp `
     )
   | (
         '
-        (
-            ( \\ [\\'btnr] )
-          | [ ^ \\' ]
+        (?:
+            \\ [ \\ ' b t n r ]
+          | [ ^ \\ ' ]
         )
         '
     )
@@ -68,17 +68,17 @@ const rx_token_raw = tag_regexp `
 //  [8] Punctuator
 //  [9] Character
 
-const char_esc = {
-    "\\\\": 0x5C,
-    "\\\'": 0x27,
-    "\\b":  0x08,
-    "\\t":  0x09,
-    "\\n":  0x0A,
-    "\\r":  0x0D,
+const escape_code_points = {
+    "\\": 0x5C,
+    "'": 0x27,
+    "b": 0x08,
+    "t": 0x09,
+    "n": 0x0A,
+    "r": 0x0D
 };
 
 function tokenize(source) {
-    let rx_token = new RegExp(rx_token_raw, "y"); // sticky
+    let rx_token = new RegExp(rx_token_raw, "yu"); // sticky, unicode aware
     let line_nr = 1;
     let column_to = 1;
     return function token_generator() {
@@ -182,18 +182,18 @@ function tokenize(source) {
             };
         }
         if (captives[9]) {
-            const char = captives[9].slice(1, -1);
-            const number = (
-                char.startsWith("\\")
-                ? char_esc[char]
-                : char.codePointAt(0)
+            const character = captives[9].slice(1, -1);
+            const code_point = (
+                character.startsWith("\\")
+                ? escape_code_points[character[1]]
+                : character.codePointAt(0)
             );
             return (
-                Number.isSafeInteger(number)
+                Number.isSafeInteger(code_point)
                 ? {
                     id: ":number:",
-                    number,
-                    text: char,
+                    number: code_point,
+                    text: character,
                     line_nr,
                     column_nr,
                     column_to
@@ -1015,6 +1015,15 @@ function assemble(source, file) {
 //     beh
 // `);
 
+// good("character literals", `
+// a:
+//     ref 'a'
+// b:
+//     ref '😀'
+// c:
+//     ref '\\n'
+// `);
+
 // bad("bad label", `
 // ab$c:
 //     end commit
@@ -1132,6 +1141,21 @@ function assemble(source, file) {
 // bad("instruction at margin", `
 // a:
 // nth 5 a
+// `);
+
+// bad("character escape", `
+// a:
+//     ref '\\x'
+// `);
+
+// bad("unescaped character literal", `
+// a:
+//     ref '''
+// `);
+
+// bad("too many characters", `
+// a:
+//     ref 'foo'
 // `);
 
 // bad("directive indented", `
