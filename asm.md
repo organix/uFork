@@ -361,7 +361,7 @@ optional.
         '-' one_to_nine digits
         base_ten
         base_ten '#' base_any
-        quote char_esc quote
+        quote character_literal quote
 
     base_ten
         digit
@@ -382,20 +382,17 @@ optional.
         alphameric
         alphameric base_any
 
-    quote
-        '0027'
-
-    char_esc
+    character_literal
         "\b"
         "\t"
         "\n"
         "\r"
-        '0020' . '0026'
         "\'"
-        '0028' . '005B'
         "\\"
-        '005D' . '007E'
-        '00A0' . '10FFFF'
+        character - quote - '\'
+
+    quote
+        '0027'
 
     type
         "#literal_t"
@@ -482,7 +479,8 @@ or comment lines.
         character - ' '
 
     character
-        ' ' . '10FFFF'
+        '0020' . '007E'
+        '00A0' . '10FFFF'
 
     indent
         spaces
