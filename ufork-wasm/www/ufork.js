@@ -1,6 +1,7 @@
 // A JavaScript wrapper for a uFork WASM core.
 
-// The 'instantiate_core' function takes the following parameters:
+// This module exports the 'instantiate_core' function, a requestor factory with
+// the following parameters:
 
 //  wasm_url
 //      The URL of the uFork WASM binary, as a string.
@@ -15,11 +16,15 @@
 //      A callback function that is called with a warning whenever a core
 //      method bottoms out to UNDEF. Optional.
 
-// It returns a Promise that resolves to a core object containing a bunch of
-// methods and constants.
+// The returned requestor produces a core object containing methods and
+// constants.
 
 /*jslint browser, long, bitwise */
 
+import parseq from "./parseq.js";
+import requestorize from "./requestors/requestorize.js";
+import lazy from "./requestors/lazy.js";
+import unpromise from "./requestors/unpromise.js";
 import assemble from "./assemble.js";
 
 // Type-tag bits
@@ -925,12 +930,11 @@ function make_core(wasm_exports, on_wakeup, on_warning, mutable_wasm_caps) {
         return exports_object;
     }
 
-    function h_import(specifier) {
-
-// Import and load a module, along with its dependencies.
-
+    function h_import_promise(specifier) {
         if (import_promises[specifier] === undefined) {
-            import_promises[specifier] = fetch(specifier).then(function (response) {
+            import_promises[specifier] = fetch(
+                specifier
+            ).then(function (response) {
                 return (
                     specifier.endsWith(".asm")
                     ? response.text().then(function (source) {
@@ -943,17 +947,17 @@ function make_core(wasm_exports, on_wakeup, on_warning, mutable_wasm_caps) {
                 if (crlf.kind === "error") {
                     return Promise.reject(crlf);
                 }
-                return Promise.all(
-                    Object.values(crlf.ast.import).map(function (import_specifier) {
+                return Promise.all(Object.values(crlf.ast.import).map(
+                    function (import_specifier) {
 
 // FIXME: cyclic module dependencies cause a deadlock, but they should instead
 // fail with an error.
 
-                        return h_import(
+                        return h_import_promise(
                             new URL(import_specifier, specifier).href
                         );
-                    })
-                ).then(function (imported_modules) {
+                    }
+                )).then(function (imported_modules) {
                     const imports = Object.create(null);
                     Object.keys(crlf.ast.import).forEach(function (name, nr) {
                         imports[name] = imported_modules[nr];
@@ -963,6 +967,15 @@ function make_core(wasm_exports, on_wakeup, on_warning, mutable_wasm_caps) {
             });
         }
         return import_promises[specifier];
+    }
+
+    function h_import(specifier) {
+
+// Import and load a module, along with its dependencies.
+
+        return unpromise(function () {
+            return h_import_promise(specifier);
+        });
     }
 
     function u_disasm(raw) {
@@ -1293,47 +1306,52 @@ function make_core(wasm_exports, on_wakeup, on_warning, mutable_wasm_caps) {
 
 function instantiate_core(wasm_url, on_wakeup, on_warning) {
     let mutable_wasm_caps = Object.create(null);
-    return WebAssembly.instantiateStreaming(
-        fetch(wasm_url),
-        {
-            capabilities: {
-                host_clock(...args) {
-                    return mutable_wasm_caps.host_clock(...args);
-                },
-                host_print(...args) {
-                    return mutable_wasm_caps.host_print(...args);
-                },
-                host_log(...args) {
-                    return mutable_wasm_caps.host_log(...args);
-                },
-                host_timer(...args) {
-                    return mutable_wasm_caps.host_timer(...args);
-                },
-                host_read(...args) {
-                    return mutable_wasm_caps.host_read(...args);
-                },
-                host_write(...args) {
-                    return mutable_wasm_caps.host_write(...args);
-                },
-                host_awp(...args) {
-                    return mutable_wasm_caps.host_awp(...args);
-                },
-                host_trace(...args) {
-                    const trace = mutable_wasm_caps.host_trace;
-                    if (typeof trace === "function") {
-                        return trace(...args);
+    return parseq.sequence([
+        unpromise(function () {
+            return WebAssembly.instantiateStreaming(
+                fetch(wasm_url),
+                {
+                    capabilities: {
+                        host_clock(...args) {
+                            return mutable_wasm_caps.host_clock(...args);
+                        },
+                        host_print(...args) {
+                            return mutable_wasm_caps.host_print(...args);
+                        },
+                        host_log(...args) {
+                            return mutable_wasm_caps.host_log(...args);
+                        },
+                        host_timer(...args) {
+                            return mutable_wasm_caps.host_timer(...args);
+                        },
+                        host_read(...args) {
+                            return mutable_wasm_caps.host_write(...args);
+                        },
+                        host_write(...args) {
+                            return mutable_wasm_caps.host_write(...args);
+                        },
+                        host_awp(...args) {
+                            return mutable_wasm_caps.host_awp(...args);
+                        },
+                        host_trace(...args) {
+                            const trace = mutable_wasm_caps.host_trace;
+                            if (typeof trace === "function") {
+                                return trace(...args);
+                            }
+                        }
                     }
                 }
-            }
-        }
-    ).then(function (wasm) {
-        return make_core(
-            wasm.instance.exports,
-            on_wakeup,
-            on_warning,
-            mutable_wasm_caps
-        );
-    });
+            );
+        }),
+        requestorize(function (wasm) {
+            return make_core(
+                wasm.instance.exports,
+                on_wakeup,
+                on_warning,
+                mutable_wasm_caps
+            );
+        })
+    ]);
 }
 
 //debug import debug_device from "./devices/debug_device.js";
@@ -1342,45 +1360,43 @@ function instantiate_core(wasm_url, on_wakeup, on_warning) {
 //debug import blob_device from "./devices/blob_device.js";
 //debug import timer_device from "./devices/timer_device.js";
 //debug let core;
-//debug instantiate_core(
-//debug     import.meta.resolve(
-//debug         "../target/wasm32-unknown-unknown/debug/ufork_wasm.wasm"
+//debug parseq.sequence([
+//debug     instantiate_core(
+//debug         import.meta.resolve(
+//debug             "../target/wasm32-unknown-unknown/debug/ufork_wasm.wasm"
+//debug         ),
+//debug         function on_wakeup(device_offset) {
+//debug             console.log("WAKE:", device_offset);
+//debug             console.log("IDLE:", core.u_fault_msg(core.h_run_loop()));
+//debug         },
+//debug         console.log
 //debug     ),
-//debug     function on_wakeup(device_offset) {
-//debug         console.log("WAKE:", device_offset);
-//debug         console.log("IDLE:", core.u_fault_msg(core.h_run_loop()));
-//debug     },
-//debug     console.log
-//debug ).then(function (the_core) {
-//debug     core = the_core;
-//debug     // Install devices
-//debug     debug_device(core);
-//debug     clock_device(core);
-//debug     io_device(core);
-//debug     blob_device(core);
-//debug     timer_device(core);
-//debug     // Test suite
-//debug     console.log("u_fixnum(0) =", core.u_fixnum(0), core.u_fixnum(0).toString(16), core.u_print(core.u_fixnum(0)));
-//debug     console.log("u_fixnum(1) =", core.u_fixnum(1), core.u_fixnum(1).toString(16), core.u_print(core.u_fixnum(1)));
-//debug     console.log("u_fixnum(-1) =", core.u_fixnum(-1), core.u_fixnum(-1).toString(16), core.u_print(core.u_fixnum(-1)));
-//debug     console.log("u_fixnum(-2) =", core.u_fixnum(-2), core.u_fixnum(-2).toString(16), core.u_print(core.u_fixnum(-2)));
-//debug     console.log("h_rom_top() =", core.h_rom_top(), core.u_print(core.h_rom_top()));
-//debug     console.log("h_ram_top() =", core.h_ram_top(), core.u_print(core.h_ram_top()));
-//debug     console.log("u_ramptr(5) =", core.u_ramptr(5), core.u_print(core.u_ramptr(5)));
-//debug     console.log("u_ptr_to_cap(u_ramptr(3)) =", core.u_ptr_to_cap(core.u_ramptr(3)), core.u_print(core.u_ptr_to_cap(core.u_ramptr(3))));
-//debug     return core.h_import(
-//debug         import.meta.resolve("../lib/dev.asm")
-//debug     ).then(function (asm_module) {
+//debug     lazy(function (the_core) {
+//debug         core = the_core;
+//debug         // Install devices
+//debug         debug_device(core);
+//debug         clock_device(core);
+//debug         io_device(core);
+//debug         blob_device(core);
+//debug         timer_device(core);
+//debug         // Test suite
+//debug         console.log("u_fixnum(0) =", core.u_fixnum(0), core.u_fixnum(0).toString(16), core.u_print(core.u_fixnum(0)));
+//debug         console.log("u_fixnum(1) =", core.u_fixnum(1), core.u_fixnum(1).toString(16), core.u_print(core.u_fixnum(1)));
+//debug         console.log("u_fixnum(-1) =", core.u_fixnum(-1), core.u_fixnum(-1).toString(16), core.u_print(core.u_fixnum(-1)));
+//debug         console.log("u_fixnum(-2) =", core.u_fixnum(-2), core.u_fixnum(-2).toString(16), core.u_print(core.u_fixnum(-2)));
+//debug         console.log("h_rom_top() =", core.h_rom_top(), core.u_print(core.h_rom_top()));
+//debug         console.log("h_ram_top() =", core.h_ram_top(), core.u_print(core.h_ram_top()));
+//debug         console.log("u_ramptr(5) =", core.u_ramptr(5), core.u_print(core.u_ramptr(5)));
+//debug         console.log("u_ptr_to_cap(u_ramptr(3)) =", core.u_ptr_to_cap(core.u_ramptr(3)), core.u_print(core.u_ptr_to_cap(core.u_ramptr(3))));
+//debug         return core.h_import(import.meta.resolve("../lib/dev.asm"));
+//debug     }),
+//debug     requestorize(function (asm_module) {
 //debug         core.h_boot(asm_module.boot);
 //debug         const start = performance.now();
-//debug         const error_code = core.h_run_loop();
+//debug         console.log("IDLE:", core.u_fault_msg(core.h_run_loop()));
 //debug         const duration = performance.now() - start;
-//debug         console.log(
-//debug             error_code,
-//debug             core.u_fault_msg(error_code),
-//debug             duration.toFixed(3) + "ms"
-//debug         );
-//debug     });
-//debug });
+//debug         return duration.toFixed(3) + "ms";
+//debug     })
+//debug ])(console.log);
 
 export default Object.freeze(instantiate_core);

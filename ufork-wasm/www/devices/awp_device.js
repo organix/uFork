@@ -389,6 +389,22 @@ function awp_device(
 
         const {store, petname} = outbox[key][0];
         const cancel = transport.connect(
+            store.identity,
+            store.acquaintances[petname].name,
+            store.acquaintances[petname].address,
+            function on_receive(connection, frame_buffer) {
+                const frame = OED.decode(frame_buffer);
+                console.log("connect on_receive");
+                return receive(store, connection.name(), frame);
+            },
+            function on_close(connection, reason) {
+                console.log("connect on_close", reason);
+                return unregister(convo_key(
+                    store.name,
+                    connection.name()
+                ));
+            }
+        )(
             function connected_callback(connection, reason) {
                 delete opening[key];
                 if (connection === undefined) {
@@ -397,23 +413,6 @@ function awp_device(
                 } else {
                     console.log("connect open");
                     register(store, connection);
-                }
-            },
-            {
-                identity: store.identity,
-                name: store.acquaintances[petname].name,
-                address: store.acquaintances[petname].address,
-                on_receive(connection, frame_buffer) {
-                    const frame = OED.decode(frame_buffer);
-                    console.log("connect on_receive");
-                    return receive(store, connection.name(), frame);
-                },
-                on_close(connection, reason) {
-                    console.log("connect on_close", reason);
-                    return unregister(convo_key(
-                        store.name,
-                        connection.name()
-                    ));
                 }
             }
         );
@@ -630,6 +629,25 @@ function awp_device(
         setTimeout(function () {
             // TODO send cancel to cancel_customer
             const cancel = transport.listen(
+                store.identity,
+                store.bind_info,
+                function on_open(connection) {
+                    console.log("listen on_open");
+                    return register(store, connection);
+                },
+                function on_receive(connection, frame_buffer) {
+                    const frame = OED.decode(frame_buffer);
+                    console.log("listen on_receive");
+                    return receive(store, connection, frame);
+                },
+                function on_close(connection, reason) {
+                    console.log("listen on_close", reason);
+                    return unregister(convo_key(
+                        store.name,
+                        connection.name()
+                    ));
+                }
+            )(
                 function listening_callback(stop, reason) {
                     if (stop === undefined) {
                         console.log("listen fail", reason);
@@ -668,26 +686,6 @@ function awp_device(
                         x: core.UNDEF_RAW, // TODO safe_stop
                         y: core.NIL_RAW
                     }));
-                },
-                {
-                    identity: store.identity,
-                    bind_info: store.bind_info,
-                    on_open(connection) {
-                        console.log("listen on_open");
-                        return register(store, connection);
-                    },
-                    on_receive(connection, frame_buffer) {
-                        const frame = OED.decode(frame_buffer);
-                        console.log("listen on_receive");
-                        return receive(store, connection, frame);
-                    },
-                    on_close(connection, reason) {
-                        console.log("listen on_close", reason);
-                        return unregister(convo_key(
-                            store.name,
-                            connection.name()
-                        ));
-                    }
                 }
             );
             // TODO provide to cancel_customer
@@ -797,6 +795,8 @@ function awp_device(
 }
 
 //debug import parseq from "../parseq.js";
+//debug import lazy from "../requestors/lazy.js";
+//debug import requestorize from "../requestors/requestorize.js";
 //debug import instantiate_core from "../ufork.js";
 //debug import debug_device from "./debug_device.js";
 //debug const wasm_url = import.meta.resolve(
@@ -804,16 +804,8 @@ function awp_device(
 //debug );
 //debug let dispose;
 //debug let core;
-//debug function run_demo({transport, bob_address, carol_address, webcrypto}) {
-//debug     parseq.parallel([
-//debug         transport.generate_identity,
-//debug         transport.generate_identity,
-//debug         transport.generate_identity,
-//debug         transport.generate_identity
-//debug     ])(function callback(
-//debug         [alice_identity, bob_identity, carol_identity, dana_identity],
-//debug         ignore
-//debug     ) {
+//debug function demo({transport, bob_address, carol_address, webcrypto}) {
+//debug     return parseq.sequence([
 //debug         instantiate_core(
 //debug             wasm_url,
 //debug             function on_wakeup(device_offset) {
@@ -823,8 +815,26 @@ function awp_device(
 //debug                 ));
 //debug             },
 //debug             console.log
-//debug         ).then(function (the_core) {
-//debug             core = the_core;
+//debug         ),
+//debug         parseq.parallel([
+//debug             lazy(function (the_core) {
+//debug                 core = the_core;
+//debug                 return core.h_import(import.meta.resolve(
+//debug                     "../../lib/grant_matcher.asm"
+//debug                 ));
+//debug             }),
+//debug             transport.generate_identity(),
+//debug             transport.generate_identity(),
+//debug             transport.generate_identity(),
+//debug             transport.generate_identity()
+//debug         ]),
+//debug         requestorize(function ([
+//debug             asm_module,
+//debug             alice_identity,
+//debug             bob_identity,
+//debug             carol_identity,
+//debug             dana_identity
+//debug         ]) {
 //debug             const acquaintances = [
 //debug                 {
 //debug                     name: transport.identity_to_name(bob_identity),
@@ -861,16 +871,11 @@ function awp_device(
 //debug             ];
 //debug             debug_device(core);
 //debug             dispose = awp_device(core, transport, store, webcrypto);
-//debug             return core.h_import(
-//debug                 import.meta.resolve("../../lib/grant_matcher.asm")
-//debug             ).then(function (asm_module) {
-//debug                 core.h_boot(asm_module.boot);
-//debug                 console.log("IDLE:", core.u_fault_msg(
-//debug                     core.h_run_loop()
-//debug                 ));
-//debug             });
-//debug         });
-//debug     });
+//debug             core.h_boot(asm_module.boot);
+//debug             console.log("IDLE:", core.u_fault_msg(core.h_run_loop()));
+//debug             return true;
+//debug         })
+//debug     ]);
 //debug }
 
 // Browser demo.
@@ -878,12 +883,12 @@ function awp_device(
 //debug import dummy_signaller from "../transports/dummy_signaller.js";
 //debug import webrtc_transport from "../transports/webrtc_transport.js";
 //debug if (typeof window === "object") {
-//debug     run_demo({
+//debug     demo({
 //debug         transport: webrtc_transport(dummy_signaller(), console.log),
 //debug         bob_address: "ws://127.0.0.1:4455",
 //debug         carol_address: "ws://127.0.0.1:4455",
 //debug         webcrypto: crypto
-//debug     });
+//debug     })(console.log);
 //debug }
 
 // Node.js demo.
@@ -896,12 +901,12 @@ function awp_device(
 //debug         crypto_module,
 //debug         transport_module
 //debug     ]) {
-//debug         run_demo({
+//debug         demo({
 //debug             transport: transport_module.default(),
 //debug             bob_address: {host: "localhost", port: 5001},
 //debug             carol_address: {host: "localhost", port: 5002},
 //debug             webcrypto: crypto_module.webcrypto
-//debug         });
+//debug         })(console.log);
 //debug     });
 //debug }
 

@@ -1,10 +1,13 @@
 // Runs the distributed Grant Matcher demo on Node.js, using TLS to encrypt
 // communications.
 
-/*jslint node, long */
+/*jslint node */
 
 import crypto from "node:crypto";
 import instantiate_core from "../../www/ufork.js";
+import parseq from "../../www/parseq.js";
+import lazy from "../../www/requestors/lazy.js";
+import requestorize from "../../www/requestors/requestorize.js";
 import debug_device from "../../www/devices/debug_device.js";
 import awp_device from "../../www/devices/awp_device.js";
 import node_tls_transport from "../../www/transports/node_tls_transport.js";
@@ -59,29 +62,37 @@ const stores = {
     }
 };
 const store_name = process.argv[2];
+const origin = "http://localhost:7273";
 const asm_url = new URL(
     process.argv[3],
-    "http://localhost:7273/examples/grant_matcher/"
+    origin + "/examples/grant_matcher/"
 ).href;
 let core;
-function resume() {
-    console.log("IDLE", store_name, core.u_fault_msg(core.h_run_loop()));
-}
-instantiate_core(
-    "http://localhost:7273/target/wasm32-unknown-unknown/debug/ufork_wasm.wasm",
-    resume,
-    console.log
-).then(function (the_core) {
-    core = the_core;
-    debug_device(core);
-    awp_device(
-        core,
-        transport,
-        [stores[store_name]],
-        crypto.webcrypto
-    );
-    return core.h_import(asm_url).then(function (asm_module) {
+parseq.sequence([
+    instantiate_core(
+        origin + "/target/wasm32-unknown-unknown/debug/ufork_wasm.wasm",
+        function on_wakeup() {
+            console.log(
+                "IDLE",
+                store_name,
+                core.u_fault_msg(core.h_run_loop())
+            );
+        },
+        console.log
+    ),
+    lazy(function (the_core) {
+        core = the_core;
+        return core.h_import(asm_url);
+    }),
+    requestorize(function (asm_module) {
+        debug_device(core);
+        awp_device(
+            core,
+            transport,
+            [stores[store_name]],
+            crypto.webcrypto
+        );
         core.h_boot(asm_module.boot);
-        resume();
-    });
-});
+        return core.u_fault_msg(core.h_run_loop());
+    })
+])(console.log);

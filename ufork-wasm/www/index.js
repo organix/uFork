@@ -415,7 +415,7 @@ const pause_action = function () {
 function boot(module_specifier) {
     localStorage.setItem("boot", module_specifier);
     const module_url = new URL(module_specifier, window.location.href).href;
-    core.h_import(module_url).then(function (module) {
+    core.h_import(module_url)(function callback(module) {
         core.h_boot(module.boot);
         update_rom_monitor();
         draw_host();
@@ -590,15 +590,17 @@ function write_stdout(char) {
     }
 }
 
-function on_wakeup(device_offset) {
-    console.log("WAKE:", device_offset);
-    //console.log("IDLE:", core.u_fault_msg(core.h_run_loop()));
-}
 instantiate_core(
     "../target/wasm32-unknown-unknown/debug/ufork_wasm.wasm",
-    on_wakeup,
+    function on_wakeup(device_offset) {
+        console.log("WAKE:", device_offset);
+        single_step();
+    },
     console.log
-).then(function (the_core) {
+)(function callback(the_core, reason) {
+    if (the_core === undefined) {
+        throw reason;
+    }
     core = the_core;
 
     // install devices
@@ -606,8 +608,8 @@ instantiate_core(
     clock_device(core);
     io_device(core, read_stdin, write_stdout);
     blob_device(core);
-    timer_device(core, single_step);
-    awp_device(core, single_step);
+    timer_device(core);
+    awp_device(core);
 
     // draw initial state
     update_rom_monitor();

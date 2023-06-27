@@ -1,6 +1,9 @@
 /*jslint browser */
 
 import hex from "../../www/hex.js";
+import parseq from "../../www/parseq.js";
+import requestorize from "../../www/requestors/requestorize.js";
+import lazy from "../../www/requestors/lazy.js";
 import instantiate_core from "../../www/ufork.js";
 import debug_device from "../../www/devices/debug_device.js";
 import awp_device from "../../www/devices/awp_device.js";
@@ -24,13 +27,9 @@ function party(asm_url, acquaintance_names = []) {
         : "ws://"
     ) + location.host;
     const transport = webrtc_transport(websockets_signaller(), print);
-    transport.generate_identity(function (identity, reason) {
-        if (identity === undefined) {
-            return print(reason);
-        }
-        const name = transport.identity_to_name(identity);
-        print("Name", hex.encode(name));
-        let core;
+    let core;
+
+    return parseq.sequence([
         instantiate_core(
             import.meta.resolve(
                 "../../target/wasm32-unknown-unknown/debug/ufork_wasm.wasm"
@@ -39,36 +38,47 @@ function party(asm_url, acquaintance_names = []) {
                 print("IDLE:", core.u_fault_msg(core.h_run_loop()));
             },
             print
-        ).then(function (the_core) {
-            core = the_core;
+        ),
+        parseq.parallel([
+            lazy(function (the_core) {
+                core = the_core;
+                return core.h_import(asm_url);
+            }),
+            transport.generate_identity()
+        ]),
+        requestorize(function ([asm_module, identity]) {
+            const name = transport.identity_to_name(identity);
             debug_device(core, function (...args) {
                 print(...args);
-                const div = document.createElement("div");
-                div.textContent = "💸";
-                div.style.fontSize = "100px";
-                document.body.append(div);
-            });
-            awp_device(core, transport, [
-                {
-                    identity,
-                    name,
-                    address: signaller_url,
-                    bind_info: signaller_url,
-                    acquaintances: acquaintance_names.map(function (name) {
-                        return {
-                            name,
-                            address: signaller_url
-                        };
-                    })
+                if (args[0].startsWith("LOG:")) {
+                    const div = document.createElement("div");
+                    div.textContent = "💸";
+                    div.style.fontSize = "100px";
+                    document.body.append(div);
                 }
-            ]);
-            return core.h_import(asm_url).then(function (asm_module) {
-                core.h_boot(asm_module.boot);
-                print("IDLE:", core.u_fault_msg(core.h_run_loop()));
             });
-        }).catch(
-            print
-        );
+            awp_device(core, transport, [{
+                identity,
+                name,
+                address: signaller_url,
+                bind_info: signaller_url,
+                acquaintances: acquaintance_names.map(function (name) {
+                    return {
+                        name,
+                        address: signaller_url
+                    };
+                })
+            }]);
+            core.h_boot(asm_module.boot);
+            print("IDLE:", core.u_fault_msg(core.h_run_loop()));
+            return name;
+        })
+    ])(function callback(name, reason) {
+        if (name !== undefined) {
+            print("Name", hex.encode(name));
+        } else {
+            print(reason);
+        }
     });
 }
 

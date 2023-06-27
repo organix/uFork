@@ -36,8 +36,8 @@ const rx_token_raw = tag_regexp `
         [ a-z _ ? ]+
     )
   | (
-        -? [ 1-9 ] \d*
-      | 0
+        0
+      | -? [ 1-9 ] \d* (?: # [ a-z A-Z \d ]+ )?
     )
   | (
         "
@@ -49,9 +49,9 @@ const rx_token_raw = tag_regexp `
     )
   | (
         '
-        (
-            ( \\ [\\'btnr] )
-          | [ ^ \\' ]
+        (?:
+            \\ [ \\ ' b t n r ]
+          | [ ^ \\ ' ]
         )
         '
     )
@@ -68,17 +68,17 @@ const rx_token_raw = tag_regexp `
 //  [8] Punctuator
 //  [9] Character
 
-const char_esc = {
-    "\\\\": 0x5C,
-    "\\\'": 0x27,
-    "\\b":  0x08,
-    "\\t":  0x09,
-    "\\n":  0x0A,
-    "\\r":  0x0D,
+const escape_code_points = {
+    "\\": 0x5C,
+    "'": 0x27,
+    "b": 0x08,
+    "t": 0x09,
+    "n": 0x0A,
+    "r": 0x0D
 };
 
 function tokenize(source) {
-    let rx_token = new RegExp(rx_token_raw, "y"); // sticky
+    let rx_token = new RegExp(rx_token_raw, "yu"); // sticky, unicode aware
     let line_nr = 1;
     let column_to = 1;
     return function token_generator() {
@@ -150,7 +150,15 @@ function tokenize(source) {
             };
         }
         if (captives[6]) {
-            const number = parseInt(captives[6], 10);
+            let [base, digits] = captives[6].split("#");
+            if (digits === undefined) {
+                digits = base;
+                base = 10;
+            }
+            if (base < 0) {
+                return error();
+            }
+            const number = parseInt(digits, base);
             return (
                 Number.isSafeInteger(number)
                 ? {
@@ -182,18 +190,18 @@ function tokenize(source) {
             };
         }
         if (captives[9]) {
-            const char = captives[9].slice(1, -1);
-            const number = (
-                char.startsWith("\\")
-                ? char_esc[char]
-                : char.codePointAt(0)
+            const character = captives[9].slice(1, -1);
+            const code_point = (
+                character.startsWith("\\")
+                ? escape_code_points[character[1]]
+                : character.codePointAt(0)
             );
             return (
-                Number.isSafeInteger(number)
+                Number.isSafeInteger(code_point)
                 ? {
                     id: ":number:",
-                    number,
-                    text: char,
+                    number: code_point,
+                    text: character,
                     line_nr,
                     column_nr,
                     column_to
@@ -1013,6 +1021,49 @@ function assemble(source, file) {
 //     ref std.send_0
 // .export
 //     beh
+// `);
+
+// good("character literals", `
+// a:
+//     ref 'a'
+// b:
+//     ref '😀'
+// c:
+//     ref '\\n'
+// `);
+
+// bad("character escape", `
+// a:
+//     ref '\\x'
+// `);
+
+// bad("unescaped character literal", `
+// a:
+//     ref '''
+// `);
+
+// bad("too many characters", `
+// a:
+//     ref 'foo'
+// `);
+
+// good("non-decimal fixnums", `
+// hex:
+//     ref 16#0A
+// binary:
+//     ref 2#101010
+// `);
+
+// bad("malformed fixnums", `
+// hex:
+//     ref 16#ZZ
+// binary:
+//     ref 2#123
+// `);
+
+// bad("negative base", `
+// a:
+//     ref -16#A0
 // `);
 
 // bad("bad label", `
