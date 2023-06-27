@@ -36,8 +36,8 @@ const rx_token_raw = tag_regexp `
         [ a-z _ ? ]+
     )
   | (
-        -? [ 1-9 ] \d*
-      | 0
+        0
+      | -? [ 1-9 ] \d* (?: # [ a-z A-Z \d ]+ )?
     )
   | (
         "
@@ -150,7 +150,15 @@ function tokenize(source) {
             };
         }
         if (captives[6]) {
-            const number = parseInt(captives[6], 10);
+            let [base, digits] = captives[6].split("#");
+            if (digits === undefined) {
+                digits = base;
+                base = 10;
+            }
+            if (base < 0) {
+                return error();
+            }
+            const number = parseInt(digits, base);
             return (
                 Number.isSafeInteger(number)
                 ? {
@@ -1024,6 +1032,40 @@ function assemble(source, file) {
 //     ref '\\n'
 // `);
 
+// bad("character escape", `
+// a:
+//     ref '\\x'
+// `);
+
+// bad("unescaped character literal", `
+// a:
+//     ref '''
+// `);
+
+// bad("too many characters", `
+// a:
+//     ref 'foo'
+// `);
+
+// good("non-decimal fixnums", `
+// hex:
+//     ref 16#0A
+// binary:
+//     ref 2#101010
+// `);
+
+// bad("malformed fixnums", `
+// hex:
+//     ref 16#ZZ
+// binary:
+//     ref 2#123
+// `);
+
+// bad("negative base", `
+// a:
+//     ref -16#A0
+// `);
+
 // bad("bad label", `
 // ab$c:
 //     end commit
@@ -1141,21 +1183,6 @@ function assemble(source, file) {
 // bad("instruction at margin", `
 // a:
 // nth 5 a
-// `);
-
-// bad("character escape", `
-// a:
-//     ref '\\x'
-// `);
-
-// bad("unescaped character literal", `
-// a:
-//     ref '''
-// `);
-
-// bad("too many characters", `
-// a:
-//     ref 'foo'
 // `);
 
 // bad("directive indented", `
