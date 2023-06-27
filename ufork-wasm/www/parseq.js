@@ -1,6 +1,6 @@
 // parseq.js
 // Douglas Crockford
-// 2020-11-09
+// 2023-06-26
 
 // Better living thru eventuality!
 
@@ -40,7 +40,7 @@ function get_array_length(array, factory_name) {
 }
 
 function check_callback(callback, factory_name) {
-    if (typeof callback !== "function" || callback.length !== 2) {
+    if (typeof callback !== "function") {
         throw make_reason(factory_name, "Not a callback function.", callback);
     }
 }

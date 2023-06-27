@@ -186,22 +186,24 @@ function identity_to_name(private_key_object) {
     )).slice(1); // discard bit field's bit padding octet
 }
 
-function generate_identity_requestor(callback) {
-    try {
-        crypto.generateKeyPair(
-            "ed25519", // less NSA
-            undefined,
-            function (error, ignore, private_key_object) {
-                return (
-                    error
-                    ? callback(undefined, error)
-                    : callback(private_key_object)
-                );
-            }
-        );
-    } catch (exception) {
-        return callback(undefined, exception);
-    }
+function generate_identity() {
+    return function generate_identity_requestor(callback) {
+        try {
+            crypto.generateKeyPair(
+                "ed25519", // less NSA
+                undefined,
+                function (error, ignore, private_key_object) {
+                    return (
+                        error
+                        ? callback(undefined, error)
+                        : callback(private_key_object)
+                    );
+                }
+            );
+        } catch (exception) {
+            return callback(undefined, exception);
+        }
+    };
 }
 
 function make_consumer(socket, connection, on_receive, on_close) {
@@ -227,116 +229,44 @@ function make_consumer(socket, connection, on_receive, on_close) {
     };
 }
 
-function listen_requestor(
-    callback,
-    {identity, bind_info, on_open, on_receive, on_close}
-) {
-    let cancelled = false;
-    let server;
-    let connections = [];
-    let reason;
+function listen(identity, bind_info, on_open, on_receive, on_close) {
+    return function listen_requestor(callback) {
+        let cancelled = false;
+        let server;
+        let connections = [];
+        let reason;
 
-    function stop() {
-        connections.forEach(function (connection) {
-            connection.close();
-        });
-        connections = [];
-        server.close();
-    }
-
-    try {
-        const {host, port} = bind_info;
-        server = tls.createServer({
-            key: identity.export({type: "pkcs8", format: "pem"}),
-            cert: get_certificate_pem(identity),
-            rejectUnauthorized: false,
-            requestCert: true,
-            minVersion: min_tls_version,
-            ciphers
-        });
-        server.on("secureConnection", function (socket) {
-            let destroyed = false;
-            const certificate = socket.getPeerCertificate();
-            const connection = Object.freeze({
-                send(frame) {
-
-// The frame buffer is encoded as a Raw BLOB with a leading length, used by the
-// receiver to distinguish separate frames.
-
-                    socket.write(oed.encode(frame));
-                },
-                name() {
-                    return new Uint8Array(cert_to_pub(certificate.raw));
-                },
-                close() {
-                    destroyed = true;
-                    socket.destroy();
-                }
+        function stop() {
+            connections.forEach(function (connection) {
+                connection.close();
             });
-            socket.on("data", make_consumer(
-                socket,
-                connection,
-                on_receive,
-                on_close
-            ));
-            socket.once("tlsClientError", function (error) {
-                reason = error;
-            });
-            socket.once("error", function (error) {
-                reason = error;
-            });
-            socket.once("close", function () {
-                connections = connections.filter(function (the_conn) {
-                    return the_conn !== connection;
-                });
-                if (!destroyed) {
-                    on_close(connection, reason);
-                }
-            });
-            connections.push(connection);
-            on_open(connection);
-        });
-        server.listen(port, host, function on_listening() {
-            if (cancelled) {
-                return server.close();
-            }
-            callback(stop);
-        });
-        return function cancel() {
-            cancelled = true;
-        };
-    } catch (exception) {
-        callback(undefined, exception);
-    }
-}
+            connections = [];
+            server.close();
+        }
 
-function connect_requestor(
-    callback,
-    {identity, name, address, on_receive, on_close}
-) {
-    let socket;
-    let destroyed = false; // socket.destroyed === true on ECONNREFUSED
-    let connection;
-    let reason;
-    try {
-        const {host, port} = address;
-        socket = tls.connect({
-            port,
-            host,
-            key: identity.export({type: "pkcs8", format: "pem"}),
-            cert: get_certificate_pem(identity),
-            rejectUnauthorized: false,
-            minVersion: min_tls_version,
-            ciphers
-        }, function on_secure_connection() {
-            const certificate = socket.getPeerCertificate();
-            if (cert_to_pub(certificate.raw).equals(name)) {
-                connection = Object.freeze({
+        try {
+            const {host, port} = bind_info;
+            server = tls.createServer({
+                key: identity.export({type: "pkcs8", format: "pem"}),
+                cert: get_certificate_pem(identity),
+                rejectUnauthorized: false,
+                requestCert: true,
+                minVersion: min_tls_version,
+                ciphers
+            });
+            server.on("secureConnection", function (socket) {
+                let destroyed = false;
+                const certificate = socket.getPeerCertificate();
+                const connection = Object.freeze({
                     send(frame) {
+
+// OED encoding the frame buffer simply prefixes it with a length, used by the
+// receiver to tease frames out of the octet stream.
+
                         socket.write(oed.encode(frame));
                     },
                     name() {
-                        return name;
+                        return new Uint8Array(cert_to_pub(certificate.raw));
                     },
                     close() {
                         destroyed = true;
@@ -349,120 +279,190 @@ function connect_requestor(
                     on_receive,
                     on_close
                 ));
-                callback(connection);
-                callback = undefined;
-            } else {
-                destroyed = true;
-                socket.destroy();
-                callback(undefined, "Unexpected public key.");
-                callback = undefined;
-            }
-        });
-        socket.once("error", function (error) {
-            reason = error;
-        });
-        socket.once("close", function () {
-            if (!destroyed) {
-                if (callback !== undefined) {
-                    callback(undefined, reason);
+                socket.once("tlsClientError", function (error) {
+                    reason = error;
+                });
+                socket.once("error", function (error) {
+                    reason = error;
+                });
+                socket.once("close", function () {
+                    connections = connections.filter(function (the_conn) {
+                        return the_conn !== connection;
+                    });
+                    if (!destroyed) {
+                        on_close(connection, reason);
+                    }
+                });
+                connections.push(connection);
+                on_open(connection);
+            });
+            server.listen(port, host, function on_listening() {
+                if (cancelled) {
+                    return server.close();
+                }
+                callback(stop);
+            });
+            return function cancel() {
+                cancelled = true;
+            };
+        } catch (exception) {
+            callback(undefined, exception);
+        }
+    };
+}
+
+function connect(identity, name, address, on_receive, on_close) {
+    return function connect_requestor(callback) {
+        let socket;
+        let destroyed = false; // socket.destroyed === true on ECONNREFUSED
+        let connection;
+        let reason;
+        try {
+            const {host, port} = address;
+            socket = tls.connect({
+                port,
+                host,
+                key: identity.export({type: "pkcs8", format: "pem"}),
+                cert: get_certificate_pem(identity),
+                rejectUnauthorized: false,
+                minVersion: min_tls_version,
+                ciphers
+            }, function on_secure_connection() {
+                const certificate = socket.getPeerCertificate();
+                if (cert_to_pub(certificate.raw).equals(name)) {
+                    connection = Object.freeze({
+                        send(frame) {
+                            socket.write(oed.encode(frame));
+                        },
+                        name() {
+                            return name;
+                        },
+                        close() {
+                            destroyed = true;
+                            socket.destroy();
+                        }
+                    });
+                    socket.on("data", make_consumer(
+                        socket,
+                        connection,
+                        on_receive,
+                        on_close
+                    ));
+                    callback(connection);
                     callback = undefined;
                 } else {
-                    on_close(connection, reason);
+                    destroyed = true;
+                    socket.destroy();
+                    callback(undefined, "Unexpected public key.");
+                    callback = undefined;
                 }
-            }
-        });
-        return function cancel() {
-            if (callback !== undefined) {
-                destroyed = true;
-                socket.destroy();
-            }
-        };
-    } catch (exception) {
-        callback(undefined, exception);
-    }
+            });
+            socket.once("error", function (error) {
+                reason = error;
+            });
+            socket.once("close", function () {
+                if (!destroyed) {
+                    if (callback !== undefined) {
+                        callback(undefined, reason);
+                        callback = undefined;
+                    } else {
+                        on_close(connection, reason);
+                    }
+                }
+            });
+            return function cancel() {
+                if (callback !== undefined) {
+                    destroyed = true;
+                    socket.destroy();
+                }
+            };
+        } catch (exception) {
+            callback(undefined, exception);
+        }
+    };
 }
 
 function node_tls_transport() {
     return Object.freeze({
-        listen: listen_requestor,
-        connect: connect_requestor,
-        generate_identity: generate_identity_requestor,
+        listen,
+        connect,
+        generate_identity,
         identity_to_name
     });
 }
 
 //debug import hex from "../hex.js";
 //debug import parseq from "../parseq.js";
+//debug import lazy from "../requestors/lazy.js";
+//debug import pair from "../requestors/pair.js";
+//debug import requestorize from "../requestors/requestorize.js";
 //debug function halve(buffer) {
 //debug     return new Uint8Array(buffer).slice(
 //debug         0,
 //debug         Math.floor(buffer.length / 2)
 //debug     );
 //debug }
-//debug parseq.parallel(
-//debug     [generate_identity_requestor, generate_identity_requestor]
-//debug )(function ([alice_identity, bob_identity], ignore) {
-//debug     const bob_address = {host: "localhost", port: 4444};
-//debug     const flake = 0;
-//debug     function connect_callback(connection, reason) {
-//debug         if (connection === undefined) {
-//debug             return console.log("alice failed", reason);
+//debug const bob_address = {host: "localhost", port: 4444};
+//debug const flake = 0;
+//debug const cancel = parseq.sequence([
+//debug     generate_identity(),
+//debug     pair(lazy(function (bob_identity) {
+//debug         return listen(
+//debug             bob_identity,
+//debug             bob_address,
+//debug             function on_open(connection) {
+//debug                 console.log(
+//debug                     "bob on_open",
+//debug                     hex.encode(connection.name())
+//debug                 );
+//debug             },
+//debug             function on_receive(connection, frame_buffer) {
+//debug                 console.log("bob on_receive", frame_buffer);
+//debug                 if (frame_buffer.length > 0) {
+//debug                     connection.send(halve(frame_buffer));
+//debug                 } else {
+//debug                     connection.close();
+//debug                 }
+//debug             },
+//debug             function on_close(ignore, reason) {
+//debug                 console.log("bob on_close", reason);
+//debug             }
+//debug         );
+//debug     })),
+//debug     requestorize(function maybe_stop([stop, bob_identity]) {
+//debug         if (Math.random() < flake) {
+//debug             console.log("bob stop");
+//debug             stop();
 //debug         }
-//debug         console.log("alice on_open", hex.encode(connection.name()));
-//debug         connection.send(new Uint8Array(1e5));
-//debug     }
-//debug     function listen_callback(stop, reason) {
-//debug         if (stop === undefined) {
-//debug             return console.log("bob failed", reason);
-//debug         }
-//debug         console.log("bob listening");
-//debug         const cancel_connect = connect_requestor(connect_callback, {
-//debug             identity: alice_identity,
-//debug             name: identity_to_name(bob_identity),
-//debug             address: bob_address,
-//debug             on_receive(connection, frame_buffer) {
+//debug         return identity_to_name(bob_identity);
+//debug     }),
+//debug     pair(generate_identity()),
+//debug     lazy(function ([alice_identity, bob_name]) {
+//debug         return connect(
+//debug             alice_identity,
+//debug             bob_name,
+//debug             bob_address,
+//debug             function on_receive(connection, frame_buffer) {
 //debug                 console.log("alice on_receive", frame_buffer);
 //debug                 if (frame_buffer.length > 0) {
 //debug                     connection.send(halve(frame_buffer));
 //debug                 } else {
 //debug                     connection.close();
 //debug                 }
-//debug                 if (Math.random() < flake) {
-//debug                     console.log("bob stop");
-//debug                     stop();
-//debug                 }
 //debug             },
-//debug             on_close(ignore, reason) {
+//debug             function on_close(ignore, reason) {
 //debug                 console.log("alice on_close", reason);
 //debug             }
-//debug         });
-//debug         if (Math.random() < flake) {
-//debug             console.log("alice cancel");
-//debug             cancel_connect();
-//debug         }
-//debug     }
-//debug     const cancel_listen = listen_requestor(listen_callback, {
-//debug         identity: bob_identity,
-//debug         bind_info: bob_address,
-//debug         on_open(connection) {
-//debug             console.log("bob on_open", hex.encode(connection.name()));
-//debug         },
-//debug         on_receive(connection, frame_buffer) {
-//debug             console.log("bob on_receive", frame_buffer);
-//debug             if (frame_buffer.length > 0) {
-//debug                 connection.send(halve(frame_buffer));
-//debug             } else {
-//debug                 connection.close();
-//debug             }
-//debug         },
-//debug         on_close(ignore, reason) {
-//debug             console.log("bob on_close", reason);
-//debug         }
-//debug     });
-//debug     if (Math.random() < flake) {
-//debug         console.log("bob cancel");
-//debug         cancel_listen();
-//debug     }
-//debug });
+//debug         );
+//debug     }),
+//debug     requestorize(function send_message(connection) {
+//debug         console.log("alice on_open", hex.encode(connection.name()));
+//debug         connection.send(new Uint8Array(1e5));
+//debug     })
+//debug ])(console.log);
+//debug if (Math.random() < flake) {
+//debug     console.log("cancel");
+//debug     cancel();
+//debug }
 
 export default Object.freeze(node_tls_transport);

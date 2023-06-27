@@ -17,7 +17,6 @@ start_server(
     {hostname, port: Number(port_string)},
     console.log,
     function on_unhandled_request(request, respond_with) {
-
         const {pathname} = new URL(request.url);
         const extension = pathname.split(".").pop();
 

@@ -23,16 +23,16 @@ authenticating remote parties and encrypting frame traffic. Note that network
 addresses are used solely for routing, and should not be relied upon for
 security.
 
-Underlying transports provide an interface made up of two requestor functions
+Underlying transports provide an interface made up of two requestor factories
 (see https://github.com/douglascrockford/parseq), `connect` and `listen`.
 
-The transport interface may also have a `generate_identity` requestor function
+The transport interface may also have a `generate_identity` requestor factory
 that produces new identities, and an `identity_to_name` function that takes an
 identity and returns the corresponding name.
 
 #### Connecting
 
-The `connect` requestor takes an object with the following properties:
+The `connect` requestor factory takes the following parameters:
 
     identity
         Used to prove ownership of the local party's name and secure the
@@ -66,15 +66,16 @@ The `connect` requestor takes an object with the following properties:
         A function that is called when the connection closes. If the connection
         failed, the 'reason' parameter explains why, otherwise it is undefined.
 
-It produces a connection object like that described for `on_receive`, and may
-return a `cancel` function that cancels the connect attempt.
+The returned requestor produces a connection object like that described for
+`on_receive`, and may return a `cancel` function that cancels the connect
+attempt.
 
 Once closed or cancelled, the `on_receive`, and `on_close` functions are not
 called again.
 
 #### Listening
 
-The `listen` requestor takes an object with the following properties:
+The `listen` requestor factory takes the following parameters:
 
     identity
         Used to prove ownership of the local party's name and secure the
@@ -98,8 +99,8 @@ The `listen` requestor takes an object with the following properties:
         A function that is called when a connection is closed. If the connection
         failed, the 'reason' parameter should explain why.
 
-It produces a `stop` function that stops listening when called, and may return a
-`cancel` function that cancels the listen attempt.
+The returned requestor produces a `stop` function that stops listening when
+called, and may return a `cancel` function that cancels the listen attempt.
 
 Once stopped or cancelled, the `on_open`, `on_receive`, and `on_close` callbacks
 are not called again.

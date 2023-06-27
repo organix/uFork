@@ -41,7 +41,7 @@ function websockets_signaller() {
                 const {from, message} = JSON.parse(event.data);
                 on_receive(hex.decode(from), message);
             };
-            // TODO autoreconnect
+            // TODO autoreconnect?
             socket.onclose = function (event) {
                 if (connection !== undefined) {
                     if (on_close !== undefined) {
