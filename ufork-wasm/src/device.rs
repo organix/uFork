@@ -246,6 +246,9 @@ let buf = new Uint8Array([              // buffer (9 + 22 = 31 octets)
 */
 fn blob_reserve(core: &mut Core, size: Any) -> Result<Any, Error> {
     let mut need = size.get_fix()? as usize;
+    if need > 0xFFFF_FFF0 {
+        return Err(E_BOUNDS);  // ~64K maximum allocation
+    }
     if need < 4 {
         need = 4;  // minimum allocation is 4 octets
     }
@@ -281,25 +284,106 @@ fn blob_reserve(core: &mut Core, size: Any) -> Result<Any, Error> {
     }
     Err(E_NO_MEM)  // BLOB memory exhausted
 }
+fn blob_size(core: &Core, handle: Any) -> Result<Any, Error> {
+    let pos = handle.get_fix()?;
+    let top = core.blob_top().get_fix()?;
+    if (pos < 5) || (pos >= top) {
+        return Err(E_BOUNDS);
+    }
+    let base = pos as usize;
+    let len = get_u16(core, base - 4);
+    Ok(Any::fix(len as isize))
+}
+fn blob_read(core: &Core, handle: Any, ofs: Any) -> Result<Any, Error> {
+    let pos = handle.get_fix()?;
+    let top = core.blob_top().get_fix()?;
+    if (pos < 5) || (pos >= top) {
+        return Err(E_BOUNDS);
+    }
+    let base = pos as usize;
+    let len = get_u16(core, base - 4);
+    let ofs = ofs.get_fix()? as usize;
+    if ofs >= len {
+        return Ok(UNDEF);
+    }
+    let byte = core.blob_read(base + ofs);
+    Ok(Any::fix(byte as isize))
+}
+fn blob_write(core: &mut Core, handle: Any, ofs: Any, val: Any) -> Result<Any, Error> {
+    let pos = handle.get_fix()?;
+    let top = core.blob_top().get_fix()?;
+    if (pos < 5) || (pos >= top) {
+        return Err(E_BOUNDS);
+    }
+    let base = pos as usize;
+    let len = get_u16(core, base - 4);
+    let ofs = ofs.get_fix()? as usize;
+    if ofs < len {
+        let byte = val.get_fix()? as u8;
+        core.blob_write(base + ofs, byte);
+    }
+    Ok(UNIT)
+}
 pub struct BlobDevice {}
 impl BlobDevice {
     pub fn new() -> BlobDevice {
         BlobDevice {}
     }
 }
+/*
+    The `BlobDevice` manages dynamically-allocated byte-arrays.
+    There is a moderate (~64K maximum) allocation size limit.
+    Each allocation is an actor/capability that implements
+    random-access byte _read_ and _write_ requests.
+
+    A _size_ request looks like `(customer)`.
+    The number of bytes in this allocation
+    is sent to the `customer` as a fixnum.
+
+    A _read_ request looks like `(customer offset)`.
+    The byte value at `offset` is sent to the `customer`.
+    If `offset` is out of bounds, the value is `#?`.
+
+    A _write_ request looks like `(customer offset value)`.
+    The byte `value` is written at `offset`,
+    and `#unit` is sent to the `customer`.
+    If `offset` is out of bounds, the write has no effect.
+*/
 impl Device for BlobDevice {
     fn handle_event(&mut self, core: &mut Core, ep: Any) -> Result<bool, Error> {
         let event = core.mem(ep);
         let sponsor = event.t();
-        let dev = event.x();
-        let msg = event.y();  // (cust size)
-        let cust = core.nth(msg, PLUS_1);
-        let size = core.nth(msg, PLUS_2);
-        let handle = blob_reserve(core, size)?;
-        let proxy = Quad::proxy_t(dev, handle);
-        let ptr = core.reserve(&proxy)?;  // no Sponsor needed
-        let cap = core.ptr_to_cap(ptr);
-        core.event_inject(sponsor, cust, cap)?;
+        let target = event.x();
+        let myself = core.ram(core.cap_to_ptr(target));
+        if myself.t() == PROXY_T {
+            // request to allocated blob
+            let _dev = myself.x();
+            let handle = myself.y();
+            let msg = event.y();  // (cust) | (cust ofs) | (cust ofs val)
+            let cust = core.nth(msg, PLUS_1);
+            let ofs: Any = core.nth(msg, PLUS_2);
+            let val: Any = core.nth(msg, PLUS_3);
+            if ofs == UNDEF {  // size request
+                let size = blob_size(core, handle)?;
+                core.event_inject(sponsor, cust, size)?;
+            } else if val == UNDEF {  // read request
+                let data = blob_read(core, handle, ofs)?;
+                core.event_inject(sponsor, cust, data)?;
+            } else {  // write request
+                let unit = blob_write(core, handle, ofs, val)?;
+                core.event_inject(sponsor, cust, unit)?;
+            }
+        } else {
+            // request to allocator
+            let msg = event.y();  // (cust size)
+            let cust = core.nth(msg, PLUS_1);
+            let size = core.nth(msg, PLUS_2);
+            let handle = blob_reserve(core, size)?;
+            let proxy = Quad::proxy_t(target, handle);
+            let ptr = core.reserve(&proxy)?;  // no Sponsor needed
+            let cap = core.ptr_to_cap(ptr);
+            core.event_inject(sponsor, cust, cap)?;
+        }
         Ok(true)  // event handled.
     }
 }

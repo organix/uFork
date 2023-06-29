@@ -86,7 +86,7 @@ boot:                   ; () <- {caps}
 
     ref std.commit
 
-count:
+count:                  ; () <- n
     msg 0               ; n
     dup 1               ; n n
     eq 0                ; n n==0

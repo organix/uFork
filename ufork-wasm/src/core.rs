@@ -1188,13 +1188,17 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
     pub fn typeq(&self, typ: Any, val: Any) -> bool {
         if typ == FIXNUM_T {
             val.is_fix()
-        } else if typ == ACTOR_T {
+        } else if (typ == ACTOR_T) || (typ == PROXY_T) {
             if val.is_cap() {
                 // NOTE: we don't use `cap_to_ptr` here to avoid the type assertion.
                 let raw = val.raw() & !OPQ_RAW;  // WARNING: converting Cap to Ptr!
                 let ptr = Any::new(raw);
                 let t = self.mem(ptr).t();
-                (t == ACTOR_T) || (t == PROXY_T)  // proxies count as actors for message addressing
+                if typ == ACTOR_T {
+                    (t == ACTOR_T) || (t == PROXY_T)  // proxies count as actors for message addressing
+                } else {
+                    t == PROXY_T
+                }
             } else {
                 false
             }
