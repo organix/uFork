@@ -196,8 +196,8 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
             assert_eq!(ep, ep_);
             let mut dev_mut = self.device[id].take().unwrap();
             let result = dev_mut.handle_event(self, ep);
-            trace_event(ep, UNDEF);  // trace transactional effect(s)
             self.device[id] = Some(dev_mut);
+            trace_event(ep, UNDEF);  // trace transactional effect(s)
             result  // should normally be Ok(true)
         } else {
             let a_ptr = self.cap_to_ptr(target);
@@ -1385,7 +1385,17 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
             let color = self.gc_queue[ofs];
             if color == UNDEF {  // still "white"
                 let ptr = Any::ram(ofs);
-                if self.ram(ptr).t() != FREE_T {  // not already free
+                let t = self.ram(ptr).t();
+                if t == PROXY_T {
+                    // drop proxy
+                    if let Ok(id) = self.device_id(ptr) {
+                        let mut dev_mut = self.device[id].take().unwrap();
+                        let cap = self.ptr_to_cap(ptr);
+                        dev_mut.drop_proxy(cap);
+                        self.device[id] = Some(dev_mut);
+                    }
+                }
+                if t != FREE_T {  // not already free
                     // add to free-list
                     self.release(ptr);
                 }

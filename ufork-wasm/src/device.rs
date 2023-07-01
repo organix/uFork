@@ -4,7 +4,7 @@ use crate::*;
 
 pub trait Device {
     fn handle_event(&mut self, core: &mut Core, ep: Any) -> Result<bool, Error>;
-    fn drop_proxy(&mut self, _ptr: Any) {}  // default: no-op
+    fn drop_proxy(&mut self, _cap: Any) {}  // default: no-op
 }
 
 pub struct NullDevice {}
@@ -385,6 +385,18 @@ impl Device for BlobDevice {
             core.event_inject(sponsor, cust, cap)?;
         }
         Ok(true)  // event handled.
+    }
+    #[cfg(target_arch = "wasm32")]
+    fn drop_proxy(&mut self, proxy: Any) {
+        let raw = proxy.raw();
+        unsafe {
+            crate::host_log(raw);
+        }
+    }
+    #[cfg(not(target_arch = "wasm32"))]
+    fn drop_proxy(&mut self, proxy: Any) {
+        let raw = proxy.raw();
+        let _dev = raw & !MSK_RAW;
     }
 }
 
