@@ -804,7 +804,14 @@ function awp_device(
 //debug );
 //debug let dispose;
 //debug let core;
-//debug function demo({transport, bob_address, carol_address, webcrypto}) {
+//debug function demo({
+//debug     transport,
+//debug     bob_address,
+//debug     bob_bind_info = bob_address,
+//debug     carol_address,
+//debug     carol_bind_info = carol_address,
+//debug     webcrypto
+//debug }) {
 //debug     return parseq.sequence([
 //debug         instantiate_core(
 //debug             wasm_url,
@@ -855,13 +862,13 @@ function awp_device(
 //debug                     identity: bob_identity,
 //debug                     name: transport.identity_to_name(bob_identity),
 //debug                     address: bob_address,
-//debug                     bind_info: bob_address
+//debug                     bind_info: bob_bind_info
 //debug                 },
 //debug                 {
 //debug                     identity: carol_identity,
 //debug                     name: transport.identity_to_name(carol_identity),
 //debug                     address: carol_address,
-//debug                     bind_info: carol_address
+//debug                     bind_info: carol_bind_info
 //debug                 },
 //debug                 {
 //debug                     identity: dana_identity,
@@ -885,8 +892,10 @@ function awp_device(
 //debug if (typeof window === "object") {
 //debug     demo({
 //debug         transport: webrtc_transport(dummy_signaller(), console.log),
-//debug         bob_address: "ws://127.0.0.1:4455",
-//debug         carol_address: "ws://127.0.0.1:4455",
+//debug         bob_address: "connect:?name=bob",
+//debug         bob_bind_info: "listen:?name=bob",
+//debug         carol_address: "connect:?name=carol",
+//debug         carol_bind_info: "listen:?name=carol",
 //debug         webcrypto: crypto
 //debug     })(console.log);
 //debug }

@@ -2,91 +2,155 @@
 
 /*jslint browser */
 
-import hex from "../hex.js";
-
 function delay(callback, ...args) {
-    const timer = setTimeout(callback, 50 * Math.random(), ...args);
+    const timer = setTimeout(callback, 500 * Math.random(), ...args);
     return function cancel() {
         clearTimeout(timer);
     };
 }
 
-function dummy_signaller() {
-    const registrations = Object.create(null);
-    return function dummy_signaller_requestor(callback, spec) {
+function make_queue() {
 
 // Signalling messages must be delivered in order, for example an offer must
 // preceed a related ICE candidate.
 
-        let queue = [];
+    let array = [];
 
-        function dequeue() {
-            const [handler, ...args] = queue.shift();
-            handler(...args);
-        }
+    function dequeue() {
+        const [handler, ...args] = array.shift();
+        handler(...args);
+    }
 
-        function enqueue(handler, ...args) {
-            queue.push([handler, ...args]);
-            delay(dequeue);
-        }
-
-        const local_key = hex.encode(spec.name) + ":" + spec.address;
-        const connection = Object.freeze({
-            send(to, message) {
-                const remote_key = hex.encode(to) + ":" + spec.address;
-                enqueue(function () {
-                    if (registrations[remote_key] !== undefined) {
-                        registrations[remote_key].forEach(
-                            (on_receive) => on_receive(spec.name, message)
-                        );
-                    }
-                });
-            },
-            close() {
-                registrations[local_key] = registrations[local_key].filter(
-                    (on_receive) => on_receive !== spec.on_receive
-                );
-            }
-        });
-
-        delay(function () {
-            if (registrations[local_key] === undefined) {
-                registrations[local_key] = [];
-            }
-            registrations[local_key].push(spec.on_receive);
-            callback(connection);
-        });
+    return function enqueue(handler, ...args) {
+        array.push([handler, ...args]);
+        delay(dequeue);
     };
 }
 
-//debug const signaller_requestor = dummy_signaller();
-//debug let bob_connection;
-//debug signaller_requestor(
-//debug     function (connection, ignore) {
-//debug         console.log("bob connected");
-//debug         bob_connection = connection;
-//debug         bob_connection.send(new Uint8Array([1, 1]), "hi alice");
+function dummy_signaller() {
+    const listeners = Object.create(null);
+    const connectors = Object.create(null);
+    let next_session_id = 0;
+
+    function forward_to_listener(name, session_id, signal) {
+        const on_receive_array = listeners[name];
+        if (on_receive_array !== undefined) {
+            on_receive_array.forEach(function (on_receive) {
+                on_receive(session_id, signal);
+            });
+        }
+    }
+
+    function forward_to_connector(session_id, signal) {
+        const on_receive = connectors[session_id];
+        if (on_receive !== undefined) {
+            on_receive(signal);
+        }
+    }
+
+    function connect(address, on_receive) {
+        return function connect_requestor(callback, offer) {
+            delay(function () {
+                const name = new URL(address).searchParams.get("name");
+                const session_id = String(next_session_id);
+                next_session_id += 1;
+                connectors[session_id] = on_receive;
+                const enqueue = make_queue();
+                enqueue(
+                    forward_to_listener,
+                    name,
+                    session_id,
+                    offer
+                );
+                callback(Object.freeze({
+                    send(signal) {
+                        enqueue(
+                            forward_to_listener,
+                            name,
+                            session_id,
+                            signal
+                        );
+                    },
+                    stop() {
+                        delete connectors[session_id];
+                    }
+                }));
+            });
+        };
+    }
+
+    function listen(bind_info, on_receive) {
+        return function listen_requestor(callback) {
+            delay(function () {
+                const name = new URL(bind_info).searchParams.get("name");
+                if (listeners[name] === undefined) {
+                    listeners[name] = [];
+                }
+                listeners[name].push(on_receive);
+                const enqueue = make_queue();
+                callback(Object.freeze({
+                    send(session_id, signal) {
+                        enqueue(
+                            forward_to_connector,
+                            session_id,
+                            signal
+                        );
+                    },
+                    stop() {
+                        listeners[name] = listeners[name].filter(
+                            function (element) {
+                                return element !== on_receive;
+                            }
+                        );
+                    }
+                }));
+            });
+        };
+    }
+
+    return Object.freeze({connect, listen});
+}
+
+//debug const signaller = dummy_signaller();
+//debug const bob_bind_info = "listen:?name=bob";
+//debug const bob_address = "connect:?name=bob";
+//debug let alice_connector;
+//debug signaller.connect(
+//debug     bob_address,
+//debug     function on_receive(message) {
+//debug         console.log("alice on_receive", message);
+//debug     }
+//debug )(
+//debug     function (connector, reason) {
+//debug         console.log("alice connected", reason);
+//debug         alice_connector = connector;
+//debug         alice_connector.send({
+//debug             candidate: "Alice's ICE."
+//debug         });
 //debug     },
-//debug     {
-//debug         name: new Uint8Array([2, 2]),
-//debug         on_receive(from, message) {
-//debug             console.log("bob on_receive", from, message);
+//debug     {type: "offer", sdp: "Alice's offer."}
+//debug );
+//debug let bob_listener;
+//debug signaller.listen(
+//debug     bob_bind_info,
+//debug     function on_receive(session_id, message) {
+//debug         console.log("bob on_receive", session_id, message);
+//debug         if (message.type === "offer") {
+//debug             bob_listener.send(session_id, {
+//debug                 type: "answer",
+//debug                 sdp: "Bob's answer."
+//debug             });
+//debug         } else {
+//debug             bob_listener.send(session_id, {
+//debug                 candidate: "Bob's ICE."
+//debug             });
 //debug         }
 //debug     }
-//debug );
-//debug let alice_connection;
-//debug signaller_requestor(
-//debug     function (connection, ignore) {
-//debug         console.log("alice connected");
-//debug         alice_connection = connection;
-//debug         alice_connection.send(new Uint8Array([2, 2]), "hi bob");
-//debug     },
-//debug     {
-//debug         name: new Uint8Array([1, 1]),
-//debug         on_receive(from, message) {
-//debug             console.log("alice on_receive", from, message);
-//debug         }
-//debug     }
-//debug );
+//debug )(function (listener, reason) {
+//debug     console.log("bob listening", reason);
+//debug     bob_listener = listener;
+//debug });
+//debug // bob_listener.stop();
+//debug // alice_connector.stop();
 
 export default Object.freeze(dummy_signaller);
