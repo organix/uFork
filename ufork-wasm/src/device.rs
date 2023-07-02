@@ -4,7 +4,7 @@ use crate::*;
 
 pub trait Device {
     fn handle_event(&mut self, core: &mut Core, ep: Any) -> Result<bool, Error>;
-    fn drop_proxy(&mut self, _cap: Any) {}  // default: no-op
+    fn drop_proxy(&mut self, _core: &mut Core, _cap: Any) {}  // default: no-op
 }
 
 pub struct NullDevice {}
@@ -284,6 +284,56 @@ fn blob_reserve(core: &mut Core, size: Any) -> Result<Any, Error> {
     }
     Err(E_NO_MEM)  // BLOB memory exhausted
 }
+fn blob_release(core: &mut Core, handle: Any) -> Result<(), Error> {
+    let pos = (handle.get_fix()? - 5) as usize;
+    let count = get_u16(core, 1);  // get number of Array elements
+    let size = get_u16(core, 5);  // get Array size in octets
+    if (pos < 9) || (pos > size + 5) {
+        return Err(E_BOUNDS);
+    }
+    let mut ofs: usize = 9;  // start after Array header
+    while ofs > 0 {
+        assert_eq!(0x8B, core.blob_read(ofs));  // Extension Blob
+        let next = get_u16(core, ofs + 1);  // `meta` field is offset of next free Blob (or zero)
+        let free = get_u16(core, ofs + 5);  // `size` field is the number of free octets in this Blob
+        if pos == (ofs + 9 + free) {
+            // allocation immediately follows this free block
+            let len = get_u16(core, pos + 1);  // `size` field is the number of data octets in this Blob
+            let free_len = free + len + 5;
+            if next == (pos + len + 5) {
+                // coalesce the following free block
+                let next_next = get_u16(core, next + 1);
+                let next_free = get_u16(core, next + 5);
+                set_u16(core, ofs + 1, next_next);
+                set_u16(core, ofs + 5, free_len + next_free + 9);
+                set_u16(core, 1, count - 2);
+            } else {
+                set_u16(core, ofs + 5, free_len);  // adjust the size of the preceeding free block
+                set_u16(core, 1, count - 1);  // remove element for free'd Blob
+            }
+            return Ok(());
+        } else if (next == 0) || (pos < next) {
+            // allocation preceeds next free block
+            let len = get_u16(core, pos + 1);  // `size` field is the number of data octets in this Blob
+            core.blob_write(pos, 0x8B);  // Blob -> Extension Blob
+            if next == (pos + len + 5) {
+                // coalesce the following free block
+                let next_next = get_u16(core, next + 1);
+                let next_free = get_u16(core, next + 5);
+                set_u16(core, pos + 1, next_next);
+                set_u16(core, pos + 5, len - next_free + (9 - 4));
+                set_u16(core, 1, count - 1);
+            } else {
+                set_u16(core, pos + 1, next);
+                set_u16(core, pos + 5, len - 4);
+                set_u16(core, ofs + 1, pos);  // link preceeding block to free'd allocation
+            }
+            return Ok(());
+        }
+        ofs = next;
+    }
+    Ok(())
+}
 fn blob_size(core: &Core, handle: Any) -> Result<Any, Error> {
     let pos = handle.get_fix()?;
     let top = core.blob_top().get_fix()?;
@@ -328,6 +378,18 @@ pub struct BlobDevice {}
 impl BlobDevice {
     pub fn new() -> BlobDevice {
         BlobDevice {}
+    }
+    #[cfg(target_arch = "wasm32")]
+    fn log_proxy(&mut self, proxy: Any) {
+        let raw = proxy.raw();
+        unsafe {
+            crate::host_log(raw);
+        }
+    }
+    #[cfg(not(target_arch = "wasm32"))]
+    fn log_proxy(&mut self, proxy: Any) {
+        let raw = proxy.raw();
+        let _dev = raw & !MSK_RAW;
     }
 }
 /*
@@ -386,17 +448,12 @@ impl Device for BlobDevice {
         }
         Ok(true)  // event handled.
     }
-    #[cfg(target_arch = "wasm32")]
-    fn drop_proxy(&mut self, proxy: Any) {
-        let raw = proxy.raw();
-        unsafe {
-            crate::host_log(raw);
-        }
-    }
-    #[cfg(not(target_arch = "wasm32"))]
-    fn drop_proxy(&mut self, proxy: Any) {
-        let raw = proxy.raw();
-        let _dev = raw & !MSK_RAW;
+    fn drop_proxy(&mut self, core: &mut Core, proxy: Any) {
+        self.log_proxy(proxy);
+        let ptr = core.cap_to_ptr(proxy);
+        let handle = core.ram(ptr).y();
+        let result = blob_release(core, handle);
+        assert!(result.is_ok());
     }
 }
 
@@ -466,7 +523,7 @@ impl Device for AwpDevice {
             code => Err(code)
         }
     }
-    fn drop_proxy(&mut self, proxy: Any) {
+    fn drop_proxy(&mut self, _core: &mut Core, proxy: Any) {
         self.forward_event(proxy);
     }
 }
