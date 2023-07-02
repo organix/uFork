@@ -21,7 +21,7 @@ function party(asm_url, acquaintance_names = []) {
         pre.textContent += "\n" + things.join(" ");
     }
 
-    const signaller_url = (
+    const signaller_origin = (
         location.protocol === "https:"
         ? "wss://"
         : "ws://"
@@ -60,12 +60,19 @@ function party(asm_url, acquaintance_names = []) {
             awp_device(core, transport, [{
                 identity,
                 name,
-                address: signaller_url,
-                bind_info: signaller_url,
+                address: signaller_origin + "/connect?name=" + hex.encode(name),
+                bind_info: (
+                    signaller_origin
+                    + "/listen?name=" + hex.encode(name)
+                    + "&password=uFork"
+                ),
                 acquaintances: acquaintance_names.map(function (name) {
                     return {
                         name,
-                        address: signaller_url
+                        address: (
+                            signaller_origin
+                            + "/connect?name=" + hex.encode(name)
+                        )
                     };
                 })
             }]);

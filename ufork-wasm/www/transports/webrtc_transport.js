@@ -1,7 +1,7 @@
-// A WebRTC AWP transport for the browser.
+// A WebRTC-based AWP transport for the browser.
 
-// The 'webrtc_transport' function takes a signaller requestor, and an optional
-// logging function that is called with detailed debugging info.
+// The 'webrtc_transport' function takes a signaller and an optional logging
+// function that is called with detailed debugging info.
 
 // Types
 
@@ -10,52 +10,78 @@
 //          Uint8Array.
 
 //      address
+//          The URL of a signalling server's "connect" endpoint, as a string.
+
 //      bind_info
-//          The URL string of a signalling server.
+//          The URL of a signalling server's "listen" endpoint (including any
+//          credentials) as a string.
 
 //      identity
 //          An RTCCertificate object associated with a P-256 ECDSA keypair.
 
-// TODO use a WebCrypto keypair as the identity instead, so the signalling
-// server can authenticate its clients. We don't want to leak SDP info
-// (IP addresses, etc) to third parties. (There is not way to access the
-// private key of an RTCCertificate object, so we can't use it for
-// authentication.) To authenticate the WebRTC connection, a challenge and
-// response could be added to the SDP offer and answer.
-
 // Signalling
 
-//      Peer-to-peer discovery is facilitated by a signalling server.
+//      WebRTC connections are truly peer-to-peer, but in order to defeat NAT
+//      they must be preceeded by an out-of-band handshake. This is usually
+//      accomplished using a signalling server, but any out-of-band
+//      communication channel can be used.
 
-//      The signaller requestor attempts to establish a connection with a
-//      signalling server. It takes a spec object with the following
-//      properties:
+//      The 'webrtc_transport' function is passed a 'signaller' object,
+//      responsible for exchanging signals with other parties. It contains two
+//      requestor factories, "connect" and "listen". A signal is either an SDP
+//      offer, an SDP answer, or an ICE candidate.
 
-//          name
-//              The local party's name.
+//      signaller.connect(address, on_receive) -> requestor(callback, offer)
 
-//          address
-//              The signalling server's address as a string.
+//          The 'connect' requestor factory takes the following parameters:
 
-//          on_receive(from, message)
-//              A callback function that is called each time a message is
-//              received from the signalling server. The 'from' parameter is
-//              the remote party's name, and the 'message' is an object.
+//              address
+//                  The listening party's signalling address.
 
-//      It produces an object with the following properties:
+//              on_receive(signal)
+//                  Called with each signalling message received from the
+//                  listening party, either an SDP answer or an ICE candidate.
 
-//          send(to, message)
-//              A function that sends a 'message' object to all parties with the
-//              name 'to'.
+//          The returned requestor takes an SDP offer (an RTCSessionDescription
+//          object) and produces an object with the following methods:
 
-//          close()
-//              Closes the connection to the signalling server.
+//              send(candidate)
+//                  Sends an RTCIceCandidate object to the listening party.
+
+//              stop()
+//                  Stop signalling immediately.
+
+//      signaller.listen(bind_info, on_receive, on_fail) -> requestor(callback)
+
+//          The 'listen' requestor factory takes the following parameters:
+
+//              bind_info
+//                  The listening party's "bind_info", most likely used to
+//                  locate and authenticate with a signalling server.
+
+//              on_receive(session_id, signal)
+//                  Called with each message received from a connecting party,
+//                  either an SDP offer or an ICE candidate. The 'session_id'
+//                  parameter securely identifies the WebRTC connection under
+//                  negotiation.
+
+//              on_fail(reason)
+//                  Called if listening stops unexpectedly.
+
+//          The returned requestor produces an object with these methods:
+
+//              send(session_id, signal)
+//                  Sends an SDP answer (RTCSessionDescription) or an ICE
+//                  candidate (RTCIceCandidate) to the connecting party.
+
+//              stop()
+//                  Stop listening immediately.
 
 // Debugging
 
 //      WebRTC is tricky to get right. A lot can go wrong in establishing
 //      peer-to-peer connections, and the browser's WebRTC interface is
-//      fiendishly intricate and very asynchronous.
+//      pretty gnarly.
 
 //      There is a comprehensive guide to debugging WebRTC connections at
 //      https://www.cloudbees.com/blog/webrtc-issues-and-how-to-debug-them.
@@ -67,6 +93,8 @@
 
 import hex from "../hex.js";
 import parseq from "../parseq.js";
+import requestorize from "../requestors/requestorize.js";
+import unpromise from "../requestors/unpromise.js";
 
 const ice_servers = [{
     urls: [
@@ -107,7 +135,17 @@ function generate_identity() {
     };
 }
 
-function trace(peer, debug) {
+function create_offer(peer) {
+    return unpromise(function () {
+        return peer.createOffer().then(function (offer) {
+            return peer.setLocalDescription(offer);
+        }).then(function () {
+            return peer.localDescription;
+        });
+    });
+}
+
+function trace_peer_events(peer, debug) {
     debug("tracing");
     peer.onsignalingstatechange = function () {
         debug("signalingstatechange", peer.signalingState);
@@ -126,26 +164,21 @@ function trace(peer, debug) {
     };
 }
 
-function webrtc_transport(signaller_requestor, log) {
-
-// TODO pool signallers with the same name & address, to avoid excessive message
-// duplication.
+function webrtc_transport(signaller, log) {
 
     function connect(identity, name, address, on_receive, on_close) {
-        return function connect_requestor(callback) {
-            const session_id = crypto.randomUUID();
 
-            let signaller;          // The connection to the signalling server.
-            let peer;               // The RTCPeerConnection object.
-            let channel;            // The RTCDataChannel object.
-            let channel_error;      // The channel's RTCError object, if any.
-            let remote_sdp;         // The remote peer's SDP string.
-
-            function debug(...args) {
-                if (log !== undefined) {
-                    log(session_id.slice(0, 4), "CONN", ...args);
-                }
+        function debug(...args) {
+            if (log !== undefined) {
+                log("CONN", ...args);
             }
+        }
+
+        return function connect_requestor(callback) {
+            let peer;               // The RTCPeerConnection object.
+            let remote_sdp;         // The remote peer's SDP string.
+            let signal_connector;   // The signaller connector object.
+            let channel_error;      // The channel's RTCError object.
 
             function destroy() {
                 debug("destroy");
@@ -154,8 +187,8 @@ function webrtc_transport(signaller_requestor, log) {
                 if (peer !== undefined) {
                     peer.close();
                 }
-                if (signaller !== undefined) {
-                    signaller.close();
+                if (signal_connector !== undefined) {
+                    signal_connector.stop();
                 }
             }
 
@@ -172,95 +205,76 @@ function webrtc_transport(signaller_requestor, log) {
                 resolve(undefined, reason);
             }
 
-            const connection = Object.freeze({
-                send(frame) {
-                    channel.send(frame);
-                },
-                name() {
-                    return sdp_to_name(remote_sdp);
-                },
-                close: destroy
-            });
-
-            function on_signaller_receive(ignore, message) {
-                if (message.session_id !== session_id) {
-                    return; // not for us
-                }
-                if (message.kind === "answer") {
+            function on_receive_signal(signal) {
+                if (signal?.type === "answer") {
                     if (peer.remoteDescription) {
-                        return debug("duplicate answer", message);
+                        return debug("duplicate answer", signal);
                     }
-
-// The certificate fingerprint in the SDP answer is the remote party's name. It
-// will be used to negotiate a secure connection, so we verify it is correct.
-// If the name is missing, or does not match the expected name, fail.
-
-                    const sdp_name = sdp_to_name(message.answer.sdp);
-                    if (sdp_name === undefined) {
-                        return fail("Missing name.");
-                    }
-                    if (hex.encode(name) !== hex.encode(sdp_name)) {
-                        return fail("Wrong name.");
-                    }
-                    remote_sdp = message.answer.sdp;
 
 // Accept the answer.
 
-                    peer.setRemoteDescription(message.answer).catch(fail);
+                    peer.setRemoteDescription(signal).then(function () {
 
-// The ICE candidates should now be flowing in both directions. With any luck a
-// direct peer-to-peer connection will soon be established.
+// The certificate fingerprint in the SDP answer is the remote party's name. It
+// will be used to negotiate a secure peer-to-peer connection, so we verify it.
+// If the name is missing or incorrect, fail.
 
-                } else if (message.kind === "ice_candidate") {
+                        remote_sdp = peer.remoteDescription.sdp;
+                        const sdp_name = sdp_to_name(remote_sdp);
+                        if (
+                            sdp_name === undefined
+                            || hex.encode(name) !== hex.encode(sdp_name)
+                        ) {
+                            return fail("Unexpected name.");
+                        }
+                    }).catch(
+                        fail
+                    );
+                } else if (typeof signal?.candidate === "string") {
                     if (peer.signalingState !== "closed") {
                         debug("addIceCandidate");
-                        peer.addIceCandidate(message.candidate);
+                        peer.addIceCandidate(signal).catch(fail);
                     }
                 }
             }
 
-            function signaller_callback(the_signaller, reason) {
-                if (the_signaller === undefined) {
-                    return fail(reason);
-                }
-                signaller = the_signaller;
-
-// Now that we are connected to the signalling server we can initiate a WebRTC
-// connection.
-
+            try {
                 peer = new window.RTCPeerConnection({
                     certificates: [identity],
                     iceServers: ice_servers
                 });
-                peer.onicecandidate = function (event) {
-                    debug("icecandidate");
-                    signaller.send(name, {
-                        kind: "ice_candidate",
-                        session_id,
-                        candidate: (
-                            event.candidate
-                            ? event.candidate.toJSON()
-                            : {} // end-of-candidates indicator
-                        )
-                    });
-                };
                 peer.onconnectionstatechange = function () {
                     debug("connectionState", peer.connectionState);
                     if (peer.connectionState === "failed") {
                         fail("Connection failed.");
                     }
                 };
-                trace(peer, debug);
+                trace_peer_events(peer, debug);
 
 // A single data channel carries our binary frames. A transport is not required
 // to reliably deliver frames, or deliver them in order.
 
-                channel = peer.createDataChannel("", {
+                const channel = peer.createDataChannel("", {
                     ordered: false,     // unordered
                     maxRetransmits: 0   // unreliable
                 });
+                const connection = Object.freeze({
+                    send(frame) {
+                        channel.send(frame);
+                    },
+                    name() {
+                        return sdp_to_name(remote_sdp);
+                    },
+                    close: destroy
+                });
                 channel.onopen = function () {
                     resolve(connection);
+
+// A peer-to-peer connection has been successfully established, so we can
+// disconnect from the signaller.
+
+                    signal_connector.stop();
+                    signal_connector = undefined;
                 };
                 channel.onmessage = function (event) {
                     on_receive(connection, new Uint8Array(event.data));
@@ -278,34 +292,37 @@ function webrtc_transport(signaller_requestor, log) {
                     destroy();
                 };
 
-// Send an SDP offer to the remote party.
+// Send an SDP offer to the remote party, via the signaller.
 
-                peer.createOffer().then(function (offer) {
-                    signaller.send(name, {
-                        kind: "offer",
-                        session_id,
-                        offer: offer.toJSON()
-                    });
-                    return peer.setLocalDescription(offer);
-                }).catch(fail);
-            }
-
-            try {
-                const cancel_signaller = signaller_requestor(
-                    signaller_callback,
-                    {
-                        name: identity_to_name(identity),
-                        address,
-                        on_receive: on_signaller_receive
+                const cancel_signalling = parseq.sequence([
+                    create_offer(peer),
+                    signaller.connect(address, on_receive_signal)
+                ])(function (value, reason) {
+                    if (value === undefined) {
+                        return fail(reason);
                     }
-                );
+                    signal_connector = value;
+
+// Begin sending our ICE candidates thru the signaller. We discard the
+// end-of-candidates indicator because it seems unnecessary and has atrocious
+// cross-browser support.
+
+                    peer.onicecandidate = function (event) {
+                        debug("icecandidate");
+                        if (event.candidate && signal_connector !== undefined) {
+                            signal_connector.send(event.candidate);
+                        }
+                    };
+                });
                 return function cancel() {
                     debug("cancel");
-                    callback = undefined;
-                    if (signaller === undefined) {
-                        cancel_signaller();
-                    } else {
-                        destroy();
+                    if (callback !== undefined) {
+                        callback = undefined;
+                        if (signal_connector === undefined) {
+                            cancel_signalling();
+                        } else {
+                            destroy();
+                        }
                     }
                 };
             } catch (exception) {
@@ -315,69 +332,76 @@ function webrtc_transport(signaller_requestor, log) {
     }
 
     function listen(identity, bind_info, on_open, on_receive, on_close) {
+
+        function debug(...args) {
+            if (log !== undefined) {
+                log("LIST", ...args);
+            }
+        }
+
         return function listen_requestor(callback) {
-            let signaller;
+            let signal_listener;
             let peers = Object.create(null);
             let manually_closed = new WeakMap();
 
-            function destroy(key) {
-                const peer = peers[key];
+            function destroy(session_id) {
+                const peer = peers[session_id];
                 if (peer !== undefined) {
                     peer.close();
-                    delete peers[key];
+                    delete peers[session_id];
                 }
             }
 
-            function on_signaller_receive(from, message) {
-                const key = hex.encode(from) + ":" + message.session_id;
-                let peer = peers[key];
+            function on_receive_signal(session_id, signal) {
+                let peer = peers[session_id];
                 let channel;
                 let channel_error;
-                let connection;
 
-                function debug(...args) {
-                    if (log !== undefined) {
-                        log(message.session_id.slice(0, 4), "LIST", ...args);
-                    }
+                function debug_session(...args) {
+                    return debug(session_id.slice(0, 4), ...args);
                 }
 
-                if (message.kind === "offer") {
+                if (signal?.type === "offer") {
                     if (peer !== undefined) {
-                        return;
+                        return debug_session("Duplicate offer", signal);
                     }
 
-// Make a new connection expecting a single data channel.
+// Make a new RTCPeerConnection object that expects a single data channel.
 
                     peer = new window.RTCPeerConnection({
                         certificates: [identity],
                         iceServers: ice_servers
                     });
-                    peers[key] = peer;
+                    peers[session_id] = peer;
                     peer.onconnectionstatechange = function () {
-                        debug("connectionState", peer.connectionState);
+                        debug_session("connectionState", peer.connectionState);
                         if (peer.connectionState === "failed") {
-                            destroy(key);
+                            destroy(session_id);
                         }
                     };
                     peer.ondatachannel = function (event) {
                         if (channel !== undefined) {
-                            debug("unexpected channel");
+                            debug_session("Duplicate channel");
                             return event.channel.close();
                         }
+                        const remote_sdp = peer.remoteDescription.sdp;
+                        if (sdp_to_name(remote_sdp) === undefined) {
+                            return destroy(session_id); // paranoid
+                        }
+                        channel = event.channel;
+                        const connection = Object.freeze({
+                            send(frame) {
+                                channel.send(frame);
+                            },
+                            name() {
+                                return sdp_to_name(remote_sdp);
+                            },
+                            close() {
+                                manually_closed.set(peer);
+                                destroy(session_id);
+                            }
+                        });
                         event.channel.onopen = function () {
-                            const remote_sdp = peer.remoteDescription.sdp;
-                            connection = Object.freeze({
-                                send(frame) {
-                                    channel.send(frame);
-                                },
-                                name() {
-                                    return sdp_to_name(remote_sdp);
-                                },
-                                close() {
-                                    manually_closed.set(peer);
-                                    destroy(key);
-                                }
-                            });
                             on_open(connection);
                         };
                         event.channel.onmessage = function (event) {
@@ -393,93 +417,90 @@ function webrtc_transport(signaller_requestor, log) {
                             }
                         };
                         event.channel.onclose = function () {
-                            debug("channel onclose", channel_error);
-                            destroy(key);
+                            debug_session("channel onclose", channel_error);
+                            destroy(session_id);
                             if (!manually_closed.has(peer)) {
                                 on_close(connection, channel_error);
                             }
                         };
-                        channel = event.channel;
                     };
                     peer.onicecandidate = function (event) {
-                        debug("icecandidate");
-                        signaller.send(from, {
-                            kind: "ice_candidate",
-                            session_id: message.session_id,
-                            candidate: (
-                                event.candidate
-                                ? event.candidate.toJSON()
-                                : {} // end-of-candidates indicator
-                            )
-                        });
+                        debug_session("icecandidate");
+                        if (event.candidate) {
+                            signal_listener.send(session_id, event.candidate);
+                        }
                     };
-                    trace(peer, debug);
+                    trace_peer_events(peer, debug_session);
 
 // Answer the offer.
 
-                    peer.setRemoteDescription(
-                        message.offer
-                    ).then(function () {
+                    peer.setRemoteDescription(signal).then(function () {
                         return peer.createAnswer();
                     }).then(function (answer) {
-                        signaller.send(from, {
-                            kind: "answer",
-                            session_id: message.session_id,
-                            answer: answer.toJSON()
-                        });
                         return peer.setLocalDescription(answer);
+                    }).then(function () {
+                        signal_listener.send(session_id, peer.localDescription);
                     }).catch(function (reason) {
-                        debug("failed to answer", reason);
-                        destroy(key);
+                        debug_session("Failed to answer", reason);
+                        destroy(session_id);
                     });
 
-// Drop the peer if no ICE candidates are received in a reasonable amount of
-// time.
+    // Drop the peer if no ICE candidates are received in a reasonable amount of
+    // time.
 
-                    setTimeout(function () {
+                    return setTimeout(function () {
                         if (peer.connectionState === "new") {
-                            debug("ICE timed out.");
-                            destroy(key);
+                            debug_session("ICE timed out.");
+                            destroy(session_id);
                         }
                     }, ice_time_limit);
-                } else if (message.kind === "ice_candidate") {
-                    if (
-                        peer !== undefined
-                        && peer.signalingState !== "closed"
-                    ) {
-                        debug("addIceCandidate");
-                        peer.addIceCandidate(message.candidate);
-                    }
+                }
+                if (
+                    typeof signal?.candidate === "string"
+                    && peers[session_id] !== undefined
+                    && peer.signalingState !== "closed"
+                ) {
+                    debug_session("addIceCandidate");
+                    return peer.addIceCandidate(
+                        signal
+                    ).catch(function (reason) {
+                        debug_session("Failed to add ICE candidate", reason);
+                        destroy(session_id);
+                    });
                 }
             }
 
             function stop() {
 
-// Close every RTCPeerConnection, suppressing the 'on_close' callback.
+    // Close every RTCPeerConnection, suppressing the 'on_close' callback.
 
-                Object.entries(peers).forEach(function ([key, peer]) {
+                Object.entries(peers).forEach(function ([session_id, peer]) {
                     manually_closed.set(peer);
-                    destroy(key);
+                    destroy(session_id);
                 });
 
-// Close the connection to the signalling server.
+    // Close the connection to the signalling server.
 
-                signaller.close();
+                signal_listener.stop();
+            }
+
+            function on_signal_listener_fail(reason) {
+                log("LIST", "Signal listener failed", reason);
+                // TODO auto reconnect?
             }
 
             try {
-                const signaller_spec = {
-                    name: identity_to_name(identity),
-                    address: bind_info,
-                    on_receive: on_signaller_receive
-                };
                 return parseq.sequence([
-                    signaller_requestor,
-                    function (callback, the_signaller) {
-                        signaller = the_signaller;
-                        callback(stop);
-                    }
-                ])(callback, signaller_spec);
+                    signaller.listen(
+                        bind_info,
+                        on_receive_signal,
+                        on_signal_listener_fail
+                    ),
+                    requestorize(function (value) {
+                        signal_listener = value;
+                        return stop;
+                    })
+                ])(callback);
             } catch (exception) {
                 return callback(undefined, exception);
             }
@@ -496,16 +517,16 @@ function webrtc_transport(signaller_requestor, log) {
 
 //debug import merge from "../requestors/merge.js";
 //debug import lazy from "../requestors/lazy.js";
-//debug import requestorize from "../requestors/requestorize.js";
 //debug import signaller from "./dummy_signaller.js";
-//debug //import signaller from "./websockets_signaller.js";
+//debug // import signaller from "./websockets_signaller.js";
 //debug function halve(buffer) {
 //debug     return new Uint8Array(buffer).slice(
 //debug         0,
 //debug         Math.floor(buffer.length / 2)
 //debug     );
 //debug }
-//debug const signalling_url = "ws://127.0.0.1:4455";
+//debug const bind_info = "ws://localhost:4455/listen?name=bob&password=uFork";
+//debug const address = "ws://localhost:4455/connect?name=bob";
 //debug const transport = webrtc_transport(signaller(), console.log);
 //debug const flake = 0;
 //debug const cancel = parseq.sequence([
@@ -517,7 +538,7 @@ function webrtc_transport(signaller_requestor, log) {
 //debug         bob_stop: lazy(function ({bob_identity}) {
 //debug             return transport.listen(
 //debug                 bob_identity,
-//debug                 signalling_url,
+//debug                 bind_info,
 //debug                 function on_open(connection) {
 //debug                     console.log(
 //debug                         "bob on_open",
@@ -543,7 +564,7 @@ function webrtc_transport(signaller_requestor, log) {
 //debug         return transport.connect(
 //debug             alice_identity,
 //debug             identity_to_name(bob_identity),
-//debug             signalling_url,
+//debug             address,
 //debug             function on_receive(connection, frame_buffer) {
 //debug                 console.log("alice on_receive", frame_buffer.length);
 //debug                 if (frame_buffer.length > 0) {

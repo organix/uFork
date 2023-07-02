@@ -3,110 +3,142 @@
 
 /*jslint browser */
 
-import hex from "../hex.js";
-
 function websockets_signaller() {
-    return function websockets_signaller_requestor(
-        callback,
-        {name, address, on_receive, on_close}
-    ) {
-        let socket;
-        let connection;
 
-        function resolve(value, reason) {
-            if (callback !== undefined) {
-                callback(value, reason);
-                callback = undefined;
+    function connect(address, on_receive) {
+        return function connect_requestor(callback, offer) {
+
+            function resolve(value, reason) {
+                if (callback !== undefined) {
+                    callback(value, reason);
+                    callback = undefined;
+                }
             }
-        }
 
-        try {
-            socket = new WebSocket(address + "/" + hex.encode(name));
-            socket.onopen = function () {
-                connection = Object.freeze({
-                    send(to, message) {
-                        socket.send(JSON.stringify({
-                            to: hex.encode(to),
-                            message
-                        }));
+            try {
+                let url = new URL(address);
+                url.searchParams.set("signal", JSON.stringify(offer));
+                const socket = new WebSocket(url);
+                const connection = Object.freeze({
+                    send(signal) {
+                        socket.send(JSON.stringify(signal));
                     },
-                    close() {
-                        on_close = undefined;
+                    stop() {
                         socket.close();
                     }
                 });
-                resolve(connection);
-            };
-            socket.onmessage = function (event) {
-                const {from, message} = JSON.parse(event.data);
-                on_receive(hex.decode(from), message);
-            };
-            // TODO autoreconnect?
-            socket.onclose = function (event) {
-                if (connection !== undefined) {
-                    if (on_close !== undefined) {
-                        on_close(event.code);
-                        on_close = undefined;
-                    }
-                } else {
+                socket.onopen = function () {
+                    resolve(connection);
+                };
+                socket.onmessage = function (event) {
+                    on_receive(JSON.parse(event.data));
+                };
+                socket.onclose = function (event) {
                     resolve(undefined, event.code);
+                };
+                return function cancel() {
+                    if (callback !== undefined) {
+                        socket.close();
+                    }
+                };
+            } catch (exception) {
+                return callback(undefined, exception);
+            }
+        };
+    }
+
+    function listen(bind_info, on_receive, on_fail) {
+        return function listen_requestor(callback) {
+
+            function resolve(value, reason) {
+                if (callback !== undefined) {
+                    callback(value, reason);
+                    callback = undefined;
                 }
-            };
-            return function cancel() {
-                if (connection === undefined) {
-                    on_close = undefined;
-                    socket.close();
-                }
-            };
-        } catch (exception) {
-            return resolve(undefined, exception);
-        }
-    };
+            }
+
+            try {
+                const socket = new WebSocket(bind_info);
+                const connection = Object.freeze({
+                    send(session, signal) {
+                        socket.send(JSON.stringify({session, signal}));
+                    },
+                    stop() {
+                        socket.close();
+                    }
+                });
+                socket.onopen = function () {
+                    resolve(connection);
+                };
+                socket.onmessage = function (event) {
+                    const {session, signal} = JSON.parse(event.data);
+                    on_receive(session, signal);
+                };
+                socket.onclose = function (event) {
+                    if (callback === undefined) {
+                        if (typeof on_fail === "function") {
+                            on_fail(event.code);
+                        }
+                    } else {
+                        resolve(undefined, event.code);
+                    }
+                };
+                return function cancel() {
+                    if (callback !== undefined) {
+                        callback = undefined;
+                        on_fail = undefined;
+                        socket.close();
+                    }
+                };
+            } catch (exception) {
+                return callback(undefined, exception);
+            }
+        };
+    }
+
+    return Object.freeze({connect, listen});
 }
 
-//debug let bob_connection;
-//debug websockets_signaller()(
-//debug     function (connection, reason) {
-//debug         if (connection === undefined) {
-//debug             return console.log("bob failed", reason);
-//debug         }
-//debug         console.log("bob connected");
-//debug         bob_connection = connection;
-//debug         bob_connection.send(new Uint8Array([1, 1]), "hi alice");
-//debug     },
-//debug     {
-//debug         name: new Uint8Array([2, 2]),
-//debug         address: "ws://127.0.0.1:4455",
-//debug         on_receive(from, message) {
-//debug             console.log("bob on_receive", from, message);
-//debug         },
-//debug         on_close(reason) {
-//debug             console.log("closed", reason);
-//debug         }
-//debug     }
-//debug );
-//debug let alice_connection;
-//debug websockets_signaller()(
-//debug     function (connection, reason) {
-//debug         if (connection === undefined) {
+//debug const signaller = websockets_signaller();
+//debug const bind_info = "ws://localhost:4455/listen?name=bob&password=uFork";
+//debug const address = "ws://localhost:4455/connect?name=bob";
+//debug let alice_connector;
+//debug signaller.connect(address, function on_receive(message) {
+//debug     console.log("alice on_receive", message);
+//debug })(
+//debug     function (connector, reason) {
+//debug         if (connector === undefined) {
 //debug             return console.log("alice failed", reason);
 //debug         }
 //debug         console.log("alice connected");
-//debug         alice_connection = connection;
-//debug         alice_connection.send(new Uint8Array([2, 2]), "hi bob");
+//debug         alice_connector = connector;
+//debug         alice_connector.send({
+//debug             candidate: "Alice's ICE."
+//debug         });
 //debug     },
-//debug     {
-//debug         name: new Uint8Array([1, 1]),
-//debug         address: "ws://127.0.0.1:4455",
-//debug         on_receive(from, message) {
-//debug             console.log("alice on_receive", from, message);
-//debug         },
-//debug         on_close(reason) {
-//debug             console.log("closed", reason);
-//debug         }
-//debug     }
+//debug     {type: "offer", sdp: "Alice's offer."}
 //debug );
-//debug // alice_connection.close()
-//debug // bob_connection.close()
+//debug let bob_listener;
+//debug signaller.listen(bind_info, function on_receive(session_id, message) {
+//debug     console.log("bob on_receive", session_id, message);
+//debug     if (message.type === "offer") {
+//debug         bob_listener.send(session_id, {
+//debug             type: "answer",
+//debug             sdp: "Bob's answer."
+//debug         });
+//debug     } else {
+//debug         bob_listener.send(session_id, {
+//debug             candidate: "Bob's ICE."
+//debug         });
+//debug     }
+//debug })(function (listener, reason) {
+//debug     if (listener === undefined) {
+//debug         return console.log("bob failed", reason);
+//debug     }
+//debug     console.log("bob listening");
+//debug     bob_listener = listener;
+//debug });
+//debug // bob_listener.stop();
+//debug // alice_connector.stop();
 
 export default Object.freeze(websockets_signaller);

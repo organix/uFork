@@ -1,7 +1,62 @@
-// A Deno signalling server, for use with the WebSockets signaller.
+// A Deno signalling server, for use with the WebSockets signaller. It exposes
+// two WebSockets endpoints:
 
-// Messages addressed to unknown peers are buffered for the lifetime of the
-// sender's connection, just in case the peer joins at a later time.
+// /listen?name=<name>&password=uFork
+
+//      A session ID is generated, uniquely identifying each WebSocket
+//      connection. Each WebSocket message is an object like {session, signal}.
+
+//      Accept offers.
+
+//          ↓ {session: "abcd", signal: {type: "offer", sdp: "..."}}
+
+//      Send answers.
+
+//          ↑ {session: "abcd", signal: {type: "answer", sdp: "..."}}
+
+//      Exchange ICE candidates.
+
+//          ↓ {session: "abcd", signal: {candidate: ...}}
+//          ↑ {session: "abcd", signal: {candidate: ...}}
+
+//      It is possible for the signalling server to authenticate a listener's
+//      fingerprint, but that requires a WebRTC connection to be established
+//      with the server. This is not a trivial measure, and would introduce
+//      significant latency. For now, the listener simply provides a password.
+
+// /connect?name=<name>&signal=<json>
+
+//      Send an offer, accept the answer, and exchange ICE candidates.
+
+//      Each WebSocket message is a signal. Including the offer in the URL saves
+//      a round trip.
+
+//          ↓ {type: "answer", sdp: "..."}
+//          ↑ {candidate: ...}
+//          ↓ {candidate: ...}
+
+//      Signals addressed to unknown peers are buffered for the lifetime of the
+//      sender's connection, just in case the peer begins listening at a later
+//      time.
+
+// Below are some sample signals.
+
+//      {
+//          type: "offer",
+//          sdp: "v=0\r\no=- 529332133664224217 2 IN IP4 127.0.0.1\r\ns=..."
+//      }
+
+//      {
+//          type: "answer",
+//          sdp: "v=0\r\no=- 1274852108352546059 2 IN IP4 127.0.0.1\r\ns..."
+//      }
+
+//      {
+//          candidate: "candidate:1738336813 1 udp 2113937151 45a1e012-5...",
+//          sdpMid: "0",
+//          sdpMLineIndex: 0,
+//          usernameFragment: "7SPZ"
+//      }
 
 /*jslint deno */
 
@@ -12,14 +67,17 @@ function websockets_signalling_server(
         return respond_with(new Response("Not found.", {status: 404}));
     }
 ) {
-    const listener = Deno.listen(listen_options);
-    let sockets = Object.create(null);      // name -> WebSocket
-    let waiting_buffer = [];                // {to, from, message, socket}
 
-    function broadcast(to, from, message) {
+// The ID of a listening socket is its name.
+// The ID of a connecting socket is its session.
+
+    let sockets = Object.create(null);  // ID -> [WebSocket]
+    let undelivered = [];               // {to_id, from_socket, message}
+
+    function deliver(to_id, from_socket, message) {
         let delivered = false;
-        if (sockets[to] !== undefined) {
-            sockets[to].forEach(function (socket) {
+        if (sockets[to_id] !== undefined) {
+            sockets[to_id].forEach(function (socket) {
 
 // The socket.onclose handler seems to be called some time after the socket is
 // actually closed. This means that there is potential for an exception to be
@@ -29,13 +87,15 @@ function websockets_signalling_server(
 // Until Deno fixes this issue, we silently drop the message if the socket is
 // closed.
 
-                if (socket.readyState !== 3) {
+                if (socket.readyState === 1) {
                     delivered = true;
-                    socket.send(JSON.stringify({from, message}));
+                    socket.send(JSON.stringify(message));
                 }
             });
         }
-        return delivered;
+        if (!delivered) {
+            undelivered.push({to_id, from_socket, message});
+        }
     }
 
     function fail(reason) {
@@ -44,53 +104,53 @@ function websockets_signalling_server(
         }
     }
 
-    function register(name, socket) {
-        if (sockets[name] === undefined) {
-            sockets[name] = [];
+    function register(id, socket) {
+        if (sockets[id] === undefined) {
+            sockets[id] = [];
         }
-        if (!sockets[name].includes(socket)) {
-            sockets[name].push(socket);
+        if (!sockets[id].includes(socket)) {
+            sockets[id].push(socket);
         }
+        if (socket.readyState === 1) {
 
-// See if there are any undelivered messages addressed to the new socket. If
-// there are, send them and remove them from the buffer.
+// Check if there are any undelivered messages addressed to the new socket. If
+// there are, send and forget them.
 
-        waiting_buffer = waiting_buffer.filter(function (entry) {
-            if (entry.to === name) {
-                socket.send(JSON.stringify({
-                    from: entry.from,
-                    message: entry.message
-                }));
-                return false;
-            }
-            return true;
-        });
+            undelivered = undelivered.filter(function (entry) {
+                if (entry.to_id === id) {
+                    socket.send(JSON.stringify(entry.message));
+                    return false;
+                }
+                return true;
+            });
+        }
     }
 
-    function unregister(name, socket) {
-        if (
-            sockets[name] !== undefined
-            && sockets[name].includes(socket)
-        ) {
-            sockets[name] = sockets[name].filter(function (element) {
+    function unregister(id, socket) {
+        if (sockets[id] !== undefined && sockets[id].includes(socket)) {
+            sockets[id] = sockets[id].filter(function (element) {
                 return element !== socket;
             });
-            if (sockets[name].length === 0) {
-                delete sockets[name];
+            if (sockets[id].length === 0) {
+                delete sockets[id];
             }
         }
 
-// Drop any undelivered messages associated with this socket.
+// Drop any undelivered messages originating from this socket.
 
-        waiting_buffer = waiting_buffer.filter(function (entry) {
-            return entry.socket !== socket;
+        undelivered = undelivered.filter(function (entry) {
+            return entry.from_socket !== socket;
         });
     }
 
+    const listener = Deno.listen(listen_options);
     (function wait_for_next_connection() {
         let http_conn;
-
-        function handle_request(event) {
+        return listener.accept().then(function (tcp_connection) {
+            wait_for_next_connection();
+            http_conn = Deno.serveHttp(tcp_connection);
+            return http_conn.nextRequest();
+        }).then(function handle_request(event) {
             if (!event) {
                 return; // no more requests
             }
@@ -100,41 +160,60 @@ function websockets_signalling_server(
                 return on_unhandled_request(request, respondWith);
             }
             const {socket, response} = Deno.upgradeWebSocket(request);
-            const name = new URL(request.url).pathname.slice(1);
-            socket.onopen = function () {
-                register(name, socket);
-            };
-            socket.onmessage = function (event) {
-
-// We have received a message. Broadcast it to any connected parties with
-// matching names, or buffer it if none are connected.
-
-                const {to, message} = JSON.parse(event.data);
-                if (!broadcast(to, name, message)) {
-                    waiting_buffer.push({
-                        to,
-                        from: name,
-                        message,
-                        socket
+            const url = new URL(request.url);
+            const endpoint = new URL(request.url).pathname;
+            const name = url.searchParams.get("name");
+            if (endpoint === "/connect" && name) {
+                const session = crypto.randomUUID();
+                register(session, socket);
+                deliver(name, socket, {
+                    session,
+                    signal: JSON.parse(url.searchParams.get("signal"))
+                });
+                socket.onopen = function () {
+                    register(session, socket); // send undelivered messages
+                };
+                socket.onmessage = function (event) {
+                    deliver(name, socket, {
+                        session,
+                        signal: JSON.parse(event.data)
                     });
-                }
-            };
-            socket.onclose = function () {
-                unregister(name, socket);
-            };
-            socket.onerror = function () {
-                unregister(name, socket);
-            };
-            return respondWith(response);
-        }
+                };
+                socket.onclose = function () {
+                    unregister(session, socket);
+                };
+                socket.onerror = function () {
+                    unregister(session, socket);
+                };
+                return respondWith(response);
+            }
+            if (
+                endpoint === "/listen"
+                && name
+                && url.searchParams.get("password") === "uFork"
+            ) {
+                socket.onopen = function () {
+                    register(name, socket);
+                };
+                socket.onmessage = function (event) {
+                    const message = JSON.parse(event.data);
 
-        return listener.accept().then(function (tcp_connection) {
-            wait_for_next_connection();
-            http_conn = Deno.serveHttp(tcp_connection);
-            return http_conn.nextRequest();
-        }).then(
-            handle_request
-        ).catch(
+// Ignore the message if it is destined for an unrecognized session.
+
+                    if (sockets[message.session] !== undefined) {
+                        deliver(message.session, socket, message.signal);
+                    }
+                };
+                socket.onclose = function () {
+                    unregister(name, socket);
+                };
+                socket.onerror = function () {
+                    unregister(name, socket);
+                };
+                return respondWith(response);
+            }
+            return http_conn.close();
+        }).catch(
             fail
         );
     }());
@@ -143,36 +222,46 @@ function websockets_signalling_server(
     };
 }
 
-//debug const hostname = "127.0.0.1";
+//debug const hostname = "localhost";
 //debug const port = 4455;
-//debug const url = "ws://" + hostname + ":" + port;
-//debug websockets_signalling_server({hostname, port});
-//debug const alice = new WebSocket(url + "/alice");
+//debug const origin = "ws://" + hostname + ":" + port;
+//debug websockets_signalling_server({hostname, port}, function (reason) {
+//debug     console.log("Signalling server error", reason);
+//debug });
+//debug const alice = new WebSocket(
+//debug     origin + "/connect?name=bob&signal=\"ALICE OFFER\""
+//debug );
 //debug alice.onopen = function () {
-//debug     alice.send(JSON.stringify({
-//debug         to: "bob",
-//debug         message: "Hi Bob!"
-//debug     }));
+//debug     alice.send(JSON.stringify("ICE"));
 //debug };
 //debug alice.onmessage = function (event) {
 //debug     console.log("alice got mail", JSON.parse(event.data));
 //debug };
-//debug const bob_desktop = new WebSocket(url + "/bob");
-//debug bob_desktop.onopen = function () {
+//debug const bob_desktop = new WebSocket(
+//debug     origin + "/listen?name=bob&password=uFork"
+//debug );
+//debug bob_desktop.onmessage = function (event) {
+//debug     const {session, signal} = JSON.parse(event.data);
+//debug     console.log("bob desktop got mail", signal);
 //debug     bob_desktop.send(JSON.stringify({
-//debug         to: "alice",
-//debug         message: "Hi Alice!"
+//debug         session,
+//debug         signal: "BOB DESKTOP ANSWER"
 //debug     }));
 //debug };
-//debug bob_desktop.onmessage = function (event) {
-//debug     console.log("bob desktop got mail", JSON.parse(event.data));
-//debug };
-//debug const bob_mobile = new WebSocket(url + "/bob");
+//debug const bob_mobile = new WebSocket(
+//debug     origin + "/listen?name=bob&password=uFork"
+//debug );
 //debug bob_mobile.onmessage = function (event) {
-//debug     console.log("bob mobile got mail", JSON.parse(event.data));
+//debug     const {session, signal} = JSON.parse(event.data);
+//debug     console.log("bob mobile got mail", signal);
+//debug     bob_mobile.send(JSON.stringify({
+//debug         session,
+//debug         signal: "BOB MOBILE ANSWER"
+//debug     }));
 //debug };
 //debug // alice.close();
 //debug // bob_desktop.close();
 //debug // bob_mobile.close();
+
 
 export default Object.freeze(websockets_signalling_server);

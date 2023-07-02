@@ -1,6 +1,6 @@
 // Runs a Deno server supporting the Grant Matcher browser demo.
 
-/*jslint deno, devel */
+/*jslint deno */
 
 import {toFileUrl} from "https://deno.land/std@0.111.0/path/mod.ts";
 import start_server from "../../www/transports/websockets_signalling_server.js";
@@ -15,7 +15,7 @@ const mime_types = {
 
 start_server(
     {hostname, port: Number(port_string)},
-    console.log,
+    window.console.log,
     function on_unhandled_request(request, respond_with) {
         const {pathname} = new URL(request.url);
         const extension = pathname.split(".").pop();

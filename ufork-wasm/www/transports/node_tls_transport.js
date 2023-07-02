@@ -1,4 +1,5 @@
-// A TLS-over-TCP AWP transport for Node.js.
+// A TLS-based AWP transport for Node.js. Note that this transport suffers from
+// head-of-line blocking because it uses TCP.
 
 // It expects the following types as its parameters:
 

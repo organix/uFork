@@ -39,14 +39,14 @@ Firstly, start the web server:
         --allow-net \
         --allow-read=. \
         examples/grant_matcher/webrtc.js \
-        127.0.0.1:4455
+        localhost:4455
 
 In separate browser tabs, navigate to the following URLs:
 
-    http://127.0.0.1:4455/gm
-    http://127.0.0.1:4455/keqd
-    http://127.0.0.1:4455/donor
-    http://127.0.0.1:4455/donor
+    http://localhost:4455/gm
+    http://localhost:4455/keqd
+    http://localhost:4455/donor
+    http://localhost:4455/donor
 
 In each of the donor tabs, copy the names from the GM and KEQD tabs and
 press "Start". The donors will then attempt to connect to the GM and KEQD
