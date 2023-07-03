@@ -197,8 +197,8 @@ _n_ _m_              | `cmp` `lt`         | _bool_       | `#t` if _n_ < _m_, ot
 _n_ _m_              | `cmp` `le`         | _bool_       | `#t` if _n_ <= _m_, otherwise `#f`
 _n_ _m_              | `cmp` `ge`         | _bool_       | `#t` if _n_ >= _m_, otherwise `#f`
 _n_ _m_              | `cmp` `gt`         | _bool_       | `#t` if _n_ > _m_, otherwise `#f`
-_bool_               | `if` _T_ [_F_]     | —            | if not "falsey"<sup>*</sup>, continue _T_ (otherwise _F_)
-_bool_               | `if_not` _F_ [_T_] | —            | if "falsey"<sup>*</sup>, continue _F_ (otherwise _T_)
+_bool_               | `if` _T_ [_F_]     | —            | if _bool_ is not falsey<sup>*</sup>, continue _T_ (else _F_)
+_bool_               | `if_not` _F_ [_T_] | —            | if _bool_ is falsey<sup>*</sup>, continue _F_ (else _T_)
 … _tail_ _head_      | `pair` _n_         | _pair_       | create _pair_ from _head_ and _tail_ (_n_ times)
 _pair_               | `part` _n_         | … _tail_ _head_ | split _pair_ into _head_ and _tail_ (_n_ times)
 _pair_               | `nth` _n_          | _itemₙ_      | extract item _n_ from a _pair_ list
