@@ -415,7 +415,10 @@ const pause_action = function () {
 function boot(module_specifier) {
     localStorage.setItem("boot", module_specifier);
     const module_url = new URL(module_specifier, window.location.href).href;
-    core.h_import(module_url)(function callback(module) {
+    core.h_import(module_url)(function callback(module, reason) {
+        if (module === undefined) {
+            return console.error("Import failed", module_specifier, reason);
+        }
         core.h_boot(module.boot);
         update_rom_monitor();
         draw_host();

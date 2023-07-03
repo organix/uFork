@@ -76,7 +76,7 @@ boot_0:                 ; () <- {caps}
 
 boot:                   ; () <- {caps}
     dup 0               ; no-op
-;    ref boot_0         ; redirect to `boot_0` behavior
+;    ref boot_0          ; redirect to `boot_0` behavior
 
 step_0:
     msg 0               ; {caps}
