@@ -197,9 +197,9 @@ _n_ _m_              | `cmp` `lt`         | _bool_       | `#t` if _n_ < _m_, ot
 _n_ _m_              | `cmp` `le`         | _bool_       | `#t` if _n_ <= _m_, otherwise `#f`
 _n_ _m_              | `cmp` `ge`         | _bool_       | `#t` if _n_ >= _m_, otherwise `#f`
 _n_ _m_              | `cmp` `gt`         | _bool_       | `#t` if _n_ > _m_, otherwise `#f`
-_bool_               | `if` _T_ [_F_]     | —            | if not "falsey", continue _T_ (otherwise _F_)
-_bool_               | `if_not` _F_ [_T_] | —            | if "falsey", continue _F_ (otherwise _T_)
-… _tail_ _head_      | `pair` _n_         | _pair_       | create {t:Pair_T, x:_head_, y:_tail_} (_n_ times)
+_bool_               | `if` _T_ [_F_]     | —            | if not "falsey"<sup>*</sup>, continue _T_ (otherwise _F_)
+_bool_               | `if_not` _F_ [_T_] | —            | if "falsey"<sup>*</sup>, continue _F_ (otherwise _T_)
+… _tail_ _head_      | `pair` _n_         | _pair_       | create _pair_ from _head_ and _tail_ (_n_ times)
 _pair_               | `part` _n_         | … _tail_ _head_ | split _pair_ into _head_ and _tail_ (_n_ times)
 _pair_               | `nth` _n_          | _itemₙ_      | extract item _n_ from a _pair_ list
 _pair_               | `nth` -_n_         | _tailₙ_      | extract tail _n_ from a _pair_ list
@@ -235,6 +235,9 @@ _reason_             | `end` `abort`      | —            | abort actor transac
 —                    | `end` `commit`     | —            | commit actor transaction
 _actual_             | `is_eq` _expect_   | —            | assert `actual` == `expect`, otherwise halt!
 _actual_             | `is_ne` _expect_   | —            | assert `actual` != `expect`, otherwise halt!
+
+<sup>*</sup> For conditionals (`if` and `if_not`) the values
+`#f`, `#?`, `()`, and `0` are considered "falsey".
 
 Every instruction (except `end`) takes a continuation as its
 final operand. In the following example, the `msg` instruction continues to
