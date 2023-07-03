@@ -39,7 +39,7 @@ object-capabilities and memory-safety.
         roll 2              ; n-2 k
         push beh            ; n-2 k beh
         new 0               ; n-2 k fib.()
-        send 2              ;
+        send 2              ; --
         ref std.commit
 
     k:                      ; cust <- m
@@ -105,7 +105,8 @@ There are five _literal_ values:
 - `#f` (false)
 
 _Fixnums_ are signed integers that fit within a single machine word, for example
-`-1000` or `7`.
+`-1000` or `7`. An explicit radix my be provided, such as `16#F0a1`. Character
+literals are recognized inside single-quotes, such as `'A'`, `'z'`, or `'\n'`.
 
 All values have a _type_, queryable with the `typeq` instruction. The following
 types are currently supported:
