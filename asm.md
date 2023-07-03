@@ -82,7 +82,7 @@ In some ways, however, it is quite different:
   after an instruction executes, to clarify the effect. The top of the stack
   is the right-most element.
 
-## Statements
+### Statements
 
 Statements begin with an operator (such as `alu`), followed by zero or more
 operands. An operand is either an enumeration (such as `sub`) or an expression
@@ -92,7 +92,7 @@ Each statement may be preceeded by one or more labels (and the first statement
 must be). Labels are not indented. Labels within a module must have unique
 names.
 
-## Expressions
+### Expressions
 
 Expressions appear only in operand position.
 
@@ -138,7 +138,7 @@ separates the module name from the import name:
 
     if std.cust_send
 
-## Ref
+### Ref
 
 The _ref_ statement takes an expression as its operand and produces the value of
 that expression.
@@ -165,43 +165,78 @@ following are equivalent:
         typeq #fixnum_t
         ref my_continuation
 
-## Instructions
+### Instructions
 
-The following table just describes the syntax of instruction statements. Refer
-to the [instruction set](ufork-wasm/vm.md#instructions)
-for a detailed description of each instruction, including how they manipulate
-the stack.
+The following table just describes
+the syntax and semantics of instruction statements.
+The **Input** depicts the stack before the operation.
+The **Output** depicts the stack after the operation.
+The top of the stack is the right-most element.
 
- Operator    | First operand                                 | Second operand
--------------|-----------------------------------------------|------------------
-`typeq`      | _type_                                        | [_k_]
-`dict`       | `has`/`get`/`add`/`set`/`del`                 | [_k_]
-`deque`      | `new`/`empty`/`push`/`pop`/`put`/`pull`/`len` | [_k_]
-`pair`       | _n_                                           | [_k_]
-`part`       | _n_                                           | [_k_]
-`nth`        | _n_                                           | [_k_]
-`push`       | _value_                                       | [_k_]
-`depth`      | [_k_]                                         |
-`drop`       | _n_                                           | [_k_]
-`pick`       | _n_                                           | [_k_]
-`dup`        | _n_                                           | [_k_]
-`roll`       | _n_                                           | [_k_]
-`alu`        | `not`/`and`/`or`/`xor`/`add`/`sub`/`mul`      | [_k_]
-`eq`         | _value_                                       | [_k_]
-`cmp`        | `eq`/`ge`/`gt`/`lt`/`le`/`ne`                 | [_k_]
-`msg`        | _n_                                           | [_k_]
-`state`      | _n_                                           | [_k_]
-`my`         | `self`/`beh`/`state`                          | [_k_]
-`send`       | _n_                                           | [_k_]
-`new`        | _n_                                           | [_k_]
-`beh`        | _n_                                           | [_k_]
-`end`        | `abort`/`stop`/`commit`/`release`             |
-`is_eq`      | _expect_                                      | [_k_]
-`is_ne`      | _expect_                                      | [_k_]
-`if`         | _t_                                           | [_f_]
-`if_not`     | _f_                                           | [_t_]
+ Input               | Instruction        | Output       | Description
+---------------------|--------------------|--------------|-------------------------------------
+—                    | `push` _value_     | _value_      | push literal _value_ on stack
+_vₙ_ … _v₁_          | `dup` _n_          |_vₙ_ … _v₁_ _vₙ_ … _v₁_ | duplicate top _n_ items on stack
+_vₙ_ … _v₁_          | `drop` _n_         | —            | remove _n_ items from stack
+_vₙ_ … _v₁_          | `pick` _n_         | _vₙ_ … _v₁_ _vₙ_ | copy item _n_ to top of stack
+_vₙ_ … _v₁_          | `roll` _n_         | _vₙ₋₁_ … _v₁_ _vₙ_ | roll item _n_ to top of stack
+_vₙ_ … _v₁_          | `roll` -_n_        | _v₁_ _vₙ_ … _v₂_ | roll top of stack to item _n_
+_vₙ_ … _v₁_          | `depth`            | _vₙ_ … _v₁_ _n_ | count items on stack
+_n_                  | `alu` `not`        | ~_n_         | bitwise not _n_
+_n_ _m_              | `alu` `and`        | _n_&_m_      | bitwise _n_ and _m_
+_n_ _m_              | `alu` `or`         | _n_\|_m_     | bitwise _n_ or _m_
+_n_ _m_              | `alu` `xor`        | _n_^_m_      | bitwise _n_ exclusive-or _m_
+_n_ _m_              | `alu` `add`        | _n_+_m_      | sum of _n_ and _m_
+_n_ _m_              | `alu` `sub`        | _n_-_m_      | difference of _n_ and _m_
+_n_ _m_              | `alu` `mul`        | _n_\*_m_     | product of _n_ and _m_
+_v_                  | `typeq` _T_        | _bool_       | `#t` if _v_ has type _T_, otherwise `#f`
+_u_                  | `eq` _v_           | _bool_       | `#t` if _u_ == _v_, otherwise `#f`
+_u_ _v_              | `cmp` `eq`         | _bool_       | `#t` if _u_ == _v_, otherwise `#f`
+_u_ _v_              | `cmp` `ne`         | _bool_       | `#t` if _u_ != _v_, otherwise `#f`
+_n_ _m_              | `cmp` `lt`         | _bool_       | `#t` if _n_ < _m_, otherwise `#f`
+_n_ _m_              | `cmp` `le`         | _bool_       | `#t` if _n_ <= _m_, otherwise `#f`
+_n_ _m_              | `cmp` `ge`         | _bool_       | `#t` if _n_ >= _m_, otherwise `#f`
+_n_ _m_              | `cmp` `gt`         | _bool_       | `#t` if _n_ > _m_, otherwise `#f`
+_bool_               | `if` _T_ [_F_]     | —            | if not "falsey", continue _T_ (otherwise _F_)
+_bool_               | `if_not` _F_ [_T_] | —            | if "falsey", continue _F_ (otherwise _T_)
+… _tail_ _head_      | `pair` _n_         | _pair_       | create {t:Pair_T, x:_head_, y:_tail_} (_n_ times)
+_pair_               | `part` _n_         | … _tail_ _head_ | split _pair_ into _head_ and _tail_ (_n_ times)
+_pair_               | `nth` _n_          | _itemₙ_      | extract item _n_ from a _pair_ list
+_pair_               | `nth` -_n_         | _tailₙ_      | extract tail _n_ from a _pair_ list
+_dict_ _key_         | `dict` `has`       | _bool_       | `#t` if _dict_ has a binding for _key_, otherwise `#f`
+_dict_ _key_         | `dict` `get`       | _value_      | the first _value_ bound to _key_ in _dict_, or `#?`
+_dict_ _key_ _value_ | `dict` `add`       | _dict'_      | add a binding from _key_ to _value_ in _dict_
+_dict_ _key_ _value_ | `dict` `set`       | _dict'_      | replace or add a binding from _key_ to _value_ in _dict_
+_dict_ _key_         | `dict` `del`       | _dict'_      | remove a binding from _key_ to _value_ in _dict_
+—                    | `deque` `new`      | _deque_      | create a new empty _deque_
+_deque_              | `deque` `empty`    | _bool_       | `#t` if _deque_ is empty, otherwise `#f`
+_deque_ _value_      | `deque` `push`     | _deque'_     | insert _value_ as the first element of _deque_
+_deque_              | `deque` `pop`      | _deque'_ _value_ | remove the first _value_ from _deque_, or `#?`
+_deque_ _value_      | `deque` `put`      | _deque'_     | insert _value_ as the last element of _deque_
+_deque_              | `deque` `pull`     | _deque'_ _value_ | remove the last _value_ from _deque_, or `#?`
+_deque_              | `deque` `len`      | _n_          | count elements in the _deque_
+—                    | `msg` `0`          | _msg_        | copy event message to stack
+—                    | `msg` _n_          | _msgₙ_       | copy message item _n_ to stack
+—                    | `msg` -_n_         | _tailₙ_      | copy message tail _n_ to stack
+—                    | `state` `0`        | _state_      | copy _actor_ state to stack
+—                    | `state` _n_        | _stateₙ_     | copy state item _n_ to stack
+—                    | `state` -_n_       | _tailₙ_      | copy state tail _n_ to stack
+—                    | `my` `self`        | _actor_      | push _actor_ address on stack
+—                    | `my` `beh`         | _beh_        | push _actor_ behavior on stack
+—                    | `my` `state`       | _vₙ_ … _v₁_  | flatten _actor_ state onto stack
+_msg_ _actor_        | `send` `-1`        | —            | send _msg_ to _actor_
+_mₙ_ … _m₁_ _actor_  | `send` _n_         | —            | send (_m₁_ … _mₙ_) to _actor_
+_state_ _beh_        | `new` `-1`         | _actor_      | create new _actor_ with code _beh_ and data _state_
+_vₙ_ … _v₁_ _beh_    | `new` _n_          | _actor_      | create new _actor_ code _beh_ and state (_v₁_ … _vₙ_)
+_state_ _beh_        | `beh` `-1`         | —            | replace code with _beh_ and data with _state_
+_vₙ_ … _v₁_ _beh_    | `beh` _n_          | —            | replace code with _beh_ and state with (_v₁_ … _vₙ_)
+_reason_             | `end` `abort`      | —            | abort actor transaction with _reason_
+—                    | `end` `stop`       | —            | stop current continuation (thread)
+—                    | `end` `commit`     | —            | commit actor transaction
+_actual_             | `is_eq` _expect_   | —            | assert `actual` == `expect`, otherwise halt!
+_actual_             | `is_ne` _expect_   | —            | assert `actual` != `expect`, otherwise halt!
 
-Every instruction (except `end`) takes a continuation (_k_, _f_, or _t_) as its
+Every instruction (except `end`) takes a continuation as its
 final operand. In the following example, the `msg` instruction continues to
 the `end` instruction.
 
@@ -218,15 +253,27 @@ two instructions could more easily be written
         msg 1
         end commit
 
-In contrast to traditional assembly languages, instructions will not continue
-through a label. This means that it is not possible to write
+The `std.asm` module contains (among others)
+the following definition:
 
-    beh:
-        msg 1
-    done:
+    commit:
         end commit
 
-## Data
+This allows the previous example to be written as:
+
+```
+.import
+    std: "./std.asm"
+
+beh:
+    msg 1
+    ref std.commit
+```
+
+In practice, most instructions are implicitly continued
+at the subsequent instruction.
+
+### Data
 
 The `pair_t` and `dict_t` statements construct data structures from their
 operands.
