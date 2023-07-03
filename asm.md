@@ -105,7 +105,7 @@ There are five _literal_ values:
 - `#f` (false)
 
 _Fixnums_ are signed integers that fit within a single machine word, for example
-`-1000` or `7`. An explicit radix my be provided, such as `16#F0a1`. Character
+`7` or `-1000`. An explicit radix may be provided, such as `16#F0a1`. Character
 literals are recognized inside single-quotes, such as `'A'`, `'z'`, or `'\n'`.
 
 All values have a _type_, queryable with the `typeq` instruction. The following
