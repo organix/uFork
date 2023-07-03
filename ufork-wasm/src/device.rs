@@ -321,13 +321,13 @@ fn blob_release(core: &mut Core, handle: Any) -> Result<(), Error> {
                 let next_next = get_u16(core, next + 1);
                 let next_free = get_u16(core, next + 5);
                 set_u16(core, pos + 1, next_next);
-                set_u16(core, pos + 5, len - next_free + (9 - 4));
+                set_u16(core, pos + 5, len - 4 + next_free + 9);
                 set_u16(core, 1, count - 1);
             } else {
                 set_u16(core, pos + 1, next);
                 set_u16(core, pos + 5, len - 4);
-                set_u16(core, ofs + 1, pos);  // link preceeding block to free'd allocation
             }
+            set_u16(core, ofs + 1, pos);  // link preceeding block to free'd allocation
             return Ok(());
         }
         ofs = next;
