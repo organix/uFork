@@ -95,3 +95,85 @@ for handling a Failure:
   * Pause the Periperhal (retaining the Event)
     * The Controller may modify the Configuration and restart the Peripheral
     * The Controller may provide a debugger to examine/modify the Configuration
+
+## Event-Driven Transactions
+
+The design described up to this point
+is focused on message-event transactions.
+This is reasonable,
+since classical Actor-Model semantics
+are defined in this way.
+However, the **uFork** processor
+interleaves instruction execution
+for multiple parallel event-handlers.
+
+## Instruction-Level Sponsorship
+
+Instruction granularity is more
+fine-grained than event granularity.
+Since sponsor limits are checked,
+(and violations reported)
+during instruction execution,
+we need an instruction-level sponsorship model.
+Each instruction is associated with an _event_,
+and each event may have a different _sponsor_.
+
+```
+                                              +-->[memory,events,instrs,#?]
+                                              |
+                                        +-->[sponsor,controller,status,NIL]
+                                        |                        |
+             +-->[memory,events,instrs,signal]<------------------+
+             |
+       +-->[sponsor,to,msg,NIL]
+       |
+[ip,sp,ep,kp]
+```
+
+The _signal_ field of the sponsor
+is either `#?` for top-level events,
+or a pointer to a pre-allocated signal event.
+The signal event is used
+to communicate _status_ to the _controller_.
+
+The pre-allocated signal event
+is not initially part of the event queue.
+When the _peripheral_ needs to signal the _controller_,
+signal event is added to the event queue.
+The _sponsor_ of the signal event
+is the sponsor of the _controller_.
+The _status_ of the signal event
+is the sponsor of the _peripheral_.
+The _signal_ field of the _peripheral_ sponsor
+is set to a fixnum _error_ code.
+When the _signal_ is a fixnum,
+the sponsor is considered **idle**
+and no events are dispatch
+or instructions executed
+for this sponsor.
+
+```
+                                              +-->[memory,events,instrs,#?]
+                                              |
+                                            [sponsor,controller,status,NIL]
+                                                                 |
+             +-->[memory,events,instrs,error]<-------------------+
+             |
+       +-->[sponsor,to,msg,NIL]
+       |
+[ip,sp,ep,kp]
+```
+
+### Sponsor Instructions
+
+These instructions are related to sponsorship.
+
+ Input                        | Instruction        | Output       | Description
+------------------------------|--------------------|--------------|-------------------------------------
+—                             | `sponsor` `new`    | _sponsor_    | create a new empty _sponsor_
+_sponsor_ _memory_            | `sponsor` `memory` | _sponsor_    | transfer _memory_ quota to _sponsor_
+_sponsor_ _events_            | `sponsor` `events` | _sponsor_    | transfer _events_ quota to _sponsor_
+_sponsor_ _instrs_            | `sponsor` `instrs` | _sponsor_    | transfer _instrs_ quota to _sponsor_
+_sponsor_ _controller_        | `sponsor` `start`  | —            | run _sponsor_ under _controller_
+_sponsor_ _msg_ _actor_       | `signal` `-1`      | —            | send _msg_ to _actor_ using _sponsor_
+_sponsor_ _mₙ_ … _m₁_ _actor_ | `signal` _n_       | —            | send (_m₁_ … _mₙ_) to _actor_ using _sponsor_
