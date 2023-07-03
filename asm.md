@@ -98,7 +98,7 @@ Expressions appear only in operand position.
 
 There are five _literal_ values:
 
-- `#?` (undef)
+- `#?` (undefined)
 - `#nil`
 - `#unit`
 - `#t` (true)
@@ -201,13 +201,13 @@ _bool_               | `if` _T_ [_F_]     | —            | if _bool_ is not fa
 _bool_               | `if_not` _F_ [_T_] | —            | if _bool_ is falsey<sup>*</sup>, continue _F_ (else _T_)
 … _tail_ _head_      | `pair` _n_         | _pair_       | create _pair_ from _head_ and _tail_ (_n_ times)
 _pair_               | `part` _n_         | … _tail_ _head_ | split _pair_ into _head_ and _tail_ (_n_ times)
-_pair_               | `nth` _n_          | _itemₙ_      | extract item _n_ from a _pair_ list
-_pair_               | `nth` -_n_         | _tailₙ_      | extract tail _n_ from a _pair_ list
+_pair_               | `nth` _n_          | _itemₙ_      | copy item _n_ from a _pair_ list
+_pair_               | `nth` -_n_         | _tailₙ_      | copy tail _n_ from a _pair_ list
 _dict_ _key_         | `dict` `has`       | _bool_       | `#t` if _dict_ has a binding for _key_, otherwise `#f`
 _dict_ _key_         | `dict` `get`       | _value_      | the first _value_ bound to _key_ in _dict_, or `#?`
 _dict_ _key_ _value_ | `dict` `add`       | _dict'_      | add a binding from _key_ to _value_ in _dict_
 _dict_ _key_ _value_ | `dict` `set`       | _dict'_      | replace or add a binding from _key_ to _value_ in _dict_
-_dict_ _key_         | `dict` `del`       | _dict'_      | remove a binding from _key_ to _value_ in _dict_
+_dict_ _key_         | `dict` `del`       | _dict'_      | remove first binding for _key_ in _dict_
 —                    | `deque` `new`      | _deque_      | create a new empty _deque_
 _deque_              | `deque` `empty`    | _bool_       | `#t` if _deque_ is empty, otherwise `#f`
 _deque_ _value_      | `deque` `push`     | _deque'_     | insert _value_ as the first element of _deque_
@@ -275,6 +275,33 @@ beh:
 
 In practice, most instructions are implicitly continued
 at the subsequent instruction.
+
+#### Pair-List Indexing
+
+Instructions like `msg`, `state`, and `nth`
+have an immediate index argument (_n_)
+to succinctly designate parts of a pair-list.
+
+  * Positive _n_ designates elements of the list, starting at `1`
+  * Negative _n_ designates list tails, starting at `-1`
+  * Zero designates the whole list/value
+
+```
+  0            -1            -2            -3
+---->[car,cdr]---->[car,cdr]---->[car,cdr]---->...
+    +1 |          +2 |          +3 |
+       V             V             V
+```
+
+...or more compactly...
+
+```
+0-->[1,-1]-->[2,-2]-->[3,-3]--> ...
+     |        |        |
+     V        V        V
+```
+
+If the index is out-of-bounds, the result is `#?` (undefined).
 
 ### Data
 
