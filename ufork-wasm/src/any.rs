@@ -70,6 +70,12 @@ pub const VM_STATE: Any     = Any { raw: DIR_RAW | 28 };
 pub const VM_IS_EQ: Any     = Any { raw: DIR_RAW | 30 };
 pub const VM_IS_NE: Any     = Any { raw: DIR_RAW | 31 };
 
+// VM_GET cell operations
+pub const GET_T: Any        = Any { raw: DIR_RAW | 0 };
+pub const GET_X: Any        = Any { raw: DIR_RAW | 1 };
+pub const GET_Y: Any        = Any { raw: DIR_RAW | 2 };
+pub const GET_Z: Any        = Any { raw: DIR_RAW | 3 };
+
 // VM_DICT dictionary operations
 pub const DICT_HAS: Any     = Any { raw: DIR_RAW | 0 };
 pub const DICT_GET: Any     = Any { raw: DIR_RAW | 1 };

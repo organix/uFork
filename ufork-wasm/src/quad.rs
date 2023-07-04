@@ -108,6 +108,16 @@ impl Quad {
         assert!(k.is_ptr());
         Self::instr_t(VM_TYPEQ, t, k)
     }
+    pub fn vm_cell(n: Any, k: Any) -> Quad {
+        assert!(n.is_fix());
+        assert!(k.is_ptr());
+        Self::instr_t(VM_CELL, n, k)
+    }
+    pub fn vm_get(op: Any, k: Any) -> Quad {
+        assert!(op.is_fix());
+        assert!(k.is_ptr());
+        Self::instr_t(VM_GET, op, k)
+    }
     pub fn vm_dict(op: Any, k: Any) -> Quad {
         assert!(op.is_fix());
         assert!(k.is_ptr());
@@ -220,6 +230,42 @@ impl Quad {
     pub fn vm_is_ne(v: Any, k: Any) -> Quad {
         assert!(k.is_ptr());
         Self::instr_t(VM_IS_NE, v, k)
+    }
+
+    // construct VM_CELL instructions
+    pub fn vm_cell_1(k: Any) -> Quad {
+        assert!(k.is_ptr());
+        Self::vm_cell(PLUS_1, k)
+    }
+    pub fn vm_cell_2(k: Any) -> Quad {
+        assert!(k.is_ptr());
+        Self::vm_cell(PLUS_2, k)
+    }
+    pub fn vm_cell_3(k: Any) -> Quad {
+        assert!(k.is_ptr());
+        Self::vm_cell(PLUS_3, k)
+    }
+    pub fn vm_cell_4(k: Any) -> Quad {
+        assert!(k.is_ptr());
+        Self::vm_cell(PLUS_4, k)
+    }
+
+    // construct VM_GET instructions
+    pub fn vm_get_t(k: Any) -> Quad {
+        assert!(k.is_ptr());
+        Self::vm_get(GET_T, k)
+    }
+    pub fn vm_get_x(k: Any) -> Quad {
+        assert!(k.is_ptr());
+        Self::vm_get(GET_X, k)
+    }
+    pub fn vm_get_y(k: Any) -> Quad {
+        assert!(k.is_ptr());
+        Self::vm_get(GET_Y, k)
+    }
+    pub fn vm_get_z(k: Any) -> Quad {
+        assert!(k.is_ptr());
+        Self::vm_get(GET_Z, k)
     }
 
     // construct VM_DICT instructions

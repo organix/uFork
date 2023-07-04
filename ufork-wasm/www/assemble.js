@@ -526,6 +526,7 @@ function parse(token_generator) {
 // CRLF generator //////////////////////////////////////////////////////////////
 
 const imm_labels = {
+    get: ["T", "X", "Y", "Z"],
     dict: ["has", "get", "add", "set", "del"],
     alu: ["not", "and", "or", "xor", "add", "sub", "mul"],
     cmp: ["eq", "ge", "gt", "lt", "le", "ne"],
@@ -789,7 +790,8 @@ function generate_crlf(tree, file) {
             };
         }
         if (
-            operator.id === "pair"
+            operator.id === "cell"
+            || operator.id === "pair"
             || operator.id === "part"
             || operator.id === "nth"
             || operator.id === "drop"
@@ -856,7 +858,8 @@ function generate_crlf(tree, file) {
             };
         }
         if (
-            operator.id === "dict"
+            operator.id === "get"
+            || operator.id === "dict"
             || operator.id === "deque"
             || operator.id === "alu"
             || operator.id === "cmp"

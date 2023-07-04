@@ -269,6 +269,67 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
                 self.stack_push(r)?;
                 kip
             },
+            VM_CELL => {
+                let n = imm.get_fix()?;
+                if (n < 1) || (n > 4) {
+                    return Err(E_BOUNDS);  // bad component count
+                }
+                let z = if n > 3 { self.stack_pop() } else { UNDEF };
+                let y = if n > 2 { self.stack_pop() } else { UNDEF };
+                let x = if n > 1 { self.stack_pop() } else { UNDEF };
+                let t = self.stack_pop();
+                if !self.typeq(TYPE_T, t) {
+                    return Err(E_BOUNDS);  // type required
+                }
+                let quad = Quad::new(t, x, y, z);
+                let v = self.alloc(&quad)?;
+                self.stack_push(v)?;
+                kip
+            },
+            VM_GET => {
+                match imm {
+                    GET_T => {
+                        let cell = self.stack_pop();
+                        let v = if cell.is_ptr() {
+                            self.mem(cell).t()
+                        } else {
+                            UNDEF
+                        };
+                        self.stack_push(v)?;
+                    }
+                    GET_X => {
+                        let cell = self.stack_pop();
+                        let v = if cell.is_ptr() {
+                            self.mem(cell).x()
+                        } else {
+                            UNDEF
+                        };
+                        self.stack_push(v)?;
+                    }
+                    GET_Y => {
+                        let cell = self.stack_pop();
+                        let v = if cell.is_ptr() {
+                            self.mem(cell).y()
+                        } else {
+                            UNDEF
+                        };
+                        self.stack_push(v)?;
+                    }
+                    GET_Z => {
+                        let cell = self.stack_pop();
+                        let v = if cell.is_ptr() {
+                            self.mem(cell).z()
+                        } else {
+                            UNDEF
+                        };
+                        self.stack_push(v)?;
+                    }
+                    _ => {
+                        return Err(E_BOUNDS);  // unknown CELL op
+                    }
+                };
+                kip
+            },
             VM_DICT => {
                 match imm {
                     DICT_HAS => {

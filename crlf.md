@@ -220,6 +220,8 @@ value points to the next instruction, and is not present on "end" instructions.
  `op`           | `imm`
 ----------------|---------------------------------------------------------------
 "typeq"         | _type_
+"cell"          | _fixnum_
+"get"           | "T", "X", "Y", "Z"
 "dict"          | "has", "get", "add", "set", "del"
 "deque"         | "new", "empty", "push", "pop", "put", "pull", "len"
 "pair"          | _fixnum_

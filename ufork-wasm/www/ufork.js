@@ -197,6 +197,12 @@ const instr_label = [
     "VM_IS_EQ",
     "VM_IS_NE"
 ];
+const get_imm_label = [
+    "T",
+    "X",
+    "Y",
+    "Z"
+];
 const dict_imm_label = [
     "HAS",
     "GET",
@@ -556,7 +562,10 @@ function make_core(wasm_exports, on_wakeup, on_warning, mutable_wasm_caps) {
             const op = quad.x ^ DIR_RAW;  // translate opcode
             if (op < instr_label.length) {
                 const imm = quad.y ^ DIR_RAW;  // translate immediate
-                if ((quad.x === VM_DICT) && (imm < dict_imm_label.length)) {
+                if ((quad.x === VM_GET) && (imm < get_imm_label.length)) {
+                    s += "VM_GET, y:";
+                    s += get_imm_label[imm];
+                } else if ((quad.x === VM_DICT) && (imm < dict_imm_label.length)) {
                     s += "VM_DICT, y:";
                     s += dict_imm_label[imm];
                 } else if ((quad.x === VM_ALU) && (imm < alu_imm_label.length)) {
@@ -679,7 +688,7 @@ function make_core(wasm_exports, on_wakeup, on_warning, mutable_wasm_caps) {
 
         function label(name, labels, prefix_length = 0, offset = 0) {
             const index = labels.findIndex(function (label) {
-                return label.slice(prefix_length).toLowerCase() === name;
+                return label.slice(prefix_length).toLowerCase() === name.toLowerCase();
             }) + offset;
             return (
                 Number.isSafeInteger(index)
@@ -780,7 +789,8 @@ function make_core(wasm_exports, on_wakeup, on_warning, mutable_wasm_caps) {
                     fields.y = type(node.imm);
                     fields.z = instruction(node.k);
                 } else if (
-                    node.op === "pair"
+                    node.op === "cell"
+                    || node.op === "pair"
                     || node.op === "part"
                     || node.op === "nth"
                     || node.op === "drop"
@@ -808,6 +818,9 @@ function make_core(wasm_exports, on_wakeup, on_warning, mutable_wasm_caps) {
                 } else if (node.op === "if") {
                     fields.y = instruction(node.t);
                     fields.z = instruction(node.f);
+                } else if (node.op === "get") {
+                    fields.y = label(node.imm, get_imm_label);
+                    fields.z = instruction(node.k);
                 } else if (node.op === "dict") {
                     fields.y = label(node.imm, dict_imm_label);
                     fields.z = instruction(node.k);

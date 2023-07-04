@@ -148,7 +148,7 @@ The _signal_ field of the _peripheral_ sponsor
 is set to a fixnum _error_ code.
 When the _signal_ is a fixnum,
 the sponsor is considered **idle**
-and no events are dispatch
+and no events are dispatched
 or instructions executed
 for this sponsor.
 
