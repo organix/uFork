@@ -168,12 +168,26 @@ for this sponsor.
 
 These instructions are related to sponsorship.
 
- Input                        | Instruction        | Output       | Description
-------------------------------|--------------------|--------------|-------------------------------------
-—                             | `sponsor` `new`    | _sponsor_    | create a new empty _sponsor_
-_sponsor_ _memory_            | `sponsor` `memory` | _sponsor_    | transfer _memory_ quota to _sponsor_
-_sponsor_ _events_            | `sponsor` `events` | _sponsor_    | transfer _events_ quota to _sponsor_
-_sponsor_ _instrs_            | `sponsor` `instrs` | _sponsor_    | transfer _instrs_ quota to _sponsor_
-_sponsor_ _controller_        | `sponsor` `start`  | —            | run _sponsor_ under _controller_
-_sponsor_ _msg_ _actor_       | `signal` `-1`      | —            | send _msg_ to _actor_ using _sponsor_
-_sponsor_ _mₙ_ … _m₁_ _actor_ | `signal` _n_       | —            | send (_m₁_ … _mₙ_) to _actor_ using _sponsor_
+ Input                        | Instruction         | Output       | Description
+------------------------------|---------------------|--------------|-------------------------------------
+—                             | `sponsor` `new`     | _sponsor_    | create a new empty _sponsor_
+_sponsor_ _memory_            | `sponsor` `memory`  | _sponsor_    | transfer _memory_ quota to _sponsor_
+_sponsor_ _events_            | `sponsor` `events`  | _sponsor_    | transfer _events_ quota to _sponsor_
+_sponsor_ _instrs_            | `sponsor` `instrs`  | _sponsor_    | transfer _instrs_ quota to _sponsor_
+_sponsor_                     | `sponsor` `reclaim` | —            | reclaim all quotas from _sponsor_
+_sponsor_ _controller_        | `sponsor` `start`   | —            | run _sponsor_ under _controller_
+_sponsor_ _msg_ _actor_       | `signal` `-1`       | —            | send _msg_ to _actor_ using _sponsor_
+_sponsor_ _mₙ_ … _m₁_ _actor_ | `signal` _n_        | —            | send (_m₁_ … _mₙ_) to _actor_ using _sponsor_
+
+These additional instructions are generally useful.
+
+ Input                        | Instruction         | Output       | Description
+------------------------------|---------------------|--------------|-------------------------------------
+_T_                           | `cell` `1`          | _cell_       | create cell [_T_, #?, #?, #?]
+_T_ _X_                       | `cell` `2`          | _cell_       | create cell [_T_, _X_, #?, #?]
+_T_ _X_ _Y_                   | `cell` `3`          | _cell_       | create cell [_T_, _X_, _Y_, #?]
+_T_ _X_ _Y_ _Z_               | `cell` `4`          | _cell_       | create cell [_T_, _X_, _Y_, _Z_]
+_cell_                        | `get` `T`           | _t_          | copy _t_ from _cell_
+_cell_                        | `get` `X`           | _x_          | copy _x_ from _cell_
+_cell_                        | `get` `Y`           | _y_          | copy _y_ from _cell_
+_cell_                        | `get` `Z`           | _z_          | copy _z_ from _cell_
