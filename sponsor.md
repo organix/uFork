@@ -155,7 +155,7 @@ for this sponsor.
 ```
                                               +-->[memory,events,instrs,#?]
                                               |
-                                            [sponsor,controller,status,NIL]
+                         event_queue ... -->[sponsor,controller,status,NIL]
                                                                  |
              +-->[memory,events,instrs,error]<-------------------+
              |
