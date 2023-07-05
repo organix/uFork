@@ -532,6 +532,7 @@ const imm_labels = {
     cmp: ["eq", "ge", "gt", "lt", "le", "ne"],
     my: ["self", "beh", "state"],
     deque: ["new", "empty", "push", "pop", "put", "pull", "len"],
+    sponsor: ["new", "memory", "events", "instrs", "reclaim", "start"],
     end: ["abort", "stop", "commit", "release"]
 };
 
@@ -800,6 +801,7 @@ function generate_crlf(tree, file) {
             || operator.id === "roll"
             || operator.id === "msg"
             || operator.id === "state"
+            || operator.id === "signal"
             || operator.id === "send"
             || operator.id === "new"
             || operator.id === "beh"
@@ -864,6 +866,7 @@ function generate_crlf(tree, file) {
             || operator.id === "alu"
             || operator.id === "cmp"
             || operator.id === "my"
+            || operator.id === "sponsor"
         ) {
             operand_check(1, 1);
             return {

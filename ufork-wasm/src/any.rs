@@ -40,7 +40,6 @@ pub const FREE_T: Any       = Any { raw: 15 };  // MUST BE (ROM_BASE_OFS - 1)
 pub const VM_TYPEQ: Any     = Any { raw: DIR_RAW | 0 };
 pub const VM_CELL: Any      = Any { raw: DIR_RAW | 1 };
 pub const VM_GET: Any       = Any { raw: DIR_RAW | 2 };
-//pub const VM_SET: Any       = Any { raw: DIR_RAW | 3 };
 pub const VM_DICT: Any      = Any { raw: DIR_RAW | 3 };
 pub const VM_PAIR: Any      = Any { raw: DIR_RAW | 4 };
 pub const VM_PART: Any      = Any { raw: DIR_RAW | 5 };
@@ -61,12 +60,13 @@ pub const VM_SEND: Any      = Any { raw: DIR_RAW | 19 };
 pub const VM_NEW: Any       = Any { raw: DIR_RAW | 20 };
 pub const VM_BEH: Any       = Any { raw: DIR_RAW | 21 };
 pub const VM_END: Any       = Any { raw: DIR_RAW | 22 };
-//pub const VM_CVT: Any       = Any { raw: DIR_RAW | 23 };
+pub const VM_SPONSOR: Any   = Any { raw: DIR_RAW | 23 };
 //pub const VM_PUTC: Any      = Any { raw: DIR_RAW | 24 };
 //pub const VM_GETC: Any      = Any { raw: DIR_RAW | 25 };
 //pub const VM_DEBUG: Any     = Any { raw: DIR_RAW | 26 };
 pub const VM_DEQUE: Any     = Any { raw: DIR_RAW | 27 };
 pub const VM_STATE: Any     = Any { raw: DIR_RAW | 28 };
+pub const VM_SIGNAL: Any    = Any { raw: DIR_RAW | 29 };
 pub const VM_IS_EQ: Any     = Any { raw: DIR_RAW | 30 };
 pub const VM_IS_NE: Any     = Any { raw: DIR_RAW | 31 };
 
@@ -119,6 +119,14 @@ pub const END_ABORT: Any    = Any { raw: DIR_RAW | -1i32 as Raw };
 pub const END_STOP: Any     = Any { raw: DIR_RAW | 0 };
 pub const END_COMMIT: Any   = Any { raw: DIR_RAW | 1 };
 pub const END_RELEASE: Any  = Any { raw: DIR_RAW | 2 };
+
+// VM_SPONSOR sponsorship management
+pub const SPONSOR_NEW: Any = Any { raw: DIR_RAW | 0 };
+pub const SPONSOR_MEMORY: Any = Any { raw: DIR_RAW | 1 };
+pub const SPONSOR_EVENTS: Any = Any { raw: DIR_RAW | 2 };
+pub const SPONSOR_INSTRS: Any = Any { raw: DIR_RAW | 3 };
+pub const SPONSOR_RECLAIM: Any = Any { raw: DIR_RAW | 4 };
+pub const SPONSOR_START: Any = Any { raw: DIR_RAW | 5 };
 
 // type-tagged value
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

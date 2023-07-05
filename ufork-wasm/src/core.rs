@@ -578,20 +578,21 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
                     }
                 }
                 kip
-            }
+            },
+            VM_SIGNAL => {
+                let n = imm.get_fix()?;
+                let target = self.stack_pop();
+                let msg = self.pop_counted(n);
+                let spn = self.stack_pop();  // explicit sponsor from stack
+                self.effect_send(spn, target, msg)?;
+                kip
+            },
             VM_SEND => {
                 let n = imm.get_fix()?;
                 let target = self.stack_pop();
-                if !self.typeq(ACTOR_T, target) {
-                    return Err(E_NOT_CAP);
-                }
                 let msg = self.pop_counted(n);
-                let ep = self.new_event(target, msg)?;
-                let me = self.self_ptr();
-                let effect = self.ram(me).z();
-                let next = self.ram(effect).z();
-                self.ram_mut(ep).set_z(next);
-                self.ram_mut(effect).set_z(ep);
+                let spn = self.event_sponsor(self.ep());  // implicit sponsor from event
+                self.effect_send(spn, target, msg)?;
                 kip
             },
             VM_NEW => {
@@ -606,13 +607,8 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
             VM_BEH => {
                 let n = imm.get_fix()?;
                 let beh = self.stack_pop();
-                assert!(self.typeq(INSTR_T, beh));  // FIXME: return Err(E_NOT_CODE)
                 let state = self.pop_counted(n);
-                let me = self.self_ptr();
-                let effect = self.ram(me).z();
-                let quad = self.ram_mut(effect);
-                quad.set_x(beh);  // replace behavior function
-                quad.set_y(state);  // replace state data
+                self.effect_become(beh, state)?;
                 kip
             },
             VM_END => {
@@ -644,6 +640,33 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
                     }
                 };
                 rv
+            },
+            VM_SPONSOR => {
+                match imm {
+                    SPONSOR_NEW => {
+                        let spn = self.new_sponsor()?;
+                        self.stack_push(spn)?;
+                    }
+                    SPONSOR_MEMORY => {
+                        return Err(E_BOUNDS);  // not implemented (yet...)
+                    }
+                    SPONSOR_EVENTS => {
+                        return Err(E_BOUNDS);  // not implemented (yet...)
+                    }
+                    SPONSOR_INSTRS => {
+                        return Err(E_BOUNDS);  // not implemented (yet...)
+                    }
+                    SPONSOR_RECLAIM => {
+                        return Err(E_BOUNDS);  // not implemented (yet...)
+                    }
+                    SPONSOR_START => {
+                        return Err(E_BOUNDS);  // not implemented (yet...)
+                    }
+                    _ => {
+                        return Err(E_BOUNDS);  // unknown CELL op
+                    }
+                };
+                kip
             },
             VM_IS_EQ => {
                 let vv = self.stack_pop();
@@ -733,6 +756,27 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
         }
     }
 
+    fn effect_send(&mut self, sponsor: Any, target: Any, msg: Any) -> Result<(), Error> {
+        if !self.typeq(ACTOR_T, target) {
+            return Err(E_NOT_CAP);
+        }
+        let ep = self.new_event(sponsor, target, msg)?;
+        let me = self.self_ptr();
+        let effect = self.ram(me).z();
+        let next = self.ram(effect).z();
+        self.ram_mut(ep).set_z(next);
+        self.ram_mut(effect).set_z(ep);
+        Ok(())
+    }
+    fn effect_become(&mut self, beh: Any, state: Any) -> Result<(), Error> {
+        assert!(self.typeq(INSTR_T, beh));  // FIXME: return Err(E_NOT_CODE)
+        let me = self.self_ptr();
+        let effect = self.ram(me).z();
+        let quad = self.ram_mut(effect);
+        quad.set_x(beh);  // replace behavior function
+        quad.set_y(state);  // replace state data
+        Ok(())
+    }
     fn actor_commit(&mut self, me: Any) {
         self.stack_clear(NIL);
         let effect = self.ram(me).z();
@@ -1046,12 +1090,15 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
     pub fn memory(&self) -> Any { MEMORY }
     pub fn blob_top(&self) -> Any { Any::fix(BLOB_RAM_MAX as isize) }
 
-    fn new_event(&mut self, target: Any, msg: Any) -> Result<Any, Error> {
+    fn new_sponsor(&mut self) -> Result<Any, Error> {
+        let spn = Quad::sponsor_t(ZERO, ZERO, ZERO);
+        self.alloc(&spn)
+    }
+    fn new_event(&mut self, sponsor: Any, target: Any, msg: Any) -> Result<Any, Error> {
         //assert!(self.typeq(ACTOR_T, target));
         if !self.typeq(ACTOR_T, target) {
             return Err(E_NOT_CAP);
         }
-        let sponsor = self.event_sponsor(self.ep());
         let event = Quad::new_event(sponsor, target, msg);
         self.alloc(&event)
     }

@@ -240,9 +240,11 @@ value points to the next instruction, and is not present on "end" instructions.
 "state"         | _fixnum_
 "my"            | "self", "beh", "state"
 "send"          | _fixnum_
+"signal"        | _fixnum_
 "new"           | _fixnum_
 "beh"           | _fixnum_
 "end"           | "abort", "stop", "commit", "release"
+"sponsor"       | "new", "memory", "events", "instrs", "reclaim", "start"
 "is_eq"         | _value_
 "is_ne"         | _value_
 

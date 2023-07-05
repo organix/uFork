@@ -219,9 +219,19 @@ impl Quad {
         assert!(k.is_ptr());
         Self::instr_t(VM_BEH, n, k)
     }
+    pub fn vm_signal(n: Any, k: Any) -> Quad {
+        assert!(n.is_fix());
+        assert!(k.is_ptr());
+        Self::instr_t(VM_SIGNAL, n, k)
+    }
     pub fn vm_end(op: Any) -> Quad {
         assert!(op.is_fix());
         Self::instr_t(VM_END, op, UNDEF)
+    }
+    pub fn vm_sponsor(op: Any, k: Any) -> Quad {
+        assert!(op.is_fix());
+        assert!(k.is_ptr());
+        Self::instr_t(VM_SPONSOR, op, k)
     }
     pub fn vm_is_eq(v: Any, k: Any) -> Quad {
         assert!(k.is_ptr());
@@ -402,6 +412,32 @@ impl Quad {
     }
     pub fn vm_end_release() -> Quad {
         Self::vm_end(END_RELEASE)
+    }
+
+    // construct VM_SPONSOR instructions
+    pub fn vm_sponsor_new(k: Any) -> Quad {
+        assert!(k.is_ptr());
+        Self::vm_sponsor(SPONSOR_NEW, k)
+    }
+    pub fn vm_sponsor_memory(k: Any) -> Quad {
+        assert!(k.is_ptr());
+        Self::vm_sponsor(SPONSOR_MEMORY, k)
+    }
+    pub fn vm_sponsor_events(k: Any) -> Quad {
+        assert!(k.is_ptr());
+        Self::vm_sponsor(SPONSOR_EVENTS, k)
+    }
+    pub fn vm_sponsor_instrs(k: Any) -> Quad {
+        assert!(k.is_ptr());
+        Self::vm_sponsor(SPONSOR_INSTRS, k)
+    }
+    pub fn vm_sponsor_reclaim(k: Any) -> Quad {
+        assert!(k.is_ptr());
+        Self::vm_sponsor(SPONSOR_RECLAIM, k)
+    }
+    pub fn vm_sponsor_start(k: Any) -> Quad {
+        assert!(k.is_ptr());
+        Self::vm_sponsor(SPONSOR_START, k)
     }
 
     // construct detached Event

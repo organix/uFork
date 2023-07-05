@@ -57,9 +57,9 @@ const FREE_T    = 0x0000000F;
 // Instruction constants
 
 const VM_TYPEQ  = 0x80000000;
-const VM_CELL   = 0x80000001;  // reserved
-const VM_GET    = 0x80000002;  // reserved
-const VM_DICT   = 0x80000003;  // was "VM_SET"
+const VM_CELL   = 0x80000001;
+const VM_GET    = 0x80000002;
+const VM_DICT   = 0x80000003;
 const VM_PAIR   = 0x80000004;
 const VM_PART   = 0x80000005;
 const VM_NTH    = 0x80000006;
@@ -79,13 +79,13 @@ const VM_SEND   = 0x80000013;
 const VM_NEW    = 0x80000014;
 const VM_BEH    = 0x80000015;
 const VM_END    = 0x80000016;
-const VM_CVT    = 0x80000017;  // deprecated
+const VM_SPONSOR= 0x80000017;
 const VM_PUTC   = 0x80000018;  // deprecated
 const VM_GETC   = 0x80000019;  // deprecated
 const VM_DEBUG  = 0x8000001A;  // deprecated
 const VM_DEQUE  = 0x8000001B;
-const VM_STATE  = 0x8000001C;  // reserved
-const VM_001D   = 0x8000001D;  // reserved
+const VM_STATE  = 0x8000001C;
+const VM_SIGNAL = 0x8000001D;
 const VM_IS_EQ  = 0x8000001E;
 const VM_IS_NE  = 0x8000001F;
 
@@ -165,9 +165,9 @@ const error_messages = [
 ];
 const instr_label = [
     "VM_TYPEQ",
-    "VM_CELL",  // reserved
-    "VM_GET",  // reserved
-    "VM_DICT",  // was "VM_SET"
+    "VM_CELL",
+    "VM_GET",
+    "VM_DICT",
     "VM_PAIR",
     "VM_PART",
     "VM_NTH",
@@ -187,13 +187,13 @@ const instr_label = [
     "VM_NEW",
     "VM_BEH",
     "VM_END",
-    "VM_CVT",  // deprecated
+    "VM_SPONSOR",
     "VM_PUTC",  // deprecated
     "VM_GETC",  // deprecated
     "VM_DEBUG",  // deprecated
     "VM_DEQUE",
     "VM_STATE",
-    "VM_001D",  // reserved
+    "VM_SIGNAL",
     "VM_IS_EQ",
     "VM_IS_NE"
 ];
@@ -246,6 +246,14 @@ const end_imm_label = [
     "STOP",
     "COMMIT",
     "RELEASE"
+];
+const sponsor_imm_label = [
+    "NEW",
+    "MEMORY",
+    "EVENTS",
+    "INSTRS",
+    "RECLAIM",
+    "START"
 ];
 
 // CRLF
@@ -583,6 +591,9 @@ function make_core(wasm_exports, on_wakeup, on_warning, mutable_wasm_caps) {
                 } else if (quad.x === VM_END) {
                     s += "VM_END, y:";
                     s += end_imm_label[u_fix_to_i32(quad.y) + 1];  // END_ABORT === -1
+                } else if ((quad.x === VM_SPONSOR) && (imm < sponsor_imm_label.length)) {
+                    s += "VM_SPONSOR, y:";
+                    s += sponsor_imm_label[imm];
                 } else {
                     s += instr_label[op];
                     s += ", y:";
@@ -799,6 +810,7 @@ function make_core(wasm_exports, on_wakeup, on_warning, mutable_wasm_caps) {
                     || node.op === "roll"
                     || node.op === "msg"
                     || node.op === "state"
+                    || node.op === "signal"
                     || node.op === "send"
                     || node.op === "new"
                     || node.op === "beh"
@@ -838,6 +850,9 @@ function make_core(wasm_exports, on_wakeup, on_warning, mutable_wasm_caps) {
                     fields.z = instruction(node.k);
                 } else if (node.op === "end") {
                     fields.y = label(node.imm, end_imm_label, 0, -1);
+                } else if (node.op === "sponsor") {
+                    fields.y = label(node.imm, sponsor_imm_label);
+                    fields.z = instruction(node.k);
                 } else {
                     return fail("Not an op", node);
                 }

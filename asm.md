@@ -174,76 +174,84 @@ The **Input** depicts the stack before the operation.
 The **Output** depicts the stack after the operation.
 The top of the stack is the right-most element.
 
- Input               | Instruction        | Output       | Description
----------------------|--------------------|--------------|-------------------------------------
-—                    | `push` _value_     | _value_      | push literal _value_ on stack
-_vₙ_ … _v₁_          | `dup` _n_          |_vₙ_ … _v₁_ _vₙ_ … _v₁_ | duplicate top _n_ items on stack
-_vₙ_ … _v₁_          | `drop` _n_         | —            | remove _n_ items from stack
-_vₙ_ … _v₁_          | `pick` _n_         | _vₙ_ … _v₁_ _vₙ_ | copy item _n_ to top of stack
-_vₙ_ … _v₁_          | `roll` _n_         | _vₙ₋₁_ … _v₁_ _vₙ_ | roll item _n_ to top of stack
-_vₙ_ … _v₁_          | `roll` -_n_        | _v₁_ _vₙ_ … _v₂_ | roll top of stack to item _n_
-_vₙ_ … _v₁_          | `depth`            | _vₙ_ … _v₁_ _n_ | count items on stack
-_n_                  | `alu` `not`        | ~_n_         | bitwise not _n_
-_n_ _m_              | `alu` `and`        | _n_&_m_      | bitwise _n_ and _m_
-_n_ _m_              | `alu` `or`         | _n_\|_m_     | bitwise _n_ or _m_
-_n_ _m_              | `alu` `xor`        | _n_^_m_      | bitwise _n_ exclusive-or _m_
-_n_ _m_              | `alu` `add`        | _n_+_m_      | sum of _n_ and _m_
-_n_ _m_              | `alu` `sub`        | _n_-_m_      | difference of _n_ and _m_
-_n_ _m_              | `alu` `mul`        | _n_\*_m_     | product of _n_ and _m_
-_v_                  | `typeq` _T_        | _bool_       | `#t` if _v_ has type _T_, otherwise `#f`
-_u_                  | `eq` _v_           | _bool_       | `#t` if _u_ == _v_, otherwise `#f`
-_u_ _v_              | `cmp` `eq`         | _bool_       | `#t` if _u_ == _v_, otherwise `#f`
-_u_ _v_              | `cmp` `ne`         | _bool_       | `#t` if _u_ != _v_, otherwise `#f`
-_n_ _m_              | `cmp` `lt`         | _bool_       | `#t` if _n_ < _m_, otherwise `#f`
-_n_ _m_              | `cmp` `le`         | _bool_       | `#t` if _n_ <= _m_, otherwise `#f`
-_n_ _m_              | `cmp` `ge`         | _bool_       | `#t` if _n_ >= _m_, otherwise `#f`
-_n_ _m_              | `cmp` `gt`         | _bool_       | `#t` if _n_ > _m_, otherwise `#f`
-_bool_               | `if` _T_ [_F_]     | —            | if _bool_ is not falsey<sup>*</sup>, continue _T_ (else _F_)
-_bool_               | `if_not` _F_ [_T_] | —            | if _bool_ is falsey<sup>*</sup>, continue _F_ (else _T_)
-… _tail_ _head_      | `pair` _n_         | _pair_       | create _pair_ from _head_ and _tail_ (_n_ times)
-_pair_               | `part` _n_         | … _tail_ _head_ | split _pair_ into _head_ and _tail_ (_n_ times)
-_pair_               | `nth` _n_          | _itemₙ_      | copy item _n_ from a _pair_ list
-_pair_               | `nth` -_n_         | _tailₙ_      | copy tail _n_ from a _pair_ list
-_dict_ _key_         | `dict` `has`       | _bool_       | `#t` if _dict_ has a binding for _key_, otherwise `#f`
-_dict_ _key_         | `dict` `get`       | _value_      | the first _value_ bound to _key_ in _dict_, or `#?`
-_dict_ _key_ _value_ | `dict` `add`       | _dict'_      | add a binding from _key_ to _value_ in _dict_
-_dict_ _key_ _value_ | `dict` `set`       | _dict'_      | replace or add a binding from _key_ to _value_ in _dict_
-_dict_ _key_         | `dict` `del`       | _dict'_      | remove first binding for _key_ in _dict_
-—                    | `deque` `new`      | _deque_      | create a new empty _deque_
-_deque_              | `deque` `empty`    | _bool_       | `#t` if _deque_ is empty, otherwise `#f`
-_deque_ _value_      | `deque` `push`     | _deque'_     | insert _value_ as the first element of _deque_
-_deque_              | `deque` `pop`      | _deque'_ _value_ | remove the first _value_ from _deque_, or `#?`
-_deque_ _value_      | `deque` `put`      | _deque'_     | insert _value_ as the last element of _deque_
-_deque_              | `deque` `pull`     | _deque'_ _value_ | remove the last _value_ from _deque_, or `#?`
-_deque_              | `deque` `len`      | _n_          | count elements in the _deque_
-_T_                  | `cell` `1`         | _cell_       | create cell \[_T_, #?, #?, #?\]
-_T_ _X_              | `cell` `2`         | _cell_       | create cell \[_T_, _X_, #?, #?\]
-_T_ _X_ _Y_          | `cell` `3`         | _cell_       | create cell \[_T_, _X_, _Y_, #?\]
-_T_ _X_ _Y_ _Z_      | `cell` `4`         | _cell_       | create cell \[_T_, _X_, _Y_, _Z_\]
-_cell_               | `get` `T`          | _t_          | copy _t_ from _cell_
-_cell_               | `get` `X`          | _x_          | copy _x_ from _cell_
-_cell_               | `get` `Y`          | _y_          | copy _y_ from _cell_
-_cell_               | `get` `Z`          | _z_          | copy _z_ from _cell_
-—                    | `msg` `0`          | _msg_        | copy event message to stack
-—                    | `msg` _n_          | _msgₙ_       | copy message item _n_ to stack
-—                    | `msg` -_n_         | _tailₙ_      | copy message tail _n_ to stack
-—                    | `state` `0`        | _state_      | copy _actor_ state to stack
-—                    | `state` _n_        | _stateₙ_     | copy state item _n_ to stack
-—                    | `state` -_n_       | _tailₙ_      | copy state tail _n_ to stack
-—                    | `my` `self`        | _actor_      | push _actor_ address on stack
-—                    | `my` `beh`         | _beh_        | push _actor_ behavior on stack
-—                    | `my` `state`       | _vₙ_ … _v₁_  | flatten _actor_ state onto stack
-_msg_ _actor_        | `send` `-1`        | —            | send _msg_ to _actor_
-_mₙ_ … _m₁_ _actor_  | `send` _n_         | —            | send (_m₁_ … _mₙ_) to _actor_
-_state_ _beh_        | `new` `-1`         | _actor_      | create new _actor_ with code _beh_ and data _state_
-_vₙ_ … _v₁_ _beh_    | `new` _n_          | _actor_      | create new _actor_ code _beh_ and state (_v₁_ … _vₙ_)
-_state_ _beh_        | `beh` `-1`         | —            | replace code with _beh_ and data with _state_
-_vₙ_ … _v₁_ _beh_    | `beh` _n_          | —            | replace code with _beh_ and state with (_v₁_ … _vₙ_)
-_reason_             | `end` `abort`      | —            | abort actor transaction with _reason_
-—                    | `end` `stop`       | —            | stop current continuation (thread)
-—                    | `end` `commit`     | —            | commit actor transaction
-_actual_             | `is_eq` _expect_   | —            | assert `actual` == `expect`, otherwise halt!
-_actual_             | `is_ne` _expect_   | —            | assert `actual` != `expect`, otherwise halt!
+ Input               | Instruction         | Output       | Description
+---------------------|---------------------|--------------|-------------------------------------
+—                    | `push` _value_      | _value_      | push literal _value_ on stack
+_vₙ_ … _v₁_          | `dup` _n_           | _vₙ_ … _v₁_ _vₙ_ … _v₁_ | duplicate top _n_ items on stack
+_vₙ_ … _v₁_          | `drop` _n_          | —            | remove _n_ items from stack
+_vₙ_ … _v₁_          | `pick` _n_          | _vₙ_ … _v₁_ _vₙ_ | copy item _n_ to top of stack
+_vₙ_ … _v₁_          | `roll` _n_          | _vₙ₋₁_ … _v₁_ _vₙ_ | roll item _n_ to top of stack
+_vₙ_ … _v₁_          | `roll` -_n_         | _v₁_ _vₙ_ … _v₂_ | roll top of stack to item _n_
+_vₙ_ … _v₁_          | `depth`             | _vₙ_ … _v₁_ _n_ | count items on stack
+_n_                  | `alu` `not`         | ~_n_         | bitwise not _n_
+_n_ _m_              | `alu` `and`         | _n_&_m_      | bitwise _n_ and _m_
+_n_ _m_              | `alu` `or`          | _n_\|_m_     | bitwise _n_ or _m_
+_n_ _m_              | `alu` `xor`         | _n_^_m_      | bitwise _n_ exclusive-or _m_
+_n_ _m_              | `alu` `add`         | _n_+_m_      | sum of _n_ and _m_
+_n_ _m_              | `alu` `sub`         | _n_-_m_      | difference of _n_ and _m_
+_n_ _m_              | `alu` `mul`         | _n_\*_m_     | product of _n_ and _m_
+_v_                  | `typeq` _T_         | _bool_       | `#t` if _v_ has type _T_, otherwise `#f`
+_u_                  | `eq` _v_            | _bool_       | `#t` if _u_ == _v_, otherwise `#f`
+_u_ _v_              | `cmp` `eq`          | _bool_       | `#t` if _u_ == _v_, otherwise `#f`
+_u_ _v_              | `cmp` `ne`          | _bool_       | `#t` if _u_ != _v_, otherwise `#f`
+_n_ _m_              | `cmp` `lt`          | _bool_       | `#t` if _n_ < _m_, otherwise `#f`
+_n_ _m_              | `cmp` `le`          | _bool_       | `#t` if _n_ <= _m_, otherwise `#f`
+_n_ _m_              | `cmp` `ge`          | _bool_       | `#t` if _n_ >= _m_, otherwise `#f`
+_n_ _m_              | `cmp` `gt`          | _bool_       | `#t` if _n_ > _m_, otherwise `#f`
+_bool_               | `if` _T_ [_F_]      | —            | if _bool_ is not falsey<sup>*</sup>, continue _T_ (else _F_)
+_bool_               | `if_not` _F_ [_T_]  | —            | if _bool_ is falsey<sup>*</sup>, continue _F_ (else _T_)
+… _tail_ _head_      | `pair` _n_          | _pair_       | create _pair_ from _head_ and _tail_ (_n_ times)
+_pair_               | `part` _n_          | … _tail_ _head_ | split _pair_ into _head_ and _tail_ (_n_ times)
+_pair_               | `nth` _n_           | _itemₙ_      | copy item _n_ from a _pair_ list
+_pair_               | `nth` -_n_          | _tailₙ_      | copy tail _n_ from a _pair_ list
+_dict_ _key_         | `dict` `has`        | _bool_       | `#t` if _dict_ has a binding for _key_, otherwise `#f`
+_dict_ _key_         | `dict` `get`        | _value_      | the first _value_ bound to _key_ in _dict_, or `#?`
+_dict_ _key_ _value_ | `dict` `add`        | _dict'_      | add a binding from _key_ to _value_ in _dict_
+_dict_ _key_ _value_ | `dict` `set`        | _dict'_      | replace or add a binding from _key_ to _value_ in _dict_
+_dict_ _key_         | `dict` `del`        | _dict'_      | remove first binding for _key_ in _dict_
+—                    | `deque` `new`       | _deque_      | create a new empty _deque_
+_deque_              | `deque` `empty`     | _bool_       | `#t` if _deque_ is empty, otherwise `#f`
+_deque_ _value_      | `deque` `push`      | _deque'_     | insert _value_ as the first element of _deque_
+_deque_              | `deque` `pop`       | _deque'_ _value_ | remove the first _value_ from _deque_, or `#?`
+_deque_ _value_      | `deque` `put`       | _deque'_     | insert _value_ as the last element of _deque_
+_deque_              | `deque` `pull`      | _deque'_ _value_ | remove the last _value_ from _deque_, or `#?`
+_deque_              | `deque` `len`       | _n_          | count elements in the _deque_
+_T_                  | `cell` `1`          | _cell_       | create cell \[_T_, `#?`, `#?`, `#?`\]
+_T_ _X_              | `cell` `2`          | _cell_       | create cell \[_T_, _X_, `#?`, `#?`\]
+_T_ _X_ _Y_          | `cell` `3`          | _cell_       | create cell \[_T_, _X_, _Y_, `#?`\]
+_T_ _X_ _Y_ _Z_      | `cell` `4`          | _cell_       | create cell \[_T_, _X_, _Y_, _Z_\]
+_cell_               | `get` `T`           | _t_          | copy _t_ from _cell_
+_cell_               | `get` `X`           | _x_          | copy _x_ from _cell_
+_cell_               | `get` `Y`           | _y_          | copy _y_ from _cell_
+_cell_               | `get` `Z`           | _z_          | copy _z_ from _cell_
+—                    | `msg` `0`           | _msg_        | copy event message to stack
+—                    | `msg` _n_           | _msgₙ_       | copy message item _n_ to stack
+—                    | `msg` -_n_          | _tailₙ_      | copy message tail _n_ to stack
+—                    | `state` `0`         | _state_      | copy _actor_ state to stack
+—                    | `state` _n_         | _stateₙ_     | copy state item _n_ to stack
+—                    | `state` -_n_        | _tailₙ_      | copy state tail _n_ to stack
+—                    | `my` `self`         | _actor_      | push _actor_ address on stack
+—                    | `my` `beh`          | _beh_        | push _actor_ behavior on stack
+—                    | `my` `state`        | _vₙ_ … _v₁_  | flatten _actor_ state onto stack
+_msg_ _actor_        | `send` `-1`         | —            | send _msg_ to _actor_
+_mₙ_ … _m₁_ _actor_  | `send` _n_          | —            | send (_m₁_ … _mₙ_) to _actor_
+_sponsor_ _msg_ _actor_ | `signal` `-1`    | —            | send _msg_ to _actor_ using _sponsor_
+_sponsor_ _mₙ_ … _m₁_ _actor_ | `signal` _n_ | —          | send (_m₁_ … _mₙ_) to _actor_ using _sponsor_
+_state_ _beh_        | `new` `-1`          | _actor_      | create new _actor_ with code _beh_ and data _state_
+_vₙ_ … _v₁_ _beh_    | `new` _n_           | _actor_      | create new _actor_ code _beh_ and data (_v₁_ … _vₙ_)
+_state_ _beh_        | `beh` `-1`          | —            | replace code with _beh_ and data with _state_
+_vₙ_ … _v₁_ _beh_    | `beh` _n_           | —            | replace code with _beh_ and data with (_v₁_ … _vₙ_)
+_reason_             | `end` `abort`       | —            | abort actor transaction with _reason_
+—                    | `end` `stop`        | —            | stop current continuation (thread)
+—                    | `end` `commit`      | —            | commit actor transaction
+—                    | `sponsor` `new`     | _sponsor_    | create a new empty _sponsor_
+_sponsor_ _memory_   | `sponsor` `memory`  | _sponsor_    | transfer _memory_ quota to _sponsor_
+_sponsor_ _events_   | `sponsor` `events`  | _sponsor_    | transfer _events_ quota to _sponsor_
+_sponsor_ _instrs_   | `sponsor` `instrs`  | _sponsor_    | transfer _instrs_ quota to _sponsor_
+_sponsor_            | `sponsor` `reclaim` | —            | reclaim all quotas from _sponsor_
+_sponsor_ _control_  | `sponsor` `start`   | —            | run _sponsor_ under _control_
+_actual_             | `is_eq` _expect_    | —            | assert `actual` == `expect`, otherwise halt!
+_actual_             | `is_ne` _expect_    | —            | assert `actual` != `expect`, otherwise halt!
 
 <sup>*</sup> For conditionals (`if` and `if_not`) the values
 `#f`, `#?`, `()`, and `0` are considered "falsey".
