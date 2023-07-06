@@ -27,18 +27,17 @@ impl Host {
     pub fn step(&mut self) -> Error {  // single-step instruction execution
         match self.core.execute_instruction() {
             Ok(more) => {
-                if !more && !self.core.event_pending() {
-                    //log!("continuation queue empty!");
-                    return E_FAIL;  // no more instructions...
+                if !more && !self.core.event_pending() {  // no more instructions...
+                    return E_FAIL;
                 }
             },
-            Err(error) => {
-                //log!("execution ERROR! {}", _error);
-                return error;  // execute instruction failed...
+            Err(error) => {  // limit reached, or other error condition signalled...
+                if !self.core.signal_sponsor(error) {
+                    return error;
+                }
             },
         }
         if let Err(error) = self.core.dispatch_event() {
-            //log!("dispatch ERROR! {}", error);
             return error;  // event dispatch failed...
         }
         E_OK  // step successful

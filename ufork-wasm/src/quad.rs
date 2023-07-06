@@ -89,11 +89,11 @@ impl Quad {
         assert!(root.is_ptr());
         Self::new(top, next, free, root)
     }
-    pub fn sponsor_t(memory: Any, events: Any, instrs: Any) -> Quad {
+    pub fn sponsor_t(memory: Any, events: Any, instrs: Any, signal: Any) -> Quad {
         assert!(memory.is_fix());
         assert!(events.is_fix());
         assert!(instrs.is_fix());
-        Self::new(memory, events, instrs, UNDEF)
+        Self::new(memory, events, instrs, signal)
     }
     pub fn fwd_ref_t(to: Any) -> Quad {
         Self::new(FWD_REF_T, UNDEF, UNDEF, to)

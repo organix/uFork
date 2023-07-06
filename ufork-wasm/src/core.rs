@@ -95,7 +95,11 @@ pub const ROM_TOP_OFS: usize = ROM_BASE_OFS;
         quad_ram[TIMER_DEV.ofs()]   = Quad::actor_t(PLUS_4, NIL, UNDEF);  // timer device #4
         quad_ram[MEMO_DEV.ofs()]    = Quad::actor_t(PLUS_5, NIL, UNDEF);  // memo device #5
         quad_ram[AWP_DEV.ofs()]     = Quad::actor_t(PLUS_6, NIL, UNDEF);  // AWP device #6
-        quad_ram[SPONSOR.ofs()]     = Quad::sponsor_t(Any::fix(512), Any::fix(64), Any::fix(768));  // root configuration sponsor
+        quad_ram[SPONSOR.ofs()]     = Quad::sponsor_t(
+                                    Any::fix(512),
+                                    Any::fix(64),
+                                    Any::fix(768),
+                                    UNDEF);  // root configuration sponsor
 
 pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
 
@@ -164,12 +168,14 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
             }
             match self.execute_instruction() {
                 Ok(more) => {
-                    if !more && !self.event_pending() {
-                        return steps;  // no more instructions to execute...
+                    if !more && !self.event_pending() {  // no more instructions to execute...
+                        return steps;
                     }
                 },
-                Err(error) => {
-                    return error;  // limit reached, or error condition signalled...
+                Err(error) => {  // limit reached, or other error condition signalled...
+                    if !self.signal_sponsor(error) {
+                        return error;
+                    }
                 },
             }
             steps += 1;
@@ -177,6 +183,21 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
                 return steps;  // step limit reached
             }
         }
+    }
+    pub fn signal_sponsor(&mut self, error: Error) -> bool {
+        let kp = self.kp();
+        if !kp.is_ram() {
+            return false;  // continuation queue is empty
+        }
+        let ep = self.ep();
+        let sponsor = self.event_sponsor(ep);
+        let sig = self.sponsor_signal(sponsor);
+        if sig.is_ram() {
+            self.set_sponsor_signal(sponsor, Any::fix(error as isize));
+            self.event_enqueue(sig);
+            return true;  // peripheral idle, controller notified
+        }
+        false  // top-level sponsor
     }
     pub fn dispatch_event(&mut self) -> Result<bool, Error> {
         if !self.event_pending() {
@@ -186,6 +207,14 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
         let event = self.mem(ep);
         let target = event.x();
         let sponsor = self.event_sponsor(ep);
+        let sig = self.sponsor_signal(sponsor);
+        if sig.is_fix() {
+            // idle sponsor, retry later...
+            let ep_ = self.event_dequeue().unwrap();
+            assert_eq!(ep, ep_);
+            self.event_enqueue(ep);  // move event to back of queue
+            return Ok(false);  // no event dispatched
+        }
         let limit = self.sponsor_events(sponsor).fix_num().unwrap_or(0);
         if limit <= 0 {
             return Err(E_MSG_LIM);  // Sponsor event limit reached
@@ -232,12 +261,21 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
         }
         let ep = self.ep();
         let sponsor = self.event_sponsor(ep);
+        let sig = self.sponsor_signal(sponsor);
+        if sig.is_fix() {
+            // idle sponsor, retry later...
+            let kp_ = self.cont_dequeue().unwrap();
+            assert_eq!(kp, kp_);
+            self.cont_enqueue(kp_);
+            return Ok(true);  // instruction skipped
+        }
         let limit = self.sponsor_instrs(sponsor).fix_num().unwrap_or(0);
         if limit <= 0 {
             return Err(E_CPU_LIM);  // Sponsor instruction limit reached
         }
         let ip = self.ip();
         let ip_ = self.perform_op(ip)?;
+        let limit = self.sponsor_instrs(sponsor).fix_num().unwrap_or(0);  // may have changed...
         self.set_sponsor_instrs(sponsor, Any::fix(limit - 1));
         if self.typeq(INSTR_T, ip_) {
             // re-queue updated continuation
@@ -646,24 +684,84 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
                     SPONSOR_NEW => {
                         let spn = self.new_sponsor()?;
                         self.stack_push(spn)?;
-                    }
+                    },
                     SPONSOR_MEMORY => {
-                        return Err(E_BOUNDS);  // not implemented (yet...)
-                    }
+                        let num = self.stack_pop();
+                        let n = num.get_fix()?;
+                        let per_spn = self.stack_peek();
+                        let ctl_spn = self.event_sponsor(self.ep());
+                        let limit = self.sponsor_memory(ctl_spn).fix_num().unwrap_or(0);
+                        if n >= limit {
+                            return Err(E_MEM_LIM);  // Sponsor memory limit reached
+                        }
+                        self.set_sponsor_memory(ctl_spn, Any::fix(limit - n));
+                        let m = self.sponsor_memory(per_spn).fix_num().unwrap_or(0);
+                        self.set_sponsor_memory(per_spn, Any::fix(m + n));
+                    },
                     SPONSOR_EVENTS => {
-                        return Err(E_BOUNDS);  // not implemented (yet...)
-                    }
+                        let num = self.stack_pop();
+                        let n = num.get_fix()?;
+                        let per_spn = self.stack_peek();
+                        let ctl_spn = self.event_sponsor(self.ep());
+                        let limit = self.sponsor_events(ctl_spn).fix_num().unwrap_or(0);
+                        if n >= limit {
+                            return Err(E_MSG_LIM);  // Sponsor message-event limit reached
+                        }
+                        self.set_sponsor_events(ctl_spn, Any::fix(limit - n));
+                        let m = self.sponsor_events(per_spn).fix_num().unwrap_or(0);
+                        self.set_sponsor_events(per_spn, Any::fix(m + n));
+                    },
                     SPONSOR_INSTRS => {
-                        return Err(E_BOUNDS);  // not implemented (yet...)
-                    }
+                        let num = self.stack_pop();
+                        let n = num.get_fix()?;
+                        let per_spn = self.stack_peek();
+                        let ctl_spn = self.event_sponsor(self.ep());
+                        let limit = self.sponsor_instrs(ctl_spn).fix_num().unwrap_or(0);
+                        if n >= limit {
+                            return Err(E_CPU_LIM);  // Sponsor instruction limit reached
+                        }
+                        self.set_sponsor_instrs(ctl_spn, Any::fix(limit - n));
+                        let m = self.sponsor_instrs(per_spn).fix_num().unwrap_or(0);
+                        self.set_sponsor_instrs(per_spn, Any::fix(m + n));
+                    },
                     SPONSOR_RECLAIM => {
-                        return Err(E_BOUNDS);  // not implemented (yet...)
-                    }
+                        let ctl_spn = self.event_sponsor(self.ep());
+                        let per_spn = self.stack_pop();
+                        if !per_spn.is_ram() {
+                            return Err(E_NOT_RAM);
+                        }
+                        let mut memory = self.sponsor_memory(ctl_spn).fix_num().unwrap_or(0);
+                        let mut events = self.sponsor_events(ctl_spn).fix_num().unwrap_or(0);
+                        let mut instrs = self.sponsor_instrs(ctl_spn).fix_num().unwrap_or(0);
+                        memory += self.sponsor_memory(per_spn).get_fix()?;
+                        events += self.sponsor_events(per_spn).get_fix()?;
+                        instrs += self.sponsor_instrs(per_spn).get_fix()?;
+                        self.set_sponsor_memory(ctl_spn, Any::fix(memory));
+                        self.set_sponsor_events(ctl_spn, Any::fix(events));
+                        self.set_sponsor_instrs(ctl_spn, Any::fix(instrs));
+                        self.set_sponsor_memory(per_spn, ZERO);
+                        self.set_sponsor_events(per_spn, ZERO);
+                        self.set_sponsor_instrs(per_spn, ZERO);
+                    },
                     SPONSOR_START => {
-                        return Err(E_BOUNDS);  // not implemented (yet...)
-                    }
+                        let ctl = self.stack_pop();
+                        if !self.typeq(ACTOR_T, ctl) {
+                            return Err(E_NOT_CAP);
+                        }
+                        let per_spn = self.stack_pop();
+                        if !per_spn.is_ram() {
+                            return Err(E_NOT_RAM);
+                        }
+                        let sig = self.sponsor_signal(per_spn);
+                        if !self.typeq(FIXNUM_T, sig) {
+                            return Err(E_NOT_FIX);
+                        }
+                        let ctl_spn = self.event_sponsor(self.ep());
+                        let evt = self.new_event(ctl_spn, ctl, per_spn)?;
+                        self.set_sponsor_signal(per_spn, evt);
+                    },
                     _ => {
-                        return Err(E_BOUNDS);  // unknown CELL op
+                        return Err(E_BOUNDS);  // unknown SPONSOR op
                     }
                 };
                 kip
@@ -851,6 +949,12 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
     }
     pub fn set_sponsor_instrs(&mut self, sponsor: Any, num: Any) {
         self.ram_mut(sponsor).set_y(num);
+    }
+    pub fn sponsor_signal(&self, sponsor: Any) -> Any {
+        self.mem(sponsor).z()
+    }
+    pub fn set_sponsor_signal(&mut self, sponsor: Any, signal: Any) {
+        self.ram_mut(sponsor).set_z(signal);
     }
     pub fn event_sponsor(&self, ep: Any) -> Any {
         self.mem(ep).t()
@@ -1091,7 +1195,7 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
     pub fn blob_top(&self) -> Any { Any::fix(BLOB_RAM_MAX as isize) }
 
     fn new_sponsor(&mut self) -> Result<Any, Error> {
-        let spn = Quad::sponsor_t(ZERO, ZERO, ZERO);
+        let spn = Quad::sponsor_t(ZERO, ZERO, ZERO, Any::fix(E_OK as isize));
         self.alloc(&spn)
     }
     fn new_event(&mut self, sponsor: Any, target: Any, msg: Any) -> Result<Any, Error> {
@@ -1206,6 +1310,15 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
             self.free(p);  // free pair holding stack item
         }
         self.set_sp(sp);
+    }
+    fn stack_peek(&mut self) -> Any {
+        let sp = self.sp();
+        if self.typeq(PAIR_T, sp) {
+            let item = self.car(sp);
+            item
+        } else {
+            UNDEF  // stack underflow
+        }
     }
     fn stack_pop(&mut self) -> Any {
         let sp = self.sp();
