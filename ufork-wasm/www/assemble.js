@@ -532,7 +532,7 @@ const imm_labels = {
     cmp: ["eq", "ge", "gt", "lt", "le", "ne"],
     my: ["self", "beh", "state"],
     deque: ["new", "empty", "push", "pop", "put", "pull", "len"],
-    sponsor: ["new", "memory", "events", "instrs", "reclaim", "start"],
+    sponsor: ["new", "memory", "events", "instrs", "reclaim", "start", "stop"],
     end: ["abort", "stop", "commit", "release"]
 };
 

@@ -127,6 +127,7 @@ pub const SPONSOR_EVENTS: Any = Any { raw: DIR_RAW | 2 };
 pub const SPONSOR_INSTRS: Any = Any { raw: DIR_RAW | 3 };
 pub const SPONSOR_RECLAIM: Any = Any { raw: DIR_RAW | 4 };
 pub const SPONSOR_START: Any = Any { raw: DIR_RAW | 5 };
+pub const SPONSOR_STOP: Any = Any { raw: DIR_RAW | 6 };
 
 // type-tagged value
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

@@ -253,7 +253,8 @@ const sponsor_imm_label = [
     "EVENTS",
     "INSTRS",
     "RECLAIM",
-    "START"
+    "START",
+    "STOP"
 ];
 
 // CRLF

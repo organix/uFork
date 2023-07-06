@@ -37,7 +37,7 @@ control_1:              ; (debug_dev) <- sponsor
     msg 0               ; sponsor
     get Z               ; error
     msg 0               ; error sponsor
-    sponsor reclaim     ; error
+    sponsor stop        ; error
     state 1             ; error debug_dev
     ref std.send_msg
 

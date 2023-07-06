@@ -439,6 +439,10 @@ impl Quad {
         assert!(k.is_ptr());
         Self::vm_sponsor(SPONSOR_START, k)
     }
+    pub fn vm_sponsor_stop(k: Any) -> Quad {
+        assert!(k.is_ptr());
+        Self::vm_sponsor(SPONSOR_STOP, k)
+    }
 
     // construct detached Event
     pub fn new_event(sponsor: Any, target: Any, msg: Any) -> Quad {

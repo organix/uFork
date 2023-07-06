@@ -209,10 +209,12 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
         let sponsor = self.event_sponsor(ep);
         let sig = self.sponsor_signal(sponsor);
         if sig.is_fix() {
-            // idle sponsor, retry later...
+            // idle sponsor
             let ep_ = self.event_dequeue().unwrap();
             assert_eq!(ep, ep_);
-            self.event_enqueue(ep);  // move event to back of queue
+            if sig != ZERO {  // if not stopped, retry later...
+                self.event_enqueue(ep_);  // move event to back of queue
+            }
             return Ok(false);  // no event dispatched
         }
         let limit = self.sponsor_events(sponsor).fix_num().unwrap_or(0);
@@ -263,10 +265,12 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
         let sponsor = self.event_sponsor(ep);
         let sig = self.sponsor_signal(sponsor);
         if sig.is_fix() {
-            // idle sponsor, retry later...
+            // idle sponsor
             let kp_ = self.cont_dequeue().unwrap();
             assert_eq!(kp, kp_);
-            self.cont_enqueue(kp_);
+            if sig != ZERO {  // if not stopped, retry later...
+                self.cont_enqueue(kp_);  // move continuation to back of queue
+            }
             return Ok(true);  // instruction skipped
         }
         let limit = self.sponsor_instrs(sponsor).fix_num().unwrap_or(0);
@@ -688,6 +692,9 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
                     SPONSOR_MEMORY => {
                         let num = self.stack_pop();
                         let n = num.get_fix()?;
+                        if n < 0 {
+                            return Err(E_BOUNDS);
+                        }
                         let per_spn = self.stack_peek();
                         let ctl_spn = self.event_sponsor(self.ep());
                         let limit = self.sponsor_memory(ctl_spn).fix_num().unwrap_or(0);
@@ -701,6 +708,9 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
                     SPONSOR_EVENTS => {
                         let num = self.stack_pop();
                         let n = num.get_fix()?;
+                        if n < 0 {
+                            return Err(E_BOUNDS);
+                        }
                         let per_spn = self.stack_peek();
                         let ctl_spn = self.event_sponsor(self.ep());
                         let limit = self.sponsor_events(ctl_spn).fix_num().unwrap_or(0);
@@ -714,6 +724,9 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
                     SPONSOR_INSTRS => {
                         let num = self.stack_pop();
                         let n = num.get_fix()?;
+                        if n < 0 {
+                            return Err(E_BOUNDS);
+                        }
                         let per_spn = self.stack_peek();
                         let ctl_spn = self.event_sponsor(self.ep());
                         let limit = self.sponsor_instrs(ctl_spn).fix_num().unwrap_or(0);
@@ -727,21 +740,7 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
                     SPONSOR_RECLAIM => {
                         let ctl_spn = self.event_sponsor(self.ep());
                         let per_spn = self.stack_pop();
-                        if !per_spn.is_ram() {
-                            return Err(E_NOT_RAM);
-                        }
-                        let mut memory = self.sponsor_memory(ctl_spn).fix_num().unwrap_or(0);
-                        let mut events = self.sponsor_events(ctl_spn).fix_num().unwrap_or(0);
-                        let mut instrs = self.sponsor_instrs(ctl_spn).fix_num().unwrap_or(0);
-                        memory += self.sponsor_memory(per_spn).get_fix()?;
-                        events += self.sponsor_events(per_spn).get_fix()?;
-                        instrs += self.sponsor_instrs(per_spn).get_fix()?;
-                        self.set_sponsor_memory(ctl_spn, Any::fix(memory));
-                        self.set_sponsor_events(ctl_spn, Any::fix(events));
-                        self.set_sponsor_instrs(ctl_spn, Any::fix(instrs));
-                        self.set_sponsor_memory(per_spn, ZERO);
-                        self.set_sponsor_events(per_spn, ZERO);
-                        self.set_sponsor_instrs(per_spn, ZERO);
+                        self.reclaim_sponsor(ctl_spn, per_spn)?;
                     },
                     SPONSOR_START => {
                         let ctl = self.stack_pop();
@@ -759,6 +758,12 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
                         let ctl_spn = self.event_sponsor(self.ep());
                         let evt = self.new_event(ctl_spn, ctl, per_spn)?;
                         self.set_sponsor_signal(per_spn, evt);
+                    },
+                    SPONSOR_STOP => {
+                        let ctl_spn = self.event_sponsor(self.ep());
+                        let per_spn = self.stack_pop();
+                        self.reclaim_sponsor(ctl_spn, per_spn)?;
+                        self.set_sponsor_signal(per_spn, ZERO);  // mark sponsor for removal
                     },
                     _ => {
                         return Err(E_BOUNDS);  // unknown SPONSOR op
@@ -932,6 +937,24 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
         a_ptr
     }
 
+    pub fn reclaim_sponsor(&mut self, ctl_spn: Any, per_spn: Any) -> Result<(), Error> {
+        if !ctl_spn.is_ram() || !per_spn.is_ram() {
+            return Err(E_NOT_RAM);
+        }
+        let mut memory = self.sponsor_memory(ctl_spn).fix_num().unwrap_or(0);
+        let mut events = self.sponsor_events(ctl_spn).fix_num().unwrap_or(0);
+        let mut instrs = self.sponsor_instrs(ctl_spn).fix_num().unwrap_or(0);
+        memory += self.sponsor_memory(per_spn).get_fix()?;
+        events += self.sponsor_events(per_spn).get_fix()?;
+        instrs += self.sponsor_instrs(per_spn).get_fix()?;
+        self.set_sponsor_memory(ctl_spn, Any::fix(memory));
+        self.set_sponsor_events(ctl_spn, Any::fix(events));
+        self.set_sponsor_instrs(ctl_spn, Any::fix(instrs));
+        self.set_sponsor_memory(per_spn, ZERO);
+        self.set_sponsor_events(per_spn, ZERO);
+        self.set_sponsor_instrs(per_spn, ZERO);
+        Ok(())
+    }
     pub fn sponsor_memory(&self, sponsor: Any) -> Any {
         self.mem(sponsor).t()
     }
@@ -1195,7 +1218,7 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
     pub fn blob_top(&self) -> Any { Any::fix(BLOB_RAM_MAX as isize) }
 
     fn new_sponsor(&mut self) -> Result<Any, Error> {
-        let spn = Quad::sponsor_t(ZERO, ZERO, ZERO, Any::fix(E_OK as isize));
+        let spn = Quad::sponsor_t(ZERO, ZERO, ZERO, ZERO);
         self.alloc(&spn)
     }
     fn new_event(&mut self, sponsor: Any, target: Any, msg: Any) -> Result<Any, Error> {

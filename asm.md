@@ -245,11 +245,12 @@ _reason_             | `end` `abort`       | —            | abort actor transa
 —                    | `end` `stop`        | —            | stop current continuation (thread)
 —                    | `end` `commit`      | —            | commit actor transaction
 —                    | `sponsor` `new`     | _sponsor_    | create a new empty _sponsor_
-_sponsor_ _memory_   | `sponsor` `memory`  | _sponsor_    | transfer _memory_ quota to _sponsor_
-_sponsor_ _events_   | `sponsor` `events`  | _sponsor_    | transfer _events_ quota to _sponsor_
-_sponsor_ _instrs_   | `sponsor` `instrs`  | _sponsor_    | transfer _instrs_ quota to _sponsor_
+_sponsor_ _n_        | `sponsor` `memory`  | _sponsor_    | transfer _n_ memory quota to _sponsor_
+_sponsor_ _n_        | `sponsor` `events`  | _sponsor_    | transfer _n_ events quota to _sponsor_
+_sponsor_ _n_        | `sponsor` `instrs`  | _sponsor_    | transfer _n_ instrs quota to _sponsor_
 _sponsor_            | `sponsor` `reclaim` | —            | reclaim all quotas from _sponsor_
 _sponsor_ _control_  | `sponsor` `start`   | —            | run _sponsor_ under _control_
+_sponsor_            | `sponsor` `stop`    | —            | reclaim all quotas and remove _sponsor_
 _actual_             | `is_eq` _expect_    | —            | assert `actual` == `expect`, otherwise halt!
 _actual_             | `is_ne` _expect_    | —            | assert `actual` != `expect`, otherwise halt!
 

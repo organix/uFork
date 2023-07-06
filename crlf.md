@@ -244,7 +244,7 @@ value points to the next instruction, and is not present on "end" instructions.
 "new"           | _fixnum_
 "beh"           | _fixnum_
 "end"           | "abort", "stop", "commit", "release"
-"sponsor"       | "new", "memory", "events", "instrs", "reclaim", "start"
+"sponsor"       | "new", "memory", "events", "instrs", "reclaim", "start", "stop"
 "is_eq"         | _value_
 "is_ne"         | _value_
 
