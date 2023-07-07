@@ -61,17 +61,17 @@ count_next:
 
 test_quad:              ; _ <- _
     push #type_t        ; #type_t
-    cell 1              ; custom_t
+    quad 1              ; custom_t
     dup 1               ; custom_t custom_t
     push #pair_t        ; custom_t custom_t #pair_t
     push #dict_t        ; custom_t custom_t #pair_t #dict_t
     push 42             ; custom_t custom_t #pair_t #dict_t 42
     push #t             ; custom_t custom_t #pair_t #dict_t 42 #t
     push #nil           ; custom_t custom_t #pair_t #dict_t 42 #t ()
-    cell 4              ; custom_t custom_t #pair_t {42:#t}
+    quad 4              ; custom_t custom_t #pair_t {42:#t}
     push #nil           ; custom_t custom_t #pair_t {42:#t} ()
-    cell 3              ; custom_t custom_t ({42:#t})
-    cell 2              ; custom_t [custom_t, ({42:#t})]
+    quad 3              ; custom_t custom_t ({42:#t})
+    quad 2              ; custom_t [custom_t, ({42:#t})]
     dup 2               ; custom_t [custom_t, ({42:#t})] custom_t [custom_t, ({42:#t})]
     get T               ; custom_t [custom_t, ({42:#t})] custom_t custom_t
     cmp eq              ; custom_t [custom_t, ({42:#t})] #t

@@ -311,7 +311,7 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
                 self.stack_push(r)?;
                 kip
             },
-            VM_CELL => {
+            VM_QUAD => {
                 let n = imm.get_fix()?;
                 if (n < 1) || (n > 4) {
                     return Err(E_BOUNDS);  // bad component count
@@ -331,43 +331,43 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
             VM_GET => {
                 match imm {
                     GET_T => {
-                        let cell = self.stack_pop();
-                        let v = if cell.is_ptr() {
-                            self.mem(cell).t()
+                        let addr = self.stack_pop();
+                        let v = if addr.is_ptr() {
+                            self.mem(addr).t()
                         } else {
                             UNDEF
                         };
                         self.stack_push(v)?;
                     }
                     GET_X => {
-                        let cell = self.stack_pop();
-                        let v = if cell.is_ptr() {
-                            self.mem(cell).x()
+                        let addr = self.stack_pop();
+                        let v = if addr.is_ptr() {
+                            self.mem(addr).x()
                         } else {
                             UNDEF
                         };
                         self.stack_push(v)?;
                     }
                     GET_Y => {
-                        let cell = self.stack_pop();
-                        let v = if cell.is_ptr() {
-                            self.mem(cell).y()
+                        let addr = self.stack_pop();
+                        let v = if addr.is_ptr() {
+                            self.mem(addr).y()
                         } else {
                             UNDEF
                         };
                         self.stack_push(v)?;
                     }
                     GET_Z => {
-                        let cell = self.stack_pop();
-                        let v = if cell.is_ptr() {
-                            self.mem(cell).z()
+                        let addr = self.stack_pop();
+                        let v = if addr.is_ptr() {
+                            self.mem(addr).z()
                         } else {
                             UNDEF
                         };
                         self.stack_push(v)?;
                     }
                     _ => {
-                        return Err(E_BOUNDS);  // unknown CELL op
+                        return Err(E_BOUNDS);  // unknown QUAD op
                     }
                 };
                 kip

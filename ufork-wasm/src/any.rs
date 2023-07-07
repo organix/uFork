@@ -38,7 +38,7 @@ pub const FREE_T: Any       = Any { raw: 15 };  // MUST BE (ROM_BASE_OFS - 1)
 
 // INSTR_T values
 pub const VM_TYPEQ: Any     = Any { raw: DIR_RAW | 0 };
-pub const VM_CELL: Any      = Any { raw: DIR_RAW | 1 };
+pub const VM_QUAD: Any      = Any { raw: DIR_RAW | 1 };
 pub const VM_GET: Any       = Any { raw: DIR_RAW | 2 };
 pub const VM_DICT: Any      = Any { raw: DIR_RAW | 3 };
 pub const VM_PAIR: Any      = Any { raw: DIR_RAW | 4 };
@@ -70,7 +70,7 @@ pub const VM_SIGNAL: Any    = Any { raw: DIR_RAW | 29 };
 pub const VM_IS_EQ: Any     = Any { raw: DIR_RAW | 30 };
 pub const VM_IS_NE: Any     = Any { raw: DIR_RAW | 31 };
 
-// VM_GET cell operations
+// VM_GET quad field operations
 pub const GET_T: Any        = Any { raw: DIR_RAW | 0 };
 pub const GET_X: Any        = Any { raw: DIR_RAW | 1 };
 pub const GET_Y: Any        = Any { raw: DIR_RAW | 2 };

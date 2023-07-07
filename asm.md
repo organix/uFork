@@ -216,14 +216,14 @@ _deque_              | `deque` `pop`       | _deque'_ _value_ | remove the first
 _deque_ _value_      | `deque` `put`       | _deque'_     | insert _value_ as the last element of _deque_
 _deque_              | `deque` `pull`      | _deque'_ _value_ | remove the last _value_ from _deque_, or `#?`
 _deque_              | `deque` `len`       | _n_          | count elements in the _deque_
-_T_                  | `cell` `1`          | _cell_       | create cell \[_T_, `#?`, `#?`, `#?`\]
-_T_ _X_              | `cell` `2`          | _cell_       | create cell \[_T_, _X_, `#?`, `#?`\]
-_T_ _X_ _Y_          | `cell` `3`          | _cell_       | create cell \[_T_, _X_, _Y_, `#?`\]
-_T_ _X_ _Y_ _Z_      | `cell` `4`          | _cell_       | create cell \[_T_, _X_, _Y_, _Z_\]
-_cell_               | `get` `T`           | _t_          | copy _t_ from _cell_
-_cell_               | `get` `X`           | _x_          | copy _x_ from _cell_
-_cell_               | `get` `Y`           | _y_          | copy _y_ from _cell_
-_cell_               | `get` `Z`           | _z_          | copy _z_ from _cell_
+_T_                  | `quad` `1`          | _quad_       | create quad \[_T_, `#?`, `#?`, `#?`\]
+_T_ _X_              | `quad` `2`          | _quad_       | create quad \[_T_, _X_, `#?`, `#?`\]
+_T_ _X_ _Y_          | `quad` `3`          | _quad_       | create quad \[_T_, _X_, _Y_, `#?`\]
+_T_ _X_ _Y_ _Z_      | `quad` `4`          | _quad_       | create quad \[_T_, _X_, _Y_, _Z_\]
+_quad_               | `get` `T`           | _t_          | copy _t_ from _quad_
+_quad_               | `get` `X`           | _x_          | copy _x_ from _quad_
+_quad_               | `get` `Y`           | _y_          | copy _y_ from _quad_
+_quad_               | `get` `Z`           | _z_          | copy _z_ from _quad_
 —                    | `msg` `0`           | _msg_        | copy event message to stack
 —                    | `msg` _n_           | _msgₙ_       | copy message item _n_ to stack
 —                    | `msg` -_n_          | _tailₙ_      | copy message tail _n_ to stack

@@ -57,7 +57,7 @@ const FREE_T    = 0x0000000F;
 // Instruction constants
 
 const VM_TYPEQ  = 0x80000000;
-const VM_CELL   = 0x80000001;
+const VM_QUAD   = 0x80000001;
 const VM_GET    = 0x80000002;
 const VM_DICT   = 0x80000003;
 const VM_PAIR   = 0x80000004;
@@ -165,7 +165,7 @@ const error_messages = [
 ];
 const instr_label = [
     "VM_TYPEQ",
-    "VM_CELL",
+    "VM_QUAD",
     "VM_GET",
     "VM_DICT",
     "VM_PAIR",
@@ -801,7 +801,7 @@ function make_core(wasm_exports, on_wakeup, on_warning, mutable_wasm_caps) {
                     fields.y = type(node.imm);
                     fields.z = instruction(node.k);
                 } else if (
-                    node.op === "cell"
+                    node.op === "quad"
                     || node.op === "pair"
                     || node.op === "part"
                     || node.op === "nth"
@@ -1212,7 +1212,7 @@ function make_core(wasm_exports, on_wakeup, on_warning, mutable_wasm_caps) {
         FWD_REF_T,
         FREE_T,
         VM_TYPEQ,
-        VM_CELL,
+        VM_QUAD,
         VM_GET,
         VM_DICT,
         VM_PAIR,

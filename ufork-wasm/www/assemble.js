@@ -791,7 +791,7 @@ function generate_crlf(tree, file) {
             };
         }
         if (
-            operator.id === "cell"
+            operator.id === "quad"
             || operator.id === "pair"
             || operator.id === "part"
             || operator.id === "nth"
