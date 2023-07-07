@@ -739,7 +739,7 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
                     },
                     SPONSOR_RECLAIM => {
                         let ctl_spn = self.event_sponsor(self.ep());
-                        let per_spn = self.stack_pop();
+                        let per_spn = self.stack_peek();
                         self.reclaim_sponsor(ctl_spn, per_spn)?;
                     },
                     SPONSOR_START => {
