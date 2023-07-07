@@ -247,7 +247,7 @@ _reason_             | `end` `abort`       | —            | abort actor transa
 —                    | `sponsor` `new`     | _sponsor_    | create a new empty _sponsor_
 _sponsor_ _n_        | `sponsor` `memory`  | _sponsor_    | transfer _n_ memory quota to _sponsor_
 _sponsor_ _n_        | `sponsor` `events`  | _sponsor_    | transfer _n_ events quota to _sponsor_
-_sponsor_ _n_        | `sponsor` `instrs`  | _sponsor_    | transfer _n_ instrs quota to _sponsor_
+_sponsor_ _n_        | `sponsor` `cycles`  | _sponsor_    | transfer _n_ cycles quota to _sponsor_
 _sponsor_            | `sponsor` `reclaim` | —            | reclaim all quotas from _sponsor_
 _sponsor_ _control_  | `sponsor` `start`   | —            | run _sponsor_ under _control_
 _sponsor_            | `sponsor` `stop`    | —            | reclaim all quotas and remove _sponsor_

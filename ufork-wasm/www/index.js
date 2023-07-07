@@ -64,7 +64,7 @@ const $mem_pages = document.getElementById("mem-pages");
 const $sponsor_ident = document.getElementById("sponsor-ident");
 const $sponsor_memory = document.getElementById("sponsor-memory");
 const $sponsor_events = document.getElementById("sponsor-events");
-const $sponsor_instrs = document.getElementById("sponsor-instrs");
+const $sponsor_cycles = document.getElementById("sponsor-cycles");
 const $sponsor_signal = document.getElementById("sponsor-signal");
 const $equeue = document.getElementById("equeue");
 const $kqueue = document.getElementById("kqueue");
@@ -317,7 +317,7 @@ function draw_host() {
     const sponsor_quad = core.u_read_quad(sponsor);
     update_element_value($sponsor_memory, core.u_fix_to_i32(sponsor_quad.t));
     update_element_value($sponsor_events, core.u_fix_to_i32(sponsor_quad.x));
-    update_element_value($sponsor_instrs, core.u_fix_to_i32(sponsor_quad.y));
+    update_element_value($sponsor_cycles, core.u_fix_to_i32(sponsor_quad.y));
     update_element_text($sponsor_signal, core.u_print(sponsor_quad.z));
     enable_next();
 }
@@ -518,8 +518,8 @@ $sponsor_events.oninput = function () {
         }
     }
 };
-$sponsor_instrs.oninput = function () {
-    const num = Number($sponsor_instrs.value);
+$sponsor_cycles.oninput = function () {
+    const num = Number($sponsor_cycles.value);
     if (Number.isSafeInteger(num) && (num >= 0)) {
         const cc = current_continuation();
         if (cc) {

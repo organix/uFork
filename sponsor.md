@@ -119,11 +119,11 @@ Each instruction is associated with an _event_,
 and each event may have a different _sponsor_.
 
 ```
-                                              +-->[memory,events,instrs,#?]
+                                              +-->[memory,events,cycles,#?]
                                               |
                                         +-->[sponsor,controller,status,NIL]
                                         |                        |
-             +-->[memory,events,instrs,signal]<------------------+
+             +-->[memory,events,cycles,signal]<------------------+
              |
        +-->[sponsor,to,msg,NIL]
        |
@@ -153,11 +153,11 @@ or instructions executed
 for this sponsor.
 
 ```
-                                              +-->[memory,events,instrs,#?]
+                                              +-->[memory,events,cycles,#?]
                                               |
                          event_queue ... -->[sponsor,controller,status,NIL]
                                                                  |
-             +-->[memory,events,instrs,error]<-------------------+
+             +-->[memory,events,cycles,error]<-------------------+
              |
        +-->[sponsor,to,msg,NIL]
        |
@@ -173,7 +173,7 @@ These instructions are related to sponsorship.
 —                             | `sponsor` `new`     | _sponsor_    | create a new empty _sponsor_
 _sponsor_ _memory_            | `sponsor` `memory`  | _sponsor_    | transfer _memory_ quota to _sponsor_
 _sponsor_ _events_            | `sponsor` `events`  | _sponsor_    | transfer _events_ quota to _sponsor_
-_sponsor_ _instrs_            | `sponsor` `instrs`  | _sponsor_    | transfer _instrs_ quota to _sponsor_
+_sponsor_ _cycles_            | `sponsor` `cycles`  | _sponsor_    | transfer _cycles_ quota to _sponsor_
 _sponsor_                     | `sponsor` `reclaim` | —            | reclaim all quotas from _sponsor_
 _sponsor_ _controller_        | `sponsor` `start`   | —            | run _sponsor_ under _controller_
 _sponsor_ _msg_ _actor_       | `signal` `-1`       | —            | send _msg_ to _actor_ using _sponsor_

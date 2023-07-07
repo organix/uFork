@@ -13,7 +13,7 @@ start:                  ; (debug_dev) <- ()
     push 8              ; sponsor 8
     sponsor events      ; sponsor
     push 64             ; sponsor 64
-    sponsor instrs      ; sponsor
+    sponsor cycles      ; sponsor
     dup 1               ; sponsor sponsor
     state 1             ; sponsor sponsor debug_dev
     push control_1      ; sponsor sponsor debug_dev control_1
@@ -27,6 +27,9 @@ start:                  ; (debug_dev) <- ()
 start_1:                ; () <- ()
     push loop_forever   ; loop_forever
     new 0               ; loop_forever.()
+    send 0              ; --
+    push fork_bomb      ; fork_bomb
+    new 0               ; fork_bomb.()
     send 0              ; --
     push 0              ; 0
     push count_to       ; 0 count_to
@@ -43,6 +46,13 @@ control_1:              ; (debug_dev) <- sponsor
 
 loop_forever:
     dup 0 loop_forever
+
+fork_bomb:              ; () <- ()
+    my self             ; SELF
+    send 0              ; --
+    my self             ; SELF
+    send 0              ; --
+    ref std.commit
 
 count_to:               ; (limit) <- count
     state 1             ; limit

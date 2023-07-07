@@ -251,7 +251,7 @@ const sponsor_imm_label = [
     "NEW",
     "MEMORY",
     "EVENTS",
-    "INSTRS",
+    "CYCLES",
     "RECLAIM",
     "START",
     "STOP"

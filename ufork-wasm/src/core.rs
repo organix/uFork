@@ -273,14 +273,8 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
             }
             return Ok(true);  // instruction skipped
         }
-        let limit = self.sponsor_instrs(sponsor).fix_num().unwrap_or(0);
-        if limit <= 0 {
-            return Err(E_CPU_LIM);  // Sponsor instruction limit reached
-        }
         let ip = self.ip();
         let ip_ = self.perform_op(ip)?;
-        let limit = self.sponsor_instrs(sponsor).fix_num().unwrap_or(0);  // may have changed...
-        self.set_sponsor_instrs(sponsor, Any::fix(limit - 1));
         if self.typeq(INSTR_T, ip_) {
             // re-queue updated continuation
             self.set_ip(ip_);
@@ -299,6 +293,7 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
         Ok(true)  // instruction executed
     }
     fn perform_op(&mut self, ip: Any) -> Result<Any, Error> {
+        self.count_cpu_cycle()?;  // always count at least one "cycle"
         let instr = self.mem(ip);
         assert!(instr.t() == INSTR_T);
         let opr = instr.x();  // operation code
@@ -721,7 +716,7 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
                         let m = self.sponsor_events(per_spn).fix_num().unwrap_or(0);
                         self.set_sponsor_events(per_spn, Any::fix(m + n));
                     },
-                    SPONSOR_INSTRS => {
+                    SPONSOR_CYCLES => {
                         let num = self.stack_pop();
                         let n = num.get_fix()?;
                         if n < 0 {
@@ -729,13 +724,13 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
                         }
                         let per_spn = self.stack_peek();
                         let ctl_spn = self.event_sponsor(self.ep());
-                        let limit = self.sponsor_instrs(ctl_spn).fix_num().unwrap_or(0);
+                        let limit = self.sponsor_cycles(ctl_spn).fix_num().unwrap_or(0);
                         if n >= limit {
                             return Err(E_CPU_LIM);  // Sponsor instruction limit reached
                         }
-                        self.set_sponsor_instrs(ctl_spn, Any::fix(limit - n));
-                        let m = self.sponsor_instrs(per_spn).fix_num().unwrap_or(0);
-                        self.set_sponsor_instrs(per_spn, Any::fix(m + n));
+                        self.set_sponsor_cycles(ctl_spn, Any::fix(limit - n));
+                        let m = self.sponsor_cycles(per_spn).fix_num().unwrap_or(0);
+                        self.set_sponsor_cycles(per_spn, Any::fix(m + n));
                     },
                     SPONSOR_RECLAIM => {
                         let ctl_spn = self.event_sponsor(self.ep());
@@ -943,16 +938,16 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
         }
         let mut memory = self.sponsor_memory(ctl_spn).fix_num().unwrap_or(0);
         let mut events = self.sponsor_events(ctl_spn).fix_num().unwrap_or(0);
-        let mut instrs = self.sponsor_instrs(ctl_spn).fix_num().unwrap_or(0);
+        let mut cycles = self.sponsor_cycles(ctl_spn).fix_num().unwrap_or(0);
         memory += self.sponsor_memory(per_spn).get_fix()?;
         events += self.sponsor_events(per_spn).get_fix()?;
-        instrs += self.sponsor_instrs(per_spn).get_fix()?;
+        cycles += self.sponsor_cycles(per_spn).get_fix()?;
         self.set_sponsor_memory(ctl_spn, Any::fix(memory));
         self.set_sponsor_events(ctl_spn, Any::fix(events));
-        self.set_sponsor_instrs(ctl_spn, Any::fix(instrs));
+        self.set_sponsor_cycles(ctl_spn, Any::fix(cycles));
         self.set_sponsor_memory(per_spn, ZERO);
         self.set_sponsor_events(per_spn, ZERO);
-        self.set_sponsor_instrs(per_spn, ZERO);
+        self.set_sponsor_cycles(per_spn, ZERO);
         Ok(())
     }
     pub fn sponsor_memory(&self, sponsor: Any) -> Any {
@@ -967,10 +962,10 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
     pub fn set_sponsor_events(&mut self, sponsor: Any, num: Any) {
         self.ram_mut(sponsor).set_x(num);
     }
-    pub fn sponsor_instrs(&self, sponsor: Any) -> Any {
+    pub fn sponsor_cycles(&self, sponsor: Any) -> Any {
         self.mem(sponsor).y()
     }
-    pub fn set_sponsor_instrs(&mut self, sponsor: Any, num: Any) {
+    pub fn set_sponsor_cycles(&mut self, sponsor: Any, num: Any) {
         self.ram_mut(sponsor).set_y(num);
     }
     pub fn sponsor_signal(&self, sponsor: Any) -> Any {
@@ -981,6 +976,16 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
     }
     pub fn event_sponsor(&self, ep: Any) -> Any {
         self.mem(ep).t()
+    }
+    fn count_cpu_cycle(&mut self) -> Result<(), Error> {
+        let ep = self.ep();
+        let sponsor = self.event_sponsor(ep);
+        let limit = self.sponsor_cycles(sponsor).fix_num().unwrap_or(0);
+        if limit <= 0 {
+            return Err(E_CPU_LIM);  // Sponsor instruction limit reached
+        }
+        self.set_sponsor_cycles(sponsor, Any::fix(limit - 1));
+        Ok(())
     }
 
     fn list_len(&self, list: Any) -> isize {
