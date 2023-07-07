@@ -164,15 +164,20 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
         let mut steps = 0;
         loop {
             if let Err(error) = self.dispatch_event() {
-                return error;  // event dispatch failed...
+                // limit reached, or other error condition signalled...
+                if !self.signal_sponsor(error) {
+                    return error;
+                }
             }
             match self.execute_instruction() {
                 Ok(more) => {
-                    if !more && !self.event_pending() {  // no more instructions to execute...
+                    // no more instructions to execute...
+                    if !more && !self.event_pending() {
                         return steps;
                     }
                 },
-                Err(error) => {  // limit reached, or other error condition signalled...
+                Err(error) => {
+                    // limit reached, or other error condition signalled...
                     if !self.signal_sponsor(error) {
                         return error;
                     }
@@ -293,7 +298,7 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
         Ok(true)  // instruction executed
     }
     fn perform_op(&mut self, ip: Any) -> Result<Any, Error> {
-        self.count_cpu_cycle()?;  // always count at least one "cycle"
+        self.count_cpu_cycles(1)?;  // always count at least one "cycle"
         let instr = self.mem(ip);
         assert!(instr.t() == INSTR_T);
         let opr = instr.x();  // operation code
@@ -977,14 +982,14 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
     pub fn event_sponsor(&self, ep: Any) -> Any {
         self.mem(ep).t()
     }
-    fn count_cpu_cycle(&mut self) -> Result<(), Error> {
+    fn count_cpu_cycles(&mut self, cost: isize) -> Result<(), Error> {
         let ep = self.ep();
         let sponsor = self.event_sponsor(ep);
         let limit = self.sponsor_cycles(sponsor).fix_num().unwrap_or(0);
         if limit <= 0 {
             return Err(E_CPU_LIM);  // Sponsor instruction limit reached
         }
-        self.set_sponsor_cycles(sponsor, Any::fix(limit - 1));
+        self.set_sponsor_cycles(sponsor, Any::fix(limit - cost));
         Ok(())
     }
 
