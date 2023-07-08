@@ -9,6 +9,7 @@ import http from "http";
 const mime_types = {
     html: "text/html",
     png: "image/png",
+    svg: "image/svg+xml",
     js: "text/javascript",
     wasm: "application/wasm",
     json: "application/json",

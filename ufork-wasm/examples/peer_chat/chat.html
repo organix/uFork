@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>uFork Chat Demo</title>
+<link rel="icon" type="image/png" sizes="128x128" href="/www/favicon-128.png">
+<style>
+body {
+  margin: 0.5ex;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  background-color: #FFC;
+}
+h1 {
+  margin: 1em;
+}
+pre {
+  margin: 2px;
+}
+.flex-row {
+  margin: 1ex;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+}
+.panel {
+  margin: 1ex;
+  width: 100ex;
+  height: 24em;
+  border-radius: 1.5ex;
+  padding: 1.2ex 2ex;
+  background: #333;
+  font-family: monospace;
+  white-space: pre;
+  overflow: auto;
+}
+#stdio {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+#stdout {
+  background-color: #222;
+  color: #FFF;
+  font-family: monospace;
+  overflow: scroll;
+}
+#stdin {
+  background-color: #FFF;
+  color: #000;
+  font-family: monospace;
+}
+#input-ctls {
+  margin: 4px;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+}
+</style>
+</head>
+<body>
+  <div class="flex-row">
+    <img src="/www/ufork_logo.svg" alt="μFork logo" />
+    <h1>Peer Chat</h1>  
+  </div>
+  <noscript>
+    This page contains webassembly and javascript content,
+    please enable javascript in your browser.
+  </noscript>
+  <div id="stdio" class="panel">
+    <textarea id="stdout" cols="70" rows="16" readonly="readonly"></textarea>
+    <div id="input-ctls">
+      <input id="stdin" type="text" size="66" />
+      <button id="send-btn">Send</button>
+    </div>
+  </div>
+  <script type="module" src="./chat.js"></script>
+</body>
+</html>
