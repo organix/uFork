@@ -15,6 +15,20 @@ import requestorize from "../../www/requestors/requestorize.js";
 
 let core = { UNDEF_RAW: 0 };  // uFork wasm processor core
 
+const $choice_tab = document.getElementById("choice");
+const $room_tab = document.getElementById("room");
+
+const $join_button = document.getElementById("join-btn");
+$join_button.onclick = function () {
+    $choice_tab.style.display = "none";
+    $room_tab.style.display = "flex";
+}
+const $host_button = document.getElementById("host-btn");
+$host_button.onclick = function () {
+    $choice_tab.style.display = "none";
+    $room_tab.style.display = "flex";
+}
+
 let stdin_buffer = "";
 let stdin_stub = core.UNDEF_RAW;
 function read_stdin(stub) {

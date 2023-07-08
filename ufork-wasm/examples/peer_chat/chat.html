@@ -18,6 +18,12 @@ h1 {
 pre {
   margin: 2px;
 }
+button {
+  margin: 0 0.5ex;
+}
+input {
+  margin: 0 0.5ex;
+}
 .flex-row {
   margin: 1ex;
   display: flex;
@@ -31,17 +37,25 @@ pre {
   border-radius: 1.5ex;
   padding: 1.2ex 2ex;
   background: #333;
+  color: #3CC;
   font-family: monospace;
   white-space: pre;
   overflow: auto;
 }
-#stdio {
+#choice {
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
 }
+#room {
+  display: none;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
 #stdout {
+  margin: 1ex;
   background-color: #222;
   color: #FFF;
   font-family: monospace;
@@ -51,12 +65,6 @@ pre {
   background-color: #FFF;
   color: #000;
   font-family: monospace;
-}
-#input-ctls {
-  margin: 4px;
-  display: flex;
-  flex-direction: row;
-  align-items: center;
 }
 </style>
 </head>
@@ -69,11 +77,23 @@ pre {
     This page contains webassembly and javascript content,
     please enable javascript in your browser.
   </noscript>
-  <div id="stdio" class="panel">
+  <div id="choice" class="panel">
+    <div class="flex-row">
+      <button id="join-btn">Join</button>
+      <input id="join-id" type="text" size="48" placeholder="Room Link" />
+    </div>
+    <div class="flex-row">or</div>
+    <div class="flex-row">
+      <button id="host-btn">Host</button>
+      <input id="host-id" type="text" size="48" placeholder="Room Name" />
+    </div>
+  </div>
+  <div id="room" class="panel">
     <textarea id="stdout" cols="70" rows="16" readonly="readonly"></textarea>
-    <div id="input-ctls">
-      <input id="stdin" type="text" size="66" />
+    <div class="flex-row">
+      <input id="stdin" type="text" size="60" />
       <button id="send-btn">Send</button>
+      <button id="exit-btn">Exit</button>
     </div>
   </div>
   <script type="module" src="./chat.js"></script>
