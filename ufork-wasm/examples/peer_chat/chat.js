@@ -105,7 +105,6 @@ parseq.sequence([
         function on_wakeup() {
             console.log(
                 "IDLE",
-                store_name,
                 core.u_fault_msg(core.h_run_loop())
             );
         },
