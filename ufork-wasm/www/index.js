@@ -135,8 +135,15 @@ function update_ram_monitor() {
     }
     $mem_ram.textContent = a.join("\n");
 }
+/*
 function update_blob_monitor() {
     $mem_blob.textContent = hexdump(core.u_blob_mem());
+}
+*/
+import oed from "./oed_lite.js";
+function update_blob_monitor() {
+    const result = oed.decode(core.u_blob_mem());
+    $mem_blob.textContent = JSON.stringify(result, undefined, 2);
 }
 function keep_centered(child, parent) {
     const child_rect = child.getBoundingClientRect();
