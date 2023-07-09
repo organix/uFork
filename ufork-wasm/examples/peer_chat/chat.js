@@ -3,15 +3,15 @@
 /*jslint browser, bitwise, long, devel */
 
 import instantiate_core from "/www/ufork.js";
-import debug_device from "../../www/devices/debug_device.js";
-import clock_device from "../../www/devices/clock_device.js";
-import io_device from "../../www/devices/io_device.js";
-import blob_device from "../../www/devices/blob_device.js";
-import timer_device from "../../www/devices/timer_device.js";
-//import OED from "../../www/oed.js";
-import parseq from "../../www/parseq.js";
-import lazy from "../../www/requestors/lazy.js";
-import requestorize from "../../www/requestors/requestorize.js";
+import debug_device from "/www/devices/debug_device.js";
+import clock_device from "/www/devices/clock_device.js";
+import io_device from "/www/devices/io_device.js";
+import blob_device from "/www/devices/blob_device.js";
+import timer_device from "/www/devices/timer_device.js";
+//import OED from "/www/oed.js";
+import parseq from "/www/parseq.js";
+import lazy from "/www/requestors/lazy.js";
+import requestorize from "/www/requestors/requestorize.js";
 
 let core = { UNDEF_RAW: 0 };  // uFork wasm processor core
 

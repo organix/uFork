@@ -1,8 +1,8 @@
 ; Device constants, and test suite.
 
 .import
-    std: "../../../lib/std.asm"
-    dev: "../../../lib/dev.asm"
+    std: "/lib/std.asm"
+    dev: "/lib/dev.asm"
 
 boot:                   ; () <- {caps}
     push '>'            ; '>'=62
