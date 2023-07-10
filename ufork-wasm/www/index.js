@@ -2,7 +2,7 @@
 
 /*jslint browser, bitwise, long, devel */
 
-import instantiate_core from "./ufork.js";
+import ufork from "./ufork.js";
 import OED from "./oed.js";
 import debug_device from "./devices/debug_device.js";
 import clock_device from "./devices/clock_device.js";
@@ -90,7 +90,8 @@ let fault = false;  // execution fault flag
 const $rate = document.getElementById("frame-rate");
 let frame = 1;  // frame-rate countdown
 let ram_max = 0;
-let core = { UNDEF_RAW: 0 };  // uFork wasm processor core
+let core;  // uFork wasm processor core
+let on_stdin;
 
 function update_element_text(el, txt) {
     if (el.textContent === txt) {
@@ -153,7 +154,7 @@ function keep_centered(child, parent) {
 }
 function update_source_monitor(ip) {
     const sourcemap = core.u_sourcemap(ip);
-    if (core.u_is_rom(ip) && ip !== core.UNDEF_RAW && sourcemap !== undefined) {
+    if (core.u_is_rom(ip) && ip !== ufork.UNDEF_RAW && sourcemap !== undefined) {
         if (sourcemap.source !== undefined) {
             $source_monitor.href = sourcemap.debug.file;
             $source_monitor.innerHTML = "";
@@ -179,7 +180,7 @@ function update_source_monitor(ip) {
     delete $source_monitor.href;
 }
 function current_continuation() {
-    const ddeque_quad = core.u_read_quad(core.u_ramptr(core.DDEQUE_OFS));
+    const ddeque_quad = core.u_read_quad(core.u_ramptr(ufork.DDEQUE_OFS));
     const k_first = ddeque_quad.y;
     if (core.u_in_mem(k_first)) {
         const cont_quad = core.u_read_quad(k_first);
@@ -195,7 +196,7 @@ function enable_next() {
         const cc = current_continuation();
         if (cc) {
             const instr = core.u_read_quad(cc.ip);
-            if ((instr.t === core.INSTR_T) && (instr.x !== core.VM_END)) {
+            if ((instr.t === ufork.INSTR_T) && (instr.x !== ufork.VM_END)) {
                 $next_button.disabled = false;
                 return;
             }
@@ -219,7 +220,7 @@ function draw_host() {
         ram_max = top;
     }
     update_element_text($ram_max, ram_max.toString());
-    const memory_quad = core.u_read_quad(core.u_ramptr(core.MEMORY_OFS));
+    const memory_quad = core.u_read_quad(core.u_ramptr(ufork.MEMORY_OFS));
     const ram_top = memory_quad.t;
     const ram_next = memory_quad.x;
     const ram_free = memory_quad.y;
@@ -233,7 +234,7 @@ function draw_host() {
     update_element_text($gc_state, core.u_print(gc_state));
     update_element_text($rom_top, core.u_print(rom_top));
     update_element_text($mem_pages, core.u_mem_pages());
-    const ddeque_quad = core.u_read_quad(core.u_ramptr(core.DDEQUE_OFS));
+    const ddeque_quad = core.u_read_quad(core.u_ramptr(ufork.DDEQUE_OFS));
     const e_first = ddeque_quad.t;
     //const e_last = ddeque_quad.x;
     const k_first = ddeque_quad.y;
@@ -539,62 +540,20 @@ $sponsor_cycles.oninput = function () {
     }
 };
 
-let stdin_buffer = "";
-let stdin_stub = core.UNDEF_RAW;
-function read_stdin(stub) {
-    if (core.u_is_ram(stdin_stub)) {
-        throw new Error("stdin_stub already set to " + core.u_pprint(stdin_stub));
-    }
-    stdin_stub = stub;
-    poll_stdin();
-}
-function poll_stdin() {
-    if (core.u_is_ram(stdin_stub)) {
-        if (stdin_buffer.length > 0) {
-            const first = stdin_buffer.slice(0, 1);
-            const rest = stdin_buffer.slice(1);
-            const code = first.codePointAt(0);
-            const char = core.u_fixnum(code);  // character read
-            stdin_buffer = rest;
-            const quad = core.u_read_quad(stdin_stub);
-            const event = core.u_read_quad(quad.y);
-            const sponsor = event.t;
-            const target = event.x;
-            //const message = event.y;
-            console.log(
-                "READ: " + code + " = " + first
-            );
-            const message = core.h_reserve_ram({  // (char)
-                t: core.PAIR_T,
-                x: char,
-                y: core.NIL_RAW,
-                z: core.UNDEF_RAW
-            });
-            core.h_event_inject(sponsor, target, message);
-            core.h_release_stub(stdin_stub);
-            stdin_stub = core.UNDEF_RAW;
-            core.h_wakeup(core.IO_DEV_OFS);
-        }
-    }
-}
-const textEncoder = new TextEncoder();
-const utf8 = new Uint8Array(256);
 const $stdin = document.getElementById("stdin");
 const $send_button = document.getElementById("send-btn");
 $send_button.onclick = function () {
     let text = $stdin.value;
-    if (text.length) {
-        text += '\n';
-        stdin_buffer += text;  // append text to buffer
+    if (text.length > 0) {
+        text += "\n";
+        on_stdin(text);
+        const utf8 = new TextEncoder().encode(text);
+        console.log("Send", hexdump(utf8, 0, utf8.length));
+        $stdin.value = "";
     }
-    const encodedResults = textEncoder.encodeInto(text, utf8);
-    //console.log(text, encodedResults, utf8);
-    console.log("Send", hexdump(utf8, 0, encodedResults.written));
-    $stdin.value = "";
-    poll_stdin();
-}
+};
 const $stdout = document.getElementById("stdout");
-function write_stdout(char) {
+function on_stdout(char) {
     if ($stdout) {
         const text = $stdout.value;
         //console.log("$stdout.value =", text);
@@ -604,7 +563,7 @@ function write_stdout(char) {
     }
 }
 
-instantiate_core(
+ufork.instantiate_core(
     "../target/wasm32-unknown-unknown/debug/ufork_wasm.wasm",
     function on_wakeup(device_offset) {
         console.log("WAKE:", device_offset);
@@ -620,7 +579,7 @@ instantiate_core(
     // install devices
     debug_device(core);
     clock_device(core);
-    io_device(core, read_stdin, write_stdout);
+    on_stdin = io_device(core, on_stdout);
     blob_device(core);
     timer_device(core);
     awp_device(core);

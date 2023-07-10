@@ -103,6 +103,10 @@ const ice_servers = [{
         "stun:stun2.l.google.com:19302",
         "stun:stun3.l.google.com:19302",
         "stun:stun4.l.google.com:19302"
+        // "stun:stun.hide.me:3478",
+        // "stun:stun.wtfismyip.com:3478",
+        // "stun:stun.gmx.net:3478",
+        // "stun:stun.gmx.de:3478"
     ]
 }];
 const ice_time_limit = 10000;
@@ -179,6 +183,7 @@ function webrtc_transport(signaller, log) {
             let remote_sdp;         // The remote peer's SDP string.
             let signal_connector;   // The signaller connector object.
             let channel_error;      // The channel's RTCError object.
+            let candidates = [];    // An array of undelivered ICE candidates.
 
             function destroy() {
                 debug("destroy");
@@ -231,10 +236,10 @@ function webrtc_transport(signaller, log) {
                         fail
                     );
                 } else if (typeof signal?.candidate === "string") {
-                    if (peer.signalingState !== "closed") {
-                        debug("addIceCandidate");
-                        peer.addIceCandidate(signal).catch(fail);
-                    }
+                    debug("addIceCandidate");
+                    peer.addIceCandidate(signal).catch(function (reason) {
+                        debug("Failed to add ICE candidate", reason);
+                    });
                 }
             }
 
@@ -243,6 +248,21 @@ function webrtc_transport(signaller, log) {
                     certificates: [identity],
                     iceServers: ice_servers
                 });
+
+// Send any ICE candidates thru the signaller. We discard the end-of-candidates
+// indicator because it seems unnecessary and has atrocious cross-browser
+// support.
+
+                peer.onicecandidate = function (event) {
+                    debug("icecandidate", event.candidate?.candidate);
+                    if (event.candidate) {
+                        if (signal_connector !== undefined) {
+                            signal_connector.send(event.candidate);
+                        } else {
+                            candidates.push(event.candidate);
+                        }
+                    }
+                };
                 peer.onconnectionstatechange = function () {
                     debug("connectionState", peer.connectionState);
                     if (peer.connectionState === "failed") {
@@ -303,16 +323,10 @@ function webrtc_transport(signaller, log) {
                     }
                     signal_connector = value;
 
-// Begin sending our ICE candidates thru the signaller. We discard the
-// end-of-candidates indicator because it seems unnecessary and has atrocious
-// cross-browser support.
+// Send thru any backed up ICE candidates.
 
-                    peer.onicecandidate = function (event) {
-                        debug("icecandidate");
-                        if (event.candidate && signal_connector !== undefined) {
-                            signal_connector.send(event.candidate);
-                        }
-                    };
+                    candidates.forEach(signal_connector.send);
+                    candidates = [];
                 });
                 return function cancel() {
                     debug("cancel");
@@ -458,14 +472,12 @@ function webrtc_transport(signaller, log) {
                 if (
                     typeof signal?.candidate === "string"
                     && peers[session_id] !== undefined
-                    && peer.signalingState !== "closed"
                 ) {
                     debug_session("addIceCandidate");
                     return peer.addIceCandidate(
                         signal
                     ).catch(function (reason) {
                         debug_session("Failed to add ICE candidate", reason);
-                        destroy(session_id);
                     });
                 }
             }

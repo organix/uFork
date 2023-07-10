@@ -2,11 +2,13 @@
 
 /*jslint bitwise, devel */
 
+import ufork from "../ufork.js";
+
 function debug_device(core, log = console.log) {
     core.h_install(
         [[
-            core.DEBUG_DEV_OFS,
-            core.u_ptr_to_cap(core.u_ramptr(core.DEBUG_DEV_OFS))
+            ufork.DEBUG_DEV_OFS,
+            core.u_ptr_to_cap(core.u_ramptr(ufork.DEBUG_DEV_OFS))
         ]],
         {
             // FIXME: where should the trace handler be installed?

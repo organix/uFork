@@ -1,7 +1,8 @@
 // A JavaScript wrapper for a uFork WASM core.
 
-// This module exports the 'instantiate_core' function, a requestor factory with
-// the following parameters:
+// This module exports an object containing the uFork constants, as well as a
+// method 'instantiate_core' which is a requestor factory with the following
+// parameters:
 
 //  wasm_url
 //      The URL of the uFork WASM binary, as a string.
@@ -16,14 +17,14 @@
 //      A callback function that is called with a warning whenever a core
 //      method bottoms out to UNDEF. Optional.
 
-// The returned requestor produces a core object containing methods and
-// constants.
+// The returned requestor produces a core object containing a bunch of methods.
+// The methods beginning with "u_" are reentrant, but the methods beginning
+// with "h_" are non-reentrant.
 
 /*jslint browser, long, bitwise */
 
 import parseq from "./parseq.js";
 import requestorize from "./requestors/requestorize.js";
-import lazy from "./requestors/lazy.js";
 import unpromise from "./requestors/unpromise.js";
 import assemble from "./assemble.js";
 
@@ -164,38 +165,38 @@ const error_messages = [
     "actor stopped"                         // E_STOP = -13
 ];
 const instr_label = [
-    "VM_TYPEQ",
-    "VM_QUAD",
-    "VM_GET",
-    "VM_DICT",
-    "VM_PAIR",
-    "VM_PART",
-    "VM_NTH",
-    "VM_PUSH",
-    "VM_DEPTH",
-    "VM_DROP",
-    "VM_PICK",
-    "VM_DUP",
-    "VM_ROLL",
-    "VM_ALU",
-    "VM_EQ",
-    "VM_CMP",
-    "VM_IF",
-    "VM_MSG",
-    "VM_MY",
-    "VM_SEND",
-    "VM_NEW",
-    "VM_BEH",
-    "VM_END",
-    "VM_SPONSOR",
-    "VM_PUTC",  // deprecated
-    "VM_GETC",  // deprecated
-    "VM_DEBUG",  // deprecated
-    "VM_DEQUE",
-    "VM_STATE",
-    "VM_SIGNAL",
-    "VM_IS_EQ",
-    "VM_IS_NE"
+    "VM_typeq",
+    "VM_quad",
+    "VM_get",
+    "VM_dict",
+    "VM_pair",
+    "VM_part",
+    "VM_nth",
+    "VM_push",
+    "VM_depth",
+    "VM_drop",
+    "VM_pick",
+    "VM_dup",
+    "VM_roll",
+    "VM_alu",
+    "VM_eq",
+    "VM_cmp",
+    "VM_if",
+    "VM_msg",
+    "VM_my",
+    "VM_send",
+    "VM_new",
+    "VM_beh",
+    "VM_end",
+    "VM_sponsor",
+    "VM_putc",  // deprecated
+    "VM_getc",  // deprecated
+    "VM_debug",  // deprecated
+    "VM_deque",
+    "VM_state",
+    "VM_signal",
+    "VM_is_eq",
+    "VM_is_ne"
 ];
 const get_imm_label = [
     "T",
@@ -204,57 +205,57 @@ const get_imm_label = [
     "Z"
 ];
 const dict_imm_label = [
-    "HAS",
-    "GET",
-    "ADD",
-    "SET",
-    "DEL"
+    "has",
+    "get",
+    "add",
+    "set",
+    "del"
 ];
 const alu_imm_label = [
-    "NOT",
-    "AND",
-    "OR",
-    "XOR",
-    "ADD",
-    "SUB",
-    "MUL"
+    "not",
+    "and",
+    "or",
+    "xor",
+    "add",
+    "sub",
+    "mul"
 ];
 const cmp_imm_label = [
-    "EQ",
-    "GE",
-    "GT",
-    "LT",
-    "LE",
-    "NE"
+    "eq",
+    "ge",
+    "gt",
+    "lt",
+    "le",
+    "ne"
 ];
 const my_imm_label = [
-    "SELF",
-    "BEH",
-    "STATE"
+    "self",
+    "beh",
+    "state"
 ];
 const deque_imm_label = [
-    "NEW",
-    "EMPTY",
-    "PUSH",
-    "POP",
-    "PUT",
-    "PULL",
-    "LEN"
+    "new",
+    "empty",
+    "push",
+    "pop",
+    "put",
+    "pull",
+    "len"
 ];
 const end_imm_label = [
-    "ABORT",
-    "STOP",
-    "COMMIT",
-    "RELEASE"
+    "abort",
+    "stop",
+    "commit",
+    "release"
 ];
 const sponsor_imm_label = [
-    "NEW",
-    "MEMORY",
-    "EVENTS",
-    "CYCLES",
-    "RECLAIM",
-    "START",
-    "STOP"
+    "new",
+    "memory",
+    "events",
+    "cycles",
+    "reclaim",
+    "start",
+    "stop"
 ];
 
 // CRLF
@@ -444,7 +445,7 @@ function make_core(wasm_exports, on_wakeup, on_warning, mutable_wasm_caps) {
     function u_cap_to_ptr(cap) {
         return (
             u_is_fix(cap)
-            ? u_warning("cap_to_ptr: can't convert fixnum "+u_print(cap))
+            ? u_warning("cap_to_ptr: can't convert fixnum " + u_print(cap))
             : (cap & ~OPQ_RAW)
         );
     }
@@ -452,7 +453,7 @@ function make_core(wasm_exports, on_wakeup, on_warning, mutable_wasm_caps) {
     function u_ptr_to_cap(ptr) {
         return (
             u_is_fix(ptr)
-            ? u_warning("ptr_to_cap: can't convert fixnum "+u_print(ptr))
+            ? u_warning("ptr_to_cap: can't convert fixnum " + u_print(ptr))
             : (ptr | OPQ_RAW)
         );
     }
@@ -474,7 +475,7 @@ function make_core(wasm_exports, on_wakeup, on_warning, mutable_wasm_caps) {
                     z: ram[ram_idx + 3]
                 };
             } else {
-                return u_warning("h_read_quad: RAM ptr out of bounds "+u_print(ptr));
+                return u_warning("h_read_quad: RAM ptr out of bounds " + u_print(ptr));
             }
         }
         if (u_is_rom(ptr)) {
@@ -489,10 +490,10 @@ function make_core(wasm_exports, on_wakeup, on_warning, mutable_wasm_caps) {
                     z: rom[rom_idx + 3]
                 };
             } else {
-                return u_warning("h_read_quad: ROM ptr out of bounds "+u_print(ptr));
+                return u_warning("h_read_quad: ROM ptr out of bounds " + u_print(ptr));
             }
         }
-        return u_warning("h_read_quad: required ptr, got "+u_print(ptr));
+        return u_warning("h_read_quad: required ptr, got " + u_print(ptr));
     }
 
     function u_write_quad(ptr, quad) {
@@ -507,10 +508,10 @@ function make_core(wasm_exports, on_wakeup, on_warning, mutable_wasm_caps) {
                 ram[idx + 3] = quad.z ?? UNDEF_RAW;
                 return;
             } else {
-                return u_warning("h_write_quad: RAM ptr out of bounds "+u_print(ptr));
+                return u_warning("h_write_quad: RAM ptr out of bounds " + u_print(ptr));
             }
         }
-        return u_warning("h_write_quad: required RAM ptr, got "+u_print(ptr));
+        return u_warning("h_write_quad: required RAM ptr, got " + u_print(ptr));
     }
 
     function u_nth(list_ptr, n) {
@@ -572,25 +573,25 @@ function make_core(wasm_exports, on_wakeup, on_warning, mutable_wasm_caps) {
             if (op < instr_label.length) {
                 const imm = quad.y ^ DIR_RAW;  // translate immediate
                 if ((quad.x === VM_GET) && (imm < get_imm_label.length)) {
-                    s += "VM_GET, y:";
+                    s += "VM_get, y:";
                     s += get_imm_label[imm];
                 } else if ((quad.x === VM_DICT) && (imm < dict_imm_label.length)) {
-                    s += "VM_DICT, y:";
+                    s += "VM_dict, y:";
                     s += dict_imm_label[imm];
                 } else if ((quad.x === VM_ALU) && (imm < alu_imm_label.length)) {
-                    s += "VM_ALU, y:";
+                    s += "VM_alu, y:";
                     s += alu_imm_label[imm];
                 } else if ((quad.x === VM_CMP) && (imm < cmp_imm_label.length)) {
-                    s += "VM_CMP, y:";
+                    s += "VM_cmp, y:";
                     s += cmp_imm_label[imm];
                 } else if ((quad.x === VM_MY) && (imm < my_imm_label.length)) {
-                    s += "VM_MY, y:";
+                    s += "VM_my, y:";
                     s += my_imm_label[imm];
                 } else if ((quad.x === VM_DEQUE) && (imm < deque_imm_label.length)) {
-                    s += "VM_DEQUE, y:";
+                    s += "VM_deque, y:";
                     s += deque_imm_label[imm];
                 } else if (quad.x === VM_END) {
-                    s += "VM_END, y:";
+                    s += "VM_end, y:";
                     s += end_imm_label[u_fix_to_i32(quad.y) + 1];  // END_ABORT === -1
                 } else if ((quad.x === VM_SPONSOR) && (imm < sponsor_imm_label.length)) {
                     s += "VM_SPONSOR, y:";
@@ -700,11 +701,11 @@ function make_core(wasm_exports, on_wakeup, on_warning, mutable_wasm_caps) {
 
         function label(name, labels, prefix_length = 0, offset = 0) {
             const index = labels.findIndex(function (label) {
-                return label.slice(prefix_length).toLowerCase() === name.toLowerCase();
-            }) + offset;
+                return label.slice(prefix_length) === name;
+            });
             return (
-                Number.isSafeInteger(index)
-                ? u_fixnum(index)
+                (Number.isSafeInteger(index) && index >= 0)
+                ? u_fixnum(index + offset)
                 : fail("Bad label", name)
             );
         }
@@ -1188,89 +1189,6 @@ function make_core(wasm_exports, on_wakeup, on_warning, mutable_wasm_caps) {
 
     return Object.freeze({
 
-// The constants.
-
-        MSK_RAW,
-        DIR_RAW,
-        OPQ_RAW,
-        MUT_RAW,
-        UNDEF_RAW,
-        NIL_RAW,
-        FALSE_RAW,
-        TRUE_RAW,
-        UNIT_RAW,
-        EMPTY_DQ,
-        LITERAL_T,
-        TYPE_T,
-        FIXNUM_T,
-        ACTOR_T,
-        PROXY_T,
-        STUB_T,
-        INSTR_T,
-        PAIR_T,
-        DICT_T,
-        FWD_REF_T,
-        FREE_T,
-        VM_TYPEQ,
-        VM_QUAD,
-        VM_GET,
-        VM_DICT,
-        VM_PAIR,
-        VM_PART,
-        VM_NTH,
-        VM_PUSH,
-        VM_DEPTH,
-        VM_DROP,
-        VM_PICK,
-        VM_DUP,
-        VM_ROLL,
-        VM_ALU,
-        VM_EQ,
-        VM_CMP,
-        VM_IF,
-        VM_MSG,
-        VM_MY,
-        VM_SEND,
-        VM_NEW,
-        VM_BEH,
-        VM_END,
-        VM_SPONSOR,
-        VM_PUTC,
-        VM_GETC,
-        VM_DEBUG,
-        VM_DEQUE,
-        VM_STATE,
-        VM_SIGNAL,
-        VM_IS_EQ,
-        VM_IS_NE,
-        QUAD_ROM_MAX,
-        QUAD_RAM_MAX,
-        BLOB_RAM_MAX,
-        MEMORY_OFS,
-        DDEQUE_OFS,
-        DEBUG_DEV_OFS,
-        CLOCK_DEV_OFS,
-        IO_DEV_OFS,
-        BLOB_DEV_OFS,
-        TIMER_DEV_OFS,
-        MEMO_DEV_OFS,
-        AWP_DEV_OFS,
-        SPONSOR_OFS,
-        E_OK,
-        E_FAIL,
-        E_BOUNDS,
-        E_NO_MEM,
-        E_NOT_FIX,
-        E_NOT_CAP,
-        E_NOT_PTR,
-        E_NOT_ROM,
-        E_NOT_RAM,
-        E_MEM_LIM,
-        E_CPU_LIM,
-        E_MSG_LIM,
-        E_ASSERT,
-        E_STOP,
-
 // The non-reentrant methods.
 
         h_blob_top,
@@ -1383,6 +1301,7 @@ function instantiate_core(wasm_url, on_wakeup, on_warning) {
     ]);
 }
 
+//debug import lazy from "./requestors/lazy.js";
 //debug import debug_device from "./devices/debug_device.js";
 //debug import clock_device from "./devices/clock_device.js";
 //debug import io_device from "./devices/io_device.js";
@@ -1428,4 +1347,92 @@ function instantiate_core(wasm_url, on_wakeup, on_warning) {
 //debug     })
 //debug ])(console.log);
 
-export default Object.freeze(instantiate_core);
+export default Object.freeze({
+
+// The functions.
+
+    instantiate_core,
+
+// The constants.
+
+    MSK_RAW,
+    DIR_RAW,
+    OPQ_RAW,
+    MUT_RAW,
+    UNDEF_RAW,
+    NIL_RAW,
+    FALSE_RAW,
+    TRUE_RAW,
+    UNIT_RAW,
+    EMPTY_DQ,
+    LITERAL_T,
+    TYPE_T,
+    FIXNUM_T,
+    ACTOR_T,
+    PROXY_T,
+    STUB_T,
+    INSTR_T,
+    PAIR_T,
+    DICT_T,
+    FWD_REF_T,
+    FREE_T,
+    VM_TYPEQ,
+    VM_QUAD,
+    VM_GET,
+    VM_DICT,
+    VM_PAIR,
+    VM_PART,
+    VM_NTH,
+    VM_PUSH,
+    VM_DEPTH,
+    VM_DROP,
+    VM_PICK,
+    VM_DUP,
+    VM_ROLL,
+    VM_ALU,
+    VM_EQ,
+    VM_CMP,
+    VM_IF,
+    VM_MSG,
+    VM_MY,
+    VM_SEND,
+    VM_NEW,
+    VM_BEH,
+    VM_END,
+    VM_SPONSOR,
+    VM_PUTC,
+    VM_GETC,
+    VM_DEBUG,
+    VM_DEQUE,
+    VM_STATE,
+    VM_SIGNAL,
+    VM_IS_EQ,
+    VM_IS_NE,
+    QUAD_ROM_MAX,
+    QUAD_RAM_MAX,
+    BLOB_RAM_MAX,
+    MEMORY_OFS,
+    DDEQUE_OFS,
+    DEBUG_DEV_OFS,
+    CLOCK_DEV_OFS,
+    IO_DEV_OFS,
+    BLOB_DEV_OFS,
+    TIMER_DEV_OFS,
+    MEMO_DEV_OFS,
+    AWP_DEV_OFS,
+    SPONSOR_OFS,
+    E_OK,
+    E_FAIL,
+    E_BOUNDS,
+    E_NO_MEM,
+    E_NOT_FIX,
+    E_NOT_CAP,
+    E_NOT_PTR,
+    E_NOT_ROM,
+    E_NOT_RAM,
+    E_MEM_LIM,
+    E_CPU_LIM,
+    E_MSG_LIM,
+    E_ASSERT,
+    E_STOP
+});

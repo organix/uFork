@@ -139,7 +139,7 @@ function get_certificate_pem(private_key_object) {
     );
     const self = der(SEQUENCE, der(SET, der(
         SEQUENCE,
-        der(OBJECT_IDENTIFIER, "55 04 03"), // commonName
+        der(OBJECT_IDENTIFIER, "550403"), // commonName
         der(UTF8_STRING, Buffer.from("ufork"))
     )));
     const tbs_certificate = der(
