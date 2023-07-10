@@ -2,7 +2,7 @@
 
 /*jslint browser, bitwise, long, devel */
 
-import instantiate_core from "/www/ufork.js";
+import ufork from "/www/ufork.js";
 import debug_device from "/www/devices/debug_device.js";
 import clock_device from "/www/devices/clock_device.js";
 import io_device from "/www/devices/io_device.js";
@@ -13,11 +13,11 @@ import parseq from "/www/parseq.js";
 import lazy from "/www/requestors/lazy.js";
 import requestorize from "/www/requestors/requestorize.js";
 
-let core = {UNDEF_RAW: 0};  // uFork wasm processor core
+let core;  // uFork wasm processor core
 let on_stdin;
 
 function current_continuation() {
-    const dd_quad = core.u_read_quad(core.u_ramptr(core.DDEQUE_OFS));
+    const dd_quad = core.u_read_quad(core.u_ramptr(ufork.DDEQUE_OFS));
     const k_first = dd_quad.y;
     if (core.u_in_mem(k_first)) {
         const k_quad = core.u_read_quad(k_first);
@@ -37,13 +37,13 @@ function refill_quota(status) {
         const cc = current_continuation();
         if (cc) {
             const sponsor = core.u_read_quad(cc.spn);
-            if (status === core.E_MEM_LIM) {
+            if (status === ufork.E_MEM_LIM) {
                 sponsor.t = core.u_fixnum(1024);
             }
-            if (status === core.E_MSG_LIM) {
+            if (status === ufork.E_MSG_LIM) {
                 sponsor.x = core.u_fixnum(256);
             }
-            if (status === core.E_CPU_LIM) {
+            if (status === ufork.E_CPU_LIM) {
                 sponsor.y = core.u_fixnum(4096);
             }
             core.u_write_quad(cc.spn, sponsor);
@@ -96,7 +96,7 @@ function on_stdout(char) {
 const origin = "http://localhost:7273";
 const asm_url = new URL("/examples/peer_chat/chat.asm", origin).href;
 parseq.sequence([
-    instantiate_core(
+    ufork.instantiate_core(
         origin + "/target/wasm32-unknown-unknown/debug/ufork_wasm.wasm",
         function on_wakeup() {
             ufork_idle(core.h_run_loop());

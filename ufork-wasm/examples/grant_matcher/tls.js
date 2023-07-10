@@ -4,7 +4,7 @@
 /*jslint node */
 
 import crypto from "node:crypto";
-import instantiate_core from "../../www/ufork.js";
+import ufork from "../../www/ufork.js";
 import parseq from "../../www/parseq.js";
 import lazy from "../../www/requestors/lazy.js";
 import requestorize from "../../www/requestors/requestorize.js";
@@ -69,7 +69,7 @@ const asm_url = new URL(
 ).href;
 let core;
 parseq.sequence([
-    instantiate_core(
+    ufork.instantiate_core(
         origin + "/target/wasm32-unknown-unknown/debug/ufork_wasm.wasm",
         function on_wakeup() {
             console.log(

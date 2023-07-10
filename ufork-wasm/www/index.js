@@ -2,7 +2,7 @@
 
 /*jslint browser, bitwise, long, devel */
 
-import instantiate_core from "./ufork.js";
+import ufork from "./ufork.js";
 import OED from "./oed.js";
 import debug_device from "./devices/debug_device.js";
 import clock_device from "./devices/clock_device.js";
@@ -90,7 +90,7 @@ let fault = false;  // execution fault flag
 const $rate = document.getElementById("frame-rate");
 let frame = 1;  // frame-rate countdown
 let ram_max = 0;
-let core = {UNDEF_RAW: 0};  // uFork wasm processor core
+let core;  // uFork wasm processor core
 let on_stdin;
 
 function update_element_text(el, txt) {
@@ -154,7 +154,7 @@ function keep_centered(child, parent) {
 }
 function update_source_monitor(ip) {
     const sourcemap = core.u_sourcemap(ip);
-    if (core.u_is_rom(ip) && ip !== core.UNDEF_RAW && sourcemap !== undefined) {
+    if (core.u_is_rom(ip) && ip !== ufork.UNDEF_RAW && sourcemap !== undefined) {
         if (sourcemap.source !== undefined) {
             $source_monitor.href = sourcemap.debug.file;
             $source_monitor.innerHTML = "";
@@ -180,7 +180,7 @@ function update_source_monitor(ip) {
     delete $source_monitor.href;
 }
 function current_continuation() {
-    const ddeque_quad = core.u_read_quad(core.u_ramptr(core.DDEQUE_OFS));
+    const ddeque_quad = core.u_read_quad(core.u_ramptr(ufork.DDEQUE_OFS));
     const k_first = ddeque_quad.y;
     if (core.u_in_mem(k_first)) {
         const cont_quad = core.u_read_quad(k_first);
@@ -196,7 +196,7 @@ function enable_next() {
         const cc = current_continuation();
         if (cc) {
             const instr = core.u_read_quad(cc.ip);
-            if ((instr.t === core.INSTR_T) && (instr.x !== core.VM_END)) {
+            if ((instr.t === ufork.INSTR_T) && (instr.x !== ufork.VM_END)) {
                 $next_button.disabled = false;
                 return;
             }
@@ -220,7 +220,7 @@ function draw_host() {
         ram_max = top;
     }
     update_element_text($ram_max, ram_max.toString());
-    const memory_quad = core.u_read_quad(core.u_ramptr(core.MEMORY_OFS));
+    const memory_quad = core.u_read_quad(core.u_ramptr(ufork.MEMORY_OFS));
     const ram_top = memory_quad.t;
     const ram_next = memory_quad.x;
     const ram_free = memory_quad.y;
@@ -234,7 +234,7 @@ function draw_host() {
     update_element_text($gc_state, core.u_print(gc_state));
     update_element_text($rom_top, core.u_print(rom_top));
     update_element_text($mem_pages, core.u_mem_pages());
-    const ddeque_quad = core.u_read_quad(core.u_ramptr(core.DDEQUE_OFS));
+    const ddeque_quad = core.u_read_quad(core.u_ramptr(ufork.DDEQUE_OFS));
     const e_first = ddeque_quad.t;
     //const e_last = ddeque_quad.x;
     const k_first = ddeque_quad.y;
@@ -563,7 +563,7 @@ function on_stdout(char) {
     }
 }
 
-instantiate_core(
+ufork.instantiate_core(
     "../target/wasm32-unknown-unknown/debug/ufork_wasm.wasm",
     function on_wakeup(device_offset) {
         console.log("WAKE:", device_offset);

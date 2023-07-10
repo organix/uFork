@@ -4,7 +4,7 @@ import hex from "../../www/hex.js";
 import parseq from "../../www/parseq.js";
 import requestorize from "../../www/requestors/requestorize.js";
 import lazy from "../../www/requestors/lazy.js";
-import instantiate_core from "../../www/ufork.js";
+import ufork from "../../www/ufork.js";
 import debug_device from "../../www/devices/debug_device.js";
 import awp_device from "../../www/devices/awp_device.js";
 import webrtc_transport from "../../www/transports/webrtc_transport.js";
@@ -30,7 +30,7 @@ function party(asm_url, acquaintance_names = []) {
     let core;
 
     return parseq.sequence([
-        instantiate_core(
+        ufork.instantiate_core(
             import.meta.resolve(
                 "../../target/wasm32-unknown-unknown/debug/ufork_wasm.wasm"
             ),

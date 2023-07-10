@@ -11,6 +11,7 @@
 
 /*jslint browser, null, devel, long */
 
+import ufork from "../ufork.js";
 import OED from "../oed.js";
 import hex from "../hex.js";
 import dummy_transport from "../transports/dummy_transport.js";
@@ -59,8 +60,8 @@ function awp_device(
     stores = [alice_store, bob_store, carol_store, dana_store],
     webcrypto = crypto // Node.js does not have a 'crypto' global
 ) {
-    const sponsor = core.u_ramptr(core.SPONSOR_OFS);
-    const device = core.u_ptr_to_cap(core.u_ramptr(core.AWP_DEV_OFS));
+    const sponsor = core.u_ramptr(ufork.SPONSOR_OFS);
+    const device = core.u_ptr_to_cap(core.u_ramptr(ufork.AWP_DEV_OFS));
 
     let connections = Object.create(null);  // local:remote -> connection object
     let opening = Object.create(null);      // local:remote -> cancel function
@@ -92,7 +93,7 @@ function awp_device(
         const handle = handle_to_proxy_key.length;
         handle_to_proxy_key.push(proxy_key);
         const raw = core.u_ptr_to_cap(core.h_reserve_ram({
-            t: core.PROXY_T,
+            t: ufork.PROXY_T,
             x: device,
             y: core.u_fixnum(handle)
         }));
@@ -144,19 +145,19 @@ function awp_device(
             if (path.includes(false)) {
                 return {value: raw}; // meta
             }
-            if (raw === core.UNDEF_RAW) {
+            if (raw === ufork.UNDEF_RAW) {
                 return {value: null};
             }
-            if (raw === core.UNIT_RAW) {
+            if (raw === ufork.UNIT_RAW) {
                 return {meta: null};
             }
-            if (raw === core.TRUE_RAW) {
+            if (raw === ufork.TRUE_RAW) {
                 return {value: true};
             }
-            if (raw === core.FALSE_RAW) {
+            if (raw === ufork.FALSE_RAW) {
                 return {value: false};
             }
-            if (raw === core.NIL_RAW) {
+            if (raw === ufork.NIL_RAW) {
                 return {value: []};
             }
             if (core.u_is_fix(raw)) {
@@ -164,7 +165,7 @@ function awp_device(
             }
             if (core.u_is_ptr(raw)) {
                 const pair = core.u_read_quad(raw);
-                if (pair.t === core.PAIR_T) {
+                if (pair.t === ufork.PAIR_T) {
                     return {value: [pair.x, pair.y]};
                 }
             }
@@ -173,7 +174,7 @@ function awp_device(
 // The quad is either a local actor (an ACTOR_T) or a remote actor (a PROXY_T).
 
                 const quad = core.u_read_quad(core.u_cap_to_ptr(raw));
-                if (quad.t === core.ACTOR_T) {
+                if (quad.t === ufork.ACTOR_T) {
                     let swiss = raw_to_swiss[raw];
                     if (
                         swiss === undefined
@@ -197,7 +198,7 @@ function awp_device(
                         data: swiss
                     };
                 }
-                if (quad.t === core.PROXY_T) {
+                if (quad.t === ufork.PROXY_T) {
                     const handle = core.u_fix_to_i32(quad.y);
                     const proxy = proxies[handle_to_proxy_key[handle]];
                     const acquaintance = proxy.store.acquaintances[
@@ -222,27 +223,27 @@ function awp_device(
                 return canonical(); // meta
             }
             if (object.value === null) {
-                return core.UNDEF_RAW;
+                return ufork.UNDEF_RAW;
             }
             if (object.meta === null) {
-                return core.UNIT_RAW;
+                return ufork.UNIT_RAW;
             }
             if (object.value === true) {
-                return core.TRUE_RAW;
+                return ufork.TRUE_RAW;
             }
             if (object.value === false) {
-                return core.FALSE_RAW;
+                return ufork.FALSE_RAW;
             }
             if (Array.isArray(object.value)) {
                 if (object.value.length === 2) {
                     return core.h_reserve_ram({
-                        t: core.PAIR_T,
+                        t: ufork.PAIR_T,
                         x: object.value[0],
                         y: object.value[1]
                     });
                 }
                 if (object.value.length === 0) {
-                    return core.NIL_RAW;
+                    return ufork.NIL_RAW;
                 }
             }
             if (
@@ -279,7 +280,7 @@ function awp_device(
     }
 
     function resume() {
-        core.h_wakeup(core.AWP_DEV_OFS);
+        core.h_wakeup(ufork.AWP_DEV_OFS);
     }
 
     function unregister(key) {
@@ -313,13 +314,13 @@ function awp_device(
                 sponsor,
                 greeter,
                 core.h_reserve_ram({
-                    t: core.PAIR_T,
-                    x: core.UNDEF_RAW, // TODO cancel_customer
+                    t: ufork.PAIR_T,
+                    x: ufork.UNDEF_RAW, // TODO cancel_customer
                     y: core.h_reserve_ram({
-                        t: core.PAIR_T,
+                        t: ufork.PAIR_T,
                         x: greeting_callback,
                         y: core.h_reserve_ram({
-                            t: core.PAIR_T,
+                            t: ufork.PAIR_T,
                             x: core.u_fixnum(petname),
                             y: hello_data
                         })
@@ -483,7 +484,7 @@ function awp_device(
             || !core.u_is_fix(store_fix)
             || !core.u_is_fix(petname_fix)
         ) {
-            return core.E_FAIL;
+            return ufork.E_FAIL;
         }
         const store_nr = core.u_fix_to_i32(store_fix);
         const petname = core.u_fix_to_i32(petname_fix);
@@ -493,7 +494,7 @@ function awp_device(
             || store.acquaintances[petname] === undefined
             || store.acquaintances[petname].name === undefined
         ) {
-            return core.E_BOUNDS; // TODO inform callback instead of failing
+            return ufork.E_BOUNDS; // TODO inform callback instead of failing
         }
 
 // Wait a turn so we can safely use the non-reentrant core methods.
@@ -503,12 +504,12 @@ function awp_device(
 // TODO rewrite this in assembly, and allocate in ROM.
 
             const sink_beh = core.h_reserve_ram({
-                t: core.INSTR_T,
-                x: core.VM_END,
+                t: ufork.INSTR_T,
+                x: ufork.VM_END,
                 y: core.u_fixnum(1) // COMMIT
             });
             const callback_fwd = core.u_ptr_to_cap(core.h_reserve_ram({
-                t: core.ACTOR_T,
+                t: ufork.ACTOR_T,
 
 //  once_fwd_beh:           ; callback <- message
 //      msg 0               ; message
@@ -519,24 +520,24 @@ function awp_device(
 //      end commit
 
                 x: core.h_reserve_ram({
-                    t: core.INSTR_T,
-                    x: core.VM_MSG,
+                    t: ufork.INSTR_T,
+                    x: ufork.VM_MSG,
                     y: core.u_fixnum(0),
                     z: core.h_reserve_ram({
-                        t: core.INSTR_T,
-                        x: core.VM_STATE,
+                        t: ufork.INSTR_T,
+                        x: ufork.VM_STATE,
                         y: core.u_fixnum(0),
                         z: core.h_reserve_ram({
-                            t: core.INSTR_T,
-                            x: core.VM_SEND,
+                            t: ufork.INSTR_T,
+                            x: ufork.VM_SEND,
                             y: core.u_fixnum(-1),
                             z: core.h_reserve_ram({
-                                t: core.INSTR_T,
-                                x: core.VM_PUSH,
+                                t: ufork.INSTR_T,
+                                x: ufork.VM_PUSH,
                                 y: sink_beh,
                                 z: core.h_reserve_ram({
-                                    t: core.INSTR_T,
-                                    x: core.VM_BEH,
+                                    t: ufork.INSTR_T,
+                                    x: ufork.VM_BEH,
                                     y: core.u_fixnum(0),
                                     z: sink_beh
                                 })
@@ -554,7 +555,7 @@ function awp_device(
                 petname,
                 undefined,
                 marshall(store, core.h_reserve_ram({
-                    t: core.PAIR_T,
+                    t: ufork.PAIR_T,
                     x: callback_fwd, // retained by a stub
                     y: hello_data
                 }))
@@ -569,8 +570,8 @@ function awp_device(
                     sponsor,
                     callback_fwd,
                     core.h_reserve_ram({
-                        t: core.PAIR_T,
-                        x: core.UNDEF_RAW,
+                        t: ufork.PAIR_T,
+                        x: ufork.UNDEF_RAW,
                         y: core.u_fixnum(-1) // TODO error codes
                     })
                 );
@@ -586,7 +587,7 @@ function awp_device(
 // callback_fwd.
 
         });
-        return core.E_OK;
+        return ufork.E_OK;
     }
 
     function listen(event_stub_ptr, request) {
@@ -601,11 +602,11 @@ function awp_device(
             || !core.u_is_fix(store_fix)
             || !core.u_is_cap(listen_callback)
         ) {
-            return core.E_FAIL;
+            return ufork.E_FAIL;
         }
         const store = stores[core.u_fix_to_i32(store_fix)];
         if (store === undefined) {
-            return core.E_BOUNDS; // TODO inform callback instead of failing
+            return ufork.E_BOUNDS; // TODO inform callback instead of failing
         }
 
         function release_event_stub() {
@@ -652,8 +653,8 @@ function awp_device(
                     if (stop === undefined) {
                         console.log("listen fail", reason);
                         return resolve(core.h_reserve_ram({
-                            t: core.PAIR_T,
-                            x: core.UNDEF_RAW,
+                            t: ufork.PAIR_T,
+                            x: ufork.UNDEF_RAW,
                             y: core.u_fixnum(-1) // TODO error codes
                         }));
                     }
@@ -665,8 +666,8 @@ function awp_device(
                     if (greeters[key] !== undefined) {
                         stop();
                         return resolve(core.h_reserve_ram({
-                            t: core.PAIR_T,
-                            x: core.UNDEF_RAW,
+                            t: ufork.PAIR_T,
+                            x: ufork.UNDEF_RAW,
                             y: core.u_fixnum(-1) // TODO error codes
                         }));
                     }
@@ -682,9 +683,9 @@ function awp_device(
 
                     stops.push(safe_stop);
                     return resolve(core.h_reserve_ram({
-                        t: core.PAIR_T,
-                        x: core.UNDEF_RAW, // TODO safe_stop
-                        y: core.NIL_RAW
+                        t: ufork.PAIR_T,
+                        x: ufork.UNDEF_RAW, // TODO safe_stop
+                        y: ufork.NIL_RAW
                     }));
                 }
             );
@@ -695,7 +696,7 @@ function awp_device(
             }
 
         });
-        return core.E_OK;
+        return ufork.E_OK;
     }
 
     function forward(event_stub_ptr, handle, message) {
@@ -711,7 +712,7 @@ function awp_device(
             }
             core.h_release_stub(event_stub_ptr);
         });
-        return core.E_OK;
+        return ufork.E_OK;
     }
 
     function handle_event(event_stub_ptr) {
@@ -729,7 +730,7 @@ function awp_device(
 // actor.
 
         const target_quad = core.u_read_quad(core.u_cap_to_ptr(event.x));
-        if (target_quad.t === core.PROXY_T) {
+        if (target_quad.t === ufork.PROXY_T) {
             const handle = core.u_fix_to_i32(target_quad.y);
             return forward(event_stub_ptr, handle, message);
         }
@@ -738,12 +739,12 @@ function awp_device(
 
         const tag = core.u_nth(message, 1);
         if (!core.u_is_fix(tag)) {
-            return core.E_FAIL;
+            return ufork.E_FAIL;
         }
         const method_array = [intro, listen];
         const method = method_array[core.u_fix_to_i32(tag)];
         if (method === undefined) {
-            return core.E_BOUNDS;
+            return ufork.E_BOUNDS;
         }
 
 // Forward the remainder of the message to the chosen method. The method may
@@ -763,15 +764,15 @@ function awp_device(
 
 // TODO inform the relevant party.
 
-        return core.E_OK;
+        return ufork.E_OK;
     }
 
 // Install the device.
 
     core.h_install(
         [[
-            core.AWP_DEV_OFS,
-            core.u_ptr_to_cap(core.u_ramptr(core.AWP_DEV_OFS))
+            ufork.AWP_DEV_OFS,
+            core.u_ptr_to_cap(core.u_ramptr(ufork.AWP_DEV_OFS))
         ]],
         {
             host_awp(raw) {
@@ -797,7 +798,6 @@ function awp_device(
 //debug import parseq from "../parseq.js";
 //debug import lazy from "../requestors/lazy.js";
 //debug import requestorize from "../requestors/requestorize.js";
-//debug import instantiate_core from "../ufork.js";
 //debug import debug_device from "./debug_device.js";
 //debug const wasm_url = import.meta.resolve(
 //debug     "../../target/wasm32-unknown-unknown/debug/ufork_wasm.wasm"
@@ -813,7 +813,7 @@ function awp_device(
 //debug     webcrypto
 //debug }) {
 //debug     return parseq.sequence([
-//debug         instantiate_core(
+//debug         ufork.instantiate_core(
 //debug             wasm_url,
 //debug             function on_wakeup(device_offset) {
 //debug                 console.log("WAKE:", device_offset);

@@ -3,6 +3,7 @@
 /*jslint bitwise, browser, devel */
 
 import OED from "../oed.js";
+import ufork from "../ufork.js";
 
 function io_device(core, on_stdout) {
     let stdin_buffer = [];
@@ -21,22 +22,22 @@ function io_device(core, on_stdout) {
             //const message = event.y;
             console.log("READ: " + code + " = " + first);
             const message = core.h_reserve_ram({  // (char)
-                t: core.PAIR_T,
+                t: ufork.PAIR_T,
                 x: char,
-                y: core.NIL_RAW,
-                z: core.UNDEF_RAW
+                y: ufork.NIL_RAW,
+                z: ufork.UNDEF_RAW
             });
             core.h_event_inject(sponsor, target, message);
             core.h_release_stub(stdin_stub);
             stdin_stub = undefined;
-            core.h_wakeup(core.IO_DEV_OFS);
+            core.h_wakeup(ufork.IO_DEV_OFS);
         }
     }
 
     core.h_install(
         [[
-            core.IO_DEV_OFS,
-            core.u_ptr_to_cap(core.u_ramptr(core.IO_DEV_OFS))
+            ufork.IO_DEV_OFS,
+            core.u_ptr_to_cap(core.u_ramptr(ufork.IO_DEV_OFS))
         ]],
         {
             host_print(base, ofs) { // (i32, i32) -> nil

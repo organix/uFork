@@ -2,11 +2,13 @@
 
 /*jslint browser, devel */
 
+import ufork from "../ufork.js";
+
 function timer_device(core) {
     core.h_install(
         [[
-            core.TIMER_DEV_OFS,
-            core.u_ptr_to_cap(core.u_ramptr(core.TIMER_DEV_OFS))
+            ufork.TIMER_DEV_OFS,
+            core.u_ptr_to_cap(core.u_ramptr(ufork.TIMER_DEV_OFS))
         ]],
         {
             host_timer(delay, stub) { // (i32, i32) -> nil
@@ -19,7 +21,7 @@ function timer_device(core) {
                         const message = event.y;
                         core.h_release_stub(stub);
                         core.h_event_inject(sponsor, target, message);
-                        core.h_wakeup(core.TIMER_DEV_OFS);
+                        core.h_wakeup(ufork.TIMER_DEV_OFS);
                     }, core.u_fix_to_i32(delay));
                 }
             }

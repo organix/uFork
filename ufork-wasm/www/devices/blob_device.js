@@ -1,9 +1,11 @@
 // Installs the BLOB device.
 
+import ufork from "../ufork.js";
+
 function blob_device(core) {
     core.h_install([[
-        core.BLOB_DEV_OFS,
-        core.u_ptr_to_cap(core.u_ramptr(core.BLOB_DEV_OFS))
+        ufork.BLOB_DEV_OFS,
+        core.u_ptr_to_cap(core.u_ramptr(ufork.BLOB_DEV_OFS))
     ]]);
 }
 
