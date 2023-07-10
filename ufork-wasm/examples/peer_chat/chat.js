@@ -13,7 +13,8 @@ import parseq from "/www/parseq.js";
 import lazy from "/www/requestors/lazy.js";
 import requestorize from "/www/requestors/requestorize.js";
 
-let core = { UNDEF_RAW: 0 };  // uFork wasm processor core
+let core = {UNDEF_RAW: 0};  // uFork wasm processor core
+let on_stdin;
 
 function current_continuation() {
     const dd_quad = core.u_read_quad(core.u_ramptr(core.DDEQUE_OFS));
@@ -63,69 +64,26 @@ const $join_button = document.getElementById("join-btn");
 $join_button.onclick = function () {
     $choice_tab.style.display = "none";
     $room_tab.style.display = "flex";
-}
+};
 const $host_button = document.getElementById("host-btn");
 $host_button.onclick = function () {
     $choice_tab.style.display = "none";
     $room_tab.style.display = "flex";
-}
+};
 
-let stdin_buffer = "";
-let stdin_stub = core.UNDEF_RAW;
-function read_stdin(stub) {
-    if (core.u_is_ram(stdin_stub)) {
-        throw new Error("stdin_stub already set to " + core.u_pprint(stdin_stub));
-    }
-    stdin_stub = stub;
-    poll_stdin();
-}
-function poll_stdin() {
-    if (core.u_is_ram(stdin_stub)) {
-        if (stdin_buffer.length > 0) {
-            const first = stdin_buffer.slice(0, 1);
-            const rest = stdin_buffer.slice(1);
-            const code = first.codePointAt(0);
-            const char = core.u_fixnum(code);  // character read
-            stdin_buffer = rest;
-            const quad = core.u_read_quad(stdin_stub);
-            const event = core.u_read_quad(quad.y);
-            const sponsor = event.t;
-            const target = event.x;
-            //const message = event.y;
-            console.log(
-                "READ: " + code + " = " + first
-            );
-            const message = core.h_reserve_ram({  // (char)
-                t: core.PAIR_T,
-                x: char,
-                y: core.NIL_RAW,
-                z: core.UNDEF_RAW
-            });
-            core.h_event_inject(sponsor, target, message);
-            core.h_release_stub(stdin_stub);
-            stdin_stub = core.UNDEF_RAW;
-            core.h_wakeup(core.IO_DEV_OFS);
-        }
-    }
-}
-const textEncoder = new TextEncoder();
-const utf8 = new Uint8Array(256);
 const $stdin = document.getElementById("stdin");
 const $send_button = document.getElementById("send-btn");
 $send_button.onclick = function () {
     let text = $stdin.value;
-    if (text.length) {
-        text += '\n';
-        stdin_buffer += text;  // append text to buffer
+    if (text.length > 0) {
+        text += "\n";
+        on_stdin(text);
+        $stdin.value = "";
     }
-    const encodedResults = textEncoder.encodeInto(text, utf8);
-    //console.log(text, encodedResults, utf8);
-    //console.log("Send", hexdump(utf8, 0, encodedResults.written));
-    $stdin.value = "";
-    poll_stdin();
-}
+};
+
 const $stdout = document.getElementById("stdout");
-function write_stdout(char) {
+function on_stdout(char) {
     if ($stdout) {
         const text = $stdout.value;
         //console.log("$stdout.value =", text);
@@ -136,10 +94,7 @@ function write_stdout(char) {
 }
 
 const origin = "http://localhost:7273";
-const asm_url = new URL(
-    "chat.asm",
-    origin + "/examples/peer_chat/"
-).href;
+const asm_url = new URL("/examples/peer_chat/chat.asm", origin).href;
 parseq.sequence([
     instantiate_core(
         origin + "/target/wasm32-unknown-unknown/debug/ufork_wasm.wasm",
@@ -155,7 +110,7 @@ parseq.sequence([
     requestorize(function (asm_module) {
         debug_device(core);
         clock_device(core);
-        io_device(core, read_stdin, write_stdout);
+        on_stdin = io_device(core, on_stdout);
         blob_device(core);
         timer_device(core);
         core.h_boot(asm_module.boot);

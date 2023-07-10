@@ -90,7 +90,8 @@ let fault = false;  // execution fault flag
 const $rate = document.getElementById("frame-rate");
 let frame = 1;  // frame-rate countdown
 let ram_max = 0;
-let core = { UNDEF_RAW: 0 };  // uFork wasm processor core
+let core = {UNDEF_RAW: 0};  // uFork wasm processor core
+let on_stdin;
 
 function update_element_text(el, txt) {
     if (el.textContent === txt) {
@@ -539,62 +540,20 @@ $sponsor_cycles.oninput = function () {
     }
 };
 
-let stdin_buffer = "";
-let stdin_stub = core.UNDEF_RAW;
-function read_stdin(stub) {
-    if (core.u_is_ram(stdin_stub)) {
-        throw new Error("stdin_stub already set to " + core.u_pprint(stdin_stub));
-    }
-    stdin_stub = stub;
-    poll_stdin();
-}
-function poll_stdin() {
-    if (core.u_is_ram(stdin_stub)) {
-        if (stdin_buffer.length > 0) {
-            const first = stdin_buffer.slice(0, 1);
-            const rest = stdin_buffer.slice(1);
-            const code = first.codePointAt(0);
-            const char = core.u_fixnum(code);  // character read
-            stdin_buffer = rest;
-            const quad = core.u_read_quad(stdin_stub);
-            const event = core.u_read_quad(quad.y);
-            const sponsor = event.t;
-            const target = event.x;
-            //const message = event.y;
-            console.log(
-                "READ: " + code + " = " + first
-            );
-            const message = core.h_reserve_ram({  // (char)
-                t: core.PAIR_T,
-                x: char,
-                y: core.NIL_RAW,
-                z: core.UNDEF_RAW
-            });
-            core.h_event_inject(sponsor, target, message);
-            core.h_release_stub(stdin_stub);
-            stdin_stub = core.UNDEF_RAW;
-            core.h_wakeup(core.IO_DEV_OFS);
-        }
-    }
-}
-const textEncoder = new TextEncoder();
-const utf8 = new Uint8Array(256);
 const $stdin = document.getElementById("stdin");
 const $send_button = document.getElementById("send-btn");
 $send_button.onclick = function () {
     let text = $stdin.value;
-    if (text.length) {
-        text += '\n';
-        stdin_buffer += text;  // append text to buffer
+    if (text.length > 0) {
+        text += "\n";
+        on_stdin(text);
+        const utf8 = new TextEncoder().encode(text);
+        console.log("Send", hexdump(utf8, 0, utf8.length));
+        $stdin.value = "";
     }
-    const encodedResults = textEncoder.encodeInto(text, utf8);
-    //console.log(text, encodedResults, utf8);
-    console.log("Send", hexdump(utf8, 0, encodedResults.written));
-    $stdin.value = "";
-    poll_stdin();
-}
+};
 const $stdout = document.getElementById("stdout");
-function write_stdout(char) {
+function on_stdout(char) {
     if ($stdout) {
         const text = $stdout.value;
         //console.log("$stdout.value =", text);
@@ -620,7 +579,7 @@ instantiate_core(
     // install devices
     debug_device(core);
     clock_device(core);
-    io_device(core, read_stdin, write_stdout);
+    on_stdin = io_device(core, on_stdout);
     blob_device(core);
     timer_device(core);
     awp_device(core);
