@@ -137,14 +137,14 @@ const rom_label = [
     "#t",
     "#unit",
     "EMPTY_DQ",
-    "TYPE_T",
-    "FIXNUM_T",
-    "ACTOR_T",
+    "#type_t",
+    "#fixnum_t",
+    "#actor_t",
     "PROXY_T",
     "STUB_T",
-    "INSTR_T",
-    "PAIR_T",
-    "DICT_T",
+    "#instr_t",
+    "#pair_t",
+    "#dict_t",
     "FWD_REF_T",
     "FREE_T"
 ];
@@ -165,38 +165,38 @@ const error_messages = [
     "actor stopped"                         // E_STOP = -13
 ];
 const instr_label = [
-    "VM_typeq",
-    "VM_quad",
-    "VM_get",
-    "VM_dict",
-    "VM_pair",
-    "VM_part",
-    "VM_nth",
-    "VM_push",
-    "VM_depth",
-    "VM_drop",
-    "VM_pick",
-    "VM_dup",
-    "VM_roll",
-    "VM_alu",
-    "VM_eq",
-    "VM_cmp",
-    "VM_if",
-    "VM_msg",
-    "VM_my",
-    "VM_send",
-    "VM_new",
-    "VM_beh",
-    "VM_end",
-    "VM_sponsor",
-    "VM_putc",  // deprecated
-    "VM_getc",  // deprecated
-    "VM_debug",  // deprecated
-    "VM_deque",
-    "VM_state",
-    "VM_signal",
-    "VM_is_eq",
-    "VM_is_ne"
+    "typeq",
+    "quad",
+    "get",
+    "dict",
+    "pair",
+    "part",
+    "nth",
+    "push",
+    "depth",
+    "drop",
+    "pick",
+    "dup",
+    "roll",
+    "alu",
+    "eq",
+    "cmp",
+    "if",
+    "msg",
+    "my",
+    "send",
+    "new",
+    "beh",
+    "end",
+    "sponsor",
+    "putc",  // deprecated
+    "getc",  // deprecated
+    "debug",  // deprecated
+    "deque",
+    "state",
+    "signal",
+    "is_eq",
+    "is_ne"
 ];
 const get_imm_label = [
     "T",
@@ -566,57 +566,47 @@ function make_core(wasm_exports, on_wakeup, on_warning, mutable_wasm_caps) {
     }
 
     function u_quad_print(quad) {
-        let s = "{ ";
+        let s = "[";
+        s += u_print(quad.t);
+        s += ", ";
         if (quad.t === INSTR_T) {
-            s += "t:INSTR_T, x:";
             const op = quad.x ^ DIR_RAW;  // translate opcode
             if (op < instr_label.length) {
+                s += instr_label[op];
+                s += ", ";
                 const imm = quad.y ^ DIR_RAW;  // translate immediate
                 if ((quad.x === VM_GET) && (imm < get_imm_label.length)) {
-                    s += "VM_get, y:";
                     s += get_imm_label[imm];
                 } else if ((quad.x === VM_DICT) && (imm < dict_imm_label.length)) {
-                    s += "VM_dict, y:";
                     s += dict_imm_label[imm];
                 } else if ((quad.x === VM_ALU) && (imm < alu_imm_label.length)) {
-                    s += "VM_alu, y:";
                     s += alu_imm_label[imm];
                 } else if ((quad.x === VM_CMP) && (imm < cmp_imm_label.length)) {
-                    s += "VM_cmp, y:";
                     s += cmp_imm_label[imm];
                 } else if ((quad.x === VM_MY) && (imm < my_imm_label.length)) {
-                    s += "VM_my, y:";
                     s += my_imm_label[imm];
                 } else if ((quad.x === VM_DEQUE) && (imm < deque_imm_label.length)) {
-                    s += "VM_deque, y:";
                     s += deque_imm_label[imm];
                 } else if (quad.x === VM_END) {
-                    s += "VM_end, y:";
                     s += end_imm_label[u_fix_to_i32(quad.y) + 1];  // END_ABORT === -1
                 } else if ((quad.x === VM_SPONSOR) && (imm < sponsor_imm_label.length)) {
-                    s += "VM_SPONSOR, y:";
                     s += sponsor_imm_label[imm];
                 } else {
-                    s += instr_label[op];
-                    s += ", y:";
                     s += u_print(quad.y);
                 }
             } else {
                 s += u_print(quad.x);
-                s += ", y:";
+                s += ", ";
                 s += u_print(quad.y);
             }
         } else {
-            s += "t:";
-            s += u_print(quad.t);
-            s += ", x:";
             s += u_print(quad.x);
-            s += ", y:";
+            s += ", ";
             s += u_print(quad.y);
         }
-        s += ", z:";
+        s += ", ";
         s += u_print(quad.z);
-        s += " }";
+        s += "]";
         return s;
     }
 
@@ -699,9 +689,9 @@ function make_core(wasm_exports, on_wakeup, on_warning, mutable_wasm_caps) {
             );
         }
 
-        function label(name, labels, prefix_length = 0, offset = 0) {
+        function label(name, labels, offset = 0) {
             const index = labels.findIndex(function (label) {
-                return label.slice(prefix_length) === name;
+                return label === name;
             });
             return (
                 (Number.isSafeInteger(index) && index >= 0)
@@ -797,7 +787,7 @@ function make_core(wasm_exports, on_wakeup, on_warning, mutable_wasm_caps) {
                 }
             } else if (the_kind === "instr") {
                 fields.t = INSTR_T;
-                fields.x = label(node.op, instr_label, 3);
+                fields.x = label(node.op, instr_label);
                 if (node.op === "typeq") {
                     fields.y = type(node.imm);
                     fields.z = instruction(node.k);
@@ -851,7 +841,7 @@ function make_core(wasm_exports, on_wakeup, on_warning, mutable_wasm_caps) {
                     fields.y = label(node.imm, my_imm_label);
                     fields.z = instruction(node.k);
                 } else if (node.op === "end") {
-                    fields.y = label(node.imm, end_imm_label, 0, -1);
+                    fields.y = label(node.imm, end_imm_label, -1);
                 } else if (node.op === "sponsor") {
                     fields.y = label(node.imm, sponsor_imm_label);
                     fields.z = instruction(node.k);
