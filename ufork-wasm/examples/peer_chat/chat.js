@@ -15,6 +15,47 @@ import requestorize from "/www/requestors/requestorize.js";
 
 let core = { UNDEF_RAW: 0 };  // uFork wasm processor core
 
+function current_continuation() {
+    const dd_quad = core.u_read_quad(core.u_ramptr(core.DDEQUE_OFS));
+    const k_first = dd_quad.y;
+    if (core.u_in_mem(k_first)) {
+        const k_quad = core.u_read_quad(k_first);
+        const e_quad = core.u_read_quad(k_quad.y);
+        return {
+            ip: k_quad.t,
+            sp: k_quad.x,
+            ep: k_quad.y,
+            act: e_quad.x,
+            msg: e_quad.y,
+            spn: e_quad.t
+        };
+    }
+}
+function refill_quota(status) {
+    if (status < 0) {
+        const cc = current_continuation();
+        if (cc) {
+            const sponsor = core.u_read_quad(cc.spn);
+            if (status === core.E_MEM_LIM) {
+                sponsor.t = core.u_fixnum(1024);
+            }
+            if (status === core.E_MSG_LIM) {
+                sponsor.x = core.u_fixnum(256);
+            }
+            if (status === core.E_CPU_LIM) {
+                sponsor.y = core.u_fixnum(4096);
+            }
+            core.u_write_quad(cc.spn, sponsor);
+            console.log("refilled sponsor:", core.u_disasm(cc.spn));
+        }
+    }
+}
+function ufork_idle(status) {
+    console.log("IDLE", core.u_fault_msg(status));
+    refill_quota(status);
+    return status;
+}
+
 const $choice_tab = document.getElementById("choice");
 const $room_tab = document.getElementById("room");
 
@@ -103,10 +144,7 @@ parseq.sequence([
     instantiate_core(
         origin + "/target/wasm32-unknown-unknown/debug/ufork_wasm.wasm",
         function on_wakeup() {
-            console.log(
-                "IDLE",
-                core.u_fault_msg(core.h_run_loop())
-            );
+            ufork_idle(core.h_run_loop());
         },
         console.log
     ),
@@ -121,6 +159,6 @@ parseq.sequence([
         blob_device(core);
         timer_device(core);
         core.h_boot(asm_module.boot);
-        return core.u_fault_msg(core.h_run_loop());
+        return ufork_idle(core.h_run_loop());
     })
 ])(console.log);
