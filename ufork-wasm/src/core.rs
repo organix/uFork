@@ -162,19 +162,14 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
 
     pub fn run_loop(&mut self, limit: i32) -> Error {
         let mut steps = 0;
-        loop {
-            if let Err(error) = self.dispatch_event() {
-                // limit reached, or other error condition signalled...
-                if !self.signal_sponsor(error) {
-                    return error;
-                }
-            }
+        while (limit <= 0) || (steps < limit) {
             match self.execute_instruction() {
                 Ok(more) => {
                     // no more instructions to execute...
                     if !more && !self.event_pending() {
                         return steps;
                     }
+                    steps += 1;
                 },
                 Err(error) => {
                     // limit reached, or other error condition signalled...
@@ -183,11 +178,14 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
                     }
                 },
             }
-            steps += 1;
-            if (limit > 0) && (steps >= limit) {
-                return steps;  // step limit reached
+            if let Err(error) = self.dispatch_event() {
+                // limit reached, or other error condition signalled...
+                if !self.signal_sponsor(error) {
+                    return error;
+                }
             }
         }
+        steps  // no error, return steps taken
     }
     pub fn signal_sponsor(&mut self, error: Error) -> bool {
         let kp = self.kp();

@@ -108,9 +108,9 @@ pub fn h_run_loop() -> Error {
     }
 }
 #[no_mangle]
-pub fn h_step() -> Error {
+pub fn h_step() -> Error {  // single-step instruction execution
     unsafe {
-        the_host().borrow_mut().step()
+        the_host().borrow_mut().run_loop(1)
     }
 }
 

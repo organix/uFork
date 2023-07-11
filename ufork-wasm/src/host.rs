@@ -16,37 +16,6 @@ impl Host {
     pub fn run_loop(&mut self, limit: i32) -> Error {
         self.core.run_loop(limit)
     }
-    /*
-    The `step` function is similar to calling `run_loop` with a `limit` of `1`.
-    However, `step` executes an instruction _and then_ dispatches an event,
-    where `run_loop` dispatches an event _and then_ executes an instruction.
-    So `step` generally leaves the processor in a state where it is prepared
-    to execute the next instruction (a good view for debugging), and
-    `run_loop` tries to dispatch an event first to create more work.
-    */
-    pub fn step(&mut self) -> Error {  // single-step instruction execution
-        match self.core.execute_instruction() {
-            Ok(more) => {
-                // no more instructions...
-                if !more && !self.core.event_pending() {
-                    return E_FAIL;
-                }
-            },
-            Err(error) => {
-                // limit reached, or other error condition signalled...
-                if !self.core.signal_sponsor(error) {
-                    return error;
-                }
-            },
-        }
-        if let Err(error) = self.core.dispatch_event() {
-            // limit reached, or other error condition signalled...
-            if !self.core.signal_sponsor(error) {
-                return error;
-            }
-        }
-        E_OK  // step successful
-    }
 
     pub fn event_inject(&mut self, sponsor: Raw, target: Raw, msg: Raw) {
         self.core.event_inject(

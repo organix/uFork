@@ -336,7 +336,7 @@ function gc_host() {
 function single_step() {
     const err = core.h_step();
     $fault_ctl.title = core.u_fault_msg(err);
-    if (err === 0) {  // 0 = E_OK = no error
+    if (err >= 0) {  // 0 = E_OK = no error
         fault = false;
     } else {
         fault = true;
@@ -355,7 +355,7 @@ function next_step() {
     while (true) {
         const err = core.h_step();
         $fault_ctl.title = core.u_fault_msg(err);
-        if (err === 0) {  // 0 = E_OK = no error
+        if (err >= 0) {  // 0 = E_OK = no error
             fault = false;
         } else {
             fault = true;
