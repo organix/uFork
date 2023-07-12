@@ -16,38 +16,38 @@ import requestorize from "/www/requestors/requestorize.js";
 let core;  // uFork wasm processor core
 let on_stdin;
 
-function refill_quota(status) {
-    if (status < 0) {
-        const cc = core.u_current_continuation();
-        if (cc) {
-            const sponsor = core.u_read_quad(cc.spn);
-            if (status === ufork.E_MEM_LIM) {
-                sponsor.t = core.u_fixnum(1024);
-            }
-            if (status === ufork.E_MSG_LIM) {
-                sponsor.x = core.u_fixnum(256);
-            }
-            if (status === ufork.E_CPU_LIM) {
-                sponsor.y = core.u_fixnum(4096);
-            }
-            core.u_write_quad(cc.spn, sponsor);
-            console.log("refilled sponsor:", core.u_disasm(cc.spn));
+function ufork_run() {
+    core.h_run_loop();
+    const spn = core.u_ramptr(ufork.SPONSOR_OFS);
+    const sponsor = core.u_read_quad(spn);
+    const sig = sponsor.z;
+    if (core.u_is_fix(sig)) {
+        const err = core.u_fix_to_i32(sig);
+        const msg = core.u_fault_msg(err);
+        console.log("IDLE", core.u_disasm(spn), "error:", err, "=", msg);
+        if (err === ufork.E_OK) {
+            // processor idle
+            return ufork.E_OK;
         }
+        if (err === ufork.E_MEM_LIM) {
+            sponsor.t = core.u_fixnum(1024);
+        }
+        if (err === ufork.E_MSG_LIM) {
+            sponsor.x = core.u_fixnum(256);
+        }
+        if (err === ufork.E_CPU_LIM) {
+            sponsor.y = core.u_fixnum(4096);
+        }
+        core.u_write_quad(spn, sponsor);
+        console.log("refreshed sponsor:", core.u_disasm(spn));
     }
+    ufork_wake();
 }
-function ufork_idle() {
-    // FIXME: use `set_timeout` to run in a subsequent turn
-    const sig = core.h_run_loop();
-    if (core.u_in_mem(sig)) {
-        const err = core.u_read_quad(sig).z;
-        if (core.u_is_fix(err)) {
-            const err_code = core.u_fix_to_i32(err);
-            const err_msg = core.u_fault_msg(err_code);
-            console.log("IDLE", sig, "error:", err_code, "=", err_msg);
-            refill_quota(err_code);
-            return err_code;
-        }
-    }
+function ufork_wake() {
+    setTimeout(function () {
+        console.log("WAKEUP");
+        ufork_run();
+    }, 0);
 }
 
 const $choice_tab = document.getElementById("choice");
@@ -91,9 +91,7 @@ const asm_url = new URL("/examples/peer_chat/chat.asm", origin).href;
 parseq.sequence([
     ufork.instantiate_core(
         origin + "/target/wasm32-unknown-unknown/debug/ufork_wasm.wasm",
-        function on_wakeup() {
-            ufork_idle();
-        },
+        ufork_wake,
         console.log
     ),
     lazy(function (the_core) {
@@ -107,6 +105,6 @@ parseq.sequence([
         blob_device(core);
         timer_device(core);
         core.h_boot(asm_module.boot);
-        return ufork_idle();
+        return ufork_run();
     })
 ])(console.log);
