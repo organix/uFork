@@ -179,21 +179,9 @@ function update_source_monitor(ip) {
     $source_monitor.textContent = "No source available.";
     delete $source_monitor.href;
 }
-function current_continuation() {
-    const ddeque_quad = core.u_read_quad(core.u_ramptr(ufork.DDEQUE_OFS));
-    const k_first = ddeque_quad.y;
-    if (core.u_in_mem(k_first)) {
-        const cont_quad = core.u_read_quad(k_first);
-        return {
-            ip: cont_quad.t,
-            sp: cont_quad.x,
-            ep: cont_quad.y
-        };
-    }
-}
 function enable_next() {
     if (paused) {
-        const cc = current_continuation();
+        const cc = core.u_current_continuation();
         if (cc) {
             const instr = core.u_read_quad(cc.ip);
             if ((instr.t === ufork.INSTR_T) && (instr.x !== ufork.VM_END)) {
@@ -321,12 +309,19 @@ function draw_host() {
     }
     update_element_text($state, core.u_pprint(state));  // pretty-print state
     update_element_text($msg, core.u_pprint(message));  // pretty-print message
-    update_element_text($sponsor_ident, core.u_print(sponsor));
-    const sponsor_quad = core.u_read_quad(sponsor);
-    update_element_value($sponsor_memory, core.u_fix_to_i32(sponsor_quad.t));
-    update_element_value($sponsor_events, core.u_fix_to_i32(sponsor_quad.x));
-    update_element_value($sponsor_cycles, core.u_fix_to_i32(sponsor_quad.y));
-    update_element_text($sponsor_signal, core.u_print(sponsor_quad.z));
+    // sponsor details
+    let spn = core.u_ramptr(ufork.SPONSOR_OFS);
+    let spn_quad = core.u_read_quad(spn);
+    if (!core.u_is_fix(spn_quad.z) && core.u_is_ram(sponsor)) {
+        // if no error and current continuation valid, show event sponsor...
+        spn = sponsor;
+        spn_quad = core.u_read_quad(spn);
+    }
+    update_element_text($sponsor_ident, core.u_print(spn));
+    update_element_value($sponsor_memory, core.u_fix_to_i32(spn_quad.t));
+    update_element_value($sponsor_events, core.u_fix_to_i32(spn_quad.x));
+    update_element_value($sponsor_cycles, core.u_fix_to_i32(spn_quad.y));
+    update_element_text($sponsor_signal, core.u_print(spn_quad.z));
     enable_next();
 }
 function gc_host() {
@@ -334,35 +329,33 @@ function gc_host() {
     draw_host();
 }
 function single_step() {
-    const err = core.h_step();
-    $fault_ctl.title = core.u_fault_msg(err);
-    if (err >= 0) {  // 0 = E_OK = no error
-        fault = false;
-    } else {
-        fault = true;
-        console.log("single_step: error = ", err);
+    fault = false;
+    const sig = core.h_step();
+    if (core.u_in_mem(sig)) {
+        const err = core.u_read_quad(sig).z;
+        if (core.u_is_fix(err)) {
+            const err_code = core.u_fix_to_i32(err);
+            const err_msg = core.u_fault_msg(err_code);
+            $fault_ctl.title = err_msg;
+            fault = true;
+            console.log("single_step:", err_code, "=", err_msg);
+        }
     }
     draw_host();
     return !fault;
 }
 function next_step() {
     // execute next instruction for current event
-    let cc = current_continuation();
+    let cc = core.u_current_continuation();
     if (!cc) {
         return single_step();
     }
     let next_event = cc.ep;
     while (true) {
-        const err = core.h_step();
-        $fault_ctl.title = core.u_fault_msg(err);
-        if (err >= 0) {  // 0 = E_OK = no error
-            fault = false;
-        } else {
-            fault = true;
-            console.log("next_step: error = ", err);
+        if (!single_step()) {
             break;
         }
-        cc = current_continuation();
+        cc = core.u_current_continuation();
         if (!cc || cc.ep === next_event) {
             break;
         }
@@ -503,7 +496,7 @@ $restore_input.title = "Restore from snapshot";
 $sponsor_memory.oninput = function () {
     const num = Number($sponsor_memory.value);
     if (Number.isSafeInteger(num) && (num >= 0)) {
-        const cc = current_continuation();
+        const cc = core.u_current_continuation();
         if (cc) {
             const event = core.u_read_quad(cc.ep);
             const sponsor = core.u_read_quad(event.t);
@@ -516,7 +509,7 @@ $sponsor_memory.oninput = function () {
 $sponsor_events.oninput = function () {
     const num = Number($sponsor_events.value);
     if (Number.isSafeInteger(num) && (num >= 0)) {
-        const cc = current_continuation();
+        const cc = core.u_current_continuation();
         if (cc) {
             const event = core.u_read_quad(cc.ep);
             const sponsor = core.u_read_quad(event.t);
@@ -529,7 +522,7 @@ $sponsor_events.oninput = function () {
 $sponsor_cycles.oninput = function () {
     const num = Number($sponsor_cycles.value);
     if (Number.isSafeInteger(num) && (num >= 0)) {
-        const cc = current_continuation();
+        const cc = core.u_current_continuation();
         if (cc) {
             const event = core.u_read_quad(cc.ep);
             const sponsor = core.u_read_quad(event.t);
@@ -567,7 +560,8 @@ ufork.instantiate_core(
     "../target/wasm32-unknown-unknown/debug/ufork_wasm.wasm",
     function on_wakeup(device_offset) {
         console.log("WAKE:", device_offset);
-        single_step();
+        //single_step();
+        draw_host();
     },
     console.log
 )(function callback(the_core, reason) {

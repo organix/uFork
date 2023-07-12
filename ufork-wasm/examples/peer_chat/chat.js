@@ -16,25 +16,9 @@ import requestorize from "/www/requestors/requestorize.js";
 let core;  // uFork wasm processor core
 let on_stdin;
 
-function current_continuation() {
-    const dd_quad = core.u_read_quad(core.u_ramptr(ufork.DDEQUE_OFS));
-    const k_first = dd_quad.y;
-    if (core.u_in_mem(k_first)) {
-        const k_quad = core.u_read_quad(k_first);
-        const e_quad = core.u_read_quad(k_quad.y);
-        return {
-            ip: k_quad.t,
-            sp: k_quad.x,
-            ep: k_quad.y,
-            act: e_quad.x,
-            msg: e_quad.y,
-            spn: e_quad.t
-        };
-    }
-}
 function refill_quota(status) {
     if (status < 0) {
-        const cc = current_continuation();
+        const cc = core.u_current_continuation();
         if (cc) {
             const sponsor = core.u_read_quad(cc.spn);
             if (status === ufork.E_MEM_LIM) {
@@ -51,10 +35,19 @@ function refill_quota(status) {
         }
     }
 }
-function ufork_idle(status) {
-    console.log("IDLE", core.u_fault_msg(status));
-    refill_quota(status);
-    return status;
+function ufork_idle() {
+    // FIXME: use `set_timeout` to run in a subsequent turn
+    const sig = core.h_run_loop();
+    if (core.u_in_mem(sig)) {
+        const err = core.u_read_quad(sig).z;
+        if (core.u_is_fix(err)) {
+            const err_code = core.u_fix_to_i32(err);
+            const err_msg = core.u_fault_msg(err_code);
+            console.log("IDLE", sig, "error:", err_code, "=", err_msg);
+            refill_quota(err_code);
+            return err_code;
+        }
+    }
 }
 
 const $choice_tab = document.getElementById("choice");
@@ -99,7 +92,7 @@ parseq.sequence([
     ufork.instantiate_core(
         origin + "/target/wasm32-unknown-unknown/debug/ufork_wasm.wasm",
         function on_wakeup() {
-            ufork_idle(core.h_run_loop());
+            ufork_idle();
         },
         console.log
     ),
@@ -114,6 +107,6 @@ parseq.sequence([
         blob_device(core);
         timer_device(core);
         core.h_boot(asm_module.boot);
-        return ufork_idle(core.h_run_loop());
+        return ufork_idle();
     })
 ])(console.log);

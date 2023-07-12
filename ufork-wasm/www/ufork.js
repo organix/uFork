@@ -149,20 +149,20 @@ const rom_label = [
     "FREE_T"
 ];
 const error_messages = [
-    "no error",                             // E_OK = 0
-    "general failure",                      // E_FAIL = -1
-    "out of bounds",                        // E_BOUNDS = -2
-    "no memory available",                  // E_NO_MEM = -3
-    "fixnum required",                      // E_NOT_FIX = -4
-    "capability required",                  // E_NOT_CAP = -5
-    "memory pointer required",              // E_NOT_PTR = -6
-    "ROM pointer required",                 // E_NOT_ROM = -7
-    "RAM pointer required",                 // E_NOT_RAM = -8
-    "Sponsor memory limit reached",         // E_MEM_LIM = -9
-    "Sponsor instruction limit reached",    // E_CPU_LIM = -10
-    "Sponsor event limit reached",          // E_MSG_LIM = -11
-    "assertion failed",                     // E_ASSERT = -12
-    "actor stopped"                         // E_STOP = -13
+    "no error",                         // E_OK = 0
+    "general failure",                  // E_FAIL = -1
+    "out of bounds",                    // E_BOUNDS = -2
+    "no memory available",              // E_NO_MEM = -3
+    "fixnum required",                  // E_NOT_FIX = -4
+    "capability required",              // E_NOT_CAP = -5
+    "memory pointer required",          // E_NOT_PTR = -6
+    "ROM pointer required",             // E_NOT_ROM = -7
+    "RAM pointer required",             // E_NOT_RAM = -8
+    "sponsor memory limit reached",     // E_MEM_LIM = -9
+    "sponsor cycle limit reached",      // E_CPU_LIM = -10
+    "sponsor event limit reached",      // E_MSG_LIM = -11
+    "assertion failed",                 // E_ASSERT = -12
+    "actor stopped"                     // E_STOP = -13
 ];
 const instr_label = [
     "typeq",
@@ -460,6 +460,24 @@ function make_core(wasm_exports, on_wakeup, on_warning, mutable_wasm_caps) {
 
     function u_mem_pages() {
         return u_memory().byteLength / 65536;
+    }
+
+    function u_current_continuation() {
+        const dd_quad = u_read_quad(u_ramptr(DDEQUE_OFS));
+        const k_first = dd_quad.y;
+        if (u_in_mem(k_first)) {
+            const k_quad = u_read_quad(k_first);
+            const e_quad = u_read_quad(k_quad.y);
+            return {
+                ip: k_quad.t,
+                sp: k_quad.x,
+                ep: k_quad.y,
+                act: e_quad.x,
+                msg: e_quad.y,
+                spn: e_quad.t
+            };
+        }
+        // returns undefined is there is no current continuation
     }
 
     function u_read_quad(ptr) {
@@ -1234,10 +1252,11 @@ function make_core(wasm_exports, on_wakeup, on_warning, mutable_wasm_caps) {
         u_ramptr,
         u_rawofs,
         u_read_quad,
+        u_write_quad,
         u_rom_ofs,
         u_romptr,
-        u_sourcemap,
-        u_write_quad
+        u_current_continuation,
+        u_sourcemap
     });
 }
 

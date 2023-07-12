@@ -102,13 +102,13 @@ unsafe fn the_host() -> &'static RefCell<Host> {
 }
 
 #[no_mangle]
-pub fn h_run_loop() -> Error {
+pub fn h_run_loop() -> Raw {
     unsafe {
         the_host().borrow_mut().run_loop(0)  // FIXME: expose run-limit in API
     }
 }
 #[no_mangle]
-pub fn h_step() -> Error {  // single-step instruction execution
+pub fn h_step() -> Raw {  // single-step instruction execution
     unsafe {
         the_host().borrow_mut().run_loop(1)
     }

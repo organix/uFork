@@ -13,8 +13,8 @@ impl Host {
             core,
         }
     }
-    pub fn run_loop(&mut self, limit: i32) -> Error {
-        self.core.run_loop(limit)
+    pub fn run_loop(&mut self, limit: i32) -> Raw {
+        self.core.run_loop(limit).raw()
     }
 
     pub fn event_inject(&mut self, sponsor: Raw, target: Raw, msg: Raw) {

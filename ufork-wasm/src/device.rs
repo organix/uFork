@@ -3,7 +3,7 @@
 use crate::*;
 
 pub trait Device {
-    fn handle_event(&mut self, core: &mut Core, ep: Any) -> Result<bool, Error>;
+    fn handle_event(&mut self, core: &mut Core, ep: Any) -> Result<(), Error>;
     fn drop_proxy(&mut self, _core: &mut Core, _cap: Any) {}  // default: no-op
 }
 
@@ -14,11 +14,11 @@ impl NullDevice {
     }
 }
 impl Device for NullDevice {
-    fn handle_event(&mut self, core: &mut Core, ep: Any) -> Result<bool, Error> {
+    fn handle_event(&mut self, core: &mut Core, ep: Any) -> Result<(), Error> {
         let _event = core.mem(ep);
         //panic!();  // terminate simulator!
         //Err(E_FAIL)  // force failure...
-        Ok(true)  // event handled.
+        Ok(())  // event handled.
     }
 }
 
@@ -41,11 +41,11 @@ impl DebugDevice {
     }
 }
 impl Device for DebugDevice {
-    fn handle_event(&mut self, core: &mut Core, ep: Any) -> Result<bool, Error> {
+    fn handle_event(&mut self, core: &mut Core, ep: Any) -> Result<(), Error> {
         let event = core.mem(ep);
         let message = event.y();  // message
         self.debug_print(message);
-        Ok(true)  // event handled.
+        Ok(())  // event handled.
     }
 }
 
@@ -80,13 +80,13 @@ impl ClockDevice {
     }
 }
 impl Device for ClockDevice {
-    fn handle_event(&mut self, core: &mut Core, ep: Any) -> Result<bool, Error> {
+    fn handle_event(&mut self, core: &mut Core, ep: Any) -> Result<(), Error> {
         let event = core.mem(ep);
         let sponsor = event.t();
         let cust = event.y();  // cust
         let now = self.read_clock();
         core.event_inject(sponsor, cust, now)?;
-        Ok(true)  // event handled.
+        Ok(())  // event handled.
     }
 }
 
@@ -160,7 +160,7 @@ impl IoDevice {
     NOTE: The initial implementation doesn't send a _cancel_ capability.
 */
 impl Device for IoDevice {
-    fn handle_event(&mut self, core: &mut Core, ep: Any) -> Result<bool, Error> {
+    fn handle_event(&mut self, core: &mut Core, ep: Any) -> Result<(), Error> {
         let event = core.mem(ep);
         let sponsor = event.t();
         let dev = event.x();
@@ -208,7 +208,7 @@ impl Device for IoDevice {
             }
         }
         // NOTE: unrecognized messages may be ignored
-        Ok(true)  // event handled.
+        Ok(())  // event handled.
     }
 }
 
@@ -412,7 +412,7 @@ impl BlobDevice {
     If `offset` is out of bounds, the write has no effect.
 */
 impl Device for BlobDevice {
-    fn handle_event(&mut self, core: &mut Core, ep: Any) -> Result<bool, Error> {
+    fn handle_event(&mut self, core: &mut Core, ep: Any) -> Result<(), Error> {
         let event = core.mem(ep);
         let sponsor = event.t();
         let target = event.x();
@@ -446,7 +446,7 @@ impl Device for BlobDevice {
             let cap = core.ptr_to_cap(ptr);
             core.event_inject(sponsor, cust, cap)?;
         }
-        Ok(true)  // event handled.
+        Ok(())  // event handled.
     }
     fn drop_proxy(&mut self, core: &mut Core, proxy: Any) {
         self.log_proxy(proxy);
@@ -474,7 +474,7 @@ impl TimerDevice {
     }
 }
 impl Device for TimerDevice {
-    fn handle_event(&mut self, core: &mut Core, ep: Any) -> Result<bool, Error> {
+    fn handle_event(&mut self, core: &mut Core, ep: Any) -> Result<(), Error> {
         let event = core.mem(ep);
         let sponsor = event.t();
         let dev = event.x();
@@ -492,7 +492,7 @@ impl Device for TimerDevice {
         let ptr = core.reserve(&delayed)?;
         let stub = core.reserve_stub(dev, ptr)?;
         self.set_timer(delay, stub);
-        Ok(true)  // event handled.
+        Ok(())  // event handled.
     }
 }
 
@@ -514,12 +514,12 @@ impl AwpDevice {
     }
 }
 impl Device for AwpDevice {
-    fn handle_event(&mut self, core: &mut Core, ep: Any) -> Result<bool, Error> {
+    fn handle_event(&mut self, core: &mut Core, ep: Any) -> Result<(), Error> {
         let event = core.mem(ep);
         let device = event.x();
         let event_stub = core.reserve_stub(device, ep)?;
         match self.forward_event(event_stub) {
-            E_OK => Ok(true),
+            E_OK => Ok(()),
             code => Err(code)
         }
     }

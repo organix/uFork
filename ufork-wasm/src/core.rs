@@ -160,109 +160,101 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
         }
     }
 
-    pub fn run_loop(&mut self, limit: i32) -> Error {
+    pub fn run_loop(&mut self, limit: i32) -> Any {
+        self.set_sponsor_signal(SPONSOR, UNDEF);  // enable root sponsor
+        let mut sponsor = SPONSOR;
         let mut steps = 0;
         while (limit <= 0) || (steps < limit) {
-            match self.execute_instruction() {
-                Ok(more) => {
-                    // no more instructions to execute...
-                    if !more && !self.event_pending() {
-                        return steps;
-                    }
-                    steps += 1;
-                },
-                Err(error) => {
-                    // limit reached, or other error condition signalled...
-                    if !self.signal_sponsor(error) {
-                        return error;
-                    }
-                },
+            if !self.k_first().is_ram() && !self.e_first().is_ram() {
+                sponsor = SPONSOR;
+                self.set_sponsor_signal(SPONSOR, ZERO);  // processor idle
+                break;  // return signal
             }
-            if let Err(error) = self.dispatch_event() {
-                // limit reached, or other error condition signalled...
-                if !self.signal_sponsor(error) {
-                    return error;
+            sponsor = self.execute_instruction();
+            if sponsor.is_ram() {
+                let sig = self.sponsor_signal(sponsor);
+                if sig.is_fix() {
+                    break;  // return signal
                 }
             }
-        }
-        steps  // no error, return steps taken
-    }
-    pub fn signal_sponsor(&mut self, error: Error) -> bool {
-        let kp = self.kp();
-        if !kp.is_ram() {
-            return false;  // continuation queue is empty
-        }
-        let ep = self.ep();
-        let sponsor = self.event_sponsor(ep);
-        let sig = self.sponsor_signal(sponsor);
-        if sig.is_ram() {
-            self.set_sponsor_signal(sponsor, Any::fix(error as isize));
-            self.event_enqueue(sig);
-            return true;  // peripheral idle, controller notified
-        }
-        false  // top-level sponsor
-    }
-    pub fn dispatch_event(&mut self) -> Result<bool, Error> {
-        if !self.event_pending() {
-            return Ok(false);  // event queue empty
-        }
-        let ep = self.e_first();
-        let event = self.mem(ep);
-        let target = event.x();
-        let sponsor = self.event_sponsor(ep);
-        let sig = self.sponsor_signal(sponsor);
-        if sig.is_fix() {
-            // idle sponsor
-            let ep_ = self.event_dequeue().unwrap();
-            assert_eq!(ep, ep_);
-            if sig != ZERO {  // if not stopped, retry later...
-                self.event_enqueue(ep_);  // move event to back of queue
+            sponsor = self.dispatch_event();
+            if sponsor.is_ram() {
+                let sig = self.sponsor_signal(sponsor);
+                if sig.is_fix() {
+                    break;  // return signal
+                }
             }
-            return Ok(false);  // no event dispatched
+            steps += 1;  // count step
         }
-        let limit = self.sponsor_events(sponsor).fix_num().unwrap_or(0);
-        if limit <= 0 {
-            return Err(E_MSG_LIM);  // Sponsor event limit reached
+        sponsor
+    }
+    fn dispatch_event(&mut self) -> Any {
+        if let Some(ep) = self.event_dequeue() {
+            let target = self.event_target(ep);
+            if self.actor_busy(target) {
+                // target actor is busy, retry later...
+                self.event_enqueue(ep);  // move event to back of queue
+                return UNDEF;  // no event dispatched
+            }
+            let sponsor = self.event_sponsor(ep);
+            let sig = self.sponsor_signal(sponsor);
+            if sig.is_fix() {
+                // idle sponsor
+                if sig != ZERO {  // if not stopped, retry later...
+                    self.event_enqueue(ep);  // move event to back of queue
+                }
+                return UNDEF;  // no event dispatched
+            }
+            let limit = self.sponsor_events(sponsor).fix_num().unwrap_or(0);
+            if limit <= 0 {
+                // sponsor event limit reached
+                let signal_sent = self.report_error(sponsor, E_MSG_LIM);
+                self.event_enqueue(ep);  // move event to back of queue
+                if signal_sent {
+                    return UNDEF;  // controller notified
+                }
+            } else {
+                self.set_sponsor_events(sponsor, Any::fix(limit - 1));  // decrement event limit
+                self.ram_mut(ep).set_z(NIL);  // disconnect event from queue
+                if let Err(error) = self.deliver_event(ep) {
+                    let signal_sent = self.report_error(sponsor, error);
+                    self.event_enqueue(ep);  // move event to back of queue
+                    if signal_sent {
+                        return UNDEF;  // controller notified
+                    }
+                }
+            }
+            sponsor
+        } else {
+            // event queue empty
+            UNDEF
         }
+    }
+    fn deliver_event(&mut self, ep: Any) -> Result<(), Error> {
+        let target = self.event_target(ep);
         if let Ok(id) = self.device_id(target) {
-            // message-event to device
-            let ep_ = self.event_dequeue().unwrap();
-            assert_eq!(ep, ep_);
+            // synchronous message-event to device
             let mut dev_mut = self.device[id].take().unwrap();
             let result = dev_mut.handle_event(self, ep);
             self.device[id] = Some(dev_mut);
             trace_event(ep, UNDEF);  // trace transactional effect(s)
-            result  // should normally be Ok(true)
+            result
         } else {
-            let a_ptr = self.cap_to_ptr(target);
-            let a_quad = self.mem(a_ptr);
-            let beh = a_quad.x();
-            let state = a_quad.y();
-            let txn = a_quad.z();
-            if txn == UNDEF {
-                // begin actor-event transaction
-                let effect = self.reserve(&Quad::actor_t(beh, state, NIL))?;  // event-effect accumulator
-                let kp = self.new_cont(beh, NIL, ep)?;  // create continuation
-                self.ram_mut(a_ptr).set_z(effect);  // indicate actor is busy
-                self.cont_enqueue(kp);
-                let ep_ = self.event_dequeue().unwrap();
-                assert_eq!(ep, ep_);
-                self.ram_mut(ep).set_z(NIL);  // disconnect event from queue
-                self.set_sponsor_events(sponsor, Any::fix(limit - 1));  // decrement event limit
-                Ok(true)  // event dispatched
-            } else {
-                // target actor is busy, retry later...
-                let ep_ = self.event_dequeue().unwrap();
-                assert_eq!(ep, ep_);
-                self.event_enqueue(ep);  // move event to back of queue
-                Ok(false)  // no event dispatched
-            }
+            // begin actor-event transaction
+            let ptr = self.cap_to_ptr(target);
+            let actor = *self.mem(ptr);  // initial actor state
+            let beh = actor.x();
+            let kp = self.new_cont(beh, NIL, ep)?;  // create continuation
+            let effect = self.reserve(&actor)?;  // event-effect accumulator
+            self.ram_mut(ptr).set_z(effect);  // indicate actor is busy
+            self.cont_enqueue(kp);
+            Ok(())
         }
     }
-    pub fn execute_instruction(&mut self) -> Result<bool, Error> {
+    fn execute_instruction(&mut self) -> Any {
         let kp = self.kp();
         if !kp.is_ram() {
-            return Ok(false);  // continuation queue is empty
+            return UNDEF;  // continuation queue is empty
         }
         let ep = self.ep();
         let sponsor = self.event_sponsor(ep);
@@ -274,26 +266,40 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
             if sig != ZERO {  // if not stopped, retry later...
                 self.cont_enqueue(kp_);  // move continuation to back of queue
             }
-            return Ok(true);  // instruction skipped
+            return UNDEF;  // instruction not executed
         }
         let ip = self.ip();
-        let ip_ = self.perform_op(ip)?;
-        if self.typeq(INSTR_T, ip_) {
-            // re-queue updated continuation
-            self.set_ip(ip_);
-            let kp_ = self.cont_dequeue().unwrap();
-            assert_eq!(kp, kp_);
-            self.cont_enqueue(kp_);
-        } else {
-            // free dead continuation and associated event
-            let kp_ = self.cont_dequeue().unwrap();
-            assert_eq!(kp, kp_);
-            self.free(ep);
-            self.free(kp);
-            self.gc_collect();  // FIXME! REMOVE FORCED GC...
+        match self.perform_op(ip) {
+            Ok(ip_) => {
+                let kp_ = self.cont_dequeue().unwrap();
+                assert_eq!(kp, kp_);
+                if self.typeq(INSTR_T, ip_) {
+                    self.ram_mut(kp).set_t(ip_);  // update ip in continuation
+                    self.cont_enqueue(kp);  // re-queue updated continuation
+                } else {
+                    // free dead continuation and associated event
+                    self.free(ep);
+                    self.free(kp);
+                    self.gc_collect();  // FIXME! REMOVE FORCED GC...
+                }
+            },
+            Err(error) => {
+                if self.report_error(sponsor, error) {
+                    return UNDEF;  // controller notified
+                }
+            },
         }
         //self.gc_increment();  // WARNING! incremental and stop-the-world GC are incompatible!
-        Ok(true)  // instruction executed
+        sponsor  // instruction executed
+    }
+    pub fn report_error(&mut self, sponsor: Any, error: Error) -> bool {
+        let sig = self.sponsor_signal(sponsor);
+        self.set_sponsor_signal(sponsor, Any::fix(error as isize));
+        if sig.is_ram() {
+            self.event_enqueue(sig);
+            return true;  // controller notified
+        }
+        return false;  // root sponsor
     }
     fn perform_op(&mut self, ip: Any) -> Result<Any, Error> {
         self.count_cpu_cycles(1)?;  // always count at least one "cycle"
@@ -790,9 +796,6 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
         Ok(ip_)
     }
 
-    pub fn event_pending(&self) -> bool {
-        self.e_first().is_ram()
-    }
     fn event_enqueue(&mut self, ep: Any) {
         // add event to the back of the queue
         self.ram_mut(ep).set_z(NIL);
@@ -829,6 +832,15 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
         }
         self.set_e_first(ep);
         Ok(())
+    }
+    pub fn event_sponsor(&self, ep: Any) -> Any {
+        self.mem(ep).t()
+    }
+    pub fn event_target(&self, ep: Any) -> Any {
+        self.mem(ep).x()
+    }
+    pub fn event_message(&self, ep: Any) -> Any {
+        self.mem(ep).y()
     }
 
     fn cont_enqueue(&mut self, kp: Any) {
@@ -877,6 +889,12 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
         quad.set_x(beh);  // replace behavior function
         quad.set_y(state);  // replace state data
         Ok(())
+    }
+
+    fn actor_busy(&self, cap: Any) -> bool {
+        let ptr = self.cap_to_ptr(cap);
+        let txn = self.mem(ptr).z();
+        txn != UNDEF
     }
     fn actor_commit(&mut self, me: Any) {
         self.stack_clear(NIL);
@@ -976,9 +994,6 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
     }
     pub fn set_sponsor_signal(&mut self, sponsor: Any, signal: Any) {
         self.ram_mut(sponsor).set_z(signal);
-    }
-    pub fn event_sponsor(&self, ep: Any) -> Any {
-        self.mem(ep).t()
     }
     fn count_cpu_cycles(&mut self, cost: isize) -> Result<(), Error> {
         let ep = self.ep();
@@ -1427,10 +1442,6 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
         if !kp.is_ram() { return UNDEF }
         let quad = self.mem(kp);
         quad.y()
-    }
-    fn set_ip(&mut self, ptr: Any) {
-        let quad = self.ram_mut(self.kp());
-        quad.set_t(ptr)
     }
     fn set_sp(&mut self, ptr: Any) {
         let quad = self.ram_mut(self.kp());
@@ -2285,8 +2296,9 @@ pub const COUNT_TO: Any = Any { raw: COUNT_TO_OFS as Raw };
         let boot_ptr = core.reserve(&Quad::new_actor(boot_beh, NIL)).unwrap();
         let a_boot = core.ptr_to_cap(boot_ptr);
         core.event_inject(SPONSOR, a_boot, UNDEF).unwrap();
-        let err = core.run_loop(0);
-        if err < 0 { assert_eq!(E_OK, err); }  // positive values are number of steps executed
+        let sponsor = core.run_loop(0);
+        assert_eq!(SPONSOR, sponsor);
+        assert_eq!(ZERO, core.sponsor_signal(sponsor));
     }
 
     #[test]
@@ -2297,9 +2309,9 @@ pub const COUNT_TO: Any = Any { raw: COUNT_TO_OFS as Raw };
         let a_boot = core.ptr_to_cap(boot_ptr);
         core.event_inject(SPONSOR, a_boot, UNDEF).unwrap();
         core.gc_collect();
-        let err = core.run_loop(1024);
-        if err < 0 { assert_eq!(E_OK, err); }  // positive values are number of steps executed
-        core.gc_collect();
+        let sponsor = core.run_loop(1024);
+        assert_eq!(SPONSOR, sponsor);
+        assert_eq!(ZERO, core.sponsor_signal(sponsor));
     }
 
     #[test]
@@ -2309,8 +2321,9 @@ pub const COUNT_TO: Any = Any { raw: COUNT_TO_OFS as Raw };
         let boot_ptr = core.reserve(&Quad::new_actor(boot_beh, NIL)).unwrap();
         let a_boot = core.ptr_to_cap(boot_ptr);
         core.event_inject(SPONSOR, a_boot, UNDEF).unwrap();
-        let err = core.run_loop(1024);
-        if err < 0 { assert_eq!(E_OK, err); }  // positive values are number of steps executed
+        let sponsor = core.run_loop(1024);
+        assert_eq!(SPONSOR, sponsor);
+        assert_eq!(ZERO, core.sponsor_signal(sponsor));
     }
 
     #[test]
@@ -2322,8 +2335,9 @@ pub const COUNT_TO: Any = Any { raw: COUNT_TO_OFS as Raw };
         let msg = core.reserve(&Quad::pair_t(UNIT, NIL)).unwrap();
         let msg = core.reserve(&Quad::pair_t(a_boot, msg)).unwrap();
         core.event_inject(SPONSOR, a_boot, msg).unwrap();
-        let err = core.run_loop(1024);
-        if err < 0 { assert_eq!(E_OK, err); }  // positive values are number of steps executed
+        let sponsor = core.run_loop(1024);
+        assert_eq!(SPONSOR, sponsor);
+        assert_eq!(ZERO, core.sponsor_signal(sponsor));
     }
 
     #[test]
@@ -2333,8 +2347,9 @@ pub const COUNT_TO: Any = Any { raw: COUNT_TO_OFS as Raw };
         let boot_ptr = core.reserve(&Quad::new_actor(boot_beh, NIL)).unwrap();
         let a_boot = core.ptr_to_cap(boot_ptr);
         core.event_inject(SPONSOR, a_boot, NIL).unwrap();
-        let err = core.run_loop(1024);
-        if err < 0 { assert_eq!(E_OK, err); }  // positive values are number of steps executed
+        let sponsor = core.run_loop(1024);
+        assert_eq!(SPONSOR, sponsor);
+        assert_eq!(ZERO, core.sponsor_signal(sponsor));
     }
 
     #[test]
