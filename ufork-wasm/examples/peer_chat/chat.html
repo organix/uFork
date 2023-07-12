@@ -42,14 +42,8 @@ input {
   white-space: pre;
   overflow: auto;
 }
-#choice {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-}
 #room {
-  display: none;
+  display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
@@ -77,23 +71,11 @@ input {
     This page contains webassembly and javascript content,
     please enable javascript in your browser.
   </noscript>
-  <div id="choice" class="panel">
-    <div class="flex-row">
-      <button id="join-btn">Join</button>
-      <input id="join-id" type="text" size="48" placeholder="Room Link" />
-    </div>
-    <div class="flex-row">or</div>
-    <div class="flex-row">
-      <button id="host-btn">Host</button>
-      <input id="host-id" type="text" size="48" placeholder="Room Name" />
-    </div>
-  </div>
   <div id="room" class="panel">
     <textarea id="stdout" cols="70" rows="16" readonly="readonly"></textarea>
     <div class="flex-row">
-      <input id="stdin" type="text" size="60" />
+      <input id="stdin" type="text" size="64" />
       <button id="send-btn">Send</button>
-      <button id="exit-btn">Exit</button>
     </div>
   </div>
   <script type="module" src="./chat.js"></script>

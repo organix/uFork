@@ -50,20 +50,7 @@ function ufork_wake() {
     }, 0);
 }
 
-const $choice_tab = document.getElementById("choice");
-const $room_tab = document.getElementById("room");
-
-const $join_button = document.getElementById("join-btn");
-$join_button.onclick = function () {
-    $choice_tab.style.display = "none";
-    $room_tab.style.display = "flex";
-};
-const $host_button = document.getElementById("host-btn");
-$host_button.onclick = function () {
-    $choice_tab.style.display = "none";
-    $room_tab.style.display = "flex";
-};
-
+//const $room = document.getElementById("room");
 const $stdin = document.getElementById("stdin");
 const $send_button = document.getElementById("send-btn");
 $send_button.onclick = function () {
