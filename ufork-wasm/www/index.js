@@ -533,6 +533,7 @@ $sponsor_cycles.oninput = function () {
     }
 };
 
+const utf8encoder = new TextEncoder();
 const $stdin = document.getElementById("stdin");
 const $send_button = document.getElementById("send-btn");
 $send_button.onclick = function () {
@@ -540,7 +541,7 @@ $send_button.onclick = function () {
     if (text.length > 0) {
         text += "\n";
         on_stdin(text);
-        const utf8 = new TextEncoder().encode(text);
+        const utf8 = utf8encoder.encode(text);
         console.log("Send", hexdump(utf8, 0, utf8.length));
         $stdin.value = "";
     }
