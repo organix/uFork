@@ -22,12 +22,12 @@ let awp_store; // mutable AWP store object
 let on_stdin;
 
 function ufork_run() {
-    const sig = core.h_run_loop(8);
+    const sig = core.h_run_loop(0);
     if (core.u_is_fix(sig)) {
         const err = core.u_fix_to_i32(sig);
         const msg = core.u_fault_msg(err);
         const spn = core.u_ramptr(ufork.SPONSOR_OFS);
-        console.log("IDLE", core.u_disasm(spn), "error:", err, "=", msg);
+        //console.log("IDLE", core.u_disasm(spn), "error:", err, "=", msg);
         if (err === ufork.E_OK) {
             // processor idle
             return ufork.E_OK;
@@ -43,15 +43,15 @@ function ufork_run() {
             sponsor.y = core.u_fixnum(4096);
         }
         core.u_write_quad(spn, sponsor);
-        console.log("refreshed sponsor:", core.u_disasm(spn));
+        //console.log("refreshed sponsor:", core.u_disasm(spn));
     }
     setTimeout(function wakeup() {
-        console.log("RUN:", core.u_print(sig));
+        //console.log("RUN:", core.u_print(sig));
         ufork_run();
     }, 0);
 }
 function ufork_wake(dev_ofs) {
-    console.log("WAKE:", dev_ofs);
+    //console.log("WAKE:", dev_ofs);
     ufork_run();
 }
 

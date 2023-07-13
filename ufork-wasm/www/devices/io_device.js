@@ -20,7 +20,9 @@ function io_device(core, on_stdout) {
             const sponsor = event.t;
             const target = event.x;
             //const message = event.y;
+            /*
             console.log("READ: " + code + " = " + first);
+            */
             const message = core.h_reserve_ram({  // (char)
                 t: ufork.PAIR_T,
                 x: char,
@@ -48,10 +50,12 @@ function io_device(core, on_stdout) {
                 ));
             },
             host_read(stub) { // (i32) -> bool
+                /*
                 console.log(
                     "READ: " + stub + " = " + core.u_print(stub)
                     + " -> " + core.u_pprint(stub)
                 );
+                */
                 if (stdin_stub !== undefined) {
                     throw new Error(
                         "stdin_stub already set to " + core.u_pprint(stdin_stub)
@@ -64,9 +68,11 @@ function io_device(core, on_stdout) {
             host_write(code) { // (i32) -> nil
                 code &= 0x1FFFFF;  // interpret as a Unicode code point
                 const char = String.fromCodePoint(code);
+                /*
                 console.log(
                     "WRITE: " + code + " = " + char
                 );
+                */
                 if (typeof on_stdout === "function") {
                     on_stdout(char);
                 }

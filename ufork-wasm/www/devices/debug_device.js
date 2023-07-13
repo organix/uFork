@@ -13,6 +13,7 @@ function debug_device(core, log = console.log) {
         {
             // FIXME: where should the trace handler be installed?
             host_trace(event) { // (i32) -> nil
+                return;  // FIXME: until we have a better mechanism, comment out this line to enable tracing...
                 event = core.u_read_quad(event);
                 const sponsor = event.t;
                 const target = event.x;
