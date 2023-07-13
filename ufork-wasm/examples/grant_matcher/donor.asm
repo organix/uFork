@@ -6,9 +6,9 @@
 store:
     ref 0
 GM_petname:
-    ref 0
-KEQD_petname:
     ref 1
+KEQD_petname:
+    ref 2
 
 boot:                       ; () <- {caps}
     push KEQD_petname       ; KEQD

@@ -23,41 +23,10 @@ function stringify(value) {
     return hex.encode(OED.encode(value));
 }
 
-// The Grant Matcher configuration. This will be removed eventually.
-
-const alice_store = {
-    name: "alice",
-    identity: "alice",
-    acquaintances: [
-        {name: "bob", address: "@bob"},
-        {name: "carol", address: "@carol"}
-    ]
-};
-const bob_store = {
-    name: "bob",
-    identity: "bob",
-    address: "@bob",
-    bind_info: "@bob"
-};
-const carol_store = {
-    name: "carol",
-    identity: "carol",
-    address: "@carol",
-    bind_info: "@carol"
-};
-const dana_store = {
-    name: "dana",
-    identity: "dana",
-    acquaintances: [
-        {name: "bob", address: "@bob"},
-        {name: "carol", address: "@carol"}
-    ]
-};
-
 function awp_device(
     core,
     transport = dummy_transport(),
-    stores = [alice_store, bob_store, carol_store, dana_store],
+    stores = [],
     webcrypto = crypto // Node.js does not have a 'crypto' global
 ) {
     const sponsor = core.u_ramptr(ufork.SPONSOR_OFS);
@@ -107,9 +76,6 @@ function awp_device(
 // necessary.
 
         const key = stringify(acquaintance.name);
-        if (store.acquaintances === undefined) {
-            store.acquaintances = [];
-        }
         const match = store.acquaintances.find(function (the_acquaintance) {
             return key === stringify(the_acquaintance.name);
         });
@@ -191,10 +157,7 @@ function awp_device(
                         raw_to_swiss[raw] = swiss;
                     }
                     return {
-                        meta: {
-                            name: store.name,
-                            address: store.address // optional
-                        },
+                        meta: store.acquaintances[0], // self
                         data: swiss
                     };
                 }
@@ -205,10 +168,7 @@ function awp_device(
                         proxy.petname
                     ];
                     return {
-                        meta: {
-                            name: acquaintance.name,
-                            address: acquaintance.address
-                        },
+                        meta: acquaintance,
                         data: proxy.swiss
                     };
                 }
@@ -296,7 +256,9 @@ function awp_device(
 
 // The frame is an introduction request. Forward it to the greeter.
 
-            const greeter_stub = greeters[stringify(store.name)];
+            const greeter_stub = greeters[
+                stringify(store.acquaintances[0].name) // self
+            ];
             if (greeter_stub === undefined) {
                 console.log("No greeter", store, frame);
                 return;
@@ -401,7 +363,7 @@ function awp_device(
             function on_close(connection, reason) {
                 console.log("connect on_close", reason);
                 return unregister(convo_key(
-                    store.name,
+                    store.acquaintances[0].name, // self
                     connection.name()
                 ));
             }
@@ -427,7 +389,7 @@ function awp_device(
     }
 
     function register(store, connection) {
-        const key = convo_key(store.name, connection.name());
+        const key = convo_key(store.acquaintances[0].name, connection.name());
 
 // If we have been trying to connect, give up.
 
@@ -466,7 +428,7 @@ function awp_device(
 
     function enqueue(store, petname, swiss, message) {
         const acquaintance = store.acquaintances[petname];
-        const key = convo_key(store.name, acquaintance.name);
+        const key = convo_key(store.acquaintances[0].name, acquaintance.name);
         add(outbox, key, {store, petname, swiss, message});
         return flush(key);
     }
@@ -561,7 +523,7 @@ function awp_device(
                 }))
             );
             const key = convo_key(
-                store.name,
+                store.acquaintances[0].name,
                 store.acquaintances[petname].name
             );
             add(lost, key, function on_lost() {
@@ -644,7 +606,7 @@ function awp_device(
                 function on_close(connection, reason) {
                     console.log("listen on_close", reason);
                     return unregister(convo_key(
-                        store.name,
+                        store.acquaintances[0].name,
                         connection.name()
                     ));
                 }
@@ -662,7 +624,7 @@ function awp_device(
 // A store may not register more than one greeter. That would get very
 // confusing.
 
-                    const key = stringify(store.name);
+                    const key = stringify(store.acquaintances[0].name);
                     if (greeters[key] !== undefined) {
                         stop();
                         return resolve(core.h_reserve_ram({
@@ -842,38 +804,38 @@ function awp_device(
 //debug             carol_identity,
 //debug             dana_identity
 //debug         ]) {
-//debug             const acquaintances = [
-//debug                 {
-//debug                     name: transport.identity_to_name(bob_identity),
-//debug                     address: bob_address
-//debug                 },
-//debug                 {
-//debug                     name: transport.identity_to_name(carol_identity),
-//debug                     address: carol_address
-//debug                 }
-//debug             ];
+//debug             const alice = {
+//debug                 name: transport.identity_to_name(alice_identity)
+//debug             };
+//debug             const bob = {
+//debug                 name: transport.identity_to_name(bob_identity),
+//debug                 address: bob_address
+//debug             };
+//debug             const carol = {
+//debug                 name: transport.identity_to_name(carol_identity),
+//debug                 address: carol_address
+//debug             };
+//debug             const dana = {
+//debug                 name: transport.identity_to_name(dana_identity)
+//debug             };
 //debug             const store = [
 //debug                 {
 //debug                     identity: alice_identity,
-//debug                     name: transport.identity_to_name(alice_identity),
-//debug                     acquaintances
+//debug                     acquaintances: [alice, bob, carol]
 //debug                 },
 //debug                 {
 //debug                     identity: bob_identity,
-//debug                     name: transport.identity_to_name(bob_identity),
-//debug                     address: bob_address,
-//debug                     bind_info: bob_bind_info
+//debug                     bind_info: bob_bind_info,
+//debug                     acquaintances: [bob]
 //debug                 },
 //debug                 {
 //debug                     identity: carol_identity,
-//debug                     name: transport.identity_to_name(carol_identity),
-//debug                     address: carol_address,
-//debug                     bind_info: carol_bind_info
+//debug                     bind_info: carol_bind_info,
+//debug                     acquaintances: [carol]
 //debug                 },
 //debug                 {
 //debug                     identity: dana_identity,
-//debug                     name: transport.identity_to_name(dana_identity),
-//debug                     acquaintances
+//debug                     acquaintances: [dana, bob, carol]
 //debug                 }
 //debug             ];
 //debug             debug_device(core);
