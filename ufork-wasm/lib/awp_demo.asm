@@ -13,7 +13,7 @@
 alice_store:
     ref 0
 bob_petname:
-    ref 0
+    ref 1
 
 ; Bob is not acquainted with Alice.
 
@@ -63,7 +63,7 @@ greeter_beh:            ; () <- (cancel result petname hello)
     msg 4               ; hello
     is_eq 42            ; --
     msg 3               ; petname
-    is_eq 0             ; --
+    is_eq 1             ; --
     push ping_beh       ; ping_beh
     new 0               ; ping
     msg 2               ; ping result

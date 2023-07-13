@@ -171,8 +171,11 @@ Each acquaintance has:
 - a secure name (globally unique)
 - an address (optional)
 
-An acquaintance is selected from a store using its petname. Petnames are
-non-negative integers. Names and addresses must be OED-encodable values.
+An acquaintance is selected from a store using its petname, a non-negative
+integer that indexes into the acquaintances array. A store always contains at
+least one acquaintance: itself, with petname 0.
+
+Names and addresses must be OED-encodable values.
 
 It is possible to become acquainted with a party that does not disclose an
 address. In such cases, communication is only possible whilst that party is
@@ -186,10 +189,12 @@ A store's contents might look something like this:
 
     {
         identity: "0400A84D1FE2AB031BE95356171FDD33ADA...", // private key
-        name: "3081EE020100301006072A8648CE3D020106052...", // public key
-        address: "2.2.2.2:3000",                            // network address
         bind_info: "0.0.0.0:3000",                          // bind address
         acquaintances: [
+            {
+                name: "3081EE020100301006072A8648CE3D0...", // own public key
+                address: "2.2.2.2:3000"                     // own network address
+            },
             {
                 name: "0401D11E26A35297D1F60DD1D252A62...", // public key
                 address: "3.3.3.3:3000"                     // network address

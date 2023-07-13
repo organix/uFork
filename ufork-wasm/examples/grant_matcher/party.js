@@ -10,6 +10,24 @@ import awp_device from "../../www/devices/awp_device.js";
 import webrtc_transport from "../../www/transports/webrtc_transport.js";
 import websockets_signaller from "../../www/transports/websockets_signaller.js";
 
+const signaller_origin = (
+    location.protocol === "https:"
+    ? "wss://"
+    : "ws://"
+) + location.host;
+
+function make_address(name) {
+    return signaller_origin + "/connect?name=" + hex.encode(name);
+}
+
+function make_bind_info(name) {
+    return (
+        signaller_origin
+        + "/listen?name=" + hex.encode(name)
+        + "&password=uFork"
+    );
+}
+
 function party(asm_url, acquaintance_names = []) {
     const pre = document.createElement("pre");
     document.body.append(pre);
@@ -21,11 +39,6 @@ function party(asm_url, acquaintance_names = []) {
         pre.textContent += "\n" + things.join(" ");
     }
 
-    const signaller_origin = (
-        location.protocol === "https:"
-        ? "wss://"
-        : "ws://"
-    ) + location.host;
     const transport = webrtc_transport(websockets_signaller(), print);
     let core;
 
@@ -48,6 +61,7 @@ function party(asm_url, acquaintance_names = []) {
         ]),
         requestorize(function ([asm_module, identity]) {
             const name = transport.identity_to_name(identity);
+            const address = make_address(name);
             debug_device(core, function (...args) {
                 print(...args);
                 if (args[0].startsWith("LOG:")) {
@@ -59,22 +73,13 @@ function party(asm_url, acquaintance_names = []) {
             });
             awp_device(core, transport, [{
                 identity,
-                name,
-                address: signaller_origin + "/connect?name=" + hex.encode(name),
-                bind_info: (
-                    signaller_origin
-                    + "/listen?name=" + hex.encode(name)
-                    + "&password=uFork"
-                ),
-                acquaintances: acquaintance_names.map(function (name) {
-                    return {
-                        name,
-                        address: (
-                            signaller_origin
-                            + "/connect?name=" + hex.encode(name)
-                        )
-                    };
-                })
+                bind_info: make_bind_info(name),
+                acquaintances: [
+                    {name, address},
+                    ...acquaintance_names.map(function (name) {
+                        return {name, address: make_address(name)};
+                    })
+                ]
             }]);
             core.h_boot(asm_module.boot);
             print("IDLE:", core.u_fault_msg(core.h_run_loop()));

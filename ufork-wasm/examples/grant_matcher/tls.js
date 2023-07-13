@@ -27,38 +27,38 @@ MC4CAQAwBQYDK2VwBCIEIBsN+u2pWW58jJteLzvYpNy+cpsKzByJWBS21sCyMkTd
 const dana_identity = crypto.createPrivateKey(`-----BEGIN PRIVATE KEY-----
 MC4CAQAwBQYDK2VwBCIEINTatAbnOgcatVHstpOCLskSHU5nogWEpe7fiDQUMZIF
 -----END PRIVATE KEY-----`);
-const acquaintances = [
-    {
-        name: transport.identity_to_name(bob_identity),
-        address: bob_address
-    },
-    {
-        name: transport.identity_to_name(carol_identity),
-        address: carol_address
-    }
-];
+const alice = {
+    name: transport.identity_to_name(alice_identity)
+};
+const bob = {
+    name: transport.identity_to_name(bob_identity),
+    address: bob_address
+};
+const carol = {
+    name: transport.identity_to_name(carol_identity),
+    address: carol_address
+};
+const dana = {
+    name: transport.identity_to_name(dana_identity)
+};
 const stores = {
     alice: {
         identity: alice_identity,
-        name: transport.identity_to_name(alice_identity),
-        acquaintances
+        acquaintances: [alice, bob, carol]
     },
     bob: {
         identity: bob_identity,
-        name: transport.identity_to_name(bob_identity),
-        address: bob_address,
-        bind_info: bob_address
+        bind_info: bob_address,
+        acquaintances: [bob]
     },
     carol: {
         identity: carol_identity,
-        name: transport.identity_to_name(carol_identity),
-        address: carol_address,
-        bind_info: carol_address
+        bind_info: carol_address,
+        acquaintances: [carol]
     },
     dana: {
         identity: dana_identity,
-        name: transport.identity_to_name(dana_identity),
-        acquaintances
+        acquaintances: [dana, bob, carol]
     }
 };
 const store_name = process.argv[2];

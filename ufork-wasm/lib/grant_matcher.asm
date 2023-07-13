@@ -24,9 +24,9 @@ KEQD_store:
 dana_store:
     ref 3
 GM_petname:
-    ref 0
-KEQD_petname:
     ref 1
+KEQD_petname:
+    ref 2
 
 ; The Grant Matcher and KEQD start listening.
 
