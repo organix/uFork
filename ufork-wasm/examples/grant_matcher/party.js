@@ -48,7 +48,9 @@ function party(asm_url, acquaintance_names = []) {
                 "../../target/wasm32-unknown-unknown/debug/ufork_wasm.wasm"
             ),
             function on_wakeup() {
-                print("IDLE:", core.u_fault_msg(core.h_run_loop()));
+                const sig = core.h_run_loop(0);
+                const err = core.u_fix_to_i32(sig);
+                print("WAKE:", core.u_print(sig), core.u_fault_msg(err));
             },
             print
         ),
@@ -82,7 +84,9 @@ function party(asm_url, acquaintance_names = []) {
                 ]
             }]);
             core.h_boot(asm_module.boot);
-            print("IDLE:", core.u_fault_msg(core.h_run_loop()));
+            const sig = core.h_run_loop(0);
+            const err = core.u_fix_to_i32(sig);
+            print("IDLE:", core.u_print(sig), core.u_fault_msg(err));
             return name;
         })
     ])(function callback(name, reason) {

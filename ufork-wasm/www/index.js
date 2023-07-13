@@ -330,16 +330,13 @@ function gc_host() {
 }
 function single_step() {
     fault = false;
-    const sig = core.h_step();
-    if (core.u_in_mem(sig)) {
-        const err = core.u_read_quad(sig).z;
-        if (core.u_is_fix(err)) {
-            const err_code = core.u_fix_to_i32(err);
-            const err_msg = core.u_fault_msg(err_code);
-            $fault_ctl.title = err_msg;
-            fault = true;
-            console.log("single_step:", err_code, "=", err_msg);
-        }
+    const sig = core.h_run_loop(1);
+    if (core.u_is_fix(sig)) {
+        const err = core.u_fix_to_i32(sig);
+        const msg = core.u_fault_msg(err);
+        $fault_ctl.title = msg;
+        fault = true;
+        console.log("single_step:", err, "=", msg);
     }
     draw_host();
     return !fault;

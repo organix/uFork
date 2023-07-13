@@ -22,18 +22,17 @@ let awp_store; // mutable AWP store object
 let on_stdin;
 
 function ufork_run() {
-    core.h_run_loop(8);
-    const spn = core.u_ramptr(ufork.SPONSOR_OFS);
-    const sponsor = core.u_read_quad(spn);
-    const sig = sponsor.z;
+    const sig = core.h_run_loop(8);
     if (core.u_is_fix(sig)) {
         const err = core.u_fix_to_i32(sig);
         const msg = core.u_fault_msg(err);
+        const spn = core.u_ramptr(ufork.SPONSOR_OFS);
         console.log("IDLE", core.u_disasm(spn), "error:", err, "=", msg);
         if (err === ufork.E_OK) {
             // processor idle
             return ufork.E_OK;
         }
+        const sponsor = core.u_read_quad(spn);
         if (err === ufork.E_MEM_LIM) {
             sponsor.t = core.u_fixnum(1024);
         }

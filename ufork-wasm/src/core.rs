@@ -162,31 +162,23 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
 
     pub fn run_loop(&mut self, limit: i32) -> Any {
         self.set_sponsor_signal(SPONSOR, UNDEF);  // enable root sponsor
-        let mut sponsor = SPONSOR;
         let mut steps = 0;
         while (limit <= 0) || (steps < limit) {
             if !self.k_first().is_ram() && !self.e_first().is_ram() {
-                sponsor = SPONSOR;
                 self.set_sponsor_signal(SPONSOR, ZERO);  // processor idle
                 break;  // return signal
             }
-            sponsor = self.execute_instruction();
-            if sponsor.is_ram() {
-                let sig = self.sponsor_signal(sponsor);
-                if sig.is_fix() {
-                    break;  // return signal
-                }
+            let sig = self.execute_instruction();
+            if sig.is_fix() {
+                break;  // return signal
             }
-            sponsor = self.dispatch_event();
-            if sponsor.is_ram() {
-                let sig = self.sponsor_signal(sponsor);
-                if sig.is_fix() {
-                    break;  // return signal
-                }
+            let sig = self.dispatch_event();
+            if sig.is_fix() {
+                break;  // return signal
             }
             steps += 1;  // count step
         }
-        sponsor
+        self.sponsor_signal(SPONSOR)  // return SPONSOR signal
     }
     fn dispatch_event(&mut self) -> Any {
         if let Some(ep) = self.event_dequeue() {
@@ -224,7 +216,7 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
                     }
                 }
             }
-            sponsor
+            self.sponsor_signal(sponsor)  // return signal
         } else {
             // event queue empty
             UNDEF
@@ -290,7 +282,7 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
             },
         }
         //self.gc_increment();  // WARNING! incremental and stop-the-world GC are incompatible!
-        sponsor  // instruction executed
+        self.sponsor_signal(sponsor)  // instruction executed, return signal
     }
     pub fn report_error(&mut self, sponsor: Any, error: Error) -> bool {
         let sig = self.sponsor_signal(sponsor);
@@ -2296,9 +2288,8 @@ pub const COUNT_TO: Any = Any { raw: COUNT_TO_OFS as Raw };
         let boot_ptr = core.reserve(&Quad::new_actor(boot_beh, NIL)).unwrap();
         let a_boot = core.ptr_to_cap(boot_ptr);
         core.event_inject(SPONSOR, a_boot, UNDEF).unwrap();
-        let sponsor = core.run_loop(0);
-        assert_eq!(SPONSOR, sponsor);
-        assert_eq!(ZERO, core.sponsor_signal(sponsor));
+        let sig = core.run_loop(0);
+        assert_eq!(ZERO, sig);
     }
 
     #[test]
@@ -2309,9 +2300,8 @@ pub const COUNT_TO: Any = Any { raw: COUNT_TO_OFS as Raw };
         let a_boot = core.ptr_to_cap(boot_ptr);
         core.event_inject(SPONSOR, a_boot, UNDEF).unwrap();
         core.gc_collect();
-        let sponsor = core.run_loop(1024);
-        assert_eq!(SPONSOR, sponsor);
-        assert_eq!(ZERO, core.sponsor_signal(sponsor));
+        let sig = core.run_loop(1024);
+        assert_eq!(ZERO, sig);
     }
 
     #[test]
@@ -2321,9 +2311,8 @@ pub const COUNT_TO: Any = Any { raw: COUNT_TO_OFS as Raw };
         let boot_ptr = core.reserve(&Quad::new_actor(boot_beh, NIL)).unwrap();
         let a_boot = core.ptr_to_cap(boot_ptr);
         core.event_inject(SPONSOR, a_boot, UNDEF).unwrap();
-        let sponsor = core.run_loop(1024);
-        assert_eq!(SPONSOR, sponsor);
-        assert_eq!(ZERO, core.sponsor_signal(sponsor));
+        let sig = core.run_loop(1024);
+        assert_eq!(ZERO, sig);
     }
 
     #[test]
@@ -2335,9 +2324,8 @@ pub const COUNT_TO: Any = Any { raw: COUNT_TO_OFS as Raw };
         let msg = core.reserve(&Quad::pair_t(UNIT, NIL)).unwrap();
         let msg = core.reserve(&Quad::pair_t(a_boot, msg)).unwrap();
         core.event_inject(SPONSOR, a_boot, msg).unwrap();
-        let sponsor = core.run_loop(1024);
-        assert_eq!(SPONSOR, sponsor);
-        assert_eq!(ZERO, core.sponsor_signal(sponsor));
+        let sig = core.run_loop(1024);
+        assert_eq!(ZERO, sig);
     }
 
     #[test]
@@ -2347,9 +2335,8 @@ pub const COUNT_TO: Any = Any { raw: COUNT_TO_OFS as Raw };
         let boot_ptr = core.reserve(&Quad::new_actor(boot_beh, NIL)).unwrap();
         let a_boot = core.ptr_to_cap(boot_ptr);
         core.event_inject(SPONSOR, a_boot, NIL).unwrap();
-        let sponsor = core.run_loop(1024);
-        assert_eq!(SPONSOR, sponsor);
-        assert_eq!(ZERO, core.sponsor_signal(sponsor));
+        let sig = core.run_loop(1024);
+        assert_eq!(ZERO, sig);
     }
 
     #[test]

@@ -107,12 +107,6 @@ pub fn h_run_loop(limit: i32) -> Raw {
         the_host().borrow_mut().run_loop(limit)
     }
 }
-#[no_mangle]
-pub fn h_step() -> Raw {  // single-step instruction execution
-    unsafe {
-        the_host().borrow_mut().run_loop(1)
-    }
-}
 
 #[no_mangle]
 pub fn h_event_inject(sponsor: Raw, target: Raw, msg: Raw) {
