@@ -2,18 +2,23 @@
 
 /*jslint browser, bitwise, long, devel */
 
-import ufork from "/www/ufork.js";
-import debug_device from "/www/devices/debug_device.js";
-import clock_device from "/www/devices/clock_device.js";
-import io_device from "/www/devices/io_device.js";
-import blob_device from "/www/devices/blob_device.js";
-import timer_device from "/www/devices/timer_device.js";
-//import OED from "/www/oed.js";
-import parseq from "/www/parseq.js";
-import lazy from "/www/requestors/lazy.js";
-import requestorize from "/www/requestors/requestorize.js";
+import ufork from "../../www/ufork.js";
+import debug_device from "../../www/devices/debug_device.js";
+import clock_device from "../../www/devices/clock_device.js";
+import io_device from "../../www/devices/io_device.js";
+import blob_device from "../../www/devices/blob_device.js";
+import timer_device from "../../www/devices/timer_device.js";
+import awp_device from "../../www/devices/awp_device.js";
+import dummy_signaller from "../../www/transports/dummy_signaller.js";
+import webrtc_transport from "../../www/transports/webrtc_transport.js";
+//import OED from "../../www/oed.js";
+import parseq from "../../www/parseq.js";
+import lazy from "../../www/requestors/lazy.js";
+import requestorize from "../../www/requestors/requestorize.js";
+import chat_db from "./chat_db.js";
 
 let core;  // uFork wasm processor core
+let awp_store; // mutable AWP store object
 let on_stdin;
 
 function ufork_run() {
@@ -122,24 +127,30 @@ function hexdump(u8buf, ofs, len, xlt) {
     return out;
 }
 
-const origin = "http://localhost:7273";
-const asm_url = new URL("/examples/peer_chat/chat.asm", origin).href;
+const transport = webrtc_transport(dummy_signaller(), console.log);
+const wasm_url = import.meta.resolve(
+    "../../target/wasm32-unknown-unknown/debug/ufork_wasm.wasm"
+);
+const asm_url = import.meta.resolve("./chat.asm");
 parseq.sequence([
-    ufork.instantiate_core(
-        origin + "/target/wasm32-unknown-unknown/debug/ufork_wasm.wasm",
-        ufork_wake,
-        console.log
-    ),
-    lazy(function (the_core) {
-        core = the_core;
-        return core.h_import(asm_url);
-    }),
-    requestorize(function (asm_module) {
+    parseq.parallel([
+        chat_db.get_store(),
+        parseq.sequence([
+            ufork.instantiate_core(wasm_url, ufork_wake, console.log),
+            lazy(function (the_core) {
+                core = the_core;
+                return core.h_import(asm_url);
+            })
+        ])
+    ]),
+    requestorize(function ([the_awp_store, asm_module]) {
         debug_device(core);
         clock_device(core);
         on_stdin = io_device(core, on_stdout);
         blob_device(core);
         timer_device(core);
+        awp_store = the_awp_store;
+        awp_device(core, transport, the_awp_store);
         core.h_boot(asm_module.boot);
         return ufork_run();
     })
