@@ -22,7 +22,7 @@ let awp_store; // mutable AWP store object
 let on_stdin;
 
 function ufork_run() {
-    core.h_run_loop();
+    core.h_run_loop(8);
     const spn = core.u_ramptr(ufork.SPONSOR_OFS);
     const sponsor = core.u_read_quad(spn);
     const sig = sponsor.z;
@@ -46,13 +46,14 @@ function ufork_run() {
         core.u_write_quad(spn, sponsor);
         console.log("refreshed sponsor:", core.u_disasm(spn));
     }
-    ufork_wake();
-}
-function ufork_wake() {
-    setTimeout(function () {
-        console.log("WAKEUP");
+    setTimeout(function wakeup() {
+        console.log("RUN:", core.u_print(sig));
         ufork_run();
     }, 0);
+}
+function ufork_wake(dev_ofs) {
+    console.log("WAKE:", dev_ofs);
+    ufork_run();
 }
 
 //const $room = document.getElementById("room");
