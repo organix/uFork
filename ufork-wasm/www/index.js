@@ -193,14 +193,6 @@ function enable_next() {
     $next_button.disabled = true;
 }
 function draw_host() {
-    $revert_button.disabled = !fault;
-    if (fault) {
-        $fault_led.setAttribute("fill", "#F30");
-        $fault_led.setAttribute("stroke", "#900");
-    } else {
-        $fault_led.setAttribute("fill", "#0F3");
-        $fault_led.setAttribute("stroke", "#090");
-    }
     update_blob_monitor();
     update_ram_monitor();
     const top = core.u_rawofs(core.h_ram_top());
@@ -310,18 +302,36 @@ function draw_host() {
     update_element_text($state, core.u_pprint(state));  // pretty-print state
     update_element_text($msg, core.u_pprint(message));  // pretty-print message
     // sponsor details
+    let err = ufork.E_OK;
     let spn = core.u_ramptr(ufork.SPONSOR_OFS);
     let spn_quad = core.u_read_quad(spn);
     if (!core.u_is_fix(spn_quad.z) && core.u_is_ram(sponsor)) {
         // if no error and current continuation valid, show event sponsor...
         spn = sponsor;
         spn_quad = core.u_read_quad(spn);
+        if (core.u_is_fix(spn_quad.z)) {
+            // display idle (yellow) indicator
+            $fault_led.setAttribute("fill", "#FF3");
+            $fault_led.setAttribute("stroke", "#990");
+            err = core.u_fix_to_i32(spn_quad.z);
+        } else {
+            // display run (green) indicator
+            $fault_led.setAttribute("fill", "#0F3");
+            $fault_led.setAttribute("stroke", "#090");
+        }
+    } else {
+        // display fault (red) indicator
+        $fault_led.setAttribute("fill", "#F30");
+        $fault_led.setAttribute("stroke", "#900");
+        err = core.u_fix_to_i32(spn_quad.z);
     }
+    $fault_ctl.title = core.u_fault_msg(err);
     update_element_text($sponsor_ident, core.u_print(spn));
     update_element_value($sponsor_memory, core.u_fix_to_i32(spn_quad.t));
     update_element_value($sponsor_events, core.u_fix_to_i32(spn_quad.x));
     update_element_value($sponsor_cycles, core.u_fix_to_i32(spn_quad.y));
     update_element_text($sponsor_signal, core.u_print(spn_quad.z));
+    $revert_button.disabled = !fault;
     enable_next();
 }
 function gc_host() {
@@ -334,7 +344,6 @@ function single_step() {
     if (core.u_is_fix(sig)) {
         const err = core.u_fix_to_i32(sig);
         const msg = core.u_fault_msg(err);
-        $fault_ctl.title = msg;
         fault = true;
         console.log("single_step:", err, "=", msg);
     }
