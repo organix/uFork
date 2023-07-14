@@ -6,6 +6,41 @@
     std: "./std.asm"
     dev: "./dev.asm"
 
+E_MEM_LIM:
+    ref -9
+E_MSG_LIM:
+    ref -11
+E_CPU_LIM:
+    ref -10
+
+refill:                 ; (memory events cycles) <- sponsor
+    msg 0               ; sponsor
+    get Z               ; error
+    dup 1               ; error error
+    eq E_CPU_LIM        ; error error==E_CPU_LIM
+    if refill_0         ; error
+    dup 1               ; error error
+    eq E_MEM_LIM        ; error error==E_MEM_LIM
+    if refill_0         ; error
+    dup 1               ; error error
+    eq E_MSG_LIM        ; error error==E_MSG_LIM
+    if refill_0         ; error
+    msg 0               ; error sponsor
+    sponsor stop        ; error --
+    ref std.commit
+refill_0:
+    msg 0               ; sponsor
+    sponsor reclaim     ; sponsor
+    state 1             ; sponsor memory
+    sponsor memory      ; sponsor
+    state 2             ; sponsor events
+    sponsor memory      ; sponsor
+    state 3             ; sponsor cycles
+    sponsor cycles      ; sponsor
+    my self             ; sponsor control=SELF
+    sponsor start       ; --
+    ref std.commit
+
 start:                  ; (debug_dev) <- ()
     sponsor new         ; sponsor
     push 48             ; sponsor 48
@@ -106,4 +141,5 @@ boot:                   ; () <- {caps}
     ref std.commit
 
 .export
+    refill
     boot
