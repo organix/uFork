@@ -29,16 +29,16 @@ refill:                 ; (memory events cycles) <- sponsor
     sponsor stop        ; error --
     ref std.commit
 refill_0:
-    msg 0               ; sponsor
-    sponsor reclaim     ; sponsor
-    state 1             ; sponsor memory
-    sponsor memory      ; sponsor
-    state 2             ; sponsor events
-    sponsor memory      ; sponsor
-    state 3             ; sponsor cycles
-    sponsor cycles      ; sponsor
-    my self             ; sponsor control=SELF
-    sponsor start       ; --
+    msg 0               ; ... sponsor
+    sponsor reclaim     ; ... sponsor
+    state 1             ; ... sponsor memory
+    sponsor memory      ; ... sponsor
+    state 2             ; ... sponsor events
+    sponsor events      ; ... sponsor
+    state 3             ; ... sponsor cycles
+    sponsor cycles      ; ... sponsor
+    my self             ; ... sponsor control=SELF
+    sponsor start       ; ...
     ref std.commit
 
 start:                  ; (debug_dev) <- ()
@@ -60,8 +60,8 @@ start:                  ; (debug_dev) <- ()
     ref std.commit
 
 start_1:                ; () <- ()
-    push loop_forever   ; loop_forever
-    new 0               ; loop_forever.()
+    push msg_bomb       ; msg_bomb
+    new 0               ; msg_bomb.()
     send 0              ; --
     push fork_bomb      ; fork_bomb
     new 0               ; fork_bomb.()
@@ -82,10 +82,19 @@ control_1:              ; (debug_dev) <- sponsor
 loop_forever:
     dup 0 loop_forever
 
-fork_bomb:              ; () <- ()
+msg_bomb:               ; () <- ()
     my self             ; SELF
     send 0              ; --
     my self             ; SELF
+    send 0              ; --
+    ref std.commit
+
+fork_bomb:              ; () <- ()
+    push fork_bomb      ; fork_bomb
+    new 0               ; fork_bomb.()
+    send 0              ; --
+    push fork_bomb      ; fork_bomb
+    new 0               ; fork_bomb.()
     send 0              ; --
     ref std.commit
 
@@ -138,6 +147,21 @@ boot:                   ; () <- {caps}
     push start          ; debug_dev start
     new 1               ; start.(debug_dev)
     send 0              ; --
+
+    sponsor new         ; sponsor
+    push 1              ; sponsor 1
+    sponsor events      ; sponsor
+    dup 1               ; sponsor sponsor
+    push 16             ; sponsor sponsor cycles=8
+    push 4              ; sponsor sponsor cycles events=3
+    push 8              ; sponsor sponsor cycles events memory=5
+    push refill         ; sponsor sponsor cycles event memory refill
+    new 3               ; sponsor sponsor refill.(memory events cycles)
+    sponsor start       ; sponsor
+    push loop_forever   ; sponsor loop_forever
+    new 0               ; sponsor loop_forever.()
+    signal 0            ; --
+
     ref std.commit
 
 .export
