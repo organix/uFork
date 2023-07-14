@@ -36,7 +36,6 @@ function awp_device(
     let opening = Object.create(null);      // local:remote -> cancel function
     let outbox = Object.create(null);       // local:remote -> messages
     let lost = Object.create(null);         // local:remote -> functions // TODO are these ever cleaned up?
-    let frame_ids = Object.create(null);    // local:remote -> integer
     let greeters = Object.create(null);     // local -> greeter stub raw
     let raw_to_swiss = Object.create(null); // raw -> swiss
     let stubs = Object.create(null);        // swiss -> stub raw    // TODO release at some point
@@ -245,14 +244,13 @@ function awp_device(
 
     function unregister(key) {
         lose(key);
-        delete frame_ids[key]; // TODO is this safe?
         delete outbox[key];
         delete connections[key];
         return resume();
     }
 
     function receive(store, connection, frame) {
-        if (frame.to === undefined) {
+        if (frame.target === undefined) {
 
 // The frame is an introduction request. Forward it to the greeter.
 
@@ -294,7 +292,7 @@ function awp_device(
 
 // The frame is a message addressed to a particular actor.
 
-        const stub = stubs[hex.encode(frame.to)];
+        const stub = stubs[hex.encode(frame.target)];
         if (stub !== undefined) {
             core.h_event_inject(
                 sponsor,
@@ -304,20 +302,6 @@ function awp_device(
             return resume();
         }
         console.log("Missing stub", store, frame);
-    }
-
-    function next_frame_id(key) {
-        const id = (
-            frame_ids[key] === undefined
-            ? 0
-            : frame_ids[key] + 1
-        );
-        // TODO how big should the frame ID be? Should it wrap around?
-        if (!Number.isSafeInteger(id)) {
-            throw new Error("Too many frames.");
-        }
-        frame_ids[key] = id;
-        return id;
     }
 
     function flush(key) {
@@ -333,8 +317,7 @@ function awp_device(
 
             outbox[key].forEach(function ({swiss, message}) {
                 connections[key].send(OED.encode({
-                    id: next_frame_id(key),
-                    to: swiss,
+                    target: swiss,
                     message
                 }));
             });

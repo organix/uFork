@@ -9,7 +9,7 @@ The transport interface may also have a `generate_identity` requestor factory
 that produces new identities, and an `identity_to_name` function that takes an
 identity and returns the corresponding name.
 
-#### Connecting
+### Connecting
 
 The `connect` requestor factory takes the following parameters:
 
@@ -52,7 +52,7 @@ attempt.
 Once closed or cancelled, the `on_receive`, and `on_close` functions are not
 called again.
 
-#### Listening
+### Listening
 
 The `listen` requestor factory takes the following parameters:
 
@@ -92,11 +92,11 @@ messages all adhere to the "requestor" pattern.
 ### Requestors
 
 Actors with the following message signature are called "requestors". They
-support cancellation and failure notification. They take an optional `request`
-value, and produce a value on success. The requestor pattern is based on the
-parseq library (https://github.com/douglascrockford/parseq).
+support cancellation and failure notification. They take an optional `value`,
+and produce a value on success. The requestor pattern is based on the parseq
+library (https://github.com/douglascrockford/parseq).
 
-    (cancel_customer callback . request) -> requestor
+    (cancel_customer callback . value) -> requestor
 
 If `cancel_customer` is an actor, the requestor _may_ send it a `cancel` actor.
 
@@ -203,22 +203,23 @@ becoming acquaintances automatically.
 
 The `hello_data` is the value included in the introduction request.
 
-### Reliable send
+### Sending
 
-It is possible to perform a _reliable_ send using the AWP device directly:
+It is possible to be notified when a message has been successfully sent by the
+AWP device.
 
     (#send cancel_customer callback proxy . message) -> awp_device
 
 This requestor produces an acknowledgement if it becomes known that the
-`message` was received by the remote transport. An acknowledgement does not
-guarantee that the `message` was received by `proxy`'s remote actor. Unlike an
-unreliable send, this requestor provides timely notification of underlying
-transport failure.
+`message` was sent by the local transport. An acknowledgement does not
+guarantee that the `message` was received by the remote transport. Unlike an
+unreliable send, this requestor provides timely notification of connection
+failure.
 
 ### Marshalling
 
 uFork quad-space values are marshalled into OED.
 
 Each capability found in an incoming message is decoded as a proxy actor.
-Messages sent directly to a proxy actor are sent _unreliably_ to the remote
+Messages sent directly to a proxy actor are sent unreliably to the remote
 actor.
