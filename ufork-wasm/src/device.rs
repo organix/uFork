@@ -463,13 +463,23 @@ impl TimerDevice {
         TimerDevice {}
     }
     #[cfg(target_arch = "wasm32")]
-    fn set_timer(&mut self, delay: Any, stub: Any) {
+    fn start_timer(&mut self, delay: Any, stub: Any) {
         unsafe {
-            crate::host_timer(delay.raw(), stub.raw());
+            crate::host_start_timer(delay.raw(), stub.raw());
         }
     }
     #[cfg(not(target_arch = "wasm32"))]
-    fn set_timer(&mut self, _delay: Any, _stub: Any) {
+    fn start_timer(&mut self, _delay: Any, _stub: Any) {
+        // timer device not available...
+    }
+    #[cfg(target_arch = "wasm32")]
+    fn stop_timer(&mut self, stub: Any) {
+        unsafe {
+            crate::host_stop_timer(stub.raw());
+        }
+    }
+    #[cfg(not(target_arch = "wasm32"))]
+    fn stop_timer(&mut self, _stub: Any) {
         // timer device not available...
     }
 }
@@ -478,20 +488,51 @@ impl Device for TimerDevice {
         let event = core.mem(ep);
         let sponsor = event.t();
         let dev = event.x();
-        let msg = event.y();  // (delay target message)
-        let delay = core.nth(msg, PLUS_1);
-        if !delay.is_fix() {
-            return Err(E_NOT_FIX);
+        let msg = event.y();
+        let myself = core.ram(core.cap_to_ptr(dev));
+        if myself.t() == PROXY_T {
+            // stop timer request
+            let handle = myself.y();
+            self.stop_timer(handle);
+        } else {
+            // start timer request
+            let arg_1 = core.nth(msg, PLUS_1);
+            if arg_1.is_fix() {  // simple delayed message
+                // (delay target message)
+                let delay = arg_1;
+                let target = core.nth(msg, PLUS_2);
+                if !target.is_cap() {
+                    return Err(E_NOT_CAP);
+                }
+                let message = core.nth(msg, PLUS_3);
+                let delayed = Quad::new_event(sponsor, target, message);
+                let ptr = core.reserve(&delayed)?;
+                let stub = core.reserve_stub(dev, ptr)?;
+                self.start_timer(delay, stub);
+            } else {  // requestor-style interface
+                // (to_cancel callback delay . result)
+                let to_cancel = arg_1;
+                let callback = core.nth(msg, PLUS_2);
+                if !callback.is_cap() {
+                    return Err(E_NOT_CAP);
+                }
+                let delay = core.nth(msg, PLUS_3);
+                if !delay.is_fix() {
+                    return Err(E_NOT_FIX);
+                }
+                let result = core.nth(msg, MINUS_3);
+                let delayed = Quad::new_event(sponsor, callback, result);
+                let ptr = core.reserve(&delayed)?;
+                let stub = core.reserve_stub(dev, ptr)?;
+                self.start_timer(delay, stub);
+                if to_cancel.is_cap() {
+                    let proxy = Quad::proxy_t(dev, stub);
+                    let ptr = core.reserve(&proxy)?;
+                    let cap = core.ptr_to_cap(ptr);
+                    core.event_inject(sponsor, to_cancel, cap)?;
+                }
+            }
         }
-        let target = core.nth(msg, PLUS_2);
-        if !target.is_cap() {
-            return Err(E_NOT_CAP);
-        }
-        let msg = core.nth(msg, PLUS_3);
-        let delayed = Quad::new_event(sponsor, target, msg);
-        let ptr = core.reserve(&delayed)?;
-        let stub = core.reserve_stub(dev, ptr)?;
-        self.set_timer(delay, stub);
         Ok(())  // event handled.
     }
 }

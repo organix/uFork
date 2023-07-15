@@ -1277,8 +1277,11 @@ function instantiate_core(wasm_url, on_wakeup, on_warning) {
                         host_log(...args) {
                             return mutable_wasm_caps.host_log(...args);
                         },
-                        host_timer(...args) {
-                            return mutable_wasm_caps.host_timer(...args);
+                        host_start_timer(...args) {
+                            return mutable_wasm_caps.host_start_timer(...args);
+                        },
+                        host_stop_timer(...args) {
+                            return mutable_wasm_caps.host_stop_timer(...args);
                         },
                         host_read(...args) {
                             return mutable_wasm_caps.host_read(...args);
