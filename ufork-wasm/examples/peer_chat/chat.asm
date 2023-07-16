@@ -34,19 +34,34 @@ echo_r:                 ; (io_dev debug_dev) <- result
     beh -1              ; --
     ref std.commit
 
-; For now, just send the room petname to the debug device.
+; An infinite loop will consume cycles, but no memory or events
 
-join_room:              ; debug_dev room_petname
-    roll 2              ; room_petname debug_dev
-    send -1             ; --
-    ref std.commit
+loop_forever:
+    dup 0 loop_forever
 
-host_room:              ; debug_dev room_petname
-    roll 2              ; room_petname debug_dev
-    send -1             ; --
-    ref std.commit
+; The "ticker" sends itself an incrementing number forever.
+
+ticker:                 ; () <- n
+    msg 0               ; n
+    push 1              ; n 1
+    alu add             ; n+1
+    my self             ; n+1 SELF
+    ref std.send_msg    ; --
+
+start:                  ; (debug_dev io_dev room_id) <-
 
 boot:                   ; () <- {caps}
+
+; One-at-a-time I/O means 5ms to read + 5ms to write
+; which gives a data-rate of 100 cps (visibly slow!).
+; If we can avoid idling the run-loop, it should be faster.
+
+    push 0              ; 0
+;    push ticker         ; 0 ticker
+    push loop_forever   ; 0 loop_forever
+    new 0               ; 0 ticker.()
+;    send -1             ; --
+    drop 2              ; --
 
 ; Request the next character from the IO device.
 
@@ -71,8 +86,23 @@ boot:                   ; () <- {caps}
     msg 0               ; debug_dev {caps}
     push room_key       ; debug_dev {caps} room_key
     dict get            ; debug_dev room_petname
+    dup 1               ; debug_dev room_petname room_petname
+    typeq #fixnum_t     ; debug_dev room_petname typeof(room_petname)==#fixnum_t
+    if_not std.commit   ; debug_dev room_petname
     pick 1              ; debug_dev room_petname room_petname
-    if join_room host_room
+    if join host
+
+; For now, just send the room petname to the debug device.
+
+join:                   ; debug_dev room_petname
+    roll 2              ; room_petname debug_dev
+    send -1             ; --
+    ref std.commit
+
+host:                   ; debug_dev room_petname
+    roll 2              ; room_petname debug_dev
+    send -1             ; --
+    ref std.commit
 
 .export
     boot
