@@ -48,10 +48,9 @@ function dummy_signaller() {
         }
     }
 
-    function connect(address, on_receive) {
+    function connect(name, ignore, on_receive) {
         return function connect_requestor(callback, offer) {
             delay(function () {
-                const name = new URL(address).searchParams.get("name");
                 const session_id = String(next_session_id);
                 next_session_id += 1;
                 connectors[session_id] = on_receive;
@@ -79,10 +78,9 @@ function dummy_signaller() {
         };
     }
 
-    function listen(bind_info, on_receive) {
+    function listen(name, ignore, on_receive) {
         return function listen_requestor(callback) {
             delay(function () {
-                const name = new URL(bind_info).searchParams.get("name");
                 if (listeners[name] === undefined) {
                     listeners[name] = [];
                 }
@@ -112,11 +110,10 @@ function dummy_signaller() {
 }
 
 //debug const signaller = dummy_signaller();
-//debug const bob_bind_info = "listen:?name=bob";
-//debug const bob_address = "connect:?name=bob";
 //debug let alice_connector;
 //debug signaller.connect(
-//debug     bob_address,
+//debug     "bob",
+//debug     undefined,
 //debug     function on_receive(message) {
 //debug         console.log("alice on_receive", message);
 //debug     }
@@ -132,7 +129,8 @@ function dummy_signaller() {
 //debug );
 //debug let bob_listener;
 //debug signaller.listen(
-//debug     bob_bind_info,
+//debug     "bob",
+//debug     undefined,
 //debug     function on_receive(session_id, message) {
 //debug         console.log("bob on_receive", session_id, message);
 //debug         if (message.type === "offer") {

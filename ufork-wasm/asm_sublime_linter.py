@@ -12,7 +12,7 @@
 #   Windows: %AppData%\Sublime Text\Packages
 #   Linux: ~/.config/sublime-text/Packages
 
-# Copy (or softlink) this file into the "SublimeLinter-asm" directory, and
+# Soft link this file into the "SublimeLinter-asm" directory, and
 # run "Reload SublimeLinter and its Plugins" from the command palette.
 
 from os import path
