@@ -4,9 +4,8 @@
 
 import ufork from "../ufork.js";
 
-const timer_map = Object.create(null);
-
 function timer_device(core) {
+    const timer_map = Object.create(null);
     core.h_install(
         [[
             ufork.TIMER_DEV_OFS,
