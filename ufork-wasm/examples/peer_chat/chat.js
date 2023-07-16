@@ -3,7 +3,6 @@
 /*jslint browser, bitwise, long, devel */
 
 import ufork from "../../www/ufork.js";
-import debug_device from "../../www/devices/debug_device.js";
 import clock_device from "../../www/devices/clock_device.js";
 import io_device from "../../www/devices/io_device.js";
 import blob_device from "../../www/devices/blob_device.js";
@@ -136,7 +135,12 @@ parseq.sequence([
     parseq.parallel([
         chat_db.get_store(),
         parseq.sequence([
-            ufork.instantiate_core(wasm_url, ufork_wake, console.log),
+            ufork.instantiate_core(
+                wasm_url,
+                ufork_wake,
+                console.log,
+                ufork.LOG_DEBUG
+            ),
             lazy(function (the_core) {
                 core = the_core;
                 return core.h_import(asm_url);
@@ -144,7 +148,6 @@ parseq.sequence([
         ])
     ]),
     requestorize(function ([the_awp_store, asm_module]) {
-        debug_device(core);
         clock_device(core);
         on_stdin = io_device(core, on_stdout);
         blob_device(core);

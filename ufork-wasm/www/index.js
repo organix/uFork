@@ -4,7 +4,6 @@
 
 import ufork from "./ufork.js";
 import OED from "./oed.js";
-import debug_device from "./devices/debug_device.js";
 import clock_device from "./devices/clock_device.js";
 import io_device from "./devices/io_device.js";
 import blob_device from "./devices/blob_device.js";
@@ -561,7 +560,8 @@ ufork.instantiate_core(
         //single_step();
         draw_host();
     },
-    console.log
+    console.log,
+    ufork.LOG_DEBUG
 )(function callback(the_core, reason) {
     if (the_core === undefined) {
         throw reason;
@@ -569,7 +569,6 @@ ufork.instantiate_core(
     core = the_core;
 
     // install devices
-    debug_device(core);
     clock_device(core);
     on_stdin = io_device(core, on_stdout);
     blob_device(core);

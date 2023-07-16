@@ -258,7 +258,9 @@ function awp_device(
                 stringify(store.acquaintances[0].name) // self
             ];
             if (greeter_stub === undefined) {
-                console.log("No greeter", store, frame);
+                if (core.u_warn !== undefined) {
+                    core.u_warn("No greeter", store, frame);
+                }
                 return;
             }
             const greeter = core.u_read_quad(greeter_stub).y;
@@ -301,7 +303,9 @@ function awp_device(
             );
             return resume();
         }
-        console.log("Missing stub", store, frame);
+        if (core.u_warn !== undefined) {
+            core.u_warn("Missing stub", store, frame);
+        }
     }
 
     function flush(key) {
@@ -340,11 +344,15 @@ function awp_device(
             store.acquaintances[petname].address,
             function on_receive(connection, frame_buffer) {
                 const frame = OED.decode(frame_buffer);
-                console.log("connect on_receive");
+                if (core.u_debug !== undefined) {
+                    core.u_debug("connect on_receive");
+                }
                 return receive(store, connection.name(), frame);
             },
             function on_close(connection, reason) {
-                console.log("connect on_close", reason);
+                if (core.u_debug !== undefined) {
+                    core.u_debug("connect on_close");
+                }
                 return unregister(convo_key(
                     store.acquaintances[0].name, // self
                     connection.name()
@@ -354,10 +362,14 @@ function awp_device(
             function connected_callback(connection, reason) {
                 delete opening[key];
                 if (connection === undefined) {
-                    console.log("connect fail", reason);
+                    if (core.u_debug !== undefined) {
+                        core.u_debug("connect fail", reason);
+                    }
                     lose(key);
                 } else {
-                    console.log("connect open");
+                    if (core.u_debug !== undefined) {
+                        core.u_debug("connect open");
+                    }
                     register(store, connection);
                 }
             }
@@ -510,7 +522,9 @@ function awp_device(
                 store.acquaintances[petname].name
             );
             add(lost, key, function on_lost() {
-                console.log("intro fail");
+                if (core.u_debug !== undefined) {
+                    core.u_debug("intro fail");
+                }
                 core.h_event_inject(
                     sponsor,
                     callback_fwd,
@@ -578,16 +592,22 @@ function awp_device(
                 store.identity,
                 store.bind_info,
                 function on_open(connection) {
-                    console.log("listen on_open");
+                    if (core.u_debug !== undefined) {
+                        core.u_debug("listen on_open");
+                    }
                     return register(store, connection);
                 },
                 function on_receive(connection, frame_buffer) {
                     const frame = OED.decode(frame_buffer);
-                    console.log("listen on_receive");
+                    if (core.u_debug !== undefined) {
+                        core.u_debug("listen on_receive");
+                    }
                     return receive(store, connection, frame);
                 },
                 function on_close(connection, reason) {
-                    console.log("listen on_close", reason);
+                    if (core.u_debug !== undefined) {
+                        core.u_debug("listen on_close", reason);
+                    }
                     return unregister(convo_key(
                         store.acquaintances[0].name,
                         connection.name()
@@ -596,7 +616,9 @@ function awp_device(
             )(
                 function listening_callback(stop, reason) {
                     if (stop === undefined) {
-                        console.log("listen fail", reason);
+                        if (core.u_debug !== undefined) {
+                            core.u_debug("listen fail", reason);
+                        }
                         return resolve(core.h_reserve_ram({
                             t: ufork.PAIR_T,
                             x: ufork.UNDEF_RAW,
@@ -743,7 +765,6 @@ function awp_device(
 //debug import parseq from "../parseq.js";
 //debug import lazy from "../requestors/lazy.js";
 //debug import requestorize from "../requestors/requestorize.js";
-//debug import debug_device from "./debug_device.js";
 //debug const wasm_url = import.meta.resolve(
 //debug     "../../target/wasm32-unknown-unknown/debug/ufork_wasm.wasm"
 //debug );
@@ -766,7 +787,8 @@ function awp_device(
 //debug                     core.h_run_loop()
 //debug                 ));
 //debug             },
-//debug             console.log
+//debug             console.log,
+//debug             ufork.LOG_DEBUG
 //debug         ),
 //debug         parseq.parallel([
 //debug             lazy(function (the_core) {
@@ -821,7 +843,6 @@ function awp_device(
 //debug                     acquaintances: [dana, bob, carol]
 //debug                 }
 //debug             ];
-//debug             debug_device(core);
 //debug             dispose = awp_device(core, transport, store, webcrypto);
 //debug             core.h_boot(asm_module.boot);
 //debug             console.log("IDLE:", core.u_fault_msg(core.h_run_loop()));

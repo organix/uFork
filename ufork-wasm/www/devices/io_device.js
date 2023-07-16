@@ -19,10 +19,9 @@ function io_device(core, on_stdout) {
             const event = core.u_read_quad(quad.y);
             const sponsor = event.t;
             const target = event.x;
-            //const message = event.y;
-            /*
-            console.log("READ: " + code + " = " + first);
-            */
+            if (core.u_trace !== undefined) {
+                core.u_trace("READ:", code, "=", first);
+            }
             const message = core.h_reserve_ram({  // (char)
                 t: ufork.PAIR_T,
                 x: char,
@@ -43,19 +42,25 @@ function io_device(core, on_stdout) {
         ]],
         {
             host_print(base, ofs) { // (i32, i32) -> nil
-                console.log(OED.decode(
-                    new Uint8Array(core.u_memory()),
-                    undefined,
-                    base + ofs - 5 // blobs have a 5-octet header
-                ));
+                if (core.u_info !== undefined) {
+                    core.u_info(OED.decode(
+                        new Uint8Array(core.u_memory()),
+                        undefined,
+                        base + ofs - 5 // blobs have a 5-octet header
+                    ));
+                }
             },
             host_read(stub) { // (i32) -> bool
-                /*
-                console.log(
-                    "READ: " + stub + " = " + core.u_print(stub)
-                    + " -> " + core.u_pprint(stub)
-                );
-                */
+                if (core.u_trace !== undefined) {
+                    core.u_trace(
+                        "READ:",
+                        stub,
+                        "=",
+                        core.u_print(stub),
+                        "->",
+                        core.u_pprint(stub)
+                    );
+                }
                 if (stdin_stub !== undefined) {
                     throw new Error(
                         "stdin_stub already set to " + core.u_pprint(stdin_stub)
@@ -68,11 +73,9 @@ function io_device(core, on_stdout) {
             host_write(code) { // (i32) -> nil
                 code &= 0x1FFFFF;  // interpret as a Unicode code point
                 const char = String.fromCodePoint(code);
-                /*
-                console.log(
-                    "WRITE: " + code + " = " + char
-                );
-                */
+                if (core.u_trace !== undefined) {
+                    core.u_trace("WRITE:", core, "=", char);
+                }
                 if (typeof on_stdout === "function") {
                     on_stdout(char);
                 }
