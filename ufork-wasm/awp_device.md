@@ -87,39 +87,7 @@ are not called again.
 ## uFork device
 
 The uFork AWP interface is implemented as a dedicated device. The AWP device's
-messages all adhere to the "requestor" pattern.
-
-### Requestors
-
-Actors with the following message signature are called "requestors". They
-support cancellation and failure notification. They take an optional `value`,
-and produce a value on success. The requestor pattern is based on the parseq
-library (https://github.com/douglascrockford/parseq).
-
-    (cancel_customer callback . value) -> requestor
-
-If `cancel_customer` is an actor, the requestor _may_ send it a `cancel` actor.
-
-    cancel -> cancel_customer
-
-If there comes a time when the reply is no longer needed, the `cancel` actor
-can be used to cancel the operation. Its sole purpose is to avoid unnecessary
-work. It is not an undo.
-
-    _ -> cancel
-
-The `callback` receives a pair when the request completes (which could be
-never). The value of the tail indicates success or failure.
-
-On success, the tail of the pair is `#nil` and the head of the pair is the
-resulting value.
-
-    (value) -> callback
-
-On failure, the tail is the reason for failure (guaranteed not to be `#nil`) and
-the head is `#?`.
-
-    (#? . reason) -> callback
+messages all adhere to the "requestor" pattern (see lib/requestors/README.md).
 
 ### Stores
 

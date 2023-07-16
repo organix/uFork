@@ -11,10 +11,11 @@ If 'to_cancel' is an actor, the requestor may send it a 'cancel' actor.
     cancel -> to_cancel
 
 If there comes a time when the reply is no longer needed, the 'cancel' actor can
-be used to cancel the operation. Its sole purpose is to avoid unnecessary work.
-It is not an undo.
+be used to cancel the operation. Its sole purpose is to avoid unnecessary work,
+it is not an undo. The message sent to the cancel actor is taken to be
+the 'reason' for the cancellation, and can be any value.
 
-    _ -> cancel
+    reason -> cancel
 
 The 'callback' actor receives a pair when the request completes (which could be
 never). The value of the tail indicates success or failure.

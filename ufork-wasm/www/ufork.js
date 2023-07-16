@@ -1473,7 +1473,7 @@ function instantiate_core(
 //debug         console.log("h_ram_top() =", core.h_ram_top(), core.u_print(core.h_ram_top()));
 //debug         console.log("u_ramptr(5) =", core.u_ramptr(5), core.u_print(core.u_ramptr(5)));
 //debug         console.log("u_ptr_to_cap(u_ramptr(3)) =", core.u_ptr_to_cap(core.u_ramptr(3)), core.u_print(core.u_ptr_to_cap(core.u_ramptr(3))));
-//debug         return core.h_import(import.meta.resolve("../lib/requestors/timeout.asm"));
+//debug         return core.h_import(import.meta.resolve("../lib/requestors/canceller.asm"));
 //debug     }),
 //debug     requestorize(function (asm_module) {
 //debug         core.h_boot(asm_module.boot);
