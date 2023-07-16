@@ -229,6 +229,7 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
             let mut dev_mut = self.device[id].take().unwrap();
             let result = dev_mut.handle_event(self, ep);
             self.device[id] = Some(dev_mut);
+            #[cfg(debug_assertions)]
             trace_event(ep, UNDEF);  // trace transactional effect(s)
             result
         } else {
@@ -650,6 +651,7 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
                 kip
             },
             VM_END => {
+                #[cfg(debug_assertions)]
                 trace_event(self.ep(), self.kp());  // trace transactional effect(s)
                 let me = self.self_ptr();
                 let rv = match imm {

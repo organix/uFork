@@ -974,6 +974,8 @@ function assemble(source, file) {
 //     }
 // }
 
+// good("empty", "");
+
 // good("continuation separated by labels", `
 // a:
 //     msg 2

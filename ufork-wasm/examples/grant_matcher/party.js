@@ -5,7 +5,6 @@ import parseq from "../../www/parseq.js";
 import requestorize from "../../www/requestors/requestorize.js";
 import lazy from "../../www/requestors/lazy.js";
 import ufork from "../../www/ufork.js";
-import debug_device from "../../www/devices/debug_device.js";
 import awp_device from "../../www/devices/awp_device.js";
 import webrtc_transport from "../../www/transports/webrtc_transport.js";
 import websockets_signaller from "../../www/transports/websockets_signaller.js";
@@ -52,7 +51,16 @@ function party(asm_url, acquaintance_names = []) {
                 const err = core.u_fix_to_i32(sig);
                 print("WAKE:", core.u_print(sig), core.u_fault_msg(err));
             },
-            print
+            function on_log(log_level, ...values) {
+                print(...values);
+                if (log_level === ufork.LOG_DEBUG) {
+                    const div = document.createElement("div");
+                    div.textContent = "💸";
+                    div.style.fontSize = "100px";
+                    document.body.append(div);
+                }
+            },
+            ufork.LOG_DEBUG
         ),
         parseq.parallel([
             lazy(function (the_core) {
@@ -64,15 +72,6 @@ function party(asm_url, acquaintance_names = []) {
         requestorize(function ([asm_module, identity]) {
             const name = transport.identity_to_name(identity);
             const address = make_address(name);
-            debug_device(core, function (...args) {
-                print(...args);
-                if (args[0].startsWith("LOG:")) {
-                    const div = document.createElement("div");
-                    div.textContent = "💸";
-                    div.style.fontSize = "100px";
-                    document.body.append(div);
-                }
-            });
             awp_device(core, transport, [{
                 identity,
                 bind_info: make_bind_info(name),

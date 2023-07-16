@@ -8,14 +8,31 @@
 //      The URL of the uFork WASM binary, as a string.
 //
 //  on_wakeup(device_offset)
-//      A callback function that is called whenever the core wakes up from a
-//      dormant state, generally due to its 'h_wakeup' method being called by
-//      a device. This callback is responsible for resuming execution of the
-//      core. Optional.
+//      A function that is called whenever the core wakes up from a dormant
+//      state, generally due to its 'h_wakeup' method being called by a device.
+//      This function is responsible for resuming execution of the core.
+//      Optional.
 
-//  on_warning(...info)
-//      A callback function that is called with a warning whenever a core
-//      method bottoms out to UNDEF. Optional.
+//  on_log(log_level, ...values)
+//      A function that is called with any values logged by the core.
+//      The 'values' may or may not be strings. Optional.
+
+//  log_level
+//      An integer controlling the core's logging verbosity. Each level includes
+//      all levels before it.
+
+//      ufork.LOG_NONE = 0
+//          No logging.
+//      ufork.LOG_INFO = 1
+//          Low volume, always shown unless all logging is disabled.
+//      ufork.LOG_WARN = 2
+//          Something went wrong, but perhaps it wasn't fatal.
+//      ufork.LOG_DEBUG = 3
+//          More detail to narrow down the source of a problem.
+//      ufork.LOG_TRACE = 4
+//          Extremely detailed (for example, all reserve and release actions).
+
+//      The default value is LOG_WARN.
 
 // The returned requestor produces a core object containing a bunch of methods.
 // The methods beginning with "u_" are reentrant, but the methods beginning
@@ -127,6 +144,14 @@ const E_CPU_LIM = -10;
 const E_MSG_LIM = -11;
 const E_ASSERT = -12;
 const E_STOP = -13;
+
+// Log levels
+
+const LOG_NONE = 0;
+const LOG_INFO = 1;
+const LOG_WARN = 2;
+const LOG_DEBUG = 3;
+const LOG_TRACE = 4;
 
 // Strings
 
@@ -277,12 +302,59 @@ const crlf_types = {
     actor: ACTOR_T
 };
 
-function make_core(wasm_exports, on_wakeup, on_warning, mutable_wasm_caps) {
+function make_core(
+    wasm_exports,
+    on_wakeup,
+    on_log,
+    log_level,
+    mutable_wasm_caps
+) {
     let boot_caps_dict = []; // empty
     let import_promises = Object.create(null);
     let module_source = Object.create(null);
     let rom_sourcemap = Object.create(null);
     let wasm_call_in_progress = false;
+
+// The presence of a particular logging method indicates that its associated log
+// level is enabled. Thus calling code can log conditionally, avoiding the
+// performance overhead of producing diagnostics that would just be discarded
+// anyway.
+
+    let u_info;
+    let u_warn;
+    let u_debug;
+    let u_trace;
+
+    function make_log_method(log_level) {
+        if (on_log !== undefined) {
+            return function (...values) {
+                on_log(log_level, ...values);
+            };
+        }
+    }
+
+    if (log_level >= LOG_INFO) {
+        u_info = make_log_method(LOG_INFO);
+    }
+    if (log_level >= LOG_WARN) {
+        u_warn = make_log_method(LOG_WARN);
+    }
+    if (log_level >= LOG_DEBUG) {
+        u_debug = make_log_method(LOG_DEBUG);
+    }
+    if (log_level >= LOG_TRACE) {
+        u_trace = make_log_method(LOG_TRACE);
+    }
+
+    function bottom_out(...values) {
+        if (u_warn !== undefined) {
+            u_warn(...values);
+        }
+        return UNDEF_RAW;
+    }
+
+// Throw an exception if the non-reentrant methods are reentered. This provides
+// a clearer indication of the problem than a panic stacktrace.
 
     function wasm_mutex_call(wasm_fn) {
         return function (...args) {
@@ -354,13 +426,6 @@ function make_core(wasm_exports, on_wakeup, on_warning, mutable_wasm_caps) {
                 source: module_source[debug.file]
             };
         }
-    }
-
-    function u_warning(message) {
-        if (on_warning !== undefined) {
-            on_warning("WARNING!", message);
-        }
-        return UNDEF_RAW;
     }
 
     function u_fault_msg(error_code) {
@@ -445,7 +510,7 @@ function make_core(wasm_exports, on_wakeup, on_warning, mutable_wasm_caps) {
     function u_cap_to_ptr(cap) {
         return (
             u_is_fix(cap)
-            ? u_warning("cap_to_ptr: can't convert fixnum " + u_print(cap))
+            ? bottom_out("cap_to_ptr: can't convert fixnum", u_print(cap))
             : (cap & ~OPQ_RAW)
         );
     }
@@ -453,7 +518,7 @@ function make_core(wasm_exports, on_wakeup, on_warning, mutable_wasm_caps) {
     function u_ptr_to_cap(ptr) {
         return (
             u_is_fix(ptr)
-            ? u_warning("ptr_to_cap: can't convert fixnum " + u_print(ptr))
+            ? bottom_out("ptr_to_cap: can't convert fixnum", u_print(ptr))
             : (ptr | OPQ_RAW)
         );
     }
@@ -493,7 +558,7 @@ function make_core(wasm_exports, on_wakeup, on_warning, mutable_wasm_caps) {
                     z: ram[ram_idx + 3]
                 };
             } else {
-                return u_warning("h_read_quad: RAM ptr out of bounds " + u_print(ptr));
+                return bottom_out("h_read_quad: RAM ptr out of bounds", u_print(ptr));
             }
         }
         if (u_is_rom(ptr)) {
@@ -508,10 +573,10 @@ function make_core(wasm_exports, on_wakeup, on_warning, mutable_wasm_caps) {
                     z: rom[rom_idx + 3]
                 };
             } else {
-                return u_warning("h_read_quad: ROM ptr out of bounds " + u_print(ptr));
+                return bottom_out("h_read_quad: ROM ptr out of bounds", u_print(ptr));
             }
         }
-        return u_warning("h_read_quad: required ptr, got " + u_print(ptr));
+        return bottom_out("h_read_quad: required ptr, got", u_print(ptr));
     }
 
     function u_write_quad(ptr, quad) {
@@ -526,10 +591,10 @@ function make_core(wasm_exports, on_wakeup, on_warning, mutable_wasm_caps) {
                 ram[idx + 3] = quad.z ?? UNDEF_RAW;
                 return;
             } else {
-                return u_warning("h_write_quad: RAM ptr out of bounds " + u_print(ptr));
+                return bottom_out("h_write_quad: RAM ptr out of bounds", u_print(ptr));
             }
         }
-        return u_warning("h_write_quad: required RAM ptr, got " + u_print(ptr));
+        return bottom_out("h_write_quad: required RAM ptr, got", u_print(ptr));
     }
 
     function u_nth(list_ptr, n) {
@@ -1195,6 +1260,60 @@ function make_core(wasm_exports, on_wakeup, on_warning, mutable_wasm_caps) {
         }
     }
 
+// Install an anonymous plugin to handle trace information emitted by the debug
+// build of the WASM.
+
+    h_install([], {
+        host_trace(event) { // (i32) -> nil
+            if (u_trace !== undefined) {
+                event = u_read_quad(event);
+                const sponsor = event.t;
+                const target = event.x;
+                const message = event.y;
+                const prev = u_read_quad(u_cap_to_ptr(target));
+                if (u_is_ram(prev.z)) {
+                    // actor effect
+                    const next = u_read_quad(prev.z);
+                    let messages = [];
+                    let sent = next.z;
+                    while (u_is_ram(sent)) {
+                        let pending = u_read_quad(sent);
+                        messages.push(
+                            u_pprint(pending.y) + "->" + u_print(pending.x)
+                        );
+                        sent = pending.z;
+                    }
+                    u_trace(
+                        u_pprint(message) + "->" + u_print(target),
+                        u_print(prev.x) + "." + u_pprint(prev.y),
+                        "=>",
+                        u_print(next.x) + "." + u_pprint(next.y),
+                        messages.join(" ")
+                    );
+                } else {
+                    // device effect
+                    u_trace(
+                        u_pprint(message) + "->" + u_print(target),
+                        u_print(prev.x) + "." + u_pprint(prev.y)
+                    );
+                }
+            }
+        }
+    });
+
+// Install the debug device, if debug logging is enabled.
+
+    if (u_debug !== undefined) {
+        h_install(
+            [[DEBUG_DEV_OFS, u_ptr_to_cap(u_ramptr(DEBUG_DEV_OFS))]],
+            {
+                host_log(x) { // (i32) -> nil
+                    const u = (x >>> 0);  // convert i32 -> u32
+                    u_debug(u, "=", u_print(u), "->", u_pprint(u));
+                }
+            }
+        );
+    }
     return Object.freeze({
 
 // The non-reentrant methods.
@@ -1229,11 +1348,14 @@ function make_core(wasm_exports, on_wakeup, on_warning, mutable_wasm_caps) {
         u_blob_mem,
         u_blob_ofs,
         u_cap_to_ptr,
+        u_current_continuation,
+        u_debug,
         u_disasm,
         u_fault_msg,
         u_fix_to_i32,
         u_fixnum,
         u_in_mem,
+        u_info,
         u_is_cap,
         u_is_fix,
         u_is_ptr,
@@ -1252,15 +1374,21 @@ function make_core(wasm_exports, on_wakeup, on_warning, mutable_wasm_caps) {
         u_ramptr,
         u_rawofs,
         u_read_quad,
-        u_write_quad,
         u_rom_ofs,
         u_romptr,
-        u_current_continuation,
-        u_sourcemap
+        u_sourcemap,
+        u_trace,
+        u_warn,
+        u_write_quad
     });
 }
 
-function instantiate_core(wasm_url, on_wakeup, on_warning) {
+function instantiate_core(
+    wasm_url,
+    on_wakeup,
+    on_log,
+    log_level = LOG_WARN
+) {
     let mutable_wasm_caps = Object.create(null);
     return parseq.sequence([
         unpromise(function () {
@@ -1293,10 +1421,7 @@ function instantiate_core(wasm_url, on_wakeup, on_warning) {
                             return mutable_wasm_caps.host_awp(...args);
                         },
                         host_trace(...args) {
-                            const trace = mutable_wasm_caps.host_trace;
-                            if (typeof trace === "function") {
-                                return trace(...args);
-                            }
+                            return mutable_wasm_caps.host_trace(...args);
                         }
                     }
                 }
@@ -1306,7 +1431,8 @@ function instantiate_core(wasm_url, on_wakeup, on_warning) {
             return make_core(
                 wasm.instance.exports,
                 on_wakeup,
-                on_warning,
+                on_log,
+                log_level,
                 mutable_wasm_caps
             );
         })
@@ -1314,7 +1440,6 @@ function instantiate_core(wasm_url, on_wakeup, on_warning) {
 }
 
 //debug import lazy from "./requestors/lazy.js";
-//debug import debug_device from "./devices/debug_device.js";
 //debug import clock_device from "./devices/clock_device.js";
 //debug import io_device from "./devices/io_device.js";
 //debug import blob_device from "./devices/blob_device.js";
@@ -1329,12 +1454,12 @@ function instantiate_core(wasm_url, on_wakeup, on_warning) {
 //debug             console.log("WAKE:", device_offset);
 //debug             console.log("IDLE:", core.u_fault_msg(core.h_run_loop()));
 //debug         },
-//debug         console.log
+//debug         console.log,
+//debug         LOG_DEBUG
 //debug     ),
 //debug     lazy(function (the_core) {
 //debug         core = the_core;
 //debug         // Install devices
-//debug         debug_device(core);
 //debug         clock_device(core);
 //debug         io_device(core);
 //debug         blob_device(core);
@@ -1446,5 +1571,10 @@ export default Object.freeze({
     E_CPU_LIM,
     E_MSG_LIM,
     E_ASSERT,
-    E_STOP
+    E_STOP,
+    LOG_NONE,
+    LOG_INFO,
+    LOG_WARN,
+    LOG_DEBUG,
+    LOG_TRACE
 });

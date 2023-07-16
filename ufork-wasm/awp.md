@@ -35,7 +35,8 @@ Each binary blob sent or received by a transport is a _frame_. A frame is an
 
 Message frames have the following properties:
 
-- `message`: a Raw BLOB containing the OED-encoded message. See "Marshalling" below.
+- `message`: a Raw BLOB containing the OED-encoded message. See "Marshalling"
+  below.
 - `target`: a Raw BLOB containing the destination actor's Swiss number. If
   omitted, the message is delivered to the greeter.
 

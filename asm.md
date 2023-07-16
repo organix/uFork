@@ -251,11 +251,11 @@ _sponsor_ _n_        | `sponsor` `cycles`  | _sponsor_    | transfer _n_ cycles 
 _sponsor_            | `sponsor` `reclaim` | _sponsor_    | reclaim all quotas from _sponsor_
 _sponsor_ _control_  | `sponsor` `start`   | —            | run _sponsor_ under _control_
 _sponsor_            | `sponsor` `stop`    | —            | reclaim all quotas and remove _sponsor_
-_actual_             | `is_eq` _expect_    | —            | assert `actual` == `expect`, otherwise halt!
-_actual_             | `is_ne` _expect_    | —            | assert `actual` != `expect`, otherwise halt!
+_actual_             | `is_eq` _expect_    | —            | assert _actual_ == _expect_, otherwise halt!
+_actual_             | `is_ne` _expect_    | —            | assert _actual_ != _expect_, otherwise halt!
 
 <sup>*</sup> For conditionals (`if` and `if_not`) the values
-`#f`, `#?`, `()`, and `0` are considered "falsey".
+`#f`, `#?`, `#nil`, and `0` are considered "falsey".
 
 Every instruction (except `end`) takes a continuation as its
 final operand. In the following example, the `msg` instruction continues to
@@ -305,10 +305,10 @@ to succinctly designate parts of a pair-list.
   * Zero designates the whole list/value
 
 ```
-  0            -1            -2            -3
----->[car,cdr]---->[car,cdr]---->[car,cdr]---->...
-    +1 |          +2 |          +3 |
-       V             V             V
+  0              -1              -2              -3
+---->[head,tail]---->[head,tail]---->[head,tail]---->...
+    +1 |            +2 |            +3 |
+       V               V               V
 ```
 
 ...or more compactly...
@@ -360,8 +360,7 @@ The grammar is written in
 [McKeeman form](https://www.crockford.com/mckeeman.html).
 
 Each source unit consists of a single _module_. A _module_ may begin with
-comments or blank lines. It must contain at least one labelled _statement_,
-declare at least one _export_, and end in a newline character.
+comments or blank lines, and must end with a newline character.
 
     module
         maybe_newlines import_declaration definitions export_declaration
@@ -456,7 +455,7 @@ optional.
         '-' one_to_nine digits
         base_ten
         base_ten '#' base_any
-        quote character_literal quote
+        single_quote character_literal single_quote
 
     base_ten
         digit
@@ -484,9 +483,9 @@ optional.
         "\r"
         "\'"
         "\\"
-        character - quote - '\'
+        character - single_quote - '\'
 
-    quote
+    single_quote
         '0027'
 
     type

@@ -8,7 +8,6 @@ import ufork from "../../www/ufork.js";
 import parseq from "../../www/parseq.js";
 import lazy from "../../www/requestors/lazy.js";
 import requestorize from "../../www/requestors/requestorize.js";
-import debug_device from "../../www/devices/debug_device.js";
 import awp_device from "../../www/devices/awp_device.js";
 import node_tls_transport from "../../www/transports/node_tls_transport.js";
 
@@ -78,14 +77,14 @@ parseq.sequence([
                 core.u_fault_msg(core.h_run_loop())
             );
         },
-        console.log
+        console.log,
+        ufork.LOG_DEBUG
     ),
     lazy(function (the_core) {
         core = the_core;
         return core.h_import(asm_url);
     }),
     requestorize(function (asm_module) {
-        debug_device(core);
         awp_device(
             core,
             transport,
