@@ -457,43 +457,41 @@ $restore_input.onchange = function restore_snapshot_file() {
 };
 $restore_input.title = "Restore from snapshot";
 
+function current_sponsor() {
+    const cc = core.u_current_continuation();
+    if (cc) {
+        return cc.spn;
+    }
+    return core.u_ramptr(ufork.SPONSOR_OFS);
+}
 $sponsor_memory.oninput = function () {
     const num = Number($sponsor_memory.value);
     if (Number.isSafeInteger(num) && (num >= 0)) {
-        const cc = core.u_current_continuation();
-        if (cc) {
-            const event = core.u_read_quad(cc.ep);
-            const sponsor = core.u_read_quad(event.t);
-            sponsor.t = core.u_fixnum(num);
-            core.u_write_quad(event.t, sponsor);
-            draw_host();
-        }
+        const spn = current_sponsor();
+        const sponsor = core.u_read_quad(spn);
+        sponsor.t = core.u_fixnum(num);
+        core.u_write_quad(spn, sponsor);
+        draw_host();
     }
 };
 $sponsor_events.oninput = function () {
     const num = Number($sponsor_events.value);
     if (Number.isSafeInteger(num) && (num >= 0)) {
-        const cc = core.u_current_continuation();
-        if (cc) {
-            const event = core.u_read_quad(cc.ep);
-            const sponsor = core.u_read_quad(event.t);
-            sponsor.x = core.u_fixnum(num);
-            core.u_write_quad(event.t, sponsor);
-            draw_host();
-        }
+        const spn = current_sponsor();
+        const sponsor = core.u_read_quad(spn);
+        sponsor.x = core.u_fixnum(num);
+        core.u_write_quad(spn, sponsor);
+        draw_host();
     }
 };
 $sponsor_cycles.oninput = function () {
     const num = Number($sponsor_cycles.value);
     if (Number.isSafeInteger(num) && (num >= 0)) {
-        const cc = core.u_current_continuation();
-        if (cc) {
-            const event = core.u_read_quad(cc.ep);
-            const sponsor = core.u_read_quad(event.t);
-            sponsor.y = core.u_fixnum(num);
-            core.u_write_quad(event.t, sponsor);
-            draw_host();
-        }
+        const spn = current_sponsor();
+        const sponsor = core.u_read_quad(spn);
+        sponsor.y = core.u_fixnum(num);
+        core.u_write_quad(spn, sponsor);
+        draw_host();
     }
 };
 
