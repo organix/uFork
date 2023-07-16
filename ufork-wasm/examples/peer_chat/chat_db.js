@@ -1,4 +1,4 @@
-/*jslint browser, devel */
+/*jslint browser */
 
 import hex from "../../www/hex.js";
 import parseq from "../../www/parseq.js";
@@ -10,35 +10,24 @@ import indexed_db from "./indexed_db.js";
 function db(...args) {
     return indexed_db(
         "peer_chat",
-        2,
+        3,
         function on_upgrade(db, old_version) {
-            if (old_version < 2) {
-                db.createObjectStore("items");
+            if (old_version < 3) {
+                db.createObjectStore("v3");
             }
         },
-        "items",
+        "v3",
         ...args
     );
 }
 
-const signaller_origin = (
-    location.protocol === "https:"
-    ? "wss://"
-    : "ws://"
-) + location.host;
-
-function make_address(name) {
-    return signaller_origin + "/connect?name=" + hex.encode(name);
-}
-
-function make_bind_info(name) {
-    return (
-        signaller_origin
-        + "/listen?name=" + hex.encode(name)
-        + "&password=uFork"
-    );
-}
-
+// TODO dedicated webserver
+// const signaller_origin = (
+//     location.protocol === "https:"
+//     ? "wss://"
+//     : "ws://"
+// ) + location.host;
+const signaller_origin = "http://localhost:4455";
 const transport = webrtc_transport();
 const awp_store_key = "awp_store";
 
@@ -62,12 +51,16 @@ function get_store() {
         parseq.sequence([
             transport.generate_identity(),
             requestorize(function (identity) {
-                const name = transport.identity_to_name(identity);
-                const address = make_address(name);
                 return {
                     identity,
-                    bind_info: make_bind_info(name),
-                    acquaintances: [{name, address}]
+                    bind_info: {
+                        origin: signaller_origin,
+                        password: "uFork"
+                    },
+                    acquaintances: [{
+                        name: transport.identity_to_name(identity),
+                        address: signaller_origin
+                    }]
                 };
             }),
             set_store()

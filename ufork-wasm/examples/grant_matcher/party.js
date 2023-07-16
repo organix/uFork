@@ -15,18 +15,6 @@ const signaller_origin = (
     : "ws://"
 ) + location.host;
 
-function make_address(name) {
-    return signaller_origin + "/connect?name=" + hex.encode(name);
-}
-
-function make_bind_info(name) {
-    return (
-        signaller_origin
-        + "/listen?name=" + hex.encode(name)
-        + "&password=uFork"
-    );
-}
-
 function party(asm_url, acquaintance_names = []) {
     const pre = document.createElement("pre");
     document.body.append(pre);
@@ -52,8 +40,8 @@ function party(asm_url, acquaintance_names = []) {
                 print("WAKE:", core.u_print(sig), core.u_fault_msg(err));
             },
             function on_log(log_level, ...values) {
-                print(...values);
-                if (log_level === ufork.LOG_DEBUG) {
+                print(log_level, ...values);
+                if (values.includes("(+0 . #?)")) {
                     const div = document.createElement("div");
                     div.textContent = "💸";
                     div.style.fontSize = "100px";
@@ -71,14 +59,17 @@ function party(asm_url, acquaintance_names = []) {
         ]),
         requestorize(function ([asm_module, identity]) {
             const name = transport.identity_to_name(identity);
-            const address = make_address(name);
+            const address = signaller_origin;
             awp_device(core, transport, [{
                 identity,
-                bind_info: make_bind_info(name),
+                bind_info: {
+                    origin: signaller_origin,
+                    password: "uFork"
+                },
                 acquaintances: [
                     {name, address},
                     ...acquaintance_names.map(function (name) {
-                        return {name, address: make_address(name)};
+                        return {name, address: signaller_origin};
                     })
                 ]
             }]);

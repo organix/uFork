@@ -3,9 +3,11 @@
 
 /*jslint browser */
 
+import hex from "../hex.js";
+
 function websockets_signaller() {
 
-    function connect(address, on_receive) {
+    function connect(name, address, on_receive) {
         return function connect_requestor(callback, offer) {
 
             function resolve(value, reason) {
@@ -17,6 +19,8 @@ function websockets_signaller() {
 
             try {
                 let url = new URL(address);
+                url.pathname = "/connect";
+                url.searchParams.set("name", hex.encode(name));
                 url.searchParams.set("signal", JSON.stringify(offer));
                 const socket = new WebSocket(url);
                 const connection = Object.freeze({
@@ -47,7 +51,7 @@ function websockets_signaller() {
         };
     }
 
-    function listen(bind_info, on_receive, on_fail) {
+    function listen(name, bind_info, on_receive, on_fail) {
         return function listen_requestor(callback) {
 
             function resolve(value, reason) {
@@ -58,7 +62,11 @@ function websockets_signaller() {
             }
 
             try {
-                const socket = new WebSocket(bind_info);
+                let url = new URL(bind_info.origin);
+                url.pathname = "/listen";
+                url.searchParams.set("name", hex.encode(name));
+                url.searchParams.set("password", bind_info.password);
+                const socket = new WebSocket(url);
                 const connection = Object.freeze({
                     send(session, signal) {
                         socket.send(JSON.stringify({session, signal}));
@@ -100,10 +108,15 @@ function websockets_signaller() {
 }
 
 //debug const signaller = websockets_signaller();
-//debug const bind_info = "ws://localhost:4455/listen?name=bob&password=uFork";
-//debug const address = "ws://localhost:4455/connect?name=bob";
+//debug const origin = "ws://localhost:4455";
+//debug const name = new TextEncoder().encode("bob");
+//debug const address = origin;
+//debug const bind_info = {
+//debug     origin,
+//debug     password: "uFork"
+//debug };
 //debug let alice_connector;
-//debug signaller.connect(address, function on_receive(message) {
+//debug signaller.connect(name, address, function on_receive(message) {
 //debug     console.log("alice on_receive", message);
 //debug })(
 //debug     function (connector, reason) {
@@ -119,19 +132,23 @@ function websockets_signaller() {
 //debug     {type: "offer", sdp: "Alice's offer."}
 //debug );
 //debug let bob_listener;
-//debug signaller.listen(bind_info, function on_receive(session_id, message) {
-//debug     console.log("bob on_receive", session_id, message);
-//debug     if (message.type === "offer") {
-//debug         bob_listener.send(session_id, {
-//debug             type: "answer",
-//debug             sdp: "Bob's answer."
-//debug         });
-//debug     } else {
-//debug         bob_listener.send(session_id, {
-//debug             candidate: "Bob's ICE."
-//debug         });
+//debug signaller.listen(
+//debug     name,
+//debug     bind_info,
+//debug     function on_receive(session_id, message) {
+//debug         console.log("bob on_receive", session_id, message);
+//debug         if (message.type === "offer") {
+//debug             bob_listener.send(session_id, {
+//debug                 type: "answer",
+//debug                 sdp: "Bob's answer."
+//debug             });
+//debug         } else {
+//debug             bob_listener.send(session_id, {
+//debug                 candidate: "Bob's ICE."
+//debug             });
+//debug         }
 //debug     }
-//debug })(function (listener, reason) {
+//debug )(function (listener, reason) {
 //debug     if (listener === undefined) {
 //debug         return console.log("bob failed", reason);
 //debug     }

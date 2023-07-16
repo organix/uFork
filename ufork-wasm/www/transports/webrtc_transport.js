@@ -31,9 +31,12 @@
 //      requestor factories, "connect" and "listen". A signal is either an SDP
 //      offer, an SDP answer, or an ICE candidate.
 
-//      signaller.connect(address, on_receive) -> requestor(callback, offer)
+//      signaller.connect(name, address, on_receive) -> requestor
 
 //          The 'connect' requestor factory takes the following parameters:
+
+//              name
+//                  The listening party's name.
 
 //              address
 //                  The listening party's signalling address.
@@ -51,9 +54,12 @@
 //              stop()
 //                  Stop signalling immediately.
 
-//      signaller.listen(bind_info, on_receive, on_fail) -> requestor(callback)
+//      signaller.listen(name, bind_info, on_receive, on_fail) -> requestor
 
 //          The 'listen' requestor factory takes the following parameters:
+
+//              name
+//                  The listening party's name.
 
 //              bind_info
 //                  The listening party's "bind_info", most likely used to
@@ -316,7 +322,7 @@ function webrtc_transport(signaller, log) {
 
                 const cancel_signalling = parseq.sequence([
                     create_offer(peer),
-                    signaller.connect(address, on_receive_signal)
+                    signaller.connect(name, address, on_receive_signal)
                 ])(function (value, reason) {
                     if (value === undefined) {
                         return fail(reason);
@@ -504,6 +510,7 @@ function webrtc_transport(signaller, log) {
             try {
                 return parseq.sequence([
                     signaller.listen(
+                        identity_to_name(identity),
                         bind_info,
                         on_receive_signal,
                         on_signal_listener_fail
@@ -537,8 +544,11 @@ function webrtc_transport(signaller, log) {
 //debug         Math.floor(buffer.length / 2)
 //debug     );
 //debug }
-//debug const bind_info = "ws://localhost:4455/listen?name=bob&password=uFork";
-//debug const address = "ws://localhost:4455/connect?name=bob";
+//debug const bind_info = {
+//debug     origin: "ws://localhost:4455",
+//debug     password: "uFork"
+//debug };
+//debug const address = "ws://localhost:4455";
 //debug const transport = webrtc_transport(signaller(), console.log);
 //debug const flake = 0;
 //debug const cancel = parseq.sequence([
