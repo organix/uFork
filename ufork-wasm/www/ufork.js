@@ -216,7 +216,7 @@ const instr_label = [
     "sponsor",
     "putc",  // deprecated
     "getc",  // deprecated
-    "debug",  // deprecated
+    "debug",
     "deque",
     "state",
     "signal",
@@ -900,7 +900,10 @@ function make_core(
                 ) {
                     fields.y = value(node.imm);
                     fields.z = instruction(node.k);
-                } else if (node.op === "depth") {
+                } else if (
+                    node.op === "depth"
+                    || node.op === "debug"
+                ) {
                     fields.z = instruction(node.k);
                 } else if (node.op === "if") {
                     fields.y = instruction(node.t);

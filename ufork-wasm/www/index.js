@@ -339,6 +339,15 @@ function render_loop() {
             pause_action();
             return;
         }
+        let cc = core.u_current_continuation();
+        if (cc !== undefined) {
+            const instruction_quad = core.u_read_quad(cc.ip);
+            const op_code = core.u_fix_to_i32(instruction_quad.x);
+            if (op_code === 26) { // 'debug' op
+                pause_action(); // breakpoint reached
+                return;
+            }
+        }
     }
     requestAnimationFrame(render_loop);
 }

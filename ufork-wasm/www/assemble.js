@@ -830,11 +830,14 @@ function generate_crlf(tree, file) {
                 debug
             };
         }
-        if (operator.id === "depth") {
+        if (
+            operator.id === "depth"
+            || operator.id === "debug"
+        ) {
             operand_check(0, 1);
             return {
                 kind: "instr",
-                op: "depth",
+                op: operator.id,
                 k: gen_continuation(0),
                 debug
             };
