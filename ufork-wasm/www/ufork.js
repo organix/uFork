@@ -109,8 +109,8 @@ const VM_IS_NE  = 0x8000001F;
 
 // Memory limits (from core.rs)
 
-const QUAD_ROM_MAX = 1 << 10;
-const QUAD_RAM_MAX = 1 << 8;
+const QUAD_ROM_MAX = 1 << 12;
+const QUAD_RAM_MAX = 1 << 10;
 const BLOB_RAM_MAX = 1 << 8;
 
 // Memory layout (from core.rs)
@@ -527,24 +527,6 @@ function make_core(
         return u_memory().byteLength / 65536;
     }
 
-    function u_current_continuation() {
-        const dd_quad = u_read_quad(u_ramptr(DDEQUE_OFS));
-        const k_first = dd_quad.y;
-        if (u_in_mem(k_first)) {
-            const k_quad = u_read_quad(k_first);
-            const e_quad = u_read_quad(k_quad.y);
-            return {
-                ip: k_quad.t,
-                sp: k_quad.x,
-                ep: k_quad.y,
-                act: e_quad.x,
-                msg: e_quad.y,
-                spn: e_quad.t
-            };
-        }
-        // returns undefined is there is no current continuation
-    }
-
     function u_read_quad(ptr) {
         if (u_is_ram(ptr)) {
             const ram_ofs = u_rawofs(ptr);
@@ -595,6 +577,23 @@ function make_core(
             }
         }
         return bottom_out("h_write_quad: required RAM ptr, got", u_print(ptr));
+    }
+
+    function u_current_continuation() {
+        const dd_quad = u_read_quad(u_ramptr(DDEQUE_OFS));
+        const k_first = dd_quad.y;
+        if (u_in_mem(k_first)) {
+            const k_quad = u_read_quad(k_first);
+            const e_quad = u_read_quad(k_quad.y);
+            return {
+                ip: k_quad.t,
+                sp: k_quad.x,
+                ep: k_quad.y,
+                act: e_quad.x,
+                msg: e_quad.y,
+                spn: e_quad.t
+            };
+        }
     }
 
     function u_nth(list_ptr, n) {
