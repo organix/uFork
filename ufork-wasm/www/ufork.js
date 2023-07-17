@@ -21,18 +21,18 @@
 //      An integer controlling the core's logging verbosity. Each level includes
 //      all levels before it.
 
-//      ufork.LOG_NONE = 0
+//      ufork.LOG_NONE (0)
 //          No logging.
-//      ufork.LOG_INFO = 1
+//      ufork.LOG_INFO (1)
 //          Low volume, always shown unless all logging is disabled.
-//      ufork.LOG_WARN = 2
+//      ufork.LOG_WARN (2)
 //          Something went wrong, but perhaps it wasn't fatal.
-//      ufork.LOG_DEBUG = 3
+//      ufork.LOG_DEBUG (3)
 //          More detail to narrow down the source of a problem.
-//      ufork.LOG_TRACE = 4
+//      ufork.LOG_TRACE (4)
 //          Extremely detailed (for example, all reserve and release actions).
 
-//      The default value is LOG_WARN.
+//      The default level is LOG_WARN.
 
 // The returned requestor produces a core object containing a bunch of methods.
 // The methods beginning with "u_" are reentrant, but the methods beginning

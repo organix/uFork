@@ -6,52 +6,66 @@
 ; time allowed in milliseconds.
 
 .import
-    std: "../std.asm"
-    lib: "../lib.asm"
-    dev: "../dev.asm"
     canceller: "./canceller.asm"
     delay: "./delay.asm"
+    dev: "../dev.asm"
+    lib: "../lib.asm"
+    std: "../std.asm"
     thru: "./thru.asm"
 
 beh:
 timeout_beh:                ; (requestor time_limit timer_dev) <- request
+
+; Create two cancellers, one for the requestor and one for the timer.
+
     push canceller.beh      ; canceller_beh
-    new 0                   ; tc
-    push canceller.beh      ; tc canceller_beh
-    new 0                   ; tc rc
-    msg 1                   ; tc rc to_cancel
-    typeq #actor_t          ; tc rc cap?
-    if_not race             ; tc rc
-    dup 2                   ; tc rc tc rc
-    push cancel_all_beh     ; tc rc tc rc cancel_all_beh
-    new 2                   ; tc rc cancel_all
-    msg 1                   ; tc rc cancel_all to_cancel
-    send -1                 ; tc rc
+    new 0                   ; t␘
+    push canceller.beh      ; t␘ canceller_beh
+    new 0                   ; t␘ r␘
+
+; Does the request contain a 'to_cancel' capability? If not, jump to 'race'.
+
+    msg 1                   ; t␘ r␘ to_cancel
+    typeq #actor_t          ; t␘ r␘ cap?
+    if_not race             ; t␘ r␘
+
+; Create a cancel capability that cancels both the requestor and timer. Send it
+; to the 'to_cancel' capability from the request.
+
+    dup 2                   ; t␘ r␘ t␘ r␘
+    push cancel_all_beh     ; t␘ r␘ t␘ r␘ cancel_all_beh
+    new 2                   ; t␘ r␘ cancel_all
+    msg 1                   ; t␘ r␘ cancel_all to_cancel
+    send -1                 ; t␘ r␘
+
+; Set up a race between the requestor and the timer. Whichever finishes first
+; sends its result to the callback and cancels the loser.
+
 race:
-    msg 2                   ; tc rc cb
-    push lib.once_beh       ; tc rc cb once_beh
-    new 1                   ; tc rc cb'
-    msg -2                  ; tc rc cb' value
-    pick 4                  ; tc rc cb' value tc
-    pick 3                  ; tc rc cb' value tc cb'
-    push win_beh            ; tc rc cb' value tc cb' win_beh
-    new 2                   ; tc rc cb' value rcb
-    pick 4                  ; tc rc cb' value rcb rc
-    pair 2                  ; tc rc cb' rreq=(rc rcb . value)
-    state 1                 ; tc rc cb' rreq requestor
-    send -1                 ; tc rc cb'
-    my self                 ; tc rc cb' self
-    push #?                 ; tc rc cb' self #?
-    pair 1                  ; tc rc cb' result=(#? . self)
-    state 2                 ; tc rc cb' result time_limit
-    pick 4                  ; tc rc cb' result time_limit rc
-    pick 4                  ; tc rc cb' result time_limit rc cb'
-    push win_beh            ; tc rc cb' result time_limit rc cb' win_beh
-    new 2                   ; tc rc cb' result time_limit tcb
-    pick 6                  ; tc rc cb' result time_limit tcb tc
-    pair 3                  ; tc rc cb' treq=(tc tcb time_limit . result)
-    state 3                 ; tc rc cb' treq timer_dev
-    send -1                 ; tc rc cb'
+    msg 2                   ; t␘ r␘ raw_callback
+    push lib.once_beh       ; t␘ r␘ raw_callback once_beh
+    new 1                   ; t␘ r␘ callback
+    msg -2                  ; t␘ r␘ callback value
+    pick 4                  ; t␘ r␘ callback value t␘
+    pick 3                  ; t␘ r␘ callback value t␘ callback
+    push win_beh            ; t␘ r␘ callback value t␘ callback win_beh
+    new 2                   ; t␘ r␘ callback value rcb
+    pick 4                  ; t␘ r␘ callback value rcb r␘
+    pair 2                  ; t␘ r␘ callback rreq=(r␘ rcb . value)
+    state 1                 ; t␘ r␘ callback rreq requestor
+    send -1                 ; t␘ r␘ callback
+    my self                 ; t␘ r␘ callback reason=self
+    push #?                 ; t␘ r␘ callback reason #?
+    pair 1                  ; t␘ r␘ callback result=(#? . reason)
+    state 2                 ; t␘ r␘ callback result time_limit
+    pick 4                  ; t␘ r␘ callback result time_limit r␘
+    pick 4                  ; t␘ r␘ callback result time_limit r␘ callback
+    push win_beh            ; t␘ r␘ callback result time_limit r␘ callback win_beh
+    new 2                   ; t␘ r␘ callback result time_limit tcb
+    pick 6                  ; t␘ r␘ callback result time_limit tcb t␘
+    pair 3                  ; t␘ r␘ callback treq=(t␘ tcb time_limit . result)
+    state 3                 ; t␘ r␘ callback treq timer_dev
+    send -1                 ; t␘ r␘ callback
     ref std.commit
 
 cancel_all_beh:             ; cancellers <- reason
@@ -66,8 +80,8 @@ cancel_all_beh:             ; cancellers <- reason
     beh -1                  ; --
     ref std.commit
 
-win_beh:                    ; (callback loser_canceller) <- (value . reason)
-    state 2                 ; loser_canceller
+win_beh:                    ; (callback loser␘) <- (value . reason)
+    state 2                 ; loser␘
     send 0                  ; --
     msg 0                   ; (value . reason)
     state 1                 ; (value . reason) callback
