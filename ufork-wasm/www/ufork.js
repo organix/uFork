@@ -901,7 +901,7 @@ function make_core(
                     fields.y = value(node.imm);
                     fields.z = instruction(node.k);
                 } else if (node.op === "depth") {
-                    fields.y = instruction(node.k);
+                    fields.z = instruction(node.k);
                 } else if (node.op === "if") {
                     fields.y = instruction(node.t);
                     fields.z = instruction(node.f);
