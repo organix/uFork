@@ -25,13 +25,21 @@ function timer_device(core) {
                         core.h_event_inject(sponsor, target, message);
                         core.h_wakeup(ufork.TIMER_DEV_OFS);
                     }, core.u_fix_to_i32(delay));
+                    if (core.u_trace !== undefined) {
+                        core.u_trace("host_start_timer", timer_map[stub]);
+                    }
                 }
             },
             host_stop_timer(stub) { // (i32) -> nil
                 const id = timer_map[stub];
-                clearTimeout(id);
-                delete timer_map[stub];
-                core.h_release_stub(stub);
+                if (id !== undefined) {
+                    clearTimeout(id);
+                    delete timer_map[stub];
+                    setTimeout(core.h_release_stub, 0, stub);
+                    if (core.u_trace !== undefined) {
+                        core.u_trace("host_stop_timer", id);
+                    }
+                }
             }
         }
     );

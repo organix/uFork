@@ -253,6 +253,7 @@ _sponsor_ _control_  | `sponsor` `start`   | —            | run _sponsor_ unde
 _sponsor_            | `sponsor` `stop`    | —            | reclaim all quotas and remove _sponsor_
 _actual_             | `is_eq` _expect_    | —            | assert _actual_ == _expect_, otherwise halt!
 _actual_             | `is_ne` _expect_    | —            | assert _actual_ != _expect_, otherwise halt!
+—                    | `debug`             | —            | debugger breakpoint
 
 <sup>*</sup> For conditionals (`if` and `if_not`) the values
 `#f`, `#?`, `#nil`, and `0` are considered "falsey".

@@ -447,6 +447,9 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
                 };
                 kip
             },
+            VM_DEBUG => {
+                kip // no op
+            },
             VM_DEQUE => {
                 match imm {
                     DEQUE_NEW => {
