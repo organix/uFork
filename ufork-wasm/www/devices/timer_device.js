@@ -25,8 +25,8 @@ function timer_device(core) {
                         core.h_event_inject(sponsor, target, message);
                         core.h_wakeup(ufork.TIMER_DEV_OFS);
                     }, core.u_fix_to_i32(delay));
-                    if (core.u_debug !== undefined) {
-                        core.u_debug("host_start_timer", timer_map[stub]);
+                    if (core.u_trace !== undefined) {
+                        core.u_trace("host_start_timer", timer_map[stub]);
                     }
                 }
             },
@@ -36,8 +36,8 @@ function timer_device(core) {
                     clearTimeout(id);
                     delete timer_map[stub];
                     setTimeout(core.h_release_stub, 0, stub);
-                    if (core.u_debug !== undefined) {
-                        core.u_debug("host_stop_timer", id);
+                    if (core.u_trace !== undefined) {
+                        core.u_trace("host_stop_timer", id);
                     }
                 }
             }

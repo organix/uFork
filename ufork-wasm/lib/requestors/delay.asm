@@ -1,20 +1,20 @@
 ; The "delay" requestor behaves just like a given requestor except that the
 ; request is delayed by a fixed number of milliseconds.
 
-; It does not currently support cancellation.
-
 .import
     std: "../std.asm"
     dev: "../dev.asm"
     thru: "./thru.asm"
+    canceller: "./canceller.asm"
 
 beh:
 delay_beh:                  ; (requestor delay timer_dev) <- request
-    msg 0                   ; request
-    state 1                 ; request requestor
-    state 2                 ; request requestor delay
-    state 3                 ; request requestor delay timer_dev
-    send 3                  ; --
+    msg -2                  ; value
+    state 2                 ; value delay
+    msg 2                   ; value delay callback
+    msg 1                   ; value delay callback to_cancel
+    state 3                 ; value delay callback to_cancel timer_dev
+    send 4                  ; --
     ref std.commit
 
 ; Test suite

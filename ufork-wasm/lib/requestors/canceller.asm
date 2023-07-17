@@ -1,7 +1,7 @@
 ; The "canceller" actor can be passed as the 'to_cancel' capability in a request
 ; message. You can pretty much treat it like the cancel capability that the
-; requestor may eventually send. The only caveat is that the reason must be
-; wrapped in a list:
+; requestor may eventually send. The only caveat is that the reason is expected
+; to be wrapped in a list:
 
 ;   (reason) -> canceller
 
