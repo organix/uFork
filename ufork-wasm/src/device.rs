@@ -133,7 +133,7 @@ impl IoDevice {
     }
 }
 /*
-    The present `IoDevice` is an experimental place-holder
+    The old `IoDevice` was an experimental place-holder
     used to dump a _blob_ proxy to the debugger console.
     For backward compatibility, when the message is just a capability
     we retain the previous behavior.

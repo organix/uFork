@@ -25,11 +25,17 @@ let on_stdin;
 
 function refill_all(sponsor) {
     // FIXME: by refilling all quotas, we're temporarily avoiding E_MEM_LIM and E_CPU_LIM
-    sponsor.t = core.u_fixnum(1024);  // memory
+    sponsor.t = core.u_fixnum(4096);  // memory
     sponsor.x = core.u_fixnum(256);  // events
-    sponsor.y = core.u_fixnum(4096);  // cycles
+    sponsor.y = core.u_fixnum(2048);  // cycles
 }
 function ufork_run() {
+    // pre-load root-sponsor will resources
+    const spn = core.u_ramptr(ufork.SPONSOR_OFS);
+    const sponsor = core.u_read_quad(spn);
+    refill_all(sponsor);
+    core.u_write_quad(spn, sponsor);
+    // run until there is no more work, or an error occurs
     const sig = core.h_run_loop(0);
     if (core.u_is_fix(sig)) {
         const err = core.u_fix_to_i32(sig);
@@ -56,6 +62,7 @@ function ufork_run() {
         core.u_write_quad(spn, sponsor);
         console.log("refilled:", core.u_disasm(spn));
     }
+    // run again on a subsequent turn
     setTimeout(function wakeup() {
         console.log("RUN:", core.u_print(sig));
         ufork_run();

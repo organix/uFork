@@ -13,6 +13,8 @@ E_MSG_LIM:
 E_CPU_LIM:
     ref -10
 
+; Sponsor controller that refills all quotas
+
 refill:                 ; (memory events cycles) <- sponsor
     msg 0               ; sponsor
     get Z               ; error
@@ -79,8 +81,21 @@ control_1:              ; (debug_dev) <- sponsor
     state 1             ; error debug_dev
     ref std.send_msg
 
+; An infinite loop will consume cycles, but no memory or events
+
 loop_forever:
     dup 0 loop_forever
+
+; Send yourself an incrementing number forever.
+
+ticker:                 ; () <- n
+    msg 0               ; n
+    push 1              ; n 1
+    alu add             ; n+1
+    my self             ; n+1 SELF
+    ref std.send_msg    ; --
+
+; Send yourself two messages for each one received.
 
 msg_bomb:               ; () <- ()
     my self             ; SELF
@@ -88,6 +103,8 @@ msg_bomb:               ; () <- ()
     my self             ; SELF
     send 0              ; --
     ref std.commit
+
+; Create and activate two clones for each message received.
 
 fork_bomb:              ; () <- ()
     push fork_bomb      ; fork_bomb
@@ -97,6 +114,8 @@ fork_bomb:              ; () <- ()
     new 0               ; fork_bomb.()
     send 0              ; --
     ref std.commit
+
+; Count up to a specified `limit`
 
 count_to:               ; (limit) <- count
     state 1             ; limit
@@ -112,33 +131,6 @@ count_next:
     alu add             ; count+1
     my self             ; count+1 SELF
     ref std.send_msg
-
-test_quad:              ; _ <- _
-    push #type_t        ; #type_t
-    quad 1              ; custom_t
-    dup 1               ; custom_t custom_t
-    push #pair_t        ; custom_t custom_t #pair_t
-    push #dict_t        ; custom_t custom_t #pair_t #dict_t
-    push 42             ; custom_t custom_t #pair_t #dict_t 42
-    push #t             ; custom_t custom_t #pair_t #dict_t 42 #t
-    push #nil           ; custom_t custom_t #pair_t #dict_t 42 #t ()
-    quad 4              ; custom_t custom_t #pair_t {42:#t}
-    push #nil           ; custom_t custom_t #pair_t {42:#t} ()
-    quad 3              ; custom_t custom_t ({42:#t})
-    quad 2              ; custom_t [custom_t, ({42:#t})]
-    dup 2               ; custom_t [custom_t, ({42:#t})] custom_t [custom_t, ({42:#t})]
-    get T               ; custom_t [custom_t, ({42:#t})] custom_t custom_t
-    cmp eq              ; custom_t [custom_t, ({42:#t})] #t
-    is_eq #t            ; custom_t [custom_t, ({42:#t})]
-    get X               ; custom_t ({42:#t})
-    part 1              ; custom_t () {42:#t}
-    dup 1               ; custom_t () {42:#t} {42:#t}
-    get Y               ; custom_t () {42:#t} #t
-    is_eq #t            ; custom_t () {42:#t}
-    get Z               ; custom_t () ()
-    cmp eq              ; custom_t #t
-    is_eq #t            ; custom_t
-    ref std.commit
 
 boot:                   ; () <- {caps}
     msg 0               ; {caps}
