@@ -475,14 +475,15 @@ impl TimerDevice {
         // timer device not available...
     }
     #[cfg(target_arch = "wasm32")]
-    fn stop_timer(&mut self, stub: Any) {
+    fn stop_timer(&mut self, stub: Any) -> bool {
         unsafe {
-            crate::host_stop_timer(stub.raw());
+            crate::host_stop_timer(stub.raw())
         }
     }
     #[cfg(not(target_arch = "wasm32"))]
-    fn stop_timer(&mut self, _stub: Any) {
+    fn stop_timer(&mut self, _stub: Any) -> bool {
         // timer device not available...
+        false
     }
 }
 impl Device for TimerDevice {
@@ -491,12 +492,17 @@ impl Device for TimerDevice {
         let sponsor = event.t();
         let dev = event.x();
         let msg = event.y();
-        let myself = core.ram(core.cap_to_ptr(dev));
+        let ptr = core.cap_to_ptr(dev);
+        let myself = core.ram(ptr);
         if myself.t() == PROXY_T {
             // stop timer request
             let handle = myself.y();
-            self.stop_timer(handle);
-            core.release_stub(handle);
+            if handle.is_ram() {
+                if self.stop_timer(handle) {
+                    core.release_stub(handle);
+                }
+                core.ram_mut(ptr).set_y(UNDEF);
+            }
         } else {
             // start timer request
             let arg_1 = core.nth(msg, PLUS_1);

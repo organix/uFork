@@ -30,7 +30,7 @@ function timer_device(core) {
                     }
                 }
             },
-            host_stop_timer(stub) { // (i32) -> nil
+            host_stop_timer(stub) { // (i32) -> bool
                 const id = timer_map[stub];
                 if (id !== undefined) {
                     clearTimeout(id);
@@ -38,7 +38,9 @@ function timer_device(core) {
                     if (core.u_trace !== undefined) {
                         core.u_trace("host_stop_timer", id);
                     }
+                    return true;
                 }
+                return false;
             }
         }
     );

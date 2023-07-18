@@ -70,7 +70,7 @@ extern {
     pub fn host_print(base: *const u8, ofs: usize);
     pub fn host_log(x: Raw);
     pub fn host_start_timer(delay: Raw, stub: Raw);
-    pub fn host_stop_timer(stub: Raw);
+    pub fn host_stop_timer(stub: Raw) -> bool;
     pub fn host_write(code: Raw) -> Raw;
     pub fn host_read(stub: Raw) -> Raw;
     pub fn host_awp(event_stub: Raw) -> Error;
