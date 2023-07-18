@@ -109,15 +109,17 @@ impl IoDevice {
     }
 
     #[cfg(target_arch = "wasm32")]
-    fn write(&mut self, code: isize) {
+    fn write(&mut self, code: Any) -> Any {
         unsafe {
-            crate::host_write(code);
+            let raw = crate::host_write(code.raw());
+            Any::new(raw)
         }
     }
     #[cfg(not(target_arch = "wasm32"))]
-    fn write(&mut self, code: isize) {
+    fn write(&mut self, code: Any) -> Any {
         // console output not available...
         let _ = code;  // place a breakpoint on this assignment
+        Any::fix(E_OK as isize)
     }
 
     #[cfg(target_arch = "wasm32")]
@@ -194,15 +196,14 @@ impl Device for IoDevice {
                 let stub = core.reserve_stub(dev, ptr)?;
                 let char = self.read(stub);
                 if char.is_fix() {
-                    // synchronous `read`, reply immediately
+                    // if `read` was synchronous, reply immediately
                     let result = core.reserve(&Quad::pair_t(char, NIL))?;  // (char)
                     core.event_inject(sponsor, callback, result)?;
                     core.release_stub(stub);
                 }
             } else if data.is_fix() {  // (to_cancel callback fixnum)
                 // write request
-                let code = data.get_fix()?;
-                self.write(code);  // FIXME: this API should probably take `Any` instead of `isize`
+                self.write(data);
                 // in the current implementation, `write` is synchronous, so we reply immediately
                 let result = core.reserve(&Quad::pair_t(UNIT, NIL))?;  // (#unit)
                 core.event_inject(sponsor, callback, result)?;

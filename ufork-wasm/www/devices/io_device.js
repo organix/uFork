@@ -85,7 +85,7 @@ function io_device(core, on_stdout) {
                 }
                 return char;
             },
-            host_write(code) { // (i32) -> nil
+            host_write(code) { // (i32) -> i32
                 code &= 0x1FFFFF;  // interpret as a Unicode code point
                 const char = String.fromCodePoint(code);
                 if (core.u_trace !== undefined) {
@@ -94,6 +94,7 @@ function io_device(core, on_stdout) {
                 if (typeof on_stdout === "function") {
                     on_stdout(char);
                 }
+                return core.u_fixnum(core.E_OK);
             }
         }
     );
