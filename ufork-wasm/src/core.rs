@@ -298,6 +298,8 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
             }
             return UNDEF;  // instruction not executed
         }
+        // FIXME: snapshot continuation state so it can be restored on error? or just `sp`?
+        let sp = self.sp();  // remember original `sp` in case of failure
         let ip = self.ip();
         match self.perform_op(ip) {
             Ok(ip_) => {
@@ -314,6 +316,7 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
                 }
             },
             Err(error) => {
+                self.set_sp(sp);  // restore original `sp` on failure
                 if self.report_error(sponsor, error) {
                     return UNDEF;  // controller notified
                 }
@@ -2379,6 +2382,30 @@ pub const COUNT_TO: Any = Any { raw: COUNT_TO_OFS as Raw };
         core.event_inject(SPONSOR, a_boot, NIL).unwrap();
         let sig = core.run_loop(1024);
         assert_eq!(ZERO, sig);
+    }
+
+    #[test]
+    fn recover_from_resource_exhaustion() {
+        const OUT_OF_MEM: Any = Any { raw: DIR_RAW | E_MEM_LIM as u32 };
+        const OUT_OF_MSG: Any = Any { raw: DIR_RAW | E_MSG_LIM as u32 };
+        const OUT_OF_CPU: Any = Any { raw: DIR_RAW | E_CPU_LIM as u32 };
+        let mut core = Core::new();
+        let boot_beh = load_fib_test(&mut core);
+        let boot_ptr = core.reserve(&Quad::new_actor(boot_beh, NIL)).unwrap();
+        let a_boot = core.ptr_to_cap(boot_ptr);
+        core.event_inject(SPONSOR, a_boot, UNDEF).unwrap();
+        let sponsor = core.ram_mut(SPONSOR);
+        *sponsor = Quad::untyped_t(PLUS_3, PLUS_1, PLUS_8, UNDEF);  // all quotas
+        let sig = core.run_loop(256);
+        assert_eq!(OUT_OF_MEM, sig);
+        core.ram_mut(SPONSOR).set_t(PLUS_8);  // memory quota
+        core.ram_mut(SPONSOR).set_y(PLUS_2);  // cycle quota
+        let sig = core.run_loop(256);
+        assert_eq!(OUT_OF_CPU, sig);
+        core.ram_mut(SPONSOR).set_t(PLUS_8);  // memory quota
+        core.ram_mut(SPONSOR).set_y(PLUS_8);  // cycle quota
+        let sig = core.run_loop(256);
+        assert_eq!(OUT_OF_MSG, sig);
     }
 
     #[test]
