@@ -9,18 +9,46 @@ function io_device(core, on_stdout) {
     let stdin_buffer = [];
     let stdin_stub;
 
-    function poll_stdin() {
-        if (stdin_stub !== undefined && stdin_buffer.length > 0) {
-            const first = stdin_buffer[0];
-            stdin_buffer = stdin_buffer.slice(1);
-            const code = first.codePointAt(0);
-            const char = core.u_fixnum(code);  // character read
+    function stdin_ready() {  // return `true` if stdin has characters waiting
+        return (stdin_buffer.length > 0);
+    }
+    function read_stdin() {  // remove and return the next character from stdin
+        if (!stdin_ready()) {
+            return core.UNDEF_RAW;
+        }
+        const first = stdin_buffer[0];
+        stdin_buffer = stdin_buffer.slice(1);  // FIXME: handle codepoints > 0xFFFF
+        const code = first.codePointAt(0);
+        const char = core.u_fixnum(code);  // character read
+        return char;
+    }
+    function listen_stdin(stub) {  // register a customer (capability) to receive a codepoint
+        if (core.u_trace !== undefined) {
+            core.u_trace(
+                "READ:",
+                stub,
+                "=",
+                core.u_print(stub),
+                "->",
+                core.u_pprint(stub)
+            );
+        }
+        if (stdin_stub !== undefined) {
+            throw new Error(
+                "stdin_stub already set to " + core.u_pprint(stdin_stub)
+            );
+        }
+        stdin_stub = stub;
+    }
+    function poll_stdin() {  // when the buffer state changes, check for stdin listener
+        if (stdin_stub !== undefined && stdin_ready()) {
+            const char = read_stdin();
             const quad = core.u_read_quad(stdin_stub);
             const event = core.u_read_quad(quad.y);
             const sponsor = event.t;
             const target = event.x;
             if (core.u_trace !== undefined) {
-                core.u_trace("READ:", code, "=", first);
+                core.u_trace("READ:", core.u_print(char), "=", String.fromCodePoint([code]));
             }
             const message = core.h_reserve_ram({  // (char)
                 t: ufork.PAIR_T,
@@ -50,25 +78,12 @@ function io_device(core, on_stdout) {
                     ));
                 }
             },
-            host_read(stub) { // (i32) -> bool
-                if (core.u_trace !== undefined) {
-                    core.u_trace(
-                        "READ:",
-                        stub,
-                        "=",
-                        core.u_print(stub),
-                        "->",
-                        core.u_pprint(stub)
-                    );
+            host_read(stub) { // (i32) -> i32
+                const char = read_stdin();
+                if (char == core.UNDEF_RAW) {
+                    listen_stdin(stub);
                 }
-                if (stdin_stub !== undefined) {
-                    throw new Error(
-                        "stdin_stub already set to " + core.u_pprint(stdin_stub)
-                    );
-                }
-                stdin_stub = stub;
-                setTimeout(poll_stdin, 0);
-                return true;  // request scheduled
+                return char;
             },
             host_write(code) { // (i32) -> nil
                 code &= 0x1FFFFF;  // interpret as a Unicode code point

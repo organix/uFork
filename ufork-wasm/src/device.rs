@@ -121,15 +121,16 @@ impl IoDevice {
     }
 
     #[cfg(target_arch = "wasm32")]
-    fn read(&mut self, stub: Any) -> bool {
+    fn read(&mut self, stub: Any) -> Any {
         unsafe {
-            crate::host_read(stub.raw())
+            let raw = crate::host_read(stub.raw());
+            Any::new(raw)
         }
     }
     #[cfg(not(target_arch = "wasm32"))]
-    fn read(&mut self, _stub: Any) -> bool {
+    fn read(&mut self, _stub: Any) -> Any {
         // console input not available...
-        false
+        UNDEF
     }
 }
 /*
@@ -191,17 +192,17 @@ impl Device for IoDevice {
                 let delayed = Quad::new_event(sponsor, callback, UNDEF);
                 let ptr = core.reserve(&delayed)?;
                 let stub = core.reserve_stub(dev, ptr)?;
-                if !self.read(stub) {
-                    // reply immediately with failure
-                    let reason = core.reserve(&Quad::pair_t(Any::fix(E_FAIL as isize), NIL))?;
-                    let result = core.reserve(&Quad::pair_t(UNDEF, reason))?;  // (#undef error_code)
+                let char = self.read(stub);
+                if char.is_fix() {
+                    // synchronous `read`, reply immediately
+                    let result = core.reserve(&Quad::pair_t(char, NIL))?;  // (char)
                     core.event_inject(sponsor, callback, result)?;
                     core.release_stub(stub);
                 }
             } else if data.is_fix() {  // (to_cancel callback fixnum)
                 // write request
                 let code = data.get_fix()?;
-                self.write(code);
+                self.write(code);  // FIXME: this API should probably take `Any` instead of `isize`
                 // in the current implementation, `write` is synchronous, so we reply immediately
                 let result = core.reserve(&Quad::pair_t(UNIT, NIL))?;  // (#unit)
                 core.event_inject(sponsor, callback, result)?;
@@ -494,6 +495,7 @@ impl Device for TimerDevice {
             // stop timer request
             let handle = myself.y();
             self.stop_timer(handle);
+            // FIXME: remove from JS and `core.release_stub(handle);`
         } else {
             // start timer request
             let arg_1 = core.nth(msg, PLUS_1);

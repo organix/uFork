@@ -27,7 +27,7 @@ function refill_all(sponsor) {
     // FIXME: by refilling all quotas, we're temporarily avoiding E_MEM_LIM and E_CPU_LIM
     sponsor.t = core.u_fixnum(4096);  // memory
     sponsor.x = core.u_fixnum(256);  // events
-    sponsor.y = core.u_fixnum(2048);  // cycles
+    sponsor.y = core.u_fixnum(4096);  // cycles
 }
 function ufork_run() {
     // pre-load root-sponsor will resources
@@ -97,7 +97,7 @@ $stdout.onclick = function () {
 function on_stdout(char) {
     if ($stdout) {
         const text = $stdout.value;
-        console.log("$stdout.value =", text);
+        //console.log("$stdout.value =", text);
         if (typeof text === "string") {
             $stdout.value = text + char;
         }
