@@ -272,10 +272,10 @@ function awp_device(
 
 // (cancel_customer greeting_callback petname . hello) -> greeter
 
-            core.h_event_inject(
-                sponsor,
-                greeter,
-                core.h_reserve_ram({
+            const evt = core.h_reserve_ram({
+                t: sponsor,
+                x: greeter,
+                y: core.h_reserve_ram({
                     t: ufork.PAIR_T,
                     x: ufork.UNDEF_RAW, // TODO cancel_customer
                     y: core.h_reserve_ram({
@@ -288,7 +288,8 @@ function awp_device(
                         })
                     })
                 })
-            );
+            });
+            core.h_event_inject(evt);
             return resume();
         }
 
@@ -296,11 +297,12 @@ function awp_device(
 
         const stub = stubs[hex.encode(frame.target)];
         if (stub !== undefined) {
-            core.h_event_inject(
-                sponsor,
-                core.u_read_quad(stub).y,
-                unmarshall(store, frame.message)
-            );
+            const evt = core.h_reserve_ram({
+                t: sponsor,
+                x: core.u_read_quad(stub).y,
+                y: unmarshall(store, frame.message)
+            });
+            core.h_event_inject(evt);
             return resume();
         }
         if (core.u_warn !== undefined) {
@@ -525,15 +527,16 @@ function awp_device(
                 if (core.u_debug !== undefined) {
                     core.u_debug("intro fail");
                 }
-                core.h_event_inject(
-                    sponsor,
-                    callback_fwd,
-                    core.h_reserve_ram({
+                const evt = core.h_reserve_ram({
+                    t: sponsor,
+                    x: callback_fwd,
+                    y: core.h_reserve_ram({
                         t: ufork.PAIR_T,
                         x: ufork.UNDEF_RAW,
                         y: core.u_fixnum(-1) // TODO error codes
                     })
-                );
+                });
+                core.h_event_inject(evt);
 
 // We could release the callback's stub here, but it becomes a sink once it
 // forwards the reply so we can safely leave it for the distributed GC to clean
@@ -579,7 +582,12 @@ function awp_device(
 
 // (stop . reason) -> listen_callback
 
-            core.h_event_inject(sponsor, listen_callback, reply);
+            const evt = core.h_reserve_ram({
+                t: sponsor,
+                x: listen_callback,
+                y: reply
+            });
+            core.h_event_inject(evt);
             release_event_stub();
             return resume();
         }

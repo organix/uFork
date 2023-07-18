@@ -274,7 +274,7 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
             let ptr = self.cap_to_ptr(target);
             let actor = *self.mem(ptr);  // initial actor state
             let beh = actor.x();
-            let kp = self.new_cont(beh, NIL, ep)?;  // create continuation
+            let kp = self.reserve_cont(beh, NIL, ep)?;  // create continuation
             let effect = self.reserve(&actor)?;  // event-effect accumulator
             self.ram_mut(ptr).set_z(effect);  // indicate actor is busy
             self.cont_enqueue(kp);
@@ -858,17 +858,14 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
             None
         }
     }
-    pub fn event_inject(&mut self, sponsor: Any, target: Any, msg: Any) -> Result<(), Error> {
+    pub fn event_inject(&mut self, ep: Any) {
         // add event to the front of the queue (e.g.: for interrupts)
-        let event = Quad::new_event(sponsor, target, msg);
-        let ep = self.reserve(&event)?;  // no Sponsor needed
         let first = self.e_first();
         self.ram_mut(ep).set_z(first);
         if !first.is_ram() {
             self.set_e_last(ep);
         }
         self.set_e_first(ep);
-        Ok(())
     }
     pub fn event_sponsor(&self, ep: Any) -> Any {
         self.mem(ep).t()
@@ -1281,7 +1278,7 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
         let spn = Quad::sponsor_t(ZERO, ZERO, ZERO, ZERO);
         self.alloc(&spn)
     }
-    fn new_event(&mut self, sponsor: Any, target: Any, msg: Any) -> Result<Any, Error> {
+    pub fn new_event(&mut self, sponsor: Any, target: Any, msg: Any) -> Result<Any, Error> {
         //assert!(self.typeq(ACTOR_T, target));
         if !self.typeq(ACTOR_T, target) {
             return Err(E_NOT_CAP);
@@ -1289,7 +1286,14 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
         let event = Quad::new_event(sponsor, target, msg);
         self.alloc(&event)
     }
-    fn new_cont(&mut self, ip: Any, sp: Any, ep: Any) -> Result<Any, Error> {
+    pub fn reserve_event(&mut self, sponsor: Any, target: Any, msg: Any) -> Result<Any, Error> {
+        if !self.typeq(ACTOR_T, target) {
+            return Err(E_NOT_CAP);
+        }
+        let event = Quad::new_event(sponsor, target, msg);
+        self.reserve(&event)  // no Sponsor needed
+    }
+    fn reserve_cont(&mut self, ip: Any, sp: Any, ep: Any) -> Result<Any, Error> {
         let cont = Quad::new_cont(ip, sp, ep);
         self.reserve(&cont)  // no Sponsor needed
     }
@@ -1526,6 +1530,12 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
         ptr
     }
 
+    pub fn reserve_proxy(&mut self, device: Any, handle: Any) -> Result<Any, Error> {
+        let proxy = Quad::proxy_t(device, handle);
+        let ptr = self.reserve(&proxy)?;
+        let cap = self.ptr_to_cap(ptr);
+        Ok(cap)
+    }
     pub fn reserve_stub(&mut self, device: Any, target: Any) -> Result<Any, Error> {
         if !device.is_cap() {
             return Err(E_NOT_CAP);
@@ -2332,7 +2342,8 @@ pub const COUNT_TO: Any = Any { raw: COUNT_TO_OFS as Raw };
         let boot_beh = load_std(&mut core);
         let boot_ptr = core.reserve(&Quad::new_actor(boot_beh, NIL)).unwrap();
         let a_boot = core.ptr_to_cap(boot_ptr);
-        core.event_inject(SPONSOR, a_boot, UNDEF).unwrap();
+        let evt = core.reserve_event(SPONSOR, a_boot, UNDEF);
+        core.event_inject(evt.unwrap());
         let sig = core.run_loop(0);
         assert_eq!(ZERO, sig);
     }
@@ -2343,7 +2354,8 @@ pub const COUNT_TO: Any = Any { raw: COUNT_TO_OFS as Raw };
         let boot_beh = load_fib_test(&mut core);
         let boot_ptr = core.reserve(&Quad::new_actor(boot_beh, NIL)).unwrap();
         let a_boot = core.ptr_to_cap(boot_ptr);
-        core.event_inject(SPONSOR, a_boot, UNDEF).unwrap();
+        let evt = core.reserve_event(SPONSOR, a_boot, UNDEF);
+        core.event_inject(evt.unwrap());
         core.gc_collect();
         let sig = core.run_loop(1024);
         assert_eq!(ZERO, sig);
@@ -2355,7 +2367,8 @@ pub const COUNT_TO: Any = Any { raw: COUNT_TO_OFS as Raw };
         let boot_beh = load_dict_test(&mut core);
         let boot_ptr = core.reserve(&Quad::new_actor(boot_beh, NIL)).unwrap();
         let a_boot = core.ptr_to_cap(boot_ptr);
-        core.event_inject(SPONSOR, a_boot, UNDEF).unwrap();
+        let evt = core.reserve_event(SPONSOR, a_boot, UNDEF);
+        core.event_inject(evt.unwrap());
         let sig = core.run_loop(1024);
         assert_eq!(ZERO, sig);
     }
@@ -2368,7 +2381,8 @@ pub const COUNT_TO: Any = Any { raw: COUNT_TO_OFS as Raw };
         let a_boot = core.ptr_to_cap(boot_ptr);
         let msg = core.reserve(&Quad::pair_t(UNIT, NIL)).unwrap();
         let msg = core.reserve(&Quad::pair_t(a_boot, msg)).unwrap();
-        core.event_inject(SPONSOR, a_boot, msg).unwrap();
+        let evt = core.reserve_event(SPONSOR, a_boot, msg);
+        core.event_inject(evt.unwrap());
         let sig = core.run_loop(1024);
         assert_eq!(ZERO, sig);
     }
@@ -2379,7 +2393,8 @@ pub const COUNT_TO: Any = Any { raw: COUNT_TO_OFS as Raw };
         let boot_beh = load_device_test(&mut core);
         let boot_ptr = core.reserve(&Quad::new_actor(boot_beh, NIL)).unwrap();
         let a_boot = core.ptr_to_cap(boot_ptr);
-        core.event_inject(SPONSOR, a_boot, NIL).unwrap();
+        let evt = core.reserve_event(SPONSOR, a_boot, NIL);
+        core.event_inject(evt.unwrap());
         let sig = core.run_loop(1024);
         assert_eq!(ZERO, sig);
     }
@@ -2393,7 +2408,8 @@ pub const COUNT_TO: Any = Any { raw: COUNT_TO_OFS as Raw };
         let boot_beh = load_fib_test(&mut core);
         let boot_ptr = core.reserve(&Quad::new_actor(boot_beh, NIL)).unwrap();
         let a_boot = core.ptr_to_cap(boot_ptr);
-        core.event_inject(SPONSOR, a_boot, UNDEF).unwrap();
+        let evt = core.reserve_event(SPONSOR, a_boot, UNDEF);
+        core.event_inject(evt.unwrap());
         core.set_sponsor_memory(SPONSOR, PLUS_3);
         core.set_sponsor_events(SPONSOR, PLUS_1);
         core.set_sponsor_cycles(SPONSOR, PLUS_8);

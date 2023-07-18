@@ -1175,10 +1175,10 @@ function make_core(
 // Inject the boot event (with a message holding the capabilities) to the front
 // of the event queue.
 
-        h_event_inject(
-            u_ramptr(SPONSOR_OFS),
-            u_ptr_to_cap(actor),
-            boot_caps_dict.reduce(function (dict, [integer, value_raw]) {
+        const evt = h_reserve_ram({
+            t: u_ramptr(SPONSOR_OFS),
+            x: u_ptr_to_cap(actor),
+            y: boot_caps_dict.reduce(function (dict, [integer, value_raw]) {
                 return h_reserve_ram({
                     t: DICT_T,
                     x: u_fixnum(integer),
@@ -1186,7 +1186,8 @@ function make_core(
                     z: dict
                 });
             }, NIL_RAW)
-        );
+        });
+        h_event_inject(evt);
     }
 
     function h_snapshot() {

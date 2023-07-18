@@ -33,9 +33,8 @@ function refill_all(spn) {
 }
 function ufork_run() {
     const spn = core.u_ramptr(ufork.SPONSOR_OFS);
-    //refill_all(spn);  // pre-load root-sponsor with resources
-    // run until there is no more work, or an error occurs
-    const sig = core.h_run_loop(0);
+    refill_all(spn);  // pre-load root-sponsor with resources
+    const sig = core.h_run_loop(0);  // run until there is no more work, or an error occurs
     if (core.u_is_fix(sig)) {
         const err = core.u_fix_to_i32(sig);
         const msg = core.u_fault_msg(err);
@@ -58,8 +57,7 @@ function ufork_run() {
         core.u_write_quad(spn, sponsor);
         console.log("refilled:", core.u_disasm(spn));
     }
-    // run again on a subsequent turn
-    setTimeout(function wakeup() {
+    setTimeout(function wakeup() {  // run again on a subsequent turn
         console.log("RUN:", core.u_print(sig));
         ufork_run();
     }, 0);

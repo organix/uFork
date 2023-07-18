@@ -43,12 +43,8 @@ function io_device(core, on_stdout) {
     function poll_stdin() {  // when the buffer state changes, check for stdin listener
         if (stdin_stub !== undefined && stdin_ready()) {
             const char = read_stdin();
-            const quad = core.u_read_quad(stdin_stub);
-            const event = core.u_read_quad(quad.y);
-            const sponsor = event.t;
-            const target = event.x;
             if (core.u_trace !== undefined) {
-                core.u_trace("READ:", core.u_print(char), "=", String.fromCodePoint([code]));
+                core.u_trace("READ:", core.u_print(char));
             }
             const message = core.h_reserve_ram({  // (char)
                 t: ufork.PAIR_T,
@@ -56,7 +52,12 @@ function io_device(core, on_stdout) {
                 y: ufork.NIL_RAW,
                 z: ufork.UNDEF_RAW
             });
-            core.h_event_inject(sponsor, target, message);
+            const quad = core.u_read_quad(stdin_stub);
+            const evt = quad.y;  // stub carries pre-allocated event
+            const event = core.u_read_quad(evt);
+            event.y = message;  // set message field in event
+            core.u_write_quad(evt, event);
+            core.h_event_inject(evt);
             core.h_release_stub(stdin_stub);
             stdin_stub = undefined;
             core.h_wakeup(ufork.IO_DEV_OFS);

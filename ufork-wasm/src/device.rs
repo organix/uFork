@@ -85,7 +85,8 @@ impl Device for ClockDevice {
         let sponsor = event.t();
         let cust = event.y();  // cust
         let now = self.read_clock();
-        core.event_inject(sponsor, cust, now)?;
+        let evt = core.reserve_event(sponsor, cust, now)?;
+        core.event_inject(evt);
         Ok(())  // event handled.
     }
 }
@@ -191,14 +192,14 @@ impl Device for IoDevice {
             let data = core.nth(msg, PLUS_3);
             if data == UNDEF {  // (to_cancel callback)
                 // read request
-                let delayed = Quad::new_event(sponsor, callback, UNDEF);
-                let ptr = core.reserve(&delayed)?;
-                let stub = core.reserve_stub(dev, ptr)?;
+                let evt = core.reserve_event(sponsor, callback, UNDEF)?;
+                let stub = core.reserve_stub(dev, evt)?;
                 let char = self.read(stub);
                 if char.is_fix() {
                     // if `read` was synchronous, reply immediately
                     let result = core.reserve(&Quad::pair_t(char, NIL))?;  // (char)
-                    core.event_inject(sponsor, callback, result)?;
+                    core.ram_mut(evt).set_y(result);  // msg = result
+                    core.event_inject(evt);
                     core.release_stub(stub);
                 }
             } else if data.is_fix() {  // (to_cancel callback fixnum)
@@ -206,7 +207,8 @@ impl Device for IoDevice {
                 self.write(data);
                 // in the current implementation, `write` is synchronous, so we reply immediately
                 let result = core.reserve(&Quad::pair_t(UNIT, NIL))?;  // (#unit)
-                core.event_inject(sponsor, callback, result)?;
+                let evt = core.reserve_event(sponsor, callback, result)?;
+                core.event_inject(evt);
             }
         }
         // NOTE: unrecognized messages may be ignored
@@ -429,13 +431,16 @@ impl Device for BlobDevice {
             let val: Any = core.nth(msg, PLUS_3);
             if ofs == UNDEF {  // size request
                 let size = blob_size(core, handle)?;
-                core.event_inject(sponsor, cust, size)?;
+                let evt = core.reserve_event(sponsor, cust, size)?;
+                core.event_inject(evt);
             } else if val == UNDEF {  // read request
                 let data = blob_read(core, handle, ofs)?;
-                core.event_inject(sponsor, cust, data)?;
+                let evt = core.reserve_event(sponsor, cust, data)?;
+                core.event_inject(evt);
             } else {  // write request
                 let unit = blob_write(core, handle, ofs, val)?;
-                core.event_inject(sponsor, cust, unit)?;
+                let evt = core.reserve_event(sponsor, cust, unit)?;
+                core.event_inject(evt);
             }
         } else {
             // request to allocator
@@ -443,10 +448,9 @@ impl Device for BlobDevice {
             let cust = core.nth(msg, PLUS_1);
             let size = core.nth(msg, PLUS_2);
             let handle = blob_reserve(core, size)?;
-            let proxy = Quad::proxy_t(target, handle);
-            let ptr = core.reserve(&proxy)?;  // no Sponsor needed
-            let cap = core.ptr_to_cap(ptr);
-            core.event_inject(sponsor, cust, cap)?;
+            let proxy = core.reserve_proxy(target, handle)?;
+            let evt = core.reserve_event(sponsor, cust, proxy)?;
+            core.event_inject(evt);
         }
         Ok(())  // event handled.
     }
@@ -535,10 +539,9 @@ impl Device for TimerDevice {
                 let stub = core.reserve_stub(dev, ptr)?;
                 self.start_timer(delay, stub);
                 if to_cancel.is_cap() {
-                    let proxy = Quad::proxy_t(dev, stub);
-                    let ptr = core.reserve(&proxy)?;
-                    let cap = core.ptr_to_cap(ptr);
-                    core.event_inject(sponsor, to_cancel, cap)?;
+                    let proxy = core.reserve_proxy(dev, stub)?;
+                    let evt = core.reserve_event(sponsor, to_cancel, proxy)?;
+                    core.event_inject(evt);
                 }
             }
         }

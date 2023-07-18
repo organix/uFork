@@ -17,12 +17,10 @@ impl Host {
         self.core.run_loop(limit).raw()
     }
 
-    pub fn event_inject(&mut self, sponsor: Raw, target: Raw, msg: Raw) {
-        self.core.event_inject(
-            Any::new(sponsor),
-            Any::new(target),
-            Any::new(msg)
-        ).unwrap()
+    pub fn event_inject(&mut self, evt: Raw) {
+        let ep = Any::new(evt);
+        assert!(ep.is_ram());
+        self.core.event_inject(ep);
     }
     pub fn actor_revert(&mut self) -> bool {
         self.core.actor_revert()

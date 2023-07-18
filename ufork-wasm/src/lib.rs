@@ -110,9 +110,9 @@ pub fn h_run_loop(limit: i32) -> Raw {
 }
 
 #[no_mangle]
-pub fn h_event_inject(sponsor: Raw, target: Raw, msg: Raw) {
+pub fn h_event_inject(evt: Raw) {
     unsafe {
-        the_host().borrow_mut().event_inject(sponsor, target, msg)
+        the_host().borrow_mut().event_inject(evt)
     }
 }
 
