@@ -35,7 +35,6 @@ function timer_device(core) {
                 if (id !== undefined) {
                     clearTimeout(id);
                     delete timer_map[stub];
-                    setTimeout(core.h_release_stub, 0, stub);
                     if (core.u_trace !== undefined) {
                         core.u_trace("host_stop_timer", id);
                     }

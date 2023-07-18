@@ -496,7 +496,7 @@ impl Device for TimerDevice {
             // stop timer request
             let handle = myself.y();
             self.stop_timer(handle);
-            // FIXME: remove from JS and `core.release_stub(handle);`
+            core.release_stub(handle);
         } else {
             // start timer request
             let arg_1 = core.nth(msg, PLUS_1);
