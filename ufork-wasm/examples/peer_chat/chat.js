@@ -23,18 +23,17 @@ let core;  // uFork wasm processor core
 let awp_store; // mutable AWP store object
 let on_stdin;
 
-function refill_all(sponsor) {
-    // FIXME: by refilling all quotas, we're temporarily avoiding E_MEM_LIM and E_CPU_LIM
+function refill_all(spn) {
+    const sponsor = core.u_read_quad(spn);
     sponsor.t = core.u_fixnum(4096);  // memory
     sponsor.x = core.u_fixnum(256);  // events
     sponsor.y = core.u_fixnum(4096);  // cycles
+    core.u_write_quad(spn, sponsor);
+    console.log("filled:", core.u_disasm(spn));
 }
 function ufork_run() {
-    // pre-load root-sponsor will resources
     const spn = core.u_ramptr(ufork.SPONSOR_OFS);
-    const sponsor = core.u_read_quad(spn);
-    refill_all(sponsor);
-    core.u_write_quad(spn, sponsor);
+    //refill_all(spn);  // pre-load root-sponsor with resources
     // run until there is no more work, or an error occurs
     const sig = core.h_run_loop(0);
     if (core.u_is_fix(sig)) {
@@ -47,14 +46,11 @@ function ufork_run() {
             // processor idle
             return ufork.E_OK;
         } else if (err === ufork.E_MEM_LIM) {
-            //sponsor.t = core.u_fixnum(1024);
-            refill_all(sponsor);
+            sponsor.t = core.u_fixnum(256);
         } else if (err === ufork.E_MSG_LIM) {
-            //sponsor.x = core.u_fixnum(256);
-            refill_all(sponsor);
+            sponsor.x = core.u_fixnum(16);
         } else if (err === ufork.E_CPU_LIM) {
-            //sponsor.y = core.u_fixnum(4096);
-            refill_all(sponsor);
+            sponsor.y = core.u_fixnum(64);
         } else {
             // processor error
             return err;

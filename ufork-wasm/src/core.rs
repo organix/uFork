@@ -2394,16 +2394,17 @@ pub const COUNT_TO: Any = Any { raw: COUNT_TO_OFS as Raw };
         let boot_ptr = core.reserve(&Quad::new_actor(boot_beh, NIL)).unwrap();
         let a_boot = core.ptr_to_cap(boot_ptr);
         core.event_inject(SPONSOR, a_boot, UNDEF).unwrap();
-        let sponsor = core.ram_mut(SPONSOR);
-        *sponsor = Quad::untyped_t(PLUS_3, PLUS_1, PLUS_8, UNDEF);  // all quotas
+        core.set_sponsor_memory(SPONSOR, PLUS_3);
+        core.set_sponsor_events(SPONSOR, PLUS_1);
+        core.set_sponsor_cycles(SPONSOR, PLUS_8);
         let sig = core.run_loop(256);
         assert_eq!(OUT_OF_MEM, sig);
-        core.ram_mut(SPONSOR).set_t(PLUS_8);  // memory quota
-        core.ram_mut(SPONSOR).set_y(PLUS_2);  // cycle quota
+        core.set_sponsor_memory(SPONSOR, PLUS_8);
+        core.set_sponsor_cycles(SPONSOR, PLUS_2);
         let sig = core.run_loop(256);
         assert_eq!(OUT_OF_CPU, sig);
-        core.ram_mut(SPONSOR).set_t(PLUS_8);  // memory quota
-        core.ram_mut(SPONSOR).set_y(PLUS_8);  // cycle quota
+        core.set_sponsor_memory(SPONSOR, PLUS_8);
+        core.set_sponsor_cycles(SPONSOR, PLUS_8);
         let sig = core.run_loop(256);
         assert_eq!(OUT_OF_MSG, sig);
     }
