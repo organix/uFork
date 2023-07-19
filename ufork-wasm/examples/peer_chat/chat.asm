@@ -33,7 +33,7 @@ start:                  ; (debug_dev io_dev room_id) <- ()
     state 3             ; room_id
     state 1             ; room_id debug_dev
     state 3             ; room_id debug_dev room_id
-    if join host
+    if join host        ; room_id debug_dev
 
 ; For now, just send the room id to the debug device.
 
@@ -42,35 +42,6 @@ join:                   ; room_id debug_dev
 
 host:                   ; room_id debug_dev
     ref std.send_msg
-
-; One-at-a-time I/O means 5ms to read + 5ms to write
-; which gives a data-rate of 100 cps (visibly slow!).
-; If we can avoid idling the run-loop, it should be faster.
-
-echo:                   ; (io_dev debug_dev) <- result
-    msg -1              ; error
-    if_not echo_w       ; --
-    ref std.commit
-echo_w:
-    msg 1               ; char
-    my self             ; char callback=SELF
-    push #?             ; char callback to_cancel=#?
-    state 1             ; char callback to_cancel io_dev
-    send 3              ; --
-    state 0             ; (io_dev debug_dev)
-    push echo_r         ; (io_dev debug_dev) echo_r
-    beh -1              ; --
-    ref std.commit
-
-echo_r:                 ; (io_dev debug_dev) <- result
-    my self             ; callback=SELF
-    push #?             ; callback to_cancel=#?
-    state 1             ; callback to_cancel io_dev
-    send 2              ; --
-    state 0             ; (io_dev debug_dev)
-    push echo           ; (io_dev debug_dev) echo
-    beh -1              ; --
-    ref std.commit
 
 ; An infinite loop will consume cycles, but no memory or events
 
@@ -130,7 +101,7 @@ line_out:               ; (io_dev) <- result | line'
     ; distinguish result from line'
     msg 1               ; first
     eq #unit            ; first==#unit
-    if std.commit       ; unexpected result!
+    if std.commit       ; --  // unexpected result!
 
     ; extract char from line
     msg 0               ; line
@@ -146,7 +117,7 @@ line_snd:               ; line' char
     ; line empty?
     dup 1               ; line' line'
     deque empty         ; line' is_empty(line')
-    if_not line_rem
+    if_not line_rem     ; line'
 
     ; no more chars in line
     state 1             ; ... io_dev
@@ -154,7 +125,7 @@ line_snd:               ; line' char
     beh 1               ; --
     ref std.commit
 
-line_rem:
+line_rem:               ; line'
     ; chars remaining in line
     state 1             ; line' io_dev
     push line_buf       ; line' io_dev line_buf
@@ -174,15 +145,23 @@ line_buf:               ; (io_dev line) <- result | line'
     deque pop           ; line' char
     ref line_snd
 
-line_add:
-    ;; FIXME: implement additional buffered lines
+line_add:               ; --
+    ; additional buffered lines
+    deque new           ; lines
+    msg 0               ; lines line
+    deque put           ; lines'
+    my state            ; lines' line io_dev
+    push line_bufs      ; lines' line io_dev line_bufs
+    beh 3               ; --
     ref std.commit
 
-line_out_0:             ; (io_dev line lines) <- result | line'
+; Writing current line, one or more lines buffered.
+
+line_bufs:              ; (io_dev line lines) <- result | line'
     ; distinguish result from line'
     msg 1               ; first
     eq #unit            ; first==#unit
-    if line_chr
+    if line_chr         ; --
 
     ; add line' to lines
     state 3             ; lines
@@ -190,26 +169,48 @@ line_out_0:             ; (io_dev line lines) <- result | line'
     deque put           ; lines'
     state 2             ; lines' line
     state 1             ; lines' line io_dev
-    my beh              ; lines' line io_dev beh
+    push line_bufs      ; lines' line io_dev line_bufs
     beh 3               ; --
     ref std.commit
 
-line_chr:
+line_chr:               ; --
     ; extract char from line
-    state 3             ; lines
-    state 2             ; lines line
-    deque pop           ; lines line' char
+    state 2             ; line
+    deque pop           ; line char
 
     ; send char to output
-    msg 1               ; lines line' char
-    my self             ; lines line' char callback=SELF
-    push #?             ; lines line' char callback to_cancel=#?
-    state 1             ; lines line' char callback to_cancel io_dev
-    send 3              ; lines line'
+    my self             ; line char callback=SELF
+    push #?             ; line char callback to_cancel=#?
+    state 1             ; line char callback to_cancel io_dev
+    send 3              ; line
 
+    ; line empty?
+    dup 1               ; line line
+    deque empty         ; line is_empty(line)
+    if_not line_chrs    ; line
+
+    ; get next line
+    drop 1              ; --
+    state 3             ; lines
+    deque pop           ; lines line
+    pick 2              ; lines line lines
+    deque empty         ; lines line is_empty(lines)
+    if_not line_more    ; lines line
+
+    ; no more lines
+    state 1             ; lines line io_dev
+    push line_buf       ; lines line io_dev line_buf
+    beh 2               ; lines
+    ref std.commit
+
+line_chrs:              ; line
     ; update state
-    state 1             ; lines line' io_dev
-    my beh              ; lines line' io_dev beh
+    state 3             ; line lines
+    roll -2             ; lines line
+
+line_more:              ; lines line
+    state 1             ; lines line io_dev
+    push line_bufs      ; lines line io_dev line_bufs
     beh 3               ; --
     ref std.commit
 
