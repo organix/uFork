@@ -86,7 +86,7 @@ impl Device for ClockDevice {
         let cust = event.y();  // cust
         let now = self.read_clock();
         let evt = core.reserve_event(sponsor, cust, now)?;
-        core.event_inject(evt);
+        core.event_enqueue(evt);
         Ok(())  // event handled.
     }
 }
@@ -199,7 +199,7 @@ impl Device for IoDevice {
                     // if `read` was synchronous, reply immediately
                     let result = core.reserve(&Quad::pair_t(char, NIL))?;  // (char)
                     core.ram_mut(evt).set_y(result);  // msg = result
-                    core.event_inject(evt);
+                    core.event_enqueue(evt);
                     core.release_stub(stub);
                 }
             } else if data.is_fix() {  // (to_cancel callback fixnum)
@@ -208,7 +208,7 @@ impl Device for IoDevice {
                 // in the current implementation, `write` is synchronous, so we reply immediately
                 let result = core.reserve(&Quad::pair_t(UNIT, NIL))?;  // (#unit)
                 let evt = core.reserve_event(sponsor, callback, result)?;
-                core.event_inject(evt);
+                core.event_enqueue(evt);
             }
         }
         // NOTE: unrecognized messages may be ignored
@@ -432,15 +432,15 @@ impl Device for BlobDevice {
             if ofs == UNDEF {  // size request
                 let size = blob_size(core, handle)?;
                 let evt = core.reserve_event(sponsor, cust, size)?;
-                core.event_inject(evt);
+                core.event_enqueue(evt);
             } else if val == UNDEF {  // read request
                 let data = blob_read(core, handle, ofs)?;
                 let evt = core.reserve_event(sponsor, cust, data)?;
-                core.event_inject(evt);
+                core.event_enqueue(evt);
             } else {  // write request
                 let unit = blob_write(core, handle, ofs, val)?;
                 let evt = core.reserve_event(sponsor, cust, unit)?;
-                core.event_inject(evt);
+                core.event_enqueue(evt);
             }
         } else {
             // request to allocator
@@ -450,7 +450,7 @@ impl Device for BlobDevice {
             let handle = blob_reserve(core, size)?;
             let proxy = core.reserve_proxy(target, handle)?;
             let evt = core.reserve_event(sponsor, cust, proxy)?;
-            core.event_inject(evt);
+            core.event_enqueue(evt);
         }
         Ok(())  // event handled.
     }
@@ -541,7 +541,7 @@ impl Device for TimerDevice {
                 if to_cancel.is_cap() {
                     let proxy = core.reserve_proxy(dev, stub)?;
                     let evt = core.reserve_event(sponsor, to_cancel, proxy)?;
-                    core.event_inject(evt);
+                    core.event_enqueue(evt);
                 }
             }
         }

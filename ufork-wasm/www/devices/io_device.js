@@ -57,7 +57,7 @@ function io_device(core, on_stdout) {
             const event = core.u_read_quad(evt);
             event.y = message;  // set message field in event
             core.u_write_quad(evt, event);
-            core.h_event_inject(evt);
+            core.h_event_enqueue(evt);
             core.h_release_stub(stdin_stub);
             stdin_stub = undefined;
             core.h_wakeup(ufork.IO_DEV_OFS);

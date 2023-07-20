@@ -833,7 +833,7 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
         Ok(ip_)
     }
 
-    fn event_enqueue(&mut self, ep: Any) {
+    pub fn event_enqueue(&mut self, ep: Any) {
         // add event to the back of the queue
         self.ram_mut(ep).set_z(NIL);
         if !self.e_first().is_ram() {
@@ -858,6 +858,7 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
             None
         }
     }
+    /*
     pub fn event_inject(&mut self, ep: Any) {
         // add event to the front of the queue (e.g.: for interrupts)
         let first = self.e_first();
@@ -867,6 +868,7 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
         }
         self.set_e_first(ep);
     }
+    */
     pub fn event_sponsor(&self, ep: Any) -> Any {
         self.mem(ep).t()
     }
@@ -2343,7 +2345,7 @@ pub const COUNT_TO: Any = Any { raw: COUNT_TO_OFS as Raw };
         let boot_ptr = core.reserve(&Quad::new_actor(boot_beh, NIL)).unwrap();
         let a_boot = core.ptr_to_cap(boot_ptr);
         let evt = core.reserve_event(SPONSOR, a_boot, UNDEF);
-        core.event_inject(evt.unwrap());
+        core.event_enqueue(evt.unwrap());
         let sig = core.run_loop(0);
         assert_eq!(ZERO, sig);
     }
@@ -2355,7 +2357,7 @@ pub const COUNT_TO: Any = Any { raw: COUNT_TO_OFS as Raw };
         let boot_ptr = core.reserve(&Quad::new_actor(boot_beh, NIL)).unwrap();
         let a_boot = core.ptr_to_cap(boot_ptr);
         let evt = core.reserve_event(SPONSOR, a_boot, UNDEF);
-        core.event_inject(evt.unwrap());
+        core.event_enqueue(evt.unwrap());
         core.gc_collect();
         let sig = core.run_loop(1024);
         assert_eq!(ZERO, sig);
@@ -2368,7 +2370,7 @@ pub const COUNT_TO: Any = Any { raw: COUNT_TO_OFS as Raw };
         let boot_ptr = core.reserve(&Quad::new_actor(boot_beh, NIL)).unwrap();
         let a_boot = core.ptr_to_cap(boot_ptr);
         let evt = core.reserve_event(SPONSOR, a_boot, UNDEF);
-        core.event_inject(evt.unwrap());
+        core.event_enqueue(evt.unwrap());
         let sig = core.run_loop(1024);
         assert_eq!(ZERO, sig);
     }
@@ -2382,7 +2384,7 @@ pub const COUNT_TO: Any = Any { raw: COUNT_TO_OFS as Raw };
         let msg = core.reserve(&Quad::pair_t(UNIT, NIL)).unwrap();
         let msg = core.reserve(&Quad::pair_t(a_boot, msg)).unwrap();
         let evt = core.reserve_event(SPONSOR, a_boot, msg);
-        core.event_inject(evt.unwrap());
+        core.event_enqueue(evt.unwrap());
         let sig = core.run_loop(1024);
         assert_eq!(ZERO, sig);
     }
@@ -2394,7 +2396,7 @@ pub const COUNT_TO: Any = Any { raw: COUNT_TO_OFS as Raw };
         let boot_ptr = core.reserve(&Quad::new_actor(boot_beh, NIL)).unwrap();
         let a_boot = core.ptr_to_cap(boot_ptr);
         let evt = core.reserve_event(SPONSOR, a_boot, NIL);
-        core.event_inject(evt.unwrap());
+        core.event_enqueue(evt.unwrap());
         let sig = core.run_loop(1024);
         assert_eq!(ZERO, sig);
     }
@@ -2409,7 +2411,7 @@ pub const COUNT_TO: Any = Any { raw: COUNT_TO_OFS as Raw };
         let boot_ptr = core.reserve(&Quad::new_actor(boot_beh, NIL)).unwrap();
         let a_boot = core.ptr_to_cap(boot_ptr);
         let evt = core.reserve_event(SPONSOR, a_boot, UNDEF);
-        core.event_inject(evt.unwrap());
+        core.event_enqueue(evt.unwrap());
         core.set_sponsor_memory(SPONSOR, PLUS_3);
         core.set_sponsor_events(SPONSOR, PLUS_1);
         core.set_sponsor_cycles(SPONSOR, PLUS_8);

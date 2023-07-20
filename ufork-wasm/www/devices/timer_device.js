@@ -19,7 +19,7 @@ function timer_device(core) {
                     timer_map[stub] = setTimeout(function () {
                         delete timer_map[stub];
                         core.h_release_stub(stub);
-                        core.h_event_inject(evt);
+                        core.h_event_enqueue(evt);
                         core.h_wakeup(ufork.TIMER_DEV_OFS);
                     }, core.u_fix_to_i32(delay));
                     if (core.u_trace !== undefined) {

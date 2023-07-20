@@ -372,7 +372,7 @@ function make_core(
 
     const h_run_loop = wasm_mutex_call(wasm_exports.h_run_loop);
     const h_step = wasm_mutex_call(wasm_exports.h_step);
-    const h_event_inject = wasm_mutex_call(wasm_exports.h_event_inject);
+    const h_event_enqueue = wasm_mutex_call(wasm_exports.h_event_enqueue);
     const h_revert = wasm_mutex_call(wasm_exports.h_revert);
     const h_gc_run = wasm_mutex_call(wasm_exports.h_gc_run);
     //const h_rom_buffer = wasm_mutex_call(wasm_exports.h_rom_buffer);
@@ -1187,7 +1187,7 @@ function make_core(
                 });
             }, NIL_RAW)
         });
-        h_event_inject(evt);
+        h_event_enqueue(evt);
     }
 
     function h_snapshot() {
@@ -1325,7 +1325,7 @@ function make_core(
         h_boot,
         h_car,
         h_cdr,
-        h_event_inject,
+        h_event_enqueue,
         h_gc_color,
         h_gc_run,
         h_gc_state,
