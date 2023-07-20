@@ -1,8 +1,8 @@
 # Requestors
 
 Actors with the following message signature are called "requestors". Requestors
-support cancellation and failure notification. They take an optional 'value'.
-The message sent to a requestor is a "request".
+support cancellation and failure notification. They take an optional
+input 'value'. The message sent to a requestor is a "request".
 
     (to_cancel callback . value) -> requestor
 
@@ -17,14 +17,14 @@ the 'reason' for the cancellation, and can be any value.
 
     reason -> cancel
 
-The 'callback' actor receives a pair when the request completes (which could be
-never). The value of the tail indicates success or failure.
+The 'callback' actor is sent a "result" when the request completes (which could
+be never). The result is a pair whose tail indicates success or failure.
 
-On success, the tail of the pair is falsy and the head of the pair is the
-resulting value.
+On success, the result's tail is falsey and its head is the output value.
 
     (value) -> callback
 
-On failure, the tail is the reason and must be truthy. The head is #?.
+On failure, the result's tail is the reason and must not be falsey. The head
+is #?.
 
     (#? . reason) -> callback
