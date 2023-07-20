@@ -5,7 +5,7 @@
     dev: "../dev.asm"
 
 beh:
-thru_beh:                   ; () <- (to_cancel callback . value)
+thru_beh:                   ; () <- request=(to_cancel callback . value)
     msg -2                  ; value
     msg 2                   ; value callback
     send 1                  ; --
@@ -21,7 +21,7 @@ boot:                       ; () <- {caps}
     push #?                 ; 42 debug_dev to_cancel=#?
     pair 2                  ; request=(#? debug_dev . 42)
     push thru_beh           ; request thru_beh
-    new 0                   ; request thru
+    new 0                   ; request thru=thru_beh.()
     ref std.send_msg
 
 .export

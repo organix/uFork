@@ -27,14 +27,14 @@ boot:                       ; () <- {caps}
     push #?                 ; 42 debug_dev to_cancel=#?
     pair 2                  ; request=(#? debug_dev . 42)
     push thru.beh           ; request thru_beh
-    new 0                   ; request thru
+    new 0                   ; request thru=thru_beh.()
     msg 0                   ; request thru {caps}
     push dev.timer_key      ; request thru {caps} timer_key
     dict get                ; request thru timer_dev
     push 1000               ; request thru timer_dev delay=1000ms
     roll 3                  ; request timer_dev delay thru
     push delay_beh          ; request timer_dev delay thru delay_beh
-    new 3                   ; request delay
+    new 3                   ; request delay=delay_beh.(thru delay timer_dev)
     ref std.send_msg
 
 .export
