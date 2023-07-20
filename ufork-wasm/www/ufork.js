@@ -1158,7 +1158,7 @@ function make_core(
         return u_print(raw);
     }
 
-    function h_boot(instr_ptr) {
+    function h_boot(instr_ptr, state_ptr = NIL_RAW) {
         if (instr_ptr === undefined || !u_is_ptr(instr_ptr)) {
             throw new Error("Not an instruction: " + u_pprint(instr_ptr));
         }
@@ -1168,7 +1168,7 @@ function make_core(
         const actor = h_reserve_ram({
             t: ACTOR_T,
             x: instr_ptr,
-            y: NIL_RAW,
+            y: state_ptr,
             z: UNDEF_RAW
         });
 
