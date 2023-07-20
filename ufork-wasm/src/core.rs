@@ -620,7 +620,7 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
             },
             VM_IF => {
                 let b = self.stack_pop();
-                if falsey(b) { kip } else { imm }
+                if falsy(b) { kip } else { imm }
             },
             VM_MSG => {
                 let n = imm.get_fix()?;
@@ -1971,7 +1971,7 @@ fn u16_msb(nat: usize) -> u8 {
     ((nat >> 8) & 0xFF) as u8
 }
 
-fn falsey(v: Any) -> bool {
+fn falsy(v: Any) -> bool {
     v == FALSE || v == UNDEF || v == NIL || v == ZERO
 }
 

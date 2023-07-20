@@ -20,11 +20,11 @@ the 'reason' for the cancellation, and can be any value.
 The 'callback' actor is sent a "result" when the request completes (which could
 be never). The result is a pair whose tail indicates success or failure.
 
-On success, the result's tail is falsey and its head is the output value.
+On success, the result's tail is falsy and its head is the output value.
 
     (value) -> callback
 
-On failure, the result's tail is the reason and must not be falsey. The head
+On failure, the result's tail is the reason and must not be falsy. The head
 is #?.
 
     (#? . reason) -> callback
