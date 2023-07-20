@@ -62,6 +62,15 @@
       (#t
         (ack (- n 1) (ack n (- m 1)))) )))
 
+;; TAKeuchi function
+(define tak
+  (lambda (x y z)
+    (if (< y z)
+      (tak (tak (- x 1) y z)
+           (tak (- y 1) z x)
+           (tak (- z 1) x y))
+      z)))
+
 (define member?
   (lambda (x xs)
     (if (pair? xs)
