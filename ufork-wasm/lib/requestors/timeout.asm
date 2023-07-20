@@ -1,6 +1,6 @@
 ; The "timeout" requestor places a time limit on another requestor.
-; Upon timeout, the callback is sent a failed result like (#? . reason), where
-; the reason is the timeout requestor itself.
+; Upon timeout, the callback is sent a failed result like (#? . error), where
+; the error is the timeout requestor itself.
 
 ; The 'timer_dev' is the timer device capability, and the 'time_limit' is the
 ; time allowed in milliseconds.
@@ -54,9 +54,9 @@ race:
     pair 2                  ; t␘ r␘ callback rreq=(r␘ rcb . value)
     state 1                 ; t␘ r␘ callback rreq requestor
     send -1                 ; t␘ r␘ callback
-    my self                 ; t␘ r␘ callback reason=self
-    push #?                 ; t␘ r␘ callback reason #?
-    pair 1                  ; t␘ r␘ callback result=(#? . reason)
+    my self                 ; t␘ r␘ callback error=self
+    push #?                 ; t␘ r␘ callback error #?
+    pair 1                  ; t␘ r␘ callback result=(#? . error)
     state 2                 ; t␘ r␘ callback result time_limit
     pick 4                  ; t␘ r␘ callback result time_limit r␘
     pick 4                  ; t␘ r␘ callback result time_limit r␘ callback
@@ -80,11 +80,11 @@ cancel_all_beh:             ; cancellers <- reason
     beh -1                  ; --
     ref std.commit
 
-win_beh:                    ; (callback loser␘) <- (value . reason)
+win_beh:                    ; (callback loser␘) <- (value . error)
     state 2                 ; loser␘
     send 0                  ; --
-    msg 0                   ; (value . reason)
-    state 1                 ; (value . reason) callback
+    msg 0                   ; (value . error)
+    state 1                 ; (value . error) callback
     ref std.send_msg
 
 ; Test suite

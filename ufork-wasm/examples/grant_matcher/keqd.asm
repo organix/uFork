@@ -22,8 +22,8 @@ boot:                       ; () <- {caps}
     send 5                  ; --
     ref std.commit
 
-listen_cb_beh:              ; () <- (result . reason)
-    msg -1                  ; reason
+listen_cb_beh:              ; () <- (result . error)
+    msg -1                  ; error
     is_eq #nil              ; --
     ref std.commit
 

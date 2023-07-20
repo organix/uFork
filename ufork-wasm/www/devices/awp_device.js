@@ -580,7 +580,7 @@ function awp_device(
 
         function resolve(reply) {
 
-// (stop . reason) -> listen_callback
+// (stop . error) -> listen_callback
 
             core.h_event_enqueue(core.h_reserve_ram({
                 t: sponsor,

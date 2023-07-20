@@ -74,8 +74,8 @@ listen_svc_beh:             ; awp_dev <- (cust store . greeter)
     send 5                  ; --
     ref std.commit
 
-listen_cb_beh:              ; cust <- (stop . reason)
-    msg -1                  ; reason
+listen_cb_beh:              ; cust <- (stop . error)
+    msg -1                  ; error
     is_eq #nil              ; --
     msg 1                   ; stop
     state 0                 ; stop cust
@@ -141,8 +141,8 @@ KEQD_greeter_beh:           ; deposit <- (cancel_customer callback petname)
     send 1                  ; --
     ref std.commit
 
-intro_cb_beh:               ; cust <- (greeting . reason)
-    msg -1                  ; reason
+intro_cb_beh:               ; cust <- (greeting . error)
+    msg -1                  ; error
     is_eq #nil              ; --
     msg 1                   ; greeting
     state 0                 ; greeting cust

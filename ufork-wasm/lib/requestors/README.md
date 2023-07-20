@@ -24,7 +24,7 @@ On success, the result's tail is falsy and its head is the output value.
 
     (value) -> callback
 
-On failure, the result's tail is the reason and must not be falsy. The head
+On failure, the result's tail is the error and must not be falsy. The head
 is #?.
 
-    (#? . reason) -> callback
+    (#? . error) -> callback
