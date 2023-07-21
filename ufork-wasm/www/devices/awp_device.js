@@ -275,7 +275,7 @@ function awp_device(
 
 // (cancel_customer greeting_callback petname . hello) -> greeter
 
-            const evt = core.h_reserve_ram({
+            core.h_event_enqueue(core.h_reserve_ram({
                 t: sponsor,
                 x: greeter,
                 y: core.h_reserve_ram({
@@ -291,8 +291,7 @@ function awp_device(
                         })
                     })
                 })
-            });
-            core.h_event_enqueue(evt);
+            }));
             return resume();
         }
 
@@ -300,12 +299,11 @@ function awp_device(
 
         const stub = stubs[hex.encode(frame.target)];
         if (stub !== undefined) {
-            const evt = core.h_reserve_ram({
+            core.h_event_enqueue(core.h_reserve_ram({
                 t: sponsor,
                 x: core.u_read_quad(stub).y,
                 y: unmarshall(store, frame.message)
-            });
-            core.h_event_enqueue(evt);
+            }));
             return resume();
         }
         if (core.u_warn !== undefined) {
@@ -530,7 +528,7 @@ function awp_device(
                 if (core.u_debug !== undefined) {
                     core.u_debug("intro fail");
                 }
-                const evt = core.h_reserve_ram({
+                core.h_event_enqueue(core.h_reserve_ram({
                     t: sponsor,
                     x: callback_fwd,
                     y: core.h_reserve_ram({
@@ -538,8 +536,7 @@ function awp_device(
                         x: ufork.UNDEF_RAW,
                         y: core.u_fixnum(-1) // TODO error codes
                     })
-                });
-                core.h_event_enqueue(evt);
+                }));
 
 // We could release the callback's stub here, but it becomes a sink once it
 // forwards the reply so we can safely leave it for the distributed GC to clean
@@ -585,12 +582,11 @@ function awp_device(
 
 // (stop . reason) -> listen_callback
 
-            const evt = core.h_reserve_ram({
+            core.h_event_enqueue(core.h_reserve_ram({
                 t: sponsor,
                 x: listen_callback,
                 y: reply
-            });
-            core.h_event_enqueue(evt);
+            }));
             release_event_stub();
             return resume();
         }
