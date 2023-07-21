@@ -24,13 +24,14 @@ function stringify(value) {
     return hex.encode(OED.encode(value));
 }
 
-function awp_device(
+function awp_device({
     core,
     make_dynamic_device,
     transport,
+    on_store_change,
     stores = [],
     webcrypto = crypto // Node.js does not have a 'crypto' global
-) {
+}) {
     const sponsor = core.u_ramptr(ufork.SPONSOR_OFS);
 
     let dynamic_device;
@@ -88,6 +89,9 @@ function awp_device(
         if (petname === -1) {
             petname = store.acquaintances.length;
             store.acquaintances.push(acquaintance);
+            if (on_store_change !== undefined) {
+                on_store_change(store);
+            }
         }
         return petname;
     }
@@ -823,7 +827,7 @@ function awp_device(
 //debug             const dana = {
 //debug                 name: transport.identity_to_name(dana_identity)
 //debug             };
-//debug             const store = [
+//debug             const stores = [
 //debug                 {
 //debug                     identity: alice_identity,
 //debug                     acquaintances: [alice, bob, carol]
@@ -844,13 +848,13 @@ function awp_device(
 //debug                 }
 //debug             ];
 //debug             const make_dynamic_device = host_device(core);
-//debug             dispose = awp_device(
+//debug             dispose = awp_device({
 //debug                 core,
 //debug                 make_dynamic_device,
 //debug                 transport,
-//debug                 store,
+//debug                 stores,
 //debug                 webcrypto
-//debug             );
+//debug             });
 //debug             core.h_boot(asm_module.boot);
 //debug             console.log("IDLE:", core.u_fault_msg(core.h_run_loop()));
 //debug             return true;

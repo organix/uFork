@@ -21,7 +21,6 @@ import chat_db from "./chat_db.js";
 const room_key = 1000;
 
 let core;  // uFork wasm processor core
-let awp_store; // mutable AWP store object
 let on_stdin;
 
 function refill_all(spn) {
@@ -122,7 +121,7 @@ function set_url_acquaintance(acquaintance) {
     location.hash = "#" + encode_acquaintance(acquaintance);
 }
 
-function room_petname() {
+function room_petname(awp_store) {
     const acquaintance = get_url_acquaintance();
     if (acquaintance === undefined) {
 
@@ -144,12 +143,12 @@ function room_petname() {
     return petname;
 }
 
-function boot(entrypoint) {
+function boot(entrypoint, awp_store) {
 
 // Get the integer petname of the acquaintance who is hosting the room, and
 // provide it to the uFork program as a boot capability.
 
-    const petname = room_petname();
+    const petname = room_petname(awp_store);
     core.h_install([[room_key, core.u_fixnum(petname)]]);
     core.h_boot(entrypoint);
     return ufork_run();
@@ -181,9 +180,23 @@ parseq.sequence([
         on_stdin = io_device(core, on_stdout);
         blob_device(core);
         timer_device(core);
-        awp_store = the_awp_store;
         const make_dynamic_device = host_device(core);
-        awp_device(core, make_dynamic_device, transport, the_awp_store);
-        return boot(asm_module.boot);
+        awp_device({
+            core,
+            make_dynamic_device,
+            transport,
+            stores: [the_awp_store],
+            on_store_change(store) {
+                chat_db.set_store()(
+                    function callback(value, reason) {
+                        if (value === undefined) {
+                            throw reason;
+                        }
+                    },
+                    store
+                );
+            }
+        });
+        return boot(asm_module.boot, the_awp_store);
     })
 ])(console.log);
