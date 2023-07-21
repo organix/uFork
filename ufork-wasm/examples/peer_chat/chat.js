@@ -10,6 +10,7 @@ import io_device from "../../www/devices/io_device.js";
 import blob_device from "../../www/devices/blob_device.js";
 import timer_device from "../../www/devices/timer_device.js";
 import awp_device from "../../www/devices/awp_device.js";
+import host_device from "../../www/devices/host_device.js";
 import dummy_signaller from "../../www/transports/dummy_signaller.js";
 import webrtc_transport from "../../www/transports/webrtc_transport.js";
 import parseq from "../../www/parseq.js";
@@ -181,7 +182,8 @@ parseq.sequence([
         blob_device(core);
         timer_device(core);
         awp_store = the_awp_store;
-        awp_device(core, transport, the_awp_store);
+        const make_dynamic_device = host_device(core);
+        awp_device(core, make_dynamic_device, transport, the_awp_store);
         return boot(asm_module.boot);
     })
 ])(console.log);

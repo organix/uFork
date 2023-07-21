@@ -6,7 +6,7 @@
 
 // TODO:
 // - distributed garbage collection
-// - swiss interning
+// - acquaintance interning
 // - cancel/stop capabilities
 
 /*jslint browser, null, devel, long */
@@ -15,6 +15,8 @@ import ufork from "../ufork.js";
 import OED from "../oed.js";
 import hex from "../hex.js";
 import dummy_transport from "../transports/dummy_transport.js";
+
+const awp_key = 100; // from dev.asm
 
 function stringify(value) {
 
@@ -25,13 +27,14 @@ function stringify(value) {
 
 function awp_device(
     core,
+    make_dynamic_device,
     transport = dummy_transport(),
     stores = [],
     webcrypto = crypto // Node.js does not have a 'crypto' global
 ) {
     const sponsor = core.u_ramptr(ufork.SPONSOR_OFS);
-    const device = core.u_ptr_to_cap(core.u_ramptr(ufork.AWP_DEV_OFS));
 
+    let dynamic_device;
     let connections = Object.create(null);  // local:remote -> connection object
     let opening = Object.create(null);      // local:remote -> cancel function
     let outbox = Object.create(null);       // local:remote -> messages
@@ -60,11 +63,7 @@ function awp_device(
         }
         const handle = handle_to_proxy_key.length;
         handle_to_proxy_key.push(proxy_key);
-        const raw = core.u_ptr_to_cap(core.h_reserve_ram({
-            t: ufork.PROXY_T,
-            x: device,
-            y: core.u_fixnum(handle)
-        }));
+        const raw = dynamic_device.h_reserve_proxy(core.u_fixnum(handle));
         proxies[proxy_key] = {raw, swiss, store, petname};
         return raw;
     }
@@ -152,7 +151,7 @@ function awp_device(
                         swiss = random_swiss();
                         stubs[
                             hex.encode(swiss)
-                        ] = core.h_reserve_stub(device, raw);
+                        ] = dynamic_device.h_reserve_stub(raw);
                         raw_to_swiss[raw] = swiss;
                     }
                     return {
@@ -161,7 +160,11 @@ function awp_device(
                     };
                 }
                 if (quad.t === ufork.PROXY_T) {
-                    const handle = core.u_fix_to_i32(quad.y);
+
+// Strip the dynamic device metadata from the proxy's handle.
+
+                    const handle_raw = core.u_nth(quad.y, -1);
+                    const handle = core.u_fix_to_i32(handle_raw);
                     const proxy = proxies[handle_to_proxy_key[handle]];
                     const acquaintance = proxy.store.acquaintances[
                         proxy.petname
@@ -239,7 +242,7 @@ function awp_device(
     }
 
     function resume() {
-        core.h_wakeup(ufork.AWP_DEV_OFS);
+        core.h_wakeup(ufork.HOST_DEV_OFS);
     }
 
     function unregister(key) {
@@ -272,7 +275,7 @@ function awp_device(
 
 // (cancel_customer greeting_callback petname . hello) -> greeter
 
-            const evt = core.h_reserve_ram({
+            core.h_event_enqueue(core.h_reserve_ram({
                 t: sponsor,
                 x: greeter,
                 y: core.h_reserve_ram({
@@ -288,8 +291,7 @@ function awp_device(
                         })
                     })
                 })
-            });
-            core.h_event_enqueue(evt);
+            }));
             return resume();
         }
 
@@ -297,12 +299,11 @@ function awp_device(
 
         const stub = stubs[hex.encode(frame.target)];
         if (stub !== undefined) {
-            const evt = core.h_reserve_ram({
+            core.h_event_enqueue(core.h_reserve_ram({
                 t: sponsor,
                 x: core.u_read_quad(stub).y,
                 y: unmarshall(store, frame.message)
-            });
-            core.h_event_enqueue(evt);
+            }));
             return resume();
         }
         if (core.u_warn !== undefined) {
@@ -527,7 +528,7 @@ function awp_device(
                 if (core.u_debug !== undefined) {
                     core.u_debug("intro fail");
                 }
-                const evt = core.h_reserve_ram({
+                core.h_event_enqueue(core.h_reserve_ram({
                     t: sponsor,
                     x: callback_fwd,
                     y: core.h_reserve_ram({
@@ -535,8 +536,7 @@ function awp_device(
                         x: ufork.UNDEF_RAW,
                         y: core.u_fixnum(-1) // TODO error codes
                     })
-                });
-                core.h_event_enqueue(evt);
+                }));
 
 // We could release the callback's stub here, but it becomes a sink once it
 // forwards the reply so we can safely leave it for the distributed GC to clean
@@ -582,12 +582,11 @@ function awp_device(
 
 // (stop . reason) -> listen_callback
 
-            const evt = core.h_reserve_ram({
+            core.h_event_enqueue(core.h_reserve_ram({
                 t: sponsor,
                 x: listen_callback,
                 y: reply
-            });
-            core.h_event_enqueue(evt);
+            }));
             release_event_stub();
             return resume();
         }
@@ -646,7 +645,7 @@ function awp_device(
                             y: core.u_fixnum(-1) // TODO error codes
                         }));
                     }
-                    greeters[key] = core.h_reserve_stub(device, greeter);
+                    greeters[key] = dynamic_device.h_reserve_stub(greeter);
 
                     function safe_stop() {
                         if (greeters[key] !== undefined) {
@@ -690,76 +689,68 @@ function awp_device(
         return ufork.E_OK;
     }
 
-    function handle_event(event_stub_ptr) {
+// Install the device.
+
+    dynamic_device = make_dynamic_device(
+        function on_event_stub(event_stub_ptr) {
 
 // The event stub retains the event, including its message, in memory until
 // explicitly released. This is necessary because h_reserve_stub is
 // non-reentrant, so marshalling must take place on a future turn and we don't
 // want the message to be GC'd in the meantime.
 
-        const event_stub = core.u_read_quad(event_stub_ptr);
-        const event = core.u_read_quad(event_stub.y);
-        const message = event.y;
+            const event_stub = core.u_read_quad(event_stub_ptr);
+            const event = core.u_read_quad(event_stub.y);
+            const message = event.y;
 
 // Inspect the event target. If it is a proxy, forward the message to a remote
-// actor.
+// actor, stripping the dynamic device metadata from the handle.
 
-        const target_quad = core.u_read_quad(core.u_cap_to_ptr(event.x));
-        if (target_quad.t === ufork.PROXY_T) {
-            const handle = core.u_fix_to_i32(target_quad.y);
-            return forward(event_stub_ptr, handle, message);
-        }
+            const target_quad = core.u_read_quad(core.u_cap_to_ptr(event.x));
+            if (target_quad.t === ufork.PROXY_T) {
+                const handle_raw = core.u_nth(target_quad.y, -1);
+                const handle = core.u_fix_to_i32(handle_raw);
+                return forward(event_stub_ptr, handle, message);
+            }
 
-// Choose a method based on the message tag (#intro, #listen, etc).
+// Choose a method based on the message tag (#intro, #listen, etc). Note that
+// the message is tagged with dynamic device metadata, so we skip the head of
+// the list.
 
-        const tag = core.u_nth(message, 1);
-        if (!core.u_is_fix(tag)) {
-            return ufork.E_FAIL;
-        }
-        const method_array = [intro, listen];
-        const method = method_array[core.u_fix_to_i32(tag)];
-        if (method === undefined) {
-            return ufork.E_BOUNDS;
-        }
+            const tag = core.u_nth(message, 2);
+            if (!core.u_is_fix(tag)) {
+                return ufork.E_FAIL;
+            }
+            const method_array = [intro, listen];
+            const method = method_array[core.u_fix_to_i32(tag)];
+            if (method === undefined) {
+                return ufork.E_BOUNDS;
+            }
 
 // Forward the remainder of the message to the chosen method. The method may
 // need to reserve stubs for the portions of the message it will need later.
 // When the method is done doing that, it should release the event stub.
 
-        return method(event_stub_ptr, core.u_nth(message, -1));
-    }
-
-    function release_proxy(proxy_raw) {
+            return method(event_stub_ptr, core.u_nth(message, -2));
+        },
+        function on_drop_proxy(handle_raw) {
 
 // A proxy has been garbage collected.
 
-        const quad = core.u_read_quad(core.u_cap_to_ptr(proxy_raw));
-        const handle = core.u_fix_to_i32(quad.y);
-        delete proxies[handle_to_proxy_key[handle]];
+            const handle = core.u_fix_to_i32(handle_raw);
+            delete proxies[handle_to_proxy_key[handle]];
 
 // TODO inform the relevant party.
 
-        return ufork.E_OK;
-    }
-
-// Install the device.
-
-    core.h_install(
-        [[
-            ufork.AWP_DEV_OFS,
-            core.u_ptr_to_cap(core.u_ramptr(ufork.AWP_DEV_OFS))
-        ]],
-        {
-            host_awp(raw) {
-                return (
-                    core.u_is_cap(raw)
-                    ? release_proxy(raw)
-                    : handle_event(raw)
-                );
-            }
         }
     );
 
+// Install the dynamic device as if it were a real device. Unlike a real device,
+// we must reserve a stub to keep the capability from being released.
+
+    const awp_device_cap = dynamic_device.h_reserve_cap();
+    core.h_install([[awp_key, awp_device_cap]]);
+    dynamic_device.h_reserve_stub(awp_device_cap);
     return function dispose() {
         Object.values(connections).forEach(function (connection) {
             connection.close();
@@ -767,12 +758,14 @@ function awp_device(
         stops.forEach(function (stop_listening) {
             stop_listening();
         });
+        dynamic_device.dispose();
     };
 }
 
 //debug import parseq from "../parseq.js";
 //debug import lazy from "../requestors/lazy.js";
 //debug import requestorize from "../requestors/requestorize.js";
+//debug import host_device from "./host_device.js";
 //debug const wasm_url = import.meta.resolve(
 //debug     "../../target/wasm32-unknown-unknown/debug/ufork_wasm.wasm"
 //debug );
@@ -851,7 +844,14 @@ function awp_device(
 //debug                     acquaintances: [dana, bob, carol]
 //debug                 }
 //debug             ];
-//debug             dispose = awp_device(core, transport, store, webcrypto);
+//debug             const make_dynamic_device = host_device(core);
+//debug             dispose = awp_device(
+//debug                 core,
+//debug                 make_dynamic_device,
+//debug                 transport,
+//debug                 store,
+//debug                 webcrypto
+//debug             );
 //debug             core.h_boot(asm_module.boot);
 //debug             console.log("IDLE:", core.u_fault_msg(core.h_run_loop()));
 //debug             return true;

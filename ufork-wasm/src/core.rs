@@ -15,7 +15,7 @@ pub const IO_DEV: Any       = Any { raw: OPQ_RAW | MUT_RAW | 4 };
 pub const BLOB_DEV: Any     = Any { raw: OPQ_RAW | MUT_RAW | 5 };
 pub const TIMER_DEV: Any    = Any { raw: OPQ_RAW | MUT_RAW | 6 };
 pub const MEMO_DEV: Any     = Any { raw: OPQ_RAW | MUT_RAW | 7 };
-pub const AWP_DEV: Any      = Any { raw: OPQ_RAW | MUT_RAW | 8 };
+pub const HOST_DEV: Any     = Any { raw: OPQ_RAW | MUT_RAW | 8 };
 pub const SPONSOR: Any      = Any { raw: MUT_RAW | 15 };
 
 pub const RAM_BASE_OFS: usize = 16;  // RAM offsets below this value are reserved
@@ -94,7 +94,7 @@ pub const ROM_TOP_OFS: usize = ROM_BASE_OFS;
         quad_ram[BLOB_DEV.ofs()]    = Quad::actor_t(PLUS_3, NIL, UNDEF);  // blob device #3
         quad_ram[TIMER_DEV.ofs()]   = Quad::actor_t(PLUS_4, NIL, UNDEF);  // timer device #4
         quad_ram[MEMO_DEV.ofs()]    = Quad::actor_t(PLUS_5, NIL, UNDEF);  // memo device #5
-        quad_ram[AWP_DEV.ofs()]     = Quad::actor_t(PLUS_6, NIL, UNDEF);  // AWP device #6
+        quad_ram[HOST_DEV.ofs()]    = Quad::actor_t(PLUS_6, NIL, UNDEF);  // host device #6
         quad_ram[SPONSOR.ofs()]     = Quad::sponsor_t(
                                     Any::fix(512),
                                     Any::fix(64),
@@ -153,7 +153,7 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
                 Some(Box::new(BlobDevice::new())),
                 Some(Box::new(TimerDevice::new())),
                 Some(Box::new(NullDevice::new())),
-                Some(Box::new(AwpDevice::new())),
+                Some(Box::new(HostDevice::new())),
             ],
             rom_top: Any::rom(ROM_TOP_OFS),
             gc_state: UNDEF,
@@ -620,7 +620,7 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
             },
             VM_IF => {
                 let b = self.stack_pop();
-                if falsey(b) { kip } else { imm }
+                if falsy(b) { kip } else { imm }
             },
             VM_MSG => {
                 let n = imm.get_fix()?;
@@ -1971,7 +1971,7 @@ fn u16_msb(nat: usize) -> u8 {
     ((nat >> 8) & 0xFF) as u8
 }
 
-fn falsey(v: Any) -> bool {
+fn falsy(v: Any) -> bool {
     v == FALSE || v == UNDEF || v == NIL || v == ZERO
 }
 

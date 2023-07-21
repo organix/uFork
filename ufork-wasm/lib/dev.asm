@@ -3,6 +3,8 @@
 .import
     std: "./std.asm"
 
+; Hard-coded devices.
+
 debug_key:
     ref 2
 clock_key:
@@ -15,9 +17,13 @@ timer_key:
     ref 6
 memo_key:
     ref 7
-awp_key:
+host_key:
     ref 8
 
+; Dynamic devices. These are provided by the host device.
+
+awp_key:
+    ref 100
 intro_tag:
     ref 0
 listen_tag:
@@ -105,6 +111,7 @@ count:                  ; () <- n
     blob_key
     timer_key
     memo_key
+    host_key
     awp_key
     intro_tag
     listen_tag

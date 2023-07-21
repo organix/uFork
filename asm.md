@@ -198,8 +198,8 @@ _n_ _m_              | `cmp` `lt`          | _bool_       | `#t` if _n_ < _m_, o
 _n_ _m_              | `cmp` `le`          | _bool_       | `#t` if _n_ <= _m_, otherwise `#f`
 _n_ _m_              | `cmp` `ge`          | _bool_       | `#t` if _n_ >= _m_, otherwise `#f`
 _n_ _m_              | `cmp` `gt`          | _bool_       | `#t` if _n_ > _m_, otherwise `#f`
-_bool_               | `if` _T_ [_F_]      | —            | if _bool_ is not falsey<sup>*</sup>, continue _T_ (else _F_)
-_bool_               | `if_not` _F_ [_T_]  | —            | if _bool_ is falsey<sup>*</sup>, continue _F_ (else _T_)
+_bool_               | `if` _T_ [_F_]      | —            | if _bool_ is not falsy<sup>*</sup>, continue _T_ (else _F_)
+_bool_               | `if_not` _F_ [_T_]  | —            | if _bool_ is falsy<sup>*</sup>, continue _F_ (else _T_)
 … _tail_ _head_      | `pair` _n_          | _pair_       | create _pair_ from _head_ and _tail_ (_n_ times)
 _pair_               | `part` _n_          | … _tail_ _head_ | split _pair_ into _head_ and _tail_ (_n_ times)
 _pair_               | `nth` _n_           | _itemₙ_      | copy item _n_ from a _pair_ list
@@ -256,7 +256,7 @@ _actual_             | `is_ne` _expect_    | —            | assert _actual_ !=
 —                    | `debug`             | —            | debugger breakpoint
 
 <sup>*</sup> For conditionals (`if` and `if_not`) the values
-`#f`, `#?`, `#nil`, and `0` are considered "falsey".
+`#f`, `#?`, `#nil`, and `0` are considered "falsy".
 
 Every instruction (except `end`) takes a continuation as its
 final operand. In the following example, the `msg` instruction continues to

@@ -129,7 +129,7 @@ _n_ _m_           | {x:VM_cmp, y:GT, z:_K_}         | _bool_   | `TRUE` if _n_ >
 _n_ _m_           | {x:VM_cmp, y:LT, z:_K_}         | _bool_   | `TRUE` if _n_ < _m_, otherwise `FALSE`
 _n_ _m_           | {x:VM_cmp, y:LE, z:_K_}         | _bool_   | `TRUE` if _n_ <= _m_, otherwise `FALSE`
 _n_ _m_           | {x:VM_cmp, y:NE, z:_K_}         | _bool_   | `TRUE` if _n_ != _m_, otherwise `FALSE`
-_bool_            | {x:VM_if, y:_T_, z:_F_}         | —        | continue _F_ if "falsey", otherwise continue _T_
+_bool_            | {x:VM_if, y:_T_, z:_F_}         | —        | continue _F_ if "falsy", otherwise continue _T_
 —                 | {x:VM_msg, y:0, z:_K_}          | _msg_    | copy event message to stack
 —                 | {x:VM_msg, y:_n_, z:_K_}        | _msgₙ_   | copy message item _n_ to stack
 —                 | {x:VM_msg, y:-_n_, z:_K_}       | _tailₙ_  | copy message tail _n_ to stack

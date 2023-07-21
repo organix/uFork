@@ -548,7 +548,6 @@ ufork.instantiate_core(
     on_stdin = io_device(core, on_stdout);
     blob_device(core);
     timer_device(core);
-    awp_device(core);
 
     // draw initial state
     update_rom_monitor();

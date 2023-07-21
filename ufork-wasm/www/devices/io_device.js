@@ -17,7 +17,7 @@ function io_device(core, on_stdout) {
             return core.UNDEF_RAW;
         }
         const first = stdin_buffer[0];
-        stdin_buffer = stdin_buffer.slice(1);  // FIXME: handle codepoints > 0xFFFF
+        stdin_buffer = stdin_buffer.slice(1);
         const code = first.codePointAt(0);
         const char = core.u_fixnum(code);  // character read
         return char;
@@ -81,7 +81,7 @@ function io_device(core, on_stdout) {
             },
             host_read(stub) { // (i32) -> i32
                 const char = read_stdin();
-                if (char == core.UNDEF_RAW) {
+                if (char === core.UNDEF_RAW) {
                     listen_stdin(stub);
                 }
                 return char;

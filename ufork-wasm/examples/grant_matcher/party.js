@@ -6,6 +6,7 @@ import requestorize from "../../www/requestors/requestorize.js";
 import lazy from "../../www/requestors/lazy.js";
 import ufork from "../../www/ufork.js";
 import awp_device from "../../www/devices/awp_device.js";
+import host_device from "../../www/devices/host_device.js";
 import webrtc_transport from "../../www/transports/webrtc_transport.js";
 import websockets_signaller from "../../www/transports/websockets_signaller.js";
 
@@ -60,7 +61,8 @@ function party(asm_url, acquaintance_names = []) {
         requestorize(function ([asm_module, identity]) {
             const name = transport.identity_to_name(identity);
             const address = signaller_origin;
-            awp_device(core, transport, [{
+            const make_dynamic_device = host_device(core);
+            awp_device(core, make_dynamic_device, transport, [{
                 identity,
                 bind_info: {
                     origin: signaller_origin,

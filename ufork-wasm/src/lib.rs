@@ -73,8 +73,8 @@ extern {
     pub fn host_stop_timer(stub: Raw) -> bool;
     pub fn host_write(code: Raw) -> Raw;
     pub fn host_read(stub: Raw) -> Raw;
-    pub fn host_awp(event_stub: Raw) -> Error;
     pub fn host_trace(event: Raw);
+    pub fn host(event_stub_or_proxy: Raw) -> Error;
 }
 
 // trace transactional effect(s)

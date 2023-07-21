@@ -21,18 +21,18 @@
 //      An integer controlling the core's logging verbosity. Each level includes
 //      all levels before it.
 
-//      ufork.LOG_NONE = 0
+//      ufork.LOG_NONE (0)
 //          No logging.
-//      ufork.LOG_INFO = 1
+//      ufork.LOG_INFO (1)
 //          Low volume, always shown unless all logging is disabled.
-//      ufork.LOG_WARN = 2
+//      ufork.LOG_WARN (2)
 //          Something went wrong, but perhaps it wasn't fatal.
-//      ufork.LOG_DEBUG = 3
+//      ufork.LOG_DEBUG (3)
 //          More detail to narrow down the source of a problem.
-//      ufork.LOG_TRACE = 4
+//      ufork.LOG_TRACE (4)
 //          Extremely detailed (for example, all reserve and release actions).
 
-//      The default value is LOG_WARN.
+//      The default level is LOG_WARN.
 
 // The returned requestor produces a core object containing a bunch of methods.
 // The methods beginning with "u_" are reentrant, but the methods beginning
@@ -123,7 +123,7 @@ const IO_DEV_OFS = 4;
 const BLOB_DEV_OFS = 5;
 const TIMER_DEV_OFS = 6;
 const MEMO_DEV_OFS = 7;
-const AWP_DEV_OFS = 8;
+const HOST_DEV_OFS = 8;
 const SPONSOR_OFS = 15;
 
 // Error codes (from core.rs)
@@ -1158,7 +1158,7 @@ function make_core(
         return u_print(raw);
     }
 
-    function h_boot(instr_ptr) {
+    function h_boot(instr_ptr, state_ptr = NIL_RAW) {
         if (instr_ptr === undefined || !u_is_ptr(instr_ptr)) {
             throw new Error("Not an instruction: " + u_pprint(instr_ptr));
         }
@@ -1168,7 +1168,7 @@ function make_core(
         const actor = h_reserve_ram({
             t: ACTOR_T,
             x: instr_ptr,
-            y: NIL_RAW,
+            y: state_ptr,
             z: UNDEF_RAW
         });
 
@@ -1420,11 +1420,11 @@ function instantiate_core(
                         host_write(...args) {
                             return mutable_wasm_caps.host_write(...args);
                         },
-                        host_awp(...args) {
-                            return mutable_wasm_caps.host_awp(...args);
-                        },
                         host_trace(...args) {
                             return mutable_wasm_caps.host_trace(...args);
+                        },
+                        host(...args) {
+                            return mutable_wasm_caps.host(...args);
                         }
                     }
                 }
@@ -1559,7 +1559,7 @@ export default Object.freeze({
     BLOB_DEV_OFS,
     TIMER_DEV_OFS,
     MEMO_DEV_OFS,
-    AWP_DEV_OFS,
+    HOST_DEV_OFS,
     SPONSOR_OFS,
     E_OK,
     E_FAIL,
