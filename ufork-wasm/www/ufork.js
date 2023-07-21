@@ -123,7 +123,7 @@ const IO_DEV_OFS = 4;
 const BLOB_DEV_OFS = 5;
 const TIMER_DEV_OFS = 6;
 const MEMO_DEV_OFS = 7;
-const AWP_DEV_OFS = 8;
+const HOST_DEV_OFS = 8;
 const SPONSOR_OFS = 15;
 
 // Error codes (from core.rs)
@@ -1420,11 +1420,11 @@ function instantiate_core(
                         host_write(...args) {
                             return mutable_wasm_caps.host_write(...args);
                         },
-                        host_awp(...args) {
-                            return mutable_wasm_caps.host_awp(...args);
-                        },
                         host_trace(...args) {
                             return mutable_wasm_caps.host_trace(...args);
+                        },
+                        host(...args) {
+                            return mutable_wasm_caps.host(...args);
                         }
                     }
                 }
@@ -1559,7 +1559,7 @@ export default Object.freeze({
     BLOB_DEV_OFS,
     TIMER_DEV_OFS,
     MEMO_DEV_OFS,
-    AWP_DEV_OFS,
+    HOST_DEV_OFS,
     SPONSOR_OFS,
     E_OK,
     E_FAIL,

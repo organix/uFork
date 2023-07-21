@@ -9,6 +9,7 @@ import parseq from "../../www/parseq.js";
 import lazy from "../../www/requestors/lazy.js";
 import requestorize from "../../www/requestors/requestorize.js";
 import awp_device from "../../www/devices/awp_device.js";
+import host_device from "../../www/devices/host_device.js";
 import node_tls_transport from "../../www/transports/node_tls_transport.js";
 
 const transport = node_tls_transport();
@@ -85,8 +86,10 @@ parseq.sequence([
         return core.h_import(asm_url);
     }),
     requestorize(function (asm_module) {
+        const make_dynamic_device = host_device(core);
         awp_device(
             core,
+            make_dynamic_device,
             transport,
             [stores[store_name]],
             crypto.webcrypto
