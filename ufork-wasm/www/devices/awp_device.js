@@ -14,7 +14,6 @@
 import ufork from "../ufork.js";
 import OED from "../oed.js";
 import hex from "../hex.js";
-import dummy_transport from "../transports/dummy_transport.js";
 
 const awp_key = 100; // from dev.asm
 
@@ -28,7 +27,7 @@ function stringify(value) {
 function awp_device(
     core,
     make_dynamic_device,
-    transport = dummy_transport(),
+    transport,
     stores = [],
     webcrypto = crypto // Node.js does not have a 'crypto' global
 ) {

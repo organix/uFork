@@ -11,7 +11,7 @@ import blob_device from "../../www/devices/blob_device.js";
 import timer_device from "../../www/devices/timer_device.js";
 import awp_device from "../../www/devices/awp_device.js";
 import host_device from "../../www/devices/host_device.js";
-import dummy_signaller from "../../www/transports/dummy_signaller.js";
+import websockets_signaller from "../../www/transports/websockets_signaller.js";
 import webrtc_transport from "../../www/transports/webrtc_transport.js";
 import parseq from "../../www/parseq.js";
 import lazy from "../../www/requestors/lazy.js";
@@ -155,7 +155,7 @@ function boot(entrypoint) {
     return ufork_run();
 }
 
-const transport = webrtc_transport(dummy_signaller(), console.log);
+const transport = webrtc_transport(websockets_signaller(), console.log);
 const wasm_url = import.meta.resolve(
     "../../target/wasm32-unknown-unknown/debug/ufork_wasm.wasm"
 );

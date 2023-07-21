@@ -21,13 +21,11 @@ function db(...args) {
     );
 }
 
-// TODO dedicated webserver
-// const signaller_origin = (
-//     location.protocol === "https:"
-//     ? "wss://"
-//     : "ws://"
-// ) + location.host;
-const signaller_origin = "http://localhost:4455";
+const signaller_origin = (
+    location.protocol === "https:"
+    ? "wss://"
+    : "ws://"
+) + location.host;
 const transport = webrtc_transport();
 const awp_store_key = "awp_store";
 
