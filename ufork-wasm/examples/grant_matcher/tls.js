@@ -87,13 +87,13 @@ parseq.sequence([
     }),
     requestorize(function (asm_module) {
         const make_dynamic_device = host_device(core);
-        awp_device(
+        awp_device({
             core,
             make_dynamic_device,
             transport,
-            [stores[store_name]],
-            crypto.webcrypto
-        );
+            stores: [stores[store_name]],
+            webscrypto: crypto.webcrypto
+        });
         core.h_boot(asm_module.boot);
         return core.u_fault_msg(core.h_run_loop());
     })

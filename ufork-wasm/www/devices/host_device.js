@@ -53,11 +53,10 @@ function host_device(core) {
         const quad = core.u_read_quad(core.u_cap_to_ptr(proxy_raw));
         const handle = quad.y;
         const key = core.u_nth(handle, 1);
-        const subhandle = core.u_nth(handle, -1);
         if (core.u_is_fix(key)) {
             const dynamic_device = dynamic_devices[core.u_fix_to_i32(key)];
             if (typeof dynamic_device?.on_drop_proxy === "function") {
-                dynamic_device.on_drop_proxy(subhandle);
+                dynamic_device.on_drop_proxy(proxy_raw);
             }
         }
     }
@@ -103,8 +102,9 @@ function host_device(core) {
         on_event_stub,
 
 // The 'on_drop_proxy' parameter is a function that is called when a proxy made
-// by 'reserve_proxy' is dropped. It is passed the same handle that was passed
-// to 'reserve_proxy'. Optional.
+// by 'reserve_proxy' is dropped. It is passed the raw proxy. Note that the
+// proxy's handle looks like (meta . handle), where 'handle' is the value
+// provided to dynamic_device.h_reserve_proxy. Optional.
 
         on_drop_proxy
     ) {
@@ -192,8 +192,11 @@ function host_device(core) {
 //debug                 );
 //debug             }
 //debug         },
-//debug         function on_drop_proxy(handle) {
-//debug             console.log("on_drop_proxy", core.u_pprint(handle));
+//debug         function on_drop_proxy(proxy_raw) {
+//debug             const quad = core.u_read_quad(core.u_cap_to_ptr(proxy_raw));
+//debug             const handle = quad.y;
+//debug             const subhandle = core.u_nth(handle, -1);
+//debug             console.log("on_drop_proxy", core.u_pprint(subhandle));
 //debug         }
 //debug     );
 //debug     dynamic_device.h_reserve_proxy(ufork.FALSE_RAW); // dropped

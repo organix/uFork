@@ -12,11 +12,26 @@
 /*jslint browser, null, devel, long */
 
 import ufork from "../ufork.js";
+import assemble from "../assemble.js";
 import OED from "../oed.js";
 import hex from "../hex.js";
-import dummy_transport from "../transports/dummy_transport.js";
 
 const awp_key = 100; // from dev.asm
+const once_fwd_crlf = assemble(`
+sink_beh:
+    end commit
+
+beh:                    ; callback <- message
+    msg 0               ; message
+    state 0             ; message callback
+    send -1             ; --
+    push sink_beh       ; sink_beh
+    beh 0               ; --
+    end commit
+
+.export
+    beh
+`);
 
 function stringify(value) {
 
@@ -25,26 +40,28 @@ function stringify(value) {
     return hex.encode(OED.encode(value));
 }
 
-function awp_device(
+function awp_device({
     core,
     make_dynamic_device,
-    transport = dummy_transport(),
+    transport,
+    on_store_change,
     stores = [],
     webcrypto = crypto // Node.js does not have a 'crypto' global
-) {
+}) {
     const sponsor = core.u_ramptr(ufork.SPONSOR_OFS);
+    const once_fwd_beh = core.h_load(once_fwd_crlf).beh;
 
     let dynamic_device;
     let connections = Object.create(null);  // local:remote -> connection object
     let opening = Object.create(null);      // local:remote -> cancel function
     let outbox = Object.create(null);       // local:remote -> messages
     let lost = Object.create(null);         // local:remote -> functions // TODO are these ever cleaned up?
-    let greeters = Object.create(null);     // local -> greeter stub raw
     let raw_to_swiss = Object.create(null); // raw -> swiss
     let stubs = Object.create(null);        // swiss -> stub raw    // TODO release at some point
+    let handle_to_listener_key = [];        // handle -> local // TODO implement safe_stop proxies
+    let listeners = Object.create(null);    // local -> {greeter, stop}
     let handle_to_proxy_key = [];           // handle -> proxy key  // TODO release
     let proxies = Object.create(null);      // proxy key -> data    // TODO drop_proxy
-    let stops = [];                         // listen stop functions // TODO release
 
     function random_swiss() {
         let swiss = new Uint8Array(16); // 128 bits
@@ -89,6 +106,9 @@ function awp_device(
         if (petname === -1) {
             petname = store.acquaintances.length;
             store.acquaintances.push(acquaintance);
+            if (on_store_change !== undefined) {
+                on_store_change(store);
+            }
         }
         return petname;
     }
@@ -257,9 +277,9 @@ function awp_device(
 
 // The frame is an introduction request. Forward it to the greeter.
 
-            const greeter_stub = greeters[
+            const greeter_stub = listeners[
                 stringify(store.acquaintances[0].name) // self
-            ];
+            ]?.greeter;
             if (greeter_stub === undefined) {
                 if (core.u_warn !== undefined) {
                     core.u_warn("No greeter", store, frame);
@@ -273,14 +293,14 @@ function awp_device(
             const greeting_callback = core.u_nth(message, 1);
             const hello_data = core.u_nth(message, -1);
 
-// (cancel_customer greeting_callback petname . hello) -> greeter
+// (to_cancel greeting_callback petname . hello) -> greeter
 
             core.h_event_enqueue(core.h_reserve_ram({
                 t: sponsor,
                 x: greeter,
                 y: core.h_reserve_ram({
                     t: ufork.PAIR_T,
-                    x: ufork.UNDEF_RAW, // TODO cancel_customer
+                    x: ufork.UNDEF_RAW, // TODO to_cancel
                     y: core.h_reserve_ram({
                         t: ufork.PAIR_T,
                         x: greeting_callback,
@@ -377,7 +397,7 @@ function awp_device(
                 }
             }
         );
-        // TODO forward cancel capability to cancel_customer
+        // TODO forward cancel capability to to_cancel
         opening[key] = function () {
             if (typeof cancel === "function") {
                 cancel();
@@ -460,51 +480,9 @@ function awp_device(
 // Wait a turn so we can safely use the non-reentrant core methods.
 
         setTimeout(function () {
-
-// TODO rewrite this in assembly, and allocate in ROM.
-
-            const sink_beh = core.h_reserve_ram({
-                t: ufork.INSTR_T,
-                x: ufork.VM_END,
-                y: core.u_fixnum(1) // COMMIT
-            });
             const callback_fwd = core.u_ptr_to_cap(core.h_reserve_ram({
                 t: ufork.ACTOR_T,
-
-//  once_fwd_beh:           ; callback <- message
-//      msg 0               ; message
-//      state 0             ; message callback
-//      send -1             ; --
-//      push std.sink_beh   ; sink_beh
-//      beh 0               ; --
-//      end commit
-
-                x: core.h_reserve_ram({
-                    t: ufork.INSTR_T,
-                    x: ufork.VM_MSG,
-                    y: core.u_fixnum(0),
-                    z: core.h_reserve_ram({
-                        t: ufork.INSTR_T,
-                        x: ufork.VM_STATE,
-                        y: core.u_fixnum(0),
-                        z: core.h_reserve_ram({
-                            t: ufork.INSTR_T,
-                            x: ufork.VM_SEND,
-                            y: core.u_fixnum(-1),
-                            z: core.h_reserve_ram({
-                                t: ufork.INSTR_T,
-                                x: ufork.VM_PUSH,
-                                y: sink_beh,
-                                z: core.h_reserve_ram({
-                                    t: ufork.INSTR_T,
-                                    x: ufork.VM_BEH,
-                                    y: core.u_fixnum(0),
-                                    z: sink_beh
-                                })
-                            })
-                        })
-                    })
-                }),
+                x: once_fwd_beh,
                 y: intro_callback
             }));
 
@@ -539,14 +517,14 @@ function awp_device(
                 }));
 
 // We could release the callback's stub here, but it becomes a sink once it
-// forwards the reply so we can safely leave it for the distributed GC to clean
+// forwards the result so we can safely leave it for the distributed GC to clean
 // up instead.
 
             });
             core.h_release_stub(event_stub_ptr);
 
-// TODO send a cancel capability to the cancel_customer. This should nullify
-// callback_fwd.
+// TODO send a cancel capability to the to_cancel. Should we also neuter
+// callback_fwd?
 
         });
         return ufork.E_OK;
@@ -578,14 +556,14 @@ function awp_device(
             }
         }
 
-        function resolve(reply) {
+        function resolve(result) {
 
-// (stop . reason) -> listen_callback
+// (stop . error) -> listen_callback
 
             core.h_event_enqueue(core.h_reserve_ram({
                 t: sponsor,
                 x: listen_callback,
-                y: reply
+                y: result
             }));
             release_event_stub();
             return resume();
@@ -594,7 +572,7 @@ function awp_device(
 // Wait a turn so we can safely use the non-reentrant core methods.
 
         setTimeout(function () {
-            // TODO send cancel to cancel_customer
+            // TODO send cancel to to_cancel
             const cancel = transport.listen(
                 store.identity,
                 store.bind_info,
@@ -637,7 +615,7 @@ function awp_device(
 // confusing.
 
                     const key = stringify(store.acquaintances[0].name);
-                    if (greeters[key] !== undefined) {
+                    if (listeners[key] !== undefined) {
                         stop();
                         return resolve(core.h_reserve_ram({
                             t: ufork.PAIR_T,
@@ -645,17 +623,20 @@ function awp_device(
                             y: core.u_fixnum(-1) // TODO error codes
                         }));
                     }
-                    greeters[key] = dynamic_device.h_reserve_stub(greeter);
 
                     function safe_stop() {
-                        if (greeters[key] !== undefined) {
-                            core.h_release_stub(greeters[key]);
-                            delete greeters[key];
+                        const listener = listeners[key];
+                        if (listener.greeter !== undefined) {
+                            core.h_release_stub(listener.greeter);
                         }
+                        delete listeners[key];
                         return stop();
                     }
 
-                    stops.push(safe_stop);
+                    listeners[key] = {
+                        greeter: dynamic_device.h_reserve_stub(greeter),
+                        stop: safe_stop
+                    };
                     return resolve(core.h_reserve_ram({
                         t: ufork.PAIR_T,
                         x: ufork.UNDEF_RAW, // TODO safe_stop
@@ -663,7 +644,7 @@ function awp_device(
                     }));
                 }
             );
-            // TODO provide to cancel_customer
+            // TODO provide to to_cancel
             function safe_cancel() {
                 release_event_stub();
                 cancel();
@@ -733,15 +714,18 @@ function awp_device(
 
             return method(event_stub_ptr, core.u_nth(message, -2));
         },
-        function on_drop_proxy(handle_raw) {
+        function on_drop_proxy(proxy_raw) {
 
 // A proxy has been garbage collected.
-
-            const handle = core.u_fix_to_i32(handle_raw);
-            delete proxies[handle_to_proxy_key[handle]];
-
 // TODO inform the relevant party.
 
+            const quad = core.u_read_quad(core.u_cap_to_ptr(proxy_raw));
+            const handle = quad.y;
+
+// Strip the dynamic device's metadata from the proxy's handle.
+
+            const subhandle = core.u_fix_to_i32(core.u_nth(handle, -1));
+            delete proxies[handle_to_proxy_key[handle]];
         }
     );
 
@@ -755,8 +739,8 @@ function awp_device(
         Object.values(connections).forEach(function (connection) {
             connection.close();
         });
-        stops.forEach(function (stop_listening) {
-            stop_listening();
+        Object.values(listeners).forEach(function (listener) {
+            listener.stop();
         });
         dynamic_device.dispose();
     };
@@ -824,7 +808,7 @@ function awp_device(
 //debug             const dana = {
 //debug                 name: transport.identity_to_name(dana_identity)
 //debug             };
-//debug             const store = [
+//debug             const stores = [
 //debug                 {
 //debug                     identity: alice_identity,
 //debug                     acquaintances: [alice, bob, carol]
@@ -845,13 +829,13 @@ function awp_device(
 //debug                 }
 //debug             ];
 //debug             const make_dynamic_device = host_device(core);
-//debug             dispose = awp_device(
+//debug             dispose = awp_device({
 //debug                 core,
 //debug                 make_dynamic_device,
 //debug                 transport,
-//debug                 store,
+//debug                 stores,
 //debug                 webcrypto
-//debug             );
+//debug             });
 //debug             core.h_boot(asm_module.boot);
 //debug             console.log("IDLE:", core.u_fault_msg(core.h_run_loop()));
 //debug             return true;

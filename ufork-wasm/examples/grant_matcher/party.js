@@ -62,19 +62,24 @@ function party(asm_url, acquaintance_names = []) {
             const name = transport.identity_to_name(identity);
             const address = signaller_origin;
             const make_dynamic_device = host_device(core);
-            awp_device(core, make_dynamic_device, transport, [{
-                identity,
-                bind_info: {
-                    origin: signaller_origin,
-                    password: "uFork"
-                },
-                acquaintances: [
-                    {name, address},
-                    ...acquaintance_names.map(function (name) {
-                        return {name, address: signaller_origin};
-                    })
-                ]
-            }]);
+            awp_device({
+                core,
+                make_dynamic_device,
+                transport,
+                stores: [{
+                    identity,
+                    bind_info: {
+                        origin: signaller_origin,
+                        password: "uFork"
+                    },
+                    acquaintances: [
+                        {name, address},
+                        ...acquaintance_names.map(function (name) {
+                            return {name, address: signaller_origin};
+                        })
+                    ]
+                }]
+            });
             core.h_boot(asm_module.boot);
             const sig = core.h_run_loop(0);
             const err = core.u_fix_to_i32(sig);

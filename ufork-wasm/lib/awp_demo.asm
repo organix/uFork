@@ -39,8 +39,8 @@ boot:                   ; () <- {caps}
 
 ; Once Bob is successfully listening, Alice requests an introduction.
 
-listening_beh:          ; {caps} <- (stop . reason)
-    msg -1              ; reason
+listening_beh:          ; {caps} <- (stop . error)
+    msg -1              ; error
     is_eq #nil          ; --
     push 42             ; hello
     push bob_petname    ; hello @bob
@@ -72,8 +72,8 @@ greeter_beh:            ; () <- (cancel result petname hello)
 
 ; Alice sends the ping actor her own pong capability.
 
-introduced_beh:         ; {caps} <- (ping . reason)
-    msg -1              ; reason
+introduced_beh:         ; {caps} <- (ping . error)
+    msg -1              ; error
     is_eq #nil          ; --
     state 0             ; {caps}
     push pong_beh       ; {caps} pong_beh

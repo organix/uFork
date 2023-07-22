@@ -149,13 +149,13 @@ impl IoDevice {
     where `to_cancel` is the optional customer for a cancel capability,
     and `callback` is the customer that will receive the result.
     The result looks like `(fixnum)` on success,
-    and `(#? . reason)` on failure.
+    and `(#? . error)` on failure.
 
     A _write_ request looks like `(to_cancel callback fixnum)`,
     where `to_cancel` is the optional customer for a cancel capability,
     and `callback` is the customer that will receive the result.
     The result looks like `(#unit)` on success,
-    and `(#? . reason)` on failure.
+    and `(#? . error)` on failure.
 
     In either request, if `to_cancel` is a capability,
     the device **may** send a _cancel_ capability to that customer.

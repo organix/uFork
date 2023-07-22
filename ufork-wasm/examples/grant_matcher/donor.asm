@@ -24,8 +24,8 @@ boot:                       ; () <- {caps}
     send 5                  ; --
     ref std.commit
 
-intro_cb_beh:               ; {caps} <- (deposit . reason)
-    msg -1                  ; reason
+intro_cb_beh:               ; {caps} <- (deposit . error)
+    msg -1                  ; error
     is_eq #nil              ; --
     push store              ; store
     state 0                 ; store {caps}

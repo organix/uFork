@@ -3,7 +3,7 @@
 This directory contains
 a self-hosted distributed "chat" application.
 The browser-based GUI presents a output panel
-and in input control for posting messages.
+and input control for posting messages.
 Each party is given a URL designating "their" room.
 By navigating to that URL,
 the party joins the conversation
@@ -11,7 +11,16 @@ in that room.
 
 ## Running the Demo
 
-_Instructions TDB_
+Make sure you have Deno (https://deno.land) installed.
+Run the following command from the ufork-wasm directory to start the web server:
+
+    deno run
+        --allow-net \
+        --allow-read=. \
+        examples/peer_chat/chat_server.js \
+        localhost:3528
+
+Then navigate to http://localhost:3528 in a browser.
 
 ## Application Design
 
@@ -19,7 +28,7 @@ The chat application centers around two main components.
 The _room_ and the _party_.
 The room coordinates messages from one or more parties,
 and maintains a list of parties
-to whom message are broadcast.
+to whom messages are broadcast.
 The party manages the output panel and input control,
 sending messages to, and receiving messages from,
 the room.
