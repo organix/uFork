@@ -2,8 +2,8 @@
 
 This directory contains
 a self-hosted distributed "chat" application.
-The browser-based GUI presents a output panel
-and input control for posting messages.
+The browser-based GUI presents an output panel
+and an input control for posting messages.
 Each party is given a URL designating "their" room.
 By navigating to that URL,
 the party joins the conversation
@@ -36,61 +36,9 @@ A party leaves a room
 simply by navigating away
 (or closing the browser tab/window).
 
-### Party/Room API
+### Link Protocol
 
-Each party sends messages with the following structure:
-
-    (party msg_num ack_num . content)
-
-The message specifies the originating party,
-the sequence number of this message,
-the sequence number of the last message received from the room,
-and the (possibly empty) content.
-
-Each party is expected to send a message
-at least once every 2 seconds.
-If the party has nothing new to send,
-the content is empty.
-If the room does not receive a message
-from a particular party
-after 6 seconds,
-the party is assumed to have left the room.
-
-The room sends messages with the following structure:
-
-    (msg_num ack_num . content)
-
-The room is also expected to send a message
-at least once every 2 seconds.
-If the room has nothing new to send,
-the message is empty.
-
-When a message is acknowledged,
-it is removed from the sender's
-transmission queue.
-Messages that have been transmitted
-but not acknowledged
-are retransmitted.
-Duplicate messages received
-are discarded.
-
-#### Room Model
-
-The state of a room consists of the following:
-
-  * A list of parties present in the room, and for each party:
-      * A list of unacknowledged messages sent
-      * The next received message number expected
-
-#### Party Model
-
-The state of a party consists of the following:
-  * A list of unacknowledged messages sent
-  * The next received message number expected
-
-#### Link API
-
-The _link_ API provide a reliable abstraction
+The _link_ protocol provides a reliable abstraction
 of a one-way communication channel.
 It consists of a transmitter (tx)
 and a receiver (rx).
@@ -102,16 +50,21 @@ If the _rx_ does not receive a message
 from the _tx_ within 6 seconds,
 the link is considered broken.
 
-    ---> tx - - - - > rx --->
-         ^            |
-     ack |            | ack
-         |            v
-    <--- rx < - - - - tx <---
+    ---> tx - - - - - > rx --->
+          ^     msg      |
+      ack |              | ack
+          |     msg      v
+    <--- rx < - - - - - tx <---
 
 Messages between _tx_ and _rx_
 are given a sequence number for acknowledgment.
 Acknowledgments are carried
 on a link running in the opposite direction.
+Messages from _tx_ to _rx_
+have the following structure:
+
+    (ack seq . content)
+
 When a message is acknowledged,
 it is removed from the sender's
 transmission queue.
@@ -120,3 +73,26 @@ but not acknowledged
 are retransmitted.
 Duplicate messages received
 are discarded.
+
+                A_tx        A_rx                B_rx        B_tx
+            {ack:5,seq:1, {seq:6}             {seq:1}   {ack:0,seq:6,
+                Q:[]}        |                   |         Q:[]}
+                 |           |                   |           |
+    -(1 . m1)--->#           |                   |           |
+                 #-(5 1 . m1)------------------->#           |
+            {ack:5,seq:2,    |                   #-m1------------------->
+            Q:[(1 . 123)]}   |                   #-(-1 5 1)->#
+                 |           |                {seq:2}        #
+                 |           |                   |      {ack:1,seq:6,
+                 |           |                   |         Q:[]}
+                 |           |                   |           |
+                 |           |                   |           #<----(0 6)-
+                 |           #<------------------------(1 6)-#
+                 #<-(-1 1 6)-#                   |      {ack:1,seq:7,
+                 #        {seq:7}                |         Q:[]}
+            {ack:6,seq:2,    |                   |           |
+                Q:[]}        |                   |           |
+                 |           |                   |           |
+
+This sequence diagram illustrates the transfer of message _m1_,
+and it's acknowledgment via the timer at the receiving end.

@@ -256,7 +256,7 @@ _actual_             | `is_ne` _expect_    | —            | assert _actual_ !=
 —                    | `debug`             | —            | debugger breakpoint
 
 <sup>*</sup> For conditionals (`if` and `if_not`) the values
-`#f`, `#?`, `#nil`, and `0` are considered "falsy".
+`#f`, `#?`, `#nil`, and `0` are considered "[falsy](https://developer.mozilla.org/en-US/docs/Glossary/Falsy)".
 
 Every instruction (except `end`) takes a continuation as its
 final operand. In the following example, the `msg` instruction continues to

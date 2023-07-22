@@ -43,6 +43,120 @@ join:                   ; room_id debug_dev
 host:                   ; room_id debug_dev
     ref std.send_msg
 
+;
+; Link transmitter
+;
+; Transmitter state:
+;   link: capability for network transport
+;   timer: capability for timer service
+;   ack: last message number successfully received (by rx)
+;   seq: next message number to transmit
+;   msgs: queue of unackowledged messages
+;
+
+tx_msg:                 ; (tx_msg . content)
+    ref 1
+tx_ack:                 ; (tx_ack ack' seq')
+    ref -1
+tx_time:                ; (tx_time seq')
+    ref 0
+
+link_tx:                ; (link timer ack seq msgs) <- tx_evt
+    msg 1               ; opr
+    eq tx_msg           ; opr==tx_msg
+    if link_tx_msg      ; --
+    msg 1               ; opr
+    eq tx_ack           ; opr==tx_ack
+    if link_tx_ack      ; --
+    msg 1               ; opr
+    eq tx_time          ; opr==tx_time
+    if link_tx_time     ; --
+    ref std.abort       ; // unknown operation
+
+link_tx_msg:            ; (link timer ack seq msgs) <- (tx_msg . content)
+    ; add message to queue
+    state 5             ; msgs
+    msg -1              ; msgs content
+    state 4             ; msgs content seq
+    pair 1              ; msgs (seq . content)
+    deque put           ; msgs'
+
+    ; increment seq number
+    dup 1               ; msgs' msgs'
+    state 4             ; msgs' msgs' seq
+    push 1              ; msgs' msgs' seq 1
+    alu add             ; msgs' msgs' seq+1
+
+    ; update actor state
+    state 3             ; msgs' msgs' seq+1 ack
+    state 2             ; msgs' msgs' seq+1 ack timer
+    state 1             ; msgs' msgs' seq+1 ack timer link
+    my beh              ; msgs' msgs' seq+1 ack timer link beh
+    beh 5               ; msgs'
+
+    ; if the queue was empty previously
+    state 5             ; msgs' msgs
+    deque empty         ; msgs' is_empty(msgs)
+    if_not std.commit   ; msgs'
+
+    ; then send message to rx
+    deque pop           ; msgs (seq . content)
+    state 3             ; msgs (seq . content) ack
+    pair 1              ; msgs (ack seq . content)
+    state 1             ; msgs (ack seq . content) link
+    ref std.send_msg
+
+link_tx_ack:            ; (link timer ack seq msgs) <- (tx_ack ack' seq')
+    ; TBD
+    ref std.commit
+
+link_tx_time:           ; (link timer ack seq msgs) <- (tx_time seq')
+    ; TBD
+    ref std.commit
+
+;
+; Link receiver
+;
+; Receiver state:
+;   cust: capability for local delivery
+;   timer: capability for timer service
+;   ack_tx: capability for tx
+;   seq: next message number expected (to receive)
+;
+
+link_rx:                ; (cust timer tx seq) <- (ack seq' . content)
+    ; check inbound message number
+    state 4             ; seq
+    msg 2               ; seq seq'
+    cmp eq              ; seq==seq'
+    if_not std.commit   ; // ignore unexpected message
+
+    ; forward ack to tx
+    msg 2               ; seq'
+    msg 1               ; seq' ack
+    push tx_ack         ; seq' ack tx_ack
+    state 3             ; seq' ack tx_ack tx
+    send 3              ; --
+
+    ; increment expected message number
+    state 4             ; seq
+    push 1              ; seq 1
+    alu add             ; seq+1
+    state 3             ; seq+1 tx
+    state 2             ; seq+1 tx timer
+    state 1             ; seq+1 tx timer cust
+    my beh              ; seq+1 tx timer cust beh
+    beh 4               ; --
+
+    ; forward message to cust
+    msg -2              ; content
+    state 1             ; content cust
+    ref std.send_msg
+
+;
+; Line buffer and utilities
+;
+
 ; An infinite loop will consume cycles, but no memory or events
 
 loop_forever:
