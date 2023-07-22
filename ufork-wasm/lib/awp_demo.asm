@@ -42,6 +42,11 @@ boot:                   ; () <- {caps}
 listening_beh:          ; {caps} <- (stop . error)
     msg -1              ; error
     is_eq #nil          ; --
+    msg 1               ; stop
+    typeq #actor_t      ; actor?(stop)
+    is_eq #t            ; --
+    ;msg 1               ; stop
+    ;send 0              ; --
     push 42             ; hello
     push bob_petname    ; hello @bob
     push alice_store    ; hello @bob alice

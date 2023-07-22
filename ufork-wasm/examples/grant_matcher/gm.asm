@@ -25,7 +25,7 @@ listen_cb_beh:              ; () <- (result . error)
     is_eq #nil              ; --
     ref std.commit
 
-greeter_beh:                ; {pledges} <- (cancel_cust callback petname pledge)
+greeter_beh:                ; {pledges} <- (to_cancel callback petname pledge)
     msg 3                   ; petname
     typeq #fixnum_t         ; fixnum?
     is_eq #t                ; --

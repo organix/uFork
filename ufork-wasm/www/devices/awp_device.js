@@ -52,16 +52,17 @@ function awp_device({
     const once_fwd_beh = core.h_load(once_fwd_crlf).beh;
 
     let dynamic_device;
-    let connections = Object.create(null);  // local:remote -> connection object
-    let opening = Object.create(null);      // local:remote -> cancel function
-    let outbox = Object.create(null);       // local:remote -> messages
-    let lost = Object.create(null);         // local:remote -> functions // TODO are these ever cleaned up?
-    let raw_to_swiss = Object.create(null); // raw -> swiss
-    let stubs = Object.create(null);        // swiss -> stub raw    // TODO release at some point
-    let handle_to_listener_key = [];        // handle -> local // TODO implement safe_stop proxies
-    let listeners = Object.create(null);    // local -> {greeter, stop}
-    let handle_to_proxy_key = [];           // handle -> proxy key  // TODO release
-    let proxies = Object.create(null);      // proxy key -> data    // TODO drop_proxy
+    let connections = Object.create(null);    // local:remote -> connection
+    let opening = Object.create(null);        // local:remote -> cancel function
+    let outbox = Object.create(null);         // local:remote -> messages
+    let lost = Object.create(null);           // local:remote -> functions      // TODO are these ever cleaned up?
+    let raw_to_swiss = Object.create(null);   // raw -> swiss
+    let stubs = Object.create(null);          // swiss -> stub raw              // TODO release at some point
+    let listener_keys = Object.create(null);  // proxy handle -> local          // TODO implement safe_stop proxies
+    let listeners = Object.create(null);      // local -> {greeter, stop}
+    let proxy_keys = Object.create(null);     // proxy handle -> proxy key
+    let proxies = Object.create(null);        // proxy key -> data
+    let next_proxy_handle = 0;
 
     function random_swiss() {
         let swiss = new Uint8Array(16); // 128 bits
@@ -78,9 +79,12 @@ function awp_device({
         if (proxies[proxy_key] !== undefined) {
             return proxies[proxy_key].raw;
         }
-        const handle = handle_to_proxy_key.length;
-        handle_to_proxy_key.push(proxy_key);
-        const raw = dynamic_device.h_reserve_proxy(core.u_fixnum(handle));
+        const remote_handle = next_proxy_handle;
+        next_proxy_handle += 1;
+        proxy_keys[remote_handle] = proxy_key;
+        const raw = dynamic_device.h_reserve_proxy(
+            core.u_fixnum(remote_handle)
+        );
         proxies[proxy_key] = {raw, swiss, store, petname};
         return raw;
     }
@@ -154,46 +158,55 @@ function awp_device({
                 }
             }
             if (core.u_is_cap(raw)) {
-
-// The quad is either a local actor (an ACTOR_T) or a remote actor (a PROXY_T).
-
                 const quad = core.u_read_quad(core.u_cap_to_ptr(raw));
-                if (quad.t === ufork.ACTOR_T) {
-                    let swiss = raw_to_swiss[raw];
-                    if (
-                        swiss === undefined
-                        || stubs[hex.encode(swiss)] === undefined
-                    ) {
+                if (
+                    quad.t === ufork.PROXY_T
+                    && dynamic_device.u_owns_proxy(raw)
+                ) {
+
+// Strip the dynamic device metadata from the proxy's handle. The resulting
+// handle is a fixnum only if the proxy refers to a remote actor. Rather than
+// allocating it a Swiss number, pass on its details directly.
+
+                    const remote_handle_raw = core.u_nth(quad.y, -1);
+                    if (core.u_is_fix(remote_handle_raw)) {
+                        const remote_handle = core.u_fix_to_i32(
+                            remote_handle_raw
+                        );
+                        const proxy = proxies[proxy_keys[remote_handle]];
+                        if (proxy !== undefined) {
+                            const acquaintance = proxy.store.acquaintances[
+                                proxy.petname
+                            ];
+                            return {
+                                meta: acquaintance,
+                                data: proxy.swiss
+                            };
+                        }
+                    }
+                }
+
+// The capability is a local actor or some other kind of proxy.
+
+                let swiss = raw_to_swiss[raw];
+                if (
+                    swiss === undefined
+                    || stubs[hex.encode(swiss)] === undefined
+                ) {
 
 // There is no stub corresponding to this capability, making it vulnerable to
 // garbage collection. Generate a new Swiss number and reserve a stub.
 
-                        swiss = random_swiss();
-                        stubs[
-                            hex.encode(swiss)
-                        ] = dynamic_device.h_reserve_stub(raw);
-                        raw_to_swiss[raw] = swiss;
-                    }
-                    return {
-                        meta: store.acquaintances[0], // self
-                        data: swiss
-                    };
+                    swiss = random_swiss();
+                    stubs[
+                        hex.encode(swiss)
+                    ] = dynamic_device.h_reserve_stub(raw);
+                    raw_to_swiss[raw] = swiss;
                 }
-                if (quad.t === ufork.PROXY_T) {
-
-// Strip the dynamic device metadata from the proxy's handle.
-
-                    const handle_raw = core.u_nth(quad.y, -1);
-                    const handle = core.u_fix_to_i32(handle_raw);
-                    const proxy = proxies[handle_to_proxy_key[handle]];
-                    const acquaintance = proxy.store.acquaintances[
-                        proxy.petname
-                    ];
-                    return {
-                        meta: acquaintance,
-                        data: proxy.swiss
-                    };
-                }
+                return {
+                    meta: store.acquaintances[0], // self
+                    data: swiss
+                };
             }
             throw new Error("Failed to marshall " + core.u_pprint(value));
         });
@@ -315,7 +328,7 @@ function awp_device({
             return resume();
         }
 
-// The frame is a message addressed to a particular actor.
+// The frame is a message addressed to a particular actor (or proxy).
 
         const stub = stubs[hex.encode(frame.target)];
         if (stub !== undefined) {
@@ -625,6 +638,9 @@ function awp_device({
                     }
 
                     function safe_stop() {
+                        if (core.u_debug !== undefined) {
+                            core.u_debug("listen stop");
+                        }
                         const listener = listeners[key];
                         if (listener.greeter !== undefined) {
                             core.h_release_stub(listener.greeter);
@@ -637,9 +653,23 @@ function awp_device({
                         greeter: dynamic_device.h_reserve_stub(greeter),
                         stop: safe_stop
                     };
+
+// Make a "stop" capabililty, put it in a successful result, and send it to the
+// callback.
+
+                    const stop_handle = next_proxy_handle;
+                    next_proxy_handle += 1;
+                    listener_keys[stop_handle] = key;
+                    const stop_proxy = dynamic_device.h_reserve_proxy(
+                        core.h_reserve_ram({
+                            t: ufork.PAIR_T,
+                            x: core.u_fixnum(stop_handle),
+                            y: ufork.NIL_RAW
+                        })
+                    );
                     return resolve(core.h_reserve_ram({
                         t: ufork.PAIR_T,
-                        x: ufork.UNDEF_RAW, // TODO safe_stop
+                        x: stop_proxy,
                         y: ufork.NIL_RAW
                     }));
                 }
@@ -650,22 +680,6 @@ function awp_device({
                 cancel();
             }
 
-        });
-        return ufork.E_OK;
-    }
-
-    function forward(event_stub_ptr, handle, message) {
-        setTimeout(function () {
-            const proxy = proxies[handle_to_proxy_key[handle]];
-            if (proxy !== undefined) {
-                enqueue(
-                    proxy.store,
-                    proxy.petname,
-                    proxy.swiss,
-                    marshall(proxy.store, message)
-                );
-            }
-            core.h_release_stub(event_stub_ptr);
         });
         return ufork.E_OK;
     }
@@ -684,14 +698,53 @@ function awp_device({
             const event = core.u_read_quad(event_stub.y);
             const message = event.y;
 
-// Inspect the event target. If it is a proxy, forward the message to a remote
-// actor, stripping the dynamic device metadata from the handle.
+// Inspect the event target. If it is a proxy, strip the dynamic device metadata
+// from the handle, then check if the proxy is a stop capability or a reference
+// to a remote actor.
 
             const target_quad = core.u_read_quad(core.u_cap_to_ptr(event.x));
             if (target_quad.t === ufork.PROXY_T) {
-                const handle_raw = core.u_nth(target_quad.y, -1);
-                const handle = core.u_fix_to_i32(handle_raw);
-                return forward(event_stub_ptr, handle, message);
+
+// Remote actor proxies have a handle like (meta . fixnum).
+
+                const remote_handle_raw = core.u_nth(target_quad.y, -1);
+                if (core.u_is_fix(remote_handle_raw)) {
+                    const remote_handle = core.u_fix_to_i32(remote_handle_raw);
+
+// Marshalling uses the reentrant core methods, so defer that work for a future
+// turn.
+
+                    setTimeout(function () {
+                        const proxy = proxies[proxy_keys[remote_handle]];
+                        if (proxy !== undefined) {
+                            enqueue(
+                                proxy.store,
+                                proxy.petname,
+                                proxy.swiss,
+                                marshall(proxy.store, message)
+                            );
+                        }
+                        core.h_release_stub(event_stub_ptr);
+                    });
+                    return ufork.E_OK;
+                }
+
+// "Stop listening" proxies have a handle like (meta fixnum).
+
+                const stop_handle_raw = core.u_nth(target_quad.y, 2);
+                if (core.u_is_fix(stop_handle_raw)) {
+                    const stop_handle = core.u_fix_to_i32(stop_handle_raw);
+                    const listener_key = listener_keys[stop_handle];
+                    if (listener_key !== undefined) {
+                        const listener = listeners[listener_key];
+                        if (listener !== undefined) {
+                            setTimeout(listener.stop);
+                        }
+                        delete listener_keys[stop_handle];
+                    }
+                    return ufork.E_OK;
+                }
+                return ufork.E_NOT_FIX;
             }
 
 // Choose a method based on the message tag (#intro, #listen, etc). Note that
@@ -717,15 +770,25 @@ function awp_device({
         function on_drop_proxy(proxy_raw) {
 
 // A proxy has been garbage collected.
-// TODO inform the relevant party.
 
             const quad = core.u_read_quad(core.u_cap_to_ptr(proxy_raw));
-            const handle = quad.y;
+            const handle_raw = quad.y;
 
-// Strip the dynamic device's metadata from the proxy's handle.
+// Strip the dynamic device's metadata from the proxy's handle, then check if
+// it is a reference to a remote actor.
 
-            const subhandle = core.u_fix_to_i32(core.u_nth(handle, -1));
-            delete proxies[handle_to_proxy_key[handle]];
+            const remote_handle_raw = core.u_nth(handle_raw, -1);
+            if (core.u_is_fix(remote_handle_raw)) {
+                const remote_handle = core.u_fix_to_i32(remote_handle_raw);
+                const proxy_key = proxy_keys[remote_handle];
+                if (proxy_key !== undefined) {
+
+// TODO inform the relevant party.
+
+                    delete proxies[proxy_keys[remote_handle]];
+                    delete proxy_keys[remote_handle];
+                }
+            }
         }
     );
 
@@ -742,7 +805,7 @@ function awp_device({
         Object.values(listeners).forEach(function (listener) {
             listener.stop();
         });
-        dynamic_device.dispose();
+        dynamic_device.u_dispose();
     };
 }
 
@@ -779,7 +842,7 @@ function awp_device({
 //debug             lazy(function (the_core) {
 //debug                 core = the_core;
 //debug                 return core.h_import(import.meta.resolve(
-//debug                     "../../lib/grant_matcher.asm"
+//debug                     "../../lib/awp_demo.asm"
 //debug                 ));
 //debug             }),
 //debug             transport.generate_identity(),

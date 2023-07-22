@@ -78,6 +78,9 @@ listen_cb_beh:              ; cust <- (stop . error)
     msg -1                  ; error
     is_eq #nil              ; --
     msg 1                   ; stop
+    typeq #actor_t          ; actor?(stop)
+    is_eq #t                ; --
+    msg 1                   ; stop
     state 0                 ; stop cust
     ref std.send_msg
 
@@ -132,7 +135,7 @@ intro_svc_beh:              ; (awp_dev store) <- (cust petname hello)
     send 6                  ; --
     ref std.commit
 
-KEQD_greeter_beh:           ; deposit <- (cancel_customer callback petname)
+KEQD_greeter_beh:           ; deposit <- (to_cancel callback petname)
     msg 3                   ; petname
     typeq #fixnum_t         ; fixnum?
     is_eq #t                ; --
@@ -169,7 +172,7 @@ donor_k_beh:                ; (intro_svc withdraw) <- deposit
 ; When a second pledge to a particular charity arrives, the charity is sent a
 ; list of donors.
 
-GM_greeter_beh:             ; {pledges} <- (cancel_cust callback petname pledge)
+GM_greeter_beh:             ; {pledges} <- (to_cancel callback petname pledge)
     msg 4                   ; pledge
     part 1                  ; new_donor deposit
     state 0                 ; new_donor deposit {pledges}

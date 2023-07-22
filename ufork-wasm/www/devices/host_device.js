@@ -150,7 +150,21 @@ function host_device(core) {
             return core.h_reserve_stub(host_device_cap, target_raw);
         }
 
-        function dispose() {
+        function u_owns_proxy(proxy_raw) {
+
+// Returns true if this dynamic device issued the proxy with 'h_reserve_proxy'.
+
+            const quad = core.u_read_quad(core.u_cap_to_ptr(proxy_raw));
+            const device = quad.x;
+            const handle = quad.y;
+            const key_raw = core.u_nth(handle, 1);
+            return (
+                device === host_device_cap
+                && core.u_fix_to_i32(key_raw) === key
+            );
+        }
+
+        function u_dispose() {
             delete dynamic_devices[key];
         }
 
@@ -158,7 +172,8 @@ function host_device(core) {
             h_reserve_cap,
             h_reserve_stub,
             h_reserve_proxy,
-            dispose
+            u_owns_proxy,
+            u_dispose
         });
     };
 }
@@ -183,7 +198,8 @@ function host_device(core) {
 //debug                 console.log(
 //debug                     "on_event_stub proxy",
 //debug                     core.u_pprint(event.y), // message
-//debug                     core.u_pprint(core.u_nth(target.y, -1)) // handle
+//debug                     core.u_pprint(core.u_nth(target.y, -1)), // handle
+//debug                     dynamic_device.u_owns_proxy(event_stub.x)
 //debug                 );
 //debug             } else {
 //debug                 console.log(
@@ -206,7 +222,7 @@ function host_device(core) {
 //debug     core.h_install([[1000, dummy_cap]]);
 //debug     core.h_install([[1001, proxy]]);
 //debug     return function dispose() {
-//debug         dynamic_device.dispose();
+//debug         dynamic_device.u_dispose();
 //debug         if (dummy_cap_stub !== undefined) {
 //debug             core.h_release_stub(dummy_cap_stub);
 //debug             dummy_cap_stub = undefined;
