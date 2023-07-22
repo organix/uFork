@@ -4,6 +4,7 @@
 
 .import
     std: "/lib/std.asm"
+    lib: "/lib/lib.asm"
     dev: "/lib/dev.asm"
 
 room_key:
@@ -107,12 +108,72 @@ link_tx_msg:            ; (link timer ack seq msgs) <- (tx_msg . content)
     ref std.send_msg
 
 link_tx_ack:            ; (link timer ack seq msgs) <- (tx_ack ack' seq')
-    ; TBD
+    ; update ack from seq'
+    my state            ; msgs seq ack timer link
+    roll 3              ; msgs seq timer link ack
+    drop 1              ; msgs seq timer link
+    msg 3               ; msgs seq timer link seq'
+    roll -3             ; msgs seq ack=seq' timer link
+
+    ; ack queued message?
+    pick 5              ; msgs seq ack timer link msgs
+    deque pop           ; ... msgs' (seq . content)
+    part 1              ; ... msgs' content seq
+    msg 2               ; ... msgs' content seq ack'
+    cmp eq              ; ... msgs' content seq==ack'
+    if tx_ack_1         ; msgs seq ack timer link msgs' content
+    drop 2              ; msgs seq ack timer link
+    ref tx_ack_2
+
+tx_ack_1:               ; msgs seq ack timer link msgs' content
+    ; remove message from queue
+    drop 1              ; msgs seq ack timer link msgs'
+    roll -5             ; msgs seq ack timer link msgs'
+
+tx_ack_2:               ; msgs seq ack timer link
+    ; update tx state
+    my beh              ; msgs seq ack timer link beh
+    beh 5               ; --
     ref std.commit
 
 link_tx_time:           ; (link timer ack seq msgs) <- (tx_time seq')
-    ; TBD
+    ; check timer message number
+    state 4             ; seq
+    msg 2               ; seq seq'
+    cmp eq              ; seq==seq'
+    if tx_time_1        ; --
+
+    ; reset timer
+    push #nil           ; ()
+    state 4             ; () seq
+    push tx_time        ; () seq tx_time
+    pair 2              ; msg=(tx_time seq)
+    my self             ; msg target=SELF
+    push 1000           ; msg target delay=1000ms
+    state 2             ; msg target delay timer
+    send 3              ; --
     ref std.commit
+
+tx_time_1:
+    ; check for empty queue
+    state 5             ; msgs
+    deque empty         ; is_empty(msgs)
+    if_not tx_time_2    ; --
+
+    ; send empty message
+    push tx_msg         ; tx_msg
+    my self             ; tx_msg SELF
+    send 1              ; --
+    ref std.commit
+
+tx_time_2:
+    ; resend queued message
+    state 5             ; msgs
+    deque pop           ; msgs (seq . content)
+    state 3             ; msgs (seq . content) ack
+    pair 1              ; msgs (ack seq . content)
+    state 1             ; msgs (ack seq . content) link
+    ref std.send_msg
 
 ;
 ; Link receiver

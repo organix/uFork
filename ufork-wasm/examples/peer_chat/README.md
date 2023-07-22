@@ -71,7 +71,7 @@ transmission queue.
 Messages that have been transmitted
 but not acknowledged
 are retransmitted.
-Duplicate messages received
+Duplicate (or empty) messages received
 are discarded.
 
                 A_tx        A_rx                B_rx        B_tx
@@ -89,7 +89,7 @@ are discarded.
                  |           |                   |           #<----(0 6)-
                  |           #<------------------------(1 6)-#
                  #<-(-1 1 6)-#                   |      {ack:1,seq:7,
-                 #        {seq:7}                |         Q:[]}
+                 #        {seq:7}                |        Q:[(6)]}
             {ack:6,seq:2,    |                   |           |
                 Q:[]}        |                   |           |
                  |           |                   |           |
