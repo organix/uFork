@@ -12,10 +12,26 @@
 /*jslint browser, null, devel, long */
 
 import ufork from "../ufork.js";
+import assemble from "../assemble.js";
 import OED from "../oed.js";
 import hex from "../hex.js";
 
 const awp_key = 100; // from dev.asm
+const once_fwd_crlf = assemble(`
+sink_beh:
+    end commit
+
+beh:                    ; callback <- message
+    msg 0               ; message
+    state 0             ; message callback
+    send -1             ; --
+    push sink_beh       ; sink_beh
+    beh 0               ; --
+    end commit
+
+.export
+    beh
+`);
 
 function stringify(value) {
 
@@ -33,18 +49,19 @@ function awp_device({
     webcrypto = crypto // Node.js does not have a 'crypto' global
 }) {
     const sponsor = core.u_ramptr(ufork.SPONSOR_OFS);
+    const once_fwd_beh = core.h_load(once_fwd_crlf).beh;
 
     let dynamic_device;
     let connections = Object.create(null);  // local:remote -> connection object
     let opening = Object.create(null);      // local:remote -> cancel function
     let outbox = Object.create(null);       // local:remote -> messages
     let lost = Object.create(null);         // local:remote -> functions // TODO are these ever cleaned up?
-    let greeters = Object.create(null);     // local -> greeter stub raw
     let raw_to_swiss = Object.create(null); // raw -> swiss
     let stubs = Object.create(null);        // swiss -> stub raw    // TODO release at some point
+    let handle_to_listener_key = [];        // handle -> local // TODO implement safe_stop proxies
+    let listeners = Object.create(null);    // local -> {greeter, stop}
     let handle_to_proxy_key = [];           // handle -> proxy key  // TODO release
     let proxies = Object.create(null);      // proxy key -> data    // TODO drop_proxy
-    let stops = [];                         // listen stop functions // TODO release
 
     function random_swiss() {
         let swiss = new Uint8Array(16); // 128 bits
@@ -260,9 +277,9 @@ function awp_device({
 
 // The frame is an introduction request. Forward it to the greeter.
 
-            const greeter_stub = greeters[
+            const greeter_stub = listeners[
                 stringify(store.acquaintances[0].name) // self
-            ];
+            ]?.greeter;
             if (greeter_stub === undefined) {
                 if (core.u_warn !== undefined) {
                     core.u_warn("No greeter", store, frame);
@@ -463,51 +480,9 @@ function awp_device({
 // Wait a turn so we can safely use the non-reentrant core methods.
 
         setTimeout(function () {
-
-// TODO rewrite this in assembly, and allocate in ROM.
-
-            const sink_beh = core.h_reserve_ram({
-                t: ufork.INSTR_T,
-                x: ufork.VM_END,
-                y: core.u_fixnum(1) // COMMIT
-            });
             const callback_fwd = core.u_ptr_to_cap(core.h_reserve_ram({
                 t: ufork.ACTOR_T,
-
-//  once_fwd_beh:           ; callback <- message
-//      msg 0               ; message
-//      state 0             ; message callback
-//      send -1             ; --
-//      push std.sink_beh   ; sink_beh
-//      beh 0               ; --
-//      end commit
-
-                x: core.h_reserve_ram({
-                    t: ufork.INSTR_T,
-                    x: ufork.VM_MSG,
-                    y: core.u_fixnum(0),
-                    z: core.h_reserve_ram({
-                        t: ufork.INSTR_T,
-                        x: ufork.VM_STATE,
-                        y: core.u_fixnum(0),
-                        z: core.h_reserve_ram({
-                            t: ufork.INSTR_T,
-                            x: ufork.VM_SEND,
-                            y: core.u_fixnum(-1),
-                            z: core.h_reserve_ram({
-                                t: ufork.INSTR_T,
-                                x: ufork.VM_PUSH,
-                                y: sink_beh,
-                                z: core.h_reserve_ram({
-                                    t: ufork.INSTR_T,
-                                    x: ufork.VM_BEH,
-                                    y: core.u_fixnum(0),
-                                    z: sink_beh
-                                })
-                            })
-                        })
-                    })
-                }),
+                x: once_fwd_beh,
                 y: intro_callback
             }));
 
@@ -542,14 +517,14 @@ function awp_device({
                 }));
 
 // We could release the callback's stub here, but it becomes a sink once it
-// forwards the reply so we can safely leave it for the distributed GC to clean
+// forwards the result so we can safely leave it for the distributed GC to clean
 // up instead.
 
             });
             core.h_release_stub(event_stub_ptr);
 
-// TODO send a cancel capability to the cancel_customer. This should nullify
-// callback_fwd.
+// TODO send a cancel capability to the cancel_customer. Should we also neuter
+// callback_fwd?
 
         });
         return ufork.E_OK;
@@ -581,14 +556,14 @@ function awp_device({
             }
         }
 
-        function resolve(reply) {
+        function resolve(result) {
 
 // (stop . error) -> listen_callback
 
             core.h_event_enqueue(core.h_reserve_ram({
                 t: sponsor,
                 x: listen_callback,
-                y: reply
+                y: result
             }));
             release_event_stub();
             return resume();
@@ -640,7 +615,7 @@ function awp_device({
 // confusing.
 
                     const key = stringify(store.acquaintances[0].name);
-                    if (greeters[key] !== undefined) {
+                    if (listeners[key] !== undefined) {
                         stop();
                         return resolve(core.h_reserve_ram({
                             t: ufork.PAIR_T,
@@ -648,17 +623,20 @@ function awp_device({
                             y: core.u_fixnum(-1) // TODO error codes
                         }));
                     }
-                    greeters[key] = dynamic_device.h_reserve_stub(greeter);
 
                     function safe_stop() {
-                        if (greeters[key] !== undefined) {
-                            core.h_release_stub(greeters[key]);
-                            delete greeters[key];
+                        const listener = listeners[key];
+                        if (listener.greeter !== undefined) {
+                            core.h_release_stub(listener.greeter);
                         }
+                        delete listeners[key];
                         return stop();
                     }
 
-                    stops.push(safe_stop);
+                    listeners[key] = {
+                        greeter: dynamic_device.h_reserve_stub(greeter),
+                        stop: safe_stop
+                    };
                     return resolve(core.h_reserve_ram({
                         t: ufork.PAIR_T,
                         x: ufork.UNDEF_RAW, // TODO safe_stop
@@ -758,8 +736,8 @@ function awp_device({
         Object.values(connections).forEach(function (connection) {
             connection.close();
         });
-        stops.forEach(function (stop_listening) {
-            stop_listening();
+        Object.values(listeners).forEach(function (listener) {
+            listener.stop();
         });
         dynamic_device.dispose();
     };
