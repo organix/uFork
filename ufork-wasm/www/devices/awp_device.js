@@ -293,14 +293,14 @@ function awp_device({
             const greeting_callback = core.u_nth(message, 1);
             const hello_data = core.u_nth(message, -1);
 
-// (cancel_customer greeting_callback petname . hello) -> greeter
+// (to_cancel greeting_callback petname . hello) -> greeter
 
             core.h_event_enqueue(core.h_reserve_ram({
                 t: sponsor,
                 x: greeter,
                 y: core.h_reserve_ram({
                     t: ufork.PAIR_T,
-                    x: ufork.UNDEF_RAW, // TODO cancel_customer
+                    x: ufork.UNDEF_RAW, // TODO to_cancel
                     y: core.h_reserve_ram({
                         t: ufork.PAIR_T,
                         x: greeting_callback,
@@ -397,7 +397,7 @@ function awp_device({
                 }
             }
         );
-        // TODO forward cancel capability to cancel_customer
+        // TODO forward cancel capability to to_cancel
         opening[key] = function () {
             if (typeof cancel === "function") {
                 cancel();
@@ -523,7 +523,7 @@ function awp_device({
             });
             core.h_release_stub(event_stub_ptr);
 
-// TODO send a cancel capability to the cancel_customer. Should we also neuter
+// TODO send a cancel capability to the to_cancel. Should we also neuter
 // callback_fwd?
 
         });
@@ -572,7 +572,7 @@ function awp_device({
 // Wait a turn so we can safely use the non-reentrant core methods.
 
         setTimeout(function () {
-            // TODO send cancel to cancel_customer
+            // TODO send cancel to to_cancel
             const cancel = transport.listen(
                 store.identity,
                 store.bind_info,
@@ -644,7 +644,7 @@ function awp_device({
                     }));
                 }
             );
-            // TODO provide to cancel_customer
+            // TODO provide to to_cancel
             function safe_cancel() {
                 release_event_stub();
                 cancel();
@@ -714,15 +714,18 @@ function awp_device({
 
             return method(event_stub_ptr, core.u_nth(message, -2));
         },
-        function on_drop_proxy(handle_raw) {
+        function on_drop_proxy(proxy_raw) {
 
 // A proxy has been garbage collected.
-
-            const handle = core.u_fix_to_i32(handle_raw);
-            delete proxies[handle_to_proxy_key[handle]];
-
 // TODO inform the relevant party.
 
+            const quad = core.u_read_quad(core.u_cap_to_ptr(proxy_raw));
+            const handle = quad.y;
+
+// Strip the dynamic device's metadata from the proxy's handle.
+
+            const subhandle = core.u_fix_to_i32(core.u_nth(handle, -1));
+            delete proxies[handle_to_proxy_key[handle]];
         }
     );
 
