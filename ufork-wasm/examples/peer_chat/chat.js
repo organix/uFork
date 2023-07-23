@@ -1,6 +1,6 @@
 // uFork debugger
 
-/*jslint browser, bitwise, long, devel */
+/*jslint browser, devel */
 
 import ufork from "../../www/ufork.js";
 import hex from "../../www/hex.js";
@@ -34,17 +34,18 @@ function refill_all(spn) {
 function ufork_run() {
     const spn = core.u_ramptr(ufork.SPONSOR_OFS);
     refill_all(spn);  // pre-load root-sponsor with resources
-    const sig = core.h_run_loop(0);  // run until there is no more work, or an error occurs
+    // run until there is no more work, or an error occurs
+    const sig = core.h_run_loop(0);
     if (core.u_is_fix(sig)) {
         const err = core.u_fix_to_i32(sig);
         const msg = core.u_fault_msg(err);
-        const spn = core.u_ramptr(ufork.SPONSOR_OFS);
         console.log("IDLE", core.u_disasm(spn), "error:", err, "=", msg);
         const sponsor = core.u_read_quad(spn);
         if (err === ufork.E_OK) {
             // processor idle
             return ufork.E_OK;
-        } else if (err === ufork.E_MEM_LIM) {
+        }
+        if (err === ufork.E_MEM_LIM) {
             sponsor.t = core.u_fixnum(256);
         } else if (err === ufork.E_MSG_LIM) {
             sponsor.x = core.u_fixnum(16);
@@ -155,6 +156,17 @@ function boot(entrypoint, awp_store) {
     return ufork_run();
 }
 
+function save_store(store) {
+    chat_db.set_store()(
+        function callback(value, reason) {
+            if (value === undefined) {
+                console.error(reason);
+            }
+        },
+        store
+    );
+}
+
 const transport = webrtc_transport(websockets_signaller(), console.log);
 const wasm_url = import.meta.resolve(
     "../../target/wasm32-unknown-unknown/debug/ufork_wasm.wasm"
@@ -187,16 +199,7 @@ parseq.sequence([
             make_dynamic_device,
             transport,
             stores: [the_awp_store],
-            on_store_change(store) {
-                chat_db.set_store()(
-                    function callback(value, reason) {
-                        if (value === undefined) {
-                            throw reason;
-                        }
-                    },
-                    store
-                );
-            }
+            save_store
         });
         return boot(asm_module.boot, the_awp_store);
     })
