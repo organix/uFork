@@ -4,6 +4,13 @@
 // Returns a disposal function that destroys all connections and stops
 // listening.
 
+// This device makes two kinds of proxies: "remote" and "stop".
+// The two kinds can be distinguished by the type of their handle:
+//  - Remote capabilities (transparent references to remote actors) have a
+//    fixnum as their handle.
+//  - Stop capabilities (used to stop listening) have a wrapped fixnum as their
+//    handle.
+
 // TODO:
 // - distributed garbage collection
 // - acquaintance interning
@@ -15,6 +22,12 @@ import ufork from "../ufork.js";
 import assemble from "../assemble.js";
 import OED from "../oed.js";
 import hex from "../hex.js";
+
+const E_CONNECTION_LOST = -1;
+const E_ALREADY_LISTENING = -2;
+const E_LISTEN_FAIL = -3;
+const E_NO_ACQUAINTANCE = -4;
+const E_NO_STORE = -5;
 
 const awp_key = 100; // from dev.asm
 const once_fwd_crlf = assemble(`
@@ -51,17 +64,18 @@ function awp_device({
     const sponsor = core.u_ramptr(ufork.SPONSOR_OFS);
     const once_fwd_beh = core.h_load(once_fwd_crlf).beh;
 
-    let dynamic_device;
-    let connections = Object.create(null);  // local:remote -> connection object
-    let opening = Object.create(null);      // local:remote -> cancel function
-    let outbox = Object.create(null);       // local:remote -> messages
-    let lost = Object.create(null);         // local:remote -> functions // TODO are these ever cleaned up?
-    let raw_to_swiss = Object.create(null); // raw -> swiss
-    let stubs = Object.create(null);        // swiss -> stub raw    // TODO release at some point
-    let handle_to_listener_key = [];        // handle -> local // TODO implement safe_stop proxies
-    let listeners = Object.create(null);    // local -> {greeter, stop}
-    let handle_to_proxy_key = [];           // handle -> proxy key  // TODO release
-    let proxies = Object.create(null);      // proxy key -> data    // TODO drop_proxy
+    let device;
+    let connections = Object.create(null);    // local:remote -> connection
+    let opening = Object.create(null);        // local:remote -> cancel function
+    let outbox = Object.create(null);         // local:remote -> messages
+    let lost = Object.create(null);           // local:remote -> functions      // TODO are these ever cleaned up?
+    let raw_to_swiss = Object.create(null);   // raw -> swiss
+    let stubs = Object.create(null);          // swiss -> stub raw              // TODO release at some point
+    let listener_keys = Object.create(null);  // proxy handle -> local          // TODO implement safe_stop proxies
+    let listeners = Object.create(null);      // local -> {greeter, stop}
+    let proxy_keys = Object.create(null);     // proxy handle -> proxy key
+    let proxies = Object.create(null);        // proxy key -> data
+    let next_proxy_handle = 0;
 
     function random_swiss() {
         let swiss = new Uint8Array(16); // 128 bits
@@ -78,9 +92,10 @@ function awp_device({
         if (proxies[proxy_key] !== undefined) {
             return proxies[proxy_key].raw;
         }
-        const handle = handle_to_proxy_key.length;
-        handle_to_proxy_key.push(proxy_key);
-        const raw = dynamic_device.h_reserve_proxy(core.u_fixnum(handle));
+        const remote_handle = next_proxy_handle;
+        next_proxy_handle += 1;
+        proxy_keys[remote_handle] = proxy_key;
+        const raw = device.h_reserve_proxy(core.u_fixnum(remote_handle));
         proxies[proxy_key] = {raw, swiss, store, petname};
         return raw;
     }
@@ -154,46 +169,49 @@ function awp_device({
                 }
             }
             if (core.u_is_cap(raw)) {
-
-// The quad is either a local actor (an ACTOR_T) or a remote actor (a PROXY_T).
-
                 const quad = core.u_read_quad(core.u_cap_to_ptr(raw));
-                if (quad.t === ufork.ACTOR_T) {
-                    let swiss = raw_to_swiss[raw];
-                    if (
-                        swiss === undefined
-                        || stubs[hex.encode(swiss)] === undefined
-                    ) {
+                if (quad.t === ufork.PROXY_T && device.u_owns_proxy(raw)) {
+
+// The proxy's handle is a fixnum only if the proxy refers to a remote actor.
+// Rather than allocating it a Swiss number, pass on its details directly.
+
+                    const remote_handle_raw = device.u_strip_meta(quad.y);
+                    if (core.u_is_fix(remote_handle_raw)) {
+                        const remote_handle = core.u_fix_to_i32(
+                            remote_handle_raw
+                        );
+                        const proxy = proxies[proxy_keys[remote_handle]];
+                        if (proxy !== undefined) {
+                            const acquaintance = proxy.store.acquaintances[
+                                proxy.petname
+                            ];
+                            return {
+                                meta: acquaintance,
+                                data: proxy.swiss
+                            };
+                        }
+                    }
+                }
+
+// The capability is a local actor or some other kind of proxy.
+
+                let swiss = raw_to_swiss[raw];
+                if (
+                    swiss === undefined
+                    || stubs[hex.encode(swiss)] === undefined
+                ) {
 
 // There is no stub corresponding to this capability, making it vulnerable to
 // garbage collection. Generate a new Swiss number and reserve a stub.
 
-                        swiss = random_swiss();
-                        stubs[
-                            hex.encode(swiss)
-                        ] = dynamic_device.h_reserve_stub(raw);
-                        raw_to_swiss[raw] = swiss;
-                    }
-                    return {
-                        meta: store.acquaintances[0], // self
-                        data: swiss
-                    };
+                    swiss = random_swiss();
+                    stubs[hex.encode(swiss)] = device.h_reserve_stub(raw);
+                    raw_to_swiss[raw] = swiss;
                 }
-                if (quad.t === ufork.PROXY_T) {
-
-// Strip the dynamic device metadata from the proxy's handle.
-
-                    const handle_raw = core.u_nth(quad.y, -1);
-                    const handle = core.u_fix_to_i32(handle_raw);
-                    const proxy = proxies[handle_to_proxy_key[handle]];
-                    const acquaintance = proxy.store.acquaintances[
-                        proxy.petname
-                    ];
-                    return {
-                        meta: acquaintance,
-                        data: proxy.swiss
-                    };
-                }
+                return {
+                    meta: store.acquaintances[0], // self
+                    data: swiss
+                };
             }
             throw new Error("Failed to marshall " + core.u_pprint(value));
         });
@@ -269,7 +287,6 @@ function awp_device({
         lose(key);
         delete outbox[key];
         delete connections[key];
-        return resume();
     }
 
     function receive(store, connection, frame) {
@@ -315,7 +332,7 @@ function awp_device({
             return resume();
         }
 
-// The frame is a message addressed to a particular actor.
+// The frame is a message addressed to a particular actor (or proxy).
 
         const stub = stubs[hex.encode(frame.target)];
         if (stub !== undefined) {
@@ -376,10 +393,11 @@ function awp_device({
                 if (core.u_debug !== undefined) {
                     core.u_debug("connect on_close");
                 }
-                return unregister(convo_key(
+                unregister(convo_key(
                     store.acquaintances[0].name, // self
                     connection.name()
                 ));
+                return resume();
             }
         )(
             function connected_callback(connection, reason) {
@@ -389,12 +407,12 @@ function awp_device({
                         core.u_debug("connect fail", reason);
                     }
                     lose(key);
-                } else {
-                    if (core.u_debug !== undefined) {
-                        core.u_debug("connect open");
-                    }
-                    register(store, connection);
+                    return resume();
                 }
+                if (core.u_debug !== undefined) {
+                    core.u_debug("connect open");
+                }
+                register(store, connection);
             }
         );
         // TODO forward cancel capability to to_cancel
@@ -468,18 +486,34 @@ function awp_device({
         }
         const store_nr = core.u_fix_to_i32(store_fix);
         const petname = core.u_fix_to_i32(petname_fix);
-        const store = stores[store_nr];
-        if (
-            store === undefined
-            || store.acquaintances[petname] === undefined
-            || store.acquaintances[petname].name === undefined
-        ) {
-            return ufork.E_BOUNDS; // TODO inform callback instead of failing
-        }
 
 // Wait a turn so we can safely use the non-reentrant core methods.
 
         setTimeout(function () {
+            core.h_release_stub(event_stub_ptr);
+
+// Send a failed result to the callback if the acquaintance can not be found.
+
+            const store = stores[store_nr];
+            if (
+                store === undefined
+                || store.acquaintances[petname]?.name === undefined
+            ) {
+                core.h_event_enqueue(core.h_reserve_ram({
+                    t: sponsor,
+                    x: intro_callback,
+                    y: core.h_reserve_ram({
+                        t: ufork.PAIR_T,
+                        x: ufork.UNDEF_RAW,
+                        y: core.u_fixnum(
+                            store === undefined
+                            ? E_NO_STORE
+                            : E_NO_ACQUAINTANCE
+                        )
+                    })
+                }));
+                return resume();
+            }
             const callback_fwd = core.u_ptr_to_cap(core.h_reserve_ram({
                 t: ufork.ACTOR_T,
                 x: once_fwd_beh,
@@ -512,16 +546,10 @@ function awp_device({
                     y: core.h_reserve_ram({
                         t: ufork.PAIR_T,
                         x: ufork.UNDEF_RAW,
-                        y: core.u_fixnum(-1) // TODO error codes
+                        y: core.u_fixnum(E_CONNECTION_LOST)
                     })
                 }));
-
-// We could release the callback's stub here, but it becomes a sink once it
-// forwards the result so we can safely leave it for the distributed GC to clean
-// up instead.
-
             });
-            core.h_release_stub(event_stub_ptr);
 
 // TODO send a cancel capability to the to_cancel. Should we also neuter
 // callback_fwd?
@@ -543,10 +571,6 @@ function awp_device({
             || !core.u_is_cap(listen_callback)
         ) {
             return ufork.E_FAIL;
-        }
-        const store = stores[core.u_fix_to_i32(store_fix)];
-        if (store === undefined) {
-            return ufork.E_BOUNDS; // TODO inform callback instead of failing
         }
 
         function release_event_stub() {
@@ -572,6 +596,14 @@ function awp_device({
 // Wait a turn so we can safely use the non-reentrant core methods.
 
         setTimeout(function () {
+            const store = stores[core.u_fix_to_i32(store_fix)];
+            if (store === undefined) {
+                return resolve(core.h_reserve_ram({
+                    t: ufork.PAIR_T,
+                    x: ufork.UNDEF_RAW,
+                    y: core.u_fixnum(E_NO_STORE)
+                }));
+            }
             // TODO send cancel to to_cancel
             const cancel = transport.listen(
                 store.identity,
@@ -607,12 +639,11 @@ function awp_device({
                         return resolve(core.h_reserve_ram({
                             t: ufork.PAIR_T,
                             x: ufork.UNDEF_RAW,
-                            y: core.u_fixnum(-1) // TODO error codes
+                            y: core.u_fixnum(E_LISTEN_FAIL)
                         }));
                     }
 
-// A store may not register more than one greeter. That would get very
-// confusing.
+// Fail if the store is already listening.
 
                     const key = stringify(store.acquaintances[0].name);
                     if (listeners[key] !== undefined) {
@@ -620,11 +651,14 @@ function awp_device({
                         return resolve(core.h_reserve_ram({
                             t: ufork.PAIR_T,
                             x: ufork.UNDEF_RAW,
-                            y: core.u_fixnum(-1) // TODO error codes
+                            y: core.u_fixnum(E_ALREADY_LISTENING)
                         }));
                     }
 
                     function safe_stop() {
+                        if (core.u_debug !== undefined) {
+                            core.u_debug("listen stop");
+                        }
                         const listener = listeners[key];
                         if (listener.greeter !== undefined) {
                             core.h_release_stub(listener.greeter);
@@ -634,16 +668,31 @@ function awp_device({
                     }
 
                     listeners[key] = {
-                        greeter: dynamic_device.h_reserve_stub(greeter),
+                        greeter: device.h_reserve_stub(greeter),
                         stop: safe_stop
                     };
+
+// Make a "stop" capabililty, put it in a successful result, and send it to the
+// callback.
+
+                    const stop_handle = next_proxy_handle;
+                    next_proxy_handle += 1;
+                    listener_keys[stop_handle] = key;
+                    const stop_proxy = device.h_reserve_proxy(
+                        core.h_reserve_ram({
+                            t: ufork.PAIR_T,
+                            x: core.u_fixnum(stop_handle),
+                            y: ufork.NIL_RAW
+                        })
+                    );
                     return resolve(core.h_reserve_ram({
                         t: ufork.PAIR_T,
-                        x: ufork.UNDEF_RAW, // TODO safe_stop
+                        x: stop_proxy,
                         y: ufork.NIL_RAW
                     }));
                 }
             );
+
             // TODO provide to to_cancel
             function safe_cancel() {
                 release_event_stub();
@@ -654,25 +703,9 @@ function awp_device({
         return ufork.E_OK;
     }
 
-    function forward(event_stub_ptr, handle, message) {
-        setTimeout(function () {
-            const proxy = proxies[handle_to_proxy_key[handle]];
-            if (proxy !== undefined) {
-                enqueue(
-                    proxy.store,
-                    proxy.petname,
-                    proxy.swiss,
-                    marshall(proxy.store, message)
-                );
-            }
-            core.h_release_stub(event_stub_ptr);
-        });
-        return ufork.E_OK;
-    }
-
 // Install the device.
 
-    dynamic_device = make_dynamic_device(
+    device = make_dynamic_device(
         function on_event_stub(event_stub_ptr) {
 
 // The event stub retains the event, including its message, in memory until
@@ -682,23 +715,65 @@ function awp_device({
 
             const event_stub = core.u_read_quad(event_stub_ptr);
             const event = core.u_read_quad(event_stub.y);
-            const message = event.y;
 
-// Inspect the event target. If it is a proxy, forward the message to a remote
-// actor, stripping the dynamic device metadata from the handle.
+// Inspect the event target. If it is a proxy, check if it is a stop capability
+// or a reference to a remote actor.
 
             const target_quad = core.u_read_quad(core.u_cap_to_ptr(event.x));
             if (target_quad.t === ufork.PROXY_T) {
-                const handle_raw = core.u_nth(target_quad.y, -1);
-                const handle = core.u_fix_to_i32(handle_raw);
-                return forward(event_stub_ptr, handle, message);
+
+// Remote actor proxies have a fixnum handle.
+
+                const remote_handle_raw = device.u_strip_meta(target_quad.y);
+                if (core.u_is_fix(remote_handle_raw)) {
+                    const remote_handle = core.u_fix_to_i32(remote_handle_raw);
+
+// Marshalling uses the reentrant core methods, so defer that work for a future
+// turn.
+
+                    setTimeout(function () {
+                        const proxy = proxies[proxy_keys[remote_handle]];
+                        if (proxy !== undefined) {
+                            enqueue(
+                                proxy.store,
+                                proxy.petname,
+                                proxy.swiss,
+                                marshall(proxy.store, event.y) // message
+                            );
+                        }
+                        core.h_release_stub(event_stub_ptr);
+                    });
+                    return ufork.E_OK;
+                }
+
+// "Stop listening" proxy handles are a wrapped fixnum.
+
+                const stop_handle_raw = core.u_nth(
+                    device.u_strip_meta(target_quad.y),
+                    1
+                );
+                if (core.u_is_fix(stop_handle_raw)) {
+                    setTimeout(function () {
+                        const stop_handle = core.u_fix_to_i32(stop_handle_raw);
+                        const listener_key = listener_keys[stop_handle];
+                        if (listener_key !== undefined) {
+                            const listener = listeners[listener_key];
+                            if (listener !== undefined) {
+                                listener.stop();
+                            }
+                            delete listener_keys[stop_handle];
+                        }
+                        core.h_release_stub(event_stub_ptr);
+                    });
+                    return ufork.E_OK;
+                }
+                return ufork.E_NOT_FIX;
             }
 
-// Choose a method based on the message tag (#intro, #listen, etc). Note that
-// the message is tagged with dynamic device metadata, so we skip the head of
-// the list.
+// Choose a method based on the message tag (#intro, #listen, etc).
 
-            const tag = core.u_nth(message, 2);
+            const message = device.u_strip_meta(event.y);
+            const tag = core.u_nth(message, 1);
             if (!core.u_is_fix(tag)) {
                 return ufork.E_FAIL;
             }
@@ -712,29 +787,38 @@ function awp_device({
 // need to reserve stubs for the portions of the message it will need later.
 // When the method is done doing that, it should release the event stub.
 
-            return method(event_stub_ptr, core.u_nth(message, -2));
+            return method(event_stub_ptr, core.u_nth(message, -1));
         },
         function on_drop_proxy(proxy_raw) {
 
 // A proxy has been garbage collected.
-// TODO inform the relevant party.
 
             const quad = core.u_read_quad(core.u_cap_to_ptr(proxy_raw));
-            const handle = quad.y;
 
-// Strip the dynamic device's metadata from the proxy's handle.
+// Is it a reference to a remote actor? If so, clean up any references to it and
+// inform the relevant party.
 
-            const subhandle = core.u_fix_to_i32(core.u_nth(handle, -1));
-            delete proxies[handle_to_proxy_key[handle]];
+            const remote_handle_raw = device.u_strip_meta(quad.y);
+            if (core.u_is_fix(remote_handle_raw)) {
+                const remote_handle = core.u_fix_to_i32(remote_handle_raw);
+                const proxy_key = proxy_keys[remote_handle];
+                if (proxy_key !== undefined) {
+
+// TODO inform the relevant party.
+
+                    delete proxy_keys[remote_handle];
+                    delete proxies[proxy_key];
+                }
+            }
         }
     );
 
 // Install the dynamic device as if it were a real device. Unlike a real device,
 // we must reserve a stub to keep the capability from being released.
 
-    const awp_device_cap = dynamic_device.h_reserve_cap();
+    const awp_device_cap = device.h_reserve_cap();
     core.h_install([[awp_key, awp_device_cap]]);
-    dynamic_device.h_reserve_stub(awp_device_cap);
+    device.h_reserve_stub(awp_device_cap);
     return function dispose() {
         Object.values(connections).forEach(function (connection) {
             connection.close();
@@ -742,7 +826,7 @@ function awp_device({
         Object.values(listeners).forEach(function (listener) {
             listener.stop();
         });
-        dynamic_device.dispose();
+        device.u_dispose();
     };
 }
 

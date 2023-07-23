@@ -136,7 +136,7 @@ A store's contents might look something like this:
 
 ### Introduction
 
-    (#intro cancel_customer callback store petname . hello_data) -> awp_device
+    (#intro to_cancel callback store petname . hello_data) -> awp_device
 
 Requests an introduction to an acquaintance, producing a greeting.
 
@@ -150,7 +150,7 @@ greeter is available, the request fails.
 
 ### Listening
 
-    (#listen cancel_customer callback store greeter) -> awp_device
+    (#listen to_cancel callback store greeter) -> awp_device
 
 Listens for introduction requests, producing a `stop` capability on success that
 can be used to stop listening:
@@ -163,7 +163,7 @@ The `greeter`, if provided, is a requestor actor that responds to introduction
 requests. It produces a "greeting" value, perhaps containing capabilities. In
 this way, the greeter lets remote parties bootstrap a relationship from scratch.
 
-    (cancel_customer callback petname . hello_data) -> greeter
+    (to_cancel callback petname . hello_data) -> greeter
 
 The `petname` identifies the acquaintance requesting the introduction, and could
 be useful authentication and logging. Unknown parties are added to the store,
@@ -176,7 +176,7 @@ The `hello_data` is the value included in the introduction request.
 It is possible to be notified when a message has been successfully sent by the
 AWP device.
 
-    (#send cancel_customer callback proxy . message) -> awp_device
+    (#send to_cancel callback proxy . message) -> awp_device
 
 This requestor produces an acknowledgement if it becomes known that the
 `message` was sent by the local transport. An acknowledgement does not

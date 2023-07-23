@@ -128,7 +128,7 @@ link_tx_ack:            ; (link timer ack seq msgs) <- (tx_ack ack' seq')
 tx_ack_1:               ; msgs seq ack timer link msgs' content
     ; remove message from queue
     drop 1              ; msgs seq ack timer link msgs'
-    roll -5             ; msgs seq ack timer link msgs'
+    roll -5             ; ... msgs' seq ack timer link
 
 tx_ack_2:               ; msgs seq ack timer link
     ; update tx state
