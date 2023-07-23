@@ -14,8 +14,8 @@ function indexed_db(
 
     return function indexed_db_requestor(callback, value) {
 
-        function fail(reason) {
-            return callback(undefined, reason);
+        function fail(event) {
+            return callback(undefined, event.target?.error);
         }
 
         try {
@@ -38,7 +38,7 @@ function indexed_db(
                     return db.close();
                 };
                 transaction.onerror = function (event) {
-                    fail(event.target?.error);
+                    fail(event);
                     return db.close();
                 };
                 const request = make_store_request(

@@ -6,10 +6,10 @@
 <link rel="icon" type="image/png" sizes="128x128" href="/www/favicon-128.png">
 <style>
 body {
-  margin: 0.5ex;
+  margin: 2ex;
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  align-items: flex-start;
   background-color: #FFC;
 }
 h1 {
@@ -19,23 +19,19 @@ pre {
   margin: 2px;
 }
 button {
-  margin: 0 0.5ex;
+  margin-left: 1ex;
 }
-input {
-  margin: 0 0.5ex;
+header {
+  margin-bottom: 2ex;
 }
-.flex-row {
-  margin: 1ex;
+header, form {
   display: flex;
   flex-direction: row;
   align-items: center;
 }
 .panel {
-  margin: 1ex;
-  width: 100ex;
-  height: 24em;
   border-radius: 1.5ex;
-  padding: 1.2ex 2ex;
+  padding: 2ex;
   background: #333;
   color: #3CC;
   font-family: monospace;
@@ -46,10 +42,11 @@ input {
   display: flex;
   flex-direction: column;
   justify-content: center;
-  align-items: center;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 #stdout {
-  margin: 1ex;
+  margin-bottom: 1ex;
   background-color: #222;
   color: #FFF;
   font-family: monospace;
@@ -59,24 +56,26 @@ input {
   background-color: #FFF;
   color: #000;
   font-family: monospace;
+  flex-grow: 1;
+  min-width: 10ex;
 }
 </style>
 </head>
 <body>
-  <div class="flex-row">
+  <header>
     <img src="/www/ufork_logo.svg" alt="μFork logo" />
     <h1>Peer Chat</h1>  
-  </div>
+  </header>
   <noscript>
     This page contains webassembly and javascript content,
     please enable javascript in your browser.
   </noscript>
   <div id="room" class="panel">
-    <textarea id="stdout" cols="70" rows="16" readonly="readonly"></textarea>
-    <div class="flex-row">
-      <input id="stdin" type="text" size="64" />
-      <button id="send-btn">Send</button>
-    </div>
+    <textarea id="stdout" cols="70" rows="16" readonly></textarea>
+    <form id="input-form">
+      <input id="stdin" type="text" />
+      <button type="submit">Send</button>
+    </form>
   </div>
   <script type="module" src="/examples/peer_chat/chat.js"></script>
 </body>

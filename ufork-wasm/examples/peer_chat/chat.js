@@ -70,8 +70,9 @@ function ufork_wake(dev_ofs) {
 
 //const $room = document.getElementById("room");
 const $stdin = document.getElementById("stdin");
-const $send_button = document.getElementById("send-btn");
-$send_button.onclick = function () {
+const $input_form = document.getElementById("input-form");
+$input_form.onsubmit = function (event) {
+    event.preventDefault(); // prevent POST
     let text = $stdin.value;
     if (text.length > 0) {
         text += "\n";
@@ -199,4 +200,8 @@ parseq.sequence([
         });
         return boot(asm_module.boot, the_awp_store);
     })
-])(console.log);
+])(function callback(value, reason) {
+    if (value === undefined) {
+        console.error(reason);
+    }
+});
