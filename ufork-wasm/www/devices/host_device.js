@@ -98,9 +98,7 @@ function host_device(core) {
         on_event_stub,
 
 // The 'on_drop_proxy' parameter is a function that is called when a proxy made
-// by 'reserve_proxy' is dropped. It is passed the raw proxy. Note that the
-// proxy's handle looks like (meta . handle), where 'handle' is the value
-// provided to dynamic_device.h_reserve_proxy. Optional.
+// by 'h_reserve_proxy' is dropped. It is passed the raw proxy. Optional.
 
         on_drop_proxy
     ) {
