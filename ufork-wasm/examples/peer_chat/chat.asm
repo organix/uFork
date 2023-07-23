@@ -95,7 +95,7 @@ link_tx_msg:            ; (link timer ack seq msgs) <- (tx_msg . content)
     my beh              ; msgs' msgs' seq+1 ack timer link beh
     beh 5               ; msgs'
 
-    ; if the queue was empty previously
+    ; if the queue was empty previously,
     state 5             ; msgs' msgs
     deque empty         ; msgs' is_empty(msgs)
     if_not std.commit   ; msgs'
@@ -129,6 +129,19 @@ tx_ack_1:               ; msgs seq ack timer link msgs' content
     ; remove message from queue
     drop 1              ; msgs seq ack timer link msgs'
     roll -5             ; ... msgs' seq ack timer link
+
+    ; if the queue is not empty,
+    pick 5              ; ... msgs' seq ack timer link msgs'
+    deque empty         ; ... msgs' seq ack timer link is_empty(msgs)
+    if tx_ack_2         ; ... msgs' seq ack timer link
+
+    ; then send another message to rx
+    deque pop           ; ... msgs'' (seq . content)
+    state 3             ; ... msgs'' (seq . content) ack
+    pair 1              ; ... msgs'' (ack seq . content)
+    state 1             ; ... msgs'' (ack seq . content) link
+    send -1             ; ... msgs''
+    drop 1              ; ... msgs' seq ack timer link
 
 tx_ack_2:               ; msgs seq ack timer link
     ; update tx state
@@ -213,6 +226,92 @@ link_rx:                ; (cust timer tx seq) <- (ack seq' . content)
     msg -2              ; content
     state 1             ; content cust
     ref std.send_msg
+
+;
+; Chat room (central mediator)
+;
+
+room:                   ; {party:tx, ...parties} <- (tx party . content) | (tx party)
+    msg -2              ; content
+    if_not room_del     ; --
+
+    ; check for new party...
+    state 0             ; {parties}
+    msg 2               ; {parties} party
+    dict has            ; known?
+    if_not room_add     ; --
+
+    msg -1              ; (party . content)
+    state 0             ; (party . content) {parties}
+
+room_cast:              ; msg=(party . content) {parties}
+    ; broadcast message to room
+    dup 1               ; msg {parties} {parties}
+    typeq #dict_t       ; msg {parties} is_dict({parties})
+    if_not std.commit   ; msg {parties}  // done broadcasting...
+
+    dup 1               ; msg {parties} {parties}
+    get Y               ; msg {parties} tx
+    pick 3              ; msg {parties} tx msg
+    roll 2              ; msg {parties} msg tx
+    send -1             ; msg {parties}
+    get Z               ; msg rest
+    ref room_cast
+
+room_add:               ; --
+    ; add party to room
+    state 0             ; {parties}
+    msg 2               ; {parties} party
+    msg 1               ; {parties} party tx
+    dict add            ; {party:tx, ...parties}
+
+    ; update room state
+    dup 1               ; {parties'} {parties'}
+    my beh              ; {parties'} {parties'} beh
+    beh -1              ; {parties'}
+
+    ; broadcast to updated parties
+    msg -1              ; {parties'} (party . content)
+    roll 2              ; (party . content) {parties'}
+    ref room_cast
+
+room_del:               ; --
+    ; delete party from room
+    state 0             ; {party:tx, ...parties}
+    msg 2               ; {party:tx, ...parties} party
+    dict del            ; {parties'}
+
+    ; update room state
+    dup 1               ; {parties'} {parties'}
+    my beh              ; {parties'} {parties'} beh
+    beh -1              ; {parties'}
+
+    ; broadcast "left" announcement
+    push txt_left       ; {parties'} txt_left
+    msg 2               ; {parties'} txt_left party
+    pair 1              ; {parties'} (party . txt_left)
+    roll 2              ; (party . txt_left) {parties'}
+    ref room_cast
+
+txt_joined:
+    pair_t 'J'
+    pair_t 'O'
+    pair_t 'I'
+    pair_t 'N'
+    pair_t 'E'
+    pair_t 'D'
+    pair_t '.'
+    pair_t '\n'
+    ref #nil
+
+txt_left:
+    pair_t 'L'
+    pair_t 'E'
+    pair_t 'F'
+    pair_t 'T'
+    pair_t '.'
+    pair_t '\n'
+    ref #nil
 
 ;
 ; Line buffer and utilities
