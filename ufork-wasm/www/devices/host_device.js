@@ -84,20 +84,16 @@ function host_device(core) {
 
 // The 'on_event_stub' parameter is a function that is called when the dynamic
 // device receives a message event via the host device. It returns an integer
-// error code, such as E_OK or E_FAIL.
+// error code, such as E_OK or E_FAIL. It takes responsibility for releasing the
+// event stub if it returns E_OK.
 
 // There are some subtle differences between events received by a dynamic device
-// and events received by a real device, because some fields are tagged with
-// dynamic device metadata that should be ignored.
+// and events received by a real device, because some fields are augmented with
+// metadata used by the dynamic device. This metadata is opaque and should be
+// discarded, using the 'h_strip_meta' method.
 
-// If the event's target is a proxy, then the proxy's handle is a pair like
-// (meta . handle) where the 'handle' is the value provided to
-// dynamic_device.h_reserve_proxy.
-
-// If the event's target is the host device, it was forwarded there by a dynamic
-// device capability produced by dynamic_device.h_reserve_cap. The message
-// field of the event is a pair like (meta . message) where the 'message' is
-// the message sent to the dynamic device capability.
+// Affected fields include proxy handles, and the message of events sent to the
+// dynamic device (but not messages sent to a proxy).
 
         on_event_stub,
 
@@ -150,6 +146,13 @@ function host_device(core) {
             return core.h_reserve_stub(host_device_cap, target_raw);
         }
 
+        function u_strip_meta(raw) {
+
+// Strip the dynamic device metadata from a message or proxy handle.
+
+            return core.u_nth(raw, -1);
+        }
+
         function u_owns_proxy(proxy_raw) {
 
 // Returns true if this dynamic device issued the proxy with 'h_reserve_proxy'.
@@ -172,6 +175,7 @@ function host_device(core) {
             h_reserve_cap,
             h_reserve_stub,
             h_reserve_proxy,
+            u_strip_meta,
             u_owns_proxy,
             u_dispose
         });
@@ -187,7 +191,7 @@ function host_device(core) {
 //debug let dispose;
 //debug let core;
 //debug function dummy_device(make_dynamic_device) {
-//debug     const dynamic_device = make_dynamic_device(
+//debug     const dev = make_dynamic_device(
 //debug         function on_event_stub(ptr) {
 //debug             const event_stub = core.u_read_quad(ptr);
 //debug             const target = core.u_read_quad(
@@ -198,31 +202,30 @@ function host_device(core) {
 //debug                 console.log(
 //debug                     "on_event_stub proxy",
 //debug                     core.u_pprint(event.y), // message
-//debug                     core.u_pprint(core.u_nth(target.y, -1)), // handle
-//debug                     dynamic_device.u_owns_proxy(event_stub.x)
+//debug                     core.u_pprint(dev.u_strip_meta(target.y)), // handle
+//debug                     dev.u_owns_proxy(event_stub.x)
 //debug                 );
 //debug             } else {
 //debug                 console.log(
 //debug                     "on_event_stub message",
-//debug                     core.u_pprint(core.u_nth(event.y, -1))
+//debug                     core.u_pprint(dev.u_strip_meta(event.y))
 //debug                 );
 //debug             }
 //debug         },
 //debug         function on_drop_proxy(proxy_raw) {
 //debug             const quad = core.u_read_quad(core.u_cap_to_ptr(proxy_raw));
-//debug             const handle = quad.y;
-//debug             const subhandle = core.u_nth(handle, -1);
-//debug             console.log("on_drop_proxy", core.u_pprint(subhandle));
+//debug             const handle = dev.u_strip_meta(quad.y);
+//debug             console.log("on_drop_proxy", core.u_pprint(handle));
 //debug         }
 //debug     );
-//debug     dynamic_device.h_reserve_proxy(ufork.FALSE_RAW); // dropped
-//debug     let proxy = dynamic_device.h_reserve_proxy(ufork.TRUE_RAW);
-//debug     let dummy_cap = dynamic_device.h_reserve_cap();
-//debug     let dummy_cap_stub = dynamic_device.h_reserve_stub(dummy_cap);
+//debug     dev.h_reserve_proxy(ufork.FALSE_RAW); // dropped
+//debug     let proxy = dev.h_reserve_proxy(ufork.TRUE_RAW);
+//debug     let dummy_cap = dev.h_reserve_cap();
+//debug     let dummy_cap_stub = dev.h_reserve_stub(dummy_cap);
 //debug     core.h_install([[1000, dummy_cap]]);
 //debug     core.h_install([[1001, proxy]]);
 //debug     return function dispose() {
-//debug         dynamic_device.u_dispose();
+//debug         dev.u_dispose();
 //debug         if (dummy_cap_stub !== undefined) {
 //debug             core.h_release_stub(dummy_cap_stub);
 //debug             dummy_cap_stub = undefined;

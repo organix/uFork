@@ -4,6 +4,13 @@
 // Returns a disposal function that destroys all connections and stops
 // listening.
 
+// This device makes two kinds of proxies: "remote" and "stop".
+// The two kinds can be distinguished by the type of their handle:
+//  - Remote capabilities (transparent references to remote actors) have a
+//    fixnum as their handle.
+//  - Stop capabilities (used to stop listening) have a wrapped fixnum as their
+//    handle.
+
 // TODO:
 // - distributed garbage collection
 // - acquaintance interning
@@ -15,6 +22,12 @@ import ufork from "../ufork.js";
 import assemble from "../assemble.js";
 import OED from "../oed.js";
 import hex from "../hex.js";
+
+const E_CONNECTION_LOST = -1;
+const E_ALREADY_LISTENING = -2;
+const E_LISTEN_FAIL = -3;
+const E_NO_ACQUAINTANCE = -4;
+const E_NO_STORE = -5;
 
 const awp_key = 100; // from dev.asm
 const once_fwd_crlf = assemble(`
@@ -51,7 +64,7 @@ function awp_device({
     const sponsor = core.u_ramptr(ufork.SPONSOR_OFS);
     const once_fwd_beh = core.h_load(once_fwd_crlf).beh;
 
-    let dynamic_device;
+    let device;
     let connections = Object.create(null);    // local:remote -> connection
     let opening = Object.create(null);        // local:remote -> cancel function
     let outbox = Object.create(null);         // local:remote -> messages
@@ -82,9 +95,7 @@ function awp_device({
         const remote_handle = next_proxy_handle;
         next_proxy_handle += 1;
         proxy_keys[remote_handle] = proxy_key;
-        const raw = dynamic_device.h_reserve_proxy(
-            core.u_fixnum(remote_handle)
-        );
+        const raw = device.h_reserve_proxy(core.u_fixnum(remote_handle));
         proxies[proxy_key] = {raw, swiss, store, petname};
         return raw;
     }
@@ -159,16 +170,12 @@ function awp_device({
             }
             if (core.u_is_cap(raw)) {
                 const quad = core.u_read_quad(core.u_cap_to_ptr(raw));
-                if (
-                    quad.t === ufork.PROXY_T
-                    && dynamic_device.u_owns_proxy(raw)
-                ) {
+                if (quad.t === ufork.PROXY_T && device.u_owns_proxy(raw)) {
 
-// Strip the dynamic device metadata from the proxy's handle. The resulting
-// handle is a fixnum only if the proxy refers to a remote actor. Rather than
-// allocating it a Swiss number, pass on its details directly.
+// The proxy's handle is a fixnum only if the proxy refers to a remote actor.
+// Rather than allocating it a Swiss number, pass on its details directly.
 
-                    const remote_handle_raw = core.u_nth(quad.y, -1);
+                    const remote_handle_raw = device.u_strip_meta(quad.y);
                     if (core.u_is_fix(remote_handle_raw)) {
                         const remote_handle = core.u_fix_to_i32(
                             remote_handle_raw
@@ -198,9 +205,7 @@ function awp_device({
 // garbage collection. Generate a new Swiss number and reserve a stub.
 
                     swiss = random_swiss();
-                    stubs[
-                        hex.encode(swiss)
-                    ] = dynamic_device.h_reserve_stub(raw);
+                    stubs[hex.encode(swiss)] = device.h_reserve_stub(raw);
                     raw_to_swiss[raw] = swiss;
                 }
                 return {
@@ -282,7 +287,6 @@ function awp_device({
         lose(key);
         delete outbox[key];
         delete connections[key];
-        return resume();
     }
 
     function receive(store, connection, frame) {
@@ -389,10 +393,11 @@ function awp_device({
                 if (core.u_debug !== undefined) {
                     core.u_debug("connect on_close");
                 }
-                return unregister(convo_key(
+                unregister(convo_key(
                     store.acquaintances[0].name, // self
                     connection.name()
                 ));
+                return resume();
             }
         )(
             function connected_callback(connection, reason) {
@@ -402,12 +407,12 @@ function awp_device({
                         core.u_debug("connect fail", reason);
                     }
                     lose(key);
-                } else {
-                    if (core.u_debug !== undefined) {
-                        core.u_debug("connect open");
-                    }
-                    register(store, connection);
+                    return resume();
                 }
+                if (core.u_debug !== undefined) {
+                    core.u_debug("connect open");
+                }
+                register(store, connection);
             }
         );
         // TODO forward cancel capability to to_cancel
@@ -481,18 +486,34 @@ function awp_device({
         }
         const store_nr = core.u_fix_to_i32(store_fix);
         const petname = core.u_fix_to_i32(petname_fix);
-        const store = stores[store_nr];
-        if (
-            store === undefined
-            || store.acquaintances[petname] === undefined
-            || store.acquaintances[petname].name === undefined
-        ) {
-            return ufork.E_BOUNDS; // TODO inform callback instead of failing
-        }
 
 // Wait a turn so we can safely use the non-reentrant core methods.
 
         setTimeout(function () {
+            core.h_release_stub(event_stub_ptr);
+
+// Send a failed result to the callback if the acquaintance can not be found.
+
+            const store = stores[store_nr];
+            if (
+                store === undefined
+                || store.acquaintances[petname]?.name === undefined
+            ) {
+                core.h_event_enqueue(core.h_reserve_ram({
+                    t: sponsor,
+                    x: intro_callback,
+                    y: core.h_reserve_ram({
+                        t: ufork.PAIR_T,
+                        x: ufork.UNDEF_RAW,
+                        y: core.u_fixnum(
+                            store === undefined
+                            ? E_NO_STORE
+                            : E_NO_ACQUAINTANCE
+                        )
+                    })
+                }));
+                return resume();
+            }
             const callback_fwd = core.u_ptr_to_cap(core.h_reserve_ram({
                 t: ufork.ACTOR_T,
                 x: once_fwd_beh,
@@ -525,16 +546,10 @@ function awp_device({
                     y: core.h_reserve_ram({
                         t: ufork.PAIR_T,
                         x: ufork.UNDEF_RAW,
-                        y: core.u_fixnum(-1) // TODO error codes
+                        y: core.u_fixnum(E_CONNECTION_LOST)
                     })
                 }));
-
-// We could release the callback's stub here, but it becomes a sink once it
-// forwards the result so we can safely leave it for the distributed GC to clean
-// up instead.
-
             });
-            core.h_release_stub(event_stub_ptr);
 
 // TODO send a cancel capability to the to_cancel. Should we also neuter
 // callback_fwd?
@@ -556,10 +571,6 @@ function awp_device({
             || !core.u_is_cap(listen_callback)
         ) {
             return ufork.E_FAIL;
-        }
-        const store = stores[core.u_fix_to_i32(store_fix)];
-        if (store === undefined) {
-            return ufork.E_BOUNDS; // TODO inform callback instead of failing
         }
 
         function release_event_stub() {
@@ -585,6 +596,14 @@ function awp_device({
 // Wait a turn so we can safely use the non-reentrant core methods.
 
         setTimeout(function () {
+            const store = stores[core.u_fix_to_i32(store_fix)];
+            if (store === undefined) {
+                return resolve(core.h_reserve_ram({
+                    t: ufork.PAIR_T,
+                    x: ufork.UNDEF_RAW,
+                    y: core.u_fixnum(E_NO_STORE)
+                }));
+            }
             // TODO send cancel to to_cancel
             const cancel = transport.listen(
                 store.identity,
@@ -620,12 +639,11 @@ function awp_device({
                         return resolve(core.h_reserve_ram({
                             t: ufork.PAIR_T,
                             x: ufork.UNDEF_RAW,
-                            y: core.u_fixnum(-1) // TODO error codes
+                            y: core.u_fixnum(E_LISTEN_FAIL)
                         }));
                     }
 
-// A store may not register more than one greeter. That would get very
-// confusing.
+// Fail if the store is already listening.
 
                     const key = stringify(store.acquaintances[0].name);
                     if (listeners[key] !== undefined) {
@@ -633,7 +651,7 @@ function awp_device({
                         return resolve(core.h_reserve_ram({
                             t: ufork.PAIR_T,
                             x: ufork.UNDEF_RAW,
-                            y: core.u_fixnum(-1) // TODO error codes
+                            y: core.u_fixnum(E_ALREADY_LISTENING)
                         }));
                     }
 
@@ -650,7 +668,7 @@ function awp_device({
                     }
 
                     listeners[key] = {
-                        greeter: dynamic_device.h_reserve_stub(greeter),
+                        greeter: device.h_reserve_stub(greeter),
                         stop: safe_stop
                     };
 
@@ -660,7 +678,7 @@ function awp_device({
                     const stop_handle = next_proxy_handle;
                     next_proxy_handle += 1;
                     listener_keys[stop_handle] = key;
-                    const stop_proxy = dynamic_device.h_reserve_proxy(
+                    const stop_proxy = device.h_reserve_proxy(
                         core.h_reserve_ram({
                             t: ufork.PAIR_T,
                             x: core.u_fixnum(stop_handle),
@@ -674,6 +692,7 @@ function awp_device({
                     }));
                 }
             );
+
             // TODO provide to to_cancel
             function safe_cancel() {
                 release_event_stub();
@@ -686,7 +705,7 @@ function awp_device({
 
 // Install the device.
 
-    dynamic_device = make_dynamic_device(
+    device = make_dynamic_device(
         function on_event_stub(event_stub_ptr) {
 
 // The event stub retains the event, including its message, in memory until
@@ -696,18 +715,16 @@ function awp_device({
 
             const event_stub = core.u_read_quad(event_stub_ptr);
             const event = core.u_read_quad(event_stub.y);
-            const message = event.y;
 
-// Inspect the event target. If it is a proxy, strip the dynamic device metadata
-// from the handle, then check if the proxy is a stop capability or a reference
-// to a remote actor.
+// Inspect the event target. If it is a proxy, check if it is a stop capability
+// or a reference to a remote actor.
 
             const target_quad = core.u_read_quad(core.u_cap_to_ptr(event.x));
             if (target_quad.t === ufork.PROXY_T) {
 
-// Remote actor proxies have a handle like (meta . fixnum).
+// Remote actor proxies have a fixnum handle.
 
-                const remote_handle_raw = core.u_nth(target_quad.y, -1);
+                const remote_handle_raw = device.u_strip_meta(target_quad.y);
                 if (core.u_is_fix(remote_handle_raw)) {
                     const remote_handle = core.u_fix_to_i32(remote_handle_raw);
 
@@ -721,7 +738,7 @@ function awp_device({
                                 proxy.store,
                                 proxy.petname,
                                 proxy.swiss,
-                                marshall(proxy.store, message)
+                                marshall(proxy.store, event.y) // message
                             );
                         }
                         core.h_release_stub(event_stub_ptr);
@@ -729,29 +746,34 @@ function awp_device({
                     return ufork.E_OK;
                 }
 
-// "Stop listening" proxies have a handle like (meta fixnum).
+// "Stop listening" proxy handles are a wrapped fixnum.
 
-                const stop_handle_raw = core.u_nth(target_quad.y, 2);
+                const stop_handle_raw = core.u_nth(
+                    device.u_strip_meta(target_quad.y),
+                    1
+                );
                 if (core.u_is_fix(stop_handle_raw)) {
-                    const stop_handle = core.u_fix_to_i32(stop_handle_raw);
-                    const listener_key = listener_keys[stop_handle];
-                    if (listener_key !== undefined) {
-                        const listener = listeners[listener_key];
-                        if (listener !== undefined) {
-                            setTimeout(listener.stop);
+                    setTimeout(function () {
+                        const stop_handle = core.u_fix_to_i32(stop_handle_raw);
+                        const listener_key = listener_keys[stop_handle];
+                        if (listener_key !== undefined) {
+                            const listener = listeners[listener_key];
+                            if (listener !== undefined) {
+                                listener.stop();
+                            }
+                            delete listener_keys[stop_handle];
                         }
-                        delete listener_keys[stop_handle];
-                    }
+                        core.h_release_stub(event_stub_ptr);
+                    });
                     return ufork.E_OK;
                 }
                 return ufork.E_NOT_FIX;
             }
 
-// Choose a method based on the message tag (#intro, #listen, etc). Note that
-// the message is tagged with dynamic device metadata, so we skip the head of
-// the list.
+// Choose a method based on the message tag (#intro, #listen, etc).
 
-            const tag = core.u_nth(message, 2);
+            const message = device.u_strip_meta(event.y);
+            const tag = core.u_nth(message, 1);
             if (!core.u_is_fix(tag)) {
                 return ufork.E_FAIL;
             }
@@ -765,19 +787,18 @@ function awp_device({
 // need to reserve stubs for the portions of the message it will need later.
 // When the method is done doing that, it should release the event stub.
 
-            return method(event_stub_ptr, core.u_nth(message, -2));
+            return method(event_stub_ptr, core.u_nth(message, -1));
         },
         function on_drop_proxy(proxy_raw) {
 
 // A proxy has been garbage collected.
 
             const quad = core.u_read_quad(core.u_cap_to_ptr(proxy_raw));
-            const handle_raw = quad.y;
 
-// Strip the dynamic device's metadata from the proxy's handle, then check if
-// it is a reference to a remote actor.
+// Is it a reference to a remote actor? If so, clean up any references to it and
+// inform the relevant party.
 
-            const remote_handle_raw = core.u_nth(handle_raw, -1);
+            const remote_handle_raw = device.u_strip_meta(quad.y);
             if (core.u_is_fix(remote_handle_raw)) {
                 const remote_handle = core.u_fix_to_i32(remote_handle_raw);
                 const proxy_key = proxy_keys[remote_handle];
@@ -785,8 +806,8 @@ function awp_device({
 
 // TODO inform the relevant party.
 
-                    delete proxies[proxy_keys[remote_handle]];
                     delete proxy_keys[remote_handle];
+                    delete proxies[proxy_key];
                 }
             }
         }
@@ -795,9 +816,9 @@ function awp_device({
 // Install the dynamic device as if it were a real device. Unlike a real device,
 // we must reserve a stub to keep the capability from being released.
 
-    const awp_device_cap = dynamic_device.h_reserve_cap();
+    const awp_device_cap = device.h_reserve_cap();
     core.h_install([[awp_key, awp_device_cap]]);
-    dynamic_device.h_reserve_stub(awp_device_cap);
+    device.h_reserve_stub(awp_device_cap);
     return function dispose() {
         Object.values(connections).forEach(function (connection) {
             connection.close();
@@ -805,7 +826,7 @@ function awp_device({
         Object.values(listeners).forEach(function (listener) {
             listener.stop();
         });
-        dynamic_device.u_dispose();
+        device.u_dispose();
     };
 }
 
@@ -842,7 +863,7 @@ function awp_device({
 //debug             lazy(function (the_core) {
 //debug                 core = the_core;
 //debug                 return core.h_import(import.meta.resolve(
-//debug                     "../../lib/awp_demo.asm"
+//debug                     "../../lib/grant_matcher.asm"
 //debug                 ));
 //debug             }),
 //debug             transport.generate_identity(),

@@ -573,7 +573,10 @@ impl Device for HostDevice {
         let event_stub = core.reserve_stub(device, ep)?;
         match self.to_host(event_stub) {
             E_OK => Ok(()),
-            code => Err(code) // TODO release the stub here
+            code => {
+                core.release_stub(event_stub);
+                Err(code)
+            }
         }
     }
     fn drop_proxy(&mut self, _core: &mut Core, proxy: Any) {
