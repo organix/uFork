@@ -1,5 +1,5 @@
 <svg version="1.1" width="120" height="120" xmlns="http://www.w3.org/2000/svg">
-  <!-- created by Dale Schumacher <dalnefre@yahoo.com> 2023-06-23 -->
+  <!-- created by Dale Schumacher <dalnefre@yahoo.com> 2023-07-24 -->
   <g transform="scale(1.0)">
     <g fill="#C90">
       <rect x="2" y="24" width="116" height="8" />
@@ -13,15 +13,15 @@
       <rect x="72" y="2" width="8" height="116" />
       <rect x="88" y="2" width="8" height="116" />
     </g>
-    <rect x="15" y="15" rx="5" ry="5" width="90" height="90" fill="#000" stroke="#FFF" stroke-width="1" />
-    <g fill="#FFF">
+    <rect x="15" y="15" rx="5" ry="5" width="90" height="90" fill="#000" stroke="#999" stroke-width="1" />
+    <g fill="#EEE">
       <circle cx="28" cy="28" r="3" />
       <text x="60" y="96" font-size="16" text-anchor="middle" font-family="Palatino" font-style="italic">μFork</text>
     </g>
     <g transform="translate(72, 48) rotate(15)">
       <path d="M -20 -24 q 10 4 20 4 q 10 0 20 -4 v 24 q 0 18 -20 24 q -20 -6 -20 -18 Z" fill="transparent" stroke="rgba(0, 0, 0, 0.4)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
       <path d="M -20 -24 q 10 4 20 4 v 44 q -20 -6 -20 -18 Z" fill="#C3F" />
-      <path d="M 0 -20 q 10 0 20 -4 v 24 q 0 18 -20 24 Z" fill="#F0F" />
+      <path d="M 0 -20 q 10 0 20 -4 v 24 q 0 18 -20 24 Z" fill="#90C" />
       <path d="M -12 -7 h 8 v -2 q 0 -4 -4 -4 q -4 0 -4 4 Z" fill="#000" />
       <path d="M 4 -7 h 8 v -2 q 0 -4 -4 -4 q -4 0 -4 4 Z" fill="#000" />
       <path d="M -10 12 Q 0 2 10 12" fill="none" stroke="#000" stroke-width="4" stroke-linecap="round" />
@@ -30,7 +30,7 @@
     <g transform="translate(48, 56) rotate(-15)">
       <path d="M -20 -24 q 10 4 20 4 q 10 0 20 -4 v 24 q 0 18 -20 24 q -20 -6 -20 -18 Z" fill="transparent" stroke="rgba(0, 0, 0, 0.4)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
       <path d="M -20 -24 q 10 4 20 4 v 44 q -20 -6 -20 -18 Z" fill="#6C3" />
-      <path d="M 0 -20 q 10 0 20 -4 v 24 q 0 18 -20 24 Z" fill="#0F0" />
+      <path d="M 0 -20 q 10 0 20 -4 v 24 q 0 18 -20 24 Z" fill="#390" />
       <path d="M -12 -13 h 8 v 2 q 0 4 -4 4 q -4 0 -4 -4 Z" fill="#000" />
       <path d="M 4 -13 h 8 v 2 q 0 4 -4 4 q -4 0 -4 -4 Z" fill="#000" />
       <path d="M -10 4 Q 0 14 10 4" fill="none" stroke="#000" stroke-width="4" stroke-linecap="round" />
