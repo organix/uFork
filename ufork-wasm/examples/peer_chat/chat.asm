@@ -4,7 +4,6 @@
 
 .import
     std: "/lib/std.asm"
-    lib: "/lib/lib.asm"
     dev: "/lib/dev.asm"
 
 room_key:
@@ -12,36 +11,118 @@ room_key:
 
 ; Start initial services.
 
-start:                  ; (debug_dev io_dev room_id) <- ()
-    deque new           ; line
-    state 2             ; line io_dev
-
-    state 2             ; ... io_dev
-    push line_out       ; ... io_dev line_out
-    new 1               ; ... cust=line_out.(io_dev)
-
-    push line_in        ; line io_dev cust line_in
-    new 3               ; callback=line_in.(cust io_dev line)
-
-    push #?             ; callback to_cancel=#?
-    state 2             ; callback to_cancel io_dev
-    send 2              ; --
+start:                  ; (debug_dev io_dev timer_dev room_id) <- ()
 
 ; The petname of the party hosting the room is passed in the boot capabilities.
 ; If it is 0, the room is local and we are hosting it. Otherwise the room is
 ; remote and we are joining it.
 
-    state 3             ; room_id
-    state 1             ; room_id debug_dev
-    state 3             ; room_id debug_dev room_id
+    state 4             ; room_id
     if join host        ; room_id debug_dev
 
 ; For now, just send the room id to the debug device.
 
-join:                   ; room_id debug_dev
+join:                   ; --
+    state 4             ; room_id
+    state 1             ; room_id debug_dev
     ref std.send_msg
 
-host:                   ; room_id debug_dev
+; SELF will become the party tx actor (circular anchor)
+
+host:                   ; --
+    ; build line out
+    state 2             ; io_dev
+    push line_out       ; io_dev line_out
+    new 1               ; l_out=line_out.(io_dev)
+
+    ; build party out
+    push party_out      ; l_out party_out
+    new 1               ; p_out=party_out.(l_out)
+
+    ; build party rx
+    push 1              ; p_out seq=1
+    my self             ; p_out seq tx=SELF
+    state 3             ; p_out seq tx timer=timer_dev
+    roll 4              ; seq tx timer cust=p_out
+    push link_rx        ; seq tx timer cust link_rx
+    new 4               ; p_rx=link_rx.(cust timer tx seq)
+
+    ; build room tx
+    deque new           ; p_rx msgs
+    push 1              ; p_rx msgs seq=1
+    push 0              ; p_rx msgs seq ack=0
+    state 3             ; p_rx msgs seq ack timer=timer_dev
+    roll 5              ; msgs seq ack timer link=p_rx
+    push link_tx        ; msgs seq ack timer link link_tx
+    new 5               ; r_tx=link_tx.(link timer ack seq msgs)
+
+    ; build room
+    push #nil           ; r_tx parties={}
+    push room           ; r_tx parties={} room
+    new -1              ; r_tx room.{parties}
+;room:                   ; {party:tx, ...parties} <- (tx party . content) | (tx party)
+
+    ; build room in
+    pick 2              ; r_tx room tx=r_tx
+    push 0              ; r_tx room tx party=0
+    push room_in        ; r_tx room tx party room_in
+    new 3               ; r_tx in=room_in.(room tx party)
+;room_in:                ; (room tx party) <- content
+
+    ; build room rx
+    push 1              ; r_tx in seq=1
+    roll 3              ; in seq tx=r_tx
+    state 3             ; in seq tx timer=timer_dev
+    roll 4              ; seq tx timer cust=in
+    push link_rx        ; seq tx timer cust link_rx
+    new 4               ; r_rx=link_rx.(cust timer tx seq)
+
+    ; become party tx
+    deque new           ; r_rx msgs
+    push 1              ; r_rx msgs seq=1
+    push 0              ; r_rx msgs seq ack=0
+    state 3             ; r_rx msgs seq ack timer=timer_dev
+    roll 5              ; msgs seq ack timer link=r_rx
+    push link_tx        ; msgs seq ack timer link link_tx
+    beh 5               ; --  // link_tx.(link timer ack seq msgs)
+
+    ; build party in
+    my self             ; p_tx=SELF
+    push party_in       ; p_tx party_in
+    new 1               ; p_in=party_in.(p_tx)
+
+    ; build line in
+    deque new           ; p_in line
+    state 2             ; p_in line io_dev
+    roll 3              ; line io_dev cust=p_in
+    push line_in        ; line io_dev cust line_in
+    new 3               ; callback=line_in.(cust io_dev line)
+
+    ; register read callback
+    push #?             ; callback to_cancel=#?
+    state 2             ; callback to_cancel io_dev
+    send 2              ; --
+
+    ref std.commit
+
+party_in:               ; (tx) <- content
+    msg 0               ; content
+    push tx_msg         ; content tx_msg
+    pair 1              ; (tx_msg . content)
+    state 1             ; (tx_msg . content) tx
+    ref std.send_msg
+
+party_out:              ; (l_out) <- (party . content)
+    msg -1              ; content
+    state 1             ; content l_out
+    ref std.send_msg
+
+room_in:                ; (room tx party) <- content
+    msg 0               ; content
+    state 2             ; content tx
+    state 3             ; content tx party
+    pair 2              ; (tx party . content)
+    state 1             ; (tx party . content) room
     ref std.send_msg
 
 ;
@@ -194,7 +275,7 @@ tx_time_2:
 ; Receiver state:
 ;   cust: capability for local delivery
 ;   timer: capability for timer service
-;   ack_tx: capability for tx
+;   tx: capability for tx
 ;   seq: next message number expected (to receive)
 ;
 
@@ -496,15 +577,19 @@ boot:                   ; () <- {caps}
     dict get            ; room_id
 
     msg 0               ; room_id {caps}
-    push dev.io_key     ; room_id {caps} io_key
-    dict get            ; room_id io_dev
+    push dev.timer_key  ; room_id {caps} timer_key
+    dict get            ; room_id timer_dev
 
-    msg 0               ; room_id io_dev {caps}
-    push dev.debug_key  ; room_id io_dev {caps} debug_key
-    dict get            ; room_id io_dev debug_dev
+    msg 0               ; room_id timer_dev {caps}
+    push dev.io_key     ; room_id timer_dev {caps} io_key
+    dict get            ; room_id timer_dev io_dev
 
-    push start          ; room_id io_dev debug_dev start
-    new 3               ; start.(debug_dev io_dev room_id)
+    msg 0               ; room_id timer_dev io_dev {caps}
+    push dev.debug_key  ; room_id timer_dev io_dev {caps} debug_key
+    dict get            ; room_id timer_dev io_dev debug_dev
+
+    push start          ; room_id timer_dev io_dev debug_dev start
+    new 3               ; start.(debug_dev io_dev timer_dev room_id)
     send 0              ; --
     ref std.commit
 
