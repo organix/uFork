@@ -13,7 +13,8 @@ boot:
     send 0              ; --
     push loop           ; loop
     new 0               ; a_loop
-    ref std.send_0
+    send 0              ; --
+    ref std.commit
 
 .export
     boot

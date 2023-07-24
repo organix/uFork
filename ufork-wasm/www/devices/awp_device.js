@@ -15,6 +15,7 @@
 // - distributed garbage collection
 // - acquaintance interning
 // - cancel/stop capabilities
+// - disconnect when all proxies are dropped?
 
 /*jslint browser, null, devel, long */
 
@@ -59,7 +60,7 @@ function awp_device({
     transport,
     on_store_change,
     stores = [],
-    webcrypto = crypto // Node.js does not have a 'crypto' global
+    webcrypto = crypto // Node.js does not have a 'crypto' global as of v19.
 }) {
     const sponsor = core.u_ramptr(ufork.SPONSOR_OFS);
     const once_fwd_beh = core.h_load(once_fwd_crlf).beh;

@@ -1,6 +1,6 @@
 .import
-    dev: "../../../lib/dev.asm"
-    std: "../../../lib/std.asm"
+    dev: "../../lib/dev.asm"
+    std: "../../lib/std.asm"
 
 store:
     ref 0

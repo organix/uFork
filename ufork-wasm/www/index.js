@@ -9,7 +9,6 @@ import clock_device from "./devices/clock_device.js";
 import io_device from "./devices/io_device.js";
 import blob_device from "./devices/blob_device.js";
 import timer_device from "./devices/timer_device.js";
-import awp_device from "./devices/awp_device.js";
 
 const $ram_max = document.getElementById("ram-max");
 const $ram_top = document.getElementById("ram-top");

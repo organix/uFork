@@ -7,13 +7,14 @@
 
 ;   (reason) -> canceller
 
-; A more cancel-like capability can be derived from a canceller by wrapping it
-; in 'wrap_beh' from lib.asm.
+; A more cancel-like capability can be made by wrapping a canceller in
+; 'wrap_beh' from lib.asm.
 
 .import
     std: "../std.asm"
     dev: "../dev.asm"
     lib: "../lib.asm"
+    referee: "../testing/referee.asm"
 
 beh:
 canceller_beh:                  ; () <- message
@@ -53,56 +54,72 @@ send_reason_to_cancel:          ; reason cancel
 ; Test suite
 
 boot:                   ; () <- {caps}
+    msg 0               ; {caps}
+    push dev.timer_key  ; {caps} timer_key
+    dict get            ; timer
+    msg 0               ; timer {caps}
+    push dev.debug_key  ; timer {caps} debug_key
+    dict get            ; timer referee=debug
+    ref setup
+
+test:                   ; (verdict) <- {caps}
+    msg 0               ; {caps}
+    push dev.timer_key  ; {caps} timer_key
+    dict get            ; timer
+    push 1729           ; timer 2nd=1729
+    push 42             ; timer 2nd 1st=42
+    push 100            ; timer 2nd 1st probation_ms=100
+    pick 4              ; timer 2nd 1st probation_ms timer
+    state 1             ; timer 2nd 1st probation_ms timer verdict
+    push referee.beh    ; timer 2nd 1st probation_ms timer verdict referee_beh
+    new 5               ; timer referee=referee_beh.(verdict timer probation_ms 1st 2nd)
+setup:
 
 ; Cancel arrives before reason.
 
-    msg 0               ; {caps}
-    push 50             ; {caps} cancel_ms
-    push 100            ; {caps} cancel_ms reason_ms
-    push 42             ; {caps} cancel_ms reason_ms reason
-    push test_beh       ; {caps} cancel_ms reason_ms reason test_beh
-    new 3               ; {caps} test=test_beh.(reason reason_ms cancel_ms)
-    send -1             ; --
+    dup 2               ; ... timer cancel=referee
+    push 25             ; ... timer cancel cancel_ms=25
+    push 50             ; ... timer cancel cancel_ms reason_ms=50
+    push 42             ; ... timer cancel cancel_ms reason_ms reason=42
+    push test_beh       ; ... timer cancel cancel_ms reason_ms reason test_beh
+    new 5               ; ... test
+    send 0              ; ...
 
 ; Reason arrives before cancel.
 
-    msg 0               ; {caps}
-    push 100            ; {caps} cancel_ms
-    push 50             ; {caps} cancel_ms reason_ms
-    push 1729           ; {caps} cancel_ms reason_ms reason
-    push test_beh       ; {caps} cancel_ms reason_ms reason test_beh
-    new 3               ; {caps} test=test_beh.(reason reason_ms cancel_ms)
-    send -1             ; --
+    dup 2               ; ... timer cancel=referee
+    push 100            ; ... timer cancel cancel_ms=100
+    push 75             ; ... timer cancel cancel_ms reason_ms=75
+    push 1729           ; ... timer cancel cancel_ms reason_ms reason=1729
+    push test_beh       ; ... timer cancel cancel_ms reason_ms reason test_beh
+    new 5               ; ... test
+    send 0              ; ...
     ref std.commit
 
 ; We create a canceller and send it a cancel capability and a reason, each after
-; a different delay. Each is sent twice, to test the canceller's tolerance.
+; an independent delay. Each is sent twice, to test the canceller's tolerance
+; to duplication.
 
-test_beh:               ; (reason reason_ms cancel_ms) <- {caps}
+test_beh:               ; (reason reason_ms cancel_ms cancel timer) <- ()
     push canceller_beh  ; canceller_beh
     new 0               ; canceller=canceller_beh.()
     state 0             ; canceller (reason ...)
     pick 2              ; canceller (reason ...) canceller
     state 2             ; canceller (reason ...) canceller reason_ms
-    msg 0               ; canceller (reason ...) canceller reason_ms {caps}
-    push dev.timer_key  ; canceller (reason ...) canceller reason_ms {caps} timer_key
-    dict get            ; canceller (reason ...) canceller reason_ms timer_dev
-    dup 4               ; ... (reason ...) canceller reason_ms timer_dev
-    send 3              ; ... (reason ...) canceller reason_ms timer_dev
+    state 5             ; canceller (reason ...) canceller reason_ms timer
+    dup 4               ; ... (reason ...) canceller reason_ms timer
+    send 3              ; ... (reason ...) canceller reason_ms timer
     send 3              ; canceller
-    msg 0               ; canceller {caps}
-    push dev.debug_key  ; canceller {caps} debug_key
-    dict get            ; canceller debug_dev
-    pick 2              ; canceller debug_dev canceller
-    state 3             ; canceller debug_dev canceller cancel_ms
-    msg 0               ; canceller debug_dev canceller cancel_ms {caps}
-    push dev.timer_key  ; canceller debug_dev canceller cancel_ms {caps} timer_key
-    dict get            ; canceller debug_dev canceller cancel_ms timer_dev
-    dup 4               ; ... debug_dev canceller cancel_ms timer_dev
-    send 3              ; ... debug_dev canceller cancel_ms timer_dev
+    state 4             ; canceller cancel
+    pick 2              ; canceller cancel canceller
+    state 3             ; canceller cancel canceller cancel_ms
+    state 5             ; canceller cancel canceller cancel_ms timer
+    dup 4               ; ... cancel canceller cancel_ms timer
+    send 3              ; ... cancel canceller cancel_ms timer
     send 3              ; canceller
     ref std.commit
 
 .export
     beh
     boot
+    test
