@@ -3,6 +3,7 @@
 .import
     std: "../std.asm"
     dev: "../dev.asm"
+    lib: "../lib.asm"
 
 beh:
 thru_beh:                   ; () <- request=(to_cancel callback . value)
@@ -24,6 +25,18 @@ boot:                       ; () <- {caps}
     new 0                   ; request thru=thru_beh.()
     ref std.send_msg
 
+test:                       ; (verdict) <- {caps}
+    push #t                 ; value=#t
+    state 1                 ; value verdict
+    push lib.unwrap_beh     ; value verdict unwrap_beh
+    new 1                   ; value callback=unwrap_beh.(verdict)
+    push #?                 ; value callback to_cancel=#?
+    pair 2                  ; request=(to_cancel callback . value)
+    push thru_beh           ; request thru_beh
+    new 0                   ; request thru=thru_beh.()
+    ref std.send_msg
+
 .export
     beh
     boot
+    test

@@ -15,6 +15,7 @@
 // - distributed garbage collection
 // - acquaintance interning
 // - cancel/stop capabilities
+// - disconnect when all proxies are dropped?
 
 /*jslint browser, null, devel, long */
 

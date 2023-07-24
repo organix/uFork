@@ -125,7 +125,7 @@ function host_device(core) {
             }));
         }
 
-        function h_reserve_proxy(handle_raw) {
+        function h_reserve_proxy(handle_raw = ufork.UNDEF_RAW) {
 
 // Makes a proxy whose handle is tagged with the dynamic device's key.
 
