@@ -3,8 +3,8 @@
 ;
 
 .import
-    std: "/lib/std.asm"
-    dev: "/lib/dev.asm"
+    std: "../../lib/std.asm"
+    dev: "../../lib/dev.asm"
 
 room_key:
     ref 1000
@@ -60,14 +60,13 @@ host:                   ; --
     push #nil           ; r_tx parties={}
     push room           ; r_tx parties={} room
     new -1              ; r_tx room.{parties}
-;room:                   ; {party:tx, ...parties} <- (tx party . content) | (tx party)
 
     ; build room in
-    pick 2              ; r_tx room tx=r_tx
-    push 0              ; r_tx room tx party=0
-    push room_in        ; r_tx room tx party room_in
+    push 0              ; r_tx room party=0
+    pick 3              ; r_tx room party tx=r_tx
+    roll 3              ; r_tx party tx room
+    push room_in        ; r_tx party tx room room_in
     new 3               ; r_tx in=room_in.(room tx party)
-;room_in:                ; (room tx party) <- content
 
     ; build room rx
     push 1              ; r_tx in seq=1
@@ -91,6 +90,11 @@ host:                   ; --
     push party_in       ; p_tx party_in
     new 1               ; p_in=party_in.(p_tx)
 
+    ; send "joined" announcement
+    push txt_joined     ; p_in txt_joined
+    pick 2              ; p_in txt_joined p_in
+    send -1             ; p_in
+
     ; build line in
     deque new           ; p_in line
     state 2             ; p_in line io_dev
@@ -102,6 +106,8 @@ host:                   ; --
     push #?             ; callback to_cancel=#?
     state 2             ; callback to_cancel io_dev
     send 2              ; --
+
+    ; FIXME: start timer(s)
 
     ref std.commit
 
@@ -119,8 +125,8 @@ party_out:              ; (l_out) <- (party . content)
 
 room_in:                ; (room tx party) <- content
     msg 0               ; content
-    state 2             ; content tx
-    state 3             ; content tx party
+    state 3             ; content party
+    state 2             ; content party tx
     pair 2              ; (tx party . content)
     state 1             ; (tx party . content) room
     ref std.send_msg
@@ -334,7 +340,9 @@ room_cast:              ; msg=(party . content) {parties}
     dup 1               ; msg {parties} {parties}
     get Y               ; msg {parties} tx
     pick 3              ; msg {parties} tx msg
-    roll 2              ; msg {parties} msg tx
+    push tx_msg         ; msg {parties} tx msg tx_msg
+    pair 1              ; msg {parties} tx (tx_msg . msg)
+    roll 2              ; msg {parties} (tx_msg . msg) tx
     send -1             ; msg {parties}
     get Z               ; msg rest
     ref room_cast
@@ -375,6 +383,8 @@ room_del:               ; --
     ref room_cast
 
 txt_joined:
+    pair_t str_joined #nil
+str_joined:
     pair_t 'J'
     pair_t 'O'
     pair_t 'I'
@@ -386,6 +396,8 @@ txt_joined:
     ref #nil
 
 txt_left:
+    pair_t str_left #nil
+str_left:
     pair_t 'L'
     pair_t 'E'
     pair_t 'F'
@@ -589,7 +601,7 @@ boot:                   ; () <- {caps}
     dict get            ; room_id timer_dev io_dev debug_dev
 
     push start          ; room_id timer_dev io_dev debug_dev start
-    new 3               ; start.(debug_dev io_dev timer_dev room_id)
+    new 4               ; start.(debug_dev io_dev timer_dev room_id)
     send 0              ; --
     ref std.commit
 
