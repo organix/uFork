@@ -3,8 +3,8 @@
 ;
 
 .import
-    std: "/lib/std.asm"
-    dev: "/lib/dev.asm"
+    std: "../../lib/std.asm"
+    dev: "../../lib/dev.asm"
 
 room_key:
     ref 1000

@@ -41,6 +41,9 @@ function timer_device(core) {
             }
         }
     );
+    return function dispose() {
+        Object.values(timer_map).forEach(clearTimeout);
+    };
 }
 
 export default Object.freeze(timer_device);
