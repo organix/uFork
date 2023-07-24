@@ -9,6 +9,12 @@
 room_key:
     ref 1000
 
+tx_timeout:
+    ref 1000            ; 1000ms
+
+rx_timeout:
+    ref 6000            ; 6sec
+
 ; Start initial services.
 
 start:                  ; (debug_dev io_dev timer_dev room_id) <- ()
@@ -56,6 +62,16 @@ host:                   ; --
     push link_tx        ; msgs seq ack timer link link_tx
     new 5               ; r_tx=link_tx.(link timer ack seq msgs)
 
+    ; set r_tx timer
+    push #nil           ; r_tx ()
+    push 1              ; r_tx () seq=1
+    push tx_time        ; r_tx () seq tx_time
+    pair 2              ; r_tx msg=(tx_time seq)
+    pick 2              ; r_tx msg target=r_tx
+    push 1000           ; r_tx msg target delay=1000ms
+    state 3             ; r_tx msg target delay timer=timer_dev
+    send 3              ; r_tx --
+
     ; build room
     push #nil           ; r_tx parties={}
     push room           ; r_tx parties={} room
@@ -85,8 +101,18 @@ host:                   ; --
     push link_tx        ; msgs seq ack timer link link_tx
     beh 5               ; --  // link_tx.(link timer ack seq msgs)
 
-    ; build party in
+    ; set r_tx timer
     my self             ; p_tx=SELF
+    push #nil           ; p_tx ()
+    push 1              ; p_tx () seq=1
+    push tx_time        ; p_tx () seq tx_time
+    pair 2              ; p_tx msg=(tx_time seq)
+    pick 2              ; p_tx msg target=p_tx
+    push 1000           ; p_tx msg target delay=1000ms
+    state 3             ; p_tx msg target delay timer=timer_dev
+    send 3              ; p_tx --
+
+    ; build party in
     push party_in       ; p_tx party_in
     new 1               ; p_in=party_in.(p_tx)
 
@@ -107,7 +133,7 @@ host:                   ; --
     state 2             ; callback to_cancel io_dev
     send 2              ; --
 
-    ; FIXME: start timer(s)
+    ; FIXME: implement 6-second disconnect
 
     ref std.commit
 
@@ -237,6 +263,7 @@ tx_ack_2:               ; msgs seq ack timer link
     ref std.commit
 
 link_tx_time:           ; (link timer ack seq msgs) <- (tx_time seq')
+;    debug               ; BREAKPOINT
     ; check timer message number
     state 4             ; seq
     msg 2               ; seq seq'
@@ -311,6 +338,9 @@ link_rx:                ; (cust timer tx seq) <- (ack seq' . content)
 
     ; forward message to cust
     msg -2              ; content
+    dup 1               ; content content
+    eq #nil             ; content content==()
+    if std.commit       ; content  // drop empty message
     state 1             ; content cust
     ref std.send_msg
 
