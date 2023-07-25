@@ -543,6 +543,10 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
                 let r = if n > 0 {
                     let lst = self.sp();
                     self.extract_nth(lst, n)
+                } else if n < 0 {
+                    let top = self.stack_peek();
+                    self.stack_roll(n)?;
+                    top
                 } else {
                     UNDEF
                 };

@@ -10,7 +10,8 @@ room_key:
     ref 1000
 
 tx_timeout:
-    ref 1000            ; 1000ms
+;    ref 1000            ; 1000ms
+    ref 10000            ; 10sec
 
 rx_timeout:
     ref 6000            ; 6sec
@@ -614,6 +615,16 @@ line_more:              ; lines line
 ; Capture required boot capabilities.
 
 boot:                   ; () <- {caps}
+    pick -1             ; #?
+    push 1              ; #? 1
+    pick -1             ; #? 1 1
+    push 2              ; #? 1 1 2
+    pick -2             ; #? 1 2 1 2
+    push 3              ; #? 1 2 1 2 3
+    pick -3             ; #? 1 2 3 1 2 3
+    pick 0              ; #? 1 2 3 1 2 3 #?
+    drop 9              ; --
+
     msg 0               ; {caps}
     push room_key       ; {caps} room_key
     dict get            ; room_id
