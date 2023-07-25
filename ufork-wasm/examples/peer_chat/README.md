@@ -26,10 +26,10 @@ Then navigate to http://localhost:3528 in a browser.
 
 The chat application centers around two main components.
 The _room_ and the _party_.
-The room coordinates messages from one or more parties,
-and maintains a list of parties
+The _room_ aggregates messages from one or more parties,
+and maintains a set of parties
 to whom messages are broadcast.
-The party manages the output panel and input control,
+The _party_ manages the output panel and input control,
 sending messages to, and receiving messages from,
 the room.
 A party leaves a room
@@ -71,8 +71,9 @@ transmission queue.
 Messages that have been transmitted
 but not acknowledged
 are retransmitted.
-Duplicate (or empty) messages received
-are discarded.
+Duplicate messages are discarded.
+Empty messages are acknowledged,
+then discarded.
 
                 A_tx        A_rx                B_rx        B_tx
             {ack:5,seq:1, {seq:6}             {seq:1}   {ack:0,seq:6,
@@ -96,3 +97,78 @@ are discarded.
 
 This sequence diagram illustrates the transfer of message _m1_,
 and it's acknowledgment via the timer at the receiving end.
+
+### Party Configuration
+
+Each _party_ has
+an input device for writing messages
+and an output device for displaying them.
+They are not directly connected, of course.
+The input is sent a _room_,
+which aggregates messages from multiple parties
+and distributes them to each party
+for display on the output.
+
+                                        p_tx_timer
+                                            |
+                                            v
+    input ---> line_in ---> party_in ---> party_tx - - - > (to room)
+                                            ^
+                                            |
+    output <-- line_out <-- party_out <-- party_rx < - - - (from room)
+                                            ^
+                                            |
+                                        p_rx_timer
+
+  * The `input` device collects characters from the user.
+  * The `line_in` buffers characters into lines.
+  * The `party_in` labels lines as messages to transmit.
+  * The `party_tx` implements the transmit-side of the _link_ protocol.
+  * The `p_tx_timer` provides a 1-second retransmition timeout.
+  * The `party_rx` implements the receive-side of the _link_ protocol.
+  * The `p_rx_timer` provides a 3-second idle-detection timeout.
+  * The `party_out` extracts the _content_ from the message.
+  * The `line_out` streams a line of characters to the output.
+  * The `output` device displays characters to the user.
+
+### Room Configuration
+
+Each _room_ has
+a collection of connected parties.
+For each message received from a _party_,
+the room sends a copy
+to each currently-connected party.
+The room maintains an _rx_/_tx_ pair
+for each connected party.
+
+                     r_rx_timer              :
+                         |                   :
+                         v                   :
+    (from party) - - > room_rx ---> room_in ---> room { party: tx, ...parties }
+                         |                   :                  |
+                         v                   :                  |
+    (to party) < - - - room_tx <--------------------------------+
+                         ^                   :
+                         |                   :
+                     r_tx_timer              :
+                                             :
+                            (for each party) :
+
+  * The `room_rx` implements the receive-side of the _link_ protocol.
+  * The `r_rx_timer` provides a 3-second idle-detection timeout.
+  * The `room_in` labels lines with the originating _party_.
+  * The `room` aggregates messages and distributes them to the _parties_.
+  * The `room_tx` implements the transmit-side of the _link_ protocol.
+  * The `r_tx_timer` provides a 1-second retransmition timeout.
+
+### Message Contents
+
+The _content_ of a message
+is the characters constituting
+a single line of text
+from a _party_.
+It is represented by
+a _deque_ structure
+containing fixnum _codepoints_.
+The final codepoint is `'\n'`,
+the _newline_ character.

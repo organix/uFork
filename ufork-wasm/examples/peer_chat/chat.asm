@@ -10,11 +10,12 @@ room_key:
     ref 1000
 
 tx_timeout:
-;    ref 1000            ; 1000ms
-    ref 10000            ; 10sec
+    ref 1000            ; 1000ms
+;    ref 10000            ; 10sec
 
 rx_timeout:
-    ref 6000            ; 6sec
+    ref 3000            ; 3sec
+;    ref 60000            ; 60sec
 
 ; Start initial services.
 
@@ -102,7 +103,7 @@ host:                   ; --
     push link_tx        ; msgs seq ack timer link link_tx
     beh 5               ; --  // link_tx.(link timer ack seq msgs)
 
-    ; set r_tx timer
+    ; set p_tx timer
     my self             ; p_tx=SELF
     push #nil           ; p_tx ()
     push 1              ; p_tx () seq=1
@@ -615,16 +616,6 @@ line_more:              ; lines line
 ; Capture required boot capabilities.
 
 boot:                   ; () <- {caps}
-    pick -1             ; #?
-    push 1              ; #? 1
-    pick -1             ; #? 1 1
-    push 2              ; #? 1 1 2
-    pick -2             ; #? 1 2 1 2
-    push 3              ; #? 1 2 1 2 3
-    pick -3             ; #? 1 2 3 1 2 3
-    pick 0              ; #? 1 2 3 1 2 3 #?
-    drop 9              ; --
-
     msg 0               ; {caps}
     push room_key       ; {caps} room_key
     dict get            ; room_id
