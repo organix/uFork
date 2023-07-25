@@ -180,7 +180,6 @@ suite:
 ; If the request is cancelled early, the callback is never called.
 
 test_beh:                   ; (referee timer value delay_ms time_limit cancel_ms) <- ()
-    debug
     state 2                 ; timer
     state 4                 ; timer delay_ms
     push thru.beh           ; timer delay_ms thru_beh

@@ -1,10 +1,13 @@
 // Installs the timer device.
 
+// The 'slowdown' parameter multiplies the specified delays, making it possible
+// to slow down time during debugging.
+
 /*jslint browser, devel */
 
 import ufork from "../ufork.js";
 
-function timer_device(core) {
+function timer_device(core, slowdown = 1) {
     const timer_map = Object.create(null);
     core.h_install(
         [[
@@ -16,12 +19,15 @@ function timer_device(core) {
                 if (core.u_is_fix(delay)) {
                     const quad = core.u_read_quad(stub);
                     const evt = quad.y;  // stub carries pre-allocated event
-                    timer_map[stub] = setTimeout(function () {
-                        delete timer_map[stub];
-                        core.h_release_stub(stub);
-                        core.h_event_enqueue(evt);
-                        core.h_wakeup(ufork.TIMER_DEV_OFS);
-                    }, core.u_fix_to_i32(delay));
+                    timer_map[stub] = setTimeout(
+                        function () {
+                            delete timer_map[stub];
+                            core.h_release_stub(stub);
+                            core.h_event_enqueue(evt);
+                            core.h_wakeup(ufork.TIMER_DEV_OFS);
+                        },
+                        slowdown * core.u_fix_to_i32(delay)
+                    );
                     if (core.u_trace !== undefined) {
                         core.u_trace("host_start_timer", timer_map[stub]);
                     }
