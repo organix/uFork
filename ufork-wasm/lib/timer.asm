@@ -1,9 +1,11 @@
-; The timer actor delays the sending of a message to an actor. It can be used
-; multiple times.
+; The timer actor delays the sending of a message to an actor. It is merely a
+; proof of concept - you should use the timer device where available.
 
 ; The timer actor's initial stack holds the clock device. It accepts a message
 ; that is a list containing the delay in milliseconds, the target actor, and the
 ; message.
+
+; It can be used multiple times.
 
 .import
     std: "./std.asm"

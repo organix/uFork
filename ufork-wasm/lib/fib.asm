@@ -5,8 +5,11 @@
 
 .import
     std: "./std.asm"
+    dev: "./dev.asm"
+    is_eq: "./testing/is_eq.asm"
 
-beh:                    ; () <- (cust n)
+beh:
+fib_beh:                ; () <- (cust n)
     msg 2               ; n
     dup 1               ; n n
     push 2              ; n n 2
@@ -21,7 +24,7 @@ beh:                    ; () <- (cust n)
     push 1              ; n k n 1
     alu sub             ; n k n-1
     pick 2              ; n k n-1 k
-    push beh            ; n k n-1 k beh
+    push fib_beh        ; n k n-1 k fib_beh
     new 0               ; n k n-1 k fib.()
     send 2              ; n k
 
@@ -29,7 +32,7 @@ beh:                    ; () <- (cust n)
     push 2              ; k n 2
     alu sub             ; k n-2
     roll 2              ; n-2 k
-    push beh            ; n-2 k beh
+    push fib_beh        ; n-2 k fib_beh
     new 0               ; n-2 k fib.()
     send 2              ;
     ref std.commit
@@ -48,20 +51,31 @@ k2:                     ; (cust m) <- n
     state 1             ; m+n cust
     ref std.send_msg
 
-boot:                   ; () <- _
-    push 6              ; n=6
-;    push 5              ; n=5 -- will lead to assert failure
-    push eq8            ; n eq8
-    new 0               ; n cust=eq8.()
-    push beh            ; n cust beh
-    new 0               ; n cust fib.()
-    send 2 std.commit
+; Test suite
 
-eq8:                    ; () <- m
-    msg 0               ; m
-    is_eq 8             ; assert_eq[8, m]
+boot:                   ; () <- {caps}
+    push 9              ; n
+    msg 0               ; n {caps}
+    push dev.debug_key  ; n {caps} debug_key
+    dict get            ; n cust=debug
+    push fib_beh        ; n cust fib_beh
+    new 0               ; n cust fib
+    send 2
+    ref std.commit
+
+test:                   ; (verdict) <- {caps}
+    push 6              ; n=6
+    push #t             ; n yes=#t
+    push 8              ; n yes expected=8
+    state 1             ; n yes expected verdict
+    push is_eq.beh      ; n yes expected verdict is_eq_beh
+    new 3               ; n cust=is_eq_beh.(verdict expected yes)
+    push fib_beh        ; n cust fib_beh
+    new 0               ; n cust fib=fib_beh.()
+    send 2              ; --
     ref std.commit
 
 .export
     beh
     boot
+    test
