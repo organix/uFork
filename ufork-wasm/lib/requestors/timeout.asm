@@ -12,6 +12,7 @@
     lib: "../lib.asm"
     std: "../std.asm"
     thru: "./thru.asm"
+    referee: "../testing/referee.asm"
 
 beh:
 timeout_beh:                ; (requestor time_limit timer_dev) <- request
@@ -91,54 +92,86 @@ win_beh:                    ; (callback loser␘) <- (value . error)
 
 boot:                       ; () <- {caps}
 
-; Scenario 1: there is a timeout before the requestor can succeed.
-
-    msg 0                   ; {caps}
-    push 5000               ; {caps} time_limit=5000
-    push 10000              ; {caps} time_limit delay=10000
-    push 111                ; {caps} time_limit delay value=111
-    push test_beh           ; {caps} time_limit delay value test_beh
-    new 3                   ; {caps} test=test_beh.(value delay time_limit)
-    send -1                 ; --
-
-; Scenario 2: the requestor succeeds within the time limit.
-
-    msg 0                   ; {caps}
-    push 10000              ; {caps} time_limit=10000
-    push 7500               ; {caps} time_limit delay=7500
-    push 222                ; {caps} time_limit delay value=222
-    push test_beh           ; {caps} time_limit delay value test_beh
-    new 3                   ; {caps} test=test_beh.(value delay time_limit)
-    send -1                 ; --
-
-; Scenario 3: the operation is cancelled early. There should be no output.
-
-    msg 0                   ; {caps}
-    push 2500               ; {caps} cancel_ms=2500
-    push 5000               ; {caps} cancel_ms time_limit=5000
-    push 5000               ; {caps} cancel_ms time_limit delay=5000
-    push 333                ; {caps} cancel_ms time_limit delay value=333
-    push test_beh           ; {caps} cancel_ms time_limit delay value test_beh
-    new 4                   ; {caps} test=test_beh.(value delay time_limit cancel_ms)
-    send -1                 ; --
-
-; Scenario 4: the operation is cancelled after the requestor succeeds.
-
-    msg 0                   ; {caps}
-    push 15000              ; {caps} cancel_ms=15000
-    push 12500              ; {caps} cancel_ms time_limit=12500
-    push 10000              ; {caps} cancel_ms time_limit delay=10000
-    push 444                ; {caps} cancel_ms time_limit delay value=444
-    push test_beh           ; {caps} cancel_ms time_limit delay value test_beh
-    new 4                   ; {caps} test=test_beh.(value delay time_limit cancel_ms)
-    send -1                 ; --
-
 ; The debug device's output, in order, should resemble:
 
 ;   (#? . @600...)
 ;   (222)
 ;   (444)
 
+    msg 0                   ; {caps}
+    push dev.debug_key      ; {caps} debug_key
+    dict get                ; debug
+    msg 0                   ; debug {caps}
+    push dev.timer_key      ; debug {caps} timer_key
+    dict get                ; debug timer
+    ref suite
+
+test:                       ; (verdict) <- {caps}
+    msg 0                   ; {caps}
+    push dev.timer_key      ; {caps} timer_key
+    dict get                ; timer
+    push 444                ; timer 3rd=444
+    push 222                ; timer 3rd 2nd=222
+    push #?                 ; timer 3rd 2nd 1st=#?
+    push 100                ; timer 3rd 2nd 1st probation=100ms
+    pick 5                  ; timer 3rd 2nd 1st probation timer
+    state 1                 ; timer 3rd 2nd 1st probation timer verdict
+    push referee.beh        ; timer 3rd 2nd 1st probation timer verdict referee_beh
+    new 6                   ; timer referee
+
+; The referee is not able to compare two lists, to unwrap the result before
+; giving it to the referee.
+
+    push lib.unwrap_beh     ; timer referee unwrap_beh
+    new 1                   ; timer referee'
+    roll 2                  ; referee' timer
+suite:
+
+; Scenario 1: there is a timeout before the requestor can succeed.
+
+    push 50                 ; ... time_limit=50
+    push 100                ; ... time_limit delay=100
+    push 111                ; ... time_limit delay value=111
+    pick 4                  ; ... time_limit delay value timer
+    pick 6                  ; ... time_limit delay value timer referee
+    push test_beh           ; ... time_limit delay value timer referee test_beh
+    new 5                   ; ... test=test_beh.(referee timer value delay time_limit)
+    send 0                  ; ...
+
+; Scenario 2: the requestor succeeds within the time limit.
+
+    push 100                ; ... time_limit=100
+    push 75                 ; ... time_limit delay=75
+    push 222                ; ... time_limit delay value=222
+    pick 4                  ; ... time_limit delay value timer
+    pick 6                  ; ... time_limit delay value timer referee
+    push test_beh           ; ... time_limit delay value timer referee test_beh
+    new 5                   ; ... test=test_beh.(referee timer value delay time_limit)
+    send 0                  ; ...
+
+; Scenario 3: the operation is cancelled early. There should be no output.
+
+    push 25                 ; ... cancel_ms=25
+    push 50                 ; ... cancel_ms time_limit=50
+    push 50                 ; ... cancel_ms time_limit delay=50
+    push 333                ; ... cancel_ms time_limit delay value=333
+    pick 5                  ; ... cancel_ms time_limit delay value timer
+    pick 7                  ; ... cancel_ms time_limit delay value timer referee
+    push test_beh           ; ... cancel_ms time_limit delay value timer referee test_beh
+    new 6                   ; ... test=test_beh.(referee timer value delay time_limit cancel_ms)
+    send 0                  ; ...
+
+; Scenario 4: the operation is cancelled after the requestor succeeds.
+
+    push 150                ; ... cancel_ms=150
+    push 125                ; ... cancel_ms time_limit=125
+    push 100                ; ... cancel_ms time_limit delay=100
+    push 444                ; ... cancel_ms time_limit delay value=444
+    pick 5                  ; ... cancel_ms time_limit delay value timer
+    pick 7                  ; ... cancel_ms time_limit delay value timer referee
+    push test_beh           ; ... cancel_ms time_limit delay value timer referee test_beh
+    new 6                   ; ... test=test_beh.(referee timer value delay time_limit cancel_ms)
+    send 0                  ; ...
     ref std.commit
 
 ; Place a time limit on a delay requestor, sending the result to the debug
@@ -146,41 +179,36 @@ boot:                       ; () <- {caps}
 ; If the time limit is inadequate, the request fails.
 ; If the request is cancelled early, the callback is never called.
 
-test_beh:                   ; (value delay_ms time_limit cancel_ms) <- {caps}
-    msg 0                   ; {caps}
-    push dev.timer_key      ; {caps} timer_key
-    dict get                ; timer_dev
-    dup 1                   ; timer_dev timer_dev
-    state 2                 ; timer_dev timer_dev delay_ms
-    push thru.beh           ; timer_dev timer_dev delay_ms thru_beh
-    new 0                   ; timer_dev timer_dev delay_ms thru=thru_beh.()
-    push delay.beh          ; timer_dev timer_dev delay_ms thru delay_beh
-    new 3                   ; timer_dev delay=delay_beh.(thru delay_ms timer_dev)
-    roll 2                  ; delay timer_dev
-    state 3                 ; delay timer_dev time_limit
-    roll 3                  ; timer_dev time_limit delay
-    push timeout_beh        ; timer_dev time_limit delay timeout_beh
-    new 3                   ; timeout=timeout_beh.(delay time_limit timer_dev)
+test_beh:                   ; (referee timer value delay_ms time_limit cancel_ms) <- ()
+    debug
+    state 2                 ; timer
+    state 4                 ; timer delay_ms
+    push thru.beh           ; timer delay_ms thru_beh
+    new 0                   ; timer delay_ms thru=thru_beh.()
+    push delay.beh          ; timer delay_ms thru delay_beh
+    new 3                   ; delay=delay_beh.(thru delay_ms timer)
+    state 2                 ; delay timer
+    state 5                 ; delay timer time_limit
+    roll 3                  ; timer time_limit delay
+    push timeout_beh        ; timer time_limit delay timeout_beh
+    new 3                   ; timeout=timeout_beh.(delay time_limit timer)
     push canceller.beh      ; timeout canceller_beh
     new 0                   ; timeout canceller=canceller_beh.()
-    state 1                 ; timeout canceller value
-    msg 0                   ; timeout canceller value {caps}
-    push dev.debug_key      ; timeout canceller value {caps} debug_key
-    dict get                ; timeout canceller value debug_dev
-    pick 3                  ; timeout canceller value debug_dev canceller
-    pair 2                  ; timeout canceller request=(canceller debug_dev . value)
+    state 3                 ; timeout canceller value
+    state 1                 ; timeout canceller value referee
+    pick 3                  ; timeout canceller value referee canceller
+    pair 2                  ; timeout canceller request=(canceller referee . value)
     roll 3                  ; canceller request timeout
     send -1                 ; canceller
-    state 4                 ; canceller cancel_ms
+    state 6                 ; canceller cancel_ms
     dup 1                   ; canceller cancel_ms cancel_ms
     typeq #fixnum_t         ; canceller cancel_ms do_cancel?
-    if_not std.commit
-    msg 0                   ; canceller cancel_ms {caps}
-    push dev.timer_key      ; canceller cancel_ms {caps} timer_key
-    dict get                ; canceller cancel_ms timer_dev
-    send 2
+    if_not std.commit       ; canceller cancel_ms
+    state 2                 ; canceller cancel_ms timer
+    send 2                  ; --
     ref std.commit
 
 .export
     beh
     boot
+    test
