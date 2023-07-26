@@ -124,7 +124,7 @@ for display on the output.
   * The `line_in` buffers characters into lines.
   * The `party_in` labels lines as messages to transmit.
   * The `party_tx` implements the transmit-side of the _link_ protocol.
-  * The `p_tx_timer` provides a 1-second retransmition timeout.
+  * The `p_tx_timer` provides a 1-second retransmission timeout.
   * The `party_rx` implements the receive-side of the _link_ protocol.
   * The `p_rx_timer` provides a 3-second loss-detection timeout.
   * The `party_out` extracts the _content_ from the message.
@@ -159,7 +159,7 @@ for each connected party.
   * The `room_in` labels lines with the originating _party_.
   * The `room` aggregates messages and distributes them to the _parties_.
   * The `room_tx` implements the transmit-side of the _link_ protocol.
-  * The `r_tx_timer` provides a 1-second retransmition timeout.
+  * The `r_tx_timer` provides a 1-second retransmission timeout.
 
 ### Message Contents
 
