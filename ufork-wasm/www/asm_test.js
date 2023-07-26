@@ -84,6 +84,18 @@ function asm_test(module_url) {
                     x: device.h_reserve_proxy(),
                     y: ufork.NIL_RAW
                 });
+
+// Provide generous resource limits.
+
+                const sponsor_ptr = core.u_ramptr(ufork.SPONSOR_OFS);
+                const sponsor = core.u_read_quad(sponsor_ptr);
+                sponsor.t = core.u_fixnum(4096);    // memory
+                sponsor.x = core.u_fixnum(256);     // events
+                sponsor.y = core.u_fixnum(4096);    // cycles
+                core.u_write_quad(sponsor_ptr, sponsor);
+
+// Run the test suite.
+
                 core.h_boot(asm_module.test, state);
                 run_ufork();
                 return dispose_timer; // cancel

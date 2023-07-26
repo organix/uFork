@@ -403,7 +403,7 @@ function boot(module_specifier) {
 }
 
 const $boot_input = document.getElementById("boot-url");
-$boot_input.value = localStorage.getItem("boot") ?? "../lib/test.asm";
+$boot_input.value = localStorage.getItem("boot") ?? "../lib/fib.asm";
 const $boot_form = document.getElementById("boot-form");
 $boot_form.onsubmit = function (event) {
     boot($boot_input.value);
@@ -546,7 +546,7 @@ ufork.instantiate_core(
     clock_device(core);
     on_stdin = io_device(core, on_stdout);
     blob_device(core);
-    timer_device(core);
+    timer_device(core, 1);
 
     // draw initial state
     update_rom_monitor();

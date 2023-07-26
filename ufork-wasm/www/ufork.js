@@ -1448,6 +1448,10 @@ function instantiate_core(
 //debug import blob_device from "./devices/blob_device.js";
 //debug import timer_device from "./devices/timer_device.js";
 //debug let core;
+//debug function run_ufork() {
+//debug     const status = core.h_run_loop(0);
+//debug     console.log("IDLE:", core.u_fault_msg(core.u_fix_to_i32(status)));
+//debug }
 //debug parseq.sequence([
 //debug     instantiate_core(
 //debug         import.meta.resolve(
@@ -1455,7 +1459,7 @@ function instantiate_core(
 //debug         ),
 //debug         function on_wakeup(device_offset) {
 //debug             console.log("WAKE:", device_offset);
-//debug             console.log("IDLE:", core.u_fault_msg(core.h_run_loop()));
+//debug             run_ufork();
 //debug         },
 //debug         console.log,
 //debug         LOG_DEBUG
@@ -1476,12 +1480,18 @@ function instantiate_core(
 //debug         console.log("h_ram_top() =", core.h_ram_top(), core.u_print(core.h_ram_top()));
 //debug         console.log("u_ramptr(5) =", core.u_ramptr(5), core.u_print(core.u_ramptr(5)));
 //debug         console.log("u_ptr_to_cap(u_ramptr(3)) =", core.u_ptr_to_cap(core.u_ramptr(3)), core.u_print(core.u_ptr_to_cap(core.u_ramptr(3))));
-//debug         return core.h_import(import.meta.resolve("../lib/requestors/canceller.asm"));
+//debug         return core.h_import(import.meta.resolve("../lib/fib.asm"));
 //debug     }),
 //debug     requestorize(function (asm_module) {
+//debug         const sponsor_ptr = core.u_ramptr(SPONSOR_OFS);
+//debug         const sponsor = core.u_read_quad(sponsor_ptr);
+//debug         sponsor.t = core.u_fixnum(4096);    // memory
+//debug         sponsor.x = core.u_fixnum(256);     // events
+//debug         sponsor.y = core.u_fixnum(4096);    // cycles
+//debug         core.u_write_quad(sponsor_ptr, sponsor);
 //debug         core.h_boot(asm_module.boot);
 //debug         const start = performance.now();
-//debug         console.log("IDLE:", core.u_fault_msg(core.h_run_loop()));
+//debug         run_ufork();
 //debug         const duration = performance.now() - start;
 //debug         return duration.toFixed(3) + "ms";
 //debug     })

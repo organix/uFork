@@ -1,5 +1,4 @@
-// A requestor factory providing a simplified interface to the browser's
-// IndexedDB storage.
+// A requestor-based interface for the browser's IndexedDB storage.
 
 /*jslint browser */
 
@@ -11,7 +10,6 @@ function indexed_db(
     make_store_request,
     default_result
 ) {
-
     return function indexed_db_requestor(callback, value) {
 
         function fail(event) {
