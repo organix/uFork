@@ -75,7 +75,7 @@ host:                   ; --
     push tx_time        ; r_tx () seq tx_time
     pair 2              ; r_tx msg=(tx_time seq)
     pick 2              ; r_tx msg target=r_tx
-    push 1000           ; r_tx msg target delay=1000ms
+    push tx_timeout     ; r_tx msg target delay=tx_timeout
     state 3             ; r_tx msg target delay timer=timer_dev
     send 3              ; r_tx --
 
@@ -99,6 +99,13 @@ host:                   ; --
     push link_rx        ; seq tx timer cust link_rx
     new 4               ; r_rx=link_rx.(cust timer tx seq)
 
+    ; set r_rx timer
+    push #unit          ; r_rx msg=#unit
+    pick 2              ; r_rx msg target=r_rx
+    push rx_timeout     ; r_rx msg target delay=rx_timeout
+    state 3             ; r_rx msg target delay timer_dev
+    send 3              ; r_rx
+
     ; build party->room logger
     state 1             ; rcvr=r_rx logr=debug_dev
     push log_fwd        ; rcvr logr log_fwd
@@ -120,7 +127,7 @@ host:                   ; --
     push tx_time        ; p_tx () seq tx_time
     pair 2              ; p_tx msg=(tx_time seq)
     pick 2              ; p_tx msg target=p_tx
-    push 1000           ; p_tx msg target delay=1000ms
+    push tx_timeout     ; p_tx msg target delay=tx_timeout
     state 3             ; p_tx msg target delay timer=timer_dev
     send 3              ; p_tx --
 
@@ -145,12 +152,13 @@ host:                   ; --
     state 2             ; callback to_cancel io_dev
     send 2              ; --
 
-    ; FIXME: implement 6-second disconnect
+    ; FIXME: implement 6-second disconnect (p_rx timer)
 
     ref std.commit
 
 party_in:               ; (tx) <- content
     msg 0               ; content
+    ; FIXME: if content==#unit, the room gone away...
     push tx_msg         ; content tx_msg
     pair 1              ; (tx_msg . content)
     state 1             ; (tx_msg . content) tx
@@ -288,7 +296,7 @@ link_tx_time:           ; (link timer ack seq msgs) <- (tx_time seq')
     push tx_time        ; () seq tx_time
     pair 2              ; msg=(tx_time seq)
     my self             ; msg target=SELF
-    push 1000           ; msg target delay=1000ms
+    push tx_timeout     ; msg target delay=tx_timeout
     state 2             ; msg target delay timer
     send 3              ; --
     ref std.commit
@@ -324,13 +332,32 @@ tx_time_2:
 ;   seq: next message number expected (to receive)
 ;
 
-link_rx:                ; (cust timer tx seq) <- (ack seq' . content)
+link_rx:                ; (cust timer tx seq) <- (ack seq' . content) | #unit
+    msg 0               ; msg
+    eq #unit            ; msg==#unit
+    if_not link_rx_1
+
+    ; timeout
+    state 0             ; state
+    push lost_rx        ; state beh=lost_rx
+    beh -1              ; --
+
+    ; reset timer
+    push #unit          ; msg=#unit
+    my self             ; msg target=SELF
+    push rx_timeout     ; msg target delay=rx_timeout
+    state 2             ; msg target delay timer
+    send 3              ; --
+    ref std.commit
+
+link_rx_1:
     ; check inbound message number
     state 4             ; seq
     msg 2               ; seq seq'
     cmp eq              ; seq==seq'
     if_not std.commit   ; // ignore unexpected message
 
+link_rx_2:
     ; forward ack to tx
     msg 2               ; seq'
     msg 1               ; seq' ack
@@ -345,7 +372,7 @@ link_rx:                ; (cust timer tx seq) <- (ack seq' . content)
     state 3             ; seq+1 tx
     state 2             ; seq+1 tx timer
     state 1             ; seq+1 tx timer cust
-    my beh              ; seq+1 tx timer cust beh
+    push link_rx        ; seq+1 tx timer cust link_rx
     beh 4               ; --
 
     ; forward message to cust
@@ -355,6 +382,31 @@ link_rx:                ; (cust timer tx seq) <- (ack seq' . content)
     if std.commit       ; content  // drop empty message
     state 1             ; content cust
     ref std.send_msg
+
+; One timeout has occurred. Another means disconnect.
+
+lost_rx:                ; (cust timer tx seq) <- (ack seq' . content) | #unit
+    msg 0               ; msg
+    eq #unit            ; msg==#unit
+    if_not lost_rx_1
+
+    ; timeout
+    state 1             ; cust
+    send 0              ; --
+    ref std.commit
+
+lost_rx_1:
+    ; check inbound message number
+    state 4             ; seq
+    msg 2               ; seq seq'
+    cmp eq              ; seq==seq'
+    if link_rx_2        ; --
+
+    ; ignore unexpected message (but recover)
+    state 0             ; state
+    push link_rx        ; state beh=link_rx
+    beh -1              ; --
+    ref std.commit
 
 ;
 ; Chat room (central mediator)
