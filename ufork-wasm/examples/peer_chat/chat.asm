@@ -26,7 +26,7 @@ start:                  ; (debug_dev io_dev timer_dev room_id) <- ()
 ; remote and we are joining it.
 
     state 4             ; room_id
-    if join host        ; room_id debug_dev
+    if join host        ; --
 
 ; For now, just send the room id to the debug device.
 
@@ -54,6 +54,11 @@ host:                   ; --
     roll 4              ; seq tx timer cust=p_out
     push link_rx        ; seq tx timer cust link_rx
     new 4               ; p_rx=link_rx.(cust timer tx seq)
+
+    ; build room->party logger
+    state 1             ; rcvr=p_rx logr=debug_dev
+    push log_fwd        ; rcvr logr log_fwd
+    new 2               ; p_rx'=log_fwd.(logr rcvr)
 
     ; build room tx
     deque new           ; p_rx msgs
@@ -93,6 +98,11 @@ host:                   ; --
     roll 4              ; seq tx timer cust=in
     push link_rx        ; seq tx timer cust link_rx
     new 4               ; r_rx=link_rx.(cust timer tx seq)
+
+    ; build party->room logger
+    state 1             ; rcvr=r_rx logr=debug_dev
+    push log_fwd        ; rcvr logr log_fwd
+    new 2               ; r_rx'=log_fwd.(logr rcvr)
 
     ; become party tx
     deque new           ; r_rx msgs
@@ -455,6 +465,19 @@ ticker:                 ; () <- n
     alu add             ; n+1
     my self             ; n+1 SELF
     ref std.send_msg    ; --
+
+; Pass messages unchanged, but also copy to log.
+; FIXME: could be a combination of `tee` and `label`...
+
+log_fwd:                ; (logr rcvr) <- msg
+    msg 0               ; msg
+    my self             ; msg SELF
+    pair 1              ; (SELF . msg)  // label log entry
+    state 1             ; (SELF . msg) logr
+    send -1             ; --
+    msg 0               ; msg
+    state 2             ; msg rcvr
+    ref std.send_msg
 
 ; Accumulate characters one-at-a-time until '\n'.
 ; When a `line` is complete, send it to `cust`.
