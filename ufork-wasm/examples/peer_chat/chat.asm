@@ -205,7 +205,7 @@ room_in:                ; (room tx party) <- content
 ;   timer: capability for timer service
 ;   ack: last message number successfully received (by rx)
 ;   seq: next message number to transmit
-;   msgs: queue of unackowledged messages
+;   msgs: queue of unacknowledged messages
 ;
 
 tx_msg:                 ; (tx_msg . content)

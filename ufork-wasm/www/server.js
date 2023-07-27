@@ -22,12 +22,17 @@ const server = http.createServer(function on_request(req, res) {
         res.statusCode = 400;
         return res.end("Escapee.");
     }
+    const mime_type = mime_types[file_path.split(".").pop()];
+    if (typeof mime_type !== "string") {
+        res.statusCode = 404;
+        return res.end();
+    }
     return fs.readFile(file_path, function (error, buffer) {
         if (error) {
             res.statusCode = 404;
             return res.end();
         }
-        res.setHeader("Content-Type", mime_types[file_path.split(".").pop()]);
+        res.setHeader("Content-Type", mime_type);
         return res.end(buffer);
     });
 });
