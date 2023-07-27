@@ -72,8 +72,8 @@ host:                   ; --
     ; set r_tx timer
     push #nil           ; r_tx ()
     push 1              ; r_tx () seq=1
-    push tx_time        ; r_tx () seq tx_time
-    pair 2              ; r_tx msg=(tx_time seq)
+    push tx_tmo         ; r_tx () seq tx_tmo
+    pair 2              ; r_tx msg=(tx_tmo seq)
     pick 2              ; r_tx msg target=r_tx
     push tx_timeout     ; r_tx msg target delay=tx_timeout
     state 3             ; r_tx msg target delay timer=timer_dev
@@ -124,8 +124,8 @@ host:                   ; --
     my self             ; p_tx=SELF
     push #nil           ; p_tx ()
     push 1              ; p_tx () seq=1
-    push tx_time        ; p_tx () seq tx_time
-    pair 2              ; p_tx msg=(tx_time seq)
+    push tx_tmo         ; p_tx () seq tx_tmo
+    pair 2              ; p_tx msg=(tx_tmo seq)
     pick 2              ; p_tx msg target=p_tx
     push tx_timeout     ; p_tx msg target delay=tx_timeout
     state 3             ; p_tx msg target delay timer=timer_dev
@@ -192,7 +192,7 @@ tx_msg:                 ; (tx_msg . content)
     ref 1
 tx_ack:                 ; (tx_ack ack' seq')
     ref -1
-tx_time:                ; (tx_time seq')
+tx_tmo:                 ; (tx_tmo seq')
     ref 0
 
 link_tx:                ; (link timer ack seq msgs) <- tx_evt
@@ -203,8 +203,8 @@ link_tx:                ; (link timer ack seq msgs) <- tx_evt
     eq tx_ack           ; opr==tx_ack
     if link_tx_ack      ; --
     msg 1               ; opr
-    eq tx_time          ; opr==tx_time
-    if link_tx_time     ; --
+    eq tx_tmo           ; opr==tx_tmo
+    if link_tx_tmo     ; --
     ref std.abort       ; // unknown operation
 
 link_tx_msg:            ; (link timer ack seq msgs) <- (tx_msg . content)
@@ -282,30 +282,30 @@ tx_ack_2:               ; msgs seq ack timer link
     beh 5               ; --
     ref std.commit
 
-link_tx_time:           ; (link timer ack seq msgs) <- (tx_time seq')
+link_tx_tmo:            ; (link timer ack seq msgs) <- (tx_tmo seq')
 ;    debug               ; BREAKPOINT
     ; check timer message number
     state 4             ; seq
     msg 2               ; seq seq'
     cmp eq              ; seq==seq'
-    if tx_time_1        ; --
+    if tx_tmo_1         ; --
 
     ; reset timer
     push #nil           ; ()
     state 4             ; () seq
-    push tx_time        ; () seq tx_time
-    pair 2              ; msg=(tx_time seq)
+    push tx_tmo         ; () seq tx_tmo
+    pair 2              ; msg=(tx_tmo seq)
     my self             ; msg target=SELF
     push tx_timeout     ; msg target delay=tx_timeout
     state 2             ; msg target delay timer
     send 3              ; --
     ref std.commit
 
-tx_time_1:
+tx_tmo_1:
     ; check for empty queue
     state 5             ; msgs
     deque empty         ; is_empty(msgs)
-    if_not tx_time_2    ; --
+    if_not tx_tmo_2     ; --
 
     ; send empty message
     push tx_msg         ; tx_msg
@@ -313,7 +313,7 @@ tx_time_1:
     send 1              ; --
     ref std.commit
 
-tx_time_2:
+tx_tmo_2:
     ; resend queued message
     state 5             ; msgs
     deque pop           ; msgs (seq . content)
