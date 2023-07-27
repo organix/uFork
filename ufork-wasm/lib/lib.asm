@@ -95,6 +95,30 @@ unwrap_beh:             ; (rcvr) <- (msg)
     state 1             ; msg rcvr
     ref std.send_msg
 
+;;  (define call-beh
+;;      (lambda (cust rcvr)
+;;          (BEH msg
+;;              (SEND rcvr (cons cust msg)) )))
+call_beh:               ; (cust rcvr) <- msg
+    msg 0               ; msg
+    state 1             ; msg cust
+    pair 1              ; (cust . msg)
+    state 2             ; (cust . msg) rcvr
+    ref std.send_msg
+
+;;  (define tee-beh
+;;      (lambda (rcvr1 rcvr2)
+;;          (BEH msg
+;;              (SEND rcvr1 msg)
+;;              (SEND rcvr2 msg) )))
+tee_beh:                ; (rcvr1 rcvr2) <- msg
+    msg 0               ; msg
+    state 1             ; msg rcvr1
+    send -1             ; --
+    msg 0               ; msg
+    state 2             ; msg rcvr2
+    ref std.send_msg
+
 ;;  (define broadcast-beh
 ;;      (lambda (value)
 ;;          (BEH actors
@@ -130,5 +154,7 @@ boot:                   ; () <- {caps}
     once_tag_beh
     wrap_beh
     unwrap_beh
+    call_beh
+    tee_beh
     broadcast_beh
     boot
