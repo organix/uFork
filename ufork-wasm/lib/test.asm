@@ -18,7 +18,7 @@ failed:                 ; (ctrl) <- (ctrl')
 
 ; Become `failed`
 
-fail:
+fail:                   ; --
     state 1             ; ctrl
     push failed         ; ctrl failed
     beh 1               ; --
@@ -36,7 +36,7 @@ success:                ; (ctrl) <- (ctrl')
 
 ; Become `success`
 
-ok:
+ok:                     ; --
     state 1             ; ctrl
     push success        ; ctrl success
     beh 1               ; --
@@ -63,7 +63,72 @@ assert_ok:              ; _ <- verdict
     is_eq #t            ; assert(verdict==#t)
     ref std.commit
 
+;
 ; Test suite
+;
+
+; setup the mock
+
+step_0:                 ; (debug timer) <- ()
+    push 42             ; expect=42
+    my self             ; expect ctrl=SELF
+    push mock_eq        ; expect ctrl mock_eq
+    new 2               ; mock=mock_eq.(ctrl 42)
+    my self             ; mock SELF
+    send -1             ; --
+
+    state 0             ; state
+    push step_1         ; state beh=step_1
+    beh -1              ; --
+    ref std.commit
+
+; first mock interaction
+
+step_1:                 ; (debug timer) <- mock
+    msg 0               ; mock
+    my self             ; mock SELF
+    send -1             ; --
+
+;    push 86             ; 86  // non-matching message
+    push 42             ; 42  // matching message
+    msg 0               ; 42 mock
+    send -1             ; --
+
+    state 0             ; state
+;    push step_2         ; state beh=step_2  // step 2 causes failure...
+    push step_3         ; state beh=step_3
+    beh -1              ; --
+    ref std.commit
+
+; second mock interaction
+
+step_2:                 ; (debug timer) <- mock
+    msg 0               ; mock
+    my self             ; mock SELF
+    send -1             ; --
+
+;    push 86             ; 86  // non-matching message
+    push 42             ; 42  // matching message
+    msg 0               ; 42 mock
+    send -1             ; --
+
+    state 0             ; state
+    push step_3         ; state beh=step_3
+    beh -1              ; --
+    ref std.commit
+
+; verify the mock
+
+step_3:                 ; (debug timer) <- mock
+    my self             ; ctrl=SELF mock
+    msg 0               ; ctrl mock
+    send 1              ; --
+
+    push assert_ok      ; assert_ok
+    beh 0               ; --
+    ref std.commit
+
+; run test suite on boot
 
 boot:                   ; () <- {caps}
     msg 0               ; {caps}
@@ -72,17 +137,9 @@ boot:                   ; () <- {caps}
     msg 0               ; timer {caps}
     push dev.debug_key  ; timer {caps} debug_key
     dict get            ; timer debug
-
-    my self             ; ... ctrl=SELF
-    push success        ; ... ctrl success
-    new 1               ; ... mock=success.(ctrl)
-
-    my self             ; ... mock ctrl=SELF
-    roll 2              ; ... ctrl mock
-    send 1              ; ...
-
-    push assert_ok      ; assert_ok
-    beh 0               ; --
+    push step_0         ; timer debug step_0
+    new 2               ; test=step_0.(debug timer)
+    send 0              ; --
     ref std.commit
 
 .export
