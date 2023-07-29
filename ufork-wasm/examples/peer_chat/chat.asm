@@ -11,11 +11,9 @@ room_key:
 
 tx_timeout:
     ref 1000            ; 1000ms
-;    ref 10000            ; 10sec
 
 rx_timeout:
     ref 3000            ; 3sec
-;    ref 60000            ; 60sec
 
 ; Start initial services.
 
@@ -56,9 +54,9 @@ host:                   ; --
     new 4               ; p_rx=link_rx.(cust timer tx seq)
 
     ; build room->party logger
-    state 1             ; rcvr=p_rx logr=debug_dev
-    push log_fwd        ; rcvr logr log_fwd
-    new 2               ; p_rx'=log_fwd.(logr rcvr)
+;    state 1             ; rcvr=p_rx logr=debug_dev
+;    push log_fwd        ; rcvr logr log_fwd
+;    new 2               ; p_rx'=log_fwd.(logr rcvr)
 
     ; build room tx
     deque new           ; p_rx msgs
@@ -100,16 +98,16 @@ host:                   ; --
     new 4               ; r_rx=link_rx.(cust timer tx seq)
 
     ; set r_rx timer
-    push #unit          ; r_rx msg=#unit
-    pick 2              ; r_rx msg target=r_rx
-    push rx_timeout     ; r_rx msg target delay=rx_timeout
-    state 3             ; r_rx msg target delay timer_dev
-    send 3              ; r_rx
+;    push #unit          ; r_rx msg=#unit
+;    pick 2              ; r_rx msg target=r_rx
+;    push rx_timeout     ; r_rx msg target delay=rx_timeout
+;    state 3             ; r_rx msg target delay timer_dev
+;    send 3              ; r_rx
 
     ; build party->room logger
-    state 1             ; rcvr=r_rx logr=debug_dev
-    push log_fwd        ; rcvr logr log_fwd
-    new 2               ; r_rx'=log_fwd.(logr rcvr)
+;    state 1             ; rcvr=r_rx logr=debug_dev
+;    push log_fwd        ; rcvr logr log_fwd
+;    new 2               ; r_rx'=log_fwd.(logr rcvr)
 
     ; become party tx
     deque new           ; r_rx msgs
@@ -152,7 +150,7 @@ host:                   ; --
     state 2             ; callback to_cancel io_dev
     send 2              ; --
 
-    ; FIXME: implement 6-second disconnect (p_rx timer)
+    ; FIXME: implement 6-second disconnect (r_rx/p_rx timers)
 
     ref std.commit
 
@@ -269,11 +267,12 @@ tx_ack_1:               ; msgs seq ack timer link msgs' content
     if tx_ack_2         ; ... msgs' seq ack timer link
 
     ; then send another message to rx
-    deque pop           ; ... msgs'' (seq . content)
-    state 3             ; ... msgs'' (seq . content) ack
-    pair 1              ; ... msgs'' (ack seq . content)
-    state 1             ; ... msgs'' (ack seq . content) link
-    send -1             ; ... msgs''
+    pick 5              ; ... msgs' seq ack timer link msgs'
+    deque pop           ; ... msgs' seq ack timer link msgs'' (seq . content)
+    pick 5              ; ... msgs' seq ack timer link msgs'' (seq . content) ack
+    pair 1              ; ... msgs' seq ack timer link msgs'' (ack seq . content)
+    pick 3              ; ... msgs' seq ack timer link msgs'' (ack seq . content) link
+    send -1             ; ... msgs' seq ack timer link msgs''
     drop 1              ; ... msgs' seq ack timer link
 
 tx_ack_2:               ; msgs seq ack timer link
@@ -283,13 +282,6 @@ tx_ack_2:               ; msgs seq ack timer link
     ref std.commit
 
 link_tx_tmo:            ; (link timer ack seq msgs) <- (tx_tmo seq')
-;    debug               ; BREAKPOINT
-    ; check timer message number
-    state 4             ; seq
-    msg 2               ; seq seq'
-    cmp eq              ; seq==seq'
-    if tx_tmo_1         ; --
-
     ; reset timer
     push #nil           ; ()
     state 4             ; () seq
@@ -299,7 +291,12 @@ link_tx_tmo:            ; (link timer ack seq msgs) <- (tx_tmo seq')
     push tx_timeout     ; msg target delay=tx_timeout
     state 2             ; msg target delay timer
     send 3              ; --
-    ref std.commit
+
+    ; check timer message number
+    state 4             ; seq
+    msg 2               ; seq seq'
+    cmp eq              ; seq==seq'
+    if_not std.commit   ; --
 
 tx_tmo_1:
     ; check for empty queue

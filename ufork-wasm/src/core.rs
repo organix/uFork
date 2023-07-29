@@ -96,9 +96,9 @@ pub const ROM_TOP_OFS: usize = ROM_BASE_OFS;
         quad_ram[MEMO_DEV.ofs()]    = Quad::actor_t(PLUS_5, NIL, UNDEF);  // memo device #5
         quad_ram[HOST_DEV.ofs()]    = Quad::actor_t(PLUS_6, NIL, UNDEF);  // host device #6
         quad_ram[SPONSOR.ofs()]     = Quad::sponsor_t(
-                                    Any::fix(512),
-                                    Any::fix(64),
-                                    Any::fix(768),
+                                    Any::fix(4096),
+                                    Any::fix(256),
+                                    Any::fix(8192),
                                     UNDEF);  // root configuration sponsor
 
 pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;

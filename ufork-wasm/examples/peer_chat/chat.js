@@ -29,7 +29,7 @@ function refill_all(spn) {
     sponsor.x = core.u_fixnum(256);  // events
     sponsor.y = core.u_fixnum(4096);  // cycles
     core.u_write_quad(spn, sponsor);
-    console.log("filled:", core.u_disasm(spn));
+    //console.log("filled:", core.u_disasm(spn));
 }
 function ufork_run() {
     const spn = core.u_ramptr(ufork.SPONSOR_OFS);
@@ -193,6 +193,7 @@ parseq.sequence([
         on_stdin = io_device(core, on_stdout);
         blob_device(core);
         timer_device(core);
+//        timer_device(core, 5);  // slow-down factor 5x
         const make_dynamic_device = host_device(core);
         awp_device({
             core,
