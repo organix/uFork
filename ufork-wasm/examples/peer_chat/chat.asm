@@ -53,10 +53,22 @@ host:                   ; --
     push link_rx        ; seq tx timer cust link_rx
     new 4               ; p_rx=link_rx.(cust timer tx seq)
 
+    ; set p_rx timer
+    push #unit          ; p_rx msg=#unit
+    pick 2              ; p_rx msg target=p_rx
+    push rx_timeout     ; p_rx msg target delay=rx_timeout
+    state 3             ; p_rx msg target delay timer_dev
+    send 3              ; p_rx
+
+    ; build room->party message-limited transport
+    push 17             ; rcvr=p_rx limit=17
+    push cnt_fwd        ; rcvr limit cnt_fwd
+    new 2               ; p_rx'=cnt_fwd.(limit rcvr)
+
     ; build room->party logger
-;    state 1             ; rcvr=p_rx logr=debug_dev
-;    push log_fwd        ; rcvr logr log_fwd
-;    new 2               ; p_rx'=log_fwd.(logr rcvr)
+    state 1             ; rcvr=p_rx logr=debug_dev
+    push log_fwd        ; rcvr logr log_fwd
+    new 2               ; p_rx'=log_fwd.(logr rcvr)
 
     ; build room tx
     deque new           ; p_rx msgs
@@ -98,16 +110,21 @@ host:                   ; --
     new 4               ; r_rx=link_rx.(cust timer tx seq)
 
     ; set r_rx timer
-;    push #unit          ; r_rx msg=#unit
-;    pick 2              ; r_rx msg target=r_rx
-;    push rx_timeout     ; r_rx msg target delay=rx_timeout
-;    state 3             ; r_rx msg target delay timer_dev
-;    send 3              ; r_rx
+    push #unit          ; r_rx msg=#unit
+    pick 2              ; r_rx msg target=r_rx
+    push rx_timeout     ; r_rx msg target delay=rx_timeout
+    state 3             ; r_rx msg target delay timer_dev
+    send 3              ; r_rx
+
+    ; build party->room message-limited transport
+    push 13             ; rcvr=r_rx limit=13
+    push cnt_fwd        ; rcvr limit cnt_fwd
+    new 2               ; r_rx'=cnt_fwd.(limit rcvr)
 
     ; build party->room logger
-;    state 1             ; rcvr=r_rx logr=debug_dev
-;    push log_fwd        ; rcvr logr log_fwd
-;    new 2               ; r_rx'=log_fwd.(logr rcvr)
+    state 1             ; rcvr=r_rx logr=debug_dev
+    push log_fwd        ; rcvr logr log_fwd
+    new 2               ; r_rx'=log_fwd.(logr rcvr)
 
     ; become party tx
     deque new           ; r_rx msgs
@@ -150,13 +167,10 @@ host:                   ; --
     state 2             ; callback to_cancel io_dev
     send 2              ; --
 
-    ; FIXME: implement 6-second disconnect (r_rx/p_rx timers)
-
     ref std.commit
 
 party_in:               ; (tx) <- content
     msg 0               ; content
-    ; FIXME: if content==#unit, the room gone away...
     push tx_msg         ; content tx_msg
     pair 1              ; (tx_msg . content)
     state 1             ; (tx_msg . content) tx
@@ -164,6 +178,14 @@ party_in:               ; (tx) <- content
 
 party_out:              ; (l_out) <- (party . content)
     msg -1              ; content
+    msg 0               ; content (party . content)
+    if party_out_1      ; content
+
+    ; lost connection
+    drop 1              ; --
+    push txt_lost       ; content=txt_lost
+
+party_out_1:            ; content
     state 1             ; content l_out
     ref std.send_msg
 
@@ -202,8 +224,12 @@ link_tx:                ; (link timer ack seq msgs) <- tx_evt
     if link_tx_ack      ; --
     msg 1               ; opr
     eq tx_tmo           ; opr==tx_tmo
-    if link_tx_tmo     ; --
-    ref std.abort       ; // unknown operation
+    if link_tx_tmo      ; --
+
+    ; unknown operation
+    push std.sink_beh   ; sink_beh  // become inert
+    beh 0               ; --
+    ref std.commit
 
 link_tx_msg:            ; (link timer ack seq msgs) <- (tx_msg . content)
     ; add message to queue
@@ -388,7 +414,11 @@ lost_rx:                ; (cust timer tx seq) <- (ack seq' . content) | #unit
     if_not lost_rx_1
 
     ; timeout
-    state 1             ; cust
+    push std.sink_beh   ; sink_beh  // become inert
+    beh 0               ; --
+    state 3             ; tx  // stop transmitter
+    send 0              ; --
+    state 1             ; cust  // lost signal
     send 0              ; --
     ref std.commit
 
@@ -456,6 +486,7 @@ room_add:               ; --
     ref room_cast
 
 room_del:               ; --
+    debug               ; BREAKPOINT
     ; delete party from room
     state 0             ; {party:tx, ...parties}
     msg 2               ; {party:tx, ...parties} party
@@ -497,6 +528,25 @@ str_left:
     pair_t '\n'
     ref #nil
 
+txt_lost:
+    pair_t str_lost #nil
+str_lost:
+    pair_t 'D'
+    pair_t 'I'
+    pair_t 'S'
+    pair_t 'C'
+    pair_t 'O'
+    pair_t 'N'
+    pair_t 'N'
+    pair_t 'E'
+    pair_t 'C'
+    pair_t 'T'
+    pair_t 'E'
+    pair_t 'D'
+    pair_t '.'
+    pair_t '\n'
+    ref #nil
+
 ;
 ; Line buffer and utilities
 ;
@@ -524,6 +574,22 @@ log_fwd:                ; (logr rcvr) <- msg
     pair 1              ; (SELF . msg)  // label log entry
     state 1             ; (SELF . msg) logr
     send -1             ; --
+    msg 0               ; msg
+    state 2             ; msg rcvr
+    ref std.send_msg
+
+; Pass messages unchanged (a limited number of times).
+
+cnt_fwd:                ; (limit rcvr) <- msg
+    state 1             ; limit
+    push 0              ; limit 0
+    cmp gt              ; limit>0
+    if_not std.commit   ; --
+    my state            ; rcvr limit
+    push 1              ; rcvr limit 1
+    alu sub             ; rcvr limit-1
+    my beh              ; rcvr limit-1 beh
+    beh 2               ; --
     msg 0               ; msg
     state 2             ; msg rcvr
     ref std.send_msg
