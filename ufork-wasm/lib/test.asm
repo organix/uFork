@@ -25,7 +25,7 @@ fail:                   ; --
     ref std.commit
 
 ; A mock-object representing a successful test.
-; Non-verify messages cause failue.
+; Non-verify messages cause failure.
 
 success:                ; (ctrl) <- (ctrl')
     state 1             ; ctrl
@@ -190,7 +190,7 @@ step_2:                 ; (debug timer) <- mock
 ; verify the mock
 
 step_3:                 ; (debug timer) <- mock
-    my self             ; ctrl=SELF mock
+    my self             ; ctrl=SELF
     msg 0               ; ctrl mock
     send 1              ; --
 
