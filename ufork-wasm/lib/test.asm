@@ -42,7 +42,7 @@ ok:                     ; --
     beh 1               ; --
     ref std.commit
 
-; A mock-object that expects a matching messages.
+; A mock-object that expects a single matching message.
 
 mock_eq:                ; (ctrl expect) <- (ctrl') | actual
     state 1             ; ctrl
@@ -54,6 +54,76 @@ mock_eq:                ; (ctrl expect) <- (ctrl') | actual
     msg 0               ; expect actual
     cmp eq              ; expect==actual
     if ok fail          ; --
+
+; A mock-object that expects `pred(actual)` is truthy.
+
+mock_pred:              ; (ctrl pred) <- (ctrl') | actual
+    state 1             ; ctrl
+    msg 1               ; ctrl ctrl'
+    cmp eq              ; ctrl==ctrl'
+    if std.rv_false     ; --  // verify returns `#f` verdict
+
+    msg 0               ; actual
+    state 1             ; actual ctrl
+    push mock_pred_ok   ; actual ctrl mock_pred_ok
+    new 1               ; actual cust=mock_pred_ok.(ctrl)
+    state 2             ; actual cust pred
+    send 2              ; --
+    ref std.commit
+
+mock_pred_ok:           ; (ctrl) <- bool
+    msg 0               ; truthy
+    if ok fail          ; --
+
+; A mock-object that verifies a list of mocks.
+
+mock_list_setup:        ; (ctrl) <- mocks
+    msg 0               ; mocks
+    state 1             ; mocks ctrl
+    pair 1              ; (ctrl . mocks)
+    push mock_list      ; (ctrl . mocks) mock_list
+    beh -1              ; --
+    ref std.commit
+
+mock_list:              ; (ctrl . mocks) <- (ctrl')
+    state 1             ; ctrl
+    msg 1               ; ctrl ctrl'
+    cmp eq              ; ctrl==ctrl'
+    if_not std.rv_false ; --  // verify returns `#f` verdict
+
+    state -1            ; mocks
+    part 1              ; mocks' mock
+    dup 1               ; mocks' mock mock
+    typeq #actor_t      ; mocks' mock is_actor(mocks)
+    if_not std.rv_true  ; mocks' mock  // return `#t` verdict at end
+
+    my self             ; mocks' mock SELF
+    roll 2              ; mocks' SELF mock
+    send 1              ; mocks'
+
+    state 1             ; mocks' ctrl
+    pair 1              ; (ctrl . mocks')
+    push mock_list_ok   ; (ctrl . mocks') mock_list_ok
+    beh -1              ; --
+    ref std.commit
+
+mock_list_ok:           ; (ctrl . mocks) <- verdict
+    msg 0               ; truthy
+    if_not mock_list_f  ; --
+
+    state 0             ; (ctrl . mocks)
+    push mock_list      ; (ctrl . mocks') mock_list
+    beh -1              ; --
+
+    state 1             ; ctrl
+    my self             ; ctrl SELF
+    send 1              ; --
+    ref std.commit
+
+mock_list_f:            ; --
+    push #f             ; #f  // return `#f` on first failure
+    state 1             ; #f ctrl
+    ref std.send_msg
 
 ; A verify customer that asserts success.
 
