@@ -14,12 +14,18 @@ import webrtc_transport from "../../www/transports/webrtc_transport.js";
 import parseq from "../../www/parseq.js";
 import lazy from "../../www/requestors/lazy.js";
 import requestorize from "../../www/requestors/requestorize.js";
-import chat_db from "./chat_db.js";
+import make_chat_db from "./chat_db.js";
 
 const room_key = 1000;
+const default_signaller_origin = (
+    location.protocol === "https:"
+    ? "wss://"
+    : "ws://"
+) + location.host;
 
 let core;  // uFork wasm processor core
 let on_stdin;
+let db = make_chat_db(default_signaller_origin);
 
 function refill_all(spn) {
     const sponsor = core.u_read_quad(spn);
@@ -100,14 +106,18 @@ function on_stdout(char) {
 }
 
 function encode_acquaintance(acquaintance) {
-    return hex.encode(acquaintance.name) + "@" + acquaintance.address;
+    return hex.encode(acquaintance.name) + (
+        acquaintance.address === default_signaller_origin
+        ? ""
+        : "@" + acquaintance.address
+    );
 }
 
 function decode_acquaintance(string) {
     const [name, address] = string.split("@");
     return {
         name: hex.decode(name),
-        address
+        address: address ?? default_signaller_origin
     };
 }
 
@@ -156,7 +166,7 @@ function boot(entrypoint, awp_store) {
 }
 
 function save_store(store) {
-    chat_db.set_store()(
+    db.set_store()(
         function callback(value, reason) {
             if (value === undefined) {
                 console.error(reason);
@@ -173,7 +183,7 @@ const wasm_url = import.meta.resolve(
 const asm_url = import.meta.resolve("./chat.asm");
 parseq.sequence([
     parseq.parallel([
-        chat_db.get_store(),
+        db.get_store(),
         parseq.sequence([
             ufork.instantiate_core(
                 wasm_url,
