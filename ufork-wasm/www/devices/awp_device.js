@@ -452,6 +452,8 @@ function awp_device({
 // It is unclear how well this strategy works when two parties attempt to
 // connect to each other at the same time.
 
+// TODO this makes it impossible for a party to connect to itself.
+
         connections[key].close();
         connections[key] = connection;
     }
@@ -478,12 +480,35 @@ function awp_device({
 
 // Validate the message.
 
-        if (
-            !core.u_is_cap(intro_callback)
-            || !core.u_is_fix(store_fix)
-            || !core.u_is_fix(petname_fix)
-        ) {
-            return ufork.E_FAIL;
+        if (!core.u_is_cap(intro_callback)) {
+            if (core.u_warn !== undefined) {
+                core.u_warn(
+                    "#intro",
+                    "not a callback",
+                    core.u_pprint(intro_callback)
+                );
+            }
+            return ufork.E_NOT_CAP;
+        }
+        if (!core.u_is_fix(store_fix)) {
+            if (core.u_warn !== undefined) {
+                core.u_warn(
+                    "#intro",
+                    "not a store",
+                    core.u_pprint(store_fix)
+                );
+            }
+            return ufork.E_NOT_FIX;
+        }
+        if (!core.u_is_fix(petname_fix)) {
+            if (core.u_warn !== undefined) {
+                core.u_warn(
+                    "#intro",
+                    "not a petname",
+                    core.u_pprint(petname_fix)
+                );
+            }
+            return ufork.E_NOT_FIX;
         }
         const store_nr = core.u_fix_to_i32(store_fix);
         const petname = core.u_fix_to_i32(petname_fix);
@@ -566,12 +591,35 @@ function awp_device({
 
 // Validate the message.
 
-        if (
-            !core.u_is_cap(listen_callback)
-            || !core.u_is_fix(store_fix)
-            || !core.u_is_cap(listen_callback)
-        ) {
-            return ufork.E_FAIL;
+        if (!core.u_is_cap(listen_callback)) {
+            if (core.u_warn !== undefined) {
+                core.u_warn(
+                    "#listen",
+                    "not a callback",
+                    core.u_pprint(listen_callback)
+                );
+            }
+            return ufork.E_NOT_CAP;
+        }
+        if (!core.u_is_fix(store_fix)) {
+            if (core.u_warn !== undefined) {
+                core.u_warn(
+                    "#listen",
+                    "not a store",
+                    core.u_pprint(store_fix)
+                );
+            }
+            return ufork.E_NOT_FIX;
+        }
+        if (!core.u_is_cap(greeter)) {
+            if (core.u_warn !== undefined) {
+                core.u_warn(
+                    "#listen",
+                    "not a greeter",
+                    core.u_pprint(greeter)
+                );
+            }
+            return ufork.E_NOT_CAP;
         }
 
         function release_event_stub() {
@@ -775,13 +823,17 @@ function awp_device({
 
             const message = device.u_strip_meta(event.y);
             const tag = core.u_nth(message, 1);
-            if (!core.u_is_fix(tag)) {
-                return ufork.E_FAIL;
-            }
             const method_array = [intro, listen];
             const method = method_array[core.u_fix_to_i32(tag)];
             if (method === undefined) {
-                return ufork.E_BOUNDS;
+                if (core.u_warn !== undefined) {
+                    core.u_warn("not a tag", core.u_pprint(tag));
+                }
+                return (
+                    core.u_is_fix(tag)
+                    ? ufork.E_BOUNDS
+                    : ufork.E_NOT_FIX
+                );
             }
 
 // Forward the remainder of the message to the chosen method. The method may
@@ -922,7 +974,9 @@ function awp_device({
 //debug                 webcrypto
 //debug             });
 //debug             core.h_boot(asm_module.boot);
-//debug             console.log("IDLE:", core.u_fault_msg(core.h_run_loop()));
+//debug             console.log("IDLE:", core.u_fault_msg(core.u_fix_to_i32(
+//debug                 core.h_run_loop()
+//debug             )));
 //debug             return true;
 //debug         })
 //debug     ]);

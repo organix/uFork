@@ -73,11 +73,15 @@ function asm_test(module_url) {
                     const event = core.u_read_quad(event_stub.y);
                     const message = event.y;
                     dispose_timer();
-                    return (
-                        message === ufork.TRUE_RAW
-                        ? callback({pass: true})
-                        : callback({pass: false, logs})
-                    );
+                    if (message === ufork.TRUE_RAW) {
+                        return callback({pass: true});
+                    }
+                    logs.push([
+                        ufork.LOG_WARN,
+                        "VERDICT",
+                        core.u_pprint(message)
+                    ]);
+                    return callback({pass: false, logs});
                 });
                 const state = core.h_reserve_ram({
                     t: ufork.PAIR_T,
@@ -109,7 +113,7 @@ function asm_test(module_url) {
 }
 
 //debug asm_test(
-//debug     import.meta.resolve("../lib/loop.asm")
+//debug     import.meta.resolve("../lib/requestors/thru.asm")
 //debug )(
 //debug     console.log
 //debug );

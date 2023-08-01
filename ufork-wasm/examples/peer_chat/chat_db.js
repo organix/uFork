@@ -7,7 +7,7 @@ import thru from "../../www/requestors/thru.js";
 import webrtc_transport from "../../www/transports/webrtc_transport.js";
 import indexed_db from "./indexed_db.js";
 
-const db_version = 3; // bump to clear DB
+const db_version = 4; // bump to clear DB
 
 function db(...args) {
     return indexed_db(
@@ -41,8 +41,6 @@ function get_store() {
 
 // Attempts to read an AWP store object from IndexedDB. If one is not found, a
 // new one is generated and saved.
-
-// TODO guard against RTCCertificate expiry (1 year).
 
     return parseq.fallback([
         db(function (db_store) {
