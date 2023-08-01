@@ -90,6 +90,7 @@ $stdout.onclick = function () {
     const hexd = hexdump(utf8, 0, utf8.length);
     console.log(hexd);
 };
+$stdout.value = ""; // prevent Firefox retaining the text thru a page reload
 function on_stdout(char) {
     if ($stdout) {
         const text = $stdout.value;

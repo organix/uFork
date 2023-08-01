@@ -7,7 +7,7 @@ import thru from "../../www/requestors/thru.js";
 import webrtc_transport from "../../www/transports/webrtc_transport.js";
 import indexed_db from "./indexed_db.js";
 
-const db_version = 3; // bump to clear DB
+const db_version = 4; // bump to clear DB
 
 function db(...args) {
     return indexed_db(

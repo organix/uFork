@@ -17,7 +17,8 @@
 //          credentials) as a string.
 
 //      identity
-//          An RTCCertificate object associated with a P-256 ECDSA keypair.
+//          An object like {certificate, name} where the certificate is an
+//          RTCCertificate object associated with a P-256 ECDSA keypair.
 
 // Signalling
 
@@ -101,14 +102,16 @@ import hex from "../hex.js";
 import parseq from "../parseq.js";
 import requestorize from "../requestors/requestorize.js";
 import unpromise from "../requestors/unpromise.js";
+import thru from "../requestors/thru.js";
+import merge from "../requestors/merge.js";
 
 const ice_servers = [{
     urls: [
         "stun:stun.l.google.com:19302",
-        "stun:stun1.l.google.com:19302",
-        "stun:stun2.l.google.com:19302",
-        "stun:stun3.l.google.com:19302",
-        "stun:stun4.l.google.com:19302"
+        "stun:stun1.l.google.com:19302"
+        // "stun:stun2.l.google.com:19302",
+        // "stun:stun3.l.google.com:19302",
+        // "stun:stun4.l.google.com:19302",
         // "stun:stun.hide.me:3478",
         // "stun:stun.wtfismyip.com:3478",
         // "stun:stun.gmx.net:3478",
@@ -125,24 +128,55 @@ function sdp_to_name(sdp_string) {
     }
 }
 
-function identity_to_name(certificate) {
-    return hex.decode(
-        certificate.getFingerprints()[0].value.replace(/:/g, "")
-    );
+function identity_to_name(identity) {
+    return identity.name;
+
+// This is the ideal code (and an identity should just be an RTCCertificate)
+// but 'getFingerprints' is not yet supported by Firefox.
+
+    // return hex.decode(
+    //     identify.certificate.getFingerprints()[0].value.replace(/:/g, "")
+    // );
 }
 
-function generate_identity() {
-    return function generate_identity_requestor(callback) {
-        window.RTCPeerConnection.generateCertificate({
+function generate_certificate() {
+    return unpromise(function () {
+        return window.RTCPeerConnection.generateCertificate({
             name: "ECDSA",
             namedCurve: "P-256",
             expires: 31536000000 // one year is the maximum
-        }).then(
-            callback
-        ).catch(function (reason) {
-            callback(undefined, reason);
         });
-    };
+    });
+}
+
+function get_fingerprints() {
+
+// Most browsers are able to get the fingerprint from the certificate using its
+// 'getFingerprints' method. Unfortunately, this method is not implemented in
+// Firefox yet, so instead we create a dummy offer and inspect the SDP string.
+
+    return parseq.sequence([
+        unpromise(function (certificate) {
+            const peer = new window.RTCPeerConnection(
+                {certificates: [certificate]}
+            );
+            peer.createDataChannel("");
+            return peer.createOffer();
+        }),
+        requestorize(function (offer) {
+            return sdp_to_name(offer.sdp);
+        })
+    ]);
+}
+
+function generate_identity() {
+    return parseq.sequence([
+        generate_certificate(),
+        merge({
+            name: get_fingerprints(),
+            certificate: thru()
+        })
+    ]);
 }
 
 function create_offer(peer) {
@@ -251,7 +285,7 @@ function webrtc_transport(signaller, log) {
 
             try {
                 peer = new window.RTCPeerConnection({
-                    certificates: [identity],
+                    certificates: [identity.certificate],
                     iceServers: ice_servers
                 });
 
@@ -284,6 +318,7 @@ function webrtc_transport(signaller, log) {
                     ordered: false,     // unordered
                     maxRetransmits: 0   // unreliable
                 });
+                channel.binaryType = "arraybuffer"; // not Blob
                 const connection = Object.freeze({
                     send(frame) {
                         channel.send(frame);
@@ -389,7 +424,7 @@ function webrtc_transport(signaller, log) {
 // Make a new RTCPeerConnection object that expects a single data channel.
 
                     peer = new window.RTCPeerConnection({
-                        certificates: [identity],
+                        certificates: [identity.certificate],
                         iceServers: ice_servers
                     });
                     peers[session_id] = peer;
@@ -409,6 +444,7 @@ function webrtc_transport(signaller, log) {
                             return destroy(session_id); // paranoid
                         }
                         channel = event.channel;
+                        channel.binaryType = "arraybuffer"; // not Blob
                         const connection = Object.freeze({
                             send(frame) {
                                 channel.send(frame);
@@ -534,7 +570,6 @@ function webrtc_transport(signaller, log) {
     });
 }
 
-//debug import merge from "../requestors/merge.js";
 //debug import lazy from "../requestors/lazy.js";
 //debug import signaller from "./dummy_signaller.js";
 //debug // import signaller from "./websockets_signaller.js";
@@ -606,7 +641,7 @@ function webrtc_transport(signaller, log) {
 //debug     }),
 //debug     requestorize(function (connection) {
 //debug         console.log("alice on_open", hex.encode(connection.name()));
-//debug         connection.send(new TextEncoder().encode("I have a bike"));
+//debug         connection.send(connection.name());
 //debug         return true;
 //debug     })
 //debug ])(console.log);
