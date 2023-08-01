@@ -452,6 +452,8 @@ function awp_device({
 // It is unclear how well this strategy works when two parties attempt to
 // connect to each other at the same time.
 
+// TODO this makes it impossible for a party to connect to itself.
+
         connections[key].close();
         connections[key] = connection;
     }
@@ -972,7 +974,9 @@ function awp_device({
 //debug                 webcrypto
 //debug             });
 //debug             core.h_boot(asm_module.boot);
-//debug             console.log("IDLE:", core.u_fault_msg(core.h_run_loop()));
+//debug             console.log("IDLE:", core.u_fault_msg(core.u_fix_to_i32(
+//debug                 core.h_run_loop()
+//debug             )));
 //debug             return true;
 //debug         })
 //debug     ]);

@@ -5,9 +5,7 @@
 import ufork from "../../www/ufork.js";
 import hex from "../../www/hex.js";
 import hexdump from "../../www/hexdump.js";
-import clock_device from "../../www/devices/clock_device.js";
 import io_device from "../../www/devices/io_device.js";
-import blob_device from "../../www/devices/blob_device.js";
 import timer_device from "../../www/devices/timer_device.js";
 import awp_device from "../../www/devices/awp_device.js";
 import host_device from "../../www/devices/host_device.js";
@@ -190,9 +188,7 @@ parseq.sequence([
         ])
     ]),
     requestorize(function ([the_awp_store, asm_module]) {
-        clock_device(core);
         on_stdin = io_device(core, on_stdout);
-        blob_device(core);
         timer_device(core);
 //        timer_device(core, 5);  // slow-down factor 5x
         const make_dynamic_device = host_device(core);
@@ -201,7 +197,7 @@ parseq.sequence([
             make_dynamic_device,
             transport,
             stores: [the_awp_store],
-            save_store
+            on_store_change: save_store
         });
         return boot(asm_module.boot, the_awp_store);
     })

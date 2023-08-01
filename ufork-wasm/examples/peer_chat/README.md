@@ -9,12 +9,12 @@ By navigating to that URL,
 the party joins the conversation
 in that room.
 
-## Running the Demo
+## Running the app
 
 Make sure you have Deno (https://deno.land) installed.
 Run the following command from the ufork-wasm directory to start the web server:
 
-    deno run
+    deno run \
         --allow-net \
         --allow-read=. \
         examples/peer_chat/chat_server.js \
@@ -109,7 +109,7 @@ which aggregates messages from multiple parties
 and distributes them to each party
 for display on the output.
 
-                                        p_tx_timer
+                                      party_tx_timer
                                             |
                                             v
     input ---> line_in ---> party_in ---> party_tx - - - > (to room)
@@ -118,15 +118,15 @@ for display on the output.
     output <-- line_out <-- party_out <-- party_rx < - - - (from room)
                                             ^
                                             |
-                                        p_rx_timer
+                                      party_rx_timer
 
   * The `input` device collects characters from the user.
   * The `line_in` buffers characters into lines.
   * The `party_in` labels lines as messages to transmit.
   * The `party_tx` implements the transmit-side of the _link_ protocol.
-  * The `p_tx_timer` provides a 1-second retransmission timeout.
+  * The `party_tx_timer` provides a 1-second retransmission timeout.
   * The `party_rx` implements the receive-side of the _link_ protocol.
-  * The `p_rx_timer` provides a 3-second loss-detection timeout.
+  * The `party_rx_timer` provides a 3-second loss-detection timeout.
   * The `party_out` extracts the _content_ from the message.
   * The `line_out` streams a line of characters to the output.
   * The `output` device displays characters to the user.
@@ -141,7 +141,7 @@ to each currently-connected party.
 The room maintains an _rx_/_tx_ pair
 for each connected party.
 
-                     r_rx_timer              :
+                    room_rx_timer            :
                          |                   :
                          v                   :
     (from party) - - > room_rx ---> room_in ---> room { party: tx, ...parties }
@@ -150,16 +150,16 @@ for each connected party.
     (to party) < - - - room_tx <--------------------------------+
                          ^                   :
                          |                   :
-                     r_tx_timer              :
+                    room_tx_timer            :
                                              :
                             (for each party) :
 
   * The `room_rx` implements the receive-side of the _link_ protocol.
-  * The `r_rx_timer` provides a 3-second loss-detection timeout.
+  * The `room_rx_timer` provides a 3-second loss-detection timeout.
   * The `room_in` labels lines with the originating _party_.
   * The `room` aggregates messages and distributes them to the _parties_.
   * The `room_tx` implements the transmit-side of the _link_ protocol.
-  * The `r_tx_timer` provides a 1-second retransmission timeout.
+  * The `room_tx_timer` provides a 1-second retransmission timeout.
 
 ### Message Contents
 

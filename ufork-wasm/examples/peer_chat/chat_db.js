@@ -42,8 +42,6 @@ function get_store() {
 // Attempts to read an AWP store object from IndexedDB. If one is not found, a
 // new one is generated and saved.
 
-// TODO guard against RTCCertificate expiry (1 year).
-
     return parseq.fallback([
         db(function (db_store) {
             return db_store.get(awp_store_key);
