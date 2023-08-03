@@ -12,13 +12,13 @@ A party leaves a room
 simply by navigating away
 (or closing the browser tab/window).
 
-Chat messages are sent via the Actor Wire Protocol (see ../../awp.md) over a
+Chat messages are sent via the [Actor Wire Protocol](../../awp.md) over a
 WebRTC transport, providing secure peer-to-peer communication.
 
 ## Running the app
 
-Make sure you have Deno (https://deno.land) installed. Run the following command
-from the "ufork-wasm" directory to start the web server:
+Make sure you have [Deno](https://deno.land) installed. Run the following command
+from the `ufork-wasm` directory to start the web server:
 
     deno run \
         --allow-net \
@@ -38,7 +38,9 @@ using "serverless" solutions like Deno Deploy), peers may not be able to signal
 each other and introductions will fail.
 
 To easily host the app for free, run it locally and use a reverse proxy like
-ngrok (https://ngrok.com/) to expose it to the internet.
+[ngrok](https://ngrok.com/) to expose it to the internet. Like this:
+
+    $ ngrok http 3528
 
 ## Application Design
 
