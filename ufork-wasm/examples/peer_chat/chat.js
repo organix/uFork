@@ -178,7 +178,7 @@ function save_store(store) {
 
 const transport = webrtc_transport(websockets_signaller(), console.log);
 const wasm_url = import.meta.resolve(
-    "../../target/wasm32-unknown-unknown/debug/ufork_wasm.wasm"
+    "../../target/wasm32-unknown-unknown/release/ufork_wasm.wasm"
 );
 const asm_url = import.meta.resolve("./chat.asm");
 parseq.sequence([

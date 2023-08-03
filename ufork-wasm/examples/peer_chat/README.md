@@ -8,6 +8,9 @@ Each party is given a URL designating "their" room.
 By navigating to that URL,
 the party joins the conversation
 in that room.
+A party leaves a room
+simply by navigating away
+(or closing the browser tab/window).
 
 ## Running the app
 
@@ -32,9 +35,6 @@ to whom messages are broadcast.
 The _party_ manages the output panel and input control,
 sending messages to, and receiving messages from,
 the room.
-A party leaves a room
-simply by navigating away
-(or closing the browser tab/window).
 
 ### Link Protocol
 
