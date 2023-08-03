@@ -1,4 +1,4 @@
-// uFork debugger
+// uFork Peer Chat demo.
 
 /*jslint browser, devel */
 
