@@ -139,11 +139,6 @@ intro_cb:
     push party_in_beh   ; party_tx party_in_beh
     new 1               ; party_in=party_in_beh.(party_tx)
 
-    ; send "joined" announcement
-    push txt_joined     ; party_in txt_joined
-    pick 2              ; party_in txt_joined party_in
-    send -1             ; party_in
-
     ; build line_in
     deque new           ; party_in line
     state 2             ; party_in line io_dev
@@ -222,6 +217,11 @@ greeter_beh:            ; (debug_dev timer_dev room) <- (to_cancel callback part
     state 3             ; room_tx party tx room
     push room_in_beh    ; room_tx party tx room room_in_beh
     new 3               ; room_tx room_in=room_in_beh.(room tx party)
+
+    ; send "joined" announcement
+    push txt_joined     ; room_tx room_in txt_joined
+    pick 2              ; room_tx room_in txt_joined room_in
+    send -1             ; room_tx room_in
 
     ; build room_rx
     push 1              ; room_tx room_in seq=1

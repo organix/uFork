@@ -8,11 +8,17 @@ Each party is given a URL designating "their" room.
 By navigating to that URL,
 the party joins the conversation
 in that room.
+A party leaves a room
+simply by navigating away
+(or closing the browser tab/window).
+
+Chat messages are sent via the Actor Wire Protocol (see ../../awp.md) over a
+WebRTC transport, providing secure peer-to-peer communication.
 
 ## Running the app
 
-Make sure you have Deno (https://deno.land) installed.
-Run the following command from the ufork-wasm directory to start the web server:
+Make sure you have Deno (https://deno.land) installed. Run the following command
+from the "ufork-wasm" directory to start the web server:
 
     deno run \
         --allow-net \
@@ -21,6 +27,18 @@ Run the following command from the ufork-wasm directory to start the web server:
         localhost:3528
 
 Then navigate to http://localhost:3528 in a browser.
+
+The web server not only serves files, but also acts as a WebSockets signalling
+server, facilitating the introduction phase necessary to coordinate NAT "hole
+punching" and establish peer-to-peer connections over WebRTC.
+
+This must be taken into account when hosting the web server. If more than one
+instance is available at a single domain name (the norm when load balancing or
+using "serverless" solutions like Deno Deploy), peers may not be able to signal
+each other and introductions will fail.
+
+To easily host the app for free, run it locally and use a reverse proxy like
+ngrok (https://ngrok.com/) to expose it to the internet.
 
 ## Application Design
 
@@ -32,9 +50,6 @@ to whom messages are broadcast.
 The _party_ manages the output panel and input control,
 sending messages to, and receiving messages from,
 the room.
-A party leaves a room
-simply by navigating away
-(or closing the browser tab/window).
 
 ### Link Protocol
 
