@@ -67,6 +67,7 @@ const MUT_RAW: Raw          = 0x2000_0000;  // 1=read-write (mutable), 0=read-on
 #[link(wasm_import_module = "capabilities")]
 extern {
     pub fn host_clock() -> Raw;
+    pub fn host_random(a: Raw, b: Raw) -> Raw;
     pub fn host_print(base: *const u8, ofs: usize);
     pub fn host_log(x: Raw);
     pub fn host_start_timer(delay: Raw, stub: Raw);

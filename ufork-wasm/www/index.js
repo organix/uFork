@@ -6,6 +6,7 @@ import ufork from "./ufork.js";
 import hexdump from "./hexdump.js";
 import OED from "./oed.js";
 import clock_device from "./devices/clock_device.js";
+import random_device from "./devices/random_device.js";
 import io_device from "./devices/io_device.js";
 import blob_device from "./devices/blob_device.js";
 import timer_device from "./devices/timer_device.js";
@@ -544,6 +545,7 @@ ufork.instantiate_core(
 
     // install devices
     clock_device(core);
+    random_device(core);
     on_stdin = io_device(core, on_stdout);
     blob_device(core);
     timer_device(core, 1);

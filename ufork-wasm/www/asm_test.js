@@ -26,6 +26,7 @@ import ufork from "./ufork.js";
 import lazy from "./requestors/lazy.js";
 import host_device from "./devices/host_device.js";
 import clock_device from "./devices/clock_device.js";
+import random_device from "./devices/random_device.js";
 import timer_device from "./devices/timer_device.js";
 
 function asm_test(module_url) {
@@ -57,6 +58,7 @@ function asm_test(module_url) {
         lazy(function (the_core) {
             core = the_core;
             clock_device(core);
+            random_device(core);
             dispose_timer = timer_device(core);
             return core.h_import(module_url);
         }),

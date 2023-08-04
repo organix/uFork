@@ -91,6 +91,39 @@ impl Device for ClockDevice {
     }
 }
 
+pub struct RandomDevice {}
+impl RandomDevice {
+    pub fn new() -> RandomDevice {
+        RandomDevice {}
+    }
+    #[cfg(target_arch = "wasm32")]
+    fn get_random(&mut self, a: Any, b: Any) -> Any {
+        unsafe {
+            let raw = crate::host_random(a.raw(), b.raw());
+            Any::fix(raw as isize)
+        }
+    }
+    #[cfg(not(target_arch = "wasm32"))]
+    fn get_random(&mut self, a: Any, b: Any) -> Any {
+        // randomness not available...
+        Any::fix(0)
+    }
+}
+impl Device for RandomDevice {
+    fn handle_event(&mut self, core: &mut Core, ep: Any) -> Result<(), Error> {
+        let event = core.mem(ep);
+        let sponsor = event.t();
+        let msg = event.y();  // (cust) | (cust size) | (cust a b)
+        let cust = core.nth(msg, PLUS_1);
+        let a = core.nth(msg, PLUS_2);
+        let b = core.nth(msg, PLUS_3);
+        let random = self.get_random(a, b);
+        let evt = core.reserve_event(sponsor, cust, random)?;
+        core.event_enqueue(evt);
+        Ok(())  // event handled.
+    }
+}
+
 pub struct IoDevice {}
 impl IoDevice {
     pub fn new() -> IoDevice {
