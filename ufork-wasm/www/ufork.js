@@ -124,6 +124,7 @@ const BLOB_DEV_OFS = 5;
 const TIMER_DEV_OFS = 6;
 const MEMO_DEV_OFS = 7;
 const HOST_DEV_OFS = 8;
+const RANDOM_DEV_OFS = 9;
 const SPONSOR_OFS = 15;
 
 // Error codes (from core.rs)
@@ -1402,6 +1403,9 @@ function instantiate_core(
                         host_clock(...args) {
                             return mutable_wasm_caps.host_clock(...args);
                         },
+                        host_random(...args) {
+                            return mutable_wasm_caps.host_random(...args);
+                        },
                         host_print(...args) {
                             return mutable_wasm_caps.host_print(...args);
                         },
@@ -1444,6 +1448,7 @@ function instantiate_core(
 
 //debug import lazy from "./requestors/lazy.js";
 //debug import clock_device from "./devices/clock_device.js";
+//debug import random_device from "./devices/random_device.js";
 //debug import io_device from "./devices/io_device.js";
 //debug import blob_device from "./devices/blob_device.js";
 //debug import timer_device from "./devices/timer_device.js";
@@ -1468,6 +1473,7 @@ function instantiate_core(
 //debug         core = the_core;
 //debug         // Install devices
 //debug         clock_device(core);
+//debug         random_device(core);
 //debug         io_device(core);
 //debug         blob_device(core);
 //debug         timer_device(core);
@@ -1570,6 +1576,7 @@ export default Object.freeze({
     TIMER_DEV_OFS,
     MEMO_DEV_OFS,
     HOST_DEV_OFS,
+    RANDOM_DEV_OFS,
     SPONSOR_OFS,
     E_OK,
     E_FAIL,

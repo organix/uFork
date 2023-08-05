@@ -19,6 +19,8 @@ memo_key:
     ref 7
 host_key:
     ref 8
+random_key:
+    ref 9
 
 ; Dynamic devices. These are provided by the host device.
 
@@ -90,6 +92,16 @@ boot:                   ; () <- {caps}
     dict get            ; callback to_cancel io_dev
     send 2              ; --
 
+    push 4              ; b=4
+    push -2             ; b a=-2
+    msg 0               ; b a {caps}
+    push debug_key      ; b a {caps} debug_key
+    dict get            ; b a debug_dev
+    msg 0               ; b a debug_dev {caps}
+    push random_key     ; b a debug_dev {caps} random_key
+    dict get            ; b a debug_dev random_dev
+    send 3              ; --
+
     ref std.commit
 
 count:                  ; () <- n
@@ -112,6 +124,7 @@ count:                  ; () <- n
     timer_key
     memo_key
     host_key
+    random_key
     awp_key
     intro_tag
     listen_tag
