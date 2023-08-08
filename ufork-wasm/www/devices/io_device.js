@@ -1,11 +1,12 @@
 // Installs the IO device.
 
-/*jslint bitwise, devel */
+/*jslint browser, bitwise, devel */
 
 import OED from "../oed.js";
 import ufork from "../ufork.js";
 
 function io_device(core, on_stdout) {
+    let utf8_decoder = new TextDecoder("utf-8", {fatal: true}); // stateful
     let stdin_buffer = [];
     let stdin_stub;
 
@@ -90,7 +91,7 @@ function io_device(core, on_stdout) {
                 code &= 0x1FFFFF;  // interpret as a Unicode code point
                 const char = String.fromCodePoint(code);
                 if (core.u_trace !== undefined) {
-                    core.u_trace("WRITE:", core, "=", char);
+                    core.u_trace("WRITE:", code, "=", char);
                 }
                 if (typeof on_stdout === "function") {
                     on_stdout(char);
@@ -99,9 +100,12 @@ function io_device(core, on_stdout) {
             }
         }
     );
-    return function on_stdin(string) {
-        const glyphs = Array.from(string);
-        stdin_buffer = stdin_buffer.concat(glyphs);
+    return function on_stdin(string_or_utf8) {
+        stdin_buffer = stdin_buffer.concat(Array.from(
+            typeof string_or_utf8 === "string"
+            ? string_or_utf8
+            : utf8_decoder.decode(string_or_utf8, {stream: true})
+        ));
         poll_stdin();
     };
 }
