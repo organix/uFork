@@ -27,14 +27,6 @@ let core;  // uFork wasm processor core
 let on_stdin;
 let db = make_chat_db(default_signaller_origin);
 
-function refill_all(spn) {
-    const sponsor = core.u_read_quad(spn);
-    sponsor.t = core.u_fixnum(4096);  // memory
-    sponsor.x = core.u_fixnum(256);  // events
-    sponsor.y = core.u_fixnum(4096);  // cycles
-    core.u_write_quad(spn, sponsor);
-    //console.log("filled:", core.u_disasm(spn));
-}
 function ufork_run() {
     const spn = core.u_ramptr(ufork.SPONSOR_OFS);
     refill_all(spn);  // pre-load root-sponsor with resources
@@ -66,6 +58,14 @@ function ufork_run() {
         console.log("RUN:", core.u_print(sig));
         ufork_run();
     }, 0);
+}
+function refill_all(spn) {
+    const sponsor = core.u_read_quad(spn);
+    sponsor.t = core.u_fixnum(4096);  // memory
+    sponsor.x = core.u_fixnum(256);  // events
+    sponsor.y = core.u_fixnum(8192);  // cycles
+    core.u_write_quad(spn, sponsor);
+    //console.log("filled:", core.u_disasm(spn));
 }
 
 function ufork_wake(dev_ofs) {

@@ -20,10 +20,38 @@ const stdin_buffer_size = 65536; // 64KB
 let core;
 
 function run() {
-    const status = core.u_fix_to_i32(core.h_run_loop());
-    if (status !== ufork.E_OK) {
-        window.console.error("FAULT", core.u_fault_msg(status));
+    while (true) {
+        // run until there is no more work, or an error occurs
+        const sig = core.h_run_loop(0);
+        if (core.u_is_fix(sig)) {
+            const err = core.u_fix_to_i32(sig);
+            const msg = core.u_fault_msg(err);
+            if (err === ufork.E_OK) {
+                break;  // no more work to do, so we exit...
+            }
+            if (err === ufork.E_MEM_LIM
+            ||  err === ufork.E_MSG_LIM
+            ||  err === ufork.E_CPU_LIM) {
+                refill();
+            } else {
+                window.console.error("FAULT", msg);
+                break;  // report error, then exit...
+            }
+        } else {
+            window.console.error("SIGNAL", core.u_print(sig));
+            break;  // report signal, then exit...
+        }
     }
+}
+
+function refill() {
+    // refill root-sponsor with resources
+    const spn = core.u_ramptr(ufork.SPONSOR_OFS);
+    const sponsor = core.u_read_quad(spn);
+    sponsor.t = core.u_fixnum(4096);  // memory
+    sponsor.x = core.u_fixnum(256);  // events
+    sponsor.y = core.u_fixnum(8192);  // cycles
+    core.u_write_quad(spn, sponsor);
 }
 
 parseq.sequence([
