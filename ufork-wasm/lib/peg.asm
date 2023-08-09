@@ -20,17 +20,17 @@
     dev: "./dev.asm"
 
 ;
-; literal sequence input stream
+; literal list input stream
 ;
 
-s_seq:                  ; seq <- cust
-    state 0             ; seq
-    typeq #pair_t       ; is_pair(seq)
+s_list:                 ; list <- cust
+    state 0             ; list
+    typeq #pair_t       ; is_pair(list)
     if_not s_eos        ; --
 
     state -1            ; rest
-    push s_seq          ; rest s_seq
-    new -1              ; next=s_seq(rest)
+    push s_list         ; rest s_list
+    new -1              ; next=s_list(rest)
     state 1             ; next token=first
     pair 1              ; (token . next)
     msg 0               ; (token . next) cust
@@ -129,6 +129,24 @@ k_ok:                   ; --
     push k_next         ; token ok k_next
     new 2               ; k=k_next.(ok token)
     state -3            ; k next
+    ref std.send_msg
+
+; start parsing `source` according to `peg`
+
+start:                  ; (peg) <- ((ok . fail) source)
+    msg 1               ; custs=(ok . fail)
+    state 1             ; custs=(ok . fail) peg
+    push k_start        ; custs=(ok . fail) peg k_start
+    new 2               ; cust=k_start.(peg (ok . fail))
+    msg 2               ; cust source
+    ref std.send_msg
+
+k_start:                ; (peg (ok . fail)) <- in
+    msg 0               ; in
+    push #?             ; in accum=#?
+    state 2             ; in accum custs=(ok . fail)
+    pair 2              ; ((ok . fail) accum . in)
+    state 1             ; ((ok . fail) accum . in) peg
     ref std.send_msg
 
 ;
@@ -244,6 +262,13 @@ expect_2:               ; () <- in
 ; test `any` fails at end-of-stream
 
 test_3:                 ; (debug_dev) <- ()
+    state 0             ; (debug_dev)
+    push test_4         ; (debug_dev) test_4
+    beh -1              ; --
+    my self             ; SELF
+    send 0              ; --
+;    if_not std.commit   ; // SKIP THIS TEST...
+
     push #nil           ; in=()
     push #?             ; in accum=#?
     push expect_3       ; in accum expect_3
@@ -262,11 +287,44 @@ expect_3:               ; () <- in
     is_eq #nil          ; assert(in==#nil)
     ref std.commit
 
+; test `any` succeeds on non-empty stream
+
+test_source:            ; (48 13 10)
+    pair_t '0'
+    pair_t '\r'
+    pair_t '\n'
+    ref #nil
+
+test_4:                 ; (debug_dev) <- ()
+    push test_source    ; list=test_source
+    push s_list         ; test_source s_list
+    new -1              ; source=s_list.test_source
+    push unexpected     ; source unexpected
+    new 0               ; source fail=unexpected.()
+    push expect_4       ; source fail expect_4
+    new 0               ; source fail ok=expect_4.()
+    pair 1              ; source (ok . fail)
+    push any            ; source (ok . fail) any
+    new 0               ; source (ok . fail) peg=any.()
+    push start          ; source (ok . fail) peg start
+    new 1               ; source (ok . fail) start.(peg)
+    send 2              ; --
+    ref std.commit
+
+expect_4:               ; () <- ('0' '\r' . next)
+;    debug               ; BREAKPOINT
+    msg 1               ; accum
+    is_eq '0'           ; assert(accum=='0')
+    msg 2               ; in.token
+    is_eq '\r'          ; assert(in=='\r')
+    ref std.commit
+
 boot:                   ; () <- {caps}
     msg 0               ; {caps}
     push dev.debug_key  ; {caps} debug_key
     dict get            ; debug_dev
-    push test_1         ; debug_dev test=test_1
+;    push test_1         ; debug_dev test=test_1
+    push test_4         ; debug_dev test=test_4
     new 1               ; test.(debug_dev)
     send 0              ; --
     ref std.commit
@@ -277,4 +335,5 @@ boot:                   ; () <- {caps}
     any
     eq
     pred
+    start
     boot
