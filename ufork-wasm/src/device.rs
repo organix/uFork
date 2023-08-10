@@ -106,6 +106,12 @@ impl RandomDevice {
     #[cfg(not(target_arch = "wasm32"))]
     fn get_random(&mut self, a: Any, b: Any) -> Any {
         // randomness not available...
+        if b.is_fix() {
+            return b;
+        }
+        if a.is_fix() {
+            return a;
+        }
         Any::fix(0)
     }
 }

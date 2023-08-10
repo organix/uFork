@@ -528,6 +528,10 @@ function on_stdout(char) {
     }
 }
 
+function trace_event(event) {
+    core.u_log_event(event, core.u_debug);
+}
+
 ufork.instantiate_core(
     "../target/wasm32-unknown-unknown/debug/ufork_wasm.wasm",
     function on_wakeup(device_offset) {
@@ -536,7 +540,8 @@ ufork.instantiate_core(
         draw_host();
     },
     console.log,
-    ufork.LOG_DEBUG
+    ufork.LOG_DEBUG,
+    trace_event
 )(function callback(the_core, reason) {
     if (the_core === undefined) {
         throw reason;

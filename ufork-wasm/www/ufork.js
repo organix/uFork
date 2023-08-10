@@ -6,7 +6,7 @@
 
 //  wasm_url
 //      The URL of the uFork WASM binary, as a string.
-//
+
 //  on_wakeup(device_offset)
 //      A function that is called whenever the core wakes up from a dormant
 //      state, generally due to its 'h_wakeup' method being called by a device.
@@ -33,6 +33,11 @@
 //          Extremely detailed (for example, all reserve and release actions).
 
 //      The default level is LOG_WARN.
+
+//  trace_event(event)
+//      A function that is called before an event transaction is committed.
+//      NOTE: This function is independent of the TRACE logging level.
+//      Optional.
 
 // The returned requestor produces a core object containing a bunch of methods.
 // The methods beginning with "u_" are reentrant, but the methods beginning
@@ -308,7 +313,8 @@ function make_core(
     on_wakeup,
     on_log,
     log_level,
-    mutable_wasm_caps
+    mutable_wasm_caps,
+    trace_event
 ) {
     let boot_caps_dict = []; // empty
     let import_promises = Object.create(null);
@@ -1159,6 +1165,85 @@ function make_core(
         return u_print(raw);
     }
 
+    function u_event_as_object(event) {
+
+// Capture event data in a JS object.
+
+        const obj = Object.create(null);
+        let quad = u_read_quad(event);
+        const evt = quad;
+        quad = u_read_quad(evt.t);
+        obj.sponsor = Object.create(null);
+        obj.sponsor.raw = evt.t;
+        obj.sponsor.memory = quad.t;
+        obj.sponsor.events = quad.x;
+        obj.sponsor.cycles = quad.y;
+        obj.sponsor.signal = quad.z;
+        quad = u_read_quad(u_cap_to_ptr(evt.x));
+        const prev = quad;
+        obj.target = Object.create(null);
+        obj.target.raw = evt.x;
+        if (u_is_ram(prev.z)) {
+            // actor effect
+            const next = u_read_quad(prev.z);
+            obj.target.code = prev.x;
+            obj.target.data = u_pprint(prev.y);
+            obj.become = Object.create(null);
+            obj.become.code = next.x;
+            obj.become.data = u_pprint(next.y);
+            obj.sent = [];
+            let pending = next.z;
+            while (u_is_ram(pending)) {
+                quad = u_read_quad(pending);
+                obj.sent.push({
+                    target: quad.x,
+                    message: u_pprint(quad.y),
+                    sponsor: quad.t
+                });
+                pending = pending.z;
+            }
+        } else {
+            // device effect
+            obj.target.device = prev.x;
+            obj.target.data = u_pprint(prev.y);
+        }
+        obj.message = u_pprint(evt.y);
+        return obj;
+    }
+
+    function u_log_event(event, log = u_trace) {
+
+// Log event details
+
+        if (log) {
+            if (typeof event === 'number') {
+                event = u_event_as_object(event);
+            }
+            if (event.target.device) {
+                // device effect
+                log(
+                    event.message + "->" + u_print(event.target.raw),
+                    u_print(event.target.device) + "." + event.target.data
+                );
+            } else {
+                // actor effect
+                let messages = [];
+                event.sent.forEach(({target, message}) => {
+                    messages.push(
+                        message + "->" + u_print(target)
+                    );
+                })
+                log(
+                    event.message + "->" + u_print(event.target.raw),
+                    u_print(event.target.code) + "." + event.target.data,
+                    "=>",
+                    u_print(event.become.code) + "." + event.become.data,
+                    messages.join(" ")
+                );
+            }
+        }
+    }
+
     function h_boot(instr_ptr, state_ptr = NIL_RAW) {
         if (instr_ptr === undefined || !u_is_ptr(instr_ptr)) {
             throw new Error("Not an instruction: " + u_pprint(instr_ptr));
@@ -1269,38 +1354,8 @@ function make_core(
 
     h_install([], {
         host_trace(event) { // (i32) -> nil
-            if (u_trace !== undefined) {
-                event = u_read_quad(event);
-                const sponsor = event.t;
-                const target = event.x;
-                const message = event.y;
-                const prev = u_read_quad(u_cap_to_ptr(target));
-                if (u_is_ram(prev.z)) {
-                    // actor effect
-                    const next = u_read_quad(prev.z);
-                    let messages = [];
-                    let sent = next.z;
-                    while (u_is_ram(sent)) {
-                        let pending = u_read_quad(sent);
-                        messages.push(
-                            u_pprint(pending.y) + "->" + u_print(pending.x)
-                        );
-                        sent = pending.z;
-                    }
-                    u_trace(
-                        u_pprint(message) + "->" + u_print(target),
-                        u_print(prev.x) + "." + u_pprint(prev.y),
-                        "=>",
-                        u_print(next.x) + "." + u_pprint(next.y),
-                        messages.join(" ")
-                    );
-                } else {
-                    // device effect
-                    u_trace(
-                        u_pprint(message) + "->" + u_print(target),
-                        u_print(prev.x) + "." + u_pprint(prev.y)
-                    );
-                }
+            if (typeof trace_event == "function") {
+                trace_event(event);
             }
         }
     });
@@ -1355,6 +1410,7 @@ function make_core(
         u_current_continuation,
         u_debug,
         u_disasm,
+        u_event_as_object,
         u_fault_msg,
         u_fix_to_i32,
         u_fixnum,
@@ -1366,6 +1422,7 @@ function make_core(
         u_is_ram,
         u_is_raw,
         u_is_rom,
+        u_log_event,
         u_mem_pages,
         u_memory,
         u_next,
@@ -1391,7 +1448,8 @@ function instantiate_core(
     wasm_url,
     on_wakeup,
     on_log,
-    log_level = LOG_WARN
+    log_level = LOG_WARN,
+    trace_event
 ) {
     let mutable_wasm_caps = Object.create(null);
     return parseq.sequence([
@@ -1440,7 +1498,8 @@ function instantiate_core(
                 on_wakeup,
                 on_log,
                 log_level,
-                mutable_wasm_caps
+                mutable_wasm_caps,
+                trace_event
             );
         })
     ]);
