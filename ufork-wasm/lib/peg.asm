@@ -131,6 +131,74 @@ k_ok:                   ; --
     state -3            ; k next
     ref std.send_msg
 
+; try matching `first`, if failed try `rest` at same position
+
+or:                     ; (first rest) <- ((ok . fail) accum . in)
+    msg -1              ; ctx=(accum . in)
+    msg 0               ; ctx msg=((ok . fail) accum . in)
+    state 2             ; ctx msg rest
+    push or_fail        ; ctx msg rest or_fail
+    new 2               ; ctx fail'=or_fail.(rest msg)
+    msg 1               ; ctx fail' custs=(ok . fail)
+    nth 1               ; ctx fail' ok
+    pair 1              ; ctx (ok . fail')
+    pair 1              ; ((ok . fail') accum . in)
+    state 1             ; ((ok . fail') accum . in) first
+    ref std.send_msg
+
+or_fail:                ; (rest msg) <- in
+    my state            ; msg rest
+    ref std.send_msg
+
+; try matching `first` followed by `rest`
+
+and:                    ; (first rest) <- ((ok . fail) accum . in)
+    msg -2              ; in
+    msg 1               ; in custs=(ok . fail)
+    nth -1              ; in fail
+    push and_fail       ; in fail and_fail
+    new 2               ; fail'=and_fail.(fail in)
+
+    dup 1               ; fail' fail'
+    msg 1               ; fail' fail' custs=(ok . fail)
+    nth 1               ; fail' fail' ok
+    state 2             ; fail' fail' ok rest
+    push and_ok         ; fail' fail' ok rest and_ok
+    new 3               ; fail' ok'=and_ok.(rest ok fail')
+
+    pair 1              ; (ok' . fail')
+    msg -1              ; (ok' . fail') (accum . in)
+    roll -2             ; (accum . in) (ok' . fail')
+    pair 1              ; ((ok' . fail') accum . in)
+    state 1             ; ((ok . fail') accum . in) first
+    ref std.send_msg
+
+and_fail:               ; (fail in) <- in'
+    my state            ; in fail
+    ref std.send_msg
+
+and_ok:                 ; (rest ok fail') <- (accum' . in')
+    msg 0               ; (accum' . in')
+    state 3             ; (accum' . in') fail'
+    msg 1               ; (accum' . in') fail' accum'
+    state 2             ; (accum' . in') fail' accum' ok
+    push and_pair       ; (accum' . in') fail' accum' ok and_pair
+    new 2               ; (accum' . in') fail' ok'=and_pair.(ok accum')
+
+    pair 1              ; (accum' . in') (ok' . fail')
+    pair 1              ; ((ok' . fail') accum . in)
+    state 1             ; ((ok' . fail') accum . in) rest
+    ref std.send_msg
+
+and_pair:               ; (ok accum') <- (accum'' . in'')
+    msg 0               ; (accum'' . in'')
+    part 1              ; in'' accum''
+    state 2             ; in'' accum'' accum'
+    pair 1              ; in'' accum=(accum' . accum'')
+    pair 1              ; (accum . in'')
+    state 1             ; (accum . in'') ok
+    ref std.send_msg
+
 ; start parsing `source` according to `peg`
 
 start:                  ; (peg) <- ((ok . fail) source)
@@ -213,15 +281,15 @@ test_1:                 ; (debug_dev) <- ()
     new 0               ; ((ok . fail) accum . in) peg=empty.()
     ref std.send_msg
 
-expect_1_data:          ; (())
+test_1_data:            ; (())
     pair_t #nil
     ref #nil
 
 expect_1:               ; () <- (accum . in)
 ;    msg 0               ; (accum . in)
-;    push expect_1_data  ; (accum . in) expect_1_data
-;    push is_equal       ; (accum . in) expect_1_data is_equal
-;    new -1              ; (accum . in) is_equal.expect_1_data
+;    push test_1_data    ; (accum . in) test_1_data
+;    push is_equal       ; (accum . in) test_1_data is_equal
+;    new -1              ; (accum . in) is_equal.test_1_data
 ;    send -1             ; --
 
 ;    debug               ; BREAKPOINT
@@ -296,6 +364,13 @@ test_source:            ; (48 13 10)
     ref #nil
 
 test_4:                 ; (debug_dev) <- ()
+    state 0             ; (debug_dev)
+    push test_5         ; (debug_dev) test_5
+    beh -1              ; --
+    my self             ; SELF
+    send 0              ; --
+;    if_not std.commit   ; // SKIP THIS TEST...
+
     push test_source    ; list=test_source
     push s_list         ; test_source s_list
     new -1              ; source=s_list.test_source
@@ -319,12 +394,75 @@ expect_4:               ; () <- ('0' '\r' . next)
     is_eq '\r'          ; assert(in=='\r')
     ref std.commit
 
+; test and/or grammar
+;
+; grammar   = '0' eol
+; eol       = lf
+;           / cr opt_lf
+; cr        = '\r'
+; lf        = '\n'
+; opt_lf    = lf
+;           / ε
+
+test_5:                 ; (debug_dev) <- ()
+    push test_source    ; list=test_source
+    push s_list         ; test_source s_list
+    new -1              ; source=s_list.test_source
+    push unexpected     ; source unexpected
+    new 0               ; source fail=unexpected.()
+    push expect_5       ; source fail expect_5
+    new 0               ; source fail ok=expect_5.()
+    pair 1              ; source (ok . fail)
+
+    push '\n'           ; ... '\n'
+    push eq             ; ... '\n' eq
+    new 1               ; ... lf=eq.('\n')
+    push empty          ; ... lf empty
+    new 0               ; ... lf e=empty.()
+    pick 2              ; ... lf e lf
+    push or             ; ... lf e lf or
+    new 2               ; ... lf opt_lf=or.(lf e)
+    push '\r'           ; ... lf opt_lf '\r'
+    push eq             ; ... lf opt_lf '\r' eq
+    new 1               ; ... lf opt_lf cr=eq.('\r')
+    push and            ; ... lf opt_lf cr and
+    new 2               ; ... lf and.(cr opt_lf)
+    roll 2              ; ... and.(cr opt_lf) lf
+    push or             ; ... and.(cr opt_lf) lf or
+    new 2               ; ... eol=or.(lf and.(cr opt_lf))
+    push '0'            ; ... eol '0'
+    push eq             ; ... eol '0' eq
+    new 1               ; ... eol eq.('0')
+    push and            ; ... eol eq.('0') and
+    new 2               ; ... peg=and.(eq.('0') eol)
+
+    push start          ; source (ok . fail) peg start
+    new 1               ; source (ok . fail) start.(peg)
+    send 2              ; --
+    ref std.commit
+
+test_5_data:            ; (('0' '\r' . '\n') . ())
+    pair_t test_5_accum
+    ref #nil
+test_5_accum:           ; ('0' '\r' . '\n')
+    pair_t '0'
+    pair_t '\r'
+    ref '\n'
+
+expect_5:               ; () <- (accum . in)
+    debug               ; BREAKPOINT
+    msg 0               ; (accum . in)
+    push test_5_data    ; (accum . in) test_5_data
+    push is_equal       ; (accum . in) test_5_data is_equal
+    new -1              ; (accum . in) is_equal.test_5_data
+    ref std.send_msg
+
 boot:                   ; () <- {caps}
     msg 0               ; {caps}
     push dev.debug_key  ; {caps} debug_key
     dict get            ; debug_dev
-;    push test_1         ; debug_dev test=test_1
-    push test_4         ; debug_dev test=test_4
+    push test_1         ; debug_dev test=test_1
+;    push test_5         ; debug_dev test=test_5
     new 1               ; test.(debug_dev)
     send 0              ; --
     ref std.commit
@@ -335,5 +473,7 @@ boot:                   ; () <- {caps}
     any
     eq
     pred
+    or
+    and
     start
     boot
