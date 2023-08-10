@@ -168,26 +168,31 @@ It handles both "interpreted" and "compiled" code.
 
 Message to Grammar:
 ```
---->[custs,context]--->[accum,in]---> NIL or --->[token,next]--->
-      |                  |                         |
-      v                  v                         v
-    [ok,fail]
+                                      NIL (on end-of-stream)
+--->[custs,context]--->[accum,in]--->  or
+      |                  |           [token,next]--->
+      v                  v             |
+    [ok,fail]                          v
      /    \
     v      v
 ```
 
 Reply to _ok_ customer:
 ```
---->[accum,in]---> NIL or --->[token,next]--->
-      |                         |
-      v                         v
+                   NIL (on end-of-stream)
+--->[accum,in]--->  or
+      |           [token,next]--->
+      v             |
+                    v
 ```
 
 Reply to _fail_ customer:
 ```
-NIL or --->[token,next]--->
-             |
-             v
+     NIL (on end-of-stream)
+--->  or
+    [token,next]--->
+      |
+      v
 ```
 
 ### LISP/Scheme Grammar
