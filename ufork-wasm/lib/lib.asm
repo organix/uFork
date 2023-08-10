@@ -106,6 +106,14 @@ call_beh:               ; (cust rcvr) <- msg
     state 2             ; (cust . msg) rcvr
     ref std.send_msg
 
+;;  (define relay-beh
+;;      (lambda (rcvr msg)
+;;          (BEH _
+;;              (SEND rcvr msg) )))
+relay_beh:              ; (rcvr msg) <- _
+    my state            ; msg rcvr
+    ref std.send_msg
+
 ;;  (define tee-beh
 ;;      (lambda (rcvr1 rcvr2)
 ;;          (BEH msg
@@ -155,6 +163,7 @@ boot:                   ; () <- {caps}
     wrap_beh
     unwrap_beh
     call_beh
+    relay_beh
     tee_beh
     broadcast_beh
     boot

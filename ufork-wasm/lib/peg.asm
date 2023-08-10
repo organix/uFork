@@ -17,6 +17,7 @@
 
 .import
     std: "./std.asm"
+    lib: "./lib.asm"
     dev: "./dev.asm"
 
 ;
@@ -137,17 +138,13 @@ or:                     ; (first rest) <- ((ok . fail) accum . in)
     msg -1              ; ctx=(accum . in)
     msg 0               ; ctx msg=((ok . fail) accum . in)
     state 2             ; ctx msg rest
-    push or_fail        ; ctx msg rest or_fail
-    new 2               ; ctx fail'=or_fail.(rest msg)
+    push lib.relay_beh  ; ctx msg rest relay_beh
+    new 2               ; ctx fail'=relay_beh.(rest msg)
     msg 1               ; ctx fail' custs=(ok . fail)
     nth 1               ; ctx fail' ok
     pair 1              ; ctx (ok . fail')
     pair 1              ; ((ok . fail') accum . in)
     state 1             ; ((ok . fail') accum . in) first
-    ref std.send_msg
-
-or_fail:                ; (rest msg) <- in
-    my state            ; msg rest
     ref std.send_msg
 
 ; try matching `first` followed by `rest`
@@ -156,8 +153,8 @@ and:                    ; (first rest) <- ((ok . fail) accum . in)
     msg -2              ; in
     msg 1               ; in custs=(ok . fail)
     nth -1              ; in fail
-    push and_fail       ; in fail and_fail
-    new 2               ; fail'=and_fail.(fail in)
+    push lib.relay_beh  ; in fail relay_beh
+    new 2               ; fail'=relay_beh.(fail in)
 
     dup 1               ; fail' fail'
     msg 1               ; fail' fail' custs=(ok . fail)
@@ -171,10 +168,6 @@ and:                    ; (first rest) <- ((ok . fail) accum . in)
     roll -2             ; (accum . in) (ok' . fail')
     pair 1              ; ((ok' . fail') accum . in)
     state 1             ; ((ok . fail') accum . in) first
-    ref std.send_msg
-
-and_fail:               ; (fail in) <- in'
-    my state            ; in fail
     ref std.send_msg
 
 and_ok:                 ; (rest ok fail') <- (accum' . in')
@@ -197,6 +190,30 @@ and_pair:               ; (ok accum') <- (accum'' . in'')
     pair 1              ; in'' accum=(accum' . accum'')
     pair 1              ; (accum . in'')
     state 1             ; (accum . in'') ok
+    ref std.send_msg
+
+; succeed if `peg` fails, fail if it succeeds (look-ahead)
+
+not:                    ; (peg) <- ((ok . fail) accum . in)
+    msg 1               ; custs=(ok . fail)
+    part 1              ; fail ok
+    msg -2              ; fail ok in
+    push #unit          ; fail ok in #unit
+    pair 1              ; fail ok (#unit . in)
+    roll 2              ; fail (#unit . in) ok
+    push lib.relay_beh  ; fail (#unit . in) ok relay_beh
+    new 2               ; fail fail'=relay_beh.(ok (#unit . in))
+
+    msg -2              ; fail fail' in
+    roll 3              ; fail' in fail
+    push lib.relay_beh  ; fail' in fail relay_beh
+    new 2               ; fail' ok'=relay_beh.(fail in)
+
+    pair 1              ; (ok' . fail')
+    msg -1              ; (ok' . fail') (accum . in)
+    roll -2             ; (accum . in) (ok' . fail')
+    pair 1              ; ((ok' . fail') accum . in)
+    state 1             ; ((ok' . fail') accum . in) peg
     ref std.send_msg
 
 ; start parsing `source` according to `peg`
@@ -394,15 +411,16 @@ expect_4:               ; () <- ('0' '\r' . next)
     is_eq '\r'          ; assert(in=='\r')
     ref std.commit
 
-; test and/or grammar
+; test and/or/not grammar
 ;
-; grammar   = '0' eol
+; grammar   = '0' eol eos
 ; eol       = lf
 ;           / cr opt_lf
 ; cr        = '\r'
 ; lf        = '\n'
 ; opt_lf    = lf
 ;           / ε
+; eos       = !.
 
 test_5:                 ; (debug_dev) <- ()
     push test_source    ; list=test_source
@@ -414,38 +432,47 @@ test_5:                 ; (debug_dev) <- ()
     new 0               ; source fail ok=expect_5.()
     pair 1              ; source (ok . fail)
 
-    push '\n'           ; ... '\n'
-    push eq             ; ... '\n' eq
-    new 1               ; ... lf=eq.('\n')
-    push empty          ; ... lf empty
-    new 0               ; ... lf e=empty.()
-    pick 2              ; ... lf e lf
-    push or             ; ... lf e lf or
-    new 2               ; ... lf opt_lf=or.(lf e)
-    push '\r'           ; ... lf opt_lf '\r'
-    push eq             ; ... lf opt_lf '\r' eq
-    new 1               ; ... lf opt_lf cr=eq.('\r')
-    push and            ; ... lf opt_lf cr and
-    new 2               ; ... lf and.(cr opt_lf)
-    roll 2              ; ... and.(cr opt_lf) lf
-    push or             ; ... and.(cr opt_lf) lf or
-    new 2               ; ... eol=or.(lf and.(cr opt_lf))
-    push '0'            ; ... eol '0'
-    push eq             ; ... eol '0' eq
-    new 1               ; ... eol eq.('0')
-    push and            ; ... eol eq.('0') and
-    new 2               ; ... peg=and.(eq.('0') eol)
+    push any            ; ... any
+    new 0               ; ... any.()
+    push not            ; ... any.() not
+    new 1               ; ... eos=not.(any.())
+    push '\n'           ; ... eos '\n'
+    push eq             ; ... eos '\n' eq
+    new 1               ; ... eos lf=eq.('\n')
+    push empty          ; ... eos lf empty
+    new 0               ; ... eos lf e=empty.()
+    pick 2              ; ... eos lf e lf
+    push or             ; ... eos lf e lf or
+    new 2               ; ... eos lf opt_lf=or.(lf e)
+    push '\r'           ; ... eos lf opt_lf '\r'
+    push eq             ; ... eos lf opt_lf '\r' eq
+    new 1               ; ... eos lf opt_lf cr=eq.('\r')
+    push and            ; ... eos lf opt_lf cr and
+    new 2               ; ... eos lf and.(cr opt_lf)
+    roll 2              ; ... eos and.(cr opt_lf) lf
+    push or             ; ... eos and.(cr opt_lf) lf or
+    new 2               ; ... eos eol=or.(lf and.(cr opt_lf))
+    push and            ; ... eos eol and
+    new 2               ; ... and.(eol eos)
+    push '0'            ; ... and.(eol eos) '0'
+    push eq             ; ... and.(eol eos) '0' eq
+    new 1               ; ... and.(eol eos) eq.('0')
+    push and            ; ... and.(eol eos) eq.('0') and
+    new 2               ; ... peg=and.(eq.('0') and.(eol eos))
 
     push start          ; source (ok . fail) peg start
     new 1               ; source (ok . fail) start.(peg)
     send 2              ; --
     ref std.commit
 
-test_5_data:            ; (('0' '\r' . '\n') . ())
+test_5_data:            ; (('0' ('\r' . '\n') . #unit) . ())
     pair_t test_5_accum
     ref #nil
-test_5_accum:           ; ('0' '\r' . '\n')
+test_5_accum:           ; ('0' ('\r' . '\n') . #unit)
     pair_t '0'
+    pair_t test_5_eol
+    ref #unit
+test_5_eol:             ; ('\r' . '\n')
     pair_t '\r'
     ref '\n'
 
@@ -475,5 +502,6 @@ boot:                   ; () <- {caps}
     pred
     or
     and
+    not
     start
     boot
