@@ -529,7 +529,15 @@ function on_stdout(char) {
 }
 
 function trace_event(event) {
-    core.u_log_event(event, core.u_debug);
+    event = core.u_event_as_object(event);
+    //core.u_log_event(event, core.u_debug);
+    core.u_debug(event);
+    //console.log(JSON.stringify(event, undefined, 2));
+}
+
+function on_log(level, ...args) {
+    //console.log(level + ": " + args.join(" "));
+    console.log(level, ...args);
 }
 
 ufork.instantiate_core(
@@ -539,7 +547,7 @@ ufork.instantiate_core(
         //single_step();
         draw_host();
     },
-    console.log,
+    on_log,
     ufork.LOG_DEBUG,
     trace_event
 )(function callback(the_core, reason) {

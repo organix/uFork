@@ -1174,37 +1174,37 @@ function make_core(
         const evt = quad;
         quad = u_read_quad(evt.t);
         obj.sponsor = Object.create(null);
-        obj.sponsor.raw = evt.t;
-        obj.sponsor.memory = quad.t;
-        obj.sponsor.events = quad.x;
-        obj.sponsor.cycles = quad.y;
-        obj.sponsor.signal = quad.z;
+        obj.sponsor.raw = u_print(evt.t);
+        obj.sponsor.memory = u_fix_to_i32(quad.t);
+        obj.sponsor.events = u_fix_to_i32(quad.x);
+        obj.sponsor.cycles = u_fix_to_i32(quad.y);
+        obj.sponsor.signal = u_print(quad.z);
         quad = u_read_quad(u_cap_to_ptr(evt.x));
         const prev = quad;
         obj.target = Object.create(null);
-        obj.target.raw = evt.x;
+        obj.target.raw = u_print(evt.x);
         if (u_is_ram(prev.z)) {
             // actor effect
             const next = u_read_quad(prev.z);
-            obj.target.code = prev.x;
+            obj.target.code = u_print(prev.x);
             obj.target.data = u_pprint(prev.y);
             obj.become = Object.create(null);
-            obj.become.code = next.x;
+            obj.become.code = u_pprint(next.x);
             obj.become.data = u_pprint(next.y);
             obj.sent = [];
             let pending = next.z;
             while (u_is_ram(pending)) {
                 quad = u_read_quad(pending);
                 obj.sent.push({
-                    target: quad.x,
+                    target: u_print(quad.x),
                     message: u_pprint(quad.y),
-                    sponsor: quad.t
+                    sponsor: u_print(quad.t)
                 });
                 pending = pending.z;
             }
         } else {
             // device effect
-            obj.target.device = prev.x;
+            obj.target.device = u_print(prev.x);
             obj.target.data = u_pprint(prev.y);
         }
         obj.message = u_pprint(evt.y);
@@ -1221,24 +1221,33 @@ function make_core(
             }
             if (event.target.device) {
                 // device effect
-                log(
-                    event.message + "->" + u_print(event.target.raw),
-                    u_print(event.target.device) + "." + event.target.data
+                log(event.message
+                    + "->"
+                    + event.target.raw
+                    + " "
+                    + event.target.device
+                    + "."
+                    + event.target.data
                 );
             } else {
                 // actor effect
                 let messages = [];
                 event.sent.forEach(({target, message}) => {
-                    messages.push(
-                        message + "->" + u_print(target)
-                    );
-                })
-                log(
-                    event.message + "->" + u_print(event.target.raw),
-                    u_print(event.target.code) + "." + event.target.data,
-                    "=>",
-                    u_print(event.become.code) + "." + event.become.data,
-                    messages.join(" ")
+                    messages.push(message + "->" + target);
+                });
+                log(event.message
+                    + "->"
+                    + event.target.raw
+                    + " "
+                    + event.target.code
+                    + "."
+                    + event.target.data
+                    + " => "
+                    + event.become.code
+                    + "."
+                    + event.become.data
+                    + " "
+                    + messages.join(" ")
                 );
             }
         }
