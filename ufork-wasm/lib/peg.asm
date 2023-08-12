@@ -101,20 +101,20 @@ eq:                     ; (expect) <- ((ok . fail) accum . in)
 
 ; succeed and consume token if pred(token)
 
-pred:                   ; (pred) <- ((ok . fail) accum . in)
+if:                     ; (pred) <- ((ok . fail) accum . in)
     msg -2              ; in
     eq #nil             ; in==()
     if fail             ; --
 
     msg 3               ; token
     msg 0               ; token ((ok . fail) accum . in)
-    push k_pred         ; token ((ok . fail) accum . in) k_pred
-    new -1              ; token k=k_pred.((ok . fail) accum . in)
+    push k_if           ; token ((ok . fail) accum . in) k_if
+    new -1              ; token k=k_if.((ok . fail) accum . in)
     state 1             ; token k pred
     send 2              ; --
     ref std.commit
 
-k_pred:                 ; ((ok . fail) accum . in) <- bool
+k_if:                   ; ((ok . fail) accum . in) <- bool
     msg 0               ; bool
     if k_ok
 
@@ -131,6 +131,18 @@ k_ok:                   ; --
     new 2               ; k=k_next.(ok token)
     state -3            ; k next
     ref std.send_msg
+
+; a predicate for matching an inclusive range [lo, hi]
+
+in_range:               ; (lo hi) <- (cust value)
+    msg 2               ; value
+    state 1             ; value lo
+    cmp lt              ; value<lo
+    if std.rv_false
+    msg 2               ; value
+    state 2             ; value hi
+    cmp le              ; value<=hi
+    ref std.cust_send
 
 ; try matching `first`, if failed try `rest` at same position
 
@@ -411,6 +423,46 @@ expect_4:               ; () <- ('0' '\r' . next)
     is_eq '\r'          ; assert(in=='\r')
     ref std.commit
 
+; test [0-9] succeeds on stream starting with '0'
+
+test_5:                 ; (debug_dev) <- ()
+    state 0             ; (debug_dev)
+    push test_6         ; (debug_dev) test_6
+    beh -1              ; --
+    my self             ; SELF
+    send 0              ; --
+;    if_not std.commit   ; // SKIP THIS TEST...
+
+    push test_source    ; list=test_source
+    push s_list         ; test_source s_list
+    new -1              ; source=s_list.test_source
+    push unexpected     ; source unexpected
+    new 0               ; source fail=unexpected.()
+    push expect_5       ; source fail expect_5
+    new 0               ; source fail ok=expect_5.()
+    pair 1              ; source (ok . fail)
+    push '9'            ; ... '9'
+    push '0'            ; ... '9' '0'
+    push in_range       ; ... '9' '0' in_range
+    new 2               ; ... pred=in_range.('0' '9')
+    push if             ; ... pred if
+    new 1               ; source (ok . fail) peg=if.(pred)
+    push start          ; source (ok . fail) peg start
+    new 1               ; source (ok . fail) start.(peg)
+    send 2              ; --
+    ref std.commit
+
+expect_5:               ; () <- ('0' '\r' . next)
+;    debug               ; BREAKPOINT
+    msg 1               ; accum
+    is_eq '0'           ; assert(accum=='0')
+    msg 2               ; in.token
+    is_eq '\r'          ; assert(in=='\r')
+    msg -2              ; next
+    typeq #actor_t      ; is_actor(next)
+    is_eq #t            ; assert(is_actor(next))
+    ref std.commit
+
 ; test and/or/not grammar
 ;
 ; grammar   = '0' eol eos
@@ -422,14 +474,14 @@ expect_4:               ; () <- ('0' '\r' . next)
 ;           / ε
 ; eos       = !.
 
-test_5:                 ; (debug_dev) <- ()
+test_6:                 ; (debug_dev) <- ()
     push test_source    ; list=test_source
     push s_list         ; test_source s_list
     new -1              ; source=s_list.test_source
     push unexpected     ; source unexpected
     new 0               ; source fail=unexpected.()
-    push expect_5       ; source fail expect_5
-    new 0               ; source fail ok=expect_5.()
+    push expect_6       ; source fail expect_6
+    new 0               ; source fail ok=expect_6.()
     pair 1              ; source (ok . fail)
 
     push any            ; ... any
@@ -465,23 +517,23 @@ test_5:                 ; (debug_dev) <- ()
     send 2              ; --
     ref std.commit
 
-test_5_data:            ; (('0' ('\r' . '\n') . #unit) . ())
-    pair_t test_5_accum
+test_6_data:            ; (('0' ('\r' . '\n') . #unit) . ())
+    pair_t test_6_accum
     ref #nil
-test_5_accum:           ; ('0' ('\r' . '\n') . #unit)
+test_6_accum:           ; ('0' ('\r' . '\n') . #unit)
     pair_t '0'
-    pair_t test_5_eol
+    pair_t test_6_eol
     ref #unit
-test_5_eol:             ; ('\r' . '\n')
+test_6_eol:             ; ('\r' . '\n')
     pair_t '\r'
     ref '\n'
 
-expect_5:               ; () <- (accum . in)
-    debug               ; BREAKPOINT
+expect_6:               ; () <- (accum . in)
+;    debug               ; BREAKPOINT
     msg 0               ; (accum . in)
-    push test_5_data    ; (accum . in) test_5_data
-    push is_equal       ; (accum . in) test_5_data is_equal
-    new -1              ; (accum . in) is_equal.test_5_data
+    push test_6_data    ; (accum . in) test_6_data
+    push is_equal       ; (accum . in) test_6_data is_equal
+    new -1              ; (accum . in) is_equal.test_6_data
     ref std.send_msg
 
 boot:                   ; () <- {caps}
@@ -499,7 +551,8 @@ boot:                   ; () <- {caps}
     fail
     any
     eq
-    pred
+    if
+    in_range
     or
     and
     not

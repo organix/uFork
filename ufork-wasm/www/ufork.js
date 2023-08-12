@@ -1172,13 +1172,7 @@ function make_core(
         const obj = Object.create(null);
         let quad = u_read_quad(event);
         const evt = quad;
-        quad = u_read_quad(evt.t);
-        obj.sponsor = Object.create(null);
-        obj.sponsor.raw = u_print(evt.t);
-        obj.sponsor.memory = u_fix_to_i32(quad.t);
-        obj.sponsor.events = u_fix_to_i32(quad.x);
-        obj.sponsor.cycles = u_fix_to_i32(quad.y);
-        obj.sponsor.signal = u_print(quad.z);
+        obj.message = u_pprint(evt.y);
         quad = u_read_quad(u_cap_to_ptr(evt.x));
         const prev = quad;
         obj.target = Object.create(null);
@@ -1207,7 +1201,13 @@ function make_core(
             obj.target.device = u_print(prev.x);
             obj.target.data = u_pprint(prev.y);
         }
-        obj.message = u_pprint(evt.y);
+        quad = u_read_quad(evt.t);
+        obj.sponsor = Object.create(null);
+        obj.sponsor.raw = u_print(evt.t);
+        obj.sponsor.memory = u_fix_to_i32(quad.t);
+        obj.sponsor.events = u_fix_to_i32(quad.x);
+        obj.sponsor.cycles = u_fix_to_i32(quad.y);
+        obj.sponsor.signal = u_print(quad.z);
         return obj;
     }
 
