@@ -34,6 +34,16 @@ fwd_beh:                ; (rcvr) <- msg
     state 1             ; msg rcvr
     ref std.send_msg
 
+;;  (define init-fwd-beh
+;;      (lambda ()
+;;          (BEH rcvr
+;;              (BECOME (fwd-beh rcvr)) )))
+init_fwd_beh:           ; () <- rcvr
+    msg 0               ; rcvr
+    push fwd_beh        ; rcvr fwd_beh
+    beh 1               ; --
+    ref std.commit
+
 ;;  (define once-beh
 ;;      (lambda (rcvr)
 ;;          (BEH msg
@@ -156,6 +166,7 @@ boot:                   ; () <- {caps}
     const_beh
     memo_beh
     fwd_beh
+    init_fwd_beh
     once_beh
     label_beh
     tag_beh
