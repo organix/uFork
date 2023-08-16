@@ -44,6 +44,126 @@ function new_if_instr(op, t = undef_lit, f = undef_lit) {
     return { "kind": "instr", "op": "if", t, f };
 }
 
+function equal_to(expect, actual) {
+    if (expect === actual) {
+        return true;
+    }
+    if (expect?.kind && (expect?.kind === actual?.kind)) {
+        if (expect.kind === "pair") {
+            while (expect.tail?.kind === "pair") {
+                if (actual?.tail?.kind !== "pair") {
+                    return false;
+                }
+                if (!equal_to(expect.head, actual?.head)) {
+                    return false;
+                }
+                expect = expect.tail;
+                actual = actual?.tail;
+            }
+            return equal_to(expect.tail, actual?.tail);
+        } else if (expect.kind === "dict") {
+            while (expect.tail?.kind === "dict") {
+                if (actual?.tail?.kind !== "dict") {
+                    return false;
+                }
+                // FIXME: dictionaries are unordered...
+                if (!equal_to(expect.key, actual?.key)) {
+                    return false;
+                }
+                if (!equal_to(expect.value, actual?.value)) {
+                    return false;
+                }
+                expect = expect.next;
+                actual = actual?.next;
+            }
+            return equal_to(expect.next, actual?.next);
+        } else if (expect.kind === "literal") {
+            return equal_to(expect?.value, actual?.value);
+        } else if (expect.kind === "type") {
+            return equal_to(expect?.name, actual?.name);
+        } else if (expect.kind === "ref") {
+            return equal_to(expect?.name, actual?.name)
+                && equal_to(expect?.module, actual?.module);
+        }
+    }
+    return false;
+}
+
+function to_scheme(value) {
+    if (typeof value === "object") {
+        const kind = value.kind;
+        if (typeof kind === "string") {
+            if (kind === "pair") {
+                let s = "(";
+                while (true) {
+                    s += to_scheme(value?.head);
+                    if (value?.tail?.kind !== "pair") {
+                        break;
+                    }
+                    value = value?.tail;
+                    s += " ";
+                }
+                if (!equal_to(nil_lit, value?.tail)) {
+                    s += " . ";
+                    s += to_scheme(value?.tail);
+                }
+                s += ")";
+                return s;
+            } else if (kind === "dict") {
+                let s = "{";
+                while (true) {
+                    s += to_scheme(value?.key) + ":" + to_scheme(value?.value);
+                    if (value?.next?.kind !== "dict") {
+                        break;
+                    }
+                    value = value?.next;
+                    s += ",";
+                }
+                s += "}";
+                return s;
+            } else if (kind === "literal") {
+                const name = value?.value;
+                if (name === "undef") {
+                    return "#?";
+                } else if (name === "nil") {
+                    return "()";
+                } else if (name === "false") {
+                    return "#f";
+                } else if (name === "true") {
+                    return "#t";
+                } else if (name === "unit") {
+                    return "#unit";
+                }
+            } else if (kind === "type") {
+                const name = value?.name;
+                if (typeof name === "string") {
+                    return "#" + name + "_t";
+                } else {
+                    return "#unknown_t";
+                }
+            } else if (kind === "ref") {
+                let s = "";
+                const module = value?.module;
+                if (typeof module === "string") {
+                    s += module + ".";
+                }
+                const name = value?.name;
+                if (typeof name === "string") {
+                    s += name;
+                    return s;
+                }
+            } else {
+                return "#" + kind + "...";
+            }
+        }
+        return "#unknown";
+    }
+    if (typeof value === "string") {
+        return JSON.stringify(value);  // quoted and escaped
+    }
+    return String(value);
+}
+
 /*
  * Scheme language parsing
  */
@@ -312,6 +432,7 @@ function compile(source) {
 const sexpr = compile("(if (< n 0) #f #t)");
 //console.log(sexpr);
 console.log(JSON.stringify(sexpr, undefined, 2));
+console.log(to_scheme(sexpr.token));
 
 // Tokenizer ///////////////////////////////////////////////////////////////////
 
