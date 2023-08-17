@@ -40,7 +40,7 @@ function new_instr(op, imm = undef_lit, k = undef_lit) {
     return { "kind": "instr", op, imm, k };
 }
 
-function new_if_instr(op, t = undef_lit, f = undef_lit) {
+function new_if_instr(t = undef_lit, f = undef_lit) {
     return { "kind": "instr", "op": "if", t, f };
 }
 
@@ -152,6 +152,15 @@ function to_scheme(value) {
                     s += name;
                     return s;
                 }
+            } else if (kind === "instr") {
+                let s = "[#instr_t, ";
+                s += to_scheme(value?.op);
+                s += ", ";
+                s += to_scheme(value?.imm);
+                s += ", ";
+                s += to_scheme(value?.k);
+                s += "]";
+                return s;
             } else {
                 return "#" + kind + "...";
             }
@@ -444,22 +453,28 @@ const sample_source = `
         (BEH (cust . _)
             (SEND cust value) )))`;
 
-function compile_sexpr(ctx, sexpr) {
-    const first = nth_sexpr(sexpr, 1);
-    const kind = first?.kind;
-    if (kind === "ref") {
-        const name = first?.name;
-        if (name === "define") {
-            return compile_define(ctx, sexpr);
-        }
-        if (name === "lambda") {
-            return compile_lambda(ctx, sexpr);
-        }
-        if (name === "BEH") {
-            return compile_BEH(ctx, sexpr);
-        }
-        if (name === "SEND") {
-            return compile_SEND(ctx, sexpr);
+function evaluate_sexpr(ctx, sexpr) {
+    if (typeof sexpr === "number") {
+        // numeric constant
+        return sexpr;
+    }
+    let kind = sexpr?.kind;
+    if (kind === "type"
+    ||  kind === "literal") {
+        // type constant or literal value
+        return sexpr;
+    }
+    if (kind === "pair") {
+        const first = nth_sexpr(sexpr, 1);
+        const kind = first?.kind;
+        if (kind === "ref") {
+            const name = first?.name;
+            if (name === "lambda") {
+                return compile_lambda(ctx, sexpr);
+            }
+            if (name === "BEH") {
+                return compile_BEH(ctx, sexpr);
+            }
         }
     }
     return {
@@ -467,15 +482,70 @@ function compile_sexpr(ctx, sexpr) {
         sexpr
     };
 }
-function compile_define(ctx, sexpr) {
+function compile_sexpr(ctx, sexpr, k) {
+    if (k?.error) {
+        return k;
+    }
+    if (typeof sexpr === "number") {
+        // numeric constant
+        return new_instr("push", sexpr, k);
+    }
+    let kind = sexpr?.kind;
+    if (kind === "type"
+    ||  kind === "literal") {
+        // constant or literal
+        return new_instr("push", sexpr, k);
+    }
+    if (kind === "ref") {
+        // symbolic reference
+        const name = sexpr.name;
+        const state_ref = ctx.state_map && ctx.state_map[name];
+        if (state_ref) {
+            return new_instr("state", state_ref, k);  // state reference
+        }
+        const msg_ref = ctx.msg_map && ctx.msg_map[name];
+        if (msg_ref) {
+            return new_instr("msg", msg_ref, k);  // message reference
+        }
+        return new_instr("push", sexpr, k);  // free variable
+    }
+    if (kind === "pair") {
+        const first = nth_sexpr(sexpr, 1);
+        kind = first?.kind;
+        if (kind === "ref") {
+            const name = first?.name;
+            if (name === "define") {
+                return compile_define(ctx, sexpr, k);
+            }
+            if (name === "lambda") {
+                return compile_lambda(ctx, sexpr, k);
+            }
+            if (name === "BEH") {
+                return compile_BEH(ctx, sexpr, k);
+            }
+            if (name === "SEND") {
+                return compile_SEND(ctx, sexpr, k);
+            }
+        }
+    }
+    return {
+        error: "can't compile sexpr",
+        sexpr
+    };
+}
+function compile_define(ctx, sexpr, k) {
+    if (k?.error) {
+        return k;
+    }
     const second = nth_sexpr(sexpr, 2);
     if (second?.kind === "ref") {
         const name = second?.name;
         const third = nth_sexpr(sexpr, 3);
-        const dfn =  compile_sexpr(ctx, third);
+        const dfn = evaluate_sexpr(ctx, third);
         if (dfn.error) {
             return dfn;
         }
+        console.log("compile_define:", name, "->", to_scheme(dfn));
         ctx.define[name] = dfn;
         return ctx;
     }
@@ -483,6 +553,27 @@ function compile_define(ctx, sexpr) {
         error: "can't compile `define`",
         sexpr
     };
+}
+function compile_body(ctx, body) {
+    let code = {
+        error: "can't compile body",
+        sexpr: body
+    };
+    if (equal_to(nil_lit, body)) {
+        code =
+            new_instr("msg", 1,             // msg cust
+            new_instr("send", -1,           // --
+            new_instr("end", "commit")));
+    } else if (body?.kind === "pair") {
+        const head = body?.head;
+        const tail = body?.tail;
+        code = compile_body(ctx, tail);
+        if (code.error) {
+            return code;
+        }
+        code = compile_sexpr(ctx, head, code);
+    }
+    return code;
 }
 function pattern_to_map(pattern) {
     const map = {}; //Object.create(null);
@@ -506,27 +597,72 @@ function pattern_to_map(pattern) {
     }
     return map;
 }
-function compile_lambda(ctx, sexpr) {
+function compile_lambda(ctx, sexpr, k) {
+    if (k?.error) {
+        return k;
+    }
     const second = nth_sexpr(sexpr, 2);
     console.log("compile_lambda:", "ptrn:", to_scheme(second));
     const state_map = pattern_to_map(second);
     console.log("compile_lambda:", "state_map:", state_map);
+    const body = nth_sexpr(sexpr, -2);
+    console.log("compile_lambda:", "body:", body);
+    ctx = {
+        state_map: state_map,
+        parent: ctx
+    };
+    let code = compile_body(ctx, body);
+    if (code.error) {
+        return code;
+    }
+    code = new_instr("push", unit_lit, code);  // #unit
+    console.log("compile_lambda:", "code:", code);
+    if (!code.error) {
+        return code;
+    }
     return {
         error: "can't compile `lambda`",
         sexpr
     };
 }
-function compile_BEH(ctx, sexpr) {
+function compile_BEH(ctx, sexpr, k) {
+    if (k?.error) {
+        return k;
+    }
     const second = nth_sexpr(sexpr, 2);
     console.log("compile_BEH:", "ptrn:", to_scheme(second));
     const msg_map = pattern_to_map(second);
     console.log("compile_BEH:", "msg_map:", msg_map);
+    const body = nth_sexpr(sexpr, -2);
+    console.log("compile_BEH:", "body:", body);
+    ctx.msg_map = msg_map;
+    let code = compile_body(ctx, body);
+    if (code.error) {
+        return code;
+    }
+    console.log("compile_BEH:", "code:", code);
+    if (!code.error) {
+        return code;
+    }
     return {
         error: "can't compile `BEH`",
         sexpr
     };
 }
-function compile_SEND(ctx, sexpr) {
+function compile_SEND(ctx, sexpr, k) {
+    if (k?.error) {
+        return k;
+    }
+    const second = nth_sexpr(sexpr, 2);
+    const third = nth_sexpr(sexpr, 3);
+    let code =
+        compile_sexpr(ctx, third,       // msg
+        compile_sexpr(ctx, second,      // msg target
+        new_instr("send", -1, k)));     // --
+    console.log("compile_SEND:", "code:", code);
+    if (!code.error) {
+        return code;
+    }
     return {
         error: "can't compile `SEND`",
         sexpr
@@ -537,19 +673,98 @@ function compile(source) {
     const str_in = string_input(source);
     const lex_in = lex_input(str_in);
     const sexpr = parse_sexpr(lex_in);
-    return sexpr;
+    console.log("compile", JSON.stringify(sexpr, undefined, 2));
+    const ctx = {
+        kind: "module",
+        define: {}
+    };
+    console.log("compile", to_scheme(sexpr.token));
+    const module = compile_sexpr(ctx, sexpr.token);
+    return module;
 }
 
-//const sexpr = compile(" `('foo (,bar ,@baz) . quux)\r\n");
-//const sexpr = compile("(0 1 -1 #t #f #nil #? () . #unit)");
-//const sexpr = compile("(if (< n 0) #f #t)");
-const sexpr = compile(sample_source);
-//console.log(sexpr);
-console.log(JSON.stringify(sexpr, undefined, 2));
-console.log(to_scheme(sexpr.token));
-const code = compile_sexpr({ define: {} }, sexpr.token);
-console.log(code);
+//const module = compile(" `('foo (,bar ,@baz) . quux)\r\n");
+//const module = compile("(0 1 -1 #t #f #nil #? () . #unit)");
+//const module = compile("(if (< n 0) #f #t)");
+const module = compile(sample_source);
+//const module = compile("(define z 0)");
+//const module = compile("(define fn (lambda (x) 0 x y))");
+console.log(JSON.stringify(module, undefined, 2));
+console.log(to_asm(module));
 
+/*
+ * Translation tools
+ */
+
+function to_asm(crlf) {
+    if (typeof crlf === "string") {
+        return crlf;
+    }
+    if (typeof crlf === "number") {
+        return String(crlf);
+    }
+    let s = "";
+    const kind = crlf?.kind;
+    if (kind === "module") {
+        for (const [name, value] of Object.entries(crlf.define)) {
+            s += name + ":\n";
+            let value = to_asm(crlf.define[name]);
+            if (value?.error) {
+                return value;
+            }
+            s += to_asm(value);
+        }
+    } else if (kind === "instr") {
+        let op = to_asm(crlf.op);
+        if (op?.error) {
+            return op;
+        }
+        s += "    " + op;
+        if (op !== "depth") {
+            let imm = to_asm(crlf.imm);
+            if (imm?.error) {
+                return imm;
+            }
+            s += " " + imm;
+        }
+        s += "\n";
+        if (op !== "end") {
+            s += to_asm(crlf.k);
+        }
+    } else if (kind === "literal") {
+        const name = crlf.value;
+        if (name === "undef") {
+            s = "#?";
+        } else if (name === "nil") {
+            s = "()";
+        } else if (name === "false") {
+            s = "#f";
+        } else if (name === "true") {
+            s = "#t";
+        } else if (name === "unit") {
+            s = "#unit";
+        }
+    } else if (kind === "type") {
+        const name = crlf.name;
+        if (typeof name === "string") {
+            s = "#" + name + "_t";
+        } else {
+            s = "#unknown_t";
+        }
+    } else if (kind === "ref") {
+        const module = crlf?.module;
+        if (typeof module === "string") {
+            s += module + ".";
+        }
+        s += crlf.name;
+    } else {
+        return {
+            error: "unknown asm",
+            crlf
+        }
+    }
+    return s;
+}
 // Tokenizer ///////////////////////////////////////////////////////////////////
 
 function tag_regexp(strings) {
