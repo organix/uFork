@@ -409,15 +409,128 @@ function parse_sexpr(next) {
         // symbol sexpr
         input.token = {
             kind: "ref",
-            name: symbol_to_label(input.token)
+            name: input.token
         };    
     }
     return input;
 }
 
-function symbol_to_label(symbol) {
-    // FIXME: translate name to ASM-valid label
-    return "$" + symbol;
+// Return the 'nth' item from a list of pairs, if defined.
+//
+//           0          -1          -2          -3
+//      lst -->[car,cdr]-->[car,cdr]-->[car,cdr]-->...
+//            +1 |        +2 |        +3 |
+//               V           V           V
+//
+function nth_sexpr(sexpr, n) {
+    while (true) {
+        if (n === 0) {
+            return sexpr;
+        }
+        if (sexpr?.kind !== "pair") {
+            return undefined;
+        }
+        if (n === 1) {
+            return sexpr?.head;
+        }
+        sexpr = sexpr?.tail;
+        n += (n < 0) ? 1 : -1;
+    }
+}
+
+const sample_source = `
+(define memo_beh
+    (lambda (value)
+        (BEH (cust . _)
+            (SEND cust value) )))`;
+
+function compile_sexpr(ctx, sexpr) {
+    const first = nth_sexpr(sexpr, 1);
+    const kind = first?.kind;
+    if (kind === "ref") {
+        const name = first?.name;
+        if (name === "define") {
+            return compile_define(ctx, sexpr);
+        }
+        if (name === "lambda") {
+            return compile_lambda(ctx, sexpr);
+        }
+        if (name === "BEH") {
+            return compile_BEH(ctx, sexpr);
+        }
+        if (name === "SEND") {
+            return compile_SEND(ctx, sexpr);
+        }
+    }
+    return {
+        error: "can't compile sexpr",
+        sexpr
+    };
+}
+function compile_define(ctx, sexpr) {
+    const second = nth_sexpr(sexpr, 2);
+    if (second?.kind === "ref") {
+        const name = second?.name;
+        const third = nth_sexpr(sexpr, 3);
+        const dfn =  compile_sexpr(ctx, third);
+        if (dfn.error) {
+            return dfn;
+        }
+        ctx.define[name] = dfn;
+        return ctx;
+    }
+    return {
+        error: "can't compile `define`",
+        sexpr
+    };
+}
+function pattern_to_map(pattern) {
+    const map = {}; //Object.create(null);
+    let n = 0;
+    while (pattern?.kind === "pair") {
+        n += 1;
+        const head = pattern?.head;
+        if (head?.kind === "ref") {
+            const name = head?.name;
+            if (name !== "_") {
+                map[name] = n;
+            }
+        }
+        pattern = pattern?.tail;
+    }
+    if (pattern?.kind === "ref") {
+        const name = pattern?.name;
+        if (name !== "_") {
+            map[name] = -n;
+        }
+    }
+    return map;
+}
+function compile_lambda(ctx, sexpr) {
+    const second = nth_sexpr(sexpr, 2);
+    console.log("compile_lambda:", "ptrn:", to_scheme(second));
+    const state_map = pattern_to_map(second);
+    console.log("compile_lambda:", "state_map:", state_map);
+    return {
+        error: "can't compile `lambda`",
+        sexpr
+    };
+}
+function compile_BEH(ctx, sexpr) {
+    const second = nth_sexpr(sexpr, 2);
+    console.log("compile_BEH:", "ptrn:", to_scheme(second));
+    const msg_map = pattern_to_map(second);
+    console.log("compile_BEH:", "msg_map:", msg_map);
+    return {
+        error: "can't compile `BEH`",
+        sexpr
+    };
+}
+function compile_SEND(ctx, sexpr) {
+    return {
+        error: "can't compile `SEND`",
+        sexpr
+    };
 }
 
 function compile(source) {
@@ -429,10 +542,13 @@ function compile(source) {
 
 //const sexpr = compile(" `('foo (,bar ,@baz) . quux)\r\n");
 //const sexpr = compile("(0 1 -1 #t #f #nil #? () . #unit)");
-const sexpr = compile("(if (< n 0) #f #t)");
+//const sexpr = compile("(if (< n 0) #f #t)");
+const sexpr = compile(sample_source);
 //console.log(sexpr);
 console.log(JSON.stringify(sexpr, undefined, 2));
 console.log(to_scheme(sexpr.token));
+const code = compile_sexpr({ define: {} }, sexpr.token);
+console.log(code);
 
 // Tokenizer ///////////////////////////////////////////////////////////////////
 
