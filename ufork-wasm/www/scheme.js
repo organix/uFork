@@ -83,6 +83,16 @@ function equal_to(expect, actual) {
             return equal_to(expect?.value, actual?.value);
         } else if (expect.kind === "type") {
             return equal_to(expect?.name, actual?.name);
+        } else if (expect.kind === "instr") {
+            if (expect?.op !== actual?.op) {
+                return false;
+            }
+            if (expect?.op === "if") {
+                return equal_to(expect?.t, actual?.t)
+                    && equal_to(expect?.f, actual?.f);
+            }
+            return equal_to(expect?.imm, actual?.imm)
+                && equal_to(expect?.k, actual?.k);
         } else if (expect.kind === "ref") {
             return equal_to(expect?.name, actual?.name)
                 && equal_to(expect?.module, actual?.module);
@@ -774,6 +784,42 @@ console.log(to_asm(module));
  * Translation tools
  */
 
+function chain_to_list(chain) {
+    let list = [];
+    while (chain?.kind === "instr") {
+        if (chain.op === "if") {
+            return;  // branching breaks the chain
+        }
+        list.push(chain);
+        chain = chain.k;
+    }
+    return list;
+}
+
+function join_instr_chains(t_chain, f_chain, j_label) {
+    let t_list = chain_to_list(t_chain);
+    if (!t_list) {
+        return;
+    }
+    let f_list = chain_to_list(f_chain);
+    if (!f_list) {
+        return;
+    }
+    while (t_list.length > 0 && f_list.length > 0) {
+        t_chain = t_list.pop();
+        f_chain = f_list.pop();
+        if (t_chain.op !== f_chain.op
+        || !equal_to(t_chain.imm, f_chain.imm)) {
+            break;
+        }
+    }
+    const join = t_chain.k;
+    const j_ref = { "kind": "ref", "name": j_label };
+    t_chain.k = j_ref;
+    f_chain.k = j_ref;
+    return join;
+}
+
 function to_asm(crlf) {
     if (typeof crlf === "string") {
         return crlf;
@@ -802,11 +848,17 @@ function to_asm(crlf) {
         if (op === "if") {
             let t_label = "t~" + asm_label;
             let f_label = "f~" + asm_label;
+            let j_label = "j~" + asm_label;
             s += " " + t_label + " " + f_label + "\n";
+            const join = join_instr_chains(crlf.t, crlf.f, j_label);
             s += t_label + ":\n";
             s += to_asm(crlf.t);
             s += f_label + ":\n";
             s += to_asm(crlf.f);
+            if (join) {
+                s += j_label + ":\n";
+                s += to_asm(join);
+            }
         } else {
             if (op !== "depth") {
                 let imm = to_asm(crlf.imm);
@@ -817,7 +869,11 @@ function to_asm(crlf) {
             }
             s += "\n";
             if (op !== "end") {
-                s += to_asm(crlf.k);
+                if (crlf.k?.kind === "ref") {
+                    s += "    ref " + to_asm(crlf.k) + "\n";
+                } else {
+                    s += to_asm(crlf.k);
+                }
             }
         }
     } else if (kind === "literal") {
