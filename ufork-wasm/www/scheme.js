@@ -5,6 +5,8 @@
 
 // The intermediate representation is described in crlf.md.
 
+let asm_label = 0;  // used by `to_asm()`
+
 /*
  * uFork/CRLF elements
  */
@@ -553,7 +555,10 @@ function compile_sexpr(ctx, sexpr, k) {
                 return code;
             }
             if (name === "list") {
-                return compile_list(ctx, nth_sexpr(sexpr, -1), k);
+                return compile_list(ctx, sexpr, k);
+            }
+            if (name === "if") {
+                return compile_if(ctx, sexpr, k);
             }
         }
     }
@@ -562,22 +567,16 @@ function compile_sexpr(ctx, sexpr, k) {
         sexpr
     };
 }
-function compile_list(ctx, body, k) {
+function compile_list(ctx, sexpr, k) {
     if (k?.error) {
         return k;
     }
-    if (typeof body !== "object") {
-        return {
-            error: "can't compile list",
-            sexpr: body
-        };
-    }
+    let tail = sexpr?.tail;
     let args = [];
-    while (body?.kind === "pair") {
-        const head = body?.head;
-        const tail = body?.tail;
+    while (tail?.kind === "pair") {
+        const head = tail?.head;
         args.push(head);
-        body = tail;
+        tail = tail?.tail;
     }
     let n = args.length;
     let code = new_instr("pair", n, k);
@@ -723,6 +722,28 @@ function compile_SEND(ctx, sexpr, k) {
         sexpr
     };
 }
+function compile_if(ctx, sexpr, k) {
+    if (k?.error) {
+        return k;
+    }
+    const pred = nth_sexpr(sexpr, 2);
+    const cnsq = nth_sexpr(sexpr, 3);
+    const altn = nth_sexpr(sexpr, 4);
+    let code =
+        compile_sexpr(ctx, pred,
+        new_if_instr(
+            compile_sexpr(ctx, cnsq, k),
+            compile_sexpr(ctx, altn, k),
+        ));
+    console.log("compile_if:", "code:", code);
+    if (!code.error) {
+        return code;
+    }
+    return {
+        error: "can't compile `if`",
+        sexpr
+    };
+}
 
 function compile(source) {
     const str_in = string_input(source);
@@ -744,7 +765,8 @@ function compile(source) {
 //const module = compile(sample_source);
 //const module = compile("(define z 0)");
 //const module = compile("(define fn (lambda (x) 0 x y))");
-const module = compile("(define fn (lambda (x y z) (list z (cons y x)) SELF ))");
+//const module = compile("(define fn (lambda (x y z) (list z (cons y x)) SELF ))");
+const module = compile("(define fn (lambda (x y z) (if x (list y z) (cons y z)) ))");
 console.log(JSON.stringify(module, undefined, 2));
 console.log(to_asm(module));
 
@@ -762,6 +784,7 @@ function to_asm(crlf) {
     let s = "";
     const kind = crlf?.kind;
     if (kind === "module") {
+        asm_label = 1;
         for (const [name, value] of Object.entries(crlf.define)) {
             s += name + ":\n";
             let value = to_asm(crlf.define[name]);
@@ -776,16 +799,26 @@ function to_asm(crlf) {
             return op;
         }
         s += "    " + op;
-        if (op !== "depth") {
-            let imm = to_asm(crlf.imm);
-            if (imm?.error) {
-                return imm;
+        if (op === "if") {
+            let t_label = "t~" + asm_label;
+            let f_label = "f~" + asm_label;
+            s += " " + t_label + " " + f_label + "\n";
+            s += t_label + ":\n";
+            s += to_asm(crlf.t);
+            s += f_label + ":\n";
+            s += to_asm(crlf.f);
+        } else {
+            if (op !== "depth") {
+                let imm = to_asm(crlf.imm);
+                if (imm?.error) {
+                    return imm;
+                }
+                s += " " + imm;
             }
-            s += " " + imm;
-        }
-        s += "\n";
-        if (op !== "end") {
-            s += to_asm(crlf.k);
+            s += "\n";
+            if (op !== "end") {
+                s += to_asm(crlf.k);
+            }
         }
     } else if (kind === "literal") {
         const name = crlf.value;
@@ -821,6 +854,7 @@ function to_asm(crlf) {
     }
     return s;
 }
+
 // Tokenizer ///////////////////////////////////////////////////////////////////
 
 function tag_regexp(strings) {
