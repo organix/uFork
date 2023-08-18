@@ -499,6 +499,9 @@ function compile_sexpr(ctx, sexpr, k) {
     if (kind === "ref") {
         // symbolic reference
         const name = sexpr.name;
+        if (name === "SELF") {
+            return new_instr("my", "self", k);  // SELF reference
+        }
         const state_ref = ctx.state_map && ctx.state_map[name];
         if (state_ref) {
             return new_instr("state", state_ref, k);  // state reference
@@ -526,6 +529,32 @@ function compile_sexpr(ctx, sexpr, k) {
             if (name === "SEND") {
                 return compile_SEND(ctx, sexpr, k);
             }
+            if (name === "car") {
+                const second = nth_sexpr(sexpr, 2);
+                let code =
+                    compile_sexpr(ctx, second,      // (head . tail)
+                    new_instr("nth", 1, k));        // head
+                return code;
+            }
+            if (name === "cdr") {
+                const second = nth_sexpr(sexpr, 2);
+                let code =
+                    compile_sexpr(ctx, second,      // (head . tail)
+                    new_instr("nth", -1, k));       // tail
+                return code;
+            }
+            if (name === "cons") {
+                const head = nth_sexpr(sexpr, 2);
+                const tail = nth_sexpr(sexpr, 3);
+                let code =
+                    compile_sexpr(ctx, tail,        // tail
+                    compile_sexpr(ctx, head,        // tail head
+                    new_instr("pair", 1, k)));      // (head . tail)
+                return code;
+            }
+            if (name === "list") {
+                return compile_list(ctx, nth_sexpr(sexpr, -1), k);
+            }
         }
     }
     return {
@@ -533,46 +562,30 @@ function compile_sexpr(ctx, sexpr, k) {
         sexpr
     };
 }
-function compile_define(ctx, sexpr, k) {
+function compile_list(ctx, body, k) {
     if (k?.error) {
         return k;
     }
-    const second = nth_sexpr(sexpr, 2);
-    if (second?.kind === "ref") {
-        const name = second?.name;
-        const third = nth_sexpr(sexpr, 3);
-        const dfn = evaluate_sexpr(ctx, third);
-        if (dfn.error) {
-            return dfn;
-        }
-        console.log("compile_define:", name, "->", to_scheme(dfn));
-        ctx.define[name] = dfn;
-        return ctx;
+    if (typeof body !== "object") {
+        return {
+            error: "can't compile list",
+            sexpr: body
+        };
     }
-    return {
-        error: "can't compile `define`",
-        sexpr
-    };
-}
-function compile_body(ctx, body) {
-    let code = {
-        error: "can't compile body",
-        sexpr: body
-    };
-    if (equal_to(nil_lit, body)) {
-        code =
-            new_instr("msg", 1,             // msg cust
-            new_instr("send", -1,           // --
-            new_instr("end", "commit")));
-    } else if (body?.kind === "pair") {
+    let args = [];
+    while (body?.kind === "pair") {
         const head = body?.head;
         const tail = body?.tail;
-        code = compile_body(ctx, tail);
-        if (code.error) {
-            return code;
-        }
-        code = compile_sexpr(ctx, head, code);
+        args.push(head);
+        body = tail;
     }
+    let n = args.length;
+    let code = new_instr("pair", n, k);
+    while (n > 0) {
+        n -= 1;
+        code = compile_sexpr(ctx, args[n], code);
+    }
+    code = new_instr("push", nil_lit, code);
     return code;
 }
 function pattern_to_map(pattern) {
@@ -596,6 +609,48 @@ function pattern_to_map(pattern) {
         }
     }
     return map;
+}
+function compile_body(ctx, body) {
+    let code = {
+        error: "can't compile body",
+        sexpr: body
+    };
+    if (equal_to(nil_lit, body)) {
+        code =
+            new_instr("msg", 1,             // msg cust
+            new_instr("send", -1,           // --
+            new_instr("end", "commit")));
+    } else if (body?.kind === "pair") {
+        const head = body?.head;
+        const tail = body?.tail;
+        code = compile_body(ctx, tail);
+        if (code.error) {
+            return code;
+        }
+        code = compile_sexpr(ctx, head, code);
+    }
+    return code;
+}
+function compile_define(ctx, sexpr, k) {
+    if (k?.error) {
+        return k;
+    }
+    const second = nth_sexpr(sexpr, 2);
+    if (second?.kind === "ref") {
+        const name = second?.name;
+        const third = nth_sexpr(sexpr, 3);
+        const dfn = evaluate_sexpr(ctx, third);
+        if (dfn.error) {
+            return dfn;
+        }
+        console.log("compile_define:", name, "->", to_scheme(dfn));
+        ctx.define[name] = dfn;
+        return ctx;
+    }
+    return {
+        error: "can't compile `define`",
+        sexpr
+    };
 }
 function compile_lambda(ctx, sexpr, k) {
     if (k?.error) {
@@ -686,9 +741,10 @@ function compile(source) {
 //const module = compile(" `('foo (,bar ,@baz) . quux)\r\n");
 //const module = compile("(0 1 -1 #t #f #nil #? () . #unit)");
 //const module = compile("(if (< n 0) #f #t)");
-const module = compile(sample_source);
+//const module = compile(sample_source);
 //const module = compile("(define z 0)");
 //const module = compile("(define fn (lambda (x) 0 x y))");
+const module = compile("(define fn (lambda (x y z) (list z (cons y x)) SELF ))");
 console.log(JSON.stringify(module, undefined, 2));
 console.log(to_asm(module));
 
