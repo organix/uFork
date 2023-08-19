@@ -597,9 +597,8 @@ function compile_list(ctx, sexpr, k) {
     code = new_instr("push", nil_lit, code);
     return code;
 }
-function pattern_to_map(pattern) {
-    const map = {}; //Object.create(null);
-    let n = 0;
+function pattern_to_map(pattern, n = 0) {
+    const map = {};
     while (pattern?.kind === "pair") {
         n += 1;
         const head = pattern?.head;
@@ -755,11 +754,15 @@ function compile_if(ctx, sexpr, k) {
     };
 }
 
-function compile(source) {
+function parse(source) {
     const str_in = string_input(source);
     const lex_in = lex_input(str_in);
     const sexpr = parse_sexpr(lex_in);
-    console.log("compile", JSON.stringify(sexpr, undefined, 2));
+    console.log("parse", JSON.stringify(sexpr, undefined, 2));
+    return sexpr;
+}
+function compile(source) {
+    const sexpr = parse(source);
     const ctx = {
         kind: "module",
         define: {}
@@ -769,14 +772,83 @@ function compile(source) {
     return module;
 }
 
-//const module = compile(" `('foo (,bar ,@baz) . quux)\r\n");
-//const module = compile("(0 1 -1 #t #f #nil #? () . #unit)");
-//const module = compile("(if (< n 0) #f #t)");
-//const module = compile(sample_source);
-//const module = compile("(define z 0)");
-//const module = compile("(define fn (lambda (x) 0 x y))");
-//const module = compile("(define fn (lambda (x y z) (list z (cons y x)) SELF ))");
-const module = compile("(define fn (lambda (x y z) (if x (list y z) (cons y z)) ))");
+const top_level_ctx = {
+    "number": function(ctx, crlf) {
+        return crlf;
+    },
+    "string": function(ctx, crlf) {
+        return crlf;
+    },
+    "type": function(ctx, crlf) {
+        return crlf;
+    },
+    "literal": function(ctx, crlf) {
+        return crlf;
+    },
+    "ref": function(ctx, crlf) {
+        const name = crlf.name;
+        return ctx.env[name];
+    },
+    "pair": function(ctx, crlf) {
+        const head = crlf.head;
+        const tail = crlf.tail;
+        const kind = head?.kind;
+        if (kind === "ref") {
+            const name = head?.name;
+            if (name === "define") {
+                const symbol = nth_sexpr(tail, 1);
+                if (symbol?.kind === "ref") {
+                    const expr = nth_sexpr(tail, 2);
+                    const value = interpret(ctx, expr);
+                    ctx.env[symbol.name] = value;
+                    return unit_lit;
+                }
+            } else if (name === "lambda") {
+                const pattern = nth_sexpr(tail, 1);
+                const body = nth_sexpr(tail, -1);
+                return compile_lambda(ctx, crlf);  // FIXME: expand inline...
+            }
+        }
+    },
+    env: {}
+};
+
+function interpret(ctx, crlf) {
+    let transform;
+    const type = typeof crlf;
+    if (type !== "object") {
+        transform = ctx[type];
+    } else {
+        const kind = crlf.kind;
+        transform = ctx[kind];
+    }
+    if (typeof transform === "function") {
+        return transform(ctx, crlf);
+    }
+}
+
+function evaluate(source) {
+    const sexpr = parse(source);
+    const crlf = sexpr?.token;
+    console.log("evaluate crlf:", to_scheme(crlf));
+    interpret(top_level_ctx, crlf);
+    return {
+        kind: "module",
+        define: top_level_ctx.env
+    };
+}
+
+/*
+const sexpr = parse(" `('foo (,bar ,@baz) . quux)\r\n");
+//const sexpr = parse("(0 1 -1 #t #f #nil #? () . #unit)");
+//const sexpr = parse("(if (< n 0) #f #t)");
+console.log(to_scheme(sexpr?.token));
+*/
+//const module = evaluate(sample_source);
+//const module = evaluate("(define z 0)");
+//const module = evaluate("(define fn (lambda (x) 0 x y))");
+//const module = evaluate("(define fn (lambda (x y z) (list z (cons y x)) SELF ))");
+const module = evaluate("(define fn (lambda (x y z) (if x (list y z) (cons y z)) ))");
 console.log(JSON.stringify(module, undefined, 2));
 console.log(to_asm(module));
 
@@ -833,9 +905,8 @@ function to_asm(crlf) {
         asm_label = 1;
         for (const [name, value] of Object.entries(crlf.define)) {
             s += name + ":\n";
-            let value = to_asm(crlf.define[name]);
-            if (value?.error) {
-                return value;
+            if (value?.kind !== "instr") {
+                s += "    ";  // indent
             }
             s += to_asm(value);
         }
