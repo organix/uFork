@@ -916,6 +916,50 @@ const lambda_ctx = {
                 interpret(ctx, target,          // msg target
                 new_instr("send", -1, k)));     // --
             return code;
+        },
+        car: function(ctx, args, k) {
+            const pair = nth_sexpr(args, 1);
+            let code =
+                interpret(ctx, pair,            // (head . tail)
+                new_instr("nth", 1, k));        // head
+            return code;
+        },
+        cdr: function(ctx, args, k) {
+            const pair = nth_sexpr(args, 1);
+            let code =
+                interpret(ctx, pair,            // (head . tail)
+                new_instr("nth", -1, k));       // tail
+            return code;
+        },
+        cons: function(ctx, args, k) {
+            const head = nth_sexpr(args, 1);
+            const tail = nth_sexpr(args, 2);
+            let code =
+                interpret(ctx, tail,            // tail
+                interpret(ctx, head,            // tail head
+                new_instr("pair", 1, k)));      // (head . tail)
+            return code;
+        },
+/*
+        if (name === "if") {
+            return compile_if(ctx, sexpr, k);
+        }
+*/
+        list: function(ctx, args, k) {
+            let arg_stack = [];
+            while (args?.kind === "pair") {
+                const head = args?.head;
+                arg_stack.push(head);
+                args = args?.tail;
+            }
+            let n = arg_stack.length;
+            let code = new_instr("pair", n, k);
+            while (n > 0) {
+                n -= 1;
+                code = interpret(ctx, arg_stack[n], code);
+            }
+            code = new_instr("push", nil_lit, code);
+            return code;
         }
     },
     state_map: {},
@@ -952,7 +996,8 @@ const BEH_ctx = {
                 return xlat(ctx, args, k);
             }
             const parent = ctx.parent;
-            return parent.pair(parent, crlf, k);  // delegate to enclosing context
+            // delegate to enclosing context
+            return parent.pair(parent, crlf, k);  // FIXME: which context? `ctx` or `ctx.parent`? (or neither!?)
         }
         return {
             error: "interpretation failure",
@@ -1051,10 +1096,10 @@ console.log(to_scheme(sexpr?.token));
 //const module = evaluate("(define id (lambda (x) x))");
 //const module = evaluate("(define id (lambda (x . y) x))");
 //const module = evaluate("(define id (lambda (x y) y))");
-//const module = evaluate("(define fn (lambda (x) 0 x y))");
-//const module = evaluate("(define fn (lambda (x y z) (list z (cons y x)) SELF ))");
+//const module = evaluate("(define fn (lambda (x) 0 x y q.z))");
+const module = evaluate("(define fn (lambda (x y z) (list z (cons y x)) (car q) (cdr q) ))");
 //const module = evaluate("(define fn (lambda (x y z) (if x (list y z) (cons y z)) ))");
-const module = evaluate(sample_source);
+//const module = evaluate(sample_source);
 console.log(JSON.stringify(module, undefined, 2));
 if (!module?.error) {
     console.log(to_asm(module));
