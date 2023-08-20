@@ -114,42 +114,43 @@ function equal_to(expect, actual) {
 //    * symbol = { "kind": "ref", "name": <string> }
 //    * cons = { "kind": "pair", "head": <sexpr>, "tail": <sexpr> }
 //    * literal = { "kind": "literal", "name": <string> }
+//    * number = <number>
 //    * type = { "kind": "type", "name": <string> }
 
-function to_scheme(crlf) {
-    if (typeof crlf === "object") {
-        const kind = crlf.kind;
+function to_scheme(sexpr) {
+    if (typeof sexpr === "object") {
+        const kind = sexpr.kind;
         if (typeof kind === "string") {
             if (kind === "pair") {
                 let s = "(";
                 while (true) {
-                    s += to_scheme(crlf?.head);
-                    if (crlf?.tail?.kind !== "pair") {
+                    s += to_scheme(sexpr?.head);
+                    if (sexpr?.tail?.kind !== "pair") {
                         break;
                     }
-                    crlf = crlf?.tail;
+                    sexpr = sexpr?.tail;
                     s += " ";
                 }
-                if (!equal_to(nil_lit, crlf?.tail)) {
+                if (!equal_to(nil_lit, sexpr?.tail)) {
                     s += " . ";
-                    s += to_scheme(crlf?.tail);
+                    s += to_scheme(sexpr?.tail);
                 }
                 s += ")";
                 return s;
             } else if (kind === "dict") {
                 let s = "{";
                 while (true) {
-                    s += to_scheme(crlf?.key) + ":" + to_scheme(crlf?.value);
-                    if (crlf?.next?.kind !== "dict") {
+                    s += to_scheme(sexpr?.key) + ":" + to_scheme(sexpr?.value);
+                    if (sexpr?.next?.kind !== "dict") {
                         break;
                     }
-                    crlf = crlf?.next;
+                    sexpr = sexpr?.next;
                     s += ",";
                 }
                 s += "}";
                 return s;
             } else if (kind === "literal") {
-                const name = crlf?.value;
+                const name = sexpr?.value;
                 if (name === "undef") {
                     return "#?";
                 } else if (name === "nil") {
@@ -162,7 +163,7 @@ function to_scheme(crlf) {
                     return "#unit";
                 }
             } else if (kind === "type") {
-                const name = crlf?.name;
+                const name = sexpr?.name;
                 if (typeof name === "string") {
                     return "#" + name + "_t";
                 } else {
@@ -170,22 +171,22 @@ function to_scheme(crlf) {
                 }
             } else if (kind === "ref") {
                 let s = "";
-                const module = crlf?.module;
+                const module = sexpr?.module;
                 if (typeof module === "string") {
                     s += module + ".";
                 }
-                const name = crlf?.name;
+                const name = sexpr?.name;
                 if (typeof name === "string") {
                     s += name;
                     return s;
                 }
             } else if (kind === "instr") {
                 let s = "[#instr_t, ";
-                s += to_scheme(crlf?.op);
+                s += to_scheme(sexpr?.op);
                 s += ", ";
-                s += to_scheme(crlf?.imm);
+                s += to_scheme(sexpr?.imm);
                 s += ", ";
-                s += to_scheme(crlf?.k);
+                s += to_scheme(sexpr?.k);
                 s += "]";
                 return s;
             } else {
@@ -194,10 +195,10 @@ function to_scheme(crlf) {
         }
         return "#unknown";
     }
-    if (typeof crlf === "string") {
-        return JSON.stringify(crlf);  // quoted and escaped
+    if (typeof sexpr === "string") {
+        return JSON.stringify(sexpr);  // quoted and escaped
     }
-    return String(crlf);
+    return String(sexpr);
 }
 
 /*
@@ -795,7 +796,6 @@ function literal_value(ctx, crlf, k) {
 
 const module_ctx = {
     number: literal_value,
-    string: literal_value,
     type: literal_value,
     literal: literal_value,
     ref: function(ctx, crlf) {
@@ -831,8 +831,8 @@ const module_ctx = {
                 const body = nth_sexpr(args, -1);
                 console.log("lambda:", "ptrn:", to_scheme(ptrn));
                 console.log("lambda:", "body:", to_scheme(body));
-                const child = Object.assign(Object.create(ctx), lambda_ctx);
-                //child.parent = ctx;  // FIXME: prototype inheritence or delegation to parent?
+                const child = Object.assign({}, lambda_ctx);
+                child.parent = ctx;
                 child.msg_map = pattern_to_map(ptrn, 1);  // skip implicit customer
                 console.log("lambda:", "msg_map:", child.msg_map);
                 let code =
@@ -860,7 +860,6 @@ function push_literal(ctx, crlf, k) {
 
 const lambda_ctx = {
     number: push_literal,
-    string: push_literal,
     type: push_literal,
     literal: push_literal,
     ref: function(ctx, crlf, k) {
@@ -886,8 +885,8 @@ const lambda_ctx = {
                 const body = nth_sexpr(args, -1);
                 console.log("BEH:", "ptrn:", to_scheme(ptrn));
                 console.log("BEH:", "body:", to_scheme(body));
-                const child = Object.assign(Object.create(ctx), BEH_ctx);
-                //child.parent = ctx;  // FIXME: prototype inheritence or delegation to parent?
+                const child = Object.assign({}, BEH_ctx);
+                child.parent = ctx;
                 child.state_map = ctx.msg_map;
                 console.log("BEH:", "state_map:", child.state_map);
                 child.msg_map = pattern_to_map(ptrn);
@@ -895,6 +894,14 @@ const lambda_ctx = {
                 let code =
                     interpret_list(child, body,
                     new_instr("end", "commit"));
+                return code;
+            } else if (name === "SEND") {
+                const target = nth_sexpr(args, 1);
+                const msg = nth_sexpr(args, 2);
+                let code =
+                    interpret(ctx, msg,             // msg
+                    interpret(ctx, target,          // msg target
+                    new_instr("send", -1, k)));     // --
                 return code;
             }
         }
@@ -910,7 +917,6 @@ const lambda_ctx = {
 
 const BEH_ctx = {
     number: push_literal,
-    string: push_literal,
     type: push_literal,
     literal: push_literal,
     ref: function(ctx, crlf, k) {
@@ -940,16 +946,8 @@ const BEH_ctx = {
                     crlf,
                     ctx
                 };
-            } else if (name === "SEND") {
-                const target = nth_sexpr(args, 1);
-                const msg = nth_sexpr(args, 2);
-                let code =
-                    interpret(ctx, msg,             // msg
-                    interpret(ctx, target,          // msg target
-                    new_instr("send", -1, k)));     // --
-                return code;            
             }
-            //ctx.super.pair(ctx, crlf, k);  // FIXME: how do we access the enclosing context?
+            return ctx.parent.pair(ctx, crlf, k);  // delegate to enclosing context
         }
         return {
             error: "interpretation failure",
@@ -1026,26 +1024,27 @@ const sample_source = `
         (BEH (cust)
             (SEND cust value) )))`;
 
+/*
 //const sexpr = parse(" `('foo (,bar ,@baz) . quux)\r\n");
 //const sexpr = parse("(0 1 -1 #t #f #nil #? () . #unit)");
 //const sexpr = parse("(if (< n 0) #f #t)");
 const sexpr = parse("(lambda (x . y) x)");
 console.log(to_scheme(sexpr?.token));
-/*
+*/
 //const module = evaluate("(define z 0)");
 //const module = evaluate("(define nop (lambda _))");
 //const module = evaluate("(define list (lambda x x))");
 //const module = evaluate("(define id (lambda (x) x))");
-const module = evaluate("(define id (lambda (x . y) x))");
+//const module = evaluate("(define id (lambda (x . y) x))");
+//const module = evaluate("(define id (lambda (x y) y))");
 //const module = evaluate("(define fn (lambda (x) 0 x y))");
 //const module = evaluate("(define fn (lambda (x y z) (list z (cons y x)) SELF ))");
 //const module = evaluate("(define fn (lambda (x y z) (if x (list y z) (cons y z)) ))");
-//const module = evaluate(sample_source);
+const module = evaluate(sample_source);
 console.log(JSON.stringify(module, undefined, 2));
 if (!module?.error) {
     console.log(to_asm(module));
 }
-*/
 
 /*
  * Translation tools
