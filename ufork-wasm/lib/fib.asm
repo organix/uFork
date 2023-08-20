@@ -8,6 +8,12 @@
     dev: "./dev.asm"
     is_eq: "./testing/is_eq.asm"
 
+;; (define fib
+;;  (lambda (n)
+;;    (if (< n 2)
+;;      n
+;;      (+ (fib (- n 1)) (fib (- n 2))))))
+
 beh:
 fib_beh:                ; () <- (cust n)
     msg 2               ; n

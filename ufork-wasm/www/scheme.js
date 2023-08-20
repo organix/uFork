@@ -110,40 +110,46 @@ function equal_to(expect, actual) {
     return false;
 }
 
-function to_scheme(value) {
-    if (typeof value === "object") {
-        const kind = value.kind;
+// Scheme s-expressions (sexprs) are represented by uFork-ASM CRLF objects.
+//    * symbol = { "kind": "ref", "name": <string> }
+//    * cons = { "kind": "pair", "head": <sexpr>, "tail": <sexpr> }
+//    * literal = { "kind": "literal", "name": <string> }
+//    * type = { "kind": "type", "name": <string> }
+
+function to_scheme(crlf) {
+    if (typeof crlf === "object") {
+        const kind = crlf.kind;
         if (typeof kind === "string") {
             if (kind === "pair") {
                 let s = "(";
                 while (true) {
-                    s += to_scheme(value?.head);
-                    if (value?.tail?.kind !== "pair") {
+                    s += to_scheme(crlf?.head);
+                    if (crlf?.tail?.kind !== "pair") {
                         break;
                     }
-                    value = value?.tail;
+                    crlf = crlf?.tail;
                     s += " ";
                 }
-                if (!equal_to(nil_lit, value?.tail)) {
+                if (!equal_to(nil_lit, crlf?.tail)) {
                     s += " . ";
-                    s += to_scheme(value?.tail);
+                    s += to_scheme(crlf?.tail);
                 }
                 s += ")";
                 return s;
             } else if (kind === "dict") {
                 let s = "{";
                 while (true) {
-                    s += to_scheme(value?.key) + ":" + to_scheme(value?.value);
-                    if (value?.next?.kind !== "dict") {
+                    s += to_scheme(crlf?.key) + ":" + to_scheme(crlf?.value);
+                    if (crlf?.next?.kind !== "dict") {
                         break;
                     }
-                    value = value?.next;
+                    crlf = crlf?.next;
                     s += ",";
                 }
                 s += "}";
                 return s;
             } else if (kind === "literal") {
-                const name = value?.value;
+                const name = crlf?.value;
                 if (name === "undef") {
                     return "#?";
                 } else if (name === "nil") {
@@ -156,7 +162,7 @@ function to_scheme(value) {
                     return "#unit";
                 }
             } else if (kind === "type") {
-                const name = value?.name;
+                const name = crlf?.name;
                 if (typeof name === "string") {
                     return "#" + name + "_t";
                 } else {
@@ -164,22 +170,22 @@ function to_scheme(value) {
                 }
             } else if (kind === "ref") {
                 let s = "";
-                const module = value?.module;
+                const module = crlf?.module;
                 if (typeof module === "string") {
                     s += module + ".";
                 }
-                const name = value?.name;
+                const name = crlf?.name;
                 if (typeof name === "string") {
                     s += name;
                     return s;
                 }
             } else if (kind === "instr") {
                 let s = "[#instr_t, ";
-                s += to_scheme(value?.op);
+                s += to_scheme(crlf?.op);
                 s += ", ";
-                s += to_scheme(value?.imm);
+                s += to_scheme(crlf?.imm);
                 s += ", ";
-                s += to_scheme(value?.k);
+                s += to_scheme(crlf?.k);
                 s += "]";
                 return s;
             } else {
@@ -188,10 +194,10 @@ function to_scheme(value) {
         }
         return "#unknown";
     }
-    if (typeof value === "string") {
-        return JSON.stringify(value);  // quoted and escaped
+    if (typeof crlf === "string") {
+        return JSON.stringify(crlf);  // quoted and escaped
     }
-    return String(value);
+    return String(crlf);
 }
 
 /*
@@ -342,7 +348,15 @@ function parse_tail(next) {
         return input;
     }
     if (input.token === ".") {
-        return parse_sexpr(input.next);
+        let tail = parse_sexpr(input.next);
+        let scan = tail.next();
+        if (scan.token !== ')') {
+            scan.error = "expected ')'";
+            return scan;
+        }
+        tail.end = scan.end;
+        tail.next = scan.next;
+        return tail;
     }
     let scan = parse_sexpr(next);
     if (scan.error) {
@@ -779,12 +793,12 @@ function literal_value(ctx, crlf, k) {
     return crlf;
 }
 
-const top_level_ctx = {
-    "number": literal_value,
-    "string": literal_value,
-    "type": literal_value,
-    "literal": literal_value,
-    "ref": function(ctx, crlf) {
+const module_ctx = {
+    number: literal_value,
+    string: literal_value,
+    type: literal_value,
+    literal: literal_value,
+    ref: function(ctx, crlf) {
         const name = crlf.name;
         const value = ctx.env[name];
         if (value !== undefined) {
@@ -795,7 +809,7 @@ const top_level_ctx = {
             name
         };
     },
-    "pair": function(ctx, crlf, k) {
+    pair: function(ctx, crlf, k) {
         const func = nth_sexpr(crlf, 1);
         const args = nth_sexpr(crlf, -1);
         const kind = func?.kind;
@@ -845,11 +859,11 @@ function push_literal(ctx, crlf, k) {
 }
 
 const lambda_ctx = {
-    "number": push_literal,
-    "string": push_literal,
-    "type": push_literal,
-    "literal": push_literal,
-    "ref": function(ctx, crlf, k) {
+    number: push_literal,
+    string: push_literal,
+    type: push_literal,
+    literal: push_literal,
+    ref: function(ctx, crlf, k) {
         const name = crlf.name;
         const msg_n = ctx.msg_map[name];
         if (typeof msg_n === "number") {
@@ -861,7 +875,7 @@ const lambda_ctx = {
         let code = new_instr("push", crlf, k);
         return code;
     },
-    "pair": function(ctx, crlf, k) {
+    pair: function(ctx, crlf, k) {
         const func = crlf.head;
         const args = crlf.tail;
         const kind = func?.kind;
@@ -890,15 +904,16 @@ const lambda_ctx = {
             ctx
         };
     },
+    state_map: {},
     msg_map: {}
 };
 
 const BEH_ctx = {
-    "number": push_literal,
-    "string": push_literal,
-    "type": push_literal,
-    "literal": push_literal,
-    "ref": function(ctx, crlf, k) {
+    number: push_literal,
+    string: push_literal,
+    type: push_literal,
+    literal: push_literal,
+    ref: function(ctx, crlf, k) {
         const name = crlf.name;
         if (name === "SELF") {
             return new_instr("my", "self", k);  // SELF reference
@@ -913,7 +928,7 @@ const BEH_ctx = {
         }
         return new_instr("push", crlf, k);  // free variable
     },
-    "pair": function(ctx, crlf, k) {
+    pair: function(ctx, crlf, k) {
         const func = crlf.head;
         const args = crlf.tail;
         const kind = func?.kind;
@@ -995,13 +1010,13 @@ function evaluate(source) {
     const sexpr = parse(source);
     const crlf = sexpr?.token;
     console.log("evaluate crlf:", to_scheme(crlf));
-    const value = interpret(top_level_ctx, crlf);
+    const value = interpret(module_ctx, crlf);
     if (value?.error) {
         return value;
     }
     return {
         kind: "module",
-        define: top_level_ctx.env
+        define: module_ctx.env
     };
 }
 
@@ -1011,21 +1026,26 @@ const sample_source = `
         (BEH (cust)
             (SEND cust value) )))`;
 
-/*
-const sexpr = parse(" `('foo (,bar ,@baz) . quux)\r\n");
+//const sexpr = parse(" `('foo (,bar ,@baz) . quux)\r\n");
 //const sexpr = parse("(0 1 -1 #t #f #nil #? () . #unit)");
 //const sexpr = parse("(if (< n 0) #f #t)");
+const sexpr = parse("(lambda (x . y) x)");
 console.log(to_scheme(sexpr?.token));
-*/
+/*
 //const module = evaluate("(define z 0)");
+//const module = evaluate("(define nop (lambda _))");
+//const module = evaluate("(define list (lambda x x))");
+//const module = evaluate("(define id (lambda (x) x))");
+const module = evaluate("(define id (lambda (x . y) x))");
 //const module = evaluate("(define fn (lambda (x) 0 x y))");
 //const module = evaluate("(define fn (lambda (x y z) (list z (cons y x)) SELF ))");
 //const module = evaluate("(define fn (lambda (x y z) (if x (list y z) (cons y z)) ))");
-const module = evaluate(sample_source);
+//const module = evaluate(sample_source);
 console.log(JSON.stringify(module, undefined, 2));
 if (!module?.error) {
     console.log(to_asm(module));
 }
+*/
 
 /*
  * Translation tools
@@ -1081,7 +1101,7 @@ function to_asm(crlf) {
         for (const [name, value] of Object.entries(crlf.define)) {
             s += name + ":\n";
             if (value?.kind !== "instr") {
-                s += "    ";  // indent
+                s += "    ref ";  // indent
             }
             s += to_asm(value);
         }
