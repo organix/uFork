@@ -582,7 +582,7 @@ const module_ctx = {
             }
         }
         return {
-            error: "interpretation failure",
+            error: "no interpretation",
             crlf,
             ctx
         };
@@ -623,97 +623,20 @@ const lambda_ctx = {
             }
         }
         return {
-            error: "interpretation failure",
+            error: "no translation",
             crlf,
             ctx
         };
     },
     func: {
-        BEH: function(ctx, args, k) {
-            const ptrn = nth_sexpr(args, 1);
-            const body = nth_sexpr(args, -1);
-            console.log("BEH:", "ptrn:", to_scheme(ptrn));
-            console.log("BEH:", "body:", to_scheme(body));
-            const child = Object.assign({}, BEH_ctx);
-            child.parent = ctx;
-            child.state_map = ctx.msg_map;
-            console.log("BEH:", "state_map:", child.state_map);
-            child.msg_map = pattern_to_map(ptrn);
-            console.log("BEH:", "msg_map:", child.msg_map);
-            let code =
-                interpret_list(child, body,
-                new_instr("end", "commit"));
-            return code;
-        },
-        SEND: function(ctx, args, k) {
-            const target = nth_sexpr(args, 1);
-            const msg = nth_sexpr(args, 2);
-            let code =
-                interpret(ctx, msg,             // msg
-                interpret(ctx, target,          // msg target
-                new_instr("send", -1, k)));     // --
-            return code;
-        },
-        car: function(ctx, args, k) {
-            const pair = nth_sexpr(args, 1);
-            let code =
-                interpret(ctx, pair,            // (head . tail)
-                new_instr("nth", 1, k));        // head
-            return code;
-        },
-        cdr: function(ctx, args, k) {
-            const pair = nth_sexpr(args, 1);
-            let code =
-                interpret(ctx, pair,            // (head . tail)
-                new_instr("nth", -1, k));       // tail
-            return code;
-        },
-        cons: function(ctx, args, k) {
-            const head = nth_sexpr(args, 1);
-            const tail = nth_sexpr(args, 2);
-            let code =
-                interpret(ctx, tail,            // tail
-                interpret(ctx, head,            // tail head
-                new_instr("pair", 1, k)));      // (head . tail)
-            return code;
-        },
-        list: function(ctx, args, k) {
-            let arg_stack = [];
-            while (args?.kind === "pair") {
-                const head = args?.head;
-                arg_stack.push(head);
-                args = args?.tail;
-            }
-            let n = arg_stack.length;
-            console.log("list:", arg_stack);
-            let code = new_instr("pair", n, k);
-            arg_stack.forEach(function (expr) {
-                code = interpret(ctx, expr, code);
-            });
-            code = new_instr("push", nil_lit, code);
-            return code;
-        },
-        "eq?": function(ctx, args, k) {
-            const expect = nth_sexpr(args, 1);
-            const actual = nth_sexpr(args, 2);
-            let code =
-                interpret(ctx, actual,
-                interpret(ctx, expect,
-                new_instr("cmp", "eq", k)));
-            return code;
-        },
-        if: function(ctx, args, k) {
-            const pred = nth_sexpr(args, 1);
-            const cnsq = nth_sexpr(args, 2);
-            const altn = nth_sexpr(args, 3);
-            let code =
-                interpret(ctx, pred,
-                new_if_instr(
-                    interpret(ctx, cnsq, k),
-                    interpret(ctx, altn, k),
-                ));
-            return code;
-        }
+        BEH: xlat_BEH,
+        SEND: xlat_SEND,
+        car: xlat_car,
+        cdr: xlat_cdr,
+        cons: xlat_cons,
+        list: xlat_list,
+        "eq?": xlat_eq,
+        if: xlat_if
     },
     state_map: {},
     msg_map: {}
@@ -748,28 +671,122 @@ const BEH_ctx = {
             if (typeof xlat === "function") {
                 return xlat(ctx, args, k);
             }
-            const parent = ctx.parent;
-            // delegate to enclosing context
-            return parent.pair(parent, crlf, k);  // FIXME: which context? `ctx` or `ctx.parent`? (or neither!?)
         }
         return {
-            error: "interpretation failure",
+            error: "no translation",
             crlf,
             ctx
         };
     },
     func: {
-        BECOME: function(ctx, args, k) {
-            return {
-                error: "not implemented",
-                crlf,
-                ctx
-            };
-        }
+        BECOME: xlat_not_implemented
     },
     state_map: {},
     msg_map: {}
 };
+
+function xlat_BEH(ctx, args, k) {
+    const ptrn = nth_sexpr(args, 1);
+    const body = nth_sexpr(args, -1);
+    console.log("BEH:", "ptrn:", to_scheme(ptrn));
+    console.log("BEH:", "body:", to_scheme(body));
+    const child = Object.assign({}, BEH_ctx);
+    child.parent = ctx;
+    child.state_map = ctx.msg_map;
+    console.log("BEH:", "state_map:", child.state_map);
+    child.msg_map = pattern_to_map(ptrn);
+    console.log("BEH:", "msg_map:", child.msg_map);
+    const func = Object.assign({}, ctx.func);
+    child.func = Object.assign(func, child.func);
+    let code =
+        interpret_list(child, body,
+        new_instr("end", "commit"));
+    return code;
+}
+
+function xlat_SEND(ctx, args, k) {
+    const target = nth_sexpr(args, 1);
+    const msg = nth_sexpr(args, 2);
+    let code =
+        interpret(ctx, msg,             // msg
+        interpret(ctx, target,          // msg target
+        new_instr("send", -1, k)));     // --
+    return code;
+}
+
+function xlat_car(ctx, args, k) {
+    const pair = nth_sexpr(args, 1);
+    let code =
+        interpret(ctx, pair,            // (head . tail)
+        new_instr("nth", 1, k));        // head
+    return code;
+}
+
+function xlat_cdr(ctx, args, k) {
+    const pair = nth_sexpr(args, 1);
+    let code =
+        interpret(ctx, pair,            // (head . tail)
+        new_instr("nth", -1, k));       // tail
+    return code;
+}
+
+function xlat_cons(ctx, args, k) {
+    const head = nth_sexpr(args, 1);
+    const tail = nth_sexpr(args, 2);
+    let code =
+        interpret(ctx, tail,            // tail
+        interpret(ctx, head,            // tail head
+        new_instr("pair", 1, k)));      // (head . tail)
+    return code;
+}
+
+function xlat_list(ctx, args, k) {
+    let arg_stack = [];
+    while (args?.kind === "pair") {
+        const head = args?.head;
+        arg_stack.push(head);
+        args = args?.tail;
+    }
+    let n = arg_stack.length;
+    console.log("list:", arg_stack);
+    let code = new_instr("pair", n, k);
+    arg_stack.forEach(function (expr) {
+        code = interpret(ctx, expr, code);
+    });
+    code = new_instr("push", nil_lit, code);
+    return code;
+}
+
+function xlat_eq(ctx, args, k) {
+    const expect = nth_sexpr(args, 1);
+    const actual = nth_sexpr(args, 2);
+    let code =
+        interpret(ctx, actual,
+        interpret(ctx, expect,
+        new_instr("cmp", "eq", k)));
+    return code;
+}
+
+function xlat_if(ctx, args, k) {
+    const pred = nth_sexpr(args, 1);
+    const cnsq = nth_sexpr(args, 2);
+    const altn = nth_sexpr(args, 3);
+    let code =
+        interpret(ctx, pred,
+        new_if_instr(
+            interpret(ctx, cnsq, k),
+            interpret(ctx, altn, k),
+        ));
+    return code;
+}
+
+function xlat_not_implemented(ctx, args, k) {
+    return {
+        error: "not implemented",
+        crlf,
+        ctx
+    };
+}
 
 function interpret(ctx, crlf, k) {
     if (k?.error) {
@@ -851,8 +868,8 @@ console.log(to_scheme(sexpr?.token));
 //const module = evaluate("(define id (lambda (x y) y))");
 //const module = evaluate("(define fn (lambda (x) 0 x y q.z))");
 //const module = evaluate("(define fn (lambda (x y z) (list z (cons y x)) (car q) (cdr q) ))");
-const module = evaluate("(define fn (lambda (x y z) (if (eq? x -1) (list z y x) (cons y z)) ))");
-//const module = evaluate(sample_source);
+//const module = evaluate("(define fn (lambda (x y z) (if (eq? x -1) (list z y x) (cons y z)) ))");
+const module = evaluate(sample_source);
 console.log(JSON.stringify(module, undefined, 2));
 if (!module?.error) {
     console.log(to_asm(module));
