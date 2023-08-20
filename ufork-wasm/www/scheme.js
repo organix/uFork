@@ -880,29 +880,9 @@ const lambda_ctx = {
         const kind = func?.kind;
         if (kind === "ref") {
             const name = func?.name;
-            if (name === "BEH") {
-                const ptrn = nth_sexpr(args, 1);
-                const body = nth_sexpr(args, -1);
-                console.log("BEH:", "ptrn:", to_scheme(ptrn));
-                console.log("BEH:", "body:", to_scheme(body));
-                const child = Object.assign({}, BEH_ctx);
-                child.parent = ctx;
-                child.state_map = ctx.msg_map;
-                console.log("BEH:", "state_map:", child.state_map);
-                child.msg_map = pattern_to_map(ptrn);
-                console.log("BEH:", "msg_map:", child.msg_map);
-                let code =
-                    interpret_list(child, body,
-                    new_instr("end", "commit"));
-                return code;
-            } else if (name === "SEND") {
-                const target = nth_sexpr(args, 1);
-                const msg = nth_sexpr(args, 2);
-                let code =
-                    interpret(ctx, msg,             // msg
-                    interpret(ctx, target,          // msg target
-                    new_instr("send", -1, k)));     // --
-                return code;
+            const xlat = ctx.func[name];
+            if (typeof xlat === "function") {
+                return xlat(ctx, args, k);
             }
         }
         return {
@@ -910,6 +890,33 @@ const lambda_ctx = {
             crlf,
             ctx
         };
+    },
+    func: {
+        BEH: function(ctx, args, k) {
+            const ptrn = nth_sexpr(args, 1);
+            const body = nth_sexpr(args, -1);
+            console.log("BEH:", "ptrn:", to_scheme(ptrn));
+            console.log("BEH:", "body:", to_scheme(body));
+            const child = Object.assign({}, BEH_ctx);
+            child.parent = ctx;
+            child.state_map = ctx.msg_map;
+            console.log("BEH:", "state_map:", child.state_map);
+            child.msg_map = pattern_to_map(ptrn);
+            console.log("BEH:", "msg_map:", child.msg_map);
+            let code =
+                interpret_list(child, body,
+                new_instr("end", "commit"));
+            return code;
+        },
+        SEND: function(ctx, args, k) {
+            const target = nth_sexpr(args, 1);
+            const msg = nth_sexpr(args, 2);
+            let code =
+                interpret(ctx, msg,             // msg
+                interpret(ctx, target,          // msg target
+                new_instr("send", -1, k)));     // --
+            return code;
+        }
     },
     state_map: {},
     msg_map: {}
@@ -940,20 +947,27 @@ const BEH_ctx = {
         const kind = func?.kind;
         if (kind === "ref") {
             const name = func?.name;
-            if (name === "BECOME") {
-                return {
-                    error: "not implemented",
-                    crlf,
-                    ctx
-                };
+            const xlat = ctx.func[name];
+            if (typeof xlat === "function") {
+                return xlat(ctx, args, k);
             }
-            return ctx.parent.pair(ctx, crlf, k);  // delegate to enclosing context
+            const parent = ctx.parent;
+            return parent.pair(parent, crlf, k);  // delegate to enclosing context
         }
         return {
             error: "interpretation failure",
             crlf,
             ctx
         };
+    },
+    func: {
+        BECOME: function(ctx, args, k) {
+            return {
+                error: "not implemented",
+                crlf,
+                ctx
+            };
+        }
     },
     state_map: {},
     msg_map: {}
