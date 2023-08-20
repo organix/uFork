@@ -460,6 +460,10 @@ function parse_sexpr(next) {
     return input;
 }
 
+/*
+ * Scheme interpreter/compiler
+ */
+
 // Return the 'nth' item from a list of pairs, if defined.
 //
 //           0          -1          -2          -3
@@ -483,138 +487,6 @@ function nth_sexpr(sexpr, n) {
     }
 }
 
-function evaluate_sexpr(ctx, sexpr) {
-    if (typeof sexpr === "number") {
-        // numeric constant
-        return sexpr;
-    }
-    let kind = sexpr?.kind;
-    if (kind === "type"
-    ||  kind === "literal") {
-        // type constant or literal value
-        return sexpr;
-    }
-    if (kind === "pair") {
-        const first = nth_sexpr(sexpr, 1);
-        const kind = first?.kind;
-        if (kind === "ref") {
-            const name = first?.name;
-            if (name === "lambda") {
-                return compile_lambda(ctx, sexpr);
-            }
-            if (name === "BEH") {
-                return compile_BEH(ctx, sexpr);
-            }
-        }
-    }
-    return {
-        error: "can't compile sexpr",
-        sexpr
-    };
-}
-function compile_sexpr(ctx, sexpr, k) {
-    if (k?.error) {
-        return k;
-    }
-    if (typeof sexpr === "number") {
-        // numeric constant
-        return new_instr("push", sexpr, k);
-    }
-    let kind = sexpr?.kind;
-    if (kind === "type"
-    ||  kind === "literal") {
-        // constant or literal
-        return new_instr("push", sexpr, k);
-    }
-    if (kind === "ref") {
-        // symbolic reference
-        const name = sexpr.name;
-        if (name === "SELF") {
-            return new_instr("my", "self", k);  // SELF reference
-        }
-        const state_ref = ctx.state_map && ctx.state_map[name];
-        if (state_ref) {
-            return new_instr("state", state_ref, k);  // state reference
-        }
-        const msg_ref = ctx.msg_map && ctx.msg_map[name];
-        if (msg_ref) {
-            return new_instr("msg", msg_ref, k);  // message reference
-        }
-        return new_instr("push", sexpr, k);  // free variable
-    }
-    if (kind === "pair") {
-        const first = nth_sexpr(sexpr, 1);
-        kind = first?.kind;
-        if (kind === "ref") {
-            const name = first?.name;
-            if (name === "define") {
-                return compile_define(ctx, sexpr, k);
-            }
-            if (name === "lambda") {
-                return compile_lambda(ctx, sexpr, k);
-            }
-            if (name === "BEH") {
-                return compile_BEH(ctx, sexpr, k);
-            }
-            if (name === "SEND") {
-                return compile_SEND(ctx, sexpr, k);
-            }
-            if (name === "car") {
-                const second = nth_sexpr(sexpr, 2);
-                let code =
-                    compile_sexpr(ctx, second,      // (head . tail)
-                    new_instr("nth", 1, k));        // head
-                return code;
-            }
-            if (name === "cdr") {
-                const second = nth_sexpr(sexpr, 2);
-                let code =
-                    compile_sexpr(ctx, second,      // (head . tail)
-                    new_instr("nth", -1, k));       // tail
-                return code;
-            }
-            if (name === "cons") {
-                const head = nth_sexpr(sexpr, 2);
-                const tail = nth_sexpr(sexpr, 3);
-                let code =
-                    compile_sexpr(ctx, tail,        // tail
-                    compile_sexpr(ctx, head,        // tail head
-                    new_instr("pair", 1, k)));      // (head . tail)
-                return code;
-            }
-            if (name === "list") {
-                return compile_list(ctx, sexpr, k);
-            }
-            if (name === "if") {
-                return compile_if(ctx, sexpr, k);
-            }
-        }
-    }
-    return {
-        error: "can't compile sexpr",
-        sexpr
-    };
-}
-function compile_list(ctx, sexpr, k) {
-    if (k?.error) {
-        return k;
-    }
-    let tail = sexpr?.tail;
-    let args = [];
-    while (tail?.kind === "pair") {
-        const head = tail?.head;
-        args.push(head);
-        tail = tail?.tail;
-    }
-    let n = args.length;
-    let code = new_instr("pair", n, k);
-    while (n > 0) {
-        n -= 1;
-        code = compile_sexpr(ctx, args[n], code);
-    }
-    code = new_instr("push", nil_lit, code);
-    return code;
-}
 function pattern_to_map(pattern, n = 0) {
     const map = {};
     while (pattern?.kind === "pair") {
@@ -635,141 +507,6 @@ function pattern_to_map(pattern, n = 0) {
         }
     }
     return map;
-}
-function compile_body(ctx, body) {
-    let code = {
-        error: "can't compile body",
-        sexpr: body
-    };
-    if (equal_to(nil_lit, body)) {
-        code =
-            new_instr("msg", 1,             // msg cust
-            new_instr("send", -1,           // --
-            new_instr("end", "commit")));
-    } else if (body?.kind === "pair") {
-        const head = body?.head;
-        const tail = body?.tail;
-        code = compile_body(ctx, tail);
-        if (code.error) {
-            return code;
-        }
-        code = compile_sexpr(ctx, head, code);
-    }
-    return code;
-}
-function compile_define(ctx, sexpr, k) {
-    if (k?.error) {
-        return k;
-    }
-    const second = nth_sexpr(sexpr, 2);
-    if (second?.kind === "ref") {
-        const name = second?.name;
-        const third = nth_sexpr(sexpr, 3);
-        const dfn = evaluate_sexpr(ctx, third);
-        if (dfn.error) {
-            return dfn;
-        }
-        console.log("compile_define:", name, "->", to_scheme(dfn));
-        ctx.define[name] = dfn;
-        return ctx;
-    }
-    return {
-        error: "can't compile `define`",
-        sexpr
-    };
-}
-function compile_lambda(ctx, sexpr, k) {
-    if (k?.error) {
-        return k;
-    }
-    const second = nth_sexpr(sexpr, 2);
-    console.log("compile_lambda:", "ptrn:", to_scheme(second));
-    const state_map = pattern_to_map(second);
-    console.log("compile_lambda:", "state_map:", state_map);
-    const body = nth_sexpr(sexpr, -2);
-    console.log("compile_lambda:", "body:", body);
-    ctx = {
-        state_map: state_map,
-        parent: ctx
-    };
-    let code = compile_body(ctx, body);
-    if (code.error) {
-        return code;
-    }
-    code = new_instr("push", unit_lit, code);  // #unit
-    console.log("compile_lambda:", "code:", code);
-    if (!code.error) {
-        return code;
-    }
-    return {
-        error: "can't compile `lambda`",
-        sexpr
-    };
-}
-function compile_BEH(ctx, sexpr, k) {
-    if (k?.error) {
-        return k;
-    }
-    const second = nth_sexpr(sexpr, 2);
-    console.log("compile_BEH:", "ptrn:", to_scheme(second));
-    const msg_map = pattern_to_map(second);
-    console.log("compile_BEH:", "msg_map:", msg_map);
-    const body = nth_sexpr(sexpr, -2);
-    console.log("compile_BEH:", "body:", body);
-    ctx.msg_map = msg_map;
-    let code = compile_body(ctx, body);
-    if (code.error) {
-        return code;
-    }
-    console.log("compile_BEH:", "code:", code);
-    if (!code.error) {
-        return code;
-    }
-    return {
-        error: "can't compile `BEH`",
-        sexpr
-    };
-}
-function compile_SEND(ctx, sexpr, k) {
-    if (k?.error) {
-        return k;
-    }
-    const second = nth_sexpr(sexpr, 2);
-    const third = nth_sexpr(sexpr, 3);
-    let code =
-        compile_sexpr(ctx, third,       // msg
-        compile_sexpr(ctx, second,      // msg target
-        new_instr("send", -1, k)));     // --
-    console.log("compile_SEND:", "code:", code);
-    if (!code.error) {
-        return code;
-    }
-    return {
-        error: "can't compile `SEND`",
-        sexpr
-    };
-}
-function compile_if(ctx, sexpr, k) {
-    if (k?.error) {
-        return k;
-    }
-    const pred = nth_sexpr(sexpr, 2);
-    const cnsq = nth_sexpr(sexpr, 3);
-    const altn = nth_sexpr(sexpr, 4);
-    let code =
-        compile_sexpr(ctx, pred,
-        new_if_instr(
-            compile_sexpr(ctx, cnsq, k),
-            compile_sexpr(ctx, altn, k),
-        ));
-    console.log("compile_if:", "code:", code);
-    if (!code.error) {
-        return code;
-    }
-    return {
-        error: "can't compile `if`",
-        sexpr
-    };
 }
 
 function parse(source) {
@@ -940,11 +677,6 @@ const lambda_ctx = {
                 new_instr("pair", 1, k)));      // (head . tail)
             return code;
         },
-/*
-        if (name === "if") {
-            return compile_if(ctx, sexpr, k);
-        }
-*/
         list: function(ctx, args, k) {
             let arg_stack = [];
             while (args?.kind === "pair") {
@@ -953,12 +685,33 @@ const lambda_ctx = {
                 args = args?.tail;
             }
             let n = arg_stack.length;
+            console.log("list:", arg_stack);
             let code = new_instr("pair", n, k);
-            while (n > 0) {
-                n -= 1;
-                code = interpret(ctx, arg_stack[n], code);
-            }
+            arg_stack.forEach(function (expr) {
+                code = interpret(ctx, expr, code);
+            });
             code = new_instr("push", nil_lit, code);
+            return code;
+        },
+        "eq?": function(ctx, args, k) {
+            const expect = nth_sexpr(args, 1);
+            const actual = nth_sexpr(args, 2);
+            let code =
+                interpret(ctx, actual,
+                interpret(ctx, expect,
+                new_instr("cmp", "eq", k)));
+            return code;
+        },
+        if: function(ctx, args, k) {
+            const pred = nth_sexpr(args, 1);
+            const cnsq = nth_sexpr(args, 2);
+            const altn = nth_sexpr(args, 3);
+            let code =
+                interpret(ctx, pred,
+                new_if_instr(
+                    interpret(ctx, cnsq, k),
+                    interpret(ctx, altn, k),
+                ));
             return code;
         }
     },
@@ -1041,16 +794,16 @@ function interpret(ctx, crlf, k) {
     };
 }
 
-function interpret_list(ctx, body, k) {
+function interpret_list(ctx, list, k) {
     if (k?.error) {
         return k;
     }
-    if (equal_to(nil_lit, body)) {
+    if (equal_to(nil_lit, list)) {
         console.log("interpret_list () k:", k);
         return k;
-    } else if (body?.kind === "pair") {
-        const head = body?.head;
-        const tail = body?.tail;
+    } else if (list?.kind === "pair") {
+        const head = list?.head;
+        const tail = list?.tail;
         console.log("interpret_list (h . t) h:", head);
         let code =
             interpret(ctx, head,
@@ -1059,7 +812,7 @@ function interpret_list(ctx, body, k) {
     }
     return {
         error: "list expected",
-        body
+        body: list
     };
 }
 
@@ -1097,8 +850,8 @@ console.log(to_scheme(sexpr?.token));
 //const module = evaluate("(define id (lambda (x . y) x))");
 //const module = evaluate("(define id (lambda (x y) y))");
 //const module = evaluate("(define fn (lambda (x) 0 x y q.z))");
-const module = evaluate("(define fn (lambda (x y z) (list z (cons y x)) (car q) (cdr q) ))");
-//const module = evaluate("(define fn (lambda (x y z) (if x (list y z) (cons y z)) ))");
+//const module = evaluate("(define fn (lambda (x y z) (list z (cons y x)) (car q) (cdr q) ))");
+const module = evaluate("(define fn (lambda (x y z) (if (eq? x -1) (list z y x) (cons y z)) ))");
 //const module = evaluate(sample_source);
 console.log(JSON.stringify(module, undefined, 2));
 if (!module?.error) {
