@@ -39,10 +39,19 @@ function new_dict(key, value, next = nil_lit) {
 }
 
 function new_instr(op, imm = undef_lit, k = undef_lit) {
+    if (k?.error) {
+        return k;
+    }
     return { "kind": "instr", op, imm, k };
 }
 
 function new_if_instr(t = undef_lit, f = undef_lit) {
+    if (t?.error) {
+        return t;
+    }
+    if (f?.error) {
+        return f;
+    }
     return { "kind": "instr", "op": "if", t, f };
 }
 
@@ -459,12 +468,6 @@ function nth_sexpr(sexpr, n) {
     }
 }
 
-const sample_source = `
-(define memo_beh
-    (lambda (value)
-        (BEH (cust . _)
-            (SEND cust value) )))`;
-
 function evaluate_sexpr(ctx, sexpr) {
     if (typeof sexpr === "number") {
         // numeric constant
@@ -772,48 +775,181 @@ function compile(source) {
     return module;
 }
 
+function literal_value(ctx, crlf, k) {
+    return crlf;
+}
+
 const top_level_ctx = {
-    "number": function(ctx, crlf) {
-        return crlf;
-    },
-    "string": function(ctx, crlf) {
-        return crlf;
-    },
-    "type": function(ctx, crlf) {
-        return crlf;
-    },
-    "literal": function(ctx, crlf) {
-        return crlf;
-    },
+    "number": literal_value,
+    "string": literal_value,
+    "type": literal_value,
+    "literal": literal_value,
     "ref": function(ctx, crlf) {
         const name = crlf.name;
-        return ctx.env[name];
+        const value = ctx.env[name];
+        if (value !== undefined) {
+            return value;
+        }
+        return {
+            error: "undefined variable",
+            name
+        };
     },
-    "pair": function(ctx, crlf) {
-        const head = crlf.head;
-        const tail = crlf.tail;
-        const kind = head?.kind;
+    "pair": function(ctx, crlf, k) {
+        const func = nth_sexpr(crlf, 1);
+        const args = nth_sexpr(crlf, -1);
+        const kind = func?.kind;
         if (kind === "ref") {
-            const name = head?.name;
+            const name = func?.name;
             if (name === "define") {
-                const symbol = nth_sexpr(tail, 1);
+                const symbol = nth_sexpr(args, 1);
                 if (symbol?.kind === "ref") {
-                    const expr = nth_sexpr(tail, 2);
+                    const expr = nth_sexpr(args, 2);
                     const value = interpret(ctx, expr);
+                    if (value?.error) {
+                        return value;
+                    }
                     ctx.env[symbol.name] = value;
                     return unit_lit;
                 }
             } else if (name === "lambda") {
-                const pattern = nth_sexpr(tail, 1);
-                const body = nth_sexpr(tail, -1);
-                return compile_lambda(ctx, crlf);  // FIXME: expand inline...
+                const ptrn = nth_sexpr(args, 1);
+                const body = nth_sexpr(args, -1);
+                console.log("lambda:", "ptrn:", to_scheme(ptrn));
+                console.log("lambda:", "body:", to_scheme(body));
+                const child = Object.assign(Object.create(ctx), lambda_ctx);
+                //child.parent = ctx;  // FIXME: prototype inheritence or delegation to parent?
+                child.msg_map = pattern_to_map(ptrn, 1);  // skip implicit customer
+                console.log("lambda:", "msg_map:", child.msg_map);
+                let code =
+                    new_instr("push", unit_lit,     // #unit
+                    interpret_list(child, body,
+                    new_instr("msg", 1,             // msg cust
+                    new_instr("send", -1,           // --
+                    new_instr("end", "commit")))));
+                return code;
             }
         }
+        return {
+            error: "interpretation failure",
+            crlf,
+            ctx
+        };
     },
     env: {}
 };
 
-function interpret(ctx, crlf) {
+function push_literal(ctx, crlf, k) {
+    let code = new_instr("push", crlf, k);
+    return code;
+}
+
+const lambda_ctx = {
+    "number": push_literal,
+    "string": push_literal,
+    "type": push_literal,
+    "literal": push_literal,
+    "ref": function(ctx, crlf, k) {
+        const name = crlf.name;
+        const msg_n = ctx.msg_map[name];
+        if (typeof msg_n === "number") {
+            // message variable
+            let code = new_instr("msg", msg_n, k);
+            return code;
+        }
+        // free variable
+        let code = new_instr("push", crlf, k);
+        return code;
+    },
+    "pair": function(ctx, crlf, k) {
+        const func = crlf.head;
+        const args = crlf.tail;
+        const kind = func?.kind;
+        if (kind === "ref") {
+            const name = func?.name;
+            if (name === "BEH") {
+                const ptrn = nth_sexpr(args, 1);
+                const body = nth_sexpr(args, -1);
+                console.log("BEH:", "ptrn:", to_scheme(ptrn));
+                console.log("BEH:", "body:", to_scheme(body));
+                const child = Object.assign(Object.create(ctx), BEH_ctx);
+                //child.parent = ctx;  // FIXME: prototype inheritence or delegation to parent?
+                child.state_map = ctx.msg_map;
+                console.log("BEH:", "state_map:", child.state_map);
+                child.msg_map = pattern_to_map(ptrn);
+                console.log("BEH:", "msg_map:", child.msg_map);
+                let code =
+                    interpret_list(child, body,
+                    new_instr("end", "commit"));
+                return code;
+            }
+        }
+        return {
+            error: "interpretation failure",
+            crlf,
+            ctx
+        };
+    },
+    msg_map: {}
+};
+
+const BEH_ctx = {
+    "number": push_literal,
+    "string": push_literal,
+    "type": push_literal,
+    "literal": push_literal,
+    "ref": function(ctx, crlf, k) {
+        const name = crlf.name;
+        if (name === "SELF") {
+            return new_instr("my", "self", k);  // SELF reference
+        }
+        const msg_n = ctx.msg_map[name];
+        if (typeof msg_n === "number") {
+            return new_instr("msg", msg_n, k);  // message variable
+        }
+        const state_n = ctx.state_map[name];
+        if (typeof state_n === "number") {
+            return new_instr("state", state_n, k);  // state variable
+        }
+        return new_instr("push", crlf, k);  // free variable
+    },
+    "pair": function(ctx, crlf, k) {
+        const func = crlf.head;
+        const args = crlf.tail;
+        const kind = func?.kind;
+        if (kind === "ref") {
+            const name = func?.name;
+            if (name === "BECOME") {
+                return {
+                    error: "not implemented",
+                    crlf,
+                    ctx
+                };
+            } else if (name === "SEND") {
+                const target = nth_sexpr(args, 1);
+                const msg = nth_sexpr(args, 2);
+                let code =
+                    interpret(ctx, msg,             // msg
+                    interpret(ctx, target,          // msg target
+                    new_instr("send", -1, k)));     // --
+                return code;            
+            }
+            //ctx.super.pair(ctx, crlf, k);  // FIXME: how do we access the enclosing context?
+        }
+        return {
+            error: "interpretation failure",
+            crlf,
+            ctx
+        };
+    },
+    state_map: {},
+    msg_map: {}
+};
+
+function interpret(ctx, crlf, k) {
+    if (k?.error) {
+        return k;
+    }
     let transform;
     const type = typeof crlf;
     if (type !== "object") {
@@ -823,20 +959,57 @@ function interpret(ctx, crlf) {
         transform = ctx[kind];
     }
     if (typeof transform === "function") {
-        return transform(ctx, crlf);
+        // FIXME: this = ctx?
+        return transform(ctx, crlf, k);
     }
+    return {
+        error: "no interpreter",
+        crlf,
+        ctx
+    };
+}
+
+function interpret_list(ctx, body, k) {
+    if (k?.error) {
+        return k;
+    }
+    if (equal_to(nil_lit, body)) {
+        console.log("interpret_list () k:", k);
+        return k;
+    } else if (body?.kind === "pair") {
+        const head = body?.head;
+        const tail = body?.tail;
+        console.log("interpret_list (h . t) h:", head);
+        let code =
+            interpret(ctx, head,
+            interpret_list(ctx, tail, k));
+        return code;
+    }
+    return {
+        error: "list expected",
+        body
+    };
 }
 
 function evaluate(source) {
     const sexpr = parse(source);
     const crlf = sexpr?.token;
     console.log("evaluate crlf:", to_scheme(crlf));
-    interpret(top_level_ctx, crlf);
+    const value = interpret(top_level_ctx, crlf);
+    if (value?.error) {
+        return value;
+    }
     return {
         kind: "module",
         define: top_level_ctx.env
     };
 }
+
+const sample_source = `
+(define memo_beh
+    (lambda (value)
+        (BEH (cust)
+            (SEND cust value) )))`;
 
 /*
 const sexpr = parse(" `('foo (,bar ,@baz) . quux)\r\n");
@@ -844,13 +1017,15 @@ const sexpr = parse(" `('foo (,bar ,@baz) . quux)\r\n");
 //const sexpr = parse("(if (< n 0) #f #t)");
 console.log(to_scheme(sexpr?.token));
 */
-//const module = evaluate(sample_source);
 //const module = evaluate("(define z 0)");
 //const module = evaluate("(define fn (lambda (x) 0 x y))");
 //const module = evaluate("(define fn (lambda (x y z) (list z (cons y x)) SELF ))");
-const module = evaluate("(define fn (lambda (x y z) (if x (list y z) (cons y z)) ))");
+//const module = evaluate("(define fn (lambda (x y z) (if x (list y z) (cons y z)) ))");
+const module = evaluate(sample_source);
 console.log(JSON.stringify(module, undefined, 2));
-console.log(to_asm(module));
+if (!module?.error) {
+    console.log(to_asm(module));
+}
 
 /*
  * Translation tools
