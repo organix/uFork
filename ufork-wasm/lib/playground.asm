@@ -95,8 +95,8 @@ fact_1:
     ref std.commit
 ;    end commit
 
-k_fact_1:               ; sp' <- msg
-    state 0             ; sp'
+k_fact_1:               ; (sp') <- msg
+    state 1             ; sp'
     part -1             ; ... n m
 
     ; continuation parameter `k`
@@ -120,11 +120,18 @@ cont_beh:               ; (msg cont sp) <- rv
     msg 0               ; sp rv
     pair 1              ; sp'=(rv . sp)
     state 2             ; sp' cont
-    beh -1              ; --
+    beh 1               ; --
     ref std.commit
 ;    end commit
 
 ; Boot code runs when the module is loaded (but not when imported).
+
+try_me:                 ; (sp . env) <- (cust . args)
+    state 0             ; (sp . env)
+    part -1             ; ...
+    state 1             ; ... sp
+    part -1             ; ... ...
+    end commit
 
 boot:                   ; () <- {caps}
     msg 0               ; {caps}
@@ -134,7 +141,12 @@ boot:                   ; () <- {caps}
 ;   YOUR CODE GOES HERE
 ;
 
-    push 3              ; n=3
+;    push try_me         ; try_me
+;    new 0               ; try_me.()
+;    send 0              ; --
+;    if_not std.commit   ; early exit
+
+    push 5              ; n=5
     msg 0               ; n {caps}
     push dev.debug_key  ; n {caps} dev.debug_key
     dict get            ; n debug_dev
