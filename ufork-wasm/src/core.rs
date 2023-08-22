@@ -525,6 +525,7 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
                 self.stack_push(val)?;
                 kip
             },
+            /* WARNING! This instruction is no-longer supported
             VM_DEPTH => {
                 let lst = self.sp();
                 let n = self.list_len(lst);
@@ -532,6 +533,7 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
                 self.stack_push(n)?;
                 kip
             },
+            FIXME: remove VM_DEPTH, et. al. */
             VM_DROP => {
                 let mut n = imm.get_fix()?;
                 assert!(n < 64);  // FIXME: replace with cycle-limit(s) in Sponsor
@@ -1329,7 +1331,11 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
             let t = self.stack_pop();
             self.set_cdr(p, t);
             self.stack_push(lst)?;
-        };
+        } else if n == -1 {
+            // capture entire stack
+            let sp = self.cons(self.sp(), NIL)?;
+            self.set_sp(sp);
+        }
         Ok(())
     }
     fn stack_parts(&mut self, n: isize) -> Result<(), Error> {
@@ -1348,6 +1354,19 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
             }
             let t = self.cons(self.cdr(s), self.sp())?;
             self.set_cdr(p, t);
+            self.set_sp(lst);
+        } else if (n == -1) && self.typeq(PAIR_T, s) {
+            // spread entire list
+            let lst = self.cons(self.car(s), NIL)?;
+            s = self.cdr(s);
+            let mut p = lst;
+            while self.typeq(PAIR_T, s) {
+                let q = self.cons(self.car(s), NIL)?;
+                self.set_cdr(p, q);
+                p = q;
+                s = self.cdr(s);
+            }
+            self.set_cdr(p, self.sp());
             self.set_sp(lst);
         }
         Ok(())

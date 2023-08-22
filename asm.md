@@ -183,7 +183,6 @@ _vₙ_ … _v₁_          | `pick` _n_          | _vₙ_ … _v₁_ _vₙ_ | co
 _vₙ_ … _v₁_          | `pick` -_n_         | _v₁_ _vₙ_ … _v₁_ | copy top of stack before item _n_
 _vₙ_ … _v₁_          | `roll` _n_          | _vₙ₋₁_ … _v₁_ _vₙ_ | roll item _n_ to top of stack
 _vₙ_ … _v₁_          | `roll` -_n_         | _v₁_ _vₙ_ … _v₂_ | roll top of stack to item _n_
-_vₙ_ … _v₁_          | `depth`             | _vₙ_ … _v₁_ _n_ | count items on stack
 _n_                  | `alu` `not`         | ~_n_         | bitwise not _n_
 _n_ _m_              | `alu` `and`         | _n_&_m_      | bitwise _n_ and _m_
 _n_ _m_              | `alu` `or`          | _n_\|_m_     | bitwise _n_ or _m_
@@ -202,9 +201,11 @@ _n_ _m_              | `cmp` `gt`          | _bool_       | `#t` if _n_ > _m_, o
 _bool_               | `if` _T_ [_F_]      | —            | if _bool_ is not falsy<sup>*</sup>, continue _T_ (else _F_)
 _bool_               | `if_not` _F_ [_T_]  | —            | if _bool_ is falsy<sup>*</sup>, continue _F_ (else _T_)
 … _tail_ _head_      | `pair` _n_          | _pair_       | create _pair_ from _head_ and _tail_ (_n_ times)
+_vₙ_ … _v₁_          | `pair` -1           | (_v₁_ … _vₙ_) | capture stack items as a single _pair_ list
 _pair_               | `part` _n_          | … _tail_ _head_ | split _pair_ into _head_ and _tail_ (_n_ times)
-_pair_               | `nth` _n_           | _itemₙ_      | copy item _n_ from a _pair_ list
-_pair_               | `nth` -_n_          | _tailₙ_      | copy tail _n_ from a _pair_ list
+(_v₁_ … _vₙ_)        | `part` -1           | _vₙ_ … _v₁_   | spread _pair_ list items onto stack
+(_v₁_ … _vₙ_ . _tailₙ_) | `nth` _n_         | _vₙ_         | copy item _n_ from a _pair_ list
+(_v₁_ … _vₙ_ . _tailₙ_) | `nth` -_n_        | _tailₙ_      | copy tail _n_ from a _pair_ list
 _dict_ _key_         | `dict` `has`        | _bool_       | `#t` if _dict_ has a binding for _key_, otherwise `#f`
 _dict_ _key_         | `dict` `get`        | _value_      | the first _value_ bound to _key_ in _dict_, or `#?`
 _dict_ _key_ _value_ | `dict` `add`        | _dict'_      | add a binding from _key_ to _value_ in _dict_
@@ -233,7 +234,7 @@ _quad_               | `get` `Z`           | _z_          | copy _z_ from _quad_
 —                    | `state` -_n_        | _tailₙ_      | copy state tail _n_ to stack
 —                    | `my` `self`         | _actor_      | push _actor_ address on stack
 —                    | `my` `beh`          | _beh_        | push _actor_ behavior on stack
-—                    | `my` `state`        | _vₙ_ … _v₁_  | flatten _actor_ state onto stack
+—                    | `my` `state`        | _vₙ_ … _v₁_  | spread _actor_ state onto stack
 _msg_ _actor_        | `send` `-1`         | —            | send _msg_ to _actor_
 _mₙ_ … _m₁_ _actor_  | `send` _n_          | —            | send (_m₁_ … _mₙ_) to _actor_
 _sponsor_ _msg_ _actor_ | `signal` `-1`    | —            | send _msg_ to _actor_ using _sponsor_
