@@ -574,10 +574,10 @@ const module_ctx = {
                 console.log("lambda:", "msg_map:", child.msg_map);
                 let code =
                     new_instr("push", unit_lit,     // #unit
-                    interpret_list(child, body,
+                    interpret_list(child, body,     // FIXME: we only need `#unit` if body is empty...
                     new_instr("msg", 1,             // msg cust
                     new_instr("send", -1,           // --
-                    new_instr("end", "commit")))));
+                    new_instr("end", "commit"))))); // FIXME: common tails can be pre-defined as static data
                 return code;
             }
         }
@@ -636,7 +636,16 @@ const lambda_ctx = {
         cons: xlat_cons,
         list: xlat_list,
         "eq?": xlat_eq,
-        if: xlat_if
+        "<": xlat_lt_num,
+        "<=": xlat_le_num,
+        "=": xlat_eq_num,
+        ">=": xlat_ge_num,
+        ">": xlat_gt_num,
+        "+": xlat_add_num,
+        "-": xlat_sub_num,
+        "*": xlat_mul_num,
+        if: xlat_if,
+        id: xlat_id
     },
     state_map: {},
     msg_map: {}
@@ -761,9 +770,89 @@ function xlat_eq(ctx, args, k) {
     const expect = nth_sexpr(args, 1);
     const actual = nth_sexpr(args, 2);
     let code =
-        interpret(ctx, actual,
-        interpret(ctx, expect,
-        new_instr("cmp", "eq", k)));
+        interpret(ctx, expect,          // expect
+        interpret(ctx, actual,          // expect actual
+        new_instr("cmp", "eq", k)));    // expect==actual
+    return code;
+}
+
+function xlat_lt_num(ctx, args, k) {
+    const n = nth_sexpr(args, 1);
+    const m = nth_sexpr(args, 2);
+    let code =
+        interpret(ctx, n,               // n
+        interpret(ctx, m,               // n m
+        new_instr("cmp", "lt", k)));    // n<m
+    return code;
+}
+
+function xlat_le_num(ctx, args, k) {
+    const n = nth_sexpr(args, 1);
+    const m = nth_sexpr(args, 2);
+    let code =
+        interpret(ctx, n,               // n
+        interpret(ctx, m,               // n m
+        new_instr("cmp", "le", k)));    // n<m
+    return code;
+}
+
+function xlat_eq_num(ctx, args, k) {
+    const n = nth_sexpr(args, 1);
+    const m = nth_sexpr(args, 2);
+    let code =
+        interpret(ctx, n,               // n
+        interpret(ctx, m,               // n m
+        new_instr("cmp", "eq", k)));    // n<m
+    return code;
+}
+
+function xlat_ge_num(ctx, args, k) {
+    const n = nth_sexpr(args, 1);
+    const m = nth_sexpr(args, 2);
+    let code =
+        interpret(ctx, n,               // n
+        interpret(ctx, m,               // n m
+        new_instr("cmp", "ge", k)));    // n<m
+    return code;
+}
+
+function xlat_gt_num(ctx, args, k) {
+    const n = nth_sexpr(args, 1);
+    const m = nth_sexpr(args, 2);
+    let code =
+        interpret(ctx, n,               // n
+        interpret(ctx, m,               // n m
+        new_instr("cmp", "gt", k)));    // n<m
+    return code;
+}
+
+function xlat_add_num(ctx, args, k) {
+    const n = nth_sexpr(args, 1);
+    const m = nth_sexpr(args, 2);
+    let code =
+        interpret(ctx, n,               // n
+        interpret(ctx, m,               // n m
+        new_instr("alu", "add", k)));   // n+m
+    return code;
+}
+
+function xlat_sub_num(ctx, args, k) {
+    const n = nth_sexpr(args, 1);
+    const m = nth_sexpr(args, 2);
+    let code =
+        interpret(ctx, n,               // n
+        interpret(ctx, m,               // n m
+        new_instr("alu", "sub", k)));   // n-m
+    return code;
+}
+
+function xlat_mul_num(ctx, args, k) {
+    const n = nth_sexpr(args, 1);
+    const m = nth_sexpr(args, 2);
+    let code =
+        interpret(ctx, n,               // n
+        interpret(ctx, m,               // n m
+        new_instr("alu", "mul", k)));   // n*m
     return code;
 }
 
@@ -777,6 +866,14 @@ function xlat_if(ctx, args, k) {
             interpret(ctx, cnsq, k),
             interpret(ctx, altn, k),
         ));
+    return code;
+}
+
+function xlat_id(ctx, args, k) {
+    const value = nth_sexpr(args, 1);
+    let code =
+        interpret(ctx, value,           // value
+        new_instr("dup", 0, k));        // value
     return code;
 }
 
@@ -852,7 +949,12 @@ const sample_source = `
     (lambda (value)
         (BEH (cust)
             (SEND cust value) )))`;
-
+const fact_source = `
+(define fact
+    (lambda (n)
+        (if (> n 1)
+            (* n (id (- n 1)))
+            1)))`;
 /*
 //const sexpr = parse(" `('foo (,bar ,@baz) . quux)\r\n");
 //const sexpr = parse("(0 1 -1 #t #f #nil #? () . #unit)");
@@ -869,7 +971,8 @@ console.log(to_scheme(sexpr?.token));
 //const module = evaluate("(define fn (lambda (x) 0 x y q.z))");
 //const module = evaluate("(define fn (lambda (x y z) (list z (cons y x)) (car q) (cdr q) ))");
 //const module = evaluate("(define fn (lambda (x y z) (if (eq? x -1) (list z y x) (cons y z)) ))");
-const module = evaluate(sample_source);
+//const module = evaluate(sample_source);
+const module = evaluate(fact_source);
 console.log(JSON.stringify(module, undefined, 2));
 if (!module?.error) {
     console.log(to_asm(module));
