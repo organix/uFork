@@ -8,6 +8,7 @@
 
 .import
     std: "./std.asm"
+    dev: "./dev.asm"
     lib: "./lib.asm"
 
 ; An infinite loop will consume cycles, but no memory or events.
@@ -61,15 +62,87 @@ count_next:
     my self             ; count+1 SELF
     ref std.send_msg
 
+; A traditional recursive (but not tail-recursive) example function.
+
+;;  (define fact
+;;    (lambda (n)
+;;      (if (> n 1)
+;;        (* n (fact (- n 1)))
+;;        1)))
+
+fact:                   ; () <- (cust n)
+    push #unit          ; #unit  // default return value for empty body...
+    msg 2               ; ... n
+    push 1              ; ... n 1
+    cmp gt              ; ... n>1
+    if fact_1 fact_2    ; ...
+fact_1:
+    msg 2               ; ... n
+    msg 2               ; ... n n
+    push 1              ; ... n n 1
+    alu sub             ; ... n n-1
+
+;    dup 0               ; ... n m=fact(n-1)  // no-op placeholder for recursive call...
+    my self             ; ... n n-1 SELF
+    push fact           ; ... n n-1 SELF fact
+    new 0               ; ... n n-1 SELF fact.()
+    send 2              ; ... n
+    pair -1             ; sp=(n ...)
+    push k_fact_1       ; sp beh=k_fact_1
+    msg 0               ; sp beh msg
+    push cont_beh       ; sp beh msg cont_beh
+    beh 3               ; --
+    ref std.commit
+;    end commit
+
+k_fact_1:               ; sp' <- msg
+    state 0             ; sp'
+    part -1             ; ... n m
+
+    ; continuation parameter `k`
+    alu mul             ; ... rv=n*m
+    ref fact_3
+fact_2:
+    push 1              ; ... rv=1
+    ref fact_3
+fact_3:                 ; ... rv
+    ref std.cust_send
+;    msg 1               ; ... rv cust
+;    send -1             ; ...
+;    end commit
+
+cont_beh:               ; (msg cont sp) <- rv
+    state 1             ; msg
+    my self             ; msg SELF
+    send -1             ; --
+
+    state 3             ; sp
+    msg 0               ; sp rv
+    pair 1              ; sp'=(rv . sp)
+    state 2             ; sp' cont
+    beh -1              ; --
+    ref std.commit
+;    end commit
+
 ; Boot code runs when the module is loaded (but not when imported).
 
 boot:                   ; () <- {caps}
     msg 0               ; {caps}
+    drop 1              ; --
 
 ;
 ;   YOUR CODE GOES HERE
 ;
-    drop 1              ; --
+
+    push 3              ; n=3
+    msg 0               ; n {caps}
+    push dev.debug_key  ; n {caps} dev.debug_key
+    dict get            ; n debug_dev
+
+    push fact           ; n cust=debug_dev fact
+    new 0               ; n cust fact.()
+    send 2              ; --
+    if_not std.commit   ; early exit
 
 demo:                   ; --
     push 3              ; 3
