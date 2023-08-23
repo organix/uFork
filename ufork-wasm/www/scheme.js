@@ -55,6 +55,21 @@ function new_if_instr(t = undef_lit, f = undef_lit) {
     return { "kind": "instr", "op": "if", t, f };
 }
 
+// standard instruction-stream tails
+const std = {};
+std.commit = new_instr("end", "commit");
+std.send_msg = new_instr("send", -1, std.commit);
+std.cust_send = new_instr("msg", 1, std.send_msg);
+
+function length_of(sexpr) {
+    let n = 0;
+    while (sexpr?.kind === "pair") {
+        n += 1;
+        sexpr = sexpr?.tail;
+    }
+    return n;
+}
+
 function equal_to(expect, actual) {
     if (expect === actual) {
         return true;
@@ -464,6 +479,18 @@ function parse_sexpr(next) {
  * Scheme interpreter/compiler
  */
 
+const cont_ref =    { "kind": "ref", "name": "cont_beh" };
+const cont_beh =                // (msg cont sp) <- rv
+    new_instr("state", 1,       // msg
+    new_instr("my", "self",     // msg SELF
+    new_instr("send", -1,       // --
+    new_instr("state", 3,       // sp
+    new_instr("msg", 0,         // sp rv
+    new_instr("pair", 1,        // sp'=(rv . sp)
+    new_instr("state", 2,       // sp' cont
+    new_instr("beh", 1,         // --
+    std.commit))))))));
+
 // Return the 'nth' item from a list of pairs, if defined.
 //
 //           0          -1          -2          -3
@@ -572,13 +599,17 @@ const module_ctx = {
                 child.parent = ctx;
                 child.msg_map = pattern_to_map(ptrn, 1);  // skip implicit customer
                 console.log("lambda:", "msg_map:", child.msg_map);
-                let code =
-                    new_instr("push", unit_lit,     // #unit
-                    interpret_list(child, body,     // FIXME: we only need `#unit` if body is empty...
-                    new_instr("msg", 1,             // msg cust
-                    new_instr("send", -1,           // --
-                    new_instr("end", "commit"))))); // FIXME: common tails can be pre-defined as static data
-                return code;
+                if (body?.kind === "pair") {
+                    let code =
+                        interpret_list(child, body,
+                        std.cust_send);
+                    return code;
+                } else {
+                    let code =
+                        new_instr("push", unit_lit,
+                        std.cust_send);
+                    return code;
+                }
             }
         }
         return {
@@ -587,7 +618,9 @@ const module_ctx = {
             ctx
         };
     },
-    env: {}
+    env: {
+        cont_beh: cont_beh
+    }
 };
 
 function push_literal(ctx, crlf, k) {
@@ -621,6 +654,7 @@ const lambda_ctx = {
             if (typeof xlat === "function") {
                 return xlat(ctx, args, k);
             }
+            return interpret_cont(ctx, crlf, k);
         }
         return {
             error: "no translation",
@@ -709,7 +743,7 @@ function xlat_BEH(ctx, args, k) {
     child.func = Object.assign(func, child.func);
     let code =
         interpret_list(child, body,
-        new_instr("end", "commit"));
+        std.commit);
     return code;
 }
 
@@ -792,7 +826,7 @@ function xlat_le_num(ctx, args, k) {
     let code =
         interpret(ctx, n,               // n
         interpret(ctx, m,               // n m
-        new_instr("cmp", "le", k)));    // n<m
+        new_instr("cmp", "le", k)));    // n<=m
     return code;
 }
 
@@ -802,7 +836,7 @@ function xlat_eq_num(ctx, args, k) {
     let code =
         interpret(ctx, n,               // n
         interpret(ctx, m,               // n m
-        new_instr("cmp", "eq", k)));    // n<m
+        new_instr("cmp", "eq", k)));    // n==m
     return code;
 }
 
@@ -812,7 +846,7 @@ function xlat_ge_num(ctx, args, k) {
     let code =
         interpret(ctx, n,               // n
         interpret(ctx, m,               // n m
-        new_instr("cmp", "ge", k)));    // n<m
+        new_instr("cmp", "ge", k)));    // n>=m
     return code;
 }
 
@@ -822,7 +856,7 @@ function xlat_gt_num(ctx, args, k) {
     let code =
         interpret(ctx, n,               // n
         interpret(ctx, m,               // n m
-        new_instr("cmp", "gt", k)));    // n<m
+        new_instr("cmp", "gt", k)));    // n>m
     return code;
 }
 
@@ -930,6 +964,39 @@ function interpret_list(ctx, list, k) {
     };
 }
 
+function interpret_cont(ctx, crlf, k) {
+    if (k?.error) {
+        return k;
+    }
+    const func = crlf.head;
+    const args = crlf.tail;
+    const kind = func?.kind;
+    console.log("interpret_cont:", crlf);
+    if (kind === "ref") {
+        const nargs = length_of(args) + 1;
+        k = new_instr("state", 1,       // sp=(...)
+            new_instr("part", -1, k));  // ...
+        let code =
+            interpret_list(ctx, args,   // ... args...
+            new_instr("my", "self",     // ... args... SELF
+            new_instr("push", func,     // ... args... SELF beh
+            new_instr("new", 0,         // ... args... SELF beh.()
+            new_instr("send", nargs,    // ...
+            new_instr("pair", -1,       // sp=(...)
+            new_instr("push", k,        // sp beh=k
+            new_instr("msg", 0,         // sp beh msg
+            new_instr("push", cont_ref, // sp beh msg cont_beh
+            new_instr("beh", 3,         // --
+            std.commit))))))))));
+        return code;
+    }
+    return {
+        error: "function-call expected",
+        crlf,
+        ctx
+    };
+};
+
 function evaluate(source) {
     const sexpr = parse(source);
     const crlf = sexpr?.token;
@@ -953,8 +1020,15 @@ const fact_source = `
 (define fact
     (lambda (n)
         (if (> n 1)
-            (* n (id (- n 1)))
+            (* n (fact (- n 1)))
             1)))`;
+const fib_source = `
+(define fib
+    (lambda (n)
+        (if (< n 2)
+            n
+            (+ (fib (- n 1)) (fib (- n 2))) )))`;
+const test_source = "(define fn (lambda (n) (* (fn (+ n 1)) (fn (- n 2))) ))";
 /*
 //const sexpr = parse(" `('foo (,bar ,@baz) . quux)\r\n");
 //const sexpr = parse("(0 1 -1 #t #f #nil #? () . #unit)");
@@ -972,7 +1046,9 @@ console.log(to_scheme(sexpr?.token));
 //const module = evaluate("(define fn (lambda (x y z) (list z (cons y x)) (car q) (cdr q) ))");
 //const module = evaluate("(define fn (lambda (x y z) (if (eq? x -1) (list z y x) (cons y z)) ))");
 //const module = evaluate(sample_source);
-const module = evaluate(fact_source);
+//const module = evaluate(fact_source);
+const module = evaluate(fib_source);
+//const module = evaluate(test_source);
 console.log(JSON.stringify(module, undefined, 2));
 if (!module?.error) {
     console.log(to_asm(module));
@@ -1043,9 +1119,11 @@ function to_asm(crlf) {
         }
         s += "    " + op;
         if (op === "if") {
+            // generate labels for branch targets
             let t_label = "t~" + asm_label;
             let f_label = "f~" + asm_label;
             let j_label = "j~" + asm_label;
+            asm_label += 1;
             s += " " + t_label + " " + f_label + "\n";
             const join = join_instr_chains(crlf.t, crlf.f, j_label);
             s += t_label + ":\n";
@@ -1056,21 +1134,33 @@ function to_asm(crlf) {
                 s += j_label + ":\n";
                 s += to_asm(join);
             }
-        } else {
-            if (op !== "depth") {
-                let imm = to_asm(crlf.imm);
-                if (imm?.error) {
-                    return imm;
-                }
-                s += " " + imm;
+            return s;
+        }
+        if (op !== "debug") {
+            let imm = to_asm(crlf.imm);
+            if (imm?.error) {
+                return imm;
             }
-            s += "\n";
-            if (op !== "end") {
-                if (crlf.k?.kind === "ref") {
-                    s += "    ref " + to_asm(crlf.k) + "\n";
-                } else {
-                    s += to_asm(crlf.k);
-                }
+            if (crlf.imm?.kind === "instr") {
+                // generate labels for continuation targets
+                let i_label = "i~" + asm_label;
+                let k_label = "k~" + asm_label;
+                asm_label += 1;
+                s += " " + i_label + " " + k_label + "\n";
+                s += i_label + ":\n";
+                s += imm;
+                s += k_label + ":\n";
+                s += to_asm(crlf.k);
+                return s;
+            }
+            s += " " + imm;
+        }
+        s += "\n";
+        if (op !== "end") {
+            if (crlf.k?.kind === "ref") {
+                s += "    ref " + to_asm(crlf.k) + "\n";
+            } else {
+                s += to_asm(crlf.k);
             }
         }
     } else if (kind === "literal") {

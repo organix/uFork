@@ -71,7 +71,6 @@ count_next:
 ;;        1)))
 
 fact:                   ; () <- (cust n)
-    push #unit          ; #unit  // default return value for empty body...
     msg 2               ; ... n
     push 1              ; ... n 1
     cmp gt              ; ... n>1
