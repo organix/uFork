@@ -57,9 +57,18 @@ function new_if_instr(t = undef_lit, f = undef_lit) {
 
 // standard instruction-stream tails
 const std = {};
-std.commit = new_instr("end", "commit");
-std.send_msg = new_instr("send", -1, std.commit);
-std.cust_send = new_instr("msg", 1, std.send_msg);
+std.commit =
+    new_instr("end", "commit");
+std.send_msg =
+    new_instr("send", -1,
+    std.commit);
+std.cust_send =
+    new_instr("msg", 1,
+    std.send_msg);
+std.resend =
+    new_instr("msg", 0,
+    new_instr("my", "self",
+    std.send_msg));
 
 function length_of(sexpr) {
     let n = 0;
@@ -479,17 +488,28 @@ function parse_sexpr(next) {
  * Scheme interpreter/compiler
  */
 
-const cont_ref =    { "kind": "ref", "name": "cont_beh" };
-const cont_beh =                // (msg cont sp) <- rv
+const cont_ref =    { "kind": "ref", "name": "~cont_beh" };
+const cont_beh =                // (msg cont env sp) <- rv
     new_instr("state", 1,       // msg
     new_instr("my", "self",     // msg SELF
     new_instr("send", -1,       // --
-    new_instr("state", 3,       // sp
-    new_instr("msg", 0,         // sp rv
-    new_instr("pair", 1,        // sp'=(rv . sp)
-    new_instr("state", 2,       // sp' cont
-    new_instr("beh", 1,         // --
-    std.commit))))))));
+    new_instr("state", 3,       // env
+    new_instr("state", 4,       // env sp
+    new_instr("msg", 0,         // env sp rv
+    new_instr("pair", 1,        // env sp'=(rv . sp)
+    new_instr("pair", 1,        // (sp' . env)
+    new_instr("state", 2,       // (sp' . env) cont
+    new_instr("beh", -1,        // --
+    std.commit))))))))));
+
+const func_ref =    { "kind": "ref", "name": "~func_beh" };
+const func_beh =                // _ <- (cust beh . env)
+    new_instr("msg", -2,        // env
+    new_instr("push", nil_lit,  // env sp=()
+    new_instr("pair", 1,        // (sp . env)
+    new_instr("msg", 2,         // (sp . env) beh
+    new_instr("new", -1,        // --
+    std.cust_send)))));
 
 // Return the 'nth' item from a list of pairs, if defined.
 //
@@ -554,14 +574,14 @@ function compile(source) {
     return module;
 }
 
-function literal_value(ctx, crlf, k) {
+function eval_literal(ctx, crlf, k) {
     return crlf;
 }
 
 const module_ctx = {
-    number: literal_value,
-    type: literal_value,
-    literal: literal_value,
+    number: eval_literal,
+    type: eval_literal,
+    literal: eval_literal,
     ref: function(ctx, crlf) {
         const name = crlf.name;
         const value = ctx.env[name];
@@ -591,25 +611,7 @@ const module_ctx = {
                     return unit_lit;
                 }
             } else if (name === "lambda") {
-                const ptrn = nth_sexpr(args, 1);
-                const body = nth_sexpr(args, -1);
-                console.log("lambda:", "ptrn:", to_scheme(ptrn));
-                console.log("lambda:", "body:", to_scheme(body));
-                const child = Object.assign({}, lambda_ctx);
-                child.parent = ctx;
-                child.msg_map = pattern_to_map(ptrn, 1);  // skip implicit customer
-                console.log("lambda:", "msg_map:", child.msg_map);
-                if (body?.kind === "pair") {
-                    let code =
-                        interpret_list(child, body,
-                        std.cust_send);
-                    return code;
-                } else {
-                    let code =
-                        new_instr("push", unit_lit,
-                        std.cust_send);
-                    return code;
-                }
+                return xlat_lambda(ctx, args, k);
             }
         }
         return {
@@ -619,9 +621,50 @@ const module_ctx = {
         };
     },
     env: {
-        cont_beh: cont_beh
+        "~cont_beh": cont_beh,
+        "~func_beh": func_beh
     }
 };
+
+function xlat_lambda(ctx, args, k) {
+    const ptrn = nth_sexpr(args, 1);
+    const body = nth_sexpr(args, -1);
+    console.log("lambda:", "ptrn:", to_scheme(ptrn));
+    console.log("lambda:", "body:", to_scheme(body));
+    const child = Object.assign({}, lambda_ctx);
+    child.parent = ctx;
+    child.msg_map = pattern_to_map(ptrn, 1);  // skip implicit customerm
+    console.log("lambda:", "msg_map:", child.msg_map);
+    if (ctx.msg_map) {
+        child.state_map = ctx.msg_map;  // inherit lexical scope
+        // FIXME: check `ctx.state_map` for multi-level nesting...
+    }
+    console.log("lambda:", "state_map:", child.state_map);
+    if (body?.kind === "pair") {
+        let beh =
+            interpret_list(child, body,
+            std.cust_send);
+        /**/
+        if (!ctx.msg_map) {
+            return beh;  // top-level function
+        }
+        /**/
+        let code =
+            new_instr("msg", -1,        // env
+            new_instr("push", beh,      // env beh
+            new_instr("msg", 1,         // env beh cust
+            new_instr("pair", 2,        // (cust beh x)
+            new_instr("push", func_ref, // (cust beh x) func_beh
+            new_instr("new", 0,         // (cust beh x) func_beh.()
+            std.send_msg))))));
+        return code;
+    } else {
+        let code =
+            new_instr("push", unit_lit,
+            std.cust_send);
+        return code;
+    }
+}
 
 function push_literal(ctx, crlf, k) {
     let code = new_instr("push", crlf, k);
@@ -639,6 +682,11 @@ const lambda_ctx = {
             // message variable
             let code = new_instr("msg", msg_n, k);
             return code;
+        }
+        const state_n = ctx.state_map[name];
+        if (typeof state_n === "number") {
+            // state variable
+            return new_instr("state", state_n, k);
         }
         // free variable
         let code = new_instr("push", crlf, k);
@@ -663,6 +711,7 @@ const lambda_ctx = {
         };
     },
     func: {
+        lambda: xlat_lambda,
         BEH: xlat_BEH,
         SEND: xlat_SEND,
         car: xlat_car,
@@ -983,11 +1032,12 @@ function interpret_cont(ctx, crlf, k) {
             new_instr("new", 0,         // ... args... SELF beh.()
             new_instr("send", nargs,    // ...
             new_instr("pair", -1,       // sp=(...)
-            new_instr("push", k,        // sp beh=k
-            new_instr("msg", 0,         // sp beh msg
-            new_instr("push", cont_ref, // sp beh msg cont_beh
-            new_instr("beh", 3,         // --
-            std.commit))))))))));
+            new_instr("state", -1,      // sp env
+            new_instr("push", k,        // sp env beh=k
+            new_instr("msg", 0,         // sp env beh msg
+            new_instr("push", cont_ref, // sp env beh msg cont_beh
+            new_instr("beh", 4,         // --
+            std.commit)))))))))));
         return code;
     }
     return {
@@ -1028,6 +1078,11 @@ const fib_source = `
         (if (< n 2)
             n
             (+ (fib (- n 1)) (fib (- n 2))) )))`;
+const hof_source = `
+(define hof
+    (lambda (x)
+        (lambda (y z)
+            (list x y z))))`;
 const test_source = "(define fn (lambda (n) (* (fn (+ n 1)) (fn (- n 2))) ))";
 /*
 //const sexpr = parse(" `('foo (,bar ,@baz) . quux)\r\n");
@@ -1047,7 +1102,8 @@ console.log(to_scheme(sexpr?.token));
 //const module = evaluate("(define fn (lambda (x y z) (if (eq? x -1) (list z y x) (cons y z)) ))");
 //const module = evaluate(sample_source);
 //const module = evaluate(fact_source);
-const module = evaluate(fib_source);
+//const module = evaluate(fib_source);
+const module = evaluate(hof_source);
 //const module = evaluate(test_source);
 console.log(JSON.stringify(module, undefined, 2));
 if (!module?.error) {
@@ -1168,7 +1224,7 @@ function to_asm(crlf) {
         if (name === "undef") {
             s = "#?";
         } else if (name === "nil") {
-            s = "()";
+            s = "#nil";
         } else if (name === "false") {
             s = "#f";
         } else if (name === "true") {

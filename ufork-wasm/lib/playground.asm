@@ -10,6 +10,7 @@
     std: "./std.asm"
     dev: "./dev.asm"
     lib: "./lib.asm"
+    asm: "./asm.asm"
 
 ; An infinite loop will consume cycles, but no memory or events.
 
@@ -87,14 +88,15 @@ fact_1:
     new 0               ; ... n n-1 SELF fact.()
     send 2              ; ... n
     pair -1             ; sp=(n ...)
-    push k_fact_1       ; sp beh=k_fact_1
-    msg 0               ; sp beh msg
-    push cont_beh       ; sp beh msg cont_beh
-    beh 3               ; --
+    state -1            ; sp env
+    push k_fact_1       ; sp env beh=k_fact_1
+    msg 0               ; sp env beh msg
+    push cont_beh       ; sp env beh msg cont_beh
+    beh 4               ; --
     ref std.commit
 ;    end commit
 
-k_fact_1:               ; (sp') <- msg
+k_fact_1:               ; (sp' . env) <- msg
     state 1             ; sp'
     part -1             ; ... n m
 
@@ -110,18 +112,59 @@ fact_3:                 ; ... rv
 ;    send -1             ; ...
 ;    end commit
 
-cont_beh:               ; (msg cont sp) <- rv
+cont_beh:               ; (msg cont env sp) <- rv
     state 1             ; msg
     my self             ; msg SELF
     send -1             ; --
 
-    state 3             ; sp
-    msg 0               ; sp rv
-    pair 1              ; sp'=(rv . sp)
-    state 2             ; sp' cont
-    beh 1               ; --
+    state 3             ; env
+    state 4             ; env sp
+    msg 0               ; env sp rv
+    pair 1              ; env sp'=(rv . sp)
+    pair 1              ; (sp' . env)
+    state 2             ; (sp' . env) cont
+    beh -1              ; --
     ref std.commit
 ;    end commit
+
+; A "trivial" higher-order function.
+
+;;  (define hof
+;;      (lambda (x)
+;;          (lambda (y z)
+;;              (list x y z))))
+
+func_beh:               ; () <- (cust beh . env)
+    msg -2              ; env
+    push #nil           ; env sp=()
+    pair 1              ; (sp . env)
+    msg 2               ; (sp . env) beh
+    new -1              ; beh.(sp . env)
+    ref std.cust_send
+
+hof:                    ; () <- (cust x)  // select free-variables
+    msg 2               ; x
+    push hof_b          ; x beh=hof_b
+    msg 1               ; x beh cust
+    push func_beh       ; x beh cust func_beh
+    new 0               ; x beh cust func_beh.()
+    send 3              ; --
+    ref std.commit
+hof2:                   ; () <- (cust x)  // capture all args
+    msg -1              ; (x)
+    push hof_b          ; (x) beh=hof_b
+    msg 1               ; (x) beh cust
+    pair 2              ; (cust beh x)
+    push func_beh       ; (cust beh x) func_beh
+    new 0               ; (cust beh x) func_beh.()
+    ref std.send_msg
+hof_b:                  ; (sp x) <- (cust y z)
+    push #nil           ; ()
+    msg 3               ; () z
+    msg 2               ; () z y
+    state 2             ; () z y x
+    pair 3              ; (x y z)
+    ref std.cust_send
 
 ; Boot code runs when the module is loaded (but not when imported).
 
