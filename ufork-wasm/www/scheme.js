@@ -57,6 +57,7 @@ function new_if_instr(t = undef_lit, f = undef_lit) {
 
 // standard instruction-stream tails
 const std = {};
+std.sink_beh =
 std.commit =
     new_instr("end", "commit");
 std.send_msg =
@@ -65,6 +66,9 @@ std.send_msg =
 std.cust_send =
     new_instr("msg", 1,
     std.send_msg);
+std.rv_self =
+    new_instr("my", "self",
+    std.cust_send);
 std.resend =
     new_instr("msg", 0,
     new_instr("my", "self",
@@ -1023,6 +1027,17 @@ function interpret_cont(ctx, crlf, k) {
     console.log("interpret_cont:", crlf);
     if (kind === "ref") {
         const nargs = length_of(args) + 1;
+        if (equal_to(std.cust_send, k)) {
+            // tail-call optimization
+            let code =
+                interpret_list(ctx, args,   // args...
+                new_instr("msg", 1,         // args... cust
+                new_instr("push", func,     // args... cust beh
+                new_instr("new", 0,         // args... cust beh.()
+                new_instr("send", nargs,    // --
+                std.commit)))));
+            return code;
+        }
         k = new_instr("state", 1,       // sp=(...)
             new_instr("part", -1, k));  // ...
         let code =
@@ -1072,6 +1087,12 @@ const fact_source = `
         (if (> n 1)
             (* n (fact (- n 1)))
             1)))`;
+const ifact_source = `
+(define ifact  ; fact(n) == ifact(n 1)
+    (lambda (n a)
+        (if (> n 1)
+            (ifact (- n 1) (* a n))
+            a)))`;
 const fib_source = `
 (define fib
     (lambda (n)
@@ -1102,8 +1123,9 @@ console.log(to_scheme(sexpr?.token));
 //const module = evaluate("(define fn (lambda (x y z) (if (eq? x -1) (list z y x) (cons y z)) ))");
 //const module = evaluate(sample_source);
 //const module = evaluate(fact_source);
+const module = evaluate(ifact_source);
 //const module = evaluate(fib_source);
-const module = evaluate(hof_source);
+//const module = evaluate(hof_source);
 //const module = evaluate(test_source);
 console.log(JSON.stringify(module, undefined, 2));
 if (!module?.error) {
