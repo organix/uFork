@@ -646,7 +646,7 @@ function xlat_lambda(ctx, args, k) {
     console.log("lambda:", "state_map:", child.state_map);
     if (body?.kind === "pair") {
         let beh =
-            interpret_list(child, body,
+            interpret_seq(child, body,
             std.cust_send);
         /**/
         if (!ctx.msg_map) {
@@ -702,6 +702,7 @@ const lambda_ctx = {
         const kind = func?.kind;
         if (kind === "ref") {
             const name = func?.name;
+            // FIXME: allow `msg_map` and `state_map` to override built-ins
             const xlat = ctx.func[name];
             if (typeof xlat === "function") {
                 return xlat(ctx, args, k);
@@ -795,7 +796,7 @@ function xlat_BEH(ctx, args, k) {
     const func = Object.assign({}, ctx.func);
     child.func = Object.assign(func, child.func);
     let code =
-        interpret_list(child, body,
+        interpret_seq(child, body,
         std.commit);
     return code;
 }
@@ -837,19 +838,11 @@ function xlat_cons(ctx, args, k) {
 }
 
 function xlat_list(ctx, args, k) {
-    let arg_stack = [];
-    while (args?.kind === "pair") {
-        const head = args?.head;
-        arg_stack.push(head);
-        args = args?.tail;
-    }
-    let n = arg_stack.length;
-    console.log("list:", arg_stack);
-    let code = new_instr("pair", n, k);
-    arg_stack.forEach(function (expr) {
-        code = interpret(ctx, expr, code);
-    });
-    code = new_instr("push", nil_lit, code);
+    let n = length_of(args);
+    let code =
+        new_instr("push", nil_lit,  // ()
+        interpret_args(ctx, args,   // () args...
+        new_instr("pair", n, k)));  // (args...)
     return code;
 }
 
@@ -995,20 +988,41 @@ function interpret(ctx, crlf, k) {
     };
 }
 
-function interpret_list(ctx, list, k) {
+function interpret_seq(ctx, list, k) {
     if (k?.error) {
         return k;
     }
     if (equal_to(nil_lit, list)) {
-        console.log("interpret_list () k:", k);
+        console.log("interpret_seq () k:", k);
         return k;
     } else if (list?.kind === "pair") {
         const head = list?.head;
         const tail = list?.tail;
-        console.log("interpret_list (h . t) h:", head);
+        console.log("interpret_seq (h . t) h:", head);
         let code =
             interpret(ctx, head,
-            interpret_list(ctx, tail, k));
+            interpret_seq(ctx, tail, k));
+        return code;
+    }
+    return {
+        error: "list expected",
+        body: list
+    };
+}
+
+function interpret_args(ctx, list, k) {
+    if (k?.error) {
+        return k;
+    }
+    if (equal_to(nil_lit, list)) {
+        console.log("interpret_args () k:", k);
+        return k;
+    } else if (list?.kind === "pair") {
+        const head = list?.head;
+        const tail = list?.tail;
+        console.log("interpret_args (h . t) h:", head);
+        k = interpret(ctx, head, k);
+        let code = interpret_args(ctx, tail, k);
         return code;
     }
     return {
@@ -1030,7 +1044,7 @@ function interpret_cont(ctx, crlf, k) {
         if (equal_to(std.cust_send, k)) {
             // tail-call optimization
             let code =
-                interpret_list(ctx, args,   // args...
+                interpret_args(ctx, args,   // args...
                 new_instr("msg", 1,         // args... cust
                 new_instr("push", func,     // args... cust beh
                 new_instr("new", 0,         // args... cust beh.()
@@ -1038,17 +1052,18 @@ function interpret_cont(ctx, crlf, k) {
                 std.commit)))));
             return code;
         }
-        k = new_instr("state", 1,       // sp=(...)
+        let beh =
+            new_instr("state", 1,       // sp=(...)
             new_instr("part", -1, k));  // ...
         let code =
-            interpret_list(ctx, args,   // ... args...
+            interpret_args(ctx, args,   // ... args...
             new_instr("my", "self",     // ... args... SELF
             new_instr("push", func,     // ... args... SELF beh
             new_instr("new", 0,         // ... args... SELF beh.()
             new_instr("send", nargs,    // ...
             new_instr("pair", -1,       // sp=(...)
             new_instr("state", -1,      // sp env
-            new_instr("push", k,        // sp env beh=k
+            new_instr("push", beh,      // sp env beh
             new_instr("msg", 0,         // sp env beh msg
             new_instr("push", cont_ref, // sp env beh msg cont_beh
             new_instr("beh", 4,         // --
