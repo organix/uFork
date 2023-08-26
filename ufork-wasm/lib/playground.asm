@@ -139,10 +139,10 @@ func_beh:               ; () <- (cust beh . env)
     push #nil           ; env sp=()
     pair 1              ; (sp . env)
     msg 2               ; (sp . env) beh
-    new -1              ; beh.(sp . env)
-    ref std.cust_send
-;    beh -1              ; --
-;    ref std.rv_self
+;    new -1              ; beh.(sp . env)
+;    ref std.cust_send
+    beh -1              ; --
+    ref std.rv_self
 
 hof:                    ; () <- (cust x)  // select free-variables
     msg 2               ; x

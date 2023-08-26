@@ -512,8 +512,12 @@ const func_beh =                // _ <- (cust beh . env)
     new_instr("push", nil_lit,  // env sp=()
     new_instr("pair", 1,        // (sp . env)
     new_instr("msg", 2,         // (sp . env) beh
+    new_instr("beh", -1,        // --
+    std.rv_self)))));
+    /*
     new_instr("new", -1,        // --
     std.cust_send)))));
+    */
 
 // Return the 'nth' item from a list of pairs, if defined.
 //
@@ -1040,7 +1044,7 @@ function interpret_cont(ctx, crlf, k) {
     const kind = func?.kind;
     console.log("interpret_cont:", crlf);
     if (kind === "ref") {
-        const nargs = length_of(args) + 1;
+        const nargs = length_of(args) + 1;  // account for customer
         if (equal_to(std.cust_send, k)) {
             // tail-call optimization
             let code =
@@ -1138,9 +1142,9 @@ console.log(to_scheme(sexpr?.token));
 //const module = evaluate("(define fn (lambda (x y z) (if (eq? x -1) (list z y x) (cons y z)) ))");
 //const module = evaluate(sample_source);
 //const module = evaluate(fact_source);
-const module = evaluate(ifact_source);
+//const module = evaluate(ifact_source);
 //const module = evaluate(fib_source);
-//const module = evaluate(hof_source);
+const module = evaluate(hof_source);
 //const module = evaluate(test_source);
 console.log(JSON.stringify(module, undefined, 2));
 if (!module?.error) {
@@ -1234,13 +1238,25 @@ function to_asm(crlf) {
             if (imm?.error) {
                 return imm;
             }
-            if (crlf.imm?.kind === "instr") {
+            const imm_kind = crlf.imm?.kind;
+            if (imm_kind === "instr") {
                 // generate labels for continuation targets
                 let i_label = "i~" + asm_label;
                 let k_label = "k~" + asm_label;
                 asm_label += 1;
                 s += " " + i_label + " " + k_label + "\n";
                 s += i_label + ":\n";
+                s += imm;
+                s += k_label + ":\n";
+                s += to_asm(crlf.k);
+                return s;
+            } else if (imm_kind === "pair" || imm_kind === "dict") {
+                // generate labels for inline literal data
+                let d_label = "d~" + asm_label;
+                let k_label = "k~" + asm_label;
+                asm_label += 1;
+                s += " " + d_label + " " + k_label + "\n";
+                s += d_label + ":\n";
                 s += imm;
                 s += k_label + ":\n";
                 s += to_asm(crlf.k);
@@ -1275,6 +1291,25 @@ function to_asm(crlf) {
             s = "#" + name + "_t";
         } else {
             s = "#unknown_t";
+        }
+    } else if (kind === "pair") {
+        s += "    pair_t ";
+        s += to_asm(crlf.head) + "\n";  // FIXME: generate label for complex value?
+        const kind = crlf.tail?.kind
+        if ((kind === "pair") && (kind === "dict")) {
+            s += to_asm(crlf.tail);
+        } else {
+            s += "    ref " + to_asm(crlf.tail) + "\n";
+        }
+    } else if (kind === "dict") {
+        s += "    dict_t ";
+        s += to_asm(crlf.key) + " ";
+        s += to_asm(crlf.value) + "\n";
+        const kind = crlf.next?.kind
+        if ((kind === "pair") && (kind === "dict")) {
+            s += to_asm(crlf.next);
+        } else {
+            s += "    ref " + to_asm(crlf.next) + "\n";
         }
     } else if (kind === "ref") {
         const module = crlf?.module;
