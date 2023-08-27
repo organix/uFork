@@ -25,6 +25,49 @@ const instr_t =     { "kind": "type", "name": "instr" };
 const pair_t =      { "kind": "type", "name": "pair" };
 const dict_t =      { "kind": "type", "name": "dict" };
 
+const asm = {  // FIXME: there must be a better place for this information...
+    TYPEQ:  0x00,
+    QUAD:   0x01,
+    GET:    0x02,
+    get: { T: 0, X: 1, Y: 2, Z: 3 },
+    DICT:   0x03,
+    dict: { has: 0, get: 1, add: 2, set: 3, del: 4 },
+    PAIR:   0x04,
+    PART:   0x05,
+    NTH:    0x06,
+    PUSH:   0x07,
+    DEPTH:  0x08,
+    DROP:   0x09,
+    PICK:   0x0A,
+    DUP:    0x0B,
+    ROLL:   0x0C,
+    ALU:    0x0D,
+    alu: { not: 0, and: 1, or: 2, xor: 3, add: 4, sub: 5, mul: 6 },
+    EQ:     0x0E,
+    CMP:    0x0F,
+    cmp: { eq: 0, ge: 1, gt: 2, lt: 3, le: 4, ne: 5 },
+    IF:     0x10,
+    MSG:    0x11,
+    MY:     0x12,
+    my: { self: 0, beh: 1, state: 2 },
+    SEND:   0x13,
+    NEW:    0x14,
+    BEH:    0x15,
+    END:    0x16,
+    end: { abort: -1, stop: 0, commit: 1 },
+    SPONSOR: 0x17,
+    sponsor: { new: 0, memory: 1, events: 2, cycles: 3, reclaim: 4, start: 5, stop: 6 },
+    PUTC:   0x18,  // deprecated
+    GETC:   0x19,  // deprecated
+    DEBUG:  0x1A,
+    DEQUE:  0x1B,
+    deque: { new: 0, empty: 1, push: 2, pop: 3, put: 4, pull: 5, len: 6 },
+    STATE:  0x1C,
+    SIGNAL: 0x1D,
+    IS_EQ:  0x1E,
+    IS_NE:  0x1F
+};
+
 const quote_ref =   { "kind": "ref", "name": "quote" };  // FIXME: do we need a "module" here?
 const qquote_ref =  { "kind": "ref", "name": "quasiquote" };
 const unquote_ref = { "kind": "ref", "name": "unquote" };
@@ -602,22 +645,15 @@ const module_ctx = {
         };
     },
     pair: function(ctx, crlf, k) {
+        return xlat_invoke(ctx, crlf, k);
+        /*
         const func = nth_sexpr(crlf, 1);
         const args = nth_sexpr(crlf, -1);
         const kind = func?.kind;
         if (kind === "ref") {
             const name = func?.name;
             if (name === "define") {
-                const symbol = nth_sexpr(args, 1);
-                if (symbol?.kind === "ref") {
-                    const expr = nth_sexpr(args, 2);
-                    const value = interpret(ctx, expr);
-                    if (value?.error) {
-                        return value;
-                    }
-                    ctx.env[symbol.name] = value;
-                    return unit_lit;
-                }
+                return eval_define(ctx, args, k);
             } else if (name === "lambda") {
                 return xlat_lambda(ctx, args, k);
             }
@@ -627,12 +663,62 @@ const module_ctx = {
             crlf,
             ctx
         };
+        */
+    },
+    func: {
+        define: eval_define,
+        lambda: xlat_lambda
     },
     env: {
-        "~cont_beh": cont_beh,
-        "~func_beh": func_beh
+        //"~func_beh": func_beh,
+        "~cont_beh": cont_beh
     }
 };
+
+function eval_define(ctx, args, k) {
+    const symbol = nth_sexpr(args, 1);
+    if (symbol?.kind === "ref") {
+        const expr = nth_sexpr(args, 2);
+        const value = interpret(ctx, expr);
+        if (value?.error) {
+            return value;
+        }
+        ctx.env[symbol.name] = value;
+        return unit_lit;
+    }
+}
+
+function xlat_invoke(ctx, crlf, k) {
+    const func = crlf.head;
+    const args = crlf.tail;
+    const kind = func?.kind;
+    if (kind === "ref") {
+        const name = func?.name;
+        // FIXME: allow `msg_map` and `state_map` to override built-ins
+        const xlat = ctx.func[name];
+        if (typeof xlat === "function") {
+            return xlat(ctx, args, k);
+        }
+        return interpret_cont(ctx, crlf, k);
+    } else if (kind === "pair") {
+        // expression in function position
+        const nargs = length_of(args) + 1;  // account for customer
+        const beh = interpret(ctx, func);   // generate code for function expression
+        let code =
+            interpret_args(ctx, args,   // args...
+            new_instr("msg", 1,         // args... cust
+            new_instr("push", beh,      // args... cust beh
+            new_instr("new", 0,         // args... cust beh.()
+            new_instr("send", nargs,    // --
+            std.commit)))));
+        return code;
+    }
+    return {
+        error: "no translation",
+        crlf,
+        ctx
+    };
+}
 
 function xlat_lambda(ctx, args, k) {
     const ptrn = nth_sexpr(args, 1);
@@ -641,7 +727,7 @@ function xlat_lambda(ctx, args, k) {
     console.log("lambda:", "body:", to_scheme(body));
     const child = Object.assign({}, lambda_ctx);
     child.parent = ctx;
-    child.msg_map = pattern_to_map(ptrn, 1);  // skip implicit customerm
+    child.msg_map = pattern_to_map(ptrn, 1);  // skip implicit customer
     console.log("lambda:", "msg_map:", child.msg_map);
     if (ctx.msg_map) {
         child.state_map = ctx.msg_map;  // inherit lexical scope
@@ -658,6 +744,36 @@ function xlat_lambda(ctx, args, k) {
         }
         /**/
         let code =
+            new_instr("push", instr_t,      // t=#instr_t
+            new_instr("push", asm.PUSH,     // t x="push"
+            new_instr("msg", -1,            // t x y=state=cdr(msg)
+
+            new_instr("push", instr_t,      // t=#instr_t
+            new_instr("push", asm.PUSH,     // t x="push"
+            new_instr("push", nil_lit,      // t x y=sp=()
+
+            new_instr("push", instr_t,      // t=#instr_t
+            new_instr("push", asm.PAIR,     // t x="pair"
+            new_instr("push", 1,            // t x y=1
+
+            new_instr("push", instr_t,      // t=#instr_t
+            new_instr("push", asm.PUSH,     // t x="push"
+            new_instr("push", beh,          // t x y=beh
+
+            new_instr("push", instr_t,      // t=#instr_t
+            new_instr("push", asm.BEH,      // t x="beh"
+            new_instr("push", -1,           // t x y=-1
+            new_instr("push", std.resend,   // t x y z=std.resend
+
+            new_instr("quad", 4,            // [#instr_t, "beh", -1, std.resend]
+            new_instr("quad", 4,            // [#instr_t, "push", beh, ...]
+            new_instr("quad", 4,            // [#instr_t, "pair", 1, ...]
+            new_instr("quad", 4,            // [#instr_t, "push", #nil, ...]
+            new_instr("quad", 4,            // [#instr_t, "push", cdr(msg), ...]
+
+            std.cust_send)))))))))))))))))))));
+        /*
+        let code =
             new_instr("msg", -1,        // env
             new_instr("push", beh,      // env beh
             new_instr("msg", 1,         // env beh cust
@@ -665,6 +781,7 @@ function xlat_lambda(ctx, args, k) {
             new_instr("push", func_ref, // (cust beh x) func_beh
             new_instr("new", 0,         // (cust beh x) func_beh.()
             std.send_msg))))));
+        */
         return code;
     } else {
         let code =
@@ -701,6 +818,8 @@ const lambda_ctx = {
         return code;
     },
     pair: function(ctx, crlf, k) {
+        return xlat_invoke(ctx, crlf, k);
+        /*
         const func = crlf.head;
         const args = crlf.tail;
         const kind = func?.kind;
@@ -712,12 +831,25 @@ const lambda_ctx = {
                 return xlat(ctx, args, k);
             }
             return interpret_cont(ctx, crlf, k);
+        } else if (kind === "pair") {
+            // expression in function position
+            const nargs = length_of(args) + 1;  // account for customer
+            func = interpret(ctx, func);    // generate code for function expression
+            let code =
+                interpret_args(ctx, args,   // args...
+                new_instr("msg", 1,         // args... cust
+                new_instr("push", func,     // args... cust beh
+                new_instr("new", 0,         // args... cust beh.()
+                new_instr("send", nargs,    // --
+                std.commit)))));
+            return code;
         }
         return {
             error: "no translation",
             crlf,
             ctx
         };
+        */
     },
     func: {
         lambda: xlat_lambda,
@@ -1140,6 +1272,7 @@ console.log(to_scheme(sexpr?.token));
 //const module = evaluate("(define fn (lambda (x) 0 x y q.z))");
 //const module = evaluate("(define fn (lambda (x y z) (list z (cons y x)) (car q) (cdr q) ))");
 //const module = evaluate("(define fn (lambda (x y z) (if (eq? x -1) (list z y x) (cons y z)) ))");
+//const module = evaluate("(define inc ((lambda (a) (lambda (b) (+ a b))) 1))");
 //const module = evaluate(sample_source);
 //const module = evaluate(fact_source);
 //const module = evaluate(ifact_source);
