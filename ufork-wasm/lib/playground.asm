@@ -168,6 +168,78 @@ hof_b:                  ; (sp x) <- (cust y z)
     pair 3              ; (x y z)
     ref std.cust_send
 
+f_of_x:                 ; () <- (cust x)
+    msg -1
+;    push i_1 k_1
+cc:
+    push #instr_t       ; t=#instr_t
+    push asm.push       ; t x="push"
+    msg -1              ; t x y=(x)  // state=cdr(msg)
+
+    push #instr_t       ; t=#instr_t
+    push asm.push       ; t x="push"
+    push #nil           ; t x y=()  // stack pointer
+
+    push #instr_t       ; t=#instr_t
+    push asm.pair       ; t x="pair"
+    push 1              ; t x y=1  // (sp . state)
+
+    push #instr_t       ; t=#instr_t
+    push asm.push       ; t x="push"
+    push i_1            ; t x y=i_1  // closed behavior
+
+    push #instr_t       ; t=#instr_t
+    push asm.beh        ; t x="beh"
+    push -1             ; t x y=-1  // become beh.(sp . state)
+    push std.resend     ; t x y z=resend
+
+    quad 4              ; "beh 2 std.resend"
+    quad 4              ; "push i_1"
+    quad 4              ; "push #nil"
+    quad 4              ; "push <x>"
+
+    ref std.cust_send
+
+f_of_y_z:               ; () <- (cust y z)
+    push 1              ; x=1  // for each free variable
+    push #nil           ; x sp=()
+    push i_1            ; state... sp beh=i_1
+    beh 2               ; --
+;    msg 0
+;    my self
+;    send -1
+;    end commit
+    ref std.resend
+i_1:                    ; (sp x) <- (cust y z)
+    push #nil           ; ()
+    msg 3               ; () z
+    msg 2               ; () z y
+    state 2             ; () z y x
+    pair 3              ; (x y z)
+;    msg 1
+;    send -1
+;    end commit
+    ref std.cust_send
+k_1:
+    msg 1
+    pair 2
+    push func_beh
+    new 0
+;    send -1
+;    end commit
+    ref std.send_msg
+
+#closure_t:
+    type_t 2
+
+sink_fn:                ; sink_beh.()
+    closure_t std.sink_beh #nil
+
+answer_fn:              ; memo_beh.(42)
+    closure_t lib.memo_beh
+    pair_t 42
+    ref #nil
+
 ; Boot code runs when the module is loaded (but not when imported).
 
 try_me:                 ; (sp . env) <- (cust . args)
