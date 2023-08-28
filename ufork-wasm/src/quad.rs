@@ -31,8 +31,8 @@ impl Quad {
     pub fn literal_t() -> Quad {
         Self::new(LITERAL_T, UNDEF, UNDEF, UNDEF)
     }
-    pub fn type_t() -> Quad {
-        Self::new(TYPE_T, UNDEF, UNDEF, UNDEF)
+    pub fn type_t(n: Any) -> Quad {
+        Self::new(TYPE_T, n, UNDEF, UNDEF)
     }
     pub fn event_t(sponsor: Any, target: Any, msg: Any, next: Any) -> Quad {
         assert!(sponsor.is_ram());

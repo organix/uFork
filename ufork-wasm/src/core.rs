@@ -67,16 +67,16 @@ impl Core {
 
         quad_rom[EMPTY_DQ.ofs()]    = Quad::pair_t(NIL, NIL);
 
-        quad_rom[TYPE_T.ofs()]      = Quad::type_t();
-        quad_rom[FIXNUM_T.ofs()]    = Quad::type_t();
-        quad_rom[ACTOR_T.ofs()]     = Quad::type_t();
-        quad_rom[PROXY_T.ofs()]     = Quad::type_t();
-        quad_rom[STUB_T.ofs()]      = Quad::type_t();
-        quad_rom[INSTR_T.ofs()]     = Quad::type_t();
-        quad_rom[PAIR_T.ofs()]      = Quad::type_t();
-        quad_rom[DICT_T.ofs()]      = Quad::type_t();
-        quad_rom[FWD_REF_T.ofs()]   = Quad::type_t();
-        quad_rom[FREE_T.ofs()]      = Quad::type_t();
+        quad_rom[TYPE_T.ofs()]      = Quad::type_t(PLUS_1);
+        quad_rom[FIXNUM_T.ofs()]    = Quad::type_t(UNDEF);
+        quad_rom[ACTOR_T.ofs()]     = Quad::type_t(PLUS_2);
+        quad_rom[PROXY_T.ofs()]     = Quad::type_t(PLUS_2);
+        quad_rom[STUB_T.ofs()]      = Quad::type_t(PLUS_2);
+        quad_rom[INSTR_T.ofs()]     = Quad::type_t(PLUS_3);
+        quad_rom[PAIR_T.ofs()]      = Quad::type_t(PLUS_2);
+        quad_rom[DICT_T.ofs()]      = Quad::type_t(PLUS_3);
+        quad_rom[FWD_REF_T.ofs()]   = Quad::type_t(MINUS_1);
+        quad_rom[FREE_T.ofs()]      = Quad::type_t(ZERO);
 
 pub const ROM_TOP_OFS: usize = ROM_BASE_OFS;
 
