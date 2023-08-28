@@ -688,18 +688,37 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
             },
             VM_NEW => {
                 let n = imm.get_fix()?;
-                let beh = self.stack_pop();
-                assert!(self.typeq(INSTR_T, beh));  // FIXME: return Err(E_NOT_CODE)
-                let state = self.pop_counted(n);
-                let a = self.new_actor(beh, state)?;
-                self.stack_push(a)?;
+                if n == -2 {
+                    // take (beh . state) pair from stack
+                    let closure = self.stack_pop();
+                    let beh = self.mem(closure).x();
+                    assert!(self.typeq(INSTR_T, beh));  // FIXME: return Err(E_NOT_CODE)
+                    let state = self.mem(closure).y();
+                    let a = self.new_actor(beh, state)?;
+                    self.stack_push(a)?;
+                } else {
+                    let beh = self.stack_pop();
+                    assert!(self.typeq(INSTR_T, beh));  // FIXME: return Err(E_NOT_CODE)
+                    let state = self.pop_counted(n);
+                    let a = self.new_actor(beh, state)?;
+                    self.stack_push(a)?;
+                }
                 kip
             },
             VM_BEH => {
                 let n = imm.get_fix()?;
-                let beh = self.stack_pop();
-                let state = self.pop_counted(n);
-                self.effect_become(beh, state)?;
+                if n == -2 {
+                    // take (beh . state) pair from stack
+                    let closure = self.stack_pop();
+                    let beh = self.mem(closure).x();
+                    assert!(self.typeq(INSTR_T, beh));  // FIXME: return Err(E_NOT_CODE)
+                    let state = self.mem(closure).y();
+                    self.effect_become(beh, state)?;
+                } else {
+                    let beh = self.stack_pop();
+                    let state = self.pop_counted(n);
+                    self.effect_become(beh, state)?;
+                }
                 kip
             },
             VM_END => {

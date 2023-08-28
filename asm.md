@@ -239,8 +239,10 @@ _msg_ _actor_        | `send` `-1`         | —            | send _msg_ to _act
 _mₙ_ … _m₁_ _actor_  | `send` _n_          | —            | send (_m₁_ … _mₙ_) to _actor_
 _sponsor_ _msg_ _actor_ | `signal` `-1`    | —            | send _msg_ to _actor_ using _sponsor_
 _sponsor_ _mₙ_ … _m₁_ _actor_ | `signal` _n_ | —          | send (_m₁_ … _mₙ_) to _actor_ using _sponsor_
+(_beh_ . _state_)    | `new` `-2`          | _actor_      | create new _actor_ with code _beh_ and data _state_
 _state_ _beh_        | `new` `-1`          | _actor_      | create new _actor_ with code _beh_ and data _state_
 _vₙ_ … _v₁_ _beh_    | `new` _n_           | _actor_      | create new _actor_ code _beh_ and data (_v₁_ … _vₙ_)
+(_beh_ . _state_)    | `beh` `-2`          | —            | replace code with _beh_ and data with _state_
 _state_ _beh_        | `beh` `-1`          | —            | replace code with _beh_ and data with _state_
 _vₙ_ … _v₁_ _beh_    | `beh` _n_           | —            | replace code with _beh_ and data with (_v₁_ … _vₙ_)
 _reason_             | `end` `abort`       | —            | abort actor transaction with _reason_
