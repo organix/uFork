@@ -188,40 +188,40 @@ function equal_to(expect, actual) {
 //    * number = <number>
 //    * type = { "kind": "type", "name": <string> }
 
-function to_scheme(sexpr) {
-    if (typeof sexpr === "object") {
-        const kind = sexpr.kind;
+function to_scheme(crlf) {
+    if (typeof crlf === "object") {
+        const kind = crlf.kind;
         if (typeof kind === "string") {
             if (kind === "pair") {
                 let s = "(";
                 while (true) {
-                    s += to_scheme(sexpr?.head);
-                    if (sexpr?.tail?.kind !== "pair") {
+                    s += to_scheme(crlf?.head);
+                    if (crlf?.tail?.kind !== "pair") {
                         break;
                     }
-                    sexpr = sexpr?.tail;
+                    crlf = crlf?.tail;
                     s += " ";
                 }
-                if (!equal_to(nil_lit, sexpr?.tail)) {
+                if (!equal_to(nil_lit, crlf?.tail)) {
                     s += " . ";
-                    s += to_scheme(sexpr?.tail);
+                    s += to_scheme(crlf?.tail);
                 }
                 s += ")";
                 return s;
             } else if (kind === "dict") {
                 let s = "{";
                 while (true) {
-                    s += to_scheme(sexpr?.key) + ":" + to_scheme(sexpr?.value);
-                    if (sexpr?.next?.kind !== "dict") {
+                    s += to_scheme(crlf?.key) + ":" + to_scheme(crlf?.value);
+                    if (crlf?.next?.kind !== "dict") {
                         break;
                     }
-                    sexpr = sexpr?.next;
+                    crlf = crlf?.next;
                     s += ",";
                 }
                 s += "}";
                 return s;
             } else if (kind === "literal") {
-                const name = sexpr?.value;
+                const name = crlf?.value;
                 if (name === "undef") {
                     return "#?";
                 } else if (name === "nil") {
@@ -234,7 +234,7 @@ function to_scheme(sexpr) {
                     return "#unit";
                 }
             } else if (kind === "type") {
-                const name = sexpr?.name;
+                const name = crlf?.name;
                 if (typeof name === "string") {
                     return "#" + name + "_t";
                 } else {
@@ -242,22 +242,22 @@ function to_scheme(sexpr) {
                 }
             } else if (kind === "ref") {
                 let s = "";
-                const module = sexpr?.module;
+                const module = crlf?.module;
                 if (typeof module === "string") {
                     s += module + ".";
                 }
-                const name = sexpr?.name;
+                const name = crlf?.name;
                 if (typeof name === "string") {
                     s += name;
                     return s;
                 }
             } else if (kind === "instr") {
                 let s = "[#instr_t, ";
-                s += to_scheme(sexpr?.op);
+                s += to_scheme(crlf?.op);
                 s += ", ";
-                s += to_scheme(sexpr?.imm);
+                s += to_scheme(crlf?.imm);
                 s += ", ";
-                s += to_scheme(sexpr?.k);
+                s += to_scheme(crlf?.k);
                 s += "]";
                 return s;
             } else {
@@ -266,10 +266,10 @@ function to_scheme(sexpr) {
         }
         return "#unknown";
     }
-    if (typeof sexpr === "string") {
-        return JSON.stringify(sexpr);  // quoted and escaped
+    if (typeof crlf === "string") {
+        return JSON.stringify(crlf);  // quoted and escaped
     }
-    return String(sexpr);
+    return String(crlf);
 }
 
 /*
