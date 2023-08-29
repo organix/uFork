@@ -621,24 +621,6 @@ function pattern_to_map(pattern, n = 0) {
     return map;
 }
 
-function parse(source) {
-    const str_in = string_input(source);
-    const lex_in = lex_input(str_in);
-    const sexpr = parse_sexpr(lex_in);
-    console.log("parse", JSON.stringify(sexpr, undefined, 2));
-    return sexpr;
-}
-function compile(source) {
-    const sexpr = parse(source);
-    const ctx = {
-        kind: "module",
-        define: {}
-    };
-    console.log("compile", to_scheme(sexpr.token));
-    const module = compile_sexpr(ctx, sexpr.token);
-    return module;
-}
-
 function eval_literal(ctx, crlf, k) {
     return crlf;
 }
@@ -1229,14 +1211,45 @@ function interpret_cont(ctx, crlf, k) {
     };
 };
 
-function evaluate(source) {
-    const sexpr = parse(source);
-    const crlf = sexpr?.token;
-    console.log("evaluate crlf:", to_scheme(crlf));
-    const value = interpret(module_ctx, crlf);
-    if (value?.error) {
-        return value;
+function parse(source) {
+    const str_in = string_input(source);
+    const lex_in = lex_input(str_in);
+    const sexpr = parse_sexpr(lex_in);
+    console.log("parse:", JSON.stringify(sexpr, undefined, 2));
+    return sexpr;
+}
+
+function compile(source) {
+    const str_in = string_input(source);
+    let lex_in = lex_input(str_in);
+    let sexprs = [];
+    while (true) {
+        const parse = parse_sexpr(lex_in);
+        console.log("compile parse:", JSON.stringify(parse, undefined, 2));
+        if (parse?.error) {
+            if (parse.error === "end of input") {
+                break;
+            }
+            return parse;
+        }
+        sexprs.push(parse.token);
+        lex_in = parse.next;
     }
+    let k =
+        new_instr("msg", 0,             // {caps}
+        new_instr("push", 2,            // {caps} dev.debug_key
+        new_instr("dict", "get",        // debug_dev
+        std.send_msg)));
+    while (sexprs.length > 0) {
+        const crlf = sexprs.pop(); //sexprs.shift();
+        console.log("compile crlf:", to_scheme(crlf));
+        const value = interpret(module_ctx, crlf);
+        if (value?.error) {
+            return value;
+        }
+        k = new_instr("push", value, k);
+    }
+    module_ctx.env["boot"] = k;
     return {
         kind: "module",
         define: module_ctx.env,
@@ -1274,30 +1287,38 @@ const hof_source = `
     (lambda (x)
         (lambda (y z)
             (list x y z))))`;
-const test_source = "(define fn (lambda (n) (* (fn (+ n 1)) (fn (- n 2))) ))";
+const test_source = `
+0
+(define z 0)
+1
+(define n 1)
+2
+(define id (lambda (x) x))
+3
+`;
 /*
 //const sexpr = parse(" `('foo (,bar ,@baz) . quux)\r\n");
 //const sexpr = parse("(0 1 -1 #t #f #nil #? () . #unit)");
-//const sexpr = parse("(if (< n 0) #f #t)");
-const sexpr = parse("(lambda (x . y) x)");
-console.log(to_scheme(sexpr?.token));
+const sexpr = parse("(if (< n 0) #f #t)");
+//const sexpr = parse("(lambda (x . y) x)");
+console.log("sexpr:", to_scheme(sexpr?.token));
 */
-//const module = evaluate("(define z 0)");
-//const module = evaluate("(define nop (lambda _))");
-//const module = evaluate("(define list (lambda x x))");
-//const module = evaluate("(define id (lambda (x) x))");
-//const module = evaluate("(define id (lambda (x . y) x))");
-//const module = evaluate("(define id (lambda (x y) y))");
-//const module = evaluate("(define fn (lambda (x) 0 x y q.z))");
-//const module = evaluate("(define fn (lambda (x y z) (list z (cons y x)) (car q) (cdr q) ))");
-//const module = evaluate("(define fn (lambda (x y z) (if (eq? x -1) (list z y x) (cons y z)) ))");
-//const module = evaluate("(define inc ((lambda (a) (lambda (b) (+ a b))) 1))");
-//const module = evaluate(sample_source);
-//const module = evaluate(fact_source);
-//const module = evaluate(ifact_source);
-//const module = evaluate(fib_source);
-const module = evaluate(hof_source);
-//const module = evaluate(test_source);
+//const module = compile("(define z 0)");
+//const module = compile("(define nop (lambda _))");
+//const module = compile("(define list (lambda x x))");
+//const module = compile("(define id (lambda (x) x))");
+//const module = compile("(define id (lambda (x . y) x))");
+//const module = compile("(define f (lambda (x y) y))");
+//const module = compile("(define fn (lambda (x) 0 x y q.z))");
+//const module = compile("(define fn (lambda (x y z) (list z (cons y x)) (car q) (cdr q) ))");
+//const module = compile("(define fn (lambda (x y z) (if (eq? x -1) (list z y x) (cons y z)) ))");
+//const module = compile("(define inc ((lambda (a) (lambda (b) (+ a b))) 1))");
+//const module = compile(sample_source);
+//const module = compile(fact_source);
+//const module = compile(ifact_source);
+//const module = compile(fib_source);
+//const module = compile(hof_source);
+const module = compile(test_source);
 console.log(JSON.stringify(module, undefined, 2));
 if (!module?.error) {
     console.log(to_asm(module));
@@ -1357,10 +1378,12 @@ function to_asm(crlf) {
         asm_label = 1;
         for (const [name, value] of Object.entries(crlf.define)) {
             s += name + ":\n";
-            if ((value?.kind !== "instr") && (value?.kind !== "quad")) {
-                s += "    ref ";  // indent
+            const kind = value?.kind;
+            if ((kind === "instr") || (kind === "pair") || (kind === "dict") || (kind === "quad")) {
+                s += to_asm(value);
+            } else {
+                s += "    ref " + to_asm(value) + "\n";
             }
-            s += to_asm(value);
         }
         let exports = crlf?.export;
         if (exports) {
