@@ -229,14 +229,15 @@ k_1:
 ;    end commit
     ref std.send_msg
 
-#closure_t:
-    type_t 2
+closure_t:
+    [type_t, 2]
 
 sink_fn:                ; sink_beh.()
-    closure_t std.sink_beh #nil
+    [closure_t, std.sink_beh, #nil]
 
 answer_fn:              ; memo_beh.(42)
-    closure_t lib.memo_beh
+    [closure_t, lib.memo_beh, answer_beh]
+answer_beh:
     pair_t 42
     ref #nil
 

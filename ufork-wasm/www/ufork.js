@@ -840,6 +840,7 @@ function make_core(
             if (
                 the_kind === "pair"
                 || the_kind === "dict"
+                || the_kind === "quad"
                 || the_kind === "instr"
             ) {
                 return populate(h_rom_alloc(node.debug), node);
@@ -874,6 +875,11 @@ function make_core(
                 if (node.next.kind === "ref" && node.next.module === undefined) {
                     cyclic_data_checks.push([fields.z, DICT_T, "z", node.next]);
                 }
+            } else if (the_kind === "quad") {
+                fields.t = value(node.t);
+                fields.x = value(node.x);
+                fields.y = value(node.y);
+                fields.z = value(node.z);
             } else if (the_kind === "instr") {
                 fields.t = INSTR_T;
                 fields.x = label(node.op, instr_label);
@@ -951,6 +957,7 @@ function make_core(
             return (
                 kind(node) === "pair"
                 || kind(node) === "dict"
+                || kind(node) === "quad"
                 || kind(node) === "instr"
             );
         }

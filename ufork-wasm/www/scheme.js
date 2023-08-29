@@ -260,6 +260,17 @@ function to_scheme(crlf) {
                 s += to_scheme(crlf?.k);
                 s += "]";
                 return s;
+            } else if (kind === "quad") {
+                let s = "[";
+                s += to_scheme(crlf?.t);
+                s += ", ";
+                s += to_scheme(crlf?.x);
+                s += ", ";
+                s += to_scheme(crlf?.y);
+                s += ", ";
+                s += to_scheme(crlf?.z);
+                s += "]";
+                return s;
             } else {
                 return "#" + kind + "...";
             }
@@ -535,6 +546,9 @@ function parse_sexpr(next) {
  * Scheme interpreter/compiler
  */
 
+const symbol_t =    { "kind": "ref", "name": "symbol_t" };
+const closure_t =   { "kind": "ref", "name": "closure_t" };
+
 const cont_ref =    { "kind": "ref", "name": "~cont_beh" };
 const cont_beh =                // (msg cont env sp) <- rv
     new_instr("state", 1,       // msg
@@ -670,6 +684,8 @@ const module_ctx = {
         lambda: xlat_lambda
     },
     env: {
+        "symbol_t": { kind: "quad", t: type_t, x: 3, y: undef_lit, z: undef_lit },
+        "closure_t": { kind: "quad", t: type_t, x: 2, y: undef_lit, z: undef_lit },
         //"~func_beh": func_beh,
         "~cont_beh": cont_beh
     }
@@ -1223,7 +1239,10 @@ function evaluate(source) {
     }
     return {
         kind: "module",
-        define: module_ctx.env
+        define: module_ctx.env,
+        export: [
+            "boot"
+        ]
     };
 }
 
@@ -1326,6 +1345,7 @@ function join_instr_chains(t_chain, f_chain, j_label) {
 
 function to_asm(crlf) {
     if (typeof crlf === "string") {
+        //return JSON.stringify(crlf);  // quoted and escaped
         return crlf;
     }
     if (typeof crlf === "number") {
@@ -1337,10 +1357,17 @@ function to_asm(crlf) {
         asm_label = 1;
         for (const [name, value] of Object.entries(crlf.define)) {
             s += name + ":\n";
-            if (value?.kind !== "instr") {
+            if ((value?.kind !== "instr") && (value?.kind !== "quad")) {
                 s += "    ref ";  // indent
             }
             s += to_asm(value);
+        }
+        let exports = crlf?.export;
+        if (exports) {
+            s += ".export\n";
+            for (const name of exports) {
+                s += "    " + name + "\n";
+            }
         }
     } else if (kind === "instr") {
         let op = to_asm(crlf.op);
@@ -1429,7 +1456,7 @@ function to_asm(crlf) {
         s += "    pair_t ";
         s += to_asm(crlf.head) + "\n";  // FIXME: generate label for complex value?
         const kind = crlf.tail?.kind
-        if ((kind === "pair") && (kind === "dict")) {
+        if ((kind === "pair") || (kind === "dict") || (kind === "quad")) {
             s += to_asm(crlf.tail);
         } else {
             s += "    ref " + to_asm(crlf.tail) + "\n";
@@ -1439,7 +1466,7 @@ function to_asm(crlf) {
         s += to_asm(crlf.key) + " ";
         s += to_asm(crlf.value) + "\n";
         const kind = crlf.next?.kind
-        if ((kind === "pair") && (kind === "dict")) {
+        if ((kind === "pair") || (kind === "dict") || (kind === "quad")) {
             s += to_asm(crlf.next);
         } else {
             s += "    ref " + to_asm(crlf.next) + "\n";
@@ -1450,6 +1477,17 @@ function to_asm(crlf) {
             s += module + ".";
         }
         s += crlf.name;
+    } else if (kind === "quad") {
+        let s = "    [";
+        s += to_asm(crlf?.t);
+        s += ", ";
+        s += to_asm(crlf?.x);
+        s += ", ";
+        s += to_asm(crlf?.y);
+        s += ", ";
+        s += to_asm(crlf?.z);
+        s += "]\n";
+        return s;
     } else {
         return {
             error: "unknown asm",
