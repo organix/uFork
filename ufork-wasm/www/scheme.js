@@ -68,17 +68,20 @@ const asm = {  // FIXME: there must be a better place for this information...
     IS_NE:  0x1F
 };
 
-const quote_ref =   { "kind": "ref", "name": "quote" };  // FIXME: do we need a "module" here?
-const qquote_ref =  { "kind": "ref", "name": "quasiquote" };
-const unquote_ref = { "kind": "ref", "name": "unquote" };
-const qsplice_ref = { "kind": "ref", "name": "unquote-splicing" };
-
 function new_pair(head, tail) {
     return { "kind": "pair", head, tail };
 }
 
 function new_dict(key, value, next = nil_lit) {
     return { "kind": "dict", key, value, next };
+}
+
+function new_quad(t, x = undef_lit, y = undef_lit, z = undef_lit) {
+    return { "kind": "quad", t, x, y, z };
+}
+
+function new_ref(name) {
+    return { "kind": "ref", name };
 }
 
 function new_instr(op, imm = undef_lit, k = undef_lit) {
@@ -182,7 +185,7 @@ function equal_to(expect, actual) {
 }
 
 // Scheme s-expressions (sexprs) are represented by uFork-ASM CRLF objects.
-//    * symbol = { "kind": "ref", "name": <string> }
+//    * symbol = <string>
 //    * cons = { "kind": "pair", "head": <sexpr>, "tail": <sexpr> }
 //    * literal = { "kind": "literal", "name": <string> }
 //    * number = <number>
@@ -240,7 +243,8 @@ function to_scheme(crlf) {
                 } else {
                     return "#unknown_t";
                 }
-            } else if (kind === "ref") {
+            /*
+            } else if (kind === "ref") {  // WARNING! Symbols are now just String values...
                 let s = "";
                 const module = crlf?.module;
                 if (typeof module === "string") {
@@ -251,6 +255,7 @@ function to_scheme(crlf) {
                     s += name;
                     return s;
                 }
+            */
             } else if (kind === "instr") {
                 let s = "[#instr_t, ";
                 s += to_scheme(crlf?.op);
@@ -278,7 +283,7 @@ function to_scheme(crlf) {
         return "#unknown";
     }
     if (typeof crlf === "string") {
-        return JSON.stringify(crlf);  // quoted and escaped
+        return crlf;
     }
     return String(crlf);
 }
@@ -521,35 +526,36 @@ function parse_sexpr(next) {
         return parse_list(input);
     }
     if (input.token === "'") {
-        return parse_quote(input, quote_ref);
+        return parse_quote(input, "quote");
     }
     if (input.token === "`") {
-        return parse_quote(input, qquote_ref);
+        return parse_quote(input, "quasiquote");
     }
     if (input.token === ",") {
-        return parse_quote(input, unquote_ref);
+        return parse_quote(input, "unquote");
     }
     if (input.token === ",@") {
-        return parse_quote(input, qsplice_ref);
+        return parse_quote(input, "unquote-splicing");
     }
     if (typeof input.token === "string") {
-        // symbol sexpr
-        input.token = {
-            kind: "ref",
-            name: input.token
-        };    
+        return input;  // symbol sexpr
     }
-    return input;
+    return {
+        error: "unexpected token",
+        token: input.token,
+        start: input.start,
+        end: input.end
+    };
 }
 
 /*
  * Scheme interpreter/compiler
  */
 
-const symbol_t =    { "kind": "ref", "name": "symbol_t" };
-const closure_t =   { "kind": "ref", "name": "closure_t" };
+const symbol_t = new_ref("symbol_t");
+const closure_t = new_ref("closure_t");
 
-const cont_ref =    { "kind": "ref", "name": "~cont_beh" };
+const cont_ref = new_ref("~cont_beh");
 const cont_beh =                // (msg cont env sp) <- rv
     new_instr("state", 1,       // msg
     new_instr("my", "self",     // msg SELF
@@ -563,7 +569,7 @@ const cont_beh =                // (msg cont env sp) <- rv
     new_instr("beh", -1,        // --
     std.commit))))))))));
 
-const func_ref =    { "kind": "ref", "name": "~func_beh" };
+const func_ref = new_ref("~func_beh");
 const func_beh =                // _ <- (cust beh . env)
     new_instr("msg", -2,        // env
     new_instr("push", nil_lit,  // env sp=()
@@ -604,18 +610,16 @@ function pattern_to_map(pattern, n = 0) {
     while (pattern?.kind === "pair") {
         n += 1;
         const head = pattern?.head;
-        if (head?.kind === "ref") {
-            const name = head?.name;
-            if (name !== "_") {
-                map[name] = n;
+        if (typeof head === "string") {
+            if (head !== "_") {
+                map[head] = n;
             }
         }
         pattern = pattern?.tail;
     }
-    if (pattern?.kind === "ref") {
-        const name = pattern?.name;
-        if (name !== "_") {
-            map[name] = -n;
+    if (typeof pattern === "string") {
+        if (pattern !== "_") {
+            map[pattern] = -n;
         }
     }
     return map;
@@ -629,43 +633,23 @@ const module_ctx = {
     number: eval_literal,
     type: eval_literal,
     literal: eval_literal,
-    ref: function(ctx, crlf) {
-        const name = crlf.name;
-        const value = ctx.env[name];
+    string: function(ctx, crlf) {
+        const value = ctx.env_map[crlf];
         if (value !== undefined) {
             return value;
         }
+        // FIXME: consider compiling to {kind:"ref",...} instead of eager env lookup
         return {
             error: "undefined variable",
-            name
+            crlf
         };
     },
-    pair: function(ctx, crlf, k) {
-        return xlat_invoke(ctx, crlf, k);
-        /*
-        const func = nth_sexpr(crlf, 1);
-        const args = nth_sexpr(crlf, -1);
-        const kind = func?.kind;
-        if (kind === "ref") {
-            const name = func?.name;
-            if (name === "define") {
-                return eval_define(ctx, args, k);
-            } else if (name === "lambda") {
-                return xlat_lambda(ctx, args, k);
-            }
-        }
-        return {
-            error: "no interpretation",
-            crlf,
-            ctx
-        };
-        */
-    },
-    func: {
+    pair: xlat_invoke,
+    func_map: {
         define: eval_define,
         lambda: xlat_lambda
     },
-    env: {
+    env_map: {
         "symbol_t": { kind: "quad", t: type_t, x: 3, y: undef_lit, z: undef_lit },
         "closure_t": { kind: "quad", t: type_t, x: 2, y: undef_lit, z: undef_lit },
         //"~func_beh": func_beh,
@@ -675,30 +659,33 @@ const module_ctx = {
 
 function eval_define(ctx, args, k) {
     const symbol = nth_sexpr(args, 1);
-    if (symbol?.kind === "ref") {
+    if (typeof symbol === "string") {
         const expr = nth_sexpr(args, 2);
         const value = interpret(ctx, expr);
         if (value?.error) {
             return value;
         }
-        ctx.env[symbol.name] = value;
+        ctx.env_map[symbol] = value;
         return unit_lit;
+    } else {
+        return {
+            error: "string (symbol) expected",
+            symbol
+        }
     }
 }
 
 function xlat_invoke(ctx, crlf, k) {
     const func = crlf.head;
     const args = crlf.tail;
-    const kind = func?.kind;
-    if (kind === "ref") {
-        const name = func?.name;
+    if (typeof func === "string") {
         // FIXME: allow `msg_map` and `state_map` to override built-ins
-        const xlat = ctx.func[name];
+        const xlat = ctx.func_map && ctx.func_map[func];
         if (typeof xlat === "function") {
             return xlat(ctx, args, k);
         }
         return interpret_cont(ctx, crlf, k);
-    } else if (kind === "pair") {
+    } else if (func?.kind === "pair") {
         // expression in function position
         const nargs = length_of(args) + 1;  // account for customer
         const beh = interpret(ctx, func);   // generate code for function expression
@@ -794,62 +781,29 @@ function push_literal(ctx, crlf, k) {
     return code;
 }
 
+function xlat_variable(ctx, crlf, k) {
+    const msg_n = ctx.msg_map && ctx.msg_map[crlf];
+    if (typeof msg_n === "number") {
+        // message variable
+        return new_instr("msg", msg_n, k);
+    }
+    const state_n = ctx.state_map && ctx.state_map[crlf];
+    if (typeof state_n === "number") {
+        // state variable
+        return new_instr("state", state_n, k);
+    }
+    // free variable
+    let ref = new_ref(crlf);
+    return new_instr("push", ref, k);
+}
+
 const lambda_ctx = {
     number: push_literal,
     type: push_literal,
     literal: push_literal,
-    ref: function(ctx, crlf, k) {
-        const name = crlf.name;
-        const msg_n = ctx.msg_map[name];
-        if (typeof msg_n === "number") {
-            // message variable
-            let code = new_instr("msg", msg_n, k);
-            return code;
-        }
-        const state_n = ctx.state_map[name];
-        if (typeof state_n === "number") {
-            // state variable
-            return new_instr("state", state_n, k);
-        }
-        // free variable
-        let code = new_instr("push", crlf, k);
-        return code;
-    },
-    pair: function(ctx, crlf, k) {
-        return xlat_invoke(ctx, crlf, k);
-        /*
-        const func = crlf.head;
-        const args = crlf.tail;
-        const kind = func?.kind;
-        if (kind === "ref") {
-            const name = func?.name;
-            // FIXME: allow `msg_map` and `state_map` to override built-ins
-            const xlat = ctx.func[name];
-            if (typeof xlat === "function") {
-                return xlat(ctx, args, k);
-            }
-            return interpret_cont(ctx, crlf, k);
-        } else if (kind === "pair") {
-            // expression in function position
-            const nargs = length_of(args) + 1;  // account for customer
-            func = interpret(ctx, func);    // generate code for function expression
-            let code =
-                interpret_args(ctx, args,   // args...
-                new_instr("msg", 1,         // args... cust
-                new_instr("push", func,     // args... cust beh
-                new_instr("new", 0,         // args... cust beh.()
-                new_instr("send", nargs,    // --
-                std.commit)))));
-            return code;
-        }
-        return {
-            error: "no translation",
-            crlf,
-            ctx
-        };
-        */
-    },
-    func: {
+    string: xlat_variable,
+    pair: xlat_invoke,
+    func_map: {
         lambda: xlat_lambda,
         BEH: xlat_BEH,
         SEND: xlat_SEND,
@@ -877,39 +831,14 @@ const BEH_ctx = {
     number: push_literal,
     type: push_literal,
     literal: push_literal,
-    ref: function(ctx, crlf, k) {
-        const name = crlf.name;
-        if (name === "SELF") {
+    string: function(ctx, crlf, k) {
+        if (crlf === "SELF") {
             return new_instr("my", "self", k);  // SELF reference
         }
-        const msg_n = ctx.msg_map[name];
-        if (typeof msg_n === "number") {
-            return new_instr("msg", msg_n, k);  // message variable
-        }
-        const state_n = ctx.state_map[name];
-        if (typeof state_n === "number") {
-            return new_instr("state", state_n, k);  // state variable
-        }
-        return new_instr("push", crlf, k);  // free variable
+        return xlat_variable(ctx, crlf, k);
     },
-    pair: function(ctx, crlf, k) {
-        const func = crlf.head;
-        const args = crlf.tail;
-        const kind = func?.kind;
-        if (kind === "ref") {
-            const name = func?.name;
-            const xlat = ctx.func[name];
-            if (typeof xlat === "function") {
-                return xlat(ctx, args, k);
-            }
-        }
-        return {
-            error: "no translation",
-            crlf,
-            ctx
-        };
-    },
-    func: {
+    pair: xlat_invoke,
+    func_map: {
         BECOME: xlat_not_implemented
     },
     state_map: {},
@@ -927,8 +856,8 @@ function xlat_BEH(ctx, args, k) {
     console.log("BEH:", "state_map:", child.state_map);
     child.msg_map = pattern_to_map(ptrn);
     console.log("BEH:", "msg_map:", child.msg_map);
-    const func = Object.assign({}, ctx.func);
-    child.func = Object.assign(func, child.func);
+    const func_map = Object.assign({}, ctx.func_map);  // inherit from parent
+    child.func_map = Object.assign(func_map, child.func_map);  // override in child
     let code =
         interpret_seq(child, body,
         std.commit);
@@ -1171,16 +1100,16 @@ function interpret_cont(ctx, crlf, k) {
     }
     const func = crlf.head;
     const args = crlf.tail;
-    const kind = func?.kind;
     console.log("interpret_cont:", crlf);
-    if (kind === "ref") {
+    if (typeof func === "string") {
+        const ref = new_ref(func);
         const nargs = length_of(args) + 1;  // account for customer
         if (equal_to(std.cust_send, k)) {
             // tail-call optimization
             let code =
                 interpret_args(ctx, args,   // args...
                 new_instr("msg", 1,         // args... cust
-                new_instr("push", func,     // args... cust beh
+                new_instr("push", ref,      // args... cust beh
                 new_instr("new", 0,         // args... cust beh.()
                 new_instr("send", nargs,    // --
                 std.commit)))));
@@ -1192,7 +1121,7 @@ function interpret_cont(ctx, crlf, k) {
         let code =
             interpret_args(ctx, args,   // ... args...
             new_instr("my", "self",     // ... args... SELF
-            new_instr("push", func,     // ... args... SELF beh
+            new_instr("push", ref,      // ... args... SELF beh
             new_instr("new", 0,         // ... args... SELF beh.()
             new_instr("send", nargs,    // ...
             new_instr("pair", -1,       // sp=(...)
@@ -1235,6 +1164,7 @@ function compile(source) {
         sexprs.push(parse.token);
         lex_in = parse.next;
     }
+    const ctx = Object.assign({}, module_ctx);
     let k =
         new_instr("msg", 0,             // {caps}
         new_instr("push", 2,            // {caps} dev.debug_key
@@ -1243,16 +1173,16 @@ function compile(source) {
     while (sexprs.length > 0) {
         const crlf = sexprs.pop(); //sexprs.shift();
         console.log("compile crlf:", to_scheme(crlf));
-        const value = interpret(module_ctx, crlf);
+        const value = interpret(ctx, crlf);
         if (value?.error) {
             return value;
         }
         k = new_instr("push", value, k);
     }
-    module_ctx.env["boot"] = k;
+    ctx.env_map["boot"] = k;
     return {
         kind: "module",
-        define: module_ctx.env,
+        define: ctx.env_map,
         export: [
             "boot"
         ]
@@ -1293,14 +1223,15 @@ const test_source = `
 1
 (define n 1)
 2
-(define id (lambda (x) x))
+(define f (lambda (x y) y))
 3
 `;
 /*
 //const sexpr = parse(" `('foo (,bar ,@baz) . quux)\r\n");
 //const sexpr = parse("(0 1 -1 #t #f #nil #? () . #unit)");
-const sexpr = parse("(if (< n 0) #f #t)");
+//const sexpr = parse("(if (< n 0) #f #t)");
 //const sexpr = parse("(lambda (x . y) x)");
+const sexpr = parse("(define f (lambda (x y) y))");
 console.log("sexpr:", to_scheme(sexpr?.token));
 */
 //const module = compile("(define z 0)");
@@ -1358,7 +1289,7 @@ function join_instr_chains(t_chain, f_chain, j_label) {
         }
     }
     const join = t_chain.k;
-    const j_ref = { "kind": "ref", "name": j_label };
+    const j_ref = new_ref(j_label);
     t_chain.k = j_ref;
     f_chain.k = j_ref;
     return join;
