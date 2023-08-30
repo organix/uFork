@@ -612,29 +612,15 @@ function pattern_to_map(pattern, n = 0) {
     return map;
 }
 
-function eval_literal(ctx, crlf, k) {
-    return crlf;
-}
-
 const module_ctx = {
     number: eval_literal,
     type: eval_literal,
     literal: eval_literal,
-    string: function(ctx, crlf) {
-        const value = ctx.env_map[crlf];
-        if (value !== undefined) {
-            return value;
-        }
-        // FIXME: consider compiling to {kind:"ref",...} instead of eager env lookup
-        return {
-            error: "undefined variable",
-            crlf
-        };
-    },
-    pair: xlat_invoke,
+    string: eval_variable,
+    pair: eval_invoke,
     func_map: {
         define: eval_define,
-        lambda: xlat_lambda
+        lambda: eval_lambda
     },
     env_map: {
         "symbol_t": new_quad(type_t, 3),
@@ -643,7 +629,37 @@ const module_ctx = {
     }
 };
 
-function eval_define(ctx, args, k) {
+function eval_literal(ctx, crlf) {
+    return crlf;
+}
+
+function eval_variable(ctx, crlf) {
+    const xlat = ctx.func_map && ctx.func_map[crlf];
+    if (typeof xlat === "function") {
+        // operative function
+        return xlat;
+    }
+    // symbolic reference
+    return new_ref(crlf);
+}
+
+function eval_invoke(ctx, crlf) {
+    const func = crlf.head;
+    const args = crlf.tail;
+    let xlat = interpret(ctx, func);
+    if (typeof xlat === "function") {
+        return xlat(ctx, args);
+    }
+    return {
+        error: "unable to invoke",
+        func,
+        args,
+        xlat,
+        ctx
+    };
+}
+
+function eval_define(ctx, args) {
     const symbol = nth_sexpr(args, 1);
     if (typeof symbol === "string") {
         const expr = nth_sexpr(args, 2);
@@ -661,37 +677,7 @@ function eval_define(ctx, args, k) {
     }
 }
 
-function xlat_invoke(ctx, crlf, k) {
-    const func = crlf.head;
-    const args = crlf.tail;
-    if (typeof func === "string") {
-        // FIXME: allow `msg_map` and `state_map` to override built-ins
-        const xlat = ctx.func_map && ctx.func_map[func];
-        if (typeof xlat === "function") {
-            return xlat(ctx, args, k);
-        }
-        return interpret_cont(ctx, crlf, k);
-    } else if (func?.kind === "pair") {
-        // expression in function position
-        const nargs = length_of(args) + 1;  // account for customer
-        const beh = interpret(ctx, func);   // generate code for function expression
-        let code =
-            interpret_args(ctx, args,   // args...
-            new_instr("msg", 1,         // args... cust
-            new_instr("push", beh,      // args... cust beh
-            new_instr("new", 0,         // args... cust beh.()
-            new_instr("send", nargs,    // --
-            std.commit)))));
-        return code;
-    }
-    return {
-        error: "no translation",
-        crlf,
-        ctx
-    };
-}
-
-function xlat_lambda(ctx, args, k) {
+function eval_lambda(ctx, args) {
     const ptrn = nth_sexpr(args, 1);
     const body = nth_sexpr(args, -1);
     console.log("lambda:", "ptrn:", to_scheme(ptrn));
@@ -718,35 +704,10 @@ function xlat_lambda(ctx, args, k) {
             std.cust_send);
         if (ctx.msg_map) {
             // capture lexical scope
-            code =
-                new_instr("push", instr_t,      // t=#instr_t
-                new_instr("push", asm.PUSH,     // t x="push"
-                new_instr("msg", -1,            // t x y=state=cdr(msg)
-
-                new_instr("push", instr_t,      // t=#instr_t
-                new_instr("push", asm.PUSH,     // t x="push"
-                new_instr("push", nil_lit,      // t x y=sp=()
-
-                new_instr("push", instr_t,      // t=#instr_t
-                new_instr("push", asm.PAIR,     // t x="pair"
-                new_instr("push", 1,            // t x y=1
-
-                new_instr("push", instr_t,      // t=#instr_t
-                new_instr("push", asm.PUSH,     // t x="push"
-                new_instr("push", code,         // t x y=beh
-
-                new_instr("push", instr_t,      // t=#instr_t
-                new_instr("push", asm.BEH,      // t x="beh"
-                new_instr("push", -1,           // t x y=-1
-                new_instr("push", std.resend,   // t x y z=std.resend
-
-                new_instr("quad", 4,            // [#instr_t, "beh", -1, std.resend]
-                new_instr("quad", 4,            // [#instr_t, "push", beh, ...]
-                new_instr("quad", 4,            // [#instr_t, "pair", 1, ...]
-                new_instr("quad", 4,            // [#instr_t, "push", #nil, ...]
-                new_instr("quad", 4,            // [#instr_t, "push", cdr(msg), ...]
-
-                std.cust_send)))))))))))))))))))));
+            code = {
+                error: "nested lambda not implemented",
+                ctx
+            };
             // FIXME: refactor this code to create a `closure_t` at runtime!
         }
     } else {
@@ -760,31 +721,10 @@ function xlat_lambda(ctx, args, k) {
     return new_quad(closure_t, code, data);
 }
 
-function push_literal(ctx, crlf, k) {
-    let code = new_instr("push", crlf, k);
-    return code;
-}
-
-function xlat_variable(ctx, crlf, k) {
-    const msg_n = ctx.msg_map && ctx.msg_map[crlf];
-    if (typeof msg_n === "number") {
-        // message variable
-        return new_instr("msg", msg_n, k);
-    }
-    const state_n = ctx.state_map && ctx.state_map[crlf];
-    if (typeof state_n === "number") {
-        // state variable
-        return new_instr("state", state_n, k);
-    }
-    // free variable
-    let ref = new_ref(crlf);
-    return new_instr("push", ref, k);
-}
-
 const lambda_ctx = {
-    number: push_literal,
-    type: push_literal,
-    literal: push_literal,
+    number: xlat_literal,
+    type: xlat_literal,
+    literal: xlat_literal,
     string: xlat_variable,
     pair: xlat_invoke,
     func_map: {
@@ -811,23 +751,81 @@ const lambda_ctx = {
     msg_map: {}
 };
 
-const BEH_ctx = {
-    number: push_literal,
-    type: push_literal,
-    literal: push_literal,
-    string: function(ctx, crlf, k) {
-        if (crlf === "SELF") {
-            return new_instr("my", "self", k);  // SELF reference
-        }
-        return xlat_variable(ctx, crlf, k);
-    },
-    pair: xlat_invoke,
-    func_map: {
-        BECOME: xlat_not_implemented
-    },
-    state_map: {},
-    msg_map: {}
-};
+function xlat_literal(ctx, crlf, k) {
+    let code = new_instr("push", crlf, k);
+    return code;
+}
+
+function xlat_variable(ctx, crlf, k) {
+    const msg_n = ctx.msg_map && ctx.msg_map[crlf];
+    if (typeof msg_n === "number") {
+        // message variable
+        return new_instr("msg", msg_n, k);
+    }
+    const state_n = ctx.state_map && ctx.state_map[crlf];
+    if (typeof state_n === "number") {
+        // state variable
+        return new_instr("state", state_n, k);
+    }
+    // free variable
+    const xlat = ctx.func_map && ctx.func_map[crlf];
+    if (typeof xlat === "function") {
+        // operative function
+        return xlat;
+    }
+    // module environment
+    let ref = new_ref(crlf);
+    return new_instr("push", ref, k);
+}
+
+function xlat_invoke(ctx, crlf, k) {
+    const func = crlf.head;
+    const args = crlf.tail;
+    let xlat = interpret(ctx, func);
+    if (typeof xlat === "function") {
+        // apply operative immediately
+        return xlat(ctx, args, k);
+    }
+    const nargs = length_of(args) + 1;  // account for customer
+    if (equal_to(std.cust_send, k)) {
+        // tail-call optimization
+        let code =
+            interpret_args(ctx, args,   // args...
+            new_instr("msg", 1,         // args... cust
+            interpret(ctx, func,        // args... cust closure
+            new_instr("new", -2,        // args... cust beh.(state)
+            new_instr("send", nargs,    // --
+            std.commit)))));
+        return code;
+    } else {
+        // construct continuation
+        let beh =
+            new_instr("state", 1,       // sp=(...)
+            new_instr("part", -1, k));  // ...
+        let code =
+            interpret_args(ctx, args,   // ... args...
+            new_instr("my", "self",     // ... args... SELF
+            interpret(ctx, func,        // ... args... cust closure
+            new_instr("new", -2,        // ... args... SELF beh.(state)
+            new_instr("send", nargs,    // ...
+            new_instr("pair", -1,       // sp=(...)
+            new_instr("state", -1,      // sp env
+            new_instr("push", beh,      // sp env beh
+            new_instr("msg", 0,         // sp env beh msg
+            new_instr("push", cont_ref, // sp env beh msg cont_beh
+            new_instr("beh", 4,         // --
+            std.commit)))))))))));
+        return code;
+    }
+}
+
+function xlat_lambda(ctx, crlf, k) {
+    const closure = eval_lambda(ctx, crlf);
+    if (closure.error) {
+        return closure;
+    }
+    return new_instr("push", closure, k);        // value
+}
 
 function xlat_BEH(ctx, args, k) {
     const ptrn = nth_sexpr(args, 1);
@@ -1004,6 +1002,24 @@ function xlat_id(ctx, args, k) {
     return code;
 }
 
+const BEH_ctx = {
+    number: xlat_literal,
+    type: xlat_literal,
+    literal: xlat_literal,
+    string: function(ctx, crlf, k) {
+        if (crlf === "SELF") {
+            return new_instr("my", "self", k);  // SELF reference
+        }
+        return xlat_variable(ctx, crlf, k);
+    },
+    pair: xlat_invoke,
+    func_map: {
+        BECOME: xlat_not_implemented
+    },
+    state_map: {},
+    msg_map: {}
+};
+
 function xlat_not_implemented(ctx, args, k) {
     return {
         error: "not implemented",
@@ -1077,52 +1093,6 @@ function interpret_args(ctx, list, k) {
         body: list
     };
 }
-
-function interpret_cont(ctx, crlf, k) {
-    if (k?.error) {
-        return k;
-    }
-    const func = crlf.head;
-    const args = crlf.tail;
-    console.log("interpret_cont:", crlf);
-    if (typeof func === "string") {
-        const ref = new_ref(func);
-        const nargs = length_of(args) + 1;  // account for customer
-        if (equal_to(std.cust_send, k)) {
-            // tail-call optimization
-            let code =
-                interpret_args(ctx, args,   // args...
-                new_instr("msg", 1,         // args... cust
-                new_instr("push", ref,      // args... cust closure
-                new_instr("new", -2,        // args... cust beh.(state)
-                new_instr("send", nargs,    // --
-                std.commit)))));
-            return code;
-        }
-        let beh =
-            new_instr("state", 1,       // sp=(...)
-            new_instr("part", -1, k));  // ...
-        let code =
-            interpret_args(ctx, args,   // ... args...
-            new_instr("my", "self",     // ... args... SELF
-            new_instr("push", ref,      // ... args... SELF closure
-            new_instr("new", -2,        // ... args... SELF beh.(state)
-            new_instr("send", nargs,    // ...
-            new_instr("pair", -1,       // sp=(...)
-            new_instr("state", -1,      // sp env
-            new_instr("push", beh,      // sp env beh
-            new_instr("msg", 0,         // sp env beh msg
-            new_instr("push", cont_ref, // sp env beh msg cont_beh
-            new_instr("beh", 4,         // --
-            std.commit)))))))))));
-        return code;
-    }
-    return {
-        error: "function-call expected",
-        crlf,
-        ctx
-    };
-};
 
 function parse(source) {
     const str_in = string_input(source);
@@ -1202,6 +1172,7 @@ const hof_source = `
         (lambda (y z)
             (list x y z))))`;
 const test_source = `
+f n z
 0
 (define z 0)
 1
@@ -1209,6 +1180,9 @@ const test_source = `
 2
 (define f (lambda (x y) y))
 3
+z n f
+;(cons z n)
+;(f z n)
 `;
 /*
 //const sexpr = parse(" `('foo (,bar ,@baz) . quux)\r\n");
@@ -1224,13 +1198,13 @@ console.log("sexpr:", to_scheme(sexpr?.token));
 //const module = compile("(define id (lambda (x) x))");
 //const module = compile("(define id (lambda (x . y) x))");
 //const module = compile("(define f (lambda (x y) y))");
-//const module = compile("(define fn (lambda (x) 0 x y q.z))");
+//const module = compile("(define fn (lambda (x) 0 x y q.z))");  // NOTE: "q.z" is _not_ a valid identifier!
 //const module = compile("(define fn (lambda (x y z) (list z (cons y x)) (car q) (cdr q) ))");
 //const module = compile("(define fn (lambda (x y z) (if (eq? x -1) (list z y x) (cons y z)) ))");
 //const module = compile("(define inc ((lambda (a) (lambda (b) (+ a b))) 1))");
 //const module = compile(sample_source);
-//const module = compile(fact_source);
 //const module = compile(ifact_source);
+//const module = compile(fact_source);
 const module = compile(fib_source);
 //const module = compile(hof_source);
 //const module = compile(test_source);
