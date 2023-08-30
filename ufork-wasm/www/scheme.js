@@ -569,19 +569,6 @@ const cont_beh =                // (msg cont env sp) <- rv
     new_instr("beh", -1,        // --
     std.commit))))))))));
 
-const func_ref = new_ref("~func_beh");
-const func_beh =                // _ <- (cust beh . env)
-    new_instr("msg", -2,        // env
-    new_instr("push", nil_lit,  // env sp=()
-    new_instr("pair", 1,        // (sp . env)
-    new_instr("msg", 2,         // (sp . env) beh
-    new_instr("beh", -1,        // --
-    std.rv_self)))));
-    /*
-    new_instr("new", -1,        // --
-    std.cust_send)))));
-    */
-
 // Return the 'nth' item from a list of pairs, if defined.
 //
 //           0          -1          -2          -3
@@ -650,9 +637,8 @@ const module_ctx = {
         lambda: xlat_lambda
     },
     env_map: {
-        "symbol_t": { kind: "quad", t: type_t, x: 3, y: undef_lit, z: undef_lit },
-        "closure_t": { kind: "quad", t: type_t, x: 2, y: undef_lit, z: undef_lit },
-        //"~func_beh": func_beh,
+        "symbol_t": new_quad(type_t, 3),
+        "closure_t": new_quad(type_t, 2),
         "~cont_beh": cont_beh
     }
 };
@@ -719,61 +705,59 @@ function xlat_lambda(ctx, args, k) {
         // FIXME: check `ctx.state_map` for multi-level nesting...
     }
     console.log("lambda:", "state_map:", child.state_map);
+    let code = {
+        error: "bad lambda",
+        ptrn,
+        body,
+        ctx
+    };
+    let data = nil_lit;
     if (body?.kind === "pair") {
-        let beh =
+        code =
             interpret_seq(child, body,
             std.cust_send);
-        /**/
-        if (!ctx.msg_map) {
-            return beh;  // top-level function
+        if (ctx.msg_map) {
+            // capture lexical scope
+            code =
+                new_instr("push", instr_t,      // t=#instr_t
+                new_instr("push", asm.PUSH,     // t x="push"
+                new_instr("msg", -1,            // t x y=state=cdr(msg)
+
+                new_instr("push", instr_t,      // t=#instr_t
+                new_instr("push", asm.PUSH,     // t x="push"
+                new_instr("push", nil_lit,      // t x y=sp=()
+
+                new_instr("push", instr_t,      // t=#instr_t
+                new_instr("push", asm.PAIR,     // t x="pair"
+                new_instr("push", 1,            // t x y=1
+
+                new_instr("push", instr_t,      // t=#instr_t
+                new_instr("push", asm.PUSH,     // t x="push"
+                new_instr("push", code,         // t x y=beh
+
+                new_instr("push", instr_t,      // t=#instr_t
+                new_instr("push", asm.BEH,      // t x="beh"
+                new_instr("push", -1,           // t x y=-1
+                new_instr("push", std.resend,   // t x y z=std.resend
+
+                new_instr("quad", 4,            // [#instr_t, "beh", -1, std.resend]
+                new_instr("quad", 4,            // [#instr_t, "push", beh, ...]
+                new_instr("quad", 4,            // [#instr_t, "pair", 1, ...]
+                new_instr("quad", 4,            // [#instr_t, "push", #nil, ...]
+                new_instr("quad", 4,            // [#instr_t, "push", cdr(msg), ...]
+
+                std.cust_send)))))))))))))))))))));
+            // FIXME: refactor this code to create a `closure_t` at runtime!
         }
-        /**/
-        let code =
-            new_instr("push", instr_t,      // t=#instr_t
-            new_instr("push", asm.PUSH,     // t x="push"
-            new_instr("msg", -1,            // t x y=state=cdr(msg)
-
-            new_instr("push", instr_t,      // t=#instr_t
-            new_instr("push", asm.PUSH,     // t x="push"
-            new_instr("push", nil_lit,      // t x y=sp=()
-
-            new_instr("push", instr_t,      // t=#instr_t
-            new_instr("push", asm.PAIR,     // t x="pair"
-            new_instr("push", 1,            // t x y=1
-
-            new_instr("push", instr_t,      // t=#instr_t
-            new_instr("push", asm.PUSH,     // t x="push"
-            new_instr("push", beh,          // t x y=beh
-
-            new_instr("push", instr_t,      // t=#instr_t
-            new_instr("push", asm.BEH,      // t x="beh"
-            new_instr("push", -1,           // t x y=-1
-            new_instr("push", std.resend,   // t x y z=std.resend
-
-            new_instr("quad", 4,            // [#instr_t, "beh", -1, std.resend]
-            new_instr("quad", 4,            // [#instr_t, "push", beh, ...]
-            new_instr("quad", 4,            // [#instr_t, "pair", 1, ...]
-            new_instr("quad", 4,            // [#instr_t, "push", #nil, ...]
-            new_instr("quad", 4,            // [#instr_t, "push", cdr(msg), ...]
-
-            std.cust_send)))))))))))))))))))));
-        /*
-        let code =
-            new_instr("msg", -1,        // env
-            new_instr("push", beh,      // env beh
-            new_instr("msg", 1,         // env beh cust
-            new_instr("pair", 2,        // (cust beh x)
-            new_instr("push", func_ref, // (cust beh x) func_beh
-            new_instr("new", 0,         // (cust beh x) func_beh.()
-            std.send_msg))))));
-        */
-        return code;
     } else {
-        let code =
+        code =
             new_instr("push", unit_lit,
             std.cust_send);
+    }
+    if (code.error) {
         return code;
     }
+    return new_quad(closure_t, code, data);
 }
 
 function push_literal(ctx, crlf, k) {
@@ -1109,8 +1093,8 @@ function interpret_cont(ctx, crlf, k) {
             let code =
                 interpret_args(ctx, args,   // args...
                 new_instr("msg", 1,         // args... cust
-                new_instr("push", ref,      // args... cust beh
-                new_instr("new", 0,         // args... cust beh.()
+                new_instr("push", ref,      // args... cust closure
+                new_instr("new", -2,        // args... cust beh.(state)
                 new_instr("send", nargs,    // --
                 std.commit)))));
             return code;
@@ -1121,8 +1105,8 @@ function interpret_cont(ctx, crlf, k) {
         let code =
             interpret_args(ctx, args,   // ... args...
             new_instr("my", "self",     // ... args... SELF
-            new_instr("push", ref,      // ... args... SELF beh
-            new_instr("new", 0,         // ... args... SELF beh.()
+            new_instr("push", ref,      // ... args... SELF closure
+            new_instr("new", -2,        // ... args... SELF beh.(state)
             new_instr("send", nargs,    // ...
             new_instr("pair", -1,       // sp=(...)
             new_instr("state", -1,      // sp env
@@ -1247,9 +1231,9 @@ console.log("sexpr:", to_scheme(sexpr?.token));
 //const module = compile(sample_source);
 //const module = compile(fact_source);
 //const module = compile(ifact_source);
-//const module = compile(fib_source);
+const module = compile(fib_source);
 //const module = compile(hof_source);
-const module = compile(test_source);
+//const module = compile(test_source);
 console.log(JSON.stringify(module, undefined, 2));
 if (!module?.error) {
     console.log(to_asm(module));
@@ -1295,6 +1279,16 @@ function join_instr_chains(t_chain, f_chain, j_label) {
     return join;
 }
 
+function is_asm_leaf(crlf) {
+    if (typeof crlf === "object") {
+        const kind = crlf?.kind;
+        if (kind === "literal" || kind === "type" || kind === "ref") {
+            return true;
+        }
+        return false;
+    }
+    return true;
+}
 function to_asm(crlf) {
     if (typeof crlf === "string") {
         //return JSON.stringify(crlf);  // quoted and escaped
@@ -1309,11 +1303,10 @@ function to_asm(crlf) {
         asm_label = 1;
         for (const [name, value] of Object.entries(crlf.define)) {
             s += name + ":\n";
-            const kind = value?.kind;
-            if ((kind === "instr") || (kind === "pair") || (kind === "dict") || (kind === "quad")) {
-                s += to_asm(value);
-            } else {
+            if (is_asm_leaf(value)) {
                 s += "    ref " + to_asm(value) + "\n";
+            } else {
+                s += to_asm(value);
             }
         }
         let exports = crlf?.export;
@@ -1324,12 +1317,8 @@ function to_asm(crlf) {
             }
         }
     } else if (kind === "instr") {
-        let op = to_asm(crlf.op);
-        if (op?.error) {
-            return op;
-        }
-        s += "    " + op;
-        if (op === "if") {
+        s += "    " + crlf.op;
+        if (crlf.op === "if") {
             // generate labels for branch targets
             let t_label = "t~" + asm_label;
             let f_label = "f~" + asm_label;
@@ -1347,40 +1336,25 @@ function to_asm(crlf) {
             }
             return s;
         }
-        if (op !== "debug") {
-            let imm = to_asm(crlf.imm);
-            if (imm?.error) {
-                return imm;
-            }
-            const imm_kind = crlf.imm?.kind;
-            if (imm_kind === "instr") {
-                // generate labels for continuation targets
+        if (crlf.op !== "debug") {
+            if (is_asm_leaf(crlf.imm)) {
+                s += " " + to_asm(crlf.imm);
+            } else {
+                // generate labels for immediate data
                 let i_label = "i~" + asm_label;
                 let k_label = "k~" + asm_label;
                 asm_label += 1;
                 s += " " + i_label + " " + k_label + "\n";
                 s += i_label + ":\n";
-                s += imm;
-                s += k_label + ":\n";
-                s += to_asm(crlf.k);
-                return s;
-            } else if (imm_kind === "pair" || imm_kind === "dict") {
-                // generate labels for inline literal data
-                let d_label = "d~" + asm_label;
-                let k_label = "k~" + asm_label;
-                asm_label += 1;
-                s += " " + d_label + " " + k_label + "\n";
-                s += d_label + ":\n";
-                s += imm;
+                s += to_asm(crlf.imm);
                 s += k_label + ":\n";
                 s += to_asm(crlf.k);
                 return s;
             }
-            s += " " + imm;
         }
         s += "\n";
-        if (op !== "end") {
-            if (crlf.k?.kind === "ref") {
+        if (crlf.op !== "end") {
+            if (is_asm_leaf(crlf.k)) {
                 s += "    ref " + to_asm(crlf.k) + "\n";
             } else {
                 s += to_asm(crlf.k);
@@ -1409,38 +1383,70 @@ function to_asm(crlf) {
     } else if (kind === "pair") {
         s += "    pair_t ";
         s += to_asm(crlf.head) + "\n";  // FIXME: generate label for complex value?
-        const kind = crlf.tail?.kind
-        if ((kind === "pair") || (kind === "dict") || (kind === "quad")) {
-            s += to_asm(crlf.tail);
-        } else {
+        if (is_asm_leaf(crlf.tail)) {
             s += "    ref " + to_asm(crlf.tail) + "\n";
+        } else {
+            s += to_asm(crlf.tail);
         }
     } else if (kind === "dict") {
         s += "    dict_t ";
         s += to_asm(crlf.key) + " ";
         s += to_asm(crlf.value) + "\n";
-        const kind = crlf.next?.kind
-        if ((kind === "pair") || (kind === "dict") || (kind === "quad")) {
-            s += to_asm(crlf.next);
-        } else {
+        if (is_asm_leaf(crlf.next)) {
             s += "    ref " + to_asm(crlf.next) + "\n";
+        } else {
+            s += to_asm(crlf.next);
         }
     } else if (kind === "ref") {
-        const module = crlf?.module;
+        const module = crlf.module;
         if (typeof module === "string") {
             s += module + ".";
         }
         s += crlf.name;
     } else if (kind === "quad") {
+        let x_is_leaf = is_asm_leaf(crlf.x);
+        let y_is_leaf = is_asm_leaf(crlf.y);
+        let z_is_leaf = is_asm_leaf(crlf.z);
+        // generate labels for quad data fields
+        let x_label = "x~" + asm_label;
+        let y_label = "y~" + asm_label;
+        let z_label = "z~" + asm_label;
+        if (!x_is_leaf || !y_is_leaf || !z_is_leaf) {
+            asm_label += 1;  // all leaves? no labels.
+        }
         let s = "    [";
-        s += to_asm(crlf?.t);
+        s += to_asm(crlf.t);
         s += ", ";
-        s += to_asm(crlf?.x);
+        if (x_is_leaf) {
+            s += to_asm(crlf.x);
+        } else {
+            s += x_label;
+        }
         s += ", ";
-        s += to_asm(crlf?.y);
+        if (y_is_leaf) {
+            s += to_asm(crlf.y);
+        } else {
+            s += y_label;
+        }
         s += ", ";
-        s += to_asm(crlf?.z);
+        if (z_is_leaf) {
+            s += to_asm(crlf.z);
+        } else {
+            s += z_label;
+        }
         s += "]\n";
+        if (!x_is_leaf) {
+            s += x_label + ":\n";
+            s += to_asm(crlf.x);
+        }
+        if (!y_is_leaf) {
+            s += y_label + ":\n";
+            s += to_asm(crlf.y);
+        }
+        if (!z_is_leaf) {
+            s += z_label + ":\n";
+            s += to_asm(crlf.z);
+        }
         return s;
     } else {
         return {
