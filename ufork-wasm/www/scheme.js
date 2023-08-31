@@ -678,46 +678,11 @@ function eval_define(ctx, args) {
 }
 
 function eval_lambda(ctx, args) {
-    const ptrn = nth_sexpr(args, 1);
-    const body = nth_sexpr(args, -1);
-    console.log("lambda:", "ptrn:", to_scheme(ptrn));
-    console.log("lambda:", "body:", to_scheme(body));
-    const child = Object.assign({}, lambda_ctx);
-    child.parent = ctx;
-    child.msg_map = pattern_to_map(ptrn, 1);  // skip implicit customer
-    console.log("lambda:", "msg_map:", child.msg_map);
-    if (ctx.msg_map) {
-        child.state_map = ctx.msg_map;  // inherit lexical scope
-        // FIXME: check `ctx.state_map` for multi-level nesting...
-    }
-    console.log("lambda:", "state_map:", child.state_map);
-    let code = {
-        error: "bad lambda",
-        ptrn,
-        body,
-        ctx
-    };
-    let data = nil_lit;
-    if (body?.kind === "pair") {
-        code =
-            interpret_seq(child, body,
-            std.cust_send);
-        if (ctx.msg_map) {
-            // capture lexical scope
-            code = {
-                error: "nested lambda not implemented",
-                ctx
-            };
-            // FIXME: refactor this code to create a `closure_t` at runtime!
-        }
-    } else {
-        code =
-            new_instr("push", unit_lit,
-            std.cust_send);
-    }
+    let code = interpret_lambda(ctx, args);
     if (code.error) {
         return code;
     }
+    let data = nil_lit;
     return new_quad(closure_t, code, data);
 }
 
@@ -819,12 +784,17 @@ function xlat_invoke(ctx, crlf, k) {
     }
 }
 
-function xlat_lambda(ctx, crlf, k) {
-    const closure = eval_lambda(ctx, crlf);
-    if (closure.error) {
-        return closure;
+function xlat_lambda(ctx, args, k) {
+    let code = interpret_lambda(ctx, args);
+    if (code.error) {
+        return code;
     }
-    return new_instr("push", closure, k);        // value
+    code =
+        new_instr("push", closure_t,    // #closure_t
+        new_instr("push", code,         // #closure_t code
+        new_instr("msg", 0,             // #closure_t code data=msg
+        new_instr("quad", 3, k))));     // [#closure_t, code, data, #?]
+    return code;
 }
 
 function xlat_BEH(ctx, args, k) {
@@ -1094,6 +1064,34 @@ function interpret_args(ctx, list, k) {
     };
 }
 
+function interpret_lambda(ctx, args) {
+    const ptrn = nth_sexpr(args, 1);
+    const body = nth_sexpr(args, -1);
+    console.log("lambda:", "ptrn:", to_scheme(ptrn));
+    console.log("lambda:", "body:", to_scheme(body));
+    const child = Object.assign({}, lambda_ctx);
+    child.parent = ctx;
+    child.msg_map = pattern_to_map(ptrn, 1);  // skip implicit customer
+    console.log("lambda:", "msg_map:", child.msg_map);
+    if (ctx.msg_map) {
+        child.state_map = ctx.msg_map;  // inherit lexical scope
+        // FIXME: check `ctx.state_map` for multi-level nesting...
+    }
+    console.log("lambda:", "state_map:", child.state_map);
+    if (body?.kind !== "pair") {
+        // empty body
+        let code =
+            new_instr("push", unit_lit,
+            std.cust_send);
+        return code;
+    }
+    // sequential body
+    let code =
+        interpret_seq(child, body,
+        std.cust_send);
+    return code;
+}
+
 function parse(source) {
     const str_in = string_input(source);
     const lex_in = lex_input(str_in);
@@ -1119,6 +1117,7 @@ function compile(source) {
         lex_in = parse.next;
     }
     const ctx = Object.assign({}, module_ctx);
+    // FIXME: could we use `interpret_seq()` instead?
     let k =
         new_instr("msg", 0,             // {caps}
         new_instr("push", 2,            // {caps} dev.debug_key
@@ -1205,8 +1204,8 @@ console.log("sexpr:", to_scheme(sexpr?.token));
 //const module = compile(sample_source);
 //const module = compile(ifact_source);
 //const module = compile(fact_source);
-const module = compile(fib_source);
-//const module = compile(hof_source);
+//const module = compile(fib_source);
+const module = compile(hof_source);
 //const module = compile(test_source);
 console.log(JSON.stringify(module, undefined, 2));
 if (!module?.error) {
