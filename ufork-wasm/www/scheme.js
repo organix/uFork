@@ -612,6 +612,42 @@ function pattern_to_map(pattern, n = 0) {
     return map;
 }
 
+function sexpr_to_crlf(ctx, sexpr) {
+    if (typeof sexpr === "number") {
+        return sexpr;
+    }
+    if (typeof sexpr === "string") {
+        // Symbol
+        const name = "'" + sexpr;
+        let symbol = ctx.env_map[name];
+        if (!symbol) {
+            symbol = new_quad(symbol_t);
+            ctx.env_map[name] = symbol;
+        }
+        return new_ref(name);
+    }
+    const kind = sexpr?.kind;
+    if (kind === "literal" || kind === "type") {
+        return sexpr;
+    }
+    if (kind === "pair") {
+        const head = sexpr_to_crlf(ctx, sexpr.head);
+        if (head.error) {
+            return head;
+        }
+        const tail = sexpr_to_crlf(ctx, sexpr.tail);
+        if (head.error) {
+            return head;
+        }
+        return new_pair(head, tail);
+    }
+    return {
+        error: "unknown sexpr",
+        sexpr,
+        ctx
+    };
+}
+
 const module_ctx = {
     number: eval_literal,
     type: eval_literal,
@@ -619,6 +655,7 @@ const module_ctx = {
     string: eval_variable,
     pair: eval_invoke,
     func_map: {
+        quote: eval_quote,
         define: eval_define,
         lambda: eval_lambda
     },
@@ -657,6 +694,11 @@ function eval_invoke(ctx, crlf) {
         xlat,
         ctx
     };
+}
+
+function eval_quote(ctx, args) {
+    const sexpr = nth_sexpr(args, 1);
+    return sexpr_to_crlf(ctx, sexpr);
 }
 
 function eval_define(ctx, args) {
@@ -1201,9 +1243,9 @@ f n z
 2
 (define f (lambda (x y) y))
 3
-z n f
-;(cons z n)
-;(f z n)
+z n f 'a 'foo
+'(cons z n)
+'(f z n . -1)
 `;
 /*
 //const sexpr = parse(" `('foo (,bar ,@baz) . quux)\r\n");
@@ -1228,8 +1270,8 @@ console.log("sexpr:", to_scheme(sexpr?.token));
 //const module = compile(fact_source);
 //const module = compile(fib_source);
 //const module = compile(hof2_source);
-const module = compile(hof3_source);
-//const module = compile(test_source);
+//const module = compile(hof3_source);
+const module = compile(test_source);
 console.log(JSON.stringify(module, undefined, 2));
 if (!module?.error) {
     console.log(to_asm(module));
