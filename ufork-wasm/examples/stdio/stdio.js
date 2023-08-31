@@ -4,7 +4,6 @@
 
 import ufork from "../../www/ufork.js";
 import parseq from "../../www/parseq.js";
-import lazy from "../../www/requestors/lazy.js";
 import requestorize from "../../www/requestors/requestorize.js";
 import io_device from "../../www/devices/io_device.js";
 const wasm_url = import.meta.resolve(
@@ -19,6 +18,16 @@ const stdin_buffer_size = 65536; // 64KB
 
 let core;
 
+function refill() {
+    // refill root-sponsor with resources
+    const spn = core.u_ramptr(ufork.SPONSOR_OFS);
+    const sponsor = core.u_read_quad(spn);
+    sponsor.t = core.u_fixnum(4096);  // memory
+    sponsor.x = core.u_fixnum(256);  // events
+    sponsor.y = core.u_fixnum(8192);  // cycles
+    core.u_write_quad(spn, sponsor);
+}
+
 function run() {
     while (true) {
         // run until there is no more work, or an error occurs
@@ -29,9 +38,11 @@ function run() {
             if (err === ufork.E_OK) {
                 break;  // no more work to do, so we exit...
             }
-            if (err === ufork.E_MEM_LIM
-            ||  err === ufork.E_MSG_LIM
-            ||  err === ufork.E_CPU_LIM) {
+            if (
+                err === ufork.E_MEM_LIM
+                || err === ufork.E_MSG_LIM
+                || err === ufork.E_CPU_LIM
+            ) {
                 refill();
             } else {
                 window.console.error("FAULT", msg);
@@ -44,22 +55,15 @@ function run() {
     }
 }
 
-function refill() {
-    // refill root-sponsor with resources
-    const spn = core.u_ramptr(ufork.SPONSOR_OFS);
-    const sponsor = core.u_read_quad(spn);
-    sponsor.t = core.u_fixnum(4096);  // memory
-    sponsor.x = core.u_fixnum(256);  // events
-    sponsor.y = core.u_fixnum(8192);  // cycles
-    core.u_write_quad(spn, sponsor);
-}
-
+core = ufork.make_core({
+    wasm_url,
+    on_wakeup: run,
+    on_log: window.console.error,
+    log_level: ufork.LOG_WARN
+});
 parseq.sequence([
-    ufork.instantiate_core(wasm_url, run, window.console.error, ufork.LOG_WARN),
-    lazy(function (the_core) {
-        core = the_core;
-        return core.h_import(asm_url);
-    }),
+    core.h_initialize(),
+    core.h_import(asm_url),
     requestorize(function (asm_module) {
         const on_stdin = io_device(core, function on_stdout(string) {
             Deno.stdout.write(utf8_encoder.encode(string));

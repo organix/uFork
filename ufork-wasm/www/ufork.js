@@ -1,11 +1,11 @@
 // A JavaScript wrapper for a uFork WASM core.
 
 // This module exports an object containing the uFork constants, as well as a
-// method 'instantiate_core' which is a requestor factory with the following
-// parameters:
+// 'make_core' constuctor function that takes an object with the following
+// properties:
 
 //  wasm_url
-//      The URL of the uFork WASM binary, as a string.
+//      The URL of the uFork WASM binary, as a string. Required.
 
 //  on_wakeup(device_offset)
 //      A function that is called whenever the core wakes up from a dormant
@@ -16,6 +16,10 @@
 //  on_log(log_level, ...values)
 //      A function that is called with any values logged by the core.
 //      The 'values' may or may not be strings. Optional.
+
+//  on_trace(event)
+//      A function that is called before an event transaction is committed.
+//      NOTE: This function is independent of the TRACE logging level. Optional.
 
 //  log_level
 //      An integer controlling the core's logging verbosity. Each level includes
@@ -34,14 +38,12 @@
 
 //      The default level is LOG_WARN.
 
-//  trace_event(event)
-//      A function that is called before an event transaction is committed.
-//      NOTE: This function is independent of the TRACE logging level.
-//      Optional.
-
-// The returned requestor produces a core object containing a bunch of methods.
+// The returned object is an uninitialized core, containing a bunch of methods.
 // The methods beginning with "u_" are reentrant, but the methods beginning
 // with "h_" are non-reentrant.
+
+// To initialize the core, call the 'h_initialize' method and run the returned
+// requestor to completion.
 
 /*jslint browser, long, bitwise */
 
@@ -308,19 +310,23 @@ const crlf_types = {
     actor: ACTOR_T
 };
 
-function make_core(
-    wasm_exports,
+function make_core({
+    wasm_url,
     on_wakeup,
     on_log,
-    log_level,
-    mutable_wasm_caps,
-    trace_event
-) {
+    on_trace,
+    log_level = LOG_WARN
+}) {
+    let wasm_exports;
     let boot_caps_dict = []; // empty
+    let wasm_caps = Object.create(null);
     let import_promises = Object.create(null);
     let module_source = Object.create(null);
     let rom_sourcemap = Object.create(null);
     let wasm_call_in_progress = false;
+    let initial_rom_ofs;
+    let initial_ram_ofs;
+    let initial_blob_ofs;
 
 // The presence of a particular logging method indicates that its associated log
 // level is enabled. Thus calling code can log conditionally, avoiding the
@@ -363,40 +369,40 @@ function make_core(
 // Throw an exception if the non-reentrant methods are reentered. This provides
 // a clearer indication of the problem than a panic stacktrace.
 
-    function wasm_mutex_call(wasm_fn) {
+    function wasm_mutex_call(get_wasm_fn) {
         return function (...args) {
             if (wasm_call_in_progress) {
                 throw new Error("re-entrant WASM call");
             }
             try {
                 wasm_call_in_progress = true;  // obtain "mutex"
-                return wasm_fn(...args);
+                return get_wasm_fn()(...args);
             } finally {
                 wasm_call_in_progress = false;  // release "mutex"
             }
         };
     }
 
-    const h_run_loop = wasm_mutex_call(wasm_exports.h_run_loop);
-    const h_step = wasm_mutex_call(wasm_exports.h_step);
-    const h_event_enqueue = wasm_mutex_call(wasm_exports.h_event_enqueue);
-    const h_revert = wasm_mutex_call(wasm_exports.h_revert);
-    const h_gc_run = wasm_mutex_call(wasm_exports.h_gc_run);
-    //const h_rom_buffer = wasm_mutex_call(wasm_exports.h_rom_buffer);
-    const h_rom_top = wasm_mutex_call(wasm_exports.h_rom_top);
-    const h_set_rom_top = wasm_mutex_call(wasm_exports.h_set_rom_top);
-    const h_reserve_rom = wasm_mutex_call(wasm_exports.h_reserve_rom);
-    //const h_ram_buffer = wasm_mutex_call(wasm_exports.h_ram_buffer);
-    const h_ram_top = wasm_mutex_call(wasm_exports.h_ram_top);
-    const h_reserve = wasm_mutex_call(wasm_exports.h_reserve);
-    const h_reserve_stub = wasm_mutex_call(wasm_exports.h_reserve_stub);
-    const h_release_stub = wasm_mutex_call(wasm_exports.h_release_stub);
-    //const h_blob_buffer = wasm_mutex_call(wasm_exports.h_blob_buffer);
-    const h_blob_top = wasm_mutex_call(wasm_exports.h_blob_top);
-    const h_car = wasm_mutex_call(wasm_exports.h_car);
-    const h_cdr = wasm_mutex_call(wasm_exports.h_cdr);
-    const h_gc_color = wasm_mutex_call(wasm_exports.h_gc_color);
-    const h_gc_state = wasm_mutex_call(wasm_exports.h_gc_state);
+    const h_run_loop = wasm_mutex_call(() => wasm_exports.h_run_loop);
+    const h_step = wasm_mutex_call(() => wasm_exports.h_step);
+    const h_event_enqueue = wasm_mutex_call(() => wasm_exports.h_event_enqueue);
+    const h_revert = wasm_mutex_call(() => wasm_exports.h_revert);
+    const h_gc_run = wasm_mutex_call(() => wasm_exports.h_gc_run);
+    //const h_rom_buffer = wasm_mutex_call(() => wasm_exports.h_rom_buffer);
+    const h_rom_top = wasm_mutex_call(() => wasm_exports.h_rom_top);
+    const h_set_rom_top = wasm_mutex_call(() => wasm_exports.h_set_rom_top);
+    const h_reserve_rom = wasm_mutex_call(() => wasm_exports.h_reserve_rom);
+    //const h_ram_buffer = wasm_mutex_call(() => wasm_exports.h_ram_buffer);
+    const h_ram_top = wasm_mutex_call(() => wasm_exports.h_ram_top);
+    const h_reserve = wasm_mutex_call(() => wasm_exports.h_reserve);
+    const h_reserve_stub = wasm_mutex_call(() => wasm_exports.h_reserve_stub);
+    const h_release_stub = wasm_mutex_call(() => wasm_exports.h_release_stub);
+    //const h_blob_buffer = wasm_mutex_call(() => wasm_exports.h_blob_buffer);
+    const h_blob_top = wasm_mutex_call(() => wasm_exports.h_blob_top);
+    const h_car = wasm_mutex_call(() => wasm_exports.h_car);
+    const h_cdr = wasm_mutex_call(() => wasm_exports.h_cdr);
+    const h_gc_color = wasm_mutex_call(() => wasm_exports.h_gc_color);
+    const h_gc_state = wasm_mutex_call(() => wasm_exports.h_gc_state);
 
     function u_memory() {
 
@@ -406,12 +412,8 @@ function make_core(
         return wasm_exports.memory.buffer;
     }
 
-// We avoid unnecessary reentrancy by caching the offsets. Even if the WASM
-// memory is rearranged, offsets should not change.
-
-    const initial_rom_ofs = wasm_exports.h_rom_buffer();
-    const initial_ram_ofs = wasm_exports.h_ram_buffer();
-    const initial_blob_ofs = wasm_exports.h_blob_buffer();
+// We avoid unnecessary reentrancy by caching the offsets at initialization
+// time. Even if the WASM memory is rearranged, offsets should not change.
 
     function u_rom_ofs() {
         return initial_rom_ofs;
@@ -1223,7 +1225,7 @@ function make_core(
 // Log event details
 
         if (log) {
-            if (typeof event === 'number') {
+            if (typeof event === "number") {
                 event = u_event_as_object(event);
             }
             if (event.target.device) {
@@ -1239,7 +1241,7 @@ function make_core(
             } else {
                 // actor effect
                 let messages = [];
-                event.sent.forEach(({target, message}) => {
+                event.sent.forEach(function ({target, message}) {
                     messages.push(message + "->" + target);
                 });
                 log(event.message
@@ -1338,6 +1340,58 @@ function make_core(
         h_set_rom_top(rom_top);  // register new top-of-ROM
     }
 
+    function h_initialize() {
+
+// Initializes the core. This requestor should be run exactly once before the
+// core is asked to do any work.
+
+        return parseq.sequence([
+            unpromise(function () {
+                return WebAssembly.instantiateStreaming(fetch(wasm_url), {
+                    capabilities: {
+                        host_clock(...args) {
+                            return wasm_caps.host_clock(...args);
+                        },
+                        host_random(...args) {
+                            return wasm_caps.host_random(...args);
+                        },
+                        host_print(...args) {
+                            return wasm_caps.host_print(...args);
+                        },
+                        host_log(...args) {
+                            return wasm_caps.host_log(...args);
+                        },
+                        host_start_timer(...args) {
+                            return wasm_caps.host_start_timer(...args);
+                        },
+                        host_stop_timer(...args) {
+                            return wasm_caps.host_stop_timer(...args);
+                        },
+                        host_read(...args) {
+                            return wasm_caps.host_read(...args);
+                        },
+                        host_write(...args) {
+                            return wasm_caps.host_write(...args);
+                        },
+                        host_trace(...args) {
+                            return wasm_caps.host_trace(...args);
+                        },
+                        host(...args) {
+                            return wasm_caps.host(...args);
+                        }
+                    }
+                });
+            }),
+            requestorize(function (wasm) {
+                wasm_exports = wasm.instance.exports;
+                initial_rom_ofs = wasm.instance.exports.h_rom_buffer();
+                initial_ram_ofs = wasm.instance.exports.h_ram_buffer();
+                initial_blob_ofs = wasm.instance.exports.h_blob_buffer();
+                return true;
+            })
+        ]);
+    }
+
     function h_install(boot_caps, wasm_imports) {
 
 // Extends the boot capabilities dictionary and provide capability functions to
@@ -1356,7 +1410,7 @@ function make_core(
         if (boot_caps !== undefined) {
             boot_caps_dict.push(...boot_caps);
         }
-        Object.assign(mutable_wasm_caps, wasm_imports);
+        Object.assign(wasm_caps, wasm_imports);
     }
 
     function h_wakeup(device_offset) {
@@ -1370,8 +1424,8 @@ function make_core(
 
     h_install([], {
         host_trace(event) { // (i32) -> nil
-            if (typeof trace_event == "function") {
-                trace_event(event);
+            if (typeof on_trace === "function") {
+                on_trace(event);
             }
         }
     });
@@ -1402,6 +1456,7 @@ function make_core(
         h_gc_run,
         h_gc_state,
         h_import,
+        h_initialize,
         h_install,
         h_load,
         h_ram_top,
@@ -1460,68 +1515,6 @@ function make_core(
     });
 }
 
-function instantiate_core(
-    wasm_url,
-    on_wakeup,
-    on_log,
-    log_level = LOG_WARN,
-    trace_event
-) {
-    let mutable_wasm_caps = Object.create(null);
-    return parseq.sequence([
-        unpromise(function () {
-            return WebAssembly.instantiateStreaming(
-                fetch(wasm_url),
-                {
-                    capabilities: {
-                        host_clock(...args) {
-                            return mutable_wasm_caps.host_clock(...args);
-                        },
-                        host_random(...args) {
-                            return mutable_wasm_caps.host_random(...args);
-                        },
-                        host_print(...args) {
-                            return mutable_wasm_caps.host_print(...args);
-                        },
-                        host_log(...args) {
-                            return mutable_wasm_caps.host_log(...args);
-                        },
-                        host_start_timer(...args) {
-                            return mutable_wasm_caps.host_start_timer(...args);
-                        },
-                        host_stop_timer(...args) {
-                            return mutable_wasm_caps.host_stop_timer(...args);
-                        },
-                        host_read(...args) {
-                            return mutable_wasm_caps.host_read(...args);
-                        },
-                        host_write(...args) {
-                            return mutable_wasm_caps.host_write(...args);
-                        },
-                        host_trace(...args) {
-                            return mutable_wasm_caps.host_trace(...args);
-                        },
-                        host(...args) {
-                            return mutable_wasm_caps.host(...args);
-                        }
-                    }
-                }
-            );
-        }),
-        requestorize(function (wasm) {
-            return make_core(
-                wasm.instance.exports,
-                on_wakeup,
-                on_log,
-                log_level,
-                mutable_wasm_caps,
-                trace_event
-            );
-        })
-    ]);
-}
-
-//debug import lazy from "./requestors/lazy.js";
 //debug import clock_device from "./devices/clock_device.js";
 //debug import random_device from "./devices/random_device.js";
 //debug import io_device from "./devices/io_device.js";
@@ -1532,20 +1525,21 @@ function instantiate_core(
 //debug     const status = core.h_run_loop(0);
 //debug     console.log("IDLE:", core.u_fault_msg(core.u_fix_to_i32(status)));
 //debug }
-//debug parseq.sequence([
-//debug     instantiate_core(
-//debug         import.meta.resolve(
-//debug             "../target/wasm32-unknown-unknown/debug/ufork_wasm.wasm"
-//debug         ),
-//debug         function on_wakeup(device_offset) {
-//debug             console.log("WAKE:", device_offset);
-//debug             run_ufork();
-//debug         },
-//debug         console.log,
-//debug         LOG_DEBUG
+//debug core = make_core({
+//debug     wasm_url: import.meta.resolve(
+//debug         "../target/wasm32-unknown-unknown/debug/ufork_wasm.wasm"
 //debug     ),
-//debug     lazy(function (the_core) {
-//debug         core = the_core;
+//debug     on_wakeup(device_offset) {
+//debug         console.log("WAKE:", device_offset);
+//debug         run_ufork();
+//debug     },
+//debug     on_log: console.log,
+//debug     log_level: LOG_DEBUG
+//debug });
+//debug parseq.sequence([
+//debug     core.h_initialize(),
+//debug     core.h_import(import.meta.resolve("../lib/fib.asm")),
+//debug     requestorize(function (asm_module) {
 //debug         // Install devices
 //debug         clock_device(core);
 //debug         random_device(core);
@@ -1561,9 +1555,7 @@ function instantiate_core(
 //debug         console.log("h_ram_top() =", core.h_ram_top(), core.u_print(core.h_ram_top()));
 //debug         console.log("u_ramptr(5) =", core.u_ramptr(5), core.u_print(core.u_ramptr(5)));
 //debug         console.log("u_ptr_to_cap(u_ramptr(3)) =", core.u_ptr_to_cap(core.u_ramptr(3)), core.u_print(core.u_ptr_to_cap(core.u_ramptr(3))));
-//debug         return core.h_import(import.meta.resolve("../lib/fib.asm"));
-//debug     }),
-//debug     requestorize(function (asm_module) {
+//debug         // Boot
 //debug         const sponsor_ptr = core.u_ramptr(SPONSOR_OFS);
 //debug         const sponsor = core.u_read_quad(sponsor_ptr);
 //debug         sponsor.t = core.u_fixnum(4096);    // memory
@@ -1580,9 +1572,9 @@ function instantiate_core(
 
 export default Object.freeze({
 
-// The functions.
+// The constructor function.
 
-    instantiate_core,
+    make_core,
 
 // The constants.
 

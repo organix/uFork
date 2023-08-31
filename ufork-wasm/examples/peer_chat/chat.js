@@ -12,7 +12,6 @@ import host_device from "../../www/devices/host_device.js";
 import websockets_signaller from "../../www/transports/websockets_signaller.js";
 import webrtc_transport from "../../www/transports/webrtc_transport.js";
 import parseq from "../../www/parseq.js";
-import lazy from "../../www/requestors/lazy.js";
 import requestorize from "../../www/requestors/requestorize.js";
 import make_chat_db from "./chat_db.js";
 
@@ -26,6 +25,15 @@ const default_signaller_origin = (
 let core;  // uFork wasm processor core
 let on_stdin;
 let db = make_chat_db(default_signaller_origin);
+
+function refill_all(spn) {
+    const sponsor = core.u_read_quad(spn);
+    sponsor.t = core.u_fixnum(4096);  // memory
+    sponsor.x = core.u_fixnum(256);  // events
+    sponsor.y = core.u_fixnum(8192);  // cycles
+    core.u_write_quad(spn, sponsor);
+    //console.log("filled:", core.u_disasm(spn));
+}
 
 function ufork_run() {
     const spn = core.u_ramptr(ufork.SPONSOR_OFS);
@@ -58,14 +66,6 @@ function ufork_run() {
         console.log("RUN:", core.u_print(sig));
         ufork_run();
     }, 0);
-}
-function refill_all(spn) {
-    const sponsor = core.u_read_quad(spn);
-    sponsor.t = core.u_fixnum(4096);  // memory
-    sponsor.x = core.u_fixnum(256);  // events
-    sponsor.y = core.u_fixnum(8192);  // cycles
-    core.u_write_quad(spn, sponsor);
-    //console.log("filled:", core.u_disasm(spn));
 }
 
 function ufork_wake(dev_ofs) {
@@ -182,21 +182,17 @@ const wasm_url = new URL(
     import.meta.url
 ).href;
 const asm_url = new URL("./chat.asm", import.meta.url).href;
+core = ufork.make_core({
+    wasm_url,
+    on_wakeup: ufork_wake,
+    on_log: console.log,
+    log_level: ufork.LOG_DEBUG
+});
 parseq.sequence([
+    core.h_initialize(),
     parseq.parallel([
         db.get_store(),
-        parseq.sequence([
-            ufork.instantiate_core(
-                wasm_url,
-                ufork_wake,
-                console.log,
-                ufork.LOG_DEBUG
-            ),
-            lazy(function (the_core) {
-                core = the_core;
-                return core.h_import(asm_url);
-            })
-        ])
+        core.h_import(asm_url)
     ]),
     requestorize(function ([the_awp_store, asm_module]) {
         on_stdin = io_device(core, on_stdout);

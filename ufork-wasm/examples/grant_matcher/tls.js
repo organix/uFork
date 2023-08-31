@@ -6,7 +6,6 @@
 import crypto from "node:crypto";
 import ufork from "../../www/ufork.js";
 import parseq from "../../www/parseq.js";
-import lazy from "../../www/requestors/lazy.js";
 import requestorize from "../../www/requestors/requestorize.js";
 import awp_device from "../../www/devices/awp_device.js";
 import host_device from "../../www/devices/host_device.js";
@@ -67,24 +66,21 @@ const asm_url = new URL(
     process.argv[3],
     origin + "/examples/grant_matcher/"
 ).href;
-let core;
+const core = ufork.make_core({
+    wasm_url: origin + "/target/wasm32-unknown-unknown/debug/ufork_wasm.wasm",
+    on_wakeup() {
+        console.log(
+            "IDLE",
+            store_name,
+            core.u_fault_msg(core.u_fix_to_i32(core.h_run_loop()))
+        );
+    },
+    on_log: console.log,
+    log_level: ufork.LOG_DEBUG
+});
 parseq.sequence([
-    ufork.instantiate_core(
-        origin + "/target/wasm32-unknown-unknown/debug/ufork_wasm.wasm",
-        function on_wakeup() {
-            console.log(
-                "IDLE",
-                store_name,
-                core.u_fault_msg(core.h_run_loop())
-            );
-        },
-        console.log,
-        ufork.LOG_DEBUG
-    ),
-    lazy(function (the_core) {
-        core = the_core;
-        return core.h_import(asm_url);
-    }),
+    core.h_initialize(),
+    core.h_import(asm_url),
     requestorize(function (asm_module) {
         const make_dynamic_device = host_device(core);
         awp_device({
@@ -95,6 +91,6 @@ parseq.sequence([
             webscrypto: crypto.webcrypto
         });
         core.h_boot(asm_module.boot);
-        return core.u_fault_msg(core.h_run_loop());
+        return core.u_fault_msg(core.u_fix_to_i32(core.h_run_loop()));
     })
 ])(console.log);

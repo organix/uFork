@@ -528,33 +528,30 @@ function on_stdout(char) {
     }
 }
 
-function trace_event(event) {
-    event = core.u_event_as_object(event);
-    //core.u_log_event(event, core.u_debug);
-    core.u_debug(event);
-    //console.log(JSON.stringify(event, undefined, 2));
-}
-
-function on_log(level, ...args) {
-    //console.log(level + ": " + args.join(" "));
-    console.log(level, ...args);
-}
-
-ufork.instantiate_core(
-    "../target/wasm32-unknown-unknown/debug/ufork_wasm.wasm",
-    function on_wakeup(device_offset) {
+core = ufork.make_core({
+    wasm_url: "../target/wasm32-unknown-unknown/debug/ufork_wasm.wasm",
+    on_wakeup(device_offset) {
         console.log("WAKE:", device_offset);
         //single_step();
         draw_host();
     },
-    on_log,
-    ufork.LOG_DEBUG,
-    trace_event
-)(function callback(the_core, reason) {
-    if (the_core === undefined) {
+    on_log(level, ...args) {
+        //console.log(level + ": " + args.join(" "));
+        console.log(level, ...args);
+    },
+    on_trace(event) {
+        event = core.u_event_as_object(event);
+        //core.u_log_event(event, core.u_debug);
+        core.u_debug(event);
+        //console.log(JSON.stringify(event, undefined, 2));
+    },
+    log_level: ufork.LOG_DEBUG
+});
+
+core.h_initialize()(function callback(value, reason) {
+    if (value === undefined) {
         throw reason;
     }
-    core = the_core;
 
     // install devices
     clock_device(core);

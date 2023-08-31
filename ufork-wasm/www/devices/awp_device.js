@@ -884,14 +884,26 @@ function awp_device({
 }
 
 //debug import parseq from "../parseq.js";
-//debug import lazy from "../requestors/lazy.js";
 //debug import requestorize from "../requestors/requestorize.js";
 //debug import host_device from "./host_device.js";
 //debug const wasm_url = import.meta.resolve(
 //debug     "../../target/wasm32-unknown-unknown/debug/ufork_wasm.wasm"
 //debug );
+//debug const asm_url = import.meta.resolve(
+//debug     "../../lib/grant_matcher.asm"
+//debug );
+//debug const core = ufork.make_core({
+//debug     wasm_url,
+//debug     on_wakeup(device_offset) {
+//debug         console.log("WAKE:", device_offset);
+//debug         console.log("IDLE:", core.u_fault_msg(
+//debug             core.h_run_loop()
+//debug         ));
+//debug     },
+//debug     on_log: console.log,
+//debug     log_level: ufork.LOG_DEBUG
+//debug });
 //debug let dispose;
-//debug let core;
 //debug function demo({
 //debug     transport,
 //debug     bob_address,
@@ -901,24 +913,9 @@ function awp_device({
 //debug     webcrypto
 //debug }) {
 //debug     return parseq.sequence([
-//debug         ufork.instantiate_core(
-//debug             wasm_url,
-//debug             function on_wakeup(device_offset) {
-//debug                 console.log("WAKE:", device_offset);
-//debug                 console.log("IDLE:", core.u_fault_msg(
-//debug                     core.h_run_loop()
-//debug                 ));
-//debug             },
-//debug             console.log,
-//debug             ufork.LOG_DEBUG
-//debug         ),
+//debug         core.h_initialize(),
 //debug         parseq.parallel([
-//debug             lazy(function (the_core) {
-//debug                 core = the_core;
-//debug                 return core.h_import(import.meta.resolve(
-//debug                     "../../lib/grant_matcher.asm"
-//debug                 ));
-//debug             }),
+//debug             core.h_import(asm_url),
 //debug             transport.generate_identity(),
 //debug             transport.generate_identity(),
 //debug             transport.generate_identity(),

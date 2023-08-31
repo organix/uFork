@@ -23,7 +23,6 @@
 
 import parseq from "./parseq.js";
 import ufork from "./ufork.js";
-import lazy from "./requestors/lazy.js";
 import host_device from "./devices/host_device.js";
 import clock_device from "./devices/clock_device.js";
 import random_device from "./devices/random_device.js";
@@ -44,26 +43,24 @@ function asm_test(module_url) {
         the_callback({pass: false, logs});
     }
 
-    return parseq.sequence([
-        ufork.instantiate_core(
-            import.meta.resolve(
-                "../target/wasm32-unknown-unknown/debug/ufork_wasm.wasm"
-            ),
-            run_ufork,
-            function on_log(...args) {
-                logs.push([...args]);
-            },
-            ufork.LOG_DEBUG
+    core = ufork.make_core({
+        wasm_url: import.meta.resolve(
+            "../target/wasm32-unknown-unknown/debug/ufork_wasm.wasm"
         ),
-        lazy(function (the_core) {
-            core = the_core;
+        on_wakeup: run_ufork,
+        on_log(...args) {
+            logs.push([...args]);
+        },
+        log_level: ufork.LOG_DEBUG
+    });
+    return parseq.sequence([
+        core.h_initialize(),
+        core.h_import(module_url),
+        function asm_test_requestor(callback, asm_module) {
+            the_callback = callback;
             clock_device(core);
             random_device(core);
             dispose_timer = timer_device(core);
-            return core.h_import(module_url);
-        }),
-        function asm_test_requestor(callback, asm_module) {
-            the_callback = callback;
             if (asm_module.test === undefined) {
                 logs.push([ufork.LOG_WARN, "Module did not export a test."]);
                 return callback({logs});
