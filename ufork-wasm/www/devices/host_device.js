@@ -181,7 +181,6 @@ function host_device(core) {
 }
 
 //debug import parseq from "../parseq.js";
-//debug import lazy from "../requestors/lazy.js";
 //debug import requestorize from "../requestors/requestorize.js";
 //debug const wasm_url = import.meta.resolve(
 //debug     "../../target/wasm32-unknown-unknown/debug/ufork_wasm.wasm"
@@ -230,25 +229,26 @@ function host_device(core) {
 //debug         }
 //debug     };
 //debug }
+//debug function run_core() {
+//debug     console.log(
+//debug         "IDLE:",
+//debug         core.u_fault_msg(core.u_fix_to_i32(core.h_run_loop()))
+//debug     );
+//debug }
+//debug core = ufork.make_core({
+//debug     wasm_url,
+//debug     on_wakeup: run_core,
+//debug     on_log: console.log,
+//debug     log_level: ufork.LOG_DEBUG
+//debug });
 //debug parseq.sequence([
-//debug     ufork.instantiate_core(
-//debug         wasm_url,
-//debug         function on_wakeup() {
-//debug             console.log("IDLE:", core.u_fault_msg(core.h_run_loop()));
-//debug         },
-//debug         console.log,
-//debug         ufork.LOG_DEBUG
-//debug     ),
-//debug     lazy(function (the_core) {
-//debug         core = the_core;
-//debug         return core.h_import(import.meta.resolve(
-//debug             "../../lib/host_device.asm"
-//debug         ));
-//debug     }),
+//debug     core.h_initialize(),
+//debug     core.h_import(import.meta.resolve("../../lib/host_device.asm")),
 //debug     requestorize(function (asm_module) {
 //debug         dispose = dummy_device(host_device(core));
 //debug         core.h_boot(asm_module.boot);
-//debug         return core.u_fault_msg(core.h_run_loop());
+//debug         run_core();
+//debug         return true;
 //debug     })
 //debug ])(console.log);
 //debug setTimeout(function () {

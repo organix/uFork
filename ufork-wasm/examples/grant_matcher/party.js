@@ -3,7 +3,6 @@
 import hex from "../../www/hex.js";
 import parseq from "../../www/parseq.js";
 import requestorize from "../../www/requestors/requestorize.js";
-import lazy from "../../www/requestors/lazy.js";
 import ufork from "../../www/ufork.js";
 import awp_device from "../../www/devices/awp_device.js";
 import host_device from "../../www/devices/host_device.js";
@@ -28,34 +27,31 @@ function party(asm_url, acquaintance_names = []) {
     }
 
     const transport = webrtc_transport(websockets_signaller(), print);
-    let core;
+    const core = ufork.make_core({
+        wasm_url: import.meta.resolve(
+            "../../target/wasm32-unknown-unknown/debug/ufork_wasm.wasm"
+        ),
+        on_wakeup() {
+            const sig = core.h_run_loop(0);
+            const err = core.u_fix_to_i32(sig);
+            print("WAKE:", core.u_print(sig), core.u_fault_msg(err));
+        },
+        on_log(log_level, ...values) {
+            print(log_level, ...values);
+            if (values.includes("(+0 . #?)")) {
+                const div = document.createElement("div");
+                div.textContent = "💸";
+                div.style.fontSize = "100px";
+                document.body.append(div);
+            }
+        },
+        log_level: ufork.LOG_DEBUG
+    });
 
     return parseq.sequence([
-        ufork.instantiate_core(
-            import.meta.resolve(
-                "../../target/wasm32-unknown-unknown/debug/ufork_wasm.wasm"
-            ),
-            function on_wakeup() {
-                const sig = core.h_run_loop(0);
-                const err = core.u_fix_to_i32(sig);
-                print("WAKE:", core.u_print(sig), core.u_fault_msg(err));
-            },
-            function on_log(log_level, ...values) {
-                print(log_level, ...values);
-                if (values.includes("(+0 . #?)")) {
-                    const div = document.createElement("div");
-                    div.textContent = "💸";
-                    div.style.fontSize = "100px";
-                    document.body.append(div);
-                }
-            },
-            ufork.LOG_DEBUG
-        ),
+        core.h_initialize(),
         parseq.parallel([
-            lazy(function (the_core) {
-                core = the_core;
-                return core.h_import(asm_url);
-            }),
+            core.h_import(asm_url),
             transport.generate_identity()
         ]),
         requestorize(function ([asm_module, identity]) {

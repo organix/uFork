@@ -1,0 +1,10 @@
+{
+    "command": [
+        "deno",
+        "run",
+        "--allow-all",
+        "--importmap",
+        "https://deno.land/x/replete/import_map.json",
+        "replete.js"
+    ]
+}
