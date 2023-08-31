@@ -790,9 +790,9 @@ function xlat_lambda(ctx, args, k) {
         return code;
     }
     code =
-        new_instr("push", closure_t,    // #closure_t
-        new_instr("push", code,         // #closure_t code
-        new_instr("msg", 0,             // #closure_t code data=msg
+        new_instr("msg", 0,             // data=msg
+        new_instr("push", code,         // data code
+        new_instr("push", closure_t,    // data code #closure_t
         new_instr("quad", 3, k))));     // [#closure_t, code, data, #?]
     return code;
 }
@@ -1165,11 +1165,17 @@ const fib_source = `
         (if (< n 2)
             n
             (+ (fib (- n 1)) (fib (- n 2))) )))`;
-const hof_source = `
-(define hof
+const hof2_source = `
+(define hof2
     (lambda (x)
         (lambda (y z)
-            (list x y z))))`;
+            (list x y z) )))`;
+const hof3_source = `
+(define hof3
+    (lambda (x)
+        (lambda (y z)
+            (lambda q
+                (list x y z q) ))))`;
 const test_source = `
 f n z
 0
@@ -1205,7 +1211,8 @@ console.log("sexpr:", to_scheme(sexpr?.token));
 //const module = compile(ifact_source);
 //const module = compile(fact_source);
 //const module = compile(fib_source);
-const module = compile(hof_source);
+const module = compile(hof2_source);
+//const module = compile(hof3_source);
 //const module = compile(test_source);
 console.log(JSON.stringify(module, undefined, 2));
 if (!module?.error) {

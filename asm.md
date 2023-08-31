@@ -219,9 +219,9 @@ _deque_ _value_      | `deque` `put`       | _deque'_     | insert _value_ as th
 _deque_              | `deque` `pull`      | _deque'_ _value_ | remove the last _value_ from _deque_, or `#?`
 _deque_              | `deque` `len`       | _n_          | count elements in the _deque_
 _T_                  | `quad` `1`          | _quad_       | create quad \[_T_, `#?`, `#?`, `#?`\]
-_T_ _X_              | `quad` `2`          | _quad_       | create quad \[_T_, _X_, `#?`, `#?`\]
-_T_ _X_ _Y_          | `quad` `3`          | _quad_       | create quad \[_T_, _X_, _Y_, `#?`\]
-_T_ _X_ _Y_ _Z_      | `quad` `4`          | _quad_       | create quad \[_T_, _X_, _Y_, _Z_\]
+_X_ _T_              | `quad` `2`          | _quad_       | create quad \[_T_, _X_, `#?`, `#?`\]
+_Y_ _X_ _T_          | `quad` `3`          | _quad_       | create quad \[_T_, _X_, _Y_, `#?`\]
+_Z_ _Y_ _X_ _T_      | `quad` `4`          | _quad_       | create quad \[_T_, _X_, _Y_, _Z_\]
 _quad_               | `get` `T`           | _t_          | copy _t_ from _quad_
 _quad_               | `get` `X`           | _x_          | copy _x_ from _quad_
 _quad_               | `get` `Y`           | _y_          | copy _y_ from _quad_

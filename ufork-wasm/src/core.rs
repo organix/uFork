@@ -356,10 +356,10 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
                 if (n < 1) || (n > 4) {
                     return Err(E_BOUNDS);  // bad component count
                 }
-                let z = if n > 3 { self.stack_pop() } else { UNDEF };
-                let y = if n > 2 { self.stack_pop() } else { UNDEF };
-                let x = if n > 1 { self.stack_pop() } else { UNDEF };
                 let t = self.stack_pop();
+                let x = if n > 1 { self.stack_pop() } else { UNDEF };
+                let y = if n > 2 { self.stack_pop() } else { UNDEF };
+                let z = if n > 3 { self.stack_pop() } else { UNDEF };
                 if !self.typeq(TYPE_T, t) {
                     return Err(E_BOUNDS);  // type required
                 }
