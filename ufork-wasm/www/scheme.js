@@ -712,7 +712,7 @@ const lambda_ctx = {
         if: xlat_if,
         id: xlat_id
     },
-    state_map: {},
+    state_maps: [],
     msg_map: {}
 };
 
@@ -727,10 +727,17 @@ function xlat_variable(ctx, crlf, k) {
         // message variable
         return new_instr("msg", msg_n, k);
     }
-    const state_n = ctx.state_map && ctx.state_map[crlf];
-    if (typeof state_n === "number") {
-        // state variable
-        return new_instr("state", state_n, k);
+    if (ctx.state_maps) {
+        // search lexical scope(s)
+        const index = ctx.state_maps.findIndex((map) => (typeof map[crlf] === "number"));
+        if (index >= 0) {
+            // state variable
+            const offset = ctx.state_maps[index][crlf];
+            const code =
+                new_instr("state", index + 2,
+                new_instr("nth", offset, k));
+            return code;
+        }
     }
     // free variable
     const xlat = ctx.func_map && ctx.func_map[crlf];
@@ -790,10 +797,14 @@ function xlat_lambda(ctx, args, k) {
         return code;
     }
     code =
-        new_instr("msg", 0,             // data=msg
+        new_instr("state", -1,          // env
+        new_instr("msg", 0,             // env msg
+        new_instr("push", nil_lit,      // env msg sp=()
+        new_instr("pair", 2,            // data=(() msg . env)
         new_instr("push", code,         // data code
         new_instr("push", closure_t,    // data code #closure_t
-        new_instr("quad", 3, k))));     // [#closure_t, code, data, #?]
+        new_instr("quad", 3,            // [#closure_t, code, data, #?]
+        k)))))));
     return code;
 }
 
@@ -804,8 +815,11 @@ function xlat_BEH(ctx, args, k) {
     console.log("BEH:", "body:", to_scheme(body));
     const child = Object.assign({}, BEH_ctx);
     child.parent = ctx;
-    child.state_map = ctx.msg_map;
-    console.log("BEH:", "state_map:", child.state_map);
+    if (ctx.state_maps) {
+        child.state_maps = ctx.state_maps.slice();
+    }
+    child.state_maps.unshift(ctx.msg_map);  // add msg to lexically-captured state
+    console.log("BEH:", "state_maps:", child.state_maps);
     child.msg_map = pattern_to_map(ptrn);
     console.log("BEH:", "msg_map:", child.msg_map);
     const func_map = Object.assign({}, ctx.func_map);  // inherit from parent
@@ -986,7 +1000,7 @@ const BEH_ctx = {
     func_map: {
         BECOME: xlat_not_implemented
     },
-    state_map: {},
+    state_maps: [],
     msg_map: {}
 };
 
@@ -1071,13 +1085,15 @@ function interpret_lambda(ctx, args) {
     console.log("lambda:", "body:", to_scheme(body));
     const child = Object.assign({}, lambda_ctx);
     child.parent = ctx;
+    if (ctx.state_maps) {
+        child.state_maps = ctx.state_maps.slice();
+    }
+    if (ctx.msg_map) {
+        child.state_maps.unshift(ctx.msg_map);  // add msg to lexically-captured state
+    }
+    console.log("lambda:", "state_maps:", child.state_maps);
     child.msg_map = pattern_to_map(ptrn, 1);  // skip implicit customer
     console.log("lambda:", "msg_map:", child.msg_map);
-    if (ctx.msg_map) {
-        child.state_map = ctx.msg_map;  // inherit lexical scope
-        // FIXME: check `ctx.state_map` for multi-level nesting...
-    }
-    console.log("lambda:", "state_map:", child.state_map);
     if (body?.kind !== "pair") {
         // empty body
         let code =
@@ -1211,8 +1227,8 @@ console.log("sexpr:", to_scheme(sexpr?.token));
 //const module = compile(ifact_source);
 //const module = compile(fact_source);
 //const module = compile(fib_source);
-const module = compile(hof2_source);
-//const module = compile(hof3_source);
+//const module = compile(hof2_source);
+const module = compile(hof3_source);
 //const module = compile(test_source);
 console.log(JSON.stringify(module, undefined, 2));
 if (!module?.error) {
