@@ -552,25 +552,28 @@ function parse_sexpr(next) {
  * Scheme interpreter/compiler
  */
 
+const global_env = {
+    "symbol_t": new_quad(type_t, 3),
+    "closure_t": new_quad(type_t, 2),
+    "~empty_env": new_pair(nil_lit, nil_lit), // (())  ; NOTE: this is the same value as EMPTY_DQ
+    "~cont_beh":
+        new_instr("state", 1,       // msg
+        new_instr("my", "self",     // msg SELF
+        new_instr("send", -1,       // --
+        new_instr("state", 3,       // env
+        new_instr("state", 4,       // env sp
+        new_instr("msg", 0,         // env sp rv
+        new_instr("pair", 1,        // env sp'=(rv . sp)
+        new_instr("pair", 1,        // (sp' . env)
+        new_instr("state", 2,       // (sp' . env) cont
+        new_instr("beh", -1,        // --
+        std.commit))))))))))
+};
+
 const symbol_t = new_ref("symbol_t");
 const closure_t = new_ref("closure_t");
-
-const empty_ref = new_ref("~empty_env");
-const empty_env = new_pair(nil_lit, nil_lit); // (())
-
-const cont_ref = new_ref("~cont_beh");
-const cont_beh =                // (msg cont env sp) <- rv
-    new_instr("state", 1,       // msg
-    new_instr("my", "self",     // msg SELF
-    new_instr("send", -1,       // --
-    new_instr("state", 3,       // env
-    new_instr("state", 4,       // env sp
-    new_instr("msg", 0,         // env sp rv
-    new_instr("pair", 1,        // env sp'=(rv . sp)
-    new_instr("pair", 1,        // (sp' . env)
-    new_instr("state", 2,       // (sp' . env) cont
-    new_instr("beh", -1,        // --
-    std.commit))))))))));
+const empty_env = new_ref("~empty_env");
+const cont_beh = new_ref("~cont_beh");
 
 // Return the 'nth' item from a list of pairs, if defined.
 //
@@ -622,10 +625,10 @@ function sexpr_to_crlf(ctx, sexpr) {
     if (typeof sexpr === "string") {
         // Symbol
         const name = "'" + sexpr;
-        let symbol = ctx.env_map[name];
+        let symbol = global_env[name];
         if (!symbol) {
             symbol = new_quad(symbol_t);
-            ctx.env_map[name] = symbol;
+            global_env[name] = symbol;
         }
         return new_ref(name);
     }
@@ -652,21 +655,65 @@ function sexpr_to_crlf(ctx, sexpr) {
 }
 
 const module_ctx = {
+    number: xlat_literal,
+    type: xlat_literal,
+    literal: xlat_literal,
+    string: xlat_variable,
+    pair: xlat_invoke,
+    func_map: {
+        define: eval_define,
+        lambda: xlat_lambda,
+        //quote: xlat_quote,
+        SEND: xlat_SEND,
+        car: xlat_car,
+        cdr: xlat_cdr,
+        cons: xlat_cons,
+        list: xlat_list,
+        "eq?": xlat_eq,
+        "<": xlat_lt_num,
+        "<=": xlat_le_num,
+        "=": xlat_eq_num,
+        ">=": xlat_ge_num,
+        ">": xlat_gt_num,
+        "+": xlat_add_num,
+        "-": xlat_sub_num,
+        "*": xlat_mul_num,
+        if: xlat_if,
+        id: xlat_id
+    }
+};
+
+function eval_define(ctx, args, k) {
+    const symbol = nth_sexpr(args, 1);
+    console.log("define:", "symbol:", to_scheme(symbol));
+    if (typeof symbol !== "string") {
+        return {
+            error: "string (symbol) expected",
+            symbol,
+            ctx
+        };
+    }
+    const expr = nth_sexpr(args, 2);
+    console.log("define:", "expr:", to_scheme(expr));
+    const child = Object.assign({}, define_ctx);
+    child.parent = ctx;
+    const value = interpret(child, expr);  // evaluate expression
+    if (value?.error) {
+        return value;
+    }
+    global_env[symbol] = value;  // bind symbol in top-level environment
+    return k;  // no code produced
+}
+
+const define_ctx = {
     number: eval_literal,
     type: eval_literal,
     literal: eval_literal,
     string: eval_variable,
     pair: eval_invoke,
     func_map: {
-        quote: eval_quote,
-        define: eval_define,
-        lambda: eval_lambda
-    },
-    env_map: {
-        "symbol_t": new_quad(type_t, 3),
-        "closure_t": new_quad(type_t, 2),
-        "~empty_env": empty_env,
-        "~cont_beh": cont_beh
+        lambda: eval_lambda,
+        quote: eval_quote
     }
 };
 
@@ -700,36 +747,18 @@ function eval_invoke(ctx, crlf) {
     };
 }
 
-function eval_quote(ctx, args) {
-    const sexpr = nth_sexpr(args, 1);
-    return sexpr_to_crlf(ctx, sexpr);
-}
-
-function eval_define(ctx, args) {
-    const symbol = nth_sexpr(args, 1);
-    if (typeof symbol === "string") {
-        const expr = nth_sexpr(args, 2);
-        const value = interpret(ctx, expr);
-        if (value?.error) {
-            return value;
-        }
-        ctx.env_map[symbol] = value;
-        return unit_lit;
-    } else {
-        return {
-            error: "string (symbol) expected",
-            symbol
-        }
-    }
-}
-
 function eval_lambda(ctx, args) {
     let code = interpret_lambda(ctx, args);
     if (code.error) {
         return code;
     }
-    let data = empty_ref;
+    let data = empty_env;
     return new_quad(closure_t, code, data);
+}
+
+function eval_quote(ctx, args) {
+    const sexpr = nth_sexpr(args, 1);
+    return sexpr_to_crlf(ctx, sexpr);
 }
 
 const lambda_ctx = {
@@ -830,7 +859,7 @@ function xlat_invoke(ctx, crlf, k) {
             new_instr("state", -1,      // sp env
             new_instr("push", beh,      // sp env beh
             new_instr("msg", 0,         // sp env beh msg
-            new_instr("push", cont_ref, // sp env beh msg cont_beh
+            new_instr("push", cont_beh, // sp env beh msg cont_beh
             new_instr("beh", 4,         // --
             std.commit)))))))))));
         return code;
@@ -1188,16 +1217,15 @@ function compile(source) {
     while (sexprs.length > 0) {
         const crlf = sexprs.pop(); //sexprs.shift();
         console.log("compile crlf:", to_scheme(crlf));
-        const value = interpret(ctx, crlf);
-        if (value?.error) {
-            return value;
+        k = interpret(ctx, crlf, k);
+        if (k?.error) {
+            return k;
         }
-        k = new_instr("push", value, k);
     }
-    ctx.env_map["boot"] = k;
+    global_env["boot"] = k;
     return {
         kind: "module",
-        define: ctx.env_map,
+        define: global_env,
         export: [
             "boot"
         ]
@@ -1249,7 +1277,7 @@ f n z
 3
 z n f 'a 'foo
 '(cons z n)
-'(f z n . -1)
+;(f z n . -1)
 `;
 /*
 //const sexpr = parse(" `('foo (,bar ,@baz) . quux)\r\n");
@@ -1260,13 +1288,15 @@ const sexpr = parse("(define f (lambda (x y) y))");
 console.log("sexpr:", to_scheme(sexpr?.token));
 */
 //const module = compile("(define z 0)");
+//const module = compile("(define foo 'bar)");
+const module = compile("(define foo '(bar baz . quux))");
 //const module = compile("(define nop (lambda _))");
 //const module = compile("(define list (lambda x x))");
 //const module = compile("(define id (lambda (x) x))");
 //const module = compile("(define id (lambda (x . y) x))");
 //const module = compile("(define f (lambda (x y) y))");
 //const module = compile("(define fn (lambda (x) 0 x y q.z))");  // NOTE: "q.z" is _not_ a valid identifier!
-const module = compile("(define w (lambda (f) (f f)))");
+//const module = compile("(define w (lambda (f) (f f)))");
 //const module = compile("(define Omega (lambda _ ((lambda (f) (f f)) (lambda (f) (f f))) ))");
 //const module = compile("(define fn (lambda (x y z) (list z (cons y x)) (car q) (cdr q) ))");
 //const module = compile("(define fn (lambda (x y z) (if (eq? x -1) (list z y x) (cons y z)) ))");
@@ -1435,7 +1465,7 @@ function to_asm(crlf) {
     } else if (kind === "dict") {
         s += "    dict_t ";
         s += to_asm(crlf.key) + " ";
-        s += to_asm(crlf.value) + "\n";
+        s += to_asm(crlf.value) + "\n";  // FIXME: generate label for complex value?
         if (is_asm_leaf(crlf.next)) {
             s += "    ref " + to_asm(crlf.next) + "\n";
         } else {
