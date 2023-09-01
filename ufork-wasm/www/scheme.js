@@ -663,7 +663,7 @@ const module_ctx = {
     func_map: {
         define: eval_define,
         lambda: xlat_lambda,
-        //quote: xlat_quote,
+        quote: xlat_quote,
         SEND: xlat_SEND,
         car: xlat_car,
         cdr: xlat_cdr,
@@ -769,6 +769,7 @@ const lambda_ctx = {
     pair: xlat_invoke,
     func_map: {
         lambda: xlat_lambda,
+        quote: xlat_quote,
         BEH: xlat_BEH,
         SEND: xlat_SEND,
         car: xlat_car,
@@ -880,6 +881,13 @@ function xlat_lambda(ctx, args, k) {
         new_instr("push", closure_t,    // data code #closure_t
         new_instr("quad", 3,            // [#closure_t, code, data, #?]
         k)))))));
+    return code;
+}
+
+function xlat_quote(ctx, args, k) {
+    const sexpr = nth_sexpr(args, 1);
+    const crlf = sexpr_to_crlf(ctx, sexpr);
+    let code = new_instr("push", crlf, k);
     return code;
 }
 
@@ -1289,7 +1297,7 @@ console.log("sexpr:", to_scheme(sexpr?.token));
 */
 //const module = compile("(define z 0)");
 //const module = compile("(define foo 'bar)");
-const module = compile("(define foo '(bar baz . quux))");
+//const module = compile("(define foo '(bar baz . quux))");
 //const module = compile("(define nop (lambda _))");
 //const module = compile("(define list (lambda x x))");
 //const module = compile("(define id (lambda (x) x))");
@@ -1300,6 +1308,7 @@ const module = compile("(define foo '(bar baz . quux))");
 //const module = compile("(define Omega (lambda _ ((lambda (f) (f f)) (lambda (f) (f f))) ))");
 //const module = compile("(define fn (lambda (x y z) (list z (cons y x)) (car q) (cdr q) ))");
 //const module = compile("(define fn (lambda (x y z) (if (eq? x -1) (list z y x) (cons y z)) ))");
+const module = compile("(define fn (lambda (x y) (list (cons 'x x) (cons 'y x)) '(x y z) ))");
 //const module = compile("(define inc ((lambda (a) (lambda (b) (+ a b))) 1))");
 //const module = compile(sample_source);
 //const module = compile(ifact_source);
