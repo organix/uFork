@@ -25,7 +25,7 @@ const rx_token_raw = tag_regexp `
   | ( \u0020+ )
   | ( ; .* )
   | (
-        [ a-z A-Z ~ ]
+        [ a-z A-Z ~ _ ]
         [ a-z A-Z ~ 0-9 \- _ ]*
         [ \? ! ]?
     )
