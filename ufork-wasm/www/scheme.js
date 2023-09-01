@@ -1262,6 +1262,8 @@ console.log("sexpr:", to_scheme(sexpr?.token));
 //const module = compile("(define id (lambda (x . y) x))");
 //const module = compile("(define f (lambda (x y) y))");
 //const module = compile("(define fn (lambda (x) 0 x y q.z))");  // NOTE: "q.z" is _not_ a valid identifier!
+//const module = compile("(define w (lambda (f) (f f)))");
+const module = compile("(define Omega (lambda _ ((lambda (f) (f f)) (lambda (f) (f f))) ))");
 //const module = compile("(define fn (lambda (x y z) (list z (cons y x)) (car q) (cdr q) ))");
 //const module = compile("(define fn (lambda (x y z) (if (eq? x -1) (list z y x) (cons y z)) ))");
 //const module = compile("(define inc ((lambda (a) (lambda (b) (+ a b))) 1))");
@@ -1271,7 +1273,7 @@ console.log("sexpr:", to_scheme(sexpr?.token));
 //const module = compile(fib_source);
 //const module = compile(hof2_source);
 //const module = compile(hof3_source);
-const module = compile(test_source);
+//const module = compile(test_source);
 console.log(JSON.stringify(module, undefined, 2));
 if (!module?.error) {
     console.log(to_asm(module));
