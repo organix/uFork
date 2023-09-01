@@ -555,6 +555,9 @@ function parse_sexpr(next) {
 const symbol_t = new_ref("symbol_t");
 const closure_t = new_ref("closure_t");
 
+const empty_ref = new_ref("~empty_env");
+const empty_env = new_pair(nil_lit, nil_lit); // (())
+
 const cont_ref = new_ref("~cont_beh");
 const cont_beh =                // (msg cont env sp) <- rv
     new_instr("state", 1,       // msg
@@ -662,6 +665,7 @@ const module_ctx = {
     env_map: {
         "symbol_t": new_quad(type_t, 3),
         "closure_t": new_quad(type_t, 2),
+        "~empty_env": empty_env,
         "~cont_beh": cont_beh
     }
 };
@@ -724,7 +728,7 @@ function eval_lambda(ctx, args) {
     if (code.error) {
         return code;
     }
-    let data = nil_lit;
+    let data = empty_ref;
     return new_quad(closure_t, code, data);
 }
 
@@ -1262,8 +1266,8 @@ console.log("sexpr:", to_scheme(sexpr?.token));
 //const module = compile("(define id (lambda (x . y) x))");
 //const module = compile("(define f (lambda (x y) y))");
 //const module = compile("(define fn (lambda (x) 0 x y q.z))");  // NOTE: "q.z" is _not_ a valid identifier!
-//const module = compile("(define w (lambda (f) (f f)))");
-const module = compile("(define Omega (lambda _ ((lambda (f) (f f)) (lambda (f) (f f))) ))");
+const module = compile("(define w (lambda (f) (f f)))");
+//const module = compile("(define Omega (lambda _ ((lambda (f) (f f)) (lambda (f) (f f))) ))");
 //const module = compile("(define fn (lambda (x y z) (list z (cons y x)) (car q) (cdr q) ))");
 //const module = compile("(define fn (lambda (x y z) (if (eq? x -1) (list z y x) (cons y z)) ))");
 //const module = compile("(define inc ((lambda (a) (lambda (b) (+ a b))) 1))");
