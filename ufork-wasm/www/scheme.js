@@ -654,33 +654,38 @@ function sexpr_to_crlf(ctx, sexpr) {
     };
 }
 
+const prim_map = {
+    lambda: xlat_lambda,
+    quote: xlat_quote,
+    car: xlat_car,
+    cdr: xlat_cdr,
+    cons: xlat_cons,
+    list: xlat_list,
+    "eq?": xlat_eq,
+    "<": xlat_lt_num,
+    "<=": xlat_le_num,
+    "=": xlat_eq_num,
+    ">=": xlat_ge_num,
+    ">": xlat_gt_num,
+    "+": xlat_add_num,
+    "-": xlat_sub_num,
+    "*": xlat_mul_num,
+    if: xlat_if,
+    id: xlat_id
+};
+
 const module_ctx = {
     number: xlat_literal,
     type: xlat_literal,
     literal: xlat_literal,
     string: xlat_variable,
     pair: xlat_invoke,
-    func_map: {
+    func_map: Object.assign({
         define: eval_define,
-        lambda: xlat_lambda,
-        quote: xlat_quote,
+        //lambda: xlat_lambda,
+        //quote: xlat_quote,
         SEND: xlat_SEND,
-        car: xlat_car,
-        cdr: xlat_cdr,
-        cons: xlat_cons,
-        list: xlat_list,
-        "eq?": xlat_eq,
-        "<": xlat_lt_num,
-        "<=": xlat_le_num,
-        "=": xlat_eq_num,
-        ">=": xlat_ge_num,
-        ">": xlat_gt_num,
-        "+": xlat_add_num,
-        "-": xlat_sub_num,
-        "*": xlat_mul_num,
-        if: xlat_if,
-        id: xlat_id
-    }
+    }, prim_map)
 };
 
 function eval_define(ctx, args, k) {
@@ -767,27 +772,10 @@ const lambda_ctx = {
     literal: xlat_literal,
     string: xlat_variable,
     pair: xlat_invoke,
-    func_map: {
-        lambda: xlat_lambda,
-        quote: xlat_quote,
+    func_map: Object.assign({
         BEH: xlat_BEH,
         SEND: xlat_SEND,
-        car: xlat_car,
-        cdr: xlat_cdr,
-        cons: xlat_cons,
-        list: xlat_list,
-        "eq?": xlat_eq,
-        "<": xlat_lt_num,
-        "<=": xlat_le_num,
-        "=": xlat_eq_num,
-        ">=": xlat_ge_num,
-        ">": xlat_gt_num,
-        "+": xlat_add_num,
-        "-": xlat_sub_num,
-        "*": xlat_mul_num,
-        if: xlat_if,
-        id: xlat_id
-    },
+    }, prim_map),
     state_maps: [],
     msg_map: {}
 };
@@ -1080,9 +1068,10 @@ const BEH_ctx = {
         return xlat_variable(ctx, crlf, k);
     },
     pair: xlat_invoke,
-    func_map: {
-        BECOME: xlat_not_implemented
-    },
+    func_map: Object.assign({
+        BEH: xlat_not_implemented,
+        SEND: xlat_SEND,
+    }, prim_map),
     state_maps: [],
     msg_map: {}
 };
@@ -1300,6 +1289,7 @@ const sexpr = parse("(define f (lambda (x y) y))");
 console.log("sexpr:", to_scheme(sexpr?.token));
 */
 /*
+*/
 //const module = compile("(define z 0)");
 //const module = compile("(define foo 'bar)");
 //const module = compile("(define foo '(bar baz . quux))");
@@ -1325,9 +1315,8 @@ const module = compile("(define hof (lambda (x) (lambda (y) (lambda (z) (list 'x
 //const module = compile(test_source);
 console.log(JSON.stringify(module, undefined, 2));
 if (!module?.error) {
-    console.log(to_asm(module));
+    console.log(to_asm(module.ast));
 }
-*/
 
 /*
  * Translation tools
