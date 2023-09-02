@@ -2068,9 +2068,9 @@ pub const ABORT: Any = Any { raw: (STD_OFS+14) as Raw };
     /*
     (define fib                 ; O(n!) performance?
         (lambda (n)             ; msg: (cust n)
-        (if (< n 2)
-            n
-            (+ (fib (- n 1)) (fib (- n 2))) )))
+            (if (< n 2)
+                n
+                (+ (fib (- n 1)) (fib (- n 2))) )))
     */
     fn load_fib_test(core: &mut Core) -> Any {
         // prepare ROM with fib(6) => 8 test case

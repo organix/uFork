@@ -13,6 +13,7 @@ const mime_types = {
     js: "text/javascript",
     wasm: "application/wasm",
     json: "application/json",
+    scm: "text/plain",
     asm: "text/plain"
 };
 

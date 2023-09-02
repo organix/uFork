@@ -1232,11 +1232,15 @@ function compile(source) {
     }
     global_env["boot"] = k;
     return {
-        kind: "module",
-        define: global_env,
-        export: [
-            "boot"
-        ]
+        lang: "uFork",
+        ast: {
+            kind: "module",
+            import: {},
+            define: global_env,
+            export: [
+                "boot"
+            ]
+        }
     };
 }
 
