@@ -1299,6 +1299,7 @@ z n f 'a 'foo
 const sexpr = parse("(define f (lambda (x y) y))");
 console.log("sexpr:", to_scheme(sexpr?.token));
 */
+/*
 //const module = compile("(define z 0)");
 //const module = compile("(define foo 'bar)");
 //const module = compile("(define foo '(bar baz . quux))");
@@ -1326,6 +1327,7 @@ console.log(JSON.stringify(module, undefined, 2));
 if (!module?.error) {
     console.log(to_asm(module));
 }
+*/
 
 /*
  * Translation tools
