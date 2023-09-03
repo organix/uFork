@@ -243,19 +243,6 @@ function to_scheme(crlf) {
                 } else {
                     return "#unknown_t";
                 }
-            /*
-            } else if (kind === "ref") {  // WARNING! Symbols are now just String values...
-                let s = "";
-                const module = crlf?.module;
-                if (typeof module === "string") {
-                    s += module + ".";
-                }
-                const name = crlf?.name;
-                if (typeof name === "string") {
-                    s += name;
-                    return s;
-                }
-            */
             } else if (kind === "instr") {
                 let s = "[#instr_t, ";
                 s += to_scheme(crlf?.op);
@@ -659,6 +646,14 @@ const prim_map = {
     quote: xlat_quote,
     car: xlat_car,
     cdr: xlat_cdr,
+    cadr: xlat_cadr,
+    caar: xlat_caar,
+    cdar: xlat_cdar,
+    cddr: xlat_cddr,
+    caddr: xlat_caddr,
+    cadar: xlat_cadar,
+    cdddr: xlat_cdddr,
+    cadddr: xlat_cadddr,
     cons: xlat_cons,
     list: xlat_list,
     "eq?": xlat_eq,
@@ -921,6 +916,74 @@ function xlat_cdr(ctx, args, k) {
     let code =
         interpret(ctx, pair,            // (head . tail)
         new_instr("nth", -1, k));       // tail
+    return code;
+}
+
+function xlat_cadr(ctx, args, k) {
+    const pair = nth_sexpr(args, 1);
+    let code =
+        interpret(ctx, pair,            // pair=(head . tail)
+        new_instr("nth", 2, k));        // car(cdr(pair))
+    return code;
+}
+
+function xlat_caar(ctx, args, k) {
+    const pair = nth_sexpr(args, 1);
+    let code =
+        interpret(ctx, pair,            // pair=(head . tail)
+        new_instr("nth", 1,             // car(pair)
+        new_instr("nth", 1, k)));       // car(car(pair))
+    return code;
+}
+
+function xlat_cdar(ctx, args, k) {
+    const pair = nth_sexpr(args, 1);
+    let code =
+        interpret(ctx, pair,            // pair=(head . tail)
+        new_instr("nth", 1,             // car(pair)
+        new_instr("nth", -1, k)));      // cdr(car(pair))
+    return code;
+}
+
+function xlat_cddr(ctx, args, k) {
+    const pair = nth_sexpr(args, 1);
+    let code =
+        interpret(ctx, pair,            // pair=(head . tail)
+        new_instr("nth", -2, k));       // cdr(cdr(pair))
+    return code;
+}
+
+function xlat_caddr(ctx, args, k) {
+    const pair = nth_sexpr(args, 1);
+    let code =
+        interpret(ctx, pair,            // pair=(head . tail)
+        new_instr("nth", 3, k));        // car(cdr(cdr(pair)))
+    return code;
+}
+
+function xlat_cadar(ctx, args, k) {
+    const pair = nth_sexpr(args, 1);
+    let code =
+        interpret(ctx, pair,            // pair=(head . tail)
+        new_instr("nth", 1,             // car(pair)
+        new_instr("nth", -1,            // cdr(car(pair))
+        new_instr("nth", 1, k))));      // car(cdr(car(pair)))
+    return code;
+}
+
+function xlat_cdddr(ctx, args, k) {
+    const pair = nth_sexpr(args, 1);
+    let code =
+        interpret(ctx, pair,            // pair=(head . tail)
+        new_instr("nth", -3, k));       // cdr(cdr(cdr(pair)))
+    return code;
+}
+
+function xlat_cadddr(ctx, args, k) {
+    const pair = nth_sexpr(args, 1);
+    let code =
+        interpret(ctx, pair,            // pair=(head . tail)
+        new_instr("nth", 4, k));        // car(cdr(cdr(cdr(pair))))
     return code;
 }
 

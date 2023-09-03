@@ -24,6 +24,14 @@ just like [ASM](../asm.md) does.
   * `(cons `_head_` `_tail_`)`
   * `(car `_pair_`)`
   * `(cdr `_pair_`)`
+  * `(cadr `_pair_`)`
+  * `(caar `_pair_`)`
+  * `(cdar `_pair_`)`
+  * `(cddr `_pair_`)`
+  * `(caddr `_pair_`)`
+  * `(cadar `_pair_`)`
+  * `(cdddr `_pair_`)`
+  * `(cadddr `_pair_`)`
   * `(eq? `_value_` `_value_`)`
   * `(if `_test_` `_t_expr_` `_f_expr_`)`
   * `(+ `_number_` `_number_`)`
@@ -37,14 +45,7 @@ just like [ASM](../asm.md) does.
 
 ## Planned Facilities
 
-  * `(cadr `_list_`)`
-  * `(caar `_list_`)`
-  * `(cdar `_list_`)`
-  * `(cddr `_list_`)`
-  * `(caddr `_list_`)`
-  * `(cadar `_list_`)`
-  * `(cadddr `_list_`)`
-  * `(nth `_index_` `_list_`)`
+  * `(nth `_index_` `_pair_`)`
   * `(null? . `_values_`)`
   * `(pair? . `_values_`)`
   * `(boolean? . `_values_`)`
