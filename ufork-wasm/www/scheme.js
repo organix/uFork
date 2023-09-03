@@ -670,8 +670,7 @@ const prim_map = {
     "+": xlat_add_num,
     "-": xlat_sub_num,
     "*": xlat_mul_num,
-    if: xlat_if,
-    id: xlat_id
+    if: xlat_if
 };
 
 const module_ctx = {
@@ -682,8 +681,6 @@ const module_ctx = {
     pair: xlat_invoke,
     func_map: Object.assign({
         define: eval_define,
-        //lambda: xlat_lambda,
-        //quote: xlat_quote,
         SEND: xlat_SEND,
     }, prim_map)
 };
@@ -1046,14 +1043,6 @@ function xlat_if(ctx, args, k) {
             interpret(ctx, cnsq, k),
             interpret(ctx, altn, k),
         ));
-    return code;
-}
-
-function xlat_id(ctx, args, k) {
-    const value = nth_sexpr(args, 1);
-    let code =
-        interpret(ctx, value,           // value
-        new_instr("dup", 0, k));        // value
     return code;
 }
 
