@@ -1,0 +1,85 @@
+# uFork LISP/Scheme Dialect
+
+A LISP/Scheme dialect is implemented
+as a surface-syntax for **uFork** programs.
+A compiler (written in JavaScript)
+generates loadable [CRLF](../crlf.md)
+just like [ASM](../asm.md) does.
+
+## Literal Values
+
+  * `#?` — undefined value
+  * `#nil` — empty list, abbreviated `()`
+  * `#f` — boolean **false**
+  * `#t` — boolean **true**
+  * `#unit` — inert result
+  * signed integer (31 bits)
+
+## Built-In Facilities
+
+  * `(define `_formal_` `_value_`)`
+  * `(quote `_expr_`)` — abbreviated `'`_expr_
+  * `(lambda `_formal_` . `_body_`)`
+  * `(list . `_values_`)`
+  * `(cons `_head_` `_tail_`)`
+  * `(car `_pair_`)`
+  * `(cdr `_pair_`)`
+  * `(eq? `_value_` `_value_`)`
+  * `(if `_test_` `_t_expr_` `_f_expr_`)`
+  * `(+ `_number_` `_number_`)`
+  * `(- `_number_` `_number_`)`
+  * `(* `_number_` `_number_`)`
+  * `(< `_number_` `_number_`)`
+  * `(<= `_number_` `_number_`)`
+  * `(= `_number_` `_number_`)`
+  * `(>= `_number_` `_number_`)`
+  * `(> `_number_` `_number_`)`
+
+## Planned Facilities
+
+  * `(cadr `_list_`)`
+  * `(caar `_list_`)`
+  * `(cdar `_list_`)`
+  * `(cddr `_list_`)`
+  * `(caddr `_list_`)`
+  * `(cadar `_list_`)`
+  * `(cadddr `_list_`)`
+  * `(nth `_index_` `_list_`)`
+  * `(null? . `_values_`)`
+  * `(pair? . `_values_`)`
+  * `(boolean? . `_values_`)`
+  * `(number? . `_values_`)`
+  * `(symbol? . `_values_`)`
+  * `(actor? . `_values_`)`
+  * `(cond (`_test_` . `_body_`) . `_clauses_`)`
+  * `(equal? `_value_` `_value_`)`
+  * `(not `_bool_`)`
+  * `(and . `_bool_`)`
+  * `(or . `_bool_`)`
+  * `(length `_list_`)`
+  * `(append . `_lists_`)`
+  * `(filter `_pred_` `_list_`)`
+  * `(reduce `_binop_` `_zero_` `_list_`)`
+  * `(foldl `_binop_` `_zero_` `_list_`)`
+  * `(foldr `_binop_` `_zero_` `_list_`)`
+  * `(map `_proc_` . `_lists_`)`
+  * `(reverse `_list_`)`
+  * `(let ((`_var_` `_val_`) . `_bindings_`) . `_body_`)`
+  * `(current-env)`
+  * `(print . `_values_`)`
+
+## Meta-Actor Facilities
+
+  * `(CREATE `_behavior_`)`
+  * `(SEND `_actor_` `_message_`)`
+  * `(BECOME `_behavior_`)`
+  * `SELF`
+  * `(BEH `_formal_` . `_body_`)`
+  * `(CALL `_actor_` `_args_`)`
+
+## Possible Future Features
+  * `(par .  `_exprs_`)`
+  * `(seq . `_body_`)`
+  * `(zip `_formal_` `_value_` `_env_`)`
+  * `(gensym)`
+  * `a-print`
