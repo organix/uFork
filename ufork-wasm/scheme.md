@@ -33,6 +33,10 @@ just like [ASM](../asm.md) does.
   * `(cdddr `_pair_`)`
   * `(cadddr `_pair_`)`
   * `(eq? `_value_` `_value_`)`
+  * `(null? `_value_`)`
+  * `(pair? `_value_`)`
+  * `(boolean? `_value_`)`
+  * `(number? `_value_`)`
   * `(if `_test_` `_t_expr_` `_f_expr_`)`
   * `(+ `_number_` `_number_`)`
   * `(- `_number_` `_number_`)`
@@ -46,10 +50,6 @@ just like [ASM](../asm.md) does.
 ## Planned Facilities
 
   * `(nth `_index_` `_pair_`)`
-  * `(null? . `_values_`)`
-  * `(pair? . `_values_`)`
-  * `(boolean? . `_values_`)`
-  * `(number? . `_values_`)`
   * `(symbol? . `_values_`)`
   * `(actor? . `_values_`)`
   * `(cond (`_test_` . `_body_`) . `_clauses_`)`

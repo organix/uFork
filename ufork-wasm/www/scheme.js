@@ -657,6 +657,10 @@ const prim_map = {
     cons: xlat_cons,
     list: xlat_list,
     "eq?": xlat_eq,
+    "null?": xlat_null_p,
+    "pair?": xlat_pair_p,
+    "boolean?": xlat_boolean_p,
+    "number?": xlat_number_p,
     "<": xlat_lt_num,
     "<=": xlat_le_num,
     "=": xlat_eq_num,
@@ -1013,6 +1017,46 @@ function xlat_eq(ctx, args, k) {
         interpret(ctx, expect,          // expect
         interpret(ctx, actual,          // expect actual
         new_instr("cmp", "eq", k)));    // expect==actual
+    return code;
+}
+
+function xlat_null_p(ctx, args, k) {
+    const value = nth_sexpr(args, 1);
+    let code =
+        interpret(ctx, value,           // value
+        new_instr("eq", nil_lit, k));   // value==()
+    return code;
+}
+
+function xlat_pair_p(ctx, args, k) {
+    const value = nth_sexpr(args, 1);
+    let code =
+        interpret(ctx, value,           // value
+        new_instr("typeq", pair_t,      // is_pair(value)
+        k));
+    return code;
+}
+
+function xlat_boolean_p(ctx, args, k) {
+    const value = nth_sexpr(args, 1);
+    let k_t = new_instr("push", true_lit, k);
+    let k_f = new_instr("push", false_lit, k);
+    let code =
+        interpret(ctx, value,           // value
+        new_instr("dup", 1,             // value value
+        new_instr("eq", true_lit,       // value value==#t
+        new_if_instr(k,                 // value
+        new_instr("eq", false_lit,      // value==#f
+        new_if_instr(k_t, k_f))))));
+    return code;
+}
+
+function xlat_number_p(ctx, args, k) {
+    const value = nth_sexpr(args, 1);
+    let code =
+        interpret(ctx, value,           // value
+        new_instr("typeq", fixnum_t,    // is_number(value)
+        k));
     return code;
 }
 
