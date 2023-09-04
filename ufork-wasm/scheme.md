@@ -37,7 +37,9 @@ just like [ASM](../asm.md) does.
   * `(pair? `_value_`)`
   * `(boolean? `_value_`)`
   * `(number? `_value_`)`
+  * `(symbol? . `_values_`)`
   * `(if `_test_` `_t_expr_` `_f_expr_`)`
+  * `(not `_bool_`)`
   * `(+ `_number_` `_number_`)`
   * `(- `_number_` `_number_`)`
   * `(* `_number_` `_number_`)`
@@ -46,18 +48,16 @@ just like [ASM](../asm.md) does.
   * `(= `_number_` `_number_`)`
   * `(>= `_number_` `_number_`)`
   * `(> `_number_` `_number_`)`
+  * `(length `_list_`)`
 
 ## Planned Facilities
 
   * `(nth `_index_` `_pair_`)`
-  * `(symbol? . `_values_`)`
   * `(actor? . `_values_`)`
   * `(cond (`_test_` . `_body_`) . `_clauses_`)`
   * `(equal? `_value_` `_value_`)`
-  * `(not `_bool_`)`
   * `(and . `_bool_`)`
   * `(or . `_bool_`)`
-  * `(length `_list_`)`
   * `(append . `_lists_`)`
   * `(filter `_pred_` `_list_`)`
   * `(reduce `_binop_` `_zero_` `_list_`)`

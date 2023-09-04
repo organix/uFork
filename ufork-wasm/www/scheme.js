@@ -642,25 +642,26 @@ function sexpr_to_crlf(ctx, sexpr) {
 }
 
 const prim_map = {
-    lambda: xlat_lambda,
-    quote: xlat_quote,
-    car: xlat_car,
-    cdr: xlat_cdr,
-    cadr: xlat_cadr,
-    caar: xlat_caar,
-    cdar: xlat_cdar,
-    cddr: xlat_cddr,
-    caddr: xlat_caddr,
-    cadar: xlat_cadar,
-    cdddr: xlat_cdddr,
-    cadddr: xlat_cadddr,
-    cons: xlat_cons,
-    list: xlat_list,
-    "eq?": xlat_eq,
+    "lambda": xlat_lambda,
+    "quote": xlat_quote,
+    "car": xlat_car,
+    "cdr": xlat_cdr,
+    "cadr": xlat_cadr,
+    "caar": xlat_caar,
+    "cdar": xlat_cdar,
+    "cddr": xlat_cddr,
+    "caddr": xlat_caddr,
+    "cadar": xlat_cadar,
+    "cdddr": xlat_cdddr,
+    "cadddr": xlat_cadddr,
+    "cons": xlat_cons,
+    "list": xlat_list,
+    "eq?": xlat_eq_p,
     "null?": xlat_null_p,
     "pair?": xlat_pair_p,
     "boolean?": xlat_boolean_p,
     "number?": xlat_number_p,
+    "symbol?": xlat_symbol_p,
     "<": xlat_lt_num,
     "<=": xlat_le_num,
     "=": xlat_eq_num,
@@ -669,7 +670,9 @@ const prim_map = {
     "+": xlat_add_num,
     "-": xlat_sub_num,
     "*": xlat_mul_num,
-    if: xlat_if
+    "length": xlat_length,
+    "not": xlat_not,
+    "if": xlat_if
 };
 
 const module_ctx = {
@@ -679,8 +682,8 @@ const module_ctx = {
     string: xlat_variable,
     pair: xlat_invoke,
     func_map: Object.assign({
-        define: eval_define,
-        SEND: xlat_SEND,
+        "define": eval_define,
+        "SEND": xlat_SEND,
     }, prim_map)
 };
 
@@ -713,8 +716,8 @@ const define_ctx = {
     string: eval_variable,
     pair: eval_invoke,
     func_map: {
-        lambda: eval_lambda,
-        quote: eval_quote
+        "lambda": eval_lambda,
+        "quote": eval_quote
     }
 };
 
@@ -769,8 +772,8 @@ const lambda_ctx = {
     string: xlat_variable,
     pair: xlat_invoke,
     func_map: Object.assign({
-        BEH: xlat_BEH,
-        SEND: xlat_SEND,
+        "BEH": xlat_BEH,
+        "SEND": xlat_SEND,
     }, prim_map),
     state_maps: [],
     msg_map: {}
@@ -1010,7 +1013,7 @@ function xlat_list(ctx, args, k) {
     return code;
 }
 
-function xlat_eq(ctx, args, k) {
+function xlat_eq_p(ctx, args, k) {
     const expect = nth_sexpr(args, 1);
     const actual = nth_sexpr(args, 2);
     let code =
@@ -1060,6 +1063,15 @@ function xlat_number_p(ctx, args, k) {
     return code;
 }
 
+function xlat_symbol_p(ctx, args, k) {
+    const value = nth_sexpr(args, 1);
+    let code =
+        interpret(ctx, value,           // value
+        new_instr("typeq", symbol_t,    // is_symbol(value)
+        k));
+    return code;
+}
+
 function xlat_lt_num(ctx, args, k) {
     const n = nth_sexpr(args, 1);
     const m = nth_sexpr(args, 2);
@@ -1083,6 +1095,7 @@ function xlat_le_num(ctx, args, k) {
 function xlat_eq_num(ctx, args, k) {
     const n = nth_sexpr(args, 1);
     const m = nth_sexpr(args, 2);
+    // FIXME: without type-checks this is just `xlat_eq_p`...
     let code =
         interpret(ctx, n,               // n
         interpret(ctx, m,               // n m
@@ -1140,6 +1153,59 @@ function xlat_mul_num(ctx, args, k) {
     return code;
 }
 
+/*
+    push 0              ; n=0
+    ...                 ; n list
+loop:
+    dup 1               ; n list list
+    typeq #pair_t       ; n list is_pair(list)
+exit:
+    if k_t              ; n list
+    drop 1              ; n
+    ...
+k_t:
+    roll 2              ; list n
+    push 1              ; list n 1
+    alu add             ; list n=n+1
+    roll 2              ; n list
+    nth -1              ; n list=cdr(list)
+    ref loop
+*/
+function xlat_length(ctx, args, k) {
+    const list = nth_sexpr(args, 1);
+    let exit =
+        new_if_instr(undef_lit,         // n list
+        new_instr("drop", 1, k));       // n
+    let loop =
+        new_instr("dup", 1,             // n list list
+        new_instr("typeq", pair_t,      // n list is_pair(list)
+        exit));                         // n list
+    let k_t =
+        new_instr("roll", 2,            // list n
+        new_instr("push", 1,            // list n 1
+        new_instr("alu", "add",         // list n=n+1
+        new_instr("roll", 2,            // n list
+        new_instr("nth", -1,            // n list=cdr(list)
+        loop)))));
+    exit.t = k_t;  // patch loop address
+    let code =
+        new_instr("push", 0,            // n=0
+        interpret(ctx, list,            // n list
+        loop));
+    return code;
+}
+
+function xlat_not(ctx, args, k) {
+    const value = nth_sexpr(args, 1);
+    let code =
+        interpret(ctx, value,           // value
+        new_if_instr(
+            new_instr("push", true_lit, k),
+            new_instr("push", false_lit, k),
+        ));
+    return code;
+}
+
 function xlat_if(ctx, args, k) {
     const pred = nth_sexpr(args, 1);
     const cnsq = nth_sexpr(args, 2);
@@ -1165,8 +1231,8 @@ const BEH_ctx = {
     },
     pair: xlat_invoke,
     func_map: Object.assign({
-        BEH: xlat_not_implemented,
-        SEND: xlat_SEND,
+        "BEH": xlat_not_implemented,
+        "SEND": xlat_SEND,
     }, prim_map),
     state_maps: [],
     msg_map: {}
@@ -1210,7 +1276,8 @@ function interpret_seq(ctx, list, k) {
     if (equal_to(nil_lit, list)) {
         console.log("interpret_seq () k:", k);
         return k;
-    } else if (list?.kind === "pair") {
+    }
+    if (list?.kind === "pair") {
         const head = list?.head;
         const tail = list?.tail;
         console.log("interpret_seq (h . t) h:", head);
@@ -1232,7 +1299,8 @@ function interpret_args(ctx, list, k) {
     if (equal_to(nil_lit, list)) {
         console.log("interpret_args () k:", k);
         return k;
-    } else if (list?.kind === "pair") {
+    }
+    if (list?.kind === "pair") {
         const head = list?.head;
         const tail = list?.tail;
         console.log("interpret_args (h . t) h:", head);
@@ -1368,13 +1436,14 @@ f n z
 0
 (define z 0)
 1
-(define n 1)
+(define n '(1 2 3))
 2
 (define f (lambda (x y) y))
 3
 z n f 'a 'foo
-'(cons z n)
-;(f z n . -1)
+'(length n)
+(not z n)
+(f n z)
 `;
 /*
 //const sexpr = parse(" `('foo (,bar ,@baz) . quux)\r\n");
@@ -1400,7 +1469,7 @@ console.log("sexpr:", to_scheme(sexpr?.token));
 //const module = compile("(define fn (lambda (x y z) (list z (cons y x)) (car q) (cdr q) ))");
 //const module = compile("(define fn (lambda (x y z) (if (eq? x -1) (list z y x) (cons y z)) ))");
 //const module = compile("(define fn (lambda (x y) (list (cons 'x x) (cons 'y y)) '(x y z) ))");
-const module = compile("(define hof (lambda (x) (lambda (y) (lambda (z) (list 'x x 'y y 'z z) )))) (hof 'a '(b c) '(d . e))");
+//const module = compile("(define hof (lambda (x) (lambda (y) (lambda (z) (list 'x x 'y y 'z z) )))) (hof 'a '(b c) '(d . e))");
 //const module = compile("(define inc ((lambda (a) (lambda (b) (+ a b))) 1))");
 //const module = compile(sample_source);
 //const module = compile(ifact_source);
@@ -1408,7 +1477,7 @@ const module = compile("(define hof (lambda (x) (lambda (y) (lambda (z) (list 'x
 //const module = compile(fib_source);
 //const module = compile(hof2_source);
 //const module = compile(hof3_source);
-//const module = compile(test_source);
+const module = compile(test_source);
 console.log(JSON.stringify(module, undefined, 2));
 if (!module?.error) {
     console.log(to_asm(module.ast));
