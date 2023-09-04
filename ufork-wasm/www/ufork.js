@@ -744,6 +744,7 @@ function make_core({
         let definitions = Object.create(null);
         let continuation_type_checks = [];
         let cyclic_data_checks = [];
+        let arity_checks = [];
 
         function fail(message, ...data) {
             throw new Error(
@@ -822,7 +823,11 @@ function make_core({
             return (
                 u_is_raw(raw)
                 ? raw
-                : fail("Unknown type", node)
+                : (
+                    Number.isSafeInteger(node.arity)
+                    ? populate(h_rom_alloc(node.debug), node)
+                    : fail("Unknown type", node)
+                )
             );
         }
 
@@ -860,7 +865,10 @@ function make_core({
         function populate(quad, node) {
             const the_kind = kind(node);
             let fields = {};
-            if (the_kind === "pair") {
+            if (the_kind === "type") {
+                fields.t = TYPE_T;
+                fields.x = fixnum(node.arity);
+            } else if (the_kind === "pair") {
                 fields.t = PAIR_T;
                 fields.x = value(node.head);
                 fields.y = value(node.tail);
@@ -880,9 +888,20 @@ function make_core({
                 }
             } else if (the_kind === "quad") {
                 fields.t = value(node.t);
-                fields.x = value(node.x);
-                fields.y = value(node.y);
-                fields.z = value(node.z);
+                let arity = 0;
+                if (node.x !== undefined) {
+                    fields.x = value(node.x);
+                    arity = 1;
+                }
+                if (node.y !== undefined) {
+                    fields.y = value(node.y);
+                    arity = 2;
+                }
+                if (node.z !== undefined) {
+                    fields.z = value(node.z);
+                    arity = 3;
+                }
+                arity_checks.push([fields.t, arity, node.t]);
             } else if (the_kind === "instr") {
                 fields.t = INSTR_T;
                 fields.x = label(node.op, instr_label);
@@ -1040,6 +1059,28 @@ function make_core({
                 }
                 seen.push(raw);
                 raw = quad[k_field];
+            }
+        });
+
+// Check that custom quad have a valid type in the T field, and an arity
+// matching the type.
+
+        arity_checks.forEach(function ([type_raw, arity, node]) {
+            if (
+                !u_in_mem(type_raw)
+                && type_raw !== TYPE_T
+                && type_raw !== INSTR_T
+                && type_raw !== PAIR_T
+                && type_raw !== DICT_T
+            ) {
+                return fail("Not a type", node);
+            }
+            const type_quad = u_read_quad(type_raw);
+            if (type_quad.t !== TYPE_T) {
+                return fail("Not a type", node);
+            }
+            if (arity !== u_fix_to_i32(type_quad.x)) {
+                return fail("Wrong arity for type", node);
             }
         });
 

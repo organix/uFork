@@ -713,6 +713,12 @@ function generate_crlf(tree, file) {
             }
         }
 
+        function data_check() {
+            if (instruction_only) {
+                return fail("Expected an instruction, not data", operator);
+            }
+        }
+
         function gen_continuation_expression(operand) {
             return (
                 instruction_only
@@ -745,10 +751,64 @@ function generate_crlf(tree, file) {
             );
         }
 
+        if (operator.id === "type_t") {
+            data_check();
+            operand_check(0, 1);
+            const arity = gen_fixnum(operands[0]);
+            return (
+                (arity >= 0 && arity <= 3)
+                ? {
+                    kind: "type",
+                    arity,
+                    debug
+                }
+                : fail("Bad arity.", operands[0][1])
+            );
+        }
+        if (operator.id === "quad_1") {
+            data_check();
+            operand_check(0, 1);
+            return {
+                kind: "quad",
+                t: gen_continuation(0),
+                debug
+            };
+        }
+        if (operator.id === "quad_2") {
+            data_check();
+            operand_check(1, 1);
+            return {
+                kind: "quad",
+                t: gen_expression(operands[0]),
+                x: gen_continuation(1),
+                debug
+            };
+        }
+        if (operator.id === "quad_3") {
+            data_check();
+            operand_check(2, 1);
+            return {
+                kind: "quad",
+                t: gen_expression(operands[0]),
+                x: gen_expression(operands[1]),
+                y: gen_continuation(2),
+                debug
+            };
+        }
+        if (operator.id === "quad_4") {
+            data_check();
+            operand_check(3, 1);
+            return {
+                kind: "quad",
+                t: gen_expression(operands[0]),
+                x: gen_expression(operands[1]),
+                y: gen_expression(operands[2]),
+                z: gen_continuation(3),
+                debug
+            };
+        }
         if (operator.id === "pair_t") {
-            if (instruction_only) {
-                return fail("Expected an instruction, not data", operator);
-            }
+            data_check();
             operand_check(1, 1);
             return {
                 kind: "pair",
@@ -758,9 +818,7 @@ function generate_crlf(tree, file) {
             };
         }
         if (operator.id === "dict_t") {
-            if (instruction_only) {
-                return fail("Expected an instruction, not data", operator);
-            }
+            data_check();
             operand_check(2, 1);
             return {
                 kind: "dict",
@@ -991,6 +1049,39 @@ function assemble(source, file) {
 //     end commit
 // `);
 
+// good("custom quads", `
+// nullary_t:
+//     type_t 0
+// unary_t:
+//     type_t 1
+// binary_t:
+//     type_t 2
+// ternary_t:
+//     type_t 3
+
+// nullary:
+//     quad_1 nullary_t
+// unary:
+//     quad_2 unary_t 1
+// binary:
+//     quad_3 binary_t 1 2
+// ternary:
+//     quad_4 ternary_t 1 2 3
+
+// nullary_k:
+//     quad_1
+//     ref nullary_t
+// unary_k:
+//     quad_2 unary_t
+//     ref 1
+// binary_k:
+//     quad_3 binary_t 1
+//     ref 2
+// ternary_k:
+//     quad_4 ternary_t 1 2
+//     ref 3
+// `);
+
 // good("fib", `
 // ; A fibonnacci service behavior.
 // .import
@@ -1040,6 +1131,11 @@ function assemble(source, file) {
 //     ref '😀'
 // c:
 //     ref '\\n'
+// `);
+
+// bad("type_t bad arity", `
+// type:
+//     type_t 4
 // `);
 
 // bad("character escape", `
