@@ -670,7 +670,6 @@ const prim_map = {
     "+": xlat_add_num,
     "-": xlat_sub_num,
     "*": xlat_mul_num,
-    "length": xlat_length,
     "not": xlat_not,
     "if": xlat_if
 };
@@ -1153,48 +1152,6 @@ function xlat_mul_num(ctx, args, k) {
     return code;
 }
 
-/*
-    push 0              ; n=0
-    ...                 ; n list
-loop:
-    dup 1               ; n list list
-    typeq #pair_t       ; n list is_pair(list)
-exit:
-    if k_t              ; n list
-    drop 1              ; n
-    ...
-k_t:
-    roll 2              ; list n
-    push 1              ; list n 1
-    alu add             ; list n=n+1
-    roll 2              ; n list
-    nth -1              ; n list=cdr(list)
-    ref loop
-*/
-function xlat_length(ctx, args, k) {
-    const list = nth_sexpr(args, 1);
-    let exit =
-        new_if_instr(undef_lit,         // n list
-        new_instr("drop", 1, k));       // n
-    let loop =
-        new_instr("dup", 1,             // n list list
-        new_instr("typeq", pair_t,      // n list is_pair(list)
-        exit));                         // n list
-    let k_t =
-        new_instr("roll", 2,            // list n
-        new_instr("push", 1,            // list n 1
-        new_instr("alu", "add",         // list n=n+1
-        new_instr("roll", 2,            // n list
-        new_instr("nth", -1,            // n list=cdr(list)
-        loop)))));
-    exit.t = k_t;  // patch loop address
-    let code =
-        new_instr("push", 0,            // n=0
-        interpret(ctx, list,            // n list
-        loop));
-    return code;
-}
-
 function xlat_not(ctx, args, k) {
     const value = nth_sexpr(args, 1);
     let code =
@@ -1440,8 +1397,13 @@ f n z
 2
 (define f (lambda (x y) y))
 3
+(define length
+    (lambda (x)
+        (if (pair? x)
+            (+ (length (cdr x)) 1)
+            0) ))
 z n f 'a 'foo
-'(length n)
+(length n)
 (not z n)
 (f n z)
 `;

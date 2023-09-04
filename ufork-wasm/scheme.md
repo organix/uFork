@@ -48,7 +48,6 @@ just like [ASM](../asm.md) does.
   * `(= `_number_` `_number_`)`
   * `(>= `_number_` `_number_`)`
   * `(> `_number_` `_number_`)`
-  * `(length `_list_`)`
 
 ## Planned Facilities
 
@@ -59,6 +58,7 @@ just like [ASM](../asm.md) does.
   * `(and . `_bool_`)`
   * `(or . `_bool_`)`
   * `(append . `_lists_`)`
+  * `(length `_list_`)`
   * `(filter `_pred_` `_list_`)`
   * `(reduce `_binop_` `_zero_` `_list_`)`
   * `(foldl `_binop_` `_zero_` `_list_`)`
