@@ -329,12 +329,19 @@ If the index is out-of-bounds, the result is `#?` (undefined).
 ### Data
 
 The `pair_t` and `dict_t` statements construct data structures from their
-operands.
+operands. The `type_t` statement makes custom types. The `quad_1`, `quad_2`,
+`quad_3`, and `quad_4` statements construct quads, taking a type as the _T_
+operand.
 
- Instruction | First operand    | Second operand    | Third operand
--------------|------------------|-------------------|---------------------------
-`pair_t`     | _head_           | [_tail_]          |
-`dict_t`     | _key_            | _value_           | [_next_]
+ Instruction | First operand | Second operand | Third operand | Fourth operand
+-------------|---------------|----------------|---------------|----------------
+`pair_t`     | _head_        | [_tail_]       |               |
+`dict_t`     | _key_         | _value_        | [_next_]      |
+`type_t`     | [_arity_]     |                |               |
+`quad_1`     | [_T_]         |                |               |
+`quad_2`     | _T_           | [_X_]          |               |
+`quad_3`     | _T_           | _X_            | [_Y_]         |
+`quad_4`     | _T_           | _X_            | _Y_           | [_Z_]
 
 Like with instructions, the final operand defaults to the next statement when
 omitted. In the following example, `a` is a list of three elements, `0`, `1`,
@@ -352,12 +359,25 @@ values true and false.
     b:
         pair_t #t #f
 
+An identical pair could be constructed using `quad_3` instead.
+
+    b:
+        quad_3 #pair_t #t #f
+
 Here, `c` is a dictionary containing entries `0: false` and `true: 1`.
 
     c:
         dict_t 0 #f
         dict_t #t 1
         ref #nil
+
+Quads can also be constructed with custom types.
+
+    ternary:
+        type_t 3
+
+    custom_quad:
+        quad_4 ternary 1 2 3
 
 ## Grammar
 

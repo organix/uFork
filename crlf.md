@@ -123,19 +123,6 @@ The boolean values are _true_ and _false_.
 A _fixnum_ is a signed integer that fits in a machine word. Some valid _fixnum_
 values are `200`, `-3` and `0`.
 
-## Type
-
-There are several _types_. These can be used as immediate values for the "typeq"
-instruction.
-
-    {"kind": "type", "name": "literal"}
-    {"kind": "type", "name": "fixnum"}
-    {"kind": "type", "name": "type"}
-    {"kind": "type", "name": "pair"}
-    {"kind": "type", "name": "dict"}
-    {"kind": "type", "name": "instr"}
-    {"kind": "type", "name": "actor"}
-
 ## Pair
 
 A _pair_ is a data structure containing two values.
@@ -279,6 +266,61 @@ is aborted.
             }
         }
     }
+
+## Type
+
+There are several built-in _types_. These can be used as immediate values for
+the "typeq" instruction.
+
+    {"kind": "type", "name": "literal"}
+    {"kind": "type", "name": "fixnum"}
+    {"kind": "type", "name": "type"}
+    {"kind": "type", "name": "pair"}
+    {"kind": "type", "name": "dict"}
+    {"kind": "type", "name": "instr"}
+    {"kind": "type", "name": "actor"}
+
+There are also custom types that can appear in the _t_ field of a quad.
+
+    {
+        "kind": "type",
+        "arity": <fixnum>
+    }
+
+A custom type's arity controls the number of quad fields expected:
+
+Arity   | Quad fields
+--------|----------------------
+0       |
+1       | _x_
+2       | _x_, _y_
+3       | _x_, _y_, _z_
+
+## Quad
+
+Pairs, dicts and instructions are all instances of a _quad_. A quad has four
+fields, _t_, _x_, _y_, and _z_. It is possible to specify arbitrary quads,
+where the _t_ field is a _type_ (either built in, like `#pair`, or a custom
+type).
+
+    {
+        "kind": "quad",
+        "t": <type>,
+        "x": <value>,
+        "y": <value>,
+        "z": <value>
+    }
+
+The type's arity controls which of _x_, _y_, and _z_ are required. For example,
+the `#pair` type has an arity of 2, so both the _x_ and _y_ fields are required,
+and a _z_ field is not allowed:
+
+    {
+        "kind": "quad",
+        "t": {"kind": "type", "name": "pair"},
+        "x": 1,
+        "y": -1
+    )
 
 ## Debugging
 
