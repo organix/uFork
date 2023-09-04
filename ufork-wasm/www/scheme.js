@@ -68,16 +68,31 @@ const asm = {  // FIXME: there must be a better place for this information...
     IS_NE:  0x1F
 };
 
+function new_quad(t, x, y, z) {
+    const value = { "kind": "quad", t };
+    if (x !== undefined) {
+        value.x = x;
+        if (y !== undefined) {
+            value.y = y;
+            if (z !== undefined) {
+                value.z = z;
+            }
+        }
+    }
+    return value;
+}
+
+function new_type(arity) {
+    //return new_quad(type_t, arity);
+    return { "kind": "type", arity };
+}
+
 function new_pair(head, tail) {
     return { "kind": "pair", head, tail };
 }
 
 function new_dict(key, value, next = nil_lit) {
     return { "kind": "dict", key, value, next };
-}
-
-function new_quad(t, x = undef_lit, y = undef_lit, z = undef_lit) {
-    return { "kind": "quad", t, x, y, z };
 }
 
 function new_ref(name) {
@@ -540,8 +555,8 @@ function parse_sexpr(next) {
  */
 
 const global_env = {
-    "symbol_t": new_quad(type_t, 3),
-    "closure_t": new_quad(type_t, 2),
+    "symbol_t": new_type(1),
+    "closure_t": new_type(2),
     "~empty_env": new_pair(nil_lit, nil_lit), // (())  ; NOTE: this is the same value as EMPTY_DQ
     "~cont_beh":
         new_instr("state", 1,       // msg
@@ -1488,8 +1503,11 @@ function join_instr_chains(t_chain, f_chain, j_label) {
 function is_asm_leaf(crlf) {
     if (typeof crlf === "object") {
         const kind = crlf?.kind;
-        if (kind === "literal" || kind === "type" || kind === "ref") {
+        if (kind === "literal" || kind === "ref") {
             return true;
+        }
+        if (kind === "type") {
+            return (typeof crlf.arity !== "number");
         }
         return false;
     }
@@ -1497,7 +1515,6 @@ function is_asm_leaf(crlf) {
 }
 function to_asm(crlf) {
     if (typeof crlf === "string") {
-        //return JSON.stringify(crlf);  // quoted and escaped
         return crlf;
     }
     if (typeof crlf === "number") {
@@ -1508,7 +1525,7 @@ function to_asm(crlf) {
     if (kind === "module") {
         asm_label = 1;
         for (const [name, value] of Object.entries(crlf.define)) {
-            s += name + ":\n";
+            s += '"' + name + '"' + ":\n";
             if (is_asm_leaf(value)) {
                 s += "    ref " + to_asm(value) + "\n";
             } else {
@@ -1519,7 +1536,7 @@ function to_asm(crlf) {
         if (exports) {
             s += ".export\n";
             for (const name of exports) {
-                s += "    " + name + "\n";
+                s += "    " + '"' + name + '"' + "\n";
             }
         }
     } else if (kind === "instr") {
@@ -1530,14 +1547,15 @@ function to_asm(crlf) {
             let f_label = "f~" + asm_label;
             let j_label = "j~" + asm_label;
             asm_label += 1;
-            s += " " + t_label + " " + f_label + "\n";
+            s += " " + '"' + t_label + '"';
+            s += " " + '"' + f_label + '"' + "\n";
             const join = join_instr_chains(crlf.t, crlf.f, j_label);
-            s += t_label + ":\n";
+            s += '"' + t_label + '"' + ":\n";
             s += to_asm(crlf.t);
-            s += f_label + ":\n";
+            s += '"' + f_label + '"' + ":\n";
             s += to_asm(crlf.f);
             if (join) {
-                s += j_label + ":\n";
+                s += '"' + j_label + '"' + ":\n";
                 s += to_asm(join);
             }
             return s;
@@ -1550,10 +1568,11 @@ function to_asm(crlf) {
                 let i_label = "i~" + asm_label;
                 let k_label = "k~" + asm_label;
                 asm_label += 1;
-                s += " " + i_label + " " + k_label + "\n";
-                s += i_label + ":\n";
+                s += " " + '"' + i_label + '"';
+                s += " " + '"' + k_label + '"' + "\n";
+                s += '"' + i_label + '"' + ":\n";
                 s += to_asm(crlf.imm);
-                s += k_label + ":\n";
+                s += '"' + k_label + '"' + ":\n";
                 s += to_asm(crlf.k);
                 return s;
             }
@@ -1569,22 +1588,27 @@ function to_asm(crlf) {
     } else if (kind === "literal") {
         const name = crlf.value;
         if (name === "undef") {
-            s = "#?";
+            s += "#?";
         } else if (name === "nil") {
-            s = "#nil";
+            s += "#nil";
         } else if (name === "false") {
-            s = "#f";
+            s += "#f";
         } else if (name === "true") {
-            s = "#t";
+            s += "#t";
         } else if (name === "unit") {
-            s = "#unit";
+            s += "#unit";
         }
     } else if (kind === "type") {
-        const name = crlf.name;
-        if (typeof name === "string") {
-            s = "#" + name + "_t";
+        const arity = crlf.arity;
+        if (typeof arity === "number") {
+            s += "    type_t " + arity + "\n";
         } else {
-            s = "#unknown_t";
+            const name = crlf.name;
+            if (typeof name === "string") {
+                s += "#" + name + "_t";
+            } else {
+                s += "#unknown_t";
+            }
         }
     } else if (kind === "pair") {
         s += "    pair_t ";
@@ -1605,11 +1629,20 @@ function to_asm(crlf) {
         }
     } else if (kind === "ref") {
         const module = crlf.module;
+        s += '"';
         if (typeof module === "string") {
             s += module + ".";
         }
         s += crlf.name;
+        s += '"';
     } else if (kind === "quad") {
+        let arity = (crlf.z === undefined)
+            ? (crlf.y === undefined)
+                ? (crlf.x === undefined)
+                    ? 0
+                    : 1
+                : 2
+            : 3;
         let x_is_leaf = is_asm_leaf(crlf.x);
         let y_is_leaf = is_asm_leaf(crlf.y);
         let z_is_leaf = is_asm_leaf(crlf.z);
@@ -1620,37 +1653,43 @@ function to_asm(crlf) {
         if (!x_is_leaf || !y_is_leaf || !z_is_leaf) {
             asm_label += 1;  // all leaves? no labels.
         }
-        let s = "    [";
+        let s = "    quad_" + (arity + 1) + " ";
         s += to_asm(crlf.t);
-        s += ", ";
-        if (x_is_leaf) {
-            s += to_asm(crlf.x);
-        } else {
-            s += x_label;
+        if (arity > 0) {
+            s += " ";
+            if (x_is_leaf) {
+                s += to_asm(crlf.x);
+            } else {
+                s += '"' + x_label + '"';
+            }
+            if (arity > 1) {
+                s += " ";
+                if (y_is_leaf) {
+                    s += to_asm(crlf.y);
+                } else {
+                    s += '"' + y_label + '"';
+                }
+                if (arity > 2) {
+                    s += " ";
+                    if (z_is_leaf) {
+                        s += to_asm(crlf.z);
+                    } else {
+                        s += '"' + z_label + '"';
+                    }
+                }
+            }
         }
-        s += ", ";
-        if (y_is_leaf) {
-            s += to_asm(crlf.y);
-        } else {
-            s += y_label;
-        }
-        s += ", ";
-        if (z_is_leaf) {
-            s += to_asm(crlf.z);
-        } else {
-            s += z_label;
-        }
-        s += "]\n";
+        s += "\n";
         if (!x_is_leaf) {
-            s += x_label + ":\n";
+            s += '"' + x_label + '"' + ":\n";
             s += to_asm(crlf.x);
         }
         if (!y_is_leaf) {
-            s += y_label + ":\n";
+            s += '"' + y_label + '"' + ":\n";
             s += to_asm(crlf.y);
         }
         if (!z_is_leaf) {
-            s += z_label + ":\n";
+            s += '"' + z_label + '"' + ":\n";
             s += to_asm(crlf.z);
         }
         return s;
