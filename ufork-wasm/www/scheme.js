@@ -6,6 +6,14 @@
 // The intermediate representation is described in crlf.md.
 
 let asm_label = 0;  // used by `to_asm()`
+/*
+prefixes {a, d, f, i, j, k, n, t, v, x, y, z}
+    if: t, f, j
+    instr: i, k
+    quad: x, y, z
+    pair: a, d
+    dict: v, n
+*/
 
 /*
  * uFork/CRLF elements
@@ -555,7 +563,7 @@ function parse_sexpr(next) {
  */
 
 const global_env = {
-    "symbol_t": new_type(1),
+    "symbol_t": new_type(0),
     "closure_t": new_type(2),
     "~empty_env": new_pair(nil_lit, nil_lit), // (())  ; NOTE: this is the same value as EMPTY_DQ
     "~cont_beh":
@@ -1421,6 +1429,7 @@ z n f 'a 'foo
 (length n)
 (not z n)
 (f n z)
+'((a b) c)
 `;
 /*
 //const sexpr = parse(" `('foo (,bar ,@baz) . quux)\r\n");
@@ -1612,20 +1621,54 @@ function to_asm(crlf) {
         }
     } else if (kind === "pair") {
         s += "    pair_t ";
-        s += to_asm(crlf.head) + "\n";  // FIXME: generate label for complex value?
-        if (is_asm_leaf(crlf.tail)) {
-            s += "    ref " + to_asm(crlf.tail) + "\n";
+        if (is_asm_leaf(crlf.head)) {
+            s += to_asm(crlf.head) + "\n";
+            if (is_asm_leaf(crlf.tail)) {
+                s += "    ref " + to_asm(crlf.tail) + "\n";
+            } else {
+                s += to_asm(crlf.tail);
+            }
         } else {
+            // generate labels for complex data
+            let a_label = "a~" + asm_label;
+            let d_label = "d~" + asm_label;
+            asm_label += 1;
+            s += '"' + a_label + '"' + " ";
+            s += '"' + d_label + '"' + "\n";
+            s += '"' + a_label + '"' + ":\n";
+            s += to_asm(crlf.head);
+            s += '"' + d_label + '"' + ":\n";
             s += to_asm(crlf.tail);
+            return s;
         }
     } else if (kind === "dict") {
         s += "    dict_t ";
+        if (!is_asm_leaf(crlf.key)) {
+            return {
+                error: "dict key must be asm leaf",
+                crlf
+            };
+        }
         s += to_asm(crlf.key) + " ";
-        s += to_asm(crlf.value) + "\n";  // FIXME: generate label for complex value?
-        if (is_asm_leaf(crlf.next)) {
-            s += "    ref " + to_asm(crlf.next) + "\n";
+        if (is_asm_leaf(crlf.value)) {
+            s += to_asm(crlf.value) + "\n";
+            if (is_asm_leaf(crlf.next)) {
+                s += "    ref " + to_asm(crlf.next) + "\n";
+            } else {
+                s += to_asm(crlf.next);
+            }
         } else {
+            // generate labels for complex data
+            let v_label = "v~" + asm_label;
+            let n_label = "n~" + asm_label;
+            asm_label += 1;
+            s += '"' + v_label + '"' + " ";
+            s += '"' + n_label + '"' + "\n";
+            s += '"' + v_label + '"' + ":\n";
+            s += to_asm(crlf.value);
+            s += '"' + n_label + '"' + ":\n";
             s += to_asm(crlf.next);
+            return s;
         }
     } else if (kind === "ref") {
         const module = crlf.module;
