@@ -637,7 +637,7 @@ function string_to_list(str, ofs = 0) {
     return new_pair(code, string_to_list(str, ofs));
 }
 
-function sexpr_to_crlf(ctx, sexpr) {
+function sexpr_to_crlf(sexpr) {
     if (typeof sexpr === "number") {
         return sexpr;
     }
@@ -656,11 +656,11 @@ function sexpr_to_crlf(ctx, sexpr) {
         return sexpr;
     }
     if (kind === "pair") {
-        const head = sexpr_to_crlf(ctx, sexpr.head);
+        const head = sexpr_to_crlf(sexpr.head);
         if (head.error) {
             return head;
         }
-        const tail = sexpr_to_crlf(ctx, sexpr.tail);
+        const tail = sexpr_to_crlf(sexpr.tail);
         if (head.error) {
             return head;
         }
@@ -668,8 +668,7 @@ function sexpr_to_crlf(ctx, sexpr) {
     }
     return {
         error: "unknown sexpr",
-        sexpr,
-        ctx
+        sexpr
     };
 }
 
@@ -683,7 +682,10 @@ function constant_value(crlf) {  // return constant value for crlf, if it has on
         if (kind === "literal" || kind === "type") {
             return crlf;
         }
-        // FIXME: consider handling `(quote ...)` here
+        if (kind === "pair" && crlf.head === "quote") {
+            const sexpr = nth_sexpr(crlf, 2);
+            return sexpr_to_crlf(sexpr);
+        }
     }
     return undefined;  // not a constant
 }
@@ -808,7 +810,7 @@ function eval_lambda(ctx, args) {
 
 function eval_quote(ctx, args) {
     const sexpr = nth_sexpr(args, 1);
-    return sexpr_to_crlf(ctx, sexpr);
+    return sexpr_to_crlf(sexpr);
 }
 
 const lambda_ctx = {
@@ -919,7 +921,7 @@ function xlat_lambda(ctx, args, k) {
 
 function xlat_quote(ctx, args, k) {
     const sexpr = nth_sexpr(args, 1);
-    const crlf = sexpr_to_crlf(ctx, sexpr);
+    const crlf = sexpr_to_crlf(sexpr);
     let code = new_instr("push", crlf, k);
     return code;
 }
@@ -1532,9 +1534,9 @@ console.log("sexpr:", to_scheme(sexpr?.token));
 //const module = compile("(define w (lambda (f) (f f)))");
 //const module = compile("(define Omega (lambda _ ((lambda (f) (f f)) (lambda (f) (f f))) ))");
 //const module = compile("(define fn (lambda (x y z) (list z (cons y x)) (car q) (cdr q) ))");
-//const module = compile("(define fn (lambda (x y z) (if (eq? x -1) (list z y x) (cons y z)) ))");
+const module = compile("(define fn (lambda (x y z) (if (eq? 'x x) (list z y x) (cons y z)) ))");
 //const module = compile("(define fn (lambda (x y) (list (cons 'x x) (cons 'y y)) '(x y z) ))");
-const module = compile("(define hof (lambda (foo) (lambda (bar) (lambda (baz) (list 'foo foo 'bar bar 'baz baz) )))) (hof 'a '(b c) '(d . e))");
+//const module = compile("(define hof (lambda (foo) (lambda (bar) (lambda (baz) (list 'foo foo 'bar bar 'baz baz) )))) (hof 'a '(b c) '(d . e))");
 //const module = compile("(define inc ((lambda (a) (lambda (b) (+ a b))) 1))");
 //const module = compile(sample_source);
 //const module = compile(ifact_source);
