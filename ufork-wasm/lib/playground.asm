@@ -91,7 +91,7 @@ fact_1:
     state -1            ; sp env
     push k_fact_1       ; sp env beh=k_fact_1
     msg 0               ; sp env beh msg
-    push ~cont_beh      ; sp env beh msg ~cont_beh
+    push "~cont_beh"    ; sp env beh msg ~cont_beh
     beh 4               ; --
     ref std.commit
 ;    end commit
@@ -140,19 +140,19 @@ closure_t:
     pair_t 'a'
     ref #nil
 "'b":
-    quad_2 symbol_t #?  ; [symbol_t, #?, #?, #?]
+    quad_2 symbol_t #nil; [symbol_t, #nil, #?, #?]
 "'c":
-    quad_2 symbol_t #?  ; [symbol_t, #?, #?, #?]
+    quad_2 symbol_t #nil; [symbol_t, #nil, #?, #?]
 "'d":
-    quad_2 symbol_t #?  ; [symbol_t, #?, #?, #?]
+    quad_2 symbol_t #nil; [symbol_t, #nil, #?, #?]
 "'e":
-    quad_2 symbol_t #?  ; [symbol_t, #?, #?, #?]
+    quad_2 symbol_t #nil; [symbol_t, #nil, #?, #?]
 "'x":
-    quad_2 symbol_t #?  ; [symbol_t, #?, #?, #?]
+    quad_2 symbol_t #nil; [symbol_t, #nil, #?, #?]
 "'y":
-    quad_2 symbol_t #?  ; [symbol_t, #?, #?, #?]
+    quad_2 symbol_t #nil; [symbol_t, #nil, #?, #?]
 "'z":
-    quad_2 symbol_t #?  ; [symbol_t, #?, #?, #?]
+    quad_2 symbol_t #nil; [symbol_t, #nil, #?, #?]
 hof:
     quad_3 closure_t "x~1" "~empty_env" ; [closure_t, x~1, ~empty_env, #?]
 "x~1":
@@ -236,7 +236,7 @@ try_me:                 ; (sp . env) <- (cust . args)
     part -1             ; ... ...
     end commit
 
-boot?:                   ; () <- {caps}
+"_boot":                   ; () <- {caps}
     msg 0               ; {caps}
     drop 1              ; --
 
