@@ -402,14 +402,7 @@ optional.
         import imports
 
     import
-        indent name ':' spaces '"' specifier '"' newlines
-
-    specifier
-        nonquote
-        nonquote specifier
-
-    nonquote
-        character - '"'
+        indent name ':' spaces string newlines
 
     definitions
         ""
@@ -533,10 +526,10 @@ https://unicode.org/reports/tr31/.
 
     name
         alpha trailing
+        string
 
     trailing
         ""
-        '?'
         '_' alphameric trailing
         '-' alphameric trailing
         alphameric trailing
@@ -593,6 +586,16 @@ or comment lines.
     comment
         nonspace
         character comment
+
+    string
+        '"' nonquotes '"'
+
+    nonquotes
+        ""
+        nonquote nonquotes
+
+    nonquote
+        character - '"'
 
     nonspace
         character - ' '
