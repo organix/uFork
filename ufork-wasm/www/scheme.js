@@ -664,6 +664,21 @@ function sexpr_to_crlf(ctx, sexpr) {
     };
 }
 
+function constant_value(crlf) {  // return constant value for crlf, if it has one
+    const type = typeof crlf;
+    if (type === "number") {
+        return crlf;
+    }
+    if (type === "object") {
+        const kind = crlf.kind;
+        if (kind === "literal" || kind === "type") {
+            return crlf;
+        }
+        // FIXME: consider handling `(quote ...)` here
+    }
+    return undefined;  // not a constant
+}
+
 const prim_map = {
     "lambda": xlat_lambda,
     "quote": xlat_quote,
@@ -1038,6 +1053,26 @@ function xlat_list(ctx, args, k) {
 function xlat_eq_p(ctx, args, k) {
     const expect = nth_sexpr(args, 1);
     const actual = nth_sexpr(args, 2);
+    const e_const = constant_value(expect);
+    const a_const = constant_value(actual);
+    if (e_const !== undefined) {
+        if (a_const !== undefined) {
+            if (equal_to(e_const, a_const)) {
+                return new_instr("push", true_lit, k);
+            }
+            return new_instr("push", false_lit, k);        
+        }
+        let code =
+            interpret(ctx, actual,          // actual
+            new_instr("eq", e_const, k));   // actual==expect
+        return code;
+    }
+    if (a_const !== undefined) {
+        let code =
+            interpret(ctx, expect,          // expect
+            new_instr("eq", a_const, k));   // expect==actual
+        return code;
+    }
     let code =
         interpret(ctx, expect,          // expect
         interpret(ctx, actual,          // expect actual
@@ -1115,14 +1150,16 @@ function xlat_le_num(ctx, args, k) {
 }
 
 function xlat_eq_num(ctx, args, k) {
+    return xlat_eq_p(ctx, args, k);    // FIXME: add numeric type-checks?
+    /*
     const n = nth_sexpr(args, 1);
     const m = nth_sexpr(args, 2);
-    // FIXME: without type-checks this is just `xlat_eq_p`...
     let code =
         interpret(ctx, n,               // n
         interpret(ctx, m,               // n m
         new_instr("cmp", "eq", k)));    // n==m
     return code;
+    */
 }
 
 function xlat_ge_num(ctx, args, k) {
@@ -1148,6 +1185,18 @@ function xlat_gt_num(ctx, args, k) {
 function xlat_add_num(ctx, args, k) {
     const n = nth_sexpr(args, 1);
     const m = nth_sexpr(args, 2);
+    const n_const = constant_value(n);
+    const m_const = constant_value(m);
+    if (typeof n_const === "number"
+    &&  typeof m_const === "number") {
+        return new_instr("push", n_const + m_const);
+    }
+    if (n_const === 0) {
+        return interpret(ctx, m, k);
+    }
+    if (m_const === 0) {
+        return interpret(ctx, n, k);
+    }
     let code =
         interpret(ctx, n,               // n
         interpret(ctx, m,               // n m
@@ -1158,6 +1207,15 @@ function xlat_add_num(ctx, args, k) {
 function xlat_sub_num(ctx, args, k) {
     const n = nth_sexpr(args, 1);
     const m = nth_sexpr(args, 2);
+    const n_const = constant_value(n);
+    const m_const = constant_value(m);
+    if (typeof n_const === "number"
+    &&  typeof m_const === "number") {
+        return new_instr("push", n_const - m_const);
+    }
+    if (m_const === 0) {
+        return interpret(ctx, n, k);
+    }
     let code =
         interpret(ctx, n,               // n
         interpret(ctx, m,               // n m
@@ -1168,6 +1226,18 @@ function xlat_sub_num(ctx, args, k) {
 function xlat_mul_num(ctx, args, k) {
     const n = nth_sexpr(args, 1);
     const m = nth_sexpr(args, 2);
+    const n_const = constant_value(n);
+    const m_const = constant_value(m);
+    if (typeof n_const === "number"
+    &&  typeof m_const === "number") {
+        return new_instr("push", n_const * m_const);
+    }
+    if (n_const === 1) {
+        return interpret(ctx, m, k);
+    }
+    if (m_const === 1) {
+        return interpret(ctx, n, k);
+    }
     let code =
         interpret(ctx, n,               // n
         interpret(ctx, m,               // n m
@@ -1453,7 +1523,7 @@ console.log("sexpr:", to_scheme(sexpr?.token));
 //const module = compile("(define w (lambda (f) (f f)))");
 //const module = compile("(define Omega (lambda _ ((lambda (f) (f f)) (lambda (f) (f f))) ))");
 //const module = compile("(define fn (lambda (x y z) (list z (cons y x)) (car q) (cdr q) ))");
-//const module = compile("(define fn (lambda (x y z) (if (eq? x -1) (list z y x) (cons y z)) ))");
+const module = compile("(define fn (lambda (x y z) (if (eq? x -1) (list z y x) (cons y z)) ))");
 //const module = compile("(define fn (lambda (x y) (list (cons 'x x) (cons 'y y)) '(x y z) ))");
 //const module = compile("(define hof (lambda (x) (lambda (y) (lambda (z) (list 'x x 'y y 'z z) )))) (hof 'a '(b c) '(d . e))");
 //const module = compile("(define inc ((lambda (a) (lambda (b) (+ a b))) 1))");
@@ -1463,7 +1533,7 @@ console.log("sexpr:", to_scheme(sexpr?.token));
 //const module = compile(fib_source);
 //const module = compile(hof2_source);
 //const module = compile(hof3_source);
-const module = compile(test_source);
+//const module = compile(test_source);
 console.log(JSON.stringify(module, undefined, 2));
 if (!module?.error) {
     console.log(to_asm(module.ast));
