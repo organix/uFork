@@ -563,7 +563,7 @@ function parse_sexpr(next) {
  */
 
 const global_env = {
-    "symbol_t": new_type(0),
+    "symbol_t": new_type(1),
     "closure_t": new_type(2),
     "~empty_env": new_pair(nil_lit, nil_lit), // (())  ; NOTE: this is the same value as EMPTY_DQ
     "~cont_beh":
@@ -628,6 +628,15 @@ function pattern_to_map(pattern, n = 0) {
     return map;
 }
 
+function string_to_list(str, ofs = 0) {
+    const code = str.codePointAt(ofs);
+    if (code === undefined) {
+        return nil_lit;
+    }
+    ofs += (code <= 0xFFFF ? 1 : 2);
+    return new_pair(code, string_to_list(str, ofs));
+}
+
 function sexpr_to_crlf(ctx, sexpr) {
     if (typeof sexpr === "number") {
         return sexpr;
@@ -637,7 +646,7 @@ function sexpr_to_crlf(ctx, sexpr) {
         const name = "'" + sexpr;
         let symbol = global_env[name];
         if (!symbol) {
-            symbol = new_quad(symbol_t);
+            symbol = new_quad(symbol_t, string_to_list(sexpr));
             global_env[name] = symbol;
         }
         return new_ref(name);
@@ -1510,6 +1519,7 @@ const sexpr = parse("(define f (lambda (x y) y))");
 console.log("sexpr:", to_scheme(sexpr?.token));
 */
 /*
+*/
 //const module = compile("(define z 0)");
 //const module = compile("(define foo 'bar)");
 //const module = compile("(define foo '(bar baz . quux))");
@@ -1522,9 +1532,9 @@ console.log("sexpr:", to_scheme(sexpr?.token));
 //const module = compile("(define w (lambda (f) (f f)))");
 //const module = compile("(define Omega (lambda _ ((lambda (f) (f f)) (lambda (f) (f f))) ))");
 //const module = compile("(define fn (lambda (x y z) (list z (cons y x)) (car q) (cdr q) ))");
-const module = compile("(define fn (lambda (x y z) (if (eq? x -1) (list z y x) (cons y z)) ))");
+//const module = compile("(define fn (lambda (x y z) (if (eq? x -1) (list z y x) (cons y z)) ))");
 //const module = compile("(define fn (lambda (x y) (list (cons 'x x) (cons 'y y)) '(x y z) ))");
-//const module = compile("(define hof (lambda (x) (lambda (y) (lambda (z) (list 'x x 'y y 'z z) )))) (hof 'a '(b c) '(d . e))");
+const module = compile("(define hof (lambda (foo) (lambda (bar) (lambda (baz) (list 'foo foo 'bar bar 'baz baz) )))) (hof 'a '(b c) '(d . e))");
 //const module = compile("(define inc ((lambda (a) (lambda (b) (+ a b))) 1))");
 //const module = compile(sample_source);
 //const module = compile(ifact_source);
@@ -1537,7 +1547,6 @@ console.log(JSON.stringify(module, undefined, 2));
 if (!module?.error) {
     console.log(to_asm(module.ast));
 }
-*/
 
 /*
  * Translation tools
@@ -1762,37 +1771,33 @@ function to_asm(crlf) {
         // generate labels for quad data fields
         let x_label = "x~" + asm_label;
         let y_label = "y~" + asm_label;
-        let z_label = "z~" + asm_label;
-        if (!x_is_leaf || !y_is_leaf || !z_is_leaf) {
-            asm_label += 1;  // all leaves? no labels.
-        }
         let s = "    quad_" + (arity + 1) + " ";
         s += to_asm(crlf.t);
+        let eos = "\n";
         if (arity > 0) {
-            s += " ";
             if (x_is_leaf) {
-                s += to_asm(crlf.x);
+                s += " " + to_asm(crlf.x);
+            } else if (arity === 1) {
+                eos += to_asm(crlf.x);
+                x_is_leaf = true;
             } else {
-                s += '"' + x_label + '"';
-            }
-            if (arity > 1) {
-                s += " ";
+                s += ' "' + x_label + '"';
                 if (y_is_leaf) {
-                    s += to_asm(crlf.y);
+                    s += " " + to_asm(crlf.y);
+                } else if (arity === 2) {
+                    eos += to_asm(crlf.y);
+                    y_is_leaf = true;
                 } else {
-                    s += '"' + y_label + '"';
-                }
-                if (arity > 2) {
-                    s += " ";
+                    s += ' "' + y_label + '"';
                     if (z_is_leaf) {
-                        s += to_asm(crlf.z);
+                        s += " " + to_asm(crlf.z);
                     } else {
-                        s += '"' + z_label + '"';
+                        eos += to_asm(crlf.z);
                     }
                 }
             }
         }
-        s += "\n";
+        s += eos;
         if (!x_is_leaf) {
             s += '"' + x_label + '"' + ":\n";
             s += to_asm(crlf.x);
@@ -1801,9 +1806,8 @@ function to_asm(crlf) {
             s += '"' + y_label + '"' + ":\n";
             s += to_asm(crlf.y);
         }
-        if (!z_is_leaf) {
-            s += '"' + z_label + '"' + ":\n";
-            s += to_asm(crlf.z);
+        if (!x_is_leaf || !y_is_leaf) {
+            asm_label += 1;  // all leaves? no labels.
         }
         return s;
     } else {
