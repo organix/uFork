@@ -5,6 +5,15 @@
 
 // The intermediate representation is described in crlf.md.
 
+const ignored = function () {};
+let info_log = console.log;  // Low volume, always shown unless all logging is disabled.
+let warn_log = ignored;  // Something went wrong, but perhaps it wasn't fatal.
+let debug_log = ignored;  // More detail to narrow down the source of a problem.
+let trace_log = ignored;  // Extremely detailed, but very high volume.
+//debug warn_log = console.log;
+//debug debug_log = console.log;
+// trace_log = console.log;
+
 let asm_label = 0;  // used by `to_asm()`
 /*
 prefixes {a, d, f, i, j, k, n, t, v, x, y}
@@ -267,7 +276,7 @@ function parse(source) {
         }
         return function next_char() {
             const code = string.codePointAt(start);
-            //console.log("next_char", code, "at", start);
+            //trace_log("next_char", code, "at", start);
             if (code === undefined) {
                 return {
                     error: "end of input",
@@ -334,7 +343,7 @@ function parse(source) {
         return function next_token() {
             let next = skip_whitespace(next_char);
             const input = next();
-            //console.log("next_token", input);
+            //trace_log("next_token", input);
             if (input.error) {
                 return input;  // report error
             }
@@ -396,7 +405,7 @@ function parse(source) {
 
     function parse_tail(next) {
         let input = next();
-        console.log("parse_tail", input);
+        trace_log("parse_tail", input);
         if (input.error) {
             return input;  // report error
         }
@@ -432,7 +441,7 @@ function parse(source) {
     function parse_list(input) {
         let next = input.next;
         let scan = next();
-        console.log("parse_list", scan);
+        trace_log("parse_list", scan);
         if (scan.error) {
             return scan;  // report error
         }
@@ -465,7 +474,7 @@ function parse(source) {
 
     function parse_quote(input, quote) {
         let scan = parse_sexpr(input.next);
-        console.log("parse_quote", scan);
+        trace_log("parse_quote", scan);
         if (scan.error) {
             return scan;  // report error
         }
@@ -477,7 +486,7 @@ function parse(source) {
 
     function parse_sexpr(next) {
         const input = next();
-        console.log("parse_sexpr", input);
+        trace_log("parse_sexpr", input);
         if (input.error) {
             return input;  // report error
         }
@@ -523,7 +532,7 @@ function parse(source) {
 
     while (true) {
         const parse = parse_sexpr(lex_in);
-        console.log("parse:", JSON.stringify(parse, undefined, 2));
+        trace_log("parse:", JSON.stringify(parse, undefined, 2));
         if (parse?.error) {
             if (parse.error === "end of input") {
                 break;
@@ -806,7 +815,7 @@ function compile(source) {
 
     function eval_define(ctx, args, k) {
         const symbol = nth_sexpr(args, 1);
-        console.log("define:", "symbol:", to_scheme(symbol));
+        debug_log("define:", "symbol:", to_scheme(symbol));
         if (typeof symbol !== "string") {
             return {
                 error: "string (symbol) expected",
@@ -815,7 +824,7 @@ function compile(source) {
             };
         }
         const expr = nth_sexpr(args, 2);
-        console.log("define:", "expr:", to_scheme(expr));
+        debug_log("define:", "expr:", to_scheme(expr));
         const child = Object.assign({}, define_ctx);
         child.parent = ctx;
         const value = interpret(child, expr);  // evaluate expression
@@ -998,17 +1007,17 @@ function compile(source) {
     function xlat_BEH(ctx, args, k) {
         const ptrn = nth_sexpr(args, 1);
         const body = nth_sexpr(args, -1);
-        console.log("BEH:", "ptrn:", to_scheme(ptrn));
-        console.log("BEH:", "body:", to_scheme(body));
+        debug_log("BEH:", "ptrn:", to_scheme(ptrn));
+        debug_log("BEH:", "body:", to_scheme(body));
         const child = Object.assign({}, BEH_ctx);
         child.parent = ctx;
         if (ctx.state_maps) {
             child.state_maps = ctx.state_maps.slice();
         }
         child.state_maps.unshift(ctx.msg_map);  // add msg to lexically-captured state
-        console.log("BEH:", "state_maps:", child.state_maps);
+        debug_log("BEH:", "state_maps:", child.state_maps);
         child.msg_map = pattern_to_map(ptrn);
-        console.log("BEH:", "msg_map:", child.msg_map);
+        debug_log("BEH:", "msg_map:", child.msg_map);
         const func_map = Object.assign({}, ctx.func_map);  // inherit from parent
         child.func_map = Object.assign(func_map, child.func_map);  // override in child
         let code =
@@ -1404,13 +1413,13 @@ function compile(source) {
             return k;
         }
         if (equal_to(nil_lit, list)) {
-            console.log("interpret_seq () k:", k);
+            trace_log("interpret_seq () k:", k);
             return k;
         }
         if (list?.kind === "pair") {
             const head = list?.head;
             const tail = list?.tail;
-            console.log("interpret_seq (h . t) h:", head);
+            trace_log("interpret_seq (h . t) h:", head);
             let code =
                 interpret(ctx, head,
                 interpret_seq(ctx, tail, k));
@@ -1427,13 +1436,13 @@ function compile(source) {
             return k;
         }
         if (equal_to(nil_lit, list)) {
-            console.log("interpret_args () k:", k);
+            trace_log("interpret_args () k:", k);
             return k;
         }
         if (list?.kind === "pair") {
             const head = list?.head;
             const tail = list?.tail;
-            console.log("interpret_args (h . t) h:", head);
+            trace_log("interpret_args (h . t) h:", head);
             k = interpret(ctx, head, k);
             let code = interpret_args(ctx, tail, k);
             return code;
@@ -1447,8 +1456,8 @@ function compile(source) {
     function interpret_lambda(ctx, args) {
         const ptrn = nth_sexpr(args, 1);
         const body = nth_sexpr(args, -1);
-        console.log("lambda:", "ptrn:", to_scheme(ptrn));
-        console.log("lambda:", "body:", to_scheme(body));
+        debug_log("lambda:", "ptrn:", to_scheme(ptrn));
+        debug_log("lambda:", "body:", to_scheme(body));
         const child = Object.assign({}, lambda_ctx);
         child.parent = ctx;
         if (ctx.state_maps) {
@@ -1457,9 +1466,9 @@ function compile(source) {
         if (ctx.msg_map) {
             child.state_maps.unshift(ctx.msg_map);  // add msg to lexically-captured state
         }
-        console.log("lambda:", "state_maps:", child.state_maps);
+        debug_log("lambda:", "state_maps:", child.state_maps);
         child.msg_map = pattern_to_map(ptrn, 1);  // skip implicit customer
-        console.log("lambda:", "msg_map:", child.msg_map);
+        debug_log("lambda:", "msg_map:", child.msg_map);
         if (body?.kind !== "pair") {
             // empty body
             let code =
@@ -1487,7 +1496,7 @@ function compile(source) {
         std.send_msg)));
     while (sexprs.length > 0) {
         const crlf = sexprs.pop(); //sexprs.shift();
-        console.log("compile:", to_scheme(crlf));
+        debug_log("compile:", to_scheme(crlf));
         k = interpret(ctx, crlf, k);
         if (k?.error) {
             return k;
@@ -1840,10 +1849,10 @@ z n f 'a 'foo
 // const sexprs = parse("(if (< n 0) #f #t)");
 // const sexprs = parse("(lambda (x . y) x)");
 //debug const sexprs = parse("(define f (lambda (x y) y))\n(f 0)\n");
-//debug console.log("sexprs:", sexprs);
+//debug info_log("sexprs:", sexprs);
 //debug if (!sexprs.error) {
 //debug     sexprs.forEach(function (sexpr) {
-//debug         console.log("sexpr:", to_scheme(sexpr));
+//debug         info_log("sexpr:", to_scheme(sexpr));
 //debug     });
 //debug }
 
@@ -1870,7 +1879,7 @@ z n f 'a 'foo
 // const module = compile(hof2_source);
 // const module = compile(hof3_source);
 // const module = compile(test_source);
-//debug console.log(JSON.stringify(module, undefined, 2));
+//debug info_log(JSON.stringify(module, undefined, 2));
 //debug if (!module?.error) {
-//debug     console.log(to_asm(module.ast));
+//debug     info_log(to_asm(module.ast));
 //debug }
