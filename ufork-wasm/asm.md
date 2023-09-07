@@ -125,17 +125,23 @@ introductory example to push the instruction labelled `beh` onto the stack:
 
     push beh
 
-Names may not contain spaces, periods, colons, or semicolons. Names may not
-start with "#" or a digit. Names may end in a "?" to indicate predicates. The
-following are all valid names:
+Names must start with a letter.
+Names may contain letters and numbers.
+Groups of letters and numbers may be separated
+by underscore (`_`) or hyphen (`-`).
+The following are all valid names:
 
 - `send_0`
 - `CONT_ID`
-- `is_nil?`
+- `isNil`
 - `take-2nd`
 
-There is also a compound form, which refers to an imported value. A period
-separates the module name from the import name:
+Exotic names may be enclosed in double-quotes (`"`).
+They may contain any non-control character except double-quote.
+These names are usually used by code-generators.
+
+There is also a compound form of name, which refers to an imported value.
+A period (`.`) separates the module name from the import name:
 
     if std.cust_send
 

@@ -51,7 +51,7 @@ import parseq from "./parseq.js";
 import requestorize from "./requestors/requestorize.js";
 import unpromise from "./requestors/unpromise.js";
 import assemble from "./assemble.js";
-import compile from "./scheme.js";
+import scm from "./scheme.js";
 
 // Type-tag bits
 
@@ -1108,7 +1108,7 @@ function make_core({
                         specifier.endsWith(".scm")
                         ? response.text().then(function (source) {
                             module_source[specifier] = source;
-                            return compile(source, specifier);
+                            return scm.compile(source, specifier);
                         })
                         : response.json()
                     )

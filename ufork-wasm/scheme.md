@@ -3,8 +3,8 @@
 A LISP/Scheme dialect is implemented
 as a surface-syntax for **uFork** programs.
 A compiler (written in JavaScript)
-generates loadable [CRLF](../crlf.md)
-just like [ASM](../asm.md) does.
+generates loadable [CRLF](crlf.md)
+just like [ASM](asm.md) does.
 
 ## Literal Values
 
