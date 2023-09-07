@@ -56,7 +56,7 @@ based on a small set of primitives:
 The mapping to lambda-calculus is fairly direct.
 _Constants_ (any object that evaluates to itself) are obvious.
 _Symbols_ normally represent _variables_,
-although unevaluated they represent unique values.
+although unevaluated they represent unique (constant) values.
 _Pairs_ normally represent function-application,
 where the head is the functional-abstraction to be applied
 and the tail is the parameters to the function.
@@ -100,7 +100,7 @@ usually via some late-bound named-reference.
 
 ## LISP/Scheme
 
-A LISP/Scheme dialect is implemented
+A [LISP/Scheme dialect](c_src/scheme.md) is implemented
 as a surface-syntax for **uFork** programs.
 
 ### Lambda Compilation Test-Cases
@@ -157,7 +157,7 @@ Date       | Events | Instructions | Description
 
 #### Bootstrap Library
 
-Start-up overhead to reach the interactive REPL.
+[Start-up overhead](c_src/boot.asm) to reach the interactive REPL.
 
 Date       | Events | Instructions | Description
 -----------|--------|--------------|-------------
@@ -195,9 +195,9 @@ Date       | Events | Instructions | Description
 
 ## PEG Parsing
 
-A PEG parsing toolkit
-is implemented in **uFork** assembly.
-A LISP/Scheme REPL
+A [PEG parsing toolkit](c_src/peg.asm)
+is implemented in **uFork** machine-code.
+A [LISP/Scheme REPL](c_src/scheme.md)
 uses this toolkit for parse
 input from the console.
 

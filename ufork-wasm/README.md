@@ -5,12 +5,30 @@ is written in [Rust](https://www.rust-lang.org/)
 and targets the browser's [WASM engine](https://webassembly.org/).
 A browser-based GUI implements a debugger for a uFork processor core.
 
-## Running the native test suite
+## Shell Scripts
 
-1. Run `cargo test --lib`
+Frequently-used command-line sequences are captured in a few small shell scripts.
 
-## Running the browser-based demo
+### Build both Debug and Release versions
 
-1. Run `cargo build --target wasm32-unknown-unknown`
-2. Run `node www/server.js`
-3. Navigate to the printed URL
+    $ ./build.sh
+
+### Run the Test Suites
+
+    $ ./test.sh
+
+### Run Browser-based Tools (including the debugger)
+
+    $ ./server.sh
+
+## Documentation
+
+  * Loader [Intermediate Language](crlf.md) specification
+  * [Assembly Language](asm.md) reference manual
+  * [LISP/Scheme compiler](scheme.md) reference manual
+  * [Actor Wire Protocol (AWP)](awp.md) specification
+  * [AWP](awp_device.md) device description
+  * [Virtual Machine](vm.md) implementation details
+  * [Sponsor](sponsor.md) semantics
+  * [Binary Large-Object (blob)](blob.md) device description
+  * [Garbage-collected](gc.md) memory management

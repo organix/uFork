@@ -81,76 +81,7 @@ usually carried in the `y` field of the instruction.
 For the typical case of a instruction with a single continuation,
 the "next instruction" is carried in the `z` field of the instruction.
 
- Input            | Instruction                     | Output   | Description
-------------------|---------------------------------|----------|------------------------------
-_v_               | {x:VM_typeq, y:_T_, z:_K_}      | _bool_   | `TRUE` if _v_ has type _T_, otherwise `FALSE`
-_T_               | {x:VM_cell, y:1, z:_K_}         | _cell_   | create cell {t:_T_} **--RESERVED--**
-_T_ _X_           | {x:VM_cell, y:2, z:_K_}         | _cell_   | create cell {t:_T_, x:_X_} **--RESERVED--**
-_T_ _X_ _Y_       | {x:VM_cell, y:3, z:_K_}         | _cell_   | create cell {t:_T_, x:_X_, y:_Y_} **--RESERVED--**
-_T_ _X_ _Y_ _Z_   | {x:VM_cell, y:4, z:_K_}         | _cell_   | create cell {t:_T_, x:_X_, y:_Y_, z:_Z_} **--RESERVED--**
-_cell_            | {x:VM_get, y:T, z:_K_}          | _t_      | get _t_ from _cell_ **--RESERVED--**
-_cell_            | {x:VM_get, y:X, z:_K_}          | _x_      | get _x_ from _cell_ **--RESERVED--**
-_cell_            | {x:VM_get, y:Y, z:_K_}          | _y_      | get _y_ from _cell_ **--RESERVED--**
-_cell_            | {x:VM_get, y:Z, z:_K_}          | _z_      | get _z_ from _cell_ **--RESERVED--**
-_dict_ _key_      | {x:VM_dict, y:HAS, z:_K_}       | _bool_   | `TRUE` if _dict_ has a binding for _key_, otherwise `FALSE`
-_dict_ _key_      | {x:VM_dict, y:GET, z:_K_}       | _value_  | the first _value_ bound to _key_ in _dict_, or `UNDEF`
-_dict_ _key_ _value_ | {x:VM_dict, y:ADD, z:_K_}    | _dict'_  | add a binding from _key_ to _value_ in _dict_
-_dict_ _key_ _value_ | {x:VM_dict, y:SET, z:_K_}    | _dict'_  | replace or add a binding from _key_ to _value_ in _dict_
-_dict_ _key_      | {x:VM_dict, y:DEL, z:_K_}       | _dict'_  | remove a binding from _key_ to _value_ in _dict_
-—                 | {x:VM_deque, y:NEW, z:_K_}      | _deque_  | create a new empty _deque_
-_deque_           | {x:VM_deque, y:EMPTY, z:_K_}    | _bool_   | `TRUE` if _deque_ is empty, otherwise `FALSE`
-_deque_ _value_   | {x:VM_deque, y:PUSH, z:_K_}     | _deque'_ | insert _value_ as the first element of _deque_
-_deque_           | {x:VM_deque, y:POP, z:_K_}      | _deque'_ _value_ | remove the first _value_ from _deque_, or `UNDEF`
-_deque_ _value_   | {x:VM_deque, y:PUT, z:_K_}      | _deque'_ | insert _value_ as the last element of _deque_
-_deque_           | {x:VM_deque, y:PULL, z:_K_}     | _deque'_ _value_ | remove the last _value_ from _deque_, or `UNDEF`
-_deque_           | {x:VM_deque, y:LEN, z:_K_}      | _n_      | count elements in the _deque_
-… _tail_ _head_   | {x:VM_pair, y:_n_, z:_K_}       | _pair_   | create {t:Pair_T, x:_head_, y:_tail_} (_n_ times)
-_pair_            | {x:VM_part, y:_n_, z:_K_}       | … _tail_ _head_ | split _pair_ into _head_ and _tail_ (_n_ times)
-_pair_            | {x:VM_nth, y:_n_, z:_K_}        | _itemₙ_  | extract item _n_ from a _pair_ list
-_pair_            | {x:VM_nth, y:-_n_, z:_K_}       | _tailₙ_  | extract tail _n_ from a _pair_ list
-—                 | {x:VM_push, y:_value_, z:_K_}   | _value_  | push literal _value_ on stack
-_vₙ_ … _v₁_       | {x:VM_depth, z:_K_}             | _vₙ_ … _v₁_ _n_ | count items on stack
-_vₙ_ … _v₁_       | {x:VM_drop, y:_n_, z:_K_}       | —        | remove _n_ items from stack
-_vₙ_ … _v₁_       | {x:VM_pick, y:_n_, z:_K_}       | _vₙ_ … _v₁_ _vₙ_ | copy item _n_ to top of stack
-_vₙ_ … _v₁_       | {x:VM_dup, y:_n_, z:_K_}        |_vₙ_ … _v₁_ _vₙ_ … _v₁_ | duplicate top _n_ items on stack
-_vₙ_ … _v₁_       | {x:VM_roll, y:_n_, z:_K_}       | _vₙ₋₁_ … _v₁_ _vₙ_ | roll item _n_ to top of stack
-_vₙ_ … _v₁_       | {x:VM_roll, y:-_n_, z:_K_}      | _v₁_ _vₙ_ … _v₂_ | roll top of stack to item _n_
-_n_               | {x:VM_alu, y:NOT, z:_K_}        | ~_n_     | bitwise not _n_
-_n_ _m_           | {x:VM_alu, y:AND, z:_K_}        | _n_&_m_  | bitwise _n_ and _m_
-_n_ _m_           | {x:VM_alu, y:OR, z:_K_}         | _n_\|_m_ | bitwise _n_ or _m_
-_n_ _m_           | {x:VM_alu, y:XOR, z:_K_}        | _n_^_m_  | bitwise _n_ exclusive-or _m_
-_n_ _m_           | {x:VM_alu, y:ADD, z:_K_}        | _n_+_m_  | sum of _n_ and _m_
-_n_ _m_           | {x:VM_alu, y:SUB, z:_K_}        | _n_-_m_  | difference of _n_ and _m_
-_n_ _m_           | {x:VM_alu, y:MUL, z:_K_}        | _n_\*_m_ | product of _n_ and _m_
-_m_               | {x:VM_eq, y:_n_, z:_K_}         | _bool_   | `TRUE` if _n_ == _m_, otherwise `FALSE`
-_n_ _m_           | {x:VM_cmp, y:EQ, z:_K_}         | _bool_   | `TRUE` if _n_ == _m_, otherwise `FALSE`
-_n_ _m_           | {x:VM_cmp, y:GE, z:_K_}         | _bool_   | `TRUE` if _n_ >= _m_, otherwise `FALSE`
-_n_ _m_           | {x:VM_cmp, y:GT, z:_K_}         | _bool_   | `TRUE` if _n_ > _m_, otherwise `FALSE`
-_n_ _m_           | {x:VM_cmp, y:LT, z:_K_}         | _bool_   | `TRUE` if _n_ < _m_, otherwise `FALSE`
-_n_ _m_           | {x:VM_cmp, y:LE, z:_K_}         | _bool_   | `TRUE` if _n_ <= _m_, otherwise `FALSE`
-_n_ _m_           | {x:VM_cmp, y:NE, z:_K_}         | _bool_   | `TRUE` if _n_ != _m_, otherwise `FALSE`
-_bool_            | {x:VM_if, y:_T_, z:_F_}         | —        | continue _F_ if "falsy", otherwise continue _T_
-—                 | {x:VM_msg, y:0, z:_K_}          | _msg_    | copy event message to stack
-—                 | {x:VM_msg, y:_n_, z:_K_}        | _msgₙ_   | copy message item _n_ to stack
-—                 | {x:VM_msg, y:-_n_, z:_K_}       | _tailₙ_  | copy message tail _n_ to stack
-—                 | {x:VM_state, y:0, z:_K_}        | _state_  | copy _actor_ state to stack
-—                 | {x:VM_state, y:_n_, z:_K_}      | _stateₙ_ | copy state item _n_ to stack
-—                 | {x:VM_state, y:-_n_, z:_K_}     | _tailₙ_  | copy state tail _n_ to stack
-—                 | {x:VM_my, y:SELF, z:_K_}        | _actor_  | push _actor_ address on stack
-—                 | {x:VM_my, y:BEH, z:_K_}         | _beh_    | push _actor_ behavior on stack
-—                 | {x:VM_my, y:STATE, z:_K_}       | _vₙ_ … _v₁_ | flatten _actor_ state onto stack
-_msg_ _actor_     | {x:VM_send, y:-1, z:_K_}        | —        | send _msg_ to _actor_
-_mₙ_ … _m₁_ _actor_ | {x:VM_send, y:_n_, z:_K_}     | —        | send (_m₁_ … _mₙ_) to _actor_
-_state_ _beh_     | {x:VM_new, y:-1, z:_K_}         | _actor_  | create new _actor_ with code _beh_ and data _state_
-_vₙ_ … _v₁_ _beh_ | {x:VM_new, y:_n_, z:_K_}        | _actor_  | create new _actor_ code _beh_ and state (_v₁_ … _vₙ_)
-_state_ _beh_     | {x:VM_beh, y:-1, z:_K_}         | —        | replace code with _beh_ and data with _state_
-_vₙ_ … _v₁_ _beh_ | {x:VM_beh, y:_n_, z:_K_}        | —        | replace code with _beh_ and state with (_v₁_ … _vₙ_)
-_reason_          | {x:VM_end, y:ABORT}             | —        | abort actor transaction with _reason_
-—                 | {x:VM_end, y:STOP}              | —        | stop current continuation (thread)
-—                 | {x:VM_end, y:COMMIT}            | —        | commit actor transaction
-—                 | {x:VM_end, y:RELEASE}           | —        | commit transaction and free actor **--DEPRECATED--**
-_actual_          | {x:VM_is_eq, y:_expect_, z:_K_} | —        | assert `actual` == `expect`, otherwise halt!
-_actual_          | {x:VM_is_ne, y:_expect_, z:_K_} | —        | assert `actual` != `expect`, otherwise halt!
+The semantics for each instruction are described in the [assembly-language manual](asm.md).
 
 ### Object Graph
 

@@ -103,3 +103,10 @@ Enter complete S-expressions at the prompt to experiment with this actor-based S
 [+999] (+1 +2 +3)
 > 
 ```
+
+## Documentation
+
+  * [LISP/Scheme interpreter](scheme.md) reference manual
+  * [Meta-circular LISP/Scheme](lisp.md) interpreter evolution
+  * [Virtual Machine](vm.md) implementation details
+  * [Garbage-collected](gc.md) memory management

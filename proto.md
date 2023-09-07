@@ -116,7 +116,7 @@ As an example, consider indexing into the list `(1 2 3)`:
  4     | `#?`
 -4     | `#?`
 
-The [uFork instructions](ufork-wasm/vm.md#instructions)
+The [uFork instructions](ufork-wasm/asm.md#instructions)
 for sending a message
 or defining an actor's behavior/state
 provide convenient support
@@ -159,7 +159,7 @@ to convert between these conventions.
 
 ### Behavior Signatures
 
-All processing in uFork is performed by executing [instructions](asm.md)
+All processing in uFork is performed by executing [instructions](ufork-wasm/asm.md#instructions)
 in the context of handling an actor message-event.
 An instruction graph defines the _behavior_ of an actor.
 The _signature_ of a behavior describes

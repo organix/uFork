@@ -30,11 +30,11 @@ An FPGA implementation is planned for the future.
 
 ## Documentation
 
-  * [uFork Project Summary](summary.md)
-  * [uFork Virtual Machine](ufork.md) Reference Manual
-  * Specification for [Sponsor](sponsor.md) semantics
-  * Meta-circular [LISP/Scheme interpreter](lisp.md) evolution
-  * [uFork Design Notes](design.md)
+  * uFork [Project Summary](summary.md)
+  * uFork [Virtual Machine](ufork.md) description
+  * [Actor Protocol Design](proto.md) in uFork
+  * [Object Capabilities](ocaps.md) in uFork
+  * uFork [Design Notes](design.md)
 
 ## License
 

@@ -57,7 +57,8 @@ There are currently two variations of the uFork VM.
 A [proof-of-concept implementation](c_src/vm.md) written in C,
 and a [more robust implementation](ufork-wasm/vm.md) written in Rust/WASM.
 The instruction set and internal representation has evolved
-so the two implementations are no longer compatible.
+so the two implementations are no longer compatible,
+but each demonstrates important points in the design space.
 
 ## Inspiration
 
