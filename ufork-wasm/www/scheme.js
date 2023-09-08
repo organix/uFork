@@ -800,11 +800,9 @@ function compile(source) {
 
     function new_module_ctx() {
         const ctx = {
-            number: xlat_literal,
-            type: xlat_literal,
-            literal: xlat_literal,
-            string: xlat_variable,
-            pair: xlat_invoke,
+            interpret_literal: xlat_literal,
+            interpret_variable: xlat_variable,
+            interpret_invoke: xlat_invoke,
             func_map: Object.assign(
                 {},  // FIXME: should this be `Object.create(null)`?
                 prim_map,
@@ -838,13 +836,11 @@ function compile(source) {
     }
 
     function new_define_ctx(parent) {
-        const ctx = { // FIXME: reduce cases to { literal, variable, invoke }
+        const ctx = {
             parent,
-            number: eval_literal,
-            type: eval_literal,
-            literal: eval_literal,
-            string: eval_variable,
-            pair: eval_invoke,
+            interpret_literal: eval_literal,
+            interpret_variable: eval_variable,
+            interpret_invoke: eval_invoke,
             func_map: {
                 "lambda": eval_lambda,
                 "quote": eval_quote
@@ -911,11 +907,9 @@ function compile(source) {
     function new_lambda_ctx(parent, ptrn = undef_lit) {
         const ctx = {
             parent,
-            number: xlat_literal,
-            type: xlat_literal,
-            literal: xlat_literal,
-            string: xlat_variable,
-            pair: xlat_invoke,
+            interpret_literal: xlat_literal,
+            interpret_variable: xlat_variable,
+            interpret_invoke: xlat_invoke,
             func_map: Object.assign(
                 {},
                 prim_map,
@@ -1377,16 +1371,14 @@ function compile(source) {
     function new_BEH_ctx(parent, ptrn = undef_lit) {
         const ctx = {
             parent,
-            number: xlat_literal,
-            type: xlat_literal,
-            literal: xlat_literal,
-            string: function(ctx, crlf, k) {
+            interpret_literal: xlat_literal,
+            interpret_variable: function(ctx, crlf, k) {
                 if (crlf === "SELF") {
                     return new_instr("my", "self", k);  // SELF reference
                 }
                 return xlat_variable(ctx, crlf, k);
             },
-            pair: xlat_invoke,
+            interpret_invoke: xlat_invoke,
             func_map: Object.assign(
                 {},
                 prim_map,  // FIXME: inherit from `parent.func_map`?
@@ -1414,23 +1406,14 @@ function compile(source) {
         if (k?.error) {
             return k;
         }
-        let transform;
-        const type = typeof crlf;
-        if (type !== "object") {
-            transform = ctx[type];
-        } else {
-            const kind = crlf.kind;
-            transform = ctx[kind];
+        if (typeof crlf === "string") {
+            return ctx.interpret_variable(ctx, crlf, k);
         }
-        if (typeof transform === "function") {
-            // FIXME: this = ctx?
-            return transform(ctx, crlf, k);
+        if (crlf?.kind === "pair") {
+            return ctx.interpret_invoke(ctx, crlf, k);
         }
-        return {
-            error: "no interpreter",
-            crlf,
-            ctx
-        };
+        return ctx.interpret_literal(ctx, crlf, k);
+        // FIXME: reduce cases to { literal, variable, invoke } *_ctx
     }
 
     function interpret_seq(ctx, list, k) {
