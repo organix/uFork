@@ -10,7 +10,7 @@ let info_log = console.log;  // Low volume, always shown unless all logging is d
 let warn_log = ignored;  // Something went wrong, but perhaps it wasn't fatal.
 let debug_log = ignored;  // More detail to narrow down the source of a problem.
 let trace_log = ignored;  // Extremely detailed, but very high volume.
-//debug warn_log = console.log;
+warn_log = console.log;
 //debug debug_log = console.log;
 // trace_log = console.log;
 
@@ -798,20 +798,23 @@ function compile(source) {
         "if": xlat_if
     };
 
-    const module_ctx = {  // FIXME: make *_ctx into functions that create fresh instances
-        number: xlat_literal,
-        type: xlat_literal,
-        literal: xlat_literal,
-        string: xlat_variable,
-        pair: xlat_invoke,
-        func_map: Object.assign(
-            {},
-            prim_map,
-            {
-                "define": eval_define,
-                "SEND": xlat_SEND,
-            })
-    };
+    function new_module_ctx() {
+        const ctx = {
+            number: xlat_literal,
+            type: xlat_literal,
+            literal: xlat_literal,
+            string: xlat_variable,
+            pair: xlat_invoke,
+            func_map: Object.assign(
+                {},  // FIXME: should this be `Object.create(null)`?
+                prim_map,
+                {
+                    "define": eval_define,
+                    "SEND": xlat_SEND,
+                })
+        };
+        return ctx;
+    }
 
     function eval_define(ctx, args, k) {
         const symbol = nth_sexpr(args, 1);
@@ -825,8 +828,7 @@ function compile(source) {
         }
         const expr = nth_sexpr(args, 2);
         debug_log("define:", "expr:", to_scheme(expr));
-        const child = Object.assign({}, define_ctx);
-        child.parent = ctx;
+        const child = new_define_ctx(ctx);
         const value = interpret(child, expr);  // evaluate expression
         if (value?.error) {
             return value;
@@ -835,17 +837,21 @@ function compile(source) {
         return k;  // no code produced
     }
 
-    const define_ctx = { // { literal, variable, invoke }
-        number: eval_literal,
-        type: eval_literal,
-        literal: eval_literal,
-        string: eval_variable,
-        pair: eval_invoke,
-        func_map: {
-            "lambda": eval_lambda,
-            "quote": eval_quote
-        }
-    };
+    function new_define_ctx(parent) {
+        const ctx = { // FIXME: reduce cases to { literal, variable, invoke }
+            parent,
+            number: eval_literal,
+            type: eval_literal,
+            literal: eval_literal,
+            string: eval_variable,
+            pair: eval_invoke,
+            func_map: {
+                "lambda": eval_lambda,
+                "quote": eval_quote
+            }
+        };
+        return ctx;
+    }
 
     function eval_literal(ctx, crlf) {
         return crlf;
@@ -891,19 +897,39 @@ function compile(source) {
         return sexpr_to_crlf(sexpr);
     }
 
-    const lambda_ctx = {
-        number: xlat_literal,
-        type: xlat_literal,
-        literal: xlat_literal,
-        string: xlat_variable,
-        pair: xlat_invoke,
-        func_map: Object.assign({
-            "BEH": xlat_BEH,
-            "SEND": xlat_SEND,
-        }, prim_map),
-        state_maps: [],
-        msg_map: {}
-    };
+    function inherit_state_maps(parent) {
+        let state_maps = [];
+        if (parent.state_maps) {
+            state_maps = parent.state_maps.slice();
+        }
+        if (parent.msg_map) {
+            state_maps.unshift(parent.msg_map);  // add msg to lexically-captured state
+        }
+        return state_maps;
+    }
+
+    function new_lambda_ctx(parent, ptrn = undef_lit) {
+        const ctx = {
+            parent,
+            number: xlat_literal,
+            type: xlat_literal,
+            literal: xlat_literal,
+            string: xlat_variable,
+            pair: xlat_invoke,
+            func_map: Object.assign(
+                {},
+                prim_map,
+                {
+                    "BEH": xlat_BEH,
+                    "SEND": xlat_SEND,
+                }),
+            state_maps: inherit_state_maps(parent),
+            msg_map: pattern_to_map(ptrn, 1)  // skip implicit customer
+        };
+        debug_log("lambda:", "state_maps:", ctx.state_maps);
+        debug_log("lambda:", "msg_map:", ctx.msg_map);
+        return ctx;
+    }
 
     function xlat_literal(ctx, crlf, k) {
         let code = new_instr("push", crlf, k);
@@ -1009,17 +1035,7 @@ function compile(source) {
         const body = nth_sexpr(args, -1);
         debug_log("BEH:", "ptrn:", to_scheme(ptrn));
         debug_log("BEH:", "body:", to_scheme(body));
-        const child = Object.assign({}, BEH_ctx);
-        child.parent = ctx;
-        if (ctx.state_maps) {
-            child.state_maps = ctx.state_maps.slice();
-        }
-        child.state_maps.unshift(ctx.msg_map);  // add msg to lexically-captured state
-        debug_log("BEH:", "state_maps:", child.state_maps);
-        child.msg_map = pattern_to_map(ptrn);
-        debug_log("BEH:", "msg_map:", child.msg_map);
-        const func_map = Object.assign({}, ctx.func_map);  // inherit from parent
-        child.func_map = Object.assign(func_map, child.func_map);  // override in child
+        const child = new_BEH_ctx(ctx, ptrn);
         let code =
             interpret_seq(child, body,
             std.commit);
@@ -1358,24 +1374,33 @@ function compile(source) {
         return code;
     }
 
-    const BEH_ctx = {
-        number: xlat_literal,
-        type: xlat_literal,
-        literal: xlat_literal,
-        string: function(ctx, crlf, k) {
-            if (crlf === "SELF") {
-                return new_instr("my", "self", k);  // SELF reference
-            }
-            return xlat_variable(ctx, crlf, k);
-        },
-        pair: xlat_invoke,
-        func_map: Object.assign({
-            "BEH": xlat_not_implemented,
-            "SEND": xlat_SEND,
-        }, prim_map),
-        state_maps: [],
-        msg_map: {}
-    };
+    function new_BEH_ctx(parent, ptrn = undef_lit) {
+        const ctx = {
+            parent,
+            number: xlat_literal,
+            type: xlat_literal,
+            literal: xlat_literal,
+            string: function(ctx, crlf, k) {
+                if (crlf === "SELF") {
+                    return new_instr("my", "self", k);  // SELF reference
+                }
+                return xlat_variable(ctx, crlf, k);
+            },
+            pair: xlat_invoke,
+            func_map: Object.assign(
+                {},
+                prim_map,  // FIXME: inherit from `parent.func_map`?
+                {
+                    "BEH": xlat_not_implemented,
+                    "SEND": xlat_SEND,
+                }),
+            state_maps: inherit_state_maps(parent),
+            msg_map: pattern_to_map(ptrn)  // no implicit customer
+        };
+        debug_log("BEH:", "state_maps:", ctx.state_maps);
+        debug_log("BEH:", "msg_map:", ctx.msg_map);
+        return ctx;
+    }
 
     function xlat_not_implemented(ctx, args, k) {
         return {
@@ -1458,17 +1483,7 @@ function compile(source) {
         const body = nth_sexpr(args, -1);
         debug_log("lambda:", "ptrn:", to_scheme(ptrn));
         debug_log("lambda:", "body:", to_scheme(body));
-        const child = Object.assign({}, lambda_ctx);
-        child.parent = ctx;
-        if (ctx.state_maps) {
-            child.state_maps = ctx.state_maps.slice();
-        }
-        if (ctx.msg_map) {
-            child.state_maps.unshift(ctx.msg_map);  // add msg to lexically-captured state
-        }
-        debug_log("lambda:", "state_maps:", child.state_maps);
-        child.msg_map = pattern_to_map(ptrn, 1);  // skip implicit customer
-        debug_log("lambda:", "msg_map:", child.msg_map);
+        const child = new_lambda_ctx(ctx, ptrn);
         if (body?.kind !== "pair") {
             // empty body
             let code =
@@ -1485,9 +1500,10 @@ function compile(source) {
 
     const sexprs = parse(source);
     if (sexprs.error) {
+        warn_log("parse:", sexprs);
         return sexprs;
     }
-    const ctx = Object.assign({}, module_ctx);
+    const ctx = new_module_ctx();
     // FIXME: could we use `interpret_seq()` instead? -- no, we don't have a sexpr list.
     let k =
         new_instr("msg", 0,             // {caps}
@@ -1499,6 +1515,7 @@ function compile(source) {
         debug_log("compile:", to_scheme(crlf));
         k = interpret(ctx, crlf, k);
         if (k?.error) {
+            warn_log("compile:", k);
             return k;
         }
     }
@@ -1863,7 +1880,7 @@ z n f 'a 'foo
 // const module = compile("(define list (lambda x x))");
 // const module = compile("(define id (lambda (x) x))");
 // const module = compile("(define id (lambda (x . y) x))");
-//debug const module = compile("(define f (lambda (x y) y))");
+// const module = compile("(define f (lambda (x y) y))");
 // const module = compile("(define fn (lambda (x) 0 x y q.z))");  // NOTE: "q.z" is _not_ a valid identifier!
 // const module = compile("(define w (lambda (f) (f f)))");
 // const module = compile("(define Omega (lambda _ ((lambda (f) (f f)) (lambda (f) (f f))) ))");
@@ -1878,7 +1895,7 @@ z n f 'a 'foo
 // const module = compile(fib_source);
 // const module = compile(hof2_source);
 // const module = compile(hof3_source);
-// const module = compile(test_source);
+//debug const module = compile(test_source);
 //debug info_log(JSON.stringify(module, undefined, 2));
 //debug if (!module?.error) {
 //debug     info_log(to_asm(module.ast));
