@@ -880,7 +880,7 @@ function compile(source) {
     }
 
     function eval_lambda(ctx, args) {
-        let code = interpret_lambda(ctx, args);
+        let code = compile_lambda(ctx, args);
         if (code.error) {
             return code;
         }
@@ -891,6 +891,26 @@ function compile(source) {
     function eval_quote(ctx, args) {
         const sexpr = nth_sexpr(args, 1);
         return sexpr_to_crlf(sexpr);
+    }
+
+    function compile_lambda(ctx, args) {
+        const ptrn = nth_sexpr(args, 1);
+        const body = nth_sexpr(args, -1);
+        debug_log("lambda:", "ptrn:", to_scheme(ptrn));
+        debug_log("lambda:", "body:", to_scheme(body));
+        const child = new_lambda_ctx(ctx, ptrn);
+        if (body?.kind !== "pair") {
+            // empty body
+            let code =
+                new_instr("push", unit_lit,
+                std.cust_send);
+            return code;
+        }
+        // sequential body
+        let code =
+            interpret_seq(child, body,
+            std.cust_send);
+        return code;
     }
 
     function inherit_state_maps(parent) {
@@ -1001,7 +1021,7 @@ function compile(source) {
     }
 
     function xlat_lambda(ctx, args, k) {
-        let code = interpret_lambda(ctx, args);
+        let code = compile_lambda(ctx, args);
         if (code.error) {
             return code;
         }
@@ -1413,7 +1433,6 @@ function compile(source) {
             return ctx.interpret_invoke(ctx, crlf, k);
         }
         return ctx.interpret_literal(ctx, crlf, k);
-        // FIXME: reduce cases to { literal, variable, invoke } *_ctx
     }
 
     function interpret_seq(ctx, list, k) {
@@ -1459,26 +1478,6 @@ function compile(source) {
             error: "list expected",
             body: list
         };
-    }
-
-    function interpret_lambda(ctx, args) {
-        const ptrn = nth_sexpr(args, 1);
-        const body = nth_sexpr(args, -1);
-        debug_log("lambda:", "ptrn:", to_scheme(ptrn));
-        debug_log("lambda:", "body:", to_scheme(body));
-        const child = new_lambda_ctx(ctx, ptrn);
-        if (body?.kind !== "pair") {
-            // empty body
-            let code =
-                new_instr("push", unit_lit,
-                std.cust_send);
-            return code;
-        }
-        // sequential body
-        let code =
-            interpret_seq(child, body,
-            std.cust_send);
-        return code;
     }
 
     const sexprs = parse(source);
