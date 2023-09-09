@@ -12,7 +12,7 @@ let debug_log = ignored;  // More detail to narrow down the source of a problem.
 let trace_log = ignored;  // Extremely detailed, but very high volume.
 warn_log = console.log;
 //debug debug_log = console.log;
-// trace_log = console.log;
+//debug trace_log = console.log;
 
 let asm_label = 0;  // used by `to_asm()`
 /*
@@ -391,6 +391,7 @@ function parse(source) {
             } else if (input.token === "#unit") {
                 input.token = unit_lit;
             } else if (input.token.startsWith("#")) {
+                // FIXME: support built-in type constants? (e.g.: #pair_t, #fixnum_t, ...)
                 input.error = "unknown literal";  // convert to error
             } else {
                 const number = Number(input.token);  // FIXME: implement better conversion method
@@ -517,6 +518,10 @@ function parse(source) {
         }
         if (typeof input.token === "string") {
             return input;  // symbol sexpr
+        }
+        const kind = input.token?.kind;
+        if (kind === "literal" || kind === "type") {
+            return input;  // constant sexpr
         }
         return {
             error: "unexpected token",
@@ -1893,10 +1898,10 @@ z n f 'a 'foo
 `;
 
 // const sexprs = parse(" `('foo (,bar ,@baz) . quux)\r\n");
-// const sexprs = parse("(0 1 -1 #t #f #nil #? () . #unit)");
+//debug const sexprs = parse("'(0 1 -1 #t #f #nil #? () . #unit)");
 // const sexprs = parse("(if (< n 0) #f #t)");
 // const sexprs = parse("(lambda (x . y) x)");
-//debug const sexprs = parse("(define f (lambda (x y) y))\n(f 0)\n");
+// const sexprs = parse("(define f (lambda (x y) y))\n(f 0)\n");
 //debug info_log("sexprs:", sexprs);
 //debug if (!sexprs.error) {
 //debug     sexprs.forEach(function (sexpr) {
@@ -1921,7 +1926,7 @@ z n f 'a 'foo
 // const module = compile("(define hof (lambda (foo) (lambda (bar) (lambda (baz) (list 'foo foo 'bar bar 'baz baz) )))) (hof 'a '(b c) '(d . e))");
 // const module = compile("(define inc ((lambda (a) (lambda (b) (+ a b))) 1))");
 // const module = compile("(define sink_beh (BEH _))");
-//debug const module = compile("(define zero_beh (BEH (cust) (SEND cust 0)))");
+// const module = compile("(define zero_beh (BEH (cust) (SEND cust 0)))");
 // const module = compile(sample_source);
 // const module = compile(ifact_source);
 // const module = compile(fact_source);
@@ -1929,7 +1934,7 @@ z n f 'a 'foo
 // const module = compile(hof2_source);
 // const module = compile(hof3_source);
 // const module = compile(test_source);
-//debug info_log(JSON.stringify(module, undefined, 2));
-//debug if (!module?.error) {
-//debug     info_log(to_asm(module.ast));
-//debug }
+// info_log(JSON.stringify(module, undefined, 2));
+// if (!module?.error) {
+//     info_log(to_asm(module.ast));
+// }
