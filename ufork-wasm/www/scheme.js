@@ -640,6 +640,7 @@ function compile(source) {
     const module_env = {
         "symbol_t": new_type(1),
         "closure_t": new_type(2),
+        "behavior_t": new_type(2),
         "~empty_env": new_pair(nil_lit, nil_lit), // (())  ; NOTE: this is the same value as EMPTY_DQ
         "~cont_beh":
             new_instr("state", 1,       // msg
@@ -657,6 +658,7 @@ function compile(source) {
 
     const symbol_t = new_ref("symbol_t");
     const closure_t = new_ref("closure_t");
+    const behavior_t = new_ref("behavior_t");
     const empty_env = new_ref("~empty_env");
     const cont_beh = new_ref("~cont_beh");
 
@@ -786,6 +788,8 @@ function compile(source) {
         "boolean?": xlat_boolean_p,
         "number?": xlat_number_p,
         "symbol?": xlat_symbol_p,
+        "actor?": xlat_actor_p,
+        "behavior?": xlat_behavior_p,
         "<": xlat_lt_num,
         "<=": xlat_le_num,
         "=": xlat_eq_num,
@@ -808,7 +812,7 @@ function compile(source) {
                 prim_map,
                 {
                     "define": eval_define,
-                    "SEND": xlat_SEND,
+                    "SEND": xlat_SEND
                 })
         };
         return ctx;
@@ -842,8 +846,9 @@ function compile(source) {
             interpret_variable: eval_variable,
             interpret_invoke: eval_invoke,
             func_map: {
+                "quote": eval_quote,
                 "lambda": eval_lambda,
-                "quote": eval_quote
+                "BEH": eval_BEH
             }
         };
         return ctx;
@@ -879,8 +884,22 @@ function compile(source) {
         };
     }
 
+    function eval_quote(ctx, args) {
+        const sexpr = nth_sexpr(args, 1);
+        return sexpr_to_crlf(sexpr);
+    }
+
+    function eval_BEH(ctx, args) {
+        let code = compile_behavior(ctx, args);
+        if (code.error) {
+            return code;
+        }
+        let data = empty_env;
+        return new_quad(behavior_t, code, data);
+    }
+
     function eval_lambda(ctx, args) {
-        let code = compile_lambda(ctx, args);
+        let code = compile_closure(ctx, args);
         if (code.error) {
             return code;
         }
@@ -888,16 +907,11 @@ function compile(source) {
         return new_quad(closure_t, code, data);
     }
 
-    function eval_quote(ctx, args) {
-        const sexpr = nth_sexpr(args, 1);
-        return sexpr_to_crlf(sexpr);
-    }
-
-    function compile_lambda(ctx, args) {
+    function compile_closure(ctx, args) {
         const ptrn = nth_sexpr(args, 1);
         const body = nth_sexpr(args, -1);
-        debug_log("lambda:", "ptrn:", to_scheme(ptrn));
-        debug_log("lambda:", "body:", to_scheme(body));
+        debug_log("closure:", "ptrn:", to_scheme(ptrn));
+        debug_log("closure:", "body:", to_scheme(body));
         const child = new_lambda_ctx(ctx, ptrn);
         if (body?.kind !== "pair") {
             // empty body
@@ -1021,7 +1035,7 @@ function compile(source) {
     }
 
     function xlat_lambda(ctx, args, k) {
-        let code = compile_lambda(ctx, args);
+        let code = compile_closure(ctx, args);
         if (code.error) {
             return code;
         }
@@ -1041,28 +1055,6 @@ function compile(source) {
         const sexpr = nth_sexpr(args, 1);
         const crlf = sexpr_to_crlf(sexpr);
         let code = new_instr("push", crlf, k);
-        return code;
-    }
-
-    function xlat_BEH(ctx, args, k) {
-        const ptrn = nth_sexpr(args, 1);
-        const body = nth_sexpr(args, -1);
-        debug_log("BEH:", "ptrn:", to_scheme(ptrn));
-        debug_log("BEH:", "body:", to_scheme(body));
-        const child = new_BEH_ctx(ctx, ptrn);
-        let code =
-            interpret_seq(child, body,
-            std.commit);
-        return code;
-    }
-
-    function xlat_SEND(ctx, args, k) {
-        const target = nth_sexpr(args, 1);
-        const msg = nth_sexpr(args, 2);
-        let code =
-            interpret(ctx, msg,             // msg
-            interpret(ctx, target,          // msg target
-            new_instr("send", -1, k)));     // --
         return code;
     }
 
@@ -1248,6 +1240,24 @@ function compile(source) {
         return code;
     }
 
+    function xlat_actor_p(ctx, args, k) {
+        const value = nth_sexpr(args, 1);
+        let code =
+            interpret(ctx, value,           // value
+            new_instr("typeq", actor_t,     // is_actor(value)
+            k));
+        return code;
+    }
+
+    function xlat_behavior_p(ctx, args, k) {
+        const value = nth_sexpr(args, 1);
+        let code =
+            interpret(ctx, value,           // value
+            new_instr("typeq", behavior_t,  // is_behavior(value)
+            k));
+        return code;
+    }
+
     function xlat_lt_num(ctx, args, k) {
         const n = nth_sexpr(args, 1);
         const m = nth_sexpr(args, 2);
@@ -1388,6 +1398,18 @@ function compile(source) {
         return code;
     }
 
+    function compile_behavior(ctx, args) {
+        const ptrn = nth_sexpr(args, 1);
+        const body = nth_sexpr(args, -1);
+        debug_log("behavior:", "ptrn:", to_scheme(ptrn));
+        debug_log("behavior:", "body:", to_scheme(body));
+        const child = new_BEH_ctx(ctx, ptrn);
+        let code =
+            interpret_seq(child, body,
+            std.commit);
+        return code;
+    }
+
     function new_BEH_ctx(parent, ptrn = undef_lit) {
         const ctx = {
             parent,
@@ -1412,6 +1434,33 @@ function compile(source) {
         debug_log("BEH:", "state_maps:", ctx.state_maps);
         debug_log("BEH:", "msg_map:", ctx.msg_map);
         return ctx;
+    }
+
+    function xlat_BEH(ctx, args, k) {
+        let code = compile_behavior(ctx, args);
+        if (code.error) {
+            return code;
+        }
+        code =
+            new_instr("state", -1,          // env
+            new_instr("msg", 0,             // env msg
+            new_instr("push", nil_lit,      // env msg sp=()
+            new_instr("pair", 2,            // data=(() msg . env)
+            new_instr("push", code,         // data code
+            new_instr("push", behavior_t,   // data code #behavior_t
+            new_instr("quad", 3,            // [#behavior_t, code, data, #?]
+            k)))))));
+        return code;
+    }
+
+    function xlat_SEND(ctx, args, k) {
+        const target = nth_sexpr(args, 1);
+        const msg = nth_sexpr(args, 2);
+        let code =
+            interpret(ctx, msg,             // msg
+            interpret(ctx, target,          // msg target
+            new_instr("send", -1, k)));     // --
+        return code;
     }
 
     function xlat_not_implemented(ctx, args, k) {
@@ -1871,13 +1920,15 @@ z n f 'a 'foo
 // const module = compile("(define fn (lambda (x y) (list (cons 'x x) (cons 'y y)) '(x y z) ))");
 // const module = compile("(define hof (lambda (foo) (lambda (bar) (lambda (baz) (list 'foo foo 'bar bar 'baz baz) )))) (hof 'a '(b c) '(d . e))");
 // const module = compile("(define inc ((lambda (a) (lambda (b) (+ a b))) 1))");
+// const module = compile("(define sink_beh (BEH _))");
+//debug const module = compile("(define zero_beh (BEH (cust) (SEND cust 0)))");
 // const module = compile(sample_source);
 // const module = compile(ifact_source);
 // const module = compile(fact_source);
 // const module = compile(fib_source);
 // const module = compile(hof2_source);
 // const module = compile(hof3_source);
-//debug const module = compile(test_source);
+// const module = compile(test_source);
 //debug info_log(JSON.stringify(module, undefined, 2));
 //debug if (!module?.error) {
 //debug     info_log(to_asm(module.ast));
