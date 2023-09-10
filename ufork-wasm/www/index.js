@@ -45,6 +45,7 @@ const $fault_led = document.getElementById("fault-led");
 
 let paused = false;  // run/pause toggle
 let fault = false;  // execution fault flag
+const rx_crlf = /\n|\r\n?/;
 const $rate = document.getElementById("frame-rate");
 let frame = 1;  // frame-rate countdown
 let ram_max = 0;
@@ -111,31 +112,42 @@ function keep_centered(child, parent) {
     parent.scrollTop = offset - parent_rect.height / 2 + child_rect.height / 2;
 }
 function update_source_monitor(ip) {
+    const $aside = $source_monitor.querySelector("aside");
+    const $code = $source_monitor.querySelector("code");
+    $aside.innerHTML = "";
+    $code.innerHTML = "";
     const sourcemap = core.u_sourcemap(ip);
-    if (core.u_is_rom(ip) && ip !== ufork.UNDEF_RAW && sourcemap !== undefined) {
-        if (sourcemap.source !== undefined) {
-            $source_monitor.href = sourcemap.debug.file;
-            $source_monitor.innerHTML = "";
-            let highlighted;
-            sourcemap.source.split(/\n|\r\n?/).forEach(function (line, line_nr) {
-                const line_element = document.createElement("span");
-                line_element.textContent = (
-                    String(line_nr + 1).padStart(4, " ") + "  " + line
-                );
-                if (sourcemap.debug.line === line_nr + 1) {
-                    line_element.className = "highlighted";
-                    highlighted = line_element;
-                }
-                $source_monitor.append(line_element);
-            });
-            if (highlighted !== undefined) {
-                keep_centered(highlighted, $source_monitor);
-            }
-            return;
+    if (
+        core.u_is_rom(ip)
+        && ip !== ufork.UNDEF_RAW
+        && sourcemap?.source !== undefined
+    ) {
+        $source_monitor.title = sourcemap.debug.file;
+        sourcemap.source.split(rx_crlf).forEach(function (ignore, line_nr) {
+            $aside.textContent += line_nr + 1 + "\n";
+        });
+        if (sourcemap.debug.start !== undefined) {
+            const $pre_text = document.createTextNode(sourcemap.source.slice(
+                0,
+                sourcemap.debug.start
+            ));
+            const $mark = document.createElement("mark");
+            $mark.textContent = sourcemap.source.slice(
+                sourcemap.debug.start,
+                sourcemap.debug.end
+            );
+            const $post_text = document.createTextNode(sourcemap.source.slice(
+                sourcemap.debug.end
+            ));
+            $code.append($pre_text, $mark, $post_text);
+            keep_centered($mark, $source_monitor);
+        } else {
+            $code.textContent = sourcemap.source;
         }
+    } else {
+        $code.textContent = "No source available.";
+        $source_monitor.title = "";
     }
-    $source_monitor.textContent = "No source available.";
-    delete $source_monitor.href;
 }
 function enable_next() {
     if (paused) {
