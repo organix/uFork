@@ -78,16 +78,14 @@ const escape_code_points = {
 
 function tokenize(source) {
     let rx_token = new RegExp(rx_token_raw, "yu"); // sticky, unicode aware
-    let line_nr = 1;
-    let column_to = 1;
+    let position = 0;
     return function token_generator() {
 
         function error() {
             source = undefined;
             return {
                 id: ":error:",
-                line_nr,
-                column_nr: column_to
+                start: position
             };
         }
 
@@ -101,51 +99,51 @@ function tokenize(source) {
         if (!captives) {
             return error();
         }
-        let column_nr = column_to;
-        column_to = column_nr + captives[0].length;
+
+// The following code is incorrect. The "start" and "end" positions should be
+// measured in Unicode code points, because the produced CRLF format is
+// intended to be language independent. For now, for a simple implementation,
+// we count UTF-16 character codes instead.
+
+        const start = position;
+        const end = position + captives[0].length;
+        position = end;
         if (captives[1]) {
-            const token = {
+            return {
                 id: ":linebreak:",
-                line_nr,
-                column_nr
+                start,
+                end
             };
-            line_nr += 1;
-            column_to = 1;
-            return token;
         }
         if (captives[2]) {
             return {
                 id: ":space:",
-                line_nr,
-                column_nr,
-                column_to
+                start,
+                end
             };
         }
         if (captives[3]) {
             return {
                 id: ":comment:",
                 comment: captives[3].slice(1),
-                line_nr,
-                column_nr,
-                column_to
+                start,
+                end
             };
         }
         if (captives[4]) {
             return {
                 id: ":name:",
                 text: captives[4],
-                line_nr,
-                column_nr,
-                column_to
+                start,
+                end
             };
         }
         if (captives[5]) {
             return {
                 id: ":literal:",
                 name: captives[5].slice(1),
-                line_nr,
-                column_nr,
-                column_to
+                start,
+                end
             };
         }
         if (captives[6]) {
@@ -164,9 +162,8 @@ function tokenize(source) {
                     id: ":number:",
                     number,
                     text: captives[6],
-                    line_nr,
-                    column_nr,
-                    column_to
+                    start,
+                    end
                 }
                 : error()
             );
@@ -175,17 +172,15 @@ function tokenize(source) {
             return {
                 id: ":string:",
                 text: captives[7].slice(1, -1),
-                line_nr,
-                column_nr,
-                column_to
+                start,
+                end
             };
         }
         if (captives[8]) {
             return {
                 id: captives[8],
-                line_nr,
-                column_nr,
-                column_to
+                start,
+                end
             };
         }
         if (captives[9]) {
@@ -201,9 +196,8 @@ function tokenize(source) {
                     id: ":number:",
                     number: code_point,
                     text: character,
-                    line_nr,
-                    column_nr,
-                    column_to
+                    start,
+                    end
                 }
                 : error()
             );
@@ -550,6 +544,15 @@ const imm_labels = {
     end: ["abort", "stop", "commit", "release"]
 };
 
+function walk_tree(node, walker) {
+    if (Array.isArray(node)) {
+        node.forEach((child_node) => walk_tree(child_node, walker));
+    }
+    if (node !== undefined) {
+        walker(node);
+    }
+}
+
 function generate_crlf(tree, file) {
     let import_object = Object.create(null);
     let define_object = Object.create(null);
@@ -659,7 +662,8 @@ function generate_crlf(tree, file) {
             name: name_token.text,
             debug: {
                 file,
-                line: name_token.line_nr
+                start: name_token.start,
+                end: name_token.end
             }
         };
     }
@@ -678,7 +682,8 @@ function generate_crlf(tree, file) {
                 name: export_name,
                 debug: {
                     file,
-                    line: token[0].line_nr
+                    start: token[0].start,
+                    end: token[0].end
                 }
             };
         }
@@ -708,9 +713,19 @@ function generate_crlf(tree, file) {
 
     function gen_value(statements, fallthru_label, instruction_only = false) {
         const [ignore, operator, operands] = statements[0];
+
+// Locate the start and end positions of the statement.
+
+        let end = operator.end;
+        walk_tree(operands, function (node) {
+            if (node.end !== undefined) {
+                end = Math.max(end, node.end);
+            }
+        });
         const debug = {
             file,
-            line: operator.line_nr
+            start: operator.start,
+            end
         };
 
         function operand_check(nr_required, nr_optional) {
@@ -1024,17 +1039,44 @@ function generate_crlf(tree, file) {
     };
 }
 
+function linecol(string, position) {
+
+// Infer line and column numbers from a position in a string. Everything is
+// numbered from zero.
+
+// We actually should be working with code points here, not char codes.
+
+    const lines = string.slice(0, position).split("\n");
+    const line = lines.length - 1;
+    const column = lines.pop().length;
+    return {line, column};
+}
+
+//debug console.log(linecol(`
+//debug abc
+//debug def
+//debug     here I am!
+//debug `, 13));
+
 function assemble(source, file) {
     try {
         return generate_crlf(parse(tokenize(source)), file);
     } catch (exception) {
-        return {
+        const error = {
             kind: "error",
-            message: exception.message,
-            file,
-            line: exception.token?.line_nr ?? 1,
-            column: exception.token?.column_nr ?? 1
+            message: exception.message
         };
+        if (exception.token?.start !== undefined) {
+            const {line, column} = linecol(source, exception.token.start);
+            error.line = line + 1;
+            error.column = column + 1;
+            error.start = exception.token.start;
+            error.end = exception.token.end;
+        }
+        if (file !== undefined) {
+            error.file = file;
+        }
+        return error;
     }
 }
 

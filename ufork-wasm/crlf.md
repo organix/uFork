@@ -325,10 +325,17 @@ and a _z_ field is not allowed:
 ## Debugging
 
 An optional `debug` property may appear on any kind of object. Its purpose it to
-provide debugging information, specifically a location in source code.
+provide debugging information.
+
+The optional _file_ string locates the source file.
+
+The optional _start_ and _end_ positions define a range, where _start_ is
+inclusive and _end_ is exclusive. A position counts the number of Unicode code
+points from the beginning of the source.
 
     {
         "kind": "debug",
         "file": <string>,
-        "line": <number>
+        "start": <number>,
+        "end": <number>
     }
