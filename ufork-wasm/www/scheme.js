@@ -91,45 +91,26 @@ function new_dict(debug, key, value, next = nil_lit) {
     return { kind: "dict", key, value, next, debug };
 }
 
-function new_ref(name) {
-    return { kind: "ref", name };
+function new_ref(debug, name) {
+    return { kind: "ref", name, debug };
 }
 
-function new_instr(op, imm = undef_lit, k = undef_lit) {
+function new_instr(debug, op, imm = undef_lit, k = undef_lit) {
     if (k?.error) {
         return k;
     }
-    return { kind: "instr", op, imm, k };
+    return { kind: "instr", op, imm, k, debug };
 }
 
-function new_if_instr(t = undef_lit, f = undef_lit) {
+function new_if_instr(debug, t = undef_lit, f = undef_lit) {
     if (t?.error) {
         return t;
     }
     if (f?.error) {
         return f;
     }
-    return { kind: "instr", op: "if", t, f };
+    return { kind: "instr", op: "if", t, f, debug };
 }
-
-// standard instruction-stream tails
-const std = {};
-std.sink_beh =
-std.commit =
-    new_instr("end", "commit");
-std.send_msg =
-    new_instr("send", -1,
-    std.commit);
-std.cust_send =
-    new_instr("msg", 1,
-    std.send_msg);
-std.rv_self =
-    new_instr("my", "self",
-    std.cust_send);
-std.resend =
-    new_instr("msg", 0,
-    new_instr("my", "self",
-    std.send_msg));
 
 function length_of(sexpr) {
     let n = 0;
@@ -665,38 +646,57 @@ function tokenize(source) {
         }
     };
 }
-    
+
 /*
  * Scheme interpreter/compiler
  */
 
 function compile(source, file) {
-
     const debug_file = { kind: "debug", file };
+
+    // standard instruction-stream tails
+    const std = {};
+    std.sink_beh =
+    std.commit =
+        new_instr(debug_file, "end", "commit");
+    std.send_msg =
+        new_instr(debug_file, "send", -1,
+        std.commit);
+    std.cust_send =
+        new_instr(debug_file, "msg", 1,
+        std.send_msg);
+    std.rv_self =
+        new_instr(debug_file, "my", "self",
+        std.cust_send);
+    std.resend =
+        new_instr(debug_file, "msg", 0,
+        new_instr(debug_file, "my", "self",
+        std.send_msg));
+
     const module_env = {
         "symbol_t": new_type(debug_file, 1),
         "closure_t": new_type(debug_file, 2),
         "behavior_t": new_type(debug_file, 2),
         "~empty_env": new_pair(debug_file, nil_lit, nil_lit), // (())  ; NOTE: this is the same value as EMPTY_DQ
         "~cont_beh":
-            new_instr("state", 1,       // msg
-            new_instr("my", "self",     // msg SELF
-            new_instr("send", -1,       // --
-            new_instr("state", 3,       // env
-            new_instr("state", 4,       // env sp
-            new_instr("msg", 0,         // env sp rv
-            new_instr("pair", 1,        // env sp'=(rv . sp)
-            new_instr("pair", 1,        // (sp' . env)
-            new_instr("state", 2,       // (sp' . env) cont
-            new_instr("beh", -1,        // --
+            new_instr(debug_file, "state", 1,   // msg
+            new_instr(debug_file, "my", "self", // msg SELF
+            new_instr(debug_file, "send", -1,   // --
+            new_instr(debug_file, "state", 3,   // env
+            new_instr(debug_file, "state", 4,   // env sp
+            new_instr(debug_file, "msg", 0,     // env sp rv
+            new_instr(debug_file, "pair", 1,    // env sp'=(rv . sp)
+            new_instr(debug_file, "pair", 1,    // (sp' . env)
+            new_instr(debug_file, "state", 2,   // (sp' . env) cont
+            new_instr(debug_file, "beh", -1,    // --
             std.commit))))))))))
     };
 
-    const symbol_t = new_ref("symbol_t");
-    const closure_t = new_ref("closure_t");
-    const behavior_t = new_ref("behavior_t");
-    const empty_env = new_ref("~empty_env");
-    const cont_beh = new_ref("~cont_beh");
+    const symbol_t = new_ref(debug_file, "symbol_t");
+    const closure_t = new_ref(debug_file, "closure_t");
+    const behavior_t = new_ref(debug_file, "behavior_t");
+    const empty_env = new_ref(debug_file, "~empty_env");
+    const cont_beh = new_ref(debug_file, "~cont_beh");
 
     // Return the 'nth' item from a list of pairs, if defined.
     //
@@ -751,6 +751,7 @@ function compile(source, file) {
     }
 
     function sexpr_to_crlf(sexpr) {
+        let debug = crlf_debug(sexpr, debug_file);
         if (typeof sexpr === "number") {
             return sexpr;
         }
@@ -759,10 +760,10 @@ function compile(source, file) {
             const name = "'" + sexpr;
             let symbol = module_env[name];
             if (!symbol) {
-                symbol = new_quad(debug_file, symbol_t, string_to_list(sexpr));
+                symbol = new_quad(debug, symbol_t, string_to_list(sexpr));
                 module_env[name] = symbol;
             }
-            return new_ref(name);
+            return new_ref(debug, name);
         }
         const kind = sexpr?.kind;
         if (kind === "literal" || kind === "type") {
@@ -777,7 +778,8 @@ function compile(source, file) {
             if (head.error) {
                 return head;
             }
-            return new_pair(debug_file, head, tail);
+            debug = crlf_debug(head, tail);
+            return new_pair(debug, head, tail);
         }
         return {
             error: "unknown sexpr",
@@ -893,7 +895,7 @@ function compile(source, file) {
     }
 
     function eval_literal(ctx, crlf) {
-        return crlf;
+        return crlf;  // FIXME: consider {kind:"number"} instead of raw Number
     }
 
     function eval_variable(ctx, crlf) {
@@ -903,7 +905,8 @@ function compile(source, file) {
             return xlat;
         }
         // symbolic reference
-        return new_ref(crlf);
+        const debug = crlf_debug(crlf);  // FIXME: consider {kind:"symbol"} instead of raw String
+        return new_ref(debug, crlf);
     }
 
     function eval_invoke(ctx, crlf) {
@@ -929,26 +932,27 @@ function compile(source, file) {
     }
 
     function eval_BEH(ctx, args) {
+        const debug = crlf_debug(args);
         const code = compile_behavior(ctx, args);
         if (code.error) {
             return code;
         }
         const data = empty_env;
-        const debug = crlf_debug(code);
         return new_quad(debug, behavior_t, code, data);
     }
 
     function eval_lambda(ctx, args) {
+        const debug = crlf_debug(args);
         const code = compile_closure(ctx, args);
         if (code.error) {
             return code;
         }
         const data = empty_env;
-        const debug = crlf_debug(code);
         return new_quad(debug, closure_t, code, data);
     }
 
     function compile_closure(ctx, args) {
+        const debug = crlf_debug(args);
         const ptrn = nth_sexpr(args, 1);
         const body = nth_sexpr(args, -1);
         debug_log("closure:", "ptrn:", to_scheme(ptrn));
@@ -957,7 +961,7 @@ function compile(source, file) {
         if (body?.kind !== "pair") {
             // empty body
             let code =
-                new_instr("push", unit_lit,
+                new_instr(debug, "push", unit_lit,
                 std.cust_send);
             return code;
         }
@@ -1001,15 +1005,17 @@ function compile(source, file) {
     }
 
     function xlat_literal(ctx, crlf, k) {
-        let code = new_instr("push", crlf, k);
+        const debug = crlf_debug(crlf);  // FIXME: consider {kind:"number"} instead of raw Number
+        let code = new_instr(debug, "push", crlf, k);
         return code;
     }
 
     function xlat_variable(ctx, crlf, k) {
+        const debug = crlf_debug(crlf);  // FIXME: consider {kind:"symbol"} instead of raw String
         const msg_n = ctx.msg_map && ctx.msg_map[crlf];
         if (typeof msg_n === "number") {
             // message variable
-            return new_instr("msg", msg_n, k);
+            return new_instr(debug, "msg", msg_n, k);
         }
         if (ctx.state_maps) {
             // search lexical scope(s)
@@ -1018,8 +1024,8 @@ function compile(source, file) {
                 // state variable
                 const offset = ctx.state_maps[index][crlf];
                 const code =
-                    new_instr("state", index + 2,
-                    new_instr("nth", offset, k));
+                    new_instr(debug, "state", index + 2,
+                    new_instr(debug, "nth", offset, k));
                 return code;
             }
         }
@@ -1030,11 +1036,12 @@ function compile(source, file) {
             return xlat;
         }
         // module environment
-        let ref = new_ref(crlf);
-        return new_instr("push", ref, k);
+        let ref = new_ref(debug, crlf);
+        return new_instr(debug, "push", ref, k);
     }
 
     function xlat_invoke(ctx, crlf, k) {
+        const debug = crlf_debug(crlf);
         const func = crlf.head;
         const args = crlf.tail;
         let xlat = interpret(ctx, func);
@@ -1046,163 +1053,178 @@ function compile(source, file) {
         if (equal_to(std.cust_send, k)) {
             // tail-call optimization
             let code =
-                interpret_args(ctx, args,   // args...
-                new_instr("msg", 1,         // args... cust
-                interpret(ctx, func,        // args... cust closure
-                new_instr("new", -2,        // args... cust beh.(state)
-                new_instr("send", nargs,    // --
+                interpret_args(ctx, args,       // args...
+                new_instr(debug, "msg", 1,      // args... cust
+                interpret(ctx, func,            // args... cust closure
+                new_instr(debug, "new", -2,     // args... cust beh.(state)
+                new_instr(debug, "send", nargs, // --
                 std.commit)))));
             return code;
         } else {
             // construct continuation
             let beh =
-                new_instr("state", 1,       // sp=(...)
-                new_instr("part", -1, k));  // ...
+                new_instr(debug, "state", 1,    // sp=(...)
+                new_instr(debug, "part", -1, k));// ...
             let code =
-                interpret_args(ctx, args,   // ... args...
-                new_instr("my", "self",     // ... args... SELF
-                interpret(ctx, func,        // ... args... cust closure
-                new_instr("new", -2,        // ... args... SELF beh.(state)
-                new_instr("send", nargs,    // ...
-                new_instr("pair", -1,       // sp=(...)
-                new_instr("state", -1,      // sp env
-                new_instr("push", beh,      // sp env beh
-                new_instr("msg", 0,         // sp env beh msg
-                new_instr("push", cont_beh, // sp env beh msg cont_beh
-                new_instr("beh", 4,         // --
+                interpret_args(ctx, args,       // ... args...
+                new_instr(debug, "my", "self",  // ... args... SELF
+                interpret(ctx, func,            // ... args... cust closure
+                new_instr(debug, "new", -2,     // ... args... SELF beh.(state)
+                new_instr(debug, "send", nargs, // ...
+                new_instr(debug, "pair", -1,    // sp=(...)
+                new_instr(debug, "state", -1,   // sp env
+                new_instr(debug, "push", beh,   // sp env beh
+                new_instr(debug, "msg", 0,      // sp env beh msg
+                new_instr(debug, "push", cont_beh,// sp env beh msg cont_beh
+                new_instr(debug, "beh", 4,      // --
                 std.commit)))))))))));
             return code;
         }
     }
 
     function xlat_lambda(ctx, args, k) {
+        const debug = crlf_debug(args);
         let code = compile_closure(ctx, args);
         if (code.error) {
             return code;
         }
         code =
-            new_instr("state", -1,          // env
-            new_instr("msg", 0,             // env msg
-            new_instr("push", nil_lit,      // env msg sp=()
-            new_instr("pair", 2,            // data=(() msg . env)
-            new_instr("push", code,         // data code
-            new_instr("push", closure_t,    // data code #closure_t
-            new_instr("quad", 3,            // [#closure_t, code, data, #?]
+            new_instr(debug, "state", -1,       // env
+            new_instr(debug, "msg", 0,          // env msg
+            new_instr(debug, "push", nil_lit,   // env msg sp=()
+            new_instr(debug, "pair", 2,         // data=(() msg . env)
+            new_instr(debug, "push", code,      // data code
+            new_instr(debug, "push", closure_t, // data code #closure_t
+            new_instr(debug, "quad", 3,         // [#closure_t, code, data, #?]
             k)))))));
         return code;
     }
 
     function xlat_quote(ctx, args, k) {
+        const debug = crlf_debug(args);
         const sexpr = nth_sexpr(args, 1);
         const crlf = sexpr_to_crlf(sexpr);
-        let code = new_instr("push", crlf, k);
+        let code = new_instr(debug, "push", crlf, k);
         return code;
     }
 
     function xlat_car(ctx, args, k) {
+        const debug = crlf_debug(args);
         const pair = nth_sexpr(args, 1);
         let code =
-            interpret(ctx, pair,            // (head . tail)
-            new_instr("nth", 1, k));        // head
+            interpret(ctx, pair,                // (head . tail)
+            new_instr(debug, "nth", 1, k));     // head
         return code;
     }
 
     function xlat_cdr(ctx, args, k) {
+        const debug = crlf_debug(args);
         const pair = nth_sexpr(args, 1);
         let code =
-            interpret(ctx, pair,            // (head . tail)
-            new_instr("nth", -1, k));       // tail
+            interpret(ctx, pair,                // (head . tail)
+            new_instr(debug, "nth", -1, k));    // tail
         return code;
     }
 
     function xlat_cadr(ctx, args, k) {
+        const debug = crlf_debug(args);
         const pair = nth_sexpr(args, 1);
         let code =
-            interpret(ctx, pair,            // pair=(head . tail)
-            new_instr("nth", 2, k));        // car(cdr(pair))
+            interpret(ctx, pair,                // pair=(head . tail)
+            new_instr(debug, "nth", 2, k));     // car(cdr(pair))
         return code;
     }
 
     function xlat_caar(ctx, args, k) {
+        const debug = crlf_debug(args);
         const pair = nth_sexpr(args, 1);
         let code =
-            interpret(ctx, pair,            // pair=(head . tail)
-            new_instr("nth", 1,             // car(pair)
-            new_instr("nth", 1, k)));       // car(car(pair))
+            interpret(ctx, pair,                // pair=(head . tail)
+            new_instr(debug, "nth", 1,          // car(pair)
+            new_instr(debug, "nth", 1, k)));    // car(car(pair))
         return code;
     }
 
     function xlat_cdar(ctx, args, k) {
+        const debug = crlf_debug(args);
         const pair = nth_sexpr(args, 1);
         let code =
-            interpret(ctx, pair,            // pair=(head . tail)
-            new_instr("nth", 1,             // car(pair)
-            new_instr("nth", -1, k)));      // cdr(car(pair))
+            interpret(ctx, pair,                // pair=(head . tail)
+            new_instr(debug, "nth", 1,          // car(pair)
+            new_instr(debug, "nth", -1, k)));   // cdr(car(pair))
         return code;
     }
 
     function xlat_cddr(ctx, args, k) {
+        const debug = crlf_debug(args);
         const pair = nth_sexpr(args, 1);
         let code =
-            interpret(ctx, pair,            // pair=(head . tail)
-            new_instr("nth", -2, k));       // cdr(cdr(pair))
+            interpret(ctx, pair,                // pair=(head . tail)
+            new_instr(debug, "nth", -2, k));    // cdr(cdr(pair))
         return code;
     }
 
     function xlat_caddr(ctx, args, k) {
+        const debug = crlf_debug(args);
         const pair = nth_sexpr(args, 1);
         let code =
-            interpret(ctx, pair,            // pair=(head . tail)
-            new_instr("nth", 3, k));        // car(cdr(cdr(pair)))
+            interpret(ctx, pair,                // pair=(head . tail)
+            new_instr(debug, "nth", 3, k));     // car(cdr(cdr(pair)))
         return code;
     }
 
     function xlat_cadar(ctx, args, k) {
+        const debug = crlf_debug(args);
         const pair = nth_sexpr(args, 1);
         let code =
-            interpret(ctx, pair,            // pair=(head . tail)
-            new_instr("nth", 1,             // car(pair)
-            new_instr("nth", -1,            // cdr(car(pair))
-            new_instr("nth", 1, k))));      // car(cdr(car(pair)))
+            interpret(ctx, pair,                // pair=(head . tail)
+            new_instr(debug, "nth", 1,          // car(pair)
+            new_instr(debug, "nth", -1,         // cdr(car(pair))
+            new_instr(debug, "nth", 1, k))));   // car(cdr(car(pair)))
         return code;
     }
 
     function xlat_cdddr(ctx, args, k) {
+        const debug = crlf_debug(args);
         const pair = nth_sexpr(args, 1);
         let code =
-            interpret(ctx, pair,            // pair=(head . tail)
-            new_instr("nth", -3, k));       // cdr(cdr(cdr(pair)))
+            interpret(ctx, pair,                // pair=(head . tail)
+            new_instr(debug, "nth", -3, k));    // cdr(cdr(cdr(pair)))
         return code;
     }
 
     function xlat_cadddr(ctx, args, k) {
+        const debug = crlf_debug(args);
         const pair = nth_sexpr(args, 1);
         let code =
-            interpret(ctx, pair,            // pair=(head . tail)
-            new_instr("nth", 4, k));        // car(cdr(cdr(cdr(pair))))
+            interpret(ctx, pair,                // pair=(head . tail)
+            new_instr(debug, "nth", 4, k));     // car(cdr(cdr(cdr(pair))))
         return code;
     }
 
     function xlat_cons(ctx, args, k) {
+        const debug = crlf_debug(args);
         const head = nth_sexpr(args, 1);
         const tail = nth_sexpr(args, 2);
         let code =
-            interpret(ctx, tail,            // tail
-            interpret(ctx, head,            // tail head
-            new_instr("pair", 1, k)));      // (head . tail)
+            interpret(debug, ctx, tail,         // tail
+            interpret(debug, ctx, head,         // tail head
+            new_instr("pair", 1, k)));          // (head . tail)
         return code;
     }
 
     function xlat_list(ctx, args, k) {
+        const debug = crlf_debug(args);
         let n = length_of(args);
         let code =
-            new_instr("push", nil_lit,  // ()
-            interpret_args(ctx, args,   // () args...
-            new_instr("pair", n, k)));  // (args...)
+            new_instr(debug, "push", nil_lit,   // ()
+            interpret_args(ctx, args,           // () args...
+            new_instr(debug, "pair", n, k)));   // (args...)
         return code;
     }
 
     function xlat_eq_p(ctx, args, k) {
+        const debug = crlf_debug(args);
         const expect = nth_sexpr(args, 1);
         const actual = nth_sexpr(args, 2);
         const e_const = constant_value(expect);
@@ -1210,156 +1232,169 @@ function compile(source, file) {
         if (e_const !== undefined) {
             if (a_const !== undefined) {
                 if (equal_to(e_const, a_const)) {
-                    return new_instr("push", true_lit, k);
+                    return new_instr(debug, "push", true_lit, k);
                 }
-                return new_instr("push", false_lit, k);
+                return new_instr(debug, "push", false_lit, k);
             }
             let code =
-                interpret(ctx, actual,          // actual
-                new_instr("eq", e_const, k));   // actual==expect
+                interpret(ctx, actual,              // actual
+                new_instr(debug, "eq", e_const, k));// actual==expect
             return code;
         }
         if (a_const !== undefined) {
             let code =
-                interpret(ctx, expect,          // expect
-                new_instr("eq", a_const, k));   // expect==actual
+                interpret(ctx, expect,              // expect
+                new_instr(debug, "eq", a_const, k));// expect==actual
             return code;
         }
         let code =
-            interpret(ctx, expect,          // expect
-            interpret(ctx, actual,          // expect actual
-            new_instr("cmp", "eq", k)));    // expect==actual
+            interpret(ctx, expect,              // expect
+            interpret(ctx, actual,              // expect actual
+            new_instr(debug, "cmp", "eq", k))); // expect==actual
         return code;
     }
 
     function xlat_null_p(ctx, args, k) {
+        const debug = crlf_debug(args);
         const value = nth_sexpr(args, 1);
         let code =
-            interpret(ctx, value,           // value
-            new_instr("eq", nil_lit, k));   // value==()
+            interpret(ctx, value,               // value
+            new_instr(debug, "eq", nil_lit, k));// value==()
         return code;
     }
 
     function xlat_pair_p(ctx, args, k) {
+        const debug = crlf_debug(args);
         const value = nth_sexpr(args, 1);
         let code =
-            interpret(ctx, value,           // value
-            new_instr("typeq", pair_t,      // is_pair(value)
+            interpret(ctx, value,               // value
+            new_instr(debug, "typeq", pair_t,   // is_pair(value)
             k));
         return code;
     }
 
     function xlat_boolean_p(ctx, args, k) {
+        const debug = crlf_debug(args);
         const value = nth_sexpr(args, 1);
-        let k_t = new_instr("push", true_lit, k);
-        let k_f = new_instr("push", false_lit, k);
+        let k_t = new_instr(debug, "push", true_lit, k);
+        let k_f = new_instr(debug, "push", false_lit, k);
         let code =
-            interpret(ctx, value,           // value
-            new_instr("dup", 1,             // value value
-            new_instr("eq", true_lit,       // value value==#t
-            new_if_instr(k,                 // value
-            new_instr("eq", false_lit,      // value==#f
-            new_if_instr(k_t, k_f))))));
+            interpret(ctx, value,               // value
+            new_instr(debug, "dup", 1,          // value value
+            new_instr(debug, "eq", true_lit,    // value value==#t
+            new_if_instr(debug, k,              // value
+            new_instr(debug, "eq", false_lit,   // value==#f
+            new_if_instr(debug, k_t, k_f))))));
         return code;
     }
 
     function xlat_number_p(ctx, args, k) {
+        const debug = crlf_debug(args);
         const value = nth_sexpr(args, 1);
         let code =
-            interpret(ctx, value,           // value
-            new_instr("typeq", fixnum_t,    // is_number(value)
+            interpret(ctx, value,               // value
+            new_instr(debug, "typeq", fixnum_t, // is_number(value)
             k));
         return code;
     }
 
     function xlat_symbol_p(ctx, args, k) {
+        const debug = crlf_debug(args);
         const value = nth_sexpr(args, 1);
         let code =
-            interpret(ctx, value,           // value
-            new_instr("typeq", symbol_t,    // is_symbol(value)
+            interpret(ctx, value,               // value
+            new_instr(debug, "typeq", symbol_t, // is_symbol(value)
             k));
         return code;
     }
 
     function xlat_actor_p(ctx, args, k) {
+        const debug = crlf_debug(args);
         const value = nth_sexpr(args, 1);
         let code =
-            interpret(ctx, value,           // value
-            new_instr("typeq", actor_t,     // is_actor(value)
+            interpret(ctx, value,               // value
+            new_instr(debug, "typeq", actor_t,  // is_actor(value)
             k));
         return code;
     }
 
     function xlat_behavior_p(ctx, args, k) {
+        const debug = crlf_debug(args);
         const value = nth_sexpr(args, 1);
         let code =
-            interpret(ctx, value,           // value
-            new_instr("typeq", behavior_t,  // is_behavior(value)
+            interpret(ctx, value,               // value
+            new_instr(debug, "typeq", behavior_t,// is_behavior(value)
             k));
         return code;
     }
 
     function xlat_lt_num(ctx, args, k) {
+        const debug = crlf_debug(args);
         const n = nth_sexpr(args, 1);
         const m = nth_sexpr(args, 2);
         let code =
-            interpret(ctx, n,               // n
-            interpret(ctx, m,               // n m
-            new_instr("cmp", "lt", k)));    // n<m
+            interpret(ctx, n,                   // n
+            interpret(ctx, m,                   // n m
+            new_instr(debug, "cmp", "lt", k))); // n<m
         return code;
     }
 
     function xlat_le_num(ctx, args, k) {
+        const debug = crlf_debug(args);
         const n = nth_sexpr(args, 1);
         const m = nth_sexpr(args, 2);
         let code =
-            interpret(ctx, n,               // n
-            interpret(ctx, m,               // n m
-            new_instr("cmp", "le", k)));    // n<=m
+            interpret(ctx, n,                   // n
+            interpret(ctx, m,                   // n m
+            new_instr(debug, "cmp", "le", k))); // n<=m
         return code;
     }
 
     function xlat_eq_num(ctx, args, k) {
         return xlat_eq_p(ctx, args, k);    // FIXME: add numeric type-checks?
         /*
+        const debug = crlf_debug(args);
         const n = nth_sexpr(args, 1);
         const m = nth_sexpr(args, 2);
         let code =
-            interpret(ctx, n,               // n
-            interpret(ctx, m,               // n m
-            new_instr("cmp", "eq", k)));    // n==m
+            interpret(ctx, n,                   // n
+            interpret(ctx, m,                   // n m
+            new_instr(debug, "cmp", "eq", k))); // n==m
         return code;
         */
     }
 
     function xlat_ge_num(ctx, args, k) {
+        const debug = crlf_debug(args);
         const n = nth_sexpr(args, 1);
         const m = nth_sexpr(args, 2);
         let code =
-            interpret(ctx, n,               // n
-            interpret(ctx, m,               // n m
-            new_instr("cmp", "ge", k)));    // n>=m
+            interpret(ctx, n,                   // n
+            interpret(ctx, m,                   // n m
+            new_instr(debug, "cmp", "ge", k))); // n>=m
         return code;
     }
 
     function xlat_gt_num(ctx, args, k) {
+        const debug = crlf_debug(args);
         const n = nth_sexpr(args, 1);
         const m = nth_sexpr(args, 2);
         let code =
-            interpret(ctx, n,               // n
-            interpret(ctx, m,               // n m
-            new_instr("cmp", "gt", k)));    // n>m
+            interpret(ctx, n,                   // n
+            interpret(ctx, m,                   // n m
+            new_instr(debug, "cmp", "gt", k))); // n>m
         return code;
     }
 
     function xlat_add_num(ctx, args, k) {
+        const debug = crlf_debug(args);
         const n = nth_sexpr(args, 1);
         const m = nth_sexpr(args, 2);
         const n_const = constant_value(n);
         const m_const = constant_value(m);
         if (typeof n_const === "number"
         &&  typeof m_const === "number") {
-            return new_instr("push", n_const + m_const);
+            return new_instr(debug, "push", n_const + m_const);
         }
         if (n_const === 0) {
             return interpret(ctx, m, k);
@@ -1368,39 +1403,41 @@ function compile(source, file) {
             return interpret(ctx, n, k);
         }
         let code =
-            interpret(ctx, n,               // n
-            interpret(ctx, m,               // n m
-            new_instr("alu", "add", k)));   // n+m
+            interpret(ctx, n,                   // n
+            interpret(ctx, m,                   // n m
+            new_instr(debug, "alu", "add", k)));// n+m
         return code;
     }
 
     function xlat_sub_num(ctx, args, k) {
+        const debug = crlf_debug(args);
         const n = nth_sexpr(args, 1);
         const m = nth_sexpr(args, 2);
         const n_const = constant_value(n);
         const m_const = constant_value(m);
         if (typeof n_const === "number"
         &&  typeof m_const === "number") {
-            return new_instr("push", n_const - m_const);
+            return new_instr(debug, "push", n_const - m_const);
         }
         if (m_const === 0) {
             return interpret(ctx, n, k);
         }
         let code =
-            interpret(ctx, n,               // n
-            interpret(ctx, m,               // n m
-            new_instr("alu", "sub", k)));   // n-m
+            interpret(ctx, n,                   // n
+            interpret(ctx, m,                   // n m
+            new_instr(debug, "alu", "sub", k)));// n-m
         return code;
     }
 
     function xlat_mul_num(ctx, args, k) {
+        const debug = crlf_debug(args);
         const n = nth_sexpr(args, 1);
         const m = nth_sexpr(args, 2);
         const n_const = constant_value(n);
         const m_const = constant_value(m);
         if (typeof n_const === "number"
         &&  typeof m_const === "number") {
-            return new_instr("push", n_const * m_const);
+            return new_instr(debug, "push", n_const * m_const);
         }
         if (n_const === 1) {
             return interpret(ctx, m, k);
@@ -1409,30 +1446,32 @@ function compile(source, file) {
             return interpret(ctx, n, k);
         }
         let code =
-            interpret(ctx, n,               // n
-            interpret(ctx, m,               // n m
-            new_instr("alu", "mul", k)));   // n*m
+            interpret(ctx, n,                   // n
+            interpret(ctx, m,                   // n m
+            new_instr(debug, "alu", "mul", k)));// n*m
         return code;
     }
 
     function xlat_not(ctx, args, k) {
+        const debug = crlf_debug(args);
         const value = nth_sexpr(args, 1);
         let code =
-            interpret(ctx, value,           // value
-            new_if_instr(
-                new_instr("push", true_lit, k),
-                new_instr("push", false_lit, k),
+            interpret(ctx, value,               // value
+            new_if_instr(debug,
+                new_instr(debug, "push", true_lit, k),
+                new_instr(debug, "push", false_lit, k),
             ));
         return code;
     }
 
     function xlat_if(ctx, args, k) {
+        const debug = crlf_debug(args);
         const pred = nth_sexpr(args, 1);
         const cnsq = nth_sexpr(args, 2);
         const altn = nth_sexpr(args, 3);
         let code =
             interpret(ctx, pred,
-            new_if_instr(
+            new_if_instr(debug,
                 interpret(ctx, cnsq, k),
                 interpret(ctx, altn, k),
             ));
@@ -1457,7 +1496,8 @@ function compile(source, file) {
             interpret_literal: xlat_literal,
             interpret_variable: function(ctx, crlf, k) {
                 if (crlf === "SELF") {
-                    return new_instr("my", "self", k);  // SELF reference
+                    const debug = crlf_debug(crlf);
+                    return new_instr(debug, "my", "self", k);  // SELF reference
                 }
                 return xlat_variable(ctx, crlf, k);
             },
@@ -1482,25 +1522,27 @@ function compile(source, file) {
         if (code.error) {
             return code;
         }
+        const debug = crlf_debug(args);
         code =
-            new_instr("state", -1,          // env
-            new_instr("msg", 0,             // env msg
-            new_instr("push", nil_lit,      // env msg sp=()
-            new_instr("pair", 2,            // data=(() msg . env)
-            new_instr("push", code,         // data code
-            new_instr("push", behavior_t,   // data code #behavior_t
-            new_instr("quad", 3,            // [#behavior_t, code, data, #?]
+            new_instr(debug, "state", -1,       // env
+            new_instr(debug, "msg", 0,          // env msg
+            new_instr(debug, "push", nil_lit,   // env msg sp=()
+            new_instr(debug, "pair", 2,         // data=(() msg . env)
+            new_instr(debug, "push", code,      // data code
+            new_instr(debug, "push", behavior_t,// data code #behavior_t
+            new_instr(debug, "quad", 3,         // [#behavior_t, code, data, #?]
             k)))))));
         return code;
     }
 
     function xlat_SEND(ctx, args, k) {
+        const debug = crlf_debug(args);
         const target = nth_sexpr(args, 1);
         const msg = nth_sexpr(args, 2);
         let code =
-            interpret(ctx, msg,             // msg
-            interpret(ctx, target,          // msg target
-            new_instr("send", -1, k)));     // --
+            interpret(ctx, msg,                 // msg
+            interpret(ctx, target,              // msg target
+            new_instr(debug, "send", -1, k)));  // --
         return code;
     }
 
@@ -1583,9 +1625,9 @@ function compile(source, file) {
     const ctx = new_module_ctx();
     // FIXME: could we use `interpret_seq()` instead? -- no, we don't have a sexpr list.
     let k =
-        new_instr("msg", 0,             // {caps}
-        new_instr("push", 2,            // {caps} dev.debug_key
-        new_instr("dict", "get",        // debug_dev
+        new_instr(debug_file, "msg", 0,         // {caps}
+        new_instr(debug_file, "push", 2,        // {caps} dev.debug_key
+        new_instr(debug_file, "dict", "get",    // debug_dev
         std.send_msg)));
     while (sexprs.length > 0) {
         const crlf = sexprs.pop(); //sexprs.shift();
@@ -1644,7 +1686,7 @@ function join_instr_chains(t_chain, f_chain, j_label) {
         }
     }
     const join = t_chain.k;
-    const j_ref = new_ref(j_label);
+    const j_ref = new_ref(undefined, j_label);
     t_chain.k = j_ref;
     f_chain.k = j_ref;
     return join;
@@ -1964,13 +2006,14 @@ z n f 'a 'foo
 // const module = compile("(define fn (lambda (x y z) (list z (cons y x)) (car q) (cdr q) ))");
 // const module = compile("(define fn (lambda (x y z) (if (eq? 'x x) (list z y x) (cons y z)) ))");
 // const module = compile("(define fn (lambda (x y) (list (cons 'x x) (cons 'y y)) '(x y z) ))");
-// const module = compile("(define hof (lambda (foo) (lambda (bar) (lambda (baz) (list 'foo foo 'bar bar 'baz baz) )))) (hof 'a '(b c) '(d . e))");
+// const module = compile("(define f (lambda (x y) y))\n(f 0)\n");
+//debug const module = compile("(define hof (lambda (foo) (lambda (bar) (lambda (baz) (list 'foo foo 'bar bar 'baz baz) )))) (hof 'a '(b c) '(d . e))");
 // const module = compile("(define inc ((lambda (a) (lambda (b) (+ a b))) 1))");
 // const module = compile("(define sink_beh (BEH _))");
 // const module = compile("(define zero_beh (BEH (cust) (SEND cust 0)))");
 // const module = compile("(define true_beh (BEH (cust) (SEND cust #t)))");
 // const module = compile(sample_source);
-//debug const module = compile(ifact_source);
+// const module = compile(ifact_source);
 // const module = compile(fact_source);
 // const module = compile(fib_source);
 // const module = compile(hof2_source);
