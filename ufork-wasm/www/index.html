@@ -63,16 +63,20 @@ table {
   display: flex;
   flex-direction: column;
   justify-content: center;
-  align-items: center;
+  align-items: stretch;
+  overflow: hidden;
+  padding-top: 2ex;
+  padding-bottom: 2ex;
 }
 #stdout {
   background-color: #222;
   color: #FFF;
   font-family: monospace;
-  overflow: scroll;
+  overflow-y: scroll;
+  flex-grow: 1;
 }
 #input-ctls {
-  margin: 4px;
+  margin-top: 1ex;
   display: flex;
   flex-direction: row;
   align-items: center;
@@ -81,6 +85,8 @@ table {
   background-color: #FFF;
   color: #000;
   font-family: monospace;
+  flex-grow: 1;
+  margin-right: 0.6ex;
 }
 #source {
   display: flex;
@@ -137,9 +143,9 @@ table {
   <pre id="ram" class="panel" title="RAM Image"></pre>
   <pre id="blob" class="panel" title="BLOB Image"></pre>
   <div id="stdio" class="panel" title="Console I/O">
-    <textarea id="stdout" cols="70" rows="16" readonly="readonly"></textarea>
+    <textarea id="stdout" readonly="readonly"></textarea>
     <div id="input-ctls">
-      <input id="stdin" type="text" size="66" />
+      <input id="stdin" type="text" />
       <button id="send-btn">Send</button>
     </div>
   </div>
