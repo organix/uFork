@@ -8,4 +8,4 @@
             (lambda (baz)
                 (list 'foo foo 'bar bar 'baz baz) ))))
 
-(hof 'a '(b c) '(d . e))
+(hof 'a '(b c) '(#t . #f))

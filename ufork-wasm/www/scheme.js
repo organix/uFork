@@ -28,22 +28,44 @@ prefixes {a, d, f, i, j, k, n, t, v, x, y}
  * uFork/CRLF elements
  */
 
-const undef_lit =   { "kind": "literal", "value": "undef" };
-const nil_lit =     { "kind": "literal", "value": "nil" };
-const false_lit =   { "kind": "literal", "value": "false" };
-const true_lit =    { "kind": "literal", "value": "true" };
-const unit_lit =    { "kind": "literal", "value": "unit" };
+const undef_lit =   { kind: "literal", value: "undef" };
+const nil_lit =     { kind: "literal", value: "nil" };
+const false_lit =   { kind: "literal", value: "false" };
+const true_lit =    { kind: "literal", value: "true" };
+const unit_lit =    { kind: "literal", value: "unit" };
 
-const literal_t =   { "kind": "type", "name": "literal" };
-const type_t =      { "kind": "type", "name": "type" };
-const fixnum_t =    { "kind": "type", "name": "fixnum" };
-const actor_t =     { "kind": "type", "name": "actor" };
-const instr_t =     { "kind": "type", "name": "instr" };
-const pair_t =      { "kind": "type", "name": "pair" };
-const dict_t =      { "kind": "type", "name": "dict" };
+const literal_t =   { kind: "type", name: "literal" };
+const type_t =      { kind: "type", name: "type" };
+const fixnum_t =    { kind: "type", name: "fixnum" };
+const actor_t =     { kind: "type", name: "actor" };
+const instr_t =     { kind: "type", name: "instr" };
+const pair_t =      { kind: "type", name: "pair" };
+const dict_t =      { kind: "type", name: "dict" };
 
-function new_quad(t, x, y, z) {
-    const value = { "kind": "quad", t };
+function crlf_debug(from, to) {
+    if (from === null) {
+        return undefined;
+    }
+    let file = from?.debug?.file ?? from?.file;
+    let start = from?.debug?.start ?? from?.start;
+    let end = from?.debug?.end ?? from?.end;
+    if (to !== null && typeof to === "object") {
+        if (file === undefined) {
+            file = to.debug?.file ?? to.file;
+        }
+        if (start === undefined) {
+            start = to.debug?.start ?? to.start;
+        }
+        let span = to.debug?.end ?? to.end;
+        if (span !== undefined) {
+            end = span;
+        }
+    }
+    return { kind: "debug", file, start, end };
+}
+
+function new_quad(debug, t, x, y, z) {
+    const value = { kind: "quad", debug, t };
     if (x !== undefined) {
         value.x = x;
         if (y !== undefined) {
@@ -56,28 +78,28 @@ function new_quad(t, x, y, z) {
     return value;
 }
 
-function new_type(arity) {
-    //return new_quad(type_t, arity);
-    return { "kind": "type", arity };
+function new_type(debug, arity) {
+    //return new_quad(debug, type_t, arity);
+    return { kind: "type", arity, debug };
 }
 
-function new_pair(head, tail) {
-    return { "kind": "pair", head, tail };
+function new_pair(debug, head, tail) {
+    return { kind: "pair", head, tail, debug };
 }
 
-function new_dict(key, value, next = nil_lit) {
-    return { "kind": "dict", key, value, next };
+function new_dict(debug, key, value, next = nil_lit) {
+    return { kind: "dict", key, value, next, debug };
 }
 
 function new_ref(name) {
-    return { "kind": "ref", name };
+    return { kind: "ref", name };
 }
 
 function new_instr(op, imm = undef_lit, k = undef_lit) {
     if (k?.error) {
         return k;
     }
-    return { "kind": "instr", op, imm, k };
+    return { kind: "instr", op, imm, k };
 }
 
 function new_if_instr(t = undef_lit, f = undef_lit) {
@@ -87,7 +109,7 @@ function new_if_instr(t = undef_lit, f = undef_lit) {
     if (f?.error) {
         return f;
     }
-    return { "kind": "instr", "op": "if", t, f };
+    return { kind: "instr", op: "if", t, f };
 }
 
 // standard instruction-stream tails
@@ -268,7 +290,7 @@ function to_scheme(crlf) {
  * Scheme language parsing
  */
 
-function parse(source) {
+function parse(source, file) {
 
     function string_input(string, start = 0) {
         if (typeof string !== "string") {
@@ -280,6 +302,7 @@ function parse(source) {
             if (code === undefined) {
                 return {
                     error: "end of input",
+                    file,
                     source: string,
                     start,
                     end: start
@@ -289,6 +312,7 @@ function parse(source) {
             return {
                 token: String.fromCodePoint(code),
                 code: code,
+                file,
                 source: string,
                 start,
                 end,
@@ -433,7 +457,8 @@ function parse(source) {
         if (tail.error) {
             return tail;  // report error
         }
-        input.token = new_pair(scan.token, tail.token);
+        const debug = crlf_debug(scan, tail);
+        input.token = new_pair(debug, scan.token, tail.token);
         input.end = tail.end;
         input.next = tail.next;
         return input;
@@ -455,6 +480,7 @@ function parse(source) {
         if (scan.token === ".") {
             return {
                 error: "unexpected dot",
+                file,
                 start: input.start,
                 end: scan.end
             };            
@@ -467,7 +493,8 @@ function parse(source) {
         if (tail.error) {
             return tail;  // report error
         }
-        input.token = new_pair(scan.token, tail.token);
+        const debug = crlf_debug(scan, tail);
+        input.token = new_pair(debug, scan.token, tail.token);
         input.end = tail.end;
         input.next = tail.next;
         return input;
@@ -479,7 +506,8 @@ function parse(source) {
         if (scan.error) {
             return scan;  // report error
         }
-        input.token = new_pair(quote, new_pair(scan.token, nil_lit));
+        const debug = crlf_debug(scan);
+        input.token = new_pair(debug, quote, new_pair(debug, scan.token, nil_lit));
         input.end = scan.end;
         input.next = scan.next;
         return input;
@@ -497,6 +525,7 @@ function parse(source) {
         if (input.token === ".") {
             return {
                 error: "unexpected dot",
+                file,
                 start: input.start,
                 end: input.end
             };            
@@ -525,6 +554,7 @@ function parse(source) {
         }
         return {
             error: "unexpected token",
+            file,
             token: input.token,
             start: input.start,
             end: input.end
@@ -640,13 +670,14 @@ function tokenize(source) {
  * Scheme interpreter/compiler
  */
 
-function compile(source) {
+function compile(source, file) {
 
+    const debug_file = { kind: "debug", file };
     const module_env = {
-        "symbol_t": new_type(1),
-        "closure_t": new_type(2),
-        "behavior_t": new_type(2),
-        "~empty_env": new_pair(nil_lit, nil_lit), // (())  ; NOTE: this is the same value as EMPTY_DQ
+        "symbol_t": new_type(debug_file, 1),
+        "closure_t": new_type(debug_file, 2),
+        "behavior_t": new_type(debug_file, 2),
+        "~empty_env": new_pair(debug_file, nil_lit, nil_lit), // (())  ; NOTE: this is the same value as EMPTY_DQ
         "~cont_beh":
             new_instr("state", 1,       // msg
             new_instr("my", "self",     // msg SELF
@@ -716,7 +747,7 @@ function compile(source) {
             return nil_lit;
         }
         ofs += (code <= 0xFFFF ? 1 : 2);
-        return new_pair(code, string_to_list(str, ofs));
+        return new_pair(debug_file, code, string_to_list(str, ofs));
     }
 
     function sexpr_to_crlf(sexpr) {
@@ -728,7 +759,7 @@ function compile(source) {
             const name = "'" + sexpr;
             let symbol = module_env[name];
             if (!symbol) {
-                symbol = new_quad(symbol_t, string_to_list(sexpr));
+                symbol = new_quad(debug_file, symbol_t, string_to_list(sexpr));
                 module_env[name] = symbol;
             }
             return new_ref(name);
@@ -746,10 +777,11 @@ function compile(source) {
             if (head.error) {
                 return head;
             }
-            return new_pair(head, tail);
+            return new_pair(debug_file, head, tail);
         }
         return {
             error: "unknown sexpr",
+            file,
             sexpr
         };
     }
@@ -830,6 +862,7 @@ function compile(source) {
             return {
                 error: "string (symbol) expected",
                 symbol,
+                file,
                 ctx
             };
         }
@@ -885,6 +918,7 @@ function compile(source) {
             func,
             args,
             xlat,
+            file,
             ctx
         };
     }
@@ -895,21 +929,23 @@ function compile(source) {
     }
 
     function eval_BEH(ctx, args) {
-        let code = compile_behavior(ctx, args);
+        const code = compile_behavior(ctx, args);
         if (code.error) {
             return code;
         }
-        let data = empty_env;
-        return new_quad(behavior_t, code, data);
+        const data = empty_env;
+        const debug = crlf_debug(code);
+        return new_quad(debug, behavior_t, code, data);
     }
 
     function eval_lambda(ctx, args) {
-        let code = compile_closure(ctx, args);
+        const code = compile_closure(ctx, args);
         if (code.error) {
             return code;
         }
-        let data = empty_env;
-        return new_quad(closure_t, code, data);
+        const data = empty_env;
+        const debug = crlf_debug(code);
+        return new_quad(debug, closure_t, code, data);
     }
 
     function compile_closure(ctx, args) {
@@ -1472,6 +1508,7 @@ function compile(source) {
         return {
             error: "not implemented",
             crlf,
+            file,
             ctx
         };
     }
@@ -1508,7 +1545,9 @@ function compile(source) {
         }
         return {
             error: "list expected",
-            body: list
+            body: list,
+            file,
+            ctx
         };
     }
 
@@ -1530,11 +1569,13 @@ function compile(source) {
         }
         return {
             error: "list expected",
-            body: list
+            body: list,
+            file,
+            ctx
         };
     }
 
-    const sexprs = parse(source);
+    const sexprs = parse(source, file);
     if (sexprs.error) {
         warn_log("parse:", sexprs);
         return sexprs;
@@ -1898,10 +1939,10 @@ z n f 'a 'foo
 `;
 
 // const sexprs = parse(" `('foo (,bar ,@baz) . quux)\r\n");
-//debug const sexprs = parse("'(0 1 -1 #t #f #nil #? () . #unit)");
+// const sexprs = parse("'(0 1 -1 #t #f #nil #? () . #unit)");
 // const sexprs = parse("(if (< n 0) #f #t)");
 // const sexprs = parse("(lambda (x . y) x)");
-// const sexprs = parse("(define f (lambda (x y) y))\n(f 0)\n");
+//debug const sexprs = parse("(define f (lambda (x y) y))\n(f 0)\n");
 //debug info_log("sexprs:", sexprs);
 //debug if (!sexprs.error) {
 //debug     sexprs.forEach(function (sexpr) {
@@ -1927,14 +1968,15 @@ z n f 'a 'foo
 // const module = compile("(define inc ((lambda (a) (lambda (b) (+ a b))) 1))");
 // const module = compile("(define sink_beh (BEH _))");
 // const module = compile("(define zero_beh (BEH (cust) (SEND cust 0)))");
+// const module = compile("(define true_beh (BEH (cust) (SEND cust #t)))");
 // const module = compile(sample_source);
-// const module = compile(ifact_source);
+//debug const module = compile(ifact_source);
 // const module = compile(fact_source);
 // const module = compile(fib_source);
 // const module = compile(hof2_source);
 // const module = compile(hof3_source);
 // const module = compile(test_source);
-// info_log(JSON.stringify(module, undefined, 2));
-// if (!module?.error) {
-//     info_log(to_asm(module.ast));
-// }
+//debug info_log(JSON.stringify(module, undefined, 2));
+//debug if (!module?.error) {
+//debug     info_log(to_asm(module.ast));
+//debug }
