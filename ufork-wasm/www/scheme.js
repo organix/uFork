@@ -2007,7 +2007,7 @@ z n f 'a 'foo
 // const module = compile("(define fn (lambda (x y z) (if (eq? 'x x) (list z y x) (cons y z)) ))");
 // const module = compile("(define fn (lambda (x y) (list (cons 'x x) (cons 'y y)) '(x y z) ))");
 // const module = compile("(define f (lambda (x y) y))\n(f 0)\n");
-//debug const module = compile("(define hof (lambda (foo) (lambda (bar) (lambda (baz) (list 'foo foo 'bar bar 'baz baz) )))) (hof 'a '(b c) '(d . e))");
+//debug const module = compile("(define hof (lambda (foo) (lambda (bar) (lambda (baz) (list 'foo foo 'bar bar 'baz baz) )))) (((hof 'a) '(b c)) '(#t . #f))");
 // const module = compile("(define inc ((lambda (a) (lambda (b) (+ a b))) 1))");
 // const module = compile("(define sink_beh (BEH _))");
 // const module = compile("(define zero_beh (BEH (cust) (SEND cust 0)))");
