@@ -2,10 +2,27 @@
 ; example Scheme source code
 ;
 
-(define hof
-    (lambda (foo)
-        (lambda (bar)
-            (lambda (baz)
-                (list 'foo foo 'bar bar 'baz baz) ))))
+(define sink-beh (BEH _))
+;sink_beh:               ; () <- _
+;    ref std.sink_beh    ; re-export
 
-(((hof 'a) '(b c)) '(#t . #f))
+(define memo-beh
+    (lambda (value)
+        (BEH (cust)
+            (SEND cust value) )))
+;memo_beh:               ; (value) <- (cust . _)
+;    state 1             ; value
+;    ref std.cust_send
+
+(define fwd-beh
+    (lambda (rcvr)
+        (BEH msg
+            (SEND rcvr msg) )))
+;fwd_beh:                ; (rcvr) <- msg
+;    msg 0               ; msg
+;    state 1             ; msg rcvr
+;    ref std.send_msg
+
+(SEND
+    (CREATE (memo-beh 42))
+    (list (CREATE sink-beh)))

@@ -838,8 +838,11 @@ function compile(source, file) {
         "-": xlat_sub_num,
         "*": xlat_mul_num,
         "not": xlat_not,
-        "if": xlat_if
-    };
+        "if": xlat_if,
+        "BEH": xlat_BEH,
+        "CREATE": xlat_CREATE,
+        "SEND": xlat_SEND,
+};
 
     function new_module_ctx() {
         const ctx = {
@@ -851,7 +854,6 @@ function compile(source, file) {
                 prim_map,
                 {
                     "define": eval_define,
-                    "SEND": xlat_SEND
                 })
         };
         return ctx;
@@ -991,11 +993,7 @@ function compile(source, file) {
             interpret_invoke: xlat_invoke,
             func_map: Object.assign(
                 {},
-                prim_map,
-                {
-                    "BEH": xlat_BEH,
-                    "SEND": xlat_SEND,
-                }),
+                prim_map),
             state_maps: inherit_state_maps(parent),
             msg_map: pattern_to_map(ptrn, 1)  // skip implicit customer
         };
@@ -1504,10 +1502,9 @@ function compile(source, file) {
             interpret_invoke: xlat_invoke,
             func_map: Object.assign(
                 {},
-                prim_map,  // FIXME: inherit from `parent.func_map`?
+                prim_map,
                 {
-                    "BEH": xlat_not_implemented,
-                    "SEND": xlat_SEND,
+                    "BECOME": xlat_not_implemented,
                 }),
             state_maps: inherit_state_maps(parent),
             msg_map: pattern_to_map(ptrn)  // no implicit customer
@@ -1530,8 +1527,17 @@ function compile(source, file) {
             new_instr(debug, "pair", 2,         // data=(() msg . env)
             new_instr(debug, "push", code,      // data code
             new_instr(debug, "push", behavior_t,// data code #behavior_t
-            new_instr(debug, "quad", 3,         // [#behavior_t, code, data, #?]
+            new_instr(debug, "quad", 3,         // [#behavior_t, code, data]
             k)))))));
+        return code;
+    }
+
+    function xlat_CREATE(ctx, args, k) {
+        const debug = crlf_debug(args);
+        const beh = nth_sexpr(args, 1);
+        let code =
+            interpret(ctx, beh,                 // [#behavior_t, code, data]
+            new_instr(debug, "new", -2, k));    // actor
         return code;
     }
 
@@ -1542,7 +1548,9 @@ function compile(source, file) {
         let code =
             interpret(ctx, msg,                 // msg
             interpret(ctx, target,              // msg target
-            new_instr(debug, "send", -1, k)));  // --
+            new_instr(debug, "send", -1,        // --
+            new_instr(debug, "push", unit_lit,  // #unit
+            k))));
         return code;
     }
 
@@ -1926,10 +1934,14 @@ function to_asm(crlf) {
 export default Object.freeze({parse, compile});
 
 const sample_source = `
-(define memo_beh
+(define sink-beh (BEH _))
+(define memo-beh
     (lambda (value)
         (BEH (cust)
-            (SEND cust value) )))`;
+            (SEND cust value) )))
+(SEND
+    (CREATE (memo-beh 42))
+    (list (CREATE sink-beh)) )`;
 const fact_source = `
 (define fact
     (lambda (n)
@@ -2007,12 +2019,12 @@ z n f 'a 'foo
 // const module = compile("(define fn (lambda (x y z) (if (eq? 'x x) (list z y x) (cons y z)) ))");
 // const module = compile("(define fn (lambda (x y) (list (cons 'x x) (cons 'y y)) '(x y z) ))");
 // const module = compile("(define f (lambda (x y) y))\n(f 0)\n");
-//debug const module = compile("(define hof (lambda (foo) (lambda (bar) (lambda (baz) (list 'foo foo 'bar bar 'baz baz) )))) (((hof 'a) '(b c)) '(#t . #f))");
+// const module = compile("(define hof (lambda (foo) (lambda (bar) (lambda (baz) (list 'foo foo 'bar bar 'baz baz) )))) (((hof 'a) '(b c)) '(#t . #f))");
 // const module = compile("(define inc ((lambda (a) (lambda (b) (+ a b))) 1))");
 // const module = compile("(define sink_beh (BEH _))");
 // const module = compile("(define zero_beh (BEH (cust) (SEND cust 0)))");
 // const module = compile("(define true_beh (BEH (cust) (SEND cust #t)))");
-// const module = compile(sample_source);
+//debug const module = compile(sample_source);
 // const module = compile(ifact_source);
 // const module = compile(fact_source);
 // const module = compile(fib_source);
