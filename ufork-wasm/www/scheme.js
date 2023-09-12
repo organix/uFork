@@ -192,7 +192,7 @@ function equal_to(expect, actual) {
 //    * type = { "kind": "type", "name": <string> }
 
 function to_scheme(crlf) {
-    if (typeof crlf === "string") {
+    if (typeof crlf === "string") {  // FIXME: raw String is DEPRECATED
         return crlf;
     }
     if (typeof crlf !== "object") {
@@ -741,7 +741,7 @@ function compile(source, file) {
         while (pattern?.kind === "pair") {
             n += 1;
             const head = pattern?.head;
-            const name = head?.name ?? head;  // FIXME: check (kind === "symbol")
+            const name = (head?.kind === "symbol" ? head.name : head);  // FIXME: DEPRECATED!
             if (typeof name === "string") {
                 if (name !== "_") {
                     map[name] = n;
@@ -749,7 +749,7 @@ function compile(source, file) {
             }
             pattern = pattern?.tail;
         }
-        const name = pattern?.name ?? pattern;
+        const name = (pattern?.kind === "symbol" ? pattern.name : pattern);  // FIXME: DEPRECATED!
         if (typeof name === "string") {
             if (name !== "_") {
                 map[name] = -n;
@@ -772,6 +772,7 @@ function compile(source, file) {
         if (typeof sexpr === "number") {  // FIXME: DEPRECATED!
             return sexpr;
         }
+        /*
         if (typeof sexpr === "string") {  // FIXME: DEPRECATED!
             // Symbol
             const label = "'" + sexpr;
@@ -782,6 +783,7 @@ function compile(source, file) {
             }
             return new_ref(debug, label);
         }
+        */
         const kind = sexpr?.kind;
         if (kind === "number" || kind === "literal" || kind === "type") {
             return sexpr;
@@ -935,7 +937,7 @@ function compile(source, file) {
 
     function eval_variable(ctx, crlf) {
         const debug = crlf_debug(crlf);
-        const name = (crlf?.kind === "symbol" ? crlf.name : crlf);
+        const name = crlf?.name; // (crlf?.kind === "symbol" ? crlf.name : crlf);
         const xlat = ctx.func_map && ctx.func_map[name];
         if (typeof xlat === "function") {
             // operative function
@@ -1038,7 +1040,9 @@ function compile(source, file) {
 
     function xlat_literal(ctx, crlf, k) {
         const debug = crlf_debug(crlf);
-        const value = crlf?.kind === "number" ? crlf.value : crlf;
+        const value = crlf?.kind === "number"
+            ? crlf.value
+            : crlf;
         let code = new_instr(debug, "push", value, k);
         return code;
     }
@@ -1603,7 +1607,15 @@ function compile(source, file) {
         if (k?.error) {
             return k;
         }
-        if (typeof crlf === "string" || crlf?.kind === "symbol") {
+        if (typeof crlf === "string") {
+            return {
+                error: "raw String not supported",
+                crlf,
+                file,
+                ctx
+            };
+        }
+        if (crlf?.kind === "symbol") {
             return ctx.interpret_variable(ctx, crlf, k);
         }
         if (crlf?.kind === "pair") {
@@ -1750,10 +1762,10 @@ function is_asm_leaf(crlf) {
     return true;
 }
 function to_asm(crlf) {
-    if (typeof crlf === "string") {
+    if (typeof crlf === "string") {  // FIXME: raw String is DEPRECATED
         return crlf;
     }
-    if (typeof crlf === "number") {
+    if (typeof crlf === "number") {  // FIXME: raw Number is DEPRECATED
         return String(crlf);
     }
     let s = "";
