@@ -78,6 +78,14 @@ function new_quad(debug, t, x, y, z) {
     return value;
 }
 
+function new_number(debug, value) {
+    return { kind: "number", value, debug };
+}
+
+function new_symbol(debug, name) {
+    return { kind: "symbol", name, debug };
+}
+
 function new_type(debug, arity) {
     //return new_quad(debug, type_t, arity);
     return { kind: "type", arity, debug };
@@ -184,87 +192,89 @@ function equal_to(expect, actual) {
 //    * type = { "kind": "type", "name": <string> }
 
 function to_scheme(crlf) {
-    if (typeof crlf === "object") {
-        const kind = crlf.kind;
-        if (typeof kind === "string") {
-            if (kind === "pair") {
-                let s = "(";
-                while (true) {
-                    s += to_scheme(crlf?.head);
-                    if (crlf?.tail?.kind !== "pair") {
-                        break;
-                    }
-                    crlf = crlf?.tail;
-                    s += " ";
-                }
-                if (!equal_to(nil_lit, crlf?.tail)) {
-                    s += " . ";
-                    s += to_scheme(crlf?.tail);
-                }
-                s += ")";
-                return s;
-            } else if (kind === "dict") {
-                let s = "{";
-                while (true) {
-                    s += to_scheme(crlf?.key) + ":" + to_scheme(crlf?.value);
-                    if (crlf?.next?.kind !== "dict") {
-                        break;
-                    }
-                    crlf = crlf?.next;
-                    s += ",";
-                }
-                s += "}";
-                return s;
-            } else if (kind === "literal") {
-                const name = crlf?.value;
-                if (name === "undef") {
-                    return "#?";
-                } else if (name === "nil") {
-                    return "()";
-                } else if (name === "false") {
-                    return "#f";
-                } else if (name === "true") {
-                    return "#t";
-                } else if (name === "unit") {
-                    return "#unit";
-                }
-            } else if (kind === "type") {
-                const name = crlf?.name;
-                if (typeof name === "string") {
-                    return "#" + name + "_t";
-                } else {
-                    return "#unknown_t";
-                }
-            } else if (kind === "instr") {
-                let s = "[#instr_t, ";
-                s += to_scheme(crlf?.op);
-                s += ", ";
-                s += to_scheme(crlf?.imm);
-                s += ", ";
-                s += to_scheme(crlf?.k);
-                s += "]";
-                return s;
-            } else if (kind === "quad") {
-                let s = "[";
-                s += to_scheme(crlf?.t);
-                s += ", ";
-                s += to_scheme(crlf?.x);
-                s += ", ";
-                s += to_scheme(crlf?.y);
-                s += ", ";
-                s += to_scheme(crlf?.z);
-                s += "]";
-                return s;
-            } else {
-                return "#" + kind + "...";
-            }
-        }
-        return "#unknown";
-    }
     if (typeof crlf === "string") {
         return crlf;
     }
-    return String(crlf);
+    if (typeof crlf !== "object") {
+        return String(crlf);
+    }
+    const kind = crlf?.kind;
+    if (kind === "pair") {
+        let s = "(";
+        while (true) {
+            s += to_scheme(crlf?.head);
+            if (crlf?.tail?.kind !== "pair") {
+                break;
+            }
+            crlf = crlf?.tail;
+            s += " ";
+        }
+        if (!equal_to(nil_lit, crlf?.tail)) {
+            s += " . ";
+            s += to_scheme(crlf?.tail);
+        }
+        s += ")";
+        return s;
+    } else if (kind === "dict") {
+        let s = "{";
+        while (true) {
+            s += to_scheme(crlf?.key) + ":" + to_scheme(crlf?.value);
+            if (crlf?.next?.kind !== "dict") {
+                break;
+            }
+            crlf = crlf?.next;
+            s += ",";
+        }
+        s += "}";
+        return s;
+    } else if (kind === "symbol") {
+        return crlf.name;
+    } else if (kind === "number") {
+        return String(crlf.value);
+    } else if (kind === "literal") {
+        const name = crlf?.value;
+        if (name === "undef") {
+            return "#?";
+        } else if (name === "nil") {
+            return "()";
+        } else if (name === "false") {
+            return "#f";
+        } else if (name === "true") {
+            return "#t";
+        } else if (name === "unit") {
+            return "#unit";
+        }
+    } else if (kind === "type") {
+        const name = crlf?.name;
+        if (typeof name === "string") {
+            return "#" + name + "_t";
+        } else {
+            return "#unknown_t";
+        }
+    } else if (kind === "instr") {
+        let s = "[#instr_t, ";
+        s += to_scheme(crlf?.op);
+        s += ", ";
+        s += to_scheme(crlf?.imm);
+        s += ", ";
+        s += to_scheme(crlf?.k);
+        s += "]";
+        return s;
+    } else if (kind === "quad") {
+        let s = "[";
+        s += to_scheme(crlf?.t);
+        s += ", ";
+        s += to_scheme(crlf?.x);
+        s += ", ";
+        s += to_scheme(crlf?.y);
+        s += ", ";
+        s += to_scheme(crlf?.z);
+        s += "]";
+        return s;
+    } else if (typeof kind === "string") {
+        return "#" + kind + "...";
+    }
+    return "#unknown";
 }
 
 /*
@@ -501,6 +511,8 @@ function parse(source, file) {
             return input;  // report error
         }
         if (typeof input.token === "number") {
+            //const debug = crlf_debug(input);
+            //input.token = new_number(debug, input.token);
             return input;  // number sexpr
         }
         if (input.token === ".") {
@@ -527,10 +539,13 @@ function parse(source, file) {
             return parse_quote(input, "unquote-splicing");
         }
         if (typeof input.token === "string") {
+            const debug = crlf_debug(input);
+            input.token = new_symbol(debug, input.token);
             return input;  // symbol sexpr
         }
         const kind = input.token?.kind;
         if (kind === "literal" || kind === "type") {
+            // FIXME: create separate instances
             return input;  // constant sexpr
         }
         return {
@@ -726,16 +741,18 @@ function compile(source, file) {
         while (pattern?.kind === "pair") {
             n += 1;
             const head = pattern?.head;
-            if (typeof head === "string") {
-                if (head !== "_") {
-                    map[head] = n;
+            const name = head?.name ?? head;  // FIXME: check (kind === "symbol")
+            if (typeof name === "string") {
+                if (name !== "_") {
+                    map[name] = n;
                 }
             }
             pattern = pattern?.tail;
         }
-        if (typeof pattern === "string") {
-            if (pattern !== "_") {
-                map[pattern] = -n;
+        const name = pattern?.name ?? pattern;
+        if (typeof name === "string") {
+            if (name !== "_") {
+                map[name] = -n;
             }
         }
         return map;
@@ -752,22 +769,32 @@ function compile(source, file) {
 
     function sexpr_to_crlf(sexpr) {
         let debug = crlf_debug(sexpr, debug_file);
-        if (typeof sexpr === "number") {
+        if (typeof sexpr === "number") {  // FIXME: DEPRECATED!
             return sexpr;
         }
-        if (typeof sexpr === "string") {
+        if (typeof sexpr === "string") {  // FIXME: DEPRECATED!
             // Symbol
-            const name = "'" + sexpr;
-            let symbol = module_env[name];
+            const label = "'" + sexpr;
+            let symbol = module_env[label];
             if (!symbol) {
                 symbol = new_quad(debug, symbol_t, string_to_list(sexpr));
-                module_env[name] = symbol;
+                module_env[label] = symbol;
             }
-            return new_ref(debug, name);
+            return new_ref(debug, label);
         }
         const kind = sexpr?.kind;
-        if (kind === "literal" || kind === "type") {
+        if (kind === "number" || kind === "literal" || kind === "type") {
             return sexpr;
+        }
+        if (kind === "symbol") {
+            const name = sexpr.name;
+            const label = "'" + name;
+            let symbol = module_env[label];
+            if (!symbol) {
+                symbol = new_quad(debug_file, symbol_t, string_to_list(name));
+                module_env[label] = symbol;
+            }
+            return new_ref(debug, label);
         }
         if (kind === "pair") {
             const head = sexpr_to_crlf(sexpr.head);
@@ -862,9 +889,13 @@ function compile(source, file) {
     function eval_define(ctx, args, k) {
         const symbol = nth_sexpr(args, 1);
         debug_log("define:", "symbol:", to_scheme(symbol));
-        if (typeof symbol !== "string") {
+        let name = symbol;
+        if (symbol?.kind === "symbol") {
+            name = symbol.name;
+        }
+        if (typeof name !== "string") {
             return {
-                error: "string (symbol) expected",
+                error: "symbol name (string) expected",
                 symbol,
                 file,
                 ctx
@@ -877,7 +908,7 @@ function compile(source, file) {
         if (value?.error) {
             return value;
         }
-        module_env[symbol] = value;  // bind symbol in top-level environment
+        module_env[name] = value;  // bind symbol in top-level environment
         return k;  // no code produced
     }
 
@@ -897,18 +928,21 @@ function compile(source, file) {
     }
 
     function eval_literal(ctx, crlf) {
-        return crlf;  // FIXME: consider {kind:"number"} instead of raw Number
+        return crlf?.kind === "number"
+            ? crlf.value
+            : crlf;
     }
 
     function eval_variable(ctx, crlf) {
-        const xlat = ctx.func_map && ctx.func_map[crlf];
+        const debug = crlf_debug(crlf);
+        const name = (crlf?.kind === "symbol" ? crlf.name : crlf);
+        const xlat = ctx.func_map && ctx.func_map[name];
         if (typeof xlat === "function") {
             // operative function
             return xlat;
         }
         // symbolic reference
-        const debug = crlf_debug(crlf);  // FIXME: consider {kind:"symbol"} instead of raw String
-        return new_ref(debug, crlf);
+        return new_ref(debug, name);
     }
 
     function eval_invoke(ctx, crlf) {
@@ -1003,24 +1037,26 @@ function compile(source, file) {
     }
 
     function xlat_literal(ctx, crlf, k) {
-        const debug = crlf_debug(crlf);  // FIXME: consider {kind:"number"} instead of raw Number
-        let code = new_instr(debug, "push", crlf, k);
+        const debug = crlf_debug(crlf);
+        const value = crlf?.kind === "number" ? crlf.value : crlf;
+        let code = new_instr(debug, "push", value, k);
         return code;
     }
 
     function xlat_variable(ctx, crlf, k) {
-        const debug = crlf_debug(crlf);  // FIXME: consider {kind:"symbol"} instead of raw String
-        const msg_n = ctx.msg_map && ctx.msg_map[crlf];
+        const debug = crlf_debug(crlf);
+        const name = crlf?.name ?? crlf;  // FIXME: raw String is DEPRECATED
+        const msg_n = ctx.msg_map && ctx.msg_map[name];
         if (typeof msg_n === "number") {
             // message variable
             return new_instr(debug, "msg", msg_n, k);
         }
         if (ctx.state_maps) {
             // search lexical scope(s)
-            const index = ctx.state_maps.findIndex((map) => (typeof map[crlf] === "number"));
+            const index = ctx.state_maps.findIndex((map) => (typeof map[name] === "number"));
             if (index >= 0) {
                 // state variable
-                const offset = ctx.state_maps[index][crlf];
+                const offset = ctx.state_maps[index][name];
                 const code =
                     new_instr(debug, "state", index + 2,
                     new_instr(debug, "nth", offset, k));
@@ -1028,13 +1064,13 @@ function compile(source, file) {
             }
         }
         // free variable
-        const xlat = ctx.func_map && ctx.func_map[crlf];
+        const xlat = ctx.func_map && ctx.func_map[name];
         if (typeof xlat === "function") {
             // operative function
             return xlat;
         }
         // module environment
-        let ref = new_ref(debug, crlf);
+        let ref = new_ref(debug, name);
         return new_instr(debug, "push", ref, k);
     }
 
@@ -1567,7 +1603,7 @@ function compile(source, file) {
         if (k?.error) {
             return k;
         }
-        if (typeof crlf === "string") {
+        if (typeof crlf === "string" || crlf?.kind === "symbol") {
             return ctx.interpret_variable(ctx, crlf, k);
         }
         if (crlf?.kind === "pair") {
@@ -1785,18 +1821,24 @@ function to_asm(crlf) {
                 s += to_asm(crlf.k);
             }
         }
+    } else if (kind === "symbol") {
+        return crlf.name;
+    } else if (kind === "number") {
+        return String(crlf.value);
     } else if (kind === "literal") {
         const name = crlf.value;
         if (name === "undef") {
-            s += "#?";
+            return "#?";
         } else if (name === "nil") {
-            s += "#nil";
+            return "#nil";
         } else if (name === "false") {
-            s += "#f";
+            return "#f";
         } else if (name === "true") {
-            s += "#t";
+            return "#t";
         } else if (name === "unit") {
-            s += "#unit";
+            return "#unit";
+        } else {
+            return "#unknown";
         }
     } else if (kind === "type") {
         const arity = crlf.arity;
