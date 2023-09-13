@@ -64,14 +64,22 @@ function crlf_debug(from, to) {
     return { kind: "debug", file, start, end };
 }
 
+function new_value(debug, value) {
+    if (typeof value === "number") {
+        // FIXME: is this automatic conversion the right approach?
+        return new_number(debug, value);
+    }
+    return value;
+}
+
 function new_quad(debug, t, x, y, z) {
     const value = { kind: "quad", debug, t };
     if (x !== undefined) {
-        value.x = x;
+        value.x = new_value(debug, x);
         if (y !== undefined) {
-            value.y = y;
+            value.y = new_value(debug, y);
             if (z !== undefined) {
-                value.z = z;
+                value.z = new_value(debug, z);
             }
         }
     }
@@ -79,35 +87,68 @@ function new_quad(debug, t, x, y, z) {
 }
 
 function new_number(debug, value) {
-    return { kind: "number", value, debug };
+    return {
+        kind: "number",
+        value,
+        debug
+    };
 }
 
 function new_symbol(debug, name) {
-    return { kind: "symbol", name, debug };
+    return {
+        kind: "symbol",
+        name,
+        debug
+    };
 }
 
 function new_type(debug, arity) {
     //return new_quad(debug, type_t, arity);
-    return { kind: "type", arity, debug };
+    return {
+        kind: "type",
+        arity, //arity: new_value(debug, arity),
+        debug
+    };
 }
 
 function new_pair(debug, head, tail) {
-    return { kind: "pair", head, tail, debug };
+    return {
+        kind: "pair",
+        head: new_value(debug, head),
+        tail: new_value(debug, tail),
+        debug
+    };
 }
 
 function new_dict(debug, key, value, next = nil_lit) {
-    return { kind: "dict", key, value, next, debug };
+    return {
+        kind: "dict",
+        key: new_value(debug, key),
+        value: new_value(debug, value),
+        next,
+        debug
+    };
 }
 
 function new_ref(debug, name) {
-    return { kind: "ref", name, debug };
+    return {
+        kind: "ref",
+        name,
+        debug
+    };
 }
 
 function new_instr(debug, op, imm = undef_lit, k = undef_lit) {
     if (k?.error) {
         return k;
     }
-    return { kind: "instr", op, imm, k, debug };
+    return {
+        kind: "instr",
+        op,
+        imm: new_value(debug, imm),
+        k,
+        debug
+    };
 }
 
 function new_if_instr(debug, t = undef_lit, f = undef_lit) {
@@ -117,7 +158,13 @@ function new_if_instr(debug, t = undef_lit, f = undef_lit) {
     if (f?.error) {
         return f;
     }
-    return { kind: "instr", op: "if", t, f, debug };
+    return {
+        kind: "instr",
+        op: "if",
+        t,
+        f,
+        debug
+    };
 }
 
 function length_of(sexpr) {
@@ -196,7 +243,7 @@ function to_scheme(crlf) {
         return crlf;
     }
     if (typeof crlf !== "object") {
-        return String(crlf);
+        return String(crlf);  // FIXME: raw Number is DEPRECATED
     }
     const kind = crlf?.kind;
     if (kind === "pair") {
@@ -448,7 +495,7 @@ function parse(source, file) {
         if (tail.error) {
             return tail;  // report error
         }
-        const debug = crlf_debug(scan, tail);
+        const debug = crlf_debug(input, tail);
         input.token = new_pair(debug, scan.token, tail.token);
         input.end = tail.end;
         input.next = tail.next;
@@ -484,7 +531,7 @@ function parse(source, file) {
         if (tail.error) {
             return tail;  // report error
         }
-        const debug = crlf_debug(scan, tail);
+        const debug = crlf_debug(input, tail);
         input.token = new_pair(debug, scan.token, tail.token);
         input.end = tail.end;
         input.next = tail.next;
@@ -511,8 +558,8 @@ function parse(source, file) {
             return input;  // report error
         }
         if (typeof input.token === "number") {
-            //const debug = crlf_debug(input);
-            //input.token = new_number(debug, input.token);
+            const debug = crlf_debug(input);
+            input.token = new_number(debug, input.token);
             return input;  // number sexpr
         }
         if (input.token === ".") {
@@ -543,6 +590,7 @@ function parse(source, file) {
             input.token = new_symbol(debug, input.token);
             return input;  // symbol sexpr
         }
+        // FIXME: create traceable instances for each constant
         const kind = input.token?.kind;
         if (kind === "literal" || kind === "type") {
             // FIXME: create separate instances
@@ -769,10 +817,10 @@ function compile(source, file) {
 
     function sexpr_to_crlf(sexpr) {
         let debug = crlf_debug(sexpr, debug_file);
+        /*
         if (typeof sexpr === "number") {  // FIXME: DEPRECATED!
             return sexpr;
         }
-        /*
         if (typeof sexpr === "string") {  // FIXME: DEPRECATED!
             // Symbol
             const label = "'" + sexpr;
@@ -818,19 +866,13 @@ function compile(source, file) {
     }
 
     function constant_value(crlf) {  // return constant value for crlf, if it has one
-        const type = typeof crlf;
-        if (type === "number") {
+        const kind = crlf?.kind;
+        if (kind === "literal" || kind === "type" || kind === "number") {
             return crlf;
         }
-        if (type === "object") {
-            const kind = crlf.kind;
-            if (kind === "literal" || kind === "type") {
-                return crlf;
-            }
-            if (kind === "pair" && crlf.head === "quote") {
-                const sexpr = nth_sexpr(crlf, 2);
-                return sexpr_to_crlf(sexpr);
-            }
+        if (kind === "pair" && crlf.head === "quote") {
+            const sexpr = nth_sexpr(crlf, 2);
+            return sexpr_to_crlf(sexpr);
         }
         return undefined;  // not a constant
     }
@@ -931,14 +973,20 @@ function compile(source, file) {
     }
 
     function eval_literal(ctx, crlf) {
-        return crlf?.kind === "number"
-            ? crlf.value
-            : crlf;
+        return crlf;
     }
 
     function eval_variable(ctx, crlf) {
         const debug = crlf_debug(crlf);
-        const name = crlf?.name; // (crlf?.kind === "symbol" ? crlf.name : crlf);
+        const name = crlf?.name;
+        if (typeof name !== "string") {
+            return {
+                error: "bad variable",
+                crlf,
+                file,
+                ctx
+            };
+        }
         const xlat = ctx.func_map && ctx.func_map[name];
         if (typeof xlat === "function") {
             // operative function
@@ -1043,16 +1091,21 @@ function compile(source, file) {
 
     function xlat_literal(ctx, crlf, k) {
         const debug = crlf_debug(crlf);
-        const value = crlf?.kind === "number"
-            ? crlf.value
-            : crlf;
-        let code = new_instr(debug, "push", value, k);
+        let code = new_instr(debug, "push", crlf, k);
         return code;
     }
 
     function xlat_variable(ctx, crlf, k) {
         const debug = crlf_debug(crlf);
-        const name = crlf?.name ?? crlf;  // FIXME: raw String is DEPRECATED
+        const name = crlf?.name;
+        if (typeof name !== "string") {
+            return {
+                error: "bad variable",
+                crlf,
+                file,
+                ctx
+            };
+        }
         const msg_n = ctx.msg_map && ctx.msg_map[name];
         if (typeof msg_n === "number") {
             // message variable
@@ -1461,14 +1514,14 @@ function compile(source, file) {
         const m = nth_sexpr(args, 2);
         const n_const = constant_value(n);
         const m_const = constant_value(m);
-        if (typeof n_const === "number"     // FIXME: convert Number checks to kind==="number"
-        &&  typeof m_const === "number") {
-            return new_instr(debug, "push", n_const + m_const);
+        if (n_const?.kind === "number" && m_const?.kind === "number") {
+            const v = new_number(debug, n_const.value + m_const.value);
+            return new_instr(debug, "push", v);
         }
-        if (n_const === 0) {
+        if (n_const?.kind === "number" && n_const.value === 0) {
             return interpret(ctx, m, k);
         }
-        if (m_const === 0) {
+        if (m_const?.kind === "number" && m_const.value === 0) {
             return interpret(ctx, n, k);
         }
         let code =
@@ -1485,11 +1538,11 @@ function compile(source, file) {
         const m = nth_sexpr(args, 2);
         const n_const = constant_value(n);
         const m_const = constant_value(m);
-        if (typeof n_const === "number"     // FIXME: convert Number checks to kind==="number"
-        &&  typeof m_const === "number") {
-            return new_instr(debug, "push", n_const - m_const);
+        if (n_const?.kind === "number" && m_const?.kind === "number") {
+            const v = new_number(debug, n_const.value - m_const.value);
+            return new_instr(debug, "push", v);
         }
-        if (m_const === 0) {
+        if (m_const?.kind === "number" && m_const.value === 0) {
             return interpret(ctx, n, k);
         }
         let code =
@@ -1506,14 +1559,14 @@ function compile(source, file) {
         const m = nth_sexpr(args, 2);
         const n_const = constant_value(n);
         const m_const = constant_value(m);
-        if (typeof n_const === "number"     // FIXME: convert Number checks to kind==="number"
-        &&  typeof m_const === "number") {
-            return new_instr(debug, "push", n_const * m_const);
+        if (n_const?.kind === "number" && m_const?.kind === "number") {
+            const v = new_number(debug, n_const.value * m_const.value);
+            return new_instr(debug, "push", v);
         }
-        if (n_const === 1) {
+        if (n_const?.kind === "number" && n_const.value === 1) {
             return interpret(ctx, m, k);
         }
-        if (m_const === 1) {
+        if (m_const?.kind === "number" && m_const.value === 1) {
             return interpret(ctx, n, k);
         }
         let code =
@@ -1789,7 +1842,7 @@ function join_instr_chains(t_chain, f_chain, j_label) {
 function is_asm_leaf(crlf) {
     if (typeof crlf === "object") {
         const kind = crlf?.kind;
-        if (kind === "literal" || kind === "ref") {
+        if (kind === "literal" || kind === "ref" || kind === "number") {
             return true;
         }
         if (kind === "type") {
@@ -1800,12 +1853,14 @@ function is_asm_leaf(crlf) {
     return true;
 }
 function to_asm(crlf) {
-    if (typeof crlf === "string") {  // FIXME: raw String is DEPRECATED
+    if (typeof crlf === "string") {
         return crlf;
     }
+    /*
     if (typeof crlf === "number") {  // FIXME: raw Number is DEPRECATED
         return String(crlf);
     }
+    */
     let s = "";
     const kind = crlf?.kind;
     if (kind === "module") {
