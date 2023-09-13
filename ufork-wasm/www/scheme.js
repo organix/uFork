@@ -544,8 +544,11 @@ function parse(source, file) {
         if (scan.error) {
             return scan;  // report error
         }
-        const debug = crlf_debug(scan);
-        input.token = new_pair(debug, quote, new_pair(debug, scan.token, nil_lit));
+        const debug = crlf_debug(input, scan);
+        input.token =
+            new_pair(debug, quote,
+            new_pair(debug, scan.token,
+            nil_lit));
         input.end = scan.end;
         input.next = scan.next;
         return input;
@@ -557,8 +560,8 @@ function parse(source, file) {
         if (input.error) {
             return input;  // report error
         }
+        const debug = crlf_debug(input);
         if (typeof input.token === "number") {
-            const debug = crlf_debug(input);
             input.token = new_number(debug, input.token);
             return input;  // number sexpr
         }
@@ -574,19 +577,22 @@ function parse(source, file) {
             return parse_list(input);
         }
         if (input.token === "'") {
-            return parse_quote(input, "quote");
+            const quote = new_symbol(debug, "quote");
+            return parse_quote(input, quote);
         }
         if (input.token === "`") {
-            return parse_quote(input, "quasiquote");
+            const quote = new_symbol(debug, "quasiquote");
+            return parse_quote(input, quote);
         }
         if (input.token === ",") {
-            return parse_quote(input, "unquote");
+            const quote = new_symbol(debug, "unquote");
+            return parse_quote(input, quote);
         }
         if (input.token === ",@") {
-            return parse_quote(input, "unquote-splicing");
+            const quote = new_symbol(debug, "unquote-splicing");
+            return parse_quote(input, quote);
         }
         if (typeof input.token === "string") {
-            const debug = crlf_debug(input);
             input.token = new_symbol(debug, input.token);
             return input;  // symbol sexpr
         }
@@ -718,6 +724,29 @@ function compile(source, file) {
     const debug_file = { kind: "debug", file };
 
     // standard instruction-stream tails
+    function std_sink_beh(debug) {
+        return new_instr(debug, "end", "commit");
+    }
+    function std_commit(debug) {
+        return std_sink_beh(debug);
+    }
+    function std_send_msg(debug) {
+        return new_instr(debug, "send", -1, std_commit(debug));
+    }
+    function std_cust_send(debug) {
+        return new_instr(debug, "msg", 1, std_send_msg(debug));
+    }
+    /*
+    function std_rv_self(debug) {
+        return new_instr(debug, "my", "self", std_cust_send(debug));
+    }
+    function std_resend(debug) {
+        const code =
+            new_instr(debug, "msg", 0,
+            new_instr(debug, "my", "self",
+            std_send_msg(debug)));
+        return code;
+    }
     const std = {};
     std.sink_beh =
     std.commit =
@@ -735,6 +764,7 @@ function compile(source, file) {
         new_instr(debug_file, "msg", 0,
         new_instr(debug_file, "my", "self",
         std.send_msg));
+    */
 
     const module_env = {
         "symbol_t": new_type(debug_file, 1),
@@ -752,7 +782,7 @@ function compile(source, file) {
             new_instr(debug_file, "pair", 1,    // (sp' . env)
             new_instr(debug_file, "state", 2,   // (sp' . env) cont
             new_instr(debug_file, "beh", -1,    // --
-            std.commit))))))))))
+            new_instr(debug_file, "end", "commit")))))))))))
     };
 
     const symbol_t = new_ref(debug_file, "symbol_t");
@@ -1065,13 +1095,13 @@ function compile(source, file) {
             // empty body
             let code =
                 new_instr(debug, "push", unit_lit,
-                std.cust_send);
+                std_cust_send(debug));
             return code;
         }
         // sequential body
         let code =
             interpret_seq(child, body,
-            std.cust_send);
+            std_cust_send(debug));
         return code;
     }
 
@@ -1148,6 +1178,7 @@ function compile(source, file) {
         return new_instr(debug, "push", ref, k);
     }
 
+    const tail_call_k = std_cust_send(debug_file);
     function xlat_invoke(ctx, crlf, k) {
         const debug = crlf_debug(crlf);
         const func = crlf.head;
@@ -1158,7 +1189,7 @@ function compile(source, file) {
             return xlat(ctx, crlf, k);
         }
         const nargs = length_of(args) + 1;  // account for customer
-        if (equal_to(std.cust_send, k)) {
+        if (equal_to(tail_call_k, k)) {
             // tail-call optimization
             let code =
                 interpret_args(ctx, args,       // args...
@@ -1166,7 +1197,7 @@ function compile(source, file) {
                 interpret(ctx, func,            // args... cust closure
                 new_instr(debug, "new", -2,     // args... cust beh.(state)
                 new_instr(debug, "send", nargs, // --
-                std.commit)))));
+                std_commit(debug))))));
             return code;
         } else {
             // construct continuation
@@ -1185,7 +1216,7 @@ function compile(source, file) {
                 new_instr(debug, "msg", 0,      // sp env beh msg
                 new_instr(debug, "push", cont_beh,// sp env beh msg cont_beh
                 new_instr(debug, "beh", 4,      // --
-                std.commit)))))))))));
+                std_commit(debug))))))))))));
             return code;
         }
     }
@@ -1328,9 +1359,9 @@ function compile(source, file) {
         const head = nth_sexpr(args, 1);
         const tail = nth_sexpr(args, 2);
         let code =
-            interpret(debug, ctx, tail,         // tail
-            interpret(debug, ctx, head,         // tail head
-            new_instr("pair", 1, k)));          // (head . tail)
+            interpret(ctx, tail,                // tail
+            interpret(ctx, head,                // tail head
+            new_instr(debug, "pair", 1, k)));   // (head . tail)
         return code;
     }
 
@@ -1624,9 +1655,10 @@ function compile(source, file) {
         debug_log("behavior:", "ptrn:", to_scheme(ptrn));
         debug_log("behavior:", "body:", to_scheme(body));
         const child = new_BEH_ctx(ctx, ptrn);
+        const debug = crlf_debug(body);
         let code =
             interpret_seq(child, body,
-            std.commit);
+            std_commit(debug));
         return code;
     }
 
@@ -1789,7 +1821,7 @@ function compile(source, file) {
         new_instr(debug_file, "msg", 0,         // {caps}
         new_instr(debug_file, "push", 2,        // {caps} dev.debug_key
         new_instr(debug_file, "dict", "get",    // debug_dev
-        std.send_msg)));
+        std_send_msg(debug_file))));
     while (sexprs.length > 0) {
         const crlf = sexprs.pop(); //sexprs.shift();
         debug_log("compile:", to_scheme(crlf));
@@ -2178,14 +2210,14 @@ z n f 'a 'foo
 // const module = compile("(define Omega (lambda _ ((lambda (f) (f f)) (lambda (f) (f f))) ))");
 // const module = compile("(define fn (lambda (x y z) (list z (cons y x)) (car q) (cdr q) ))");
 // const module = compile("(define fn (lambda (x y z) (if (eq? 'x x) (list z y x) (cons y z)) ))");
-// const module = compile("(define fn (lambda (x y) (list (cons 'x x) (cons 'y y)) '(x y z) ))");
+//debug const module = compile("(define fn (lambda (x y) (list (cons 'x x) (cons 'y y)) '(x y z) ))");
 // const module = compile("(define f (lambda (x y) y))\n(f 0)\n");
 // const module = compile("(define hof (lambda (foo) (lambda (bar) (lambda (baz) (list 'foo foo 'bar bar 'baz baz) )))) (((hof 'a) '(b c)) '(#t . #f))");
 // const module = compile("(define inc ((lambda (a) (lambda (b) (+ a b))) 1))");
 // const module = compile("(define sink_beh (BEH _))");
 // const module = compile("(define zero_beh (BEH (cust) (SEND cust 0)))");
 // const module = compile("(define true_beh (BEH (cust) (SEND cust #t)))");
-//debug const module = compile(sample_source);
+// const module = compile(sample_source);
 // const module = compile(ifact_source);
 // const module = compile(fact_source);
 // const module = compile(fib_source);
