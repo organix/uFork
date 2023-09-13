@@ -795,8 +795,8 @@ function make_core({
 
         function kind(node) {
             return (
-                Number.isSafeInteger(node)
-                ? "fixnum"
+                Number.isSafeInteger(node) // TODO remove backwards compat
+                ? "number"
                 : node.kind
             );
         }
@@ -812,8 +812,8 @@ function make_core({
 
         function fixnum(node) {
             return (
-                kind(node) === "fixnum"
-                ? u_fixnum(node) // FIXME: check integer bounds?
+                kind(node) === "number"
+                ? u_fixnum(node.value ?? node) // FIXME: check integer bounds? TODO remove backwards compat
                 : fail("Not a fixnum", node)
             );
         }
@@ -836,7 +836,7 @@ function make_core({
             if (the_kind === "literal") {
                 return literal(node);
             }
-            if (the_kind === "fixnum") {
+            if (the_kind === "number") {
                 return fixnum(node);
             }
             if (the_kind === "type") {
