@@ -77,6 +77,7 @@ just like [ASM](asm.md) does.
   * `SELF`
   * `(BEH `_formal_` . `_body_`)`
   * `(CALL `_actor_` `_args_`)`
+  * `(DEVICE `_id_`)`
 
 ## Possible Future Features
   * `(par .  `_exprs_`)`

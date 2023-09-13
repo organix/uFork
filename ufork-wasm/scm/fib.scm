@@ -8,4 +8,5 @@
             n
             (+ (fib (- n 1)) (fib (- n 2))) )))
 
-(fib 6)
+;(fib 6)
+(SEND (DEVICE 2) (fib 6))

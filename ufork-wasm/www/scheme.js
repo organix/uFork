@@ -924,10 +924,24 @@ function compile(source, file) {
                 {},  // FIXME: should this be `Object.create(null)`?
                 prim_map,
                 {
+                    "DEVICE": xlat_DEVICE,
                     "define": eval_define,
                 })
         };
         return ctx;
+    }
+
+    function xlat_DEVICE(ctx, crlf, k) {
+        // WARNING! this code only works at the top level of a module (boot code)
+        const debug = crlf_debug(crlf);
+        const args = crlf.tail;
+        const id = nth_sexpr(args, 1);
+        let code =
+            new_instr(debug, "msg", 0,          // {caps}
+            interpret(ctx, id,                  // {caps} id
+            new_instr(debug, "dict", "get",     // device
+            k)));
+        return code;
     }
 
     function eval_define(ctx, crlf, k) {
