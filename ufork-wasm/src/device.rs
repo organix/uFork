@@ -181,26 +181,10 @@ impl IoDevice {
     For backward compatibility, when the message is just a capability
     we retain the previous behavior.
 
-    The new `IoDevice` interface follows the _Requestor_ pattern
-    and provides a simple fixnum read/write API.
-
-    A _read_ request looks like `(to_cancel callback)`,
-    where `to_cancel` is the optional customer for a cancel capability,
-    and `callback` is the customer that will receive the result.
-    The result looks like `(fixnum)` on success,
-    and `(#? . error)` on failure.
-
-    A _write_ request looks like `(to_cancel callback fixnum)`,
-    where `to_cancel` is the optional customer for a cancel capability,
-    and `callback` is the customer that will receive the result.
-    The result looks like `(#unit)` on success,
-    and `(#? . error)` on failure.
-
-    In either request, if `to_cancel` is a capability,
-    the device **may** send a _cancel_ capability to that customer.
-    If the _cancel_ capability is sent a message (any message),
-    the request **may** be cancelled, if it has not already sent a result.
-    NOTE: The initial implementation doesn't send a _cancel_ capability.
+    The new `IoDevice` interface is described in [io_dev.md](io_dev.md)
+      * _read_: `(to_cancel callback)` → `(fixnum)` | `(#? . error)`
+      * _write_: `(to_cancel callback fixnum)` → `(#unit)` | `(#? . error)`
+      * _cancel_: `_` → `to_cancel`
 */
 impl Device for IoDevice {
     fn handle_event(&mut self, core: &mut Core, ep: Any) -> Result<(), Error> {
@@ -274,19 +258,6 @@ fn set_u16(core: &mut Core, ofs: usize, data: usize) {
     core.blob_write(ofs + 2, u16_lsb(data));
     core.blob_write(ofs + 3, u16_msb(data));
 }
-/*
-let buf = new Uint8Array([              // buffer (9 + 22 = 31 octets)
-    0x88,                               // Array
-    0x82, 16, 2, 0,                     // length (2 elements)
-    0x82, 16, 22, 0,                    // size (13 + 9 = 22 octets)
-    0x8B,                               // [0] = Ext (9 + 4 = 13 octets free)
-    0x82, 16, 0, 0,                     //       meta (0 offset)
-    0x82, 16, 4, 0,                     //       size (4 octets)
-    0xDE, 0xAD, 0xBE, 0xEF,             //       data (4 octets)
-    0x8A,                               // [1] = Blob (5 + 4 = 9 octets used)
-    0x82, 16, 4, 0,                     //       size (4 octets)
-    0xCA, 0xFE, 0xBA, 0xBE]);           //       data (4 octets)
-*/
 fn blob_reserve(core: &mut Core, size: Any) -> Result<Any, Error> {
     let mut need = size.get_fix()? as usize;
     if need > 0xFFFF_FFF0 {
@@ -436,23 +407,7 @@ impl BlobDevice {
     }
 }
 /*
-    The `BlobDevice` manages dynamically-allocated byte-arrays.
-    There is a moderate (~64K maximum) allocation size limit.
-    Each allocation is an actor/capability that implements
-    random-access byte _read_ and _write_ requests.
-
-    A _size_ request looks like `(customer)`.
-    The number of bytes in this allocation
-    is sent to the `customer` as a fixnum.
-
-    A _read_ request looks like `(customer offset)`.
-    The byte value at `offset` is sent to the `customer`.
-    If `offset` is out of bounds, the value is `#?`.
-
-    A _write_ request looks like `(customer offset value)`.
-    The byte `value` is written at `offset`,
-    and `#unit` is sent to the `customer`.
-    If `offset` is out of bounds, the write has no effect.
+    The `BlobDevice` interface is described in [blob_dev.md](blob_dev.md)
 */
 impl Device for BlobDevice {
     fn handle_event(&mut self, core: &mut Core, ep: Any) -> Result<(), Error> {

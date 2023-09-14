@@ -27,8 +27,9 @@ Frequently-used command-line sequences are captured in a few small shell scripts
   * [Assembly Language](asm.md) reference manual
   * [LISP/Scheme compiler](scheme.md) reference manual
   * [Actor Wire Protocol (AWP)](awp.md) specification
-  * [AWP](awp_device.md) device description
+  * [AWP Network](awp_device.md) device description
   * [Virtual Machine](vm.md) implementation details
   * [Sponsor](sponsor.md) semantics
-  * [Binary Large-Object (blob)](blob.md) device description
+  * [Console Input/Output](io_dev.md) device description
+  * [Binary Large-Object (blob)](blob_dev.md) device description
   * [Garbage-collected](gc.md) memory management

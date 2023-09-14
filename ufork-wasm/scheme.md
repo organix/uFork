@@ -13,11 +13,18 @@ just like [ASM](asm.md) does.
   * `#f` — boolean **false**
   * `#t` — boolean **true**
   * `#unit` — inert result
-  * signed integer (31 bits)
+  * `#literal_t` — type of literal values
+  * `#type_t` — type of types
+  * `#fixnum_t` — type of _fixnums_ (31-bit signed integers)
+  * `#actor_t` — type of actor reference/capabilities
+  * `#instr_t` — type of machine instructions
+  * `#pair_t` — type of pairs (`cons` cells)
+  * `#dict_t` — type of dictionary entries
+  * _fixnums_ (31-bit signed integers)
 
 ## Built-In Facilities
 
-  * `(define `_formal_` `_value_`)`
+  * `(define `_symbol_` `_value_`)`
   * `(quote `_expr_`)` — abbreviated `'`_expr_
   * `(lambda `_formal_` . `_body_`)`
   * `(list . `_values_`)`
