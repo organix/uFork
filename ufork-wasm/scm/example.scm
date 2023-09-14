@@ -23,6 +23,7 @@
 ;    state 1             ; msg rcvr
 ;    ref std.send_msg
 
+(list () #? #nil #f #t #unit '(#pair_t . #actor_t))
 (SEND
     (CREATE (memo-beh 42))
     (list (CREATE sink-beh)))

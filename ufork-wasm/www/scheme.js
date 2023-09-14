@@ -86,6 +86,14 @@ function new_quad(debug, t, x, y, z) {
     return value;
 }
 
+function new_literal(debug, value) {
+    return {
+        kind: "literal",
+        value,
+        debug
+    };
+}
+
 function new_number(debug, value) {
     return {
         kind: "number",
@@ -102,7 +110,15 @@ function new_symbol(debug, name) {
     };
 }
 
-function new_type(debug, arity) {
+function new_type(debug, name) {
+    return {
+        kind: "type",
+        name,
+        debug
+    };
+}
+
+function new_quad_type(debug, arity) {
     //return new_quad(debug, type_t, arity);
     return {
         kind: "type",
@@ -442,24 +458,9 @@ function parse(source, file) {
                     break;
                 }
             }
-            if (input.token === "#?") {
-                input.token = undef_lit;
-            } else if (input.token === "#nil") {
-                input.token = nil_lit;
-            } else if (input.token === "#f") {
-                input.token = false_lit;
-            } else if (input.token === "#t") {
-                input.token = true_lit;
-            } else if (input.token === "#unit") {
-                input.token = unit_lit;
-            } else if (input.token.startsWith("#")) {
-                // FIXME: support built-in type constants? (e.g.: #pair_t, #fixnum_t, ...)
-                input.error = "unknown literal";  // convert to error
-            } else {
-                const number = Number(input.token);  // FIXME: implement better conversion method
-                if (Number.isSafeInteger(number)) {
-                    input.token = number;
-                }
+            const number = Number(input.token);  // FIXME: implement better conversion method
+            if (Number.isSafeInteger(number)) {
+                input.token = number;
             }
             input.next = lex_input(next);
             return input;
@@ -473,7 +474,8 @@ function parse(source, file) {
             return input;  // report error
         }
         if (input.token === ")") {
-            input.token = nil_lit;
+            const debug = crlf_debug(input);
+            input.token = new_literal(debug, "nil");
             return input;
         }
         if (input.token === ".") {
@@ -510,7 +512,8 @@ function parse(source, file) {
             return scan;  // report error
         }
         if (scan.token === ")") {
-            input.token = nil_lit;
+            const debug = crlf_debug(input, scan);
+            input.token = new_literal(debug, "nil");
             input.end = scan.end;
             input.next = scan.next;
             return input;
@@ -548,7 +551,7 @@ function parse(source, file) {
         input.token =
             new_pair(debug, quote,
             new_pair(debug, scan.token,
-            nil_lit));
+            new_literal(debug, "nil")));
         input.end = scan.end;
         input.next = scan.next;
         return input;
@@ -592,15 +595,53 @@ function parse(source, file) {
             const quote = new_symbol(debug, "unquote-splicing");
             return parse_quote(input, quote);
         }
-        if (typeof input.token === "string") {
+        if (input.token === "#?") {
+            input.token = new_literal(debug, "undef");
+            return input;
+        } else if (input.token === "#nil") {
+            input.token = new_literal(debug, "nil");
+            return input;
+        } else if (input.token === "#f") {
+            input.token = new_literal(debug, "false");
+            return input;
+        } else if (input.token === "#t") {
+            input.token = new_literal(debug, "true");
+            return input;
+        } else if (input.token === "#unit") {
+            input.token = new_literal(debug, "unit");
+            return input;
+        } else if (input.token === "#literal_t") {
+            input.token = new_type(debug, "literal");
+            return input;
+        } else if (input.token === "#fixnum_t") {
+            input.token = new_type(debug, "fixnum");
+            return input;
+        } else if (input.token === "#type_t") {
+            input.token = new_type(debug, "type");
+            return input;
+        } else if (input.token === "#pair_t") {
+            input.token = new_type(debug, "pair");
+            return input;
+        } else if (input.token === "#dict_t") {
+            input.token = new_type(debug, "dict");
+            return input;
+        } else if (input.token === "#instr_t") {
+            input.token = new_type(debug, "instr");
+            return input;
+        } else if (input.token === "#actor_t") {
+            input.token = new_type(debug, "actor");
+            return input;
+        } else if (input.token.startsWith("#")) {
+            return {
+                error: "unknown literal",
+                token: input.token,
+                file,
+                start: input.start,
+                end: input.end
+            };
+        } else if (typeof input.token === "string") {
             input.token = new_symbol(debug, input.token);
             return input;  // symbol sexpr
-        }
-        // FIXME: create traceable instances for each constant
-        const kind = input.token?.kind;
-        if (kind === "literal" || kind === "type") {
-            // FIXME: create separate instances
-            return input;  // constant sexpr
         }
         return {
             error: "unexpected token",
@@ -767,9 +808,9 @@ function compile(source, file) {
     */
 
     const module_env = {
-        "symbol_t": new_type(debug_file, 1),
-        "closure_t": new_type(debug_file, 2),
-        "behavior_t": new_type(debug_file, 2),
+        "symbol_t": new_quad_type(debug_file, 1),
+        "closure_t": new_quad_type(debug_file, 2),
+        "behavior_t": new_quad_type(debug_file, 2),
         "~empty_env": new_pair(debug_file, nil_lit, nil_lit), // (())  ; NOTE: this is the same value as EMPTY_DQ
         "~cont_beh":
             new_instr(debug_file, "state", 1,   // msg
@@ -900,9 +941,12 @@ function compile(source, file) {
         if (kind === "literal" || kind === "type" || kind === "number") {
             return crlf;
         }
-        if (kind === "pair" && crlf.head === "quote") {
-            const sexpr = nth_sexpr(crlf, 2);
-            return sexpr_to_crlf(sexpr);
+        if (kind === "pair") {
+            const head = nth_sexpr(crlf, 1);
+            if (head.kind === "symbol" && head.name === "quote") {
+                const sexpr = nth_sexpr(crlf, 2);
+                return sexpr_to_crlf(sexpr);
+            }
         }
         return undefined;  // not a constant
     }
