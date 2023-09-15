@@ -1681,7 +1681,7 @@ function compile(source, file) {
             parent,
             interpret_literal: xlat_literal,
             interpret_variable: function(ctx, crlf, k) {
-                if (crlf === "SELF") {
+                if (crlf.name === "SELF") {
                     const debug = crlf_debug(crlf);
                     return new_instr(debug, "my", "self", k);  // SELF reference
                 }
@@ -1830,12 +1830,15 @@ function compile(source, file) {
         return sexprs;
     }
     const ctx = new_module_ctx();
-    // FIXME: could we use `interpret_seq()` instead? -- no, we don't have a sexpr list.
+    let debug = debug_file;
+    sexprs.forEach(function (sexpr) {
+        debug = crlf_debug(debug, sexpr);
+    });
     let k =
-        new_instr(debug_file, "msg", 0,         // {caps}
-        new_instr(debug_file, "push", 2,        // {caps} dev.debug_key
-        new_instr(debug_file, "dict", "get",    // debug_dev
-        std_send_msg(debug_file))));
+        new_instr(debug, "msg", 0,              // {caps}
+        new_instr(debug, "push", 2,             // {caps} dev.debug_key
+        new_instr(debug, "dict", "get",         // debug_dev
+        std_send_msg(debug))));
     while (sexprs.length > 0) {
         const crlf = sexprs.pop(); //sexprs.shift();
         debug_log("compile:", to_scheme(crlf));

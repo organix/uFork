@@ -12,6 +12,9 @@ and `callback` is the customer that will receive the result.
 The result looks like `(fixnum)` on success,
 and `(#? . error)` on failure.
 
+**WARNING:** It is an error to send another read request
+before receiving a result on your callback.
+
 ## Write Request
 
 A _write_ request looks like `(to_cancel callback fixnum)`,
@@ -19,6 +22,9 @@ where `to_cancel` is the optional customer for a cancel capability,
 and `callback` is the customer that will receive the result.
 The result looks like `(#unit)` on success,
 and `(#? . error)` on failure.
+
+**WARNING:** It is an error to send another write request
+before receiving a result on your callback.
 
 ## Cancellation
 
