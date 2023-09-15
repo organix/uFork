@@ -56,7 +56,7 @@ the room.
 ### Link Protocol
 
 The _link_ protocol provides a reliable abstraction
-of a one-way communication channel.
+of a bidirectional communication channel.
 It consists of a transmitter (tx)
 and a receiver (rx).
 The _tx_ sends a message
