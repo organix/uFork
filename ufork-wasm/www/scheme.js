@@ -197,7 +197,13 @@ function equal_to(expect, actual) {
         return true;
     }
     if (expect?.kind && (expect?.kind === actual?.kind)) {
-        if (expect.kind === "pair") {
+        if (expect.kind === "literal") {
+            return equal_to(expect?.value, actual?.value);
+        } else if (expect.kind === "number") {
+            return equal_to(expect?.value, actual?.value);
+        } else if (expect.kind === "type") {
+            return equal_to(expect?.name, actual?.name);
+        } else if (expect.kind === "pair") {
             while (expect.tail?.kind === "pair") {
                 if (actual?.tail?.kind !== "pair") {
                     return false;
@@ -225,10 +231,6 @@ function equal_to(expect, actual) {
                 actual = actual?.next;
             }
             return equal_to(expect.next, actual?.next);
-        } else if (expect.kind === "literal") {
-            return equal_to(expect?.value, actual?.value);
-        } else if (expect.kind === "type") {
-            return equal_to(expect?.name, actual?.name);
         } else if (expect.kind === "instr") {
             if (expect?.op !== actual?.op) {
                 return false;
@@ -255,14 +257,35 @@ function equal_to(expect, actual) {
 //    * type = { "kind": "type", "name": <string> }
 
 function to_scheme(crlf) {
-    if (typeof crlf === "string") {  // FIXME: raw String is DEPRECATED
-        return crlf;
-    }
     if (typeof crlf !== "object") {
-        return String(crlf);  // FIXME: raw Number is DEPRECATED
+        return String(crlf);  // FIXME: raw Number and String are DEPRECATED
     }
     const kind = crlf?.kind;
-    if (kind === "pair") {
+    if (kind === "symbol") {
+        return crlf.name;
+    } else if (kind === "number") {
+        return String(crlf.value);
+    } else if (kind === "literal") {
+        const name = crlf?.value;
+        if (name === "undef") {
+            return "#?";
+        } else if (name === "nil") {
+            return "()";
+        } else if (name === "false") {
+            return "#f";
+        } else if (name === "true") {
+            return "#t";
+        } else if (name === "unit") {
+            return "#unit";
+        }
+    } else if (kind === "type") {
+        const name = crlf?.name;
+        if (typeof name === "string") {
+            return "#" + name + "_t";
+        } else {
+            return "#unknown_t";
+        }
+    } else if (kind === "pair") {
         let s = "(";
         while (true) {
             s += to_scheme(crlf?.head);
@@ -290,30 +313,6 @@ function to_scheme(crlf) {
         }
         s += "}";
         return s;
-    } else if (kind === "symbol") {
-        return crlf.name;
-    } else if (kind === "number") {
-        return String(crlf.value);
-    } else if (kind === "literal") {
-        const name = crlf?.value;
-        if (name === "undef") {
-            return "#?";
-        } else if (name === "nil") {
-            return "()";
-        } else if (name === "false") {
-            return "#f";
-        } else if (name === "true") {
-            return "#t";
-        } else if (name === "unit") {
-            return "#unit";
-        }
-    } else if (kind === "type") {
-        const name = crlf?.name;
-        if (typeof name === "string") {
-            return "#" + name + "_t";
-        } else {
-            return "#unknown_t";
-        }
     } else if (kind === "instr") {
         let s = "[#instr_t, ";
         s += to_scheme(crlf?.op);
@@ -777,35 +776,6 @@ function compile(source, file) {
     function std_cust_send(debug) {
         return new_instr(debug, "msg", 1, std_send_msg(debug));
     }
-    /*
-    function std_rv_self(debug) {
-        return new_instr(debug, "my", "self", std_cust_send(debug));
-    }
-    function std_resend(debug) {
-        const code =
-            new_instr(debug, "msg", 0,
-            new_instr(debug, "my", "self",
-            std_send_msg(debug)));
-        return code;
-    }
-    const std = {};
-    std.sink_beh =
-    std.commit =
-        new_instr(debug_file, "end", "commit");
-    std.send_msg =
-        new_instr(debug_file, "send", -1,
-        std.commit);
-    std.cust_send =
-        new_instr(debug_file, "msg", 1,
-        std.send_msg);
-    std.rv_self =
-        new_instr(debug_file, "my", "self",
-        std.cust_send);
-    std.resend =
-        new_instr(debug_file, "msg", 0,
-        new_instr(debug_file, "my", "self",
-        std.send_msg));
-    */
 
     const module_env = {
         "symbol_t": new_quad_type(debug_file, 1),
@@ -2254,7 +2224,8 @@ z n f 'a 'foo
 // const module = compile("(define Omega (lambda _ ((lambda (f) (f f)) (lambda (f) (f f))) ))");
 // const module = compile("(define fn (lambda (x y z) (list z (cons y x)) (car q) (cdr q) ))");
 // const module = compile("(define fn (lambda (x y z) (if (eq? 'x x) (list z y x) (cons y z)) ))");
-//debug const module = compile("(define fn (lambda (x y) (list (cons 'x x) (cons 'y y)) '(x y z) ))");
+// const module = compile("(define fn (lambda (x y) (list (cons 'x x) (cons 'y y)) '(x y z) ))");
+// const module = compile("(define f (lambda (x) (+ 1 (if x 42 69)) )) (list (f -1) (f 0) (f 1))");
 // const module = compile("(define f (lambda (x y) y))\n(f 0)\n");
 // const module = compile("(define hof (lambda (foo) (lambda (bar) (lambda (baz) (list 'foo foo 'bar bar 'baz baz) )))) (((hof 'a) '(b c)) '(#t . #f))");
 // const module = compile("(define inc ((lambda (a) (lambda (b) (+ a b))) 1))");
@@ -2262,7 +2233,7 @@ z n f 'a 'foo
 // const module = compile("(define zero_beh (BEH (cust) (SEND cust 0)))");
 // const module = compile("(define true_beh (BEH (cust) (SEND cust #t)))");
 // const module = compile(sample_source);
-// const module = compile(ifact_source);
+//debug const module = compile(ifact_source);
 // const module = compile(fact_source);
 // const module = compile(fib_source);
 // const module = compile(hof2_source);
