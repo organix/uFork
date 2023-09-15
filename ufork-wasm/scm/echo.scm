@@ -22,8 +22,8 @@
     (lambda (io-dev)
         (BEH (code . error)
             (if (eq? #unit code)
-                (SEND io-dev (list #? SELF))        ; input character
                 (SEND io-dev (list #? SELF code))   ; output character
+                (SEND io-dev (list #? SELF))        ; input character
             )
         )))
 

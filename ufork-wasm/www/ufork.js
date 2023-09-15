@@ -1108,7 +1108,11 @@ function make_core({
                         specifier.endsWith(".scm")
                         ? response.text().then(function (source) {
                             module_source[specifier] = source;
-                            return scm.compile(source, specifier);
+                            const crlf = scm.compile(source, specifier);
+                            if (!crlf?.error) {
+                                //console.log(scm.to_asm(crlf.ast));
+                            }
+                            return crlf;
                         })
                         : response.json()
                     )

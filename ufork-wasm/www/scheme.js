@@ -14,6 +14,7 @@ warn_log = console.log;
 //debug debug_log = console.log;
 //debug trace_log = console.log;
 
+/* FIXME: find a way to encapsulate this "global" state! */
 let asm_label = 0;  // used by `to_asm()`
 /*
 prefixes {a, d, f, i, j, k, n, t, v, x, y}
@@ -1849,16 +1850,17 @@ function compile(source, file) {
         }
     }
     module_env["boot"] = k;
+    const ast = {
+        kind: "module",
+        import: {},
+        define: module_env,
+        export: [
+            "boot"
+        ]
+    };
     return {
         lang: "uFork",
-        ast: {
-            kind: "module",
-            import: {},
-            define: module_env,
-            export: [
-                "boot"
-            ]
-        }
+        ast
     };
 }
 
@@ -1916,6 +1918,9 @@ function is_asm_leaf(crlf) {
     return true;
 }
 function to_asm(crlf) {
+    if (crlf?.error) {
+        return JSON.stringify(crlf, undefined, 2);
+    }
     if (typeof crlf === "string") {
         return crlf;
     }
@@ -2114,12 +2119,16 @@ function to_asm(crlf) {
                     if (z_is_leaf) {
                         s += " " + to_asm(crlf.z);
                     } else {
+                        asm_label += 1;
                         eos += to_asm(crlf.z);
                     }
                 }
             }
         }
         s += eos;
+        if (!x_is_leaf || !y_is_leaf) {  // all leaves? no labels.
+            asm_label += 1;
+        }
         if (!x_is_leaf) {
             s += '"' + x_label + '"' + ":\n";
             s += to_asm(crlf.x);
@@ -2127,9 +2136,6 @@ function to_asm(crlf) {
         if (!y_is_leaf) {
             s += '"' + y_label + '"' + ":\n";
             s += to_asm(crlf.y);
-        }
-        if (!x_is_leaf || !y_is_leaf) {
-            asm_label += 1;  // all leaves? no labels.
         }
         return s;
     } else {
@@ -2141,7 +2147,7 @@ function to_asm(crlf) {
     return s;
 }
 
-export default Object.freeze({parse, compile});
+export default Object.freeze({parse, compile, to_asm});
 
 const sample_source = `
 (define sink-beh (BEH _))
