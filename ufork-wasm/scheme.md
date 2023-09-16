@@ -47,6 +47,7 @@ just like [ASM](asm.md) does.
   * `(number? `_value_`)`
   * `(symbol? . `_values_`)`
   * `(if `_test_` `_t_expr_` `_f_expr_`)`
+  * `(cond (`_test_` . `_body_`) . `_clauses_`)`
   * `(not `_bool_`)`
   * `(+ `_number_` `_number_`)`
   * `(- `_number_` `_number_`)`
@@ -61,7 +62,6 @@ just like [ASM](asm.md) does.
 
   * `(nth `_index_` `_pair_`)`
   * `(actor? . `_values_`)`
-  * `(cond (`_test_` . `_body_`) . `_clauses_`)`
   * `(equal? `_value_` `_value_`)`
   * `(and . `_bool_`)`
   * `(or . `_bool_`)`

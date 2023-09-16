@@ -954,8 +954,9 @@ function compile(source, file) {
         "+": xlat_add_num,
         "-": xlat_sub_num,
         "*": xlat_mul_num,
-        "not": xlat_not,
         "if": xlat_if,
+        "cond": xlat_cond,
+        "not": xlat_not,
         "BEH": xlat_BEH,
         "CREATE": xlat_CREATE,
         "SEND": xlat_SEND,
@@ -1643,19 +1644,6 @@ function compile(source, file) {
         return code;
     }
 
-    function xlat_not(ctx, crlf, k) {
-        const debug = crlf_debug(crlf);
-        const args = crlf.tail;
-        const value = nth_sexpr(args, 1);
-        let code =
-            interpret(ctx, value,               // value
-            new_if_instr(debug,
-                new_instr(debug, "push", true_lit, k),
-                new_instr(debug, "push", false_lit, k),
-            ));
-        return code;
-    }
-
     function xlat_if(ctx, crlf, k) {
         const debug = crlf_debug(crlf);
         const args = crlf.tail;
@@ -1667,6 +1655,54 @@ function compile(source, file) {
             new_if_instr(debug,
                 interpret(ctx, cnsq, k),
                 interpret(ctx, altn, k),
+            ));
+        return code;
+    }
+
+    function xlat_cond(ctx, crlf, k) {
+        const args = crlf.tail;
+        if (args?.kind === "pair") {
+            const clause = args.head;
+            if (clause?.kind === "pair") {
+                const test = clause.head;
+                const body = clause.tail;
+                const test_const = constant_value(test);
+                if (equal_to(true_lit, test_const)) {
+                    let code = interpret_seq(ctx, body, k);
+                    return code;
+                }
+                if (equal_to(false_lit, test_const)) {
+                    let code = xlat_cond(ctx, args, k);
+                    return code;
+                }
+                const debug = crlf_debug(clause);
+                let code =
+                    interpret(ctx, test,
+                        new_if_instr(debug,
+                            interpret_seq(ctx, body, k),
+                            xlat_cond(ctx, args, k),
+                        ));
+                return code;
+            }
+            // skip bad clause
+            let code = xlat_cond(ctx, args, k);
+            return code;
+        }
+        // empty case
+        const debug = crlf_debug(args);
+        let code = new_instr(debug, "push", unit_lit, k);
+        return code;
+    }
+
+    function xlat_not(ctx, crlf, k) {
+        const debug = crlf_debug(crlf);
+        const args = crlf.tail;
+        const value = nth_sexpr(args, 1);
+        let code =
+            interpret(ctx, value,               // value
+            new_if_instr(debug,
+                new_instr(debug, "push", true_lit, k),
+                new_instr(debug, "push", false_lit, k),
             ));
         return code;
     }
@@ -2201,6 +2237,16 @@ const hof3_source = `
         (lambda (y z)
             (lambda q
                 (list x y z q) ))))`;
+const cond_source = `
+(define fn
+    (lambda (n)
+        (cond
+            ((< n 0) 1)
+            ((> n 0) -1)
+            (#f #?)
+            (#t 1 -1 0)
+        )))
+(list (fn -1) (fn 0) (fn 1) (fn))`;
 const test_source = `
 f n z
 0
@@ -2256,11 +2302,12 @@ z n f 'a 'foo
 // const module = compile("(define zero_beh (BEH (cust) (SEND cust 0)))");
 // const module = compile("(define true_beh (BEH (cust) (SEND cust #t)))");
 // const module = compile(sample_source);
-//debug const module = compile(ifact_source);
+// const module = compile(ifact_source);
 // const module = compile(fact_source);
 // const module = compile(fib_source);
 // const module = compile(hof2_source);
 // const module = compile(hof3_source);
+//debug const module = compile(cond_source);
 // const module = compile(test_source);
 //debug info_log(JSON.stringify(module, undefined, 2));
 //debug if (!module?.error) {
