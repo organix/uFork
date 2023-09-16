@@ -27,6 +27,7 @@ just like [ASM](asm.md) does.
   * `(define `_symbol_` `_value_`)`
   * `(quote `_expr_`)` — abbreviated `'`_expr_
   * `(lambda `_formal_` . `_body_`)`
+  * `(seq . `_body_`)`
   * `(list . `_values_`)`
   * `(cons `_head_` `_tail_`)`
   * `(car `_pair_`)`
@@ -88,7 +89,6 @@ just like [ASM](asm.md) does.
 
 ## Possible Future Features
   * `(par .  `_exprs_`)`
-  * `(seq . `_body_`)`
   * `(zip `_formal_` `_value_` `_env_`)`
   * `(gensym)`
   * `a-print`

@@ -923,8 +923,11 @@ function compile(source, file) {
     }
 
     const prim_map = {
-        "lambda": xlat_lambda,
         "quote": xlat_quote,
+        "lambda": xlat_lambda,
+        "seq": xlat_seq,
+        "list": xlat_list,
+        "cons": xlat_cons,
         "car": xlat_car,
         "cdr": xlat_cdr,
         "cadr": xlat_cadr,
@@ -935,8 +938,6 @@ function compile(source, file) {
         "cadar": xlat_cadar,
         "cdddr": xlat_cdddr,
         "cadddr": xlat_cadddr,
-        "cons": xlat_cons,
-        "list": xlat_list,
         "eq?": xlat_eq_p,
         "null?": xlat_null_p,
         "pair?": xlat_pair_p,
@@ -1236,6 +1237,15 @@ function compile(source, file) {
         }
     }
 
+    function xlat_quote(ctx, crlf, k) {
+        const debug = crlf_debug(crlf);
+        const args = crlf.tail;
+        const sexpr = nth_sexpr(args, 1);
+        const value = sexpr_to_crlf(sexpr);
+        let code = new_instr(debug, "push", value, k);
+        return code;
+    }
+
     function xlat_lambda(ctx, crlf, k) {
         const debug = crlf_debug(crlf);
         const args = crlf.tail;
@@ -1255,12 +1265,32 @@ function compile(source, file) {
         return code;
     }
 
-    function xlat_quote(ctx, crlf, k) {
+    function xlat_seq(ctx, crlf, k) {
+        const body = crlf.tail;  // sequential body
+        let code = interpret_seq(ctx, body, k);
+        return code;
+    }
+
+    function xlat_list(ctx, crlf, k) {
         const debug = crlf_debug(crlf);
         const args = crlf.tail;
-        const sexpr = nth_sexpr(args, 1);
-        const value = sexpr_to_crlf(sexpr);
-        let code = new_instr(debug, "push", value, k);
+        let n = length_of(args);
+        let code =
+            new_instr(debug, "push", nil_lit,   // ()
+            interpret_args(ctx, args,           // () args...
+            new_instr(debug, "pair", n, k)));   // (args...)
+        return code;
+    }
+
+    function xlat_cons(ctx, crlf, k) {
+        const debug = crlf_debug(crlf);
+        const args = crlf.tail;
+        const head = nth_sexpr(args, 1);
+        const tail = nth_sexpr(args, 2);
+        let code =
+            interpret(ctx, tail,                // tail
+            interpret(ctx, head,                // tail head
+            new_instr(debug, "pair", 1, k)));   // (head . tail)
         return code;
     }
 
@@ -1365,29 +1395,6 @@ function compile(source, file) {
         let code =
             interpret(ctx, pair,                // pair=(head . tail)
             new_instr(debug, "nth", 4, k));     // car(cdr(cdr(cdr(pair))))
-        return code;
-    }
-
-    function xlat_cons(ctx, crlf, k) {
-        const debug = crlf_debug(crlf);
-        const args = crlf.tail;
-        const head = nth_sexpr(args, 1);
-        const tail = nth_sexpr(args, 2);
-        let code =
-            interpret(ctx, tail,                // tail
-            interpret(ctx, head,                // tail head
-            new_instr(debug, "pair", 1, k)));   // (head . tail)
-        return code;
-    }
-
-    function xlat_list(ctx, crlf, k) {
-        const debug = crlf_debug(crlf);
-        const args = crlf.tail;
-        let n = length_of(args);
-        let code =
-            new_instr(debug, "push", nil_lit,   // ()
-            interpret_args(ctx, args,           // () args...
-            new_instr(debug, "pair", n, k)));   // (args...)
         return code;
     }
 
@@ -1780,25 +1787,32 @@ function compile(source, file) {
         if (k?.error) {
             return k;
         }
-        if (equal_to(nil_lit, list)) {
-            trace_log("interpret_seq () k:", k);
-            return k;
-        }
+        const debug = crlf_debug(list);
         if (list?.kind === "pair") {
             const head = list?.head;
             const tail = list?.tail;
-            trace_log("interpret_seq (h . t) h:", head);
+            if (tail?.kind === "pair") {
+                trace_log("interpret_seq (h . t) h:", head);
+                let code =
+                    interpret(ctx, head,
+                    new_instr(debug, "drop", 1,     // drop intermediate result
+                    interpret_seq(ctx, tail, k)));
+                return code;
+            } else {
+                trace_log("interpret_seq (h) h:", head);
+                let code =
+                    interpret(ctx, head,            // retain final result
+                    k);
+                return code;
+            }
+        } else {
+            // empty body
+            trace_log("interpret_seq () k:", k);
             let code =
-                interpret(ctx, head,
-                interpret_seq(ctx, tail, k));
+                new_instr(debug, "push", unit_lit,
+                k);
             return code;
         }
-        return {
-            error: "list expected",
-            body: list,
-            file,
-            ctx
-        };
     }
 
     function interpret_args(ctx, list, k) {

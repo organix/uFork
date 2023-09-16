@@ -32,4 +32,4 @@
 (define f
     (lambda (x)
         (+ 1 (if x 42 69)) ))
-(list (f -1) (f 0) (f 1))
+(list (seq (f -1) (f 0)) (f 1))
