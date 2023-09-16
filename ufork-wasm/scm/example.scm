@@ -25,11 +25,16 @@
 
 (list () #? #nil #f #t #unit '(#pair_t . #actor_t))
 
-(SEND
-    (CREATE (memo-beh 42))
-    (list (CREATE sink-beh)))
+;(SEND
+;    (CREATE (memo-beh 42))
+;    (list (CREATE sink-beh)))
 
 (define f
     (lambda (x)
         (+ 1 (if x 42 69)) ))
-(list (seq (f -1) (f 0)) (f 1))
+(let (
+        (x (seq (f -1) (f 0)))
+        (y (f 1))
+    )
+    (list x y)
+    (cons x y))

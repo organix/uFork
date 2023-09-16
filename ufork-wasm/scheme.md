@@ -27,6 +27,7 @@ just like [ASM](asm.md) does.
   * `(define `_symbol_` `_value_`)`
   * `(quote `_expr_`)` — abbreviated `'`_expr_
   * `(lambda `_formal_` . `_body_`)`
+  * `(let ((`_var_` `_val_`) . `_bindings_`) . `_body_`)`
   * `(seq . `_body_`)`
   * `(list . `_values_`)`
   * `(cons `_head_` `_tail_`)`
@@ -73,7 +74,7 @@ just like [ASM](asm.md) does.
   * `(foldr `_binop_` `_zero_` `_list_`)`
   * `(map `_proc_` . `_lists_`)`
   * `(reverse `_list_`)`
-  * `(let ((`_var_` `_val_`) . `_bindings_`) . `_body_`)`
+  * `(letrec ((`_var_` `_val_`) . `_bindings_`) . `_body_`)`
   * `(current-env)`
   * `(print . `_values_`)`
 

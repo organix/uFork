@@ -925,6 +925,7 @@ function compile(source, file) {
     const prim_map = {
         "quote": xlat_quote,
         "lambda": xlat_lambda,
+        "let": xlat_let,
         "seq": xlat_seq,
         "list": xlat_list,
         "cons": xlat_cons,
@@ -1263,6 +1264,41 @@ function compile(source, file) {
             new_instr(debug, "push", closure_t, // data code #closure_t
             new_instr(debug, "quad", 3,         // [#closure_t, code, data, #?]
             k)))))));
+        return code;
+    }
+
+    function unzip_bindings(bindings) {
+        if (bindings?.kind === "pair") {
+            const binding = bindings.head;
+            const debug = crlf_debug(binding);
+            const form = nth_sexpr(binding, 1);
+            const expr = nth_sexpr(binding, 2);
+            const [forms, exprs] = unzip_bindings(bindings.tail);
+            return [
+                new_pair(debug, form, forms),
+                new_pair(debug, expr, exprs),
+            ];
+        }
+        return [bindings, bindings];
+    }
+    /*
+    The expression
+        (let ((<form_1> <expr_1>) ... (<form_n> <expr_n>)) . <body>)
+    is equivalent to
+        ((lambda (<form_1> ... <form_n>) . <body>) <expr_1> ... <expr_n>)
+    */
+    function xlat_let(ctx, crlf, k) {
+        const debug = crlf_debug(crlf);
+        const args = crlf.tail;
+        const bindings = nth_sexpr(args, 1);
+        const body = nth_sexpr(args, -1);
+        const [forms, exprs] = unzip_bindings(bindings);
+        const lambda = new_pair(debug,
+            new_symbol(debug, "lambda"),
+            new_pair(debug, forms, body)
+        );
+        const sexpr = new_pair(debug, lambda, exprs);
+        let code = interpret(ctx, sexpr, k);
         return code;
     }
 
@@ -2247,6 +2283,14 @@ const cond_source = `
             (#t 1 -1 0)
         )))
 (list (fn -1) (fn 0) (fn 1) (fn))`;
+const let_source = `
+(let ((a 1) (b 2) (c 3)) (list a b c))
+;((lambda (a b c) (list a b c)) 1 2 3)
+;(let (  ; requires "letrec"
+;        (odd (lambda (n) (if (= n 0) #f (even (- n 1)))))
+;        (even (lambda (n) (if (= n 0) #t (odd (- n 1)))))
+;    )
+;    (list (odd 3) (even 3)))  ; ==> (#t #f)`;
 const test_source = `
 f n z
 0
@@ -2307,7 +2351,8 @@ z n f 'a 'foo
 // const module = compile(fib_source);
 // const module = compile(hof2_source);
 // const module = compile(hof3_source);
-//debug const module = compile(cond_source);
+// const module = compile(cond_source);
+//debug const module = compile(let_source);
 // const module = compile(test_source);
 //debug info_log(JSON.stringify(module, undefined, 2));
 //debug if (!module?.error) {
