@@ -1714,10 +1714,10 @@ function compile(source, file) {
                 const debug = crlf_debug(clause);
                 let code =
                     interpret(ctx, test,
-                        new_if_instr(debug,
-                            interpret_seq(ctx, body, k),
-                            xlat_cond(ctx, args, k),
-                        ));
+                    new_if_instr(debug,
+                        interpret_seq(ctx, body, k),
+                        xlat_cond(ctx, args, k),
+                    ));
                 return code;
             }
             // skip bad clause
