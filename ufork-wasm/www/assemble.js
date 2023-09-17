@@ -648,10 +648,7 @@ function generate_crlf(tree, file) {
         const token = operand[1];
         return (
             token.id === ":number:"
-            ? {
-                kind: "number",
-                value: token.number
-            }
+            ? token.number
             : fail("Expected a fixnum", token)
         );
     }
@@ -702,10 +699,7 @@ function generate_crlf(tree, file) {
     function gen_expression(operand) {
         const token = operand[1];
         if (token.id === ":number:") {
-            return {
-                kind: "number",
-                value: token.number
-            };
+            return token.number;
         }
         if (token.id === ":literal:") {
             return (
@@ -792,10 +786,10 @@ function generate_crlf(tree, file) {
             operand_check(0, 1);
             const arity = gen_fixnum(operands[0]);
             return (
-                (arity.value >= 0 && arity.value <= 3)
+                (arity >= 0 && arity <= 3)
                 ? {
                     kind: "type",
-                    arity: arity.value,
+                    arity,
                     debug
                 }
                 : fail("Bad arity.", operands[0][1])

@@ -120,14 +120,8 @@ The boolean values are _true_ and _false_.
 
 ## Fixnum
 
-A _fixnum_ is a signed integer that fits in a machine word.
-
-    {
-        "kind": "number",
-        "value": <number>
-    }
-
-Some valid values are `200`, `-3` and `0`.
+A _fixnum_ is a signed integer that fits in a machine word. Some valid _fixnum_
+values are `200`, `-3` and `0`.
 
 ## Pair
 
