@@ -65,22 +65,14 @@ function crlf_debug(from, to) {
     return { kind: "debug", file, start, end };
 }
 
-function new_value(debug, value) {
-    if (typeof value === "number") {
-        // FIXME: is this automatic conversion the right approach?
-        return new_number(debug, value);
-    }
-    return value;
-}
-
 function new_quad(debug, t, x, y, z) {
     const value = { kind: "quad", debug, t };
     if (x !== undefined) {
-        value.x = new_value(debug, x);
+        value.x = x;
         if (y !== undefined) {
-            value.y = new_value(debug, y);
+            value.y = y;
             if (z !== undefined) {
-                value.z = new_value(debug, z);
+                value.z = z;
             }
         }
     }
@@ -123,7 +115,7 @@ function new_quad_type(debug, arity) {
     //return new_quad(debug, type_t, arity);
     return {
         kind: "type",
-        arity, //arity: new_value(debug, arity),
+        arity,
         debug
     };
 }
@@ -131,8 +123,8 @@ function new_quad_type(debug, arity) {
 function new_pair(debug, head, tail) {
     return {
         kind: "pair",
-        head: new_value(debug, head),
-        tail: new_value(debug, tail),
+        head,
+        tail,
         debug
     };
 }
@@ -140,8 +132,8 @@ function new_pair(debug, head, tail) {
 function new_dict(debug, key, value, next = nil_lit) {
     return {
         kind: "dict",
-        key: new_value(debug, key),
-        value: new_value(debug, value),
+        key,
+        value,
         next,
         debug
     };
@@ -162,7 +154,7 @@ function new_instr(debug, op, imm = undef_lit, k = undef_lit) {
     return {
         kind: "instr",
         op,
-        imm: new_value(debug, imm),
+        imm,
         k,
         debug
     };
@@ -202,6 +194,8 @@ function equal_to(expect, actual) {
             return equal_to(expect?.value, actual?.value);
         } else if (expect.kind === "number") {
             return equal_to(expect?.value, actual?.value);
+        } else if (expect.kind === "symbol") {
+            return equal_to(expect?.name, actual?.name);
         } else if (expect.kind === "type") {
             return equal_to(expect?.name, actual?.name);
         } else if (expect.kind === "pair") {
@@ -250,16 +244,16 @@ function equal_to(expect, actual) {
     return false;
 }
 
-// Scheme s-expressions (sexprs) are represented by uFork-ASM CRLF objects.
-//    * symbol = <string>
+// Scheme s-expressions (sexprs) are represented by uFork-ASM CRLF-like objects.
+//    * symbol = { "kind": "symbol", "name": <string> }
 //    * cons = { "kind": "pair", "head": <sexpr>, "tail": <sexpr> }
 //    * literal = { "kind": "literal", "name": <string> }
-//    * number = <number>
+//    * number = { "kind": "number", "value": <number> }
 //    * type = { "kind": "type", "name": <string> }
 
 function to_scheme(crlf) {
     if (typeof crlf !== "object") {
-        return String(crlf);  // FIXME: raw Number and String are DEPRECATED
+        return String(crlf);
     }
     const kind = crlf?.kind;
     if (kind === "symbol") {
@@ -831,16 +825,16 @@ function compile(source, file) {
         while (pattern?.kind === "pair") {
             n += 1;
             const head = pattern?.head;
-            const name = (head?.kind === "symbol" ? head.name : head);  // FIXME: DEPRECATED!
-            if (typeof name === "string") {
+            if (head?.kind === "symbol") {
+                const name = head.name;
                 if (name !== "_") {
                     map[name] = n;
                 }
             }
             pattern = pattern?.tail;
         }
-        const name = (pattern?.kind === "symbol" ? pattern.name : pattern);  // FIXME: DEPRECATED!
-        if (typeof name === "string") {
+        if (pattern?.kind === "symbol") {
+            const name = pattern.name;
             if (name !== "_") {
                 map[name] = -n;
             }
@@ -859,24 +853,12 @@ function compile(source, file) {
 
     function sexpr_to_crlf(sexpr) {
         let debug = crlf_debug(sexpr, debug_file);
-        /*
-        if (typeof sexpr === "number") {  // FIXME: DEPRECATED!
-            return sexpr;
-        }
-        if (typeof sexpr === "string") {  // FIXME: DEPRECATED!
-            // Symbol
-            const label = "'" + sexpr;
-            let symbol = module_env[label];
-            if (!symbol) {
-                symbol = new_quad(debug, symbol_t, string_to_list(sexpr));
-                module_env[label] = symbol;
-            }
-            return new_ref(debug, label);
-        }
-        */
         const kind = sexpr?.kind;
-        if (kind === "number" || kind === "literal" || kind === "type") {
+        if (kind === "literal" || kind === "type") {
             return sexpr;
+        }
+        if (kind === "number") {
+            return sexpr.value;
         }
         if (kind === "symbol") {
             const name = sexpr.name;
@@ -908,8 +890,14 @@ function compile(source, file) {
     }
 
     function constant_value(crlf) {  // return constant value for crlf, if it has one
+        if (typeof crlf === "number") {
+            return crlf;
+        }
         const kind = crlf?.kind;
-        if (kind === "literal" || kind === "type" || kind === "number") {
+        if (kind === "number") {
+            return crlf.value;
+        }
+        if (kind === "literal" || kind === "type") {
             return crlf;
         }
         if (kind === "pair") {
@@ -925,7 +913,7 @@ function compile(source, file) {
     const prim_map = {
         "quote": xlat_quote,
         "lambda": xlat_lambda,
-        "let": xlat_let,
+        "let": rewrite_let,
         "seq": xlat_seq,
         "list": xlat_list,
         "cons": xlat_cons,
@@ -944,8 +932,9 @@ function compile(source, file) {
         "pair?": xlat_pair_p,
         "boolean?": xlat_boolean_p,
         "number?": xlat_number_p,
-        "symbol?": xlat_symbol_p,
         "actor?": xlat_actor_p,
+        "symbol?": xlat_symbol_p,
+        "procedure?": xlat_procedure_p,
         "behavior?": xlat_behavior_p,
         "<": xlat_lt_num,
         "<=": xlat_le_num,
@@ -1028,13 +1017,17 @@ function compile(source, file) {
             func_map: {
                 "quote": eval_quote,
                 "lambda": eval_lambda,
-                "BEH": eval_BEH
+                //"let": rewrite_let, -- FIXME: need full interpreter...
+                "BEH": eval_BEH,
             }
         };
         return ctx;
     }
 
     function eval_literal(ctx, crlf) {
+        if (crlf?.kind === "number") {
+            return crlf.value;
+        }
         return crlf;
     }
 
@@ -1109,17 +1102,44 @@ function compile(source, file) {
         debug_log("closure:", "body:", to_scheme(body));
         const child = new_lambda_ctx(ctx, ptrn);
         const debug = crlf_debug(body);
-        if (body?.kind !== "pair") {
-            // empty body
-            let code =
-                new_instr(debug, "push", unit_lit,
-                std_cust_send(debug));
-            return code;
-        }
-        // sequential body
         let code =
             interpret_seq(child, body,
             std_cust_send(debug));
+        return code;
+    }
+
+    function unzip_bindings(bindings) {
+        if (bindings?.kind === "pair") {
+            const binding = bindings.head;
+            const debug = crlf_debug(binding);
+            const form = nth_sexpr(binding, 1);
+            const expr = nth_sexpr(binding, 2);
+            const [forms, exprs] = unzip_bindings(bindings.tail);
+            return [
+                new_pair(debug, form, forms),
+                new_pair(debug, expr, exprs),
+            ];
+        }
+        return [bindings, bindings];
+    }
+    /*
+    The expression
+        (let ((<form_1> <expr_1>) ... (<form_n> <expr_n>)) . <body>)
+    is equivalent to
+        ((lambda (<form_1> ... <form_n>) . <body>) <expr_1> ... <expr_n>)
+    */
+    function rewrite_let(ctx, crlf, k) {
+        const debug = crlf_debug(crlf);
+        const args = crlf.tail;
+        const bindings = nth_sexpr(args, 1);
+        const body = nth_sexpr(args, -1);
+        const [forms, exprs] = unzip_bindings(bindings);
+        const lambda = new_pair(debug,
+            new_symbol(debug, "lambda"),
+            new_pair(debug, forms, body)
+        );
+        const sexpr = new_pair(debug, lambda, exprs);
+        let code = interpret(ctx, sexpr, k);
         return code;
     }
 
@@ -1153,7 +1173,8 @@ function compile(source, file) {
 
     function xlat_literal(ctx, crlf, k) {
         const debug = crlf_debug(crlf);
-        let code = new_instr(debug, "push", crlf, k);
+        const value = (crlf?.kind === "number" ? crlf.value : crlf);
+        let code = new_instr(debug, "push", value, k);
         return code;
     }
 
@@ -1264,41 +1285,6 @@ function compile(source, file) {
             new_instr(debug, "push", closure_t, // data code #closure_t
             new_instr(debug, "quad", 3,         // [#closure_t, code, data, #?]
             k)))))));
-        return code;
-    }
-
-    function unzip_bindings(bindings) {
-        if (bindings?.kind === "pair") {
-            const binding = bindings.head;
-            const debug = crlf_debug(binding);
-            const form = nth_sexpr(binding, 1);
-            const expr = nth_sexpr(binding, 2);
-            const [forms, exprs] = unzip_bindings(bindings.tail);
-            return [
-                new_pair(debug, form, forms),
-                new_pair(debug, expr, exprs),
-            ];
-        }
-        return [bindings, bindings];
-    }
-    /*
-    The expression
-        (let ((<form_1> <expr_1>) ... (<form_n> <expr_n>)) . <body>)
-    is equivalent to
-        ((lambda (<form_1> ... <form_n>) . <body>) <expr_1> ... <expr_n>)
-    */
-    function xlat_let(ctx, crlf, k) {
-        const debug = crlf_debug(crlf);
-        const args = crlf.tail;
-        const bindings = nth_sexpr(args, 1);
-        const body = nth_sexpr(args, -1);
-        const [forms, exprs] = unzip_bindings(bindings);
-        const lambda = new_pair(debug,
-            new_symbol(debug, "lambda"),
-            new_pair(debug, forms, body)
-        );
-        const sexpr = new_pair(debug, lambda, exprs);
-        let code = interpret(ctx, sexpr, k);
         return code;
     }
 
@@ -1515,6 +1501,17 @@ function compile(source, file) {
         return code;
     }
 
+    function xlat_actor_p(ctx, crlf, k) {
+        const debug = crlf_debug(crlf);
+        const args = crlf.tail;
+        const value = nth_sexpr(args, 1);
+        let code =
+            interpret(ctx, value,               // value
+            new_instr(debug, "typeq", actor_t,  // is_actor(value)
+            k));
+        return code;
+    }
+
     function xlat_symbol_p(ctx, crlf, k) {
         const debug = crlf_debug(crlf);
         const args = crlf.tail;
@@ -1526,13 +1523,13 @@ function compile(source, file) {
         return code;
     }
 
-    function xlat_actor_p(ctx, crlf, k) {
+    function xlat_procedure_p(ctx, crlf, k) {
         const debug = crlf_debug(crlf);
         const args = crlf.tail;
         const value = nth_sexpr(args, 1);
         let code =
             interpret(ctx, value,               // value
-            new_instr(debug, "typeq", actor_t,  // is_actor(value)
+            new_instr(debug, "typeq", closure_t,// is_closure(value)
             k));
         return code;
     }
@@ -1618,20 +1615,21 @@ function compile(source, file) {
         const m = nth_sexpr(args, 2);
         const n_const = constant_value(n);
         const m_const = constant_value(m);
-        if (n_const?.kind === "number" && m_const?.kind === "number") {
-            const v = new_number(debug, n_const.value + m_const.value);
-            return new_instr(debug, "push", v);
+        if (typeof n_const === "number" && typeof m_const === "number") {
+            const value = n_const + m_const;
+            return new_instr(debug, "push", value);
         }
-        if (n_const?.kind === "number" && n_const.value === 0) {
+        if (n_const === 0) {
             return interpret(ctx, m, k);
         }
-        if (m_const?.kind === "number" && m_const.value === 0) {
+        if (m_const === 0) {
             return interpret(ctx, n, k);
         }
         let code =
             interpret(ctx, n,                   // n
             interpret(ctx, m,                   // n m
-            new_instr(debug, "alu", "add", k)));// n+m
+            new_instr(debug, "alu", "add",      // n+m
+            k)));
         return code;
     }
 
@@ -1642,17 +1640,18 @@ function compile(source, file) {
         const m = nth_sexpr(args, 2);
         const n_const = constant_value(n);
         const m_const = constant_value(m);
-        if (n_const?.kind === "number" && m_const?.kind === "number") {
-            const v = new_number(debug, n_const.value - m_const.value);
-            return new_instr(debug, "push", v);
+        if (typeof n_const === "number" && typeof m_const === "number") {
+            const value = n_const - m_const;
+            return new_instr(debug, "push", value);
         }
-        if (m_const?.kind === "number" && m_const.value === 0) {
+        if (m_const === 0) {
             return interpret(ctx, n, k);
         }
         let code =
             interpret(ctx, n,                   // n
             interpret(ctx, m,                   // n m
-            new_instr(debug, "alu", "sub", k)));// n-m
+            new_instr(debug, "alu", "sub",      // n-m
+            k)));
         return code;
     }
 
@@ -1663,20 +1662,21 @@ function compile(source, file) {
         const m = nth_sexpr(args, 2);
         const n_const = constant_value(n);
         const m_const = constant_value(m);
-        if (n_const?.kind === "number" && m_const?.kind === "number") {
-            const v = new_number(debug, n_const.value * m_const.value);
-            return new_instr(debug, "push", v);
+        if (typeof n_const === "number" && typeof m_const === "number") {
+            const value = n_const * m_const;
+            return new_instr(debug, "push", value);
         }
-        if (n_const?.kind === "number" && n_const.value === 1) {
+        if (n_const === 1) {
             return interpret(ctx, m, k);
         }
-        if (m_const?.kind === "number" && m_const.value === 1) {
+        if (m_const === 1) {
             return interpret(ctx, n, k);
         }
         let code =
             interpret(ctx, n,                   // n
             interpret(ctx, m,                   // n m
-            new_instr(debug, "alu", "mul", k)));// n*m
+            new_instr(debug, "alu", "mul",      // n*m
+            k)));
         return code;
     }
 
@@ -1993,7 +1993,7 @@ function join_instr_chains(t_chain, f_chain, j_label) {
 function is_asm_leaf(crlf) {
     if (typeof crlf === "object") {
         const kind = crlf?.kind;
-        if (kind === "literal" || kind === "ref" || kind === "number") {
+        if (kind === "literal" || kind === "ref") {
             return true;
         }
         if (kind === "type") {
@@ -2010,11 +2010,9 @@ function to_asm(crlf) {
     if (typeof crlf === "string") {
         return crlf;
     }
-    /*
-    if (typeof crlf === "number") {  // FIXME: raw Number is DEPRECATED
+    if (typeof crlf === "number") {
         return String(crlf);
     }
-    */
     let s = "";
     const kind = crlf?.kind;
     if (kind === "module") {
@@ -2082,8 +2080,6 @@ function to_asm(crlf) {
         }
     } else if (kind === "symbol") {
         return crlf.name;
-    } else if (kind === "number") {
-        return String(crlf.value);
     } else if (kind === "literal") {
         const name = crlf.value;
         if (name === "undef") {
@@ -2352,8 +2348,8 @@ z n f 'a 'foo
 // const module = compile(hof2_source);
 // const module = compile(hof3_source);
 // const module = compile(cond_source);
-//debug const module = compile(let_source);
-// const module = compile(test_source);
+// const module = compile(let_source);
+//debug const module = compile(test_source);
 //debug info_log(JSON.stringify(module, undefined, 2));
 //debug if (!module?.error) {
 //debug     info_log(to_asm(module.ast));

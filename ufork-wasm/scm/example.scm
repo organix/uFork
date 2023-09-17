@@ -25,6 +25,11 @@
 
 (list () #? #nil #f #t #unit '(#pair_t . #actor_t))
 
+;(define add3
+;    (let ((x 3))  ; requires full interpreter in compiler
+;        (lambda (y) (+ x y))))
+;(add3 5)                  ; ⇒ 8
+
 ;(SEND
 ;    (CREATE (memo-beh 42))
 ;    (list (CREATE sink-beh)))

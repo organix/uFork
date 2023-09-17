@@ -46,8 +46,10 @@ just like [ASM](asm.md) does.
   * `(pair? `_value_`)`
   * `(boolean? `_value_`)`
   * `(number? `_value_`)`
-  * `(symbol? . `_values_`)`
   * `(actor? . `_values_`)`
+  * `(symbol? . `_values_`)`
+  * `(procedure? . `_values_`)`
+  * `(behavior? . `_values_`)`
   * `(if `_test_` `_t_expr_` `_f_expr_`)`
   * `(cond (`_test_` . `_body_`) . `_clauses_`)`
   * `(not `_bool_`)`
