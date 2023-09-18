@@ -1,16 +1,22 @@
 // Runs a uFork program with its IO device hooked up to stdin and stdout.
 
+// Usage:
+
+//  $ deno run --allow-read=. examples/stdio/stdio.js <boot>
+
+// where <boot> is the relative path (or absolute URL) to a .asm or .scm module
+// to boot from.
+
 /*jslint deno */
 
+import {join} from "https://deno.land/std@0.201.0/path/join.ts";
+import {toFileUrl} from "https://deno.land/std@0.201.0/path/to_file_url.ts";
 import ufork from "../../www/ufork.js";
 import parseq from "../../www/parseq.js";
 import requestorize from "../../www/requestors/requestorize.js";
 import io_device from "../../www/devices/io_device.js";
 const wasm_url = import.meta.resolve(
     "../../target/wasm32-unknown-unknown/debug/ufork_wasm.wasm"
-);
-const asm_url = import.meta.resolve(
-    "./echo.asm"
 );
 
 const utf8_encoder = new TextEncoder();
@@ -55,6 +61,16 @@ function run() {
     }
 }
 
+const boot = Deno.args[0];
+if (boot === undefined || boot === "") {
+    window.console.error(
+        "Missing boot specifier. Try \"examples/stdio/echo.asm\"."
+    );
+    Deno.exit(1);
+}
+const cwd_dir = toFileUrl(join(Deno.cwd(), "./")); // ensure trailing slash
+const boot_url = new URL(boot, cwd_dir).href; // resolve specifier if relative
+
 core = ufork.make_core({
     wasm_url,
     on_wakeup: run,
@@ -63,7 +79,7 @@ core = ufork.make_core({
 });
 parseq.sequence([
     core.h_initialize(),
-    core.h_import(asm_url),
+    core.h_import(boot_url),
     requestorize(function (asm_module) {
         const on_stdin = io_device(core, function on_stdout(string) {
             Deno.stdout.write(utf8_encoder.encode(string));
