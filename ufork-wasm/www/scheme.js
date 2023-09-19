@@ -778,9 +778,6 @@ function compile(source, file) {
         "behavior_t": new_quad_type(debug_file, 2),
         "~empty_env": new_pair(debug_file, nil_lit, nil_lit), // (())  ; NOTE: this is the same value as EMPTY_DQ
         "~cont_beh":
-            new_instr(debug_file, "state", 1,   // msg
-            new_instr(debug_file, "my", "self", // msg SELF
-            new_instr(debug_file, "send", -1,   // --
             new_instr(debug_file, "state", 3,   // env
             new_instr(debug_file, "state", 4,   // env sp
             new_instr(debug_file, "msg", 0,     // env sp rv
@@ -788,6 +785,9 @@ function compile(source, file) {
             new_instr(debug_file, "pair", 1,    // (sp' . env)
             new_instr(debug_file, "state", 2,   // (sp' . env) cont
             new_instr(debug_file, "beh", -1,    // --
+            new_instr(debug_file, "state", 1,   // msg
+            new_instr(debug_file, "my", "self", // msg SELF
+            new_instr(debug_file, "send", -1,   // --
             new_instr(debug_file, "end", "commit")))))))))))
     };
 
@@ -1245,9 +1245,9 @@ function compile(source, file) {
                 new_instr(debug, "part", -1, k));// ...
             let code =
                 interpret_args(ctx, args,       // ... args...
-                new_instr(debug, "my", "self",  // ... args... SELF
+                new_instr(debug, "my", "self",  // ... args... cust=SELF
                 interpret(ctx, func,            // ... args... cust closure
-                new_instr(debug, "new", -2,     // ... args... SELF beh.(state)
+                new_instr(debug, "new", -2,     // ... args... cust beh.(state)
                 new_instr(debug, "send", nargs, // ...
                 new_instr(debug, "pair", -1,    // sp=(...)
                 new_instr(debug, "state", -1,   // sp env
@@ -1760,13 +1760,7 @@ function compile(source, file) {
         const ctx = {
             parent,
             interpret_literal: xlat_literal,
-            interpret_variable: function(ctx, crlf, k) {
-                if (crlf.name === "SELF") {
-                    const debug = crlf_debug(crlf);
-                    return new_instr(debug, "my", "self", k);  // SELF reference
-                }
-                return xlat_variable(ctx, crlf, k);
-            },
+            interpret_variable: xlat_BEH_var,
             interpret_invoke: xlat_invoke,
             func_map: Object.assign(
                 {},
@@ -1782,6 +1776,14 @@ function compile(source, file) {
         return ctx;
     }
 
+    function xlat_BEH_var(ctx, crlf, k) {
+        if (crlf.name === "SELF") {
+            const debug = crlf_debug(crlf);
+            return new_instr(debug, "my", "self", k);  // SELF reference
+        }
+        return xlat_variable(ctx, crlf, k);
+    }
+
     function xlat_BEH(ctx, crlf, k) {
         const debug = crlf_debug(crlf);
         const args = crlf.tail;
@@ -1789,6 +1791,15 @@ function compile(source, file) {
         if (code.error) {
             return code;
         }
+        /*
+        code =
+            interpret_args(ctx, args,       // args...
+            new_instr(debug, "msg", 1,      // args... cust
+            interpret(ctx, func,            // args... cust closure
+            new_instr(debug, "new", -2,     // args... cust beh.(state)
+            new_instr(debug, "send", nargs, // --
+            std_commit(debug))))));
+        */
         code =
             new_instr(debug, "state", -1,       // env
             new_instr(debug, "msg", 0,          // env msg
@@ -2287,6 +2298,12 @@ const let_source = `
 ;        (even (lambda (n) (if (= n 0) #t (odd (- n 1)))))
 ;    )
 ;    (list (odd 3) (even 3)))  ; ==> (#t #f)`;
+const count_source = `
+(define count_beh
+    (lambda (n)
+        (BEH (cust)
+            (SEND cust n)
+            (BECOME (count_beh (+ n 1))) )))`;
 const test_source = `
 f n z
 0
@@ -2304,7 +2321,8 @@ f n z
 z n f 'a 'foo
 (length n)
 (not z n)
-(f n z)
+(define g f)
+(g n z)
 '((a b) c)
 `;
 
@@ -2341,7 +2359,7 @@ z n f 'a 'foo
 // const module = compile("(define sink_beh (BEH _))");
 // const module = compile("(define zero_beh (BEH (cust) (SEND cust 0)))");
 // const module = compile("(define true_beh (BEH (cust) (SEND cust #t)))");
-// const module = compile(sample_source);
+//debug const module = compile(sample_source);
 // const module = compile(ifact_source);
 // const module = compile(fact_source);
 // const module = compile(fib_source);
@@ -2349,7 +2367,8 @@ z n f 'a 'foo
 // const module = compile(hof3_source);
 // const module = compile(cond_source);
 // const module = compile(let_source);
-//debug const module = compile(test_source);
+// const module = compile(count_source);
+// const module = compile(test_source);
 //debug info_log(JSON.stringify(module, undefined, 2));
 //debug if (!module?.error) {
 //debug     info_log(to_asm(module.ast));

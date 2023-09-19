@@ -6,6 +6,14 @@ A compiler (written in JavaScript)
 generates loadable [CRLF](crlf.md)
 just like [ASM](asm.md) does.
 
+Since this dialect is focused on expressing actor behaviors,
+it is a mostly-pure functional expression language.
+Most data-structures (including Pairs) are immutable,
+and mutation features (e.g.: `set!`) are not supported.
+The language is extended with actor primitives.
+It is expected that mutation generally will be confined
+to the state of actors, managed with `BECOME`.
+
 ## Literal Values
 
   * `#?` — undefined value

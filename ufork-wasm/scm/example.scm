@@ -37,9 +37,8 @@
 (define f
     (lambda (x)
         (+ 1 (if x 42 69)) ))
-(let (
-        (x (seq (f -1) (f 0)))
-        (y (f 1))
-    )
+(define g f)
+(let ((x (seq (g -1) (f 0)))
+      (y (f 1)))
     (list x y)
     (cons x y))
