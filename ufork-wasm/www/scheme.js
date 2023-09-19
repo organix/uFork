@@ -95,9 +95,18 @@ function new_number(debug, value) {
     };
 }
 
-function new_symbol(debug, name) {
+function new_string(debug, value) {
+    return {
+        kind: "string",
+        value,
+        debug
+    };
+}
+
+function new_symbol(debug, name, module) {
     return {
         kind: "symbol",
+        module,  // optional
         name,
         debug
     };
@@ -139,9 +148,10 @@ function new_dict(debug, key, value, next = nil_lit) {
     };
 }
 
-function new_ref(debug, name) {
+function new_ref(debug, name, module) {
     return {
         kind: "ref",
+        module,  // optional
         name,
         debug
     };
@@ -250,16 +260,24 @@ function equal_to(expect, actual) {
 //    * literal = { "kind": "literal", "name": <string> }
 //    * number = { "kind": "number", "value": <number> }
 //    * type = { "kind": "type", "name": <string> }
+//    * string = { "kind": "string", "value": <string> }
 
 function to_scheme(crlf) {
     if (typeof crlf !== "object") {
         return String(crlf);
     }
     const kind = crlf?.kind;
-    if (kind === "symbol") {
-        return crlf.name;
-    } else if (kind === "number") {
+    if (kind === "number") {
         return String(crlf.value);
+    } else if (kind === "string") {
+        return JSON.stringify(crlf.value);
+    } else if (kind === "symbol") {
+        let s = "";
+        if (crlf.module) {
+            s += crlf.module + ".";
+        }
+        s += crlf.name;
+        return s;
     } else if (kind === "literal") {
         const name = crlf?.value;
         if (name === "undef") {
@@ -435,6 +453,29 @@ function parse(source, file) {
                 }
                 input.next = lex_input(input.next);
                 return input;
+            } else if (input.token === '"') {
+                let scan = input;
+                delete input.code;
+                while (true) {
+                    next = scan.next;
+                    scan = next();
+                    if (scan.error) {
+                        break;  // stop on error
+                    }
+                    if (/[!-~]/.test(scan.token)) {
+                        // accumulate token characters
+                        input.token += scan.token;
+                        input.end = scan.end;
+                    } else {
+                        break;  // stop on error
+                    }
+                    if (scan.token === '"') {
+                        next = scan.next;
+                        break;  // closing quote
+                    }
+                }
+                input.next = lex_input(next);
+                return input;
             }
             let scan = input;
             delete input.code;
@@ -562,6 +603,20 @@ function parse(source, file) {
             input.token = new_number(debug, input.token);
             return input;  // number sexpr
         }
+        if (typeof input.token !== "string") {
+            return {
+                error: "unexpected token",
+                token: input.token,
+                file,
+                start: input.start,
+                end: input.end
+            };    
+        }
+        if (input.token.startsWith('"') && input.token.endsWith('"')) {
+            const s = input.token.slice(1, -1);
+            input.token = new_string(debug, s);
+            return input;  // string literal
+        }
         if (input.token === ".") {
             return {
                 error: "unexpected dot",
@@ -592,40 +647,52 @@ function parse(source, file) {
         if (input.token === "#?") {
             input.token = new_literal(debug, "undef");
             return input;
-        } else if (input.token === "#nil") {
+        }
+        if (input.token === "#nil") {
             input.token = new_literal(debug, "nil");
             return input;
-        } else if (input.token === "#f") {
+        }
+        if (input.token === "#f") {
             input.token = new_literal(debug, "false");
             return input;
-        } else if (input.token === "#t") {
+        }
+        if (input.token === "#t") {
             input.token = new_literal(debug, "true");
             return input;
-        } else if (input.token === "#unit") {
+        }
+        if (input.token === "#unit") {
             input.token = new_literal(debug, "unit");
             return input;
-        } else if (input.token === "#literal_t") {
+        }
+        if (input.token === "#literal_t") {
             input.token = new_type(debug, "literal");
             return input;
-        } else if (input.token === "#fixnum_t") {
+        }
+        if (input.token === "#fixnum_t") {
             input.token = new_type(debug, "fixnum");
             return input;
-        } else if (input.token === "#type_t") {
+        }
+        if (input.token === "#type_t") {
             input.token = new_type(debug, "type");
             return input;
-        } else if (input.token === "#pair_t") {
+        }
+        if (input.token === "#pair_t") {
             input.token = new_type(debug, "pair");
             return input;
-        } else if (input.token === "#dict_t") {
+        }
+        if (input.token === "#dict_t") {
             input.token = new_type(debug, "dict");
             return input;
-        } else if (input.token === "#instr_t") {
+        }
+        if (input.token === "#instr_t") {
             input.token = new_type(debug, "instr");
             return input;
-        } else if (input.token === "#actor_t") {
+        }
+        if (input.token === "#actor_t") {
             input.token = new_type(debug, "actor");
             return input;
-        } else if (input.token.startsWith("#")) {
+        }
+        if (input.token.startsWith("#")) {
             return {
                 error: "unknown literal",
                 token: input.token,
@@ -633,17 +700,24 @@ function parse(source, file) {
                 start: input.start,
                 end: input.end
             };
-        } else if (typeof input.token === "string") {
-            input.token = new_symbol(debug, input.token);
-            return input;  // symbol sexpr
         }
-        return {
-            error: "unexpected token",
-            file,
-            token: input.token,
-            start: input.start,
-            end: input.end
-        };
+        // symbol sexpr
+        const parts = input.token.split(".");
+        if (parts.length === 1) {
+            input.token = new_symbol(debug, parts[0]);
+        } else if (parts.length === 2) {
+            input.token = new_symbol(debug, parts[1], parts[0]);
+        } else {
+            return {
+                error: "invalid namespace",
+                token: input.token,
+                parts,
+                file,
+                start: input.start,
+                end: input.end
+            };
+        }
+        return input;
     }
 
     const str_in = string_input(source);
@@ -829,7 +903,7 @@ function compile(source, file) {
         while (pattern?.kind === "pair") {
             n += 1;
             const head = pattern?.head;
-            if (head?.kind === "symbol") {
+            if (head?.kind === "symbol" && !head.module) {
                 const name = head.name;
                 if (name !== "_") {
                     map[name] = n;
@@ -837,7 +911,7 @@ function compile(source, file) {
             }
             pattern = pattern?.tail;
         }
-        if (pattern?.kind === "symbol") {
+        if (pattern?.kind === "symbol" && !pattern.module) {
             const name = pattern.name;
             if (name !== "_") {
                 map[name] = -n;
@@ -866,6 +940,10 @@ function compile(source, file) {
         }
         if (kind === "symbol") {
             const name = sexpr.name;
+            const module = sexpr.module;
+            if (module) {
+                return new_ref(debug, name, module);
+            }
             const label = "'" + name;
             let symbol = module_env[label];
             if (!symbol) {
@@ -965,6 +1043,7 @@ function compile(source, file) {
                 {},  // FIXME: should this be `Object.create(null)`?
                 prim_map,
                 {
+                    "import": eval_import,
                     "DEVICE": xlat_DEVICE,
                     "define": eval_define,
                     "export": eval_export,
@@ -973,14 +1052,29 @@ function compile(source, file) {
         return ctx;
     }
 
+    function eval_import(ctx, crlf, k) {
+        let args = crlf.tail;
+        const symbol = nth_sexpr(args, 1);
+        const locator = nth_sexpr(args, 2);
+        if (symbol?.kind === "symbol"
+        &&  symbol.module === undefined
+        &&  locator?.kind === "string") {
+            debug_log("import:", "symbol:", to_scheme(symbol));
+            import_map[symbol.name] = locator.value;
+        }
+        return k;  // no code produced
+    }
+
     function eval_export(ctx, crlf, k) {
         let args = crlf.tail;
         let symbol = args?.head;
         while (symbol?.kind === "symbol") {
-            debug_log("export:", "symbol:", to_scheme(symbol));
-            export_list.push(symbol.name);
-            args = args.tail;
-            symbol = args?.head;
+            if (symbol.module === undefined) {
+                debug_log("export:", "symbol:", to_scheme(symbol));
+                export_list.push(symbol.name);
+                args = args.tail;
+                symbol = args?.head;
+            }
         }
         return k;  // no code produced
     }
@@ -1002,10 +1096,12 @@ function compile(source, file) {
         const args = crlf.tail;
         const symbol = nth_sexpr(args, 1);
         debug_log("define:", "symbol:", to_scheme(symbol));
-        let name = symbol?.name;
+        const name = symbol.module
+            ? undefined  // define local symbols only
+            : symbol?.name;
         if (typeof name !== "string") {
             return {
-                error: "symbol name (string) expected",
+                error: "local symbol expected",
                 symbol,
                 file,
                 ctx
@@ -1055,6 +1151,11 @@ function compile(source, file) {
                 file,
                 ctx
             };
+        }
+        const module = crlf?.module;
+        if (module) {
+            // external reference
+            return new_ref(debug, name, module);
         }
         const xlat = ctx.func_map && ctx.func_map[name];
         if (typeof xlat === "function") {
@@ -1202,6 +1303,12 @@ function compile(source, file) {
                 file,
                 ctx
             };
+        }
+        const module = crlf?.module;
+        if (module) {
+            // external reference
+            let ref = new_ref(debug, name, module);
+            return new_instr(debug, "push", ref, k);
         }
         const msg_n = ctx.msg_map && ctx.msg_map[name];
         if (typeof msg_n === "number") {
@@ -2039,6 +2146,17 @@ function to_asm(crlf) {
     let s = "";
     const kind = crlf?.kind;
     if (kind === "module") {
+        let imports = crlf?.import;
+        if (imports) {
+            const entries = Object.entries(imports);
+            if (entries.length > 0) {
+                s += ".import\n";
+                for (const [name, value] of entries) {
+                    s += "    " + name + ": ";
+                    s += JSON.stringify(value) + "\n";
+                }
+            }
+        }
         asm_label = 1;
         for (const [name, value] of Object.entries(crlf.define)) {
             s += '"' + name + '"' + ":\n";
@@ -2049,7 +2167,7 @@ function to_asm(crlf) {
             }
         }
         let exports = crlf?.export;
-        if (exports) {
+        if (Array.isArray(exports) && exports.length > 0) {
             s += ".export\n";
             for (const name of exports) {
                 s += "    " + '"' + name + '"' + "\n";
@@ -2102,7 +2220,10 @@ function to_asm(crlf) {
             }
         }
     } else if (kind === "symbol") {
-        return crlf.name;
+        if (crlf.module) {
+            s += crlf.module + ".";
+        }
+        s += crlf.name;
     } else if (kind === "literal") {
         const name = crlf.value;
         if (name === "undef") {
@@ -2317,6 +2438,8 @@ const count_source = `
             (SEND cust n)
             (BECOME (count_beh (+ n 1))) )))`;
 const test_source = `
+(import std "../lib/std.asm")
+(import dev "../lib/dev.asm")
 f n z
 0
 (define z 0)
@@ -2336,14 +2459,17 @@ z n f 'a 'foo
 (define g f)
 (g n z)
 '((a b) c)
-(export f g z)
+(define debug-key dev.debug_key)
+(export f g debug-key)
+(export z)
 `;
 
 // const sexprs = parse(" `('foo (,bar ,@baz) . quux)\r\n");
 // const sexprs = parse("'(0 1 -1 #t #f #nil #? () . #unit)");
 // const sexprs = parse("(if (< n 0) #f #t)");
 // const sexprs = parse("(lambda (x . y) x)");
-//debug const sexprs = parse("(define f (lambda (x y) y))\n(f 0)\n");
+// const sexprs = parse("(define f (lambda (x y) y))\n(f 0)\n");
+//debug const sexprs = parse('(import std "../lib/std.asm") (define end std.commit)');
 //debug info_log("sexprs:", sexprs);
 //debug if (!sexprs.error) {
 //debug     sexprs.forEach(function (sexpr) {

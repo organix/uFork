@@ -2,6 +2,8 @@
 ; Console I/O echo demonstration (DEVICE 4)
 ;
 
+(import dev "../lib/dev.asm")
+
 ;(define echo-in
 ;    (lambda (io-dev)
 ;        (BEH (code . error)
@@ -22,8 +24,8 @@
     (lambda (io-dev)
         (BEH (code . error)
             (if (eq? #unit code)
-                (SEND io-dev (list #? SELF code))   ; output character
                 (SEND io-dev (list #? SELF))        ; input character
+                (SEND io-dev (list #? SELF code))   ; output character
             )
         )))
 
@@ -33,4 +35,4 @@
             io-dev
             (list #? (CREATE (echo-beh io-dev))))   ; input character
         ))
-(start (DEVICE 4))
+(start (DEVICE dev.io_key))
