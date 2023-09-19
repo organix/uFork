@@ -32,6 +32,7 @@ to the state of actors, managed with `BECOME`.
 
 ## Built-In Facilities
 
+  * `(import `_prefix_` `_URL_`)`
   * `(define `_symbol_` `_value_`)`
   * `(quote `_expr_`)` — abbreviated `'`_expr_
   * `(lambda `_formal_` . `_body_`)`
@@ -54,10 +55,10 @@ to the state of actors, managed with `BECOME`.
   * `(pair? `_value_`)`
   * `(boolean? `_value_`)`
   * `(number? `_value_`)`
-  * `(actor? . `_values_`)`
-  * `(symbol? . `_values_`)`
-  * `(procedure? . `_values_`)`
-  * `(behavior? . `_values_`)`
+  * `(actor? `_value_`)`
+  * `(symbol? `_value_`)`
+  * `(procedure? `_value_`)`
+  * `(behavior? `_value_`)`
   * `(if `_test_` `_t_expr_` `_f_expr_`)`
   * `(cond (`_test_` . `_body_`) . `_clauses_`)`
   * `(not `_bool_`)`
@@ -69,6 +70,7 @@ to the state of actors, managed with `BECOME`.
   * `(= `_number_` `_number_`)`
   * `(>= `_number_` `_number_`)`
   * `(> `_number_` `_number_`)`
+  * `(export . `_symbols_`)`
 
 ## Planned Facilities
 

@@ -772,6 +772,7 @@ function compile(source, file) {
         return new_instr(debug, "msg", 1, std_send_msg(debug));
     }
 
+    const import_map = {};
     const module_env = {
         "symbol_t": new_quad_type(debug_file, 1),
         "closure_t": new_quad_type(debug_file, 2),
@@ -790,6 +791,9 @@ function compile(source, file) {
             new_instr(debug_file, "send", -1,   // --
             new_instr(debug_file, "end", "commit")))))))))))
     };
+    const export_list = [
+        "boot"
+    ];
 
     const symbol_t = new_ref(debug_file, "symbol_t");
     const closure_t = new_ref(debug_file, "closure_t");
@@ -963,9 +967,22 @@ function compile(source, file) {
                 {
                     "DEVICE": xlat_DEVICE,
                     "define": eval_define,
+                    "export": eval_export,
                 })
         };
         return ctx;
+    }
+
+    function eval_export(ctx, crlf, k) {
+        let args = crlf.tail;
+        let symbol = args?.head;
+        while (symbol?.kind === "symbol") {
+            debug_log("export:", "symbol:", to_scheme(symbol));
+            export_list.push(symbol.name);
+            args = args.tail;
+            symbol = args?.head;
+        }
+        return k;  // no code produced
     }
 
     function xlat_DEVICE(ctx, crlf, k) {
@@ -985,10 +1002,7 @@ function compile(source, file) {
         const args = crlf.tail;
         const symbol = nth_sexpr(args, 1);
         debug_log("define:", "symbol:", to_scheme(symbol));
-        let name = symbol;
-        if (symbol?.kind === "symbol") {
-            name = symbol.name;
-        }
+        let name = symbol?.name;
         if (typeof name !== "string") {
             return {
                 error: "symbol name (string) expected",
@@ -1949,11 +1963,9 @@ function compile(source, file) {
     module_env["boot"] = k;
     const ast = {
         kind: "module",
-        import: {},
+        import: import_map,
         define: module_env,
-        export: [
-            "boot"
-        ]
+        export: export_list
     };
     return {
         lang: "uFork",
@@ -2324,6 +2336,7 @@ z n f 'a 'foo
 (define g f)
 (g n z)
 '((a b) c)
+(export f g z)
 `;
 
 // const sexprs = parse(" `('foo (,bar ,@baz) . quux)\r\n");
@@ -2359,7 +2372,7 @@ z n f 'a 'foo
 // const module = compile("(define sink_beh (BEH _))");
 // const module = compile("(define zero_beh (BEH (cust) (SEND cust 0)))");
 // const module = compile("(define true_beh (BEH (cust) (SEND cust #t)))");
-//debug const module = compile(sample_source);
+// const module = compile(sample_source);
 // const module = compile(ifact_source);
 // const module = compile(fact_source);
 // const module = compile(fib_source);
@@ -2368,7 +2381,7 @@ z n f 'a 'foo
 // const module = compile(cond_source);
 // const module = compile(let_source);
 // const module = compile(count_source);
-// const module = compile(test_source);
+//debug const module = compile(test_source);
 //debug info_log(JSON.stringify(module, undefined, 2));
 //debug if (!module?.error) {
 //debug     info_log(to_asm(module.ast));
