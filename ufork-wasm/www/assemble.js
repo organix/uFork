@@ -558,6 +558,7 @@ function generate_crlf(tree, file) {
     let define_object = Object.create(null);
     let export_array = [];
     let supposed_instructions = [];
+    let supposed_types = [];
 
     function fail(message, token) {
         throw {message, token};
@@ -624,7 +625,7 @@ function generate_crlf(tree, file) {
         return fail("Expected a literal", token);
     }
 
-    function gen_type(operand) {
+    function gen_type_literal(operand) {
         const token = operand[1];
         return (
             (token.id === ":literal:" && (
@@ -696,6 +697,17 @@ function generate_crlf(tree, file) {
         return gen_local_ref(token, instruction_only);
     }
 
+    function gen_type(operand) {
+        const token = operand[1];
+        if (token.text !== undefined) {
+            supposed_types.push(token);
+        }
+        if (token.text !== undefined || Array.isArray(token)) {
+            return gen_ref_expression(operand);
+        }
+        return gen_type_literal(operand);
+    }
+
     function gen_expression(operand) {
         const token = operand[1];
         if (token.id === ":number:") {
@@ -704,7 +716,7 @@ function generate_crlf(tree, file) {
         if (token.id === ":literal:") {
             return (
                 token.name.endsWith("_t")
-                ? gen_type(operand)
+                ? gen_type_literal(operand)
                 : gen_literal(operand)
             );
         }
@@ -1019,6 +1031,11 @@ function generate_crlf(tree, file) {
             return fail("Expected an instruction, not data", name_token);
         }
     });
+    supposed_types.forEach(function (name_token) {
+        if (!maybe_kind(define_object[name_token.text], "type")) {
+            return fail("Expected a type", name_token);
+        }
+    });
     if (exports !== undefined) {
         export_array = exports[2].map(function (the_export) {
             const the_name = the_export[1];
@@ -1192,6 +1209,40 @@ function assemble(source, file) {
 //debug     ref '😀'
 //debug c:
 //debug     ref '\\n'
+//debug `);
+//debug good("typeq type", `
+//debug .import
+//debug     out: "out"
+//debug alias_t:
+//debug     ref #fixnum_t
+//debug custom_t:
+//debug     type_t 2
+//debug external_t:
+//debug     ref out.t
+//debug a:
+//debug     typeq #fixnum_t
+//debug     end commit
+//debug b:
+//debug     typeq alias_t
+//debug     end commit
+//debug c:
+//debug     typeq custom_t
+//debug     end commit
+//debug d:
+//debug     typeq out.t
+//debug     end commit
+//debug `);
+//debug bad("typeq #t", `
+//debug a:
+//debug     typeq #t
+//debug     end commit
+//debug `);
+//debug bad("typeq local ref", `
+//debug a:
+//debug     ref #t
+//debug b:
+//debug     typeq a
+//debug     end commit
 //debug `);
 //debug bad("string declaration", `
 //debug ."import"
