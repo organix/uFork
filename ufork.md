@@ -68,7 +68,7 @@ but each demonstrates important points in the design space.
 |-----+--------+-------+-------+---------|-------------|
 | uFork-CRLF intermediate language       | uFork VM    |
 |========================================|=============|
-| Rust                         | Verilog | C           |
+| Rust (no-std)                | Verilog | C           |
 |------+-----+--------+--------|---------|-------------|
 | WASM | ARM | RISC-V | Xtensa | FPGA    | Host O/S    |
 +------+-----+--------+--------+---------+-------------+

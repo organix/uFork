@@ -8,7 +8,7 @@ just like [ASM](asm.md) does.
 
 Since this dialect is focused on expressing actor behaviors,
 it is a mostly-pure functional expression language.
-Most data-structures (including Pairs) are immutable,
+Most data-structures (including _pairs_) are immutable,
 and mutation features (e.g.: `set!`) are not supported.
 The language is extended with actor primitives.
 It is expected that mutation generally will be confined
@@ -26,18 +26,18 @@ to the state of actors, managed with `BECOME`.
   * `#fixnum_t` — type of _fixnums_ (31-bit signed integers)
   * `#actor_t` — type of actor reference/capabilities
   * `#instr_t` — type of machine instructions
-  * `#pair_t` — type of pairs (`cons` cells)
+  * `#pair_t` — type of _pairs_ (`cons` cells)
   * `#dict_t` — type of dictionary entries
   * _fixnums_ (31-bit signed integers)
 
 ## Built-In Facilities
 
-  * `(import `_prefix_` `_URL_`)`
-  * `(define `_symbol_` `_value_`)`
-  * `(quote `_expr_`)` — abbreviated `'`_expr_
-  * `(lambda `_formal_` . `_body_`)`
-  * `(let ((`_var_` `_val_`) . `_bindings_`) . `_body_`)`
-  * `(seq . `_body_`)`
+  * `(import `<_prefix_>` `<_URL_>`)`
+  * `(define `<_symbol_>` `<_expr_>`)`
+  * `(quote `<_expr_>`)` — abbreviated `'`<_expr_>
+  * `(lambda `<_formal_>`  .  `<_body_>`)`
+  * `(let ((`<_var_>` `<_val_>`) . `<_bindings_>`) . `<_body_>`)`
+  * `(seq . `<_body_>`)`
   * `(list . `_values_`)`
   * `(cons `_head_` `_tail_`)`
   * `(car `_pair_`)`
@@ -59,8 +59,8 @@ to the state of actors, managed with `BECOME`.
   * `(symbol? `_value_`)`
   * `(procedure? `_value_`)`
   * `(behavior? `_value_`)`
-  * `(if `_test_` `_t_expr_` `_f_expr_`)`
-  * `(cond (`_test_` . `_body_`) . `_clauses_`)`
+  * `(if `<_test_>` `<_t_expr_>` `<_f_expr_>`)`
+  * `(cond (`<_test_>`  .  `<_body_>`) . `<_clauses_>`)`
   * `(not `_bool_`)`
   * `(+ `_number_` `_number_`)`
   * `(- `_number_` `_number_`)`
@@ -70,7 +70,7 @@ to the state of actors, managed with `BECOME`.
   * `(= `_number_` `_number_`)`
   * `(>= `_number_` `_number_`)`
   * `(> `_number_` `_number_`)`
-  * `(export . `_symbols_`)`
+  * `(export . `<_symbols_>`)`
 
 ## Planned Facilities
 
@@ -84,9 +84,9 @@ to the state of actors, managed with `BECOME`.
   * `(reduce `_binop_` `_zero_` `_list_`)`
   * `(foldl `_binop_` `_zero_` `_list_`)`
   * `(foldr `_binop_` `_zero_` `_list_`)`
-  * `(map `_proc_` . `_lists_`)`
+  * `(map `_proc_`  .  `_lists_`)`
   * `(reverse `_list_`)`
-  * `(letrec ((`_var_` `_val_`) . `_bindings_`) . `_body_`)`
+  * `(letrec ((`<_var_>` `<_val_>`) . `<_bindings_>`) . `<_body_>`)`
   * `(current-env)`
   * `(print . `_values_`)`
 
@@ -96,12 +96,12 @@ to the state of actors, managed with `BECOME`.
   * `(SEND `_actor_` `_message_`)`
   * `(BECOME `_behavior_`)`
   * `SELF`
-  * `(BEH `_formal_` . `_body_`)`
+  * `(BEH `<_formal_>`  .  `<_body_>`)`
   * `(CALL `_actor_` `_args_`)`
   * `(DEVICE `_id_`)`
 
 ## Possible Future Features
-  * `(par .  `_exprs_`)`
+  * `(par .  `<_exprs_>`)`
   * `(zip `_formal_` `_value_` `_env_`)`
   * `(gensym)`
   * `a-print`
