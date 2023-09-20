@@ -66,8 +66,8 @@ but each demonstrates important points in the design space.
 +-----+--------+-------+-------+---------+-------------+
 | ASM | Scheme | Humus | Misty | ...     | Scheme REPL |
 |-----+--------+-------+-------+---------|-------------|
-| uFork-CRLF intermediate language       |             |
-|------------------------------+---------|             |
+| uFork-CRLF intermediate language       | uFork VM    |
+|========================================|=============|
 | Rust                         | Verilog | C           |
 |------+-----+--------+--------|---------|-------------|
 | WASM | ARM | RISC-V | Xtensa | FPGA    | Host O/S    |
@@ -82,6 +82,7 @@ but each demonstrates important points in the design space.
   * [The LISP 1.5 Programmer's Manual](https://www.softwarepreservation.org/projects/LISP/book/LISP%201.5%20Programmers%20Manual.pdf)
   * [Schism](https://github.com/schism-lang/schism)
   * [A Simple Scheme Compiler](https://www.cs.rpi.edu/academics/courses/fall00/ai/scheme/reference/schintro-v14/schintro_142.html#SEC271)
+  * [Compiling to WebAssembly](https://archive.fosdem.org/2021/schedule/event/webassembly/)
   * [Parsing Expression Grammars: A Recognition-Based Syntactic Foundation](https://bford.info/pub/lang/peg.pdf)
     * [OMeta: an Object-Oriented Language for Pattern Matching](http://www.vpri.org/pdf/tr2007003_ometa.pdf)
     * [PEG-based transformer provides front-, middle and back-end stages in a simple compiler](http://www.vpri.org/pdf/tr2010003_PEG.pdf)
