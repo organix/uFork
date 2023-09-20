@@ -559,7 +559,7 @@ function parse(source, file) {
                 file,
                 start: input.start,
                 end: scan.end
-            };            
+            };
         }
         scan = parse_sexpr(next);
         if (scan.error) {
@@ -832,48 +832,37 @@ function tokenize(source) {
 function compile(source, file) {
     const debug_file = { kind: "debug", file };
 
+    const symbol_t = new_ref(debug_file, "symbol_t", "scm");
+    const closure_t = new_ref(debug_file, "closure_t", "scm");
+    const behavior_t = new_ref(debug_file, "behavior_t", "scm");
+    const empty_env = new_ref(debug_file, "empty_env", "scm");
+    const cont_beh = new_ref(debug_file, "continuation", "scm");
+
     // standard instruction-stream tails
-    function std_sink_beh(debug) {
-        return new_instr(debug, "end", "commit");
+    function scm_commit(debug) {
+        return new_ref(debug, "commit", "scm");
+        //return new_instr(debug, "end", "commit");
     }
-    function std_commit(debug) {
-        return std_sink_beh(debug);
+    function scm_send_msg(debug) {
+        return new_ref(debug, "send_msg", "scm");
+        //return new_instr(debug, "send", -1, std_commit(debug));
     }
-    function std_send_msg(debug) {
-        return new_instr(debug, "send", -1, std_commit(debug));
-    }
-    function std_cust_send(debug) {
-        return new_instr(debug, "msg", 1, std_send_msg(debug));
+    function scm_cust_send(debug) {
+        return new_ref(debug, "cust_send", "scm");
+        //return new_instr(debug, "msg", 1, std_send_msg(debug));
     }
 
-    const import_map = {};
+    const tail_pos_k = scm_cust_send(debug_file);
+
+    const import_map = {
+        "scm": "../lib/scm.asm",
+    };
     const module_env = {
-        "symbol_t": new_quad_type(debug_file, 1),
-        "closure_t": new_quad_type(debug_file, 2),
-        "behavior_t": new_quad_type(debug_file, 2),
-        "~empty_env": new_pair(debug_file, nil_lit, nil_lit), // (())  ; NOTE: this is the same value as EMPTY_DQ
-        "~cont_beh":
-            new_instr(debug_file, "state", 3,   // env
-            new_instr(debug_file, "state", 4,   // env sp
-            new_instr(debug_file, "msg", 0,     // env sp rv
-            new_instr(debug_file, "pair", 1,    // env sp'=(rv . sp)
-            new_instr(debug_file, "pair", 1,    // (sp' . env)
-            new_instr(debug_file, "state", 2,   // (sp' . env) cont
-            new_instr(debug_file, "beh", -1,    // --
-            new_instr(debug_file, "state", 1,   // msg
-            new_instr(debug_file, "my", "self", // msg SELF
-            new_instr(debug_file, "send", -1,   // --
-            new_instr(debug_file, "end", "commit")))))))))))
+        "boot": scm_commit(debug_file),  // replaced by compiler...
     };
     const export_list = [
-        "boot"
+        "boot",
     ];
-
-    const symbol_t = new_ref(debug_file, "symbol_t");
-    const closure_t = new_ref(debug_file, "closure_t");
-    const behavior_t = new_ref(debug_file, "behavior_t");
-    const empty_env = new_ref(debug_file, "~empty_env");
-    const cont_beh = new_ref(debug_file, "~cont_beh");
 
     // Return the 'nth' item from a list of pairs, if defined.
     //
@@ -1219,7 +1208,7 @@ function compile(source, file) {
         const debug = crlf_debug(body);
         let code =
             interpret_seq(child, body,
-            std_cust_send(debug));
+            scm_cust_send(debug));
         return code;
     }
 
@@ -1338,7 +1327,6 @@ function compile(source, file) {
         return new_instr(debug, "push", ref, k);
     }
 
-    const tail_call_k = std_cust_send(debug_file);
     function xlat_invoke(ctx, crlf, k) {
         const debug = crlf_debug(crlf);
         const func = crlf.head;
@@ -1349,7 +1337,7 @@ function compile(source, file) {
             return xlat(ctx, crlf, k);
         }
         const nargs = length_of(args) + 1;  // account for customer
-        if (equal_to(tail_call_k, k)) {
+        if (equal_to(tail_pos_k, k)) {
             // tail-call optimization
             let code =
                 interpret_args(ctx, args,       // args...
@@ -1357,7 +1345,7 @@ function compile(source, file) {
                 interpret(ctx, func,            // args... cust closure
                 new_instr(debug, "new", -2,     // args... cust beh.(state)
                 new_instr(debug, "send", nargs, // --
-                std_commit(debug))))));
+                scm_commit(debug))))));
             return code;
         } else {
             // construct continuation
@@ -1376,7 +1364,7 @@ function compile(source, file) {
                 new_instr(debug, "msg", 0,      // sp env beh msg
                 new_instr(debug, "push", cont_beh,// sp env beh msg cont_beh
                 new_instr(debug, "beh", 4,      // --
-                std_commit(debug))))))))))));
+                scm_commit(debug))))))))))));
             return code;
         }
     }
@@ -1873,7 +1861,7 @@ function compile(source, file) {
         const debug = crlf_debug(body);
         let code =
             interpret_seq(child, body,
-            std_commit(debug));
+            scm_commit(debug));
         return code;
     }
 
@@ -2057,7 +2045,7 @@ function compile(source, file) {
         new_instr(debug, "msg", 0,              // {caps}
         new_instr(debug, "push", 2,             // {caps} dev.debug_key
         new_instr(debug, "dict", "get",         // debug_dev
-        std_send_msg(debug))));
+        scm_send_msg(debug))));
     while (sexprs.length > 0) {
         const crlf = sexprs.pop(); //sexprs.shift();
         debug_log("compile:", to_scheme(crlf));
@@ -2303,13 +2291,13 @@ function to_asm(crlf) {
             return s;
         }
     } else if (kind === "ref") {
+        const name = crlf.name;
         const module = crlf.module;
-        s += '"';
         if (typeof module === "string") {
-            s += module + ".";
+            s += module + "." + name;
+        } else {
+            s += '"' + crlf.name + '"';
         }
-        s += crlf.name;
-        s += '"';
     } else if (kind === "quad") {
         let arity = (crlf.z === undefined)
             ? (crlf.y === undefined)
@@ -2468,8 +2456,8 @@ z n f 'a 'foo
 // const sexprs = parse("'(0 1 -1 #t #f #nil #? () . #unit)");
 // const sexprs = parse("(if (< n 0) #f #t)");
 // const sexprs = parse("(lambda (x . y) x)");
-// const sexprs = parse("(define f (lambda (x y) y))\n(f 0)\n");
-//debug const sexprs = parse('(import std "../lib/std.asm") (define end std.commit)');
+//debug const sexprs = parse("(define f (lambda (x y) y))\n(f 0)\n");
+// const sexprs = parse('(import std "../lib/std.asm") (define end std.commit)');
 //debug info_log("sexprs:", sexprs);
 //debug if (!sexprs.error) {
 //debug     sexprs.forEach(function (sexpr) {
@@ -2498,7 +2486,7 @@ z n f 'a 'foo
 // const module = compile("(define sink_beh (BEH _))");
 // const module = compile("(define zero_beh (BEH (cust) (SEND cust 0)))");
 // const module = compile("(define true_beh (BEH (cust) (SEND cust #t)))");
-// const module = compile(sample_source);
+//debug const module = compile(sample_source);
 // const module = compile(ifact_source);
 // const module = compile(fact_source);
 // const module = compile(fib_source);
@@ -2507,7 +2495,7 @@ z n f 'a 'foo
 // const module = compile(cond_source);
 // const module = compile(let_source);
 // const module = compile(count_source);
-//debug const module = compile(test_source);
+// const module = compile(test_source);
 //debug info_log(JSON.stringify(module, undefined, 2));
 //debug if (!module?.error) {
 //debug     info_log(to_asm(module.ast));

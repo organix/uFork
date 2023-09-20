@@ -27,6 +27,16 @@ empty_env:              ; (sp=#nil . env=#nil) = (())
 ; Continuations for non-tail function calls
 ;
 
+tail_pos_k:             ; definition of "tail-position"
+cust_send:              ; msg
+    msg 1               ; msg to=cust
+
+send_msg:               ; msg to
+    send -1             ; --
+
+commit:                 ; ...
+    end commit          ; --
+
 ; Function template for compiled lambda-closure
 ;func:                   ; [closure_t, code, data]
 ;    quad_3 closure_t code data
@@ -49,7 +59,7 @@ empty_env:              ; (sp=#nil . env=#nil) = (())
 ;    msg 0               ; sp' env cont msg
 ;    push continuation   ; sp' env cont msg continuation
 ;    beh 4               ; -- SELF=continuation.(msg cont env sp')
-;    ref std.commit
+;    ref scm.commit
 
 continuation:           ; (msg cont env sp) <- rv
     state 3             ; env
@@ -61,10 +71,10 @@ continuation:           ; (msg cont env sp) <- rv
     beh -1              ; -- SELF=cont.(sp' . env)
     state 1             ; msg
     my self             ; msg SELF
-    ref std.send_msg
-;std.send_msg:
+    ref send_msg
+;scm.send_msg:
 ;    send -1
-;std.commit:
+;scm.commit:
 ;    end commit
 
 ; Suffix to restore stack and continue
@@ -83,10 +93,10 @@ imm_actor:              ; beh <- msg
     pair 1              ; (SELF . msg)
     state 0             ; (SELF . msg) beh=[behavior_t, code, data]
     new -2              ; (SELF . msg) code.data
-    ref std.send_msg
-;std.send_msg:
+    ref send_msg
+;scm.send_msg:
 ;    send -1
-;std.commit:
+;scm.commit:
 ;    end commit
 
 mut_actor:              ; beh <- msg
@@ -104,8 +114,8 @@ txn_actor:              ; beh pending msg
     send -1             ; beh txn pending
     push bsy_actor      ; beh txn pending bsy_actor
     beh 3               ; -- SELF=bsy_actor.(pending txn beh)
-    ref std.commit
-;std.commit:
+    ref commit
+;scm.commit:
 ;    end commit
 
 bsy_actor:              ; (pending txn beh) <- (txn? . beh') | msg
@@ -122,8 +132,8 @@ bsy_actor:              ; (pending txn beh) <- (txn? . beh') | msg
     pair 1              ; (pending' txn beh)
     push bsy_actor      ; (pending' txn beh) bsy_actor
     beh -1              ; -- SELF=bsy_actor.(pending' txn beh)
-    ref std.commit
-;std.commit:
+    ref commit
+;scm.commit:
 ;    end commit
 
 cmt_actor:              ; --
@@ -131,10 +141,10 @@ cmt_actor:              ; --
     msg -1              ; beh'
     dup 1               ; beh' beh'
 ; FIXME: `typeq` should work on user-defined types!
-;    typeq behavior_t    ; beh' is_behavior(beh')
-;    if nxt_actor        ; beh'
-    eq #nil             ; beh' beh'==#nil
-    if_not nxt_actor    ; beh'
+    typeq behavior_t    ; beh' is_behavior(beh')
+    if nxt_actor        ; beh'
+;    eq #nil             ; beh' beh'==#nil
+;    if_not nxt_actor    ; beh'
 
     ; retain existing behavior
 ;    drop 1              ; -- (no need to drop this from the stack)
@@ -155,8 +165,8 @@ rdy_actor:              ; beh'
     ; no more deferred, become ready
     push mut_actor      ; beh' mut_actor
     beh -1              ; -- SELF=mut_actor.beh'
-    ref std.commit
-;std.commit:
+    ref commit
+;scm.commit:
 ;    end commit
 
 ;
@@ -191,10 +201,10 @@ count_beh:              ; (_ n) <- (self cust)
     my self             ; beh' txn=SELF
     pair 1              ; (txn . beh')
     msg 1               ; (txn . beh') self
-    ref std.send_msg
-;std.send_msg:
+    ref send_msg
+;scm.send_msg:
 ;    send -1
-;std.commit:
+;commit:
 ;    end commit
 
 assert:                 ; expect <- actual
@@ -230,4 +240,15 @@ boot:                   ; () <- {caps}
     ref std.commit
 
 .export
+    symbol_t
+    closure_t
+    behavior_t
+    empty_env
+    tail_pos_k
+    cust_send
+    send_msg
+    commit
+    continuation
+    imm_actor
+    mut_actor
     boot

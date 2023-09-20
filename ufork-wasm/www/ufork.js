@@ -826,7 +826,7 @@ function make_core({
                 : (
                     Number.isSafeInteger(node.arity)
                     ? populate(h_rom_alloc(node.debug), node)
-                    : fail("Unknown type", node)
+                    : lookup(node)//fail("Unknown type", node)
                 )
             );
         }
