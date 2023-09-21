@@ -742,7 +742,7 @@ function make_core({
 // Load a module after its imports have been loaded.
 
         let definitions = Object.create(null);
-        let continuation_type_checks = [];
+        let type_checks = [];
         let cyclic_data_checks = [];
         let arity_checks = [];
 
@@ -858,7 +858,12 @@ function make_core({
 
         function instruction(node) {
             const raw = value(node);
-            continuation_type_checks.push([raw, INSTR_T, node]);
+            type_checks.push({
+                raw,
+                t: INSTR_T,
+                node,
+                msg: "Expected an instruction"
+            });
             return raw;
         }
 
@@ -881,7 +886,12 @@ function make_core({
                 fields.y = value(node.value);
                 fields.z = value(node.next); // dict/nil
                 if (fields.z !== NIL_RAW) {
-                    continuation_type_checks.push([fields.z, DICT_T, node.next]);
+                    type_checks.push({
+                        raw: fields.z,
+                        t: DICT_T,
+                        node: node.next,
+                        msg: "Expected a dict"
+                    });
                 }
                 if (node.next.kind === "ref" && node.next.module === undefined) {
                     cyclic_data_checks.push([fields.z, DICT_T, "z", node.next]);
@@ -906,7 +916,14 @@ function make_core({
                 fields.t = INSTR_T;
                 fields.x = label(node.op, instr_label);
                 if (node.op === "typeq") {
-                    fields.y = type(node.imm);
+                    const imm_raw = value(node.imm);
+                    type_checks.push({
+                        raw: imm_raw,
+                        t: TYPE_T,
+                        node: node.imm,
+                        msg: "Expected a type"
+                    });
+                    fields.y = imm_raw;
                     fields.z = instruction(node.k);
                 } else if (
                     node.op === "quad"
@@ -1036,11 +1053,11 @@ function make_core({
             }
         });
 
-// Check the type of dubious continuations.
+// Check the type of dubious quads now they are fully populated.
 
-        continuation_type_checks.forEach(function ([raw, t, node]) {
+        type_checks.forEach(function ({raw, t, node, msg}) {
             if (!u_is_ptr(raw) || u_read_quad(raw).t !== t) {
-                return fail("Bad continuation", node);
+                return fail(msg, node);
             }
         });
 
