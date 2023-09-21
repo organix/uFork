@@ -10,18 +10,17 @@
 ; Custom types and constants for Scheme
 ;
 
-symbol_t:               ; [#type_t, 1]
-    type_t 1
+symbol_t:               ; [symbol_t, name]
+    type_t 1            ; [#type_t, 1]
 
-closure_t:              ; [#type_t, 2]
-    type_t 2
+closure_t:              ; [closure_t, code, data]
+    type_t 2            ; [#type_t, 2]
 
-behavior_t:             ; [#type_t, 2]
-    type_t 2
+behavior_t:             ; [behavior_t, code, data, meta]
+    type_t 3            ; [#type_t, 3]
 
-empty_env:              ; (sp=#nil . env=#nil) = (())
-    pair_t #nil
-    ref #nil
+empty_env:              ; (sp=#nil . env=#nil)
+    pair_t #nil #nil    ; (())
 
 ;
 ; Continuations for non-tail function calls
@@ -91,7 +90,7 @@ imm_actor:              ; beh <- msg
     msg 0               ; msg
     my self             ; msg SELF
     pair 1              ; (SELF . msg)
-    state 0             ; (SELF . msg) beh=[behavior_t, code, data]
+    state 0             ; (SELF . msg) beh=[behavior_t, code, data, meta]
     new -2              ; (SELF . msg) code.data
     ref send_msg
 ;scm.send_msg:
@@ -100,7 +99,7 @@ imm_actor:              ; beh <- msg
 ;    end commit
 
 mut_actor:              ; beh <- msg
-    state 0             ; beh=[behavior_t, code, data]
+    state 0             ; beh=[behavior_t, code, data, meta]
     deque new           ; beh pending
     msg 0               ; beh pending msg
 
@@ -179,13 +178,13 @@ rdy_actor:              ; beh'
 ;;              (SEND cust n)
 ;;              (BECOME (count-beh (+ n 1))) )))
 
-count_0:                ; [behavior_t, count_beh, (#? 0)]
-    quad_3 behavior_t count_beh
+count_0:                ; [behavior_t, count_code, (#? 0), meta]
+    quad_4 behavior_t count_code count_data mut_actor
+count_data:
     pair_t #?
     pair_t 0
     ref #nil
-
-count_beh:              ; (_ n) <- (self cust)
+count_code:             ; (_ n) <- (self cust)
     state 2             ; n
     msg 2               ; n cust
     send -1             ; --
@@ -195,9 +194,11 @@ count_beh:              ; (_ n) <- (self cust)
     alu add             ; () n+1
     state 1             ; () n+1 _
     pair 2              ; data=(_ n+1)
-    push count_beh      ; data code=count_beh
-    push behavior_t     ; data code behavior_t
-    quad 3              ; beh'=[behavior_t, code, data]
+    push count_code     ; data code=count_code
+    push mut_actor      ; data code meta=mut_actor
+    roll -3             ; meta data code
+    push behavior_t     ; meta data code behavior_t
+    quad 4              ; beh'=[behavior_t, code, data, meta]
     my self             ; beh' txn=SELF
     pair 1              ; (txn . beh')
     msg 1               ; (txn . beh') self
@@ -227,9 +228,10 @@ boot:                   ; () <- {caps}
 ;   YOUR CODE GOES HERE
 ;
 
-    push count_0        ; debug_dev count_0
-    push mut_actor      ; debug_dev count_0 mut_actor
-    new -1              ; debug_dev counter=mut_actor.count_0
+    push count_0        ; debug_dev beh=count_0
+    dup 1               ; debug_dev beh beh
+    get Z               ; debug_dev beh meta
+    new -1              ; debug_dev counter=meta.beh
 
     dup 2               ; debug_dev counter debug_dev counter
     send 1              ; debug_dev counter

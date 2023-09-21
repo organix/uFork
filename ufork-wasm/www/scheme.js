@@ -186,6 +186,19 @@ function new_if_instr(debug, t = undef_lit, f = undef_lit) {
     };
 }
 
+function new_BEH_tag(debug, op, imm = undef_lit, k = undef_lit) {
+    if (k?.error) {
+        return k;
+    }
+    return {
+        kind: "BEH",
+        op,
+        imm,
+        k,
+        debug
+    };
+}
+
 function length_of(sexpr) {
     let n = 0;
     while (sexpr?.kind === "pair") {
@@ -1188,12 +1201,12 @@ function compile(source, file) {
     function eval_BEH(ctx, crlf) {
         const debug = crlf_debug(crlf);
         const args = crlf.tail;
-        const code = compile_behavior(ctx, args);
+        const [code, meta] = compile_behavior(ctx, args);
         if (code.error) {
             return code;
         }
         const data = empty_env;
-        return new_quad(debug, behavior_t, code, data);
+        return new_quad(debug, behavior_t, code, data, meta);
     }
 
     function eval_lambda(ctx, crlf) {
@@ -1869,14 +1882,19 @@ function compile(source, file) {
         debug_log("behavior:", "body:", to_scheme(body));
         const child = new_BEH_ctx(ctx, ptrn);
         const debug = crlf_debug(body);
-        let k = scm_commit(debug);
-        // FIXME: `mut_actor` ends meta-txn if there is no `BECOME`!
-        //k = new_instr(debug, "msg", 1,          // meta-self
-        //    new_instr(debug, "send", 0, k));    // -- (end meta-txn)
+        // FIXME: must use `mut_actor` if there is a `BECOME`!
+        let meta = imm_actor;
+//        let k = new_BEH_tag(debug, "end", "commit");
+        let k = new_instr(debug, "end", "commit");
+        if (meta !== imm_actor) {
+            // `mut_actor` ends meta-txn if there is no `BECOME`!
+            k = new_instr(debug, "msg", 1,          // meta-self
+                new_instr(debug, "send", 0, k));    // -- (end meta-txn)
+        }
         let code =
             interpret_seq(child, body,
             k);
-        return code;
+        return [code, meta];
     }
 
     function new_BEH_ctx(parent, ptrn = undef_lit) {
@@ -1910,19 +1928,20 @@ function compile(source, file) {
     function xlat_BEH(ctx, crlf, k) {
         const debug = crlf_debug(crlf);
         const args = crlf.tail;
-        let code = compile_behavior(ctx, args);
+        let [code, meta] = compile_behavior(ctx, args);
         if (code.error) {
             return code;
         }
         code =
-            new_instr(debug, "state", -1,       // env
-            new_instr(debug, "msg", 0,          // env msg
-            new_instr(debug, "push", nil_lit,   // env msg sp=()
-            new_instr(debug, "pair", 2,         // data=(() msg . env)
-            new_instr(debug, "push", code,      // data code
-            new_instr(debug, "push", behavior_t,// data code #behavior_t
-            new_instr(debug, "quad", 3,         // [#behavior_t, code, data]
-            k)))))));
+            new_instr(debug, "push", meta,      // meta
+            new_instr(debug, "state", -1,       // meta env
+            new_instr(debug, "msg", 0,          // meta env msg
+            new_instr(debug, "push", nil_lit,   // meta env msg sp=()
+            new_instr(debug, "pair", 2,         // meta data=(() msg . env)
+            new_instr(debug, "push", code,      // meta data code
+            new_instr(debug, "push", behavior_t,// meta data code #behavior_t
+            new_instr(debug, "quad", 4,         // [#behavior_t, code, data, meta]
+            k))))))));
         return code;
     }
 
@@ -1930,11 +1949,11 @@ function compile(source, file) {
         const debug = crlf_debug(crlf);
         const args = crlf.tail;
         const beh = nth_sexpr(args, 1);
-        // FIXME: must use `mut_actor` if there is a `BECOME`!
         let code =
-            interpret(ctx, beh,                 // beh=[#behavior_t, code, data]
-            new_instr(debug, "push", imm_actor, // beh imm_actor
-            new_instr(debug, "new", -1, k)));   // actor
+            interpret(ctx, beh,                 // beh=[#behavior_t, code, data, meta]
+            new_instr(debug, "dup", 1,          // beh beh
+            new_instr(debug, "get", "Z",        // beh meta
+            new_instr(debug, "new", -1, k))));  // actor -- FIXME: "new -3" instruction?
         return code;
     }
 
@@ -2322,28 +2341,40 @@ function to_asm(crlf) {
         let s = "    quad_" + (arity + 1) + " ";
         s += to_asm(crlf.t);
         let eos = "\n";
-        if (arity > 0) {
+        if (arity === 1) {
             if (x_is_leaf) {
                 s += " " + to_asm(crlf.x);
-            } else if (arity === 1) {
+            } else {
                 eos += to_asm(crlf.x);
                 x_is_leaf = true;
+            }
+        } else if (arity === 2) {
+            if (x_is_leaf) {
+                s += " " + to_asm(crlf.x);
             } else {
                 s += ' "' + x_label + '"';
-                if (y_is_leaf) {
-                    s += " " + to_asm(crlf.y);
-                } else if (arity === 2) {
-                    eos += to_asm(crlf.y);
-                    y_is_leaf = true;
-                } else {
-                    s += ' "' + y_label + '"';
-                    if (z_is_leaf) {
-                        s += " " + to_asm(crlf.z);
-                    } else {
-                        asm_label += 1;
-                        eos += to_asm(crlf.z);
-                    }
-                }
+            }
+            if (y_is_leaf) {
+                s += " " + to_asm(crlf.y);
+            } else {
+                eos += to_asm(crlf.y);
+                y_is_leaf = true;
+            }
+        } else if (arity === 3) {
+            if (x_is_leaf) {
+                s += " " + to_asm(crlf.x);
+            } else {
+                s += ' "' + x_label + '"';
+            }
+            if (y_is_leaf) {
+                s += " " + to_asm(crlf.y);
+            } else {
+                s += ' "' + y_label + '"';
+            }
+            if (z_is_leaf) {
+                s += " " + to_asm(crlf.z);
+            } else {
+                eos += to_asm(crlf.z);
             }
         }
         s += eos;
