@@ -195,6 +195,12 @@ function length_of(sexpr) {
     return n;
 }
 
+function mapping(map, name) {
+    if (typeof map === "object" && Object.hasOwn(map, name)) {
+        return map[name];
+    }
+}
+
 function equal_to(expect, actual) {
     if (expect === actual) {
         return true;
@@ -1029,7 +1035,7 @@ function compile(source, file) {
             interpret_variable: xlat_variable,
             interpret_invoke: xlat_invoke,
             func_map: Object.assign(
-                {},  // FIXME: should this be `Object.create(null)`?
+                {},
                 prim_map,
                 {
                     "import": eval_import,
@@ -1146,7 +1152,7 @@ function compile(source, file) {
             // external reference
             return new_ref(debug, name, module);
         }
-        const xlat = ctx.func_map && ctx.func_map[name];
+        const xlat = mapping(ctx.func_map, name);
         if (typeof xlat === "function") {
             // operative function
             return xlat;
@@ -1299,14 +1305,16 @@ function compile(source, file) {
             let ref = new_ref(debug, name, module);
             return new_instr(debug, "push", ref, k);
         }
-        const msg_n = ctx.msg_map && ctx.msg_map[name];
-        if (typeof msg_n === "number") {
+        const msg_n = mapping(ctx.msg_map, name);
+        if (Number.isSafeInteger(msg_n)) {
             // message variable
             return new_instr(debug, "msg", msg_n, k);
         }
         if (ctx.state_maps) {
             // search lexical scope(s)
-            const index = ctx.state_maps.findIndex((map) => (typeof map[name] === "number"));
+            const index = ctx.state_maps.findIndex(function (map) {
+                return Number.isSafeInteger(mapping(map, name));
+            });
             if (index >= 0) {
                 // state variable
                 const offset = ctx.state_maps[index][name];
@@ -1317,7 +1325,7 @@ function compile(source, file) {
             }
         }
         // free variable
-        const xlat = ctx.func_map && ctx.func_map[name];
+        const xlat = mapping(ctx.func_map, name);
         if (typeof xlat === "function") {
             // operative function
             return xlat;
