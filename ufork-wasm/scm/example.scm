@@ -2,6 +2,8 @@
 ; example Scheme source code
 ;
 
+(import dev "../lib/dev.asm")
+
 (define sink-beh (BEH _))
 ;sink_beh:               ; () <- _
 ;    ref std.sink_beh    ; re-export
@@ -23,6 +25,14 @@
 ;    state 1             ; msg rcvr
 ;    ref std.send_msg
 
+(define start
+    (lambda (debug-dev)
+        (SEND
+            (CREATE (memo-beh 42))
+;            (list (CREATE sink-beh))
+            (list debug-dev)
+        )))
+
 (list () #? #nil #f #t #unit '(#pair_t . #actor_t))
 
 ;(define add3
@@ -30,15 +40,13 @@
 ;        (lambda (y) (+ x y))))
 ;(add3 5)                  ; ⇒ 8
 
-;(SEND
-;    (CREATE (memo-beh 42))
-;    (list (CREATE sink-beh)))
+;(define f
+;    (lambda (x)
+;        (+ 1 (if x 42 69)) ))
+;(define g f)
+;(let ((x (seq (g -1) (f 0)))
+;      (y (f 1)))
+;    (list x y)
+;    (cons x y))
 
-(define f
-    (lambda (x)
-        (+ 1 (if x 42 69)) ))
-(define g f)
-(let ((x (seq (g -1) (f 0)))
-      (y (f 1)))
-    (list x y)
-    (cons x y))
+(start (DEVICE dev.debug_key))

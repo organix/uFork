@@ -843,6 +843,8 @@ function compile(source, file) {
     const behavior_t = new_ref(debug_file, "behavior_t", "scm");
     const empty_env = new_ref(debug_file, "empty_env", "scm");
     const cont_beh = new_ref(debug_file, "continuation", "scm");
+    const imm_actor = new_ref(debug_file, "imm_actor", "scm");
+    const mut_actor = new_ref(debug_file, "mut_actor", "scm");
 
     // standard instruction-stream tails
     function scm_commit(debug) {
@@ -1867,9 +1869,13 @@ function compile(source, file) {
         debug_log("behavior:", "body:", to_scheme(body));
         const child = new_BEH_ctx(ctx, ptrn);
         const debug = crlf_debug(body);
+        let k = scm_commit(debug);
+        // FIXME: `mut_actor` ends meta-txn if there is no `BECOME`!
+        //k = new_instr(debug, "msg", 1,          // meta-self
+        //    new_instr(debug, "send", 0, k));    // -- (end meta-txn)
         let code =
             interpret_seq(child, body,
-            scm_commit(debug));
+            k);
         return code;
     }
 
@@ -1886,7 +1892,7 @@ function compile(source, file) {
                     "BECOME": xlat_not_implemented,
                 }),
             state_maps: inherit_state_maps(parent),
-            msg_map: pattern_to_map(ptrn)  // no implicit customer
+            msg_map: pattern_to_map(ptrn, 1)  // skip implicit self
         };
         debug_log("BEH:", "state_maps:", ctx.state_maps);
         debug_log("BEH:", "msg_map:", ctx.msg_map);
@@ -1896,7 +1902,7 @@ function compile(source, file) {
     function xlat_BEH_var(ctx, crlf, k) {
         if (crlf.name === "SELF") {
             const debug = crlf_debug(crlf);
-            return new_instr(debug, "my", "self", k);  // SELF reference
+            return new_instr(debug, "msg", 1, k);  // meta-self
         }
         return xlat_variable(ctx, crlf, k);
     }
@@ -1908,15 +1914,6 @@ function compile(source, file) {
         if (code.error) {
             return code;
         }
-        /*
-        code =
-            interpret_args(ctx, args,       // args...
-            new_instr(debug, "msg", 1,      // args... cust
-            interpret(ctx, func,            // args... cust closure
-            new_instr(debug, "new", -2,     // args... cust beh.(state)
-            new_instr(debug, "send", nargs, // --
-            std_commit(debug))))));
-        */
         code =
             new_instr(debug, "state", -1,       // env
             new_instr(debug, "msg", 0,          // env msg
@@ -1933,9 +1930,11 @@ function compile(source, file) {
         const debug = crlf_debug(crlf);
         const args = crlf.tail;
         const beh = nth_sexpr(args, 1);
+        // FIXME: must use `mut_actor` if there is a `BECOME`!
         let code =
-            interpret(ctx, beh,                 // [#behavior_t, code, data]
-            new_instr(debug, "new", -2, k));    // actor
+            interpret(ctx, beh,                 // beh=[#behavior_t, code, data]
+            new_instr(debug, "push", imm_actor, // beh imm_actor
+            new_instr(debug, "new", -1, k)));   // actor
         return code;
     }
 

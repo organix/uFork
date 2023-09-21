@@ -76,8 +76,8 @@ to the state of actors, managed with `BECOME`.
 
   * `(nth `_index_` `_pair_`)`
   * `(equal? `_value_` `_value_`)`
-  * `(and . `_bool_`)`
-  * `(or . `_bool_`)`
+  * `(and . `<_exprs_>`)`
+  * `(or . `<_exprs_>`)`
   * `(append . `_lists_`)`
   * `(length `_list_`)`
   * `(filter `_pred_` `_list_`)`
