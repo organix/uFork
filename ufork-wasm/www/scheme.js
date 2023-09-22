@@ -1876,24 +1876,89 @@ function compile(source, file) {
     }
 
     function compile_behavior(ctx, args) {
+        const imm_ends = [];
+        const mut_ends = [];
+        function analyze_behavior(code, mut = false) {
+            debug_log("analyze_behavior(1):", mut, code/*JSON.stringify(code, undefined, 2)*/);
+            // iterate over instructions
+            while (code?.kind === "instr") {
+                if (code.op === "if") {
+                    let t = analyze_behavior(code.t, mut);
+                    let f = analyze_behavior(code.f, mut);
+                    debug_log("analyze_behavior(2):", mut, t, f, code);
+                    if (t || f) {
+                        mut = true;
+                    }
+                //} else if (op === "end") {
+                } else {
+                    let imm = analyze_behavior(code.imm, mut);
+                    if (imm) {
+                        debug_log("analyze_behavior(3):", mut, imm, code);
+                        mut = true;
+                    }
+                }
+                code = code.k;
+            }
+            if (code?.kind === "BEH") {
+                if (code.op === "beh") {
+                    let debug = code.debug;
+                    let k = code.k;
+                    Object.assign(code,
+                        new_instr(debug, "msg", 1,  // beh meta-self
+                        new_instr(debug, "send", -1,// --
+                        k)));
+                    debug_log("analyze_behavior(4):", mut, code);
+                    mut = analyze_behavior(k, true);
+                } else if (code.op === "end") {
+                    debug_log("analyze_behavior(5):", mut, code);
+                    if (mut) {
+                        mut_ends.push(code);
+                    } else {
+                        imm_ends.push(code);
+                    }
+                }
+            }
+            return mut;
+        }
+
         const ptrn = nth_sexpr(args, 1);
         const body = nth_sexpr(args, -1);
         debug_log("behavior:", "ptrn:", to_scheme(ptrn));
         debug_log("behavior:", "body:", to_scheme(body));
         const child = new_BEH_ctx(ctx, ptrn);
         const debug = crlf_debug(body);
-        // FIXME: must use `mut_actor` if there is a `BECOME`!
-        let meta = imm_actor;
-//        let k = new_BEH_tag(debug, "end", "commit");
-        let k = new_instr(debug, "end", "commit");
-        if (meta !== imm_actor) {
-            // `mut_actor` ends meta-txn if there is no `BECOME`!
-            k = new_instr(debug, "msg", 1,          // meta-self
-                new_instr(debug, "send", 0, k));    // -- (end meta-txn)
-        }
         let code =
             interpret_seq(child, body,
-            k);
+            new_BEH_tag(debug, "end", "commit"));
+        // analyze mutability and fix endings
+        const mut = analyze_behavior(code);
+        if (mut) {
+            imm_ends.forEach(function (code) {
+                code.is_imm = true;
+                let debug = code.debug;
+                let imm = code.imm;
+                Object.assign(code,
+                    new_instr(debug, "msg", 1,      // meta-self
+                    new_instr(debug, "send", 0,     // --
+                    new_instr(debug, "end", imm))));
+                if (code.is_mut) {
+                    warn_log("WARNING!", "conflicting mutability", code);
+                }
+            });
+            mut_ends.forEach(function (code) {
+                code.is_mut = true;
+                code.kind = "instr";  // convert to "end" instruction
+                if (code.is_imm) {
+                    warn_log("WARNING!", "conflicting mutability", code);
+                }
+            });
+        } else {
+            imm_ends.forEach(function (code) {
+                code.kind = "instr";  // convert to "end" instruction
+            });
+        }
+        info_log("analyze_behavior:", mut, imm_ends, mut_ends);
+        const meta = mut ? mut_actor : imm_actor;
         return [code, meta];
     }
 
@@ -1907,7 +1972,7 @@ function compile(source, file) {
                 {},
                 prim_map,
                 {
-                    "BECOME": xlat_not_implemented,
+                    "BECOME": xlat_BECOME,
                 }),
             state_maps: inherit_state_maps(parent),
             msg_map: pattern_to_map(ptrn, 1)  // skip implicit self
@@ -1953,7 +2018,19 @@ function compile(source, file) {
             interpret(ctx, beh,                 // beh=[#behavior_t, code, data, meta]
             new_instr(debug, "dup", 1,          // beh beh
             new_instr(debug, "get", "Z",        // beh meta
-            new_instr(debug, "new", -1, k))));  // actor -- FIXME: "new -3" instruction?
+            new_instr(debug, "new", -1,         // actor -- FIXME: "new -3" instruction?
+            k))));
+        return code;
+    }
+
+    function xlat_BECOME(ctx, crlf, k) {
+        const debug = crlf_debug(crlf);
+        const args = crlf.tail;
+        const beh = nth_sexpr(args, 1);
+        let code =
+            interpret(ctx, beh,                 // beh=[#behavior_t, code, data, meta]
+            new_BEH_tag(debug, "beh", -3,       // --
+            k));
         return code;
     }
 
@@ -2524,7 +2601,7 @@ z n f 'a 'foo
 // const module = compile("(define sink_beh (BEH _))");
 // const module = compile("(define zero_beh (BEH (cust) (SEND cust 0)))");
 // const module = compile("(define true_beh (BEH (cust) (SEND cust #t)))");
-//debug const module = compile(sample_source);
+// const module = compile(sample_source);
 // const module = compile(ifact_source);
 // const module = compile(fact_source);
 // const module = compile(fib_source);
@@ -2532,7 +2609,7 @@ z n f 'a 'foo
 // const module = compile(hof3_source);
 // const module = compile(cond_source);
 // const module = compile(let_source);
-// const module = compile(count_source);
+//debug const module = compile(count_source);
 // const module = compile(test_source);
 //debug info_log(JSON.stringify(module, undefined, 2));
 //debug if (!module?.error) {
