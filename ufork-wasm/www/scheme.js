@@ -1812,17 +1812,29 @@ function compile(source, file) {
         return code;
     }
 
+    function code_dup(code) {
+        const kind = code?.kind;
+        if (kind === "instr" || kind === "BEH") {
+            if (code.op !== "if") {
+                code = Object.assign({}, code);
+                code.k = code_dup(code.k);
+            }
+        }
+        return code;
+    }
     function xlat_if(ctx, crlf, k) {
         const debug = crlf_debug(crlf);
         const args = crlf.tail;
         const pred = nth_sexpr(args, 1);
         const cnsq = nth_sexpr(args, 2);
         const altn = nth_sexpr(args, 3);
+        const k_t = code_dup(k);  // don't share code!
+        const k_f = k;
         let code =
             interpret(ctx, pred,
             new_if_instr(debug,
-                interpret(ctx, cnsq, k),
-                interpret(ctx, altn, k),
+                interpret(ctx, cnsq, k_t),
+                interpret(ctx, altn, k_f),
             ));
         return code;
     }
@@ -1847,7 +1859,7 @@ function compile(source, file) {
                 let code =
                     interpret(ctx, test,
                     new_if_instr(debug,
-                        interpret_seq(ctx, body, k),
+                        interpret_seq(ctx, body, code_dup(k)),
                         xlat_cond(ctx, args, k),
                     ));
                 return code;
@@ -2188,6 +2200,9 @@ function chain_to_list(chain) {
 }
 
 function join_instr_chains(t_chain, f_chain, j_label) {
+    if (j_label) {
+        return;  // disable code sharing!
+    }
     let t_list = chain_to_list(t_chain);
     if (!t_list) {
         return;
@@ -2549,7 +2564,7 @@ const cell_source = `
                     (BECOME (cell_beh (car opt_val)))
                     (SEND cust SELF))
                 (#t                             ; read request
-                    (BECOME (cell_beh val))
+                    ;(BECOME (cell_beh val))
                     (SEND cust val))) )))`;
 const test_source = `
 (import std "../lib/std.asm")
