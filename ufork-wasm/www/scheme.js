@@ -2540,6 +2540,16 @@ const count_source = `
         (BEH (cust)
             (SEND cust n)
             (BECOME (count_beh (+ n 1))) )))`;
+const cell_source = `
+(define cell_beh
+    (lambda (val)
+        (BEH (cust . opt_val)
+            (cond
+                ((pair? opt_val)                ; write request
+                    (SEND cust SELF)
+                    (BECOME (cell_beh (car opt_val))))
+                (#t                             ; read request
+                    (SEND cust val))) )))`;
 const test_source = `
 (import std "../lib/std.asm")
 (import dev "../lib/dev.asm")
@@ -2609,7 +2619,8 @@ z n f 'a 'foo
 // const module = compile(hof3_source);
 // const module = compile(cond_source);
 // const module = compile(let_source);
-//debug const module = compile(count_source);
+// const module = compile(count_source);
+//debug const module = compile(cell_source);
 // const module = compile(test_source);
 //debug info_log(JSON.stringify(module, undefined, 2));
 //debug if (!module?.error) {
