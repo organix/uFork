@@ -2546,9 +2546,10 @@ const cell_source = `
         (BEH (cust . opt_val)
             (cond
                 ((pair? opt_val)                ; write request
-                    (SEND cust SELF)
-                    (BECOME (cell_beh (car opt_val))))
+                    (BECOME (cell_beh (car opt_val)))
+                    (SEND cust SELF))
                 (#t                             ; read request
+                    (BECOME (cell_beh val))
                     (SEND cust val))) )))`;
 const test_source = `
 (import std "../lib/std.asm")
