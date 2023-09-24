@@ -1916,9 +1916,11 @@ function compile(source, file) {
                     let debug = code.debug;
                     let k = code.k;
                     Object.assign(code,
-                        new_instr(debug, "msg", 1,  // beh meta-self
-                        new_instr(debug, "send", -1,// --
-                        k)));
+                        new_instr(debug, "my", "self",  // beh SELF
+                        new_instr(debug, "pair", 1,     // (SELF . beh)
+                        new_instr(debug, "msg", 1,      // (SELF . beh) meta-self
+                        new_instr(debug, "send", -1,    // --
+                        k)))));
                     debug_log("analyze_behavior(4):", mut, code);
                     mut = analyze_behavior(k, true);
                 } else if (code.op === "end") {
@@ -2566,6 +2568,28 @@ const cell_source = `
                 (#t                             ; read request
                     ;(BECOME (cell_beh val))
                     (SEND cust val))) )))`;
+const future_source = `
+(define future-beh
+    (lambda (waiting)  ; initially ()
+        (BEH (op arg)  ; ('read cust) | ('write value)
+            (cond
+                ((eq? op 'read)
+                    (BECOME (future-beh (cons arg waiting))))
+                ((eq? op 'write)
+                    (BECOME (value-beh arg))
+                    (send-to-all waiting arg)) ))))
+(define value-beh
+    (lambda (value)
+        (BEH (op arg)
+            (if (eq? op 'read)
+                (SEND arg value)
+                #unit))))
+(define send-to-all
+    (lambda (waiting value)
+        (cond
+            ((pair? waiting)
+                (SEND (car waiting) value)
+                (send-to-all (cdr waiting) value)) )))`;
 const test_source = `
 (import std "../lib/std.asm")
 (import dev "../lib/dev.asm")
@@ -2636,7 +2660,8 @@ z n f 'a 'foo
 // const module = compile(cond_source);
 // const module = compile(let_source);
 // const module = compile(count_source);
-//debug const module = compile(cell_source);
+// const module = compile(cell_source);
+//debug const module = compile(future_source);
 // const module = compile(test_source);
 //debug info_log(JSON.stringify(module, undefined, 2));
 //debug if (!module?.error) {

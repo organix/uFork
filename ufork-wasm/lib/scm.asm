@@ -139,11 +139,8 @@ cmt_actor:              ; --
     ; transaction complete
     msg -1              ; beh'
     dup 1               ; beh' beh'
-; FIXME: `typeq` should work on user-defined types!
     typeq behavior_t    ; beh' is_behavior(beh')
     if nxt_actor        ; beh'
-;    eq #nil             ; beh' beh'==#nil
-;    if_not nxt_actor    ; beh'
 
     ; retain existing behavior
 ;    drop 1              ; -- (no need to drop this from the stack)
