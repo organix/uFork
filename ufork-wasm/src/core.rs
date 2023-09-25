@@ -886,17 +886,28 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
             None
         }
     }
-    /*
-    pub fn event_inject(&mut self, ep: Any) {
-        // add event to the front of the queue (e.g.: for interrupts)
-        let first = self.e_first();
-        self.ram_mut(ep).set_z(first);
-        if !first.is_ram() {
-            self.set_e_last(ep);
+    pub fn event_commit(&mut self, events: Any) {
+        // move sent-message events to event queue
+        if !events.is_ram() {
+            return;  // no events to enqueue
         }
-        self.set_e_first(ep);
+        // reverse list in place
+        let mut ep = events;
+        let mut prev = NIL;
+        while ep.is_ram() {
+            let next = self.ram(ep).z();
+            self.ram_mut(ep).set_z(prev);
+            prev = ep;
+            ep = next;
+        }
+        // add events to the back of the queue
+        if !self.e_first().is_ram() {
+            self.set_e_first(prev);
+        } else /* if self.e_last().is_ram() */ {
+            self.ram_mut(self.e_last()).set_z(prev);
+        }
+        self.set_e_last(events);
     }
-    */
     pub fn event_sponsor(&self, ep: Any) -> Any {
         self.mem(ep).t()
     }
@@ -966,14 +977,7 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
         let quad = self.ram(effect);
         let beh = quad.x();
         let state = quad.y();
-        let mut ep = quad.z();
-        // move sent-message events to event queue
-        while ep.is_ram() {
-            let event = self.ram(ep);
-            let next = event.z();
-            self.event_enqueue(ep);
-            ep = next;
-        }
+        self.event_commit(quad.z());
         self.free(effect);
         // commit actor transaction
         let actor = self.ram_mut(me);

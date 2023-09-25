@@ -154,6 +154,17 @@ boot:                   ; () <- {caps}
 ;   YOUR CODE GOES HERE
 ;
 
+    push 1              ; debug_dev 1
+    pick 2              ; debug_dev 1 debug_dev
+    send -1             ; debug_dev
+    push 2              ; debug_dev 2
+    pick 2              ; debug_dev 1 debug_dev
+    send -1             ; debug_dev
+    push 3              ; debug_dev 3
+    pick 2              ; debug_dev 1 debug_dev
+    send -1             ; debug_dev
+    if std.commit       ; -- early exit
+
 ;    push try_me         ; ... try_me
 ;    new 0               ; ... try_me.()
 ;    send 0              ; ...
