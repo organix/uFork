@@ -2,9 +2,12 @@
 ;;; Runtime support for compiled Scheme
 ;;;
 
-.import
-    std: "./std.asm"
-    dev: "./dev.asm"
+;.import
+;    std: "./std.asm"
+;    dev: "./dev.asm"
+
+debug_key:              ; borrowed from `dev.asm`
+    ref 2               ; dev.debug_key
 
 ;
 ; Custom types and constants for Scheme
@@ -71,9 +74,9 @@ continuation:           ; (msg cont env sp) <- rv
     state 1             ; msg
     my self             ; msg SELF
     ref send_msg
-;scm.send_msg:
+;send_msg:
 ;    send -1
-;scm.commit:
+;commit:
 ;    end commit
 
 ; Suffix to restore stack and continue
@@ -93,10 +96,6 @@ imm_actor:              ; beh <- msg
     state 0             ; (SELF . msg) beh=[behavior_t, code, data, meta]
     new -2              ; (SELF . msg) code.data
     ref send_msg
-;scm.send_msg:
-;    send -1
-;scm.commit:
-;    end commit
 
 mut_actor:              ; beh <- msg
     state 0             ; beh=[behavior_t, code, data, meta]
@@ -114,8 +113,6 @@ txn_actor:              ; beh pending msg
     push bsy_actor      ; beh txn pending bsy_actor
     beh 3               ; -- SELF=bsy_actor.(pending txn beh)
     ref commit
-;scm.commit:
-;    end commit
 
 bsy_actor:              ; (pending txn beh) <- (txn? . beh') | msg
     state 2             ; txn
@@ -132,8 +129,6 @@ bsy_actor:              ; (pending txn beh) <- (txn? . beh') | msg
     push bsy_actor      ; (pending' txn beh) bsy_actor
     beh -1              ; -- SELF=bsy_actor.(pending' txn beh)
     ref commit
-;scm.commit:
-;    end commit
 
 cmt_actor:              ; --
     ; transaction complete
@@ -147,6 +142,12 @@ cmt_actor:              ; --
     state 3             ; beh'=beh
 
 nxt_actor:              ; beh'
+    ; check for new meta
+    dup 1               ; beh' beh'
+    get Z               ; beh' meta'
+    eq mut_actor        ; beh' meta'==mut_actor
+    if_not rst_actor
+
     ; process next msg
     state 1             ; beh' pending
     deque empty         ; beh' is_empty(pending)
@@ -162,8 +163,22 @@ rdy_actor:              ; beh'
     push mut_actor      ; beh' mut_actor
     beh -1              ; -- SELF=mut_actor.beh'
     ref commit
-;scm.commit:
-;    end commit
+
+rst_actor:              ; beh'
+    ; reset entry-point (e.g.: transition to `imm_actor`)
+    dup 1               ; beh' beh'
+    get Z               ; beh' meta'
+    beh -1              ; -- SELF=meta'.beh'
+    state 1             ; pending
+
+rst_msgs:               ; pending
+    dup 1               ; pending pending
+    deque empty         ; is_empty(pending)
+    if commit           ; pending
+    deque pop           ; pending' msg'
+    my self             ; pending' msg' SELF
+    send -1             ; pending'
+    ref rst_msgs
 
 ;
 ; Unit-test suite
@@ -200,17 +215,13 @@ count_code:             ; (_ n) <- (self cust)
     pair 1              ; (txn . beh')
     msg 1               ; (txn . beh') self
     ref send_msg
-;scm.send_msg:
-;    send -1
-;commit:
-;    end commit
 
 assert:                 ; expect <- actual
     state 0             ; expect
     msg 0               ; expect actual
     cmp eq              ; expect==actual
     is_eq #t            ; assert(expect==actual)
-    ref std.commit
+    ref commit
 
 ;
 ; Boot code runs when the module is loaded (but not when imported).
@@ -218,12 +229,8 @@ assert:                 ; expect <- actual
 
 boot:                   ; () <- {caps}
     msg 0               ; {caps}
-    push dev.debug_key  ; {caps} debug_key
+    push debug_key      ; {caps} debug_key
     dict get            ; debug_dev
-
-;
-;   YOUR CODE GOES HERE
-;
 
     push count_0        ; debug_dev beh=count_0
     dup 1               ; debug_dev beh beh
@@ -236,9 +243,10 @@ boot:                   ; () <- {caps}
     dup 2               ; debug_dev counter debug_dev counter
     send 1              ; debug_dev counter
 
-    ref std.commit
+    ref commit
 
 .export
+    debug_key
     symbol_t
     closure_t
     behavior_t
