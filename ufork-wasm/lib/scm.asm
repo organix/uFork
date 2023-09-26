@@ -142,16 +142,16 @@ cmt_actor:              ; --
     state 3             ; beh'=beh
 
 nxt_actor:              ; beh'
+    ; process next msg
+    state 1             ; beh' pending
+    deque empty         ; beh' is_empty(pending)
+    if rdy_actor        ; beh'
+
     ; check for new meta
     dup 1               ; beh' beh'
     get Z               ; beh' meta'
     eq mut_actor        ; beh' meta'==mut_actor
     if_not rst_actor
-
-    ; process next msg
-    state 1             ; beh' pending
-    deque empty         ; beh' is_empty(pending)
-    if rdy_actor        ; beh'
 
     ; dequeue deferred msg
     state 1             ; beh' pending
@@ -160,15 +160,12 @@ nxt_actor:              ; beh'
 
 rdy_actor:              ; beh'
     ; no more deferred, become ready
-    push mut_actor      ; beh' mut_actor
-    beh -1              ; -- SELF=mut_actor.beh'
+    beh -3              ; -- SELF=get_Z(beh').beh'
     ref commit
 
 rst_actor:              ; beh'
     ; reset entry-point (e.g.: transition to `imm_actor`)
-    dup 1               ; beh' beh'
-    get Z               ; beh' meta'
-    beh -1              ; -- SELF=meta'.beh'
+    beh -3              ; -- SELF=get_Z(beh').beh'
     state 1             ; pending
 
 rst_msgs:               ; pending
@@ -233,9 +230,7 @@ boot:                   ; () <- {caps}
     dict get            ; debug_dev
 
     push count_0        ; debug_dev beh=count_0
-    dup 1               ; debug_dev beh beh
-    get Z               ; debug_dev beh meta
-    new -1              ; debug_dev counter=meta.beh
+    new -3              ; debug_dev counter=get_Z(beh).beh
 
     dup 2               ; debug_dev counter debug_dev counter
     send 1              ; debug_dev counter

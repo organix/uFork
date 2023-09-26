@@ -2030,10 +2030,8 @@ function compile(source, file) {
         const beh = nth_sexpr(args, 1);
         let code =
             interpret(ctx, beh,                 // beh=[#behavior_t, code, data, meta]
-            new_instr(debug, "dup", 1,          // beh beh
-            new_instr(debug, "get", "Z",        // beh meta
-            new_instr(debug, "new", -1,         // actor -- FIXME: "new -3" instruction?
-            k))));
+            new_instr(debug, "new", -3,         // actor=meta.beh
+            k));
         return code;
     }
 

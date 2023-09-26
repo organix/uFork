@@ -453,9 +453,6 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
                 };
                 kip
             },
-            VM_DEBUG => {
-                kip // no op
-            },
             VM_DEQUE => {
                 match imm {
                     DEQUE_NEW => {
@@ -525,15 +522,6 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
                 self.stack_push(val)?;
                 kip
             },
-            /* WARNING! This instruction is no-longer supported
-            VM_DEPTH => {
-                let lst = self.sp();
-                let n = self.list_len(lst);
-                let n = Any::fix(n);
-                self.stack_push(n)?;
-                kip
-            },
-            FIXME: remove VM_DEPTH, et. al. */
             VM_DROP => {
                 let mut n = imm.get_fix()?;
                 assert!(n < 64);  // FIXME: replace with cycle-limit(s) in Sponsor
@@ -688,37 +676,17 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
             },
             VM_NEW => {
                 let n = imm.get_fix()?;
-                if n == -2 {
-                    // take (beh . state) pair from stack
-                    let closure = self.stack_pop();
-                    let beh = self.mem(closure).x();
-                    assert!(self.typeq(INSTR_T, beh));  // FIXME: return Err(E_NOT_CODE)
-                    let state = self.mem(closure).y();
-                    let a = self.new_actor(beh, state)?;
-                    self.stack_push(a)?;
-                } else {
-                    let beh = self.stack_pop();
-                    assert!(self.typeq(INSTR_T, beh));  // FIXME: return Err(E_NOT_CODE)
-                    let state = self.pop_counted(n);
-                    let a = self.new_actor(beh, state)?;
-                    self.stack_push(a)?;
-                }
+                let (beh, state) = self.pop_beh_and_state(n);
+                assert!(self.typeq(INSTR_T, beh));  // FIXME: return Err(E_NOT_CODE)
+                let a = self.new_actor(beh, state)?;
+                self.stack_push(a)?;
                 kip
             },
             VM_BEH => {
                 let n = imm.get_fix()?;
-                if n == -2 {
-                    // take (beh . state) pair from stack
-                    let closure = self.stack_pop();
-                    let beh = self.mem(closure).x();
-                    assert!(self.typeq(INSTR_T, beh));  // FIXME: return Err(E_NOT_CODE)
-                    let state = self.mem(closure).y();
-                    self.effect_become(beh, state)?;
-                } else {
-                    let beh = self.stack_pop();
-                    let state = self.pop_counted(n);
-                    self.effect_become(beh, state)?;
-                }
+                let (beh, state) = self.pop_beh_and_state(n);
+                assert!(self.typeq(INSTR_T, beh));  // FIXME: return Err(E_NOT_CODE)
+                self.effect_become(beh, state)?;
                 kip
             },
             VM_END => {
@@ -739,12 +707,6 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
                     END_COMMIT => {
                         self.actor_commit(me);
                         TRUE
-                    },
-                    END_RELEASE => {
-                        self.actor_commit(me);
-                        // FIXME: End::Release is DEPRECATED due to potential use-after-free hazards!
-                        //self.free(me);  // free actor
-                        FALSE
                     },
                     _ => {
                         return Err(E_BOUNDS);  // unknown END op
@@ -853,6 +815,9 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
                     return Err(E_ASSERT);  // assertion failed
                 }
                 kip
+            },
+            VM_DEBUG => {
+                kip // no op
             },
             _ => {
                 return Err(E_BOUNDS);  // illegal instruction
@@ -1160,6 +1125,24 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
             }
         }
         v
+    }
+    fn pop_beh_and_state(&mut self, n: isize) -> (Any, Any) {
+        if n == -3 {
+            // take state=[_, _, _, beh] from stack
+            let state = self.stack_pop();
+            let beh = self.mem(state).z();
+            (beh, state)
+        } else if n == -2 {
+            // take (beh . state) pair from stack
+            let closure = self.stack_pop();
+            let beh = self.mem(closure).x();
+            let state = self.mem(closure).y();
+            (beh, state)
+        } else {
+            let beh = self.stack_pop();
+            let state = self.pop_counted(n);
+            (beh, state)
+        }
     }
 
     pub fn dict_has(&self, dict: Any, key: Any) -> bool {

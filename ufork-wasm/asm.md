@@ -241,16 +241,18 @@ _quad_               | `get` `Z`           | _z_          | copy _z_ from _quad_
 —                    | `my` `self`         | _actor_      | push _actor_ address on stack
 —                    | `my` `beh`          | _beh_        | push _actor_ behavior on stack
 —                    | `my` `state`        | _vₙ_ … _v₁_  | spread _actor_ state onto stack
-_msg_ _actor_        | `send` `-1`         | —            | send _msg_ to _actor_
 _mₙ_ … _m₁_ _actor_  | `send` _n_          | —            | send (_m₁_ … _mₙ_) to _actor_
-_sponsor_ _msg_ _actor_ | `signal` `-1`    | —            | send _msg_ to _actor_ using _sponsor_
+_msg_ _actor_        | `send` `-1`         | —            | send _msg_ to _actor_
 _sponsor_ _mₙ_ … _m₁_ _actor_ | `signal` _n_ | —          | send (_m₁_ … _mₙ_) to _actor_ using _sponsor_
-(_beh_ . _state_)    | `new` `-2`          | _actor_      | create an _actor_ with code _beh_ and data _state_
-_state_ _beh_        | `new` `-1`          | _actor_      | create an _actor_ with code _beh_ and data _state_
+_sponsor_ _msg_ _actor_ | `signal` `-1`    | —            | send _msg_ to _actor_ using _sponsor_
 _vₙ_ … _v₁_ _beh_    | `new` _n_           | _actor_      | create an _actor_ with code _beh_ and data (_v₁_ … _vₙ_)
-(_beh_ . _state_)    | `beh` `-2`          | —            | replace code with _beh_ and data with _state_
-_state_ _beh_        | `beh` `-1`          | —            | replace code with _beh_ and data with _state_
+_state_ _beh_        | `new` `-1`          | _actor_      | create an _actor_ with code _beh_ and data _state_
+(_beh_ . _state_)    | `new` `-2`          | _actor_      | create an _actor_ with code _beh_ and data _state_
+\[_, _, _, _beh_\]   | `new` `-3`          | _actor_      | create an _actor_ with code _beh_ and data \[_, _, _, _beh_\]
 _vₙ_ … _v₁_ _beh_    | `beh` _n_           | —            | replace code with _beh_ and data with (_v₁_ … _vₙ_)
+_state_ _beh_        | `beh` `-1`          | —            | replace code with _beh_ and data with _state_
+(_beh_ . _state_)    | `beh` `-2`          | —            | replace code with _beh_ and data with _state_
+\[_, _, _, _beh_\]   | `beh` `-3`          | —            | replace code with _beh_ and data with \[_, _, _, _beh_\]
 _reason_             | `end` `abort`       | —            | abort actor transaction with _reason_
 —                    | `end` `stop`        | —            | stop current continuation (thread)
 —                    | `end` `commit`      | —            | commit actor transaction

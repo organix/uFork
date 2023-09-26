@@ -215,7 +215,6 @@ value points to the next instruction, and is not present on "end" instructions.
 "part"          | _fixnum_
 "nth"           | _fixnum_
 "push"          | _value_
-"depth"         |
 "drop"          | _fixnum_
 "pick"          | _fixnum_
 "dup"           | _fixnum_
@@ -234,6 +233,7 @@ value points to the next instruction, and is not present on "end" instructions.
 "sponsor"       | "new", "memory", "events", "cycles", "reclaim", "start", "stop"
 "is_eq"         | _value_
 "is_ne"         | _value_
+"debug"         | `undefined`
 
 In addition, there is an "if" instruction. Rather than having a single
 continuation field (`k`), it has two: the consequent (`t`) and the alternative
