@@ -154,7 +154,9 @@ function enable_next() {
         const cc = core.u_current_continuation();
         if (cc) {
             const instr = core.u_read_quad(cc.ip);
-            if ((instr.t === ufork.INSTR_T) && (instr.x !== ufork.VM_END)) {
+            if ((instr.t === ufork.INSTR_T)
+            &&  (instr.x !== ufork.VM_JUMP)
+            &&  (instr.x !== ufork.VM_END)) {
                 $next_button.disabled = false;
                 return;
             }

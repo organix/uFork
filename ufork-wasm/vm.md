@@ -327,10 +327,12 @@ _actual_             | `assert` _expect_   | —            | assert _actual_ ==
 
 The semantics of each instruction are detailed below.
 A few general rules apply to all instructions.
+Unless stated otherwise an the description of an instruction:
 
- * Items referenced beyond the bottom of the stack are treated as `#?`
- * Unknown instruction op-code signal an error
+ * Attempts to execute a non-instruction signal an error
+ * Unknown instruction op-codes signal an error
  * Arguments of an invalid type signal an error
+ * Items referenced beyond the bottom of the stack are treated as `#?`
 
 #### `alu` instruction
 

@@ -619,6 +619,13 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
                 let b = self.stack_pop();
                 if falsy(b) { kip } else { imm }
             },
+            VM_JUMP => {
+                let k = self.stack_pop();
+                if !self.typeq(INSTR_T, k) {
+                    return Err(E_BOUNDS);  // FIXME: should be E_NO_EXE
+                }
+                k  // continue at `k`
+            },
             VM_MSG => {
                 let n = imm.get_fix()?;
                 let ep = self.ep();

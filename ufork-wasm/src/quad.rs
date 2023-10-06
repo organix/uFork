@@ -147,8 +147,8 @@ impl Quad {
         assert!(k.is_ptr());
         Self::instr_t(VM_PUSH, v, k)
     }
-    pub fn vm_depth(k: Any) -> Quad {
-        Self::instr_t(VM_DEPTH, UNDEF, k)
+    pub fn vm_jump() -> Quad {
+        Self::instr_t(VM_JUMP, UNDEF, UNDEF)
     }
     pub fn vm_drop(n: Any, k: Any) -> Quad {
         assert!(n.is_fix());

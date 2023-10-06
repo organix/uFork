@@ -201,8 +201,9 @@ together to form instruction streams.
     }
 
 The `op` is the name of the instruction. Most instructions take an immediate
-`imm` value: either a fixnum, a string label, or some other value. The `k`
-value points to the next instruction, and is not present on "end" instructions.
+`imm` value: either a fixnum, a string label, or some other value.
+The `k` value points to the next instruction,
+and is not present on "jump" or "end" instructions.
 
  `op`           | `imm`
 ----------------|---------------------------------------------------------------
@@ -215,6 +216,7 @@ value points to the next instruction, and is not present on "end" instructions.
 "part"          | _fixnum_
 "nth"           | _fixnum_
 "push"          | _value_
+"jump"          | `undefined`
 "drop"          | _fixnum_
 "pick"          | _fixnum_
 "dup"           | _fixnum_

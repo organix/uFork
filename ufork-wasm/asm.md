@@ -206,6 +206,7 @@ _n_ _m_              | `cmp` `ge`          | _bool_       | `#t` if _n_ >= _m_, 
 _n_ _m_              | `cmp` `gt`          | _bool_       | `#t` if _n_ > _m_, otherwise `#f`
 _bool_               | `if` _T_ [_F_]      | —            | if _bool_ is not falsy<sup>*</sup>, continue _T_ (else _F_)
 _bool_               | `if_not` _F_ [_T_]  | —            | if _bool_ is falsy<sup>*</sup>, continue _F_ (else _T_)
+_k_                  | `jump`              | —            | continue at _k_
 … _tail_ _head_      | `pair` _n_          | _pair_       | create _pair_ from _head_ and _tail_ (_n_ times)
 _vₙ_ … _v₁_          | `pair` -1           | (_v₁_ … _vₙ_) | capture stack items as a single _pair_ list
 _pair_               | `part` _n_          | … _tail_ _head_ | split _pair_ into _head_ and _tail_ (_n_ times)

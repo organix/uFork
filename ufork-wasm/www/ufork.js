@@ -90,7 +90,7 @@ const VM_PAIR   = 0x80000004;
 const VM_PART   = 0x80000005;
 const VM_NTH    = 0x80000006;
 const VM_PUSH   = 0x80000007;
-const VM_DEPTH  = 0x80000008;
+const VM_JUMP   = 0x80000008;
 const VM_DROP   = 0x80000009;
 const VM_PICK   = 0x8000000A;
 const VM_DUP    = 0x8000000B;
@@ -113,7 +113,7 @@ const VM_DEQUE  = 0x8000001B;
 const VM_STATE  = 0x8000001C;
 const VM_SIGNAL = 0x8000001D;
 const VM_IS_EQ  = 0x8000001E;
-const VM_IS_NE  = 0x8000001F;
+const VM_IS_NE  = 0x8000001F;  // deprecated
 
 // Memory limits (from core.rs)
 
@@ -207,7 +207,7 @@ const instr_label = [
     "part",
     "nth",
     "push",
-    "depth",  // deprecated
+    "jump",
     "drop",
     "pick",
     "dup",
@@ -641,7 +641,7 @@ function make_core({
             const t = quad.t;
             if (t === INSTR_T) {
                 const op = quad.x;
-                if ((op !== VM_IF) && (op !== VM_END)) {
+                if ((op !== VM_IF) && (op !== VM_JUMP) && (op !== VM_END)) {
                     return quad.z;
                 }
             } else if (t === PAIR_T) {
@@ -951,14 +951,13 @@ function make_core({
                 ) {
                     fields.y = value(node.imm);
                     fields.z = instruction(node.k);
-                } else if (
-                    node.op === "depth"
-                    || node.op === "debug"
-                ) {
+                } else if (node.op === "debug") {
                     fields.z = instruction(node.k);
                 } else if (node.op === "if") {
                     fields.y = instruction(node.t);
                     fields.z = instruction(node.f);
+                } else if (node.op === "jump") {
+                    // the `jump` instruction has no fields
                 } else if (node.op === "get") {
                     fields.y = label(node.imm, get_imm_label);
                     fields.z = instruction(node.k);
@@ -1677,7 +1676,7 @@ export default Object.freeze({
     VM_PART,
     VM_NTH,
     VM_PUSH,
-    VM_DEPTH,
+    VM_JUMP,
     VM_DROP,
     VM_PICK,
     VM_DUP,

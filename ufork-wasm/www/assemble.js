@@ -929,14 +929,11 @@ function generate_crlf(tree, file) {
                 debug
             };
         }
-        if (
-            operator.text === "depth"
-            || operator.text === "debug"
-        ) {
+        if (operator.text === "debug") {
             operand_check(0, 1);
             return {
                 kind: "instr",
-                op: operator.text,
+                op: "debug",
                 k: gen_continuation(0),
                 debug
             };
@@ -958,6 +955,14 @@ function generate_crlf(tree, file) {
                 op: "if",
                 t: gen_continuation(1),
                 f: gen_ref_expression(operands[0], true),
+                debug
+            };
+        }
+        if (operator.text === "jump") {
+            operand_check(0, 0);
+            return {
+                kind: "instr",
+                op: "jump",
                 debug
             };
         }
@@ -1317,7 +1322,7 @@ function assemble(source, file) {
 //debug `);
 //debug bad("too many operands", `
 //debug a:
-//debug     depth 1 a
+//debug     jump 1 a
 //debug `);
 //debug bad("undefined ref", `
 //debug a:
