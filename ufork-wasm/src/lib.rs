@@ -48,6 +48,7 @@ pub const E_NOT_CAP: Error  = -5;   // capability required
 pub const E_NOT_PTR: Error  = -6;   // memory pointer required
 pub const E_NOT_ROM: Error  = -7;   // ROM pointer required
 pub const E_NOT_RAM: Error  = -8;   // RAM pointer required
+// FIXME: E_NOT_EXE: needed         // instruction required
 pub const E_MEM_LIM: Error  = -9;   // Sponsor memory limit reached
 pub const E_CPU_LIM: Error  = -10;  // Sponsor instruction limit reached
 pub const E_MSG_LIM: Error  = -11;  // Sponsor event limit reached

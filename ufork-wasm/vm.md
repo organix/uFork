@@ -185,7 +185,7 @@ Instructions like `msg`, `state`, and `nth`
 have an immediate index argument (_n_)
 to succinctly designate parts of a pair-list.
 
-  * Positive _n_ designates elements of the list, starting at `+1`
+  * Positive _n_ designates items of the list, starting at `+1`
   * Negative _n_ designates list tails, starting at `-1`
   * Zero designates the whole list/value
 
@@ -227,7 +227,7 @@ The following table summarizes
 the syntax and semantics of instruction statements.
 The **Input** depicts the stack before the operation.
 The **Output** depicts the stack after the operation.
-The top of the stack is the right-most element.
+The top of the stack is the right-most item.
 
  Input               | Instruction         | Output       | Description
 ---------------------|---------------------|--------------|-------------------------------------
@@ -260,7 +260,7 @@ _n_ _m_              | `cmp` `ge`          | _bool_       | `#t` if _n_ >= _m_, 
 _n_ _m_              | `cmp` `gt`          | _bool_       | `#t` if _n_ > _m_, otherwise `#f`
 _bool_               | `if` _T_ [_F_]      | —            | if _bool_ is not falsy<sup>*</sup>, continue _T_ (else _F_)
 _k_                  | `jump`              | —            | continue at _k_
-… _tail_ _head_      | `pair` _n_          | _pair_       | create _pair_ from _head_ and _tail_ (_n_ times)
+… _tail_ _head_      | `pair` _n_          | _pair_       | create _pair(s)_ from _head_ and _tail_ (_n_ times)
 _vₙ_ … _v₁_          | `pair` -1           | (_v₁_ … _vₙ_) | capture stack items as a single _pair_ list
 _pair_               | `part` _n_          | … _tail_ _head_ | split _pair_ into _head_ and _tail_ (_n_ times)
 (_v₁_ … _vₙ_)        | `part` -1           | _vₙ_ … _v₁_   | spread _pair_ list items onto stack
@@ -273,11 +273,11 @@ _dict_ _key_ _value_ | `dict` `set`        | _dict'_      | replace or add a bin
 _dict_ _key_         | `dict` `del`        | _dict'_      | remove first binding for _key_ in _dict_
 —                    | `deque` `new`       | _deque_      | create a new empty _deque_
 _deque_              | `deque` `empty`     | _bool_       | `#t` if _deque_ is empty, otherwise `#f`
-_deque_ _value_      | `deque` `push`      | _deque'_     | insert _value_ as the first element of _deque_
+_deque_ _value_      | `deque` `push`      | _deque'_     | insert _value_ as the first item of _deque_
 _deque_              | `deque` `pop`       | _deque'_ _value_ | remove the first _value_ from _deque_, or `#?`
-_deque_ _value_      | `deque` `put`       | _deque'_     | insert _value_ as the last element of _deque_
+_deque_ _value_      | `deque` `put`       | _deque'_     | insert _value_ as the last item of _deque_
 _deque_              | `deque` `pull`      | _deque'_ _value_ | remove the last _value_ from _deque_, or `#?`
-_deque_              | `deque` `len`       | _n_          | count elements in the _deque_
+_deque_              | `deque` `len`       | _n_          | count items in the _deque_
 _T_                  | `quad` `1`          | _quad_       | create quad \[_T_, `#?`, `#?`, `#?`\]
 _X_ _T_              | `quad` `2`          | _quad_       | create quad \[_T_, _X_, `#?`, `#?`\]
 _Y_ _X_ _T_          | `quad` `3`          | _quad_       | create quad \[_T_, _X_, _Y_, `#?`\]
@@ -326,6 +326,11 @@ _actual_             | `assert` _expect_   | —            | assert _actual_ ==
 ### Instruction Details
 
 The semantics of each instruction are detailed below.
+A few general rules apply to all instructions.
+
+ * Items referenced beyond the bottom of the stack are treated as `#?`
+ * Unknown instruction op-code signal an error
+ * Arguments of an invalid type signal an error
 
 #### `alu` instruction
 
@@ -345,7 +350,7 @@ Compute an ALU function of the arguments on the stack.
 --------------|-------------|-------------|-------------
  `#instr_t`   | `+13` (alu) | `+0` (not)  | _instr_
 
- 1. Remove element _n_ from the stack (`#?` on underflow)
+ 1. Remove item _n_ from the stack (`#?` on underflow)
  1. If _n_ is a fixnum
     1. Invert all bits of fixnum
     1. Push result onto the stack
@@ -356,8 +361,8 @@ Compute an ALU function of the arguments on the stack.
 --------------|-------------|-------------|-------------
  `#instr_t`   | `+13` (alu) | `+5` (sub)  | _instr_
 
- 1. Remove element _m_ from the stack (`#?` on underflow)
- 1. Remove element _n_ from the stack (`#?` on underflow)
+ 1. Remove item _m_ from the stack (`#?` on underflow)
+ 1. Remove item _n_ from the stack (`#?` on underflow)
  1. If _n_ and _m_ are both fixnums
     1. Subtract _m_ from _n_
     1. Truncate 2's-complement result
@@ -377,6 +382,45 @@ Continue execution at the address taken from the stack.
 --------------|-------------|-------------|-------------
  `#instr_t`   | `+8` (jump) | `#?`        | `#?`
 
+ 1. Remove item _k_ from the stack (`#?` on underflow)
+ 1. If _k_ is an instruction
+    1. Continue execution at _k_
+ 1. Otherwise
+    1. Signal an error
+
+#### `pair` instruction
+
+ Input               | Instruction         | Output       | Description
+---------------------|---------------------|--------------|-------------------------------------
+… _tail_ _head_      | `pair` _n_          | _pair_       | create _pair(s)_ from _head_ and _tail_ (_n_ times)
+_vₙ_ … _v₁_          | `pair` -1           | (_v₁_ … _vₙ_) | capture stack items as a single _pair_ list
+
+Create a _pair_ list from some number of stack items.
+
+ T (type)     | X (op)      | Y (imm)     | Z (k)
+--------------|-------------|-------------|-------------
+ `#instr_t`   | `+4` (pair) | _positive_  | _instr_
+
+ 1. Remove _n_+1 items from the stack (`#?` on underflow)
+ 1. Create an _n_ item list from removed stack items
+    1. Item  _n_+1 will be the tail of the list
+ 1. Push the resulting list onto the stack
+
+ T (type)     | X (op)      | Y (imm)     | Z (k)
+--------------|-------------|-------------|-------------
+ `#instr_t`   | `+4` (pair) | `0`         | _instr_
+
+ 1. Push `()` onto the stack
+
+ T (type)     | X (op)      | Y (imm)     | Z (k)
+--------------|-------------|-------------|-------------
+ `#instr_t`   | `+4` (pair) | _negative_  | _instr_
+
+ 1. If _n_ is `-1`
+    1. Capture the entire stack as a single item on the stack
+ 1. Otherwise
+    1. Push `#?` onto the stack
+
 #### `push` instruction
 
  Input               | Instruction         | Output       | Description
@@ -388,6 +432,8 @@ Push an immediate value onto the top of the stack.
  T (type)     | X (op)      | Y (imm)     | Z (k)
 --------------|-------------|-------------|-------------
  `#instr_t`   | `+7` (push) | _any_       | _instr_
+
+ 1. Push _value_ onto the stack
 
 ### Instruction Encoding (TDB)
 
