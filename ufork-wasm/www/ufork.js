@@ -207,7 +207,7 @@ const instr_label = [
     "part",
     "nth",
     "push",
-    "depth",
+    "depth",  // deprecated
     "drop",
     "pick",
     "dup",
@@ -230,7 +230,7 @@ const instr_label = [
     "state",
     "signal",
     "is_eq",
-    "is_ne"
+    "is_ne"  // deprecated
 ];
 const get_imm_label = [
     "T",

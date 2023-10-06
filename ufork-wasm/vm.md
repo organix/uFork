@@ -16,7 +16,7 @@ are turned into message-events.
 The quad-cell is the primary internal data-structure in **uFork**.
 It consists of four integers (current WASM target is 32 bits).
 
- t        | x        | y        | z
+ T        | X        | Y        | Z
 ----------|----------|----------|----------
 type/proc | head/car | tail/cdr | link/next
 
@@ -41,7 +41,7 @@ immutable     mutable
 Direct values (fixnums) are stored in 2's-complement representation,
 where the 2nd MSB is the sign bit of the integer value.
 
-Indirect values (references) desigate quad-cells (with fields {_t_, _x_, _y_, _z_}).
+Indirect values (references) desigate quad-cells (with fields [_T_, _X_, _Y_, _Z_]).
 
 Opaque values (object-capabilities) cannot be dereferenced
 except by the virtual-processor (to implement _actor_ primitive operations).
@@ -51,39 +51,84 @@ Since actor-state is mutable, the quad representing the actor must stored in wri
 
 The assembly language semantics provide no way to convert between _fixnums_, _ocaps_, and quad-cell references.
 
-### Data Structures
+## Data Structures
 
 Quad-cells are used to encode most of the important data-structures in uFork.
 
  Structure                              | Description
 ----------------------------------------|---------------------------------
-{t:sponsor, x:target, y:msg, z:next}    | actor event queue entry
-{t:IP, x:SP, y:EP, z:next}              | continuation queue entry
-{t:Instr_T, x:opcode, y:data, z:next}   | machine instruction (typical)
-{t:Pair_T, x:head, y:tail}              | pair-lists of user data (cons)
-{t:Pair_T, x:item, y:rest}              | stack entry holding _item_
-{t:Actor_T, x:beh, y:sp, z:?}           | idle actor
-{t:Actor_T, x:beh, y:sp, z:effect}      | busy actor
-{t:Actor_T, x:beh', y:sp', z:events}    | effect accumulator, intially z: ()
-{t:Dict_T, x:key, y:value, z:next }     | dictionary binding entry
-{t:Free_T, z:next}                      | cell in the free-list
+[_sponsor_, _target_, _msg_, _next_]    | message-event queue entry
+[_IP_, _SP_, _EP_, _next_]              | continuation queue entry
+[`#instr_t`, _opcode_, _data_, _next_]  | machine instruction (typical)
+[`#pair_t`, _head_, _tail_, `#?`]       | pair-lists of user data (cons)
+[`#pair_t`, _item_, _rest_, `#?`]       | stack entry holding _item_
+[`#actor_t`, _beh_, _sp_, `#?`]         | idle actor
+[`#actor_t`, _beh_, _sp_, _effects_]    | busy actor
+[`#actor_t`, _beh'_, _sp'_, _events_]   | effects, initial _events_=()
+[`#dict_t`, _key_, _value_, _next_]     | dictionary binding entry
+[`FREE_T`, `#?`, `#?`, _next_]          | cell in the free-list
 
-### Instructions
+### Reserved ROM
 
-The uFork instruction execution engine implements a linked-stack machine,
-however the stack is only used for local state in a computation.
-The _input_ for each instruction is taken from the stack
-and the _output_ is placed back onto the stack.
-Instructions all have a `t` field containing `Instr_T` type marker.
-The operation code is carried in the `x` field of the instruction.
-Many instructions also have an immediate value,
-usually carried in the `y` field of the instruction.
-For the typical case of a instruction with a single continuation,
-the "next instruction" is carried in the `z` field of the instruction.
+ Name        | Address     | T         | X    | Y    | Z    | Description
+-------------|-------------|-----------|------|------|------|------------------
+ `#?`        | `^00000000` | `#?`      | `#?` | `#?` | `#?` | Undefined
+ `()`        | `^00000001` | `#?`      | `#?` | `#?` | `#?` | Nil (empty list)
+ `#f`        | `^00000002` | `#?`      | `#?` | `#?` | `#?` | Boolean False
+ `#t`        | `^00000003` | `#?`      | `#?` | `#?` | `#?` | Boolean True
+ `#unit`     | `^00000004` | `#?`      | `#?` | `#?` | `#?` | Unit (inert)
+ `EMPTY_DQ`  | `^00000005` | `#pair_t` | `()` | `()` | `#?` | Empty Deque
+ `#type_t`   | `^00000006` | `#type_t` | `+1` | `#?` | `#?` | Type of Types
+ `#fixnum_t` | `^00000007` | `#type_t` | `#?` | `#?` | `#?` | Fixnum Type
+ `#actor_t`  | `^00000008` | `#type_t` | `+2` | `#?` | `#?` | Actor (ocap) Type
+ `PROXY_T`   | `^00000009` | `#type_t` | `+2` | `#?` | `#?` | Proxy Type
+ `STUB_T`    | `^0000000A` | `#type_t` | `+2` | `#?` | `#?` | Stub Type
+ `#instr_t`  | `^0000000B` | `#type_t` | `+3` | `#?` | `#?` | Instruction Type
+ `#pair_t`   | `^0000000C` | `#type_t` | `+2` | `#?` | `#?` | Pair Type
+ `#dict_t`   | `^0000000D` | `#type_t` | `+3` | `#?` | `#?` | Dictionary Type
+ `FWD_REF_T` | `^0000000E` | `#type_t` | `-1` | `#?` | `#?` | GC Fwd-Ref Type
+ `FREE_T`    | `^0000000F` | `#type_t` | `+0` | `#?` | `#?` | Free-Quad Type
 
-The semantics for each instruction are described in the [assembly-language manual](asm.md).
+### Reserved RAM
 
-### Object Graph
+ Address     | T          | X        | Y        | Z        | Description
+-------------|------------|----------|----------|----------|------------------
+ `^20000000` | _top_      | _next_   | _free_   | _root_   | Memory Descriptor
+ `^20000001` | _e_head_   | _e_tail_ | _k_head_ | _k_tail_ | Events and Continuations
+ `@60000002` | `#actor_t` | `+0`     | `()`     | `#?`     | Device Actor #0
+ `@60000003` | `#actor_t` | `+1`     | `()`     | `#?`     | Device Actor #1
+ `@60000004` | `#actor_t` | `+2`     | `()`     | `#?`     | Device Actor #2
+ `@60000005` | `#actor_t` | `+3`     | `()`     | `#?`     | Device Actor #3
+ `@60000006` | `#actor_t` | `+4`     | `()`     | `#?`     | Device Actor #4
+ `@60000007` | `#actor_t` | `+5`     | `()`     | `#?`     | Device Actor #5
+ `@60000008` | `#actor_t` | `+6`     | `()`     | `#?`     | Device Actor #6
+ `@60000009` | `#actor_t` | `+7`     | `()`     | `#?`     | Device Actor #7
+ `@6000000A` | `#actor_t` | `+8`     | `()`     | `#?`     | Device Actor #8
+ `@6000000B` | `#actor_t` | `+9`     | `()`     | `#?`     | Device Actor #9
+ `@6000000C` | `#actor_t` | `+10`    | `()`     | `#?`     | Device Actor #10
+ `@6000000D` | `#actor_t` | `+11`    | `()`     | `#?`     | Device Actor #11
+ `@6000000E` | `#actor_t` | `+12`    | `()`     | `#?`     | Device Actor #12
+ `^2000000F` | _memory_   | _events_ | _cycles_ | _signal_ | Root Sponsor
+
+### Memory Descriptor
+
+ Address     | T          | X           | Y            | Z
+-------------|------------|-------------|--------------|----------
+ `^20000000` | _top addr_ | _next free_ | _free count_ | _GC root_
+
+### Event and Continuation Queues
+
+ Address     | T          | X        | Y        | Z
+-------------|------------|----------|----------|----------
+ `^20000001` | _e_head_   | _e_tail_ | _k_head_ | _k_tail_
+
+### Root Sponsor
+
+ Address     | T          | X        | Y        | Z
+-------------|------------|----------|----------|----------
+ `^2000000F` | _memory_   | _events_ | _cycles_ | _signal_
+
+## Object Graph
 
 The diagram below shows a typical graph of quad-cells
 representing the contents of the `e_queue` (event queue)
@@ -94,48 +139,48 @@ form the root-set of objects for [garbage-collection](gc.md).
 ```
 e_queue: [head,tail]----------------------------+
           |                                     V
-          +-->[sponsor,to,msg,next]---> ... -->[sponsor,to,msg,NIL]
+          +-->[sponsor,to,msg,next]---> ... -->[sponsor,to,msg,()]
                        |   |
                        |   +--> actor message content
                        V
-                      [Actor,code,data,?]
-                              |    |
-                              |    +--> actor state
-                              |
-                              +--> actor behavior
+                      [#pair_t,code,data,#?]
+                                |    |
+                                |    +--> actor state
+                                |
+                                +--> actor behavior
 
 k_queue: [head,tail]--------------------+
           |                             V
-          +-->[ip,sp,ep,kp]---> ... -->[ip,sp,ep,NIL]
+          +-->[ip,sp,ep,kp]---> ... -->[ip,sp,ep,()]
                |  |  |
-               |  |  +-->[sponsor,to,msg,NIL]
+               |  |  +-->[sponsor,to,msg,()]
                |  |               |   |
                |  |               |   +--> ...
                |  |               V
-               |  |              [Actor,code,data,effect]--->[Actor,code',data',events]---> ... -->[sponsor,to,msg,NIL]
+               |  |              [#actor_t,code,data,effect]--->[#actor_t,code',data',events]---> ... -->[sponsor,to,msg,()]
                |  V
-               | [Pair,car,cdr,?]
-               |        |   |
-               |        |   +--> ... -->[Pair,car,NIL,?]
-               |        V
-               |       item
+               | [#pair_t,car,cdr,#?]
+               |           |   |
+               |           |   +--> ... -->[#pair_t,car,(),#?]
+               |           V
+               |          item
                V
-              [Instr,EQ,0,k]
-                          |
-                          +--> [Instr,IF,t,f]
-                                         | |
-                                         | +--> ...
-                                         V
-                                         ...
+              [#instr_t,"eq",0,k]
+                               |
+                               +--> [#instr_t,"if",t,f]
+                                                   | |
+                                                   | +--> ...
+                                                   V
+                                                   ...
 ```
 
 ### Pair-List Indexing
 
-Instructions like `VM_msg`, `VM_state`, and `VM_nth`
+Instructions like `msg`, `state`, and `nth`
 have an immediate index argument (_n_)
 to succinctly designate parts of a pair-list.
 
-  * Positive _n_ designates elements of the list, starting at `1`
+  * Positive _n_ designates elements of the list, starting at `+1`
   * Negative _n_ designates list tails, starting at `-1`
   * Zero designates the whole list/value
 
@@ -154,4 +199,206 @@ to succinctly designate parts of a pair-list.
      V        V        V
 ```
 
-If the index is out-of-bounds, the result is `?` (undefined).
+If the index is out-of-bounds, the result is `#?` (undefined).
+
+## Instructions
+
+The uFork instruction execution engine implements a linked-stack machine,
+however the stack is only used for local state in a computation.
+The _input_ for each instruction is taken from the stack
+and the _output_ is placed back onto the stack.
+Instructions all have a `T` field containing `#instr_t` type marker.
+The operation code is carried in the `X` field of the instruction.
+Most instructions also have an immediate value,
+carried in the `Y` field of the instruction.
+For the typical case of a instruction with a single continuation,
+the "next instruction" is carried in the `Z` field of the instruction.
+
+Instructions are shown in their textual representation as defined in the [assembly-language manual](asm.md).
+
+### Instruction Summary
+
+The following table summarizes
+the syntax and semantics of instruction statements.
+The **Input** depicts the stack before the operation.
+The **Output** depicts the stack after the operation.
+The top of the stack is the right-most element.
+
+ Input               | Instruction         | Output       | Description
+---------------------|---------------------|--------------|-------------------------------------
+—                    | `push` _value_      | _value_      | push literal _value_ on stack
+_vₙ_ … _v₁_          | `dup` _n_           | _vₙ_ … _v₁_ _vₙ_ … _v₁_ | duplicate top _n_ items on stack
+_vₙ_ … _v₁_          | `drop` _n_          | —            | remove _n_ items from stack
+_vₙ_ … _v₁_          | `pick` _n_          | _vₙ_ … _v₁_ _vₙ_ | copy item _n_ to top of stack
+_vₙ_ … _v₁_          | `pick` -_n_         | _v₁_ _vₙ_ … _v₁_ | copy top of stack before item _n_
+_vₙ_ … _v₁_          | `roll` _n_          | _vₙ₋₁_ … _v₁_ _vₙ_ | roll item _n_ to top of stack
+_vₙ_ … _v₁_          | `roll` -_n_         | _v₁_ _vₙ_ … _v₂_ | roll top of stack to item _n_
+_n_                  | `alu` `not`         | ~_n_         | bitwise not _n_
+_n_ _m_              | `alu` `and`         | _n_&_m_      | bitwise _n_ and _m_
+_n_ _m_              | `alu` `or`          | _n_\|_m_     | bitwise _n_ or _m_
+_n_ _m_              | `alu` `xor`         | _n_^_m_      | bitwise _n_ exclusive-or _m_
+_n_ _m_              | `alu` `add`         | _n_+_m_      | sum of _n_ and _m_
+_n_ _m_              | `alu` `sub`         | _n_-_m_      | difference of _n_ and _m_
+_n_ _m_              | `alu` `mul`         | _n_\*_m_     | product of _n_ and _m_
+_v_                  | `typeq` _T_         | _bool_       | `#t` if _v_ has type _T_, otherwise `#f`
+_u_                  | `eq` _v_            | _bool_       | `#t` if _u_ == _v_, otherwise `#f`
+_u_ _v_              | `cmp` `eq`          | _bool_       | `#t` if _u_ == _v_, otherwise `#f`
+_u_ _v_              | `cmp` `ne`          | _bool_       | `#t` if _u_ != _v_, otherwise `#f`
+_n_ _m_              | `cmp` `lt`          | _bool_       | `#t` if _n_ < _m_, otherwise `#f`
+_n_ _m_              | `cmp` `le`          | _bool_       | `#t` if _n_ <= _m_, otherwise `#f`
+_n_ _m_              | `cmp` `ge`          | _bool_       | `#t` if _n_ >= _m_, otherwise `#f`
+_n_ _m_              | `cmp` `gt`          | _bool_       | `#t` if _n_ > _m_, otherwise `#f`
+_bool_               | `if` _T_ [_F_]      | —            | if _bool_ is not falsy<sup>*</sup>, continue _T_ (else _F_)
+… _tail_ _head_      | `pair` _n_          | _pair_       | create _pair_ from _head_ and _tail_ (_n_ times)
+_vₙ_ … _v₁_          | `pair` -1           | (_v₁_ … _vₙ_) | capture stack items as a single _pair_ list
+_pair_               | `part` _n_          | … _tail_ _head_ | split _pair_ into _head_ and _tail_ (_n_ times)
+(_v₁_ … _vₙ_)        | `part` -1           | _vₙ_ … _v₁_   | spread _pair_ list items onto stack
+(_v₁_ … _vₙ_ . _tailₙ_) | `nth` _n_         | _vₙ_         | copy item _n_ from a _pair_ list
+(_v₁_ … _vₙ_ . _tailₙ_) | `nth` -_n_        | _tailₙ_      | copy tail _n_ from a _pair_ list
+_dict_ _key_         | `dict` `has`        | _bool_       | `#t` if _dict_ has a binding for _key_, otherwise `#f`
+_dict_ _key_         | `dict` `get`        | _value_      | the first _value_ bound to _key_ in _dict_, or `#?`
+_dict_ _key_ _value_ | `dict` `add`        | _dict'_      | add a binding from _key_ to _value_ in _dict_
+_dict_ _key_ _value_ | `dict` `set`        | _dict'_      | replace or add a binding from _key_ to _value_ in _dict_
+_dict_ _key_         | `dict` `del`        | _dict'_      | remove first binding for _key_ in _dict_
+—                    | `deque` `new`       | _deque_      | create a new empty _deque_
+_deque_              | `deque` `empty`     | _bool_       | `#t` if _deque_ is empty, otherwise `#f`
+_deque_ _value_      | `deque` `push`      | _deque'_     | insert _value_ as the first element of _deque_
+_deque_              | `deque` `pop`       | _deque'_ _value_ | remove the first _value_ from _deque_, or `#?`
+_deque_ _value_      | `deque` `put`       | _deque'_     | insert _value_ as the last element of _deque_
+_deque_              | `deque` `pull`      | _deque'_ _value_ | remove the last _value_ from _deque_, or `#?`
+_deque_              | `deque` `len`       | _n_          | count elements in the _deque_
+_T_                  | `quad` `1`          | _quad_       | create quad \[_T_, `#?`, `#?`, `#?`\]
+_X_ _T_              | `quad` `2`          | _quad_       | create quad \[_T_, _X_, `#?`, `#?`\]
+_Y_ _X_ _T_          | `quad` `3`          | _quad_       | create quad \[_T_, _X_, _Y_, `#?`\]
+_Z_ _Y_ _X_ _T_      | `quad` `4`          | _quad_       | create quad \[_T_, _X_, _Y_, _Z_\]
+_quad_               | `get` `T`           | _t_          | copy _t_ from _quad_
+_quad_               | `get` `X`           | _x_          | copy _x_ from _quad_
+_quad_               | `get` `Y`           | _y_          | copy _y_ from _quad_
+_quad_               | `get` `Z`           | _z_          | copy _z_ from _quad_
+—                    | `msg` `0`           | _msg_        | copy event message to stack
+—                    | `msg` _n_           | _msgₙ_       | copy message item _n_ to stack
+—                    | `msg` -_n_          | _tailₙ_      | copy message tail _n_ to stack
+—                    | `state` `0`         | _state_      | copy _actor_ state to stack
+—                    | `state` _n_         | _stateₙ_     | copy state item _n_ to stack
+—                    | `state` -_n_        | _tailₙ_      | copy state tail _n_ to stack
+—                    | `my` `self`         | _actor_      | push _actor_ address on stack
+—                    | `my` `beh`          | _beh_        | push _actor_ behavior on stack
+—                    | `my` `state`        | _vₙ_ … _v₁_  | spread _actor_ state onto stack
+_mₙ_ … _m₁_ _actor_  | `send` _n_          | —            | send (_m₁_ … _mₙ_) to _actor_
+_msg_ _actor_        | `send` `-1`         | —            | send _msg_ to _actor_
+_sponsor_ _mₙ_ … _m₁_ _actor_ | `signal` _n_ | —          | send (_m₁_ … _mₙ_) to _actor_ using _sponsor_
+_sponsor_ _msg_ _actor_ | `signal` `-1`    | —            | send _msg_ to _actor_ using _sponsor_
+_vₙ_ … _v₁_ _beh_    | `new` _n_           | _actor_      | create an _actor_ with code _beh_ and data (_v₁_ … _vₙ_)
+_state_ _beh_        | `new` `-1`          | _actor_      | create an _actor_ with code _beh_ and data _state_
+(_beh_ . _state_)    | `new` `-2`          | _actor_      | create an _actor_ with code _beh_ and data _state_
+\[_, _, _, _beh_\]   | `new` `-3`          | _actor_      | create an _actor_ with code _beh_ and data \[_, _, _, _beh_\]
+_vₙ_ … _v₁_ _beh_    | `beh` _n_           | —            | replace code with _beh_ and data with (_v₁_ … _vₙ_)
+_state_ _beh_        | `beh` `-1`          | —            | replace code with _beh_ and data with _state_
+(_beh_ . _state_)    | `beh` `-2`          | —            | replace code with _beh_ and data with _state_
+\[_, _, _, _beh_\]   | `beh` `-3`          | —            | replace code with _beh_ and data with \[_, _, _, _beh_\]
+_reason_             | `end` `abort`       | —            | abort actor transaction with _reason_
+—                    | `end` `stop`        | —            | stop current continuation (thread)
+—                    | `end` `commit`      | —            | commit actor transaction
+—                    | `sponsor` `new`     | _sponsor_    | create a new empty _sponsor_
+_sponsor_ _n_        | `sponsor` `memory`  | _sponsor_    | transfer _n_ memory quota to _sponsor_
+_sponsor_ _n_        | `sponsor` `events`  | _sponsor_    | transfer _n_ events quota to _sponsor_
+_sponsor_ _n_        | `sponsor` `cycles`  | _sponsor_    | transfer _n_ cycles quota to _sponsor_
+_sponsor_            | `sponsor` `reclaim` | _sponsor_    | reclaim all quotas from _sponsor_
+_sponsor_ _control_  | `sponsor` `start`   | —            | run _sponsor_ under _control_
+_sponsor_            | `sponsor` `stop`    | —            | reclaim all quotas and remove _sponsor_
+_actual_             | `is_eq` _expect_    | —            | assert _actual_ == _expect_, otherwise halt!
+_actual_             | `is_ne` _expect_    | —            | assert _actual_ != _expect_, otherwise halt!
+—                    | `debug`             | —            | debugger breakpoint
+
+<sup>*</sup> For the `if` instruction, the values
+`#f`, `#?`, `#nil`, and `0` are considered "[falsy](https://developer.mozilla.org/en-US/docs/Glossary/Falsy)".
+
+### Instruction Details
+
+The semantics of each instruction are detailed below.
+
+#### `alu` instruction
+
+ Input               | Instruction         | Output       | Description
+---------------------|---------------------|--------------|-------------------------------------
+_n_                  | `alu` `not`         | ~_n_         | bitwise not _n_
+_n_ _m_              | `alu` `and`         | _n_&_m_      | bitwise _n_ and _m_
+_n_ _m_              | `alu` `or`          | _n_\|_m_     | bitwise _n_ or _m_
+_n_ _m_              | `alu` `xor`         | _n_^_m_      | bitwise _n_ exclusive-or _m_
+_n_ _m_              | `alu` `add`         | _n_+_m_      | sum of _n_ and _m_
+_n_ _m_              | `alu` `sub`         | _n_-_m_      | difference of _n_ and _m_
+_n_ _m_              | `alu` `mul`         | _n_\*_m_     | product of _n_ and _m_
+
+Compute an ALU function of the arguments on the stack.
+
+ T            | X (op)      | Y (imm)     | Z (k)
+--------------|-------------|-------------|-------------
+ `#instr_t`   | `+13`       | `+0`        | _instr_
+
+ 1. Remove element _n_ from the stack (`#?` on underflow)
+ 1. If _n_ is a fixnum
+    1. Invert all bits of fixnum
+    1. Push result onto the stack
+ 1. Otherwise
+    1. Push `#?` onto the stack
+
+ T            | X (op)      | Y (imm)     | Z (k)
+--------------|-------------|-------------|-------------
+ `#instr_t`   | `+13`       | `+5`        | _instr_
+
+ 1. Remove element _m_ from the stack (`#?` on underflow)
+ 1. Remove element _n_ from the stack (`#?` on underflow)
+ 1. If _n_ and _m_ are both fixnums
+    1. Subtract _m_ from _n_
+    1. Truncate 2's-complement result
+    1. Push result onto the stack
+ 1. Otherwise
+    1. Push `#?` onto the stack
+
+#### `push` instruction
+
+ Input               | Instruction         | Output       | Description
+---------------------|---------------------|--------------|-------------------------------------
+—                    | `push` _value_      | _value_      | push literal _value_ on stack
+
+Push an immediate value onto the top of the stack.
+
+ T (type)     | X (op)      | Y (imm)     | Z (k)
+--------------|-------------|-------------|-------------
+ `#instr_t`   | `+7`        | _any_       | _instr_
+
+### Instruction Encoding (TDB)
+
+    const VM_ALU    = 0x8000000D;
+    const VM_CMP    = 0x8000000F;
+    const VM_BEH    = 0x80000015;
+    const VM_DEBUG  = 0x8000001A;
+    const VM_DEQUE  = 0x8000001B;
+    const VM_DICT   = 0x80000003;
+    const VM_DROP   = 0x80000009;
+    const VM_DUP    = 0x8000000B;
+    const VM_END    = 0x80000016;
+    const VM_EQ     = 0x8000000E;
+    const VM_GET    = 0x80000002;
+    const VM_IF     = 0x80000010;
+    const VM_IS_EQ  = 0x8000001E;
+    const VM_MSG    = 0x80000011;
+    const VM_MY     = 0x80000012;
+    const VM_NEW    = 0x80000014;
+    const VM_NTH    = 0x80000006;
+    const VM_PAIR   = 0x80000004;
+    const VM_PART   = 0x80000005;
+    const VM_PICK   = 0x8000000A;
+    const VM_PUSH   = 0x80000007;
+    const VM_ROLL   = 0x8000000C;
+    const VM_SEND   = 0x80000013;
+    const VM_SIGNAL = 0x8000001D;
+    const VM_SPONSOR= 0x80000017;
+    const VM_STATE  = 0x8000001C;
+    const VM_TYPEQ  = 0x80000000;
+    const VM_QUAD   = 0x80000001;
+
+    const VM_DEPTH  = 0x80000008;  // deprecated --> VM_JUMP
+    const VM_PUTC   = 0x80000018;  // deprecated
+    const VM_GETC   = 0x80000019;  // deprecated
+    const VM_IS_NE  = 0x8000001F;  // deprecated
