@@ -163,9 +163,7 @@ k_queue: [k_head,k_tail]----------------+
                |  |                                   V
                |  |                             [#actor_t,code',data',events]
                |  |                                                    |
-               |  |                                                    +--> ... -->[sponsor,to,msg,()]
-               |  |
-               |  V
+               |  V                                                    +--> ... -->[sponsor,to,msg,()]
                | [#pair_t,car,cdr,#?]
                |           |   |
                |           |   +--> ... -->[#pair_t,car,(),#?]
@@ -247,6 +245,11 @@ _n_ _m_              | `alu` `xor`         | _n_^_m_      | bitwise _n_ exclusiv
 _n_ _m_              | `alu` `add`         | _n_+_m_      | sum of _n_ and _m_
 _n_ _m_              | `alu` `sub`         | _n_-_m_      | difference of _n_ and _m_
 _n_ _m_              | `alu` `mul`         | _n_\*_m_     | product of _n_ and _m_
+_n_ _m_              | `alu` `lsl`         | _n_<<_m_     | logical shift left _n_ by _m_
+_n_ _m_              | `alu` `lsr`         | _n_>>_m_     | logical shift right _n_ by _m_
+_n_ _m_              | `alu` `asr`         | _n_>>>_m_    | arithmetic shift right _n_ by _m_
+_n_ _m_              | `alu` `rol`         | _n_<<>_m_    | rotate left _n_ by _m_
+_n_ _m_              | `alu` `ror`         | _n_<>>_m_    | rotate right _n_ by _m_
 _v_                  | `typeq` _T_         | _bool_       | `#t` if _v_ has type _T_, otherwise `#f`
 _u_                  | `eq` _v_            | _bool_       | `#t` if _u_ == _v_, otherwise `#f`
 _u_ _v_              | `cmp` `eq`          | _bool_       | `#t` if _u_ == _v_, otherwise `#f`
@@ -256,6 +259,7 @@ _n_ _m_              | `cmp` `le`          | _bool_       | `#t` if _n_ <= _m_, 
 _n_ _m_              | `cmp` `ge`          | _bool_       | `#t` if _n_ >= _m_, otherwise `#f`
 _n_ _m_              | `cmp` `gt`          | _bool_       | `#t` if _n_ > _m_, otherwise `#f`
 _bool_               | `if` _T_ [_F_]      | —            | if _bool_ is not falsy<sup>*</sup>, continue _T_ (else _F_)
+_k_                  | `jump`              | —            | continue at _k_
 … _tail_ _head_      | `pair` _n_          | _pair_       | create _pair_ from _head_ and _tail_ (_n_ times)
 _vₙ_ … _v₁_          | `pair` -1           | (_v₁_ … _vₙ_) | capture stack items as a single _pair_ list
 _pair_               | `part` _n_          | … _tail_ _head_ | split _pair_ into _head_ and _tail_ (_n_ times)
@@ -313,8 +317,7 @@ _sponsor_ _n_        | `sponsor` `cycles`  | _sponsor_    | transfer _n_ cycles 
 _sponsor_            | `sponsor` `reclaim` | _sponsor_    | reclaim all quotas from _sponsor_
 _sponsor_ _control_  | `sponsor` `start`   | —            | run _sponsor_ under _control_
 _sponsor_            | `sponsor` `stop`    | —            | reclaim all quotas and remove _sponsor_
-_actual_             | `is_eq` _expect_    | —            | assert _actual_ == _expect_, otherwise halt!
-_actual_             | `is_ne` _expect_    | —            | assert _actual_ != _expect_, otherwise halt!
+_actual_             | `assert` _expect_   | —            | assert _actual_ == _expect_, otherwise halt!
 —                    | `debug`             | —            | debugger breakpoint
 
 <sup>*</sup> For the `if` instruction, the values
@@ -340,7 +343,7 @@ Compute an ALU function of the arguments on the stack.
 
  T            | X (op)      | Y (imm)     | Z (k)
 --------------|-------------|-------------|-------------
- `#instr_t`   | `+13`       | `+0`        | _instr_
+ `#instr_t`   | `+13` (alu) | `+0` (not)  | _instr_
 
  1. Remove element _n_ from the stack (`#?` on underflow)
  1. If _n_ is a fixnum
@@ -351,7 +354,7 @@ Compute an ALU function of the arguments on the stack.
 
  T            | X (op)      | Y (imm)     | Z (k)
 --------------|-------------|-------------|-------------
- `#instr_t`   | `+13`       | `+5`        | _instr_
+ `#instr_t`   | `+13` (alu) | `+5` (sub)  | _instr_
 
  1. Remove element _m_ from the stack (`#?` on underflow)
  1. Remove element _n_ from the stack (`#?` on underflow)
@@ -361,6 +364,18 @@ Compute an ALU function of the arguments on the stack.
     1. Push result onto the stack
  1. Otherwise
     1. Push `#?` onto the stack
+
+#### `jump` instruction
+
+ Input               | Instruction         | Output       | Description
+---------------------|---------------------|--------------|-------------------------------------
+_k_                  | `jump`              | —            | continue at _k_
+
+Continue execution at the address taken from the stack.
+
+ T (type)     | X (op)      | Y (imm)     | Z (k)
+--------------|-------------|-------------|-------------
+ `#instr_t`   | `+8` (jump) | `#?`        | `#?`
 
 #### `push` instruction
 
@@ -372,7 +387,7 @@ Push an immediate value onto the top of the stack.
 
  T (type)     | X (op)      | Y (imm)     | Z (k)
 --------------|-------------|-------------|-------------
- `#instr_t`   | `+7`        | _any_       | _instr_
+ `#instr_t`   | `+7` (push) | _any_       | _instr_
 
 ### Instruction Encoding (TDB)
 
@@ -388,7 +403,7 @@ Push an immediate value onto the top of the stack.
     const VM_EQ     = 0x8000000E;
     const VM_GET    = 0x80000002;
     const VM_IF     = 0x80000010;
-    const VM_IS_EQ  = 0x8000001E;
+    const VM_IS_EQ  = 0x8000001E;  // --> VM_ASSERT
     const VM_MSG    = 0x80000011;
     const VM_MY     = 0x80000012;
     const VM_NEW    = 0x80000014;
