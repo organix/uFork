@@ -133,11 +133,12 @@ Quad-cells are used to encode most of the important data-structures in uFork.
 The diagram below shows a typical graph of quad-cells
 representing the contents of the `e_queue` (event queue)
 and the `k_queue` (continuation queue).
-These two queues, and the interrupt-handling actors,
-form the root-set of objects for [garbage-collection](gc.md).
+These two queues, the interrupt-handling actors,
+and the root sponsor form the root-set of objects
+for [garbage-collection](gc.md).
 
 ```
-e_queue: [head,tail]----------------------------+
+e_queue: [e_head,e_tail]------------------------+
           |                                     V
           +-->[sponsor,to,msg,next]---> ... -->[sponsor,to,msg,()]
                        |   |
@@ -149,7 +150,7 @@ e_queue: [head,tail]----------------------------+
                                 |
                                 +--> actor behavior
 
-k_queue: [head,tail]--------------------+
+k_queue: [k_head,k_tail]----------------+
           |                             V
           +-->[ip,sp,ep,kp]---> ... -->[ip,sp,ep,()]
                |  |  |
@@ -157,7 +158,13 @@ k_queue: [head,tail]--------------------+
                |  |               |   |
                |  |               |   +--> ...
                |  |               V
-               |  |              [#actor_t,code,data,effect]--->[#actor_t,code',data',events]---> ... -->[sponsor,to,msg,()]
+               |  |              [#actor_t,code,data,effect]
+               |  |                                   |
+               |  |                                   V
+               |  |                             [#actor_t,code',data',events]
+               |  |                                                    |
+               |  |                                                    +--> ... -->[sponsor,to,msg,()]
+               |  |
                |  V
                | [#pair_t,car,cdr,#?]
                |           |   |
