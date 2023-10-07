@@ -1,5 +1,52 @@
 # Virtual Machine Semantics
 
+## Contents
+
+ * Introduction
+ * Representation
+ * Data Structures
+    * Reserved ROM
+    * Reserved RAM
+    * Memory Descriptor
+    * Event and Continuation Queues
+    * Root Sponsor
+ * Object Graph
+    * Pair-List Indexing
+ * Instructions
+    * Instruction Summary
+    * Instruction Details
+        * `alu` instruction
+        * `assert` instruction
+        * `beh` instruction
+        * `cmp` instruction
+        * `debug` instruction
+        * `deque` instruction
+        * `dict` instruction
+        * `drop` instruction
+        * `dup` instruction
+        * `end` instruction
+        * `eq` instruction
+        * `get` instruction
+        * `if` instruction
+        * `jump` instruction
+        * `msg` instruction
+        * `my` instruction
+        * `new` instruction
+        * `nth` instruction
+        * `pair` instruction
+        * `part` instruction
+        * `pick` instruction
+        * `push` instruction
+        * `roll` instruction
+        * `send` instruction
+        * `signal` instruction
+        * `sponsor` instruction
+        * `state` instruction
+        * `typeq` instruction
+        * `quad` instruction
+
+## Introduction
+
 The [**uFork** virtual machine](../ufork.md)
 is designed to support machine-level actors.
 All instructions execute within the context of an actor handling a message-event.
@@ -372,6 +419,103 @@ Compute an ALU function of the arguments on the stack.
  1. Otherwise
     1. Push `#?` onto the stack
 
+#### `assert` instruction
+
+ Input               | Instruction         | Output       | Description
+---------------------|---------------------|--------------|-------------------------------------
+_actual_             | `assert` _expect_   | —            | assert _actual_ == _expect_, otherwise halt!
+
+#### `beh` instruction
+
+ Input               | Instruction         | Output       | Description
+---------------------|---------------------|--------------|-------------------------------------
+_vₙ_ … _v₁_ _beh_    | `beh` _n_           | —            | replace code with _beh_ and data with (_v₁_ … _vₙ_)
+_state_ _beh_        | `beh` `-1`          | —            | replace code with _beh_ and data with _state_
+(_beh_ . _state_)    | `beh` `-2`          | —            | replace code with _beh_ and data with _state_
+\[_, _, _, _beh_\]   | `beh` `-3`          | —            | replace code with _beh_ and data with \[_, _, _, _beh_\]
+
+#### `cmp` instruction
+
+ Input               | Instruction         | Output       | Description
+---------------------|---------------------|--------------|-------------------------------------
+_u_ _v_              | `cmp` `eq`          | _bool_       | `#t` if _u_ == _v_, otherwise `#f`
+_u_ _v_              | `cmp` `ne`          | _bool_       | `#t` if _u_ != _v_, otherwise `#f`
+_n_ _m_              | `cmp` `lt`          | _bool_       | `#t` if _n_ < _m_, otherwise `#f`
+_n_ _m_              | `cmp` `le`          | _bool_       | `#t` if _n_ <= _m_, otherwise `#f`
+_n_ _m_              | `cmp` `ge`          | _bool_       | `#t` if _n_ >= _m_, otherwise `#f`
+_n_ _m_              | `cmp` `gt`          | _bool_       | `#t` if _n_ > _m_, otherwise `#f`
+
+#### `debug` instruction
+
+ Input               | Instruction         | Output       | Description
+---------------------|---------------------|--------------|-------------------------------------
+—                    | `debug`             | —            | debugger breakpoint
+
+#### `deque` instruction
+
+ Input               | Instruction         | Output       | Description
+---------------------|---------------------|--------------|-------------------------------------
+—                    | `deque` `new`       | _deque_      | create a new empty _deque_
+_deque_              | `deque` `empty`     | _bool_       | `#t` if _deque_ is empty, otherwise `#f`
+_deque_ _value_      | `deque` `push`      | _deque'_     | insert _value_ as the first item of _deque_
+_deque_              | `deque` `pop`       | _deque'_ _value_ | remove the first _value_ from _deque_, or `#?`
+_deque_ _value_      | `deque` `put`       | _deque'_     | insert _value_ as the last item of _deque_
+_deque_              | `deque` `pull`      | _deque'_ _value_ | remove the last _value_ from _deque_, or `#?`
+_deque_              | `deque` `len`       | _n_          | count items in the _deque_
+
+#### `dict` instruction
+
+ Input               | Instruction         | Output       | Description
+---------------------|---------------------|--------------|-------------------------------------
+_dict_ _key_         | `dict` `has`        | _bool_       | `#t` if _dict_ has a binding for _key_, otherwise `#f`
+_dict_ _key_         | `dict` `get`        | _value_      | the first _value_ bound to _key_ in _dict_, or `#?`
+_dict_ _key_ _value_ | `dict` `add`        | _dict'_      | add a binding from _key_ to _value_ in _dict_
+_dict_ _key_ _value_ | `dict` `set`        | _dict'_      | replace or add a binding from _key_ to _value_ in _dict_
+_dict_ _key_         | `dict` `del`        | _dict'_      | remove first binding for _key_ in _dict_
+
+#### `drop` instruction
+
+ Input               | Instruction         | Output       | Description
+---------------------|---------------------|--------------|-------------------------------------
+_vₙ_ … _v₁_          | `drop` _n_          | —            | remove _n_ items from stack
+
+#### `dup` instruction
+
+ Input               | Instruction         | Output       | Description
+---------------------|---------------------|--------------|-------------------------------------
+_vₙ_ … _v₁_          | `dup` _n_           | _vₙ_ … _v₁_ _vₙ_ … _v₁_ | duplicate top _n_ items on stack
+
+#### `end` instruction
+
+ Input               | Instruction         | Output       | Description
+---------------------|---------------------|--------------|-------------------------------------
+_reason_             | `end` `abort`       | —            | abort actor transaction with _reason_
+—                    | `end` `stop`        | —            | stop current continuation (thread)
+—                    | `end` `commit`      | —            | commit actor transaction
+
+#### `eq` instruction
+
+ Input               | Instruction         | Output       | Description
+---------------------|---------------------|--------------|-------------------------------------
+_u_                  | `eq` _v_            | _bool_       | `#t` if _u_ == _v_, otherwise `#f`
+
+#### `get` instruction
+
+ Input               | Instruction         | Output       | Description
+---------------------|---------------------|--------------|-------------------------------------
+_quad_               | `get` `T`           | _t_          | copy _t_ from _quad_
+_quad_               | `get` `X`           | _x_          | copy _x_ from _quad_
+_quad_               | `get` `Y`           | _y_          | copy _y_ from _quad_
+_quad_               | `get` `Z`           | _z_          | copy _z_ from _quad_
+
+#### `if` instruction
+
+ Input               | Instruction         | Output       | Description
+---------------------|---------------------|--------------|-------------------------------------
+_bool_               | `if` _T_ [_F_]      | —            | if _bool_ is not falsy<sup>*</sup>, continue _T_ (else _F_)
+
+<sup>*</sup> The values `#f`, `#?`, `#nil`, and `0` are considered "[falsy](https://developer.mozilla.org/en-US/docs/Glossary/Falsy)".
+
 #### `jump` instruction
 
  Input               | Instruction         | Output       | Description
@@ -389,6 +533,38 @@ Continue execution at the address taken from the stack.
     1. Continue execution at _k_
  1. Otherwise
     1. Signal an error
+
+#### `msg` instruction
+
+ Input               | Instruction         | Output       | Description
+---------------------|---------------------|--------------|-------------------------------------
+—                    | `msg` `0`           | _msg_        | copy event message to stack
+—                    | `msg` _n_           | _msgₙ_       | copy message item _n_ to stack
+—                    | `msg` -_n_          | _tailₙ_      | copy message tail _n_ to stack
+
+#### `my` instruction
+
+ Input               | Instruction         | Output       | Description
+---------------------|---------------------|--------------|-------------------------------------
+—                    | `my` `self`         | _actor_      | push _actor_ address on stack
+—                    | `my` `beh`          | _beh_        | push _actor_ behavior on stack
+—                    | `my` `state`        | _vₙ_ … _v₁_  | spread _actor_ state onto stack
+
+#### `new` instruction
+
+ Input               | Instruction         | Output       | Description
+---------------------|---------------------|--------------|-------------------------------------
+_vₙ_ … _v₁_ _beh_    | `new` _n_           | _actor_      | create an _actor_ with code _beh_ and data (_v₁_ … _vₙ_)
+_state_ _beh_        | `new` `-1`          | _actor_      | create an _actor_ with code _beh_ and data _state_
+(_beh_ . _state_)    | `new` `-2`          | _actor_      | create an _actor_ with code _beh_ and data _state_
+\[_, _, _, _beh_\]   | `new` `-3`          | _actor_      | create an _actor_ with code _beh_ and data \[_, _, _, _beh_\]
+
+#### `nth` instruction
+
+ Input               | Instruction         | Output       | Description
+---------------------|---------------------|--------------|-------------------------------------
+(_v₁_ … _vₙ_ . _tailₙ_) | `nth` _n_         | _vₙ_         | copy item _n_ from a _pair_ list
+(_v₁_ … _vₙ_ . _tailₙ_) | `nth` -_n_        | _tailₙ_      | copy tail _n_ from a _pair_ list
 
 #### `pair` instruction
 
@@ -423,6 +599,20 @@ Create a _pair_ list from some number of stack items.
  1. Otherwise
     1. Push `#?` onto the stack
 
+#### `part` instruction
+
+ Input               | Instruction         | Output       | Description
+---------------------|---------------------|--------------|-------------------------------------
+_pair_               | `part` _n_          | … _tail_ _head_ | split _pair_ into _head_ and _tail_ (_n_ times)
+(_v₁_ … _vₙ_)        | `part` -1           | _vₙ_ … _v₁_   | spread _pair_ list items onto stack
+
+#### `pick` instruction
+
+ Input               | Instruction         | Output       | Description
+---------------------|---------------------|--------------|-------------------------------------
+_vₙ_ … _v₁_          | `pick` _n_          | _vₙ_ … _v₁_ _vₙ_ | copy item _n_ to top of stack
+_vₙ_ … _v₁_          | `pick` -_n_         | _v₁_ _vₙ_ … _v₁_ | copy top of stack before item _n_
+
 #### `push` instruction
 
  Input               | Instruction         | Output       | Description
@@ -437,38 +627,58 @@ Push an immediate value onto the top of the stack.
 
  1. Push _value_ onto the stack
 
-### Instruction Encoding (TDB)
+#### `roll` instruction
 
-    const VM_ALU    = 0x8000000D;
-    const VM_CMP    = 0x8000000F;
-    const VM_BEH    = 0x80000015;
-    const VM_DEBUG  = 0x8000001A;
-    const VM_DEQUE  = 0x8000001B;
-    const VM_DICT   = 0x80000003;
-    const VM_DROP   = 0x80000009;
-    const VM_DUP    = 0x8000000B;
-    const VM_END    = 0x80000016;
-    const VM_EQ     = 0x8000000E;
-    const VM_GET    = 0x80000002;
-    const VM_IF     = 0x80000010;
-    const VM_IS_EQ  = 0x8000001E;  // --> VM_ASSERT
-    const VM_MSG    = 0x80000011;
-    const VM_MY     = 0x80000012;
-    const VM_NEW    = 0x80000014;
-    const VM_NTH    = 0x80000006;
-    const VM_PAIR   = 0x80000004;
-    const VM_PART   = 0x80000005;
-    const VM_PICK   = 0x8000000A;
-    const VM_PUSH   = 0x80000007;
-    const VM_ROLL   = 0x8000000C;
-    const VM_SEND   = 0x80000013;
-    const VM_SIGNAL = 0x8000001D;
-    const VM_SPONSOR= 0x80000017;
-    const VM_STATE  = 0x8000001C;
-    const VM_TYPEQ  = 0x80000000;
-    const VM_QUAD   = 0x80000001;
+ Input               | Instruction         | Output       | Description
+---------------------|---------------------|--------------|-------------------------------------
+_vₙ_ … _v₁_          | `roll` _n_          | _vₙ₋₁_ … _v₁_ _vₙ_ | roll item _n_ to top of stack
+_vₙ_ … _v₁_          | `roll` -_n_         | _v₁_ _vₙ_ … _v₂_ | roll top of stack to item _n_
 
-    const VM_DEPTH  = 0x80000008;  // deprecated --> VM_JUMP
-    const VM_PUTC   = 0x80000018;  // deprecated
-    const VM_GETC   = 0x80000019;  // deprecated
-    const VM_IS_NE  = 0x8000001F;  // deprecated
+#### `send` instruction
+
+ Input               | Instruction         | Output       | Description
+---------------------|---------------------|--------------|-------------------------------------
+_mₙ_ … _m₁_ _actor_  | `send` _n_          | —            | send (_m₁_ … _mₙ_) to _actor_
+_msg_ _actor_        | `send` `-1`         | —            | send _msg_ to _actor_
+
+#### `signal` instruction
+
+ Input               | Instruction         | Output       | Description
+---------------------|---------------------|--------------|-------------------------------------
+_sponsor_ _mₙ_ … _m₁_ _actor_ | `signal` _n_ | —          | send (_m₁_ … _mₙ_) to _actor_ using _sponsor_
+_sponsor_ _msg_ _actor_ | `signal` `-1`    | —            | send _msg_ to _actor_ using _sponsor_
+
+#### `sponsor` instruction
+
+ Input               | Instruction         | Output       | Description
+---------------------|---------------------|--------------|-------------------------------------
+—                    | `sponsor` `new`     | _sponsor_    | create a new empty _sponsor_
+_sponsor_ _n_        | `sponsor` `memory`  | _sponsor_    | transfer _n_ memory quota to _sponsor_
+_sponsor_ _n_        | `sponsor` `events`  | _sponsor_    | transfer _n_ events quota to _sponsor_
+_sponsor_ _n_        | `sponsor` `cycles`  | _sponsor_    | transfer _n_ cycles quota to _sponsor_
+_sponsor_            | `sponsor` `reclaim` | _sponsor_    | reclaim all quotas from _sponsor_
+_sponsor_ _control_  | `sponsor` `start`   | —            | run _sponsor_ under _control_
+_sponsor_            | `sponsor` `stop`    | —            | reclaim all quotas and remove _sponsor_
+
+#### `state` instruction
+
+ Input               | Instruction         | Output       | Description
+---------------------|---------------------|--------------|-------------------------------------
+—                    | `state` `0`         | _state_      | copy _actor_ state to stack
+—                    | `state` _n_         | _stateₙ_     | copy state item _n_ to stack
+—                    | `state` -_n_        | _tailₙ_      | copy state tail _n_ to stack
+
+#### `typeq` instruction
+
+ Input               | Instruction         | Output       | Description
+---------------------|---------------------|--------------|-------------------------------------
+_v_                  | `typeq` _T_         | _bool_       | `#t` if _v_ has type _T_, otherwise `#f`
+
+#### `quad` instruction
+
+ Input               | Instruction         | Output       | Description
+---------------------|---------------------|--------------|-------------------------------------
+_T_                  | `quad` `1`          | _quad_       | create quad \[_T_, `#?`, `#?`, `#?`\]
+_X_ _T_              | `quad` `2`          | _quad_       | create quad \[_T_, _X_, `#?`, `#?`\]
+_Y_ _X_ _T_          | `quad` `3`          | _quad_       | create quad \[_T_, _X_, _Y_, `#?`\]
+_Z_ _Y_ _X_ _T_      | `quad` `4`          | _quad_       | create quad \[_T_, _X_, _Y_, _Z_\]
