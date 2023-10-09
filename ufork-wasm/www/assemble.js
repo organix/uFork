@@ -917,13 +917,14 @@ function generate_crlf(tree, file) {
         if (
             operator.text === "eq"
             || operator.text === "push"
+            || operator.text === "assert"
             || operator.text === "is_eq"
             || operator.text === "is_ne"
         ) {
             operand_check(1, 1);
             return {
                 kind: "instr",
-                op: operator.text,
+                op: ((operator.text === "assert") ? "is_eq" : operator.text),
                 imm: gen_expression(operands[0]),
                 k: gen_continuation(1),
                 debug
