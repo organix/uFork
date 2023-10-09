@@ -392,6 +392,11 @@ _n_ _m_              | `alu` `xor`         | _n_^_m_      | bitwise _n_ exclusiv
 _n_ _m_              | `alu` `add`         | _n_+_m_      | sum of _n_ and _m_
 _n_ _m_              | `alu` `sub`         | _n_-_m_      | difference of _n_ and _m_
 _n_ _m_              | `alu` `mul`         | _n_\*_m_     | product of _n_ and _m_
+_n_ _m_              | `alu` `lsl`         | _n_<<_m_     | logical shift left _n_ by _m_
+_n_ _m_              | `alu` `lsr`         | _n_>>_m_     | logical shift right _n_ by _m_
+_n_ _m_              | `alu` `asr`         | _n_>>>_m_    | arithmetic shift right _n_ by _m_
+_n_ _m_              | `alu` `rol`         | _n_<<>_m_    | rotate left _n_ by _m_
+_n_ _m_              | `alu` `ror`         | _n_<>>_m_    | rotate right _n_ by _m_
 
 Compute an ALU function of the arguments on the stack.
 
@@ -425,6 +430,16 @@ Compute an ALU function of the arguments on the stack.
 ---------------------|---------------------|--------------|-------------------------------------
 _actual_             | `assert` _expect_   | —            | assert _actual_ == _expect_, otherwise halt!
 
+Ensure that the item on the stack has the expected value.
+
+ T            | X (op)          | Y (imm)     | Z (k)
+--------------|-----------------|-------------|-------------
+ `#instr_t`   | `+30` (assert)  | _any_       | _instr_
+
+ 1. Remove item _actual_ from the stack (`#?` on underflow)
+ 1. If _actual_ is not equal to _expect_
+    1. Signal an `E_ASSERT` error
+
 #### `beh` instruction
 
  Input               | Instruction         | Output       | Description
@@ -433,6 +448,43 @@ _vₙ_ … _v₁_ _beh_    | `beh` _n_           | —            | replace code
 _state_ _beh_        | `beh` `-1`          | —            | replace code with _beh_ and data with _state_
 (_beh_ . _state_)    | `beh` `-2`          | —            | replace code with _beh_ and data with _state_
 \[_, _, _, _beh_\]   | `beh` `-3`          | —            | replace code with _beh_ and data with \[_, _, _, _beh_\]
+
+Provide a new behavior (code and data) for the current actor.
+This is the actor "become" primitive.
+There are several ways to provide the code and data
+for handling the next event,
+however both are always replaced together.
+
+ T            | X (op)      | Y (imm)     | Z (k)
+--------------|-------------|-------------|-------------
+ `#instr_t`   | `+21` (beh) | _positive_  | _instr_
+
+ 1. Remove item _beh_ from the stack (`#?` on underflow)
+
+ T            | X (op)      | Y (imm)     | Z (k)
+--------------|-------------|-------------|-------------
+ `#instr_t`   | `+21` (beh) | `0`         | _instr_
+
+ 1. Remove item _beh_ from the stack (`#?` on underflow)
+
+ T            | X (op)      | Y (imm)     | Z (k)
+--------------|-------------|-------------|-------------
+ `#instr_t`   | `+21` (beh) | `-1`        | _instr_
+
+ 1. Remove item _beh_ from the stack (`#?` on underflow)
+ 1. Remove item _state_ from the stack (`#?` on underflow)
+ 1. Record _beh_ as the code to execute when handling the next event
+ 1. Record _state_ as the private data when handling the next event
+
+ T            | X (op)      | Y (imm)     | Z (k)
+--------------|-------------|-------------|-------------
+ `#instr_t`   | `+21` (beh) | `-2`        | _instr_
+
+ T            | X (op)      | Y (imm)     | Z (k)
+--------------|-------------|-------------|-------------
+ `#instr_t`   | `+21` (beh) | `-3`        | _instr_
+
+ 1. Remove item _beh_ from the stack (`#?` on underflow)
 
 #### `cmp` instruction
 
