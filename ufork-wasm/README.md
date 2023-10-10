@@ -1,6 +1,6 @@
 # uFork Simulator in Rust
 
-This [implementation](vm.md) of the [**uFork** virtual machine](../ufork.md)
+This [implementation](vm.md) of the [**uFork** virtual machine](../../ufork.md)
 is written in [Rust](https://www.rust-lang.org/)
 and targets the browser's [WASM engine](https://webassembly.org/).
 A browser-based GUI implements a debugger for a uFork processor core.

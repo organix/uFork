@@ -4,7 +4,7 @@ version = "0.1.0"
 authors = ["Dale Schumacher <dalnefre@yahoo.com>"]
 edition = "2021"
 description = "uFork VM in Rust targeting WASM"
-repository = "https://github.com/organix/uFork/tree/main/ufork-wasm"
+repository = "https://github.com/organix/uFork/tree/main/ufork-rust/ufork-wasm"
 license = "Apache-2.0"
 
 [profile.dev]
@@ -21,6 +21,6 @@ crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 lol_alloc = { version = "0.4.0" }
-ufork = { path = "../ufork" }
+ufork = { path = "../ufork-rust" }
 
 [dev-dependencies]
