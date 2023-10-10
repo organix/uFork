@@ -7,7 +7,7 @@
 ;
 ; These functions expect a continuation address (`k`) on the stack.
 ;
-;   stack picture: k n d -- q r
+;   stack picture: k n d -- q=n/d r=n%d
 ;
 
 divmod:                 ; k n d
@@ -179,7 +179,7 @@ expect-2and0:           ; q r
     assert -2           ; -- assert(q==-2)
 
 done:
-;    assert #t           ; force halt
+;    end stop            ; force halt
     end commit
 
 .export

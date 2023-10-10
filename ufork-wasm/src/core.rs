@@ -684,15 +684,13 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
             VM_NEW => {
                 let n = imm.get_fix()?;
                 let (beh, state) = self.pop_beh_and_state(n);
-                assert!(self.typeq(INSTR_T, beh));  // FIXME: return Err(E_NOT_CODE)
-                let a = self.new_actor(beh, state)?;
+                let a = self.effect_create(beh, state)?;
                 self.stack_push(a)?;
                 kip
             },
             VM_BEH => {
                 let n = imm.get_fix()?;
                 let (beh, state) = self.pop_beh_and_state(n);
-                assert!(self.typeq(INSTR_T, beh));  // FIXME: return Err(E_NOT_CODE)
                 self.effect_become(beh, state)?;
                 kip
             },
@@ -928,8 +926,18 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
         self.ram_mut(effect).set_z(ep);
         Ok(())
     }
+    fn effect_create(&mut self, beh: Any, state: Any) -> Result<Any, Error> {
+        if !self.typeq(INSTR_T, beh) {
+            return Err(E_BOUNDS);  // FIXME: should be E_NOT_EXE
+        }
+        let actor = Quad::new_actor(beh, state);
+        let ptr = self.alloc(&actor)?;
+        Ok(self.ptr_to_cap(ptr))
+    }
     fn effect_become(&mut self, beh: Any, state: Any) -> Result<(), Error> {
-        assert!(self.typeq(INSTR_T, beh));  // FIXME: return Err(E_NOT_CODE)
+        if !self.typeq(INSTR_T, beh) {
+            return Err(E_BOUNDS);  // FIXME: should be E_NOT_EXE
+        }
         let me = self.self_ptr();
         let effect = self.ram(me).z();
         let quad = self.ram_mut(effect);
@@ -1320,11 +1328,6 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
     fn reserve_cont(&mut self, ip: Any, sp: Any, ep: Any) -> Result<Any, Error> {
         let cont = Quad::new_cont(ip, sp, ep);
         self.reserve(&cont)  // no Sponsor needed
-    }
-    fn new_actor(&mut self, beh: Any, state: Any) -> Result<Any, Error> {
-        let actor = Quad::new_actor(beh, state);
-        let ptr = self.alloc(&actor)?;
-        Ok(self.ptr_to_cap(ptr))
     }
 
     fn stack_pairs(&mut self, n: isize) -> Result<(), Error> {
