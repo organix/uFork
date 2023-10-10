@@ -60,13 +60,13 @@ The instruction set and internal representation has evolved
 so the two implementations are no longer compatible,
 but each demonstrates important points in the design space.
 
-## Software Stacks
+## Technology Stacks
 
 ```
 +-----+--------+-------+-------+---------+-------------+
 | ASM | Scheme | Humus | Misty | ...     | Scheme REPL |
 |-----+--------+-------+-------+---------|-------------|
-| uFork-CRLF intermediate language       | uFork VM    |
+| uFork-CRLF intermediate representation | uFork VM    |
 |========================================|=============|
 | Rust (no-std)                | Verilog | C           |
 |------+-----+--------+--------|---------|-------------|
