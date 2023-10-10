@@ -54,7 +54,7 @@ External events (such as "interrupts")
 are turned into message-events.
 
 There are currently two variations of the uFork VM.
-A [proof-of-concept implementation](c_src/vm.md) written in C,
+A [proof-of-concept implementation](ufork-c/vm.md) written in C,
 and a [more robust implementation](ufork-wasm/vm.md) written in Rust/WASM.
 The instruction set and internal representation has evolved
 so the two implementations are no longer compatible,

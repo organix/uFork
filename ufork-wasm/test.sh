@@ -2,8 +2,6 @@
 
 # Run the test runners in parallel.
 
-cargo test --lib &
-
 deno run \
     --allow-read=. \
     --allow-net=localhost:7273 \
@@ -11,5 +9,7 @@ deno run \
     examples \
     lib \
     &
+
+cd ../ufork-rust/ && cargo test --lib &
 
 wait %1 %2

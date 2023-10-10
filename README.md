@@ -17,7 +17,7 @@ and the rationale behind it.
 
 ## Implementations
 
-The initial prototype is [implemented in **C**](c_src/README.md)
+The initial prototype is [implemented in **C**](ufork-c/README.md)
 and hosts a Scheme REPL with actor extensions.
 
 The [Rust/WASM version](ufork-wasm/README.md)

@@ -100,7 +100,7 @@ usually via some late-bound named-reference.
 
 ## LISP/Scheme
 
-A [LISP/Scheme dialect](c_src/scheme.md) is implemented
+A [LISP/Scheme dialect](ufork-c/scheme.md) is implemented
 as a surface-syntax for **uFork** programs.
 
 ### Lambda Compilation Test-Cases
@@ -157,7 +157,7 @@ Date       | Events | Instructions | Description
 
 #### Bootstrap Library
 
-[Start-up overhead](c_src/boot.asm) to reach the interactive REPL.
+[Start-up overhead](ufork-c/boot.asm) to reach the interactive REPL.
 
 Date       | Events | Instructions | Description
 -----------|--------|--------------|-------------
@@ -195,9 +195,9 @@ Date       | Events | Instructions | Description
 
 ## PEG Parsing
 
-A [PEG parsing toolkit](c_src/peg.asm)
+A [PEG parsing toolkit](ufork-c/peg.asm)
 is implemented in **uFork** machine-code.
-A [LISP/Scheme REPL](c_src/scheme.md)
+A [LISP/Scheme REPL](ufork-c/scheme.md)
 uses this toolkit for parse
 input from the console.
 
