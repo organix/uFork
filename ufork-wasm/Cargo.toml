@@ -2,21 +2,10 @@
 name = "ufork-wasm"
 version = "0.1.0"
 authors = ["Dale Schumacher <dalnefre@yahoo.com>"]
-edition = "2018"
+edition = "2021"
 description = "uFork VM in Rust targeting WASM"
-repository = "https://github.com/organix/uFork/tree/main/ufork-wasm"
+repository = "https://github.com/organix/uFork/tree/main/ufork-rust/ufork-wasm"
 license = "Apache-2.0"
-
-[lib]
-crate-type = ["cdylib", "rlib"]
-
-[features]
-default = []
-
-[dependencies]
-lol_alloc = "0.3.0"     		# a size-efficient allocator crate
-
-[dev-dependencies]
 
 [profile.dev]
 panic = "abort"					# abort on panic!()
@@ -26,3 +15,12 @@ panic = "abort"					# abort on panic!()
 opt-level = "s"					# optimize for small code size
 lto = true              		# enable link time optimization
 strip = true            		# strip debug symbols
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+lol_alloc = { version = "0.4.0" }
+ufork = { path = "../ufork-rust" }
+
+[dev-dependencies]

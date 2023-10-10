@@ -22,60 +22,32 @@ impl Device for NullDevice {
     }
 }
 
-pub struct DebugDevice {}
-impl DebugDevice {
-    pub fn new() -> DebugDevice {
-        DebugDevice {}
-    }
-    #[cfg(target_arch = "wasm32")]
-    fn debug_print(&mut self, value: Any) {
-        let raw = value.raw();
-        unsafe {
-            crate::host_log(raw);
+pub struct DebugDevice {
+    pub debug_print: fn(Any),
+}
+impl Default for DebugDevice {
+    fn default() -> Self {
+        Self {
+            debug_print: |_| (),
         }
-    }
-    #[cfg(not(target_arch = "wasm32"))]
-    fn debug_print(&mut self, value: Any) {
-        // debug output not available...
-        let _ = value.raw();  // place a breakpoint on this assignment
     }
 }
 impl Device for DebugDevice {
     fn handle_event(&mut self, core: &mut Core, ep: Any) -> Result<(), Error> {
         let event = core.mem(ep);
         let message = event.y();  // message
-        self.debug_print(message);
+        (self.debug_print)(message);
         Ok(())  // event handled.
     }
 }
 
 pub struct ClockDevice {
-    clock_ticks: Any,
+    pub read_clock: fn() -> Any,
 }
-impl ClockDevice {
-    pub fn new() -> ClockDevice {
-        ClockDevice {
-            clock_ticks: ZERO,
-        }
-    }
-    #[cfg(target_arch = "wasm32")]
-    fn read_clock(&mut self) -> Any {
-        unsafe {
-            let raw = crate::host_clock();
-            let now = Any::fix(raw as isize);
-            self.clock_ticks = now;
-            now
-        }
-    }
-    #[cfg(not(target_arch = "wasm32"))]
-    fn read_clock(&mut self) -> Any {
-        match self.clock_ticks.fix_num() {
-            Some(t) => {
-                let now = Any::fix(t + 5);  // arbitrary advance on each call
-                self.clock_ticks = now;
-                now
-            }
-            None => ZERO,
+impl Default for ClockDevice {
+    fn default() -> Self {
+        Self {
+            read_clock: || Any::new(0),
         }
     }
 }
@@ -84,35 +56,21 @@ impl Device for ClockDevice {
         let event = core.mem(ep);
         let sponsor = event.t();
         let cust = event.y();  // cust
-        let now = self.read_clock();
+        let now = (self.read_clock)();
         let evt = core.reserve_event(sponsor, cust, now)?;
         core.event_enqueue(evt);
         Ok(())  // event handled.
     }
 }
 
-pub struct RandomDevice {}
-impl RandomDevice {
-    pub fn new() -> RandomDevice {
-        RandomDevice {}
-    }
-    #[cfg(target_arch = "wasm32")]
-    fn get_random(&mut self, a: Any, b: Any) -> Any {
-        unsafe {
-            let raw = crate::host_random(a.raw(), b.raw());
-            Any::fix(raw as isize)
+pub struct RandomDevice {
+    pub get_random: fn(Any, Any) -> Any,
+}
+impl Default for RandomDevice {
+    fn default() -> Self {
+        Self {
+            get_random: |_, _| Any::new(0),
         }
-    }
-    #[cfg(not(target_arch = "wasm32"))]
-    fn get_random(&mut self, a: Any, b: Any) -> Any {
-        // randomness not available...
-        if b.is_fix() {
-            return b;
-        }
-        if a.is_fix() {
-            return a;
-        }
-        Any::fix(0)
     }
 }
 impl Device for RandomDevice {
@@ -123,58 +81,28 @@ impl Device for RandomDevice {
         let cust = core.nth(msg, PLUS_1);
         let a = core.nth(msg, PLUS_2);
         let b = core.nth(msg, PLUS_3);
-        let random = self.get_random(a, b);
+        let random = (self.get_random)(a, b);
         let evt = core.reserve_event(sponsor, cust, random)?;
         core.event_enqueue(evt);
         Ok(())  // event handled.
     }
 }
 
-pub struct IoDevice {}
-impl IoDevice {
-    pub fn new() -> IoDevice {
-        IoDevice {}
-    }
-
-    #[cfg(target_arch = "wasm32")]
-    fn dump_blob(&mut self, base: *const u8, ofs: usize) {
-        unsafe {
-            crate::host_print(base, ofs);
+pub struct IoDevice {
+    pub dump_blob: fn(base: *const u8, ofs: usize),
+    pub write: fn (code: Any) -> Any,
+    pub read: fn (stub: Any) -> Any,
+}
+impl Default for IoDevice {
+    fn default() -> Self {
+        Self {
+            dump_blob: |_, _| (),
+            write: |_| Any::fix(E_OK as isize),
+            read: |_| UNDEF,
         }
-    }
-    #[cfg(not(target_arch = "wasm32"))]
-    fn dump_blob(&mut self, _base: *const u8, _ofs: usize) {
-        //println!("LOG: {}[{}]", base as usize, ofs);
-        // FIXME: console i/o not available in `#![no_std]` build
-    }
-
-    #[cfg(target_arch = "wasm32")]
-    fn write(&mut self, code: Any) -> Any {
-        unsafe {
-            let raw = crate::host_write(code.raw());
-            Any::new(raw)
-        }
-    }
-    #[cfg(not(target_arch = "wasm32"))]
-    fn write(&mut self, code: Any) -> Any {
-        // console output not available...
-        let _ = code;  // place a breakpoint on this assignment
-        Any::fix(E_OK as isize)
-    }
-
-    #[cfg(target_arch = "wasm32")]
-    fn read(&mut self, stub: Any) -> Any {
-        unsafe {
-            let raw = crate::host_read(stub.raw());
-            Any::new(raw)
-        }
-    }
-    #[cfg(not(target_arch = "wasm32"))]
-    fn read(&mut self, _stub: Any) -> Any {
-        // console input not available...
-        UNDEF
     }
 }
+
 /*
     The old `IoDevice` was an experimental place-holder
     used to dump a _blob_ proxy to the debugger console.
@@ -204,7 +132,7 @@ impl Device for IoDevice {
                 return Err(E_BOUNDS);
             }
             let ofs = proxy.y().get_fix()? as usize;
-            self.dump_blob(base, ofs);
+            (self.dump_blob)(base, ofs);
         } else if core.typeq(PAIR_T, msg) {
             let _to_cancel = core.nth(msg, PLUS_1);
             // FIXME: cancel option not implemented
@@ -217,7 +145,7 @@ impl Device for IoDevice {
                 // read request
                 let evt = core.reserve_event(sponsor, callback, UNDEF)?;
                 let stub = core.reserve_stub(dev, evt)?;
-                let char = self.read(stub);
+                let char = (self.read)(stub);
                 if char.is_fix() {
                     // if `read` was synchronous, reply immediately
                     let result = core.reserve(&Quad::pair_t(char, NIL))?;  // (char)
@@ -227,7 +155,7 @@ impl Device for IoDevice {
                 }
             } else if data.is_fix() {  // (to_cancel callback fixnum)
                 // write request
-                self.write(data);
+                (self.write)(data);
                 // in the current implementation, `write` is synchronous, so we reply immediately
                 let result = core.reserve(&Quad::pair_t(UNIT, NIL))?;  // (#unit)
                 let evt = core.reserve_event(sponsor, callback, result)?;
@@ -388,22 +316,15 @@ fn blob_write(core: &mut Core, handle: Any, ofs: Any, val: Any) -> Result<Any, E
     }
     Ok(UNIT)
 }
-pub struct BlobDevice {}
-impl BlobDevice {
-    pub fn new() -> BlobDevice {
-        BlobDevice {}
-    }
-    #[cfg(target_arch = "wasm32")]
-    fn log_proxy(&mut self, proxy: Any) {
-        let raw = proxy.raw();
-        unsafe {
-            crate::host_log(raw);
+
+pub struct BlobDevice {
+    pub log_proxy: fn (proxy: Any),
+}
+impl Default for BlobDevice {
+    fn default() -> Self {
+        Self {
+            log_proxy: |_| (),
         }
-    }
-    #[cfg(not(target_arch = "wasm32"))]
-    fn log_proxy(&mut self, proxy: Any) {
-        let raw = proxy.raw();
-        let _dev = raw & !MSK_RAW;
     }
 }
 /*
@@ -449,7 +370,7 @@ impl Device for BlobDevice {
         Ok(())  // event handled.
     }
     fn drop_proxy(&mut self, core: &mut Core, proxy: Any) {
-        self.log_proxy(proxy);
+        (self.log_proxy)(proxy);
         let ptr = core.cap_to_ptr(proxy);
         let handle = core.ram(ptr).y();
         let result = blob_release(core, handle);
@@ -457,31 +378,16 @@ impl Device for BlobDevice {
     }
 }
 
-pub struct TimerDevice {}
-impl TimerDevice {
-    pub fn new() -> TimerDevice {
-        TimerDevice {}
-    }
-    #[cfg(target_arch = "wasm32")]
-    fn start_timer(&mut self, delay: Any, stub: Any) {
-        unsafe {
-            crate::host_start_timer(delay.raw(), stub.raw());
+pub struct TimerDevice {
+    pub start_timer: fn(Any, Any),
+    pub stop_timer: fn(Any) -> bool,
+}
+impl Default for TimerDevice {
+    fn default() -> Self {
+        Self {
+            start_timer: |_,_| (),
+            stop_timer: |_| false,
         }
-    }
-    #[cfg(not(target_arch = "wasm32"))]
-    fn start_timer(&mut self, _delay: Any, _stub: Any) {
-        // timer device not available...
-    }
-    #[cfg(target_arch = "wasm32")]
-    fn stop_timer(&mut self, stub: Any) -> bool {
-        unsafe {
-            crate::host_stop_timer(stub.raw())
-        }
-    }
-    #[cfg(not(target_arch = "wasm32"))]
-    fn stop_timer(&mut self, _stub: Any) -> bool {
-        // timer device not available...
-        false
     }
 }
 impl Device for TimerDevice {
@@ -496,7 +402,7 @@ impl Device for TimerDevice {
             // stop timer request
             let handle = myself.y();
             if handle.is_ram() {
-                if self.stop_timer(handle) {
+                if (self.stop_timer)(handle) {
                     core.release_stub(handle);
                 }
                 core.ram_mut(ptr).set_y(UNDEF);
@@ -515,7 +421,7 @@ impl Device for TimerDevice {
                 let delayed = Quad::new_event(sponsor, target, message);
                 let ptr = core.reserve(&delayed)?;
                 let stub = core.reserve_stub(dev, ptr)?;
-                self.start_timer(delay, stub);
+                (self.start_timer)(delay, stub);
             } else {  // requestor-style interface
                 // (to_cancel callback delay . result)
                 let to_cancel = arg_1;
@@ -531,7 +437,7 @@ impl Device for TimerDevice {
                 let delayed = Quad::new_event(sponsor, callback, result);
                 let ptr = core.reserve(&delayed)?;
                 let stub = core.reserve_stub(dev, ptr)?;
-                self.start_timer(delay, stub);
+                (self.start_timer)(delay, stub);
                 if to_cancel.is_cap() {
                     let proxy = core.reserve_proxy(dev, stub)?;
                     let evt = core.reserve_event(sponsor, to_cancel, proxy)?;
@@ -543,21 +449,14 @@ impl Device for TimerDevice {
     }
 }
 
-pub struct HostDevice {}
-impl HostDevice {
-    pub fn new() -> HostDevice {
-        HostDevice {}
-    }
-    #[cfg(target_arch = "wasm32")]
-    fn to_host(&mut self, event_stub_or_proxy: Any) -> Error {
-        unsafe {
-            crate::host(event_stub_or_proxy.raw())
+pub struct HostDevice {
+    pub to_host: fn(Any) -> Error,
+}
+impl Default for HostDevice {
+    fn default() -> Self {
+        Self {
+            to_host: |_| E_OK,
         }
-    }
-    #[cfg(not(target_arch = "wasm32"))]
-    fn to_host(&mut self, _event_stub_or_proxy: Any) -> Error {
-        // host device not available...
-        E_OK
     }
 }
 impl Device for HostDevice {
@@ -565,7 +464,7 @@ impl Device for HostDevice {
         let event = core.mem(ep);
         let device = event.x();
         let event_stub = core.reserve_stub(device, ep)?;
-        match self.to_host(event_stub) {
+        match (self.to_host)(event_stub) {
             E_OK => Ok(()),
             code => {
                 core.release_stub(event_stub);
@@ -574,6 +473,6 @@ impl Device for HostDevice {
         }
     }
     fn drop_proxy(&mut self, _core: &mut Core, proxy: Any) {
-        self.to_host(proxy);
+        (self.to_host)(proxy);
     }
 }

@@ -6,6 +6,10 @@
 *.img
 .DS_Store
 c_src/ufork
-ufork-wasm/Cargo.lock
 ufork-wasm/target/
 *.rs.bk
+
+
+# Added by cargo
+
+/target

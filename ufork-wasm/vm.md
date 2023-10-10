@@ -47,7 +47,7 @@
 
 ## Introduction
 
-The [**uFork** virtual machine](../ufork.md)
+The [**uFork** virtual machine](../../ufork.md)
 is designed to support machine-level actors.
 All instructions execute within the context of an actor handling a message-event.
 There is no support for procedure/function call/return.

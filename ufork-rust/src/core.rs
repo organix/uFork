@@ -38,18 +38,47 @@ const BLOB_RAM_MAX: usize = 1<<8;   // 256 octets of Blob RAM (for testing)
 //const BLOB_RAM_MAX: usize = 1<<16;  // 64K octets of Blob RAM (maximum value)
 const DEVICE_MAX:   usize = 8;      // number of Core devices
 
-pub struct Core {
-    quad_rom:   [Quad; QUAD_ROM_MAX],
-    quad_ram:   [Quad; QUAD_RAM_MAX],
-    gc_queue:   [Any; QUAD_RAM_MAX],
-    blob_ram:   [u8; BLOB_RAM_MAX],
+pub struct Core<
+    const QUAD_ROM_SIZE: usize = QUAD_ROM_MAX,
+    const QUAD_RAM_SIZE: usize = QUAD_RAM_MAX,
+    const GC_QUEUE_SIZE: usize = QUAD_RAM_MAX,
+    const BLOB_RAM_SIZE: usize = BLOB_RAM_MAX,
+> {
+    quad_rom:   [Quad; QUAD_ROM_SIZE],
+    quad_ram:   [Quad; QUAD_RAM_SIZE],
+    gc_queue:   [Any; GC_QUEUE_SIZE],
+    blob_ram:   [u8; BLOB_RAM_SIZE],
     device:     [Option<Box<dyn Device>>; DEVICE_MAX],
     rom_top:    Any,
     gc_state:   Any,
+
+
+    trace_event: Box<dyn Fn(Any, Any)>,
+}
+
+impl Default for Core {
+    fn default() -> Self {
+        Self::new(
+            CoreDevices::default(),
+        )
+    }
+}
+
+#[derive(Default)]
+pub struct CoreDevices {
+    pub debug_device: DebugDevice,
+    pub clock_device: ClockDevice,
+    pub random_device: RandomDevice,
+    pub io_device: IoDevice,
+    pub blob_device: BlobDevice,
+    pub timer_device: TimerDevice,
+    pub host_device: HostDevice,
 }
 
 impl Core {
-    pub fn new() -> Core {
+    pub fn new(
+        core_devices: CoreDevices,
+    ) -> Core {
 
         /*
          * Read-Only Memory (ROM) image (read/execute)
@@ -143,24 +172,31 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
         blob_ram[16] = u16_lsb(nat);    //         size[0] (lsb)
         blob_ram[17] = u16_msb(nat);    //         size[1] (msb)
 
+        let CoreDevices { debug_device, clock_device, random_device, io_device, blob_device, timer_device, host_device } = core_devices;
+
         Core {
             quad_rom,
             quad_ram,
             gc_queue,
             blob_ram,
             device: [
-                Some(Box::new(DebugDevice::new())),
-                Some(Box::new(ClockDevice::new())),
-                Some(Box::new(IoDevice::new())),
-                Some(Box::new(BlobDevice::new())),
-                Some(Box::new(TimerDevice::new())),
+                Some(Box::new(debug_device)),
+                Some(Box::new(clock_device)),
+                Some(Box::new(io_device)),
+                Some(Box::new(blob_device)),
+                Some(Box::new(timer_device)),
                 Some(Box::new(NullDevice::new())),
-                Some(Box::new(HostDevice::new())),
-                Some(Box::new(RandomDevice::new())),
+                Some(Box::new(host_device)),
+                Some(Box::new(random_device)),
             ],
             rom_top: Any::rom(ROM_TOP_OFS),
             gc_state: UNDEF,
+            trace_event: Box::new(|_, _| {}),
         }
+    }
+
+    pub fn set_trace_event<F: Fn(Any, Any) + 'static>(&mut self, trace_event: F) {
+        self.trace_event = Box::new(trace_event);
     }
 
     /*
@@ -270,7 +306,7 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
             let result = dev_mut.handle_event(self, ep);
             self.device[id] = Some(dev_mut);
             #[cfg(debug_assertions)]
-            trace_event(ep, UNDEF);  // trace transactional effect(s)
+            (self.trace_event)(ep, UNDEF);  // trace transactional effect(s)
             result
         } else {
             // begin actor-event transaction
@@ -696,7 +732,7 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
             },
             VM_END => {
                 #[cfg(debug_assertions)]
-                trace_event(self.ep(), self.kp());  // trace transactional effect(s)
+                (self.trace_event)(self.ep(), self.kp());  // trace transactional effect(s)
                 let me = self.self_ptr();
                 let rv = match imm {
                     END_ABORT => {
@@ -2360,7 +2396,7 @@ pub const COUNT_TO: Any = Any { raw: COUNT_TO_OFS as Raw };
 
     #[test]
     fn core_initialization() {
-        let core = Core::new();
+        let core = Core::default();
         assert_eq!(ZERO, core.ram_free());
         assert_eq!(NIL, core.ram_next());
         assert_eq!(NIL, core.e_first());
@@ -2370,7 +2406,7 @@ pub const COUNT_TO: Any = Any { raw: COUNT_TO_OFS as Raw };
 
     #[test]
     fn basic_memory_allocation() {
-        let mut core = Core::new();
+        let mut core = Core::default();
         let top_before = core.ram_top().ofs();
         let m1 = core.reserve(&Quad::pair_t(PLUS_1, PLUS_1)).unwrap();
         assert!(m1.is_ptr());
@@ -2386,7 +2422,7 @@ pub const COUNT_TO: Any = Any { raw: COUNT_TO_OFS as Raw };
 
     #[test]
     fn run_loop_terminates() {
-        let mut core = Core::new();
+        let mut core = Core::default();
         let boot_beh = load_std(&mut core);
         let boot_ptr = core.reserve(&Quad::new_actor(boot_beh, NIL)).unwrap();
         let a_boot = core.ptr_to_cap(boot_ptr);
@@ -2398,7 +2434,7 @@ pub const COUNT_TO: Any = Any { raw: COUNT_TO_OFS as Raw };
 
     #[test]
     fn gc_before_and_after_run() {
-        let mut core = Core::new();
+        let mut core = Core::default();
         let boot_beh = load_fib_test(&mut core);
         let boot_ptr = core.reserve(&Quad::new_actor(boot_beh, NIL)).unwrap();
         let a_boot = core.ptr_to_cap(boot_ptr);
@@ -2411,7 +2447,7 @@ pub const COUNT_TO: Any = Any { raw: COUNT_TO_OFS as Raw };
 
     #[test]
     fn dict_operations() {
-        let mut core = Core::new();
+        let mut core = Core::default();
         let boot_beh = load_dict_test(&mut core);
         let boot_ptr = core.reserve(&Quad::new_actor(boot_beh, NIL)).unwrap();
         let a_boot = core.ptr_to_cap(boot_ptr);
@@ -2423,7 +2459,7 @@ pub const COUNT_TO: Any = Any { raw: COUNT_TO_OFS as Raw };
 
     #[test]
     fn deque_operations() {
-        let mut core = Core::new();
+        let mut core = Core::default();
         let boot_beh = load_deque_test(&mut core);
         let boot_ptr = core.reserve(&Quad::new_actor(boot_beh, NIL)).unwrap();
         let a_boot = core.ptr_to_cap(boot_ptr);
@@ -2437,7 +2473,7 @@ pub const COUNT_TO: Any = Any { raw: COUNT_TO_OFS as Raw };
 
     #[test]
     fn device_operations() {
-        let mut core = Core::new();
+        let mut core = Core::default();
         let boot_beh = load_device_test(&mut core);
         let boot_ptr = core.reserve(&Quad::new_actor(boot_beh, NIL)).unwrap();
         let a_boot = core.ptr_to_cap(boot_ptr);
@@ -2452,7 +2488,7 @@ pub const COUNT_TO: Any = Any { raw: COUNT_TO_OFS as Raw };
         const OUT_OF_MEM: Any = Any { raw: DIR_RAW | E_MEM_LIM as u32 };
         const OUT_OF_MSG: Any = Any { raw: DIR_RAW | E_MSG_LIM as u32 };
         const OUT_OF_CPU: Any = Any { raw: DIR_RAW | E_CPU_LIM as u32 };
-        let mut core = Core::new();
+        let mut core = Core::default();
         let boot_beh = load_fib_test(&mut core);
         let boot_ptr = core.reserve(&Quad::new_actor(boot_beh, NIL)).unwrap();
         let a_boot = core.ptr_to_cap(boot_ptr);
@@ -2475,7 +2511,7 @@ pub const COUNT_TO: Any = Any { raw: COUNT_TO_OFS as Raw };
 
     #[test]
     fn gc_queue_management() {
-        let mut core = Core::new();
+        let mut core = Core::default();
         assert_eq!(NIL, core.gc_queue[GC_FIRST]);
         assert_eq!(NIL, core.gc_queue[GC_LAST]);
         let mut item;
