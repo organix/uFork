@@ -543,7 +543,7 @@ function on_stdout(char) {
 }
 
 core = ufork.make_core({
-    wasm_url: "../target/wasm32-unknown-unknown/debug/ufork_wasm.wasm",
+    wasm_url: "../www/wasm/ufork_wasm.wasm",
     on_wakeup(device_offset) {
         console.log("WAKE:", device_offset);
         //single_step();

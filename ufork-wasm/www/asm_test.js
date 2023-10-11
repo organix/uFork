@@ -45,7 +45,7 @@ function asm_test(module_url) {
 
     core = ufork.make_core({
         wasm_url: import.meta.resolve(
-            "../target/wasm32-unknown-unknown/debug/ufork_wasm.wasm"
+            "../www/wasm/ufork_wasm.wasm"
         ),
         on_wakeup: run_ufork,
         on_log(...args) {
