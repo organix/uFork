@@ -16,7 +16,7 @@ import parseq from "../../www/parseq.js";
 import requestorize from "../../www/requestors/requestorize.js";
 import io_device from "../../www/devices/io_device.js";
 const wasm_url = import.meta.resolve(
-    "../../target/wasm32-unknown-unknown/debug/ufork_wasm.wasm"
+    "../../www/wasm/ufork_wasm.wasm"
 );
 
 const utf8_encoder = new TextEncoder();

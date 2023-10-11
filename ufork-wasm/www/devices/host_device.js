@@ -183,7 +183,7 @@ function host_device(core) {
 //debug import parseq from "../parseq.js";
 //debug import requestorize from "../requestors/requestorize.js";
 //debug const wasm_url = import.meta.resolve(
-//debug     "../../target/wasm32-unknown-unknown/debug/ufork_wasm.wasm"
+//debug     "../../www/wasm/ufork_wasm.wasm"
 //debug );
 //debug let dispose;
 //debug let core;

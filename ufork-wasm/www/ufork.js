@@ -1596,7 +1596,7 @@ function make_core({
 //debug }
 //debug core = make_core({
 //debug     wasm_url: import.meta.resolve(
-//debug         "../target/wasm32-unknown-unknown/debug/ufork_wasm.wasm"
+//debug         "../www/wasm/ufork_wasm.wasm"
 //debug     ),
 //debug     on_wakeup(device_offset) {
 //debug         console.log("WAKE:", device_offset);

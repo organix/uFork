@@ -887,7 +887,7 @@ function awp_device({
 //debug import requestorize from "../requestors/requestorize.js";
 //debug import host_device from "./host_device.js";
 //debug const wasm_url = import.meta.resolve(
-//debug     "../../target/wasm32-unknown-unknown/debug/ufork_wasm.wasm"
+//debug     "../../www/wasm/ufork_wasm.wasm"
 //debug );
 //debug const asm_url = import.meta.resolve(
 //debug     "../../lib/grant_matcher.asm"
