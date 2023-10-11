@@ -9,7 +9,7 @@ to the subsequent instruction,
 or multiple pointers in the case of conditionals, etc.
 
 This is combined with a lightweight computational context
-(such as IP+SP) that makes it efficient
+(IP+SP+EP) that makes it efficient
 to enqueue the context after each instruction.
 Then the next context can be dequeued and executed.
 Thus an arbitrary number of instruction streams can be executed,
@@ -25,9 +25,9 @@ to execute instructions in the target actor's behavior.
 If the event target is busy,
 the event is recycled to the tail of the queue.
 Since asynchronous actor messages may be arbitrarily delayed,
-this does not change the semantics.
+this does not change the message-passing semantics.
 
-Effects caused by an actor's behavior (send, create, and become)
+Effects caused by an actor's behavior (_send_, _create_, and _become_)
 are applied to the system in an all-or-nothing transaction.
 The instruction stream defining the actor's behavior
 will end with a "commit" or "abort" instruction,
@@ -45,8 +45,6 @@ and the rationale behind it.
 
 The **uFork** _virtual machine_ is designed to support machine-level actors.
 All instructions execute within the context of an actor handling a message-event.
-There is no support for procedure/function call/return.
-Instead actors are used to implement procedure/function abstractions.
 There is no support for address arithmetic or load/store of arbitrary memory.
 Mutation is always local to an actor's private state.
 Immutable values are passed between actors via message-events.
@@ -55,7 +53,7 @@ are turned into message-events.
 
 There are currently two variations of the uFork VM.
 A [proof-of-concept implementation](ufork-c/vm.md) written in C,
-and a [more robust implementation](ufork-wasm/vm.md) written in Rust/WASM.
+and a [more robust implementation](ufork-rust/vm.md) written in Rust/WASM.
 The instruction set and internal representation has evolved
 so the two implementations are no longer compatible,
 but each demonstrates important points in the design space.

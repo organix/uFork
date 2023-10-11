@@ -1,4 +1,4 @@
-// JavaScript interface adapter for ufork_wasm::core::Core
+// JavaScript interface adapter for ufork::core::Core
 
 use crate::*;
 
