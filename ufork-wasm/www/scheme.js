@@ -1038,6 +1038,8 @@ function compile(source, file) {
         "*": xlat_mul_num,
         "if": xlat_if,
         "cond": xlat_cond,
+        "and": xlat_and,
+        "or": xlat_or,
         "not": xlat_not,
         "BEH": xlat_BEH,
         "CREATE": xlat_CREATE,
@@ -1871,6 +1873,56 @@ function compile(source, file) {
         // empty case
         const debug = crlf_debug(args);
         let code = new_instr(debug, "push", unit_lit, k);
+        return code;
+    }
+
+    function xlat_and(ctx, crlf, k) {
+        const args = crlf.tail;
+        const debug = crlf_debug(args);
+        if (args?.kind === "pair") {
+            const test = args.head;
+            const more = args.tail;
+            const debug = crlf_debug(test);
+            const k_more = (more?.kind === "pair")
+                ? new_instr(debug, "drop", 1,
+                    xlat_and(ctx, args, k))
+                : k;
+            let code =
+                interpret(ctx, test,            // bool
+                new_instr(debug, "dup", 1,      // bool bool
+                new_if_instr(debug,
+                    k_more,                     // ...
+                    k                           // #f
+                )));
+            return code;
+        }
+        // empty case
+        let code = new_instr(debug, "push", true_lit, k);
+        return code;
+    }
+
+    function xlat_or(ctx, crlf, k) {
+        const args = crlf.tail;
+        const debug = crlf_debug(args);
+        if (args?.kind === "pair") {
+            const test = args.head;
+            const more = args.tail;
+            const debug = crlf_debug(test);
+            const k_more = (more?.kind === "pair")
+                ? new_instr(debug, "drop", 1,
+                    xlat_or(ctx, args, k))
+                : k;
+            let code =
+                interpret(ctx, test,            // bool
+                new_instr(debug, "dup", 1,      // bool bool
+                new_if_instr(debug,
+                    k,                          // #t
+                    k_more                      // ...
+                )));
+            return code;
+        }
+        // empty case
+        let code = new_instr(debug, "push", false_lit, k);
         return code;
     }
 

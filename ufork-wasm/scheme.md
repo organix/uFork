@@ -61,6 +61,8 @@ to the state of actors, managed with `BECOME`.
   * `(behavior? `_value_`)`
   * `(if `<_test_>` `<_t_expr_>` `<_f_expr_>`)`
   * `(cond (`<_test_>`  .  `<_body_>`) . `<_clauses_>`)`
+  * `(and . `<_exprs_>`)`
+  * `(or . `<_exprs_>`)`
   * `(not `_bool_`)`
   * `(+ `_number_` `_number_`)`
   * `(- `_number_` `_number_`)`
@@ -76,8 +78,6 @@ to the state of actors, managed with `BECOME`.
 
   * `(nth `_index_` `_pair_`)`
   * `(equal? `_value_` `_value_`)`
-  * `(and . `<_exprs_>`)`
-  * `(or . `<_exprs_>`)`
   * `(append . `_lists_`)`
   * `(length `_list_`)`
   * `(filter `_pred_` `_list_`)`

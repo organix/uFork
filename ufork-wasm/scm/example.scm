@@ -51,4 +51,18 @@
 ;    (list x y)
 ;    (cons x y))
 
-(start (DEVICE dev.debug_key))
+;;(start (DEVICE dev.debug_key))
+
+(list
+    (or (< 2 2) (> 2 1))                ; ==> #t
+    (or (= 2 2) (< 2 1))                ; ==> #t
+    (or (< 2 2) (> 2 2))                ; ==> #f
+    (or #f #? () 0)                     ; ==> 0
+    (or)                                ; ==> #f
+)
+;(list
+;    (and (= 2 2) (> 2 1))               ; ==> #t
+;    (and (= 2 2) (< 2 1))               ; ==> #f
+;    (and 1 2 'c '(f g))                 ; ==> (f g)
+;    (and)                               ; ==> #t
+;)
