@@ -2,48 +2,48 @@
 
 ## Contents
 
- * Introduction
- * Representation
- * Data Structures
+ * [Introduction](#introduction)
+ * [Representation](#representation)
+ * [Data Structures](#data-structures)
     * Reserved ROM
     * Reserved RAM
     * Memory Descriptor
     * Event and Continuation Queues
     * Root Sponsor
- * Object Graph
+ * [Object Graph](#object-graph)
     * Pair-List Indexing
- * Instructions
+ * [Instructions](#instructions)
     * Instruction Summary
     * Instruction Details
-        * `alu` instruction
-        * `assert` instruction
-        * `beh` instruction
-        * `cmp` instruction
-        * `debug` instruction
-        * `deque` instruction
-        * `dict` instruction
-        * `drop` instruction
-        * `dup` instruction
-        * `end` instruction
-        * `eq` instruction
-        * `get` instruction
-        * `if` instruction
-        * `jump` instruction
-        * `msg` instruction
-        * `my` instruction
-        * `new` instruction
-        * `nth` instruction
-        * `pair` instruction
-        * `part` instruction
-        * `pick` instruction
-        * `push` instruction
-        * `roll` instruction
-        * `send` instruction
-        * `signal` instruction
-        * `sponsor` instruction
-        * `state` instruction
-        * `typeq` instruction
-        * `quad` instruction
+        * [`alu`](#alu-instruction) instruction
+        * [`assert`](#assert-instruction) instruction
+        * [`beh`](#beh-instruction) instruction
+        * [`cmp`](#cmp-instruction) instruction
+        * [`debug`](#debug-instruction) instruction
+        * [`deque`](#deque-instruction) instruction
+        * [`dict`](#dict-instruction) instruction
+        * [`drop`](#drop-instruction) instruction
+        * [`dup`](#dup-instruction) instruction
+        * [`end`](#end-instruction) instruction
+        * [`eq`](#eq-instruction) instruction
+        * [`get`](#get-instruction) instruction
+        * [`if`](#if-instruction) instruction
+        * [`jump`](#jump-instruction) instruction
+        * [`msg`](#msg-instruction) instruction
+        * [`my`](#my-instruction) instruction
+        * [`new`](#new-instruction) instruction
+        * [`nth`](#nth-instruction) instruction
+        * [`pair`](#pair-instruction) instruction
+        * [`part`](#part-instruction) instruction
+        * [`pick`](#pick-instruction) instruction
+        * [`push`](#push-instruction) instruction
+        * [`roll`](#roll-instruction) instruction
+        * [`send`](#send-instruction) instruction
+        * [`signal`](#signal-instruction) instruction
+        * [`sponsor`](#sponsor-instruction) instruction
+        * [`state`](#state-instruction) instruction
+        * [`typeq`](#typeq-instruction) instruction
+        * [`quad`](#quad-instruction) instruction
 
 ## Introduction
 
@@ -208,9 +208,8 @@ k_queue: [k_head,k_tail]----------------+
                |  |                                   |
                |  |                                   V
                |  |                             [#actor_t,code',data',events]
-               |  |                                                    |
-               |  V                                                    +--> ... -->[sponsor,to,msg,()]
-               | [#pair_t,car,cdr,#?]
+               |  V                                                    |
+               | [#pair_t,car,cdr,#?]                                  +--> ... -->[sponsor,to,msg,()]
                |           |   |
                |           |   +--> ... -->[#pair_t,car,(),#?]
                |           V
@@ -459,31 +458,42 @@ however both are always replaced together.
  `#instr_t`   | `+21` (beh) | _positive_  | _instr_
 
  1. Remove item _beh_ from the stack (`#?` on underflow)
+ 1. Record _beh_ as the code to execute when handling the next event
+ 1. Form a list from the number of stack items specified by the immediate argument
+ 1. Record this list as the private data when handling the next event
 
  T            | X (op)      | Y (imm)     | Z (k)
 --------------|-------------|-------------|-------------
  `#instr_t`   | `+21` (beh) | `0`         | _instr_
 
  1. Remove item _beh_ from the stack (`#?` on underflow)
+ 1. Record _beh_ as the code to execute when handling the next event
+ 1. Record `()` as the private data when handling the next event
 
  T            | X (op)      | Y (imm)     | Z (k)
 --------------|-------------|-------------|-------------
  `#instr_t`   | `+21` (beh) | `-1`        | _instr_
 
  1. Remove item _beh_ from the stack (`#?` on underflow)
- 1. Remove item _state_ from the stack (`#?` on underflow)
  1. Record _beh_ as the code to execute when handling the next event
+ 1. Remove item _state_ from the stack (`#?` on underflow)
  1. Record _state_ as the private data when handling the next event
 
  T            | X (op)      | Y (imm)     | Z (k)
 --------------|-------------|-------------|-------------
  `#instr_t`   | `+21` (beh) | `-2`        | _instr_
 
+ 1. Remove an item from the stack (`#?` on underflow)
+ 1. Record the `X` field of this item as the code to execute when handling the next event
+ 1. Record the `Y` field of this item as the private data when handling the next event
+
  T            | X (op)      | Y (imm)     | Z (k)
 --------------|-------------|-------------|-------------
  `#instr_t`   | `+21` (beh) | `-3`        | _instr_
 
- 1. Remove item _beh_ from the stack (`#?` on underflow)
+ 1. Remove an item from the stack (`#?` on underflow)
+ 1. Record the `Z` field of this item as the code to execute when handling the next event
+ 1. Record this item as the private data when handling the next event
 
 #### `cmp` instruction
 
@@ -609,6 +619,54 @@ _vₙ_ … _v₁_ _beh_    | `new` _n_           | _actor_      | create an _act
 _state_ _beh_        | `new` `-1`          | _actor_      | create an _actor_ with code _beh_ and data _state_
 (_beh_ . _state_)    | `new` `-2`          | _actor_      | create an _actor_ with code _beh_ and data _state_
 \[_, _, _, _beh_\]   | `new` `-3`          | _actor_      | create an _actor_ with code _beh_ and data \[_, _, _, _beh_\]
+
+Provide the behavior (code and data) for a new actor.
+This is the actor "create" primitive.
+There are several ways to provide
+the code and data for the new actor,
+however both are always specified.
+
+ T            | X (op)      | Y (imm)     | Z (k)
+--------------|-------------|-------------|-------------
+ `#instr_t`   | `+20` (new) | _positive_  | _instr_
+
+ 1. Remove item _beh_ from the stack (`#?` on underflow)
+ 1. Form a list from the number of stack items specified by the immediate argument
+ 1. Create a new actor with _beh_ for code and this list for data
+ 1. Push a capability designating the new actor onto the stack
+
+ T            | X (op)      | Y (imm)     | Z (k)
+--------------|-------------|-------------|-------------
+ `#instr_t`   | `+20` (new) | `0`         | _instr_
+
+ 1. Remove item _beh_ from the stack (`#?` on underflow)
+ 1. Create a new actor with _beh_ for code and `()` for data
+ 1. Push a capability designating the new actor onto the stack
+
+ T            | X (op)      | Y (imm)     | Z (k)
+--------------|-------------|-------------|-------------
+ `#instr_t`   | `+20` (new) | `-1`        | _instr_
+
+ 1. Remove item _beh_ from the stack (`#?` on underflow)
+ 1. Remove item _state_ from the stack (`#?` on underflow)
+ 1. Create a new actor with _beh_ for code and _state_ for data
+ 1. Push a capability designating the new actor onto the stack
+
+ T            | X (op)      | Y (imm)     | Z (k)
+--------------|-------------|-------------|-------------
+ `#instr_t`   | `+20` (new) | `-2`        | _instr_
+
+ 1. Remove an item from the stack (`#?` on underflow)
+ 1. Create a new actor with the `X` field of this item for code and the `Y` field of this item for data
+ 1. Push a capability designating the new actor onto the stack
+
+ T            | X (op)      | Y (imm)     | Z (k)
+--------------|-------------|-------------|-------------
+ `#instr_t`   | `+20` (new) | `-3`        | _instr_
+
+ 1. Remove an item from the stack (`#?` on underflow)
+ 1. Create a new actor with the `Z` field of this item for code and this item for data
+ 1. Push a capability designating the new actor onto the stack
 
 #### `nth` instruction
 

@@ -99,8 +99,8 @@ Expressions appear only in operand position.
 There are five _literal_ values:
 
 - `#?` (undefined)
-- `#nil`
-- `#unit`
+- `#nil` (empty list)
+- `#unit` (inert result)
 - `#t` (true)
 - `#f` (false)
 
