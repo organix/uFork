@@ -137,8 +137,6 @@ const SPONSOR_OFS = 15;
 
 // Error codes (from core.rs)
 
-// TODO should these be here? They seem pretty Rust-centric.
-
 const E_OK = 0;
 const E_FAIL = -1;
 const E_BOUNDS = -2;
@@ -148,11 +146,13 @@ const E_NOT_CAP = -5;
 const E_NOT_PTR = -6;
 const E_NOT_ROM = -7;
 const E_NOT_RAM = -8;
-const E_MEM_LIM = -9;
-const E_CPU_LIM = -10;
-const E_MSG_LIM = -11;
-const E_ASSERT = -12;
-const E_STOP = -13;
+const E_NOT_EXE = -9;
+const E_NO_TYPE = -10;
+const E_MEM_LIM = -11;
+const E_CPU_LIM = -12;
+const E_MSG_LIM = -13;
+const E_ASSERT = -14;
+const E_STOP = -15;
 
 // Log levels
 
@@ -192,11 +192,13 @@ const error_messages = [
     "memory pointer required",          // E_NOT_PTR = -6
     "ROM pointer required",             // E_NOT_ROM = -7
     "RAM pointer required",             // E_NOT_RAM = -8
-    "sponsor memory limit reached",     // E_MEM_LIM = -9
-    "sponsor cycle limit reached",      // E_CPU_LIM = -10
-    "sponsor event limit reached",      // E_MSG_LIM = -11
-    "assertion failed",                 // E_ASSERT = -12
-    "actor stopped"                     // E_STOP = -13
+    "instruction required",             // E_NOT_EXE = -9
+    "type required",                    // E_NO_TYPE = -10
+    "sponsor memory limit reached",     // E_MEM_LIM = -11
+    "sponsor cycle limit reached",      // E_CPU_LIM = -12
+    "sponsor event limit reached",      // E_MSG_LIM = -13
+    "assertion failed",                 // E_ASSERT = -14
+    "actor stopped"                     // E_STOP = -15
 ];
 const instr_label = [
     "typeq",
@@ -1723,6 +1725,8 @@ export default Object.freeze({
     E_NOT_PTR,
     E_NOT_ROM,
     E_NOT_RAM,
+    E_NOT_EXE,
+    E_NO_TYPE,
     E_MEM_LIM,
     E_CPU_LIM,
     E_MSG_LIM,

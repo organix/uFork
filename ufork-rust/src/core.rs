@@ -376,7 +376,9 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
     fn perform_op(&mut self, ip: Any) -> Result<Any, Error> {
         self.count_cpu_cycles(1)?;  // always count at least one "cycle"
         let instr = self.mem(ip);
-        assert!(instr.t() == INSTR_T);
+        if instr.t() != INSTR_T {
+            return Err(E_NOT_EXE);
+        }
         let opr = instr.x();  // operation code
         let imm = instr.y();  // immediate argument
         let kip = instr.z();  // next instruction
@@ -397,7 +399,7 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
                 let y = if n > 2 { self.stack_pop() } else { UNDEF };
                 let z = if n > 3 { self.stack_pop() } else { UNDEF };
                 if !self.typeq(TYPE_T, t) {
-                    return Err(E_BOUNDS);  // type required
+                    return Err(E_NO_TYPE);  // type required
                 }
                 let quad = Quad::new(t, x, y, z);
                 let v = self.alloc(&quad)?;
@@ -658,7 +660,7 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
             VM_JUMP => {
                 let k = self.stack_pop();
                 if !self.typeq(INSTR_T, k) {
-                    return Err(E_BOUNDS);  // FIXME: should be E_NO_EXE
+                    return Err(E_NOT_EXE);
                 }
                 k  // continue at `k`
             },
@@ -964,7 +966,7 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
     }
     fn effect_create(&mut self, beh: Any, state: Any) -> Result<Any, Error> {
         if !self.typeq(INSTR_T, beh) {
-            return Err(E_BOUNDS);  // FIXME: should be E_NOT_EXE
+            return Err(E_NOT_EXE);
         }
         let actor = Quad::new_actor(beh, state);
         let ptr = self.alloc(&actor)?;
@@ -972,7 +974,7 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
     }
     fn effect_become(&mut self, beh: Any, state: Any) -> Result<(), Error> {
         if !self.typeq(INSTR_T, beh) {
-            return Err(E_BOUNDS);  // FIXME: should be E_NOT_EXE
+            return Err(E_NOT_EXE);
         }
         let me = self.self_ptr();
         let effect = self.ram(me).z();
@@ -1133,7 +1135,7 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
         let mut nth = lst;
         let mut pred = UNDEF;
         let mut n = n;
-        assert!(n < 64);
+        assert!(n < 64);  // FIXME: replace with cycle-limit(s) in Sponsor
         while n > 1 && self.typeq(PAIR_T, nth) {
             pred = nth;
             nth = self.cdr(nth);
@@ -1155,7 +1157,7 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
         if n == 0 {  // entire list/message
             v = p;
         } else if n > 0 {  // item at n-th index
-            assert!(n < 64);
+            assert!(n < 64);  // FIXME: replace with cycle-limit(s) in Sponsor
             while self.typeq(PAIR_T, p) {
                 n -= 1;
                 if n <= 0 { break; }
@@ -1165,7 +1167,7 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
                 v = self.car(p);
             }
         } else {  // `-n` selects the n-th tail
-            assert!(n > -64);
+            assert!(n > -64);  // FIXME: replace with cycle-limit(s) in Sponsor
             while self.typeq(PAIR_T, p) {
                 n += 1;
                 if n >= 0 { break; }
@@ -1347,7 +1349,6 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
         self.alloc(&spn)
     }
     pub fn new_event(&mut self, sponsor: Any, target: Any, msg: Any) -> Result<Any, Error> {
-        //assert!(self.typeq(ACTOR_T, target));
         if !self.typeq(ACTOR_T, target) {
             return Err(E_NOT_CAP);
         }
@@ -1651,7 +1652,6 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
         let next = self.rom_top();
         let top = next.ofs();
         if top >= QUAD_ROM_MAX {
-            //panic!("out of memory!");
             return Err(E_NO_MEM);  // no memory available
         }
         self.set_rom_top(Any::rom(top + 1));
@@ -1663,7 +1663,6 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
         let sponsor = self.event_sponsor(ep);
         let limit = self.sponsor_memory(sponsor).fix_num().unwrap_or(0);
         if limit <= 0 {
-            //panic!("memory limit reached");
             return Err(E_MEM_LIM);  // Sponsor memory limit reached
         }
         let ptr = self.reserve(init)?;
@@ -1684,7 +1683,6 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
             let top = self.ram_top();
             let ofs = top.ofs() + 1;
             if ofs > QUAD_RAM_MAX {
-                //panic!("out of memory!");
                 /*
                 self.gc_collect();
                 if let Some(m) = self.ram_free().fix_num() {

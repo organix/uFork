@@ -21,12 +21,13 @@ pub const E_NOT_CAP: Error  = -5;   // capability required
 pub const E_NOT_PTR: Error  = -6;   // memory pointer required
 pub const E_NOT_ROM: Error  = -7;   // ROM pointer required
 pub const E_NOT_RAM: Error  = -8;   // RAM pointer required
-// FIXME: E_NOT_EXE: needed         // instruction required
-pub const E_MEM_LIM: Error  = -9;   // Sponsor memory limit reached
-pub const E_CPU_LIM: Error  = -10;  // Sponsor instruction limit reached
-pub const E_MSG_LIM: Error  = -11;  // Sponsor event limit reached
-pub const E_ASSERT: Error   = -12;  // assertion failed
-pub const E_STOP: Error     = -13;  // actor stopped
+pub const E_NOT_EXE: Error  = -9;   // instruction required
+pub const E_NO_TYPE: Error  = -10;  // type required
+pub const E_MEM_LIM: Error  = -11;  // Sponsor memory limit reached
+pub const E_CPU_LIM: Error  = -12;  // Sponsor instruction limit reached
+pub const E_MSG_LIM: Error  = -13;  // Sponsor event limit reached
+pub const E_ASSERT: Error   = -14;  // assertion failed
+pub const E_STOP: Error     = -15;  // actor stopped
 
 pub type Raw = u32;  // univeral value type
 pub type Num = i32;  // fixnum integer type
