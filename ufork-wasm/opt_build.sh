@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -euo pipefail
+
 pushd "$( dirname "${BASH_SOURCE[0]}" )"
 
 nightly="nightly-2023-10-09"

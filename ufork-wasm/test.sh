@@ -1,5 +1,9 @@
 #!/bin/bash
 
+set -euo pipefail
+
+pushd "$( dirname "${BASH_SOURCE[0]}" )"
+
 # Run the test runners in parallel.
 
 deno run \
