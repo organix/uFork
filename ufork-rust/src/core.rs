@@ -9,14 +9,15 @@ pub const ROM_BASE_OFS: usize = 16;  // ROM offsets below this value are reserve
 
 pub const MEMORY: Any       = Any { raw: MUT_RAW | 0 };
 pub const DDEQUE: Any       = Any { raw: MUT_RAW | 1 };
-pub const DEBUG_DEV: Any    = Any { raw: OPQ_RAW | MUT_RAW | 2 };
-pub const CLOCK_DEV: Any    = Any { raw: OPQ_RAW | MUT_RAW | 3 };
-pub const IO_DEV: Any       = Any { raw: OPQ_RAW | MUT_RAW | 4 };
-pub const BLOB_DEV: Any     = Any { raw: OPQ_RAW | MUT_RAW | 5 };
-pub const TIMER_DEV: Any    = Any { raw: OPQ_RAW | MUT_RAW | 6 };
-pub const MEMO_DEV: Any     = Any { raw: OPQ_RAW | MUT_RAW | 7 };
-pub const HOST_DEV: Any     = Any { raw: OPQ_RAW | MUT_RAW | 8 };
-pub const RANDOM_DEV: Any   = Any { raw: OPQ_RAW | MUT_RAW | 9 };
+//pub const NULL_DEV: Any    = Any { raw: MUT_RAW | OPQ_RAW | 2 };
+pub const DEBUG_DEV: Any    = Any { raw: MUT_RAW | OPQ_RAW | 2 };
+pub const CLOCK_DEV: Any    = Any { raw: MUT_RAW | OPQ_RAW | 3 };
+pub const IO_DEV: Any       = Any { raw: MUT_RAW | OPQ_RAW | 4 };
+pub const BLOB_DEV: Any     = Any { raw: MUT_RAW | OPQ_RAW | 5 };
+pub const TIMER_DEV: Any    = Any { raw: MUT_RAW | OPQ_RAW | 6 };
+pub const MEMO_DEV: Any     = Any { raw: MUT_RAW | OPQ_RAW | 7 };
+pub const HOST_DEV: Any     = Any { raw: MUT_RAW | OPQ_RAW | 8 };
+pub const RANDOM_DEV: Any   = Any { raw: MUT_RAW | OPQ_RAW | 9 };
 pub const SPONSOR: Any      = Any { raw: MUT_RAW | 15 };
 
 pub const RAM_BASE_OFS: usize = 16;  // RAM offsets below this value are reserved
@@ -1828,8 +1829,8 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
     }
 
     fn gc_mark(&mut self, val: Any) {
-        let raw = val.raw() & !OPQ_RAW;
-        let ptr = Any::new(raw);  // strip opaque bit
+        let raw = val.raw() & !OPQ_RAW;  // strip opaque bit
+        let ptr = Any::new(raw);
         if ptr.is_ram() {
             let ofs = ptr.ofs();
             if self.gc_queue[ofs] == UNDEF {

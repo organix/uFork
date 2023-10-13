@@ -60,7 +60,8 @@ are turned into message-events.
 ## Representation
 
 The quad-cell is the primary internal data-structure in **uFork**.
-It consists of four integers (current WASM target is 32 bits).
+It consists of four unsigned integers
+(the current WASM target uses 32-bit words).
 
  T        | X        | Y        | Z
 ----------|----------|----------|----------
@@ -69,33 +70,32 @@ type/proc | head/car | tail/cdr | link/next
 The integers in each field carry a _type tag_
 in their 3 most-significant bits (MSBs).
 The 1st MSB is {0=indirect-reference, 1=direct-value}.
-The 2nd MSB is {0=transparent, 1=opaque}.
-The 3rd MSB is {0=immutable, 1=mutable}.
+The 2nd MSB is {0=immutable, 1=mutable}.
+The 3rd MSB is {0=transparent, 1=opaque}.
 The resulting type-heirarchy looks like this:
 
 ```
                    any-value
                   0 /     \ 1
-              indirect   direct (fixnum)
+        (ptr) indirect   direct (fixnum)
              0 /    \ 1
-      transparent  opaque (ocap)
-     0 /       \ 1
-immutable     mutable
-  (rom)        (ram)
+  (rom) immutable  mutable
+                  0 /   \ 1
+     (ram) transparent opaque (ocap)
 ```
 
 Direct values (fixnums) are stored in 2's-complement representation,
 where the 2nd MSB is the sign bit of the integer value.
 
-Indirect values (references) desigate quad-cells (with fields [_T_, _X_, _Y_, _Z_]).
-
-Opaque values (object-capabilities) cannot be dereferenced
-except by the virtual-processor (to implement _actor_ primitive operations).
+Indirect values (pointers) designate quad-cells (with fields [_T_, _X_, _Y_, _Z_]).
 
 Mutable values designate a quad that may be written as well as read.
 Since actor-state is mutable, the quad representing the actor must stored in writable memory.
 
-The assembly language semantics provide no way to convert between _fixnums_, _ocaps_, and quad-cell references.
+Opaque values (object-capabilities) cannot be dereferenced
+except by the virtual-processor (to implement _actor_ primitive operations).
+
+The machine-code semantics provide no way to convert between _fixnums_, _ocaps_, and quad-cell pointers.
 
 ## Data Structures
 
@@ -139,8 +139,8 @@ Quad-cells are used to encode most of the important data-structures in uFork.
 
  Address     | T          | X        | Y        | Z        | Description
 -------------|------------|----------|----------|----------|------------------
- `^20000000` | _top_      | _next_   | _free_   | _root_   | Memory Descriptor
- `^20000001` | _e_head_   | _e_tail_ | _k_head_ | _k_tail_ | Events and Continuations
+ `^40000000` | _top_      | _next_   | _free_   | _root_   | Memory Descriptor
+ `^40000001` | _e_head_   | _e_tail_ | _k_head_ | _k_tail_ | Events and Continuations
  `@60000002` | `#actor_t` | `+0`     | `()`     | `#?`     | Device Actor #0
  `@60000003` | `#actor_t` | `+1`     | `()`     | `#?`     | Device Actor #1
  `@60000004` | `#actor_t` | `+2`     | `()`     | `#?`     | Device Actor #2
@@ -154,25 +154,25 @@ Quad-cells are used to encode most of the important data-structures in uFork.
  `@6000000C` | `#actor_t` | `+10`    | `()`     | `#?`     | Device Actor #10
  `@6000000D` | `#actor_t` | `+11`    | `()`     | `#?`     | Device Actor #11
  `@6000000E` | `#actor_t` | `+12`    | `()`     | `#?`     | Device Actor #12
- `^2000000F` | _memory_   | _events_ | _cycles_ | _signal_ | Root Sponsor
+ `^4000000F` | _memory_   | _events_ | _cycles_ | _signal_ | Root Sponsor
 
 ### Memory Descriptor
 
  Address     | T          | X           | Y            | Z
 -------------|------------|-------------|--------------|----------
- `^20000000` | _top addr_ | _next free_ | _free count_ | _GC root_
+ `^40000000` | _top addr_ | _next free_ | _free count_ | _GC root_
 
 ### Event and Continuation Queues
 
  Address     | T          | X        | Y        | Z
 -------------|------------|----------|----------|----------
- `^20000001` | _e_head_   | _e_tail_ | _k_head_ | _k_tail_
+ `^40000001` | _e_head_   | _e_tail_ | _k_head_ | _k_tail_
 
 ### Root Sponsor
 
  Address     | T          | X        | Y        | Z
 -------------|------------|----------|----------|----------
- `^2000000F` | _memory_   | _events_ | _cycles_ | _signal_
+ `^4000000F` | _memory_   | _events_ | _cycles_ | _signal_
 
 ## Object Graph
 

@@ -35,5 +35,5 @@ pub type Num = i32;  // fixnum integer type
 // type-tag bits
 pub const MSK_RAW: Raw          = 0xF000_0000;  // mask for type-tag bits
 pub const DIR_RAW: Raw          = 0x8000_0000;  // 1=direct (fixnum), 0=indirect (pointer)
-pub const OPQ_RAW: Raw          = 0x4000_0000;  // 1=opaque (capability), 0=transparent (navigable)
-pub const MUT_RAW: Raw          = 0x2000_0000;  // 1=read-write (mutable), 0=read-only (immutable)
+pub const MUT_RAW: Raw          = 0x4000_0000;  // 1=read-write (mutable), 0=read-only (immutable)
+pub const OPQ_RAW: Raw          = 0x2000_0000;  // 1=opaque (capability), 0=transparent (navigable)

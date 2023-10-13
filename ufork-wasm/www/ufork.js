@@ -57,8 +57,8 @@ import scm from "./scheme.js";
 
 const MSK_RAW   = 0xF0000000;  // mask for type-tag bits
 const DIR_RAW   = 0x80000000;  // 1=direct (fixnum), 0=indirect (pointer)
-const OPQ_RAW   = 0x40000000;  // 1=opaque (capability), 0=transparent (navigable)
-const MUT_RAW   = 0x20000000;  // 1=read-write (mutable), 0=read-only (immutable)
+const MUT_RAW   = 0x40000000;  // 1=read-write (mutable), 0=read-only (immutable)
+const OPQ_RAW   = 0x20000000;  // 1=opaque (capability), 0=transparent (navigable)
 
 // Raw constants
 
@@ -457,19 +457,19 @@ function make_core({
     }
 
     function u_is_cap(raw) {
-        return ((raw & (DIR_RAW | OPQ_RAW)) === OPQ_RAW);
+        return ((raw & (DIR_RAW | MUT_RAW | OPQ_RAW)) === (MUT_RAW | OPQ_RAW));
     }
 
     function u_is_ptr(raw) {
-        return ((raw & (DIR_RAW | OPQ_RAW)) === 0);
+        return u_is_rom(raw) || u_is_ram(raw);  // excludes ocaps
     }
 
     function u_is_rom(raw) {
-        return ((raw & (DIR_RAW | OPQ_RAW | MUT_RAW)) === 0);
+        return ((raw & (DIR_RAW | MUT_RAW)) === 0);
     }
 
     function u_is_ram(raw) {
-        return ((raw & (DIR_RAW | OPQ_RAW | MUT_RAW)) === MUT_RAW);
+        return ((raw & (DIR_RAW | MUT_RAW | OPQ_RAW)) === MUT_RAW);
     }
 
     function u_fixnum(i32) {
@@ -512,7 +512,7 @@ function make_core({
             return rom_label[raw];
         }
         const prefix = (
-            (raw & OPQ_RAW)
+            u_is_cap(raw)
             ? "@"
             : "^"
         );
@@ -1651,8 +1651,8 @@ export default Object.freeze({
 
     MSK_RAW,
     DIR_RAW,
-    OPQ_RAW,
     MUT_RAW,
+    OPQ_RAW,
     UNDEF_RAW,
     NIL_RAW,
     FALSE_RAW,

@@ -159,6 +159,7 @@ impl Any {
     pub fn raw(&self) -> Raw {
         self.raw
     }
+    // FIXME: we are limiting all offsets to 28 bits
     pub fn ofs(&self) -> usize {
         if self.is_fix() {
             panic!("fixnum has no addr");
@@ -170,16 +171,16 @@ impl Any {
         (self.raw & DIR_RAW) != 0
     }
     pub fn is_cap(&self) -> bool {
-        (self.raw & (DIR_RAW | OPQ_RAW)) == OPQ_RAW
+        (self.raw & (DIR_RAW | MUT_RAW | OPQ_RAW)) == (MUT_RAW | OPQ_RAW)
     }
     pub fn is_ptr(&self) -> bool {
-        (self.raw & (DIR_RAW | OPQ_RAW)) == 0
+        self.is_rom() || self.is_ram()  // excludes ocaps
     }
     pub fn is_rom(&self) -> bool {
-        (self.raw & MSK_RAW) == 0
+        (self.raw & (DIR_RAW | MUT_RAW)) == 0
     }
     pub fn is_ram(&self) -> bool {
-        (self.raw & MSK_RAW) == MUT_RAW
+        (self.raw & (DIR_RAW | MUT_RAW | OPQ_RAW)) == MUT_RAW
     }
     pub fn get_fix(&self) -> Result<isize, Error> {
         match self.fix_num() {
