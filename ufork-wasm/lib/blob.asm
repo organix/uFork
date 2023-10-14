@@ -38,7 +38,7 @@ write_13:               ; (debug_dev blob) <- #unit
     state 2             ; 7 SELF blob
     send 2              ; --
     msg 0               ; msg
-    is_eq #unit         ; --
+    assert #unit        ; --
     ref std.commit
 read_13:                ; (debug_dev blob) <- byte
     msg 0               ; byte

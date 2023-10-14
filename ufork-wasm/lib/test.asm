@@ -128,9 +128,9 @@ mock_list_f:            ; --
 ; A verify customer that asserts success.
 
 assert_ok:              ; _ <- verdict
-    msg 0               ; verdict
     debug               ; pause if running in debugger
-    is_eq #t            ; assert(verdict==#t)
+    msg 0               ; verdict
+    assert #t           ; assert(verdict==#t)
     ref std.commit
 
 ;

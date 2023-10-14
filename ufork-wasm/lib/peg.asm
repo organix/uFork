@@ -253,7 +253,7 @@ k_start:                ; (peg (ok . fail)) <- in
 unexpected:             ; _ <- _
 ;    debug               ; BREAKPOINT
     push #f             ; #f
-    is_eq #t            ; assert(#f==#t)
+    assert #t           ; assert(#f==#t)
     ref std.commit
 
 ; assert deep (structural) equality
@@ -268,13 +268,13 @@ is_equal:               ; expect <- actual
     state 0             ; expect
     msg 0               ; expect actual
     cmp eq              ; expect==actual
-    is_eq #t            ; assert(expect==actual)
+    assert #t           ; assert(expect==actual)
     ref std.commit
 
 is_equal_pair:          ; --
     msg 0               ; actual
     typeq #pair_t       ; is_pair(actual)
-    is_eq #t            ; assert(is_pair(actual))
+    assert #t           ; assert(is_pair(actual))
 
     msg 1               ; first(actual)
     state 1             ; first(actual) first(expect)
@@ -323,9 +323,9 @@ expect_1:               ; () <- (accum . in)
 
 ;    debug               ; BREAKPOINT
     msg 1               ; accum
-    is_eq #nil          ; assert(accum==#nil)
+    assert #nil         ; assert(accum==#nil)
     msg -1              ; in
-    is_eq #nil          ; assert(in==#nil)
+    assert #nil         ; assert(in==#nil)
     ref std.commit
 
 ; test `fail` fails at end-of-stream
@@ -353,7 +353,7 @@ test_2:                 ; (debug_dev) <- ()
 expect_2:               ; () <- in
 ;    debug               ; BREAKPOINT
     msg 0               ; in
-    is_eq #nil          ; assert(in==#nil)
+    assert #nil         ; assert(in==#nil)
     ref std.commit
 
 ; test `any` fails at end-of-stream
@@ -381,7 +381,7 @@ test_3:                 ; (debug_dev) <- ()
 expect_3:               ; () <- in
 ;    debug               ; BREAKPOINT
     msg 0               ; in
-    is_eq #nil          ; assert(in==#nil)
+    assert #nil         ; assert(in==#nil)
     ref std.commit
 
 ; test `any` succeeds on non-empty stream
@@ -418,9 +418,9 @@ test_4:                 ; (debug_dev) <- ()
 expect_4:               ; () <- ('0' '\r' . next)
 ;    debug               ; BREAKPOINT
     msg 1               ; accum
-    is_eq '0'           ; assert(accum=='0')
+    assert '0'          ; assert(accum=='0')
     msg 2               ; in.token
-    is_eq '\r'          ; assert(in=='\r')
+    assert '\r'         ; assert(in=='\r')
     ref std.commit
 
 ; test [0-9] succeeds on stream starting with '0'
@@ -455,12 +455,12 @@ test_5:                 ; (debug_dev) <- ()
 expect_5:               ; () <- ('0' '\r' . next)
 ;    debug               ; BREAKPOINT
     msg 1               ; accum
-    is_eq '0'           ; assert(accum=='0')
+    assert '0'          ; assert(accum=='0')
     msg 2               ; in.token
-    is_eq '\r'          ; assert(in=='\r')
+    assert '\r'         ; assert(in=='\r')
     msg -2              ; next
     typeq #actor_t      ; is_actor(next)
-    is_eq #t            ; assert(is_actor(next))
+    assert #t           ; assert(is_actor(next))
     ref std.commit
 
 ; test and/or/not grammar

@@ -76,10 +76,10 @@ listen_svc_beh:             ; awp_dev <- (cust store . greeter)
 
 listen_cb_beh:              ; cust <- (stop . error)
     msg -1                  ; error
-    is_eq #nil              ; --
+    assert #nil             ; --
     msg 1                   ; stop
     typeq #actor_t          ; actor?(stop)
-    is_eq #t                ; --
+    assert #t               ; --
     msg 1                   ; stop
     state 0                 ; stop cust
     ref std.send_msg
@@ -138,7 +138,7 @@ intro_svc_beh:              ; (awp_dev store) <- (cust petname hello)
 KEQD_greeter_beh:           ; deposit <- (to_cancel callback petname)
     msg 3                   ; petname
     typeq #fixnum_t         ; fixnum?
-    is_eq #t                ; --
+    assert #t               ; --
     state 0                 ; deposit
     msg 2                   ; deposit callback
     send 1                  ; --
@@ -146,7 +146,7 @@ KEQD_greeter_beh:           ; deposit <- (to_cancel callback petname)
 
 intro_cb_beh:               ; cust <- (greeting . error)
     msg -1                  ; error
-    is_eq #nil              ; --
+    assert #nil             ; --
     msg 1                   ; greeting
     state 0                 ; greeting cust
     ref std.send_msg

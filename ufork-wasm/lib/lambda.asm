@@ -148,8 +148,8 @@ test_const:             ; () <- ()
     new 0               ; env=empty_env.()
 
     push 42             ; env 42
-    push assert         ; env 42 assert
-    new -1              ; env cust=assert.42
+    push assert_beh     ; env 42 assert_beh
+    new -1              ; env cust=assert_beh.42
     pair 1              ; (cust . env)
 
     push 42             ; (cust . env) 42
@@ -174,8 +174,8 @@ test_var:               ; () <- ()
     new -1              ; var env=binding.({var:value} . next)
 
     push 13             ; var env 13
-    push assert         ; var env 13 assert
-    new -1              ; var env cust=assert.13
+    push assert_beh         ; var env 13 assert_beh
+    new -1              ; var env cust=assert_beh.13
     pair 1              ; var (cust . env)
 
     roll 2              ; (cust . env) var
@@ -187,8 +187,8 @@ test_identity:
     new 0               ; env=empty_env.()
 
     push -77            ; env -77
-    push assert         ; env -77 assert
-    new -1              ; env cust=assert.-77
+    push assert_beh         ; env -77 assert_beh
+    new -1              ; env cust=assert_beh.-77
     pair 1              ; (cust . env)
 
     push variable       ; (cust . env) variable
@@ -207,11 +207,11 @@ test_identity:
     new -1              ; (cust . env) application.(lambda . param)
     ref std.send_msg
 
-assert:                 ; expect <- actual
+assert_beh:             ; expect <- actual
     state 0             ; expect
     msg 0               ; expect actual
     cmp eq              ; expect==actual
-    is_eq #t            ; assert(expect==actual)
+    assert #t           ; assert(expect==actual)
     ref std.commit
 
 ;;  #

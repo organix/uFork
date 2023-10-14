@@ -41,10 +41,10 @@ boot:                   ; () <- {caps}
 
 listening_beh:          ; {caps} <- (stop . error)
     msg -1              ; error
-    is_eq #nil          ; --
+    assert #nil         ; --
     msg 1               ; stop
     typeq #actor_t      ; actor?(stop)
-    is_eq #t            ; --
+    assert #t           ; --
     ;msg 1               ; stop
     ;send 0              ; --
     push 42             ; hello
@@ -66,9 +66,9 @@ listening_beh:          ; {caps} <- (stop . error)
 
 greeter_beh:            ; () <- (cancel result petname hello)
     msg 4               ; hello
-    is_eq 42            ; --
+    assert 42           ; --
     msg 3               ; petname
-    is_eq 1             ; --
+    assert 1            ; --
     push ping_beh       ; ping_beh
     new 0               ; ping
     msg 2               ; ping result
@@ -79,7 +79,7 @@ greeter_beh:            ; () <- (cancel result petname hello)
 
 introduced_beh:         ; {caps} <- (ping . error)
     msg -1              ; error
-    is_eq #nil          ; --
+    assert #nil         ; --
     state 0             ; {caps}
     push pong_beh       ; {caps} pong_beh
     new -1              ; pong

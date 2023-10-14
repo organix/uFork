@@ -126,9 +126,9 @@ boot:                   ; () <- {caps}
 
 verify:                 ; () <- (42 . -42)
     msg 1               ; 42
-    is_eq 42            ; --
+    assert 42           ; --
     msg -1              ; -42
-    is_eq -42           ; --
+    assert -42          ; --
     ref std.commit
 
 .export

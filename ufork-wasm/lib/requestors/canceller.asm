@@ -8,7 +8,7 @@
 ;   (reason) -> canceller
 
 ; A more cancel-like capability can be made by wrapping a canceller in
-; 'wrap_beh' from lib.asm.
+; 'wrap_beh' from `../lib.asm`.
 
 .import
     std: "../std.asm"

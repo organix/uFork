@@ -175,12 +175,6 @@ boot:                   ; () <- {caps}
     new 0               ; debug_dev n cust fact.()
     send 2              ; debug_dev
 
-;    depth               ; 3 2 1 depth
-;    my self             ; 3 2 1 depth SELF
-;    send -1             ; 3 2 1
-;    push step_1         ; (1 2 3 . #?) step_1
-;    beh -1              ; --
-
     ; start unbounded counter
 ;    push count_to       ; ... count_to
 ;    new 0               ; ... count_to.()
@@ -188,19 +182,11 @@ boot:                   ; () <- {caps}
 
     ref std.commit
 
-step_1:                 ; (1 2 3 . #?) <- depth'
-    my state            ; 3 2 1
-    depth               ; 3 2 1 depth
-    msg 0               ; 3 2 1 depth depth'
-    cmp eq              ; 3 2 1 depth==depth'
-    is_eq #t            ; 3 2 1
-    ref std.commit
-
 assert:                 ; expect <- actual
     state 0             ; expect
     msg 0               ; expect actual
     cmp eq              ; expect==actual
-    is_eq #t            ; assert(expect==actual)
+    assert #t           ; assert(expect==actual)
     ref std.commit
 
 .export

@@ -130,7 +130,7 @@ test_CAS:               ; new old expect
 
 check_CAS_beh:          ; (cell expect) <- value
     msg 0               ; value
-    is_eq 4             ; --
+    assert 4            ; --
     state 1             ; cell
     state 2             ; cell expect
     push check_read_beh ; cell expect check_read_beh
@@ -150,7 +150,7 @@ assert_eq_beh:          ; expect <- value
     msg 0               ; value
     state 0             ; value expect
     cmp eq              ; value==expect
-    is_eq #t            ; --
+    assert #t           ; --
     ref std.commit
 
 test_overlap:           ; () <- ()
