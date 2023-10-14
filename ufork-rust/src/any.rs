@@ -24,6 +24,7 @@ pub const FALSE: Any        = Any { raw: 0x2 };
 pub const TRUE: Any         = Any { raw: 0x3 };
 pub const UNIT: Any         = Any { raw: 0x4 };
 pub const EMPTY_DQ: Any     = Any { raw: 0x5 };
+
 pub const LITERAL_T: Any    = Any { raw: 0x0 };  // == UNDEF
 pub const TYPE_T: Any       = Any { raw: 0x6 };
 pub const FIXNUM_T: Any     = Any { raw: 0x7 };
@@ -37,7 +38,6 @@ pub const FWD_REF_T: Any    = Any { raw: 0xE };
 pub const FREE_T: Any       = Any { raw: 0xF };  // MUST BE (ROM_BASE_OFS - 1)
 
 // INSTR_T values
-/*
 pub const VM_DEBUG: Any     = Any { raw: DIR_RAW | 0x00 };
 pub const VM_JUMP: Any      = Any { raw: DIR_RAW | 0x01 };
 pub const VM_PUSH: Any      = Any { raw: DIR_RAW | 0x02 };
@@ -73,39 +73,6 @@ pub const VM_NEW: Any       = Any { raw: DIR_RAW | 0x1C };
 pub const VM_BEH: Any       = Any { raw: DIR_RAW | 0x1D };
 pub const VM_1E: Any        = Any { raw: DIR_RAW | 0x1E };  // unused
 pub const VM_1F: Any        = Any { raw: DIR_RAW | 0x1F };  // unused
-*/
-pub const VM_TYPEQ: Any     = Any { raw: DIR_RAW | 0 };
-pub const VM_QUAD: Any      = Any { raw: DIR_RAW | 1 };
-//pub const VM_GET: Any       = Any { raw: DIR_RAW | 2 };
-pub const VM_DICT: Any      = Any { raw: DIR_RAW | 3 };
-pub const VM_PAIR: Any      = Any { raw: DIR_RAW | 4 };
-pub const VM_PART: Any      = Any { raw: DIR_RAW | 5 };
-pub const VM_NTH: Any       = Any { raw: DIR_RAW | 6 };
-pub const VM_PUSH: Any      = Any { raw: DIR_RAW | 7 };
-pub const VM_JUMP: Any      = Any { raw: DIR_RAW | 8 };
-pub const VM_DROP: Any      = Any { raw: DIR_RAW | 9 };
-pub const VM_PICK: Any      = Any { raw: DIR_RAW | 10 };
-pub const VM_DUP: Any       = Any { raw: DIR_RAW | 11 };
-pub const VM_ROLL: Any      = Any { raw: DIR_RAW | 12 };
-pub const VM_ALU: Any       = Any { raw: DIR_RAW | 13 };
-pub const VM_EQ: Any        = Any { raw: DIR_RAW | 14 };
-pub const VM_CMP: Any       = Any { raw: DIR_RAW | 15 };
-pub const VM_IF: Any        = Any { raw: DIR_RAW | 16 };
-pub const VM_MSG: Any       = Any { raw: DIR_RAW | 17 };
-pub const VM_MY: Any        = Any { raw: DIR_RAW | 18 };
-pub const VM_SEND: Any      = Any { raw: DIR_RAW | 19 };
-pub const VM_NEW: Any       = Any { raw: DIR_RAW | 20 };
-pub const VM_BEH: Any       = Any { raw: DIR_RAW | 21 };
-pub const VM_END: Any       = Any { raw: DIR_RAW | 22 };
-pub const VM_SPONSOR: Any   = Any { raw: DIR_RAW | 23 };
-//pub const VM_PUTC: Any      = Any { raw: DIR_RAW | 24 };
-//pub const VM_GETC: Any      = Any { raw: DIR_RAW | 25 };
-pub const VM_DEBUG: Any     = Any { raw: DIR_RAW | 26 };
-pub const VM_DEQUE: Any     = Any { raw: DIR_RAW | 27 };
-pub const VM_STATE: Any     = Any { raw: DIR_RAW | 28 };
-pub const VM_SIGNAL: Any    = Any { raw: DIR_RAW | 29 };
-pub const VM_ASSERT: Any    = Any { raw: DIR_RAW | 30 };
-//pub const VM_IS_NE: Any     = Any { raw: DIR_RAW | 31 };
 
 // VM_DICT dictionary operations
 pub const DICT_HAS: Any     = ZERO;
@@ -115,30 +82,30 @@ pub const DICT_SET: Any     = PLUS_3;
 pub const DICT_DEL: Any     = PLUS_4;
 
 // VM_DEQUE deque operations
-pub const DEQUE_NEW: Any    = Any { raw: DIR_RAW | 0 };
-pub const DEQUE_EMPTY: Any  = Any { raw: DIR_RAW | 1 };
-pub const DEQUE_PUSH: Any   = Any { raw: DIR_RAW | 2 };
-pub const DEQUE_POP: Any    = Any { raw: DIR_RAW | 3 };
-pub const DEQUE_PUT: Any    = Any { raw: DIR_RAW | 4 };
-pub const DEQUE_PULL: Any   = Any { raw: DIR_RAW | 5 };
-pub const DEQUE_LEN: Any    = Any { raw: DIR_RAW | 6 };
+pub const DEQUE_NEW: Any    = ZERO;
+pub const DEQUE_EMPTY: Any  = PLUS_1;
+pub const DEQUE_PUSH: Any   = PLUS_2;
+pub const DEQUE_POP: Any    = PLUS_3;
+pub const DEQUE_PUT: Any    = PLUS_4;
+pub const DEQUE_PULL: Any   = PLUS_5;
+pub const DEQUE_LEN: Any    = PLUS_6;
 
 // VM_ALU arithmetic/logical operations
-pub const ALU_NOT: Any      = Any { raw: DIR_RAW | 0 };
-pub const ALU_AND: Any      = Any { raw: DIR_RAW | 1 };
-pub const ALU_OR: Any       = Any { raw: DIR_RAW | 2 };
-pub const ALU_XOR: Any      = Any { raw: DIR_RAW | 3 };
-pub const ALU_ADD: Any      = Any { raw: DIR_RAW | 4 };
-pub const ALU_SUB: Any      = Any { raw: DIR_RAW | 5 };
-pub const ALU_MUL: Any      = Any { raw: DIR_RAW | 6 };
+pub const ALU_NOT: Any      = ZERO;
+pub const ALU_AND: Any      = PLUS_1;
+pub const ALU_OR: Any       = PLUS_2;
+pub const ALU_XOR: Any      = PLUS_3;
+pub const ALU_ADD: Any      = PLUS_4;
+pub const ALU_SUB: Any      = PLUS_5;
+pub const ALU_MUL: Any      = PLUS_6;
 
 // VM_CMP comparison operations
-pub const CMP_EQ: Any       = Any { raw: DIR_RAW | 0 };
-pub const CMP_GE: Any       = Any { raw: DIR_RAW | 1 };
-pub const CMP_GT: Any       = Any { raw: DIR_RAW | 2 };
-pub const CMP_LT: Any       = Any { raw: DIR_RAW | 3 };
-pub const CMP_LE: Any       = Any { raw: DIR_RAW | 4 };
-pub const CMP_NE: Any       = Any { raw: DIR_RAW | 5 };
+pub const CMP_EQ: Any       = ZERO;
+pub const CMP_GE: Any       = PLUS_1;
+pub const CMP_GT: Any       = PLUS_2;
+pub const CMP_LT: Any       = PLUS_3;
+pub const CMP_LE: Any       = PLUS_4;
+pub const CMP_NE: Any       = PLUS_5;
 
 // VM_MY actor operations
 pub const MY_SELF: Any      = ZERO;
@@ -151,13 +118,13 @@ pub const END_STOP: Any     = ZERO;
 pub const END_COMMIT: Any   = PLUS_1;
 
 // VM_SPONSOR sponsorship management
-pub const SPONSOR_NEW: Any = Any { raw: DIR_RAW | 0 };
-pub const SPONSOR_MEMORY: Any = Any { raw: DIR_RAW | 1 };
-pub const SPONSOR_EVENTS: Any = Any { raw: DIR_RAW | 2 };
-pub const SPONSOR_CYCLES: Any = Any { raw: DIR_RAW | 3 };
-pub const SPONSOR_RECLAIM: Any = Any { raw: DIR_RAW | 4 };
-pub const SPONSOR_START: Any = Any { raw: DIR_RAW | 5 };
-pub const SPONSOR_STOP: Any = Any { raw: DIR_RAW | 6 };
+pub const SPONSOR_NEW: Any      = ZERO;
+pub const SPONSOR_MEMORY: Any   = PLUS_1;
+pub const SPONSOR_EVENTS: Any   = PLUS_2;
+pub const SPONSOR_CYCLES: Any   = PLUS_3;
+pub const SPONSOR_RECLAIM: Any  = PLUS_4;
+pub const SPONSOR_START: Any    = PLUS_5;
+pub const SPONSOR_STOP: Any     = PLUS_6;
 
 // type-tagged value
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

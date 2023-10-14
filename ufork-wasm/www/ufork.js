@@ -81,38 +81,41 @@ const FREE_T    = 0x0000000F;
 
 // Instruction constants
 
-const VM_TYPEQ  = 0x80000000;
-const VM_QUAD   = 0x80000001;
-//const VM_GET    = 0x80000002;  // deprecated
-const VM_DICT   = 0x80000003;
-const VM_PAIR   = 0x80000004;
-const VM_PART   = 0x80000005;
-const VM_NTH    = 0x80000006;
-const VM_PUSH   = 0x80000007;
-const VM_JUMP   = 0x80000008;
-const VM_DROP   = 0x80000009;
-const VM_PICK   = 0x8000000A;
-const VM_DUP    = 0x8000000B;
-const VM_ROLL   = 0x8000000C;
+const VM_DEBUG  = 0x80000000;
+const VM_JUMP   = 0x80000001;
+const VM_PUSH   = 0x80000002;
+const VM_IF     = 0x80000003;
+const VM_04     = 0x80000004;  // unused
+const VM_TYPEQ  = 0x80000005;
+const VM_EQ     = 0x80000006;
+const VM_ASSERT = 0x80000007;
+
+const VM_SPONSOR= 0x80000008;
+const VM_QUAD   = 0x80000009;
+const VM_DICT   = 0x8000000A;
+const VM_DEQUE  = 0x8000000B;
+const VM_MY     = 0x8000000C;
 const VM_ALU    = 0x8000000D;
-const VM_EQ     = 0x8000000E;
-const VM_CMP    = 0x8000000F;
-const VM_IF     = 0x80000010;
-const VM_MSG    = 0x80000011;
-const VM_MY     = 0x80000012;
-const VM_SEND   = 0x80000013;
-const VM_NEW    = 0x80000014;
-const VM_BEH    = 0x80000015;
-const VM_END    = 0x80000016;
-const VM_SPONSOR= 0x80000017;
-//const VM_PUTC   = 0x80000018;  // deprecated
-//const VM_GETC   = 0x80000019;  // deprecated
-const VM_DEBUG  = 0x8000001A;
-const VM_DEQUE  = 0x8000001B;
-const VM_STATE  = 0x8000001C;
-const VM_SIGNAL = 0x8000001D;
-const VM_ASSERT = 0x8000001E;
-//const VM_IS_NE  = 0x8000001F;  // deprecated
+const VM_CMP    = 0x8000000E;
+const VM_END    = 0x8000000F;
+
+const VM_10     = 0x80000010;  // unused
+const VM_PAIR   = 0x80000011;
+const VM_PART   = 0x80000012;
+const VM_NTH    = 0x80000013;
+const VM_PICK   = 0x80000014;
+const VM_ROLL   = 0x80000015;
+const VM_DUP    = 0x80000016;
+const VM_DROP   = 0x80000017;
+
+const VM_MSG    = 0x80000018;
+const VM_STATE  = 0x80000019;
+const VM_SEND   = 0x8000001A;
+const VM_SIGNAL = 0x8000001B;
+const VM_NEW    = 0x8000001C;
+const VM_BEH    = 0x8000001D;
+const VM_1E     = 0x8000001E;  // unused
+const VM_1F     = 0x8000001F;  // unused
 
 // Memory limits (from core.rs)
 
@@ -200,38 +203,38 @@ const error_messages = [
     "actor stopped"                     // E_STOP = -15
 ];
 const instr_label = [
+    "debug",
+    "jump",
+    "push",
+    "if",
+    "VM_04",        // unused
     "typeq",
+    "eq",
+    "assert",
+    "sponsor",
     "quad",
-    "~get",  // deprecated
     "dict",
+    "deque",
+    "my",
+    "alu",
+    "cmp",
+    "end",
+    "VM_10",        // unused
     "pair",
     "part",
     "nth",
-    "push",
-    "jump",
-    "drop",
     "pick",
-    "dup",
     "roll",
-    "alu",
-    "eq",
-    "cmp",
-    "if",
+    "dup",
+    "drop",
     "msg",
-    "my",
+    "state",
     "send",
+    "signal",
     "new",
     "beh",
-    "end",
-    "sponsor",
-    "~putc",  // deprecated
-    "~getc",  // deprecated
-    "debug",
-    "deque",
-    "state",
-    "signal",
-    "assert",
-    "~is_ne"  // deprecated
+    "VM_1E",        // unused
+    "VM_1F"         // unused
 ];
 const dict_imm_label = [
     "has",
@@ -655,11 +658,11 @@ function make_core({
         s += u_print(quad.t);
         s += ", ";
         if (quad.t === INSTR_T) {
-            const op = quad.x ^ DIR_RAW;  // translate opcode
+            const op = u_fix_to_i32(quad.x);  // translate opcode
             if (op < instr_label.length) {
                 s += instr_label[op];
                 s += ", ";
-                const imm = quad.y ^ DIR_RAW;  // translate immediate
+                const imm = u_fix_to_i32(quad.y);  // translate immediate
                 if ((quad.x === VM_DICT) && (imm < dict_imm_label.length)) {
                     s += dict_imm_label[imm];
                 } else if ((quad.x === VM_ALU) && (imm < alu_imm_label.length)) {
@@ -671,7 +674,7 @@ function make_core({
                 } else if ((quad.x === VM_DEQUE) && (imm < deque_imm_label.length)) {
                     s += deque_imm_label[imm];
                 } else if (quad.x === VM_END) {
-                    s += end_imm_label[u_fix_to_i32(quad.y) + 1];  // END_ABORT === -1
+                    s += end_imm_label[imm + 1];  // END_ABORT === -1
                 } else if ((quad.x === VM_SPONSOR) && (imm < sponsor_imm_label.length)) {
                     s += sponsor_imm_label[imm];
                 } else {
