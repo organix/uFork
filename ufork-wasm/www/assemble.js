@@ -534,14 +534,13 @@ function parse(token_generator) {
 // CRLF generator //////////////////////////////////////////////////////////////
 
 const imm_labels = {
-    get: ["T", "X", "Y", "Z"],
     dict: ["has", "get", "add", "set", "del"],
     alu: ["not", "and", "or", "xor", "add", "sub", "mul"],
     cmp: ["eq", "ge", "gt", "lt", "le", "ne"],
     my: ["self", "beh", "state"],
     deque: ["new", "empty", "push", "pop", "put", "pull", "len"],
     sponsor: ["new", "memory", "events", "cycles", "reclaim", "start", "stop"],
-    end: ["abort", "stop", "commit", "release"]
+    end: ["abort", "stop", "commit"]
 };
 
 function walk_tree(node, walker) {
@@ -629,8 +628,7 @@ function generate_crlf(tree, file) {
         const token = operand[1];
         return (
             (token.id === ":literal:" && (
-                token.name === "literal_t"
-                || token.name === "fixnum_t"
+                token.name === "fixnum_t"
                 || token.name === "type_t"
                 || token.name === "pair_t"
                 || token.name === "dict_t"
@@ -918,13 +916,11 @@ function generate_crlf(tree, file) {
             operator.text === "eq"
             || operator.text === "push"
             || operator.text === "assert"
-            || operator.text === "is_eq"
-            || operator.text === "is_ne"
         ) {
             operand_check(1, 1);
             return {
                 kind: "instr",
-                op: ((operator.text === "assert") ? "is_eq" : operator.text),
+                op: operator.text,
                 imm: gen_expression(operands[0]),
                 k: gen_continuation(1),
                 debug
@@ -968,8 +964,7 @@ function generate_crlf(tree, file) {
             };
         }
         if (
-            operator.text === "get"
-            || operator.text === "dict"
+            operator.text === "dict"
             || operator.text === "deque"
             || operator.text === "alu"
             || operator.text === "cmp"

@@ -68,7 +68,6 @@ const FALSE_RAW = 0x00000002;
 const TRUE_RAW  = 0x00000003;
 const UNIT_RAW  = 0x00000004;
 const EMPTY_DQ  = 0x00000005;
-const LITERAL_T = 0x00000000; // == UNDEF
 const TYPE_T    = 0x00000006;
 const FIXNUM_T  = 0x00000007;
 const ACTOR_T   = 0x00000008;
@@ -84,7 +83,7 @@ const FREE_T    = 0x0000000F;
 
 const VM_TYPEQ  = 0x80000000;
 const VM_QUAD   = 0x80000001;
-const VM_GET    = 0x80000002;
+//const VM_GET    = 0x80000002;  // deprecated
 const VM_DICT   = 0x80000003;
 const VM_PAIR   = 0x80000004;
 const VM_PART   = 0x80000005;
@@ -106,14 +105,14 @@ const VM_NEW    = 0x80000014;
 const VM_BEH    = 0x80000015;
 const VM_END    = 0x80000016;
 const VM_SPONSOR= 0x80000017;
-const VM_PUTC   = 0x80000018;  // deprecated
-const VM_GETC   = 0x80000019;  // deprecated
+//const VM_PUTC   = 0x80000018;  // deprecated
+//const VM_GETC   = 0x80000019;  // deprecated
 const VM_DEBUG  = 0x8000001A;
 const VM_DEQUE  = 0x8000001B;
 const VM_STATE  = 0x8000001C;
 const VM_SIGNAL = 0x8000001D;
-const VM_IS_EQ  = 0x8000001E;
-const VM_IS_NE  = 0x8000001F;  // deprecated
+const VM_ASSERT = 0x8000001E;
+//const VM_IS_NE  = 0x8000001F;  // deprecated
 
 // Memory limits (from core.rs)
 
@@ -203,7 +202,7 @@ const error_messages = [
 const instr_label = [
     "typeq",
     "quad",
-    "get",
+    "~get",  // deprecated
     "dict",
     "pair",
     "part",
@@ -225,20 +224,14 @@ const instr_label = [
     "beh",
     "end",
     "sponsor",
-    "putc",  // deprecated
-    "getc",  // deprecated
+    "~putc",  // deprecated
+    "~getc",  // deprecated
     "debug",
     "deque",
     "state",
     "signal",
-    "is_eq",
-    "is_ne"  // deprecated
-];
-const get_imm_label = [
-    "T",
-    "X",
-    "Y",
-    "Z"
+    "assert",
+    "~is_ne"  // deprecated
 ];
 const dict_imm_label = [
     "has",
@@ -281,8 +274,7 @@ const deque_imm_label = [
 const end_imm_label = [
     "abort",
     "stop",
-    "commit",
-    "release"
+    "commit"
 ];
 const sponsor_imm_label = [
     "new",
@@ -304,7 +296,6 @@ const crlf_literals = {
     unit: UNIT_RAW
 };
 const crlf_types = {
-    literal: LITERAL_T,
     fixnum: FIXNUM_T,
     type: TYPE_T,
     pair: PAIR_T,
@@ -669,9 +660,7 @@ function make_core({
                 s += instr_label[op];
                 s += ", ";
                 const imm = quad.y ^ DIR_RAW;  // translate immediate
-                if ((quad.x === VM_GET) && (imm < get_imm_label.length)) {
-                    s += get_imm_label[imm];
-                } else if ((quad.x === VM_DICT) && (imm < dict_imm_label.length)) {
+                if ((quad.x === VM_DICT) && (imm < dict_imm_label.length)) {
                     s += dict_imm_label[imm];
                 } else if ((quad.x === VM_ALU) && (imm < alu_imm_label.length)) {
                     s += alu_imm_label[imm];
@@ -948,8 +937,7 @@ function make_core({
                 } else if (
                     node.op === "eq"
                     || node.op === "push"
-                    || node.op === "is_eq"
-                    || node.op === "is_ne"
+                    || node.op === "assert"
                 ) {
                     fields.y = value(node.imm);
                     fields.z = instruction(node.k);
@@ -960,9 +948,6 @@ function make_core({
                     fields.z = instruction(node.f);
                 } else if (node.op === "jump") {
                     // the `jump` instruction has no fields
-                } else if (node.op === "get") {
-                    fields.y = label(node.imm, get_imm_label);
-                    fields.z = instruction(node.k);
                 } else if (node.op === "dict") {
                     fields.y = label(node.imm, dict_imm_label);
                     fields.z = instruction(node.k);
@@ -1659,7 +1644,6 @@ export default Object.freeze({
     TRUE_RAW,
     UNIT_RAW,
     EMPTY_DQ,
-    LITERAL_T,
     TYPE_T,
     FIXNUM_T,
     ACTOR_T,
@@ -1672,7 +1656,6 @@ export default Object.freeze({
     FREE_T,
     VM_TYPEQ,
     VM_QUAD,
-    VM_GET,
     VM_DICT,
     VM_PAIR,
     VM_PART,
@@ -1694,14 +1677,11 @@ export default Object.freeze({
     VM_BEH,
     VM_END,
     VM_SPONSOR,
-    VM_PUTC,
-    VM_GETC,
     VM_DEBUG,
     VM_DEQUE,
     VM_STATE,
     VM_SIGNAL,
-    VM_IS_EQ,
-    VM_IS_NE,
+    VM_ASSERT,
     QUAD_ROM_MAX,
     QUAD_RAM_MAX,
     BLOB_RAM_MAX,

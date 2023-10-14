@@ -26,7 +26,6 @@
         * [`dup`](#dup-instruction) instruction
         * [`end`](#end-instruction) instruction
         * [`eq`](#eq-instruction) instruction
-        * [`get`](#get-instruction) instruction
         * [`if`](#if-instruction) instruction
         * [`jump`](#jump-instruction) instruction
         * [`msg`](#msg-instruction) instruction
@@ -257,14 +256,14 @@ The uFork instruction execution engine implements a linked-stack machine,
 however the stack is only used for local state in a computation.
 The _input_ for each instruction is taken from the stack
 and the _output_ is placed back onto the stack.
-Instructions all have a `T` field containing `#instr_t` type marker.
+Instructions all have a `T` field containing the `#instr_t` type marker.
 The operation code is carried in the `X` field of the instruction.
 Most instructions also have an immediate value,
 carried in the `Y` field of the instruction.
 For the typical case of a instruction with a single continuation,
 the "next instruction" is carried in the `Z` field of the instruction.
 
-Instructions are shown in their textual representation as defined in the [assembly-language manual](asm.md).
+Instructions are shown in their textual representation as defined in the [assembly-language manual](../ufork-wasm/asm.md).
 
 ### Instruction Summary
 
@@ -327,10 +326,10 @@ _T_                  | `quad` `1`          | _quad_       | create quad \[_T_, `
 _X_ _T_              | `quad` `2`          | _quad_       | create quad \[_T_, _X_, `#?`, `#?`\]
 _Y_ _X_ _T_          | `quad` `3`          | _quad_       | create quad \[_T_, _X_, _Y_, `#?`\]
 _Z_ _Y_ _X_ _T_      | `quad` `4`          | _quad_       | create quad \[_T_, _X_, _Y_, _Z_\]
-_quad_               | `get` `T`           | _t_          | copy _t_ from _quad_
-_quad_               | `get` `X`           | _x_          | copy _x_ from _quad_
-_quad_               | `get` `Y`           | _y_          | copy _y_ from _quad_
-_quad_               | `get` `Z`           | _z_          | copy _z_ from _quad_
+_quad_               | `quad` `-1`         | _T_          | extract 1 _quad_ field
+_quad_               | `quad` `-2`         | _X_ _T_      | extract 2 _quad_ fields
+_quad_               | `quad` `-3`         | _Y_ _X_ _T_  | extract 3 _quad_ fields
+_quad_               | `quad` `-4`         | _Z_ _Y_ _X_ _T_ | extract 4 _quad_ fields
 —                    | `msg` `0`           | _msg_        | copy event message to stack
 —                    | `msg` _n_           | _msgₙ_       | copy message item _n_ to stack
 —                    | `msg` -_n_          | _tailₙ_      | copy message tail _n_ to stack
@@ -372,9 +371,9 @@ _actual_             | `assert` _expect_   | —            | assert _actual_ ==
 
 The semantics of each instruction are detailed below.
 A few general rules apply to all instructions.
-Unless stated otherwise an the description of an instruction:
+Unless stated otherwise in the description of an instruction:
 
- * Attempts to execute a non-instruction signal an error
+ * Attempts to execute a non-instruction signals an error
  * Unknown instruction op-codes signal an error
  * Arguments of an invalid type signal an error
  * Items referenced beyond the bottom of the stack are treated as `#?`
@@ -559,15 +558,6 @@ _reason_             | `end` `abort`       | —            | abort actor transa
  Input               | Instruction         | Output       | Description
 ---------------------|---------------------|--------------|-------------------------------------
 _u_                  | `eq` _v_            | _bool_       | `#t` if _u_ == _v_, otherwise `#f`
-
-#### `get` instruction
-
- Input               | Instruction         | Output       | Description
----------------------|---------------------|--------------|-------------------------------------
-_quad_               | `get` `T`           | _t_          | copy _t_ from _quad_
-_quad_               | `get` `X`           | _x_          | copy _x_ from _quad_
-_quad_               | `get` `Y`           | _y_          | copy _y_ from _quad_
-_quad_               | `get` `Z`           | _z_          | copy _z_ from _quad_
 
 #### `if` instruction
 
@@ -791,3 +781,7 @@ _T_                  | `quad` `1`          | _quad_       | create quad \[_T_, `
 _X_ _T_              | `quad` `2`          | _quad_       | create quad \[_T_, _X_, `#?`, `#?`\]
 _Y_ _X_ _T_          | `quad` `3`          | _quad_       | create quad \[_T_, _X_, _Y_, `#?`\]
 _Z_ _Y_ _X_ _T_      | `quad` `4`          | _quad_       | create quad \[_T_, _X_, _Y_, _Z_\]
+_quad_               | `quad` `-1`         | _T_          | extract 1 _quad_ field
+_quad_               | `quad` `-2`         | _X_ _T_      | extract 2 _quad_ fields
+_quad_               | `quad` `-3`         | _Y_ _X_ _T_  | extract 3 _quad_ fields
+_quad_               | `quad` `-4`         | _Z_ _Y_ _X_ _T_ | extract 4 _quad_ fields

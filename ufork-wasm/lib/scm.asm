@@ -149,7 +149,8 @@ nxt_actor:              ; beh'
 
     ; check for new meta
     dup 1               ; beh' beh'
-    get Z               ; beh' meta'
+    quad -4             ; beh' Z Y X T
+    drop 3              ; beh' meta'=Z
     eq mut_actor        ; beh' meta'==mut_actor
     if_not rst_actor
 
@@ -217,7 +218,7 @@ assert:                 ; expect <- actual
     state 0             ; expect
     msg 0               ; expect actual
     cmp eq              ; expect==actual
-    is_eq #t            ; assert(expect==actual)
+    assert #t           ; assert(expect==actual)
     ref commit
 
 ;

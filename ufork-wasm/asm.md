@@ -111,7 +111,6 @@ literals are recognized inside single-quotes, such as `'A'`, `'z'`, or `'\n'`.
 All values have a _type_, queryable with the `typeq` instruction. The following
 types are currently supported:
 
-- `#literal_t`
 - `#fixnum_t`
 - `#type_t`
 - `#pair_t`
@@ -229,10 +228,10 @@ _T_                  | `quad` `1`          | _quad_       | create quad \[_T_, `
 _X_ _T_              | `quad` `2`          | _quad_       | create quad \[_T_, _X_, `#?`, `#?`\]
 _Y_ _X_ _T_          | `quad` `3`          | _quad_       | create quad \[_T_, _X_, _Y_, `#?`\]
 _Z_ _Y_ _X_ _T_      | `quad` `4`          | _quad_       | create quad \[_T_, _X_, _Y_, _Z_\]
-_quad_               | `get` `T`           | _t_          | copy _t_ from _quad_
-_quad_               | `get` `X`           | _x_          | copy _x_ from _quad_
-_quad_               | `get` `Y`           | _y_          | copy _y_ from _quad_
-_quad_               | `get` `Z`           | _z_          | copy _z_ from _quad_
+_quad_               | `quad` `-1`         | _T_          | extract 1 _quad_ field
+_quad_               | `quad` `-2`         | _X_ _T_      | extract 2 _quad_ fields
+_quad_               | `quad` `-3`         | _Y_ _X_ _T_  | extract 3 _quad_ fields
+_quad_               | `quad` `-4`         | _Z_ _Y_ _X_ _T_ | extract 4 _quad_ fields
 —                    | `msg` `0`           | _msg_        | copy event message to stack
 —                    | `msg` _n_           | _msgₙ_       | copy message item _n_ to stack
 —                    | `msg` -_n_          | _tailₙ_      | copy message tail _n_ to stack
@@ -264,8 +263,7 @@ _sponsor_ _n_        | `sponsor` `cycles`  | _sponsor_    | transfer _n_ cycles 
 _sponsor_            | `sponsor` `reclaim` | _sponsor_    | reclaim all quotas from _sponsor_
 _sponsor_ _control_  | `sponsor` `start`   | —            | run _sponsor_ under _control_
 _sponsor_            | `sponsor` `stop`    | —            | reclaim all quotas and remove _sponsor_
-_actual_             | `is_eq` _expect_    | —            | assert _actual_ == _expect_, otherwise halt!
-_actual_             | `is_ne` _expect_    | —            | assert _actual_ != _expect_, otherwise halt!
+_actual_             | `assert` _expect_   | —            | assert _actual_ == _expect_, otherwise halt!
 —                    | `debug`             | —            | debugger breakpoint
 
 <sup>*</sup> For conditionals (`if` and `if_not`) the values

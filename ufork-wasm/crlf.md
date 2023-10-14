@@ -208,8 +208,7 @@ and is not present on "jump" or "end" instructions.
  `op`           | `imm`
 ----------------|---------------------------------------------------------------
 "typeq"         | _type_
-"quad"          | 1, 2, 3, 4
-"get"           | "T", "X", "Y", "Z"
+"quad"          | _fixnum_
 "dict"          | "has", "get", "add", "set", "del"
 "deque"         | "new", "empty", "push", "pop", "put", "pull", "len"
 "pair"          | _fixnum_
@@ -231,10 +230,9 @@ and is not present on "jump" or "end" instructions.
 "signal"        | _fixnum_
 "new"           | _fixnum_
 "beh"           | _fixnum_
-"end"           | "abort", "stop", "commit", "release"
+"end"           | "abort", "stop", "commit"
 "sponsor"       | "new", "memory", "events", "cycles", "reclaim", "start", "stop"
-"is_eq"         | _value_
-"is_ne"         | _value_
+"assert"        | _value_
 "debug"         | `undefined`
 
 In addition, there is an "if" instruction. Rather than having a single
@@ -274,7 +272,6 @@ is aborted.
 There are several built-in _types_. These can be used as immediate values for
 the "typeq" instruction.
 
-    {"kind": "type", "name": "literal"}
     {"kind": "type", "name": "fixnum"}
     {"kind": "type", "name": "type"}
     {"kind": "type", "name": "pair"}
