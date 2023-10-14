@@ -65,10 +65,12 @@ function io_device(core, on_stdout) {
         }
     }
 
+    const dev_ptr = core.u_ramptr(ufork.IO_DEV_OFS);
+    const dev_id = core.u_read_quad(dev_ptr).x;
     core.h_install(
         [[
-            ufork.IO_DEV_OFS,
-            core.u_ptr_to_cap(core.u_ramptr(ufork.IO_DEV_OFS))
+            core.u_fix_to_i32(dev_id),
+            core.u_ptr_to_cap(dev_ptr)
         ]],
         {
             host_print(base, ofs) { // (i32, i32) -> nil

@@ -360,6 +360,7 @@ function make_core({
         if (u_warn !== undefined) {
             u_warn(...values);
         }
+        //throw new Error("bottom_out!");
         return UNDEF_RAW;
     }
 
@@ -514,18 +515,20 @@ function make_core({
     }
 
     function u_cap_to_ptr(cap) {
+        if (cap === UNDEF_RAW) return UNDEF_RAW;
         return (
-            u_is_fix(cap)
-            ? bottom_out("cap_to_ptr: can't convert fixnum", u_print(cap))
-            : (cap & ~OPQ_RAW)
+            ((cap & (DIR_RAW | MUT_RAW)) === MUT_RAW)  // mutable
+            ? (cap & ~OPQ_RAW)  // clear opaque bit
+            : bottom_out("cap_to_ptr: must be mutable", u_print(cap))
         );
     }
 
     function u_ptr_to_cap(ptr) {
+        if (ptr === UNDEF_RAW) return UNDEF_RAW;
         return (
-            u_is_fix(ptr)
-            ? bottom_out("ptr_to_cap: can't convert fixnum", u_print(ptr))
-            : (ptr | OPQ_RAW)
+            ((ptr & (DIR_RAW | MUT_RAW)) === MUT_RAW)  // mutable
+            ? (ptr | OPQ_RAW)  // set opaque bit
+            : bottom_out("ptr_to_cap: must be mutable", u_print(ptr))
         );
     }
 
@@ -1492,8 +1495,13 @@ function make_core({
 // Install the debug device, if debug logging is enabled.
 
     if (u_debug !== undefined) {
+        const dev_ptr = u_ramptr(DEBUG_DEV_OFS);
+        const dev_id = DEBUG_DEV_OFS-2;//u_read_quad(dev_ptr).x;
         h_install(
-            [[DEBUG_DEV_OFS, u_ptr_to_cap(u_ramptr(DEBUG_DEV_OFS))]],
+            [[
+                u_fix_to_i32(dev_id),
+                u_ptr_to_cap(dev_ptr)
+            ]],
             {
                 host_log(x) { // (i32) -> nil
                     const u = (x >>> 0);  // convert i32 -> u32

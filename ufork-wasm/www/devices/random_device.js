@@ -44,10 +44,12 @@ function random32(webcrypto, a, b) {
 //debug random32(crypto, -3, 2);
 
 function random_device(core, webcrypto = crypto) {
+    const dev_ptr = core.u_ramptr(ufork.RANDOM_DEV_OFS);
+    const dev_id = core.u_read_quad(dev_ptr).x;
     core.h_install(
         [[
-            ufork.RANDOM_DEV_OFS,
-            core.u_ptr_to_cap(core.u_ramptr(ufork.RANDOM_DEV_OFS))
+            core.u_fix_to_i32(dev_id),
+            core.u_ptr_to_cap(dev_ptr)
         ]],
         {
             host_random(a_raw, b_raw) {

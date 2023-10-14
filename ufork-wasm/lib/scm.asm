@@ -7,7 +7,7 @@
 ;    dev: "./dev.asm"
 
 debug_key:              ; borrowed from `dev.asm`
-    ref 2               ; dev.debug_key
+    ref 0               ; dev.debug_key
 
 ;
 ; Custom types and constants for Scheme

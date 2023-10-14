@@ -9,10 +9,12 @@ import ufork from "../ufork.js";
 
 function timer_device(core, slowdown = 1) {
     const timer_map = Object.create(null);
+    const dev_ptr = core.u_ramptr(ufork.TIMER_DEV_OFS);
+    const dev_id = core.u_read_quad(dev_ptr).x;
     core.h_install(
         [[
-            ufork.TIMER_DEV_OFS,
-            core.u_ptr_to_cap(core.u_ramptr(ufork.TIMER_DEV_OFS))
+            core.u_fix_to_i32(dev_id),
+            core.u_ptr_to_cap(dev_ptr)
         ]],
         {
             host_start_timer(delay, stub) { // (i32, i32) -> nil

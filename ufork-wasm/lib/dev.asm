@@ -3,24 +3,24 @@
 .import
     std: "./std.asm"
 
-; Hard-coded devices.
+; Core devices.
 
 debug_key:
-    ref 2
+    ref 0
 clock_key:
-    ref 3
+    ref 1
 io_key:
-    ref 4
+    ref 2
 blob_key:
-    ref 5
+    ref 3
 timer_key:
-    ref 6
+    ref 4
 memo_key:
-    ref 7
+    ref 5
 host_key:
-    ref 8
+    ref 6
 random_key:
-    ref 9
+    ref 7
 
 ; Dynamic devices. These are provided by the host device.
 

@@ -63,11 +63,13 @@ function host_device(core) {
 
 // Install the host device.
 
-    const host_device_cap = core.u_ptr_to_cap(
-        core.u_ramptr(ufork.HOST_DEV_OFS)
-    );
+    const dev_ptr = core.u_ramptr(ufork.HOST_DEV_OFS);
+    const dev_id = core.u_read_quad(dev_ptr).x;
     core.h_install(
-        [[ufork.HOST_DEV_OFS, host_device_cap]],
+        [[
+            core.u_fix_to_i32(dev_id),
+            core.u_ptr_to_cap(dev_ptr)
+        ]],
         {
             host(raw) {
                 return (
