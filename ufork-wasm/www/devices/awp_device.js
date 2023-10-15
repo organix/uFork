@@ -869,9 +869,10 @@ function awp_device({
 // Install the dynamic device as if it were a real device. Unlike a real device,
 // we must reserve a stub to keep the capability from being released.
 
-    const awp_device_cap = device.h_reserve_cap();
-    core.h_install([[awp_key, awp_device_cap]]);
-    device.h_reserve_stub(awp_device_cap);
+    const dev_cap = device.h_reserve_cap();
+    const dev_id = core.u_fixnum(awp_key);
+    core.h_install([[dev_id, dev_cap]]);
+    device.h_reserve_stub(dev_cap);
     return function dispose() {
         Object.values(connections).forEach(function (connection) {
             connection.close();
@@ -896,9 +897,9 @@ function awp_device({
 //debug     wasm_url,
 //debug     on_wakeup(device_offset) {
 //debug         console.log("WAKE:", device_offset);
-//debug         console.log("IDLE:", core.u_fault_msg(
+//debug         console.log("IDLE:", core.u_fault_msg(core.u_fix_to_i32(
 //debug             core.h_run_loop()
-//debug         ));
+//debug         )));
 //debug     },
 //debug     on_log: console.log,
 //debug     log_level: ufork.LOG_DEBUG

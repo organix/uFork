@@ -66,42 +66,37 @@ function io_device(core, on_stdout) {
     }
 
     const dev_ptr = core.u_ramptr(ufork.IO_DEV_OFS);
+    const dev_cap = core.u_ptr_to_cap(dev_ptr);
     const dev_id = core.u_read_quad(dev_ptr).x;
-    core.h_install(
-        [[
-            core.u_fix_to_i32(dev_id),
-            core.u_ptr_to_cap(dev_ptr)
-        ]],
-        {
-            host_print(base, ofs) { // (i32, i32) -> nil
-                if (core.u_info !== undefined) {
-                    core.u_info(OED.decode(
-                        new Uint8Array(core.u_memory()),
-                        undefined,
-                        base + ofs - 5 // blobs have a 5-octet header
-                    ));
-                }
-            },
-            host_read(stub) { // (i32) -> i32
-                const char = read_stdin();
-                if (char === core.UNDEF_RAW) {
-                    listen_stdin(stub);
-                }
-                return char;
-            },
-            host_write(code) { // (i32) -> i32
-                code &= 0x1FFFFF;  // interpret as a Unicode code point
-                const char = String.fromCodePoint(code);
-                if (core.u_trace !== undefined) {
-                    core.u_trace("WRITE:", code, "=", char);
-                }
-                if (typeof on_stdout === "function") {
-                    on_stdout(char);
-                }
-                return core.u_fixnum(core.E_OK);
+    core.h_install([[dev_id, dev_cap]], {
+        host_print(base, ofs) { // (i32, i32) -> nil
+            if (core.u_info !== undefined) {
+                core.u_info(OED.decode(
+                    new Uint8Array(core.u_memory()),
+                    undefined,
+                    base + ofs - 5 // blobs have a 5-octet header
+                ));
             }
+        },
+        host_read(stub) { // (i32) -> i32
+            const char = read_stdin();
+            if (char === core.UNDEF_RAW) {
+                listen_stdin(stub);
+            }
+            return char;
+        },
+        host_write(code) { // (i32) -> i32
+            code &= 0x1FFFFF;  // interpret as a Unicode code point
+            const char = String.fromCodePoint(code);
+            if (core.u_trace !== undefined) {
+                core.u_trace("WRITE:", code, "=", char);
+            }
+            if (typeof on_stdout === "function") {
+                on_stdout(char);
+            }
+            return core.u_fixnum(core.E_OK);
         }
-    );
+    });
     return function on_stdin(string_or_utf8) {
         stdin_buffer = stdin_buffer.concat(Array.from(
             typeof string_or_utf8 === "string"

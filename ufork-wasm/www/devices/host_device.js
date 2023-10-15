@@ -64,22 +64,17 @@ function host_device(core) {
 // Install the host device.
 
     const dev_ptr = core.u_ramptr(ufork.HOST_DEV_OFS);
+    const dev_cap = core.u_ptr_to_cap(dev_ptr);
     const dev_id = core.u_read_quad(dev_ptr).x;
-    core.h_install(
-        [[
-            core.u_fix_to_i32(dev_id),
-            core.u_ptr_to_cap(dev_ptr)
-        ]],
-        {
-            host(raw) {
-                return (
-                    core.u_is_cap(raw)
-                    ? drop_proxy(raw)
-                    : handle_event(raw)
-                );
-            }
+    core.h_install([[dev_id, dev_cap]], {
+        host(raw) {
+            return (
+                core.u_is_cap(raw)
+                ? drop_proxy(raw)
+                : handle_event(raw)
+            );
         }
-    );
+    });
     const fwd_to_host_beh = core.h_load(fwd_to_host_crlf).beh;
 
     return function make_dynamic_device(
@@ -121,7 +116,7 @@ function host_device(core) {
                 x: fwd_to_host_beh,
                 y: core.h_reserve_ram({
                     t: ufork.PAIR_T,
-                    x: host_device_cap,
+                    x: dev_cap,
                     y: core.u_fixnum(key)
                 })
             }));
@@ -133,7 +128,7 @@ function host_device(core) {
 
             return core.u_ptr_to_cap(core.h_reserve_ram({
                 t: ufork.PROXY_T,
-                x: host_device_cap,
+                x: dev_cap,
                 y: core.h_reserve_ram({
                     t: ufork.PAIR_T,
                     x: core.u_fixnum(key),
@@ -143,7 +138,7 @@ function host_device(core) {
         }
 
         function h_reserve_stub(target_raw) {
-            return core.h_reserve_stub(host_device_cap, target_raw);
+            return core.h_reserve_stub(dev_cap, target_raw);
         }
 
         function u_strip_meta(raw) {
@@ -161,10 +156,7 @@ function host_device(core) {
             const device = quad.x;
             const handle = quad.y;
             const key_raw = core.u_nth(handle, 1);
-            return (
-                device === host_device_cap
-                && core.u_fix_to_i32(key_raw) === key
-            );
+            return device === dev_cap && core.u_fix_to_i32(key_raw) === key;
         }
 
         function u_dispose() {
@@ -221,8 +213,8 @@ function host_device(core) {
 //debug     let proxy = dev.h_reserve_proxy(ufork.TRUE_RAW);
 //debug     let dummy_cap = dev.h_reserve_cap();
 //debug     let dummy_cap_stub = dev.h_reserve_stub(dummy_cap);
-//debug     core.h_install([[1000, dummy_cap]]);
-//debug     core.h_install([[1001, proxy]]);
+//debug     core.h_install([[core.u_fixnum(1000), dummy_cap]]);
+//debug     core.h_install([[core.u_fixnum(1001), proxy]]);
 //debug     return function dispose() {
 //debug         dev.u_dispose();
 //debug         if (dummy_cap_stub !== undefined) {

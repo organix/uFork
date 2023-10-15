@@ -45,30 +45,25 @@ function random32(webcrypto, a, b) {
 
 function random_device(core, webcrypto = crypto) {
     const dev_ptr = core.u_ramptr(ufork.RANDOM_DEV_OFS);
+    const dev_cap = core.u_ptr_to_cap(dev_ptr);
     const dev_id = core.u_read_quad(dev_ptr).x;
-    core.h_install(
-        [[
-            core.u_fix_to_i32(dev_id),
-            core.u_ptr_to_cap(dev_ptr)
-        ]],
-        {
-            host_random(a_raw, b_raw) {
-                return core.u_fixnum(random32(
-                    webcrypto,
-                    (
-                        core.u_is_fix(a_raw)
-                        ? core.u_fix_to_i32(a_raw)
-                        : undefined
-                    ),
-                    (
-                        core.u_is_fix(b_raw)
-                        ? core.u_fix_to_i32(b_raw)
-                        : undefined
-                    )
-                ));
-            }
+    core.h_install([[dev_id, dev_cap]], {
+        host_random(a_raw, b_raw) {
+            return core.u_fixnum(random32(
+                webcrypto,
+                (
+                    core.u_is_fix(a_raw)
+                    ? core.u_fix_to_i32(a_raw)
+                    : undefined
+                ),
+                (
+                    core.u_is_fix(b_raw)
+                    ? core.u_fix_to_i32(b_raw)
+                    : undefined
+                )
+            ));
         }
-    );
+    });
 }
 
 export default Object.freeze(random_device);
