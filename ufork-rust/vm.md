@@ -431,7 +431,7 @@ Ensure that the item on the stack has the expected value.
 
  T            | X (op)          | Y (imm)     | Z (k)
 --------------|-----------------|-------------|-------------
- `#instr_t`   | `+30` (assert)  | _any_       | _instr_
+ `#instr_t`   | `+7` (assert)   | _any_       | _instr_
 
  1. Remove item _actual_ from the stack (`#?` on underflow)
  1. If _actual_ is not equal to _expect_
@@ -454,7 +454,7 @@ however both are always replaced together.
 
  T            | X (op)      | Y (imm)     | Z (k)
 --------------|-------------|-------------|-------------
- `#instr_t`   | `+21` (beh) | _positive_  | _instr_
+ `#instr_t`   | `+29` (beh) | _positive_  | _instr_
 
  1. Remove item _beh_ from the stack (`#?` on underflow)
  1. Record _beh_ as the code to execute when handling the next event
@@ -463,7 +463,7 @@ however both are always replaced together.
 
  T            | X (op)      | Y (imm)     | Z (k)
 --------------|-------------|-------------|-------------
- `#instr_t`   | `+21` (beh) | `0`         | _instr_
+ `#instr_t`   | `+29` (beh) | `+0`        | _instr_
 
  1. Remove item _beh_ from the stack (`#?` on underflow)
  1. Record _beh_ as the code to execute when handling the next event
@@ -471,7 +471,7 @@ however both are always replaced together.
 
  T            | X (op)      | Y (imm)     | Z (k)
 --------------|-------------|-------------|-------------
- `#instr_t`   | `+21` (beh) | `-1`        | _instr_
+ `#instr_t`   | `+29` (beh) | `-1`        | _instr_
 
  1. Remove item _beh_ from the stack (`#?` on underflow)
  1. Record _beh_ as the code to execute when handling the next event
@@ -480,7 +480,7 @@ however both are always replaced together.
 
  T            | X (op)      | Y (imm)     | Z (k)
 --------------|-------------|-------------|-------------
- `#instr_t`   | `+21` (beh) | `-2`        | _instr_
+ `#instr_t`   | `+29` (beh) | `-2`        | _instr_
 
  1. Remove an item from the stack (`#?` on underflow)
  1. Record the `X` field of this item as the code to execute when handling the next event
@@ -488,7 +488,7 @@ however both are always replaced together.
 
  T            | X (op)      | Y (imm)     | Z (k)
 --------------|-------------|-------------|-------------
- `#instr_t`   | `+21` (beh) | `-3`        | _instr_
+ `#instr_t`   | `+29` (beh) | `-3`        | _instr_
 
  1. Remove an item from the stack (`#?` on underflow)
  1. Record the `Z` field of this item as the code to execute when handling the next event
@@ -577,7 +577,7 @@ Continue execution at the address taken from the stack.
 
  T (type)     | X (op)      | Y (imm)     | Z (k)
 --------------|-------------|-------------|-------------
- `#instr_t`   | `+8` (jump) | `#?`        | `#?`
+ `#instr_t`   | `+1` (jump) | `#?`        | `#?`
 
  1. Remove item _k_ from the stack (`#?` on underflow)
  1. If _k_ is an instruction
@@ -618,7 +618,7 @@ however both are always specified.
 
  T            | X (op)      | Y (imm)     | Z (k)
 --------------|-------------|-------------|-------------
- `#instr_t`   | `+20` (new) | _positive_  | _instr_
+ `#instr_t`   | `+28` (new) | _positive_  | _instr_
 
  1. Remove item _beh_ from the stack (`#?` on underflow)
  1. Form a list from the number of stack items specified by the immediate argument
@@ -627,7 +627,7 @@ however both are always specified.
 
  T            | X (op)      | Y (imm)     | Z (k)
 --------------|-------------|-------------|-------------
- `#instr_t`   | `+20` (new) | `0`         | _instr_
+ `#instr_t`   | `+28` (new) | `+0`        | _instr_
 
  1. Remove item _beh_ from the stack (`#?` on underflow)
  1. Create a new actor with _beh_ for code and `()` for data
@@ -635,7 +635,7 @@ however both are always specified.
 
  T            | X (op)      | Y (imm)     | Z (k)
 --------------|-------------|-------------|-------------
- `#instr_t`   | `+20` (new) | `-1`        | _instr_
+ `#instr_t`   | `+28` (new) | `-1`        | _instr_
 
  1. Remove item _beh_ from the stack (`#?` on underflow)
  1. Remove item _state_ from the stack (`#?` on underflow)
@@ -644,7 +644,7 @@ however both are always specified.
 
  T            | X (op)      | Y (imm)     | Z (k)
 --------------|-------------|-------------|-------------
- `#instr_t`   | `+20` (new) | `-2`        | _instr_
+ `#instr_t`   | `+28` (new) | `-2`        | _instr_
 
  1. Remove an item from the stack (`#?` on underflow)
  1. Create a new actor with the `X` field of this item for code and the `Y` field of this item for data
@@ -652,7 +652,7 @@ however both are always specified.
 
  T            | X (op)      | Y (imm)     | Z (k)
 --------------|-------------|-------------|-------------
- `#instr_t`   | `+20` (new) | `-3`        | _instr_
+ `#instr_t`   | `+28` (new) | `-3`        | _instr_
 
  1. Remove an item from the stack (`#?` on underflow)
  1. Create a new actor with the `Z` field of this item for code and this item for data
@@ -674,24 +674,24 @@ _vₙ_ … _v₁_          | `pair` -1           | (_v₁_ … _vₙ_) | capture
 
 Create a _pair_ list from some number of stack items.
 
- T (type)     | X (op)      | Y (imm)     | Z (k)
---------------|-------------|-------------|-------------
- `#instr_t`   | `+4` (pair) | _positive_  | _instr_
+ T (type)     | X (op)        | Y (imm)     | Z (k)
+--------------|---------------|-------------|-------------
+ `#instr_t`   | `+17` (pair)  | _positive_  | _instr_
 
  1. Remove _n_+1 items from the stack (`#?` on underflow)
  1. Create an _n_ item list from removed stack items
     1. Item  _n_+1 will be the tail of the list
  1. Push the resulting list onto the stack
 
- T (type)     | X (op)      | Y (imm)     | Z (k)
---------------|-------------|-------------|-------------
- `#instr_t`   | `+4` (pair) | `0`         | _instr_
+ T (type)     | X (op)        | Y (imm)     | Z (k)
+--------------|---------------|-------------|-------------
+ `#instr_t`   | `+17` (pair)  | `+0`        | _instr_
 
  1. Push `()` onto the stack
 
- T (type)     | X (op)      | Y (imm)     | Z (k)
---------------|-------------|-------------|-------------
- `#instr_t`   | `+4` (pair) | _negative_  | _instr_
+ T (type)     | X (op)        | Y (imm)     | Z (k)
+--------------|---------------|-------------|-------------
+ `#instr_t`   | `+17` (pair)  | _negative_  | _instr_
 
  1. If _n_ is `-1`
     1. Capture the entire stack as a single item on the stack
@@ -722,7 +722,7 @@ Push an immediate value onto the top of the stack.
 
  T (type)     | X (op)      | Y (imm)     | Z (k)
 --------------|-------------|-------------|-------------
- `#instr_t`   | `+7` (push) | _any_       | _instr_
+ `#instr_t`   | `+2` (push) | _any_       | _instr_
 
  1. Push _value_ onto the stack
 

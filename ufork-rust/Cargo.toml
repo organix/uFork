@@ -4,7 +4,7 @@ version = "0.1.0"
 authors = ["Dale Schumacher <dalnefre@yahoo.com>"]
 edition = "2021"
 description = "uFork VM in Rust"
-repository = "https://github.com/organix/uFork/tree/main/ufork-rust/ufork"
+repository = "https://github.com/organix/uFork/tree/main/ufork-rust/"
 license = "Apache-2.0"
 
 [features]

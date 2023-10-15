@@ -38,39 +38,39 @@ pub const FWD_REF_T: Any    = Any { raw: 0xE };
 pub const FREE_T: Any       = Any { raw: 0xF };  // MUST BE (ROM_BASE_OFS - 1)
 
 // INSTR_T values
-pub const VM_DEBUG: Any     = Any { raw: DIR_RAW | 0x00 };
-pub const VM_JUMP: Any      = Any { raw: DIR_RAW | 0x01 };
-pub const VM_PUSH: Any      = Any { raw: DIR_RAW | 0x02 };
-pub const VM_IF: Any        = Any { raw: DIR_RAW | 0x03 };
+pub const VM_DEBUG: Any     = Any { raw: DIR_RAW | 0x00 };  // +0
+pub const VM_JUMP: Any      = Any { raw: DIR_RAW | 0x01 };  // +1
+pub const VM_PUSH: Any      = Any { raw: DIR_RAW | 0x02 };  // +2
+pub const VM_IF: Any        = Any { raw: DIR_RAW | 0x03 };  // +3
 pub const VM_04: Any        = Any { raw: DIR_RAW | 0x04 };  // unused
-pub const VM_TYPEQ: Any     = Any { raw: DIR_RAW | 0x05 };
-pub const VM_EQ: Any        = Any { raw: DIR_RAW | 0x06 };
-pub const VM_ASSERT: Any    = Any { raw: DIR_RAW | 0x07 };
+pub const VM_TYPEQ: Any     = Any { raw: DIR_RAW | 0x05 };  // +5
+pub const VM_EQ: Any        = Any { raw: DIR_RAW | 0x06 };  // +6
+pub const VM_ASSERT: Any    = Any { raw: DIR_RAW | 0x07 };  // +7
 
-pub const VM_SPONSOR: Any   = Any { raw: DIR_RAW | 0x08 };
-pub const VM_QUAD: Any      = Any { raw: DIR_RAW | 0x09 };
-pub const VM_DICT: Any      = Any { raw: DIR_RAW | 0x0A };
-pub const VM_DEQUE: Any     = Any { raw: DIR_RAW | 0x0B };
-pub const VM_MY: Any        = Any { raw: DIR_RAW | 0x0C };
-pub const VM_ALU: Any       = Any { raw: DIR_RAW | 0x0D };
-pub const VM_CMP: Any       = Any { raw: DIR_RAW | 0x0E };
-pub const VM_END: Any       = Any { raw: DIR_RAW | 0x0F };
+pub const VM_SPONSOR: Any   = Any { raw: DIR_RAW | 0x08 };  // +8
+pub const VM_QUAD: Any      = Any { raw: DIR_RAW | 0x09 };  // +9
+pub const VM_DICT: Any      = Any { raw: DIR_RAW | 0x0A };  // +10
+pub const VM_DEQUE: Any     = Any { raw: DIR_RAW | 0x0B };  // +11
+pub const VM_MY: Any        = Any { raw: DIR_RAW | 0x0C };  // +12
+pub const VM_ALU: Any       = Any { raw: DIR_RAW | 0x0D };  // +13
+pub const VM_CMP: Any       = Any { raw: DIR_RAW | 0x0E };  // +14
+pub const VM_END: Any       = Any { raw: DIR_RAW | 0x0F };  // +15
 
 pub const VM_10: Any        = Any { raw: DIR_RAW | 0x10 };  // unused
-pub const VM_PAIR: Any      = Any { raw: DIR_RAW | 0x11 };
-pub const VM_PART: Any      = Any { raw: DIR_RAW | 0x12 };
-pub const VM_NTH: Any       = Any { raw: DIR_RAW | 0x13 };
-pub const VM_PICK: Any      = Any { raw: DIR_RAW | 0x14 };
-pub const VM_ROLL: Any      = Any { raw: DIR_RAW | 0x15 };
-pub const VM_DUP: Any       = Any { raw: DIR_RAW | 0x16 };
-pub const VM_DROP: Any      = Any { raw: DIR_RAW | 0x17 };
+pub const VM_PAIR: Any      = Any { raw: DIR_RAW | 0x11 };  // +17
+pub const VM_PART: Any      = Any { raw: DIR_RAW | 0x12 };  // +18
+pub const VM_NTH: Any       = Any { raw: DIR_RAW | 0x13 };  // +19
+pub const VM_PICK: Any      = Any { raw: DIR_RAW | 0x14 };  // +20
+pub const VM_ROLL: Any      = Any { raw: DIR_RAW | 0x15 };  // +21
+pub const VM_DUP: Any       = Any { raw: DIR_RAW | 0x16 };  // +22
+pub const VM_DROP: Any      = Any { raw: DIR_RAW | 0x17 };  // +23
 
-pub const VM_MSG: Any       = Any { raw: DIR_RAW | 0x18 };
-pub const VM_STATE: Any     = Any { raw: DIR_RAW | 0x19 };
-pub const VM_SEND: Any      = Any { raw: DIR_RAW | 0x1A };
-pub const VM_SIGNAL: Any    = Any { raw: DIR_RAW | 0x1B };
-pub const VM_NEW: Any       = Any { raw: DIR_RAW | 0x1C };
-pub const VM_BEH: Any       = Any { raw: DIR_RAW | 0x1D };
+pub const VM_MSG: Any       = Any { raw: DIR_RAW | 0x18 };  // +24
+pub const VM_STATE: Any     = Any { raw: DIR_RAW | 0x19 };  // +25
+pub const VM_SEND: Any      = Any { raw: DIR_RAW | 0x1A };  // +26
+pub const VM_SIGNAL: Any    = Any { raw: DIR_RAW | 0x1B };  // +27
+pub const VM_NEW: Any       = Any { raw: DIR_RAW | 0x1C };  // +28
+pub const VM_BEH: Any       = Any { raw: DIR_RAW | 0x1D };  // +29
 pub const VM_1E: Any        = Any { raw: DIR_RAW | 0x1E };  // unused
 pub const VM_1F: Any        = Any { raw: DIR_RAW | 0x1F };  // unused
 

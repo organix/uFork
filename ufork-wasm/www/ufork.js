@@ -81,39 +81,39 @@ const FREE_T    = 0x0000000F;
 
 // Instruction constants
 
-const VM_DEBUG  = 0x80000000;
-const VM_JUMP   = 0x80000001;
-const VM_PUSH   = 0x80000002;
-const VM_IF     = 0x80000003;
+const VM_DEBUG  = 0x80000000;  // +0
+const VM_JUMP   = 0x80000001;  // +1
+const VM_PUSH   = 0x80000002;  // +2
+const VM_IF     = 0x80000003;  // +3
 const VM_04     = 0x80000004;  // unused
-const VM_TYPEQ  = 0x80000005;
-const VM_EQ     = 0x80000006;
-const VM_ASSERT = 0x80000007;
+const VM_TYPEQ  = 0x80000005;  // +5
+const VM_EQ     = 0x80000006;  // +6
+const VM_ASSERT = 0x80000007;  // +7
 
-const VM_SPONSOR= 0x80000008;
-const VM_QUAD   = 0x80000009;
-const VM_DICT   = 0x8000000A;
-const VM_DEQUE  = 0x8000000B;
-const VM_MY     = 0x8000000C;
-const VM_ALU    = 0x8000000D;
-const VM_CMP    = 0x8000000E;
-const VM_END    = 0x8000000F;
+const VM_SPONSOR= 0x80000008;  // +8
+const VM_QUAD   = 0x80000009;  // +9
+const VM_DICT   = 0x8000000A;  // +10
+const VM_DEQUE  = 0x8000000B;  // +11
+const VM_MY     = 0x8000000C;  // +12
+const VM_ALU    = 0x8000000D;  // +13
+const VM_CMP    = 0x8000000E;  // +14
+const VM_END    = 0x8000000F;  // +15
 
 const VM_10     = 0x80000010;  // unused
-const VM_PAIR   = 0x80000011;
-const VM_PART   = 0x80000012;
-const VM_NTH    = 0x80000013;
-const VM_PICK   = 0x80000014;
-const VM_ROLL   = 0x80000015;
-const VM_DUP    = 0x80000016;
-const VM_DROP   = 0x80000017;
+const VM_PAIR   = 0x80000011;  // +17
+const VM_PART   = 0x80000012;  // +18
+const VM_NTH    = 0x80000013;  // +19
+const VM_PICK   = 0x80000014;  // +20
+const VM_ROLL   = 0x80000015;  // +21
+const VM_DUP    = 0x80000016;  // +22
+const VM_DROP   = 0x80000017;  // +23
 
-const VM_MSG    = 0x80000018;
-const VM_STATE  = 0x80000019;
-const VM_SEND   = 0x8000001A;
-const VM_SIGNAL = 0x8000001B;
-const VM_NEW    = 0x8000001C;
-const VM_BEH    = 0x8000001D;
+const VM_MSG    = 0x80000018;  // +24
+const VM_STATE  = 0x80000019;  // +25
+const VM_SEND   = 0x8000001A;  // +26
+const VM_SIGNAL = 0x8000001B;  // +27
+const VM_NEW    = 0x8000001C;  // +28
+const VM_BEH    = 0x8000001D;  // +29
 const VM_1E     = 0x8000001E;  // unused
 const VM_1F     = 0x8000001F;  // unused
 
