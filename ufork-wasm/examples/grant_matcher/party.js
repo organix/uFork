@@ -28,9 +28,7 @@ function party(asm_url, acquaintance_names = []) {
 
     const transport = webrtc_transport(websockets_signaller(), print);
     const core = ufork.make_core({
-        wasm_url: import.meta.resolve(
-            "../../www/wasm/ufork_wasm.wasm"
-        ),
+        wasm_url: import.meta.resolve("../../www/ufork.wasm"),
         on_wakeup() {
             const sig = core.h_run_loop(0);
             const err = core.u_fix_to_i32(sig);

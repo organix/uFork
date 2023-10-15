@@ -1589,9 +1589,7 @@ function make_core({
 //debug     console.log("IDLE:", core.u_fault_msg(core.u_fix_to_i32(status)));
 //debug }
 //debug core = make_core({
-//debug     wasm_url: import.meta.resolve(
-//debug         "../www/wasm/ufork_wasm.wasm"
-//debug     ),
+//debug     wasm_url: import.meta.resolve("./ufork.wasm"),
 //debug     on_wakeup(device_offset) {
 //debug         console.log("WAKE:", device_offset);
 //debug         run_ufork();

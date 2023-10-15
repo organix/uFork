@@ -15,9 +15,7 @@ import ufork from "../../www/ufork.js";
 import parseq from "../../www/parseq.js";
 import requestorize from "../../www/requestors/requestorize.js";
 import io_device from "../../www/devices/io_device.js";
-const wasm_url = import.meta.resolve(
-    "../../www/wasm/ufork_wasm.wasm"
-);
+const wasm_url = import.meta.resolve("../../www/ufork.wasm");
 
 const utf8_encoder = new TextEncoder();
 const stdin_buffer_size = 65536; // 64KB

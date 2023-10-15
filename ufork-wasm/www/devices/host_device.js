@@ -176,9 +176,7 @@ function host_device(core) {
 
 //debug import parseq from "../parseq.js";
 //debug import requestorize from "../requestors/requestorize.js";
-//debug const wasm_url = import.meta.resolve(
-//debug     "../../www/wasm/ufork_wasm.wasm"
-//debug );
+//debug const wasm_url = import.meta.resolve("../ufork.wasm");
 //debug let dispose;
 //debug let core;
 //debug function dummy_device(make_dynamic_device) {

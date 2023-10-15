@@ -180,10 +180,7 @@ function save_store(store) {
 }
 
 const transport = webrtc_transport(websockets_signaller(), console.log);
-const wasm_url = new URL(
-    "../../www/wasm/ufork_wasm.opt.wasm",
-    import.meta.url
-).href;
+const wasm_url = new URL("../../www/ufork.opt.wasm", import.meta.url).href;
 const asm_url = new URL("./chat.asm", import.meta.url).href;
 core = ufork.make_core({
     wasm_url,

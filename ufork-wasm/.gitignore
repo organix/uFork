@@ -1,5 +1,5 @@
 package-lock.json
 target
-www/wasm/*.wasm
+www/*.wasm
 .cargo/.*
 .cargo/bin

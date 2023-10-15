@@ -12,5 +12,5 @@ cargo install --root .cargo wasm-opt \
 && rustup +"$nightly" target add wasm32-unknown-unknown \
 && rustup +"$nightly" component add rust-src \
 && cargo +"$nightly" build --release -Z build-std=core,alloc,panic_abort -Z build-std-features=panic_immediate_abort \
-&& .cargo/bin/wasm-opt -Oz -o www/wasm/ufork_wasm.opt.wasm target/wasm32-unknown-unknown/release/ufork_wasm.wasm \
-&& du -h www/wasm/ufork_wasm.opt.wasm
+&& .cargo/bin/wasm-opt -Oz -o www/ufork.opt.wasm target/wasm32-unknown-unknown/release/ufork_wasm.wasm \
+&& du -h www/ufork.opt.wasm

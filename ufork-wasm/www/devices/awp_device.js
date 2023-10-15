@@ -887,12 +887,8 @@ function awp_device({
 //debug import parseq from "../parseq.js";
 //debug import requestorize from "../requestors/requestorize.js";
 //debug import host_device from "./host_device.js";
-//debug const wasm_url = import.meta.resolve(
-//debug     "../../www/wasm/ufork_wasm.wasm"
-//debug );
-//debug const asm_url = import.meta.resolve(
-//debug     "../../lib/grant_matcher.asm"
-//debug );
+//debug const wasm_url = import.meta.resolve("../ufork.wasm");
+//debug const asm_url = import.meta.resolve("../../lib/grant_matcher.asm");
 //debug const core = ufork.make_core({
 //debug     wasm_url,
 //debug     on_wakeup(device_offset) {

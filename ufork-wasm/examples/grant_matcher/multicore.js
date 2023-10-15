@@ -13,7 +13,7 @@ import requestorize from "../../www/requestors/requestorize.js";
 import awp_device from "../../www/devices/awp_device.js";
 import host_device from "../../www/devices/host_device.js";
 import memory_transport from "../../www/transports/memory_transport.js";
-const wasm_url = import.meta.resolve("../../www/wasm/ufork_wasm.wasm");
+const wasm_url = import.meta.resolve("../../www/ufork.wasm");
 const donor_url = import.meta.resolve("./donor.asm");
 const gm_url = import.meta.resolve("./gm.asm");
 const keqd_url = import.meta.resolve("./keqd.asm");
