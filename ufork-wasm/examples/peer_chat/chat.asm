@@ -553,16 +553,13 @@ room_cast:              ; msg=(party . content) {parties}
     typeq #dict_t       ; msg {parties} is_dict({parties})
     if_not std.commit   ; msg {parties}  // done broadcasting...
 
-    dup 1               ; msg {parties} {parties}
-    quad -3             ; msg {parties} tx=Y X T
-    drop 2              ; msg {parties} tx
-    pick 3              ; msg {parties} tx msg
-    push tx_msg         ; msg {parties} tx msg tx_msg
-    pair 1              ; msg {parties} tx (tx_msg . msg)
-    roll 2              ; msg {parties} (tx_msg . msg) tx
-    send -1             ; msg {parties}
-    quad -4             ; msg rest=Z Y X T
-    drop 3              ; msg rest
+    quad -4             ; msg next value key #dict_t
+    drop 2              ; msg next tx=value
+    pick 3              ; msg next tx msg
+    push tx_msg         ; msg next tx msg tx_msg
+    pair 1              ; msg next tx (tx_msg . msg)
+    roll 2              ; msg next (tx_msg . msg) tx
+    send -1             ; msg next
     ref room_cast
 
 room_add:               ; --
