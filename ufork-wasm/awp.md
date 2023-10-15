@@ -1,16 +1,14 @@
 # Actor Wire Protocol
 
-The Actor Wire Protocol (AWP) facilitates the secure, unreliable, and unordered
-delivery of messages between actors over the network. Messages can contain
-actor addresses, allowing actors to perform introductions. It is a low-level
-protocol, in that it assumes application-level guarantees like reliability and
-ordering will be achieved through message passing.
+The Actor Wire Protocol (AWP) facilitates the secure delivery of messages
+between actors over a network. Such a network could consist of machines
+distributed across the globe, or CPU cores sharing the same chip. Messages can
+contain actor addresses, allowing actors to perform introductions.
 
-The protocol assumes an underlying _transport_ providing secure, unreliable, and
-unordered delivery of small binary blobs between machines. At the transport
-level, connections are established between _parties_. Every party has a
-secure _name_ that it can prove it owns, and may have a network _address_ to
-help other parties find it.
+The protocol assumes an underlying _transport_ providing secure delivery of
+small binary blobs. At the transport level, connections are established
+between _parties_. Every party has a secure _name_ that it can prove it owns,
+and may have a network _address_ to help other parties find it.
 
 When an actor wishes to communicate with actors outside of its own address
 space, it does so via a party. When a party receives a message, it attempts to
@@ -24,9 +22,15 @@ The transport is responsible for verifying the name of connecting parties and
 encrypting traffic. Note that network addresses are used solely for routing,
 and should not be relied upon for security.
 
-Existing protocols that make suitable transports include QUIC and DTLS. Ordered
-protocols such as TLS will also work, but may incur a performance penalty due
-to head-of-line blocking inherent to TCP.
+AWP does not require that the transport deliver messages reliably or in order.
+Because of this, AWP can be used as a very efficient low-level protocol where
+guarantees like reliability and ordering are achieved through message passing.
+If, however, the transport does guarantee reliability or ordering, applications
+are free to rely on those properties.
+
+Existing network protocols that make suitable transports include QUIC and DTLS.
+Ordered protocols such as TLS will also work, but may incur a performance
+penalty due to head-of-line blocking inherent to TCP.
 
 ## Frames
 
@@ -43,8 +47,7 @@ Message frames have the following properties:
 ## Marshalling
 
 Outgoing messages must be encoded as OED prior to transmission, then decoded at
-the other end. This process is referred to as _marshalling_
-and _unmarshalling_.
+the other end. This process is referred to as _marshalling_ and _unmarshalling_.
 
 Implementations are free to marshall messages however they see fit, with one
 exception. Any actor address found in the message must be encoded as an OED
