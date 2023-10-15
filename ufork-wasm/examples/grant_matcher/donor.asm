@@ -26,7 +26,7 @@ boot:                       ; () <- {caps}
 
 intro_cb_beh:               ; {caps} <- (deposit . error)
     msg -1                  ; error
-    is_eq #nil              ; --
+    assert #nil             ; --
     push store              ; store
     state 0                 ; store {caps}
     push dev.debug_key      ; store {caps} debug_key

@@ -2,11 +2,11 @@
 target = "wasm32-unknown-unknown"
 
 [profile.dev]
-panic = "abort"					# abort on panic!()
+panic = "abort"         # abort on panic
 
 [profile.release]
-panic = "abort"					# abort on panic!()
-opt-level = "z"					# optimize for small code size
-lto = true              		# enable link time optimization
-strip = true            		# strip debug symbols
-codegen-units = 1               # use a single codegen-unit for better optimizations
+panic = "abort"         # abort on panic
+opt-level = "z"         # optimize for small code size
+lto = true              # enable link time optimization
+strip = true            # strip debug symbols
+codegen-units = 1       # use a single codegen-unit for better optimizations

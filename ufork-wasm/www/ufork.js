@@ -1344,10 +1344,10 @@ function make_core({
         const evt = h_reserve_ram({
             t: u_ramptr(SPONSOR_OFS),
             x: u_ptr_to_cap(actor),
-            y: boot_caps_dict.reduce(function (dict, [integer, value_raw]) {
+            y: boot_caps_dict.reduce(function (dict, [key_raw, value_raw]) {
                 return h_reserve_ram({
                     t: DICT_T,
-                    x: u_fixnum(integer),
+                    x: key_raw,
                     y: value_raw,
                     z: dict
                 });
@@ -1449,6 +1449,31 @@ function make_core({
                 initial_rom_ofs = wasm.instance.exports.h_rom_buffer();
                 initial_ram_ofs = wasm.instance.exports.h_ram_buffer();
                 initial_blob_ofs = wasm.instance.exports.h_blob_buffer();
+
+// Install an anonymous plugin to handle trace information emitted by the debug
+// build of the WASM.
+
+                h_install([], {
+                    host_trace(event) { // (i32) -> nil
+                        if (typeof on_trace === "function") {
+                            on_trace(event);
+                        }
+                    }
+                });
+
+// Install the debug device, if debug logging is enabled.
+
+                if (u_debug !== undefined) {
+                    const dev_ptr = u_ramptr(DEBUG_DEV_OFS);
+                    const dev_cap = u_ptr_to_cap(dev_ptr);
+                    const dev_id = u_read_quad(dev_ptr).x;
+                    h_install([[dev_id, dev_cap]], {
+                        host_log(x) { // (i32) -> nil
+                            const u = (x >>> 0);  // convert i32 -> u32
+                            u_debug(u, "=", u_print(u), "->", u_pprint(u));
+                        }
+                    });
+                }
                 return true;
             })
         ]);
@@ -1481,35 +1506,6 @@ function make_core({
         }
     }
 
-// Install an anonymous plugin to handle trace information emitted by the debug
-// build of the WASM.
-
-    h_install([], {
-        host_trace(event) { // (i32) -> nil
-            if (typeof on_trace === "function") {
-                on_trace(event);
-            }
-        }
-    });
-
-// Install the debug device, if debug logging is enabled.
-
-    if (u_debug !== undefined) {
-        const dev_ptr = u_ramptr(DEBUG_DEV_OFS);
-        const dev_id = DEBUG_DEV_OFS-2;//u_read_quad(dev_ptr).x;
-        h_install(
-            [[
-                u_fix_to_i32(dev_id),
-                u_ptr_to_cap(dev_ptr)
-            ]],
-            {
-                host_log(x) { // (i32) -> nil
-                    const u = (x >>> 0);  // convert i32 -> u32
-                    u_debug(u, "=", u_print(u), "->", u_pprint(u));
-                }
-            }
-        );
-    }
     return Object.freeze({
 
 // The non-reentrant methods.
@@ -1593,9 +1589,7 @@ function make_core({
 //debug     console.log("IDLE:", core.u_fault_msg(core.u_fix_to_i32(status)));
 //debug }
 //debug core = make_core({
-//debug     wasm_url: import.meta.resolve(
-//debug         "../www/wasm/ufork_wasm.wasm"
-//debug     ),
+//debug     wasm_url: import.meta.resolve("./ufork.wasm"),
 //debug     on_wakeup(device_offset) {
 //debug         console.log("WAKE:", device_offset);
 //debug         run_ufork();

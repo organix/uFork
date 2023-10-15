@@ -67,7 +67,7 @@ const asm_url = new URL(
     origin + "/examples/grant_matcher/"
 ).href;
 const core = ufork.make_core({
-    wasm_url: origin + "/www/wasm/ufork_wasm.wasm",
+    wasm_url: origin + "/www/ufork.wasm",
     on_wakeup() {
         console.log(
             "IDLE",

@@ -22,13 +22,13 @@ boot:                       ; () <- {caps}
 
 listen_cb_beh:              ; () <- (result . error)
     msg -1                  ; error
-    is_eq #nil              ; --
+    assert #nil             ; --
     ref std.commit
 
 greeter_beh:                ; {pledges} <- (to_cancel callback petname pledge)
     msg 3                   ; petname
     typeq #fixnum_t         ; fixnum?
-    is_eq #t                ; --
+    assert #t               ; --
     msg 4                   ; pledge
     part 1                  ; new_donor deposit
     state 0                 ; new_donor deposit {pledges}

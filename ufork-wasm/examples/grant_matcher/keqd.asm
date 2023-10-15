@@ -24,13 +24,13 @@ boot:                       ; () <- {caps}
 
 listen_cb_beh:              ; () <- (result . error)
     msg -1                  ; error
-    is_eq #nil              ; --
+    assert #nil             ; --
     ref std.commit
 
 greeter_beh:                ; deposit <- (to_cancel callback petname)
     msg 3                   ; petname
     typeq #fixnum_t         ; fixnum?
-    is_eq #t                ; --
+    assert #t               ; --
     state 0                 ; deposit
     msg 2                   ; deposit callback
     send 1                  ; --

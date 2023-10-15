@@ -1,24 +1,35 @@
-// A dummy AWP transport. It simulates a private network in memory. Latency is
-// randomised. The 'flakiness' parameter, between 0 and 1, controls the
-// propensity for network errors.
+// An in-memory AWP transport that is ordered and reliable.
 
 // Names and addresses are arbitrary numbers or strings. The bind_info equals
 // the address, the identity equals the name.
 
+// Randomized latency will be simulated if the 'max_latency' parameter is a
+// positive integer, and messages are no longer guaranteed to arrive in order.
+
+// Intermittent communication failure will be simulated if the 'flakiness'
+// parameter is a number between 0 and 1.
+
 /*jslint browser */
 
-function delay(callback, ...args) {
-    const timer = setTimeout(callback, 50 * Math.random(), ...args);
-    return function cancel() {
-        clearTimeout(timer);
-    };
-}
-
-function dummy_transport(flakiness = 0) {
+function memory_transport(flakiness, max_latency) {
     let listeners = Object.create(null);
 
     function flake() {
-        return Math.random() < flakiness;
+        return Number.isFinite(flakiness) && Math.random() < flakiness;
+    }
+
+    function delay(callback, ...args) {
+        if (!Number.isSafeInteger(max_latency)) {
+            return callback(...args);
+        }
+        const timer = setTimeout(
+            callback,
+            max_latency * Math.random(),
+            ...args
+        );
+        return function cancel() {
+            clearTimeout(timer);
+        };
     }
 
     function listen(identity, bind_info, on_open, on_receive, on_close) {
@@ -171,7 +182,7 @@ function dummy_transport(flakiness = 0) {
 //debug import parseq from "../parseq.js";
 //debug import requestorize from "../requestors/requestorize.js";
 //debug const flake = 0.1;
-//debug const transport = dummy_transport(flake);
+//debug const transport = memory_transport(flake, 50);
 //debug const cancel = parseq.sequence([
 //debug     transport.listen(
 //debug         "bob",
@@ -226,4 +237,4 @@ function dummy_transport(flakiness = 0) {
 //debug     cancel();
 //debug }
 
-export default Object.freeze(dummy_transport);
+export default Object.freeze(memory_transport);

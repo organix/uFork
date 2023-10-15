@@ -160,7 +160,10 @@ function boot(entrypoint, awp_store) {
 // provide it to the uFork program as a boot capability.
 
     const petname = room_petname(awp_store);
-    core.h_install([[room_key, core.u_fixnum(petname)]]);
+    core.h_install([[
+        core.u_fixnum(room_key),
+        core.u_fixnum(petname)
+    ]]);
     core.h_boot(entrypoint);
     return ufork_run();
 }
@@ -177,10 +180,7 @@ function save_store(store) {
 }
 
 const transport = webrtc_transport(websockets_signaller(), console.log);
-const wasm_url = new URL(
-    "../../www/wasm/ufork_wasm.opt.wasm",
-    import.meta.url
-).href;
+const wasm_url = new URL("../../www/ufork.opt.wasm", import.meta.url).href;
 const asm_url = new URL("./chat.asm", import.meta.url).href;
 core = ufork.make_core({
     wasm_url,

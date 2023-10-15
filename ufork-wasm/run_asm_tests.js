@@ -83,11 +83,11 @@ function find_asm(url) {
     });
 }
 
-function run_asm_tests(filter_file_urls, root_file_url, web_server_url) {
+function run_asm_tests(url_filters, root_file_url) {
     return parseq.sequence([
         unpromise(function () {
             return Promise.all(
-                filter_file_urls.map(find_asm)
+                url_filters.map(find_asm)
             ).then(function (array_of_arrays) {
                 return array_of_arrays.flat();
             });
@@ -96,11 +96,7 @@ function run_asm_tests(filter_file_urls, root_file_url, web_server_url) {
             return parseq.parallel(
                 [],
                 file_url_array.map(function (file_url) {
-                    const relative = (
-                        "./" + file_url.href.replace(root_file_url.href, "")
-                    );
-                    const web_url = new URL(relative, web_server_url);
-                    return workerize(asm_test_url, web_url.href);
+                    return workerize(asm_test_url, file_url.href);
                 }),
                 time_limit,
                 true,
@@ -129,24 +125,21 @@ function run_asm_tests(filter_file_urls, root_file_url, web_server_url) {
     ]);
 }
 
-let filter_paths = Deno.args;
-let web_server_url = new URL("http://localhost:7273/");
+let path_filters = Deno.args;
 let file_root_url = directorify(own_directory_url);
 
-//debug filter_paths = ["/Users/me/code/uFork/ufork-wasm"];
-//debug web_server_url = directorify(own_directory_url);
+//debug path_filters = ["/Users/me/code/uFork/ufork-wasm"];
 //debug file_root_url = toFileUrl("/Users/me/code/uFork/ufork-wasm/");
 
 run_asm_tests(
-    filter_paths.map(function (path) {
+    path_filters.map(function (path) {
         return (
             isAbsolute(path)
             ? toFileUrl(path)
             : new URL(path, file_root_url)
         );
     }),
-    file_root_url,
-    web_server_url
+    file_root_url
 )(function (summary, reason) {
     if (summary === undefined) {
         throw reason;

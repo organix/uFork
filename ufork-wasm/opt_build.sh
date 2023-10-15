@@ -8,9 +8,9 @@ nightly="nightly-2023-10-09"
 # -Z build-std=core,alloc,panic_abort builds a custom std with only the components needed
 # -Z build-std-features=panic_immediate_abort disables panic format generation and immediately aborts
 
-cargo install wasm-opt \
+cargo install --root .cargo wasm-opt \
 && rustup +"$nightly" target add wasm32-unknown-unknown \
 && rustup +"$nightly" component add rust-src \
 && cargo +"$nightly" build --release -Z build-std=core,alloc,panic_abort -Z build-std-features=panic_immediate_abort \
-&& wasm-opt -Oz -o www/wasm/ufork_wasm.opt.wasm target/wasm32-unknown-unknown/release/ufork_wasm.wasm \
-&& du -h www/wasm/ufork_wasm.opt.wasm
+&& .cargo/bin/wasm-opt -Oz -o www/ufork.opt.wasm target/wasm32-unknown-unknown/release/ufork_wasm.wasm \
+&& du -h www/ufork.opt.wasm
