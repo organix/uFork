@@ -90,7 +90,7 @@ join_beh:               ; (debug_dev io_dev timer_dev awp_dev room_id) <- () | (
 intro_cb:
     ; check for a successful introduction
     msg -1              ; error
-    is_eq #nil          ; error==()!
+    assert #nil         ; error==()!
 
     ; build party_tx
     deque new           ; msgs
@@ -188,7 +188,7 @@ host_beh:               ; (debug_dev io_dev timer_dev awp_dev room_id) <- ()
 
 listen_cb_beh:          ; () <- (stop . error)
     msg -1              ; error
-    is_eq #nil          ; error==()!
+    assert #nil         ; error==()!
     ref std.commit
 
 greeter_beh:            ; (debug_dev timer_dev room) <- (to_cancel callback party party_rx)
@@ -554,13 +554,15 @@ room_cast:              ; msg=(party . content) {parties}
     if_not std.commit   ; msg {parties}  // done broadcasting...
 
     dup 1               ; msg {parties} {parties}
-    get Y               ; msg {parties} tx
+    quad -3             ; msg {parties} tx=Y X T
+    drop 2              ; msg {parties} tx
     pick 3              ; msg {parties} tx msg
     push tx_msg         ; msg {parties} tx msg tx_msg
     pair 1              ; msg {parties} tx (tx_msg . msg)
     roll 2              ; msg {parties} (tx_msg . msg) tx
     send -1             ; msg {parties}
-    get Z               ; msg rest
+    quad -4             ; msg rest=Z Y X T
+    drop 3              ; msg rest
     ref room_cast
 
 room_add:               ; --

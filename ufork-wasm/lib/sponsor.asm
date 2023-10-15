@@ -17,7 +17,8 @@ E_CPU_LIM:
 
 refill:                 ; (memory events cycles) <- sponsor
     msg 0               ; sponsor
-    get Z               ; error
+    quad -4             ; error=Z Y X T
+    drop 3              ; error
     dup 1               ; error error
     eq E_CPU_LIM        ; error error==E_CPU_LIM
     if refill_0         ; error
@@ -75,7 +76,8 @@ start_1:                ; () <- ()
 
 control_1:              ; (debug_dev) <- sponsor
     msg 0               ; sponsor
-    get Z               ; error
+    quad -4             ; error=Z Y X T
+    drop 3              ; error
     msg 0               ; error sponsor
     sponsor stop        ; error
     state 1             ; error debug_dev
