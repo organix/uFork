@@ -4,7 +4,6 @@
 
 deno run \
     --allow-read=. \
-    --allow-net=localhost:7273 \
     run_asm_tests.js \
     examples \
     lib \
