@@ -110,7 +110,7 @@ function asm_test(module_url) {
 }
 
 //debug asm_test(
-//debug     import.meta.resolve("../lib/requestors/thru.asm")
+//debug     import.meta.resolve("lib/requestors/thru.asm")
 //debug )(
 //debug     console.log
 //debug );

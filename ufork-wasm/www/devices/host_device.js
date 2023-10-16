@@ -235,7 +235,7 @@ function host_device(core) {
 //debug });
 //debug parseq.sequence([
 //debug     core.h_initialize(),
-//debug     core.h_import(import.meta.resolve("../../lib/host_device.asm")),
+//debug     core.h_import(import.meta.resolve("../lib/host_device.asm")),
 //debug     requestorize(function (asm_module) {
 //debug         dispose = dummy_device(host_device(core));
 //debug         core.h_boot(asm_module.boot);

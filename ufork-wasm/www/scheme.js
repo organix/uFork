@@ -629,7 +629,7 @@ function parse(source, file) {
                 file,
                 start: input.start,
                 end: input.end
-            };    
+            };
         }
         if (input.token.startsWith('"') && input.token.endsWith('"')) {
             const s = input.token.slice(1, -1);
@@ -642,7 +642,7 @@ function parse(source, file) {
                 file,
                 start: input.start,
                 end: input.end
-            };            
+            };
         }
         if (input.token === "(") {
             return parse_list(input);
@@ -876,7 +876,7 @@ function compile(source, file) {
     const tail_pos_k = scm_cust_send(debug_file);
 
     const import_map = {
-        "scm": "../lib/scm.asm",
+        "scm": "lib/scm.asm",
     };
     const module_env = {
         "boot": scm_commit(debug_file),  // replaced by compiler...
@@ -2641,8 +2641,8 @@ const future_source = `
                 (SEND (car waiting) value)
                 (send-to-all (cdr waiting) value)) )))`;
 const test_source = `
-(import std "../lib/std.asm")
-(import dev "../lib/dev.asm")
+(import std "lib/std.asm")
+(import dev "lib/dev.asm")
 f n z
 0
 (define z 0)
@@ -2672,7 +2672,7 @@ z n f 'a 'foo
 // const sexprs = parse("(if (< n 0) #f #t)");
 // const sexprs = parse("(lambda (x . y) x)");
 //debug const sexprs = parse("(define f (lambda (x y) y))\n(f 0)\n");
-// const sexprs = parse('(import std "../lib/std.asm") (define end std.commit)');
+// const sexprs = parse('(import std "lib/std.asm") (define end std.commit)');
 //debug info_log("sexprs:", sexprs);
 //debug if (!sexprs.error) {
 //debug     sexprs.forEach(function (sexpr) {
