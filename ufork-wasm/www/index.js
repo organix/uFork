@@ -418,7 +418,7 @@ function boot(module_specifier) {
 }
 
 const $boot_input = document.getElementById("boot-url");
-$boot_input.value = localStorage.getItem("boot") ?? "../lib/fib.asm";
+$boot_input.value = localStorage.getItem("boot") ?? "lib/fib.asm";
 const $boot_form = document.getElementById("boot-form");
 $boot_form.onsubmit = function (event) {
     boot($boot_input.value);

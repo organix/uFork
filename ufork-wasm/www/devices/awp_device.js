@@ -888,7 +888,7 @@ function awp_device({
 //debug import requestorize from "../requestors/requestorize.js";
 //debug import host_device from "./host_device.js";
 //debug const wasm_url = import.meta.resolve("../ufork.wasm");
-//debug const asm_url = import.meta.resolve("../../lib/grant_matcher.asm");
+//debug const asm_url = import.meta.resolve("../lib/grant_matcher.asm");
 //debug const core = ufork.make_core({
 //debug     wasm_url,
 //debug     on_wakeup(device_offset) {

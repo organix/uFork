@@ -1599,7 +1599,7 @@ function make_core({
 //debug });
 //debug parseq.sequence([
 //debug     core.h_initialize(),
-//debug     core.h_import(import.meta.resolve("../lib/fib.asm")),
+//debug     core.h_import(import.meta.resolve("lib/fib.asm")),
 //debug     requestorize(function (asm_module) {
 //debug         // Install devices
 //debug         clock_device(core);
