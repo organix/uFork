@@ -56,6 +56,21 @@ The future Verilog implementation
 will target small FPGA devices
 as a secure soft-core processor.
 
+There is currently an assembler
+that generates uFork IR
+from a textual ASM format.
+A compiler for a dialect of Scheme
+with actor-oriented extensions
+also generates uFork IR.
+A univeral linker/loader
+produces uFork memory images
+from uFork IR.
+Modules in uFork IR
+can import and export symbols
+regardless of their original source language.
+Additional languages can be supported
+by generating interoperable uFork IR.
+
 ## Documentation
 
   * uFork [Project Summary](summary.md)
