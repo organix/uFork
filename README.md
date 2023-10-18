@@ -28,6 +28,34 @@ or distributed system.
 
 An FPGA implementation is planned for the future.
 
+### Technology Stacks
+
+```
++-----+--------+-------+-------+---------+-------------+
+| ASM | Scheme | Humus | Misty | ...     | Scheme REPL |
+|-----+--------+-------+-------+---------|-------------|
+| uFork-CRLF intermediate representation | uFork VM    |
+|========================================|=============|
+| Rust (no-std)                | Verilog | C           |
+|------+-----+--------+--------|---------|-------------|
+| WASM | ARM | RISC-V | Xtensa | FPGA    | Host O/S    |
++------+-----+--------+--------+---------+-------------+
+```
+
+The C proof-of-concept was built to run
+in a traditional hosted O/S environment,
+and does not track the evolving semantics
+of the uFork IR (intermediate representation).
+
+The Rust implementation (and eventually the Verilog)
+conforms to a common uFork IR semantics.
+The Rust code-base currently targets WASM,
+but it should be possible to compile the core
+for a variety of other Rust target platforms.
+The future Verilog implementation
+will target small FPGA devices
+as a secure soft-core processor.
+
 ## Documentation
 
   * uFork [Project Summary](summary.md)

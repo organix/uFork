@@ -58,20 +58,6 @@ The instruction set and internal representation has evolved
 so the two implementations are no longer compatible,
 but each demonstrates important points in the design space.
 
-## Technology Stacks
-
-```
-+-----+--------+-------+-------+---------+-------------+
-| ASM | Scheme | Humus | Misty | ...     | Scheme REPL |
-|-----+--------+-------+-------+---------|-------------|
-| uFork-CRLF intermediate representation | uFork VM    |
-|========================================|=============|
-| Rust (no-std)                | Verilog | C           |
-|------+-----+--------+--------|---------|-------------|
-| WASM | ARM | RISC-V | Xtensa | FPGA    | Host O/S    |
-+------+-----+--------+--------+---------+-------------+
-```
-
 ## Inspiration
 
   * [SectorLISP](http://justine.lol/sectorlisp2/)
