@@ -194,9 +194,29 @@ field of the root-sponsor is returned to the host. If both the event-queue
 and the continuation-queue are empty, the root-sponsor _signal_ field is
 set to `ZERO` (aka `E_OK`), and the same value is returned to the host.
 
- Signal   | Root Sponsor | Peripheral Sponsor
-----------|--------------|--------------------
-`E_OK`    | no more work | sponsor stopped
-+_fixnum_ | error (idle) | error (idle)
-`#?`      | runnable     | —
-_ctl_cap_ | —            | runnable
+ Signal   | Root Sponsor      | Peripheral Sponsor
+----------|-------------------|--------------------
+`E_OK`    | no more work      | sponsor stopped
++_fixnum_ | error (suspended) | error (suspended)
+`#?`      | runnable          | —
+_ctl_cap_ | —                 | runnable
+
+### Peripheral Sponsor Signaling
+
+When an error is signaled for a peripheral,
+the controller is notified by sending the peripheral sponsor
+in a message to the actor in the _ctl_cap_
+with the controller as sponsor.
+The _signal_ field of the peripheral sponsor
+will contain the error code (a non-zero fixnum).
+While in this state,
+events and continuations associated with the peripheral
+will be suspended, circulating in their queues.
+If the controller executes a "sponsor stop" instruction,
+the _signal_ field of the peripheral controller
+is set to `ZERO` (aka `E_OK`).
+When an event or continuation reaches the front of the queue
+with their sponsor in this state,
+the event or continuation is discarded
+and the garbage-collector cleanly removes
+all associated memory of them from the system.
