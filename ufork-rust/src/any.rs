@@ -25,7 +25,7 @@ pub const TRUE: Any         = Any { raw: 0x3 };
 pub const UNIT: Any         = Any { raw: 0x4 };
 pub const EMPTY_DQ: Any     = Any { raw: 0x5 };
 
-pub const LITERAL_T: Any    = Any { raw: 0x0 };  // == UNDEF
+pub const LITERAL_T: Any    = UNDEF;
 pub const TYPE_T: Any       = Any { raw: 0x6 };
 pub const FIXNUM_T: Any     = Any { raw: 0x7 };
 pub const ACTOR_T: Any      = Any { raw: 0x8 };

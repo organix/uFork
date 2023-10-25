@@ -3,26 +3,19 @@
 A _Configuration_ is a set of Actors
 and a set of pending Events.
 An _Actor_ in a Configuration
-is a mapping between an _Address_ (a _Capability_)
+is a mapping between a _Capability_ (an address)
 that designates the Actor
 and a _Behavior_.
-An _Event_ designates a target Actor,
+An _Event_ designates a Sponsor,
+a target Actor,
 and immutable _Message_ data.
 A _Behavior_ defines the _Effects_ caused
 by an Actor processing an Event.
+
 _Effects_ define a transformation
 from the current Configuration state
 to a new Configuration state.
-
-A _Sponsor_ is the entity responsible for
-managing Configuration resources.
-All the resources used by Actors in the Configuration;
-including processor time, memory, storage, and communications;
-are controlled by a Sponsor.
-The Sponsor dispatches Events,
-invoking the target Actor's Behavior,
-parameterized by the Message.
-The Effects produced by the Actor
+The Effects produced by an Actor
 are applied in an all-or-nothing manner,
 as a transaction on the Configuration.
 The Configuration state is consistent
@@ -30,82 +23,74 @@ between Event dispatches.
 This can provide a stable checkpoint
 for persistence, suspension, migration, upgrade, and restart.
 
-## Sponsor Life-Cycle
+A _Sponsor_ is responsible for
+managing Configuration resources.
+All the resources used by an Actor to handle an Event;
+including processor time, memory, and communications;
+are controlled by a Sponsor.
+Sponsors are associated with Events,
+since Events represent the work to be done,
+regardless of which Actor(s) perform the work.
 
-A Sponsor is created with an initial Configuration
-and a _Controller_ to whom it reports life-cycle messages.
-From the perspective of the Controller,
-the new Sponsor is a _Peripheral_.
-A Sponsor begins in an `IDLE` state,
-with no initial resources.
+## Sponsorhip Hierarchy
 
-The Controller draws from its own resource pool
-and passes resources to the Peripheral Sponsor
-as part of a `Run` message.
-When a Peripheral receives a `Run` message,
-it enters `ACTIVE` state
-and begins to dispatch pending Events.
+All work done by a uFork processor
+is driven by actor message-events.
+Each event has a _sponsor_
+representing limits to resources
+that may be consumed
+while processing an event.
 
-```
-   --------              --------
-  |        | ---Run---> |        |
-  |  IDLE  | <--Pause-- | ACTIVE |
-  |        | <--Stop--- |        |
-   --------              --------
-```
+The system is started by a bootstrap event.
+The bootstrap event is sponsored
+by the _root_ sponsor.
+The bootstrap behavior creates new actors
+to build a configuration,
+and sends new messages
+to initiate processing.
+By default, new messages use the sponsor
+of the event that caused them to be sent.
+However, the sender may choose
+to designate a specific sponsor
+for any message it sends.
 
-If an Actor cannot obtain enough resources
-from the Sponsor
-to finish handling an Event,
-the transaction must be rolled back
-to the Configuration state
-before the Event was dispatched.
-The Sponsor then enters `IDLE` state
-and notifies its _Controller_ with a `Paused` message.
-
-If a Configuration has no more pending Events to dispatch,
-it enters `IDLE` state
-and notifies its _Controller_ with a `Stopped` message.
-
-The Controller can send the following messages to a Peripheral:
-
-  * Run(Resources)
-  * Pause
-
-A Peripheral can send the following messages to its Controller:
-
-  * Paused(Resources)
-  * Stopped(Resources)
+An actor's behavior does not have direct access
+to the sponsor for the event it is processing.
+Any resources used to handle an event
+are charged to the sponsor for that event.
+An actor can create a new sponsor
+with a subset of the current sponsor's resources.
+The new sponsor is called the _peripheral_ sponsor.
+The original sponsor is called the _controller_ sponsor.
+Controllers and peripherals form a sponsorship hierarchy.
 
 ## Actor Failure
 
-If an Actor detects a condition
-where it is unable or unwilling
-to continue processing an Event,
-it can signal a _Failure_
-to its Sponsor.
-The Event transaction is aborted,
-so there are no Effects.
-The Controller and Peripheral Sponsors
-may have a variety of policies
-for handling a Failure:
+If an actor encounters a condition
+which prevents it from continuing
+to process an event,
+it signals a failure
+to the sponsor of the event.
+This failure signal
+causes all processing
+associated with the sponsor
+to be suspended,
+and the _controller_
+for this _peripheral_
+is notified.
+The controller's signal-handler (an actor)
+handles the signal-message (an event)
+under the sponsorship of the controller.
 
-  * Ignore the Failure, discard the Event, and continue
-  * Log the failed Event, and continue
-  * Pause the Periperhal (retaining the Event)
-    * The Controller may modify the Configuration and restart the Peripheral
-    * The Controller may provide a debugger to examine/modify the Configuration
-
-## Event-Driven Transactions
-
-The design described up to this point
-is focused on message-event transactions.
-This is reasonable,
-since classical Actor-Model semantics
-are defined in this way.
-However, the **uFork** processor
-interleaves instruction execution
-for multiple parallel event-handlers.
+Resource exhaustion is an obvious cause of failure,
+however there are several other constraint violations
+that may also cause a failure.
+All failures are handled by the same mechanism,
+suspending the _peripheral_
+and notifying the _controller_.
+If the root sponsor fails,
+it is suspended (like any sponsor),
+and the host environment is notified.
 
 ## Instruction-Level Sponsorship
 
@@ -139,7 +124,7 @@ to communicate _status_ to the _controller_.
 The pre-allocated signal event
 is not initially part of the event queue.
 When the _peripheral_ needs to signal the _controller_,
-signal event is added to the event queue.
+the signal event is added to the event queue.
 The _sponsor_ of the signal event
 is the sponsor of the _controller_.
 The _status_ of the signal event
