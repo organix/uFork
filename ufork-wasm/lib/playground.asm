@@ -63,78 +63,40 @@ count_next:
     my self             ; count+1 SELF
     ref std.send_msg
 
-; Compiled Scheme boilerplate
+;;; Hewitt Go/Stop "Unbounded Integer" Example
+;
+; Theorem. An Actor machine can perform computations that a no λ expression, nondeterministic Turing
+; Machine or pure Logic Program can implement because there is an always-halting Actor machine that can
+; compute an integer of unbounded size (cf. [Clinger 1981]) This can be accomplished using an Actor with a
+; variable count that is initially 0 and a variable continue initially True. The computation is begun by
+; concurrently sending two requests to the Actor machine: a stop request that will return an integer and a go
+; request that will return Void. The Actor machine operates as follows: 1
+;  • When a stop request is received, return count and set continue to False for the next request received.
+;  • When a go request is received:
+;    o If continue is True, increment count by 1, send this Actor machine a go request in a hole of the region
+;      of mutual exclusion, and then return Void.
+;    o If continue is False, return Void.
 
-"symbol_t":
-    type_t 1
-"closure_t":
-    type_t 2
-"behavior_t":
-    type_t 2
-"~empty_env":
-    pair_t #nil
-    ref #nil
-"~cont_beh":
-    state 1
-    my self
-    send -1
-    state 3
-    state 4
-    msg 0
-    pair 1
-    pair 1
-    state 2
-    beh -1
-    end commit
-
-; A traditional recursive (but not tail-recursive) example function.
-
-;;  (define fact
-;;      (lambda (n)
-;;          (if (> n 1)
-;;              (* n (fact (- n 1)))
-;;              1)))
-
-fact:                   ; () <- (cust n)
-    msg 2               ; ... n
-    push 1              ; ... n 1
-    cmp gt              ; ... n>1
-    if fact_1 fact_2    ; ...
-fact_1:
-    msg 2               ; ... n
-    msg 2               ; ... n n
-    push 1              ; ... n n 1
-    alu sub             ; ... n n-1
-
-;    dup 0               ; ... n m=fact(n-1)  // no-op placeholder for recursive call...
-    my self             ; ... n n-1 SELF
-    push fact           ; ... n n-1 SELF fact
-    new 0               ; ... n n-1 SELF fact.()
-    send 2              ; ... n
-    pair -1             ; sp=(n ...)
-    state -1            ; sp env
-    push k_fact_1       ; sp env beh=k_fact_1
-    msg 0               ; sp env beh msg
-    push "~cont_beh"    ; sp env beh msg ~cont_beh
-    beh 4               ; --
+unbounded:              ; num <- inc | cust
+    msg 0               ; msg
+    typeq #actor_t      ; is_actor(msg)
+    if ub_stop          ; --
+    state 0             ; num
+    msg 0               ; num inc
+    dup 1               ; num inc inc
+    my self             ; num inc inc SELF
+    send -1             ; num inc
+    alu add             ; num+inc
+    my beh              ; num+inc unbounded
+    beh -1              ; --
     ref std.commit
-;    end commit
-
-k_fact_1:               ; (sp' . env) <- msg
-    state 1             ; sp'
-    part -1             ; ... n m
-
-    ; continuation parameter `k`
-    alu mul             ; ... rv=n*m
-    ref fact_3
-fact_2:
-    push 1              ; ... rv=1
-    ref fact_3
-fact_3:                 ; ... rv
-    ref std.cust_send
-;    msg 1               ; ... rv cust
-;    send -1             ; ...
-;    end commit
+ub_stop:                ; --
+    state 0             ; num
+    msg 0               ; num cust
+    send -1             ; --
+    push std.sink_beh   ; sink_beh
+    beh 0               ; --
+    ref std.commit
 
 ; Boot code runs when the module is loaded (but not when imported).
 
@@ -154,6 +116,17 @@ boot:                   ; () <- {caps}
 ;   YOUR CODE GOES HERE
 ;
 
+    ; start "unbounded" counter
+    dup 1               ; debug_dev
+    push 0              ; debug_dev debug_dev 0
+    push unbounded      ; debug_dev debug_dev 0 unbounded
+    new -1              ; debug_dev debug_dev unbounded.0
+    push 1              ; debug_dev debug_dev unbounded.0 1
+    pick 2              ; debug_dev debug_dev unbounded.0 1 unbounded.0
+    send -1             ; debug_dev debug_dev unbounded.0
+    send -1             ; debug_dev
+    if std.commit       ; -- early exit
+
     push 1              ; debug_dev 1
     pick 2              ; debug_dev 1 debug_dev
     send -1             ; debug_dev
@@ -169,13 +142,7 @@ boot:                   ; () <- {caps}
 ;    new 0               ; ... try_me.()
 ;    send 0              ; ...
 
-    push 5              ; debug_dev n=5
-    pick 2              ; debug_dev n cust=debug_dev
-    push fact           ; debug_dev n cust fact
-    new 0               ; debug_dev n cust fact.()
-    send 2              ; debug_dev
-
-    ; start unbounded counter
+    ; start counting forever
 ;    push count_to       ; ... count_to
 ;    new 0               ; ... count_to.()
 ;    send 0              ; ...
