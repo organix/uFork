@@ -123,6 +123,16 @@ boot:                   ; () <- {caps}
     new -1              ; debug_dev debug_dev unbounded.0
     push 1              ; debug_dev debug_dev unbounded.0 1
     pick 2              ; debug_dev debug_dev unbounded.0 1 unbounded.0
+
+    dup 2               ; debug_dev debug_dev unbounded.0 1 unbounded.0 1 unbounded.0
+    send -1             ; debug_dev debug_dev unbounded.0 1 unbounded.0
+    dup 2               ; debug_dev debug_dev unbounded.0 1 unbounded.0 1 unbounded.0
+    send -1             ; debug_dev debug_dev unbounded.0 1 unbounded.0
+    dup 2               ; debug_dev debug_dev unbounded.0 1 unbounded.0 1 unbounded.0
+    send -1             ; debug_dev debug_dev unbounded.0 1 unbounded.0
+    dup 2               ; debug_dev debug_dev unbounded.0 1 unbounded.0 1 unbounded.0
+    send -1             ; debug_dev debug_dev unbounded.0 1 unbounded.0
+
     send -1             ; debug_dev debug_dev unbounded.0
     send -1             ; debug_dev
     if std.commit       ; -- early exit
