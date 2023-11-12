@@ -179,7 +179,7 @@ executed in the context of an event, which always has a sponsor. If an
 error occurs (including exceeding the sponsor's quota), it is stored in
 the _signal_ field of the sponsor. If the sponsor is the root-sponsor,
 the run-loop is terminated and the error signal is returned to the host.
-For a peripheral sponsor, sponsor's controller is notified using a
+For a peripheral sponsor, the sponsor's controller is notified using a
 pre-allocated event, and no error is reported to the run-loop.
 
 If no error is reported from the instruction execution (or no instruction
@@ -192,7 +192,7 @@ If no error is reported from the event dispatch (or no event is dispatched),
 then the step limit is checked. If the step-limit is reached, the _signal_
 field of the root-sponsor is returned to the host. If both the event-queue
 and the continuation-queue are empty, the root-sponsor _signal_ field is
-set to `ZERO` (aka `E_OK`), and the same value is returned to the host.
+set to `ZERO` (aka `E_OK`), and that value is returned to the host.
 
  Signal   | Root Sponsor      | Peripheral Sponsor
 ----------|-------------------|--------------------
@@ -219,4 +219,4 @@ When an event or continuation reaches the front of the queue
 with their sponsor in this state,
 the event or continuation is discarded
 and the garbage-collector cleanly removes
-all associated memory of them from the system.
+all their associated memory from the system.
