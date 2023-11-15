@@ -535,7 +535,7 @@ function parse(token_generator) {
 
 const imm_labels = {
     dict: ["has", "get", "add", "set", "del"],
-    alu: ["not", "and", "or", "xor", "add", "sub", "mul"],
+    alu: ["not", "and", "or", "xor", "add", "sub", "mul", "div", "lsl", "lsr", "asr", "rol", "ror"],
     cmp: ["eq", "ge", "gt", "lt", "le", "ne"],
     my: ["self", "beh", "state"],
     deque: ["new", "empty", "push", "pop", "put", "pull", "len"],

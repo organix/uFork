@@ -581,6 +581,11 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
                                 ALU_ADD => Any::fix(n + nn),
                                 ALU_SUB => Any::fix(n - nn),
                                 ALU_MUL => Any::fix(n * nn),
+                                ALU_LSL => self.bitsr(n, -nn, false, false),
+                                ALU_LSR => self.bitsr(n, nn, false, false),
+                                ALU_ASR => self.bitsr(n, nn, true, false),
+                                ALU_ROL => self.bitsr(n, -nn, false, true),
+                                ALU_ROR => self.bitsr(n, nn, false, true),
                                 _ => UNDEF,
                             }
                         }
@@ -2001,6 +2006,32 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
     }
     pub fn blob_write(&mut self, ofs: usize, data: u8) {
         self.blob_ram[ofs] = data;
+    }
+
+    fn bitsr(&self, n: isize, nn: isize, carry: bool, rotate: bool) -> Any {
+        // fixnum bitwise shift/rotate utility
+        const FIX_NUM: u32 = 0x7FFF_FFFF;  // significant bits in fixnum
+        const FIX_OVF: u32 = 0x8000_0000;  // fixnum overflow bit
+        const FIX_MSB: u32 = 0x4000_0000;  // fixnum most-significant bit
+        const FIX_LSB: u32 = 0x0000_0001;  // fixnum least-significant bit
+        let mut a = (n as u32) & FIX_NUM;
+        let mut i = nn;
+        while i < 0 {
+            a <<= 1;
+            if rotate && ((a & FIX_OVF) != 0) {
+                a |= FIX_LSB;
+            }
+            i += 1;
+        }
+        while i > 0 {
+            if (rotate && ((a & FIX_LSB) != 0))
+            || (carry && ((a & FIX_MSB) != 0)) {
+                a |= FIX_OVF;
+            }
+            a >>= 1;
+            i -= 1;
+        }
+        Any::new(a | FIX_OVF)  // OVF is fixnum type-tag
     }
 }
 

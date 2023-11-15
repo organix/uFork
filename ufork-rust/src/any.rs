@@ -98,6 +98,12 @@ pub const ALU_XOR: Any      = PLUS_3;
 pub const ALU_ADD: Any      = PLUS_4;
 pub const ALU_SUB: Any      = PLUS_5;
 pub const ALU_MUL: Any      = PLUS_6;
+pub const ALU_DIV: Any      = PLUS_7;  // RESERVED
+pub const ALU_LSL: Any      = PLUS_8;
+pub const ALU_LSR: Any      = Any { raw: DIR_RAW | 9 };
+pub const ALU_ASR: Any      = Any { raw: DIR_RAW | 10 };
+pub const ALU_ROL: Any      = Any { raw: DIR_RAW | 11 };
+pub const ALU_ROR: Any      = Any { raw: DIR_RAW | 12 };
 
 // VM_CMP comparison operations
 pub const CMP_EQ: Any       = ZERO;

@@ -116,8 +116,50 @@ boot:                   ; () <- {caps}
 ;   YOUR CODE GOES HERE
 ;
 
+    ; exercise shift and rotate instructions
+    push 3              ; debug_dev 3
+    push 0              ; debug_dev 3 0
+    alu lsl             ; debug_dev n
+    assert 3            ; debug_dev assert(n==3)
+
+    push 3              ; debug_dev 3
+    push 1              ; debug_dev 3 1
+    alu lsl             ; debug_dev n
+    assert 6            ; debug_dev assert(n==6)
+
+    push 3              ; debug_dev 3
+    push -1             ; debug_dev 3 -1
+    alu lsl             ; debug_dev n
+    assert 1            ; debug_dev assert(n==1)
+
+    push 16#40000000    ; debug_dev 16#40000000
+    push 1              ; debug_dev 16#40000000 1
+    alu lsr             ; debug_dev n
+    assert 16#20000000  ; debug_dev assert(n==16#20000000)
+
+    push 16#40000000    ; debug_dev 16#40000000
+    push 1              ; debug_dev 16#40000000 1
+    alu asr             ; debug_dev n
+    assert 16#60000000  ; debug_dev assert(n==16#60000000)
+
+    push 1              ; debug_dev 1
+    push -1             ; debug_dev 1 -1
+    alu rol             ; debug_dev n
+    assert 16#40000000  ; debug_dev assert(n==16#40000000)
+
+    push 16#aBe11       ; debug_dev 16#aBe11
+    push 16             ; debug_dev 16#aBe11 16
+    alu rol             ; debug_dev n
+    dup 1               ; debug_dev n n
+    assert 16#3e110015  ; debug_dev n assert(n==16#3e110015)
+    push 16             ; debug_dev n 16
+    alu ror             ; debug_dev m
+    assert 16#aBe11     ; debug_dev assert(m==16#aBe11)
+
+    if std.commit       ; -- early exit
+
     ; start "unbounded" counter
-    dup 1               ; debug_dev
+    dup 1               ; debug_dev debug_dev
     push 0              ; debug_dev debug_dev 0
     push unbounded      ; debug_dev debug_dev 0 unbounded
     new -1              ; debug_dev debug_dev unbounded.0

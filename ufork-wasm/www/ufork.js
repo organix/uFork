@@ -250,7 +250,13 @@ const alu_imm_label = [
     "xor",
     "add",
     "sub",
-    "mul"
+    "mul",
+    "div",          // reserved
+    "lsl",
+    "lsr",
+    "asr",
+    "rol",
+    "ror"
 ];
 const cmp_imm_label = [
     "eq",
