@@ -12,6 +12,7 @@ import {toFileUrl} from "https://deno.land/std@0.203.0/path/to_file_url.ts";
 import {isAbsolute} from "https://deno.land/std@0.203.0/path/is_absolute.ts";
 import parseq from "./www/parseq.js";
 import pair from "./www/requestors/pair.js";
+import infallible from "./www/requestors/infallible.js";
 import requestorize from "./www/requestors/requestorize.js";
 import unpromise from "./www/requestors/unpromise.js";
 import lazy from "./www/requestors/lazy.js";
@@ -95,30 +96,36 @@ function run_asm_tests(url_filters, root_file_url) {
         }),
         pair(lazy(function (file_url_array) {
             return parseq.parallel(
-                [],
                 file_url_array.map(function (file_url) {
-                    return workerize(asm_test_url, file_url.href);
+                    return infallible(parseq.sequence(
+                        [workerize(asm_test_url, file_url.href)],
+                        time_limit
+                    ));
                 }),
-                time_limit,
-                true,
+                undefined,
+                undefined,
+                undefined,
                 throttle
             );
         })),
-        requestorize(function ([report_array, file_url_array]) {
+        requestorize(function ([outcome_array, file_url_array]) {
             const summary = {
                 pass: {},
                 lost: {},
                 fail: {}
             };
             file_url_array.forEach(function (file_url, report_nr) {
-                const report = report_array[report_nr];
-                const path = file_url.href.replace(file_root_url.href, "");
+                const path = file_url.href.replace(root_file_url.href, "");
+                const outcome = outcome_array[report_nr];
+                const report = outcome.value;
                 if (report === undefined) {
-                    summary.lost[path] = [];
-                } else if (report.pass === true) {
-                    summary.pass[path] = [];
-                } else if (report.pass === false) {
-                    summary.fail[path] = report.logs;
+                    summary.lost[path] = [outcome.reason];
+                } else {
+                    if (report.pass === true) {
+                        summary.pass[path] = [];
+                    } else if (report.pass === false) {
+                        summary.fail[path] = report.logs;
+                    }
                 }
             });
             return summary;
@@ -151,9 +158,9 @@ run_asm_tests(
     );
 });
 
-// TODO provide interactive TTY output.
+// Possible improvement: provide interactive TTY output.
 
-// ANSI TTY control codes.
+// ANSI TTY control codes:
 
 // const ESC = "\u001B[";
 // const CLEAR_SCREEN = "2J";
