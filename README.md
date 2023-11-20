@@ -17,11 +17,12 @@ and the rationale behind it.
 
 ## Implementations
 
-The initial prototype is [implemented in **C**](ufork-c/README.md)
+The initial prototype
+was [implemented in **C**](https://github.com/organix/ufork-c)
 and hosts a Scheme REPL with actor extensions.
 
 The [Rust/WASM version](ufork-wasm/README.md)
-is intended to be a more-robust implementation.
+is a newer and more-robust implementation.
 Multiple instances of the WASM component
 can be instantiated to simulate a multi-core
 or distributed system.
@@ -77,7 +78,6 @@ by generating interoperable uFork IR.
   * uFork [Virtual Machine](ufork.md) description
   * [Actor Protocol Design](proto.md) in uFork
   * [Object Capabilities](ocaps.md) in uFork
-  * uFork [Design Notes](design.md)
 
 ## License
 
