@@ -1,10 +1,11 @@
 // Runs the development server.
 
-/*jslint node */
+// It requires permission to bind to localhost, and to read the files it will
+// serve.
 
-import fs from "fs";
-import path from "path";
-import http from "http";
+/*jslint deno */
+
+import {toFileUrl} from "https://deno.land/std@0.203.0/path/to_file_url.ts";
 
 const mime_types = {
     html: "text/html",
@@ -16,32 +17,44 @@ const mime_types = {
     scm: "text/plain",
     asm: "text/plain"
 };
+const cwd_url = new URL(toFileUrl(Deno.cwd()).href + "/");
+const listener = Deno.listen({
+    hostname: "localhost",
+    port: 7273
+});
 
-const server = http.createServer(function on_request(req, res) {
-    const file_path = path.join(process.cwd(), req.url);
-    if (!file_path.startsWith(process.cwd())) {
-        res.statusCode = 400;
-        return res.end("Escapee.");
-    }
-    const mime_type = mime_types[file_path.split(".").pop()];
+function respond(request) {
+    const mime_type = mime_types[request.url.split(".").pop()];
     if (typeof mime_type !== "string") {
-        res.statusCode = 404;
-        return res.end();
+        return new Response("Unsupported file extension.", {status: 400});
     }
-    return fs.readFile(file_path, function (error, buffer) {
-        if (error) {
-            res.statusCode = 404;
-            return res.end();
-        }
-        res.setHeader("Content-Type", mime_type);
-        return res.end(buffer);
-    });
-});
 
-server.listen(7273, "localhost", function on_listening() {
-    console.log(
-        "Navigate to http://localhost:"
-        + server.address().port
-        + "/www/index.html"
-    );
+// Any '..' path segments are discarded by the URL constructor, so we do not
+// need to check for escapees.
+
+    const file_path = new URL(request.url).pathname.slice(1);
+    const file_url = new URL(file_path, cwd_url);
+    return Deno.readFile(file_url).then(function (buffer) {
+        return new Response(buffer, {
+            status: 200,
+            headers: {"content-type": mime_type}
+        });
+    }).catch(function (error) {
+        window.console.error(error);
+        return new Response("Not found.", {status: 404});
+    });
+}
+
+listener.accept().then(function on_connection(tcp) {
+    const http = Deno.serveHttp(tcp);
+    http.nextRequest().then(function on_request(event) {
+        if (event) {
+            event.respondWith(respond(event.request));
+            http.nextRequest().then(on_request);
+        }
+    });
+    listener.accept().then(on_connection);
 });
+window.console.log(
+    "Navigate to http://localhost:" + listener.addr.port + "/www/index.html"
+);

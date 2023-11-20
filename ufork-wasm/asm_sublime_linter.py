@@ -20,7 +20,8 @@ from SublimeLinter.lint import Linter, STREAM_STDOUT
 
 class asm(Linter):
     cmd = [
-        "node",
+        "deno",
+        "run",
         path.normpath(
             path.join(
                 path.dirname(path.realpath(__file__)),

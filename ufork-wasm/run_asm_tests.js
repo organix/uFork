@@ -8,7 +8,8 @@
 
 /*jslint deno */
 
-import {toFileUrl, isAbsolute} from "https://deno.land/std@0.111.0/path/mod.ts";
+import {toFileUrl} from "https://deno.land/std@0.203.0/path/to_file_url.ts";
+import {isAbsolute} from "https://deno.land/std@0.203.0/path/is_absolute.ts";
 import parseq from "./www/parseq.js";
 import pair from "./www/requestors/pair.js";
 import requestorize from "./www/requestors/requestorize.js";

@@ -3,19 +3,22 @@
 
 //  <line>:<col> <msg>
 
-/*jslint node */
+/*jslint deno */
 
 import assemble from "./www/assemble.js";
 
-let chunks = [];
-process.stdin.setEncoding("utf8");
-process.stdin.on("data", function (chunk) {
-    chunks.push(chunk);
-});
-process.stdin.on("end", function () {
-    const source = chunks.join("");
+let decoder = new TextDecoder();
+let source = "";
+let buffer = new Uint8Array(4096);
+Deno.stdin.read(buffer).then(function on_chunk(nr_bytes) {
+    if (Number.isSafeInteger(nr_bytes)) {
+        source += decoder.decode(buffer.slice(0, nr_bytes), {stream: true});
+        return Deno.stdin.read(buffer).then(on_chunk);
+    }
     const result = assemble(source);
     if (result.kind === "error") {
-        console.log(result.line + ":" + result.column + " " + result.message);
+        window.console.log(
+            result.line + ":" + result.column + " " + result.message
+        );
     }
 });

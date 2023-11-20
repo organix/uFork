@@ -2,4 +2,4 @@
 
 pushd "$( dirname "${BASH_SOURCE[0]}" )"
 
-node www/server.js
+deno run --allow-read=. --allow-net=localhost www/server.js
