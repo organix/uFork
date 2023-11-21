@@ -11,7 +11,7 @@
 
 /*jslint deno, long */
 
-import ecomcon from "https://raw.githubusercontent.com/douglascrockford/ecomcon/master/ecomcon.js";
+import ecomcon from "https://raw.githubusercontent.com/douglascrockford/ecomcon/b3eda9196a827666af178199aff1c5b8ad9e45b3/ecomcon.js";
 import run_replete from "https://deno.land/x/replete/run.js";
 
 const mime_types = {
@@ -33,9 +33,7 @@ run_replete({
     which_node: "node",
     deno_args: ["--allow-all"],
     source(command) {
-        return Promise.resolve(
-            ecomcon(command.source, ["debug"])
-        );
+        return Promise.resolve(ecomcon(command.source, ["debug"]));
     },
     mime(locator) {
         return mime_types[locator.split(".").pop()];
