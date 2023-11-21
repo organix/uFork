@@ -119,7 +119,7 @@ test:                       ; (verdict) <- {caps}
     push referee.beh        ; timer 3rd 2nd 1st probation timer verdict referee_beh
     new 6                   ; timer referee
 
-; The referee is not able to compare two lists, to unwrap the result before
+; The referee is not able to compare two lists, so unwrap the result before
 ; giving it to the referee.
 
     push lib.unwrap_beh     ; timer referee unwrap_beh

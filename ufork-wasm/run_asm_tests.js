@@ -4,7 +4,7 @@
 // Usage:
 
 //      cd ufork-wasm
-//      deno run --allow-all run_asm_tests.js [...file_or_directory]
+//      deno run --allow-read=. run_asm_tests.js [...file_or_directory]
 
 /*jslint deno */
 
@@ -20,8 +20,8 @@ import workerize from "./www/requestors/workerize.js";
 const asm_test_url = import.meta.resolve("./www/asm_test.js");
 const own_directory_url = new URL(import.meta.resolve("./"));
 
-const time_limit = 2000; // milliseconds
-const throttle = 20; // number of concurrent Workers
+const time_limit = 5000; // milliseconds
+const throttle = navigator.hardwareConcurrency; // number of concurrent Workers
 
 function iterate(iterable) {
     const iterator = iterable[Symbol.asyncIterator]();

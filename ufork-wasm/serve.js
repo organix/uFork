@@ -1,11 +1,17 @@
-// Runs the development server.
+// A Deno program that runs the development server.
 
-// It requires permission to bind to localhost, and to read the files it will
-// serve.
+// It requires permission to
+
+//  a) bind to localhost (--allow-net=localhost)
+//  b) read the files it serves from disk (--allow-read=.)
+
+// For brevity, however, it should be safe to run it will full permissions like
+
+//  $ deno run -A serve.js
 
 /*jslint deno */
 
-import {toFileUrl} from "https://deno.land/std@0.203.0/path/to_file_url.ts";
+const cwd_href = import.meta.resolve("./");
 
 const mime_types = {
     html: "text/html",
@@ -17,11 +23,6 @@ const mime_types = {
     scm: "text/plain",
     asm: "text/plain"
 };
-const cwd_url = new URL(toFileUrl(Deno.cwd()).href + "/");
-const listener = Deno.listen({
-    hostname: "localhost",
-    port: 7273
-});
 
 function respond(request) {
     const mime_type = mime_types[request.url.split(".").pop()];
@@ -29,11 +30,11 @@ function respond(request) {
         return new Response("Unsupported file extension.", {status: 400});
     }
 
-// Any '..' path segments are discarded by the URL constructor, so we do not
-// need to check for escapees.
+// Any '..' path segments are discarded by this URL constructor, so we do not
+// bother to guard against escapees.
 
     const file_path = new URL(request.url).pathname.slice(1);
-    const file_url = new URL(file_path, cwd_url);
+    const file_url = new URL(file_path, cwd_href);
     return Deno.readFile(file_url).then(function (buffer) {
         return new Response(buffer, {
             status: 200,
@@ -45,6 +46,10 @@ function respond(request) {
     });
 }
 
+const listener = Deno.listen({
+    hostname: "localhost",
+    port: 7273
+});
 listener.accept().then(function on_connection(tcp) {
     const http = Deno.serveHttp(tcp);
     http.nextRequest().then(function on_request(event) {
