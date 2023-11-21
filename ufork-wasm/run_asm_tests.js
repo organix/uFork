@@ -16,12 +16,10 @@ import infallible from "./www/requestors/infallible.js";
 import requestorize from "./www/requestors/requestorize.js";
 import unpromise from "./www/requestors/unpromise.js";
 import lazy from "./www/requestors/lazy.js";
-import workerize from "./www/requestors/workerize.js";
-const asm_test_url = import.meta.resolve("./www/asm_test.js");
+import asm_test from "./www/asm_test.js";
 const own_directory_url = new URL(import.meta.resolve("./"));
 
 const time_limit = 5000; // milliseconds
-const throttle = navigator.hardwareConcurrency; // number of concurrent Workers
 
 function iterate(iterable) {
     const iterator = iterable[Symbol.asyncIterator]();
@@ -98,14 +96,10 @@ function run_asm_tests(url_filters, root_file_url) {
             return parseq.parallel(
                 file_url_array.map(function (file_url) {
                     return infallible(parseq.sequence(
-                        [workerize(asm_test_url, file_url.href)],
+                        [asm_test(file_url.href)],
                         time_limit
                     ));
-                }),
-                undefined,
-                undefined,
-                undefined,
-                throttle
+                })
             );
         })),
         requestorize(function ([outcome_array, file_url_array]) {
