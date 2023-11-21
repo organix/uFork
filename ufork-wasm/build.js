@@ -4,8 +4,13 @@
 
 //  $ deno run -A build.js [--opt]
 
-// Pass the --opt flag to produce a highly optimized release build (this feature
-// is not supported on Windows).
+// Pass the --opt flag to produce a highly optimized release build.
+
+// The Rust compiler requires a C++ compiler to be installed. On Windows, this
+// requires several gigabytes of build tools from Microsoft.
+// See https://stackoverflow.com/a/69788132.
+// Alternatively, install the GNU toolchain described at
+// https://rust-lang.github.io/rustup/installation/windows.html.
 
 /*jslint deno */
 
@@ -106,7 +111,7 @@ function build_release() {
     );
 }
 
-// Configure the build environment and run the tasks.
+// Configure the build environment, then build.
 
 let tasks = [];
 if (optimize) {
@@ -124,20 +129,14 @@ if (optimize) {
         fromFileUrl(dot_cargo_url),
         "wasm-opt"
     ));
-} else if (Deno.build.os === "windows") {
-
-// The Rust compiler on Windows requires a C++ compiler. Rustup suggests
-// installing the Visual Studio C++ build tools, which are about 5GB, but it
-// seems we can get away with using the much smaller GNU implementation.
-
-    const gnu_win = "stable-x86_64-pc-windows-gnu";
-    tasks.push(run("rustup", "toolchain", "install", gnu_win));
-    tasks.push(run("rustup", "default", gnu_win));
 } else {
     tasks.push(run("rustup", "default", "stable"));
 }
 tasks.push(run("rustup", "target", "add", "wasm32-unknown-unknown"));
-tasks.push(parseq.parallel([build_debug(), build_release()]));
+tasks.push(parseq.parallel([
+    build_debug(),
+    build_release()
+]));
 parseq.sequence(tasks)(function callback(value, reason) {
     if (value === undefined) {
         window.console.error(reason);
