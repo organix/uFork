@@ -9,8 +9,8 @@
 
 /*jslint deno */
 
-import {join} from "https://deno.land/std@0.201.0/path/join.ts";
-import {toFileUrl} from "https://deno.land/std@0.201.0/path/to_file_url.ts";
+import {join} from "https://deno.land/std@0.203.0/path/join.ts";
+import {toFileUrl} from "https://deno.land/std@0.203.0/path/to_file_url.ts";
 import ufork from "../../www/ufork.js";
 import parseq from "../../www/parseq.js";
 import requestorize from "../../www/requestors/requestorize.js";

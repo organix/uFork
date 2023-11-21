@@ -11,7 +11,7 @@
 
 /*jslint deno */
 
-import {toFileUrl} from "https://deno.land/std@0.111.0/path/mod.ts";
+import {toFileUrl} from "https://deno.land/std@0.203.0/path/to_file_url.ts";
 import start_server from "../../www/transports/websockets_signalling_server.js";
 
 const bind_address = Deno.args[0];

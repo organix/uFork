@@ -10,8 +10,8 @@ AWP device.
 This demo consists of four Node.js processes, each representing a single party.
 All communications are secured with TLS.
 
-Make sure you have the development server running (serve.sh), then run each
-of the following commands in separate terminal windows:
+Make sure you have the development server running (deno run -A serve.js), then
+run each of the following commands in separate terminal windows:
 
     node examples/grant_matcher/tls.js bob gm.asm
     node examples/grant_matcher/tls.js carol keqd.asm
