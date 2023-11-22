@@ -17,6 +17,12 @@ WebRTC transport, providing secure peer-to-peer communication.
 
 ## Running the app
 
+There is an instance running at
+[https://chat.ufork.org/](https://chat.ufork.org/)
+that anyone can use.
+You can also host your own instance
+by following these instructions.
+
 Make sure you have [Deno](https://deno.land) installed. Run the following command
 from the `ufork-wasm` directory to start the web server:
 
@@ -97,7 +103,7 @@ then discarded.
                   Q:[]}         |                   |          Q:[]}
                    |            |                   |            |
     -(msg . m1)--->#            |                   |            |
-                   #-(5 1 . m1)-------------------->#            |
+                   #-(5 1 . m1)------- - - - - ---->#            |
               {ack:5,seq:2,     |                   #-m1------------------->
               Q:[(1 . m1)]}     |                   #-(ack 5 1)->#
                    |            |                {seq:2}         #
@@ -105,7 +111,7 @@ then discarded.
                    |            |                   |          Q:[]}
                    |            |                   |            |
                    |            |                   |            #<-(tmo 6)-
-                   |            #<-------------------------(1 6)-#
+                   |            #<---- - - - - ------------(1 6)-#
                    #<-(ack 1 6)-#                   |       {ack:1,seq:7,
                    #         {seq:7}                |         Q:[(6)]}
               {ack:6,seq:2,     |                   |            |

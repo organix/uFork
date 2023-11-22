@@ -1,4 +1,4 @@
-# uFork Simulator in Rust
+# μFork Simulator in Rust/WASM
 
 This [implementation](vm.md) of the [**uFork** virtual machine](../ufork.md)
 is written in [Rust](https://www.rust-lang.org/)
