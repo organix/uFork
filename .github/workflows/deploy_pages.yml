@@ -1,0 +1,20 @@
+on: push
+permissions:
+  pages: write
+  id-token: write
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: denoland/setup-deno@v1
+      - run: deno run -A ufork-wasm/build.js
+      - run: deno run -A test.js
+      - run: mv ufork-wasm/lib ufork-wasm/www/
+      - uses: actions/upload-pages-artifact@v2
+        with:
+          path: 'ufork-wasm/www/'
+      - uses: actions/deploy-pages@v2
