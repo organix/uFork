@@ -116,7 +116,7 @@ As an example, consider indexing into the list `(1 2 3)`:
  4     | `#?`
 -4     | `#?`
 
-The [uFork instructions](ufork-wasm/asm.md#instructions)
+The [uFork instructions](asm.md#instructions)
 for sending a message
 or defining an actor's behavior/state
 provide convenient support
@@ -153,20 +153,21 @@ in function/procedure calls.
 Note that some services
 (like the _clock_ device described above)
 expect the entire message to be just the _customer_.
-The idioms in [`lib.asm`](ufork-wasm/lib/lib.asm)
+The idioms in [`lib.asm`](../lib/lib.asm)
 include adapters (`wrap`/`unwrap`)
 to convert between these conventions.
 
 ### Behavior Signatures
 
-All processing in uFork is performed by executing [instructions](ufork-wasm/asm.md#instructions)
+All processing in uFork is performed by executing
+[instructions](asm.md#instructions)
 in the context of handling an actor message-event.
 An instruction graph defines the _behavior_ of an actor.
 The _signature_ of a behavior describes
 the expected actor _state_ structure and _message_ structure.
 We write a behavior signature as `state <- message`.
 
-Consider the adapter [`wrap_beh`](ufork-wasm/lib/lib.asm),
+Consider the adapter [`wrap_beh`](../lib/lib.asm),
 which expects the state to be a single-element list designating the receiver
 and the message to be a single value:
 
@@ -183,7 +184,7 @@ creates a single-element list
 containing the message
 and sends it to the receiver.
 
-Now consider the adapter [`unwrap_beh`](ufork-wasm/lib/lib.asm),
+Now consider the adapter [`unwrap_beh`](../lib/lib.asm),
 which expects the state to be a single-element list designating the receiver
 and the message to be a single-element list:
 
@@ -199,7 +200,7 @@ An actor with "unwrap" behavior
 extracts the message from a single-element list
 and sends it to the receiver.
 
-Finally, consider a constant-function [`const_beh`](ufork-wasm/lib/lib.asm),
+Finally, consider a constant-function [`const_beh`](../lib/lib.asm),
 which expects the state to be a single value,
 and the message to be a pair-list
 with the _customer_ as the first element:
@@ -239,7 +240,8 @@ where a single actor is the _state holder_,
 and messages with _methods selectors_ may cause
 changes to the actor's private state.
 
-Consider the behavior of an actor representing a "mutable" [storage-cell](ufork-wasm/lib/cell.asm):
+Consider the behavior of an actor representing
+a "mutable" [storage-cell](../lib/cell.asm):
 
 ```
 read_tag:
@@ -359,7 +361,7 @@ for each available operation on a particular cell.
 
 Each _facet_ is represented by a distinct actor,
 separate from each other and from the state-holder.
-The behavior of a facet is an idiomatic [`label_beh`](ufork-wasm/lib/lib.asm),
+The behavior of a facet is an idiomatic [`label_beh`](../lib/lib.asm),
 which expects the state to be a list containing
 the receiver and the label.
 The message is arbitrary (simple or complex).

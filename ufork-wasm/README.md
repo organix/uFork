@@ -1,35 +1,13 @@
-# μFork Simulator in Rust/WASM
+# μFork Simulator in WASM
 
-This [implementation](vm.md) of the [**uFork** virtual machine](../ufork.md)
+This implementation of the [**uFork** virtual machine](../../docs/ufork.md)
 is written in [Rust](https://www.rust-lang.org/)
 and targets the browser's [WASM engine](https://webassembly.org/).
-A browser-based GUI implements a debugger for a uFork processor core.
 
-## Shell Scripts
+Only [WASM 1.0 (MVP)](https://github.com/WebAssembly/design/blob/main/MVP.md)
+features are used in this implementation.
 
-Frequently-used command-line sequences are captured in a few small shell scripts.
+The virtual machine semantics are described in [vm.md](../../docs/vm.md).
 
-### Build both Debug and Release versions
-
-    $ ./build.sh
-
-### Run the Test Suites
-
-    $ ./test.sh
-
-### Run Browser-based Tools (including the debugger)
-
-    $ ./server.sh
-
-## Documentation
-
-  * Loader [Intermediate Language](crlf.md) specification
-  * [Assembly Language](asm.md) reference manual
-  * [LISP/Scheme compiler](scheme.md) reference manual
-  * [Actor Wire Protocol (AWP)](awp.md) specification
-  * [AWP Network](awp_device.md) device description
-  * [Virtual Machine](vm.md) implementation details
-  * [Sponsor](sponsor.md) semantics
-  * [Console Input/Output](io_dev.md) device description
-  * [Binary Large-Object (blob)](blob_dev.md) device description
-  * [Garbage-collected](gc.md) memory management
+A [browser-based GUI](../../apps/debugger/README.md) implements a debugger for a
+uFork processor core.

@@ -1,4 +1,4 @@
-// Installs the BLOB device.
+// Installs the BLOB device. See also blob_dev.md.
 
 import ufork from "../ufork.js";
 

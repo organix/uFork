@@ -1,8 +1,7 @@
-# uFork
+# uFork intermediate representation
 
-[uFork](https://github.com/organix/uFork) is a pure-actor virtual machine with
-object-capabilities and memory-safety. This document describes an intermediate
-representation format for uFork modules.
+This document describes an intermediate representation format for uFork
+modules.
 
     {
         "lang": "uFork",

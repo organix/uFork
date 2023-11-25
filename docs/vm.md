@@ -46,7 +46,7 @@
 
 ## Introduction
 
-The [**uFork** virtual machine](../ufork.md)
+The [**uFork** virtual machine](ufork.md)
 is designed to support machine-level actors.
 All instructions execute within the context
 of an actor handling a message-event.
@@ -263,7 +263,7 @@ carried in the `Y` field of the instruction.
 For the typical case of a instruction with a single continuation,
 the "next instruction" is carried in the `Z` field of the instruction.
 
-Instructions are shown in their textual representation as defined in the [assembly-language manual](../ufork-wasm/asm.md).
+Instructions are shown in their textual representation as defined in the [assembly-language manual](asm.md).
 
 ### Instruction Summary
 

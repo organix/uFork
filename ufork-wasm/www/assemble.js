@@ -4,7 +4,7 @@
 // that is suitable for loading.
 
 // The assembly language is described in asm.md.
-// The intermediate representation is described in crlf.md.
+// The intermediate representation is described in ir.md.
 
 // Tokenizer ///////////////////////////////////////////////////////////////////
 

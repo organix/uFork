@@ -1,5 +1,5 @@
 // Installs the AWP device, allowing cores to communicate over the network via
-// the Actor Wire Protocol.
+// the Actor Wire Protocol. See also awp.md and awp_device.md.
 
 // Returns a disposal function that destroys all connections and stops
 // listening.

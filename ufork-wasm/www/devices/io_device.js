@@ -1,4 +1,4 @@
-// Installs the IO device.
+// Installs the IO device. See also io_dev.md.
 
 /*jslint browser, bitwise, devel */
 

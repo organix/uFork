@@ -53,7 +53,7 @@ are turned into message-events.
 
 There are currently two variations of the uFork VM.
 A [proof-of-concept prototype](https://github.com/organix/ufork-c/blob/main/vm.md) written in C,
-and a [more robust implementation](ufork-rust/vm.md) written in Rust/WASM.
+and a [more robust implementation](../vm/wasm/README.md) written in Rust/WASM.
 The instruction set and internal representation has evolved
 so the two implementations are no longer compatible,
 but each demonstrates important aspects of the design space.

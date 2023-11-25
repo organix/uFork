@@ -12,7 +12,7 @@ A party leaves a room
 simply by navigating away
 (or closing the browser tab/window).
 
-Chat messages are sent via the [Actor Wire Protocol](../../awp.md) over a
+Chat messages are sent via the [Actor Wire Protocol](../../docs/awp.md) over a
 WebRTC transport, providing secure peer-to-peer communication.
 
 ## Running the app

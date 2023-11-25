@@ -1,4 +1,7 @@
-# uFork's AWP device
+# uFork AWP device
+
+uFork programs interface with the AWP device to communicate with other cores
+using the [Actor Wire Protocol](awp.md).
 
 ## Transports
 

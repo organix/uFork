@@ -3,7 +3,7 @@
 // Transforms Scheme source code into an intermediate representation
 // that is suitable for loading.
 
-// The intermediate representation is described in crlf.md.
+// The intermediate representation is described in ir.md.
 
 const ignored = function () {};
 let info_log = console.log;  // Low volume, always shown unless all logging is disabled.

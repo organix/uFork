@@ -1,8 +1,6 @@
 # uFork assembly language
 
 This document describes a textual assembly language for uFork.
-[uFork](https://github.com/organix/uFork) is a pure-actor virtual machine with
-object-capabilities and memory-safety.
 
 ## An example
 

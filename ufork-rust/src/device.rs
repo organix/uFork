@@ -108,7 +108,7 @@ impl Default for IoDevice {
     For backward compatibility, when the message is just a capability
     we retain the previous behavior.
 
-    The new `IoDevice` interface is described in [io_dev.md](io_dev.md)
+    The new `IoDevice` interface is described in io_dev.md.
       * _read_: `(to_cancel callback)` → `(fixnum)` | `(#? . error)`
       * _write_: `(to_cancel callback fixnum)` → `(#unit)` | `(#? . error)`
       * _cancel_: `_` → `to_cancel`
@@ -327,7 +327,7 @@ impl Default for BlobDevice {
     }
 }
 /*
-    The `BlobDevice` interface is described in [blob_dev.md](blob_dev.md)
+    The `BlobDevice` interface is described in blob_dev.md.
 */
 impl Device for BlobDevice {
     fn handle_event(&mut self, core: &mut Core, ep: Any) -> Result<(), Error> {

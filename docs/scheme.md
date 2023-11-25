@@ -3,7 +3,7 @@
 A LISP/Scheme dialect is implemented
 as a surface-syntax for **uFork** programs.
 A compiler (written in JavaScript)
-generates loadable [CRLF](crlf.md)
+generates loadable [IR](ir.md)
 just like [ASM](asm.md) does.
 
 Since this dialect is focused on expressing actor behaviors,
