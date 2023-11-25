@@ -138,4 +138,4 @@ cited by Douglas Crockford in his **code::dive 2022** talk
 This technology is being shared freely
 for the betterment of the planet.
 
-[Apache License](LICENSE), Version 2.0
+[Apache License](../LICENSE), Version 2.0

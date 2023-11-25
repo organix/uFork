@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,user-scalable=no" />
+<title>uFork Chat Demo</title>
+<link rel="icon" type="image/png" sizes="128x128" href="/favicon-128.png">
+<style>
+body {
+    margin: 2ex;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    background-color: #FFC;
+}
+h1 {
+    margin: 1em;
+}
+pre {
+    margin: 2px;
+}
+button {
+    margin-left: 1ex;
+}
+header {
+    margin-bottom: 2ex;
+}
+header, form {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+}
+.panel {
+    border-radius: 1.5ex;
+    padding: 2ex;
+    background: #333;
+    color: #3CC;
+    font-family: monospace;
+    white-space: pre;
+    overflow: auto;
+}
+#room {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    max-width: 100%;
+    box-sizing: border-box;
+}
+#stdout {
+    margin-bottom: 1ex;
+    background-color: #222;
+    color: #FFF;
+    font-family: monospace;
+    overflow-y: auto;
+}
+#stdin {
+    background-color: #FFF;
+    color: #000;
+    font-family: monospace;
+    flex-grow: 1;
+    min-width: 10ex;
+}
+</style>
+</head>
+<body>
+    <header>
+        <img src="/ufork_logo.svg" alt="μFork logo" />
+        <h1>Peer Chat</h1>
+    </header>
+    <noscript>
+        This page contains webassembly and javascript content,
+        please enable javascript in your browser.
+    </noscript>
+    <div id="room" class="panel">
+        <textarea id="stdout" cols="70" rows="16" readonly></textarea>
+        <form id="input-form">
+            <input id="stdin" type="text" />
+            <button type="submit">Send</button>
+        </form>
+    </div>
+    <script type="importmap">
+        {
+            "imports": {
+                "std/": "https://lib.ufork.org/std/",
+                "js/": "https://lib.ufork.org/js/",
+                "wasm/": "https://lib.ufork.org/wasm/"
+            }
+        }
+    </script>
+    <script type="module" src="/chat.js"></script>
+</body>
+</html>

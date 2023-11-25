@@ -1,15 +1,2 @@
-*.o
-*.list
-*.sym
-*.hex
-*.elf
-*.img
 .DS_Store
-c_src/ufork
-ufork-wasm/target/
-*.rs.bk
-
-
-# Added by cargo
-
-/target
+deno.lock

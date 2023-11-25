@@ -90,7 +90,7 @@ are not called again.
 ## uFork device
 
 The uFork AWP interface is implemented as a dedicated device. The AWP device's
-messages all adhere to the "requestor" pattern (see lib/requestors/README.md).
+messages all adhere to the "requestor" pattern (see lib/rq/README.md).
 
 ### Stores
 

@@ -11,10 +11,18 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: denoland/setup-deno@v1
-      - run: deno run -A ufork-wasm/build.js
-      - run: deno run -A test.js
-      - run: mv ufork-wasm/lib ufork-wasm/www/
+      - run: deno task build
+      - run: deno task test
+
+# Copy the relevant libs into the deployment directory. This will not be
+# necessary once https://lib.ufork.org is live.
+
+      - run: mkdir -p apps/debugger/lib/wasm
+      - run: cp -R lib apps/debugger/lib/std
+      - run: cp -R vm/js apps/debugger/lib/js
+      - run: cp vm/wasm/*.wasm apps/debugger/lib/wasm/
+      - run: sed -e s,https://lib.ufork.org,/uFork/lib,g -i apps/debugger/index.html
       - uses: actions/upload-pages-artifact@v2
         with:
-          path: 'ufork-wasm/www/'
+          path: 'apps/debugger/'
       - uses: actions/deploy-pages@v2
