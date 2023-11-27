@@ -6,7 +6,7 @@
 
 import {fromFileUrl} from "https://deno.land/std@0.203.0/path/from_file_url.ts";
 const root_dir_href = import.meta.resolve("../");
-const rust_dir_href = import.meta.resolve("../vm/rust");
+const rust_dir_href = import.meta.resolve("../vm/rs");
 const asm_runner_href = import.meta.resolve("./run_asm_tests.js");
 
 // Run the test runners in parallel, allowing their stdouts to mingle.
