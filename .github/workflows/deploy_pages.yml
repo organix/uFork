@@ -15,13 +15,13 @@ jobs:
       - run: deno task test
 
 # Copy the relevant libs into the deployment directory. This will not be
-# necessary once https://lib.ufork.org is live.
+# necessary once https://ufork.org is live.
 
-      - run: mkdir -p apps/debugger/lib/wasm
-      - run: cp -R lib apps/debugger/lib/std
-      - run: cp -R vm/js apps/debugger/lib/js
-      - run: cp vm/wasm/*.wasm apps/debugger/lib/wasm/
-      - run: sed -e s,https://lib.ufork.org,/uFork/lib,g -i apps/debugger/index.html
+      - run: mkdir -p apps/debugger/ufork.org/wasm
+      - run: cp -R lib apps/debugger/ufork.org/lib
+      - run: cp -R vm/js apps/debugger/ufork.org/js
+      - run: cp vm/wasm/*.wasm apps/debugger/ufork.org/wasm/
+      - run: 'sed -e "s,<!-- importmap goes here -->,<script type=\"importmap\">{\"imports\": {\"https://ufork.org/\": \"/uFork/ufork.org/\"}}</script>,g" -i apps/debugger/index.html'
       - uses: actions/upload-pages-artifact@v2
         with:
           path: 'apps/debugger/'

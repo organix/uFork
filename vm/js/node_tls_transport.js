@@ -17,7 +17,7 @@
 
 import crypto from "node:crypto";
 import tls from "node:tls";
-import oed from "std/oed_lite.js";
+import oed from "https://ufork.org/lib/oed_lite.js";
 
 const min_tls_version = "TLSv1.3";              // more secure than v1.2
 const ciphers = "TLS_CHACHA20_POLY1305_SHA256"; // no negotiation
@@ -392,11 +392,11 @@ function node_tls_transport() {
     });
 }
 
-//debug import hex from "std/hex.js";
-//debug import parseq from "std/parseq.js";
-//debug import lazy from "std/rq/lazy.js";
-//debug import pair from "std/rq/pair.js";
-//debug import requestorize from "std/rq/requestorize.js";
+//debug import hex from "https://ufork.org/lib/hex.js";
+//debug import parseq from "https://ufork.org/lib/parseq.js";
+//debug import lazy from "https://ufork.org/lib/rq/lazy.js";
+//debug import pair from "https://ufork.org/lib/rq/pair.js";
+//debug import requestorize from "https://ufork.org/lib/rq/requestorize.js";
 //debug function halve(buffer) {
 //debug     return new Uint8Array(buffer).slice(
 //debug         0,

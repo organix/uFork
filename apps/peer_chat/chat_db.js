@@ -1,9 +1,9 @@
 /*jslint browser */
 
-import parseq from "std/parseq.js";
-import requestorize from "std/rq/requestorize.js";
-import thru from "std/rq/thru.js";
-import webrtc_transport from "js/webrtc_transport.js";
+import parseq from "https://ufork.org/lib/parseq.js";
+import requestorize from "https://ufork.org/lib/rq/requestorize.js";
+import thru from "https://ufork.org/lib/rq/thru.js";
+import webrtc_transport from "https://ufork.org/js/webrtc_transport.js";
 import indexed_db from "./indexed_db.js";
 
 const db_version = 4; // bump to clear DB

@@ -179,8 +179,8 @@ function memory_transport(flakiness, max_latency) {
     return Object.freeze({listen, connect});
 }
 
-//debug import parseq from "std/parseq.js";
-//debug import requestorize from "std/rq/requestorize.js";
+//debug import parseq from "https://ufork.org/lib/parseq.js";
+//debug import requestorize from "https://ufork.org/lib/rq/requestorize.js";
 //debug const flake = 0.1;
 //debug const transport = memory_transport(flake, 50);
 //debug const cancel = parseq.sequence([

@@ -11,11 +11,11 @@
 
 import {join} from "https://deno.land/std@0.203.0/path/join.ts";
 import {toFileUrl} from "https://deno.land/std@0.203.0/path/to_file_url.ts";
-import parseq from "std/parseq.js";
-import requestorize from "std/rq/requestorize.js";
-import ufork from "js/ufork.js";
-import io_device from "js/io_device.js";
-const wasm_url = import.meta.resolve("wasm/ufork.wasm");
+import parseq from "https://ufork.org/lib/parseq.js";
+import requestorize from "https://ufork.org/lib/rq/requestorize.js";
+import ufork from "https://ufork.org/js/ufork.js";
+import io_device from "https://ufork.org/js/io_device.js";
+const wasm_url = import.meta.resolve("https://ufork.org/wasm/ufork.wasm");
 
 const utf8_encoder = new TextEncoder();
 const stdin_buffer_size = 65536; // 64KB

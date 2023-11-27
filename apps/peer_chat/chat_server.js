@@ -5,14 +5,16 @@
 
 //  $ deno run --allow-net --allow-read chat_server.js localhost:3528 [--dev]
 
-// Pass the --dev flag to load source files from disk rather than
-// https://lib.ufork.org.
+// Pass the --dev flag to load source files from disk instead of
+// https://ufork.org.
 
 /*jslint deno */
 
 import {toFileUrl} from "https://deno.land/std@0.203.0/path/to_file_url.ts";
-import start_server from "js/websockets_signalling_server.js";
-import dev_import_map from "../../tools/import_map.js";
+import start_server from "https://ufork.org/js/websockets_signalling_server.js";
+const lib_href = import.meta.resolve("../../lib/");
+const js_href = import.meta.resolve("../../vm/js/");
+const wasm_href = import.meta.resolve("../../vm/wasm/");
 
 const bind_address = Deno.args[0];
 const [hostname, port_string] = bind_address.split(":");
@@ -24,8 +26,17 @@ const mime_types = {
     png: "image/png",
     asm: "text/plain"
 };
-const rx_ufork_lib = /https:\/\/lib\.ufork\.org\//g;
 const is_dev = Deno.args[1] === "--dev";
+const importmap_html = `
+    <script type="importmap">
+        {"imports": {"https://ufork.org/": "/@/"}}
+    </script>
+`;
+const dev_import_map = {
+    "/@/lib/": lib_href,
+    "/@/js/": js_href,
+    "/@/wasm/": wasm_href
+};
 
 start_server(
     {hostname, port: Number(port_string)},
@@ -46,13 +57,13 @@ start_server(
                 return respond_with(new Response(
                     (
 
-// Modify the import map to point back to this server, so that source files are
-// loaded from the local repository.
+// Provide an import map pointing back to this server, so that source files
+// are loaded from disk.
 
                         (is_dev && file_url.pathname.endsWith("index.html"))
                         ? new TextDecoder().decode(buffer).replace(
-                            rx_ufork_lib,
-                            "/@/"
+                            "<!-- importmap goes here -->",
+                            importmap_html
                         )
                         : buffer
                     ),
@@ -67,7 +78,6 @@ start_server(
         if (pathname === "/") {
             file_url = new URL("./index.html", cwd);
         } else if (pathname.startsWith("/@/")) {
-            pathname = pathname.slice(3);
             const alias = Object.keys(dev_import_map).find(function (key) {
                 return pathname.startsWith(key);
             });

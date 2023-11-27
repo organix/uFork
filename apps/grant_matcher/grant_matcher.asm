@@ -13,10 +13,10 @@
 ; to form the distributed application.
 
 .import
-    dev: "std/dev.asm"
-    fork: "std/fork.asm"
-    lib: "std/lib.asm"
-    std: "std/std.asm"
+    dev: "https://ufork.org/lib/dev.asm"
+    fork: "https://ufork.org/lib/fork.asm"
+    lib: "https://ufork.org/lib/lib.asm"
+    std: "https://ufork.org/lib/std.asm"
 
 alice_store:
     ref 0

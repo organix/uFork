@@ -5,7 +5,7 @@
 
 /*jslint deno */
 
-import assemble from "std/assemble.js";
+import assemble from "https://ufork.org/lib/assemble.js";
 
 let decoder = new TextDecoder();
 let source = "";

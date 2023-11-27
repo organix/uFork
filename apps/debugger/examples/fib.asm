@@ -4,9 +4,9 @@
 ; fibonnacci number is calculated and sent to the customer.
 
 .import
-    std: "std/std.asm"
-    dev: "std/dev.asm"
-    is_eq: "std/testing/is_eq.asm"
+    std: "https://ufork.org/lib/std.asm"
+    dev: "https://ufork.org/lib/dev.asm"
+    is_eq: "https://ufork.org/lib/testing/is_eq.asm"
 
 ;;  (define fib
 ;;      (lambda (n)

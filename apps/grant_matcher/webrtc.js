@@ -3,7 +3,8 @@
 /*jslint deno */
 
 import {toFileUrl} from "https://deno.land/std@0.203.0/path/to_file_url.ts";
-import start_server from "js/websockets_signalling_server.js";
+import start_server from "https://ufork.org/js/websockets_signalling_server.js";
+import import_map from "./import_map.js";
 
 const bind_address = Deno.args[0];
 const [hostname, port_string] = bind_address.split(":");
@@ -38,13 +39,29 @@ start_server(
             || pathname === "/keqd"
             || pathname === "/donor"
         ) {
+            const html = `
+                <script type="importmap">
+                    {"imports": {"https://ufork.org/": "/@/"}}
+                </script>
+                <script type="module" src="${pathname.slice(1)}.js"></script>
+            `;
             return respond_with(new Response(
-                `<script type="module" src="${pathname.slice(1)}.js"></script>`,
+                html,
                 {headers: {"content-type": "text/html"}}
             ));
         }
         const cwd = toFileUrl(Deno.cwd()) + "/";
         if (typeof mime_types[extension] === "string") {
+            if (pathname.startsWith("/@/")) {
+
+// Consult the import map.
+
+                const canon = "https://ufork.org/" + pathname.slice(3);
+                const alias = Object.keys(import_map).find(function (key) {
+                    return canon.startsWith(key);
+                });
+                return serve(new URL(canon.replace(alias, import_map[alias])));
+            }
             return serve(new URL(pathname.slice(1), cwd));
         }
         return not_found();

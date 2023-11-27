@@ -17,8 +17,8 @@
 /*jslint deno */
 
 import {fromFileUrl} from "https://deno.land/std@0.203.0/path/from_file_url.ts";
-import parseq from "std/parseq.js";
-import unpromise from "std/rq/unpromise.js";
+import parseq from "https://ufork.org/lib/parseq.js";
+import unpromise from "https://ufork.org/lib/rq/unpromise.js";
 const wasm_dir_url = new URL(import.meta.resolve("./"));
 const dot_cargo_url = new URL(import.meta.resolve("./.cargo"));
 const wasm_opt_bin_url = new URL(import.meta.resolve("./.cargo/bin/wasm-opt"));

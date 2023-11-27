@@ -4,7 +4,7 @@
 ;   Increase N until out of resources
 
 .import
-    std: "std/std.asm"
+    std: "https://ufork.org/lib/std.asm"
 
 ;;  LET countdown_builder_beh(n) = \(first, m).[
 ;;      IF $n = 1 [

@@ -7,13 +7,13 @@
 
 /*jslint deno */
 
-import parseq from "std/parseq.js";
-import requestorize from "std/rq/requestorize.js";
-import ufork from "js/ufork.js";
-import awp_device from "js/awp_device.js";
-import host_device from "js/host_device.js";
-import memory_transport from "js/memory_transport.js";
-const wasm_url = import.meta.resolve("wasm/ufork.wasm");
+import parseq from "https://ufork.org/lib/parseq.js";
+import requestorize from "https://ufork.org/lib/rq/requestorize.js";
+import ufork from "https://ufork.org/js/ufork.js";
+import awp_device from "https://ufork.org/js/awp_device.js";
+import host_device from "https://ufork.org/js/host_device.js";
+import memory_transport from "https://ufork.org/js/memory_transport.js";
+const wasm_url = import.meta.resolve("https://ufork.org/wasm/ufork.wasm");
 const donor_url = import.meta.resolve("./donor.asm");
 const gm_url = import.meta.resolve("./gm.asm");
 const keqd_url = import.meta.resolve("./keqd.asm");

@@ -3,7 +3,7 @@
 
 /*jslint browser */
 
-import assemble from "std/assemble.js";
+import assemble from "https://ufork.org/lib/assemble.js";
 import ufork from "./ufork.js";
 
 const fwd_to_host_crlf = assemble(`
@@ -174,11 +174,13 @@ function host_device(core) {
     };
 }
 
-//debug import parseq from "std/parseq.js";
-//debug import requestorize from "std/rq/requestorize.js";
-//debug const wasm_url = import.meta.resolve("wasm/ufork.wasm");
+//debug import parseq from "https://ufork.org/lib/parseq.js";
+//debug import requestorize from "https://ufork.org/lib/rq/requestorize.js";
+//debug const wasm_url = import.meta.resolve(
+//debug     "https://ufork.org/wasm/ufork.wasm"
+//debug );
 //debug const asm_url = import.meta.resolve("./host_device.asm");
-//debug const std_url = import.meta.resolve("../../lib/");
+//debug const lib_url = import.meta.resolve("../../lib/");
 //debug let dispose;
 //debug let core;
 //debug function dummy_device(make_dynamic_device) {
@@ -234,7 +236,7 @@ function host_device(core) {
 //debug     on_wakeup: run_core,
 //debug     on_log: console.log,
 //debug     log_level: ufork.LOG_DEBUG,
-//debug     import_map: {"std/": std_url}
+//debug     import_map: {"https://ufork.org/lib/": lib_url}
 //debug });
 //debug parseq.sequence([
 //debug     core.h_initialize(),

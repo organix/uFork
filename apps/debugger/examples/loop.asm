@@ -1,7 +1,7 @@
 ; looping and self-reference
 
 .import
-    std: "std/std.asm"
+    std: "https://ufork.org/lib/std.asm"
 
 loop:
     drop 0 loop         ; no-op loop

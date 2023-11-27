@@ -1,6 +1,6 @@
 .import
-    std: "std/std.asm"
-    dev: "std/dev.asm"
+    std: "https://ufork.org/lib/std.asm"
+    dev: "https://ufork.org/lib/dev.asm"
 
 nullary:
     type_t 0

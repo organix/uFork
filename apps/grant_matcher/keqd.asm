@@ -1,7 +1,7 @@
 .import
-    dev: "std/dev.asm"
-    lib: "std/lib.asm"
-    std: "std/std.asm"
+    dev: "https://ufork.org/lib/dev.asm"
+    lib: "https://ufork.org/lib/lib.asm"
+    std: "https://ufork.org/lib/std.asm"
 
 store:
     ref 0

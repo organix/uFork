@@ -2,7 +2,7 @@
 ; (fib 6) ==> 8
 ;
 
-(import dev "std/dev.asm")
+(import dev "https://ufork.org/lib/dev.asm")
 
 (define fib                 ; O(n!) performance?
     (lambda (n)             ; msg: (cust n)

@@ -2,15 +2,15 @@
 
 /*jslint browser, bitwise, long, devel */
 
-import hexdump from "std/hexdump.js";
-import OED from "std/oed.js";
-import ufork from "js/ufork.js";
-import clock_device from "js/clock_device.js";
-import random_device from "js/random_device.js";
-import io_device from "js/io_device.js";
-import blob_device from "js/blob_device.js";
-import timer_device from "js/timer_device.js";
-const wasm_url = import.meta.resolve("wasm/ufork.wasm");
+import hexdump from "https://ufork.org/lib/hexdump.js";
+import OED from "https://ufork.org/lib/oed.js";
+import ufork from "https://ufork.org/js/ufork.js";
+import clock_device from "https://ufork.org/js/clock_device.js";
+import random_device from "https://ufork.org/js/random_device.js";
+import io_device from "https://ufork.org/js/io_device.js";
+import blob_device from "https://ufork.org/js/blob_device.js";
+import timer_device from "https://ufork.org/js/timer_device.js";
+const wasm_url = import.meta.resolve("https://ufork.org/wasm/ufork.wasm");
 
 const $importmap = document.querySelector("script[type=importmap]");
 
@@ -421,7 +421,7 @@ function boot(module_specifier) {
 }
 
 const $boot_input = document.getElementById("boot-url");
-$boot_input.value = localStorage.getItem("boot") ?? "./asm/fib.asm";
+$boot_input.value = localStorage.getItem("boot") ?? "./examples/fib.asm";
 const $boot_form = document.getElementById("boot-form");
 $boot_form.onsubmit = function (event) {
     boot($boot_input.value);

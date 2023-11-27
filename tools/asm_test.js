@@ -22,13 +22,13 @@
 /*jslint browser */
 
 import import_map from "./import_map.js";
-import parseq from "std/parseq.js";
-import ufork from "js/ufork.js";
-import host_device from "js/host_device.js";
-import clock_device from "js/clock_device.js";
-import random_device from "js/random_device.js";
-import timer_device from "js/timer_device.js";
-const wasm_url = import.meta.resolve("wasm/ufork.wasm");
+import parseq from "https://ufork.org/lib/parseq.js";
+import ufork from "https://ufork.org/js/ufork.js";
+import host_device from "https://ufork.org/js/host_device.js";
+import clock_device from "https://ufork.org/js/clock_device.js";
+import random_device from "https://ufork.org/js/random_device.js";
+import timer_device from "https://ufork.org/js/timer_device.js";
+const wasm_url = import.meta.resolve("https://ufork.org/wasm/ufork.wasm");
 
 function asm_test(module_url) {
     let logs = [];
@@ -113,7 +113,7 @@ function asm_test(module_url) {
 }
 
 //debug asm_test(
-//debug     import.meta.resolve("std/rq/thru.asm")
+//debug     import.meta.resolve("https://ufork.org/lib/rq/thru.asm")
 //debug )(
 //debug     console.log
 //debug );

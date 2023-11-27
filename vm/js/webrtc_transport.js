@@ -98,12 +98,12 @@
 
 /*jslint browser */
 
-import hex from "std/hex.js";
-import parseq from "std/parseq.js";
-import requestorize from "std/rq/requestorize.js";
-import unpromise from "std/rq/unpromise.js";
-import thru from "std/rq/thru.js";
-import merge from "std/rq/merge.js";
+import hex from "https://ufork.org/lib/hex.js";
+import parseq from "https://ufork.org/lib/parseq.js";
+import requestorize from "https://ufork.org/lib/rq/requestorize.js";
+import unpromise from "https://ufork.org/lib/rq/unpromise.js";
+import thru from "https://ufork.org/lib/rq/thru.js";
+import merge from "https://ufork.org/lib/rq/merge.js";
 
 const ice_servers = [{
     urls: [
@@ -570,7 +570,7 @@ function webrtc_transport(signaller, log) {
     });
 }
 
-//debug import lazy from "std/rq/lazy.js";
+//debug import lazy from "https://ufork.org/lib/rq/lazy.js";
 //debug import signaller from "./dummy_signaller.js";
 //debug // import signaller from "./websockets_signaller.js";
 //debug function halve(buffer) {

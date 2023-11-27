@@ -55,7 +55,7 @@ function indexed_db(
     };
 }
 
-//debug import parseq from "std/parseq.js";
+//debug import parseq from "https://ufork.org/lib/parseq.js";
 //debug function feijoa(...args) {
 //debug     return indexed_db(
 //debug         "fruit_basket",

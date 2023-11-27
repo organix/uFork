@@ -1,6 +1,6 @@
 /*jslint browser */
 
-import hex from "std/hex.js";
+import hex from "https://ufork.org/lib/hex.js";
 import party from "./party.js";
 
 function make_input(role) {

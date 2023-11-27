@@ -42,10 +42,10 @@
 //      An object mapping prefixes to base URLs, used to resolve module
 //      specifiers. For example, the import map
 
-//          {"std/": "https://lib.ufork.org/std/"}
+//          {"lib/": "https://ufork.org/lib/"}
 
-//      would cause the specifier "std/std.asm" to be imported from
-//      "https://lib.ufork.org/std/std.asm".
+//      would resolve the specifier "lib/std.asm" to
+//      "https://ufork.org/lib/std.asm".
 
 // The returned object is an uninitialized core, containing a bunch of methods.
 // The methods beginning with "u_" are reentrant, but the methods beginning
@@ -56,11 +56,11 @@
 
 /*jslint browser, long, bitwise */
 
-import parseq from "std/parseq.js";
-import requestorize from "std/rq/requestorize.js";
-import unpromise from "std/rq/unpromise.js";
-import assemble from "std/assemble.js";
-import scm from "std/scheme.js";
+import parseq from "https://ufork.org/lib/parseq.js";
+import requestorize from "https://ufork.org/lib/rq/requestorize.js";
+import unpromise from "https://ufork.org/lib/rq/unpromise.js";
+import assemble from "https://ufork.org/lib/assemble.js";
+import scm from "https://ufork.org/lib/scheme.js";
 
 // Type-tag bits
 
@@ -1612,9 +1612,9 @@ function make_core({
 //debug import io_device from "./io_device.js";
 //debug import blob_device from "./blob_device.js";
 //debug import timer_device from "./timer_device.js";
-//debug const wasm_url = import.meta.resolve("wasm/ufork.wasm");
-//debug const asm_url = import.meta.resolve("../../apps/debugger/asm/fib.asm");
-//debug const std_url = import.meta.resolve("../../lib/");
+//debug const wasm_url = import.meta.resolve("https://ufork.org/wasm/ufork.wasm");
+//debug const asm_url = import.meta.resolve("../../apps/debugger/examples/fib.asm");
+//debug const lib_url = import.meta.resolve("../../lib/");
 //debug let core;
 //debug function run_ufork() {
 //debug     const status = core.h_run_loop(0);
@@ -1628,7 +1628,7 @@ function make_core({
 //debug     },
 //debug     on_log: console.log,
 //debug     log_level: LOG_DEBUG,
-//debug     import_map: {"std/": std_url}
+//debug     import_map: {"https://ufork.org/lib/": lib_url}
 //debug });
 //debug parseq.sequence([
 //debug     core.h_initialize(),

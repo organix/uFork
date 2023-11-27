@@ -2,7 +2,7 @@
 
 /*jslint browser, bitwise, devel */
 
-import OED from "std/oed.js";
+import OED from "https://ufork.org/lib/oed.js";
 import ufork from "./ufork.js";
 
 function io_device(core, on_stdout) {

@@ -1,7 +1,7 @@
 ; Test suite for the host device.
 
 .import
-    std: "std/std.asm"
+    std: "https://ufork.org/lib/std.asm"
 
 dummy_key:
     ref 1000

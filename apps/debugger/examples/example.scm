@@ -2,7 +2,7 @@
 ; example Scheme source code
 ;
 
-(import dev "std/dev.asm")
+(import dev "https://ufork.org/lib/dev.asm")
 
 (define sink-beh (BEH _))
 ;sink_beh:               ; () <- _

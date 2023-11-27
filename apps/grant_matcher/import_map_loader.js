@@ -2,11 +2,7 @@
 
 /*jslint node */
 
-const import_map = {
-    "std/": new URL("../../lib/", import.meta.url).href,
-    "js/": new URL("../../vm/js/", import.meta.url).href,
-    "wasm/": new URL("../../vm/wasm/", import.meta.url).href
-};
+import import_map from "./import_map.js";
 
 function resolve(specifier, context, next_resolve) {
     const alias = Object.keys(import_map).find(function (key) {
@@ -15,6 +11,7 @@ function resolve(specifier, context, next_resolve) {
     if (alias !== undefined) {
         return {
             url: specifier.replace(alias, import_map[alias]),
+            format: "module",
             shortCircuit: true
         };
     }

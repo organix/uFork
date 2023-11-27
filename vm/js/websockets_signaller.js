@@ -3,7 +3,7 @@
 
 /*jslint browser */
 
-import hex from "std/hex.js";
+import hex from "https://ufork.org/lib/hex.js";
 
 function websockets_signaller() {
 

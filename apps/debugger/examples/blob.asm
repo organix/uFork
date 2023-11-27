@@ -3,8 +3,8 @@
 ;
 
 .import
-    std: "std/std.asm"
-    dev: "std/dev.asm"
+    std: "https://ufork.org/lib/std.asm"
+    dev: "https://ufork.org/lib/dev.asm"
 
 do_3:                   ; (debug_dev io_dev) <- blob
     msg 0               ; blob

@@ -7,10 +7,10 @@
 ;;;
 
 .import
-    std: "std/std.asm"
-    dev: "std/dev.asm"
-    lib: "std/lib.asm"
-;    asm: "std/asm.asm"
+    std: "https://ufork.org/lib/std.asm"
+    dev: "https://ufork.org/lib/dev.asm"
+    lib: "https://ufork.org/lib/lib.asm"
+;    asm: "https://ufork.org/lib/asm.asm"
 
 ; An infinite loop will consume cycles, but no memory or events.
 

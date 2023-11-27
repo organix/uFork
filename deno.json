@@ -1,8 +1,8 @@
 {
     "imports": {
-        "std/": "./lib/",
-        "js/": "./vm/js/",
-        "wasm/": "./vm/wasm/"
+        "https://ufork.org/lib/": "./lib/",
+        "https://ufork.org/js/": "./vm/js/",
+        "https://ufork.org/wasm/": "./vm/wasm/"
     },
     "tasks": {
         "debug": "deno run --allow-net=localhost --allow-read=. apps/debugger/dev_server.js",

@@ -5,8 +5,8 @@
 ; eventually receives a message and prints it to the debug device.
 
 .import
-    dev: "std/dev.asm"
-    std: "std/std.asm"
+    dev: "https://ufork.org/lib/dev.asm"
+    std: "https://ufork.org/lib/std.asm"
 
 ; Alice is acquainted with Bob.
 

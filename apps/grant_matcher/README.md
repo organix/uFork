@@ -12,10 +12,10 @@ All communications are secured with TLS.
 
 Run each of the following commands in separate terminal windows:
 
-    node --experimental-loader ./importmap_loader.js tls.js bob
-    node --experimental-loader ./importmap_loader.js tls.js carol
-    node --experimental-loader ./importmap_loader.js tls.js alice
-    node --experimental-loader ./importmap_loader.js tls.js dana
+    node --experimental-loader ./import_map_loader.js tls.js bob
+    node --experimental-loader ./import_map_loader.js tls.js carol
+    node --experimental-loader ./import_map_loader.js tls.js alice
+    node --experimental-loader ./import_map_loader.js tls.js dana
 
 On success, the donors (Alice and Dana) will each print something like
 
@@ -34,7 +34,7 @@ A simple Deno web server serves the HTML and facilitates signalling
 
 Firstly, start the web server:
 
-    deno run --allow-net --allow-read=. webrtc.js localhost:4455
+    deno run --allow-net --allow-read=../.. webrtc.js localhost:4455
 
 In separate browser tabs, navigate to the following URLs:
 

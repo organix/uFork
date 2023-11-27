@@ -1,20 +1,23 @@
 /*jslint browser */
 
-import hex from "std/hex.js";
-import parseq from "std/parseq.js";
-import requestorize from "std/rq/requestorize.js";
-import ufork from "js/ufork.js";
-import awp_device from "js/awp_device.js";
-import host_device from "js/host_device.js";
-import webrtc_transport from "js/webrtc_transport.js";
-import websockets_signaller from "js/websockets_signaller.js";
-const wasm_url = import.meta.resolve("wasm/ufork.wasm");
+import hex from "https://ufork.org/lib/hex.js";
+import parseq from "https://ufork.org/lib/parseq.js";
+import requestorize from "https://ufork.org/lib/rq/requestorize.js";
+import ufork from "https://ufork.org/js/ufork.js";
+import awp_device from "https://ufork.org/js/awp_device.js";
+import host_device from "https://ufork.org/js/host_device.js";
+import webrtc_transport from "https://ufork.org/js/webrtc_transport.js";
+import websockets_signaller from "https://ufork.org/js/websockets_signaller.js";
+const wasm_url = import.meta.resolve("https://ufork.org/wasm/ufork.wasm");
 
 const signaller_origin = (
     location.protocol === "https:"
     ? "wss://"
     : "ws://"
 ) + location.host;
+const import_map = JSON.parse(
+    document.querySelector("[type=importmap]").textContent
+).imports;
 
 function party(asm_url, acquaintance_names = []) {
     const pre = document.createElement("pre");
@@ -44,7 +47,8 @@ function party(asm_url, acquaintance_names = []) {
                 document.body.append(div);
             }
         },
-        log_level: ufork.LOG_DEBUG
+        log_level: ufork.LOG_DEBUG,
+        import_map
     });
 
     return parseq.sequence([

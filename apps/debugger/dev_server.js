@@ -10,7 +10,6 @@
 import import_map from "../../tools/import_map.js";
 const cwd_href = import.meta.resolve("./");
 
-const rx_ufork_lib = /https:\/\/lib\.ufork\.org\//g;
 const mime_types = {
     html: "text/html",
     png: "image/png",
@@ -21,6 +20,11 @@ const mime_types = {
     scm: "text/plain",
     asm: "text/plain"
 };
+const importmap_html = `
+    <script type="importmap">
+        {"imports": {"https://ufork.org/": "/@/"}}
+    </script>
+`;
 
 function respond(request) {
 
@@ -33,7 +37,7 @@ function respond(request) {
 
 // Consult the import map.
 
-        file_path = file_path.slice(2);
+        file_path = "https://ufork.org/" + file_path.slice(2);
         const alias = Object.keys(import_map).find(function (key) {
             return file_path.startsWith(key);
         });
@@ -49,11 +53,14 @@ function respond(request) {
         return new Response(
             (
 
-// Modify the import map to point back to this server, so that source files are
-// loaded from the local repository.
+// Provide an import map pointing back to this server, so that source files
+// are loaded from disk.
 
                 file_url.pathname.endsWith("index.html")
-                ? new TextDecoder().decode(buffer).replace(rx_ufork_lib, "/@/")
+                ? new TextDecoder().decode(buffer).replace(
+                    "<!-- importmap goes here -->",
+                    importmap_html
+                )
                 : buffer
             ),
             {headers: {"content-type": mime_type}}

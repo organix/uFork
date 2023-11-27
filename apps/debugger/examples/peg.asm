@@ -16,9 +16,9 @@
 ; The `fail` customer will receive message like `in`.
 
 .import
-    std: "std/std.asm"
-    lib: "std/lib.asm"
-    dev: "std/dev.asm"
+    std: "https://ufork.org/lib/std.asm"
+    lib: "https://ufork.org/lib/lib.asm"
+    dev: "https://ufork.org/lib/dev.asm"
 
 ;
 ; literal list input stream

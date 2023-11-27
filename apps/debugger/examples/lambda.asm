@@ -3,7 +3,7 @@
 ;;;
 
 .import
-    std: "std/std.asm"
+    std: "https://ufork.org/lib/std.asm"
 
 ; Constant values do not depend on the environment.
 

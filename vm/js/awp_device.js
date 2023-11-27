@@ -20,9 +20,9 @@
 /*jslint browser, null, devel, long */
 
 import ufork from "./ufork.js";
-import assemble from "std/assemble.js";
-import OED from "std/oed.js";
-import hex from "std/hex.js";
+import assemble from "https://ufork.org/lib/assemble.js";
+import OED from "https://ufork.org/lib/oed.js";
+import hex from "https://ufork.org/lib/hex.js";
 
 const E_CONNECTION_LOST = -1;
 const E_ALREADY_LISTENING = -2;
@@ -884,12 +884,12 @@ function awp_device({
     };
 }
 
-//debug import parseq from "std/parseq.js";
-//debug import requestorize from "std/rq/requestorize.js";
+//debug import parseq from "https://ufork.org/lib/parseq.js";
+//debug import requestorize from "https://ufork.org/lib/rq/requestorize.js";
 //debug import host_device from "./host_device.js";
-//debug const wasm_url = import.meta.resolve("wasm/ufork.wasm");
+//debug const wasm_url = import.meta.resolve("https://ufork.org/wasm/ufork.wasm");
 //debug const asm_url = import.meta.resolve("../../apps/grant_matcher/grant_matcher.asm");
-//debug const std_url = import.meta.resolve("../../lib/");
+//debug const lib_url = import.meta.resolve("../../lib/");
 //debug const core = ufork.make_core({
 //debug     wasm_url,
 //debug     on_wakeup(device_offset) {
@@ -900,7 +900,7 @@ function awp_device({
 //debug     },
 //debug     on_log: console.log,
 //debug     log_level: ufork.LOG_DEBUG,
-//debug     import_map: {"std/": std_url}
+//debug     import_map: {"https://ufork.org/lib/": lib_url}
 //debug });
 //debug let dispose;
 //debug function demo({

@@ -2,19 +2,19 @@
 
 /*jslint browser, devel */
 
-import hex from "std/hex.js";
-import hexdump from "std/hexdump.js";
-import parseq from "std/parseq.js";
-import requestorize from "std/rq/requestorize.js";
-import ufork from "js/ufork.js";
-import io_device from "js/io_device.js";
-import timer_device from "js/timer_device.js";
-import awp_device from "js/awp_device.js";
-import host_device from "js/host_device.js";
-import websockets_signaller from "js/websockets_signaller.js";
-import webrtc_transport from "js/webrtc_transport.js";
+import hex from "https://ufork.org/lib/hex.js";
+import hexdump from "https://ufork.org/lib/hexdump.js";
+import parseq from "https://ufork.org/lib/parseq.js";
+import requestorize from "https://ufork.org/lib/rq/requestorize.js";
+import ufork from "https://ufork.org/js/ufork.js";
+import io_device from "https://ufork.org/js/io_device.js";
+import timer_device from "https://ufork.org/js/timer_device.js";
+import awp_device from "https://ufork.org/js/awp_device.js";
+import host_device from "https://ufork.org/js/host_device.js";
+import websockets_signaller from "https://ufork.org/js/websockets_signaller.js";
+import webrtc_transport from "https://ufork.org/js/webrtc_transport.js";
 import make_chat_db from "./chat_db.js";
-const wasm_url = import.meta.resolve("wasm/ufork.opt.wasm");
+const wasm_url = import.meta.resolve("https://ufork.org/wasm/ufork.opt.wasm");
 const asm_url = import.meta.resolve("./chat.asm");
 
 const room_key = 1000;

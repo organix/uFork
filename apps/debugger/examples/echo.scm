@@ -2,7 +2,7 @@
 ; Console I/O echo demonstration (DEVICE 4)
 ;
 
-(import dev "std/dev.asm")
+(import dev "https://ufork.org/lib/dev.asm")
 
 ;(define echo-in
 ;    (lambda (io-dev)

@@ -9,12 +9,12 @@
 
 import {toFileUrl} from "https://deno.land/std@0.203.0/path/to_file_url.ts";
 import {isAbsolute} from "https://deno.land/std@0.203.0/path/is_absolute.ts";
-import parseq from "std/parseq.js";
-import pair from "std/rq/pair.js";
-import infallible from "std/rq/infallible.js";
-import requestorize from "std/rq/requestorize.js";
-import unpromise from "std/rq/unpromise.js";
-import lazy from "std/rq/lazy.js";
+import parseq from "https://ufork.org/lib/parseq.js";
+import pair from "https://ufork.org/lib/rq/pair.js";
+import infallible from "https://ufork.org/lib/rq/infallible.js";
+import requestorize from "https://ufork.org/lib/rq/requestorize.js";
+import unpromise from "https://ufork.org/lib/rq/unpromise.js";
+import lazy from "https://ufork.org/lib/rq/lazy.js";
 import asm_test from "./asm_test.js";
 
 const time_limit = 5000; // milliseconds
