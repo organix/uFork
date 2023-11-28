@@ -5,6 +5,6 @@
         "--allow-all",
         "--importmap",
         "https://deno.land/x/replete/import_map.json",
-        "ufork-wasm/replete.js"
+        "tools/replete.js"
     ]
 }

@@ -1,5 +1,0 @@
-package-lock.json
-target
-www/*.wasm
-.cargo/.*
-.cargo/bin

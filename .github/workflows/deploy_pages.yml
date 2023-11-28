@@ -1,0 +1,35 @@
+on: push
+permissions:
+  pages: write
+  id-token: write
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+# Build the WASMs and check everything is working.
+
+      - uses: denoland/setup-deno@v1
+      - run: deno task build
+      - run: deno task test
+
+# Create the web root directory.
+
+      - run: mkdir _site
+
+# Deploy the libs.
+
+      - run: cp -R lib _site/lib
+      - run: cp -R vm/js _site/js
+      - run: mkdir _site/wasm
+      - run: cp vm/wasm/*.wasm _site/wasm/
+
+# Deploy the debugger.
+
+      - run: cp -R apps/debugger _site/debugger
+      - uses: actions/upload-pages-artifact@v2
+      - uses: actions/deploy-pages@v2

@@ -6,7 +6,7 @@ instruction-level concurrency,
 automatic memory-management,
 and fine-grained resource limits.
 
-![μFork logo](ufork-wasm/www/ufork_logo.svg)
+![μFork logo](ufork_logo.svg)
 
 The blog post
 "[Memory Safety Simplifies Microprocessor Design](http://www.dalnefre.com/wp/2022/08/memory-safety-simplifies-microprocessor-design/)"
@@ -21,7 +21,7 @@ The initial prototype
 was [implemented in **C**](https://github.com/organix/ufork-c)
 and hosts a Scheme REPL with actor extensions.
 
-The [Rust/WASM version](ufork-wasm/README.md)
+The [Rust/WASM version](vm/wasm/README.md)
 is a newer and more-robust implementation.
 Multiple instances of the WASM component
 can be instantiated to simulate a multi-core
@@ -74,10 +74,20 @@ by generating interoperable uFork IR.
 
 ## Documentation
 
-  * uFork [Project Summary](summary.md)
-  * uFork [Virtual Machine](ufork.md) description
-  * [Actor Protocol Design](proto.md) in uFork
-  * [Object Capabilities](ocaps.md) in uFork
+  * uFork [Project Summary](docs/summary.md)
+  * uFork [Virtual Machine](docs/ufork.md) description
+  * [Actor Protocol Design](docs/proto.md) in uFork
+  * [Object Capabilities](docs/ocaps.md) in uFork
+  * Loader [Intermediate Language](docs/ir.md) specification
+  * [Assembly Language](docs/asm.md) reference manual
+  * [LISP/Scheme compiler](docs/scheme.md) reference manual
+  * [Actor Wire Protocol (AWP)](docs/awp.md) specification
+  * [AWP Network](docs/awp_device.md) device description
+  * [Virtual Machine](docs/vm.md) implementation details
+  * [Sponsor](docs/sponsor.md) semantics
+  * [Console Input/Output](docs/io_dev.md) device description
+  * [Binary Large-Object (blob)](docs/blob_dev.md) device description
+  * [Garbage-collected](docs/gc.md) memory management
 
 ## License
 
