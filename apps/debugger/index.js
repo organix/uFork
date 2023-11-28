@@ -563,7 +563,11 @@ core = ufork.make_core({
         //console.log(JSON.stringify(event, undefined, 2));
     },
     log_level: ufork.LOG_DEBUG,
-    import_map: JSON.parse($importmap.textContent).imports
+    import_map: (
+        $importmap
+        ? JSON.parse($importmap.textContent).imports
+        : {}
+    )
 });
 
 core.h_initialize()(function callback(value, reason) {

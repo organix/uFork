@@ -11,11 +11,6 @@ export PATH=\"\$DENO_INSTALL/bin:\$PATH\"
 " >> .bashrc
 . .bashrc
 
-# Install Rustup (cargo, rustc etc)
-sudo yum install gcc -y
-curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
-source .cargo/env
-
 # Install Caddy (a web server that handles HTTPS automatically)
 curl -sSf "https://caddyserver.com/api/download?os=linux&arch=amd64" > caddy
 chmod +x caddy
@@ -35,12 +30,10 @@ chat.ufork.org {
 " > Caddyfile
 sudo ./caddy start --config Caddyfile &
 cd uFork
-deno task build
 nohup deno run \
     --allow-net \
     --allow-read=. \
     apps/peer_chat/chat_server.js \
     localhost:$CHAT_PORT \
-    --dev \
     &
 cd -

@@ -3,7 +3,7 @@
 // It requires permission to
 
 //  a) bind to localhost (--allow-net=localhost)
-//  b) read the files it serves from disk (--allow-read=.)
+//  b) read the files it serves from disk (--allow-read)
 
 /*jslint deno */
 

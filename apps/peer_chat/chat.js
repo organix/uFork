@@ -181,15 +181,18 @@ function save_store(store) {
     );
 }
 
+const $importmap = document.querySelector("[type=importmap]");
 const transport = webrtc_transport(websockets_signaller(), console.log);
 core = ufork.make_core({
     wasm_url,
     on_wakeup: ufork_wake,
     on_log: console.log,
     log_level: ufork.LOG_DEBUG,
-    import_map: JSON.parse(
-        document.querySelector("script[type=importmap]").textContent
-    ).imports
+    import_map: (
+        $importmap
+        ? JSON.parse($importmap.textContent).imports
+        : {}
+    )
 });
 parseq.sequence([
     core.h_initialize(),

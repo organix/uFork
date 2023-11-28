@@ -10,11 +10,11 @@
 
 /*jslint deno */
 
-import {toFileUrl} from "https://deno.land/std@0.203.0/path/to_file_url.ts";
 import start_server from "https://ufork.org/js/websockets_signalling_server.js";
 const lib_href = import.meta.resolve("../../lib/");
 const js_href = import.meta.resolve("../../vm/js/");
 const wasm_href = import.meta.resolve("../../vm/wasm/");
+const cwd_href = import.meta.resolve("./");
 
 const bind_address = Deno.args[0];
 const [hostname, port_string] = bind_address.split(":");
@@ -72,18 +72,17 @@ start_server(
             }).catch(not_found);
         }
 
-        const cwd = toFileUrl(Deno.cwd()) + "/";
         let {pathname} = new URL(request.url);
         let file_url;
         if (pathname === "/") {
-            file_url = new URL("./index.html", cwd);
+            file_url = new URL("./index.html", cwd_href);
         } else if (pathname.startsWith("/@/")) {
             const alias = Object.keys(dev_import_map).find(function (key) {
                 return pathname.startsWith(key);
             });
             file_url = new URL(pathname.replace(alias, dev_import_map[alias]));
         } else {
-            file_url = new URL(pathname.slice(1), cwd);
+            file_url = new URL(pathname.slice(1), cwd_href);
         }
         return serve(file_url);
     }

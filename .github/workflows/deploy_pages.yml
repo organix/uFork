@@ -10,19 +10,26 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
+
+# Build the WASMs and check everything is working.
+
       - uses: denoland/setup-deno@v1
       - run: deno task build
       - run: deno task test
 
-# Copy the relevant libs into the deployment directory. This will not be
-# necessary once https://ufork.org is live.
+# Create the web root directory.
 
-      - run: mkdir -p apps/debugger/ufork.org/wasm
-      - run: cp -R lib apps/debugger/ufork.org/lib
-      - run: cp -R vm/js apps/debugger/ufork.org/js
-      - run: cp vm/wasm/*.wasm apps/debugger/ufork.org/wasm/
-      - run: 'sed -e "s,<!-- importmap goes here -->,<script type=\"importmap\">{\"imports\": {\"https://ufork.org/\": \"/uFork/ufork.org/\"}}</script>,g" -i apps/debugger/index.html'
+      - run: mkdir _site
+
+# Deploy the libs.
+
+      - run: cp -R lib _site/lib
+      - run: cp -R vm/js _site/js
+      - run: mkdir _site/wasm
+      - run: cp vm/wasm/*.wasm _site/wasm/
+
+# Deploy the debugger.
+
+      - run: cp -R apps/debugger _site/debugger
       - uses: actions/upload-pages-artifact@v2
-        with:
-          path: 'apps/debugger/'
       - uses: actions/deploy-pages@v2
