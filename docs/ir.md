@@ -1,15 +1,22 @@
-# uFork intermediate representation
+# uFork Intermediate Representation
 
-This document describes an intermediate representation format for uFork
-modules.
+This document describes an _intermediate representation_ format for uFork modules.
+It encodes an abstract syntax tree (AST)
+that describes the logical structure of a uFork module.
+Symbolic named-references abstract away specific quad-memory addresses,
+allowing the linker/loader to layout the memory image
+however it sees fit.
+Module dependencies are loaded recursively.
+Symbolic names designate references to values from imported modules.
+Only exported symbols are visible outside of a module.
+
+Each [CRLF](https://github.com/organix/crlf) object describes a single module.
+The top-level `ast` is a _module_ object.
 
     {
         "lang": "uFork",
         "ast": <module>
     }
-
-Each [CRLF](https://github.com/organix/crlf) object describes a single module.
-The `ast` is a _module_ object.
 
 ## Module
 
