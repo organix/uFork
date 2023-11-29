@@ -78,7 +78,7 @@ by generating interoperable uFork IR.
   * uFork [Virtual Machine](docs/ufork.md) description
   * [Actor Protocol Design](docs/proto.md) in uFork
   * [Object Capabilities](docs/ocaps.md) in uFork
-  * Loader [Intermediate Language](docs/ir.md) specification
+  * Linker/loader [Intermediate Representation](docs/ir.md) specification
   * [Assembly Language](docs/asm.md) reference manual
   * [LISP/Scheme compiler](docs/scheme.md) reference manual
   * [Actor Wire Protocol (AWP)](docs/awp.md) specification
