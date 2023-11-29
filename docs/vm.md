@@ -189,11 +189,11 @@ e_queue: [e_head,e_tail]------------------------+
                        |   |
                        |   +--> actor message content
                        V
-                      [#pair_t,code,data,#?]
-                                |    |
-                                |    +--> actor state
-                                |
-                                +--> actor behavior
+                      [#actor_t,code,data,#?]
+                                 |    |
+                                 |    +--> actor state
+                                 |
+                                 +--> actor behavior
 
 k_queue: [k_head,k_tail]----------------+
           |                             V
