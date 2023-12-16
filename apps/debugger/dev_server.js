@@ -20,17 +20,13 @@ const mime_types = {
     scm: "text/plain",
     asm: "text/plain"
 };
-const importmap_html = `
-    <script type="importmap">
-        {"imports": {"https://ufork.org/": "/@/"}}
-    </script>
-`;
 
 function respond(request) {
 
 // Any '..' path segments are discarded by this URL constructor, so we do not
 // bother to guard against escapees.
 
+    const lib_href = new URL("/@/", request.url);
     let file_path = new URL(request.url).pathname.slice(1);
     let file_url;
     if (file_path.startsWith("@/")) {
@@ -59,7 +55,11 @@ function respond(request) {
                 file_url.pathname.endsWith("index.html")
                 ? new TextDecoder().decode(buffer).replace(
                     "<!-- importmap goes here -->",
-                    importmap_html
+                    `
+                        <script type="importmap">
+                            {"imports": {"https://ufork.org/": "${lib_href}"}}
+                        </script>
+                    `
                 )
                 : buffer
             ),
