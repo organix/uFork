@@ -28,3 +28,6 @@ On failure, the result's tail is the error and must not be falsy. The head
 is #?.
 
     (#? . error) -> callback
+
+The requestor pattern was invented by Douglas Crockford, and was first
+implemented in JavaScript. See https://crockford.com/parseq.html.

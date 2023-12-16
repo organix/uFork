@@ -408,7 +408,6 @@ const pause_action = function () {
 };
 
 function boot(module_specifier) {
-    localStorage.setItem("boot", module_specifier);
     const module_url = new URL(module_specifier, window.location.href).href;
     core.h_import(module_url)(function callback(module, reason) {
         if (module === undefined) {
@@ -425,6 +424,7 @@ $boot_input.value = localStorage.getItem("boot") ?? "./examples/fib.asm";
 const $boot_form = document.getElementById("boot-form");
 $boot_form.onsubmit = function (event) {
     boot($boot_input.value);
+    localStorage.setItem("boot", $boot_input.value);
     $boot_input.blur(); // become responsive to keybindings
     event.preventDefault();
 };
@@ -453,6 +453,7 @@ document.onkeydown = function (event) {
         next_step();
     } else if (event.key === "b") {
         boot($boot_input.value);
+        localStorage.setItem("boot", $boot_input.value);
     } else if (event.key === "g") {
         gc_host();
     }
@@ -588,4 +589,10 @@ core.h_initialize()(function callback(value, reason) {
 
     //play_action();  // start animation (running)
     pause_action();  // start animation (paused)
+
+    const boot_specifier = new URL(location.href).searchParams.get("boot");
+    if (boot_specifier) {
+        boot(boot_specifier);
+        $boot_input.value = boot_specifier;
+    }
 });
