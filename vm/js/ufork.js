@@ -1613,7 +1613,7 @@ function make_core({
 //debug import blob_device from "./blob_device.js";
 //debug import timer_device from "./timer_device.js";
 //debug const wasm_url = import.meta.resolve("https://ufork.org/wasm/ufork.wasm");
-//debug const asm_url = import.meta.resolve("../../apps/debugger/examples/fib.asm");
+//debug const asm_url = import.meta.resolve("../../lib/rq/race.asm");
 //debug const lib_url = import.meta.resolve("../../lib/");
 //debug let core;
 //debug function run_ufork() {
