@@ -1,0 +1,152 @@
+%YAML 1.2
+---
+# http://www.sublimetext.com/docs/3/syntax.html
+# http://www.sublimetext.com/docs/3/scope_naming.html
+
+name: uFork Assembly
+file_extensions: [asm]
+scope: source.uforkasm
+version: 2
+
+contexts:
+  main:
+    - include: comments
+    - match: ^\.import\b
+      scope: support.function.directive.uforkasm
+      set: imports
+    - match: '^(\w+)(:)'
+      captures:
+        1: entity.name.type.constant.uforkasm
+        2: punctuation.separator.uforkasm
+      set: definitions
+  comments:
+    - match: (\s*)((;).*)$
+      captures:
+        2: comment.line.uforkasm
+        3: punctuation.definition.comment.uforkasm
+
+# Imports
+
+  imports:
+    - include: comments
+    - match: '^\s+(\w+)(:)'
+      captures:
+        1: entity.name.namespace.uforkasm
+        2: punctuation.separator.uforkasm
+      push: import
+    - match: '^(\w+)(:)'
+      captures:
+        1: entity.name.type.constant.uforkasm
+        2: punctuation.separator.uforkasm
+      set: definitions
+  import:
+    - include: comments
+    - match: '"'
+      scope: punctuation.definition.string.begin.uforkasm
+      push: import_specifier
+    - match: '\n|\r\n?'
+      pop: true
+  import_specifier:
+    - meta_scope: string.quoted.double.uforkasm
+    - match: '"'
+      scope: punctuation.definition.string.end.uforkasm
+      pop: true
+
+# Definitions
+
+  definitions:
+    - include: comments
+    - match: '^(\w+)(:)'
+      captures:
+        1: entity.name.type.constant.uforkasm
+        2: punctuation.separator.uforkasm
+    - match: '^\s+(ref|jump|pair_t|dict_t|type_t|quad_1|quad_2|quad_3|quad_4)\b'
+      captures:
+        1: storage.type.uforkasm
+      push: operands
+    - match: '^\s+(if|if_not)\b'
+      captures:
+        1: support.function.conditional.uforkasm
+      push: operands
+    - match: '^\s+(dict)\s+(has|get|add|set|del)\b'
+      captures:
+        1: keyword.operator.word.uforkasm
+        2: keyword.operator.word.uforkasm
+      push: operands
+    - match: '^\s+(alu)\s+(not|and|or|xor|add|sub|mul|div|lsl|lsr|asr|rol|ror)\b'
+      captures:
+        1: keyword.operator.word.uforkasm
+        2: keyword.operator.word.uforkasm
+      push: operands
+    - match: '^\s+(cmp)\s+(eq|ge|gt|lt|le|ne)\b'
+      captures:
+        1: keyword.operator.word.uforkasm
+        2: keyword.operator.word.uforkasm
+      push: operands
+    - match: '^\s+(my)\s+(self|beh|state)\b'
+      captures:
+        1: keyword.operator.word.uforkasm
+        2: keyword.operator.word.uforkasm
+      push: operands
+    - match: '^\s+(deque)\s+(new|empty|push|pop|put|pull|len)\b'
+      captures:
+        1: keyword.operator.word.uforkasm
+        2: keyword.operator.word.uforkasm
+      push: operands
+    - match: '^\s+(sponsor)\s+(new|memory|events|cycles|reclaim|start|stop)\b'
+      captures:
+        1: keyword.operator.word.uforkasm
+        2: keyword.operator.word.uforkasm
+      push: operands
+    - match: '^\s+(end)\s+(abort|stop|commit)\b'
+      captures:
+        1: keyword.operator.word.uforkasm
+        2: keyword.operator.word.uforkasm
+      push: operands
+    - match: '^\s+(assert|beh|debug|drop|dup|eq|msg|new|nth|pair|part|pick|push|quad|roll|send|signal|state|typeq)\b'
+      captures:
+        1: keyword.operator.word.uforkasm
+      push: operands
+    - match: '^\.export\b'
+      scope: support.function.directive.uforkasm
+      set: exports
+  operands:
+    - include: comments
+    - match: ' +'
+      push: operand
+    - match: '\n|\r\n?'
+      pop: true
+  operand:
+    - match: '#(t|f|\?|nil|unit|literal_t|fixnum_t|type_t|pair_t|dict_t|instr_t|actor_t)'
+      scope: constant.language.uforkasm
+      pop: true
+    - match: '\d+(#)[0-9A-Za-z]+'
+      scope: constant.numeric.integer.uforkasm
+      captures:
+        1: punctuation.separator.uforkasm
+      pop: true
+    - match: '-?\d+'
+      scope: constant.numeric.integer.uforkasm
+      pop: true
+    - match: \'(\\(b|t|n|r|\'|\\)|.)\'
+      scope: constant.numeric.integer.other.uforkasm
+      pop: true
+    - match: '(\w+)(\.)(\w+)'
+      captures:
+        1: entity.name.namespace.uforkasm
+        2: punctuation.accessor.uforkasm
+        3: variable.other.member.uforkasm
+      pop: true
+    - match: '\w+'
+      scope: entity.name.type.constant.uforkasm
+      pop: true
+    - match: '\n|\r\n?'
+      pop: true
+
+  # Exports
+
+  exports:
+    - include: comments
+    - match: '^\s+(\w+)\n'
+      captures:
+        1: entity.name.type.constant.uforkasm
