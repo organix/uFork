@@ -1,18 +1,17 @@
 # A SublimeLinter plugin for uFork assembly.
 
-# Only Sublime views whose syntax type is set to assembly will be linted. This
-# may require the installation of a syntax package such as
-# https://github.com/dougmasten/sublime-assembly-6809.
+# Only Sublime views whose syntax type is set to uFork Assembly will be linted.
+# This requires installation of the uFork Assembly syntax package, ./uforkasm.
 
 # To install this plugin, first install the SublimeLinter package. Create a
-# directory in Sublime's Packages directory called "SublimeLinter-asm".
+# directory in Sublime's Packages directory called "SublimeLinter-uforkasm".
 # The location of the Packages directory depends on your operating system:
 
 #   MacOS: ~/Library/Application Support/Sublime Text/Packages
 #   Windows: %AppData%\Sublime Text\Packages
 #   Linux: ~/.config/sublime-text/Packages
 
-# Soft link this file into the "SublimeLinter-asm" directory, and
+# Soft link this file into the "SublimeLinter-uforkasm" directory, and
 # run "Reload SublimeLinter and its Plugins" from the command palette.
 
 from os import path
@@ -32,4 +31,4 @@ class asm(Linter):
     regex = r'^(?P<line>\d+):(?P<col>\d+) (?P<message>.*)'
     multiline = False
     error_stream = STREAM_STDOUT
-    defaults = {'selector': 'source.asm, source.mc6809'}
+    defaults = {'selector': 'source.uforkasm'}
