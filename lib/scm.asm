@@ -2,12 +2,10 @@
 ;;; Runtime support for compiled Scheme
 ;;;
 
-;.import
-;    std: "./std.asm"
-;    dev: "./dev.asm"
-
-debug_key:              ; borrowed from `dev.asm`
-    ref 0               ; dev.debug_key
+.import
+    std: "./std.asm"
+    dev: "./dev.asm"
+    referee: "./testing/referee.asm"
 
 ;
 ; Custom types and constants for Scheme
@@ -28,16 +26,6 @@ empty_env:              ; (sp=#nil . env=#nil)
 ;
 ; Continuations for non-tail function calls
 ;
-
-tail_pos_k:             ; definition of "tail-position"
-cust_send:              ; msg
-    msg 1               ; msg to=cust
-
-send_msg:               ; msg to
-    send -1             ; --
-
-commit:                 ; ...
-    end commit          ; --
 
 ; Function template for compiled lambda-closure
 ;func:                   ; [closure_t, code, data]
@@ -73,11 +61,7 @@ continuation:           ; (msg cont env sp) <- rv
     beh -1              ; -- SELF=cont.(sp' . env)
     state 1             ; msg
     my self             ; msg SELF
-    ref send_msg
-;send_msg:
-;    send -1
-;commit:
-;    end commit
+    ref std.send_msg
 
 ; Suffix to restore stack and continue
 ;cont:                   ; (sp . env) <- (cust . args)
@@ -95,7 +79,7 @@ imm_actor:              ; beh <- msg
     pair 1              ; (SELF . msg)
     state 0             ; (SELF . msg) beh=[behavior_t, code, data, meta]
     new -2              ; (SELF . msg) code.data
-    ref send_msg
+    ref std.send_msg
 
 mut_actor:              ; beh <- msg
     state 0             ; beh=[behavior_t, code, data, meta]
@@ -112,7 +96,7 @@ txn_actor:              ; beh pending msg
     send -1             ; beh txn pending
     push bsy_actor      ; beh txn pending bsy_actor
     beh 3               ; -- SELF=bsy_actor.(pending txn beh)
-    ref commit
+    ref std.commit
 
 bsy_actor:              ; (pending txn beh) <- (txn? . beh') | msg
     state 2             ; txn
@@ -128,7 +112,7 @@ bsy_actor:              ; (pending txn beh) <- (txn? . beh') | msg
     pair 1              ; (pending' txn beh)
     push bsy_actor      ; (pending' txn beh) bsy_actor
     beh -1              ; -- SELF=bsy_actor.(pending' txn beh)
-    ref commit
+    ref std.commit
 
 cmt_actor:              ; --
     ; transaction complete
@@ -162,7 +146,7 @@ nxt_actor:              ; beh'
 rdy_actor:              ; beh'
     ; no more deferred, become ready
     beh -3              ; -- SELF=get_Z(beh').beh'
-    ref commit
+    ref std.commit
 
 rst_actor:              ; beh'
     ; reset entry-point (e.g.: transition to `imm_actor`)
@@ -172,7 +156,7 @@ rst_actor:              ; beh'
 rst_msgs:               ; pending
     dup 1               ; pending pending
     deque empty         ; is_empty(pending)
-    if commit           ; pending
+    if std.commit       ; pending
     deque pop           ; pending' msg'
     my self             ; pending' msg' SELF
     send -1             ; pending'
@@ -212,14 +196,14 @@ count_code:             ; (_ n) <- (self cust)
     my self             ; beh' txn=SELF
     pair 1              ; (txn . beh')
     msg 1               ; (txn . beh') self
-    ref send_msg
+    ref std.send_msg
 
 assert:                 ; expect <- actual
     state 0             ; expect
     msg 0               ; expect actual
     cmp eq              ; expect==actual
     assert #t           ; assert(expect==actual)
-    ref commit
+    ref std.commit
 
 ;
 ; Boot code runs when the module is loaded (but not when imported).
@@ -227,31 +211,35 @@ assert:                 ; expect <- actual
 
 boot:                   ; () <- {caps}
     msg 0               ; {caps}
-    push debug_key      ; {caps} debug_key
-    dict get            ; debug_dev
-
-    push count_0        ; debug_dev beh=count_0
-    new -3              ; debug_dev counter=get_Z(beh).beh
-
-    dup 2               ; debug_dev counter debug_dev counter
-    send 1              ; debug_dev counter
-
-    dup 2               ; debug_dev counter debug_dev counter
-    send 1              ; debug_dev counter
-
-    ref commit
+    push dev.debug_key  ; {caps} debug_key
+    dict get            ; referee=debug
+    ref act
+test:                   ; (verdict) <- {caps}
+    push 1              ; 2nd=1
+    push 0              ; 2nd 1st=0
+    push 10             ; 2nd 1st probation=10ms
+    msg 0               ; 2nd 1st probation {caps}
+    push dev.timer_key  ; 2nd 1st probation {caps} timer_key
+    dict get            ; 2nd 1st probation timer
+    state 1             ; 2nd 1st probation timer verdict
+    push referee.beh    ; 2nd 1st probation timer verdict referee_beh
+    new 5               ; referee=referee_beh.(verdict timer probation 1st 2nd)
+act:
+    push count_0        ; referee beh=count_0
+    new -3              ; referee counter=get_Z(beh).beh
+    dup 2               ; referee counter referee counter
+    send 1              ; referee counter
+    dup 2               ; referee counter referee counter
+    send 1              ; referee counter
+    ref std.commit
 
 .export
-    debug_key
     symbol_t
     closure_t
     behavior_t
     empty_env
-    tail_pos_k
-    cust_send
-    send_msg
-    commit
     continuation
     imm_actor
     mut_actor
     boot
+    test
