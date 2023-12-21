@@ -11,12 +11,12 @@
 #   ^^^ entity.name.namespace.uforkasm
 #      ^ punctuation.separator.uforkasm
 #        ^^^^^^^^^^^ string.quoted.double.uforkasm
-#        ^ punctuation.definition.string.begin.uforkasm
-#                  ^ punctuation.definition.string.end.uforkasm
     ; comment
 #   ^^^^^^^^^ comment.line.uforkasm
-    lib: "../lib.asm" ; comment
-#                     ^^^^^^^^^ comment.line.uforkasm
+    "lib": "../lib.asm" ; comment
+#   ^^^^^ string.quoted.double.uforkasm
+#        ^ punctuation.separator.uforkasm
+#                       ^^^^^^^^^ comment.line.uforkasm
 
 decimal:
 # <- entity.name.type.constant.uforkasm
@@ -41,9 +41,10 @@ quad:
 beh:
 # <- entity.name.type.constant.uforkasm
 #  ^ punctuation.separator.uforkasm
-race_beh:               ; (requestors throttle) <- request
-# <- entity.name.type.constant.uforkasm
-#                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ comment.line.uforkasm
+"race_beh":               ; (requestors throttle) <- request
+# <- string.quoted.double.uforkasm
+#         ^ punctuation.separator.uforkasm
+#                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ comment.line.uforkasm
 
 ; The work of handling the request is deferred to a dedicated "runner" actor,
 ; freeing up the race requestor to accept additional requests.
@@ -69,7 +70,17 @@ race_beh:               ; (requestors throttle) <- request
     dict has
 #   ^^^^ keyword.operator.word.uforkasm
 #        ^^^ keyword.operator.word.uforkasm
-    ref std.commit
+    eq "race_beh"
+#      ^^^^^^^^^^ string.quoted.double.uforkasm
+    eq "lib"."race_beh"
+#      ^^^^^ string.quoted.double.uforkasm
+#           ^ punctuation.accessor.uforkasm
+#            ^^^^^^^^^^ string.quoted.double.uforkasm
+    eq lib."race_beh"
+#      ^^^ entity.name.namespace.uforkasm
+    eq "lib".race_beh
+#            ^^^^^^^^ variable.other.member.uforkasm
+    end abort
 
     ; Provide a cancel capability.
 #   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ comment.line.uforkasm
