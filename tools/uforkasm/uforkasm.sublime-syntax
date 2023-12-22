@@ -58,7 +58,7 @@ contexts:
 
     - match: '^(?:(\w+)|({{string}}))(:)'
       captures:
-        1: entity.name.type.constant.uforkasm
+        1: entity.name.label.uforkasm
         2: string.quoted.double.uforkasm
         3: punctuation.separator.uforkasm
 
@@ -177,7 +177,7 @@ contexts:
 
     - match: '(\w+)|({{string}})'
       captures:
-        1: entity.name.type.constant.uforkasm
+        1: entity.name.label.uforkasm
         2: string.quoted.double.uforkasm
 
 # Any whitespace terminates the operand.
@@ -191,7 +191,7 @@ contexts:
     - include: comments
     - match: '^{{spaces}}(\w+){{crlf}}'
       captures:
-        1: entity.name.type.constant.uforkasm
+        1: entity.name.label.uforkasm
 
 # There are three distinct sections in a uFork module: the imports, then the
 # definitions, then the exports.
@@ -203,7 +203,7 @@ contexts:
       push: imports
     - match: '^(\w+)(:)'
       captures:
-        1: entity.name.type.constant.uforkasm
+        1: entity.name.label.uforkasm
         2: punctuation.separator.uforkasm
       push: definitions
     - match: '^\.export\b'
