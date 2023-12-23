@@ -6,6 +6,12 @@ the [uFork Assembly language](../../docs/asm.md).
 To install, symlink this directory into your Sublime Text "Packages" directory
 with the name "uforkasm".
 
+Operating system | Path to "Packages" directory
+-----------------|----------------------------------
+MacOS            | ~/Library/Application Support/Sublime Text/Packages
+Windows          | %AppData%\Sublime Text\Packages
+Linux            | ~/.config/sublime-text/Packages
+
 To run the tests:
 - install the "UnitTesting" package via Package Control
 - open the syntax_test.asm file
