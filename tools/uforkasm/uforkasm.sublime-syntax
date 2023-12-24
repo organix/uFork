@@ -14,10 +14,6 @@ variables:
   spaces: ' +'
   string: '"[^"]*"'
 
-# Newline, carriage return, or carriage return newline.
-
-  crlf: '(\n|\r\n?)'
-
 # Detects the beginning of a section without consuming any characters. A new
 # section begins with a directive, for example .export, or an unindented label.
 # The label's name may or may not be quoted.
@@ -67,7 +63,7 @@ contexts:
     - match: '^{{spaces}}(pair_t|dict_t|type_t|quad_1|quad_2|quad_3|quad_4)\b'
       captures:
         1: storage.type.uforkasm
-      push: operands
+      push: operand_list
 
 # Terminal operators. It is vital to distinguish these visually, so we use
 # the inappropriate scope "variable.language".
@@ -75,19 +71,19 @@ contexts:
     - match: '^{{spaces}}(ref|jump)\b'
       captures:
         1: variable.language.uforkasm
-      push: operands
+      push: operand_list
     - match: '^{{spaces}}(end){{spaces}}(abort|stop|commit)\b'
       captures:
         1: variable.language.uforkasm
         2: keyword.operator.word.uforkasm
-      push: operands
+      push: operand_list
 
 # Conditional operators.
 
     - match: '^{{spaces}}(if|if_not)\b'
       captures:
         1: support.function.conditional.uforkasm
-      push: operands
+      push: operand_list
 
 # Two-part operators.
 
@@ -95,49 +91,49 @@ contexts:
       captures:
         1: keyword.operator.word.uforkasm
         2: keyword.operator.word.uforkasm
-      push: operands
+      push: operand_list
     - match: '^{{spaces}}(alu){{spaces}}(not|and|or|xor|add|sub|mul|div|lsl|lsr|asr|rol|ror)\b'
       captures:
         1: keyword.operator.word.uforkasm
         2: keyword.operator.word.uforkasm
-      push: operands
+      push: operand_list
     - match: '^{{spaces}}(cmp){{spaces}}(eq|ge|gt|lt|le|ne)\b'
       captures:
         1: keyword.operator.word.uforkasm
         2: keyword.operator.word.uforkasm
-      push: operands
+      push: operand_list
     - match: '^{{spaces}}(my){{spaces}}(self|beh|state)\b'
       captures:
         1: keyword.operator.word.uforkasm
         2: keyword.operator.word.uforkasm
-      push: operands
+      push: operand_list
     - match: '^{{spaces}}(deque){{spaces}}(new|empty|push|pop|put|pull|len)\b'
       captures:
         1: keyword.operator.word.uforkasm
         2: keyword.operator.word.uforkasm
-      push: operands
+      push: operand_list
     - match: '^{{spaces}}(sponsor){{spaces}}(new|memory|events|cycles|reclaim|start|stop)\b'
       captures:
         1: keyword.operator.word.uforkasm
         2: keyword.operator.word.uforkasm
-      push: operands
+      push: operand_list
 
 # Other operators.
 
     - match: '^{{spaces}}(assert|beh|debug|drop|dup|eq|msg|new|nth|pair|part|pick|push|quad|roll|send|signal|state|typeq)\b'
       captures:
         1: keyword.operator.word.uforkasm
-      push: operands
+      push: operand_list
     - match: '{{section_lookahead}}'
       pop: true
 
 # Operators are followed by a whitespace-separated list of operands.
 
-  operands:
+  operand_list:
     - include: comments
     - match: '{{spaces}}'
       push: operand
-    - match: '{{crlf}}'
+    - match: '$'
       pop: true
   operand:
 
@@ -189,7 +185,7 @@ contexts:
 
   exports:
     - include: comments
-    - match: '^{{spaces}}(\w+){{crlf}}'
+    - match: '^{{spaces}}(\w+)$'
       captures:
         1: entity.name.label.uforkasm
 
@@ -201,10 +197,11 @@ contexts:
     - match: ^\.import\b
       scope: support.function.directive.uforkasm
       push: imports
-    - match: '^(\w+)(:)'
+    - match: '^(?:(\w+)|({{string}}))(:)'
       captures:
         1: entity.name.label.uforkasm
-        2: punctuation.separator.uforkasm
+        2: string.quoted.double.uforkasm
+        3: punctuation.separator.uforkasm
       push: definitions
     - match: '^\.export\b'
       scope: support.function.directive.uforkasm

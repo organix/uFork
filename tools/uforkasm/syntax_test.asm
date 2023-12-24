@@ -19,7 +19,7 @@
 #                       ^^^^^^^^^ comment.line.uforkasm
 
 decimal:
-# <- entity.name.type.constant.uforkasm
+# <- entity.name.label.uforkasm
 #      ^ punctuation.separator.uforkasm
     ref 0
 literal:
@@ -39,7 +39,7 @@ quad:
 #                    ^^^^^^^^^^ constant.numeric.integer.uforkasm
 
 beh:
-# <- entity.name.type.constant.uforkasm
+# <- entity.name.label.uforkasm
 #  ^ punctuation.separator.uforkasm
 "race_beh":               ; (requestors throttle) <- request
 # <- string.quoted.double.uforkasm
@@ -58,7 +58,7 @@ beh:
     push #nil           ; value callback queue running=()
 #        ^^^^ constant.language.uforkasm
     push runner_beh     ; value callback queue running runner_beh
-#        ^^^^^^^^^^ entity.name.type.constant.uforkasm
+#        ^^^^^^^^^^ entity.name.label.uforkasm
     typeq #actor_t      ; runner cap?(to_cancel)
 #         ^^^^^^^^ constant.language.uforkasm
     if_not std.commit   ; runner
@@ -88,6 +88,6 @@ beh:
 .export
 # <- support.function.directive.uforkasm
     beh
-#   ^^^ entity.name.type.constant.uforkasm
+#   ^^^ entity.name.label.uforkasm
     quad
-#   ^^^^ entity.name.type.constant.uforkasm
+#   ^^^^ entity.name.label.uforkasm
