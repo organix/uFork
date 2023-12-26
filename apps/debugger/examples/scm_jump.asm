@@ -14,24 +14,45 @@
 
 ;   ... k args env
 
-; It leaves behind the return value, like
+; The top 3 elements constitute the frame:
 
-;   ... k args env rv
-
-; when it returns.
+;   k
+;       The continuation, that is, the instruction to jump to after producing
+;       the return value.
+;   args
+;       The arguments as a single value.
+;   env
+;       The environment of the closure.
 
 call:                   ; ... k args closure
     quad -3             ; ... k args env code #closure_t
     drop 1              ; ... k args env code
     jump
 
-; The continuation code, here labelled 'k', expects the return value on top of
-; the last known stack.
+; A closure_t's code leaves behind the return value on top of the frame
+
+;   ... k args env rv
+
+; and returns.
+
+; The continuation, 'k', expects the return value on top of the last known
+; stack:
+
+;   ... rv
 
 return:                 ; ... k args env rv
     roll -4             ; ... rv k args env
     drop 2              ; ... rv k
     jump
+
+; The tail call optimization works by modifying the current frame. Its arguments
+; are replaced, yet the continuation is left unchanged.
+
+tail:                   ; ... k args env args' closure
+    roll -4             ; ... k closure args env args'
+    roll -4             ; ... k args' closure args env
+    drop 2              ; ... k args' closure
+    ref call
 
 ;
 ; The 'double_sum' function adds its four arguments together, calling out to
@@ -83,6 +104,44 @@ k2:                     ; k args env |2| a+b c+d
 
 double_sum:
     quad_3 scm.closure_t double_sum_code #nil
+
+;
+; The 'ifact' function is the iterative factorial. It demonstrates the tail call
+; optimization.
+;
+
+; (define ifact  ; fact(n) == ifact(n 1)
+;     (lambda (n a)
+;         (if (> n 1)
+;             (ifact (- n 1) (* a n))
+;             a)))
+
+ifact_code:             ; k args=(n a) env=()
+    pick 2              ; k args env |1| args
+    nth 1               ; k args env |1| n
+    push 1              ; k args env |2| n 1
+    cmp gt              ; k args env |1| n>1
+    if recurse          ; k args env |0|
+    pick 2              ; k args env |1| args
+    nth 2               ; k args env |1| a
+    ref return
+recurse:
+    push #nil           ; k args env |1| ()
+    pick 3              ; k args env |2| () args
+    nth 2               ; k args env |2| () a
+    pick 4              ; k args env |3| () a args
+    nth 1               ; k args env |3| () a n
+    alu mul             ; k args env |2| () a*n
+    pick 4              ; k args env |3| () a*n args
+    nth 1               ; k args env |3| () a*n n
+    push 1              ; k args env |4| () a*n n 1
+    alu sub             ; k args env |3| () a*n n-1
+    pair 2              ; k args env |1| args=(n-1 a*n)
+    push ifact          ; k args env |2| args closure=ifact
+    ref tail
+
+ifact:
+    quad_3 scm.closure_t ifact_code #nil
 
 ;
 ; The 'hof3' function returns a function that returns a function that returns a
@@ -148,27 +207,37 @@ boot:                   ; () <- {caps}
     ; push double_sum     ; k args closure=double_sum
     ; ref call
 
+; Print the factorial of 6.
+
+    push print_rv       ; k=print_rv
+    push #nil           ; k ()
+    push 1              ; k () a=1
+    push 6              ; k () a n=6
+    pair 2              ; k args=(n a)
+    push ifact          ; k args closure=ifact
+    ref call
+
 ; Call the innermost lambda in hof3 and print its return value.
 
-    push p_return       ; k=p_return
-    push #nil           ; k ()
-    push 1              ; k () p=1
-    pair 1              ; k args=(p)
-    push hof3           ; k args closure=hof3
-    ref call
-p_return:               ; qr
-    push qr_return      ; qr k=qr_return
-    push #nil           ; qr k ()
-    push 3              ; qr k () r=3
-    push 2              ; qr k () r q=2
-    pair 2              ; qr k args=(q r)
-    roll 3              ; k args closure=qr
-    ref call
-qr_return:              ; s
-    push print_rv       ; s k=print_rv
-    push 4              ; s k args=4
-    roll 3              ; k args closure=s
-    ref call
+;     push p_return       ; k=p_return
+;     push #nil           ; k ()
+;     push 1              ; k () p=1
+;     pair 1              ; k args=(p)
+;     push hof3           ; k args closure=hof3
+;     ref call
+; p_return:               ; qr
+;     push qr_return      ; qr k=qr_return
+;     push #nil           ; qr k ()
+;     push 3              ; qr k () r=3
+;     push 2              ; qr k () r q=2
+;     pair 2              ; qr k args=(q r)
+;     roll 3              ; k args closure=qr
+;     ref call
+; qr_return:              ; s
+;     push print_rv       ; s k=print_rv
+;     push 4              ; s k args=4
+;     roll 3              ; k args closure=s
+;     ref call
 
 print_rv:               ; rv
     msg 0               ; rv {caps}
