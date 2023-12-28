@@ -360,7 +360,7 @@ function render_loop() {
         if (cc !== undefined) {
             const instruction_quad = core.u_read_quad(cc.ip);
             const op_code = core.u_fix_to_i32(instruction_quad.x);
-            if (op_code === 26) { // 'debug' op
+            if (op_code === core.VM_DEBUG) { // 'debug' op
                 pause_action(); // breakpoint reached
                 return;
             }
@@ -374,11 +374,12 @@ $gc_button.onclick = gc_host;
 $gc_button.title = "Run garbage collection (g)";
 
 const $revert_button = document.getElementById("revert-btn");
-$revert_button.disabled = true;
-$revert_button.onclick = function () {
+function revert_action() {
     core.h_revert();  // FIXME: check `bool` result...
     draw_host();
-};
+}
+$revert_button.disabled = true;
+$revert_button.onclick = revert_action;
 $revert_button.title = "Revert actor message-event";
 
 const $next_button = document.getElementById("next-step");
@@ -390,22 +391,22 @@ $step_button.onclick = single_step;
 $step_button.title = "Next instruction in KQ (s)";
 
 const $pause_button = document.getElementById("play-pause");
-const play_action = function () {
+function play_action() {
     $pause_button.textContent = "Pause";
     $pause_button.onclick = pause_action;
     $pause_button.title = "Pause execution (c)";
     paused = false;
     $step_button.disabled = true;
     render_loop();
-};
-const pause_action = function () {
+}
+function pause_action() {
     $pause_button.textContent = "Play";
     $pause_button.onclick = play_action;
     $pause_button.title = "Continue execution (c)";
     $step_button.disabled = false;
     paused = true;
     draw_host();
-};
+}
 
 function boot(module_specifier) {
     const module_url = new URL(module_specifier, window.location.href).href;
