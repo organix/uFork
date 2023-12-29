@@ -46,11 +46,10 @@ const $msg = document.getElementById("msg");
 const $fault_ctl = document.getElementById("fault-ctl");
 const $fault_led = document.getElementById("fault-led");
 
+let timer_id;
 let paused = false;  // run/pause toggle
 let fault = false;  // execution fault flag
 const rx_crlf = /\n|\r\n?/;
-const $rate = document.getElementById("frame-rate");
-let frame = 1;  // frame-rate countdown
 let ram_max = 0;
 let core;  // uFork wasm processor core
 let on_stdin;
@@ -309,6 +308,13 @@ function draw_host() {
     $revert_button.disabled = !fault;
     enable_next();
 }
+function schedule_draw_host() {
+    // Calling 'draw_host' on each instruction can introduce long delays. This
+    // function is a cheaper alternative. It schedules a single draw to occur
+    // right before the upcoming paint.
+    cancelAnimationFrame(timer_id);
+    timer_id = requestAnimationFrame(draw_host);
+}
 function gc_host() {
     core.h_gc_run();
     draw_host();
@@ -322,7 +328,7 @@ function single_step() {
         fault = true;
         console.log("single_step:", err, "=", msg);
     }
-    draw_host();
+    schedule_draw_host();
     return !fault;
 }
 function next_step() {
@@ -344,19 +350,21 @@ function next_step() {
     draw_host();
     return !fault;
 }
+
+const $interval = document.getElementById("play-interval");
 function render_loop() {
     //debugger;
     if (paused) {
         return;
     }
-    frame -= 1;
-    if (frame <= 0) {
-        frame = Number($rate.value);
+    const interval = Number($interval.value);
+    const begin = Date.now();
+    while (true) {
         if (!single_step()) {  // pause on fault signal
             pause_action();
             return;
         }
-        let cc = core.u_current_continuation();
+        const cc = core.u_current_continuation();
         if (cc !== undefined) {
             const instruction_quad = core.u_read_quad(cc.ip);
             const op_code = core.u_fix_to_i32(instruction_quad.x);
@@ -365,8 +373,13 @@ function render_loop() {
                 return;
             }
         }
+        // Defer the next iteration if a non-zero interval has been specified,
+        // or if the render loop is being blocked.
+        const elapsed = Date.now() - begin;
+        if (interval > 0 || elapsed > 20) {
+            return setTimeout(render_loop, interval);
+        }
     }
-    requestAnimationFrame(render_loop);
 }
 
 const $gc_button = document.getElementById("gc-btn");
