@@ -2,7 +2,7 @@
 
 import {editor, languages} from "monaco";
 import make_editor_worker from "monaco_editor_worker";
-import make_uforkasm_token_provider from "./uforkasm.js";
+import make_uforkasm_token_provider from "./monarch_uforkasm.js";
 
 window.MonacoEnvironment = {
     getWorker() {

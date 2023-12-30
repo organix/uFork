@@ -26,7 +26,8 @@ const mime_types = {
     json: "application/json",
     jpg: "image/jpeg",
     png: "image/png",
-    svg: "image/svg+xml"
+    svg: "image/svg+xml",
+    woff2: "font/woff2"
 };
 
 run_replete({

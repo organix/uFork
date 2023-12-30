@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>uFork Playground</title>
+    <meta name="viewport" content="width=device-width" />
+    <style>
+        @font-face {
+            font-family: "Programma";
+            font-style: normal;
+            src: url(./programma.woff2) format("woff2");
+        }
+        body {
+            --red: #F92672;
+            --orange: #FD971F;
+            --gray: #49483E;
+            --black: #272822;
+            --blue: #66D9EF;
+            --green: #A6E22E;
+            --purple: #AE81FF;
+            --yellow: #E6DB74;
+            background: var(--black);
+            color: white;
+            line-height: 1.5;
+            font-size: 17px;
+        }
+        #editor {
+            font-family: Programma, monospace;
+            display: block;
+            white-space: pre;
+            padding: 10px;
+            position: absolute;
+            top: 0;
+            right: 0;
+            bottom: 0;
+            left: 0;
+        }
+        ::selection {
+            background-color: var(--gray);
+        }
+        .separator {
+            color: var(--orange);
+        }
+        .comment {
+            color: wheat;
+        }
+        .error {
+            background: red;
+            color: white;
+        }
+        .literal {
+            color: var(--blue);
+        }
+        .name {
+            color: white;
+        }
+        .number {
+            color: var(--purple);
+        }
+        .string {
+            color: var(--yellow);
+        }
+    </style>
+</head>
+<body>
+    <code id="editor"></code>
+    <script type="module" src="codejar.js"></script>
+</body>
+</html>

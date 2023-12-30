@@ -1,5 +1,3 @@
 # uFork Playground
 
-A web-based IDE for uFork programs, featuring VSCode's text editor.
-
-Work in progress.
+A web-based IDE for uFork programs. Currently a work in progress.
