@@ -61,6 +61,8 @@ beh:
 #        ^^^^^^^^^^ entity.name.label.uforkasm
     typeq #actor_t      ; runner cap?(to_cancel)
 #         ^^^^^^^^ constant.language.uforkasm
+    typeq #fixnum_t
+#         ^^^^^^^^^ constant.language.uforkasm
     if_not std.commit   ; runner
 #          ^^^ entity.name.namespace.uforkasm
 #             ^ punctuation.accessor.uforkasm

@@ -25,7 +25,7 @@ function alter_string(string, alterations) {
     );
 }
 
-const rx_html_unsafe = /<>/g;
+const rx_html_unsafe = /[<>]/g;
 
 function highlight(element) {
     const source = element.textContent;
