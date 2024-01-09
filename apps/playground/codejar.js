@@ -37,9 +37,9 @@ function highlight(element) {
             break;
         }
         const kind = (
-            token.id.length === 1
+            token.kind.length === 1
             ? "separator"
-            : token.id.slice(1, -1)
+            : token.kind
         );
         const text = source.slice(
             token.start,
