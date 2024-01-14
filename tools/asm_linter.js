@@ -18,10 +18,12 @@ Deno.stdin.read(buffer).then(function on_chunk(nr_bytes) {
         );
         return Deno.stdin.read(buffer).then(on_chunk);
     }
-    const result = assemble(source);
-    if (result.kind === "error") {
-        window.console.log(
-            result.line + ":" + result.column + " " + result.message
-        );
+    const crlf = assemble(source);
+    if (Array.isArray(crlf.errors)) {
+        crlf.errors.forEach(function (error) {
+            window.console.log(
+                error.line + ":" + error.column + " " + error.message
+            );
+        });
     }
 });

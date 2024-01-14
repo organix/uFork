@@ -1145,17 +1145,13 @@ function make_core({
                         specifier.endsWith(".scm")
                         ? response.text().then(function (source) {
                             module_source[specifier] = source;
-                            const crlf = scm.compile(source, specifier);
-                            // if (!crlf?.error) {
-                            //     console.log(scm.to_asm(crlf.ast));
-                            // }
-                            return crlf;
+                            return scm.compile(source, specifier);
                         })
                         : response.json()
                     )
                 );
             }).then(function (crlf) {
-                if (crlf.kind === "error") {
+                if (crlf.lang !== "uFork") {
                     return Promise.reject(crlf);
                 }
 
