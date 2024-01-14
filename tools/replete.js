@@ -65,6 +65,7 @@ run_replete({
         return Promise.reject(new Error("Not found."));
     },
     mime(locator) {
-        return mime_types[locator.split(".").pop()];
+        const extension = new URL(locator).pathname.split(".").pop();
+        return mime_types[extension];
     }
 });

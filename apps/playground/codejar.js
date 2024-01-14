@@ -2,6 +2,30 @@
 
 import {CodeJar} from "https://esm.sh/codejar@4.2.0";
 import tokenize from "https://ufork.org/lib/asm_tokenize.js";
+import parse from "https://ufork.org/lib/asm_parse.js";
+
+function entityify(string) {
+
+// The 'entityify' function escapes any potentially dangerous characters in a
+// string that is to be interpreted as HTML.
+
+    return string.replace(
+        /&/g,
+        "&amp;"
+    ).replace(
+        /</g,
+        "&lt;"
+    ).replace(
+        />/g,
+        "&gt;"
+    ).replace(
+        /\\/g,
+        "&bsol;"
+    ).replace(
+        /"/g,
+        "&quot;"
+    );
+}
 
 function alter_string(string, alterations) {
 
@@ -25,31 +49,42 @@ function alter_string(string, alterations) {
     );
 }
 
-const rx_html_unsafe = /<>/g;
-
 function highlight(element) {
     const source = element.textContent;
+    const ast = parse(tokenize(source));
     let alterations = [];
-    let generator = tokenize(source);
-    while (true) {
-        const token = generator();
-        if (token === undefined) {
-            break;
-        }
-        const kind = (
-            token.id.length === 1
+    ast.tokens.forEach(function (token) {
+        const errors = ast.errors.filter(function (error) {
+            return token.start >= error.start && token.end <= error.end;
+        });
+        const title = errors.map(function (error) {
+            return error.message;
+        }).join(
+            "\n"
+        );
+        const classes = (
+            token.kind.length === 1
             ? "separator"
-            : token.id.slice(1, -1)
+            : token.kind
+        ) + (
+            errors.length > 0
+            ? " warning"
+            : ""
         );
-        const text = source.slice(
-            token.start,
-            token.end
-        ).replace(
-            rx_html_unsafe,
-            ""
-        );
-        alterations.push([token, `<span class="${kind}">${text}</span>`]);
-    }
+        const text = source.slice(token.start, token.end);
+        alterations.push([
+            token,
+            (
+                "<span class=\""
+                + classes
+                + "\" title=\""
+                + entityify(title)
+                + "\">"
+                + entityify(text)
+                + "</span>"
+            )
+        ]);
+    });
     element.innerHTML = alter_string(source, alterations);
 }
 
