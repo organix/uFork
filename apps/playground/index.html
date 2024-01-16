@@ -1,13 +1,18 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>uFork Playground</title>
+    <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width" />
+    <title>uFork Playground</title>
     <style>
         @font-face {
             font-family: "Programma";
             font-style: normal;
             src: url(./programma.woff2) format("woff2");
+        }
+        html,
+        body {
+            height: 100%;
         }
         body {
             --red: #F92672;
@@ -22,17 +27,60 @@
             color: white;
             line-height: 1.5;
             font-size: 17px;
+            display: flex;
+            margin: 0;
         }
         #editor {
             font-family: Programma, monospace;
-            display: block;
-            white-space: pre;
+            white-space: pre !important; /* override Codejar */
             padding: 10px;
-            position: absolute;
-            top: 0;
-            right: 0;
-            bottom: 0;
-            left: 0;
+            flex: 0 1 60%;
+        }
+        #devices {
+            flex: 1 1 40%;
+            min-width: 0;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+        }
+        #controls {
+            display: flex;
+            justify-content: flex-end;
+            margin-bottom: 10px;
+        }
+        #controls > :not(:last-child) {
+            margin-right: 5px;
+        }
+        #output {
+            white-space: pre;
+            font-family: Programma, monospace;
+            min-height: 60px;
+            overflow: auto;
+        }
+        #output > .warn {
+            color: red;
+        }
+        #output > .debug {
+            color: white;
+        }
+        #output > .info {
+            color: gray;
+        }
+        @media (max-width: 719px) {
+            body {
+                flex-direction: column;
+            }
+            #devices {
+                border-top: 1px solid gray;
+            }
+        }
+        @media (min-width: 720px) {
+            body {
+                flex-direction: row;
+            }
+            #devices {
+                border-left: 1px solid gray;
+            }
         }
         ::selection {
             background-color: var(--gray);
@@ -126,6 +174,13 @@
 </head>
 <body>
     <code id="editor"></code>
-    <script type="module" src="codejar.js"></script>
+    <div id="devices">
+        <div id="controls">
+            <button id="run">▶ Run</button>
+            <button id="clear_output">⨉ Clear</button>
+        </div>
+        <div id="output"></div>
+    </div>
+    <script type="module" src="main.js"></script>
 </body>
 </html>
