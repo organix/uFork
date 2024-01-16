@@ -116,12 +116,6 @@ function highlight(element) {
     element.innerHTML = alter_string(source, alterations);
 }
 
-const jar = new CodeJar(
-    document.getElementById("editor"),
-    highlight,
-    {tab: "    "}
-);
-
 // The state of the playground is stored in the URL of the page, making it easy
 // to share a configuration with others.
 
@@ -166,15 +160,6 @@ function fetch_source() {
     return Promise.resolve("; Write some uFork assembly here...");
 }
 
-function update_page_url() {
-    return encode_bytes_as_data_url(
-        new TextEncoder().encode(jar.toString()),
-        "text/plain"
-    ).then(function (data_url) {
-        write_state("text", data_url.split("base64,")[1]);
-    });
-}
-
 function clear_output() {
     output_element.textContent = "";
 }
@@ -192,9 +177,23 @@ function append_output(log_level, ...values) {
     );
     div.textContent = values.join(" ");
     output_element.append(div);
+    output_element.scrollTo({
+        top: output_element.scrollHeight,
+        left: 0,
+        behavior: "smooth"
+    });
 }
 
-function run() {
+function update_page_url(text) {
+    return encode_bytes_as_data_url(
+        new TextEncoder().encode(text),
+        "text/plain"
+    ).then(function (data_url) {
+        write_state("text", data_url.split("base64,")[1]);
+    });
+}
+
+function run(text) {
     let core;
 
     function run_loop() {
@@ -218,7 +217,7 @@ function run() {
             : {"https://ufork.org/lib/": dev_lib_url}
         )
     });
-    const crlf = assemble(jar.toString());
+    const crlf = assemble(text);
     if (crlf.lang !== "uFork") {
         const error_messages = crlf.errors.map(function (error) {
             return `[${error.line}:${error.column}] ${error.message}`;
@@ -245,11 +244,22 @@ function run() {
     });
 }
 
+const jar = new CodeJar(
+    document.getElementById("editor"),
+    highlight,
+    {
+        tab: "    ",
+        addClosing: false,
+        indentOn: /(\.import|\.export|:)$/
+    }
+);
 fetch_source().then(function (source) {
     jar.updateCode(source);
     jar.onUpdate(update_page_url);
 }).catch(function (error) {
     jar.updateCode("; Failed to load source: " + error.message);
 });
-run_button.onclick = run;
+run_button.onclick = function () {
+    run(jar.toString());
+};
 clear_output_button.onclick = clear_output;
