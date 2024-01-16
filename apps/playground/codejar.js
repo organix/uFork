@@ -27,6 +27,24 @@ function entityify(string) {
     );
 }
 
+function encode_bytes_as_data_url(bytes, type) {
+
+// The atob and btoa functions provided by the browser do not support Unicode,
+// so the only alternative, apart from reimplementing Base64 ourselves, is to
+// abuse the FileReader.
+
+    return new Promise(function (resolve, reject) {
+        const reader = new FileReader();
+        reader.onload = function () {
+            return resolve(reader.result);
+        };
+        reader.onerror = function () {
+            return reject(reader.error);
+        };
+        reader.readAsDataURL(new Blob([bytes], {type}));
+    });
+}
+
 function alter_string(string, alterations) {
 
 // The 'alter_string' function applies an array of substitutions to a string.
@@ -109,8 +127,23 @@ function fetch_source() {
     );
 }
 
+function update_page_url() {
+
+// Update the page's URL with the current state of the playground.
+
+    return encode_bytes_as_data_url(
+        new TextEncoder().encode(jar.toString()),
+        "text/plain"
+    ).then(function (data_url) {
+        const page_url = new URL(location.href);
+        page_url.searchParams.set("src", data_url);
+        history.replaceState(undefined, "", page_url);
+    });
+}
+
 fetch_source().then(function (source) {
     jar.updateCode(source);
+    jar.onUpdate(update_page_url);
 }).catch(function (error) {
-    window.alert("Failed to load source: " + error.message);
+    jar.updateCode("; Failed to load source: " + error.message);
 });
