@@ -1130,27 +1130,29 @@ function make_core({
         );
     }
 
-    function h_import_promise(specifier) {
+    function h_import_promise(specifier, crlf) {
         if (import_promises[specifier] === undefined) {
-            import_promises[specifier] = fetch(
-                specifier
-            ).then(function (response) {
-                return (
-                    specifier.endsWith(".asm")
-                    ? response.text().then(function (source) {
-                        module_source[specifier] = source;
-                        return assemble(source, specifier);
-                    })
-                    : (
-                        specifier.endsWith(".scm")
+            import_promises[specifier] = (
+                crlf !== undefined
+                ? Promise.resolve(crlf)
+                : fetch(specifier).then(function (response) {
+                    return (
+                        specifier.endsWith(".asm")
                         ? response.text().then(function (source) {
                             module_source[specifier] = source;
-                            return scm.compile(source, specifier);
+                            return assemble(source, specifier);
                         })
-                        : response.json()
-                    )
-                );
-            }).then(function (crlf) {
+                        : (
+                            specifier.endsWith(".scm")
+                            ? response.text().then(function (source) {
+                                module_source[specifier] = source;
+                                return scm.compile(source, specifier);
+                            })
+                            : response.json()
+                        )
+                    );
+                })
+            ).then(function (crlf) {
                 if (crlf.lang !== "uFork") {
                     return Promise.reject(crlf);
                 }
@@ -1177,12 +1179,13 @@ function make_core({
         return import_promises[specifier];
     }
 
-    function h_import(specifier) {
+    function h_import(specifier, crlf) {
 
-// Import and load a module, along with its dependencies.
+// Import and load a module, along with its dependencies. If 'crlf' is provided,
+// the 'specifier' is only used to resolve relative import specifiers.
 
         return unpromise(function () {
-            return h_import_promise(h_map_specifier(specifier));
+            return h_import_promise(h_map_specifier(specifier), crlf);
         });
     }
 
@@ -1522,7 +1525,7 @@ function make_core({
                     h_install([[dev_id, dev_cap]], {
                         host_log(x) { // (i32) -> nil
                             const u = (x >>> 0);  // convert i32 -> u32
-                            u_debug(u, "=", u_print(u), "->", u_pprint(u));
+                            u_debug(u_print(u), "->", u_pprint(u));
                         }
                     });
                 }
