@@ -17,6 +17,7 @@
         body {
             --red: #F92672;
             --orange: #FD971F;
+            --silver: #BFBFBF;
             --gray: #49483E;
             --black: #272822;
             --blue: #66D9EF;
@@ -85,9 +86,8 @@
         ::selection {
             background-color: var(--gray);
         }
-        /**/
         .comment {
-            color: #BBB;
+            color: var(--silver);
         }
         .conditional {
             color: var(--purple);
@@ -125,48 +125,6 @@
             color: var(--purple);
             font-style: italic;
         }
-        /**/
-        /*
-        .comment {
-            color: wheat;
-        }
-        .conditional {
-            color: var(--blue);
-        }
-        .data {
-            color: var(--blue);
-            font-style: italic;
-        }
-        .directive {
-            color: var(--blue);
-        }
-        .error {
-            background: red;
-            color: white;
-        }
-        .literal {
-            color: var(--purple);
-        }
-        .name {
-            color: white;
-        }
-        .namespace {
-            color: var(--green);
-        }
-        .number {
-            color: var(--purple);
-        }
-        .operator {
-            color: var(--red);
-        }
-        .string {
-            color: var(--yellow);
-        }
-        .terminal {
-            color: var(--orange);
-            font-style: italic;
-        }
-        */
         .warning {
             outline: 1px solid red;
             border-radius: 2px;

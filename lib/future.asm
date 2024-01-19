@@ -1,5 +1,5 @@
 ;;;
-;;; single-assignement data-flow variable
+;;; single-assignment data-flow variable
 ;;;
 
 .import
