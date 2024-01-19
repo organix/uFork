@@ -7,6 +7,10 @@ import tokenize from "https://ufork.org/lib/asm_tokenize.js";
 import parse from "https://ufork.org/lib/asm_parse.js";
 import assemble from "https://ufork.org/lib/assemble.js";
 import ufork from "https://ufork.org/js/ufork.js";
+import clock_device from "https://ufork.org/js/clock_device.js";
+import random_device from "https://ufork.org/js/random_device.js";
+import blob_device from "https://ufork.org/js/blob_device.js";
+import timer_device from "https://ufork.org/js/timer_device.js";
 const wasm_url = import.meta.resolve("https://ufork.org/wasm/ufork.wasm");
 const dev_lib_url = import.meta.resolve("../../lib/");
 
@@ -230,6 +234,10 @@ function run(text) {
         core.h_initialize(),
         core.h_import(specifier, crlf),
         requestorize(function (imported_module) {
+            clock_device(core);
+            random_device(core);
+            blob_device(core);
+            timer_device(core);
             if (imported_module.boot === undefined) {
                 throw new Error("Missing 'boot' export.");
             }
