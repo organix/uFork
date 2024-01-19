@@ -15,31 +15,10 @@ const wasm_url = import.meta.resolve("https://ufork.org/wasm/ufork.wasm");
 const dev_lib_url = import.meta.resolve("../../lib/");
 
 const clear_output_button = document.getElementById("clear_output");
+const line_numbers_element = document.getElementById("line_numbers");
 const output_element = document.getElementById("output");
 const run_button = document.getElementById("run");
-
-function entityify(string) {
-
-// The 'entityify' function escapes any potentially dangerous characters in a
-// string that is to be interpreted as HTML.
-
-    return string.replace(
-        /&/g,
-        "&amp;"
-    ).replace(
-        /</g,
-        "&lt;"
-    ).replace(
-        />/g,
-        "&gt;"
-    ).replace(
-        /\\/g,
-        "&bsol;"
-    ).replace(
-        /"/g,
-        "&quot;"
-    );
-}
+const source_element = document.getElementById("source");
 
 function encode_bytes_as_data_url(bytes, type) {
 
@@ -59,65 +38,39 @@ function encode_bytes_as_data_url(bytes, type) {
     });
 }
 
-function alter_string(string, alterations) {
-
-// The 'alter_string' function applies an array of substitutions to a string.
-// The ranges of the alterations must be disjoint. The 'alterations' parameter
-// is an array of arrays like [range, replacement] where the range is an object
-// like {start, end}.
-
-    alterations = alterations.slice().sort(function compare(a, b) {
-        return a[0].start - b[0].start || a[0].end - b[0].end;
-    });
-    let end = 0;
-    return alterations.map(function ([range, replacement]) {
-        const chunk = string.slice(end, range.start) + replacement;
-        end = range.end;
-        return chunk;
-    }).concat(
-        string.slice(end)
-    ).join(
-        ""
-    );
-}
-
 function highlight(element) {
     const source = element.textContent;
     const ast = parse(tokenize(source));
-    let alterations = [];
+    let line_nr = 1;
+    line_numbers_element.textContent = line_nr;
+    element.innerHTML = "";
     ast.tokens.forEach(function (token) {
+        if (token.kind === "newline") {
+            element.append("\n");
+            line_nr += 1;
+            return line_numbers_element.append("\n" + line_nr);
+        }
+        const text = source.slice(token.start, token.end);
         const errors = ast.errors.filter(function (error) {
             return token.start >= error.start && token.end <= error.end;
         });
-        const title = errors.map(function (error) {
-            return error.message;
-        }).join(
-            "\n"
-        );
-        const classes = (
+        const span = document.createElement("span");
+        span.textContent = text;
+        span.classList.add(
             token.kind.length === 1
             ? "separator"
             : token.kind
-        ) + (
-            errors.length > 0
-            ? " warning"
-            : ""
         );
-        const text = source.slice(token.start, token.end);
-        alterations.push([
-            token,
-            (
-                "<span class=\""
-                + classes
-                + "\" title=\""
-                + entityify(title)
-                + "\">"
-                + entityify(text)
-                + "</span>"
-            )
-        ]);
+        if (errors.length > 0) {
+            span.title = errors.map(function (error) {
+                return error.message;
+            }).join(
+                "\n"
+            );
+            span.classList.add("warning");
+        }
+        element.append(span);
     });
-    element.innerHTML = alter_string(source, alterations);
 }
 
 // The state of the playground is stored in the URL of the page, making it easy
@@ -253,7 +206,7 @@ function run(text) {
 }
 
 const jar = new CodeJar(
-    document.getElementById("editor"),
+    source_element,
     highlight,
     {
         tab: "    ",
