@@ -33,12 +33,26 @@
         }
         #editor {
             font-family: Programma, monospace;
-            white-space: pre !important; /* override Codejar */
+            flex: 1 1 70%;
+            display: flex;
+            align-items: flex-start;
+            overflow-y: auto; /* scroll */
+        }
+        #line_numbers {
+            flex: 0 1 0%;
+            color: gray;
+            border-right: 1px solid var(--gray);
             padding: 10px;
-            flex: 0 1 60%;
+            text-align: right;
+        }
+        #source {
+            flex: 1 1 100%;
+            white-space: pre !important; /* override Codejar */
+            overflow-y: visible !important; /* override Codejar */
+            padding: 10px;
         }
         #devices {
-            flex: 1 1 40%;
+            flex: 1 1 30%;
             min-width: 0;
             padding: 10px;
             display: flex;
@@ -59,7 +73,7 @@
             overflow: auto;
         }
         #output > .warn {
-            color: red;
+            color: var(--red);
         }
         #output > .debug {
             color: white;
@@ -72,7 +86,7 @@
                 flex-direction: column;
             }
             #devices {
-                border-top: 1px solid gray;
+                border-top: 1px solid var(--gray);
             }
         }
         @media (min-width: 720px) {
@@ -80,7 +94,7 @@
                 flex-direction: row;
             }
             #devices {
-                border-left: 1px solid gray;
+                border-left: 1px solid var(--gray);
             }
         }
         ::selection {
@@ -132,7 +146,10 @@
     </style>
 </head>
 <body>
-    <code id="editor"></code>
+    <code id="editor">
+        <div id="line_numbers"></div>
+        <div id="source"></div>
+    </code>
     <div id="devices">
         <div id="controls">
             <button id="run">▶ Run</button>
