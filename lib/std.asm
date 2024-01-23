@@ -36,7 +36,7 @@ rv_one:                 ; _ <- (cust . _)
 
 resend:                 ; _ <- msg
     msg 0               ; msg
-    my rv_self          ; msg cust=SELF
+    my self             ; msg cust=SELF
     ref send_msg
 
 stop:
