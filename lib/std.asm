@@ -1,42 +1,42 @@
 ; The uFork standard library
 
-sink_beh:
+cust_send:              ; msg
+    msg 1               ; msg cust
+
+send_msg:               ; msg cust
+    send -1             ; --
+
+sink_beh:               ; _ <- _
 commit:
     end commit
 
-send_msg:
-    send -1 commit
+rv_self:                ; _ <- (cust . _)
+    my self cust_send   ; msg=SELF
 
-cust_send:
-    msg 1 send_msg
+rv_undef:               ; _ <- (cust . _)
+    push #? cust_send   ; msg=#?
 
-rv_self:
-    my self cust_send
+rv_nil:                 ; _ <- (cust . _)
+    push #nil cust_send ; msg=()
 
-rv_undef:
-    push #? cust_send
+rv_false:               ; _ <- (cust . _)
+    push #f cust_send   ; msg=#f
 
-rv_nil:
-    push #nil cust_send
+rv_true:                ; _ <- (cust . _)
+    push #t cust_send   ; msg=#t
 
-rv_false:
-    push #f cust_send
+rv_unit:                ; _ <- (cust . _)
+    push #unit cust_send ; msg=#unit
 
-rv_true:
-    push #t cust_send
+rv_zero:                ; _ <- (cust . _)
+    push 0 cust_send    ; msg=0
 
-rv_unit:
-    push #unit cust_send
+rv_one:                 ; _ <- (cust . _)
+    push 1 cust_send    ; msg=1
 
-rv_zero:
-    push 0 cust_send
-
-rv_one:
-    push 1 cust_send
-
-resend:
-    msg 0
-    my self
+resend:                 ; _ <- msg
+    msg 0               ; msg
+    my rv_self          ; msg cust=SELF
     ref send_msg
 
 stop:
