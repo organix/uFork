@@ -15,7 +15,7 @@
 ;(define echo-out
 ;    (lambda (io-dev)
 ;        (BEH (ack)
-;            ; input character-code to console
+;            ; input character-code from console
 ;            (SEND io-dev (list #? SELF))
 ;            ; wait for input to complete
 ;            (BECOME (echo-in io-dev))
