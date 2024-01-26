@@ -98,12 +98,17 @@ function get_caret(element, position) {
 // const caret = get_caret(document.body, 4);
 // console.log(caret.node.nodeValue, caret.offset);
 
-function is_apple_device() {
-    return (
+function is_command(keyboard_event) {
+    const is_apple_device = (
         navigator.platform.startsWith("Mac")
         || navigator.platform === "iPhone"
         || navigator.platform === "iPad"
         || navigator.platform === "iPod"
+    );
+    return (
+        is_apple_device
+        ? keyboard_event.metaKey
+        : keyboard_event.ctrlKey
     );
 }
 
@@ -210,12 +215,7 @@ function webcode({
 
     function keydown(event) {
         record_history();
-        const is_command = (
-            is_apple_device()
-            ? event.metaKey
-            : event.ctrlKey
-        );
-        if (is_command && event.key.toLowerCase() === "z") {
+        if (is_command(event) && event.key.toLowerCase() === "z") {
             event.preventDefault();
             travel_history(
                 event.shiftKey
@@ -309,6 +309,7 @@ function webcode({
         set_cursor,
         record_history,
         travel_history,
+        is_command,
         destroy
     };
 }

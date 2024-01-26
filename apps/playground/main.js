@@ -14,11 +14,29 @@ import timer_device from "https://ufork.org/js/timer_device.js";
 const wasm_url = import.meta.resolve("https://ufork.org/wasm/ufork.wasm");
 const dev_lib_url = import.meta.resolve("../../lib/");
 
+const rx_comment = /^(\s*)(;\u0020?)/;
+
 const clear_output_button = document.getElementById("clear_output");
 const line_numbers_element = document.getElementById("line_numbers");
 const output_element = document.getElementById("output");
 const run_button = document.getElementById("run");
 const source_element = document.getElementById("source");
+
+function alter_string(string, alterations) {
+    alterations = alterations.slice().sort(function compare(a, b) {
+        return a.range[0] - b.range[0] || a.range[1] - b.range[1];
+    });
+    let end = 0;
+    return alterations.map(function ({range, replacement}) {
+        const chunk = string.slice(end, range[0]) + replacement;
+        end = range[1];
+        return chunk;
+    }).concat(
+        string.slice(end)
+    ).join(
+        ""
+    );
+}
 
 function encode_bytes_as_data_url(bytes, type) {
 
@@ -211,15 +229,15 @@ const editor = webcode({
     highlight,
     on_input: update_page_url,
     on_keydown(event) {
-        const text = editor.get_text();
-        const cursor = editor.get_cursor();
-        const cursor_start = Math.min(...cursor);
-        const cursor_end = Math.max(...cursor);
-        const is_collapsed = cursor_start === cursor_end;
-        const pre = text.slice(0, cursor_start);
-        const post = text.slice(cursor_end);
-        const line_pre = pre.split("\n").pop();
-        const line_post = post.split("\n").shift();
+        let text = editor.get_text();
+        let cursor = editor.get_cursor();
+        let cursor_start = Math.min(...cursor);
+        let cursor_end = Math.max(...cursor);
+        let is_collapsed = cursor_start === cursor_end;
+        let pre = text.slice(0, cursor_start);
+        let post = text.slice(cursor_end);
+        let line_pre = pre.split("\n").pop();
+        let line_post = post.split("\n").shift();
 
 // Increase indentation.
 
@@ -257,6 +275,67 @@ const editor = webcode({
         ) {
             event.preventDefault();
             editor.insert_text("\n" + tab);
+        }
+
+// Comment or uncomment.
+
+        if (event.key === "/" && editor.is_command(event)) {
+            event.preventDefault();
+            let line_start = cursor_start - line_pre.length;
+            let line_end = cursor_end + line_post.length;
+            const lines = text.slice(line_start, line_end).split("\n");
+            const matches_array = lines.map(function (line) {
+                return line.match(rx_comment);
+            });
+            const uncomment = matches_array.some(Array.isArray);
+            let alterations = [];
+            let cursor_adjustment = 0;
+            lines.forEach(function (line, line_nr) {
+                if (uncomment) {
+                    const matches = matches_array[line_nr];
+                    if (matches) {
+
+// Capturing groups:
+//  [1] indentation
+//  [2] ";" or "; "
+
+                        if (line_nr === 0 && (
+                            cursor_start >= line_start + matches[0].length
+                        )) {
+                            cursor_start -= matches[2].length;
+                        }
+                        cursor_end = Math.max(
+                            cursor_start,
+                            cursor_end - matches[2].length
+                        );
+                        alterations.push({
+                            range: [
+                                line_start + matches[1].length,
+                                line_start + matches[0].length
+                            ],
+                            replacement: ""
+                        });
+                    }
+                } else {
+                    if (line !== "") {
+                        if (line_nr === 0) {
+                            cursor_start += 2;
+                        }
+                        cursor_end += 2;
+                        alterations.push({
+                            range: [line_start, line_start],
+                            replacement: "; "
+                        });
+                    }
+                }
+                line_start += line.length + 1; // account for \n
+            });
+            editor.set_text(alter_string(text, alterations));
+            editor.set_cursor(
+                cursor[0] <= cursor[1]
+                ? [cursor_start, cursor_end]
+                : [cursor_end, cursor_start]
+            );
         }
     }
 });
