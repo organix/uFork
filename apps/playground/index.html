@@ -39,6 +39,9 @@
             align-items: flex-start;
             overflow-y: auto; /* scroll */
         }
+        #editor > * {
+            min-height: 100%;
+        }
         #line_numbers {
             flex: 0 1 0%;
             color: gray;
@@ -48,9 +51,9 @@
         }
         #source {
             flex: 1 1 100%;
-            white-space: pre !important; /* override Codejar */
-            overflow-y: visible !important; /* override Codejar */
             padding: 10px;
+            outline: none;
+            caret-color: white;
         }
         #devices {
             flex: 1 1 30%;
