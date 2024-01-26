@@ -4,6 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width" />
     <title>μFork</title>
+    <link rel="icon" type="image/png" sizes="128x128" href="favicon-128.png">
 </head>
 <body>
     <h1>μFork</h1>
@@ -13,6 +14,20 @@
         automatic memory-management,
         and fine-grained resource limits.</p>
     <p><img src="ufork_logo.svg" alt="μFork logo" style="max-width: 100%;"></p>
+    <p>
+        Applying the design principle of actors-all-the-way-down,
+        uFork implements a virtual-machine that is memory-safe
+        at the level of assembly-language instructions.
+        All operations occur in the context of an actor message-event,
+        which provides object-capability security throughout the system.
+        The effects of individual instructions are isolated
+        so they can only affect the state of their host actor,
+        until a transactional commit releases additional asynchronous message-events
+        into the system.
+        This isolation allows interleaved execution of multiple instruction streams,
+        so multiple actors can make progress concurrently.
+        The virtual-machine implements automatic memory management with garbage-collection,
+        and fine-grained resource quotas are enforced by the processor.</p>
     <p>The blog post
         "<a href="http://www.dalnefre.com/wp/2022/08/memory-safety-simplifies-microprocessor-design/">Memory Safety Simplifies Microprocessor Design</a>"
         describes the high-level architecture,
