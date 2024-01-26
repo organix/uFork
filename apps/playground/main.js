@@ -1,6 +1,6 @@
-/*jslint browser, devel */
+/*jslint browser */
 
-import {CodeJar} from "./codejar_4.2.0.js"; // https://esm.sh/codejar@4.2.0
+import webcode from "./webcode.js";
 import parseq from "https://ufork.org/lib/parseq.js";
 import requestorize from "https://ufork.org/lib/rq/requestorize.js";
 import tokenize from "https://ufork.org/lib/asm_tokenize.js";
@@ -42,7 +42,7 @@ function highlight(element) {
     const source = element.textContent;
     const ast = parse(tokenize(source));
     let line_nr = 1;
-    line_numbers_element.textContent = line_nr;
+    line_numbers_element.textContent = String(line_nr);
     element.innerHTML = "";
     ast.tokens.forEach(function (token) {
         if (token.kind === "newline") {
@@ -205,22 +205,68 @@ function run(text) {
     });
 }
 
-const jar = new CodeJar(
-    source_element,
+const tab = "    ";
+const editor = webcode({
+    element: source_element,
     highlight,
-    {
-        tab: "    ",
-        addClosing: false,
-        indentOn: /(\.import|\.export|:)$/
+    on_input: update_page_url,
+    on_keydown(event) {
+        const text = editor.get_text();
+        const cursor = editor.get_cursor();
+        const cursor_start = Math.min(...cursor);
+        const cursor_end = Math.max(...cursor);
+        const is_collapsed = cursor_start === cursor_end;
+        const pre = text.slice(0, cursor_start);
+        const post = text.slice(cursor_end);
+        const line_pre = pre.split("\n").pop();
+        const line_post = post.split("\n").shift();
+
+// Increase indentation.
+
+        if (event.key === "Tab") {
+            event.preventDefault();
+            editor.insert_text(tab.slice(line_pre.length % tab.length));
+        }
+
+// Decrease indentation.
+
+        if (event.key === "Backspace" && is_collapsed && line_pre.length > 0) {
+            const excess = tab.slice(0, 1 + (line_pre.length - 1) % tab.length);
+            if (line_pre.endsWith(excess)) {
+                event.preventDefault();
+                editor.set_cursor([
+                    cursor_start - excess.length,
+                    cursor_start
+                ]);
+                editor.insert_text("");
+            }
+        }
+
+// Increase or maintain indentation following a linebreak.
+
+        if (
+            event.key === "Enter"
+            && is_collapsed
+            && (
+                line_pre.endsWith(":")
+                || line_pre === ".import"
+                || line_pre === ".export"
+                || (line_pre.startsWith(tab) && line_pre !== tab)
+            )
+            && line_post === ""
+        ) {
+            event.preventDefault();
+            editor.insert_text("\n" + tab);
+        }
     }
-);
+});
+
 fetch_source().then(function (source) {
-    jar.updateCode(source);
-    jar.onUpdate(update_page_url);
+    editor.set_text(source);
 }).catch(function (error) {
-    jar.updateCode("; Failed to load source: " + error.message);
+    editor.set_text("; Failed to load source: " + error.message);
 });
 run_button.onclick = function () {
-    run(jar.toString());
+    run(editor.get_text());
 };
 clear_output_button.onclick = clear_output;
