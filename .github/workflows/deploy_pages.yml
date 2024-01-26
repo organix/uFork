@@ -20,7 +20,7 @@ jobs:
 # Create the web root directory.
 
       - run: mkdir _site
-      - run: cp -R site _site
+      - run: cp -R site/* _site
 
 # Deploy the libs.
 
