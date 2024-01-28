@@ -11,6 +11,7 @@ import clock_device from "https://ufork.org/js/clock_device.js";
 import random_device from "https://ufork.org/js/random_device.js";
 import blob_device from "https://ufork.org/js/blob_device.js";
 import timer_device from "https://ufork.org/js/timer_device.js";
+import io_device from "https://ufork.org/js/io_device.js";
 const wasm_url = import.meta.resolve("https://ufork.org/wasm/ufork.wasm");
 const dev_lib_url = import.meta.resolve("../../lib/");
 
@@ -21,6 +22,7 @@ const line_numbers_element = document.getElementById("line_numbers");
 const output_element = document.getElementById("output");
 const run_button = document.getElementById("run");
 const source_element = document.getElementById("source");
+const info_checkbox = document.getElementById("info");
 
 function alter_string(string, alterations) {
 
@@ -144,6 +146,15 @@ function clear_output() {
     output_element.textContent = "";
 }
 
+function append(node) {
+    output_element.append(node);
+    output_element.scrollTo({
+        top: output_element.scrollHeight,
+        left: 0,
+        behavior: "smooth"
+    });
+}
+
 function append_output(log_level, ...values) {
     const div = document.createElement("div");
     div.className = (
@@ -156,12 +167,7 @@ function append_output(log_level, ...values) {
         )
     );
     div.textContent = values.join(" ");
-    output_element.append(div);
-    output_element.scrollTo({
-        top: output_element.scrollHeight,
-        left: 0,
-        behavior: "smooth"
-    });
+    append(div);
 }
 
 function update_page_url(text) {
@@ -175,6 +181,23 @@ function update_page_url(text) {
 
 function run(text) {
     let core;
+    let on_stdin;
+
+    output_element.contentEditable = "true";
+    output_element.spellcheck = false;
+    output_element.onkeydown = function (event) {
+        if (!event.ctrlKey && !event.metaKey) {
+            event.preventDefault();
+            const glyphs = Array.from(event.key);
+            if (glyphs.length === 1) {
+                return on_stdin(event.key);
+            }
+            if (event.key === "Enter") {
+                return on_stdin("\n");
+            }
+            on_stdin(String.fromCodePoint(event.keyCode));
+        }
+    };
 
     function run_loop() {
         const status = core.h_run_loop(0);
@@ -213,6 +236,12 @@ function run(text) {
             random_device(core);
             blob_device(core);
             timer_device(core);
+            on_stdin = io_device(core, function (text) {
+                const span = document.createElement("span");
+                span.classList.add("io");
+                span.textContent = text;
+                append(span);
+            });
             if (imported_module.boot === undefined) {
                 throw new Error("Missing 'boot' export.");
             }
@@ -398,3 +427,6 @@ run_button.onclick = function () {
     run(editor.get_text());
 };
 clear_output_button.onclick = clear_output;
+info_checkbox.oninput = function () {
+    output_element.classList.toggle("info");
+};
