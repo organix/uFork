@@ -14,7 +14,7 @@ import timer_device from "https://ufork.org/js/timer_device.js";
 const wasm_url = import.meta.resolve("https://ufork.org/wasm/ufork.wasm");
 const dev_lib_url = import.meta.resolve("../../lib/");
 
-const rx_comment = /^(\s*)(;\u0020?)/;
+const rx_comment = /^(\s*)(;+\u0020?)/;
 
 const clear_output_button = document.getElementById("clear_output");
 const line_numbers_element = document.getElementById("line_numbers");
@@ -23,6 +23,15 @@ const run_button = document.getElementById("run");
 const source_element = document.getElementById("source");
 
 function alter_string(string, alterations) {
+
+// Performs a series of alterations on a string and returns the new string.
+
+// The 'alterations' array contains objects like {range, replacement} where
+// 'replacement' is a string to insert at the 'range', an array like
+// [start, end] where 'start' and 'end' are positions in the original string.
+
+// The alterations should not overlap.
+
     alterations = alterations.slice().sort(function compare(a, b) {
         return a.range[0] - b.range[0] || a.range[1] - b.range[1];
     });
@@ -58,15 +67,11 @@ function encode_bytes_as_data_url(bytes, type) {
 
 function highlight(element) {
     const source = element.textContent;
-    const ast = parse(tokenize(source));
-    let line_nr = 1;
-    line_numbers_element.textContent = String(line_nr);
     element.innerHTML = "";
+    const ast = parse(tokenize(source));
     ast.tokens.forEach(function (token) {
         if (token.kind === "newline") {
-            element.append("\n");
-            line_nr += 1;
-            return line_numbers_element.append("\n" + line_nr);
+            return element.append("\n");
         }
         const text = source.slice(token.start, token.end);
         const errors = ast.errors.filter(function (error) {
@@ -181,7 +186,6 @@ function run(text) {
         wasm_url,
         on_wakeup(device_offset) {
             append_output(ufork.LOG_TRACE, "WAKE:", device_offset);
-            console.log("WAKE:", device_offset);
             run_loop();
         },
         on_log: append_output,
@@ -223,11 +227,54 @@ function run(text) {
     });
 }
 
-const tab = "    ";
+function update_line_numbers(editor) {
+    const text = editor.get_text();
+    const lines = text.split("\n");
+    let anchor;
+
+    function end_selection() {
+        source_element.focus();
+        anchor = undefined;
+    }
+
+    line_numbers_element.innerHTML = "";
+    let position = 0;
+    lines.forEach(function (line, line_nr) {
+        const element = document.createElement("line_nr");
+        element.textContent = line_nr + 1;
+        line_numbers_element.append(element);
+
+// Lines can be selected by dragging up and down the line numbers.
+
+        const line_start = position;
+        const line_end = position + line.length + 1;
+        element.onpointerdown = function () {
+            editor.set_cursor([line_start, line_end]);
+            anchor = line_start;
+        };
+        element.onpointerenter = function () {
+            if (anchor !== undefined) {
+                editor.set_cursor(
+                    line_start >= anchor
+                    ? [anchor, line_end]
+                    : [line_start, anchor]
+                );
+            }
+        };
+        element.onpointerup = end_selection;
+        element.onpointercancel = end_selection;
+        position += line.length + 1; // account for \n
+    });
+}
+
+const indent = "    ";
 const editor = webcode({
     element: source_element,
     highlight,
-    on_input: update_page_url,
+    on_input(text) {
+        update_page_url(text);
+        update_line_numbers(editor);
+    },
     on_keydown(event) {
         let text = editor.get_text();
         let cursor = editor.get_cursor();
@@ -243,13 +290,13 @@ const editor = webcode({
 
         if (event.key === "Tab") {
             event.preventDefault();
-            editor.insert_text(tab.slice(line_pre.length % tab.length));
+            editor.insert_text(indent.slice(line_pre.length % indent.length));
         }
 
 // Decrease indentation.
 
         if (event.key === "Backspace" && is_collapsed && line_pre.length > 0) {
-            const excess = tab.slice(0, 1 + (line_pre.length - 1) % tab.length);
+            const excess = indent.slice(0, 1 + (line_pre.length - 1) % indent.length);
             if (line_pre.endsWith(excess)) {
                 event.preventDefault();
                 editor.set_cursor([
@@ -269,12 +316,12 @@ const editor = webcode({
                 line_pre.endsWith(":")
                 || line_pre === ".import"
                 || line_pre === ".export"
-                || (line_pre.startsWith(tab) && line_pre !== tab)
+                || (line_pre.startsWith(indent) && line_pre !== indent)
             )
             && line_post === ""
         ) {
             event.preventDefault();
-            editor.insert_text("\n" + tab);
+            editor.insert_text("\n" + indent);
         }
 
 // Comment or uncomment.
@@ -340,10 +387,12 @@ const editor = webcode({
     }
 });
 
-fetch_source().then(function (source) {
-    editor.set_text(source);
+fetch_source().then(function (text) {
+    editor.set_text(text);
+    update_line_numbers(editor);
 }).catch(function (error) {
     editor.set_text("; Failed to load source: " + error.message);
+    update_line_numbers(editor);
 });
 run_button.onclick = function () {
     run(editor.get_text());
