@@ -44,10 +44,18 @@
         }
         #line_numbers {
             flex: 0 1 0%;
-            color: gray;
             border-right: 1px solid var(--gray);
-            padding: 10px;
+            padding: 10px 0;
+        }
+        #line_numbers > * {
+            display: block;
+            padding: 0 10px;
             text-align: right;
+            color: gray;
+            user-select: none;
+        }
+        #line_numbers > *:hover {
+            background: var(--gray);
         }
         #source {
             flex: 1 1 100%;
@@ -75,6 +83,7 @@
             font-family: Programma, monospace;
             min-height: 60px;
             overflow: auto;
+            flex-grow: 1;
         }
         #output > .warn {
             color: var(--red);
@@ -85,12 +94,21 @@
         #output > .info {
             color: gray;
         }
+        #output:not(.info) > .info {
+            display: none;
+        }
+        #output > .io {
+            color: var(--yellow);
+        }
         @media (max-width: 719px) {
             body {
                 flex-direction: column;
             }
             #devices {
                 border-top: 1px solid var(--gray);
+            }
+            #output {
+                max-height: 40vh;
             }
         }
         @media (min-width: 720px) {
@@ -156,6 +174,7 @@
     </code>
     <div id="devices">
         <div id="controls">
+            <label><input type="checkbox" id="info" /> Show trace</label>
             <button id="run">▶ Run</button>
             <button id="clear_output">⨉ Clear</button>
         </div>
