@@ -90,6 +90,34 @@ function alter_cursor(cursor, alterations) {
     );
 }
 
+function partially_decode_query_string(url) {
+
+// The URL object percent-encodes all special characters in the query string,
+// making embedded URLs much harder to read. This function decodes just the
+// query portion of a URL, except for "?", "&", "=", and ""#" characters.
+
+    const rx_percent_encoded = /%[0-7][0-9A-F]/g;
+    const [base, query] = String(url).split("?");
+    if (query === undefined) {
+        return base;
+    }
+    return base + "?" + query.replace(rx_percent_encoded, function (encoded) {
+        const decoded = decodeURIComponent(encoded);
+        return (
+            (
+                decoded === "?"
+                || decoded === "&"
+                || decoded === "="
+                || decoded === "#"
+            )
+            ? encoded
+            : decoded
+        );
+    });
+}
+
+//debug partially_decode_query_string("http://a.b/c?d=http%3A%2F%2Fe.f%3Fg");
+
 function encode_bytes_as_data_url(bytes, type) {
 
 // The atob and btoa functions provided by the browser do not support Unicode,
@@ -133,11 +161,9 @@ function decompress(base64) {
 // Decompresses Base64-encoded, gzipped text. The returned Promise resolves to
 // the text string.
 
-// 'fetch' decodes the Base64 for us.
+// 'fetch' performs Base64 decoding for us.
 
-    return fetch(
-        "data:text/plain;base64," + base64
-    ).then(function (response) {
+    return fetch("data:text/plain;base64," + base64).then(function (response) {
         return response.arrayBuffer();
     }).then(function (array_buffer) {
 
@@ -197,11 +223,15 @@ function read_state(name) {
 function write_state(name, value) {
     const url = new URL(location.href);
     if (value !== undefined) {
-        url.searchParams.set(name, value);
+
+// URLSearchParams replaces "+" characters with spaces, corrupting
+// Base64-encoded data. That quirk is avoided by percent-encoding the value.
+
+        url.searchParams.set(name, encodeURIComponent(value));
     } else {
         url.searchParams.delete(name);
     }
-    history.replaceState(undefined, "", url);
+    history.replaceState(undefined, "", partially_decode_query_string(url));
 }
 
 function fetch_source() {
