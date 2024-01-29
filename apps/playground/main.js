@@ -16,7 +16,6 @@ const wasm_url = import.meta.resolve("https://ufork.org/wasm/ufork.wasm");
 const dev_lib_url = import.meta.resolve("../../lib/");
 
 const rx_comment = /^(\s*)(;+\u0020?)/;
-
 const clear_output_button = document.getElementById("clear_output");
 const line_numbers_element = document.getElementById("line_numbers");
 const output_element = document.getElementById("output");
@@ -54,7 +53,7 @@ function alter_string(string, alterations) {
 function alter_cursor(cursor, alterations) {
 
 // Adjusts the cursor to accomodate an array of alterations. The cursor expands
-// to encompass any alterations with which it overlaps.
+// to encompass any alterations that it overlaps.
 
     const cursor_start = Math.min(...cursor);
     const cursor_end = Math.max(...cursor);
@@ -108,6 +107,51 @@ function encode_bytes_as_data_url(bytes, type) {
         reader.readAsDataURL(new Blob([bytes], {type}));
     });
 }
+
+function compress(text) {
+
+// Compresses a string using gzip. The returned Promise resolves to a Base64
+// string.
+
+    const utf8 = new Blob([text]).stream();
+    const gzip = new window.CompressionStream("gzip");
+    return new Response(
+        utf8.pipeThrough(gzip)
+    ).arrayBuffer(
+    ).then(
+        encode_bytes_as_data_url
+    ).then(function (data_url) {
+
+// Discard the data URL's prefix, leaving only Base64.
+
+        return data_url.split("base64,")[1];
+    });
+}
+
+function decompress(base64) {
+
+// Decompresses Base64-encoded, gzipped text. The returned Promise resolves to
+// the text string.
+
+// 'fetch' decodes the Base64 for us.
+
+    return fetch(
+        "data:text/plain;base64," + base64
+    ).then(function (response) {
+        return response.arrayBuffer();
+    }).then(function (array_buffer) {
+
+// Then the bytes are decompressed and UTF-8 decoded.
+
+        const compressed = new Blob([array_buffer]).stream();
+        const gunzip = new window.DecompressionStream("gzip");
+        return new Response(
+            compressed.pipeThrough(gunzip)
+        ).text();
+    });
+}
+
+//debug compress("hello there 🧙‍♂️").then(decompress).then(console.log);
 
 function highlight(element) {
     const source = element.textContent;
@@ -163,13 +207,7 @@ function write_state(name, value) {
 function fetch_source() {
     const text = read_state("text");
     if (text !== undefined) {
-
-// Use 'fetch' to Base64 decode the UTF-8 encoded text.
-
-        const data_url = "data:text/plain;base64," + text;
-        return fetch(data_url).then(function (response) {
-            return response.text();
-        });
+        return decompress(text);
     }
     const file = read_state("file");
     if (file !== undefined) {
@@ -213,11 +251,8 @@ function append_output(log_level, ...values) {
 }
 
 function update_page_url(text) {
-    return encode_bytes_as_data_url(
-        new TextEncoder().encode(text),
-        "text/plain"
-    ).then(function (data_url) {
-        write_state("text", data_url.split("base64,")[1]);
+    return compress(text).then(function (base64) {
+        write_state("text", base64);
     });
 }
 
