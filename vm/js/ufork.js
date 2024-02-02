@@ -1525,7 +1525,12 @@ function make_core({
                     h_install([[dev_id, dev_cap]], {
                         host_log(x) { // (i32) -> nil
                             const u = (x >>> 0);  // convert i32 -> u32
-                            u_debug(u_print(u), "->", u_pprint(u));
+                            //u_debug(u_print(u), "->", u_pprint(u));
+                            let s = u_print(u);
+                            if (u_in_mem(u)) {
+                                s += ": " + u_pprint(u);
+                            }
+                            u_debug(s);
                         }
                     });
                 }
