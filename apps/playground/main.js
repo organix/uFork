@@ -16,13 +16,14 @@ const wasm_url = import.meta.resolve("https://ufork.org/wasm/ufork.wasm");
 const dev_lib_url = import.meta.resolve("../../lib/");
 
 const rx_comment = /^(\s*)(;+\u0020?)/;
-
 const clear_output_button = document.getElementById("clear_output");
 const line_numbers_element = document.getElementById("line_numbers");
 const output_element = document.getElementById("output");
 const run_button = document.getElementById("run");
 const source_element = document.getElementById("source");
 const info_checkbox = document.getElementById("info");
+
+let line_selection_anchor;
 
 function alter_string(string, alterations) {
 
@@ -32,7 +33,7 @@ function alter_string(string, alterations) {
 // 'replacement' is a string to insert at the 'range', an array like
 // [start, end] where 'start' and 'end' are positions in the original string.
 
-// The alterations should not overlap.
+// The alterations may be provided in any order, but should not overlap.
 
     alterations = alterations.slice().sort(function compare(a, b) {
         return a.range[0] - b.range[0] || a.range[1] - b.range[1];
@@ -48,6 +49,74 @@ function alter_string(string, alterations) {
         ""
     );
 }
+
+function alter_cursor(cursor, alterations) {
+
+// Adjusts the cursor to accomodate an array of alterations. The cursor expands
+// to encompass any alterations that it overlaps.
+
+    const cursor_start = Math.min(...cursor);
+    const cursor_end = Math.max(...cursor);
+    let start = cursor_start;
+    let end = cursor_end;
+    alterations.forEach(function ({range, replacement}) {
+        const [range_start, range_end] = range;
+        const difference = replacement.length - (range_end - range_start);
+        if (cursor_end > range_start) {
+
+// rrrr         rrrr        rrrr        rrrr
+//      cccc      cccc       cc       cccc
+
+            end += difference + Math.max(0, range_end - cursor_end);
+        }
+        if (cursor_start < range_end) {
+
+//      rrrr      rrrr      rrrr         rr       rrrr
+// cccc         cccc         cc         cccc        cccc
+
+            start += Math.min(0, range_start - cursor_start);
+        } else {
+
+// rrrr
+//      cccc
+
+            start += difference;
+        }
+    });
+    return (
+        cursor[0] > cursor[1]
+        ? [end, start]
+        : [start, end]
+    );
+}
+
+function partially_decode_query_string(url) {
+
+// The URL object percent-encodes all special characters in the query string,
+// making embedded URLs much harder to read. This function decodes just the
+// query portion of a URL, except for "?", "&", "=", and ""#" characters.
+
+    const rx_percent_encoded = /%[0-7][0-9A-F]/g;
+    const [base, query] = String(url).split("?");
+    if (query === undefined) {
+        return base;
+    }
+    return base + "?" + query.replace(rx_percent_encoded, function (encoded) {
+        const decoded = decodeURIComponent(encoded);
+        return (
+            (
+                decoded === "?"
+                || decoded === "&"
+                || decoded === "="
+                || decoded === "#"
+            )
+            ? encoded
+            : decoded
+        );
+    });
+}
+
+//debug partially_decode_query_string("http://a.b/c?d=http%3A%2F%2Fe.f%3Fg");
 
 function encode_bytes_as_data_url(bytes, type) {
 
@@ -66,6 +135,49 @@ function encode_bytes_as_data_url(bytes, type) {
         reader.readAsDataURL(new Blob([bytes], {type}));
     });
 }
+
+function compress(text) {
+
+// Compresses a string using gzip. The returned Promise resolves to a Base64
+// string.
+
+    const utf8 = new Blob([text]).stream();
+    const gzip = new window.CompressionStream("gzip");
+    return new Response(
+        utf8.pipeThrough(gzip)
+    ).arrayBuffer(
+    ).then(
+        encode_bytes_as_data_url
+    ).then(function (data_url) {
+
+// Discard the data URL's prefix, leaving only Base64.
+
+        return data_url.split("base64,")[1];
+    });
+}
+
+function decompress(base64) {
+
+// Decompresses Base64-encoded, gzipped text. The returned Promise resolves to
+// the text string.
+
+// 'fetch' performs Base64 decoding for us.
+
+    return fetch("data:text/plain;base64," + base64).then(function (response) {
+        return response.arrayBuffer();
+    }).then(function (array_buffer) {
+
+// Then the bytes are decompressed and UTF-8 decoded.
+
+        const compressed = new Blob([array_buffer]).stream();
+        const gunzip = new window.DecompressionStream("gzip");
+        return new Response(
+            compressed.pipeThrough(gunzip)
+        ).text();
+    });
+}
+
+//debug compress("hello there 🧙‍♂️").then(decompress).then(console.log);
 
 function highlight(element) {
     const source = element.textContent;
@@ -111,23 +223,21 @@ function read_state(name) {
 function write_state(name, value) {
     const url = new URL(location.href);
     if (value !== undefined) {
-        url.searchParams.set(name, value);
+
+// URLSearchParams replaces "+" characters with spaces, corrupting
+// Base64-encoded data. That quirk is avoided by percent-encoding the value.
+
+        url.searchParams.set(name, encodeURIComponent(value));
     } else {
         url.searchParams.delete(name);
     }
-    history.replaceState(undefined, "", url);
+    history.replaceState(undefined, "", partially_decode_query_string(url));
 }
 
 function fetch_source() {
     const text = read_state("text");
     if (text !== undefined) {
-
-// Use 'fetch' to Base64 decode the UTF-8 encoded text.
-
-        const data_url = "data:text/plain;base64," + text;
-        return fetch(data_url).then(function (response) {
-            return response.text();
-        });
+        return decompress(text);
     }
     const file = read_state("file");
     if (file !== undefined) {
@@ -146,8 +256,7 @@ function clear_output() {
     output_element.textContent = "";
 }
 
-function append(node) {
-    output_element.append(node);
+function scroll_to_latest_output() {
     output_element.scrollTo({
         top: output_element.scrollHeight,
         left: 0,
@@ -167,15 +276,13 @@ function append_output(log_level, ...values) {
         )
     );
     div.textContent = values.join(" ");
-    append(div);
+    output_element.append(div);
+    scroll_to_latest_output();
 }
 
 function update_page_url(text) {
-    return encode_bytes_as_data_url(
-        new TextEncoder().encode(text),
-        "text/plain"
-    ).then(function (data_url) {
-        write_state("text", data_url.split("base64,")[1]);
+    return compress(text).then(function (base64) {
+        write_state("text", base64);
     });
 }
 
@@ -240,7 +347,8 @@ function run(text) {
                 const span = document.createElement("span");
                 span.classList.add("io");
                 span.textContent = text;
-                append(span);
+                output_element.append(span);
+                scroll_to_latest_output();
             });
             if (imported_module.boot === undefined) {
                 throw new Error("Missing 'boot' export.");
@@ -256,15 +364,16 @@ function run(text) {
     });
 }
 
+function end_line_selection() {
+    if (line_selection_anchor !== undefined) {
+        source_element.focus();
+        line_selection_anchor = undefined;
+    }
+}
+
 function update_line_numbers(editor) {
     const text = editor.get_text();
     const lines = text.split("\n");
-    let anchor;
-
-    function end_selection() {
-        source_element.focus();
-        anchor = undefined;
-    }
 
     line_numbers_element.innerHTML = "";
     let position = 0;
@@ -277,21 +386,21 @@ function update_line_numbers(editor) {
 
         const line_start = position;
         const line_end = position + line.length + 1;
-        element.onpointerdown = function () {
-            editor.set_cursor([line_start, line_end]);
-            anchor = line_start;
+        element.onpointerdown = function (event) {
+            if (event.buttons === 1) {
+                editor.set_cursor([line_start, line_end]);
+                line_selection_anchor = line_start;
+            }
         };
         element.onpointerenter = function () {
-            if (anchor !== undefined) {
+            if (line_selection_anchor !== undefined) {
                 editor.set_cursor(
-                    line_start >= anchor
-                    ? [anchor, line_end]
-                    : [line_start, anchor]
+                    line_start >= line_selection_anchor
+                    ? [line_selection_anchor, line_end]
+                    : [line_start, line_selection_anchor]
                 );
             }
         };
-        element.onpointerup = end_selection;
-        element.onpointercancel = end_selection;
         position += line.length + 1; // account for \n
     });
 }
@@ -305,15 +414,15 @@ const editor = webcode({
         update_line_numbers(editor);
     },
     on_keydown(event) {
-        let text = editor.get_text();
-        let cursor = editor.get_cursor();
-        let cursor_start = Math.min(...cursor);
-        let cursor_end = Math.max(...cursor);
-        let is_collapsed = cursor_start === cursor_end;
-        let pre = text.slice(0, cursor_start);
-        let post = text.slice(cursor_end);
-        let line_pre = pre.split("\n").pop();
-        let line_post = post.split("\n").shift();
+        const text = editor.get_text();
+        const cursor = editor.get_cursor();
+        const cursor_start = Math.min(...cursor);
+        const cursor_end = Math.max(...cursor);
+        const is_collapsed = cursor_start === cursor_end;
+        const pre = text.slice(0, cursor_start);
+        const post = text.slice(cursor_end);
+        const line_pre = pre.split("\n").pop();
+        const line_post = post.split("\n").shift();
 
 // Increase indentation.
 
@@ -325,7 +434,10 @@ const editor = webcode({
 // Decrease indentation.
 
         if (event.key === "Backspace" && is_collapsed && line_pre.length > 0) {
-            const excess = indent.slice(0, 1 + (line_pre.length - 1) % indent.length);
+            const excess = indent.slice(
+                0,
+                1 + (line_pre.length - 1) % indent.length
+            );
             if (line_pre.endsWith(excess)) {
                 event.preventDefault();
                 editor.set_cursor([
@@ -365,7 +477,6 @@ const editor = webcode({
             });
             const uncomment = matches_array.some(Array.isArray);
             let alterations = [];
-            let cursor_adjustment = 0;
             lines.forEach(function (line, line_nr) {
                 if (uncomment) {
                     const matches = matches_array[line_nr];
@@ -373,17 +484,8 @@ const editor = webcode({
 
 // Capturing groups:
 //  [1] indentation
-//  [2] ";" or "; "
+//  [2] semicolon(s) optionally followed by a space
 
-                        if (line_nr === 0 && (
-                            cursor_start >= line_start + matches[0].length
-                        )) {
-                            cursor_start -= matches[2].length;
-                        }
-                        cursor_end = Math.max(
-                            cursor_start,
-                            cursor_end - matches[2].length
-                        );
                         alterations.push({
                             range: [
                                 line_start + matches[1].length,
@@ -394,10 +496,6 @@ const editor = webcode({
                     }
                 } else {
                     if (line !== "") {
-                        if (line_nr === 0) {
-                            cursor_start += 2;
-                        }
-                        cursor_end += 2;
                         alterations.push({
                             range: [line_start, line_start],
                             replacement: "; "
@@ -407,11 +505,7 @@ const editor = webcode({
                 line_start += line.length + 1; // account for \n
             });
             editor.set_text(alter_string(text, alterations));
-            editor.set_cursor(
-                cursor[0] <= cursor[1]
-                ? [cursor_start, cursor_end]
-                : [cursor_end, cursor_start]
-            );
+            editor.set_cursor(alter_cursor(cursor, alterations));
         }
     }
 });
@@ -429,4 +523,7 @@ run_button.onclick = function () {
 clear_output_button.onclick = clear_output;
 info_checkbox.oninput = function () {
     output_element.classList.toggle("info");
+    scroll_to_latest_output();
 };
+document.body.onpointerup = end_line_selection;
+document.body.onpointercancel = end_line_selection;
