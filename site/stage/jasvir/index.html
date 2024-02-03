@@ -84,24 +84,47 @@
           <h2 class="title">Actor-based</h2>
           <p class="text">
             µFork uses a new processor architecture driven by asynchronous message-events. This model,
-            called the actor model, makes it ideally suited to writing distributed
-            programs.
-        </div>
+            called the actor model, is well suited as the target processor infrastructure for writing
+            concurrent programs.
+            <details class="text">
+              <summary class="text">Read more...</summary>
+              The actor Model is a style of software architecture where the unit of computation is called an actor.
+              Actors are similar to objects in object-oriented programming in that an actor, like an object encapsulates behavior and
+              state. Unlike objects, actors run concurrently, send messages asynchronously and do not share state.
+            </details>
+          </div>
         <div class="feature">
           <span class="badge">🦺</span>
-          <h2 class="title">Memory-safe</h2>
+          <h2 class="title">Safety</h2>
           <p class="text">
-            µFork is built to avoid the need for shared mutable state and is designed with memory safety
-            from the beginning. This
-            simplifies its microprocessor design, uses less logic
+            µFork is built to avoid the need for shared mutable state and is designed with safety
+            from the beginning. This simplifies its microprocessor design, uses less logic
             and consumes less power.
-        </div>
+            <details class="text">
+              <summary class="text">Read more...</summary>
+              One of the classic sources of bugs and hard to understand code arises from the use of shared mutable state. µFork uses
+              the realization that shared state, if immutable, does not cause these kinds of problems. Nor does mutable state, if the
+              state is not shared. µFork uses the actor model to give controlled mutable state where state which is private to an
+              actor is effectively mutable but state that is shared is immutable.
+            </details>
+          </div>
         <div class="feature">
           <span class="badge">🔑</span>
-          <h2 class="title">Object-capability secure</h2>
-          <p class="text">µFork is designed around object-capabilties and relies on the principle of least
+          <h2 class="title">Fine-grained Security</h2>
+          <p class="text">
+            µFork's design, based around actors and object-capabilties, relies on the principle of least
             authority to
-            make it easy to create and run distributed programs safely.</p>
+            make it easy to create and run programs safely with fine-grained control over how programs use resources like memory,
+            CPU, networks and other devices.
+          </p>
+          <details class="text">
+            <summary class="text">Read more...</summary>
+              The object-capability model is a software security model. A capability describes a transferable right to perform
+              operations on a given object. In µFork, having a reference to an actor gives you the <i>de facto</i> authorization to
+              use it - specifically to send it messages. Among other
+              things, the typical split between kernel and user-space is rendered unnecessary and eliminates the cost of the calls
+              between the two.
+          </details>
         </div>
       </section>
       <section>

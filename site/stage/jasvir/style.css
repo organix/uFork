@@ -14,6 +14,18 @@ ul {
   padding-left: 1rem;
 }
 
+details {
+  width: 100%;
+}
+
+details > summary {
+  list-style: none;
+}
+
+details[open] summary {
+  display: none;
+}
+
 .container {
   width: 100%;
   margin: 0 0;
