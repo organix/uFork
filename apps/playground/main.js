@@ -1,6 +1,8 @@
 /*jslint browser */
 
 import webcode from "./webcode.js";
+import base64 from "https://ufork.org/lib/base64.js";
+import gzip from "https://ufork.org/lib/gzip.js";
 import parseq from "https://ufork.org/lib/parseq.js";
 import requestorize from "https://ufork.org/lib/rq/requestorize.js";
 import tokenize from "https://ufork.org/lib/asm_tokenize.js";
@@ -118,67 +120,6 @@ function partially_decode_query_string(url) {
 
 //debug partially_decode_query_string("http://a.b/c?d=http%3A%2F%2Fe.f%3Fg");
 
-function encode_bytes_as_data_url(bytes, type) {
-
-// The atob and btoa functions provided by the browser do not support Unicode,
-// so the only alternative, apart from reimplementing Base64 ourselves, is to
-// abuse the FileReader.
-
-    return new Promise(function (resolve, reject) {
-        const reader = new FileReader();
-        reader.onload = function () {
-            return resolve(reader.result);
-        };
-        reader.onerror = function () {
-            return reject(reader.error);
-        };
-        reader.readAsDataURL(new Blob([bytes], {type}));
-    });
-}
-
-function compress(text) {
-
-// Compresses a string using gzip. The returned Promise resolves to a Base64
-// string.
-
-    const utf8 = new Blob([text]).stream();
-    const gzip = new window.CompressionStream("gzip");
-    return new Response(
-        utf8.pipeThrough(gzip)
-    ).arrayBuffer(
-    ).then(
-        encode_bytes_as_data_url
-    ).then(function (data_url) {
-
-// Discard the data URL's prefix, leaving only Base64.
-
-        return data_url.split("base64,")[1];
-    });
-}
-
-function decompress(base64) {
-
-// Decompresses Base64-encoded, gzipped text. The returned Promise resolves to
-// the text string.
-
-// 'fetch' performs Base64 decoding for us.
-
-    return fetch("data:text/plain;base64," + base64).then(function (response) {
-        return response.arrayBuffer();
-    }).then(function (array_buffer) {
-
-// Then the bytes are decompressed and UTF-8 decoded.
-
-        const compressed = new Blob([array_buffer]).stream();
-        const gunzip = new window.DecompressionStream("gzip");
-        return new Response(
-            compressed.pipeThrough(gunzip)
-        ).text();
-    });
-}
-
-//debug compress("hello there 🧙‍♂️").then(decompress).then(console.log);
-
 function highlight(element) {
     const source = element.textContent;
     element.innerHTML = "";
@@ -237,7 +178,9 @@ function write_state(name, value) {
 function fetch_source() {
     const text = read_state("text");
     if (text !== undefined) {
-        return decompress(text);
+        return base64.decode(text).then(gzip.decode).then(function (utf8) {
+            return new TextDecoder().decode(utf8);
+        });
     }
     const file = read_state("file");
     if (file !== undefined) {
@@ -281,7 +224,7 @@ function append_output(log_level, ...values) {
 }
 
 function update_page_url(text) {
-    return compress(text).then(function (base64) {
+    return gzip.encode(text).then(base64.encode).then(function (base64) {
         write_state("text", base64);
     });
 }
