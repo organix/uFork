@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>μFork</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css"
+    integrity="sha512-1ycn6IcaQQ40/MKBW2W4Rhis/DbILU74C1vSrLJxCq57o941Ym01SwNsOMqvEBFlcgUa6xLiPY/NS5R+E6ztJQ=="
+    crossorigin="anonymous" referrerpolicy="no-referrer" />
+</head>
+
+<body>
+  <div class="container">
+    <header>
+      <nav>
+        <ul>
+          <li>
+            <ul class="menu">
+              <li class="menu-item">
+                <a href="#">Documentation</a>
+                <ul class="drop-menu">
+                  <li class="drop-menu-item"><a
+                      href="https://github.com/organix/uFork/blob/main/docs/summary.md">Project Summary</a></li>
+                  <li class="drop-menu-item"><a href="https://github.com/organix/uFork/blob/main/docs/ufork.md">Virtual
+                      Machine description</a></li>
+                  <li class="drop-menu-item"><a
+                      href="https://github.com/organix/uFork/blob/main/docs/proto.md/organix/uFork/blob/main/docs/proto.md">Actor
+                      Protocol Design</a></li>
+                  <li class="drop-menu-item"><a href="https://github.com/organix/uFork/blob/main/docs/ocaps.md">Object
+                      Capabilities</a></li>
+                  <li class="drop-menu-item"><a
+                      href="https://github.com/organix/uFork/blob/main/docs/ir.md">Intermediate Representation</a></li>
+                  <li class="drop-menu-item"><a href="https://github.com/organix/uFork/blob/main/docs/asm.md">Assembly
+                      Language Reference</a></li>
+                  <li class="drop-menu-item"><a
+                      href="https://github.com/organix/uFork/blob/main/docs/scheme.md">LISP/Scheme compiler</a></li>
+                  <li class="drop-menu-item"><a href="https://github.com/organix/uFork/blob/main/docs/awp.md">Actor Wire
+                      Protocol (AWP)</a></li>
+                  <li class="drop-menu-item"><a href="https://github.com/organix/uFork/blob/main/docs/awp_device.md">AWP
+                      Network</a></li>
+                  <li class="drop-menu-item"><a href="https://github.com/organix/uFork/blob/main/docs/vm.md">Virtual
+                      Machine Implementation</a></li>
+                  <li class="drop-menu-item"><a href="https://github.com/organix/uFork/blob/main/docs/io_dev.md">Console
+                      Input/Output</a></li>
+                  <li class="drop-menu-item"><a
+                      href="https://github.com/organix/uFork/blob/main/docs/blob_dev.md">Binary Large-Object (blob)</a>
+                  </li>
+                  <li class="drop-menu-item"><a
+                      href="https://github.com/organix/uFork/blob/main/docs/gc.md">Garbage-collected memory management
+                    </a></li>
+                </ul>
+              </li>
+              <li class="menu-item">
+                <a href="https://ufork.org/playground/">Playground</a>
+                <ul class="drop-menu">
+                  <li class="drop-menu-item">
+                    <a
+                      href="https://ufork.org/playground/?text=OyBBIHNpbXBsZSAiSGVsbG8sIFdvcmxkISIgZXhhbXBsZQoKLmltcG9ydAogICAgZGV2OiAiaHR0cHM6Ly91Zm9yay5vcmcvbGliL2Rldi5hc20iCgpoZWxsbzogICAgICAgICAgICAgICAgICA7ICgrNzIgKzEwMSArMTA4ICsxMDggKzExMSArNjMgKzEwKQogICAgcGFpcl90ICdIJwogICAgcGFpcl90ICdlJwogICAgcGFpcl90ICdsJwogICAgcGFpcl90ICdsJwogICAgcGFpcl90ICdvJwogICAgcGFpcl90ICc%2FJwogICAgcGFpcl90ICdcbicKICAgIHJlZiAjbmlsCgpib290OiAgICAgICAgICAgICAgICAgICA7ICgpIDwtIHtjYXBzfQogICAgcHVzaCBoZWxsbyAgICAgICAgICA7IHZhbHVlCiAgICBtc2cgMCAgICAgICAgICAgICAgIDsgdmFsdWUge2NhcHN9CiAgICBwdXNoIGRldi5kZWJ1Z19rZXkgIDsgdmFsdWUge2NhcHN9IGRldi5kZWJ1Z19rZXkKICAgIGRpY3QgZ2V0ICAgICAgICAgICAgOyB2YWx1ZSBkZWJ1Z19kZXYKOyAgICBtc2cgMCAgICAgICAgICAgICAgIDsgLi4uIGRlYnVnX2RldiB7Y2Fwc30KOyAgICBwdXNoIGRldi5jbG9ja19rZXkgIDsgLi4uIGRlYnVnX2RldiB7Y2Fwc30gZGV2LmNsb2NrX2tleQo7ICAgIGRpY3QgZ2V0ICAgICAgICAgICAgOyAuLi4gY3VzdD1kZWJ1Z19kZXYgY2xvY2tfZGV2CiAgICBzZW5kIC0xICAgICAgICAgICAgIDsgLS0KICAgIGVuZCBjb21taXQKCi5leHBvcnQKICAgIGJvb3Q%3D">Hello
+                      World</a>
+                  </li>
+                </ul>
+              </li>
+            </ul>
+          </li>
+        </ul>
+      </nav>
+    </header>
+    <main>
+      <section class="hero">
+        <div>
+          <h1>µFork</h1>
+          <h3>A pure actor-based virtual-machine</h3>
+          <h3>With memory-safety and object-capability security</h3>
+        </div>
+        <div>
+          <img class="logo" src="ufork_logo.svg"></p>
+        </div>
+      </section>
+      <section class="grid">
+        <div class="feature">
+          <span class="badge">🎭</span>
+          <h2 class="title">Actor-based</h2>
+          <p class="text">
+            µFork uses a new processor architecture driven by asynchronous message-events. This model,
+            called the actor model, is well suited as the target processor infrastructure for writing
+            concurrent programs.
+            <details class="text">
+              <summary class="text">Read more...</summary>
+              The actor Model is a style of software architecture where the unit of computation is called an actor.
+              Actors are similar to objects in object-oriented programming in that an actor, like an object encapsulates behavior and
+              state. Unlike objects, actors run concurrently, send messages asynchronously and do not share state.
+            </details>
+          </div>
+        <div class="feature">
+          <span class="badge">🦺</span>
+          <h2 class="title">Safety</h2>
+          <p class="text">
+            µFork is built to avoid the need for shared mutable state and is designed with safety
+            from the beginning. This simplifies its microprocessor design, uses less logic
+            and consumes less power.
+            <details class="text">
+              <summary class="text">Read more...</summary>
+              One of the classic sources of bugs and hard to understand code arises from the use of shared mutable state. µFork uses
+              the realization that shared state, if immutable, does not cause these kinds of problems. Nor does mutable state, if the
+              state is not shared. µFork uses the actor model to give controlled mutable state where state which is private to an
+              actor is effectively mutable but state that is shared is immutable.
+            </details>
+          </div>
+        <div class="feature">
+          <span class="badge">🔑</span>
+          <h2 class="title">Fine-grained Security</h2>
+          <p class="text">
+            µFork's design, based around actors and object-capabilties, relies on the principle of least
+            authority to
+            make it easy to create and run programs safely with fine-grained control over how programs use resources like memory,
+            CPU, networks and other devices.
+          </p>
+          <details class="text">
+            <summary class="text">Read more...</summary>
+              The object-capability model is a software security model. A capability describes a transferable right to perform
+              operations on a given object. In µFork, having a reference to an actor gives you the <i>de facto</i> authorization to
+              use it - specifically to send it messages. Among other
+              things, the typical split between kernel and user-space is rendered unnecessary and eliminates the cost of the calls
+              between the two.
+          </details>
+        </div>
+      </section>
+      <section>
+        <h2 name="about">About</h2>
+        <p class="text">
+          The µFork processor architecture features:
+        </p>
+        <ul>
+          <li>instruction-level concurrency</li>
+          <li>automatic memory-management</li>
+          <li>fine-grained resource limits</li>
+        </ul>
+        <p class="text">
+          Applying the design principle of actors-all-the-way-down,
+          µFork implements a virtual-machine that is memory-safe
+          at the level of assembly-language instructions.
+          All operations occur in the context of an actor message-event,
+          which provides object-capability security throughout the system.
+          The effects of individual instructions are isolated
+          so they can only affect the state of their host actor,
+          until a transactional commit releases additional asynchronous message-events
+          into the system.
+          This isolation allows interleaved execution of multiple instruction streams,
+          so multiple actors can make progress concurrently.
+          The virtual-machine implements automatic memory management with garbage-collection,
+          and fine-grained resource quotas are enforced by the processor.</p>
+        <p class="text">The blog post
+          "<a href="http://www.dalnefre.com/wp/2022/08/memory-safety-simplifies-microprocessor-design/">Memory Safety
+            Simplifies Microprocessor Design</a>"
+          describes the high-level architecture,
+          and the rationale behind it.</p>
+      </section>
+
+      <section>
+        <h2 name="implementations">Getting Started</h2>
+        <p>
+          There are two implementations of µFork currently available.
+        </p>
+        <div class="grid">
+          <div class="implementation">
+            <h2 class="title"><a href="https://ufork.org/playground">Online Playground</a></h2>
+            <p class="text">
+              The quickest way to get started using µFork is to use the <a href="https://ufork.org/playground">online playground</a>.
+              You can start writing and running µFork programs immediately without any installation.
+              You also use the <a href="https://ufork.org/debugger">µFork debugger</a> visualize your program
+              running on the µFork virtual
+              machine and to debug it.
+            </p>
+          </div>
+          <div class="implementation">
+            <h2 class="title"><a href="https://github.com/organix/ufork-c">Scheme</a></h2>
+            <p class="text">Alternatively, if you'd like to install and run µFork, there is an <a href="https://github.com/organix/ufork-c">implementation</a> written in C that
+            compiles Scheme programs to run on a µFork interpreter. Similar to the online debugger, this version also has a GDB-like
+            debugger.
+            </p>
+          </div>  
+        </div>
+      </section>
+
+      <section>
+        <h2 name="getstarted">Examples</h2>
+        <p class="text">
+          <ul>
+            <li><a href="https://github.com/organix/uFork/blob/main/apps/debugger/examples/hello.asm">Hello World (asm)</a></li>
+            <li><a href="https://github.com/organix/uFork/blob/main/apps/debugger/examples/euclid.asm">Euclid (asm)</a></li>
+            <li><a href="https://github.com/organix/uFork/blob/main/apps/debugger/examples/fib.asm">Fibonacci (asm)</a></li>
+            <li><a href="https://github.com/organix/uFork/blob/main/apps/debugger/examples/fib.scm">Fibonacci (Scheme)</a></li>
+          </ul>  
+        </p>
+        <p class="text"><a href="https://github.com/organix/uFork/tree/main/apps/debugger/examples">Other examples...</a></p>
+      </section>
+      <section>
+        <h2 name="support">Project Support</h2>
+        <p>
+          <a href="https://NLnet.nl" target="_blank">
+            <img src="https://www.github.com/organix/uFork/raw/main/NLnet_banner.png"
+              alt="Logo NLnet: abstract logo of four people seen from above"
+              style="width: 150px; margin: 0 10px 10px; max-width: 50%;">
+          </a>
+          <a href="https://NLnet.nl/NGI0" target="_blank">
+            <img src="https://www.github.com/organix/uFork/raw/main/NGI0Entrust_tag.svg"
+              alt="Logo NGI Zero: letterlogo shaped like a tag"
+              style="width: 150px; margin: 0 10px 10px; max-width: 50%;">
+          </a>
+        </p>
+        <p>
+          This project was funded through the <a href="https://nlnet.nl/entrust">NGI0 Entrust</a> Fund,
+          a fund established by <a href="https://nlnet.nl/">NLnet</a> with financial support from
+          the European Commission's <a href="https://ngi.eu/">Next Generation Internet</a> programme,
+          under the aegis of DG Communications Networks,
+          Content and Technology under grant agreement N<sup>o</sup> 101069594.</p>
+      </section>
+    </main>
+    <footer>
+      <section class="footer">
+        <p class="text">Copyright &copy; 2024</p>
+        <p class="text"><a href="https://github.com/organix/uFork"><i class="fab fa-github fa-2x"></i></a></p>
+      </section>
+    </footer>
+
+  </div>
+</body>
+
+</html>

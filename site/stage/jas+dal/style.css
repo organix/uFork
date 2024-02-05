@@ -1,0 +1,227 @@
+/* Basic Reset */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: "Trebuchet MS","Lucida Grande",arial;
+  font-weight: 100;
+}
+
+ul {
+  padding-left: 1rem;
+}
+
+.container {
+  width: 100%;
+  margin: 0 0;
+  padding: 0 5%;
+}
+
+/* uFork header and navigation */
+header {
+  width: 100%;
+}
+
+h1 {
+  font-size: 30px;
+  font-weight: 600;
+  padding: 1rem;
+}
+
+h2 {
+  font-size: 20px;
+  font-weight: 500;
+  padding: 1rem 0;
+}
+
+h3 {
+  font-size: 15px;
+  font-weight: 400;
+  padding: 0 1rem;
+}
+
+nav ul {
+  list-style: none;
+  display: flex;
+  justify-content: flex-end;
+  background-color: #9900cb;
+  padding: 1rem;
+}
+
+nav ul li {
+  background-color: #66cc33;
+/*  border-radius: 10px; */
+}
+
+nav ul li a {
+  text-decoration: none;
+  color: white;
+  font-weight: bold;
+/*  border: 10px solid #349900;
+/*  border-radius: 10px; */
+}
+
+nav ul li:hover {
+  background-color: #349900;
+}
+
+nav img {
+  box-shadow: 7px 7px 7px rgba(0, 0, 0, 0.2);
+  width: 150px;
+  max-width: 100%;
+  padding: 10px 10px;
+}
+
+
+.hero {
+  background-color: #9900cb;
+  color: white;
+  padding: 10px 10px;
+
+  display: grid;
+  grid-template-columns: auto min-content;
+  gap: 1rem;
+  padding: 0 2rem;
+}
+
+/* Main features that it provides */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 5rem;
+  padding: 1rem 10rem;
+}
+
+.feature {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  grid-column: span 4;
+  text-align: center;
+}
+
+.implementation {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  grid-column: span 6;
+  text-align: center;
+}
+
+.example {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  grid-column: span 4;
+  text-align: center;
+}
+
+.badge {
+  font-size: 60px;
+}
+
+.feature img {
+  width: 50px; /* Assuming a fixed size for icons */
+  height: auto;
+  margin-bottom: 1rem;
+}
+
+.title {
+  margin: 1rem 0;
+}
+
+.text {
+  text-align: left;
+  vertical-align: middle;
+  padding: 10px 0;
+}
+
+/* uFork copyright github etc */
+footer {
+  width: 100%;
+  background-color: #9900cb;
+}
+
+.socials {
+  padding: 10px;
+  align-self: flex-end;
+}
+
+.menu, .drop-menu {
+  list-style-type: none;
+  padding: 0;
+  margin: 0;
+}
+
+.menu-item {
+  display: inline-block;
+  position: relative;
+}
+
+.menu-item a {
+  text-decoration: none;
+  padding: 6px 10px;
+  color: #fff;
+  display: block;
+}
+
+.drop-menu {
+  display: none;
+  position: absolute;
+  min-width: 100px;
+  box-shadow: 0 2px 5px 0 rgba(0,0,0,.16), 0 2px 10px 0 rgba(0,0,0,.12);
+}
+
+.drop-menu-item {
+  width: 100%;
+}
+
+.drop-menu-item:hover {
+  background-color: #349900;
+}
+
+.drop-menu-item a {
+  color: #555;
+}
+
+.menu-item:hover .drop-menu {
+  display: block;
+}
+
+.footer {
+  background-color: #9900cb;
+  color: white;
+  padding: 10px 10px;
+  margin-top: 20px;
+
+  display: grid;
+  grid-template-columns: auto min-content;
+  gap: 1rem;
+}
+
+.footer a {
+  color: white;
+}
+
+@media (max-width: 768px) {
+  .grid {
+    grid-template-columns: repeat(6, 1fr);
+  }
+
+  .feature {
+    grid-column: span 6; /* Each feature spans 6 out of 6 columns on smaller screens */
+  }
+}
+
+@media (max-width: 480px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+
+  .feature {
+    grid-column: span 1; /* Each feature spans the full width on the smallest screens */
+  }
+}
