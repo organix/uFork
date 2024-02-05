@@ -3,6 +3,7 @@
 import webcode from "./webcode.js";
 import base64 from "https://ufork.org/lib/base64.js";
 import gzip from "https://ufork.org/lib/gzip.js";
+import unpercent from "https://ufork.org/lib/unpercent.js";
 import parseq from "https://ufork.org/lib/parseq.js";
 import requestorize from "https://ufork.org/lib/rq/requestorize.js";
 import tokenize from "https://ufork.org/lib/asm_tokenize.js";
@@ -92,34 +93,6 @@ function alter_cursor(cursor, alterations) {
     );
 }
 
-function partially_decode_query_string(url) {
-
-// The URL object percent-encodes all special characters in the query string,
-// making embedded URLs much harder to read. This function decodes just the
-// query portion of a URL, except for "?", "&", "=", and ""#" characters.
-
-    const rx_percent_encoded = /%[0-7][0-9A-F]/g;
-    const [base, query] = String(url).split("?");
-    if (query === undefined) {
-        return base;
-    }
-    return base + "?" + query.replace(rx_percent_encoded, function (encoded) {
-        const decoded = decodeURIComponent(encoded);
-        return (
-            (
-                decoded === "?"
-                || decoded === "&"
-                || decoded === "="
-                || decoded === "#"
-            )
-            ? encoded
-            : decoded
-        );
-    });
-}
-
-//debug partially_decode_query_string("http://a.b/c?d=http%3A%2F%2Fe.f%3Fg");
-
 function highlight(element) {
     const source = element.textContent;
     element.innerHTML = "";
@@ -155,7 +128,12 @@ function highlight(element) {
 // to share a configuration with others.
 
 function read_state(name) {
-    const url = new URL(location.href);
+
+// The URL constructor interprets "+" characters as spaces, corrupting
+// Base64-encoded data. This quirk is avoided by first percent-encoding any
+// pluses.
+
+    const url = new URL(location.href.replaceAll("+", "%2B"));
     if (url.searchParams.has(name)) {
         return url.searchParams.get(name);
     }
@@ -164,15 +142,11 @@ function read_state(name) {
 function write_state(name, value) {
     const url = new URL(location.href);
     if (value !== undefined) {
-
-// URLSearchParams replaces "+" characters with spaces, corrupting
-// Base64-encoded data. That quirk is avoided by percent-encoding the value.
-
-        url.searchParams.set(name, encodeURIComponent(value));
+        url.searchParams.set(name, value);
     } else {
         url.searchParams.delete(name);
     }
-    history.replaceState(undefined, "", partially_decode_query_string(url));
+    history.replaceState(undefined, "", unpercent(url));
 }
 
 function fetch_source() {
