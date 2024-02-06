@@ -8,10 +8,28 @@
 body {
   font-family: "Trebuchet MS","Lucida Grande",arial;
   font-weight: 100;
+  background-color: var(--color-bg);
+  color: var(--color-fg);
+}
+
+a {
+  color: var(--color-link);
 }
 
 ul {
   padding-left: 1rem;
+}
+
+details {
+  width: 100%;
+}
+
+details > summary {
+  list-style: none;
+}
+
+details[open] summary {
+  display: none;
 }
 
 .container {
@@ -223,5 +241,19 @@ footer {
 
   .feature {
     grid-column: span 1; /* Each feature spans the full width on the smallest screens */
+  }
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    --color-bg: #ffffff;
+    --color-fg: #000000;
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-bg: #000000;
+    --color-fg: #ffffff;
   }
 }
