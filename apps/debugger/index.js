@@ -2,6 +2,7 @@
 
 /*jslint browser, bitwise, long, devel */
 
+import unpercent from "https://ufork.org/lib/unpercent.js";
 import hexdump from "https://ufork.org/lib/hexdump.js";
 import OED from "https://ufork.org/lib/oed.js";
 import ufork from "https://ufork.org/js/ufork.js";
@@ -53,6 +54,24 @@ const rx_crlf = /\n|\r\n?/;
 let ram_max = 0;
 let core;  // uFork wasm processor core
 let on_stdin;
+
+function read_state(name) {
+    // pluses are not spaces
+    const url = new URL(location.href.replace("+", "%2B"));
+    if (url.searchParams.has(name)) {
+        return url.searchParams.get(name);
+    }
+}
+
+function write_state(name, value) {
+    const url = new URL(location.href);
+    if (value !== undefined) {
+        url.searchParams.set(name, value);
+    } else {
+        url.searchParams.delete(name);
+    }
+    history.replaceState(undefined, "", unpercent(url));
+}
 
 function update_element_text(el, txt) {
     if (el.textContent === txt) {
@@ -421,11 +440,11 @@ function pause_action() {
     draw_host();
 }
 
-function boot(module_specifier) {
-    const module_url = new URL(module_specifier, window.location.href).href;
+function boot(src) {
+    const module_url = new URL(src, window.location.href).href;
     core.h_import(module_url)(function callback(module, reason) {
         if (module === undefined) {
-            return console.error("Import failed", module_specifier, reason);
+            return console.error("Import failed", src, reason);
         }
         core.h_boot(module.boot);
         update_rom_monitor();
@@ -434,11 +453,12 @@ function boot(module_specifier) {
 }
 
 const $boot_input = document.getElementById("boot-url");
-$boot_input.value = localStorage.getItem("boot") ?? "./examples/fib.asm";
+$boot_input.oninput = function () {
+    write_state("src", $boot_input.value || undefined);
+};
 const $boot_form = document.getElementById("boot-form");
 $boot_form.onsubmit = function (event) {
     boot($boot_input.value);
-    localStorage.setItem("boot", $boot_input.value);
     $boot_input.blur(); // become responsive to keybindings
     event.preventDefault();
 };
@@ -467,7 +487,6 @@ document.onkeydown = function (event) {
         next_step();
     } else if (event.key === "b") {
         boot($boot_input.value);
-        localStorage.setItem("boot", $boot_input.value);
     } else if (event.key === "g") {
         gc_host();
     }
@@ -604,9 +623,11 @@ core.h_initialize()(function callback(value, reason) {
     //play_action();  // start animation (running)
     pause_action();  // start animation (paused)
 
-    const boot_specifier = new URL(location.href).searchParams.get("boot");
-    if (boot_specifier) {
-        boot(boot_specifier);
-        $boot_input.value = boot_specifier;
+    const src = new URL(location.href).searchParams.get("src");
+    if (src) {
+        boot(src);
+        $boot_input.value = src;
+    } else {
+        $boot_input.value = "./examples/fib.asm";
     }
 });
