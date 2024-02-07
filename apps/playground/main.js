@@ -16,12 +16,14 @@ import blob_device from "https://ufork.org/js/blob_device.js";
 import timer_device from "https://ufork.org/js/timer_device.js";
 import io_device from "https://ufork.org/js/io_device.js";
 const wasm_url = import.meta.resolve("https://ufork.org/wasm/ufork.wasm");
-const dev_lib_url = import.meta.resolve("../../lib/");
+const unqualified_dev_lib_url = import.meta.resolve("../../lib/");
 
+const dev_lib_url = new URL(unqualified_dev_lib_url, location.href).href;
 const clear_output_button = document.getElementById("clear_output");
 const line_numbers_element = document.getElementById("line_numbers");
 const output_element = document.getElementById("output");
 const run_button = document.getElementById("run");
+const debug_button = document.getElementById("debug");
 const source_element = document.getElementById("source");
 const info_checkbox = document.getElementById("info");
 const lang_select = document.getElementById("lang");
@@ -150,7 +152,7 @@ function run(text) {
         import_map: (
             location.href.startsWith("https://ufork.org/")
             ? {}
-            : {"https://ufork.org/lib/": dev_lib_url}
+            : {"https://ufork.org/lib/": new URL(dev_lib_url, location.href).href}
         ),
         compilers: {asm: lang_asm.compile, scm: scm.compile}
     });
@@ -276,6 +278,9 @@ fetch_text().then(function (text) {
 });
 run_button.onclick = function () {
     run(editor.get_text());
+};
+debug_button.onclick = function () {
+    window.open(location.href.replace("playground", "debugger"));
 };
 clear_output_button.onclick = clear_output;
 info_checkbox.oninput = function () {

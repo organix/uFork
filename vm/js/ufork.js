@@ -1149,24 +1149,29 @@ function make_core({
         );
     }
 
-    function h_import_promise(src, crlf) {
+    function h_import_promise(src, content) {
+
+        function compile(text) {
+            const extension = src.split(".").pop();
+            if (!Object.hasOwn(compilers, extension)) {
+                throw new Error("No compiler for '" + src + "'.");
+            }
+            const compiler = compilers[extension];
+            module_text[src] = text;
+            return compiler(text, src);
+        }
+
         if (import_promises[src] === undefined) {
             import_promises[src] = (
-                crlf !== undefined
-                ? Promise.resolve(crlf)
-                : fetch(src).then(function (response) {
+                content === undefined
+                ? fetch(src).then(function (response) {
                     return response.text();
-                }).then(function (text) {
-                    const extension = src.split(".").pop();
-                    if (!Object.hasOwn(compilers, extension)) {
-                        return Promise.reject(new Error(
-                            "No compiler for '" + src + "'."
-                        ));
-                    }
-                    const compile = compilers[extension];
-                    module_text[src] = text;
-                    return compile(text, src);
-                })
+                }).then(compile)
+                : Promise.resolve(
+                    typeof content === "string"
+                    ? compile(content)
+                    : content
+                )
             ).then(function (crlf) {
                 if (crlf.errors !== undefined && crlf.errors.length > 0) {
                     return Promise.reject(new Error(
@@ -1198,13 +1203,14 @@ function make_core({
         return import_promises[src];
     }
 
-    function h_import(src, crlf) {
+    function h_import(src, content) {
 
-// Import and load a module, along with its dependencies. If 'crlf' is provided,
-// the 'src' is only used to resolve relative imports.
+// Import and load a module, along with its dependencies. If 'content' (a text
+// string or CRLF object) is provided, the 'src' is used only to resolve
+// relative imports.
 
         return unpromise(function () {
-            return h_import_promise(h_map_src(src), crlf);
+            return h_import_promise(h_map_src(src), content);
         });
     }
 

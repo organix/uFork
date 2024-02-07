@@ -2,6 +2,8 @@
 
 /*jslint browser, bitwise, long, devel */
 
+import base64 from "https://ufork.org/lib/base64.js";
+import gzip from "https://ufork.org/lib/gzip.js";
 import unpercent from "https://ufork.org/lib/unpercent.js";
 import hexdump from "https://ufork.org/lib/hexdump.js";
 import OED from "https://ufork.org/lib/oed.js";
@@ -59,12 +61,11 @@ let on_stdin;
 
 function read_state(name) {
     // pluses are not spaces
-    const url = new URL(location.href.replace("+", "%2B"));
+    const url = new URL(location.href.replaceAll("+", "%2B"));
     if (url.searchParams.has(name)) {
         return url.searchParams.get(name);
     }
 }
-
 function write_state(name, value) {
     const url = new URL(location.href);
     if (value !== undefined) {
@@ -74,7 +75,6 @@ function write_state(name, value) {
     }
     history.replaceState(undefined, "", unpercent(url));
 }
-
 function update_element_text(el, txt) {
     if (el.textContent === txt) {
         el.style.color = "#000";
@@ -442,9 +442,9 @@ function pause_action() {
     draw_host();
 }
 
-function boot(src) {
-    const module_url = new URL(src, window.location.href).href;
-    core.h_import(module_url)(function callback(module, reason) {
+function boot(unqualified_src, text) {
+    const src = new URL(unqualified_src, window.location.href).href;
+    core.h_import(src, text)(function callback(module, reason) {
         if (module === undefined) {
             return console.error("Import failed", src, reason);
         }
@@ -457,6 +457,7 @@ function boot(src) {
 const $boot_input = document.getElementById("boot-src");
 $boot_input.oninput = function () {
     write_state("src", $boot_input.value || undefined);
+    write_state("text", undefined);
 };
 const $boot_form = document.getElementById("boot-form");
 $boot_form.onsubmit = function (event) {
@@ -626,11 +627,14 @@ core.h_initialize()(function callback(value, reason) {
     //play_action();  // start animation (running)
     pause_action();  // start animation (paused)
 
-    const src = new URL(location.href).searchParams.get("src");
-    if (src) {
+    const src = read_state("src");
+    const text_enc = read_state("text");
+    $boot_input.value = src || "./examples/fib.asm";
+    if (text_enc) {
+        base64.decode(text_enc).then(gzip.decode).then(function (text) {
+            boot(src, new TextDecoder().decode(text));
+        });
+    } else if (src) {
         boot(src);
-        $boot_input.value = src;
-    } else {
-        $boot_input.value = "./examples/fib.asm";
     }
 });
