@@ -16,17 +16,18 @@ import run_replete from "https://deno.land/x/replete/run.js";
 import import_map from "./import_map.js";
 
 const mime_types = {
-    js: "text/javascript",
-    mjs: "text/javascript",
-    wasm: "application/wasm",
     asm: "text/plain",
     css: "text/css",
     html: "text/html",
-    map: "application/json",
-    json: "application/json",
     jpg: "image/jpeg",
+    js: "text/javascript",
+    json: "application/json",
+    map: "application/json",
+    mjs: "text/javascript",
     png: "image/png",
+    scm: "text/plain",
     svg: "image/svg+xml",
+    wasm: "application/wasm",
     woff2: "font/woff2"
 };
 

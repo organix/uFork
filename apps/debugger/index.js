@@ -2,8 +2,13 @@
 
 /*jslint browser, bitwise, long, devel */
 
+import base64 from "https://ufork.org/lib/base64.js";
+import gzip from "https://ufork.org/lib/gzip.js";
+import unpercent from "https://ufork.org/lib/unpercent.js";
 import hexdump from "https://ufork.org/lib/hexdump.js";
 import OED from "https://ufork.org/lib/oed.js";
+import assemble from "https://ufork.org/lib/assemble.js";
+import scm from "https://ufork.org/lib/scheme.js";
 import ufork from "https://ufork.org/js/ufork.js";
 import clock_device from "https://ufork.org/js/clock_device.js";
 import random_device from "https://ufork.org/js/random_device.js";
@@ -54,6 +59,22 @@ let ram_max = 0;
 let core;  // uFork wasm processor core
 let on_stdin;
 
+function read_state(name) {
+    // pluses are not spaces
+    const url = new URL(location.href.replaceAll("+", "%2B"));
+    if (url.searchParams.has(name)) {
+        return url.searchParams.get(name);
+    }
+}
+function write_state(name, value) {
+    const url = new URL(location.href);
+    if (value !== undefined) {
+        url.searchParams.set(name, value);
+    } else {
+        url.searchParams.delete(name);
+    }
+    history.replaceState(undefined, "", unpercent(url));
+}
 function update_element_text(el, txt) {
     if (el.textContent === txt) {
         el.style.color = "#000";
@@ -122,29 +143,29 @@ function update_source_monitor(ip) {
     if (
         core.u_is_rom(ip)
         && ip !== ufork.UNDEF_RAW
-        && sourcemap?.source !== undefined
+        && sourcemap?.text !== undefined
     ) {
-        $source_monitor.title = sourcemap.debug.file;
-        sourcemap.source.split(rx_crlf).forEach(function (ignore, line_nr) {
+        $source_monitor.title = sourcemap.debug.src;
+        sourcemap.text.split(rx_crlf).forEach(function (ignore, line_nr) {
             $aside.textContent += line_nr + 1 + "\n";
         });
         if (sourcemap.debug.start !== undefined) {
-            const $pre_text = document.createTextNode(sourcemap.source.slice(
+            const $pre_text = document.createTextNode(sourcemap.text.slice(
                 0,
                 sourcemap.debug.start
             ));
             const $mark = document.createElement("mark");
-            $mark.textContent = sourcemap.source.slice(
+            $mark.textContent = sourcemap.text.slice(
                 sourcemap.debug.start,
                 sourcemap.debug.end
             );
-            const $post_text = document.createTextNode(sourcemap.source.slice(
+            const $post_text = document.createTextNode(sourcemap.text.slice(
                 sourcemap.debug.end
             ));
             $code.append($pre_text, $mark, $post_text);
             keep_centered($mark, $source_monitor);
         } else {
-            $code.textContent = sourcemap.source;
+            $code.textContent = sourcemap.text;
         }
     } else {
         $code.textContent = "No source available.";
@@ -421,11 +442,11 @@ function pause_action() {
     draw_host();
 }
 
-function boot(module_specifier) {
-    const module_url = new URL(module_specifier, window.location.href).href;
-    core.h_import(module_url)(function callback(module, reason) {
+function boot(unqualified_src, text) {
+    const src = new URL(unqualified_src, window.location.href).href;
+    core.h_import(src, text)(function callback(module, reason) {
         if (module === undefined) {
-            return console.error("Import failed", module_specifier, reason);
+            return console.error("Import failed", src, reason);
         }
         core.h_boot(module.boot);
         update_rom_monitor();
@@ -433,12 +454,14 @@ function boot(module_specifier) {
     });
 }
 
-const $boot_input = document.getElementById("boot-url");
-$boot_input.value = localStorage.getItem("boot") ?? "./examples/fib.asm";
+const $boot_input = document.getElementById("boot-src");
+$boot_input.oninput = function () {
+    write_state("src", $boot_input.value || undefined);
+    write_state("text", undefined);
+};
 const $boot_form = document.getElementById("boot-form");
 $boot_form.onsubmit = function (event) {
     boot($boot_input.value);
-    localStorage.setItem("boot", $boot_input.value);
     $boot_input.blur(); // become responsive to keybindings
     event.preventDefault();
 };
@@ -467,7 +490,6 @@ document.onkeydown = function (event) {
         next_step();
     } else if (event.key === "b") {
         boot($boot_input.value);
-        localStorage.setItem("boot", $boot_input.value);
     } else if (event.key === "g") {
         gc_host();
     }
@@ -582,7 +604,8 @@ core = ufork.make_core({
         $importmap
         ? JSON.parse($importmap.textContent).imports
         : {}
-    )
+    ),
+    compilers: {asm: assemble, scm: scm.compile}
 });
 
 core.h_initialize()(function callback(value, reason) {
@@ -604,9 +627,14 @@ core.h_initialize()(function callback(value, reason) {
     //play_action();  // start animation (running)
     pause_action();  // start animation (paused)
 
-    const boot_specifier = new URL(location.href).searchParams.get("boot");
-    if (boot_specifier) {
-        boot(boot_specifier);
-        $boot_input.value = boot_specifier;
+    const src = read_state("src");
+    const text_enc = read_state("text");
+    $boot_input.value = src || "./examples/fib.asm";
+    if (text_enc) {
+        base64.decode(text_enc).then(gzip.decode).then(function (text) {
+            boot(src, new TextDecoder().decode(text));
+        });
+    } else if (src) {
+        boot(src);
     }
 });

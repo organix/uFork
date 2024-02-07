@@ -23,6 +23,7 @@
 
 import import_map from "./import_map.js";
 import parseq from "https://ufork.org/lib/parseq.js";
+import assemble from "https://ufork.org/lib/assemble.js";
 import ufork from "https://ufork.org/js/ufork.js";
 import host_device from "https://ufork.org/js/host_device.js";
 import clock_device from "https://ufork.org/js/clock_device.js";
@@ -52,7 +53,8 @@ function asm_test(module_url) {
             logs.push([...args]);
         },
         log_level: ufork.LOG_DEBUG,
-        import_map
+        import_map,
+        compilers: {asm: assemble}
     });
     return parseq.sequence([
         core.h_initialize(),

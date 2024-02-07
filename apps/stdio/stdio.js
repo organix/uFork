@@ -2,9 +2,9 @@
 
 // Usage:
 
-//  $ deno run --allow-read=../.. stdio.js <boot>
+//  $ deno run --allow-read=../.. stdio.js <src>
 
-// where <boot> is the relative path (or absolute URL) to a .asm or .scm module
+// where <src> is the relative path (or absolute URL) to a .asm or .scm module
 // to boot from.
 
 /*jslint deno */
@@ -13,6 +13,8 @@ import {join} from "https://deno.land/std@0.203.0/path/join.ts";
 import {toFileUrl} from "https://deno.land/std@0.203.0/path/to_file_url.ts";
 import parseq from "https://ufork.org/lib/parseq.js";
 import requestorize from "https://ufork.org/lib/rq/requestorize.js";
+import assemble from "https://ufork.org/lib/assemble.js";
+import scm from "https://ufork.org/lib/scheme.js";
 import ufork from "https://ufork.org/js/ufork.js";
 import io_device from "https://ufork.org/js/io_device.js";
 const wasm_url = import.meta.resolve("https://ufork.org/wasm/ufork.wasm");
@@ -59,23 +61,24 @@ function run() {
     }
 }
 
-const boot = Deno.args[0];
-if (boot === undefined || boot === "") {
-    window.console.error("Missing boot specifier. Try \"echo.asm\".");
+const unqualified_src = Deno.args[0];
+if (unqualified_src === undefined || unqualified_src === "") {
+    window.console.error("Missing src. Try \"echo.asm\".");
     Deno.exit(1);
 }
 const cwd_dir = toFileUrl(join(Deno.cwd(), "./")); // ensure trailing slash
-const boot_url = new URL(boot, cwd_dir).href; // resolve specifier if relative
+const src = new URL(unqualified_src, cwd_dir).href;
 
 core = ufork.make_core({
     wasm_url,
     on_wakeup: run,
     on_log: window.console.error,
-    log_level: ufork.LOG_WARN
+    log_level: ufork.LOG_WARN,
+    compilers: {asm: assemble, scm: scm.compile}
 });
 parseq.sequence([
     core.h_initialize(),
-    core.h_import(boot_url),
+    core.h_import(src),
     requestorize(function (asm_module) {
         const on_stdin = io_device(core, function on_stdout(string) {
             Deno.stdout.write(utf8_encoder.encode(string));

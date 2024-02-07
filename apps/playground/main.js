@@ -1,11 +1,14 @@
 /*jslint browser */
 
-import webcode from "./webcode.js";
+import ed from "./ed.js";
+import lang_asm from "./lang_asm.js";
+import lang_scm from "./lang_scm.js";
+import base64 from "https://ufork.org/lib/base64.js";
+import gzip from "https://ufork.org/lib/gzip.js";
+import unpercent from "https://ufork.org/lib/unpercent.js";
 import parseq from "https://ufork.org/lib/parseq.js";
 import requestorize from "https://ufork.org/lib/rq/requestorize.js";
-import tokenize from "https://ufork.org/lib/asm_tokenize.js";
-import parse from "https://ufork.org/lib/asm_parse.js";
-import assemble from "https://ufork.org/lib/assemble.js";
+import scm from "https://ufork.org/lib/scheme.js";
 import ufork from "https://ufork.org/js/ufork.js";
 import clock_device from "https://ufork.org/js/clock_device.js";
 import random_device from "https://ufork.org/js/random_device.js";
@@ -13,208 +16,36 @@ import blob_device from "https://ufork.org/js/blob_device.js";
 import timer_device from "https://ufork.org/js/timer_device.js";
 import io_device from "https://ufork.org/js/io_device.js";
 const wasm_url = import.meta.resolve("https://ufork.org/wasm/ufork.wasm");
-const dev_lib_url = import.meta.resolve("../../lib/");
+const unqualified_dev_lib_url = import.meta.resolve("../../lib/");
 
-const rx_comment = /^(\s*)(;+\u0020?)/;
+const dev_lib_url = new URL(unqualified_dev_lib_url, location.href).href;
 const clear_output_button = document.getElementById("clear_output");
 const line_numbers_element = document.getElementById("line_numbers");
 const output_element = document.getElementById("output");
 const run_button = document.getElementById("run");
+const debug_button = document.getElementById("debug");
 const source_element = document.getElementById("source");
 const info_checkbox = document.getElementById("info");
+const lang_select = document.getElementById("lang");
+const lang_packs = {
+    asm: lang_asm,
+    scm: lang_scm
+};
 
+let editor;
+let lang;
 let line_selection_anchor;
-
-function alter_string(string, alterations) {
-
-// Performs a series of alterations on a string and returns the new string.
-
-// The 'alterations' array contains objects like {range, replacement} where
-// 'replacement' is a string to insert at the 'range', an array like
-// [start, end] where 'start' and 'end' are positions in the original string.
-
-// The alterations may be provided in any order, but should not overlap.
-
-    alterations = alterations.slice().sort(function compare(a, b) {
-        return a.range[0] - b.range[0] || a.range[1] - b.range[1];
-    });
-    let end = 0;
-    return alterations.map(function ({range, replacement}) {
-        const chunk = string.slice(end, range[0]) + replacement;
-        end = range[1];
-        return chunk;
-    }).concat(
-        string.slice(end)
-    ).join(
-        ""
-    );
-}
-
-function alter_cursor(cursor, alterations) {
-
-// Adjusts the cursor to accomodate an array of alterations. The cursor expands
-// to encompass any alterations that it overlaps.
-
-    const cursor_start = Math.min(...cursor);
-    const cursor_end = Math.max(...cursor);
-    let start = cursor_start;
-    let end = cursor_end;
-    alterations.forEach(function ({range, replacement}) {
-        const [range_start, range_end] = range;
-        const difference = replacement.length - (range_end - range_start);
-        if (cursor_end > range_start) {
-
-// rrrr         rrrr        rrrr        rrrr
-//      cccc      cccc       cc       cccc
-
-            end += difference + Math.max(0, range_end - cursor_end);
-        }
-        if (cursor_start < range_end) {
-
-//      rrrr      rrrr      rrrr         rr       rrrr
-// cccc         cccc         cc         cccc        cccc
-
-            start += Math.min(0, range_start - cursor_start);
-        } else {
-
-// rrrr
-//      cccc
-
-            start += difference;
-        }
-    });
-    return (
-        cursor[0] > cursor[1]
-        ? [end, start]
-        : [start, end]
-    );
-}
-
-function partially_decode_query_string(url) {
-
-// The URL object percent-encodes all special characters in the query string,
-// making embedded URLs much harder to read. This function decodes just the
-// query portion of a URL, except for "?", "&", "=", and ""#" characters.
-
-    const rx_percent_encoded = /%[0-7][0-9A-F]/g;
-    const [base, query] = String(url).split("?");
-    if (query === undefined) {
-        return base;
-    }
-    return base + "?" + query.replace(rx_percent_encoded, function (encoded) {
-        const decoded = decodeURIComponent(encoded);
-        return (
-            (
-                decoded === "?"
-                || decoded === "&"
-                || decoded === "="
-                || decoded === "#"
-            )
-            ? encoded
-            : decoded
-        );
-    });
-}
-
-//debug partially_decode_query_string("http://a.b/c?d=http%3A%2F%2Fe.f%3Fg");
-
-function encode_bytes_as_data_url(bytes, type) {
-
-// The atob and btoa functions provided by the browser do not support Unicode,
-// so the only alternative, apart from reimplementing Base64 ourselves, is to
-// abuse the FileReader.
-
-    return new Promise(function (resolve, reject) {
-        const reader = new FileReader();
-        reader.onload = function () {
-            return resolve(reader.result);
-        };
-        reader.onerror = function () {
-            return reject(reader.error);
-        };
-        reader.readAsDataURL(new Blob([bytes], {type}));
-    });
-}
-
-function compress(text) {
-
-// Compresses a string using gzip. The returned Promise resolves to a Base64
-// string.
-
-    const utf8 = new Blob([text]).stream();
-    const gzip = new window.CompressionStream("gzip");
-    return new Response(
-        utf8.pipeThrough(gzip)
-    ).arrayBuffer(
-    ).then(
-        encode_bytes_as_data_url
-    ).then(function (data_url) {
-
-// Discard the data URL's prefix, leaving only Base64.
-
-        return data_url.split("base64,")[1];
-    });
-}
-
-function decompress(base64) {
-
-// Decompresses Base64-encoded, gzipped text. The returned Promise resolves to
-// the text string.
-
-// 'fetch' performs Base64 decoding for us.
-
-    return fetch("data:text/plain;base64," + base64).then(function (response) {
-        return response.arrayBuffer();
-    }).then(function (array_buffer) {
-
-// Then the bytes are decompressed and UTF-8 decoded.
-
-        const compressed = new Blob([array_buffer]).stream();
-        const gunzip = new window.DecompressionStream("gzip");
-        return new Response(
-            compressed.pipeThrough(gunzip)
-        ).text();
-    });
-}
-
-//debug compress("hello there 🧙‍♂️").then(decompress).then(console.log);
-
-function highlight(element) {
-    const source = element.textContent;
-    element.innerHTML = "";
-    const ast = parse(tokenize(source));
-    ast.tokens.forEach(function (token) {
-        if (token.kind === "newline") {
-            return element.append("\n");
-        }
-        const text = source.slice(token.start, token.end);
-        const errors = ast.errors.filter(function (error) {
-            return token.start >= error.start && token.end <= error.end;
-        });
-        const span = document.createElement("span");
-        span.textContent = text;
-        span.classList.add(
-            token.kind.length === 1
-            ? "separator"
-            : token.kind
-        );
-        if (errors.length > 0) {
-            span.title = errors.map(function (error) {
-                return error.message;
-            }).join(
-                "\n"
-            );
-            span.classList.add("warning");
-        }
-        element.append(span);
-    });
-}
 
 // The state of the playground is stored in the URL of the page, making it easy
 // to share a configuration with others.
 
 function read_state(name) {
-    const url = new URL(location.href);
+
+// The URL constructor interprets "+" characters as spaces, corrupting
+// Base64-encoded data. This quirk is avoided by first percent-encoding any
+// pluses.
+
+    const url = new URL(location.href.replaceAll("+", "%2B"));
     if (url.searchParams.has(name)) {
         return url.searchParams.get(name);
     }
@@ -223,25 +54,23 @@ function read_state(name) {
 function write_state(name, value) {
     const url = new URL(location.href);
     if (value !== undefined) {
-
-// URLSearchParams replaces "+" characters with spaces, corrupting
-// Base64-encoded data. That quirk is avoided by percent-encoding the value.
-
-        url.searchParams.set(name, encodeURIComponent(value));
+        url.searchParams.set(name, value);
     } else {
         url.searchParams.delete(name);
     }
-    history.replaceState(undefined, "", partially_decode_query_string(url));
+    history.replaceState(undefined, "", unpercent(url));
 }
 
-function fetch_source() {
+function fetch_text() {
     const text = read_state("text");
     if (text !== undefined) {
-        return decompress(text);
+        return base64.decode(text).then(gzip.decode).then(function (utf8) {
+            return new TextDecoder().decode(utf8);
+        });
     }
-    const file = read_state("file");
-    if (file !== undefined) {
-        return fetch(file).then(function (response) {
+    const src = read_state("src");
+    if (src !== undefined) {
+        return fetch(src).then(function (response) {
             return (
                 response.ok
                 ? response.text()
@@ -281,7 +110,7 @@ function append_output(log_level, ...values) {
 }
 
 function update_page_url(text) {
-    return compress(text).then(function (base64) {
+    return gzip.encode(text).then(base64.encode).then(function (base64) {
         write_state("text", base64);
     });
 }
@@ -323,21 +152,20 @@ function run(text) {
         import_map: (
             location.href.startsWith("https://ufork.org/")
             ? {}
-            : {"https://ufork.org/lib/": dev_lib_url}
-        )
+            : {"https://ufork.org/lib/": new URL(dev_lib_url, location.href).href}
+        ),
+        compilers: {asm: lang_asm.compile, scm: scm.compile}
     });
-    const crlf = assemble(text);
-    if (crlf.lang !== "uFork") {
-        const error_messages = crlf.errors.map(function (error) {
-            return `[${error.line}:${error.column}] ${error.message}`;
-        });
+    const crlf = lang.compile(text);
+    if (crlf.errors !== undefined && crlf.errors.length > 0) {
+        const error_messages = crlf.errors.map(lang.stringify_error);
         return append_output(ufork.LOG_WARN, error_messages.join("\n"));
     }
-    const file = read_state("file") ?? "placeholder.asm";
-    const specifier = new URL(file, location.href).href;
+    const unqualified_src = read_state("src") ?? "placeholder.asm";
+    const src = new URL(unqualified_src, location.href).href;
     parseq.sequence([
         core.h_initialize(),
-        core.h_import(specifier, crlf),
+        core.h_import(src, crlf),
         requestorize(function (imported_module) {
             clock_device(core);
             random_device(core);
@@ -405,112 +233,43 @@ function update_line_numbers(editor) {
     });
 }
 
-const indent = "    ";
-const editor = webcode({
-    element: source_element,
-    highlight,
-    on_input(text) {
-        update_page_url(text);
-        update_line_numbers(editor);
-    },
-    on_keydown(event) {
-        const text = editor.get_text();
-        const cursor = editor.get_cursor();
-        const cursor_start = Math.min(...cursor);
-        const cursor_end = Math.max(...cursor);
-        const is_collapsed = cursor_start === cursor_end;
-        const pre = text.slice(0, cursor_start);
-        const post = text.slice(cursor_end);
-        const line_pre = pre.split("\n").pop();
-        const line_post = post.split("\n").shift();
-
-// Increase indentation.
-
-        if (event.key === "Tab") {
-            event.preventDefault();
-            editor.insert_text(indent.slice(line_pre.length % indent.length));
-        }
-
-// Decrease indentation.
-
-        if (event.key === "Backspace" && is_collapsed && line_pre.length > 0) {
-            const excess = indent.slice(
-                0,
-                1 + (line_pre.length - 1) % indent.length
-            );
-            if (line_pre.endsWith(excess)) {
-                event.preventDefault();
-                editor.set_cursor([
-                    cursor_start - excess.length,
-                    cursor_start
-                ]);
-                editor.insert_text("");
-            }
-        }
-
-// Increase or maintain indentation following a linebreak.
-
-        if (
-            event.key === "Enter"
-            && is_collapsed
-            && (
-                line_pre.endsWith(":")
-                || line_pre === ".import"
-                || line_pre === ".export"
-                || (line_pre.startsWith(indent) && line_pre !== indent)
-            )
-            && line_post === ""
-        ) {
-            event.preventDefault();
-            editor.insert_text("\n" + indent);
-        }
-
-// Comment or uncomment.
-
-        if (event.key === "/" && editor.is_command(event)) {
-            event.preventDefault();
-            let line_start = cursor_start - line_pre.length;
-            let line_end = cursor_end + line_post.length;
-            const lines = text.slice(line_start, line_end).split("\n");
-            const matches_array = lines.map(function (line) {
-                return line.match(rx_comment);
-            });
-            const uncomment = matches_array.some(Array.isArray);
-            let alterations = [];
-            lines.forEach(function (line, line_nr) {
-                if (uncomment) {
-                    const matches = matches_array[line_nr];
-                    if (matches) {
-
-// Capturing groups:
-//  [1] indentation
-//  [2] semicolon(s) optionally followed by a space
-
-                        alterations.push({
-                            range: [
-                                line_start + matches[1].length,
-                                line_start + matches[0].length
-                            ],
-                            replacement: ""
-                        });
-                    }
-                } else {
-                    if (line !== "") {
-                        alterations.push({
-                            range: [line_start, line_start],
-                            replacement: "; "
-                        });
-                    }
-                }
-                line_start += line.length + 1; // account for \n
-            });
-            editor.set_text(alter_string(text, alterations));
-            editor.set_cursor(alter_cursor(cursor, alterations));
-        }
+function reset_editor() {
+    if (editor !== undefined) {
+        editor.destroy();
     }
-});
+    editor = ed({
+        element: source_element,
+        highlight: lang.highlight,
+        on_input(text) {
+            update_page_url(text);
+            update_line_numbers(editor);
+        },
+        on_keydown(event) {
+            lang.handle_keydown(editor, event);
+        }
+    });
+}
 
-fetch_source().then(function (text) {
+function choose_lang(name) {
+    if (typeof name !== "string" || !Object.hasOwn(lang_packs, name)) {
+        name = "asm"; // default
+    }
+    lang = lang_packs[name];
+    lang_select.value = name;
+    reset_editor();
+}
+
+Object.keys(lang_packs).forEach(function (name) {
+    const option = document.createElement("option");
+    option.value = name;
+    option.textContent = name;
+    lang_select.append(option);
+});
+const src = read_state("src") || "";
+const src_extension = src.split(".").pop();
+const lang_override = read_state("lang");
+choose_lang(lang_override ?? src_extension);
+fetch_text().then(function (text) {
     editor.set_text(text);
     update_line_numbers(editor);
 }).catch(function (error) {
@@ -520,10 +279,17 @@ fetch_source().then(function (text) {
 run_button.onclick = function () {
     run(editor.get_text());
 };
+debug_button.onclick = function () {
+    window.open(location.href.replace("playground", "debugger"));
+};
 clear_output_button.onclick = clear_output;
 info_checkbox.oninput = function () {
     output_element.classList.toggle("info");
     scroll_to_latest_output();
+};
+lang_select.oninput = function () {
+    choose_lang(lang_select.value);
+    write_state("lang", lang_select.value);
 };
 document.body.onpointerup = end_line_selection;
 document.body.onpointercancel = end_line_selection;

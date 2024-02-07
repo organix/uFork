@@ -2,6 +2,7 @@
 
 import hex from "https://ufork.org/lib/hex.js";
 import parseq from "https://ufork.org/lib/parseq.js";
+import assemble from "https://ufork.org/lib/assemble.js";
 import requestorize from "https://ufork.org/lib/rq/requestorize.js";
 import ufork from "https://ufork.org/js/ufork.js";
 import awp_device from "https://ufork.org/js/awp_device.js";
@@ -48,7 +49,8 @@ function party(asm_url, acquaintance_names = []) {
             }
         },
         log_level: ufork.LOG_DEBUG,
-        import_map
+        import_map,
+        compilers: {asm: assemble}
     });
 
     return parseq.sequence([

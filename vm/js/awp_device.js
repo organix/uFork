@@ -900,7 +900,8 @@ function awp_device({
 //debug     },
 //debug     on_log: console.log,
 //debug     log_level: ufork.LOG_DEBUG,
-//debug     import_map: {"https://ufork.org/lib/": lib_url}
+//debug     import_map: {"https://ufork.org/lib/": lib_url},
+//debug     compilers: {asm: assemble}
 //debug });
 //debug let dispose;
 //debug function demo({

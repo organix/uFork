@@ -6,6 +6,7 @@ import hex from "https://ufork.org/lib/hex.js";
 import hexdump from "https://ufork.org/lib/hexdump.js";
 import parseq from "https://ufork.org/lib/parseq.js";
 import requestorize from "https://ufork.org/lib/rq/requestorize.js";
+import assemble from "https://ufork.org/lib/assemble.js";
 import ufork from "https://ufork.org/js/ufork.js";
 import io_device from "https://ufork.org/js/io_device.js";
 import timer_device from "https://ufork.org/js/timer_device.js";
@@ -192,7 +193,8 @@ core = ufork.make_core({
         $importmap
         ? JSON.parse($importmap.textContent).imports
         : {}
-    )
+    ),
+    compilers: {asm: assemble}
 });
 parseq.sequence([
     core.h_initialize(),

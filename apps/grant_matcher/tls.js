@@ -7,6 +7,7 @@ import crypto from "node:crypto";
 import fs from "node:fs";
 import parseq from "https://ufork.org/lib/parseq.js";
 import requestorize from "https://ufork.org/lib/rq/requestorize.js";
+import assemble from "https://ufork.org/lib/assemble.js";
 import ufork from "https://ufork.org/js/ufork.js";
 import awp_device from "https://ufork.org/js/awp_device.js";
 import host_device from "https://ufork.org/js/host_device.js";

@@ -1,8 +1,8 @@
 ;
-; single-assignement data-flow variable
+; single-assignment data-flow variable
 ;
 
-;(import dev "./dev.asm")
+(import dev "./dev.asm")
 
 (define future-beh
     (lambda (waiting)  ; initially ()
@@ -37,7 +37,7 @@
         (SEND future (list 'read cust))
         (SEND future (list 'read cust)) ))
 
-(start (DEVICE scm.debug_key) (CREATE (future-beh '())))
+(start (DEVICE dev.debug_key) (CREATE (future-beh '())))
 
 (define beh future-beh)  ; module default alias
 (export beh future-beh)
