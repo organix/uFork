@@ -96,12 +96,12 @@ function alter_cursor(cursor, alterations) {
 function highlight(element) {
     const text = element.textContent;
     element.innerHTML = "";
-    const ast = parse(tokenize(text));
-    ast.tokens.forEach(function (token) {
+    const crlf = parse(tokenize(text));
+    crlf.tokens.forEach(function (token) {
         if (token.kind === "newline") {
             return element.append("\n");
         }
-        const errors = ast.errors.filter(function (error) {
+        const errors = crlf.errors.filter(function (error) {
             return token.start >= error.start && token.end <= error.end;
         });
         const span = document.createElement("span");
@@ -243,7 +243,7 @@ function run(text) {
         )
     });
     const crlf = assemble(text);
-    if (crlf.lang !== "uFork") {
+    if (crlf.errors !== undefined && crlf.errors.length > 0) {
         const error_messages = crlf.errors.map(function (error) {
             return `[${error.line}:${error.column}] ${error.message}`;
         });

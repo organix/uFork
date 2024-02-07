@@ -1152,8 +1152,13 @@ function make_core({
                     );
                 })
             ).then(function (crlf) {
-                if (crlf.lang !== "uFork") {
-                    return Promise.reject(crlf);
+                if (crlf.errors !== undefined && crlf.errors.length > 0) {
+                    return Promise.reject(new Error(
+                        "Failed to load '"
+                        + src
+                        + "':\n"
+                        + JSON.stringify(crlf.errors, undefined, 4)
+                    ));
                 }
 
 // FIXME: cyclic module dependencies cause a deadlock, but they should instead
