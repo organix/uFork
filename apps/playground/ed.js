@@ -1,6 +1,6 @@
-// webcode.js
+// ed.js
 // James Diacono
-// 2024-01-26
+// 2024-02-07
 
 // A minimal code editor for the Web, with support for syntax highlighting,
 // copy/paste, and undo/redo. Tested on Chrome, Safari, and Firefox.
@@ -116,7 +116,7 @@ function normalize_line_endings(text) {
     return text.replace(/\r\n?/g, "\n");
 }
 
-function webcode({
+function ed({
     element,
     highlight,
     on_keydown,
@@ -466,7 +466,7 @@ function webcode({
 //debug         }
 //debug     }
 //debug }
-//debug const editor = webcode({
+//debug const editor = ed({
 //debug     element: source,
 //debug     highlight,
 //debug     on_keydown(event) {
@@ -483,4 +483,4 @@ function webcode({
 //debug document.onselectionchange = refresh_preview;
 //debug refresh_preview();
 
-export default Object.freeze(webcode);
+export default Object.freeze(ed);

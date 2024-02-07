@@ -1,6 +1,6 @@
 /*jslint browser */
 
-import webcode from "./webcode.js";
+import ed from "./ed.js";
 import base64 from "https://ufork.org/lib/base64.js";
 import gzip from "https://ufork.org/lib/gzip.js";
 import unpercent from "https://ufork.org/lib/unpercent.js";
@@ -323,7 +323,7 @@ function update_line_numbers(editor) {
 }
 
 const indent = "    ";
-const editor = webcode({
+const editor = ed({
     element: source_element,
     highlight,
     on_input(text) {
