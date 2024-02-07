@@ -6,8 +6,6 @@ import gzip from "https://ufork.org/lib/gzip.js";
 import unpercent from "https://ufork.org/lib/unpercent.js";
 import parseq from "https://ufork.org/lib/parseq.js";
 import requestorize from "https://ufork.org/lib/rq/requestorize.js";
-import tokenize from "https://ufork.org/lib/asm_tokenize.js";
-import parse from "https://ufork.org/lib/asm_parse.js";
 import assemble from "https://ufork.org/lib/assemble.js";
 import ufork from "https://ufork.org/js/ufork.js";
 import clock_device from "https://ufork.org/js/clock_device.js";
@@ -96,7 +94,7 @@ function alter_cursor(cursor, alterations) {
 function highlight(element) {
     const text = element.textContent;
     element.innerHTML = "";
-    const crlf = parse(tokenize(text));
+    const crlf = assemble(text);
     crlf.tokens.forEach(function (token) {
         if (token.kind === "newline") {
             return element.append("\n");
