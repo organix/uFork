@@ -25,8 +25,8 @@ A _module_ describes its imports, its definitions, and its exports.
     {
         "kind": "module",
         "import": {
-            <name>: <specifier>,
-            <name>: <specifier>,
+            <name>: <src>,
+            <name>: <src>,
             ...
         },
         "define": {
@@ -41,10 +41,10 @@ A _module_ describes its imports, its definitions, and its exports.
         ]
     }
 
-Each _import_ consists of a _name_ and _specifier_ string. The import's _name_
-is private to the module, and can be any string whatsoever. The _specifier_
-tells the loader where to find the module. The format of _specifier_ strings
-depends on the system.
+Each _import_ consists of a _name_ and _src_ string. The import's _name_ is
+private to the module, and can be any string whatsoever. The _src_ tells the
+loader where to find the module. The format of _src_ strings depends on the
+system.
 
 Each _definition_ consists of a _name_ and a _value_. The _name_ can be any
 string. The _value_ is a _literal_, _fixnum_, _type_, _pair_, _dict_, _instr_,
@@ -53,9 +53,9 @@ or _ref_.
 Definitions are private by default. Only definitions whose names are included in
 the `export` array will be accessible by other modules.
 
-In the following example, URLs and relative paths are used as _specifier_
-strings. The `apple` definition remains private whereas the `orange` definition
-is exported.
+In the following example, URLs and relative paths are used as _src_ strings. The
+`apple` definition remains private whereas the `orange` definition is
+exported.
 
     {
         "kind": "module",
@@ -332,7 +332,7 @@ and a _z_ field is not allowed:
 An optional `debug` property may appear on any kind of object. Its purpose it to
 provide debugging information.
 
-The optional _file_ string locates the source file.
+The optional _src_ string locates the source text.
 
 The optional _start_ and _end_ positions define a range, where _start_ is
 inclusive and _end_ is exclusive. A position counts the number of Unicode code
@@ -340,7 +340,7 @@ points from the beginning of the source.
 
     {
         "kind": "debug",
-        "file": <string>,
+        "src": <string>,
         "start": <number>,
         "end": <number>
     }

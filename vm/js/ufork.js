@@ -39,13 +39,12 @@
 //      The default level is LOG_WARN.
 
 //  import_map
-//      An object mapping prefixes to base URLs, used to resolve module
-//      specifiers. For example, the import map
+//      An object that maps prefixes to base URLs, used to resolve imports.
+//      For example, the import map
 
 //          {"lib/": "https://ufork.org/lib/"}
 
-//      would resolve the specifier "lib/std.asm" to
-//      "https://ufork.org/lib/std.asm".
+//      would resolve "lib/std.asm" to "https://ufork.org/lib/std.asm".
 
 // The returned object is an uninitialized core, containing a bunch of methods.
 // The methods beginning with "u_" are reentrant, but the methods beginning
@@ -334,7 +333,7 @@ function make_core({
     let boot_caps_dict = []; // empty
     let wasm_caps = Object.create(null);
     let import_promises = Object.create(null);
-    let module_source = Object.create(null);
+    let module_text = Object.create(null);
     let rom_sourcemap = Object.create(null);
     let wasm_call_in_progress = false;
     let initial_rom_ofs;
@@ -446,7 +445,7 @@ function make_core({
         if (debug !== undefined) {
             return {
                 debug,
-                source: module_source[debug.file]
+                text: module_text[debug.src]
             };
         }
     }
@@ -1119,34 +1118,34 @@ function make_core({
         return exports_object;
     }
 
-    function h_map_specifier(specifier) {
+    function h_map_src(src) {
         const alias = Object.keys(import_map).find(function (key) {
-            return specifier.startsWith(key);
+            return src.startsWith(key);
         });
         return (
             alias !== undefined
-            ? specifier.replace(alias, import_map[alias])
-            : specifier
+            ? src.replace(alias, import_map[alias])
+            : src
         );
     }
 
-    function h_import_promise(specifier, crlf) {
-        if (import_promises[specifier] === undefined) {
-            import_promises[specifier] = (
+    function h_import_promise(src, crlf) {
+        if (import_promises[src] === undefined) {
+            import_promises[src] = (
                 crlf !== undefined
                 ? Promise.resolve(crlf)
-                : fetch(specifier).then(function (response) {
+                : fetch(src).then(function (response) {
                     return (
-                        specifier.endsWith(".asm")
-                        ? response.text().then(function (source) {
-                            module_source[specifier] = source;
-                            return assemble(source, specifier);
+                        src.endsWith(".asm")
+                        ? response.text().then(function (text) {
+                            module_text[src] = text;
+                            return assemble(text, src);
                         })
                         : (
-                            specifier.endsWith(".scm")
-                            ? response.text().then(function (source) {
-                                module_source[specifier] = source;
-                                return scm.compile(source, specifier);
+                            src.endsWith(".scm")
+                            ? response.text().then(function (text) {
+                                module_text[src] = text;
+                                return scm.compile(text, src);
                             })
                             : response.json()
                         )
@@ -1161,11 +1160,10 @@ function make_core({
 // fail with an error.
 
                 return Promise.all(Object.values(crlf.ast.import).map(
-                    function (import_specifier) {
-                        return h_import_promise(new URL(
-                            h_map_specifier(import_specifier),
-                            specifier
-                        ).href);
+                    function (import_src) {
+                        return h_import_promise(
+                            new URL(h_map_src(import_src), src).href
+                        );
                     }
                 )).then(function (imported_modules) {
                     const imports = Object.create(null);
@@ -1176,16 +1174,16 @@ function make_core({
                 });
             });
         }
-        return import_promises[specifier];
+        return import_promises[src];
     }
 
-    function h_import(specifier, crlf) {
+    function h_import(src, crlf) {
 
 // Import and load a module, along with its dependencies. If 'crlf' is provided,
-// the 'specifier' is only used to resolve relative import specifiers.
+// the 'src' is only used to resolve relative imports.
 
         return unpromise(function () {
-            return h_import_promise(h_map_specifier(specifier), crlf);
+            return h_import_promise(h_map_src(src), crlf);
         });
     }
 

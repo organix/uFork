@@ -94,19 +94,18 @@ function alter_cursor(cursor, alterations) {
 }
 
 function highlight(element) {
-    const source = element.textContent;
+    const text = element.textContent;
     element.innerHTML = "";
-    const ast = parse(tokenize(source));
+    const ast = parse(tokenize(text));
     ast.tokens.forEach(function (token) {
         if (token.kind === "newline") {
             return element.append("\n");
         }
-        const text = source.slice(token.start, token.end);
         const errors = ast.errors.filter(function (error) {
             return token.start >= error.start && token.end <= error.end;
         });
         const span = document.createElement("span");
-        span.textContent = text;
+        span.textContent = text.slice(token.start, token.end);
         span.classList.add(
             (token.context === undefined && token.kind.length === 1)
             ? "separator"
@@ -149,16 +148,16 @@ function write_state(name, value) {
     history.replaceState(undefined, "", unpercent(url));
 }
 
-function fetch_source() {
+function fetch_text() {
     const text = read_state("text");
     if (text !== undefined) {
         return base64.decode(text).then(gzip.decode).then(function (utf8) {
             return new TextDecoder().decode(utf8);
         });
     }
-    const file = read_state("file");
-    if (file !== undefined) {
-        return fetch(file).then(function (response) {
+    const src = read_state("src");
+    if (src !== undefined) {
+        return fetch(src).then(function (response) {
             return (
                 response.ok
                 ? response.text()
@@ -250,11 +249,11 @@ function run(text) {
         });
         return append_output(ufork.LOG_WARN, error_messages.join("\n"));
     }
-    const file = read_state("file") ?? "placeholder.asm";
-    const specifier = new URL(file, location.href).href;
+    const unqualified_src = read_state("src") ?? "placeholder.asm";
+    const src = new URL(unqualified_src, location.href).href;
     parseq.sequence([
         core.h_initialize(),
-        core.h_import(specifier, crlf),
+        core.h_import(src, crlf),
         requestorize(function (imported_module) {
             clock_device(core);
             random_device(core);
@@ -427,7 +426,7 @@ const editor = ed({
     }
 });
 
-fetch_source().then(function (text) {
+fetch_text().then(function (text) {
     editor.set_text(text);
     update_line_numbers(editor);
 }).catch(function (error) {

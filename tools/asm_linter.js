@@ -8,17 +8,17 @@
 import assemble from "https://ufork.org/lib/assemble.js";
 
 let decoder = new TextDecoder();
-let source = "";
+let text = "";
 let buffer = new Uint8Array(4096);
 Deno.stdin.read(buffer).then(function on_chunk(nr_bytes) {
     if (Number.isSafeInteger(nr_bytes)) {
-        source += decoder.decode(
+        text += decoder.decode(
             buffer.slice(0, nr_bytes),
             {stream: true}
         );
         return Deno.stdin.read(buffer).then(on_chunk);
     }
-    const crlf = assemble(source);
+    const crlf = assemble(text);
     if (Array.isArray(crlf.errors)) {
         crlf.errors.forEach(function (error) {
             window.console.log(

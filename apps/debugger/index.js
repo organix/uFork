@@ -141,29 +141,29 @@ function update_source_monitor(ip) {
     if (
         core.u_is_rom(ip)
         && ip !== ufork.UNDEF_RAW
-        && sourcemap?.source !== undefined
+        && sourcemap?.text !== undefined
     ) {
-        $source_monitor.title = sourcemap.debug.file;
-        sourcemap.source.split(rx_crlf).forEach(function (ignore, line_nr) {
+        $source_monitor.title = sourcemap.debug.src;
+        sourcemap.text.split(rx_crlf).forEach(function (ignore, line_nr) {
             $aside.textContent += line_nr + 1 + "\n";
         });
         if (sourcemap.debug.start !== undefined) {
-            const $pre_text = document.createTextNode(sourcemap.source.slice(
+            const $pre_text = document.createTextNode(sourcemap.text.slice(
                 0,
                 sourcemap.debug.start
             ));
             const $mark = document.createElement("mark");
-            $mark.textContent = sourcemap.source.slice(
+            $mark.textContent = sourcemap.text.slice(
                 sourcemap.debug.start,
                 sourcemap.debug.end
             );
-            const $post_text = document.createTextNode(sourcemap.source.slice(
+            const $post_text = document.createTextNode(sourcemap.text.slice(
                 sourcemap.debug.end
             ));
             $code.append($pre_text, $mark, $post_text);
             keep_centered($mark, $source_monitor);
         } else {
-            $code.textContent = sourcemap.source;
+            $code.textContent = sourcemap.text;
         }
     } else {
         $code.textContent = "No source available.";
@@ -452,7 +452,7 @@ function boot(src) {
     });
 }
 
-const $boot_input = document.getElementById("boot-url");
+const $boot_input = document.getElementById("boot-src");
 $boot_input.oninput = function () {
     write_state("src", $boot_input.value || undefined);
 };
