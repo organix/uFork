@@ -236,7 +236,8 @@ function host_device(core) {
 //debug     on_wakeup: run_core,
 //debug     on_log: console.log,
 //debug     log_level: ufork.LOG_DEBUG,
-//debug     import_map: {"https://ufork.org/lib/": lib_url}
+//debug     import_map: {"https://ufork.org/lib/": lib_url},
+//debug     compilers: {asm: assemble}
 //debug });
 //debug parseq.sequence([
 //debug     core.h_initialize(),

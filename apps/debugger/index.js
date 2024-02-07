@@ -5,6 +5,8 @@
 import unpercent from "https://ufork.org/lib/unpercent.js";
 import hexdump from "https://ufork.org/lib/hexdump.js";
 import OED from "https://ufork.org/lib/oed.js";
+import assemble from "https://ufork.org/lib/assemble.js";
+import scm from "https://ufork.org/lib/scheme.js";
 import ufork from "https://ufork.org/js/ufork.js";
 import clock_device from "https://ufork.org/js/clock_device.js";
 import random_device from "https://ufork.org/js/random_device.js";
@@ -601,7 +603,8 @@ core = ufork.make_core({
         $importmap
         ? JSON.parse($importmap.textContent).imports
         : {}
-    )
+    ),
+    compilers: {asm: assemble, scm: scm.compile}
 });
 
 core.h_initialize()(function callback(value, reason) {

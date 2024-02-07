@@ -1,7 +1,7 @@
 // A JavaScript wrapper for a uFork WASM core.
 
 // This module exports an object containing the uFork constants, as well as a
-// 'make_core' constuctor function that takes an object with the following
+// 'make_core' constructor function that takes an object with the following
 // properties:
 
 //  wasm_url
@@ -46,6 +46,27 @@
 
 //      would resolve "lib/std.asm" to "https://ufork.org/lib/std.asm".
 
+//  compilers
+//      An object that maps file extensions to compiler functions.
+
+//      Compilers are used by the 'h_import' method to transform text, fetched
+//      over the network, to uFork IR. A compiler has the signature:
+
+//          compile(text, src) -> ir
+
+//      where 'text' is the source text as a string, 'src' is the module's
+//      source (usually a URL, optional), and 'ir' is a CRLF object as
+//      described in ir.md, unless compilation failed, in which case 'ir'
+//      should have a non-empty array as its "errors" property.
+
+//      For example, if both assembly and Scheme modules were to be imported,
+//      the compilers object might look like:
+
+//          {
+//              asm: compile_assembly,
+//              scm: compile_scheme
+//          }
+
 // The returned object is an uninitialized core, containing a bunch of methods.
 // The methods beginning with "u_" are reentrant, but the methods beginning
 // with "h_" are non-reentrant.
@@ -58,8 +79,6 @@
 import parseq from "https://ufork.org/lib/parseq.js";
 import requestorize from "https://ufork.org/lib/rq/requestorize.js";
 import unpromise from "https://ufork.org/lib/rq/unpromise.js";
-import assemble from "https://ufork.org/lib/assemble.js";
-import scm from "https://ufork.org/lib/scheme.js";
 
 // Type-tag bits
 
@@ -327,7 +346,8 @@ function make_core({
     on_log,
     on_trace,
     log_level = LOG_WARN,
-    import_map = {}
+    import_map = {},
+    compilers = {}
 }) {
     let wasm_exports;
     let boot_caps_dict = []; // empty
@@ -1135,21 +1155,17 @@ function make_core({
                 crlf !== undefined
                 ? Promise.resolve(crlf)
                 : fetch(src).then(function (response) {
-                    return (
-                        src.endsWith(".asm")
-                        ? response.text().then(function (text) {
-                            module_text[src] = text;
-                            return assemble(text, src);
-                        })
-                        : (
-                            src.endsWith(".scm")
-                            ? response.text().then(function (text) {
-                                module_text[src] = text;
-                                return scm.compile(text, src);
-                            })
-                            : response.json()
-                        )
-                    );
+                    return response.text();
+                }).then(function (text) {
+                    const extension = src.split(".").pop();
+                    if (!Object.hasOwn(compilers, extension)) {
+                        return Promise.reject(new Error(
+                            "No compiler for '" + src + "'."
+                        ));
+                    }
+                    const compile = compilers[extension];
+                    module_text[src] = text;
+                    return compile(text, src);
                 })
             ).then(function (crlf) {
                 if (crlf.errors !== undefined && crlf.errors.length > 0) {
@@ -1614,6 +1630,8 @@ function make_core({
     });
 }
 
+//debug import assemble from "https://ufork.org/lib/assemble.js";
+//debug import scm from "https://ufork.org/lib/scheme.js";
 //debug import clock_device from "./clock_device.js";
 //debug import random_device from "./random_device.js";
 //debug import io_device from "./io_device.js";
@@ -1635,7 +1653,8 @@ function make_core({
 //debug     },
 //debug     on_log: console.log,
 //debug     log_level: LOG_DEBUG,
-//debug     import_map: {"https://ufork.org/lib/": lib_url}
+//debug     import_map: {"https://ufork.org/lib/": lib_url},
+//debug     compilers: {asm: assemble, scm: scm.compile}
 //debug });
 //debug parseq.sequence([
 //debug     core.h_initialize(),

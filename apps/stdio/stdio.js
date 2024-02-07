@@ -13,6 +13,8 @@ import {join} from "https://deno.land/std@0.203.0/path/join.ts";
 import {toFileUrl} from "https://deno.land/std@0.203.0/path/to_file_url.ts";
 import parseq from "https://ufork.org/lib/parseq.js";
 import requestorize from "https://ufork.org/lib/rq/requestorize.js";
+import assemble from "https://ufork.org/lib/assemble.js";
+import scm from "https://ufork.org/lib/scheme.js";
 import ufork from "https://ufork.org/js/ufork.js";
 import io_device from "https://ufork.org/js/io_device.js";
 const wasm_url = import.meta.resolve("https://ufork.org/wasm/ufork.wasm");
@@ -71,7 +73,8 @@ core = ufork.make_core({
     wasm_url,
     on_wakeup: run,
     on_log: window.console.error,
-    log_level: ufork.LOG_WARN
+    log_level: ufork.LOG_WARN,
+    compilers: {asm: assemble, scm: scm.compile}
 });
 parseq.sequence([
     core.h_initialize(),

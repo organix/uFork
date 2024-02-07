@@ -7,6 +7,7 @@ import unpercent from "https://ufork.org/lib/unpercent.js";
 import parseq from "https://ufork.org/lib/parseq.js";
 import requestorize from "https://ufork.org/lib/rq/requestorize.js";
 import assemble from "https://ufork.org/lib/assemble.js";
+import scm from "https://ufork.org/lib/scheme.js";
 import ufork from "https://ufork.org/js/ufork.js";
 import clock_device from "https://ufork.org/js/clock_device.js";
 import random_device from "https://ufork.org/js/random_device.js";
@@ -238,7 +239,8 @@ function run(text) {
             location.href.startsWith("https://ufork.org/")
             ? {}
             : {"https://ufork.org/lib/": dev_lib_url}
-        )
+        ),
+        compilers: {asm: assemble, scm: scm.compile}
     });
     const crlf = assemble(text);
     if (crlf.errors !== undefined && crlf.errors.length > 0) {
