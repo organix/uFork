@@ -108,9 +108,9 @@ function highlight(element) {
         const span = document.createElement("span");
         span.textContent = text;
         span.classList.add(
-            token.kind.length === 1
+            (token.context === undefined && token.kind.length === 1)
             ? "separator"
-            : token.kind
+            : token.context ?? token.kind
         );
         if (errors.length > 0) {
             span.title = errors.map(function (error) {
