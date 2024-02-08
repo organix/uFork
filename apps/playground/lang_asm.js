@@ -3,6 +3,7 @@
 import assemble from "https://ufork.org/lib/assemble.js";
 import handle_tab from "./handle_tab.js";
 import handle_comment from "./handle_comment.js";
+import handle_duplication from "./handle_duplication.js";
 
 const indent = "    ";
 const rx_comment = /^(\s*)(;+\u0020?)/;
@@ -42,6 +43,7 @@ function highlight(element) {
 function handle_keydown(editor, event) {
     handle_tab(editor, event, indent);
     handle_comment(editor, event, rx_comment, comment_prefix);
+    handle_duplication(editor, event);
     if (event.defaultPrevented) {
         return;
     }

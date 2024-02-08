@@ -7,7 +7,7 @@ function handle_comment(editor, event, rx_comment, comment_prefix) {
     if (event.defaultPrevented) {
         return;
     }
-    if (event.key === "/" && editor.is_command(event)) {
+    if (editor.is_command(event) && event.key === "/") {
         event.preventDefault();
         const text = editor.get_text();
         const cursor = editor.get_cursor();
