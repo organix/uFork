@@ -3,7 +3,7 @@
 // The 'slowdown' parameter multiplies the specified delays, making it possible
 // to slow down time during debugging.
 
-/*jslint browser, devel */
+/*jslint browser */
 
 import ufork from "./ufork.js";
 
