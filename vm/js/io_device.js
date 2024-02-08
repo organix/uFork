@@ -1,6 +1,6 @@
 // Installs the IO device. See also io_dev.md.
 
-/*jslint browser, bitwise, devel */
+/*jslint browser, bitwise */
 
 import OED from "https://ufork.org/lib/oed.js";
 import ufork from "./ufork.js";
@@ -10,11 +10,11 @@ function io_device(core, on_stdout) {
     let stdin_buffer = [];
     let stdin_stub;
 
-    function stdin_ready() {  // return `true` if stdin has characters waiting
-        return (stdin_buffer.length > 0);
-    }
-    function read_stdin() {  // remove and return the next character from stdin
-        if (!stdin_ready()) {
+    function read_stdin() {
+
+// Remove and return the next character from stdin.
+
+        if (stdin_buffer.length === 0) {
             return core.UNDEF_RAW;
         }
         const first = stdin_buffer[0];
@@ -23,7 +23,11 @@ function io_device(core, on_stdout) {
         const char = core.u_fixnum(code);  // character read
         return char;
     }
-    function listen_stdin(stub) {  // register a customer (capability) to receive a codepoint
+
+    function listen_stdin(stub) {
+
+// Register a customer (capability) to receive a codepoint.
+
         if (core.u_trace !== undefined) {
             core.u_trace(
                 "READ:",
@@ -41,8 +45,12 @@ function io_device(core, on_stdout) {
         }
         stdin_stub = stub;
     }
-    function poll_stdin() {  // when the buffer state changes, check for stdin listener
-        if (stdin_stub !== undefined && stdin_ready()) {
+
+    function poll_stdin() {
+
+// When the buffer state changes, check for stdin listener.
+
+        if (stdin_stub !== undefined && stdin_buffer.length > 0) {
             const char = read_stdin();
             if (core.u_trace !== undefined) {
                 core.u_trace("READ:", core.u_print(char));

@@ -352,6 +352,7 @@ function make_core({
     let wasm_exports;
     let boot_caps_dict = []; // empty
     let wasm_caps = Object.create(null);
+    let uninstallers = [];
     let import_promises = Object.create(null);
     let module_text = Object.create(null);
     let rom_sourcemap = Object.create(null);
@@ -1455,7 +1456,7 @@ function make_core({
         h_set_rom_top(rom_top);  // register new top-of-ROM
     }
 
-    function h_install(boot_caps, wasm_imports) {
+    function h_install(boot_caps, wasm_imports, uninstall) {
 
 // Extends the boot capabilities dictionary and provide capability functions to
 // the WASM instance.
@@ -1474,6 +1475,19 @@ function make_core({
             boot_caps_dict.push(...boot_caps);
         }
         Object.assign(wasm_caps, wasm_imports);
+        if (typeof uninstall === "function") {
+            uninstallers.push(uninstall);
+        }
+    }
+
+    function h_dispose() {
+
+// Dispose of the core. This involves uninstalling the devices.
+
+        uninstallers.forEach(function (uninstall) {
+            uninstall();
+        });
+        uninstallers = [];
     }
 
     function h_wakeup(device_offset) {
@@ -1572,6 +1586,7 @@ function make_core({
         h_boot,
         h_car,
         h_cdr,
+        h_dispose,
         h_event_enqueue,
         h_gc_color,
         h_gc_run,

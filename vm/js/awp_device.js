@@ -1,9 +1,6 @@
 // Installs the AWP device, allowing cores to communicate over the network via
 // the Actor Wire Protocol. See also awp.md and awp_device.md.
 
-// Returns a disposal function that destroys all connections and stops
-// listening.
-
 // This device makes two kinds of proxies: "remote" and "stop".
 // The two kinds can be distinguished by the type of their handle:
 //  - Remote capabilities (transparent references to remote actors) have a
@@ -866,22 +863,23 @@ function awp_device({
         }
     );
 
-// Install the dynamic device as if it were a real device. Unlike a real device,
-// we must reserve a stub to keep the capability from being released.
-
-    const dev_cap = device.h_reserve_cap();
-    const dev_id = core.u_fixnum(awp_key);
-    core.h_install([[dev_id, dev_cap]]);
-    device.h_reserve_stub(dev_cap);
-    return function dispose() {
+    function uninstall() {
         Object.values(connections).forEach(function (connection) {
             connection.close();
         });
         Object.values(listeners).forEach(function (listener) {
             listener.stop();
         });
-        device.u_dispose();
-    };
+        device.h_dispose();
+    }
+
+// Install the dynamic device as if it were a real device. Unlike a real device,
+// we must reserve a stub to keep the capability from being released.
+
+    const dev_cap = device.h_reserve_cap();
+    const dev_id = core.u_fixnum(awp_key);
+    core.h_install([[dev_id, dev_cap]], undefined, uninstall);
+    device.h_reserve_stub(dev_cap);
 }
 
 //debug import parseq from "https://ufork.org/lib/parseq.js";
@@ -903,7 +901,6 @@ function awp_device({
 //debug     import_map: {"https://ufork.org/lib/": lib_url},
 //debug     compilers: {asm: assemble}
 //debug });
-//debug let dispose;
 //debug function demo({
 //debug     transport,
 //debug     bob_address,
@@ -963,7 +960,7 @@ function awp_device({
 //debug                 }
 //debug             ];
 //debug             const make_dynamic_device = host_device(core);
-//debug             dispose = awp_device({
+//debug             awp_device({
 //debug                 core,
 //debug                 make_dynamic_device,
 //debug                 transport,
@@ -1015,6 +1012,6 @@ function awp_device({
 
 // Clean up.
 
-// dispose();
+// core.h_dispose();
 
 export default Object.freeze(awp_device);
