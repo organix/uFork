@@ -62,6 +62,19 @@
             padding: 10px;
             outline: none;
             caret-color: white;
+            position: relative; /* for ruler */
+        }
+        #source::before { /* ruler */
+            content: " ";
+            display: block;
+            background: var(--gray);
+            width: 1px;
+            position: absolute;
+            z-index: -1;
+            left: calc(80ch + 10px);
+            top: 0;
+            bottom: 0;
+            pointer-events: none;
         }
         #devices {
             flex: 1 1 30%;
