@@ -20,13 +20,27 @@ function handle_comment(editor, event, rx_comment, comment_prefix) {
         let line_start = cursor_start - line_pre.length;
         let line_end = cursor_end + line_post.length;
         const lines = text.slice(line_start, line_end).split("\n");
+
+// If some lines are commented and some aren't, comment all non-empty lines.
+
+        let comment = false;
         const matches_array = lines.map(function (line) {
-            return line.match(rx_comment);
+            const matches = line.match(rx_comment);
+            if (!matches && line !== "") {
+                comment = true;
+            }
+            return matches;
         });
-        const uncomment = matches_array.some(Array.isArray);
         let alterations = [];
         lines.forEach(function (line, line_nr) {
-            if (uncomment) {
+            if (comment) {
+                if (line !== "") {
+                    alterations.push({
+                        range: [line_start, line_start],
+                        replacement: comment_prefix
+                    });
+                }
+            } else {
                 const matches = matches_array[line_nr];
                 if (matches) {
 
@@ -40,13 +54,6 @@ function handle_comment(editor, event, rx_comment, comment_prefix) {
                             line_start + matches[0].length
                         ],
                         replacement: ""
-                    });
-                }
-            } else {
-                if (line !== "") {
-                    alterations.push({
-                        range: [line_start, line_start],
-                        replacement: comment_prefix
                     });
                 }
             }
