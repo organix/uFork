@@ -159,17 +159,17 @@ function host_device(core) {
             return device === dev_cap && core.u_fix_to_i32(key_raw) === key;
         }
 
-        function u_dispose() {
+        function h_dispose() {
             delete dynamic_devices[key];
         }
 
         return Object.freeze({
+            h_dispose,
             h_reserve_cap,
             h_reserve_stub,
             h_reserve_proxy,
             u_strip_meta,
-            u_owns_proxy,
-            u_dispose
+            u_owns_proxy
         });
     };
 }
@@ -215,10 +215,12 @@ function host_device(core) {
 //debug     let proxy = dev.h_reserve_proxy(ufork.TRUE_RAW);
 //debug     let dummy_cap = dev.h_reserve_cap();
 //debug     let dummy_cap_stub = dev.h_reserve_stub(dummy_cap);
-//debug     core.h_install([[core.u_fixnum(1000), dummy_cap]]);
-//debug     core.h_install([[core.u_fixnum(1001), proxy]]);
+//debug     core.h_install([
+//debug         [core.u_fixnum(1000), dummy_cap],
+//debug         [core.u_fixnum(1001), proxy]
+//debug     ]);
 //debug     return function dispose() {
-//debug         dev.u_dispose();
+//debug         dev.h_dispose();
 //debug         if (dummy_cap_stub !== undefined) {
 //debug             core.h_release_stub(dummy_cap_stub);
 //debug             dummy_cap_stub = undefined;

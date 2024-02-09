@@ -15,15 +15,18 @@ import random_device from "https://ufork.org/js/random_device.js";
 import blob_device from "https://ufork.org/js/blob_device.js";
 import timer_device from "https://ufork.org/js/timer_device.js";
 import io_device from "https://ufork.org/js/io_device.js";
+import host_device from "https://ufork.org/js/host_device.js";
 const wasm_url = import.meta.resolve("https://ufork.org/wasm/ufork.wasm");
 const unqualified_dev_lib_url = import.meta.resolve("../../lib/");
 
 const dev_lib_url = new URL(unqualified_dev_lib_url, location.href).href;
-const clear_output_button = document.getElementById("clear_output");
 const line_numbers_element = document.getElementById("line_numbers");
 const output_element = document.getElementById("output");
 const run_button = document.getElementById("run");
 const debug_button = document.getElementById("debug");
+const test_button = document.getElementById("test");
+const clear_output_button = document.getElementById("clear_output");
+const help_button = document.getElementById("help");
 const source_element = document.getElementById("source");
 const info_checkbox = document.getElementById("info");
 const lang_select = document.getElementById("lang");
@@ -115,7 +118,7 @@ function update_page_url(text) {
     });
 }
 
-function run(text) {
+function run(text, entry) {
     let core;
     let on_stdin;
 
@@ -141,6 +144,9 @@ function run(text) {
         append_output(ufork.LOG_TRACE, "IDLE:", status_message);
     }
 
+    if (core !== undefined) {
+        core.h_dispose();
+    }
     core = ufork.make_core({
         wasm_url,
         on_wakeup(device_offset) {
@@ -152,7 +158,7 @@ function run(text) {
         import_map: (
             location.href.startsWith("https://ufork.org/")
             ? {}
-            : {"https://ufork.org/lib/": new URL(dev_lib_url, location.href).href}
+            : {"https://ufork.org/lib/": dev_lib_url}
         ),
         compilers: {asm: lang_asm.compile, scm: scm.compile}
     });
@@ -178,10 +184,38 @@ function run(text) {
                 output_element.append(span);
                 scroll_to_latest_output();
             });
-            if (imported_module.boot === undefined) {
-                throw new Error("Missing 'boot' export.");
+            if (imported_module[entry] === undefined) {
+                throw new Error("Missing '" + entry + "' export.");
             }
-            core.h_boot(imported_module.boot);
+            if (entry === "test") {
+                const make_dynamic_device = host_device(core);
+                const device = make_dynamic_device(function on_event_stub(ptr) {
+                    const event_stub = core.u_read_quad(ptr);
+                    const event = core.u_read_quad(event_stub.y);
+                    const message = event.y;
+                    if (message === ufork.TRUE_RAW) {
+                        append_output(
+                            ufork.LOG_DEBUG,
+                            "Test passed. You are awesome!"
+                        );
+                    } else {
+                        append_output(
+                            ufork.LOG_WARN,
+                            "Test failed:",
+                            core.u_pprint(message)
+                        );
+                    }
+                    core.h_dispose();
+                });
+                const state = core.h_reserve_ram({
+                    t: ufork.PAIR_T,
+                    x: device.h_reserve_proxy(),
+                    y: ufork.NIL_RAW
+                });
+                core.h_boot(imported_module[entry], state);
+            } else {
+                core.h_boot(imported_module[entry]);
+            }
             run_loop();
             return true;
         })
@@ -257,6 +291,7 @@ function choose_lang(name) {
     lang = lang_packs[name];
     lang_select.value = name;
     reset_editor();
+    test_button.disabled = name !== "asm";
 }
 
 Object.keys(lang_packs).forEach(function (name) {
@@ -277,12 +312,18 @@ fetch_text().then(function (text) {
     update_line_numbers(editor);
 });
 run_button.onclick = function () {
-    run(editor.get_text());
+    run(editor.get_text(), "boot");
 };
 debug_button.onclick = function () {
     window.open(location.href.replace("playground", "debugger"));
 };
+test_button.onclick = function () {
+    run(editor.get_text(), "test");
+};
 clear_output_button.onclick = clear_output;
+help_button.onclick = function () {
+    window.open(lang.docs_url);
+};
 info_checkbox.oninput = function () {
     output_element.classList.toggle("info");
     scroll_to_latest_output();

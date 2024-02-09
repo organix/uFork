@@ -388,8 +388,8 @@ function render_loop() {
         const cc = core.u_current_continuation();
         if (cc !== undefined) {
             const instruction_quad = core.u_read_quad(cc.ip);
-            const op_code = core.u_fix_to_i32(instruction_quad.x);
-            if (op_code === core.VM_DEBUG) { // 'debug' op
+            const op_code = instruction_quad.x;
+            if (op_code === ufork.VM_DEBUG) { // 'debug' op
                 pause_action(); // breakpoint reached
                 return;
             }

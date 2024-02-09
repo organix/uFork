@@ -34,7 +34,6 @@ const wasm_url = import.meta.resolve("https://ufork.org/wasm/ufork.wasm");
 function asm_test(module_url) {
     let logs = [];
     let core;
-    let dispose_timer;
     let the_callback;
 
     function run_ufork() {
@@ -63,7 +62,7 @@ function asm_test(module_url) {
             the_callback = callback;
             clock_device(core);
             random_device(core);
-            dispose_timer = timer_device(core);
+            timer_device(core);
             if (asm_module.test === undefined) {
                 logs.push([ufork.LOG_WARN, "Module did not export a test."]);
                 return callback({logs});
@@ -74,7 +73,7 @@ function asm_test(module_url) {
                     const event_stub = core.u_read_quad(ptr);
                     const event = core.u_read_quad(event_stub.y);
                     const message = event.y;
-                    dispose_timer();
+                    core.h_dispose();
                     if (message === ufork.TRUE_RAW) {
                         return callback({pass: true});
                     }
@@ -104,10 +103,10 @@ function asm_test(module_url) {
 
                 core.h_boot(asm_module.test, state);
                 run_ufork();
-                return dispose_timer; // cancel
+                return core.h_dispose; // cancel
             } catch (exception) {
                 logs.push([ufork.LOG_WARN, "EXCEPTION", exception]);
-                dispose_timer();
+                core.h_dispose();
                 return callback({pass: false, logs});
             }
         }

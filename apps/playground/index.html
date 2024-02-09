@@ -62,6 +62,19 @@
             padding: 10px;
             outline: none;
             caret-color: white;
+            position: relative; /* for ruler */
+        }
+        #source::before { /* ruler */
+            content: " ";
+            display: block;
+            background: var(--gray);
+            width: 1px;
+            position: absolute;
+            z-index: -1;
+            left: calc(80ch + 10px);
+            top: 0;
+            bottom: 0;
+            pointer-events: none;
         }
         #devices {
             flex: 1 1 30%;
@@ -72,11 +85,19 @@
         }
         #controls {
             display: flex;
+            flex-wrap: wrap;
             justify-content: flex-end;
             margin-bottom: 10px;
         }
-        #controls > :not(:last-child) {
-            margin-right: 5px;
+        #controls > * {
+            margin-bottom: 5px;
+            margin-left: 5px;
+        }
+        #buttons {
+            display: flex;
+        }
+        #buttons > * + * {
+            margin-left: 5px;
         }
         #output {
             white-space: pre;
@@ -176,9 +197,13 @@
         <div id="controls">
             <select id="lang"></select>
             <label><input type="checkbox" id="info" /> Show info</label>
-            <button id="run">▶ Run</button>
-            <button id="debug">🧐 Debug</button>
-            <button id="clear_output">⨉ Clear</button>
+            <div id="buttons">
+                <button id="run">▶ Run</button>
+                <button id="debug">🧐 Debug</button>
+                <button id="test">✔ Test</button>
+                <button id="clear_output">⨉ Clear</button>
+                <button id="help">﹖ Help</button>
+            </div>
         </div>
         <div id="output"></div>
     </div>
