@@ -15,9 +15,6 @@ function highlight(element) {
     element.innerHTML = "";
     const crlf = assemble(text);
     crlf.tokens.forEach(function (token) {
-        if (token.kind === "newline") {
-            return element.append("\n");
-        }
         const errors = crlf.errors.filter(function (error) {
             return token.start >= error.start && token.end <= error.end;
         });
