@@ -83,5 +83,6 @@ export default Object.freeze({
     compile: assemble,
     handle_keydown,
     highlight,
-    stringify_error
+    stringify_error,
+    docs_url: "https://github.com/organix/uFork/blob/main/docs/asm.md"
 });

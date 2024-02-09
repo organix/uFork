@@ -20,12 +20,13 @@ const wasm_url = import.meta.resolve("https://ufork.org/wasm/ufork.wasm");
 const unqualified_dev_lib_url = import.meta.resolve("../../lib/");
 
 const dev_lib_url = new URL(unqualified_dev_lib_url, location.href).href;
-const clear_output_button = document.getElementById("clear_output");
 const line_numbers_element = document.getElementById("line_numbers");
 const output_element = document.getElementById("output");
 const run_button = document.getElementById("run");
 const debug_button = document.getElementById("debug");
 const test_button = document.getElementById("test");
+const clear_output_button = document.getElementById("clear_output");
+const help_button = document.getElementById("help");
 const source_element = document.getElementById("source");
 const info_checkbox = document.getElementById("info");
 const lang_select = document.getElementById("lang");
@@ -320,6 +321,9 @@ test_button.onclick = function () {
     run(editor.get_text(), "test");
 };
 clear_output_button.onclick = clear_output;
+help_button.onclick = function () {
+    window.open(lang.docs_url);
+};
 info_checkbox.oninput = function () {
     output_element.classList.toggle("info");
     scroll_to_latest_output();
