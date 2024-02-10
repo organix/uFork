@@ -179,8 +179,26 @@ function host_dev(core) {
 //debug const wasm_url = import.meta.resolve(
 //debug     "https://ufork.org/wasm/ufork.wasm"
 //debug );
-//debug const asm_url = import.meta.resolve("./host_dev.asm");
-//debug const lib_url = import.meta.resolve("../../lib/");
+//debug const test_crlf = assemble(`
+//debug dummy_key:
+//debug     ref 1000
+//debug proxy_key:
+//debug     ref 1001
+//debug boot:                   ; () <- {caps}
+//debug     push -42            ; -42
+//debug     msg 0               ; -42 {caps}
+//debug     push proxy_key      ; -42 {caps} proxy_key
+//debug     dict get            ; -42 proxy
+//debug     send -1             ; --
+//debug     push 42             ; 42
+//debug     msg 0               ; 42 {caps}
+//debug     push dummy_key      ; 42 {caps} dummy_key
+//debug     dict get            ; 42 dummy_dev
+//debug     send -1             ; --
+//debug     end commit
+//debug .export
+//debug     boot
+//debug `);
 //debug let dispose;
 //debug let core;
 //debug function dummy_dev(make_ddev) {
@@ -238,12 +256,11 @@ function host_dev(core) {
 //debug     on_wakeup: run_core,
 //debug     on_log: console.log,
 //debug     log_level: ufork.LOG_DEBUG,
-//debug     import_map: {"https://ufork.org/lib/": lib_url},
 //debug     compilers: {asm: assemble}
 //debug });
 //debug parseq.sequence([
 //debug     core.h_initialize(),
-//debug     core.h_import(asm_url),
+//debug     core.h_import(undefined, test_crlf),
 //debug     requestorize(function (asm_module) {
 //debug         dispose = dummy_dev(host_dev(core));
 //debug         core.h_boot(asm_module.boot);
