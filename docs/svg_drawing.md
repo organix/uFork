@@ -19,7 +19,28 @@ Prefix     | Parameters     | Operation
 `m`        | _dx_ _dy_      | relative move to (_x_+_dx_, _y_+_dy_)
 `L`        | _x_ _y_        | absolute line to (_x_, _y_)
 `l`        | _dx_ _dy_      | relative line to (_x_+_dx_, _y_+_dy_)
+`H`        | _x_            | absolute horizontal line to (_x_, _y_)
+`h`        | _dx_           | relative horizontal line to (_x_+_dx_, _y_)
+`V`        | _y_            | absolute vertical line to (_x_, _y_)
+`v`        | _dy_           | relative vertical line to (_x_, _y_+_dy_)
 `Z` or `z` | &mdash;        | close path (line to beginning)
+
+In addition, there are extended operations
+not directly available as paths.
+
+Prefix     | Parameters       | Operation
+-----------|------------------|------------------------------------------
+`X`        | _x_ _y_ _n_ ...  | _n_ characters of text starting at (_x_, _y_)
+`F`        | _r_ _g_ _b_ _a_  | fill with color (_a_=255 for opaque)
+`f`        | _r_ _g_ _b_ _a_  | fill pending (followed by `D`)
+`D`        | _w_ _cap_ _join_ | draw stroke _w_ wide (0=butt, 1=round, 2=square)
+`f`        | _w_ _cap_ _join_ | draw pending (followed by `F`)
+
+Standard: `AaCcHhLlMmQqSsTtVvZz`
+
+Extended: `DdFfX`
+
+Unused: `BbEeGgIiJjKkNnOoPpRrUuWwxYy`
 
 ## I/O Interface
 The **I/O Interfacee** interface follows the
