@@ -5,7 +5,7 @@
 import OED from "https://ufork.org/lib/oed.js";
 import ufork from "./ufork.js";
 
-function io_device(core, on_stdout) {
+function io_dev(core, on_stdout) {
     let utf8_decoder = new TextDecoder("utf-8", {fatal: true}); // stateful
     let stdin_buffer = [];
     let stdin_stub;
@@ -115,4 +115,4 @@ function io_device(core, on_stdout) {
     };
 }
 
-export default Object.freeze(io_device);
+export default Object.freeze(io_dev);

@@ -9,8 +9,8 @@ import parseq from "https://ufork.org/lib/parseq.js";
 import requestorize from "https://ufork.org/lib/rq/requestorize.js";
 import assemble from "https://ufork.org/lib/assemble.js";
 import ufork from "https://ufork.org/js/ufork.js";
-import awp_device from "https://ufork.org/js/awp_device.js";
-import host_device from "https://ufork.org/js/host_device.js";
+import awp_dev from "https://ufork.org/js/awp_dev.js";
+import host_dev from "https://ufork.org/js/host_dev.js";
 import node_tls_transport from "https://ufork.org/js/node_tls_transport.js";
 import import_map from "./import_map.js";
 const wasm_url = import.meta.resolve("https://ufork.org/wasm/ufork.wasm");
@@ -102,10 +102,10 @@ parseq.sequence([
     core.h_initialize(),
     core.h_import(asm_urls[store_name]),
     requestorize(function (asm_module) {
-        const make_dynamic_device = host_device(core);
-        awp_device({
+        const make_ddev = host_dev(core);
+        awp_dev({
             core,
-            make_dynamic_device,
+            make_ddev,
             transport,
             stores: [stores[store_name]],
             webscrypto: crypto.webcrypto

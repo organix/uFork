@@ -25,10 +25,10 @@ import import_map from "./import_map.js";
 import parseq from "https://ufork.org/lib/parseq.js";
 import assemble from "https://ufork.org/lib/assemble.js";
 import ufork from "https://ufork.org/js/ufork.js";
-import host_device from "https://ufork.org/js/host_device.js";
-import clock_device from "https://ufork.org/js/clock_device.js";
-import random_device from "https://ufork.org/js/random_device.js";
-import timer_device from "https://ufork.org/js/timer_device.js";
+import host_dev from "https://ufork.org/js/host_dev.js";
+import clock_dev from "https://ufork.org/js/clock_dev.js";
+import random_dev from "https://ufork.org/js/random_dev.js";
+import timer_dev from "https://ufork.org/js/timer_dev.js";
 const wasm_url = import.meta.resolve("https://ufork.org/wasm/ufork.wasm");
 
 function asm_test(module_url) {
@@ -60,16 +60,16 @@ function asm_test(module_url) {
         core.h_import(module_url),
         function asm_test_requestor(callback, asm_module) {
             the_callback = callback;
-            clock_device(core);
-            random_device(core);
-            timer_device(core);
+            clock_dev(core);
+            random_dev(core);
+            timer_dev(core);
             if (asm_module.test === undefined) {
                 logs.push([ufork.LOG_WARN, "Module did not export a test."]);
                 return callback({logs});
             }
             try {
-                const make_dynamic_device = host_device(core);
-                const device = make_dynamic_device(function on_event_stub(ptr) {
+                const make_ddev = host_dev(core);
+                const test_dev = make_ddev(function on_event_stub(ptr) {
                     const event_stub = core.u_read_quad(ptr);
                     const event = core.u_read_quad(event_stub.y);
                     const message = event.y;
@@ -86,7 +86,7 @@ function asm_test(module_url) {
                 });
                 const state = core.h_reserve_ram({
                     t: ufork.PAIR_T,
-                    x: device.h_reserve_proxy(),
+                    x: test_dev.h_reserve_proxy(),
                     y: ufork.NIL_RAW
                 });
 

@@ -99,14 +99,14 @@ function get_caret(element, position) {
 // console.log(caret.node.nodeValue, caret.offset);
 
 function is_command(keyboard_event) {
-    const is_apple_device = (
+    const is_apple_dev = (
         navigator.platform.startsWith("Mac")
         || navigator.platform === "iPhone"
         || navigator.platform === "iPad"
         || navigator.platform === "iPod"
     );
     return (
-        is_apple_device
+        is_apple_dev
         ? keyboard_event.metaKey
         : keyboard_event.ctrlKey
     );

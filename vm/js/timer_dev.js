@@ -7,7 +7,7 @@
 
 import ufork from "./ufork.js";
 
-function timer_device(core, slowdown = 1) {
+function timer_dev(core, slowdown = 1) {
     const timer_map = Object.create(null);
     const dev_ptr = core.u_ramptr(ufork.TIMER_DEV_OFS);
     const dev_cap = core.u_ptr_to_cap(dev_ptr);
@@ -52,4 +52,4 @@ function timer_device(core, slowdown = 1) {
     );
 }
 
-export default Object.freeze(timer_device);
+export default Object.freeze(timer_dev);

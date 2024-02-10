@@ -43,7 +43,7 @@ function random32(webcrypto, a, b) {
 
 //debug random32(crypto, -3, 2);
 
-function random_device(core, webcrypto = crypto) {
+function random_dev(core, webcrypto = crypto) {
     const dev_ptr = core.u_ramptr(ufork.RANDOM_DEV_OFS);
     const dev_cap = core.u_ptr_to_cap(dev_ptr);
     const dev_id = core.u_read_quad(dev_ptr).x;
@@ -66,4 +66,4 @@ function random_device(core, webcrypto = crypto) {
     });
 }
 
-export default Object.freeze(random_device);
+export default Object.freeze(random_dev);

@@ -8,10 +8,10 @@ import parseq from "https://ufork.org/lib/parseq.js";
 import requestorize from "https://ufork.org/lib/rq/requestorize.js";
 import assemble from "https://ufork.org/lib/assemble.js";
 import ufork from "https://ufork.org/js/ufork.js";
-import io_device from "https://ufork.org/js/io_device.js";
-import timer_device from "https://ufork.org/js/timer_device.js";
-import awp_device from "https://ufork.org/js/awp_device.js";
-import host_device from "https://ufork.org/js/host_device.js";
+import io_dev from "https://ufork.org/js/io_dev.js";
+import timer_dev from "https://ufork.org/js/timer_dev.js";
+import awp_dev from "https://ufork.org/js/awp_dev.js";
+import host_dev from "https://ufork.org/js/host_dev.js";
 import websockets_signaller from "https://ufork.org/js/websockets_signaller.js";
 import webrtc_transport from "https://ufork.org/js/webrtc_transport.js";
 import make_chat_db from "./chat_db.js";
@@ -203,13 +203,13 @@ parseq.sequence([
         core.h_import(asm_url)
     ]),
     requestorize(function ([the_awp_store, asm_module]) {
-        on_stdin = io_device(core, on_stdout);
-        timer_device(core);
-//        timer_device(core, 5);  // slow-down factor 5x
-        const make_dynamic_device = host_device(core);
-        awp_device({
+        on_stdin = io_dev(core, on_stdout);
+        timer_dev(core);
+//        timer_dev(core, 5);  // slow-down factor 5x
+        const make_ddev = host_dev(core);
+        awp_dev({
             core,
-            make_dynamic_device,
+            make_ddev,
             transport,
             stores: [the_awp_store],
             on_store_change: save_store

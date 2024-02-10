@@ -1653,11 +1653,11 @@ function make_core({
 
 //debug import assemble from "https://ufork.org/lib/assemble.js";
 //debug import scm from "https://ufork.org/lib/scheme.js";
-//debug import clock_device from "./clock_device.js";
-//debug import random_device from "./random_device.js";
-//debug import io_device from "./io_device.js";
-//debug import blob_device from "./blob_device.js";
-//debug import timer_device from "./timer_device.js";
+//debug import clock_dev from "./clock_dev.js";
+//debug import random_dev from "./random_dev.js";
+//debug import io_dev from "./io_dev.js";
+//debug import blob_dev from "./blob_dev.js";
+//debug import timer_dev from "./timer_dev.js";
 //debug const wasm_url = import.meta.resolve("https://ufork.org/wasm/ufork.wasm");
 //debug const asm_url = import.meta.resolve("../../lib/scm.asm");
 //debug const lib_url = import.meta.resolve("../../lib/");
@@ -1682,11 +1682,11 @@ function make_core({
 //debug     core.h_import(asm_url),
 //debug     requestorize(function (asm_module) {
 //debug         // Install devices
-//debug         clock_device(core);
-//debug         random_device(core);
-//debug         io_device(core);
-//debug         blob_device(core);
-//debug         timer_device(core);
+//debug         clock_dev(core);
+//debug         random_dev(core);
+//debug         io_dev(core);
+//debug         blob_dev(core);
+//debug         timer_dev(core);
 //debug         // Test suite
 //debug         console.log("u_fixnum(0) =", core.u_fixnum(0), core.u_fixnum(0).toString(16), core.u_print(core.u_fixnum(0)));
 //debug         console.log("u_fixnum(1) =", core.u_fixnum(1), core.u_fixnum(1).toString(16), core.u_print(core.u_fixnum(1)));

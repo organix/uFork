@@ -139,7 +139,7 @@ A store's contents might look something like this:
 
 ### Introduction
 
-    (#intro to_cancel callback store petname . hello_data) -> awp_device
+    (#intro to_cancel callback store petname . hello_data) -> awp_dev
 
 Requests an introduction to an acquaintance, producing a greeting.
 
@@ -153,7 +153,7 @@ greeter is available, the request fails.
 
 ### Listening
 
-    (#listen to_cancel callback store greeter) -> awp_device
+    (#listen to_cancel callback store greeter) -> awp_dev
 
 Listens for introduction requests, producing a `stop` capability on success that
 can be used to stop listening:
@@ -179,7 +179,7 @@ The `hello_data` is the value included in the introduction request.
 It is possible to be notified when a message has been successfully sent by the
 AWP device.
 
-    (#send to_cancel callback proxy . message) -> awp_device
+    (#send to_cancel callback proxy . message) -> awp_dev
 
 This requestor produces an acknowledgement if it becomes known that the
 `message` was sent by the local transport. An acknowledgement does not
