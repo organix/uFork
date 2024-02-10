@@ -43,9 +43,11 @@ Extended: `DdFfX`
 Unused: `BbEeGgIiJjKkNnOoPpRrUuWwxYy`
 
 ## I/O Interface
-The **I/O Interfacee** interface follows the
+
+The **I/O Interface** follows the
 [_Requestor_](https://github.com/douglascrockford/parseq) pattern
-and provides a simple `fixnum` read/write API.
+and provides a simple `fixnum` read/write API,
+just like the [I/O Device](io_dev.md).
 
 ### Read Request
 
