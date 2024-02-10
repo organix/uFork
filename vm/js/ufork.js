@@ -1658,7 +1658,7 @@ function make_core({
 //debug import io_dev from "./io_dev.js";
 //debug import blob_dev from "./blob_dev.js";
 //debug import timer_dev from "./timer_dev.js";
-//debug const wasm_url = import.meta.resolve("https://ufork.org/wasm/ufork.debug.wasm");
+//debug const wasm_url = import.meta.resolve("https://ufork.org/wasm/ufork.wasm");
 //debug const asm_url = import.meta.resolve("../../lib/scm.asm");
 //debug const lib_url = import.meta.resolve("../../lib/");
 //debug let core;

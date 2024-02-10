@@ -177,7 +177,7 @@ function host_dev(core) {
 //debug import parseq from "https://ufork.org/lib/parseq.js";
 //debug import requestorize from "https://ufork.org/lib/rq/requestorize.js";
 //debug const wasm_url = import.meta.resolve(
-//debug     "https://ufork.org/wasm/ufork.debug.wasm"
+//debug     "https://ufork.org/wasm/ufork.wasm"
 //debug );
 //debug const asm_url = import.meta.resolve("./host_dev.asm");
 //debug const lib_url = import.meta.resolve("../../lib/");

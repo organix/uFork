@@ -14,7 +14,7 @@ import ufork from "https://ufork.org/js/ufork.js";
 import awp_dev from "https://ufork.org/js/awp_dev.js";
 import host_dev from "https://ufork.org/js/host_dev.js";
 import memory_transport from "https://ufork.org/js/memory_transport.js";
-const wasm_url = import.meta.resolve("https://ufork.org/wasm/ufork.debug.wasm");
+const wasm_url = import.meta.resolve("https://ufork.org/wasm/ufork.wasm");
 const donor_url = import.meta.resolve("./donor.asm");
 const gm_url = import.meta.resolve("./gm.asm");
 const keqd_url = import.meta.resolve("./keqd.asm");
