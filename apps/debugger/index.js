@@ -15,7 +15,7 @@ import random_dev from "https://ufork.org/js/random_dev.js";
 import io_dev from "https://ufork.org/js/io_dev.js";
 import blob_dev from "https://ufork.org/js/blob_dev.js";
 import timer_dev from "https://ufork.org/js/timer_dev.js";
-const wasm_url = import.meta.resolve("https://ufork.org/wasm/ufork.wasm");
+const wasm_url = import.meta.resolve("https://ufork.org/wasm/ufork.debug.wasm");
 
 const $importmap = document.querySelector("script[type=importmap]");
 

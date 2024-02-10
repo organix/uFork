@@ -9,7 +9,7 @@ import awp_dev from "https://ufork.org/js/awp_dev.js";
 import host_dev from "https://ufork.org/js/host_dev.js";
 import webrtc_transport from "https://ufork.org/js/webrtc_transport.js";
 import websockets_signaller from "https://ufork.org/js/websockets_signaller.js";
-const wasm_url = import.meta.resolve("https://ufork.org/wasm/ufork.wasm");
+const wasm_url = import.meta.resolve("https://ufork.org/wasm/ufork.debug.wasm");
 
 const signaller_origin = (
     location.protocol === "https:"

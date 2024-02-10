@@ -13,7 +13,7 @@ import awp_dev from "https://ufork.org/js/awp_dev.js";
 import host_dev from "https://ufork.org/js/host_dev.js";
 import node_tls_transport from "https://ufork.org/js/node_tls_transport.js";
 import import_map from "./import_map.js";
-const wasm_url = import.meta.resolve("https://ufork.org/wasm/ufork.wasm");
+const wasm_url = import.meta.resolve("https://ufork.org/wasm/ufork.debug.wasm");
 const asm_urls = {
     alice: import.meta.resolve("./donor.asm"),
     bob: import.meta.resolve("./gm.asm"),

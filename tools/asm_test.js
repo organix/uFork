@@ -29,7 +29,7 @@ import host_dev from "https://ufork.org/js/host_dev.js";
 import clock_dev from "https://ufork.org/js/clock_dev.js";
 import random_dev from "https://ufork.org/js/random_dev.js";
 import timer_dev from "https://ufork.org/js/timer_dev.js";
-const wasm_url = import.meta.resolve("https://ufork.org/wasm/ufork.wasm");
+const wasm_url = import.meta.resolve("https://ufork.org/wasm/ufork.debug.wasm");
 
 function asm_test(module_url) {
     let logs = [];

@@ -15,7 +15,7 @@ import host_dev from "https://ufork.org/js/host_dev.js";
 import websockets_signaller from "https://ufork.org/js/websockets_signaller.js";
 import webrtc_transport from "https://ufork.org/js/webrtc_transport.js";
 import make_chat_db from "./chat_db.js";
-const wasm_url = import.meta.resolve("https://ufork.org/wasm/ufork.opt.wasm");
+const wasm_url = import.meta.resolve("https://ufork.org/wasm/ufork.wasm");
 const asm_url = import.meta.resolve("./chat.asm");
 
 const room_key = 1000;

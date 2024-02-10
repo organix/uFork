@@ -885,7 +885,7 @@ function awp_dev({
 //debug import parseq from "https://ufork.org/lib/parseq.js";
 //debug import requestorize from "https://ufork.org/lib/rq/requestorize.js";
 //debug import host_dev from "./host_dev.js";
-//debug const wasm_url = import.meta.resolve("https://ufork.org/wasm/ufork.wasm");
+//debug const wasm_url = import.meta.resolve("https://ufork.org/wasm/ufork.debug.wasm");
 //debug const asm_url = import.meta.resolve("../../apps/grant_matcher/grant_matcher.asm");
 //debug const lib_url = import.meta.resolve("../../lib/");
 //debug const core = ufork.make_core({
