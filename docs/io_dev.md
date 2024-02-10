@@ -1,7 +1,7 @@
 # uFork Console Input/Output Device
 
 The **I/O Device** interface follows the
-[_Requestor_](https://github.com/douglascrockford/parseq) pattern
+[_requestor_](../lib/rq/README.md) pattern.
 and provides a simple `fixnum` read/write API.
 
 ## Read Request
