@@ -28,7 +28,7 @@ const E_NO_ACQUAINTANCE = -4;
 const E_NO_STORE = -5;
 
 const awp_key = 100; // from dev.asm
-const once_fwd_crlf = assemble(`
+const once_fwd_ir = assemble(`
 sink_beh:
     end commit
 
@@ -60,7 +60,7 @@ function awp_dev({
     webcrypto = crypto // Node.js does not have a 'crypto' global as of v19.
 }) {
     const sponsor = core.u_ramptr(ufork.SPONSOR_OFS);
-    const once_fwd_beh = core.h_load(once_fwd_crlf).beh;
+    const once_fwd_beh = core.h_load(once_fwd_ir).beh;
 
     let ddev;                                 // the dynamic device
     let connections = Object.create(null);    // local:remote -> connection

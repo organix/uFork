@@ -162,16 +162,16 @@ function run(text, entry) {
         ),
         compilers: {asm: lang_asm.compile, scm: scm.compile}
     });
-    const crlf = lang.compile(text);
-    if (crlf.errors !== undefined && crlf.errors.length > 0) {
-        const error_messages = crlf.errors.map(lang.stringify_error);
+    const ir = lang.compile(text);
+    if (ir.errors !== undefined && ir.errors.length > 0) {
+        const error_messages = ir.errors.map(lang.stringify_error);
         return append_output(ufork.LOG_WARN, error_messages.join("\n"));
     }
     const unqualified_src = read_state("src") ?? "placeholder.asm";
     const src = new URL(unqualified_src, location.href).href;
     parseq.sequence([
         core.h_initialize(),
-        core.h_import(src, crlf),
+        core.h_import(src, ir),
         requestorize(function (imported_module) {
             clock_dev(core);
             random_dev(core);

@@ -13,9 +13,9 @@ function highlight(element) {
     const document = element.getRootNode();
     const text = element.textContent;
     element.innerHTML = "";
-    const crlf = assemble(text);
-    crlf.tokens.forEach(function (token) {
-        const errors = crlf.errors.filter(function (error) {
+    const ir = assemble(text);
+    ir.tokens.forEach(function (token) {
+        const errors = ir.errors.filter(function (error) {
             return token.start >= error.start && token.end <= error.end;
         });
         const span = document.createElement("span");

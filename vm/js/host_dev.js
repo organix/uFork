@@ -6,7 +6,7 @@
 import assemble from "https://ufork.org/lib/assemble.js";
 import ufork from "./ufork.js";
 
-const fwd_to_host_crlf = assemble(`
+const fwd_to_host_ir = assemble(`
 beh:                    ; (host_dev . key) <- message
     msg 0               ; message
     state -1            ; message key
@@ -75,7 +75,7 @@ function host_dev(core) {
             );
         }
     });
-    const fwd_to_host_beh = core.h_load(fwd_to_host_crlf).beh;
+    const fwd_to_host_beh = core.h_load(fwd_to_host_ir).beh;
 
     return function make_ddev(
 
@@ -179,7 +179,7 @@ function host_dev(core) {
 //debug const wasm_url = import.meta.resolve(
 //debug     "https://ufork.org/wasm/ufork.wasm"
 //debug );
-//debug const test_crlf = assemble(`
+//debug const test_ir = assemble(`
 //debug dummy_key:
 //debug     ref 1000
 //debug proxy_key:
@@ -260,7 +260,7 @@ function host_dev(core) {
 //debug });
 //debug parseq.sequence([
 //debug     core.h_initialize(),
-//debug     core.h_import(undefined, test_crlf),
+//debug     core.h_import(undefined, test_ir),
 //debug     requestorize(function (asm_module) {
 //debug         dispose = dummy_dev(host_dev(core));
 //debug         core.h_boot(asm_module.boot);
