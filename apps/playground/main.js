@@ -189,7 +189,7 @@ function run(text, entry) {
             }
             if (entry === "test") {
                 const make_ddev = host_dev(core);
-                const dev = make_ddev(function on_event_stub(ptr) {
+                const ddev = make_ddev(function on_event_stub(ptr) {
                     const event_stub = core.u_read_quad(ptr);
                     const event = core.u_read_quad(event_stub.y);
                     const message = event.y;
@@ -207,9 +207,10 @@ function run(text, entry) {
                     }
                     core.h_dispose();
                 });
+                const verdict = ddev.h_reserve_proxy();
                 const state = core.h_reserve_ram({
                     t: ufork.PAIR_T,
-                    x: dev.h_reserve_proxy(),
+                    x: verdict,
                     y: ufork.NIL_RAW
                 });
                 core.h_boot(imported_module[entry], state);
