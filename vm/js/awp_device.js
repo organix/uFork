@@ -1,5 +1,5 @@
 // Installs the AWP device, allowing cores to communicate over the network via
-// the Actor Wire Protocol. See also awp.md and awp_device.md.
+// the Actor Wire Protocol. See also awp.md and awp_dev.md.
 
 // This device makes two kinds of proxies: "remote" and "stop".
 // The two kinds can be distinguished by the type of their handle:
