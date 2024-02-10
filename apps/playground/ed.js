@@ -1,6 +1,6 @@
 // ed.js
 // James Diacono
-// 2024-02-07
+// 2024-02-10
 
 // A minimal code editor for the Web, with support for syntax highlighting,
 // copy/paste, and undo/redo. Tested on Chrome, Safari, and Firefox.
@@ -10,20 +10,14 @@
 /*jslint browser */
 
 function find(node, callback) {
-    const queue = [];
-    while (node) {
-        const result = callback(node);
-        if (result !== undefined) {
-            return result;
-        }
-        if (node.nextSibling) {
-            queue.push(node.nextSibling);
-        }
-        if (node.firstChild) {
-            queue.push(node.firstChild);
-        }
-        node = queue.pop();
+    let result = callback(node);
+    if (result === undefined) {
+        Array.from(node.childNodes).every(function (child_node) {
+            result = find(child_node, callback);
+            return result === undefined;
+        });
     }
+    return result;
 }
 
 function next(node) {
@@ -44,7 +38,7 @@ function get_position(element, caret) {
         caret_offset = 0;
     }
     let position = 0;
-    find(element.firstChild, function (node) {
+    find(element, function (node) {
         if (node === caret_node) {
             position += caret_offset;
             return true;
@@ -61,7 +55,7 @@ function get_caret(element, position) {
 
 // Find the text node encompassing the position.
 
-        find(element.firstChild, function (node) {
+        find(element, function (node) {
             if (is_text(node)) {
                 if (position >= 0 && position <= node.textContent.length) {
                     return [node, position];
