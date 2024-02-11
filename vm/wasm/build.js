@@ -28,12 +28,8 @@ const target_debug_wasm_url = new URL(import.meta.resolve(
 const target_release_wasm_url = new URL(import.meta.resolve(
     "./target/wasm32-unknown-unknown/release/ufork_wasm.wasm"
 ));
-const www_debug_wasm_url = new URL(import.meta.resolve(
-    "./ufork.wasm"
-));
-const www_release_wasm_url = new URL(import.meta.resolve(
-    "./ufork.opt.wasm"
-));
+const www_debug_wasm_url = new URL(import.meta.resolve("./ufork.debug.wasm"));
+const www_release_wasm_url = new URL(import.meta.resolve("./ufork.wasm"));
 
 function run(...cmd) {
     return unpromise(function () {

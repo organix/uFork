@@ -18,9 +18,9 @@ Deno.stdin.read(buffer).then(function on_chunk(nr_bytes) {
         );
         return Deno.stdin.read(buffer).then(on_chunk);
     }
-    const crlf = assemble(text);
-    if (Array.isArray(crlf.errors)) {
-        crlf.errors.forEach(function (error) {
+    const ir = assemble(text);
+    if (Array.isArray(ir.errors)) {
+        ir.errors.forEach(function (error) {
             window.console.log(
                 error.line + ":" + error.column + " " + error.message
             );

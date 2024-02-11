@@ -82,7 +82,7 @@ by generating interoperable uFork IR.
   * [Assembly Language](docs/asm.md) reference manual
   * [LISP/Scheme compiler](docs/scheme.md) reference manual
   * [Actor Wire Protocol (AWP)](docs/awp.md) specification
-  * [AWP Network](docs/awp_device.md) device description
+  * [AWP Network](docs/awp_dev.md) device description
   * [Virtual Machine](docs/vm.md) implementation details
   * [Sponsor](docs/sponsor.md) semantics
   * [Console Input/Output](docs/io_dev.md) device description

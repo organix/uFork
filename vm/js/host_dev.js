@@ -6,12 +6,12 @@
 import assemble from "https://ufork.org/lib/assemble.js";
 import ufork from "./ufork.js";
 
-const fwd_to_host_crlf = assemble(`
-beh:                    ; (host_device . key) <- message
+const fwd_to_host_ir = assemble(`
+beh:                    ; (host_dev . key) <- message
     msg 0               ; message
     state -1            ; message key
     pair 1              ; (key . message)
-    state 1             ; (key . message) host_device
+    state 1             ; (key . message) host_dev
     send -1             ; --
     end commit
 
@@ -19,9 +19,9 @@ beh:                    ; (host_device . key) <- message
     beh
 `);
 
-function host_device(core) {
+function host_dev(core) {
     let next_key = 0;
-    let dynamic_devices = Object.create(null);
+    let dynamic_devs = Object.create(null);
 
     function handle_event(event_stub_ptr) {
 
@@ -38,11 +38,11 @@ function host_device(core) {
         if (!core.u_is_fix(key)) {
             return ufork.E_NOT_FIX;
         }
-        const dynamic_device = dynamic_devices[core.u_fix_to_i32(key)];
-        if (dynamic_device === undefined) {
+        const dynamic_dev = dynamic_devs[core.u_fix_to_i32(key)];
+        if (dynamic_dev === undefined) {
             return ufork.E_BOUNDS;
         }
-        return dynamic_device.on_event_stub(event_stub_ptr);
+        return dynamic_dev.on_event_stub(event_stub_ptr);
     }
 
     function drop_proxy(proxy_raw) {
@@ -54,9 +54,9 @@ function host_device(core) {
         const handle = quad.y;
         const key = core.u_nth(handle, 1);
         if (core.u_is_fix(key)) {
-            const dynamic_device = dynamic_devices[core.u_fix_to_i32(key)];
-            if (typeof dynamic_device?.on_drop_proxy === "function") {
-                dynamic_device.on_drop_proxy(proxy_raw);
+            const dynamic_dev = dynamic_devs[core.u_fix_to_i32(key)];
+            if (typeof dynamic_dev?.on_drop_proxy === "function") {
+                dynamic_dev.on_drop_proxy(proxy_raw);
             }
         }
     }
@@ -75,9 +75,9 @@ function host_device(core) {
             );
         }
     });
-    const fwd_to_host_beh = core.h_load(fwd_to_host_crlf).beh;
+    const fwd_to_host_beh = core.h_load(fwd_to_host_ir).beh;
 
-    return function make_dynamic_device(
+    return function make_ddev(
 
 // The 'on_event_stub' parameter is a function that is called when the dynamic
 // device receives a message event via the host device. It returns an integer
@@ -101,7 +101,7 @@ function host_device(core) {
     ) {
         const key = next_key;
         next_key += 1;
-        dynamic_devices[key] = {on_event_stub, on_drop_proxy};
+        dynamic_devs[key] = {on_event_stub, on_drop_proxy};
 
         function h_reserve_cap() {
 
@@ -153,14 +153,14 @@ function host_device(core) {
 // Returns true if this dynamic device issued the proxy with 'h_reserve_proxy'.
 
             const quad = core.u_read_quad(core.u_cap_to_ptr(proxy_raw));
-            const device = quad.x;
+            const dev = quad.x;
             const handle = quad.y;
             const key_raw = core.u_nth(handle, 1);
-            return device === dev_cap && core.u_fix_to_i32(key_raw) === key;
+            return dev === dev_cap && core.u_fix_to_i32(key_raw) === key;
         }
 
         function h_dispose() {
-            delete dynamic_devices[key];
+            delete dynamic_devs[key];
         }
 
         return Object.freeze({
@@ -179,12 +179,30 @@ function host_device(core) {
 //debug const wasm_url = import.meta.resolve(
 //debug     "https://ufork.org/wasm/ufork.wasm"
 //debug );
-//debug const asm_url = import.meta.resolve("./host_device.asm");
-//debug const lib_url = import.meta.resolve("../../lib/");
+//debug const test_ir = assemble(`
+//debug dummy_key:
+//debug     ref 1000
+//debug proxy_key:
+//debug     ref 1001
+//debug boot:                   ; () <- {caps}
+//debug     push -42            ; -42
+//debug     msg 0               ; -42 {caps}
+//debug     push proxy_key      ; -42 {caps} proxy_key
+//debug     dict get            ; -42 proxy
+//debug     send -1             ; --
+//debug     push 42             ; 42
+//debug     msg 0               ; 42 {caps}
+//debug     push dummy_key      ; 42 {caps} dummy_key
+//debug     dict get            ; 42 dummy_dev
+//debug     send -1             ; --
+//debug     end commit
+//debug .export
+//debug     boot
+//debug `);
 //debug let dispose;
 //debug let core;
-//debug function dummy_device(make_dynamic_device) {
-//debug     const dev = make_dynamic_device(
+//debug function dummy_dev(make_ddev) {
+//debug     const dev = make_ddev(
 //debug         function on_event_stub(ptr) {
 //debug             const event_stub = core.u_read_quad(ptr);
 //debug             const target = core.u_read_quad(
@@ -238,14 +256,13 @@ function host_device(core) {
 //debug     on_wakeup: run_core,
 //debug     on_log: console.log,
 //debug     log_level: ufork.LOG_DEBUG,
-//debug     import_map: {"https://ufork.org/lib/": lib_url},
 //debug     compilers: {asm: assemble}
 //debug });
 //debug parseq.sequence([
 //debug     core.h_initialize(),
-//debug     core.h_import(asm_url),
+//debug     core.h_import(undefined, test_ir),
 //debug     requestorize(function (asm_module) {
-//debug         dispose = dummy_device(host_device(core));
+//debug         dispose = dummy_dev(host_dev(core));
 //debug         core.h_boot(asm_module.boot);
 //debug         run_core();
 //debug         return true;
@@ -255,4 +272,4 @@ function host_device(core) {
 //debug     dispose();
 //debug }, 1000);
 
-export default Object.freeze(host_device);
+export default Object.freeze(host_dev);

@@ -774,7 +774,7 @@ function make_core({
         });
     }
 
-    function h_load(crlf, imports) {
+    function h_load(ir, imports) {
 
 // Load a module after its imports have been loaded.
 
@@ -1033,7 +1033,7 @@ function make_core({
 // Allocate a placeholder quad for each definition that requires one, or set the
 // raw directly. Only resolve refs that refer to imports, not definitions.
 
-        Object.entries(crlf.ast.define).forEach(function ([name, node]) {
+        Object.entries(ir.ast.define).forEach(function ([name, node]) {
             if (is_quad(node)) {
                 definitions[name] = h_rom_alloc(node.debug);
             } else if (kind(node) === "ref") {
@@ -1050,7 +1050,7 @@ function make_core({
 // dependency.
 
         let ref_deps = Object.create(null);
-        Object.entries(crlf.ast.define).forEach(function ([name, node]) {
+        Object.entries(ir.ast.define).forEach(function ([name, node]) {
             if (kind(node) === "ref" && node.module === undefined) {
                 ref_deps[name] = node.name;
             }
@@ -1059,7 +1059,7 @@ function make_core({
         function ref_depth(name, seen = []) {
             const dep_name = ref_deps[name];
             if (seen.includes(name)) {
-                return fail("Cyclic refs", crlf.ast.define[name]);
+                return fail("Cyclic refs", ir.ast.define[name]);
             }
             return (
                 ref_deps[dep_name] === undefined
@@ -1071,12 +1071,12 @@ function make_core({
         Object.keys(ref_deps).sort(function (a, b) {
             return ref_depth(a) - ref_depth(b);
         }).forEach(function (name) {
-            definitions[name] = lookup(crlf.ast.define[name]);
+            definitions[name] = lookup(ir.ast.define[name]);
         });
 
 // Populate each placeholder quad.
 
-        Object.entries(crlf.ast.define).forEach(function ([name, node]) {
+        Object.entries(ir.ast.define).forEach(function ([name, node]) {
             if (is_quad(node)) {
                 populate(definitions[name], node);
             }
@@ -1133,7 +1133,7 @@ function make_core({
 // Populate the exports object.
 
         let exports_object = Object.create(null);
-        crlf.ast.export.forEach(function (name) {
+        ir.ast.export.forEach(function (name) {
             exports_object[name] = definition_raw(name);
         });
         return exports_object;
@@ -1173,20 +1173,20 @@ function make_core({
                     ? compile(content)
                     : content
                 )
-            ).then(function (crlf) {
-                if (crlf.errors !== undefined && crlf.errors.length > 0) {
+            ).then(function (ir) {
+                if (ir.errors !== undefined && ir.errors.length > 0) {
                     return Promise.reject(new Error(
                         "Failed to load '"
                         + src
                         + "':\n"
-                        + JSON.stringify(crlf.errors, undefined, 4)
+                        + JSON.stringify(ir.errors, undefined, 4)
                     ));
                 }
 
 // FIXME: cyclic module dependencies cause a deadlock, but they should instead
 // fail with an error.
 
-                return Promise.all(Object.values(crlf.ast.import).map(
+                return Promise.all(Object.values(ir.ast.import).map(
                     function (import_src) {
                         return h_import_promise(
                             new URL(h_map_src(import_src), src).href
@@ -1194,10 +1194,10 @@ function make_core({
                     }
                 )).then(function (imported_modules) {
                     const imports = Object.create(null);
-                    Object.keys(crlf.ast.import).forEach(function (name, nr) {
+                    Object.keys(ir.ast.import).forEach(function (name, nr) {
                         imports[name] = imported_modules[nr];
                     });
-                    return h_load(crlf, imports);
+                    return h_load(ir, imports);
                 });
             });
         }
@@ -1207,8 +1207,8 @@ function make_core({
     function h_import(src, content) {
 
 // Import and load a module, along with its dependencies. If 'content' (a text
-// string or CRLF object) is provided, the 'src' is used only to resolve
-// relative imports.
+// string or IR object) is provided, the 'src' is used only to resolve relative
+// imports.
 
         return unpromise(function () {
             return h_import_promise(h_map_src(src), content);
@@ -1653,11 +1653,11 @@ function make_core({
 
 //debug import assemble from "https://ufork.org/lib/assemble.js";
 //debug import scm from "https://ufork.org/lib/scheme.js";
-//debug import clock_device from "./clock_device.js";
-//debug import random_device from "./random_device.js";
-//debug import io_device from "./io_device.js";
-//debug import blob_device from "./blob_device.js";
-//debug import timer_device from "./timer_device.js";
+//debug import clock_dev from "./clock_dev.js";
+//debug import random_dev from "./random_dev.js";
+//debug import io_dev from "./io_dev.js";
+//debug import blob_dev from "./blob_dev.js";
+//debug import timer_dev from "./timer_dev.js";
 //debug const wasm_url = import.meta.resolve("https://ufork.org/wasm/ufork.wasm");
 //debug const asm_url = import.meta.resolve("../../lib/scm.asm");
 //debug const lib_url = import.meta.resolve("../../lib/");
@@ -1682,11 +1682,11 @@ function make_core({
 //debug     core.h_import(asm_url),
 //debug     requestorize(function (asm_module) {
 //debug         // Install devices
-//debug         clock_device(core);
-//debug         random_device(core);
-//debug         io_device(core);
-//debug         blob_device(core);
-//debug         timer_device(core);
+//debug         clock_dev(core);
+//debug         random_dev(core);
+//debug         io_dev(core);
+//debug         blob_dev(core);
+//debug         timer_dev(core);
 //debug         // Test suite
 //debug         console.log("u_fixnum(0) =", core.u_fixnum(0), core.u_fixnum(0).toString(16), core.u_print(core.u_fixnum(0)));
 //debug         console.log("u_fixnum(1) =", core.u_fixnum(1), core.u_fixnum(1).toString(16), core.u_print(core.u_fixnum(1)));

@@ -3,9 +3,9 @@
 
 // To start:
 
-//  $ deno run --allow-net --allow-read chat_server.js localhost:3528 [--dev]
+//  $ deno run --allow-net --allow-read chat_server.js localhost:3528 [--local]
 
-// Pass the --dev flag to load source files from disk instead of
+// Pass the --local flag to load source files from disk instead of
 // https://ufork.org.
 
 /*jslint deno */
@@ -26,7 +26,7 @@ const mime_types = {
     png: "image/png",
     asm: "text/plain"
 };
-const is_dev = Deno.args[1] === "--dev";
+const is_dev = Deno.args[1] === "--local";
 const importmap_html = `
     <script type="importmap">
         {"imports": {"https://ufork.org/": "/@/"}}

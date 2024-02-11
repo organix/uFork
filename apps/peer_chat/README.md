@@ -28,7 +28,7 @@ by following these instructions.
 Make sure you have [Deno](https://deno.land) installed. Run the following
 command from the current directory to start the web server:
 
-    deno run --allow-net --allow-read=../.. chat_server.js localhost:3528 --dev
+    deno run --allow-net --allow-read=../.. chat_server.js localhost:3528 --local
 
 Then navigate to http://localhost:3528 in a browser.
 

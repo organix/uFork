@@ -16,7 +16,7 @@ import requestorize from "https://ufork.org/lib/rq/requestorize.js";
 import assemble from "https://ufork.org/lib/assemble.js";
 import scm from "https://ufork.org/lib/scheme.js";
 import ufork from "https://ufork.org/js/ufork.js";
-import io_device from "https://ufork.org/js/io_device.js";
+import io_dev from "https://ufork.org/js/io_dev.js";
 const wasm_url = import.meta.resolve("https://ufork.org/wasm/ufork.wasm");
 
 const utf8_encoder = new TextEncoder();
@@ -80,7 +80,7 @@ parseq.sequence([
     core.h_initialize(),
     core.h_import(src),
     requestorize(function (asm_module) {
-        const on_stdin = io_device(core, function on_stdout(string) {
+        const on_stdin = io_dev(core, function on_stdout(string) {
             Deno.stdout.write(utf8_encoder.encode(string));
         });
         let in_buffer = new Uint8Array(stdin_buffer_size);

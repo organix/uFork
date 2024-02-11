@@ -10,12 +10,12 @@ import parseq from "https://ufork.org/lib/parseq.js";
 import requestorize from "https://ufork.org/lib/rq/requestorize.js";
 import scm from "https://ufork.org/lib/scheme.js";
 import ufork from "https://ufork.org/js/ufork.js";
-import clock_device from "https://ufork.org/js/clock_device.js";
-import random_device from "https://ufork.org/js/random_device.js";
-import blob_device from "https://ufork.org/js/blob_device.js";
-import timer_device from "https://ufork.org/js/timer_device.js";
-import io_device from "https://ufork.org/js/io_device.js";
-import host_device from "https://ufork.org/js/host_device.js";
+import clock_dev from "https://ufork.org/js/clock_dev.js";
+import random_dev from "https://ufork.org/js/random_dev.js";
+import blob_dev from "https://ufork.org/js/blob_dev.js";
+import timer_dev from "https://ufork.org/js/timer_dev.js";
+import io_dev from "https://ufork.org/js/io_dev.js";
+import host_dev from "https://ufork.org/js/host_dev.js";
 const wasm_url = import.meta.resolve("https://ufork.org/wasm/ufork.wasm");
 const unqualified_dev_lib_url = import.meta.resolve("../../lib/");
 
@@ -162,22 +162,22 @@ function run(text, entry) {
         ),
         compilers: {asm: lang_asm.compile, scm: scm.compile}
     });
-    const crlf = lang.compile(text);
-    if (crlf.errors !== undefined && crlf.errors.length > 0) {
-        const error_messages = crlf.errors.map(lang.stringify_error);
+    const ir = lang.compile(text);
+    if (ir.errors !== undefined && ir.errors.length > 0) {
+        const error_messages = ir.errors.map(lang.stringify_error);
         return append_output(ufork.LOG_WARN, error_messages.join("\n"));
     }
     const unqualified_src = read_state("src") ?? "placeholder.asm";
     const src = new URL(unqualified_src, location.href).href;
     parseq.sequence([
         core.h_initialize(),
-        core.h_import(src, crlf),
+        core.h_import(src, ir),
         requestorize(function (imported_module) {
-            clock_device(core);
-            random_device(core);
-            blob_device(core);
-            timer_device(core);
-            on_stdin = io_device(core, function (text) {
+            clock_dev(core);
+            random_dev(core);
+            blob_dev(core);
+            timer_dev(core);
+            on_stdin = io_dev(core, function (text) {
                 const span = document.createElement("span");
                 span.classList.add("io");
                 span.textContent = text;
@@ -188,8 +188,8 @@ function run(text, entry) {
                 throw new Error("Missing '" + entry + "' export.");
             }
             if (entry === "test") {
-                const make_dynamic_device = host_device(core);
-                const device = make_dynamic_device(function on_event_stub(ptr) {
+                const make_ddev = host_dev(core);
+                const ddev = make_ddev(function on_event_stub(ptr) {
                     const event_stub = core.u_read_quad(ptr);
                     const event = core.u_read_quad(event_stub.y);
                     const message = event.y;
@@ -207,9 +207,10 @@ function run(text, entry) {
                     }
                     core.h_dispose();
                 });
+                const verdict = ddev.h_reserve_proxy();
                 const state = core.h_reserve_ram({
                     t: ufork.PAIR_T,
-                    x: device.h_reserve_proxy(),
+                    x: verdict,
                     y: ufork.NIL_RAW
                 });
                 core.h_boot(imported_module[entry], state);

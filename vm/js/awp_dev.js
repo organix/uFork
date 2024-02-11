@@ -1,5 +1,5 @@
 // Installs the AWP device, allowing cores to communicate over the network via
-// the Actor Wire Protocol. See also awp.md and awp_device.md.
+// the Actor Wire Protocol. See also awp.md and awp_dev.md.
 
 // This device makes two kinds of proxies: "remote" and "stop".
 // The two kinds can be distinguished by the type of their handle:
@@ -28,7 +28,7 @@ const E_NO_ACQUAINTANCE = -4;
 const E_NO_STORE = -5;
 
 const awp_key = 100; // from dev.asm
-const once_fwd_crlf = assemble(`
+const once_fwd_ir = assemble(`
 sink_beh:
     end commit
 
@@ -51,18 +51,18 @@ function stringify(value) {
     return hex.encode(OED.encode(value));
 }
 
-function awp_device({
+function awp_dev({
     core,
-    make_dynamic_device,
+    make_ddev,
     transport,
     on_store_change,
     stores = [],
     webcrypto = crypto // Node.js does not have a 'crypto' global as of v19.
 }) {
     const sponsor = core.u_ramptr(ufork.SPONSOR_OFS);
-    const once_fwd_beh = core.h_load(once_fwd_crlf).beh;
+    const once_fwd_beh = core.h_load(once_fwd_ir).beh;
 
-    let device;
+    let ddev;                                 // the dynamic device
     let connections = Object.create(null);    // local:remote -> connection
     let opening = Object.create(null);        // local:remote -> cancel function
     let outbox = Object.create(null);         // local:remote -> messages
@@ -93,7 +93,7 @@ function awp_device({
         const remote_handle = next_proxy_handle;
         next_proxy_handle += 1;
         proxy_keys[remote_handle] = proxy_key;
-        const raw = device.h_reserve_proxy(core.u_fixnum(remote_handle));
+        const raw = ddev.h_reserve_proxy(core.u_fixnum(remote_handle));
         proxies[proxy_key] = {raw, swiss, store, petname};
         return raw;
     }
@@ -168,12 +168,12 @@ function awp_device({
             }
             if (core.u_is_cap(raw)) {
                 const quad = core.u_read_quad(core.u_cap_to_ptr(raw));
-                if (quad.t === ufork.PROXY_T && device.u_owns_proxy(raw)) {
+                if (quad.t === ufork.PROXY_T && ddev.u_owns_proxy(raw)) {
 
 // The proxy's handle is a fixnum only if the proxy refers to a remote actor.
 // Rather than allocating it a Swiss number, pass on its details directly.
 
-                    const remote_handle_raw = device.u_strip_meta(quad.y);
+                    const remote_handle_raw = ddev.u_strip_meta(quad.y);
                     if (core.u_is_fix(remote_handle_raw)) {
                         const remote_handle = core.u_fix_to_i32(
                             remote_handle_raw
@@ -203,7 +203,7 @@ function awp_device({
 // garbage collection. Generate a new Swiss number and reserve a stub.
 
                     swiss = random_swiss();
-                    stubs[hex.encode(swiss)] = device.h_reserve_stub(raw);
+                    stubs[hex.encode(swiss)] = ddev.h_reserve_stub(raw);
                     raw_to_swiss[raw] = swiss;
                 }
                 return {
@@ -714,7 +714,7 @@ function awp_device({
                     }
 
                     listeners[key] = {
-                        greeter: device.h_reserve_stub(greeter),
+                        greeter: ddev.h_reserve_stub(greeter),
                         stop: safe_stop
                     };
 
@@ -724,7 +724,7 @@ function awp_device({
                     const stop_handle = next_proxy_handle;
                     next_proxy_handle += 1;
                     listener_keys[stop_handle] = key;
-                    const stop_proxy = device.h_reserve_proxy(
+                    const stop_proxy = ddev.h_reserve_proxy(
                         core.h_reserve_ram({
                             t: ufork.PAIR_T,
                             x: core.u_fixnum(stop_handle),
@@ -751,7 +751,7 @@ function awp_device({
 
 // Install the device.
 
-    device = make_dynamic_device(
+    ddev = make_ddev(
         function on_event_stub(event_stub_ptr) {
 
 // The event stub retains the event, including its message, in memory until
@@ -770,7 +770,7 @@ function awp_device({
 
 // Remote actor proxies have a fixnum handle.
 
-                const remote_handle_raw = device.u_strip_meta(target_quad.y);
+                const remote_handle_raw = ddev.u_strip_meta(target_quad.y);
                 if (core.u_is_fix(remote_handle_raw)) {
                     const remote_handle = core.u_fix_to_i32(remote_handle_raw);
 
@@ -795,7 +795,7 @@ function awp_device({
 // "Stop listening" proxy handles are a wrapped fixnum.
 
                 const stop_handle_raw = core.u_nth(
-                    device.u_strip_meta(target_quad.y),
+                    ddev.u_strip_meta(target_quad.y),
                     1
                 );
                 if (core.u_is_fix(stop_handle_raw)) {
@@ -818,7 +818,7 @@ function awp_device({
 
 // Choose a method based on the message tag (#intro, #listen, etc).
 
-            const message = device.u_strip_meta(event.y);
+            const message = ddev.u_strip_meta(event.y);
             const tag = core.u_nth(message, 1);
             const method_array = [intro, listen];
             const method = method_array[core.u_fix_to_i32(tag)];
@@ -848,7 +848,7 @@ function awp_device({
 // Is it a reference to a remote actor? If so, clean up any references to it and
 // inform the relevant party.
 
-            const remote_handle_raw = device.u_strip_meta(quad.y);
+            const remote_handle_raw = ddev.u_strip_meta(quad.y);
             if (core.u_is_fix(remote_handle_raw)) {
                 const remote_handle = core.u_fix_to_i32(remote_handle_raw);
                 const proxy_key = proxy_keys[remote_handle];
@@ -870,21 +870,21 @@ function awp_device({
         Object.values(listeners).forEach(function (listener) {
             listener.stop();
         });
-        device.h_dispose();
+        ddev.h_dispose();
     }
 
 // Install the dynamic device as if it were a real device. Unlike a real device,
 // we must reserve a stub to keep the capability from being released.
 
-    const dev_cap = device.h_reserve_cap();
+    const dev_cap = ddev.h_reserve_cap();
     const dev_id = core.u_fixnum(awp_key);
     core.h_install([[dev_id, dev_cap]], undefined, uninstall);
-    device.h_reserve_stub(dev_cap);
+    ddev.h_reserve_stub(dev_cap);
 }
 
 //debug import parseq from "https://ufork.org/lib/parseq.js";
 //debug import requestorize from "https://ufork.org/lib/rq/requestorize.js";
-//debug import host_device from "./host_device.js";
+//debug import host_dev from "./host_dev.js";
 //debug const wasm_url = import.meta.resolve("https://ufork.org/wasm/ufork.wasm");
 //debug const asm_url = import.meta.resolve("../../apps/grant_matcher/grant_matcher.asm");
 //debug const lib_url = import.meta.resolve("../../lib/");
@@ -959,10 +959,10 @@ function awp_device({
 //debug                     acquaintances: [dana, bob, carol]
 //debug                 }
 //debug             ];
-//debug             const make_dynamic_device = host_device(core);
-//debug             awp_device({
+//debug             const make_ddev = host_dev(core);
+//debug             awp_dev({
 //debug                 core,
-//debug                 make_dynamic_device,
+//debug                 make_ddev,
 //debug                 transport,
 //debug                 stores,
 //debug                 webcrypto
@@ -1014,4 +1014,4 @@ function awp_device({
 
 // core.h_dispose();
 
-export default Object.freeze(awp_device);
+export default Object.freeze(awp_dev);

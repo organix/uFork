@@ -10,12 +10,12 @@ import OED from "https://ufork.org/lib/oed.js";
 import assemble from "https://ufork.org/lib/assemble.js";
 import scm from "https://ufork.org/lib/scheme.js";
 import ufork from "https://ufork.org/js/ufork.js";
-import clock_device from "https://ufork.org/js/clock_device.js";
-import random_device from "https://ufork.org/js/random_device.js";
-import io_device from "https://ufork.org/js/io_device.js";
-import blob_device from "https://ufork.org/js/blob_device.js";
-import timer_device from "https://ufork.org/js/timer_device.js";
-const wasm_url = import.meta.resolve("https://ufork.org/wasm/ufork.wasm");
+import clock_dev from "https://ufork.org/js/clock_dev.js";
+import random_dev from "https://ufork.org/js/random_dev.js";
+import io_dev from "https://ufork.org/js/io_dev.js";
+import blob_dev from "https://ufork.org/js/blob_dev.js";
+import timer_dev from "https://ufork.org/js/timer_dev.js";
+const wasm_url = import.meta.resolve("https://ufork.org/wasm/ufork.debug.wasm");
 
 const $importmap = document.querySelector("script[type=importmap]");
 
@@ -614,11 +614,11 @@ core.h_initialize()(function callback(value, reason) {
     }
 
     // install devices
-    clock_device(core);
-    random_device(core);
-    on_stdin = io_device(core, on_stdout);
-    blob_device(core);
-    timer_device(core, 1);
+    clock_dev(core);
+    random_dev(core);
+    on_stdin = io_dev(core, on_stdout);
+    blob_dev(core);
+    timer_dev(core, 1);
 
     // draw initial state
     update_rom_monitor();
