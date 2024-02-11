@@ -189,13 +189,13 @@ function choose_device(name) {
         devices_element.insertBefore(svg_element, buttons_element);
         info_checkbox.disabled = true;
         device_select.value = "svg";
-        write_state("device", "svg");
+        write_state("dev", "svg");
     } else {
         svg_element.remove();
         devices_element.insertBefore(output_element, buttons_element);
         info_checkbox.disabled = false;
         device_select.value = "io";
-        write_state("device", undefined);
+        write_state("dev", undefined);
     }
 }
 
@@ -337,7 +337,7 @@ const src = read_state("src") || "";
 const src_extension = src.split(".").pop();
 const lang_override = read_state("lang");
 choose_lang(lang_override ?? src_extension);
-choose_device(read_state("device") || "io");
+choose_device(read_state("dev") || "io");
 fetch_text().then(function (text) {
     editor.set_text(text);
     update_line_numbers(editor);
