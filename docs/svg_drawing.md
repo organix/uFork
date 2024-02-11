@@ -28,13 +28,13 @@ Prefix     | Parameters     | Operation
 In addition, there are extended operations
 not directly available as paths.
 
-Prefix     | Parameters       | Operation
------------|------------------|------------------------------------------
-`X`        | _x_ _y_ _n_ ...  | _n_ characters of text starting at (_x_, _y_)
-`F`        | _r_ _g_ _b_ _a_  | fill with color (_a_=255 for opaque)
-`f`        | _r_ _g_ _b_ _a_  | fill pending (followed by `D`)
-`D`        | _w_ _cap_ _join_ | draw stroke _w_ wide (0=butt, 1=round, 2=square)
-`f`        | _w_ _cap_ _join_ | draw pending (followed by `F`)
+Prefix     | Parameters                       | Operation
+-----------|----------------------------------|------------------------------------------
+`X`        | _x_ _y_ _n_ ...                  | _n_ characters of text starting at (_x_, _y_)
+`F`        | _r_ _g_ _b_ _a_                  | fill with color (_a_=255 for opaque)
+`f`        | _r_ _g_ _b_ _a_                  | fill pending (followed by `D`)
+`D`        | _r_ _g_ _b_ _a_ _w_ _cap_ _join_ | draw stroke _w_ wide (0=butt, 1=round, 2=square)
+`f`        | _r_ _g_ _b_ _a_ _w_ _cap_ _join_ | draw pending (followed by `F`)
 
 Standard: `AaCcHhLlMmQqSsTtVvZz`
 
