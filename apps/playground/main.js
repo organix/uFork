@@ -360,7 +360,7 @@ help_button.onclick = function () {
 };
 bg_color_picker.oninput = function () {
     svg_element.style.backgroundColor = bg_color_picker.value;
-}
+};
 info_checkbox.oninput = function () {
     output_element.classList.toggle("info");
     scroll_to_latest_output();
