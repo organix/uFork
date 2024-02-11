@@ -16,12 +16,16 @@ import blob_dev from "https://ufork.org/js/blob_dev.js";
 import timer_dev from "https://ufork.org/js/timer_dev.js";
 import io_dev from "https://ufork.org/js/io_dev.js";
 import host_dev from "https://ufork.org/js/host_dev.js";
+import svg_dev from "https://ufork.org/js/svg_dev.js";
 const wasm_url = import.meta.resolve("https://ufork.org/wasm/ufork.wasm");
 const unqualified_dev_lib_url = import.meta.resolve("../../lib/");
 
 const dev_lib_url = new URL(unqualified_dev_lib_url, location.href).href;
 const line_numbers_element = document.getElementById("line_numbers");
+const devices_element = document.getElementById("devices");
 const output_element = document.getElementById("output");
+const svg_element = document.getElementById("svg");
+const buttons_element = document.getElementById("buttons");
 const run_button = document.getElementById("run");
 const debug_button = document.getElementById("debug");
 const test_button = document.getElementById("test");
@@ -29,6 +33,7 @@ const clear_output_button = document.getElementById("clear_output");
 const help_button = document.getElementById("help");
 const source_element = document.getElementById("source");
 const info_checkbox = document.getElementById("info");
+const device_select = document.getElementById("device");
 const lang_select = document.getElementById("lang");
 const lang_packs = {
     asm: lang_asm,
@@ -85,7 +90,8 @@ function fetch_text() {
 }
 
 function clear_output() {
-    output_element.textContent = "";
+    output_element.innerHTML = "";
+    svg_element.innerHTML = "";
 }
 
 function scroll_to_latest_output() {
@@ -115,115 +121,6 @@ function append_output(log_level, ...values) {
 function update_page_url(text) {
     return gzip.encode(text).then(base64.encode).then(function (base64) {
         write_state("text", base64);
-    });
-}
-
-function run(text, entry) {
-    let core;
-    let on_stdin;
-
-    output_element.contentEditable = "true";
-    output_element.spellcheck = false;
-    output_element.onkeydown = function (event) {
-        if (!event.ctrlKey && !event.metaKey) {
-            event.preventDefault();
-            const glyphs = Array.from(event.key);
-            if (glyphs.length === 1) {
-                return on_stdin(event.key);
-            }
-            if (event.key === "Enter") {
-                return on_stdin("\n");
-            }
-            on_stdin(String.fromCodePoint(event.keyCode));
-        }
-    };
-
-    function run_loop() {
-        const status = core.h_run_loop(0);
-        const status_message = core.u_fault_msg(core.u_fix_to_i32(status));
-        append_output(ufork.LOG_TRACE, "IDLE:", status_message);
-    }
-
-    if (core !== undefined) {
-        core.h_dispose();
-    }
-    core = ufork.make_core({
-        wasm_url,
-        on_wakeup(device_offset) {
-            append_output(ufork.LOG_TRACE, "WAKE:", device_offset);
-            run_loop();
-        },
-        on_log: append_output,
-        log_level: ufork.LOG_DEBUG,
-        import_map: (
-            location.href.startsWith("https://ufork.org/")
-            ? {}
-            : {"https://ufork.org/lib/": dev_lib_url}
-        ),
-        compilers: {asm: lang_asm.compile, scm: scm.compile}
-    });
-    const ir = lang.compile(text);
-    if (ir.errors !== undefined && ir.errors.length > 0) {
-        const error_messages = ir.errors.map(lang.stringify_error);
-        return append_output(ufork.LOG_WARN, error_messages.join("\n"));
-    }
-    const unqualified_src = read_state("src") ?? "placeholder.asm";
-    const src = new URL(unqualified_src, location.href).href;
-    parseq.sequence([
-        core.h_initialize(),
-        core.h_import(src, ir),
-        requestorize(function (imported_module) {
-            clock_dev(core);
-            random_dev(core);
-            blob_dev(core);
-            timer_dev(core);
-            on_stdin = io_dev(core, function (text) {
-                const span = document.createElement("span");
-                span.classList.add("io");
-                span.textContent = text;
-                output_element.append(span);
-                scroll_to_latest_output();
-            });
-            if (imported_module[entry] === undefined) {
-                throw new Error("Missing '" + entry + "' export.");
-            }
-            if (entry === "test") {
-                const make_ddev = host_dev(core);
-                const ddev = make_ddev(function on_event_stub(ptr) {
-                    const event_stub = core.u_read_quad(ptr);
-                    const event = core.u_read_quad(event_stub.y);
-                    const message = event.y;
-                    if (message === ufork.TRUE_RAW) {
-                        append_output(
-                            ufork.LOG_DEBUG,
-                            "Test passed. You are awesome!"
-                        );
-                    } else {
-                        append_output(
-                            ufork.LOG_WARN,
-                            "Test failed:",
-                            core.u_pprint(message)
-                        );
-                    }
-                    core.h_dispose();
-                });
-                const verdict = ddev.h_reserve_proxy();
-                const state = core.h_reserve_ram({
-                    t: ufork.PAIR_T,
-                    x: verdict,
-                    y: ufork.NIL_RAW
-                });
-                core.h_boot(imported_module[entry], state);
-            } else {
-                core.h_boot(imported_module[entry]);
-            }
-            run_loop();
-            return true;
-        })
-    ])(function callback(value, reason) {
-        if (value === undefined) {
-            append_output(ufork.LOG_WARN, reason.message ?? reason);
-        }
     });
 }
 
@@ -285,6 +182,22 @@ function reset_editor() {
     });
 }
 
+function choose_device(name) {
+    if (name === "svg") {
+        output_element.remove();
+        devices_element.insertBefore(svg_element, buttons_element);
+        info_checkbox.disabled = true;
+        device_select.value = "svg";
+        write_state("device", "svg");
+    } else {
+        svg_element.remove();
+        devices_element.insertBefore(output_element, buttons_element);
+        info_checkbox.disabled = false;
+        device_select.value = "io";
+        write_state("device", undefined);
+    }
+}
+
 function choose_lang(name) {
     if (typeof name !== "string" || !Object.hasOwn(lang_packs, name)) {
         name = "asm"; // default
@@ -293,6 +206,124 @@ function choose_lang(name) {
     lang_select.value = name;
     reset_editor();
     test_button.disabled = name !== "asm";
+    write_state("lang", (
+        name !== "asm"
+        ? name
+        : undefined
+    ));
+}
+
+function run(text, entry) {
+    let core;
+    let on_stdin;
+
+    output_element.contentEditable = "true";
+    output_element.spellcheck = false;
+    output_element.onkeydown = function (event) {
+        if (!event.ctrlKey && !event.metaKey) {
+            event.preventDefault();
+            const glyphs = Array.from(event.key);
+            if (glyphs.length === 1) {
+                return on_stdin(event.key);
+            }
+            if (event.key === "Enter") {
+                return on_stdin("\n");
+            }
+            on_stdin(String.fromCodePoint(event.keyCode));
+        }
+    };
+
+    function run_loop() {
+        const status = core.h_run_loop(0);
+        const status_message = core.u_fault_msg(core.u_fix_to_i32(status));
+        append_output(ufork.LOG_TRACE, "IDLE:", status_message);
+    }
+
+    if (core !== undefined) {
+        core.h_dispose();
+    }
+    core = ufork.make_core({
+        wasm_url,
+        on_wakeup(device_offset) {
+            append_output(ufork.LOG_TRACE, "WAKE:", device_offset);
+            run_loop();
+        },
+        on_log: append_output,
+        log_level: ufork.LOG_DEBUG,
+        import_map: (
+            location.href.startsWith("https://ufork.org/")
+            ? {}
+            : {"https://ufork.org/lib/": dev_lib_url}
+        ),
+        compilers: {asm: lang_asm.compile, scm: scm.compile}
+    });
+    const ir = lang.compile(text);
+    if (ir.errors !== undefined && ir.errors.length > 0) {
+        const error_messages = ir.errors.map(lang.stringify_error);
+        choose_device("io");
+        return append_output(ufork.LOG_WARN, error_messages.join("\n"));
+    }
+    const unqualified_src = read_state("src") ?? "placeholder.asm";
+    const src = new URL(unqualified_src, location.href).href;
+    parseq.sequence([
+        core.h_initialize(),
+        core.h_import(src, ir),
+        requestorize(function (imported_module) {
+            clock_dev(core);
+            random_dev(core);
+            blob_dev(core);
+            timer_dev(core);
+            on_stdin = io_dev(core, function (text) {
+                const span = document.createElement("span");
+                span.classList.add("io");
+                span.textContent = text;
+                output_element.append(span);
+                scroll_to_latest_output();
+            });
+            const make_ddev = host_dev(core);
+            svg_dev(core, make_ddev, svg_element);
+            if (imported_module[entry] === undefined) {
+                throw new Error("Missing '" + entry + "' export.");
+            }
+            if (entry === "test") {
+                const ddev = make_ddev(function on_event_stub(ptr) {
+                    const event_stub = core.u_read_quad(ptr);
+                    const event = core.u_read_quad(event_stub.y);
+                    const message = event.y;
+                    choose_device("io");
+                    if (message === ufork.TRUE_RAW) {
+                        append_output(
+                            ufork.LOG_DEBUG,
+                            "Test passed. You are awesome!"
+                        );
+                    } else {
+                        append_output(
+                            ufork.LOG_WARN,
+                            "Test failed:",
+                            core.u_pprint(message)
+                        );
+                    }
+                    core.h_dispose();
+                });
+                const verdict = ddev.h_reserve_proxy();
+                const state = core.h_reserve_ram({
+                    t: ufork.PAIR_T,
+                    x: verdict,
+                    y: ufork.NIL_RAW
+                });
+                core.h_boot(imported_module[entry], state);
+            } else {
+                core.h_boot(imported_module[entry]);
+            }
+            run_loop();
+            return true;
+        })
+    ])(function callback(value, reason) {
+        if (value === undefined) {
+            choose_device("io");
+            append_output(ufork.LOG_WARN, reason.message ?? reason);
+        }
+    });
 }
 
 Object.keys(lang_packs).forEach(function (name) {
@@ -305,6 +336,7 @@ const src = read_state("src") || "";
 const src_extension = src.split(".").pop();
 const lang_override = read_state("lang");
 choose_lang(lang_override ?? src_extension);
+choose_device(read_state("device") || "io");
 fetch_text().then(function (text) {
     editor.set_text(text);
     update_line_numbers(editor);
@@ -329,9 +361,11 @@ info_checkbox.oninput = function () {
     output_element.classList.toggle("info");
     scroll_to_latest_output();
 };
+device_select.oninput = function () {
+    choose_device(device_select.value);
+};
 lang_select.oninput = function () {
     choose_lang(lang_select.value);
-    write_state("lang", lang_select.value);
 };
 document.body.onpointerup = end_line_selection;
 document.body.onpointercancel = end_line_selection;
