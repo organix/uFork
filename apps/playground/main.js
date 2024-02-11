@@ -32,6 +32,7 @@ const test_button = document.getElementById("test");
 const clear_output_button = document.getElementById("clear_output");
 const help_button = document.getElementById("help");
 const source_element = document.getElementById("source");
+const bg_color_picker = document.getElementById("bg_color");
 const info_checkbox = document.getElementById("info");
 const device_select = document.getElementById("device");
 const lang_select = document.getElementById("lang");
@@ -357,6 +358,9 @@ clear_output_button.onclick = clear_output;
 help_button.onclick = function () {
     window.open(lang.docs_url);
 };
+bg_color_picker.oninput = function () {
+    svg_element.style.backgroundColor = bg_color_picker.value;
+}
 info_checkbox.oninput = function () {
     output_element.classList.toggle("info");
     scroll_to_latest_output();
