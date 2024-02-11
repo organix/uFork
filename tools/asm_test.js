@@ -6,18 +6,7 @@
 // If "pass" is not true, "logs" is an array of log entries like
 // [log_level, ...values] that might help debug the failure.
 
-// Eligible modules export a 'test' entrypoint, for example:
-
-//      test:                       ; (verdict) <- {caps}
-//          push #t                 ; #f
-//          state 1                 ; #f verdict
-//          ref std.send_msg        ; FAIL!
-
-//      .export
-//          test
-
-// The 'verdict' capability is sent the outcome of the test. Anything other
-// than #t is considered a failure.
+// See testing.md.
 
 /*jslint browser */
 
