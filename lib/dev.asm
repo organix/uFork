@@ -30,6 +30,8 @@ intro_tag:
     ref 0
 listen_tag:
     ref 1
+svg_key:
+    ref 101
 
 boot:                   ; () <- {caps}
     msg 0               ; {caps}
@@ -128,4 +130,5 @@ count:                  ; () <- n
     awp_key
     intro_tag
     listen_tag
+    svg_key
     boot

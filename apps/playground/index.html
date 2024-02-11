@@ -79,7 +79,6 @@
         #devices {
             flex: 1 1 30%;
             min-width: 0;
-            padding: 10px;
             display: flex;
             flex-direction: column;
         }
@@ -87,24 +86,36 @@
             display: flex;
             flex-wrap: wrap;
             justify-content: flex-end;
-            margin-bottom: 10px;
+            margin: 8px;
         }
         #controls > * {
-            margin-bottom: 5px;
-            margin-left: 5px;
+            margin: 4px;
         }
         #buttons {
             display: flex;
+            justify-content: stretch;
+            flex-wrap: wrap;
+            margin: 6px;
         }
-        #buttons > * + * {
-            margin-left: 5px;
+        #buttons > * {
+            flex: 1 1;
+            margin: 2px;
+            white-space: nowrap;
+        }
+        #svg,
+        #output {
+            flex: 1 1;
+            margin: 4px 10px 2px;
+        }
+        #svg {
+            background: white;
+            border-radius: 4px;
         }
         #output {
             white-space: pre;
             font-family: Programma, monospace;
             min-height: 60px;
             overflow: auto;
-            flex-grow: 1;
         }
         #output > .warn {
             color: var(--red);
@@ -195,17 +206,22 @@
     </code>
     <div id="devices">
         <div id="controls">
-            <select id="lang"></select>
-            <label><input type="checkbox" id="info" /> Show info</label>
-            <div id="buttons">
-                <button id="run">▶ Run</button>
-                <button id="debug">🧐 Debug</button>
-                <button id="test">✔ Test</button>
-                <button id="clear_output">⨉ Clear</button>
-                <button id="help">﹖ Help</button>
-            </div>
+            <label><input id="info" type="checkbox" /> Show info</label>
+            <select id="device" title="Choose device">
+                <option value="io">I/O</option>
+                <option value="svg">SVG</option>
+            </select>
+            <select id="lang" title="Choose language"></select>
         </div>
         <div id="output"></div>
+        <svg id="svg" viewBox="0 0 100 100"></svg>
+        <div id="buttons">
+            <button id="run">▶ Run</button>
+            <button id="debug">🧐 Debug</button>
+            <button id="test">✔ Test</button>
+            <button id="clear_output">⨉ Clear</button>
+            <button id="help">﹖ Help</button>
+        </div>
     </div>
     <script type="module" src="main.js"></script>
 </body>
