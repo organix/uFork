@@ -1,9 +1,9 @@
 ; The timer actor delays the sending of a message to an actor. It is merely a
 ; proof of concept - you should use the timer device where available.
 
-; The timer actor's initial stack holds the clock device. It accepts a message
-; that is a list containing the delay in milliseconds, the target actor, and the
-; message.
+; The timer actor is created with a reference to the clock device. It accepts a
+; request that is a list containing the delay in milliseconds, the target actor,
+; and the message.
 
 ; It can be used multiple times.
 
@@ -14,7 +14,8 @@
 ; Initially, the actor has no awareness of time. A customer is created to
 ; receive the current time from the clock device.
 
-beh:                    ; clock <- (delay target message)
+beh:
+timer_beh:              ; clock <- (delay target message)
     msg 0               ; (delay target message)
     state 0             ; (delay target message) clock
     pair 1              ; (clock delay target message)
@@ -34,7 +35,7 @@ cust_beh:               ; (clock delay target message) <- now
     alu add             ; message target end_time
     state 1             ; message target end_time clock
     push poll_beh       ; message target end_time clock poll_beh
-    beh 4               ;
+    beh 4               ; --
     my self             ; SELF
     state 1             ; SELF clock
     ref std.send_msg
@@ -46,7 +47,8 @@ poll_beh:               ; (clock end_time target message) <- now
     msg 0               ; now
     state 2             ; now end_time
     cmp ge              ; expired?
-    if_not retry        ;
+    if_not retry        ; --
+
     state 4             ; message
     state 3             ; message target
     ref std.send_msg

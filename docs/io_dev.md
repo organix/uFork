@@ -18,7 +18,7 @@ before receiving a result on your callback.
 ## Write Request
 
 A _write_ request looks like `(to_cancel callback fixnum)`,
-where `to_cancel` is the optional customer for a cancel capability,
+where `to_cancel` is the optional customer for a _cancel_ capability,
 and `callback` is the customer that will receive the result.
 The result looks like `(#unit)` on success,
 and `(#? . error)` on failure.
