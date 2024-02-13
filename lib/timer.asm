@@ -46,6 +46,8 @@ cust_beh:               ; (clock delay target message) <- now
 poll_beh:               ; (clock end_time target message) <- now
     msg 0               ; now
     state 2             ; now end_time
+    alu sub             ; (now-end_time)
+    push 0              ; (now-end_time) 0
     cmp ge              ; expired?
     if_not retry        ; --
 
@@ -63,13 +65,12 @@ retry:                  ; (clock ...)
 
 boot:                   ; () <- {caps}
     msg 0               ; {caps}
-    dup 1               ; {caps} {caps}
-    push dev.debug_key  ; {caps} {caps} dev.debug_key
-    dict get            ; {caps} debug_dev
-    roll 2              ; debug_dev {caps}
+    push dev.debug_key  ; {caps} dev.debug_key
+    dict get            ; debug_dev
+    msg 0               ; debug_dev {caps}
     push dev.clock_key  ; debug_dev {caps} dev.clock_key
     dict get            ; debug_dev clock_dev
-    push beh            ; debug_dev clock_dev timer_beh
+    push timer_beh      ; debug_dev clock_dev timer_beh
     new -1              ; debug_dev timer
     push 42             ; debug_dev timer 42
     pick 3              ; debug_dev timer 42 debug_dev
