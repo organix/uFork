@@ -22,7 +22,8 @@ const unqualified_dev_lib_url = import.meta.resolve("../../lib/");
 
 const dev_lib_url = new URL(unqualified_dev_lib_url, location.href).href;
 const line_numbers_element = document.getElementById("line_numbers");
-const devices_element = document.getElementById("devices");
+const divider_element = document.getElementById("divider");
+const tools_element = document.getElementById("tools");
 const output_element = document.getElementById("output");
 const svg_element = document.getElementById("svg");
 const buttons_element = document.getElementById("buttons");
@@ -40,10 +41,19 @@ const lang_packs = {
     asm: lang_asm,
     scm: lang_scm
 };
+const min_tools_width = 200;
+const min_tools_height = 200;
+const default_tools_width = 300;
+const default_tools_height = 300;
 
 let editor;
 let lang;
 let line_selection_anchor;
+let divider_origin;
+
+function is_landscape() {
+    return document.documentElement.clientWidth >= 720;
+}
 
 // The state of the playground is stored in the URL of the page, making it easy
 // to share a configuration with others.
@@ -68,6 +78,28 @@ function write_state(name, value) {
         url.searchParams.delete(name);
     }
     history.replaceState(undefined, "", unpercent(url));
+}
+
+// The user's settings are stored in localStorage.
+
+function read_settings_object() {
+    const json = localStorage.getItem("settings");
+    if (typeof json === "string") {
+        try {
+            return JSON.parse(json);
+        } catch (ignore) {}
+    }
+    return {};
+}
+
+function read_setting(name) {
+    return read_settings_object()[name];
+}
+
+function write_setting(name, value) {
+    let object = read_settings_object();
+    object[name] = value;
+    localStorage.setItem("settings", JSON.stringify(object));
 }
 
 function fetch_text() {
@@ -123,6 +155,10 @@ function update_page_url(text) {
     return gzip.encode(text).then(base64.encode).then(function (base64) {
         write_state("text", base64);
     });
+}
+
+function end_divider_drag() {
+    divider_origin = undefined;
 }
 
 function end_line_selection() {
@@ -186,13 +222,13 @@ function reset_editor() {
 function choose_device(name) {
     if (name === "svg") {
         output_element.remove();
-        devices_element.insertBefore(svg_element, buttons_element);
+        tools_element.insertBefore(svg_element, buttons_element);
         info_checkbox.disabled = true;
         device_select.value = "svg";
         write_state("dev", "svg");
     } else {
         svg_element.remove();
-        devices_element.insertBefore(output_element, buttons_element);
+        tools_element.insertBefore(output_element, buttons_element);
         info_checkbox.disabled = false;
         device_select.value = "io";
         write_state("dev", undefined);
@@ -338,6 +374,12 @@ const src_extension = src.split(".").pop();
 const lang_override = read_state("lang");
 choose_lang(lang_override ?? src_extension);
 choose_device(read_state("dev") || "io");
+tools_element.style.width = (
+    read_setting("tools_width") ?? default_tools_width
+) + "px";
+tools_element.style.height = (
+    read_setting("tools_height") ?? default_tools_height
+) + "px";
 fetch_text().then(function (text) {
     editor.set_text(text);
     update_line_numbers(editor);
@@ -371,5 +413,38 @@ device_select.oninput = function () {
 lang_select.oninput = function () {
     choose_lang(lang_select.value);
 };
-document.body.onpointerup = end_line_selection;
-document.body.onpointercancel = end_line_selection;
+window.onpointerup = end_line_selection;
+window.onpointercancel = end_line_selection;
+divider_element.onpointerdown = function (event) {
+    if (event.buttons === 1) {
+        event.preventDefault();
+        event.target.setPointerCapture(event.pointerId);
+        divider_origin = (
+            is_landscape()
+            ? tools_element.clientWidth + event.pageX
+            : tools_element.clientHeight + event.pageY
+        );
+    }
+};
+divider_element.onpointermove = function (event) {
+    if (Number.isFinite(divider_origin)) {
+        event.preventDefault();
+        if (is_landscape()) {
+            const width = Math.max(
+                divider_origin - event.pageX,
+                min_tools_width
+            );
+            tools_element.style.width = width + "px";
+            write_setting("tools_width", Math.floor(width));
+        } else {
+            const height = Math.max(
+                divider_origin - event.pageY,
+                min_tools_height
+            );
+            tools_element.style.height = height + "px";
+            write_setting("tools_height", Math.floor(height));
+        }
+    }
+};
+divider_element.onpointerup = end_divider_drag;
+divider_element.onpointercancel = end_divider_drag;
