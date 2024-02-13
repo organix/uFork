@@ -222,8 +222,18 @@
     <div id="divider"></div>
     <div id="tools">
         <div id="controls">
-            <label><input id="bg_color" type="color" value="#ffffff" /> Background</label>
-            <label><input id="info" type="checkbox" /> Show info</label>
+            <label>
+                <span id="dimensions"></span>
+                <input id="scale" type="range" min="0" max="1" step="0.01">
+            </label>
+            <label>
+                <input id="bg_color" type="color" value="#ffffff" />
+                Background
+            </label>
+            <label>
+                <input id="info" type="checkbox" />
+                Show info
+            </label>
             <select id="device" title="Choose device">
                 <option value="io">I/O</option>
                 <option value="svg">SVG</option>
@@ -231,7 +241,7 @@
             <select id="lang" title="Choose language"></select>
         </div>
         <div id="output"></div>
-        <svg id="svg" viewBox="0 0 100 100"></svg>
+        <svg id="svg"></svg>
         <div id="buttons">
             <button id="run">▶ Run</button>
             <button id="debug">🧐 Debug</button>

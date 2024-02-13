@@ -33,7 +33,9 @@ const test_button = document.getElementById("test");
 const clear_output_button = document.getElementById("clear_output");
 const help_button = document.getElementById("help");
 const source_element = document.getElementById("source");
-const bg_color_picker = document.getElementById("bg_color");
+const scale_input = document.getElementById("scale");
+const dimensions_element = document.getElementById("dimensions");
+const bg_color_input = document.getElementById("bg_color");
 const info_checkbox = document.getElementById("info");
 const device_select = document.getElementById("device");
 const lang_select = document.getElementById("lang");
@@ -250,6 +252,16 @@ function choose_lang(name) {
     ));
 }
 
+function set_scale(scale) {
+    const dimension = Math.round(1024 ** scale);
+    svg_element.setAttribute(
+        "viewBox",
+        "0 0 " + dimension + " " + dimension
+    );
+    dimensions_element.textContent = dimension + "x" + dimension;
+    scale_input.value = scale;
+}
+
 function run(text, entry) {
     let core;
     let on_stdin;
@@ -374,6 +386,7 @@ const src_extension = src.split(".").pop();
 const lang_override = read_state("lang");
 choose_lang(lang_override ?? src_extension);
 choose_device(read_state("dev") || "io");
+set_scale(0.46); // 24x24
 tools_element.style.width = (
     read_setting("tools_width") ?? default_tools_width
 ) + "px";
@@ -400,8 +413,11 @@ clear_output_button.onclick = clear_output;
 help_button.onclick = function () {
     window.open(lang.docs_url);
 };
-bg_color_picker.oninput = function () {
-    svg_element.style.backgroundColor = bg_color_picker.value;
+bg_color_input.oninput = function () {
+    svg_element.style.backgroundColor = bg_color_input.value;
+};
+scale_input.oninput = function () {
+    set_scale(parseFloat(scale_input.value));
 };
 info_checkbox.oninput = function () {
     output_element.classList.toggle("info");
