@@ -334,12 +334,12 @@ setup_beh:                  ; (timer referee) <- ()
     send 6                  ; --
 
 ; Fallback. Three requestors are raced, throttled one at a time.
-; Expected output: (+5000) @ 40ms
+; Expected output: (+5000) @ 45ms
 
     push 30                 ; ... 1st_delay=30ms
     push 666                ; ... 1st_error=666
     push #?                 ; ... 1st_value=#?
-    push 10                 ; ... 2nd_delay=10ms
+    push 15                 ; ... 2nd_delay=15ms
     push #nil               ; ... 2nd_error=()
     push 5000               ; ... 2nd_value=5000
     push 5                  ; ... 3rd_delay=5ms

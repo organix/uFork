@@ -33,7 +33,7 @@
         }
         #editor {
             font-family: Programma, monospace;
-            flex: 1 1 70%;
+            flex: 1 1;
             display: flex;
             white-space: pre;
             align-items: flex-start;
@@ -76,9 +76,14 @@
             bottom: 0;
             pointer-events: none;
         }
-        #devices {
-            flex: 1 1 30%;
-            min-width: 0;
+        #divider {
+            background: var(--gray);
+            touch-action: none; /* suppress pointercancel events on Chrome */
+        }
+        #divider:hover {
+            filter: brightness(1.5);
+        }
+        #tools {
             display: flex;
             flex-direction: column;
         }
@@ -136,7 +141,12 @@
             body {
                 flex-direction: column;
             }
-            #devices {
+            #divider {
+                height: 3px;
+                cursor: ns-resize;
+            }
+            #tools {
+                width: auto !important; /* ignore width set in landscape */
                 border-top: 1px solid var(--gray);
             }
             #output {
@@ -147,7 +157,12 @@
             body {
                 flex-direction: row;
             }
-            #devices {
+            #divider {
+                width: 3px;
+                cursor: ew-resize;
+            }
+            #tools {
+                height: auto !important; /* ignore height set in portrait */
                 border-left: 1px solid var(--gray);
             }
         }
@@ -204,10 +219,21 @@
         <div id="line_numbers"></div>
         <div id="source"></div>
     </code>
-    <div id="devices">
+    <div id="divider"></div>
+    <div id="tools">
         <div id="controls">
-            <label><input id="bg_color" type="color" value="#ffffff" /> Background</label>
-            <label><input id="info" type="checkbox" /> Show info</label>
+            <label>
+                <span id="dimensions"></span>
+                <input id="scale" type="range" min="0" max="1" step="0.01">
+            </label>
+            <label>
+                <input id="bg_color" type="color" value="#ffffff" />
+                Background
+            </label>
+            <label>
+                <input id="info" type="checkbox" />
+                Show info
+            </label>
             <select id="device" title="Choose device">
                 <option value="io">I/O</option>
                 <option value="svg">SVG</option>
@@ -215,7 +241,7 @@
             <select id="lang" title="Choose language"></select>
         </div>
         <div id="output"></div>
-        <svg id="svg" viewBox="0 0 100 100"></svg>
+        <svg id="svg"></svg>
         <div id="buttons">
             <button id="run">▶ Run</button>
             <button id="debug">🧐 Debug</button>
