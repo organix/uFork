@@ -28,6 +28,7 @@ const output_element = document.getElementById("output");
 const svg_element = document.getElementById("svg");
 const buttons_element = document.getElementById("buttons");
 const run_button = document.getElementById("run");
+const stop_button = document.getElementById("stop");
 const debug_button = document.getElementById("debug");
 const test_button = document.getElementById("test");
 const clear_output_button = document.getElementById("clear_output");
@@ -52,6 +53,7 @@ let editor;
 let lang;
 let line_selection_anchor;
 let divider_origin;
+let stop_flag = false;
 
 function is_landscape() {
     return document.documentElement.clientWidth >= 720;
@@ -401,7 +403,15 @@ fetch_text().then(function (text) {
     update_line_numbers(editor);
 });
 run_button.onclick = function () {
+    stop_button.style.display = "block";
+    run_button.style.display = "none";
+    stop_flag = false;
     run(editor.get_text(), "boot");
+    run_button.style.display = "block";
+    stop_button.style.display = "none";
+};
+stop_button.onclick = function () {
+    stop_flag = true;
 };
 debug_button.onclick = function () {
     window.open(location.href.replace("playground", "debugger"));
