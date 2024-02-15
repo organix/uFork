@@ -3,45 +3,32 @@
 import scm from "https://ufork.org/lib/scheme.js";
 import handle_tab from "./handle_tab.js";
 import handle_comment from "./handle_comment.js";
+import element from "./element.js";
+import theme from "./theme.js";
 
 const indent = "    ";
 const rx_comment = /^(\s*)(;+\u0020?)/;
 const comment_prefix = "; ";
+const rainbow = Object.values(theme);
 
-const red = "#F92672";
-const orange = "#FD971F";
-const silver = "#BFBFBF";
-const blue = "#66D9EF";
-const green = "#2EE250";
-const purple = "#CE80FF";
-const yellow = "#E6DB74";
-
-const rainbow = [blue, green, yellow, purple, orange, red, silver];
-
-function highlight(element) {
-    const document = element.getRootNode();
-
-    function span(properties) {
-        const the_element = document.createElement("span");
-        Object.assign(the_element, properties);
-        Object.assign(the_element.style, properties.style);
-        return the_element;
-    }
-
-    const text = element.textContent;
-    element.innerHTML = "";
+function highlight(the_element) {
+    const text = the_element.textContent;
+    the_element.innerHTML = "";
     const ir = scm.compile(text);
     if (ir.errors !== undefined && ir.errors.length > 0) {
 
 // Show the position of the error.
 
         const error = ir.errors[0];
-        element.append(
+        the_element.append(
             text.slice(0, error.start),
-            span({
+            element("span", {
                 textContent: text.slice(error.start, error.end),
                 title: error.error,
-                className: "warning"
+                style: {
+                    outline: "1px solid " + theme.red,
+                    borderRadius: "2px"
+                }
             }),
             text.slice(error.end)
         );
@@ -52,7 +39,7 @@ function highlight(element) {
         let depth = 0;
         Array.from(text).forEach(function (glyph) {
             if (glyph === "(" || glyph === ")") {
-                element.append(span({
+                the_element.append(element("span", {
                     textContent: glyph,
                     style: {color: rainbow[depth]}
                 }));
@@ -62,7 +49,7 @@ function highlight(element) {
                     : -1
                 );
             } else {
-                element.append(glyph);
+                the_element.append(glyph);
             }
         });
     }

@@ -4,15 +4,31 @@ import assemble from "https://ufork.org/lib/assemble.js";
 import handle_tab from "./handle_tab.js";
 import handle_comment from "./handle_comment.js";
 import handle_duplication from "./handle_duplication.js";
+import theme from "./theme.js";
 
 const indent = "    ";
 const rx_comment = /^(\s*)(;+\u0020?)/;
 const comment_prefix = "; ";
+const styles = {
+    comment: {color: theme.silver},
+    conditional: {color: theme.purple},
+    data: {color: theme.blue, fontStyle: "italic"},
+    directive: {color: theme.purple},
+    error: {color: theme.red, background: "black"},
+    literal: {color: theme.green},
+    name: {color: theme.yellow},
+    namespace: {color: theme.orange},
+    number: {color: theme.green},
+    operator: {color: theme.blue},
+    string: {color: theme.yellow},
+    terminal: {color: theme.purple, fontStyle: "italic"},
+    warning: {borderRadius: "2px", outline: "1px solid " + theme.red}
+};
 
-function highlight(element) {
-    const document = element.getRootNode();
-    const text = element.textContent;
-    element.innerHTML = "";
+function highlight(the_element) {
+    const document = the_element.getRootNode();
+    const text = the_element.textContent;
+    the_element.innerHTML = "";
     const ir = assemble(text);
     ir.tokens.forEach(function (token) {
         const errors = ir.errors.filter(function (error) {
@@ -20,20 +36,16 @@ function highlight(element) {
         });
         const span = document.createElement("span");
         span.textContent = text.slice(token.start, token.end);
-        span.classList.add(
-            (token.context === undefined && token.kind.length === 1)
-            ? "separator"
-            : token.context ?? token.kind
-        );
+        Object.assign(span.style, styles[token.context ?? token.kind]);
         if (errors.length > 0) {
             span.title = errors.map(function (error) {
                 return error.message;
             }).join(
                 "\n"
             );
-            span.classList.add("warning");
+            Object.assign(span.style, styles.warning);
         }
-        element.append(span);
+        the_element.append(span);
     });
 }
 
