@@ -1,5 +1,7 @@
 // Text editor support for uFork assembly.
 
+/*jslint browser */
+
 import assemble from "https://ufork.org/lib/assemble.js";
 import handle_tab from "./handle_tab.js";
 import handle_comment from "./handle_comment.js";
@@ -26,7 +28,6 @@ const styles = {
 };
 
 function highlight(the_element) {
-    const document = the_element.getRootNode();
     const text = the_element.textContent;
     the_element.innerHTML = "";
     const ir = assemble(text);

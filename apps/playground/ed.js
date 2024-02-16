@@ -120,7 +120,7 @@ function ed({
     on_input
 }) {
     const document = element.getRootNode(); // Shadow DOM, etc.
-    const trailing_br = document.createElement("br");
+    const trailing_br = window.document.createElement("br");
     let history = [];
     let history_at = -1;
     let text_at_last_change;

@@ -1,4 +1,6 @@
-// The default color scheme.
+// The default playground theme.
+
+const programma_url = import.meta.resolve("./programma.woff2");
 
 export default Object.freeze({
     red: "#F92672",
@@ -9,5 +11,13 @@ export default Object.freeze({
     blue: "#66D9EF",
     green: "#2EE250",
     purple: "#CE80FF",
-    yellow: "#E6DB74"
+    yellow: "#E6DB74",
+    monospace_font_family: "Programma",
+    monospace_font_css: `
+        @font-face {
+            font-family: "Programma";
+            font-style: normal;
+            src: url(${programma_url}) format("woff2");
+        }
+    `
 });

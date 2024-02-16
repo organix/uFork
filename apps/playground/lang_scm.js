@@ -38,16 +38,16 @@ function highlight(the_element) {
 
         let depth = 0;
         Array.from(text).forEach(function (glyph) {
-            if (glyph === "(" || glyph === ")") {
-                the_element.append(element("span", {
-                    textContent: glyph,
-                    style: {color: rainbow[depth]}
-                }));
-                depth += (
-                    glyph === "("
-                    ? 1
-                    : -1
-                );
+            const paren = element("span", {
+                textContent: glyph,
+                style: {color: rainbow[depth]}
+            });
+            if (glyph === "(") {
+                the_element.append(paren);
+                depth += 1;
+            } else if (glyph === ")") {
+                depth -= 1;
+                the_element.append(paren);
             } else {
                 the_element.append(glyph);
             }

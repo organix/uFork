@@ -1,8 +1,11 @@
 /*jslint browser */
 
-import ed from "./ed.js";
 import lang_asm from "./lang_asm.js";
 import lang_scm from "./lang_scm.js";
+import element from "./element.js";
+import editor_ui from "./editor_ui.js";
+import split_ui from "./split_ui.js";
+import theme from "./theme.js";
 import base64 from "https://ufork.org/lib/base64.js";
 import gzip from "https://ufork.org/lib/gzip.js";
 import unpercent from "https://ufork.org/lib/unpercent.js";
@@ -21,8 +24,6 @@ const wasm_url = import.meta.resolve("https://ufork.org/wasm/ufork.wasm");
 const unqualified_dev_lib_url = import.meta.resolve("../../lib/");
 
 const dev_lib_url = new URL(unqualified_dev_lib_url, location.href).href;
-const line_numbers_element = document.getElementById("line_numbers");
-const divider_element = document.getElementById("divider");
 const tools_element = document.getElementById("tools");
 const output_element = document.getElementById("output");
 const svg_element = document.getElementById("svg");
@@ -33,7 +34,6 @@ const debug_button = document.getElementById("debug");
 const test_button = document.getElementById("test");
 const clear_output_button = document.getElementById("clear_output");
 const help_button = document.getElementById("help");
-const source_element = document.getElementById("source");
 const scale_input = document.getElementById("scale");
 const dimensions_element = document.getElementById("dimensions");
 const bg_color_input = document.getElementById("bg_color");
@@ -44,16 +44,10 @@ const lang_packs = {
     asm: lang_asm,
     scm: lang_scm
 };
-const min_tools_width = 200;
-const min_tools_height = 200;
-const default_tools_width = 300;
-const default_tools_height = 300;
+const min_tools_size = 200;
+const default_tools_size = 300;
 
-let editor;
 let lang;
-let line_selection_anchor;
-let divider_origin;
-let stop_flag = false;
 
 function is_landscape() {
     return document.documentElement.clientWidth >= 720;
@@ -161,68 +155,6 @@ function update_page_url(text) {
     });
 }
 
-function end_divider_drag() {
-    divider_origin = undefined;
-}
-
-function end_line_selection() {
-    if (line_selection_anchor !== undefined) {
-        source_element.focus();
-        line_selection_anchor = undefined;
-    }
-}
-
-function update_line_numbers(editor) {
-    const text = editor.get_text();
-    const lines = text.split("\n");
-
-    line_numbers_element.innerHTML = "";
-    let position = 0;
-    lines.forEach(function (line, line_nr) {
-        const element = document.createElement("line_nr");
-        element.textContent = line_nr + 1;
-        line_numbers_element.append(element);
-
-// Lines can be selected by dragging up and down the line numbers.
-
-        const line_start = position;
-        const line_end = position + line.length + 1;
-        element.onpointerdown = function (event) {
-            if (event.buttons === 1) {
-                editor.set_cursor([line_start, line_end]);
-                line_selection_anchor = line_start;
-            }
-        };
-        element.onpointerenter = function () {
-            if (line_selection_anchor !== undefined) {
-                editor.set_cursor(
-                    line_start >= line_selection_anchor
-                    ? [line_selection_anchor, line_end]
-                    : [line_start, line_selection_anchor]
-                );
-            }
-        };
-        position += line.length + 1; // account for \n
-    });
-}
-
-function reset_editor() {
-    if (editor !== undefined) {
-        editor.destroy();
-    }
-    editor = ed({
-        element: source_element,
-        highlight: lang.highlight,
-        on_input(text) {
-            update_page_url(text);
-            update_line_numbers(editor);
-        },
-        on_keydown(event) {
-            lang.handle_keydown(editor, event);
-        }
-    });
-}
-
 function choose_device(name) {
     if (name === "svg") {
         output_element.remove();
@@ -237,21 +169,6 @@ function choose_device(name) {
         device_select.value = "io";
         write_state("dev", undefined);
     }
-}
-
-function choose_lang(name) {
-    if (typeof name !== "string" || !Object.hasOwn(lang_packs, name)) {
-        name = "asm"; // default
-    }
-    lang = lang_packs[name];
-    lang_select.value = name;
-    reset_editor();
-    test_button.disabled = name !== "asm";
-    write_state("lang", (
-        name !== "asm"
-        ? name
-        : undefined
-    ));
 }
 
 function set_scale(scale) {
@@ -377,6 +294,58 @@ function run(text, entry) {
     });
 }
 
+const editor = editor_ui({
+    text: "; Loading...",
+    on_text_input: update_page_url
+});
+
+function choose_lang(name) {
+    if (typeof name !== "string" || !Object.hasOwn(lang_packs, name)) {
+        name = "asm"; // default
+    }
+    lang = lang_packs[name];
+    lang_select.value = name;
+    test_button.disabled = name !== "asm";
+    editor.set_lang(lang);
+    write_state("lang", (
+        name !== "asm"
+        ? name
+        : undefined
+    ));
+}
+
+const split = element(
+    split_ui({
+        placement: (
+            is_landscape()
+            ? "right"
+            : "bottom"
+        ),
+        size: read_setting(
+            is_landscape()
+            ? "tools_width"
+            : "tools_height"
+        ) ?? default_tools_size,
+        divider_color: theme.gray,
+        divider_width: "3px",
+        on_drag(size) {
+            write_setting(
+                (
+                    is_landscape()
+                    ? "tools_width"
+                    : "tools_height"
+                ),
+                Math.floor(size)
+            );
+            return size >= min_tools_size;
+        }
+    }),
+    {style: {width: "100%", height: "100%"}},
+    [
+        element(editor, {slot: "main"}),
+        element(tools_element, {slot: "peripheral"})
+    ]
+);
 Object.keys(lang_packs).forEach(function (name) {
     const option = document.createElement("option");
     option.value = name;
@@ -389,29 +358,20 @@ const lang_override = read_state("lang");
 choose_lang(lang_override ?? src_extension);
 choose_device(read_state("dev") || "io");
 set_scale(0.46); // 24x24
-tools_element.style.width = (
-    read_setting("tools_width") ?? default_tools_width
-) + "px";
-tools_element.style.height = (
-    read_setting("tools_height") ?? default_tools_height
-) + "px";
 fetch_text().then(function (text) {
     editor.set_text(text);
-    update_line_numbers(editor);
 }).catch(function (error) {
     editor.set_text("; Failed to load source: " + error.message);
-    update_line_numbers(editor);
 });
 run_button.onclick = function () {
     stop_button.style.display = "block";
     run_button.style.display = "none";
-    stop_flag = false;
     run(editor.get_text(), "boot");
     run_button.style.display = "block";
     stop_button.style.display = "none";
 };
 stop_button.onclick = function () {
-    stop_flag = true;
+    // TODO
 };
 debug_button.onclick = function () {
     window.open(location.href.replace("playground", "debugger"));
@@ -439,38 +399,13 @@ device_select.oninput = function () {
 lang_select.oninput = function () {
     choose_lang(lang_select.value);
 };
-window.onpointerup = end_line_selection;
-window.onpointercancel = end_line_selection;
-divider_element.onpointerdown = function (event) {
-    if (event.buttons === 1) {
-        event.preventDefault();
-        event.target.setPointerCapture(event.pointerId);
-        divider_origin = (
-            is_landscape()
-            ? tools_element.clientWidth + event.pageX
-            : tools_element.clientHeight + event.pageY
-        );
+window.onresize = function () {
+    if (is_landscape()) {
+        split.set_placement("right");
+        split.set_size(read_setting("tools_width") ?? default_tools_size);
+    } else {
+        split.set_placement("bottom");
+        split.set_size(read_setting("tools_height") ?? default_tools_size);
     }
 };
-divider_element.onpointermove = function (event) {
-    if (Number.isFinite(divider_origin)) {
-        event.preventDefault();
-        if (is_landscape()) {
-            const width = Math.max(
-                divider_origin - event.pageX,
-                min_tools_width
-            );
-            tools_element.style.width = width + "px";
-            write_setting("tools_width", Math.floor(width));
-        } else {
-            const height = Math.max(
-                divider_origin - event.pageY,
-                min_tools_height
-            );
-            tools_element.style.height = height + "px";
-            write_setting("tools_height", Math.floor(height));
-        }
-    }
-};
-divider_element.onpointerup = end_divider_drag;
-divider_element.onpointercancel = end_divider_drag;
+document.body.append(split);
