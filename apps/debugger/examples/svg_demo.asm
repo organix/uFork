@@ -7,21 +7,66 @@
     std: "https://ufork.org/lib/std.asm"
 
 svg_cmds:
+    ; square
     pair_t 'M'
-    pair_t 3
-    pair_t 5
+    pair_t 4
+    pair_t 20
     pair_t 'h'
-    pair_t 8
-    pair_t 'V'
-    pair_t 13
-    pair_t 'H'
-    pair_t 3
+    pair_t 14
+    pair_t 'v'
+    pair_t -14
+    pair_t 'h'
+    pair_t -14
     pair_t 'Z'
-    pair_t 'F'
+    pair_t 'D'
+    pair_t 246
+    pair_t 157
+    pair_t 200
     pair_t 255
-    pair_t 153
+    pair_t 1
     pair_t 0
+    pair_t 0
+    ; triangle
+    pair_t 'M'
+    pair_t 22
+    pair_t 20
+    pair_t 'l'
+    pair_t 8
+    pair_t -14
+    pair_t 'l'
+    pair_t 8
+    pair_t 14
+    pair_t 'Z'
+    pair_t 'D'
+    pair_t 107
+    pair_t 228
+    pair_t 223
     pair_t 255
+    pair_t 1
+    pair_t 0
+    pair_t 0
+    ; cross
+    pair_t 'M'
+    pair_t 4
+    pair_t 38
+    pair_t 'l'
+    pair_t 14
+    pair_t -14
+    pair_t 'm'
+    pair_t -14
+    pair_t 0
+    pair_t 'l'
+    pair_t 14
+    pair_t 14
+    pair_t 'Z'
+    pair_t 'D'
+    pair_t 155
+    pair_t 160
+    pair_t 233
+    pair_t 255
+    pair_t 1
+    pair_t 0
+    pair_t 0
     ref #nil
 
 ; A write request looks like (to_cancel callback fixnum),
