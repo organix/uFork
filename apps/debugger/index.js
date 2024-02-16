@@ -631,8 +631,16 @@ core.h_initialize()(function callback(value, reason) {
     const text_enc = read_state("text");
     $boot_input.value = src || "./examples/fib.asm";
     if (text_enc) {
-        base64.decode(text_enc).then(gzip.decode).then(function (text) {
-            boot(src, new TextDecoder().decode(text));
+        base64.decode(text_enc).then(gzip.decode).then(function (bytes) {
+            const text = new TextDecoder().decode(bytes);
+            boot(
+                src || (
+                    read_state("lang") === "scm"
+                    ? "untitled.scm"
+                    : "untitled.asm"
+                ),
+                text
+            );
         });
     } else if (src) {
         boot(src);

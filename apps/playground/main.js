@@ -231,7 +231,7 @@ function run(text, entry) {
         choose_device("io");
         return append_output(ufork.LOG_WARN, error_messages.join("\n"));
     }
-    const unqualified_src = read_state("src") ?? "placeholder.asm";
+    const unqualified_src = read_state("src") ?? "untitled.asm";
     const src = new URL(unqualified_src, location.href).href;
     parseq.sequence([
         core.h_initialize(),
