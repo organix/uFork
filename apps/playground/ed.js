@@ -1,9 +1,12 @@
 // ed.js
 // James Diacono
-// 2024-02-10
+// 2024-02-16
 
 // A minimal code editor for the Web, with support for syntax highlighting,
 // copy/paste, and undo/redo. Tested on Chrome, Safari, and Firefox.
+
+// If using Shadow DOM, ensure that all ancestor ShadowRoots are in "open"
+// mode.
 
 // Public Domain.
 
@@ -28,7 +31,27 @@ function next(node) {
 }
 
 function is_text(node) {
-    return node.nodeType === window.Node.TEXT_NODE;
+    return node.nodeType === Node.TEXT_NODE;
+}
+
+function get_selection_range(element) {
+
+// Returns the current selection's range.
+
+// When the element is within a ShadowRoot, browser compatibility breaks down.
+// See https://stackoverflow.com/a/70523247.
+
+    let selection = document.getSelection(); // Firefox
+    if (typeof element.getRootNode().getSelection === "function") {
+        selection = element.getRootNode().getSelection(); // Chrome
+    }
+    const is_shadow = element.getRootNode() !== document;
+    if (is_shadow && typeof selection.getComposedRanges === "function") {
+        return selection.getComposedRanges(element.getRootNode())[0]; // Safari
+    }
+    if (selection.anchorNode) {
+        return selection.getRangeAt(0);
+    }
 }
 
 function get_position(element, caret) {
@@ -119,7 +142,6 @@ function ed({
     on_keydown,
     on_input
 }) {
-    const document = element.getRootNode(); // Shadow DOM, etc.
     const trailing_br = document.createElement("br");
     let history = [];
     let history_at = -1;
@@ -139,28 +161,31 @@ function ed({
 
     function get_cursor() {
         let {
-            anchorNode,
-            anchorOffset,
-            focusNode,
-            focusOffset
-        } = document.getSelection();
-        if (element.contains(anchorNode) && element.contains(focusNode)) {
+            startContainer,
+            startOffset,
+            endContainer,
+            endOffset
+        } = get_selection_range(element);
+        if (
+            element.contains(startContainer)
+            && element.contains(endContainer)
+        ) {
             return [
-                get_position(element, [anchorNode, anchorOffset]),
-                get_position(element, [focusNode, focusOffset])
+                get_position(element, [startContainer, startOffset]),
+                get_position(element, [endContainer, endOffset])
             ];
         }
     }
 
     function set_cursor(cursor) {
         if (cursor !== undefined) {
-            const [anchorNode, anchorOffset] = get_caret(element, cursor[0]);
-            const [focusNode, focusOffset] = get_caret(element, cursor[1]);
+            const [startContainer, startOffset] = get_caret(element, cursor[0]);
+            const [endContainer, endOffset] = get_caret(element, cursor[1]);
             document.getSelection().setBaseAndExtent(
-                anchorNode,
-                anchorOffset,
-                focusNode,
-                focusOffset
+                startContainer,
+                startOffset,
+                endContainer,
+                endOffset
             );
         }
     }
@@ -223,9 +248,29 @@ function ed({
         if (on_keydown !== undefined) {
             on_keydown(event);
         }
-        if (event.key === "Enter" && !event.defaultPrevented) {
-            event.preventDefault();
-            insert_text("\n");
+        if (!event.defaultPrevented) {
+
+// Browsers insert a <br> on Enter, but we just want a newline character.
+
+            if (event.key === "Enter") {
+                event.preventDefault();
+                insert_text("\n");
+            }
+
+// Within a ShadowRoot, Firefox's backspace button stop working. Until that is
+// fixed, we implement backspace by hand.
+
+            if (event.key === "Backspace") {
+                event.preventDefault();
+                const [anchor, focus] = get_cursor();
+                if (anchor === focus) {
+                    set_cursor([focus - 1, focus]);
+                    insert_text("");
+                    set_cursor([focus - 1, focus - 1]);
+                } else {
+                    insert_text("");
+                }
+            }
         }
         maybe_text_changed();
     }
@@ -268,11 +313,14 @@ function ed({
 // to do nothing because the <br> is added back immediately. Our workaround is
 // to exclude the trailing <br> from the selection.
 
-        const selection = document.getSelection();
-        const {anchorNode, anchorOffset, focusNode, focusOffset} = selection;
+        const range = get_selection_range(element);
+        if (range === undefined) {
+            return;
+        }
+        const {startContainer, startOffset, endContainer, endOffset} = range;
         const end = element.childNodes.length;
-        const anchor_at_end = anchorNode === element && anchorOffset === end;
-        const focus_at_end = focusNode === element && focusOffset === end;
+        const anchor_at_end = startContainer === element && startOffset === end;
+        const focus_at_end = endContainer === element && endOffset === end;
         if (anchor_at_end || focus_at_end) {
             set_cursor(get_cursor());
         }
@@ -319,7 +367,8 @@ function ed({
 //debug source.style.fontFamily = "monospace";
 //debug source.style.outline = "none";
 //debug source.style.padding = "0 5px";
-//debug source.textContent = "abc\r\ndef\rstuff\nthings";
+//debug //source.textContent = "abc\r\ndef\rstuff\nthings";
+//debug source.textContent = "abc\ndef\nstuff\nthings";
 //debug const preview = document.createElement("html_preview");
 //debug preview.style.flex = "1 1 50%";
 //debug preview.style.whiteSpace = "pre";
@@ -328,7 +377,11 @@ function ed({
 //debug document.body.style.margin = "0px";
 //debug document.body.style.height = "100%";
 //debug document.body.style.display = "flex";
-//debug document.body.append(source, preview);
+//debug console.log("Rendering in ShadowRoot");
+//debug const shadow = document.body.attachShadow({mode: "open"});
+//debug shadow.append(source, preview);
+//debug //console.log("Rendering in window.document");
+//debug //document.body.append(source, preview);
 //debug const caret_anchor = "▶";
 //debug const caret_focus = "◀";
 //debug function alter_string(string, alterations) {
@@ -350,7 +403,7 @@ function ed({
 //debug         ""
 //debug     );
 //debug }
-//debug function visualize_selection(node, selection) {
+//debug function visualize_selection(node, range) {
 //debug     let string = "";
 //debug     let indent = "";
 //debug     function caret(node, caret, selection_node, selection_offset) {
@@ -371,26 +424,26 @@ function ed({
 //debug         return caret(
 //debug             node,
 //debug             caret_anchor,
-//debug             selection?.anchorNode,
-//debug             selection?.anchorOffset + offset_offset
+//debug             range?.startContainer,
+//debug             range?.startOffset + offset_offset
 //debug         ) + caret(
 //debug             node,
 //debug             caret_focus,
-//debug             selection?.focusNode,
-//debug             selection?.focusOffset + offset_offset
+//debug             range?.endContainer,
+//debug             range?.endOffset + offset_offset
 //debug         );
 //debug     }
 //debug     function append_text(node) {
 //debug         let alterations = [];
-//debug         if (selection?.anchorNode === node) {
+//debug         if (range?.startContainer === node) {
 //debug             alterations.push({
-//debug                 range: [selection.anchorOffset, selection.anchorOffset],
+//debug                 range: [range.startOffset, range.startOffset],
 //debug                 replacement: caret_anchor
 //debug             });
 //debug         }
-//debug         if (selection?.focusNode === node) {
+//debug         if (range?.endContainer === node) {
 //debug             alterations.push({
-//debug                 range: [selection.focusOffset, selection.focusOffset],
+//debug                 range: [range.endOffset, range.endOffset],
 //debug                 replacement: caret_focus
 //debug             });
 //debug         }
@@ -424,7 +477,7 @@ function ed({
 //debug     }
 //debug     function append_node(node) {
 //debug         return (
-//debug             node.nodeType === window.Node.ELEMENT_NODE
+//debug             node.nodeType === Node.ELEMENT_NODE
 //debug             ? append_element(node)
 //debug             : append_text(node)
 //debug         );
@@ -434,8 +487,10 @@ function ed({
 //debug }
 //debug function refresh_preview() {
 //debug     preview.textContent = (
-//debug         "HTML\n" + visualize_selection(source, document.getSelection())
-//debug         + "\nTEXT\n" + JSON.stringify(source.textContent)
+//debug         "HTML\n"
+//debug         + visualize_selection(source, get_selection_range(source))
+//debug         + "\nTEXT\n"
+//debug         + JSON.stringify(source.textContent)
 //debug     );
 //debug }
 //debug const colors = ["red", "purple", "orange", "green", "blue"];

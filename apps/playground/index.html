@@ -5,24 +5,13 @@
     <meta name="viewport" content="width=device-width" />
     <title>uFork Playground</title>
     <style>
-        @font-face {
-            font-family: "Programma";
-            font-style: normal;
-            src: url(./programma.woff2) format("woff2");
-        }
         html,
         body {
             height: 100%;
         }
         body {
-            --red: #F92672;
-            --orange: #FD971F;
-            --silver: #BFBFBF;
-            --gray: #484848;
             --black: #222222;
-            --blue: #66D9EF;
-            --green: #2EE250;
-            --purple: #CE80FF;
+            --red: #F92672;
             --yellow: #E6DB74;
             background: var(--black);
             color: white;
@@ -30,58 +19,6 @@
             font-size: 17px;
             display: flex;
             margin: 0;
-        }
-        #editor {
-            font-family: Programma, monospace;
-            flex: 1 1;
-            display: flex;
-            white-space: pre;
-            align-items: flex-start;
-            overflow-y: auto; /* scroll */
-        }
-        #editor > * {
-            min-height: 100%;
-        }
-        #line_numbers {
-            flex: 0 1 0%;
-            border-right: 1px solid var(--gray);
-            padding: 10px 0;
-        }
-        #line_numbers > * {
-            display: block;
-            padding: 0 10px;
-            text-align: right;
-            color: gray;
-            user-select: none;
-        }
-        #line_numbers > *:hover {
-            background: var(--gray);
-        }
-        #source {
-            flex: 1 1 100%;
-            padding: 10px;
-            outline: none;
-            caret-color: white;
-            position: relative; /* for ruler */
-        }
-        #source::before { /* ruler */
-            content: " ";
-            display: block;
-            background: var(--gray);
-            width: 1px;
-            position: absolute;
-            z-index: -1;
-            left: calc(80ch + 10px);
-            top: 0;
-            bottom: 0;
-            pointer-events: none;
-        }
-        #divider {
-            background: var(--gray);
-            touch-action: none; /* suppress pointercancel events on Chrome */
-        }
-        #divider:hover {
-            filter: brightness(1.5);
         }
         #tools {
             display: flex;
@@ -137,89 +74,10 @@
         #output > .io {
             color: var(--yellow);
         }
-        @media (max-width: 719px) {
-            body {
-                flex-direction: column;
-            }
-            #divider {
-                height: 3px;
-                cursor: ns-resize;
-            }
-            #tools {
-                width: auto !important; /* ignore width set in landscape */
-                border-top: 1px solid var(--gray);
-            }
-            #output {
-                max-height: 40vh;
-            }
-        }
-        @media (min-width: 720px) {
-            body {
-                flex-direction: row;
-            }
-            #divider {
-                width: 3px;
-                cursor: ew-resize;
-            }
-            #tools {
-                height: auto !important; /* ignore height set in portrait */
-                border-left: 1px solid var(--gray);
-            }
-        }
-        ::selection {
-            background-color: var(--gray);
-        }
-        .comment {
-            color: var(--silver);
-        }
-        .conditional {
-            color: var(--purple);
-        }
-        .data {
-            color: var(--blue);
-            font-style: italic;
-        }
-        .directive {
-            color: var(--purple);
-        }
-        .error {
-            background: black;
-            color: red;
-        }
-        .literal {
-            color: var(--green);
-        }
-        .name {
-            color: var(--yellow);
-        }
-        .namespace {
-            color: var(--orange);
-        }
-        .number {
-            color: var(--green);
-        }
-        .operator {
-            color: var(--blue);
-        }
-        .string {
-            color: var(--yellow);
-        }
-        .terminal {
-            color: var(--purple);
-            font-style: italic;
-        }
-        .warning {
-            outline: 1px solid red;
-            border-radius: 2px;
-        }
     </style>
+    <script type="module" src="main.js"></script>
 </head>
 <body>
-    <code id="editor">
-        <div id="line_numbers"></div>
-        <div id="source"></div>
-    </code>
-    <div id="divider"></div>
     <div id="tools">
         <div id="controls">
             <label>
@@ -251,6 +109,5 @@
             <button id="help">﹖ Help</button>
         </div>
     </div>
-    <script type="module" src="main.js"></script>
 </body>
 </html>
