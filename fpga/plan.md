@@ -8,6 +8,7 @@ This is a living document outlining our project goals.
   * Quad-memory allocator and garbage-collector
   * Event and Continuation queue management and dispatch
   * Micro-code execution engine
+  * * Write the micro code instruction documentation
   * Micro-coded instructions for stack and pair-list manipulation
   * Micro-coded instructions for ALU and flow-control operations
   * Micro-coded instructions for Actor and Sponsor primitives
