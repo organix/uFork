@@ -6,7 +6,7 @@ The [Fomu-PVT](https://tomu.im/fomu.html)
 is a programmable FPGA device
 that fits inside a USB Type-A port.
 It has I/O contacts, an RGB LED,
-and a [Lattice iCE40 UP5K FPGA](https://www.latticesemi.com/Products/FPGAandCPLD/iCE40UltraPlus).
+and a [Lattice iCE40 UP5K](https://www.latticesemi.com/Products/FPGAandCPLD/iCE40UltraPlus) FPGA.
 It is supported by a fully open-source toolchain.
 This block-diagram describes the primary components of the Fomu platform.
 

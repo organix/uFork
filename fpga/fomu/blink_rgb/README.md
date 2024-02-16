@@ -42,7 +42,7 @@ To build and run the test-bench:
 
 The resulting `vcd` file can be loaded into the `GTKWave` tool for viewing.
 
-To removed the build artifacts,
+To remove the build artifacts,
 forcing everything to be rebuilt from source:
 
     make clean
