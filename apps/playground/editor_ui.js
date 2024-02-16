@@ -13,7 +13,7 @@ const editor_ui = make_ui("editor-ui", function (host, {
     lang,
     on_text_input
 }) {
-    const shadow = host.attachShadow({mode: "closed"});
+    const shadow = host.attachShadow({mode: "open"});
     const style = element("style", `
         ${theme.monospace_font_css}
         :host {
@@ -62,7 +62,7 @@ const editor_ui = make_ui("editor-ui", function (host, {
             bottom: 0;
             pointer-events: none;
         }
-        ::selection {
+        source_code ::selection {
             background-color: ${theme.gray};
         }
     `);

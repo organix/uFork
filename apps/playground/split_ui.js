@@ -27,7 +27,7 @@ const split_ui = make_ui("split-ui", function (host, {
         return true;
     }
 }) {
-    const shadow = host.attachShadow({mode: "closed"});
+    const shadow = host.attachShadow({mode: "open"});
     const style = element("style", `
         :host {
             display: flex;

@@ -45,7 +45,7 @@ function ui(tag, create) {
 //debug const make_blink = ui("blink-ui", function create(element, params) {
 //debug     let {interval} = params;
 //debug     let timer;
-//debug     let shadow = element.attachShadow({mode: "closed"});
+//debug     let shadow = element.attachShadow({mode: "open"});
 //debug     shadow.append(document.createElement("slot"));
 //debug     function toggle_visibility() {
 //debug         element.style.visibility = (
