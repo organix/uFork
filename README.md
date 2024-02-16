@@ -27,7 +27,7 @@ Multiple instances of the WASM component
 can be instantiated to simulate a multi-core
 or distributed system.
 
-An FPGA implementation is planned for the future.
+An [FPGA](fpga/README.md) implementation is in development.
 
 ### Technology Stacks
 
