@@ -229,7 +229,9 @@ export const wozmon = (asm, opts) => {
   dat("(LIT)", 0x88, "+");   // map letter "A"-"F" to $FA-FF
   dat("DUP", "(LIT)", 0xFA, "<", "(BRNZ)", "wozmon_nothex");
   def("wozmon_dig");
-  dat("4<<");
+  dat("(LIT)", 0x0F, "&");
+  dat("wozmon_tmp", "@", "4<<", "OR", "wozmon_tmp", "!");
+  dat("1+", "(JMP)", "wozmon_nexthex");
   
   def("wozmon_escape"); // ( buff_addr chr -- )
   dat("2DROP", "(JMP)", "wozmon");
