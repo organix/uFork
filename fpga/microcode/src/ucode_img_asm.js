@@ -187,6 +187,7 @@ export const wozmon = (asm, opts) => {
   dat("DUP", "(LIT)", linebuffer_max, "<", "(BRZ)", "wozmon_escape");
   dat("SWAP");
   dat("(LIT)", 0x0D, "=", "(BRNZ)", "wozmon_notcr");
+  dat("wozmon_linebuffer_start", "-"); // ( lineLength )
   
   def("wozmon_escape"); // ( buff_addr chr -- )
   dat("2DROP", "(JMP)", "wozmon");
