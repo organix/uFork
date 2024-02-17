@@ -183,7 +183,7 @@ export const wozmon = (asm, opts) => {
   dat("DUP", "(LIT)", 0x1B, "=", "(BRNZ)", "wozmon_escape");
   dat("DUP", "(LIT)", 0x08, "=", "(BRNZ)", "wozmon_backspace");
   dat("DUP", "EMIT");    // echo the character
-  dat("SWAP", "2DUP", "!", "1+");
+  dat("SWAP", "2DUP", "!", "1+"); // store char to buffer and incr buffer ptr
   dat("DUP", "(LIT)", linebuffer_max, "<", "(BRZ)", "wozmon_escape");
   dat("SWAP");
   dat("(LIT)", 0x0D, "=", "(BRNZ)", "wozmon_notcr");
