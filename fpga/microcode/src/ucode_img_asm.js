@@ -37,6 +37,11 @@ export const defineInstructionset = (asm) => {
   def("QUAD_ALLOCATE", 0x0018);
   def("QUAD_FREE",    0x0019);
   def("QUAD_GCSTEP",  0x001A);
+
+  def("DEBUG_LED",    0x003C);
+  def("DEBUG_RX?",    0x003D);
+  def("DEBUG_TX?",    0x003E);
+  def("DEBUG_TX!",    0x003F);
   
   def("UM+", "UMPLUS");
   def("&",   "AND");
