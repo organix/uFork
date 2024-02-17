@@ -210,15 +210,17 @@ export const wozmon = (asm, opts) => {
   def("wozmon_l2");
   dat("DUP", "(LIT)", 0x52, "=", "(BRNZ)", "wozmon_run");
   dat(       "(LIT)", 0x51, "=", "(BRNZ)", "wozmon_quit");
-
-  def("wozmon_nexthex");   
   
-
+  def("wozmon_nexthex"); // ( ba )
   
   def("wozmon_escape"); // ( buff_addr chr -- )
   dat("2DROP", "(JMP)", "wozmon");
   def("wozmon_backspace"); // ( buff_addr chr -- buff_addr )
   dat("DROP", "1-", "wozmon_linebuffer_start", "MAX", "(JMP)", "wozmon_notcr");
+  def("wozmon_run"); // ( ba chr )
+  dat("2DROP", "wozmon_xam", "@", "EXECUTE", "(JMP)", "wozmon");
+  def("wozmon_quit"); // ( ba )
+  dat("(JMP)", "(DROP)");
   
   def("wozmon_linebuffer_start");
   dat("(CONST)", linebuffer_start);
