@@ -75,6 +75,23 @@ export const minicore = (asm, opts) => {
   def("?:"); // ( alt conseq cond -- conseq | alt )
   dat("SKZ", "SWAP", "DROP", "EXIT");
 
+  def("(CONST)"); // ( -- constant )
+  dat("R>", "@", "EXIT");
+
+  def("TRUE");
+  dat("(CONST)", 0xFFFF);
+
+  def("FALSE");
+  dat("(CONST)", 0x0000);
+
+  def("CLEAN_BOOL");
+  dat(">R", "FALSE", "TRUE", "R>", "?:", "EXIT");
+  
+  def("INVERT");
+  dat("TRUE", "XOR", "EXIT");
+
+  def("(BRNZ)");
+  dat("CLEAN_BOOL", "INVERT");
   def("(BRZ)"); // BRanch if Zero ( bool -- )
   dat("R>", "SWAP", ">R"); // ( raddr ) R:( bool )
   dat("DUP", "@", "SWAP"); // ( dest raddr ) R:( bool )
@@ -83,20 +100,47 @@ export const minicore = (asm, opts) => {
 
   def("(LIT)"); // literal ( -- item )
   dat("R>", "DUP", "1+", ">R", "@", "EXIT");
+
+  def("="); // ( a b -- bool )
+  dat("XOR", "CLEAN_BOOL", "INVERT", "EXIT");
   
   def("TX!"); // ( char -- )
   dat("DEBUG_TX?", "(BRZ)", "TX!");
   dat("DEBUG_TX!", "EXIT");
 
   def("RX?", "DEBUG_RX?");
+  def("EMIT", "TX!");
+
+  def("RX"); // ( -- chr )
+  dat("RX?", "(BRZ)", "RX", "EXIT");
+
+  def("(.chr)"); // emitts a char from the cell following the call
+  dat(">R", "DUP", "1+", ">R", "@", "EMIT", "EXIT");
+
+  def("(CRLF.)";
+  dat("(.chr)", 0x13, "(.chr)", 0x0D, "EXIT");
   
   return asm;
 };
 
 export const wozmon = (asm, opts) => {
-  // inspired by Wozniacs Monitor
+  // inspired by Wozniacs Monitor (see https://gist.github.com/zarutian/7074f12ea3ed5a44ee2c58e8fcf6d7ae for example )
   // not as small though
+  opts = (opts == undefined) ? {} : opts ;
+  const linebuffer_start = (opts.linebuffer_start) ? 0x0200 : opts.linebuffer_start ;
   const { def, dat } = asm;
+
+  def("wozmon");
+  dat("(.chr)", 0x5C, "(CRLF.)");
+  def("wozmon_getline"); // ( )
+  dat("(LIT)", linebuffer_start);
+  def("wozmon_notcr");   // ( buff_addr )
+  dat("RX");             // ( buff_addr chr )
+  dat("DUP", "(LIT)", 0x1B, "=", "(BRNZ)", "wozmon_escape");
+  dat("DUP", "(LIT)", 0x08, "=", "(BRNZ)", "wozmon_backspace");
+  dat("DUP", "EMIT");
+  dat("SWAP", "2DUP", "!", "1+", "SWAP");
+  dat("(LIT)", 0x0D, "=", "(BRNZ)", "wozmon_notcr");
 
   return asm;
 };
