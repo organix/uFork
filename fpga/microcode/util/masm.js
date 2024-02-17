@@ -146,6 +146,12 @@ export const makeAssembler = (opts) => {
     });
     done_resolve({ symbols, image });
   };
+
+  asm.ascii = (str) => {
+    str.split("").forEach((char) => {
+      datum(char.charCodeAt(0));
+    });
+  };
   
   return asm;
 };
