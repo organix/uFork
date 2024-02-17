@@ -248,29 +248,12 @@ function ed({
         if (on_keydown !== undefined) {
             on_keydown(event);
         }
-        if (!event.defaultPrevented) {
+        if (!event.defaultPrevented && event.key === "Enter") {
 
 // Browsers insert a <br> on Enter, but we just want a newline character.
 
-            if (event.key === "Enter") {
-                event.preventDefault();
-                insert_text("\n");
-            }
-
-// Within a ShadowRoot, Firefox's backspace button stop working. Until that is
-// fixed, we implement backspace by hand.
-
-            if (event.key === "Backspace") {
-                event.preventDefault();
-                const [anchor, focus] = get_cursor();
-                if (anchor === focus) {
-                    set_cursor([focus - 1, focus]);
-                    insert_text("");
-                    set_cursor([focus - 1, focus - 1]);
-                } else {
-                    insert_text("");
-                }
-            }
+            event.preventDefault();
+            insert_text("\n");
         }
         maybe_text_changed();
     }
