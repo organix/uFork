@@ -233,6 +233,13 @@ export const wozmon = (asm, opts) => {
   dat("wozmon_tmp", "@", "4<<", "OR", "wozmon_tmp", "!");
   dat("1+", "(JMP)", "wozmon_nexthex");
   
+  def("wozmon_nothex");  // ( ba char )
+  dat("2DROP");
+  dat("wozmon_tmp", "@", "wozmon_st", "@", "OR", "(BRZ)", "wozmon");
+  dat("(LIT)", 0x74, "wozmon_mode", "@", "=", "(BRZ)", "wozmon_notstore");
+  dat("wozmon_tmp", "@", "wozmon_st", "@", "!");
+  dat("wozmon_st",  "@", "1+", "wozmon_st", "!");
+  
   def("wozmon_escape"); // ( buff_addr chr -- )
   dat("2DROP", "(JMP)", "wozmon");
   def("wozmon_backspace"); // ( buff_addr chr -- buff_addr )
