@@ -172,6 +172,9 @@ export const wozmon = (asm, opts) => {
   opts = (opts == undefined) ? {} : opts ;
   const linebuffer_start = (opts.linebuffer_start) ? 0x0200 : opts.linebuffer_start ;
   const linebuffer_max   = (opts.linebuffer_max)   ? 0x0250 : opts.linebuffer_max ;
+  const mode_var_addr    = (opts.mode_var_addr)    ? 0x0251 : opts.mode_var_addr ;
+  const xam_var_addr     = (opts.xam_var_addr)     ? 0x0252 : opts.xam_var_addr ;
+  const tmp_var_addr     = (opts.tmp_var_addr)     ? 0x0253 : opts.tmp_var_addr ;
   const { def, dat } = asm;
 
   def("wozmon");
@@ -187,7 +190,9 @@ export const wozmon = (asm, opts) => {
   dat("DUP", "(LIT)", linebuffer_max, "<", "(BRZ)", "wozmon_escape");
   dat("SWAP");
   dat("(LIT)", 0x0D, "=", "(BRNZ)", "wozmon_notcr");
-  dat("wozmon_linebuffer_start", "-"); // ( lineLength )
+  dat("DROP", "wozmon_linebuffer_start"); // reset text index
+  dat("FALSE", "wozmon_mode", "!");       // reset mode
+  def("wozmon_nextitem");
   
   def("wozmon_escape"); // ( buff_addr chr -- )
   dat("2DROP", "(JMP)", "wozmon");
@@ -196,6 +201,14 @@ export const wozmon = (asm, opts) => {
   
   def("wozmon_linebuffer_start");
   dat("(CONST)", linebuffer_start);
+  def("wozmon_mode");
+  dat("(CONST)", mode_var_addr);
+  def("wozmon_xam");
+  dat("(CONST)", xam_var_addr);
+  def("wozmon_st"):
+  dat("(CONST)", st_var_addr);
+  def("wozmon_tmp");
+  dat("(CONST)", tmp_var_addr);
 
 
   return asm;
