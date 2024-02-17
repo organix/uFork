@@ -131,11 +131,10 @@ const editor_ui = make_ui("editor-ui", function (host, {
     }
 
     function get_text() {
-        return text;
+        return editor.get_text();
     }
 
-    function set_text(the_text) {
-        text = the_text;
+    function set_text(text) {
         if (editor !== undefined) {
             editor.set_text(text);
             update_line_numbers();
