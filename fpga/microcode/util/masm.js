@@ -30,7 +30,10 @@ export const makeAssembler = (opts) => {
   let curr_addr = (opts.origin  == undefined) ? 0x0000 : opts.origin ;
   
   const asm = {
-    symbols: {
+    get addr: () => curr_addr,
+    set addr: (val) => asm.origin(val),
+  };
+  asm.symbols = {
       define: (sym, val = undefined) => {
         if (val == undefined) {
           val = curr_addr;
@@ -54,7 +57,7 @@ export const makeAssembler = (opts) => {
           let val = symbols.get(sym);
           switch (typeof val) {
             case "string": return asm.symbols.lookup(val);
-            case "bigint": val = BigInt.asUintN(cellsize, val);
+            case "bigint": val = BigInt.asUintN(cellsize, val); // fallthrough
             case "number": return Math.trunc(val) & fullcellBitmask;
             case "boolean": return (val ? fullcellBitmask : 0);
             case "object":
@@ -67,16 +70,26 @@ export const makeAssembler = (opts) => {
           return tmp.promise;
         }
       },
-    },
-    get addr: () => curr_addr,
-    origin: (new_addr) => {
-      const tmp = curr_addr;
-      curr_addr = new_addr;
-      return tmp;
-    },
-    set addr: asm.origin,
+    }
+  asm.allot = (amount = 1) => {
+    curr_addr = (curr_addr + amount) & fullcellBitmask;
+    return curr_addr;
+  };
+  const datum = (item) => {
+    let val = undefined;
+    switch (typeof item) {
+      case "string": val = asm.symbols.lookup(item); break;
+    }
+  };
+  asm.data = (...datums) => Array.prototype.forEach(datum);
+  asm.origin = (new_addr) => {
+    const tmp = curr_addr;
+    curr_addr = new_addr;
+    return tmp;
   };
   asm.def = asm.symbols.define;
+  asm.org = asm.origin;
+  asm.dat = asm.data;
   
   return asm;
 };
