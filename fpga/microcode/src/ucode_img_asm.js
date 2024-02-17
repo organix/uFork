@@ -171,24 +171,31 @@ export const wozmon = (asm, opts) => {
   // not as small though
   opts = (opts == undefined) ? {} : opts ;
   const linebuffer_start = (opts.linebuffer_start) ? 0x0200 : opts.linebuffer_start ;
+  const linebuffer_max   = (opts.linebuffer_max)   ? 0x0250 : opts.linebuffer_max ;
   const { def, dat } = asm;
 
   def("wozmon");
   dat("(.chr)", 0x5C, "(CRLF.)");
   def("wozmon_getline"); // ( )
-  dat("(LIT)", linebuffer_start);
+  dat("wozmon_linebuffer_start");
   def("wozmon_notcr");   // ( buff_addr )
   dat("RX");             // ( buff_addr chr )
   dat("DUP", "(LIT)", 0x1B, "=", "(BRNZ)", "wozmon_escape");
   dat("DUP", "(LIT)", 0x08, "=", "(BRNZ)", "wozmon_backspace");
-  dat("DUP", "EMIT");
-  dat("SWAP", "2DUP", "!", "1+", "SWAP");
+  dat("DUP", "EMIT");    // echo the character
+  dat("SWAP", "2DUP", "!", "1+");
+  dat("DUP", "(LIT)", linebuffer_max, "<", "(BRZ)", "wozmon_escape");
+  dat("SWAP");
   dat("(LIT)", 0x0D, "=", "(BRNZ)", "wozmon_notcr");
-
-  def("wozmon_backspace"); // ( buff_addr chr -- buff_addr )
-  dat("DROP", "1-", "(LIT)", linebuffer_start, "MAX", "(JMP)", "wozmon_notcr");
+  
   def("wozmon_escape"); // ( buff_addr chr -- )
   dat("2DROP", "(JMP)", "wozmon");
+  def("wozmon_backspace"); // ( buff_addr chr -- buff_addr )
+  dat("DROP", "1-", "wozmon_linebuffer_start", "MAX", "(JMP)", "wozmon_notcr");
+  
+  def("wozmon_linebuffer_start");
+  dat("(CONST)", linebuffer_start);
+
 
   return asm;
 };
