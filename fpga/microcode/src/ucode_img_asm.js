@@ -84,11 +84,19 @@ export const minicore = (asm, opts) => {
   def("FALSE");
   dat("(CONST)", 0x0000);
 
+  def("0x8000");
+  dat("(CONST)", 0x8000);
+
   def("CLEAN_BOOL");
   dat(">R", "FALSE", "TRUE", "R>", "?:", "EXIT");
   
   def("INVERT");
   dat("TRUE", "XOR", "EXIT");
+
+  def("OR");   // ( a b -- a|b )
+  dat("INVERT", "SWAP", "INVERT");
+  def("NAND"); // ( a b -- not(a & b)
+  dat("&", "INVERT", "EXIT");
 
   def("(BRNZ)");
   dat("CLEAN_BOOL", "INVERT");
@@ -107,8 +115,34 @@ export const minicore = (asm, opts) => {
   def("2DUP"); // ( a b -- a b a b )
   dat("OVER", "OVER", "EXIT");
 
+  def("2DROP");
+  dat("DROP", "DROP", "EXIT");
+
+  def("+"); // ( a b -- sum )
+  dat("UM+");
+  def("(DROP)");
+  dat("DROP", "EXIT");
+
+  def("NEGATE");
+  dat("INVERT", "1+", "EXIT");
+
+  def("1-");
+  dat("NEGATE", "1+", "NEGATE", "EXIT");
+
+  def("-"); // ( a b -- a-b )
+  dat("NEGATE", "+", "EXIT");
+
   def("="); // ( a b -- bool )
   dat("XOR", "CLEAN_BOOL", "INVERT", "EXIT");
+
+  def("0<"); // ( num -- bool )
+  dat("0x8000", "&", "CLEAN_BOOL", "EXIT");
+
+  def("<"); // ( a b -- bool )
+  dat("-", "0<", "EXIT");
+
+  def("<="); // ( a b -- bool )
+  dat("2DUP", "<", ">R", "=", "R>", "OR", "EXIT");
 
   def("MAX"); // ( a b -- a | b )
   dat("2DUP", "<", "?:", "EXIT");
@@ -150,6 +184,11 @@ export const wozmon = (asm, opts) => {
   dat("DUP", "EMIT");
   dat("SWAP", "2DUP", "!", "1+", "SWAP");
   dat("(LIT)", 0x0D, "=", "(BRNZ)", "wozmon_notcr");
+
+  def("wozmon_backspace"); // ( buff_addr chr -- buff_addr )
+  dat("DROP", "1-", "(LIT)", linebuffer_start, "MAX", "(JMP)", "wozmon_notcr");
+  def("wozmon_escape"); // ( buff_addr chr -- )
+  dat("2DROP", "(JMP)", "wozmon");
 
   return asm;
 };
