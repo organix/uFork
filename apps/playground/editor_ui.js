@@ -13,7 +13,7 @@ const editor_ui = make_ui("editor-ui", function (host, {
     lang,
     on_text_input
 }) {
-    const shadow = host.attachShadow({mode: "open"});
+    const shadow = host.attachShadow({mode: "closed"});
     const style = element("style", `
         ${theme.monospace_font_css}
         :host {
@@ -131,10 +131,15 @@ const editor_ui = make_ui("editor-ui", function (host, {
     }
 
     function get_text() {
-        return editor.get_text();
+        return (
+            editor !== undefined
+            ? editor.get_text()
+            : text
+        );
     }
 
-    function set_text(text) {
+    function set_text(new_text) {
+        text = new_text;
         if (editor !== undefined) {
             editor.set_text(text);
             update_line_numbers();

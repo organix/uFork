@@ -5,9 +5,6 @@
 // A minimal code editor for the Web, with support for syntax highlighting,
 // copy/paste, and undo/redo. Tested on Chrome, Safari, and Firefox.
 
-// If using Shadow DOM, ensure that all ancestor ShadowRoots are in "open"
-// mode.
-
 // Public Domain.
 
 /*jslint browser */
@@ -378,7 +375,7 @@ function ed({
 //debug document.body.style.height = "100%";
 //debug document.body.style.display = "flex";
 //debug console.log("Rendering in ShadowRoot");
-//debug const shadow = document.body.attachShadow({mode: "open"});
+//debug const shadow = document.body.attachShadow({mode: "closed"});
 //debug shadow.append(source, preview);
 //debug //console.log("Rendering in window.document");
 //debug //document.body.append(source, preview);
