@@ -80,6 +80,9 @@ export const minicore = (asm, opts) => {
   dat("DUP", "@", "SWAP"); // ( dest raddr ) R:( bool )
   dat("1+", "R>", "?:");   // ( raddr ) R:( )
   dat(">R", "EXIT");
+
+  def("(LIT)"); // literal ( -- item )
+  dat("R>", "DUP", "1+", ">R", "@", "EXIT");
   
   def("TX!"); // ( char -- )
   dat("DEBUG_TX?", "(BRZ)", "TX!");
