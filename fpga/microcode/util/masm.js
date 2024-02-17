@@ -28,10 +28,16 @@ export const makeAssembler = (opts) => {
   const fullcellBitmask = makeBitmask(cellsize);
   const symbols = (opts.symbols == undefined) ? new Map() : opts.symbols ;
   let curr_addr = (opts.origin  == undefined) ? 0x0000 : opts.origin ;
+  const image = (opts.image == undefined) ? new Map() : opts.image ;
+
+  const {
+    promise: done_promise,
+    resolve: done_resolve,
+    reject:  done_reject,
+  } = makePromise();
   
   const asm = {
     get addr: () => curr_addr,
-    set addr: (val) => asm.origin(val),
   };
   asm.symbols = {
       define: (sym, val = undefined) => {
@@ -66,7 +72,7 @@ export const makeAssembler = (opts) => {
           }
         } else {
           const tmp = makePromise();
-          symbols.set(symb, tmp);
+          symbols.set(sym, tmp);
           return tmp.promise;
         }
       },
@@ -76,12 +82,42 @@ export const makeAssembler = (opts) => {
     return curr_addr;
   };
   const datum = (item) => {
-    let val = undefined;
-    switch (typeof item) {
-      case "string": val = asm.symbols.lookup(item); break;
+    let val = item;
+    switch (typeof val) {
+      case "undefined": val = 0; break;
+      case "string": val = asm.symbols.lookup(val); break;
+      case "bigint": val = BigInt.asUintN(cellsize, val); // fallthrough
+      case "number": val = Math.trunc(val) & fullcellBitmask; break;
+      case "boolean": val = (val ? fullcellBitmask : 0); break;
+      case "object":
+        if (val == null) {
+          val = 0;
+        } else if (val instanceof Promise) {
+          const captured_addrsss = curr_addr;
+          val.then((result) => {
+            image.set(captured_address, result);
+          });
+        } else if (val instanceof Array) {
+          Array.prototype.forEach.call(val, datum);
+          return;
+        } else if (val[Symbol.iterator] != undefined) {
+          const it = val[Symbol.iterator].call(val);
+          let done = false;
+          let value = undefined;
+          while (!done) {
+            { done, value } = it.next(curr_addr);
+            if (value != undefined) {
+              datum(value);
+            }
+          }
+          return;
+        }
+        break;
     }
+    image.set(curr_addr, val);
+    asm.allot(1);
   };
-  asm.data = (...datums) => Array.prototype.forEach(datum);
+  asm.data = (...datums) => Array.prototype.forEach.call(datums, datum);
   asm.origin = (new_addr) => {
     const tmp = curr_addr;
     curr_addr = new_addr;
@@ -90,6 +126,11 @@ export const makeAssembler = (opts) => {
   asm.def = asm.symbols.define;
   asm.org = asm.origin;
   asm.dat = asm.data;
+  asm.whenDone = () => done_promise;
+  asm.done = () => {
+    // iterate through the symbols, looking for promise packs
+    // iterate through the image, looking for promises
+  };
   
   return asm;
 };
