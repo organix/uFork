@@ -25,6 +25,15 @@ export const defineInstructionset = (asm) => {
   def("R_FROM", 0x000D);
   def("EXT",    0x000E);
   def("EXIT",   0x000F);
+
+  def("UM+", "UMPLUS");
+  def("&",   "AND");
+  def("⊕",   "XOR");
+  def("1+",  "INCR");
+  def("@",   "FETCH");
+  def("!",   "STORE");
+  def(">R",  "TO_R");
+  def("R>",  "R_FROM");
   
   return asm;
 };
