@@ -5,7 +5,7 @@
  * @author Zarutian
  */
 
-const makePromise = () => {
+export const makePromise = () => {
   let resolve = undefined;
   let reject  = undefined;
   let prom    = new Promise((res, rej) => {
@@ -14,7 +14,7 @@ const makePromise = () => {
   return { promise: prom, resolve, reject };
 };
 
-const makeBitmask = (width) => {
+export const makeBitmask = (width) => {
   let result = 0;
   for (let count = 0; count < width; count++) {
     result = (result << 1) | 1;
@@ -129,7 +129,22 @@ export const makeAssembler = (opts) => {
   asm.whenDone = () => done_promise;
   asm.done = () => {
     // iterate through the symbols, looking for promise packs
+    (new Array(symbols.entries()).forEach(([sym, val]) => {
+      if ((typeof val) == "object") {
+        if (val.promise != undefined) {
+          done_reject(new Error(`symbol ${sym} is not defined`));
+        }
+      }
+    });
     // iterate through the image, looking for promises
+    (new Array(image.entries()).forEach(([addr, val]) => {
+      if ((typeof val) == "object") {
+        if (val.promise != undefined) {
+          done_reject(new Error(`addr ${addr} has a promise an no concrete value`));
+        }
+      }
+    });
+    done_resolve({ symbols, image });
   };
   
   return asm;
