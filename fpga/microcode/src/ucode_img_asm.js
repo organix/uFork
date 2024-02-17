@@ -65,16 +65,35 @@ export const defineInstructionset = (asm) => {
 };
 
 export const minicore = (asm, opts) => {
+  const { def, dat } = asm;
+
+  def("(JMP)"); // JuMP
+  dat("R>", "@");
+  def("EXECUTE");
+  dat(">R", "EXIT");
+
+  def("?:"); // ( alt conseq cond -- conseq | alt )
+  dat("SKZ", "SWAP", "DROP", "EXIT");
+
+  def("(BRZ)"); // BRanch if Zero ( bool -- )
+  dat("R>", "SWAP", ">R"); // ( raddr ) R:( bool )
+  dat("DUP", "@", "SWAP"); // ( dest raddr ) R:( bool )
+  dat("1+", "R>", "?:");   // ( raddr ) R:( )
+  dat(">R", "EXIT");
+  
+  def("TX!"); // ( char -- )
+  dat("DEBUG_TX?", "(BRZ)", "TX!");
+  dat("DEBUG_TX!", "EXIT");
+
+  def("RX?", "DEBUG_RX?");
+  
+  return asm;
 };
 
 export const wozmon = (asm, opts) => {
   // inspired by Wozniacs Monitor
   // not as small though
   const { def, dat } = asm;
-
-  def("TX!"); // ( char -- )
-  dat("DEBUG_TX?", "(BRZ)", "TX!");
-  dat("DEBUG_TX!", "EXIT");
 
   return asm;
 };
