@@ -87,6 +87,9 @@ export const minicore = (asm, opts) => {
   def("0x8000");
   dat("(CONST)", 0x8000);
 
+  def("0xFFFE");
+  dat("(CONST)", 0xFFFE);
+
   def("CLEAN_BOOL");
   dat(">R", "FALSE", "TRUE", "R>", "?:", "EXIT");
   
@@ -131,6 +134,14 @@ export const minicore = (asm, opts) => {
 
   def("-"); // ( a b -- a-b )
   dat("NEGATE", "+", "EXIT");
+
+  def("4<<"); // ( a -- a<<4 )
+  dat("2<<");
+  def("2<<"); // ( a -- a<<2 )
+  dat("1<<");
+  def("1<<"); // ( a -- a<<1 )
+  dat("1LBR");
+  dat("0xFFFE", "&", "EXIT");
 
   def("="); // ( a b -- bool )
   dat("XOR", "CLEAN_BOOL", "INVERT", "EXIT");
@@ -216,6 +227,9 @@ export const wozmon = (asm, opts) => {
   dat("(LIT)", 0x30, "XOR"); // map digits to 0-9 ( ba digit )
   dat("DUP", "(LIT)", 0x0A, "<", "(BRNZ)", "wozmon_dig");
   dat("(LIT)", 0x88, "+");   // map letter "A"-"F" to $FA-FF
+  dat("DUP", "(LIT)", 0xFA, "<", "(BRNZ)", "wozmon_nothex");
+  def("wozmon_dig");
+  dat("4<<");
   
   def("wozmon_escape"); // ( buff_addr chr -- )
   dat("2DROP", "(JMP)", "wozmon");
