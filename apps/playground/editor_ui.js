@@ -13,7 +13,7 @@ const editor_ui = make_ui("editor-ui", function (host, {
     lang,
     on_text_input
 }) {
-    const shadow = host.attachShadow({mode: "open"});
+    const shadow = host.attachShadow({mode: "closed"});
     const style = element("style", `
         ${theme.monospace_font_css}
         :host {
@@ -62,8 +62,13 @@ const editor_ui = make_ui("editor-ui", function (host, {
             bottom: 0;
             pointer-events: none;
         }
-        source_code ::selection {
-            background-color: ${theme.gray};
+        ::selection {
+
+/* The intended color for the selection is an opaque gray, but in Safari under a
+   ShadowRoot opaque gray appears black. For now, we approximate theme.gray
+   with a translucent white. */
+
+            background-color: rgb(255, 255, 255, 0.2);
         }
     `);
     const line_numbers_element = element("line_numbers");
@@ -131,11 +136,15 @@ const editor_ui = make_ui("editor-ui", function (host, {
     }
 
     function get_text() {
-        return text;
+        return (
+            editor !== undefined
+            ? editor.get_text()
+            : text
+        );
     }
 
-    function set_text(the_text) {
-        text = the_text;
+    function set_text(new_text) {
+        text = new_text;
         if (editor !== undefined) {
             editor.set_text(text);
             update_line_numbers();
