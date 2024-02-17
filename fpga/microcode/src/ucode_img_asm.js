@@ -101,8 +101,17 @@ export const minicore = (asm, opts) => {
   def("(LIT)"); // literal ( -- item )
   dat("R>", "DUP", "1+", ">R", "@", "EXIT");
 
+  def("OVER"); // ( a b -- a b a )
+  dat(">R", "DUP", "R>", "SWAP", "EXIT");
+
+  def("2DUP"); // ( a b -- a b a b )
+  dat("OVER", "OVER", "EXIT");
+
   def("="); // ( a b -- bool )
   dat("XOR", "CLEAN_BOOL", "INVERT", "EXIT");
+
+  def("MAX"); // ( a b -- a | b )
+  dat("2DUP", "<", "?:", "EXIT");
   
   def("TX!"); // ( char -- )
   dat("DEBUG_TX?", "(BRZ)", "TX!");
