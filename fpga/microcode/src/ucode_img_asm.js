@@ -190,9 +190,21 @@ export const wozmon = (asm, opts) => {
   dat("DUP", "(LIT)", linebuffer_max, "<", "(BRZ)", "wozmon_escape");
   dat("SWAP");
   dat("(LIT)", 0x0D, "=", "(BRNZ)", "wozmon_notcr");
-  dat("DROP", "wozmon_linebuffer_start"); // reset text index
   dat("FALSE", "wozmon_mode", "!");       // reset mode
-  def("wozmon_nextitem");
+  dat("DROP", "wozmon_linebuffer_start"); // reset text index
+  dat("1-");
+  def("wozmon_nextitem");  // ( buff_addr )
+  dat("1+");               // ( ba+1 )
+  dat("DUP", "@");         // ( ba+1 char )
+  dat("DUP", "(LIT)", 0x0D, "=", "(BRZ)", "wozmon_l0");
+  dat("2DROP", "(JMP)", "wozmon_getline"); // done the line, get the next one
+  def("wozmon_l0");        // ( ba+1 char )
+  dat("DUP", "(LIT)", 0x2E, "=", "(BRZ)", "wozmon_l1");
+  dat("DROP", "(LIT)", 0xB8, "wozmon_mode", "!", "(JMP)", "wozmon_nextitem");
+  def("wozmon_l1");        // ( ba+1 char )
+  dat("DUP", "(LIT)", 0x3A, "=", "(BRZ)", "wozmon_l2");
+  dat("DROP", "(LIT)", 0x74, "wozmon_mode", "!", "(JMP)", "wozmon_nextitem");
+  def("wozmon_l2");
   
   def("wozmon_escape"); // ( buff_addr chr -- )
   dat("2DROP", "(JMP)", "wozmon");
