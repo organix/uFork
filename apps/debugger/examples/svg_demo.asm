@@ -7,10 +7,26 @@
     std: "https://ufork.org/lib/std.asm"
 
 svg_cmds:
+    ; background
+    pair_t 'M'
+    pair_t 0
+    pair_t 0
+    pair_t 'h'
+    pair_t 40
+    pair_t 'v'
+    pair_t 40
+    pair_t 'h'
+    pair_t -40
+    pair_t 'Z'
+    pair_t 'F'
+    pair_t 92
+    pair_t 92
+    pair_t 92
+    pair_t 255
     ; square
     pair_t 'M'
     pair_t 4
-    pair_t 20
+    pair_t 18
     pair_t 'h'
     pair_t 14
     pair_t 'v'
@@ -29,7 +45,7 @@ svg_cmds:
     ; triangle
     pair_t 'M'
     pair_t 22
-    pair_t 20
+    pair_t 18
     pair_t 'l'
     pair_t 8
     pair_t -14
