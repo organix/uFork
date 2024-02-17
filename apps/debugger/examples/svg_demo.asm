@@ -58,7 +58,6 @@ svg_cmds:
     pair_t 'l'
     pair_t 14
     pair_t 14
-    pair_t 'Z'
     pair_t 'D'
     pair_t 155
     pair_t 160
@@ -67,6 +66,37 @@ svg_cmds:
     pair_t 1
     pair_t 0
     pair_t 0
+    ; circle
+    pair_t 'M'
+    pair_t 22
+    pair_t 38
+    pair_t 'm'
+    pair_t 8
+    pair_t 0
+    pair_t 'a'
+    pair_t 7
+    pair_t 7
+    pair_t 0
+    pair_t 1
+    pair_t 0
+    pair_t 0
+    pair_t -14
+    pair_t 'a'
+    pair_t 7
+    pair_t 7
+    pair_t 0
+    pair_t 1
+    pair_t 0
+    pair_t 0
+    pair_t 14
+    pair_t 'D'
+    pair_t 255
+    pair_t 102
+    pair_t 102
+    pair_t 255
+    pair_t 1
+    pair_t 1
+    pair_t 1
     ref #nil
 
 ; A write request looks like (to_cancel callback fixnum),
