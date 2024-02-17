@@ -62,8 +62,13 @@ const editor_ui = make_ui("editor-ui", function (host, {
             bottom: 0;
             pointer-events: none;
         }
-        source_code ::selection {
-            background-color: ${theme.gray};
+        ::selection {
+
+/* The intended color for the selection is an opaque gray, but in Safari under a
+   ShadowRoot opaque gray appears black. For now, we approximate theme.gray
+   with a translucent white. */
+
+            background-color: rgb(255, 255, 255, 0.2);
         }
     `);
     const line_numbers_element = element("line_numbers");
