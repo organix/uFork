@@ -12,11 +12,11 @@ svg_cmds:
     pair_t 0
     pair_t 0
     pair_t 'h'
-    pair_t 40
+    pair_t 42
     pair_t 'v'
-    pair_t 40
+    pair_t 42
     pair_t 'h'
-    pair_t -40
+    pair_t -42
     pair_t 'Z'
     pair_t 'F'
     pair_t 92
