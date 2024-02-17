@@ -46,11 +46,23 @@ export const defineInstructionset = (asm) => {
   def("!",   "STORE");
   def(">R",  "TO_R");
   def("R>",  "R_FROM");
+
+  def("qt@", "QUAD_T_FETCH");
+  def("qx@", "QUAD_X_FETCH");
+  def("qy@", "QUAD_Y_FETCH");
+  def("qz@", "QUAD_Z_FETCH");
+  def("qt!", "QUAD_T_STORE");
+  def("qx!", "QUAD_X_STORE");
+  def("qy!", "QUAD_Y_STORE");
+  def("qz!", "QUAD_Z_STORE");
   
   return asm;
 };
 
 export const makeUcodeImage = (opts) => {
+  opts = (opts == undefined) ? {} : opts ;
+  const asm = makeAssembler(opts.assemblerOpts);
+  defineInstructionset(asm);
 };
 
 export default {
