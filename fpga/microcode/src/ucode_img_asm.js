@@ -64,10 +64,27 @@ export const defineInstructionset = (asm) => {
   return asm;
 };
 
+export const minicore = (asm, opts) => {
+};
+
+export const wozmon = (asm, opts) => {
+  // inspired by Wozniacs Monitor
+  // not as small though
+  const { def, dat } = asm;
+
+  def("TX!"); // ( char -- )
+  dat("DEBUG_TX?", "(BRZ)", "TX!");
+  dat("DEBUG_TX!", "EXIT");
+
+  return asm;
+};
+
 export const makeUcodeImage = (opts) => {
   opts = (opts == undefined) ? {} : opts ;
   const asm = makeAssembler(opts.assemblerOpts);
   defineInstructionset(asm);
+  minicore(asm);
+  wozmon(asm);
 };
 
 export default {
