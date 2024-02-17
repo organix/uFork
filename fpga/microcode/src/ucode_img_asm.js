@@ -200,11 +200,20 @@ export const wozmon = (asm, opts) => {
   dat("2DROP", "(JMP)", "wozmon_getline"); // done the line, get the next one
   def("wozmon_l0");        // ( ba+1 char )
   dat("DUP", "(LIT)", 0x2E, "=", "(BRZ)", "wozmon_l1");
-  dat("DROP", "(LIT)", 0xB8, "wozmon_mode", "!", "(JMP)", "wozmon_nextitem");
+  dat("(LIT)", 0xB8);      // set mode as BLOCK XAM
+  def("wozmon_setmode");
+  dat("wozmon_mode", "!", "DROP", "(JMP)", "wozmon_nextitem");
   def("wozmon_l1");        // ( ba+1 char )
   dat("DUP", "(LIT)", 0x3A, "=", "(BRZ)", "wozmon_l2");
-  dat("DROP", "(LIT)", 0x74, "wozmon_mode", "!", "(JMP)", "wozmon_nextitem");
+  dat("(LIT)", 0x74);      // set mode as store
+  dat("(JMP)", "wozmon_setmode");
   def("wozmon_l2");
+  dat("DUP", "(LIT)", 0x52, "=", "(BRNZ)", "wozmon_run");
+  dat(       "(LIT)", 0x51, "=", "(BRNZ)", "wozmon_quit");
+
+  def("wozmon_nexthex");   
+  
+
   
   def("wozmon_escape"); // ( buff_addr chr -- )
   dat("2DROP", "(JMP)", "wozmon");
