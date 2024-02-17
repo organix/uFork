@@ -33,22 +33,32 @@ function is_text(node) {
 
 function get_selection_range(element) {
 
-// Returns the current selection's range.
+// If a valid Selection lies within 'element', its Range is returned, otherwise
+// undefined is returned.
+
+    try {
 
 // When the element is within a ShadowRoot, browser compatibility breaks down.
 // See https://stackoverflow.com/a/70523247.
 
-    let selection = document.getSelection(); // Firefox
-    if (typeof element.getRootNode().getSelection === "function") {
-        selection = element.getRootNode().getSelection(); // Chrome
-    }
-    const is_shadow = element.getRootNode() !== document;
-    if (is_shadow && typeof selection.getComposedRanges === "function") {
-        return selection.getComposedRanges(element.getRootNode())[0]; // Safari
-    }
-    if (selection.anchorNode) {
-        return selection.getRangeAt(0);
-    }
+        const selection = (
+            typeof element.getRootNode().getSelection === "function"
+            ? element.getRootNode().getSelection() // Chrome
+            : document.getSelection() // Firefox
+        );
+        const is_shadow = element.getRootNode() !== document;
+        const range = (
+            (is_shadow && typeof selection.getComposedRanges === "function")
+            ? selection.getComposedRanges(element.getRootNode())[0] // Safari
+            : selection.getRangeAt(0)
+        );
+        if (
+            element.contains(range.startContainer)
+            && element.contains(range.endContainer)
+        ) {
+            return range;
+        }
+    } catch (ignore) {}
 }
 
 function get_position(element, caret) {
@@ -157,21 +167,14 @@ function ed({
     }
 
     function get_cursor() {
-        let {
-            startContainer,
-            startOffset,
-            endContainer,
-            endOffset
-        } = get_selection_range(element);
-        if (
-            element.contains(startContainer)
-            && element.contains(endContainer)
-        ) {
-            return [
-                get_position(element, [startContainer, startOffset]),
-                get_position(element, [endContainer, endOffset])
-            ];
+        const range = get_selection_range(element);
+        if (range === undefined) {
+            return;
         }
+        return [
+            get_position(element, [range.startContainer, range.startOffset]),
+            get_position(element, [range.endContainer, range.endOffset])
+        ];
     }
 
     function set_cursor(cursor) {
@@ -311,15 +314,14 @@ function ed({
 // to exclude the trailing <br> from the selection.
 
         const range = get_selection_range(element);
-        if (range === undefined) {
-            return;
-        }
-        const {startContainer, startOffset, endContainer, endOffset} = range;
-        const end = element.childNodes.length;
-        const anchor_at_end = startContainer === element && startOffset === end;
-        const focus_at_end = endContainer === element && endOffset === end;
-        if (anchor_at_end || focus_at_end) {
-            set_cursor(get_cursor());
+        if (range !== undefined) {
+            const end = element.childNodes.length;
+            if (
+                (range.startContainer === element && range.startOffset === end)
+                || (range.endContainer === element && range.endOffset === end)
+            ) {
+                set_cursor(get_cursor());
+            }
         }
     }
 
@@ -400,7 +402,7 @@ function ed({
 //debug         ""
 //debug     );
 //debug }
-//debug function visualize_selection(node, range) {
+//debug function visualize_selection_range(node, range) {
 //debug     let string = "";
 //debug     let indent = "";
 //debug     function caret(node, caret, selection_node, selection_offset) {
@@ -485,7 +487,7 @@ function ed({
 //debug function refresh_preview() {
 //debug     preview.textContent = (
 //debug         "HTML\n"
-//debug         + visualize_selection(source, get_selection_range(source))
+//debug         + visualize_selection_range(source, get_selection_range(source))
 //debug         + "\nTEXT\n"
 //debug         + JSON.stringify(source.textContent)
 //debug     );
