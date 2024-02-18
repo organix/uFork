@@ -27,9 +27,7 @@ function svg_dev(core, make_ddev, svg_element) {
             return ufork.E_NOT_FIX;
         }
         on_code(core.u_fix_to_i32(code));
-        // By using queueMicrotask instead of setTimeout, we avoid the 4ms delay
-        // imposed by browsers on nested setTimeout callbacks.
-        window.queueMicrotask(function () {
+        core.u_defer(function () {
             // send ack to callback
             core.h_release_stub(event_stub_ptr);
             core.h_event_enqueue(core.h_reserve_ram({

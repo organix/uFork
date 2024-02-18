@@ -357,6 +357,7 @@ function make_core({
     let module_text = Object.create(null);
     let rom_sourcemap = Object.create(null);
     let wasm_call_in_progress = false;
+    let deferred_queue = [];
     let initial_rom_ofs;
     let initial_ram_ofs;
     let initial_blob_ofs;
@@ -403,17 +404,33 @@ function make_core({
 // Throw an exception if the non-reentrant methods are reentered. This provides
 // a clearer indication of the problem than a panic stacktrace.
 
-    function wasm_mutex_call(get_wasm_fn) {
+    function wasm_mutex_call(get_wasm_function) {
         return function (...args) {
             if (wasm_call_in_progress) {
                 throw new Error("re-entrant WASM call");
             }
+            wasm_call_in_progress = true;  // obtain "mutex"
+            let result;
+            let threw;
             try {
-                wasm_call_in_progress = true;  // obtain "mutex"
-                return get_wasm_fn()(...args);
-            } finally {
-                wasm_call_in_progress = false;  // release "mutex"
+                result = get_wasm_function()(...args);
+            } catch (exception) {
+                result = exception;
+                threw = true;
             }
+            wasm_call_in_progress = false;  // release "mutex"
+            if (threw) {
+                throw result;
+            }
+
+// Some callbacks that make non-reentrant calls may have been scheduled
+// by 'u_defer' whilst the WASM component had control. Run them now and flush
+// the queue.
+
+            const callbacks = deferred_queue;
+            deferred_queue = [];
+            callbacks.forEach((callback) => callback());
+            return result;
         };
     }
 
@@ -737,6 +754,20 @@ function make_core({
         s += u_print(quad.z);
         s += "]";
         return s;
+    }
+
+    function u_defer(callback) {
+
+// Schedule a callback to be run at the conclusion of the currently running
+// non-reentrant method, for example 'h_run_loop'. The callback can safely call
+// the core's non-reentrant methods.
+
+// This method is more performant than scheduling the callback using setTimeout.
+
+        if (!wasm_call_in_progress) {
+            throw new Error("u_defer called outside of WASM control.");
+        }
+        deferred_queue.push(callback);
     }
 
     function h_reserve_ram(quad = {}) {
@@ -1644,6 +1675,7 @@ function make_core({
         u_read_quad,
         u_rom_ofs,
         u_romptr,
+        u_defer,
         u_sourcemap,
         u_trace,
         u_warn,
