@@ -23,6 +23,7 @@ const editor_ui = make_ui("editor-ui", function (host, {
             align-items: flex-start;
             overflow-y: auto; /* scroll */
             color: white;
+            scrollbar-color: ${theme.gray} transparent;
         }
         :host > * {
             min-height: 100%;
