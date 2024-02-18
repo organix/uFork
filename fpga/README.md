@@ -2,15 +2,31 @@
 
 ![μFork logo](../ufork_logo.svg)
 
-A novel microprocessor architecture
-based on dispatching immutable asynchronous message-events
-to reactive objects (actors) which manage private mutable state.
-Contention for shared mutable storage is eliminated, reducing complexity.
-Strong process and memory isolation prevents interference among tasks.
-Object-capability security (ocaps) provides fine-grained access control.
-The architecture has been validated by implementing a virtual-machine in software.
-This sub-project implements the design using FPGA hardware
+**uFork** is a novel microprocessor architecture featuring:
+  * memory safety
+  * capability security
+  * automatic memory-management
+  * fine-grained resource limits
+  * instruction-level concurrency
+
+Processes are strongly-isolated,
+with mutable state held privately.
+They share information via
+immutable asynchronous message-passing.
+Dynamic memory-management and garbage-collection
+are implemented at the machine-level.
+Quotas for all resources are enforced
+by the hardware.
+Instruction execution is interleaved among processes,
+so progress is made on all programs concurrently.
+
+A software virtual-machine implementation
+was previously funded by NLnet,
+and demonstrated the viability of this design.
+The current project implements the design using FPGA hardware,
 fully supported by open-source tooling.
+We plan to produce a soft-core processor
+that can be integrated with the LiteX framework.
 
 The initial target hardware is the [Fomu](fomu/README.md),
 which features a Lattice iCE40 UP5K FPGA.
