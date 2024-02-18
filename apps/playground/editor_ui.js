@@ -23,6 +23,7 @@ const editor_ui = make_ui("editor-ui", function (host, {
             align-items: flex-start;
             overflow-y: auto; /* scroll */
             color: white;
+            scrollbar-color: ${theme.gray} transparent;
         }
         :host > * {
             min-height: 100%;
@@ -43,17 +44,17 @@ const editor_ui = make_ui("editor-ui", function (host, {
         line_numbers > *:hover {
             background: ${theme.gray};
         }
-        source_code {
+        div {
             flex: 1 1 100%;
             padding: 10px;
             outline: none;
             caret-color: white;
             position: relative; /* for ruler */
         }
-        source_code::before { /* ruler */
+        div::before { /* ruler */
             content: " ";
             display: block;
-            background: ${theme.gray};
+            background: rgba(255, 255, 255, 0.08);
             width: 1px;
             position: absolute;
             z-index: -1;
@@ -72,7 +73,7 @@ const editor_ui = make_ui("editor-ui", function (host, {
         }
     `);
     const line_numbers_element = element("line_numbers");
-    const text_element = element("source_code");
+    const text_element = element("div"); // Firefox v122
 
     let line_selection_anchor;
     let editor;
@@ -177,7 +178,7 @@ const editor_ui = make_ui("editor-ui", function (host, {
     };
 });
 
-//debug document.documentElement.innerHTML = "";
+//debug document.documentElement.innerHTML = "<body></body>\n"; // Firefox v122
 //debug const editor = editor_ui({
 //debug     text: "hello there",
 //debug     on_text_input: console.log

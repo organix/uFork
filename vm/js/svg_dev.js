@@ -1,5 +1,7 @@
 // The SVG device draws into an SVG element, based on the commands it receives.
 
+/*jslint browser */
+
 import ufork from "./ufork.js";
 import svg_drawing from "https://ufork.org/lib/svg_drawing.js";
 
@@ -25,8 +27,8 @@ function svg_dev(core, make_ddev, svg_element) {
             return ufork.E_NOT_FIX;
         }
         on_code(core.u_fix_to_i32(code));
-        // send ack to callback
-        setTimeout(function () {
+        core.u_defer(function () {
+            // send ack to callback
             core.h_release_stub(event_stub_ptr);
             core.h_event_enqueue(core.h_reserve_ram({
                 t: sponsor,

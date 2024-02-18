@@ -1,6 +1,6 @@
 # μFork/FPGA soft-core for Fomu-PVT
 
-![Annotated Hardware](hw-pvt-annotated.png)
+![Annotated Hardware](hw_pvt_annotated.png)
 
 The [Fomu-PVT](https://tomu.im/fomu.html)
 is a programmable FPGA device
@@ -10,7 +10,7 @@ and a [Lattice iCE40 UP5K](https://www.latticesemi.com/Products/FPGAandCPLD/iCE4
 It is supported by a fully open-source toolchain.
 This block-diagram describes the primary components of the Fomu platform.
 
-![Functional Block Diagram](fomu-block-diagram.png)
+![Functional Block Diagram](fomu_block_diagram.png)
 
 We are developing the uFork processor soft-core incrementally.
 A series and smaller/simpler designs

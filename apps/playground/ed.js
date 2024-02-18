@@ -1,6 +1,6 @@
 // ed.js
 // James Diacono
-// 2024-02-16
+// 2024-02-18
 
 // A minimal code editor for the Web, with support for syntax highlighting,
 // copy/paste, and undo/redo. Tested on Chrome, Safari, and Firefox.
@@ -341,8 +341,8 @@ function ed({
     };
 }
 
-//debug document.documentElement.innerHTML = "";
-//debug const source = document.createElement("source_code");
+//debug document.documentElement.innerHTML = "<body></body>\n"; // Firefox v122
+//debug const source = document.createElement("div"); // Firefox v122
 //debug source.style.flex = "1 1 50%";
 //debug source.style.whiteSpace = "pre";
 //debug source.style.caretColor = "black";
