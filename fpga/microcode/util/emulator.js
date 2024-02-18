@@ -14,12 +14,32 @@ export const makeStack = (opts) => {
   };
 };
 
+export const makeMemory = (opts) => {
+  const contents = new Map();
+  return {
+    fetch: (addr) => {
+      if (contents.has(addr)) {
+        return contents.get(addr);
+      } else {
+        return 0x0000;
+      }
+    },
+    store: (val, addr) => {
+      if (val === 0x0000) {
+        contents.delete(addr);
+      } else {
+        contents.set(addr, val);
+      }
+    },
+  };
+};
+
 const incr = (val) => ((val + 1) & 0xFFFF);
 
 export const makeEmulator = (opts) => {
   opts = (opts == undefined) ? {} : opts;
   const emu = {};
-  const memory = (opts.microcode_memory == undefined) ? new Map() : opts.microcode_memory ;
+  const memory = (opts.microcode_memory == undefined) ? makeMemory() : opts.microcode_memory ;
   let pc = (opts.pc == undefined) ? 0x0100 : opts.pc ;
   const dstack = makeStack();
   const rstack = makeStack();
@@ -58,6 +78,8 @@ export const makeEmulator = (opts) => {
         break;
       // FETCH
       case 0x0006:
+        dstack.push(memory.fetch(dstack.pop()));
+        break;
       // STORE
       case 0x0007:
       // DUP
