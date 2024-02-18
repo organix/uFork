@@ -65,6 +65,7 @@ export const makeEmulator = (opts) => {
   opts = (opts == undefined) ? {} : opts;
   const emu = {};
   const quads  = (opts.quad_memory == undefined) ? makeQuadMemory() : opts.quad_memory ;
+  const debug_io = (opts.debug_io == undefined) ? makeDebugIOStub() : opts.debug_io ;
   const memory = (opts.microcode_memory == undefined) ? makeMemory() : opts.microcode_memory ;
   let pc = (opts.pc == undefined) ? 0x0100 : opts.pc ;
   const dstack = makeStack();
@@ -189,10 +190,58 @@ export const makeEmulator = (opts) => {
         const addr = dstack.pop();
         quads.free(addr);
       }; break;
-  def("QUAD_GCSTEP",  0x001A);
-
-  def("DEBUG_LED",    0x003C);
-  def("DEBUG_RX?",    0x003D);
+      // QUAD_GCSTEP
+      case 0x001A: {
+        quads.gcstep();
+      }; break;
+      case 0x001B:
+      case 0x001C:
+      case 0x001D:
+      case 0x001E:
+      case 0x001F:
+      case 0x0020:
+      case 0x0021:
+      case 0x0022:
+      case 0x0023:
+      case 0x0024:
+      case 0x0025:
+      case 0x0026:
+      case 0x0027:
+      case 0x0028:
+      case 0x0029:
+      case 0x002A:
+      case 0x002B:
+      case 0x002C:
+      case 0x002D:
+      case 0x002E:
+      case 0x002F:
+      case 0x0030:
+      case 0x0031:
+      case 0x0032:
+      case 0x0033:
+      case 0x0034:
+      case 0x0035:
+      case 0x0036:
+      case 0x0037:
+      case 0x0038:
+      case 0x0039:
+      case 0x003A:
+      case 0x003B:
+        throw new Error("instruction reserved and not (yet) implemented");
+      // DEBUG_LED
+      case 0x003C: {
+        const colours = dstack.pop();
+        debug_io.led(colours);
+      }; break;
+      // DEBUG_RX?
+      case 0x003D: {
+        let [gotChar, char] = debug_io.rx();
+        gotChar = gotChar ? 0xFFFF : 0x0000 ;
+        if (gotChar != 0) {
+          dstack.push(char);
+        }
+        dstack.push(gotChar);
+      }; break;
   def("DEBUG_TX?",    0x003E);
   def("DEBUG_TX!",    0x003F);
     }
