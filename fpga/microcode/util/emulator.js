@@ -155,9 +155,16 @@ export const makeEmulator = (opts) => {
         quad[idx] = val;
         quads.store(quad, addr);
       }; break;
-        
-  def("QUAD_ALLOCATE", 0x0018);
-  def("QUAD_FREE",    0x0019);
+      // QUAD_ALLOCATE
+      case 0x0018: {
+        const addr = quads.allot();
+        dstack.push(addr);
+      }; break;
+      // QUAD_FREE
+      case 0x0019: {
+        const addr = dstack.pop();
+        quads.free(addr);
+      }; break;
   def("QUAD_GCSTEP",  0x001A);
 
   def("DEBUG_LED",    0x003C);
