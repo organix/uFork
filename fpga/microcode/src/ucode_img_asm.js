@@ -330,6 +330,9 @@ export const makeUcodeImage = (opts) => {
   defineInstructionset(asm);
   minicore(asm);
   wozmon(asm);
+
+  asm.done();
+  return asm.whenDone();
 };
 
 export default {
