@@ -509,10 +509,7 @@ function awp_dev({
         }
         const store_nr = core.u_fix_to_i32(store_fix);
         const petname = core.u_fix_to_i32(petname_fix);
-
-// Wait a turn so we can safely use the non-reentrant core methods.
-
-        setTimeout(function () {
+        core.u_defer(function () {
             core.h_release_stub(event_stub_ptr);
 
 // Send a failed result to the callback if the acquaintance can not be found.
@@ -638,10 +635,7 @@ function awp_dev({
             release_event_stub();
             return resume();
         }
-
-// Wait a turn so we can safely use the non-reentrant core methods.
-
-        setTimeout(function () {
+        core.u_defer(function () {
             const store = stores[core.u_fix_to_i32(store_fix)];
             if (store === undefined) {
                 return resolve(core.h_reserve_ram({
@@ -773,11 +767,7 @@ function awp_dev({
                 const remote_handle_raw = ddev.u_strip_meta(target_quad.y);
                 if (core.u_is_fix(remote_handle_raw)) {
                     const remote_handle = core.u_fix_to_i32(remote_handle_raw);
-
-// Marshalling uses the reentrant core methods, so defer that work for a future
-// turn.
-
-                    setTimeout(function () {
+                    core.u_defer(function () {
                         const proxy = proxies[proxy_keys[remote_handle]];
                         if (proxy !== undefined) {
                             enqueue(
@@ -799,7 +789,7 @@ function awp_dev({
                     1
                 );
                 if (core.u_is_fix(stop_handle_raw)) {
-                    setTimeout(function () {
+                    core.u_defer(function () {
                         const stop_handle = core.u_fix_to_i32(stop_handle_raw);
                         const listener_key = listener_keys[stop_handle];
                         if (listener_key !== undefined) {
