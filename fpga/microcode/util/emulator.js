@@ -81,13 +81,28 @@ export const makeEmulator = (opts) => {
         dstack.push(memory.fetch(dstack.pop()));
         break;
       // STORE
-      case 0x0007:
+      case 0x0007: {
+        const addr = dstack.pop();
+        const val  = dstack.pop();
+        memory.store(val, addr);
+      }; break;
       // DUP
-      case 0x0008:
+      case 0x0008: {
+        const a = dstack.pop();
+        dstack.push(a);
+        dstack.push(a);
+      }; break;
       // DROP
       case 0x0009:
+        dstack.pop();
+        break;
       // SWAP
-      case 0x000A:
+      case 0x000A: {
+        const b = dstack.pop();
+        const a = dstack.pop();
+        dstack.push(b);
+        dstack.push(a);
+      }; break;
       // SKZ
       case 0x000B:
       // TO_R
