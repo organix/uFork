@@ -36,10 +36,14 @@ export const makeEmulator = (opts) => {
       case 0x000A:
       // SKZ
       case 0x000B:
-  def("TO_R",   0x000C);
-  def("R_FROM", 0x000D);
-  def("EXT",    0x000E);
-  def("EXIT",   0x000F);
+      // TO_R
+      case 0x000C:
+      // R_FROM
+      case 0x000D:
+      // EXT
+      case 0x000E:
+      // EXIT
+      case 0x000F:
 
   def("QUAD_T_FETCH", 0x0010);
   def("QUAD_X_FETCH", 0x0011);
