@@ -127,8 +127,13 @@ export const makeEmulator = (opts) => {
       case 0x000F:
         pc = rstack.pop();
         break;
-
-  def("QUAD_T_FETCH", 0x0010);
+      // QUAD_T_FETCH
+      case 0x0010: {
+        const addr = dstack.pop();
+        const quad = quads.fetch(addr);
+        dstack.push(quad[0]);
+      }; break;
+        
   def("QUAD_X_FETCH", 0x0011);
   def("QUAD_Y_FETCH", 0x0012);
   def("QUAD_Z_FETCH", 0x0013);
