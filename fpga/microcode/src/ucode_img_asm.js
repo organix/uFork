@@ -198,7 +198,7 @@ export const minicore = (asm, opts) => {
   dat("0x30", "OR", "(JMP)", "EMIT");
   def("0x0A", "-", "0x41", "+", "(JMP)", "EMIT");
 
-  def("EMIT_HEX");
+  def("EMIT_HEXWORD");
   dat("4LBR", "EMIT_HEXCHR");
   dat("4LBR", "EMIT_HEXCHR");
   dat("4LBR", "EMIT_HEXCHR");
@@ -276,6 +276,13 @@ export const wozmon = (asm, opts) => {
   def("wozmon_notstore"); // ( )
   dat("FALSE", "wozmon_mode", "@", "=", "(BRZ)", "wozmon_xamnext");
   dat("wozmon_tmp", "@", "DUP", "wozmon_st", "!", "wozmon_xam", "!");
+
+  def("wozmon_nxtprnt");
+  // placeholder for a branch instr seq to prdata
+  dat("(CRLF.)");
+  dat("wozmon_xam", "@", "EMIT_HEXWORD");
+  dat("(LIT)", 0x3A, "EMIT");
+
   
   def("wozmon_escape"); // ( buff_addr chr -- )
   dat("2DROP", "(JMP)", "wozmon");
