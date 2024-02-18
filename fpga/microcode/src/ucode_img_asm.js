@@ -278,7 +278,8 @@ export const wozmon = (asm, opts) => {
   dat("wozmon_tmp", "@", "DUP", "wozmon_st", "!", "wozmon_xam", "!");
 
   def("wozmon_nxtprnt");
-  // placeholder for a branch instr seq to prdata
+  dat("wozmon_xam", "@", "(LIT)", 0x07, "&");
+  dat("(BRNZ)", "wozmon_prdata");
   dat("(CRLF.)");
   dat("wozmon_xam", "@", "EMIT_HEXWORD");
   dat("(LIT)", 0x3A, "EMIT");
