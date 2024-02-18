@@ -140,10 +140,22 @@ export const makeEmulator = (opts) => {
         const idx  = instr & 3;
         dstack.push(quad[idx]);
       }; break;
-  def("QUAD_T_STORE", 0x0014);
-  def("QUAD_X_STORE", 0x0015);
-  def("QUAD_Y_STORE", 0x0016);
-  def("QUAD_Z_STORE", 0x0017);
+      // QUAD_T_STORE 0x0014);
+      // QUAD_X_STORE 0x0015);
+      // QUAD_Y_STORE 0x0016);
+      // QUAD_Z_STORE 0x0017);
+      case 0x0014: // gegnfall
+      case 0x0015: // gegnfall
+      case 0x0016: // gegnfall
+      case 0x0017: {
+        const addr = dstack.pop();
+        const val  = dstack.pop();
+        const quad = new Array(quads.fetch(addr));
+        const idx  = instr & 3;
+        quad[idx] = val;
+        quads.store(quad, addr);
+      }; break;
+        
   def("QUAD_ALLOCATE", 0x0018);
   def("QUAD_FREE",    0x0019);
   def("QUAD_GCSTEP",  0x001A);
