@@ -4,10 +4,21 @@
  * @author Zarutian
  */
 
+export const makeStack = (opts) => {
+  const contents = []; // FlexList
+
+  return {
+    getContents: () => contents.map((x) => x),
+    push: (item) => { contents.push(item) },
+    pop:  () => contents.pop(),
+  };
+};
+
 export const makeEmulator = (opts) => {
+  opts = (opts == undefined) ? {} : opts;
   const emu = {};
-  const memory = new Map();
-  let pc = 0x0100;
+  const memory = (opts.microcode_memory == undefined) ? new Map() : opts.microcode_memory ;
+  let pc = (opts.pc == undefined) ? 0x0100 : opts.pc ;
   const dstack = makeStack();
   const rstack = makeStack();
   emu.doOneInstruction = () => {
