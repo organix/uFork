@@ -54,7 +54,7 @@ const editor_ui = make_ui("editor-ui", function (host, {
         div::before { /* ruler */
             content: " ";
             display: block;
-            background: ${theme.gray};
+            background: rgba(255, 255, 255, 0.08);
             width: 1px;
             position: absolute;
             z-index: -1;
