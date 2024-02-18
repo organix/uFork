@@ -283,6 +283,15 @@ export const wozmon = (asm, opts) => {
   dat("wozmon_xam", "@", "EMIT_HEXWORD");
   dat("(LIT)", 0x3A, "EMIT");
 
+  def("wozmon_prdata");
+  dat("(BL.)");
+  dat("wozmon_xam", "@", "@");
+  dat("EMIT_HEXWORD");
+
+  def("wozmon_xamnext");
+  dat("FALSE", "wozmon_mode", "!");
+  dat();
+
   
   def("wozmon_escape"); // ( buff_addr chr -- )
   dat("2DROP", "(JMP)", "wozmon");
