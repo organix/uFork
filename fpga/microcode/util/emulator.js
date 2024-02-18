@@ -14,6 +14,8 @@ export const makeStack = (opts) => {
   };
 };
 
+const incr = (val) => ((val + 1) & 0xFFFF);
+
 export const makeEmulator = (opts) => {
   opts = (opts == undefined) ? {} : opts;
   const emu = {};
@@ -35,6 +37,8 @@ export const makeEmulator = (opts) => {
       case 0x0004:
       // INCR
       case 0x0005:
+        dstack.push(incr(dstack.pop()));
+        break;
       // FETCH
       case 0x0006:
       // STORE
