@@ -128,15 +128,18 @@ export const makeEmulator = (opts) => {
         pc = rstack.pop();
         break;
       // QUAD_T_FETCH
-      case 0x0010: {
+      // QUAD_X_FETCH
+      // QUAD_Y_FETCH
+      // QUAD_Z_FETCH
+      case 0x0010: // gegnfall
+      case 0x0011: // gegnfall
+      case 0x0012: // gegnfall
+      case 0x0013: {
         const addr = dstack.pop();
         const quad = quads.fetch(addr);
-        dstack.push(quad[0]);
+        const idx  = instr & 3;
+        dstack.push(quad[idx]);
       }; break;
-        
-  def("QUAD_X_FETCH", 0x0011);
-  def("QUAD_Y_FETCH", 0x0012);
-  def("QUAD_Z_FETCH", 0x0013);
   def("QUAD_T_STORE", 0x0014);
   def("QUAD_X_STORE", 0x0015);
   def("QUAD_Y_STORE", 0x0016);
