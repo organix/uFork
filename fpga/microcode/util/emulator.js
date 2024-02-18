@@ -5,8 +5,8 @@
  */
 
 export const makeStack = (opts) => {
-  const contents = []; // FlexList
-
+  opts = (opts == undefined) ? {} : opts ;
+  const contents = (opts.contents == undefined) ? [] : new Array(opts.contents); // FlexList
   return {
     getContents: () => contents.map((x) => x),
     push: (item) => { contents.push(item) },
@@ -15,7 +15,8 @@ export const makeStack = (opts) => {
 };
 
 export const makeMemory = (opts) => {
-  const contents = new Map();
+  opts = (opts == undefined) ? {} : opts ;
+  const contents = (opts.contents == undefined) ? new Map() : opts.contents ;
   return {
     getContents: () => contents,
     fetch: (addr) => {
@@ -36,7 +37,8 @@ export const makeMemory = (opts) => {
 };
 
 export const makeQuadMemory = (opts) => {
-  const contents = new Map();
+  opts = (opts == undefined) ? {} : opts ;
+  const contents = (opts.contents == undefined) ? new Map() : opts.contents;
   return {
     fetch: (addr) => {
       if (!contents.has(addr)) {
@@ -76,11 +78,14 @@ const incr = (val) => ((val + 1) & 0xFFFF);
 
 export const makeEmulator = (opts) => {
   opts = (opts == undefined) ? {} : opts;
-  const emu = {};
+  let pc = (opts.pc == undefined) ? 0x0100 : opts.pc ;
+  const emu = {
+    get pc() { return pc; },
+    set pc(addr) { pc = addr; return addr; },
+  };
   const quads  = (opts.quad_memory == undefined) ? makeQuadMemory() : opts.quad_memory ;
   const debug_io = (opts.debug_io == undefined) ? makeDebugIOStub() : opts.debug_io ;
   const memory = (opts.microcode_memory == undefined) ? makeMemory() : opts.microcode_memory ;
-  let pc = (opts.pc == undefined) ? 0x0100 : opts.pc ;
   const dstack = makeStack();
   const rstack = makeStack();
   emu.doOneInstruction = () => {
