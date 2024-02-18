@@ -35,6 +35,30 @@ export const makeMemory = (opts) => {
   };
 };
 
+export const makeQuadMemory = (opts) => {
+  const contents = new Map();
+  return {
+    fetch: (addr) => {
+      if (!contents.has(addr)) {
+        contents.set(addr, [0x0000, 0x0000, 0x0000, 0x0000]);
+      }
+      return contents.get(addr);
+    },
+    store: (val, addr) => {
+      contents.set(addr, val);
+    },
+    allot: () => {
+      throw new Error("not yet implemented");
+    },
+    free: (addr) => {
+      throw new Error("not yet implemented");
+    },
+    gcstep: () => {
+      throw new Error("not yet implemented");
+    },
+  };
+};
+
 const incr = (val) => ((val + 1) & 0xFFFF);
 
 export const makeEmulator = (opts) => {
