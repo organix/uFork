@@ -13,17 +13,27 @@ The commands are based on the
 [SVG Path Specifition](https://www.w3.org/TR/SVG11/paths.html).
 The following table summarizes the supported operations:
 
-Prefix     | Parameters     | Operation
------------|----------------|------------------------------------------
-`M`        | _x_ _y_        | absolute move to (_x_, _y_)
-`m`        | _dx_ _dy_      | relative move to (_x_+_dx_, _y_+_dy_)
-`L`        | _x_ _y_        | absolute line to (_x_, _y_)
-`l`        | _dx_ _dy_      | relative line to (_x_+_dx_, _y_+_dy_)
-`H`        | _x_            | absolute horizontal line to (_x_, _y_)
-`h`        | _dx_           | relative horizontal line to (_x_+_dx_, _y_)
-`V`        | _y_            | absolute vertical line to (_x_, _y_)
-`v`        | _dy_           | relative vertical line to (_x_, _y_+_dy_)
-`Z` or `z` | &mdash;        | close path (line to beginning)
+Prefix      | Parameters                                | Operation
+------------|-------------------------------------------|--------------------------------------------------------
+`M`         | _x_ _y_                                   | absolute move to (_x_, _y_)
+`m`         | _dx_ _dy_                                 | relative move to (_x_+_dx_, _y_+_dy_)
+`L`         | _x_ _y_                                   | absolute line to (_x_, _y_)
+`l`         | _dx_ _dy_                                 | relative line to (_x_+_dx_, _y_+_dy_)
+`H`         | _x_                                       | absolute horizontal line to (_x_, _y_)
+`h`         | _dx_                                      | relative horizontal line to (_x_+_dx_, _y_)
+`V`         | _y_                                       | absolute vertical line to (_x_, _y_)
+`v`         | _dy_                                      | relative vertical line to (_x_, _y_+_dy_)
+`C`         | _x1_ _y1_  _x2_ _y2_ _x_ _y_              | absolute cubic curve to (_x_, _y_)
+`c`         | _x1_ _y1_  _x2_ _y2_ _dx_ _dy_            | relative cubic curve to (_x_+_dx_, _y_+_dy_)
+`S`         | _x2_ _y2_ _x_ _y_                         | absolute smooth cubic curve to (_x_, _y_)
+`s`         | _x2_ _y2_ _dx_ _dy_                       | relative smooth cubic curve to (_x_+_dx_, _y_+_dy_)
+`Q`         | _x1_ _y1_  _x_ _y_                        | absolute quadratic curve to (_x_, _y_)
+`q`         | _x1_ _y1_  _dx_ _dy_                      | relative quadratic curve to (_x_+_dx_, _y_+_dy_)
+`T`         | _x_ _y_                                   | absolute smooth quadratic curve to (_x_, _y_)
+`t`         | _dx_ _dy_                                 | relative smooth quadratic curve to (_x_+_dx_, _y_+_dy_)
+`A`         | _rx_ _ry_ _rot_ _large_ _sweep_ _x_ _y_   | absolute elliptical arc to (_x_, _y_)
+`a`         | _rx_ _ry_ _rot_ _large_ _sweep_ _dx_ _dy_ | relative elliptical arc to (_x_+_dx_, _y_+_dy_)
+`Z` or `z`  | &mdash;                                   | close path (line to join start)
 
 In addition, there are extended operations
 not directly available as paths.

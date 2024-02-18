@@ -12,7 +12,7 @@
 /*jslint deno, long */
 
 import ecomcon from "https://raw.githubusercontent.com/douglascrockford/ecomcon/b3eda9196a827666af178199aff1c5b8ad9e45b3/ecomcon.js";
-import run_replete from "https://deno.land/x/replete/run.js";
+import run_replete from "https://deno.land/x/replete@0.0.8/run.js";
 import import_map from "./import_map.js";
 
 const mime_types = {
