@@ -104,15 +104,27 @@ export const makeEmulator = (opts) => {
         dstack.push(a);
       }; break;
       // SKZ
-      case 0x000B:
+      case 0x000B: {
+        const cond = dstack.pop();
+        if (cond === 0x0000) {
+          pc = incr(pc);
+        }
+      }; break;
       // TO_R
       case 0x000C:
+        rstack.push(dstack.pop());
+        break;
       // R_FROM
       case 0x000D:
+        dstack.push(rstack.pop());
+        break;
       // EXT
       case 0x000E:
+        throw new Error("ext instr is not implemented");
       // EXIT
       case 0x000F:
+        pc = rstack.pop();
+        break;
 
   def("QUAD_T_FETCH", 0x0010);
   def("QUAD_X_FETCH", 0x0011);
