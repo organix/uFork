@@ -59,6 +59,19 @@ export const makeQuadMemory = (opts) => {
   };
 };
 
+export const makeDebugIOStub = (opts) => {
+  return {
+    setLED: (colour) => {
+      console.log(`µcode led: 0b${colour.toString(2)}`);
+    },
+    rx: () => [false, 0],
+    tx_ready: () => true,
+    tx: (char) => {
+      console.log(`µcode debug tx: "${String.fromCharCodes([char])}"`);
+    },
+  };
+};
+
 const incr = (val) => ((val + 1) & 0xFFFF);
 
 export const makeEmulator = (opts) => {
@@ -231,7 +244,7 @@ export const makeEmulator = (opts) => {
       // DEBUG_LED
       case 0x003C: {
         const colours = dstack.pop();
-        debug_io.led(colours);
+        debug_io.setLED(colours);
       }; break;
       // DEBUG_RX?
       case 0x003D: {
@@ -242,8 +255,22 @@ export const makeEmulator = (opts) => {
         }
         dstack.push(gotChar);
       }; break;
-  def("DEBUG_TX?",    0x003E);
-  def("DEBUG_TX!",    0x003F);
+      // DEBUG_TX?
+      case 0x003E: {
+        let ready = debug_io.tx_ready();
+        ready = ready ? 0xFFFF : 0x0000 ;
+        dstack.push(ready);
+      }; break;
+      // DEBUG_TX!
+      case 0x003F: {
+        const char = dstack.pop();
+        debug_io.tx(char);
+      }; break;
+      // call
+      default: {
+        rstack.push(pc);
+        pc = instr;
+      }; break;
     }
   }
   
