@@ -155,6 +155,11 @@ export const minicore = (asm, opts) => {
   dat("1LBR");
   dat("0xFFFE", "&", "EXIT");
 
+  def("4LBR");
+  dat("2LBR");
+  def("2LBR");
+  dat("1LBR", "1LBR", "EXIT");
+
   def("0x0F_&");
   dat("0x0F", "&", "EXIT");
 
