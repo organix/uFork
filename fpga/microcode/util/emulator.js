@@ -17,6 +17,7 @@ export const makeStack = (opts) => {
 export const makeMemory = (opts) => {
   const contents = new Map();
   return {
+    getContents: () => contents,
     fetch: (addr) => {
       if (contents.has(addr)) {
         return contents.get(addr);
@@ -39,6 +40,7 @@ const incr = (val) => ((val + 1) & 0xFFFF);
 export const makeEmulator = (opts) => {
   opts = (opts == undefined) ? {} : opts;
   const emu = {};
+  const quads  = (opts.quad_memory == undefined) ? makeQuadMemory() : opts.quad_memory ;
   const memory = (opts.microcode_memory == undefined) ? makeMemory() : opts.microcode_memory ;
   let pc = (opts.pc == undefined) ? 0x0100 : opts.pc ;
   const dstack = makeStack();
