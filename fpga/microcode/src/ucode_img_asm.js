@@ -290,8 +290,9 @@ export const wozmon = (asm, opts) => {
 
   def("wozmon_xamnext");
   dat("FALSE", "wozmon_mode", "!");
-  dat();
-
+  dat("wozmon_xam", "@", "wozmon_tmp", "@", "<", "(BRZ)", "wozmon_nextitem");
+  dat("wozmon_xam", "@", "1+", "wozmon_xam", "!");
+  dat("(JMP)", "wozmon_nxtprnt");
   
   def("wozmon_escape"); // ( buff_addr chr -- )
   dat("2DROP", "(JMP)", "wozmon");
