@@ -28,13 +28,30 @@ export const makeEmulator = (opts) => {
     pc = incr(pc);
     switch (instr) {
       // UMPLUS
-      case 0x0001:
+      case 0x0001: {
+        const b = dstack.pop();
+        const a = dstack.pop();
+        const sc = a + b;
+        dstack.push(sc & 0xFFFF); // sum
+        dstack.push((sc >> 16) & 0xFFFF); // carry
+      }; break;
       // AND
-      case 0x0002:
+      case 0x0002: {
+        const b = dstack.pop();
+        const a = dstack.pop();
+        dstack.push(a & b);
+      }; break;
       // XOR
-      case 0x0003:
+      case 0x0003: {
+        const b = dstack.pop();
+        const a = dstack.pop();
+        dstack.push(a ^ b);
+      }; break;
       // 1LBR
-      case 0x0004:
+      case 0x0004: {
+        const a = dstack.pop();
+        dstack.push((a << 1) | ((a >> 15) & 1));
+      }; break;
       // INCR
       case 0x0005:
         dstack.push(incr(dstack.pop()));
