@@ -72,6 +72,12 @@ export const uFork_instrHandling = (asm, opts) => {
   dat("uFork_instr__subroutine_exit");
   // todo: cause a error signal
   dat("EXIT");
+
+  def("uFork_instr_nop"); // ( kont ip opcode -- )
+  dat("DROP");            // ( kont ip )
+  def("uFork_instr__common_tail");
+  dat("qz@", "SWAP", "qt!");
+  dat("EXIT");
   
   return asm;
 };
