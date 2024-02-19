@@ -18,6 +18,9 @@ export const uFork_instrHandling = (asm, opts) => {
   def("uFork_eventQueueAndContQueue");
   dat("(CONST)", eventQueueAndContQueue_qaddr);
 
+  def("uFork_#?");
+  dat("(CONST)", 0x0000);
+
   def("uFork_enqueueCont"); // ( kont -- )
   dat("uFork_eventQueueAndContQueue", "qz@"); // ( kont k_tail )
   dat("2DUP", "qz!", "DROP");
