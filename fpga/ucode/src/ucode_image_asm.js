@@ -339,9 +339,13 @@ export const makeUcodeImage = (opts) => {
   opts = (opts == undefined) ? {} : opts ;
   const asm = makeAssembler(opts.assemblerOpts);
   defineInstructionset(asm);
+  asm.org(0x0080);
   minicore(asm);
   wozmon(asm);
   uFork_instrHandling(asm);
+
+  asm.org(0x0040); // default start address
+  asm.dat("wozmon", "(JMP)", 0x0040); // for now we start in wozmon
   asm.done();
   return asm.whenDone();
 };
