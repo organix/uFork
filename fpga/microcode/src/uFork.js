@@ -27,11 +27,15 @@ export const uFork_instrHandling = (asm, opts) => {
   def("uFork_doOneInstrOfContinuation"); // ( -- )
   dat("uFork_eventQueueAndContQueue", "qy@"); // ( k_head )
   dat("DUP", "qz@");    // ( k_head k_next )
-  // -merkill-
   dat("uFork_eventQueueAndContQueue", "qy!"); // ( k_head )
+  dat("DUP", "uFork_fetchAndExec");
   dat("DUP", "uFork_enqueueCont"); // ( k_head )
   dat("EXIT");
-  
+
+  def("uFork_fetchAndExec"); // ( kont -- )
+  dat("DUP", "qt@");         // ( kont ip )
+  dat("DUP", "qx@");         // ( kont ip opcode )
+  // dat("(JMP)", "uFork_doInstr"); fallthrough
   def("uFork_doInstr"); // ( opcode -- )
   dat("(JMPTBL)");
   dat(31); // number of base instructions
