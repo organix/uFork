@@ -1,11 +1,12 @@
 // @ts-check js
 /**
  * @use JSDoc
- * @overview This is the micro code image
+ * @overview This is the micro code image generator
  * @author Zarutian
  */
 
 import { makeAssembler } from "../util/masm.js";
+import { uFork_instrHandling } from "./uFork.js";
 
 export const defineInstructionset = (asm) => {
   const { def } = asm;
@@ -113,13 +114,23 @@ export const minicore = (asm, opts) => {
   def("NAND"); // ( a b -- not(a & b)
   dat("&", "INVERT", "EXIT");
 
-  def("(BRNZ)");
+  def("(BRNZ)"); // BRanch if Not Zero ( bool -- )
   dat("CLEAN_BOOL", "INVERT");
   def("(BRZ)"); // BRanch if Zero ( bool -- )
   dat("R>", "SWAP", ">R"); // ( raddr ) R:( bool )
   dat("DUP", "@", "SWAP"); // ( dest raddr ) R:( bool )
   dat("1+", "R>", "?:");   // ( raddr ) R:( )
   dat(">R", "EXIT");
+
+  def("(JMPTBL)"); // ( idx -- idx ) note: default case is after the table
+  dat("R>");       // ( idx raddr )
+  dat("2DUP");     // ( idx raddr idx raddr )
+  dat("@");        // ( idx raddr idx nrOfEntries )
+  dat("<");        // ( idx raddr bool )
+  dat("(BRZ)", "(JMPTBL)_l0"); // ( idx raddr )
+  dat("1+", "OVER", "+", "@", ">R", "EXIT");
+  def("(JMPTBL)_l0"); // ( idx raddr )
+  dat("DUP", "@", "+", "1+", ">R", "EXIT");
 
   def("(LIT)"); // literal ( -- item )
   dat("R>", "DUP", "1+", ">R", "@", "EXIT");
@@ -330,7 +341,7 @@ export const makeUcodeImage = (opts) => {
   defineInstructionset(asm);
   minicore(asm);
   wozmon(asm);
-
+  uFork_instrHandling(asm);
   asm.done();
   return asm.whenDone();
 };
