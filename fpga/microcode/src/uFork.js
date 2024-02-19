@@ -7,6 +7,31 @@
 // using uFork/docs/vm.md as reference
 
 export const uFork_instrHandling = (asm, opts) => {
+  opts = (opts == undefined) ? {} : opts ;
+  const eventQueueAndContQueue_qaddr = (opts.eventQueueAndContQueue_qaddr == undefined ) ? 0x4001 ;
+  
+  def("uFork_doOneSnú"); // ( -- ) 
+  dat("uFork_dispatchOneEvent");
+  dat("uFork_doOneInstrOfContinuation");
+  dat("EXIT");
+
+  def("uFork_eventQueueAndContQueue");
+  dat("(CONST)", eventQueueAndContQueue_qaddr);
+
+  def("uFork_enqueueCont"); // ( kont -- )
+  dat("uFork_eventQueueAndContQueue", "qz@"); // ( kont k_tail )
+  dat("2DUP", "qz!", "DROP");
+  dat("uFork_eventQueueAndContQueue", "qz!"); // ( )
+  dat("EXIT");
+  
+  def("uFork_doOneInstrOfContinuation"); // ( -- )
+  dat("uFork_eventQueueAndContQueue", "qy@"); // ( k_head )
+  dat("DUP", "qz@");    // ( k_head k_next )
+  // -merkill-
+  dat("uFork_eventQueueAndContQueue", "qy!"); // ( k_head )
+  dat("DUP", "uFork_enqueueCont"); // ( k_head )
+  dat("EXIT");
+  
   def("uFork_doInstr"); // ( opcode -- )
   dat("(JMPTBL)");
   dat(31); // number of base instructions
@@ -41,6 +66,8 @@ export const uFork_instrHandling = (asm, opts) => {
   dat("uFork_instr_debug");
   dat("uFork_instr__subroutine_call");
   dat("uFork_instr__subroutine_exit");
+  // todo: cause a error signal
+  dat("EXIT");
   
   return asm;
 };
