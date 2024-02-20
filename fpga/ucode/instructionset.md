@@ -41,4 +41,3 @@ Machine word (cell) size is 16 bits.
 
 If the first 10 bits of an instruction are zero then it is an primitive instruction otherwise it is a call to that address. That is the instruction is the new program counter value.
 
-.
