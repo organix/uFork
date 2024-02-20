@@ -168,26 +168,25 @@ function awp_dev({
             }
             if (core.u_is_cap(raw)) {
                 const quad = core.u_read_quad(core.u_cap_to_ptr(raw));
-                if (quad.t === ufork.PROXY_T && ddev.u_owns_proxy(raw)) {
+                const handle_raw = ddev.u_strip_meta(quad.y);
+                if (
+                    ddev.u_owns_proxy(raw)
+                    && core.u_is_fix(handle_raw)
+                ) {
 
 // The proxy's handle is a fixnum only if the proxy refers to a remote actor.
 // Rather than allocating it a Swiss number, pass on its details directly.
 
-                    const remote_handle_raw = ddev.u_strip_meta(quad.y);
-                    if (core.u_is_fix(remote_handle_raw)) {
-                        const remote_handle = core.u_fix_to_i32(
-                            remote_handle_raw
-                        );
-                        const proxy = proxies[proxy_keys[remote_handle]];
-                        if (proxy !== undefined) {
-                            const acquaintance = proxy.store.acquaintances[
-                                proxy.petname
-                            ];
-                            return {
-                                meta: acquaintance,
-                                data: proxy.swiss
-                            };
-                        }
+                    const remote_handle = core.u_fix_to_i32(handle_raw);
+                    const proxy = proxies[proxy_keys[remote_handle]];
+                    if (proxy !== undefined) {
+                        const acquaintance = proxy.store.acquaintances[
+                            proxy.petname
+                        ];
+                        return {
+                            meta: acquaintance,
+                            data: proxy.swiss
+                        };
                     }
                 }
 
@@ -755,60 +754,55 @@ function awp_dev({
 
             const event_stub = core.u_read_quad(event_stub_ptr);
             const event = core.u_read_quad(event_stub.y);
+            const message = event.y;
 
 // Inspect the event target. If it is a proxy, check if it is a stop capability
 // or a reference to a remote actor.
 
             const target_quad = core.u_read_quad(core.u_cap_to_ptr(event.x));
-            if (target_quad.t === ufork.PROXY_T) {
+            const handle_raw = ddev.u_strip_meta(target_quad.y);
 
 // Remote actor proxies have a fixnum handle.
 
-                const remote_handle_raw = ddev.u_strip_meta(target_quad.y);
-                if (core.u_is_fix(remote_handle_raw)) {
-                    const remote_handle = core.u_fix_to_i32(remote_handle_raw);
-                    core.u_defer(function () {
-                        const proxy = proxies[proxy_keys[remote_handle]];
-                        if (proxy !== undefined) {
-                            enqueue(
-                                proxy.store,
-                                proxy.petname,
-                                proxy.swiss,
-                                marshall(proxy.store, event.y) // message
-                            );
-                        }
-                        core.h_release_stub(event_stub_ptr);
-                    });
-                    return ufork.E_OK;
-                }
+            if (core.u_is_fix(handle_raw)) {
+                const remote_handle = core.u_fix_to_i32(handle_raw);
+                core.u_defer(function () {
+                    const proxy = proxies[proxy_keys[remote_handle]];
+                    if (proxy !== undefined) {
+                        enqueue(
+                            proxy.store,
+                            proxy.petname,
+                            proxy.swiss,
+                            marshall(proxy.store, message)
+                        );
+                    }
+                    core.h_release_stub(event_stub_ptr);
+                });
+                return ufork.E_OK;
+            }
 
 // "Stop listening" proxy handles are a wrapped fixnum.
 
-                const stop_handle_raw = core.u_nth(
-                    ddev.u_strip_meta(target_quad.y),
-                    1
-                );
-                if (core.u_is_fix(stop_handle_raw)) {
-                    core.u_defer(function () {
-                        const stop_handle = core.u_fix_to_i32(stop_handle_raw);
-                        const listener_key = listener_keys[stop_handle];
-                        if (listener_key !== undefined) {
-                            const listener = listeners[listener_key];
-                            if (listener !== undefined) {
-                                listener.stop();
-                            }
-                            delete listener_keys[stop_handle];
+            const stop_handle_raw = core.u_nth(handle_raw, 1);
+            if (core.u_is_fix(stop_handle_raw)) {
+                core.u_defer(function () {
+                    const stop_handle = core.u_fix_to_i32(stop_handle_raw);
+                    const listener_key = listener_keys[stop_handle];
+                    if (listener_key !== undefined) {
+                        const listener = listeners[listener_key];
+                        if (listener !== undefined) {
+                            listener.stop();
                         }
-                        core.h_release_stub(event_stub_ptr);
-                    });
-                    return ufork.E_OK;
-                }
-                return ufork.E_NOT_FIX;
+                        delete listener_keys[stop_handle];
+                    }
+                    core.h_release_stub(event_stub_ptr);
+                });
+                return ufork.E_OK;
             }
 
-// Choose a method based on the message tag (#intro, #listen, etc).
+// Otherwise the proxy is the device capability. Choose a method based on the
+// message tag (#intro, #listen, etc).
 
-            const message = ddev.u_strip_meta(event.y);
             const tag = core.u_nth(message, 1);
             const method_array = [intro, listen];
             const method = method_array[core.u_fix_to_i32(tag)];
@@ -838,9 +832,9 @@ function awp_dev({
 // Is it a reference to a remote actor? If so, clean up any references to it and
 // inform the relevant party.
 
-            const remote_handle_raw = ddev.u_strip_meta(quad.y);
-            if (core.u_is_fix(remote_handle_raw)) {
-                const remote_handle = core.u_fix_to_i32(remote_handle_raw);
+            const handle_raw = ddev.u_strip_meta(quad.y);
+            if (core.u_is_fix(handle_raw)) {
+                const remote_handle = core.u_fix_to_i32(handle_raw);
                 const proxy_key = proxy_keys[remote_handle];
                 if (proxy_key !== undefined) {
 
@@ -866,7 +860,7 @@ function awp_dev({
 // Install the dynamic device as if it were a real device. Unlike a real device,
 // we must reserve a stub to keep the capability from being released.
 
-    const dev_cap = ddev.h_reserve_cap();
+    const dev_cap = ddev.h_reserve_proxy(ufork.UNDEF_RAW);
     const dev_id = core.u_fixnum(awp_key);
     core.h_install([[dev_id, dev_cap]], undefined, uninstall);
     ddev.h_reserve_stub(dev_cap);
