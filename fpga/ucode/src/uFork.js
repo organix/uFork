@@ -21,6 +21,9 @@ export const uFork_instrHandling = (asm, opts) => {
   def("uFork_#?");
   dat("(CONST)", 0x0000);
 
+  def("uFork_#pair_t");
+  dat("(CONST)", 0x000C);
+
   def("uFork_enqueueCont"); // ( kont -- )
   dat("uFork_eventQueueAndContQueue", "qz@"); // ( kont k_tail )
   dat("2DUP", "qz!", "DROP");
@@ -36,6 +39,7 @@ export const uFork_instrHandling = (asm, opts) => {
   dat("EXIT");
 
   def("uFork_fetchAndExec"); // ( kont -- )
+  // todo: insert sponsor instr fuel check&burn here.
   dat("DUP", "qt@");         // ( kont ip )
   dat("DUP", "qx@");         // ( kont ip opcode )
   // dat("(JMP)", "uFork_doInstr"); fallthrough
@@ -76,11 +80,33 @@ export const uFork_instrHandling = (asm, opts) => {
   // todo: cause a error signal
   dat("EXIT");
 
+  def("uFork_cons"); // ( item tail -- pair_quad )
+  dat("uFork_allot"); // ( i t qa )
+  dat("DUP", ">R");  // ( i t qa ) R:( qa )
+  dat("qy!", "R@");  // ( i qa ) R:( qa )
+  dat("qx!");        // ( ) R:( qa )
+  dat("uFork_#pair_t", "R@", "qt!");
+  dat("uFork_#?", "R@", "qz!");
+  dat("R>");
+  dat("EXIT");
+  
   def("uFork_instr_nop"); // ( kont ip opcode -- )
   dat("DROP");            // ( kont ip )
-  def("uFork_instr__common_tail");
-  dat("qz@", "SWAP", "qt!");
+  def("uFork_instr__common_tail"); // ( kont ip -- )
+  dat("qz@", "SWAP", "qt!"); // advance the ip of the kontinuation
   dat("EXIT");
+
+  def("uFork_instr_push"); // ( kont ip opcode -- )
+  dat("DROP");             // ( kont ip )
+  // todo: insert sponsor mem fuel check&burn here
+  dat("qy@");              // ( kont item )
+  dat("OVER");             // ( kont item kont )
+  dat("uFork_sp@");        // ( kont item sp_tail )
+  dat("uFork_cons");       // ( kont pair_quad )
+  dat("OVER");             // ( kont pair_quad kont )
+  dat("uFork_sp!");        // ( kont )
+  dat("DUP", "qt@");       // ( kont ip )
+  dat("(JMP)", "uFork_instr__common_tail");
   
   return asm;
 };
