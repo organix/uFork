@@ -8,12 +8,18 @@
 
 export const uFork_instrHandling = (asm, opts) => {
   opts = (opts == undefined) ? {} : opts ;
-  const eventQueueAndContQueue_qaddr = (opts.eventQueueAndContQueue_qaddr == undefined ) ? 0x4001 ;
+  const eventQueueAndContQueue_qaddr = (opts.eventQueueAndContQueue_qaddr == undefined ) ?
+    0x4001 : opts.eventQueueAndContQueue_qaddr ;
+  const memoryDescriptor_qaddr = (opts.memoryDescriptor_qaddr == undefined) ?
+    0x4000 : opts.memoryDescriptor_qaddr ;
   
   def("uFork_doOneSnú"); // ( -- ) 
   dat("uFork_dispatchOneEvent");
   dat("uFork_doOneInstrOfContinuation");
   dat("EXIT");
+
+  def("uFork_memoryDescriptor");
+  dat("(CONST", memoryDescriptor_qaddr);
 
   def("uFork_eventQueueAndContQueue");
   dat("(CONST)", eventQueueAndContQueue_qaddr);
