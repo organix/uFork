@@ -2,11 +2,11 @@
 // the Actor Wire Protocol. See also awp.md and awp_dev.md.
 
 // This device makes two kinds of proxies: "remote" and "stop".
-// The two kinds can be distinguished by the type of their handle:
+// The two kinds can be distinguished by the type of their tag:
 //  - Remote capabilities (transparent references to remote actors) have a
-//    fixnum as their handle.
+//    fixnum as their tag.
 //  - Stop capabilities (used to stop listening) have a wrapped fixnum as their
-//    handle.
+//    tag.
 
 // TODO:
 // - distributed garbage collection
@@ -69,11 +69,11 @@ function awp_dev({
     let lost = Object.create(null);           // local:remote -> functions      // TODO are these ever cleaned up?
     let raw_to_swiss = Object.create(null);   // raw -> swiss
     let stubs = Object.create(null);          // swiss -> stub raw              // TODO release at some point
-    let listener_keys = Object.create(null);  // proxy handle -> local          // TODO implement safe_stop proxies
+    let listener_keys = Object.create(null);  // proxy tag -> local             // TODO implement safe_stop proxies
     let listeners = Object.create(null);      // local -> {greeter, stop}
-    let proxy_keys = Object.create(null);     // proxy handle -> proxy key
+    let proxy_keys = Object.create(null);     // proxy tag -> proxy key
     let proxies = Object.create(null);        // proxy key -> data
-    let next_proxy_handle = 0;
+    let next_proxy_tag = 0;
 
     function random_swiss() {
         let swiss = new Uint8Array(16); // 128 bits
@@ -90,10 +90,10 @@ function awp_dev({
         if (proxies[proxy_key] !== undefined) {
             return proxies[proxy_key].raw;
         }
-        const remote_handle = next_proxy_handle;
-        next_proxy_handle += 1;
-        proxy_keys[remote_handle] = proxy_key;
-        const raw = ddev.h_reserve_proxy(core.u_fixnum(remote_handle));
+        const remote_tag = next_proxy_tag;
+        next_proxy_tag += 1;
+        proxy_keys[remote_tag] = proxy_key;
+        const raw = ddev.h_reserve_proxy(core.u_fixnum(remote_tag));
         proxies[proxy_key] = {raw, swiss, store, petname};
         return raw;
     }
@@ -168,17 +168,14 @@ function awp_dev({
             }
             if (core.u_is_cap(raw)) {
                 const quad = core.u_read_quad(core.u_cap_to_ptr(raw));
-                const handle_raw = ddev.u_strip_meta(quad.y);
-                if (
-                    ddev.u_owns_proxy(raw)
-                    && core.u_is_fix(handle_raw)
-                ) {
+                const tag_raw = ddev.u_tag(quad.y);
+                if (ddev.u_owns_proxy(raw) && core.u_is_fix(tag_raw)) {
 
-// The proxy's handle is a fixnum only if the proxy refers to a remote actor.
+// The proxy's tag is a fixnum only if the proxy refers to a remote actor.
 // Rather than allocating it a Swiss number, pass on its details directly.
 
-                    const remote_handle = core.u_fix_to_i32(handle_raw);
-                    const proxy = proxies[proxy_keys[remote_handle]];
+                    const remote_tag = core.u_fix_to_i32(tag_raw);
+                    const proxy = proxies[proxy_keys[remote_tag]];
                     if (proxy !== undefined) {
                         const acquaintance = proxy.store.acquaintances[
                             proxy.petname
@@ -714,13 +711,13 @@ function awp_dev({
 // Make a "stop" capabililty, put it in a successful result, and send it to the
 // callback.
 
-                    const stop_handle = next_proxy_handle;
-                    next_proxy_handle += 1;
-                    listener_keys[stop_handle] = key;
+                    const stop_tag = next_proxy_tag;
+                    next_proxy_tag += 1;
+                    listener_keys[stop_tag] = key;
                     const stop_proxy = ddev.h_reserve_proxy(
                         core.h_reserve_ram({
                             t: ufork.PAIR_T,
-                            x: core.u_fixnum(stop_handle),
+                            x: core.u_fixnum(stop_tag),
                             y: ufork.NIL_RAW
                         })
                     );
@@ -760,14 +757,14 @@ function awp_dev({
 // or a reference to a remote actor.
 
             const target_quad = core.u_read_quad(core.u_cap_to_ptr(event.x));
-            const handle_raw = ddev.u_strip_meta(target_quad.y);
+            const tag_raw = ddev.u_tag(target_quad.y);
 
-// Remote actor proxies have a fixnum handle.
+// Remote actor proxies have a fixnum tag.
 
-            if (core.u_is_fix(handle_raw)) {
-                const remote_handle = core.u_fix_to_i32(handle_raw);
+            if (core.u_is_fix(tag_raw)) {
+                const remote_tag = core.u_fix_to_i32(tag_raw);
                 core.u_defer(function () {
-                    const proxy = proxies[proxy_keys[remote_handle]];
+                    const proxy = proxies[proxy_keys[remote_tag]];
                     if (proxy !== undefined) {
                         enqueue(
                             proxy.store,
@@ -781,19 +778,19 @@ function awp_dev({
                 return ufork.E_OK;
             }
 
-// "Stop listening" proxy handles are a wrapped fixnum.
+// "Stop listening" proxy tags are a wrapped fixnum.
 
-            const stop_handle_raw = core.u_nth(handle_raw, 1);
-            if (core.u_is_fix(stop_handle_raw)) {
+            const stop_tag_raw = core.u_nth(tag_raw, 1);
+            if (core.u_is_fix(stop_tag_raw)) {
                 core.u_defer(function () {
-                    const stop_handle = core.u_fix_to_i32(stop_handle_raw);
-                    const listener_key = listener_keys[stop_handle];
+                    const stop_tag = core.u_fix_to_i32(stop_tag_raw);
+                    const listener_key = listener_keys[stop_tag];
                     if (listener_key !== undefined) {
                         const listener = listeners[listener_key];
                         if (listener !== undefined) {
                             listener.stop();
                         }
-                        delete listener_keys[stop_handle];
+                        delete listener_keys[stop_tag];
                     }
                     core.h_release_stub(event_stub_ptr);
                 });
@@ -832,15 +829,15 @@ function awp_dev({
 // Is it a reference to a remote actor? If so, clean up any references to it and
 // inform the relevant party.
 
-            const handle_raw = ddev.u_strip_meta(quad.y);
-            if (core.u_is_fix(handle_raw)) {
-                const remote_handle = core.u_fix_to_i32(handle_raw);
-                const proxy_key = proxy_keys[remote_handle];
+            const tag_raw = ddev.u_tag(quad.y);
+            if (core.u_is_fix(tag_raw)) {
+                const remote_tag = core.u_fix_to_i32(tag_raw);
+                const proxy_key = proxy_keys[remote_tag];
                 if (proxy_key !== undefined) {
 
 // TODO inform the relevant party.
 
-                    delete proxy_keys[remote_handle];
+                    delete proxy_keys[remote_tag];
                     delete proxies[proxy_key];
                 }
             }

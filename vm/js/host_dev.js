@@ -1,6 +1,8 @@
 // Installs the host device, making it possible to provide "dynamic" devices
 // without modifying uFork's Rust code.
 
+// See host_dev.md.
+
 /*jslint browser */
 
 import ufork from "./ufork.js";
@@ -15,12 +17,9 @@ function host_dev(core) {
 
         const event_stub = core.u_read_quad(event_stub_ptr);
         const event = core.u_read_quad(event_stub.y);
-        const target_quad = core.u_read_quad(core.u_cap_to_ptr(event.x));
-        const key = (
-            target_quad.t === ufork.PROXY_T
-            ? core.u_nth(target_quad.y, 1)  // handle tag
-            : core.u_nth(event.y, 1)        // message tag
-        );
+        const proxy = core.u_read_quad(core.u_cap_to_ptr(event.x));
+        const handle = proxy.y;
+        const key = core.u_nth(handle, 1);
         if (!core.u_is_fix(key)) {
             return ufork.E_NOT_FIX;
         }
@@ -33,8 +32,7 @@ function host_dev(core) {
 
     function drop_proxy(proxy_raw) {
 
-// A proxy has been garbage collected. Route its handle to the relevant dynamic
-// device.
+// A proxy has been garbage collected. Inform it's dynamic device.
 
         const quad = core.u_read_quad(core.u_cap_to_ptr(proxy_raw));
         const handle = quad.y;
@@ -62,43 +60,19 @@ function host_dev(core) {
         }
     });
 
-    return function make_ddev(
-
-// The 'on_event_stub' parameter is a function that is called when the dynamic
-// device receives a message event via the host device. It returns an integer
-// error code, such as E_OK or E_FAIL. It takes responsibility for releasing the
-// event stub if it returns E_OK.
-
-// There are some subtle differences between events received by a dynamic device
-// and events received by a real device. Events received by a dynamic device
-// are always received by a proxy. The proxy's "handle" field is augmented with
-// metadata used by the dynamic device, and should be discarded using
-// the 'h_strip_meta' method.
-
-        on_event_stub,
-
-// The 'on_drop_proxy' parameter is a function that is called when a proxy made
-// by 'h_reserve_proxy' is dropped. It is passed the raw proxy. Optional.
-
-        on_drop_proxy
-    ) {
+    return function make_ddev(on_event_stub, on_drop_proxy) {
         const key = next_key;
         next_key += 1;
         dynamic_devs[key] = {on_event_stub, on_drop_proxy};
 
-        function h_reserve_proxy(handle_raw = ufork.UNDEF_RAW) {
-
-// Makes a proxy whose handle is tagged with the dynamic device's key.
-
-// Careful, it will be vulnerable to garbage collection.
-
+        function h_reserve_proxy(tag_raw = ufork.UNDEF_RAW) {
             return core.u_ptr_to_cap(core.h_reserve_ram({
                 t: ufork.PROXY_T,
                 x: dev_cap,
                 y: core.h_reserve_ram({
                     t: ufork.PAIR_T,
                     x: core.u_fixnum(key),
-                    y: handle_raw
+                    y: tag_raw
                 })
             }));
         }
@@ -107,10 +81,7 @@ function host_dev(core) {
             return core.h_reserve_stub(dev_cap, target_raw);
         }
 
-        function u_strip_meta(proxy_handle_raw) {
-
-// Strip the dynamic device metadata from the proxy handle.
-
+        function u_tag(proxy_handle_raw) {
             return core.u_nth(proxy_handle_raw, -1);
         }
 
@@ -140,7 +111,7 @@ function host_dev(core) {
             h_dispose,
             h_reserve_stub,
             h_reserve_proxy,
-            u_strip_meta,
+            u_tag,
             u_owns_proxy
         });
     };
@@ -166,10 +137,9 @@ function host_dev(core) {
 //debug .export
 //debug     boot
 //debug `);
-//debug let dispose;
 //debug let core;
 //debug function dummy_dev(make_ddev) {
-//debug     const dev = make_ddev(
+//debug     const ddev = make_ddev(
 //debug         function on_event_stub(ptr) {
 //debug             const event_stub = core.u_read_quad(ptr);
 //debug             const target = core.u_read_quad(
@@ -179,27 +149,31 @@ function host_dev(core) {
 //debug             console.log(
 //debug                 "on_event_stub",
 //debug                 core.u_pprint(event.y), // message
-//debug                 core.u_pprint(dev.u_strip_meta(target.y)), // handle
-//debug                 dev.u_owns_proxy(event_stub.x)
+//debug                 core.u_pprint(ddev.u_tag(target.y)), // tag
+//debug                 ddev.u_owns_proxy(event_stub.x)
 //debug             );
 //debug         },
 //debug         function on_drop_proxy(proxy_raw) {
 //debug             const quad = core.u_read_quad(core.u_cap_to_ptr(proxy_raw));
-//debug             const handle = dev.u_strip_meta(quad.y);
-//debug             console.log("on_drop_proxy", core.u_pprint(handle));
+//debug             const tag = ddev.u_tag(quad.y);
+//debug             console.log("on_drop_proxy", core.u_pprint(tag));
 //debug         }
 //debug     );
-//debug     dev.h_reserve_proxy(ufork.FALSE_RAW); // dropped
-//debug     let proxy = dev.h_reserve_proxy(ufork.TRUE_RAW);
-//debug     let stub = dev.h_reserve_stub(proxy);
-//debug     core.h_install([[core.u_fixnum(proxy_key), proxy]]);
-//debug     return function dispose() {
-//debug         dev.h_dispose();
-//debug         if (stub !== undefined) {
-//debug             core.h_release_stub(stub);
-//debug             stub = undefined;
+//debug     ddev.h_reserve_proxy(ufork.FALSE_RAW); // dropped
+//debug     let proxy = ddev.h_reserve_proxy(ufork.TRUE_RAW);
+//debug     let stub = ddev.h_reserve_stub(proxy);
+//debug     core.h_install(
+//debug         [[core.u_fixnum(proxy_key), proxy]],
+//debug         undefined,
+//debug         function uninstall() {
+//debug             console.log("uninstalling");
+//debug             ddev.h_dispose();
+//debug             if (stub !== undefined) {
+//debug                 core.h_release_stub(stub);
+//debug                 stub = undefined;
+//debug             }
 //debug         }
-//debug     };
+//debug     );
 //debug }
 //debug function run_core() {
 //debug     console.log(
@@ -218,14 +192,12 @@ function host_dev(core) {
 //debug     core.h_initialize(),
 //debug     core.h_import(undefined, test_ir),
 //debug     requestorize(function (asm_module) {
-//debug         dispose = dummy_dev(host_dev(core));
+//debug         dummy_dev(host_dev(core));
 //debug         core.h_boot(asm_module.boot);
 //debug         run_core();
 //debug         return true;
 //debug     })
 //debug ])(console.log);
-//debug setTimeout(function () {
-//debug     dispose();
-//debug }, 1000);
+//debug setTimeout(core.h_dispose, 1000);
 
 export default Object.freeze(host_dev);
