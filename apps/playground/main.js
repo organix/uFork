@@ -70,6 +70,15 @@ function write_state(name, value) {
     } else {
         url.searchParams.delete(name);
     }
+
+// Ensure the very long 'text' param appears at the end of the URL, making it
+// easier to edit the other params manually.
+
+    if (name !== "text" && url.searchParams.has("text")) {
+        const text = url.searchParams.get("text");
+        url.searchParams.delete("text");
+        url.searchParams.set("text", text);
+    }
     history.replaceState(undefined, "", unpercent(url));
 }
 
