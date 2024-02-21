@@ -40,8 +40,32 @@ export const uFork_instrHandling = (asm, opts) => {
   def("uFork_#type_t");
   dat("(CONST)", 0x0006);
 
+  def("uFork_#fixnum_t");
+  dat("(CONST)", 0x0007);
+
+  def("uFork_#actor_t");
+  dat("(CONST)", 0x0008);
+
+  def("uFork_PROXY_T");
+  dat("(CONST)", 0x0009);
+
+  def("uFork_STUB_T");
+  dat("(CONST)", 0x000A);
+
+  def("uFork_#instr_t");
+  dat("(CONST)", 0x000B);
+
   def("uFork_#pair_t");
   dat("(CONST)", 0x000C);
+
+  def("uFork_#dict_t");
+  dat("(CONST)", 0x000D);
+
+  def("uFork_FWD_REF_T");
+  dat("(CONST)", 0x000E);
+
+  def("uFork_FREE_T");
+  dat("(CONST)", 0x000F);
 
   def("uFork_enqueueCont"); // ( kont -- )
   dat("uFork_eventQueueAndContQueue", "qz@"); // ( kont k_tail )
