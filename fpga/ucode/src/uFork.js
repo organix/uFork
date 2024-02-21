@@ -31,6 +31,15 @@ export const uFork_instrHandling = (asm, opts) => {
   def("uFork_#t");
   dat("(CONST)", 0x0003);
 
+  def("uFork_#unit");
+  dat("(CONST)", 0x0004);
+
+  def("uFork_EMPTY_DQ");
+  dat("(CONST)", 0x0005);
+
+  def("uFork_#type_t");
+  dat("(CONST)", 0x0006);
+
   def("uFork_#pair_t");
   dat("(CONST)", 0x000C);
 
