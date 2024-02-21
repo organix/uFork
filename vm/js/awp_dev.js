@@ -844,22 +844,15 @@ function awp_dev({
         }
     );
 
-    function uninstall() {
-        Object.values(connections).forEach(function (connection) {
-            connection.close();
-        });
-        Object.values(listeners).forEach(function (listener) {
-            listener.stop();
-        });
-        ddev.h_dispose();
-    }
-
 // Install the dynamic device as if it were a real device. Unlike a real device,
 // we must reserve a stub to keep the capability from being released.
 
     const dev_cap = ddev.h_reserve_proxy(ufork.UNDEF_RAW);
     const dev_id = core.u_fixnum(awp_key);
-    core.h_install([[dev_id, dev_cap]], undefined, uninstall);
+    core.h_install(dev_id, dev_cap, function on_dispose() {
+        Object.values(connections).forEach((connection) => connection.close());
+        Object.values(listeners).forEach((listener) => listener.stop());
+    });
     ddev.h_reserve_stub(dev_cap);
 }
 

@@ -39,7 +39,7 @@ collection by a stub.
 ```javascript
 let proxy = ddev.h_reserve_proxy();
 let stub = ddev.h_reserve_stub(proxy);
-core.h_install([[core.u_fixnum(1234), proxy]]);
+core.h_install(core.u_fixnum(1234), proxy);
 ```
 
 The following assembly program would extract `proxy` from the boot caps dict and
@@ -140,18 +140,14 @@ A dynamic device may be uninstalled by calling its `ddev.h_dispose` method.
 The `on_event_stub` and `on_drop_proxy` callbacks will no longer be called.
 
 A dynamic device may reserve resources on the host that should be released when
-the core is disposed. In this case, an `uninstall` callback should be supplied
-to `h_install`, like so:
+the core is disposed. In such cases, an `on_dispose` callback should be
+supplied to `h_install`, like so:
 
 ```javascript
 core.h_install(
-    [[core.u_fixnum(1234), proxy]],
-    undefined,
-    function uninstall() {
-        ddev.h_dispose();
-        if (stub !== undefined) {
-            core.h_release_stub(stub);
-            stub = undefined;
-        }
+    core.u_fixnum(1234),
+    proxy,
+    function on_dispose() {
+        // release resources...
     }
 );

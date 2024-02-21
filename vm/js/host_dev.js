@@ -50,7 +50,7 @@ function host_dev(core) {
     const dev_ptr = core.u_ramptr(ufork.HOST_DEV_OFS);
     const dev_cap = core.u_ptr_to_cap(dev_ptr);
     const dev_id = core.u_read_quad(dev_ptr).x;
-    core.h_install([[dev_id, dev_cap]], {
+    core.h_install(dev_id, dev_cap, undefined, {
         host(raw) {
             return (
                 core.u_is_cap(raw)
@@ -163,10 +163,10 @@ function host_dev(core) {
 //debug     let proxy = ddev.h_reserve_proxy(ufork.TRUE_RAW);
 //debug     let stub = ddev.h_reserve_stub(proxy);
 //debug     core.h_install(
-//debug         [[core.u_fixnum(proxy_key), proxy]],
-//debug         undefined,
-//debug         function uninstall() {
-//debug             console.log("uninstalling");
+//debug         core.u_fixnum(proxy_key),
+//debug         proxy,
+//debug         function on_dispose() {
+//debug             console.log("disposing");
 //debug             ddev.h_dispose();
 //debug             if (stub !== undefined) {
 //debug                 core.h_release_stub(stub);
