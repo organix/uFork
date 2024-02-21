@@ -191,12 +191,34 @@ export const uFork_instrHandling = (asm, opts) => {
     dat("OVER");             // ( kont next_ip kont )
     dat("uFork_rp@");        // ( kont next_ip uFork_rp )
     dat("uFork_cons");       // ( kont uFork_new_rp )
-    dat("OVER", "uFork_rp!");
-    dat("(JMP)", "uFork_instr__common_longer_tail");
+    dat("SWAP", "uFork_rp!");
+    dat("EXIT");
   } else {
+    // todo: insert a signalling to sponsor here
   }
 
   def("uFork_instr__subroutine_exit"); // ( kont ip opcode -- )
+  if (uForkSubroutines) {
+    dat("2DROP");     // ( kont ) 2DROP because there is no next_ip in ip
+    dat("DUP");       // ( kont kont )
+    dat("uFork_rp@"); // ( kont uFork_rstack )
+    dat("DUP");       // ( kont uFork_rstack uFork_rstack )
+    dat("qx@");       // ( kont uFork_rstack resume_ip )
+    dat(">R");        // ( kont uFork_rstack ) R:( resume_ip )
+    dat("DUP");       // ( kont uFork_rstack uFork_rstack ) R:( resume_ip )
+    dat("qy@");       // ( kont uFork_rstack uFork_next_rstack ) R:( resume_ip )
+    dat(">R");        // ( kont uFork_rstack ) R:( resume_ip uFork_next_rstack )
+    dat("uFork_free"); // ( kont ) R:( resume_ip uFork_next_rstack )
+    dat("R>");        // ( kont uFork_next_rstack ) R:( resume_ip )
+    dat("OVER");      // ( kont uFork_next_rstack kont ) R:( resume_ip )
+    dat("uFork_rp!"); // ( kont ) R:( resume_ip )
+    dat("R>");        // ( kont resume_ip ) R:( )
+    dat("SWAP");      // ( resume_ip kont )
+    dat("qt!");       // ( )
+    dat("EXIT");
+  } else {
+    // todo: insert a signalling to sponsor here
+  }
   
   return asm;
 };
