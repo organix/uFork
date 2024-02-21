@@ -103,6 +103,7 @@ export const uFork_instrHandling = (asm, opts) => {
   def("uFork_fetchAndExec"); // ( kont -- )
   // todo: insert sponsor instr fuel check&burn here.
   dat("DUP", "qt@");         // ( kont ip )
+  // todo: insert ip #instr_t check here
   dat("DUP", "qx@");         // ( kont ip opcode )
   // dat("(JMP)", "uFork_doInstr"); fallthrough
   def("uFork_doInstr"); // ( opcode -- )
@@ -167,8 +168,27 @@ export const uFork_instrHandling = (asm, opts) => {
   dat("uFork_cons");       // ( kont pair_quad )
   dat("OVER");             // ( kont pair_quad kont )
   dat("uFork_sp!");        // ( kont )
+  def("uFork_instr__common_longer_tail"); // ( kont -- )
   dat("DUP", "qt@");       // ( kont ip )
   dat("(JMP)", "uFork_instr__common_tail");
+
+  def("uFork_instr__subroutine_call"); // ( kont ip opcode -- )
+  if (uForkSubroutines) {
+    dat("DROP"); // ( kont ip )
+    // todo: insert allot fuel check&burn here
+    dat("DUP", "qz@", ">R"); // ( kont ip ) R:( next_ip )
+    dat("qy@", "OVER");      // ( kont subr_ip kont ) R:( next_ip )
+    dat("qt!");              // ( kont ) R:( next_ip )
+    dat("R>");               // ( kont next_ip ) R:( )
+    dat("OVER");             // ( kont next_ip kont )
+    dat("uFork_rp@");        // ( kont next_ip uFork_rp )
+    dat("uFork_cons");       // ( kont uFork_new_rp )
+    dat("OVER", "uFork_rp!");
+    dat("(JMP)", "uFork_instr__common_longer_tail");
+  } else {
+  }
+
+  def("uFork_instr__subroutine_exit"); // ( kont ip opcode -- )
   
   return asm;
 };
