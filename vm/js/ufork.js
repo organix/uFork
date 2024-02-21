@@ -74,7 +74,7 @@
 // To initialize the core, call the 'h_initialize' method and run the returned
 // requestor to completion.
 
-/*jslint browser, long, bitwise */
+/*jslint browser, long, bitwise, white */
 
 import parseq from "https://ufork.org/lib/parseq.js";
 import requestorize from "https://ufork.org/lib/rq/requestorize.js";
@@ -112,7 +112,7 @@ const VM_DEBUG  = 0x80000000;  // +0
 const VM_JUMP   = 0x80000001;  // +1
 const VM_PUSH   = 0x80000002;  // +2
 const VM_IF     = 0x80000003;  // +3
-const VM_04     = 0x80000004;  // unused
+//const VM_04     = 0x80000004;  // unused
 const VM_TYPEQ  = 0x80000005;  // +5
 const VM_EQ     = 0x80000006;  // +6
 const VM_ASSERT = 0x80000007;  // +7
@@ -126,7 +126,7 @@ const VM_ALU    = 0x8000000D;  // +13
 const VM_CMP    = 0x8000000E;  // +14
 const VM_END    = 0x8000000F;  // +15
 
-const VM_10     = 0x80000010;  // unused
+//const VM_10     = 0x80000010;  // unused
 const VM_PAIR   = 0x80000011;  // +17
 const VM_PART   = 0x80000012;  // +18
 const VM_NTH    = 0x80000013;  // +19
@@ -141,8 +141,8 @@ const VM_SEND   = 0x8000001A;  // +26
 const VM_SIGNAL = 0x8000001B;  // +27
 const VM_NEW    = 0x8000001C;  // +28
 const VM_BEH    = 0x8000001D;  // +29
-const VM_1E     = 0x8000001E;  // unused
-const VM_1F     = 0x8000001F;  // unused
+//const VM_1E     = 0x8000001E;  // unused
+//const VM_1F     = 0x8000001F;  // unused
 
 // Memory limits (from core.rs)
 
@@ -352,7 +352,7 @@ function make_core({
     let wasm_exports;
     let boot_caps_dict = []; // empty
     let wasm_caps = Object.create(null);
-    let uninstallers = [];
+    let on_dispose_callbacks = [];
     let import_promises = Object.create(null);
     let module_text = Object.create(null);
     let rom_sourcemap = Object.create(null);
@@ -1487,38 +1487,39 @@ function make_core({
         h_set_rom_top(rom_top);  // register new top-of-ROM
     }
 
-    function h_install(boot_caps, wasm_imports, uninstall) {
+    function h_install(boot_key, boot_value, on_dispose, wasm_imports) {
 
-// Extends the boot capabilities dictionary and provide capability functions to
-// the WASM instance.
+// Install a device. This usually involves extending the boot capabilities
+// dictionary, handling disposal, and providing capability functions to the
+// WASM instance.
 
-// The 'boot_caps' parameter is an array of entries to add to the "caps"
+// If provided, the 'boot_key' and 'boot_value' are added to the "caps"
 // dictionary provided to boot actors (created via the 'h_boot' method). Each
-// entry is an array containing two values like [key, value]. The key is an
-// integer, see dev.asm for a list of assigned numbers. The value can be
-// any raw value.
+// entry is an array containing two values like [key, value]. Both the key and
+// the value can be any raw value.
+
+// The 'on_dispose' callback is called when the core is disposed.
 
 // The 'wasm_imports' parameter is an object with functions to provide to the
 // WASM instance. The names of these functions are hard coded into the built
 // WASM, e.g. "host_clock".
 
-        if (boot_caps !== undefined) {
-            boot_caps_dict.push(...boot_caps);
+        if (boot_key !== undefined && boot_value !== undefined) {
+            boot_caps_dict.push([boot_key, boot_value]);
+        }
+        if (typeof on_dispose === "function") {
+            on_dispose_callbacks.push(on_dispose);
         }
         Object.assign(wasm_caps, wasm_imports);
-        if (typeof uninstall === "function") {
-            uninstallers.push(uninstall);
-        }
     }
 
     function h_dispose() {
 
-// Dispose of the core. This involves uninstalling the devices.
+// Dispose of the core by disposing of any installed devices.
 
-        uninstallers.forEach(function (uninstall) {
-            uninstall();
-        });
-        uninstallers = [];
+        const callbacks = on_dispose_callbacks;
+        on_dispose_callbacks = [];
+        callbacks.forEach((on_dispose) => on_dispose());
     }
 
     function h_wakeup(device_offset) {
@@ -1578,7 +1579,8 @@ function make_core({
 // Install an anonymous plugin to handle trace information emitted by the debug
 // build of the WASM.
 
-                h_install([], {
+
+                Object.assign(wasm_caps, {
                     host_trace(event) { // (i32) -> nil
                         if (typeof on_trace === "function") {
                             on_trace(event);
@@ -1592,7 +1594,8 @@ function make_core({
                     const dev_ptr = u_ramptr(DEBUG_DEV_OFS);
                     const dev_cap = u_ptr_to_cap(dev_ptr);
                     const dev_id = u_read_quad(dev_ptr).x;
-                    h_install([[dev_id, dev_cap]], {
+                    boot_caps_dict.push([dev_id, dev_cap]);
+                    Object.assign(wasm_caps, {
                         host_log(x) { // (i32) -> nil
                             const u = (x >>> 0);  // convert i32 -> u32
                             //u_debug(u_print(u), "->", u_pprint(u));

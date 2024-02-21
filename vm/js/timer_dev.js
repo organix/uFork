@@ -13,7 +13,11 @@ function timer_dev(core, slowdown = 1) {
     const dev_cap = core.u_ptr_to_cap(dev_ptr);
     const dev_id = core.u_read_quad(dev_ptr).x;
     core.h_install(
-        [[dev_id, dev_cap]],
+        dev_id,
+        dev_cap,
+        function on_dispose() {
+            Object.values(timer_map).forEach(clearTimeout);
+        },
         {
             host_start_timer(delay, stub) { // (i32, i32) -> nil
                 if (core.u_is_fix(delay)) {
@@ -45,9 +49,6 @@ function timer_dev(core, slowdown = 1) {
                 }
                 return false;
             }
-        },
-        function uninstall() {
-            Object.values(timer_map).forEach(clearTimeout);
         }
     );
 }

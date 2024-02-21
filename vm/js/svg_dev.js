@@ -51,7 +51,7 @@ function svg_dev(core, make_ddev, svg_element) {
     const on_code = svg_drawing(svg_append);
     const ddev = make_ddev(on_event_stub);
     const svg_proxy = ddev.h_reserve_proxy();
-    core.h_install([[core.u_fixnum(svg_key), svg_proxy]]);
+    core.h_install(core.u_fixnum(svg_key), svg_proxy);
 }
 
 export default Object.freeze(svg_dev);
