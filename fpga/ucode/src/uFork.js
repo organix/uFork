@@ -260,6 +260,20 @@ export const uFork_instrHandling = (asm, opts) => {
   dat("OVER", "uFork_sp!"); // ( kont ) R:( tmp1st )
   dat("R>", "uFork_free");  // ( kont ) R:( )
   dat("(JMP)", "uFork_instr__common_longer_tail");
+
+  def("uFork_instr_drop"); // ( kont ip opcode )
+  dat("DROP");             // ( kont ip )
+  dat("qy@");              // ( kont n )
+  // todo: insert fixnum type tag check here
+  dat(">R");               // ( kont ) R:( count )
+  dat("DUP", "uFork_sp@"); // ( kont stack ) R:( count )
+  dat("(JMP)", "uFork_instr_drop_l1");
+  def("uFork_instr_drop_l0"); // ( kont stack ) R:( count )
+  dat("DUP", "qy@", "SWAP", "uFork_free"); // ( kont next_stack ) R:( count )
+  def("uFork_instr_drop_l1");
+  dat("(NEXT)", "uFork_instr_drop_l0"); // ( kont nextest_stack ) R:( )
+  dat("OVER", "uFork_sp!"); // ( kont )
+  dat("(JMP)", "uFork_instr__common_longer_tail");
   
 
   def("uFork_instr__subroutine_call"); // ( kont ip opcode -- )
