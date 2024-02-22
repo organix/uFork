@@ -180,6 +180,42 @@ export const uFork_instrHandling = (asm, opts) => {
   dat("DUP", "qt@");       // ( kont ip )
   dat("(JMP)", "uFork_instr__common_tail");
 
+  def("uFork_instr_dup"); // ( kont ip opcode )
+  dat("DROP");            // ( kont ip )
+  dat("qy@");             // ( kont n )
+  // todo: insert fixnum type check here for n
+  // todo: insert allot fuel check&burn here taking n into consideration
+  dat(">R");              // ( kont ) R:( n )
+  dat("DUP", "uFork_sp@", "uForm_allot"); // ( kont stack tmp ) R:( n )
+  dat("DUP", "R>", "SWAP", ">R", ">R");   // ( kont stack tmp ) R:( tmp1st n )
+  dat("(JMP)", "uFork_instr_dup_l1");
+  def("uFork_instr_dup_l0"); // ( kont tmp stack )
+  dat("OVER");         // ( kont stack tmp stack )
+  dat("qx@");          // ( kont stack tmp item  )
+  // -merkill1-
+  dat("uFork_allot");  // ( kont stack tmp item qa ) Qn:[#?, #?, <hole>, #?]
+  dat("DUP", ">R");    // ( kont stack tmp item qa ) R:( tmp1st n qa ) Qn:[#?, #?, <hole>, #?]
+  dat("qx!");          // ( kont stack tmp ) R:( tmp1st n qa ) Qn:[#?, item, <hole>, #?]
+  dat("uFork_#pair_t");
+  dat("R@", "qt!");    // ( kont stack tmp ) R:( tmp1st n qa ) Qn:[#pair_t, item, <hole>, #?]
+  dat("R@", "SWAP");   // ( kont stack qa tmp ) R:( tmp1st n qa )
+  dat("qy!"); // fill earlier hole ( kont stack ) R:( tmp1st n qa )
+  dat("R>");  // ( kont stack new_tmp ) R:( tmp1st n )
+  dat("SWAP", "qy@", "SWAP");
+  def("uFork_instr_dup_l1");
+  dat("(NEXT)", "uFork_instr_dup_l0"); // ( kont stack newest_tmp ) R:( tmp1st )
+  dat("NIP"); // ( kont newest_tmp ) R:( tmp1st )
+  dat("OVER"); // ( kont newest_tmp kont ) R:( tmp1st )
+  dat("uFork_sp@"); // ( kont newest_tmp original_stack ) R:( tmp1st )
+  dat("SWAP"); // ( kont original_stack newest_tmp ) R:( tmp1st )
+  dat("qy!"); // join the two stack parts together ( kont ) R:( tmp1st )
+  dat("R@");  // ( kont tmp1st ) R:( tmp1st )
+  dat("qy@"); // ( kont uFork_new_tos ) R:( tmp1st )
+  dat("OVER", "uFork_sp!"); // ( kont ) R:( tmp1st )
+  dat("R>", "uFork_free");  // ( kont ) R:( )
+  dat("(JMP)", "uFork_instr__common_longer_tail");
+  
+
   def("uFork_instr__subroutine_call"); // ( kont ip opcode -- )
   if (uForkSubroutines) {
     dat("DROP"); // ( kont ip )
