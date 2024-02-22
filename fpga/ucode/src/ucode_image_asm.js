@@ -132,6 +132,12 @@ export const minicore = (asm, opts) => {
   def("(JMPTBL)_l0"); // ( idx raddr )
   dat("DUP", "@", "+", "1+", ">R", "EXIT");
 
+  def("(NEXT)"); // ( ) R:( count raddr -- )
+  dat("R>", "R>", "DUP", "(BRZ)", "(NEXT)_l0"); // ( raddr count )
+  dat("1-", ">R", "@", ">R", "EXIT");
+  def("(NEXT)_l0");
+  dat("DROP", "1+", ">R", "EXIT");
+
   def("(LIT)"); // literal ( -- item )
   dat("R>", "DUP", "1+", ">R", "@", "EXIT");
 
