@@ -2,7 +2,7 @@
 
 The **Host Device** extends the set of built-in devices with **dynamic**
 devices. Dynamic devices can be installed without recompiling the uFork WASM
-core, and even whilst the core is running.
+core, or indeed any time the core is not dispatching an event.
 
 ## Differences with "real" devices
 
@@ -33,7 +33,7 @@ const ddev = make_ddev(on_event_stub, on_drop_proxy);
 
 We will discuss the `on_event_stub` and `on_drop_proxy` callbacks in the next
 section. Now that we have a dynamic device, `ddev`, we can make a proxy and
-install it as a boot capability. The proxy can be protected from garbage
+install it as a boot capability. Here, the proxy is protected from garbage
 collection by a stub.
 
 ```javascript
