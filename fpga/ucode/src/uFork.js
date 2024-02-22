@@ -13,6 +13,7 @@ export const uFork_instrHandling = (asm, opts) => {
   const memoryDescriptor_qaddr = (opts.memoryDescriptor_qaddr == undefined) ?
     0x4000 : opts.memoryDescriptor_qaddr ;
   const uForkSubroutines = (opts.uForkSubroutines == undefined) ? false : opts.uForkSubroutines ;
+  const hwImplOfQuadAllotAndFree = (opts.hwImplOfQuadAllotAndFree == undefined) ? false : opts.hwImplOfQuadAllotAndFree ;
   
   def("uFork_doOneSnú"); // ( -- ) 
   dat("uFork_dispatchOneEvent");
@@ -92,6 +93,36 @@ export const uFork_instrHandling = (asm, opts) => {
 
     def("uFork_rp!"); // ( uFork_rstack kont -- )
     dat("qx@", "qy!", "EXIT");
+  }
+
+  def("uFork_incr"); // ( fixnum -- fixnum )
+  dat("0x7FFF_&", "1+", "0x8000_OR", "EXIT");
+
+  def("uFork_decr"); // ( fixnum -- fixnum )
+  dat("0x7FFF_&", "1-", "0x8000_OR", "EXIT");
+
+  def("uFork_allot"); // ( -- qaddr )
+  if (hwImplOfQuadAllotAndFree) {
+    dat("qallot", "EXIT");
+  } else {
+    // first check if any quads are on the free list
+    dat("uFork_memoryDescriptor", "qx@"); // ( qa )
+    dat("DUP", "uFork_()", "=");          // ( qa notNil? )
+    dat("(BRZ)", "uFork_allot_l0");       // ( qa )
+
+    dat("(JMP)", "uFork_allot_l1");
+    def("uFork_allot_l0"); // ( qa ) got a quad off the free list
+    dat("DUP", "qy@", "uFork_memoryDescriptor", "qx!"); // update the free list
+    dat("uFork_memoryDescriptor", "qy@", "uFork_decr", "uFork_memoryDescriptor", "qy!");
+    def("uFork_allot_l1"); // ( qa ) clean the quad
+    dat("uFork_#?__OVER", "qt!");
+    dat("uFork_#?__OVER", "qx!");
+    dat("uFork_#?__OVER", "qy!");
+    dat("uFork_#?__OVER", "qz!");
+    dat("EXIT");
+
+    def("uFork_#?__OVER");
+    dat("uFork_#?", "OVER", "EXIT");
   }
 
   def("uFork_enqueueCont"); // ( kont -- )
