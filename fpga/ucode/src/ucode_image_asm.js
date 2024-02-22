@@ -144,6 +144,12 @@ export const minicore = (asm, opts) => {
   def("2DROP");
   dat("DROP", "DROP", "EXIT");
 
+  def("NIP"); // ( a b c -- a c )
+  dat("SWAP", "DROP", "EXIT");
+
+  def("R@"); // ( -- a ) R:( a ra -- a )
+  dat("R>", "R>", "DUP", ">R", "SWAP", ">R", "EXIT");
+
   def("+"); // ( a b -- sum )
   dat("UM+");
   def("(DROP)");
