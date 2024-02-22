@@ -76,7 +76,7 @@ function io_dev(core, on_stdout) {
     const dev_ptr = core.u_ramptr(ufork.IO_DEV_OFS);
     const dev_cap = core.u_ptr_to_cap(dev_ptr);
     const dev_id = core.u_read_quad(dev_ptr).x;
-    core.h_install([[dev_id, dev_cap]], {
+    core.h_install(dev_id, dev_cap, undefined, {
         host_print(base, ofs) { // (i32, i32) -> nil
             if (core.u_info !== undefined) {
                 core.u_info(OED.decode(

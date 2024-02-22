@@ -163,10 +163,7 @@ function boot(entrypoint, awp_store) {
 // provide it to the uFork program as a boot capability.
 
     const petname = room_petname(awp_store);
-    core.h_install([[
-        core.u_fixnum(room_key),
-        core.u_fixnum(petname)
-    ]]);
+    core.h_install(core.u_fixnum(room_key), core.u_fixnum(petname));
     core.h_boot(entrypoint);
     return ufork_run();
 }

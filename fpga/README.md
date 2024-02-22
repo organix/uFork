@@ -2,7 +2,7 @@
 
 ![μFork logo](../ufork_logo.svg)
 
-**uFork** is a novel microprocessor architecture featuring:
+[**uFork**](../README.md) is a novel microprocessor architecture featuring:
   * memory safety
   * capability security
   * automatic memory-management
@@ -19,6 +19,10 @@ Quotas for all resources are enforced
 by the hardware.
 Instruction execution is interleaved among processes,
 so progress is made on all programs concurrently.
+The blog post
+"[Memory Safety Simplifies Microprocessor Design](http://www.dalnefre.com/wp/2022/08/memory-safety-simplifies-microprocessor-design/)"
+describes the high-level design,
+and the rationale behind it.
 
 A software virtual-machine implementation
 was previously funded by NLnet,
