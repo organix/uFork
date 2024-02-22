@@ -96,6 +96,15 @@ export const uFork_instrHandling = (asm, opts) => {
     dat("qx@", "qy!", "EXIT");
   }
 
+  def("uFork_isFixnum?"); // ( specimen -- bool )
+  dat("0x8000", "&", "(JMP)", "CLEAN_BOOL");
+
+  def("uFork_isMutable?"); // ( specimen -- bool )
+  dat("0x4000", "&", "(JMP)", "CLEAN_BOOL");
+
+  def("uFork_isImmutable?"); // ( specimen -- bool )
+  dat("uFork_isMutable?", "INVERT", "EXIT");
+
   def("uFork_incr"); // ( fixnum -- fixnum )
   dat("0x7FFF_&", "1+", "0x8000_OR", "EXIT");
 
@@ -129,6 +138,8 @@ export const uFork_instrHandling = (asm, opts) => {
   }
   
   def("uFork_free"); // ( qaddr -- )
+  dat("DUP", "uFork_isFixnum?", "(BRNZ)", "(DROP)");
+  dat("DUP", "uFork_isImmutable?", "(BRNZ)", "(DROP)");
   if (hwImplOfQuadAllotAndFree) {
     dat("qfree", "EXIT");
   } else {
