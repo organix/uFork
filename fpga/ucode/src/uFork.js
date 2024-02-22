@@ -18,6 +18,7 @@ export const uFork_instrHandling = (asm, opts) => {
   def("uFork_doOneSnú"); // ( -- ) 
   dat("uFork_dispatchOneEvent");
   dat("uFork_doOneInstrOfContinuation");
+  dat("uFork_gcOneStep");
   dat("EXIT");
 
   def("uFork_memoryDescriptor");
@@ -109,7 +110,9 @@ export const uFork_instrHandling = (asm, opts) => {
     dat("uFork_memoryDescriptor", "qx@"); // ( qa )
     dat("DUP", "uFork_()", "=");          // ( qa notNil? )
     dat("(BRZ)", "uFork_allot_l0");       // ( qa )
-
+    // no quads on the free list, increment top addr and use that
+    dat("uFork_memoryDescriptor", "qt@", "1+", "DUP");
+    dat("uFork_memoryDescriptor", "qt!");
     dat("(JMP)", "uFork_allot_l1");
     def("uFork_allot_l0"); // ( qa ) got a quad off the free list
     dat("DUP", "qy@", "uFork_memoryDescriptor", "qx!"); // update the free list
