@@ -97,11 +97,26 @@ export const minicore = (asm, opts) => {
   def("0x41")
   dat("(CONST)", 0x41);
 
+  def("0x4000");
+  dat("(CONST)", 0x4000);
+
   def("0x8000");
   dat("(CONST)", 0x8000);
 
+  def("0x7FFF");
+  dat("(CONST)", 0x7FFF);
+
   def("0xFFFE");
   dat("(CONST)", 0xFFFE);
+
+  def("0x4000_&");
+  dat("0x4000", "&", "EXIT");
+
+  def("0x8000_&");
+  dat("0x8000", "&", "EXIT");
+
+  def("0x8000_OR");
+  dat("0x8000", "OR", "EXIT");
 
   def("CLEAN_BOOL");
   dat(">R", "FALSE", "TRUE", "R>", "?:", "EXIT");
