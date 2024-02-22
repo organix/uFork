@@ -10,10 +10,7 @@
             height: 100%;
         }
         body {
-            --black: #222222;
-            --red: #F92672;
-            --yellow: #E6DB74;
-            background: var(--black);
+            background: #222222;
             color: white;
             line-height: 1.5;
             font-size: 17px;
@@ -44,35 +41,11 @@
             margin: 2px;
             white-space: nowrap;
         }
-        #svg,
-        #output {
+        svg-dev-ui,
+        io-dev-ui {
             flex: 1 1;
+            min-height: 0;
             margin: 4px 10px 2px;
-        }
-        #svg {
-            background: white;
-            border-radius: 4px;
-        }
-        #output {
-            white-space: pre;
-            font-family: Programma, monospace;
-            min-height: 60px;
-            overflow: auto;
-        }
-        #output > .warn {
-            color: var(--red);
-        }
-        #output > .debug {
-            color: white;
-        }
-        #output > .info {
-            color: gray;
-        }
-        #output:not(.info) > .info {
-            display: none;
-        }
-        #output > .io {
-            color: var(--yellow);
         }
     </style>
     <script type="module" src="main.js"></script>
@@ -80,32 +53,16 @@
 <body>
     <div id="tools">
         <div id="controls">
-            <label>
-                <span id="dimensions"></span>
-                <input id="scale" type="range" min="0" max="1" step="0.01">
-            </label>
-            <label>
-                <input id="bg_color" type="color" value="#ffffff" />
-                Background
-            </label>
-            <label>
-                <input id="info" type="checkbox" />
-                Show info
-            </label>
             <select id="device" title="Choose device">
                 <option value="io">I/O</option>
                 <option value="svg">SVG</option>
             </select>
             <select id="lang" title="Choose language"></select>
         </div>
-        <div id="output"></div>
-        <svg id="svg" fill="transparent" stroke="transparent"></svg>
         <div id="buttons">
             <button id="run">▶ Run</button>
-            <button id="stop" style="display: none;">⏹ Stop</button>
             <button id="debug">🧐 Debug</button>
             <button id="test">✔ Test</button>
-            <button id="clear_output">⨉ Clear</button>
             <button id="help">﹖ Help</button>
         </div>
     </div>

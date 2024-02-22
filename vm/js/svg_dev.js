@@ -12,7 +12,9 @@ const svg_key = 101; // from dev.asm
 // and callback is the customer that will receive the result.
 // The result looks like (#unit) on success, and (#? . error) on failure.
 
-function svg_dev(core, make_ddev, svg_element) {
+function svg_dev(core, make_ddev, on_draw) {
+    const on_code = svg_drawing(on_draw);
+
     function on_event_stub(event_stub_ptr) {
         const event_stub = core.u_read_quad(event_stub_ptr);
         const event = core.u_read_quad(event_stub.y);
@@ -44,11 +46,6 @@ function svg_dev(core, make_ddev, svg_element) {
         return ufork.E_OK;
     }
 
-    function svg_append(html) {
-        svg_element.innerHTML += html;
-    }
-
-    const on_code = svg_drawing(svg_append);
     const ddev = make_ddev(on_event_stub);
     const svg_proxy = ddev.h_reserve_proxy();
     core.h_install(core.u_fixnum(svg_key), svg_proxy);
