@@ -127,6 +127,18 @@ export const uFork_instrHandling = (asm, opts) => {
     def("uFork_#?__OVER");
     dat("uFork_#?", "OVER", "EXIT");
   }
+  
+  def("uFork_free"); // ( qaddr -- )
+  if (hwImplOfQuadAllotAndFree) {
+    dat("qfree", "EXIT");
+  } else {
+    // just slapp the quad onto the free list
+    dat("uFork_memoryDescriptor", "qx@", "OVER", "qy!");
+    dat("uFork_memoryDescriptor", "qx!");
+    dat("uFork_memoryDescriptor", "qy@", "uFork_incr");
+    dat("uFork_memoryDescriptor", "qy!");
+    dat("EXIT");
+  }
 
   def("uFork_enqueueCont"); // ( kont -- )
   dat("uFork_eventQueueAndContQueue", "qz@"); // ( kont k_tail )
