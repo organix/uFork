@@ -59,3 +59,5 @@ Combinational logic design tricks to implement the ucode instruction set:
 2. PC mux that has four inputs: current PC, from top of returnstack, from instruction register, pc+(1|2).
    Last input is actually from a two input mux whose selection control is (instr==SKZ & TOS==0), which means +1 most of the time.
 
+![uCode exec diagram first draft](./signal-2024-02-23-16-41-43-624.jpg)
+
