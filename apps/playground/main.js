@@ -19,7 +19,8 @@ const unqualified_dev_lib_url = import.meta.resolve("../../lib/");
 
 const dev_lib_url = new URL(unqualified_dev_lib_url, location.href).href;
 const min_tools_size = 200;
-const default_tools_size = 300;
+const default_tools_width = 400;
+const default_tools_height = 200;
 const lang_packs = Object.create(null);
 lang_packs.asm = lang_asm;
 lang_packs.scm = lang_scm;
@@ -157,11 +158,11 @@ const split = dom(
             ? "right"
             : "bottom"
         ),
-        size: read_setting(
+        size: (
             is_landscape()
-            ? "tools_width"
-            : "tools_height"
-        ) ?? default_tools_size,
+            ? read_setting("tools_width") ?? default_tools_width
+            : read_setting("tools_height") ?? default_tools_height
+        ),
         divider_color: theme.gray,
         divider_width: "3px",
         on_drag(size) {
@@ -200,10 +201,10 @@ fetch_text().then(function (text) {
 window.onresize = function () {
     if (is_landscape()) {
         split.set_placement("right");
-        split.set_size(read_setting("tools_width") ?? default_tools_size);
+        split.set_size(read_setting("tools_width") ?? default_tools_width);
     } else {
         split.set_placement("bottom");
-        split.set_size(read_setting("tools_height") ?? default_tools_size);
+        split.set_size(read_setting("tools_height") ?? default_tools_height);
     }
 };
 document.body.append(split);
