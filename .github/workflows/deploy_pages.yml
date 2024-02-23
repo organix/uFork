@@ -32,7 +32,7 @@ jobs:
 # Deploy the apps.
 
       - run: cp -R apps/debugger _site/debugger
-      - run: deno run -A apps/playground/build.js
-      - run: cp -R apps/playground/dist _site/playground
+      - run: cp -R apps/playground _site/playground
+      - run: deno run -A apps/playground/optimize.js _site/playground/index.html
       - uses: actions/upload-pages-artifact@v2
       - uses: actions/deploy-pages@v2
