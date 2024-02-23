@@ -31,7 +31,8 @@ Machine word (cell) size is 16 bits.
 | 0x0018 | qalloc | ( -- qaddr )          | get a quad from the hardware implemented allocator |
 | 0x0019 | qfree  | ( qaddr -- )          | free up a quad and give it back to the hardware implemented allocator |
 | 0x001A | qgcstep | ( -- )               | crank the garbage collector of the hardware implemented allocator one step |
-| 0x001B-3C |     | reserved              | |
+| 0x001B | qfull? | ( -- bool ) | quad memory full? |
+| 0x001C-3C |     | reserved              | |
 | 0x003D | debug_rx? | ( -- char T \| F ) | |
 | 0x003E | debug_tx? | ( -- ready_flag )  | |
 | 0x003F | debug_tx! | ( char -- )        | |
