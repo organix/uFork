@@ -1,70 +1,21 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width" />
-    <title>uFork Playground</title>
-    <style>
-        html,
-        body {
-            height: 100%;
-        }
-        body {
-            background: #222222;
-            color: white;
-            line-height: 1.5;
-            font-size: 17px;
-            display: flex;
-            margin: 0;
-        }
-        #tools {
-            display: flex;
-            flex-direction: column;
-        }
-        #controls {
-            display: flex;
-            flex-wrap: wrap;
-            justify-content: flex-end;
-            margin: 8px;
-        }
-        #controls > * {
-            margin: 4px;
-        }
-        #buttons {
-            display: flex;
-            justify-content: stretch;
-            flex-wrap: wrap;
-            margin: 6px;
-        }
-        #buttons > * {
-            flex: 1 1;
-            margin: 2px;
-            white-space: nowrap;
-        }
-        svg-dev-ui,
-        io-dev-ui {
-            flex: 1 1;
-            min-height: 0;
-            margin: 4px 10px 2px;
-        }
-    </style>
-    <script type="module" src="main.js"></script>
+<meta charset="utf-8" />
+<title>uFork Playground</title>
+<meta name="viewport" content="width=device-width" />
+<style>
+    html, body {
+        height: 100%;
+    }
+    body {
+        background: #222222;
+        margin: 0;
+    }
+</style>
+<script type="module" src="main.js"></script>
+<link rel="icon" type="image/png" sizes="128x128" href="favicon.png">
+<!-- PRELOADS GO HERE -->
 </head>
-<body>
-    <div id="tools">
-        <div id="controls">
-            <select id="device" title="Choose device">
-                <option value="io">I/O</option>
-                <option value="svg">SVG</option>
-            </select>
-            <select id="lang" title="Choose language"></select>
-        </div>
-        <div id="buttons">
-            <button id="run">▶ Run</button>
-            <button id="debug">🧐 Debug</button>
-            <button id="test">✔ Test</button>
-            <button id="help">﹖ Help</button>
-        </div>
-    </div>
-</body>
+<body></body>
 </html>

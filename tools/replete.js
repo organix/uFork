@@ -13,6 +13,7 @@
 
 import ecomcon from "https://raw.githubusercontent.com/douglascrockford/ecomcon/b3eda9196a827666af178199aff1c5b8ad9e45b3/ecomcon.js";
 import run_replete from "https://deno.land/x/replete@0.0.8/run.js";
+// import {minify} from "https://esm.sh/terser";
 import import_map from "./import_map.js";
 
 const mime_types = {
@@ -38,6 +39,20 @@ run_replete({
     source(command) {
         return Promise.resolve(ecomcon(command.source, ["debug"]));
     },
+    // read(locator) {
+    //     return Deno.readFile(new URL(locator)).then(function (buffer) {
+    //         if (locator.endsWith(".js")) {
+    //             const source = new TextDecoder().decode(buffer);
+    //             return minify(source, {
+    //                 module: true,
+    //                 compress: {unsafe_arrows: true, passes: 2, ecma: "6"}
+    //             }).then(function ({code}) {
+    //                 return code;
+    //             });
+    //         }
+    //         return buffer;
+    //     });
+    // },
     locate(specifier, parent_locator) {
 
 // Consult the import map.
