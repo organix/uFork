@@ -38,6 +38,7 @@ export const defineInstructionset = (asm) => {
   def("QUAD_ALLOCATE", 0x0018);
   def("QUAD_FREE",    0x0019);
   def("QUAD_GCSTEP",  0x001A);
+  def("QUAD_ISFULL",  0x001B);
 
   def("DEBUG_LED",    0x003C);
   def("DEBUG_RX?",    0x003D);
@@ -61,6 +62,11 @@ export const defineInstructionset = (asm) => {
   def("qx!", "QUAD_X_STORE");
   def("qy!", "QUAD_Y_STORE");
   def("qz!", "QUAD_Z_STORE");
+
+  def("qallot",  "QUAD_ALLOCATE");
+  def("qfree",   "QUAD_FREE");
+  def("qgcstep", "QUAD_GCSTEP");
+  def("qfull?",  "QUAD_ISFULL");
   
   return asm;
 };
