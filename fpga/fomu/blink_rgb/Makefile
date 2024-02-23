@@ -10,7 +10,7 @@ install: $(TOP).dfu
 	dfu-util -D $<
 
 clean:
-	rm -f *.sim *.vcd *.json *.log *.asc *.bit *.dfu
+	rm -f *.sim *.vcd *.json *.log *.asc *.bit *.dfu abc.history
 
 %.sim: %_tb.v
 	iverilog -o $@ $^
