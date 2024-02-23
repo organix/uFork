@@ -14,6 +14,7 @@ export const uFork_instrHandling = (asm, opts) => {
     0x4000 : opts.memoryDescriptor_qaddr ;
   const uForkSubroutines = (opts.uForkSubroutines == undefined) ? false : opts.uForkSubroutines ;
   const hwImplOfQuadAllotAndFree = (opts.hwImplOfQuadAllotAndFree == undefined) ? false : opts.hwImplOfQuadAllotAndFree ;
+  const maxTopOfQuadMemory = (opts.maxTopOfQuadMemory == undefined) ? 0x5000 : opts.maxTopOfQuadMemory ;
   
   def("uFork_doOneSnú"); // ( -- ) 
   dat("uFork_dispatchOneEvent");
@@ -113,14 +114,16 @@ export const uFork_instrHandling = (asm, opts) => {
 
   def("uFork_allot"); // ( -- qaddr )
   if (hwImplOfQuadAllotAndFree) {
-    dat("qallot", "EXIT");
+    dat("qallot", "qfull?", "(BRNZ)", "uFork_outOfQuadMemory", "EXIT");
   } else {
     // first check if any quads are on the free list
     dat("uFork_memoryDescriptor", "qx@"); // ( qa )
     dat("DUP", "uFork_()", "=");          // ( qa notNil? )
     dat("(BRZ)", "uFork_allot_l0");       // ( qa )
     // no quads on the free list, increment top addr and use that
-    dat("uFork_memoryDescriptor", "qt@", "1+", "DUP");
+    dat("uFork_memoryDescriptor", "qt@");
+    dat("DUP", "uFork_maxTopOfQuadMemory", "<", "(BRZ)", "uFork_outOfQuadMemory");
+    dat("1+", "DUP");
     dat("uFork_memoryDescriptor", "qt!");
     dat("(JMP)", "uFork_allot_l1");
     def("uFork_allot_l0"); // ( qa ) got a quad off the free list
@@ -135,6 +138,9 @@ export const uFork_instrHandling = (asm, opts) => {
 
     def("uFork_#?__OVER");
     dat("uFork_#?", "OVER", "EXIT");
+
+    def("uFork_maxTopOfQuadMemory");
+    dat("(CONST)", maxTopOfQuadMemory);
   }
   
   def("uFork_free"); // ( qaddr -- )
