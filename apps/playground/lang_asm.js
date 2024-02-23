@@ -27,9 +27,9 @@ const styles = {
     warning: {borderRadius: "2px", outline: "1px solid " + theme.red}
 };
 
-function highlight(the_element) {
-    const text = the_element.textContent;
-    the_element.innerHTML = "";
+function highlight(element) {
+    const text = element.textContent;
+    element.innerHTML = "";
     const ir = assemble(text);
     ir.tokens.forEach(function (token) {
         const errors = ir.errors.filter(function (error) {
@@ -46,7 +46,7 @@ function highlight(the_element) {
             );
             Object.assign(span.style, styles.warning);
         }
-        the_element.append(span);
+        element.append(span);
     });
 }
 

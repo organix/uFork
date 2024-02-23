@@ -3,7 +3,7 @@
 import scm from "https://ufork.org/lib/scheme.js";
 import handle_tab from "./handle_tab.js";
 import handle_comment from "./handle_comment.js";
-import element from "./element.js";
+import dom from "./dom.js";
 import theme from "./theme.js";
 
 const indent = "    ";
@@ -11,18 +11,18 @@ const rx_comment = /^(\s*)(;+\u0020?)/;
 const comment_prefix = "; ";
 const rainbow = Object.values(theme);
 
-function highlight(the_element) {
-    const text = the_element.textContent;
-    the_element.innerHTML = "";
+function highlight(element) {
+    const text = element.textContent;
+    element.innerHTML = "";
     const ir = scm.compile(text);
     if (ir.errors !== undefined && ir.errors.length > 0) {
 
 // Show the position of the error.
 
         const error = ir.errors[0];
-        the_element.append(
+        element.append(
             text.slice(0, error.start),
-            element("span", {
+            dom("span", {
                 textContent: text.slice(error.start, error.end),
                 title: error.error,
                 style: {
@@ -38,18 +38,18 @@ function highlight(the_element) {
 
         let depth = 0;
         Array.from(text).forEach(function (glyph) {
-            const paren = element("span", {
+            const paren = dom("span", {
                 textContent: glyph,
                 style: {color: rainbow[depth]}
             });
             if (glyph === "(") {
-                the_element.append(paren);
+                element.append(paren);
                 depth += 1;
             } else if (glyph === ")") {
                 depth -= 1;
-                the_element.append(paren);
+                element.append(paren);
             } else {
-                the_element.append(glyph);
+                element.append(glyph);
             }
         });
     }

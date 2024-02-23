@@ -2,3 +2,4 @@ abc.history
 *.dfu
 *.json
 *.log
+*.vcd

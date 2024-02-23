@@ -1,8 +1,8 @@
 // A split view with draggable divider.
 
 // It renders two slots, "main" and "peripheral", on either side of the divider.
-// Each slot should receive exactly one element before the host is added to the
-// document.
+// Each slot should receive exactly one element before the <split-ui> element is
+// connected to the document.
 
 // The peripheral is given a 'placement': "right", "bottom", "left", or "top".
 
@@ -16,9 +16,9 @@
 /*jslint browser */
 
 import make_ui from "./ui.js";
-import element from "./element.js";
+import dom from "./dom.js";
 
-const split_ui = make_ui("split-ui", function (host, {
+const split_ui = make_ui("split-ui", function (element, {
     placement = "right",
     size = 100,
     divider_color = "black",
@@ -27,8 +27,8 @@ const split_ui = make_ui("split-ui", function (host, {
         return true;
     }
 }) {
-    const shadow = host.attachShadow({mode: "closed"});
-    const style = element("style", `
+    const shadow = element.attachShadow({mode: "closed"});
+    const style = dom("style", `
         :host {
             display: flex;
         }
@@ -43,8 +43,8 @@ const split_ui = make_ui("split-ui", function (host, {
             filter: brightness(1.5);
         }
     `);
-    const main_slot = element("slot", {name: "main"});
-    const peripheral_slot = element("slot", {name: "peripheral"});
+    const main_slot = dom("slot", {name: "main"});
+    const peripheral_slot = dom("slot", {name: "peripheral"});
     let drag_origin;
 
     function set_size(the_size) {
@@ -65,7 +65,7 @@ const split_ui = make_ui("split-ui", function (host, {
         drag_origin = undefined;
     }
 
-    const divider = element("div", {
+    const divider = dom("div", {
         onpointerdown(event) {
             const peripheral = peripheral_slot.assignedElements()[0];
             if (peripheral !== undefined && event.buttons === 1) {
@@ -114,7 +114,7 @@ const split_ui = make_ui("split-ui", function (host, {
     function set_placement(the_placement) {
         placement = the_placement;
         if (placement === "top" || placement === "bottom") {
-            host.style.flexDirection = (
+            element.style.flexDirection = (
                 placement === "top"
                 ? "column-reverse"
                 : "column"
@@ -123,7 +123,7 @@ const split_ui = make_ui("split-ui", function (host, {
             divider.style.height = divider_width;
             divider.style.cursor = "ns-resize";
         } else {
-            host.style.flexDirection = (
+            element.style.flexDirection = (
                 placement === "left"
                 ? "row-reverse"
                 : "row"
@@ -135,8 +135,8 @@ const split_ui = make_ui("split-ui", function (host, {
     }
 
     shadow.append(style, main_slot, divider, peripheral_slot);
-    host.set_placement = set_placement;
-    host.set_size = set_size;
+    element.set_placement = set_placement;
+    element.set_size = set_size;
     return {
         connect() {
             set_placement(placement);
@@ -148,7 +148,7 @@ const split_ui = make_ui("split-ui", function (host, {
 //debug document.documentElement.innerHTML = "";
 //debug const placements = ["right", "bottom", "left", "top"];
 //debug let placement_nr = 0;
-//debug const split = element(
+//debug const split = dom(
 //debug     split_ui({
 //debug         placement: placements[placement_nr],
 //debug         size: 50,
@@ -161,17 +161,17 @@ const split_ui = make_ui("split-ui", function (host, {
 //debug     }),
 //debug     {style: {width: "400px", height: "400px"}},
 //debug     [
-//debug         element("div", {
+//debug         dom("div", {
 //debug             style: {backgroundColor: "red"},
 //debug             slot: "main"
 //debug         }),
-//debug         element("div", {
+//debug         dom("div", {
 //debug             style: {backgroundColor: "blue"},
 //debug             slot: "peripheral"
 //debug         })
 //debug     ]
 //debug );
-//debug const button = element("button", {
+//debug const button = dom("button", {
 //debug     textContent: "Toggle placement",
 //debug     onclick() {
 //debug         placement_nr = (placement_nr + 1) % placements.length;

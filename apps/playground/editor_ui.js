@@ -4,20 +4,23 @@
 /*jslint browser */
 
 import make_ui from "./ui.js";
-import element from "./element.js";
+import dom from "./dom.js";
 import theme from "./theme.js";
 import ed from "./ed.js";
 
-const editor_ui = make_ui("editor-ui", function (host, {
+const editor_ui = make_ui("editor-ui", function (element, {
     text = "",
     lang,
+    lang_packs = {},
     on_text_input
 }) {
-    const shadow = host.attachShadow({mode: "closed"});
-    const style = element("style", `
+    const shadow = element.attachShadow({mode: "closed"});
+    const style = dom("style", `
         ${theme.monospace_font_css}
         :host {
             font-family: ${theme.monospace_font_family}, monospace;
+            font-size: 17px;
+            line-height: 1.5;
             display: flex;
             white-space: pre;
             align-items: flex-start;
@@ -72,8 +75,8 @@ const editor_ui = make_ui("editor-ui", function (host, {
             background-color: rgb(255, 255, 255, 0.2);
         }
     `);
-    const line_numbers_element = element("line_numbers");
-    const text_element = element("div"); // Firefox v122
+    const line_numbers_element = dom("line_numbers");
+    const text_element = dom("div"); // Firefox v122
 
     let line_selection_anchor;
     let editor;
@@ -123,14 +126,14 @@ const editor_ui = make_ui("editor-ui", function (host, {
         }
         editor = ed({
             element: text_element,
-            highlight: lang?.highlight,
+            highlight: lang_packs[lang]?.highlight,
             on_input(text) {
                 update_line_numbers();
                 on_text_input(text);
             },
             on_keydown(event) {
-                if (lang?.handle_keydown !== undefined) {
-                    lang.handle_keydown(editor, event);
+                if (lang_packs[lang]?.handle_keydown !== undefined) {
+                    lang_packs[lang].handle_keydown(editor, event);
                 }
             }
         });
@@ -152,6 +155,10 @@ const editor_ui = make_ui("editor-ui", function (host, {
         }
     }
 
+    function get_lang() {
+        return lang;
+    }
+
     function set_lang(the_lang) {
         lang = the_lang;
         if (editor !== undefined) {
@@ -160,9 +167,10 @@ const editor_ui = make_ui("editor-ui", function (host, {
     }
 
     shadow.append(style, line_numbers_element, text_element);
-    host.get_text = get_text;
-    host.set_text = set_text;
-    host.set_lang = set_lang;
+    element.get_text = get_text;
+    element.set_text = set_text;
+    element.get_lang = get_lang;
+    element.set_lang = set_lang;
     return {
         connect() {
             reset_editor();
