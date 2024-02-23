@@ -78,7 +78,7 @@ const incr = (val) => ((val + 1) & 0xFFFF);
 
 export const makeEmulator = (opts) => {
   opts = (opts == undefined) ? {} : opts;
-  let pc = (opts.pc == undefined) ? 0x0100 : opts.pc ;
+  let pc = (opts.pc == undefined) ? 0x0040 : opts.pc ;
   const emu = {
     get pc() { return pc; },
     set pc(addr) { pc = addr; return addr; },

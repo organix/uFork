@@ -38,6 +38,7 @@ export const defineInstructionset = (asm) => {
   def("QUAD_ALLOCATE", 0x0018);
   def("QUAD_FREE",    0x0019);
   def("QUAD_GCSTEP",  0x001A);
+  def("QUAD_ISFULL",  0x001B);
 
   def("DEBUG_LED",    0x003C);
   def("DEBUG_RX?",    0x003D);
@@ -61,6 +62,11 @@ export const defineInstructionset = (asm) => {
   def("qx!", "QUAD_X_STORE");
   def("qy!", "QUAD_Y_STORE");
   def("qz!", "QUAD_Z_STORE");
+
+  def("qallot",  "QUAD_ALLOCATE");
+  def("qfree",   "QUAD_FREE");
+  def("qgcstep", "QUAD_GCSTEP");
+  def("qfull?",  "QUAD_ISFULL");
   
   return asm;
 };
@@ -97,11 +103,26 @@ export const minicore = (asm, opts) => {
   def("0x41")
   dat("(CONST)", 0x41);
 
+  def("0x4000");
+  dat("(CONST)", 0x4000);
+
   def("0x8000");
   dat("(CONST)", 0x8000);
 
+  def("0x7FFF");
+  dat("(CONST)", 0x7FFF);
+
   def("0xFFFE");
   dat("(CONST)", 0xFFFE);
+
+  def("0x4000_&");
+  dat("0x4000", "&", "EXIT");
+
+  def("0x8000_&");
+  dat("0x8000", "&", "EXIT");
+
+  def("0x8000_OR");
+  dat("0x8000", "OR", "EXIT");
 
   def("CLEAN_BOOL");
   dat(">R", "FALSE", "TRUE", "R>", "?:", "EXIT");
@@ -132,6 +153,12 @@ export const minicore = (asm, opts) => {
   def("(JMPTBL)_l0"); // ( idx raddr )
   dat("DUP", "@", "+", "1+", ">R", "EXIT");
 
+  def("(NEXT)"); // ( ) R:( count raddr -- )
+  dat("R>", "R>", "DUP", "(BRZ)", "(NEXT)_l0"); // ( raddr count )
+  dat("1-", ">R", "@", ">R", "EXIT");
+  def("(NEXT)_l0");
+  dat("DROP", "1+", ">R", "EXIT");
+
   def("(LIT)"); // literal ( -- item )
   dat("R>", "DUP", "1+", ">R", "@", "EXIT");
 
@@ -143,6 +170,12 @@ export const minicore = (asm, opts) => {
 
   def("2DROP");
   dat("DROP", "DROP", "EXIT");
+
+  def("NIP"); // ( a b c -- a c )
+  dat("SWAP", "DROP", "EXIT");
+
+  def("R@"); // ( -- a ) R:( a ra -- a )
+  dat("R>", "R>", "DUP", ">R", "SWAP", ">R", "EXIT");
 
   def("+"); // ( a b -- sum )
   dat("UM+");
@@ -339,9 +372,13 @@ export const makeUcodeImage = (opts) => {
   opts = (opts == undefined) ? {} : opts ;
   const asm = makeAssembler(opts.assemblerOpts);
   defineInstructionset(asm);
+  asm.org(0x0080);
   minicore(asm);
   wozmon(asm);
   uFork_instrHandling(asm);
+
+  asm.org(0x0040); // default start address
+  asm.dat("wozmon", "(JMP)", 0x0040); // for now we start in wozmon
   asm.done();
   return asm.whenDone();
 };

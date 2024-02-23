@@ -10,6 +10,7 @@ This is a living document outlining our project goals.
   * Event and Continuation queue management and dispatch
   * Micro-code execution engine
     * Write the micro code instruction documentation
+    * Add uCode exec engine block diagram.
   * Micro-coded instructions for stack and pair-list manipulation
   * Micro-coded instructions for ALU and flow-control operations
   * Micro-coded instructions for Actor and Sponsor primitives
