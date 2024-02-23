@@ -291,6 +291,14 @@ export const uFork_instrHandling = (asm, opts) => {
   dat("(NEXT)", "uFork_instr_drop_l0"); // ( kont nextest_stack ) R:( )
   dat("OVER", "uFork_sp!"); // ( kont )
   dat("(JMP)", "uFork_instr__common_longer_tail");
+
+  def("uFork_instr_pick"); // ( kont ip opcode )
+  dat("DROP");             // ( kont ip )
+  // todo: insert here a memory fuel check&burn here
+  dat("qy@");              // ( kont fixnum )
+  // todo: insert isFixnum? check and sponsor signal here
+  dat("uFork_fixnum2int"); // ( kont n )
+  // -merkill- hmm... spurning um hvort ætti að branch á minus eður ei
   
 
   def("uFork_instr__subroutine_call"); // ( kont ip opcode -- )
