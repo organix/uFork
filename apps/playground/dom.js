@@ -1,5 +1,5 @@
-// The 'element' function creates a new DOM element with the specified 'tag'
-// name, or modifies an existing element.
+// The 'dom' function creates a new DOM element with the specified 'tag' name,
+// or modifies an existing element.
 
 // The 'properties' parameter is an object containing values to assign to the
 // element's properties.
@@ -10,7 +10,7 @@
 
 /*jslint browser */
 
-function element(tag, properties = {}, children = []) {
+function dom(tag, properties = {}, children = []) {
     if (typeof properties === "string" || Array.isArray(properties)) {
         children = properties;
         properties = {};
@@ -18,17 +18,17 @@ function element(tag, properties = {}, children = []) {
     if (!Array.isArray(children)) {
         children = [children];
     }
-    const the_element = (
+    const element = (
         typeof tag === "string"
         ? document.createElement(tag)
         : tag
     );
-    the_element.append(...children);
+    element.append(...children);
     Object.keys(properties).forEach(function (name) {
-        the_element[name] = properties[name];
+        element[name] = properties[name];
     });
-    Object.assign(the_element.style, properties.style);
-    return the_element;
+    Object.assign(element.style, properties.style);
+    return element;
 }
 
-export default Object.freeze(element);
+export default Object.freeze(dom);

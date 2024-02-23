@@ -1,15 +1,15 @@
-// Observe and interact with the IO device. Also capable of displaying generic
-// textual output at a variety of log levels.
+// Observe and interact with the IO device. Also displays generic textual output
+// at a variety of log levels.
 
 /*jslint browser */
 
 import make_ui from "./ui.js";
-import element from "./element.js";
+import dom from "./dom.js";
 import theme from "./theme.js";
 
-const io_dev_ui = make_ui("io-dev-ui", function (host, {on_input}) {
-    const shadow = host.attachShadow({mode: "closed"});
-    const style = element("style", `
+const io_dev_ui = make_ui("io-dev-ui", function (element, {on_input}) {
+    const shadow = element.attachShadow({mode: "closed"});
+    const style = dom("style", `
         :host {
             display: flex;
             flex-direction: column;
@@ -18,10 +18,13 @@ const io_dev_ui = make_ui("io-dev-ui", function (host, {on_input}) {
         ${theme.monospace_font_css}
         io_output {
             font-family: ${theme.monospace_font_family}, monospace;
+            font-size: 17px;
             line-height: 1.3;
             white-space: pre;
             min-height: 60px;
             overflow: auto;
+            scrollbar-color: ${theme.gray} transparent;
+            caret-color: white;
             flex: 1 1;
         }
         io_output > .io {
@@ -42,16 +45,17 @@ const io_dev_ui = make_ui("io-dev-ui", function (host, {on_input}) {
         io_controls {
             display: flex;
             justify-content: space-between;
-            margin-top: 5px;
+            margin-top: 6px;
         }
         label {
             font-family: system-ui;
             font-size: 15px;
         }
     `);
-    const text_element = element("io_output", {
+    const text_element = dom("io_output", {
         contentEditable: "true",
         spellcheck: false,
+        title: "Input and output",
         onkeydown(event) {
             if (!event.ctrlKey && !event.metaKey) {
                 event.preventDefault();
@@ -80,7 +84,7 @@ const io_dev_ui = make_ui("io-dev-ui", function (host, {on_input}) {
     }
 
     function append_output(level, ...values) {
-        text_element.append(element("span", {
+        text_element.append(dom("span", {
             className: level,
             textContent: values.join(" ")
         }));
@@ -91,9 +95,9 @@ const io_dev_ui = make_ui("io-dev-ui", function (host, {on_input}) {
         text_element.innerHTML = "";
     }
 
-    const controls_element = element("io_controls", [
-        element("label", [
-            element("input", {
+    const controls_element = dom("io_controls", [
+        dom("label", {title: "Show extended trace information"}, [
+            dom("input", {
                 type: "checkbox",
                 oninput() {
                     text_element.classList.toggle("show_info");
@@ -102,31 +106,32 @@ const io_dev_ui = make_ui("io-dev-ui", function (host, {on_input}) {
             }),
             " Show info"
         ]),
-        element("button", {
+        dom("button", {
             textContent: "⨉ Clear",
-            onclick: clear_output
+            onclick: clear_output,
+            title: "Clear I/O output"
         })
     ]);
 
     shadow.append(style, text_element, controls_element);
-    host.append_output = append_output;
-    host.warn = function (...values) {
+    element.append_output = append_output;
+    element.warn = function (...values) {
         append_output("warn", ...values, "\n");
     };
-    host.debug = function (...values) {
+    element.debug = function (...values) {
         append_output("debug", ...values, "\n");
     };
-    host.info = function (...values) {
+    element.info = function (...values) {
         append_output("info", ...values, "\n");
     };
-    host.output = function (...values) {
+    element.output = function (...values) {
         append_output("io", ...values);
     };
-    host.clear = clear_output;
+    element.clear = clear_output;
 });
 
 //debug document.documentElement.innerHTML = "";
-//debug const io_dev = element(
+//debug const io_dev = dom(
 //debug     io_dev_ui({on_input: console.log}),
 //debug     {style: {width: "400px", height: "400px", background: "black"}}
 //debug );

@@ -5,16 +5,16 @@
 /*jslint browser */
 
 import make_ui from "./ui.js";
-import element from "./element.js";
+import dom from "./dom.js";
 import theme from "./theme.js";
 
-const svg_dev_ui = make_ui("svg-dev-ui", function (host, {
+const svg_dev_ui = make_ui("svg-dev-ui", function (element, {
     viewbox_size = 32, // defaults to slider's halfway position
     max_viewbox_size = 1024,
     background_color = "#ffffff"
 }) {
-    const shadow = host.attachShadow({mode: "closed"});
-    const style = element("style", `
+    const shadow = element.attachShadow({mode: "closed"});
+    const style = dom("style", `
         :host {
             display: flex;
             flex-direction: column;
@@ -48,7 +48,7 @@ const svg_dev_ui = make_ui("svg-dev-ui", function (host, {
         input {
             margin: 0 10px;
         }
-        dimensions_value {
+        svg_dimensions {
             color: ${theme.silver};
             font-weight: normal;
         }
@@ -59,7 +59,7 @@ const svg_dev_ui = make_ui("svg-dev-ui", function (host, {
     );
     svg_element.setAttribute("fill", "transparent");
     svg_element.setAttribute("stroke", "transparent");
-    const dimensions_element = element("dimensions_value");
+    const dimensions_element = dom("svg_dimensions");
     let scale_input;
     let background_input;
 
@@ -77,17 +77,17 @@ const svg_dev_ui = make_ui("svg-dev-ui", function (host, {
 
     function set_background_color(new_background_color) {
         background_color = new_background_color;
-        background_input.value = background_color;
         svg_element.style.background = background_color;
+        background_input.value = background_color;
     }
 
-    background_input = element("input", {
+    background_input = dom("input", {
         type: "color",
         oninput() {
             set_background_color(background_input.value);
         }
     });
-    scale_input = element("input", {
+    scale_input = dom("input", {
         type: "range",
         min: 0,
         max: 1,
@@ -97,13 +97,22 @@ const svg_dev_ui = make_ui("svg-dev-ui", function (host, {
             set_viewbox_size(Math.round(max_viewbox_size ** scale));
         }
     });
-    const controls_element = element("svg_controls", [
-        element("svg_pickers", [
-            element("label", ["Scale", scale_input, dimensions_element]),
-            element("label", ["Background", background_input])
+    const controls_element = dom("svg_controls", [
+        dom("svg_pickers", [
+            dom(
+                "label",
+                {title: "Adjust the drawing's viewbox"},
+                ["Scale", scale_input, dimensions_element]
+            ),
+            dom(
+                "label",
+                {title: "Change the drawing's background color"},
+                ["Background", background_input]
+            )
         ]),
-        element("button", {
+        dom("button", {
             textContent: "⨉ Clear",
+            title: "Clear the drawing",
             onclick() {
                 svg_element.innerHTML = "";
             }
@@ -117,14 +126,15 @@ const svg_dev_ui = make_ui("svg-dev-ui", function (host, {
     set_background_color(background_color);
     set_viewbox_size(viewbox_size);
     shadow.append(style, svg_element, controls_element);
-    host.draw = draw;
-    host.set_viewbox_size = set_viewbox_size;
-    host.set_background_color = set_background_color;
+    element.title = "SVG drawing";
+    element.draw = draw;
+    element.set_viewbox_size = set_viewbox_size;
+    element.set_background_color = set_background_color;
 });
 
 //debug document.documentElement.innerHTML = "";
 //debug document.body.style.background = "black";
-//debug const svg_dev = element(
+//debug const svg_dev = dom(
 //debug     svg_dev_ui({viewbox_size: 24, background_color: "#FF99FF"}),
 //debug     {style: {width: "400px", height: "400px"}}
 //debug );
