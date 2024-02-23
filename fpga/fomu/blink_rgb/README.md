@@ -35,6 +35,13 @@ To reset the Fomu and run the boot-loader,
 just remove the Fomu from the USB port
 and re-insert it.
 
+You can use the browser-based
+[floorplan visualizer](https://knielsen.github.io/ice40_viewer/ice40_viewer.html)
+to examine the design's resource usage and routing.
+For this, you need to build the `asc` file, like this:
+
+    make top.asc
+
 The `timer` component has a simulation test-bench.
 To build and run the test-bench:
 
