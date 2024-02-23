@@ -55,9 +55,8 @@ module top (
     reg run = 1'b0;
     reg [5:0] waiting = 0;
     always @(posedge clk) begin
-        // wait for memory to "settle"
         if (!run) begin
-            {run, waiting} <= {1'b0, waiting} + 1'b1;
+            {run, waiting} <= {1'b0, waiting} + 1'b1;           // wait for overflow
         end
     end
 
