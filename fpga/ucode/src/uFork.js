@@ -165,6 +165,18 @@ export const uFork = (asm, opts) => {
     dat("EXIT");
   }
 
+  def("uFork_enqueueEvents"); // ( headOfNewEvents -- )
+  dat("DUP");                 // ( events events )
+  dat("uFork_eventQueueAndContQueue", "qx@"); // ( events events e_tail )
+  dat("qz!");  // link the events segment in ( events )
+  def("uFork_enqueueEvents_l0"); // find the tail of the added events ( events )
+  dat("DUP", "qz@", "DUP", "uFork_()", "=", "(BRNZ)", "uFork_enqueueEvents_l1");
+  dat("NIP", "(JMP)", "uFork_enqueueEvents_l0");
+  def("uFork_enqueueEvents_l1"); // ( tailOfEvents uFork_() )
+  dat("DROP", "uFork_eventQueueAndContQueue", "qx!"); // ( )
+  dat("EXIT");
+  
+
   def("uFork_enqueueCont"); // ( kont -- )
   dat("uFork_eventQueueAndContQueue", "qz@"); // ( kont k_tail )
   dat("2DUP", "qz!", "DROP");
