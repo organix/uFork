@@ -6,7 +6,7 @@
  */
 // using uFork/docs/vm.md as reference
 
-export const uFork_instrHandling = (asm, opts) => {
+export const uFork = (asm, opts) => {
   opts = (opts == undefined) ? {} : opts ;
   const eventQueueAndContQueue_qaddr = (opts.eventQueueAndContQueue_qaddr == undefined ) ?
     0x4001 : opts.eventQueueAndContQueue_qaddr ;
