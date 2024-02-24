@@ -72,59 +72,59 @@ module lifo8x8_test (
         {   8'h00,  1'b0,   1'b0,   1'b0,   8'h00,  1'b0,   8'h00,  STOP    };
         script[5'h01] =  // start state
         {   8'h00,  1'b0,   1'b0,   1'b0,   8'h00,  1'b0,   8'h00,  5'h02   };
-        script[5'h02] =  // ram[^50FF] <= $BE11
-        {   8'hD5,  1'b1,   1'b0,   1'b0,   8'h00,  1'b0,   8'h00,  5'h03   };
-        script[5'h03] =  // ram[^5095] <= $C0DE
-        {   8'h00,  1'b0,   1'b1,   1'b1,   8'hD5,  1'b0,   8'h00,  LOOP    };
-        script[5'h04] =  // rdata <= ram[^50FF]
-        {   8'h00,  1'b0,   1'b0,   1'b0,   8'h00,  1'b0,   8'h00,  STOP    };
-        script[5'h05] =  // assert(rdata == $BE11); rdata <= ram[^5095]
-        {   8'h00,  1'b0,   1'b0,   1'b0,   8'h00,  1'b0,   8'h00,  STOP    };
-        script[5'h06] =  // assert(rdata == $C0DE)
-        {   8'h00,  1'b0,   1'b0,   1'b0,   8'h00,  1'b0,   8'h00,  STOP    };
-        script[5'h07] =  // rdata <= ram[^50FF]; ram[^5034] <= $D05E
-        {   8'h00,  1'b0,   1'b0,   1'b0,   8'h00,  1'b0,   8'h00,  STOP    };
-        script[5'h08] =  // assert(rdata == $BE11)
-        {   8'h00,  1'b0,   1'b0,   1'b0,   8'h00,  1'b0,   8'h00,  STOP    };
-        script[5'h09] =  // rdata <= ram[^5034]; ram[^5034] <= $EA5E
-        {   8'h00,  1'b0,   1'b0,   1'b0,   8'h00,  1'b0,   8'h00,  STOP    };
-        script[5'h0A] =  // assert(rdata == $EA5E) --- read before write
-        {   8'h00,  1'b0,   1'b0,   1'b0,   8'h00,  1'b0,   8'h00,  STOP    };
-        script[5'h0B] =  // no-op
-        {   8'h00,  1'b0,   1'b0,   1'b0,   8'h00,  1'b0,   8'h00,  STOP    };
-        script[5'h0C] =  // no-op
-        {   8'h00,  1'b0,   1'b0,   1'b0,   8'h00,  1'b0,   8'h00,  STOP    };
-        script[5'h0D] =  // no-op
-        {   8'h00,  1'b0,   1'b0,   1'b0,   8'h00,  1'b0,   8'h00,  STOP    };
-        script[5'h0E] =  // no-op
-        {   8'h00,  1'b0,   1'b0,   1'b0,   8'h00,  1'b0,   8'h00,  STOP    };
+        script[5'h02] =  // push(13)
+        {   8'd13,  1'b1,   1'b0,   1'b0,   8'h00,  1'b0,   8'h00,  5'h03   };
+        script[5'h03] =  // assert(tos == 13)
+        {   8'h00,  1'b0,   1'b0,   1'b1,   8'd13,  1'b0,   8'h00,  5'h04   };
+        script[5'h04] =  // push(21)
+        {   8'd21,  1'b1,   1'b0,   1'b0,   8'h00,  1'b0,   8'h00,  5'h05   };
+        script[5'h05] =  // assert(tos == 21); assert(nos == 13)
+        {   8'h00,  1'b0,   1'b0,   1'b1,   8'd21,  1'b1,   8'd13,  5'h06   };
+        script[5'h06] =  // pop()
+        {   8'h00,  1'b0,   1'b1,   1'b0,   8'h00,  1'b0,   8'h00,  5'h07   };
+        script[5'h07] =  // assert(tos == 13)
+        {   8'h00,  1'b0,   1'b0,   1'b1,   8'd13,  1'b0,   8'h00,  5'h08   };
+        script[5'h08] =  // pop(); push(34)
+        {   8'd34,  1'b1,   1'b1,   1'b0,   8'h00,  1'b0,   8'h00,  5'h09   };
+        script[5'h09] =  // assert(tos == 34)
+        {   8'h00,  1'b0,   1'b0,   1'b1,   8'd34,  1'b0,   8'h00,  5'h0A   };
+        script[5'h0A] =  // push(55)
+        {   8'd55,  1'b1,   1'b0,   1'b0,   8'h00,  1'b0,   8'h00,  5'h0B   };
+        script[5'h0B] =  // push(89); assert(tos == 55); assert(nos == 34)
+        {   8'd89,  1'b1,   1'b0,   1'b1,   8'd55,  1'b1,   8'd34,  5'h0C   };
+        script[5'h0C] =  // pop(); assert(tos == 89); assert(nos == 55)
+        {   8'h00,  1'b0,   1'b1,   1'b1,   8'd89,  1'b1,   8'd55,  5'h0D   };
+        script[5'h0D] =  // pop(); assert(tos == 55); assert(nos == 34)
+        {   8'h00,  1'b0,   1'b1,   1'b1,   8'd55,  1'b1,   8'd34,  5'h0E   };
+        script[5'h0E] =  // assert(tos == 34)
+        {   8'h00,  1'b0,   1'b0,   1'b1,   8'd34,  1'b0,   8'd00,  DONE    };
         script[LOOP]  =  // no-op (loop forever...)
         {   8'h00,  1'b0,   1'b0,   1'b0,   8'h00,  1'b0,   8'h00,  LOOP    };
-        script[5'h10] =  // aaddr <= alloc($FADE)
+        script[5'h10] =  // no-op
         {   8'h00,  1'b0,   1'b0,   1'b0,   8'h00,  1'b0,   8'h00,  STOP    };
-        script[5'h11] =  // assert(aaddr == ^5000); aaddr <= alloc($AB1E)
+        script[5'h11] =  // no-op
         {   8'h00,  1'b0,   1'b0,   1'b0,   8'h00,  1'b0,   8'h00,  STOP    };
-        script[5'h12] =  // assert(aaddr == ^5001); aaddr <= alloc($B055)
+        script[5'h12] =  // no-op
         {   8'h00,  1'b0,   1'b0,   1'b0,   8'h00,  1'b0,   8'h00,  STOP    };
-        script[5'h13] =  // assert(aaddr == ^5002)
+        script[5'h13] =  // no-op
         {   8'h00,  1'b0,   1'b0,   1'b0,   8'h00,  1'b0,   8'h00,  STOP    };
-        script[5'h14] =  // aaddr <= alloc($CE11); free(^5001)
+        script[5'h14] =  // no-op
         {   8'h00,  1'b0,   1'b0,   1'b0,   8'h00,  1'b0,   8'h00,  STOP    };
-        script[5'h15] =  // assert(aaddr == ^5001); free(^5002)
+        script[5'h15] =  // no-op
         {   8'h00,  1'b0,   1'b0,   1'b0,   8'h00,  1'b0,   8'h00,  STOP    };
-        script[5'h16] =  // free(^5001)
+        script[5'h16] =  // no-op
         {   8'h00,  1'b0,   1'b0,   1'b0,   8'h00,  1'b0,   8'h00,  STOP    };
-        script[5'h17] =  // aaddr <= alloc($DEAF)
+        script[5'h17] =  // no-op
         {   8'h00,  1'b0,   1'b0,   1'b0,   8'h00,  1'b0,   8'h00,  STOP    };
-        script[5'h18] =  // assert(aaddr == ^5001); aaddr <= alloc($E15E)
+        script[5'h18] =  // no-op
         {   8'h00,  1'b0,   1'b0,   1'b0,   8'h00,  1'b0,   8'h00,  STOP    };
-        script[5'h19] =  // assert(aaddr == ^5002); aaddr <= alloc($F001)
+        script[5'h19] =  // no-op
         {   8'h00,  1'b0,   1'b0,   1'b0,   8'h00,  1'b0,   8'h00,  STOP    };
-        script[5'h1A] =  // assert(aaddr == ^5003)
+        script[5'h1A] =  // no-op
         {   8'h00,  1'b0,   1'b0,   1'b0,   8'h00,  1'b0,   8'h00,  STOP    };
         script[5'h1B] =  // no-op
         {   8'h00,  1'b0,   1'b0,   1'b0,   8'h00,  1'b0,   8'h00,  STOP    };
-        script[5'h1C] =  // assert(aaddr == ^5002)
+        script[5'h1C] =  // no-op
         {   8'h00,  1'b0,   1'b0,   1'b0,   8'h00,  1'b0,   8'h00,  STOP    };
         script[5'h1D] =  // no-op
         {   8'h00,  1'b0,   1'b0,   1'b0,   8'h00,  1'b0,   8'h00,  STOP    };
