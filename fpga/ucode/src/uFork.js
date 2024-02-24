@@ -16,7 +16,7 @@ export const uFork = (asm, opts) => {
   const hwImplOfQuadAllotAndFree = (opts.hwImplOfQuadAllotAndFree == undefined) ? false : opts.hwImplOfQuadAllotAndFree ;
   const maxTopOfQuadMemory = (opts.maxTopOfQuadMemory == undefined) ? 0x5000 : opts.maxTopOfQuadMemory ;
   
-  def("uFork_doOneSnú"); // ( -- ) 
+  def("uFork_doOneRunLoopTurn"); // ( -- ) 
   dat("uFork_dispatchOneEvent");
   dat("uFork_doOneInstrOfContinuation");
   dat("uFork_gcOneStep");
@@ -157,7 +157,10 @@ export const uFork = (asm, opts) => {
   if (hwImplOfQuadAllotAndFree) {
     dat("qfree", "EXIT");
   } else {
-    // just slapp the quad onto the free list
+    dat("uFork_FREE_T", "OVER", "qt!");
+    dat("uFork_#?__OVER", "qx!");
+    dat("uFork_#?__OVER", "qy!");
+    // then slapp the quad onto the free list
     dat("uFork_memoryDescriptor", "qx@", "OVER", "qy!");
     dat("uFork_memoryDescriptor", "qx!");
     dat("uFork_memoryDescriptor", "qy@", "uFork_incr");
