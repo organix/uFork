@@ -246,6 +246,12 @@ export const uFork = (asm, opts) => {
   dat("uFork_#?", "R@", "qz!");
   dat("R>");
   dat("EXIT");
+
+  // todo: refactor following to use uFork_cons
+  def("uFork_push"); // ( item kont -- )
+  dat(">R");
+  dat("uFork_allot", "SWAP", "OVER", "qx!", "uFork_#pair_t", "OVER", "qt!");
+  dat("DUP", "R@", "uFork_sp@", "SWAP", "qy!", "R>", "uFork_sp!", "EXIT");
   
   def("uFork_instr_nop"); // ( kont ip opcode -- )
   dat("DROP");            // ( kont ip )
@@ -278,7 +284,7 @@ export const uFork = (asm, opts) => {
   def("uFork_instr_dup_l0"); // ( kont tmp stack )
   dat("OVER");         // ( kont stack tmp stack )
   dat("qx@");          // ( kont stack tmp item  )
-  // -merkill1-
+  // -merkill1- hvað var þetta aftur?
   dat("uFork_allot");  // ( kont stack tmp item qa ) Qn:[#?, #?, <hole>, #?]
   dat("DUP", ">R");    // ( kont stack tmp item qa ) R:( tmp1st n qa ) Qn:[#?, #?, <hole>, #?]
   dat("qx!");          // ( kont stack tmp ) R:( tmp1st n qa ) Qn:[#?, item, <hole>, #?]
@@ -321,7 +327,18 @@ export const uFork = (asm, opts) => {
   dat("qy@");              // ( kont fixnum )
   // todo: insert isFixnum? check and sponsor signal here
   dat("uFork_fixnum2int"); // ( kont n )
-  // -merkill- hmm... spurning um hvort ætti að branch á minus eður ei
+  dat("DUP", "0<");        // ( kont n bool )
+  dat("(BRZ)", "uFork_instr_pick_l0"); // ( kont n )
+  dat("1-", ">R");         // ( kont ) R:( count )
+  dat("DUP", "uFork_sp@"); // ( kont stack ) R:( count )
+  dat("(JMP)", "uFork_instr_pick_l2");
+  def("uFork_instr_pick_l1"); // ( kont stack ) R:( count )
+  dat("qy@"); // ( kont next_stack )
+  def("uFork_instr_pick_l2"); // ( kont stack ) R:( count )
+  dat("(NEXT)", "uFork_instr_pick_l1"); // ( kont stack ) R:( )
+  dat("qx@", "OVER", "uFork_push");
+  dat("(JMP)", "uFork_instr__common_longer_tail");
+
   
 
   def("uFork_instr__subroutine_call"); // ( kont ip opcode -- )
