@@ -1,12 +1,12 @@
 /*
 
-Test Bench for lifo8x8.v
+Test Bench for lifo.v
 
 */
 
 `default_nettype none
 
-`include "lifo8x8_test.v"
+`include "lifo_test.v"
 
 `timescale 10ns/1ns
 
@@ -14,7 +14,7 @@ module test_bench;
 
     // dump simulation signals
     initial begin
-        $dumpfile("lifo8x8.vcd");
+        $dumpfile("lifo.vcd");
         $dumpvars(0, test_bench);
         #200;
         $finish;
@@ -38,7 +38,7 @@ module test_bench;
     // instantiate test fixture
     wire running;
     wire passed;
-    lifo8x8_test TEST (
+    lifo_test TEST (
         .i_clk(clk),
         .i_run(!waiting),
         .o_running(running),
