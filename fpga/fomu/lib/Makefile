@@ -6,7 +6,7 @@ ALL =	led_freq.vcd \
 	serial_tx.vcd \
 	serial_rx.vcd \
 	serial_rx+tx.vcd \
-	lifo8x8.vcd
+	lifo.vcd
 
 all: $(ALL)
 

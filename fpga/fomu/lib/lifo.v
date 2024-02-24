@@ -1,9 +1,9 @@
 /*
 
-LIFO (stack) 8 bits x 8 elements
+LIFO (stack)
 
     +---------------+
-    | lifo8x8       |
+    | lifo          |
     |               |
 =W=>|i_data     o_s0|=W=>
 --->|i_push     o_s1|=W=>
@@ -24,7 +24,7 @@ the top of stack (s0) is replaced by `i_data`.
 
 `default_nettype none
 
-module lifo8x8 #(
+module lifo #(
     parameter WIDTH             = 8,                            // bits per element
     parameter DEPTH             = 8                             // number of elements (hard-coded at 8)
 ) (

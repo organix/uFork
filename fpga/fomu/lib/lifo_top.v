@@ -1,12 +1,12 @@
 /*
 
-Physical Test Bench for lifo8x8.v
+Physical Test Bench for lifo.v
 
 */
 
 `default_nettype none
 
-`include "lifo8x8_test.v"
+`include "lifo_test.v"
 
 module top (
     input                       clki,                           // 48MHz oscillator input on Fomu-PVT
@@ -63,7 +63,7 @@ module top (
     // instantiate test fixture
     wire running;
     wire passed;
-    lifo8x8_test TEST (
+    lifo_test TEST (
         .i_clk(clk),
         .i_run(!waiting),
         .o_running(running),
