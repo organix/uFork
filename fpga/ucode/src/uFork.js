@@ -106,11 +106,19 @@ export const uFork = (asm, opts) => {
   def("uFork_isImmutable?"); // ( specimen -- bool )
   dat("uFork_isMutable?", "INVERT", "EXIT");
 
+  def("uFork_fixnum2int"); // ( fixnum -- int )
+  dat("0x7FFF_&", "DUP" "1<<", "0x8000", "&", "OR"); // sign extend
+  dat("EXIT");
+
+  def("uFork_int2fixnum"); // ( int -- fixnum )
+  dat("DUP", "0x8000", "&", "1>>", "OR"); // move the sign bit
+  dat("0x8000_OR", "EXIT"); // tag it as fixnum and return
+
   def("uFork_incr"); // ( fixnum -- fixnum )
-  dat("0x7FFF_&", "1+", "0x8000_OR", "EXIT");
+  dat("uFork_fixnum2int", "1+", "uFork_int2fixnum", "EXIT");
 
   def("uFork_decr"); // ( fixnum -- fixnum )
-  dat("0x7FFF_&", "1-", "0x8000_OR", "EXIT");
+  dat("uFork_fixnum2int", "1-", "uFork_int2fixnum", "EXIT");
 
   def("uFork_allot"); // ( -- qaddr )
   if (hwImplOfQuadAllotAndFree) {
