@@ -265,7 +265,6 @@ export const minicore = (asm, opts) => {
   dat("4LBR", "EMIT_HEXCHR");
   dat("EXIT");
 
-  
   return asm;
 };
 
@@ -384,12 +383,27 @@ export const makeUcodeImage = (opts) => {
   const asm = makeAssembler(opts.assemblerOpts);
   defineInstructionset(asm);
   asm.org(0x0080);
-  minicore(asm);
-  wozmon(asm);
-  uFork(asm);
+  minicore(asm); // always required as lot of subsequent assemblies relie on definitions there in
+  if (opts.wozmon != undefined) {
+    wozmon(asm, opts.wozmon);
+  }
+  if (opts.uFork != undefined) {
+    uFork(asm, opts.uFork);
+  }
 
   asm.org(0x0040); // default start address
-  asm.dat("wozmon", "(JMP)", 0x0040); // for now we start in wozmon
+  if (opts.wozmon != undefined) {
+    const startInWozmon = opts.wozmon.startInWozmon;
+    if ((startInWozmon != undefined) || (startInWozmon != false)) {
+      asm.dat("wozmon", "(JMP)", 0x0040); // start in wozmon, and stay in it if it was quitted
+    }
+  }
+  if (opts.uFork != undefined) {
+    const startIn_uFork_runLoop = opts.uFork.startInRunLoop;
+    if ((startIn_uFork_runLoop != undefined) || (startIn_uFork_runLoop != false)) {
+      asm.dat("uFork_runLoop", "(JMP)", 0x40);
+    }
+  }
   asm.done();
   return asm.whenDone();
 };
