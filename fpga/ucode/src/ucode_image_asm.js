@@ -6,7 +6,7 @@
  */
 
 import { makeAssembler } from "../util/masm.js";
-import { uFork_instrHandling } from "./uFork.js";
+import { uFork } from "./uFork.js";
 
 export const defineInstructionset = (asm) => {
   const { def } = asm;
@@ -375,7 +375,7 @@ export const makeUcodeImage = (opts) => {
   asm.org(0x0080);
   minicore(asm);
   wozmon(asm);
-  uFork_instrHandling(asm);
+  uFork(asm);
 
   asm.org(0x0040); // default start address
   asm.dat("wozmon", "(JMP)", 0x0040); // for now we start in wozmon
