@@ -40,6 +40,7 @@ module alu #(
     localparam NO_OP            = 4'h0;                         // i_arg0 -> o_data
     localparam ADD              = 4'h1;                         // i_arg0 + i_arg1 -> o_data
     localparam SUB              = 4'h2;                         // i_arg0 - i_arg1 -> o_data
+    localparam MUL              = 4'h3;                         // i_arg0 * i_arg1 -> o_data
     localparam AND              = 4'h4;                         // i_arg0 & i_arg1 -> o_data
     localparam OR               = 4'h5;                         // i_arg0 | i_arg1 -> o_data
     localparam XOR              = 4'h6;                         // i_arg0 ^ i_arg1 -> o_data
@@ -53,6 +54,9 @@ module alu #(
             end
             SUB: begin
                 o_data <= i_arg0 - i_arg1;
+            end
+            MUL: begin
+                o_data <= i_arg0 * i_arg1;
             end
             AND: begin
                 o_data <= i_arg0 & i_arg1;

@@ -32,6 +32,7 @@ module alu_test (
     localparam NO_OP            = 4'h0;                         // i_arg0 -> o_data
     localparam ADD              = 4'h1;                         // i_arg0 + i_arg1 -> o_data
     localparam SUB              = 4'h2;                         // i_arg0 - i_arg1 -> o_data
+    localparam MUL              = 4'h3;                         // i_arg0 * i_arg1 -> o_data
     localparam AND              = 4'h4;                         // i_arg0 & i_arg1 -> o_data
     localparam OR               = 4'h5;                         // i_arg0 | i_arg1 -> o_data
     localparam XOR              = 4'h6;                         // i_arg0 ^ i_arg1 -> o_data
@@ -89,13 +90,13 @@ module alu_test (
         {    XOR,    8'hCA,    8'hAC,   1'b1,    8'hEE,  4'h7  };
         script[4'h7] =  // rol(2#1001_1010); assert(d == 2#0110)
         {    ROL,    8'h9A,    8'h86,   1'b1,    8'h66,  4'h8  };
-        script[4'h8] =  // assert(d == 2#0011_0101)
-        {  NO_OP,     8'd0,     8'd0,   1'b1,    8'h35,  DONE  };
-        script[4'h9] =  // assert(d == 2#0110)
-        {  NO_OP,     8'd0,     8'd0,   1'b0,     8'd0,  4'hA  };
-        script[4'hA] =  // rol(2#1001_1010)
+        script[4'h8] =  // mul(8, 13); assert(d == 2#0011_0101)
+        {    MUL,     8'd8,    8'd13,   1'b1,    8'h35,  4'h9  };
+        script[4'h9] =  // assert(d == 104)
+        {  NO_OP,     8'd0,     8'd0,   1'b1,   8'd104,  DONE  };
+        script[4'hA] =  // no-op
         {  NO_OP,     8'd0,     8'd0,   1'b0,     8'd0,  4'hB  };
-        script[4'hB] =  // assert(d == 2#0011_0101)
+        script[4'hB] =  // no-op
         {  NO_OP,     8'd0,     8'd0,   1'b0,     8'd0,  4'hC  };
         script[4'hC] =  // no-op
         {  NO_OP,     8'd0,     8'd0,   1'b0,     8'd0,  4'hD  };
