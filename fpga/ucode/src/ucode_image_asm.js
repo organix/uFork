@@ -246,7 +246,7 @@ export const minicore = (asm, opts) => {
   def("(.chr)"); // emitts a char from the cell following the call
   dat(">R", "DUP", "1+", ">R", "@", "EMIT", "EXIT");
 
-  def("(CRLF.)";
+  def("(CRLF.)");
   dat("(.chr)", 0x13, "(.chr)", 0x0D, "EXIT");
 
   def("(BL.)");
@@ -369,11 +369,10 @@ export const wozmon = (asm, opts) => {
   dat("(CONST)", mode_var_addr);
   def("wozmon_xam");
   dat("(CONST)", xam_var_addr);
-  def("wozmon_st"):
+  def("wozmon_st");
   dat("(CONST)", st_var_addr);
   def("wozmon_tmp");
   dat("(CONST)", tmp_var_addr);
-
 
   return asm;
 };
