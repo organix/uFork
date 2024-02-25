@@ -29,6 +29,8 @@ export const uFork = (asm, opts) => {
   dat("(CONST)", eventQueueAndContQueue_qaddr);
 
   def("uFork_#?");
+  def("0x0000");
+  def("ZERO");
   dat("(CONST)", 0x0000);
 
   def("uFork_()");
@@ -76,6 +78,17 @@ export const uFork = (asm, opts) => {
 
   def("uFork_FREE_T");
   dat("(CONST)", 0x000F);
+
+  def("uForm_E_OK", "ZERO");
+  
+  def("uFork_E_MEM_LIM");
+  dat("(CONST)", 0xFFF7); // -9
+
+  def("uFork_E_MSG_LIM");
+  dat("(CONST)", 0xFFF5); // -11
+
+  def("uFork_E_CPU_LIM");
+  dat("(CONST)", 0xFFF6); // -10
 
   def("uFork_sp@"); // ( kont -- uFork_stack_qaddr )
   if (uForkSubroutines) {
