@@ -248,10 +248,20 @@ export const uFork = (asm, opts) => {
   dat("EXIT");
 
   // todo: refactor following to use uFork_cons
-  def("uFork_push"); // ( item kont -- )
-  dat(">R");
-  dat("uFork_allot", "SWAP", "OVER", "qx!", "uFork_#pair_t", "OVER", "qt!");
-  dat("DUP", "R@", "uFork_sp@", "SWAP", "qy!", "R>", "uFork_sp!", "EXIT");
+  def("uFork_push");    // ( item kont -- )
+  dat(">R");            // ( item ) R:( kont )
+  dat("uFork_allot");   // ( item q ) R:( kont )
+  dat("SWAP");          // ( q item ) R:( kont )
+  dat("OVER");          // ( q item q ) R:( kont )  Q:[#?, #?, #?, #?]
+  dat("qx!");           // ( q ) R:( kont )         Q:[#?, item, #?, #?]
+  dat("uFork_#pair_t"); // ( q #pair_t ) R:( kont ) Q:[#?, item, #?, #?]
+  dat("OVER", "qt!");   // ( q ) R:( kont )         Q:[#pair_t, item, #?, #?]
+  dat("DUP", "R@");     // ( q q kont ) R:( kont )  Q:[#pair_t, item, #?, #?]
+  dat("uFork_sp@");     // ( q q stack ) R:( kont ) Q:[#pair_t, item, #?, #?]
+  dat("SWAP", "qy!");   // ( q ) R:( kont )         Q:[#pair_t, item, stack, #?]
+  dat("R>");            // ( q kont ) R:( )         Q:[#pair_t, item, stack, #?]
+  dat("uFork_sp!");     // ( )
+  dat("EXIT");
   
   def("uFork_instr_nop"); // ( kont ip opcode -- )
   dat("DROP");            // ( kont ip )
