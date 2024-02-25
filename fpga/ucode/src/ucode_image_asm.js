@@ -276,7 +276,8 @@ export const wozmon = (asm, opts) => {
   const linebuffer_max   = (opts.linebuffer_max)   ? 0x0250 : opts.linebuffer_max ;
   const mode_var_addr    = (opts.mode_var_addr)    ? 0x0251 : opts.mode_var_addr ;
   const xam_var_addr     = (opts.xam_var_addr)     ? 0x0252 : opts.xam_var_addr ;
-  const tmp_var_addr     = (opts.tmp_var_addr)     ? 0x0253 : opts.tmp_var_addr ;
+  const st_var_addr      = (opts.st_var_addr)      ? 0x0253 : opts.st_var_addr ;
+  const tmp_var_addr     = (opts.tmp_var_addr)     ? 0x0254 : opts.tmp_var_addr ;
   const { def, dat } = asm;
 
   def("wozmon");
