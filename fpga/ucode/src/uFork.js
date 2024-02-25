@@ -6,7 +6,7 @@
  */
 // using uFork/docs/vm.md as reference
 
-export const uFork_instrHandling = (asm, opts) => {
+export const uFork = (asm, opts) => {
   opts = (opts == undefined) ? {} : opts ;
   const eventQueueAndContQueue_qaddr = (opts.eventQueueAndContQueue_qaddr == undefined ) ?
     0x4001 : opts.eventQueueAndContQueue_qaddr ;
@@ -16,7 +16,7 @@ export const uFork_instrHandling = (asm, opts) => {
   const hwImplOfQuadAllotAndFree = (opts.hwImplOfQuadAllotAndFree == undefined) ? false : opts.hwImplOfQuadAllotAndFree ;
   const maxTopOfQuadMemory = (opts.maxTopOfQuadMemory == undefined) ? 0x5000 : opts.maxTopOfQuadMemory ;
   
-  def("uFork_doOneSnú"); // ( -- ) 
+  def("uFork_doOneRunLoopTurn"); // ( -- ) 
   dat("uFork_dispatchOneEvent");
   dat("uFork_doOneInstrOfContinuation");
   dat("uFork_gcOneStep");
@@ -106,11 +106,19 @@ export const uFork_instrHandling = (asm, opts) => {
   def("uFork_isImmutable?"); // ( specimen -- bool )
   dat("uFork_isMutable?", "INVERT", "EXIT");
 
+  def("uFork_fixnum2int"); // ( fixnum -- int )
+  dat("0x7FFF_&", "DUP" "1<<", "0x8000", "&", "OR"); // sign extend
+  dat("EXIT");
+
+  def("uFork_int2fixnum"); // ( int -- fixnum )
+  dat("DUP", "0x8000", "&", "1>>", "OR"); // move the sign bit
+  dat("0x8000_OR", "EXIT"); // tag it as fixnum and return
+
   def("uFork_incr"); // ( fixnum -- fixnum )
-  dat("0x7FFF_&", "1+", "0x8000_OR", "EXIT");
+  dat("uFork_fixnum2int", "1+", "uFork_int2fixnum", "EXIT");
 
   def("uFork_decr"); // ( fixnum -- fixnum )
-  dat("0x7FFF_&", "1-", "0x8000_OR", "EXIT");
+  dat("uFork_fixnum2int", "1-", "uFork_int2fixnum", "EXIT");
 
   def("uFork_allot"); // ( -- qaddr )
   if (hwImplOfQuadAllotAndFree) {
@@ -149,13 +157,28 @@ export const uFork_instrHandling = (asm, opts) => {
   if (hwImplOfQuadAllotAndFree) {
     dat("qfree", "EXIT");
   } else {
-    // just slapp the quad onto the free list
+    dat("uFork_FREE_T", "OVER", "qt!");
+    dat("uFork_#?__OVER", "qx!");
+    dat("uFork_#?__OVER", "qy!");
+    // then slapp the quad onto the free list
     dat("uFork_memoryDescriptor", "qx@", "OVER", "qy!");
     dat("uFork_memoryDescriptor", "qx!");
     dat("uFork_memoryDescriptor", "qy@", "uFork_incr");
     dat("uFork_memoryDescriptor", "qy!");
     dat("EXIT");
   }
+
+  def("uFork_enqueueEvents"); // ( headOfNewEvents -- )
+  dat("DUP");                 // ( events events )
+  dat("uFork_eventQueueAndContQueue", "qx@"); // ( events events e_tail )
+  dat("qz!");  // link the events segment in ( events )
+  def("uFork_enqueueEvents_l0"); // find the tail of the added events ( events )
+  dat("DUP", "qz@", "DUP", "uFork_()", "=", "(BRNZ)", "uFork_enqueueEvents_l1");
+  dat("NIP", "(JMP)", "uFork_enqueueEvents_l0");
+  def("uFork_enqueueEvents_l1"); // ( tailOfEvents uFork_() )
+  dat("DROP", "uFork_eventQueueAndContQueue", "qx!"); // ( )
+  dat("EXIT");
+  
 
   def("uFork_enqueueCont"); // ( kont -- )
   dat("uFork_eventQueueAndContQueue", "qz@"); // ( kont k_tail )
@@ -223,6 +246,12 @@ export const uFork_instrHandling = (asm, opts) => {
   dat("uFork_#?", "R@", "qz!");
   dat("R>");
   dat("EXIT");
+
+  // todo: refactor following to use uFork_cons
+  def("uFork_push"); // ( item kont -- )
+  dat(">R");
+  dat("uFork_allot", "SWAP", "OVER", "qx!", "uFork_#pair_t", "OVER", "qt!");
+  dat("DUP", "R@", "uFork_sp@", "SWAP", "qy!", "R>", "uFork_sp!", "EXIT");
   
   def("uFork_instr_nop"); // ( kont ip opcode -- )
   dat("DROP");            // ( kont ip )
@@ -255,7 +284,7 @@ export const uFork_instrHandling = (asm, opts) => {
   def("uFork_instr_dup_l0"); // ( kont tmp stack )
   dat("OVER");         // ( kont stack tmp stack )
   dat("qx@");          // ( kont stack tmp item  )
-  // -merkill1-
+  // -merkill1- hvað var þetta aftur?
   dat("uFork_allot");  // ( kont stack tmp item qa ) Qn:[#?, #?, <hole>, #?]
   dat("DUP", ">R");    // ( kont stack tmp item qa ) R:( tmp1st n qa ) Qn:[#?, #?, <hole>, #?]
   dat("qx!");          // ( kont stack tmp ) R:( tmp1st n qa ) Qn:[#?, item, <hole>, #?]
@@ -291,6 +320,25 @@ export const uFork_instrHandling = (asm, opts) => {
   dat("(NEXT)", "uFork_instr_drop_l0"); // ( kont nextest_stack ) R:( )
   dat("OVER", "uFork_sp!"); // ( kont )
   dat("(JMP)", "uFork_instr__common_longer_tail");
+
+  def("uFork_instr_pick"); // ( kont ip opcode )
+  dat("DROP");             // ( kont ip )
+  // todo: insert here a memory fuel check&burn here
+  dat("qy@");              // ( kont fixnum )
+  // todo: insert isFixnum? check and sponsor signal here
+  dat("uFork_fixnum2int"); // ( kont n )
+  dat("DUP", "0<");        // ( kont n bool )
+  dat("(BRZ)", "uFork_instr_pick_l0"); // ( kont n )
+  dat("1-", ">R");         // ( kont ) R:( count )
+  dat("DUP", "uFork_sp@"); // ( kont stack ) R:( count )
+  dat("(JMP)", "uFork_instr_pick_l2");
+  def("uFork_instr_pick_l1"); // ( kont stack ) R:( count )
+  dat("qy@"); // ( kont next_stack )
+  def("uFork_instr_pick_l2"); // ( kont stack ) R:( count )
+  dat("(NEXT)", "uFork_instr_pick_l1"); // ( kont stack ) R:( )
+  dat("qx@", "OVER", "uFork_push");
+  dat("(JMP)", "uFork_instr__common_longer_tail");
+
   
 
   def("uFork_instr__subroutine_call"); // ( kont ip opcode -- )

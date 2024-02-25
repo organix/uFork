@@ -37,7 +37,7 @@ export const makeAssembler = (opts) => {
   } = makePromise();
   
   const asm = {
-    get addr: () => curr_addr,
+    get addr() { return curr_addr },
   };
   asm.symbols = {
       define: (sym, val = undefined) => {
@@ -102,12 +102,13 @@ export const makeAssembler = (opts) => {
           return;
         } else if (val[Symbol.iterator] != undefined) {
           const it = val[Symbol.iterator].call(val);
-          let done = false;
-          let value = undefined;
-          while (!done) {
-            { done, value } = it.next(curr_addr);
-            if (value != undefined) {
-              datum(value);
+          let nextObj = {};
+          nextObj.done = false;
+          nextObj.value = undefined;
+          while (!(nextObj.done)) {
+            nextObj = it.next(curr_addr);
+            if (nextObj.value != undefined) {
+              datum(nextObj.value);
             }
           }
           return;
@@ -129,7 +130,7 @@ export const makeAssembler = (opts) => {
   asm.whenDone = () => done_promise;
   asm.done = () => {
     // iterate through the symbols, looking for promise packs
-    (new Array(symbols.entries()).forEach(([sym, val]) => {
+    (new Array(symbols.entries())).forEach(([sym, val]) => {
       if ((typeof val) == "object") {
         if (val.promise != undefined) {
           done_reject(new Error(`symbol ${sym} is not defined`));
@@ -137,7 +138,7 @@ export const makeAssembler = (opts) => {
       }
     });
     // iterate through the image, looking for promises
-    (new Array(image.entries()).forEach(([addr, val]) => {
+    (new Array(image.entries())).forEach(([addr, val]) => {
       if ((typeof val) == "object") {
         if (val.promise != undefined) {
           done_reject(new Error(`addr ${addr} has a promise an no concrete value`));

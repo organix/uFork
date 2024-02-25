@@ -6,7 +6,7 @@
  */
 
 import { makeAssembler } from "../util/masm.js";
-import { uFork_instrHandling } from "./uFork.js";
+import { uFork } from "./uFork.js";
 
 export const defineInstructionset = (asm) => {
   const { def } = asm;
@@ -199,10 +199,21 @@ export const minicore = (asm, opts) => {
   dat("1LBR");
   dat("0xFFFE", "&", "EXIT");
 
+  def("15LBR"); def("1RBR");
+  dat("1LBR");
+  def("14LBR");
+  dat("2LBR");
+  def("12LBR");
+  dat("4LBR");
+  def("8LBR");
+  dat("4LBR");
   def("4LBR");
   dat("2LBR");
   def("2LBR");
   dat("1LBR", "1LBR", "EXIT");
+
+  def("1>>"); // ( a -- a>>1 )
+  dat("1RBR", "0x7FFF_&", "EXIT");
 
   def("0x0F_&");
   dat("0x0F", "&", "EXIT");
@@ -235,7 +246,7 @@ export const minicore = (asm, opts) => {
   def("(.chr)"); // emitts a char from the cell following the call
   dat(">R", "DUP", "1+", ">R", "@", "EMIT", "EXIT");
 
-  def("(CRLF.)";
+  def("(CRLF.)");
   dat("(.chr)", 0x13, "(.chr)", 0x0D, "EXIT");
 
   def("(BL.)");
@@ -254,7 +265,6 @@ export const minicore = (asm, opts) => {
   dat("4LBR", "EMIT_HEXCHR");
   dat("EXIT");
 
-  
   return asm;
 };
 
@@ -359,11 +369,10 @@ export const wozmon = (asm, opts) => {
   dat("(CONST)", mode_var_addr);
   def("wozmon_xam");
   dat("(CONST)", xam_var_addr);
-  def("wozmon_st"):
+  def("wozmon_st");
   dat("(CONST)", st_var_addr);
   def("wozmon_tmp");
   dat("(CONST)", tmp_var_addr);
-
 
   return asm;
 };
@@ -373,12 +382,27 @@ export const makeUcodeImage = (opts) => {
   const asm = makeAssembler(opts.assemblerOpts);
   defineInstructionset(asm);
   asm.org(0x0080);
-  minicore(asm);
-  wozmon(asm);
-  uFork_instrHandling(asm);
+  minicore(asm); // always required as lot of subsequent assemblies relie on definitions there in
+  if (opts.wozmon != undefined) {
+    wozmon(asm, opts.wozmon);
+  }
+  if (opts.uFork != undefined) {
+    uFork(asm, opts.uFork);
+  }
 
   asm.org(0x0040); // default start address
-  asm.dat("wozmon", "(JMP)", 0x0040); // for now we start in wozmon
+  if (opts.wozmon != undefined) {
+    const startInWozmon = opts.wozmon.startInWozmon;
+    if ((startInWozmon != undefined) || (startInWozmon != false)) {
+      asm.dat("wozmon", "(JMP)", 0x0040); // start in wozmon, and stay in it if it was quitted
+    }
+  }
+  if (opts.uFork != undefined) {
+    const startIn_uFork_runLoop = opts.uFork.startInRunLoop;
+    if ((startIn_uFork_runLoop != undefined) || (startIn_uFork_runLoop != false)) {
+      asm.dat("uFork_runLoop", "(JMP)", 0x40);
+    }
+  }
   asm.done();
   return asm.whenDone();
 };
