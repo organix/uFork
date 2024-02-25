@@ -102,12 +102,13 @@ export const makeAssembler = (opts) => {
           return;
         } else if (val[Symbol.iterator] != undefined) {
           const it = val[Symbol.iterator].call(val);
-          let done = false;
-          let value = undefined;
-          while (!done) {
-            { done, value } = it.next(curr_addr);
-            if (value != undefined) {
-              datum(value);
+          let nextObj = {};
+          nextObj.done = false;
+          nextObj.value = undefined;
+          while (!(nextObj.done)) {
+            nextObj = it.next(curr_addr);
+            if (nextObj.value != undefined) {
+              datum(nextObj.value);
             }
           }
           return;
