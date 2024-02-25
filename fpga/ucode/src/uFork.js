@@ -402,11 +402,25 @@ export const uFork = (asm, opts) => {
   dat("DUP", "uFork_pop");    // ( kont fixnum )
   dat("uFork_fixnum2int");    // ( kont int )
   dat("INVERT");              // ( kont ~int )
+  def("uFork_instr_alu__common_tail");
   dat("uFork_int2fixnum");    // ( kont fixnum )
   dat("OVER");                // ( kont fixnum kont )
   dat("uFork_push");          // ( kont )
   dat("(JMP)", "uFork_instr__common_longer_tail");
+
+  def("uFork_instr_alu_and"); // ( kont subopcode )
+  dat("DROP");                // ( kont )
+  // todo: insert fixnum type check here for TOS and NOS items
+  // -merkill byrjun-
+  dat("DUP", "uFork_pop");    // ( kont uTOS_fixnum )
+  dat("uFork_fixnum2int");    // ( kont uTOS_int )
+  dat("OVER", "uFork_pop");   // ( kont uTOS_int uNOS_fixnum )
+  dat("uFork_fixnum2int");    // ( kont uTOS_int uNOS_int )
+  // -merkill lok-
+  dat("&");
+  dat("(JMP)", "uFork_instr_alu__common_tail");
   
+
 
   def("uFork_instr__subroutine_call"); // ( kont ip opcode -- )
   if (uForkSubroutines) {
