@@ -374,6 +374,27 @@ export const uFork = (asm, opts) => {
   dat("R>");                  // ( kont pair_quad nth ) R:( )
   dat("qy!");  // rejigger the stack by inserting the new pair quad
   dat("(JMP)", "uFork_instr__common_longer_tail");
+
+  // todo: the uFork roll instruction
+
+  def("uFork_instr_alu"); // ( kont ip opcode )
+  dat("DROP", "qy@");     // ( kont subopcode )
+  dat("(JMPTBL)");
+  dat(12); // nr of entries
+  dat("uFork_instr_alu_not");
+  dat("uFork_instr_alu_and");
+  dat("uFork_instr_alu_or");
+  dat("uFork_instr_alu_xor");
+  dat("uFork_instr_alu_add");
+  dat("uFork_instr_alu_sub");
+  dat("uFork_instr_alu_mul");
+  dat("uFork_instr_alu_lsl");
+  dat("uFork_instr_alu_lsr");
+  dat("uFork_instr_alu_asr");
+  dat("uFork_instr_alu_rol");
+  dat("uFork_instr_alu_ror");
+  // todo: insert sponsor err signalling here
+  dat("EXIT");
   
 
   def("uFork_instr__subroutine_call"); // ( kont ip opcode -- )
