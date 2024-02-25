@@ -69,7 +69,7 @@ export const makeDebugIOStub = (opts) => {
     rx: () => [false, 0],
     tx_ready: () => true,
     tx: (char) => {
-      console.log(`µcode debug tx: "${String.fromCharCodes([char])}"`);
+      console.log(`µcode debug tx: "${String.fromCharCode(char)}"`);
     },
   };
 };
