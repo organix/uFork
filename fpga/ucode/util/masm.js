@@ -37,7 +37,7 @@ export const makeAssembler = (opts) => {
   } = makePromise();
   
   const asm = {
-    get addr: () => curr_addr,
+    get addr() { return curr_addr },
   };
   asm.symbols = {
       define: (sym, val = undefined) => {
