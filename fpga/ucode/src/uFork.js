@@ -408,18 +408,26 @@ export const uFork = (asm, opts) => {
   dat("uFork_push");          // ( kont )
   dat("(JMP)", "uFork_instr__common_longer_tail");
 
-  def("uFork_instr_alu_and"); // ( kont subopcode )
-  dat("DROP");                // ( kont )
-  // todo: insert fixnum type check here for TOS and NOS items
-  // -merkill byrjun-
+  def("uFork_pop_two_fixnums2ints"); // ( kont -- kont uTOS_int uNOS_int )
   dat("DUP", "uFork_pop");    // ( kont uTOS_fixnum )
   dat("uFork_fixnum2int");    // ( kont uTOS_int )
   dat("OVER", "uFork_pop");   // ( kont uTOS_int uNOS_fixnum )
   dat("uFork_fixnum2int");    // ( kont uTOS_int uNOS_int )
-  // -merkill lok-
+  dat("EXIT");
+
+  def("uFork_instr_alu_and"); // ( kont subopcode )
+  dat("DROP");                // ( kont )
+  // todo: insert fixnum type check here for TOS and NOS items
+  dat("uFork_pop_two_fixnums2ints"); // ( kont n m )
   dat("&");
   dat("(JMP)", "uFork_instr_alu__common_tail");
-  
+
+  def("uFork_instr_alu_or"); // ( kont subopcode )
+  dat("DROP");               // ( kont )
+  // todo: insert fixnum type check here for TOS and NOS items
+  dat("uFork_pop_two_fixnums2ints"); // ( kont a b )
+  dat("OR");
+  dat("(JMP)", "uFork_instr_alu__common_tail");
 
 
   def("uFork_instr__subroutine_call"); // ( kont ip opcode -- )
