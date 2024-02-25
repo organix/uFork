@@ -298,21 +298,20 @@ export const uFork = (asm, opts) => {
   dat("qy@");             // ( kont n )
   // todo: insert fixnum type check here for n
   // todo: insert allot fuel check&burn here taking n into consideration
-  dat(">R");              // ( kont ) R:( n )
+  dat("uFork_fixnum2int", ">R");          // ( kont ) R:( n )
   dat("DUP", "uFork_sp@", "uForm_allot"); // ( kont stack tmp ) R:( n )
   dat("DUP", "R>", "SWAP", ">R", ">R");   // ( kont stack tmp ) R:( tmp1st n )
   dat("(JMP)", "uFork_instr_dup_l1");
   def("uFork_instr_dup_l0"); // ( kont tmp stack )
   dat("OVER");         // ( kont stack tmp stack )
-  dat("qx@");          // ( kont stack tmp item  )
-  // -merkill1- hvað var þetta aftur?
-  dat("uFork_allot");  // ( kont stack tmp item qa ) Qn:[#?, #?, <hole>, #?]
-  dat("DUP", ">R");    // ( kont stack tmp item qa ) R:( tmp1st n qa ) Qn:[#?, #?, <hole>, #?]
-  dat("qx!");          // ( kont stack tmp ) R:( tmp1st n qa ) Qn:[#?, item, <hole>, #?]
+  dat("uForm_car");    // ( kont stack tmp item  )
+  dat("uFork_allot");  // ( kont stack tmp item q )                  Q:[#?, #?, <hole>, #?]
+  dat("DUP", ">R");    // ( kont stack tmp item q ) R:( tmp1st n q ) Q:[#?, #?, <hole>, #?]
+  dat("qx!");          // ( kont stack tmp ) R:( tmp1st n q )        Q:[#?, item, <hole>, #?]
   dat("uFork_#pair_t");
-  dat("R@", "qt!");    // ( kont stack tmp ) R:( tmp1st n qa ) Qn:[#pair_t, item, <hole>, #?]
-  dat("R@", "SWAP");   // ( kont stack qa tmp ) R:( tmp1st n qa )
-  dat("qy!"); // fill earlier hole ( kont stack ) R:( tmp1st n qa )
+  dat("R@", "qt!");    // ( kont stack tmp ) R:( tmp1st n q )        Q:[#pair_t, item, <hole>, #?]
+  dat("R@", "SWAP");   // ( kont stack q tmp ) R:( tmp1st n q )
+  dat("qy!"); // fill earlier hole ( kont stack ) R:( tmp1st n q )   Q:[#pair_t, item, tmp, #?]
   dat("R>");  // ( kont stack new_tmp ) R:( tmp1st n )
   dat("SWAP", "qy@", "SWAP");
   def("uFork_instr_dup_l1");
@@ -359,7 +358,22 @@ export const uFork = (asm, opts) => {
   dat("(NEXT)", "uFork_instr_pick_l1"); // ( kont stack ) R:( )
   dat("qx@", "OVER", "uFork_push");
   dat("(JMP)", "uFork_instr__common_longer_tail");
-
+  def("uFork_instr_pick_l0"); // ( kont -n )
+  dat("NEGATE");              // ( kont n )
+  dat(">R", "DUP");           // ( kont kont ) R:( n )
+  dat("uFork_sp@");           // ( kont stack ) R:( n )
+  dat("uFork_carAndCdr");     // ( kont item next_stack ) R:( n )
+  dat("(JMP)", "uFork_instr_pick_l4");
+  def("uFork_instr_pick_l3"); // ( kont item nth_next_stack ) R:( n )
+  dat("uFork_cdr");
+  def("uFork_instr_pick_l4"); // ( kont item nth_next_stack ) R:( n )
+  dat("(NEXT)", "uFork_instr_pick_l3"); // ( kont item nth_next_stack ) R:( )
+  dat("DUP", ">R");           // ( kont it nth ) R:( nth )
+  dat("uFork_cdr");           // ( kont it n+1th )
+  dat("uFork_cons");          // ( kont pair_quad )
+  dat("R>");                  // ( kont pair_quad nth ) R:( )
+  dat("qy!");  // rejigger the stack by inserting the new pair quad
+  dat("(JMP)", "uFork_instr__common_longer_tail");
   
 
   def("uFork_instr__subroutine_call"); // ( kont ip opcode -- )
