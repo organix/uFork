@@ -247,19 +247,11 @@ export const uFork = (asm, opts) => {
   dat("R>");
   dat("EXIT");
 
-  // todo: refactor following to use uFork_cons
   def("uFork_push");    // ( item kont -- )
-  dat(">R");            // ( item ) R:( kont )
-  dat("uFork_allot");   // ( item q ) R:( kont )
-  dat("SWAP");          // ( q item ) R:( kont )
-  dat("OVER");          // ( q item q ) R:( kont )  Q:[#?, #?, #?, #?]
-  dat("qx!");           // ( q ) R:( kont )         Q:[#?, item, #?, #?]
-  dat("uFork_#pair_t"); // ( q #pair_t ) R:( kont ) Q:[#?, item, #?, #?]
-  dat("OVER", "qt!");   // ( q ) R:( kont )         Q:[#pair_t, item, #?, #?]
-  dat("DUP", "R@");     // ( q q kont ) R:( kont )  Q:[#pair_t, item, #?, #?]
-  dat("uFork_sp@");     // ( q q stack ) R:( kont ) Q:[#pair_t, item, #?, #?]
-  dat("SWAP", "qy!");   // ( q ) R:( kont )         Q:[#pair_t, item, stack, #?]
-  dat("R>");            // ( q kont ) R:( )         Q:[#pair_t, item, stack, #?]
+  dat("DUP", ">R");     // ( item kont ) R:( kont )
+  dat("uFork_sp@");     // ( item stack ) R:( kont )
+  dat("uFork_cons");    // ( pair_quad ) R:( kont )
+  dat("R>");            // ( pair_quad kont ) R:( )
   dat("uFork_sp!");     // ( )
   dat("EXIT");
   
