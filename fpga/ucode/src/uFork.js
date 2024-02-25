@@ -254,6 +254,28 @@ export const uFork = (asm, opts) => {
   dat("R>");            // ( pair_quad kont ) R:( )
   dat("uFork_sp!");     // ( )
   dat("EXIT");
+
+  def("uFork_car", "qx@"); // ( pair_quad -- car )
+  def("uFork_cdr", "qy@"); // ( pair_quad -- cdr )
+
+  def("uFork_carAndCdr");  // ( pair_quad -- car cdr )
+  dat("DUP");              // ( pair_quad pair_quad )
+  dat("uFork_car");        // ( pair_quad car )
+  dat("SWAP");             // ( car pair_quad )
+  dat("uFork_cdr");        // ( car cdr )
+  dat("EXIT");
+
+  def("uFork_pop");       // ( kont -- item )
+  dat("DUP", ">R");       // ( kont ) R:( kont )
+  dat("uFork_sp@");       // ( stack ) R:( kont )
+  dat("DUP");             // ( stack stack ) R:( kont )
+  dat("uFork_carAndCdr"); // ( stack item next_stack ) R:( kont )
+  dat("R>");              // ( stack item next_stack kont ) R:( )
+  dat("uFork_sp!");       // ( stack item )
+  dat("SWAP");            // ( item stack )
+  dat("uFork_free");      // ( item )
+  dat("EXIT");
+  
   
   def("uFork_instr_nop"); // ( kont ip opcode -- )
   dat("DROP");            // ( kont ip )
@@ -266,10 +288,7 @@ export const uFork = (asm, opts) => {
   // todo: insert sponsor mem fuel check&burn here
   dat("qy@");              // ( kont item )
   dat("OVER");             // ( kont item kont )
-  dat("uFork_sp@");        // ( kont item sp_tail )
-  dat("uFork_cons");       // ( kont pair_quad )
-  dat("OVER");             // ( kont pair_quad kont )
-  dat("uFork_sp!");        // ( kont )
+  dat("uFork_push");       // ( kont )
   def("uFork_instr__common_longer_tail"); // ( kont -- )
   dat("DUP", "qt@");       // ( kont ip )
   dat("(JMP)", "uFork_instr__common_tail");
