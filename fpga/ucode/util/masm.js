@@ -138,7 +138,7 @@ export const makeAssembler = (opts) => {
       }
     });
     // iterate through the image, looking for promises
-    (new Array(image.entries()).forEach(([addr, val]) => {
+    (new Array(image.entries())).forEach(([addr, val]) => {
       if ((typeof val) == "object") {
         if (val.promise != undefined) {
           done_reject(new Error(`addr ${addr} has a promise an no concrete value`));
