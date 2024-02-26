@@ -86,11 +86,11 @@ export const uFork = (asm, opts) => {
   def("uFork_E_MEM_LIM");
   dat("(CONST)", 0xFFF7); // -9
 
-  def("uFork_E_MSG_LIM");
-  dat("(CONST)", 0xFFF5); // -11
-
   def("uFork_E_CPU_LIM");
   dat("(CONST)", 0xFFF6); // -10
+
+  def("uFork_E_MSG_LIM");
+  dat("(CONST)", 0xFFF5); // -11
 
   def("uFork_sp@"); // ( kont -- uFork_stack_qaddr )
   if (uForkSubroutines) {
