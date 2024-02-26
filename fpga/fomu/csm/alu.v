@@ -18,8 +18,6 @@ on an ordered-pair of arguments.
 The operation is selected by `i_op`,
 and the result appears on `o_data`.
 
-NOTE: `o_data` is _not_ registered.
-
 */
 
 `default_nettype none
