@@ -232,6 +232,18 @@ export const uFork = (asm, opts) => {
   dat("2DUP", "qz!", "DROP");
   dat("uFork_eventQueueAndContQueue", "qz!"); // ( )
   dat("EXIT");
+
+  def("uFork_signal_sponsor_controler"); // ( kont E_* -- )
+  dat("SWAP", "qy@");     // ( E_* event )
+  dat("qt@");             // ( E_* sponsor )
+  dat("DUP", "qz@");      // ( E_* sponsor signal )
+  dat("DUP", "uFork_#?", "=", "(BRNZ)", "uFork_HALTCORE"); // because there is no one to signal
+  dat(">R", "qz!", "R>"); // ( signal )
+  dat("uFork_enqueueEvents"); // ( )
+  // tbd: return to callers caller? or callers callers caller?
+  dat("R>", "DROP", "EXIT");
+  
+  
   
   def("uFork_doOneInstrOfContinuation"); // ( -- )
   dat("uFork_eventQueueAndContQueue", "qy@"); // ( k_head )
