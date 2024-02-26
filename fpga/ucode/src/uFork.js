@@ -30,10 +30,7 @@ export const uFork = (asm, opts) => {
   def("uFork_eventQueueAndContQueue");
   dat("(CONST)", eventQueueAndContQueue_qaddr);
 
-  def("uFork_#?");
-  def("0x0000");
-  def("ZERO");
-  dat("(CONST)", 0x0000);
+  def("uFork_#?", "ZERO");
 
   def("uFork_()");
   def("uFork_nil");
