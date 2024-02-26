@@ -91,8 +91,12 @@ export const uFork = (asm, opts) => {
   def("uFork_E_NOT_FIX"); // fixnum required
   dat("(CONST)", 0xFFFC); // -4
   
-pub const E_NOT_CAP: Error  = -5;   // capability required
-pub const E_NOT_PTR: Error  = -6;   // memory pointer required
+  def("uFork_E_NOT_CAP"); // capability required
+  dat("(CONST)", 0xFFFB); // -5
+  
+  def("uFork_E_NOT_PTR"); // memory pointer required
+  dat("(CONST)", 0xFFFA); // -6
+  
 pub const E_NOT_ROM: Error  = -7;   // ROM pointer required
 pub const E_NOT_RAM: Error  = -8;   // RAM pointer required
 pub const E_NOT_EXE: Error  = -9;   // instruction required
