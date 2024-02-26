@@ -204,6 +204,21 @@ export const minicore = (asm, opts) => {
   def("-"); // ( a b -- a-b )
   dat("NEGATE", "+", "EXIT");
 
+  def("<<"); // ( u n -- u<<n )  doing the lazy way for now
+  dat(">R", "(JMP)", "<<_l1");
+  def("<<_l0");
+  dat("1<<");
+  def("<<_l1");
+  dat("(NEXT)", "<<_l0");
+  dat("EXIT");
+
+  def(">>"); // ( u n -- u>>n )  same lazy way
+  dat(">R", "(JMP)", ">>_l1");
+  def(">>_l0");
+  dat("1>>");
+  def(">>_l1");
+  dat("(NEXT)", ">>_l0", "EXIT");
+
   def("4<<"); // ( a -- a<<4 )
   dat("2<<");
   def("2<<"); // ( a -- a<<2 )
