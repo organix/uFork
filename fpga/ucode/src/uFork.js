@@ -451,6 +451,13 @@ export const uFork = (asm, opts) => {
   dat("OR");
   dat("(JMP)", "uFork_instr_alu__common_tail");
 
+  def("uFork_instr_alu_add"); // ( kont subopcode )
+  dat("DROP");               // ( kont )
+  // todo: insert fixnum type check here for TOS and NOS items
+  dat("uFork_pop_two_fixnums2ints"); // ( kont a b )
+  dat("+");
+  dat("(JMP)", "uFork_instr_alu__common_tail");
+
 
   def("uFork_instr__subroutine_call"); // ( kont ip opcode -- )
   if (uForkSubroutines) {
