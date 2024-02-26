@@ -81,7 +81,9 @@ export const uFork = (asm, opts) => {
   def("uFork_FREE_T");
   dat("(CONST)", 0x000F);
 
+  // source uFork/vm/rs/src/lib.rs
   def("uForm_E_OK", "ZERO");
+  def("E_FAIL", "-1");
   
   def("uFork_E_MEM_LIM");
   dat("(CONST)", 0xFFF7); // -9
