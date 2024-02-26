@@ -85,8 +85,12 @@ export const uFork = (asm, opts) => {
   def("uFork_E_BOUNDS");  // out of bounds
   dat("(CONST)", 0xFFFE); // -2
 
-pub const E_NO_MEM: Error   = -3;   // no memory available
-pub const E_NOT_FIX: Error  = -4;   // fixnum required
+  def("uFork_E_NO_MEM");  // no memory available
+  dat("(CONST)", 0xFFFD); // -3
+  
+  def("uFork_E_NOT_FIX"); // fixnum required
+  dat("(CONST)", 0xFFFC); // -4
+  
 pub const E_NOT_CAP: Error  = -5;   // capability required
 pub const E_NOT_PTR: Error  = -6;   // memory pointer required
 pub const E_NOT_ROM: Error  = -7;   // ROM pointer required
