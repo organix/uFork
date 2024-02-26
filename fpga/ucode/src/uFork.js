@@ -79,17 +79,28 @@ export const uFork = (asm, opts) => {
   dat("(CONST)", 0x000F);
 
   // source uFork/vm/rs/src/lib.rs
-  def("uForm_E_OK", "ZERO");
-  def("E_FAIL", "-1");
-  
-  def("uFork_E_MEM_LIM");
-  dat("(CONST)", 0xFFF7); // -9
+  def("uFork_E_OK", "ZERO");
+  def("uFork_E_FAIL", "-1");
 
-  def("uFork_E_CPU_LIM");
-  dat("(CONST)", 0xFFF6); // -10
+  def("uFork_E_BOUNDS");
+  dat("(CONST)", 0xFFFE); // -2
 
-  def("uFork_E_MSG_LIM");
-  dat("(CONST)", 0xFFF5); // -11
+  pub const E_OK: Error       = 0;    // not an error
+pub const E_FAIL: Error     = -1;   // general failure
+pub const E_BOUNDS: Error   = -2;   // out of bounds
+pub const E_NO_MEM: Error   = -3;   // no memory available
+pub const E_NOT_FIX: Error  = -4;   // fixnum required
+pub const E_NOT_CAP: Error  = -5;   // capability required
+pub const E_NOT_PTR: Error  = -6;   // memory pointer required
+pub const E_NOT_ROM: Error  = -7;   // ROM pointer required
+pub const E_NOT_RAM: Error  = -8;   // RAM pointer required
+pub const E_NOT_EXE: Error  = -9;   // instruction required
+pub const E_NO_TYPE: Error  = -10;  // type required
+pub const E_MEM_LIM: Error  = -11;  // Sponsor memory limit reached
+pub const E_CPU_LIM: Error  = -12;  // Sponsor instruction limit reached
+pub const E_MSG_LIM: Error  = -13;  // Sponsor event limit reached
+pub const E_ASSERT: Error   = -14;  // assertion failed
+pub const E_STOP: Error     = -15;  // actor stopped
 
   def("uFork_sp@"); // ( kont -- uFork_stack_qaddr )
   if (uForkSubroutines) {
