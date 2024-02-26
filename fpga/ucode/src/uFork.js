@@ -242,13 +242,14 @@ export const uFork = (asm, opts) => {
   dat("uFork_enqueueEvents"); // ( )
   dat("EXIT");
 
-  def("uFork_sponsor_cycles_check&burn"); // ( kont -- kont | )
+  def("uFork_sponsor_cycles_check&burn"); // ( kont -- kont )
   dat("DUP");           // ( kont kont )
   dat("qy@");           // ( kont event )
   dat("qt@");           // ( kont sponsor )
   dat("DUP", "qy@");    // ( kont sponsor cycles_fixnum )
   dat("DUP", "ZERO", "uFork_int2fixnum", "=", "(BRZ)", "uFork_sponsor_cycles_check_l0");
   dat("2DROP");         // ( kont )
+  dat("DUP");           // ( kont kont )
   dat("uFork_E_CPU_LIM", "uFork_signal_sponsor_controler");
   dat("R>", "@", ">R", "EXIT");
   def("uFork_sponsor_cycles_check_l0");
@@ -266,7 +267,8 @@ export const uFork = (asm, opts) => {
   dat("EXIT");
 
   def("uFork_fetchAndExec"); // ( kont -- )
-  // todo: insert sponsor cycles fuel check&burn here.
+  // done: insert sponsor cycles fuel check&burn here.
+  dat("uFork_sponsor_cycles_check&burn");
   dat("DUP", "qt@");         // ( kont ip )
   // todo: insert ip #instr_t check here
   dat("DUP", "qx@");         // ( kont ip opcode )
