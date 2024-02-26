@@ -86,6 +86,7 @@ export const minicore = (asm, opts) => {
   dat("R>", "@", "EXIT");
 
   def("TRUE");
+  def("-1");
   dat("(CONST)", 0xFFFF);
 
   def("FALSE");
