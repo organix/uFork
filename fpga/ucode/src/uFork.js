@@ -240,21 +240,33 @@ export const uFork = (asm, opts) => {
   dat("DUP", "uFork_#?", "=", "(BRNZ)", "uFork_HALTCORE"); // because there is no one to signal
   dat(">R", "qz!", "R>"); // ( signal )
   dat("uFork_enqueueEvents"); // ( )
-  // tbd: return to callers caller? or callers callers caller?
-  dat("R>", "DROP", "EXIT");
-  
+  dat("EXIT");
+
+  def("uFork_sponsor_cycles_check&burn"); // ( kont -- kont | )
+  dat("DUP");           // ( kont kont )
+  dat("qy@");           // ( kont event )
+  dat("qt@");           // ( kont sponsor )
+  dat("DUP", "qy@");    // ( kont sponsor cycles_fixnum )
+  dat("DUP", "ZERO", "uFork_int2fixnum", "=", "(BRZ)", "uFork_sponsor_cycles_check_l0");
+  dat("2DROP");         // ( kont )
+  dat("uFork_E_CPU_LIM", "uFork_signal_sponsor_controler");
+  dat("R>", "@", ">R", "EXIT");
+  def("uFork_sponsor_cycles_check_l0");
+  dat("uFork_decr");    // ( kont sponsor cycles-1_fixnum )
+  dat("SWAP", "qy!");   // ( kont )
+  dat("R>", "1+", ">R", "EXIT");
   
   
   def("uFork_doOneInstrOfContinuation"); // ( -- )
   dat("uFork_eventQueueAndContQueue", "qy@"); // ( k_head )
   dat("DUP", "qz@");    // ( k_head k_next )
   dat("uFork_eventQueueAndContQueue", "qy!"); // ( k_head )
-  dat("DUP", "uFork_fetchAndExec");
-  dat("DUP", "uFork_enqueueCont"); // ( k_head )
+  dat("DUP", "uFork_fetchAndExec"); // ( k_head )
+  dat("uFork_enqueueCont"); // ( k_head )
   dat("EXIT");
 
   def("uFork_fetchAndExec"); // ( kont -- )
-  // todo: insert sponsor instr fuel check&burn here.
+  // todo: insert sponsor cycles fuel check&burn here.
   dat("DUP", "qt@");         // ( kont ip )
   // todo: insert ip #instr_t check here
   dat("DUP", "qx@");         // ( kont ip opcode )
