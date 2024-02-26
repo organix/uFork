@@ -162,6 +162,13 @@ export const minicore = (asm, opts) => {
   def("(NEXT)_l0");
   dat("DROP", "1+", ">R", "EXIT");
 
+  def("(BREXIT)"); // ( bool -- ) exit caller early if bool is true
+  dat("(BRZ)", "(BREXIT)_l0"); // ( )
+  dat("R>", "DROP");
+  def("(BREXIT)_l0");
+  dat("EXIT");
+  
+
   def("(LIT)"); // literal ( -- item )
   dat("R>", "DUP", "1+", ">R", "@", "EXIT");
 
@@ -179,6 +186,9 @@ export const minicore = (asm, opts) => {
 
   def("R@"); // ( -- a ) R:( a ra -- a )
   dat("R>", "R>", "DUP", ">R", "SWAP", ">R", "EXIT");
+
+  def("RDROP"); // ( -- ) R:( x ra -- ra )
+  dat("R>", "R>", "DROP", ">R", "EXIT");
 
   def("+"); // ( a b -- sum )
   dat("UM+");
