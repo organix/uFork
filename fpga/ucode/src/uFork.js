@@ -97,15 +97,17 @@ export const uFork = (asm, opts) => {
   def("uFork_E_NOT_PTR"); // memory pointer required
   dat("(CONST)", 0xFFFA); // -6
   
-pub const E_NOT_ROM: Error  = -7;   // ROM pointer required
-pub const E_NOT_RAM: Error  = -8;   // RAM pointer required
-pub const E_NOT_EXE: Error  = -9;   // instruction required
-pub const E_NO_TYPE: Error  = -10;  // type required
-pub const E_MEM_LIM: Error  = -11;  // Sponsor memory limit reached
-pub const E_CPU_LIM: Error  = -12;  // Sponsor instruction limit reached
-pub const E_MSG_LIM: Error  = -13;  // Sponsor event limit reached
-pub const E_ASSERT: Error   = -14;  // assertion failed
-pub const E_STOP: Error     = -15;  // actor stopped
+  def("uFork_E_NOT_ROM"); // ROM pointer required
+  dat("(CONST)", 0xFFF9); // -7
+  
+    E_NOT_RAM: Error  = -8;   // RAM pointer required
+    E_NOT_EXE: Error  = -9;   // instruction required
+    E_NO_TYPE: Error  = -10;  // type required
+    E_MEM_LIM: Error  = -11;  // Sponsor memory limit reached
+    E_CPU_LIM: Error  = -12;  // Sponsor instruction limit reached
+    E_MSG_LIM: Error  = -13;  // Sponsor event limit reached
+    E_ASSERT: Error   = -14;  // assertion failed
+    E_STOP: Error     = -15;  // actor stopped
 
   def("uFork_sp@"); // ( kont -- uFork_stack_qaddr )
   if (uForkSubroutines) {
