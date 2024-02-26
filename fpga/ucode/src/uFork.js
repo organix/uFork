@@ -100,14 +100,29 @@ export const uFork = (asm, opts) => {
   def("uFork_E_NOT_ROM"); // ROM pointer required
   dat("(CONST)", 0xFFF9); // -7
   
-    E_NOT_RAM: Error  = -8;   // RAM pointer required
-    E_NOT_EXE: Error  = -9;   // instruction required
-    E_NO_TYPE: Error  = -10;  // type required
-    E_MEM_LIM: Error  = -11;  // Sponsor memory limit reached
-    E_CPU_LIM: Error  = -12;  // Sponsor instruction limit reached
-    E_MSG_LIM: Error  = -13;  // Sponsor event limit reached
-    E_ASSERT: Error   = -14;  // assertion failed
-    E_STOP: Error     = -15;  // actor stopped
+  def("uFork_E_NOT_RAM"); // RAM pointer required
+  dat("(CONST)", 0xFFF8); // -8
+  
+  def("uFork_E_NOT_EXE"); // instruction required
+  dat("(CONST)", 0xFFF7); // -9
+  
+  def("uFork_E_NO_TYPE"); // type required
+  dat("(CONST)", 0xFFF6); // -10
+  
+  def("uFork_E_MEM_LIM"); // Sponsor memory limit reached
+  dat("(CONST)", 0xFFF5); // -11
+  
+  def("uFork_E_CPU_LIM"); // Sponsor instruction limit reached
+  dat("(CONST)", 0xFFF4); // -12
+  
+  def("uFork_E_MSG_LIM"); // Sponsor event limit reached
+  dat("(CONST)", 0xFFF3); // -13
+  
+  def("uFork_E_ASSERT");  // assertion failed
+  dat("(CONST)", 0xFFF2); // -14
+  
+  def("uFork_E_STOP");    // actor stopped
+  dat("(CONST)", 0xFFF1); // -15
 
   def("uFork_sp@"); // ( kont -- uFork_stack_qaddr )
   if (uForkSubroutines) {
