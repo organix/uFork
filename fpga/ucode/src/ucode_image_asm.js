@@ -205,6 +205,7 @@ export const minicore = (asm, opts) => {
   dat("NEGATE", "+", "EXIT");
 
   def("<<"); // ( u n -- u<<n )  doing the lazy way for now
+  dat("0x0F_&");
   dat(">R", "(JMP)", "<<_l1");
   def("<<_l0");
   dat("1<<");
@@ -213,11 +214,39 @@ export const minicore = (asm, opts) => {
   dat("EXIT");
 
   def(">>"); // ( u n -- u>>n )  same lazy way
+  dat("0x0F_&");
   dat(">R", "(JMP)", ">>_l1");
   def(">>_l0");
   dat("1>>");
   def(">>_l1");
   dat("(NEXT)", ">>_l0", "EXIT");
+
+  def("LBR"); // ( u n -- u<<>n )  same lazy way
+  def("<<>");
+  dat("0x0F_&");
+  dat(">R", "(JMP)", "LBR_l1");
+  def("LBR_l0");
+  dat("1LBR");
+  def("LBR_l1");
+  dat("(NEXT)", "LBR_l0", "EXIT");
+
+  def("RBR"); // ( u n -- u<>>n )  same lazy way
+  def("<>>");
+  dat("0x0F_&");
+  dat(">R", "(JMP)", "RBR_l1");
+  def("RBR_l0");
+  dat("1RBR");
+  def("RBR_l1");
+  dat("(NEXT)", "RBR_l0", "EXIT");
+
+  def("*"); // ( n m -- n*m )  using the lazy way here, need to find the old eForth impl
+  dat(">R", "ZERO");
+  dat("(JMP)", "*_l1");
+  def("*_l0");
+  dat("OVER", "+");
+  def("*_l1");
+  dat("(NEXT)", "*_l0");
+  dat("NIP", "EXIT");
 
   def("4<<"); // ( a -- a<<4 )
   dat("2<<");
