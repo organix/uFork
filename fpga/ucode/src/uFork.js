@@ -503,83 +503,46 @@ export const uFork = (asm, opts) => {
   dat("uFork_fixnum2int");    // ( kont uTOS_int uNOS_int )
   dat("EXIT");
 
-  def("uFork_instr_alu_and"); // ( kont subopcode )
-  dat("DROP");                // ( kont )
+  def("uFork_instr_alu__common"); // ( kont subopcode ) R:( raddr_spefic_alu_instr )
+  dat("DROP");                    // ( kont )
   // todo: insert fixnum type check here for TOS and NOS items
   dat("uFork_pop_two_fixnums2ints"); // ( kont n m )
-  dat("&");
+  dat("SWAP");                    // ( kont m n )
+  dat("R>", "@EXECUTE");          // do the op
   dat("(JMP)", "uFork_instr_alu__common_tail");
 
-  def("uFork_instr_alu_or"); // ( kont subopcode )
-  dat("DROP");               // ( kont )
-  // todo: insert fixnum type check here for TOS and NOS items
-  dat("uFork_pop_two_fixnums2ints"); // ( kont a b )
-  dat("XOR");
-  dat("(JMP)", "uFork_instr_alu__common_tail");
+  def("uFork_instr_alu_and");
+  dat("uFork_instr_alu__common", "(&)");
 
-  def("uFork_instr_alu_xor"); // ( kont subopcode )
-  dat("DROP");               // ( kont )
-  // todo: insert fixnum type check here for TOS and NOS items
-  dat("uFork_pop_two_fixnums2ints"); // ( kont a b )
-  dat("OR");
-  dat("(JMP)", "uFork_instr_alu__common_tail");
+  def("uFork_instr_alu_or");
+  dat("uFork_instr_alu__common", "OR");
 
-  def("uFork_instr_alu_add"); // ( kont subopcode )
-  dat("DROP");               // ( kont )
-  // todo: insert fixnum type check here for TOS and NOS items
-  dat("uFork_pop_two_fixnums2ints"); // ( kont a b )
-  dat("+");
-  dat("(JMP)", "uFork_instr_alu__common_tail");
+  def("uFork_instr_alu_xor");
+  dat("uFork_instr_alu__common", "(XOR)");
 
-  def("uFork_instr_alu_sub"); // ( kont subopcode )
-  dat("DROP");               // ( kont )
-  // todo: insert fixnum type check here for TOS and NOS items
-  dat("uFork_pop_two_fixnums2ints"); // ( kont a b )
-  dat("SWAP", "-");
-  dat("(JMP)", "uFork_instr_alu__common_tail");
+  def("uFork_instr_alu_add");
+  dat("uFork_instr_alu__common", "+");
 
-  def("uFork_instr_alu_mul"); // ( kont subopcode )
-  dat("DROP");               // ( kont )
-  // todo: insert fixnum type check here for TOS and NOS items
-  dat("uFork_pop_two_fixnums2ints"); // ( kont a b )
-  dat("*");
-  dat("(JMP)", "uFork_instr_alu__common_tail");
+  def("uFork_instr_alu_sub");
+  dat("uFork_instr_alu__common", "-");
 
-  def("uFork_instr_alu_lsl"); // ( kont subopcode )
-  dat("DROP");               // ( kont )
-  // todo: insert fixnum type check here for TOS and NOS items
-  dat("uFork_pop_two_fixnums2ints"); // ( kont a b )
-  dat("<<");
-  dat("(JMP)", "uFork_instr_alu__common_tail");
+  def("uFork_instr_alu_mul");
+  dat("uFork_instr_alu__common", "*");
+
+  def("uFork_instr_alu_lsl");
+  dat("uFork_instr_alu__common", "<<");
 
   def("uFork_instr_alu_lsr"); // ( kont subopcode )
-  dat("DROP");               // ( kont )
-  // todo: insert fixnum type check here for TOS and NOS items
-  dat("uFork_pop_two_fixnums2ints"); // ( kont a b )
-  dat(">>");
-  dat("(JMP)", "uFork_instr_alu__common_tail");
+  dat("uFork_instr_alu__common", ">>");
 
   def("uFork_instr_alu_asr"); // ( kont subopcode )
-  dat("DROP");               // ( kont )
-  // todo: insert fixnum type check here for TOS and NOS items
-  dat("uFork_pop_two_fixnums2ints"); // ( kont a b )
-  dat(">>>");
-  dat("(JMP)", "uFork_instr_alu__common_tail");
+  dat("uFork_instr_alu__common", ">>>");
 
   def("uFork_instr_alu_rol"); // ( kont subopcode )
-  dat("DROP");               // ( kont )
-  // todo: insert fixnum type check here for TOS and NOS items
-  dat("uFork_pop_two_fixnums2ints"); // ( kont a b )
-  dat("<<>");
-  dat("(JMP)", "uFork_instr_alu__common_tail");
+  dat("uFork_instr_alu__common", "<<>");
 
   def("uFork_instr_alu_ror"); // ( kont subopcode )
-  dat("DROP");               // ( kont )
-  // todo: insert fixnum type check here for TOS and NOS items
-  dat("uFork_pop_two_fixnums2ints"); // ( kont a b )
-  dat("<>>");
-  dat("(JMP)", "uFork_instr_alu__common_tail");
-
+  dat("uFork_instr_alu__common", "<>>");
 
   def("uFork_instr__subroutine_call"); // ( kont ip opcode -- )
   if (uForkSubroutines) {
