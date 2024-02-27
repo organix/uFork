@@ -22,6 +22,8 @@ and the result appears on `o_data`.
 
 `default_nettype none
 
+`include "alu_ops.vh"
+
 module alu #(
     parameter WIDTH             = 8                             // bits per element
 ) (
@@ -34,38 +36,28 @@ module alu #(
 
     initial o_data = 0;
 
-    // enumerated values i_op
-    localparam NO_OP            = 4'h0;                         // i_arg0 -> o_data
-    localparam ADD              = 4'h1;                         // i_arg0 + i_arg1 -> o_data
-    localparam SUB              = 4'h2;                         // i_arg0 - i_arg1 -> o_data
-    localparam MUL              = 4'h3;                         // i_arg0 * i_arg1 -> o_data
-    localparam AND              = 4'h4;                         // i_arg0 & i_arg1 -> o_data
-    localparam OR               = 4'h5;                         // i_arg0 | i_arg1 -> o_data
-    localparam XOR              = 4'h6;                         // i_arg0 ^ i_arg1 -> o_data
-    localparam ROL              = 4'h8;                         // i_arg0 <<> 1 -> o_data
-
     // perform selected operation
     always @(posedge i_clk) begin
         case (i_op)
-            ADD: begin
+            `ADD_OP: begin
                 o_data <= i_arg0 + i_arg1;
             end
-            SUB: begin
+            `SUB_OP: begin
                 o_data <= i_arg0 - i_arg1;
             end
-            MUL: begin
+            `MUL_OP: begin
                 o_data <= i_arg0 * i_arg1;
             end
-            AND: begin
+            `AND_OP: begin
                 o_data <= i_arg0 & i_arg1;
             end
-            OR: begin
+            `OR_OP: begin
                 o_data <= i_arg0 | i_arg1;
             end
-            XOR: begin
+            `XOR_OP: begin
                 o_data <= i_arg0 ^ i_arg1;
             end
-            ROL: begin
+            `ROL_OP: begin
                 o_data <= { i_arg0[WIDTH-2:0], i_arg0[WIDTH-1] };
             end
             default: begin
