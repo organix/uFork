@@ -75,7 +75,9 @@ export const minicore = (asm, opts) => {
   const { def, dat } = asm;
 
   def("(JMP)"); // JuMP
-  dat("R>", "@");
+  dat("R>");
+  def("@EXECUTE");
+  dat("@");
   def("EXECUTE");
   dat(">R", "EXIT");
 
@@ -119,7 +121,9 @@ export const minicore = (asm, opts) => {
   dat("(CONST)", 0xFFFE);
 
   def("0x4000_&");
-  dat("0x4000", "&", "EXIT");
+  dat("0x4000");
+  def("(&)");
+  dat("&", "EXIT");
 
   def("0x8000_&");
   dat("0x8000", "&", "EXIT");
@@ -131,7 +135,9 @@ export const minicore = (asm, opts) => {
   dat(">R", "FALSE", "TRUE", "R>", "?:", "EXIT");
   
   def("INVERT");
-  dat("TRUE", "XOR", "EXIT");
+  dat("TRUE");
+  def("(XOR)");
+  dat("XOR", "EXIT");
 
   def("OR");   // ( a b -- a|b )
   dat("INVERT", "SWAP", "INVERT");
