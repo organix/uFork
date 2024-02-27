@@ -94,5 +94,6 @@ export default Object.freeze({
     handle_keydown,
     highlight,
     stringify_error,
-    docs_url: "https://github.com/organix/uFork/blob/main/docs/asm.md"
+    docs_url: "https://github.com/organix/uFork/blob/main/docs/asm.md",
+    ruler_position: 28
 });
