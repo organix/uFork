@@ -2,17 +2,17 @@
 
 ## Contents
 
- * [Introduction](#introduction)
- * [Representation](#representation)
- * [Data Structures](#data-structures)
+  * [Introduction](#introduction)
+  * [Representation](#representation)
+  * [Data Structures](#data-structures)
     * Reserved ROM
     * Reserved RAM
     * Memory Descriptor
     * Event and Continuation Queues
     * Root Sponsor
- * [Object Graph](#object-graph)
+  * [Object Graph](#object-graph)
     * Pair-List Indexing
- * [Instructions](#instructions)
+  * [Instructions](#instructions)
     * Instruction Summary
     * Instruction Details
         * [`alu`](#alu-instruction) instruction
@@ -366,6 +366,87 @@ _actual_             | `assert` _expect_   | —            | assert _actual_ ==
 
 <sup>*</sup> For the `if` instruction, the values
 `#f`, `#?`, `#nil`, and `0` are considered "[falsy](https://developer.mozilla.org/en-US/docs/Glossary/Falsy)".
+
+### Instruction Decoding
+
+The uFork instruction encoding
+is designed to allow partial decoding
+based on grouping similar encodings.
+By extracting just a few bits
+from the `X` and `Y` fields of the quad,
+we can make generalizations across instructions.
+
+When the `T` field is `#instr_t`,
+the `X` field carries the op-code.
+The op-codes are all encoded as positive _fixnums_,
+so the 4 most-significant bits are `2#1000`.
+The op-code has one of the following formats:
+
+  * `2#1000_0000_0000_0xxx` -- _immediate_ instruction `xxx`
+  * `2#1000_0000_0000_1xxx` -- _qualified_ instruction `xxx`
+  * `2#1000_0000_0001_xxxx` -- _indexed_ instruction `xxxx`
+
+#### Immediate Instructions
+
+If bit 4 of the op-code is `0`
+and bit 3 is `0`,
+this is an _immediate_ instruction.
+The `Y` field is the immediate value.
+The immediate instructions are:
+
+  * `debug`
+  * `jump`
+  * `push`
+  * `if`
+  * `typeq`
+  * `assert`
+
+The `debug` and `jump` instructions
+do not use the immediate value.
+They can be distinguish, if needed,
+by the `2#1000_0000_0000_000x` format.
+
+#### Qualifed Instructions
+
+If bit 4 of the op-code is `0`
+and bit 3 is `1`,
+this is an _qualified_ instruction.
+The bottom 4 bits of the `Y` field
+define the (unsigned) qualifer value
+in the range [0, 15].
+The qualified instructions are:
+
+  * `sponsor`
+  * `quad`
+  * `dict`
+  * `deque`
+  * `my`
+  * `alu`
+  * `cmp`
+  * `end`
+
+#### Indexed Instructions
+
+If bit 4 of the op-code is `1`,
+this is an _indexed_ instruction.
+The bottom 6 bits of the `Y` field
+define the (signed) index (or count) value
+in the range [-32, +31].
+The indexed instructions are:
+
+  * `pair`
+  * `part`
+  * `nth`
+  * `pick`
+  * `roll`
+  * `dup`
+  * `drop`
+  * `msg`
+  * `state`
+  * `send`
+  * `signal`
+  * `new`
+  * `beh`
 
 ### Instruction Details
 
