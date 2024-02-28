@@ -38,8 +38,13 @@ function highlight(element) {
 // Rainbow parens, pending detailed token information.
 
         let depth = 0;
-        Array.from(text).forEach(function (glyph) {
-            if (glyph === "(") {
+        let mode = source_mode;
+
+        function source_mode(glyph) {
+            if (glyph === ";") {
+                mode = comment_mode;
+                mode(glyph);
+            } else if (glyph === "(") {
                 const open = dom("span", {
                     textContent: glyph,
                     style: {color: rainbow[depth % rainbow.length]}
@@ -56,6 +61,23 @@ function highlight(element) {
             } else {
                 element.append(glyph);
             }
+        }
+
+        function comment_mode(glyph) {
+            if (glyph === "\n") {
+                mode = source_mode;
+                mode(glyph);
+            } else {
+                const dim = dom("span", {
+                    textContent: glyph,
+                    style: {color: theme.silver}
+                });
+                element.append(dim);
+            }
+        }
+
+        Array.from(text).forEach(function (glyph) {
+            mode(glyph);  // handle `gylph` in current `mode`
         });
     }
 }
