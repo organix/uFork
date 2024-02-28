@@ -436,7 +436,7 @@ export const uFork = (asm, opts) => {
   // todo: insert isFixnum? check and sponsor signal here
   dat("uFork_fixnum2int"); // ( kont n )
   dat("DUP", "0<");        // ( kont n bool )
-  dat("(BRZ)", "uFork_instr_pick_l0"); // ( kont n )
+  dat("(BRNZ)", "uFork_instr_pick_l0"); // ( kont n )
   dat("1-", ">R");         // ( kont ) R:( count )
   dat("DUP", "uFork_sp@"); // ( kont stack ) R:( count )
   dat("(JMP)", "uFork_instr_pick_l2");
@@ -463,7 +463,32 @@ export const uFork = (asm, opts) => {
   dat("qy!");  // rejigger the stack by inserting the new pair quad
   dat("(JMP)", "uFork_instr__common_longer_tail");
 
-  // todo: the uFork roll instruction
+  def("uFork_instr_roll"); // ( kont ip opcode -- )
+  dat("DROP");             // ( kont ip )
+  dat("qy@");              // ( kont n_fixnum )
+  // todo: insert isFixnum? check and sponsor signal here
+  dat("uFork_fixnum2int"); // ( kont n )
+  dat("DUP", "0<");        // ( kont n bool )
+  dat("(BRNZ)", "uFork_instr_roll_l0"); // ( kont n )
+  dat("1-", ">R", "DUP", "uFork_sp@");  // ( kont stack ) R:( n )
+  dat("(JMP)", "uForm_instr_roll_l2");
+  def("uFork_instr_roll_l1"); // ( kont stack ) R:( n )
+  dat("uFork_cdr");           // ( kont next_stack ) R:( n )
+  def("uFork_instr_roll_l2"); // ( kont stack ) R:( n )
+  dat("(NEXT)", "uFork_instr_roll_l1"); // ( kont stack_next2target ) R:( )
+  // bog standard singly linked list item removal -byrjun-
+  dat("DUP");                 // ( kont n2t n2t )
+  dat("uFork_cdr");           // ( kont n2t target )
+  dat("DUP", ">R");           // ( kont n2t target ) R:( target )
+  dat("uFork_cdr");           // ( kont n2t prev2t ) R:( target )
+  dat("SWAP");                // ( kont prev2t n2t ) R:( target )
+  dat("qy!", "R>");           // ( kont target )
+  // -lok-
+  dat("OVER", "uFork_sp@");   // ( kont target stack )
+  dat("OVER", "qy!");         // ( kont target )
+  dat("OVER", "uFork_sp!");   // ( kont )
+  dat("(JMP)", "uFork_instr__common_longer_tail");
+  
 
   def("uFork_instr_alu"); // ( kont ip opcode )
   dat("DROP", "qy@");     // ( kont subopcode )
