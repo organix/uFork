@@ -9,11 +9,11 @@ import theme from "./theme.js";
 const indent = "    ";
 const rx_comment = /^(\s*)(;+\u0020?)/;
 const comment_prefix = "; ";
-const rainbow = [theme.blue, theme.orange, theme.purple, theme.green];
+const rainbow = [theme.yellow, theme.purple, theme.orange, theme.green];
 
 function highlight(element) {
     const text = element.textContent;
-    element.style.color = theme.yellow;
+    element.style.color = theme.blue;
     element.innerHTML = "";
     const ir = scm.compile(text);
     if (ir.errors !== undefined && ir.errors.length > 0) {
@@ -39,16 +39,20 @@ function highlight(element) {
 
         let depth = 0;
         Array.from(text).forEach(function (glyph) {
-            const paren = dom("span", {
-                textContent: glyph,
-                style: {color: rainbow[depth % rainbow.length]}
-            });
             if (glyph === "(") {
-                element.append(paren);
+                const open = dom("span", {
+                    textContent: glyph,
+                    style: {color: rainbow[depth % rainbow.length]}
+                });
+                element.append(open);
                 depth += 1;
             } else if (glyph === ")") {
                 depth -= 1;
-                element.append(paren);
+                const close = dom("span", {
+                    textContent: glyph,
+                    style: {color: rainbow[depth % rainbow.length]}
+                });
+                element.append(close);
             } else {
                 element.append(glyph);
             }
