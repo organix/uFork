@@ -363,6 +363,10 @@ export const uFork = (asm, opts) => {
   dat("SWAP");            // ( item stack )
   dat("uFork_free");      // ( item )
   dat("EXIT");
+
+  def("uFork_push_bool"); // ( kont bool -- kont )
+  dat(">R", "uFork_#f", "uFork_#t", "R>", "?:"); // ( kont uFork_bool )
+  dat("OVER", "(JMP)", "uFork_push");
   
   
   def("uFork_instr_nop"); // ( kont ip opcode -- )
@@ -585,6 +589,23 @@ export const uFork = (asm, opts) => {
 
   def("uFork_instr_alu_ror"); // ( kont subopcode )
   dat("uFork_instr_alu__common", "<>>");
+
+  def("uFork_instr_typeq");   // ( kont ip opcode )
+  dat("DROP");                // ( kont ip )
+  dat("qy@");                 // ( kont expected_type )
+  // todo: insert check here for expected_type being a quad with #type_t in t field
+  dat("DUP", "uFork_#fixnum_t", "="); // special case #fixnum_t check due to fixnums not being quads
+  dat("(BRNZ)", "uFork_instr_typeq_l0"); // ( kont expected_type )
+  dat("OVER", "uFork_pop");           // ( kont expected_type value )
+  dat("qt@", "=");
+  def("uFork_instr_typeq_l1");
+  dat("uFork_push_bool"); // ( kont )
+  dat("(JMP)", "uFork_instr__common_longer_tail");
+  def("uFork_instr_typeq_l0");        // ( kont #fixnum_t )
+  dat("DROP", "DUP", "uFork_pop");    // ( kont value )
+  dat("uFork_isFixnum?");
+  dat("(JMP)", "uFork_instr_typeq_l1");
+
 
   def("uFork_instr__subroutine_call"); // ( kont ip opcode -- )
   if (uForkSubroutines) {
