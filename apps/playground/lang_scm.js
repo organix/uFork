@@ -9,10 +9,11 @@ import theme from "./theme.js";
 const indent = "    ";
 const rx_comment = /^(\s*)(;+\u0020?)/;
 const comment_prefix = "; ";
-const rainbow = Object.values(theme);
+const rainbow = [theme.blue, theme.orange, theme.purple, theme.green];
 
 function highlight(element) {
     const text = element.textContent;
+    element.style({color: theme.yellow});
     element.innerHTML = "";
     const ir = scm.compile(text);
     if (ir.errors !== undefined && ir.errors.length > 0) {
@@ -40,7 +41,7 @@ function highlight(element) {
         Array.from(text).forEach(function (glyph) {
             const paren = dom("span", {
                 textContent: glyph,
-                style: {color: rainbow[depth]}
+                style: {color: rainbow[depth % rainbow.length]}
             });
             if (glyph === "(") {
                 element.append(paren);
