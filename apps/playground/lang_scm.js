@@ -13,7 +13,7 @@ const rainbow = [theme.blue, theme.orange, theme.purple, theme.green];
 
 function highlight(element) {
     const text = element.textContent;
-    element.style({color: theme.yellow});
+    element.style.color = theme.yellow;
     element.innerHTML = "";
     const ir = scm.compile(text);
     if (ir.errors !== undefined && ir.errors.length > 0) {
