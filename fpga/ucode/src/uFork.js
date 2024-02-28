@@ -488,7 +488,24 @@ export const uFork = (asm, opts) => {
   dat("OVER", "qy!");         // ( kont target )
   dat("OVER", "uFork_sp!");   // ( kont )
   dat("(JMP)", "uFork_instr__common_longer_tail");
-  
+  def("uFork_instr_roll_l0"); // ( kont -n )
+  dat("NEGATE");              // ( kont n )
+  dat("OVER");                // ( kont n kont ) R:( )
+  dat("uFork_sp@");           // ( kont n v1_stack ) R:( )
+  dat("DUP", "uFork_cdr");    // ( kont n v1_stack v2_stack ) R:( )
+  dat(">R", "SWAP", ">R");    // ( kont v1_stack ) R:( v2_stack n )
+  dat("(JMP)", "uFork_instr_roll_l4");
+  def("uFork_instr_roll_l3"); // ( kont vn_stack ) R:( v2_stack n )
+  dat("uFork_cdr");
+  def("uFork_instr_roll_l4"); // ( kont vn_stack ) R:( v2_stack n )
+  dat("(NEXT)", "uFork_instr_roll_l3"); // ( kont vn_stack ) R:( v2_stack )
+  dat("OVER", "uFork_sp@");   // ( kont vn_stack v1_stack )  R:( v2_stack )
+  dat("OVER", "uFork_cdr");   // ( kont vn_stack v1_stack vm_stack ) R:( v2_stack )
+  dat("OVER", "qy!");         // ( kont vn_stack v1_stack ) R:( v2_stack )
+  dat("SWAP", "qy!");         // ( kont ) R:( v2_stack )
+  dat("R>", "OVER", "uFork_sp!"); // ( kont )
+  dat("(JMP)", "uFork_instr__common_longer_tail");
+
 
   def("uFork_instr_alu"); // ( kont ip opcode )
   dat("DROP", "qy@");     // ( kont subopcode )
