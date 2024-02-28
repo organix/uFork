@@ -597,7 +597,9 @@ export const uFork = (asm, opts) => {
   dat("DUP", "uFork_#fixnum_t", "="); // special case #fixnum_t check due to fixnums not being quads
   dat("(BRNZ)", "uFork_instr_typeq_l0"); // ( kont expected_type )
   dat("OVER", "uFork_pop");           // ( kont expected_type value )
-  dat("qt@", "=");
+  dat("qt@");
+  def("uFork_instr_typeq_l2");
+  dat("=");
   def("uFork_instr_typeq_l1");
   dat("uFork_push_bool"); // ( kont )
   dat("(JMP)", "uFork_instr__common_longer_tail");
@@ -605,6 +607,12 @@ export const uFork = (asm, opts) => {
   dat("DROP", "DUP", "uFork_pop");    // ( kont value )
   dat("uFork_isFixnum?");
   dat("(JMP)", "uFork_instr_typeq_l1");
+
+  def("uFork_instr_eq");      // ( kont ip opcode )
+  dat("DROP");                // ( kont ip )
+  dat("qy@");                 // ( kont expected_value )
+  dat("OVER", "uFork_pop");   // ( kont expected_value value )
+  dat("(JMP)", "uFork_instr_typeq_l2");
 
 
   def("uFork_instr__subroutine_call"); // ( kont ip opcode -- )
