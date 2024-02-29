@@ -659,6 +659,20 @@ export const uFork = (asm, opts) => {
   def("uFork_instr_cmp_gt");
   dat("uFork_instr_cmp__cpmmon", ">");
 
+  def("uFork_instr_if");    // ( kont ip opcode -- )
+  dat("DROP");              // ( kont ip )
+  dat("OVER", "uFork_pop"); // ( kont ip booly )
+  dat("uFork_#f", "OVER");  // ( kont ip booly #f booly )
+  dat("ZERO", "uFork_int2fixnum", "=", "?:"); // ( kont ip booly2 )
+  dat("uFork_#f", "OVER");  // ( kont ip booly2 #f booly2 )
+  dat("uFork_()", "=", "?:"); // ( kont ip booly3 )
+  dat("uFork_#f", "OVER");  // ( kont ip booly3 #f booly3 )
+  dat("uFork_#?", "=", "?:"); // ( kont ip booly4 )
+  dat("uFork_#f", "=", "(BRNZ)", "uFork_instr__common_tail"); // ( kont ip )
+  dat("qy@");               // ( kont true_path )
+  dat("OVER", "qt!", "EXIT");
+  
+
   def("uFork_instr__subroutine_call"); // ( kont ip opcode -- )
   if (uForkSubroutines) {
     dat("DROP"); // ( kont ip )
