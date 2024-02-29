@@ -542,18 +542,18 @@ export const uFork = (asm, opts) => {
   dat("uFork_push");          // ( kont )
   dat("(JMP)", "uFork_instr__common_longer_tail");
 
-  def("uFork_pop_two_fixnums2ints"); // ( kont -- kont uTOS_int uNOS_int )
+  def("uFork_pop_two_fixnums2ints"); // ( kont -- kont uNOS_int uTOS_int )
   dat("DUP", "uFork_pop");    // ( kont uTOS_fixnum )
   dat("uFork_fixnum2int");    // ( kont uTOS_int )
   dat("OVER", "uFork_pop");   // ( kont uTOS_int uNOS_fixnum )
   dat("uFork_fixnum2int");    // ( kont uTOS_int uNOS_int )
+  dat("SWAP");
   dat("EXIT");
 
   def("uFork_instr_alu__common"); // ( kont subopcode ) R:( raddr_spefic_alu_instr )
   dat("DROP");                    // ( kont )
   // todo: insert fixnum type check here for TOS and NOS items
   dat("uFork_pop_two_fixnums2ints"); // ( kont n m )
-  dat("SWAP");                    // ( kont m n )
   dat("R>", "@EXECUTE");          // do the op
   dat("(JMP)", "uFork_instr_alu__common_tail");
 
@@ -639,7 +639,25 @@ export const uFork = (asm, opts) => {
   def("uFork_instr_cmp_ne"); // ( kont subopcode )
   dat("DROP");               // ( kont )
   dat("uFork_pop2items");    // ( kont u v )
-  dat("=", "INVERT", "(JMP)", "uFork_instr_type_l1");
+  dat("=", "INVERT", "(JMP)", "uFork_instr_typeq_l1");
+
+  def("uFork_instr_cmp__common");    // ( kont subopcode ) R:( raddr raddr_op )
+  dat("DROP");                       // ( kont )
+  // todo: insert here a check if uFork TOS and NOS are fixnums
+  dat("uFork_pop_two_fixnums2ints"); // ( kont NOS_int TOS_int ) R:( raddr raddr_op )
+  dat("R>", "@EXECUTE", "(JMP)", "uFork_instr_typeq_l1");
+
+  def("uFork_instr_cmp_lt");
+  dat("uFork_instr_cmp__common", "<");
+
+  def("uFork_instr_cmp_le");
+  dat("uFork_instr_cmp__common", "<=");
+
+  def("uFork_instr_cmp_ge");
+  dat("uFork_instr_cmp__common", ">=");
+
+  def("uFork_instr_cmp_gt");
+  dat("uFork_instr_cmp__cpmmon", ">");
 
   def("uFork_instr__subroutine_call"); // ( kont ip opcode -- )
   if (uForkSubroutines) {
