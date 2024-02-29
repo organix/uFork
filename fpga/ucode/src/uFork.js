@@ -711,6 +711,31 @@ export const uFork = (asm, opts) => {
   dat("2DROP");             // ( kont )
   dat("DUP", "uFork_pop");  // ( kont k )
   dat("(JMP)", "uFork_instr_if_l0");
+
+  def("uFork_instr_pair"); // ( kont ip opcode )
+  dat("DROP");             // ( kont ip )
+  dat("qy@");              // ( kont n_fixnum )
+  // todo: insert here a sponsor mem fuel check&burn. Fuel usage: 1
+  // todo: insert here a TOS fixnum check
+  dat("uFork_fixnum2int"); // ( kont n )
+  dat("DUP", "-1", "=", "(BRNZ)", "uFork_instr_pair_l0");
+  dat("1-", "NEGATE", "OVER", "uFork_sp@", "SWAP", "uFork_ndeep"); // ( kont stack@n-1 )
+  dat("DUP", "uFork_cdr", "SWAP", "uFork_()", "SWAP", "qy!"); // ( kont stack@n+1 )
+  dat("OVER", "uFork_sp@");  // ( kont stack@n+1 stack )
+  dat("SWAP");
+  def("uFork_instr_pair_l1");
+  dat("uFork_cons"); // ( kont pair )
+  dat("OVER", "uFork_sp!");  // ( kont )
+  dat("(JMP)", "uFork_instr__common_longer_tail");
+  def("uFork_instr_pair_l0"); // ( kont -1 )
+  dat("DROP");                // ( kont )
+  dat("DUP", "uFork_sp@");    // ( kont stack )
+  dat("uFork_()");            // ( kont pair )
+  dat("(JMP)", "uFork_instr_pair_l1");
+  
+  
+
+  
   
 
   def("uFork_instr__subroutine_call"); // ( kont ip opcode -- )
