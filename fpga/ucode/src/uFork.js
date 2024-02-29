@@ -376,16 +376,16 @@ export const uFork = (asm, opts) => {
   dat("EXIT");
 
   def("uFork_ndeep"); // ( pair_list n -- car | cdr )
-  dat("DUP", ">R");
+  dat("DUP", ">R", "ABSOLUTE");
   dat(">R", "(JMP)", "uFork_ndeep_l1");
   def("uFork_ndeep_l0");
   dat("uFork_cdr");
   def("uFork_ndeep_l1");
   dat("(NEXT)", "uFork_ndeep_l0");
-  dat("R>", "DUP", "(BRZ)", "uFork_ndeep_l2");
-  dat("(JMP)", "(DROP)");
-  def("uFork_ndeep_l2");
-  // =merkill=
+  dat("R>", "DUP", "(BRZ)", "(DROP)");
+  dat("0<", "(BRZ)", "uFork_cdr");
+  dat("(JMP)", "uFork_car");
+  
 
   def("uFork_pop");       // ( kont -- item )
   dat("DUP", ">R");       // ( kont ) R:( kont )
