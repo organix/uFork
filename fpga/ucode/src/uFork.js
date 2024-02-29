@@ -307,9 +307,9 @@ export const uFork = (asm, opts) => {
   // todo: insert ip #instr_t check here
   dat("DUP", "qx@");         // ( kont ip opcode )
   // dat("(JMP)", "uFork_doInstr"); fallthrough
-  def("uFork_doInstr"); // ( opcode -- )
+  // def("uFork_doInstr"); // ( opcode -- )
   dat("(JMPTBL)");
-  dat(31); // number of base instructions
+  dat(33); // number of base instructions
   dat("uFork_instr_nop");
   dat("uFork_instr_push");
   dat("uFork_instr_dup");
@@ -339,8 +339,11 @@ export const uFork = (asm, opts) => {
   dat("uFork_instr_sponsor");
   dat("uFork_instr_assert");
   dat("uFork_instr_debug");
+  dat("uFork_instr__rpush");
+  dat("uFork_instr__rpop");
   dat("uFork_instr__subroutine_call");
   dat("uFork_instr__subroutine_exit");
+  def("uFork_no_such_opcode"); // ( kont ip opcode )
   // todo: cause a error signal
   dat("EXIT");
 
@@ -712,7 +715,7 @@ export const uFork = (asm, opts) => {
     dat("SWAP", "uFork_rp!");
     dat("EXIT");
   } else {
-    // todo: insert a signalling to sponsor here
+    dat("(JMP)", "uFork_no_such_opcode");
   }
 
   def("uFork_instr__subroutine_exit"); // ( kont ip opcode -- )
@@ -735,12 +738,36 @@ export const uFork = (asm, opts) => {
     dat("qt!");       // ( )
     dat("EXIT");
   } else {
-    // todo: insert a signalling to sponsor here
+    dat("(JMP)", "uFork_no_such_opcode");
+  }
+
+  def("uFork_instr__rpush"); // ( kont ip opcode )
+  if (uForkSubroutines) {
+    dat("2DROP");            // ( kont )
+    dat("DUP");              // ( kont kont )
+    dat("uFork_pop");        // ( kont item )
+    dat("OVER");             // ( kont item kont )
+    dat("uFork_rpush");      // ( kont )
+    dat("(JMP)", "uFork_instr__common_longer_tail");
+  } else {
+    dat("(JMP)", "uFork_no_such_opcode");
+  }
+
+  def("uFork_instr__rpop"); // ( kont ip opcode )
+  if (uForkSubroutines) {
+    dat("2DROP");            // ( kont )
+    dat("DUP");              // ( kont kont )
+    dat("uFork_rpop");       // ( kont item )
+    dat("OVER");             // ( kont item kont )
+    dat("uFork_push");      // ( kont )
+    dat("(JMP)", "uFork_instr__common_longer_tail");
+  } else {
+    dat("(JMP)", "uFork_no_such_opcode");
   }
   
   return asm;
 };
 
 export default {
-  uFork_instrHandling
+  uFork
 };
