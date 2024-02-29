@@ -732,9 +732,58 @@ export const uFork = (asm, opts) => {
   dat("DUP", "uFork_sp@");    // ( kont stack )
   dat("uFork_()");            // ( kont pair )
   dat("(JMP)", "uFork_instr_pair_l1");
-  
-  
 
+  def("uFork_copy_pairlist_until_n"); // ( pair n -- new_tailend new_headend )
+  dat("uFork_allot");      // ( pair n q ) R:( )
+  dat("DUP", ">R");        // ( pair n q ) R:( headend )
+  dat("SWAP", ">R");       // ( pair q ) R:( headend n )
+  dat("(JMP)", "uFork_copy_pairlist_until_n_l1");
+  def("uFork_copy_pairlist_until_n_l0"); // ( pair q ) R:( headend n )
+  dat("SWAP");            // ( q pair )
+  dat("uFork_carAndCdr"); // ( q item next )
+  dat(">R");              // ( q item ) R:( headend n next )
+  dat("OVER");            // ( q item q )
+  dat("qx!");             // ( q )
+  dat("uFork_#pair_t", "OVER", "qt!"); // ( q )
+  dat("uFork_#?", "OVER", "qz!");      // ( q )
+  dat("uFork_allot", "DUP", ">R");     // ( q new_q ) R:( headend n next new_q )
+  dat("SWAP", "qy!", "R>");            // ( new_q )   R:( headend n next )
+  dat("R>", "SWAP");                   // ( next new_q ) R:( headend n )
+  def("uFork_copy_pairlist_until_n_l1");
+  dat("(NEXT)", "uFork_copy_pairlist_until_n_l0"); // ( nextest tailend )
+  dat("NIP", "R>");                    // ( tailend headend )
+  dat("EXIT");
+
+  def("uFork_pairlist_length"); // ( pair -- n )
+  // =merkill=
+  
+  def("uFork_instr_part"); // ( kont ip opcode )
+  dat("DROP");             // ( kont ip )
+  dat("qy@");              // ( kont n_fixnum? )
+  // todo: insert here a check to see if TOS value is a pair
+  // todo: insert fixnum check here
+  dat("uFork_fixnum2int"); // ( kont n )
+  // todo: insert here sponsor mem fuel check&burn
+  dat("DUP", "0<", "(BRNZ)", "uFork_instr_part_l0"); // ( kont n )
+  dat("OVER", "uFork_pop");
+  def("uFork_instr_part_l1");
+  dat("SWAP");                    // ( kont pair n )
+  dat("uFork_copy_pairlist_until_n"); // ( kont new_tailend new_headend )
+  dat(">R", "OVER", "uFork_sp@"); // ( kont new_tailend stack ) R:( new_headend )
+  dat("SWAP", "qy!", "R>");       // ( kont new_headend ) R:( )
+  dat("OVER", "uFork_sp!");       // ( kont )
+  dat("(JMP)", "uFork_instr__common_longer_tail");
+  def("uFork_instr_part_l0"); // ( kont -n )
+  dat("-1", "=", "(BRNZ)", "uFork_instr_part_l2");
+  dat("DROP");                // ( kont -1 )
+  dat("DUP");                 // ( kont kont )
+  dat("uFork_pop", "DUP");    // ( kont pair pair )
+  dat("uFork_pairlist_length"); // ( kont pair n )
+  dat("(JMP)", "uFork_instr_part_l1");
+  def("uFork_instr_part_l2"); // ( kont -n )
+  // todo: insert err signal to sponsor here
+  dat("uFork_HARDHALT");
+  
   
   
 
