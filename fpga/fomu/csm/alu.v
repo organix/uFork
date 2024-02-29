@@ -16,7 +16,8 @@ This component performs
 an arithmetic or logical operation
 on an ordered-pair of arguments.
 The operation is selected by `i_op`,
-and the result appears on `o_data`.
+and the result appears on `o_data`
+at the next clock cycle.
 
 */
 
@@ -25,13 +26,13 @@ and the result appears on `o_data`.
 `include "alu_ops.vh"
 
 module alu #(
-    parameter WIDTH             = 8                             // bits per element
+    parameter WIDTH         = 8                         // bits per element
 ) (
-    input                       i_clk,                          // system clock
-    input                 [3:0] i_op,                           // operation selector
-    input           [WIDTH-1:0] i_arg0,                         // argument 0
-    input           [WIDTH-1:0] i_arg1,                         // argument 1
-    output reg      [WIDTH-1:0] o_data                          // result value
+    input                   i_clk,                      // system clock
+    input             [3:0] i_op,                       // operation selector
+    input       [WIDTH-1:0] i_arg0,                     // argument 0
+    input       [WIDTH-1:0] i_arg1,                     // argument 1
+    output reg  [WIDTH-1:0] o_data                      // result value
 );
 
     initial o_data = 0;
@@ -45,9 +46,11 @@ module alu #(
             `SUB_OP: begin
                 o_data <= i_arg0 - i_arg1;
             end
+            /*
             `MUL_OP: begin
                 o_data <= i_arg0 * i_arg1;
             end
+            */
             `AND_OP: begin
                 o_data <= i_arg0 & i_arg1;
             end
@@ -60,8 +63,8 @@ module alu #(
             `ROL_OP: begin
                 o_data <= { i_arg0[WIDTH-2:0], i_arg0[WIDTH-1] };
             end
-            default: begin
-                o_data <= i_arg0;                               // no operation
+            default: begin                              // no operation
+                o_data <= 0; // was: i_arg0;
             end
         endcase
     end
