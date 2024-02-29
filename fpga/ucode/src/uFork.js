@@ -755,7 +755,11 @@ export const uFork = (asm, opts) => {
   dat("EXIT");
 
   def("uFork_pairlist_length"); // ( pair -- n )
-  // =merkill=
+  dat("ZERO", "SWAP");          // ( n pair )
+  def("uFork_pairlist_length_l0");
+  dat("DUP", "uFork_()", "=", "(BRNZ)", "(DROP)");
+  dat("uFork_cdr", "SWAP", "1+", "SWAP");
+  dat("(JMP)", "uFork_pairlist_length_l0");
   
   def("uFork_instr_part"); // ( kont ip opcode )
   dat("DROP");             // ( kont ip )
