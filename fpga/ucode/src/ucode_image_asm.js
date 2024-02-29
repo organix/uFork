@@ -293,6 +293,12 @@ export const minicore = (asm, opts) => {
   def("<="); // ( a b -- bool )
   dat("2DUP", "<", ">R", "=", "R>", "OR", "EXIT");
 
+  def(">");
+  dat("SWAP", "(JMP)", "<");
+
+  def(">=");
+  dat("SWAP", "(JMP)", "<=");
+
   def("MAX"); // ( a b -- a | b )
   dat("2DUP", "<", "?:", "EXIT");
   
