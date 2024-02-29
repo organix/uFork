@@ -670,7 +670,13 @@ export const uFork = (asm, opts) => {
   dat("uFork_#?", "=", "?:"); // ( kont ip booly4 )
   dat("uFork_#f", "=", "(BRNZ)", "uFork_instr__common_tail"); // ( kont ip )
   dat("qy@");               // ( kont true_path )
+  def("uFork_instr_if_l0");
   dat("OVER", "qt!", "EXIT");
+
+  def("uFork_instr_jump");  // ( kont ip opcode )
+  dat("2DROP");             // ( kont )
+  dat("DUP", "uFork_pop");  // ( kont k )
+  dat("(JMP)", "uFork_instr_if_l0");
   
 
   def("uFork_instr__subroutine_call"); // ( kont ip opcode -- )
