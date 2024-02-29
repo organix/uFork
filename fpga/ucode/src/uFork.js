@@ -142,6 +142,25 @@ export const uFork = (asm, opts) => {
 
     def("uFork_rp!"); // ( uFork_rstack kont -- )
     dat("qx@", "qy!", "EXIT");
+
+    def("uFork_rpop");      // ( kont -- item )
+    dat("DUP");             // ( kont kont )
+    dat("uFork_rp@");       // ( kont rstack )
+    dat("uFork_carAndCdr"); // ( kont item next_rstack )
+    dat("SWAP");            // ( kont next_rstack item )
+    dat(">R");              // ( kont next_rstack ) R:( item )
+    dat("SWAP");            // ( next_rstack kont )
+    dat("uFork_rp!");       // ( ) R:( item )
+    dat("R>");              // ( item ) R:( )
+    dat("EXIT");            //
+
+    def("uFork_rpush");     // ( item kont -- )
+    dat("DUP", ">R");       // ( item kont ) R:( kont )
+    dat("uFork_rp@");       // ( item rstack ) R:( kont )
+    dat("uFork_cons");      // ( rstack_new ) R:( kont )
+    dat("R>");              // ( rstack_new kont ) R:( )
+    dat("uFork_rp!");       // ( )
+    dat("EXIT");
   }
 
   def("uFork_isFixnum?"); // ( specimen -- bool )
