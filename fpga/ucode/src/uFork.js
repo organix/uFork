@@ -627,6 +627,20 @@ export const uFork = (asm, opts) => {
   // todo: insert sponsor err signalling here
   dat("EXIT");
 
+  def("uFork_pop2items"); // ( kont -- kont u v )
+  dat("DUP", "uFork_pop", "OVER", "uFork_pop");
+  dat("EXIT");
+
+  def("uFork_instr_cmp_eq"); // ( kont subopcode )
+  dat("DROP");
+  dat("uFork_pop2items");
+  dat("(JMP)", "uFork_instr_typeq_l2");
+
+  def("uFork_instr_cmp_ne"); // ( kont subopcode )
+  dat("DROP");               // ( kont )
+  dat("uFork_pop2items");    // ( kont u v )
+  dat("=", "INVERT", "(JMP)", "uFork_instr_type_l1");
+
   def("uFork_instr__subroutine_call"); // ( kont ip opcode -- )
   if (uForkSubroutines) {
     dat("DROP"); // ( kont ip )
