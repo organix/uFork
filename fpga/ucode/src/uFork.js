@@ -614,6 +614,18 @@ export const uFork = (asm, opts) => {
   dat("OVER", "uFork_pop");   // ( kont expected_value value )
   dat("(JMP)", "uFork_instr_typeq_l2");
 
+  def("uFork_instr_cmp");     // ( kont ip opcode )
+  dat("DROP", "qy@");         // ( kont subopcode )
+  dat("(JMPTBL)");
+  dat(6);
+  dat("uFork_instr_cmp_eq");
+  dat("uFork_instr_cmp_ne");
+  dat("uFork_instr_cmp_lt");
+  dat("uFork_instr_cmp_le");
+  dat("uFork_instr_cmp_ge");
+  dat("uFork_instr_cmp_gt");
+  // todo: insert sponsor err signalling here
+  dat("EXIT");
 
   def("uFork_instr__subroutine_call"); // ( kont ip opcode -- )
   if (uForkSubroutines) {
