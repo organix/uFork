@@ -78,7 +78,7 @@ module cpu (
     localparam UC_TRUE      = 16'h8B80;                 // ( -- -1 )
     localparam UC_FALSE     = 16'h8D80;                 // ( -- 0 )
     localparam UC_INVERT    = 16'h8F80;                 // ( a -- ~a )
-    localparam UC_LIT       = 16'h9280;                 // LIT item ( -- item )
+    localparam UC_LIT       = 16'h9280;                 // LIT cell ( -- cell )
     localparam UC_NEGATE    = 16'h9880;                 // ( a -- -a )
     localparam UC_DEC       = 16'h9B80;                 // 1- ( a -- a-1 )
     localparam UC_SUB       = 16'h9F80;                 // - ( a b -- a+b )
@@ -113,7 +113,7 @@ module cpu (
         ucode[8'h8F] = UC_TRUE;
         ucode[8'h90] = UC_XOR;
         ucode[8'h91] = UC_EXIT;
-        // LIT item ( -- item )
+        // LIT cell ( -- cell )
         ucode[8'h92] = UC_R_POP;
         ucode[8'h93] = UC_DUP;
         ucode[8'h94] = UC_INC;
@@ -236,6 +236,21 @@ module cpu (
             2: begin                                    // execute
                 case (opcode)
                     UC_NOP: begin
+                        // ( -- )
+                        phase <= 3;
+                    end
+                    UC_PUSH_R: begin
+                        // >R ( a -- ) R:( -- a )
+                        r_value <= d0;
+                        d_pop <= 1'b1;
+                        r_push <= 1'b1;
+                        phase <= 3;
+                    end
+                    UC_R_POP: begin
+                        // R> ( -- a ) R:( a -- )
+                        d_value <= r0;
+                        r_pop <= 1'b1;
+                        d_push <= 1'b1;
                         phase <= 3;
                     end
                     default: begin
