@@ -5,6 +5,7 @@
  * @author Zarutian
  */
 // using uFork/docs/vm.md as reference
+// also using uFork/docs/sponsor.md as reference
 
 export const uFork = (asm, opts) => {
   opts = (opts == undefined) ? {} : opts ;
