@@ -300,10 +300,12 @@ module cpu (
                         d_value = uc_rdata;
                         d_push = 1'b1;
                     end
+                    /*
                     UC_STORE: begin
                         // ! ( cell addr -- )
 //                        d_pop <= 1'b1;
                     end
+                    */
                 endcase
                 if (o_running) begin
                     uc_raddr <= pc;
