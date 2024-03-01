@@ -235,6 +235,15 @@ module cpu (
                         // @ ( addr -- cell )
                         uc_raddr <= d0[15:8];
                     end
+                    /*
+                    UC_STORE: begin
+                        // ! ( cell addr -- )
+                        uc_waddr <= d0[15:8];
+                        uc_wdata <= d1;
+                        uc_wr <= 1'b1;
+                        d_pop <= 1'b1;
+                    end
+                    */
                 endcase
                 opcode <= uc_rdata;
                 pc <= pc + 1'b1;
@@ -251,9 +260,7 @@ module cpu (
                     /*
                     UC_STORE: begin
                         // ! ( cell addr -- )
-                        uc_waddr <= d0[15:8];
-                        uc_wdata <= d1;
-                        uc_wr <= 1'b1;
+                        d_pop <= 1'b1;
                     end
                     */
                     UC_PUSH_R: begin
@@ -292,6 +299,10 @@ module cpu (
                         // @ ( addr -- cell )
                         d_value = uc_rdata;
                         d_push = 1'b1;
+                    end
+                    UC_STORE: begin
+                        // ! ( cell addr -- )
+//                        d_pop <= 1'b1;
                     end
                 endcase
                 if (o_running) begin
