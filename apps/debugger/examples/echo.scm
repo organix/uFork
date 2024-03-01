@@ -33,6 +33,6 @@
     (lambda (io-dev)
         (SEND
             io-dev
-            (list #? (CREATE (echo-beh io-dev))))   ; input character
-        ))
+            (list #? (CREATE (echo-beh io-dev)))    ; input character
+        )))
 (start (DEVICE dev.io_key))

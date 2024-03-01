@@ -1,13 +1,12 @@
 /*
 
-Test Bench for alu.v
+Test Bench for cpu.v
 
 */
 
 `default_nettype none
 
-//`include "alu_test8.v"
-`include "alu_test16.v"
+`include "cpu.v"
 
 `timescale 10ns/1ns
 
@@ -15,7 +14,7 @@ module test_bench;
 
     // dump simulation signals
     initial begin
-        $dumpfile("alu.vcd");
+        $dumpfile("cpu.vcd");
         $dumpvars(0, test_bench);
         #200;
         $finish;
@@ -36,14 +35,14 @@ module test_bench;
         end
     end
 
-    // instantiate test fixture
+    // instantiate CPU
     wire running;
     wire passed;
-    alu_test TEST (
+    cpu CPU (
         .i_clk(clk),
         .i_run(!waiting),
         .o_running(running),
-        .o_passed(passed)
+        .o_status(passed)
     );
 
 endmodule

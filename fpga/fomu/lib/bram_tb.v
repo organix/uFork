@@ -1,13 +1,12 @@
 /*
 
-Test Bench for alu.v
+Test Bench for bram.v
 
 */
 
 `default_nettype none
 
-//`include "alu_test8.v"
-`include "alu_test16.v"
+`include "bram_test.v"
 
 `timescale 10ns/1ns
 
@@ -15,7 +14,7 @@ module test_bench;
 
     // dump simulation signals
     initial begin
-        $dumpfile("alu.vcd");
+        $dumpfile("bram.vcd");
         $dumpvars(0, test_bench);
         #200;
         $finish;
@@ -29,7 +28,7 @@ module test_bench;
 
     // start-up delay
     reg [5:0] waiting;
-    initial waiting = 3;                                // wait for device initialization
+    initial waiting = 3;                                        // wait for device initialization
     always @(posedge clk) begin
         if (waiting) begin
             waiting <= waiting - 1'b1;
@@ -39,7 +38,7 @@ module test_bench;
     // instantiate test fixture
     wire running;
     wire passed;
-    alu_test TEST (
+    bram_test TEST (
         .i_clk(clk),
         .i_run(!waiting),
         .o_running(running),

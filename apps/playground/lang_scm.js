@@ -9,10 +9,11 @@ import theme from "./theme.js";
 const indent = "    ";
 const rx_comment = /^(\s*)(;+\u0020?)/;
 const comment_prefix = "; ";
-const rainbow = Object.values(theme);
+const rainbow = [theme.yellow, theme.purple, theme.orange, theme.green];
 
 function highlight(element) {
     const text = element.textContent;
+    element.style.color = theme.blue;
     element.innerHTML = "";
     const ir = scm.compile(text);
     if (ir.errors !== undefined && ir.errors.length > 0) {
@@ -37,20 +38,46 @@ function highlight(element) {
 // Rainbow parens, pending detailed token information.
 
         let depth = 0;
-        Array.from(text).forEach(function (glyph) {
-            const paren = dom("span", {
-                textContent: glyph,
-                style: {color: rainbow[depth]}
-            });
-            if (glyph === "(") {
-                element.append(paren);
+        let mode = source_mode;
+
+        function source_mode(glyph) {
+            if (glyph === ";") {
+                mode = comment_mode;
+                mode(glyph);
+            } else if (glyph === "(") {
+                const open = dom("span", {
+                    textContent: glyph,
+                    style: {color: rainbow[depth % rainbow.length]}
+                });
+                element.append(open);
                 depth += 1;
             } else if (glyph === ")") {
                 depth -= 1;
-                element.append(paren);
+                const close = dom("span", {
+                    textContent: glyph,
+                    style: {color: rainbow[depth % rainbow.length]}
+                });
+                element.append(close);
             } else {
                 element.append(glyph);
             }
+        }
+
+        function comment_mode(glyph) {
+            if (glyph === "\n") {
+                mode = source_mode;
+                mode(glyph);
+            } else {
+                const dim = dom("span", {
+                    textContent: glyph,
+                    style: {color: theme.silver}
+                });
+                element.append(dim);
+            }
+        }
+
+        Array.from(text).forEach(function (glyph) {
+            mode(glyph);  // handle `gylph` in current `mode`
         });
     }
 }

@@ -484,6 +484,7 @@ export const uFork = (asm, opts) => {
   dat("(NEXT)", "uFork_instr_pick_l1"); // ( kont stack ) R:( )
   dat("qx@", "OVER", "uFork_push");
   dat("(JMP)", "uFork_instr__common_longer_tail");
+<<<<<<< HEAD
   def("uFork_instr_pick_l0"); // ( kont -n )
   dat("NEGATE");              // ( kont n )
   dat(">R", "DUP");           // ( kont kont ) R:( n )
@@ -789,6 +790,9 @@ export const uFork = (asm, opts) => {
   dat("uFork_HARDHALT");
   
   
+=======
+
+>>>>>>> 15011dffa478f77351dc411f7518ca8bf9e606df
   
 
   def("uFork_instr__subroutine_call"); // ( kont ip opcode -- )

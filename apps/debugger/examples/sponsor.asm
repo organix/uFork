@@ -6,13 +6,6 @@
     std: "https://ufork.org/lib/std.asm"
     dev: "https://ufork.org/lib/dev.asm"
 
-E_MEM_LIM:
-    ref -9
-E_MSG_LIM:
-    ref -11
-E_CPU_LIM:
-    ref -10
-
 ; Sponsor controller that refills all quotas
 
 refill:                 ; (memory events cycles) <- sponsor
@@ -20,13 +13,13 @@ refill:                 ; (memory events cycles) <- sponsor
     quad -4             ; error=Z Y X T
     drop 3              ; error
     dup 1               ; error error
-    eq E_CPU_LIM        ; error error==E_CPU_LIM
+    eq std.E_CPU_LIM    ; error error==E_CPU_LIM
     if refill_0         ; error
     dup 1               ; error error
-    eq E_MEM_LIM        ; error error==E_MEM_LIM
+    eq std.E_MEM_LIM    ; error error==E_MEM_LIM
     if refill_0         ; error
     dup 1               ; error error
-    eq E_MSG_LIM        ; error error==E_MSG_LIM
+    eq std.E_MSG_LIM    ; error error==E_MSG_LIM
     if refill_0         ; error
     msg 0               ; error sponsor
     sponsor stop        ; error --

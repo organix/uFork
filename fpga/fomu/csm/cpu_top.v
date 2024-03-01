@@ -1,13 +1,12 @@
 /*
 
-Physical Test Bench for alu.v
+Physical Test Bench for cpu.v
 
 */
 
 `default_nettype none
 
-//`include "alu_test8.v"
-`include "alu_test16.v"
+`include "cpu.v"
 
 module top (
     input                   clki,                       // 48MHz oscillator input on Fomu-PVT
@@ -61,14 +60,14 @@ module top (
         end
     end
 
-    // instantiate test fixture
+    // instantiate CPU
     wire running;
     wire passed;
-    alu_test TEST (
+    cpu CPU (
         .i_clk(clk),
         .i_run(!waiting),
         .o_running(running),
-        .o_passed(passed)
+        .o_status(passed)
     );
 
     // drive LEDs

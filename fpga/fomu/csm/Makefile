@@ -3,11 +3,13 @@
 #
 
 ALL =	alu.vcd \
-	alu.dfu
+	alu.dfu \
+	cpu.vcd \
+	cpu.dfu
 
 all: $(ALL)
 
-install: alu.dfu
+install: cpu.dfu
 	dfu-util -D $<
 
 clean:
