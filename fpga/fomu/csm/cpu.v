@@ -47,7 +47,7 @@ module cpu (
     localparam UC_PUSH_R    = 16'h000C;                 // >R ( a -- ) R:( -- a )
     localparam UC_R_POP     = 16'h000D;                 // R> ( -- a ) R:( a -- )
     localparam UC_000E      = 16'h000E;
-    localparam UC_EXIT      = 16'h000F;                 // ( -- ) R:( raddr -- ) raddr->pc
+    localparam UC_EXIT      = 16'h000F;                 // ( -- ) R:( addr -- ) addr->pc
     localparam UC_CALL      = 16'hFFC0;                 // ( -- ) R:( -- pc ) @pc[15:8]->pc
 
     //
@@ -229,29 +229,49 @@ module cpu (
                 end
             end
             1: begin                                    // decode
+                phase <= 2;
+                case (uc_rdata)
+                    UC_FETCH: begin
+                        // @ ( addr -- cell )
+                        uc_raddr <= d0[15:8];
+                    end
+                endcase
                 opcode <= uc_rdata;
                 pc <= pc + 1'b1;
-                phase <= 2;
             end
             2: begin                                    // execute
+                phase <= 3;
                 case (opcode)
                     UC_NOP: begin
                         // ( -- )
-                        phase <= 3;
                     end
+                    UC_FETCH: begin
+                        // @ ( addr -- cell )
+                    end
+                    /*
+                    UC_STORE: begin
+                        // ! ( cell addr -- )
+                        uc_waddr <= d0[15:8];
+                        uc_wdata <= d1;
+                        uc_wr <= 1'b1;
+                    end
+                    */
                     UC_PUSH_R: begin
                         // >R ( a -- ) R:( -- a )
                         r_value <= d0;
                         d_pop <= 1'b1;
                         r_push <= 1'b1;
-                        phase <= 3;
                     end
                     UC_R_POP: begin
                         // R> ( -- a ) R:( a -- )
                         d_value <= r0;
                         r_pop <= 1'b1;
                         d_push <= 1'b1;
-                        phase <= 3;
+                    end
+                    UC_EXIT: begin
+                        // ( -- ) R:( addr -- ) addr->pc
+                        pc <= r0[15:8];
+                        r_pop <= 1'b1;
                     end
                     default: begin
                         if (is_call) begin
@@ -262,15 +282,21 @@ module cpu (
                         end else begin
                             o_status <= 1'b0;           // register failure
                         end
-                        phase <= 3;
                     end
                 endcase
             end
-            3: begin                                    // next
+            3: begin                                    // write-back & next
+                phase <= 0;
+                case (opcode)
+                    UC_FETCH: begin
+                        // @ ( addr -- cell )
+                        d_value = uc_rdata;
+                        d_push = 1'b1;
+                    end
+                endcase
                 if (o_running) begin
                     uc_raddr <= pc;
                 end
-                phase <= 0;
             end
             default: begin
                 o_status <= 1'b0;                       // register failure
