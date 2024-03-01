@@ -249,7 +249,7 @@ module cpu (
                         uc_waddr <= d0[15:8];
                         uc_wdata <= d1;
                         uc_wr <= 1'b1;
-                        d_pop <= 1'b1;
+//                        d_pop <= 1'b1; // pop d-stack twice (in 2 separate phases)
                     end
                     */
                 endcase
@@ -268,9 +268,15 @@ module cpu (
                     /*
                     UC_STORE: begin
                         // ! ( cell addr -- )
-                        d_pop <= 1'b1;
+                        d_pop <= 1'b1; // pop d-stack twice (in 2 separate phases)
                     end
                     */
+                    UC_SKZ: begin                       // ( cond -- ) cond==0?pc+2:pc+1->pc
+                        if (d0 == 0) begin
+                            pc <= pc + 1'b1;
+                        end
+                        d_pop <= 1'b1;
+                    end
                     UC_PUSH_R: begin
                         // >R ( a -- ) R:( -- a )
                         r_value <= d0;
@@ -311,7 +317,7 @@ module cpu (
                     /*
                     UC_STORE: begin
                         // ! ( cell addr -- )
-//                        d_pop <= 1'b1; // pop d-stack here or phase 2, but not both!
+                        d_pop <= 1'b1; // pop d-stack twice (in 2 separate phases)
                     end
                     */
                 endcase
