@@ -82,6 +82,8 @@ module cpu (
     localparam UC_NEGATE    = 16'h9880;                 // ( a -- -a )
     localparam UC_DEC       = 16'h9B80;                 // 1- ( a -- a-1 )
     localparam UC_SUB       = 16'h9F80;                 // - ( a b -- a+b )
+    localparam UC_LSB       = 16'hA280;                 // ( -- 1 )
+    localparam UC_MSB       = 16'hA480;                 // ( -- -32768 )
 
     // initial program
     initial begin
@@ -133,6 +135,12 @@ module cpu (
         ucode[8'h9F] = UC_NEGATE;
         ucode[8'hA0] = UC_ADD;
         ucode[8'hA1] = UC_EXIT;
+        // LSB ( -- 1 )
+        ucode[8'hA2] = UC_CONST;
+        ucode[8'hA3] = 16'h0001;
+        // MSB ( -- -32768 )
+        ucode[8'hA4] = UC_CONST;
+        ucode[8'hA5] = 16'h8000;
         /*
         */
     end
@@ -303,7 +311,7 @@ module cpu (
                     /*
                     UC_STORE: begin
                         // ! ( cell addr -- )
-//                        d_pop <= 1'b1;
+//                        d_pop <= 1'b1; // pop d-stack here or phase 2, but not both!
                     end
                     */
                 endcase
