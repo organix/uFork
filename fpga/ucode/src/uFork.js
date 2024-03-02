@@ -800,7 +800,20 @@ export const uFork = (asm, opts) => {
   dat("uFork_ndeep");       // ( kont item|tail )
   dat("OVER", "uFork_push"); // ( kont )
   dat("(JMP)", "uFork_instr__common_longer_tail");
-  
+
+  //  t        x    y      z
+  // [#dict_t, key, value, next]
+  def("uFork_instr_dict"); // ( kont ip opcode -- )
+  dat("DROP");             // ( kont ip )
+  dat("qy@");              // ( kont subopcode )
+  dat("(JMPTBL)", 5);
+  dat("uFork_instr_dict_has");
+  dat("uFork_instr_dict_get");
+  dat("uFork_instr_dict_add");
+  dat("uFork_instr_dict_set");
+  dat("uFork_instr_dict_del");
+  // todo: insert here err signalling
+  dat("EXIT");
 
   def("uFork_instr__subroutine_call"); // ( kont ip opcode -- )
   if (uForkSubroutines) {
