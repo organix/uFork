@@ -66,6 +66,7 @@ export const makeQuadMemoryWASMbridge = (opts) => {
     u_read_quad,
     u_write_quad,
     memory_descriptor_addr = 0x40000000,
+    h_gc_run,
   } = opts;
   const iface = {
     fetch: (addr) => {
@@ -88,13 +89,19 @@ export const makeQuadMemoryWASMbridge = (opts) => {
       }
       const addr = x;
       const [_, _, _, nextFree] = iface.fetch(addr);
-      iface.store([t, x, nextFree, (z - 1)&0xFFFF], memory_descriptor_addr);
+      iface.store([t, nextFree, (y - 1)&0xFFFF, z], memory_descriptor_addr);
       iface.store([0, 0, 0, 0], addr);
       return addr;
     },
     free: (addr) => {
+      // selfnote: það sama á við hér
+      let [t, x, y, z] = iface.fetch(memory_descriptor_addr);
+      iface.store([0xF, 0, 0, x], addr);
+      iface.store([t, addr, (y + 1)&0xFFFF, z], memory_descriptor_addr);
+      returnb
     },
     gcstep: () => {
+      h_gc_run();
     },
   };
 };
