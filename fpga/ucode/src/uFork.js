@@ -789,6 +789,18 @@ export const uFork = (asm, opts) => {
   def("uFork_instr_part_l2"); // ( kont -n )
   // todo: insert err signal to sponsor here
   dat("uFork_HARDHALT");
+
+  def("uFork_instr_nth"); // ( kont ip opcode )
+  dat("DROP");            // ( kont ip )
+  dat("qy@");             // ( kont n_fixnum )
+  // todo: insert here a fixnum check for the immediate param of the uFork instr
+  dat("uFork_fixnum2int");  // ( kont n )
+  dat("OVER", "uFork_pop"); // ( kont n pairlist )
+  dat("SWAP");              // ( kont pairlist n )
+  // merkill: man ekki nafnið á fallinu í augnablikinu
+  dat("    ");              // ( kont item|tail )
+  dat("OVER", "uFork_push"); // ( kont )
+  dat("(JMP)", "uFork_instr__common_longer_tail");
   
 
   def("uFork_instr__subroutine_call"); // ( kont ip opcode -- )
