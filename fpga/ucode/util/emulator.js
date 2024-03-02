@@ -61,6 +61,44 @@ export const makeQuadMemory = (opts) => {
   };
 };
 
+export const makeQuadMemoryWASMbridge = (opts) => {
+  const {
+    u_read_quad,
+    u_write_quad,
+    memory_descriptor_addr = 0x40000000,
+  } = opts;
+  const iface = {
+    fetch: (addr) => {
+      const { t, x, y, z } = u_read_quad(addr);
+      return [t, x, y, z];
+    },
+    store: (val, addr) => {
+      const [t, x, y, z] = val;
+      u_write_quad(addr, { t, x, y, z });
+      return;
+    },
+    allot: () => {
+      // selfnote: virðist eigi vera bein meðóða í wasm útgáfunni
+      //           þannig að þetta mix er því notað.
+      let [t, x, y, z] = iface.fetch(memory_descriptor_addr);
+      let attempts = 4200;
+      while((attempts > 0) || x == 0x0000) {
+        iface.gcstep();
+        [t, x, y, z] = iface.fetch(memory_descriptor_addr);
+      }
+      const addr = x;
+      const [_, _, _, nextFree] = iface.fetch(addr);
+      iface.store([t, x, nextFree, (z - 1)&0xFFFF], memory_descriptor_addr);
+      iface.store([0, 0, 0, 0], addr);
+      return addr;
+    },
+    free: (addr) => {
+    },
+    gcstep: () => {
+    },
+  };
+};
+
 export const makeDebugIOStub = (opts) => {
   return {
     setLED: (colour) => {
