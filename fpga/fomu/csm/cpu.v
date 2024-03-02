@@ -270,7 +270,11 @@ module cpu (
                     UC_DROP: begin                      // ( a -- )
                         d_pop <= 1'b1;
                     end
-//                    localparam UC_SWAP      = 16'h000A;                 // ( a b -- b a )
+                    UC_SWAP: begin                      // ( a b -- b a )
+                        alu_op <= `NO_OP;
+                        alu_arg0 <= d0;                 // pass b thru ALU
+                        d_pop <= 1'b1;
+                    end
                 endcase
                 opcode <= uc_rdata;
                 pc <= pc + 1'b1;
@@ -308,7 +312,13 @@ module cpu (
                         d_pop <= 1'b1;
                     end
                     */
-//                    localparam UC_SWAP      = 16'h000A;                 // ( a b -- b a )
+                    UC_SWAP: begin                      // ( a b -- b a )
+                        alu_op <= `NO_OP;
+                        alu_arg0 <= d0;                 // pass a thru ALU
+                        d_value <= alu_data;            // replace a with b
+                        d_pop <= 1'b1;
+                        d_push <= 1'b1;
+                    end
                     UC_SKZ: begin                       // ( cond -- ) cond==0?pc+2:pc+1->pc
                         if (d0 == 0) begin
                             pc <= pc + 1'b1;
@@ -352,6 +362,10 @@ module cpu (
                         d_pop <= 1'b1; // pop d-stack twice (in 2 separate phases)
                     end
                     */
+                    UC_SWAP: begin                      // ( a b -- b a )
+                        d_value <= alu_data;            // push a
+                        d_push <= 1'b1;
+                    end
                 endcase
                 if (o_running) begin
                     uc_raddr <= pc;
