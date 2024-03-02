@@ -243,8 +243,7 @@ module cpu (
                         alu_arg0 <= d0;
                         alu_arg1 <= 16'h0001;
                     end
-                    UC_FETCH: begin
-                        // @ ( addr -- cell )
+                    UC_FETCH: begin                     // @ ( addr -- cell )
                         uc_raddr <= d0[15:8];
                     end
                     /*
@@ -263,20 +262,17 @@ module cpu (
             2: begin                                    // execute
                 phase <= 3;
                 case (opcode)
-                    UC_NOP: begin
-                        // ( -- )
+                    UC_NOP: begin                       // ( -- )
                     end
                     UC_INC: begin                       // 1+ ( a -- a+1 )
                         d_value <= alu_data;
                         d_pop <= 1'b1;
                         d_push <= 1'b1;
                     end
-                    UC_FETCH: begin
-                        // @ ( addr -- cell )
+                    UC_FETCH: begin                     // @ ( addr -- cell )
                     end
                     /*
-                    UC_STORE: begin
-                        // ! ( cell addr -- )
+                    UC_STORE: begin                     // ! ( cell addr -- )
                         d_pop <= 1'b1; // pop d-stack twice (in 2 separate phases)
                     end
                     */
@@ -286,20 +282,17 @@ module cpu (
                         end
                         d_pop <= 1'b1;
                     end
-                    UC_PUSH_R: begin
-                        // >R ( a -- ) R:( -- a )
+                    UC_PUSH_R: begin                    // >R ( a -- ) R:( -- a )
                         r_value <= d0;
                         d_pop <= 1'b1;
                         r_push <= 1'b1;
                     end
-                    UC_R_POP: begin
-                        // R> ( -- a ) R:( a -- )
+                    UC_R_POP: begin                     // R> ( -- a ) R:( a -- )
                         d_value <= r0;
                         r_pop <= 1'b1;
                         d_push <= 1'b1;
                     end
-                    UC_EXIT: begin
-                        // ( -- ) R:( addr -- ) addr->pc
+                    UC_EXIT: begin                      // ( -- ) R:( addr -- ) addr->pc
                         pc <= r0[15:8];
                         r_pop <= 1'b1;
                     end
@@ -317,14 +310,12 @@ module cpu (
             3: begin                                    // write-back & next
                 phase <= 0;
                 case (opcode)
-                    UC_FETCH: begin
-                        // @ ( addr -- cell )
+                    UC_FETCH: begin                     // @ ( addr -- cell )
                         d_value = uc_rdata;
                         d_push = 1'b1;
                     end
                     /*
-                    UC_STORE: begin
-                        // ! ( cell addr -- )
+                    UC_STORE: begin                     // ! ( cell addr -- )
                         d_pop <= 1'b1; // pop d-stack twice (in 2 separate phases)
                     end
                     */
