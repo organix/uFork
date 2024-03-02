@@ -218,7 +218,6 @@ module cpu (
 
     reg [7:0] pc = 8'h00;
     reg [15:0] opcode = UC_NOP;
-    wire is_call = opcode[7];
 
     assign o_running = i_run && o_status;
 
@@ -239,6 +238,11 @@ module cpu (
             1: begin                                    // decode
                 phase <= 2;
                 case (uc_rdata)
+                    UC_INC: begin                       // 1+ ( a -- a+1 )
+                        alu_op <= `ADD_OP;
+                        alu_arg0 <= d0;
+                        alu_arg1 <= 16'h0001;
+                    end
                     UC_FETCH: begin
                         // @ ( addr -- cell )
                         uc_raddr <= d0[15:8];
@@ -261,6 +265,11 @@ module cpu (
                 case (opcode)
                     UC_NOP: begin
                         // ( -- )
+                    end
+                    UC_INC: begin                       // 1+ ( a -- a+1 )
+                        d_value <= alu_data;
+                        d_pop <= 1'b1;
+                        d_push <= 1'b1;
                     end
                     UC_FETCH: begin
                         // @ ( addr -- cell )
@@ -295,8 +304,7 @@ module cpu (
                         r_pop <= 1'b1;
                     end
                     default: begin
-                        if (is_call) begin
-                            // ( -- ) R:( -- pc ) @pc[15:8]->pc
+                        if (opcode[7]) begin            // CALL ( -- ) R:( -- pc ) @pc[15:8]->pc
                             r_value <= { pc, 8'h80 };
                             r_push <= 1'b1;
                             pc <= opcode[15:8];
