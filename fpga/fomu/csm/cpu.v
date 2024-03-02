@@ -263,6 +263,7 @@ module cpu (
 //                        d_pop <= 1'b1; // pop d-stack twice (in 2 separate phases)
                     end
                     */
+                    /*
                     UC_DUP: begin                       // ( a -- a a )
                         d_value <= d0;
                         d_push <= 1'b1;
@@ -270,6 +271,7 @@ module cpu (
                     UC_DROP: begin                      // ( a -- )
                         d_pop <= 1'b1;
                     end
+                    */
                     UC_SWAP: begin                      // ( a b -- b a )
                         alu_op <= `NO_OP;
                         alu_arg0 <= d0;                 // pass b thru ALU
@@ -303,7 +305,6 @@ module cpu (
                         d_pop <= 1'b1; // pop d-stack twice (in 2 separate phases)
                     end
                     */
-                    /*
                     UC_DUP: begin                       // ( a -- a a )
                         d_value <= d0;
                         d_push <= 1'b1;
@@ -311,7 +312,6 @@ module cpu (
                     UC_DROP: begin                      // ( a -- )
                         d_pop <= 1'b1;
                     end
-                    */
                     UC_SWAP: begin                      // ( a b -- b a )
                         alu_op <= `NO_OP;
                         alu_arg0 <= d0;                 // pass a thru ALU
