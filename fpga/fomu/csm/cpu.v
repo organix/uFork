@@ -238,6 +238,14 @@ module cpu (
             1: begin                                    // decode
                 phase <= 2;
                 case (uc_rdata)
+                    /*
+                    UC_XOR: begin                       // ^ ( a b -- a^b )
+                        alu_op <= `XOR_OP;
+                        alu_arg0 <= d0;
+                        alu_arg1 <= d1;
+                        d_pop <= 1'b1;
+                    end
+                    */
                     UC_INC: begin                       // 1+ ( a -- a+1 )
                         alu_op <= `ADD_OP;
                         alu_arg0 <= d0;
@@ -264,6 +272,13 @@ module cpu (
                 case (opcode)
                     UC_NOP: begin                       // ( -- )
                     end
+                    /*
+                    UC_XOR: begin                       // ^ ( a b -- a^b )
+                        d_value <= alu_data;
+                        d_pop <= 1'b1;
+                        d_push <= 1'b1;
+                    end
+                    */
                     UC_INC: begin                       // 1+ ( a -- a+1 )
                         d_value <= alu_data;
                         d_pop <= 1'b1;
