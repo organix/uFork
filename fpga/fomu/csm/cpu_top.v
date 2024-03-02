@@ -17,7 +17,8 @@ module top (
     output                  usb_dn,                     // USB D-
     output                  usb_dp_pu                   // USB D+ pull-up
 );
-    parameter CLK_FREQ      = 48_000_000;               // clock frequency (Hz)
+//    parameter CLK_FREQ      = 48_000_000;               // clock frequency (Hz)
+    parameter CLK_FREQ      = 12_000_000;               // clock frequency (Hz)
 
     // disable Fomu USB
     assign usb_dp = 1'b0;
@@ -25,9 +26,14 @@ module top (
     assign usb_dp_pu = 1'b0;
 
     // connect system clock (with buffering)
+    reg [1:0] clk_div = 2'b00;
+    always @(posedge clki) begin
+        clk_div <= clk_div + 1'b1;
+    end
     wire clk;
     SB_GB clk_gb (
-        .USER_SIGNAL_TO_GLOBAL_BUFFER(clki),
+//        .USER_SIGNAL_TO_GLOBAL_BUFFER(clki),
+        .USER_SIGNAL_TO_GLOBAL_BUFFER(clk_div[1]),      // divide 48MHz clock down to 12MHz
         .GLOBAL_BUFFER_OUTPUT(clk)
     );
 
