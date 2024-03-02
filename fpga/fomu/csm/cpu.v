@@ -82,6 +82,8 @@ module cpu (
     localparam UC_NEGATE    = 16'h9880;                 // ( a -- -a )
     localparam UC_DEC       = 16'h9B80;                 // 1- ( a -- a-1 )
     localparam UC_SUB       = 16'h9F80;                 // - ( a b -- a+b )
+    localparam UC_LSB       = 16'hA280;                 // ( -- 1 )
+    localparam UC_MSB       = 16'hA480;                 // ( -- -32768 )
 
     // initial program
     initial begin
@@ -133,6 +135,12 @@ module cpu (
         ucode[8'h9F] = UC_NEGATE;
         ucode[8'hA0] = UC_ADD;
         ucode[8'hA1] = UC_EXIT;
+        // LSB ( -- 1 )
+        ucode[8'hA2] = UC_CONST;
+        ucode[8'hA3] = 16'h0001;
+        // MSB ( -- -32768 )
+        ucode[8'hA4] = UC_CONST;
+        ucode[8'hA5] = 16'h8000;
         /*
         */
     end
@@ -210,7 +218,6 @@ module cpu (
 
     reg [7:0] pc = 8'h00;
     reg [15:0] opcode = UC_NOP;
-    wire is_call = opcode[7];
 
     assign o_running = i_run && o_status;
 
@@ -225,25 +232,55 @@ module cpu (
         case (phase)
             0: begin                                    // fetch
                 if (o_running) begin
+                    // wait for memory cycle...
                     phase <= 1;
                 end
             end
             1: begin                                    // decode
                 phase <= 2;
                 case (uc_rdata)
-                    UC_FETCH: begin
-                        // @ ( addr -- cell )
+                    UC_ADD: begin                       // ^ ( a b -- a+b )
+                        alu_op <= `ADD_OP;
+                        alu_arg0 <= d0;
+                        alu_arg1 <= d1;
+                        d_pop <= 1'b1;
+                    end
+                    UC_AND: begin                       // ^ ( a b -- a&b )
+                        alu_op <= `AND_OP;
+                        alu_arg0 <= d0;
+                        alu_arg1 <= d1;
+                        d_pop <= 1'b1;
+                    end
+                    UC_XOR: begin                       // ^ ( a b -- a^b )
+                        alu_op <= `XOR_OP;
+                        alu_arg0 <= d0;
+                        alu_arg1 <= d1;
+                        d_pop <= 1'b1;
+                    end
+                    UC_ROL: begin                       // ( a -- {a[14:0],a[15]} )
+                        alu_op <= `ROL_OP;
+                        alu_arg0 <= d0;
+                    end
+                    UC_INC: begin                       // 1+ ( a -- a+1 )
+                        alu_op <= `ADD_OP;
+                        alu_arg0 <= d0;
+                        alu_arg1 <= 16'h0001;
+                    end
+                    UC_FETCH: begin                     // @ ( addr -- cell )
                         uc_raddr <= d0[15:8];
                     end
-                    /*
                     UC_STORE: begin
                         // ! ( cell addr -- )
                         uc_waddr <= d0[15:8];
                         uc_wdata <= d1;
                         uc_wr <= 1'b1;
+                        d_pop <= 1'b1; // pop d-stack twice (in 2 separate phases)
+                    end
+                    UC_SWAP: begin                      // ( a b -- b a )
+                        alu_op <= `NO_OP;
+                        alu_arg0 <= d0;                 // pass b thru ALU
                         d_pop <= 1'b1;
                     end
-                    */
                 endcase
                 opcode <= uc_rdata;
                 pc <= pc + 1'b1;
@@ -251,38 +288,75 @@ module cpu (
             2: begin                                    // execute
                 phase <= 3;
                 case (opcode)
-                    UC_NOP: begin
-                        // ( -- )
+                    UC_NOP: begin                       // ( -- )
                     end
-                    UC_FETCH: begin
-                        // @ ( addr -- cell )
+                    UC_ADD: begin                       // ^ ( a b -- a+b )
+                        d_value <= alu_data;
+                        d_pop <= 1'b1;
+                        d_push <= 1'b1;
                     end
-                    /*
-                    UC_STORE: begin
-                        // ! ( cell addr -- )
+                    UC_AND: begin                       // ^ ( a b -- a&b )
+                        d_value <= alu_data;
+                        d_pop <= 1'b1;
+                        d_push <= 1'b1;
+                    end
+                    UC_XOR: begin                       // ^ ( a b -- a^b )
+                        d_value <= alu_data;
+                        d_pop <= 1'b1;
+                        d_push <= 1'b1;
+                    end
+                    UC_ROL: begin                       // ( a -- {a[14:0],a[15]} )
+                        d_value <= alu_data;
+                        d_pop <= 1'b1;
+                        d_push <= 1'b1;
+                    end
+                    UC_INC: begin                       // 1+ ( a -- a+1 )
+                        d_value <= alu_data;
+                        d_pop <= 1'b1;
+                        d_push <= 1'b1;
+                    end
+                    UC_FETCH: begin                     // @ ( addr -- cell )
+                        // wait for memory cycle...
+                    end
+                    UC_STORE: begin                     // ! ( cell addr -- )
+                        d_pop <= 1'b1; // pop d-stack twice (in 2 separate phases)
+                    end
+                    UC_DUP: begin                       // ( a -- a a )
+                        d_value <= d0;
+                        d_push <= 1'b1;
+                    end
+                    UC_DROP: begin                      // ( a -- )
                         d_pop <= 1'b1;
                     end
-                    */
-                    UC_PUSH_R: begin
-                        // >R ( a -- ) R:( -- a )
+                    UC_SWAP: begin                      // ( a b -- b a )
+                        alu_op <= `NO_OP;
+                        alu_arg0 <= d0;                 // pass a thru ALU
+                        d_value <= alu_data;            // replace a with b
+                        d_pop <= 1'b1;
+                        d_push <= 1'b1;
+                    end
+                    UC_SKZ: begin                       // ( cond -- ) cond==0?pc+2:pc+1->pc
+                        if (d0 == 0) begin
+                            pc <= pc + 1'b1;
+                        end
+                        d_pop <= 1'b1;
+                    end
+                    UC_PUSH_R: begin                    // >R ( a -- ) R:( -- a )
                         r_value <= d0;
                         d_pop <= 1'b1;
                         r_push <= 1'b1;
                     end
-                    UC_R_POP: begin
-                        // R> ( -- a ) R:( a -- )
+                    UC_R_POP: begin                     // R> ( -- a ) R:( a -- )
                         d_value <= r0;
                         r_pop <= 1'b1;
                         d_push <= 1'b1;
                     end
-                    UC_EXIT: begin
-                        // ( -- ) R:( addr -- ) addr->pc
+                    UC_EXIT: begin                      // ( -- ) R:( addr -- ) addr->pc
                         pc <= r0[15:8];
                         r_pop <= 1'b1;
                     end
                     default: begin
-                        if (is_call) begin
-                            // ( -- ) R:( -- pc ) @pc[15:8]->pc
+                        if (opcode[7]) begin            // CALL ( -- ) R:( -- pc ) @pc[15:8]->pc
                             r_value <= { pc, 8'h80 };
                             r_push <= 1'b1;
                             pc <= opcode[15:8];
@@ -295,17 +369,14 @@ module cpu (
             3: begin                                    // write-back & next
                 phase <= 0;
                 case (opcode)
-                    UC_FETCH: begin
-                        // @ ( addr -- cell )
+                    UC_FETCH: begin                     // @ ( addr -- cell )
                         d_value = uc_rdata;
                         d_push = 1'b1;
                     end
-                    /*
-                    UC_STORE: begin
-                        // ! ( cell addr -- )
-//                        d_pop <= 1'b1;
+                    UC_SWAP: begin                      // ( a b -- b a )
+                        d_value <= alu_data;            // push a
+                        d_push <= 1'b1;
                     end
-                    */
                 endcase
                 if (o_running) begin
                     uc_raddr <= pc;

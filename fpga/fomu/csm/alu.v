@@ -40,6 +40,9 @@ module alu #(
     // perform selected operation
     always @(posedge i_clk) begin
         case (i_op)
+            `NO_OP: begin
+                o_data <= i_arg0;                       // pass-thru
+            end
             `ADD_OP: begin
                 o_data <= i_arg0 + i_arg1;
             end
@@ -64,7 +67,7 @@ module alu #(
                 o_data <= { i_arg0[WIDTH-2:0], i_arg0[WIDTH-1] };
             end
             default: begin                              // no operation
-                o_data <= 0; // was: i_arg0;
+                o_data <= 0;
             end
         endcase
     end
