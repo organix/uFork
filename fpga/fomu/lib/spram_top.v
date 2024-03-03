@@ -9,15 +9,15 @@ Physical Test Bench for spram.v
 `include "spram_test.v"
 
 module top (
-    input                       clki,                   // 48MHz oscillator input on Fomu-PVT
-    output                      rgb0,                   // RGB LED pin 0 (**DO NOT** drive directly)
-    output                      rgb1,                   // RGB LED pin 1 (**DO NOT** drive directly)
-    output                      rgb2,                   // RGB LED pin 2 (**DO NOT** drive directly)
-    output                      usb_dp,                 // USB D+
-    output                      usb_dn,                 // USB D-
-    output                      usb_dp_pu               // USB D+ pull-up
+    input                   clki,                       // 48MHz oscillator input on Fomu-PVT
+    output                  rgb0,                       // RGB LED pin 0 (**DO NOT** drive directly)
+    output                  rgb1,                       // RGB LED pin 1 (**DO NOT** drive directly)
+    output                  rgb2,                       // RGB LED pin 2 (**DO NOT** drive directly)
+    output                  usb_dp,                     // USB D+
+    output                  usb_dn,                     // USB D-
+    output                  usb_dp_pu                   // USB D+ pull-up
 );
-    parameter CLK_FREQ          = 48_000_000;           // clock frequency (Hz)
+    parameter CLK_FREQ      = 48_000_000;               // clock frequency (Hz)
 
     // disable Fomu USB
     assign usb_dp = 1'b0;
@@ -55,8 +55,8 @@ module top (
     reg run = 1'b0;
     reg [5:0] waiting = 0;
     always @(posedge clk) begin
-        if (!run) begin
-            {run, waiting} <= {1'b0, waiting} + 1'b1;   // wait for overflow
+        if (!run) begin                                 // wait for overflow
+            {run, waiting} <= {1'b0, waiting} + 1'b1;
         end
     end
 

@@ -17,17 +17,17 @@ Serial Transmitter
 `default_nettype none
 
 module serial_tx #(
-    parameter CLK_FREQ          = 48_000_000,           // clock frequency (Hz)
-    parameter BAUD_RATE         = 115_200               // baud rate (bits per second)
+    parameter CLK_FREQ      = 48_000_000,               // clock frequency (Hz)
+    parameter BAUD_RATE     = 115_200                   // baud rate (bits per second)
 ) (
-    input                       i_clk,                  // system clock
-    input                       i_wr,                   // write-request strobe
-    input                 [7:0] i_data,                 // octet to transmit
-    output reg                  o_busy,                 // transmitter busy signal
-    output                      o_tx                    // transmit line
+    input                   i_clk,                      // system clock
+    input                   i_wr,                       // write-request strobe
+    input             [7:0] i_data,                     // octet to transmit
+    output reg              o_busy,                     // transmitter busy signal
+    output                  o_tx                        // transmit line
 );
-    localparam BAUD_CLKS        = CLK_FREQ / BAUD_RATE; // clock-cycles per serial bit
-    localparam CNT_BITS         = $clog2(BAUD_CLKS);    // bit-width of baud counter
+    localparam BAUD_CLKS    = CLK_FREQ / BAUD_RATE;     // clock-cycles per serial bit
+    localparam CNT_BITS     = $clog2(BAUD_CLKS);        // bit-width of baud counter
 
     // transmission start signal
     wire start = (i_wr && !o_busy);
@@ -46,9 +46,9 @@ module serial_tx #(
     wire baud_stb = (baud_cnt == 0);
 
     // enumerated values for state
-    localparam START            = 4'hF;
+    localparam START        = 4'hF;
     /* 0..7 are bit transmit positions */
-    localparam STOP             = 4'h8;
+    localparam STOP         = 4'h8;
 
     // bit transmission state-machine
     reg [3:0] state;

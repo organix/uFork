@@ -19,19 +19,19 @@ iCE40 Single-Ported On-Chip RAM
 
 module spram #(
     // DATA_SZ x MEM_MAX = 256k bits
-    parameter DATA_SZ           = 16,                   // number of bits per memory word
-    parameter ADDR_SZ           = 14,                   // number of bits in each address
-    parameter MEM_MAX           = (1<<ADDR_SZ)          // maximum memory memory address
+    parameter DATA_SZ       = 16,                       // number of bits per memory word
+    parameter ADDR_SZ       = 14,                       // number of bits in each address
+    parameter MEM_MAX       = (1<<ADDR_SZ)              // maximum memory memory address
 ) (
-    input                       i_clk,                  // system clock
+    input                   i_clk,                      // system clock
 
-    input                       i_wr_en,                // write request
-    input         [ADDR_SZ-1:0] i_waddr,                // write address
-    input         [DATA_SZ-1:0] i_wdata,                // data written
+    input                   i_wr_en,                    // write request
+    input     [ADDR_SZ-1:0] i_waddr,                    // write address
+    input     [DATA_SZ-1:0] i_wdata,                    // data written
 
-    input                       i_rd_en,                // read request
-    input         [ADDR_SZ-1:0] i_raddr,                // read address
-    output reg    [DATA_SZ-1:0] o_rdata                 // data read
+    input                   i_rd_en,                    // read request
+    input     [ADDR_SZ-1:0] i_raddr,                    // read address
+    output reg [DATA_SZ-1:0] o_rdata                    // data read
 );
 
     wire [ADDR_SZ-1:0] addr = (i_wr_en ? i_waddr : i_raddr);

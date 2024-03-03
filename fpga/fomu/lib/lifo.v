@@ -25,15 +25,15 @@ the top of stack (s0) is replaced by `i_data`.
 `default_nettype none
 
 module lifo #(
-    parameter WIDTH             = 8,                    // bits per element
-    parameter DEPTH             = 8                     // number of elements (hard-coded at 8)
+    parameter WIDTH         = 8,                        // bits per element
+    parameter DEPTH         = 8                         // number of elements (hard-coded at 8)
 ) (
-    input                       i_clk,                  // system clock
-    input           [WIDTH-1:0] i_data,                 // new data value
-    input                       i_push,                 // "push" request
-    input                       i_pop,                  // "pop" request
-    output reg      [WIDTH-1:0] o_s0,                   // top-of-stack value
-    output reg      [WIDTH-1:0] o_s1                    // next-on-stack value
+    input                   i_clk,                      // system clock
+    input       [WIDTH-1:0] i_data,                     // new data value
+    input                   i_push,                     // "push" request
+    input                   i_pop,                      // "pop" request
+    output reg  [WIDTH-1:0] o_s0,                       // top-of-stack value
+    output reg  [WIDTH-1:0] o_s1                        // next-on-stack value
 );
 
     // deeper stack elements

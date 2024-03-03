@@ -15,18 +15,18 @@ Serial Receiver
 `default_nettype none
 
 module serial_rx #(
-    parameter CLK_FREQ          = 48_000_000,           // clock frequency (Hz)
-    parameter BAUD_RATE         = 115_200               // baud rate (bits per second)
+    parameter CLK_FREQ      = 48_000_000,               // clock frequency (Hz)
+    parameter BAUD_RATE     = 115_200                   // baud rate (bits per second)
 ) (
-    input                       i_clk,                  // system clock
-    input                       i_rx,                   // receive line
-    output reg                  o_wr,                   // write-request strobe
-    output reg            [7:0] o_data                  // octet received
+    input                   i_clk,                      // system clock
+    input                   i_rx,                       // receive line
+    output reg              o_wr,                       // write-request strobe
+    output reg        [7:0] o_data                      // octet received
 );
-    localparam BAUD_CLKS        = CLK_FREQ / BAUD_RATE;
-    localparam BAUD_BITS        = $clog2(BAUD_CLKS);
-    localparam HALF_BIT_TIME    = BAUD_CLKS >> 1;
-    localparam FULL_BIT_TIME    = BAUD_CLKS - 1;
+    localparam BAUD_CLKS    = CLK_FREQ / BAUD_RATE;
+    localparam BAUD_BITS    = $clog2(BAUD_CLKS);
+    localparam HALFBIT_TIME = BAUD_CLKS >> 1;
+    localparam FULLBIT_TIME = BAUD_CLKS - 1;
 
     // baud-rate countdown timer
     reg [BAUD_BITS-1:0] baud_time = 0;
@@ -44,10 +44,10 @@ module serial_rx #(
     initial o_wr = 1'b0;
 
     // enumerated values for state
-    localparam START            = 4'hF;
+    localparam START        = 4'hF;
     /* 0..7 are bit receive positions */
-    localparam STOP             = 4'h8;
-    localparam IDLE             = 4'hC;
+    localparam STOP         = 4'h8;
+    localparam IDLE         = 4'hC;
 
     // state-machine
     reg [3:0] state = IDLE;                             // initial state
@@ -59,15 +59,15 @@ module serial_rx #(
                 IDLE: begin
                     o_wr <= 1'b0;                       // clear write strobe
                     if (!rx) begin                      // possible start-bit
-                        baud_time <= HALF_BIT_TIME;
+                        baud_time <= HALFBIT_TIME;
                         state <= START;
                     end
                 end
                 START: begin
                     if (rx) begin                       // not a start-bit!
                         state <= IDLE;
-                    end else begin
-                        baud_time <= FULL_BIT_TIME;     // start-bit confirmed
+                    end else begin                      // start-bit confirmed
+                        baud_time <= FULLBIT_TIME;
                         state <= 0;                     // look for bit 0
                     end
                 end
@@ -77,7 +77,7 @@ module serial_rx #(
                 end
                 default: begin                          // data-bit received
                     o_data <= { rx, o_data[7:1] };      // shift into MSB
-                    baud_time <= FULL_BIT_TIME;
+                    baud_time <= FULLBIT_TIME;
                     state <= state + 1;                 // advance to next bit
                 end
             endcase

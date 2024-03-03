@@ -26,8 +26,8 @@ module test_bench;
         #1 clk = !clk;
     end
 
-    parameter CLK_FREQ          = 500_000;              // clock frequency (Hz)
-    parameter BAUD_RATE         = 115_200;              // baud rate (bits per second)
+    parameter CLK_FREQ      = 500_000;                  // clock frequency (Hz)
+    parameter BAUD_RATE     = 115_200;                  // baud rate (bits per second)
 
     // uart signals
     wire tx_wr;
