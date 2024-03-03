@@ -483,9 +483,10 @@ export const uFork = (asm, opts) => {
   dat("qy@"); // ( kont next_stack )
   def("uFork_instr_pick_l2"); // ( kont stack ) R:( count )
   dat("(NEXT)", "uFork_instr_pick_l1"); // ( kont stack ) R:( )
-  dat("qx@", "OVER", "uFork_push");
+  dat("qx@");
+  def("uFork__push_then_instrTail");
+  dat("OVER", "uFork_push");
   dat("(JMP)", "uFork_instr__common_longer_tail");
-
   def("uFork_instr_pick_l0"); // ( kont -n )
   dat("NEGATE");              // ( kont n )
   dat(">R", "DUP");           // ( kont kont ) R:( n )
@@ -574,9 +575,7 @@ export const uFork = (asm, opts) => {
   dat("INVERT");              // ( kont ~int )
   def("uFork_instr_alu__common_tail");
   dat("uFork_int2fixnum");    // ( kont fixnum )
-  dat("OVER");                // ( kont fixnum kont )
-  dat("uFork_push");          // ( kont )
-  dat("(JMP)", "uFork_instr__common_longer_tail");
+  dat("(JMP)", "uFork__push_then_instrTail");
 
   def("uFork_pop_two_fixnums2ints"); // ( kont -- kont uNOS_int uTOS_int )
   dat("DUP", "uFork_pop");    // ( kont uTOS_fixnum )
@@ -798,8 +797,7 @@ export const uFork = (asm, opts) => {
   dat("OVER", "uFork_pop"); // ( kont n pairlist )
   dat("SWAP");              // ( kont pairlist n )
   dat("uFork_ndeep");       // ( kont item|tail )
-  dat("OVER", "uFork_push"); // ( kont )
-  dat("(JMP)", "uFork_instr__common_longer_tail");
+  dat("(JMP)", "uFork__push_then_instrTail");
 
   //  t        x    y      z
   // [#dict_t, key, value, next]
@@ -861,7 +859,7 @@ export const uFork = (asm, opts) => {
   dat("2DUP", "uFork_dict_has"); // ( kont key dict bool )
   dat("(BRZ)", "uFork_instr_dict_get_l0"); // ( kont key dict )
   dat("uFork_dict_forEach", "uFork_instr_dict_get_l1"); // ( kont value )
-  // todo: hoppa til þess kóða sem setur item á uFork staflann og klárar keyrslu uFork skipunar
+  dat("(JMP)", "uFork__push_then_instrTail");
   // merkill
   
 
