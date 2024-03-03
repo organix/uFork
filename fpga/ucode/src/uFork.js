@@ -845,15 +845,24 @@ export const uFork = (asm, opts) => {
   dat("OR", "SWAP", "R>");  // ( bool key dict ) R:( )
   dat("EXIT");
 
-
   def("uFork_instr_dict_has"); // ( kont subopcode )
   dat("DROP");                 // ( kont )
   // todo: insert here a check that uFork NOS is of #dict_t
   dat("DUP", "uFork_pop");     // ( kont key )
   dat("OVER", "uFork_pop");    // ( kont key dict )
-  dat("uFork_dict_has");       // ( bool )
+  dat("uFork_dict_has");       // ( kont bool )
   dat("(JMP)", "uFork_instr_typeq_l1");
-  
+
+  def("uFork_instr_dict_get"); // ( kont subopcode )
+  dat("DROP");                 // ( kont )
+  // todo: insert here a check that uFork NOS is of #dict_t
+  dat("DUP", "uFork_pop");     // ( kont key )
+  dat("OVER", "uFork_pop");    // ( kont key dict )
+  dat("2DUP", "uFork_dict_has"); // ( kont key dict bool )
+  dat("(BRZ)", "uFork_instr_dict_get_l0"); // ( kont key dict )
+  dat("uFork_dict_forEach", "uFork_instr_dict_get_l1"); // ( kont value )
+  // todo: hoppa til þess kóða sem setur item á uFork staflann og klárar keyrslu uFork skipunar
+  // merkill
   
 
   def("uFork_instr__subroutine_call"); // ( kont ip opcode -- )
