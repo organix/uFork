@@ -66,7 +66,7 @@ module top (
     wire passed;
     alu_test TEST (
         .i_clk(clk),
-        .i_run(!waiting),
+        .i_run(run),
         .o_running(running),
         .o_passed(passed)
     );

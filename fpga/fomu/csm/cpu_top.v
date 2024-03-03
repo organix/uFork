@@ -71,7 +71,7 @@ module top (
     wire passed;
     cpu CPU (
         .i_clk(clk),
-        .i_run(!waiting),
+        .i_run(run),
         .o_running(running),
         .o_status(passed)
     );
