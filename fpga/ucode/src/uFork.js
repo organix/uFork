@@ -807,13 +807,18 @@ export const uFork = (asm, opts) => {
   def("uFork_dict_forEach"); // ( dict -- ) R:( raddr )
   dat("R>", "DUP", "1+", ">R", ">R"); // ( dict ) R:( raddr+1 raddr )
   def("uFork_dict_forEach_l0");
-  dat("DUP", "qz@", "SWAP"); // ( next dict ) R:( raddr+1 raddr )
-  dat("R@",  "@EXECUTE");    // ( next dict ) R:( raddr+1 raddr )
-  dat("DROP");
+  dat("R@",  "@EXECUTE");    // ( dict ) R:( raddr+1 raddr )
+  dat("qz@");                // ( next ) R:( raddr+1 raddr )
   dat("DUP", "uFork_()", "=", "OVER", "uFork_#?", "=", "OR");
   dat("(BRZ)", "uFork_dict_forEach_l0");
   dat("DROP", "R>", "DROP", "EXIT");
-  
+
+  def("uFork_dict_size"); // ( dict -- n )
+  dat("ZERO", "SWAP");    // ( n dict )
+  dat("uFork_dict_forEach", "uFork_dict_size_l0"); // ( n )
+  dat("EXIT");
+  def("uFork_dict_size_l0"); // ( n dict -- n+1 dict )
+  dat("SWAP", "1+", "SWAP", "EXIT");
   
   
   def("uFork_instr_dict"); // ( kont ip opcode -- )
