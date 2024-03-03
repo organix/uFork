@@ -8,14 +8,8 @@ import dom from "./dom.js";
 import theme from "./theme.js";
 import ed from "./ed.js";
 
-const editor_ui = make_ui("editor-ui", function (element, {
-    text = "",
-    lang,
-    lang_packs = {},
-    on_text_input
-}) {
-    const shadow = element.attachShadow({mode: "closed"});
-    const style = dom("style", `
+function render_css(ruler_position = 80) {
+    return `
         ${theme.monospace_font_css}
         :host {
             font-family: ${theme.monospace_font_family}, monospace;
@@ -61,7 +55,7 @@ const editor_ui = make_ui("editor-ui", function (element, {
             width: 1px;
             position: absolute;
             z-index: -1;
-            left: calc(80ch + 10px);
+            left: calc(${ruler_position}ch + 10px);
             top: 0;
             bottom: 0;
             pointer-events: none;
@@ -74,7 +68,17 @@ const editor_ui = make_ui("editor-ui", function (element, {
 
             background-color: rgb(255, 255, 255, 0.2);
         }
-    `);
+    `;
+}
+
+const editor_ui = make_ui("editor-ui", function (element, {
+    text = "",
+    lang,
+    lang_packs = {},
+    on_text_input
+}) {
+    const shadow = element.attachShadow({mode: "closed"});
+    const style = dom("style");
     const line_numbers_element = dom("line_numbers");
     const text_element = dom("div"); // Firefox v122
 
@@ -124,6 +128,7 @@ const editor_ui = make_ui("editor-ui", function (element, {
         if (editor !== undefined) {
             editor.destroy();
         }
+        style.textContent = render_css(lang_packs[lang]?.ruler_position);
         editor = ed({
             element: text_element,
             highlight: lang_packs[lang]?.highlight,

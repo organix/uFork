@@ -38,9 +38,14 @@ module test_bench;
     // instantiate CPU
     wire running;
     wire passed;
+//    wire rx = 1'b1;                                     // serial idle-state is high
+    wire rx = tx;                                       // loop-back from transmitter
+    wire tx;
     cpu CPU (
         .i_clk(clk),
         .i_run(!waiting),
+        .i_rx(rx),
+        .o_tx(tx),
         .o_running(running),
         .o_status(passed)
     );

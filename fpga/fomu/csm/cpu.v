@@ -20,13 +20,22 @@ Once `o_running` is de-asserted, the value of `o_status` indicates success (1) o
 
 `include "../lib/lifo.v"
 `include "alu.v"
+`include "../lib/serial_tx.v"
+`include "../lib/serial_rx.v"
 
-module cpu (
+module cpu #(
+    parameter CLK_FREQ      = 48_000_000                // clock frequency (Hz)
+) (
     input                   i_clk,                      // system clock
     input                   i_run,                      // run the processor
+    input                   i_rx,                       // serial port transmit
+    output                  o_tx,                       // serial port receive
     output                  o_running,                  // processor active
     output reg              o_status                    // final status
 );
+
+    initial o_status = 1'b1;                            // default to success
+
     parameter DATA_SZ       = 16;                       // number of bits per memory word
     parameter ADDR_SZ       = 8;                        // number of bits in each address
     parameter MEM_MAX       = (1<<ADDR_SZ);             // maximum memory memory address
@@ -48,6 +57,10 @@ module cpu (
     localparam UC_R_POP     = 16'h000D;                 // R> ( -- a ) R:( a -- )
     localparam UC_000E      = 16'h000E;
     localparam UC_EXIT      = 16'h000F;                 // ( -- ) R:( addr -- ) addr->pc
+    localparam UC_RX_OK     = 16'h003C;                 // rx? ( -- ready )
+    localparam UC_GET_RX    = 16'h003D;                 // rx@ ( -- char )
+    localparam UC_TX_OK     = 16'h003E;                 // tx? ( -- ready )
+    localparam UC_SET_TX    = 16'h003F;                 // tx! ( char -- )
     localparam UC_CALL      = 16'hFFC0;                 // ( -- ) R:( -- pc ) @pc[15:8]->pc
 
     //
@@ -70,20 +83,20 @@ module cpu (
     end
 
     // uCode word definitions
-    localparam UC_BOOT      = 16'h0080;
-    localparam UC_JMP       = 16'h8080;
-    localparam UC_EXE       = 16'h8280;
-    localparam UC_ALT       = 16'h8480;                 // ( altn cnsq cond -- cnsq | altn )
-    localparam UC_CONST     = 16'h8880;
-    localparam UC_TRUE      = 16'h8B80;                 // ( -- -1 )
-    localparam UC_FALSE     = 16'h8D80;                 // ( -- 0 )
-    localparam UC_INVERT    = 16'h8F80;                 // ( a -- ~a )
-    localparam UC_LIT       = 16'h9280;                 // LIT cell ( -- cell )
-    localparam UC_NEGATE    = 16'h9880;                 // ( a -- -a )
-    localparam UC_DEC       = 16'h9B80;                 // 1- ( a -- a-1 )
-    localparam UC_SUB       = 16'h9F80;                 // - ( a b -- a+b )
-    localparam UC_LSB       = 16'hA280;                 // ( -- 1 )
-    localparam UC_MSB       = 16'hA480;                 // ( -- -32768 )
+    localparam UC_BOOT      = 16'hF000;
+    localparam UC_JMP       = 16'hF080;
+    localparam UC_EXE       = 16'hF082;
+    localparam UC_ALT       = 16'hF084;                 // ( altn cnsq cond -- cnsq | altn )
+    localparam UC_CONST     = 16'hF088;
+    localparam UC_TRUE      = 16'hF08B;                 // ( -- -1 )
+    localparam UC_FALSE     = 16'hF08D;                 // ( -- 0 )
+    localparam UC_INVERT    = 16'hF08F;                 // ( a -- ~a )
+    localparam UC_LIT       = 16'hF092;                 // LIT cell ( -- cell )
+    localparam UC_NEGATE    = 16'hF098;                 // ( a -- -a )
+    localparam UC_DEC       = 16'hF09B;                 // 1- ( a -- a-1 )
+    localparam UC_SUB       = 16'hF09F;                 // - ( a b -- a+b )
+    localparam UC_LSB       = 16'hF0A2;                 // ( -- 1 )
+    localparam UC_MSB       = 16'hF0A4;                 // ( -- -32768 )
 
     // initial program
     initial begin
@@ -149,14 +162,14 @@ module cpu (
     // evaluation (data) stack
     //
 
-    reg [15:0] d_value = 16'h0000;
+    reg [DATA_SZ-1:0] d_value = 0;
     reg d_push = 1'b0;
     reg d_pop = 1'b0;
-    wire [15:0] d0;
-    wire [15:0] d1;
+    wire [DATA_SZ-1:0] d0;
+    wire [DATA_SZ-1:0] d1;
 
     lifo #(
-        .WIDTH(16)
+        .WIDTH(DATA_SZ)
     ) D_STACK (
         .i_clk(i_clk),
 
@@ -172,14 +185,14 @@ module cpu (
     // control (return) stack
     //
 
-    reg [15:0] r_value = 16'h0000;
+    reg [DATA_SZ-1:0] r_value = 0;
     reg r_push = 1'b0;
     reg r_pop = 1'b0;
-    wire [15:0] r0;
-    wire [15:0] r1;
+    wire [DATA_SZ-1:0] r0;
+    wire [DATA_SZ-1:0] r1;
 
     lifo #(
-        .WIDTH(16)
+        .WIDTH(DATA_SZ)
     ) R_STACK (
         .i_clk(i_clk),
 
@@ -216,10 +229,19 @@ module cpu (
     // uCode execution engine
     //
 
-    reg [7:0] pc = 8'h00;
-    reg [15:0] opcode = UC_NOP;
+    reg [ADDR_SZ-1:0] pc = 0;
+    reg [DATA_SZ-1:0] opcode = UC_NOP;
 
-    assign o_running = i_run && o_status;
+    reg halt = 1'b0;
+    /*
+    reg [7:0] tick = 0;                                 // "watchdog" timer
+    always @(posedge i_clk) begin
+        tick <= tick + 1'b1;
+        halt <= (tick > 16);
+    end
+    */
+
+    assign o_running = i_run && o_status && !halt;
 
     reg [1:0] phase = 0;
     always @(posedge i_clk) begin
@@ -229,6 +251,7 @@ module cpu (
         r_push <= 1'b0;
         r_pop <= 1'b0;
         alu_op <= `NO_OP;
+        tx_wr <= 1'b0;
         case (phase)
             0: begin                                    // fetch
                 if (o_running) begin
@@ -239,13 +262,13 @@ module cpu (
             1: begin                                    // decode
                 phase <= 2;
                 case (uc_rdata)
-                    UC_ADD: begin                       // ^ ( a b -- a+b )
+                    UC_ADD: begin                       // + ( a b -- a+b )
                         alu_op <= `ADD_OP;
                         alu_arg0 <= d0;
                         alu_arg1 <= d1;
                         d_pop <= 1'b1;
                     end
-                    UC_AND: begin                       // ^ ( a b -- a&b )
+                    UC_AND: begin                       // & ( a b -- a&b )
                         alu_op <= `AND_OP;
                         alu_arg0 <= d0;
                         alu_arg1 <= d1;
@@ -267,14 +290,13 @@ module cpu (
                         alu_arg1 <= 16'h0001;
                     end
                     UC_FETCH: begin                     // @ ( addr -- cell )
-                        uc_raddr <= d0[15:8];
+                        uc_raddr <= d0[ADDR_SZ-1:0];
                     end
-                    UC_STORE: begin
-                        // ! ( cell addr -- )
-                        uc_waddr <= d0[15:8];
+                    UC_STORE: begin                     // ! ( cell addr -- )
+                        uc_waddr <= d0[ADDR_SZ-1:0];
                         uc_wdata <= d1;
                         uc_wr <= 1'b1;
-                        d_pop <= 1'b1; // pop d-stack twice (in 2 separate phases)
+                        d_pop <= 1'b1;                  // pop d-stack twice (in 2 separate phases)
                     end
                     UC_SWAP: begin                      // ( a b -- b a )
                         alu_op <= `NO_OP;
@@ -290,12 +312,12 @@ module cpu (
                 case (opcode)
                     UC_NOP: begin                       // ( -- )
                     end
-                    UC_ADD: begin                       // ^ ( a b -- a+b )
+                    UC_ADD: begin                       // + ( a b -- a+b )
                         d_value <= alu_data;
                         d_pop <= 1'b1;
                         d_push <= 1'b1;
                     end
-                    UC_AND: begin                       // ^ ( a b -- a&b )
+                    UC_AND: begin                       // & ( a b -- a&b )
                         d_value <= alu_data;
                         d_pop <= 1'b1;
                         d_push <= 1'b1;
@@ -319,7 +341,7 @@ module cpu (
                         // wait for memory cycle...
                     end
                     UC_STORE: begin                     // ! ( cell addr -- )
-                        d_pop <= 1'b1; // pop d-stack twice (in 2 separate phases)
+                        d_pop <= 1'b1;                  // pop d-stack twice (in 2 separate phases)
                     end
                     UC_DUP: begin                       // ( a -- a a )
                         d_value <= d0;
@@ -352,14 +374,32 @@ module cpu (
                         d_push <= 1'b1;
                     end
                     UC_EXIT: begin                      // ( -- ) R:( addr -- ) addr->pc
-                        pc <= r0[15:8];
+                        pc <= r0[ADDR_SZ-1:0];
                         r_pop <= 1'b1;
                     end
+                    UC_RX_OK: begin                     // rx? ( -- ready )
+                        d_value <= (rx_ready ? -1 : 0);
+                        d_push <= 1'b1;
+                    end
+                    UC_GET_RX: begin                    // rx@ ( -- char )
+                        d_value <= { 8'h00, rx_buffer };
+                        rx_ready <= 1'b0;
+                        d_push <= 1'b1;
+                    end
+                    UC_TX_OK: begin                     // tx? ( -- ready )
+                        d_value <= (tx_busy ? 0 : -1);
+                        d_push <= 1'b1;
+                    end
+                    UC_SET_TX: begin                    // tx! ( char -- )
+                        tx_data <= d0;
+                        tx_wr <= 1'b1;
+                        d_pop <= 1'b1;
+                    end
                     default: begin
-                        if (opcode[7]) begin            // CALL ( -- ) R:( -- pc ) @pc[15:8]->pc
-                            r_value <= { pc, 8'h80 };
+                        if (opcode[DATA_SZ-1]) begin    // CALL ( -- ) R:( -- pc ) @pc->pc
+                            r_value <= { 8'hF0, pc }; // FIXME: use verilog repetition operator to add leading 1's...
                             r_push <= 1'b1;
-                            pc <= opcode[15:8];
+                            pc <= opcode[ADDR_SZ-1:0];
                         end else begin
                             o_status <= 1'b0;           // register failure
                         end
@@ -378,9 +418,7 @@ module cpu (
                         d_push <= 1'b1;
                     end
                 endcase
-                if (o_running) begin
-                    uc_raddr <= pc;
-                end
+                uc_raddr <= pc;
             end
             default: begin
                 o_status <= 1'b0;                       // register failure
@@ -388,6 +426,47 @@ module cpu (
         endcase
     end
 
-    initial o_status = 1'b1;                            // default to success
+    //
+    // serial port UART
+    //
+
+    parameter BAUD_RATE     = 115_200;                  // baud rate (bits per second)
+
+    // instantiate serial transmitter
+    reg tx_wr = 1'b0;
+    reg [7:0] tx_data;
+    wire tx_busy;
+    serial_tx #(
+        .CLK_FREQ(CLK_FREQ),
+        .BAUD_RATE(BAUD_RATE)
+    ) SER_TX (
+        .i_clk(i_clk),
+        .i_wr(tx_wr),
+        .i_data(tx_data),
+        .o_busy(tx_busy),
+        .o_tx(o_tx)
+    );
+
+    // instantiate serial receiver
+    wire rx_wr;
+    wire [7:0] rx_data;
+    serial_rx #(
+        .CLK_FREQ(CLK_FREQ),
+        .BAUD_RATE(BAUD_RATE)
+    ) SER_RX (
+        .i_clk(i_clk),
+        .i_rx(i_rx),
+        .o_wr(rx_wr),
+        .o_data(rx_data)
+    );
+
+    reg rx_ready = 1'b0;                                // character in buffer
+    reg [7:0] rx_buffer;                                // character received
+    always @(posedge i_clk) begin
+        if (rx_wr) begin
+            rx_ready <= 1'b1;
+            rx_buffer <= rx_data;
+        end
+    end
 
 endmodule

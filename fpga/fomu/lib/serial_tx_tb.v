@@ -26,13 +26,13 @@ module test_bench;
         #1 clk = !clk;
     end
 
-    parameter CLK_FREQ          = 500_000;                      // clock frequency (Hz)
-    parameter BAUD_RATE         = 115_200;                      // baud rate (bits per second)
+    parameter CLK_FREQ      = 500_000;                  // clock frequency (Hz)
+    parameter BAUD_RATE     = 115_200;                  // baud rate (bits per second)
 
     // uart signals
     wire tx_wr;
     wire [7:0] tx_data;
-    wire tx_busy;                                               // busy signal (ignored)
+    wire tx_busy;                                       // busy signal (ignored)
     wire uart_tx;
 
     // instantiate serial transmitter
@@ -47,7 +47,7 @@ module test_bench;
         .o_tx(uart_tx)
     );
 
-    assign tx_wr = 1'b1;                                        // perpetual write-request
+    assign tx_wr = 1'b1;                                // perpetual write-request
     assign tx_data = "K";
 
 endmodule

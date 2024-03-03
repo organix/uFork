@@ -13,6 +13,10 @@ module top (
     output                  rgb0,                       // RGB LED pin 0 (**DO NOT** drive directly)
     output                  rgb1,                       // RGB LED pin 1 (**DO NOT** drive directly)
     output                  rgb2,                       // RGB LED pin 2 (**DO NOT** drive directly)
+    output                  user_1,                     // User I/O Pad #1 (nearest to notch)
+    output                  user_2,                     // User I/O Pad #2
+    input                   user_3,                     // User I/O Pad #3
+    output                  user_4,                     // User I/O Pad #4
     output                  usb_dp,                     // USB D+
     output                  usb_dn,                     // USB D-
     output                  usb_dp_pu                   // USB D+ pull-up
@@ -57,6 +61,35 @@ module top (
         .RGB2(rgb2)
     );
 
+    // designate user i/o pins
+    assign user_1 = 1'b0;                               // GND
+//    assign user_2 = 1'b1;                               // TX (configured below)
+//    assign user_3 = 1'b0;                               // RX (configured below)
+    assign user_4 = 1'b1;                               // 3v3 (weak)
+
+    localparam SB_IO_TYPE_SIMPLE_OUTPUT = 6'b011000;
+    wire serial_tx;                                     // TX
+    SB_IO #(
+        .PIN_TYPE(SB_IO_TYPE_SIMPLE_OUTPUT)
+    ) user_2_io (
+        .PACKAGE_PIN(user_2),
+        .OUTPUT_ENABLE(1'b1), // FIXME: is this needed?
+        .OUTPUT_CLK(clk),
+        .D_OUT_0(serial_tx),
+    );
+
+    localparam SB_IO_TYPE_SIMPLE_INPUT = 6'b000001;
+    wire serial_rx;                                     // RX
+    SB_IO #(
+        .PIN_TYPE(SB_IO_TYPE_SIMPLE_INPUT),
+        .PULLUP(1'b1)
+    ) user_3_io (
+        .PACKAGE_PIN(user_3),
+        .OUTPUT_ENABLE(1'b0), // FIXME: is this needed?
+        .INPUT_CLK(clk),
+        .D_IN_0(serial_rx),
+    );
+
     // start-up delay
     reg run = 1'b0;
     reg [5:0] waiting = 0;
@@ -69,9 +102,13 @@ module top (
     // instantiate CPU
     wire running;
     wire passed;
-    cpu CPU (
+    cpu #(
+        .CLK_FREQ(CLK_FREQ)
+    ) CPU (
         .i_clk(clk),
-        .i_run(!waiting),
+        .i_run(run),
+        .i_rx(serial_rx),
+        .o_tx(serial_tx),
         .o_running(running),
         .o_status(passed)
     );

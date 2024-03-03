@@ -22,10 +22,10 @@ Once `o_running` is de-asserted, the value of `o_passed` indicates success or fa
 `include "spram.v"
 
 module spram_test (
-    input                       i_clk,                          // system clock
-    input                       i_run,                          // start the test
-    output                      o_running,                      // test in progress
-    output reg                  o_passed                        // final test result
+    input                   i_clk,                      // system clock
+    input                   i_run,                      // start the test
+    output                  o_running,                  // test in progress
+    output reg              o_passed                    // final test result
 );
 
     //
@@ -50,11 +50,11 @@ module spram_test (
 
     wire [15:0] actual;
 
-    reg [3:0] state = 4'h1;  // 4-bit state-machine
+    reg [3:0] state = 4'h1;                             // 4-bit state-machine
     localparam STOP = 4'h0;
     localparam DONE = 4'hF;
 
-    reg [54:0] script [0:15];  // script indexed by state
+    reg [54:0] script [0:15];                           // script indexed by state
     initial begin    //    wr, waddr,    wdata,    rd, raddr,   expect,  cmp  next
         script[STOP] = { 1'b0, 8'h00, 16'h0000,  1'b0, 8'h00, 16'h0000, 1'b0, STOP };
         script[4'h1] = { 1'b0, 8'h00, 16'h0000,  1'b0, 8'h00, 16'h0000, 1'b0, 4'h2 };
@@ -74,15 +74,15 @@ module spram_test (
         script[DONE] = { 1'b0, 8'h00, 16'h0000,  1'b0, 8'h00, 16'h0000, 1'b0, STOP };
     end
     // inputs
-    wire wr             = script[state][54];
-    wire [13:0] waddr   = {script[state][53:48], script[state][53:46]};
-    wire [15:0] wdata   = script[state][45:30];
-    wire rd             = script[state][29];
-    wire [13:0] raddr   = {script[state][28:23], script[state][28:21]};
+    wire wr                 = script[state][54];
+    wire [13:0] waddr       = {script[state][53:48], script[state][53:46]};
+    wire [15:0] wdata       = script[state][45:30];
+    wire rd                 = script[state][29];
+    wire [13:0] raddr       = {script[state][28:23], script[state][28:21]};
     // outputs
-    wire [15:0] expect  = script[state][20:5];
-    wire cmp            = script[state][4];
-    wire [3:0] next     = script[state][3:0];
+    wire [15:0] expect      = script[state][20:5];
+    wire cmp                = script[state][4];
+    wire [3:0] next         = script[state][3:0];
 
     assign o_running = i_run && (state != STOP);
     initial o_passed = 1'b0;
@@ -93,10 +93,10 @@ module spram_test (
                 // register success
                 o_passed <= 1'b1;
             end
-            state <= next;  // default transition
+            state <= next;                              // default transition
             if (cmp) begin
                 if (actual != expect) begin
-                    state <= STOP;  // stop (failed)
+                    state <= STOP;                      // stop (failed)
                 end
             end
         end
