@@ -15,19 +15,19 @@ Synchronize External Signal to Clock Domain
 `default_nettype none
 
 module clk_sync #(
-    parameter STAGES            = 3                             // number of FF stages to pass through (>= 2)
+    parameter STAGES            = 3                     // number of FF stages to pass through (>= 2)
 ) (
-    input                       i_clk,                          // domain clock
-    input                       i_ext,                          // external (unsynchronized) signal
-    output                      o_reg                           // registered (synchronized) signal
+    input                       i_clk,                  // domain clock
+    input                       i_ext,                  // external (unsynchronized) signal
+    output                      o_reg                   // registered (synchronized) signal
 );
 
-    reg [STAGES-1:0] stage = 0;                                 // synchronization shift-register
+    reg [STAGES-1:0] stage = 0;                         // synchronization shift-register
     always @(posedge i_clk) begin
-        stage <= { i_ext, stage[STAGES-1:1] };                  // enter SR at MSB
+        stage <= { i_ext, stage[STAGES-1:1] };          // enter SR at MSB
     end
 
-    assign o_reg = stage[0];  // exit SR at LSB
+    assign o_reg = stage[0];                            // exit SR at LSB
 
 endmodule
 

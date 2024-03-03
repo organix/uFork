@@ -22,10 +22,10 @@ Once `o_running` is de-asserted, the value of `o_passed` indicates success or fa
 `include "bram.v"
 
 module bram_test (
-    input                       i_clk,                          // system clock
-    input                       i_run,                          // start the test
-    output                      o_running,                      // test in progress
-    output reg                  o_passed                        // final test result
+    input                       i_clk,                  // system clock
+    input                       i_run,                  // start the test
+    output                      o_running,              // test in progress
+    output reg                  o_passed                // final test result
 );
 
     //
@@ -50,11 +50,11 @@ module bram_test (
 
     wire [15:0] actual;
 
-    reg [3:0] state = 4'h1;  // 4-bit state-machine
+    reg [3:0] state = 4'h1;                             // 4-bit state-machine
     localparam STOP = 4'h0;
     localparam DONE = 4'hF;
 
-    reg [54:0] script [0:15];  // script indexed by state
+    reg [54:0] script [0:15];                           // script indexed by state
     initial begin    //    wr, waddr,    wdata,    rd, raddr,   expect,  cmp  next
         script[STOP] = { 1'b0, 8'h00, 16'h0000,  1'b0, 8'h00, 16'h0000, 1'b0, STOP };
         script[4'h1] = { 1'b0, 8'h00, 16'h0000,  1'b0, 8'h00, 16'h0000, 1'b0, 4'h2 };
@@ -94,10 +94,10 @@ module bram_test (
                 // register success
                 o_passed <= 1'b1;
             end
-            state <= next;  // default transition
+            state <= next;                              // default transition
             if (cmp) begin
                 if (actual != expect) begin
-                    state <= STOP;  // stop (failed)
+                    state <= STOP;                      // stop (failed)
                 end
             end
         end

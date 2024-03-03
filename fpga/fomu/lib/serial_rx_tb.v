@@ -26,8 +26,8 @@ module test_bench;
         #1 clk = !clk;
     end
 
-    parameter CLK_FREQ          = 500_000;                      // clock frequency (Hz)
-    parameter BAUD_RATE         = 115_200;                      // baud rate (bits per second)
+    parameter CLK_FREQ          = 500_000;              // clock frequency (Hz)
+    parameter BAUD_RATE         = 115_200;              // baud rate (bits per second)
 
     // uart signals
     wire uart_rx;
@@ -64,8 +64,8 @@ module test_bench;
     IDLE | + | 1 | 1 | 0 | 1 | 0 | 0 | 1 | 0 | - | IDLE
          START                                STOP
     */
-    reg [11:0] signal = 12'b101101001011;                       // ASCII "K"
-    reg [3:0] sample = 0;                                       // signal sample counter
+    reg [11:0] signal = 12'b101101001011;               // ASCII "K"
+    reg [3:0] sample = 0;                               // signal sample counter
     always @(posedge clk) begin
         if (baud_cnt == 0) begin
             if (sample == 0) begin
