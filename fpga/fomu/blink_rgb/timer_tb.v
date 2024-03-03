@@ -27,7 +27,7 @@ module test_bench;
     end
 
     // instantiate timer component
-    localparam DATA_BITS        = 3;                            // number of timer output bits
+    localparam DATA_BITS        = 3;                    // number of timer output bits
     wire [DATA_BITS-1:0] bits;
     timer #(
         .WIDTH(5),

@@ -11,6 +11,8 @@
 
 /*jslint deno, long */
 
+import {toFileUrl} from "https://deno.land/std@0.203.0/path/to_file_url.ts";
+import {fromFileUrl} from "https://deno.land/std@0.203.0/path/from_file_url.ts";
 import ecomcon from "https://raw.githubusercontent.com/douglascrockford/ecomcon/b3eda9196a827666af178199aff1c5b8ad9e45b3/ecomcon.js";
 import run_replete from "https://deno.land/x/replete@0.0.8/run.js";
 // import {minify} from "https://esm.sh/terser";
@@ -32,27 +34,54 @@ const mime_types = {
     woff2: "font/woff2"
 };
 
+function cwd_href() {
+    const href = toFileUrl(Deno.cwd()).href;
+    return (
+        href.endsWith("/")
+        ? href
+        : href + "/"
+    );
+}
+
+function locator_to_url(locator) {
+    return locator.replace("file:///", cwd_href());
+}
+
+function url_to_locator(url) {
+    return url.replace(cwd_href(), "file:///");
+}
+
 run_replete({
     browser_port: 3675,
     which_node: "node",
     deno_args: ["--allow-all"],
+    root_locator: "file:///", // cwd
     source(command) {
         return Promise.resolve(ecomcon(command.source, ["debug"]));
     },
-    // read(locator) {
-    //     return Deno.readFile(new URL(locator)).then(function (buffer) {
-    //         if (locator.endsWith(".js")) {
-    //             const source = new TextDecoder().decode(buffer);
-    //             return minify(source, {
-    //                 module: true,
-    //                 compress: {unsafe_arrows: true, passes: 2, ecma: "6"}
-    //             }).then(function ({code}) {
-    //                 return code;
-    //             });
-    //         }
-    //         return buffer;
-    //     });
-    // },
+    read(locator) {
+        const file_url = new URL(locator_to_url(locator));
+
+// Uncomment the code below to enable minification.
+
+        // return Deno.readFile(file_url).then(function (buffer) {
+        //     if (locator.endsWith(".js")) {
+        //         const source = new TextDecoder().decode(buffer);
+        //         return minify(source, {
+        //             module: true,
+        //             compress: {unsafe_arrows: true, passes: 2, ecma: "6"}
+        //         }).then(function ({code}) {
+        //             return code;
+        //         });
+        //     }
+        //     return buffer;
+        // });
+        return Deno.readFile(file_url);
+    },
+    mime(locator) {
+        const extension = new URL(locator).pathname.split(".").pop();
+        return mime_types[extension];
+    },
     locate(specifier, parent_locator) {
 
 // Consult the import map.
@@ -61,7 +90,9 @@ run_replete({
             return specifier.startsWith(key);
         });
         if (alias !== undefined) {
-            specifier = specifier.replace(alias, import_map[alias]);
+            specifier = url_to_locator(
+                specifier.replace(alias, import_map[alias])
+            );
         }
 
 // Pass thru network specifiers.
@@ -80,8 +111,10 @@ run_replete({
 
         return Promise.reject(new Error("Not found."));
     },
-    mime(locator) {
-        const extension = new URL(locator).pathname.split(".").pop();
-        return mime_types[extension];
+    watch(locator) {
+        const watcher = Deno.watchFs(fromFileUrl(locator_to_url(locator)));
+        return watcher[Symbol.asyncIterator]().next().finally(function () {
+            watcher.close();
+        });
     }
 });

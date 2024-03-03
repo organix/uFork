@@ -13,10 +13,10 @@
 #        ^^^^^^^^^^^ string.quoted.double.uforkasm
     ; comment
 #   ^^^^^^^^^ comment.line.uforkasm
-    "lib": "../lib.asm" ; comment
+    "lib": "../lib.asm"     ; comment
 #   ^^^^^ string.quoted.double.uforkasm
 #        ^ punctuation.separator.uforkasm
-#                       ^^^^^^^^^ comment.line.uforkasm
+#                           ^^^^^^^^^ comment.line.uforkasm
 
 decimal:
 # <- entity.name.label.uforkasm
@@ -41,29 +41,29 @@ quad:
 beh:
 # <- entity.name.label.uforkasm
 #  ^ punctuation.separator.uforkasm
-"race_beh":               ; (requestors throttle) <- request
+"race_beh":                 ; (requestors throttle) <- request
 # <- string.quoted.double.uforkasm
 #         ^ punctuation.separator.uforkasm
-#                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ comment.line.uforkasm
+#                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ comment.line.uforkasm
 
 ; The work of handling the request is deferred to a dedicated "runner" actor,
 ; freeing up the race requestor to accept additional requests.
 # <- comment.line.uforkasm
 
-    msg -2              ; value
+    msg -2                  ; value
 #   ^^^ keyword.operator.word.uforkasm
 #       ^^ constant.numeric.integer.uforkasm
-#                       ^^^^^^^ comment.line.uforkasm
+#                           ^^^^^^^ comment.line.uforkasm
 
-    push #nil           ; value callback queue running=()
+    push #nil               ; value callback queue running=()
 #        ^^^^ constant.language.uforkasm
-    push runner_beh     ; value callback queue running runner_beh
+    push runner_beh         ; value callback queue running runner_beh
 #        ^^^^^^^^^^ entity.name.label.uforkasm
-    typeq #actor_t      ; runner cap?(to_cancel)
+    typeq #actor_t          ; runner cap?(to_cancel)
 #         ^^^^^^^^ constant.language.uforkasm
     typeq #fixnum_t
 #         ^^^^^^^^^ constant.language.uforkasm
-    if_not std.commit   ; runner
+    if_not std.commit       ; runner
 #          ^^^ entity.name.namespace.uforkasm
 #             ^ punctuation.accessor.uforkasm
 #              ^^^^^^ variable.other.member.uforkasm

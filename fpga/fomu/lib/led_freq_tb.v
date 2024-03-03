@@ -28,14 +28,14 @@ module test_bench;
     end
 
     // request changes every 13 clocks
-    reg led_req = 1'b1;                                         // requested LED level
+    reg led_req = 1'b1;                                 // requested LED level
     reg [3:0] cnt = 13;
     always @(posedge clk) begin
         if (cnt == 0) begin
-            cnt <= 13;                                          // reset counter
-            led_req <= !led_req;                                // toggle request
+            cnt <= 13;                                  // reset counter
+            led_req <= !led_req;                        // toggle request
         end else begin
-            cnt <= cnt - 1'b1;                                  // decrement counter
+            cnt <= cnt - 1'b1;                          // decrement counter
         end
     end
 
@@ -46,7 +46,7 @@ module test_bench;
 //        .o_clk(led_clk),
         .o_stb(led_stb)
     );
-    wire led_act;                                               // actual LED level
+    wire led_act;                                       // actual LED level
     led_freq LED_FREQ (
         .i_clk(clk),
         .i_led(led_req),

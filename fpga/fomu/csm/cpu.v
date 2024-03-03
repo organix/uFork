@@ -282,7 +282,7 @@ module cpu (
                         uc_waddr <= d0[ADDR_SZ-1:0];
                         uc_wdata <= d1;
                         uc_wr <= 1'b1;
-                        d_pop <= 1'b1; // pop d-stack twice (in 2 separate phases)
+                        d_pop <= 1'b1;                  // pop d-stack twice (in 2 separate phases)
                     end
                     UC_SWAP: begin                      // ( a b -- b a )
                         alu_op <= `NO_OP;
@@ -327,7 +327,7 @@ module cpu (
                         // wait for memory cycle...
                     end
                     UC_STORE: begin                     // ! ( cell addr -- )
-                        d_pop <= 1'b1; // pop d-stack twice (in 2 separate phases)
+                        d_pop <= 1'b1;                  // pop d-stack twice (in 2 separate phases)
                     end
                     UC_DUP: begin                       // ( a -- a a )
                         d_value <= d0;

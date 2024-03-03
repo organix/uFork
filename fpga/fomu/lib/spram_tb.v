@@ -28,7 +28,7 @@ module test_bench;
 
     // start-up delay
     reg [5:0] waiting;
-    initial waiting = 3;                                        // wait for device initialization
+    initial waiting = 3;                                // wait for device initialization
     always @(posedge clk) begin
         if (waiting) begin
             waiting <= waiting - 1'b1;

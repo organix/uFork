@@ -3,7 +3,7 @@
 .import
     dev: "https://ufork.org/lib/dev.asm"
 
-hello:                  ; (+72 +101 +108 +108 +111 +63 +10)
+hello:                      ; (+72 +101 +108 +108 +111 +63 +10)
     pair_t 'H'
     pair_t 'e'
     pair_t 'l'
@@ -13,15 +13,15 @@ hello:                  ; (+72 +101 +108 +108 +111 +63 +10)
     pair_t '\n'
     ref #nil
 
-boot:                   ; () <- {caps}
-    push hello          ; value
-    msg 0               ; value {caps}
-    push dev.debug_key  ; value {caps} dev.debug_key
-    dict get            ; value debug_dev
+boot:                       ; () <- {caps}
+    push hello              ; value
+    msg 0                   ; value {caps}
+    push dev.debug_key      ; value {caps} dev.debug_key
+    dict get                ; value debug_dev
 ;    msg 0               ; ... debug_dev {caps}
 ;    push dev.clock_key  ; ... debug_dev {caps} dev.clock_key
 ;    dict get            ; ... cust=debug_dev clock_dev
-    send -1             ; --
+    send -1                 ; --
     end commit
 
 .export
