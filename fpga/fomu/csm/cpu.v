@@ -20,13 +20,22 @@ Once `o_running` is de-asserted, the value of `o_status` indicates success (1) o
 
 `include "../lib/lifo.v"
 `include "alu.v"
+`include "../lib/serial_tx.v"
+`include "../lib/serial_rx.v"
 
-module cpu (
+module cpu #(
+    parameter CLK_FREQ      = 48_000_000                // clock frequency (Hz)
+) (
     input                   i_clk,                      // system clock
     input                   i_run,                      // run the processor
+    input                   i_rx,                       // serial port transmit
+    output                  o_tx,                       // serial port receive
     output                  o_running,                  // processor active
     output reg              o_status                    // final status
 );
+
+    initial o_status = 1'b1;                            // default to success
+
     parameter DATA_SZ       = 16;                       // number of bits per memory word
     parameter ADDR_SZ       = 8;                        // number of bits in each address
     parameter MEM_MAX       = (1<<ADDR_SZ);             // maximum memory memory address
@@ -48,6 +57,10 @@ module cpu (
     localparam UC_R_POP     = 16'h000D;                 // R> ( -- a ) R:( a -- )
     localparam UC_000E      = 16'h000E;
     localparam UC_EXIT      = 16'h000F;                 // ( -- ) R:( addr -- ) addr->pc
+    localparam UC_RX_OK     = 16'h003C;                 // rx? ( -- ready )
+    localparam UC_GET_RX    = 16'h003D;                 // rx@ ( -- char )
+    localparam UC_TX_OK     = 16'h003E;                 // tx? ( -- ready )
+    localparam UC_SET_TX    = 16'h003F;                 // tx! ( char -- )
     localparam UC_CALL      = 16'hFFC0;                 // ( -- ) R:( -- pc ) @pc[15:8]->pc
 
     //
@@ -238,6 +251,7 @@ module cpu (
         r_push <= 1'b0;
         r_pop <= 1'b0;
         alu_op <= `NO_OP;
+        tx_wr <= 1'b0;
         case (phase)
             0: begin                                    // fetch
                 if (o_running) begin
@@ -363,6 +377,24 @@ module cpu (
                         pc <= r0[ADDR_SZ-1:0];
                         r_pop <= 1'b1;
                     end
+                    UC_RX_OK: begin                     // rx? ( -- ready )
+                        d_value <= (rx_ready ? -1 : 0);
+                        d_push <= 1'b1;
+                    end
+                    UC_GET_RX: begin                    // rx@ ( -- char )
+                        d_value <= { 8'h00, rx_buffer };
+                        rx_ready <= 1'b0;
+                        d_push <= 1'b1;
+                    end
+                    UC_TX_OK: begin                     // tx? ( -- ready )
+                        d_value <= (tx_busy ? 0 : -1);
+                        d_push <= 1'b1;
+                    end
+                    UC_SET_TX: begin                    // tx! ( char -- )
+                        tx_data <= d0;
+                        tx_wr <= 1'b1;
+                        d_pop <= 1'b1;
+                    end
                     default: begin
                         if (opcode[DATA_SZ-1]) begin    // CALL ( -- ) R:( -- pc ) @pc->pc
                             r_value <= { 8'hF0, pc }; // FIXME: use verilog repetition operator to add leading 1's...
@@ -394,6 +426,47 @@ module cpu (
         endcase
     end
 
-    initial o_status = 1'b1;                            // default to success
+    //
+    // serial port UART
+    //
+
+    parameter BAUD_RATE     = 115_200;                  // baud rate (bits per second)
+
+    // instantiate serial transmitter
+    reg tx_wr = 1'b0;
+    reg [7:0] tx_data;
+    wire tx_busy;
+    serial_tx #(
+        .CLK_FREQ(CLK_FREQ),
+        .BAUD_RATE(BAUD_RATE)
+    ) SER_TX (
+        .i_clk(i_clk),
+        .i_wr(tx_wr),
+        .i_data(tx_data),
+        .o_busy(tx_busy),
+        .o_tx(o_tx)
+    );
+
+    // instantiate serial receiver
+    wire rx_wr;
+    wire [7:0] rx_data;
+    serial_rx #(
+        .CLK_FREQ(CLK_FREQ),
+        .BAUD_RATE(BAUD_RATE)
+    ) SER_RX (
+        .i_clk(i_clk),
+        .i_rx(i_rx),
+        .o_wr(rx_wr),
+        .o_data(rx_data)
+    );
+
+    reg rx_ready = 1'b0;                                // character in buffer
+    reg [7:0] rx_buffer;                                // character received
+    always @(posedge i_clk) begin
+        if (rx_wr) begin
+            rx_ready <= 1'b1;
+            rx_buffer <= rx_data;
+        end
+    end
 
 endmodule
