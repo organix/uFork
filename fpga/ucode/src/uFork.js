@@ -835,19 +835,25 @@ export const uFork = (asm, opts) => {
   // todo: insert here err signalling
   dat("EXIT");
 
+  def("uFork_dict_has");  // ( key dict -- bool )
+  dat("FALSE", "-ROT");   // ( bool key dict )
+  dat("uFork_dict_forEach", "uFork_dict_has_l0"); // ( bool key )
+  dat("DROP", "EXIT");
+  def("uFork_dict_has_l0"); // ( bool key dict -- bool key dict )
+  dat("DUP", ">R", "qx@");  // ( bool key dkey ) R:( dict )
+  dat("OVER", "=", "ROT");  // ( key dbool bool ) R:( dict )
+  dat("OR", "SWAP", "R>");  // ( bool key dict ) R:( )
+  dat("EXIT");
+
+
   def("uFork_instr_dict_has"); // ( kont subopcode )
   dat("DROP");                 // ( kont )
   // todo: insert here a check that uFork NOS is of #dict_t
   dat("DUP", "uFork_pop");     // ( kont key )
   dat("OVER", "uFork_pop");    // ( kont key dict )
-  dat("FALSE", "-ROT");        // ( kont bool key dict )
-  dat("uFork_dict_forEach", "uFork_instr_dict_has_l0"); // ( kont bool key )
-  dat("DROP", "(JMP)", "uFork_instr_typeq_l1");
-  def("uFork_instr_dict_has_l0"); // ( bool key dict -- bool key dict )
-  dat("DUP", ">R", "qx@");        // ( bool key dkey ) R:( dict )
-  dat("OVER", "=", "ROT");        // ( key dbool bool ) R:( dict )
-  dat("OR", "SWAP", "R>");        // ( bool key dict ) R:( )
-  dat("EXIT");
+  dat("uFork_dict_has");       // ( bool )
+  dat("(JMP)", "uFork_instr_typeq_l1");
+  
   
 
   def("uFork_instr__subroutine_call"); // ( kont ip opcode -- )
