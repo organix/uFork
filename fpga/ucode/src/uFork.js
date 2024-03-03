@@ -860,7 +860,17 @@ export const uFork = (asm, opts) => {
   dat("(BRZ)", "uFork_instr_dict_get_l0"); // ( kont key dict )
   dat("uFork_dict_forEach", "uFork_instr_dict_get_l1"); // ( kont value )
   dat("(JMP)", "uFork__push_then_instrTail");
-  // merkill
+  def("uFork_instr_dict_get_l0"); // ( kont key dict )
+  dat("2DROP");
+  def("uFork__push_#?_then_instrTail");
+  dat("uFork_#?", "(JMP)", "uFork__push_then_instrTail");
+  def("uFork_instr_dict_get_l1"); // ( key dict -- key dict | value )
+  // note: this will exit early
+  dat("2DUP", "qx@", "=");        // ( key dict bool )
+  dat("(BRZ)", "uFork_instr_dict_get_l2"); // ( key dict )
+  dat("NIP", "qy@", "uFork_dict_forEach_exitEarly");
+  def("uFork_instr_dict_get_l2")
+  dat("EXIT");
   
 
   def("uFork_instr__subroutine_call"); // ( kont ip opcode -- )
