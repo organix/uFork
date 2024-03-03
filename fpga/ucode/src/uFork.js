@@ -805,13 +805,15 @@ export const uFork = (asm, opts) => {
   // [#dict_t, key, value, next]
   
   def("uFork_dict_forEach"); // ( dict -- ) R:( raddr )
-  dat("R>", "DUP", "1+", ">R", ">R"); // ( dict ) R:( raddr+1 raddr )
+  dat("R>", "DUP", "1+", ">R", ">R"); // ( dict ) R:( raddr+1 xt )
   def("uFork_dict_forEach_l0");
-  dat("R@",  "@EXECUTE");    // ( dict ) R:( raddr+1 raddr )
-  dat("qz@");                // ( next ) R:( raddr+1 raddr )
+  dat("R@",  "@EXECUTE");    // ( dict ) R:( raddr+1 xt )
+  dat("qz@");                // ( next ) R:( raddr+1 xt )
   dat("DUP", "uFork_()", "=", "OVER", "uFork_#?", "=", "OR");
   dat("(BRZ)", "uFork_dict_forEach_l0");
   dat("DROP", "R>", "DROP", "EXIT");
+  def("uFork_dict_forEach_exitEarly"); // ( dict -- ) R:( raddr+1_forEachCaller xt raddr_xt raddr )
+  dat("DROP", "RDROP", "RDROP", "RDROP", "EXIT");
 
   def("uFork_dict_size"); // ( dict -- n )
   dat("ZERO", "SWAP");    // ( n dict )
