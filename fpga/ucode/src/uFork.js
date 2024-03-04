@@ -871,6 +871,22 @@ export const uFork = (asm, opts) => {
   dat("NIP", "qy@", "uFork_dict_forEach_exitEarly");
   def("uFork_instr_dict_get_l2")
   dat("EXIT");
+
+  def("uFork_instr_dict_add"); // ( kont subopcode )
+  dat("DROP");                 // ( kont )
+  // todo: insert here check that ÞOS (Þird On Stack) is of #dict_t
+  // todo: insert here sponsor mem fuel check&burn
+  dat("uFork_allot");          // ( kont q )
+  dat("uFork_#pair_t");        // ( kont q #pair_t )
+  dat("OVER", "qt!");          // ( kont q )
+  dat("OVER", "uFork_pop");    // ( kont q value )
+  dat("OVER", "qy!");          // ( kont q )
+  dat("OVER", "uFork_pop");    // ( kont q key )
+  dat("OVER", "qx!");          // ( kont q )
+  dat("OVER", "uFork_pop");    // ( kont q dict )
+  dat("OVER", "qz!");          // ( kont q )
+  dat("(JMP)", "uFork__push_then_instrTail");
+
   
 
   def("uFork_instr__subroutine_call"); // ( kont ip opcode -- )
