@@ -37,8 +37,13 @@ module cpu #(
     initial o_status = 1'b1;                            // default to success
 
     parameter DATA_SZ       = 16;                       // number of bits per memory word
-    parameter ADDR_SZ       = 8;                        // number of bits in each address
+    parameter ADDR_SZ       = 10;                       // number of bits in each address
     parameter MEM_MAX       = (1<<ADDR_SZ);             // maximum memory memory address
+    parameter PAD_ADDR      = (DATA_SZ-ADDR_SZ);        // number of padding bits from addr to data
+
+    // symbolic constants
+    localparam FALSE        = 16'h0000;                 // Boolean FALSE = 0
+    localparam TRUE         = 16'hFFFF;                 // Boolean TRUE = -1
 
     // uCode instructions
     localparam UC_NOP       = 16'h0000;                 // ( -- )
@@ -378,26 +383,26 @@ module cpu #(
                         r_pop <= 1'b1;
                     end
                     UC_RX_OK: begin                     // rx? ( -- ready )
-                        d_value <= (rx_ready ? -1 : 0);
+                        d_value <= (rx_ready ? TRUE : FALSE);
                         d_push <= 1'b1;
                     end
                     UC_GET_RX: begin                    // rx@ ( -- char )
-                        d_value <= { 8'h00, rx_buffer };
+                        d_value <= { {(DATA_SZ-8){1'b0}}, rx_buffer };
                         rx_ready <= 1'b0;
                         d_push <= 1'b1;
                     end
                     UC_TX_OK: begin                     // tx? ( -- ready )
-                        d_value <= (tx_busy ? 0 : -1);
+                        d_value <= (tx_busy ? FALSE : TRUE);
                         d_push <= 1'b1;
                     end
                     UC_SET_TX: begin                    // tx! ( char -- )
-                        tx_data <= d0;
+                        tx_data <= d0[7:0];
                         tx_wr <= 1'b1;
                         d_pop <= 1'b1;
                     end
                     default: begin
                         if (opcode[DATA_SZ-1]) begin    // CALL ( -- ) R:( -- pc ) @pc->pc
-                            r_value <= { 8'hF0, pc }; // FIXME: use verilog repetition operator to add leading 1's...
+                            r_value <= { {PAD_ADDR{1'b1}}, pc };
                             r_push <= 1'b1;
                             pc <= opcode[ADDR_SZ-1:0];
                         end else begin

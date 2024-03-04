@@ -14,6 +14,16 @@ Use snake case for identifiers and file names.
     ufixtoi32
     u-fix-to-i32
 
+When describing uFork pair-based data structures, use Scheme list-notation.
+A dot surrounded by whitespace separates the two components of a pair.
+A list formed from pairs may be abbreviated such that `(a b c)` is equivalent
+to `(a . (b . (c . ())))`. A _dotted-tail_ denotes the rest of the list.
+
+    (first second . rest) = -->[*,*]-->[*,*]--> rest
+                                |       |
+                                V       V
+                              first   second
+
 ## JavaScript
 
 TL;DR use JSLint (https://github.com/jamesdiacono/JSLint).
@@ -266,13 +276,15 @@ the signal list.
 Avoid `always @(*)`.
 
 Begin end-of-line comments at the tabstop at position 57.
+Align middle-column (if needed) at position 29.
 
     // Good
+        localparam UC_NOP = 16'h0000;                       // ( -- )
         localparam UC_NOP       = 16'h0000;                 // ( -- )
 
     // Bad
         localparam UC_NOP       = 16'h0000;                     // ( -- )
-        localparam UC_NOP       = 16'h0000; // ( -- )
+        localparam UC_NOP   = 16'h0000; // ( -- )
 
 ## Assembly
 
@@ -298,7 +310,7 @@ In the stack diagram, depict actor creation like `beh.state`:
 At the entry point of each behavior, show the signature of the state and
 message like `state <- msg`. For example:
 
-    my_beh     :                ; (count limit) <- (cust selector . rest)
+    my_beh:                     ; (count limit) <- (cust selector . rest)
 
 If the module represents a behavior, the behavior's export should be named
 `beh`.
