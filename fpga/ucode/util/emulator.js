@@ -6,11 +6,31 @@
 
 export const makeStack = (opts) => {
   opts = (opts == undefined) ? {} : opts ;
-  const contents = (opts.contents == undefined) ? [] : new Array(opts.contents); // FlexList
+  const contents = (opts.contents == undefined) ? [] : new Array(opts.contents);
   return {
     getContents: () => contents.map((x) => x),
     push: (item) => { contents.push(item) },
     pop:  () => contents.pop(),
+  };
+};
+
+export const makeStackStatistican = (opts) => {
+  opts = (opts == undefined) ? {} : opts ;
+  const report = (opts.report == undefined) ? {} : opts.report ;
+  report.maxDepth  = (report.maxDepth == undefined ) ? 0 : report.maxDepth ;
+  report.currDepth = (report.currDepth == undefined ) ? 0 : report.currDepth ;
+  const stack = makeStack(opts.stackOpts);
+  return {
+    getContents: stack.getContents,
+    push: (item) => {
+      report.currDepth += 1;
+      report.maxDepth = Math.max(report.currDepth, report.maxDepth);
+      stack.push(item);
+    },
+    pop: () => {
+      report.currDepth -= 1;
+      return stack.pop();
+    },
   };
 };
 
