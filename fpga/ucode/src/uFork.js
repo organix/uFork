@@ -857,6 +857,16 @@ export const uFork = (asm, opts) => {
   dat("uFork_dict_forEach_exitEarly", "EXIT");
   def("uFork_dict_count_until_l1"); // ( count key dict )
   dat("ROT", "1+", "-ROT", "EXIT");
+
+  def("uFork_dict_del"); // ( key dict -- dict' )
+  dat("2DUP", "uFork_dict_has"); // ( key dict bool )
+  dat("(BRZ)", "NIP");           // ( key dict )
+  dat("uFork_allot");            // ( key old_dict new_dict )
+  dat("DUP", ">R");              // ( key old_dict new_dict ) R:( new_dict )
+  dat("-ROT");                   // ( new_dict key old_dict ) R:( new_dict )
+  def("uFork_dict_del_l0");      // ( new_dict key old_dict ) R:( new_dict )
+  dat("2DUP", "qx@", "=");       // ( new_dict key old_dict ) R:( new_dict )
+  // merkill
   
 
   def("uFork_instr_dict_has"); // ( kont subopcode )
