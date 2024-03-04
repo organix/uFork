@@ -40,6 +40,10 @@ module cpu #(
     parameter ADDR_SZ       = 8;                        // number of bits in each address
     parameter MEM_MAX       = (1<<ADDR_SZ);             // maximum memory memory address
 
+    // symbolic constants
+    localparam FALSE        = 16'h0000;                 // Boolean FALSE = 0
+    localparam TRUE         = 16'hFFFF;                 // Boolean TRUE = -1
+
     // uCode instructions
     localparam UC_NOP       = 16'h0000;                 // ( -- )
     localparam UC_ADD       = 16'h0001;                 // + ( a b -- a+b )
@@ -378,7 +382,7 @@ module cpu #(
                         r_pop <= 1'b1;
                     end
                     UC_RX_OK: begin                     // rx? ( -- ready )
-                        d_value <= (rx_ready ? -1 : 0);
+                        d_value <= (rx_ready ? TRUE : FALSE);
                         d_push <= 1'b1;
                     end
                     UC_GET_RX: begin                    // rx@ ( -- char )
@@ -387,7 +391,7 @@ module cpu #(
                         d_push <= 1'b1;
                     end
                     UC_TX_OK: begin                     // tx? ( -- ready )
-                        d_value <= (tx_busy ? 0 : -1);
+                        d_value <= (tx_busy ? FALSE : TRUE);
                         d_push <= 1'b1;
                     end
                     UC_SET_TX: begin                    // tx! ( char -- )
