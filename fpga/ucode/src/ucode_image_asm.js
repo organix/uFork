@@ -11,7 +11,7 @@ import { uFork } from "./uFork.js";
 export const defineInstructionset = (asm) => {
   const { def } = asm;
   def("NOP",    0x0000);
-  def("UMPLUS", 0x0001);
+  def("PLUS",   0x0001);
   def("AND",    0x0002);
   def("XOR",    0x0003);
   def("1LBR",   0x0004);
@@ -40,12 +40,13 @@ export const defineInstructionset = (asm) => {
   def("QUAD_GCSTEP",  0x001A);
   def("QUAD_ISFULL",  0x001B);
 
-  def("DEBUG_LED",    0x003C);
-  def("DEBUG_RX?",    0x003D);
-  def("DEBUG_TX?",    0x003E);
-  def("DEBUG_TX!",    0x003F);
+  def("DEBUG_LED",    0x003B);
+  def("DEBUG_RX?",    0x003C); // rx? ( -- ready )
+  def("DEBUG_RX@",    0x003D); // rx@ ( -- char )
+  def("DEBUG_TX?",    0x003E); // tx? ( -- ready )
+  def("DEBUG_TX!",    0x003F); // tx! ( char -- )
   
-  def("UM+", "UMPLUS");
+  def("+",   "PLUS");
   def("&",   "AND");
   def("⊕",   "XOR");
   def("1+",  "INCR");
@@ -196,10 +197,36 @@ export const minicore = (asm, opts) => {
   def("RDROP"); // ( -- ) R:( x ra -- ra )
   dat("R>", "R>", "DROP", ">R", "EXIT");
 
+  /*
   def("+"); // ( a b -- sum )
   dat("UM+");
   def("(DROP)");
   dat("DROP", "EXIT");
+  */
+
+  def("UM+");      // ( a b -- sum carry )
+  dat("2DUP");     // ( a b a b )
+  dat("0x7FFF_&"); // ( a b a b_masked )
+  dat("SWAP");     // ( a b b_masked a )
+  dat("0x7FFF_&"); // ( a b b_masked a_masked )
+  dat("+");        // ( a b sum1 )
+  dat("DUP");      // ( a b sum1 sum1 )
+  dat("0x7FFF_&"); // ( a b sum1 sum1_masked )
+  dat(">R");       // ( a b sum1 ) R:( sum1_masked )
+  dat("15>>");     // ( a b sum1Carry ) R:( sum1_masked )
+  dat("SWAP");     // ( a sum1Carry b ) R:( sum1_masked )
+  dat("15>>");     // ( a sum1Carry b[15] ) R:( sum1_masked )
+  dat("+");        // ( a sum2 ) R:( sum1_masked )
+  dat("SWAP");     // ( sum2 a ) R:( sum1_masked )
+  dat("15>>");     // ( sum2 a[15] ) R:( sum1_masked )
+  dat("+");        // ( sum3 ) R:( sum1_masked )
+  dat("DUP");      // ( sum3 sum3 ) R:( sum1_masked )
+  dat("15<<");     // ( sum3 sum3[15]<<15 ) R:( sum1_masked )
+  dat("R>");       // ( sum3 sum3[15]<<15 sum1_masked ) R:( )
+  dat("OR");       // ( sum3 final_sum )
+  dat("SWAP");     // ( final_sum sum3 )
+  dat("1>>");      // ( final_sum c )
+  dat("EXIT");
 
   def("NEGATE");
   dat("INVERT", "1+", "EXIT");
@@ -306,7 +333,12 @@ export const minicore = (asm, opts) => {
   dat("DEBUG_TX?", "(BRZ)", "TX!");
   dat("DEBUG_TX!", "EXIT");
 
-  def("RX?", "DEBUG_RX?");
+  def("RX?"); // ( -- char T | F )
+  dat("DEBUG_RX?", "DUP", "(BRZ)", "RX?_l0");
+  dat("DEBUG_RX@", "SWAP");
+  def("RX?_l0");
+  dat("EXIT");
+  
   def("EMIT", "TX!");
 
   def("RX"); // ( -- chr )
