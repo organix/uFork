@@ -954,6 +954,10 @@ const uFork = (asm, opts) => {
   dat("uFork_dict_del");
   dat("(JMP)", "uFork__push_then_instrTail");
 
+  // deque gagnabygging: [#pair_t, fram, bak, #?]
+  // þar sem fram og bak eru par listar hver
+  // bankers todo algorithm
+
   
 
   def("uFork_instr__subroutine_call"); // ( kont ip opcode -- )
