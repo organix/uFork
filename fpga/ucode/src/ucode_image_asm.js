@@ -182,6 +182,12 @@ export const minicore = (asm, opts) => {
   def("OVER"); // ( a b -- a b a )
   dat(">R", "DUP", "R>", "SWAP", "EXIT");
 
+  def("ROT"); // ( a b c -- b c a )
+  dat(">R", "SWAP", "R>", "SWAP", "EXIT");
+
+  def("-ROT"); // ( a b c -- c a b )
+  dat("SWAP", ">R", "SWAP", "R>", "EXIT");
+
   def("2DUP"); // ( a b -- a b a b )
   dat("OVER", "OVER", "EXIT");
 
