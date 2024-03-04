@@ -111,7 +111,8 @@ export const makeDebugIOStub = (opts) => {
     setLED: (colour) => {
       console.log(`µcode led: 0b${colour.toString(2)}`);
     },
-    rx: () => [false, 0],
+    rx_ready: () => false,
+    rx: () => 0,
     tx_ready: () => true,
     tx: (char) => {
       console.log(`µcode debug tx: "${String.fromCharCode(char)}"`);
@@ -137,13 +138,13 @@ export const makeEmulator = (opts) => {
     const instr = memory.get(pc);
     pc = incr(pc);
     switch (instr) {
-      // UMPLUS
+      // PLUS
       case 0x0001: {
         const b = dstack.pop();
         const a = dstack.pop();
         const sc = a + b;
         dstack.push(sc & 0xFFFF); // sum
-        dstack.push((sc >> 16) & 0xFFFF); // carry
+        // dstack.push((sc >> 16) & 0xFFFF); // carry
       }; break;
       // AND
       case 0x0002: {
@@ -289,21 +290,21 @@ export const makeEmulator = (opts) => {
       case 0x0038:
       case 0x0039:
       case 0x003A:
-      case 0x003B:
         throw new Error("instruction reserved and not (yet) implemented");
       // DEBUG_LED
-      case 0x003C: {
+      case 0x003B: {
         const colours = dstack.pop();
         debug_io.setLED(colours);
       }; break;
-      // DEBUG_RX?
-      case 0x003D: {
-        let [gotChar, char] = debug_io.rx();
+      // DEBUG_Rx?
+      case 0x003C: {
+        let gotChar = debug_io.rx_ready();
         gotChar = gotChar ? 0xFFFF : 0x0000 ;
-        if (gotChar != 0) {
-          dstack.push(char);
-        }
         dstack.push(gotChar);
+      }; break;
+      // DEBUG_RX@
+      case 0x003D: {
+        dstack.push(debug_io.rx());
       }; break;
       // DEBUG_TX?
       case 0x003E: {
