@@ -40,7 +40,27 @@ export const defineInstructionset = (asm) => {
   def("QUAD_GCSTEP",  0x001A);
   def("QUAD_ISFULL",  0x001B);
 
-  def("DEBUG_LED",    0x003B);
+  /* tbd: unlikely to be implemented at all
+  fomu spefic
+  def("GPIO@",        0x0038); // gpio@ ( -- pins )
+  def("GPIO!",        0x0039); // gpio! ( pins -- )
+  def("GPIO_config",  0x003A); // gpio_config ( pins_config -- )
+
+  pins:
+   [0xF]: gpio pad 4
+   [0xE]: gpio pad 3
+   [0xD]: gpio pad 2
+   [0xC]: gpio pad 1
+   [0x7]: usb D-
+   [0x6]: usb D+
+   [0x5]: usb pull up
+   [0x4]: flash busy 
+   [0x3]: spi chip select flash
+   [0x2]: spi mclk
+   [0x1]: spi mosi
+   [0x0]: spi miso
+  */
+  def("DEBUG_LED",    0x003B); // led! ( colour -- )
   def("DEBUG_RX?",    0x003C); // rx? ( -- ready )
   def("DEBUG_RX@",    0x003D); // rx@ ( -- char )
   def("DEBUG_TX?",    0x003E); // tx? ( -- ready )
