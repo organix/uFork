@@ -26,7 +26,8 @@ the top of stack (s0) is replaced by `i_data`.
 
 module lifo #(
     parameter WIDTH         = 8,                        // bits per element
-    parameter DEPTH         = 8                         // number of elements (hard-coded at 8)
+//    parameter DEPTH         = 8                         // number of elements (hard-coded at 8)
+    parameter DEPTH         = 12                        // number of elements (hard-coded at 12)
 ) (
     input                   i_clk,                      // system clock
     input       [WIDTH-1:0] i_data,                     // new data value
