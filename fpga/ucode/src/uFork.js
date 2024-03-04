@@ -921,7 +921,8 @@ const uFork = (asm, opts) => {
   def("uFork_instr_dict_add"); // ( kont subopcode )
   dat("DROP");                 // ( kont )
   // todo: insert here check that ÞOS (Þird On Stack) is of #dict_t
-  // todo: insert here sponsor mem fuel check&burn
+  // todo: insert here sponsor mem fuel check&burn: 1 quad usage
+  def("uFork_instr_dict_add_l0"); // ( kont )
   dat("uFork_allot");          // ( kont q )
   dat("uFork_#pair_t");        // ( kont q #pair_t )
   dat("OVER", "qt!");          // ( kont q )
@@ -932,6 +933,23 @@ const uFork = (asm, opts) => {
   dat("OVER", "uFork_pop");    // ( kont q dict )
   dat("OVER", "qz!");          // ( kont q )
   dat("(JMP)", "uFork__push_then_instrTail");
+
+  def("uFork_instr_dict_set"); // ( kont subopcode )
+  dat("DROP");                 // ( kont )
+  // todo: insert here check that ÞOS (Þird On Stack) is of #dict_t
+  // todo: insert here sponsor mem fuel check&burn: 1 quad usage + n head copy
+  dat("DUP", "uFork_pop", ">R"); // ( kont ) R:( value )
+  dat("DUP", "uFork_pop");       // ( kont key ) R:( value )
+  dat("OVER", "uFork_pop");      // ( kont key dict ) R:( value )
+  dat("2DUP", "uFork_dict_del"); // ( kont key dict dict' ) R:( value )
+  dat("NIP");                    // ( kont key dict' ) R:( value )
+  dat("SWAP", ">R", "OVER");     // ( kont dict' kont ) R:( value key )
+  dat("uFork_push");             // ( kont ) R:( value key )
+  dat("R>", "OVER", "uFork_push"); // ( kont ) R:( value )
+  dat("R>", "OVER", "uFork_push"); // ( kont ) R:( )
+  dat("(JMP)", "uFork_instr_dict_add_l0");
+
+  
 
   
 
