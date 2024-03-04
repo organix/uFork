@@ -23,19 +23,32 @@ const convert_img_to_array = (img) => {
 /**
   * @parameter {Map<Uint16, Uint16>} img - the ucode program memory image
   * @parameter {undefined | any} opts - options bag object
-  * @returns {null | string} the .memh contents unless opts.write is present
+  * @returns {string} the .memh contents
   **/
 const convert_img_to_memh = (img, opts) => {
-    
+    const arr = convert_img_to_array(img);
+    return String.prototype.concat.apply("// verilog memh format\n", arr.map(
+        (item) => "".concat(Number(item).toString(16), "\n")
+    ));
 };
 
 /**
   * @parameter {Map<Uint16, Uint16>} img - the ucode program memory image
   * @parameter {undefined | any} opts - options bag object
-  * @returns {null | string} the wozmon hexdump unless opts.write is present
+  * @returns {string} the wozmon hexdump
   **/
 const convert_img_to_wozmon_hex = (img, opts) => {
-
+    const entries = new Array(img.entries());
+    // tbd: maybe sort entries based on address?
+    return String.prototype.concat.apply("", entries.map(
+        ([addr, value]) => "".concat(
+            Number(addr).toString(16).toUppecase(),
+            ": ",
+            Number(value).toString(16).toUppercase(),
+            "\n",
+        )
+    ));
+    
 };
 
 export default Object.freeze({
