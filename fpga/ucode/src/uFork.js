@@ -843,6 +843,22 @@ export const uFork = (asm, opts) => {
   dat("OR", "SWAP", "R>");  // ( bool key dict ) R:( )
   dat("EXIT");
 
+  def("uFork_dict_count_until"); // ( dict key -- count )
+  dat("SWAP");
+  dat("ZERO", "-ROT");           // ( 0 key dict )
+  dat("uFork_dict_forEach");
+  dat("uFork_dict_count_until_l0"); // ( count key )
+  dat("DROP", "EXIT");
+  def("uFork_dict_count_until_l0"); // ( count key dict -- count key dict )
+  // note: exits early
+  dat("2DUP");                 // ( count key dict key dict )
+  dat("qx@", "=");             // ( count key dict bool )
+  dat("(BRZ)", "uFork_dict_count_until_l1");
+  dat("uFork_dict_forEach_exitEarly", "EXIT");
+  def("uFork_dict_count_until_l1"); // ( count key dict )
+  dat("ROT", "1+", "-ROT", "EXIT");
+  
+
   def("uFork_instr_dict_has"); // ( kont subopcode )
   dat("DROP");                 // ( kont )
   // todo: insert here a check that uFork NOS is of #dict_t
