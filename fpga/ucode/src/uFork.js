@@ -868,22 +868,25 @@ const uFork = (asm, opts) => {
   dat("2DUP", "qx@", "=");       // ( new_dict key old_dict bool ) R:( dict' )
   dat("(BRNZ)", "uFork_dict_del_l1"); // ( new_dict key old_dict ) R:( dict' )
   dat("ROT");                    // ( key old_dict new_dict ) R:( dict' )
-  dat("OVER");                   // ( key old_dict new_dict old_dict ) R:( dict' )
-  dat("qx@");                    // ( key old_dict new_dict entry_key ) R:( dict' )
-  dat("OVER");                   // ( key old_dict new_dict entry_key new_dict ) R:( dict' )
-  dat("qx!");                    // ( key old_dict new_dict ) R:( dict' )
-  dat("OVER", "qy@");            // ( key old_dict new_dict entry_value ) R:( dict' )
-  dat("OVER", "qy!");            // ( key old_dict new_dict ) R:( dict' )
-  dat("uFork_#dict_t");          // ( key old_dict new_dict #dict_t ) R:( dict' )
-  dat("OVER", "qt!");            // ( key old_dict new_dict ) R:( dict' )
-  dat("uFork_allot");            // ( key old_dict new_dict q ) R:( dict' )
-  dat("SWAP");                   // ( key old_dict q new_dict ) R:( dict' )
-  dat("2DUP");                   // ( key old_dict q new_dict q new_dict ) R:( dict' )
-  dat("qz!", "DROP");            // ( key old_dict q )
-  dat("SWAP", "qz@", "SWAP");    // ( key old_dict_next q )
-  dat("-ROT");                   // ( q key old_dict_next )
+  dat("uFork_allot");            // ( key old_dict new_dict new_dict' ) R:( dict' )
+  dat("SWAP", "2DUP", "qz!");    // ( key old_dict new_dict' new_dict ) R:( dict' )
+  dat("DROP");                   // ( key old_dict new_dict ) R:( dict' )
+  dat("OVER");                   // ( key old_dict new_dict' old_dict ) R:( dict' )
+  dat("qx@");                    // ( key old_dict new_dict' entry_key ) R:( dict' )
+  dat("OVER");                   // ( key old_dict new_dict' entry_key new_dict ) R:( dict' )
+  dat("qx!");                    // ( key old_dict new_dict' ) R:( dict' )
+  dat("OVER", "qy@");            // ( key old_dict new_dict' entry_value ) R:( dict' )
+  dat("OVER", "qy!");            // ( key old_dict new_dict' ) R:( dict' )
+  dat("uFork_#dict_t");          // ( key old_dict new_dict' #dict_t ) R:( dict' )
+  dat("OVER", "qt!");            // ( key old_dict new_dict' ) R:( dict' )
+  dat("-ROT");                   // ( q key old_dict_next ) R:( dict' )
   dat("(JMP)", "uFork_dict_del_l0");
-  // merkill
+  def("uFork_dict_del_l1"); // ( new_dict key old_dict ) R:( dict' )
+  dat("NIP", "qz@");        // ( new_dict old_dict_next ) R:( dict' )
+  dat("SWAP", "qz!");       // ( ) R:( dict' )
+  dat("R>", "DUP", "qz@", "SWAP", "uFork_free", "EXIT");
+  
+
   
 
   def("uFork_instr_dict_has"); // ( kont subopcode )
