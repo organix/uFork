@@ -43,6 +43,12 @@ module lifo #(
     reg [WIDTH-1:0] o_s5;
     reg [WIDTH-1:0] o_s6;
     reg [WIDTH-1:0] o_s7;
+    /*
+    */
+    reg [WIDTH-1:0] o_s8;
+    reg [WIDTH-1:0] o_s9;
+    reg [WIDTH-1:0] o_s10;
+    reg [WIDTH-1:0] o_s11;
 
     // stack operations
     always @(posedge i_clk) begin
@@ -59,6 +65,12 @@ module lifo #(
                 o_s5 <= o_s4;
                 o_s6 <= o_s5;
                 o_s7 <= o_s6;
+                /*
+                */
+                o_s8 <= o_s7;
+                o_s9 <= o_s8;
+                o_s10 <= o_s9;
+                o_s11 <= o_s10;
             end
             {1'b0, 1'b1}: begin                         // remove top-of-stack
                 o_s0 <= o_s1;
@@ -68,6 +80,12 @@ module lifo #(
                 o_s4 <= o_s5;
                 o_s5 <= o_s6;
                 o_s6 <= o_s7;
+                /*
+                */
+                o_s7 <= o_s8;
+                o_s8 <= o_s9;
+                o_s9 <= o_s10;
+                o_s10 <= o_s11;
             end
             default: begin                              // no operation
                 // nothing changes
