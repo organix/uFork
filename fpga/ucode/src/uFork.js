@@ -885,9 +885,6 @@ const uFork = (asm, opts) => {
   dat("NIP", "qz@");        // ( new_dict old_dict_next ) R:( dict' )
   dat("SWAP", "qz!");       // ( ) R:( dict' )
   dat("R>", "DUP", "qz@", "SWAP", "uFork_free", "EXIT");
-  
-
-  
 
   def("uFork_instr_dict_has"); // ( kont subopcode )
   dat("DROP");                 // ( kont )
@@ -949,7 +946,13 @@ const uFork = (asm, opts) => {
   dat("R>", "OVER", "uFork_push"); // ( kont ) R:( )
   dat("(JMP)", "uFork_instr_dict_add_l0");
 
-  
+  def("uFork_instr_dict_del"); // ( kont subopcode )
+  dat("DROP");                 // ( kont )
+  // todo: insert here check that NOS is of #dict_t
+  // todo: insert here sponsor mem fuel check&burn
+  dat("DUP", "uFork_pop", "OVER", "uFork_pop");
+  dat("uFork_dict_del");
+  dat("(JMP)", "uFork__push_then_instrTail");
 
   
 
