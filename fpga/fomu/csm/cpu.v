@@ -133,65 +133,66 @@ module cpu #(
 
     // initial program
     initial begin
-        ucode[8'h00] = UC_NOP;
-        ucode[8'h01] = UC_JMP;
-        ucode[8'h02] = UC_BOOT;
+        ucode[12'h000] = UC_NOP;
+        ucode[12'h001] = UC_JMP;
+        ucode[12'h002] = UC_BOOT;
         //
         // ...
         //
         // JMP
-        ucode[8'h80] = UC_R_POP;
-        ucode[8'h81] = UC_FETCH;
+        ucode[12'h080] = UC_R_POP;
+        ucode[12'h081] = UC_FETCH;
         // EXE
-        ucode[8'h82] = UC_PUSH_R;
-        ucode[8'h83] = UC_EXIT;
+        ucode[12'h082] = UC_PUSH_R;
+        ucode[12'h083] = UC_EXIT;
         // ALT ( altn cnsq cond -- cnsq | altn )
-        ucode[8'h84] = UC_SKZ;
-        ucode[8'h85] = UC_SWAP;
-        ucode[8'h86] = UC_DROP;
-        ucode[8'h87] = UC_EXIT;
+        ucode[12'h084] = UC_SKZ;
+        ucode[12'h085] = UC_SWAP;
+        ucode[12'h086] = UC_DROP;
+        ucode[12'h087] = UC_EXIT;
         // CONST
-        ucode[8'h88] = UC_R_POP;
-        ucode[8'h89] = UC_FETCH;
-        ucode[8'h8A] = UC_EXIT;
+        ucode[12'h088] = UC_R_POP;
+        ucode[12'h089] = UC_FETCH;
+        ucode[12'h08A] = UC_EXIT;
         // TRUE ( -- -1 )
-        ucode[8'h8B] = UC_CONST;
-        ucode[8'h8C] = 16'hFFFF;
+        ucode[12'h08B] = UC_CONST;
+        ucode[12'h08C] = 16'hFFFF;
         // FALSE ( -- 0 )
-        ucode[8'h8D] = UC_CONST;
-        ucode[8'h8E] = 16'h0000;
+        ucode[12'h08D] = UC_CONST;
+        ucode[12'h08E] = 16'h0000;
         // INVERT ( a -- ~a )
-        ucode[8'h8F] = UC_TRUE;
-        ucode[8'h90] = UC_XOR;
-        ucode[8'h91] = UC_EXIT;
+        ucode[12'h08F] = UC_TRUE;
+        ucode[12'h090] = UC_XOR;
+        ucode[12'h091] = UC_EXIT;
         // (LIT) item ( -- item )
-        ucode[8'h92] = UC_R_POP;
-        ucode[8'h93] = UC_DUP;
-        ucode[8'h94] = UC_INC;
-        ucode[8'h95] = UC_PUSH_R;
-        ucode[8'h96] = UC_FETCH;
-        ucode[8'h97] = UC_EXIT;
+        ucode[12'h092] = UC_R_POP;
+        ucode[12'h093] = UC_DUP;
+        ucode[12'h094] = UC_INC;
+        ucode[12'h095] = UC_PUSH_R;
+        ucode[12'h096] = UC_FETCH;
+        ucode[12'h097] = UC_EXIT;
         // NEGATE ( a -- -a )
-        ucode[8'h98] = UC_NOT;//UC_INVERT;
-        ucode[8'h99] = UC_INC;
-        ucode[8'h9A] = UC_EXIT;
+        ucode[12'h098] = UC_NOT;//UC_INVERT;
+        ucode[12'h099] = UC_INC;
+        ucode[12'h09A] = UC_EXIT;
         // DEC ( a -- a-1 )
-        ucode[8'h9B] = UC_NEG;//UC_NEGATE;
-        ucode[8'h9C] = UC_INC;
-        ucode[8'h9D] = UC_NEG;//UC_NEGATE;
-        ucode[8'h9E] = UC_EXIT;
+        ucode[12'h09B] = UC_NEG;//UC_NEGATE;
+        ucode[12'h09C] = UC_INC;
+        ucode[12'h09D] = UC_NEG;//UC_NEGATE;
+        ucode[12'h09E] = UC_EXIT;
         // SUB ( a b -- a-b )
-        ucode[8'h9F] = UC_NEG;//UC_NEGATE;
-        ucode[8'hA0] = UC_ADD;
-        ucode[8'hA1] = UC_EXIT;
+        ucode[12'h09F] = UC_NEG;//UC_NEGATE;
+        ucode[12'h0A0] = UC_ADD;
+        ucode[12'h0A1] = UC_EXIT;
         // LSB ( -- 1 )
-        ucode[8'hA2] = UC_CONST;
-        ucode[8'hA3] = 16'h0001;
+        ucode[12'h0A2] = UC_CONST;
+        ucode[12'h0A3] = 16'h0001;
         // MSB ( -- -32768 )
-        ucode[8'hA4] = UC_CONST;
-        ucode[8'hA5] = 16'h8000;
+        ucode[12'h0A4] = UC_CONST;
+        ucode[12'h0A5] = 16'h8000;
         /*
         */
+        $writememh("ucode_rom.mem", ucode);
     end
 
     //
