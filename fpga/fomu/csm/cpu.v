@@ -139,7 +139,7 @@ module cpu #(
         ucode[12'h003] = UC_DROP;
         ucode[12'h004] = UC_JMP;
         ucode[12'h005] = UC_BOOT;
-        ucode[12'h007] = UC_TRUE;
+        ucode[12'h006] = UC_TRUE;
         ucode[12'h007] = UC_EXTN;
         //
         // ...
