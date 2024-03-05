@@ -60,7 +60,7 @@ module cpu #(
     localparam UC_SKZ       = 16'h000B;                 // ( cond -- ) cond==0?pc+2:pc+1->pc
     localparam UC_PUSH_R    = 16'h000C;                 // >R ( a -- ) R:( -- a )
     localparam UC_R_POP     = 16'h000D;                 // R> ( -- a ) R:( a -- )
-    localparam UC_000E      = 16'h000E;
+    localparam UC_EXTN      = 16'h000E;                 // extension ( extn -- )
     localparam UC_EXIT      = 16'h000F;                 // ( -- ) R:( addr -- ) addr->pc
 
     localparam UC_LIT       = 16'h0020;                 // (LIT) item ( -- item )
@@ -134,8 +134,13 @@ module cpu #(
     // initial program
     initial begin
         ucode[12'h000] = UC_NOP;
-        ucode[12'h001] = UC_JMP;
-        ucode[12'h002] = UC_BOOT;
+        ucode[12'h001] = UC_LIT;
+        ucode[12'h002] = 16'hC0DE;
+        ucode[12'h003] = UC_DROP;
+        ucode[12'h004] = UC_JMP;
+        ucode[12'h005] = UC_BOOT;
+        ucode[12'h007] = UC_TRUE;
+        ucode[12'h007] = UC_EXTN;
         //
         // ...
         //
@@ -191,8 +196,8 @@ module cpu #(
         ucode[12'h0A4] = UC_CONST;
         ucode[12'h0A5] = 16'h8000;
         /*
-        */
         $writememh("ucode_rom.mem", ucode);
+        */
     end
 
     //
@@ -294,6 +299,7 @@ module cpu #(
                 if (o_running) begin
                     // wait for memory cycle...
                     phase <= 1;
+                    pc <= pc + 1'b1;
                 end
             end
             1: begin                                    // decode
@@ -340,6 +346,9 @@ module cpu #(
                         alu_arg0 <= d0;                 // pass b thru ALU
                         d_pop <= 1'b1;
                     end
+                    UC_LIT: begin                       // (LIT) item ( -- item )
+                        uc_raddr <= pc;
+                    end
                     UC_SUB: begin                       // - ( a b -- a-b )
                         alu_op <= `SUB_OP;
                         alu_arg0 <= d1;
@@ -369,7 +378,6 @@ module cpu #(
                     end
                 endcase
                 opcode <= uc_rdata;
-                pc <= pc + 1'b1;
             end
             2: begin                                    // execute
                 phase <= 3;
@@ -437,9 +445,17 @@ module cpu #(
                         r_pop <= 1'b1;
                         d_push <= 1'b1;
                     end
+                    UC_EXTN: begin                      // extension ( extn -- )
+                        d_pop <= 1'b1;
+                        halt <= 1'b1;
+                    end
                     UC_EXIT: begin                      // ( -- ) R:( addr -- ) addr->pc
                         pc <= r0[ADDR_SZ-1:0];
                         r_pop <= 1'b1;
+                    end
+                    UC_LIT: begin                       // (LIT) item ( -- item )
+                        // wait for memory cycle...
+                        pc <= pc + 1'b1;
                     end
                     UC_SUB: begin                       // - ( a b -- a-b )
                         d_value <= alu_data;
@@ -505,6 +521,10 @@ module cpu #(
                     UC_SWAP: begin                      // ( a b -- b a )
                         d_value <= alu_data;            // push a
                         d_push <= 1'b1;
+                    end
+                    UC_LIT: begin                       // (LIT) item ( -- item )
+                        d_value = uc_rdata;
+                        d_push = 1'b1;
                     end
                 endcase
                 uc_raddr <= pc;
