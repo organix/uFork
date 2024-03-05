@@ -64,31 +64,16 @@ module cpu #(
     localparam UC_EXIT      = 16'h000F;                 // ( -- ) R:( addr -- ) addr->pc
 
     localparam UC_LIT       = 16'h0020;                 // (LIT) item ( -- item )
-    //dat("R>", "DUP", "1+", ">R", "@", "EXIT");
     localparam UC_SUB       = 16'h0021;                 // - ( a b -- a-b )
-    //dat("NEGATE", "+", "EXIT")
     localparam UC_OR        = 16'h0022;                 // OR ( a b -- a|b )
-    //dat("INVERT", "SWAP", "INVERT");
-    //def("NAND"); // ( a b -- not(a & b)
-    //dat("&", "INVERT", "EXIT");
     localparam UC_NOT       = 16'h0023;                 // INVERT ( a -- ~a )
-    //dat("TRUE", "XOR", "EXIT");
     localparam UC_NEG       = 16'h0024;                 // NEGATE ( a -- -a )
-    //dat("ZERO", "SWAP", "SUB", "EXIT");
-    //dat("INVERT", "1+", "EXIT");
     localparam UC_DEC       = 16'h0025;                 // 1- ( a -- a-1 )
-    //dat("ONE", "SUB", "EXIT");
-    //dat("NEGATE", "1+", "NEGATE", "EXIT");
     localparam UC_NIP       = 16'h0026;                 // ( a b -- b )
-    //dat("SWAP", "DROP", "EXIT");
-    localparam UC_TUCK      = 16'h0027;                 // ( a b -- b a b )
-    //dat("SWAP", "OVER", "EXIT");
+//    localparam UC_TUCK      = 16'h0027;                 // ( a b -- b a b )
     localparam UC_2DUP      = 16'h0028;                 // ( a b -- a b a b )
-    //dat("OVER", "OVER", "EXIT");
     localparam UC_2DROP     = 16'h0029;                 // ( a b -- )
-    //dat("DROP", "DROP", "EXIT");
     localparam UC_OVER      = 16'h002A;                 // ( a b -- a b a )
-    //dat(">R", "DUP", "R>", "SWAP", "EXIT");
 
     localparam UC_RX_OK     = 16'h003C;                 // rx? ( -- ready )
     localparam UC_GET_RX    = 16'h003D;                 // rx@ ( -- char )
@@ -124,13 +109,9 @@ module cpu #(
     localparam UC_CONST     = 16'hF088;
     localparam UC_TRUE      = 16'hF08B;                 // ( -- -1 )
     localparam UC_FALSE     = 16'hF08D;                 // ( -- 0 )
-//    localparam UC_INVERT    = 16'hF08F;                 // ( a -- ~a )
-//    localparam UC_LIT       = 16'hF092;                 // (LIT) item ( -- item )
-//    localparam UC_NEGATE    = 16'hF098;                 // ( a -- -a )
-//    localparam UC_DEC       = 16'hF09B;                 // 1- ( a -- a-1 )
-//    localparam UC_SUB       = 16'hF09F;                 // - ( a b -- a+b )
-    localparam UC_LSB       = 16'hF0A2;                 // ( -- 1 )
-    localparam UC_MSB       = 16'hF0A4;                 // ( -- -32768 )
+    localparam UC_LSB       = 16'hF08F;                 // ( -- 1 )
+    localparam UC_MSB       = 16'hF091;                 // ( -- -32768 )
+    localparam UC_TUCK      = 16'hF127;                 // ( a b -- b a b )
 
     // initial program
     initial begin
@@ -166,36 +147,19 @@ module cpu #(
         // FALSE ( -- 0 )
         ucode[12'h08D] = UC_CONST;
         ucode[12'h08E] = 16'h0000;
-        // INVERT ( a -- ~a )
-        ucode[12'h08F] = UC_TRUE;
-        ucode[12'h090] = UC_XOR;
-        ucode[12'h091] = UC_EXIT;
-        // (LIT) item ( -- item )
-        ucode[12'h092] = UC_R_POP;
-        ucode[12'h093] = UC_DUP;
-        ucode[12'h094] = UC_INC;
-        ucode[12'h095] = UC_PUSH_R;
-        ucode[12'h096] = UC_FETCH;
-        ucode[12'h097] = UC_EXIT;
-        // NEGATE ( a -- -a )
-        ucode[12'h098] = UC_NOT;//UC_INVERT;
-        ucode[12'h099] = UC_INC;
-        ucode[12'h09A] = UC_EXIT;
-        // DEC ( a -- a-1 )
-        ucode[12'h09B] = UC_NEG;//UC_NEGATE;
-        ucode[12'h09C] = UC_INC;
-        ucode[12'h09D] = UC_NEG;//UC_NEGATE;
-        ucode[12'h09E] = UC_EXIT;
-        // SUB ( a b -- a-b )
-        ucode[12'h09F] = UC_NEG;//UC_NEGATE;
-        ucode[12'h0A0] = UC_ADD;
-        ucode[12'h0A1] = UC_EXIT;
         // LSB ( -- 1 )
-        ucode[12'h0A2] = UC_CONST;
-        ucode[12'h0A3] = 16'h0001;
+        ucode[12'h08F] = UC_CONST;
+        ucode[12'h090] = 16'h0001;
         // MSB ( -- -32768 )
-        ucode[12'h0A4] = UC_CONST;
-        ucode[12'h0A5] = 16'h8000;
+        ucode[12'h091] = UC_CONST;
+        ucode[12'h092] = 16'h8000;
+        //
+        // ...
+        //
+        // TUCK ( a b -- b a b )
+        ucode[12'h127] = UC_SWAP;
+        ucode[12'h128] = UC_OVER;
+        ucode[12'h129] = UC_EXIT;
         /*
         $writememh("ucode_rom.mem", ucode);
         */
@@ -377,29 +341,19 @@ module cpu #(
                         alu_arg0 <= d0;
                         alu_arg1 <= 16'h0001;
                     end
-                    /*
-    localparam UC_NIP       = 16'h0026;                 // ( a b -- b )
-    //dat("SWAP", "DROP", "EXIT");
-    localparam UC_TUCK      = 16'h0027;                 // ( a b -- b a b )
-    //dat("SWAP", "OVER", "EXIT");
-    localparam UC_2DUP      = 16'h0028;                 // ( a b -- a b a b )
-    //dat("OVER", "OVER", "EXIT");
-    localparam UC_2DROP     = 16'h0029;                 // ( a b -- )
-    //dat("DROP", "DROP", "EXIT");
-    localparam UC_OVER      = 16'h002A;                 // ( a b -- a b a )
-    //dat(">R", "DUP", "R>", "SWAP", "EXIT");
-                    */
                     UC_NIP: begin                       // ( a b -- b )
                         alu_op <= `NO_OP;
                         alu_arg0 <= d0;                 // pass b thru ALU
                         d_pop <= 1'b1;
                     end
+                    /*
                     UC_TUCK: begin                      // ( a b -- b a b )
                         alu_op <= `XOR_OP;
                         alu_arg0 <= d1;
                         alu_arg1 <= d0;
                         d_pop <= 1'b1;
                     end
+                    */
                     UC_2DUP: begin                      // ( a b -- a b a b )
                         d_value <= d1;
                         d_push <= 1'b1;
@@ -513,23 +467,12 @@ module cpu #(
                         d_pop <= 1'b1;
                         d_push <= 1'b1;
                     end
-                    /*
-    localparam UC_NIP       = 16'h0026;                 // ( a b -- b )
-    //dat("SWAP", "DROP", "EXIT");
-    localparam UC_TUCK      = 16'h0027;                 // ( a b -- b a b )
-    //dat("SWAP", "OVER", "EXIT");
-    localparam UC_2DUP      = 16'h0028;                 // ( a b -- a b a b )
-    //dat("OVER", "OVER", "EXIT");
-    localparam UC_2DROP     = 16'h0029;                 // ( a b -- )
-    //dat("DROP", "DROP", "EXIT");
-    localparam UC_OVER      = 16'h002A;                 // ( a b -- a b a )
-    //dat(">R", "DUP", "R>", "SWAP", "EXIT");
-                    */
                     UC_NIP: begin                       // ( a b -- b )
                         d_value <= alu_data;
                         d_pop <= 1'b1;
                         d_push <= 1'b1;
                     end
+                    /*
                     UC_TUCK: begin                      // ( a b -- b a b )
                         alu_op <= `XOR_OP;
                         alu_arg0 <= alu_data;           // a^b
@@ -538,6 +481,7 @@ module cpu #(
                         d_pop <= 1'b1;
                         d_push <= 1'b1;
                     end
+                    */
                     UC_2DUP: begin                      // ( a b -- a b a b )
                         d_value <= d1;
                         d_push <= 1'b1;
@@ -594,9 +538,6 @@ module cpu #(
                         d_push = 1'b1;
                     end
                     /*
-    localparam UC_TUCK      = 16'h0027;                 // ( a b -- b a b )
-    //dat("SWAP", "OVER", "EXIT");
-                    */
                     UC_TUCK: begin                      // ( a b -- b a b )
                         alu_op <= `XOR_OP;
                         alu_arg0 <= alu_data;           // b
@@ -606,6 +547,7 @@ module cpu #(
                         d_push <= 1'b1;
                         // FIXME: need 2 more cycles to push a & b for desired effect!
                     end
+                    */
                 endcase
                 uc_raddr <= pc;
             end
