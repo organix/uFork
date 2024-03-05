@@ -958,6 +958,13 @@ const uFork = (asm, opts) => {
   // þar sem fram og bak eru par listar hver
   // bankers todo algorithm
 
+  def("uFork_deque_new"); // ( -- deque )
+  dat("uFork_allot");     // ( q )
+  dat("uFork_#pair_t", "OVER", "qt!");
+  dat("uFork_()",      "OVER", "qx!");
+  dat("uFork_()",      "OVER", "qy!");
+  dat("uFork_#?",      "OVER", "qz!");
+  dat("EXIT");
   
 
   def("uFork_instr__subroutine_call"); // ( kont ip opcode -- )
