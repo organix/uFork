@@ -82,6 +82,7 @@ module cpu #(
     localparam UC_NIP       = 16'h0026;                 // ( a b -- b )
     //dat("SWAP", "DROP", "EXIT");
     localparam UC_TUCK      = 16'h0027;                 // ( a b -- b a b )
+    //dat("SWAP", "OVER", "EXIT");
     localparam UC_2DUP      = 16'h0028;                 // ( a b -- a b a b )
     //dat("OVER", "OVER", "EXIT");
     localparam UC_2DROP     = 16'h0029;                 // ( a b -- )
@@ -376,6 +377,36 @@ module cpu #(
                         alu_arg0 <= d0;
                         alu_arg1 <= 16'h0001;
                     end
+                    /*
+    localparam UC_NIP       = 16'h0026;                 // ( a b -- b )
+    //dat("SWAP", "DROP", "EXIT");
+    localparam UC_TUCK      = 16'h0027;                 // ( a b -- b a b )
+    //dat("SWAP", "OVER", "EXIT");
+    localparam UC_2DUP      = 16'h0028;                 // ( a b -- a b a b )
+    //dat("OVER", "OVER", "EXIT");
+    localparam UC_2DROP     = 16'h0029;                 // ( a b -- )
+    //dat("DROP", "DROP", "EXIT");
+    localparam UC_OVER      = 16'h002A;                 // ( a b -- a b a )
+    //dat(">R", "DUP", "R>", "SWAP", "EXIT");
+                    */
+                    UC_NIP: begin                       // ( a b -- b )
+                        alu_op <= `NO_OP;
+                        alu_arg0 <= d0;                 // pass b thru ALU
+                        d_pop <= 1'b1;
+                    end
+                    UC_TUCK: begin                      // ( a b -- b a b )
+                        alu_op <= `XOR_OP;
+                        alu_arg0 <= d1;
+                        alu_arg1 <= d0;
+                        d_pop <= 1'b1;
+                    end
+                    UC_2DUP: begin                      // ( a b -- a b a b )
+                        d_value <= d1;
+                        d_push <= 1'b1;
+                    end
+                    UC_2DROP: begin                     // ( a b -- )
+                        d_pop <= 1'b1;
+                    end
                 endcase
                 opcode <= uc_rdata;
             end
@@ -482,6 +513,42 @@ module cpu #(
                         d_pop <= 1'b1;
                         d_push <= 1'b1;
                     end
+                    /*
+    localparam UC_NIP       = 16'h0026;                 // ( a b -- b )
+    //dat("SWAP", "DROP", "EXIT");
+    localparam UC_TUCK      = 16'h0027;                 // ( a b -- b a b )
+    //dat("SWAP", "OVER", "EXIT");
+    localparam UC_2DUP      = 16'h0028;                 // ( a b -- a b a b )
+    //dat("OVER", "OVER", "EXIT");
+    localparam UC_2DROP     = 16'h0029;                 // ( a b -- )
+    //dat("DROP", "DROP", "EXIT");
+    localparam UC_OVER      = 16'h002A;                 // ( a b -- a b a )
+    //dat(">R", "DUP", "R>", "SWAP", "EXIT");
+                    */
+                    UC_NIP: begin                       // ( a b -- b )
+                        d_value <= alu_data;
+                        d_pop <= 1'b1;
+                        d_push <= 1'b1;
+                    end
+                    UC_TUCK: begin                      // ( a b -- b a b )
+                        alu_op <= `XOR_OP;
+                        alu_arg0 <= alu_data;           // a^b
+                        alu_arg1 <= d0;                 // a
+                        d_value <= alu_data;            // ( a -- a^b )
+                        d_pop <= 1'b1;
+                        d_push <= 1'b1;
+                    end
+                    UC_2DUP: begin                      // ( a b -- a b a b )
+                        d_value <= d1;
+                        d_push <= 1'b1;
+                    end
+                    UC_2DROP: begin                     // ( a b -- )
+                        d_pop <= 1'b1;
+                    end
+                    UC_OVER: begin                      // ( a b -- a b a )
+                        d_value <= d1;
+                        d_push <= 1'b1;
+                    end
                     UC_RX_OK: begin                     // rx? ( -- ready )
                         d_value <= (rx_ready ? TRUE : FALSE);
                         d_push <= 1'b1;
@@ -525,6 +592,19 @@ module cpu #(
                     UC_LIT: begin                       // (LIT) item ( -- item )
                         d_value = uc_rdata;
                         d_push = 1'b1;
+                    end
+                    /*
+    localparam UC_TUCK      = 16'h0027;                 // ( a b -- b a b )
+    //dat("SWAP", "OVER", "EXIT");
+                    */
+                    UC_TUCK: begin                      // ( a b -- b a b )
+                        alu_op <= `XOR_OP;
+                        alu_arg0 <= alu_data;           // b
+                        alu_arg1 <= d0;                 // a^b
+                        d_value <= alu_data;            // ( a^b -- b )
+                        d_pop <= 1'b1;
+                        d_push <= 1'b1;
+                        // FIXME: need 2 more cycles to push a & b for desired effect!
                     end
                 endcase
                 uc_raddr <= pc;
