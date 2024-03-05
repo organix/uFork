@@ -48,8 +48,8 @@ module cpu #(
     // uCode instructions
     localparam UC_NOP       = 16'h0000;                 // ( -- )
     localparam UC_ADD       = 16'h0001;                 // + ( a b -- a+b )
-    localparam UC_AND       = 16'h0002;                 // & ( a b -- a&b )
-    localparam UC_XOR       = 16'h0003;                 // ^ ( a b -- a^b )
+    localparam UC_AND       = 16'h0002;                 // AND ( a b -- a&b )
+    localparam UC_XOR       = 16'h0003;                 // XOR ( a b -- a^b )
     localparam UC_ROL       = 16'h0004;                 // ( a -- {a[14:0],a[15]} )
     localparam UC_INC       = 16'h0005;                 // 1+ ( a -- a+1 )
     localparam UC_FETCH     = 16'h0006;                 // @ ( addr -- cell )
@@ -60,12 +60,26 @@ module cpu #(
     localparam UC_SKZ       = 16'h000B;                 // ( cond -- ) cond==0?pc+2:pc+1->pc
     localparam UC_PUSH_R    = 16'h000C;                 // >R ( a -- ) R:( -- a )
     localparam UC_R_POP     = 16'h000D;                 // R> ( -- a ) R:( a -- )
-    localparam UC_000E      = 16'h000E;
+    localparam UC_EXTN      = 16'h000E;                 // extension ( extn -- )
     localparam UC_EXIT      = 16'h000F;                 // ( -- ) R:( addr -- ) addr->pc
+
+    localparam UC_LIT       = 16'h0020;                 // (LIT) item ( -- item )
+    localparam UC_SUB       = 16'h0021;                 // - ( a b -- a-b )
+    localparam UC_OR        = 16'h0022;                 // OR ( a b -- a|b )
+    localparam UC_NOT       = 16'h0023;                 // INVERT ( a -- ~a )
+    localparam UC_NEG       = 16'h0024;                 // NEGATE ( a -- -a )
+    localparam UC_DEC       = 16'h0025;                 // 1- ( a -- a-1 )
+    localparam UC_NIP       = 16'h0026;                 // ( a b -- b )
+//    localparam UC_TUCK      = 16'h0027;                 // ( a b -- b a b )
+    localparam UC_2DUP      = 16'h0028;                 // ( a b -- a b a b )
+    localparam UC_2DROP     = 16'h0029;                 // ( a b -- )
+    localparam UC_OVER      = 16'h002A;                 // ( a b -- a b a )
+
     localparam UC_RX_OK     = 16'h003C;                 // rx? ( -- ready )
     localparam UC_GET_RX    = 16'h003D;                 // rx@ ( -- char )
     localparam UC_TX_OK     = 16'h003E;                 // tx? ( -- ready )
     localparam UC_SET_TX    = 16'h003F;                 // tx! ( char -- )
+
     localparam UC_CALL      = 16'hFFC0;                 // ( -- ) R:( -- pc ) @pc[15:8]->pc
 
     //
@@ -95,71 +109,59 @@ module cpu #(
     localparam UC_CONST     = 16'hF088;
     localparam UC_TRUE      = 16'hF08B;                 // ( -- -1 )
     localparam UC_FALSE     = 16'hF08D;                 // ( -- 0 )
-    localparam UC_INVERT    = 16'hF08F;                 // ( a -- ~a )
-    localparam UC_LIT       = 16'hF092;                 // LIT cell ( -- cell )
-    localparam UC_NEGATE    = 16'hF098;                 // ( a -- -a )
-    localparam UC_DEC       = 16'hF09B;                 // 1- ( a -- a-1 )
-    localparam UC_SUB       = 16'hF09F;                 // - ( a b -- a+b )
-    localparam UC_LSB       = 16'hF0A2;                 // ( -- 1 )
-    localparam UC_MSB       = 16'hF0A4;                 // ( -- -32768 )
+    localparam UC_LSB       = 16'hF08F;                 // ( -- 1 )
+    localparam UC_MSB       = 16'hF091;                 // ( -- -32768 )
+    localparam UC_TUCK      = 16'hF127;                 // ( a b -- b a b )
 
     // initial program
     initial begin
-        ucode[8'h00] = UC_NOP;
-        ucode[8'h01] = UC_JMP;
-        ucode[8'h02] = UC_BOOT;
+        ucode[12'h000] = UC_NOP;
+        ucode[12'h001] = UC_LIT;
+        ucode[12'h002] = 16'hC0DE;
+        ucode[12'h003] = UC_DROP;
+        ucode[12'h004] = UC_JMP;
+        ucode[12'h005] = UC_BOOT;
+        ucode[12'h006] = UC_TRUE;
+        ucode[12'h007] = UC_EXTN;
+        //
+        // ...
+        //
         // JMP
-        ucode[8'h80] = UC_R_POP;
-        ucode[8'h81] = UC_FETCH;
+        ucode[12'h080] = UC_R_POP;
+        ucode[12'h081] = UC_FETCH;
         // EXE
-        ucode[8'h82] = UC_PUSH_R;
-        ucode[8'h83] = UC_EXIT;
+        ucode[12'h082] = UC_PUSH_R;
+        ucode[12'h083] = UC_EXIT;
         // ALT ( altn cnsq cond -- cnsq | altn )
-        ucode[8'h84] = UC_SKZ;
-        ucode[8'h85] = UC_SWAP;
-        ucode[8'h86] = UC_DROP;
-        ucode[8'h87] = UC_EXIT;
+        ucode[12'h084] = UC_SKZ;
+        ucode[12'h085] = UC_SWAP;
+        ucode[12'h086] = UC_DROP;
+        ucode[12'h087] = UC_EXIT;
         // CONST
-        ucode[8'h88] = UC_R_POP;
-        ucode[8'h89] = UC_FETCH;
-        ucode[8'h8A] = UC_EXIT;
+        ucode[12'h088] = UC_R_POP;
+        ucode[12'h089] = UC_FETCH;
+        ucode[12'h08A] = UC_EXIT;
         // TRUE ( -- -1 )
-        ucode[8'h8B] = UC_CONST;
-        ucode[8'h8C] = 16'hFFFF;
+        ucode[12'h08B] = UC_CONST;
+        ucode[12'h08C] = 16'hFFFF;
         // FALSE ( -- 0 )
-        ucode[8'h8D] = UC_CONST;
-        ucode[8'h8E] = 16'h0000;
-        // INVERT ( a -- ~a )
-        ucode[8'h8F] = UC_TRUE;
-        ucode[8'h90] = UC_XOR;
-        ucode[8'h91] = UC_EXIT;
-        // LIT cell ( -- cell )
-        ucode[8'h92] = UC_R_POP;
-        ucode[8'h93] = UC_DUP;
-        ucode[8'h94] = UC_INC;
-        ucode[8'h95] = UC_PUSH_R;
-        ucode[8'h96] = UC_FETCH;
-        ucode[8'h97] = UC_EXIT;
-        // NEGATE ( a -- -a )
-        ucode[8'h98] = UC_INVERT;
-        ucode[8'h99] = UC_INC;
-        ucode[8'h9A] = UC_EXIT;
-        // DEC ( a -- a-1 )
-        ucode[8'h9B] = UC_NEGATE;
-        ucode[8'h9C] = UC_INC;
-        ucode[8'h9D] = UC_NEGATE;
-        ucode[8'h9E] = UC_EXIT;
-        // SUB ( a b -- a-b )
-        ucode[8'h9F] = UC_NEGATE;
-        ucode[8'hA0] = UC_ADD;
-        ucode[8'hA1] = UC_EXIT;
+        ucode[12'h08D] = UC_CONST;
+        ucode[12'h08E] = 16'h0000;
         // LSB ( -- 1 )
-        ucode[8'hA2] = UC_CONST;
-        ucode[8'hA3] = 16'h0001;
+        ucode[12'h08F] = UC_CONST;
+        ucode[12'h090] = 16'h0001;
         // MSB ( -- -32768 )
-        ucode[8'hA4] = UC_CONST;
-        ucode[8'hA5] = 16'h8000;
+        ucode[12'h091] = UC_CONST;
+        ucode[12'h092] = 16'h8000;
+        //
+        // ...
+        //
+        // TUCK ( a b -- b a b )
+        ucode[12'h127] = UC_SWAP;
+        ucode[12'h128] = UC_OVER;
+        ucode[12'h129] = UC_EXIT;
         /*
+        $writememh("ucode_rom.mem", ucode);
         */
     end
 
@@ -262,6 +264,7 @@ module cpu #(
                 if (o_running) begin
                     // wait for memory cycle...
                     phase <= 1;
+                    pc <= pc + 1'b1;
                 end
             end
             1: begin                                    // decode
@@ -269,20 +272,20 @@ module cpu #(
                 case (uc_rdata)
                     UC_ADD: begin                       // + ( a b -- a+b )
                         alu_op <= `ADD_OP;
-                        alu_arg0 <= d0;
-                        alu_arg1 <= d1;
+                        alu_arg0 <= d1;
+                        alu_arg1 <= d0;
                         d_pop <= 1'b1;
                     end
-                    UC_AND: begin                       // & ( a b -- a&b )
+                    UC_AND: begin                       // AND ( a b -- a&b )
                         alu_op <= `AND_OP;
-                        alu_arg0 <= d0;
-                        alu_arg1 <= d1;
+                        alu_arg0 <= d1;
+                        alu_arg1 <= d0;
                         d_pop <= 1'b1;
                     end
-                    UC_XOR: begin                       // ^ ( a b -- a^b )
+                    UC_XOR: begin                       // XOR ( a b -- a^b )
                         alu_op <= `XOR_OP;
-                        alu_arg0 <= d0;
-                        alu_arg1 <= d1;
+                        alu_arg0 <= d1;
+                        alu_arg1 <= d0;
                         d_pop <= 1'b1;
                     end
                     UC_ROL: begin                       // ( a -- {a[14:0],a[15]} )
@@ -308,9 +311,58 @@ module cpu #(
                         alu_arg0 <= d0;                 // pass b thru ALU
                         d_pop <= 1'b1;
                     end
+                    UC_LIT: begin                       // (LIT) item ( -- item )
+                        uc_raddr <= pc;
+                    end
+                    UC_SUB: begin                       // - ( a b -- a-b )
+                        alu_op <= `SUB_OP;
+                        alu_arg0 <= d1;
+                        alu_arg1 <= d0;
+                        d_pop <= 1'b1;
+                    end
+                    UC_OR: begin                        // OR ( a b -- a|b )
+                        alu_op <= `OR_OP;
+                        alu_arg0 <= d1;
+                        alu_arg1 <= d0;
+                        d_pop <= 1'b1;
+                    end
+                    UC_NOT: begin                       // INVERT ( a -- ~a )
+                        alu_op <= `XOR_OP;
+                        alu_arg0 <= d0;
+                        alu_arg1 <= 16'hFFFF;
+                    end
+                    UC_NEG: begin                       // NEGATE ( a -- -a )
+                        alu_op <= `SUB_OP;
+                        alu_arg0 <= 16'h0000;
+                        alu_arg1 <= d0;
+                    end
+                    UC_DEC: begin                       // 1- ( a -- a-1 )
+                        alu_op <= `SUB_OP;
+                        alu_arg0 <= d0;
+                        alu_arg1 <= 16'h0001;
+                    end
+                    UC_NIP: begin                       // ( a b -- b )
+                        alu_op <= `NO_OP;
+                        alu_arg0 <= d0;                 // pass b thru ALU
+                        d_pop <= 1'b1;
+                    end
+                    /*
+                    UC_TUCK: begin                      // ( a b -- b a b )
+                        alu_op <= `XOR_OP;
+                        alu_arg0 <= d1;
+                        alu_arg1 <= d0;
+                        d_pop <= 1'b1;
+                    end
+                    */
+                    UC_2DUP: begin                      // ( a b -- a b a b )
+                        d_value <= d1;
+                        d_push <= 1'b1;
+                    end
+                    UC_2DROP: begin                     // ( a b -- )
+                        d_pop <= 1'b1;
+                    end
                 endcase
                 opcode <= uc_rdata;
-                pc <= pc + 1'b1;
             end
             2: begin                                    // execute
                 phase <= 3;
@@ -322,12 +374,12 @@ module cpu #(
                         d_pop <= 1'b1;
                         d_push <= 1'b1;
                     end
-                    UC_AND: begin                       // & ( a b -- a&b )
+                    UC_AND: begin                       // AND ( a b -- a&b )
                         d_value <= alu_data;
                         d_pop <= 1'b1;
                         d_push <= 1'b1;
                     end
-                    UC_XOR: begin                       // ^ ( a b -- a^b )
+                    UC_XOR: begin                       // XOR ( a b -- a^b )
                         d_value <= alu_data;
                         d_pop <= 1'b1;
                         d_push <= 1'b1;
@@ -378,9 +430,68 @@ module cpu #(
                         r_pop <= 1'b1;
                         d_push <= 1'b1;
                     end
+                    UC_EXTN: begin                      // extension ( extn -- )
+                        d_pop <= 1'b1;
+                        halt <= 1'b1;
+                    end
                     UC_EXIT: begin                      // ( -- ) R:( addr -- ) addr->pc
                         pc <= r0[ADDR_SZ-1:0];
                         r_pop <= 1'b1;
+                    end
+                    UC_LIT: begin                       // (LIT) item ( -- item )
+                        // wait for memory cycle...
+                        pc <= pc + 1'b1;
+                    end
+                    UC_SUB: begin                       // - ( a b -- a-b )
+                        d_value <= alu_data;
+                        d_pop <= 1'b1;
+                        d_push <= 1'b1;
+                    end
+                    UC_OR: begin                        // OR ( a b -- a|b )
+                        d_value <= alu_data;
+                        d_pop <= 1'b1;
+                        d_push <= 1'b1;
+                    end
+                    UC_NOT: begin                       // INVERT ( a -- ~a )
+                        d_value <= alu_data;
+                        d_pop <= 1'b1;
+                        d_push <= 1'b1;
+                    end
+                    UC_NEG: begin                       // NEGATE ( a -- -a )
+                        d_value <= alu_data;
+                        d_pop <= 1'b1;
+                        d_push <= 1'b1;
+                    end
+                    UC_DEC: begin                       // 1- ( a -- a-1 )
+                        d_value <= alu_data;
+                        d_pop <= 1'b1;
+                        d_push <= 1'b1;
+                    end
+                    UC_NIP: begin                       // ( a b -- b )
+                        d_value <= alu_data;
+                        d_pop <= 1'b1;
+                        d_push <= 1'b1;
+                    end
+                    /*
+                    UC_TUCK: begin                      // ( a b -- b a b )
+                        alu_op <= `XOR_OP;
+                        alu_arg0 <= alu_data;           // a^b
+                        alu_arg1 <= d0;                 // a
+                        d_value <= alu_data;            // ( a -- a^b )
+                        d_pop <= 1'b1;
+                        d_push <= 1'b1;
+                    end
+                    */
+                    UC_2DUP: begin                      // ( a b -- a b a b )
+                        d_value <= d1;
+                        d_push <= 1'b1;
+                    end
+                    UC_2DROP: begin                     // ( a b -- )
+                        d_pop <= 1'b1;
+                    end
+                    UC_OVER: begin                      // ( a b -- a b a )
+                        d_value <= d1;
+                        d_push <= 1'b1;
                     end
                     UC_RX_OK: begin                     // rx? ( -- ready )
                         d_value <= (rx_ready ? TRUE : FALSE);
@@ -422,6 +533,21 @@ module cpu #(
                         d_value <= alu_data;            // push a
                         d_push <= 1'b1;
                     end
+                    UC_LIT: begin                       // (LIT) item ( -- item )
+                        d_value = uc_rdata;
+                        d_push = 1'b1;
+                    end
+                    /*
+                    UC_TUCK: begin                      // ( a b -- b a b )
+                        alu_op <= `XOR_OP;
+                        alu_arg0 <= alu_data;           // b
+                        alu_arg1 <= d0;                 // a^b
+                        d_value <= alu_data;            // ( a^b -- b )
+                        d_pop <= 1'b1;
+                        d_push <= 1'b1;
+                        // FIXME: need 2 more cycles to push a & b for desired effect!
+                    end
+                    */
                 endcase
                 uc_raddr <= pc;
             end
