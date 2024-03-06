@@ -30,17 +30,17 @@ export const makeAssembler = (opts) => {
           val = curr_addr;
         }
         // next line is debug only
-        console.log(`defining symbol '${sym}' as '${val}'`);
+        // console.log(`defining symbol '${sym}' as '${val}'`);
         if (typeof val == "string") {
           val = asm.symbols.lookup(val);
         }
         if (syms.has(sym)) {
           // next line is debug only
-          console.log("merkill 1");
+          // console.log("merkill 1");
           const tmp = syms.get(sym);
           if (typeof tmp == "object") {
             // next line is debug only
-            console.log("merkill 2");
+            // console.log("merkill 2");
             tmp.resolve(val);
             syms.set(sym, val);
           } else {
@@ -53,10 +53,10 @@ export const makeAssembler = (opts) => {
       },
       lookup: (sym) => {
         // next line is debug only
-        console.log(`looking up symbol '${sym}'`);
+        // console.log(`looking up symbol '${sym}'`);
         if (syms.has(sym)) {
           let val = syms.get(sym);
-          console.log(`merkill 3: '${sym}' er '${val}'`);
+          // console.log(`merkill 3: '${sym}' er '${val}'`);
           switch (typeof val) {
             case "string": return asm.symbols.lookup(val);
             case "bigint": val = BigInt.asUintN(cellsize, val); // fallthrough
@@ -67,8 +67,8 @@ export const makeAssembler = (opts) => {
               return val.promise;
           }
         } else {
-          console.log(`merkill 4`);
-          console.dir(syms);
+          // console.log(`merkill 4`);
+          // console.dir(syms);
           const tmp = makePromise();
           syms.set(sym, tmp);
           return tmp.promise;
