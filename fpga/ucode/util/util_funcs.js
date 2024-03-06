@@ -19,7 +19,8 @@ export const makeArrayFromIterator = (iterator) => {
   return arr;
 };
 
- resolve = undefined;
+export makePromise = () => {
+  let resolve = undefined;
   let reject  = undefined;
   let prom    = new Promise((res, rej) => {
     [resolve, reject] = [res, rej];
@@ -33,4 +34,4 @@ export const makeBitmask = (width) => {
     result = (result << 1) | 1;
   }
   return result;
-}
+};
