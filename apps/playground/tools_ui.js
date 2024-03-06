@@ -112,7 +112,7 @@ const tools_ui = make_ui("tools-ui", function (element, {
                 devices.io.info("WAKE:", device_offset);
                 run_loop();
             },
-            log_level: ufork.LOG_DEBUG,
+            log_level: ufork.LOG_TRACE,
             on_log(log_level, value) {
                 const logger = (
                     log_level === ufork.LOG_WARN

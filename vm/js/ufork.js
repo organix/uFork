@@ -1194,6 +1194,9 @@ function make_core({
         }
 
         if (import_promises[src] === undefined) {
+            if (u_trace !== undefined && content === undefined) {
+                u_trace("Fetching " + src);
+            }
             import_promises[src] = (
                 content === undefined
                 ? fetch(src).then(function (response) {
