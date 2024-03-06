@@ -5,7 +5,7 @@
  * @author Zarutian
  */
 
-import { makeArrayFromIterator, makePromise } from "./util_funcs.js";
+import { makeArrayFromIterator, makePromise, makeBitmask } from "./util_funcs.js";
 
 export const makeAssembler = (opts) => {
   opts = (opts == undefined) ? {} : opts;
