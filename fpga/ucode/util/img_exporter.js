@@ -7,12 +7,14 @@
  * @author Zarutian
  **/
 
+import { makeArrayFromIterator } from "./util_funcs.js";
+
 /**
   * @parameter {Map<Uint16, Uint16>} img - the ucode program memory image
   * @returns {Array<Uint16>} an array of uint16s
   **/
 const convert_img_to_array = (img) => {
-    const entries = new Array(img.entries());
+    const entries = makeArrayFromIterator(img.entries());
     const result  = new Array(entries.length);
     entries.forEach(([addr, value]) => {
         result[addr] = value;
@@ -38,7 +40,7 @@ const convert_img_to_memh = (img, opts) => {
   * @returns {string} the wozmon hexdump
   **/
 const convert_img_to_wozmon_hex = (img, opts) => {
-    const entries = new Array(img.entries());
+    const entries = makeArrayFromIterator(img.entries());
     // tbd: maybe sort entries based on address?
     return String.prototype.concat.apply("", entries.map(
         ([addr, value]) => "".concat(
