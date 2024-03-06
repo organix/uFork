@@ -66,6 +66,7 @@ export const makeAssembler = (opts) => {
           }
         } else {
           console.log(`merkill 4`);
+          console.dir(syms);
           const tmp = makePromise();
           syms.set(sym, tmp);
           return tmp.promise;
