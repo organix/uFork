@@ -100,14 +100,54 @@ const tools_ui = make_ui("tools-ui", function (element, {
         }
     }
 
+    function refill_sponsor() {
+        const spn = core.u_ramptr(ufork.SPONSOR_OFS);
+        const sponsor = core.u_read_quad(spn);
+        sponsor.t = core.u_fixnum(4096);  // memory
+        sponsor.x = core.u_fixnum(256);  // events
+        sponsor.y = core.u_fixnum(8192);  // cycles
+        core.u_write_quad(spn, sponsor);
+    }
+
+    function run_loop() {
+        const begin = Date.now();
+        while (true) {
+
+// Run a step.
+
+            const status = core.h_run_loop(1);
+
+// Are we done?
+
+            if (
+                status !== ufork.UNDEF_RAW  // step limit not reached
+                && status !== core.u_fixnum(ufork.E_MEM_LIM)
+                && status !== core.u_fixnum(ufork.E_CPU_LIM)
+                && status !== core.u_fixnum(ufork.E_MSG_LIM)
+            ) {
+                const message = core.u_fault_msg(core.u_fix_to_i32(status));
+                if (status === core.u_fixnum(ufork.E_OK)) {
+                    devices.io.info("IDLE:", message);
+                } else {
+                    devices.io.warn("FAULT:", message);
+                    stop();
+                }
+                return;
+            }
+
+// There is work left in the continuation queue. Refill and continue, deferring
+// the next iteration if the browser's event loop is being blocked.
+
+            refill_sponsor();
+            const elapsed = Date.now() - begin;
+            if (elapsed > 20) {
+                return setTimeout(run_loop, 0);
+            }
+        }
+    }
+
     function run(text, entry) {
         stop();
-
-        function run_loop() {
-            const status = core.h_run_loop(0);
-            const status_message = core.u_fault_msg(core.u_fix_to_i32(status));
-            devices.io.info("IDLE:", status_message);
-        }
 
 // The module may import modules written in a different language, so provide
 // the core with every compiler we have.
