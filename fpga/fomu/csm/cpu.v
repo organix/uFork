@@ -191,10 +191,8 @@ module cpu #(
     ) D_STACK (
         .i_clk(i_clk),
 
+        .i_se({d_swap, d_push, d_pop}),
         .i_data(d_value),
-        .i_push(d_push),
-        .i_pop(d_pop),
-        .i_swap(d_swap),
 
         .o_s0(d0),
         .o_s1(d1)
@@ -216,10 +214,8 @@ module cpu #(
     ) R_STACK (
         .i_clk(i_clk),
 
+        .i_se({r_swap, r_push, r_pop}),
         .i_data(r_value),
-        .i_push(r_push),
-        .i_pop(r_pop),
-        .i_swap(r_swap),
 
         .o_s0(r0),
         .o_s1(r1)

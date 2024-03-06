@@ -37,10 +37,8 @@ module lifo_test (
     ) LIFO (
         .i_clk(i_clk),
 
+        .i_se({swap, push, pop}),
         .i_data(data),
-        .i_push(push),
-        .i_pop(pop),
-        .i_swap(swap),
 
         .o_s0(s0),
         .o_s1(s1)
