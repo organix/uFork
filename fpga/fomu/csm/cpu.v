@@ -11,8 +11,10 @@ uCode Central Processing Unit (CPU)
  +->|i_clk              |
  |  +-------------------+
 
-The CPU runs when `i_run` is asserted. `o_running` is asserted while the CPU is active.
-Once `o_running` is de-asserted, the value of `o_status` indicates success (1) or failure (0).
+The CPU runs when `i_run` is asserted.
+`o_running` is asserted while the CPU is active.
+Once `o_running` is de-asserted,
+the value of `o_status` indicates success (1) or failure (0).
 
 */
 
@@ -39,7 +41,7 @@ module cpu #(
 
     parameter DATA_SZ       = 16;                       // number of bits per memory word
     parameter ADDR_SZ       = 10;                       // number of bits in each address
-    parameter MEM_MAX       = (1<<ADDR_SZ);             // maximum memory memory address
+    parameter MEM_MAX       = (1<<ADDR_SZ);             // maximum memory address
     parameter PAD_ADDR      = (DATA_SZ-ADDR_SZ);        // number of padding bits from addr to data
 
     // symbolic constants

@@ -65,37 +65,37 @@ module alu_test (
     reg [56:0] script [0:15];                           // script indexed by state
     initial begin
         //     op,     arg0,     arg1,    cmp,     xpct,  next
-        script[START]=                                  // start state
+        script[START] =     // start state
         {  `NO_OP,    16'd0,    16'd0,   1'b0,    16'd0,  4'h1   };
-        script[4'h1] =                                  // no-op
+        script[4'h1] =      // no-op
         {  `NO_OP,    16'd0,    16'd0,   1'b0,    16'd0,  4'h2  };
-        script[4'h2] =                                  // add(5, 8) == 13
+        script[4'h2] =      // add(5, 8) == 13
         { `ADD_OP,    16'd5,    16'd8,   1'b1,   16'd13,  4'h3  };
-        script[4'h3] =                                  // sub(8, 13) == -5
+        script[4'h3] =      // sub(8, 13) == -5
         { `SUB_OP,    16'd8,   16'd13,   1'b1,   -16'd5,  4'h5  };  // skip MUL test
-        script[4'h4] =                                  // mul(8, 13) == 104
+        script[4'h4] =      // mul(8, 13) == 104
         { `MUL_OP,   16'd13,    16'd8,   1'b1,  16'd104,  4'h5  };
-        script[4'h5] =                                  // and(2#1100, 2#1010) == 2#1000
+        script[4'h5] =      // and(2#1100, 2#1010) == 2#1000
         { `AND_OP, 16'hCCAA, 16'hAACC,   1'b1, 16'h8888,  4'h6  };
-        script[4'h6] =                                  // xor(2#1100, 2#1010) == 2#0110
+        script[4'h6] =      // xor(2#1100, 2#1010) == 2#0110
         { `XOR_OP, 16'hCACA, 16'hACAC,   1'b1, 16'h6666,  4'h7  };
-        script[4'h7] =                                  // rol(2#1001_1010) == 2#0011_0101)
+        script[4'h7] =      // rol(2#1001_1010) == 2#0011_0101)
         {  `OR_OP, 16'hAACC, 16'hCCAA,   1'b1, 16'hEEEE,  4'h8  };
-        script[4'h8] =                                  // xor(2#1100, 2#1010) == 2#0110
+        script[4'h8] =      // xor(2#1100, 2#1010) == 2#0110
         { `ROL_OP, 16'h9A9A, 16'hDEAD,   1'b1, 16'h3535,  DONE  };
-        script[4'h9] =                                  // no-op
+        script[4'h9] =      // no-op
         {  `NO_OP,    16'd0,    16'd0,   1'b0,    16'd0,  4'hA  };
-        script[4'hA] =                                  // no-op
+        script[4'hA] =      // no-op
         {  `NO_OP,    16'd0,    16'd0,   1'b0,    16'd0,  4'hB  };
-        script[4'hB] =                                  // no-op
+        script[4'hB] =      // no-op
         {  `NO_OP,    16'd0,    16'd0,   1'b0,    16'd0,  4'hC   };
-        script[4'hC] =                                  // no-op
+        script[4'hC] =      // no-op
         {  `NO_OP,    16'd0,    16'd0,   1'b0,    16'd0,  4'hD  };
-        script[4'hD] =                                  // done
+        script[4'hD] =      // done
         {  `NO_OP,    16'd0,    16'd0,   1'b0,    16'd0,  DONE   };
-        script[DONE]  =                                 // done state (success)
+        script[DONE] =      // done state (success)
         {  `NO_OP,    16'd0,    16'd0,   1'b0,    16'd0,  STOP   };
-        script[STOP]  =                                 // stop state (looping)
+        script[STOP] =      // stop state (looping)
         {  `NO_OP,    16'd0,    16'd0,   1'b0,    16'd0,  STOP   };
     end
 
