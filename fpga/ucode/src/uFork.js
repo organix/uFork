@@ -993,6 +993,28 @@ const uFork = (asm, opts) => {
   dat("R>");                    // ( fram' bak ) R:( )
   dat("uFork_cons", "EXIT");    // ( deque' )
 
+  def("uFork_deque_pop");       // ( deque -- deque' value )
+  dat("uFork_carAndCdr");       // ( fram bak )
+  dat("OVER");
+  dat("uFork_pairlist_length"); // ( fram bak fram_lengd )
+  dat("0=");
+  dat("(BRZ)", "uFork_deque_pop_l0"); // ( fram bak )
+  dat("DUP");
+  dat("uFork_pairlist_length");       // ( fram bak bak_lengd )
+  dat("0=");
+  dat("(BRZ)", "uFork_deque_pop_l1");
+  dat("uFork_cons", "uFork_#?", "EXIT");
+  def("uFork_deque_pop_l1");
+  dat("uFork_deque_frá_bak_til_fram_l0"); // ( deque' )
+  dat("uFork_carAndCdr");             // ( fram bak )
+  def("uFork_deque_pop_l0");          // ( fram bak )
+  dat("SWAP");                        // ( bak fram )
+  dat("uFork_carAndCdr");             // ( bak value fram' )
+  dat("SWAP", ">R", "SWAP");          // ( fram' bak ) R:( value )
+  dat("uFork_cons", "R>");            // ( deque' value ) R:( )
+  dat("EXIT");
+  
+
   def("uFork_instr__subroutine_call"); // ( kont ip opcode -- )
   if (uForkSubroutines) {
     dat("DROP"); // ( kont ip )
