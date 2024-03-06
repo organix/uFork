@@ -30,7 +30,7 @@ export const makeAssembler = (opts) => {
           val = curr_addr;
         }
         // next line is debug only
-        // console.log(`defining symbol '${sym}' as '${val}'`);
+        console.log(`defining symbol '${sym}' as '${val}'`);
         if (typeof val == "string") {
           val = asm.symbols.lookup(val);
         }
@@ -51,9 +51,10 @@ export const makeAssembler = (opts) => {
       },
       lookup: (sym) => {
         // next line is debug only
-        // console.log(`looking up symbol '${sym}'`);
+        console.log(`looking up symbol '${sym}'`);
         if (syms.has(sym)) {
           let val = syms.get(sym);
+          console.log(`merkill 3: '${sym}' er '${val}'`);
           switch (typeof val) {
             case "string": return asm.symbols.lookup(val);
             case "bigint": val = BigInt.asUintN(cellsize, val); // fallthrough
@@ -64,8 +65,8 @@ export const makeAssembler = (opts) => {
               return val.promise;
           }
         } else {
+          console.log(`merkill 4`);
           const tmp = makePromise();
-          tmp.merkill = 1; // debug
           syms.set(sym, tmp);
           return tmp.promise;
         }
@@ -126,7 +127,7 @@ export const makeAssembler = (opts) => {
     // iterate through the symbols, looking for promise packs
     makeArrayFromIterator(syms.entries()).forEach(([sym, val]) => {
       if ((typeof val) == "object") {
-        console.log(`villuleit: '${sym}' er '${val}' ${val.merkill}`);
+        console.log(`villuleit: '${sym}' er '${val}'`);
         if (val.promise != undefined) {
           done_reject(new Error(`symbol ${sym} is not defined`));
         }
