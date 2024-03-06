@@ -11,7 +11,7 @@ export const makeAssembler = (opts) => {
   opts = (opts == undefined) ? {} : opts;
   const cellsize = (opts.cellsize == undefined) ? 16 : opts.cellsize ;
   const fullcellBitmask = makeBitmask(cellsize);
-  const symbols = (opts.symbols == undefined) ? new Map() : opts.symbols ;
+  const syms = (opts.symbols == undefined) ? new Map() : opts.symbols ;
   let curr_addr = (opts.origin  == undefined) ? 0x0000 : opts.origin ;
   const image = (opts.image == undefined) ? new Map() : opts.image ;
 
@@ -34,22 +34,22 @@ export const makeAssembler = (opts) => {
         if (typeof val == "string") {
           val = asm.symbols.lookup(val);
         }
-        if (symbols.has(sym)) {
-          const tmp = symbols.get(sym);
+        if (syms.has(sym)) {
+          const tmp = syms.get(sym);
           if (typeof tmp == "object") {
             tmp.resolve(val);
-            symbols.set(sym, val);
+            syms.set(sym, val);
           } else {
             throw new Error(`the symbol ${sym} is already defined as ${tmp}`);
           }
         }
-        return symbols.get(sym);
+        return syms.get(sym);
       },
       lookup: (sym) => {
         // next line is debug only
         console.log(`looking up symbol '${sym}'`);
-        if (symbols.has(sym)) {
-          let val = symbols.get(sym);
+        if (syms.has(sym)) {
+          let val = syms.get(sym);
           switch (typeof val) {
             case "string": return asm.symbols.lookup(val);
             case "bigint": val = BigInt.asUintN(cellsize, val); // fallthrough
@@ -61,7 +61,7 @@ export const makeAssembler = (opts) => {
           }
         } else {
           const tmp = makePromise();
-          symbols.set(sym, tmp);
+          syms.set(sym, tmp);
           return tmp.promise;
         }
       },
