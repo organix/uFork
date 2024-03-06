@@ -430,6 +430,13 @@ function make_core({
             const callbacks = deferred_queue;
             deferred_queue = [];
             callbacks.forEach((callback) => callback());
+            if (Number.isSafeInteger(result)) {
+
+// Some of the WASM exports return a fixnum, but fixnums appear to be negative
+// because the top bit is set. Discard the sign.
+
+                result = result >>> 0;  // i32 -> u32
+            }
             return result;
         };
     }
@@ -1194,6 +1201,9 @@ function make_core({
         }
 
         if (import_promises[src] === undefined) {
+            if (u_trace !== undefined && content === undefined) {
+                u_trace("Fetching " + src);
+            }
             import_promises[src] = (
                 content === undefined
                 ? fetch(src).then(function (response) {

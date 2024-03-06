@@ -53,11 +53,15 @@ const tools_ui = make_ui("tools-ui", function (element, {
             margin: 0 8px 8px;
         }
     `);
+    let core;
     let devices = Object.create(null);
     let device_element = document.createComment("placeholder");
     let device_select;
     let lang_select;
+    let run_button;
+    let debug_button;
     let test_button;
+    let help_button;
     let on_stdin;
 
     devices.io = io_dev_ui({
@@ -86,18 +90,64 @@ const tools_ui = make_ui("tools-ui", function (element, {
         test_button.disabled = new_lang !== "asm";
     }
 
-    function run(text, entry) {
-        let core;
-
-        function run_loop() {
-            const status = core.h_run_loop(0);
-            const status_message = core.u_fault_msg(core.u_fix_to_i32(status));
-            devices.io.info("IDLE:", status_message);
-        }
-
+    function stop() {
+        run_button.textContent = "▶ Run";
+        run_button.onclick = function () {
+            run(get_text(), "boot");
+        };
         if (core !== undefined) {
             core.h_dispose();
         }
+    }
+
+    function refill_sponsor() {
+        const spn = core.u_ramptr(ufork.SPONSOR_OFS);
+        const sponsor = core.u_read_quad(spn);
+        sponsor.t = core.u_fixnum(4096);  // memory
+        sponsor.x = core.u_fixnum(256);  // events
+        sponsor.y = core.u_fixnum(8192);  // cycles
+        core.u_write_quad(spn, sponsor);
+    }
+
+    function run_loop() {
+        const begin = Date.now();
+        while (true) {
+
+// Run a step.
+
+            const status = core.h_run_loop(1);
+
+// Are we done?
+
+            if (
+                status !== ufork.UNDEF_RAW  // step limit not reached
+                && status !== core.u_fixnum(ufork.E_MEM_LIM)
+                && status !== core.u_fixnum(ufork.E_CPU_LIM)
+                && status !== core.u_fixnum(ufork.E_MSG_LIM)
+            ) {
+                const message = core.u_fault_msg(core.u_fix_to_i32(status));
+                if (status === core.u_fixnum(ufork.E_OK)) {
+                    devices.io.info("IDLE:", message);
+                } else {
+                    devices.io.warn("FAULT:", message);
+                    stop();
+                }
+                return;
+            }
+
+// There is work left in the continuation queue. Refill and continue, deferring
+// the next iteration if the browser's event loop is being blocked.
+
+            refill_sponsor();
+            const elapsed = Date.now() - begin;
+            if (elapsed > 20) {
+                return setTimeout(run_loop, 0);
+            }
+        }
+    }
+
+    function run(text, entry) {
+        stop();
 
 // The module may import modules written in a different language, so provide
 // the core with every compiler we have.
@@ -112,7 +162,7 @@ const tools_ui = make_ui("tools-ui", function (element, {
                 devices.io.info("WAKE:", device_offset);
                 run_loop();
             },
-            log_level: ufork.LOG_DEBUG,
+            log_level: ufork.LOG_TRACE,
             on_log(log_level, value) {
                 const logger = (
                     log_level === ufork.LOG_WARN
@@ -154,18 +204,15 @@ const tools_ui = make_ui("tools-ui", function (element, {
                     const ddev = make_ddev(function on_event_stub(ptr) {
                         const event_stub = core.u_read_quad(ptr);
                         const event = core.u_read_quad(event_stub.y);
-                        const message = event.y;
+                        const msg = event.y;
                         set_device("io");
                         on_device_change("io");
-                        if (message === ufork.TRUE_RAW) {
+                        if (msg === ufork.TRUE_RAW) {
                             devices.io.debug("Test passed. You are awesome!");
                         } else {
-                            devices.io.warn(
-                                "Test failed:",
-                                core.u_pprint(message)
-                            );
+                            devices.io.warn("Test failed:", core.u_pprint(msg));
                         }
-                        core.h_dispose();
+                        stop();
                     });
                     const verdict = ddev.h_reserve_proxy();
                     const state = core.h_reserve_ram({
@@ -177,6 +224,8 @@ const tools_ui = make_ui("tools-ui", function (element, {
                 } else {
                     core.h_boot(imported_module[entry]);
                 }
+                run_button.textContent = "⏹ Stop";
+                run_button.onclick = stop;
                 run_loop();
                 return true;
             })
@@ -216,14 +265,8 @@ const tools_ui = make_ui("tools-ui", function (element, {
             return dom("option", {value: name, textContent: name});
         })
     );
-    const run_button = dom("button", {
-        textContent: "▶ Run",
-        onclick() {
-            run(get_text(), "boot");
-            // run_button.textContent = "⏹ Stop";
-        }
-    });
-    const debug_button = dom("button", {
+    run_button = dom("button");
+    debug_button = dom("button", {
         textContent: "⛐ Debug",
         onclick: on_debug
     });
@@ -233,7 +276,7 @@ const tools_ui = make_ui("tools-ui", function (element, {
             run(get_text(), "test");
         }
     });
-    const help_button = dom("button", {
+    help_button = dom("button", {
         textContent: "﹖ Help",
         onclick: on_help
     });
@@ -247,6 +290,7 @@ const tools_ui = make_ui("tools-ui", function (element, {
     ]);
     set_device(device);
     set_lang(lang);
+    stop();
     shadow.append(style, controls_element, device_element);
     element.set_device = set_device;
     element.set_lang = set_lang;
