@@ -119,7 +119,7 @@ export const makeAssembler = (opts) => {
   asm.whenDone = () => done_promise;
   asm.done = () => {
     // iterate through the symbols, looking for promise packs
-    makeArrayFromIterator(symbols.entries()).forEach(([sym, val]) => {
+    makeArrayFromIterator(syms.entries()).forEach(([sym, val]) => {
       if ((typeof val) == "object") {
         if (val.promise != undefined) {
           done_reject(new Error(`symbol ${sym} is not defined`));
