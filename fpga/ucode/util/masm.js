@@ -29,6 +29,8 @@ export const makeAssembler = (opts) => {
         if (val == undefined) {
           val = curr_addr;
         }
+        // next line is debug only
+        console.log(`defining symbol '${sym}' as '${val}'`);
         if (typeof val == "string") {
           val = asm.symbols.lookup(val);
         }
@@ -44,6 +46,8 @@ export const makeAssembler = (opts) => {
         return symbols.get(sym);
       },
       lookup: (sym) => {
+        // next line is debug only
+        console.log(`looking up symbol '${sym}'`);
         if (symbols.has(sym)) {
           let val = symbols.get(sym);
           switch (typeof val) {
