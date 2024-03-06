@@ -134,7 +134,7 @@ export const makeAssembler = (opts) => {
         }
       }
     });
-    done_resolve({ symbols, image });
+    done_resolve({ symbols: syms, image });
   };
 
   asm.ascii = (str) => {
