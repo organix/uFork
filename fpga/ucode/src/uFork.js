@@ -965,7 +965,17 @@ const uFork = (asm, opts) => {
   dat("uFork_()",      "OVER", "qy!");
   dat("uFork_#?",      "OVER", "qz!");
   dat("EXIT");
-  
+
+  def("uFork_deque_frá_bak_til_fram"); // ( deque -- deque' )
+  dat("uFork_carAndCdr");              // ( fram bak )
+  def("uFork_deque_frá_bak_til_fram_l0"); // ( fram bak )
+  dat("uFork_carAndCdr", ">R");        // ( fram item ) R:( bak_next )
+  dat("SWAP", "uFork_cons");           // ( fram' ) R:( bak_next )
+  dat("R>", "DUP");                    // ( fram' bak_next bak_next )
+  dat("uFork_()", "=", "OVER");        // ( fram' bak_next bool bak_next )
+  dat("uFork_#?", "=", "OR");          // ( fram' bak_next bool )
+  dat("(BRZ)", "uFork_deque_frá_bak_til_fram_l0");
+  dat("uFork_cons", "EXIT");
 
   def("uFork_instr__subroutine_call"); // ( kont ip opcode -- )
   if (uForkSubroutines) {
