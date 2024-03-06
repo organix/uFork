@@ -10,7 +10,7 @@ export const makeArrayFromIterator = (iterator) => {
   let done = false;
   let value = undefined;
   while (!done) {
-    ({ value, done }) = iterator.next();
+    ({ value, done } = iterator.next());
     done = (done == undefined) ? false : done ;
     if (value != undefined) {
       arr.push(value);
