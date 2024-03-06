@@ -4,6 +4,8 @@
 
 ALL =	alu.vcd \
 	alu.dfu \
+	lifo.vcd \
+	lifo.dfu \
 	cpu.vcd \
 	cpu.dfu
 
