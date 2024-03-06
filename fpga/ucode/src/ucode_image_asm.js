@@ -103,7 +103,9 @@ export const minicore = (asm, opts) => {
   dat(">R", "EXIT");
 
   def("?:"); // ( alt conseq cond -- conseq | alt )
-  dat("SKZ", "SWAP", "DROP", "EXIT");
+  dat("SKZ", "SWAP");
+  def("(DROP)");
+  dat("DROP", "EXIT");
 
   def("(CONST)"); // ( -- constant )
   dat("R>", "@", "EXIT");
