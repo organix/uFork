@@ -115,7 +115,7 @@ export const makeAssembler = (opts) => {
   asm.whenDone = () => done_promise;
   asm.done = () => {
     // iterate through the symbols, looking for promise packs
-    (new Array(symbols.entries())).forEach(([sym, val]) => {
+    makeArrayFromIterator(symbols.entries()).forEach(([sym, val]) => {
       if ((typeof val) == "object") {
         if (val.promise != undefined) {
           done_reject(new Error(`symbol ${sym} is not defined`));
@@ -123,7 +123,7 @@ export const makeAssembler = (opts) => {
       }
     });
     // iterate through the image, looking for promises
-    (new Array(image.entries())).forEach(([addr, val]) => {
+    makeArrayFromIterator(image.entries()).forEach(([addr, val]) => {
       if ((typeof val) == "object") {
         if (val.promise != undefined) {
           done_reject(new Error(`addr ${addr} has a promise an no concrete value`));
