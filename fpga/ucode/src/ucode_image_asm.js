@@ -146,6 +146,9 @@ export const minicore = (asm, opts) => {
   def("(&)");
   dat("&", "EXIT");
 
+  def("0x7FFF_&");
+  dat("0x7FFF", "&", "EXIT");
+
   def("0x8000_&");
   dat("0x8000", "&", "EXIT");
 
