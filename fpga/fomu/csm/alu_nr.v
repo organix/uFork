@@ -31,42 +31,20 @@ module alu #(
     input             [3:0] i_op,                       // operation selector
     input       [WIDTH-1:0] i_arg0,                     // argument 0
     input       [WIDTH-1:0] i_arg1,                     // argument 1
-    output reg  [WIDTH-1:0] o_data                      // result value (no FF!)
+    output      [WIDTH-1:0] o_data                      // result value
 );
 
     // perform selected operation
-    always @(*) begin                                   // combinational logic!
-        case (i_op)
-            `NO_OP: begin
-                o_data = i_arg0;                        // pass-thru
-            end
-            `ADD_OP: begin
-                o_data = i_arg0 + i_arg1;
-            end
-            `SUB_OP: begin
-                o_data = i_arg0 - i_arg1;
-            end
-            /*
-            `MUL_OP: begin
-                o_data = i_arg0 * i_arg1;
-            end
-            */
-            `AND_OP: begin
-                o_data = i_arg0 & i_arg1;
-            end
-            `OR_OP: begin
-                o_data = i_arg0 | i_arg1;
-            end
-            `XOR_OP: begin
-                o_data = i_arg0 ^ i_arg1;
-            end
-            `ROL_OP: begin
-                o_data = { i_arg0[WIDTH-2:0], i_arg0[WIDTH-1] };
-            end
-            default: begin                              // no operation
-                o_data = 0;
-            end
-        endcase
-    end
+    assign o_data = (
+        i_op == `NO_OP ? i_arg0                         // pass-thru
+        : i_op == `ADD_OP ? i_arg0 + i_arg1
+        : i_op == `SUB_OP ? i_arg0 - i_arg1
+        // : i_op == `MUL_OP ? i_arg0 * i_arg1
+        : i_op == `AND_OP ? i_arg0 & i_arg1
+        : i_op == `OR_OP ? i_arg0 | i_arg1
+        : i_op == `XOR_OP ? i_arg0 ^ i_arg1
+        : i_op == `ROL_OP ? { i_arg0[WIDTH-2:0], i_arg0[WIDTH-1] }
+        : 0                                             // no operation
+    );
 
 endmodule
