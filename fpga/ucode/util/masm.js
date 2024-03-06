@@ -35,8 +35,12 @@ export const makeAssembler = (opts) => {
           val = asm.symbols.lookup(val);
         }
         if (syms.has(sym)) {
+          // next line is debug only
+          console.log("merkill 1");
           const tmp = syms.get(sym);
           if (typeof tmp == "object") {
+            // next line is debug only
+            console.log("merkill 2");
             tmp.resolve(val);
             syms.set(sym, val);
           } else {
