@@ -392,6 +392,7 @@ export const minicore = (asm, opts) => {
   dat("0x0F_&");
   dat("DUP", "0x0A", "<", "(BRZ)", "EMIT_HEXCHR_NOTDIGIT");
   dat("0x30", "OR", "(JMP)", "EMIT");
+  def("EMIT_HEXCHR_NOTDIGIT");
   dat("0x0A", "-", "0x41", "+", "(JMP)", "EMIT");
 
   def("EMIT_HEXWORD");
