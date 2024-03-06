@@ -19,7 +19,8 @@ Once `o_running` is de-asserted, the value of `o_status` indicates success (1) o
 `default_nettype none
 
 `include "../lib/lifo.v"
-`include "alu.v"
+//`include "alu.v"
+`include "alu_nr.v"
 `include "../lib/serial_tx.v"
 `include "../lib/serial_rx.v"
 
@@ -74,6 +75,9 @@ module cpu #(
     localparam UC_2DUP      = 16'h0028;                 // ( a b -- a b a b )
     localparam UC_2DROP     = 16'h0029;                 // ( a b -- )
     localparam UC_OVER      = 16'h002A;                 // ( a b -- a b a )
+//    localparam UC_ROT       = 16'h002B;                 // ( a b c -- b c a )
+//    localparam UC_R_SWAP    = 16'h002C;                 // ( -- ) R:( a b -- b a )
+//    localparam UC_R_PEEK    = 16'h002D;                 // R@ ( -- a ) R:( a -- a )
 
     localparam UC_RX_OK     = 16'h003C;                 // rx? ( -- ready )
     localparam UC_GET_RX    = 16'h003D;                 // rx@ ( -- char )
@@ -93,12 +97,12 @@ module cpu #(
     reg [ADDR_SZ-1:0] uc_raddr = 0;                     // read address
     reg [DATA_SZ-1:0] uc_rdata;                         // last data read
     always @(posedge i_clk) begin
-        // write conditionally
-        if (uc_wr) begin
+        if (uc_wr) begin                                // write conditionally
             ucode[uc_waddr] <= uc_wdata;
+        end else begin
+            uc_rdata <= ucode[uc_raddr];                // only read if not writing
         end
-        // read always
-        uc_rdata <= ucode[uc_raddr];
+//        uc_rdata <= ucode[uc_raddr];                    // read always
     end
 
     // uCode word definitions
@@ -118,11 +122,15 @@ module cpu #(
         ucode[12'h000] = UC_NOP;
         ucode[12'h001] = UC_LIT;
         ucode[12'h002] = 16'hC0DE;
-        ucode[12'h003] = UC_DROP;
-        ucode[12'h004] = UC_JMP;
-        ucode[12'h005] = UC_BOOT;
-        ucode[12'h006] = UC_TRUE;
-        ucode[12'h007] = UC_EXTN;
+        ucode[12'h003] = UC_DUP;
+        ucode[12'h004] = UC_NOT;
+        ucode[12'h005] = UC_SWAP;
+        ucode[12'h006] = UC_DROP;
+        ucode[12'h007] = UC_DROP;
+        ucode[12'h008] = UC_JMP;
+        ucode[12'h009] = UC_BOOT;
+        ucode[12'h00A] = UC_TRUE;
+        ucode[12'h00B] = UC_EXTN;
         //
         // ...
         //
@@ -172,6 +180,7 @@ module cpu #(
     reg [DATA_SZ-1:0] d_value = 0;
     reg d_push = 1'b0;
     reg d_pop = 1'b0;
+    reg d_swap = 1'b0;
     wire [DATA_SZ-1:0] d0;
     wire [DATA_SZ-1:0] d1;
 
@@ -183,6 +192,7 @@ module cpu #(
         .i_data(d_value),
         .i_push(d_push),
         .i_pop(d_pop),
+        .i_swap(d_swap),
 
         .o_s0(d0),
         .o_s1(d1)
@@ -195,6 +205,7 @@ module cpu #(
     reg [DATA_SZ-1:0] r_value = 0;
     reg r_push = 1'b0;
     reg r_pop = 1'b0;
+    reg r_swap = 1'b0;
     wire [DATA_SZ-1:0] r0;
     wire [DATA_SZ-1:0] r1;
 
@@ -206,6 +217,7 @@ module cpu #(
         .i_data(r_value),
         .i_push(r_push),
         .i_pop(r_pop),
+        .i_swap(r_swap),
 
         .o_s0(r0),
         .o_s1(r1)
@@ -255,8 +267,10 @@ module cpu #(
         uc_wr <= 1'b0;
         d_push <= 1'b0;
         d_pop <= 1'b0;
+        d_swap <= 1'b0;
         r_push <= 1'b0;
         r_pop <= 1'b0;
+        r_swap <= 1'b0;
         alu_op <= `NO_OP;
         tx_wr <= 1'b0;
         case (phase)
@@ -305,11 +319,6 @@ module cpu #(
                         uc_wdata <= d1;
                         uc_wr <= 1'b1;
                         d_pop <= 1'b1;                  // pop d-stack twice (in 2 separate phases)
-                    end
-                    UC_SWAP: begin                      // ( a b -- b a )
-                        alu_op <= `NO_OP;
-                        alu_arg0 <= d0;                 // pass b thru ALU
-                        d_pop <= 1'b1;
                     end
                     UC_LIT: begin                       // (LIT) item ( -- item )
                         uc_raddr <= pc;
@@ -408,11 +417,7 @@ module cpu #(
                         d_pop <= 1'b1;
                     end
                     UC_SWAP: begin                      // ( a b -- b a )
-                        alu_op <= `NO_OP;
-                        alu_arg0 <= d0;                 // pass a thru ALU
-                        d_value <= alu_data;            // replace a with b
-                        d_pop <= 1'b1;
-                        d_push <= 1'b1;
+                        d_swap <= 1'b1;
                     end
                     UC_SKZ: begin                       // ( cond -- ) cond==0?pc+2:pc+1->pc
                         if (d0 == 0) begin
@@ -528,10 +533,6 @@ module cpu #(
                     UC_FETCH: begin                     // @ ( addr -- cell )
                         d_value = uc_rdata;
                         d_push = 1'b1;
-                    end
-                    UC_SWAP: begin                      // ( a b -- b a )
-                        d_value <= alu_data;            // push a
-                        d_push <= 1'b1;
                     end
                     UC_LIT: begin                       // (LIT) item ( -- item )
                         d_value = uc_rdata;
