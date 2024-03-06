@@ -19,7 +19,7 @@ export const makeArrayFromIterator = (iterator) => {
   return arr;
 };
 
-export makePromise = () => {
+export const makePromise = () => {
   let resolve = undefined;
   let reject  = undefined;
   let prom    = new Promise((res, rej) => {
