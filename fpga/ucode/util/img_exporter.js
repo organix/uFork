@@ -16,6 +16,7 @@ import { makeArrayFromIterator } from "./util_funcs.js";
 export const convert_img_to_array = (img) => {
     const entries = makeArrayFromIterator(img.entries());
     const result  = new Array(entries.length);
+    result.fill(0);
     entries.forEach(([addr, value]) => {
         result[addr] = value;
     });
@@ -30,7 +31,7 @@ export const convert_img_to_array = (img) => {
 export const convert_img_to_memh = (img, opts) => {
     const arr = convert_img_to_array(img);
     return String.prototype.concat.apply("// verilog memh format\n", arr.map(
-        (item) => "".concat(Number(item).toString(16), "\n")
+        (item) => "".concat(Number(item).toString(16).padStart(4, "0"), "\n")
     ));
 };
 
@@ -44,9 +45,9 @@ export const convert_img_to_wozmon_hex = (img, opts) => {
     // tbd: maybe sort entries based on address?
     return String.prototype.concat.apply("", entries.map(
         ([addr, value]) => "".concat(
-            Number(addr).toString(16).toUppecase(),
+            Number(addr).toString(16).toUppecase().padStart(4, "0"),
             ": ",
-            Number(value).toString(16).toUppercase(),
+            Number(value).toString(16).toUppercase().padStart(4, "0"),
             "\n",
         )
     ));
