@@ -30,17 +30,17 @@ export const makeAssembler = (opts) => {
           val = curr_addr;
         }
         // next line is debug only
-        console.log(`defining symbol '${sym}' as '${val}'`);
+        // console.log(`defining symbol '${sym}' as '${val}'`);
         if (typeof val == "string") {
           val = asm.symbols.lookup(val);
         }
         if (syms.has(sym)) {
           // next line is debug only
-          console.log("merkill 1");
+          // console.log("merkill 1");
           const tmp = syms.get(sym);
           if (typeof tmp == "object") {
             // next line is debug only
-            console.log("merkill 2");
+            // console.log("merkill 2");
             tmp.resolve(val);
             syms.set(sym, val);
           } else {
@@ -51,7 +51,7 @@ export const makeAssembler = (opts) => {
       },
       lookup: (sym) => {
         // next line is debug only
-        console.log(`looking up symbol '${sym}'`);
+        // console.log(`looking up symbol '${sym}'`);
         if (syms.has(sym)) {
           let val = syms.get(sym);
           switch (typeof val) {
@@ -124,6 +124,7 @@ export const makeAssembler = (opts) => {
   asm.done = () => {
     // iterate through the symbols, looking for promise packs
     makeArrayFromIterator(syms.entries()).forEach(([sym, val]) => {
+      console.log(`villuleit: '${sym}' er '${val}`);
       if ((typeof val) == "object") {
         if (val.promise != undefined) {
           done_reject(new Error(`symbol ${sym} is not defined`));
