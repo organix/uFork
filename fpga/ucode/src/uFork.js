@@ -174,7 +174,7 @@ const uFork = (asm, opts) => {
   dat("uFork_isMutable?", "INVERT", "EXIT");
 
   def("uFork_fixnum2int"); // ( fixnum -- int )
-  dat("0x7FFF_&", "DUP" "1<<", "0x8000", "&", "OR"); // sign extend
+  dat("0x7FFF_&", "DUP", "1<<", "0x8000", "&", "OR"); // sign extend
   dat("EXIT");
 
   def("uFork_int2fixnum"); // ( int -- fixnum )
