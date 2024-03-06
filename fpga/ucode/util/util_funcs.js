@@ -18,3 +18,19 @@ export const makeArrayFromIterator = (iterator) => {
   }
   return arr;
 };
+
+ resolve = undefined;
+  let reject  = undefined;
+  let prom    = new Promise((res, rej) => {
+    [resolve, reject] = [res, rej];
+  });
+  return { promise: prom, resolve, reject };
+};
+
+export const makeBitmask = (width) => {
+  let result = 0;
+  for (let count = 0; count < width; count++) {
+    result = (result << 1) | 1;
+  }
+  return result;
+}
