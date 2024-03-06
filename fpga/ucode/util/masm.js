@@ -46,6 +46,8 @@ export const makeAssembler = (opts) => {
           } else {
             throw new Error(`the symbol ${sym} is already defined as ${tmp}`);
           }
+        } else {
+          syms.set(sym, val);
         }
         return syms.get(sym);
       },
