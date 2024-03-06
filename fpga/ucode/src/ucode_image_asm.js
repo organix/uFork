@@ -11,7 +11,7 @@ import { uFork } from "./uFork.js";
 export const defineInstructionset = (asm) => {
   const { def } = asm;
   def("NOP",    0x0000);
-  def("UMPLUS", 0x0001);
+  def("PLUS",   0x0001);
   def("AND",    0x0002);
   def("XOR",    0x0003);
   def("1LBR",   0x0004);
@@ -40,12 +40,33 @@ export const defineInstructionset = (asm) => {
   def("QUAD_GCSTEP",  0x001A);
   def("QUAD_ISFULL",  0x001B);
 
-  def("DEBUG_LED",    0x003C);
-  def("DEBUG_RX?",    0x003D);
-  def("DEBUG_TX?",    0x003E);
-  def("DEBUG_TX!",    0x003F);
+  /* tbd: unlikely to be implemented at all
+  fomu spefic
+  def("GPIO@",        0x0038); // gpio@ ( -- pins )
+  def("GPIO!",        0x0039); // gpio! ( pins -- )
+  def("GPIO_config",  0x003A); // gpio_config ( pins_config -- )
+
+  pins:
+   [0xF]: gpio pad 4
+   [0xE]: gpio pad 3
+   [0xD]: gpio pad 2
+   [0xC]: gpio pad 1
+   [0x7]: usb D-
+   [0x6]: usb D+
+   [0x5]: usb pull up
+   [0x4]: flash busy 
+   [0x3]: spi chip select flash
+   [0x2]: spi mclk
+   [0x1]: spi mosi
+   [0x0]: spi miso
+  */
+  def("DEBUG_LED",    0x003B); // led! ( colour -- )
+  def("DEBUG_RX?",    0x003C); // rx? ( -- ready )
+  def("DEBUG_RX@",    0x003D); // rx@ ( -- char )
+  def("DEBUG_TX?",    0x003E); // tx? ( -- ready )
+  def("DEBUG_TX!",    0x003F); // tx! ( char -- )
   
-  def("UM+", "UMPLUS");
+  def("+",   "PLUS");
   def("&",   "AND");
   def("⊕",   "XOR");
   def("1+",  "INCR");
@@ -75,20 +96,27 @@ export const minicore = (asm, opts) => {
   const { def, dat } = asm;
 
   def("(JMP)"); // JuMP
-  dat("R>", "@");
+  dat("R>");
+  def("@EXECUTE");
+  dat("@");
   def("EXECUTE");
   dat(">R", "EXIT");
 
   def("?:"); // ( alt conseq cond -- conseq | alt )
-  dat("SKZ", "SWAP", "DROP", "EXIT");
+  dat("SKZ", "SWAP");
+  def("(DROP)");
+  dat("DROP", "EXIT");
 
   def("(CONST)"); // ( -- constant )
   dat("R>", "@", "EXIT");
 
   def("TRUE");
+  def("-1");
   dat("(CONST)", 0xFFFF);
 
   def("FALSE");
+  def("0x0000");
+  def("ZERO");
   dat("(CONST)", 0x0000);
 
   def("0x0A");
@@ -116,7 +144,12 @@ export const minicore = (asm, opts) => {
   dat("(CONST)", 0xFFFE);
 
   def("0x4000_&");
-  dat("0x4000", "&", "EXIT");
+  dat("0x4000");
+  def("(&)");
+  dat("&", "EXIT");
+
+  def("0x7FFF_&");
+  dat("0x7FFF", "&", "EXIT");
 
   def("0x8000_&");
   dat("0x8000", "&", "EXIT");
@@ -128,7 +161,9 @@ export const minicore = (asm, opts) => {
   dat(">R", "FALSE", "TRUE", "R>", "?:", "EXIT");
   
   def("INVERT");
-  dat("TRUE", "XOR", "EXIT");
+  dat("TRUE");
+  def("(XOR)");
+  dat("XOR", "EXIT");
 
   def("OR");   // ( a b -- a|b )
   dat("INVERT", "SWAP", "INVERT");
@@ -159,11 +194,24 @@ export const minicore = (asm, opts) => {
   def("(NEXT)_l0");
   dat("DROP", "1+", ">R", "EXIT");
 
+  def("(BREXIT)"); // ( bool -- ) exit caller early if bool is true
+  dat("(BRZ)", "(BREXIT)_l0"); // ( )
+  dat("R>", "DROP");
+  def("(BREXIT)_l0");
+  dat("EXIT");
+  
+
   def("(LIT)"); // literal ( -- item )
   dat("R>", "DUP", "1+", ">R", "@", "EXIT");
 
   def("OVER"); // ( a b -- a b a )
   dat(">R", "DUP", "R>", "SWAP", "EXIT");
+
+  def("ROT"); // ( a b c -- b c a )
+  dat(">R", "SWAP", "R>", "SWAP", "EXIT");
+
+  def("-ROT"); // ( a b c -- c a b )
+  dat("SWAP", ">R", "SWAP", "R>", "EXIT");
 
   def("2DUP"); // ( a b -- a b a b )
   dat("OVER", "OVER", "EXIT");
@@ -177,10 +225,39 @@ export const minicore = (asm, opts) => {
   def("R@"); // ( -- a ) R:( a ra -- a )
   dat("R>", "R>", "DUP", ">R", "SWAP", ">R", "EXIT");
 
+  def("RDROP"); // ( -- ) R:( x ra -- ra )
+  dat("R>", "R>", "DROP", ">R", "EXIT");
+
+  /*
   def("+"); // ( a b -- sum )
   dat("UM+");
   def("(DROP)");
   dat("DROP", "EXIT");
+  */
+
+  def("UM+");      // ( a b -- sum carry )
+  dat("2DUP");     // ( a b a b )
+  dat("0x7FFF_&"); // ( a b a b_masked )
+  dat("SWAP");     // ( a b b_masked a )
+  dat("0x7FFF_&"); // ( a b b_masked a_masked )
+  dat("+");        // ( a b sum1 )
+  dat("DUP");      // ( a b sum1 sum1 )
+  dat("0x7FFF_&"); // ( a b sum1 sum1_masked )
+  dat(">R");       // ( a b sum1 ) R:( sum1_masked )
+  dat("15>>");     // ( a b sum1Carry ) R:( sum1_masked )
+  dat("SWAP");     // ( a sum1Carry b ) R:( sum1_masked )
+  dat("15>>");     // ( a sum1Carry b[15] ) R:( sum1_masked )
+  dat("+");        // ( a sum2 ) R:( sum1_masked )
+  dat("SWAP");     // ( sum2 a ) R:( sum1_masked )
+  dat("15>>");     // ( sum2 a[15] ) R:( sum1_masked )
+  dat("+");        // ( sum3 ) R:( sum1_masked )
+  dat("DUP");      // ( sum3 sum3 ) R:( sum1_masked )
+  dat("15<<");     // ( sum3 sum3[15]<<15 ) R:( sum1_masked )
+  dat("R>");       // ( sum3 sum3[15]<<15 sum1_masked ) R:( )
+  dat("OR");       // ( sum3 final_sum )
+  dat("SWAP");     // ( final_sum sum3 )
+  dat("1>>");      // ( final_sum c )
+  dat("EXIT");
 
   def("NEGATE");
   dat("INVERT", "1+", "EXIT");
@@ -190,6 +267,56 @@ export const minicore = (asm, opts) => {
 
   def("-"); // ( a b -- a-b )
   dat("NEGATE", "+", "EXIT");
+
+  def("<<"); // ( u n -- u<<n )  doing the lazy way for now
+  dat("0x0F_&");
+  dat(">R", "(JMP)", "<<_l1");
+  def("<<_l0");
+  dat("1<<");
+  def("<<_l1");
+  dat("(NEXT)", "<<_l0");
+  dat("EXIT");
+
+  def("15<<");
+  dat("0x0F", "<<", "EXIT");
+
+  def(">>"); // ( u n -- u>>n )  same lazy way
+  dat("0x0F_&");
+  dat(">R", "(JMP)", ">>_l1");
+  def(">>_l0");
+  dat("1>>");
+  def(">>_l1");
+  dat("(NEXT)", ">>_l0", "EXIT");
+
+  def("15>>");
+  dat("0x0F", ">>", "EXIT");
+
+  def("LBR"); // ( u n -- u<<>n )  same lazy way
+  def("<<>");
+  dat("0x0F_&");
+  dat(">R", "(JMP)", "LBR_l1");
+  def("LBR_l0");
+  dat("1LBR");
+  def("LBR_l1");
+  dat("(NEXT)", "LBR_l0", "EXIT");
+
+  def("RBR"); // ( u n -- u<>>n )  same lazy way
+  def("<>>");
+  dat("0x0F_&");
+  dat(">R", "(JMP)", "RBR_l1");
+  def("RBR_l0");
+  dat("1RBR");
+  def("RBR_l1");
+  dat("(NEXT)", "RBR_l0", "EXIT");
+
+  def("*"); // ( n m -- n*m )  using the lazy way here, need to find the old eForth impl
+  dat(">R", "ZERO");
+  dat("(JMP)", "*_l1");
+  def("*_l0");
+  dat("OVER", "+");
+  def("*_l1");
+  dat("(NEXT)", "*_l0");
+  dat("NIP", "EXIT");
 
   def("4<<"); // ( a -- a<<4 )
   dat("2<<");
@@ -230,6 +357,12 @@ export const minicore = (asm, opts) => {
   def("<="); // ( a b -- bool )
   dat("2DUP", "<", ">R", "=", "R>", "OR", "EXIT");
 
+  def(">");
+  dat("SWAP", "(JMP)", "<");
+
+  def(">=");
+  dat("SWAP", "(JMP)", "<=");
+
   def("MAX"); // ( a b -- a | b )
   dat("2DUP", "<", "?:", "EXIT");
   
@@ -237,7 +370,12 @@ export const minicore = (asm, opts) => {
   dat("DEBUG_TX?", "(BRZ)", "TX!");
   dat("DEBUG_TX!", "EXIT");
 
-  def("RX?", "DEBUG_RX?");
+  def("RX?"); // ( -- char T | F )
+  dat("DEBUG_RX?", "DUP", "(BRZ)", "RX?_l0");
+  dat("DEBUG_RX@", "SWAP");
+  def("RX?_l0");
+  dat("EXIT");
+  
   def("EMIT", "TX!");
 
   def("RX"); // ( -- chr )
@@ -256,7 +394,8 @@ export const minicore = (asm, opts) => {
   dat("0x0F_&");
   dat("DUP", "0x0A", "<", "(BRZ)", "EMIT_HEXCHR_NOTDIGIT");
   dat("0x30", "OR", "(JMP)", "EMIT");
-  def("0x0A", "-", "0x41", "+", "(JMP)", "EMIT");
+  def("EMIT_HEXCHR_NOTDIGIT");
+  dat("0x0A", "-", "0x41", "+", "(JMP)", "EMIT");
 
   def("EMIT_HEXWORD");
   dat("4LBR", "EMIT_HEXCHR");
@@ -276,7 +415,8 @@ export const wozmon = (asm, opts) => {
   const linebuffer_max   = (opts.linebuffer_max)   ? 0x0250 : opts.linebuffer_max ;
   const mode_var_addr    = (opts.mode_var_addr)    ? 0x0251 : opts.mode_var_addr ;
   const xam_var_addr     = (opts.xam_var_addr)     ? 0x0252 : opts.xam_var_addr ;
-  const tmp_var_addr     = (opts.tmp_var_addr)     ? 0x0253 : opts.tmp_var_addr ;
+  const st_var_addr      = (opts.st_var_addr)      ? 0x0253 : opts.st_var_addr ;
+  const tmp_var_addr     = (opts.tmp_var_addr)     ? 0x0254 : opts.tmp_var_addr ;
   const { def, dat } = asm;
 
   def("wozmon");

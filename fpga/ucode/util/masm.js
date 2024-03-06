@@ -5,28 +5,13 @@
  * @author Zarutian
  */
 
-export const makePromise = () => {
-  let resolve = undefined;
-  let reject  = undefined;
-  let prom    = new Promise((res, rej) => {
-    [resolve, reject] = [res, rej];
-  });
-  return { promise: prom, resolve, reject };
-};
-
-export const makeBitmask = (width) => {
-  let result = 0;
-  for (let count = 0; count < width; count++) {
-    result = (result << 1) | 1;
-  }
-  return result;
-}
+import { makeArrayFromIterator, makePromise, makeBitmask } from "./util_funcs.js";
 
 export const makeAssembler = (opts) => {
   opts = (opts == undefined) ? {} : opts;
   const cellsize = (opts.cellsize == undefined) ? 16 : opts.cellsize ;
   const fullcellBitmask = makeBitmask(cellsize);
-  const symbols = (opts.symbols == undefined) ? new Map() : opts.symbols ;
+  const syms = (opts.symbols == undefined) ? new Map() : opts.symbols ;
   let curr_addr = (opts.origin  == undefined) ? 0x0000 : opts.origin ;
   const image = (opts.image == undefined) ? new Map() : opts.image ;
 
@@ -44,23 +29,34 @@ export const makeAssembler = (opts) => {
         if (val == undefined) {
           val = curr_addr;
         }
+        // next line is debug only
+        // console.log(`defining symbol '${sym}' as '${val}'`);
         if (typeof val == "string") {
           val = asm.symbols.lookup(val);
         }
-        if (symbols.has(sym)) {
-          const tmp = symbols.get(sym);
+        if (syms.has(sym)) {
+          // next line is debug only
+          // console.log("merkill 1");
+          const tmp = syms.get(sym);
           if (typeof tmp == "object") {
+            // next line is debug only
+            // console.log("merkill 2");
             tmp.resolve(val);
-            symbols.set(sym, val);
+            syms.set(sym, val);
           } else {
             throw new Error(`the symbol ${sym} is already defined as ${tmp}`);
           }
+        } else {
+          syms.set(sym, val);
         }
-        return symbols.get(sym);
+        return syms.get(sym);
       },
       lookup: (sym) => {
-        if (symbols.has(sym)) {
-          let val = symbols.get(sym);
+        // next line is debug only
+        // console.log(`looking up symbol '${sym}'`);
+        if (syms.has(sym)) {
+          let val = syms.get(sym);
+          // console.log(`merkill 3: '${sym}' er '${val}'`);
           switch (typeof val) {
             case "string": return asm.symbols.lookup(val);
             case "bigint": val = BigInt.asUintN(cellsize, val); // fallthrough
@@ -71,8 +67,10 @@ export const makeAssembler = (opts) => {
               return val.promise;
           }
         } else {
+          // console.log(`merkill 4`);
+          // console.dir(syms);
           const tmp = makePromise();
-          symbols.set(sym, tmp);
+          syms.set(sym, tmp);
           return tmp.promise;
         }
       },
@@ -130,22 +128,23 @@ export const makeAssembler = (opts) => {
   asm.whenDone = () => done_promise;
   asm.done = () => {
     // iterate through the symbols, looking for promise packs
-    (new Array(symbols.entries())).forEach(([sym, val]) => {
+    makeArrayFromIterator(syms.entries()).forEach(([sym, val]) => {
       if ((typeof val) == "object") {
+        console.log(`villuleit: '${sym}' er '${val}'`);
         if (val.promise != undefined) {
           done_reject(new Error(`symbol ${sym} is not defined`));
         }
       }
     });
     // iterate through the image, looking for promises
-    (new Array(image.entries())).forEach(([addr, val]) => {
+    makeArrayFromIterator(image.entries()).forEach(([addr, val]) => {
       if ((typeof val) == "object") {
         if (val.promise != undefined) {
           done_reject(new Error(`addr ${addr} has a promise an no concrete value`));
         }
       }
     });
-    done_resolve({ symbols, image });
+    done_resolve({ symbols: syms, image });
   };
 
   asm.ascii = (str) => {

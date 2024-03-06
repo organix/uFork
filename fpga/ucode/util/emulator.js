@@ -6,11 +6,31 @@
 
 export const makeStack = (opts) => {
   opts = (opts == undefined) ? {} : opts ;
-  const contents = (opts.contents == undefined) ? [] : new Array(opts.contents); // FlexList
+  const contents = (opts.contents == undefined) ? [] : new Array(opts.contents);
   return {
     getContents: () => contents.map((x) => x),
     push: (item) => { contents.push(item) },
     pop:  () => contents.pop(),
+  };
+};
+
+export const makeStackStatistican = (opts) => {
+  opts = (opts == undefined) ? {} : opts ;
+  const report = (opts.report == undefined) ? {} : opts.report ;
+  report.maxDepth  = (report.maxDepth == undefined ) ? 0 : report.maxDepth ;
+  report.currDepth = (report.currDepth == undefined ) ? 0 : report.currDepth ;
+  const stack = makeStack(opts.stackOpts);
+  return {
+    getContents: stack.getContents,
+    push: (item) => {
+      report.currDepth += 1;
+      report.maxDepth = Math.max(report.currDepth, report.maxDepth);
+      stack.push(item);
+    },
+    pop: () => {
+      report.currDepth -= 1;
+      return stack.pop();
+    },
   };
 };
 
@@ -61,15 +81,61 @@ export const makeQuadMemory = (opts) => {
   };
 };
 
+export const makeQuadMemoryWASMbridge = (opts) => {
+  const {
+    u_read_quad,
+    u_write_quad,
+    memory_descriptor_addr = 0x40000000,
+    h_gc_run,
+  } = opts;
+  const iface = {
+    fetch: (addr) => {
+      const { t, x, y, z } = u_read_quad(addr);
+      return [t, x, y, z];
+    },
+    store: (val, addr) => {
+      const [t, x, y, z] = val;
+      u_write_quad(addr, { t, x, y, z });
+      return;
+    },
+    allot: () => {
+      // selfnote: virðist eigi vera bein meðóða í wasm útgáfunni
+      //           þannig að þetta mix er því notað.
+      let [t, x, y, z] = iface.fetch(memory_descriptor_addr);
+      let attempts = 4200;
+      while((attempts > 0) || x == 0x0000) {
+        iface.gcstep();
+        [t, x, y, z] = iface.fetch(memory_descriptor_addr);
+      }
+      const addr = x;
+      const [_, _, _, nextFree] = iface.fetch(addr);
+      iface.store([t, nextFree, (y - 1)&0xFFFF, z], memory_descriptor_addr);
+      iface.store([0, 0, 0, 0], addr);
+      return addr;
+    },
+    free: (addr) => {
+      // selfnote: það sama á við hér
+      let [t, x, y, z] = iface.fetch(memory_descriptor_addr);
+      iface.store([0xF, 0, 0, x], addr);
+      iface.store([t, addr, (y + 1)&0xFFFF, z], memory_descriptor_addr);
+      returnb
+    },
+    gcstep: () => {
+      h_gc_run();
+    },
+  };
+};
+
 export const makeDebugIOStub = (opts) => {
   return {
     setLED: (colour) => {
       console.log(`µcode led: 0b${colour.toString(2)}`);
     },
-    rx: () => [false, 0],
+    rx_ready: () => false,
+    rx: () => 0,
     tx_ready: () => true,
     tx: (char) => {
-      console.log(`µcode debug tx: "${String.fromCharCodes([char])}"`);
+      console.log(`µcode debug tx: "${String.fromCharCode(char)}"`);
     },
   };
 };
@@ -92,13 +158,13 @@ export const makeEmulator = (opts) => {
     const instr = memory.get(pc);
     pc = incr(pc);
     switch (instr) {
-      // UMPLUS
+      // PLUS
       case 0x0001: {
         const b = dstack.pop();
         const a = dstack.pop();
         const sc = a + b;
         dstack.push(sc & 0xFFFF); // sum
-        dstack.push((sc >> 16) & 0xFFFF); // carry
+        // dstack.push((sc >> 16) & 0xFFFF); // carry
       }; break;
       // AND
       case 0x0002: {
@@ -244,21 +310,21 @@ export const makeEmulator = (opts) => {
       case 0x0038:
       case 0x0039:
       case 0x003A:
-      case 0x003B:
         throw new Error("instruction reserved and not (yet) implemented");
       // DEBUG_LED
-      case 0x003C: {
+      case 0x003B: {
         const colours = dstack.pop();
         debug_io.setLED(colours);
       }; break;
-      // DEBUG_RX?
-      case 0x003D: {
-        let [gotChar, char] = debug_io.rx();
+      // DEBUG_Rx?
+      case 0x003C: {
+        let gotChar = debug_io.rx_ready();
         gotChar = gotChar ? 0xFFFF : 0x0000 ;
-        if (gotChar != 0) {
-          dstack.push(char);
-        }
         dstack.push(gotChar);
+      }; break;
+      // DEBUG_RX@
+      case 0x003D: {
+        dstack.push(debug_io.rx());
       }; break;
       // DEBUG_TX?
       case 0x003E: {
