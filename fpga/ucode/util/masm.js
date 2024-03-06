@@ -36,11 +36,11 @@ export const makeAssembler = (opts) => {
         }
         if (syms.has(sym)) {
           // next line is debug only
-          // console.log("merkill 1");
+          console.log("merkill 1");
           const tmp = syms.get(sym);
           if (typeof tmp == "object") {
             // next line is debug only
-            // console.log("merkill 2");
+            console.log("merkill 2");
             tmp.resolve(val);
             syms.set(sym, val);
           } else {
@@ -65,6 +65,7 @@ export const makeAssembler = (opts) => {
           }
         } else {
           const tmp = makePromise();
+          tmp.merkill = 1; // debug
           syms.set(sym, tmp);
           return tmp.promise;
         }
@@ -124,8 +125,8 @@ export const makeAssembler = (opts) => {
   asm.done = () => {
     // iterate through the symbols, looking for promise packs
     makeArrayFromIterator(syms.entries()).forEach(([sym, val]) => {
-      console.log(`villuleit: '${sym}' er '${val}`);
       if ((typeof val) == "object") {
+        console.log(`villuleit: '${sym}' er '${val}' ${val.merkill}`);
         if (val.promise != undefined) {
           done_reject(new Error(`symbol ${sym} is not defined`));
         }
