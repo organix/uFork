@@ -1013,6 +1013,14 @@ const uFork = (asm, opts) => {
   dat("SWAP", ">R", "SWAP");          // ( fram' bak ) R:( value )
   dat("uFork_cons", "R>");            // ( deque' value ) R:( )
   dat("EXIT");
+
+  def("uFork_deque_put"); // ( value deque -- deque' )
+  dat("uFork_carAndCdr"); // ( value fram bak )
+  dat("SWAP", ">R");      // ( value bak ) R:( fram )
+  dat("uFork_cons");      // ( bak' ) R:( fram )
+  dat("R>", "SWAP");      // ( fram bak' ) R:( )
+  dat("uFork_cons");
+  dat("EXIT");
   
 
   def("uFork_instr__subroutine_call"); // ( kont ip opcode -- )
