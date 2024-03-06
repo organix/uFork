@@ -275,6 +275,9 @@ export const minicore = (asm, opts) => {
   dat("(NEXT)", "<<_l0");
   dat("EXIT");
 
+  def("15<<");
+  dat("0x0F", "<<", "EXIT");
+
   def(">>"); // ( u n -- u>>n )  same lazy way
   dat("0x0F_&");
   dat(">R", "(JMP)", ">>_l1");
