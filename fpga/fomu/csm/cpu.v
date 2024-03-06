@@ -20,7 +20,7 @@ the value of `o_status` indicates success (1) or failure (0).
 
 `default_nettype none
 
-`include "../lib/lifo.v"
+`include "lifo.v"
 //`include "alu.v"
 `include "alu_nr.v"
 `include "../lib/serial_tx.v"
@@ -86,7 +86,7 @@ module cpu #(
     localparam UC_TX_OK     = 16'h003E;                 // tx? ( -- ready )
     localparam UC_SET_TX    = 16'h003F;                 // tx! ( char -- )
 
-    localparam UC_CALL      = 16'hFFC0;                 // ( -- ) R:( -- pc ) @pc[15:8]->pc
+    localparam UC_CALL      = 16'hFFC0;                 // <addr> ( -- ) R:( -- pc+1 ) @pc->pc
 
     //
     // uCode program memory
@@ -191,10 +191,8 @@ module cpu #(
     ) D_STACK (
         .i_clk(i_clk),
 
+        .i_se({d_swap, d_push, d_pop}),
         .i_data(d_value),
-        .i_push(d_push),
-        .i_pop(d_pop),
-        .i_swap(d_swap),
 
         .o_s0(d0),
         .o_s1(d1)
@@ -216,10 +214,8 @@ module cpu #(
     ) R_STACK (
         .i_clk(i_clk),
 
+        .i_se({r_swap, r_push, r_pop}),
         .i_data(r_value),
-        .i_push(r_push),
-        .i_pop(r_pop),
-        .i_swap(r_swap),
 
         .o_s0(r0),
         .o_s1(r1)
@@ -519,12 +515,12 @@ module cpu #(
                         d_pop <= 1'b1;
                     end
                     default: begin
-                        if (opcode[DATA_SZ-1]) begin    // CALL ( -- ) R:( -- pc ) @pc->pc
+                        if (opcode[DATA_SZ-1]) begin    // <addr> ( -- ) R:( -- pc+1 ) @pc->pc
                             r_value <= { {PAD_ADDR{1'b1}}, pc };
                             r_push <= 1'b1;
                             pc <= opcode[ADDR_SZ-1:0];
                         end else begin
-                            o_status <= 1'b0;           // register failure
+                            o_status <= 1'b0;           // illegal instruction
                         end
                     end
                 endcase
@@ -555,7 +551,7 @@ module cpu #(
                 uc_raddr <= pc;
             end
             default: begin
-                o_status <= 1'b0;                       // register failure
+                o_status <= 1'b0;                       // phase error
             end
         endcase
     end
