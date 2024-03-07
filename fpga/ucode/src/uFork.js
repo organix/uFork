@@ -574,20 +574,23 @@ export const uFork = (asm, opts) => {
 
   def("uFork_instr_alu"); // ( kont ip opcode )
   dat("DROP", "qy@");     // ( kont subopcode )
+  // todo: insert here a fixnum type check
+  dat("uFork_fixnum2int");
   dat("(JMPTBL)");
-  dat(12); // nr of entries
-  dat("uFork_instr_alu_not");
-  dat("uFork_instr_alu_and");
-  dat("uFork_instr_alu_or");
-  dat("uFork_instr_alu_xor");
-  dat("uFork_instr_alu_add");
-  dat("uFork_instr_alu_sub");
-  dat("uFork_instr_alu_mul");
-  dat("uFork_instr_alu_lsl");
-  dat("uFork_instr_alu_lsr");
-  dat("uFork_instr_alu_asr");
-  dat("uFork_instr_alu_rol");
-  dat("uFork_instr_alu_ror");
+  dat(13); // nr of entries
+  dat("uFork_instr_alu_not");    // +0
+  dat("uFork_instr_alu_and");    // +1
+  dat("uFork_instr_alu_or");     // +2
+  dat("uFork_instr_alu_xor");    // +3
+  dat("uFork_instr_alu_add");    // +4
+  dat("uFork_instr_alu_sub");    // +5
+  dat("uFork_instr_alu_mul");    // +6
+  dat("uFork_instr_alu_divmod"); // +7
+  dat("uFork_instr_alu_lsl");    // +8
+  dat("uFork_instr_alu_lsr");    // +9
+  dat("uFork_instr_alu_asr");    // +10
+  dat("uFork_instr_alu_rol");    // +11
+  dat("uFork_instr_alu_ror");    // +12
   // todo: insert sponsor err signalling here
   dat("EXIT");
 
