@@ -8,6 +8,20 @@
 //   as that is a bit incomplete use uFork/vm/rs/src/any.rs as suppliment
 // also using uFork/docs/sponsor.md as reference
 
+/* tbd: 
+   quad encoded chunked overlay protocol:
+     instead of #instr_t in t field of first quad we have an capability
+     that cap is usually closely held
+         
+     1st [<cap>, 
+          ucode_program_memory_address_fixnum,
+          chunk_size_fixnum,
+          next]
+      nth [payload1_fixnum, payload2_fixnum, payload3_fixnum, next]
+
+      if chunk_size is zero then call the ucode_program_memory_address
+
+ */
 
 export const uFork = (asm, opts) => {
   opts = (opts == undefined) ? {} : opts ;
