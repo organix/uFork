@@ -1290,3 +1290,17 @@ export const uFork = (asm, opts) => {
 export default Object.freeze({
   uFork
 });
+
+/* tbd:
+     möguleiki á að búa til actor þar sem sp bendir ekki á stack heldur á
+     quad þar sem z field bendir á
+       [debugger_sponsor, debugger, #?, #?]
+     ef anonomulous staða kemur upp þá er þetta notað til að senda event boð til
+     debugger á forminu:
+       [debugger_sponsor, debugger, msg, #?]
+                                    |
+                                    V
+                                 [resume_cap, afrit_af_faulting_continuation, #?, #?]
+   resume_cap er capability sem bendir a psuedo-actor sem býst við event boði
+   þar sem msg er nýja instruction pointer fyrir það continuation
+*/
