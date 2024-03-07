@@ -822,6 +822,7 @@ export const uFork = (asm, opts) => {
   // todo: insert here a fixnum check for the immediate param of the uFork instr
   dat("uFork_fixnum2int");  // ( kont n )
   dat("OVER", "uFork_pop"); // ( kont n pairlist )
+  def("uFork_instr_nth_l0");
   dat("SWAP");              // ( kont pairlist n )
   dat("uFork_ndeep");       // ( kont item|tail )
   dat("(JMP)", "uFork__push_then_instrTail");
@@ -1186,6 +1187,14 @@ export const uFork = (asm, opts) => {
   dat("1-", ">R", "2DUP", "SWAP", "qt@", "SWAP", "uFork_push", "R>");
   dat("2DROP");
   dat("(JMP)", "uFork_instr__common_longer_tail");
+
+  def("uFork_instr_msg"); // ( kont ip opcode )
+  dat("DROP");            // ( kont ip )
+  dat("qy@");             // ( kont n_fixnum )
+  // todo: insert here a fixnum typecheck
+  dat("uFork_fixnum2int"); // ( kont n )
+  dat("OVER", "qy@", "qy@"); // ( kont n msg )
+  dat("(JMP)", "uFork_instr_nth_l0");
 
   // todo: sponsor <peek> instruction
   //       þar sem <peek> er capability og ekki fixnum
