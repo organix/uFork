@@ -1154,6 +1154,10 @@ export const uFork = (asm, opts) => {
   dat("DUP", "4", ">", "(BRZ)", "uFork_instr_quad_l0");
   // todo: insert here an error signal to sponsor
   def("uFork_instr_quad_l0"); // ( kont n )
+  dat("OVER", ">R");          // ( kont n ) R:( kont )
+  dat("uFork_allot", "SWAP"); // ( kont q n ) R:( kont )
+  dat("1-", "SWAP", "R@", "uFork_pop", "OVER", "qt!", "SWAP");
+  dat("DUP", "1", ">", "(BRZ)", "uFork_instr_quad_l1");
   dat("EXIT");
 
 
