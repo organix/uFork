@@ -1168,7 +1168,24 @@ export const uFork = (asm, opts) => {
   dat("(JMP)", "uFork__push_then_instrTail");
   def("uFork_instr_quad_access"); // ( kont -n )
   dat("NEGATE");                  // ( kont n )
-
+  // todo: insert here a check for that uFork TOS is not a fixnum nor a capability
+  dat("DUP", "4", ">", "(BRZ)", "uFork_instr_quad_l2");
+  // todo: insert here error signalling to sponsor
+  def("uFork_instr_quad_l2");     // ( kont n )
+  dat("OVER", "uFork_pop");       // ( kont n q )
+  dat("SWAP");                    // ( kont q n )
+  dat("DUP", "4", "=", "(BRZ)", "uFork_instr_quad_l3");
+  dat("1-", ">R", "2DUP", "SWAP", "qz@", "SWAP", "uFork_push", "R>");
+  def("uFork_instr_quad_l3");
+  dat("DUP", "3", "=", "(BRZ)", "uFork_instr_quad_l4");
+  dat("1-", ">R", "2DUP", "SWAP", "qy@", "SWAP", "uFork_push", "R>");
+  def("uFork_instr_quad_l4");
+  dat("DUP", "2", "=", "(BRZ)", "uFork_instr_quad_l5");
+  dat("1-", ">R", "2DUP", "SWAP", "qx@", "SWAP", "uFork_push", "R>");
+  def("uFork_instr_quad_l5");
+  dat("1-", ">R", "2DUP", "SWAP", "qt@", "SWAP", "uFork_push", "R>");
+  dat("2DROP");
+  dat("(JMP)", "uFork_instr__common_longer_tail");
 
   // todo: sponsor <peek> instruction
   //       þar sem <peek> er capability og ekki fixnum
