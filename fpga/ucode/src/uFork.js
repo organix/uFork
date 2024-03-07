@@ -1074,6 +1074,13 @@ export const uFork = (asm, opts) => {
   dat("uFork_deque_new");
   dat("(JMP)", "uFork__push_then_instrTail");
 
+  def("uFork_instr_deque_empty"); // ( kont subopcode )
+  dat("DROP");                    // ( kont )
+  // todo: insert here a check that TOS is a deque
+  dat("DUP", "uFork_pop", "uFork_deque_empty");
+  dat("(JMP)", "uFork__push_then_instrTail");
+
+
 
   // todo: sponsor <peek> instruction
   //       þar sem <peek> er capability og ekki fixnum
