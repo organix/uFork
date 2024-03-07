@@ -1163,9 +1163,11 @@ export const uFork = (asm, opts) => {
   dat("1-", "SWAP", "R@", "uFork_pop", "OVER", "qy!", "SWAP");
   dat("DUP", "1", ">", "(BRZ)", "uFork_instr_quad_l1");
   dat("1-", "SWAP", "R@", "uFork_pop", "OVER", "qz!", "SWAP");
-  def("uFork_instr_quad_l1");
-   
-  dat("EXIT");
+  def("uFork_instr_quad_l1"); // ( kont q 0 ) R:( kont )
+  dat("R>", "2DROP");
+  dat("(JMP)", "uFork__push_then_instrTail");
+  def("uFork_instr_quad_access"); // ( kont -n )
+  dat("NEGATE");                  // ( kont n )
 
 
   // todo: sponsor <peek> instruction
