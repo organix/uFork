@@ -1058,6 +1058,12 @@ export const uFork = (asm, opts) => {
   // todo: insert here an err signal to sponsor
   dat("EXIT");
 
+  def("uFork_instr_deque_new"); // ( kont subopcode )
+  dat("DROP");                  // ( kont )
+  // todo: insert here sponsor mem fuel check&burn: 1 quad spent
+  dat("uFork_deque_new");
+  dat("(JMP)", "uFork__push_then_instrTail");
+
 
   // todo: sponsor <peek> instruction
   //       þar sem <peek> er capability og ekki fixnum
