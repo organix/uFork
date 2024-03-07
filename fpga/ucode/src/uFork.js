@@ -1145,6 +1145,18 @@ export const uFork = (asm, opts) => {
   dat("DUP", "uFork_pop", "uFork_deque_length");
   dat("(JMP)", "uFork__push_then_instrTail");
 
+  def("uFork_instr_quad"); // ( kont ip opcode )
+  dat("DROP");             // ( kont ip )
+  dat("qy@");              // ( kont n_fixnum )
+  // todo: insert here a fixnum typecheck
+  dat("uFork_fixnum2int"); // ( kont n )
+  dat("DUP", "0<", "(BRNZ)", "uFork_instr_quad_access");
+  dat("DUP", "4", ">", "(BRZ)", "uFork_instr_quad_l0");
+  // todo: insert here an error signal to sponsor
+  def("uFork_instr_quad_l0"); // ( kont n )
+  dat("EXIT");
+
+
   // todo: sponsor <peek> instruction
   //       þar sem <peek> er capability og ekki fixnum
   
