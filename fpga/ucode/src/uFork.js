@@ -313,7 +313,7 @@ export const uFork = (asm, opts) => {
   // def("uFork_doInstr"); // ( opcode_fixnum -- )
   dat("uFork_fixnum2int"); // ( opcode )
   dat("(JMPTBL)");
-  dat(32); // number of base instructions
+  dat(37); // number of base instructions
   dat("uFork_instr_debug");   // +0
   dat("uFork_instr_jump");    // +1
   dat("uFork_instr_push");    // +2
@@ -327,30 +327,33 @@ export const uFork = (asm, opts) => {
   dat("uFork_instr_dict");    // +10
   dat("uFork_instr_deque");   // +11
   dat("uFork_instr_my");      // +12
+  dat("uFork_instr_alu");     // +13
+  dat("uFork_instr_cmp");     // +14
+  dat("uFork_instr_end");     // +15
+  dat("uFork_instr__error");  // +16  unused
+  dat("uFork_instr_pair");    // +17
+  dat("uFork_instr_part");    // +18
+  dat("uFork_instr_nth");     // +19
+  dat("uFork_instr_pick");    // +20
+  dat("uFork_instr_roll");    // +21
+  dat("uFork_instr_dup");     // +22
+  dat("uFork_instr_drop");    // +23
+  dat("uFork_instr_msg");     // +24
+  dat("uFork_instr_state");   // +25
+  dat("uFork_instr_send");    // +26
+  dat("uFork_instr_signal");  // +27
+  dat("uFork_instr_new");     // +28
+  dat("uFork_instr_beh");     // +29
+  dat("uFork_instr__error");  // +30
+  dat("uFork_instr__error");  // +31
+  
+  dat("uFork_instr__rpush");  // +32
+  dat("uFork_instr__rpop");   // +33
+  dat("uFork_instr__subroutine_call"); // +34
+  dat("uFork_instr__subroutine_exit"); // +35
+  dat("uFork_instr_nop");     // +36
 
-  
-  dat("uFork_instr_dup");
-  dat("uFork_instr_drop");
-  dat("uFork_instr_pick");
-  dat("uFork_instr_roll");
-  dat("uFork_instr_alu");
-  dat("uFork_instr_cmp");
-  dat("uFork_instr_pair");
-  dat("uFork_instr_part");
-  dat("uFork_instr_nth");
-  dat("uFork_instr_msg");
-  dat("uFork_instr_state");
-  dat("uFork_instr_send");
-  dat("uFork_instr_signal");
-  dat("uFork_instr_new");
-  dat("uFork_instr_beh");
-  dat("uFork_instr_end");
-  
-  
-  dat("uFork_instr__rpush");
-  dat("uFork_instr__rpop");
-  dat("uFork_instr__subroutine_call");
-  dat("uFork_instr__subroutine_exit");
+  def("uFork_instr__error");
   def("uFork_no_such_opcode"); // ( kont ip opcode )
   // todo: cause a error signal
   dat("EXIT");
