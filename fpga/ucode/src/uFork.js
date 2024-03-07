@@ -1073,7 +1073,9 @@ export const uFork = (asm, opts) => {
 
   def("uFork_instr_deque"); // ( kont ip opcode )
   dat("DROP");              // ( kont ip )
-  dat("qy@");               // ( kont subopcode )
+  dat("qy@");               // ( kont subopcode_fixnum )
+  // todo: insert here a fixnum type check
+  dat("uFork_fixnum2int");  // ( kont subopcode )
   dat("(JMPTBL)", 7);       //
   dat("uFork_instr_deque_new");
   dat("uFork_instr_deque_empty");
@@ -1117,6 +1119,15 @@ export const uFork = (asm, opts) => {
   dat("R>", "uFork_push");        // ( kont value )
   dat("(JMP)", "uFork__push_then_instrTail");
 
+  def("uFork_instr_deque_put");  // ( kont supopcode )
+  dat("DROP");                   // ( kont )
+  // todo: insert here a check that NOS is a deque
+  // todo: insert here sponsor mem fuel check&burn: 2 quads
+  dat("DUP");                    // ( kont kont )
+  dat("uFork_pop");              // ( kont value )
+  dat("OVER", "uFork_pop");      // ( kont value deque )
+  dat("uFork_deque_put");        // ( kont deque' )
+  dat("(JMP)", "uFork__push_then_instrTail");
 
   // todo: sponsor <peek> instruction
   //       þar sem <peek> er capability og ekki fixnum
