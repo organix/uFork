@@ -1204,6 +1204,17 @@ export const uFork = (asm, opts) => {
   dat("OVER", "qy@", "qx@", "qy@");
   dat("(JMP)", "uFork_instr_nth_l0");
 
+  def("uFork_instr_my"); // ( kont ip opcode )
+  dat("DROP");           // ( kont ip )
+  dat("qy@");            // ( kont subopcode )
+  // todo: insert here a fixnum type check
+  dat("uFork_fixnum2int");
+  dat("(JMPTBL)", 3);
+  dat("uFork_instr_my_self");  // +0
+  dat("uFork_instr_my_beh");   // +1
+  dat("uFork_instr_my_state"); // +2
+  // todo: insert here error signalling to sponsor
+  dat("EXIT");
 
   // todo: sponsor <peek> instruction
   //       þar sem <peek> er capability og ekki fixnum
