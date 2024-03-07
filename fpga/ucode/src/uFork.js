@@ -5,7 +5,9 @@
  * @author Zarutian
  */
 // using uFork/docs/vm.md as reference
+//   as that is a bit incomplete use uFork/vm/rs/src/any.rs as suppliment
 // also using uFork/docs/sponsor.md as reference
+
 
 export const uFork = (asm, opts) => {
   opts = (opts == undefined) ? {} : opts ;
@@ -308,21 +310,26 @@ export const uFork = (asm, opts) => {
   // todo: insert ip #instr_t check here
   dat("DUP", "qx@");         // ( kont ip opcode )
   // dat("(JMP)", "uFork_doInstr"); fallthrough
-  // def("uFork_doInstr"); // ( opcode -- )
+  // def("uFork_doInstr"); // ( opcode_fixnum -- )
+  dat("uFork_fixnum2int"); // ( opcode )
   dat("(JMPTBL)");
-  dat(33); // number of base instructions
-  dat("uFork_instr_nop");
-  dat("uFork_instr_push");
+  dat(32); // number of base instructions
+  dat("uFork_instr_debug");  // +0
+  dat("uFork_instr_jump");   // +1
+  dat("uFork_instr_push");   // +2
+  dat("uFork_instr_if");     // +3
+  dat("uFork_instr__error"); // +4  unused
+  dat("uFork_instr_typeq");  // +5
+  dat("uFork_instr_eq");     // +6
+  dat("uFork_instr_assert"); // +7
+  
   dat("uFork_instr_dup");
   dat("uFork_instr_drop");
   dat("uFork_instr_pick");
   dat("uFork_instr_roll");
   dat("uFork_instr_alu");
-  dat("uFork_instr_typeq");
-  dat("uFork_instr_eq");
+  
   dat("uFork_instr_cmp");
-  dat("uFork_instr_if");
-  dat("uFork_instr_jump");
   dat("uFork_instr_pair");
   dat("uFork_instr_part");
   dat("uFork_instr_nth");
@@ -338,8 +345,8 @@ export const uFork = (asm, opts) => {
   dat("uFork_instr_beh");
   dat("uFork_instr_end");
   dat("uFork_instr_sponsor");
-  dat("uFork_instr_assert");
-  dat("uFork_instr_debug");
+  
+  
   dat("uFork_instr__rpush");
   dat("uFork_instr__rpop");
   dat("uFork_instr__subroutine_call");
