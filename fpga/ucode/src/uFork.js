@@ -1158,6 +1158,13 @@ export const uFork = (asm, opts) => {
   dat("uFork_allot", "SWAP"); // ( kont q n ) R:( kont )
   dat("1-", "SWAP", "R@", "uFork_pop", "OVER", "qt!", "SWAP");
   dat("DUP", "1", ">", "(BRZ)", "uFork_instr_quad_l1");
+  dat("1-", "SWAP", "R@", "uFork_pop", "OVER", "qx!", "SWAP");
+  dat("DUP", "1", ">", "(BRZ)", "uFork_instr_quad_l1");
+  dat("1-", "SWAP", "R@", "uFork_pop", "OVER", "qy!", "SWAP");
+  dat("DUP", "1", ">", "(BRZ)", "uFork_instr_quad_l1");
+  dat("1-", "SWAP", "R@", "uFork_pop", "OVER", "qz!", "SWAP");
+  def("uFork_instr_quad_l1");
+   
   dat("EXIT");
 
 
