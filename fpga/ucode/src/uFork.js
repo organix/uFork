@@ -314,37 +314,37 @@ export const uFork = (asm, opts) => {
   dat("uFork_fixnum2int"); // ( opcode )
   dat("(JMPTBL)");
   dat(32); // number of base instructions
-  dat("uFork_instr_debug");  // +0
-  dat("uFork_instr_jump");   // +1
-  dat("uFork_instr_push");   // +2
-  dat("uFork_instr_if");     // +3
-  dat("uFork_instr__error"); // +4  unused
-  dat("uFork_instr_typeq");  // +5
-  dat("uFork_instr_eq");     // +6
-  dat("uFork_instr_assert"); // +7
+  dat("uFork_instr_debug");   // +0
+  dat("uFork_instr_jump");    // +1
+  dat("uFork_instr_push");    // +2
+  dat("uFork_instr_if");      // +3
+  dat("uFork_instr__error");  // +4  unused
+  dat("uFork_instr_typeq");   // +5
+  dat("uFork_instr_eq");      // +6
+  dat("uFork_instr_assert");  // +7
+  dat("uFork_instr_sponsor"); // +8
+  dat("uFork_instr_quad");    // +9
+  dat("uFork_instr_dict");    // +10
+  dat("uFork_instr_deque");   // +11
+  dat("uFork_instr_my");      // +12
+
   
   dat("uFork_instr_dup");
   dat("uFork_instr_drop");
   dat("uFork_instr_pick");
   dat("uFork_instr_roll");
   dat("uFork_instr_alu");
-  
   dat("uFork_instr_cmp");
   dat("uFork_instr_pair");
   dat("uFork_instr_part");
   dat("uFork_instr_nth");
-  dat("uFork_instr_dict");
-  dat("uFork_instr_deque");
-  dat("uFork_instr_quad");
   dat("uFork_instr_msg");
   dat("uFork_instr_state");
-  dat("uFork_instr_my");
   dat("uFork_instr_send");
   dat("uFork_instr_signal");
   dat("uFork_instr_new");
   dat("uFork_instr_beh");
   dat("uFork_instr_end");
-  dat("uFork_instr_sponsor");
   
   
   dat("uFork_instr__rpush");
