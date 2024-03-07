@@ -32,7 +32,7 @@ module lifo_test (
     // unit under test
     //
 
-    lifo #(
+    lifo_se #(
         .WIDTH(16)
     ) LIFO (
         .i_clk(i_clk),

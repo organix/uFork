@@ -20,6 +20,7 @@ the value of `o_status` indicates success (1) or failure (0).
 
 `default_nettype none
 
+`include "../lib/lifo.v"
 `include "lifo.v"
 //`include "alu.v"
 `include "alu_nr.v"
@@ -72,10 +73,10 @@ module cpu #(
     localparam UC_NOT       = 16'h0023;                 // INVERT ( a -- ~a )
     localparam UC_NEG       = 16'h0024;                 // NEGATE ( a -- -a )
     localparam UC_DEC       = 16'h0025;                 // 1- ( a -- a-1 )
-    localparam UC_NIP       = 16'h0026;                 // ( a b -- b )
+//    localparam UC_NIP       = 16'h0026;                 // ( a b -- b )
 //    localparam UC_TUCK      = 16'h0027;                 // ( a b -- b a b )
-    localparam UC_2DUP      = 16'h0028;                 // ( a b -- a b a b )
-    localparam UC_2DROP     = 16'h0029;                 // ( a b -- )
+//    localparam UC_2DUP      = 16'h0028;                 // ( a b -- a b a b )
+//    localparam UC_2DROP     = 16'h0029;                 // ( a b -- )
     localparam UC_OVER      = 16'h002A;                 // ( a b -- a b a )
 //    localparam UC_ROT       = 16'h002B;                 // ( a b c -- b c a )
 //    localparam UC_R_SWAP    = 16'h002C;                 // ( -- ) R:( a b -- b a )
@@ -117,7 +118,10 @@ module cpu #(
     localparam UC_FALSE     = 16'hF08D;                 // ( -- 0 )
     localparam UC_LSB       = 16'hF08F;                 // ( -- 1 )
     localparam UC_MSB       = 16'hF091;                 // ( -- -32768 )
+    localparam UC_NIP       = 16'hF124;                 // ( a b -- b )
     localparam UC_TUCK      = 16'hF127;                 // ( a b -- b a b )
+    localparam UC_2DUP      = 16'hF12A;                 // ( a b -- a b a b )
+    localparam UC_2DROP     = 16'hF12D;                 // ( a b -- )
 
     // initial program
     initial begin
@@ -166,10 +170,22 @@ module cpu #(
         //
         // ...
         //
+        // NIP ( a b -- b )
+        ucode[12'h124] = UC_SWAP;
+        ucode[12'h125] = UC_DROP;
+        ucode[12'h126] = UC_EXIT;
         // TUCK ( a b -- b a b )
         ucode[12'h127] = UC_SWAP;
         ucode[12'h128] = UC_OVER;
         ucode[12'h129] = UC_EXIT;
+        // 2DUP ( a b -- a b a b )
+        ucode[12'h12A] = UC_OVER;
+        ucode[12'h12B] = UC_OVER;
+        ucode[12'h12C] = UC_EXIT;
+        // 2DROP ( a b -- )
+        ucode[12'h12D] = UC_DROP;
+        ucode[12'h12E] = UC_DROP;
+        ucode[12'h12F] = UC_EXIT;
         /*
         $writememh("ucode_rom.mem", ucode);
         */
@@ -186,7 +202,7 @@ module cpu #(
     wire [DATA_SZ-1:0] d0;
     wire [DATA_SZ-1:0] d1;
 
-    lifo #(
+    lifo_se #(
         .WIDTH(DATA_SZ)
     ) D_STACK (
         .i_clk(i_clk),
@@ -205,7 +221,6 @@ module cpu #(
     reg [DATA_SZ-1:0] r_value = 0;
     reg r_push = 1'b0;
     reg r_pop = 1'b0;
-    reg r_swap = 1'b0;
     wire [DATA_SZ-1:0] r0;
     wire [DATA_SZ-1:0] r1;
 
@@ -214,8 +229,9 @@ module cpu #(
     ) R_STACK (
         .i_clk(i_clk),
 
-        .i_se({r_swap, r_push, r_pop}),
         .i_data(r_value),
+        .i_push(r_push),
+        .i_pop(r_pop),
 
         .o_s0(r0),
         .o_s1(r1)
@@ -268,7 +284,6 @@ module cpu #(
         d_swap <= 1'b0;
         r_push <= 1'b0;
         r_pop <= 1'b0;
-        r_swap <= 1'b0;
         alu_op <= `NO_OP;
         tx_wr <= 1'b0;
         case (phase)
@@ -347,26 +362,6 @@ module cpu #(
                         alu_op <= `SUB_OP;
                         alu_arg0 <= d0;
                         alu_arg1 <= 16'h0001;
-                    end
-                    UC_NIP: begin                       // ( a b -- b )
-                        alu_op <= `NO_OP;
-                        alu_arg0 <= d0;                 // pass b thru ALU
-                        d_pop <= 1'b1;
-                    end
-                    /*
-                    UC_TUCK: begin                      // ( a b -- b a b )
-                        alu_op <= `XOR_OP;
-                        alu_arg0 <= d1;
-                        alu_arg1 <= d0;
-                        d_pop <= 1'b1;
-                    end
-                    */
-                    UC_2DUP: begin                      // ( a b -- a b a b )
-                        d_value <= d1;
-                        d_push <= 1'b1;
-                    end
-                    UC_2DROP: begin                     // ( a b -- )
-                        d_pop <= 1'b1;
                     end
                 endcase
                 opcode <= uc_rdata;
@@ -469,28 +464,6 @@ module cpu #(
                         d_value <= alu_data;
                         d_pop <= 1'b1;
                         d_push <= 1'b1;
-                    end
-                    UC_NIP: begin                       // ( a b -- b )
-                        d_value <= alu_data;
-                        d_pop <= 1'b1;
-                        d_push <= 1'b1;
-                    end
-                    /*
-                    UC_TUCK: begin                      // ( a b -- b a b )
-                        alu_op <= `XOR_OP;
-                        alu_arg0 <= alu_data;           // a^b
-                        alu_arg1 <= d0;                 // a
-                        d_value <= alu_data;            // ( a -- a^b )
-                        d_pop <= 1'b1;
-                        d_push <= 1'b1;
-                    end
-                    */
-                    UC_2DUP: begin                      // ( a b -- a b a b )
-                        d_value <= d1;
-                        d_push <= 1'b1;
-                    end
-                    UC_2DROP: begin                     // ( a b -- )
-                        d_pop <= 1'b1;
                     end
                     UC_OVER: begin                      // ( a b -- a b a )
                         d_value <= d1;
