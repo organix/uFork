@@ -1196,6 +1196,15 @@ export const uFork = (asm, opts) => {
   dat("OVER", "qy@", "qy@"); // ( kont n msg )
   dat("(JMP)", "uFork_instr_nth_l0");
 
+  def("uFork_instr_state"); // ( kont ip opcode )
+  dat("DROP");            // ( kont ip )
+  dat("qy@");             // ( kont n_fixnum )
+  // todo: insert here a fixnum typecheck
+  dat("uFork_fixnum2int"); // ( kont n )
+  dat("OVER", "qy@", "qx@", "qy@");
+  dat("(JMP)", "uFork_instr_nth_l0");
+
+
   // todo: sponsor <peek> instruction
   //       þar sem <peek> er capability og ekki fixnum
   
