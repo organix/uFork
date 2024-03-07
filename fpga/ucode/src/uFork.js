@@ -1021,6 +1021,32 @@ export const uFork = (asm, opts) => {
   dat("R>", "SWAP");      // ( fram bak' ) R:( )
   dat("uFork_cons");
   dat("EXIT");
+
+  def("uFork_deque_swap"); // ( deque -- deque' )
+  dat("uFork_carAndCdr");  // ( fram bak )
+  dat("SWAP");
+  dat("uFork_cons");
+  dat("EXIT");
+
+  def("uFork_deque_pull"); // ( deque -- deque' value )
+  dat("uFork_deque_swap"); // ( deque_swapped )
+  dat("uFork_deque_pop");  // ( deque_swapped' value )
+  dat("SWAP");             // ( value deque_swapped' )
+  dat("uFork_deque_swap"); // ( value deque' )
+  dat("SWAP");             // ( deque' value )
+  dat("EXIT");
+
+  def("uFork_deque_length"); // ( deque -- n )
+  dat("uFork_carAndCdr");    // ( fram bak )
+  dat("uFork_pairlist_length");
+  dat("SWAP");
+  dat("uFork_pairlist_length");
+  dat("+");
+  dat("EXIT");
+
+
+  // todo: sponsor <peek> instruction
+  //       þar sem <peek> er capability og ekki fixnum
   
 
   def("uFork_instr__subroutine_call"); // ( kont ip opcode -- )
