@@ -1044,6 +1044,20 @@ export const uFork = (asm, opts) => {
   dat("+");
   dat("EXIT");
 
+  def("uFork_instr_deque"); // ( kont ip opcode )
+  dat("DROP");              // ( kont ip )
+  dat("qy@");               // ( kont subopcode )
+  dat("(JMPTBL)", 7);       //
+  dat("uFork_instr_deque_new");
+  dat("uFork_instr_deque_empty");
+  dat("uFork_instr_deque_push");
+  dat("uFork_instr_deque_pop");
+  dat("uFork_instr_deque_put");
+  dat("uFork_instr_deque_pull");
+  dat("uFork_instr_deque_len");
+  // todo: insert here an err signal to sponsor
+  dat("EXIT");
+
 
   // todo: sponsor <peek> instruction
   //       þar sem <peek> er capability og ekki fixnum
