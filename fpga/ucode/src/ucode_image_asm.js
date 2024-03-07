@@ -521,7 +521,7 @@ export const makeUcodeImage = (opts) => {
   opts = (opts == undefined) ? {} : opts ;
   const asm = makeAssembler(opts.assemblerOpts);
   defineInstructionset(asm);
-  asm.org(0x0080);
+  asm.org(0x0050);
   minicore(asm); // always required as lot of subsequent assemblies relie on definitions there in
   if (opts.wozmon != undefined) {
     wozmon(asm, opts.wozmon);
