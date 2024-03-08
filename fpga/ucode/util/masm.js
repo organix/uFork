@@ -74,6 +74,9 @@ export const makeAssembler = (opts) => {
           return tmp.promise;
         }
       },
+      isDefined: (sym) => {
+        return syms.has(sym);
+      },
     }
   asm.allot = (amount = 1) => {
     curr_addr = (curr_addr + amount) & fullcellBitmask;
