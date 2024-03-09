@@ -126,6 +126,7 @@ export const makeAssembler = (opts) => {
     return tmp;
   };
   asm.def = asm.symbols.define;
+  asm.isDefined = asm.symbols.isDefined;
   asm.org = asm.origin;
   asm.dat = asm.data;
   asm.whenDone = () => done_promise;
