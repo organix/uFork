@@ -62,6 +62,14 @@ export const uFork = (asm, opts) => {
     def("qramy!"); dat("qramy", "spram!", "EXIT");
     def("qramz!"); dat("qramz", "spram!", "EXIT");
 
+    if (asm.isDefined("spi_flash@")) {
+    } else {
+      def("qromt@", "qramt@");
+      def("qromx@", "qramx@");
+      def("qromy@", "qramy@");
+      def("qromz@", "qramz@");
+    }
+
     asm.symbols.redefine("qt@"); // ( quad_addr -- t_field )
     dat("uFork_quaddrInRam", "(BRZ)", "qromt@", "(JMP)", "qramt@");
     asm.symbols.redefine("qx@"); // ( quad_addr -- x_field )
