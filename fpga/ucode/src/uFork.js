@@ -25,10 +25,12 @@ export const uFork = (asm, opts) => {
 
   let hereBeyondEnd = asm.incr("uFork_last_ucode_address", 0x0000);
   if (!hwImplOfQuadMemory) {
-    const quadMemSize_in_cells = quadMemSize_in_quads * 4;
-    def("uFork_quadMem_baseAddr");
-    dat("(CONST)", hereBeyondEnd);
-    hereBeyondEnd = asm.incr(hereBeyondEnd, quadMemSize_in_cells);
+    if (!(asm.isDefined("spram@")) && !(asm.isDefined("spram!"))) {
+      const quadMemSize_in_cells = quadMemSize_in_quads * 4;
+      def("uFork_quadMem_baseAddr");
+      dat("(CONST)", hereBeyondEnd);
+      hereBeyondEnd = asm.incr(hereBeyondEnd, quadMemSize_in_cells);
+    }
 
     def("uFork_quaddrInRam"); // ( quad_addr -- quad_addr bool )
     // var ekki til e-r staðar annað orð sem athugar hvort quad_addr er RAM eða ROM bendill?
