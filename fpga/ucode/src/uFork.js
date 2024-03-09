@@ -8,38 +8,15 @@
 //   as that is a bit incomplete use uFork/vm/rs/src/any.rs as suppliment
 // also using uFork/docs/sponsor.md as reference
 
-/* tbd: 
-   quad encoded chunked overlay protocol:
-     instead of #instr_t in t field of first quad we have an closely held
-     type quad we call here #ucode_load_t
-         
-     1st [#ucode_load_t, 
-          ucode_program_memory_address_fixnum,
-          chunk_size_fixnum,
-          next]
-      nth [payload1_fixnum, payload2_fixnum, payload3_fixnum, next]
-
-      next eather points to next payload quad or next instruction
-
-      if chunk_size is zero then call the ucode_program_memory_address
-
-   tbd: priviledged ucode backdoor call
-     instead of #instr_t in t field of first quad we have an closely held
-     type quad we call here #ucode_backdoor_call_t
-
-     [#ucode_backdoor_call_t, ucode_addr_fixnum, #?, next_instr]
-
- */
-
 export const uFork = (asm, opts) => {
   opts = (opts == undefined) ? {} : opts ;
-  const eventQueueAndContQueue_qaddr = (opts.eventQueueAndContQueue_qaddr == undefined ) ?
-    0x4001 : opts.eventQueueAndContQueue_qaddr ;
-  const memoryDescriptor_qaddr = (opts.memoryDescriptor_qaddr == undefined) ?
-    0x4000 : opts.memoryDescriptor_qaddr ;
-  const uForkSubroutines = (opts.uForkSubroutines == undefined) ? false : opts.uForkSubroutines ;
-  const hwImplOfQuadAllotAndFree = (opts.hwImplOfQuadAllotAndFree == undefined) ? false : opts.hwImplOfQuadAllotAndFree ;
-  const maxTopOfQuadMemory = (opts.maxTopOfQuadMemory == undefined) ? 0x5000 : opts.maxTopOfQuadMemory ;
+  const {
+    eventQueueAndContQueue_qaddr = 0x4001,
+    memoryDescriptor_qaddr =       0x4000,
+    uForkSubroutines =              false,
+    hwImplOfQuadAllotAndFree =      false,
+    maxTopOfQuadMemory =           0x5000,
+  } = opts;
    
   const { def, dat } = asm;
   
@@ -1299,6 +1276,28 @@ export const uFork = (asm, opts) => {
 export default Object.freeze({
   uFork
 });
+/* tbd: 
+   quad encoded chunked overlay protocol:
+     instead of #instr_t in t field of first quad we have an closely held
+     type quad we call here #ucode_load_t
+         
+     1st [#ucode_load_t, 
+          ucode_program_memory_address_fixnum,
+          chunk_size_fixnum,
+          next]
+      nth [payload1_fixnum, payload2_fixnum, payload3_fixnum, next]
+
+      next eather points to next payload quad or next instruction
+
+      if chunk_size is zero then call the ucode_program_memory_address
+
+   tbd: priviledged ucode backdoor call
+     instead of #instr_t in t field of first quad we have an closely held
+     type quad we call here #ucode_backdoor_call_t
+
+     [#ucode_backdoor_call_t, ucode_addr_fixnum, #?, next_instr]
+
+ */
 
 /* tbd:
      möguleiki á að búa til actor þar sem sp bendir ekki á stack heldur á
