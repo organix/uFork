@@ -70,6 +70,16 @@ export const uFork = (asm, opts) => {
     dat("uFork_quaddrInRam", "(BRZ)", "qromy@", "(JMP)", "qramy@");
     asm.symbols.redefine("qz@"); // ( quad_addr -- z_field )
     dat("uFork_quaddrInRam", "(BRZ)", "qromz@", "(JMP)", "qramz@");
+
+    // attempted writes to ROM are just silently discarded here
+    asm.symbols.redefine("qt!"); // ( t_field quad_addr -- )
+    dat("uFork_quaddrInRam", "(BRZ)", "2DROP", "(JMP)", "qramt!");
+    asm.symbols.redefine("qx!"); // ( x_field quad_addr -- )
+    dat("uFork_quaddrInRam", "(BRZ)", "2DROP", "(JMP)", "qramx!");
+    asm.symbols.redefine("qy!"); // ( x_field quad_addr -- )
+    dat("uFork_quaddrInRam", "(BRZ)", "2DROP", "(JMP)", "qramy!");
+    asm.symbols.redefine("qz!"); // ( x_field quad_addr -- )
+    dat("uFork_quaddrInRam", "(BRZ)", "2DROP", "(JMP)", "qramz!");
   }
   
   def("uFork_doOneRunLoopTurn"); // ( -- )
