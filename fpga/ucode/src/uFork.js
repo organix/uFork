@@ -123,12 +123,13 @@ export const uFork = (asm, opts) => {
     dat("uFork_quaddrInRam", "(BRZ)", "2DROP");
     dat("gcMem_common2", "gcMem!_shadowed", "EXIT");
 
-    def("gcPhase");
+    def("gc_phase");
     dat("(VAR)", 0);
     // 0 - idle, check quad memory pressure
     // 1 - marking
     // 2 - sweeping (??stop-the-world?? and resetting gcMem by its way)
-    // 3-0xFFFF = idle
+    // 3-0xFFFF = counting up to idle
+
     
     def("gc_first", "uFork_memoryDescriptor_qaddr"); // head of scanning queue addr
     def("gc_last",  "uFork_eventQueueAndContQueue"); // tail of scanning queue addr
@@ -159,7 +160,8 @@ export const uFork = (asm, opts) => {
     dat("EXIT");
 
     def("gc_mutator_mark"); // ( ?_field quad_addr -- ?_field quad_addr )
-    dat("2DUP");           
+    dat("gc_phase", "@", "DUP", "1=", "SWAP", "2=", "OR", "INVERT", "(BREXIT)");
+    dat("2DUP", "gc_add2scanque", "gc_add2scanque", "EXIT");
 
     def("nonGChaz_qt!", "qt!");
     def("nonGChaz_qx!", "qx!");
@@ -177,6 +179,19 @@ export const uFork = (asm, opts) => {
 
     asm.symbols.redefine("qz!"); // ( z_field quad_addr -- )
     dat("gc_mutator_mark", "nonGChaz_qz!", "EXIT");
+
+    def("uFork_gcOneStep"); // ( -- )
+    dat("gc_phase", "@");   // ( phase )
+    dat("(JMPTBL)", 3);
+    dat("uFork_gc_idle");
+    dat("uFork_gc_mark");
+    dat("uFork_gc_sweep");
+    def("uFork_gc_idle");  // ( phase )
+    dat("DUP", "0=", "(BRZ)", "uFork_gc_idle_l0");
+    // check quad memory pressure by looking at free count and qmem_top
+    // merkill
+    def("uFork_gc_idle_l0"); // ( phase )
+    dat("1+", "gc_phase", "!", "EXIT");
   }
   
   def("uFork_doOneRunLoopTurn"); // ( -- )
