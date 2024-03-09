@@ -137,9 +137,18 @@ export const uFork = (asm, opts) => {
     dat("uFork_quaddrInRam", "(BRZ)", "(DROP)");
     dat("DUP", "gc_first", "=", "(BRZ)", "(DROP)");
     dat("DUP", "gc_last",  "=", "(BRZ)", "(DROP)");
-    dat("DUP"); // ( qra qra )
-    dat("gc_last", "gcMem@", "gcMem!");
-    dat("gc_last", "gcMem!", "EXIT");
+    dat("DUP");     // ( qra qra )
+    dat("gc_last"); // ( qra qra addr )
+    dat("gcMem@");  // ( qra qra last )
+    dat("DUP", "uFork_()", "=", "(BRZ)", "gc_add2scanque_l0");
+    dat("2DROP", "(JMP)", "gc_add2scanque_l1");
+    def("gc_add2scanque_l0");
+    dat("gcMem!");
+    def("gc_add2scanque_l1");
+    dat("DUP", "gc_last", "gcMem!");
+    dat("DUP", "gcMem@", "gc_black", "=", "(BRNZ)", "(DROP)");
+    dat("uFork_()", "SWAP", "gcMem!");
+    dat("EXIT");
 
     def("gc_nextOfScanque");   // ( -- quad_ram_addr | uFork_() )
     dat("gc_first", "gcMem@"); // ( qra )
@@ -148,6 +157,9 @@ export const uFork = (asm, opts) => {
     dat("gc_first", "gcMem!"); // ( qra )
     def("gc_nextOfScanque_l0");
     dat("EXIT");
+
+    def("gc_mutator_mark"); // ( ?_field quad_addr -- ?_field quad_addr )
+    dat("2DUP");           
 
     def("nonGChaz_qt!", "qt!");
     def("nonGChaz_qx!", "qx!");
