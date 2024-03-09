@@ -123,6 +123,13 @@ export const uFork = (asm, opts) => {
     dat("uFork_quaddrInRam", "(BRZ)", "2DROP");
     dat("gcMem_common2", "gcMem!_shadowed", "EXIT");
 
+    def("gcPhase");
+    dat("(VAR)", 0);
+    // 0 - idle
+    // 1 - marking
+    // 2 - sweeping (??stop-the-world?? and resetting gcMem by its way)
+    // 3-0xFFFF
+
     // merkill
 
     def("nonGChaz_qt!", "qt!");
