@@ -15,6 +15,8 @@ export const uFork = (asm, opts) => {
     memoryDescriptor_qaddr =       0x4000,
     uForkSubroutines =              false,
     hwImplOfQuadAllotAndFree =      false,
+    hwImplOfQuadMemory =             true,
+    hwImplOfQuadMemoryGC =          false,
     maxTopOfQuadMemory =           0x5000,
   } = opts;
    
@@ -1273,6 +1275,9 @@ export const uFork = (asm, opts) => {
   } else {
     dat("(JMP)", "uFork_no_such_opcode");
   }
+
+  // this definition must be the last one
+  def("uFork_last_ucode_address");
   
   return asm;
 };
