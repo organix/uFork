@@ -36,6 +36,11 @@ export const uFork = (asm, opts) => {
     dat("WITHIN", "(BRZ)", "uFork_HARD_fault");
     */
     dat("4*", "uFork_quadMem_baseAddr", "+", "EXIT");
+
+    def("qramt"); dat("uFork_quaddr2addr", "EXIT");
+    def("qramx"); dat("uFork_quaddr2addr", "1+", "EXIT");
+    def("qramy"); dat("uFork_quaddr2addr", "2+", "EXIT");
+    def("qramz"); dat("uFork_quaddr2addr", "3+", "EXIT");
     // merkill
   }
   
