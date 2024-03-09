@@ -57,8 +57,18 @@ export const uFork = (asm, opts) => {
     def("qramy@"); dat("qramy", "spram@", "EXIT");
     def("qramz@"); dat("qramz", "spram@", "EXIT");
 
+    def("qramt!"); dat("qramt", "spram!", "EXIT");
+    def("qramx!"); dat("qramx", "spram!", "EXIT");
+    def("qramy!"); dat("qramy", "spram!", "EXIT");
+    def("qramz!"); dat("qramz", "spram!", "EXIT");
+
     asm.symbols.redefine("qt@"); // ( quad_addr -- t_field )
     dat("uFork_quaddrInRam", "(BRZ)", "qromt@", "(JMP)", "qramt@");
+    asm.symbols.redefine("qx@"); // ( quad_addr -- x_field )
+    dat("uFork_quaddrInRam", "(BRZ)", "qromx@", "(JMP)", "qramx@");
+    asm.symbols.redefine("qy@"); // ( quad_addr -- y_field )
+    dat("uFork_quaddrInRam", "(BRZ)", "qromy@", "(JMP)", "qramy@");
+    // merkill
   }
   
   def("uFork_doOneRunLoopTurn"); // ( -- )
