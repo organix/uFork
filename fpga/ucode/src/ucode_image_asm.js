@@ -226,9 +226,7 @@ export const minicore = (asm, opts) => {
   dat("OVER", "OVER", "EXIT");
 
   def("2DROP");
-  dat("DROP");
-  def("(DROP)");
-  dat("DROP", "EXIT");
+  dat("DROP", "DROP", "EXIT");
 
   def("NIP"); // ( a b c -- a c )
   dat("SWAP", "DROP", "EXIT");
@@ -240,6 +238,13 @@ export const minicore = (asm, opts) => {
 
   def("RDROP"); // ( -- ) R:( x ra -- ra )
   dat("R>", "R>", "DROP", ">R", "EXIT");
+
+  if ((!isDefined("+")) && (!isDefined("UM+")) && isDefined("1+")) {
+    def("+"); // ( a b -- sum )
+    dat("0=", "(BRNZ)", "(DROP)");
+    dat("1-", "SWAP", "1+", "SWAP");
+    dat("(JMP)", "+");
+  }
 
   if ((!isDefined("+")) && isDefined("UM+")) {
     def("+"); // ( a b -- sum )
