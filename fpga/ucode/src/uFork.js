@@ -19,8 +19,18 @@ export const uFork = (asm, opts) => {
     hwImplOfQuadMemoryGC =          false,
     maxTopOfQuadMemory =           0x5000,
   } = opts;
-   
+  const quadMemSize_in_quads = maxTopOfQuadMemory - memoryDescriptor_qaddr;
+  
   const { def, dat } = asm;
+
+  let hereBeyondEnd = asm.incr("uFork_last_ucode_address", 0x0000);
+  if (!hwImplOfQuadMemory) {
+    const quadMemSize_in_cells = quadMemSize_in_quads * 4;
+    def("uFork_quadMem_baseAddr");
+    dat("(CONST)", hereBeyondEnd);
+    hereBeyondEnd = asm.incr(hereBeyondEnd, quadMemSize_in_cells);
+    // merkill
+  }
   
   def("uFork_doOneRunLoopTurn"); // ( -- )
   dat("uFork_checkPendingInterrupts"); // ( -- )
