@@ -68,7 +68,8 @@ export const uFork = (asm, opts) => {
     dat("uFork_quaddrInRam", "(BRZ)", "qromx@", "(JMP)", "qramx@");
     asm.symbols.redefine("qy@"); // ( quad_addr -- y_field )
     dat("uFork_quaddrInRam", "(BRZ)", "qromy@", "(JMP)", "qramy@");
-    // merkill
+    asm.symbols.redefine("qz@"); // ( quad_addr -- z_field )
+    dat("uFork_quaddrInRam", "(BRZ)", "qromz@", "(JMP)", "qramz@");
   }
   
   def("uFork_doOneRunLoopTurn"); // ( -- )
