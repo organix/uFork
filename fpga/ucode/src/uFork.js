@@ -181,8 +181,13 @@ export const uFork = (asm, opts) => {
     dat("gc_mutator_mark", "nonGChaz_qz!", "EXIT");
 
     def("gc_check_quad_mem_pressure"); // ( -- bool )
-    dat("uFork_memoryDescriptor", "DUP", "qy@");
-    dat("SWAP", "-", "uFork_maxTopOfQuadMemory", "<"); // ( bool1 )
+    dat("uFork_memoryDescriptor", "DUP", "qy@", "2*");
+    dat("+", "uFork_maxTopOfQuadMemory", ">"); // ( bool1 ) T: more than half on freelist!
+    dat("(BRNZ)", "FALSE");
+    dat("uFork_memoryDescriptor", "qt@", "2*", "uFork_maxTopOfQuadMemory", "<");
+    // T: more than half of avalable quad ram available
+    dat("(BRNZ)", "FALSE");
+    dat("(JMP)", "TRUE");
     // merkill
 
     def("uFork_gcOneStep"); // ( -- )
