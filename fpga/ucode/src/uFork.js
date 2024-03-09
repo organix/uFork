@@ -153,6 +153,18 @@ export const uFork = (asm, opts) => {
     def("nonGChaz_qx!", "qx!");
     def("nonGChaz_qy!", "qy!");
     def("nonGZhaz_qz!", "qz!");
+
+    asm.symbols.redefine("qt!"); // ( t_field quad_addr -- )
+    dat("gc_mutator_mark", "nonGChaz_qt!", "EXIT");
+
+    asm.symbols.redefine("qx!"); // ( x_field quad_addr -- )
+    dat("gc_mutator_mark", "nonGChaz_qx!", "EXIT");
+
+    asm.symbols.redefine("qy!"); // ( y_field quad_addr -- )
+    dat("gc_mutator_mark", "nonGChaz_qy!", "EXIT");
+
+    asm.symbols.redefine("qz!"); // ( z_field quad_addr -- )
+    dat("gc_mutator_mark", "nonGChaz_qz!", "EXIT");
   }
   
   def("uFork_doOneRunLoopTurn"); // ( -- )
