@@ -344,8 +344,10 @@ export const minicore = (asm, opts) => {
 
   def("4<<"); // ( a -- a<<4 )
   dat("2<<");
+  def("4*");
   def("2<<"); // ( a -- a<<2 )
   dat("1<<");
+  def("2*");
   def("1<<"); // ( a -- a<<1 )
   dat("1LBR");
   dat("0xFFFE", "&", "EXIT");
@@ -362,6 +364,13 @@ export const minicore = (asm, opts) => {
   dat("2LBR");
   def("2LBR");
   dat("1LBR", "1LBR", "EXIT");
+
+  def("3+");
+  dat("1+");
+  def("2+");
+  dat("1+");
+  dat("1+");
+  dat("EXIT");
 
   def("1>>"); // ( a -- a>>1 )
   dat("1RBR", "0x7FFF_&", "EXIT");
@@ -380,6 +389,18 @@ export const minicore = (asm, opts) => {
 
   def("<="); // ( a b -- bool )
   dat("2DUP", "<", ">R", "=", "R>", "OR", "EXIT");
+
+  def("WITHIN"); // ( n min max -- )
+  dat(">R");     // ( n min ) R:( max )
+  dat("OVER");   // ( n min n ) R:( max )
+  dat("<=");     // ( n bool1 ) R:( max )
+  dat("R>");     // ( n bool1 max ) R:( )
+  dat("SWAP");   // ( n max bool1 ) R:( )
+  dat(">R");     // ( n max ) R:( bool1 )
+  dat("<=");     // ( bool2 ) R:( bool1 )
+  dat("R>");     // ( bool2 bool1 ) R:( )
+  dat("&");      // ( bool )
+  dat("EXIT");   //
 
   def(">");
   dat("SWAP", "(JMP)", "<");
