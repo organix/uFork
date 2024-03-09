@@ -23,6 +23,13 @@ export const uFork = (asm, opts) => {
   
   const { def, dat } = asm;
 
+  if (!hwImplOfQuadMemory || !hwImplOfQuadMemoryGC) {
+    def("uFork_quaddrInRam"); // ( quad_addr -- quad_addr bool )
+    // var ekki til e-r staðar annað orð sem athugar hvort quad_addr er RAM eða ROM bendill?
+    dat("DUP", "uFork_memoryDescriptor_qaddr", "uFork_maxTopOfQuadMemory", "WITHIN");
+    dat("EXIT");
+  }
+
   let hereBeyondEnd = asm.incr("uFork_last_ucode_address", 0x0000);
   if (!hwImplOfQuadMemory) {
     if (!(asm.isDefined("spram@")) && !(asm.isDefined("spram!"))) {
@@ -31,11 +38,6 @@ export const uFork = (asm, opts) => {
       dat("(CONST)", hereBeyondEnd);
       hereBeyondEnd = asm.incr(hereBeyondEnd, quadMemSize_in_cells);
     }
-
-    def("uFork_quaddrInRam"); // ( quad_addr -- quad_addr bool )
-    // var ekki til e-r staðar annað orð sem athugar hvort quad_addr er RAM eða ROM bendill?
-    dat("DUP", "uFork_memoryDescriptor_qaddr", "uFork_maxTopOfQuadMemory", "WITHIN");
-    dat("EXIT");
 
     def("uFork_quaddr2addr"); // ( quad_addr -- cell_addr )
     if (!(asm.isDefined("spram@")) && !(asm.isDefined("spram!"))) {
@@ -90,18 +92,17 @@ export const uFork = (asm, opts) => {
     dat("uFork_quaddrInRam", "(BRZ)", "2DROP", "(JMP)", "qramz!");
   }
   if (!hwImplOfQuadMemoryGC) {
-    // spurning: þarf privateGCmem að vera e-ð meira en live-obj bitvector?
-    // hugmyndin er sú að þegar gc er í mark fasa þá er ítrað yfir bitana í þeim
-    // bitvector og ef biti[n] er 1 þá er samsvarandi quad[n] skoðaður
-    //  þeas hvert field þess quad er skoðað og ef það inniheldur bendil á quad[m]
-    //  þá er biti[m] settur sem 1
-    //    sé biti[m] áður 0 þá setja gc_dirty_flag sem 1
-    //  hljómar of flókið
-    def("uFork_privateGCmem_baseAddr");
-    dat("(CONST)", hereBeyondEnd);
-    // hereBeyondEnd = asm.incr(hereBeyondEnd, Math.ceil(quadMemSize_in_quads / 16)); // bitvector version
-    hereBeyondEnd = asm.incr(hereBeyondEnd, quadMemSize_in_quads); // per uFork/docs/gc.md
+    if (!(asm.isDefined("gcMem@")) && !(asm.isDefined("gcMem!"))) {
+      def("uFork_privateGCmem_baseAddr");
+      dat("(CONST)", hereBeyondEnd);
+      hereBeyondEnd = asm.incr(hereBeyondEnd, quadMemSize_in_quads); // per uFork/docs/gc.md
 
+      def("gcMem_common"); // ( quad_ram_offset -- addr )
+      dat("uFork_privateGCmem_baseAddr", "+", "EXIT");
+
+      def("gcMem@"); dat("gcMem_common", "@", "EXIT");
+      def("gcMem!"); dat("gcMem_common", "!", "EXIT");
+    }
 
     def("nonGChaz_qt!", "qt!");
     def("nonGChaz_qx!", "qx!");
