@@ -104,6 +104,27 @@ export const uFork = (asm, opts) => {
       def("gcMem!"); dat("gcMem_common", "!", "EXIT");
     }
 
+    def("gcMem@_shadowed", "gcMem@");
+    def("gcMem!_shadowed", "gcMem!");
+
+    def("gcMem_common2"); // ( quad_addr -- quad_ram_offset )
+    dat("uFork_memoryDescriptor_qaddr", "-", "EXIT");
+
+    def("gc_white", "uFork_#?");
+    def("gc_black", "uFork_#unit");
+
+    asm.symbols.redefine("gcMem@"); // ( quad_ram_addr -- value )
+    dat("uFork_quaddrInRam", "(BRZ)", "gcMem@_l0");
+    dat("gcMem_common2", "gcMem@_shadowed", "EXIT");
+    def("gcMem@_l0");
+    dat("DROP", "gc_black", "EXIT");
+
+    asm.symbols.redefine("gcMem!"); // ( value quad_ram_addr -- )
+    dat("uFork_quaddrInRam", "(BRZ)", "2DROP");
+    dat("gcMem_common2", "gcMem!_shadowed", "EXIT");
+
+    // merkill
+
     def("nonGChaz_qt!", "qt!");
     def("nonGChaz_qx!", "qx!");
     def("nonGChaz_qy!", "qy!");
@@ -127,7 +148,7 @@ export const uFork = (asm, opts) => {
   def("uFork_eventQueueAndContQueue");
   dat("(CONST)", eventQueueAndContQueue_qaddr);
 
-  def("uFork_#?", "ZERO");
+  def("uFork_#?", "ZERO"); // aka UNDEF
 
   def("uFork_()");
   def("uFork_nil");
