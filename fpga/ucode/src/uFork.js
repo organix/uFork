@@ -40,13 +40,14 @@ export const uFork = (asm, opts) => {
   const uForkSubroutines = (opts.uForkSubroutines == undefined) ? false : opts.uForkSubroutines ;
   const hwImplOfQuadAllotAndFree = (opts.hwImplOfQuadAllotAndFree == undefined) ? false : opts.hwImplOfQuadAllotAndFree ;
   const maxTopOfQuadMemory = (opts.maxTopOfQuadMemory == undefined) ? 0x5000 : opts.maxTopOfQuadMemory ;
-
+   
   const { def, dat } = asm;
   
-  def("uFork_doOneRunLoopTurn"); // ( -- ) 
-  dat("uFork_dispatchOneEvent");
-  dat("uFork_doOneInstrOfContinuation");
-  dat("uFork_gcOneStep");
+  def("uFork_doOneRunLoopTurn"); // ( -- )
+  dat("uFork_checkPendingInterrupts"); // ( -- )
+  dat("uFork_dispatchOneEvent"); // ( -- )
+  dat("uFork_doOneInstrOfContinuation"); // ( -- )
+  dat("uFork_gcOneStep"); // ( -- )
   dat("EXIT");
 
   def("uFork_memoryDescriptor");
