@@ -29,6 +29,13 @@ export const uFork = (asm, opts) => {
     def("uFork_quadMem_baseAddr");
     dat("(CONST)", hereBeyondEnd);
     hereBeyondEnd = asm.incr(hereBeyondEnd, quadMemSize_in_cells);
+
+    def("uFork_quaddr2addr"); // ( quad_addr -- cell_addr )
+    /*
+    dat("DUP", "uFork_memoryDescriptor_qaddr", "uFork_maxTopOfQuadMemory");
+    dat("WITHIN", "(BRZ)", "uFork_HARD_fault");
+    */
+    dat("4*", "uFork_quadMem_baseAddr", "+", "EXIT");
     // merkill
   }
   
