@@ -103,7 +103,7 @@ export const makeAssembler = (opts) => {
         if (val == null) {
           val = 0;
         } else if (val instanceof Promise) {
-          const captured_addrsss = curr_addr;
+          const captured_address = curr_addr;
           val.then((result) => {
             image.set(captured_address, result);
           });
