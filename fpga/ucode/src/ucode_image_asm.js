@@ -93,10 +93,12 @@ export const defineInstructionset = (asm) => {
 };
 
 export const minicore = (asm, opts) => {
-  const { def, dat } = asm;
+  const { def, dat, isDefined } = asm;
 
-  def("(JMP)"); // JuMP
-  dat("R>");
+  if (!isDefined("(JMP)") {
+    def("(JMP)"); // JuMP
+    dat("R>");
+  }
   def("@EXECUTE");
   dat("@");
   def("EXECUTE");
@@ -165,14 +167,18 @@ export const minicore = (asm, opts) => {
   def("(XOR)");
   dat("XOR", "EXIT");
 
-  def("OR");   // ( a b -- a|b )
-  dat("INVERT", "SWAP", "INVERT");
+  if (!isDefined("OR")) {
+    def("OR");   // ( a b -- a|b )
+    dat("INVERT", "SWAP", "INVERT");
+  }
   def("NAND"); // ( a b -- not(a & b)
   dat("&", "INVERT", "EXIT");
 
   def("(BRNZ)"); // BRanch if Not Zero ( bool -- )
   dat("CLEAN_BOOL", "INVERT");
-  def("(BRZ)"); // BRanch if Zero ( bool -- )
+  if (!isDefined("(BRZ)")) {
+    def("(BRZ)"); // BRanch if Zero ( bool -- )
+  }
   dat("R>", "SWAP", ">R"); // ( raddr ) R:( bool )
   dat("DUP", "@", "SWAP"); // ( dest raddr ) R:( bool )
   dat("1+", "R>", "?:");   // ( raddr ) R:( )
@@ -187,12 +193,14 @@ export const minicore = (asm, opts) => {
   dat("1+", "OVER", "+", "@", ">R", "EXIT");
   def("(JMPTBL)_l0"); // ( idx raddr )
   dat("DUP", "@", "+", "1+", ">R", "EXIT");
-
-  def("(NEXT)"); // ( ) R:( count raddr -- )
-  dat("R>", "R>", "DUP", "(BRZ)", "(NEXT)_l0"); // ( raddr count )
-  dat("1-", ">R", "@", ">R", "EXIT");
-  def("(NEXT)_l0");
-  dat("DROP", "1+", ">R", "EXIT");
+  
+  if (!isDefined("(NEXT)")) {
+    def("(NEXT)"); // ( ) R:( count raddr -- )
+    dat("R>", "R>", "DUP", "(BRZ)", "(NEXT)_l0"); // ( raddr count )
+    dat("1-", ">R", "@", ">R", "EXIT");
+    def("(NEXT)_l0");
+    dat("DROP", "1+", ">R", "EXIT");
+  }
 
   def("(BREXIT)"); // ( bool -- ) exit caller early if bool is true
   dat("(BRZ)", "(BREXIT)_l0"); // ( )
@@ -200,9 +208,10 @@ export const minicore = (asm, opts) => {
   def("(BREXIT)_l0");
   dat("EXIT");
   
-
-  def("(LIT)"); // literal ( -- item )
-  dat("R>", "DUP", "1+", ">R", "@", "EXIT");
+  if (!isDefined("(LIT)") {
+    def("(LIT)"); // literal ( -- item )
+    dat("R>", "DUP", "1+", ">R", "@", "EXIT");
+  }
 
   def("OVER"); // ( a b -- a b a )
   dat(">R", "DUP", "R>", "SWAP", "EXIT");
@@ -217,56 +226,64 @@ export const minicore = (asm, opts) => {
   dat("OVER", "OVER", "EXIT");
 
   def("2DROP");
-  dat("DROP", "DROP", "EXIT");
+  dat("DROP");
+  def("(DROP)");
+  dat("DROP", "EXIT");
 
   def("NIP"); // ( a b c -- a c )
   dat("SWAP", "DROP", "EXIT");
 
-  def("R@"); // ( -- a ) R:( a ra -- a )
-  dat("R>", "R>", "DUP", ">R", "SWAP", ">R", "EXIT");
+  if (!isDefined("R@")) {
+    def("R@"); // ( -- a ) R:( a ra -- a )
+    dat("R>", "R>", "DUP", ">R", "SWAP", ">R", "EXIT");
+  }
 
   def("RDROP"); // ( -- ) R:( x ra -- ra )
   dat("R>", "R>", "DROP", ">R", "EXIT");
 
-  /*
-  def("+"); // ( a b -- sum )
-  dat("UM+");
-  def("(DROP)");
-  dat("DROP", "EXIT");
-  */
-
-  def("UM+");      // ( a b -- sum carry )
-  dat("2DUP");     // ( a b a b )
-  dat("0x7FFF_&"); // ( a b a b_masked )
-  dat("SWAP");     // ( a b b_masked a )
-  dat("0x7FFF_&"); // ( a b b_masked a_masked )
-  dat("+");        // ( a b sum1 )
-  dat("DUP");      // ( a b sum1 sum1 )
-  dat("0x7FFF_&"); // ( a b sum1 sum1_masked )
-  dat(">R");       // ( a b sum1 ) R:( sum1_masked )
-  dat("15>>");     // ( a b sum1Carry ) R:( sum1_masked )
-  dat("SWAP");     // ( a sum1Carry b ) R:( sum1_masked )
-  dat("15>>");     // ( a sum1Carry b[15] ) R:( sum1_masked )
-  dat("+");        // ( a sum2 ) R:( sum1_masked )
-  dat("SWAP");     // ( sum2 a ) R:( sum1_masked )
-  dat("15>>");     // ( sum2 a[15] ) R:( sum1_masked )
-  dat("+");        // ( sum3 ) R:( sum1_masked )
-  dat("DUP");      // ( sum3 sum3 ) R:( sum1_masked )
-  dat("15<<");     // ( sum3 sum3[15]<<15 ) R:( sum1_masked )
-  dat("R>");       // ( sum3 sum3[15]<<15 sum1_masked ) R:( )
-  dat("OR");       // ( sum3 final_sum )
-  dat("SWAP");     // ( final_sum sum3 )
-  dat("1>>");      // ( final_sum c )
-  dat("EXIT");
+  if ((!isDefined("+")) && isDefined("UM+")) {
+    def("+"); // ( a b -- sum )
+    dat("UM+","DROP", "EXIT");
+  }
+  
+  if ((!isDefined("UM+")) && isDefined("+")) {
+    def("UM+");      // ( a b -- sum carry )
+    dat("2DUP");     // ( a b a b )
+    dat("0x7FFF_&"); // ( a b a b_masked )
+    dat("SWAP");     // ( a b b_masked a )
+    dat("0x7FFF_&"); // ( a b b_masked a_masked )
+    dat("+");        // ( a b sum1 )
+    dat("DUP");      // ( a b sum1 sum1 )
+    dat("0x7FFF_&"); // ( a b sum1 sum1_masked )
+    dat(">R");       // ( a b sum1 ) R:( sum1_masked )
+    dat("15>>");     // ( a b sum1Carry ) R:( sum1_masked )
+    dat("SWAP");     // ( a sum1Carry b ) R:( sum1_masked )
+    dat("15>>");     // ( a sum1Carry b[15] ) R:( sum1_masked )
+    dat("+");        // ( a sum2 ) R:( sum1_masked )
+    dat("SWAP");     // ( sum2 a ) R:( sum1_masked )
+    dat("15>>");     // ( sum2 a[15] ) R:( sum1_masked )
+    dat("+");        // ( sum3 ) R:( sum1_masked )
+    dat("DUP");      // ( sum3 sum3 ) R:( sum1_masked )
+    dat("15<<");     // ( sum3 sum3[15]<<15 ) R:( sum1_masked )
+    dat("R>");       // ( sum3 sum3[15]<<15 sum1_masked ) R:( )
+    dat("OR");       // ( sum3 final_sum )
+    dat("SWAP");     // ( final_sum sum3 )
+    dat("1>>");      // ( final_sum c )
+    dat("EXIT");
+  }
 
   def("NEGATE");
   dat("INVERT", "1+", "EXIT");
 
-  def("1-");
-  dat("NEGATE", "1+", "NEGATE", "EXIT");
+  if (!isDefined("1-")) {
+    def("1-");
+    dat("NEGATE", "1+", "NEGATE", "EXIT");
+  }
 
-  def("-"); // ( a b -- a-b )
-  dat("NEGATE", "+", "EXIT");
+  if (!isDefined("-")) {
+    def("-"); // ( a b -- a-b )
+    dat("NEGATE", "+", "EXIT");
+  }
 
   def("<<"); // ( u n -- u<<n )  doing the lazy way for now
   dat("0x0F_&");
@@ -309,14 +326,16 @@ export const minicore = (asm, opts) => {
   def("RBR_l1");
   dat("(NEXT)", "RBR_l0", "EXIT");
 
-  def("*"); // ( n m -- n*m )  using the lazy way here, need to find the old eForth impl
-  dat(">R", "ZERO");
-  dat("(JMP)", "*_l1");
-  def("*_l0");
-  dat("OVER", "+");
-  def("*_l1");
-  dat("(NEXT)", "*_l0");
-  dat("NIP", "EXIT");
+  if (!isDefined("*")) {
+    def("*"); // ( n m -- n*m )  using the lazy way here, need to find the old eForth impl
+    dat(">R", "ZERO");
+    dat("(JMP)", "*_l1");
+    def("*_l0");
+    dat("OVER", "+");
+    def("*_l1");
+    dat("(NEXT)", "*_l0");
+    dat("NIP", "EXIT");
+  }
 
   def("4<<"); // ( a -- a<<4 )
   dat("2<<");
