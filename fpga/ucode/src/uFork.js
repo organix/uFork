@@ -30,11 +30,12 @@ export const uFork = (asm, opts) => {
     dat("(CONST)", hereBeyondEnd);
     hereBeyondEnd = asm.incr(hereBeyondEnd, quadMemSize_in_cells);
 
+    def("uFork_quaddrInRam"); // ( quad_addr -- quad_addr bool )
+    // var ekki til e-r staðar annað orð sem athugar hvort quad_addr er RAM eða ROM bendill?
+    dat("DUP", "uFork_memoryDescriptor_qaddr", "uFork_maxTopOfQuadMemory", "WITHIN");
+    dat("EXIT");
+
     def("uFork_quaddr2addr"); // ( quad_addr -- cell_addr )
-    /*
-    dat("DUP", "uFork_memoryDescriptor_qaddr", "uFork_maxTopOfQuadMemory");
-    dat("WITHIN", "(BRZ)", "uFork_HARD_fault");
-    */
     if (!(asm.isDefined("spram@")) && !(asm.isDefined("spram!"))) {
       dat("4*", "uFork_quadMem_baseAddr", "+", "EXIT");
 
@@ -49,8 +50,13 @@ export const uFork = (asm, opts) => {
     def("qramy"); dat("uFork_quaddr2addr", "2+", "EXIT");
     def("qramz"); dat("uFork_quaddr2addr", "3+", "EXIT");
 
+    def("qramt@"); dat("qramt", "spram@", "EXIT");
+    def("qramx@"); dat("qramx", "spram@", "EXIT");
+    def("qramy@"); dat("qramy", "spram@", "EXIT");
+    def("qramz@"); dat("qramz", "spram@", "EXIT");
+
     asm.symbols.redefine("qt@"); // ( quad_addr -- t_field )
-    // merkill
+    dat("uFork_quaddrInRam", "(BRZ)", "qromt@", "(JMP)", "qramt@");
   }
   
   def("uFork_doOneRunLoopTurn"); // ( -- )
