@@ -180,6 +180,11 @@ export const uFork = (asm, opts) => {
     asm.symbols.redefine("qz!"); // ( z_field quad_addr -- )
     dat("gc_mutator_mark", "nonGChaz_qz!", "EXIT");
 
+    def("gc_check_quad_mem_pressure"); // ( -- bool )
+    dat("uFork_memoryDescriptor", "DUP", "qy@");
+    dat("SWAP", "-", "uFork_maxTopOfQuadMemory", "<"); // ( bool1 )
+    // merkill
+
     def("uFork_gcOneStep"); // ( -- )
     dat("gc_phase", "@");   // ( phase )
     dat("(JMPTBL)", 3);
@@ -189,7 +194,10 @@ export const uFork = (asm, opts) => {
     def("uFork_gc_idle");  // ( phase )
     dat("DUP", "0=", "(BRZ)", "uFork_gc_idle_l0");
     // check quad memory pressure by looking at free count and qmem_top
-    // merkill
+    dat("gc_check_quad_mem_pressure", "(BRZ)", "uFork_gc_idle_l1");
+    
+    def("uFork_gc_idle_l1"); // ( 0 )
+    dat("DROP", "0x0F");     // ( 15 )
     def("uFork_gc_idle_l0"); // ( phase )
     dat("1+", "gc_phase", "!", "EXIT");
   }
