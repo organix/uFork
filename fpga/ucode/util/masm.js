@@ -75,7 +75,16 @@ export const makeAssembler = (opts) => {
         }
       },
       isDefined: (sym) => {
-        return syms.has(sym);
+        const t1 = syms.has(sym);
+        if (t1) {
+          return ((typeof syms.get(sym)) == "number");
+        } else {
+          return false;
+        }
+      },
+      redefine: (sym, val = undefined) => {
+        syms.delete(sym);
+        return asm.symbols.define(sym, val);
       },
     }
   asm.allot = (amount = 1) => {
