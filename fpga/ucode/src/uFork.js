@@ -141,7 +141,13 @@ export const uFork = (asm, opts) => {
     dat("gc_last", "gcMem@", "gcMem!");
     dat("gc_last", "gcMem!", "EXIT");
 
-    // merkill
+    def("gc_nextOfScanque");   // ( -- quad_ram_addr | uFork_() )
+    dat("gc_first", "gcMem@"); // ( qra )
+    dat("DUP", "uFork_()", "=", "(BRNZ)", "gc_nextOfScanque_l0");
+    dat("DUP", "gcMem@");      // ( qra next )
+    dat("gc_first", "gcMem!"); // ( qra )
+    def("gc_nextOfScanque_l0");
+    dat("EXIT");
 
     def("nonGChaz_qt!", "qt!");
     def("nonGChaz_qx!", "qx!");
