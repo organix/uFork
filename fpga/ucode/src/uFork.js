@@ -10,16 +10,24 @@
 
 /* tbd: 
    quad encoded chunked overlay protocol:
-     instead of #instr_t in t field of first quad we have an capability
-     that cap is usually closely held
+     instead of #instr_t in t field of first quad we have an closely held
+     type quad we call here #ucode_load_t
          
-     1st [<cap>, 
+     1st [#ucode_load_t, 
           ucode_program_memory_address_fixnum,
           chunk_size_fixnum,
           next]
       nth [payload1_fixnum, payload2_fixnum, payload3_fixnum, next]
 
+      next eather points to next payload quad or next instruction
+
       if chunk_size is zero then call the ucode_program_memory_address
+
+   tbd: priviledged ucode backdoor call
+     instead of #instr_t in t field of first quad we have an closely held
+     type quad we call here #ucode_backdoor_call_t
+
+     [#ucode_backdoor_call_t, ucode_addr_fixnum, #?, next_instr]
 
  */
 
