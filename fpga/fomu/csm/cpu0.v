@@ -1,6 +1,6 @@
 /*
 
-uCode Central Processing Unit (CPU)
+uCode Central Processing Unit (CPU) v0.0
 
     +-------------------+
     | cpu               |
@@ -20,12 +20,10 @@ the value of `o_status` indicates success (1) or failure (0).
 
 `default_nettype none
 
-`include "../lib/bram.v"
-//`include "../lib/spram.v"
 `include "../lib/lifo.v"
 `include "lifo.v"
-`include "alu.v"
-//`include "alu_nr.v"
+//`include "alu.v"
+`include "alu_nr.v"
 `include "../lib/serial_tx.v"
 `include "../lib/serial_rx.v"
 
@@ -82,7 +80,7 @@ module cpu #(
     localparam UC_OVER      = 16'h002A;                 // ( a b -- a b a )
 //    localparam UC_ROT       = 16'h002B;                 // ( a b c -- b c a )
 //    localparam UC_R_SWAP    = 16'h002C;                 // ( -- ) R:( a b -- b a )
-//    localparam UC_R_FETCH   = 16'h002D;                 // R@ ( -- a ) R:( a -- a )
+//    localparam UC_R_PEEK    = 16'h002D;                 // R@ ( -- a ) R:( a -- a )
 
     localparam UC_RX_OK     = 16'h003C;                 // rx? ( -- ready )
     localparam UC_GET_RX    = 16'h003D;                 // rx@ ( -- char )
@@ -100,19 +98,6 @@ module cpu #(
     reg [DATA_SZ-1:0] uc_wdata;                         // data to write
     reg [ADDR_SZ-1:0] uc_raddr = 0;                     // read address
     reg [DATA_SZ-1:0] uc_rdata;                         // last data read
-    /*
-    bram BRAM (
-        .i_clk(i_clk),
-
-        .i_wr_en(uc_wr),
-        .i_waddr(uc_waddr),
-        .i_wdata(uc_wdata),
-
-        .i_rd_en(!uc_wr),
-        .i_raddr(uc_raddr),
-        .o_rdata(uc_rdata)
-    );
-    */
     reg [DATA_SZ-1:0] ucode [0:MEM_MAX-1];              // inferred block ram
     always @(posedge i_clk) begin
         if (uc_wr) begin                                // write conditionally
@@ -279,7 +264,6 @@ module cpu #(
 
     reg [ADDR_SZ-1:0] pc = 0;
     reg [DATA_SZ-1:0] opcode = UC_NOP;
-    wire d_zero = (d0 == 0);                            // zero check for TOS
 
     reg halt = 1'b0;
     /*
