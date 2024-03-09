@@ -125,10 +125,21 @@ export const uFork = (asm, opts) => {
 
     def("gcPhase");
     dat("(VAR)", 0);
-    // 0 - idle
+    // 0 - idle, check quad memory pressure
     // 1 - marking
     // 2 - sweeping (??stop-the-world?? and resetting gcMem by its way)
-    // 3-0xFFFF
+    // 3-0xFFFF = idle
+    
+    def("gc_first", "uFork_memoryDescriptor_qaddr"); // head of scanning queue addr
+    def("gc_last",  "uFork_eventQueueAndContQueue"); // tail of scanning queue addr
+
+    def("gc_add2scanque"); // ( quad_ram_addr -- )
+    dat("uFork_quaddrInRam", "(BRZ)", "(DROP)");
+    dat("DUP", "gc_first", "=", "(BRZ)", "(DROP)");
+    dat("DUP", "gc_last",  "=", "(BRZ)", "(DROP)");
+    dat("DUP"); // ( qra qra )
+    dat("gc_last", "gcMem@", "gcMem!");
+    dat("gc_last", "gcMem!", "EXIT");
 
     // merkill
 
