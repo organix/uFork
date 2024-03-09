@@ -27,6 +27,10 @@ export const uFork = (asm, opts) => {
   dat("uFork_gcOneStep"); // ( -- )
   dat("EXIT");
 
+  def("uFork_checkPendingInterrupts");
+  // nothing here yet
+  dat("EXIT");
+
   def("uFork_memoryDescriptor");
   dat("(CONST", memoryDescriptor_qaddr);
 
