@@ -105,7 +105,10 @@ export const makeAssembler = (opts) => {
         } else if (val instanceof Promise) {
           const captured_address = curr_addr;
           val.then((result) => {
-            image.set(captured_address, result);
+            const old_addr = curr_addr;
+            asm.origin(captured_address);
+            datum(result);
+            asm.origin(old_addr);
           });
         } else if (val instanceof Array) {
           Array.prototype.forEach.call(val, datum);
