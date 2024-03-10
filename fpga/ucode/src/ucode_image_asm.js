@@ -234,6 +234,9 @@ export const minicore = (asm, opts) => {
   def("NIP"); // ( a b c -- a c )
   dat("SWAP", "DROP", "EXIT");
 
+  def("TUCK"); // ( a b -- b a b )
+  dat("SWAP", "OVER", "EXIT");
+
   if (!isDefined("R@")) {
     def("R@"); // ( -- a ) R:( a ra -- a )
     dat("R>", "R>", "DUP", ">R", "SWAP", ">R", "EXIT");
