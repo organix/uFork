@@ -125,12 +125,13 @@ export const uFork = (asm, opts) => {
 
     def("uFork_gc_phase");
     dat("(VAR)", 0);
-    // 0 - idle, check quad memory pressure
+    // 0 - marking setup
     // 1 - marking
     // 2 - sweep setup
     // 3 - sweeping ( and resetting gcMem by its way)
     // 0b0000_0000_0000_01xx  stop-the-world until done
-    // 0xF-0xFFFF = counting up to idle
+    // 0xF-0xFFFE = counting up to idle
+    // 0xFFFF - idle, check quad memory pressure
 
     def("uFork_gc_sweep_ptr");
     dat("(VAR)", 0);
@@ -192,7 +193,7 @@ export const uFork = (asm, opts) => {
     dat(       "qz@", "uFork_gc_add2scanque");
     dat("EXIT");
     
-    def("uFork_gc_mark_setup"); // ( -- )
+    def("uFork_gc_mark_setup"); // ( phase -- )
     dat("uFork_gc_first", "uFork_gc_scan_quad");
     dat("uFork_gc_last",  "uFork_gc_scan_quad");
     dat("uFork_gc_last", "2+", "0x0F", "1-", ">R");
@@ -201,7 +202,7 @@ export const uFork = (asm, opts) => {
     dat("(NEXT)", "uFork_gc_mark_setup_l0");
     dat("DROP");
     dat("uFork_gc_last", "2+", "uFork_gc_first", "gcMem!");
-    dat("EXIT");
+    dat("(JMP)", "uFork_gc_idle_l0");
 
     def("uFork_gc_mark"); // ( phase -- )
     dat("uFork_gc_nextOfScanque", "DUP", "uFork_()", "(BRZ)", "uFork_gc_mark_l0");
@@ -242,7 +243,7 @@ export const uFork = (asm, opts) => {
     def("uFork_gcOneStep"); // ( -- )
     dat("uFork_gc_phase", "@");   // ( phase )
     dat("(JMPTBL)", 8);
-    dat("uFork_gc_idle");        // 0
+    dat("uFork_gc_mark_setup");  // 0
     dat("uFork_gc_mark");        // 1
     dat("uFork_gc_sweep_setup"); // 2
     dat("uFork_gc_sweep");       // 3
@@ -251,13 +252,16 @@ export const uFork = (asm, opts) => {
     dat("uFork_gc_sweep_setup"); // 6
     dat("uFork_gc_sweep");       // 7
     def("uFork_gc_idle");        // ( phase -- )
-    dat("DUP", "0=", "(BRZ)", "uFork_gc_idle_l0");
+    dat("DUP", "0xFFFF", "=", "(BRZ)", "uFork_gc_idle_l0");
     dat("uFork_gc_check_quad_mem_pressure", "(BRZ)", "uFork_gc_idle_l1");
-    dat("uFork_gc_mark_setup", "(JMP)", "uFork_gc_idle_l0");
+    dat("(JMP)", "uFork_gc_mark_setup");
     def("uFork_gc_idle_l1");     // ( 0 )
     dat("DROP", "0x0F");         // ( 15 )
     def("uFork_gc_idle_l0");     // ( phase )
-    dat("1+", "uFork_gc_phase", "!", "EXIT");
+    dat("DUP", "1+", "uFork_gc_phase", "!");
+    dat("4&", "(BRNZ)", "uFork_gcOneStep"); // stop-the-world condition
+    dat("EXIT");
+
   }
   
   def("uFork_doOneRunLoopTurn"); // ( -- )
