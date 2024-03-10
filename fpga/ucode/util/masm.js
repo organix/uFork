@@ -125,6 +125,9 @@ export const makeAssembler = (opts) => {
             }
           }
           return;
+        } else if (val instanceof Function) {
+          datum(val(asm));
+          return;
         }
         break;
     }
