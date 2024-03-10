@@ -1463,6 +1463,14 @@ export const uFork = (asm, opts) => {
   // todo: insert here error signalling to sponsor
   dat("EXIT");
 
+  def("uFork_instr_my_self"); // ( kont subopcode )
+  dat("DROP");                // ( kont )
+  dat("DUP");                 // ( kont kont )
+  dat("qy@");                 // ( kont ep )
+  dat("qx@");                 // ( kont actor )
+  dat("(JMP)", "uFork__push_then_instrTail");
+
+
   // todo: sponsor <peek> instruction
   //       þar sem <peek> er capability og ekki fixnum
   
