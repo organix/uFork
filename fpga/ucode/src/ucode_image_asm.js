@@ -179,13 +179,18 @@ export const minicore = (asm, opts) => {
 
   def("(BRNZ)"); // BRanch if Not Zero ( bool -- )
   dat("CLEAN_BOOL", "INVERT");
-  if (!isDefined("(BRZ)")) {
-    def("(BRZ)"); // BRanch if Zero ( bool -- )
-  }
+  // deliberate fall through
+  def("(BRZ)"); // BRanch if Zero ( bool -- )
   dat("R>", "SWAP", ">R"); // ( raddr ) R:( bool )
   dat("DUP", "@", "SWAP"); // ( dest raddr ) R:( bool )
   dat("1+", "R>", "?:");   // ( raddr ) R:( )
   dat(">R", "EXIT");
+
+  def("(BREQ)"); // ( a b -- )
+  dat("=", "(JMP)", "(BRNZ)");
+
+  def("(BRNE)"); // ( a b -- )
+  dat("=", "(JMP)", "(BRZ)");
 
   def("(JMPTBL)"); // ( idx -- idx ) note: default case is after the table
   dat("R>");       // ( idx raddr )
