@@ -110,20 +110,20 @@ export const uFork = (asm, opts) => {
     def("gcMem_common2"); // ( quad_addr -- quad_ram_offset )
     dat("uFork_memoryDescriptor_qaddr", "-", "EXIT");
 
-    def("gc_white", "uFork_#?");
-    def("gc_black", "uFork_#unit");
+    def("uFork_gc_white", "uFork_#?");
+    def("uFork_gc_black", "uFork_#unit");
 
     asm.symbols.redefine("gcMem@"); // ( quad_ram_addr -- value )
     dat("uFork_quaddrInRam", "(BRZ)", "gcMem@_l0");
     dat("gcMem_common2", "gcMem@_shadowed", "EXIT");
     def("gcMem@_l0");
-    dat("DROP", "gc_black", "EXIT");
+    dat("DROP", "uFork_gc_black", "EXIT");
 
     asm.symbols.redefine("gcMem!"); // ( value quad_ram_addr -- )
     dat("uFork_quaddrInRam", "(BRZ)", "2DROP");
     dat("gcMem_common2", "gcMem!_shadowed", "EXIT");
 
-    def("gc_phase");
+    def("uFork_gc_phase");
     dat("(VAR)", 0);
     // 0 - idle, check quad memory pressure
     // 1 - marking
@@ -132,37 +132,37 @@ export const uFork = (asm, opts) => {
     // 8-0xFFFF = counting up to idle
 
     
-    def("gc_first", "uFork_memoryDescriptor_qaddr"); // head of scanning queue addr
-    def("gc_last",  "uFork_eventQueueAndContQueue"); // tail of scanning queue addr
+    def("uFork_gc_first", "uFork_memoryDescriptor_qaddr"); // head of scanning queue addr
+    def("uForkygc_last",  "uFork_eventQueueAndContQueue"); // tail of scanning queue addr
 
-    def("gc_add2scanque"); // ( quad_ram_addr -- )
+    def("uFork_gc_add2scanque"); // ( quad_ram_addr -- )
     dat("uFork_quaddrInRam", "(BRZ)", "(DROP)");
-    dat("DUP", "gc_first", "=", "(BRZ)", "(DROP)");
-    dat("DUP", "gc_last",  "=", "(BRZ)", "(DROP)");
+    dat("DUP", "uFork_gc_first", "=", "(BRZ)", "(DROP)");
+    dat("DUP", "uFork_gc_last",  "=", "(BRZ)", "(DROP)");
     dat("DUP");     // ( qra qra )
-    dat("gc_last"); // ( qra qra addr )
+    dat("uFork_gc_last"); // ( qra qra addr )
     dat("gcMem@");  // ( qra qra last )
-    dat("DUP", "uFork_()", "=", "(BRZ)", "gc_add2scanque_l0");
-    dat("2DROP", "(JMP)", "gc_add2scanque_l1");
-    def("gc_add2scanque_l0");
+    dat("DUP", "uFork_()", "=", "(BRZ)", "uFork_gc_add2scanque_l0");
+    dat("2DROP", "(JMP)", "uFork_gc_add2scanque_l1");
+    def("uFork_gc_add2scanque_l0");
     dat("gcMem!");
-    def("gc_add2scanque_l1");
-    dat("DUP", "gc_last", "gcMem!");
-    dat("DUP", "gcMem@", "gc_black", "=", "(BRNZ)", "(DROP)");
+    def("uFork_gc_add2scanque_l1");
+    dat("DUP", "uFork_gc_last", "gcMem!");
+    dat("DUP", "gcMem@", "uFork_gc_black", "=", "(BRNZ)", "(DROP)");
     dat("uFork_()", "SWAP", "gcMem!");
     dat("EXIT");
 
-    def("gc_nextOfScanque");   // ( -- quad_ram_addr | uFork_() )
-    dat("gc_first", "gcMem@"); // ( qra )
-    dat("DUP", "uFork_()", "=", "(BRNZ)", "gc_nextOfScanque_l0");
+    def("uFork_gc_nextOfScanque");   // ( -- quad_ram_addr | uFork_() )
+    dat("uFork_gc_first", "gcMem@"); // ( qra )
+    dat("DUP", "uFork_()", "=", "(BRNZ)", "uFork_gc_nextOfScanque_l0");
     dat("DUP", "gcMem@");      // ( qra next )
-    dat("gc_first", "gcMem!"); // ( qra )
-    def("gc_nextOfScanque_l0");
+    dat("uFork_gc_first", "gcMem!"); // ( qra )
+    def("uFork_gc_nextOfScanque_l0");
     dat("EXIT");
 
-    def("gc_mutator_mark"); // ( ?_field quad_addr -- ?_field quad_addr )
-    dat("gc_phase", "@", "DUP", "1=", "SWAP", "2=", "OR", "INVERT", "(BREXIT)");
-    dat("2DUP", "gc_add2scanque", "gc_add2scanque", "EXIT");
+    def("uFork_gc_mutator_mark"); // ( ?_field quad_addr -- ?_field quad_addr )
+    dat("uFork_gc_phase", "@", "DUP", "1=", "SWAP", "2=", "OR", "INVERT", "(BREXIT)");
+    dat("2DUP", "uFork_gc_add2scanque", "uFork_gc_add2scanque", "EXIT");
 
     def("nonGChaz_qt!", "qt!");
     def("nonGChaz_qx!", "qx!");
@@ -170,30 +170,30 @@ export const uFork = (asm, opts) => {
     def("nonGZhaz_qz!", "qz!");
 
     asm.symbols.redefine("qt!"); // ( t_field quad_addr -- )
-    dat("gc_mutator_mark", "nonGChaz_qt!", "EXIT");
+    dat("uFork_gc_mutator_mark", "nonGChaz_qt!", "EXIT");
 
     asm.symbols.redefine("qx!"); // ( x_field quad_addr -- )
-    dat("gc_mutator_mark", "nonGChaz_qx!", "EXIT");
+    dat("uFork_gc_mutator_mark", "nonGChaz_qx!", "EXIT");
 
     asm.symbols.redefine("qy!"); // ( y_field quad_addr -- )
-    dat("gc_mutator_mark", "nonGChaz_qy!", "EXIT");
+    dat("uFork_gc_mutator_mark", "nonGChaz_qy!", "EXIT");
 
     asm.symbols.redefine("qz!"); // ( z_field quad_addr -- )
-    dat("gc_mutator_mark", "nonGChaz_qz!", "EXIT");
+    dat("uFork_gc_mutator_mark", "nonGChaz_qz!", "EXIT");
 
     def("uFork_gc_mark_setup"); // ( -- )
-    dat("gc_first", "uFork_gc_scan_quad");
-    dat("gc_last",  "uFork_gc_scan_quad");
-    dat("gc_last", "2+", "0x0F", "1-", ">R");
+    dat("uFork_gc_first", "uFork_gc_scan_quad");
+    dat("uFork_gc_last",  "uFork_gc_scan_quad");
+    dat("uFork_gc_last", "2+", "0x0F", "1-", ">R");
     def("uFork_gc_mark_setup_l0"); // ( qa )
-    dat("DUP", "gc_add2scanque", "1+");
+    dat("DUP", "uFork_gc_add2scanque", "1+");
     dat("(NEXT)", "uFork_gc_mark_setup_l0");
     dat("DROP");
-    dat("gc_last", "2+", "gc_first", "gcMem!");
+    dat("uFork_gc_last", "2+", "uFork_gc_first", "gcMem!");
     dat("EXIT");
 
     // check quad memory pressure by looking at free count and qmem_top
-    def("gc_check_quad_mem_pressure"); // ( -- bool )
+    def("uFork_gc_check_quad_mem_pressure"); // ( -- bool )
     dat("uFork_memoryDescriptor", "DUP", "qy@", "2*");
     dat("+", "uFork_maxTopOfQuadMemory", ">"); // ( bool1 ) T: more than half on freelist!
     dat("(BRNZ)", "FALSE");
@@ -203,7 +203,7 @@ export const uFork = (asm, opts) => {
     dat("(JMP)", "TRUE");
 
     def("uFork_gcOneStep"); // ( -- )
-    dat("gc_phase", "@");   // ( phase )
+    dat("uFork_gc_phase", "@");   // ( phase )
     dat("(JMPTBL)", 7);
     dat("uFork_gc_idle");      // 0
     dat("uFork_gc_mark");      // 1
@@ -214,12 +214,12 @@ export const uFork = (asm, opts) => {
     dat("uFork_gc_sweep_stw"); // 6
     def("uFork_gc_idle");  // ( phase )
     dat("DUP", "0=", "(BRZ)", "uFork_gc_idle_l0");
-    dat("gc_check_quad_mem_pressure", "(BRZ)", "uFork_gc_idle_l1");
+    dat("uFork_gc_check_quad_mem_pressure", "(BRZ)", "uFork_gc_idle_l1");
     dat("uFork_gc_mark_setup", "(JMP)", "uFork_gc_idle_l0");
     def("uFork_gc_idle_l1"); // ( 0 )
     dat("DROP", "0x0F");     // ( 15 )
     def("uFork_gc_idle_l0"); // ( phase )
-    dat("1+", "gc_phase", "!", "EXIT");
+    dat("1+", "uFork_gc_phase", "!", "EXIT");
   }
   
   def("uFork_doOneRunLoopTurn"); // ( -- )
