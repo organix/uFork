@@ -26,6 +26,8 @@ lang_packs.asm = lang_asm;
 lang_packs.scm = lang_scm;
 Object.freeze(lang_packs);
 
+let initial_text = "; Write some uFork assembly here...";
+
 function is_landscape() {
     return document.documentElement.clientWidth >= 720;
 }
@@ -103,19 +105,21 @@ function fetch_text() {
             );
         });
     }
-    return Promise.resolve("; Write some uFork assembly here...");
-}
-
-function update_page_url(text) {
-    return gzip.encode(text).then(base64.encode).then(function (base64) {
-        write_state("text", base64);
-    });
+    return Promise.resolve(initial_text);
 }
 
 const editor = editor_ui({
     text: "; Loading...",
     lang_packs,
-    on_text_input: update_page_url
+    on_text_input(text) {
+        return (
+            text === initial_text
+            ? write_state("text", undefined)
+            : gzip.encode(text).then(base64.encode).then(function (base64) {
+                write_state("text", base64);
+            })
+        );
+    }
 });
 const tools = tools_ui({
     get_text: editor.get_text,
@@ -197,6 +201,8 @@ fetch_text().then(function (text) {
     editor.set_text(text);
 }).catch(function (error) {
     editor.set_text("; Failed to load source: " + error.message);
+}).finally(function () {
+    initial_text = editor.get_text();
 });
 window.onresize = function () {
     if (is_landscape()) {

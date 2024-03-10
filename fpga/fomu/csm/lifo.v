@@ -5,7 +5,7 @@ LIFO (stack)
     +---------------+
     | lifo          |
     |               |
---->|i_se       o_s0|=W=>
+-3->|i_se       o_s0|=W=>
 =W=>|i_data     o_s1|=W=>
     |               |
  +->|i_clk          |

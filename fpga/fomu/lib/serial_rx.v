@@ -7,6 +7,7 @@ Serial Receiver
     |            |
 --->|i_rx  o_data|=8=>
     |        o_wr|--->
+    |            |
  +->|i_clk       |
  |  +------------+
 
