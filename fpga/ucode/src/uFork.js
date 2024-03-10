@@ -132,6 +132,9 @@ export const uFork = (asm, opts) => {
     // 0b0000_0000_0000_01xx  stop-the-world until done
     // 0xF-0xFFFF = counting up to idle
 
+    def("uFork_gc_sweep_ptr");
+    dat("(VAR)", 0);
+
     
     def("uFork_gc_first", "uFork_memoryDescriptor_qaddr"); // head of scanning queue addr
     def("uForkygc_last",  "uFork_eventQueueAndContQueue"); // tail of scanning queue addr
@@ -207,6 +210,10 @@ export const uFork = (asm, opts) => {
     dat("uFork_gc_scan_quad"); // ( phase )
     dat("DUP", "4&", "(BRNZ)", "uFork_gc_mark"); // stop-the-world condition
     dat("DROP", "EXIT");
+
+    def("uFork_gc_sweep_setup"); // ( phase -- )
+    dat("uFork_gc_first", "uFork_gc_sweep_ptr", "!");
+    dat("(JMP)", "uFork_gc_idle_l0");
 
 
     // check quad memory pressure by looking at free count and qmem_top
