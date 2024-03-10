@@ -1470,6 +1470,12 @@ export const uFork = (asm, opts) => {
   dat("qx@");                 // ( kont actor )
   dat("(JMP)", "uFork__push_then_instrTail");
 
+  def("uFork_instr_my_beh"); // ( kont subopcode )
+  dat("DROP");
+  dat("DUP", "qy@", "qx@", "qx@");
+  dat("(JMP)", "uFork__push_then_instrTail");
+
+
 
   // todo: sponsor <peek> instruction
   //       þar sem <peek> er capability og ekki fixnum
