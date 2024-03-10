@@ -215,6 +215,19 @@ export const uFork = (asm, opts) => {
     dat("uFork_gc_first", "uFork_gc_sweep_ptr", "!");
     dat("(JMP)", "uFork_gc_idle_l0");
 
+    def("uFork_gc_sweep"); // ( phase -- )
+    dat("uFork_gc_sweep_ptr", "@"); // ( phase qa )
+    dat("DUP", "uFork_maxTopOfQuadMemory", "=", "(BRZ)", "uFork_gc_sweep_l0");
+    dat("DROP", "(JMP)", "uFork_gc_idle_l1");
+    def("uFork_gc_sweep_l0");
+    dat("DUP", "gcMem@"); // ( phase qa colour )
+    dat("uFork_gc_white", "=", "(BRZ)", "uFork_gc_sweep_l1");
+    dat("uFork_free", "(JMP)", "uFork_gc_sweep_l2");
+    def("uFork_gc_sweep_l1"); // ( phase qa )
+    dat("DUP", "uFork_gc_white", "SWAP", "gcMem!");
+    dat("1+", "uFork_gc_sweep_ptr", "!"); // ( phase )
+    dat("DUP", "4&", "(BRNZ)", "uFork_gc_sweep"); // stop-the-world condition
+    dat("DROP", "EXIT");
 
     // check quad memory pressure by looking at free count and qmem_top
     def("uFork_gc_check_quad_mem_pressure"); // ( -- bool )
