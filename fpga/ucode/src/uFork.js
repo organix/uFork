@@ -441,6 +441,15 @@ export const uFork = (asm, opts) => {
   def("uFork_decr"); // ( fixnum -- fixnum )
   dat("uFork_fixnum2int", "1-", "uFork_int2fixnum", "EXIT");
 
+  if (hwImplOfQuadMemoryGC) {
+    // todo: tbd: exit to monitor with a message or?
+  } else {
+    def("uFork_outOfQuadMemory"); // ( item -- )
+    dat("DROP");
+    dat("uFork_gcStopTheWorld"):
+    // deliberate fallthrough to uFork_allot for a secound quad allot attempt but now after gc was done.
+  }
+
   def("uFork_allot"); // ( -- qaddr )
   if (hwImplOfQuadAllotAndFree) {
     dat("qallot", "qfull?", "(BRNZ)", "uFork_outOfQuadMemory", "EXIT");
