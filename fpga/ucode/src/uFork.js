@@ -181,6 +181,7 @@ export const uFork = (asm, opts) => {
     asm.symbols.redefine("qz!"); // ( z_field quad_addr -- )
     dat("gc_mutator_mark", "nonGChaz_qz!", "EXIT");
 
+    // check quad memory pressure by looking at free count and qmem_top
     def("gc_check_quad_mem_pressure"); // ( -- bool )
     dat("uFork_memoryDescriptor", "DUP", "qy@", "2*");
     dat("+", "uFork_maxTopOfQuadMemory", ">"); // ( bool1 ) T: more than half on freelist!
@@ -203,9 +204,8 @@ export const uFork = (asm, opts) => {
     dat("uFork_gc_sweep_stw"); // 6
     def("uFork_gc_idle");  // ( phase )
     dat("DUP", "0=", "(BRZ)", "uFork_gc_idle_l0");
-    // check quad memory pressure by looking at free count and qmem_top
     dat("gc_check_quad_mem_pressure", "(BRZ)", "uFork_gc_idle_l1");
-    
+    dat("uFork_gc_mark_setup", "(JMP)", "uFork_gc_idle_l0");
     def("uFork_gc_idle_l1"); // ( 0 )
     dat("DROP", "0x0F");     // ( 15 )
     def("uFork_gc_idle_l0"); // ( phase )
