@@ -131,8 +131,20 @@ export const makeAssembler = (opts) => {
         }
         break;
     }
-    image.set(curr_addr, val);
-    asm.allot(1);
+    if (image.has(curr_addr)) {
+      const prev_val = image.get(curr_addr);
+      if ((typeof prev_val) == "object") { // assume its a promise pack
+        if (prev_val.resolve != undefined) {
+          image.delete(curr_addr);
+          prev_val.resolve([curr_addr, val]);
+        }
+      } else {
+        throw new Error(`image address ${curr_addr} already has ${prev_val} assigned to it whilist ${val} was atempted to be assigned to it`);
+      }
+    } else {
+      image.set(curr_addr, val);
+      asm.allot(1);
+    }
   };
   asm.data = (...datums) => Array.prototype.forEach.call(datums, datum);
   asm.incr = (a, b) => {
