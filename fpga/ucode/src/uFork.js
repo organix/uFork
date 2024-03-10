@@ -127,9 +127,10 @@ export const uFork = (asm, opts) => {
     dat("(VAR)", 0);
     // 0 - idle, check quad memory pressure
     // 1 - marking
-    // 2 - sweeping ( and resetting gcMem by its way)
+    // 2 - sweep setup
+    // 3 - sweeping ( and resetting gcMem by its way)
     // 0b0000_0000_0000_01xx  stop-the-world until done
-    // 8-0xFFFF = counting up to idle
+    // 0xF-0xFFFF = counting up to idle
 
     
     def("uFork_gc_first", "uFork_memoryDescriptor_qaddr"); // head of scanning queue addr
@@ -220,21 +221,22 @@ export const uFork = (asm, opts) => {
 
     def("uFork_gcOneStep"); // ( -- )
     dat("uFork_gc_phase", "@");   // ( phase )
-    dat("(JMPTBL)", 7);
-    dat("uFork_gc_idle");      // 0
-    dat("uFork_gc_mark");      // 1
-    dat("uFork_gc_sweep");     // 2
-    dat("uFork_gc_idle_l1");   // 3
-    dat("uFork_gc_idle_l1");   // 4
-    dat("uFork_gc_mark_stw");  // 5
-    dat("uFork_gc_sweep_stw"); // 6
-    def("uFork_gc_idle");      // ( phase -- )
+    dat("(JMPTBL)", 8);
+    dat("uFork_gc_idle");        // 0
+    dat("uFork_gc_mark");        // 1
+    dat("uFork_gc_sweep_setup"); // 2
+    dat("uFork_gc_sweep");       // 3
+    dat("uFork_gc_idle_l1");     // 4
+    dat("uFork_gc_mark");        // 5
+    dat("uFork_gc_sweep_setup"); // 6
+    dat("uFork_gc_sweep");       // 7
+    def("uFork_gc_idle");        // ( phase -- )
     dat("DUP", "0=", "(BRZ)", "uFork_gc_idle_l0");
     dat("uFork_gc_check_quad_mem_pressure", "(BRZ)", "uFork_gc_idle_l1");
     dat("uFork_gc_mark_setup", "(JMP)", "uFork_gc_idle_l0");
-    def("uFork_gc_idle_l1"); // ( 0 )
-    dat("DROP", "0x0F");     // ( 15 )
-    def("uFork_gc_idle_l0"); // ( phase )
+    def("uFork_gc_idle_l1");     // ( 0 )
+    dat("DROP", "0x0F");         // ( 15 )
+    def("uFork_gc_idle_l0");     // ( phase )
     dat("1+", "uFork_gc_phase", "!", "EXIT");
   }
   
