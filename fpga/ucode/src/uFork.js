@@ -240,6 +240,10 @@ export const uFork = (asm, opts) => {
     dat("(BRNZ)", "FALSE");
     dat("(JMP)", "TRUE");
 
+    def("uFork_gcStopTheWorld"); // ( -- )
+    dat("4", "uFork_gc_phase", "!");
+    // deliberate fallthrough to uFork_gcOneStep
+
     def("uFork_gcOneStep"); // ( -- )
     dat("uFork_gc_phase", "@");   // ( phase )
     dat("(JMPTBL)", 8);
