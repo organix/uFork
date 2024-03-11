@@ -146,6 +146,11 @@ export const defineInstructionset = (asm, opts = { instrsetName: "uFork_CSM1" })
     def("-",   "MINUS");
     def("1-",  "DECR");
 
+    def("SKZ", (asm) => {
+      const here = asm.addr;
+      const here_plustwo = asm.deferedOp.plus(here, 2);
+      return asm.deferedOp.or(0xA000, asm.deferedOp.and(here_plustwo, 0x0FFF));
+    });
     def("(JMP)", (asm) => {
       const here = asm.addr;
       const resolve = ([here_plusone, val]) => {
