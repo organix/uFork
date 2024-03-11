@@ -108,22 +108,32 @@ export const defineInstructionset = (asm, opts = { instrsetName: "uFork_CSM1" })
 
   // see uFork/fpga/fomu/csm/cpu.md as reference for uFork_SM2
   if (opts.instrsetName.startsWith("uFork_SM2")) {
-    def("NOP",    0x0000);
-    def("PLUS",   0x0B41);
-    def("AND",    0x0B44);
-    def("XOR",    0x0B45);
-    def("1LBR",   0x0307);
-    def("INCR",   0x0311);
-    def("FETCH",  0x030E);
-    def("STORE",  0x094F);
-    def("DUP",    0x0200);
-    def("DROP",   0x0100);
-    def("SWAP",   0x0400);
+    def("NOP",     0x0000);
+    def("PLUS",    0x0B41);
+    def("AND",     0x0B44);
+    def("XOR",     0x0B45);
+    def("1LBR",    0x0307);
+    def("INCR",    0x0311);
+    def("FETCH",   0x030E);
+    def("STORE",   0x094F);
+    def("DUP",     0x0200);
+    def("DROP",    0x0100);
+    def("SWAP",    0x0400);
     // SKZ not implemented in hardware
-    def("TO_R",   0x2100);
-    def("R_FROM", 0x1280);
-    def("R_AT",   0x0280);
-    def("EXIT",   0x5000);
+    def("TO_R",    0x2100);
+    def("R_FROM",  0x1280);
+    def("R_AT",    0x0280);
+    def("EXIT",    0x5000);
+    def("MINUS",   0x0B42);
+    def("OR",      0x0B46);
+    def("DECR",    0x0312);
+    def("INVERT",  0x0375);
+    def("NEGATE",  0x03C2);
+    def("OVER",    0x0500);
+    def("ROT",     0x0700);
+    def("2DROP",   0x0900);
+    def("(FALSE)", 0x02C0);
+    def("(TRUE)",  0x02F5);
   }
 
 
