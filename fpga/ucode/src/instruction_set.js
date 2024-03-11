@@ -8,7 +8,7 @@
 import { makeAssembler } from "../util/masm.js";
 import { uFork } from "./uFork.js";
 
-export const defineInstructionset = (asm, opts = { instrsetName: "uFork_CSM2" }) => {
+export const defineInstructionset = (asm, opts = { instrsetName: "uFork_CSM1" }) => {
   const { def } = asm;
   if (opts.instrsetName.startsWith("FCPU-16") ||
       opts.instrsetName.startsWith("uFork_CSM1")) {
@@ -85,8 +85,6 @@ export const defineInstructionset = (asm, opts = { instrsetName: "uFork_CSM2" })
     def("DEBUG_TX!",    0x003F); // tx! ( char -- )
   }
     
-
-
   /* tbd: unlikely to be implemented at all
   fomu spefic
   def("GPIO@",        0x0038); // gpio@ ( -- pins )
@@ -107,7 +105,15 @@ export const defineInstructionset = (asm, opts = { instrsetName: "uFork_CSM2" })
    [0x1]: spi mosi
    [0x0]: spi miso
   */
-  
-  
+
+  // see uFork/fpga/fomu/csm/cpu.md as reference for uFork_SM2
+  if (opts.instrsetName.startsWith("uFork_SM2")) {
+    def("NOP",    0x0000);
+    def("PLUS",   0x0B41);
+    def("AND",    0x0B44);
+  }
+
+
+    
   return asm;
 };
