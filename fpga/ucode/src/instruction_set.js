@@ -63,7 +63,8 @@ export const defineInstructionset = (asm, opts = { instrsetName: "uFork_CSM2" })
     def("qy!", "QUAD_Y_STORE");
     def("qz!", "QUAD_Z_STORE");
   }
-  if (opts.instrsetName.startsWith("FCPU-16 w/qmem w/hwgc")) {
+  if (opts.instrsetName.startsWith("FCPU-16 w/qmem w/hwgc") ||
+      opts.instrsetName.startsWith("uFork_CSM1 w/qmem w/hwgc")) {
     def("QUAD_ALLOCATE", 0x0018);
     def("QUAD_FREE",    0x0019);
     def("QUAD_GCSTEP",  0x001A);
@@ -73,6 +74,15 @@ export const defineInstructionset = (asm, opts = { instrsetName: "uFork_CSM2" })
     def("qfree",   "QUAD_FREE");
     def("qgcstep", "QUAD_GCSTEP");
     def("qfull?",  "QUAD_ISFULL");
+  }
+  if ((opts.instrsetName.startsWith("FCPU-16 ") ||
+       opts.instrsetName.startsWith("uFork_CSM1 ")) &&
+      opts.instrsetName.includes("w/debug_io")) {
+    def("DEBUG_LED",    0x003B); // led! ( colour -- )
+    def("DEBUG_RX?",    0x003C); // rx? ( -- ready )
+    def("DEBUG_RX@",    0x003D); // rx@ ( -- char )
+    def("DEBUG_TX?",    0x003E); // tx? ( -- ready )
+    def("DEBUG_TX!",    0x003F); // tx! ( char -- )
   }
     
 
@@ -97,16 +107,6 @@ export const defineInstructionset = (asm, opts = { instrsetName: "uFork_CSM2" })
    [0x1]: spi mosi
    [0x0]: spi miso
   */
-  def("DEBUG_LED",    0x003B); // led! ( colour -- )
-  def("DEBUG_RX?",    0x003C); // rx? ( -- ready )
-  def("DEBUG_RX@",    0x003D); // rx@ ( -- char )
-  def("DEBUG_TX?",    0x003E); // tx? ( -- ready )
-  def("DEBUG_TX!",    0x003F); // tx! ( char -- )
-  
-  
-
-  
-
   
   
   return asm;
