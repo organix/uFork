@@ -11,6 +11,11 @@ import { uFork } from "./uFork.js";
 export const defineInstructionset = (asm, opts = { instrsetName: "uFork_CSM2" }) => {
   const { def } = asm;
   switch (opts.instrsetName) {
+    case "FCPU-16 w/hwgc w/qmem":
+      def("QUAD_ALLOCATE", 0x0018);
+      def("QUAD_FREE",    0x0019);
+      def("QUAD_GCSTEP",  0x001A);
+      def("QUAD_ISFULL",  0x001B);
     case "FCPU-16 w/qmem":
       def("QUAD_T_FETCH", 0x0010);
       def("QUAD_X_FETCH", 0x0011);
@@ -41,11 +46,6 @@ export const defineInstructionset = (asm, opts = { instrsetName: "uFork_CSM2" })
       break;
   }
 
-  
-  def("QUAD_ALLOCATE", 0x0018);
-  def("QUAD_FREE",    0x0019);
-  def("QUAD_GCSTEP",  0x001A);
-  def("QUAD_ISFULL",  0x001B);
 
   /* tbd: unlikely to be implemented at all
   fomu spefic
