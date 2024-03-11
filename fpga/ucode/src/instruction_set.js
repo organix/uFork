@@ -15,8 +15,10 @@ export const defineInstructionset = (asm, opts = { instrsetName: "uFork_CSM2" })
     def("NOP",    0x0000);
     if (opts.instrsetName.startsWith("FCPU-16")) {
       def("UMPLUS", 0x0001);
+      def("UM+", "UMPLUS");
     } else if (opts.instrzetName.startsWith("uFork_CSM1")) {
       def("PLUS",   0x0001);
+      def("+",   "PLUS");
     }
     def("AND",    0x0002);
     def("XOR",    0x0003);
@@ -32,6 +34,14 @@ export const defineInstructionset = (asm, opts = { instrsetName: "uFork_CSM2" })
     def("R_FROM", 0x000D);
     def("EXT",    0x000E);
     def("EXIT",   0x000F);
+
+    def("&",   "AND");
+    def("⊕",   "XOR");
+    def("1+",  "INCR");
+    def("@",   "FETCH");
+    def("!",   "STORE");
+    def(">R",  "TO_R");
+    def("R>",  "R_FROM");
   }
   if (opts.instrsetName.startsWith("FCPU-16 w/qmem") ||
       opts.instrsetName.startsWith("uFork_CSM1 w/qmem")) {
@@ -43,13 +53,27 @@ export const defineInstructionset = (asm, opts = { instrsetName: "uFork_CSM2" })
     def("QUAD_X_STORE", 0x0015);
     def("QUAD_Y_STORE", 0x0016);
     def("QUAD_Z_STORE", 0x0017);
+
+    def("qt@", "QUAD_T_FETCH");
+    def("qx@", "QUAD_X_FETCH");
+    def("qy@", "QUAD_Y_FETCH");
+    def("qz@", "QUAD_Z_FETCH");
+    def("qt!", "QUAD_T_STORE");
+    def("qx!", "QUAD_X_STORE");
+    def("qy!", "QUAD_Y_STORE");
+    def("qz!", "QUAD_Z_STORE");
   }
-    case "FCPU-16 w/qmem w/hwgc":
-      def("QUAD_ALLOCATE", 0x0018);
-      def("QUAD_FREE",    0x0019);
-      def("QUAD_GCSTEP",  0x001A);
-      def("QUAD_ISFULL",  0x001B);
-    case "FCPU-16 w/qmem":
+  if (opts.instrsetName.startsWith("FCPU-16 w/qmem w/hwgc")) {
+    def("QUAD_ALLOCATE", 0x0018);
+    def("QUAD_FREE",    0x0019);
+    def("QUAD_GCSTEP",  0x001A);
+    def("QUAD_ISFULL",  0x001B);
+
+    def("qallot",  "QUAD_ALLOCATE");
+    def("qfree",   "QUAD_FREE");
+    def("qgcstep", "QUAD_GCSTEP");
+    def("qfull?",  "QUAD_ISFULL");
+  }
     
 
 
@@ -79,28 +103,11 @@ export const defineInstructionset = (asm, opts = { instrsetName: "uFork_CSM2" })
   def("DEBUG_TX?",    0x003E); // tx? ( -- ready )
   def("DEBUG_TX!",    0x003F); // tx! ( char -- )
   
-  def("+",   "PLUS");
-  def("&",   "AND");
-  def("⊕",   "XOR");
-  def("1+",  "INCR");
-  def("@",   "FETCH");
-  def("!",   "STORE");
-  def(">R",  "TO_R");
-  def("R>",  "R_FROM");
+  
 
-  def("qt@", "QUAD_T_FETCH");
-  def("qx@", "QUAD_X_FETCH");
-  def("qy@", "QUAD_Y_FETCH");
-  def("qz@", "QUAD_Z_FETCH");
-  def("qt!", "QUAD_T_STORE");
-  def("qx!", "QUAD_X_STORE");
-  def("qy!", "QUAD_Y_STORE");
-  def("qz!", "QUAD_Z_STORE");
+  
 
-  def("qallot",  "QUAD_ALLOCATE");
-  def("qfree",   "QUAD_FREE");
-  def("qgcstep", "QUAD_GCSTEP");
-  def("qfull?",  "QUAD_ISFULL");
+  
   
   return asm;
 };
