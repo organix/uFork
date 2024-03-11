@@ -119,6 +119,11 @@ export const defineInstructionset = (asm, opts = { instrsetName: "uFork_CSM1" })
     def("DUP",    0x0200);
     def("DROP",   0x0100);
     def("SWAP",   0x0400);
+    // SKZ not implemented in hardware
+    def("TO_R",   0x2100);
+    def("R_FROM", 0x1280);
+    def("R_AT",   0x0280);
+    def("EXIT",   0x5000);
   }
 
 
