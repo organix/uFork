@@ -36,9 +36,9 @@ it may be incremented or decremented by one.
     *---+---+---+---*---+---+---+---*---+---+---+---*---+---+---+---*
       ^   ^  \_____/
       |   |  00: addr->PC
-      |   |  01: D0==0?addr->PC:PC+1->PC,D0+1->D0
-      |   |  10: D0==0?addr->PC:PC+1->PC
-      |   |  11: D0==0?addr->PC:PC+1->PC,D0-1->D0
+      |   |  01: D0==0?addr->PC,DROP:PC+1->PC,D0+1->D0
+      |   |  10: D0==0?addr->PC,DROP:PC+1->PC,DROP
+      |   |  11: D0==0?addr->PC,DROP:PC+1->PC,D0-1->D0
       | PC+1->R {0=JUMP, 1=CALL}
     control
 
@@ -50,14 +50,14 @@ various sources and constants. The result is available as input to
 both the D-stack and R-stack. The stack-effects are independently
 specified, including an extra "drop" for the D-stack to consume two
 values. Normally, the program counter is loaded with the address of
-the next instruction, but may loaded from the R-stack instead.
+the next instruction, but may be loaded from the R-stack instead.
 
      15  14  13  12  11  10   9   8   7   6   5   4   3   2   1   0
     *---+---+---+---*---+---+---+---*---+---+---+---*---+---+---+---*
     | 0 |RPC|  R se |2:1|    D se   | ALU A | ALU B |    ALU op     |
     *---+---+---+---*---+---+---+---*---+---+---+---*---+---+---+---*
       ^   ^  \_____/  ^  \_________/ \_____/ \_____/ \______________/
-      |   |  00=NONE  |    000=NONE   00=D0   00=D1     0000=NONE
+      |   |  00=NONE  |    000=NONE   00=D0   00=D0     0000=NONE
       |   |  01=DROP  |    001=DROP   01=D1   01=+1     0001=ADD
       |   |  10=PUSH  |    010=PUSH   10=R0   10=msb    0010=SUB
       |   |  11=RPLC  |    011=RPLC   11=0    11=-1     0011=MUL
@@ -74,34 +74,36 @@ the next instruction, but may loaded from the R-stack instead.
                                                         1110=FETCH
                                                         1111=STORE
 
-### Memory Access
+### Primitive Encodings
 
-  * `@ ( addr -- cell )` -- FETCH
-  * `! ( cell addr -- )` -- STORE
-  * `>R ( a -- ) R:( -- a )` -- PUSH_R
-  * `R> ( -- a ) R:( a -- )` -- R_DROP
-  * `R@ ( -- a ) R:( a -- a )` -- R_FETCH
-
-
-```
-`define NO_SE   (3'h0)      // no operation             ( -- )
-`define DROP_SE (3'h1)      // remove top               ( a -- )
-`define PUSH_SE (3'h2)      // push onto top            ( -- a )
-`define RPLC_SE (3'h3)      // replace top              ( a -- b )
-`define SWAP_SE (3'h4)      // swap top and next        ( a b -- b a )
-`define OVER_SE (3'h5)      // copy next to top         ( a b -- a b a )
-`define ZDUP_SE (3'h6)      // copy non-zero top        : ?DUP ( a -- 0 | a a ) DUP IF DUP THEN ;
-`define ROT3_SE (3'h7)      // rotate top 3 elements    ( a b c -- b c a )
-
-`define NO_OP   (4'h0)      // a
-`define ADD_OP  (4'h1)      // a+b
-`define SUB_OP  (4'h2)      // a-b
-`define MUL_OP  (4'h3)      // a*b
-`define AND_OP  (4'h4)      // a&b
-`define XOR_OP  (4'h5)      // a^b
-`define OR_OP   (4'h6)      // a|b
-`define ROL_OP  (4'h7)      // {a[14:0],a[15]}
-```
+Word    | Stack Effect              | Hex    | Binary
+--------|---------------------------|--------|-----------------------
+NOP     | ( -- )                    | `0000` | `0000_0000_0000_0000`
+\+      | ( a b -- a+b )            | `0B41` | `0000_1011_0100_0001`
+AND     | ( a b -- a&b )            | `0B44` | `0000_1011_0100_0100`
+XOR     | ( a b -- a^b )            | `0B45` | `0000_1011_0100_0101`
+ROL     | ( a -- {a[14:0],a[15]} )  | `0307` | `0000_0011_0000_0111`
+1+      | ( a -- a+1 )              | `0311` | `0000_0011_0001_0001`
+@       | ( addr -- cell )          | `030E` | `0000_0011_0000_1110`
+!       | ( cell addr -- )          | `094F` | `0000_1001_0100_1111`
+DUP     | ( a -- a a )              | `0200` | `0000_0010_0000_0000`
+DROP    | ( a -- )                  | `0100` | `0000_0001_0000_0000`
+SWAP    | ( a b -- b a )            | `0400` | `0000_0100_0000_0000`
+SKZ     | ( cond -- )               | --     | _not primitive_
+\>R     | ( a -- ) R:( -- a )       | `2100` | `0010_0001_0000_0000`
+R>      | ( -- a ) R:( a -- )       | `1280` | `0001_0010_1000_0000`
+R@      | ( -- a ) R:( a -- a )     | `0280` | `0000_0010_1000_0000`
+EXIT    | R:( addr -- ) addr->pc    | `5000` | `0101_0000_0000_0000`
+\-      | ( a b -- a-b )            | `0B42` | `0000_1011_0100_0001`
+OR      | ( a b -- a\|b )           | `0B46` | `0000_1011_0100_0100`
+1-      | ( a -- a-1 )              | `0312` | `0000_0011_0001_0010`
+INVERT  | ( a -- ~a )               | `0375` | `0000_0011_0111_0101`
+NEGATE  | ( a -- -a )               | `03C2` | `0000_0011_1100_0010`
+OVER    | ( a b -- a b a )          | `0500` | `0000_0101_0000_0000`
+ROT     | ( a b c -- b c a )        | `0700` | `0000_0111_0000_0000`
+2DROP   | ( a b -- )                | `0900` | `0000_1001_0000_0000`
+FALSE   | ( -- 0 )                  | `02C0` | `0000_0010_1100_0000`
+TRUE    | ( -- -1 )                 | `02F5` | `0000_0010_1111_0110`
 
 ## Component Block Diagrams
 
