@@ -5,9 +5,8 @@
  * @author Zarutian
  */
 
-import { makeAssembler } from "../util/masm.js";
-import { uFork } from "./uFork.js";
-
+import { makePromise } from "../util/util_funcs.js";
+  
 export const defineInstructionset = (asm, opts = { instrsetName: "uFork_CSM1" }) => {
   const { def } = asm;
   if (opts.instrsetName.startsWith("FCPU-16") ||
@@ -146,6 +145,14 @@ export const defineInstructionset = (asm, opts = { instrsetName: "uFork_CSM1" })
     def("R@",  "R_AT");
     def("-",   "MINUS");
     def("1-",  "DECR");
+
+    def("(JMP)", (asm) => {
+      const here = asm.addr;
+      const resolve = ([here_plusone, val]) => {
+        // merkill
+      };
+      return ["NOP", { resolve }];
+    });
   }
 
 
