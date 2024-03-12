@@ -372,6 +372,28 @@ export const minicore = (asm, opts) => {
 
   def("MAX"); // ( a b -- a | b )
   dat("2DUP", "<", "?:", "EXIT");
+
+  if (!isDefined("DEBUG_TX?") ||
+      !isDefined("DEBUG_TX!") ||
+      !isDefined("DEBUG_RX?") ||
+      !isDefined("DEBUG_RX@")) {
+    if (isDefined("instrset_FCPU-16")) {
+      def("DEBUG_comms");
+      dat("(VAR)", 0);
+
+      def("DEBUG_commsport");
+      dat("(CONST)", 0xFFFD);
+
+      def("DEBUG_TX!"); // ( char -- )
+      dat("0xFF_&", "DEBUG_commsport", "!", "EXIT");
+
+      def("DEBUG_comms_common"); // ( -- common )
+      dat("DEBUG_comms", "@", "DUP", "0x30", "&", "(BRZ)", "DEBUG_comms_common_l0");
+      dat("EXIT");
+      def("DEBUG_comms_common_l0"); // ( 
+      
+    }
+  }
   
   def("TX!"); // ( char -- )
   dat("DEBUG_TX?", "(BRZ)", "TX!");
