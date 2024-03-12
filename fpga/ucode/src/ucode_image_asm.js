@@ -34,12 +34,20 @@ export const minicore = (asm, opts) => {
 
   def("TRUE");
   def("-1");
-  dat("(CONST)", 0xFFFF);
+  if (isDefined("(TRUE)")) {
+    dat("(TRUE)", "EXIT");
+  } else {
+    dat("(CONST)", 0xFFFF);
+  }
 
   def("FALSE");
   def("0x0000");
   def("ZERO");
-  dat("(CONST)", 0x0000);
+  if (isDefined("(FALSE)")) {
+    dat("(FALSE)", "EXIT");
+  } else {
+    dat("(CONST)", 0x0000);
+  }
 
   def("0x0A");
   dat("(CONST)", 0x0A);
@@ -99,7 +107,10 @@ export const minicore = (asm, opts) => {
   def("(BRNZ)"); // BRanch if Not Zero ( bool -- )
   dat("CLEAN_BOOL", "INVERT");
   // deliberate fall through
-  def("(BRZ)"); // BRanch if Zero ( bool -- )
+  if (!isDefined("(BRZ)")) {
+    def("(BRZ)"); // BRanch if Zero ( bool -- )
+  }
+  def("(BRZ)_alt");
   dat("R>", "SWAP", ">R"); // ( raddr ) R:( bool )
   dat("DUP", "@", "SWAP"); // ( dest raddr ) R:( bool )
   dat("1+", "R>", "?:");   // ( raddr ) R:( )
@@ -109,7 +120,7 @@ export const minicore = (asm, opts) => {
   dat("=", "(JMP)", "(BRNZ)");
 
   def("(BRNE)"); // ( a b -- )
-  dat("=", "(JMP)", "(BRZ)");
+  dat("=", "(JMP)", "(BRZ)_alt");
 
   def("(JMPTBL)"); // ( idx -- idx ) note: default case is after the table
   dat("R>");       // ( idx raddr )
@@ -161,8 +172,10 @@ export const minicore = (asm, opts) => {
     dat("DROP", "DROP", "EXIT");
   }
 
-  def("NIP"); // ( a b c -- a c )
-  dat("SWAP", "DROP", "EXIT");
+  if (!isDefined("NIP")) {
+    def("NIP"); // ( a b c -- a c )
+    dat("SWAP", "DROP", "EXIT");
+  }
 
   def("TUCK"); // ( a b -- b a b )
   dat("SWAP", "OVER", "EXIT");
@@ -172,8 +185,10 @@ export const minicore = (asm, opts) => {
     dat("R>", "R>", "DUP", ">R", "SWAP", ">R", "EXIT");
   }
 
-  def("RDROP"); // ( -- ) R:( x ra -- ra )
-  dat("R>", "R>", "DROP", ">R", "EXIT");
+  if (!isDefined("RDROP")) {
+    def("RDROP"); // ( -- ) R:( x ra -- ra )
+    dat("R>", "R>", "DROP", ">R", "EXIT");
+  }
 
   if ((!isDefined("+")) && (!isDefined("UM+")) && isDefined("1+")) {
     def("+"); // ( a b -- sum )
@@ -321,14 +336,18 @@ export const minicore = (asm, opts) => {
   def("0x0F_&");
   dat("0x0F", "&", "EXIT");
 
-  def("="); // ( a b -- bool )
-  dat("XOR", "CLEAN_BOOL", "INVERT", "EXIT");
+  if (!isDefined("=")) {
+    def("="); // ( a b -- bool )
+    dat("XOR", "CLEAN_BOOL", "INVERT", "EXIT");
+  }
 
   def("0<"); // ( num -- bool )
   dat("0x8000", "&", "CLEAN_BOOL", "EXIT");
 
-  def("<"); // ( a b -- bool )
-  dat("-", "0<", "EXIT");
+  if (!isDefined("<")) {
+    def("<"); // ( a b -- bool )
+    dat("-", "0<", "EXIT");
+  }
 
   def("<="); // ( a b -- bool )
   dat("2DUP", "<", ">R", "=", "R>", "OR", "EXIT");
