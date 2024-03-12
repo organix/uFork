@@ -123,6 +123,26 @@ export const defineInstructionset = (asm, opts = { instrsetName: "uFork_CSM1" })
    [0x0]: spi miso
   */
 
+  if (opts.instrsetName.startsWith("excamera_J1")) {
+    def("(LIT)", (asm) => {
+      const here = asm.addr;
+      const resolve = ([here_plusone, val]) => {
+        Promise.resolve(val).then((real_val) => {
+          const tmp = asm.addr;
+          asm.origin(here);
+          if ((real_val & 0x8000) == 0x8000) {
+            asm.datum(0x8000 | (real_val ^ 0xFFFF));
+            asm.datum("INVERT");
+          } else {
+            asm.datum(0x8000 | real_val);
+            asm.datum("NOP");
+          }
+        });
+      };
+      return ["NOP", { resolve }];
+    });
+  }
+
   // see uFork/fpga/fomu/csm/cpu.md as reference for uFork_SM2
   if (opts.instrsetName.startsWith("uFork_SM2")) {
     def("NOP",     0x0000);
