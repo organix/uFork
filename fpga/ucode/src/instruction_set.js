@@ -9,6 +9,21 @@ import { makePromise } from "../util/util_funcs.js";
   
 export const defineInstructionset = (asm, opts = { instrsetName: "uFork_CSM1" }) => {
   const { def } = asm;
+  if (opts.instrsetName.startsWith("FCPU-16")) {
+    def("instrset_FCPU-16", 1);
+  }
+  if (opts.instrsetName.startsWith("uFork_CSM1")) {
+    def("instrset_uFork_CSM1", 1);
+  }
+  if (opts.instrsetName.includes("w/qmem")) {
+    def("instrset_w/qmem", 1);
+  }
+  if (opts.instrsetName.includes("w/hwgc")) {
+    def("instrset_w/hwgc", 1);
+  }
+  if (opts.instrsetName.imcludes("w/debug_io")) {
+    def("instrset_w/debug_io", 1);
+  }
   if (opts.instrsetName.startsWith("FCPU-16") ||
       opts.instrsetName.startsWith("uFork_CSM1")) {
     def("NOP",    0x0000);
