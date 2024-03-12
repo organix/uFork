@@ -285,10 +285,15 @@ export const minicore = (asm, opts) => {
   def("4*");
   def("2<<"); // ( a -- a<<2 )
   dat("1<<");
-  def("2*");
-  def("1<<"); // ( a -- a<<1 )
-  dat("1LBR");
-  dat("0xFFFE", "&", "EXIT");
+  if (isDefined("2*")) {
+    dat("2*", "EXIT");
+    def("1<<", "2*");
+  } else {
+    def("2*");
+    def("1<<"); // ( a -- a<<1 )
+    dat("1LBR");
+    dat("0xFFFE", "&", "EXIT");
+  }
 
   def("15LBR"); def("1RBR");
   dat("1LBR");
