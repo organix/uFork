@@ -157,9 +157,13 @@ export const defineInstructionset = (asm, opts = { instrsetName: "uFork_CSM1" })
       };
       return ["NOP", { resolve }];
     });
-    def("NOP",  0x6000);
-    def("+",    0x6201);
-    def("EXIT", 0x700C);
+    def("NOP",    0x6000);
+    def("PLUS",   0x6203);
+    def("AND",    0x6303);
+    def("OR",     0x6403);
+    def("XOR",    0x6503);
+    def("INVERT", 0x6603);
+    def("EXIT",   0x700C);
   }
 
   // see uFork/fpga/fomu/csm/cpu.md as reference for uFork_SM2
