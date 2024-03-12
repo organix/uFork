@@ -81,9 +81,11 @@ export const minicore = (asm, opts) => {
 
   def("CLEAN_BOOL");
   dat(">R", "FALSE", "TRUE", "R>", "?:", "EXIT");
-  
-  def("INVERT");
-  dat("TRUE");
+
+  if (!isDefined("INVERT")) {
+    def("INVERT");
+    dat("TRUE");
+  }
   def("(XOR)");
   dat("XOR", "EXIT");
 
@@ -138,11 +140,15 @@ export const minicore = (asm, opts) => {
     dat("R>", "DUP", "1+", ">R", "@", "EXIT");
   }
 
-  def("OVER"); // ( a b -- a b a )
-  dat(">R", "DUP", "R>", "SWAP", "EXIT");
+  if (!isDefined("OVER")) {
+    def("OVER"); // ( a b -- a b a )
+    dat(">R", "DUP", "R>", "SWAP", "EXIT");
+  }
 
-  def("ROT"); // ( a b c -- b c a )
-  dat(">R", "SWAP", "R>", "SWAP", "EXIT");
+  if (!isDefined("ROT")) {
+    def("ROT"); // ( a b c -- b c a )
+    dat(">R", "SWAP", "R>", "SWAP", "EXIT");
+  }
 
   def("-ROT"); // ( a b c -- c a b )
   dat("SWAP", ">R", "SWAP", "R>", "EXIT");
@@ -150,8 +156,10 @@ export const minicore = (asm, opts) => {
   def("2DUP"); // ( a b -- a b a b )
   dat("OVER", "OVER", "EXIT");
 
-  def("2DROP");
-  dat("DROP", "DROP", "EXIT");
+  if (!isDefined("2DROP")) {
+    def("2DROP");
+    dat("DROP", "DROP", "EXIT");
+  }
 
   def("NIP"); // ( a b c -- a c )
   dat("SWAP", "DROP", "EXIT");
@@ -205,8 +213,10 @@ export const minicore = (asm, opts) => {
     dat("EXIT");
   }
 
-  def("NEGATE");
-  dat("INVERT", "1+", "EXIT");
+  if (!isDefined("NEGATE")) {
+    def("NEGATE");
+    dat("INVERT", "1+", "EXIT");
+  }
 
   if (!isDefined("1-")) {
     def("1-");
@@ -492,28 +502,28 @@ export const wozmon = (asm, opts) => {
 
 export const makeUcodeImage = (opts) => {
   opts = (opts == undefined) ? {} : opts ;
-  const asm = makeAssembler(opts.assemblerOpts);
-  defineInstructionset(asm);
-  asm.org(0x0050);
-  minicore(asm); // always required as lot of subsequent assemblies relie on definitions there in
+  let asm = makeAssembler(opts.assemblerOpts);
+  asm = defineInstructionset(asm);
+  asm.org(0x0010);
+  asm = minicore(asm); // always required as lot of subsequent assemblies relie on definitions there in
   if (opts.wozmon != undefined) {
-    wozmon(asm, opts.wozmon);
+    asm = wozmon(asm, opts.wozmon);
   }
   if (opts.uFork != undefined) {
-    uFork(asm, opts.uFork);
+    asm = uFork(asm, opts.uFork);
   }
 
-  asm.org(0x0040); // default start address
+  asm.org(0x0000); // default start address
   if (opts.wozmon != undefined) {
     const startInWozmon = opts.wozmon.startInWozmon;
     if ((startInWozmon != undefined) || (startInWozmon != false)) {
-      asm.dat("wozmon", "(JMP)", 0x0040); // start in wozmon, and stay in it if it was quitted
+      asm.dat("wozmon", "(JMP)", 0x0000); // start in wozmon, and stay in it if it was quitted
     }
   }
   if (opts.uFork != undefined) {
     const startIn_uFork_runLoop = opts.uFork.startInRunLoop;
     if ((startIn_uFork_runLoop != undefined) || (startIn_uFork_runLoop != false)) {
-      asm.dat("uFork_runLoop", "(JMP)", 0x40);
+      asm.dat("uFork_runLoop", "(JMP)", 0x0000);
     }
   }
   asm.done();
