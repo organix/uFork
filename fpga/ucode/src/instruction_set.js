@@ -151,6 +151,7 @@ export const defineInstructionset = (asm, opts = { instrsetName: "uFork_CSM1" })
     def("2DROP",   0x0900);
     def("(FALSE)", 0x02C0);
     def("(TRUE)",  0x02F5);
+    def("2*",      0x0301);
 
     def("+",   "PLUS");
     def("&",   "AND");
