@@ -168,6 +168,16 @@ export const defineInstructionset = (asm, opts = { instrsetName: "uFork_CSM1" })
       };
       return ["NOP", { resolve }];
     });
+    return {
+      ...asm,
+      def: (sym, val = undefined) => {
+        if (val == undefined) {
+          const here = asm.addr;
+          val = asm.deferedOp.or(0xC000, asm.deferedOp.and(here, 0x0FFF));
+        }
+        asm.def(sym, val);
+      },
+    }
   }
 
 
