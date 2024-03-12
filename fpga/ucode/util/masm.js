@@ -147,7 +147,36 @@ export const makeAssembler = (opts) => {
     }
   };
   asm.data = (...datums) => Array.prototype.forEach.call(datums, datum);
-  asm.incr = (a, b) => {
+  asm.deferedOp = {};
+  asm.deferedOp.or = (a, b) => {
+    if ((typeof a) == "string") {
+      a = asm.symbols.lookup(a);
+    }
+    if ((typeof b) == "string") {
+      b = asm.symbols.lookup(b);
+    }
+    if (((typeof a) == "number") && ((typeof b) == "number")) {
+      return (a | b);
+    }
+    a = Promise.resolve(a);
+    b = Promise.resolve(b);
+    return Promise.all([a, b]).then(([a_real, b_real]) => (a_real | b_real));
+  };
+  asm.deferedOp.and = (a, b) => {
+    if ((typeof a) == "string") {
+      a = asm.symbols.lookup(a);
+    }
+    if ((typeof b) == "string") {
+      b = asm.symbols.lookup(b);
+    }
+    if (((typeof a) == "number") && ((typeof b) == "number")) {
+      return (a & b);
+    }
+    a = Promise.resolve(a);
+    b = Promise.resolve(b);
+    return Promise.all([a, b]).then(([a_real, b_real]) => (a_real & b_real));
+  };
+  asm.deferedOp.incr = (a, b) => {
     if ((typeof a) == "string") {
       a = asm.symbols.lookup(a);
     }
@@ -161,6 +190,8 @@ export const makeAssembler = (opts) => {
     b = Promise.resolve(b);
     return Promise.all([a, b]).then(([a_real, b_real]) => (a_real + b_real));
   };
+  asm.deferedOp.plus = asm.deferedOp.incr;
+  asm.incr = asm.deferedOp.incr;
   asm.origin = (new_addr) => {
     const tmp = curr_addr;
     curr_addr = new_addr;
