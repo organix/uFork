@@ -387,13 +387,19 @@ export const minicore = (asm, opts) => {
       def("DEBUG_TX!"); // ( char -- )
       dat("0xFF_&", "DEBUG_commsport", "!", "EXIT");
 
+      def("DEBUG_TX?", "TRUE"); // ( -- T )
+
       def("DEBUG_RX?"); // ( -- bool )
       dat("DEBUG_comms", "@", "0x10", "&");
       dat("CLEAN_BOOL");
       dat("DUP", "(BRNZ)", "DEBUG_RX?_l0");
+      def("DEBUG_comms_common");
       dat("DEBUG_commsport", "@", "DEBUG_comms", "!");
       def("DEBUG_RX?_l0");
       dat("EXIT");
+
+      def("DEBUG_RX@"); // ( -- char )
+      dat("DEBUG_comms", "@", "0xFF_&", "(JMP)", "DEBUG_comms_common");
       
     }
   }
