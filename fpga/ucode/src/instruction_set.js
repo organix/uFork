@@ -158,6 +158,15 @@ export const defineInstructionset = (asm, opts = { instrsetName: "uFork_CSM1" })
         asm.datum(asm.deferedOp.or(0x8000, asm.deferedOp.and(val, 0x0FFF)));
       };
       return ["NOP", { resolve }];
+      //      ^ placeholder
+    });
+    def("(BRZ)", (asm) => {
+      const here = asm.addr;
+      const resolve = ([here_plusone, val]) => {
+        asm.origin(here);
+        asm.datum(asm.deferedOp.or(0xA000, asm.deferedOp.and(val, 0x0FFF)));
+      };
+      return ["NOP", { resolve }];
     });
   }
 
