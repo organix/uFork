@@ -401,6 +401,20 @@ export const minicore = (asm, opts) => {
       def("DEBUG_RX@"); // ( -- char )
       dat("DEBUG_comms", "@", "0xFF_&", "(JMP)", "DEBUG_comms_common");
     }
+    if (isDefined("instrset_excamera_J1") ||
+        isDefined("instrset_excamera_J1a")) {
+      def("DEBUG_RX?"); // ( -- bool )
+      dat("(LIT)", 0x2000, "@", "2", "&", "CLEAN_BOOL", "EXIT");
+
+      def("DEBUG_TX?"); // ( -- bool )
+      dat("(LIT)", 0x2000, "@", "1", "&", "CLEAN_BOOL", "EXIT");
+
+      def("DEBUG_RX@"); // ( -- char )
+      dat("(LIT)", 0x1000, "@", "0xFF_&", "EXIT");
+
+      def("DEBUG_TX!"); // ( char -- )
+      dat("0xFF_&", "(LIT)", 0x1000, "!", "EXIT");
+    }
     if (isDefined("instrset_uFork_SM2")) {
       // 0xFF00 is RX?, 0xFF01 is TX?, 0xFF02 is RX@, and 0xFF03 is TX!
       def("DEBUG_RX?"); // ( -- bool )
