@@ -168,6 +168,9 @@ export const defineInstructionset = (asm, opts = { instrsetName: "uFork_CSM1" })
     def("LESSTHAN", 0x6803);
     def("RSHIFT", 0x6903);
     def("DECR",   0x6A00);
+    def("LSHIFT", 0x6D03);
+    def("DEPTH",  0x6E81);
+    def("unsigned_LESSTHAN", 0x6F03);
     def("DUP",    0x6081);
     def("OVER",   0x6181);
     def("SWAP",   0x6180);
@@ -182,11 +185,14 @@ export const defineInstructionset = (asm, opts = { instrsetName: "uFork_CSM1" })
 
     def("&",   "AND");
     def("⊕",   "XOR");
-    def("1+",  "INCR");
     def("@",   "FETCH");
     def("!",   "STORE");
     def(">R",  "TO_R");
     def("R>",  "R_FROM");
+    def("R@",  "R_AT");
+    def("1-",  "DECR");
+    def("<",   "LESSTHAN");
+    def("=",   "EQUAL");
     return {
       ...asm,
       def: (sym, val = undefined) => {
