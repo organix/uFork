@@ -149,6 +149,14 @@ export const defineInstructionset = (asm, opts = { instrsetName: "uFork_CSM1" })
       };
       return ["NOP", { resolve }];
     });
+    def("(BRZ)", (asm) => {
+      const here = asm.addr;
+      const resolve = ([here_plustwo, val]) => {
+        asm.origin(here);
+        asm.datum(asm.deferedOp.or(0x2000, asm.deferedOp.and(0x1FFF, val)));
+      };
+      return ["NOP", { resolve }];
+    });
   }
 
   // see uFork/fpga/fomu/csm/cpu.md as reference for uFork_SM2
