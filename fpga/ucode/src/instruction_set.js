@@ -124,6 +124,7 @@ export const defineInstructionset = (asm, opts = { instrsetName: "uFork_CSM1" })
   */
 
   if (opts.instrsetName.startsWith("excamera_J1")) {
+    def("instrset_excamera_J1", 1);
     def("(LIT)", (asm) => {
       const here = asm.addr;
       const resolve = ([here_plusone, val]) => {
@@ -178,6 +179,24 @@ export const defineInstructionset = (asm, opts = { instrsetName: "uFork_CSM1" })
     def("FETCH",  0x6C00);
     def("STORE",  0x6123);
     def("EXIT",   0x700C);
+
+    def("&",   "AND");
+    def("⊕",   "XOR");
+    def("1+",  "INCR");
+    def("@",   "FETCH");
+    def("!",   "STORE");
+    def(">R",  "TO_R");
+    def("R>",  "R_FROM");
+    return {
+      ...asm,
+      def: (sym, val = undefined) => {
+        if (val == undefined) {
+          const here = asm.addr;
+          val = asm.deferedOp.or(0x4000, asm.deferedOp.and(here, 0x1FFF));
+        }
+        asm.def(sym, val);
+      },
+    }
   }
 
   // see uFork/fpga/fomu/csm/cpu.md as reference for uFork_SM2
