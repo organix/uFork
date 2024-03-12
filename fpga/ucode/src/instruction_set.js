@@ -163,6 +163,11 @@ export const defineInstructionset = (asm, opts = { instrsetName: "uFork_CSM1" })
     def("OR",     0x6403);
     def("XOR",    0x6503);
     def("INVERT", 0x6603);
+    def("EQUAL",  0x6703);
+    def("LESSTHAN", 0x6803);
+    def("RSHIFT", 0x6903);
+    def("DECR",   0x6A00);
+    
     def("EXIT",   0x700C);
   }
 
