@@ -9,11 +9,11 @@
 
 Start  | End    | Description
 -------|--------|-------------------------------
-`0000` | `03FF` | uCode program and data
-`0400` | `7EFF` | (reserved)
-`7F00` | `7FFF` | memory-mapped device registers
-`8000` | `BFFF` | uFork quad-cell ROM
-`C000` | `FFFF` | uFork quad-cell RAM
+`0000` | `0FFF` | uCode program and data
+`1000` | `3EFF` | (reserved)
+`3F00` | `3FFF` | memory-mapped device registers
+`4000` | `7FFF` | uFork quad-cell RAM
+`8000` | `FFFF` | uFork quad-cell ROM
 
 ### uCode Memory
 
@@ -26,31 +26,38 @@ Start  | End    | Description
 
      15  14  13  12  11  10   9   8   7   6   5   4   3   2   1   0
     *---+---+---+---*---+---+---+---*---+---+---+---*---+---+---+---*
-    | 0 | 1 | 1 | 1 | 1 | 1 | 1 | 1 |     device ID |  register ID  |
+    | 0 | 0 | 1 | 1 | 1 | 1 | 1 | 1 |     device ID |  register ID  |
     *---+---+---+---*---+---+---+---*---+---+---+---*---+---+---+---*
 
-  * `7F0x`: Serial UART
-    * `7F00`: TX?
-    * `7F01`: TX!
-    * `7F02`: RX?
-    * `7F03`: RX@
-
-### uFork ROM
-
-     15  14  13  12  11  10   9   8   7   6   5   4   3   2   1   0
-    *---+---+---+---*---+---+---+---*---+---+---+---*---+---+---+---*
-    | 1 | 0 |                       uFork quad-cell address | field |
-    *---+---+---+---*---+---+---+---*---+---+---+---*---+---+---+---*
+  * `3F0x`: Serial UART
+    * `3F00`: TX?
+    * `3F01`: TX!
+    * `3F02`: RX?
+    * `3F03`: RX@
 
 ### uFork RAM
 
      15  14  13  12  11  10   9   8   7   6   5   4   3   2   1   0
     *---+---+---+---*---+---+---+---*---+---+---+---*---+---+---+---*
-    | 1 | 1 |cap|                   uFork quad-cell address | field |
+    | 0 | 1 |cap|                   uFork quad-cell address | field |
     *---+---+---+---*---+---+---+---*---+---+---+---*---+---+---+---*
-             \_/
-              0=Read/Write Cell
-              1=Opaque Capability
+             \_/                                             \_____/
+              0=Read/Write Cell                               00:T
+              1=Opaque Capability                             00:X
+                                                              00:Y
+                                                              00:Z
+
+### uFork ROM
+
+     15  14  13  12  11  10   9   8   7   6   5   4   3   2   1   0
+    *---+---+---+---*---+---+---+---*---+---+---+---*---+---+---+---*
+    | 1 |                           uFork quad-cell address | field |
+    *---+---+---+---*---+---+---+---*---+---+---+---*---+---+---+---*
+                                                             \_____/
+                                                              00:T
+                                                              00:X
+                                                              00:Y
+                                                              00:Z
 
 ## Instruction Encoding
 
