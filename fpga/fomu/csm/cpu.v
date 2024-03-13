@@ -192,34 +192,8 @@ module cpu #(
     end
 
     //
-    // evaluation (data) stack
-    //
-
-    wire [DATA_SZ-1:0] d_value;
-    wire [2:0] d_se;
-    wire [DATA_SZ-1:0] d0;
-    wire [DATA_SZ-1:0] d1;
-
-    lifo_se #(
-        .WIDTH(DATA_SZ)
-    ) D_STACK (
-        .i_clk(i_clk),
-
-        .i_data(d_value),
-        .i_se(d_se),
-
-        .o_s0(d0),
-        .o_s1(d1)
-    );
-
-    //
     // control (return) stack
     //
-
-    wire [DATA_SZ-1:0] r_value;
-    wire [2:0] r_se;
-    wire [DATA_SZ-1:0] r0;
-    wire [DATA_SZ-1:0] r1;
 
     lifo #(
         .WIDTH(DATA_SZ)
@@ -235,20 +209,31 @@ module cpu #(
     );
 
     //
-    // arithmetic/logical unit
+    // evaluation (data) stack
     //
 
-    wire [3:0] alu_op;
-    wire [DATA_SZ-1:0] alu_arg0;
-    wire [DATA_SZ-1:0] alu_arg1;
-    wire [DATA_SZ-1:0] alu_data;
+    lifo_se #(
+        .WIDTH(DATA_SZ)
+    ) D_STACK (
+        .i_clk(i_clk),
+
+        .i_data(d_value),
+        .i_se(d_se),
+
+        .o_s0(d0),
+        .o_s1(d1)
+    );
+
+    //
+    // arithmetic/logical unit
+    //
 
     alu #(
         .WIDTH(DATA_SZ)
     ) ALU (
         .i_clk(i_clk),
 
-        .i_op(alu_op),
+        .i_op(alu_fn),
         .i_arg0(alu_arg0),
         .i_arg1(alu_arg1),
 
@@ -265,29 +250,67 @@ module cpu #(
     reg [7:0] tick = 0;                                 // "watchdog" timer
     always @(posedge i_clk) begin
         tick <= tick + 1'b1;
-        halt <= (tick > 16);
+        halt <= (tick > 32);
     end
     assign o_running = i_run && o_status && !halt;
 
     reg [ADDR_SZ-1:0] pc = 0;
-    reg [DATA_SZ-1:0] instr_1;
+    reg [DATA_SZ-1:0] instr_1 = UC_NOP;
+    /*
+//    wire [DATA_SZ-1:0] instr = ( phase == 1 ? uc_rdata : instr_1 );
     wire [DATA_SZ-1:0] instr = (
-        phase == 0 ? UC_NOP
-        : phase == 1 ? uc_rdata
+        phase == 1 ? uc_rdata
         : instr_1
     );
+    */
+    wire [DATA_SZ-1:0] instr =                          // current instruction
+        ( phase == 1 ? uc_rdata
+        : instr_1 );
+    wire ctrl = instr[15];                              // {0:evaluation, 1:control-transfer}
+    wire r_pc = instr[14];                              // PC <-> R interaction
+    wire [1:0] r_op = instr[13:12];                     // R-stack operation
+    wire d_drop = instr[11];                            // extra D-stack DROP
+    wire [2:0] d_op = instr[10:8];                      // D-stack operation
+    wire [1:0] alu_a = instr[7:6];                      // left ALU input selector
+    wire [1:0] alu_b = instr[5:4];                      // right ALU input selector
+    wire [3:0] alu_op = instr[3:0];                     // ALU operation
+
+    wire [DATA_SZ-1:0] r_value = alu_data;
+    wire [2:0] r_se =
+        ( ctrl ? `NO_SE
+        : phase == 1 && d_drop ? `DROP_SE
+        : phase == 2 ? r_op
+        : `NO_SE );
+    wire [DATA_SZ-1:0] r0;
+    wire [DATA_SZ-1:0] r1;
+
+    wire [DATA_SZ-1:0] d_value = alu_data;
+    wire [2:0] d_se =
+        ( ctrl ? `NO_SE
+        : phase == 2 ? d_op
+        : `NO_SE );
+    wire [DATA_SZ-1:0] d0;
+    wire [DATA_SZ-1:0] d1;
     wire d_zero = (d0 == 0);                            // zero check for TOS
+
+    wire [3:0] alu_fn = ( ctrl ? `NO_OP : alu_op );
+    wire [DATA_SZ-1:0] alu_arg0 =
+        ( ctrl ? 0
+        : alu_a == 2'b01 ? d1
+        : alu_a == 2'b10 ? r0
+        : alu_a == 2'b11 ? 0
+        : d0 );
+    wire [DATA_SZ-1:0] alu_arg1 =
+        ( ctrl ? -1
+        : alu_b == 2'b01 ? 1
+        : alu_b == 2'b10 ? 16'h8000
+        : alu_b == 2'b11 ? -1
+        : d0 );
+    wire [DATA_SZ-1:0] alu_data;
 
     reg [1:0] phase = 0;
     assign uc_wr = 1'b0;
     assign uc_raddr = pc;
-    assign d_value = 0;
-    assign d_se = `NO_SE;
-    assign r_value = 0;
-    assign r_se = `NO_SE;
-    assign alu_op = `NO_OP;
-    assign alu_arg0 = d0;
-    assign alu_arg1 = d1;
     always @(posedge i_clk) begin
         case (phase)
             0: begin
