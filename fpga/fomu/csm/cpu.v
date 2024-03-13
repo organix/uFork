@@ -256,13 +256,6 @@ module cpu #(
 
     reg [ADDR_SZ-1:0] pc = 0;
     reg [DATA_SZ-1:0] instr_1 = UC_NOP;
-    /*
-//    wire [DATA_SZ-1:0] instr = ( phase == 1 ? uc_rdata : instr_1 );
-    wire [DATA_SZ-1:0] instr = (
-        phase == 1 ? uc_rdata
-        : instr_1
-    );
-    */
     wire [DATA_SZ-1:0] instr =                          // current instruction
         ( phase == 1 ? uc_rdata
         : instr_1 );
