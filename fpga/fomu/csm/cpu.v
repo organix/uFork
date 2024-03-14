@@ -70,7 +70,7 @@ module cpu #(
 //    localparam UC_LIT       = 16'h0020;                 // (LIT) item ( -- item )
     localparam UC_SUB       = 16'h0B42;                 // - ( a b -- a-b )
     localparam UC_OR        = 16'h0B46;                 // OR ( a b -- a|b )
-    localparam UC_NOT       = 16'h0375;                 // INVERT ( a -- ~a )
+    localparam UC_NOT       = 16'h0335;                 // INVERT ( a -- ~a )
     localparam UC_NEG       = 16'h03C2;                 // NEGATE ( a -- -a )
     localparam UC_DEC       = 16'h0312;                 // 1- ( a -- a-1 )
 //    localparam UC_NIP       = 16'h0026;                 // ( a b -- b )
@@ -128,8 +128,8 @@ module cpu #(
     // initial program
     initial begin
         ucode[12'h000] = UC_TRUE;
-        ucode[12'h001] = UC_NOP;
-        ucode[12'h002] = UC_DUP;
+        ucode[12'h001] = UC_MSB;//UC_NOP;
+        ucode[12'h002] = UC_NOP;//UC_DUP;
         ucode[12'h003] = UC_NEG;
         ucode[12'h004] = UC_NOT;
         ucode[12'h005] = UC_SWAP;
@@ -268,11 +268,17 @@ module cpu #(
     wire [1:0] alu_b = instr[5:4];                      // right ALU input selector
     wire [3:0] alu_op = instr[3:0];                     // ALU operation
 
-    wire [DATA_SZ-1:0] r_value = alu_data;
+    wire [DATA_SZ-1:0] r_value =
+        ( ctrl ?
+            ( phase == 1 && r_pc ? pc
+            : 0 )
+        : alu_data );
     wire [2:0] r_se =
-        ( ctrl ? `NO_SE
-        : phase == 1 && d_drop ? `DROP_SE
+        ( ctrl ?
+            ( phase == 1 && r_pc ? `PUSH_SE
+            : `NO_SE )
         : phase == 2 ? r_op
+        //: phase == 3 && r_pc ? `DROP_SE <--- this is done by phase 2 r_op...
         : `NO_SE );
     wire [DATA_SZ-1:0] r0;
     wire [DATA_SZ-1:0] r1;
@@ -280,6 +286,7 @@ module cpu #(
     wire [DATA_SZ-1:0] d_value = alu_data;
     wire [2:0] d_se =
         ( ctrl ? `NO_SE
+        : phase == 1 && d_drop ? `DROP_SE
         : phase == 2 ? d_op
         : `NO_SE );
     wire [DATA_SZ-1:0] d0;
@@ -309,7 +316,7 @@ module cpu #(
             0: begin
                 if (o_running) begin
                     phase <= 1;
-                    pc <= pc + 1'b1;
+                    pc <= pc + 1'b1;                    // precalculate default next
                 end
             end
             1: begin
@@ -317,9 +324,15 @@ module cpu #(
                 instr_1 <= uc_rdata;
             end
             2: begin
+                if (!ctrl && r_pc) begin                // return from procedure
+                    pc <= r0[ADDR_SZ-1:0];
+                end
                 phase <= 3;
             end
             3: begin
+                if (ctrl) begin                         // jump or call procedure
+                    pc <= instr[ADDR_SZ-1:0];
+                end
                 phase <= 0;
             end
             default: begin
