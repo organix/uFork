@@ -66,7 +66,7 @@ module alu #(
             `ROL_OP: begin
                 o_data <= { i_arg0[WIDTH-2:0], i_arg0[WIDTH-1] };
             end
-            default: begin                              // no operation
+            default: begin                              // ignore
                 o_data <= 0;
             end
         endcase

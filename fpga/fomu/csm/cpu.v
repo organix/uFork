@@ -272,18 +272,20 @@ module cpu #(
         ( ctrl ?
             ( phase == 1 && r_pc ? pc
             : 0 )
+        : alu_fn == `FETCH_OP ? uc_rdata
         : alu_data );
     wire [2:0] r_se =
         ( ctrl ?
             ( phase == 1 && r_pc ? `PUSH_SE
             : `NO_SE )
         : phase == 2 ? r_op
-        //: phase == 3 && r_pc ? `DROP_SE <--- this is done by phase 2 r_op...
         : `NO_SE );
     wire [DATA_SZ-1:0] r0;
     wire [DATA_SZ-1:0] r1;
 
-    wire [DATA_SZ-1:0] d_value = alu_data;
+    wire [DATA_SZ-1:0] d_value =
+        ( alu_fn == `FETCH_OP ? uc_rdata
+        : alu_data );
     wire [2:0] d_se =
         ( ctrl ? `NO_SE
         : phase == 1 && d_drop ? `DROP_SE
@@ -309,8 +311,18 @@ module cpu #(
     wire [DATA_SZ-1:0] alu_data;
 
     reg [1:0] phase = 0;
-    assign uc_wr = 1'b0;
-    assign uc_raddr = pc;
+    assign uc_wr =
+        ( phase == 1 && alu_fn == `STORE_OP ? 1'b0
+        : 1'b0 );
+    assign uc_waddr =
+        ( phase == 1 && alu_fn == `STORE_OP ? alu_arg1[ADDR_SZ-1:0]
+        : -1 );
+    assign uc_wdata =
+        ( phase == 1 && alu_fn == `STORE_OP ? alu_arg0
+        : -1 );
+    assign uc_raddr =
+        ( phase == 1 && alu_fn == `FETCH_OP ? alu_arg0[ADDR_SZ-1:0]
+        : pc );
     always @(posedge i_clk) begin
         case (phase)
             0: begin
