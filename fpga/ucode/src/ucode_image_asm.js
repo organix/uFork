@@ -458,6 +458,12 @@ export const minicore = (asm, opts) => {
                                                          // 12 MHz / 60 = 200 KHz
       dat("0xF_&", "(LIT)", 0x1F, "fomu_sysbus!");       // SPICSR
       dat("EXIT");
+
+      def("spi1_wait_if_busy"); // ( -- )
+      dat("(LIT)", 0x1C, "fomu_sysbus@"); // ( status_byte )
+      dat("(LIT)", 0xC0, "&");            // ( dirty_busy_flag )
+      dat("(BRNZ)", "spi1_wait_if_busy");
+      dat("EXIT");
       
       def("spi1_readbyte"); // ( -- byte ) blocking read of incomming byte
       def("spi1_writebyte"); // ( byte -- )
