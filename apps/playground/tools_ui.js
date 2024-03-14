@@ -146,6 +146,12 @@ const tools_ui = make_ui("tools-ui", function (element, {
         }
     }
 
+    function warn(...args) {
+        set_device("io");
+        on_device_change("io");
+        devices.io.warn(...args);
+    }
+
     function run(text, entry) {
         stop();
 
@@ -182,9 +188,7 @@ const tools_ui = make_ui("tools-ui", function (element, {
         const ir = compile(text);
         if (ir.errors !== undefined && ir.errors.length > 0) {
             const error_messages = ir.errors.map(stringify_error);
-            set_device("io");
-            on_device_change("io");
-            return devices.io.warn(error_messages.join("\n"));
+            return warn(error_messages.join("\n"));
         }
         parseq.sequence([
             core.h_initialize(),
@@ -205,12 +209,10 @@ const tools_ui = make_ui("tools-ui", function (element, {
                         const event_stub = core.u_read_quad(ptr);
                         const event = core.u_read_quad(event_stub.y);
                         const msg = event.y;
-                        set_device("io");
-                        on_device_change("io");
                         if (msg === ufork.TRUE_RAW) {
                             devices.io.debug("Test passed. You are awesome!");
                         } else {
-                            devices.io.warn("Test failed:", core.u_pprint(msg));
+                            warn("Test failed:", core.u_pprint(msg));
                         }
                         stop();
                     });
@@ -231,9 +233,7 @@ const tools_ui = make_ui("tools-ui", function (element, {
             })
         ])(function callback(value, reason) {
             if (value === undefined) {
-                set_device("io");
-                on_device_change("io");
-                devices.io.warn(reason.message ?? reason);
+                warn(reason.message ?? reason);
             }
         });
     }
@@ -294,6 +294,7 @@ const tools_ui = make_ui("tools-ui", function (element, {
     shadow.append(style, controls_element, device_element);
     element.set_device = set_device;
     element.set_lang = set_lang;
+    element.warn = warn;
 });
 
 //debug import lang_asm from "./lang_asm.js";

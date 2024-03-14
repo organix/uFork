@@ -199,10 +199,10 @@ tools.set_lang(lang);
 tools.set_device(read_state("dev") || "io");
 fetch_text().then(function (text) {
     editor.set_text(text);
+    initial_text = text;
 }).catch(function (error) {
-    editor.set_text("; Failed to load source: " + error.message);
-}).finally(function () {
-    initial_text = editor.get_text();
+    editor.set_text(initial_text);
+    tools.warn("Failed to load source: " + error.message);
 });
 window.onresize = function () {
     if (is_landscape()) {
