@@ -464,8 +464,19 @@ export const minicore = (asm, opts) => {
       dat("(LIT)", 0xC0, "&");            // ( dirty_busy_flag )
       dat("(BRNZ)", "spi1_wait_if_busy");
       dat("EXIT");
+
+      def("spi1_wait_if_readbyte_not_ready"); // ( -- )
+      dat("(LIT)", 0x1C, "fomu_sysbus@");     // ( status_byte )
+      dat("(LIT)", 0x08, "&");
+      dat("(BRNZ)", "spi1_wait_if_readbyte_not_ready");
+      dat("EXIT");
       
       def("spi1_readbyte"); // ( -- byte ) blocking read of incomming byte
+      dat("spi1_wait_if_busy");
+      dat("spi1_wait_if_readbyte_not_ready");
+      dat("(LIT)", 0x1E, "fomu_sysbus@");
+      dat("EXIT");
+      
       def("spi1_writebyte"); // ( byte -- )
       def("spi1_end");
       
