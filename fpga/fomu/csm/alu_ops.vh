@@ -15,6 +15,12 @@ Operation Encoding for ALU
 `define XOR_OP      (4'h5)  // a^b
 `define OR_OP       (4'h6)  // a|b
 `define ROL_OP      (4'h7)  // {a[14:0],a[15]}
+`define ROL2_OP     (4'h8)  // {a[13:0],a[15:14]}
+`define ROL4_OP     (4'h9)  // {a[11:0],a[15:12]}
+`define ROL8_OP     (4'hA)  // {a[7:0],a[15:8]}
+`define ASR_OP      (4'hB)  // {a[15],a[15:1]}
+`define ASR2_OP     (4'hC)  // {a[15],a[15],a[15:2]}
+`define ASR4_OP     (4'hD)  // {a[15],a[15],a[15],a[15],a[15:4]}
 `define FETCH_OP    (4'hE)  // @
 `define STORE_OP    (4'hF)  // !
 
