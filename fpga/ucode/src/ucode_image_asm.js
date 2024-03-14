@@ -444,7 +444,21 @@ export const minicore = (asm, opts) => {
       dat("0xFF_&", "SWAP", "0xFF_&", "SWAP");
       dat("(LIT)", 0x3F04, "!", "(LIT)", 0x3F05, "!", "EXIT");
 
-      def("spi1_start"); // asuming that the spi flash eeprom is connected there
+      def("spi1_start"); // ( SlaveSelect -- )
+      // asuming that the spi flash eeprom is connected to spi 1 hard block
+      dat("(LIT)", 0xFF, "(LIT)", 0x19, "fomu_sysbus!"); // SPIRC0 = 0b11_111_111
+                                                         //   most waits
+      dat("(LIT)", 0x80, "(LIT)", 0x1A, "fomu_sysbus!"); // SPIRC1 = 0b1_0000000
+                                                         // spi enabled
+      dat("(LIT)", 0x86, "(LIT)", 0x1B, "fomu_sysbus!"); // SPIRC2
+                                                         // fpga is master
+                                                         // spi mode is 3
+                                                         // most significant bit first
+      dat("(LIT)", 0x3D, "(LIT)", 0x1C, "fomu_sysbus!"); // SPIBR = nearly slowest
+                                                         // 12 MHz / 60 = 200 KHz
+      dat("0xF_&", "(LIT)", 0x1F, "fomu_sysbus!");       // SPICSR
+      dat("EXIT");
+      
       def("spi1_readbyte"); // ( -- byte ) blocking read of incomming byte
       def("spi1_writebyte"); // ( byte -- )
       def("spi1_end");
