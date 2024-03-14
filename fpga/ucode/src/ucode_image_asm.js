@@ -444,9 +444,15 @@ export const minicore = (asm, opts) => {
       dat("0xFF_&", "SWAP", "0xFF_&", "SWAP");
       dat("(LIT)", 0x3F04, "!", "(LIT)", 0x3F05, "!", "EXIT");
 
+      def("spi1_start"); // asuming that the spi flash eeprom is connected there
+      def("spi1_readbyte"); // ( -- byte ) blocking read of incomming byte
+      def("spi1_writebyte"); // ( byte -- )
+      def("spi1_end");
+      
+
       def("spi_flash_fastread"); // ( flash_upper_addr flash_lower_addr ucode_addr cells )
       dat("SWAP", ">R", ">R");   // ( flash_upper_addr flash_lower_addr ) R:( ucode_addr cells )
-      // merkill
+      dat("SWAP", "0xFF_&");     // ( flash_lower_addr flash_upper_addr ) R:( ucode_addr cells )
     }
   }
   
