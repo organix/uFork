@@ -444,7 +444,7 @@ export const minicore = (asm, opts) => {
       dat("0xFF_&", "SWAP", "0xFF_&", "SWAP");
       dat("(LIT)", 0x3F04, "!", "(LIT)", 0x3F05, "!", "EXIT");
 
-      def("spi1_start"); // ( SlaveSelect -- )
+      def("spi1_start"); // ( SlaveSelectMask -- )
       // asuming that the spi flash eeprom is connected to spi 1 hard block
       dat("(LIT)", 0xFF, "(LIT)", 0x19, "fomu_sysbus!"); // SPIRC0 = 0b11_111_111
                                                          //   most waits
@@ -465,6 +465,12 @@ export const minicore = (asm, opts) => {
       dat("(BRNZ)", "spi1_wait_if_busy");
       dat("EXIT");
 
+      def("spi1_wait_if_writebyte_not_ready"); // ( -- )
+      dat("(LIT)", 0x1C, "fomu_sysbus@");     // ( status_byte )
+      dat("(LIT)", 0x10, "&");
+      dat("(BRNZ)", "spi1_wait_if_writebyte_not_ready");
+      dat("EXIT");
+
       def("spi1_wait_if_readbyte_not_ready"); // ( -- )
       dat("(LIT)", 0x1C, "fomu_sysbus@");     // ( status_byte )
       dat("(LIT)", 0x08, "&");
@@ -478,6 +484,11 @@ export const minicore = (asm, opts) => {
       dat("EXIT");
       
       def("spi1_writebyte"); // ( byte -- )
+      dat("spi1_wait_if_busy");
+      dat("spi1_wait_if_writebyte_not_ready");
+      dat("(LIT)", 0x1D, "fomu_sysbus!");
+      dat("EXIT");
+      
       def("spi1_end");
       
 
