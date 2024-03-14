@@ -515,6 +515,9 @@ export const minicore = (asm, opts) => {
       dat("(NEXT)", "spi_flash_fastread_l0");
       dat("DROP");
       dat("spi1_end");
+      dat("1", "spi1_start");
+      dat("(LIT)", 0xB9, "spi1_writebyte"); // tell flash to into deep power down
+      dat("spi1_end");
       dat("EXIT");
     }
   }
