@@ -429,6 +429,26 @@ export const minicore = (asm, opts) => {
       dat("0xFF_&", "(LIT)", 0x3F01, "!", "EXIT");
     }
   }
+
+  if (isDefined("instrset_uFork_SM2")) {
+    if (isDefined("platform_fomu")) {
+      // addresses 0x3F04-5 is the Lattice ICE 40 UltraPlus 5K system bus
+      // 0x3F04 is the system bus address, only lower byte (mask 0x00FF) used
+      // 0x3F05 is the system bus data,    only lower byte (mask 0x00FF) used
+      //   only reads from and writes to 0x3F03 cause activity from uFork_CSM core
+      //   to lattice system bus
+      def("fomu_sysbus@"); // ( sysbus_addrbyte -- sysbus_databyte )
+      dat("0xFF_&", "(LIT)", 0x3F04, "!", "(LIT)", 0x3F05, "@", "EXIT");
+
+      def("fomu_sysbus!"); // ( sysbus_databyte sysbus_addrbyte -- )
+      dat("0xFF_&", "SWAP", "0xFF_&", "SWAP");
+      dat("(LIT)", 0x3F04, "!", "(LIT)", 0x3F05, "!", "EXIT");
+
+      def("spi_flash_fastread"); // ( flash_upper_addr flash_lower_addr ucode_addr cells )
+      dat("SWAP", ">R", ">R");   // ( flash_upper_addr flash_lower_addr ) R:( ucode_addr cells )
+      // merkill
+    }
+  }
   
   def("TX!"); // ( char -- )
   dat("DEBUG_TX?", "(BRZ)", "TX!");
