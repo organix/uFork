@@ -490,11 +490,32 @@ export const minicore = (asm, opts) => {
       dat("EXIT");
       
       def("spi1_end");
-      
+      dat("0x0000", "(LIT)", 0x1F, "fomu_sysbus!"); // deselect slave
+      dat("0x0000", "(LIT)", 0x1A, "fomu_sysbus!"); // disable spi
+      dat("EXIT");
 
       def("spi_flash_fastread"); // ( flash_upper_addr flash_lower_addr ucode_addr cells )
-      dat("SWAP", ">R", ">R");   // ( flash_upper_addr flash_lower_addr ) R:( ucode_addr cells )
-      dat("SWAP", "0xFF_&");     // ( flash_lower_addr flash_upper_addr ) R:( ucode_addr cells )
+      dat(">R", ">R");           // ( flash_upper_addr flash_lower_addr ) R:( cells ucode_addr )
+      dat("SWAP", "0xFF_&");     // ( flash_lower_addr flash_upper_addr ) R:( cells ucode_addr )
+      dat("1", "spi1_start");    // assume that spi flash is at slave 0
+      dat("(LIT)", 0xAB, "spi1_writebyte"); // wake the spi flash out of low power mode
+      dat("spi1_end");
+      dat("1", "spi1_start");
+      dat("(LIT)", 0x0B, "spi1_writebyte"); // JEDEC std fast read
+      dat("spi1_writebyte");     // first byte of flash address ( flash_lower_addr ) R:( cells ucode_addr  )
+      dat("DUP", "8LBR", "spi1_writebyte"); // second byte of flash address ( flash_lower_addr ) R:( cells ucode_addr )
+      dat("spi1_writebyte");     // third byte of flash address ( ) R:( cells ucode_addr )
+      dat("spi1_readbyte", "DROP"); // read dummy byte ( ) R:( cells ucode_addr )
+      dat("R>");                 // ( ucode_addr ) R:( cells )
+      dat("(JMP)", "spi_flash_fastread_l1");
+      def("spi_flash_fastread_l0");
+      dat("spi1_readbyte", "8LBR", "spi1_readbyte", "OR", "OVER", "!");
+      dat("1+");
+      def("spi_flash_fastread_l1");
+      dat("(NEXT)", "spi_flash_fastread_l0");
+      dat("DROP");
+      dat("spi1_end");
+      dat("EXIT");
     }
   }
   
