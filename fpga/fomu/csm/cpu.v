@@ -106,14 +106,12 @@ module cpu #(
     always @(posedge i_clk) begin
         if (uc_wr) begin                                // write conditionally
             ucode[uc_waddr] <= uc_wdata;
-        /*
         end else begin
             uc_rdata <= ucode[uc_raddr];                // only read if not writing
-        */
         end
         /*
-        */
         uc_rdata <= ucode[uc_raddr];                    // read always
+        */
     end
 
     // uCode word definitions
@@ -132,14 +130,14 @@ module cpu #(
 
     // initial program
     initial begin
-        ucode[12'h000] = 16'h8010;//UC_TRUE;
-        ucode[12'h001] = UC_NOP;//UC_MSB;
-        ucode[12'h002] = UC_DUP;//UC_NOP;
-        ucode[12'h003] = UC_NEG;
+        ucode[12'h000] = UC_TRUE;//16'h8010;
+        ucode[12'h001] = UC_DUP;
+        ucode[12'h002] = UC_DEC;
+        ucode[12'h003] = UC_AND;
         ucode[12'h004] = UC_NOT;
-        ucode[12'h005] = UC_SWAP;
-        ucode[12'h006] = UC_SUB;
-        ucode[12'h007] = UC_DROP;
+        ucode[12'h005] = UC_DROP;
+        ucode[12'h006] = 16'h8000;                      // jump $000
+        ucode[12'h007] = UC_NOP;
         ucode[12'h008] = UC_JMP;//16'h8000;
         ucode[12'h009] = UC_BOOT;
         //
@@ -317,9 +315,13 @@ module cpu #(
         : `NO_SE );
     wire [DATA_SZ-1:0] d0;
     wire [DATA_SZ-1:0] d1;
+
     wire d_zero = (d0 == 0);                            // zero check for TOS
     wire c_branch = ctrl                                // ctrl branch taken
         && (r_op == 2'b00 || d_zero);
+    wire ext_addr = (phase == 1)                        // address outside uCode memory
+        && (alu_fn == `FETCH_OP || alu_fn == `STORE_OP)
+        && (d0[DATA_SZ-1:DATA_SZ-PAD_ADDR] != 0);
 
     wire [3:0] alu_fn = ( ctrl ? `ADD_OP : alu_op );
     wire [DATA_SZ-1:0] alu_arg0 =
@@ -348,6 +350,9 @@ module cpu #(
         ( phase == 1 && alu_fn == `FETCH_OP ? alu_arg0[ADDR_SZ-1:0]
         : pc );
     always @(posedge i_clk) begin
+        if (ext_addr) begin
+            o_status <= 1'b0;                           // address error
+        end
         case (phase)
             0: begin
                 if (o_running) begin
