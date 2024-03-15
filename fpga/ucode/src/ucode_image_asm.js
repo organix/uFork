@@ -19,6 +19,9 @@ export const minicore = (asm, opts) => {
   def("@EXECUTE");
   dat("@");
   def("EXECUTE");
+  if (isDefined("instrset_uFork_SM2")) {
+    dat("0x0FFF_&");
+  }
   dat(">R", "EXIT");
 
   def("?:"); // ( alt conseq cond -- conseq | alt )
@@ -61,6 +64,9 @@ export const minicore = (asm, opts) => {
   def("0x41")
   dat("(CONST)", 0x41);
 
+  def("0x0FFF");
+  dat("(CONST)", 0x0FFF);
+
   def("0x4000");
   dat("(CONST)", 0x4000);
 
@@ -73,6 +79,9 @@ export const minicore = (asm, opts) => {
   def("0xFFFE");
   dat("(CONST)", 0xFFFE);
 
+  def("0x0FFF_&");
+  dat("0x0FFF", "&", "EXIT");
+  
   def("0x4000_&");
   dat("0x4000");
   def("(&)");
@@ -111,7 +120,11 @@ export const minicore = (asm, opts) => {
     def("(BRZ)"); // BRanch if Zero ( bool -- )
   }
   def("(BRZ)_alt");
-  dat("R>", "SWAP", ">R"); // ( raddr ) R:( bool )
+  dat("R>");
+  if (isDefined("instrset_uFork_SM2")) {
+    dat("0x0FFF_&");
+  }
+  dat("SWAP", ">R"); // ( raddr ) R:( bool )
   dat("DUP", "@", "SWAP"); // ( dest raddr ) R:( bool )
   dat("1+", "R>", "?:");   // ( raddr ) R:( )
   dat(">R", "EXIT");
@@ -128,16 +141,32 @@ export const minicore = (asm, opts) => {
   dat("@");        // ( idx raddr idx nrOfEntries )
   dat("<");        // ( idx raddr bool )
   dat("(BRZ)", "(JMPTBL)_l0"); // ( idx raddr )
-  dat("1+", "OVER", "+", "@", ">R", "EXIT");
+  dat("1+", "OVER", "+", "@");
+  if (isDefined("instrset_uFork_SM2")) {
+    dat("0x0FFF_&");
+  }
+  dat(">R", "EXIT");
   def("(JMPTBL)_l0"); // ( idx raddr )
-  dat("DUP", "@", "+", "1+", ">R", "EXIT");
+  dat("DUP", "@", "+", "1+");
+  if (isDefined("instrset_uFork_SM2")) {
+    dat("0x0FFF_&");
+  }
+  dat(">R", "EXIT");
   
   if (!isDefined("(NEXT)")) {
     def("(NEXT)"); // ( ) R:( count raddr -- )
     dat("R>", "R>", "DUP", "(BRZ)", "(NEXT)_l0"); // ( raddr count )
-    dat("1-", ">R", "@", ">R", "EXIT");
+    dat("1-", ">R", "@");
+    if (isDefined("instrset_uFork_SM2")) {
+      dat("0x0FFF_&");
+    }
+    dat(">R", "EXIT");
     def("(NEXT)_l0");
-    dat("DROP", "1+", ">R", "EXIT");
+    dat("DROP", "1+");
+    if (isDefined("instrset_uFork_SM2")) {
+      dat("0x0FFF_&");
+    }
+    dat(">R", "EXIT");
   }
 
   def("(BREXIT)"); // ( bool -- ) exit caller early if bool is true
