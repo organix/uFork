@@ -32,45 +32,60 @@ export const uFork = (asm, opts) => {
 
   let hereBeyondEnd = asm.incr("uFork_last_ucode_address", 0x0000);
   if (!hwImplOfQuadMemory) {
-    if (!(asm.isDefined("spram@")) && !(asm.isDefined("spram!"))) {
-      const quadMemSize_in_cells = quadMemSize_in_quads * 4;
-      def("uFork_quadMem_baseAddr");
-      dat("(CONST)", hereBeyondEnd);
-      hereBeyondEnd = asm.incr(hereBeyondEnd, quadMemSize_in_cells);
-    }
-
-    def("uFork_quaddr2addr"); // ( quad_addr -- cell_addr )
-    if (!(asm.isDefined("spram@")) && !(asm.isDefined("spram!"))) {
-      dat("4*", "uFork_quadMem_baseAddr", "+", "EXIT");
-
-      def("spram@", "@");
-      def("spram!", "!");
+    if (asm.isDefined("instrset_uFork_SM2") && asm.isDefined("platform_fomu")) {
+      def("qramt@");
+      def("qramx@");
+      def("qramy@");
+      def("qramz@");
+      def("qramt!");
+      def("qramx!");
+      def("qramy!");
+      def("qramz!");
+      def("qromt@");
+      def("qromx@");
+      def("qromy@");
+      def("qromz@");
     } else {
-      dat("4*", "EXIT");
-    }
+      if (!(asm.isDefined("spram@")) && !(asm.isDefined("spram!"))) {
+        const quadMemSize_in_cells = quadMemSize_in_quads * 4;
+        def("uFork_quadMem_baseAddr");
+        dat("(CONST)", hereBeyondEnd);
+        hereBeyondEnd = asm.incr(hereBeyondEnd, quadMemSize_in_cells);
+      }
 
-    def("qramt"); dat("uFork_quaddr2addr", "EXIT");
-    def("qramx"); dat("uFork_quaddr2addr", "1+", "EXIT");
-    def("qramy"); dat("uFork_quaddr2addr", "2+", "EXIT");
-    def("qramz"); dat("uFork_quaddr2addr", "3+", "EXIT");
+      def("uFork_quaddr2addr"); // ( quad_addr -- cell_addr )
+      if (!(asm.isDefined("spram@")) && !(asm.isDefined("spram!"))) {
+        dat("4*", "uFork_quadMem_baseAddr", "+", "EXIT");
+        
+        def("spram@", "@");
+        def("spram!", "!");
+      } else {
+        dat("4*", "EXIT");
+      }
 
-    def("qramt@"); dat("qramt", "spram@", "EXIT");
-    def("qramx@"); dat("qramx", "spram@", "EXIT");
-    def("qramy@"); dat("qramy", "spram@", "EXIT");
-    def("qramz@"); dat("qramz", "spram@", "EXIT");
+      def("qramt"); dat("uFork_quaddr2addr", "EXIT");
+      def("qramx"); dat("uFork_quaddr2addr", "1+", "EXIT");
+      def("qramy"); dat("uFork_quaddr2addr", "2+", "EXIT");
+      def("qramz"); dat("uFork_quaddr2addr", "3+", "EXIT");
 
-    def("qramt!"); dat("qramt", "spram!", "EXIT");
-    def("qramx!"); dat("qramx", "spram!", "EXIT");
-    def("qramy!"); dat("qramy", "spram!", "EXIT");
-    def("qramz!"); dat("qramz", "spram!", "EXIT");
+      def("qramt@"); dat("qramt", "spram@", "EXIT");
+      def("qramx@"); dat("qramx", "spram@", "EXIT");
+      def("qramy@"); dat("qramy", "spram@", "EXIT");
+      def("qramz@"); dat("qramz", "spram@", "EXIT");
 
-    if (asm.isDefined("spi_flash@")) {
-    } else {
-      def("qromt@", "qramt@");
-      def("qromx@", "qramx@");
-      def("qromy@", "qramy@");
-      def("qromz@", "qramz@");
-    }
+      def("qramt!"); dat("qramt", "spram!", "EXIT");
+      def("qramx!"); dat("qramx", "spram!", "EXIT");
+      def("qramy!"); dat("qramy", "spram!", "EXIT");
+      def("qramz!"); dat("qramz", "spram!", "EXIT");
+
+      if (asm.isDefined("spi_flash@")) {
+      } else {
+        def("qromt@", "qramt@");
+        def("qromx@", "qramx@");
+        def("qromy@", "qramy@");
+        def("qromz@", "qramz@");
+      }
+    } 
 
     asm.symbols.redefine("qt@"); // ( quad_addr -- t_field )
     dat("uFork_quaddrInRam", "(BRZ)", "qromt@", "(JMP)", "qramt@");
