@@ -33,14 +33,30 @@ export const uFork = (asm, opts) => {
   let hereBeyondEnd = asm.incr("uFork_last_ucode_address", 0x0000);
   if (!hwImplOfQuadMemory) {
     if (asm.isDefined("instrset_uFork_SM2") && asm.isDefined("platform_fomu")) {
-      def("qramt@");
-      def("qramx@");
-      def("qramy@");
-      def("qramz@");
-      def("qramt!");
-      def("qramx!");
-      def("qramy!");
-      def("qramz!");
+      def("qram_base");
+      dat("(CONST)", 0x4000);
+
+      def("qrom_base");
+      dat("(CONST)", 0x8000);
+
+      def("qram"); // ( quad_addr -- addr )
+      dat("DUP", "0x6000_&", "SWAP", "4*", "OR", "qram_base", "+", "EXIT");
+
+      def("qramt", "qram");
+      def("qramx"); dat("qram", "1+", "EXIT");
+      def("qramy"); dat("qram", "2+", "EXIT");
+      def("qramz"); dat("qram", "3+", "EXIT");
+      
+      def("qramt@"); // ( qaddr -- item )
+      dat("qramt", "@", "EXIT");
+      
+      def("qramx@"); dat("qramx", "@", "EXIT");
+      def("qramy@"); dat("qramy", "@", "EXIT");
+      def("qramz@"); dat("qramz", "@", "EXIT");
+      def("qramt!"); dat("qramt", "!", "EXIT");
+      def("qramx!"); dat("qramx", "!", "EXIT");
+      def("qramy!"); dat("qramy", "!", "EXIT");
+      def("qramz!"); dat("qramz", "!", "EXIT");
       def("qromt@");
       def("qromx@");
       def("qromy@");
