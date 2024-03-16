@@ -208,6 +208,25 @@ export const makeAssembler = (opts) => {
     return Promise.all([a, b]).then(([a_real, b_real]) => (a_real + b_real));
   };
   asm.deferedOp.plus = asm.deferedOp.incr;
+  asm.deferedOp.equal = (a, b) => {
+    if (((typeof a) == "string") && ((typeof b) == "string")) {
+      if (a == b) {
+        return true;
+      }
+    }
+    if ((typeof a) == "string") {
+      a = asm.symbols.lookup(a);
+    }
+    if ((typeof b) == "string") {
+      b = asm.symbols.lookup(b);
+    }
+    if (((typeof a) == "number") && ((typeof b) == "number")) {
+      return (a == b);
+    }
+    a = Promise.resolve(a);
+    b = Promise.resolve(b);
+    return Promise.all([a, b]).then(([a_real, b_real]) => (a_real == b_real));
+  };
   asm.incr = asm.deferedOp.incr;
   asm.origin = (new_addr) => {
     const tmp = curr_addr;
