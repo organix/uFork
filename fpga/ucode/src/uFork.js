@@ -15,7 +15,7 @@ export const uFork = (asm, opts) => {
     memoryDescriptor_qaddr =       0x4000,
     uForkSubroutines =              false,
     hwImplOfQuadAllotAndFree =      false,
-    hwImplOfQuadMemory =             true,
+    hwImplOfQuadMemory =            false,
     hwImplOfQuadMemoryGC =          false,
     maxTopOfQuadMemory =           0x5000,
   } = opts;
