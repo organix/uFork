@@ -33,7 +33,7 @@ export const defineInstructionset = (asm, opts = { instrsetName: "uFork_CSM1" })
     if (opts.instrsetName.startsWith("FCPU-16")) {
       def("UMPLUS", 0x0001);
       def("UM+", "UMPLUS");
-    } else if (opts.instrzetName.startsWith("uFork_CSM1")) {
+    } else if (opts.instrsetName.startsWith("uFork_CSM1")) {
       def("PLUS",   0x0001);
       def("+",   "PLUS");
     }
@@ -222,7 +222,7 @@ export const defineInstructionset = (asm, opts = { instrsetName: "uFork_CSM1" })
     def("TO_R",    0x2100);
     def("R_FROM",  0x1280);
     def("R_AT",    0x0280);
-    def("EXIT",    0x5000);
+    def("(EXIT)",  0x5000);
     def("MINUS",   0x0B42);
     def("OR",      0x0B46);
     def("DECR",    0x0312);
@@ -268,6 +268,22 @@ export const defineInstructionset = (asm, opts = { instrsetName: "uFork_CSM1" })
         asm.datum(asm.deferedOp.or(0xA000, asm.deferedOp.and(val, 0x0FFF)));
       };
       return ["NOP", { resolve }];
+    });
+    def("EXIT", (asm) => {
+      // this tries to combine (EXIT) with the preceeding Evaluate instruction if possible
+      // tbd if it turns a preceeding Call instruction into a Jump instruction
+      //     consideration: there are word definitions that depend on return address being consumed
+      const here = asm.addr;
+      const here_minusone = asm.deferedOp.minus(here, 1);
+      const t0 = asm.datumAt(here_minusone);
+      const t1 = asm.deferedOp.equal(asm.deferedOp.and(t0, 0xC000), 0);
+      if ((typeof t1) == "boolean") {
+        if (t1) {
+          asm.origin(here_minusone);
+          return asm.deferOp.or(t0, "(EXIT)");
+        }
+      }
+      return "(EXIT)";
     });
     return {
       ...asm,
