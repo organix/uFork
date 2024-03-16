@@ -146,6 +146,23 @@ export const makeAssembler = (opts) => {
       asm.allot(1);
     }
   };
+  asm.datum = datum;
+  asm.datumAt = (address) => {
+    if (image.has(address)) {
+      const val = image.get(address);
+      if ((typeof val) == "object") {
+        if (!(val instanceof Promise)) { // assume its a promise pack
+          return val.promise;
+        }
+      }
+      return val;
+    } else {
+      // image cell at address yet to be assigned a value
+      const val = makePromise();
+      image.set(address, val);
+      return val.promise;
+    }
+  };
   asm.data = (...datums) => Array.prototype.forEach.call(datums, datum);
   asm.deferedOp = {};
   asm.deferedOp.or = (a, b) => {
