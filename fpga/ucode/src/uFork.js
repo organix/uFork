@@ -42,6 +42,9 @@ export const uFork = (asm, opts) => {
       def("qram"); // ( quad_addr -- addr )
       dat("DUP", "0x6000_&", "SWAP", "4*", "OR", "qram_base", "+", "EXIT");
 
+      def("qrom"); // ( quad_addr -- addr )
+      dat("4*", "qrom_base", "+", "EXIT");
+
       def("qramt", "qram");
       def("qramx"); dat("qram", "1+", "EXIT");
       def("qramy"); dat("qram", "2+", "EXIT");
@@ -57,10 +60,10 @@ export const uFork = (asm, opts) => {
       def("qramx!"); dat("qramx", "!", "EXIT");
       def("qramy!"); dat("qramy", "!", "EXIT");
       def("qramz!"); dat("qramz", "!", "EXIT");
-      def("qromt@");
-      def("qromx@");
-      def("qromy@");
-      def("qromz@");
+      def("qromt@"); dat("qrom", "@", "EXIT");
+      def("qromx@"); dat("qrom", "1+", "@", "EXIT");
+      def("qromy@"); dat("qrom", "2+", "@", "EXIT");
+      def("qromz@"); dat("qrom", "3+", "@", "EXIT");
     } else {
       if (!(asm.isDefined("spram@")) && !(asm.isDefined("spram!"))) {
         const quadMemSize_in_cells = quadMemSize_in_quads * 4;
