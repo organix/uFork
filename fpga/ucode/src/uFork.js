@@ -126,6 +126,12 @@ export const uFork = (asm, opts) => {
     dat("uFork_quaddrInRam", "(BRZ)", "2DROP", "(JMP)", "qramz!");
   }
   if (!hwImplOfQuadMemoryGC) {
+    if (asm.isDefined("instrset_uFork_SM2") && asm.isDefined("platform_fomu")) {
+      def("gcMem_common");
+      def("gcMem@");
+      def("gcMem!");
+      // merkill
+    }
     if (!(asm.isDefined("gcMem@")) && !(asm.isDefined("gcMem!"))) {
       def("uFork_privateGCmem_baseAddr");
       dat("(CONST)", hereBeyondEnd);
