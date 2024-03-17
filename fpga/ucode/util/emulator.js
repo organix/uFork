@@ -362,7 +362,12 @@ export const makeEmulator_uFork_SM2 = (opts) => {
   const rstack = makeStack();
   emu.doOneInstruction = () => {
     const instr = memory.get(pc);
-    pc = incr(pc);
+    const instr_15bit = (instr & 0x8000) >> 15;
+    if (instr_15bit) {
+      // Control
+    } else {
+      // Evaluate
+    }
   };
   return emu;
 };
