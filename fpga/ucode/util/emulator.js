@@ -441,6 +441,11 @@ export const makeEmulator_uFork_SM2 = (opts) => {
         case 0x8: ALU_RESULT = (ALU_A << 2) | (ALU_A >> 14); break;
         case 0x9: ALU_RESULT = (ALU_A << 4) | (ALU_A >> 12); break;
         case 0xA: ALU_RESULT = (ALU_A << 8) | (ALU_A >>  8); break;
+        case 0xB: ALU_RESULT = (ALU_A >> 1); break;
+        case 0xC: ALU_RESULT = (ALU_A >> 2); break;
+        case 0xD: ALU_RESULT = (ALU_A >> 4); break;
+        case 0xE: ALU_RESULT = memory.fetch(TOS); break;
+        case 0xF: ALU_RESULT = 0xCAFE; memory.store(NOS, TOS); break;
     }
   };
   return emu;
