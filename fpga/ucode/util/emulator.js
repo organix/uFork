@@ -448,21 +448,23 @@ export const makeEmulator_uFork_SM2 = (opts) => {
         case 0xF: ALU_RESULT = 0xCAFE; memory.store(NOS, TOS); break;
       }
 
-      switch (instr_D_sel) {
-        case 0o0: dstack.push(NOS); dstack.push(TOS); break; // NONE 
-        case 0o1: dstack.push(NOS); break; // DROP
-        case 0o2: dstack.push(ALU_RESULT); break; // PUSH
-        case 0o3: dstack.push(NOS); dstack.push(ALU_RESULT); break; // RePLaCe
-        case 0o4: dstack.push(TOS); dstack.push(NOS); break; // SWAP
-        case 0o5: dstack.push(NOS); dstack.push(TOS); break; // OVER
-        case 0o6: dstack.push(NOS); dstack.push(TOS);        // ZDUP or ?DUP
-                  if (TOS != 0x0000) {
-                    dstack.push(TOS);
-                  }
-                  break;
-        case 0o7: const THOS = dstack.pop(); // ROT3
-                  dstack.push(NOS); dstack.push(TOS); dstack.push(THOS);
-                  break;
+      if (!instr_2DROP) {
+        switch (instr_D_sel) {
+          case 0o0: dstack.push(NOS); dstack.push(TOS); break; // NONE 
+          case 0o1: dstack.push(NOS); break; // DROP
+          case 0o2: dstack.push(ALU_RESULT); break; // PUSH
+          case 0o3: dstack.push(NOS); dstack.push(ALU_RESULT); break; // RePLaCe
+          case 0o4: dstack.push(TOS); dstack.push(NOS); break; // SWAP
+          case 0o5: dstack.push(NOS); dstack.push(TOS); break; // OVER
+          case 0o6: dstack.push(NOS); dstack.push(TOS);        // ZDUP or ?DUP
+                    if (TOS != 0x0000) {
+                      dstack.push(TOS);
+                    }
+                    break;
+          case 0o7: const THOS = dstack.pop(); // ROT3
+                    dstack.push(NOS); dstack.push(TOS); dstack.push(THOS);
+                    break;
+        }
       }
     }
   };
