@@ -70,7 +70,7 @@ module cpu #(
 //    localparam UC_LIT       = 16'h0020;                 // (LIT) item ( -- item )
     localparam UC_SUB       = 16'h0B42;                 // - ( a b -- a-b )
     localparam UC_OR        = 16'h0B46;                 // OR ( a b -- a|b )
-    localparam UC_NOT       = 16'h0375;                 // INVERT ( a -- ~a )
+    localparam UC_NOT       = 16'h0335;                 // INVERT ( a -- ~a )
     localparam UC_NEG       = 16'h03C2;                 // NEGATE ( a -- -a )
     localparam UC_DEC       = 16'h0312;                 // 1- ( a -- a-1 )
 //    localparam UC_NIP       = 16'h0026;                 // ( a b -- b )
@@ -81,6 +81,7 @@ module cpu #(
     localparam UC_ROT       = 16'h0700;                 // ( a b c -- b c a )
 //    localparam UC_R_SWAP    = 16'h002C;                 // ( -- ) R:( a b -- b a )
     localparam UC_R_FETCH   = 16'h0280;                 // R@ ( -- a ) R:( a -- a )
+    localparam UC_2MUL      = 16'h0301;                 // 2* ( a -- a+a )
 
     /*
     localparam UC_RX_OK     = 16'h003C;                 // rx? ( -- ready )
@@ -108,7 +109,9 @@ module cpu #(
         end else begin
             uc_rdata <= ucode[uc_raddr];                // only read if not writing
         end
-//        uc_rdata <= ucode[uc_raddr];                    // read always
+        /*
+        uc_rdata <= ucode[uc_raddr];                    // read always
+        */
     end
 
     // uCode word definitions
@@ -127,16 +130,29 @@ module cpu #(
 
     // initial program
     initial begin
-        ucode[12'h000] = UC_TRUE;
-        ucode[12'h001] = UC_NOP;
-        ucode[12'h002] = UC_DUP;
-        ucode[12'h003] = UC_NEG;
+        ucode[12'h000] = UC_TRUE;//16'h8010;
+        ucode[12'h001] = UC_DUP;
+        ucode[12'h002] = UC_DEC;
+        ucode[12'h003] = UC_AND;
         ucode[12'h004] = UC_NOT;
-        ucode[12'h005] = UC_SWAP;
-        ucode[12'h006] = UC_SUB;
-        ucode[12'h007] = UC_DROP;
-        ucode[12'h008] = UC_JMP;
+        ucode[12'h005] = UC_DROP;
+        ucode[12'h006] = 16'h8000;                      // jump $000
+        ucode[12'h007] = UC_NOP;
+        ucode[12'h008] = UC_JMP;//16'h8000;
         ucode[12'h009] = UC_BOOT;
+        //
+        // ...
+        //
+        ucode[12'h010] = UC_LSB;
+        ucode[12'h011] = UC_2MUL;
+        ucode[12'h012] = 16'hB012;                      // if 0 branch $010, else decrement
+        ucode[12'h013] = UC_NOP;
+        ucode[12'h014] = UC_NOP;
+        ucode[12'h015] = UC_NOP;
+        ucode[12'h016] = UC_NOP;
+        ucode[12'h017] = UC_NOP;
+        ucode[12'h018] = UC_NOP;
+        ucode[12'h019] = 16'h8000;                      // jump $000
         //
         // ...
         //
@@ -192,34 +208,8 @@ module cpu #(
     end
 
     //
-    // evaluation (data) stack
-    //
-
-    wire [DATA_SZ-1:0] d_value;
-    wire [2:0] d_se;
-    wire [DATA_SZ-1:0] d0;
-    wire [DATA_SZ-1:0] d1;
-
-    lifo_se #(
-        .WIDTH(DATA_SZ)
-    ) D_STACK (
-        .i_clk(i_clk),
-
-        .i_data(d_value),
-        .i_se(d_se),
-
-        .o_s0(d0),
-        .o_s1(d1)
-    );
-
-    //
     // control (return) stack
     //
-
-    wire [DATA_SZ-1:0] r_value;
-    wire [2:0] r_se;
-    wire [DATA_SZ-1:0] r0;
-    wire [DATA_SZ-1:0] r1;
 
     lifo #(
         .WIDTH(DATA_SZ)
@@ -235,24 +225,35 @@ module cpu #(
     );
 
     //
-    // arithmetic/logical unit
+    // evaluation (data) stack
     //
 
-    wire [3:0] alu_op;
-    wire [DATA_SZ-1:0] alu_arg0;
-    wire [DATA_SZ-1:0] alu_arg1;
-    wire [DATA_SZ-1:0] alu_data;
+    lifo_se #(
+        .WIDTH(DATA_SZ)
+    ) D_STACK (
+        .i_clk(i_clk),
+
+        .i_data(d_value),
+        .i_se(d_se),
+
+        .o_s0(d0),
+        .o_s1(d1)
+    );
+
+    //
+    // arithmetic/logical unit
+    //
 
     alu #(
         .WIDTH(DATA_SZ)
     ) ALU (
         .i_clk(i_clk),
 
-        .i_op(alu_op),
+        .i_op(alu_fn),
         .i_arg0(alu_arg0),
         .i_arg1(alu_arg1),
 
-        .o_data(alu_data)
+        .o_data(alu_out)
     );
 
     //
@@ -261,49 +262,122 @@ module cpu #(
 
     reg halt = 1'b0;
     /*
-    */
     reg [7:0] tick = 0;                                 // "watchdog" timer
     always @(posedge i_clk) begin
         tick <= tick + 1'b1;
-        halt <= (tick > 16);
+        halt <= (tick > 32);
     end
+    */
     assign o_running = i_run && o_status && !halt;
 
     reg [ADDR_SZ-1:0] pc = 0;
-    reg [DATA_SZ-1:0] instr_1;
-    wire [DATA_SZ-1:0] instr = (
-        phase == 0 ? UC_NOP
-        : phase == 1 ? uc_rdata
-        : instr_1
-    );
+    reg [DATA_SZ-1:0] instr_1 = UC_NOP;
+    wire [DATA_SZ-1:0] instr =                          // current instruction
+        ( phase == 1 ? uc_rdata
+        : instr_1 );
+    wire ctrl = instr[15];                              // {0:evaluation, 1:control-transfer}
+    wire r_pc = instr[14];                              // PC <-> R interaction
+    wire [1:0] r_op = instr[13:12];                     // R-stack operation
+    wire d_drop = instr[11];                            // extra D-stack DROP
+    wire [2:0] d_op = instr[10:8];                      // D-stack operation
+    wire [1:0] alu_a = ( ctrl ? 2'b00 : instr[7:6] );   // left ALU input selector
+    wire [1:0] alu_b = ( ctrl ? r_op : instr[5:4] );    // right ALU input selector
+    wire [3:0] alu_op = instr[3:0];                     // ALU operation
+
+    assign uc_wr =
+        ( phase == 1 && alu_fn == `STORE_OP ? 1'b1
+        : 1'b0 );
+    assign uc_waddr =
+        ( phase == 1 && alu_fn == `STORE_OP ? alu_arg1[ADDR_SZ-1:0]
+        : -1 );
+    assign uc_wdata =
+        ( phase == 1 && alu_fn == `STORE_OP ? alu_arg0
+        : -1 );
+    assign uc_raddr =
+        ( phase == 1 && alu_fn == `FETCH_OP ? alu_arg0[ADDR_SZ-1:0]
+        : pc );
+
+    wire [DATA_SZ-1:0] r_value =
+        ( ctrl ?
+            ( phase == 1 && r_pc ? pc
+            : 0 )
+        : alu_fn == `FETCH_OP ? uc_rdata
+        : alu_out );
+    wire [2:0] r_se =
+        ( ctrl ?
+            ( phase == 1 && r_pc ? `PUSH_SE
+            : `NO_SE )
+        : phase == 2 ? r_op
+        : `NO_SE );
+    wire [DATA_SZ-1:0] r0;
+    wire [DATA_SZ-1:0] r1;
+
+    wire [DATA_SZ-1:0] d_value =
+        ( !ctrl && alu_fn == `FETCH_OP ? uc_rdata
+        : alu_out );
+    wire [2:0] d_se =
+        ( ctrl ?
+            ( phase == 1 && c_branch && r_op != 2'b00 ? `DROP_SE
+            : phase == 2 && !c_branch ?
+                ( r_op == 2'b00 ? `NO_SE
+                : r_op == 2'b10 ? `DROP_SE
+                : `RPLC_SE )
+            : `NO_SE )
+        : phase == 1 && d_drop ? `DROP_SE
+        : phase == 2 ? d_op
+        : `NO_SE );
+    wire [DATA_SZ-1:0] d0;
+    wire [DATA_SZ-1:0] d1;
+
     wire d_zero = (d0 == 0);                            // zero check for TOS
+    wire c_branch = (r_op == 2'b00 || d_zero);          // ctrl branch taken
+    wire ext_addr = (phase == 1)                        // address outside uCode memory
+        && (alu_fn == `FETCH_OP || alu_fn == `STORE_OP)
+        && (d0[DATA_SZ-1:DATA_SZ-PAD_ADDR] != 0);
+
+    wire [3:0] alu_fn =
+        ( ctrl ? `ADD_OP
+        : phase == 1 ? alu_op
+        : `NO_OP );
+    wire [DATA_SZ-1:0] alu_arg0 =
+        ( alu_a == 2'b01 ? d1
+        : alu_a == 2'b10 ? r0
+        : alu_a == 2'b11 ? 0
+        : d0 );
+    wire [DATA_SZ-1:0] alu_arg1 =
+        ( alu_b == 2'b01 ? 1
+        : alu_b == 2'b10 ? 16'h8000
+        : alu_b == 2'b11 ? -1
+        : d0 );
+    wire [DATA_SZ-1:0] alu_out;
 
     reg [1:0] phase = 0;
-    assign uc_wr = 1'b0;
-    assign uc_raddr = pc;
-    assign d_value = 0;
-    assign d_se = `NO_SE;
-    assign r_value = 0;
-    assign r_se = `NO_SE;
-    assign alu_op = `NO_OP;
-    assign alu_arg0 = d0;
-    assign alu_arg1 = d1;
     always @(posedge i_clk) begin
+        if (ext_addr) begin
+            o_status <= 1'b0;                           // address error
+        end
         case (phase)
             0: begin
                 if (o_running) begin
+                    pc <= pc + 1'b1;                    // precalculate default next
                     phase <= 1;
-                    pc <= pc + 1'b1;
                 end
             end
             1: begin
-                phase <= 2;
+                if (ctrl && c_branch) begin             // jump or call procedure
+                    pc <= instr[ADDR_SZ-1:0];
+                end
+                if (!ctrl && r_pc) begin                // return from procedure
+                    pc <= r0[ADDR_SZ-1:0];
+                end
                 instr_1 <= uc_rdata;
+                phase <= 2;
             end
             2: begin
-                phase <= 3;
+                phase <= 0;
             end
             3: begin
+                o_status <= 1'b0;                       // phase error
                 phase <= 0;
             end
             default: begin

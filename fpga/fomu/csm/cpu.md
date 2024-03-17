@@ -1,9 +1,63 @@
 # uCode CPU Design
 
-Highlights:
+## Highlights
 
   * 16-bit data words
   * 12-bit addresses
+
+## Address Space
+
+Start  | End    | Description
+-------|--------|-------------------------------
+`0000` | `0FFF` | uCode program and data
+`1000` | `3EFF` | (reserved)
+`3F00` | `3FFF` | memory-mapped device registers
+`4000` | `7FFF` | uFork quad-cell RAM
+`8000` | `FFFF` | uFork quad-cell ROM
+
+### uCode Memory
+
+     15  14  13  12  11  10   9   8   7   6   5   4   3   2   1   0
+    *---+---+---+---*---+---+---+---*---+---+---+---*---+---+---+---*
+    | 0 | 0 | 0 | 0 |                          uCode memory address |
+    *---+---+---+---*---+---+---+---*---+---+---+---*---+---+---+---*
+
+### Device Registers
+
+     15  14  13  12  11  10   9   8   7   6   5   4   3   2   1   0
+    *---+---+---+---*---+---+---+---*---+---+---+---*---+---+---+---*
+    | 0 | 0 | 1 | 1 | 1 | 1 | 1 | 1 |     device ID |  register ID  |
+    *---+---+---+---*---+---+---+---*---+---+---+---*---+---+---+---*
+
+  * `3F0x`: Serial UART
+    * `3F00`: TX?
+    * `3F01`: TX!
+    * `3F02`: RX?
+    * `3F03`: RX@
+
+### uFork RAM
+
+     15  14  13  12  11  10   9   8   7   6   5   4   3   2   1   0
+    *---+---+---+---*---+---+---+---*---+---+---+---*---+---+---+---*
+    | 0 | 1 |cap|                   uFork quad-cell address | field |
+    *---+---+---+---*---+---+---+---*---+---+---+---*---+---+---+---*
+             \_/                                             \_____/
+              0=Read/Write Cell                               00:T
+              1=Opaque Capability                             00:X
+                                                              00:Y
+                                                              00:Z
+
+### uFork ROM
+
+     15  14  13  12  11  10   9   8   7   6   5   4   3   2   1   0
+    *---+---+---+---*---+---+---+---*---+---+---+---*---+---+---+---*
+    | 1 |                           uFork quad-cell address | field |
+    *---+---+---+---*---+---+---+---*---+---+---+---*---+---+---+---*
+                                                             \_____/
+                                                              00:T
+                                                              00:X
+                                                              00:Y
+                                                              00:Z
 
 ## Instruction Encoding
 
@@ -39,7 +93,7 @@ it may be incremented or decremented by one.
       |   |  01: D0==0?addr->PC,DROP:PC+1->PC,D0+1->D0
       |   |  10: D0==0?addr->PC,DROP:PC+1->PC,DROP
       |   |  11: D0==0?addr->PC,DROP:PC+1->PC,D0-1->D0
-      | PC+1->R {0=JUMP, 1=CALL}
+      | PC+1->R {0:JUMP, 1:CALL}
     control
 
 ### Evaluation Instructions
@@ -57,22 +111,22 @@ the next instruction, but may be loaded from the R-stack instead.
     | 0 |RPC|  R se |2:1|    D se   | ALU A | ALU B |    ALU op     |
     *---+---+---+---*---+---+---+---*---+---+---+---*---+---+---+---*
       ^   ^  \_____/  ^  \_________/ \_____/ \_____/ \______________/
-      |   |  00=NONE  |    000=NONE   00=D0   00=D0     0000=NONE
-      |   |  01=DROP  |    001=DROP   01=D1   01=+1     0001=ADD
-      |   |  10=PUSH  |    010=PUSH   10=R0   10=msb    0010=SUB
-      |   |  11=RPLC  |    011=RPLC   11=0    11=-1     0011=MUL
-      | R->PC       2DROP  100=SWAP                     0100=AND
-    evaluate               101=OVER                     0101=XOR
-                           110=ZDUP                     0110=OR 
-                           111=ROT3                     0111=ROL
-                                                        1000=2ROL
-                                                        1001=4ROL
-                                                        1010=8ROL
-                                                        1011=ASR
-                                                        1100=2ASR
-                                                        1101=4ASR
-                                                        1110=FETCH
-                                                        1111=STORE
+      |   |  00:NONE  |    000:NONE   00:D0   00:D0     0000:NONE
+      |   |  01:DROP  |    001:DROP   01:D1   01:+1     0001:ADD
+      |   |  10:PUSH  |    010:PUSH   10:R0   10:msb    0010:SUB
+      |   |  11:RPLC  |    011:RPLC   11:0    11:-1     0011:MUL
+      | R->PC       2DROP  100:SWAP                     0100:AND
+    evaluate               101:OVER                     0101:XOR
+                           110:ZDUP                     0110:OR 
+                           111:ROT3                     0111:ROL
+                                                        1000:2ROL
+                                                        1001:4ROL
+                                                        1010:8ROL
+                                                        1011:ASR
+                                                        1100:2ASR
+                                                        1101:4ASR
+                                                        1110:FETCH
+                                                        1111:STORE
 
 ### Primitive Encodings
 
@@ -97,7 +151,7 @@ EXIT    | R:( addr -- ) addr->pc    | `5000` | `0101_0000_0000_0000`
 \-      | ( a b -- a-b )            | `0B42` | `0000_1011_0100_0001`
 OR      | ( a b -- a\|b )           | `0B46` | `0000_1011_0100_0100`
 1-      | ( a -- a-1 )              | `0312` | `0000_0011_0001_0010`
-INVERT  | ( a -- ~a )               | `0375` | `0000_0011_0111_0101`
+INVERT  | ( a -- ~a )               | `0335` | `0000_0011_0011_0101`
 NEGATE  | ( a -- -a )               | `03C2` | `0000_0011_1100_0010`
 OVER    | ( a b -- a b a )          | `0500` | `0000_0101_0000_0000`
 ROT     | ( a b c -- b c a )        | `0700` | `0000_0111_0000_0000`

@@ -30,8 +30,8 @@ module alu #(
 ) (
     input                   i_clk,                      // system clock
     input             [3:0] i_op,                       // operation selector
-    input       [WIDTH-1:0] i_arg0,                     // argument 0
-    input       [WIDTH-1:0] i_arg1,                     // argument 1
+    input       [WIDTH-1:0] i_arg0,                     // argument 0 (left)
+    input       [WIDTH-1:0] i_arg1,                     // argument 1 (right)
     output reg  [WIDTH-1:0] o_data                      // result value
 );
 
@@ -66,7 +66,33 @@ module alu #(
             `ROL_OP: begin
                 o_data <= { i_arg0[WIDTH-2:0], i_arg0[WIDTH-1] };
             end
-            default: begin                              // no operation
+            `ROL2_OP: begin
+                o_data <= { i_arg0[WIDTH-3:0], i_arg0[WIDTH-1:WIDTH-2] };
+            end
+            `ROL4_OP: begin
+                o_data <= { i_arg0[WIDTH-5:0], i_arg0[WIDTH-1:WIDTH-4] };
+            end
+            `ROL8_OP: begin
+                o_data <= { i_arg0[WIDTH-9:0], i_arg0[WIDTH-1:WIDTH-8] };
+            end
+            `ASR_OP: begin
+                o_data <= { i_arg0[WIDTH-1], i_arg0[WIDTH-1:1] };
+            end
+            `ASR2_OP: begin
+                o_data <= { i_arg0[WIDTH-1], i_arg0[WIDTH-1], i_arg0[WIDTH-1:2] };
+            end
+            `ASR4_OP: begin
+                o_data <= { i_arg0[WIDTH-1], i_arg0[WIDTH-1], i_arg0[WIDTH-1], i_arg0[WIDTH-1], i_arg0[WIDTH-1:4] };
+            end
+            /*
+            `FETCH_OP: begin
+                // FETCH is handled by the CPU outside of the ALU
+            end
+            `STORE_OP: begin
+                // STORE is handled by the CPU outside of the ALU
+            end
+            */
+            default: begin                              // ignore
                 o_data <= 0;
             end
         endcase
