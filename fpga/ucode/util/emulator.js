@@ -362,9 +362,42 @@ export const makeEmulator_uFork_SM2 = (opts) => {
   const rstack = makeStack();
   emu.doOneInstruction = () => {
     const instr = memory.get(pc);
+    pc = incr(pc);
     const instr_15bit = (instr & 0x8000) >> 15;
     if (instr_15bit) {
       // Control
+      const instr_addr = instr & 0x0FFF;
+      const instr_PCR = (instr & 0x4000) >> 14;
+      if (instr_PCR) {
+        // PC+1 -> R
+        rstack.push(pc);
+      }
+      const instr_tst_inc = (instr & 0x3000) >> 12;
+      const instr_incdec  = (instr & 0x1000) >> 12;
+      const instr_tst     = (instr & 0x2000) >> 12;
+      switch (instr_tst_inc) {
+        case 0b00: // addr -> PC
+          pc = instr_addr;
+          break;
+        case 0b01: // (D0 == 0) ? addr->PC,DROP : PC+1->PC,D0+1->D0   gegnfall
+        case 0b10: // (D0 == 0) ? addr->PC,DROP : PC+1->PC,DROP       gegnfall
+        case 0b11: // (D0 == 0) ? addr->PC,DROP : PC+1->PC,D0-1->D0
+          let TOS = dstack.pop();
+          if (TOS == 0x0000) {
+            pc = instr_addr;
+          } else {
+            pc = incr(pc);
+            if (instr_incdec) {
+              if (instr_tst) {
+                TOS = decr(TOS);
+              } else {
+                TOS = incr(TOS);
+              }
+              dstack.push(TOS);
+            }
+          }
+          break;
+      }
     } else {
       // Evaluate
     }
