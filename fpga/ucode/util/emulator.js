@@ -466,6 +466,16 @@ export const makeEmulator_uFork_SM2 = (opts) => {
                     break;
         }
       }
+
+      if (instr_RPC) {
+        pc = TORS;
+      }
+      switch (instr_R_sel) {
+        case 0b00: rstack.push(TORS); break; // NONE
+        case 0b01: break; // DROP
+        case 0b10: rstack.push(TORS); rstack.push(ALU_RESULT); break; // PUSH
+        case 0b11: rstack.push(ALU_RESULT); break; // RePLaCe
+      }
     }
   };
   return emu;
