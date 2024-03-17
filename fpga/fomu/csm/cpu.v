@@ -253,7 +253,7 @@ module cpu #(
         .i_arg0(alu_arg0),
         .i_arg1(alu_arg1),
 
-        .o_data(alu_data)
+        .o_data(alu_out)
     );
 
     //
@@ -284,59 +284,6 @@ module cpu #(
     wire [1:0] alu_b = ( ctrl ? r_op : instr[5:4] );    // right ALU input selector
     wire [3:0] alu_op = instr[3:0];                     // ALU operation
 
-    wire [DATA_SZ-1:0] r_value =
-        ( ctrl ?
-            ( phase == 1 && r_pc ? pc
-            : 0 )
-        : alu_fn == `FETCH_OP ? uc_rdata
-        : alu_data );
-    wire [2:0] r_se =
-        ( ctrl ?
-            ( phase == 1 && r_pc ? `PUSH_SE
-            : `NO_SE )
-        : phase == 2 ? r_op
-        : `NO_SE );
-    wire [DATA_SZ-1:0] r0;
-    wire [DATA_SZ-1:0] r1;
-
-    wire [DATA_SZ-1:0] d_value =
-        ( !ctrl && alu_fn == `FETCH_OP ? uc_rdata
-        : alu_data );
-    wire [2:0] d_se =
-        ( ctrl ?
-            ( phase == 1 && r_op != 2'b00 ? `DROP_SE
-            : phase == 2 ?
-                ( r_op == 2'b00 ? `NO_SE
-                : r_op == 2'b10 ? `DROP_SE
-                : `RPLC_SE )
-            : `NO_SE )
-        : phase == 1 && d_drop ? `DROP_SE
-        : phase == 2 ? d_op
-        : `NO_SE );
-    wire [DATA_SZ-1:0] d0;
-    wire [DATA_SZ-1:0] d1;
-
-    wire d_zero = (d0 == 0);                            // zero check for TOS
-    wire c_branch = ctrl                                // ctrl branch taken
-        && (r_op == 2'b00 || d_zero);
-    wire ext_addr = (phase == 1)                        // address outside uCode memory
-        && (alu_fn == `FETCH_OP || alu_fn == `STORE_OP)
-        && (d0[DATA_SZ-1:DATA_SZ-PAD_ADDR] != 0);
-
-    wire [3:0] alu_fn = ( ctrl ? `ADD_OP : alu_op );
-    wire [DATA_SZ-1:0] alu_arg0 =
-        ( alu_a == 2'b01 ? d1
-        : alu_a == 2'b10 ? r0
-        : alu_a == 2'b11 ? 0
-        : d0 );
-    wire [DATA_SZ-1:0] alu_arg1 =
-        ( alu_b == 2'b01 ? 1
-        : alu_b == 2'b10 ? 16'h8000
-        : alu_b == 2'b11 ? -1
-        : d0 );
-    wire [DATA_SZ-1:0] alu_data;
-
-    reg [1:0] phase = 0;
     assign uc_wr =
         ( phase == 1 && alu_fn == `STORE_OP ? 1'b1
         : 1'b0 );
@@ -349,6 +296,62 @@ module cpu #(
     assign uc_raddr =
         ( phase == 1 && alu_fn == `FETCH_OP ? alu_arg0[ADDR_SZ-1:0]
         : pc );
+
+    wire [DATA_SZ-1:0] r_value =
+        ( ctrl ?
+            ( phase == 1 && r_pc ? pc
+            : 0 )
+        : alu_fn == `FETCH_OP ? uc_rdata
+        : alu_out );
+    wire [2:0] r_se =
+        ( ctrl ?
+            ( phase == 1 && r_pc ? `PUSH_SE
+            : `NO_SE )
+        : phase == 2 ? r_op
+        : `NO_SE );
+    wire [DATA_SZ-1:0] r0;
+    wire [DATA_SZ-1:0] r1;
+
+    wire [DATA_SZ-1:0] d_value =
+        ( !ctrl && alu_fn == `FETCH_OP ? uc_rdata
+        : alu_out );
+    wire [2:0] d_se =
+        ( ctrl ?
+            ( phase == 1 && c_branch && r_op != 2'b00 ? `DROP_SE
+            : phase == 2 && !c_branch ?
+                ( r_op == 2'b00 ? `NO_SE
+                : r_op == 2'b10 ? `DROP_SE
+                : `RPLC_SE )
+            : `NO_SE )
+        : phase == 1 && d_drop ? `DROP_SE
+        : phase == 2 ? d_op
+        : `NO_SE );
+    wire [DATA_SZ-1:0] d0;
+    wire [DATA_SZ-1:0] d1;
+
+    wire d_zero = (d0 == 0);                            // zero check for TOS
+    wire c_branch = (r_op == 2'b00 || d_zero);          // ctrl branch taken
+    wire ext_addr = (phase == 1)                        // address outside uCode memory
+        && (alu_fn == `FETCH_OP || alu_fn == `STORE_OP)
+        && (d0[DATA_SZ-1:DATA_SZ-PAD_ADDR] != 0);
+
+    wire [3:0] alu_fn =
+        ( ctrl ? `ADD_OP
+        : phase == 1 ? alu_op
+        : `NO_OP );
+    wire [DATA_SZ-1:0] alu_arg0 =
+        ( alu_a == 2'b01 ? d1
+        : alu_a == 2'b10 ? r0
+        : alu_a == 2'b11 ? 0
+        : d0 );
+    wire [DATA_SZ-1:0] alu_arg1 =
+        ( alu_b == 2'b01 ? 1
+        : alu_b == 2'b10 ? 16'h8000
+        : alu_b == 2'b11 ? -1
+        : d0 );
+    wire [DATA_SZ-1:0] alu_out;
+
+    reg [1:0] phase = 0;
     always @(posedge i_clk) begin
         if (ext_addr) begin
             o_status <= 1'b0;                           // address error
@@ -356,24 +359,25 @@ module cpu #(
         case (phase)
             0: begin
                 if (o_running) begin
-                    phase <= 1;
                     pc <= pc + 1'b1;                    // precalculate default next
+                    phase <= 1;
                 end
             end
             1: begin
-                phase <= 2;
-                instr_1 <= uc_rdata;
-            end
-            2: begin
+                if (ctrl && c_branch) begin             // jump or call procedure
+                    pc <= instr[ADDR_SZ-1:0];
+                end
                 if (!ctrl && r_pc) begin                // return from procedure
                     pc <= r0[ADDR_SZ-1:0];
                 end
-                phase <= 3;
+                instr_1 <= uc_rdata;
+                phase <= 2;
+            end
+            2: begin
+                phase <= 0;
             end
             3: begin
-                if (c_branch) begin                     // jump or call procedure
-                    pc <= instr[ADDR_SZ-1:0];
-                end
+                o_status <= 1'b0;                       // phase error
                 phase <= 0;
             end
             default: begin
