@@ -47,6 +47,7 @@ If the first 10 bits of an instruction are zero then it is an primitive instruct
 TBD: use a similiar unencoded instructions to what excamer J1 and Harris RTX2010?
      For now, go with the canonical dual stack machine from Koopmans book (see README.md)
      Why? Three reasons:
+     
      1. does not tie the ucode implementation to spefic fpga combination bool logic implementation
      2. dead easy to make the macro assembler (just symbol to uint16 translations and no machine word/cell packing)
      3. gives option to implement ucode instruction set via either hardwired with partial instruction decoding (see how the venerable 6502 did it) or ?nano?-code rom-logic
