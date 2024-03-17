@@ -130,7 +130,7 @@ module cpu #(
 
     // initial program
     initial begin
-        ucode[12'h000] = UC_TRUE;//16'h8010;
+        ucode[12'h000] = 16'h8010;//UC_TRUE;
         ucode[12'h001] = UC_DUP;
         ucode[12'h002] = UC_DEC;
         ucode[12'h003] = UC_AND;
@@ -144,14 +144,14 @@ module cpu #(
         // ...
         //
         ucode[12'h010] = UC_LSB;
-        ucode[12'h011] = UC_2MUL;
-        ucode[12'h012] = 16'hB012;                      // if 0 branch $010, else decrement
-        ucode[12'h013] = UC_NOP;
-        ucode[12'h014] = UC_NOP;
-        ucode[12'h015] = UC_NOP;
-        ucode[12'h016] = UC_NOP;
-        ucode[12'h017] = UC_NOP;
-        ucode[12'h018] = UC_NOP;
+        ucode[12'h011] = UC_DUP;
+        ucode[12'h012] = UC_INC;
+        ucode[12'h013] = UC_DUP;
+        ucode[12'h014] = UC_2MUL;
+        ucode[12'h015] = UC_DEC;
+        ucode[12'h016] = UC_ROT;
+        ucode[12'h017] = UC_SWAP;
+        ucode[12'h018] = UC_OVER;
         ucode[12'h019] = 16'h8000;                      // jump $000
         //
         // ...
@@ -337,8 +337,7 @@ module cpu #(
 
     wire [3:0] alu_fn =
         ( ctrl ? `ADD_OP
-        : phase == 1 ? alu_op
-        : `NO_OP );
+        : alu_op );
     wire [DATA_SZ-1:0] alu_arg0 =
         ( alu_a == 2'b01 ? d1
         : alu_a == 2'b10 ? r0
