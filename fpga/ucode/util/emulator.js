@@ -400,6 +400,14 @@ export const makeEmulator_uFork_SM2 = (opts) => {
       }
     } else {
       // Evaluate
+      let RTOS = rstack.pop();
+      const instr_RPC   = (instr & 0x4000) >> 14;
+      const instr_R_sel = (instr & 0x3000) >> 12;
+      const instr_2DROP = (instr & 0x0100) >> 11;
+      const instr_D_sel = (instr & 0x0700) >>  8;
+      const instr_ALU_A = (instr & 0x00C0) >>  6;
+      const instr_ALU_B = (instr & 0x0030) >>  4;
+      const instr_ALUop =  instr & 0x000F;
     }
   };
   return emu;
