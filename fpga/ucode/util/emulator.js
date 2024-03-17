@@ -401,9 +401,9 @@ export const makeEmulator_uFork_SM2 = (opts) => {
       }
     } else {
       // Evaluate
-      let   TOS = dstack.peek(0);
-      let   NOS = dstack.peek(1);
-      let  TORS = rstack.peek(0);
+      const  TOS = dstack.pop();
+      const  NOS = dstack.pop();
+      const TORS = rstack.pop();
       const instr_RPC   = (instr & 0x4000) >> 14;
       const instr_R_sel = (instr & 0x3000) >> 12;
       const instr_2DROP = (instr & 0x0100) >> 11;
@@ -446,6 +446,16 @@ export const makeEmulator_uFork_SM2 = (opts) => {
         case 0xD: ALU_RESULT = (ALU_A >> 4); break;
         case 0xE: ALU_RESULT = memory.fetch(TOS); break;
         case 0xF: ALU_RESULT = 0xCAFE; memory.store(NOS, TOS); break;
+      }
+
+      switch (instr_D_sel) {
+        case 0o0: dstack.push(NOS); dstack.push(TOS); break; // NONE 
+        case 0o1: dstack.push(NOS); break; // DROP
+        case 0o2: dstack.push(ALU_RESULT); break; // PUSH
+        case 0o3: dstack.push(NOS); dstack.push(ALU_RESULT); break; // RePLaCe
+        case 0o4: dstack.push(TOS); dstack.push(NOS); break; // SWAP
+        case 0o5: 
+      }
     }
   };
   return emu;
