@@ -142,7 +142,7 @@ export const makeDebugIOStub = (opts) => {
 
 const incr = (val) => ((val + 1) & 0xFFFF);
 
-export const makeEmulator = (opts) => {
+export const makeEmulator_uFork_CSM1 = (opts) => {
   opts = (opts == undefined) ? {} : opts;
   let pc = (opts.pc == undefined) ? 0x0040 : opts.pc ;
   const emu = {
@@ -348,6 +348,21 @@ export const makeEmulator = (opts) => {
   return emu;
 };
 
-export default {
-  makeEmulator,
+export const makeEmulator_uFork_SM2 = (opts) => {
+  opts = (opts == undefined) ? {} : opts;
+  let pc = (opts.pc == undefined) ? 0x0040 : opts.pc ;
+  const emu = {
+    get pc() { return pc; },
+    set pc(addr) { pc = addr; return addr; },
+  };
+  const quads  = (opts.quad_memory == undefined) ? makeQuadMemory() : opts.quad_memory ;
+  const debug_io = (opts.debug_io == undefined) ? makeDebugIOStub() : opts.debug_io ;
+  const memory = (opts.microcode_memory == undefined) ? makeMemory() : opts.microcode_memory ;
+  const dstack = makeStack();
+  const rstack = makeStack();
+  emu.doOneInstruction = () => {
+    const instr = memory.get(pc);
+    pc = incr(pc);
+  };
+  return emu;
 };
