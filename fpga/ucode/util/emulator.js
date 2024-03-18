@@ -424,7 +424,7 @@ export const makeEmulator_uFork_SM2 = (opts) => {
       switch (instr_ALU_B) {
         case 0b00: ALU_B = TOS; break;
         case 0b01: ALU_B = 0x0001; break;
-        case 0b10: ALU_B = (TOS & 0x8000) >> 15; break;
+        case 0b10: ALU_B = 0x8000; break;
         case 0b11: ALU_B = 0xFFFF; break;
       }
 
