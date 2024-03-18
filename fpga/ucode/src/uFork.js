@@ -8,20 +8,22 @@
 //   as that is a bit incomplete use uFork/vm/rs/src/any.rs as suppliment
 // also using uFork/docs/sponsor.md as reference
 
-export const uFork = (asm, opts) => {
-  opts = (opts == undefined) ? {} : opts ;
-  const {
-    eventQueueAndContQueue_qaddr = 0x4001,
-    memoryDescriptor_qaddr =       0x4000,
-    uForkSubroutines =              false,
-    hwImplOfQuadAllotAndFree =      false,
-    hwImplOfQuadMemory =            false,
-    hwImplOfQuadMemoryGC =          false,
-    maxTopOfQuadMemory =           0x5000,
-  } = opts;
+export const uFork = (asm) => {
+  const { def, dat, isDefined } = asm;
+
+  const eventQueueAndContQueue_qaddr = isDefined("uFork_eventQueueAndKontQueue_qaddr") ?
+                                       asm.symbols.lookup("uFork_eventQueueAndKontQueue_qaddr") :
+                                       0x4001;
+  const memoryDescriptor_qaddr =       isDefined("uFork_memoryDescriptor_qaddr") ?
+                                       asm.symbols.lookup("uFork_memoryDescriptor_qaddr") :
+                                       0x4000;
+  const uForkSubroutines =             isDefined("uFork_subroutines_support");
+  const hwImplOfQuadMemory =           isDefined("instrset_w/qmem");
+  const hwImplOfQuadMemoryGC =         isDefined("instrset_w/hwgc");
+  const hwImplOfQuadAllotAndFree =     hwImplOfQuadMemoryGC;
+  const maxTopOfQuadMemory =           0x5000;
   const quadMemSize_in_quads = maxTopOfQuadMemory - memoryDescriptor_qaddr;
   
-  const { def, dat } = asm;
 
   if (!hwImplOfQuadMemory || !hwImplOfQuadMemoryGC) {
     def("uFork_quaddrInRam"); // ( quad_addr -- quad_addr bool )
