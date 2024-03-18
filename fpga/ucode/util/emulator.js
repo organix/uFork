@@ -389,6 +389,18 @@ export const makeEmulator_uFork_SM2 = (opts) => {
     }
   };
   const store = (val, addr) => {
+    if (((addr & 0xF000) == 0x0000) ||
+        ((addr & 0xFF00) == 0x1000)) {
+      memory.store(val, addr);
+    } else if (addr == 0x3F01) {
+      debug_io.tx(val);
+    } else if ((addr & 0xC000) == 0x4000) {
+      const quad_addr = (addr >> 2) | 0x8000 | (addr & 0x4000);
+      const field_sel = addr & 0x0003;
+      const quad      = quads.fetch(quad_addr);
+      quad[field_sel] = val;
+      quads.store(quad, quad_addr);
+    }
   };
   emu.doOneInstruction = () => {
     const instr = fetch(pc);
