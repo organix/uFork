@@ -361,8 +361,37 @@ export const makeEmulator_uFork_SM2 = (opts) => {
   const memory = (opts.microcode_memory == undefined) ? makeMemory() : opts.microcode_memory ;
   const dstack = makeStack();
   const rstack = makeStack();
+
+  const fetch = (addr) => {
+    if (((addr & 0xF000) == 0x0000) ||
+        ((addr & 0xFF00) == 0x1000)) {
+      return memory.fetch(addr);
+    } else if (addr == 0x3F00) {
+      return (debug_io.tx_ready() ? 0xFFFF : 0x0000);
+    } else if (addr == 0x3F01) {
+      return 0xBABE;
+    } else if (addr == 0x3F02) {
+      return (debug_io.rx_ready() ? 0xFFFF : 0x0000);
+    } else if (addr == 0x3F03) {
+      return debug_io.rx();
+    } else if ((addr & 0xC000) == 0x4000) {
+      const quad_addr = (addr >> 2) | 0x8000 | (addr & 0x4000);
+      const field_sel = addr & 0x0003;
+      const quad      = quads.fetch(quad_addr);
+      return quad[field_sel];
+    } else if ((addr & 0x8000) == 0x8000)) {
+      const quad_addr = ((addr & 0x7FFF) >> 2);
+      const field_sel = addr & 0x0003;
+      const quad      = quads.fetch(quad_addr);
+      return quad[field_sel];
+    } else {
+      return 0xDEAD;
+    }
+  };
+  const store = (val, addr) => {
+  };
   emu.doOneInstruction = () => {
-    const instr = memory.get(pc);
+    const instr = fetch(pc);
     pc = incr(pc);
     const instr_15bit = (instr & 0x8000) >> 15;
     if (instr_15bit) {
@@ -444,8 +473,8 @@ export const makeEmulator_uFork_SM2 = (opts) => {
         case 0xB: ALU_RESULT = (ALU_A >> 1); break;
         case 0xC: ALU_RESULT = (ALU_A >> 2); break;
         case 0xD: ALU_RESULT = (ALU_A >> 4); break;
-        case 0xE: ALU_RESULT = memory.fetch(TOS); break;
-        case 0xF: ALU_RESULT = 0xCAFE; memory.store(NOS, TOS); break;
+        case 0xE: ALU_RESULT = fetch(TOS); break;
+        case 0xF: ALU_RESULT = 0xCAFE; store(NOS, TOS); break;
       }
 
       if (!instr_2DROP) {
