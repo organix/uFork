@@ -93,45 +93,32 @@ module lifo_se #(
                 o_s0 <= o_s1;
                 o_s1 <= o_s0;
             end
-            `OVER_SE: begin                             // ( a b -- a b a )
-                o_s0 <= o_s1;
-                o_s1 <= o_s0;
-                o_s2 <= o_s1;
-                o_s3 <= o_s2;
-                o_s4 <= o_s3;
-                o_s5 <= o_s4;
-                o_s6 <= o_s5;
-                o_s7 <= o_s6;
-                /*
-                */
-                o_s8 <= o_s7;
-                o_s9 <= o_s8;
-                o_s10 <= o_s9;
-                o_s11 <= o_s10;
-            end
-            `ZDUP_SE: begin                             // : ?DUP ( a -- 0 | a a ) DUP IF DUP THEN ;
-                if ( !o_s0 ) begin
-                    o_s1 <= o_s0;
-                    o_s2 <= o_s1;
-                    o_s3 <= o_s2;
-                    o_s4 <= o_s3;
-                    o_s5 <= o_s4;
-                    o_s6 <= o_s5;
-                    o_s7 <= o_s6;
-                    /*
-                    */
-                    o_s8 <= o_s7;
-                    o_s9 <= o_s8;
-                    o_s10 <= o_s9;
-                    o_s11 <= o_s10;
-                end
-            end
             `ROT3_SE: begin                             // ( a b c -- b c a )
                 o_s0 <= o_s2;
                 o_s1 <= o_s0;
                 o_s2 <= o_s1;
             end
-        endcase
+            `RROT_SE: begin                             // ( a b c -- c a b )
+                o_s0 <= o_s1;
+                o_s1 <= o_s2;
+                o_s2 <= o_s0;
+            end
+            `ALU2_SE: begin                             // ( a b -- c )
+                o_s0 <= i_data;
+                o_s1 <= o_s2;
+                o_s2 <= o_s3;
+                o_s3 <= o_s4;
+                o_s4 <= o_s5;
+                o_s5 <= o_s6;
+                o_s6 <= o_s7;
+                /*
+                */
+                o_s7 <= o_s8;
+                o_s8 <= o_s9;
+                o_s9 <= o_s10;
+                o_s10 <= o_s11;
+            end
+    endcase
     end
 
 endmodule
