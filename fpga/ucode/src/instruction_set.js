@@ -327,6 +327,24 @@ export const defineInstructionset = (asm, opts = { instrsetName: "uFork_CSM1" })
     def("(TRUE)",  0x02F5);
     def("2*",      0x0301);
 
+    def("QUAD_T_FETCH", 0x034F);
+    def("QUAD_X_FETCH", 0x035F);
+    def("QUAD_Y_FETCH", 0x036F);
+    def("QUAD_Z_FETCH", 0x037F);
+    def("QUAD_T_STORE", 0x09CF);
+    def("QUAD_X_STORE", 0x09DF);
+    def("QUAD_Y_STORE", 0x09EF);
+    def("QUAD_Z_STORE", 0x09FF);
+
+    def("qt@", "QUAD_T_FETCH");
+    def("qx@", "QUAD_X_FETCH");
+    def("qy@", "QUAD_Y_FETCH");
+    def("qz@", "QUAD_Z_FETCH");
+    def("qt!", "QUAD_T_STORE");
+    def("qx!", "QUAD_X_STORE");
+    def("qy!", "QUAD_Y_STORE");
+    def("qz!", "QUAD_Z_STORE");
+
     def("+",   "PLUS");
     def("&",   "AND");
     def("⊕",   "XOR");
