@@ -137,7 +137,7 @@ module cpu #(
 
     // initial program
     initial begin
-        ucode[12'h000] = UC_TRUE;//16'h8020;
+        ucode[12'h000] = 16'h8010;//UC_TRUE;
         ucode[12'h001] = UC_DUP;
         ucode[12'h002] = UC_DEC;
         ucode[12'h003] = UC_AND;
@@ -312,7 +312,7 @@ module cpu #(
     wire [3:0] alu_op = instr[3:0];                     // ALU operation
     wire mem_op = !ctrl && (alu_op == `MEM_OP);         // ALU bypass for MEM ops
     wire mem_wr = instr[7];                             // {0:read, 1:write} MEM
-    wire mem_rng = instr[6:4];                          // MEM range selector
+    wire [2:0] mem_rng = instr[6:4];                    // MEM range selector
     wire d_zero = (d0 == 0);                            // zero check for TOS
     wire c_branch = (r_op == 2'b00 || d_zero);          // ctrl branch taken
     wire ext_addr = p_alu && mem_op
