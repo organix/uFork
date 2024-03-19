@@ -15,8 +15,11 @@ export const defineInstructionset = (asm, opts = { instrsetName: "uFork_CSM1" })
   if (opts.instrsetName.startsWith("uFork_CSM1")) {
     def("instrset_uFork_CSM1", 1);
   }
-  if (opts.instrsetName.startsWith("uFork_SM2")) {
+  if (opts.instrsetName.startsWith("uFork_SM2 ")) {
     def("instrset_uFork_SM2", 1);
+  }
+  if (opts.instrsetName.startsWith("uFork_SM2.1")) {
+    def("instrset_uFork_SM2.1", 1);
   }
   if (opts.instrsetName.includes("w/qmem")) {
     def("instrset_w/qmem", 1);
