@@ -304,8 +304,9 @@ export const defineInstructionset = (asm, opts = { instrsetName: "uFork_CSM1" })
     def("XOR",     0x0B45);
     def("1LBR",    0x0307);
     def("INCR",    0x0311);
-    def("FETCH",   0x030E);
-    def("STORE",   0x094F);
+    def("FETCH",   0x030F);
+    def("STORE",   0x098F);
+    def("(LIT)",   0x021F);
     def("DUP",     0x0200);
     def("DROP",    0x0100);
     def("SWAP",    0x0400);
