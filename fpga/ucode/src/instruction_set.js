@@ -297,7 +297,97 @@ export const defineInstructionset = (asm, opts = { instrsetName: "uFork_CSM1" })
     }
   }
 
+  if (opts.instrsetName.startsWith("uFork_SM2.1")) {
+    def("NOP",     0x0000);
+    def("PLUS",    0x0B41);
+    def("AND",     0x0B44);
+    def("XOR",     0x0B45);
+    def("1LBR",    0x0307);
+    def("INCR",    0x0311);
+    def("FETCH",   0x030E);
+    def("STORE",   0x094F);
+    def("DUP",     0x0200);
+    def("DROP",    0x0100);
+    def("SWAP",    0x0400);
+    // SKZ not implemented in hardware
+    def("TO_R",    0x2100);
+    def("R_FROM",  0x1280);
+    def("R_AT",    0x0280);
+    def("(EXIT)",  0x5000);
+    def("MINUS",   0x0B42);
+    def("OR",      0x0B46);
+    def("DECR",    0x0312);
+    def("INVERT",  0x0375);
+    def("NEGATE",  0x03C2);
+    def("OVER",    0x0500);
+    def("ROT",     0x0700);
+    def("2DROP",   0x0900);
+    def("(FALSE)", 0x02C0);
+    def("(TRUE)",  0x02F5);
+    def("2*",      0x0301);
 
-    
+    def("+",   "PLUS");
+    def("&",   "AND");
+    def("⊕",   "XOR");
+    def("1+",  "INCR");
+    def("@",   "FETCH");
+    def("!",   "STORE");
+    def(">R",  "TO_R");
+    def("R>",  "R_FROM");
+    def("R@",  "R_AT");
+    def("-",   "MINUS");
+    def("1-",  "DECR");
+
+    def("SKZ", (asm) => {
+      const here = asm.addr;
+      const here_plustwo = asm.deferedOp.plus(here, 2);
+      return asm.deferedOp.or(0xA000, asm.deferedOp.and(here_plustwo, 0x0FFF));
+    });
+    def("(JMP)", (asm) => {
+      const here = asm.addr;
+      const resolve = ([here_plusone, val]) => {
+        asm.origin(here);
+        asm.datum(asm.deferedOp.or(0x8000, asm.deferedOp.and(val, 0x0FFF)));
+      };
+      return ["NOP", { resolve }];
+      //      ^ placeholder
+    });
+    def("(BRZ)", (asm) => {
+      const here = asm.addr;
+      const resolve = ([here_plusone, val]) => {
+        asm.origin(here);
+        asm.datum(asm.deferedOp.or(0xA000, asm.deferedOp.and(val, 0x0FFF)));
+      };
+      return ["NOP", { resolve }];
+    });
+    def("EXIT", (asm) => {
+      // this tries to combine (EXIT) with the preceeding Evaluate instruction if possible
+      // tbd if it turns a preceeding Call instruction into a Jump instruction
+      //     consideration: there are word definitions that depend on return address being consumed
+      const here = asm.addr;
+      const here_minusone = asm.deferedOp.minus(here, 1);
+      const t0 = asm.datumAt(here_minusone);
+      const t1 = asm.deferedOp.equal(asm.deferedOp.and(t0, 0xC000), 0);
+      if ((typeof t1) == "boolean") {
+        if (t1) {
+          asm.origin(here_minusone);
+          return asm.deferOp.or(t0, "(EXIT)");
+        }
+      }
+      return "(EXIT)";
+    });
+    return {
+      ...asm,
+      def: (sym, val = undefined) => {
+        if (val == undefined) {
+          const here = asm.addr;
+          val = asm.deferedOp.or(0xC000, asm.deferedOp.and(here, 0x0FFF));
+        }
+        asm.def(sym, val);
+      },
+    }
+  }
+  
   return asm;
 };
+
