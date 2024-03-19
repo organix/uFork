@@ -125,8 +125,34 @@ the next instruction, but may be loaded from the R-stack instead.
                                                         1011:ASR
                                                         1100:2ASR
                                                         1101:4ASR
-                                                        1110:FETCH
-                                                        1111:STORE
+                                                        1110:DSP?
+                                                        1111:MEM*
+
+\* If `ALU op` is `MEM`, then it's a _memory instruction_ instead.
+
+#### Memory Instructions
+
+These instructions bypass the normal evaluation ALU module.
+Instead they perform operations involving a memory cycle.
+The result is available as input to both the D-stack and R-stack.
+The top 8 bits are the same as other evaluation instructions.
+`D0` is routed to the address lines, and `D1` to the data lines.
+
+     15  14  13  12  11  10   9   8   7   6   5   4   3   2   1   0
+    *---+---+---+---*---+---+---+---*---+---+---+---*---+---+---+---*
+    | 0 |RPC|  R se |2:1|    D se   |W/R| MEM range | 1 | 1 | 1 | 1 |
+    *---+---+---+---*---+---+---+---*---+---+---+---*---+---+---+---*
+      ^   ^  \_____/  ^  \_________/ \_/ \_________/
+      |   |  00:NONE  |    000:NONE  0:R   000:UC
+      |   |  01:DROP  |    001:DROP  1:W   001:[PC]*
+      |   |  10:PUSH  |    010:PUSH        010:??
+      |   |  11:RPLC  |    011:RPLC        011:DEV
+      | R->PC       2DROP  100:SWAP        100:Q_T
+    evaluate               101:OVER        101:Q_X
+                           110:ZDUP        110:Q_Y
+                           111:ROT3        111:Q_Z
+
+\* If `MEM range` is `[PC]`, then read from `PC+1` and increment again.
 
 ### Primitive Encodings
 
@@ -138,16 +164,17 @@ AND     | ( a b -- a&b )            | `0B44` | `0000_1011_0100_0100`
 XOR     | ( a b -- a^b )            | `0B45` | `0000_1011_0100_0101`
 ROL     | ( a -- {a[14:0],a[15]} )  | `0307` | `0000_0011_0000_0111`
 1+      | ( a -- a+1 )              | `0311` | `0000_0011_0001_0001`
-@       | ( addr -- cell )          | `030E` | `0000_0011_0000_1110`
-!       | ( cell addr -- )          | `094F` | `0000_1001_0100_1111`
+@       | ( addr -- cell )          | `030F` | `0000_0011_0000_1111`
+!       | ( cell addr -- )          | `098F` | `0000_1001_1000_1111`
+(LIT) w | ( -- [PC+1] ) PC+2->PC    | `021F` | `0000_0010_0001_1111`
 DUP     | ( a -- a a )              | `0200` | `0000_0010_0000_0000`
 DROP    | ( a -- )                  | `0100` | `0000_0001_0000_0000`
 SWAP    | ( a b -- b a )            | `0400` | `0000_0100_0000_0000`
-SKZ     | ( cond -- )               | --     | _not primitive_
+SKZ w   | ( cond -- )               | --     | _conditional jump macro_
 \>R     | ( a -- ) R:( -- a )       | `2100` | `0010_0001_0000_0000`
 R>      | ( -- a ) R:( a -- )       | `1280` | `0001_0010_1000_0000`
 R@      | ( -- a ) R:( a -- a )     | `0280` | `0000_0010_1000_0000`
-EXIT    | R:( addr -- ) addr->pc    | `5000` | `0101_0000_0000_0000`
+EXIT    | R:( addr -- ) addr->PC    | `5000` | `0101_0000_0000_0000`
 \-      | ( a b -- a-b )            | `0B42` | `0000_1011_0100_0001`
 OR      | ( a b -- a\|b )           | `0B46` | `0000_1011_0100_0100`
 1-      | ( a -- a-1 )              | `0312` | `0000_0011_0001_0010`
