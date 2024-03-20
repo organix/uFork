@@ -457,6 +457,19 @@ export const minicore = (asm, opts) => {
       def("DEBUG_TX!"); // ( char -- )
       dat("0xFF_&", "(LIT)", 0x3F01, "!", "EXIT");
     }
+    if (isDefined("instrset_uFork_SM2.1")) {
+      def("DEBUG_TX?"); // ( -- bool )
+      dat("(LIT)", 0x00, "io@", "CLEAN_BOOL", "EXIT");
+
+      def("DEBUG_TX!"); // ( char -- )
+      dat("0xFF_&", "(LIT)", 0x01, "io!", "EXIT");
+
+      def("DEBUG_RX?"); // ( -- bool )
+      dat("(LIT)", 0x02, "io@", "CLEAN_BOOL", "EXIT");
+
+      def("DEBUG_RX@"); // ( -- char )
+      dat("(LIT)", 0x03, "io@", "0xFF_&", "EXIT");
+    }
   }
 
   if (isDefined("instrset_uFork_SM2")) {
