@@ -21,6 +21,13 @@ export const uFork_quadmem_and_gc = (asm) => {
       def("qram_base");
       dat("(CONST)", 0x4000);
 
+      def("qrom_base");
+      dat("(CONST)", 0x8000);
+
+      def("qram"); // ( quad_addr -- addr )
+      dat("DUP", "0x6000_&", "SWAP", "4*", "OR", "qram_base", "+", "EXIT");
+
+
   
   return asm;
 };
