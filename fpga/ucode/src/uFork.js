@@ -17,12 +17,10 @@ export const uFork = (asm) => {
   const memoryDescriptor_qaddr =       isDefined("uFork_memoryDescriptor_qaddr") ?
                                        asm.symbols.lookup("uFork_memoryDescriptor_qaddr") :
                                        0x4000;
-  const uForkSubroutines =             isDefined("uFork_subroutines_support");
-  const hwImplOfQuadMemory =           isDefined("instrset_w/qmem");
-  const hwImplOfQuadMemoryGC =         isDefined("instrset_w/hwgc");
-  const hwImplOfQuadAllotAndFree =     hwImplOfQuadMemoryGC;
   const maxTopOfQuadMemory =           0x5000;
   const quadMemSize_in_quads = maxTopOfQuadMemory - memoryDescriptor_qaddr;
+  const uForkSubroutines =             isDefined("uFork_subroutines_support");
+
   
 
   if (!hwImplOfQuadMemory || !hwImplOfQuadMemoryGC) {
