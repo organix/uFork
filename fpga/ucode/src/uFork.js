@@ -25,9 +25,7 @@ export const uFork = (asm) => {
 
   if (!hwImplOfQuadMemory || !hwImplOfQuadMemoryGC) {
     def("uFork_quaddrInRam"); // ( quad_addr -- quad_addr bool )
-    // var ekki til e-r staðar annað orð sem athugar hvort quad_addr er RAM eða ROM bendill?
-    dat("DUP", "uFork_memoryDescriptor_qaddr", "uFork_maxTopOfQuadMemory", "WITHIN");
-    dat("EXIT");
+    dat("DUP", "uFork_isRamQuad?", "EXIT");
   }
 
   let hereBeyondEnd = asm.incr("uFork_last_ucode_address", 0x0000);
@@ -491,6 +489,12 @@ export const uFork = (asm) => {
 
   def("uFork_isImmutable?"); // ( specimen -- bool )
   dat("uFork_isMutable?", "INVERT", "EXIT");
+
+  def("uFork_isQuad?"); // ( specimen -- bool )
+  dat("uFork_isFixnum?", "INVERT", "EXIT");
+
+  def("uFork_isRamQuad?"); // ( specimen -- bool )
+  dat("DUP", "uFork_isQuad?", "SWAP", "uFork_isMutable?", "&", "EXIT");
 
   def("uFork_fixnum2int"); // ( fixnum -- int )
   dat("0x7FFF_&", "DUP", "1<<", "0x8000", "&", "OR"); // sign extend
