@@ -58,6 +58,38 @@ export const uFork_quadmem_and_gc = (asm) => {
       def("qromy@"); dat("qrom", "2+", "@", "EXIT");
       def("qromz@"); dat("qrom", "3+", "@", "EXIT");
     } else {
-  
+      if (!(asm.isDefined("spram@")) && !(asm.isDefined("spram!"))) {
+        const quadMemSize_in_cells = quadMemSize_in_quads * 4;
+        def("uFork_quadMem_baseAddr");
+        dat("(CONST)", hereBeyondEnd);
+        hereBeyondEnd = asm.incr(hereBeyondEnd, quadMemSize_in_cells);
+      }
+
+      def("uFork_quaddr2addr"); // ( quad_addr -- cell_addr )
+      if (!(asm.isDefined("spram@")) && !(asm.isDefined("spram!"))) {
+        dat("4*", "uFork_quadMem_baseAddr", "+", "EXIT");
+        
+        def("spram@", "@");
+        def("spram!", "!");
+      } else {
+        dat("4*", "EXIT");
+      }
+
+      def("qramt"); dat("uFork_quaddr2addr", "EXIT");
+      def("qramx"); dat("uFork_quaddr2addr", "1+", "EXIT");
+      def("qramy"); dat("uFork_quaddr2addr", "2+", "EXIT");
+      def("qramz"); dat("uFork_quaddr2addr", "3+", "EXIT");
+
+      def("qramt@"); dat("qramt", "spram@", "EXIT");
+      def("qramx@"); dat("qramx", "spram@", "EXIT");
+      def("qramy@"); dat("qramy", "spram@", "EXIT");
+      def("qramz@"); dat("qramz", "spram@", "EXIT");
+
+      def("qramt!"); dat("qramt", "spram!", "EXIT");
+      def("qramx!"); dat("qramx", "spram!", "EXIT");
+      def("qramy!"); dat("qramy", "spram!", "EXIT");
+      def("qramz!"); dat("qramz", "spram!", "EXIT");
+
+      if (asm.isDefined("spi_flash@")) {  
   return asm;
 };
