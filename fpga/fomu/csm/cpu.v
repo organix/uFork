@@ -125,7 +125,8 @@ module cpu #(
     localparam UC_JMP       = 16'hC080;
     localparam UC_EXE       = 16'hC082;
     localparam UC_ALT       = 16'hC084;                 // ( altn cnsq cond -- cnsq | altn )
-    localparam UC_CONST     = 16'hC088;
+//    localparam UC_CONST     = 16'hC088;
+    localparam UC_CONST     = 16'h521F;                 // (CONST) item ( -- item ) R:( addr -- ) addr->pc
     localparam UC_TRUE      = 16'h02F6;                 // ( -- -1 )
     localparam UC_FALSE     = 16'h02C0;                 // ( -- 0 )
     localparam UC_LSB       = 16'h02D6;                 // ( -- 1 )
@@ -137,7 +138,7 @@ module cpu #(
 
     // initial program
     initial begin
-        ucode[12'h000] = 16'h8010;//UC_TRUE;
+        ucode[12'h000] = 16'h8020;//UC_TRUE;
         ucode[12'h001] = UC_DUP;
         ucode[12'h002] = UC_DEC;
         ucode[12'h003] = UC_AND;
@@ -329,7 +330,9 @@ module cpu #(
         ( p_alu && mem_op ? d1
         : -1 );
     assign uc_raddr =
-        ( p_alu && mem_op ? d0[ADDR_SZ-1:0]
+        ( p_alu && mem_op ?
+            ( mem_rng == `MEM_PC ? pc
+            : d0[ADDR_SZ-1:0] )
         : pc );
 
     wire [DATA_SZ-1:0] r_value =
@@ -384,12 +387,12 @@ module cpu #(
         if (ext_addr) begin
             o_status <= 1'b0;                           // signal failure
         end else if (p_alu) begin
-            if (mem_op && mem_rng == `MEM_PC) begin
+            if (!ctrl && r_pc) begin
+                pc <= r0[ADDR_SZ-1:0];                  // return from procedure
+            end else if (mem_op && mem_rng == `MEM_PC) begin
                 pc <= pc + 1'b1;                        // auto-increment on [PC] access
             end else if (ctrl && c_branch) begin
                 pc <= instr[ADDR_SZ-1:0];               // jump or call procedure
-            end else if (!ctrl && r_pc) begin
-                pc <= r0[ADDR_SZ-1:0];                  // return from procedure
             end
             instr_1 <= uc_rdata;
             p_alu <= !p_alu;
