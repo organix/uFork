@@ -88,6 +88,26 @@ the next instruction, but may be loaded from the R-stack instead.
 
 \* If `ALU op` is `MEM`, then it's a _memory instruction_ instead.
 
+#### ALU Operations
+
+Operation | Encoding | Result
+----------|----------|--------------------------------------
+NO_OP     | `(4'h0)` | a
+ADD_OP    | `(4'h1)` | a+b
+SUB_OP    | `(4'h2)` | a-b
+MUL_OP    | `(4'h3)` | a\*b
+AND_OP    | `(4'h4)` | a&b
+XOR_OP    | `(4'h5)` | a^b
+OR_OP     | `(4'h6)` | a\|b
+ROL_OP    | `(4'h7)` | {a[14:0],a[15]}
+ROL2_OP   | `(4'h8)` | {a[13:0],a[15:14]}
+ROL4_OP   | `(4'h9)` | {a[11:0],a[15:12]}
+ROL8_OP   | `(4'hA)` | {a[7:0],a[15:8]}
+ASR_OP    | `(4'hB)` | {a[15],a[15:1]}
+ASR2_OP   | `(4'hC)` | {a[15],a[15],a[15:2]}
+ASR4_OP   | `(4'hD)` | {a[15],a[15],a[15],a[15],a[15:4]}
+MEM_OP    | `(4'hF)` | memory operation
+
 #### Memory Instructions
 
 These instructions bypass the normal evaluation ALU module.
@@ -111,6 +131,19 @@ The top 8 bits are the same as other evaluation instructions.
                            111:ALU2        111:Q_Z
 
 \* If `MEM range` is `[PC]`, then read from `PC+1` and increment again.
+
+#### Stack Operations
+
+Operation | Encoding | Description            | Stack Effect
+----------|----------|------------------------|--------------
+NO_SE     | `(3'h0)` | no operation           | ( -- )
+DROP_SE   | `(3'h1)` | remove top             | ( a -- )
+PUSH_SE   | `(3'h2)` | push onto top          | ( -- a )
+RPLC_SE   | `(3'h3)` | replace top            | ( a -- b )
+SWAP_SE   | `(3'h4)` | swap top and next      | ( a b -- b a )
+ROT3_SE   | `(3'h5)` | rotate top 3 elements  | ( a b c -- b c a )
+RROT_SE   | `(3'h6)` | reverse rotate top 3   | ( a b c -- c a b )
+ALU2_SE   | `(3'h7)` | drop 2, push 1         | ( a b -- c )
 
 ### Primitive Encodings
 
