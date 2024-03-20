@@ -21,13 +21,6 @@ export const uFork = (asm) => {
   const quadMemSize_in_quads = maxTopOfQuadMemory - memoryDescriptor_qaddr;
   const uForkSubroutines =             isDefined("uFork_subroutines_support");
 
-  
-
-  if (!hwImplOfQuadMemory || !hwImplOfQuadMemoryGC) {
-    def("uFork_quaddrInRam"); // ( quad_addr -- quad_addr bool )
-    dat("DUP", "uFork_isRamQuad?", "EXIT");
-  }
-
   let hereBeyondEnd = asm.incr("uFork_last_ucode_address", 0x0000);
   if (!hwImplOfQuadMemory) {
     if (asm.isDefined("instrset_uFork_SM2") && asm.isDefined("platform_fomu")) {
