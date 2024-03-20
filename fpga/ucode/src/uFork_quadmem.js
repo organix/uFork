@@ -11,6 +11,11 @@ export const uFork_quadmem_and_gc = (asm) => {
   const hwImplOfQuadMemory =           isDefined("instrset_w/qmem");
   const hwImplOfQuadMemoryGC =         isDefined("instrset_w/hwgc");
   const hwImplOfQuadAllotAndFree =     hwImplOfQuadMemoryGC;
+
+  if (!hwImplOfQuadMemory || !hwImplOfQuadMemoryGC) {
+    def("uFork_quaddrInRam"); // ( quad_addr -- quad_addr bool )
+    dat("DUP", "uFork_isRamQuad?", "EXIT");
+  }
   
   return asm;
 };
