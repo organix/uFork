@@ -12,9 +12,9 @@ Stack-Effect Encoding for LIFO
 `define PUSH_SE (3'h2)      // push onto top            ( -- a )
 `define RPLC_SE (3'h3)      // replace top              ( a -- b )
 `define SWAP_SE (3'h4)      // swap top and next        ( a b -- b a )
-`define OVER_SE (3'h5)      // copy next to top         ( a b -- a b a )
-`define ZDUP_SE (3'h6)      // copy non-zero top        : ?DUP ( a -- 0 | a a ) DUP IF DUP THEN ;
-`define ROT3_SE (3'h7)      // rotate top 3 elements    ( a b c -- b c a )
+`define ROT3_SE (3'h5)      // rotate top 3 elements    ( a b c -- b c a )
+`define RROT_SE (3'h6)      // reverse rotate top 3     ( a b c -- c a b )
+`define ALU2_SE (3'h7)      // drop 2, push 1           ( a b -- c )
 
 /*
 : NIP ( a b -- b ) SWAP DROP ;

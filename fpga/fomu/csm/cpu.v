@@ -29,6 +29,16 @@ the value of `o_status` indicates success (1) or failure (0).
 //`include "../lib/serial_tx.v"
 //`include "../lib/serial_rx.v"
 
+// Memory Ranges
+`define MEM_UC  (3'h0)      // uCode memory
+`define MEM_PC  (3'h1)      // contents of PC+1 & increment
+//`define MEM_TBD (3'h2)      // RESERVED
+`define MEM_DEV (3'h3)      // memory-mapped devices
+`define MEM_Q_T (3'h4)      // uFork quad-memory field T
+`define MEM_Q_X (3'h5)      // uFork quad-memory field X
+`define MEM_Q_Y (3'h6)      // uFork quad-memory field Y
+`define MEM_Q_Z (3'h7)      // uFork quad-memory field Z
+
 module cpu #(
     parameter CLK_FREQ      = 48_000_000                // clock frequency (Hz)
 ) (
@@ -53,13 +63,13 @@ module cpu #(
 
     // uCode instructions
     localparam UC_NOP       = 16'h0000;                 // ( -- )
-    localparam UC_ADD       = 16'h0B41;                 // + ( a b -- a+b )
-    localparam UC_AND       = 16'h0B44;                 // AND ( a b -- a&b )
-    localparam UC_XOR       = 16'h0B45;                 // XOR ( a b -- a^b )
+    localparam UC_ADD       = 16'h0741;                 // + ( a b -- a+b )
+    localparam UC_AND       = 16'h0744;                 // AND ( a b -- a&b )
+    localparam UC_XOR       = 16'h0745;                 // XOR ( a b -- a^b )
     localparam UC_ROL       = 16'h0307;                 // ( a -- {a[14:0],a[15]} )
     localparam UC_INC       = 16'h0311;                 // 1+ ( a -- a+1 )
-    localparam UC_FETCH     = 16'h030E;                 // @ ( addr -- cell )
-    localparam UC_STORE     = 16'h094F;                 // ! ( cell addr -- )
+    localparam UC_FETCH     = 16'h030F;                 // @ ( addr -- cell )
+    localparam UC_STORE     = 16'h098F;                 // ! ( cell addr -- )
     localparam UC_DUP       = 16'h0200;                 // ( a -- a a )
     localparam UC_DROP      = 16'h0100;                 // ( a -- )
     localparam UC_SWAP      = 16'h0400;                 // ( a b -- b a )
@@ -67,18 +77,14 @@ module cpu #(
     localparam UC_R_FROM    = 16'h1280;                 // R> ( -- a ) R:( a -- )
     localparam UC_EXIT      = 16'h5000;                 // ( -- ) R:( addr -- ) addr->pc
 
-//    localparam UC_LIT       = 16'h0020;                 // (LIT) item ( -- item )
-    localparam UC_SUB       = 16'h0B42;                 // - ( a b -- a-b )
-    localparam UC_OR        = 16'h0B46;                 // OR ( a b -- a|b )
+    localparam UC_LIT       = 16'h021F;                 // (LIT) item ( -- item )
+    localparam UC_SUB       = 16'h0742;                 // - ( a b -- a-b )
+    localparam UC_OR        = 16'h0746;                 // OR ( a b -- a|b )
     localparam UC_NOT       = 16'h0335;                 // INVERT ( a -- ~a )
     localparam UC_NEG       = 16'h03C2;                 // NEGATE ( a -- -a )
     localparam UC_DEC       = 16'h0312;                 // 1- ( a -- a-1 )
-//    localparam UC_NIP       = 16'h0026;                 // ( a b -- b )
-//    localparam UC_TUCK      = 16'h0027;                 // ( a b -- b a b )
-//    localparam UC_2DUP      = 16'h0028;                 // ( a b -- a b a b )
-    localparam UC_2DROP     = 16'h0900;                 // ( a b -- )
-    localparam UC_OVER      = 16'h0500;                 // ( a b -- a b a )
-    localparam UC_ROT       = 16'h0700;                 // ( a b c -- b c a )
+    localparam UC_OVER      = 16'h0240;                 // ( a b -- a b a )
+    localparam UC_ROT       = 16'h0500;                 // ( a b c -- b c a )
 //    localparam UC_R_SWAP    = 16'h002C;                 // ( -- ) R:( a b -- b a )
     localparam UC_R_FETCH   = 16'h0280;                 // R@ ( -- a ) R:( a -- a )
     localparam UC_2MUL      = 16'h0301;                 // 2* ( a -- a+a )
@@ -120,17 +126,18 @@ module cpu #(
     localparam UC_EXE       = 16'hC082;
     localparam UC_ALT       = 16'hC084;                 // ( altn cnsq cond -- cnsq | altn )
     localparam UC_CONST     = 16'hC088;
-    localparam UC_TRUE      = 16'h02F5;                 // ( -- -1 )
+    localparam UC_TRUE      = 16'h02F6;                 // ( -- -1 )
     localparam UC_FALSE     = 16'h02C0;                 // ( -- 0 )
-    localparam UC_LSB       = 16'hC08F;                 // ( -- 1 )
-    localparam UC_MSB       = 16'hC091;                 // ( -- -32768 )
+    localparam UC_LSB       = 16'h02D6;                 // ( -- 1 )
+    localparam UC_MSB       = 16'h02E6;                 // ( -- -32768 )
     localparam UC_NIP       = 16'hC124;                 // ( a b -- b )
     localparam UC_TUCK      = 16'hC127;                 // ( a b -- b a b )
     localparam UC_2DUP      = 16'hC12A;                 // ( a b -- a b a b )
+    localparam UC_2DROP     = 16'hC12D;                 // ( a b -- )
 
     // initial program
     initial begin
-        ucode[12'h000] = 16'h8020;//UC_TRUE;
+        ucode[12'h000] = 16'h8010;//UC_TRUE;
         ucode[12'h001] = UC_DUP;
         ucode[12'h002] = UC_DEC;
         ucode[12'h003] = UC_AND;
@@ -198,11 +205,11 @@ module cpu #(
         ucode[12'h08E] = 16'h0000;
         */
         // LSB ( -- 1 )
-        ucode[12'h08F] = UC_CONST;
-        ucode[12'h090] = 16'h0001;
+        //ucode[12'h08F] = UC_CONST;
+        //ucode[12'h090] = 16'h0001;
         // MSB ( -- -32768 )
-        ucode[12'h091] = UC_CONST;
-        ucode[12'h092] = 16'h8000;
+        //ucode[12'h091] = UC_CONST;
+        //ucode[12'h092] = 16'h8000;
         //
         // ...
         //
@@ -218,6 +225,10 @@ module cpu #(
         ucode[12'h12A] = UC_OVER;
         ucode[12'h12B] = UC_OVER;
         ucode[12'h12C] = UC_EXIT;
+        // 2DROP ( a b -- )
+        ucode[12'h12D] = UC_DROP;
+        ucode[12'h12E] = UC_DROP;
+        ucode[12'h12F] = UC_EXIT;
         /*
         $writememh("ucode_rom.mem", ucode);
         */
@@ -289,7 +300,7 @@ module cpu #(
     reg [ADDR_SZ-1:0] pc = 0;
     reg [DATA_SZ-1:0] instr_1 = UC_NOP;
     wire [DATA_SZ-1:0] instr =                          // current instruction
-        ( phase == 1 ? uc_rdata
+        ( p_alu ? uc_rdata
         : instr_1 );
     wire ctrl = instr[15];                              // {0:evaluation, 1:control-transfer}
     wire r_pc = instr[14];                              // PC <-> R interaction
@@ -299,57 +310,59 @@ module cpu #(
     wire [1:0] alu_a = ( ctrl ? 2'b00 : instr[7:6] );   // left ALU input selector
     wire [1:0] alu_b = ( ctrl ? r_op : instr[5:4] );    // right ALU input selector
     wire [3:0] alu_op = instr[3:0];                     // ALU operation
+    wire mem_op = !ctrl && (alu_op == `MEM_OP);         // ALU bypass for MEM ops
+    wire mem_wr = instr[7];                             // {0:read, 1:write} MEM
+    wire [2:0] mem_rng = instr[6:4];                    // MEM range selector
+    wire d_zero = (d0 == 0);                            // zero check for TOS
+    wire c_branch = (r_op == 2'b00 || d_zero);          // ctrl branch taken
+    wire ext_addr = p_alu && mem_op
+        && (d0[DATA_SZ-1:DATA_SZ-PAD_ADDR] != 0);       // address outside uCode memory
+
 
     assign uc_wr =
-        ( phase == 1 && alu_fn == `STORE_OP ? 1'b1
+        ( p_alu && mem_op ? mem_wr
         : 1'b0 );
     assign uc_waddr =
-        ( phase == 1 && alu_fn == `STORE_OP ? alu_arg1[ADDR_SZ-1:0]
+        ( p_alu && mem_op ? d0[ADDR_SZ-1:0]
         : -1 );
     assign uc_wdata =
-        ( phase == 1 && alu_fn == `STORE_OP ? alu_arg0
+        ( p_alu && mem_op ? d1
         : -1 );
     assign uc_raddr =
-        ( phase == 1 && alu_fn == `FETCH_OP ? alu_arg0[ADDR_SZ-1:0]
+        ( p_alu && mem_op ? d0[ADDR_SZ-1:0]
         : pc );
 
     wire [DATA_SZ-1:0] r_value =
         ( ctrl ?
-            ( phase == 1 && r_pc ? pc
+            ( p_alu && r_pc ? pc
             : 0 )
-        : alu_fn == `FETCH_OP ? uc_rdata
+        : mem_op ? uc_rdata
         : alu_out );
     wire [2:0] r_se =
         ( ctrl ?
-            ( phase == 1 && r_pc ? `PUSH_SE
+            ( p_alu && r_pc ? `PUSH_SE
             : `NO_SE )
-        : phase == 2 ? r_op
+        : !p_alu ? r_op
         : `NO_SE );
     wire [DATA_SZ-1:0] r0;
     wire [DATA_SZ-1:0] r1;
 
     wire [DATA_SZ-1:0] d_value =
-        ( !ctrl && alu_fn == `FETCH_OP ? uc_rdata
+        ( mem_op ? uc_rdata
         : alu_out );
     wire [2:0] d_se =
         ( ctrl ?
-            ( phase == 1 && c_branch && r_op != 2'b00 ? `DROP_SE
-            : phase == 2 && !c_branch ?
+            ( p_alu && c_branch && r_op != 2'b00 ? `DROP_SE
+            : !p_alu && !c_branch ?
                 ( r_op == 2'b00 ? `NO_SE
                 : r_op == 2'b10 ? `DROP_SE
                 : `RPLC_SE )
             : `NO_SE )
-        : phase == 1 && d_drop ? `DROP_SE
-        : phase == 2 ? d_op
+        : p_alu && d_drop ? `DROP_SE
+        : !p_alu ? d_op
         : `NO_SE );
     wire [DATA_SZ-1:0] d0;
     wire [DATA_SZ-1:0] d1;
-
-    wire d_zero = (d0 == 0);                            // zero check for TOS
-    wire c_branch = (r_op == 2'b00 || d_zero);          // ctrl branch taken
-    wire ext_addr = (phase == 1)                        // address outside uCode memory
-        && (alu_fn == `FETCH_OP || alu_fn == `STORE_OP)
-        && (d0[DATA_SZ-1:DATA_SZ-PAD_ADDR] != 0);
 
     wire [3:0] alu_fn =
         ( ctrl ? `ADD_OP
@@ -366,39 +379,24 @@ module cpu #(
         : d0 );
     wire [DATA_SZ-1:0] alu_out;
 
-    reg [1:0] phase = 0;
+    reg p_alu = 0;                                      // 0: stack-phase, 1: alu-phase
     always @(posedge i_clk) begin
         if (ext_addr) begin
-            o_status <= 1'b0;                           // address error
+            o_status <= 1'b0;                           // signal failure
+        end else if (p_alu) begin
+            if (mem_op && mem_rng == `MEM_PC) begin
+                pc <= pc + 1'b1;                        // auto-increment on [PC] access
+            end else if (ctrl && c_branch) begin
+                pc <= instr[ADDR_SZ-1:0];               // jump or call procedure
+            end else if (!ctrl && r_pc) begin
+                pc <= r0[ADDR_SZ-1:0];                  // return from procedure
+            end
+            instr_1 <= uc_rdata;
+            p_alu <= !p_alu;
+        end else if (o_running) begin
+            pc <= pc + 1'b1;                            // default next PC
+            p_alu <= !p_alu;
         end
-        case (phase)
-            0: begin
-                if (o_running) begin
-                    pc <= pc + 1'b1;                    // precalculate default next
-                    phase <= 1;
-                end
-            end
-            1: begin
-                if (ctrl && c_branch) begin             // jump or call procedure
-                    pc <= instr[ADDR_SZ-1:0];
-                end
-                if (!ctrl && r_pc) begin                // return from procedure
-                    pc <= r0[ADDR_SZ-1:0];
-                end
-                instr_1 <= uc_rdata;
-                phase <= 2;
-            end
-            2: begin
-                phase <= 0;
-            end
-            3: begin
-                o_status <= 1'b0;                       // phase error
-                phase <= 0;
-            end
-            default: begin
-                o_status <= 1'b0;                       // phase error
-            end
-        endcase
     end
 
 /*

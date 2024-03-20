@@ -85,11 +85,8 @@ module alu #(
                 o_data <= { i_arg0[WIDTH-1], i_arg0[WIDTH-1], i_arg0[WIDTH-1], i_arg0[WIDTH-1], i_arg0[WIDTH-1:4] };
             end
             /*
-            `FETCH_OP: begin
-                // FETCH is handled by the CPU outside of the ALU
-            end
-            `STORE_OP: begin
-                // STORE is handled by the CPU outside of the ALU
+            `MEM_OP: begin
+                // memory operations are handled by the CPU bypassing the ALU
             end
             */
             default: begin                              // ignore
