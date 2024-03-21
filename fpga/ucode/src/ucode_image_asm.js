@@ -572,8 +572,42 @@ export const minicore = (asm, opts) => {
       dat("EXIT");
     }
     if (isDefined("instrset_uFork_SM2.1")) {
+      def("spi1_readcell"); // ( -- cell )
+      dat("spi1_readbyte", "8LBR", "spi1_readbyte", "OR", "EXIT");
+
+      def("spi_flash_wakeup");   // ( -- )
+      dat("1", "spi1_start");    // assume that spi flash is at slave 0
+      dat("(LIT)", 0xAB, "spi1_writebyte"); // wake the spi flash out of low power mode
+      dat("spi1_end", "EXIT");
+
+      def("spi_flash_deepsleep"); // ( -- )
+      dat("1", "spi1_start");
+      dat("(LIT)", 0xB9, "spi1_writebyte"); // tell flash to into deep power down
+      dat("spi1_end");
+      dat("EXIT");
+      
       def("spi_flash_fastread_into_quads"); // ( flash_hi_addr flash_lo_addr start_quaddr nrOfQuads -- )
-      dat(); // merkill
+      dat(">R", ">R");                      // ( flash_hi_addr flash_lo_addr ) R:( nrOfQuads start_quaddr )
+      dat("SWAP", "0xFF_&");                // ( flash_lo_addr flash_hi_dr ) R:( nrOfQuads start_quaddr )
+      dat("spi_flash_wakeup");
+      dat("(LIT)", 0x0B, "spi1_writebyte"); // JEDEC std fast read
+      dat("spi1_writebyte");     // first byte of flash address ( flash_lo_addr ) R:( nrOfQuads start_quaddr  )
+      dat("DUP", "8LBR", "spi1_writebyte"); // second byte of flash address ( flash_lo_addr ) R:( nrOfQuads start_quaddr )
+      dat("spi1_writebyte");     // third byte of flash address ( ) R:( nrOfQuads start_quaddr )
+      dat("spi1_readbyte", "DROP"); // read dummy byte ( ) R:( nrOfQuads start_quaddr )
+      dat("R>");                 // ( start_quaddr ) R:( nrOfQuads )
+      dat("(JMP)", "spi_flash_fastread_into_quads_l1");
+      def("spi_flash_fastread_into_quads_l0"); // ( quaddr ) R:( nrofQuads )
+      dat("spi1_readcell", "OVER", "qt!");
+      dat("spi1_readcell", "OVER", "qx!");
+      dat("spi1_readcell", "OVER", "qy!");
+      dat("spi1_readcell", "OVER", "qz!");
+      dat("1+");
+      def("spi_flash_fastread_into_quads_l1");
+      dat("(NEXT)", "spi_flash_fastread_into_quads_l0");
+      dat("DROP", "spi1_end");
+      dat("spi_flash_deepsleep");
+      dat("EXIT");
     }
   }
   
