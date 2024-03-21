@@ -90,23 +90,24 @@ the next instruction, but may be loaded from the R-stack instead.
 
 #### ALU Operations
 
-Operation | Encoding | Result
-----------|----------|--------------------------------------
-NO_OP     | `(4'h0)` | a
-ADD_OP    | `(4'h1)` | a+b
-SUB_OP    | `(4'h2)` | a-b
-MUL_OP    | `(4'h3)` | a\*b
-AND_OP    | `(4'h4)` | a&b
-XOR_OP    | `(4'h5)` | a^b
-OR_OP     | `(4'h6)` | a\|b
-ROL_OP    | `(4'h7)` | {a[14:0],a[15]}
-ROL2_OP   | `(4'h8)` | {a[13:0],a[15:14]}
-ROL4_OP   | `(4'h9)` | {a[11:0],a[15:12]}
-ROL8_OP   | `(4'hA)` | {a[7:0],a[15:8]}
-ASR_OP    | `(4'hB)` | {a[15],a[15:1]}
-ASR2_OP   | `(4'hC)` | {a[15],a[15],a[15:2]}
-ASR4_OP   | `(4'hD)` | {a[15],a[15],a[15],a[15],a[15:4]}
-MEM_OP    | `(4'hF)` | memory operation
+Operation   | Encoding  | Result
+------------|-----------|--------------------------------------
+NO_OP       | `(4'h0)`  | a
+ADD_OP      | `(4'h1)`  | a+b
+SUB_OP      | `(4'h2)`  | a-b
+MUL_OP      | `(4'h3)`  | a\*b
+AND_OP      | `(4'h4)`  | a&b
+XOR_OP      | `(4'h5)`  | a^b
+OR_OP       | `(4'h6)`  | a\|b
+ROL_OP      | `(4'h7)`  | {a[14:0],a[15]}
+ROL2_OP     | `(4'h8)`  | {a[13:0],a[15:14]}
+ROL4_OP     | `(4'h9)`  | {a[11:0],a[15:12]}
+ROL8_OP     | `(4'hA)`  | {a[7:0],a[15:8]}
+ASR_OP      | `(4'hB)`  | {a[15],a[15:1]}
+ASR2_OP     | `(4'hC)`  | {a[15],a[15],a[15:2]}
+ASR4_OP     | `(4'hD)`  | {a[15],a[15],a[15],a[15],a[15:4]}
+_reserved_  | `(4'hE)`  | DSP/co-processor hook?
+MEM_OP      | `(4'hF)`  | memory operation
 
 #### Memory Instructions
 
@@ -115,18 +116,20 @@ Instead they perform operations involving a memory cycle.
 The result is available as input to both the D-stack and R-stack.
 The top 8 bits are the same as other evaluation instructions.
 `D0` is routed to the address lines, and `D1` to the data lines.
+The `2DROP` bit performs an extra D-stack `DROP` during the
+ALU/memory cycle (usually for a write request).
 
      15  14  13  12  11  10   9   8   7   6   5   4   3   2   1   0
     *---+---+---+---*---+---+---+---*---+---+---+---*---+---+---+---*
-    | 0 |RPC|  R se | ? |    D se   |W/R| MEM range | 1 | 1 | 1 | 1 |
+    | 0 |RPC|  R se | D |    D se   |W/R| MEM range | 1 | 1 | 1 | 1 |
     *---+---+---+---*---+---+---+---*---+---+---+---*---+---+---+---*
-      ^   ^  \_____/     \_________/ \_/ \_________/
-      |   |  00:NONE       000:NONE  0:R   000:UC
-      |   |  01:DROP       001:DROP  1:W   001:[PC]*
-      |   |  10:PUSH       010:PUSH        010:??
-      |   |  11:RPLC       011:RPLC        011:DEV
-      | R->PC              100:SWAP        100:Q_T
-    evaluate               101:ROT3        101:Q_X
+      ^   ^  \_____/  ^  \_________/ \_/ \_________/
+      |   |  00:NONE  |    000:NONE  0:R   000:UC
+      |   |  01:DROP  |    001:DROP  1:W   001:[PC]*
+      |   |  10:PUSH  |    010:PUSH        010:??
+      |   |  11:RPLC  |    011:RPLC        011:DEV
+      | R->PC         |    100:SWAP        100:Q_T
+    evaluate        2DROP  101:ROT3        101:Q_X
                            110:RROT        110:Q_Y
                            111:ALU2        111:Q_Z
 
@@ -134,16 +137,16 @@ The top 8 bits are the same as other evaluation instructions.
 
 #### Stack Operations
 
-Operation | Encoding | Description            | Stack Effect
-----------|----------|------------------------|--------------
-NO_SE     | `(3'h0)` | no operation           | ( -- )
-DROP_SE   | `(3'h1)` | remove top             | ( a -- )
-PUSH_SE   | `(3'h2)` | push onto top          | ( -- a )
-RPLC_SE   | `(3'h3)` | replace top            | ( a -- b )
-SWAP_SE   | `(3'h4)` | swap top and next      | ( a b -- b a )
-ROT3_SE   | `(3'h5)` | rotate top 3 elements  | ( a b c -- b c a )
-RROT_SE   | `(3'h6)` | reverse rotate top 3   | ( a b c -- c a b )
-ALU2_SE   | `(3'h7)` | drop 2, push 1         | ( a b -- c )
+Operation   | Encoding  | Description           | Stack Effect
+------------|-----------|-----------------------|--------------
+NO_SE       | `(3'h0)`  | no operation          | ( -- )
+DROP_SE     | `(3'h1)`  | remove top            | ( a -- )
+PUSH_SE     | `(3'h2)`  | push onto top         | ( -- a )
+RPLC_SE     | `(3'h3)`  | replace top           | ( a -- b )
+SWAP_SE     | `(3'h4)`  | swap top and next     | ( a b -- b a )
+ROT3_SE     | `(3'h5)`  | rotate top 3 elements | ( a b c -- b c a )
+RROT_SE     | `(3'h6)`  | reverse rotate top 3  | ( a b c -- c a b )
+ALU2_SE     | `(3'h7)`  | drop 2, push 1        | ( a b -- c )
 
 ### Primitive Encodings
 

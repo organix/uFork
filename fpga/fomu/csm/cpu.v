@@ -167,16 +167,19 @@ module cpu #(
         ucode[12'h01D] = UC_CONST;
         ucode[12'h01E] = 16'h001F;
         ucode[12'h01F] = 3;
-        ucode[12'h020] = 16'hC01D;                      // $01F
-        ucode[12'h021] = UC_FETCH;                      // 3=@$01F
-        ucode[12'h022] = UC_NOP;                        // cnt=3
-        ucode[12'h023] = UC_DEC;                        // cnt=cnt-1
+        ucode[12'h020] = UC_LIT;                        // $01F
+        ucode[12'h021] = 16'h001F;
+        ucode[12'h022] = UC_FETCH;                      // 3=@$01F
+        ucode[12'h023] = 16'hB027;                      // test, branch, and decrement
         ucode[12'h024] = 16'hC01D;                      // cnt $01F
         ucode[12'h025] = UC_STORE;                      // --
-        ucode[12'h026] = 16'hC01D;                      // $01F
-        ucode[12'h027] = UC_FETCH;                      // 3=@$01F
-        ucode[12'h028] = UC_DROP;                       // --
-        ucode[12'h029] = 16'h8000;                      // jump $000
+        ucode[12'h026] = 16'h8020;                      // jump $020
+        ucode[12'h027] = UC_LIT;                        // 5
+        ucode[12'h028] = 5;
+        ucode[12'h029] = UC_LIT;                        // 5 $01F
+        ucode[12'h02A] = 16'h001F;
+        ucode[12'h02B] = UC_STORE;                      // --
+        ucode[12'h02C] = 16'h8000;                      // jump $000
         //
         // ...
         //
