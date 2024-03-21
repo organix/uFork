@@ -166,11 +166,11 @@ module cpu #(
         //
         ucode[12'h01D] = UC_CONST;
         ucode[12'h01E] = 16'h001F;
-        ucode[12'h01F] = 3;
+        ucode[12'h01F] = -3;
         ucode[12'h020] = UC_LIT;                        // $01F
         ucode[12'h021] = 16'h001F;
         ucode[12'h022] = UC_FETCH;                      // 3=@$01F
-        ucode[12'h023] = 16'hB027;                      // test, branch, and decrement
+        ucode[12'h023] = 16'h9027;//16'hB027;                      // test, branch, and inc(dec)rement
         ucode[12'h024] = 16'hC01D;                      // cnt $01F
         ucode[12'h025] = UC_STORE;                      // --
         ucode[12'h026] = 16'h8020;                      // jump $020
@@ -320,6 +320,7 @@ module cpu #(
     wire d_zero = (d0 == 0);                            // zero check for TOS
     wire c_branch = (r_op == 2'b00 || d_zero);          // ctrl branch taken
     wire ext_addr = p_alu && mem_op
+        && mem_rng != `MEM_PC
         && (d0[DATA_SZ-1:DATA_SZ-PAD_ADDR] != 0);       // address outside uCode memory
 
 
