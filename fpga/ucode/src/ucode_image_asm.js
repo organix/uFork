@@ -472,20 +472,28 @@ export const minicore = (asm, opts) => {
     }
   }
 
-  if (isDefined("instrset_uFork_SM2")) {
-    if (isDefined("platform_fomu")) {
+  if (isDefined("platform_fomu")) {
+    if (isDefined("instrset_uFork_SM2")) {
       // addresses 0x3F04-5 is the Lattice ICE 40 UltraPlus 5K system bus
       // 0x3F04 is the system bus address, only lower byte (mask 0x00FF) used
       // 0x3F05 is the system bus data,    only lower byte (mask 0x00FF) used
       //   only reads from and writes to 0x3F03 cause activity from uFork_CSM core
       //   to lattice system bus
       def("fomu_sysbus@"); // ( sysbus_addrbyte -- sysbus_databyte )
-      dat("0xFF_&", "(LIT)", 0x3F04, "!", "(LIT)", 0x3F05, "@", "EXIT");
+      dat("0xFF_&", "(LIT)", 0x3F04, "!", "(LIT)", 0x3F05, "@", "0xFF_&", "EXIT");
 
       def("fomu_sysbus!"); // ( sysbus_databyte sysbus_addrbyte -- )
       dat("0xFF_&", "SWAP", "0xFF_&", "SWAP");
       dat("(LIT)", 0x3F04, "!", "(LIT)", 0x3F05, "!", "EXIT");
+    } else if (isDefined("instrset_uFork_SM2.1")) {
+      def("fomu_sysbus@"); // ( sysbus_addrbyte -- sysbus_databyte )
+      dat("0xFF_&", "(LIT)", 0x0004, "io!", "(LIT)", 0x0005, "io@", "0xFF_&", "EXIT");
 
+      def("fomu_sysbus!"); // ( sysbus_databyte sysbus_addrbyte -- )
+      dat("0xFF_&", "SWAP", "0xFF_&", "SWAP");
+      dat("(LIT)", 0x0004, "io!", "(LIT)", 0x0005, "io!", "0xFF_&", "EXIT");
+    }
+    if (isDefined("instrset_uFork_SM2") || isDefined("instrset_uFork_SM2.1")) {
       def("spi1_start"); // ( SlaveSelectMask -- )
       // asuming that the spi flash eeprom is connected to spi 1 hard block
       dat("(LIT)", 0xFF, "(LIT)", 0x19, "fomu_sysbus!"); // SPIRC0 = 0b11_111_111
@@ -535,7 +543,8 @@ export const minicore = (asm, opts) => {
       dat("0x0000", "(LIT)", 0x1F, "fomu_sysbus!"); // deselect slave
       dat("0x0000", "(LIT)", 0x1A, "fomu_sysbus!"); // disable spi
       dat("EXIT");
-
+    }
+    if (isDefined("instrset_uFork_SM2")) {
       def("spi_flash_fastread"); // ( flash_upper_addr flash_lower_addr ucode_addr cells )
       dat(">R", ">R");           // ( flash_upper_addr flash_lower_addr ) R:( cells ucode_addr )
       dat("SWAP", "0xFF_&");     // ( flash_lower_addr flash_upper_addr ) R:( cells ucode_addr )
@@ -561,6 +570,10 @@ export const minicore = (asm, opts) => {
       dat("(LIT)", 0xB9, "spi1_writebyte"); // tell flash to into deep power down
       dat("spi1_end");
       dat("EXIT");
+    }
+    if (isDefined("instrset_uFork_SM2.1")) {
+      def("spi_flash_fastread_into_quads"); // ( flash_hi_addr flash_lo_addr start_quaddr nrOfQuads -- )
+      dat(); // merkill
     }
   }
   
