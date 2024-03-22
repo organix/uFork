@@ -188,7 +188,7 @@ MSB     | ( -- 0x8000 )             | `02E6` | `0000_0010_1110_0110`
 ###  Baseline (before adding devices)
 
     Info: Device utilisation:
-    Info: 	         ICESTORM_LC:   930/ 5280    17%
+    Info: 	         ICESTORM_LC:   928/ 5280    17%
     Info: 	        ICESTORM_RAM:     4/   30    13%
     Info: 	               SB_IO:     8/   96     8%
     Info: 	               SB_GB:     7/    8    87%
@@ -203,7 +203,7 @@ MSB     | ( -- 0x8000 )             | `02E6` | `0000_0010_1110_0110`
     Info: 	         SB_LEDDA_IP:     0/    1     0%
     Info: 	         SB_RGBA_DRV:     1/    1   100%
     Info: 	      ICESTORM_SPRAM:     0/    4     0%
-    Info: Max frequency for clock 'clk': 30.00 MHz (PASS at 12.00 MHz)
+    Info: Max frequency for clock 'clk': 30.75 MHz (PASS at 12.00 MHz)
 
 ## Component Block Diagrams
 

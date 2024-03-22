@@ -138,6 +138,8 @@ module cpu #(
 
     // initial program
     initial begin
+        $readmemh("ucode_rom.mem", ucode);
+        /*
         ucode[12'h000] = 16'h8020;//UC_TRUE;
         ucode[12'h001] = UC_DUP;
         ucode[12'h002] = UC_DEC;
@@ -166,17 +168,17 @@ module cpu #(
         //
         ucode[12'h01D] = UC_CONST;
         ucode[12'h01E] = 16'h001F;
-        ucode[12'h01F] = -3;
+        ucode[12'h01F] = 3;
         ucode[12'h020] = UC_LIT;                        // $01F
         ucode[12'h021] = 16'h001F;
         ucode[12'h022] = UC_FETCH;                      // 3=@$01F
-        ucode[12'h023] = 16'h9027;//16'hB027;                      // test, branch, and inc(dec)rement
+        ucode[12'h023] = 16'hB027;                      // test, branch, and decrement
         ucode[12'h024] = 16'hC01D;                      // cnt $01F
         ucode[12'h025] = UC_STORE;                      // --
         ucode[12'h026] = 16'h8020;                      // jump $020
-        ucode[12'h027] = UC_LIT;                        // 5
-        ucode[12'h028] = 5;
-        ucode[12'h029] = UC_LIT;                        // 5 $01F
+        ucode[12'h027] = UC_LIT;                        // -5
+        ucode[12'h028] = -5;
+        ucode[12'h029] = UC_LIT;                        // -5 $01F
         ucode[12'h02A] = 16'h001F;
         ucode[12'h02B] = UC_STORE;                      // --
         ucode[12'h02C] = 16'h8000;                      // jump $000
@@ -189,25 +191,21 @@ module cpu #(
         // EXE
         ucode[12'h082] = UC_TO_R;
         ucode[12'h083] = UC_EXIT;
-        /*
         // ALT ( altn cnsq cond -- cnsq | altn )
         ucode[12'h084] = UC_SKZ;
         ucode[12'h085] = UC_SWAP;
         ucode[12'h086] = UC_DROP;
         ucode[12'h087] = UC_EXIT;
-        */
         // CONST
         ucode[12'h088] = UC_R_FROM;
         ucode[12'h089] = UC_FETCH;
         ucode[12'h08A] = UC_EXIT;
-        /*
         // TRUE ( -- -1 )
         ucode[12'h08B] = UC_CONST;
         ucode[12'h08C] = 16'hFFFF;
         // FALSE ( -- 0 )
         ucode[12'h08D] = UC_CONST;
         ucode[12'h08E] = 16'h0000;
-        */
         // LSB ( -- 1 )
         //ucode[12'h08F] = UC_CONST;
         //ucode[12'h090] = 16'h0001;
@@ -233,6 +231,7 @@ module cpu #(
         ucode[12'h12D] = UC_DROP;
         ucode[12'h12E] = UC_DROP;
         ucode[12'h12F] = UC_EXIT;
+        */
         /*
         $writememh("ucode_rom.mem", ucode);
         */
@@ -319,10 +318,6 @@ module cpu #(
     wire [2:0] mem_rng = instr[6:4];                    // MEM range selector
     wire d_zero = (d0 == 0);                            // zero check for TOS
     wire c_branch = (r_op == 2'b00 || d_zero);          // ctrl branch taken
-    wire ext_addr = p_alu && mem_op
-        && mem_rng != `MEM_PC
-        && (d0[DATA_SZ-1:DATA_SZ-PAD_ADDR] != 0);       // address outside uCode memory
-
 
     assign uc_wr =
         ( p_alu && mem_op ? mem_wr
@@ -388,7 +383,7 @@ module cpu #(
 
     reg p_alu = 0;                                      // 0: stack-phase, 1: alu-phase
     always @(posedge i_clk) begin
-        if (ext_addr) begin
+        if (mem_op && mem_rng != `MEM_UC && mem_rng != `MEM_PC) begin
             o_status <= 1'b0;                           // signal failure
         end else if (p_alu) begin
             if (!ctrl && r_pc) begin
