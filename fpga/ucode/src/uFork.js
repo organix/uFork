@@ -28,17 +28,6 @@ export const uFork = (asm) => {
   let hereBeyondEnd = asm.incr("uFork_last_ucode_address", 0x0000);
             
   if (!hwImplOfQuadMemoryGC) {
-    if (!(asm.isDefined("gcMem@")) && !(asm.isDefined("gcMem!"))) {
-      def("uFork_privateGCmem_baseAddr");
-      dat("(CONST)", hereBeyondEnd);
-      hereBeyondEnd = asm.incr(hereBeyondEnd, quadMemSize_in_quads); // per uFork/docs/gc.md
-
-      def("gcMem_common"); // ( quad_ram_offset -- addr )
-      dat("uFork_privateGCmem_baseAddr", "+", "EXIT");
-
-      def("gcMem@"); dat("gcMem_common", "@", "EXIT");
-      def("gcMem!"); dat("gcMem_common", "!", "EXIT");
-    }
     if (asm.isDefined("uFork_gc_algo2")) {
       // this implements the Rust implementation variant of gc
       def("gcMem@_shadowed", "gcMem@");
