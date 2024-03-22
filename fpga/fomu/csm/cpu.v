@@ -125,7 +125,8 @@ module cpu #(
     localparam UC_JMP       = 16'hC080;
     localparam UC_EXE       = 16'hC082;
     localparam UC_ALT       = 16'hC084;                 // ( altn cnsq cond -- cnsq | altn )
-    localparam UC_CONST     = 16'hC088;
+//    localparam UC_CONST     = 16'hC088;
+    localparam UC_CONST     = 16'h521F;                 // (CONST) item ( -- item ) R:( addr -- ) addr->pc
     localparam UC_TRUE      = 16'h02F6;                 // ( -- -1 )
     localparam UC_FALSE     = 16'h02C0;                 // ( -- 0 )
     localparam UC_LSB       = 16'h02D6;                 // ( -- 1 )
@@ -137,7 +138,7 @@ module cpu #(
 
     // initial program
     initial begin
-        ucode[12'h000] = 16'h8010;//UC_TRUE;
+        ucode[12'h000] = 16'h8020;//UC_TRUE;
         ucode[12'h001] = UC_DUP;
         ucode[12'h002] = UC_DEC;
         ucode[12'h003] = UC_AND;
@@ -165,17 +166,20 @@ module cpu #(
         //
         ucode[12'h01D] = UC_CONST;
         ucode[12'h01E] = 16'h001F;
-        ucode[12'h01F] = 3;
-        ucode[12'h020] = 16'hC01D;                      // $01F
-        ucode[12'h021] = UC_FETCH;                      // 3=@$01F
-        ucode[12'h022] = UC_NOP;                        // cnt=3
-        ucode[12'h023] = UC_DEC;                        // cnt=cnt-1
+        ucode[12'h01F] = -3;
+        ucode[12'h020] = UC_LIT;                        // $01F
+        ucode[12'h021] = 16'h001F;
+        ucode[12'h022] = UC_FETCH;                      // 3=@$01F
+        ucode[12'h023] = 16'h9027;//16'hB027;                      // test, branch, and inc(dec)rement
         ucode[12'h024] = 16'hC01D;                      // cnt $01F
         ucode[12'h025] = UC_STORE;                      // --
-        ucode[12'h026] = 16'hC01D;                      // $01F
-        ucode[12'h027] = UC_FETCH;                      // 3=@$01F
-        ucode[12'h028] = UC_DROP;                       // --
-        ucode[12'h029] = 16'h8000;                      // jump $000
+        ucode[12'h026] = 16'h8020;                      // jump $020
+        ucode[12'h027] = UC_LIT;                        // 5
+        ucode[12'h028] = 5;
+        ucode[12'h029] = UC_LIT;                        // 5 $01F
+        ucode[12'h02A] = 16'h001F;
+        ucode[12'h02B] = UC_STORE;                      // --
+        ucode[12'h02C] = 16'h8000;                      // jump $000
         //
         // ...
         //
@@ -316,6 +320,7 @@ module cpu #(
     wire d_zero = (d0 == 0);                            // zero check for TOS
     wire c_branch = (r_op == 2'b00 || d_zero);          // ctrl branch taken
     wire ext_addr = p_alu && mem_op
+        && mem_rng != `MEM_PC
         && (d0[DATA_SZ-1:DATA_SZ-PAD_ADDR] != 0);       // address outside uCode memory
 
 
@@ -329,7 +334,9 @@ module cpu #(
         ( p_alu && mem_op ? d1
         : -1 );
     assign uc_raddr =
-        ( p_alu && mem_op ? d0[ADDR_SZ-1:0]
+        ( p_alu && mem_op ?
+            ( mem_rng == `MEM_PC ? pc
+            : d0[ADDR_SZ-1:0] )
         : pc );
 
     wire [DATA_SZ-1:0] r_value =
@@ -384,12 +391,12 @@ module cpu #(
         if (ext_addr) begin
             o_status <= 1'b0;                           // signal failure
         end else if (p_alu) begin
-            if (mem_op && mem_rng == `MEM_PC) begin
+            if (!ctrl && r_pc) begin
+                pc <= r0[ADDR_SZ-1:0];                  // return from procedure
+            end else if (mem_op && mem_rng == `MEM_PC) begin
                 pc <= pc + 1'b1;                        // auto-increment on [PC] access
             end else if (ctrl && c_branch) begin
                 pc <= instr[ADDR_SZ-1:0];               // jump or call procedure
-            end else if (!ctrl && r_pc) begin
-                pc <= r0[ADDR_SZ-1:0];                  // return from procedure
             end
             instr_1 <= uc_rdata;
             p_alu <= !p_alu;
