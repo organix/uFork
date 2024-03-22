@@ -61,8 +61,8 @@ export const uFork_quadmem_and_gc = (asm) => {
       if (!(asm.isDefined("spram@")) && !(asm.isDefined("spram!"))) {
         const quadMemSize_in_cells = quadMemSize_in_quads * 4;
         def("uFork_quadMem_baseAddr");
-        dat("(CONST)", hereBeyondEnd);
-        hereBeyondEnd = asm.incr(hereBeyondEnd, quadMemSize_in_cells);
+        dat("(CONST)", "meta_hereBeyondEnd");
+        asm.symbols.redefine("meta_hereBeyondEnd", asm.incr(asm.symbols.lookup("meta_hereBeyondEnd"), quadMemSize_in_cells);
       }
 
       def("uFork_quaddr2addr"); // ( quad_addr -- cell_addr )
@@ -119,9 +119,16 @@ export const uFork_quadmem_and_gc = (asm) => {
     dat("uFork_quaddrInRam", "(BRZ)", "2DROP", "(JMP)", "qramz!");
   }
   if (!hwImplOfQuadMemoryGC) {
-    if (asm.isDefined("instrset_uFork_SM2.1") && asm.isDefined("platform_fomu")) {
+    if (asm.isDefined("uFork_gc_algo1")) {
+      // this only used by uFork_gc_algo1 as uFork_gc_algo2 needs full size cells and not just two bits
       def("gcMem_base");
-      dat("(CONST)", 0x1000);
+      if (asm.isDefined("instrset_uFork_SM2.1") &&
+          asm.isDefined("platform_fomu")) {
+        dat("(CONST)", 0x1000);
+      } else {
+        dat("(CONST)", "meta_hereBeyondEnd");
+        asm.symbols.redefine("meta_hereBeyondEnd", asm.incr(asm.symbols.lookup("meta_hereBeyondEnd"), Math.int(quadMemSize_in_cells / 8));
+      }
 
       def("gcMem_common"); // ( quad_ram_addr -- bit_offset addr )
       dat("0x3FFF_&");
