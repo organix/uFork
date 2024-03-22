@@ -118,5 +118,21 @@ export const uFork_quadmem_and_gc = (asm) => {
     asm.symbols.redefine("qz!"); // ( x_field quad_addr -- )
     dat("uFork_quaddrInRam", "(BRZ)", "2DROP", "(JMP)", "qramz!");
   }
+  if (!hwImplOfQuadMemoryGC) {
+    if (asm.isDefined("instrset_uFork_SM2") && asm.isDefined("platform_fomu")) {
+      def("gcMem_base");
+      dat("(CONST)", 0x1000);
+
+      def("gcMem_common"); // ( quad_ram_addr -- bit_offset addr )
+      dat("0x3FFF_&");
+      dat("DUP", "7_&", "2*", "2+", "SWAP", "8/", "gcMem_base", "+", "EXIT");
+
+      def("gcMem@");       // ( quad_addr -- gc_mark )
+      dat("gcMem_common"); // ( bit_offset addr )
+      dat("@");            // ( bit_offset cell )
+      dat("SWAP");         // ( cell bit_offset )
+      dat("LBR", "3_&");   // ( gc_mark )
+      dat("EXIT");
+      
   return asm;
 };
