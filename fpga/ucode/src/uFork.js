@@ -22,7 +22,7 @@ export const uFork = (asm) => {
                                        asm.symbols.lookup("uFork_memoryDescriptor_qaddr") :
                                        0x4000;
   const maxTopOfQuadMemory =           0x5000;
-  const quadMemSize_in_quads = maxTopOfQuadMemory - memoryDescriptor_qaddr;
+  def("meta_quadMemSize_in_quads", asm.deferedOp.minus(maxTopOfQuadMemory, memoryDescriptor_qaddr));
   const uForkSubroutines =             isDefined("uFork_subroutines_support");
 
   def("meta_hereBeyondEnd", asm.incr("uFork_last_ucode_address", 0x0000));
