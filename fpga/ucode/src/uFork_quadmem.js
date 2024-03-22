@@ -218,5 +218,10 @@ export const uFork_quadmem_and_gc = (asm) => {
       dat("uFork_gc_first", "gcMem!"); // ( qra )
       def("uFork_gc_nextOfScanque_l0");
       dat("EXIT");
+
+      def("uFork_gc_mutator_mark"); // ( ?_field quad_addr -- ?_field quad_addr )
+      dat("uFork_gc_phase", "@", "DUP", "1=", "SWAP", "2=", "OR", "INVERT", "(BREXIT)");
+      dat("2DUP", "uFork_gc_add2scanque", "uFork_gc_add2scanque", "EXIT");
+      
   return asm;
 };
