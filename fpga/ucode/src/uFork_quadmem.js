@@ -284,6 +284,15 @@ export const uFork_quadmem_and_gc = (asm) => {
       dat("DUP", "4&", "(BRNZ)", "uFork_gc_sweep"); // stop-the-world condition
       dat("DROP", "EXIT");
 
+            // check quad memory pressure by looking at free count and qmem_top
+      def("uFork_gc_check_quad_mem_pressure"); // ( -- bool )
+      dat("uFork_memoryDescriptor", "DUP", "qy@", "2*");
+      dat("+", "uFork_maxTopOfQuadMemory", ">"); // ( bool1 ) T: more than half on freelist!
+      dat("(BRNZ)", "FALSE");
+      dat("uFork_memoryDescriptor", "qt@", "2*", "uFork_maxTopOfQuadMemory", "<");
+      // T: more than half of avalable quad ram available
+      dat("(BRNZ)", "FALSE");
+      dat("(JMP)", "TRUE");
       
   return asm;
 };
