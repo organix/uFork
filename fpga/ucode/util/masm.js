@@ -242,6 +242,22 @@ export const makeAssembler = (opts) => {
     b = Promise.resolve(b);
     return Promise.all([a, b]).then(([a_real, b_real]) => (a_real == b_real));
   };
+  asm.deferedOp.intDivide = (divdent, divisor) => {
+    if ((typeof divident) == "string") {
+      divident = asm.symbols.lookup(divident);
+    }
+    if ((typeof divisor) == "string") {
+      divisor = asm.symbols.lookup(divisor);
+    }
+    if (((typeof divident) == "number") && ((typeof divisor) == "number")) {
+      return Math.ceil(divident / divisor);
+    }
+    divident = Promise.resolve(divident);
+    divisor  = Promise.resolve(divisor);
+    return Promise.all([divident, divisor]).then(([real_divident, real_divisor]) => {
+      return Math.ceil(real_divident / real_divisor);
+    });
+  };
   asm.incr = asm.deferedOp.incr;
   asm.origin = (new_addr) => {
     const tmp = curr_addr;
