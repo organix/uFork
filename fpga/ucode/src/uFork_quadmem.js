@@ -328,6 +328,14 @@ export const uFork_quadmem_and_gc = (asm) => {
       dat("EXIT");
     } else if (asm.isDefined("uFork_gc_algo1")) {
       // this implements the uFork-c implementation garbage collection algorithm
+      def("uFork_gc_genx_mark", "0");
+      def("uFork_gc_geny_mark", "1");
+      def("uFork_gc_scan_mark", "2");
+      def("uFork_gc_free_mark", "3");
+
+      def("uFork_gc_currGen");
+      dat("(VAR)", 0);
+      
     } else {
       throw new Error("garbage collection isnt implemented in hardware and neither of the two gc algorithms have been selected  (uFork_gc_algo1 or uFork_gc_algo2)");
     }
