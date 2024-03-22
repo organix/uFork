@@ -8,7 +8,11 @@
 //   as that is a bit incomplete use uFork/vm/rs/src/any.rs as suppliment
 // also using uFork/docs/sponsor.md as reference
 
+import { uFork_quadmem_and_gc } from "./uFork_quadmem.js";
+
 export const uFork = (asm) => {
+  asm = uFork_quadmem_and_gc(asm);
+  
   const { def, dat, isDefined } = asm;
 
   const eventQueueAndContQueue_qaddr = isDefined("uFork_eventQueueAndKontQueue_qaddr") ?
