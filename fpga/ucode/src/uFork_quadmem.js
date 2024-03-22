@@ -194,6 +194,22 @@ export const uFork_quadmem_and_gc = (asm) => {
       def("uFork_gc_first", "uFork_memoryDescriptor_qaddr"); // head of scanning queue addr
       def("uFork_gc_last",  "uFork_eventQueueAndContQueue"); // tail of scanning queue addr
 
+      def("uFork_gc_add2scanque"); // ( quad_ram_addr -- )
+      dat("uFork_quaddrInRam", "(BRZ)", "(DROP)");
+      dat("DUP", "uFork_gc_first", "=", "(BRZ)", "(DROP)");
+      dat("DUP", "uFork_gc_last",  "=", "(BRZ)", "(DROP)");
+      dat("DUP");     // ( qra qra )
+      dat("uFork_gc_last"); // ( qra qra addr )
+      dat("gcMem@");  // ( qra qra last )
+      dat("DUP", "uFork_()", "=", "(BRZ)", "uFork_gc_add2scanque_l0");
+      dat("2DROP", "(JMP)", "uFork_gc_add2scanque_l1");
+      def("uFork_gc_add2scanque_l0");
+      dat("gcMem!");
+      def("uFork_gc_add2scanque_l1");
+      dat("DUP", "uFork_gc_last", "gcMem!");
+      dat("DUP", "gcMem@", "uFork_gc_black", "=", "(BRNZ)", "(DROP)");
+      dat("uFork_()", "SWAP", "gcMem!");
+      dat("EXIT");
       
   return asm;
 };
