@@ -178,7 +178,7 @@ export const uFork_quadmem_and_gc = (asm) => {
       dat("uFork_quaddrInRam", "(BRZ)", "2DROP");
       dat("gcMem_common2", "gcMem!_shadowed", "EXIT");
 
-            def("uFork_gc_phase");
+      def("uFork_gc_phase");
       dat("(VAR)", 0);
       // 0 - marking setup
       // 1 - marking
@@ -222,6 +222,24 @@ export const uFork_quadmem_and_gc = (asm) => {
       def("uFork_gc_mutator_mark"); // ( ?_field quad_addr -- ?_field quad_addr )
       dat("uFork_gc_phase", "@", "DUP", "1=", "SWAP", "2=", "OR", "INVERT", "(BREXIT)");
       dat("2DUP", "uFork_gc_add2scanque", "uFork_gc_add2scanque", "EXIT");
+
+      def("nonGChaz_qt!", "qt!");
+      def("nonGChaz_qx!", "qx!");
+      def("nonGChaz_qy!", "qy!");
+      def("nonGZhaz_qz!", "qz!");
+
+      asm.symbols.redefine("qt!"); // ( t_field quad_addr -- )
+      dat("uFork_gc_mutator_mark", "nonGChaz_qt!", "EXIT");
+
+      asm.symbols.redefine("qx!"); // ( x_field quad_addr -- )
+      dat("uFork_gc_mutator_mark", "nonGChaz_qx!", "EXIT");
+
+      asm.symbols.redefine("qy!"); // ( y_field quad_addr -- )
+      dat("uFork_gc_mutator_mark", "nonGChaz_qy!", "EXIT");
+
+      asm.symbols.redefine("qz!"); // ( z_field quad_addr -- )
+      dat("uFork_gc_mutator_mark", "nonGChaz_qz!", "EXIT");
+
       
   return asm;
 };
