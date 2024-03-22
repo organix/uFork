@@ -164,6 +164,19 @@ export const uFork_quadmem_and_gc = (asm) => {
 
       def("gcMem_common2"); // ( quad_addr -- quad_ram_offset )
       dat("uFork_memoryDescriptor_qaddr", "-", "EXIT");
+
+      def("uFork_gc_white", "uFork_#?");
+      def("uFork_gc_black", "uFork_#unit");
+
+      asm.symbols.redefine("gcMem@"); // ( quad_ram_addr -- value )
+      dat("uFork_quaddrInRam", "(BRZ)", "gcMem@_l0");
+      dat("gcMem_common2", "gcMem@_shadowed", "EXIT");
+      def("gcMem@_l0");
+      dat("DROP", "uFork_gc_black", "EXIT");
+
+      asm.symbols.redefine("gcMem!"); // ( value quad_ram_addr -- )
+      dat("uFork_quaddrInRam", "(BRZ)", "2DROP");
+      dat("gcMem_common2", "gcMem!_shadowed", "EXIT");
       
   return asm;
 };
