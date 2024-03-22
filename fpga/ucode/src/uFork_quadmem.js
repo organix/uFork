@@ -293,7 +293,33 @@ export const uFork_quadmem_and_gc = (asm) => {
       // T: more than half of avalable quad ram available
       dat("(BRNZ)", "FALSE");
       dat("(JMP)", "TRUE");
-      
+
+      def("uFork_gcStopTheWorld"); // ( -- )
+      dat("4", "uFork_gc_phase", "!");
+      // deliberate fallthrough to uFork_gcOneStep
+
+      def("uFork_gcOneStep"); // ( -- )
+      dat("uFork_gc_phase", "@");   // ( phase )
+      dat("(JMPTBL)", 8);
+      dat("uFork_gc_mark_setup");  // 0
+      dat("uFork_gc_mark");        // 1
+      dat("uFork_gc_sweep_setup"); // 2
+      dat("uFork_gc_sweep");       // 3
+      dat("uFork_gc_idle_l1");     // 4
+      dat("uFork_gc_mark");        // 5
+      dat("uFork_gc_sweep_setup"); // 6
+      dat("uFork_gc_sweep");       // 7
+      def("uFork_gc_idle");        // ( phase -- )
+      dat("DUP", "0xFFFF", "=", "(BRZ)", "uFork_gc_idle_l0");
+      dat("uFork_gc_check_quad_mem_pressure", "(BRZ)", "uFork_gc_idle_l1");
+      dat("(JMP)", "uFork_gc_mark_setup");
+      def("uFork_gc_idle_l1");     // ( 0 )
+      dat("DROP", "0x0F");         // ( 15 )
+      def("uFork_gc_idle_l0");     // ( phase )
+      dat("DUP", "1+", "uFork_gc_phase", "!");
+      dat("4&", "(BRNZ)", "uFork_gcOneStep"); // stop-the-world condition
+      dat("EXIT");
+    }
   return asm;
 };
 
