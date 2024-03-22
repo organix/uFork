@@ -210,6 +210,13 @@ export const uFork_quadmem_and_gc = (asm) => {
       dat("DUP", "gcMem@", "uFork_gc_black", "=", "(BRNZ)", "(DROP)");
       dat("uFork_()", "SWAP", "gcMem!");
       dat("EXIT");
-      
+
+      def("uFork_gc_nextOfScanque");   // ( -- quad_ram_addr | uFork_() )
+      dat("uFork_gc_first", "gcMem@"); // ( qra )
+      dat("DUP", "uFork_()", "=", "(BRNZ)", "uFork_gc_nextOfScanque_l0");
+      dat("DUP", "gcMem@");      // ( qra next )
+      dat("uFork_gc_first", "gcMem!"); // ( qra )
+      def("uFork_gc_nextOfScanque_l0");
+      dat("EXIT");
   return asm;
 };
