@@ -187,6 +187,10 @@ export const uFork_quadmem_and_gc = (asm) => {
       // 0b0000_0000_0000_01xx  stop-the-world until done
       // 0xF-0xFFFE = counting up to idle
       // 0xFFFF - idle, check quad memory pressure
+
+      def("uFork_gc_sweep_ptr");
+      dat("(VAR)", 0);
+
       
   return asm;
 };
