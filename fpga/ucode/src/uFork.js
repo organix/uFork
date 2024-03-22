@@ -25,7 +25,8 @@ export const uFork = (asm) => {
   const quadMemSize_in_quads = maxTopOfQuadMemory - memoryDescriptor_qaddr;
   const uForkSubroutines =             isDefined("uFork_subroutines_support");
 
-  let hereBeyondEnd = asm.incr("uFork_last_ucode_address", 0x0000);
+  def("meta_hereBeyondEnd", asm.incr("uFork_last_ucode_address", 0x0000));
+
   
   def("uFork_doOneRunLoopTurn"); // ( -- )
   dat("uFork_checkPendingInterrupts"); // ( -- )
