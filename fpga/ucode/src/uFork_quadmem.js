@@ -191,6 +191,9 @@ export const uFork_quadmem_and_gc = (asm) => {
       def("uFork_gc_sweep_ptr");
       dat("(VAR)", 0);
 
+      def("uFork_gc_first", "uFork_memoryDescriptor_qaddr"); // head of scanning queue addr
+      def("uFork_gc_last",  "uFork_eventQueueAndContQueue"); // tail of scanning queue addr
+
       
   return asm;
 };
