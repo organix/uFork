@@ -119,7 +119,7 @@ export const uFork_quadmem_and_gc = (asm) => {
     dat("uFork_quaddrInRam", "(BRZ)", "2DROP", "(JMP)", "qramz!");
   }
   if (!hwImplOfQuadMemoryGC) {
-    if (asm.isDefined("instrset_uFork_SM2") && asm.isDefined("platform_fomu")) {
+    if (asm.isDefined("instrset_uFork_SM2.1") && asm.isDefined("platform_fomu")) {
       def("gcMem_base");
       dat("(CONST)", 0x1000);
 
@@ -133,6 +133,18 @@ export const uFork_quadmem_and_gc = (asm) => {
       dat("SWAP");         // ( cell bit_offset )
       dat("LBR", "3_&");   // ( gc_mark )
       dat("EXIT");
-      
+
+      def("gcMem!");       // ( gc_mark quad_addr -- )
+      dat("gcMem_common"); // ( gc_mark bit_offset addr )
+      dat("DUP", "@");     // ( gc_mark bit_offset addr cell )
+      dat("SWAP", ">R");   // ( gc_mark bit_offset cell ) R:( addr )
+      dat("OVER");         // ( gc_mark bit_offset cell bit_offset ) R:( addr )
+      dat("3", "INVERT");  // ( gc_mark bit_offset cell bit_offset 0xFFFC ) R:( addr )
+      dat("SWAP", "LBR");  // ( gc_mark bit_offset cell mask ) R:( addr )
+      dat("&", ">R");      // ( gc_mark bit_offset ) R:( addr masked_cell )
+      dat("LBR", "R>");    // ( gc_mark_offsetted masked_cell ) R:( addr )
+      dat("OR", "R>");     // ( cell addr )
+      dat("!", "EXIT");    // ( )
+    }
   return asm;
 };
