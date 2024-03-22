@@ -177,6 +177,16 @@ export const uFork_quadmem_and_gc = (asm) => {
       asm.symbols.redefine("gcMem!"); // ( value quad_ram_addr -- )
       dat("uFork_quaddrInRam", "(BRZ)", "2DROP");
       dat("gcMem_common2", "gcMem!_shadowed", "EXIT");
+
+            def("uFork_gc_phase");
+      dat("(VAR)", 0);
+      // 0 - marking setup
+      // 1 - marking
+      // 2 - sweep setup
+      // 3 - sweeping ( and resetting gcMem by its way)
+      // 0b0000_0000_0000_01xx  stop-the-world until done
+      // 0xF-0xFFFE = counting up to idle
+      // 0xFFFF - idle, check quad memory pressure
       
   return asm;
 };
