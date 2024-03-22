@@ -240,6 +240,13 @@ export const uFork_quadmem_and_gc = (asm) => {
       asm.symbols.redefine("qz!"); // ( z_field quad_addr -- )
       dat("uFork_gc_mutator_mark", "nonGChaz_qz!", "EXIT");
 
+      def("uFork_gc_scan_quad"); // ( quad -- )
+      dat("DUP", "qt@", "uFork_gc_add2scanque");
+      dat("DUP", "qx@", "uFork_gc_add2scanque");
+      dat("DUP", "qy@", "uFork_gc_add2scanque");
+      dat(       "qz@", "uFork_gc_add2scanque");
+      dat("EXIT");
+
       
   return asm;
 };
