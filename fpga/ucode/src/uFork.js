@@ -28,33 +28,6 @@ export const uFork = (asm) => {
   let hereBeyondEnd = asm.incr("uFork_last_ucode_address", 0x0000);
             
   if (!hwImplOfQuadMemoryGC) {
-    if (asm.isDefined("instrset_uFork_SM2") && asm.isDefined("platform_fomu")) {
-      def("gcMem_base");
-      dat("(CONST)", 0x1000);
-      
-      def("gcMem_common"); // ( quad_ram_addr -- bit_offset addr )
-      dat("0x3FFF_&");
-      dat("DUP", "7_&", "2*", "2+", "SWAP", "8/", "gcMem_base", "+", "EXIT");
-      
-      def("gcMem@");       // ( quad_addr -- gc_mark )
-      dat("gcMem_common"); // ( bit_offset addr )
-      dat("@");            // ( bit_offset cell )
-      dat("SWAP");         // ( cell bit_offset )
-      dat("LBR", "3_&");   // ( gc_mark )
-      dat("EXIT");
-      
-      def("gcMem!");       // ( gc_mark quad_addr -- )
-      dat("gcMem_common"); // ( gc_mark bit_offset addr )
-      dat("DUP", "@");     // ( gc_mark bit_offset addr cell )
-      dat("SWAP", ">R");   // ( gc_mark bit_offset cell ) R:( addr )
-      dat("OVER");         // ( gc_mark bit_offset cell bit_offset ) R:( addr )
-      dat("3", "INVERT");  // ( gc_mark bit_offset cell bit_offset 0xFFFC ) R:( addr )
-      dat("SWAP", "LBR");  // ( gc_mark bit_offset cell mask ) R:( addr )
-      dat("&", ">R");      // ( gc_mark bit_offset ) R:( addr masked_cell )
-      dat("LBR", "R>");    // ( gc_mark_offsetted masked_cell ) R:( addr )
-      dat("OR", "R>");     // ( cell addr )
-      dat("!", "EXIT");    // ( )
-    }
     if (!(asm.isDefined("gcMem@")) && !(asm.isDefined("gcMem!"))) {
       def("uFork_privateGCmem_baseAddr");
       dat("(CONST)", hereBeyondEnd);
