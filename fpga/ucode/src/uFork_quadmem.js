@@ -269,5 +269,23 @@ export const uFork_quadmem_and_gc = (asm) => {
       def("uFork_gc_sweep_setup"); // ( phase -- )
       dat("uFork_gc_first", "uFork_gc_sweep_ptr", "!");
       dat("(JMP)", "uFork_gc_idle_l0");
+
+            def("uFork_gc_sweep"); // ( phase -- )
+      dat("uFork_gc_sweep_ptr", "@"); // ( phase qa )
+      dat("DUP", "uFork_maxTopOfQuadMemory", "=", "(BRZ)", "uFork_gc_sweep_l0");
+      dat("DROP", "(JMP)", "uFork_gc_idle_l1");
+      def("uFork_gc_sweep_l0");
+      dat("DUP", "gcMem@"); // ( phase qa colour )
+      dat("uFork_gc_white", "=", "(BRZ)", "uFork_gc_sweep_l1");
+      dat("uFork_free", "(JMP)", "uFork_gc_sweep_l2");
+      def("uFork_gc_sweep_l1"); // ( phase qa )
+      dat("DUP", "uFork_gc_white", "SWAP", "gcMem!");
+      dat("1+", "uFork_gc_sweep_ptr", "!"); // ( phase )
+      dat("DUP", "4&", "(BRNZ)", "uFork_gc_sweep"); // stop-the-world condition
+      dat("DROP", "EXIT");
+
+      
   return asm;
 };
+
+
