@@ -157,5 +157,13 @@ export const uFork_quadmem_and_gc = (asm) => {
       def("gcMem@"); dat("gcMem_common", "@", "EXIT");
       def("gcMem!"); dat("gcMem_common", "!", "EXIT");
     }
+    if (asm.isDefined("uFork_gc_algo2")) {
+      // this implements the Rust implementation variant of gc
+      def("gcMem@_shadowed", "gcMem@");
+      def("gcMem!_shadowed", "gcMem!");
+
+      def("gcMem_common2"); // ( quad_addr -- quad_ram_offset )
+      dat("uFork_memoryDescriptor_qaddr", "-", "EXIT");
+      
   return asm;
 };
