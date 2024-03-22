@@ -257,7 +257,7 @@ export const uFork_quadmem_and_gc = (asm) => {
       dat("DROP");
       dat("uFork_gc_last", "2+", "uFork_gc_first", "gcMem!");
       dat("(JMP)", "uFork_gc_idle_l0");
-
+      
       def("uFork_gc_mark"); // ( phase -- )
       dat("uFork_gc_nextOfScanque", "DUP", "uFork_()", "(BRZ)", "uFork_gc_mark_l0");
       dat("DROP", "(JMP)", "uFork_gc_idle_l0");
@@ -265,5 +265,9 @@ export const uFork_quadmem_and_gc = (asm) => {
       dat("uFork_gc_scan_quad"); // ( phase )
       dat("DUP", "4&", "(BRNZ)", "uFork_gc_mark"); // stop-the-world condition
       dat("DROP", "EXIT");
+
+      def("uFork_gc_sweep_setup"); // ( phase -- )
+      dat("uFork_gc_first", "uFork_gc_sweep_ptr", "!");
+      dat("(JMP)", "uFork_gc_idle_l0");
   return asm;
 };
