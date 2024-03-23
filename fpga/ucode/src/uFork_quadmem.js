@@ -277,7 +277,7 @@ export const uFork_quadmem_and_gc = (asm) => {
       dat("uFork_gc_first", "uFork_gc_sweep_ptr", "!");
       dat("(JMP)", "uFork_gc_idle_l0");
 
-            def("uFork_gc_sweep"); // ( phase -- )
+      def("uFork_gc_sweep"); // ( phase -- )
       dat("uFork_gc_sweep_ptr", "@"); // ( phase qa )
       dat("DUP", "uFork_maxTopOfQuadMemory", "=", "(BRZ)", "uFork_gc_sweep_l0");
       dat("DROP", "(JMP)", "uFork_gc_idle_l1");
@@ -291,7 +291,7 @@ export const uFork_quadmem_and_gc = (asm) => {
       dat("DUP", "4&", "(BRNZ)", "uFork_gc_sweep"); // stop-the-world condition
       dat("DROP", "EXIT");
 
-            // check quad memory pressure by looking at free count and qmem_top
+      // check quad memory pressure by looking at free count and qmem_top
       def("uFork_gc_check_quad_mem_pressure"); // ( -- bool )
       dat("uFork_memoryDescriptor", "DUP", "qy@", "2*");
       dat("+", "uFork_maxTopOfQuadMemory", ">"); // ( bool1 ) T: more than half on freelist!
@@ -335,7 +335,26 @@ export const uFork_quadmem_and_gc = (asm) => {
 
       def("uFork_gc_currGen");
       dat("(VAR)", 0);
+
+      def("uFork_gc_swapCurrGen");
+      dat("uFork_gc_currGen", "@");
+      dat("(JMPTBL)", 2);
+      dat("uFork_gc_swapCurrGen_genx");
+      dat("uFork_gc_swapCurrGen_geny");
+      def("uFork_gc_swapCurrGen_set");
+      dat("uFork_gc_currGen", "!");
+      dat("EXIT");
+      def("uFork_gc_swapCurrGen_genx");
+      dat("DROP", "uFork_gc_geny_mark", "(JMP)", "uFork_gc_swapCurrGen_set");
+      def("uFork_gc_swapCurrGen_geny");
+      dat("DROP", "uFork_gc_genx_mark", "(JMP)", "uFork_gc_swapCurrGen_set");
+
+      def("uFork_gc_mark_setup"); // ( phase -- )
+      dat("uFork_gc_swapCurrGen")
+
       
+      def("uFork_gcOneStep"); // ( -- )
+
     } else {
       throw new Error("garbage collection isnt implemented in hardware and neither of the two gc algorithms have been selected  (uFork_gc_algo1 or uFork_gc_algo2)");
     }
