@@ -303,9 +303,9 @@ export const defineInstructionset = (asm, opts = { instrsetName: "uFork_CSM1" })
   if (opts.instrsetName.startsWith("uFork_SM2.1")) {
     // propably needs updating
     def("NOP",     0x0000);
-    def("PLUS",    0x0B41);
-    def("AND",     0x0B44);
-    def("XOR",     0x0B45);
+    def("PLUS",    0x0741);
+    def("AND",     0x0744);
+    def("XOR",     0x0745);
     def("1LBR",    0x0307);
     def("INCR",    0x0311);
     def("FETCH",   0x030F);
@@ -319,16 +319,18 @@ export const defineInstructionset = (asm, opts = { instrsetName: "uFork_CSM1" })
     def("R_FROM",  0x1280);
     def("R_AT",    0x0280);
     def("(EXIT)",  0x5000);
-    def("MINUS",   0x0B42);
-    def("OR",      0x0B46);
+    def("MINUS",   0x0742);
+    def("OR",      0x0746);
     def("DECR",    0x0312);
     def("INVERT",  0x0375);
     def("NEGATE",  0x03C2);
-    def("OVER",    0x0500);
-    def("ROT",     0x0700);
-    def("2DROP",   0x0900);
+    def("OVER",    0x0240);
+    def("ROT",     0x0500);
+    def("-ROT",    0x0600);
     def("(FALSE)", 0x02C0);
-    def("(TRUE)",  0x02F5);
+    def("(TRUE)",  0x02F6);
+    def("1",       0x02D6); // LSB
+    def("0x8000",  0x02E6); // MSB
     def("2*",      0x0301);
 
     def("QUAD_T_FETCH", 0x034F);
@@ -357,13 +359,13 @@ export const defineInstructionset = (asm, opts = { instrsetName: "uFork_CSM1" })
                   0x22  write 0x0000 to one step of gc
                         write 0x0001 to do full gc, will read 0x0001 until done then 0x0000
                   0x3 - DSP
-                  0x30  tbd: A input
-                  0x31  tbd: B input
-                  0x32       C input
-                  0x33       D input
-                  0x34  tbd: dsp control
-                  0x35       O output [31:16]
-                  0x36       O output [15:0]
+                  0x30  A input
+                  0x31  B input
+                  0x32  C input
+                  0x33  D input
+                  0x34  O output [31:16]
+                  0x35  O output [15:0]
+                  0x36  dsp control
     */
 
     def("qt@", "QUAD_T_FETCH");
