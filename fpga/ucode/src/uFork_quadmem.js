@@ -336,18 +336,19 @@ export const uFork_quadmem_and_gc = (asm) => {
       def("uFork_gc_currGen");
       dat("(VAR)", 0);
 
-      def("uFork_gc_swapCurrGen");
-      dat("uFork_gc_currGen", "@");
+      def("uFork_gc_not_gen"); // ( gen_mark -- gen_mark )
       dat("(JMPTBL)", 2);
-      dat("uFork_gc_swapCurrGen_genx");
-      dat("uFork_gc_swapCurrGen_geny");
-      def("uFork_gc_swapCurrGen_set");
-      dat("uFork_gc_currGen", "!");
+      dat("uFork_gc_not_genx");
+      dat("uFork_gc_not_geny");
       dat("EXIT");
-      def("uFork_gc_swapCurrGen_genx");
-      dat("DROP", "uFork_gc_geny_mark", "(JMP)", "uFork_gc_swapCurrGen_set");
-      def("uFork_gc_swapCurrGen_geny");
-      dat("DROP", "uFork_gc_genx_mark", "(JMP)", "uFork_gc_swapCurrGen_set");
+      def("uFork_gc_not_genx");
+      dat("DROP", "(JMP)", "uFork_gc_geny_mark");
+      def("uFork_gc_not_geny");
+      dat("DROP", "(JMP)", "uFork_gc_genx_mark");
+
+      def("uFork_gc_swapCurrGen");
+      dat("uFork_gc_currGen", "@", "uFork_gc_not_gen", "uFork_gc_currGen", "!");
+      dat("EXIT");
 
       def("uFork_gc_ptr");
       dat("(VAR)", 0);
@@ -407,8 +408,15 @@ export const uFork_quadmem_and_gc = (asm) => {
       def("uFork_gc_sweep_l0"); // ( phase offset )
       dat("DUP", "gcMem@");     // ( phase offset mark )
       dat("DUP", "uFork_gc_currGen", "@", "="); // ( phase offset mark bool )
-
-
+      dat("(BRZ)", "uFork_gc_sweep_l1");
+      def("uFork_gc_sweep_l2");
+      dat("2DROP", "(JMP)", "uFork_gc_phase_common");
+      def("uFork_gc_sweep_l1");
+      dat("DUP", "uFork_gc_currGen", "@", "uFork_gc_not_gen", "=");
+      dat("(BRZ)", "uFork_gc_sweep_l2"); // ( phase offset mark )
+      dat("DROP", "DUP", "uFork_gc_offset2quadRamAddr", "uFork_free"); // ( phase offset )
+      dat("uFork_gc_free_mark", "SWAP", "gcMem!");
+      dat("(JMP)", "uFork_gc_phase_common");
       
       def("uFork_gcOneStep"); // ( -- )
 
