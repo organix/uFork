@@ -354,7 +354,19 @@ export const uFork_quadmem_and_gc = (asm) => {
 
       def("uFork_gc_add2scanque"); // ( quaddr -- )
       dat("uFork_quaddrInRam", "(BRZ)", "(DROP)");
+      dat("DUP", "gcMem@", "uFork_gc_currGen", "@", "=", "(BRNZ)", "(DROP)");
       dat("uFork_gc_scan_mark", "SWAP", "gcMem!");
+      dat("EXIT");
+
+      def("uFork_gc_offset2quadRamAddr"); // ( offset -- quaddr )
+      dat("uFork_memoryDescriptor_qaddr", "+", "EXIT");
+
+      def("uFork_gc_scan_quad"); // ( offset -- )
+      dat("uFork_gc_offset2quadRamAddr"); // ( qram_addr )
+      dat("DUP", "qt@", "uFork_gc_add2scanque");
+      dat("DUP", "qx@", "uFork_gc_add2scanque");
+      dat("DUP", "qy@", "uFork_gc_add2scanque");
+      dat(       "qz@", "uFork_gc_add2scanque");
       dat("EXIT");
 
       def("uFork_gc_mark_setup"); // ( phase -- )
@@ -370,8 +382,13 @@ export const uFork_quadmem_and_gc = (asm) => {
       dat("uFork_gc_ptr", "@", "DUP", "1+", "uFork_gc_ptr", "!");
       dat("DUP", "(LIT)", "meta_quadMemSize_in_quads", "<=", "(BRNZ)", "uFork_gc_mark_l0");
       dat("DROP", "1+", "(JMP)", "uFork_gc_phase_common");
-      def("uFork_gc_mark_l0"); // ( phase qa )
+      def("uFork_gc_mark_l0"); // ( phase offset )
+      dat("DUP", "gcMem@", "uFork_gc_scan_mark", "=", "(BRZ)", "uFork_gc_mark_l1");
       dat("uFork_gc_scan_quad"); // ( phase )
+      dat("(JMP)", "uFork_gc_mark_l2");
+      def("uFork_gc_mark_l1");
+      dat("DROP");
+      def("uFork_gc_mark_l2");
       dat("DUP", "4&", "(BRNZ)", "uFork_gc_mark"); // stop-the-world condition
       dat("DROP", "EXIT");
       
