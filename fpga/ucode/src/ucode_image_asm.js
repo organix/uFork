@@ -487,11 +487,11 @@ export const minicore = (asm, opts) => {
       dat("(LIT)", 0x3F04, "!", "(LIT)", 0x3F05, "!", "EXIT");
     } else if (isDefined("instrset_uFork_SM2.1")) {
       def("fomu_sysbus@"); // ( sysbus_addrbyte -- sysbus_databyte )
-      dat("0xFF_&", "(LIT)", 0x0004, "io!", "(LIT)", 0x0005, "io@", "0xFF_&", "EXIT");
+      dat("0xFF_&", "(LIT)", 0x010, "io!", "(LIT)", 0x0011, "io@", "0xFF_&", "EXIT");
 
       def("fomu_sysbus!"); // ( sysbus_databyte sysbus_addrbyte -- )
       dat("0xFF_&", "SWAP", "0xFF_&", "SWAP");
-      dat("(LIT)", 0x0004, "io!", "(LIT)", 0x0005, "io!", "0xFF_&", "EXIT");
+      dat("(LIT)", 0x0010, "io!", "(LIT)", 0x0011, "io!", "0xFF_&", "EXIT");
     }
     if (isDefined("instrset_uFork_SM2") || isDefined("instrset_uFork_SM2.1")) {
       def("spi1_start"); // ( SlaveSelectMask -- )
@@ -585,7 +585,12 @@ export const minicore = (asm, opts) => {
       dat("(LIT)", 0xB9, "spi1_writebyte"); // tell flash to into deep power down
       dat("spi1_end");
       dat("EXIT");
-      
+
+      /*
+      I am looking at https://github.com/im-tomu/foboot/blob/master/doc/FLASHLAYOUT.md and I am guessing that the uFork fpga bitstream starts at 0x01a000 in the spi flash
+      bitstream for the ice40up5k is 104250 bytes, so assume uFork rom+ram image start at 0x01a000 + 0x01973A ?
+      0x03373A if my addition is right
+      */
       def("spi_flash_fastread_into_quads"); // ( flash_hi_addr flash_lo_addr start_quaddr nrOfQuads -- )
       dat(">R", ">R");                      // ( flash_hi_addr flash_lo_addr ) R:( nrOfQuads start_quaddr )
       dat("SWAP", "0xFF_&");                // ( flash_lo_addr flash_hi_dr ) R:( nrOfQuads start_quaddr )
