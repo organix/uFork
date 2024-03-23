@@ -349,8 +349,17 @@ export const uFork_quadmem_and_gc = (asm) => {
       def("uFork_gc_swapCurrGen_geny");
       dat("DROP", "uFork_gc_genx_mark", "(JMP)", "uFork_gc_swapCurrGen_set");
 
+      def("uFork_gc_ptr");
+      dat("(VAR)", 0);
+
       def("uFork_gc_mark_setup"); // ( phase -- )
-      dat("uFork_gc_swapCurrGen")
+      dat("uFork_gc_swapCurrGen");
+      dat("0", "uFork_gc_ptr", "!");
+      dat("0xF", ">R");
+      def("uFork_gc_mark_setup_l0");
+      dat("R@", "uFork_gc_add2scanque");
+      dat("(NEXT)", "uFork_gc_mark_setup_l0");
+      dat("1+", "(JMP)", "uFork_gc_phase_common");
 
       
       def("uFork_gcOneStep"); // ( -- )
