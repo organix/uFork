@@ -301,6 +301,7 @@ export const defineInstructionset = (asm, opts = { instrsetName: "uFork_CSM1" })
   }
 
   if (opts.instrsetName.startsWith("uFork_SM2.1")) {
+    // propably needs updating
     def("NOP",     0x0000);
     def("PLUS",    0x0B41);
     def("AND",     0x0B44);
@@ -341,6 +342,29 @@ export const defineInstructionset = (asm, opts = { instrsetName: "uFork_CSM1" })
 
     def("io@",          0x003F);
     def("io!",          0x09BF);
+    /*
+      IO devices: 0x0 - UART
+                  0x00  TX?
+                  0x01  TX!
+                  0x02  RX?
+                  0x03  RX@
+                  0x1 - SPI or Lattice ICE40UP5K sysBus (latter is implemented)
+                  0x10  sysBus address
+                  0x11  sysBus data
+                  0x2 - gc hw allot, free, oneStep
+                  0x20  allot - returns the next free quad address when read
+                  0x21  free  - frees the quad whose address is written here
+                  0x22  write 0x0000 to one step of gc
+                        write 0x0001 to do full gc, will read 0x0001 until done then 0x0000
+                  0x3 - DSP
+                  0x30  tbd: A input
+                  0x31  tbd: B input
+                  0x32       C input
+                  0x33       D input
+                  0x34  tbd: dsp control
+                  0x35       O output [31:16]
+                  0x36       O output [15:0]
+    */
 
     def("qt@", "QUAD_T_FETCH");
     def("qx@", "QUAD_X_FETCH");
