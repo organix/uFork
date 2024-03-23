@@ -352,6 +352,11 @@ export const uFork_quadmem_and_gc = (asm) => {
       def("uFork_gc_ptr");
       dat("(VAR)", 0);
 
+      def("uFork_gc_add2scanque"); // ( quaddr -- )
+      dat("uFork_quaddrInRam", "(BRZ)", "(DROP)");
+      dat("uFork_gc_scan_mark", "SWAP", "gcMem!");
+      dat("EXIT");
+
       def("uFork_gc_mark_setup"); // ( phase -- )
       dat("uFork_gc_swapCurrGen");
       dat("0", "uFork_gc_ptr", "!");
