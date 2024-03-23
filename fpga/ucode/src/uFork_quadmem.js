@@ -366,6 +366,14 @@ export const uFork_quadmem_and_gc = (asm) => {
       dat("(NEXT)", "uFork_gc_mark_setup_l0");
       dat("1+", "(JMP)", "uFork_gc_phase_common");
 
+      def("uFork_gc_mark"); // ( phase -- )
+      dat("uFork_gc_ptr", "@", "DUP", "1+", "uFork_gc_ptr", "!");
+      dat("DUP", "(LIT)", "meta_quadMemSize_in_quads", "<=", "(BRNZ)", "uFork_gc_mark_l0");
+      dat("DROP", "1+", "(JMP)", "uFork_gc_phase_common");
+      def("uFork_gc_mark_l0"); // ( phase qa )
+      dat("uFork_gc_scan_quad"); // ( phase )
+      dat("DUP", "4&", "(BRNZ)", "uFork_gc_mark"); // stop-the-world condition
+      dat("DROP", "EXIT");
       
       def("uFork_gcOneStep"); // ( -- )
 
