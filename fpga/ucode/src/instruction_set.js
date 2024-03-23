@@ -301,7 +301,6 @@ export const defineInstructionset = (asm, opts = { instrsetName: "uFork_CSM1" })
   }
 
   if (opts.instrsetName.startsWith("uFork_SM2.1")) {
-    // propably needs updating
     def("NOP",     0x0000);
     def("PLUS",    0x0741);
     def("AND",     0x0744);
