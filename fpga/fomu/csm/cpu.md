@@ -185,7 +185,7 @@ MSB     | ( -- 0x8000 )             | `02E6` | `0000_0010_1110_0110`
 
 ## Resource Usage
 
-###  Baseline (before adding devices)
+###  Baseline (1k uCode, no devices)
 
     Info: Device utilisation:
     Info: 	         ICESTORM_LC:   928/ 5280    17%
@@ -205,6 +205,66 @@ MSB     | ( -- 0x8000 )             | `02E6` | `0000_0010_1110_0110`
     Info: 	      ICESTORM_SPRAM:     0/    4     0%
     Info: Max frequency for clock 'clk': 30.75 MHz (PASS at 12.00 MHz)
 
+### Expand uCode Memory (2k uCode, no devices)
+
+    Info: Device utilisation:
+    Info: 	         ICESTORM_LC:   931/ 5280    17%
+    Info: 	        ICESTORM_RAM:     8/   30    26%
+    Info: 	               SB_IO:     8/   96     8%
+    Info: 	               SB_GB:     7/    8    87%
+    Info: 	        ICESTORM_PLL:     0/    1     0%
+    Info: 	         SB_WARMBOOT:     0/    1     0%
+    Info: 	        ICESTORM_DSP:     0/    8     0%
+    Info: 	      ICESTORM_HFOSC:     0/    1     0%
+    Info: 	      ICESTORM_LFOSC:     0/    1     0%
+    Info: 	              SB_I2C:     0/    2     0%
+    Info: 	              SB_SPI:     0/    2     0%
+    Info: 	              IO_I3C:     0/    2     0%
+    Info: 	         SB_LEDDA_IP:     0/    1     0%
+    Info: 	         SB_RGBA_DRV:     1/    1   100%
+    Info: 	      ICESTORM_SPRAM:     0/    4     0%
+    Info: Max frequency for clock 'clk': 29.83 MHz (PASS at 12.00 MHz)
+
+### Expand uCode Memory (4k uCode, no devices)
+
+    Info: Device utilisation:
+    Info: 	         ICESTORM_LC:   939/ 5280    17%
+    Info: 	        ICESTORM_RAM:    16/   30    53%
+    Info: 	               SB_IO:     8/   96     8%
+    Info: 	               SB_GB:     7/    8    87%
+    Info: 	        ICESTORM_PLL:     0/    1     0%
+    Info: 	         SB_WARMBOOT:     0/    1     0%
+    Info: 	        ICESTORM_DSP:     0/    8     0%
+    Info: 	      ICESTORM_HFOSC:     0/    1     0%
+    Info: 	      ICESTORM_LFOSC:     0/    1     0%
+    Info: 	              SB_I2C:     0/    2     0%
+    Info: 	              SB_SPI:     0/    2     0%
+    Info: 	              IO_I3C:     0/    2     0%
+    Info: 	         SB_LEDDA_IP:     0/    1     0%
+    Info: 	         SB_RGBA_DRV:     1/    1   100%
+    Info: 	      ICESTORM_SPRAM:     0/    4     0%
+    Info: Max frequency for clock 'clk': 24.60 MHz (PASS at 12.00 MHz)
+
+### Initial UART Device Support (2k uCode)
+
+    Info: Device utilisation:
+    Info: 	         ICESTORM_LC:  1042/ 5280    19%
+    Info: 	        ICESTORM_RAM:     8/   30    26%
+    Info: 	               SB_IO:     8/   96     8%
+    Info: 	               SB_GB:     7/    8    87%
+    Info: 	        ICESTORM_PLL:     0/    1     0%
+    Info: 	         SB_WARMBOOT:     0/    1     0%
+    Info: 	        ICESTORM_DSP:     0/    8     0%
+    Info: 	      ICESTORM_HFOSC:     0/    1     0%
+    Info: 	      ICESTORM_LFOSC:     0/    1     0%
+    Info: 	              SB_I2C:     0/    2     0%
+    Info: 	              SB_SPI:     0/    2     0%
+    Info: 	              IO_I3C:     0/    2     0%
+    Info: 	         SB_LEDDA_IP:     0/    1     0%
+    Info: 	         SB_RGBA_DRV:     1/    1   100%
+    Info: 	      ICESTORM_SPRAM:     0/    4     0%
+    Info: Max frequency for clock 'clk': 29.98 MHz (PASS at 12.00 MHz)
+
 ## Component Block Diagrams
 
     .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .
@@ -223,7 +283,7 @@ MSB     | ( -- 0x8000 )             | `02E6` | `0000_0010_1110_0110`
         |                   |
     --->|i_wr_en     i_rd_en|<---
     =A=>|i_waddr     i_raddr|<=A=
-    <=D=|i_wdata     o_rdata|=D=>
+    =D=>|i_wdata     o_rdata|=D=>
         |                   |
         |>i_clk             |
         +-------------------+
