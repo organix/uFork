@@ -8,6 +8,8 @@ uCode Central Processing Unit (CPU)
 --->|i_run     o_running|--->
     |           o_status|--->
     |                   |
+    |               i_rx|<---
+    |               o_tx|--->
  +->|i_clk              |
  |  +-------------------+
 
@@ -26,8 +28,9 @@ the value of `o_status` indicates success (1) or failure (0).
 `include "lifo.v"
 `include "alu.v"
 //`include "alu_nr.v"
-`include "../lib/serial_tx.v"
-`include "../lib/serial_rx.v"
+//`include "../lib/serial_tx.v"
+//`include "../lib/serial_rx.v"
+`include "uart.v"
 
 // Memory Ranges
 `define MEM_UC  (3'h0)      // uCode memory
@@ -140,12 +143,12 @@ module cpu #(
     localparam UC_TX_OK     = 16'hC138;                 // tx? ( -- ready )
     localparam UC_SET_TX    = 16'hC13C;                 // tx! ( char -- )
 
-
     // initial program
     initial begin
-        $readmemh("ucode_rom.mem", ucode);
         /*
-        ucode[12'h000] = 16'h8030;//UC_TRUE;
+        $readmemh("ucode_rom.mem", ucode);
+        */
+        ucode[12'h000] = 16'h8020;//UC_TRUE;
         ucode[12'h001] = UC_DUP;
         ucode[12'h002] = UC_DEC;
         ucode[12'h003] = UC_AND;
@@ -190,9 +193,12 @@ module cpu #(
         //
         // serial UART
         //
-        ucode[12'h030] = UC_RX_OK;                      // ready?
-        ucode[12'h031] = 16'hA030;                      // --
-        ucode[12'h032] = UC_GET_RX;                     // char
+        ucode[12'h030] = UC_LIT;                        // 'K'
+        ucode[12'h031] = 16'd75;
+        ucode[12'h032] = UC_NOP;                        // char='K'
+//        ucode[12'h030] = UC_RX_OK;                      // ready?
+//        ucode[12'h031] = 16'hA030;                      // --
+//        ucode[12'h032] = UC_GET_RX;                     // char
         ucode[12'h033] = UC_TX_OK;                      // char ready?
         ucode[12'h034] = 16'hA033;                      // char
         ucode[12'h035] = UC_SET_TX;                     // --
@@ -266,7 +272,6 @@ module cpu #(
         ucode[12'h13D] = { 8'h00, `UART_TX_DAT };
         ucode[12'h13E] = 16'h097F;
         ucode[12'h13F] = UC_EXIT;
-        */
         /*
         $writememh("ucode_rom.mem", ucode);
         */
@@ -322,6 +327,25 @@ module cpu #(
     );
 
     //
+    // serial UART
+    //
+
+    uart #(
+        .CLK_FREQ(CLK_FREQ)
+    ) UART (
+        .i_clk(i_clk),
+        .i_rx(i_rx),
+        .o_tx(o_tx),
+
+        .i_en(uart_en),
+        .i_wr(uart_wr),
+        .i_addr(uart_addr),
+        .i_data(uart_wdata),
+
+        .o_data(uart_rdata)
+    );
+
+    //
     // uCode execution engine
     //
 
@@ -352,6 +376,8 @@ module cpu #(
     wire mem_wr = instr[7];                             // {0:read, 1:write} MEM
     wire [2:0] mem_rng = instr[6:4];                    // MEM range selector
     wire d_zero = (d0 == 0);                            // zero check for TOS
+    wire [3:0] dev_id = d0[7:4];                        // device id (mem_rng == `MEM_DEV)
+    wire [3:0] reg_id = d0[3:0];                        // register id (mem_rng == `MEM_DEV)
 
     assign uc_wr =
         ( p_alu && mem_op && mem_rng == `MEM_UC ? mem_wr
@@ -383,9 +409,12 @@ module cpu #(
     wire [DATA_SZ-1:0] d_value =
         ( mem_op && mem_rng == `MEM_UC ? uc_rdata
         : mem_op && mem_rng == `MEM_PC ? uc_rdata
+        : mem_op && mem_rng == `MEM_DEV ? { {(DATA_SZ-8){uart_rdata[7]}}, uart_rdata }
+        /*
         : mem_op && mem_rng == `MEM_DEV && d0 == `UART_TX_RDY ? {DATA_SZ{!tx_busy}}
         : mem_op && mem_rng == `MEM_DEV && d0 == `UART_RX_RDY ? {DATA_SZ{rx_ready}}
         : mem_op && mem_rng == `MEM_DEV && d0 == `UART_RX_DAT ? { {(DATA_SZ-8){1'b0}}, rx_buffer }
+        */
         : alu_out );
     wire [2:0] d_se =
         ( ctrl ?
@@ -415,6 +444,12 @@ module cpu #(
         : d0 );
     wire [DATA_SZ-1:0] alu_out;
 
+    wire uart_en = (p_alu && mem_op && mem_rng == `MEM_DEV && dev_id == 4'h0);
+    wire uart_wr = mem_wr;
+    wire [3:0] uart_addr = reg_id;
+    wire [7:0] uart_wdata = d1[7:0];
+    wire [7:0] uart_rdata;
+
     reg p_alu = 0;                                      // 0: stack-phase, 1: alu-phase
     always @(posedge i_clk) begin
         if (mem_op && mem_rng == `MEM_ERR) begin
@@ -427,63 +462,18 @@ module cpu #(
             end else if (ctrl && (r_op == 2'b00 || d_zero)) begin
                 pc <= instr[ADDR_SZ-1:0];               // jump or call procedure
             end
+            /*
             tx_wr <= (mem_op && mem_rng == `MEM_DEV && mem_wr && d0 == `UART_TX_DAT);
             tx_data <= d0;
             if (mem_op && mem_rng == `MEM_DEV && d0 == `UART_RX_DAT) begin
                 rx_ready <= 1'b0;                       // clear "ready" on read
             end
+            */
             instr_r <= uc_rdata;
             p_alu <= !p_alu;
         end else if (o_running) begin
             pc <= pc + 1'b1;                            // default next PC
             p_alu <= !p_alu;
-        end
-    end
-
-    //
-    // serial port UART
-    //
-
-    parameter BAUD_RATE     = 115_200;                  // baud rate (bits per second)
-
-    // instantiate serial transmitter
-    reg tx_wr = 1'b0;
-    reg [7:0] tx_data;
-    wire tx_busy;
-    serial_tx #(
-        .CLK_FREQ(CLK_FREQ),
-        .BAUD_RATE(BAUD_RATE)
-    ) SER_TX (
-        .i_clk(i_clk),
-        .i_wr(tx_wr),
-        .i_data(tx_data),
-        .o_busy(tx_busy),
-        .o_tx(o_tx)
-    );
-
-    // instantiate serial receiver
-    wire rx_wr;
-    wire [7:0] rx_data;
-    serial_rx #(
-        .CLK_FREQ(CLK_FREQ),
-        .BAUD_RATE(BAUD_RATE)
-    ) SER_RX (
-        .i_clk(i_clk),
-        .i_rx(i_rx),
-        .o_wr(rx_wr),
-        .o_data(rx_data)
-    );
-
-    /*
-    reg rx_ready = 1'b0;                                // character in buffer
-    reg [7:0] rx_buffer;                                // character received
-    */
-    reg rx_ready = 1'b1;                                // character in buffer (prefilled)
-    reg [7:0] rx_buffer = 8'h7E;                        // character received (prefilled)
-    always @(posedge i_clk) begin
-        if (rx_wr) begin
-            rx_ready <= 1'b1;
-            rx_buffer <= rx_data;
         end
     end
 
