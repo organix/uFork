@@ -5,8 +5,8 @@ UART (Univeral Asynchronous Receiver/Transmitter)
     +---------------+
     | uart          |
     |               |
---->|i_en           |
---->|i_wr           |
+--->|i_en       i_rx|<---
+--->|i_wr       o_tx|--->
 =4=>|i_addr         |
 =8=>|i_data   o_data|=8=>
     |               |
