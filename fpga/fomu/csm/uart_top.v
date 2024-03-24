@@ -50,7 +50,8 @@ module top (
         .USER_SIGNAL_TO_GLOBAL_BUFFER(clk_div[1]),      // divide 48MHz clock down to 12MHz
         .GLOBAL_BUFFER_OUTPUT(clk12)
     );
-    wire clk = clk48;
+//    wire clk = clk48;
+    wire clk = clk12;
 
     // connect RGB LED driver (see: FPGA-TN-1288-ICE40LEDDriverUsageGuide.pdf)
     wire led_r;
@@ -112,7 +113,8 @@ module top (
 
     // instantiate UART
     uart #(
-        .CLK_FREQ(CLK_48MHz)
+//        .CLK_FREQ(CLK_48MHz)
+        .CLK_FREQ(CLK_12MHz)
     ) UART (
         .i_clk(clk),
         .i_rx(serial_rx),
