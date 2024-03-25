@@ -1241,6 +1241,28 @@ export const uFork = (asm) => {
   dat("DUP", "qy@", "qx@", "qx@");
   dat("(JMP)", "uFork__push_then_instrTail");
 
+  def("uFork_instr_my_state"); // ( kont subopcode )
+  dat("DROP");                 // ( kont )
+  dat("DUP");                  // ( kont kont )
+  dat("qy@");                  // ( kont event )
+  dat("qx@");                  // ( kont actor )
+  dat("qy@");                  // ( kont state )
+  dat("DUP");                  // ( kont state state )
+  dat("uFork_pairlist_length"); // ( kont state length )
+  // todo: insert here a sponsor mem fuel check&burn: length units of fuel
+  dat("uFork_copy_pairlist_until_n"); // ( kont new_tail new_head )
+  // todo: there should be a word definition tail this definition can share, find it
+  dat("ROT");                  // ( new_tail new_head kont )
+  dat(">R");                   // ( new_tail new_head ) R:( kont )
+  dat("SWAP");                 // ( new_head new_tail ) R:( kont )
+  dat("R@");                   // ( new_head new_tail kont ) R:( kont )
+  dat("uFork_sp@");            // ( new_head new_tail stack ) R:( kont )
+  dat("SWAP");                 // ( new_head stack new_tail ) R:( kont )
+  dat("qy!");                  // ( new_head ) R:( kont )
+  dat("R@");                   // ( new_head kont ) R:( kont )
+  dat("uFork_sp!");            // ( ) R:( kont )
+  dat("R>");                   // ( kont )
+  dat("(JMP)", "uFork_instr__common_longer_tail");
 
 
   // todo: sponsor <peek> instruction
