@@ -25,73 +25,52 @@ forcing everything to be rebuilt from source:
 
     make clean
 
-## Benchmarks
+## Serial UART Device
 
-uCode Feature Set:
+This example includes a [serial](https://en.wikipedia.org/wiki/Asynchronous_serial_communication)
+[UART](https://en.wikipedia.org/wiki/Universal_asynchronous_receiver-transmitter) device.
+It operates at a fixed [baud rate](https://en.wikipedia.org/wiki/Baud) of 115200
+with [8N1](https://en.wikipedia.org/wiki/8-N-1) framing and parity.
 
-  * 4-phase instruction execution
-  * 12MHz clock (divided from 48MHz)
-  * 10-bit address, 16-bit data path
+The user i/o pads of the Fomu are assigned as follows
+(starting from the side with the notch):
 
-### Baseline (12-deep stacks, 16#002x primitives)
+  1. GND -- Common Ground
+  2. TX -- Transmitted Data
+  3. RX -- Received Data (w/ pull-up if not connected)
+  4. PWR -- 3v3 Level (do not connect)
 
-    Info: Device utilisation:
-    Info: 	         ICESTORM_LC:  1115/ 5280    21%
-    Info: 	        ICESTORM_RAM:     4/   30    13%
-    Info: 	               SB_IO:     8/   96     8%
-    Info: 	               SB_GB:     8/    8   100%
-    Info: 	        ICESTORM_PLL:     0/    1     0%
-    Info: 	         SB_WARMBOOT:     0/    1     0%
-    Info: 	        ICESTORM_DSP:     0/    8     0%
-    Info: 	      ICESTORM_HFOSC:     0/    1     0%
-    Info: 	      ICESTORM_LFOSC:     0/    1     0%
-    Info: 	              SB_I2C:     0/    2     0%
-    Info: 	              SB_SPI:     0/    2     0%
-    Info: 	              IO_I3C:     0/    2     0%
-    Info: 	         SB_LEDDA_IP:     0/    1     0%
-    Info: 	         SB_RGBA_DRV:     1/    1   100%
-    Info: 	      ICESTORM_SPRAM:     0/    4     0%
-    ...
-    Info: Max frequency for clock                    'clk': 36.52 MHz (PASS at 12.00 MHz)
+Connections between the Fomu and Host must be cross-wired
+as a [Null Modem](https://en.wikipedia.org/wiki/Null_modem).
 
-### Single-Cycle Stack-SWAP, non-registered ALU output
+    Fomu              Host
+    -----+          +-----
+     GND |----------| GND
+         |          |
+         |          |
+      TX |---+  +---| TX
+         |    \/    |
+         |    /\    |
+      RX |---+  +---| RX
+    -----+          +-----
 
-    Info: Device utilisation:
-    Info: 	         ICESTORM_LC:  1016/ 5280    19%
-    Info: 	        ICESTORM_RAM:     4/   30    13%
-    Info: 	               SB_IO:     8/   96     8%
-    Info: 	               SB_GB:     7/    8    87%
-    Info: 	        ICESTORM_PLL:     0/    1     0%
-    Info: 	         SB_WARMBOOT:     0/    1     0%
-    Info: 	        ICESTORM_DSP:     0/    8     0%
-    Info: 	      ICESTORM_HFOSC:     0/    1     0%
-    Info: 	      ICESTORM_LFOSC:     0/    1     0%
-    Info: 	              SB_I2C:     0/    2     0%
-    Info: 	              SB_SPI:     0/    2     0%
-    Info: 	              IO_I3C:     0/    2     0%
-    Info: 	         SB_LEDDA_IP:     0/    1     0%
-    Info: 	         SB_RGBA_DRV:     1/    1   100%
-    Info: 	      ICESTORM_SPRAM:     0/    4     0%
-    ...
-    Info: Max frequency for clock                    'clk': 31.80 MHz (PASS at 12.00 MHz)
+Signals are expected to be LVCMOS levels.
+Note that a serial line is held high when idle
+and transitions to low to indicate the start
+of a new character (octet).
 
-### Customized LIFO w/ swap
+### Serial Terminal Program
 
-    Info: Device utilisation:
-    Info: 	         ICESTORM_LC:   988/ 5280    18%
-    Info: 	        ICESTORM_RAM:     4/   30    13%
-    Info: 	               SB_IO:     8/   96     8%
-    Info: 	               SB_GB:     7/    8    87%
-    Info: 	        ICESTORM_PLL:     0/    1     0%
-    Info: 	         SB_WARMBOOT:     0/    1     0%
-    Info: 	        ICESTORM_DSP:     0/    8     0%
-    Info: 	      ICESTORM_HFOSC:     0/    1     0%
-    Info: 	      ICESTORM_LFOSC:     0/    1     0%
-    Info: 	              SB_I2C:     0/    2     0%
-    Info: 	              SB_SPI:     0/    2     0%
-    Info: 	              IO_I3C:     0/    2     0%
-    Info: 	         SB_LEDDA_IP:     0/    1     0%
-    Info: 	         SB_RGBA_DRV:     1/    1   100%
-    Info: 	      ICESTORM_SPRAM:     0/    4     0%
-    ...
-    Info: Max frequency for clock                    'clk': 34.74 MHz (PASS at 12.00 MHz)
+You'll have to run a serial terminal program
+to communicate with the serial device.
+
+On a Mac, determine the available devices like this:
+
+    $ ls /dev/tty.*
+
+Then run the `screen` program to connect
+to the serial port at your desired baud-rate.
+
+    $ screen /dev/tty.usbserial-AD0JIXTZ 115200
+
+Use the key sequence `Ctrl-a + k` to kill the terminal session.
