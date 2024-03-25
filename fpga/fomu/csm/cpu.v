@@ -148,7 +148,7 @@ module cpu #(
         /*
         $readmemh("ucode_rom.mem", ucode);
         */
-        ucode[12'h000] = 16'h8020;//UC_TRUE;
+        ucode[12'h000] = 16'h8030;//UC_TRUE;
         ucode[12'h001] = UC_DUP;
         ucode[12'h002] = UC_DEC;
         ucode[12'h003] = UC_AND;
@@ -193,13 +193,13 @@ module cpu #(
         //
         // serial UART
         //
-        ucode[12'h030] = UC_LIT;                        // 'K'
-        ucode[12'h031] = 16'd75;
-        ucode[12'h032] = UC_NOP;                        // char='K'
-//        ucode[12'h030] = UC_RX_OK;                      // ready?
-//        ucode[12'h031] = 16'hA030;                      // --
-//        ucode[12'h032] = UC_GET_RX;                     // char
-        ucode[12'h033] = UC_TX_OK;                      // char ready?
+        ucode[12'h030] = UC_RX_OK;                      // rx?
+        ucode[12'h031] = 16'hA030;                      // --
+        ucode[12'h032] = UC_GET_RX;                     // char
+//        ucode[12'h030] = UC_LIT;                        // 'K'
+//        ucode[12'h031] = 16'd75;
+//        ucode[12'h032] = UC_NOP;                        // char='K'
+        ucode[12'h033] = UC_TX_OK;                      // char tx?
         ucode[12'h034] = 16'hA033;                      // char
         ucode[12'h035] = UC_SET_TX;                     // --
         ucode[12'h036] = 16'h8030;
@@ -270,7 +270,7 @@ module cpu #(
         // SET_TX ( char -- )
         ucode[12'h13C] = UC_LIT;
         ucode[12'h13D] = { 8'h00, `UART_TX_DAT };
-        ucode[12'h13E] = 16'h097F;
+        ucode[12'h13E] = 16'h09BF;
         ucode[12'h13F] = UC_EXIT;
         /*
         $writememh("ucode_rom.mem", ucode);
