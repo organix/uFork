@@ -35,7 +35,7 @@ the value of `o_status` indicates success (1) or failure (0).
 // Memory Ranges
 `define MEM_UC  (3'h0)      // uCode memory
 `define MEM_PC  (3'h1)      // contents of PC+1 & increment
-`define MEM_ERR (3'h2)      // RESERVED
+`define MEM_ERR (3'h2)      // RESERVED (signals failure)
 `define MEM_DEV (3'h3)      // memory-mapped devices
 `define MEM_Q_T (3'h4)      // uFork quad-memory field T
 `define MEM_Q_X (3'h5)      // uFork quad-memory field X
@@ -94,10 +94,10 @@ module cpu #(
     localparam UC_DEC       = 16'h0312;                 // 1- ( a -- a-1 )
     localparam UC_OVER      = 16'h0240;                 // ( a b -- a b a )
     localparam UC_ROT       = 16'h0500;                 // ( a b c -- b c a )
-//    localparam UC_R_SWAP    = 16'h002C;                 // ( -- ) R:( a b -- b a )
     localparam UC_R_FETCH   = 16'h0280;                 // R@ ( -- a ) R:( a -- a )
     localparam UC_2MUL      = 16'h0301;                 // 2* ( a -- a+a )
 
+    localparam UC_FAIL      = 16'h002F;                 // ( -- ) signal failure
     localparam UC_CALL      = 16'hC000;                 // <addr> ( -- ) R:( -- pc+1 ) @pc->pc
 
     //
@@ -148,14 +148,14 @@ module cpu #(
         /*
         $readmemh("ucode_rom.mem", ucode);
         */
-        ucode[12'h000] = 16'h8030;//UC_TRUE;
-        ucode[12'h001] = UC_DUP;
-        ucode[12'h002] = UC_DEC;
-        ucode[12'h003] = UC_AND;
-        ucode[12'h004] = UC_NOT;
-        ucode[12'h005] = UC_DROP;
-        ucode[12'h006] = 16'h8000;                      // jump $000
-        ucode[12'h007] = UC_NOP;
+        ucode[12'h000] = 16'h8010;//16'h8002;//UC_NOP;
+        ucode[12'h001] = UC_FAIL;
+        ucode[12'h002] = UC_TRUE;
+        ucode[12'h003] = UC_DUP;
+        ucode[12'h004] = UC_DEC;
+        ucode[12'h005] = UC_AND;
+        ucode[12'h006] = UC_NOT;
+        ucode[12'h007] = UC_DROP;
         ucode[12'h008] = UC_JMP;//16'h8000;
         ucode[12'h009] = UC_BOOT;
         //
@@ -168,8 +168,8 @@ module cpu #(
         ucode[12'h014] = UC_2MUL;
         ucode[12'h015] = UC_DEC;
         ucode[12'h016] = UC_ROT;
-        ucode[12'h017] = UC_SWAP;
-        ucode[12'h018] = UC_OVER;
+        ucode[12'h017] = UC_NIP;
+        ucode[12'h018] = UC_TUCK;
         ucode[12'h019] = 16'h8000;                      // jump $000
         //
         // branch, fetch, and store
@@ -238,39 +238,39 @@ module cpu #(
         //
         // NIP ( a b -- b )
         ucode[12'h124] = UC_SWAP;
-        ucode[12'h125] = UC_DROP;
+        ucode[12'h125] = UC_DROP + UC_EXIT;
         ucode[12'h126] = UC_EXIT;
         // TUCK ( a b -- b a b )
         ucode[12'h127] = UC_SWAP;
-        ucode[12'h128] = UC_OVER;
+        ucode[12'h128] = UC_OVER + UC_EXIT;
         ucode[12'h129] = UC_EXIT;
         // 2DUP ( a b -- a b a b )
         ucode[12'h12A] = UC_OVER;
-        ucode[12'h12B] = UC_OVER;
+        ucode[12'h12B] = UC_OVER + UC_EXIT;
         ucode[12'h12C] = UC_EXIT;
         // 2DROP ( a b -- )
         ucode[12'h12D] = UC_DROP;
-        ucode[12'h12E] = UC_DROP;
+        ucode[12'h12E] = UC_DROP + UC_EXIT;
         ucode[12'h12F] = UC_EXIT;
         // RX_OK ( -- ready )
         ucode[12'h130] = UC_LIT;
         ucode[12'h131] = { 8'h00, `UART_RX_RDY };
-        ucode[12'h132] = 16'h033F;//16'h533F;
+        ucode[12'h132] = 16'h033F + UC_EXIT;
         ucode[12'h133] = UC_EXIT;
         // GET_RX ( -- char )
         ucode[12'h134] = UC_LIT;
         ucode[12'h135] = { 8'h00, `UART_RX_DAT };
-        ucode[12'h136] = 16'h033F;
+        ucode[12'h136] = 16'h033F + UC_EXIT;
         ucode[12'h137] = UC_EXIT;
         // TX_OK ( -- ready )
         ucode[12'h138] = UC_LIT;
         ucode[12'h139] = { 8'h00, `UART_TX_RDY };
-        ucode[12'h13A] = 16'h033F;
+        ucode[12'h13A] = 16'h033F + UC_EXIT;
         ucode[12'h13B] = UC_EXIT;
         // SET_TX ( char -- )
         ucode[12'h13C] = UC_LIT;
         ucode[12'h13D] = { 8'h00, `UART_TX_DAT };
-        ucode[12'h13E] = 16'h09BF;
+        ucode[12'h13E] = 16'h09BF + UC_EXIT;
         ucode[12'h13F] = UC_EXIT;
         /*
         $writememh("ucode_rom.mem", ucode);
@@ -410,11 +410,6 @@ module cpu #(
         ( mem_op && mem_rng == `MEM_UC ? uc_rdata
         : mem_op && mem_rng == `MEM_PC ? uc_rdata
         : mem_op && mem_rng == `MEM_DEV ? { {(DATA_SZ-8){uart_rdata[7]}}, uart_rdata }
-        /*
-        : mem_op && mem_rng == `MEM_DEV && d0 == `UART_TX_RDY ? {DATA_SZ{!tx_busy}}
-        : mem_op && mem_rng == `MEM_DEV && d0 == `UART_RX_RDY ? {DATA_SZ{rx_ready}}
-        : mem_op && mem_rng == `MEM_DEV && d0 == `UART_RX_DAT ? { {(DATA_SZ-8){1'b0}}, rx_buffer }
-        */
         : alu_out );
     wire [2:0] d_se =
         ( ctrl ?
@@ -454,6 +449,8 @@ module cpu #(
     always @(posedge i_clk) begin
         if (mem_op && mem_rng == `MEM_ERR) begin
             o_status <= 1'b0;                           // signal failure
+            p_alu = 1'b0;
+            instr_r = UC_NOP;
         end else if (p_alu) begin
             if (!ctrl && r_pc) begin
                 pc <= r0[ADDR_SZ-1:0];                  // return from procedure
@@ -462,13 +459,6 @@ module cpu #(
             end else if (ctrl && (r_op == 2'b00 || d_zero)) begin
                 pc <= instr[ADDR_SZ-1:0];               // jump or call procedure
             end
-            /*
-            tx_wr <= (mem_op && mem_rng == `MEM_DEV && mem_wr && d0 == `UART_TX_DAT);
-            tx_data <= d0;
-            if (mem_op && mem_rng == `MEM_DEV && d0 == `UART_RX_DAT) begin
-                rx_ready <= 1'b0;                       // clear "ready" on read
-            end
-            */
             instr_r <= uc_rdata;
             p_alu <= !p_alu;
         end else if (o_running) begin
