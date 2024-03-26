@@ -1265,6 +1265,20 @@ export const uFork = (asm) => {
   dat("(JMP)", "uFork_instr__common_longer_tail");
 
 
+  def("uFork_send_msg"); // ( kont sponsor msg actor -- )
+  dat("uFork_allot", "DUP", ">R"); // ( kont sponsor msg actor quad ) R:( quad )
+  dat("qx!");            // ( kont sponsor msg ) R:( quad )
+  dat("R@", "qy!");      // ( kont sponsor ) R:( quad )
+  dat("R@", "qt!");      // ( kont ) R:( quad )
+  dat("qy@");            // ( event ) R:( quad )
+  dat("qx@");            // ( this_actor ) R:( quad )
+  dat("qz@");            // ( effects ) R:( quad )
+  dat("DUP", "qz@");     // ( effects outgoing_events ) R:( quad )
+  dat("R@", "qz!");      // ( effects ) R:( quad )
+  dat("R>", "SWAP");     // ( quad effects ) R:( )
+  dat("qz!", "EXIT");    // ( ) R:( )
+
+
   // todo: sponsor <peek> instruction
   //       þar sem <peek> er capability og ekki fixnum
   
