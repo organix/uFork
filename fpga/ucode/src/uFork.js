@@ -1265,11 +1265,11 @@ export const uFork = (asm) => {
   dat("(JMP)", "uFork_instr__common_longer_tail");
 
 
-  def("uFork_send_msg"); // ( kont sponsor msg actor -- )
-  dat("uFork_allot", "DUP", ">R"); // ( kont sponsor msg actor quad ) R:( quad )
-  dat("qx!");            // ( kont sponsor msg ) R:( quad )
-  dat("R@", "qy!");      // ( kont sponsor ) R:( quad )
-  dat("R@", "qt!");      // ( kont ) R:( quad )
+  def("uFork_send_msg"); // ( kont actor msg sponsor -- )
+  dat("uFork_allot", "DUP", ">R"); // ( kont actor msg sponsor quad ) R:( quad )
+  dat("qt!");            // ( kont actor msg ) R:( quad )
+  dat("R@", "qy!");      // ( kont actor ) R:( quad )
+  dat("R@", "qx!");      // ( kont ) R:( quad )
   dat("qy@");            // ( event ) R:( quad )
   dat("qx@");            // ( this_actor ) R:( quad )
   dat("qz@");            // ( effects ) R:( quad )
@@ -1277,6 +1277,26 @@ export const uFork = (asm) => {
   dat("R@", "qz!");      // ( effects ) R:( quad )
   dat("R>", "SWAP");     // ( quad effects ) R:( )
   dat("qz!", "EXIT");    // ( ) R:( )
+
+  def("uFork_instr_send"); // ( kont ip opcode )
+  dat("DROP");             // ( kont ip )
+  dat("qy@");              // ( kont n_fixnum )
+  // todo: insert here fixnum type check
+  // todo: insert here a sponsor mem fuel check&burn: 1 quad spent
+  dat("uFork_fixnum2int"); // ( kont n )
+  dat("OVER", "uFork_pop", "SWAP"); // ( kont actor n )
+  dat("DUP", "-1", "=", "(BRZ)", "uFork_instr_send_l0");
+  dat("DROP", "OVER", "uFork_pop"); // ( kont actor msg )
+  dat("(JMP)", "uFork_instr_send_l1");
+  def("uFork_instr_send_l0"); // ( kont actor n )
+  // todo: insert a sponsor mem fuel check&burn: n quads spent
+  // todo: pluck n stack pair quads off the stack
+  def("uFork_instr_send_l1"); // ( kont actor msg )
+  dat("ROT", "DUP", ">R", "-ROT"); // ( kont actor msg ) R:( kont )
+  dat("R@", "qy@", "qt@");    // ( kont actor msg sponsor ) R:( kont )
+  dat("uFork_send_msg");      // ( ) R:( kont )
+  dat("R>");                  // ( kont ) R:( kont )
+  dat("(JMP)", "uFork_instr__common_longer_tail");
 
 
   // todo: sponsor <peek> instruction
