@@ -32,8 +32,15 @@ export const uFork_quadmem_and_gc = (asm) => {
       def("qramy"); dat("qram", "2+", "EXIT");
       def("qramz"); dat("qram", "3+", "EXIT");
 
-      def("qram"); // ( quad_addr -- addr )
-      dat("DUP", "0x6000_&", "SWAP", "4*", "OR", "qram_base", "+", "EXIT");
+      def("qram");      // ( quad_addr -- addr )
+      dat("DUP");       // ( quad_addr quad_addr )
+      dat("0x4000_&");  // ( quad_addr quad_addr_maskedUpper )
+      dat("SWAP");      // ( quad_addr_maskedUpper quad_addr )
+      dat("4*");        // ( quad_addr_maskedUpper quad_addr<<2 )
+      dat("OR");        // ( qa )
+      dat("qram_base"); // ( qa qram_base )
+      dat("+");         // ( addr )
+      dat("EXIT");      // ( addr )
 
       def("qrom"); // ( quad_addr -- addr )
       dat("4*", "qrom_base", "+", "EXIT");
@@ -66,6 +73,7 @@ export const uFork_quadmem_and_gc = (asm) => {
       }
 
       def("uFork_quaddr2addr"); // ( quad_addr -- cell_addr )
+      dat("(LIT)", 0xDFFF, "&");
       if (!(asm.isDefined("spram@")) && !(asm.isDefined("spram!"))) {
         dat("4*", "uFork_quadMem_baseAddr", "+", "EXIT");
         
@@ -91,6 +99,7 @@ export const uFork_quadmem_and_gc = (asm) => {
       def("qramz!"); dat("qramz", "spram!", "EXIT");
 
       if (asm.isDefined("spi_flash@")) {
+        throw new Error("not yet implemented!");
       } else {
         def("qromt@", "qramt@");
         def("qromx@", "qramx@");
