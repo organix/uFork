@@ -87,7 +87,7 @@ export const uFork = (asm) => {
   def("uFork_#dict_t");
   dat("(CONST)", 0x000D);
 
-  def("uFork_FWD_REF_T");
+  def("uFork_GC_FWD_REF_T");
   dat("(CONST)", 0x000E);
 
   def("uFork_FREE_T");
@@ -198,6 +198,15 @@ export const uFork = (asm) => {
   dat("(LIT)", 0x2000, "&", "(JMP)", "CLEAN_BOOL");
   def("uFork_isOpaque?_l0");
   dat("DROP", "(JMP)", "FALSE");
+
+  def("uFork_opaquefy"); // ( quad_ram_addr -- ocap )
+  dat("DUP", "uFork_isRamQuad?", "(BRZ)", "(EXIT)");
+  dat("(LIT)", 0x2000, "OR", "EXIT");
+
+  def("uFork_transparenify"); // ( ocap -- quad_ram_addr )
+  dat("DUP", "uFork_isOpaque?", "(BRZ)", "(EXIT)");
+  dat("(LIT)", 0xDFFF, "&", "EXIT");
+  
 
   def("uFork_fixnum2int"); // ( fixnum -- int )
   dat("0x7FFF_&", "DUP", "1<<", "0x8000", "&", "OR"); // sign extend
