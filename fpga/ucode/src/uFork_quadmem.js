@@ -328,6 +328,7 @@ export const uFork_quadmem_and_gc = (asm) => {
       dat("EXIT");
     } else if (asm.isDefined("uFork_gc_algo1")) {
       // this implements the uFork-c implementation garbage collection algorithm
+      // reference https://github.com/organix/ufork-c/blob/main/gc.md
       def("uFork_gc_genx_mark", "0");
       def("uFork_gc_geny_mark", "1");
       def("uFork_gc_scan_mark", "2");
