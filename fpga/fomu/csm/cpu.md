@@ -18,6 +18,93 @@
     * `02`: RX?
     * `03`: RX@
 
+## Memory Models
+
+The uCode micro-coded processor is designed to implement
+the uFork actor-oriented processor.
+The uCode memory is organized as 16-bit words
+with a 12-bit (4k) address range.
+All uCode memory is writeable,
+with code and data sharing the same address-space.
+The uFork memory is organized into 4-word quads
+with 16-bits per word (called "quad-space").
+Type-tagging bits are used to distinguish
+uFork ROM (where most code resides) and
+uFork RAM (for actors and working storage).
+
+### uFork Quad-Space
+
+16-bit uFork type-tagged data values are structured as follows:
+
+     15  14  13  12  11  10   9   8   7   6   5   4   3   2   1   0
+    *---+---+---+---*---+---+---+---*---+---+---+---*---+---+---+---*
+    |fix|mut|cap|vol|                      uFork quad-memory offset |
+    *---+---+---+---*---+---+---+---*---+---+---+---*---+---+---+---*
+      ^   ^   ^   ^
+      |   |   |   |
+      |   |   |  {0:reserved, 1:volatile}
+      |   |  {0:transparent, 1:opaque}
+      |  {0:immutable, 1:mutable}
+     {0:pointer, 1:fixnum}
+
+The 4 most-significant bits are the type-tag. However, the bits must be
+consider sequentially starting with the MSB, indicating a 15-bit _fixnum_.
+
+     15  14  13  12  11  10   9   8   7   6   5   4   3   2   1   0
+    *---+---+---+---*---+---+---+---*---+---+---+---*---+---+---+---*
+    | 1 |   15-bit signed integer in 2's-complement representation  |
+    *---+---+---+---*---+---+---+---*---+---+---+---*---+---+---+---*
+
+Next we consider references to ROM, with 14-bit quad-memory addresses.
+
+     15  14  13  12  11  10   9   8   7   6   5   4   3   2   1   0
+    *---+---+---+---*---+---+---+---*---+---+---+---*---+---+---+---*
+    | 0 | 0 |                    14-bit offset to quad-cell in ROM  |
+    *---+---+---+---*---+---+---+---*---+---+---+---*---+---+---+---*
+
+Next we consider references to RAM, with 12-bit quad-memory addresses.
+
+     15  14  13  12  11  10   9   8   7   6   5   4   3   2   1   0
+    *---+---+---+---*---+---+---+---*---+---+---+---*---+---+---+---*
+    | 0 | 1 |cap|vol|            12-bit offset to quad-cell in RAM  |
+    *---+---+---+---*---+---+---+---*---+---+---+---*---+---+---+---*
+
+The `cap` bit indicates a capability reference to an opaque actor.
+The `vol` bit distinquishes user-memory from reserved system-memory.
+
+### uCode Access to Quad-Space
+
+uCode has separate memory-access instructions
+for each field of a uFork quad-cell.
+This keeps the uCode data-path to a manageable 16-bits wide.
+uFork quad-space is mapped into SPRAMs on the UP5K FPGA.
+Each SPRAM is organized as 16-bit words with a 14-bit (16k) address range.
+We designate the least-significant 2 bits as the quad-field selector,
+giving us a 12-bit quad-cell offset into each SPRAM.
+
+     15  14  13  12  11  10   9   8   7   6   5   4   3   2   1   0
+    *---+---+---+---*---+---+---+---*---+---+---+---*---+---+---+---*
+    |  n/a  |                       12-bit quad-cell offset | field |
+    *---+---+---+---*---+---+---+---*---+---+---+---*---+---+---+---*
+                                                             \_____/
+                                                              00:T
+                                                              01:X
+                                                              10:Y
+                                                              11:Z
+
+One SPRAM is used to hold "volatile" mutable user-memory (RAM).
+Two SPRAMs are used to hold "immutable" code and data (ROM).
+The 2 most-significant bits of the 14-bit ROM offset
+(bits 13 and 12, corresponding to `cap` and `vol` in RAM)
+are used as a bank-selector:
+
+  * `00`: reserved ROM
+  * `01`: unused
+  * `10`: SPRAM bank 0
+  * `11`: SPRAM bank 1
+
+**NOTE:** uCode must be able to write to ROM to implement a boot-loader.
+
 ## Instruction Encoding
 
 There are two primary instruction encoding patterns. One for control
@@ -245,7 +332,7 @@ MSB     | ( -- 0x8000 )             | `02E6` | `0000_0010_1110_0110`
     Info: 	      ICESTORM_SPRAM:     0/    4     0%
     Info: Max frequency for clock 'clk': 24.60 MHz (PASS at 12.00 MHz)
 
-### Initial UART Device Support (2k uCode)
+### UART Device Component (2k uCode)
 
     Info: Device utilisation:
     Info: 	         ICESTORM_LC:  1042/ 5280    19%
@@ -263,27 +350,7 @@ MSB     | ( -- 0x8000 )             | `02E6` | `0000_0010_1110_0110`
     Info: 	         SB_LEDDA_IP:     0/    1     0%
     Info: 	         SB_RGBA_DRV:     1/    1   100%
     Info: 	      ICESTORM_SPRAM:     0/    4     0%
-    Info: Max frequency for clock 'clk': 29.98 MHz (PASS at 12.00 MHz)
-
-### Separate UART Component (2k uCode)
-
-    Info: Device utilisation:
-    Info: 	         ICESTORM_LC:  1034/ 5280    19%
-    Info: 	        ICESTORM_RAM:     8/   30    26%
-    Info: 	               SB_IO:     8/   96     8%
-    Info: 	               SB_GB:     8/    8   100%
-    Info: 	        ICESTORM_PLL:     0/    1     0%
-    Info: 	         SB_WARMBOOT:     0/    1     0%
-    Info: 	        ICESTORM_DSP:     0/    8     0%
-    Info: 	      ICESTORM_HFOSC:     0/    1     0%
-    Info: 	      ICESTORM_LFOSC:     0/    1     0%
-    Info: 	              SB_I2C:     0/    2     0%
-    Info: 	              SB_SPI:     0/    2     0%
-    Info: 	              IO_I3C:     0/    2     0%
-    Info: 	         SB_LEDDA_IP:     0/    1     0%
-    Info: 	         SB_RGBA_DRV:     1/    1   100%
-    Info: 	      ICESTORM_SPRAM:     0/    4     0%
-    Info: Max frequency for clock 'clk': 30.30 MHz (PASS at 12.00 MHz)
+    Info: Max frequency for clock 'clk': 29.31 MHz (PASS at 12.00 MHz)
 
 ## Component Block Diagrams
 

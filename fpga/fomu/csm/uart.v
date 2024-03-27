@@ -42,8 +42,8 @@ module uart #(
 );
 
     // instantiate serial transmitter
-    reg tx_wr = 1'b1;//1'b0;
-    reg [7:0] tx_data = "k"; // FIXME: continuous stream of 'k' characters...
+    reg tx_wr = 1'b0;
+    reg [7:0] tx_data;
     wire tx_busy;
     serial_tx #(
         .CLK_FREQ(CLK_FREQ),
@@ -71,10 +71,6 @@ module uart #(
 
     reg rx_ready = 1'b0;                                // character in buffer
     reg [7:0] rx_buffer;                                // character received
-    /*
-    reg rx_ready = 1'b1;                                // character in buffer (prefilled)
-    reg [7:0] rx_buffer = 8'h7E;                        // character received (prefilled)
-    */
 
     // device "registers"
     localparam TX_RDY       = 4'h0;                     // ready to transmit
@@ -87,10 +83,12 @@ module uart #(
             rx_ready <= 1'b1;
             rx_buffer <= rx_data;
         end
+        tx_wr <= 1'b0;                                  // default to "read"
         if (i_en) begin
             if (i_wr) begin
                 if (i_addr == TX_DAT) begin
-                    ;
+                    tx_data <= i_data;
+                    tx_wr <= 1'b1;
                 end
             end else begin
                 if (i_addr == TX_RDY) begin
