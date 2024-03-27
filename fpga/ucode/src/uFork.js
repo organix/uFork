@@ -193,6 +193,12 @@ export const uFork = (asm) => {
   def("uFork_isRamQuad?"); // ( specimen -- bool )
   dat("DUP", "uFork_isQuad?", "SWAP", "uFork_isMutable?", "&", "EXIT");
 
+  def("uFork_isOpaque?"); // ( specimen -- bool )
+  dat("DUP", "uFork_isRamQuad?", "(BRZ)", "uFork_isOpaque?_l0");
+  dat("(LIT)", 0x2000, "&", "(JMP)", "CLEAN_BOOL");
+  def("uFork_isOpaque?_l0");
+  dat("DROP", "(JMP)", "FALSE");
+
   def("uFork_fixnum2int"); // ( fixnum -- int )
   dat("0x7FFF_&", "DUP", "1<<", "0x8000", "&", "OR"); // sign extend
   dat("EXIT");
