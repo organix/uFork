@@ -478,12 +478,12 @@ export const uFork = (asm) => {
   // todo: insert fixnum type check here for n
   // todo: insert allot fuel check&burn here taking n into consideration
   dat("uFork_fixnum2int", ">R");          // ( kont ) R:( n )
-  dat("DUP", "uFork_sp@", "uForm_allot"); // ( kont stack tmp ) R:( n )
+  dat("DUP", "uFork_sp@", "uFork_allot"); // ( kont stack tmp ) R:( n )
   dat("DUP", "R>", "SWAP", ">R", ">R");   // ( kont stack tmp ) R:( tmp1st n )
   dat("(JMP)", "uFork_instr_dup_l1");
   def("uFork_instr_dup_l0"); // ( kont tmp stack )
   dat("OVER");         // ( kont stack tmp stack )
-  dat("uForm_car");    // ( kont stack tmp item  )
+  dat("uFork_car");    // ( kont stack tmp item  )
   dat("uFork_allot");  // ( kont stack tmp item q )                  Q:[#?, #?, <hole>, #?]
   dat("DUP", ">R");    // ( kont stack tmp item q ) R:( tmp1st n q ) Q:[#?, #?, <hole>, #?]
   dat("qx!");          // ( kont stack tmp ) R:( tmp1st n q )        Q:[#?, item, <hole>, #?]
