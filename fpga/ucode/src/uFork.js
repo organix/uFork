@@ -268,6 +268,7 @@ export const uFork = (asm) => {
   if (hwImplOfQuadAllotAndFree) {
     dat("qfree", "EXIT");
   } else {
+    dat("uFork_transperify");
     dat("uFork_FREE_T", "OVER", "qt!");
     dat("uFork_#?__OVER", "qx!");
     dat("uFork_#?__OVER", "qy!");
@@ -1293,6 +1294,14 @@ export const uFork = (asm) => {
   dat("R>", "SWAP");     // ( quad effects ) R:( )
   dat("qz!", "EXIT");    // ( ) R:( )
 
+  def("uFork_stack_pluck"); // ( kont n -- head )
+  dat("1-", "NEGATE");      // ( kont -(n-1) )
+  dat("OVER", "uFork_sp@", "DUP", ">R"); // ( kont -(n-1) head ) R:( head )
+  dat("SWAP", "uFork_ndeep"); // ( kont tail ) R:( head )
+  dat("DUP", "uFork_cdr", "ROT", "uFork_sp!");
+  dat("uFork_()", "SWAP", "qy!"); // ( )
+  dat("R>", "EXIT");
+
   def("uFork_instr_send"); // ( kont ip opcode )
   dat("DROP");             // ( kont ip )
   dat("qy@");              // ( kont n_fixnum )
@@ -1305,7 +1314,8 @@ export const uFork = (asm) => {
   dat("(JMP)", "uFork_instr_send_l1");
   def("uFork_instr_send_l0"); // ( kont actor n )
   // todo: insert a sponsor mem fuel check&burn: n quads spent
-  // todo: pluck n stack pair quads off the stack
+  dat("ROT", "DUP", ">R", "-ROT", "R>"); // ( kont actor n kont )
+  dat("SWAP", "uFork_stack_pluck"); // ( kont actor msg )
   def("uFork_instr_send_l1"); // ( kont actor msg )
   dat("ROT", "DUP", ">R", "-ROT"); // ( kont actor msg ) R:( kont )
   dat("R@", "qy@", "qt@");    // ( kont actor msg sponsor ) R:( kont )
@@ -1324,7 +1334,8 @@ export const uFork = (asm) => {
   dat("DROP", "OVER", "uFork_pop"); // ( kont actor msg )
   dat("(JMP)", "uFork_instr_signal_l1");
   // todo: insert a sponsor mem fuel check&burn: n quads spent
-  // todo: pluck n stack pair quads off the stack
+  dat("ROT", "DUP", ">R", "-ROT", "R>"); // ( kont actor n kont )
+  dat("SWAP", "uFork_stack_pluck"); // ( kont actor msg )
   def("uFork_instr_send_l1"); // ( kont actor msg )
   dat("ROT", "DUP", ">R", "-ROT"); // ( kont actor msg ) R:( kont )
   dat("R@", "uFork_pop", "uFork_send_msg"); // ( )
