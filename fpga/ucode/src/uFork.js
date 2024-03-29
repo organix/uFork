@@ -460,7 +460,8 @@ export const uFork = (asm) => {
   def("uFork_instr_nop"); // ( kont ip opcode -- )
   dat("DROP");            // ( kont ip )
   def("uFork_instr__common_tail"); // ( kont ip -- )
-  dat("qz@", "SWAP", "qt!"); // advance the ip of the kontinuation
+  dat("qz@");             // ( kont next_ip )
+  dat("SWAP", "qt!");     // ( ) advance the ip of the kontinuation
   dat("EXIT");
 
   def("uFork_instr_push"); // ( kont ip opcode -- )
@@ -1423,22 +1424,30 @@ export const uFork = (asm) => {
   // todo: insert fixnum type check here
   dat("uFork_fixnum2int"); // ( kont subopcode )
   dat("DUP", "-1", "=", "(BRZ)", "uFork_instr_end_l0");
-  // end abort
+  // end abort  acts like the instigating event message was thrown away
+  //            reason gets reported to attached debugger
   dat("DROP");
   def("uFork_instr_end_l0"); // ( kont subopcode )
   dat("DUP", "0", "=", "(BRZ)", "uFork_instr_end_l1"); // ( kont subopcode )
-  // end stop
+  // end stop  halts the sponsor configuration this kontinuation runs under
+  //           END_HALT gets reported to the sponsor controler
   dat("DROP");
+  // todo: insert here END_HALT signal to sponsor controler
+  dat("uFork_HARDHALT"); // for now
   def("uFork_instr_end_l1"); // ( kont subopcode )
   dat("DUP", "1", "=", "(BRZ)", "uFork_instr_end_l2");
-  // end commit
+  // end commit  commits the effects of this kontinuation to the actor
+  //             and releases the accumulated outgoing events to the event queue
   dat("DROP");
   def("uFork_instr_end_l2");
-  // merkill
+  // todo: signal sponsor controler that an errornous subopcode was encountered
+  dat("");
 
   // todo: sponsor <peek> instruction
   //       þar sem <peek> er capability og ekki fixnum
-  
+
+  // tbd: new instruction for uFork `throw_away_effects`
+  //      throws away the accumulated outgoing events and cancels beh update of the actor
 
   def("uFork_instr__subroutine_call"); // ( kont ip opcode -- )
   if (uForkSubroutines) {
