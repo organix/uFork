@@ -1381,6 +1381,34 @@ export const uFork = (asm) => {
   dat("uFork_opaquefy");
   dat("(JMP)", "uFork__push_then_instrTail");
 
+  def("uFork_instr_beh"); // ( kont ip opcode )
+  dat("DROP");            // ( kont ip )
+  dat("qy@");             // ( kont n_fixnum )
+  // todo: insert here a fixnum type check
+  dat("uFork_fixnum2int"); // ( kont n )
+  dat("DUP", "0", "=", "(BRZ)", "uFork_instr_beh_l0"); // ( kont n )
+  dat("DROP", "uFork_()", "OVER", "uFork_pop"); // ( kont staða hegðun )
+  dat("(JMP)", "uFork_instr_beh_l4");
+  def("uFork_instr_beh_l0"); // ( kont n )
+  dat("DUP", "-1", "=", "(BRZ)", "uFork_instr_beh_l1"); // ( kont n )
+  dat("DROP", "DUP", "uFork_pop");  // ( kont hegðun )
+  dat("OVER", "uFork_pop", "SWAP"); // ( kont staða hegðun )
+  dat("(JMP)", "uFork_instr_beh_l4");
+  def("uFork_instr_beh_l1"); // ( kont n )
+  dat("DUP", "-2", "=", "(BRZ)", "uFork_instr_beh_l2"); // ( kont n )
+  dat("DROP", "DUP", "uFork_pop", "uFork_carAndCdr");   // ( kont staða hegðun )
+  dat("(JMP)", "uFork_instr_beh_l4");
+  def("uFork_instr_beh_l2"); // ( kont n )
+  dat("DUP", "-3", "=", "(BRZ)", "uFork_instr_beh_l3"); // ( kont n )
+  dat("DROP", "DUP", "uFork_pop", "DUP", "qz@"); // ( kont staða hegðun )
+  dat("(JMP)", "uFork_instr_beh_l4");
+  def("uFork_instr_beh_l3"); // ( kont n )
+  dat(">R", "DUP", ">R", "DUP"); // ( kont kont ) R:( n kont )
+  dat("uFork_pop");          // ( kont hegðun )
+  dat("R>", "R>");           // ( kont hegðun kont n ) R:( )
+  dat("uFork_stack_pluck");  // ( kont hegðun staða )
+  dat("SWAP");               // ( kont staða hegðun )
+  def("uFork_instr_beh_l4"); // ( kont staða hegðun )
 
   // todo: sponsor <peek> instruction
   //       þar sem <peek> er capability og ekki fixnum
