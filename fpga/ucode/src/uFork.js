@@ -1341,6 +1341,24 @@ export const uFork = (asm) => {
   dat("R@", "uFork_pop", "uFork_send_msg"); // ( )
   dat("R>", "(JMP)", "uFork_instr__common_longer_tail");
 
+  // tbd: provide a hook so new actors could be created
+  //      elsewhere instead of this quads space
+  def("uFork_instr_new"); // ( kont ip opcode )
+  dat("DROP");            // ( kont ip )
+  dat("qy@");             // ( kont n_fixnum )
+  // todo: insert here a fixnum type check
+  dat("uFork_fixnum2int"); // ( kont n )
+  // todo: insert here sponsor mem fuel check&burn: 1 quad spend
+  dat("DUP", "0", "=", "(BRZ)", "uFork_instr_new_l0"); // ( kont n )
+  dat("DROP", "uFork_()", "OVER", "uFork_pop"); // ( kont staða hegðun )
+  dat("(JMP)", "uFork_instr_new_lx");
+  def("uFork_instr_new_l0"); // ( kont n )
+  dat("DUP", "-1", "=", "(BRZ)", "uFork_instr_new_l1"); // ( kont n )
+  dat("DROP", "DUP", "uFork_pop");  // ( kont hegðun )
+  dat("OVER", "uFork_pop", "SWAP"); // ( kont staða hegðun )
+  dat("(JMP)", "uFork_instr_new_lx");
+  // merkill
+
 
   // todo: sponsor <peek> instruction
   //       þar sem <peek> er capability og ekki fixnum
