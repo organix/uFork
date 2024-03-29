@@ -290,7 +290,41 @@ export const uFork = (asm) => {
   def("uFork_enqueueEvents_l1"); // ( tailOfEvents uFork_() )
   dat("DROP", "uFork_eventQueueAndContQueue", "qx!"); // ( )
   dat("EXIT");
-  
+
+  def("uFork_dispatchOneEvent"); // ( -- )
+  dat("uFork_eventQueueAndContQueue", "qt@"); // ( events_head )
+  dat("DUP", "uFork_()", "=", "OVER", "uFork_#?", "=", "OR"); // ( events_head bool )
+  dat("(BRNZ)", "(DROP)");
+  dat("DUP", "qz@", "uFork_eventQueueAndContQueue", "qt!"); // ( events_head ) move the event queue along
+  dat("uFork_()", "OVER", "qz!"); // ( event )
+  dat("DUP", "qx@", "DUP", "qz@"); // ( event actor effect|uFork_#? )
+  dat("uFork_#?", "=");            // ( event actor idle? )
+  dat("(BRNZ)", "uFork_dispatchOneEvent_l0"); // ( event actor )
+  // actor is busy
+  dat("DROP"); // ( event )
+  dat("(JMP)", "uFork_enqueueEvents"); // put the event at the back of the event queue
+  def("uFork_dispatchOneEvent_l0"); // actor was idle
+  // todo: insert here an event sponsor mem fuel check&burn here: 2 quads spent
+  dat("uFork_allot");              // ( event actor quad )
+  dat("uFork_#actor_t");           // ( event actor quad uFork_#actor_t )
+  dat("OVER", "qt!");              // ( event actor quad )
+  dat("OVER", "qx@");              // ( event actor quad beh )
+  dat("OVER", "qx!");              // ( event actor quad )
+  dat("OVER", "qy@");              // ( event actor quad state )
+  dat("OVER", "qy!");              // ( event actor quad )
+  dat("uFork_()", "OVER", "qz!");  // ( event actor effect )
+  dat("OVER", "qz!");              // ( event actor )
+  dat("qx@");                      // ( event beh )
+  dat("uFork_allot");              // ( event beh kont )
+  dat("SWAP", "OVER", "qt!");      // ( event kont )
+  dat("SWAP", "OVER", "qy!");      // ( kont )
+  dat("uFork_()");                 // ( kont uFork_() )
+  if (uForkSubroutines) {
+    dat("uFork_allot", "SWAP", "OVER", "qx!"); // ( kont spAndRp_quad )
+    dat("uFork_()", "OVER", "qy!");
+  }
+  dat("OVER", "qx!"); // ( kont )
+  // dat("(JMP)", "uFork_enqueueCont"); // deliberate fallthrough to uFork_enqueueCont
 
   def("uFork_enqueueCont"); // ( kont -- )
   dat("DUP", "uFork_()", "=", "(BRNZ)", "(DROP)");
