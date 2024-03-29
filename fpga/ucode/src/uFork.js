@@ -1417,6 +1417,25 @@ export const uFork = (asm) => {
   dat("qy!");                // ( kont )
   dat("(JMP)", "uFork_instr__common_longer_tail");
 
+  def("uFork_instr_end"); // ( kont ip opcode )
+  dat("DROP");
+  dat("qy@");             // ( kont subopcode_fixnum )
+  // todo: insert fixnum type check here
+  dat("uFork_fixnum2int"); // ( kont subopcode )
+  dat("DUP", "-1", "=", "(BRZ)", "uFork_instr_end_l0");
+  // end abort
+  dat("DROP");
+  def("uFork_instr_end_l0"); // ( kont subopcode )
+  dat("DUP", "0", "=", "(BRZ)", "uFork_instr_end_l1"); // ( kont subopcode )
+  // end stop
+  dat("DROP");
+  def("uFork_instr_end_l1"); // ( kont subopcode )
+  dat("DUP", "1", "=", "(BRZ)", "uFork_instr_end_l2");
+  // end commit
+  dat("DROP");
+  def("uFork_instr_end_l2");
+  // merkill
+
   // todo: sponsor <peek> instruction
   //       þar sem <peek> er capability og ekki fixnum
   
