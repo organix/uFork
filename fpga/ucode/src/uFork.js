@@ -293,6 +293,7 @@ export const uFork = (asm) => {
   
 
   def("uFork_enqueueCont"); // ( kont -- )
+  dat("DUP", "uFork_()", "=", "(BRNZ)", "(DROP)");
   dat("uFork_eventQueueAndContQueue", "qz@"); // ( kont k_tail )
   dat("2DUP", "qz!", "DROP");
   dat("uFork_eventQueueAndContQueue", "qz!"); // ( )
@@ -1426,7 +1427,11 @@ export const uFork = (asm) => {
   dat("DUP", "-1", "=", "(BRZ)", "uFork_instr_end_l0");
   // end abort  acts like the instigating event message was thrown away
   //            reason gets reported to attached debugger
-  dat("DROP");
+  dat("2DROP");           // ( )
+  def("uFork_instr_end_l3");
+  dat("DROP");            // not an error, there is k_head on the stack gets dropped
+  dat("uFork_()");        // and gets replaced with NullInList
+  dat("EXIT");
   def("uFork_instr_end_l0"); // ( kont subopcode )
   dat("DUP", "0", "=", "(BRZ)", "uFork_instr_end_l1"); // ( kont subopcode )
   // end stop  halts the sponsor configuration this kontinuation runs under
@@ -1438,10 +1443,20 @@ export const uFork = (asm) => {
   dat("DUP", "1", "=", "(BRZ)", "uFork_instr_end_l2");
   // end commit  commits the effects of this kontinuation to the actor
   //             and releases the accumulated outgoing events to the event queue
-  dat("DROP");
+  dat("DROP");               // ( kont )
+  dat("qy@");                // ( event )
+  dat("qx@", "DUP", "qz@");  // ( actor effect )
+  dat("DUP", ">R",  "qx@");  // ( actor beh' ) R:( effect )
+  dat("OVER", "qx!");        // ( actor ) R:( effect )
+  dat("R@", "qy@");          // ( actor state' ) R:( effect )
+  dat("OVER", "qy!");        // ( actor ) R:( effect )
+  dat("uFork_#?", "SWAP", "qz!"); // ( ) R:( effect )
+  dat("R>", "qz@");          // ( outgoing_events ) R:( )
+  dat("uFork_enqueue_events"); // ( )
+  dat("(JMP)", "uFork_enqueue_events");
   def("uFork_instr_end_l2");
   // todo: signal sponsor controler that an errornous subopcode was encountered
-  dat("");
+  dat("uFork_HARDHALT");
 
   // todo: sponsor <peek> instruction
   //       þar sem <peek> er capability og ekki fixnum
