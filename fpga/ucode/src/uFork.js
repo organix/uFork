@@ -1351,13 +1351,35 @@ export const uFork = (asm) => {
   // todo: insert here sponsor mem fuel check&burn: 1 quad spend
   dat("DUP", "0", "=", "(BRZ)", "uFork_instr_new_l0"); // ( kont n )
   dat("DROP", "uFork_()", "OVER", "uFork_pop"); // ( kont staða hegðun )
-  dat("(JMP)", "uFork_instr_new_lx");
+  dat("(JMP)", "uFork_instr_new_l4");
   def("uFork_instr_new_l0"); // ( kont n )
   dat("DUP", "-1", "=", "(BRZ)", "uFork_instr_new_l1"); // ( kont n )
   dat("DROP", "DUP", "uFork_pop");  // ( kont hegðun )
   dat("OVER", "uFork_pop", "SWAP"); // ( kont staða hegðun )
-  dat("(JMP)", "uFork_instr_new_lx");
-  // merkill
+  dat("(JMP)", "uFork_instr_new_l4");
+  def("uFork_instr_new_l1"); // ( kont n )
+  dat("DUP", "-2", "=", "(BRZ)", "uFork_instr_new_l2"); // ( kont n )
+  dat("DROP", "DUP", "uFork_pop", "uFork_carAndCdr");   // ( kont staða hegðun )
+  dat("(JMP)", "uFork_instr_new_l4");
+  def("uFork_instr_new_l2"); // ( kont n )
+  dat("DUP", "-3", "=", "(BRZ)", "uFork_instr_new_l3"); // ( kont n )
+  dat("DROP", "DUP", "uFork_pop", "DUP", "qz@"); // ( kont staða hegðun )
+  dat("(JMP)", "uFork_instr_new_l4");
+  def("uFork_instr_new_l3"); // ( kont n )
+  dat(">R", "DUP", ">R", "DUP"); // ( kont kont ) R:( n kont )
+  dat("uFork_pop");          // ( kont hegðun )
+  dat("R>", "R>");           // ( kont hegðun kont n ) R:( )
+  dat("uFork_stack_pluck");  // ( kont hegðun staða )
+  dat("SWAP");               // ( kont staða hegðun )
+  def("uFork_instr_new_l4"); // ( kont staða hegðun )
+  // tbd punktur
+  dat("uFork_allot");        // ( kont staða hegðun quad )
+  dat("uFork_#actor_t", "OVER", "qt!"); // ( kont staða hegðun quad )
+  dat("SWAP", "OVER", "qx!"); // ( kont staða quad )
+  dat("SWAP", "OVER", "qy!"); // ( kont quad )
+  dat("uFork_#?", "OVER", "qz!"); // ( kont quad )
+  dat("uFork_opaquefy");
+  dat("(JMP)", "uFork__push_then_instrTail");
 
 
   // todo: sponsor <peek> instruction
