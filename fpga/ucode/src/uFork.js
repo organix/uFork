@@ -1409,6 +1409,13 @@ export const uFork = (asm) => {
   dat("uFork_stack_pluck");  // ( kont hegðun staða )
   dat("SWAP");               // ( kont staða hegðun )
   def("uFork_instr_beh_l4"); // ( kont staða hegðun )
+  dat("ROT", "DUP", ">R", "-ROT", "R>"); // ( kont staða hegðun kont )
+  dat("qy@");                // ( kont staða hegðun event )
+  dat("qx@");                // ( kont staða hegðun actor )
+  dat("qz@");                // ( kont staða hegðun effect )
+  dat("SWAP", "OVER", "qx!"); // ( kont staða effect )
+  dat("qy!");                // ( kont )
+  dat("(JMP)", "uFork_instr__common_longer_tail");
 
   // todo: sponsor <peek> instruction
   //       þar sem <peek> er capability og ekki fixnum
