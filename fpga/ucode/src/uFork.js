@@ -1452,8 +1452,8 @@ export const uFork = (asm) => {
   dat("OVER", "qy!");        // ( actor ) R:( effect )
   dat("uFork_#?", "SWAP", "qz!"); // ( ) R:( effect )
   dat("R>", "qz@");          // ( outgoing_events ) R:( )
-  dat("uFork_enqueue_events"); // ( )
-  dat("(JMP)", "uFork_enqueue_events");
+  dat("uFork_enqueueEvents"); // ( )
+  dat("(JMP)", "uFork_instr_end_l3");
   def("uFork_instr_end_l2");
   // todo: signal sponsor controler that an errornous subopcode was encountered
   dat("uFork_HARDHALT");
