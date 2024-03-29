@@ -1408,6 +1408,7 @@ export const uFork = (asm) => {
 export default Object.freeze({
   uFork
 });
+// forkmon sem nafn á monitor dæminu
 /* tbd: 
    quad encoded chunked overlay protocol:
      instead of #instr_t in t field of first quad we have an closely held
