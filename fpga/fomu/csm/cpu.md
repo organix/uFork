@@ -23,7 +23,7 @@
 The uCode micro-coded processor is designed to implement
 the uFork actor-oriented processor.
 The uCode memory is organized as 16-bit words
-with a 12-bit (4k) address range.
+with a 12-bit (4k) maximum address range.
 All uCode memory is writeable,
 with code and data sharing the same address-space.
 The uFork memory is organized into 4-word quads
@@ -38,17 +38,17 @@ uFork RAM (for actors and working storage).
 
      15  14  13  12  11  10   9   8   7   6   5   4   3   2   1   0
     *---+---+---+---*---+---+---+---*---+---+---+---*---+---+---+---*
-    |fix|mut|cap|vol|                      uFork quad-memory offset |
+    |fix|mut|cap| ? |                      uFork quad-memory offset |
     *---+---+---+---*---+---+---+---*---+---+---+---*---+---+---+---*
       ^   ^   ^   ^
       |   |   |   |
-      |   |   |  {0:reserved, 1:volatile}
+      |   |   |  ignored
       |   |  {0:transparent, 1:opaque}
       |  {0:immutable, 1:mutable}
      {0:pointer, 1:fixnum}
 
 The 4 most-significant bits are the type-tag. However, the bits must be
-consider sequentially starting with the MSB, indicating a 15-bit _fixnum_.
+considered sequentially starting with the MSB, indicating a 15-bit _fixnum_.
 
      15  14  13  12  11  10   9   8   7   6   5   4   3   2   1   0
     *---+---+---+---*---+---+---+---*---+---+---+---*---+---+---+---*
@@ -66,11 +66,10 @@ Next we consider references to RAM, with 12-bit quad-memory addresses.
 
      15  14  13  12  11  10   9   8   7   6   5   4   3   2   1   0
     *---+---+---+---*---+---+---+---*---+---+---+---*---+---+---+---*
-    | 0 | 1 |cap|vol|            12-bit offset to quad-cell in RAM  |
+    | 0 | 1 |cap| ? |            12-bit offset to quad-cell in RAM  |
     *---+---+---+---*---+---+---+---*---+---+---+---*---+---+---+---*
 
 The `cap` bit indicates a capability reference to an opaque actor.
-The `vol` bit distinquishes user-memory from reserved system-memory.
 
 ### uCode Access to Quad-Space
 
@@ -92,16 +91,10 @@ giving us a 12-bit quad-cell offset into each SPRAM.
                                                               10:Y
                                                               11:Z
 
-One SPRAM is used to hold "volatile" mutable user-memory (RAM).
+One SPRAM is used to hold mutable user-memory (RAM).
 Two SPRAMs are used to hold "immutable" code and data (ROM).
-The 2 most-significant bits of the 14-bit ROM offset
-(bits 13 and 12, corresponding to `cap` and `vol` in RAM)
-are used as a bank-selector:
-
-  * `00`: reserved ROM
-  * `01`: unused
-  * `10`: SPRAM bank 0
-  * `11`: SPRAM bank 1
+Bit 12 of the 14-bit ROM offset selects the SPRAM bank.
+Bit 13 of the 14-bit ROM offset should be `0`.
 
 **NOTE:** uCode must be able to write to ROM to implement a boot-loader.
 
@@ -352,6 +345,26 @@ MSB     | ( -- 0x8000 )             | `02E6` | `0000_0010_1110_0110`
     Info: 	      ICESTORM_SPRAM:     0/    4     0%
     Info: Max frequency for clock 'clk': 29.31 MHz (PASS at 12.00 MHz)
 
+### uFork Quad-Memory Component (2k uCode)
+
+    Info: Device utilisation:
+    Info: 	         ICESTORM_LC:  1056/ 5280    20%
+    Info: 	        ICESTORM_RAM:     8/   30    26%
+    Info: 	               SB_IO:     8/   96     8%
+    Info: 	               SB_GB:     8/    8   100%
+    Info: 	        ICESTORM_PLL:     0/    1     0%
+    Info: 	         SB_WARMBOOT:     0/    1     0%
+    Info: 	        ICESTORM_DSP:     0/    8     0%
+    Info: 	      ICESTORM_HFOSC:     0/    1     0%
+    Info: 	      ICESTORM_LFOSC:     0/    1     0%
+    Info: 	              SB_I2C:     0/    2     0%
+    Info: 	              SB_SPI:     0/    2     0%
+    Info: 	              IO_I3C:     0/    2     0%
+    Info: 	         SB_LEDDA_IP:     0/    1     0%
+    Info: 	         SB_RGBA_DRV:     1/    1   100%
+    Info: 	      ICESTORM_SPRAM:     3/    4    75%
+    Info: Max frequency for clock 'clk': 29.09 MHz (PASS at 12.00 MHz)
+
 ## Component Block Diagrams
 
     .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .
@@ -395,21 +408,26 @@ MSB     | ( -- 0x8000 )             | `02E6` | `0000_0010_1110_0110`
         +---------------+
 
         +---------------+
-        | serial_rx     |
+        | uart          |
         |               |
-    --->|i_rx     o_data|=8=>
-        |           o_wr|--->
+    --->|i_en       i_rx|<---
+    --->|i_wr       o_tx|--->
+    =4=>|i_addr         |
+    =8=>|i_data   o_data|=8=>
         |               |
         |>i_clk         |
         +---------------+
 
-        +---------------+
-        | serial_tx     |
-        |               |
-    =8=>|i_data     o_tx|--->
-    --->|i_wr           |
-    <---|o_busy         |
-        |               |
-        |>i_clk         |
-        +---------------+
+        +-------------------+
+        | quad_mem          |
+        |                   |
+    --->|i_wr       i_cs_ram|<---
+    =A=>|i_addr    i_cs_rom0|<---
+    =2=>|i_field   i_cs_rom1|<---
+    =D=>|i_data             |
+        |             o_data|=D=>
+        |>i_clk             |
+        +-------------------+
+
+
     .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .
