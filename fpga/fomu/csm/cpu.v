@@ -31,6 +31,7 @@ the value of `o_status` indicates success (1) or failure (0).
 //`include "../lib/serial_tx.v"
 //`include "../lib/serial_rx.v"
 `include "uart.v"
+`include "quad_mem.v"
 
 // Memory Ranges
 `define MEM_UC  (3'h0)      // uCode memory
@@ -148,7 +149,7 @@ module cpu #(
         /*
         $readmemh("ucode_rom.mem", ucode);
         */
-        ucode[12'h000] = 16'h8010;//16'h8002;//UC_NOP;
+        ucode[12'h000] = 16'h8020;//16'h8002;//UC_NOP;
         ucode[12'h001] = UC_FAIL;
         ucode[12'h002] = UC_TRUE;
         ucode[12'h003] = UC_DUP;
@@ -346,6 +347,24 @@ module cpu #(
     );
 
     //
+    // uFork quad-cell memory
+    //
+
+    quad_mem QUAD (
+        .i_clk(i_clk),
+        .i_cs_ram(cs_qram),
+        .i_cs_rom0(cs_qrom0),
+        .i_cs_rom1(cs_qrom1),
+
+        .i_wr(quad_wr),
+        .i_addr(quad_addr),
+        .i_field(quad_field),
+        .i_data(quad_wdata),
+
+        .o_data(quad_rdata)
+    );
+
+    //
     // uCode execution engine
     //
 
@@ -375,19 +394,14 @@ module cpu #(
     wire mem_op = !ctrl && (alu_op == `MEM_OP);         // ALU bypass for MEM ops
     wire mem_wr = instr[7];                             // {0:read, 1:write} MEM
     wire [2:0] mem_rng = instr[6:4];                    // MEM range selector
+    wire quad_op = mem_rng[2];                          // uFork quad-memory operation
     wire d_zero = (d0 == 0);                            // zero check for TOS
     wire [3:0] dev_id = d0[7:4];                        // device id (mem_rng == `MEM_DEV)
     wire [3:0] reg_id = d0[3:0];                        // register id (mem_rng == `MEM_DEV)
 
-    assign uc_wr =
-        ( p_alu && mem_op && mem_rng == `MEM_UC ? mem_wr
-        : 1'b0 );
-    assign uc_waddr =
-        ( p_alu && mem_op && mem_rng == `MEM_UC ? d0[ADDR_SZ-1:0]
-        : -1 );
-    assign uc_wdata =
-        ( p_alu && mem_op && mem_rng == `MEM_UC ? d1
-        : -1 );
+    assign uc_wr = (p_alu && mem_op && mem_rng == `MEM_UC && mem_wr);
+    assign uc_waddr = d0[ADDR_SZ-1:0];
+    assign uc_wdata = d1;
     assign uc_raddr =
         ( p_alu && mem_op && mem_rng == `MEM_UC ? d0[ADDR_SZ-1:0]
         : pc );
@@ -410,6 +424,7 @@ module cpu #(
         ( mem_op && mem_rng == `MEM_UC ? uc_rdata
         : mem_op && mem_rng == `MEM_PC ? uc_rdata
         : mem_op && mem_rng == `MEM_DEV ? { {(DATA_SZ-8){uart_rdata[7]}}, uart_rdata }
+        : mem_op && quad_op ? quad_rdata
         : alu_out );
     wire [2:0] d_se =
         ( ctrl ?
@@ -444,6 +459,16 @@ module cpu #(
     wire [3:0] uart_addr = reg_id;
     wire [7:0] uart_wdata = d1[7:0];
     wire [7:0] uart_rdata;
+
+    wire quad_en = (p_alu && mem_op && quad_op);
+    wire cs_qram = (quad_en && d0[15:14]==2'b01);
+    wire cs_qrom0 = (quad_en && d0[15:12]==4'b0000);
+    wire cs_qrom1 = (quad_en && d0[15:12]==4'b0001);
+    wire quad_wr = mem_wr;
+    wire [11:0] quad_addr = d0[11:0];
+    wire [1:0] quad_field = mem_rng[1:0];
+    wire [15:0] quad_wdata = d1;
+    wire [15:0] quad_rdata;
 
     reg p_alu = 0;                                      // 0: stack-phase, 1: alu-phase
     always @(posedge i_clk) begin

@@ -5,8 +5,8 @@ uFork quad-cell memory interface
     +-------------------+
     | quad_mem          |
     |                   |
---->|i_wr       i_cs_ram|<--
-=A=>|i_addr    i_cs_rom0|<--
+--->|i_wr       i_cs_ram|<---
+=A=>|i_addr    i_cs_rom0|<---
 =2=>|i_field   i_cs_rom1|<---
 =D=>|i_data             |
     |             o_data|=D=>
