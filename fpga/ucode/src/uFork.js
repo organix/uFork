@@ -74,8 +74,7 @@ export const uFork = (asm) => {
   def("uFork_PROXY_T");
   dat("(CONST)", 0x0009);
 
-  def("uFork_STUB_T");
-  dat("(CONST)", 0x000A);
+  def("uFork_STUB_T", "0x0A");
 
   def("uFork_#instr_t");
   dat("(CONST)", 0x000B);
