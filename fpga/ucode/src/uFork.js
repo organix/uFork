@@ -1494,6 +1494,9 @@ export const uFork = (asm) => {
 
   // todo: sponsor <peek> instruction
   //       þar sem <peek> er capability og ekki fixnum
+  def("uFork_instr_sponsor"); // ( kont ip opcode )
+  dat("DROP"); // ( kont ip )
+  // merkill2
 
   // tbd: new instruction for uFork `throw_away_effects`
   //      throws away the accumulated outgoing events and cancels beh update of the actor
