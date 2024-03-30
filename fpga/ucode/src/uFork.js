@@ -47,12 +47,10 @@ export const uFork = (asm) => {
 
   def("uFork_#?", "ZERO"); // aka UNDEF
 
-  def("uFork_()");
-  def("uFork_nil");
-  dat("(CONST)", 0x0001);
+  def("uFork_()", "1");
+  def("uFork_nil", "1");
 
-  def("uFork_#f");
-  dat("(CONST)", 0x0002);
+  def("uFork_#f", "2");
 
   def("uFork_#t");
   dat("(CONST)", 0x0003);
@@ -179,10 +177,10 @@ export const uFork = (asm) => {
   }
 
   def("uFork_isFixnum?"); // ( specimen -- bool )
-  dat("0x8000", "&", "(JMP)", "CLEAN_BOOL");
+  dat("0x8000_&", "(JMP)", "CLEAN_BOOL");
 
   def("uFork_isMutable?"); // ( specimen -- bool )
-  dat("0x4000", "&", "(JMP)", "CLEAN_BOOL");
+  dat("0x4000_&", "(JMP)", "CLEAN_BOOL");
 
   def("uFork_isImmutable?"); // ( specimen -- bool )
   dat("uFork_isMutable?", "INVERT", "EXIT");
