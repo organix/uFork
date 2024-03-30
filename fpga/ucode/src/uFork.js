@@ -12,6 +12,9 @@ import { uFork_quadmem_and_gc } from "./uFork_quadmem.js";
 
 export const uFork = (asm) => {
   asm = uFork_quadmem_and_gc(asm);
+  const hwImplOfQuadMemory =           isDefined("instrset_w/qmem");
+  const hwImplOfQuadMemoryGC =         isDefined("instrset_w/hwgc");
+  const hwImplOfQuadAllotAndFree =     hwImplOfQuadMemoryGC;
   
   const { def, dat, isDefined } = asm;
 
@@ -45,18 +48,16 @@ export const uFork = (asm) => {
   def("uFork_eventQueueAndContQueue");
   dat("(CONST)", eventQueueAndContQueue_qaddr);
 
-  def("uFork_#?", "ZERO"); // aka UNDEF
+  def("uFork_#?", "ZERO"); // aka UNDEF or UNDEFINED
 
   def("uFork_()", "1");
   def("uFork_nil", "1");
 
   def("uFork_#f", "2");
 
-  def("uFork_#t");
-  dat("(CONST)", 0x0003);
+  def("uFork_#t", "3");
 
-  def("uFork_#unit");
-  dat("(CONST)", 0x0004);
+  def("uFork_#unit", "4");
 
   def("uFork_EMPTY_DQ");
   dat("(CONST)", 0x0005);
