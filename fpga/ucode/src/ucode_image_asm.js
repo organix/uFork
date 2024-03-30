@@ -71,6 +71,13 @@ export const minicore = (asm, opts) => {
   def("0x0002", "2");
   def("TWO", "2");
 
+  if (!isDefined("3")) {
+    def("3");
+    dat("(CONST)", 0x0003);
+  }
+  def("0x03", "3");
+  def("0x0003", "3");
+
   def("0x0A");
   dat("(CONST)", 0x0A);
 
