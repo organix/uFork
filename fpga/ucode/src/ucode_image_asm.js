@@ -19,7 +19,7 @@ export const minicore = (asm, opts) => {
   def("@EXECUTE");
   dat("@");
   def("EXECUTE");
-  if (isDefined("instrset_uFork_SM2")) {
+  if (isDefined("instrset_uFork_SM2") || isDefined("instrset_uFork_SM2.1")) {
     dat("0x0FFF_&");
   }
   dat(">R", "EXIT");
@@ -77,6 +77,10 @@ export const minicore = (asm, opts) => {
   }
   def("0x03", "3");
   def("0x0003", "3");
+  def("THREE", "3");
+
+  def("4");
+  dat("CONST", 0x0004);
 
   def("0x0A");
   dat("(CONST)", 0x0A);
