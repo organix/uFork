@@ -1468,9 +1468,10 @@ export const uFork = (asm) => {
   dat("DUP", "0", "=", "(BRZ)", "uFork_instr_end_l1"); // ( kont subopcode )
   // end stop  halts the sponsor configuration this kontinuation runs under
   //           END_HALT gets reported to the sponsor controler
-  dat("DROP");
+  dat("DROP");               // ( kont )
   // todo: insert here END_HALT signal to sponsor controler
-  dat("uFork_HARDHALT"); // for now
+  dat("uFork_E_STOP", "uFork_signal_sponsor_controler");
+  dat("(JMP)", "uFork_instr_end_l3");
   def("uFork_instr_end_l1"); // ( kont subopcode )
   dat("DUP", "1", "=", "(BRZ)", "uFork_instr_end_l2");
   // end commit  commits the effects of this kontinuation to the actor
