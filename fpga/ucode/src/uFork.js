@@ -1494,9 +1494,22 @@ export const uFork = (asm) => {
 
   // todo: sponsor <peek> instruction
   //       þar sem <peek> er capability og ekki fixnum
+  def("uFork_sponsor_peek");
+  dat("(CONST)", 0x4010);
+  
   def("uFork_instr_sponsor"); // ( kont ip opcode )
-  dat("DROP"); // ( kont ip )
-  // merkill2
+  dat("DROP");                // ( kont ip )
+  dat("qy@");                 // ( kont subopcode )
+  dat("DUP", "uFork_sponsor_peek", "=", "(BRZ)", "uFork_instr_sponsor_peek");
+  dat("uFork_fixnum2int");
+  dat("(JMPTBL)", 7);
+  dat("uFork_instr_sponsor_new");     // +0
+  dat("uFork_instr_sponsor_memory");  // +1
+  dat("uFork_instr_sponsor_events");  // +2
+  dat("uFork_instr_sponsor_cycles");  // +3
+  dat("uFork_instr_sponsor_reclaim"); // +4
+  dat("uFork_instr_sponsor_start");   // +5
+  dat("uFork_instr_sponsor_stop");    // +6
 
   // tbd: new instruction for uFork `throw_away_effects`
   //      throws away the accumulated outgoing events and cancels beh update of the actor
