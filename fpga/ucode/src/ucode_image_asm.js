@@ -55,11 +55,21 @@ export const minicore = (asm, opts) => {
     dat("(CONST)", 0x0000);
   }
 
-  def("1");
-  def("0x01");
-  def("0x0001");
-  def("ONE");
-  dat("(CONST)", 0x0001);
+  if (!isDefined("1")) {
+    def("1");
+    dat("(CONST)", 0x0001);
+  }
+  def("0x01", "1");
+  def("0x0001", "1");
+  def("ONE", "1");
+
+  if (!isDefined("2")) {
+    def("2");
+    dat("(CONST)", 0x0002);
+  }
+  def("0x02", "2");
+  def("0x0002", "2");
+  def("TWO", "2");
 
   def("0x0A");
   dat("(CONST)", 0x0A);
@@ -79,11 +89,13 @@ export const minicore = (asm, opts) => {
   def("0x4000");
   dat("(CONST)", 0x4000);
 
-  def("0x8000");
-  dat("(CONST)", 0x8000);
-
   def("0x7FFF");
   dat("(CONST)", 0x7FFF);
+  
+  if (!isDefined("0x8000")) {
+    def("0x8000");
+    dat("(CONST)", 0x8000);
+  }
 
   def("0xFFFE");
   dat("(CONST)", 0xFFFE);
@@ -103,7 +115,9 @@ export const minicore = (asm, opts) => {
   dat("0x8000", "&", "EXIT");
 
   def("0x8000_OR");
-  dat("0x8000", "OR", "EXIT");
+  dat("0x8000");
+  def("(OR)");
+  dat("OR", "EXIT");
 
   def("CLEAN_BOOL");
   dat(">R", "FALSE", "TRUE", "R>", "?:", "EXIT");
