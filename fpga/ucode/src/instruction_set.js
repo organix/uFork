@@ -331,6 +331,7 @@ export const defineInstructionset = (asm, opts = { instrsetName: "uFork_CSM1" })
     def("1",       0x02D6); // LSB
     def("0x8000",  0x02E6); // MSB
     def("2*",      0x0301);
+    def("(CONST)", 0x521F);
 
     def("QUAD_T_FETCH", 0x034F);
     def("QUAD_X_FETCH", 0x035F);
