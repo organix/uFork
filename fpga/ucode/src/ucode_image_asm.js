@@ -32,8 +32,10 @@ export const minicore = (asm, opts) => {
   def("(VAR)");
   dat("R>", "EXIT");
 
-  def("(CONST)"); // ( -- constant )
-  dat("R>", "@", "EXIT");
+  if (!isDefined("(CONST)")) {
+    def("(CONST)"); // ( -- constant )
+    dat("R>", "@", "EXIT");
+  }
 
   def("TRUE");
   def("-1");
@@ -46,11 +48,18 @@ export const minicore = (asm, opts) => {
   def("FALSE");
   def("0x0000");
   def("ZERO");
+  def("0");
   if (isDefined("(FALSE)")) {
     dat("(FALSE)", "EXIT");
   } else {
     dat("(CONST)", 0x0000);
   }
+
+  def("1");
+  def("0x01");
+  def("0x0001");
+  def("ONE");
+  dat("(CONST)", 0x0001);
 
   def("0x0A");
   dat("(CONST)", 0x0A);
