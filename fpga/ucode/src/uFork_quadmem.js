@@ -167,8 +167,11 @@ export const uFork_quadmem_and_gc = (asm) => {
     }
     if (!(asm.isDefined("gcMem@")) && !(asm.isDefined("gcMem!"))) {
       def("uFork_privateGCmem_baseAddr");
-      dat("(CONST)", hereBeyondEnd);
-      hereBeyondEnd = asm.incr(hereBeyondEnd, quadMemSize_in_quads); // per uFork/docs/gc.md
+      dat("(CONST)", "meta_hereBeyondEnd");
+      asm.symbols.redefine(
+        "meta_hereBeyondEnd",
+        asm.incr("meta_hereBeyondEnd", quadMemSize_in_quads)
+      ); // per uFork/docs/gc.md
 
       def("gcMem_common"); // ( quad_ram_offset -- addr )
       dat("uFork_privateGCmem_baseAddr", "+", "EXIT");
