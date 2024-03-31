@@ -27,7 +27,7 @@ export const defineInstructionset = (asm, opts = { instrsetName: "uFork_CSM1" })
   if (opts.instrsetName.includes("w/hwgc")) {
     def("instrset_w/hwgc", 1);
   }
-  if (opts.instrsetName.imcludes("w/debug_io")) {
+  if (opts.instrsetName.includes("w/debug_io")) {
     def("instrset_w/debug_io", 1);
   }
   if (opts.instrsetName.startsWith("FCPU-16") ||
