@@ -540,6 +540,7 @@ export const uFork = (asm) => {
   // todo: insert allot fuel check&burn here taking n into consideration
   // done: insert fixnum type check here for n
   dat("DUP", "uFork_isFixnum?", "(BRNZ)", "uFork_instr_dup_l2"); // ( kont n )
+  def("uFork_instr_dup_l3");
   dat("DROP", "uFork_E_NOT_FIX", "(JMP)", "uFork_signal_sponsor_controler");
   def("uFork_instr_dup_l2");
   dat("uFork_fixnum2int", ">R");          // ( kont ) R:( n )
@@ -574,8 +575,9 @@ export const uFork = (asm) => {
   def("uFork_instr_drop"); // ( kont ip opcode )
   dat("DROP");             // ( kont ip )
   dat("qy@");              // ( kont n )
-  // todo: insert fixnum type tag check here
-  dat(">R");               // ( kont ) R:( count )
+  // done: insert fixnum type tag check here
+  dat("DUP", "uFork_isFixnum?", "(BRZ)", "uFork_instr_dup_l3"); // ( kont n )
+  dat("uFork_fixnum2int", ">R"); // ( kont ) R:( count )
   dat("DUP", "uFork_sp@"); // ( kont stack ) R:( count )
   dat("(JMP)", "uFork_instr_drop_l1");
   def("uFork_instr_drop_l0"); // ( kont stack ) R:( count )
@@ -589,7 +591,8 @@ export const uFork = (asm) => {
   dat("DROP");             // ( kont ip )
   // todo: insert here a memory fuel check&burn here
   dat("qy@");              // ( kont fixnum )
-  // todo: insert isFixnum? check and sponsor signal here
+  // done: insert isFixnum? check and sponsor signal here
+  dat("DUP", "uFork_isFixnum?", "(BRZ)", "uFork_instr_dup_l3"); // ( kont n )
   dat("uFork_fixnum2int"); // ( kont n )
   dat("DUP", "0<");        // ( kont n bool )
   dat("(BRNZ)", "uFork_instr_pick_l0"); // ( kont n )
@@ -624,7 +627,8 @@ export const uFork = (asm) => {
   def("uFork_instr_roll"); // ( kont ip opcode -- )
   dat("DROP");             // ( kont ip )
   dat("qy@");              // ( kont n_fixnum )
-  // todo: insert isFixnum? check and sponsor signal here
+  // done: insert isFixnum? check and sponsor signal here
+  dat("DUP", "uFork_isFixnum?", "(BRZ)", "uFork_instr_dup_l3"); // ( kont n )
   dat("uFork_fixnum2int"); // ( kont n )
   dat("DUP", "0<");        // ( kont n bool )
   dat("(BRNZ)", "uFork_instr_roll_l0"); // ( kont n )
@@ -699,6 +703,12 @@ export const uFork = (asm) => {
   dat("(JMP)", "uFork__push_then_instrTail");
 
   def("uFork_pop_two_fixnums2ints"); // ( kont -- kont uNOS_int uTOS_int )
+  // done: insert fixnum type check here for uFork TOS and uFork NOS items
+  dat("DUP", "uFork_sp@", "DUP", "uFork_car"); // ( kont stack n_fixnum )
+  dat("uFork_isFixnum?", "SWAP", "uFork_cdr"); // ( kont bool next_stack )
+  dat("uFork_car", "uFork_isFixnum?", "&");    // ( kont bool )
+  dat("DUP", "(BRZ)", "uFork_instr_dup_l3");   // ( kont bool )
+  dat("DROP");                                 // ( kont )
   dat("DUP", "uFork_pop");    // ( kont uTOS_fixnum )
   dat("uFork_fixnum2int");    // ( kont uTOS_int )
   dat("OVER", "uFork_pop");   // ( kont uTOS_int uNOS_fixnum )
@@ -708,9 +718,8 @@ export const uFork = (asm) => {
 
   def("uFork_instr_alu__common"); // ( kont subopcode ) R:( raddr_spefic_alu_instr )
   dat("DROP");                    // ( kont )
-  // todo: insert fixnum type check here for TOS and NOS items
-  dat("uFork_pop_two_fixnums2ints"); // ( kont n m )
-  dat("R>", "@EXECUTE");          // do the op
+  dat("uFork_pop_two_fixnums2ints");           // ( kont n m )
+  dat("R>", "@EXECUTE");                       // do the op
   dat("(JMP)", "uFork_instr_alu__common_tail");
 
   def("uFork_instr_alu_and");
@@ -802,7 +811,6 @@ export const uFork = (asm) => {
 
   def("uFork_instr_cmp__common");    // ( kont subopcode ) R:( raddr raddr_op )
   dat("DROP");                       // ( kont )
-  // todo: insert here a check if uFork TOS and NOS are fixnums
   dat("uFork_pop_two_fixnums2ints"); // ( kont NOS_int TOS_int ) R:( raddr raddr_op )
   dat("R>", "@EXECUTE", "(JMP)", "uFork_instr_typeq_l1");
 
@@ -835,13 +843,15 @@ export const uFork = (asm) => {
   def("uFork_instr_jump");  // ( kont ip opcode )
   dat("2DROP");             // ( kont )
   dat("DUP", "uFork_pop");  // ( kont k )
+  // todo: insert a check that k is not fixnum nor an actor
   dat("(JMP)", "uFork_instr_if_l0");
 
   def("uFork_instr_pair"); // ( kont ip opcode )
   dat("DROP");             // ( kont ip )
   dat("qy@");              // ( kont n_fixnum )
   // todo: insert here a sponsor mem fuel check&burn. Fuel usage: 1
-  // todo: insert here a TOS fixnum check
+  // done: insert here a fixnum check
+  dat("DUP", "uFork_isFixnum?", "(BRZ)", "uFork_instr_dup_l3"); // ( kont n )
   dat("uFork_fixnum2int"); // ( kont n )
   dat("DUP", "-1", "=", "(BRNZ)", "uFork_instr_pair_l0");
   dat("1-", "NEGATE", "OVER", "uFork_sp@", "SWAP", "uFork_ndeep"); // ( kont stack@n-1 )
@@ -890,7 +900,8 @@ export const uFork = (asm) => {
   dat("DROP");             // ( kont ip )
   dat("qy@");              // ( kont n_fixnum? )
   // todo: insert here a check to see if TOS value is a pair
-  // todo: insert fixnum check here
+  // done: insert fixnum check here
+  dat("DUP", "uFork_isFixnum?", "(BRZ)", "uFork_instr_dup_l3"); // ( kont n )
   dat("uFork_fixnum2int"); // ( kont n )
   // todo: insert here sponsor mem fuel check&burn
   dat("DUP", "0<", "(BRNZ)", "uFork_instr_part_l0"); // ( kont n )
@@ -916,7 +927,8 @@ export const uFork = (asm) => {
   def("uFork_instr_nth"); // ( kont ip opcode )
   dat("DROP");            // ( kont ip )
   dat("qy@");             // ( kont n_fixnum )
-  // todo: insert here a fixnum check for the immediate param of the uFork instr
+  // done: insert here a fixnum check for the immediate param of the uFork instr
+  dat("DUP", "uFork_isFixnum?", "(BRZ)", "uFork_instr_dup_l3"); // ( kont n )
   dat("uFork_fixnum2int");  // ( kont n )
   dat("OVER", "uFork_pop"); // ( kont n pairlist )
   def("uFork_instr_nth_l0");
@@ -1253,7 +1265,8 @@ export const uFork = (asm) => {
   def("uFork_instr_quad"); // ( kont ip opcode )
   dat("DROP");             // ( kont ip )
   dat("qy@");              // ( kont n_fixnum )
-  // todo: insert here a fixnum typecheck
+  // done: insert here a fixnum typecheck
+  dat("DUP", "uFork_isFixnum?", "(BRZ)", "uFork_instr_dup_l3"); // ( kont n )
   dat("uFork_fixnum2int"); // ( kont n )
   dat("DUP", "0<", "(BRNZ)", "uFork_instr_quad_access");
   dat("DUP", "4", ">", "(BRZ)", "uFork_instr_quad_l0");
@@ -1295,7 +1308,8 @@ export const uFork = (asm) => {
   def("uFork_instr_msg"); // ( kont ip opcode )
   dat("DROP");            // ( kont ip )
   dat("qy@");             // ( kont n_fixnum )
-  // todo: insert here a fixnum typecheck
+  // done: insert here a fixnum typecheck
+  dat("DUP", "uFork_isFixnum?", "(BRZ)", "uFork_instr_dup_l3"); // ( kont n )
   dat("uFork_fixnum2int"); // ( kont n )
   dat("OVER", "qy@", "qy@"); // ( kont n msg )
   dat("(JMP)", "uFork_instr_nth_l0");
@@ -1303,7 +1317,8 @@ export const uFork = (asm) => {
   def("uFork_instr_state"); // ( kont ip opcode )
   dat("DROP");            // ( kont ip )
   dat("qy@");             // ( kont n_fixnum )
-  // todo: insert here a fixnum typecheck
+  // done: insert here a fixnum typecheck
+  dat("DUP", "uFork_isFixnum?", "(BRZ)", "uFork_instr_dup_l3"); // ( kont n )
   dat("uFork_fixnum2int"); // ( kont n )
   dat("OVER", "qy@", "qx@", "qy@");
   dat("(JMP)", "uFork_instr_nth_l0");
@@ -1384,8 +1399,9 @@ export const uFork = (asm) => {
   def("uFork_instr_send"); // ( kont ip opcode )
   dat("DROP");             // ( kont ip )
   dat("qy@");              // ( kont n_fixnum )
-  // todo: insert here fixnum type check
   // todo: insert here a sponsor mem fuel check&burn: 1 quad spent
+  // done: insert here fixnum type check
+  dat("DUP", "uFork_isFixnum?", "(BRZ)", "uFork_instr_dup_l3"); // ( kont n )
   dat("uFork_fixnum2int"); // ( kont n )
   dat("OVER", "uFork_pop", "SWAP"); // ( kont actor n )
   dat("DUP", "-1", "=", "(BRZ)", "uFork_instr_send_l0");
@@ -1405,8 +1421,9 @@ export const uFork = (asm) => {
   def("uFork_instr_signal"); // ( kont ip opcode )
   dat("DROP");               // ( kont ip )
   dat("qy@");                // ( kont n_fixnum )
-  // todo: insert here fixnum type check
   // todo: insert here a sponsor mem fuel check&burn: 1 quad spent
+  // done: insert here fixnum type check
+  dat("DUP", "uFork_isFixnum?", "(BRZ)", "uFork_instr_dup_l3"); // ( kont n )
   dat("uFork_fixnum2int");   // ( kont n )
   dat("OVER", "uFork_pop", "SWAP"); // ( kont actor n )
   dat("DUP", "-1", "=", "(BRZ)", "uFork_instr_signal_l0");
@@ -1425,7 +1442,8 @@ export const uFork = (asm) => {
   def("uFork_instr_new"); // ( kont ip opcode )
   dat("DROP");            // ( kont ip )
   dat("qy@");             // ( kont n_fixnum )
-  // todo: insert here a fixnum type check
+  // done: insert here a fixnum type check
+  dat("DUP", "uFork_isFixnum?", "(BRZ)", "uFork_instr_dup_l3"); // ( kont n )
   dat("uFork_fixnum2int"); // ( kont n )
   // todo: insert here sponsor mem fuel check&burn: 1 quad spend
   dat("DUP", "0", "=", "(BRZ)", "uFork_instr_new_l0"); // ( kont n )
@@ -1463,7 +1481,8 @@ export const uFork = (asm) => {
   def("uFork_instr_beh"); // ( kont ip opcode )
   dat("DROP");            // ( kont ip )
   dat("qy@");             // ( kont n_fixnum )
-  // todo: insert here a fixnum type check
+  // done: insert here a fixnum type check
+  dat("DUP", "uFork_isFixnum?", "(BRZ)", "uFork_instr_dup_l3"); // ( kont n )
   dat("uFork_fixnum2int"); // ( kont n )
   dat("DUP", "0", "=", "(BRZ)", "uFork_instr_beh_l0"); // ( kont n )
   dat("DROP", "uFork_()", "OVER", "uFork_pop"); // ( kont staða hegðun )
