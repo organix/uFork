@@ -646,7 +646,8 @@ export const uFork = (asm) => {
 
   def("uFork_instr_alu"); // ( kont ip opcode )
   dat("DROP", "qy@");     // ( kont subopcode )
-  // todo: insert here a fixnum type check
+  // done: insert here a fixnum type check
+  dat("DUP", "uFork_isFixnum?", "(BRZ)", "uFork_no_such_opcode"); // ( kont ip subopcode_fixnum )
   dat("uFork_fixnum2int");
   dat("(JMPTBL)");
   dat(13); // nr of entries
@@ -663,8 +664,8 @@ export const uFork = (asm) => {
   dat("uFork_instr_alu_asr");    // +10
   dat("uFork_instr_alu_rol");    // +11
   dat("uFork_instr_alu_ror");    // +12
-  // todo: insert sponsor err signalling here
-  dat("EXIT");
+  // done: insert here an error signal to sponsor controller
+  dat("(JMP)", "uFork_no_such_opcode"); // ( kont ip subopcode )
 
   def("uFork_instr_alu_not"); // ( kont subopcode )
   dat("DROP");
@@ -695,7 +696,7 @@ export const uFork = (asm) => {
   dat("uFork_instr_alu__common", "(&)");
 
   def("uFork_instr_alu_or");
-  dat("uFork_instr_alu__common", "OR");
+  dat("uFork_instr_alu__common", "(OR)");
 
   def("uFork_instr_alu_xor");
   dat("uFork_instr_alu__common", "(XOR)");
@@ -749,7 +750,10 @@ export const uFork = (asm) => {
   dat("(JMP)", "uFork_instr_typeq_l2");
 
   def("uFork_instr_cmp");     // ( kont ip opcode )
-  dat("DROP", "qy@");         // ( kont subopcode )
+  dat("DROP", "DUP", "qy@");  // ( kont subopcode )
+  dat("DUP", "uFork_isFixnum?", "(BRZ)", "uFork_no_such_opcode"); // ( kont ip subopcode_fixnum )
+  dat("uFork_fixnum2int");
+  dat("NIP");
   dat("(JMPTBL)");
   dat(6);
   dat("uFork_instr_cmp_eq"); // +0
@@ -758,8 +762,8 @@ export const uFork = (asm) => {
   dat("uFork_instr_cmp_lt"); // +3
   dat("uFork_instr_cmp_le"); // +4
   dat("uFork_instr_cmp_ne"); // +5
-  // todo: insert sponsor err signalling here
-  dat("EXIT");
+  // done: insert sponsor err signalling here
+  dat("DUP", "(JMP)", "uFork_no_such_opcode"); // ( kont item item )
 
   def("uFork_pop2items"); // ( kont -- kont u v )
   dat("DUP", "uFork_pop", "OVER", "uFork_pop");
@@ -923,15 +927,19 @@ export const uFork = (asm) => {
   
   def("uFork_instr_dict"); // ( kont ip opcode -- )
   dat("DROP");             // ( kont ip )
-  dat("qy@");              // ( kont subopcode )
+  dat("DUP");
+  dat("qy@");              // ( kont ip subopcode )
+  dat("DUP", "uFork_isFixnum?", "(BRZ)", "uFork_no_such_opcode"); // ( kont ip opcode_fixnum )
+  dat("uFork_fixnum2int");
+  dat("NIP");
   dat("(JMPTBL)", 5);
   dat("uFork_instr_dict_has");
   dat("uFork_instr_dict_get");
   dat("uFork_instr_dict_add");
   dat("uFork_instr_dict_set");
   dat("uFork_instr_dict_del");
-  // todo: insert here err signalling
-  dat("EXIT");
+  // done: insert here err signalling
+  dat("DUP", "(JMP)", "uFork_no_such_opcode"); // ( kont ip opcode_fixnum )
 
   def("uFork_dict_has");  // ( key dict -- bool )
   dat("FALSE", "-ROT");   // ( bool key dict )
@@ -1146,9 +1154,12 @@ export const uFork = (asm) => {
 
   def("uFork_instr_deque"); // ( kont ip opcode )
   dat("DROP");              // ( kont ip )
+  dat("DUP");               // ( kont ip ip )
   dat("qy@");               // ( kont subopcode_fixnum )
-  // todo: insert here a fixnum type check
+  // done: insert here a fixnum type check
+  dat("DUP", "uFork_isFixnum?", "(BRZ)", "uFork_no_such_opcode"); // ( kont ip opcode_fixnum )
   dat("uFork_fixnum2int");  // ( kont subopcode )
+  dat("NIP");
   dat("(JMPTBL)", 7);       //
   dat("uFork_instr_deque_new");
   dat("uFork_instr_deque_empty");
@@ -1157,8 +1168,8 @@ export const uFork = (asm) => {
   dat("uFork_instr_deque_put");
   dat("uFork_instr_deque_pull");
   dat("uFork_instr_deque_len");
-  // todo: insert here an err signal to sponsor
-  dat("EXIT");
+  // done: insert here an err signal to sponsor
+  dat("DUP", "(JMP)", "uFork_no_such_opcode");
 
   def("uFork_instr_deque_new"); // ( kont subopcode )
   dat("DROP");                  // ( kont )
@@ -1278,15 +1289,19 @@ export const uFork = (asm) => {
 
   def("uFork_instr_my"); // ( kont ip opcode )
   dat("DROP");           // ( kont ip )
-  dat("qy@");            // ( kont subopcode )
-  // todo: insert here a fixnum type check
+  dat("DUP");            // ( kont ip ip )
+  dat("qy@");            // ( kont ip subopcode )
+  // done: insert here a fixnum type check
+  dat("DUP", "uFork_isFixnum?", "(BRZ)", "uFork_no_such_opcode"); // ( kont ip opcode_fixnum )
   dat("uFork_fixnum2int");
+  dat("NIP");
   dat("(JMPTBL)", 3);
   dat("uFork_instr_my_self");  // +0
   dat("uFork_instr_my_beh");   // +1
   dat("uFork_instr_my_state"); // +2
-  // todo: insert here error signalling to sponsor
-  dat("EXIT");
+  // done: insert here error signalling to sponsor
+  dat("DUP", "(JMP)", "uFork_no_such_opcode"); // ( kont item item )
+
 
   def("uFork_instr_my_self"); // ( kont subopcode )
   dat("DROP");                // ( kont )
@@ -1462,9 +1477,12 @@ export const uFork = (asm) => {
 
   def("uFork_instr_end"); // ( kont ip opcode )
   dat("DROP");
+  dat("DUP");
   dat("qy@");             // ( kont subopcode_fixnum )
-  // todo: insert fixnum type check here
+  // done: insert fixnum type check here
+  dat("DUP", "uFork_isFixnum?", "(BRZ)", "uFork_no_such_opcode"); // ( kont ip opcode_fixnum )
   dat("uFork_fixnum2int"); // ( kont subopcode )
+  dat("NIP");
   dat("DUP", "-1", "=", "(BRZ)", "uFork_instr_end_l0");
   // end abort  acts like the instigating event message was thrown away
   //            reason gets reported to attached debugger
@@ -1497,8 +1515,8 @@ export const uFork = (asm) => {
   dat("uFork_enqueueEvents"); // ( )
   dat("(JMP)", "uFork_instr_end_l3");
   def("uFork_instr_end_l2");
-  // todo: signal sponsor controler that an errornous subopcode was encountered
-  dat("uFork_HARDHALT");
+  // done: signal sponsor controler that an errornous subopcode was encountered
+  dat("DUP", "(JMP)", "uFork_no_such_opcode");
 
   // todo: sponsor <peek> instruction
   //       þar sem <peek> er capability og ekki fixnum
@@ -1507,9 +1525,12 @@ export const uFork = (asm) => {
   
   def("uFork_instr_sponsor"); // ( kont ip opcode )
   dat("DROP");                // ( kont ip )
-  dat("qy@");                 // ( kont subopcode )
+  dat("DUP");                 // ( kont ip ip )
+  dat("qy@");                 // ( kont ip subopcode )
   dat("DUP", "uFork_sponsor_peek", "=", "(BRZ)", "uFork_instr_sponsor_peek");
+  dat("DUP", "uFork_isFixnum?", "(BRZ)", "uFork_no_such_opcode"); // ( kont ip subopcode_fixnum )
   dat("uFork_fixnum2int");
+  dat("NIP");
   dat("(JMPTBL)", 7);
   dat("uFork_instr_sponsor_new");     // +0
   dat("uFork_instr_sponsor_memory");  // +1
@@ -1518,12 +1539,13 @@ export const uFork = (asm) => {
   dat("uFork_instr_sponsor_reclaim"); // +4
   dat("uFork_instr_sponsor_start");   // +5
   dat("uFork_instr_sponsor_stop");    // +6
+  dat("DUP", "(JMP)", "uFork_no_such_opcode");
 
   // tbd: new instruction for uFork `throw_away_effects`
   //      throws away the accumulated outgoing events and cancels beh update of the actor
 
-  def("uFork_instr__subroutine_call"); // ( kont ip opcode -- )
   if (uForkSubroutines) {
+    def("uFork_instr__subroutine_call"); // ( kont ip opcode -- )
     dat("DROP"); // ( kont ip )
     // todo: insert allot fuel check&burn here
     dat("DUP", "qz@", ">R"); // ( kont ip ) R:( next_ip )
@@ -1535,12 +1557,8 @@ export const uFork = (asm) => {
     dat("uFork_cons");       // ( kont uFork_new_rp )
     dat("SWAP", "uFork_rp!");
     dat("EXIT");
-  } else {
-    dat("(JMP)", "uFork_no_such_opcode");
-  }
-
-  def("uFork_instr__subroutine_exit"); // ( kont ip opcode -- )
-  if (uForkSubroutines) {
+    
+    def("uFork_instr__subroutine_exit"); // ( kont ip opcode -- )
     dat("2DROP");     // ( kont ) 2DROP because there is no next_ip in ip
     dat("DUP");       // ( kont kont )
     dat("uFork_rp@"); // ( kont uFork_rstack )
@@ -1558,32 +1576,22 @@ export const uFork = (asm) => {
     dat("SWAP");      // ( resume_ip kont )
     dat("qt!");       // ( )
     dat("EXIT");
-  } else {
-    dat("(JMP)", "uFork_no_such_opcode");
-  }
 
-  def("uFork_instr__rpush"); // ( kont ip opcode )
-  if (uForkSubroutines) {
+    def("uFork_instr__rpush"); // ( kont ip opcode )
     dat("2DROP");            // ( kont )
     dat("DUP");              // ( kont kont )
     dat("uFork_pop");        // ( kont item )
     dat("OVER");             // ( kont item kont )
     dat("uFork_rpush");      // ( kont )
     dat("(JMP)", "uFork_instr__common_longer_tail");
-  } else {
-    dat("(JMP)", "uFork_no_such_opcode");
-  }
 
-  def("uFork_instr__rpop"); // ( kont ip opcode )
-  if (uForkSubroutines) {
+    def("uFork_instr__rpop"); // ( kont ip opcode )
     dat("2DROP");            // ( kont )
     dat("DUP");              // ( kont kont )
     dat("uFork_rpop");       // ( kont item )
     dat("OVER");             // ( kont item kont )
     dat("uFork_push");      // ( kont )
     dat("(JMP)", "uFork_instr__common_longer_tail");
-  } else {
-    dat("(JMP)", "uFork_no_such_opcode");
   }
 
   // this definition must be the last one
