@@ -170,7 +170,7 @@ export const uFork_quadmem_and_gc = (asm) => {
       dat("(CONST)", "meta_hereBeyondEnd");
       asm.symbols.redefine(
         "meta_hereBeyondEnd",
-        asm.incr("meta_hereBeyondEnd", quadMemSize_in_quads)
+        asm.incr("meta_hereBeyondEnd", "meta_quadMemSize_in_quads"),
       ); // per uFork/docs/gc.md
 
       def("gcMem_common"); // ( quad_ram_offset -- addr )
