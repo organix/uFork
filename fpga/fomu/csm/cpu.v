@@ -149,7 +149,7 @@ module cpu #(
         /*
         $readmemh("ucode_rom.mem", ucode);
         */
-        ucode[12'h000] = 16'h8020;//16'h8002;//UC_NOP;
+        ucode[12'h000] = 16'h8040;//16'h8002;//UC_NOP;
         ucode[12'h001] = UC_FAIL;
         ucode[12'h002] = UC_TRUE;
         ucode[12'h003] = UC_DUP;
@@ -204,6 +204,43 @@ module cpu #(
         ucode[12'h034] = 16'hA033;                      // char
         ucode[12'h035] = UC_SET_TX;                     // --
         ucode[12'h036] = 16'h8030;
+        //
+        // uFork quad-space
+        //
+        ucode[12'h040] = UC_LIT;                        // $BE11
+        ucode[12'h041] = 16'hBE11;
+        ucode[12'h042] = UC_LIT;                        // ^00FF
+        ucode[12'h043] = 16'h00FF;
+        ucode[12'h044] = 16'h09DF;                      // X!
+        ucode[12'h045] = UC_LIT;                        // ^00FF
+        ucode[12'h046] = 16'h00FF;
+        ucode[12'h047] = 16'h035F;                      // X@
+        ucode[12'h048] = UC_LIT;                        // $CE11
+        ucode[12'h049] = 16'hCE11;
+        ucode[12'h04A] = UC_XOR;                        // EQ?
+        ucode[12'h04B] = 16'hA04D;                      // BZ $04D
+        ucode[12'h04C] = UC_FAIL;                       // FAIL
+        ucode[12'h04D] = 16'h8000;                      // jump $000
+/*
+    initial begin    //    wr, waddr,    wdata,    rd, raddr,   expect,  cmp  next
+        script[STOP] = { 1'b0, 8'h00, 16'h0000,  1'b0, 8'h00, 16'h0000, 1'b0, STOP };
+        script[4'h1] = { 1'b0, 8'h00, 16'h0000,  1'b0, 8'h00, 16'h0000, 1'b0, 4'h2 };
+        script[4'h2] = { 1'b1, 8'hFF, 16'hBE11,  1'b0, 8'h00, 16'h0000, 1'b0, 4'h3 };
+        script[4'h3] = { 1'b1, 8'h95, 16'hC0DE,  1'b0, 8'h00, 16'h0000, 1'b0, 4'h4 };
+        script[4'h4] = { 1'b0, 8'h00, 16'h0000,  1'b1, 8'hFF, 16'h0000, 1'b0, 4'h5 };
+        script[4'h5] = { 1'b0, 8'h00, 16'h0000,  1'b1, 8'h95, 16'hBE11, 1'b1, 4'h6 };
+        script[4'h6] = { 1'b0, 8'h00, 16'h0000,  1'b0, 8'h00, 16'hC0DE, 1'b1, 4'h7 };
+        script[4'h7] = { 1'b1, 8'hFF, 16'hFADE,  1'b0, 8'h00, 16'h0000, 1'b0, 4'h8 };
+        script[4'h8] = { 1'b0, 8'h00, 16'h0000,  1'b1, 8'hFF, 16'h0000, 1'b0, 4'h9 };
+        script[4'h9] = { 1'b0, 8'h00, 16'h0000,  1'b0, 8'h00, 16'hFADE, 1'b1, 4'hA };
+        script[4'hA] = { 1'b1, 8'hFF, 16'hDEAD,  1'b0, 8'h00, 16'h0000, 1'b0, 4'hB };
+        script[4'hB] = { 1'b0, 8'h00, 16'h0000,  1'b1, 8'hFF, 16'h0000, 1'b0, 4'hC };
+        script[4'hC] = { 1'b0, 8'h00, 16'h0000,  1'b0, 8'h00, 16'hDEAD, 1'b1, 4'hD };
+        script[4'hD] = { 1'b0, 8'h00, 16'h0000,  1'b0, 8'h00, 16'h0000, 1'b0, 4'hE };
+        script[4'hE] = { 1'b0, 8'h00, 16'h0000,  1'b0, 8'h00, 16'h0000, 1'b0, 4'hF };
+        script[DONE] = { 1'b0, 8'h00, 16'h0000,  1'b0, 8'h00, 16'h0000, 1'b0, STOP };
+    end
+*/
         //
         // ...
         //
