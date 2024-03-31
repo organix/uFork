@@ -136,7 +136,10 @@ export const uFork_quadmem_and_gc = (asm) => {
         dat("(CONST)", 0x1000);
       } else {
         dat("(CONST)", "meta_hereBeyondEnd");
-        asm.symbols.redefine("meta_hereBeyondEnd", asm.incr("meta_hereBeyondEnd"), asm.deferedOp.intDivide("meta_quadMemSize_in_cells", 8)));
+        asm.symbols.redefine(
+          "meta_hereBeyondEnd",
+          asm.incr("meta_hereBeyondEnd", asm.deferedOp.intDivide("meta_quadMemSize_in_cells", 8))
+        );
       }
 
       def("gcMem_common"); // ( quad_ram_addr -- bit_offset addr )
