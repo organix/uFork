@@ -209,7 +209,7 @@ export const minicore = (asm, opts) => {
   def("(BREXIT)_l0");
   dat("EXIT");
   
-  if (!isDefined("(LIT)") {
+  if (!isDefined("(LIT)")) {
     def("(LIT)"); // literal ( -- item )
     dat("R>", "DUP", "1+", ">R", "@", "EXIT");
   }
