@@ -243,7 +243,7 @@ export const uFork = (asm) => {
   } else {
     def("uFork_outOfQuadMemory"); // ( item -- )
     dat("DROP");
-    dat("uFork_gcStopTheWorld"):
+    dat("uFork_gcStopTheWorld");
     // deliberate fallthrough to uFork_allot for a secound quad allot attempt but now after gc was done.
   }
 
