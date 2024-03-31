@@ -337,8 +337,7 @@ export const uFork = (asm) => {
   dat("DUP", "qz@");      // ( E_* sponsor signal )
   dat("DUP", "uFork_#?", "=", "(BRNZ)", "uFork_HALTCORE"); // because there is no one to signal
   dat(">R", "qz!", "R>"); // ( signal )
-  dat("uFork_enqueueEvents"); // ( )
-  dat("EXIT");
+  dat("(JMP)", "uFork_enqueueEvents"); // ( )
 
   def("uFork_isContHalted?"); // ( kont -- kont bool )
   dat("DUP");      // ( kont kont )
@@ -383,13 +382,23 @@ export const uFork = (asm) => {
   // done: insert sponsor cycles fuel check&burn here.
   dat("uFork_sponsor_cycles_check&burn", "RDROP");
   dat("DUP", "qt@");         // ( kont ip )
-  // todo: insert ip #instr_t check here
+  // done: insert ip #instr_t check here
+  dat("DUP", "qt@", "uFork_#instr_t", "=", "(BRNZ)", "uFork_fetchAndExec_l0");
+  dat("DROP", "uFork_E_NOT_EXE", "(JMP)", "uFork_signal_sponsor_controler");
+  def("uFork_fetchAndExec_l0"); // ( kont ip )
+  //
   dat("DUP", "qx@");         // ( kont ip opcode )
   // dat("(JMP)", "uFork_doInstr"); fallthrough
-  // def("uFork_doInstr"); // ( opcode_fixnum -- )
-  dat("uFork_fixnum2int"); // ( opcode )
+  // def("uFork_doInstr"); // ( kont ip opcode_fixnum -- )
+  // done: insert instruction being an fixnum or within 'bounds'
+  dat("DUP", "uFork_isFixnum?", "(BRZ)", "uFork_no_such_opcode"); // ( kont ip opcode_fixnum )
+  dat("uFork_fixnum2int"); // ( kont ip opcode )
   dat("(JMPTBL)");
-  dat(37); // number of base instructions
+  if (uForkSubroutines) {
+    dat(37);
+  } else {
+    dat(32); // number of base instructions
+  }
   dat("uFork_instr_debug");   // +0
   dat("uFork_instr_jump");    // +1
   dat("uFork_instr_push");    // +2
@@ -422,17 +431,17 @@ export const uFork = (asm) => {
   dat("uFork_instr_beh");     // +29
   dat("uFork_instr__error");  // +30
   dat("uFork_instr__error");  // +31
-  
-  dat("uFork_instr__rpush");  // +32
-  dat("uFork_instr__rpop");   // +33
-  dat("uFork_instr__subroutine_call"); // +34
-  dat("uFork_instr__subroutine_exit"); // +35
-  dat("uFork_instr_nop");     // +36
-
-  def("uFork_instr__error");
+  if (uForkSubroutines) {
+    dat("uFork_instr__rpush");  // +32
+    dat("uFork_instr__rpop");   // +33
+    dat("uFork_instr__subroutine_call"); // +34
+    dat("uFork_instr__subroutine_exit"); // +35
+    dat("uFork_instr_nop");     // +36
+  }
+  def("uFork_instr__error");   // ( kont ip opcode )
   def("uFork_no_such_opcode"); // ( kont ip opcode )
-  // todo: cause a error signal
-  dat("EXIT");
+  // done: cause a error signal   tbd: debug hugdettan?
+  dat("2DROP", "uFork_E_BOUNDS", "(JMP)", "uFork_signal_sponsor_controler");
 
   def("uFork_cons"); // ( item tail -- pair_quad )
   dat("uFork_allot"); // ( i t qa )
