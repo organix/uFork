@@ -12,7 +12,7 @@ import { defineInstructionset } from "./instruction_set.js";
 export const minicore = (asm, opts) => {
   const { def, dat, isDefined } = asm;
 
-  if (!isDefined("(JMP)") {
+  if (!isDefined("(JMP)")) {
     def("(JMP)"); // JuMP
     dat("R>");
   }
