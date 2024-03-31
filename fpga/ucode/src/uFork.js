@@ -38,8 +38,26 @@ export const uFork = (asm) => {
   dat("uFork_gcOneStep"); // ( -- )
   dat("EXIT");
 
+  def("uFork_daliclock_count");
+  dat("(VAR)", 0x0000, 0x0000);
+
+  def("uFork_daliclock_tick");  // ( -- )
+  dat("uFork_daliclock_count"); // ( ucode_addr )
+  dat("1+");                    // ( ucode_addr+1 )
+  dat("@");                     // ( count_lower )
+  dat("1+");                    // ( count_lower+1 )
+  dat("DUP");                   // ( count_lower+1 count_lower+1 )
+  dat("uFork_daliclock_count"); // ( count_lower+1 count_lower+1 ucode_addr )
+  dat("1+");                    // ( count_lower+1 count_lower+1 ucode_addr+1 )
+  dat("!");                     // ( count_lower+1 )
+  dat("(BRZ)", "uFork_daliclock_tick_l0");
+  dat("EXIT");
+  def("uFork_daliclock_tick_l0");
+  dat("uFork_daliclock_count", "@", "1+", "uFork_daliclock_count", "!", "EXIT");
+
   def("uFork_checkPendingInterrupts");
-  // nothing here yet
+  dat("uFork_daliclock_tick");
+  // more to come
   dat("EXIT");
 
   def("uFork_memoryDescriptor");
@@ -519,8 +537,11 @@ export const uFork = (asm) => {
   def("uFork_instr_dup"); // ( kont ip opcode )
   dat("DROP");            // ( kont ip )
   dat("qy@");             // ( kont n )
-  // todo: insert fixnum type check here for n
   // todo: insert allot fuel check&burn here taking n into consideration
+  // done: insert fixnum type check here for n
+  dat("DUP", "uFork_isFixnum?", "(BRNZ)", "uFork_instr_dup_l2"); // ( kont n )
+  dat("DROP", "uFork_E_NOT_FIX", "(JMP)", "uFork_signal_sponsor_controler");
+  def("uFork_instr_dup_l2");
   dat("uFork_fixnum2int", ">R");          // ( kont ) R:( n )
   dat("DUP", "uFork_sp@", "uFork_allot"); // ( kont stack tmp ) R:( n )
   dat("DUP", "R>", "SWAP", ">R", ">R");   // ( kont stack tmp ) R:( tmp1st n )
