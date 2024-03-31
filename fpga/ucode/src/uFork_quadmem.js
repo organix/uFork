@@ -427,8 +427,20 @@ export const uFork_quadmem_and_gc = (asm) => {
       dat("DROP", "DUP", "uFork_gc_offset2quadRamAddr", "uFork_free"); // ( phase offset )
       dat("uFork_gc_free_mark", "SWAP", "gcMem!");
       dat("(JMP)", "uFork_gc_phase_common");
+
+      def("uFork_gc_phase");
+      dat("(VAR)", 0x0000);
       
       def("uFork_gcOneStep"); // ( -- )
+      dat("uFork_gc_phase", "@");
+      dat("(JMPTBL)", 4);
+      dat("uFork_gc_mark_setup");  // 0
+      dat("uFork_gc_mark");        // 1
+      dat("uFork_gc_sweep_setup"); // 2
+      dat("uFork_gc_sweep");       // 3
+      def("uFork_gc_phase_common");
+      dat("3", "&");
+      dat("uFork_gc_phase", "!", "EXIT");
 
     } else {
       throw new Error("garbage collection isnt implemented in hardware and neither of the two gc algorithms have been selected  (uFork_gc_algo1 or uFork_gc_algo2)");
