@@ -22,5 +22,10 @@ Skipanasett:
 
  Skipun | Samskiptamynd | Lýsing 
 --------|---------------|--------
- setja t part af quad | t<bil><hextala 4 stafir><bil><hextala 4 stafir>\n | fyrri talan er gildið og sú seinni quad vistfangið |
+ setja t part af quad | t<hextala 4 stafir><hextala 4 stafir>\n | fyrri talan er gildið og sú seinni quad vistfangið 
+ setja x part af quad | x<hextala 4 stafir><hextala 4 stafir>\n | sama
+ setja y part af quad | y<hextala 4 stafir><hextala 4 stafir>\n | sama
+ setja z part af quad | z<hextala 4 stafir><hextala 4 stafir>\n | sama
+ skrefa uFork keyrslulykkju x margar ítranir áfram | s<hextala 4 stafir>\n | talan seigir til um hve margar ítranir á að keyra
+ ákalla wozmon | w\n | ef wozmon er hluti af ucode myndinni þá skipta yfir í hann með ákalli
 
