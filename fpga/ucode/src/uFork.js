@@ -768,7 +768,7 @@ export const uFork = (asm) => {
   dat("uFork_instr_cmp__common", ">=");
 
   def("uFork_instr_cmp_gt");
-  dat("uFork_instr_cmp__cpmmon", ">");
+  dat("uFork_instr_cmp__common", ">");
 
   def("uFork_instr_if");    // ( kont ip opcode -- )
   dat("DROP");              // ( kont ip )
