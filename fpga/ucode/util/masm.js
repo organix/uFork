@@ -182,6 +182,9 @@ export const makeAssembler = (opts) => {
     if (((typeof a) == "number") && ((typeof b) == "number")) {
       return (a | b);
     }
+    if (((typeof a) == "function") || ((typeof b) == "function")) {
+      throw new Error("not yet implemented!");
+    }
     a = Promise.resolve(a);
     b = Promise.resolve(b);
     return Promise.all([a, b]).then(([a_real, b_real]) => (a_real | b_real));
@@ -195,6 +198,9 @@ export const makeAssembler = (opts) => {
     }
     if (((typeof a) == "number") && ((typeof b) == "number")) {
       return (a & b);
+    }
+    if (((typeof a) == "function") || ((typeof b) == "function")) {
+      throw new Error("not yet implemented!");
     }
     a = Promise.resolve(a);
     b = Promise.resolve(b);
@@ -210,6 +216,9 @@ export const makeAssembler = (opts) => {
     if (((typeof a) == "number") && ((typeof b) == "number")) {
       return (a + b);
     }
+    if (((typeof a) == "function") || ((typeof b) == "function")) {
+      throw new Error("not yet implemented!");
+    }
     a = Promise.resolve(a);
     b = Promise.resolve(b);
     return Promise.all([a, b]).then(([a_real, b_real]) => (a_real + b_real));
@@ -224,6 +233,9 @@ export const makeAssembler = (opts) => {
     }
     if (((typeof a) == "number") && ((typeof b) == "number")) {
       return (a - b);
+    }
+    if (((typeof a) == "function") || ((typeof b) == "function")) {
+      throw new Error("not yet implemented!");
     }
     a = Promise.resolve(a);
     b = Promise.resolve(b);
@@ -245,6 +257,9 @@ export const makeAssembler = (opts) => {
     if (((typeof a) == "number") && ((typeof b) == "number")) {
       return (a == b);
     }
+    if (((typeof a) == "function") || ((typeof b) == "function")) {
+      throw new Error("not yet implemented!");
+    }
     a = Promise.resolve(a);
     b = Promise.resolve(b);
     return Promise.all([a, b]).then(([a_real, b_real]) => (a_real == b_real));
@@ -258,6 +273,9 @@ export const makeAssembler = (opts) => {
     }
     if (((typeof divident) == "number") && ((typeof divisor) == "number")) {
       return Math.ceil(divident / divisor);
+    }
+    if (((typeof divident) == "function") || ((typeof divisor) == "function")) {
+      throw new Error("not yet implemented!");
     }
     divident = Promise.resolve(divident);
     divisor  = Promise.resolve(divisor);
