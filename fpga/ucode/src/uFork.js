@@ -97,7 +97,7 @@ export const uFork = (asm) => {
   def("uFork_E_CPU_LIM", "-12"); // Sponsor instruction limit reached
   def("uFork_E_MSG_LIM", "-13"); // Sponsor event limit reached
   def("uFork_E_ASSERT",  "-14"); // assertion failed
-  def("uFork_E_STOP",  . "-15"); // actor stopped
+  def("uFork_E_STOP",    "-15"); // actor stopped
 
   def("uFork_sp@"); // ( kont -- uFork_stack_qaddr )
   if (uForkSubroutines) {
