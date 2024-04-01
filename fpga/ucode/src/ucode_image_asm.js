@@ -94,6 +94,9 @@ export const minicore = (asm, opts) => {
   def("0x41")
   dat("(CONST)", 0x41);
 
+  def("0xFF");
+  dat("(CONST)", 0xFF);
+
   def("0x0FFF");
   dat("(CONST)", 0x0FFF);
 
@@ -110,6 +113,16 @@ export const minicore = (asm, opts) => {
 
   def("0xFFFE");
   dat("(CONST)", 0xFFFE);
+
+  def("4&");
+  def("4_&");
+  dat("4", "&", "EXIT");
+
+  def("0x0F_&");
+  dat("0x0F", "&", "EXIT");
+
+  def("0xFF_&");
+  dat("0xFF", "&", "EXIT");
 
   def("0x0FFF_&");
   dat("0x0FFF", "&", "EXIT");
@@ -224,11 +237,15 @@ export const minicore = (asm, opts) => {
     dat(">R", "SWAP", "R>", "SWAP", "EXIT");
   }
 
-  def("-ROT"); // ( a b c -- c a b )
-  dat("SWAP", ">R", "SWAP", "R>", "EXIT");
+  if (!isDefined("-ROT")) {
+    def("-ROT"); // ( a b c -- c a b )
+    dat("SWAP", ">R", "SWAP", "R>", "EXIT");
+  }
 
-  def("2DUP"); // ( a b -- a b a b )
-  dat("OVER", "OVER", "EXIT");
+  if (!isDefined("2DUP")) {
+    def("2DUP"); // ( a b -- a b a b )
+    dat("OVER", "OVER", "EXIT");
+  }
 
   if (!isDefined("2DROP")) {
     def("2DROP");
@@ -240,8 +257,10 @@ export const minicore = (asm, opts) => {
     dat("SWAP", "DROP", "EXIT");
   }
 
-  def("TUCK"); // ( a b -- b a b )
-  dat("SWAP", "OVER", "EXIT");
+  if (!isDefined("TUCK")) {
+    def("TUCK"); // ( a b -- b a b )
+    dat("SWAP", "OVER", "EXIT");
+  }
 
   if (!isDefined("R@")) {
     def("R@"); // ( -- a ) R:( a ra -- a )
@@ -316,7 +335,7 @@ export const minicore = (asm, opts) => {
   dat("EXIT");
 
   def("15<<");
-  dat("0x0F", "<<", "EXIT");
+  dat("1_&", "1RBR", "EXIT");
 
   def(">>"); // ( u n -- u>>n )  same lazy way
   dat("0x0F_&");
@@ -327,8 +346,8 @@ export const minicore = (asm, opts) => {
   dat("(NEXT)", ">>_l0", "EXIT");
 
   def("15>>");
-  dat("0x0F", ">>", "EXIT");
-
+  dat("1_&", "1LBR", "EXIT");
+  
   def("LBR"); // ( u n -- u<<>n )  same lazy way
   def("<<>");
   dat("0x0F_&");
