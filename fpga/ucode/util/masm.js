@@ -280,15 +280,15 @@ export const makeAssembler = (opts) => {
     const errs = makeArrayFromIterator(syms.entries()).reduce((acc, [sym, val]) => {
       if ((typeof val) == "object") {
         if (val.promise != undefined) {
-          console.log(`villuleit2: '${sym}' er '${val}'`);
-          console.dir(val);
+          console.log(`villuleit: '${sym}' er '${val}'`);
+          // console.dir(val);
           acc.push(new Error(`symbol ${sym} is not defined`));
         }
       }
       return acc;
     }, []);
     if (errs.length > 0) {
-      done_reject(errs.map(Promise.reject));
+      done_reject(errs.map((item) => Promise.reject(item)));
     }
     // iterate through the image, looking for promises
     makeArrayFromIterator(image.entries()).forEach(([addr, val]) => {
