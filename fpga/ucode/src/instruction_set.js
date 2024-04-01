@@ -293,7 +293,7 @@ export const defineInstructionset = (asm, opts = { instrsetName: "uFork_SM2.1" }
     def("(CONST)", 0x521F);
     def("EXIT",    0x5000);
     const defineEvaluateInstruction = (sym, val) => {
-      console.log(`furðuvilluaflúsun1: ${sym} = ${val}`);
+      // console.log(`furðuvilluaflúsun1: ${sym} = ${val}`);
       def(sym, (asm) => {
         const myval = val;
         const here = asm.addr;
@@ -310,7 +310,7 @@ export const defineInstructionset = (asm, opts = { instrsetName: "uFork_SM2.1" }
         };
         return [myval, { resolve }];
       });
-      console.log(`furðuvilluaflúsun2: ${sym} = ${asm.symbols.lookup(sym)}`);
+      // console.log(`furðuvilluaflúsun2: ${sym} = ${asm.symbols.lookup(sym)}`);
     };
     const defEvalInstr = defineEvaluateInstruction;
     
