@@ -111,47 +111,33 @@ export const uFork = (asm) => {
   def("uFork_E_OK", "ZERO"); // not an error
   def("uFork_E_FAIL", "-1"); // general failure
 
-  def("uFork_E_BOUNDS");  // out of bounds
-  dat("(CONST)", 0xFFFE); // -2
+  def("uFork_E_BOUNDS", "-2");  // out of bounds
 
-  def("uFork_E_NO_MEM");  // no memory available
-  dat("(CONST)", 0xFFFD); // -3
+  def("uFork_E_NO_MEM", "-3");  // no memory available
   
-  def("uFork_E_NOT_FIX"); // fixnum required
-  dat("(CONST)", 0xFFFC); // -4
+  def("uFork_E_NOT_FIX", "-4"); // fixnum required
   
-  def("uFork_E_NOT_CAP"); // capability required
-  dat("(CONST)", 0xFFFB); // -5
+  def("uFork_E_NOT_CAP", "-5"); // capability required
   
-  def("uFork_E_NOT_PTR"); // memory pointer required
-  dat("(CONST)", 0xFFFA); // -6
+  def("uFork_E_NOT_PTR", "-6"); // memory pointer required
   
-  def("uFork_E_NOT_ROM"); // ROM pointer required
-  dat("(CONST)", 0xFFF9); // -7
+  def("uFork_E_NOT_ROM", "-7"); // ROM pointer required
   
-  def("uFork_E_NOT_RAM"); // RAM pointer required
-  dat("(CONST)", 0xFFF8); // -8
+  def("uFork_E_NOT_RAM", "-8"); // RAM pointer required
   
-  def("uFork_E_NOT_EXE"); // instruction required
-  dat("(CONST)", 0xFFF7); // -9
+  def("uFork_E_NOT_EXE", "-9"); // instruction required
   
-  def("uFork_E_NO_TYPE"); // type required
-  dat("(CONST)", 0xFFF6); // -10
+  def("uFork_E_NO_TYPE", "-10"); // type required
   
-  def("uFork_E_MEM_LIM"); // Sponsor memory limit reached
-  dat("(CONST)", 0xFFF5); // -11
+  def("uFork_E_MEM_LIM", "-11"); // Sponsor memory limit reached
   
-  def("uFork_E_CPU_LIM"); // Sponsor instruction limit reached
-  dat("(CONST)", 0xFFF4); // -12
+  def("uFork_E_CPU_LIM", "-12"); // Sponsor instruction limit reached
   
-  def("uFork_E_MSG_LIM"); // Sponsor event limit reached
-  dat("(CONST)", 0xFFF3); // -13
+  def("uFork_E_MSG_LIM", "-13"); // Sponsor event limit reached
   
-  def("uFork_E_ASSERT");  // assertion failed
-  dat("(CONST)", 0xFFF2); // -14
+  def("uFork_E_ASSERT", "-14");  // assertion failed
   
-  def("uFork_E_STOP");    // actor stopped
-  dat("(CONST)", 0xFFF1); // -15
+  def("uFork_E_STOP", "-15");    // actor stopped
 
   def("uFork_sp@"); // ( kont -- uFork_stack_qaddr )
   if (uForkSubroutines) {
