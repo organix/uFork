@@ -105,6 +105,9 @@ export const minicore = (asm, opts) => {
   def("0x0FFF");
   dat("(CONST)", 0x0FFF);
 
+  def("0x1FFF");
+  dat("(CONST)", 0x1FFF);
+
   def("0x3FFF");
   dat("(CONST)", 0x3FFF);
 
