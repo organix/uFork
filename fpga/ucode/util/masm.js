@@ -287,7 +287,7 @@ export const makeAssembler = (opts) => {
       return acc;
     }, []);
     if (errs.length > 0) {
-      done_reject(errs);
+      done_reject(errs.map(Promise.reject));
     }
     // iterate through the image, looking for promises
     makeArrayFromIterator(image.entries()).forEach(([addr, val]) => {
