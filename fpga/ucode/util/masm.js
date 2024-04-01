@@ -283,6 +283,23 @@ export const makeAssembler = (opts) => {
       return Math.ceil(real_divident / real_divisor);
     });
   };
+  asm.deferedOp.multiply = (a, b) => {
+    if ((typeof a) == "string") {
+      a = asm.symbols.lookup(a);
+    }
+    if ((typeof b) == "string") {
+      b = asm.symbols.lookup(b);
+    }
+    if (((typeof a) == "number") && ((typeof b) == "number")) {
+      return (a * b);
+    }
+    if (((typeof a) == "function") || ((typeof b) == "function")) {
+      throw new Error("not yet implemented!");
+    }
+    a = Promise.resolve(a);
+    b = Promise.resolve(b);
+    return Promise.all([a, b]).then(([a_real, b_real]) => (a_real * b_real));
+  };
   asm.incr = asm.deferedOp.incr;
   asm.origin = (new_addr) => {
     const tmp = curr_addr;
