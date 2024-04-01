@@ -7,7 +7,7 @@
 
 import { makePromise } from "../util/util_funcs.js";
   
-export const defineInstructionset = (asm, opts = { instrsetName: "uFork_CSM1" }) => {
+export const defineInstructionset = (asm, opts = { instrsetName: "instrset_uFork_SM2.1" }) => {
   const { def } = asm;
   if (opts.instrsetName.startsWith("FCPU-16")) {
     def("instrset_FCPU-16", 1);
