@@ -22,7 +22,9 @@ export const minicore = (asm, opts) => {
   if (isDefined("instrset_uFork_SM2") || isDefined("instrset_uFork_SM2.1")) {
     dat("0x0FFF_&");
   }
-  dat(">R", "EXIT");
+  dat(">R");
+  def("(EXIT)");
+  dat("EXIT");
 
   def("?:"); // ( alt conseq cond -- conseq | alt )
   dat("SKZ", "SWAP");
