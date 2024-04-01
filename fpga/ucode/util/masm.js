@@ -82,7 +82,8 @@ export const makeAssembler = (opts) => {
       isDefined: (sym) => {
         const t1 = syms.has(sym);
         if (t1) {
-          return ((typeof syms.get(sym)) == "number");
+          const t2 = (typeof syms.get(sym));
+          return ((t2 == "number") || (t2 == "function"));
         } else {
           return false;
         }
