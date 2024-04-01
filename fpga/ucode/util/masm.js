@@ -41,7 +41,9 @@ export const makeAssembler = (opts) => {
           if (typeof tmp == "object") {
             // next line is debug only
             // console.log("merkill 2");
-            console.dir(tmp);
+            if ((typeof tmp.resolve) != "function") {
+              console.dir(tmp);
+            }
             tmp.resolve(val);
             syms.set(sym, val);
           } else {
