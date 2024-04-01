@@ -11,6 +11,7 @@
 import { uFork_quadmem_and_gc } from "./uFork_quadmem.js";
 
 export const uFork = (asm) => {
+  asm.def("meta_hereBeyondEnd", asm.incr("uFork_last_ucode_address", 0x0000));
   asm = uFork_quadmem_and_gc(asm);
   const { def, dat, isDefined } = asm;
 
@@ -28,9 +29,6 @@ export const uFork = (asm) => {
   def("meta_quadMemSize_in_quads", asm.deferedOp.minus(maxTopOfQuadMemory, memoryDescriptor_qaddr));
   const uForkSubroutines =             isDefined("uFork_subroutines_support");
 
-  def("meta_hereBeyondEnd", asm.incr("uFork_last_ucode_address", 0x0000));
-
-  
   def("uFork_doOneRunLoopTurn"); // ( -- )
   dat("uFork_checkPendingInterrupts"); // ( -- )
   dat("uFork_dispatchOneEvent"); // ( -- )
