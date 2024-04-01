@@ -64,80 +64,40 @@ export const uFork = (asm) => {
   def("uFork_eventQueueAndContQueue");
   dat("(CONST)", eventQueueAndContQueue_qaddr);
 
-  def("uFork_#?", "ZERO"); // aka UNDEF or UNDEFINED
-
-  def("uFork_()", "1");
-  def("uFork_nil", "1");
-
-  def("uFork_#f", "2");
-
-  def("uFork_#t", "3");
-
-  def("uFork_#unit", "4");
-
-  def("uFork_EMPTY_DQ");
-  dat("(CONST)", 0x0005);
-
-  def("uFork_#type_t");
-  dat("(CONST)", 0x0006);
-
-  def("uFork_#fixnum_t");
-  dat("(CONST)", 0x0007);
-
-  def("uFork_#actor_t");
-  dat("(CONST)", 0x0008);
-
-  def("uFork_PROXY_T");
-  dat("(CONST)", 0x0009);
-
-  def("uFork_STUB_T", "0x0A");
-
-  def("uFork_#instr_t");
-  dat("(CONST)", 0x000B);
-
-  def("uFork_#pair_t");
-  dat("(CONST)", 0x000C);
-
-  def("uFork_#dict_t");
-  dat("(CONST)", 0x000D);
-
-  def("uFork_GC_FWD_REF_T");
-  dat("(CONST)", 0x000E);
-
-  def("uFork_FREE_T");
-  dat("(CONST)", 0x000F);
+  def("uFork_#?",            "0"); // aka UNDEF or UNDEFINED
+  def("uFork_()",            "1"); def("uFork_nil", "1");
+  def("uFork_#f",            "2");
+  def("uFork_#t",            "3");
+  def("uFork_#unit",         "4");
+  def("uFork_EMPTY_DQ",      "5");
+  def("uFork_#type_t",       "6");
+  def("uFork_#fixnum_t",     "7");
+  def("uFork_#actor_t",      "8");
+  def("uFork_PROXY_T",       "9");
+  def("uFork_STUB_T",       "10");
+  def("uFork_#instr_t",     "11");
+  def("uFork_#pair_t",      "12");
+  def("uFork_#dict_t",      "13");
+  def("uFork_GC_FWD_REF_T", "14");
+  def("uFork_FREE_T",       "15");
 
   // source uFork/vm/rs/src/lib.rs
-  def("uFork_E_OK", "ZERO"); // not an error
-  def("uFork_E_FAIL", "-1"); // general failure
-
-  def("uFork_E_BOUNDS", "-2");  // out of bounds
-
-  def("uFork_E_NO_MEM", "-3");  // no memory available
-  
-  def("uFork_E_NOT_FIX", "-4"); // fixnum required
-  
-  def("uFork_E_NOT_CAP", "-5"); // capability required
-  
-  def("uFork_E_NOT_PTR", "-6"); // memory pointer required
-  
-  def("uFork_E_NOT_ROM", "-7"); // ROM pointer required
-  
-  def("uFork_E_NOT_RAM", "-8"); // RAM pointer required
-  
-  def("uFork_E_NOT_EXE", "-9"); // instruction required
-  
+  def("uFork_E_OK",        "0"); // not an error
+  def("uFork_E_FAIL",     "-1"); // general failure
+  def("uFork_E_BOUNDS",   "-2"); // out of bounds
+  def("uFork_E_NO_MEM",   "-3"); // no memory available
+  def("uFork_E_NOT_FIX",  "-4"); // fixnum required
+  def("uFork_E_NOT_CAP",  "-5"); // capability required
+  def("uFork_E_NOT_PTR",  "-6"); // memory pointer required
+  def("uFork_E_NOT_ROM",  "-7"); // ROM pointer required
+  def("uFork_E_NOT_RAM",  "-8"); // RAM pointer required
+  def("uFork_E_NOT_EXE",  "-9"); // instruction required
   def("uFork_E_NO_TYPE", "-10"); // type required
-  
   def("uFork_E_MEM_LIM", "-11"); // Sponsor memory limit reached
-  
   def("uFork_E_CPU_LIM", "-12"); // Sponsor instruction limit reached
-  
   def("uFork_E_MSG_LIM", "-13"); // Sponsor event limit reached
-  
-  def("uFork_E_ASSERT", "-14");  // assertion failed
-  
-  def("uFork_E_STOP", "-15");    // actor stopped
+  def("uFork_E_ASSERT",  "-14"); // assertion failed
+  def("uFork_E_STOP",  . "-15"); // actor stopped
 
   def("uFork_sp@"); // ( kont -- uFork_stack_qaddr )
   if (uForkSubroutines) {
