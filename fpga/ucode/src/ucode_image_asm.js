@@ -146,16 +146,50 @@ export const minicore = (asm, opts) => {
   def("4");
   dat("(CONST)", 0x0004);
 
+  def("5");
+  dat("(CONST)", 0x0005);
+
+  def("6");
+  dat("(CONST)", 0x0006);
+
   def("7");
   dat("(CONST)", 0x0007);
 
+  def("8");
+  dat("(CONST)", 0x0008);
+
+  def("9");
+  dat("(CONST)", 0x0009);
+
+  def("10");
   def("0xA");
   def("0x0A");
-  dat("(CONST)", 0x0A);
+  dat("(CONST)", 0x000A);
 
+  def("11");
+  def("0xB");
+  def("0x0B");
+  dat("(CONST)", 0x000B);
+
+  def("12");
+  def("0xC");
+  def("0x0C");
+  dat("(CONST)", 0x000C);
+
+  def("13");
+  def("0xD");
+  def("0x0D");
+  dat("(CONST)", 0x000D);
+
+  def("14");
+  def("0xE");
+  def("0x0E");
+  dat("(CONST)", 0x000E);
+
+  def("15");
   def("0xF");
   def("0x0F");
-  dat("(CONST)", 0x0F);
+  dat("(CONST)", 0x000F);
 
   def("0x30");
   dat("(CONST)", 0x30);
