@@ -414,6 +414,7 @@ export const defineInstructionset = (asm, opts = { instrsetName: "uFork_SM2.1" }
       return ["NOP", { resolve }];
     });
     def("EXIT", (asm) => {
+      // FIXME! EXIT can not know if the preceeding cell is even an instruction!
       // this tries to combine (EXIT) with the preceeding Evaluate instruction if possible
       // tbd if it turns a preceeding Call instruction into a Jump instruction
       //     consideration: there are word definitions that depend on return address being consumed
