@@ -80,7 +80,7 @@ export const minicore = (asm, opts) => {
   def("THREE", "3");
 
   def("4");
-  dat("CONST", 0x0004);
+  dat("(CONST)", 0x0004);
 
   def("0x0A");
   dat("(CONST)", 0x0A);
