@@ -415,9 +415,6 @@ export const minicore = (asm, opts) => {
   def("1>>"); // ( a -- a>>1 )
   dat("1RBR", "0x7FFF_&", "EXIT");
 
-  def("0x0F_&");
-  dat("0x0F", "&", "EXIT");
-
   if (!isDefined("=")) {
     def("="); // ( a b -- bool )
     dat("XOR", "CLEAN_BOOL", "INVERT", "EXIT");
