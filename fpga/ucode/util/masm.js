@@ -68,9 +68,10 @@ export const makeAssembler = (opts) => {
             case "number": return Math.trunc(val) & fullcellBitmask;
             case "boolean": return (val ? fullcellBitmask : 0);
             case "object":
-              // asume it is an record with promise
+              // assume it is an record with promise
               return val.promise;
           }
+          return val;
         } else {
           // console.log(`merkill 4`);
           // console.dir(syms);
