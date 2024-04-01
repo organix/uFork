@@ -276,14 +276,19 @@ export const makeAssembler = (opts) => {
   asm.whenDone = () => done_promise;
   asm.done = () => {
     // iterate through the symbols, looking for promise packs
-    makeArrayFromIterator(syms.entries()).forEach(([sym, val]) => {
+    const errs = makeArrayFromIterator(syms.entries()).reduce((acc, [sym, val]) => {
       if ((typeof val) == "object") {
-        console.log(`villuleit: '${sym}' er '${val}'`);
         if (val.promise != undefined) {
-          done_reject(new Error(`symbol ${sym} is not defined`));
+          console.log(`villuleit2: '${sym}' er '${val}'`);
+          console.dir(val);
+          acc.push(new Error(`symbol ${sym} is not defined`));
         }
       }
-    });
+      return acc;
+    }, []);
+    if (errs.length > 0) {
+      done_reject(errs);
+    }
     // iterate through the image, looking for promises
     makeArrayFromIterator(image.entries()).forEach(([addr, val]) => {
       if ((typeof val) == "object") {
