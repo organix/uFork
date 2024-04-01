@@ -304,48 +304,67 @@ export const defineInstructionset = (asm, opts = { instrsetName: "uFork_SM2.1" }
 
   if (isDefined("instrset_uFork_SM2.1")) {
     def("NOP",     0x0000);
-    def("PLUS",    0x0741);
-    def("AND",     0x0744);
-    def("XOR",     0x0745);
-    def("1LBR",    0x0307);
-    def("INCR",    0x0311);
-    def("FETCH",   0x030F);
-    def("STORE",   0x098F);
     def("(LIT)",   0x021F);
-    def("DUP",     0x0200);
-    def("DROP",    0x0100);
-    def("SWAP",    0x0400);
+    def("(CONST)", 0x521F);
+    def("EXIT",    0x5000);
+    const defineEvaluateInstruction = (sym, myval) => {
+      def(sym, (asm) => {
+        const here = asm.addr;
+        const resolve = ([here_plusone, val]) => {
+          asm.deferOp.equal(val, "EXIT").then((bool) => {
+            if (bool) {
+              asm.origin(here);
+              asm.datum(asm.deferOp.or(myval, "EXIT"));
+            } else {
+              asm.origin(here_plusone);
+              asm.datum(val);
+            }
+          });
+        };
+        return [myval, { resolve }];
+      });
+    };
+    const defEvalInstr = defineEvaluateInstruction;
+    
+    defEvalInstr("PLUS",    0x0741);
+    defEvalInstr("AND",     0x0744);
+    defEvalInstr("XOR",     0x0745);
+    defEvalInstr("1LBR",    0x0307);
+    defEvalInstr("INCR",    0x0311);
+    defEvalInstr("FETCH",   0x030F);
+    defEvalInstr("STORE",   0x098F);
+    defEvalInstr("DUP",     0x0200);
+    defEvalInstr("DROP",    0x0100);
+    defEvalInstr("SWAP",    0x0400);
     // SKZ not implemented in hardware
     def("TO_R",    0x2100);
     def("R_FROM",  0x1280);
     def("R_AT",    0x0280);
-    def("(EXIT)",  0x5000);
-    def("MINUS",   0x0742);
-    def("OR",      0x0746);
-    def("DECR",    0x0312);
-    def("INVERT",  0x0375);
-    def("NEGATE",  0x03C2);
-    def("OVER",    0x0240);
-    def("ROT",     0x0500);
-    def("-ROT",    0x0600);
-    def("(FALSE)", 0x02C0);
-    def("(TRUE)",  0x02F6);
-    def("1",       0x02D6); // LSB
-    def("0x8000",  0x02E6); // MSB
-    def("2*",      0x0301);
-    def("(CONST)", 0x521F);
+    defEvalInstr("MINUS",   0x0742);
+    defEvalInstr("OR",      0x0746);
+    defEvalInstr("DECR",    0x0312);
+    defEvalInstr("INVERT",  0x0375);
+    defEvalInstr("NEGATE",  0x03C2);
+    defEvalInstr("OVER",    0x0240);
+    defEvalInstr("ROT",     0x0500);
+    defEvalInstr("-ROT",    0x0600);
+    defEvalInstr("(FALSE)", 0x02C0);
+    defEvalInstr("(TRUE)",  0x02F6);
+    defEvalInstr("1",       0x02D6); // LSB
+    defEvalInstr("0x8000",  0x02E6); // MSB
+    defEvalInstr("2*",      0x0301);
 
-    def("QUAD_T_FETCH", 0x034F);
-    def("QUAD_X_FETCH", 0x035F);
-    def("QUAD_Y_FETCH", 0x036F);
-    def("QUAD_Z_FETCH", 0x037F);
-    def("QUAD_T_STORE", 0x09CF);
-    def("QUAD_X_STORE", 0x09DF);
-    def("QUAD_Y_STORE", 0x09EF);
-    def("QUAD_Z_STORE", 0x09FF);
+    defEvalInstr("QUAD_T_FETCH", 0x034F);
+    defEvalInstr("QUAD_X_FETCH", 0x035F);
+    defEvalInstr("QUAD_Y_FETCH", 0x036F);
+    defEvalInstr("QUAD_Z_FETCH", 0x037F);
+    defEvalInstr("QUAD_T_STORE", 0x09CF);
+    defEvalInstr("QUAD_X_STORE", 0x09DF);
+    defEvalInstr("QUAD_Y_STORE", 0x09EF);
+    defEvalInstr("QUAD_Z_STORE", 0x09FF);
 
-    def("io@",          0x003F);
-    def("io!",          0x09BF);
+    defEvalInstr("io@",          0x003F);
+    defEvalInstr("io!",          0x09BF);
     /*
       IO devices: 0x0 - UART
                   0x00  TX?
@@ -413,23 +432,7 @@ export const defineInstructionset = (asm, opts = { instrsetName: "uFork_SM2.1" }
       };
       return ["NOP", { resolve }];
     });
-    def("EXIT", (asm) => {
-      // FIXME! EXIT can not know if the preceeding cell is even an instruction!
-      // this tries to combine (EXIT) with the preceeding Evaluate instruction if possible
-      // tbd if it turns a preceeding Call instruction into a Jump instruction
-      //     consideration: there are word definitions that depend on return address being consumed
-      const here = asm.addr;
-      const here_minusone = asm.deferedOp.minus(here, 1);
-      const t0 = asm.datumAt(here_minusone);
-      const t1 = asm.deferedOp.equal(asm.deferedOp.and(t0, 0xC000), 0);
-      if ((typeof t1) == "boolean") {
-        if (t1) {
-          asm.origin(here_minusone);
-          return asm.deferOp.or(t0, "(EXIT)");
-        }
-      }
-      return "(EXIT)";
-    });
+    
     return {
       ...asm,
       def: (sym, val = undefined) => {
