@@ -39,6 +39,68 @@ export const minicore = (asm, opts) => {
     dat("R>", "@", "EXIT");
   }
 
+  def("-15");
+  def("-0xF");
+  def("0xFFF1");
+  dat("(CONST)", 0xFFF1);
+
+  def("-14");
+  def("-0xE");
+  def("0xFFF2");
+  dat("(CONST)", 0xFFF2);
+
+  def("-13");
+  def("-0xD");
+  def("0xFFF3");
+  dat("(CONST)", 0xFFF3);
+
+  def("-12");
+  def("-0xC");
+  def("0xFFF4");
+  dat("(CONST)", 0xFFF4);
+
+  def("-11");
+  def("-0xB");
+  def("0xFFF5");
+  dat("(CONST)", 0xFFF5);
+  
+  def("-10");
+  def("-0xA");
+  def("0xFFF6");
+  dat("(CONST)", 0xFFF6);
+
+  def("-9");
+  def("0xFFF7");
+  dat("(CONST)", 0xFFF7);
+
+  def("-8");
+  def("0xFFF8");
+  dat("(CONST)", 0xFFF8);
+
+  def("-7");
+  def("0xFFF9");
+  dat("(CONST)", 0xFFF9);
+
+  def("-6");
+  def("0xFFFA");
+  dat("(CONST)", 0xFFFA);
+
+  def("-5");
+  def("0xFFFB");
+  dat("(CONST)", 0xFFFB);
+
+  def("-4");
+  def("0xFFFC");
+  dat("(CONST)", 0xFFFC);
+
+  def("-3");
+  def("0xFFFD");
+  dat("(CONST)", 0xFFFD);
+
+  def("-2");
+  def("0xFFFE");
+  dat("(CONST)", 0xFFFE);
+
   def("TRUE");
   def("-1");
   if (isDefined("(TRUE)")) {
@@ -123,9 +185,6 @@ export const minicore = (asm, opts) => {
     def("0x8000");
     dat("(CONST)", 0x8000);
   }
-
-  def("0xFFFE");
-  dat("(CONST)", 0xFFFE);
 
   if (!isDefined("1_&")) {
     def("1_&");
