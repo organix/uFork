@@ -66,7 +66,7 @@ export const uFork_quadmem_and_gc = (asm) => {
       def("qromz@"); dat("qrom", "3+", "@", "EXIT");
     } else {
       if (!(asm.isDefined("spram@")) && !(asm.isDefined("spram!"))) {
-        def("meta_quadMemSize_in_cells", asm.deferOp.multiply("meta_quadMemSize_in_quads", 4));
+        def("meta_quadMemSize_in_cells", asm.deferedOp.multiply("meta_quadMemSize_in_quads", 4));
         def("uFork_quadMem_baseAddr");
         dat("(CONST)", "meta_hereBeyondEnd");
         asm.symbols.redefine("meta_hereBeyondEnd", asm.incr("meta_hereBeyondEnd", "meta_quadMemSize_in_cells"));
