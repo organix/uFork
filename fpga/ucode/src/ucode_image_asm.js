@@ -147,6 +147,9 @@ export const minicore = (asm, opts) => {
   def("0x0FFF_&");
   dat("0x0FFF", "&", "EXIT");
 
+  def("0x1FFF_&");
+  dat("0x1FFF", "&", "EXIT");
+
   def("0x3FFF_&");
   dat("0x3FFF", "&", "EXIT");
   
@@ -360,6 +363,10 @@ export const minicore = (asm, opts) => {
   def("15<<");
   dat("1_&", "1RBR", "EXIT");
 
+  def("8/");
+  def("3>>");
+  dat("3LBR", "0x1FFF_&", "EXIT");
+
   def(">>"); // ( u n -- u>>n )  same lazy way
   dat("0x0F_&");
   dat(">R", "(JMP)", ">>_l1");
@@ -427,6 +434,9 @@ export const minicore = (asm, opts) => {
   dat("2LBR");
   def("2LBR");
   dat("1LBR", "1LBR", "EXIT");
+
+  def("3LBR");
+  dat("2LBR", "1LBR", "EXIT");
 
   def("3+");
   dat("1+");
