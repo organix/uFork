@@ -495,6 +495,15 @@ export const minicore = (asm, opts) => {
   def("MAX"); // ( a b -- a | b )
   dat("2DUP", "<", "?:", "EXIT");
 
+  def("ABSOLUTE"); // ( n | -n -- n )
+  def("ABS");
+  dat("DUP");      // ( n n )
+  dat("NEGATE");   // ( n -n )
+  dat("OVER");     // ( n -n n )
+  dat("0<");       // ( n -n bool )
+  dat("?:");       // ( n )
+  dat("EXIT");
+
   if (!isDefined("DEBUG_TX?") ||
       !isDefined("DEBUG_TX!") ||
       !isDefined("DEBUG_RX?") ||
