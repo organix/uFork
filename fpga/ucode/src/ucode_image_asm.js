@@ -811,6 +811,7 @@ export const makeUcodeImage = (opts) => {
     asm = wozmon(asm, opts.wozmon);
   }
   if (opts.uFork != undefined) {
+    asm.symbols.define("uFork_gc_algo1", 1);
     asm = uFork(asm, opts.uFork);
   }
 
