@@ -8,7 +8,7 @@
 import { makePromise } from "../util/util_funcs.js";
   
 export const defineInstructionset = (asm, opts = { instrsetName: "uFork_SM2.1" }) => {
-  const { def } = asm;
+  const { def, isDefined } = asm;
   if (opts.instrsetName.startsWith("FCPU-16")) {
     def("instrset_FCPU-16", 1);
   }
@@ -30,13 +30,13 @@ export const defineInstructionset = (asm, opts = { instrsetName: "uFork_SM2.1" }
   if (opts.instrsetName.includes("w/debug_io")) {
     def("instrset_w/debug_io", 1);
   }
-  if (opts.instrsetName.startsWith("FCPU-16") ||
-      opts.instrsetName.startsWith("uFork_CSM1")) {
+  if (isDefined("instrset_FCPU-16") ||
+      isDefined("instrset_uFork_CSM1")) {
     def("NOP",    0x0000);
-    if (opts.instrsetName.startsWith("FCPU-16")) {
+    if (isDefined("instrset_FCPU-16")) {
       def("UMPLUS", 0x0001);
       def("UM+", "UMPLUS");
-    } else if (opts.instrsetName.startsWith("uFork_CSM1")) {
+    } else if (isDefined("instrset_uFork_CSM1")) {
       def("PLUS",   0x0001);
       def("+",   "PLUS");
     }
@@ -63,8 +63,9 @@ export const defineInstructionset = (asm, opts = { instrsetName: "uFork_SM2.1" }
     def(">R",  "TO_R");
     def("R>",  "R_FROM");
   }
-  if (opts.instrsetName.startsWith("FCPU-16 w/qmem") ||
-      opts.instrsetName.startsWith("uFork_CSM1 w/qmem")) {
+  if (isDefined("instrset_w/qmem") && 
+      (isDefined("instrset_FCPU-16") || isDefined("instrset_uFork_CSM1"))
+  ) {
     def("QUAD_T_FETCH", 0x0010);
     def("QUAD_X_FETCH", 0x0011);
     def("QUAD_Y_FETCH", 0x0012);
@@ -83,8 +84,9 @@ export const defineInstructionset = (asm, opts = { instrsetName: "uFork_SM2.1" }
     def("qy!", "QUAD_Y_STORE");
     def("qz!", "QUAD_Z_STORE");
   }
-  if (opts.instrsetName.startsWith("FCPU-16 w/qmem w/hwgc") ||
-      opts.instrsetName.startsWith("uFork_CSM1 w/qmem w/hwgc")) {
+  if (isDefined("instrset_w/qmem") && isDefined("instrset_w/hwgc") &&
+      (isDefined("instrset_FCPU-16") || isDefined("instrset_uFork_CSM1"))
+  ) {
     def("QUAD_ALLOCATE", 0x0018);
     def("QUAD_FREE",    0x0019);
     def("QUAD_GCSTEP",  0x001A);
@@ -95,9 +97,9 @@ export const defineInstructionset = (asm, opts = { instrsetName: "uFork_SM2.1" }
     def("qgcstep", "QUAD_GCSTEP");
     def("qfull?",  "QUAD_ISFULL");
   }
-  if ((opts.instrsetName.startsWith("FCPU-16 ") ||
-       opts.instrsetName.startsWith("uFork_CSM1 ")) &&
-      opts.instrsetName.includes("w/debug_io")) {
+  if (isDefined("instrset_w/debug_io") &&
+      (isDefined("instrset_FCPU-16") || isDefined("instrset_uFork_CSM1"))
+  ) {
     def("DEBUG_LED",    0x003B); // led! ( colour -- )
     def("DEBUG_RX?",    0x003C); // rx? ( -- ready )
     def("DEBUG_RX@",    0x003D); // rx@ ( -- char )
@@ -209,7 +211,7 @@ export const defineInstructionset = (asm, opts = { instrsetName: "uFork_SM2.1" }
   }
 
   // see uFork/fpga/fomu/csm/cpu.md as reference for uFork_SM2
-  if (opts.instrsetName.startsWith("uFork_SM2")) {
+  if (isDefined("instrset_uFork_SM2")) {
     def("NOP",     0x0000);
     def("PLUS",    0x0B41);
     def("AND",     0x0B44);
@@ -300,7 +302,7 @@ export const defineInstructionset = (asm, opts = { instrsetName: "uFork_SM2.1" }
     }
   }
 
-  if (opts.instrsetName.startsWith("uFork_SM2.1")) {
+  if (isDefined("instrset_uFork_SM2.1")) {
     def("NOP",     0x0000);
     def("PLUS",    0x0741);
     def("AND",     0x0744);
