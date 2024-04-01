@@ -453,6 +453,11 @@ export const minicore = (asm, opts) => {
     dat("XOR", "CLEAN_BOOL", "INVERT", "EXIT");
   }
 
+  if (!isDefined("0=")) {
+    def("0=");
+    dat("CLEAN_BOOL", "INVERT", "EXIT");
+  }
+
   def("0<"); // ( num -- bool )
   dat("0x8000", "&", "CLEAN_BOOL", "EXIT");
 
