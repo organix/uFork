@@ -292,8 +292,12 @@ export const defineInstructionset = (asm, opts = { instrsetName: "uFork_SM2.1" }
     def("(LIT)",   0x021F);
     def("(CONST)", 0x521F);
     def("EXIT",    0x5000);
-    const defineEvaluateInstruction = (sym, myval) => {
+    const defineEvaluateInstruction = (sym, val) => {
       def(sym, (asm) => {
+        const myval = val;
+        if (myval == undefined) {
+          throw new Error("furðulegheit");
+        }
         const here = asm.addr;
         const resolve = ([here_plusone, val]) => {
           asm.deferOp.equal(val, "EXIT").then((bool) => {
@@ -309,7 +313,7 @@ export const defineInstructionset = (asm, opts = { instrsetName: "uFork_SM2.1" }
         return [myval, { resolve }];
       });
     };
-    const defEvalInstr = def; // defineEvaluateInstruction;
+    const defEvalInstr = defineEvaluateInstruction;
     
     defEvalInstr("PLUS",    0x0741);
     defEvalInstr("AND",     0x0744);
