@@ -293,11 +293,9 @@ export const defineInstructionset = (asm, opts = { instrsetName: "uFork_SM2.1" }
     def("(CONST)", 0x521F);
     def("EXIT",    0x5000);
     const defineEvaluateInstruction = (sym, val) => {
+      console.log(`furðuvilluaflúsun: ${sym} = ${val}`);
       def(sym, (asm) => {
         const myval = val;
-        if (myval == undefined) {
-          throw new Error("furðulegheit");
-        }
         const here = asm.addr;
         const resolve = ([here_plusone, val]) => {
           asm.deferOp.equal(val, "EXIT").then((bool) => {
