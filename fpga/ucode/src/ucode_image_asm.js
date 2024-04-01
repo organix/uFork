@@ -82,9 +82,14 @@ export const minicore = (asm, opts) => {
   def("4");
   dat("(CONST)", 0x0004);
 
+  def("7");
+  dat("(CONST)", 0x0007);
+
+  def("0xA");
   def("0x0A");
   dat("(CONST)", 0x0A);
 
+  def("0xF");
   def("0x0F");
   dat("(CONST)", 0x0F);
 
@@ -100,6 +105,9 @@ export const minicore = (asm, opts) => {
   def("0x0FFF");
   dat("(CONST)", 0x0FFF);
 
+  def("0x3FFF");
+  dat("(CONST)", 0x3FFF);
+
   def("0x4000");
   dat("(CONST)", 0x4000);
 
@@ -114,9 +122,18 @@ export const minicore = (asm, opts) => {
   def("0xFFFE");
   dat("(CONST)", 0xFFFE);
 
+  if (!isDefined("1_&")) {
+    def("1_&");
+    dat("1", "&", "EXIT");
+  }
+  def("1&", "1_&");
+
   def("4&");
   def("4_&");
   dat("4", "&", "EXIT");
+
+  def("7_&");
+  dat("7", "&", "EXIT");
 
   def("0x0F_&");
   dat("0x0F", "&", "EXIT");
@@ -126,6 +143,9 @@ export const minicore = (asm, opts) => {
 
   def("0x0FFF_&");
   dat("0x0FFF", "&", "EXIT");
+
+  def("0x3FFF_&");
+  dat("0x3FFF", "&", "EXIT");
   
   def("0x4000_&");
   dat("0x4000");
