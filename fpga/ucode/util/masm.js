@@ -41,13 +41,15 @@ export const makeAssembler = (opts) => {
           if (typeof tmp == "object") {
             // next line is debug only
             // console.log("merkill 2");
-            if ((typeof tmp.resolve) != "function") {
+            if ((typeof tmp.resolve) == "function") {
+              tmp.resolve(val);
+              syms.set(sym, val);
+            } else {
               console.dir(tmp);
+              throw new Error(`the symbol ${sym} is already defined as ${tmp} (2)`);
             }
-            tmp.resolve(val);
-            syms.set(sym, val);
           } else {
-            throw new Error(`the symbol ${sym} is already defined as ${tmp}`);
+            throw new Error(`the symbol ${sym} is already defined as ${tmp} (1)`);
           }
         } else {
           syms.set(sym, val);
