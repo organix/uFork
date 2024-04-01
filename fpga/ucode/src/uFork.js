@@ -1430,7 +1430,7 @@ export const uFork = (asm) => {
   // todo: insert a sponsor mem fuel check&burn: n quads spent
   dat("ROT", "DUP", ">R", "-ROT", "R>"); // ( kont actor n kont )
   dat("SWAP", "uFork_stack_pluck"); // ( kont actor msg )
-  def("uFork_instr_send_l1"); // ( kont actor msg )
+  def("uFork_instr_signal_l1"); // ( kont actor msg )
   dat("ROT", "DUP", ">R", "-ROT"); // ( kont actor msg ) R:( kont )
   dat("R@", "uFork_pop", "uFork_send_msg"); // ( )
   dat("R>", "(JMP)", "uFork_instr__common_longer_tail");
