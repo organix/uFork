@@ -242,7 +242,7 @@ export const makeAssembler = (opts) => {
     b = Promise.resolve(b);
     return Promise.all([a, b]).then(([a_real, b_real]) => (a_real == b_real));
   };
-  asm.deferedOp.intDivide = (divdent, divisor) => {
+  asm.deferedOp.intDivide = (divident, divisor) => {
     if ((typeof divident) == "string") {
       divident = asm.symbols.lookup(divident);
     }
