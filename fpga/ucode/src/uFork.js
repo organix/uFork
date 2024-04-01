@@ -282,7 +282,7 @@ export const uFork = (asm) => {
   if (hwImplOfQuadAllotAndFree) {
     dat("qfree", "EXIT");
   } else {
-    dat("uFork_transperify");
+    dat("uFork_transparenify");
     dat("uFork_FREE_T", "OVER", "qt!");
     dat("uFork_#?__OVER", "qx!");
     dat("uFork_#?__OVER", "qy!");
