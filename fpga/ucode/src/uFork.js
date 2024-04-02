@@ -1541,11 +1541,14 @@ export const uFork = (asm) => {
   dat("0_i2f_OVER", "qx!");
   dat("0_i2f_OVER", "qy!");
   dat("uFork_#?", "OVER", "qz!");
-  dat("uFork_opaquefy");
+  // dat("uFork_opaquefy"); the sponsor is always transparent but the resource security against counterfitting a sponsor relies on the uFork `quad` constructing instruction checking that the t field points to a valid #type 
   dat("(JMP)", "uFork__push_then_instrTail");
 
   def("0_i2f_OVER");
   dat("0", "uFork_int2fixnum", "OVER", "EXIT");
+
+  def("uFork_instr_sponsor__resources_common"); // ( kont subopcode )
+  dat("SWAP");                     // ( subop kont )
 
   // tbd: new instruction for uFork `throw_away_effects`
   //      throws away the accumulated outgoing events and cancels beh update of the actor
