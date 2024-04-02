@@ -1373,6 +1373,7 @@ export const uFork = (asm) => {
   dat("DUP", "-1", "=", "(BRZ)", "uFork_instr_signal_l0");
   dat("DROP", "OVER", "uFork_pop"); // ( kont actor msg )
   dat("(JMP)", "uFork_instr_signal_l1");
+  def("uFork_instr_signal_l0");
   // todo: insert a sponsor mem fuel check&burn: n quads spent
   dat("ROT", "DUP", ">R", "-ROT", "R>"); // ( kont actor n kont )
   dat("SWAP", "uFork_stack_pluck"); // ( kont actor msg )
