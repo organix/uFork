@@ -19,9 +19,9 @@ export const uFork = (asm) => {
   const hwImplOfQuadMemoryGC =         isDefined("instrset_w/hwgc");
   const hwImplOfQuadAllotAndFree =     hwImplOfQuadMemoryGC;
   
-  const eventQueueAndContQueue_qaddr = isDefined("uFork_eventQueueAndKontQueue_qaddr") ?
-                                       asm.symbols.lookup("uFork_eventQueueAndKontQueue_qaddr") :
-                                       0x4001;
+  if (!isDefined("uFork_eventQueueAndKontQueue_qaddr")) {
+    def("uFork_eventQueueAndKontQueue_qaddr", 0x4001);
+  }
   const memoryDescriptor_qaddr =       isDefined("uFork_memoryDescriptor_qaddr") ?
                                        asm.symbols.lookup("uFork_memoryDescriptor_qaddr") :
                                        0x4000;
@@ -62,7 +62,7 @@ export const uFork = (asm) => {
   dat("(CONST)", memoryDescriptor_qaddr);
 
   def("uFork_eventQueueAndContQueue");
-  dat("(CONST)", eventQueueAndContQueue_qaddr);
+  dat("(CONST)", "uFork_eventQueueAndKontQueue_qaddr");
 
   def("uFork_#?",            "0"); // aka UNDEF or UNDEFINED
   def("uFork_()",            "1"); def("uFork_nil", "1");
