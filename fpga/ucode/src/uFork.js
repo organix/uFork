@@ -340,7 +340,7 @@ export const uFork = (asm) => {
   dat("EXIT");
 
   def("uFork_fetchAndExec"); // ( kont -- )
-  dat("uFork_isContHalted", "(BREXIT)");
+  dat("uFork_isContHalted?", "(BREXIT)");
   // done: insert sponsor cycles fuel check&burn here.
   dat("uFork_sponsor_cycles_check&burn", "RDROP");
   dat("DUP", "qt@");         // ( kont ip )
