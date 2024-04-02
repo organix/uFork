@@ -577,7 +577,7 @@ export const uFork = (asm) => {
   dat("DUP", "0<");        // ( kont n bool )
   dat("(BRNZ)", "uFork_instr_roll_l0"); // ( kont n )
   dat("1-", ">R", "DUP", "uFork_sp@");  // ( kont stack ) R:( n )
-  dat("(JMP)", "uForm_instr_roll_l2");
+  dat("(JMP)", "uFork_instr_roll_l2");
   def("uFork_instr_roll_l1"); // ( kont stack ) R:( n )
   dat("uFork_cdr");           // ( kont next_stack ) R:( n )
   def("uFork_instr_roll_l2"); // ( kont stack ) R:( n )
