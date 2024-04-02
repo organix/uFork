@@ -1533,6 +1533,19 @@ export const uFork = (asm) => {
   dat("qt@");                      // ( kont sponsor )
   dat("(JMP)", "uFork__push_then_instrTail");
 
+  def("uFork_instr_sponsor_new"); // ( kont subopcode )
+  dat("DROP");                    // ( kont )
+  // todo: insert here this events sponsor mem fuel check&burn
+  dat("uFork_allot");             // ( kont quad )
+  dat("0_i2f_OVER", "qt!");
+  dat("0_i2f_OVER", "qx!");
+  dat("0_i2f_OVER", "qy!");
+  dat("uFork_#?", "OVER", "qz!");
+  dat("(JMP)", "uFork__push_then_instrTail");
+
+  def("0_i2f_OVER");
+  dat("0", "uFork_int2fixnum", "OVER", "EXIT");
+
   // tbd: new instruction for uFork `throw_away_effects`
   //      throws away the accumulated outgoing events and cancels beh update of the actor
 
