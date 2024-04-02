@@ -31,11 +31,16 @@ Eventset (from fpga to host):
 
  Event | Commpicture | Description
 -------|-------------|-------------
- t part of quad set as value | t<hexnumber 4 digits><space><hexnumber 4 digits>\n | former number is the value and the latter is the quad address
- x part of quad set as value | x<hexnumber 4 digits><space><hexnumber 4 digits>\n | same
- y part of quad set as value | y<hexnumber 4 digits><space><hexnumber 4 digits>\n | same
- z part of quad set as value | z<hexnumber 4 digits><space><hexnumber 4 digits>\n | same
-
+ t part of quad set as value | F>H: t<hexnumber 4 digits><space><hexnumber 4 digits>\n | former number is the value and the latter is the quad address
+ x part of quad set as value | F>H: x<hexnumber 4 digits><space><hexnumber 4 digits>\n | same
+ y part of quad set as value | F>H: y<hexnumber 4 digits><space><hexnumber 4 digits>\n | same
+ z part of quad set as value | F>H: z<hexnumber 4 digits><space><hexnumber 4 digits>\n | same
+ uFork runloop iteration done | F>H: s\n | 
+ output from uFork io device | F>H: o<hecnumber 4 digits>\n | the number is the datacell outputed by the uFork io device
+ output from uFork debug device | F>H: d<hexnumber 4 digits>\n | the number is the datacell outputed by the uFork debug device
+ ucode error occured | F>H: V<hexnumber 4 digits>\n | the number is the errorcode
+ command prompt | F>H: ~ | forkmon ready for further commands
+ 
 =====================================
 
 Please note that the original following is mostly in Icelandic
