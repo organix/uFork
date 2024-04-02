@@ -1,5 +1,32 @@
 
-Please note that this is mostly in Icelandic. It will be translated.
+forkmon protocol over serial datalink:
+
+```
+H>F  from host to fpga
+F>H  from fpga to host
+
+--- fpga out of reset and has loaded in bitstream from spi flash
+F>H: uFork0V1\n
+     uFork version 0.1 -- will probably changed with every version
+F>H: <four digit hexnumber><space><another such>\n
+     tells about how big quad memories, RAM and ROM respectively, are
+F>H: ~
+     command prompt, forkmon ready to accept commands
+
+```
+
+Commandset (from host to fpga):
+
+ Command | Commpicture | Description
+---------|-------------|--------------
+ set t part of quad | H>F: t<hexnumber 4 digits><space><hexnumber 4 digits>\n | former number is the value and the latter is the address
+ set x part of quad | H>F: x<hexnumber 4 digits><space><hexnumber 4 digits>\n | same
+ set y part of quad | H>F: y<hexnumber 4 digits><space><hexnumber 4 digits>\n | same
+ set z part of quad | H>F: z<hexnumber 4 digits><space><hexnumber 4 digits>\n | same
+
+=====================================
+
+Please note that the original following is mostly in Icelandic
 
 forkmon samskiptastaðall yfir serial gagnatengingu:
 
