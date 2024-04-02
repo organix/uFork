@@ -1527,6 +1527,12 @@ export const uFork = (asm) => {
   dat("uFork_instr_sponsor_stop");    // +6
   dat("DUP", "(JMP)", "uFork_no_such_opcode");
 
+  def("uFork_instr_sponsor_peek"); // ( kont ip subopcode )
+  dat("2DROP");                    // ( kont )
+  dat("DUP", "qy@");               // ( kont event )
+  dat("qt@");                      // ( kont sponsor )
+  dat("(JMP)", "uFork__push_then_instrTail");
+
   // tbd: new instruction for uFork `throw_away_effects`
   //      throws away the accumulated outgoing events and cancels beh update of the actor
 
