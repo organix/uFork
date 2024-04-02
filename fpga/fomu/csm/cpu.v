@@ -215,8 +215,8 @@ module cpu #(
         ucode[12'h045] = UC_LIT;                        // ^00FF
         ucode[12'h046] = 16'h00FF;
         ucode[12'h047] = 16'h035F;                      // X@
-        ucode[12'h048] = UC_LIT;                        // $CE11
-        ucode[12'h049] = 16'hCE11;
+        ucode[12'h048] = UC_LIT;                        // $BE11
+        ucode[12'h049] = 16'hBE11;
         ucode[12'h04A] = UC_XOR;                        // EQ?
         ucode[12'h04B] = 16'hA04D;                      // BZ $04D
         ucode[12'h04C] = UC_FAIL;                       // FAIL
@@ -387,7 +387,7 @@ module cpu #(
     // uFork quad-cell memory
     //
 
-    quad_mem QUAD (
+    quad_mem QUADS (
         .i_clk(i_clk),
         .i_cs_ram(cs_qram),
         .i_cs_rom0(cs_qrom0),
