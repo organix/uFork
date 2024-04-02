@@ -22,11 +22,11 @@ export const uFork = (asm) => {
   if (!isDefined("uFork_eventQueueAndKontQueue_qaddr")) {
     def("uFork_eventQueueAndKontQueue_qaddr", 0x4001);
   }
-  const memoryDescriptor_qaddr =       isDefined("uFork_memoryDescriptor_qaddr") ?
-                                       asm.symbols.lookup("uFork_memoryDescriptor_qaddr") :
-                                       0x4000;
+  if (!isDefined("uFork_memoryDescriptor_qaddr")) {
+    def("uFork_memoryDescriptor_qaddr", 0x4000);
+  }
   const maxTopOfQuadMemory =           0x5000;
-  def("meta_quadMemSize_in_quads", asm.deferedOp.minus(maxTopOfQuadMemory, memoryDescriptor_qaddr));
+  def("meta_quadMemSize_in_quads", asm.deferedOp.minus(maxTopOfQuadMemory, "uFork_memoryDescriptor_qaddr"));
   const uForkSubroutines =             isDefined("uFork_subroutines_support");
 
   def("uFork_doOneRunLoopTurn"); // ( -- )
@@ -59,7 +59,7 @@ export const uFork = (asm) => {
   dat("EXIT");
 
   def("uFork_memoryDescriptor");
-  dat("(CONST)", memoryDescriptor_qaddr);
+  dat("(CONST)", "uFork_memoryDescriptor_qaddr");
 
   def("uFork_eventQueueAndContQueue");
   dat("(CONST)", "uFork_eventQueueAndKontQueue_qaddr");
