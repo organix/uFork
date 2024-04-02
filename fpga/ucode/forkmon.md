@@ -19,7 +19,7 @@ Commandset (from host to fpga):
 
  Command | Commpicture | Description
 ---------|-------------|--------------
- set t part of quad | H>F: t<hexnumber 4 digits><space><hexnumber 4 digits>\n | former number is the value and the latter is the address
+ set t part of quad | H>F: t<hexnumber 4 digits><space><hexnumber 4 digits>\n | former number is the value and the latter is the quad address
  set x part of quad | H>F: x<hexnumber 4 digits><space><hexnumber 4 digits>\n | same
  set y part of quad | H>F: y<hexnumber 4 digits><space><hexnumber 4 digits>\n | same
  set z part of quad | H>F: z<hexnumber 4 digits><space><hexnumber 4 digits>\n | same
@@ -27,7 +27,14 @@ Commandset (from host to fpga):
  input for io device | H>F: i<henumber 4 digits>\n | datacell for input of uFork io device
  call wozmon | H>F: w\n | Call into wozmon if its part of the ucode image. Further serial comms will be with wozmon until it is quit
 
+Eventset (from fpga to host):
 
+ Event | Commpicture | Description
+-------|-------------|-------------
+ t part of quad set as value | t<hexnumber 4 digits><space><hexnumber 4 digits>\n | former number is the value and the latter is the quad address
+ x part of quad set as value | x<hexnumber 4 digits><space><hexnumber 4 digits>\n | same
+ y part of quad set as value | y<hexnumber 4 digits><space><hexnumber 4 digits>\n | same
+ z part of quad set as value | z<hexnumber 4 digits><space><hexnumber 4 digits>\n | same
 
 =====================================
 
