@@ -1541,6 +1541,7 @@ export const uFork = (asm) => {
   dat("0_i2f_OVER", "qx!");
   dat("0_i2f_OVER", "qy!");
   dat("uFork_#?", "OVER", "qz!");
+  dat("uFork_opaquefy");
   dat("(JMP)", "uFork__push_then_instrTail");
 
   def("0_i2f_OVER");
