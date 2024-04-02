@@ -288,7 +288,7 @@ export const defineInstructionset = (asm, opts = { instrsetName: "uFork_SM2.1" }
   }
 
   if (isDefined("instrset_uFork_SM2.1")) {
-    if (!isDefined("instrset_w/qmem") {
+    if (!isDefined("instrset_w/qmem")) {
       def("instrset_w/qmem", 1);
     }
     
