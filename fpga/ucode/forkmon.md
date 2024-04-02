@@ -23,6 +23,11 @@ Commandset (from host to fpga):
  set x part of quad | H>F: x<hexnumber 4 digits><space><hexnumber 4 digits>\n | same
  set y part of quad | H>F: y<hexnumber 4 digits><space><hexnumber 4 digits>\n | same
  set z part of quad | H>F: z<hexnumber 4 digits><space><hexnumber 4 digits>\n | same
+ step uFork runloop x many iterations onward | s<hexnumber 4 digits>\n | the number tells how many iterations of the loop should be run
+ input for io device | H>F: i<henumber 4 digits>\n | datacell for input of uFork io device
+ call wozmon | H>F: w\n | Call into wozmon if its part of the ucode image. Further serial comms will be with wozmon until it is quit
+
+
 
 =====================================
 
