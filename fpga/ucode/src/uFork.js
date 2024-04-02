@@ -1145,7 +1145,7 @@ export const uFork = (asm) => {
   dat("uFork_instr_deque_pop");
   dat("uFork_instr_deque_put");
   dat("uFork_instr_deque_pull");
-  dat("uFork_instr_deque_len");
+  dat("uFork_instr_deque_length");
   // done: insert here an err signal to sponsor
   dat("DUP", "(JMP)", "uFork_no_such_opcode");
 
