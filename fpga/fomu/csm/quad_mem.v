@@ -33,7 +33,7 @@ module quad_mem #(
     input             [1:0] i_field,                    // quad field selector {0:T, 1:X, 2:Y, 3:Z}
     input     [DATA_SZ-1:0] i_data,                     // data to write
 
-    output reg [DATA_SZ-1:0] o_data                     // data read
+    output     [DATA_SZ-1:0] o_data                     // data read
 );
 
     wire [ADDR_SZ+1:0] addr = { i_addr, i_field };
@@ -47,22 +47,24 @@ module quad_mem #(
             if (i_wr) begin
                 ram[addr] <= i_data;
             end else begin
-                o_data <= ram[addr];
+                r_data <= ram[addr];
             end
         end else if (i_cs_rom0) begin
             if (i_wr) begin
                 rom0[addr] <= i_data;
             end else begin
-                o_data <= rom0[addr];
+                r_data <= rom0[addr];
             end
         end else if (i_cs_rom1) begin
             if (i_wr) begin
                 rom1[addr] <= i_data;
             end else begin
-                o_data <= rom1[addr];
+                r_data <= rom1[addr];
             end
         end
     end
+    reg [DATA_SZ-1:0] r_data;                           // registered data read
+    assign o_data = r_data;
 `else
     // explictly instantiated SPRAMs
     wire [DATA_SZ-1:0] ram_data;
@@ -70,8 +72,12 @@ module quad_mem #(
         .ADDRESS(addr),
         .DATAIN(i_data),
         .MASKWREN(4'b1111),
+        /*
         .WREN(i_wr),
         .CHIPSELECT(i_cs_ram),
+        */
+        .WREN(i_wr && i_cs_ram),
+        .CHIPSELECT(1'b1),
         .CLOCK(i_clk),
         .STANDBY(1'b0),
         .SLEEP(1'b0),
@@ -83,8 +89,12 @@ module quad_mem #(
         .ADDRESS(addr),
         .DATAIN(i_data),
         .MASKWREN(4'b1111),
+        /*
         .WREN(i_wr),
         .CHIPSELECT(i_cs_rom0),
+        */
+        .WREN(i_wr && i_cs_rom0),
+        .CHIPSELECT(1'b1),
         .CLOCK(i_clk),
         .STANDBY(1'b0),
         .SLEEP(1'b0),
@@ -96,14 +106,19 @@ module quad_mem #(
         .ADDRESS(addr),
         .DATAIN(i_data),
         .MASKWREN(4'b1111),
+        /*
         .WREN(i_wr),
         .CHIPSELECT(i_cs_rom1),
+        */
+        .WREN(i_wr && i_cs_rom1),
+        .CHIPSELECT(1'b1),
         .CLOCK(i_clk),
         .STANDBY(1'b0),
         .SLEEP(1'b0),
         .POWEROFF(1'b1),
         .DATAOUT(rom1_data)
     );
+    /*
     always @(posedge i_clk) begin
         if (i_cs_ram) begin
             o_data <= ram_data;
@@ -113,6 +128,11 @@ module quad_mem #(
             o_data <= rom1_data;
         end
     end
-`endif
+    */
+    assign o_data =
+        ( i_cs_rom0 ? rom0_data
+        : i_cs_rom1 ? rom1_data
+        : ram_data );
+    `endif
 
 endmodule
