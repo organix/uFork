@@ -162,15 +162,15 @@ module cpu #(
         //
         // ALU and stack ops
         //
-        ucode[12'h010] = UC_LSB;
-        ucode[12'h011] = UC_DUP;
-        ucode[12'h012] = UC_INC;
-        ucode[12'h013] = UC_DUP;
-        ucode[12'h014] = UC_2MUL;
-        ucode[12'h015] = UC_DEC;
-        ucode[12'h016] = UC_ROT;
-        ucode[12'h017] = UC_NIP;
-        ucode[12'h018] = UC_TUCK;
+        ucode[12'h010] = UC_LSB;                        // 1
+        ucode[12'h011] = UC_DUP;                        // 1 1
+        ucode[12'h012] = UC_INC;                        // 1 2
+        ucode[12'h013] = UC_DUP;                        // 1 2 2
+        ucode[12'h014] = UC_2MUL;                       // 1 2 4
+        ucode[12'h015] = UC_DEC;                        // 1 2 3
+        ucode[12'h016] = UC_ROT;                        // 2 3 1
+        ucode[12'h017] = UC_NIP;                        // 2 1
+        ucode[12'h018] = UC_TUCK;                       // 1 2 1
         ucode[12'h019] = 16'h8000;                      // jump $000
         //
         // branch, fetch, and store
@@ -444,9 +444,7 @@ module cpu #(
         : pc );
 
     wire [DATA_SZ-1:0] r_value =
-        ( ctrl ?
-            ( p_alu && r_pc ? { {PAD_ADDR{1'b0}}, pc }
-            : 0 )
+        ( ctrl ? { {PAD_ADDR{1'b0}}, pc }
         : d_value );
     wire [2:0] r_se =
         ( ctrl ?
@@ -457,11 +455,12 @@ module cpu #(
     wire [DATA_SZ-1:0] r0;
     wire [DATA_SZ-1:0] r1;
 
+    wire [DATA_SZ-1:0] mem_out =
+        ( quad_op ? quad_rdata
+        : mem_rng == `MEM_DEV ? { {(DATA_SZ-8){uart_rdata[7]}}, uart_rdata }
+        : uc_rdata );
     wire [DATA_SZ-1:0] d_value =
-        ( mem_op && mem_rng == `MEM_UC ? uc_rdata
-        : mem_op && mem_rng == `MEM_PC ? uc_rdata
-        : mem_op && mem_rng == `MEM_DEV ? { {(DATA_SZ-8){uart_rdata[7]}}, uart_rdata }
-        : mem_op && quad_op ? quad_rdata
+        ( mem_op ? mem_out
         : alu_out );
     wire [2:0] d_se =
         ( ctrl ?
