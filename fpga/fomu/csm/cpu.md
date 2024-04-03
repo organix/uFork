@@ -271,6 +271,27 @@ Each uCode instruction executes
 in 2 clock-cycles.
 The phases are ALU/MEM and STACK.
 
+    : ALU/MEM phase                                     : STACK phase
+    :                                                   :
+    Instruction ----------+------+------------+-------> Instruction     +---------->
+    :                     |      |            |         :         |     |
+    :                     |      V            |         :         |     |
+    :         +---> %-----|--> Memory --+     |         :         |   Memory
+    :         |     ^     |             |     |         :         |     ^
+    :         |     |     |             |     V         :         |     |
+    PC+1 -----|-----+-----|-------------|---> %-------> PC -------|-----+--- +1 --->
+    :         |     |     |             |     %         :         |
+    :         |     +-----|---- +1 -----|---> %         :         |
+    :         |     |     |             |     ^         :         |
+    :         |     +-----|-------------|-----|----+    :         +-------------+
+    :         |           |             |     |    |    :         |             V
+    R-stack --|-----+-----|-------------|-----+    +--> R-stack --|---> %--> R-stack
+    :         |     |     |             |               :         |     ^
+    :         |     |     |             |               :         +-----|-------+
+    :         |     V     V             V               :               |       V
+    D-stack --+---> %--> ALU ---------> %-------------> Result ---------+--> D-stack
+    :                                                   :
+
 ### ALU/MEM phase
 
 At the beginning of the ALU/MEM phase
