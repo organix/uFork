@@ -1548,7 +1548,35 @@ export const uFork = (asm) => {
   dat("0", "uFork_int2fixnum", "OVER", "EXIT");
 
   def("uFork_instr_sponsor__resources_common"); // ( kont subopcode )
-  dat("SWAP");                     // ( subop kont )
+  dat(">R");                     // ( kont ) R:( subopcode )
+  // todo: insert here a fixnum type check
+  dat("DUP", "uFork_pop");       // ( kont n_fixnum ) R:( subopcode )
+  dat("uFork_fixnum2int");       // ( kont n )
+  // todo: insert here a check that n is greater than 0
+  dat("OVER");                   // ( kont n kont )
+  dat("qy@");                    // ( kont n event )
+  dat("qt@");                    // ( kont n my_sponsor ) R:( subopcode )
+  dat("R@");                     // ( kont n my_sponsor subopcode ) R:( subopcode )
+  dat("uFork_instr_sponsor__resources_common_res@"); // ( kont n my_quota ) R:( subopcode )
+  
+
+  def("uFork_instr_sponsor__resources_common_res@"); // ( sponsor subopcode -- quota )
+  dat("1-");
+  dat("(JMPTBL)", 3);
+  dat("uFork_instr_sponsor__resources_common_qt@");
+  dat("uFork_instr_sponsor__resources_common_qx@");
+  dat("uFork_instr_sponsor__resources_common_qy@");
+  dat("EXIT");
+  def("uFork_instr_sponsor__resources_common_qt@");
+  dat("DROP", "qt@", "EXIT");
+  def("uFork_instr_sponsor__resources_common_qx@");
+  dat("DROP", "qx@", "EXIT");
+  def("uFork_instr_sponsor__resources_common_qy@");
+  dat("DROP", "qy@", "EXIT");
+
+
+
+
 
   // tbd: new instruction for uFork `throw_away_effects`
   //      throws away the accumulated outgoing events and cancels beh update of the actor
