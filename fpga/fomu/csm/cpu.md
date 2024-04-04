@@ -263,6 +263,119 @@ LSB     | ( -- 1 )                  | `02D6` | `0000_0010_1101_0110`
 MSB     | ( -- 0x8000 )             | `02E6` | `0000_0010_1110_0110`
 2*      | ( a -- a+a )              | `0301` | `0000_0011_0000_0001`
 
+## Operational Description
+
+The current FPGA design implements
+a 2-phase instruction execution machine.
+Each uCode instruction executes
+in 2 clock-cycles.
+The phases are ALU/MEM and STACK.
+
+    :       ALU/MEM phase                               :       STACK phase
+    :                                                   :
+    Instruction ----------+------+------------+-------> Instruction     +---------->
+    :                     |      |            |         :         |     |
+    :                     |      V            |         :         |     |
+    :         +---> %-----|--> Memory --+     |         :         |   Memory
+    :         |     ^     |             |     |         :         |     ^
+    :         |     |     |             |     V         :         |     |
+    PC+1 -----|-----+-----|-------------|---> %-------> PC -------|-----+--> +1 --->
+    :         |     |     |             |     %         :         |
+    :         |     +-----|---> +1 -----|---> %         :         |
+    :         |     |     |             |     ^         :         |
+    :         |     +-----|-------------|-----|----+    :         +-------------+
+    :         |           |             |     |    |    :         |             V
+    R-stack --|-----+-----|-------------|-----+    +--> R-stack --|---> %--> R-stack
+    :         |     |     |             |               :         |     ^
+    :         |     |     |             |               :         +-----|-------+
+    :         |     V     V             V               :               |       V
+    D-stack --+---> %--> ALU ---------> %-------------> Result ---------+--> D-stack
+    :                                                   :
+
+### ALU/MEM phase
+
+At the beginning of the ALU/MEM phase
+the instruction has been fetched from uCode memory
+and the program-counter (`PC`) incremented by `1`,
+pointing to the default next-instruction location.
+Registered inputs include:
+
+  * The current instruction
+  * The incremented program-counter (`PC+1`)
+  * The top 2 elements of the D(ata)-Stack (`D0` and `D1`)
+  * The top element of the R(eturn)-Stack (`R0`)
+
+For ALU instructions,
+fields of the instruction select
+the inputs to the ALU
+and the operation to perform.
+If the `RPC` bit is set,
+the `PC` is loaded from `R0`,
+otherwise it remains just `PC+1`.
+
+For MEM instructions,
+fields of the instruction select
+the type of memory accessed
+and the operation to perform (read or write).
+If the `RPC` bit is set,
+the `PC` is loaded from `R0`,
+otherwise it remains just `PC+1`,
+or `PC+2` if the memory read is from `PC+1`.
+A memory write consumes both `D0` (the address)
+and `D1` (the data), so an extra DROP
+is performed on the D-stack in this phase.
+
+For control-transfer instructions,
+most of the bits are an immediate address
+that may be loaded into the `PC`.
+If the `PRC` bit is set,
+`PC+1` is pushed onto the R-stack
+as a return-address (a CALL versus a JUMP).
+If the branch is conditional,
+the immediate address is only used
+If `D0` is zero,
+otherwise it remains just `PC+1`.
+If auto-increment/decrement are selected,
+the ALU performs the operation on `D0`.
+
+### STACK phase
+
+At the beginning of the STACK phase
+the address of the next instruction has been selected
+and the results of either the ALU operation or MEM access are available.
+Registered inputs include:
+
+  * The current instruction (carried over from the ALU/MEM phase)
+  * The selected program-counter (`PC`) from the ALU/MEM phase
+  * The result of the ALU operation, for ALU instructions
+  * The result of the memory cycle, for MEM instructions
+
+For ALU instructions,
+fields of the instruction select
+effects on the D-stack and R-stack.
+The ALU result is available
+to be PUSHed or RPLCed on either stack.
+
+For MEM instructions,
+fields of the instruction select
+effects on the D-stack and R-stack.
+If the memory operation was a read,
+the result data is available
+to be PUSHed or RPLCed on either stack.
+
+For control-transfer instructions,
+the stack operations (if any)
+are implied by the branch-type.
+If the branch is conditional,
+the test value (`D0`) is DROPed from the D-stack.
+If auto-increment/decrement are selected
+and `D0` was not zero,
+the ALU result is used to RPLC the `D0` value.
+
+Finally, the `PC` selected in the ALU/MEM phase
+is used to fetch the next instruction to execute,
+and the `PC` is incremented by `1`.
+
 ## Resource Usage
 
 ###  Baseline (1k uCode, no devices)
