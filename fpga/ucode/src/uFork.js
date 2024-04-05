@@ -1618,6 +1618,16 @@ export const uFork = (asm) => {
   dat("uFork_int2fixnum");      // ( eds ings ings_events_quota_fixnum )
   dat("OVER", "qx!");           // ( eds ings )
   dat("OVER", "qy@");           // ( eds ings eds_cycles_quota_fixnum )
+  dat("uFork_fixnum2int");      // ( eds ings eds_cycles_quota )
+  dat("OVER", "qy@");           // ( eds ings eds_cycles_quota ings_cycles_quota_fixnum )
+  dat("uFork_fixnum2int");      // ( eds ings eds_cycles_quota ings_cycles_quota )
+  dat("+");                     // ( eds ings ings_cycles_quota )
+  dat("uFork_int2fixnum");      // ( eds ings ings_cycles_quota_fixnum )
+  dat("SWAP", "qy!");           // ( eds )
+  dat("0", "uFork_int2fixnum", "OVER", "qt!");
+  dat("0", "uFork_int2fixnum", "OVER", "qx!");
+  dat("0", "uFork_int2fixnum", "SWAP", "qy!");
+  dat("EXIT");
   
 
   def("uFork_instr_sponsor_reclaim"); // ( kont subopcode )
