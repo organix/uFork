@@ -1602,6 +1602,26 @@ export const uFork = (asm) => {
   def("uFork_instr_sponsor__resources_common_qy!"); // ( quota sponsor -- )
   dat("DROP", "qy!", "EXIT");
 
+  def("uFork_sponsor_reclaim"); // ( reclaimed_sponsor reclaiming_sponsor -- )
+  dat("OVER", "qt@");           // ( eds ings eds_mem_quota_fixnum )
+  dat("uFork_fixnum2int");      // ( eds ings eds_mem_quota )
+  dat("OVER", "qt@");           // ( eds ings eds_mem_quota ings_mem_quota_fixnum )
+  dat("uFork_fixnum2int");      // ( eds ings eds_mem_quota ings_mem_quota )
+  dat("+");                     // ( eds ings ings_mem_quota )
+  dat("uFork_int2fixnum");      // ( eds ings ings_mem_quota_fixnum )
+  dat("OVER", "qt!");           // ( eds ings )
+  dat("OVER", "qx@");           // ( eds ings eds_events_quota_fixnum )
+  dat("uFork_fixnum2int");      // ( eds ings eds_events_quota )
+  dat("OVER", "qx@");           // ( eds ings eds_events_quota ings_events_quota_fixnum )
+  dat("uFork_fixnum2int");      // ( eds ings eds_events_quota ings_events_quota )
+  dat("+");                     // ( eds ings ings_events_quota )
+  dat("uFork_int2fixnum");      // ( eds ings ings_events_quota_fixnum )
+  dat("OVER", "qx!");           // ( eds ings )
+  dat("OVER", "qy@");           // ( eds ings eds_cycles_quota_fixnum )
+  
+
+  def("uFork_instr_sponsor_reclaim"); // ( kont subopcode )
+  dat("DROP");                        
 
 
 
