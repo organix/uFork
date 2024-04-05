@@ -1629,10 +1629,9 @@ export const uFork = (asm) => {
   dat("0", "uFork_int2fixnum", "SWAP", "qy!");
   dat("EXIT");
   
-
   def("uFork_instr_sponsor_reclaim"); // ( kont subopcode )
   dat("DROP");                        // ( kont )
-  // todo: insert here an uFork TOS type check that is a sponsor
+  // todo: insert here an uFork TOS type check that it is a sponsor
   dat("DUP", "uFork_pop");            // ( kont reclaimed_sponsor )
   dat("DUP", ">R");                   // ( kont reclaimed_sponsor ) R:( reclaimed_sponsor )
   dat("OVER", "qy@", "qt@");          // ( kont reclaimed_sponsor reclaiming_sponsor )
