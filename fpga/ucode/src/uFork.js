@@ -1547,6 +1547,9 @@ export const uFork = (asm) => {
   def("0_i2f_OVER");
   dat("0", "uFork_int2fixnum", "OVER", "EXIT");
 
+  def("uFork_instr_sponsor_memory");
+  def("uFork_instr_sponsor_events");
+  def("uFork_instr_sponsor_cycles");
   def("uFork_instr_sponsor__resources_common"); // ( kont subopcode )
   dat(">R");                     // ( kont ) R:( subopcode )
   // todo: insert here a fixnum type check
@@ -1558,7 +1561,18 @@ export const uFork = (asm) => {
   dat("qt@");                    // ( kont n my_sponsor ) R:( subopcode )
   dat("R@");                     // ( kont n my_sponsor subopcode ) R:( subopcode )
   dat("uFork_instr_sponsor__resources_common_res@"); // ( kont n my_quota ) R:( subopcode )
-  
+  dat("2DUP", "<", "(BRZ)", "uFork_instr_sponsor__resources_common_l0");
+  dat("uFork_fixnum2int", "OVER", "-", "uFork_int2fixnum"); // ( kont n my_quota-n )
+  dat("ROT", "DUP", ">R", "-ROT", "R>"); // ( kont n my_quota-n kont ) R:( subopcode )
+  dat("qy@", "qt@", "R@"); // ( kont n my_quota-n my_sponsor subopcode ) R:( subopcode )
+  dat("uFork_instr_sponsor__resources_common_res!"); // ( kont n ) R:( subopcode )
+  dat("OVER", "uFork_pop"); // ( kont n dest_sponsor ) R:( subopcode )
+  dat("SWAP", "OVER", "R@"); // ( kont dest_sponsor n dest_sponsor subopcode ) R:( subopcode )
+  dat("uFork_instr_sponsor__resources_common_res@"); // ( kont dest_sponsor n dest_quota ) R:( subopcode )
+  dat("uFork_fixnum2int", "+", "uFork_int2fixnum");  // ( kont dest_sponsor dest_quota+n ) R:( subopcode )
+  dat("OVER");               // ( kont dest_sponsor dest_quota+n dest_sponsor ) R:( subopcode )
+  dat("R>", "uFork_instr_sponsor__resources_common_res!"); // ( kont dest_sponsor )
+  dat("(JMP)", "uFork__push_then_instrTail");
 
   def("uFork_instr_sponsor__resources_common_res@"); // ( sponsor subopcode -- quota )
   dat("1-");
@@ -1573,6 +1587,20 @@ export const uFork = (asm) => {
   dat("DROP", "qx@", "EXIT");
   def("uFork_instr_sponsor__resources_common_qy@");
   dat("DROP", "qy@", "EXIT");
+
+  def("uFork_instr_sponsor__resources_common_res!"); // ( quota sponsor subopcode -- )
+  dat("1-");
+  dat("(JMPTBL)", 3);
+  dat("uFork_instr_sponsor__resources_common_qt!");
+  dat("uFork_instr_sponsor__resources_common_qx!");
+  dat("uFork_instr_sponsor__resources_common_qy!");
+  dat("EXIT");
+  def("uFork_instr_sponsor__resources_common_qt!"); // ( quota sponsor -- )
+  dat("DROP", "qt!", "EXIT");
+  def("uFork_instr_sponsor__resources_common_qx!"); // ( quota sponsor -- )
+  dat("DROP", "qx!", "EXIT");
+  def("uFork_instr_sponsor__resources_common_qy!"); // ( quota sponsor -- )
+  dat("DROP", "qy!", "EXIT");
 
 
 
