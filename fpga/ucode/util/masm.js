@@ -106,7 +106,7 @@ export const makeAssembler = (opts) => {
       case "bigint": val = BigInt.asUintN(cellsize, val); // fallthrough
       case "number": val = Math.trunc(val) & fullcellBitmask; break;
       case "boolean": val = (val ? fullcellBitmask : 0); break;
-      case "function": datum(val(asm)); break;
+      case "function": val = 42; break; // datum(val(asm)); break;
       case "object":
         if (val == null) {
           val = 0;
