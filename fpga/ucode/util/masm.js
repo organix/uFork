@@ -148,7 +148,7 @@ export const makeAssembler = (opts) => {
           prev_val.resolve([curr_addr, val]);
         }
       } else {
-        throw new Error(`image address ${curr_addr} already has ${prev_val} assigned to it whilist ${val} was atempted to be assigned to it`);
+        throw new Error(`image address ${curr_addr} already has ${prev_val} assigned to it whilist ${val} was attempted to be assigned to it`);
       }
     } else {
       if ((typeof val) == "function") {
@@ -159,6 +159,9 @@ export const makeAssembler = (opts) => {
     }
   };
   asm.datum = datum;
+  asm.undatum = (address) => {
+    image.delete(address);
+  };
   asm.datumAt = (address) => {
     if (image.has(address)) {
       const val = image.get(address);
