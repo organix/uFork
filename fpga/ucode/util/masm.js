@@ -146,18 +146,19 @@ export const makeAssembler = (opts) => {
         if (prev_val.resolve != undefined) {
           image.delete(curr_addr);
           prev_val.resolve([curr_addr, val]);
+        } else {
+          throw new Error("fallmerkill1");
         }
       } else {
         console.dir(val);
         throw new Error(`image address ${curr_addr} already has ${prev_val} assigned to it whilist ${val} was attempted to be assigned to it`);
       }
-    } else {
-      if ((typeof val) == "function") {
-        throw new Error("fallmerkill2");
-      }
-      image.set(curr_addr, val);
-      asm.allot(1);
     }
+    if ((typeof val) == "function") {
+      throw new Error("fallmerkill2");
+    }
+    image.set(curr_addr, val);
+    asm.allot(1);
   };
   asm.datum = datum;
   asm.undatum = (address) => {
