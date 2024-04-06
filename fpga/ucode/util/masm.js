@@ -101,7 +101,7 @@ export const makeAssembler = (opts) => {
   const datum = (item) => {
     let val = item;
     switch (typeof val) {
-      case "undefined": val = 0; break;
+      case "undefined": return;
       case "string": return datum(asm.symbols.lookup(val)); break;
       case "bigint": val = BigInt.asUintN(cellsize, val); // fallthrough
       case "number": val = Math.trunc(val) & fullcellBitmask; break;
