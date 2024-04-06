@@ -148,6 +148,7 @@ export const makeAssembler = (opts) => {
           prev_val.resolve([curr_addr, val]);
         }
       } else {
+        console.dir(val);
         throw new Error(`image address ${curr_addr} already has ${prev_val} assigned to it whilist ${val} was attempted to be assigned to it`);
       }
     } else {
