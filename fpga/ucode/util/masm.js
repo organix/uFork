@@ -106,7 +106,7 @@ export const makeAssembler = (opts) => {
       case "bigint": val = BigInt.asUintN(cellsize, val); // fallthrough
       case "number": val = Math.trunc(val) & fullcellBitmask; break;
       case "boolean": val = (val ? fullcellBitmask : 0); break;
-      case "function": val = 42; break; // datum(val(asm)); break;
+      case "function": throw new Error("fallmerkill1"); break; // datum(val(asm)); break;
       case "object":
         if (val == null) {
           val = 0;
@@ -150,6 +150,9 @@ export const makeAssembler = (opts) => {
         throw new Error(`image address ${curr_addr} already has ${prev_val} assigned to it whilist ${val} was atempted to be assigned to it`);
       }
     } else {
+      if ((typeof val) == "function") {
+        throw new Error("fallmerkill2");
+      }
       image.set(curr_addr, val);
       asm.allot(1);
     }
