@@ -102,11 +102,11 @@ export const makeAssembler = (opts) => {
     let val = item;
     switch (typeof val) {
       case "undefined": val = 0; break;
-      case "string": val = asm.symbols.lookup(val); break;
+      case "string": return datum(asm.symbols.lookup(val)); break;
       case "bigint": val = BigInt.asUintN(cellsize, val); // fallthrough
       case "number": val = Math.trunc(val) & fullcellBitmask; break;
       case "boolean": val = (val ? fullcellBitmask : 0); break;
-      case "function": val = val(asm); break;
+      case "function": return datum(val(asm)); break;
       case "object":
         if (val == null) {
           val = 0;
@@ -138,10 +138,6 @@ export const makeAssembler = (opts) => {
           return;
         }
         break;
-    }
-    if ((typeof val) != "number") {
-      datum(val);
-      return;
     }
     if (image.has(curr_addr)) {
       const prev_val = image.get(curr_addr);
