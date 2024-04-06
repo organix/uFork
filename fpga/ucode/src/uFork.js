@@ -1639,8 +1639,24 @@ export const uFork = (asm) => {
   dat("R>");                          // ( kont reclaimed_sponsor )
   dat("(JMP)", "uFork__push_then_instrTail");
 
-
-
+  def("uFork_instr_sponsor_start"); // ( kont subopcode )
+  dat("DROP");                      // ( kont )
+  // todo: insert here that uFork TOS is opaque and an actor
+  // todo: insert here that uFork NOS is an sponsor
+  // todo: insert here that signal field of that sponsor is fixnum
+  // todo: insert here mem fuel of this kont sponsor check&burn: 1 quad spent
+  dat("DUP", "uFork_pop");          // ( kont ctrlr )
+  dat("OVER", "uFork_pop");         // ( kont ctrlr spn )
+  dat(">R");                        // ( kont ctrlr ) R:( spn )
+  dat("uFork_allot");               // ( kont ctrlr quad )
+  dat("DUP", ">R");                 // ( kont ctrlr quad ) R:( spn quad )
+  dat("qx!");                       // ( kont ) R:( spn quad )
+  dat("DUP", "qy@", "qt@");         // ( kont ctrlr_spn ) R:( spn quad )
+  dat("R@", "qt!");                 // ( kont ) R:( spn quad )
+  dat("R>", "DUP", "R@");           // ( kont quad quad spn ) R:( spn )
+  dat("SWAP", "qy!");               // ( kont quad ) R:( spn )
+  dat("R>", "qz!");                 // ( kont ) R:( )
+  dat("(JMP)", "uFork_instr__common_longer_tail");
 
   // tbd: new instruction for uFork `throw_away_effects`
   //      throws away the accumulated outgoing events and cancels beh update of the actor
