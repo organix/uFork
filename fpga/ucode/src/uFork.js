@@ -1660,6 +1660,15 @@ export const uFork = (asm) => {
 
   def("uFork_instr_sponsor_stop"); // ( kont subopcode )
   dat("DROP");                     // ( kont )
+  // todo: insert here that uFork NOS is an sponsor
+  dat("DUP", "uFork_pop");         // ( kont spn )
+  dat("OVER", "qy@", "qt@");       // ( kont spn kont_spn )
+  dat("OVER", "SWAP");             // ( kont spn spn kont_spn )
+  dat("uFork_sponsor_reclaim");    // ( kont spn )
+  dat("0", "uFork_int2fixnum");    // ( kont spn zero_fixnum )
+  dat("SWAP", "qz!");              // ( kont )
+  dat("(JMP)", "uFork_instr__common_longer_tail");
+
 
   // tbd: new instruction for uFork `throw_away_effects`
   //      throws away the accumulated outgoing events and cancels beh update of the actor
