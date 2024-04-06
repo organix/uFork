@@ -118,6 +118,7 @@ export const makeAssembler = (opts) => {
             datum(result);
             asm.origin(old_addr);
           });
+          return;
         } else if (val instanceof Array) {
           Array.prototype.forEach.call(val, datum);
           return;
