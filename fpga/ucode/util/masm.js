@@ -106,7 +106,7 @@ export const makeAssembler = (opts) => {
       case "bigint": val = BigInt.asUintN(cellsize, val); // fallthrough
       case "number": val = Math.trunc(val) & fullcellBitmask; break;
       case "boolean": val = (val ? fullcellBitmask : 0); break;
-      case "function": throw new Error("fallmerkill1"); break; // datum(val(asm)); break;
+      case "function": val = val(asm)); break;
       case "object":
         if (val == null) {
           val = 0;
@@ -138,6 +138,10 @@ export const makeAssembler = (opts) => {
           return;
         }
         break;
+    }
+    if ((typeof val) != "number") {
+      datum(val);
+      return;
     }
     if (image.has(curr_addr)) {
       const prev_val = image.get(curr_addr);
