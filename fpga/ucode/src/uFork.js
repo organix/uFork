@@ -1658,6 +1658,9 @@ export const uFork = (asm) => {
   dat("R>", "qz!");                 // ( kont ) R:( )
   dat("(JMP)", "uFork_instr__common_longer_tail");
 
+  def("uFork_instr_sponsor_stop"); // ( kont subopcode )
+  dat("DROP");                     // ( kont )
+
   // tbd: new instruction for uFork `throw_away_effects`
   //      throws away the accumulated outgoing events and cancels beh update of the actor
 
@@ -1745,9 +1748,14 @@ export default Object.freeze({
  */
 
 /* tbd:
-     möguleiki á að búa til actor þar sem sp bendir ekki á stack heldur á
-     quad þar sem z field bendir á
-       [debugger_sponsor, debugger, #?, #?]
+     möguleiki á að búa til actor þar sem code bendir ekki á stack heldur á
+     quad
+       þar sem t field bendir á #debug_t
+       þar sem x field bendir á raunverulegan kóða
+       þar sem z field bendir á
+         [debugger_sponsor, debugger, #?, #?]
+     þegar slíkur actor fær boð þá bendir sp (x quad field) á quad sem z field bendir á
+        debugger event quad hér rétt fyrir ofan
      ef anonomulous staða kemur upp þá er þetta notað til að senda event boð til
      debugger á forminu:
        [debugger_sponsor, debugger, msg, #?]
