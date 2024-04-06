@@ -135,6 +135,7 @@ export const defineInstructionset = (asm, opts = { instrsetName: "uFork_SM2.1" }
       const resolve = ([here_plusone, val]) => {
         Promise.resolve(val).then((real_val) => {
           const tmp = asm.addr;
+          asm.undatum(here); // erease placeholder
           asm.origin(here);
           if ((real_val & 0x8000) == 0x8000) {
             asm.datum(0x8000 | (real_val ^ 0xFFFF));
@@ -145,7 +146,7 @@ export const defineInstructionset = (asm, opts = { instrsetName: "uFork_SM2.1" }
           }
         });
       };
-      asm.datum("NOP");
+      asm.datum("NOP"); // placeholder put in
       asm.datum({ resolve });
       asm.origin(asm.deferedOp.minus(asm.addr, 1));
       return undefined;
@@ -153,10 +154,11 @@ export const defineInstructionset = (asm, opts = { instrsetName: "uFork_SM2.1" }
     def("(JMP)", (asm) => {
       const here = asm.addr;
       const resolve = ([here_plustwo, val]) => {
+        asm.undatum(here); // erease placeholder
         asm.origin(here);
         asm.datum(asm.deferedOp.or(0x0000, asm.deferedOp.and(0x1FFF, val)));
       };
-      asm.datum("NOP");
+      asm.datum("NOP"); // placeholder set in
       asm.datum({ resolve });
       asm.origin(asm.deferedOp.minus(asm.addr, 1));
       return undefined;
@@ -164,6 +166,7 @@ export const defineInstructionset = (asm, opts = { instrsetName: "uFork_SM2.1" }
     def("(BRZ)", (asm) => {
       const here = asm.addr;
       const resolve = ([here_plustwo, val]) => {
+        asm.undatum(here); // erease placeholder
         asm.origin(here);
         asm.datum(asm.deferedOp.or(0x2000, asm.deferedOp.and(0x1FFF, val)));
       };
@@ -269,10 +272,11 @@ export const defineInstructionset = (asm, opts = { instrsetName: "uFork_SM2.1" }
     def("(JMP)", (asm) => {
       const here = asm.addr;
       const resolve = ([here_plusone, val]) => {
+        asm.undatum(here);
         asm.origin(here);
         asm.datum(asm.deferedOp.or(0x8000, asm.deferedOp.and(val, 0x0FFF)));
       };
-      asm.datum("NOP");
+      asm.datum("NOP"); // placeholder put in
       asm.datum({ resolve });
       asm.origin(asm.deferedOp.minus(asm.addr, 1));
       return undefined;
@@ -280,10 +284,11 @@ export const defineInstructionset = (asm, opts = { instrsetName: "uFork_SM2.1" }
     def("(BRZ)", (asm) => {
       const here = asm.addr;
       const resolve = ([here_plusone, val]) => {
+        asm.undatum(here); // erease placeholder
         asm.origin(here);
         asm.datum(asm.deferedOp.or(0xA000, asm.deferedOp.and(val, 0x0FFF)));
       };
-      asm.datum("NOP");
+      asm.datum("NOP"); // placeholder put in
       asm.datum({ resolve });
       asm.origin(asm.deferedOp.minus(asm.addr, 1));
       return undefined;
@@ -318,6 +323,7 @@ export const defineInstructionset = (asm, opts = { instrsetName: "uFork_SM2.1" }
         const resolve = ([here_plusone, val]) => {
           asm.deferOp.equal(val, "EXIT").then((bool) => {
             if (bool) {
+              asm.undatum(here); // erase the previous value 
               asm.origin(here);
               asm.datum(asm.deferOp.or(myval, "EXIT"));
             } else {
@@ -427,10 +433,11 @@ export const defineInstructionset = (asm, opts = { instrsetName: "uFork_SM2.1" }
     def("(JMP)", (asm) => {
       const here = asm.addr;
       const resolve = ([here_plusone, val]) => {
+        asm.undatum(here); // erease placeholder
         asm.origin(here);
         asm.datum(asm.deferedOp.or(0x8000, asm.deferedOp.and(val, 0x0FFF)));
       };
-      asm.datum("NOP");
+      asm.datum("NOP"); // placeholder put in
       asm.datum({ resolve });
       asm.origin(asm.deferedOp.minus(asm.addr, 1));
       return undefined;
@@ -438,10 +445,11 @@ export const defineInstructionset = (asm, opts = { instrsetName: "uFork_SM2.1" }
     def("(BRZ)", (asm) => {
       const here = asm.addr;
       const resolve = ([here_plusone, val]) => {
+        asm.undatum(here); // erease placeholder
         asm.origin(here);
         asm.datum(asm.deferedOp.or(0xA000, asm.deferedOp.and(val, 0x0FFF)));
       };
-      asm.datum("NOP");
+      asm.datum("NOP"); // placeholder put in
       asm.datum({ resolve });
       asm.origin(asm.deferedOp.minus(asm.addr, 1));
       return undefined;
