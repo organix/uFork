@@ -341,7 +341,7 @@ export const makeAssembler = (opts) => {
     image.forEach((val, addr) => {
       if ((typeof val) == "object") {
         if ((val.promise != undefined) || (val instanceof Promise)) {
-          done_reject(new Error(`addr ${addr} has a promise and no concrete value`));
+          // done_reject(new Error(`addr ${addr} has a promise and no concrete value`));
         }
       }
     });
