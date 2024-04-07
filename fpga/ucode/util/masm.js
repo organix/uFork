@@ -191,7 +191,7 @@ export const makeAssembler = (opts) => {
       b = asm.symbols.lookup(b);
     }
     if (((typeof a) == "number") && ((typeof b) == "number")) {
-      return (a | b);
+      return Promise.resolve(a | b);
     }
     if (((typeof a) == "function") || ((typeof b) == "function")) {
       throw new Error("not yet implemented!");
@@ -208,7 +208,7 @@ export const makeAssembler = (opts) => {
       b = asm.symbols.lookup(b);
     }
     if (((typeof a) == "number") && ((typeof b) == "number")) {
-      return (a & b);
+      return Promise.resolve(a & b);
     }
     if (((typeof a) == "function") || ((typeof b) == "function")) {
       throw new Error("not yet implemented!");
@@ -225,7 +225,7 @@ export const makeAssembler = (opts) => {
       b = asm.symbols.lookup(b);
     }
     if (((typeof a) == "number") && ((typeof b) == "number")) {
-      return (a + b);
+      return Promise.resolve(a + b);
     }
     if (((typeof a) == "function") || ((typeof b) == "function")) {
       throw new Error("not yet implemented!");
@@ -243,7 +243,7 @@ export const makeAssembler = (opts) => {
       b = asm.symbols.lookup(b);
     }
     if (((typeof a) == "number") && ((typeof b) == "number")) {
-      return (a - b);
+      return Promise.resolve(a - b);
     }
     if (((typeof a) == "function") || ((typeof b) == "function")) {
       throw new Error("not yet implemented!");
@@ -256,7 +256,7 @@ export const makeAssembler = (opts) => {
   asm.deferedOp.equal = (a, b) => {
     if (((typeof a) == "string") && ((typeof b) == "string")) {
       if (a == b) {
-        return true;
+        return Promise.resolve(true);
       }
     }
     if ((typeof a) == "string") {
@@ -266,7 +266,7 @@ export const makeAssembler = (opts) => {
       b = asm.symbols.lookup(b);
     }
     if (((typeof a) == "number") && ((typeof b) == "number")) {
-      return (a == b);
+      return Promise.resolve(a == b);
     }
     if (((typeof a) == "function") || ((typeof b) == "function")) {
       throw new Error("not yet implemented!");
@@ -283,7 +283,7 @@ export const makeAssembler = (opts) => {
       divisor = asm.symbols.lookup(divisor);
     }
     if (((typeof divident) == "number") && ((typeof divisor) == "number")) {
-      return Math.ceil(divident / divisor);
+      return Promise.resolve(Math.ceil(divident / divisor));
     }
     if (((typeof divident) == "function") || ((typeof divisor) == "function")) {
       throw new Error("not yet implemented!");
@@ -302,7 +302,7 @@ export const makeAssembler = (opts) => {
       b = asm.symbols.lookup(b);
     }
     if (((typeof a) == "number") && ((typeof b) == "number")) {
-      return (a * b);
+      return Promise.resolve(a * b);
     }
     if (((typeof a) == "function") || ((typeof b) == "function")) {
       throw new Error("not yet implemented!");
