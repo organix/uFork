@@ -444,7 +444,8 @@ export const defineInstructionset = (asm, opts = { instrsetName: "uFork_SM2.1" }
       const resolve = ([here_plusone, val]) => {
         asm.undatum(here); // erease placeholder
         asm.origin(here);
-        asm.datum(asm.deferedOp.or(0x8000, asm.deferedOp.and(val, 0x0FFF)));
+        // asm.datum(asm.deferedOp.or(0x8000, asm.deferedOp.and(val, 0x0FFF)));
+        asm.datum(0x8000 | (val & 0x0FFF));
       };
       asm.datum("NOP"); // placeholder put in
       const gildra = asm.addr;
@@ -457,7 +458,8 @@ export const defineInstructionset = (asm, opts = { instrsetName: "uFork_SM2.1" }
       const resolve = ([here_plusone, val]) => {
         asm.undatum(here); // erease placeholder
         asm.origin(here);
-        asm.datum(asm.deferedOp.or(0xA000, asm.deferedOp.and(val, 0x0FFF)));
+        // asm.datum(asm.deferedOp.or(0xA000, asm.deferedOp.and(val, 0x0FFF)));
+        asm.datum(0xA000 | (val & 0x0FFF));
       };
       asm.datum("NOP"); // placeholder put in
       const gildra = asm.addr;
