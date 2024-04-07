@@ -339,6 +339,7 @@ export const defineInstructionset = (asm, opts = { instrsetName: "uFork_SM2.1" }
             }
           });
         };
+        asm.undatum(asm.addr); // aflúsunaraðstoð
         asm.datum(myval);
         const gildra = asm.addr;
         asm.datum({ resolve });
