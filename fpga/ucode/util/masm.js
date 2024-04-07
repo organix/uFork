@@ -114,11 +114,11 @@ export const makeAssembler = (opts) => {
           const captured_address = curr_addr;
           val.then((result) => {
             const old_addr = curr_addr;
+            asm.undatum(captured_address);
             asm.origin(captured_address);
             datum(result);
             asm.origin(old_addr);
           });
-          return;
         } else if (val instanceof Array) {
           Array.prototype.forEach.call(val, datum);
           return;
