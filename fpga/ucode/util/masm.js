@@ -150,7 +150,7 @@ export const makeAssembler = (opts) => {
           throw new Error("fallmerkill1");
         }
       } else {
-        console.dir(val);
+        // console.dir(val);
         throw new Error(`image address ${curr_addr} already has ${prev_val} assigned to it whilist ${val} was attempted to be assigned to it`);
       }
     }
