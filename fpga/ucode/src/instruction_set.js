@@ -332,6 +332,7 @@ export const defineInstructionset = (asm, opts = { instrsetName: "uFork_SM2.1" }
               asm.origin(here);
               asm.datum(asm.deferOp.or(myval, "EXIT"));
             } else {
+              asm.undatum(here_plusone);
               asm.origin(here_plusone);
               asm.datum(val);
             }
