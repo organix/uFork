@@ -472,10 +472,13 @@ export const defineInstructionset = (asm, opts = { instrsetName: "uFork_SM2.1" }
         if (val == undefined) {
           const here = asm.addr;
           asm.def(sym.concat("_"), here);
+          /*
           val = asm.deferedOp.or(0xC000, asm.deferedOp.and(here, 0x0FFF));
           val.then((resolved_val) => {
             asm.symbols.redefine(sym, resolved_val);
           });
+          */
+          val = (0xC000 | (here & 0x0FFF));
         }
         asm.def(sym, val);
       },
