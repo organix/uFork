@@ -151,7 +151,7 @@ export const makeAssembler = (opts) => {
         }
       } else {
         // console.dir(val);
-        throw new Error(`image address ${curr_addr} already has ${prev_val} assigned to it whilist ${val} was attempted to be assigned to it`);
+        throw new Error(`image address 0x${curr_addr.toString(16).padStart(4, "0")} already has ${prev_val.toString(16).padStart(4, "0")} assigned to it whilist ${val.toString(16).padStart(4, "0")} was attempted to be assigned to it`);
       }
     }
     if ((typeof val) == "function") {
