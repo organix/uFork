@@ -147,8 +147,9 @@ export const defineInstructionset = (asm, opts = { instrsetName: "uFork_SM2.1" }
         });
       };
       asm.datum("NOP"); // placeholder put in
+      const gildra = asm.addr;
       asm.datum({ resolve });
-      asm.origin(asm.deferedOp.minus(asm.addr, 1));
+      asm.origin(gildra);
       return undefined;
     });
     def("(JMP)", (asm) => {
@@ -159,8 +160,9 @@ export const defineInstructionset = (asm, opts = { instrsetName: "uFork_SM2.1" }
         asm.datum(asm.deferedOp.or(0x0000, asm.deferedOp.and(0x1FFF, val)));
       };
       asm.datum("NOP"); // placeholder set in
+      const gildra = asm.addr;
       asm.datum({ resolve });
-      asm.origin(asm.deferedOp.minus(asm.addr, 1));
+      asm.origin(gildra);
       return undefined;
     });
     def("(BRZ)", (asm) => {
@@ -171,8 +173,9 @@ export const defineInstructionset = (asm, opts = { instrsetName: "uFork_SM2.1" }
         asm.datum(asm.deferedOp.or(0x2000, asm.deferedOp.and(0x1FFF, val)));
       };
       asm.datum("NOP");
+      const gildra = asm.addr;
       asm.datum({ resolve });
-      asm.origin(asm.deferedOp.minus(asm.addr, 1));
+      asm.origin(gildra);
       return undefined;
     });
     def("NOP",    0x6000);
@@ -277,8 +280,9 @@ export const defineInstructionset = (asm, opts = { instrsetName: "uFork_SM2.1" }
         asm.datum(asm.deferedOp.or(0x8000, asm.deferedOp.and(val, 0x0FFF)));
       };
       asm.datum("NOP"); // placeholder put in
+      const gildra = asm.addr;
       asm.datum({ resolve });
-      asm.origin(asm.deferedOp.minus(asm.addr, 1));
+      asm.origin(gildra);
       return undefined;
     });
     def("(BRZ)", (asm) => {
@@ -289,8 +293,9 @@ export const defineInstructionset = (asm, opts = { instrsetName: "uFork_SM2.1" }
         asm.datum(asm.deferedOp.or(0xA000, asm.deferedOp.and(val, 0x0FFF)));
       };
       asm.datum("NOP"); // placeholder put in
+      const gildra = asm.addr;
       asm.datum({ resolve });
-      asm.origin(asm.deferedOp.minus(asm.addr, 1));
+      asm.origin(gildra);
       return undefined;
     });
     
@@ -333,8 +338,9 @@ export const defineInstructionset = (asm, opts = { instrsetName: "uFork_SM2.1" }
           });
         };
         asm.datum(myval);
+        const gildra = asm.addr;
         asm.datum({ resolve });
-        asm.origin(asm.deferedOp.minus(asm.here, 1));
+        asm.origin(gildra);
         return undefined;
       });
       // console.log(`furðuvilluaflúsun2: ${sym} = ${asm.symbols.lookup(sym)}`);
@@ -438,8 +444,9 @@ export const defineInstructionset = (asm, opts = { instrsetName: "uFork_SM2.1" }
         asm.datum(asm.deferedOp.or(0x8000, asm.deferedOp.and(val, 0x0FFF)));
       };
       asm.datum("NOP"); // placeholder put in
+      const gildra = asm.addr;
       asm.datum({ resolve });
-      asm.origin(asm.deferedOp.minus(asm.addr, 1));
+      asm.origin(gildra);
       return undefined;
     });
     def("(BRZ)", (asm) => {
@@ -450,8 +457,9 @@ export const defineInstructionset = (asm, opts = { instrsetName: "uFork_SM2.1" }
         asm.datum(asm.deferedOp.or(0xA000, asm.deferedOp.and(val, 0x0FFF)));
       };
       asm.datum("NOP"); // placeholder put in
+      const gildra = asm.addr;
       asm.datum({ resolve });
-      asm.origin(asm.deferedOp.minus(asm.addr, 1));
+      asm.origin(gildra);
       return undefined;
     });
     
