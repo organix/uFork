@@ -326,7 +326,7 @@ export const defineInstructionset = (asm, opts = { instrsetName: "uFork_SM2.1" }
         const myval = val;
         const here = asm.addr;
         const resolve = ([here_plusone, val]) => {
-          asm.deferOp.equal(val, "EXIT").then((bool) => {
+          asm.deferedOp.equal(val, "EXIT").then((bool) => {
             if (bool) {
               asm.undatum(here); // erase the previous value 
               asm.origin(here);
