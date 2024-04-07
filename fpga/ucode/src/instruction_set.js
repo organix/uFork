@@ -348,7 +348,7 @@ export const defineInstructionset = (asm, opts = { instrsetName: "uFork_SM2.1" }
       });
       // console.log(`furðuvilluaflúsun2: ${sym} = ${asm.symbols.lookup(sym)}`);
     };
-    const defEvalInstr = defineEvaluateInstruction;
+    const defEvalInstr = def; // defineEvaluateInstruction;
     
     defEvalInstr("PLUS",    0x0741);
     defEvalInstr("AND",     0x0744);
