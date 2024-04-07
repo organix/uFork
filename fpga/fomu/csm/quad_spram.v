@@ -1,7 +1,7 @@
 /*
 
 uFork quad-cell memory interface
-implemented in Verilog (for simulation)
+implemented with SPRAM hard-blocks
 
     +-------------------+
     | quad_mem          |
@@ -40,35 +40,60 @@ module quad_mem #(
     // composite address
     wire [ADDR_SZ+1:0] addr = { i_addr, i_field };
 
-    reg [DATA_SZ-1:0] ram [0:4*MEM_MAX-1];
-    reg [DATA_SZ-1:0] rom0 [0:4*MEM_MAX-1];
-    reg [DATA_SZ-1:0] rom1 [0:4*MEM_MAX-1];
-    always @(posedge i_clk) begin
-        if (i_wr) begin
-            if (i_cs_ram) begin
-                ram[addr] <= i_data;
-            end
-            if (i_cs_rom0) begin
-                rom0[addr] <= i_data;
-            end
-            if (i_cs_rom1) begin
-                rom1[addr] <= i_data;
-            end
-        end else begin
-            if (i_cs_ram) begin
-                r_data <= ram[addr];
-            end
-            if (i_cs_rom0) begin
-                r_data <= rom0[addr];
-            end
-            if (i_cs_rom1) begin
-                r_data <= rom1[addr];
-            end
-        end
-    end
+    wire [DATA_SZ-1:0] ram_data;
+    SB_SPRAM256KA sp_ram (
+        .ADDRESS(addr),
+        .DATAIN(i_data),
+        .MASKWREN(4'b1111),
+        .WREN(i_wr && i_cs_ram),
+        .CHIPSELECT(1'b1),
+        .CLOCK(i_clk),
+        .STANDBY(1'b0),
+        .SLEEP(1'b0),
+        .POWEROFF(1'b1),
+        .DATAOUT(ram_data)
+    );
 
-    // registered data read
-    reg [DATA_SZ-1:0] r_data;
-    assign o_data = r_data;
+    wire [DATA_SZ-1:0] rom0_data;
+    SB_SPRAM256KA sp_rom0 (
+        .ADDRESS(addr),
+        .DATAIN(i_data),
+        .MASKWREN(4'b1111),
+        .WREN(i_wr && i_cs_rom0),
+        .CHIPSELECT(1'b1),
+        .CLOCK(i_clk),
+        .STANDBY(1'b0),
+        .SLEEP(1'b0),
+        .POWEROFF(1'b1),
+        .DATAOUT(rom0_data)
+    );
+
+    wire [DATA_SZ-1:0] rom1_data;
+    SB_SPRAM256KA sp_rom1 (
+        .ADDRESS(addr),
+        .DATAIN(i_data),
+        .MASKWREN(4'b1111),
+        .WREN(i_wr && i_cs_rom1),
+        .CHIPSELECT(1'b1),
+        .CLOCK(i_clk),
+        .STANDBY(1'b0),
+        .SLEEP(1'b0),
+        .POWEROFF(1'b1),
+        .DATAOUT(rom1_data)
+    );
+
+    // output multiplexor
+    reg r_cs_ram = 1'b0;
+    reg r_cs_rom0 = 1'b0;
+    reg r_cs_rom1 = 1'b0;
+    always @(posedge i_clk) begin
+        r_cs_ram <= i_cs_ram;
+        r_cs_rom0 <= i_cs_rom0;
+        r_cs_rom1 <= i_cs_rom1;
+    end
+    assign o_data =
+        ( r_cs_rom0 ? rom0_data
+        : r_cs_rom1 ? rom1_data
+        : ram_data );
 
 endmodule

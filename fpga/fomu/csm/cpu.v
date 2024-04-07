@@ -31,7 +31,12 @@ the value of `o_status` indicates success (1) or failure (0).
 //`include "../lib/serial_tx.v"
 //`include "../lib/serial_rx.v"
 `include "uart.v"
+`ifdef __ICARUS__
 `include "quad_mem.v"
+`else
+`include "quad_spram.v"
+//`include "quad_bram.v"
+`endif
 
 // Memory Ranges
 `define MEM_UC  (3'h0)      // uCode memory
@@ -63,7 +68,7 @@ module cpu #(
     initial o_status = 1'b1;                            // default to success
 
     parameter DATA_SZ       = 16;                       // number of bits per memory word
-    parameter ADDR_SZ       = 11;                       // number of bits in each address
+    parameter ADDR_SZ       = 12;                       // number of bits in each address
     parameter MEM_MAX       = (1<<ADDR_SZ);             // maximum memory address
     parameter PAD_ADDR      = (DATA_SZ-ADDR_SZ);        // number of padding bits from addr to data
 
@@ -436,11 +441,12 @@ module cpu #(
     wire [3:0] dev_id = d0[7:4];                        // device id (mem_rng == `MEM_DEV)
     wire [3:0] reg_id = d0[3:0];                        // register id (mem_rng == `MEM_DEV)
 
-    assign uc_wr = (p_alu && mem_op && mem_rng == `MEM_UC && mem_wr);
+    wire uc_en = (p_alu && mem_op && mem_rng == `MEM_UC);
+    assign uc_wr = (uc_en && mem_wr);
     assign uc_waddr = d0[ADDR_SZ-1:0];
     assign uc_wdata = d1;
     assign uc_raddr =
-        ( p_alu && mem_op && mem_rng == `MEM_UC ? d0[ADDR_SZ-1:0]
+        ( uc_en ? d0[ADDR_SZ-1:0]
         : pc );
 
     wire [DATA_SZ-1:0] r_value =
@@ -500,7 +506,7 @@ module cpu #(
     wire cs_qram = (quad_en && d0[15:14]==2'b01);
     wire cs_qrom0 = (quad_en && d0[15:12]==4'b0000);
     wire cs_qrom1 = (quad_en && d0[15:12]==4'b0001);
-    wire quad_wr = mem_wr;
+    wire quad_wr = (quad_en && mem_wr);
     wire [11:0] quad_addr = d0[11:0];
     wire [1:0] quad_field = mem_rng[1:0];
     wire [15:0] quad_wdata = d1;
@@ -510,8 +516,8 @@ module cpu #(
     always @(posedge i_clk) begin
         if (mem_op && mem_rng == `MEM_ERR) begin
             o_status <= 1'b0;                           // signal failure
-            p_alu = 1'b0;
-            instr_r = UC_NOP;
+            p_alu <= 1'b0;
+            instr_r <= UC_NOP;
         end else if (p_alu) begin
             if (!ctrl && r_pc) begin
                 pc <= r0[ADDR_SZ-1:0];                  // return from procedure

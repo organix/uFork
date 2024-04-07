@@ -461,7 +461,7 @@ and the `PC` is incremented by `1`.
 ### uFork Quad-Memory Component (2k uCode)
 
     Info: Device utilisation:
-    Info: 	         ICESTORM_LC:  1056/ 5280    20%
+    Info: 	         ICESTORM_LC:  1077/ 5280    20%
     Info: 	        ICESTORM_RAM:     8/   30    26%
     Info: 	               SB_IO:     8/   96     8%
     Info: 	               SB_GB:     8/    8   100%
@@ -476,7 +476,27 @@ and the `PC` is incremented by `1`.
     Info: 	         SB_LEDDA_IP:     0/    1     0%
     Info: 	         SB_RGBA_DRV:     1/    1   100%
     Info: 	      ICESTORM_SPRAM:     3/    4    75%
-    Info: Max frequency for clock 'clk': 29.09 MHz (PASS at 12.00 MHz)
+    Info: Max frequency for clock 'clk': 30.08 MHz (PASS at 12.00 MHz)
+
+### uFork Quad-Memory Component (4k uCode)
+
+    Info: Device utilisation:
+    Info: 	         ICESTORM_LC:  1079/ 5280    20%
+    Info: 	        ICESTORM_RAM:    16/   30    53%
+    Info: 	               SB_IO:     8/   96     8%
+    Info: 	               SB_GB:     8/    8   100%
+    Info: 	        ICESTORM_PLL:     0/    1     0%
+    Info: 	         SB_WARMBOOT:     0/    1     0%
+    Info: 	        ICESTORM_DSP:     0/    8     0%
+    Info: 	      ICESTORM_HFOSC:     0/    1     0%
+    Info: 	      ICESTORM_LFOSC:     0/    1     0%
+    Info: 	              SB_I2C:     0/    2     0%
+    Info: 	              SB_SPI:     0/    2     0%
+    Info: 	              IO_I3C:     0/    2     0%
+    Info: 	         SB_LEDDA_IP:     0/    1     0%
+    Info: 	         SB_RGBA_DRV:     1/    1   100%
+    Info: 	      ICESTORM_SPRAM:     3/    4    75%
+    Info: Max frequency for clock 'clk': 27.37 MHz (PASS at 12.00 MHz)
 
 ## Component Block Diagrams
 
