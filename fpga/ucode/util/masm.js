@@ -338,10 +338,10 @@ export const makeAssembler = (opts) => {
       done_reject(errs.map((item) => Promise.reject(item)));
     }
     // iterate through the image, looking for promises
-    makeArrayFromIterator(image.entries()).forEach(([addr, val]) => {
+    image.forEach((val, addr) => {
       if ((typeof val) == "object") {
-        if (val.promise != undefined) {
-          done_reject(new Error(`addr ${addr} has a promise an no concrete value`));
+        if ((val.promise != undefined) || (val instanceof Promise) {
+          done_reject(new Error(`addr ${addr} has a promise and no concrete value`));
         }
       }
     });
