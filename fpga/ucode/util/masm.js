@@ -157,7 +157,7 @@ export const makeAssembler = (opts) => {
     if ((typeof val) == "function") {
       throw new Error("fallmerkill2");
     }
-    console.log(` here: 0x${curr_addr.toString(16)}`);
+    // console.log(` here: 0x${curr_addr.toString(16)}`);
     image.set(curr_addr, val);
     asm.allot(1);
   };
