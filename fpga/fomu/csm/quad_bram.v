@@ -1,7 +1,7 @@
 /*
 
 uFork quad-cell memory interface
-implemented with SPRAM hard-blocks
+implemented with BRAM hard-blocks
 
     +-------------------+
     | quad_mem          |

@@ -249,7 +249,8 @@ SKZ w   | ( cond -- )               | --     | _conditional jump macro_
 R>      | ( -- a ) R:( a -- )       | `1280` | `0001_0010_1000_0000`
 R@      | ( -- a ) R:( a -- a )     | `0280` | `0000_0010_1000_0000`
 EXIT    | R:( addr -- ) addr->PC    | `5000` | `0101_0000_0000_0000`
-\-      | ( a b -- a-b )            | `0742` | `0000_0111_0100_0001`
+\-      | ( a b -- a-b )            | `0742` | `0000_0111_0100_0010`
+\*      | ( a b -- a\*b )           | `0743` | `0000_0111_0100_0011`
 OR      | ( a b -- a\|b )           | `0746` | `0000_0111_0100_0110`
 1-      | ( a -- a-1 )              | `0312` | `0000_0011_0001_0010`
 INVERT  | ( a -- ~a )               | `0335` | `0000_0011_0011_0101`
@@ -497,6 +498,26 @@ and the `PC` is incremented by `1`.
     Info: 	         SB_RGBA_DRV:     1/    1   100%
     Info: 	      ICESTORM_SPRAM:     3/    4    75%
     Info: Max frequency for clock 'clk': 27.37 MHz (PASS at 12.00 MHz)
+
+### Single-cycle Multiply w/ DSP block
+
+    Info: Device utilisation:
+    Info: 	         ICESTORM_LC:  1114/ 5280    21%
+    Info: 	        ICESTORM_RAM:    16/   30    53%
+    Info: 	               SB_IO:     8/   96     8%
+    Info: 	               SB_GB:     8/    8   100%
+    Info: 	        ICESTORM_PLL:     0/    1     0%
+    Info: 	         SB_WARMBOOT:     0/    1     0%
+    Info: 	        ICESTORM_DSP:     1/    8    12%
+    Info: 	      ICESTORM_HFOSC:     0/    1     0%
+    Info: 	      ICESTORM_LFOSC:     0/    1     0%
+    Info: 	              SB_I2C:     0/    2     0%
+    Info: 	              SB_SPI:     0/    2     0%
+    Info: 	              IO_I3C:     0/    2     0%
+    Info: 	         SB_LEDDA_IP:     0/    1     0%
+    Info: 	         SB_RGBA_DRV:     1/    1   100%
+    Info: 	      ICESTORM_SPRAM:     3/    4    75%
+    Info: Max frequency for clock 'clk': 25.19 MHz (PASS at 12.00 MHz)
 
 ## Component Block Diagrams
 
