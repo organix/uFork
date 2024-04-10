@@ -1672,7 +1672,12 @@ export const uFork = (asm) => {
 
   // tbd: new instruction for uFork `throw_away_effects`
   //      throws away the accumulated outgoing events and cancels beh update of the actor
-
+  // tbd: maybe a better idea
+  //      an uFork instruction that takes the current actor 'effect' quad of the current kontinuation
+  //      pushes that onto the uFork stack and makes a new 'effect' quad with reinitialized fields
+  //      pointing to current actor state and behaviour
+  //      nafn á kvkindið?
+  
   if (uForkSubroutines) {
     def("uFork_instr__subroutine_call"); // ( kont ip opcode -- )
     dat("DROP"); // ( kont ip )
