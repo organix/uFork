@@ -94,6 +94,7 @@ module cpu #(
 
     localparam UC_LIT       = 16'h021F;                 // (LIT) item ( -- item )
     localparam UC_SUB       = 16'h0742;                 // - ( a b -- a-b )
+    localparam UC_MUL       = 16'h0743;                 // * ( a b -- a*b )
     localparam UC_OR        = 16'h0746;                 // OR ( a b -- a|b )
     localparam UC_NOT       = 16'h0335;                 // INVERT ( a -- ~a )
     localparam UC_NEG       = 16'h03C2;                 // NEGATE ( a -- -a )
@@ -154,7 +155,7 @@ module cpu #(
         /*
         $readmemh("ucode_rom.mem", ucode);
         */
-        ucode[12'h000] = 16'h8040;//16'h8002;//UC_NOP;
+        ucode[12'h000] = 16'h8050;//16'h8002;//UC_NOP;
         ucode[12'h001] = UC_FAIL;
         ucode[12'h002] = UC_TRUE;
         ucode[12'h003] = UC_DUP;
@@ -226,26 +227,20 @@ module cpu #(
         ucode[12'h04B] = 16'hA04D;                      // BZ $04D
         ucode[12'h04C] = UC_FAIL;                       // FAIL
         ucode[12'h04D] = 16'h8000;                      // jump $000
-/*
-    initial begin    //    wr, waddr,    wdata,    rd, raddr,   expect,  cmp  next
-        script[STOP] = { 1'b0, 8'h00, 16'h0000,  1'b0, 8'h00, 16'h0000, 1'b0, STOP };
-        script[4'h1] = { 1'b0, 8'h00, 16'h0000,  1'b0, 8'h00, 16'h0000, 1'b0, 4'h2 };
-        script[4'h2] = { 1'b1, 8'hFF, 16'hBE11,  1'b0, 8'h00, 16'h0000, 1'b0, 4'h3 };
-        script[4'h3] = { 1'b1, 8'h95, 16'hC0DE,  1'b0, 8'h00, 16'h0000, 1'b0, 4'h4 };
-        script[4'h4] = { 1'b0, 8'h00, 16'h0000,  1'b1, 8'hFF, 16'h0000, 1'b0, 4'h5 };
-        script[4'h5] = { 1'b0, 8'h00, 16'h0000,  1'b1, 8'h95, 16'hBE11, 1'b1, 4'h6 };
-        script[4'h6] = { 1'b0, 8'h00, 16'h0000,  1'b0, 8'h00, 16'hC0DE, 1'b1, 4'h7 };
-        script[4'h7] = { 1'b1, 8'hFF, 16'hFADE,  1'b0, 8'h00, 16'h0000, 1'b0, 4'h8 };
-        script[4'h8] = { 1'b0, 8'h00, 16'h0000,  1'b1, 8'hFF, 16'h0000, 1'b0, 4'h9 };
-        script[4'h9] = { 1'b0, 8'h00, 16'h0000,  1'b0, 8'h00, 16'hFADE, 1'b1, 4'hA };
-        script[4'hA] = { 1'b1, 8'hFF, 16'hDEAD,  1'b0, 8'h00, 16'h0000, 1'b0, 4'hB };
-        script[4'hB] = { 1'b0, 8'h00, 16'h0000,  1'b1, 8'hFF, 16'h0000, 1'b0, 4'hC };
-        script[4'hC] = { 1'b0, 8'h00, 16'h0000,  1'b0, 8'h00, 16'hDEAD, 1'b1, 4'hD };
-        script[4'hD] = { 1'b0, 8'h00, 16'h0000,  1'b0, 8'h00, 16'h0000, 1'b0, 4'hE };
-        script[4'hE] = { 1'b0, 8'h00, 16'h0000,  1'b0, 8'h00, 16'h0000, 1'b0, 4'hF };
-        script[DONE] = { 1'b0, 8'h00, 16'h0000,  1'b0, 8'h00, 16'h0000, 1'b0, STOP };
-    end
-*/
+        //
+        // single-cycle multiply
+        //
+        ucode[12'h050] = UC_LIT;                        // 12345=16#3039
+        ucode[12'h051] = 12345;
+        ucode[12'h052] = UC_LIT;                        // 12345 -6789=16#E57B
+        ucode[12'h053] = -6789;
+        ucode[12'h054] = UC_MUL;                        // 12345*-6789
+        ucode[12'h055] = UC_LIT;                        // 12345*-6789 10339=16#2863
+        ucode[12'h056] = 10339;
+        ucode[12'h057] = UC_XOR;                        // EQ?
+        ucode[12'h058] = 16'hA05A;                      // BZ $05A
+        ucode[12'h059] = UC_FAIL;                       // FAIL
+        ucode[12'h05A] = 16'h8000;                      // jump $000
         //
         // ...
         //

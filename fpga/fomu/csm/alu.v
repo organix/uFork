@@ -26,7 +26,7 @@ at the next clock cycle.
 `include "alu_ops.vh"
 
 module alu #(
-    parameter WIDTH         = 8                         // bits per element
+    parameter WIDTH         = 16                        // bits per element
 ) (
     input                   i_clk,                      // system clock
     input             [3:0] i_op,                       // operation selector
@@ -49,11 +49,12 @@ module alu #(
             `SUB_OP: begin
                 o_data <= i_arg0 - i_arg1;
             end
-            /*
+            `MUL_OP: begin
+                o_data <= o_mul[WIDTH-1:0];
+            end
             `MUL_OP: begin
                 o_data <= i_arg0 * i_arg1;
             end
-            */
             `AND_OP: begin
                 o_data <= i_arg0 & i_arg1;
             end
@@ -94,5 +95,24 @@ module alu #(
             end
         endcase
     end
+
+    // 32-bit result of 16x16 signed multiply
+    wire [31:0] o_mul;
+`ifdef __ICARUS__
+    assign o_mul = i_arg0 * i_arg1;
+`else
+    SB_MAC16 #(
+        .TOPOUTPUT_SELECT(2'b11),
+        .BOTOUTPUT_SELECT(2'b11),
+        .A_SIGNED(1'b1),
+        .B_SIGNED(1'b1)
+    ) muls16x16 (
+        .A(i_arg0),
+        .B(i_arg1),
+        .O(o_mul),
+        .CLK(i_clk),
+        .CE(1'b1)
+    );
+`endif
 
 endmodule
