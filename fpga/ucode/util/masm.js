@@ -184,7 +184,7 @@ export const makeAssembler = (opts) => {
   asm.data = (...datums) => Array.prototype.forEach.call(datums, datum);
   asm.deferedOp = {};
   asm.deferedOp.or = (a, b) => {
-    console.trace(`deferedOp.or(${a},${b})`);
+    // console.log(`deferedOp.or(${a},${b})`);
     if ((typeof a) == "string") {
       a = asm.symbols.lookup(a);
     }
@@ -202,7 +202,7 @@ export const makeAssembler = (opts) => {
     return Promise.all([a, b]).then(([a_real, b_real]) => (a_real | b_real));
   };
   asm.deferedOp.and = (a, b) => {
-    console.trace(`deferedOp.and(${a},${b})`);
+    // console.log(`deferedOp.and(${a},${b})`);
     if ((typeof a) == "string") {
       a = asm.symbols.lookup(a);
     }
