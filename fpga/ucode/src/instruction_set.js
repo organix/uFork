@@ -444,7 +444,7 @@ export const defineInstructionset = (asm, opts = { instrsetName: "uFork_SM2.1" }
     def("(JMP)", (asm) => {
       const here = asm.addr;
       const resolve = ([here_plusone, val]) => {
-        console.trace("(JMP) resolve");
+        console.trace(`(JMP) resolve: 0x${here.toString(16).padStart(4, "0")} ${val}`);
         asm.undatum(here); // erease placeholder
         asm.origin(here);
         asm.datum(asm.deferedOp.or(0x8000, asm.deferedOp.and(val, 0x0FFF)));
@@ -459,7 +459,7 @@ export const defineInstructionset = (asm, opts = { instrsetName: "uFork_SM2.1" }
     def("(BRZ)", (asm) => {
       const here = asm.addr;
       const resolve = ([here_plusone, val]) => {
-        console.trace("(BRZ) resolve");
+        console.trace(`(BRZ) resolve: 0x${here.toString(16).padStart(4, "0")} ${val}`);
         asm.undatum(here); // erease placeholder
         asm.origin(here);
         asm.datum(asm.deferedOp.or(0xA000, asm.deferedOp.and(val, 0x0FFF)));
