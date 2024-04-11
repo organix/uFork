@@ -73,9 +73,9 @@ export const makeAssembler = (opts) => {
           }
           return val;
         } else {
-          // console.log(`merkill 4`);
           // console.dir(syms);
           const tmp = makePromise();
+          console.log(`asm.symbols.lookup("${sym}"): ${tmp.promise}`);
           syms.set(sym, tmp);
           return tmp.promise;
         }
