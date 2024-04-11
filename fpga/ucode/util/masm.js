@@ -76,6 +76,8 @@ export const makeAssembler = (opts) => {
           // console.dir(syms);
           const tmp = makePromise();
           // console.log(`asm.symbols.lookup("${sym}"): ${tmp.promise}`);
+           const t1 = tmp.promise.toString();
+           tmp.promise.toString = () => `${t1.slice(0, -1)} from lookup of "${sym}"]`;
           syms.set(sym, tmp);
           return tmp.promise;
         }
