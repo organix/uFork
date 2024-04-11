@@ -185,8 +185,7 @@ export const makeAssembler = (opts) => {
   };
   asm.data = (...datums) => Array.prototype.forEach.call(datums, datum);
   asm.deferedOp = {};
-  asm.deferedOp.or = (a, b) => {
-    // console.log(`deferedOp.or(${a},${b})`);
+  const deferedOp_common = (a, b, op) => {
     if ((typeof a) == "string") {
       a = asm.symbols.lookup(a);
     }
@@ -194,71 +193,21 @@ export const makeAssembler = (opts) => {
       b = asm.symbols.lookup(b);
     }
     if (((typeof a) == "number") && ((typeof b) == "number")) {
-      return Promise.resolve(a | b);
+      return Promise.resolve(op(a, b));
     }
     if (((typeof a) == "function") || ((typeof b) == "function")) {
       throw new Error("not yet implemented!");
     }
     a = Promise.resolve(a);
     b = Promise.resolve(b);
-    return Promise.all([a, b]).then(([a_real, b_real]) => (a_real | b_real));
+    return Promise.all([a, b]).then(([a_real, b_real]) => op(a_real, b_real));
   };
-  asm.deferedOp.and = (a, b) => {
-    // console.log(`deferedOp.and(${a},${b})`);
-    if ((typeof a) == "string") {
-      a = asm.symbols.lookup(a);
-    }
-    if ((typeof b) == "string") {
-      b = asm.symbols.lookup(b);
-    }
-    if (((typeof a) == "number") && ((typeof b) == "number")) {
-      return Promise.resolve(a & b);
-    }
-    if (((typeof a) == "function") || ((typeof b) == "function")) {
-      throw new Error("not yet implemented!");
-    }
-    a = Promise.resolve(a);
-    b = Promise.resolve(b);
-    return Promise.all([a, b]).then(([a_real, b_real]) => (a_real & b_real));
-  };
-  asm.deferedOp.incr = (a, b) => {
-    // console.log(`deferedOp.incr(${a},${b})`);
-    if ((typeof a) == "string") {
-      a = asm.symbols.lookup(a);
-    }
-    if ((typeof b) == "string") {
-      b = asm.symbols.lookup(b);
-    }
-    if (((typeof a) == "number") && ((typeof b) == "number")) {
-      return Promise.resolve(a + b);
-    }
-    if (((typeof a) == "function") || ((typeof b) == "function")) {
-      throw new Error("not yet implemented!");
-    }
-    a = Promise.resolve(a);
-    b = Promise.resolve(b);
-    return Promise.all([a, b]).then(([a_real, b_real]) => (a_real + b_real));
-  };
-  asm.deferedOp.plus = asm.deferedOp.incr;
-  asm.deferedOp.minus = (a, b) => {
-    // console.log(`deferedOp.decr(${a},${b})`);
-    if ((typeof a) == "string") {
-      a = asm.symbols.lookup(a);
-    }
-    if ((typeof b) == "string") {
-      b = asm.symbols.lookup(b);
-    }
-    if (((typeof a) == "number") && ((typeof b) == "number")) {
-      return Promise.resolve(a - b);
-    }
-    if (((typeof a) == "function") || ((typeof b) == "function")) {
-      throw new Error("not yet implemented!");
-    }
-    a = Promise.resolve(a);
-    b = Promise.resolve(b);
-    return Promise.all([a, b]).then(([a_real, b_real]) => (a_real - b_real));
-  };
-  asm.deferedOp.decr = asm.deferedOp.minus;
+  asm.deferedOp.or    = (a, b) => deferedOp_common(a, b, (a, b) => (a | b));
+  asm.deferedOp.and   = (a, b) => deferedOp_common(a, b, (a, b) => (a & b));
+  asm.deferedOp.incr  = (a, b) => deferedOp_common(a, b, (a, b) => (a + b));
+  asm.deferedOp.plus  = asm.deferedOp.incr;
+  asm.deferedOp.minus = (a, b) => deferedOp_common(a, b, (a, b) => (a - b));
+  asm.deferedOp.decr  = asm.deferedOp.minus;
   asm.deferedOp.equal = (a, b) => {
     // console.log(`deferedOp.equal(${a},${b})`);
     if (((typeof a) == "string") && ((typeof b) == "string")) {
@@ -266,60 +215,10 @@ export const makeAssembler = (opts) => {
         return Promise.resolve(true);
       }
     }
-    if ((typeof a) == "string") {
-      a = asm.symbols.lookup(a);
-    }
-    if ((typeof b) == "string") {
-      b = asm.symbols.lookup(b);
-    }
-    if (((typeof a) == "number") && ((typeof b) == "number")) {
-      return Promise.resolve(a == b);
-    }
-    if (((typeof a) == "function") || ((typeof b) == "function")) {
-      throw new Error("not yet implemented!");
-    }
-    a = Promise.resolve(a);
-    b = Promise.resolve(b);
-    return Promise.all([a, b]).then(([a_real, b_real]) => (a_real == b_real));
+    return deferedOp_common(a, b, (a, b) => (a == b));
   };
-  asm.deferedOp.intDivide = (divident, divisor) => {
-    // console.log(`deferedOp.intDivide(${divident},${divisor})`);
-    if ((typeof divident) == "string") {
-      divident = asm.symbols.lookup(divident);
-    }
-    if ((typeof divisor) == "string") {
-      divisor = asm.symbols.lookup(divisor);
-    }
-    if (((typeof divident) == "number") && ((typeof divisor) == "number")) {
-      return Promise.resolve(Math.ceil(divident / divisor));
-    }
-    if (((typeof divident) == "function") || ((typeof divisor) == "function")) {
-      throw new Error("not yet implemented!");
-    }
-    divident = Promise.resolve(divident);
-    divisor  = Promise.resolve(divisor);
-    return Promise.all([divident, divisor]).then(([real_divident, real_divisor]) => {
-      return Math.ceil(real_divident / real_divisor);
-    });
-  };
-  asm.deferedOp.multiply = (a, b) => {
-    console.log(`deferedOp.multiply(${a},${b})`);
-    if ((typeof a) == "string") {
-      a = asm.symbols.lookup(a);
-    }
-    if ((typeof b) == "string") {
-      b = asm.symbols.lookup(b);
-    }
-    if (((typeof a) == "number") && ((typeof b) == "number")) {
-      return Promise.resolve(a * b);
-    }
-    if (((typeof a) == "function") || ((typeof b) == "function")) {
-      throw new Error("not yet implemented!");
-    }
-    a = Promise.resolve(a);
-    b = Promise.resolve(b);
-    return Promise.all([a, b]).then(([a_real, b_real]) => (a_real * b_real));
-  };
+  asm.deferedOp.intDivide = (divident, divisor) => deferedOp_common(divident, divisor, (a, b) => (Math.ceil(a / b)));
+  asm.deferedOp.multiply  = (a, b) => deferedOp_common(a, b, (a, b) => (a * b));
   asm.incr = asm.deferedOp.incr;
   asm.origin = (new_addr) => {
     const tmp = curr_addr;
