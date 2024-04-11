@@ -184,6 +184,7 @@ export const makeAssembler = (opts) => {
   asm.data = (...datums) => Array.prototype.forEach.call(datums, datum);
   asm.deferedOp = {};
   asm.deferedOp.or = (a, b) => {
+    console.log(`deferedOp.or(${a},${b})`);
     if ((typeof a) == "string") {
       a = asm.symbols.lookup(a);
     }
@@ -201,6 +202,7 @@ export const makeAssembler = (opts) => {
     return Promise.all([a, b]).then(([a_real, b_real]) => (a_real | b_real));
   };
   asm.deferedOp.and = (a, b) => {
+    console.log(`deferedOp.and(${a},${b})`);
     if ((typeof a) == "string") {
       a = asm.symbols.lookup(a);
     }
@@ -218,6 +220,7 @@ export const makeAssembler = (opts) => {
     return Promise.all([a, b]).then(([a_real, b_real]) => (a_real & b_real));
   };
   asm.deferedOp.incr = (a, b) => {
+    console.log(`deferedOp.incr(${a},${b})`);
     if ((typeof a) == "string") {
       a = asm.symbols.lookup(a);
     }
@@ -236,6 +239,7 @@ export const makeAssembler = (opts) => {
   };
   asm.deferedOp.plus = asm.deferedOp.incr;
   asm.deferedOp.minus = (a, b) => {
+    console.log(`deferedOp.decr(${a},${b})`);
     if ((typeof a) == "string") {
       a = asm.symbols.lookup(a);
     }
@@ -254,6 +258,7 @@ export const makeAssembler = (opts) => {
   };
   asm.deferedOp.decr = asm.deferedOp.minus;
   asm.deferedOp.equal = (a, b) => {
+    console.log(`deferedOp.equal(${a},${b})`);
     if (((typeof a) == "string") && ((typeof b) == "string")) {
       if (a == b) {
         return Promise.resolve(true);
@@ -276,6 +281,7 @@ export const makeAssembler = (opts) => {
     return Promise.all([a, b]).then(([a_real, b_real]) => (a_real == b_real));
   };
   asm.deferedOp.intDivide = (divident, divisor) => {
+    console.log(`deferedOp.intDivide(${divident},${divisor})`);
     if ((typeof divident) == "string") {
       divident = asm.symbols.lookup(divident);
     }
@@ -295,6 +301,7 @@ export const makeAssembler = (opts) => {
     });
   };
   asm.deferedOp.multiply = (a, b) => {
+    console.log(`deferedOp.multiply(${a},${b})`);
     if ((typeof a) == "string") {
       a = asm.symbols.lookup(a);
     }
