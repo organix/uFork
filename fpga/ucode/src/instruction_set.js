@@ -328,6 +328,7 @@ export const defineInstructionset = (asm, opts = { instrsetName: "uFork_SM2.1" }
         const here = asm.addr;
         const resolve = ([here_plusone, val]) => {
           asm.deferedOp.equal(val, "EXIT").then((bool) => {
+            console.trace(`${sym} resolve`);
             if (bool) {
               asm.undatum(here); // erase the previous value 
               asm.origin(here);
@@ -443,10 +444,11 @@ export const defineInstructionset = (asm, opts = { instrsetName: "uFork_SM2.1" }
     def("(JMP)", (asm) => {
       const here = asm.addr;
       const resolve = ([here_plusone, val]) => {
+        console.trace("(JMP) resolve");
         asm.undatum(here); // erease placeholder
         asm.origin(here);
-        // asm.datum(asm.deferedOp.or(0x8000, asm.deferedOp.and(val, 0x0FFF)));
-        asm.datum(0x8000 | (val & 0x0FFF));
+        asm.datum(asm.deferedOp.or(0x8000, asm.deferedOp.and(val, 0x0FFF)));
+        // asm.datum(0x8000 | (val & 0x0FFF));
       };
       asm.datum("NOP"); // placeholder put in
       const gildra = asm.addr;
@@ -457,10 +459,11 @@ export const defineInstructionset = (asm, opts = { instrsetName: "uFork_SM2.1" }
     def("(BRZ)", (asm) => {
       const here = asm.addr;
       const resolve = ([here_plusone, val]) => {
+        console.trace("(BRZ) resolve");
         asm.undatum(here); // erease placeholder
         asm.origin(here);
-        // asm.datum(asm.deferedOp.or(0xA000, asm.deferedOp.and(val, 0x0FFF)));
-        asm.datum(0xA000 | (val & 0x0FFF));
+        asm.datum(asm.deferedOp.or(0xA000, asm.deferedOp.and(val, 0x0FFF)));
+        // asm.datum(0xA000 | (val & 0x0FFF));
       };
       asm.datum("NOP"); // placeholder put in
       const gildra = asm.addr;
