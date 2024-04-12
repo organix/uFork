@@ -2,38 +2,6 @@
 // Dale Schumacher
 // 2024-04-10
 
-const words = {
-    "NOP":                  0x0000,                     // ( -- )
-    "DROP":                 0x0100,                     // ( a -- )
-    "DUP":                  0x0200,                     // ( a -- a a )
-    "SWAP":                 0x0400,                     // ( a b -- b a )
-    "OVER":                 0x0240,                     // ( a b -- a b a )
-    "ROT":                  0x0500,                     // ( a b c -- b c a )
-    "-ROT":                 0x0600,                     // ( a b c -- c a b )
-    "TRUE":                 0x02F6,                     // ( -- -1 )
-    "FALSE":                0x02C0,                     // ( -- 0 )
-    "0":                    0x02C0,                     // ( -- 0 )
-    "1":                    0x02D6,                     // ( -- 1 )
-    "-1":                   0x02F6,                     // ( -- -1 )
-    "LSB":                  0x02D6,                     // ( -- 1 )
-    "MSB":                  0x02E6,                     // ( -- -32768 )
-    "1+":                   0x0311,                     // ( a -- a+1 )
-    "1-":                   0x0312,                     // ( a -- a-1 )
-    "+":                    0x0741,                     // ( a b -- a+b )
-    "-":                    0x0742,                     // ( a b -- a-b )
-    "*":                    0x0743,                     // ( a b -- a*b )
-    "AND":                  0x0744,                     // ( a b -- a&b )
-    "XOR":                  0x0745,                     // ( a b -- a^b )
-    "OR":                   0x0746,                     // ( a b -- a|b )
-    "@":                    0x030F,                     // ( addr -- data )
-    "!":                    0x098F,                     // ( data addr -- )
-    ">R":                   0x2100,                     // ( a -- ) R:( -- a )
-    "R>":                   0x1280,                     // ( -- a ) R:( a -- )
-    "R@":                   0x0280,                     // ( -- a ) R:( a -- a )
-    "EXIT":                 0x5000,                     // ( -- ) R:( addr -- ) addr->pc
-    ";":                    0x5000                      // ( -- ) R:( addr -- ) addr->pc
-};
-
 const UC_LIT =              0x021F;                     // (LIT) item ( -- item )
 const UC_CONST =            0x521F;                     // (CONST) item ( -- item ) R:( addr -- ) addr->pc
 const UC_LSB =              0x02D6;                     // ( -- 1 )
@@ -72,6 +40,37 @@ function compile(text) {
         return token;
     }
 
+    const words = {
+        "NOP":              0x0000,                     // ( -- )
+        "DROP":             0x0100,                     // ( a -- )
+        "DUP":              0x0200,                     // ( a -- a a )
+        "SWAP":             0x0400,                     // ( a b -- b a )
+        "OVER":             0x0240,                     // ( a b -- a b a )
+        "ROT":              0x0500,                     // ( a b c -- b c a )
+        "-ROT":             0x0600,                     // ( a b c -- c a b )
+        "TRUE":             0x02F6,                     // ( -- -1 )
+        "FALSE":            0x02C0,                     // ( -- 0 )
+        "0":                0x02C0,                     // ( -- 0 )
+        "1":                0x02D6,                     // ( -- 1 )
+        "-1":               0x02F6,                     // ( -- -1 )
+        "LSB":              0x02D6,                     // ( -- 1 )
+        "MSB":              0x02E6,                     // ( -- -32768 )
+        "1+":               0x0311,                     // ( a -- a+1 )
+        "1-":               0x0312,                     // ( a -- a-1 )
+        "+":                0x0741,                     // ( a b -- a+b )
+        "-":                0x0742,                     // ( a b -- a-b )
+        "*":                0x0743,                     // ( a b -- a*b )
+        "AND":              0x0744,                     // ( a b -- a&b )
+        "XOR":              0x0745,                     // ( a b -- a^b )
+        "OR":               0x0746,                     // ( a b -- a|b )
+        "@":                0x030F,                     // ( addr -- data )
+        "!":                0x098F,                     // ( data addr -- )
+        ">R":               0x2100,                     // ( a -- ) R:( -- a )
+        "R>":               0x1280,                     // ( -- a ) R:( a -- )
+        "R@":               0x0280,                     // ( -- a ) R:( a -- a )
+        "EXIT":             0x5000,                     // ( -- ) R:( addr -- ) addr->pc
+        ";":                0x5000                      // ( -- ) R:( addr -- ) addr->pc
+    };
     const prog = [
         uc_call(0)
     ];
@@ -136,7 +135,7 @@ function compile(text) {
         while (token.length > 0) {
 //debug console.log("compile_comment:", token);
             if (token === "(") {
-                parse_comment(next_token());
+                compile_comment(next_token());
             } else if (token == ")") {
                 break;
             }
