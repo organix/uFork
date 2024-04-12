@@ -200,7 +200,9 @@ export const makeAssembler = (opts) => {
     }
     a = Promise.resolve(a);
     b = Promise.resolve(b);
-    return Promise.all([a, b]).then(([a_real, b_real]) => op(a_real, b_real));
+    const r = Promise.all([a, b]).then(([a_real, b_real]) => op(a_real, b_real));
+    r.toString = () => `[Promise from (${op.toString()})(${a},${b});`;
+    return r;
   };
   asm.deferedOp.or    = (a, b) => deferedOp_common(a, b, (a, b) => (a | b));
   asm.deferedOp.and   = (a, b) => deferedOp_common(a, b, (a, b) => (a & b));
