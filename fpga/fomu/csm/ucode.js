@@ -159,7 +159,7 @@ function compile(text) {
     return prog;
 }
 
-// console.log(compile(": BOOT R> DROP BOOT ;"));
+//debug const simple_source = ": BOOT R> DROP BOOT ;";
 //debug const multiline_source = `
 //debug : NOT ( a -- ~a )
 //debug     0xFFFF XOR ;
@@ -169,13 +169,16 @@ function compile(text) {
 //debug     SWAP OVER ;
 //debug : ?: ( altn cnsq cond -- cnqs | altn )
 //debug     SKZ SWAP
+//debug : (DROP)
 //debug     DROP ;
 //debug 
 //debug ( WARNING! BOOT should not return... )
 //debug : BOOT
 //debug     R> DROP BOOT`;
-// console.log(compile(multiline_source));
-//debug console.log(compile(multiline_source).map(function (number, index) {
+// const source = simple_source;
+//debug const source = multiline_source;
+// console.log(compile(source));
+//debug console.log(compile(source).map(function (number, index) {
 //debug    return index.toString(16).padStart(3, "0") + ": " + number.toString(16).padStart(4, "0");
 //debug }).join("\n"));
 
