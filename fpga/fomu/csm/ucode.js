@@ -101,7 +101,7 @@ function compile(text) {
                 const word = uc_call(here);
                 prog[0] = word;  // update bootstrap entry-point
                 const name = next_token();
-//debug console.log("compile_name:", name, "=", word);
+//debug console.log("compile_name:", name, "=", word.toString(16).padStart(4, "0"));
                 words[name] = word;
                 prev_safe = false;
             } else {
@@ -155,6 +155,8 @@ function compile(text) {
 //debug     SWAP DROP ;
 //debug : TUCK ( a b -- b a b )
 //debug     SWAP OVER ;
+//debug : NEGATE ( a -- -a )
+//debug     000 SWAP - ;
 //debug 
 //debug ( WARNING! BOOT should not return... )
 //debug : BOOT
