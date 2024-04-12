@@ -111,6 +111,16 @@ function compile(text) {
 //debug console.log("compile_name:", name, "=", word.toString(16).padStart(4, "0"));
                 words[name] = word;
                 prev_safe = false;
+            } else if (token === "CONSTANT") {
+                // allocate constant word
+                const name = next_token();
+                const addr = prog.length - 2;
+                if (addr < 0 || prog[addr] !== UC_LIT) {
+                    return error("invalid constant:", name);
+                }
+                const word = uc_call(addr);
+//debug console.log("compile_const:", name, "=", word.toString(16).padStart(4, "0"));
+                prog[addr] = UC_CONST;  // convert (LIT) to (CONST)
             } else if (token === "SKZ") {
                 // skip (next instruction), if TOS is zero
                 prog.push(uc_skz());
@@ -161,6 +171,8 @@ function compile(text) {
 
 //debug const simple_source = ": BOOT R> DROP BOOT ;";
 //debug const multiline_source = `
+//debug 0x0FFF CONSTANT ADDR_MASK
+//debug 
 //debug : NOT ( a -- ~a )
 //debug     0xFFFF XOR ;
 //debug : NIP ( a b -- b )
