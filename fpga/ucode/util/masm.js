@@ -203,20 +203,26 @@ export const makeAssembler = (opts) => {
       throw new Error("not yet implemented!");
     }
     const a2 = Promise.resolve(a);
-    if (toString_recursion_depth < 10) {
-      toString_recursion_depth += 1;
-      a2.toString = () => `[Promise of ${a}]`;
-      toString_recursion_depth -= 1;
-    } else {
-      a2.toString = () => `[Promise of [..recursion limit..]]`;
+    a2.toString = () => {
+      if (toString_recursion_depth < 10) {
+        toString_recursion_depth += 1;
+        const result = `[Promise of ${a}]`
+        toString_recursion_depth -= 1;
+        return result;
+      } else {
+        return `[Promise of [..recursion limit..]]`;
+      }
     }
     const b2 = Promise.resolve(b);
-    if (toString_recursion_depth < 10) {
-      toString_recursion_depth += 1;
-      b2.toString = () => `[Promise of ${b}]`;
-      toString_recursion_depth -= 1;
-    } else {
-      b2.toString = () => `[Promise of [..recursion limit..]]`;
+    b2.toString = () => {
+      if (toString_recursion_depth < 10) {
+        toString_recursion_depth += 1;
+        const result = `[Promise of ${b}]`
+        toString_recursion_depth -= 1;
+        return result;
+      } else {
+        return `[Promise of [..recursion limit..]]`;
+      }
     }
     const r = Promise.all([a2, b2]).then(([a_real, b_real]) => op(a_real, b_real));
     r.toString = () => `[Promise from (${op.toString()})(${a},${b});`;
