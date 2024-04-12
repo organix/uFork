@@ -74,7 +74,6 @@ function compile(text) {
     const prog = [
         uc_call(0)
     ];
-    let here = 1;  // offset into `prog` for next definition
 
     function uc_call(addr) {    // push return address and jump
         return (0xC000 | (addr & ADDR_MASK));
@@ -86,7 +85,7 @@ function compile(text) {
         return (0xA000 | (addr & ADDR_MASK));
     }
     function uc_skz() {         // skip if zero
-        return uc_jz(here + 2);
+        return uc_jz(prog.length + 2);
     }
 
     function compile_words(token) {
@@ -97,7 +96,7 @@ function compile(text) {
                 compile_comment(next_token());
             } else if (token === ":") {
                 // new entry-point
-                const word = uc_call(here);
+                const word = uc_call(prog.length);
                 prog[0] = word;  // update bootstrap entry-point
                 const name = next_token();
 //debug console.log("compile_name:", name, "=", word.toString(16).padStart(4, "0"));
@@ -107,20 +106,17 @@ function compile(text) {
                 const word = words[token];
                 if (prev_safe && (word === UC_EXIT)) {
                     // attach "free" EXIT to previous word
-                    prog[here - 1] |= UC_EXIT;
+                    prog[prog.length - 1] |= UC_EXIT;
                 } else if (typeof word === "number") {
                     // compile primitive or call
-                    prog[here] = word;
-                    here += 1;
+                    prog.push(word);
                     prev_safe = ((word & 0xF000) === 0);
                 } else {
                     const num = Number(token);
                     if (Number.isSafeInteger(num)) {
                         // push number literal
-                        prog[here] = UC_LIT;
-                        here += 1;
-                        prog[here] = (num & 0xFFFF);  // truncate to 16 bits
-                        here += 1;
+                        prog.push(UC_LIT);
+                        prog.push(num & 0xFFFF);  // truncate to 16 bits
                         prev_safe = false;
                     } else {
                         return error("invalid token:", token);
