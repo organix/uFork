@@ -20,6 +20,8 @@ export const makeAssembler = (opts) => {
     resolve: done_resolve,
     reject:  done_reject,
   } = makePromise();
+
+  let toString_recursion_depth = 0;
   
   const asm = {
     get addr() { return curr_addr },
@@ -201,9 +203,21 @@ export const makeAssembler = (opts) => {
       throw new Error("not yet implemented!");
     }
     const a2 = Promise.resolve(a);
-    a2.toString = () => `[Promise of ${a}]`;
+    if (toString_recursion_depth < 10) {
+      toString_recursion_depth += 1;
+      a2.toString = () => `[Promise of ${a}]`;
+      toString_recursion_depth -= 1;
+    } else {
+      a2.toString = () => `[Promise of [..recursion limit..]]`;
+    }
     const b2 = Promise.resolve(b);
-    b2.toString = () => `[Promise of ${b}]`;
+    if (toString_recursion_depth < 10) {
+      toString_recursion_depth += 1;
+      b2.toString = () => `[Promise of ${b}]`;
+      toString_recursion_depth -= 1;
+    } else {
+      b2.toString = () => `[Promise of [..recursion limit..]]`;
+    }
     const r = Promise.all([a2, b2]).then(([a_real, b_real]) => op(a_real, b_real));
     r.toString = () => `[Promise from (${op.toString()})(${a},${b});`;
     return r;
