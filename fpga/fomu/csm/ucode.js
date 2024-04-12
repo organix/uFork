@@ -4,8 +4,6 @@
 
 const UC_LIT =              0x021F;                     // (LIT) item ( -- item )
 const UC_CONST =            0x521F;                     // (CONST) item ( -- item ) R:( addr -- ) addr->pc
-const UC_LSB =              0x02D6;                     // ( -- 1 )
-const UC_MSB =              0x02E6;                     // ( -- -32768 )
 const UC_EXIT =             0x5000;                     // ( -- ) R:( addr -- ) addr->pc
 
 const ADDR_MASK =           0x0FFF;                     // 12-bit uCode addresses
@@ -55,14 +53,25 @@ function compile(text) {
         "-1":               0x02F6,                     // ( -- -1 )
         "LSB":              0x02D6,                     // ( -- 1 )
         "MSB":              0x02E6,                     // ( -- -32768 )
+        "INVERT":           0x0335,                     // ( a -- ~a )
+        "NEGATE":           0x03C2,                     // ( a -- -a )
         "1+":               0x0311,                     // ( a -- a+1 )
         "1-":               0x0312,                     // ( a -- a-1 )
+        "2*":               0x0301,                     // ( a -- a*2 )
+        "2/":               0x030B,                     // ( a -- a/2 )
         "+":                0x0741,                     // ( a b -- a+b )
         "-":                0x0742,                     // ( a b -- a-b )
         "*":                0x0743,                     // ( a b -- a*b )
         "AND":              0x0744,                     // ( a b -- a&b )
         "XOR":              0x0745,                     // ( a b -- a^b )
         "OR":               0x0746,                     // ( a b -- a|b )
+        "ROL":              0x0307,                     // ( a -- {a[14:0],a[15]} )
+        "2ROL":             0x0308,                     // ( a -- {a[13:0],a[15:14]} )
+        "4ROL":             0x0309,                     // ( a -- {a[11:0],a[15:12]} )
+        "8ROL":             0x030A,                     // ( a -- {a[7:0],a[15:8]} )
+        "ASR":              0x030B,                     // ( a -- {a[15],a[15:1]} )
+        "2ASR":             0x030C,                     // ( a -- {a[15],a[15],a[15:2]} )
+        "4ASR":             0x030D,                     // ( a -- {a[15],a[15],a[15],a[15],a[15:4]} )
         "@":                0x030F,                     // ( addr -- data )
         "!":                0x098F,                     // ( data addr -- )
         ">R":               0x2100,                     // ( a -- ) R:( -- a )
@@ -72,7 +81,7 @@ function compile(text) {
         ";":                0x5000                      // ( -- ) R:( addr -- ) addr->pc
     };
     const prog = [
-        uc_call(0)
+        uc_jump(0)
     ];
 
     function uc_call(addr) {    // push return address and jump
@@ -140,18 +149,21 @@ function compile(text) {
         return token;
     }
 
-    compile_words(next_token());
+    const end = compile_words(next_token());
+    if (end.length !== 0) {
+        return end;
+    }
     return prog;
 }
 
 // console.log(compile(": BOOT R> DROP BOOT ;"));
 //debug const multiline_source = `
+//debug : NOT ( a -- ~a )
+//debug     0xFFFF XOR ;
 //debug : NIP ( a b -- b )
 //debug     SWAP DROP ;
 //debug : TUCK ( a b -- b a b )
 //debug     SWAP OVER ;
-//debug : NEGATE ( a -- -a )
-//debug     000 SWAP - ;
 //debug 
 //debug ( WARNING! BOOT should not return... )
 //debug : BOOT
