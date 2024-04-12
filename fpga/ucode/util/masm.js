@@ -193,14 +193,18 @@ export const makeAssembler = (opts) => {
       b = asm.symbols.lookup(b);
     }
     if (((typeof a) == "number") && ((typeof b) == "number")) {
-      return Promise.resolve(op(a, b));
+      const r = Promise.resolve(op(a, b));
+      r.toString = () => `[Promise from (${op.toString()})(${a},${b});`;
+      return r;
     }
     if (((typeof a) == "function") || ((typeof b) == "function")) {
       throw new Error("not yet implemented!");
     }
-    a = Promise.resolve(a);
-    b = Promise.resolve(b);
-    const r = Promise.all([a, b]).then(([a_real, b_real]) => op(a_real, b_real));
+    const a2 = Promise.resolve(a);
+    a2.toString = () => `[Promise of ${a}]`;
+    const b2 = Promise.resolve(b);
+    b2.toString = () => `[Promise of ${b}]`;
+    const r = Promise.all([a2, b2]).then(([a_real, b_real]) => op(a_real, b_real));
     r.toString = () => `[Promise from (${op.toString()})(${a},${b});`;
     return r;
   };
