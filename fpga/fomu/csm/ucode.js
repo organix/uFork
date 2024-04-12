@@ -111,6 +111,9 @@ function compile(text) {
 //debug console.log("compile_name:", name, "=", word.toString(16).padStart(4, "0"));
                 words[name] = word;
                 prev_safe = false;
+            } else if (token === "SKZ") {
+                // skip (next instruction), if TOS is zero
+                prog.push(uc_skz());
             } else {
                 const word = words[token];
                 if (prev_safe && (word === UC_EXIT)) {
@@ -164,6 +167,9 @@ function compile(text) {
 //debug     SWAP DROP ;
 //debug : TUCK ( a b -- b a b )
 //debug     SWAP OVER ;
+//debug : ?: ( altn cnsq cond -- cnqs | altn )
+//debug     SKZ SWAP
+//debug     DROP ;
 //debug 
 //debug ( WARNING! BOOT should not return... )
 //debug : BOOT
