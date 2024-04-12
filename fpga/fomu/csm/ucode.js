@@ -43,6 +43,7 @@ const UC_EXIT =             0x5000;                     // ( -- ) R:( addr -- ) 
 const ADDR_MASK =           0x0FFF;                     // 12-bit uCode addresses
 
 function error(...msg) {
+//debug console.log("ERROR!", ...msg);
     return msg.join(" ");
 }
 
@@ -92,7 +93,7 @@ function compile(text) {
     function compile_words(token) {
         let prev_safe = false;
         while (token.length > 0) {
-            console.log("compile_words:", token);
+//debug console.log("compile_words:", token);
             if (token === "(") {
                 compile_comment(next_token());
             } else if (token === ":") {
@@ -100,14 +101,14 @@ function compile(text) {
                 const word = uc_call(here);
                 prog[0] = word;  // update bootstrap entry-point
                 const name = next_token();
-                console.log("compile_name:", name, "=", word);
+//debug console.log("compile_name:", name, "=", word);
                 words[name] = word;
                 prev_safe = false;
             } else {
                 const word = words[token];
                 if (prev_safe && (word === UC_EXIT)) {
                     // attach "free" EXIT to previous word
-                    prog[here - 1] += UC_EXIT;
+                    prog[here - 1] |= UC_EXIT;
                 } else if (typeof word === "number") {
                     // compile primitive or call
                     prog[here] = word;
@@ -133,7 +134,7 @@ function compile(text) {
     }
     function compile_comment(token) {
         while (token.length > 0) {
-            console.log("compile_comment:", token);
+//debug console.log("compile_comment:", token);
             if (token === "(") {
                 parse_comment(next_token());
             } else if (token == ")") {
