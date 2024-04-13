@@ -193,8 +193,10 @@ function compile(text) {
 //debug const multiline_source = `
 //debug 0x0FFF CONSTANT ADDR_MASK
 //debug 
-//debug : NOT ( a -- ~a )
-//debug     0xFFFF XOR ;
+//debug : EXECUTE
+//debug     ADDR_MASK ( 0x0FFF ) AND >R
+//debug : (EXIT)
+//debug     EXIT
 //debug : NIP ( a b -- b )
 //debug     SWAP DROP ;
 //debug : TUCK ( a b -- b a b )
@@ -203,12 +205,15 @@ function compile(text) {
 //debug     SKZ SWAP
 //debug : (DROP)
 //debug     DROP ;
+//debug : NOT ( flag -- !flag )
+//debug : 0=
+//debug     TRUE FALSE ROT ?: ;
 //debug 
 //debug ( WARNING! BOOT should not return... )
 //debug : BOOT
 //debug     R> DROP BOOT`;
-//debug const source = simple_source;
-// const source = multiline_source;
+// const source = simple_source;
+//debug const source = multiline_source;
 // console.log(compile(source));
 //debug console.log(compile(source).map(function (number, index) {
 //debug    return index.toString(16).padStart(3, "0") + ": " + number.toString(16).padStart(4, "0");
