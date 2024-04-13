@@ -26,6 +26,29 @@ export const minicore = (asm, opts) => {
   def("(EXIT)");
   dat("EXIT");
 
+  if (!isDefined("SKZ") && !isDefined("(BRZ)")) {
+    def("CELLWIDE_OR"); // ( cell -- cell )
+    dat("CELLWIDE_OR_8step");
+    def("CELLWIDE_OR_8step");
+    dat("CELLWIDE_OR_4step");
+    def("CELLWIDE_OR_4step");
+    dat("CELLWIDE_OR_2step");
+    def("CELLWIDE_OR_2step");
+    dat("CELLWIDE_OR_1step");
+    def("CELLWIDE_OR_1step");
+    dat("DUP", "1LBR", "OR");
+    dat("EXIT");
+
+    def("SKZ"); // ( cond -- ) R:( raddr -- raddr | raddr+1 )
+    dat("CELLWIDE_OR");
+    dat("INVERT");
+    dat("1_OR");
+    dat("R>");
+    dat("+");
+    dat(">R");
+    dat("EXIT");
+  }
+
   def("?:"); // ( alt conseq cond -- conseq | alt )
   dat("SKZ", "SWAP");
   def("(DROP)");
