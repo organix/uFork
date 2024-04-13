@@ -452,7 +452,7 @@ export const defineInstructionset = (asm, opts = { instrsetName: "uFork_SM2.1" }
       const here = asm.addr;
       const resolve = ([here_plusone, dest]) => {
         if ((typeof dest) == "number") {
-          redatum(asm, here, (0x8000 | (dest & 0x0FFF));
+          redatum(asm, here, (0x8000 | (dest & 0x0FFF)));
         } else {
           throw new Error(`aflúsun (JMP): ${here} ${here_plusone} ${dest}`);
         }
