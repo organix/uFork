@@ -859,12 +859,12 @@ export const wozmon = (asm, opts) => {
   // inspired by Wozniacs Monitor (see https://gist.github.com/zarutian/7074f12ea3ed5a44ee2c58e8fcf6d7ae for example )
   // not as small though
   opts = (opts == undefined) ? {} : opts ;
-  const linebuffer_start = (opts.linebuffer_start) ? 0x0200 : opts.linebuffer_start ;
-  const linebuffer_max   = (opts.linebuffer_max)   ? 0x0250 : opts.linebuffer_max ;
-  const mode_var_addr    = (opts.mode_var_addr)    ? 0x0251 : opts.mode_var_addr ;
-  const xam_var_addr     = (opts.xam_var_addr)     ? 0x0252 : opts.xam_var_addr ;
-  const st_var_addr      = (opts.st_var_addr)      ? 0x0253 : opts.st_var_addr ;
-  const tmp_var_addr     = (opts.tmp_var_addr)     ? 0x0254 : opts.tmp_var_addr ;
+  const linebuffer_start = (opts.linebuffer_start == undefined) ? 0x0200 : opts.linebuffer_start ;
+  const linebuffer_max   = (opts.linebuffer_max   == undefined) ? 0x0250 : opts.linebuffer_max ;
+  const mode_var_addr    = (opts.mode_var_addr    == undefined) ? 0x0251 : opts.mode_var_addr ;
+  const xam_var_addr     = (opts.xam_var_addr     == undefined) ? 0x0252 : opts.xam_var_addr ;
+  const st_var_addr      = (opts.st_var_addr      == undefined) ? 0x0253 : opts.st_var_addr ;
+  const tmp_var_addr     = (opts.tmp_var_addr     == undefined) ? 0x0254 : opts.tmp_var_addr ;
   const { def, dat } = asm;
 
   def("wozmon");
