@@ -460,6 +460,7 @@ export const defineInstructionset = (asm, opts = { instrsetName: "uFork_SM2.1" }
         } else {
           throw new Error(`aflúsun (JMP): ${here} ${here_plusone} ${dest}`);
         }
+        return undefined;
       };
       asm.datum("NOP"); // placeholder put in
       const gildra = asm.addr;
