@@ -119,6 +119,7 @@ export const makeAssembler = (opts) => {
           val.then((result) => {
             const old_addr = curr_addr;
             const old_val  = asm.datumAt(captured_address);
+            /*
             if ((typeof old_val) != "object") {
               asm.undatum(captured_address);
             } else {
@@ -126,6 +127,7 @@ export const makeAssembler = (opts) => {
                 asm.undatum(captured_address);
               }
             }
+            */
             asm.origin(captured_address);
             asm.datum(result);
             asm.origin(old_addr);
