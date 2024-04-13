@@ -203,6 +203,7 @@ export const makeAssembler = (opts) => {
       throw new Error("not yet implemented!");
     }
     const a2 = Promise.resolve(a);
+    const a2_oldToString = a2.toString,
     a2.toString = () => {
       if (toString_recursion_depth < 10) {
         toString_recursion_depth += 1;
@@ -210,10 +211,12 @@ export const makeAssembler = (opts) => {
         toString_recursion_depth -= 1;
         return result;
       } else {
-        return `[Promise of [..recursion limit..]]`;
+        // return `[Promise of [..recursion limit..]]`;
+        return a2_oldToString();
       }
     }
     const b2 = Promise.resolve(b);
+    const b2_oldToString = b2.toString,
     b2.toString = () => {
       if (toString_recursion_depth < 10) {
         toString_recursion_depth += 1;
@@ -221,7 +224,8 @@ export const makeAssembler = (opts) => {
         toString_recursion_depth -= 1;
         return result;
       } else {
-        return `[Promise of [..recursion limit..]]`;
+        // return `[Promise of [..recursion limit..]]`;
+        return b2_oldToString();
       }
     }
     const r = Promise.all([a2, b2]).then(([a_real, b_real]) => op(a_real, b_real));
