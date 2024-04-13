@@ -27,8 +27,9 @@
 : 2DROP ( a b -- )
     DROP DROP ;
 : NOT ( flag -- !flag )
+: 0=
     TRUE FALSE ROT ?: ;
 
 ( WARNING! BOOT should not return... )
 : BOOT
-    R> DROP BOOT
+    BOOT ;
