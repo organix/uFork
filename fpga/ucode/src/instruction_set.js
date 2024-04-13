@@ -462,8 +462,18 @@ export const defineInstructionset = (asm, opts = { instrsetName: "uFork_SM2.1" }
         console.trace(`(BRZ) resolve: 0x${here.toString(16).padStart(4, "0")} ${val}`);
         asm.undatum(here); // erease placeholder
         asm.origin(here);
-        asm.datum(asm.deferedOp.or(0xA000, asm.deferedOp.and(val, 0x0FFF)));
-        // asm.datum(0xA000 | (val & 0x0FFF));
+        if ((typeof val) == "number") {
+          asm.datum(0xA000 | (val & 0x0FFF));
+        } else {
+          asm.datum("NOP"); // placeholder
+          val.then((value) => {
+            const prev = asm.addr;
+            asm.undatum(here);
+            asm.origin(here);
+            asm.datum((0xA000 | (value, 0x0FFF)));
+            asm.origin(prev);
+          });
+        }
       };
       asm.datum("NOP"); // placeholder put in
       const gildra = asm.addr;
