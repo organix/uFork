@@ -456,14 +456,13 @@ export const defineInstructionset = (asm, opts = { instrsetName: "uFork_SM2.1" }
         } else if (dest instanceof Promise) {
           dest.then((destination) => {
             redatum(asm, here, (0x8000 | (destination & 0x0FFF)));
+            redatum(asm, here_plusone, 0xDEAD);
           });
         } else {
           throw new Error(`aflúsun (JMP): ${here} ${here_plusone} ${dest}`);
         }
         // refrain from writing the destination twice into the image
-        asm.undatum(here_plusone);
-        asm.origin(here_plusone);
-        asm.datum({ resolve: ([h, d]) => {
+        redatum(asm, here_plusone, { resolve: ([h, d]) => {
           throw new Error(`aflúsun (JMP) 2: ${h} ${here_plusone} ${dest} ${d}`);
         }});
         asm.origin(here_plusone);
