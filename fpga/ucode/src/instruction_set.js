@@ -349,7 +349,7 @@ export const defineInstructionset = (asm, opts = { instrsetName: "uFork_SM2.1" }
       });
       // console.log(`furðuvilluaflúsun2: ${sym} = ${asm.symbols.lookup(sym)}`);
     };
-    const defEvalInstr = defineEvaluateInstruction;
+    const defEvalInstr = def // defineEvaluateInstruction;
     
     defEvalInstr("PLUS",    0x0741);
     defEvalInstr("AND",     0x0744);
@@ -441,6 +441,7 @@ export const defineInstructionset = (asm, opts = { instrsetName: "uFork_SM2.1" }
       // return asm.deferedOp.or(0xA000, asm.deferedOp.and(here_plustwo, 0x0FFF));
       asm.datum(0xA000 | ((here + 2) & 0x0FFF));
     });
+    /*
     def("(JMP)", (asm) => {
       const here = asm.addr;
       const resolve = ([here_plusone, val]) => {
@@ -481,6 +482,7 @@ export const defineInstructionset = (asm, opts = { instrsetName: "uFork_SM2.1" }
       asm.origin(gildra);
       return undefined;
     });
+    */
     
     return {
       ...asm,
