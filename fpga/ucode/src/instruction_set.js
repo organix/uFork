@@ -441,10 +441,21 @@ export const defineInstructionset = (asm, opts = { instrsetName: "uFork_SM2.1" }
       // return asm.deferedOp.or(0xA000, asm.deferedOp.and(here_plustwo, 0x0FFF));
       asm.datum(0xA000 | ((here + 2) & 0x0FFF));
     });
+    const redatum = (asm, address, value) => {
+      const prev = asm.addr;
+      asm.undatum(address);
+      asm.origin(address);
+      asm.datum(value);
+      asm.origin(prev);
+    };
     def("(JMP)", (asm) => {
       const here = asm.addr;
       const resolve = ([here_plusone, dest]) => {
-        throw new Error(`aflúsun (JMP): ${here} ${here_plusone} ${dest}`);
+        if ((typeof dest) == "number") {
+          redatum(asm, here, (0x8000 | (dest & 0x0FFF));
+        } else {
+          throw new Error(`aflúsun (JMP): ${here} ${here_plusone} ${dest}`);
+        }
       };
       asm.datum("NOP"); // placeholder put in
       const gildra = asm.addr;
