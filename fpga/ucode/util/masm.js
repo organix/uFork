@@ -202,7 +202,7 @@ export const makeAssembler = (opts) => {
     if (((typeof a) == "function") || ((typeof b) == "function")) {
       throw new Error("not yet implemented!");
     }
-    const a2 = Promise.resolve(a);
+    const a2 = (a instanceof Promise) ? a : Promise.resolve(a);
     const a2_oldToString = a2.toString;
     a2.toString = () => {
       if (toString_recursion_depth < 10) {
@@ -215,7 +215,7 @@ export const makeAssembler = (opts) => {
         return a2_oldToString();
       }
     };
-    const b2 = Promise.resolve(b);
+    const b2 = (b instanceof Promise) ? b : Promise.resolve(b);
     const b2_oldToString = b2.toString;
     b2.toString = () => {
       if (toString_recursion_depth < 10) {
