@@ -98,7 +98,11 @@ function compile(text) {
     }
 
     function compile_words(token) {
-        let prev_safe = false;
+        const TAIL_NONE = 0;
+        const TAIL_OPER = 1;
+        const TAIL_CALL = 2;
+        const TAIL_DATA = 3;
+        let tail_ctx = TAIL_NONE;
         while (token.length > 0) {
 //debug console.log("compile_words:", token);
             if (token === "(") {
@@ -109,37 +113,53 @@ function compile(text) {
                 prog[0] = word;  // update bootstrap entry-point
                 const name = next_token();
 //debug console.log("compile_name:", name, "=", word.toString(16).padStart(4, "0"));
-                words[name] = word;
-                prev_safe = false;
+                words[name] = word;  // add word to dictionary
+                tail_ctx = TAIL_NONE;
             } else if (token === "CONSTANT") {
                 // allocate constant word
                 const name = next_token();
-                const addr = prog.length - 2;
-                if (addr < 0 || prog[addr] !== UC_LIT) {
+                if (tail_ctx !== TAIL_DATA) {
                     return error("invalid constant:", name);
                 }
+                const addr = prog.length - 2;
                 const word = uc_call(addr);
 //debug console.log("compile_const:", name, "=", word.toString(16).padStart(4, "0"));
                 prog[addr] = UC_CONST;  // convert (LIT) to (CONST)
+                words[name] = word;  // add word to dictionary
+                tail_ctx = TAIL_NONE;
             } else if (token === "SKZ") {
                 // skip (next instruction), if TOS is zero
                 prog.push(uc_skz());
+                tail_ctx = TAIL_NONE;
             } else {
                 const word = words[token];
-                if (prev_safe && (word === UC_EXIT)) {
-                    // attach "free" EXIT to previous word
-                    prog[prog.length - 1] |= UC_EXIT;
+                if (word === UC_EXIT) {
+                    if (tail_ctx === TAIL_OPER) {
+                        // attach "free" EXIT to previous word
+                        prog[prog.length - 1] |= UC_EXIT;
+                    } else if (tail_ctx === TAIL_CALL) {
+                        // convert previous CALL to JUMP
+                        prog[prog.length - 1] &= ~0x4000;
+                    } else {
+                        // compile EXIT
+                        prog.push(UC_EXIT);
+                    }
+                    tail_ctx = TAIL_NONE;
                 } else if (typeof word === "number") {
                     // compile primitive or call
                     prog.push(word);
-                    prev_safe = ((word & 0xF000) === 0);
+                    tail_ctx = (word & 0xF000) === 0xC000
+                        ? TAIL_CALL
+                        : (word & 0xF000) === 0x0000
+                            ? TAIL_OPER
+                            : TAIL_NONE;
                 } else {
                     const num = Number(token);
                     if (Number.isSafeInteger(num)) {
                         // push number literal
                         prog.push(UC_LIT);
                         prog.push(num & 0xFFFF);  // truncate to 16 bits
-                        prev_safe = false;
+                        tail_ctx = TAIL_DATA;
                     } else {
                         return error("invalid token:", token);
                     }
@@ -169,7 +189,7 @@ function compile(text) {
     return prog;
 }
 
-//debug const simple_source = ": BOOT R> DROP BOOT ;";
+//debug const simple_source = ": BOOT R@ DROP BOOT ;";
 //debug const multiline_source = `
 //debug 0x0FFF CONSTANT ADDR_MASK
 //debug 
@@ -187,8 +207,8 @@ function compile(text) {
 //debug ( WARNING! BOOT should not return... )
 //debug : BOOT
 //debug     R> DROP BOOT`;
-// const source = simple_source;
-//debug const source = multiline_source;
+//debug const source = simple_source;
+// const source = multiline_source;
 // console.log(compile(source));
 //debug console.log(compile(source).map(function (number, index) {
 //debug    return index.toString(16).padStart(3, "0") + ": " + number.toString(16).padStart(4, "0");

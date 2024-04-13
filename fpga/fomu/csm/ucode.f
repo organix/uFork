@@ -31,4 +31,4 @@
 
 ( WARNING! BOOT should not return... )
 : BOOT
-    R> DROP BOOT
+    BOOT ;
