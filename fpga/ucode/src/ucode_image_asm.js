@@ -833,7 +833,7 @@ export const minicore = (asm, opts) => {
   dat(">R", "DUP", "1+", ">R", "@", "EMIT", "EXIT");
 
   def("(CRLF.)");
-  dat("(.chr)", 0x13, "(.chr)", 0x0D, "EXIT");
+  dat("(.chr)", 0x0D, "(.chr)", 0x0A, "EXIT");
 
   def("(BL.)");
   dat("(.chr)", 0x20, "EXIT");
