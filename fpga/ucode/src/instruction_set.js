@@ -463,6 +463,10 @@ export const defineInstructionset = (asm, opts = { instrsetName: "uFork_SM2.1" }
         // refrain from writing the destination twice into the image
         asm.undatum(here_plusone);
         asm.origin(here_plusone);
+        asm.datum({ resolve: ([h, d]) => {
+          throw new Error(`aflúsun (JMP) 2: ${h} ${here_plusone} ${dest} ${d}`);
+        }});
+        asm.origin(here_plusone);
       };
       asm.datum("NOP"); // placeholder put in
       const gildra = asm.addr;
