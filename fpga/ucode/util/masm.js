@@ -118,9 +118,16 @@ export const makeAssembler = (opts) => {
           const captured_address = curr_addr;
           val.then((result) => {
             const old_addr = curr_addr;
-            asm.undatum(captured_address);
+            const old_val  = asm.datumAt(captured_address);
+            if ((typeof old_val) != "object") {
+              asm.undatum(captured_address);
+            } else {
+              if (old_val.resolve != undefined) {
+                asm.undatum(captured_address);
+              }
+            }
             asm.origin(captured_address);
-            datum(result);
+            asm.datum(result);
             asm.origin(old_addr);
           });
         } else if (val instanceof Array) {
