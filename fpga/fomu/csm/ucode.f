@@ -36,6 +36,10 @@
 : NOT ( flag -- !flag )
 : 0=
     TRUE FALSE ROT ?: ;
+: = ( a b -- a==b )
+    XOR FLAG ;
+: ABS ( n -- +n )
+    DUP MSB& SKZ NEGATE ;
 
 : TX? ( -- ready )
     0x00 DEV@ ;

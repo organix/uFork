@@ -205,7 +205,7 @@ ALU/memory cycle (usually for a write request).
     *---+---+---+---*---+---+---+---*---+---+---+---*---+---+---+---*
       ^   ^  \_____/  ^  \_________/ \_/ \_________/
       |   |  00:NONE  |    000:NONE  0:R   000:UC
-      |   |  01:DROP  |    001:DROP  1:W   001:[PC]*
+      |   |  01:DROP  |    001:DROP  1:W   001:[PC+1]*
       |   |  10:PUSH  |    010:PUSH        010:??
       |   |  11:RPLC  |    011:RPLC        011:DEV
       | R->PC         |    100:SWAP        100:Q_T
@@ -213,7 +213,7 @@ ALU/memory cycle (usually for a write request).
                            110:RROT        110:Q_Y
                            111:ALU2        111:Q_Z
 
-\* If `MEM range` is `[PC]`, then read from `PC+1` and increment again.
+\* If `MEM range` is `[PC+1]`, then read from `PC+1` and increment again.
 
 #### Stack Operations
 
