@@ -38,17 +38,19 @@
     TRUE FALSE ROT ?: ;
 : = ( a b -- a==b )
     XOR FLAG ;
+: 0< ( n -- n<0 )
+    DUP MSB& IF TRUE ELSE FALSE THEN ;
 : ABS ( n -- +n )
     DUP MSB& SKZ NEGATE ;
 
 : TX? ( -- ready )
-    0x00 DEV@ ;
+    0x00 IO@ ;
 : TX! ( char -- )
-    0x01 DEV! ;
+    0x01 IO! ;
 : RX? ( -- ready )
-    0x02 DEV@ ;
+    0x02 IO@ ;
 : RX@ ( -- char )
-    0x03 DEV@ ;
+    0x03 IO@ ;
 
 ( WARNING! BOOT should not return... )
 : BOOT
