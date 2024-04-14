@@ -2,6 +2,11 @@
     Base word dictionary for uCode
 )
 
+32 CONSTANT BL
+48 CONSTANT '0'
+65 CONSTANT 'A'
+97 CONSTANT 'a'
+
 : (JMP)
     R>
 : @EXECUTE
@@ -26,6 +31,8 @@
     OVER OVER ;
 : 2DROP ( a b -- )
     DROP DROP ;
+: FLAG ( n -- flag )
+    FALSE TRUE ROT ?: ;
 : NOT ( flag -- !flag )
 : 0=
     TRUE FALSE ROT ?: ;
