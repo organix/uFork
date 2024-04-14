@@ -37,6 +37,15 @@
 : 0=
     TRUE FALSE ROT ?: ;
 
+: TX? ( -- ready )
+    0x00 DEV@ ;
+: TX! ( char -- )
+    0x01 DEV! ;
+: RX? ( -- ready )
+    0x02 DEV@ ;
+: RX@ ( -- char )
+    0x03 DEV@ ;
+
 ( WARNING! BOOT should not return... )
 : BOOT
     BOOT ;

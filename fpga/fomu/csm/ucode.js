@@ -50,12 +50,12 @@ function compile(text) {
         return (0xB000 | (addr & ADDR_MASK));
     }
 
-    const UC_LIT =              0x021F;                 // (LIT) item ( -- item )
-    const UC_CONST =            0x521F;                 // (CONST) item ( -- item ) R:( addr -- ) addr->pc
-    const UC_TO_R =             0x2100;                 // >R ( a -- ) R:( -- a )
-    const UC_R_FROM =           0x1280;                 // R> ( -- a ) R:( a -- )
-    const UC_R_FETCH =          0x0280;                 // R@ ( -- a ) R:( a -- a )
-    const UC_EXIT =             0x5000;                 // EXIT ( -- ) R:( addr -- ) addr->pc
+    const UC_LIT =          0x021F;                     // (LIT) item ( -- item )
+    const UC_CONST =        0x521F;                     // (CONST) item ( -- item ) R:( addr -- ) addr->pc
+    const UC_TO_R =         0x2100;                     // >R ( a -- ) R:( -- a )
+    const UC_R_FROM =       0x1280;                     // R> ( -- a ) R:( a -- )
+    const UC_R_FETCH =      0x0280;                     // R@ ( -- a ) R:( a -- a )
+    const UC_EXIT =         0x5000;                     // EXIT ( -- ) R:( addr -- ) addr->pc
 
     const words = {
         "NOP":              0x0000,                     // ( -- )
@@ -95,11 +95,31 @@ function compile(text) {
         "4ASR":             0x030D,                     // ( a -- {a[15],a[15],a[15],a[15],a[15:4]} )
         "@":                0x030F,                     // ( addr -- data )
         "!":                0x098F,                     // ( data addr -- )
+        "DEV@":             0x033F,                     // ( dev_reg -- data )
+        "DEV!":             0x09BF,                     // ( data dev_reg -- )
         ">R":               0x2100,                     // ( a -- ) R:( -- a )
         "R>":               0x1280,                     // ( -- a ) R:( a -- )
         "R@":               0x0280,                     // ( -- a ) R:( a -- a )
         "EXIT":             0x5000,                     // ( -- ) R:( addr -- ) addr->pc
         ";":                0x5000                      // ( -- ) R:( addr -- ) addr->pc
+    };
+    words[":"] = function () {
+        // new entry-point
+        const word = uc_call(prog.length);
+        prog[0] = word;  // update bootstrap entry-point
+        const name = next_token();
+//debug console.log("compile_name:", name, "=", word.toString(16).padStart(4, "0"));
+        words[name] = word;  // add word to dictionary
+    };
+    words["VARIABLE"] = function () {
+        // new named variable
+        const word = uc_call(prog.length);
+        const name = next_token();
+//debug console.log("compile_var:", name, "=", word.toString(16).padStart(4, "0"));
+        prog.push(UC_CONST);
+        prog.push(prog.length + 1);  // variable address
+        prog.push(0);  // variable data field
+        words[name] = word;  // add word to dictionary
     };
     words["SKZ"] = function () {                        // ( 0 -- ) pc+2->pc | ( n -- )
         // skip (next instruction), if TOS is zero
@@ -147,14 +167,6 @@ function compile(text) {
 //debug console.log("compile_words:", token);
             if (token === "(") {
                 compile_comment(next_token());
-            } else if (token === ":") {
-                // new entry-point
-                const word = uc_call(prog.length);
-                prog[0] = word;  // update bootstrap entry-point
-                const name = next_token();
-//debug console.log("compile_name:", name, "=", word.toString(16).padStart(4, "0"));
-                words[name] = word;  // add word to dictionary
-                tail_ctx = TAIL_NONE;
             } else if (token === "CONSTANT") {
                 // allocate constant word
                 const name = next_token();
@@ -232,7 +244,11 @@ function compile(text) {
 //debug const simple_source = ": BOOT R@ DROP BOOT ;";
 //debug const multiline_source = `
 //debug 0x0FFF CONSTANT ADDR_MASK
+//debug VARIABLE COUNTER
 //debug 
+//debug : ADJUST ( n -- n+COUNTER )
+//debug     COUNTER @ +
+//debug     DUP COUNTER ! ;
 //debug : EXECUTE
 //debug     ADDR_MASK ( 0x0FFF ) AND >R
 //debug : (EXIT)
