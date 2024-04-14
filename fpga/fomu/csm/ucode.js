@@ -97,11 +97,18 @@ function compile(text) {
         "!":                0x098F,                     // ( data addr -- )
         "DEV@":             0x033F,                     // ( dev_reg -- data )
         "DEV!":             0x09BF,                     // ( data dev_reg -- )
+        "T@":               0x034F,                     // ( qref -- data )
+        "T!":               0x09CF,                     // ( data qref -- )
+        "X@":               0x035F,                     // ( qref -- data )
+        "X!":               0x09DF,                     // ( data qref -- )
+        "Y@":               0x036F,                     // ( qref -- data )
+        "Y!":               0x09EF,                     // ( data qref -- )
+        "Z@":               0x037F,                     // ( qref -- data )
+        "Z!":               0x09FF,                     // ( data qref -- )
         ">R":               0x2100,                     // ( a -- ) R:( -- a )
         "R>":               0x1280,                     // ( -- a ) R:( a -- )
         "R@":               0x0280,                     // ( -- a ) R:( a -- a )
-        "EXIT":             0x5000,                     // ( -- ) R:( addr -- ) addr->pc
-        ";":                0x5000                      // ( -- ) R:( addr -- ) addr->pc
+        "EXIT":             0x5000                      // ( -- ) R:( addr -- ) addr->pc ; no TCO
     };
     words[":"] = function () {
         // new entry-point
@@ -167,6 +174,18 @@ function compile(text) {
 //debug console.log("compile_words:", token);
             if (token === "(") {
                 compile_comment(next_token());
+            } else if (token === ";") {
+                if (tail_ctx === TAIL_EVAL) {
+                    // attach "free" EXIT to previous word
+                    prog[prog.length - 1] |= UC_EXIT;
+                } else if (tail_ctx === TAIL_CALL) {
+                    // convert previous CALL to JUMP
+                    prog[prog.length - 1] &= ~0x4000;
+                } else {
+                    // compile EXIT
+                    prog.push(UC_EXIT);
+                }
+                tail_ctx = TAIL_NONE;
             } else if (token === "CONSTANT") {
                 // allocate constant word
                 const name = next_token();
@@ -181,19 +200,7 @@ function compile(text) {
                 tail_ctx = TAIL_NONE;
             } else {
                 const word = words[token];
-                if (word === UC_EXIT) {
-                    if (tail_ctx === TAIL_EVAL) {
-                        // attach "free" EXIT to previous word
-                        prog[prog.length - 1] |= UC_EXIT;
-                    } else if (tail_ctx === TAIL_CALL) {
-                        // convert previous CALL to JUMP
-                        prog[prog.length - 1] &= ~0x4000;
-                    } else {
-                        // compile EXIT
-                        prog.push(UC_EXIT);
-                    }
-                    tail_ctx = TAIL_NONE;
-                } else if (typeof word === "number") {
+                if (typeof word === "number") {
                     // compile primitive or call
                     prog.push(word);
                     tail_ctx = (word & 0xF000) === 0xC000
