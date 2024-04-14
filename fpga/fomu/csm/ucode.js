@@ -2,12 +2,6 @@
 // Dale Schumacher
 // 2024-04-10
 
-const UC_LIT =              0x021F;                     // (LIT) item ( -- item )
-const UC_CONST =            0x521F;                     // (CONST) item ( -- item ) R:( addr -- ) addr->pc
-const UC_EXIT =             0x5000;                     // ( -- ) R:( addr -- ) addr->pc
-
-const ADDR_MASK =           0x0FFF;                     // 12-bit uCode addresses
-
 function error(...msg) {
 //debug console.log("ERROR!", ...msg);
     return msg.join(" ");
@@ -38,6 +32,31 @@ function compile(text) {
         return token;
     }
 
+    const ADDR_MASK =           0x0FFF;                 // 12-bit uCode addresses
+
+    function uc_call(addr) {    // push return address and jump
+        return (0xC000 | (addr & ADDR_MASK));
+    }
+    function uc_jump(addr) {    // jump (unconditional)
+        return (0x8000 | (addr & ADDR_MASK));
+    }
+    function uc_jz(addr) {      // jump if zero
+        return (0xA000 | (addr & ADDR_MASK));
+    }
+    function uc_jz_inc(addr) {  // jump if zero, else increment
+        return (0x9000 | (addr & ADDR_MASK));
+    }
+    function uc_jz_dec(addr) {  // jump if zero, else decrement
+        return (0xB000 | (addr & ADDR_MASK));
+    }
+
+    const UC_LIT =          0x021F;                     // (LIT) item ( -- item )
+    const UC_CONST =        0x521F;                     // (CONST) item ( -- item ) R:( addr -- ) addr->pc
+    const UC_TO_R =         0x2100;                     // >R ( a -- ) R:( -- a )
+    const UC_R_FROM =       0x1280;                     // R> ( -- a ) R:( a -- )
+    const UC_R_FETCH =      0x0280;                     // R@ ( -- a ) R:( a -- a )
+    const UC_EXIT =         0x5000;                     // EXIT ( -- ) R:( addr -- ) addr->pc
+
     const words = {
         "NOP":              0x0000,                     // ( -- )
         "DROP":             0x0100,                     // ( a -- )
@@ -53,6 +72,8 @@ function compile(text) {
         "-1":               0x02F6,                     // ( -- -1 )
         "LSB":              0x02D6,                     // ( -- 1 )
         "MSB":              0x02E6,                     // ( -- -32768 )
+        "LSB&":             0x0314,                     // ( a -- a&1 )
+        "MSB&":             0x0324,                     // ( a -- a&-32768 )
         "INVERT":           0x0335,                     // ( a -- ~a )
         "NEGATE":           0x03C2,                     // ( a -- -a )
         "1+":               0x0311,                     // ( a -- a+1 )
@@ -74,32 +95,71 @@ function compile(text) {
         "4ASR":             0x030D,                     // ( a -- {a[15],a[15],a[15],a[15],a[15:4]} )
         "@":                0x030F,                     // ( addr -- data )
         "!":                0x098F,                     // ( data addr -- )
+        "DEV@":             0x033F,                     // ( dev_reg -- data )
+        "DEV!":             0x09BF,                     // ( data dev_reg -- )
         ">R":               0x2100,                     // ( a -- ) R:( -- a )
         "R>":               0x1280,                     // ( -- a ) R:( a -- )
         "R@":               0x0280,                     // ( -- a ) R:( a -- a )
         "EXIT":             0x5000,                     // ( -- ) R:( addr -- ) addr->pc
         ";":                0x5000                      // ( -- ) R:( addr -- ) addr->pc
     };
+    words[":"] = function () {
+        // new entry-point
+        const word = uc_call(prog.length);
+        prog[0] = word;  // update bootstrap entry-point
+        const name = next_token();
+//debug console.log("compile_name:", name, "=", word.toString(16).padStart(4, "0"));
+        words[name] = word;  // add word to dictionary
+    };
+    words["VARIABLE"] = function () {
+        // new named variable
+        const word = uc_call(prog.length);
+        const name = next_token();
+//debug console.log("compile_var:", name, "=", word.toString(16).padStart(4, "0"));
+        prog.push(UC_CONST);
+        prog.push(prog.length + 1);  // variable address
+        prog.push(0);  // variable data field
+        words[name] = word;  // add word to dictionary
+    };
+    words["SKZ"] = function () {                        // ( 0 -- ) pc+2->pc | ( n -- )
+        // skip (next instruction), if TOS is zero
+        prog.push(uc_jz(prog.length + 2));
+    };
+    words["?D0"] = function () {                        // ( n -- ) R:( -- n' )
+        // begin counted loop
+        const addr = prog.length;
+//debug console.log("compile_loop:", "$"+addr.toString(16).padStart(3, "0"));
+        loop_ctx.push(addr);
+        prog.push(uc_jump(prog.length));  // placeholder
+        prog.push(UC_TO_R);
+    };
+    words["I"] = function () {                          // ( -- n ) R:( n -- n )
+        // fetch loop count (from R-stack)
+        prog.push(UC_R_FETCH);
+    };
+    words["LOOP-"] = function () {                      // loop->pc
+        // end decrement loop
+        prog.push(UC_R_FROM);
+        const addr = loop_ctx.pop();
+        prog.push(uc_jump(addr));
+        prog[addr] = uc_jz_dec(prog.length);  // patch
+    };
+    words["LOOP+"] = function () {                      // loop->pc
+        // end increment loop
+        prog.push(UC_R_FROM);
+        const addr = loop_ctx.pop();
+        prog.push(uc_jump(addr));
+        prog[addr] = uc_jz_inc(prog.length);  // patch
+    };
+
+    const loop_ctx = [];  // stack of looping contexts
+
     const prog = [
         uc_jump(0)
     ];
-
-    function uc_call(addr) {    // push return address and jump
-        return (0xC000 | (addr & ADDR_MASK));
-    }
-    function uc_jump(addr) {    // jump (unconditional)
-        return (0x8000 | (addr & ADDR_MASK));
-    }
-    function uc_jz(addr) {      // jump if zero
-        return (0xA000 | (addr & ADDR_MASK));
-    }
-    function uc_skz() {         // skip if zero
-        return uc_jz(prog.length + 2);
-    }
-
     function compile_words(token) {
         const TAIL_NONE = 0;
-        const TAIL_OPER = 1;
+        const TAIL_EVAL = 1;
         const TAIL_CALL = 2;
         const TAIL_DATA = 3;
         let tail_ctx = TAIL_NONE;
@@ -107,14 +167,6 @@ function compile(text) {
 //debug console.log("compile_words:", token);
             if (token === "(") {
                 compile_comment(next_token());
-            } else if (token === ":") {
-                // new entry-point
-                const word = uc_call(prog.length);
-                prog[0] = word;  // update bootstrap entry-point
-                const name = next_token();
-//debug console.log("compile_name:", name, "=", word.toString(16).padStart(4, "0"));
-                words[name] = word;  // add word to dictionary
-                tail_ctx = TAIL_NONE;
             } else if (token === "CONSTANT") {
                 // allocate constant word
                 const name = next_token();
@@ -127,14 +179,10 @@ function compile(text) {
                 prog[addr] = UC_CONST;  // convert (LIT) to (CONST)
                 words[name] = word;  // add word to dictionary
                 tail_ctx = TAIL_NONE;
-            } else if (token === "SKZ") {
-                // skip (next instruction), if TOS is zero
-                prog.push(uc_skz());
-                tail_ctx = TAIL_NONE;
             } else {
                 const word = words[token];
                 if (word === UC_EXIT) {
-                    if (tail_ctx === TAIL_OPER) {
+                    if (tail_ctx === TAIL_EVAL) {
                         // attach "free" EXIT to previous word
                         prog[prog.length - 1] |= UC_EXIT;
                     } else if (tail_ctx === TAIL_CALL) {
@@ -151,8 +199,12 @@ function compile(text) {
                     tail_ctx = (word & 0xF000) === 0xC000
                         ? TAIL_CALL
                         : (word & 0xF000) === 0x0000
-                            ? TAIL_OPER
+                            ? TAIL_EVAL
                             : TAIL_NONE;
+                } else if (typeof word === "function") {
+                    // invoke compiler function
+                    word();
+                    tail_ctx = TAIL_NONE;
                 } else {
                     const num = Number(token);
                     if (Number.isSafeInteger(num)) {
@@ -192,7 +244,11 @@ function compile(text) {
 //debug const simple_source = ": BOOT R@ DROP BOOT ;";
 //debug const multiline_source = `
 //debug 0x0FFF CONSTANT ADDR_MASK
+//debug VARIABLE COUNTER
 //debug 
+//debug : ADJUST ( n -- n+COUNTER )
+//debug     COUNTER @ +
+//debug     DUP COUNTER ! ;
 //debug : EXECUTE
 //debug     ADDR_MASK ( 0x0FFF ) AND >R
 //debug : (EXIT)
@@ -208,6 +264,8 @@ function compile(text) {
 //debug : NOT ( flag -- !flag )
 //debug : 0=
 //debug     TRUE FALSE ROT ?: ;
+//debug : 4DROP
+//debug     4 ?D0 DROP I DROP LOOP- ;
 //debug 
 //debug ( WARNING! BOOT should not return... )
 //debug : BOOT
