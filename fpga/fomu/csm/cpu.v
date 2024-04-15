@@ -152,9 +152,8 @@ module cpu #(
 
     // initial program
     initial begin
-        /*
         $readmemh("ucode_rom.mem", ucode);
-        */
+        /*
         ucode[12'h000] = 16'h8050;//16'h8002;//UC_NOP;
         ucode[12'h001] = UC_FAIL;
         ucode[12'h002] = UC_TRUE;
@@ -310,6 +309,7 @@ module cpu #(
         ucode[12'h13D] = { 8'h00, `UART_TX_DAT };
         ucode[12'h13E] = 16'h09BF + UC_EXIT;
         ucode[12'h13F] = UC_EXIT;
+        */
         /*
         $writememh("ucode_rom.mem", ucode);
         */

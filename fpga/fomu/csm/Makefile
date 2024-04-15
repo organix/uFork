@@ -9,12 +9,12 @@ ALL =	alu.vcd \
 	cpu.vcd \
 	cpu.dfu
 
-all: $(ALL)
+all: ucode_rom.mem $(ALL)
 
 install: cpu.dfu
-	dfu-util -D $<
+	dfu-util -D cpu.dfu
 
-clean:
+clean: ucode_rom.mem
 	rm -f *.sim *.vcd *.json *.log *.asc *.bit *.dfu abc.history
 
 %.sim: %_tb.v
@@ -35,3 +35,6 @@ clean:
 %.dfu: %.bit
 	cp $< $@
 	dfu-suffix -v 1209 -p 70b1 -a $@
+
+ucode_rom.mem: ucode.f
+	deno run ucode_cli.js <ucode.f >ucode_rom.mem
