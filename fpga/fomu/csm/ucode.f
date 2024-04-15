@@ -44,13 +44,20 @@
     DUP MSB& SKZ NEGATE ;
 
 : TX? ( -- ready )
+: EMIT?
     0x00 IO@ ;
 : TX! ( char -- )
     0x01 IO! ;
 : RX? ( -- ready )
+: KEY?
     0x02 IO@ ;
 : RX@ ( -- char )
     0x03 IO@ ;
+
+: EMIT ( char -- )
+    BEGIN TX? UNTIL TX! ;
+: KEY ( -- char )
+    BEGIN RX? UNTIL RX@ ;
 
 ( WARNING! BOOT should not return... )
 : BOOT
