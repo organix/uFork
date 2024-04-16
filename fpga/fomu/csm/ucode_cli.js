@@ -21,7 +21,7 @@ new Response(Deno.stdin.readable).text().then(function (text) {
 // Fail if there was a compilation error.
 
     if (!Array.isArray(word_array)) {
-        Deno.stderr.write(text_encoder.encode(word_array));
+        Deno.stderr.write(text_encoder.encode(word_array + "\n"));
         return Deno.exit(1);
     }
 

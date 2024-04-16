@@ -108,6 +108,7 @@ function compile(text) {
         ">R":               0x2100,                     // ( a -- ) ( R: -- a )
         "R>":               0x1280,                     // ( -- a ) ( R: a -- )
         "R@":               0x0280,                     // ( -- a ) ( R: a -- a )
+        "RDROP":            0x1000,                     // ( -- ) ( R: a -- )
         "EXIT":             0x5000                      // ( -- ) ( R: addr -- ) addr->pc ; no TCO
     };
     words[":"] = function () {
@@ -321,13 +322,15 @@ function compile(text) {
 //debug     SKZ SWAP
 //debug : (DROP)
 //debug     DROP ;
+//debug : 0= ( n -- n==0 )
 //debug : NOT ( flag -- !flag )
-//debug : 0=
 //debug     TRUE FALSE ROT ?: ;
+//debug : BOOL ( n -- flag )
+//debug     IF TRUE ELSE FALSE THEN ;
+//debug : 0< ( n -- n<0 )
+//debug     MSB& BOOL ;
 //debug : 4DROP ( a b c d -- )
 //debug     4 ?D0 DROP I DROP LOOP- ;
-//debug : 0< ( n -- n<0 )
-//debug     DUP MSB& IF TRUE ELSE FALSE THEN ;
 //debug : EMIT ( ch -- )
 //debug     BEGIN 0x00 IO@ UNTIL 0x01 IO! ;
 //debug : KEY ( -- ch )
