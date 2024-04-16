@@ -2,15 +2,19 @@
     Base word dictionary for uCode
 )
 
-10 CONSTANT '\n'
-13 CONSTANT '\r'
-32 CONSTANT BL
-48 CONSTANT '0'
-55 CONSTANT A-10
-65 CONSTANT 'A'
-90 CONSTANT 'Z'
-97 CONSTANT 'a'
+8   CONSTANT '\b'
+9   CONSTANT '\t'
+10  CONSTANT '\n'
+13  CONSTANT '\r'
+32  CONSTANT BL
+48  CONSTANT '0'
+57  CONSTANT '9'
+55  CONSTANT A-10
+65  CONSTANT 'A'
+90  CONSTANT 'Z'
+97  CONSTANT 'a'
 122 CONSTANT 'z'
+127 CONSTANT DEL
 
 : (JMP)
     R>
@@ -108,10 +112,37 @@
         4ROL DUP X#
     LOOP- DROP ;
 
+: INBOUNDS ( n lo hi -- lo<=n&&n<=hi )
+    ( a<=b === !(a>b) === !(b<a) === !((b-a)<0) )
+    ( lo<=n === !((n-lo)<0) )
+    ( n<=hi === !((hi-n)<0) )
+    -ROT    ( hi n lo )
+    OVER    ( hi n lo n )
+    SWAP    ( hi n n lo )
+    -       ( hi n n-lo )
+    -ROT    ( n-lo hi n )
+    -       ( n-lo hi-n )
+    OR      ( (n-lo)|(hi-n) )
+    MSB& 0= ;
+: WITHIN ( n lo hi -- lo<=n&&n<=hi ) ( WARNING! STANDARD SEMANTICS ARE lo<=n&&n<hi )
+    >R      ( n lo ) ( R: hi )
+    OVER    ( n lo n ) ( R: hi )
+    <=      ( n lo<=n ) ( R: hi )
+    R>      ( n lo<=n hi )
+    SWAP    ( n hi lo<=n )
+    >R      ( n hi ) ( R: lo<=n )
+    <=      ( n<=hi ) ( R: lo<=n )
+    R>      ( n<=hi lo<=n )
+    AND ;   ( n<=hi&&lo<=n )
+: UPPER ( 'A' | 'a' -- 'A' )
+    DUP 'a' 'z' INBOUNDS IF
+        BL XOR  ( flip case )
+    THEN ;
+
 ( WARNING! BOOT should not return... )
 : BOOT
     KEY DUP
-    EMIT
+    UPPER EMIT ( X. CR )
     '\r' = IF
         '\n' EMIT
     THEN
