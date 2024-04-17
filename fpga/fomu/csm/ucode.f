@@ -2,6 +2,9 @@
     Base word dictionary for uCode
 )
 
+: PANIC! FAIL PANIC! ;      ( if BOOT returns... )
+
+3   CONSTANT ^C
 8   CONSTANT '\b'
 9   CONSTANT '\t'
 10  CONSTANT '\n'
@@ -211,8 +214,11 @@ VARIABLE nos    ( next on stack )
     ELSE
         !
     THEN ;
+: prompt ( -- )
+    '>' EMIT BL EMIT ;
 : MONITOR
     KEY                     ( D: key )
+    DUP ^C = SKZ EXIT       ( abort! )
     DUP EMIT
     DUP '\r' = IF
         '\n' EMIT
@@ -235,7 +241,7 @@ VARIABLE nos    ( next on stack )
         THEN
         0 inp !
         DUP '\r' = IF
-            '>' EMIT BL EMIT  ( display prompt )
+            prompt
         THEN
     THEN
     DUP ISHEX IF
@@ -254,11 +260,12 @@ VARIABLE nos    ( next on stack )
 : ECHO
     KEY DUP
     ( EMIT ) X. CR
-    '\r' = IF
+    DUP '\r' = IF
         '\n' EMIT
     THEN
+    ^C = SKZ EXIT           ( abort! )
     ECHO ;
 
-( WARNING! BOOT should not return... )
+( WARNING! if BOOT returns we PANIC! )
 : BOOT
-    ( ECHO ) MONITOR ;
+    ECHO prompt MONITOR ;

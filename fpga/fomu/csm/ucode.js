@@ -111,6 +111,7 @@ function compile(text) {
         "R>":               0x1280,                     // ( -- a ) ( R: a -- )
         "R@":               0x0280,                     // ( -- a ) ( R: a -- a )
         "RDROP":            0x1000,                     // ( -- ) ( R: a -- )
+        "FAIL":             0x002F,                     // ( -- ) signal failure
         "EXIT":             0x5000                      // ( -- ) ( R: addr -- ) addr->pc ; no TCO
     };
     words[":"] = function () {
