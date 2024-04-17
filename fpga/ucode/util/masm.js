@@ -15,6 +15,11 @@ export const makeAssembler = (opts) => {
   const asm = {
     get addr() { return curr_addr },
   };
+  asm.symbols = {};
+  asm.symbols.define = (sym, val = undefined) => { };
+  asm.symbols.lookup = (sym) => { };
+  asm.symbols.isDefined = (sym) => { };
+  asm.symbols.redefine  = (sym, val = undefined) => { };
 
   
   return asm;
