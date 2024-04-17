@@ -4,6 +4,8 @@
 
 Indentation is 4 spaces.
 
+Use Unix style line endings (`\n`). Ensure files end with a newline.
+
 Use snake case for identifiers and file names.
 
     // Good

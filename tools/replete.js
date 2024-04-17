@@ -2,7 +2,7 @@
 // Node.js, and Deno. The VSCode extension is available at
 // https://marketplace.visualstudio.com/items?itemName=jamesdiacono.Replete.
 
-// Its 'source' function enables specially commented code during evaluation,
+// Its 'command' function enables specially commented code during evaluation,
 // making it possible to run the tests embedded in many of uFork's JavaScript
 // modules.
 

@@ -88,9 +88,9 @@ module cpu #(
     localparam UC_DUP       = 16'h0200;                 // ( a -- a a )
     localparam UC_DROP      = 16'h0100;                 // ( a -- )
     localparam UC_SWAP      = 16'h0400;                 // ( a b -- b a )
-    localparam UC_TO_R      = 16'h2100;                 // >R ( a -- ) R:( -- a )
-    localparam UC_R_FROM    = 16'h1280;                 // R> ( -- a ) R:( a -- )
-    localparam UC_EXIT      = 16'h5000;                 // ( -- ) R:( addr -- ) addr->pc
+    localparam UC_TO_R      = 16'h2100;                 // >R ( a -- ) ( R: -- a )
+    localparam UC_R_FROM    = 16'h1280;                 // R> ( -- a ) ( R: a -- )
+    localparam UC_EXIT      = 16'h5000;                 // ( -- ) ( R: addr -- ) addr->pc
 
     localparam UC_LIT       = 16'h021F;                 // (LIT) item ( -- item )
     localparam UC_SUB       = 16'h0742;                 // - ( a b -- a-b )
@@ -101,11 +101,11 @@ module cpu #(
     localparam UC_DEC       = 16'h0312;                 // 1- ( a -- a-1 )
     localparam UC_OVER      = 16'h0240;                 // ( a b -- a b a )
     localparam UC_ROT       = 16'h0500;                 // ( a b c -- b c a )
-    localparam UC_R_FETCH   = 16'h0280;                 // R@ ( -- a ) R:( a -- a )
+    localparam UC_R_FETCH   = 16'h0280;                 // R@ ( -- a ) ( R: a -- a )
     localparam UC_2MUL      = 16'h0301;                 // 2* ( a -- a+a )
 
     localparam UC_FAIL      = 16'h002F;                 // ( -- ) signal failure
-    localparam UC_CALL      = 16'hC000;                 // <addr> ( -- ) R:( -- pc+1 ) @pc->pc
+    localparam UC_CALL      = 16'hC000;                 // <addr> ( -- ) ( R: -- pc+1 ) @pc->pc
 
     //
     // uCode program memory
@@ -135,7 +135,7 @@ module cpu #(
     localparam UC_EXE       = 16'hC082;
     localparam UC_ALT       = 16'hC084;                 // ( altn cnsq cond -- cnsq | altn )
 //    localparam UC_CONST     = 16'hC088;
-    localparam UC_CONST     = 16'h521F;                 // (CONST) item ( -- item ) R:( addr -- ) addr->pc
+    localparam UC_CONST     = 16'h521F;                 // (CONST) item ( -- item ) ( R: addr -- ) addr->pc
     localparam UC_TRUE      = 16'h02F6;                 // ( -- -1 )
     localparam UC_FALSE     = 16'h02C0;                 // ( -- 0 )
     localparam UC_LSB       = 16'h02D6;                 // ( -- 1 )
@@ -152,9 +152,8 @@ module cpu #(
 
     // initial program
     initial begin
-        /*
         $readmemh("ucode_rom.mem", ucode);
-        */
+        /*
         ucode[12'h000] = 16'h8050;//16'h8002;//UC_NOP;
         ucode[12'h001] = UC_FAIL;
         ucode[12'h002] = UC_TRUE;
@@ -310,6 +309,7 @@ module cpu #(
         ucode[12'h13D] = { 8'h00, `UART_TX_DAT };
         ucode[12'h13E] = 16'h09BF + UC_EXIT;
         ucode[12'h13F] = UC_EXIT;
+        */
         /*
         $writememh("ucode_rom.mem", ucode);
         */

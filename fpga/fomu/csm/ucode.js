@@ -51,11 +51,11 @@ function compile(text) {
     }
 
     const UC_LIT =          0x021F;                     // (LIT) item ( -- item )
-    const UC_CONST =        0x521F;                     // (CONST) item ( -- item ) R:( addr -- ) addr->pc
-    const UC_TO_R =         0x2100;                     // >R ( a -- ) R:( -- a )
-    const UC_R_FROM =       0x1280;                     // R> ( -- a ) R:( a -- )
-    const UC_R_FETCH =      0x0280;                     // R@ ( -- a ) R:( a -- a )
-    const UC_EXIT =         0x5000;                     // EXIT ( -- ) R:( addr -- ) addr->pc
+    const UC_CONST =        0x521F;                     // (CONST) item ( -- item ) ( R: addr -- ) addr->pc
+    const UC_TO_R =         0x2100;                     // >R ( a -- ) ( R: -- a )
+    const UC_R_FROM =       0x1280;                     // R> ( -- a ) ( R: a -- )
+    const UC_R_FETCH =      0x0280;                     // R@ ( -- a ) ( R: a -- a )
+    const UC_EXIT =         0x5000;                     // EXIT ( -- ) ( R: addr -- ) addr->pc
 
     const words = {
         "NOP":              0x0000,                     // ( -- )
@@ -95,8 +95,8 @@ function compile(text) {
         "4ASR":             0x030D,                     // ( a -- {a[15],a[15],a[15],a[15],a[15:4]} )
         "@":                0x030F,                     // ( addr -- data )
         "!":                0x098F,                     // ( data addr -- )
-        "DEV@":             0x033F,                     // ( dev_reg -- data )
-        "DEV!":             0x09BF,                     // ( data dev_reg -- )
+        "IO@":              0x033F,                     // ( io_reg -- data )
+        "IO!":              0x09BF,                     // ( data io_reg -- )
         "T@":               0x034F,                     // ( qref -- data )
         "T!":               0x09CF,                     // ( data qref -- )
         "X@":               0x035F,                     // ( qref -- data )
@@ -105,10 +105,11 @@ function compile(text) {
         "Y!":               0x09EF,                     // ( data qref -- )
         "Z@":               0x037F,                     // ( qref -- data )
         "Z!":               0x09FF,                     // ( data qref -- )
-        ">R":               0x2100,                     // ( a -- ) R:( -- a )
-        "R>":               0x1280,                     // ( -- a ) R:( a -- )
-        "R@":               0x0280,                     // ( -- a ) R:( a -- a )
-        "EXIT":             0x5000                      // ( -- ) R:( addr -- ) addr->pc ; no TCO
+        ">R":               0x2100,                     // ( a -- ) ( R: -- a )
+        "R>":               0x1280,                     // ( -- a ) ( R: a -- )
+        "R@":               0x0280,                     // ( -- a ) ( R: a -- a )
+        "RDROP":            0x1000,                     // ( -- ) ( R: a -- )
+        "EXIT":             0x5000                      // ( -- ) ( R: addr -- ) addr->pc ; no TCO
     };
     words[":"] = function () {
         // new entry-point
@@ -132,34 +133,84 @@ function compile(text) {
         // skip (next instruction), if TOS is zero
         prog.push(uc_jz(prog.length + 2));
     };
-    words["?D0"] = function () {                        // ( n -- ) R:( -- n' )
+    words["BEGIN"] = function () {                      // ( -- )
+        // begin indefinite loop
+        const addr = prog.length;
+//debug console.log("compile_indefinite_loop:", "$"+addr.toString(16).padStart(3, "0"));
+        const word = uc_jump(addr);  // placeholder
+        ctrl_ctx.push(word);
+    };
+    words["UNTIL"] = function () {                      // ( cond -- )
+        // end bottom-test loop
+        const addr = ctrl_ctx.pop() & ADDR_MASK;
+        prog.push(uc_jz(addr));
+    };
+    words["WHILE"] = function () {                      // ( cond -- )
+        // loop (top) test
+        const addr = ctrl_ctx.pop() & ADDR_MASK;
+        const word = uc_jump(prog.length);
+        ctrl_ctx.push(word);
+        prog.push(uc_jz(addr));  // placeholder
+    };
+    words["REPEAT"] = function () {                     // ( -- )
+        // end top-test loop
+        const addr = ctrl_ctx.pop() & ADDR_MASK;
+        const word = uc_jump(prog[addr]);
+        prog.push(word);
+        prog[addr] = uc_jz(prog.length);  // patch
+    };
+    words["?D0"] = function () {                        // ( n -- ) ( R: -- n' )
         // begin counted loop
         const addr = prog.length;
-//debug console.log("compile_loop:", "$"+addr.toString(16).padStart(3, "0"));
-        loop_ctx.push(addr);
-        prog.push(uc_jump(prog.length));  // placeholder
+//debug console.log("compile_counted_loop:", "$"+addr.toString(16).padStart(3, "0"));
+        const word = uc_jz(addr);  // placeholder
+        ctrl_ctx.push(word);
+        prog.push(word);
         prog.push(UC_TO_R);
     };
-    words["I"] = function () {                          // ( -- n ) R:( n -- n )
+    words["I"] = function () {                          // ( -- n ) ( R: n -- n )
         // fetch loop count (from R-stack)
         prog.push(UC_R_FETCH);
     };
     words["LOOP-"] = function () {                      // loop->pc
         // end decrement loop
         prog.push(UC_R_FROM);
-        const addr = loop_ctx.pop();
+        const addr = ctrl_ctx.pop() & ADDR_MASK;
         prog.push(uc_jump(addr));
         prog[addr] = uc_jz_dec(prog.length);  // patch
     };
     words["LOOP+"] = function () {                      // loop->pc
         // end increment loop
         prog.push(UC_R_FROM);
-        const addr = loop_ctx.pop();
+        const addr = ctrl_ctx.pop() & ADDR_MASK;
         prog.push(uc_jump(addr));
         prog[addr] = uc_jz_inc(prog.length);  // patch
     };
+    words["IF"] = function () {                         // ( cond -- )
+        // begin conditional
+//debug console.log("compile_if:", "$"+prog.length.toString(16).padStart(3, "0"));
+        const word = uc_jz(prog.length);  // placeholder
+        ctrl_ctx.push(word);
+        prog.push(word);
+    };
+    words["ELSE"] = function () {                       // ( -- )
+        // begin alternative
+//debug console.log("compile_else:", "$"+prog.length.toString(16).padStart(3, "0"));
+        const addr = ctrl_ctx.pop() & ADDR_MASK;
+        prog[addr] = uc_jz(prog.length + 1);  // patch
+        const word = uc_jump(prog.length);  // placeholder
+        ctrl_ctx.push(word);
+        prog.push(word);
+    };
+    words["THEN"] = function () {                       // ( -- )
+        // end conditional
+//debug console.log("compile_then:", "$"+prog.length.toString(16).padStart(3, "0"));
+        const word = ctrl_ctx.pop();
+        const addr = word & ADDR_MASK;
+        prog[addr] = (word & ~ADDR_MASK) | (prog.length & ADDR_MASK);  // patch
+    };
 
-    const loop_ctx = [];  // stack of looping contexts
+    const ctrl_ctx = [];  // stack of flow-control contexts
 
     const prog = [
         uc_jump(0)
@@ -175,6 +226,9 @@ function compile(text) {
             if (token === "(") {
                 compile_comment(next_token());
             } else if (token === ";") {
+                if (ctrl_ctx.length > 0) {
+                    return error("EXIT from control depth", ctrl_ctx.length);
+                }
                 if (tail_ctx === TAIL_EVAL) {
                     // attach "free" EXIT to previous word
                     prog[prog.length - 1] |= UC_EXIT;
@@ -256,7 +310,7 @@ function compile(text) {
 //debug : ADJUST ( n -- n+COUNTER )
 //debug     COUNTER @ +
 //debug     DUP COUNTER ! ;
-//debug : EXECUTE
+//debug : EXECUTE ( addr -- ) ( R: -- addr )
 //debug     ADDR_MASK ( 0x0FFF ) AND >R
 //debug : (EXIT)
 //debug     EXIT
@@ -268,11 +322,19 @@ function compile(text) {
 //debug     SKZ SWAP
 //debug : (DROP)
 //debug     DROP ;
+//debug : 0= ( n -- n==0 )
 //debug : NOT ( flag -- !flag )
-//debug : 0=
 //debug     TRUE FALSE ROT ?: ;
-//debug : 4DROP
+//debug : BOOL ( n -- flag )
+//debug     IF TRUE ELSE FALSE THEN ;
+//debug : 0< ( n -- n<0 )
+//debug     MSB& BOOL ;
+//debug : 4DROP ( a b c d -- )
 //debug     4 ?D0 DROP I DROP LOOP- ;
+//debug : EMIT ( ch -- )
+//debug     BEGIN 0x00 IO@ UNTIL 0x01 IO! ;
+//debug : KEY ( -- ch )
+//debug     BEGIN 0x02 IO@ NOT WHILE REPEAT 0x03 IO@ ;
 //debug 
 //debug ( WARNING! BOOT should not return... )
 //debug : BOOT
