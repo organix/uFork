@@ -13,6 +13,7 @@ export const makeAssembler = (opts) => {
   const image = (opts.image == undefined) ? new Map() : opts.image ;
 
   const asm = {
+    get addr() { return curr_addr },
   };
 
   
