@@ -48,6 +48,7 @@ export const makeAssembler = (opts) => {
     image.set(curr_addr, item);
     asm.allot(1);
   };
+  asm.data = (...datums) => Array.prototype.forEach.call(datums, datum);
 
   const resolveImage = () => {
     const snapshot = new Map(image.entries());
@@ -71,6 +72,8 @@ export const makeAssembler = (opts) => {
     resolveImage();
     return Promise.resolve({ image, symbols: syms });
   };
+
+  
   
   return asm;
 }
