@@ -22,10 +22,21 @@ export const makeAssembler = (opts) => {
   asm.symbols.isDefined = (sym) => { };
   asm.symbols.redefine  = (sym, val = undefined) => { };
 
-  asm.allot = (amount = 1) => { };
-  asm.origin = (newAddr) => { };
+  asm.allot = (amount = 1) => {
+    curr_addr = (curr_addr + amount) & fullcellBitmask;
+    return curr_addr;
+  };
+  asm.origin = (new_addr) => {
+    const tmp = curr_addr;
+    curr_addr = new_addr;
+    return tmp;
+  };
 
-  asm.datum = (item) => { };
+  asm.datum = (item) => {
+    
+  };
+
+  asm.done = () => { };
 
   
   return asm;
