@@ -17,10 +17,22 @@ export const makeAssembler = (opts) => {
   };
   
   asm.symbols = {};
-  asm.symbols.define = (sym, val = undefined) => { };
-  asm.symbols.lookup = (sym) => { };
-  asm.symbols.isDefined = (sym) => { };
-  asm.symbols.redefine  = (sym, val = undefined) => { };
+  asm.symbols.define =    (sym, val = undefined) => {
+    if (val == undefined) {
+      val = curr_addr;
+    }
+    if (syms.has(sym)) {
+      throw new Error(`the symbol ${sym} is already defined as ${syms.get(sym)}`);
+    }
+    syms.set(sym, val);
+    return val;
+  };
+  asm.symbols.lookup =    (sym) => { return syms.get(sym); };
+  asm.symbols.isDefined = (sym) => { return syms.has(sym); };
+  asm.symbols.redefine  = (sym, val = undefined) => {
+    syms.delete(sym);
+    asm.symbols.define(sym, val);
+  };
 
   asm.allot = (amount = 1) => {
     curr_addr = (curr_addr + amount) & fullcellBitmask;
@@ -33,11 +45,14 @@ export const makeAssembler = (opts) => {
   };
 
   asm.datum = (item) => {
-    
+    image.set(curr_addr, item);
+    asm.allot(1);
   };
 
-  asm.done = () => { };
+  asm.done = () => {
 
+    return Promise.resolve({ image, symbols: syms });
+  };
   
   return asm;
 }
