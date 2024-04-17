@@ -49,8 +49,26 @@ export const makeAssembler = (opts) => {
     asm.allot(1);
   };
 
-  asm.done = () => {
+  const resolveImage = () => {
+    const snapshot = new Map(image.entries());
+    snapshot.forEach((item, addr) => {
+      switch (typeof item) {
+        case "string":
+          if (!(asm.symbols.isDefined(item))) {
+            throw new Error(`encountered undefined symbol ${item} during image resolvement`);
+          }
+          item = asm.symbols.lookup(item);
+          break;
+        case "function":
+          item = item(asm, addr);
+          break;
+      }
+      image.set(addr, item);
+    });
+  };
 
+  asm.done = () => {
+    resolveImage();
     return Promise.resolve({ image, symbols: syms });
   };
   
