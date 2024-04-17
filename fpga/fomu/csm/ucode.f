@@ -140,6 +140,7 @@
 46  CONSTANT '.'
 62  CONSTANT '>'
 64  CONSTANT '@'
+113 CONSTANT 'q'
 VARIABLE cmd    ( last command character read )
 VARIABLE inp    ( input data accumulator )
 VARIABLE tos    ( top of stack )
@@ -150,6 +151,66 @@ VARIABLE nos    ( next on stack )
 : pop ( -- x )
     tos @
     nos @ tos ! ;
+: quad ( raw -- addr )
+    DUP MSB& IF
+        0x0FFF AND          ( uCode | fixnum )
+    ELSE
+        2ROL
+        DUP LSB& IF         ( RAM address )
+            0x3FFC AND 0x4000 OR
+        ELSE                ( ROM address )
+            0x7FFC AND MSB|
+        THEN
+    THEN ;
+: fetch ( addr -- data )
+    DUP 0xC000 AND IF
+        DUP 0x3 AND SWAP    ( D: field addr )
+        DUP MSB& IF
+            2ASR 0x1FFF
+        ELSE
+            2ASR 0x0FFF
+        THEN AND            ( D: field offset )
+        OVER 0x1 = IF
+            QX@             ( D: field data )
+        ELSE
+            OVER 0x2 = IF
+                QY@         ( D: field data )
+            ELSE
+                OVER 0x3 = IF
+                    QZ@     ( D: field data )
+                ELSE
+                    QT@     ( D: field data )
+                THEN
+            THEN
+        THEN
+        NIP                 ( D: data )
+    ELSE
+        @                   ( D: data )
+    THEN ;
+: store ( data addr -- )
+    DUP 0xC000 AND IF
+        DUP 0x3 AND SWAP    ( D: data field addr )
+        DUP MSB& IF
+            2ASR 0x1FFF
+        ELSE
+            2ASR 0x0FFF
+        THEN AND SWAP       ( D: data offset field )
+        DUP 0x1 = IF
+            DROP QX!
+        ELSE
+            DUP 0x2 = IF
+                DROP QY!
+            ELSE
+                DUP 0x3 = IF
+                    DROP QZ!
+                ELSE
+                    DROP QT!
+                THEN
+            THEN
+        THEN
+    ELSE
+        !
+    THEN ;
 : MONITOR
     KEY                     ( D: key )
     DUP EMIT
@@ -161,13 +222,16 @@ VARIABLE nos    ( next on stack )
             inp @ push
         THEN
         cmd @ '@' = IF
-            pop @ push
+            pop fetch push
         THEN
         cmd @ '.' = IF
             pop X. CR
         THEN
         cmd @ '!' = IF
-            pop pop SWAP !
+            pop pop SWAP store
+        THEN
+        cmd @ 'q' = IF
+            pop quad push
         THEN
         0 inp !
         DUP '\r' = IF

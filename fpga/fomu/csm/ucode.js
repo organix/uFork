@@ -71,9 +71,11 @@ function compile(text) {
         "1":                0x02D6,                     // ( -- 1 )
         "-1":               0x02F6,                     // ( -- -1 )
         "LSB":              0x02D6,                     // ( -- 1 )
-        "MSB":              0x02E6,                     // ( -- -32768 )
+        "MSB":              0x02E6,                     // ( -- 0x8000 )
         "LSB&":             0x0314,                     // ( a -- a&1 )
-        "MSB&":             0x0324,                     // ( a -- a&-32768 )
+        "MSB&":             0x0324,                     // ( a -- a&0x8000 )
+        "LSB|":             0x0316,                     // ( a -- a|1 )
+        "MSB|":             0x0326,                     // ( a -- a|0x8000 )
         "INVERT":           0x0335,                     // ( a -- ~a )
         "NEGATE":           0x03C2,                     // ( a -- -a )
         "1+":               0x0311,                     // ( a -- a+1 )
@@ -97,14 +99,14 @@ function compile(text) {
         "!":                0x098F,                     // ( data addr -- )
         "IO@":              0x033F,                     // ( io_reg -- data )
         "IO!":              0x09BF,                     // ( data io_reg -- )
-        "T@":               0x034F,                     // ( qref -- data )
-        "T!":               0x09CF,                     // ( data qref -- )
-        "X@":               0x035F,                     // ( qref -- data )
-        "X!":               0x09DF,                     // ( data qref -- )
-        "Y@":               0x036F,                     // ( qref -- data )
-        "Y!":               0x09EF,                     // ( data qref -- )
-        "Z@":               0x037F,                     // ( qref -- data )
-        "Z!":               0x09FF,                     // ( data qref -- )
+        "QT@":              0x034F,                     // ( qref -- data )
+        "QT!":              0x09CF,                     // ( data qref -- )
+        "QX@":              0x035F,                     // ( qref -- data )
+        "QX!":              0x09DF,                     // ( data qref -- )
+        "QY@":              0x036F,                     // ( qref -- data )
+        "QY!":              0x09EF,                     // ( data qref -- )
+        "QZ@":              0x037F,                     // ( qref -- data )
+        "QZ!":              0x09FF,                     // ( data qref -- )
         ">R":               0x2100,                     // ( a -- ) ( R: -- a )
         "R>":               0x1280,                     // ( -- a ) ( R: a -- )
         "R@":               0x0280,                     // ( -- a ) ( R: a -- a )
@@ -335,6 +337,10 @@ function compile(text) {
 //debug     BEGIN 0x00 IO@ UNTIL 0x01 IO! ;
 //debug : KEY ( -- ch )
 //debug     BEGIN 0x02 IO@ NOT WHILE REPEAT 0x03 IO@ ;
+//debug : fetch ( addr -- data )
+//debug     ! ;
+//debug : store ( data addr -- )
+//debug     @ ;
 //debug 
 //debug ( WARNING! BOOT should not return... )
 //debug : BOOT
