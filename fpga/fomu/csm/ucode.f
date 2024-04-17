@@ -11,8 +11,10 @@
 57  CONSTANT '9'
 55  CONSTANT A-10
 65  CONSTANT 'A'
+70  CONSTANT 'F'
 90  CONSTANT 'Z'
 97  CONSTANT 'a'
+102 CONSTANT 'f'
 122 CONSTANT 'z'
 127 CONSTANT DEL
 
@@ -76,6 +78,27 @@
     2DUP < ?: ;
 : MIN ( a b -- a | b )
     2DUP > ?: ;
+: INBOUNDS ( n lo hi -- lo<=n&&n<=hi )
+    -ROT OVER SWAP -
+    -ROT - OR MSB& 0= ;
+: ISDIGIT ( char -- flag )
+    '0' '9' INBOUNDS ;
+: ISHEX ( char -- flag )
+    DUP 'A' 'F' INBOUNDS
+    OVER 'a' 'f' INBOUNDS OR
+    SWAP ISDIGIT OR ;
+: ISUPPER ( char -- flag )
+    'A' 'Z' INBOUNDS ;
+: ISLOWER ( char -- flag )
+    'a' 'z' INBOUNDS ;
+: TOUPPER ( 'A' | 'a' -- 'A' )
+    DUP ISLOWER IF
+        BL XOR  ( flip case )
+    THEN ;
+: TOLOWER ( 'A' | 'a' -- 'a' )
+    DUP ISUPPER IF
+        BL XOR  ( flip case )
+    THEN ;
 
 : TX? ( -- ready )
 : EMIT?
@@ -103,47 +126,75 @@
 : X# ( n -- )
     0xF AND
     DUP 10 < IF
-        '0' + EMIT
+        '0'
     ELSE
-        A-10 + EMIT
-    THEN ;
+        A-10
+    THEN + EMIT ;
 : X. ( n -- )
     4 ?D0
         4ROL DUP X#
     LOOP- DROP ;
 
-: INBOUNDS ( n lo hi -- lo<=n&&n<=hi )
-    ( a<=b === !(a>b) === !(b<a) === !((b-a)<0) )
-    ( lo<=n === !((n-lo)<0) )
-    ( n<=hi === !((hi-n)<0) )
-    -ROT    ( hi n lo )
-    OVER    ( hi n lo n )
-    SWAP    ( hi n n lo )
-    -       ( hi n n-lo )
-    -ROT    ( n-lo hi n )
-    -       ( n-lo hi-n )
-    OR      ( (n-lo)|(hi-n) )
-    MSB& 0= ;
-: WITHIN ( n lo hi -- lo<=n&&n<=hi ) ( WARNING! STANDARD SEMANTICS ARE lo<=n&&n<hi )
-    >R      ( n lo ) ( R: hi )
-    OVER    ( n lo n ) ( R: hi )
-    <=      ( n lo<=n ) ( R: hi )
-    R>      ( n lo<=n hi )
-    SWAP    ( n hi lo<=n )
-    >R      ( n hi ) ( R: lo<=n )
-    <=      ( n<=hi ) ( R: lo<=n )
-    R>      ( n<=hi lo<=n )
-    AND ;   ( n<=hi&&lo<=n )
-: UPPER ( 'A' | 'a' -- 'A' )
-    DUP 'a' 'z' INBOUNDS IF
-        BL XOR  ( flip case )
-    THEN ;
+( Debugging Monitor )
+33  CONSTANT '!'
+46  CONSTANT '.'
+62  CONSTANT '>'
+64  CONSTANT '@'
+VARIABLE cmd    ( last command character read )
+VARIABLE inp    ( input data accumulator )
+VARIABLE tos    ( top of stack )
+VARIABLE nos    ( next on stack )
+: push ( x -- )
+    tos @ nos !
+    tos ! ;
+: pop ( -- x )
+    tos @
+    nos @ tos ! ;
+: MONITOR
+    KEY                     ( D: key )
+    DUP EMIT
+    DUP '\r' = IF
+        '\n' EMIT
+    THEN
+    DUP BL <= IF
+        cmd @ ISHEX IF
+            inp @ push
+        THEN
+        cmd @ '@' = IF
+            pop @ push
+        THEN
+        cmd @ '.' = IF
+            pop X. CR
+        THEN
+        cmd @ '!' = IF
+            pop pop SWAP !
+        THEN
+        0 inp !
+        DUP '\r' = IF
+            '>' EMIT BL EMIT  ( display prompt )
+        THEN
+    THEN
+    DUP ISHEX IF
+        DUP TOUPPER         ( D: key uc )
+        DUP 'A' < IF
+            '0'
+        ELSE
+            A-10
+        THEN -              ( D: key nybble )
+        inp @               ( D: key nybble accum )
+        4ROL 0xFFF0 AND OR  ( D: key accum' )
+        inp !               ( D: key )
+    THEN
+    cmd ! MONITOR ;
 
-( WARNING! BOOT should not return... )
-: BOOT
+: ECHO
     KEY DUP
-    UPPER EMIT ( X. CR )
+    ( EMIT ) X. CR
     '\r' = IF
         '\n' EMIT
     THEN
-    BOOT ;
+    ECHO ;
+
+( WARNING! BOOT should not return... )
+: BOOT
+    ( ECHO ) MONITOR ;
