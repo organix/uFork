@@ -144,6 +144,7 @@
 0x2F CONSTANT '/'
 0x3C CONSTANT '<'
 0x3E CONSTANT '>'
+0x3F CONSTANT '?'
 0x40 CONSTANT '@'
 0x71 CONSTANT 'q'
 0x72 CONSTANT 'r'
@@ -217,6 +218,19 @@ VARIABLE nos    ( next on stack )
     ELSE
         !
     THEN ;
+: dump ( start end -- )
+    OVER -                  ( D: start span )
+    DUP 0< IF
+        2DROP
+    ELSE
+        1+                  ( D: start count )
+        ?D0
+            DUP fetch       ( D: addr data )
+            X. CR           ( D: addr )
+            1+              ( D: addr+1 )
+        LOOP-
+        DROP
+    THEN ;
 : prompt ( -- )
     '>' EMIT BL EMIT ;
 : eol ( begin -- end )
@@ -246,6 +260,9 @@ VARIABLE nos    ( next on stack )
         THEN
         cmd @ 'q' = IF
             pop quad push
+        THEN
+        cmd @ '?' = IF
+            pop pop SWAP dump
         THEN
         cmd @ 'r' = IF
             pop EXECUTE
