@@ -146,16 +146,22 @@
 0x3E CONSTANT '>'
 0x3F CONSTANT '?'
 0x40 CONSTANT '@'
+0x5B CONSTANT '['
+0x5D CONSTANT ']'
 0x71 CONSTANT 'q'
 0x72 CONSTANT 'r'
 VARIABLE cmd    ( last command character read )
 VARIABLE inp    ( input data accumulator )
 VARIABLE tos    ( top of stack )
 VARIABLE nos    ( next on stack )
-: push ( x -- )
+VARIABLE copy   ( bulk copy mode )
+VARIABLE here   ( bulk copy addr )
+: @1+ ( addr -- )
+    DUP @ 1+ SWAP ! ;
+: push ( a -- )
     tos @ nos !
     tos ! ;
-: pop ( -- x )
+: pop ( -- a )
     tos @
     nos @ tos ! ;
 : quad ( raw -- addr )
@@ -233,6 +239,19 @@ VARIABLE nos    ( next on stack )
             X. 1+           ( D: addr+1 )
         LOOP- CR DROP
     THEN ;
+: >inp ( x -- )
+    DUP TOUPPER             ( D: key uc )
+    DUP 'A' < IF
+        '0'
+    ELSE
+        A-10
+    THEN -                  ( D: key nybble )
+    inp @                   ( D: key nybble accum )
+    4ROL 0xFFF0 AND OR      ( D: key accum' )
+    inp ! ;
+: >here ( data -- )
+    here @ store
+    here @1+ ;
 : prompt ( -- )
     '>' EMIT BL EMIT ;
 : eol ( begin -- end )
@@ -247,45 +266,52 @@ VARIABLE nos    ( next on stack )
     DUP '\r' = IF
         '\n' EMIT
     THEN
+    cmd @ SWAP              ( D: cmd key )
     DUP BL <= IF
-        cmd @ ISHEX IF
-            inp @ push
+        copy @ IF
+            OVER ISHEX IF
+                inp @ >here
+            THEN
+            OVER ']' = IF
+                FALSE copy !
+            THEN
+        ELSE
+            OVER ISHEX IF
+                inp @ push
+            THEN
+            OVER '@' = IF
+                pop fetch push
+            THEN
+            OVER '.' = IF
+                pop X. CR
+            THEN
+            OVER '!' = IF
+                pop pop SWAP store
+            THEN
+            OVER 'q' = IF
+                pop quad push
+            THEN
+            OVER '?' = IF
+                pop pop SWAP dump
+            THEN
+            OVER '[' = IF
+                pop here !
+                TRUE copy !
+            THEN
+            OVER 'r' = IF
+                pop EXECUTE
+            THEN
         THEN
-        cmd @ '@' = IF
-            pop fetch push
-        THEN
-        cmd @ '.' = IF
-            pop X. CR
-        THEN
-        cmd @ '!' = IF
-            pop pop SWAP store
-        THEN
-        cmd @ 'q' = IF
-            pop quad push
-        THEN
-        cmd @ '?' = IF
-            pop pop SWAP dump
-        THEN
-        cmd @ 'r' = IF
-            pop EXECUTE
-        THEN
-        0 inp !
+        0 inp !             ( clear input accum )
         DUP '\r' = IF
             prompt
         THEN
     THEN
     DUP ISHEX IF
-        DUP TOUPPER         ( D: key uc )
-        DUP 'A' < IF
-            '0'
-        ELSE
-            A-10
-        THEN -              ( D: key nybble )
-        inp @               ( D: key nybble accum )
-        4ROL 0xFFF0 AND OR  ( D: key accum' )
-        inp !               ( D: key )
+        >inp
     THEN
-    cmd ! MONITOR ;
+    NIP cmd !               ( key -> cmd )
+    MONITOR ;
 
 : ECHO
     KEY DUP
