@@ -141,6 +141,7 @@
 ( Debugging Monitor )
 33  CONSTANT '!'
 46  CONSTANT '.'
+47  CONSTANT '/'
 62  CONSTANT '>'
 64  CONSTANT '@'
 113 CONSTANT 'q'
@@ -217,10 +218,15 @@ VARIABLE nos    ( next on stack )
     THEN ;
 : prompt ( -- )
     '>' EMIT BL EMIT ;
+: eol ( begin -- end )
+    DROP KEY DUP EMIT
+    DUP '\r' = SKZ EXIT
+    eol ;
 : MONITOR
     KEY                     ( D: key )
     DUP ^C = SKZ EXIT       ( abort! )
     DUP EMIT
+    DUP '/' = SKZ eol       ( comment to EOL )
     DUP '\r' = IF
         '\n' EMIT
     THEN
