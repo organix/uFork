@@ -144,6 +144,7 @@
 62  CONSTANT '>'
 64  CONSTANT '@'
 113 CONSTANT 'q'
+113 CONSTANT 'r'
 VARIABLE cmd    ( last command character read )
 VARIABLE inp    ( input data accumulator )
 VARIABLE tos    ( top of stack )
@@ -238,6 +239,9 @@ VARIABLE nos    ( next on stack )
         THEN
         cmd @ 'q' = IF
             pop quad push
+        THEN
+        cmd @ 'r' = IF
+            pop EXECUTE
         THEN
         0 inp !
         DUP '\r' = IF

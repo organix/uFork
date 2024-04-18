@@ -14,3 +14,4 @@ _hex_   | ( -- hex )                | Push _hex_ value onto the stack
 .       | ( hex -- )                | Pop top-of-stack and print _hex_
 !       | ( data addr -- )          | Store _data_ into _addr_
 q       | ( raw -- addr )           | Translate uFork _raw_ to uCode
+r       | ( addr -- )               | Run (call) procedure at _addr_
