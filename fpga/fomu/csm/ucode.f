@@ -223,13 +223,15 @@ VARIABLE nos    ( next on stack )
     DUP 0< IF
         2DROP
     ELSE
-        1+                  ( D: start count )
-        ?D0
+        1+ ?D0
             DUP fetch       ( D: addr data )
-            X. CR           ( D: addr )
-            1+              ( D: addr+1 )
-        LOOP-
-        DROP
+            OVER 0x7 AND IF
+                SPACE
+            ELSE
+                CR
+            THEN
+            X. 1+           ( D: addr+1 )
+        LOOP- CR DROP
     THEN ;
 : prompt ( -- )
     '>' EMIT BL EMIT ;
