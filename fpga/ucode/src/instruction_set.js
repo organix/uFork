@@ -441,6 +441,28 @@ export const defineInstructionset = (asm, opts = { instrsetName: "uFork_SM2.1" }
       // return asm.deferedOp.or(0xA000, asm.deferedOp.and(here_plustwo, 0x0FFF));
       asm.datum(0xA000 | ((here + 2) & 0x0FFF));
     });
+    def("(JMP)", 0x8000);
+    asm.macro.jmp = (dest) => {
+      asm.datum((asm, here) => {
+        const prev = asm.addr;
+        const resolved_dest = ((typeof dest) == "string") ? asm.symbols.lookup(dest) : dest ;
+        asm.origin(here);
+        asm.datum(0x8000 | (resolved_dest & 0x0FFF));
+        asm.origin(prev);
+      });
+    };
+    def("(BRZ)", 0xA000);
+    asm.macro.brz = (dest) => {
+      asm.datum((asm, here) => {
+        const prev = asm.addr;
+        const resolved_dest = ((typeof dest) == "string") ? asm.symbols.lookup(dest) : dest ;
+        asm.origin(here);
+        asm.datum(0xA000 | (resolved_dest & 0x0FFF));
+        asm.origin(prev);
+      });
+    };
+    
+    /*
     const redatum = (asm, address, value) => {
       const prev = asm.addr;
       asm.undatum(address);
@@ -473,7 +495,6 @@ export const defineInstructionset = (asm, opts = { instrsetName: "uFork_SM2.1" }
       asm.origin(gildra);
       return undefined;
     });
-    /*
     def("(JMP)", (asm) => {
       const here = asm.addr;
       const resolve = ([here_plusone, val]) => {
