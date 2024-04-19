@@ -119,6 +119,7 @@ function compile(text) {
         const word = uc_call(prog.length);
         prog[0] = word;  // update bootstrap entry-point
         const name = next_token();
+        console.log("//", word.toString(16).padStart(4, "0"), ":", name);   // symbol table entry
 //debug console.log("compile_name:", name, "=", word.toString(16).padStart(4, "0"));
         words[name] = word;  // add word to dictionary
     };
