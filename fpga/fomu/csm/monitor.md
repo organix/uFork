@@ -1,7 +1,19 @@
 # uCode Monitor
 
-Connect to the serial debugging port
-and hit `[RETURN]` to get the monitor prompt `> `.
+Then run the `screen` program (or equivalent)
+to connect to the serial debugging port
+at 115200 baud, 8 bits, no parity.
+
+    $ screen /dev/tty.usbserial-AD0JIXTZ 115200
+
+Use the key sequence `Ctrl-a + k` to kill the terminal session.
+
+The monitor starts in _echo_ mode.
+for each character sent.
+and a hex value will be printed.
+`Ctrl-c` terminates _echo_ mode.
+
+Hit `[RETURN]` to get the monitor prompt `> `.
 Commands are separated by whitespace,
 including `[SPACE]`, `[TAB]`, and `[RETURN]`.
 
