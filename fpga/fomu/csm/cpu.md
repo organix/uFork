@@ -83,18 +83,16 @@ giving us a 12-bit quad-cell offset into each SPRAM.
 
      15  14  13  12  11  10   9   8   7   6   5   4   3   2   1   0
     *---+---+---+---*---+---+---+---*---+---+---+---*---+---+---+---*
-    |  n/a  |                       12-bit quad-cell offset | field |
+    |  bank |                       12-bit quad-cell offset | field |
     *---+---+---+---*---+---+---+---*---+---+---+---*---+---+---+---*
-                                                             \_____/
-                                                              00:T
-                                                              01:X
-                                                              10:Y
-                                                              11:Z
+     \_____/                                                 \_____/
+      00:UC                                                   00:T
+      01:RAM                                                  01:X
+      10:ROM0                                                 10:Y
+      11:ROM1                                                 11:Z
 
 One SPRAM is used to hold mutable user-memory (RAM).
 Two SPRAMs are used to hold "immutable" code and data (ROM).
-Bit 12 of the 14-bit ROM offset selects the SPRAM bank.
-Bit 13 of the 14-bit ROM offset should be `0`.
 
 **NOTE:** uCode must be able to write to ROM to implement a boot-loader.
 
