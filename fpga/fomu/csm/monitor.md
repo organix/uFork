@@ -19,3 +19,6 @@ q       | ( raw -- addr )           | Translate uFork _raw_ to uCode
 [       | ( addr -- )               | Start copying data to _addr_
 ]       | ( -- )                    | Stop copying literal data
 r       | ( addr -- )               | Run (call) procedure at _addr_
+
+`[BACKSPACE]` or `[DELETE]` may be used
+to correct the preceeding word.

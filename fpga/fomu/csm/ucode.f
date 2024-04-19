@@ -126,13 +126,22 @@
     LOOP- ;
 : CR ( -- )
     '\r' EMIT '\n' EMIT ;
-: X# ( n -- )
+: >X ( n -- x )
     0xF AND
     DUP 10 < IF
         '0'
     ELSE
         A-10
-    THEN + EMIT ;
+    THEN + ;
+: X> ( x -- n )
+    TOUPPER
+    DUP 'A' < IF
+        '0'
+    ELSE
+        A-10
+    THEN - ;
+: X# ( n -- )
+    >X EMIT ;
 : X. ( n -- )
     4 ?D0
         4ROL DUP X#
@@ -239,34 +248,50 @@ VARIABLE here   ( bulk copy addr )
             X. 1+           ( D: addr+1 )
         LOOP- CR DROP
     THEN ;
-: >inp ( x -- )
-    DUP TOUPPER             ( D: key uc )
-    DUP 'A' < IF
-        '0'
-    ELSE
-        A-10
-    THEN -                  ( D: key nybble )
-    inp @                   ( D: key nybble accum )
-    4ROL 0xFFF0 AND OR      ( D: key accum' )
+: >inp ( key -- )
+    X> inp @                ( D: nybble accum )
+    4ROL 0xFFF0 AND OR      ( D: accum' )
     inp ! ;
 : >here ( data -- )
     here @ store
     here @1+ ;
 : prompt ( -- )
     '>' EMIT BL EMIT ;
+: del ( -- )
+    cmd @
+    DUP BL > IF
+        DUP ISHEX IF
+            inp @
+            4ASR 0x0FFF AND
+            DUP IF
+                DUP >X
+            ELSE
+                BL
+            THEN cmd !
+            inp !
+        ELSE
+            BL cmd !
+        THEN
+        '\b' EMIT BL EMIT '\b' EMIT
+    THEN DROP ;
 : eol ( begin -- end )
-    DROP KEY DUP EMIT
+    EMIT KEY
     DUP '\r' = SKZ EXIT
     eol ;
 : MONITOR
     KEY                     ( D: key )
     DUP ^C = SKZ EXIT       ( abort! )
-    DUP EMIT
+    DUP '\b' = IF
+        DROP DEL
+    THEN
+    DUP DEL = SKZ del       ( delete previous )
     DUP '/' = SKZ eol       ( comment to EOL )
+    DUP EMIT
     DUP '\r' = IF
         '\n' EMIT
     THEN
     cmd @ SWAP              ( D: cmd key )
+    ( '<' EMIT OVER X. '.' EMIT DUP X. '>' EMIT )
     DUP BL <= IF
         copy @ IF
             OVER ISHEX IF
@@ -308,9 +333,13 @@ VARIABLE here   ( bulk copy addr )
         THEN
     THEN
     DUP ISHEX IF
-        >inp
+        DUP >inp
     THEN
-    NIP cmd !               ( key -> cmd )
+    DUP DEL = IF
+        2DROP
+    ELSE
+        NIP cmd !           ( key -> cmd )
+    THEN
     MONITOR ;
 
 : ECHO
