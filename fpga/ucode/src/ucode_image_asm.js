@@ -343,7 +343,7 @@ export const minicore = (asm, opts) => {
   dat("2DUP");     // ( idx raddr idx raddr )
   dat("@");        // ( idx raddr idx nrOfEntries )
   dat("<");        // ( idx raddr bool )
-  dat("(BRZ)", "(JMPTBL)_l0"); // ( idx raddr )
+  asm.macro.brz("(JMPTBL)_l0"); // ( idx raddr )
   dat("1+", "OVER", "+", "@");
   if (isDefined("instrset_uFork_SM2")) {
     dat("0x0FFF_&");
@@ -358,7 +358,8 @@ export const minicore = (asm, opts) => {
   
   if (!isDefined("(NEXT)")) {
     def("(NEXT)"); // ( ) R:( count raddr -- )
-    dat("R>", "R>", "DUP", "(BRZ)", "(NEXT)_l0"); // ( raddr count )
+    dat("R>", "R>", "DUP");
+    asm.macro.brz("(NEXT)_l0"); // ( raddr count )
     dat("1-", ">R", "@");
     if (isDefined("instrset_uFork_SM2")) {
       dat("0x0FFF_&");
@@ -381,7 +382,7 @@ export const minicore = (asm, opts) => {
   }
 
   def("(BREXIT)"); // ( bool -- ) exit caller early if bool is true
-  dat("(BRZ)", "(BREXIT)_l0"); // ( )
+  asm.macro.brz("(BREXIT)_l0"); // ( )
   dat("R>", "DROP");
   def("(BREXIT)_l0");
   dat("EXIT");
@@ -438,9 +439,10 @@ export const minicore = (asm, opts) => {
 
   if ((!isDefined("+")) && (!isDefined("UM+")) && isDefined("1+")) {
     def("+"); // ( a b -- sum )
-    dat("0=", "(BRNZ)", "(DROP)");
+    dat("0=");
+    asm.macro.brnz("(DROP)");
     dat("1-", "SWAP", "1+", "SWAP");
-    dat("(JMP)", "+");
+    asm.macro.jmp("+");
   }
 
   if ((!isDefined("+")) && isDefined("UM+")) {
@@ -491,7 +493,8 @@ export const minicore = (asm, opts) => {
 
   def("<<"); // ( u n -- u<<n )  doing the lazy way for now
   dat("0x0F_&");
-  dat(">R", "(JMP)", "<<_l1");
+  dat(">R");
+  asm.macro.jmp("<<_l1");
   def("<<_l0");
   dat("1<<");
   def("<<_l1");
@@ -507,7 +510,8 @@ export const minicore = (asm, opts) => {
 
   def(">>"); // ( u n -- u>>n )  same lazy way
   dat("0x0F_&");
-  dat(">R", "(JMP)", ">>_l1");
+  dat(">R");
+  asm.macro.jmp(">>_l1");
   def(">>_l0");
   dat("1>>");
   def(">>_l1");
@@ -522,7 +526,8 @@ export const minicore = (asm, opts) => {
   def("LBR"); // ( u n -- u<<>n )  same lazy way
   def("<<>");
   dat("0x0F_&");
-  dat(">R", "(JMP)", "LBR_l1");
+  dat(">R");
+  asm.macro.jmp("LBR_l1");
   def("LBR_l0");
   dat("1LBR");
   def("LBR_l1");
@@ -531,7 +536,8 @@ export const minicore = (asm, opts) => {
   def("RBR"); // ( u n -- u<>>n )  same lazy way
   def("<>>");
   dat("0x0F_&");
-  dat(">R", "(JMP)", "RBR_l1");
+  dat(">R");
+  asm.macro.jmp("RBR_l1");
   def("RBR_l0");
   dat("1RBR");
   def("RBR_l1");
@@ -540,7 +546,7 @@ export const minicore = (asm, opts) => {
   if (!isDefined("*")) {
     def("*"); // ( n m -- n*m )  using the lazy way here, need to find the old eForth impl
     dat(">R", "ZERO");
-    dat("(JMP)", "*_l1");
+    asm.macro.jmp("*_l1");
     def("*_l0");
     dat("OVER", "+");
     def("*_l1");
@@ -628,6 +634,9 @@ export const minicore = (asm, opts) => {
   def(">=");
   dat("SWAP", "(JMP)", "<=");
 
+  def("MIN"); // ( a b -- a | b )
+  dat("2DUP", ">", "?:", "EXIT");
+
   def("MAX"); // ( a b -- a | b )
   dat("2DUP", "<", "?:", "EXIT");
 
@@ -659,7 +668,8 @@ export const minicore = (asm, opts) => {
       def("DEBUG_RX?"); // ( -- bool )
       dat("DEBUG_comms", "@", "0x10", "&");
       dat("CLEAN_BOOL");
-      dat("DUP", "(BRNZ)", "DEBUG_RX?_l0");
+      dat("DUP");
+      asm.macro.brnz("DEBUG_RX?_l0");
       def("DEBUG_comms_common");
       dat("DEBUG_commsport", "@", "DEBUG_comms", "!");
       def("DEBUG_RX?_l0");
@@ -750,19 +760,19 @@ export const minicore = (asm, opts) => {
       def("spi1_wait_if_busy"); // ( -- )
       dat("(LIT)", 0x1C, "fomu_sysbus@"); // ( status_byte )
       dat("(LIT)", 0xC0, "&");            // ( dirty_busy_flag )
-      dat("(BRNZ)", "spi1_wait_if_busy");
+      asm.macro.brnz("spi1_wait_if_busy");
       dat("EXIT");
 
       def("spi1_wait_if_writebyte_not_ready"); // ( -- )
       dat("(LIT)", 0x1C, "fomu_sysbus@");     // ( status_byte )
       dat("(LIT)", 0x10, "&");
-      dat("(BRNZ)", "spi1_wait_if_writebyte_not_ready");
+      asm.macro.brnz("spi1_wait_if_writebyte_not_ready");
       dat("EXIT");
 
       def("spi1_wait_if_readbyte_not_ready"); // ( -- )
       dat("(LIT)", 0x1C, "fomu_sysbus@");     // ( status_byte )
       dat("(LIT)", 0x08, "&");
-      dat("(BRNZ)", "spi1_wait_if_readbyte_not_ready");
+      asm.macro.brnz("spi1_wait_if_readbyte_not_ready");
       dat("EXIT");
       
       def("spi1_readbyte"); // ( -- byte ) blocking read of incomming byte
@@ -796,7 +806,7 @@ export const minicore = (asm, opts) => {
       dat("spi1_writebyte");     // third byte of flash address ( ) R:( cells ucode_addr )
       dat("spi1_readbyte", "DROP"); // read dummy byte ( ) R:( cells ucode_addr )
       dat("R>");                 // ( ucode_addr ) R:( cells )
-      dat("(JMP)", "spi_flash_fastread_l1");
+      asm.macro.jmp("spi_flash_fastread_l1");
       def("spi_flash_fastread_l0");
       dat("spi1_readbyte", "8LBR", "spi1_readbyte", "OR", "OVER", "!");
       dat("1+");
@@ -839,7 +849,7 @@ export const minicore = (asm, opts) => {
       dat("spi1_writebyte");     // third byte of flash address ( ) R:( nrOfQuads start_quaddr )
       dat("spi1_readbyte", "DROP"); // read dummy byte ( ) R:( nrOfQuads start_quaddr )
       dat("R>");                 // ( start_quaddr ) R:( nrOfQuads )
-      dat("(JMP)", "spi_flash_fastread_into_quads_l1");
+      asm.macro.jmp("spi_flash_fastread_into_quads_l1");
       def("spi_flash_fastread_into_quads_l0"); // ( quaddr ) R:( nrofQuads )
       dat("spi1_readcell", "OVER", "qt!");
       dat("spi1_readcell", "OVER", "qx!");
@@ -855,11 +865,13 @@ export const minicore = (asm, opts) => {
   }
   
   def("TX!"); // ( char -- )
-  dat("DEBUG_TX?", "(BRZ)", "TX!");
+  dat("DEBUG_TX?");
+  asm.macro.brz("TX!");
   dat("DEBUG_TX!", "EXIT");
 
   def("RX?"); // ( -- char T | F )
-  dat("DEBUG_RX?", "DUP", "(BRZ)", "RX?_l0");
+  dat("DEBUG_RX?", "DUP");
+  asm.macro.brz("RX?_l0");
   dat("DEBUG_RX@", "SWAP");
   def("RX?_l0");
   dat("EXIT");
@@ -867,7 +879,9 @@ export const minicore = (asm, opts) => {
   def("EMIT", "TX!");
 
   def("RX"); // ( -- chr )
-  dat("RX?", "(BRZ)", "RX", "EXIT");
+  dat("RX?");
+  asm.macro.brz("RX");
+  dat("EXIT");
 
   def("(.chr)"); // emitts a char from the cell following the call
   dat(">R", "DUP", "1+", ">R", "@", "EMIT", "EXIT");
@@ -913,60 +927,77 @@ export const wozmon = (asm, opts) => {
   dat("wozmon_linebuffer_start");
   def("wozmon_notcr");   // ( buff_addr )
   dat("RX");             // ( buff_addr chr )
-  dat("DUP", "(LIT)", 0x1B, "=", "(BRNZ)", "wozmon_escape");
-  dat("DUP", "(LIT)", 0x08, "=", "(BRNZ)", "wozmon_backspace");
+  dat("DUP", "(LIT)", 0x1B, "=");
+  asm.macro.brnz("wozmon_escape");
+  dat("DUP", "(LIT)", 0x08, "=");
+  asm.macro.brnz("wozmon_backspace");
   dat("DUP", "EMIT");    // echo the character
   dat("SWAP", "2DUP", "!", "1+"); // store char to buffer and incr buffer ptr
-  dat("DUP", "(LIT)", linebuffer_max, "<", "(BRZ)", "wozmon_escape");
+  dat("DUP", "(LIT)", linebuffer_max, "<");
+  asm.macro.brz("wozmon_escape");
   dat("SWAP");
-  dat("(LIT)", 0x0D, "=", "(BRNZ)", "wozmon_notcr");
+  dat("(LIT)", 0x0D, "=");
+  asm.macro.brnz("wozmon_notcr");
   dat("FALSE", "wozmon_mode", "!");       // reset mode
   dat("DROP", "wozmon_linebuffer_start"); // reset text index
   dat("1-");
   def("wozmon_nextitem");  // ( buff_addr )
   dat("1+");               // ( ba+1 )
   dat("DUP", "@");         // ( ba+1 char )
-  dat("DUP", "(LIT)", 0x0D, "=", "(BRZ)", "wozmon_l0");
-  dat("2DROP", "(JMP)", "wozmon_getline"); // done the line, get the next one
+  dat("DUP", "(LIT)", 0x0D, "=");
+  asm.macro.brz("wozmon_l0");
+  dat("2DROP");
+  asm.macro.jmp("wozmon_getline"); // done the line, get the next one
   def("wozmon_l0");        // ( ba+1 char )
-  dat("DUP", "(LIT)", 0x2E, "=", "(BRZ)", "wozmon_l1");
+  dat("DUP", "(LIT)", 0x2E, "=");
+  asm.macro.brz("wozmon_l1");
   dat("(LIT)", 0xB8);      // set mode as BLOCK XAM
   def("wozmon_setmode");
-  dat("wozmon_mode", "!", "DROP", "(JMP)", "wozmon_nextitem");
+  dat("wozmon_mode", "!", "DROP");
+  asm.macro.jmp("wozmon_nextitem");
   def("wozmon_l1");        // ( ba+1 char )
-  dat("DUP", "(LIT)", 0x3A, "=", "(BRZ)", "wozmon_l2");
+  dat("DUP", "(LIT)", 0x3A, "=");
+  asm.macro.brz("wozmon_l2");
   dat("(LIT)", 0x74);      // set mode as store
-  dat("(JMP)", "wozmon_setmode");
+  asm.macro.jmp("wozmon_setmode");
   def("wozmon_l2");
-  dat("DUP", "(LIT)", 0x52, "=", "(BRNZ)", "wozmon_run");
-  dat(       "(LIT)", 0x51, "=", "(BRNZ)", "wozmon_quit");
+  dat("DUP", "(LIT)", 0x52, "=");
+  asm.macro.brnz("wozmon_run");
+  dat(       "(LIT)", 0x51, "=");
+  asm.macro.brnz("wozmon_quit");
   
   def("wozmon_nexthex"); // ( ba )
   dat("DUP", "@");       // get char ( ba chr )
   dat("(LIT)", 0x30, "XOR"); // map digits to 0-9 ( ba digit )
-  dat("DUP", "(LIT)", 0x0A, "<", "(BRNZ)", "wozmon_dig");
+  dat("DUP", "(LIT)", 0x0A, "<");
+  asm.macro.brnz("wozmon_dig");
   dat("(LIT)", 0x88, "+");   // map letter "A"-"F" to $FA-FF
-  dat("DUP", "(LIT)", 0xFA, "<", "(BRNZ)", "wozmon_nothex");
+  dat("DUP", "(LIT)", 0xFA, "<");
+  asm.macro.brnz("wozmon_nothex");
   def("wozmon_dig");
   dat("0x0F_&");
   dat("wozmon_tmp", "@", "4<<", "OR", "wozmon_tmp", "!");
-  dat("1+", "(JMP)", "wozmon_nexthex");
+  dat("1+");
+  asm.macro.jmp("wozmon_nexthex");
   
   def("wozmon_nothex");  // ( ba char )
   dat("2DROP");
-  dat("wozmon_tmp", "@", "wozmon_st", "@", "OR", "(BRZ)", "wozmon");
-  dat("(LIT)", 0x74, "wozmon_mode", "@", "=", "(BRZ)", "wozmon_notstore");
+  dat("wozmon_tmp", "@", "wozmon_st", "@", "OR");
+  asm.macro.brz("wozmon");
+  dat("(LIT)", 0x74, "wozmon_mode", "@", "=");
+  asm.macro.brz("wozmon_notstore");
   dat("wozmon_tmp", "@", "wozmon_st", "@", "!");
   dat("wozmon_st",  "@", "1+", "wozmon_st", "!");
-  dat("(JMP)", "wozmon_nextitem");
+  asm.macro.jmp("wozmon_nextitem");
 
   def("wozmon_notstore"); // ( )
-  dat("FALSE", "wozmon_mode", "@", "=", "(BRZ)", "wozmon_xamnext");
+  dat("FALSE", "wozmon_mode", "@", "=");
+  asm.macro.brz("wozmon_xamnext");
   dat("wozmon_tmp", "@", "DUP", "wozmon_st", "!", "wozmon_xam", "!");
 
   def("wozmon_nxtprnt");
   dat("wozmon_xam", "@", "(LIT)", 0x07, "&");
-  dat("(BRNZ)", "wozmon_prdata");
+  asm.macro.brnz("wozmon_prdata");
   dat("(CRLF.)");
   dat("wozmon_xam", "@", "EMIT_HEXWORD");
   dat("(LIT)", 0x3A, "EMIT");
@@ -978,16 +1009,19 @@ export const wozmon = (asm, opts) => {
 
   def("wozmon_xamnext");
   dat("FALSE", "wozmon_mode", "!");
-  dat("wozmon_xam", "@", "wozmon_tmp", "@", "<", "(BRZ)", "wozmon_nextitem");
+  dat("wozmon_xam", "@", "wozmon_tmp", "@", "<");
+  asm.macro.brz("wozmon_nextitem");
   dat("wozmon_xam", "@", "1+", "wozmon_xam", "!");
-  dat("(JMP)", "wozmon_nxtprnt");
+  asm.macro.jmp("wozmon_nxtprnt");
   
   def("wozmon_escape"); // ( buff_addr chr -- )
   dat("2DROP", "(JMP)", "wozmon");
   def("wozmon_backspace"); // ( buff_addr chr -- buff_addr )
-  dat("DROP", "1-", "wozmon_linebuffer_start", "MAX", "(JMP)", "wozmon_notcr");
+  dat("DROP", "1-", "wozmon_linebuffer_start", "MAX");
+  asm.macro.jmp("wozmon_notcr");
   def("wozmon_run"); // ( ba chr )
-  dat("2DROP", "wozmon_xam", "@", "EXECUTE", "(JMP)", "wozmon");
+  dat("2DROP", "wozmon_xam", "@", "EXECUTE");
+  asm.macro.jmp("wozmon");
   def("wozmon_quit"); // ( ba )
   dat("(JMP)", "(DROP)");
   
