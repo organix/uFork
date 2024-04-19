@@ -73,7 +73,11 @@ export const makeAssembler = (opts) => {
     return Promise.resolve({ image, symbols: syms });
   };
 
-  
+  asm.macro = {};
+
+  asm.def = asm.symbols.define;
+  asm.dat = asm.data;
+  asm.isDefined = asm.symbols.isDefined;
   
   return asm;
 }
