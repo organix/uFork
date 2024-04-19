@@ -15,6 +15,9 @@ export const minicore = (asm, opts) => {
   if (!isDefined("(JMP)")) {
     def("(JMP)"); // JuMP
     dat("R>");
+    asm.macro.jmp = (dest) => {
+      asm.data("(JMP)", dest);
+    }
   }
   def("@EXECUTE");
   dat("@");
@@ -306,12 +309,16 @@ export const minicore = (asm, opts) => {
   }
   def("NAND"); // ( a b -- not(a & b)
   dat("&", "INVERT", "EXIT");
-
+  
   def("(BRNZ)"); // BRanch if Not Zero ( bool -- )
+  asm.macro.brnz = (dest) => { asm.data("(BRNZ)", dest); };
   dat("CLEAN_BOOL", "INVERT");
   // deliberate fall through
   if (!isDefined("(BRZ)")) {
     def("(BRZ)"); // BRanch if Zero ( bool -- )
+    asm.macro.brz = (dest) => {
+      asm.data("(BRZ)", dest);
+    };
   }
   def("(BRZ)_alt");
   dat("R>");
@@ -325,9 +332,11 @@ export const minicore = (asm, opts) => {
 
   def("(BREQ)"); // ( a b -- )
   dat("=", "(JMP)", "(BRNZ)");
+  asm.macro.breq = (dest) => { asm.data("(BREQ)", dest); };
 
   def("(BRNE)"); // ( a b -- )
   dat("=", "(JMP)", "(BRZ)_alt");
+  asm.macro.brne = (dest) => { asm.data("(BRNE)", dest); };
 
   def("(JMPTBL)"); // ( idx -- idx ) note: default case is after the table
   dat("R>");       // ( idx raddr )
@@ -361,6 +370,14 @@ export const minicore = (asm, opts) => {
       dat("0x0FFF_&");
     }
     dat(">R", "EXIT");
+    asm.macro.countDownLoop = (preamble, body, prefix) => {
+      preamble();
+      asm.symbols.define(prefix.concat("_loopStart"));
+      asm.macro.jmp(prefix.concat("_loopCheck"));
+      body();
+      def(prefix.concat("_loopCheck"));
+      dat("(NEXT)", prefix.concat("_loopStart"));
+    }
   }
 
   def("(BREXIT)"); // ( bool -- ) exit caller early if bool is true
