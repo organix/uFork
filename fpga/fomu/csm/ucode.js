@@ -127,6 +127,7 @@ function compile(text) {
         // new named variable
         const word = uc_call(prog.length);
         const name = next_token();
+        console.log("//", word.toString(16).padStart(4, "0"), ":", name);   // symbol table entry
 //debug console.log("compile_var:", name, "=", word.toString(16).padStart(4, "0"));
         prog.push(UC_CONST);
         prog.push(prog.length + 1);  // variable address
@@ -252,6 +253,7 @@ function compile(text) {
                 }
                 const addr = prog.length - 2;
                 const word = uc_call(addr);
+                console.log("//", word.toString(16).padStart(4, "0"), ":", name);   // symbol table entry
 //debug console.log("compile_const:", name, "=", word.toString(16).padStart(4, "0"));
                 prog[addr] = UC_CONST;  // convert (LIT) to (CONST)
                 words[name] = word;  // add word to dictionary

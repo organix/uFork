@@ -81,6 +81,11 @@
     2DUP < ?: ;
 : MIN ( a b -- a | b )
     2DUP > ?: ;
+: @1+ ( addr -- )
+    DUP @ 1+ SWAP ! ;
+: @1- ( addr -- )
+    DUP @ 1- SWAP ! ;
+
 : INBOUNDS ( n lo hi -- lo<=n&&n<=hi )
     -ROT OVER SWAP -
     -ROT - OR MSB& 0= ;
@@ -102,6 +107,20 @@
     DUP ISUPPER IF
         BL XOR  ( flip case )
     THEN ;
+: TOHEX ( n -- x )
+    0xF AND
+    DUP 10 < IF
+        '0'
+    ELSE
+        A-10
+    THEN + ;
+: FROMHEX ( x -- n )
+    TOUPPER
+    DUP 'A' < IF
+        '0'
+    ELSE
+        A-10
+    THEN - ;
 
 : TX? ( -- ready )
 : EMIT?
@@ -113,7 +132,6 @@
     0x02 IO@ ;
 : RX@ ( -- char )
     0x03 IO@ ;
-
 : EMIT ( char -- )
     BEGIN TX? UNTIL TX! ;
 : KEY ( -- char )
@@ -126,22 +144,8 @@
     LOOP- ;
 : CR ( -- )
     '\r' EMIT '\n' EMIT ;
-: >X ( n -- x )
-    0xF AND
-    DUP 10 < IF
-        '0'
-    ELSE
-        A-10
-    THEN + ;
-: X> ( x -- n )
-    TOUPPER
-    DUP 'A' < IF
-        '0'
-    ELSE
-        A-10
-    THEN - ;
 : X# ( n -- )
-    >X EMIT ;
+    TOHEX EMIT ;
 : X. ( n -- )
     4 ?D0
         4ROL DUP X#
@@ -165,8 +169,6 @@ VARIABLE tos    ( top of stack )
 VARIABLE nos    ( next on stack )
 VARIABLE copy   ( bulk copy mode )
 VARIABLE here   ( bulk copy addr )
-: @1+ ( addr -- )
-    DUP @ 1+ SWAP ! ;
 : push ( a -- )
     tos @ nos !
     tos ! ;
@@ -249,7 +251,7 @@ VARIABLE here   ( bulk copy addr )
         LOOP- CR DROP
     THEN ;
 : >inp ( key -- )
-    X> inp @                ( D: nybble accum )
+    FROMHEX inp @           ( D: nybble accum )
     4ROL 0xFFF0 AND OR      ( D: accum' )
     inp ! ;
 : >here ( data -- )
@@ -264,7 +266,7 @@ VARIABLE here   ( bulk copy addr )
             inp @
             4ASR 0x0FFF AND
             DUP IF
-                DUP >X
+                DUP TOHEX
             ELSE
                 BL
             THEN cmd !
