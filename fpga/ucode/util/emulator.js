@@ -535,7 +535,7 @@ opts = (opts == undefined) ? {} : opts;
   const dstack = makeStack();
   const rstack = makeStack();
   emu.doOneInstruction = () => {
-    const instr = uc_fetch(pc);
+    const instr = memory.fetch(pc);
     pc = (pc + 1) & 0x0FFF;
     const EvaluateOrControl = (instr & 0x8000) >> 15;
     if (EvaluateOrControl == 0) {
@@ -561,10 +561,10 @@ opts = (opts == undefined) ? {} : opts;
           case 0: // uCode program memory
             if (W_EN == 1) {
               // write
-              uc_store(NOS, TOS); // uc_store(item, addr);
+              memory.store(NOS, TOS);
             } else {
               // read
-              MEM_or_ALU_result = uc_fetch(TOS);
+              MEM_or_ALU_result = memory.fetch(TOS);
             }
             break;
           case 1: // uCode program memory [PC+1]
@@ -575,17 +575,17 @@ opts = (opts == undefined) ? {} : opts;
               throw new Error("trying to write to uCode program memory via MEM range [PC+1]");
             } else {
               // read
-              MEM_or_ALU_result = uc_fetch(pc);
+              MEM_or_ALU_result = memory.fetch(pc);
             }
             pc = (pc + 1) & 0x0FFF;
             break;
           case 2: // scratch memory?
             if (W_EN == 1) {
               // write
-              scratch_store(NOS, TOS);
+              scratch_mem.store(NOS, TOS);
             } else {
               // read
-              MEM_or_ALU_result = scratch_fetch(TOS);
+              MEM_or_ALU_result = scratch_mem.fetch(TOS);
             }
             break;
           case 3: // Devices, registers of
@@ -628,10 +628,21 @@ opts = (opts == undefined) ? {} : opts;
                   break;
               }
             }; break;
-          case 4: // quad t field
-          case 5: // quad x field
-          case 6: // quad y field
+          case 4: // quad t field, fallthrough
+          case 5: // quad x field, fallthrough
+          case 6: // quad y field, fallthrough
           case 7: // quad z field
+            {
+              if (W_EN == 1) {
+                // write
+                const val = quads.fetch(TOS);
+                val[MEM_sel - 4] = NOS;
+              } else {
+                // read
+                const val = quads.fetch(TOS);
+                MEM_or_ALU_result = val[MEM_sel - 4];
+              }
+            }; break;
         }
       }
     } else {
