@@ -568,6 +568,16 @@ opts = (opts == undefined) ? {} : opts;
             }
             break;
           case 1: // uCode program memory [PC+1]
+            if (W_EN == 1) {
+              // write
+              // what exactly happens here? This my guess:
+              uc_store(TOS, pc);
+            } else {
+              // read
+              MEM_or_ALU_result = uc_fetch(pc);
+            }
+            pc = (pc + 1) & 0x0FFF;
+            break;
           case 2: // scratch memory?
           case 3: // Devices, registers of
           case 4: // quad t field
