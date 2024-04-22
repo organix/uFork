@@ -16,6 +16,38 @@ const text_encoder = new TextEncoder();
 // Read the entirety of STDIN as a string.
 
 new Response(Deno.stdin.readable).text().then(function (text) {
+    function disasm(code) {
+        if (code === 0x021F) {
+            return "(LIT)";
+        }
+        if (code === 0x521F) {
+            return "(CONST)";
+        }
+        let suffix = "";
+        if ((code & 0xF000) === 0x5000) {
+            code &= 0x0FFF;
+            suffix = " EXIT";
+        }
+        for (const [name, word] of Object.entries(result.words)) {
+            if (word === code) {
+                return name + suffix;
+            }
+        }
+        let text = "";
+        if (code & 0x8000) {
+            text += (code & 0x4000) ? "call" : "jump";
+            if (code & 0x3000) {
+                text += "_ifzero";
+                if (code & 0x1000) {
+                    text += (code & 0x2000 ? "_dec" : "_inc");
+                }
+            }
+            const addr = code & 0xFFF;
+            text += "(" + addr.toString(16).padStart(3, "0") + ")";
+        }
+        return text;
+    }
+
     const result = compile(text);
 
 // Fail if there was a compilation error.
@@ -64,8 +96,12 @@ new Response(Deno.stdin.readable).text().then(function (text) {
 
 // Encode each word as a hex string, one per line.
 
-        const word_hex = word.toString(16).padStart(4, "0");
-        lines.push(word_hex);
+        let line = word.toString(16).padStart(4, "0");
+        const annotation = disasm(word);
+        if (annotation) {
+            line += "  // " + annotation;
+        }
+        lines.push(line);
 
     });
 
