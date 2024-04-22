@@ -551,6 +551,16 @@ opts = (opts == undefined) ? {} : opts;
         const TWO_DROP = (instr & 0x0800) >> 11;
         const W_EN     = (instr & 0x0080) >>  7;
         const MEM_sel  = (instr & 0x0070) >>  4;
+        switch (MEM_sel) {
+          case 0: // uCode program memory
+          case 1: // uCode program memory [PC+1]
+          case 2: // scratch memory?
+          case 3: // Devices, registers of
+          case 4: // quad t field
+          case 5: // quad x field
+          case 6: // quad y field
+          case 7: // quad z field
+        }
       }
     } else {
       // Control
