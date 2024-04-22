@@ -2,17 +2,26 @@
 // Dale Schumacher
 // 2024-04-10
 
-function error(...msg) {
-//debug console.log("ERROR!", ...msg);
-    return msg.join(" ");
-}
-
-function compile(text) {
+function compile(text, src = "") {
     let pos = 0;  // input position within `text`
+    let line = 1;  // input line number
+    function error(...msg) {
+        const err = {
+            src,
+            pos,
+            line,
+            error: msg.join(" ")
+        };
+//debug console.log("ERROR!", err);
+        return err;
+    }
     function next_char() {
         const cp = text.codePointAt(pos);  // returns `undefined` if out-of-bounds
         if (typeof cp === "number") {
             pos += (cp <= 0xFFFF ? 1 : 2);
+        }
+        if (cp === 10) {  // watch for '\n'
+            line += 1;
         }
         return cp;
     }
@@ -119,7 +128,6 @@ function compile(text) {
         const word = uc_call(prog.length);
         prog[0] = word;  // update bootstrap entry-point
         const name = next_token();
-        console.log("//", word.toString(16).padStart(4, "0"), ":", name);   // symbol table entry
 //debug console.log("compile_name:", name, "=", word.toString(16).padStart(4, "0"));
         words[name] = word;  // add word to dictionary
     };
@@ -127,7 +135,6 @@ function compile(text) {
         // new named variable
         const word = uc_call(prog.length);
         const name = next_token();
-        console.log("//", word.toString(16).padStart(4, "0"), ":", name);   // symbol table entry
 //debug console.log("compile_var:", name, "=", word.toString(16).padStart(4, "0"));
         prog.push(UC_CONST);
         prog.push(prog.length + 1);  // variable address
@@ -253,7 +260,6 @@ function compile(text) {
                 }
                 const addr = prog.length - 2;
                 const word = uc_call(addr);
-                console.log("//", word.toString(16).padStart(4, "0"), ":", name);   // symbol table entry
 //debug console.log("compile_const:", name, "=", word.toString(16).padStart(4, "0"));
                 prog[addr] = UC_CONST;  // convert (LIT) to (CONST)
                 words[name] = word;  // add word to dictionary
@@ -302,10 +308,13 @@ function compile(text) {
     }
 
     const end = compile_words(next_token());
-    if (end.length !== 0) {
-        return end;
+    if (end?.error) {
+        return { errors: [ end ] };
     }
-    return prog;
+    return {
+        words,
+        prog
+    };
 }
 
 //debug const simple_source = ": BOOT R@ DROP BOOT ;";
@@ -351,8 +360,10 @@ function compile(text) {
 //debug     R> DROP BOOT`;
 // const source = simple_source;
 //debug const source = multiline_source;
-// console.log(compile(source));
-//debug console.log(compile(source).map(function (number, index) {
+//debug const result = compile(source);
+//debug console.log(result);
+//debug const prog = result?.prog;
+//debug console.log(prog.map(function (number, index) {
 //debug    return index.toString(16).padStart(3, "0") + ": " + number.toString(16).padStart(4, "0");
 //debug }).join("\n"));
 
