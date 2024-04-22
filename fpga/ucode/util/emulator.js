@@ -569,6 +569,16 @@ opts = (opts == undefined) ? {} : opts;
               pc = (pc + 1) & 0x0FFF;
             }
           }; break;
+        case 3:
+          {
+            const TOS = dstack.pop();
+            if (TOS == 0x0000) {
+              pc = addr;
+            } else {
+              pc = (pc + 1) & 0x0FFF;
+              dstack.push((TOS - 1) & 0xFFFF);
+            }
+          }; break
       }
     }
   }
