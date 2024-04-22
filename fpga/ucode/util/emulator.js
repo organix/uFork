@@ -540,6 +540,12 @@ opts = (opts == undefined) ? {} : opts;
     const EvaluateOrControl = (instr & 0x8000) >> 15;
     if (EvaluateOrControl == 0) {
       // Evaluate
+      const R_to_PC = (instr & 0x4000) >> 14;
+      const R_sel   = (instr & 0x3000) >> 12;
+      const D_sel   = (instr & 0x0700) >>  8;
+      const ALU_A   = (instr & 0x00C0) >>  6;
+      const ALU_B   = (instr & 0x0030) >>  4;
+      const ALU_op  = (instr & 0x000F);
     } else {
       // Control
       const PC_to_R = (instr & 0x4000) >> 14;
