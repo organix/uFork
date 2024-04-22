@@ -527,7 +527,7 @@ opts = (opts == undefined) ? {} : opts;
   let pc = (opts.pc == undefined) ? 0x0010 : opts.pc ;
   const emu = {
     get pc() { return pc; },
-    set pc(addr) { pc = addr; return addr; },
+    set pc(addr) { pc = addr & 0x0FFF; return pc; },
   };
   const quads  = (opts.quad_memory == undefined) ? makeQuadMemory() : opts.quad_memory ;
   const debug_io = (opts.debug_io == undefined) ? makeDebugIOStub() : opts.debug_io ;
@@ -537,7 +537,12 @@ opts = (opts == undefined) ? {} : opts;
   emu.doOneInstruction = () => {
     const instr = fetch(pc);
     pc = (pc + 1) & 0x0FFF;
-
+    const EvaluateOrControl = (instr & 0x8000) >> 15;
+    if (EvaluateOrControl == 0) {
+      // Evaluate
+    } else {
+      // Control
+    }
   }
   return emu;
 };
