@@ -618,9 +618,14 @@ opts = (opts == undefined) ? {} : opts;
                   }
                   break;
                 case 0x1: // fomu lattice ICe40UP5K sysBus, spi stuff
+                  throw new Error("fomu lattice ICe40UP5K sysBus not yet implemented");
+                  break;
                 case 0x2: // gc hw iterface
+                  throw new Error("garbage collection in hardware not currently implemented");
+                  break;
                 case 0x3: // DSP interface
-                  
+                  throw new Error("Digital Signal Processing interface not yet implemented");
+                  break;
               }
             }; break;
           case 4: // quad t field
