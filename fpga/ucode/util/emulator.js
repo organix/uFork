@@ -571,8 +571,8 @@ opts = (opts == undefined) ? {} : opts;
       
       if (ALU_op == 0xF) {
         // MEM operation
-        const TWO_DROP = (instr & 0x0800) >> 11;
         const W_EN     = (instr & 0x0080) >>  7;
+        const TWO_DROP = W_EN;
         const MEM_sel  = (instr & 0x0070) >>  4;
         switch (MEM_sel) {
           case 0: // uCode program memory
@@ -660,6 +660,25 @@ opts = (opts == undefined) ? {} : opts;
                 MEM_or_ALU_result = val[MEM_sel - 4];
               }
             }; break;
+        }
+      } else {
+        switch (ALU_op) {
+          case 0x0: break; // NONE
+          case 0x1: MEM_or_ALU_result = (ALU_A + ALU_B) & 0xFFFF; break;     // ADD
+          case 0x2: MEM_or_ALU_result = (ALU_A - ALU_B) & 0xFFFF; break;     // SUB
+          case 0x3: MEM_or_ALU_result = (ALU_A * ALU_B) & 0xFFFF; break;     // MUL
+          case 0x4: MEM_or_ALU_result = (ALU_A & ALU_B) & 0xFFFF; break;     // AND
+          case 0x5: MEM_or_ALU_result = (ALU_A ^ ALU_B) & 0xFFFF; break;     // XOR
+          case 0x6: MEM_or_ALU_result = (ALU_A | ALU_B) & 0xFFFF; break;     // OR
+          case 0x7: MEM_or_ALU_result = (ALU_A << 1) | (ALU_A >> 15); break; // ROL
+          case 0x8: MEM_or_ALU_result = (ALU_A << 2) | (ALU_A >> 14); break; // 2ROL
+          case 0x9: MEM_or_ALU_result = (ALU_A << 4) | (ALU_A >> 12); break; // 4ROL
+          case 0xA: MEM_or_ALU_result = (ALU_A << 8) | (ALU_A >>  8); break; // 8ROL
+          case 0xB: MEM_or_ALU_result = (ALU_A >> 1); break;                 // ASR
+          case 0xC: MEM_or_ALU_result = (ALU_A >> 2); break;                 // 2ASR
+          case 0xD: MEM_or_ALU_result = (ALU_A >> 4); break;                 // 4ASR
+          case 0xE: throw new Error("DSP? not implemented");
+          case 0xF: throw new Error("something went wrong this case (MEM) should be unreachable");
         }
       }
     } else {
