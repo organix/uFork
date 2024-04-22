@@ -521,3 +521,8 @@ export const makeEmulator_uFork_SM2 = (opts) => {
   };
   return emu;
 };
+
+export const makeEmulator_uFork_SM2v1 = (opts) => {
+  const emu = {};
+  return emu;
+};
