@@ -523,6 +523,21 @@ export const makeEmulator_uFork_SM2 = (opts) => {
 };
 
 export const makeEmulator_uFork_SM2v1 = (opts) => {
-  const emu = {};
+opts = (opts == undefined) ? {} : opts;
+  let pc = (opts.pc == undefined) ? 0x0010 : opts.pc ;
+  const emu = {
+    get pc() { return pc; },
+    set pc(addr) { pc = addr; return addr; },
+  };
+  const quads  = (opts.quad_memory == undefined) ? makeQuadMemory() : opts.quad_memory ;
+  const debug_io = (opts.debug_io == undefined) ? makeDebugIOStub() : opts.debug_io ;
+  const memory = (opts.microcode_memory == undefined) ? makeMemory() : opts.microcode_memory ;
+  const dstack = makeStack();
+  const rstack = makeStack();
+  emu.doOneInstruction = () => {
+    const instr = fetch(pc);
+    pc = (pc + 1) & 0x0FFF;
+
+  }
   return emu;
 };
