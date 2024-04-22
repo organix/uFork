@@ -546,6 +546,21 @@ opts = (opts == undefined) ? {} : opts;
       if (PC_to_R == 1) { rstack.push(pc); }
       const tst_inc = (instr & 0x3000) >> 12;
       const addr    = instr & 0x0FFF;
+      switch (tst_inc) {
+        case 0:
+          pc = addr;
+          break;
+        case 1:
+          {
+            const TOS = dstack.pop();
+            if (TOS == 0x0000) {
+              pc = addr;
+            } else {
+              pc = (pc + 1) & 0x0FFF;
+              dstack.push((TOS + 1) & 0xFFFF);
+            }
+          }; break;
+      }
     }
   }
   return emu;
