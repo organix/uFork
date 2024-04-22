@@ -571,7 +571,8 @@ opts = (opts == undefined) ? {} : opts;
             if (W_EN == 1) {
               // write
               // what exactly happens here? This my guess:
-              uc_store(TOS, pc);
+              // uc_store(TOS, pc); // which was wrong
+              throw new Error("trying to write to uCode program memory via MEM range [PC+1]");
             } else {
               // read
               MEM_or_ALU_result = uc_fetch(pc);
@@ -588,6 +589,17 @@ opts = (opts == undefined) ? {} : opts;
             }
             break;
           case 3: // Devices, registers of
+            {
+              const device_id  = (TOS & 0x00F0) >> 4;
+              const device_reg = (TOS & 0x000F);
+              switch (device_id) {
+                case 0x0: // UART
+                case 0x1: // fomu lattice ICe40UP5K sysBus, spi stuff
+                case 0x2: // gc hw iterface
+                case 0x3: // DSP interface
+                  
+              }
+            }; break;
           case 4: // quad t field
           case 5: // quad x field
           case 6: // quad y field
