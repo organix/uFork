@@ -579,6 +579,14 @@ opts = (opts == undefined) ? {} : opts;
             pc = (pc + 1) & 0x0FFF;
             break;
           case 2: // scratch memory?
+            if (W_EN == 1) {
+              // write
+              scratch_store(NOS, TOS);
+            } else {
+              // read
+              MEM_or_ALU_result = scratch_fetch(TOS);
+            }
+            break;
           case 3: // Devices, registers of
           case 4: // quad t field
           case 5: // quad x field
