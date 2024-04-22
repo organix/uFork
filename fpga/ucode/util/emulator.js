@@ -594,6 +594,29 @@ opts = (opts == undefined) ? {} : opts;
               const device_reg = (TOS & 0x000F);
               switch (device_id) {
                 case 0x0: // UART
+                  if (W_EN == 1) {
+                    // write
+                    if (device_reg == 0x1) {
+                      debug_io.tx(NOS & 0xFF);
+                    }
+                  } else {
+                    // read
+                    switch (device_reg) {
+                      case 0x0: // TX?
+                        MEM_or_ALU_result = debug_io.tx_ready() ? 0xFFFF : 0x0000;
+                        break;
+                      case 0x1: // TX!
+                        MEM_or_ALU_result = 0xDEAD;
+                        break;
+                      case 0x2: // RX?
+                        MEM_or_ALU_result = debug_io.rx_ready() ? 0xFFFF : 0x0000 ;
+                        break;
+                      case 0x3: // RX@
+                        MEM_or_ALU_result = debug_io.rx() & 0xFF ;
+                        break
+                    }
+                  }
+                  break;
                 case 0x1: // fomu lattice ICe40UP5K sysBus, spi stuff
                 case 0x2: // gc hw iterface
                 case 0x3: // DSP interface
