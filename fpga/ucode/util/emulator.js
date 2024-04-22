@@ -546,6 +546,12 @@ opts = (opts == undefined) ? {} : opts;
       const ALU_A   = (instr & 0x00C0) >>  6;
       const ALU_B   = (instr & 0x0030) >>  4;
       const ALU_op  = (instr & 0x000F);
+      if (ALU_op == 0xF) {
+        // MEM operation
+        const TWO_DROP = (instr & 0x0800) >> 11;
+        const W_EN     = (instr & 0x0080) >>  7;
+        const MEM_sel  = (instr & 0x0070) >>  4;
+      }
     } else {
       // Control
       const PC_to_R = (instr & 0x4000) >> 14;
