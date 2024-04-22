@@ -535,14 +535,25 @@ opts = (opts == undefined) ? {} : opts;
   const dstack = makeStack();
   const rstack = makeStack();
   emu.doOneInstruction = () => {
-    const instr = fetch(pc);
+    const instr = uc_fetch(pc);
     pc = (pc + 1) & 0x0FFF;
     const EvaluateOrControl = (instr & 0x8000) >> 15;
     if (EvaluateOrControl == 0) {
       // Evaluate
     } else {
       // Control
+      const PC_to_R = (instr & 0x4000) >> 14;
+      if (PC_to_R == 1) { rstack.push(pc); }
+      const tst_inc = (instr & 0x3000) >> 12;
+      const addr    = instr & 0x0FFF;
     }
   }
   return emu;
 };
+
+
+
+
+
+
+
