@@ -540,6 +540,12 @@ opts = (opts == undefined) ? {} : opts;
     const EvaluateOrControl = (instr & 0x8000) >> 15;
     if (EvaluateOrControl == 0) {
       // Evaluate
+      const TOS  = dstack.peek(0);
+      const NOS  = dstack.peek(1);
+      const TORS = rstack.peek(0);
+
+      let MEM_or_ALU_result = 0;
+      
       const R_to_PC = (instr & 0x4000) >> 14;
       const R_sel   = (instr & 0x3000) >> 12;
       const D_sel   = (instr & 0x0700) >>  8;
@@ -553,6 +559,14 @@ opts = (opts == undefined) ? {} : opts;
         const MEM_sel  = (instr & 0x0070) >>  4;
         switch (MEM_sel) {
           case 0: // uCode program memory
+            if (W_EN == 1) {
+              // write
+              uc_store(NOS, TOS); // uc_store(item, addr);
+            } else {
+              // read
+              MEM_or_ALU_result = uc_fetch(TOS);
+            }
+            break;
           case 1: // uCode program memory [PC+1]
           case 2: // scratch memory?
           case 3: // Devices, registers of
