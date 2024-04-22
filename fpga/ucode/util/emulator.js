@@ -546,12 +546,29 @@ opts = (opts == undefined) ? {} : opts;
 
       let MEM_or_ALU_result = 0;
       
-      const R_to_PC = (instr & 0x4000) >> 14;
-      const R_sel   = (instr & 0x3000) >> 12;
-      const D_sel   = (instr & 0x0700) >>  8;
-      const ALU_A   = (instr & 0x00C0) >>  6;
-      const ALU_B   = (instr & 0x0030) >>  4;
-      const ALU_op  = (instr & 0x000F);
+      const R_to_PC     = (instr & 0x4000) >> 14;
+      const R_sel       = (instr & 0x3000) >> 12;
+      const D_sel       = (instr & 0x0700) >>  8;
+      const instr_ALU_A = (instr & 0x00C0) >>  6;
+      const instr_ALU_B = (instr & 0x0030) >>  4;
+      const ALU_op      = (instr & 0x000F);
+
+      let ALU_A;
+      switch (instr_ALU_A) {
+        case 0b00: ALU_A = TOS; break;    // D0
+        case 0b01: ALU_A = NOS; break;    // D1
+        case 0b10: ALU_A = TORS; break;   // R0
+        case 0b11: ALU_A = 0x0000; break; //  0  also FALSE
+      }
+
+      let ALU_B;
+      switch (instr_ALU_B) {
+        case 0b00: ALU_B = TOS; break;    // D0
+        case 0b01: ALU_B = 0x0001; break; // +1
+        case 0b10: ALU_B = 0x8000; break; // most significant bit
+        case 0b11: ALU_B = 0xFFFF; break; // -1  also TRUE
+      }
+      
       if (ALU_op == 0xF) {
         // MEM operation
         const TWO_DROP = (instr & 0x0800) >> 11;
