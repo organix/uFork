@@ -661,6 +661,9 @@ opts = (opts == undefined) ? {} : opts;
               }
             }; break;
         }
+        if (TWO_DROP == 1) {
+          dstack.pop(); dstack.pop();
+        }
       } else {
         switch (ALU_op) {
           case 0x0: break; // NONE
@@ -718,6 +721,11 @@ opts = (opts == undefined) ? {} : opts;
             dstack.push(c);
             dstack.push(a);
             dstack.push(b);
+          }; break;
+        case 7: // ALU2
+          {
+            dstack.pop(); dstack.pop();
+            dstack.push(MEM_or_ALU_result);
           }; break;
       }
     } else {
