@@ -532,8 +532,9 @@ opts = (opts == undefined) ? {} : opts;
   const quads  = (opts.quad_memory == undefined) ? makeQuadMemory() : opts.quad_memory ;
   const debug_io = (opts.debug_io == undefined) ? makeDebugIOStub() : opts.debug_io ;
   const memory = (opts.microcode_memory == undefined) ? makeMemory() : opts.microcode_memory ;
-  const dstack = makeStack();
-  const rstack = makeStack();
+  const dstack = (opts.dstack == undefined) ? makeStack() : opts.dstack;
+  const rstack = (opts.rstack == undefined) ? makeStack() : opts.rstack;
+  const fomu_sys_emu = (opts.fomu_sys_emu == undefined) ? make_fomu_sys_emu() : opts.fomu_sys_emu ;
   emu.doOneInstruction = () => {
     const instr = memory.fetch(pc);
     pc = (pc + 1) & 0x0FFF;
@@ -635,7 +636,14 @@ opts = (opts == undefined) ? {} : opts;
                   }
                   break;
                 case 0x1: // fomu lattice ICe40UP5K sysBus, spi stuff
-                  throw new Error("fomu lattice ICe40UP5K sysBus not yet implemented");
+                  if (W_EN == 1) {
+                    // write
+                    fomu_sys_emu.store(NOS, TOS);
+                  } else {
+                    // read
+                    MEM_or_ALU_result = fomu_sys_emu.fetch(TOS);
+                  }
+                  // throw new Error("fomu lattice ICe40UP5K sysBus not yet implemented");
                   break;
                 case 0x2: // gc hw iterface
                   throw new Error("garbage collection in hardware not currently implemented");
