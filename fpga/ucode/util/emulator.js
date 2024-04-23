@@ -710,6 +710,15 @@ opts = (opts == undefined) ? {} : opts;
             dstack.push(c);
             dstack.push(a);
           }; break;
+        case 6: // RROT in most forths -ROT ( a b c -- c a b )
+          {
+            const c = dstack.pop();
+            const b = dstack.pop();
+            const a = dstack.pop();
+            dstack.push(c);
+            dstack.push(a);
+            dstack.push(b);
+          }; break;
       }
     } else {
       // Control
