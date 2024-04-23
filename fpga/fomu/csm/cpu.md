@@ -211,7 +211,7 @@ ALU/memory cycle (usually for a write request).
                            110:RROT        110:Q_Y
                            111:ALU2        111:Q_Z
 
-\* If `MEM range` is `[PC+1]`, then read from `PC+1` and increment again.
+\* If `MEM range` is `[PC+1]`, then read from `PC+1` and increment again (write is ignored).
 
 #### Stack Operations
 
