@@ -349,6 +349,14 @@ export const makeEmulator_uFork_CSM1 = (opts) => {
   return emu;
 };
 
+export const make_fomu_sys_emu = (opts) => {
+  const fomu_sys_emu = {};
+  fomu_sys_emu.store = (item, addr) => {
+  };
+  fomu_sys_emu.fetch = (addr) => {
+  };
+  return fomu_sys_emu;
+};
 export const makeEmulator_uFork_SM2 = (opts) => {
   opts = (opts == undefined) ? {} : opts;
   let pc = (opts.pc == undefined) ? 0x0040 : opts.pc ;
