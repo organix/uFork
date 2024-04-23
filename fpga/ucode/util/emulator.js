@@ -688,6 +688,29 @@ opts = (opts == undefined) ? {} : opts;
         case 3: rstack.pop();                          // RePLaCe
                 rstack.push(MEM_or_ALU_result); break;
       }
+      switch (D_sel) {
+        case 0: break;                                 // NONE
+        case 1: dstack.pop(); break;                   // DROP
+        case 2: dstack.push(MEM_or_ALU_result); break; // PUSH
+        case 3: dstack.pop();
+                dstack.push(MEM_or_ALU_result); break; // RePLaCe
+        case 4: // SWAP
+          {
+            const b = dstack.pop();
+            const a = dstack.pop();
+            dstack.push(b);
+            dstack.push(a);
+          }; break;
+        case 5: // ROT3 in most forth just ROT ( a b c -- b c a )
+          {
+            const c = dstack.pop();
+            const b = dstack.pop();
+            const a = dstack.pop();
+            dstack.push(b);
+            dstack.push(c);
+            dstack.push(a);
+          }; break;
+      }
     } else {
       // Control
       const PC_to_R = (instr & 0x4000) >> 14;
