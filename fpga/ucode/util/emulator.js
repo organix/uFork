@@ -681,6 +681,13 @@ opts = (opts == undefined) ? {} : opts;
           case 0xF: throw new Error("something went wrong this case (MEM) should be unreachable");
         }
       }
+      switch (R_sel) {
+        case 0: break;                                 // NONE
+        case 1: rstack.pop(); break;                   // DROP
+        case 2: rstack.push(MEM_or_ALU_result); break; // PUSH
+        case 3: rstack.pop();                          // RePLaCe
+                rstack.push(MEM_or_ALU_result); break;
+      }
     } else {
       // Control
       const PC_to_R = (instr & 0x4000) >> 14;
