@@ -349,14 +349,6 @@ export const makeEmulator_uFork_CSM1 = (opts) => {
   return emu;
 };
 
-export const make_fomu_sys_emu = (opts) => {
-  const fomu_sys_emu = {};
-  fomu_sys_emu.store = (item, addr) => {
-  };
-  fomu_sys_emu.fetch = (addr) => {
-  };
-  return fomu_sys_emu;
-};
 export const makeEmulator_uFork_SM2 = (opts) => {
   opts = (opts == undefined) ? {} : opts;
   let pc = (opts.pc == undefined) ? 0x0040 : opts.pc ;
@@ -528,6 +520,44 @@ export const makeEmulator_uFork_SM2 = (opts) => {
     }
   };
   return emu;
+};
+
+export const make_fomu_sys_emu = (opts) => {
+  const fomu_sys_emu = {};
+  let sysbus_addr = 0x00;
+  let sysbus_data = 0x01;
+
+  let spi_en = false;
+  
+  fomu_sys_emu.store = (item, addr) => {
+    addr = addr & 0x1;
+    if (addr == 0) {
+      sysbus_addr = item & 0xFF;
+    } else {
+      sysbus_data = item & 0xFF;
+      switch (sysbus_addr) {
+        case 0x19: break; // SPIRC0
+        case 0x1A:        // SPIRC1
+          {
+            spi_en = ((sysbus_data & 0x80) == 0x80); // spi enable?
+          }; break;
+        case 0x1B: break; // SPIRC2
+        case 0x1C: break; // SPIBR
+        case 0x1D: break; // SPI data out (MOSI)
+        case 0x1E: break; // SPI data in  (MISO)
+        case 0x1F: break; // SPICSR
+      }
+    }
+  };
+  fomu_sys_emu.fetch = (addr) => {
+    addr = addr & 0x1;
+    if (addr == 0) {
+      return sysbus_addr;
+    } else {
+      return sysbus_data;
+    }
+  };
+  return fomu_sys_emu;
 };
 
 export const makeEmulator_uFork_SM2v1 = (opts) => {
