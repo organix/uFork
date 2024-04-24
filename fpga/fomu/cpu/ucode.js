@@ -1,6 +1,6 @@
-// ucode.js -- uCode (Forth dialect) compiler
+// ucode.js -- uCode/Forth compiler
 // Dale Schumacher
-// 2024-04-10
+// created: 2024-04-10
 
 function compile(text, src = "") {
     let pos = 0;  // input position within `text`

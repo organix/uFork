@@ -22,14 +22,10 @@ the value of `o_status` indicates success (1) or failure (0).
 
 `default_nettype none
 
-//`include "../lib/bram.v"
-//`include "../lib/spram.v"
 `include "../lib/lifo.v"
 `include "lifo.v"
 `include "alu.v"
 //`include "alu_nr.v"
-//`include "../lib/serial_tx.v"
-//`include "../lib/serial_rx.v"
 `include "uart.v"
 `ifdef __ICARUS__
 `include "quad_mem.v"
