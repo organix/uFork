@@ -7,7 +7,7 @@
 
 import { makePromise } from "../util/util_funcs.js";
   
-export const defineInstructionset = (asm, opts = { instrsetName: "uFork_SM2.1" }) => {
+export const defineInstructionset = (asm, opts = { instrsetName: "uFork_SM2.2" }) => {
   const { def, isDefined } = asm;
   if (opts.instrsetName.startsWith("FCPU-16")) {
     def("instrset_FCPU-16", 1);
@@ -311,7 +311,7 @@ export const defineInstructionset = (asm, opts = { instrsetName: "uFork_SM2.1" }
     }
   }
 
-  if (isDefined("instrset_uFork_SM2.1")) {
+  if (isDefined("instrset_uFork_SM2.2")) {
     if (!isDefined("instrset_w/qmem")) {
       def("instrset_w/qmem", 1);
     }
@@ -438,8 +438,8 @@ export const defineInstructionset = (asm, opts = { instrsetName: "uFork_SM2.1" }
     def("SKZ", (asm) => {
       const here = asm.addr;
       const here_plustwo = asm.deferedOp.plus(here, 2);
-      // return asm.deferedOp.or(0xA000, asm.deferedOp.and(here_plustwo, 0x0FFF));
-      asm.datum(0xA000 | ((here + 2) & 0x0FFF));
+      // return asm.deferedOp.or(0x9000, asm.deferedOp.and(here_plustwo, 0x0FFF));
+      asm.datum(0x9000 | ((here + 2) & 0x0FFF));
     });
     def("(JMP)", 0x8000);
     asm.macro.jmp = (dest) => {
@@ -451,92 +451,16 @@ export const defineInstructionset = (asm, opts = { instrsetName: "uFork_SM2.1" }
         asm.origin(prev);
       });
     };
-    def("(BRZ)", 0xA000);
+    def("(BRZ)", 0x9000);
     asm.macro.brz = (dest) => {
       asm.datum((asm, here) => {
         const prev = asm.addr;
         const resolved_dest = ((typeof dest) == "string") ? asm.symbols.lookup(dest) : dest ;
         asm.origin(here);
-        asm.datum(0xA000 | (resolved_dest & 0x0FFF));
+        asm.datum(0x9000 | (resolved_dest & 0x0FFF));
         asm.origin(prev);
       });
     };
-    
-    /*
-    const redatum = (asm, address, value) => {
-      const prev = asm.addr;
-      asm.undatum(address);
-      asm.origin(address);
-      asm.datum(value);
-      asm.origin(prev);
-    };
-    def("(JMP)", (asm) => {
-      const here = asm.addr;
-      const resolve = ([here_plusone, dest]) => {
-        if ((typeof dest) == "number") {
-          redatum(asm, here, (0x8000 | (dest & 0x0FFF)));
-        } else if (dest instanceof Promise) {
-          dest.then((destination) => {
-            redatum(asm, here, (0x8000 | (destination & 0x0FFF)));
-            redatum(asm, here_plusone, 0xDEAD);
-          });
-        } else {
-          throw new Error(`aflúsun (JMP): ${here} ${here_plusone} ${dest}`);
-        }
-        // refrain from writing the destination twice into the image
-        redatum(asm, here_plusone, { resolve: ([h, d]) => {
-          throw new Error(`aflúsun (JMP) 2: ${h} ${here_plusone} ${dest} ${d}`);
-        }});
-        asm.origin(here_plusone);
-      };
-      asm.datum("NOP"); // placeholder put in
-      const gildra = asm.addr;
-      asm.datum({ resolve });
-      asm.origin(gildra);
-      return undefined;
-    });
-    def("(JMP)", (asm) => {
-      const here = asm.addr;
-      const resolve = ([here_plusone, val]) => {
-        console.trace(`(JMP) resolve: 0x${here.toString(16).padStart(4, "0")} ${val}`);
-        asm.undatum(here); // erease placeholder
-        asm.origin(here);
-        asm.datum(asm.deferedOp.or(0x8000, asm.deferedOp.and(val, 0x0FFF)));
-        // asm.datum(0x8000 | (val & 0x0FFF));
-      };
-      asm.datum("NOP"); // placeholder put in
-      const gildra = asm.addr;
-      asm.datum({ resolve });
-      asm.origin(gildra);
-      return undefined;
-    });
-    def("(BRZ)", (asm) => {
-      const here = asm.addr;
-      const resolve = ([here_plusone, val]) => {
-        console.trace(`(BRZ) resolve: 0x${here.toString(16).padStart(4, "0")} ${val}`);
-        asm.undatum(here); // erease placeholder
-        asm.origin(here);
-        if ((typeof val) == "number") {
-          asm.datum(0xA000 | (val & 0x0FFF));
-        } else {
-          asm.datum("NOP"); // placeholder
-          val.then((value) => {
-            const prev = asm.addr;
-            asm.undatum(here);
-            asm.origin(here);
-            asm.datum((0xA000 | (value, 0x0FFF)));
-            asm.origin(prev);
-          });
-        }
-      };
-      asm.datum("NOP"); // placeholder put in
-      const gildra = asm.addr;
-      asm.datum({ resolve });
-      asm.origin(gildra);
-      return undefined;
-    });
-    */
-    
     return {
       ...asm,
       def: (sym, val = undefined) => {
