@@ -63,7 +63,11 @@ test("uCode cpu 2v2 NOP instr", async t => {
   memory.store(0x0000, 0x0000);
   emu.doOneInstruction();
   // todo: actually check if stuff that happened, did
-  t.pass();
+  if (emu.pc == 0x0001) {
+    t.pass();
+  } else {
+    t.fail();
+  }
   return undefined;
 });
 test("uCode cpu 2v2 PLUS instr", async (t) => {
@@ -92,5 +96,19 @@ test("uCode cpu 2v2 AND instr", async (t) => {
     t.pass();
   } else {
     t.fail(`expected 0x0042 but got 0x${result.toString(16).padStart(4, "0")}`);
+  }
+});
+test("uCode cpu 2v2 XOR instr", async (t) => {
+  const { emu, dstack, memory } = await common_setup();
+  emu.pc = 0x0000;
+  memory.store(0x0745, 0x0000);
+  dstack.push(0x5555);
+  dstack.push(0xAAAA);
+  emu.doOneInstruction();
+  const result = dstack.pop();
+  if (result == 0xFFFF) {
+    t.pass();
+  } else {
+    t.fail(`expected 0xFFFF but got 0x${result.toString(16).padStart(4, "0")}`);
   }
 });
