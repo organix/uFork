@@ -39,7 +39,7 @@ module spi_master #(
     output                  o_SS                        // spi Slave Select
     input                   i_en,                       // device enable
     input                   i_wr,                       // {0:read, 1:write}
-    input             [3:0] i_addr,                     // {0:TX_RDY, 1:TX_DAT, 2:RX_RDY, 3:RX_DAT}
+    input             [3:0] i_addr,                     // {0:STATUS, 1:DATA_OUT, 2:DATA_IN, 3:CTRL}
     input             [7:0] i_data,                     // data to write
     output reg        [7:0] o_data                      // last data read
   );
