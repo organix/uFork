@@ -33,11 +33,29 @@ test("name of test", t => {
 // note this only works for uCode cpu version 2.2
 const common_setup = async (opts) => {
   const {
+    makeStack,
     makeMemory,
     makeQuadMemory,
     makeDebugIOStub,
     makeEmulator_uFork_SM2v2,
   } = await require("../util/emulator.js");
+
+  const dstack = makeStack();
+  const rstack = makeStack();
+  const memory = makeMemory();
+  const quads  = makeQuadMemory();
+  const io     = makeDebugIOStub();
+  const emu    = makeEmulator_uFork_SM2v2({
+    quads,
+    microcode_memory: memory, 
+    dstack,
+    rstack,
+    debug_io: io, 
+  });
+  
+  return {
+    dstack, rstack, memory, quads, io, emu,
+  };
 }
 test("uCode cpu 2v2 NOP instr", async t => {
 });
