@@ -1,6 +1,6 @@
 This is the older uFork_CSM1 instructionset.
 
-See [cpu.md](../fomu/csm/cpu.md) for the current instructionset. (Called uFork_SM2 in ucode)
+See [cpu.md](../fomu/cpu/cpu.md) for the current instructionset. (Called uFork_SM2.2 in ucode)
 
 Instruction set, subject to change.
 
