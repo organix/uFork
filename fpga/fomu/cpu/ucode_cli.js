@@ -30,54 +30,27 @@ new Response(Deno.stdin.readable).text().then(function (text) {
         return Deno.exit(1);
     }
 
-// Compose lines of output.
+// Compose rows of columns.
+// TODO: explain layout
 
-    let lines = [];
-
-/*
-// Dump symbol table as leading comments.
-
-    Object.entries(words).forEach(function ([name, word]) {
-        if (typeof word === "number" && (word & 0x8000) !== 0) {
-            const word_hex = word.toString(16).padStart(4, "0");
-            lines.push("// " + word_hex + ": " + name);   // symbol table entry
-        }
-    });
-*/
-    prog.forEach(function (word, address) {
-
-// Occasionally include the current word's address in a comment.
-
-        if (address % 16 === 0) {
-            const long_hex = address.toString(16).padStart(8, "0");
-            lines.push("// 0x" + long_hex);
-        }
-
-// Include symbol-table entries as comments.
-
+    let lines = prog.map(function (code, address) {
         const call = 0xC000 | address;
-        Object.entries(words).forEach(function ([name, word]) {
-            if (word === call) {
-                const hex = address.toString(16).padStart(3, "0");
-                lines.push("// " + hex + ": " + name);   // symbol table entry
-            }
-        });
-
-// Encode each word as a hex string, one per line.
-
-        const short_hex = word.toString(16).padStart(4, "0");
-        const annotation = disasm(word, words);
-        lines.push(
-            annotation !== ""
-            ? short_hex + "  // " + annotation
-            : short_hex
+        const line = (
+            code.toString(16).padStart(4, "0")
+            + " // "
+            + "0x" + address.toString(16).padStart(3, "0") + "   "
+            + disasm(code, words).padEnd(24, " ")
+            + Object.entries(words).filter(function ([ignore, word]) {
+                return word === call;
+            }).map(function ([name, ignore]) {
+                return name;
+            }).join(
+                " "
+            )
         );
+        return line.trim();
     });
-
-// Include length as a final comment.
-
-    const length_hex = prog.length.toString(16).padStart(8, "0");
-    lines.push("// 0x" + length_hex);
+    lines.unshift("     // [addr]  [disasm]                [names]");
     Deno.stdout.write(text_encoder.encode(lines.join("\n") + "\n"));
     return Deno.exit(0);
 });
