@@ -80,3 +80,17 @@ test("uCode cpu 2v2 PLUS instr", async (t) => {
     t.fail(`got ${result} but expected 0x0003`);
   }
 });
+test("uCode cpu 2v2 AND instr", async (t) => {
+  const { emu, dstack, memory } = await common_setup();
+  emu.pc = 0x0000;
+  memory.store(0x0744, 0x0000);
+  dstack.push(0x00FF);
+  dstack.push(0x6942);
+  emu.doOneInstruction();
+  const result = dstack.pop();
+  if (result == 0x0042) {
+    t.pass();
+  } else {
+    t.fail(`expected 0x0042 but got 0x${result.toString(16).padStart(4, "0")}`);
+  }
+});
