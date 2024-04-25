@@ -31,16 +31,28 @@ new Response(Deno.stdin.readable).text().then(function (text) {
     }
 
 // Compose rows of columns.
-// TODO: explain layout
 
-    let lines = prog.map(function (code, address) {
+    let lines = [
+        " // CODE    ADR DISASM                  NAMES                     //",
+        "///////////////////////////////////////////////////////////////////"
+//           021f // 0a9 (LIT)                   RX? KEY?
+//           0002 // 0aa
+//           533f // 0ab IO@ EXIT
+// E.g.      021f // 0ac (LIT)                   RX@
+//           0003 // 0ad
+//           533f // 0ae IO@ EXIT
+//           c0a3 // 0af TX?                     EMIT
+//           a0af // 0b0 jump_ifzero_inc(0af)
+    ];
+    lines = lines.concat(prog.map(function (code, address) {
         const call = 0xC000 | address;
         const line = (
-            code.toString(16).padStart(4, "0")
-            + " // "
-            + "0x" + address.toString(16).padStart(3, "0") + "   "
-            + disasm(code, words).padEnd(24, " ")
-            + Object.entries(words).filter(function ([ignore, word]) {
+            "    " + code.toString(16).padStart(4, "0")             // CODE
+            + " // " + address.toString(16).padStart(3, "0") + " "  // ADR
+            + disasm(code, words).padEnd(24, " ")                   // DISASM
+            + Object.entries(                                       // NAMES
+                words
+            ).filter(function ([ignore, word]) {
                 return word === call;
             }).map(function ([name, ignore]) {
                 return name;
@@ -48,9 +60,8 @@ new Response(Deno.stdin.readable).text().then(function (text) {
                 " "
             )
         );
-        return line.trim();
-    });
-    lines.unshift("     // [addr]  [disasm]                [names]");
+        return line.trimEnd();
+    }));
     Deno.stdout.write(text_encoder.encode(lines.join("\n") + "\n"));
     return Deno.exit(0);
 });
