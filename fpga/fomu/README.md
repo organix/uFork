@@ -18,10 +18,10 @@ demonstrate and verify the behavior a various components,
 leading to a fully-functioning processor.
 
   * [RGB Blinker Demo](blink_rgb/README.md)
-  * [Canonical Stack Machine](csm/README.md)
   * [Reusable Module Library](lib/README.md)
     * Domain-Crossing Synchronizer
     * Clock Divider
     * LED Frequency Limiter
     * Unbuffered Serial UART
     * Fast LIFO (Stack)
+  * [uCode/Forth CPU](cpu/README.md)

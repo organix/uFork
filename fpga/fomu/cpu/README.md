@@ -1,15 +1,13 @@
-# Canonical Stack Machine (CSM)
+# uCode/Forth Processor
 
 The sources in this directory
-implement Koopman's _Canonical Stack Machine_
-from Chapter 3 of
-"[Stack Computers: the new wave](https://users.ece.cmu.edu/~koopman/stack_computers/)".
+implement a Forth-oriented processor
+that serves as the microcode machine
+for implementing uFork instructions.
 Programs for the machine
 are written in [Forth](https://en.wikipedia.org/wiki/Forth_(programming_language)).
 Considerable inspiration was taken from
-the [`j1a`](https://github.com/jamesbowman/swapforth/tree/master/j1a).
-
-**NOTE**: _The CPU design has drifted considerably from the original CSM!_
+[`J1a SwapForth`](https://github.com/jamesbowman/swapforth/tree/master/j1a).
 
 ## Build and Deploy
 
