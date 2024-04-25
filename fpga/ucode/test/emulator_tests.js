@@ -66,3 +66,17 @@ test("uCode cpu 2v2 NOP instr", async t => {
   t.pass();
   return undefined;
 });
+test("uCode cpu 2v2 PLUS instr", async (t) => {
+  const { emu, dstack, memory } = await common_setup();
+  emu.pc = 0x0000;
+  memory.store(0x0741, 0x0000);
+  dstack.push(0x0001);
+  dstack.push(0x0002);
+  emu.doOneInstruction();
+  const result = dstack.pop();
+  if (result == 0x0003) {
+    t.pass();
+  } else {
+    t.fail(`got ${result} but expected 0x0003`);
+  }
+});
