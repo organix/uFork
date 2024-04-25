@@ -3,14 +3,14 @@
 
        +-----------------+
        | spi master      |
-C      |                 |
-P  --->|i_en       o_SCLK|--->
-U  --->|i_wr       o_MOSI|--->
-   =4=>|i_addr     i_MISO|<---
-S  =8=>|i_data       o_SS|--->
-I  <=8=|o_data           |
-D      |                 |
-E   +->|i_clk            |
+C      |                 |      S
+P  --->|i_en       o_SCLK|--->  P
+U  --->|i_wr       o_MOSI|--->  I
+   =4=>|i_addr     i_MISO|<---   
+S  =8=>|i_data       o_SS|--->  S
+I  <=8=|o_data           |      I
+D      |                 |      D
+E   +->|i_clk            |      E
     |  +-----------------+
 
 This component is an spi master that is meant to connect to an external spi slave.
