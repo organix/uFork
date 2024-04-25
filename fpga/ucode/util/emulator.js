@@ -560,7 +560,7 @@ export const make_fomu_sys_emu = (opts) => {
   return fomu_sys_emu;
 };
 
-export const makeEmulator_uFork_SM2v1 = (opts) => {
+export const makeEmulator_uFork_SM2v2 = (opts) => {
 opts = (opts == undefined) ? {} : opts;
   let pc = (opts.pc == undefined) ? 0x0010 : opts.pc ;
   const emu = {
@@ -791,29 +791,22 @@ opts = (opts == undefined) ? {} : opts;
               pc = addr;
             } else {
               pc = (pc + 1) & 0x0FFF;
-              dstack.push((TOS + 1) & 0xFFFF);
             }
           }; break;
-        case 2:
-          {
-            const TOS = dstack.pop();
-            if (TOS == 0x0000) {
-              pc = addr;
-            } else {
-              pc = (pc + 1) & 0x0FFF;
-            }
-          }; break;
+        case 2: // gegnfall
         case 3:
           {
-            const TOS = dstack.pop();
-            if (TOS == 0x0000) {
-              pc = addr;
-            } else {
+            const TORS = rstack.pop();
+            const incr_or_decr = tst_inc & 0x1;
+            if (TORS == 0x0000) {
               pc = (pc + 1) & 0x0FFF;
-              dstack.push((TOS - 1) & 0xFFFF);
+              const res = (incr_or_decr == 0) ? (TORS + 1) : (TORS - 1) ;
+              rstack.push(res & 0xFFFF);
+            } else {
+              pc = addr;
             }
-          }; break
-      }
+          }; break;
+       }
     }
   }
   return emu;
