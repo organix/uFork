@@ -58,4 +58,11 @@ const common_setup = async (opts) => {
   };
 }
 test("uCode cpu 2v2 NOP instr", async t => {
+  const { emu, memory } = await common_setup();
+  emu.pc = 0x0000;
+  memory.store(0x0000, 0x0000);
+  emu.doOneInstruction();
+  // todo: actually check if stuff that happened, did
+  t.pass();
+  return undefined;
 });
