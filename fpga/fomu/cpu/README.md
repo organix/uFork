@@ -76,3 +76,7 @@ to the serial port at your desired baud-rate.
     $ screen /dev/tty.usbserial-AD0JIXTZ 115200
 
 Use the key sequence `Ctrl-a + k` to kill the terminal session.
+
+## Sample CPU Trace (Simulated)
+
+![CPU Trace](sample_cpu_trace.png)

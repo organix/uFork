@@ -43,20 +43,23 @@ function compile(text, src = "") {
 
     const ADDR_MASK =           0x0FFF;                 // 12-bit uCode addresses
 
-    function uc_call(addr) {    // push return address and jump
-        return (0xC000 | (addr & ADDR_MASK));
-    }
     function uc_jump(addr) {    // jump (unconditional)
         return (0x8000 | (addr & ADDR_MASK));
     }
-    function uc_jz(addr) {      // jump if zero
-        return (0xA000 | (addr & ADDR_MASK));
-    }
-    function uc_jz_inc(addr) {  // jump if zero, else increment
+    function uc_jz(addr) {      // jump, if zero
         return (0x9000 | (addr & ADDR_MASK));
     }
-    function uc_jz_dec(addr) {  // jump if zero, else decrement
+    function uc_inc_jnz(addr) {  // increment and jump, if not zero
+        return (0xA000 | (addr & ADDR_MASK));
+    }
+    function uc_dec_jnz(addr) {  // decrement and jump, if not zero
         return (0xB000 | (addr & ADDR_MASK));
+    }
+    function uc_call(addr) {    // push return address and jump
+        return (0xC000 | (addr & ADDR_MASK));
+    }
+    function uc_cz(addr) {      // call, if zero
+        return (0xD000 | (addr & ADDR_MASK));
     }
 
     const UC_LIT =          0x021F;                     // (LIT) item ( -- item )
@@ -145,6 +148,15 @@ function compile(text, src = "") {
         // skip (next instruction), if TOS is zero
         prog.push(uc_jz(prog.length + 2));
     };
+    words["CALLZ"] = function () {                      // 0= IF <call> THEN
+        // call (next word), if TOS is zero
+        const name = next_token();
+        const word = words[name];
+        if ((word & 0xF000) != 0xC000) {
+            return error(name, "is not a procedure");
+        }
+        prog.push(uc_cz(word));
+    };
     words["BEGIN"] = function () {                      // ( -- )
         // begin indefinite loop
         const addr = prog.length;
@@ -171,32 +183,33 @@ function compile(text, src = "") {
         prog.push(word);
         prog[addr] = uc_jz(prog.length);  // patch
     };
-    words["?D0"] = function () {                        // ( n -- ) ( R: -- n' )
+    words["?R0"] = function () {                        // ( n -- ) ( R: -- n' )
         // begin counted loop
+        prog.push(UC_TO_R);
         const addr = prog.length;
 //debug console.log("compile_counted_loop:", "$"+addr.toString(16).padStart(3, "0"));
-        const word = uc_jz(addr);  // placeholder
+        const word = uc_jump(addr);  // placeholder
         ctrl_ctx.push(word);
         prog.push(word);
-        prog.push(UC_TO_R);
     };
     words["I"] = function () {                          // ( -- n ) ( R: n -- n )
         // fetch loop count (from R-stack)
+        if (ctrl_ctx.length < 1) {
+            return error("no `I` at control depth", ctrl_ctx.length);
+        }
         prog.push(UC_R_FETCH);
     };
     words["LOOP-"] = function () {                      // loop->pc
         // end decrement loop
-        prog.push(UC_R_FROM);
         const addr = ctrl_ctx.pop() & ADDR_MASK;
-        prog.push(uc_jump(addr));
-        prog[addr] = uc_jz_dec(prog.length);  // patch
+        prog[addr] = uc_jump(prog.length);  // patch
+        prog.push(uc_dec_jnz(addr + 1));
     };
     words["LOOP+"] = function () {                      // loop->pc
         // end increment loop
-        prog.push(UC_R_FROM);
         const addr = ctrl_ctx.pop() & ADDR_MASK;
-        prog.push(uc_jump(addr));
-        prog[addr] = uc_jz_inc(prog.length);  // patch
+        prog[addr] = uc_jump(prog.length);  // patch
+        prog.push(uc_inc_jnz(addr + 1));
     };
     words["IF"] = function () {                         // ( cond -- )
         // begin conditional
@@ -276,7 +289,10 @@ function compile(text, src = "") {
                             : TAIL_NONE;
                 } else if (typeof word === "function") {
                     // invoke compiler function
-                    word();
+                    const err = word();
+                    if (err) {
+                        return err;
+                    }
                     tail_ctx = TAIL_NONE;
                 } else {
                     const num = Number(token);

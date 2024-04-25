@@ -118,8 +118,9 @@ program counter may be pushed onto the R-stack. If the instruction is
 conditional, the program counter is only loaded from the immediate
 field if the value at the top of the data stack (D0) is zero, otherwise
 the program counter is loaded with the address of the next instruction,
-which is the default behavior of all instructions. If D0 is _not_ zero,
-it may be incremented or decremented by one.
+which is the default behavior of all instructions. If the instruction
+is auto-increment/decrement, the top of the return stack (R0) is tested
+instead of D0, and if R0 _not_ zero, it is incremented/decremented by 1.
 
      15  14  13  12  11  10   9   8   7   6   5   4   3   2   1   0
     *---+---+---+---*---+---+---+---*---+---+---+---*---+---+---+---*
@@ -127,9 +128,9 @@ it may be incremented or decremented by one.
     *---+---+---+---*---+---+---+---*---+---+---+---*---+---+---+---*
       ^   ^  \_____/
       |   |  00: addr->PC
-      |   |  01: D0==0 ? addr->PC,DROP : PC+1->PC,D0+1->D0
-      |   |  10: D0==0 ? addr->PC,DROP : PC+1->PC,DROP
-      |   |  11: D0==0 ? addr->PC,DROP : PC+1->PC,D0-1->D0
+      |   |  01: D0==0 ? addr->PC,DROP : PC+1->PC,DROP
+      |   |  10: R0==0 ? PC+1->PC,RDROP : addr->PC,R0+1->R0
+      |   |  11: R0==0 ? PC+1->PC,RDROP : addr->PC,R0-1->R0
       | PC+1->R {0:JUMP, 1:CALL}
     control
 

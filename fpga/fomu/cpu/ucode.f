@@ -133,13 +133,18 @@
 : RX@ ( -- char )
     0x03 IO@ ;
 : EMIT ( char -- )
-    BEGIN TX? UNTIL TX! ;
+    BEGIN TX? UNTIL TX! ; ( FIXME: consider fall-thru instead of tail-call )
 : KEY ( -- char )
     BEGIN RX? UNTIL RX@ ;
+: ECHO ( char -- )
+    EMIT
+    DUP '\r' = IF
+        '\n' EMIT
+    THEN ;
 : SPACE ( -- )
     BL EMIT ;
 : SPACES ( n -- )
-    ?D0
+    ?R0
         SPACE
     LOOP- ;
 : CR ( -- )
@@ -147,7 +152,7 @@
 : X# ( n -- )
     TOHEX EMIT ;
 : X. ( n -- )
-    4 ?D0
+    4 ?R0
         4ROL DUP X#
     LOOP- DROP ;
 
@@ -240,7 +245,7 @@ VARIABLE here   ( bulk copy addr )
     DUP 0< IF
         2DROP
     ELSE
-        1+ ?D0
+        1+ ?R0
             DUP fetch       ( D: addr data )
             OVER 0x7 AND IF
                 SPACE
@@ -286,12 +291,9 @@ VARIABLE here   ( bulk copy addr )
     DUP '\b' = IF
         DROP DEL
     THEN
-    DUP DEL = SKZ del       ( delete previous )
-    DUP '/' = SKZ eol       ( comment to EOL )
-    DUP EMIT
-    DUP '\r' = IF
-        '\n' EMIT
-    THEN
+    DUP DEL XOR CALLZ del   ( delete previous )
+    DUP '/' XOR CALLZ eol   ( comment to EOL )
+    DUP ECHO
     cmd @ SWAP              ( D: cmd key )
     ( '<' EMIT OVER X. '.' EMIT DUP X. '>' EMIT )
     DUP BL <= IF
@@ -344,15 +346,13 @@ VARIABLE here   ( bulk copy addr )
     THEN
     MONITOR ;
 
-: ECHO
-    KEY DUP
-    ( EMIT ) X. CR
-    DUP '\r' = IF
-        '\n' EMIT
-    THEN
+: ECHOLOOP
+    KEY
+    DUP X. CR
+    ( DUP ECHO )
     ^C = SKZ EXIT           ( abort! )
-    ECHO ;
+    ECHOLOOP ;
 
 ( WARNING! if BOOT returns we PANIC! )
 : BOOT
-    ECHO prompt MONITOR ;
+    ECHOLOOP prompt MONITOR ;

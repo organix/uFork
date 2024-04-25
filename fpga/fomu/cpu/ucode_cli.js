@@ -37,9 +37,10 @@ new Response(Deno.stdin.readable).text().then(function (text) {
         if (code & 0x8000) {
             text += (code & 0x4000) ? "call" : "jump";
             if (code & 0x3000) {
-                text += "_ifzero";
-                if (code & 0x1000) {
-                    text += (code & 0x2000 ? "_dec" : "_inc");
+                if (code & 0x2000) {
+                    text += (code & 0x1000 ? "_ifnz_dec" : "_ifnz_inc");
+                } else {
+                    text += "_ifzero";
                 }
             }
             const addr = code & 0xFFF;

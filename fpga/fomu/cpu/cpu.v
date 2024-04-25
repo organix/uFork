@@ -150,7 +150,7 @@ module cpu #(
     initial begin
         $readmemh("ucode_rom.mem", ucode);
         /*
-        ucode[12'h000] = 16'h8050;//16'h8002;//UC_NOP;
+        ucode[12'h000] = 16'h8020;//16'h8002;//UC_NOP;
         ucode[12'h001] = UC_FAIL;
         ucode[12'h002] = UC_TRUE;
         ucode[12'h003] = UC_DUP;
@@ -176,33 +176,34 @@ module cpu #(
         //
         // branch, fetch, and store
         //
-        ucode[12'h01D] = UC_CONST;
+        ucode[12'h01D] = UC_CONST;                      // ( -- $01F )
         ucode[12'h01E] = 16'h001F;
         ucode[12'h01F] = 3;
-        ucode[12'h020] = UC_LIT;                        // $01F
-        ucode[12'h021] = 16'h001F;
-        ucode[12'h022] = UC_FETCH;                      // 3=@$01F
-        ucode[12'h023] = 16'hB027;                      // test, branch, and decrement
-        ucode[12'h024] = 16'hC01D;                      // cnt $01F
-        ucode[12'h025] = UC_STORE;                      // --
-        ucode[12'h026] = 16'h8020;                      // jump $020
-        ucode[12'h027] = UC_LIT;                        // -5
-        ucode[12'h028] = -5;
-        ucode[12'h029] = UC_LIT;                        // -5 $01F
-        ucode[12'h02A] = 16'h001F;
-        ucode[12'h02B] = UC_STORE;                      // --
-        ucode[12'h02C] = 16'h8000;                      // jump $000
+        ucode[12'h020] = 16'hC01D;                      // call $01D
+        ucode[12'h021] = UC_FETCH;                      // ( $01F -- I )
+        ucode[12'h022] = UC_TO_R;                       // ( I -- ) ( R: -- I )
+        ucode[12'h023] = 16'h8027;                      // jump $027
+        ucode[12'h024] = UC_R_FETCH;                    // ( -- I' )
+        ucode[12'h025] = 16'hC01D;                      // call $01D
+        ucode[12'h026] = UC_STORE;                      // ( I' $01F -- )
+        ucode[12'h027] = 16'hB024;                      // test, decrement, and branch $024
+        ucode[12'h028] = UC_LIT;                        // ( -- -5 )
+        ucode[12'h029] = -5;
+        ucode[12'h02A] = UC_LIT;                        // ( -- $01F )
+        ucode[12'h02B] = 16'h001F;
+        ucode[12'h02C] = UC_STORE;                      // ( -5 $01F -- )
+        ucode[12'h02D] = 16'h8000;                      // jump $000
         //
         // serial UART
         //
         ucode[12'h030] = UC_RX_OK;                      // rx?
-        ucode[12'h031] = 16'hA030;                      // --
+        ucode[12'h031] = 16'h9030;                      // (BZ $030)
         ucode[12'h032] = UC_GET_RX;                     // char
 //        ucode[12'h030] = UC_LIT;                        // 'K'
 //        ucode[12'h031] = 16'd75;
 //        ucode[12'h032] = UC_NOP;                        // char='K'
         ucode[12'h033] = UC_TX_OK;                      // char tx?
-        ucode[12'h034] = 16'hA033;                      // char
+        ucode[12'h034] = 16'h9033;                      // char (BZ $033)
         ucode[12'h035] = UC_SET_TX;                     // --
         ucode[12'h036] = 16'h8030;
         //
@@ -219,7 +220,7 @@ module cpu #(
         ucode[12'h048] = UC_LIT;                        // $BE11
         ucode[12'h049] = 16'hBE11;
         ucode[12'h04A] = UC_XOR;                        // EQ?
-        ucode[12'h04B] = 16'hA04D;                      // BZ $04D
+        ucode[12'h04B] = 16'h904D;                      // BZ $04D
         ucode[12'h04C] = UC_FAIL;                       // FAIL
         ucode[12'h04D] = 16'h8000;                      // jump $000
         //
@@ -233,7 +234,7 @@ module cpu #(
         ucode[12'h055] = UC_LIT;                        // 12345*-6789 10339=16#2863
         ucode[12'h056] = 10339;
         ucode[12'h057] = UC_XOR;                        // EQ?
-        ucode[12'h058] = 16'hA05A;                      // BZ $05A
+        ucode[12'h058] = 16'h905A;                      // BZ $05A
         ucode[12'h059] = UC_FAIL;                       // FAIL
         ucode[12'h05A] = 16'h8000;                      // jump $000
         //
@@ -418,17 +419,26 @@ module cpu #(
         : instr_r );
     wire ctrl = instr[15];                              // {0:evaluation, 1:control-transfer}
     wire r_pc = instr[14];                              // PC <-> R interaction
-    wire [1:0] r_op = instr[13:12];                     // R-stack operation
+    wire [1:0] r_op = instr[13:12];                     // R-stack operation (tst/inc, if ctrl)
+    wire auto = instr[13];                              // auto increment/decrement (if ctrl)
     wire d_drop = instr[11];                            // extra D-stack DROP --- FIXME: infer from (mem_op && mem_wr)?
     wire [2:0] d_op = instr[10:8];                      // D-stack operation
-    wire [1:0] alu_a = ( ctrl ? 2'b00 : instr[7:6] );   // left ALU input selector
-    wire [1:0] alu_b = ( ctrl ? r_op : instr[5:4] );    // right ALU input selector
+    wire [1:0] alu_a =                                  // left ALU input selector
+        ( ctrl ? 2'b10
+        : instr[7:6] );
+    wire [1:0] alu_b =                                  // right ALU input selector
+        ( ctrl ? { instr[12], 1'b1 }
+        : instr[5:4] );
     wire [3:0] alu_op = instr[3:0];                     // ALU operation
     wire mem_op = !ctrl && (alu_op == `MEM_OP);         // ALU bypass for MEM ops
     wire mem_wr = instr[7];                             // {0:read, 1:write} MEM
     wire [2:0] mem_rng = instr[6:4];                    // MEM range selector
     wire quad_op = mem_rng[2];                          // uFork quad-memory operation
     wire d_zero = (d0 == 0);                            // zero check for TOS
+    wire r_zero = (r0 == 0);                            // zero check for TORS
+    wire branch = (r_op == 2'b00)                       // branch taken
+                || ((r_op == 2'b01) && d_zero)
+                || (auto && !r_zero);
     wire [3:0] dev_id = d0[7:4];                        // device id (mem_rng == `MEM_DEV)
     wire [3:0] reg_id = d0[3:0];                        // register id (mem_rng == `MEM_DEV)
 
@@ -441,11 +451,12 @@ module cpu #(
         : pc );
 
     wire [DATA_SZ-1:0] r_value =
-        ( ctrl ? { {PAD_ADDR{1'b0}}, pc }
+        ( ctrl && !auto ? { {PAD_ADDR{1'b0}}, pc }
         : d_value );
     wire [2:0] r_se =
         ( ctrl ?
-            ( p_alu && r_pc ? `PUSH_SE
+            ( p_alu && !auto ? ( r_pc ? `PUSH_SE : `NO_SE )
+            : !p_alu && auto ? ( r_zero ? `DROP_SE : `RPLC_SE )
             : `NO_SE )
         : !p_alu ? r_op
         : `NO_SE );
@@ -460,12 +471,7 @@ module cpu #(
         ( mem_op ? mem_out
         : alu_out );
     wire [2:0] d_se =
-        ( ctrl ?
-            ( p_alu ? `NO_SE
-            : r_op == 2'b00 ? `NO_SE
-            : r_op == 2'b10 ? `DROP_SE
-            : d_zero ? `DROP_SE
-            : `RPLC_SE )
+        ( ctrl ? ( !p_alu && r_op == 2'b01 ? `DROP_SE : `NO_SE )
         : p_alu && d_drop ? `DROP_SE
         : !p_alu ? d_op
         : `NO_SE );
@@ -514,7 +520,7 @@ module cpu #(
                 pc <= r0[ADDR_SZ-1:0];                  // return from procedure
             end else if (mem_op && mem_rng == `MEM_PC) begin
                 pc <= pc + 1'b1;                        // auto-increment on [PC] access
-            end else if (ctrl && (r_op == 2'b00 || d_zero)) begin
+            end else if (ctrl && branch) begin
                 pc <= instr[ADDR_SZ-1:0];               // jump or call procedure
             end
             instr_r <= uc_rdata;
