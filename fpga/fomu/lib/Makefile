@@ -6,6 +6,7 @@ ALL =	led_freq.vcd \
 	serial_tx.vcd \
 	serial_rx.vcd \
 	serial_rx+tx.vcd \
+	fifo.vcd \
 	lifo.vcd \
 	spram.vcd \
 	bram.vcd

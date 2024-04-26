@@ -518,6 +518,26 @@ and the `PC` is incremented by `1`.
     Info: 	      ICESTORM_SPRAM:     3/    4    75%
     Info: Max frequency for clock 'clk': 25.19 MHz (PASS at 12.00 MHz)
 
+### Counting Loops Use R-stack Directly
+
+    Info: Device utilisation:
+    Info: 	         ICESTORM_LC:  1137/ 5280    21%
+    Info: 	        ICESTORM_RAM:    16/   30    53%
+    Info: 	               SB_IO:     8/   96     8%
+    Info: 	               SB_GB:     8/    8   100%
+    Info: 	        ICESTORM_PLL:     0/    1     0%
+    Info: 	         SB_WARMBOOT:     0/    1     0%
+    Info: 	        ICESTORM_DSP:     1/    8    12%
+    Info: 	      ICESTORM_HFOSC:     0/    1     0%
+    Info: 	      ICESTORM_LFOSC:     0/    1     0%
+    Info: 	              SB_I2C:     0/    2     0%
+    Info: 	              SB_SPI:     0/    2     0%
+    Info: 	              IO_I3C:     0/    2     0%
+    Info: 	         SB_LEDDA_IP:     0/    1     0%
+    Info: 	         SB_RGBA_DRV:     1/    1   100%
+    Info: 	      ICESTORM_SPRAM:     3/    4    75%
+    Info: Max frequency for clock 'clk': 26.65 MHz (PASS at 12.00 MHz)
+
 ## Component Block Diagrams
 
     .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .
