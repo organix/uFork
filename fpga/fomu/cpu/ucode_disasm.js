@@ -41,6 +41,9 @@ function ucode_disasm(code, dictionary = {}) {
         }
         const addr = code & 0xFFF;
         text += "(" + addr.toString(16).padStart(3, "0") + ")";
+    } else {
+        text += "0x";
+        text += code.toString(16).padStart(4, "0");
     }
     return text;
 }

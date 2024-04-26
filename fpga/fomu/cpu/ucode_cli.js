@@ -33,22 +33,27 @@ new Response(Deno.stdin.readable).text().then(function (text) {
 // Compose rows of columns.
 
     let lines = [
-        " // CODE    ADR DISASM                  NAMES                     //",
-        "///////////////////////////////////////////////////////////////////"
-//           021f // 0a9 (LIT)                   RX? KEY?
-//           0002 // 0aa
-//           533f // 0ab IO@ EXIT
-// E.g.      021f // 0ac (LIT)                   RX@
-//           0003 // 0ad
-//           533f // 0ae IO@ EXIT
-//           c0a3 // 0af TX?                     EMIT
-//           a0af // 0b0 jump_ifzero_inc(0af)
+        "//  CODE    ADR  DISASM                  NAMES                     //",
+        "/////////////////////////////////////////////////////////////////////"
+//           021f // 0ac: (LIT)                   RX? KEY?
+//           0002 // 0ad: 0x0002
+//           533f // 0ae: IO@ EXIT
+//           c0ac // 0af: RX?                     KEY
+//           90af // 0b0: jump_ifzero(0af)
+// E.g.      021f // 0b1: (LIT)                   RX@
+//           0003 // 0b2: 0x0003
+//           533f // 0b3: IO@ EXIT
+//           2100 // 0b4: >R                      SPACES
+//           80b7 // 0b5: jump(0b7)
+//           c0a6 // 0b6: SPACE
+//           b0b6 // 0b7: jump_ifnz_dec(0b6)
+//           5000 // 0b8: NOP EXIT
     ];
     lines = lines.concat(prog.map(function (code, address) {
         const call = 0xC000 | address;
         const line = (
             "    " + code.toString(16).padStart(4, "0")             // CODE
-            + " // " + address.toString(16).padStart(3, "0") + " "  // ADR
+            + " // " + address.toString(16).padStart(3, "0") + ": " // ADR
             + disasm(code, words).padEnd(24, " ")                   // DISASM
             + Object.entries(                                       // NAMES
                 words
