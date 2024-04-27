@@ -72,7 +72,7 @@ module uart #(
     // instantiate transmit fifo
     fifo #(
         .DATA_SZ(8),
-        .ADDR_SZ(4)
+        .ADDR_SZ(8)
     ) TX_FIFO (
         .i_clk(i_clk),
         .i_wr(tx_wr),
@@ -91,7 +91,7 @@ module uart #(
     // instantiate receive fifo
     fifo #(
         .DATA_SZ(8),
-        .ADDR_SZ(4)
+        .ADDR_SZ(8)
     ) RX_FIFO (
         .i_clk(i_clk),
         .i_wr(rx_wr),

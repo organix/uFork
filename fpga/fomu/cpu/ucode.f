@@ -282,7 +282,8 @@ VARIABLE here   ( bulk copy addr )
         '\b' EMIT BL EMIT '\b' EMIT
     THEN DROP ;
 : eol ( begin -- end )
-    EMIT KEY
+    ( copy @ CALLZ ) EMIT
+    KEY
     DUP '\r' = SKZ EXIT
     eol ;
 : MONITOR
