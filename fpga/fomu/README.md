@@ -24,4 +24,5 @@ leading to a fully-functioning processor.
     * LED Frequency Limiter
     * Unbuffered Serial UART
     * Fast LIFO (Stack)
+    * Synchronous FIFO (Queue)
   * [uCode/Forth CPU](cpu/README.md)
