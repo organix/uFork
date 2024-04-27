@@ -277,6 +277,15 @@ function compile(text, src = "") {
                 prog[addr] = UC_CONST;  // convert (LIT) to (CONST)
                 words[name] = word;  // add word to dictionary
                 tail_ctx = TAIL_NONE;
+            } else if (token === ",") {
+                // allocate raw data
+                if (tail_ctx !== TAIL_DATA) {
+                    return error("invalid data allocation");
+                }
+                const addr = prog.length - 2;
+                prog[addr] = prog[addr + 1];  // copy data over (LIT)
+                prog.pop();  // deallocate duplicated data
+                tail_ctx = TAIL_NONE;
             } else {
                 const word = words[token];
                 if (typeof word === "number") {
@@ -361,7 +370,7 @@ function compile(text, src = "") {
 //debug : 0< ( n -- n<0 )
 //debug     MSB& BOOL ;
 //debug : 4DROP ( a b c d -- )
-//debug     4 ?D0 DROP I DROP LOOP- ;
+//debug     4 ?R0 DROP I DROP LOOP- ;
 //debug : EMIT ( ch -- )
 //debug     BEGIN 0x00 IO@ UNTIL 0x01 IO! ;
 //debug : KEY ( -- ch )
@@ -370,6 +379,7 @@ function compile(text, src = "") {
 //debug     ! ;
 //debug : store ( data addr -- )
 //debug     @ ;
+//debug : Hello 72 , 101 , 108 , 108 , 111 ,
 //debug 
 //debug ( WARNING! BOOT should not return... )
 //debug : BOOT
