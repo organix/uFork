@@ -43,6 +43,20 @@ module spi_master #(
     input             [7:0] i_data,                     // data to write
     output reg        [7:0] o_data                      // last data read
   );
+
+  // device registers
+  localparam STATUS   = 4'h0;
+  localparam DATA_OUT = 4'h1;
+  localparam DATA_IN  = 4'h2;
+  localparam CTRL     = 4'h3;
+
+  always @(posedge i_clk) begin
+    if (i_en) begin
+      if (i_wr) begin
+      end else begin
+      end
+    end
+  end
 endmodule
 
 
