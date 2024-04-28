@@ -26,6 +26,7 @@ on the previous clock-cycle.
 
 `include "../lib/serial_tx.v"
 `include "../lib/serial_rx.v"
+`include "../lib/fifo.v"
 
 module uart #(
     parameter CLK_FREQ      = 48_000_000,               // clock frequency (Hz)
@@ -42,23 +43,20 @@ module uart #(
 );
 
     // instantiate serial transmitter
-    reg tx_wr = 1'b0;
-    reg [7:0] tx_data;
-    wire tx_busy;
     serial_tx #(
         .CLK_FREQ(CLK_FREQ),
         .BAUD_RATE(BAUD_RATE)
     ) SER_TX (
         .i_clk(i_clk),
-        .i_wr(tx_wr),
+        .i_wr(tx_rd),
         .i_data(tx_data),
         .o_busy(tx_busy),
         .o_tx(o_tx)
     );
+    wire [7:0] tx_data;
+    wire tx_busy;
 
     // instantiate serial receiver
-    wire rx_wr;
-    wire [7:0] rx_data;
     serial_rx #(
         .CLK_FREQ(CLK_FREQ),
         .BAUD_RATE(BAUD_RATE)
@@ -68,9 +66,44 @@ module uart #(
         .o_wr(rx_wr),
         .o_data(rx_data)
     );
+    wire rx_wr;
+    wire [7:0] rx_data;
 
-    reg rx_ready = 1'b0;                                // character in buffer
-    reg [7:0] rx_buffer;                                // character received
+    // instantiate transmit fifo
+    fifo #(
+        .DATA_SZ(8),
+        .ADDR_SZ(8)
+    ) TX_FIFO (
+        .i_clk(i_clk),
+        .i_wr(tx_wr),
+        .i_data(tx_buffer),
+        .o_full(tx_full),
+        .i_rd(tx_rd),
+        .o_data(tx_data),
+        .o_empty(tx_empty)
+    );
+    wire tx_wr = i_en && i_wr && i_addr == TX_DAT;
+    wire [7:0] tx_buffer = i_data;
+    wire tx_rd = !tx_busy && !tx_empty;
+    wire tx_empty;
+    wire tx_full;
+
+    // instantiate receive fifo
+    fifo #(
+        .DATA_SZ(8),
+        .ADDR_SZ(8)
+    ) RX_FIFO (
+        .i_clk(i_clk),
+        .i_wr(rx_wr),
+        .i_data(rx_data),
+        //.o_full(),  // IGNORED! overflow = data-loss
+        .i_rd(rx_rd),
+        .o_data(rx_buffer),
+        .o_empty(rx_empty)
+    );
+    wire rx_rd = i_en && !i_wr && i_addr == RX_DAT;
+    wire [7:0] rx_buffer;
+    wire rx_empty;
 
     // device "registers"
     localparam TX_RDY       = 4'h0;                     // ready to transmit
@@ -79,26 +112,13 @@ module uart #(
     localparam RX_DAT       = 4'h3;                     // data received
 
     always @(posedge i_clk) begin
-        if (rx_wr) begin
-            rx_ready <= 1'b1;
-            rx_buffer <= rx_data;
-        end
-        tx_wr <= 1'b0;                                  // default to "read"
-        if (i_en) begin
-            if (i_wr) begin
-                if (i_addr == TX_DAT) begin
-                    tx_data <= i_data;
-                    tx_wr <= 1'b1;
-                end
-            end else begin
-                if (i_addr == TX_RDY) begin
-                    o_data <= {8{!tx_busy}};
-                end else if (i_addr == RX_RDY) begin
-                    o_data <= {8{rx_ready}};
-                end else if (i_addr == RX_DAT) begin
-                    o_data <= rx_wr ? rx_data : rx_buffer;
-                    rx_ready <= 1'b0;
-                end
+        if (i_en && !i_wr) begin
+            if (i_addr == TX_RDY) begin
+                o_data <= {8{!tx_full}};
+            end else if (i_addr == RX_RDY) begin
+                o_data <= {8{!rx_empty}};
+            end else if (i_addr == RX_DAT) begin
+                o_data <= rx_buffer;
             end
         end
     end

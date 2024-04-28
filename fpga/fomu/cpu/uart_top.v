@@ -111,6 +111,12 @@ module top (
         end
     end
 
+    // UART device "registers"
+    localparam TX_RDY       = 4'h0;                     // ready to transmit
+    localparam TX_DAT       = 4'h1;                     // data to transmit
+    localparam RX_RDY       = 4'h2;                     // receive complete
+    localparam RX_DAT       = 4'h3;                     // data received
+
     // instantiate UART
     uart #(
 //        .CLK_FREQ(CLK_48MHz)
@@ -127,15 +133,49 @@ module top (
 
         .o_data(uart_rdata)
     );
-    wire uart_en = 1'b0;
-    wire uart_wr = 1'b0;
-    wire [3:0] uart_addr;
-    wire [7:0] uart_wdata;
+    wire uart_en = (state == 1)
+                || (state == 3)
+                || (state == 5)
+                || (state == 7);
+    wire uart_wr = (state == 7);
+    wire [3:0] uart_addr =
+        ( state == 1 ? RX_RDY
+        : state == 3 ? RX_DAT
+        : state == 5 ? TX_RDY
+        : state == 7 ? TX_DAT
+        : 4'h0 );
+    wire [7:0] uart_wdata =
+        ( state == 7 : buffer
+        : 8'h00 );
     wire [7:0] uart_rdata;
+
+    // console echo state-machine
+    reg [7:0] buffer = 0;
+    reg [2:0] state = 0;
+    always @(posedge clk) begin
+        if (state == 0) begin                           // wait for init
+            state <= run ? 1 : 0;
+        end else if (state == 1) begin                  // read rx status
+            state <= 2;
+        end else if (state == 2) begin                  // wait for rx ready
+            state <= uart_rdata ? 3 : 1;
+        end else if (state == 3) begin                  // read rx data
+            state <= 4;
+        end else if (state == 4) begin                  // copy to buffer
+            buffer <= uart_rdata;
+            state <= 5;
+        end else if (state == 5) begin                  // read tx status
+            state <= 6;
+        end else if (state == 6) begin                  // wait for tx ready
+            state <= uart_rdata ? 7 : 5;
+        end else if (state == 7) begin                  // write tx data
+            state <= 1;
+        end
+    end
 
     // drive LEDs
     assign led_r = !serial_tx;
     assign led_g = !serial_rx;
-    assign led_b = run;
+//    assign led_b = run;
 
 endmodule

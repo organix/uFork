@@ -125,30 +125,30 @@
 : TX? ( -- ready )
 : EMIT?
     0x00 IO@ ;
+: SPACE ( -- )
+    BL
+: EMIT ( char -- )
+    BEGIN TX? UNTIL
 : TX! ( char -- )
     0x01 IO! ;
 : RX? ( -- ready )
 : KEY?
     0x02 IO@ ;
+: KEY ( -- char )
+    BEGIN RX? UNTIL
 : RX@ ( -- char )
     0x03 IO@ ;
-: EMIT ( char -- )
-    BEGIN TX? UNTIL TX! ; ( FIXME: consider fall-thru instead of tail-call )
-: KEY ( -- char )
-    BEGIN RX? UNTIL RX@ ;
-: ECHO ( char -- )
-    EMIT
-    DUP '\r' = IF
-        '\n' EMIT
-    THEN ;
-: SPACE ( -- )
-    BL EMIT ;
 : SPACES ( n -- )
     ?R0
         SPACE
     LOOP- ;
 : CR ( -- )
     '\r' EMIT '\n' EMIT ;
+: ECHO ( char -- )
+    EMIT
+    DUP '\r' = IF
+        '\n' EMIT
+    THEN ;
 : X# ( n -- )
     TOHEX EMIT ;
 : X. ( n -- )
@@ -282,7 +282,8 @@ VARIABLE here   ( bulk copy addr )
         '\b' EMIT BL EMIT '\b' EMIT
     THEN DROP ;
 : eol ( begin -- end )
-    EMIT KEY
+    ( copy @ CALLZ ) EMIT
+    KEY
     DUP '\r' = SKZ EXIT
     eol ;
 : MONITOR
