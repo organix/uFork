@@ -371,14 +371,28 @@ export const minicore = (asm, opts) => {
       dat("0x0FFF_&");
     }
     dat(">R", "EXIT");
-    asm.macro.countDownLoop = (preamble, body, prefix) => {
-      preamble();
-      asm.symbols.define(prefix.concat("_loopStart"));
-      asm.macro.jmp(prefix.concat("_loopCheck"));
-      body();
-      def(prefix.concat("_loopCheck"));
+  }
+  asm.macro.countDownLoop = (prefix, body) => {
+    dat(">R");
+    asm.macro.jmp(prefix.concat("_loopCheck"));
+    asm.symbols.define(prefix.concat("_loopStart"));
+    body();
+    def(prefix.concat("_loopCheck"));
+    if (asm.macro.loopPlus == undefined) {
       dat("(NEXT)", prefix.concat("_loopStart"));
+    } else {
+      asm.macro.loopPlus(prefix.concat("_loopStart"));
     }
+  };
+  asm.macro.beginAgainLoop = (prefix, body) => {
+    asm.symbols.define(prefix.concat("_loopStart"));
+    body();
+    asm.macro.jmp(prefix.concat("_loopStart"));
+  };
+  asm.macro.beginUntilLoop = (prefix, body) => {
+    asm.symbols.define(prefix.concat("_loopStart"));
+    body();
+    asm.macro.brz(prefix.concat("_loopStart"));
   }
 
   def("(BREXIT)"); // ( bool -- ) exit caller early if bool is true
