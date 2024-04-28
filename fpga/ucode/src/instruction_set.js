@@ -462,7 +462,7 @@ export const defineInstructionset = (asm, opts = { instrsetName: "uFork_SM2.2" }
       });
     };
     def("(NEXT)", 0xB000);
-    asm.macro.loopPlus = (dest) => {
+    asm.macro.loopMinus = (dest) => {
       asm.datum((asm, here) => {
         const prev = asm.addr;
         const resolved_dest = ((typeof dest) == "string") ? asm.symbols.lookup(dest) : dest ;
