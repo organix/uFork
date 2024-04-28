@@ -66,7 +66,7 @@ module spi_master #(
         end
       end
     end
-    o_SS <= !CTRL_reg[0];
+    assign o_SS = !CTRL_reg[2];
   end
 endmodule
 
