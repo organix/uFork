@@ -3,7 +3,7 @@
 import alter_string from "./alter_string.js";
 import alter_cursor from "./alter_cursor.js";
 
-function handle_duplication(editor, event) {
+function ed_duplication(editor, event) {
     if (event.defaultPrevented) {
         return;
     }
@@ -42,4 +42,4 @@ function handle_duplication(editor, event) {
     }
 }
 
-export default Object.freeze(handle_duplication);
+export default Object.freeze(ed_duplication);

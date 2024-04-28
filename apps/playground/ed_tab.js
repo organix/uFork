@@ -5,7 +5,7 @@ import alter_cursor from "./alter_cursor.js";
 
 const rx_leading_spaces = /^\u0020*/;
 
-function handle_tab(editor, event, indent) {
+function ed_tab(editor, event, indent) {
     if (event.defaultPrevented) {
         return;
     }
@@ -76,4 +76,4 @@ function handle_tab(editor, event, indent) {
     }
 }
 
-export default Object.freeze(handle_tab);
+export default Object.freeze(ed_tab);
