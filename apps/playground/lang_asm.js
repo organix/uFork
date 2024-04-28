@@ -3,9 +3,9 @@
 /*jslint browser */
 
 import assemble from "https://ufork.org/lib/assemble.js";
-import handle_tab from "./handle_tab.js";
-import handle_comment from "./handle_comment.js";
-import handle_duplication from "./handle_duplication.js";
+import ed_tab from "./ed_tab.js";
+import ed_comment from "./ed_comment.js";
+import ed_duplication from "./ed_duplication.js";
 import theme from "./theme.js";
 
 const indent = "    ";
@@ -51,9 +51,9 @@ function highlight(element) {
 }
 
 function handle_keydown(editor, event) {
-    handle_tab(editor, event, indent);
-    handle_comment(editor, event, rx_comment, comment_prefix);
-    handle_duplication(editor, event);
+    ed_tab(editor, event, indent);
+    ed_comment(editor, event, rx_comment, comment_prefix);
+    ed_duplication(editor, event);
     if (event.defaultPrevented) {
         return;
     }

@@ -1,8 +1,8 @@
 // Text editor support for Scheme.
 
 import scm from "https://ufork.org/lib/scheme.js";
-import handle_tab from "./handle_tab.js";
-import handle_comment from "./handle_comment.js";
+import ed_tab from "./ed_tab.js";
+import ed_comment from "./ed_comment.js";
 import dom from "./dom.js";
 import theme from "./theme.js";
 
@@ -83,8 +83,8 @@ function highlight(element) {
 }
 
 function handle_keydown(editor, event) {
-    handle_tab(editor, event, indent);
-    handle_comment(editor, event, rx_comment, comment_prefix);
+    ed_tab(editor, event, indent);
+    ed_comment(editor, event, rx_comment, comment_prefix);
 }
 
 function stringify_error(error) {
