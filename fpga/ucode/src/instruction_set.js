@@ -461,6 +461,16 @@ export const defineInstructionset = (asm, opts = { instrsetName: "uFork_SM2.2" }
         asm.origin(prev);
       });
     };
+    def("(NEXT)", 0xB000);
+    asm.macro.loopPlus = (dest) => {
+      asm.datum((asm, here) => {
+        const prev = asm.addr;
+        const resolved_dest = ((typeof dest) == "string") ? asm.symbols.lookup(dest) : dest ;
+        asm.origin(here);
+        asm.datum(0xB000 | (resolved_dest & 0x0FFF));
+        asm.origin(prev);
+      });
+    };
     return {
       ...asm,
       def: (sym, val = undefined) => {
