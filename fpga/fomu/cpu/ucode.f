@@ -29,7 +29,7 @@
     0x0FFF AND >R
 : (EXIT)
     EXIT
-: ?: ( altn cnsq cond -- cnqs | altn )
+: ?: ( altn cnsq cond -- cnsq | altn )
     SKZ SWAP
 : (DROP)
     DROP ;
