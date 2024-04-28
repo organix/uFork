@@ -378,11 +378,10 @@ export const minicore = (asm, opts) => {
     asm.symbols.define(prefix.concat("_loopStart"));
     body();
     def(prefix.concat("_loopCheck"));
-    if (asm.macro.loopPlus == undefined) {
-      dat("(NEXT)", prefix.concat("_loopStart"));
-    } else {
-      asm.macro.loopPlus(prefix.concat("_loopStart"));
+    if (asm.macro.loopMinus == undefined) {
+      asm.macro.loopMinus = (dest) => { dat("(NEXT)", dest); }
     }
+    asm.macro.loopMinus(prefix.concat("_loopStart"));
   };
   asm.macro.beginAgainLoop = (prefix, body) => {
     asm.symbols.define(prefix.concat("_loopStart"));
