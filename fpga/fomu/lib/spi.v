@@ -30,7 +30,7 @@ Internal registers:
 `default_nettype none
 
 module spi_master #(
-    parameter CLK_FREQ      = 48_000_000,               // clock frequency (Hz)
+    parameter CLK_FREQ      = 48_000_000,               // cpu clock frequency (Hz)
 ) (
     input                   i_clk,                      // system clock
     output                  o_SCLK                      // Spi CLocK
@@ -54,6 +54,12 @@ module spi_master #(
     if (i_en) begin
       if (i_wr) begin
       end else begin
+        if (i_addr == STATUS) begin
+        end else if (i_addr == DATA_OUT) begin
+        end else if (i_addr == DATA_IN) begin
+        end else if (i_addr == CTRL) begin
+        end else begin
+        end
       end
     end
   end
