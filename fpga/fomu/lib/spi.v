@@ -50,6 +50,8 @@ module spi_master #(
   localparam DATA_IN  = 4'h2;
   localparam CTRL     = 4'h3;
 
+  reg [7:0] CTRL_reg;
+
   always @(posedge i_clk) begin
     if (i_en) begin
       if (i_wr) begin
@@ -58,10 +60,13 @@ module spi_master #(
         end else if (i_addr == DATA_OUT) begin
         end else if (i_addr == DATA_IN) begin
         end else if (i_addr == CTRL) begin
+          o_data <= CTRL_reg;
         end else begin
+          o_data <= 8'h00;
         end
       end
     end
+    o_SS <= !CTRL_reg[0];
   end
 endmodule
 
