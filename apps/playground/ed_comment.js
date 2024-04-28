@@ -3,7 +3,7 @@
 import alter_string from "./alter_string.js";
 import alter_cursor from "./alter_cursor.js";
 
-function handle_comment(editor, event, rx_comment, comment_prefix) {
+function ed_comment(editor, event, rx_comment, comment_prefix) {
     if (event.defaultPrevented) {
         return;
     }
@@ -64,4 +64,4 @@ function handle_comment(editor, event, rx_comment, comment_prefix) {
     }
 }
 
-export default Object.freeze(handle_comment);
+export default Object.freeze(ed_comment);
