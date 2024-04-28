@@ -393,7 +393,24 @@ export const minicore = (asm, opts) => {
     asm.symbols.define(prefix.concat("_loopStart"));
     body();
     asm.macro.brz(prefix.concat("_loopStart"));
-  }
+  };
+
+  //                  forskeyti, yrðing, afleiðing,  annars
+  asm.macro.efSegð = (prefix, condition, consequent, alternative) => {
+    condition();
+    if (alternative == undefined) {
+      asm.macro.brz(prefix.concat("_end"));
+      consequent();
+      asm.symbols.define(prefix.concat("_end"));
+    } else {
+      asm.macro.brz(prefix.concat("_alt"));
+      consequent();
+      asm.macro.jmp(prefix.concat("_end"));
+      asm.symbols.define(prefix.concat("_alt"));
+      alternative();
+      asm.symbols.define(prefix.concat("_end"));
+    }
+  };
 
   def("(BREXIT)"); // ( bool -- ) exit caller early if bool is true
   asm.macro.brz("(BREXIT)_l0"); // ( )
