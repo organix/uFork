@@ -7,7 +7,7 @@ C      |                 |      S
 P  --->|i_en       o_SCLK|--->  P
 U  --->|i_wr       o_MOSI|--->  I
    =4=>|i_addr     i_MISO|<---   
-S  =8=>|i_data       o_SS|--->  S
+S  =8=>|i_data   o_SS_bar|--->  S
 I  <=8=|o_data           |      I
 D      |                 |      D
 E   +->|i_clk            |      E
@@ -51,6 +51,8 @@ module spi_master #(
   localparam CTRL     = 4'h3;
 
   reg [7:0] CTRL_reg;
+  wire CPOL = CTRL_reg[1]; // spi clock polarity
+  wire CPHA = CTRL_reg[0]; // spi clock phase
 
   always @(posedge i_clk) begin
     if (i_en) begin
