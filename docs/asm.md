@@ -215,7 +215,7 @@ _dict_ _key_         | `dict` `get`        | _value_      | the first _value_ bo
 _dict_ _key_ _value_ | `dict` `add`        | _dict'_      | add a binding from _key_ to _value_ in _dict_
 _dict_ _key_ _value_ | `dict` `set`        | _dict'_      | replace or add a binding from _key_ to _value_ in _dict_
 _dict_ _key_         | `dict` `del`        | _dict'_      | remove first binding for _key_ in _dict_
-—                    | `deque` `new`       | _deque_      | create a new empty _deque_
+—                    | `deque` `new`       | _deque_      | an empty _deque_
 _deque_              | `deque` `empty`     | _bool_       | `#t` if _deque_ is empty, otherwise `#f`
 _deque_ _value_      | `deque` `push`      | _deque'_     | insert _value_ as the first element of _deque_
 _deque_              | `deque` `pop`       | _deque'_ _value_ | remove the first _value_ from _deque_, or `#?`
