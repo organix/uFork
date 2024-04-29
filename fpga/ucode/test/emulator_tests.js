@@ -112,3 +112,16 @@ test("uCode cpu 2v2 XOR instr", async (t) => {
     t.fail(`expected 0xFFFF but got 0x${result.toString(16).padStart(4, "0")}`);
   }
 });
+test("uCode cpu 2v2 1LBR instr", async (t) => {
+  const { emu, dstack, memory } = await common_setup();
+  emu.pc = 0x0000;
+  memory.store(0x0307, 0x0000);
+  dstack.push(0x8020);
+  emu.doOneInstruction();
+  const result = dstack.pop();
+  if (result == 0x0041) {
+    t.pass();
+  } else {
+    t.fail(`expected 0x0041 but got 0x${result.toString(16).padStart(4, "0")}`);
+  }
+});
