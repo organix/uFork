@@ -261,7 +261,7 @@ _sponsor_ _n_        | `sponsor` `cycles`  | _sponsor_    | transfer _n_ cycles 
 _sponsor_            | `sponsor` `reclaim` | _sponsor_    | reclaim all quotas from _sponsor_
 _sponsor_ _control_  | `sponsor` `start`   | —            | run _sponsor_ under _control_
 _sponsor_            | `sponsor` `stop`    | —            | reclaim all quotas and remove _sponsor_
-_actual_             | `assert` _expect_   | —            | assert _actual_ == _expect_, otherwise halt!
+_actual_             | `assert` _expect_   | —            | assert _actual_ == _expect_, otherwise fail!
 —                    | `debug`             | —            | debugger breakpoint
 
 <sup>*</sup> For conditionals (`if` and `if_not`) the values

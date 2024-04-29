@@ -113,6 +113,13 @@ Word        | Stack Effect                              | Description
 `@1+`       | ( addr -- )                               | Increment contents of _addr_
 `@1-`       | ( addr -- )                               | Decrement contents of _addr_
 
+### Comments
+
+When the compiler encounters `(` surrounded by whitespace,
+it begins a comment that continues until the matching `)`.
+Comments may be nested.
+Otherwise, all words within a comments are ignored.
+
 ### Literals, Constants, and Variables
 
 Word                | Stack Effect                          | Description
@@ -151,6 +158,33 @@ If a word designates a procedure,
 it is compiled into a _call_ to that procedure.
 A _call_ copies `PC+1` to TORS,
 and loads the `PC` with address of the procedure.
+
+> `:` _name_ ... _body_ ... `;`
+
+A procedure definition usually begins with `:` and ends with `;`.
+The `:` _name_ adds a procedure label to the dictionary,
+but does not generate any code.
+Multiple labels (aliases) may preceed the _body_.
+The `;` compiles to an optimized `EXIT`.
+If the preceeding word in the _body_ was a procedure call,
+it is converted to a _jump_ instruction (tail-call optimization).
+If the preceeding word in the _body_ was an instruction with no R-stack effect,
+the `EXIT` is added to that instruction (exit compression).
+Otherwise, a stand-alone `EXIT` is compiled (`NOP` + `EXIT`).
+Ending a definition with `EXIT` instead of `;`
+suppresses any optimizations and compiles a stand-alone `EXIT`.
+Additional labels within the _body_ create callable entry-points
+for tail-segments of the definition.
+
+The uCode machine supports several kinds control transfer
+with the target `PC` compiled into the instruction.
+A _jump_ is a basic unconditional transfer of control.
+A _call_ additionally copies `PC+1` to TORS.
+Either can be made conditional on a TOS value of `0`.
+Auto-increment/decrement variants maintain a _count_
+in TORS, jumping and removing the _count_ on `0`.
+The compiler generates the appropriate instructions
+for a variety of control-structures described below.
 
 ### Conditional and Looping Control-Structures
 
