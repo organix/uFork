@@ -138,3 +138,17 @@ test("uCode cpu 2v2 INCR instr", async (t) => {
     t.fail(`expected 0x0042 but got 0x${result.toString(16).padStart(4, "0")}`);
   }
 });
+test("uCode cpu 2v2 FETCH instr", async (t) => {
+  const { emu, dstack, memory } = await common_setup();
+  emu.pc = 0x0000;
+  memory.store(0x030F, 0x0000);
+  memory.store(0xBABE, 0x0100);
+  dstack.push(0x0100);
+  emu.doOneInstruction();
+  const result = dstack.pop();
+  if (result == 0xBABE) {
+    t.pass();
+  } else {
+    t.fail(`expected 0xBABE but got 0x${result.toString(16).padStart(4, "0")}`);
+  }
+});
