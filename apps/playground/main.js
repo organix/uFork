@@ -113,7 +113,7 @@ const editor = editor_ui({
     lang_packs,
     on_text_input(text) {
         return (
-            text === initial_text
+            (text === initial_text && read_state("src") !== undefined)
             ? write_state("text", undefined)
             : gzip.encode(text).then(base64.encode).then(function (base64) {
                 write_state("text", base64);

@@ -18,35 +18,49 @@ function ed_tab(editor, event, indent) {
     const post = text.slice(cursor_end);
     const line_pre = pre.split("\n").pop();
     const line_post = post.split("\n").shift();
-    const lines = text.slice(cursor_start, cursor_end).split("\n");
+    let lines = text.slice(cursor_start, cursor_end).split("\n");
     if (event.key === "Tab") {
         event.preventDefault();
-        if (lines.length > 1) {
+        if (lines.length > 1 || event.shiftKey) {
 
-// Multiline.
+// Indent or outdent a multiline block.
 
-            lines[0] = line_pre + lines[0];         // expand to start of line
-            lines[lines.length - 1] += line_post;   // expand to end of line
+// Expand the selection to the start of the first line.
+
+            lines[0] = line_pre + lines[0];
+
+// Expand the selection to the end of the last line if at least one character of
+// that line has been selected. Otherwise contract the selection to exclude the
+// last line.
+
+            if (lines[lines.length - 1] !== "") {
+                lines[lines.length - 1] += line_post;
+            } else {
+                lines.pop();
+            }
             let position = cursor_start - line_pre.length;
-            const alterations = lines.map(function (line) {
-                const [spaces] = line.match(rx_leading_spaces);
-                const indent_alteration = {
-                    range: [position, position],
-                    replacement: indent
-                };
-                const outdent_alteration = {
-                    range: [
-                        position,
-                        position + Math.min(spaces.length, indent.length)
-                    ],
-                    replacement: ""
-                };
+            let alterations = [];
+            lines.forEach(function (line) {
+                if (line !== "") {
+                    const [spaces] = line.match(rx_leading_spaces);
+                    const indent_alteration = {
+                        range: [position, position],
+                        replacement: indent
+                    };
+                    const outdent_alteration = {
+                        range: [
+                            position,
+                            position + Math.min(spaces.length, indent.length)
+                        ],
+                        replacement: ""
+                    };
+                    alterations.push(
+                        event.shiftKey
+                        ? outdent_alteration
+                        : indent_alteration
+                    );
+                }
                 position += line.length + 1; // \n
-                return (
-                    event.shiftKey
-                    ? outdent_alteration
-                    : indent_alteration
-                );
             });
             editor.set_text(alter_string(text, alterations));
             editor.set_cursor(alter_cursor(cursor, alterations));
