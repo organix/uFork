@@ -22,6 +22,36 @@ const { test } = await require("npm:ava");
 /*
 todo:
   1. write a test for every primitive instruction and for calls
+  1.1  NOP      [x]
+  1.2  PLUS     [x]
+  1.3  AND      [x]
+  1.4  XOR      [x]
+  1.5  ROL      [x]
+  1.6  INCR     [x]
+  1.7  FETCH    [x]
+  1.8  STORE    [ ]
+  1.9  (LIT)    [ ]
+  1.10 DUP      [ ]
+  1.11 DROP     [ ]
+  1.12 SWAP     [ ]
+  1.13 TO_R     [ ]
+  1.14 R_FROM   [ ]
+  1.15 R_AT     [ ]
+  1.16 EXIT     [ ]
+  1.17 MINUS    [ ]
+  1.18 MULTIPLY [ ]
+  1.19 OR       [ ]
+  1.20 DECR     [ ]
+  1.21 INVERT   [ ]
+  1.22 NEGATE   [ ]
+  1.23 OVER     [ ]
+  1.24 ROT      [ ]
+  1.25 RROT     [ ]
+  1.26 FALSE    [ ]
+  1.27 TRUE     [ ]
+  1.28 LSB      [ ]
+  1.29 MSB      [ ]
+  1.30 TWOMUL   [ ]
   2. write a test to test memory
   3. write a test to test quad memory
   4. write a test to test a small ucode image
