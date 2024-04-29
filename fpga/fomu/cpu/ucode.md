@@ -120,6 +120,31 @@ Word                | Stack Effect                          | Description
 `(LIT)` _data_      | ( -- [PC+1] ) PC+2->PC                | Push literal _data_ onto stack
 `(CONST)` _data_    | ( -- [PC+1] ) ( R: addr -- ) addr->PC | Push literal _data_ onto stack and `EXIT`
 
+When the compiler encounters a literal number,
+either in decimal (e.g.: `-420`)
+or hexadecimal (e.g.: `0x7F`),
+it is compiled as `(LIT)`
+followed by the number as _data_.
+At runtime, this causes the _data_
+to be copied to the TOS.
+
+> _number_ `CONSTANT` _name_
+
+If a literal _number_ is followed by `CONSTANT` and a _name_,
+then the compiled `(LIT)` is converted to `(CONST)`,
+which is `(LIT)` plus `EXIT` (in a single instruction).
+The address of the `(CONST)` is added to the dictionary
+as the procedure _name_.
+Calling the _name_ procedure copies the _number_ to the TOS.
+
+> `VARIABLE` _name_
+
+When the compiler encounters `VARIABLE` followed by a _name_,
+a variable location is allocated and initialized to `0`.
+The address of the variable is compiled as a `(CONST)`
+and the _name_ is added to the dictionary
+as a procedure that produces the address.
+
 ### Calls, Jumps, and Definitions
 
 If a word designates a procedure,
@@ -147,7 +172,7 @@ Execute _body_, including the _test_. Remove the result of the _test_ from the s
 
 Execute _preamble_, including the _test_. Remove the result of the _test_ from the stack. If it is 0, jump to the instruction after `REPEAT`. If it is not 0, continue with the _body_. When `REPEAT` is encountered, jump to the instruction after `BEGIN`.
 
-uCode also implements several non-standard control-flow words, although the `?R0` loop is similar to the standard `?DO` loop.
+The uCode compiler also implements several non-standard control-flow words (although the `?R0` loop is similar to the standard `?DO` loop).
 
 > _count_ `?R0` ... _loop-body_ ... `LOOP-`
 
