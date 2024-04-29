@@ -22,9 +22,9 @@ Internal registers:
   0x1 data out (what the cpu wants out to the slave)
   0x2 data in  (what the spi slave wants into the master)
   0x3 control, whose bits controls:
-      bits 0-1: spi mode
+      bits 0-1: spi mode  (bit 0 clock phase, bit 1 clock polarity)
       bit    2: slave select, spi enable
-      bits 3-7: reserved
+      bits 3-7: cpu clock to spi clock division
 */
 
 `default_nettype none
@@ -53,17 +53,21 @@ module spi_master #(
   reg [7:0] CTRL_reg;
   wire CPOL = CTRL_reg[1]; // spi clock polarity
   wire CPHA = CTRL_reg[0]; // spi clock phase
+  wire [4:0] CLK_DIV = CTRL_reg[7:3];
 
   always @(posedge i_clk) begin
     if (i_en) begin
-      if (i_wr) begin
-      end else begin
-        if (i_addr == STATUS) begin
-        end else if (i_addr == DATA_OUT) begin
-        end else if (i_addr == DATA_IN) begin
-        end else if (i_addr == CTRL) begin
-          o_data <= CTRL_reg;
+      if (i_addr == STATUS) begin
+      end else if (i_addr == DATA_OUT) begin
+      end else if (i_addr == DATA_IN) begin
+      end else if (i_addr == CTRL) begin
+        if (i_wr) begin
+          CTRL_reg <= i_data;
         end else begin
+          o_data <= CTRL_reg;
+        end
+      end else begin
+        if (i_wr) begin
           o_data <= 8'h00;
         end
       end
