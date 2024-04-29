@@ -52,9 +52,11 @@ todo:
   1.28 LSB      [ ]
   1.29 MSB      [ ]
   1.30 TWOMUL   [ ]
+  1.31 call     [ ]
   2. write a test to test memory
   3. write a test to test quad memory
   4. write a test to test a small ucode image
+  5. write a test to test serial io
 */
 /* template:
 test("name of test", t => {
