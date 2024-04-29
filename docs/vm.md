@@ -491,6 +491,55 @@ Compute an ALU function of the arguments on the stack.
 
  T            | X (op)      | Y (imm)     | Z (k)
 --------------|-------------|-------------|-------------
+ `#instr_t`   | `+13` (alu) | `+1` (and)  | _instr_
+
+ 1. Remove item _m_ from the stack (`#?` on underflow)
+ 1. Remove item _n_ from the stack (`#?` on underflow)
+ 1. If _n_ and _m_ are both fixnums
+    1. Bitwise AND _n_ with _m_
+    1. Push result onto the stack
+ 1. Otherwise
+    1. Push `#?` onto the stack
+
+ T            | X (op)      | Y (imm)     | Z (k)
+--------------|-------------|-------------|-------------
+ `#instr_t`   | `+13` (alu) | `+2` (or)  | _instr_
+
+ 1. Remove item _m_ from the stack (`#?` on underflow)
+ 1. Remove item _n_ from the stack (`#?` on underflow)
+ 1. If _n_ and _m_ are both fixnums
+    1. Bitwise OR _n_ with _m_
+    1. Push result onto the stack
+ 1. Otherwise
+    1. Push `#?` onto the stack
+
+ T            | X (op)      | Y (imm)     | Z (k)
+--------------|-------------|-------------|-------------
+ `#instr_t`   | `+13` (alu) | `+3` (xor)  | _instr_
+
+ 1. Remove item _m_ from the stack (`#?` on underflow)
+ 1. Remove item _n_ from the stack (`#?` on underflow)
+ 1. If _n_ and _m_ are both fixnums
+    1. Bitwise XOR _n_ with _m_
+    1. Push result onto the stack
+ 1. Otherwise
+    1. Push `#?` onto the stack
+
+ T            | X (op)      | Y (imm)     | Z (k)
+--------------|-------------|-------------|-------------
+ `#instr_t`   | `+13` (alu) | `+4` (add)  | _instr_
+
+ 1. Remove item _m_ from the stack (`#?` on underflow)
+ 1. Remove item _n_ from the stack (`#?` on underflow)
+ 1. If _n_ and _m_ are both fixnums
+    1. Add _n_ and _m_
+    1. Truncate 2's-complement result
+    1. Push result onto the stack
+ 1. Otherwise
+    1. Push `#?` onto the stack
+
+ T            | X (op)      | Y (imm)     | Z (k)
+--------------|-------------|-------------|-------------
  `#instr_t`   | `+13` (alu) | `+5` (sub)  | _instr_
 
  1. Remove item _m_ from the stack (`#?` on underflow)
@@ -498,6 +547,80 @@ Compute an ALU function of the arguments on the stack.
  1. If _n_ and _m_ are both fixnums
     1. Subtract _m_ from _n_
     1. Truncate 2's-complement result
+    1. Push result onto the stack
+ 1. Otherwise
+    1. Push `#?` onto the stack
+
+ T            | X (op)      | Y (imm)     | Z (k)
+--------------|-------------|-------------|-------------
+ `#instr_t`   | `+13` (alu) | `+6` (mul)  | _instr_
+
+ 1. Remove item _m_ from the stack (`#?` on underflow)
+ 1. Remove item _n_ from the stack (`#?` on underflow)
+ 1. If _n_ and _m_ are both fixnums
+    1. Multiply _n_ by _m_
+    1. Truncate 2's-complement result
+    1. Push result onto the stack
+ 1. Otherwise
+    1. Push `#?` onto the stack
+
+ T            | X (op)      | Y (imm)     | Z (k)
+--------------|-------------|-------------|-------------
+ `#instr_t`   | `+13` (alu) | `+8` (lsl)  | _instr_
+
+ 1. Remove item _m_ from the stack (`#?` on underflow)
+ 1. Remove item _n_ from the stack (`#?` on underflow)
+ 1. If _n_ and _m_ are both fixnums
+    1. Logical shift _n_ left by _m_ bits (fill w/ zero)
+    1. Truncate 2's-complement result
+    1. Push result onto the stack
+ 1. Otherwise
+    1. Push `#?` onto the stack
+
+ T            | X (op)      | Y (imm)     | Z (k)
+--------------|-------------|-------------|-------------
+ `#instr_t`   | `+13` (alu) | `+9` (lsr)  | _instr_
+
+ 1. Remove item _m_ from the stack (`#?` on underflow)
+ 1. Remove item _n_ from the stack (`#?` on underflow)
+ 1. If _n_ and _m_ are both fixnums
+    1. Logical shift _n_ right by _m_ bits (fill w/ zero)
+    1. Push result onto the stack
+ 1. Otherwise
+    1. Push `#?` onto the stack
+
+ T            | X (op)      | Y (imm)     | Z (k)
+--------------|-------------|-------------|-------------
+ `#instr_t`   | `+13` (alu) | `+10` (asr) | _instr_
+
+ 1. Remove item _m_ from the stack (`#?` on underflow)
+ 1. Remove item _n_ from the stack (`#?` on underflow)
+ 1. If _n_ and _m_ are both fixnums
+    1. Arithmetic shift _n_ right by _m_ bits (sign extend)
+    1. Push result onto the stack
+ 1. Otherwise
+    1. Push `#?` onto the stack
+
+ T            | X (op)      | Y (imm)     | Z (k)
+--------------|-------------|-------------|-------------
+ `#instr_t`   | `+13` (alu) | `+11` (rol) | _instr_
+
+ 1. Remove item _m_ from the stack (`#?` on underflow)
+ 1. Remove item _n_ from the stack (`#?` on underflow)
+ 1. If _n_ and _m_ are both fixnums
+    1. Rotate _n_ left by _m_ bits
+    1. Push result onto the stack
+ 1. Otherwise
+    1. Push `#?` onto the stack
+
+ T            | X (op)      | Y (imm)     | Z (k)
+--------------|-------------|-------------|-------------
+ `#instr_t`   | `+13` (alu) | `+12` (ror) | _instr_
+
+ 1. Remove item _m_ from the stack (`#?` on underflow)
+ 1. Remove item _n_ from the stack (`#?` on underflow)
+ 1. If _n_ and _m_ are both fixnums
+    1. Rotate _n_ right by _m_ bits
     1. Push result onto the stack
  1. Otherwise
     1. Push `#?` onto the stack
