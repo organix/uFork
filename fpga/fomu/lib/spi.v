@@ -65,7 +65,9 @@ module spi_master #(
 
   reg [4:0] clkdiv_reg;
   reg SCLK;
+  
   always @(posedge i_clk) begin
+    // spi clock division from cpu clock
     if (state != IDLE) begin
       if (clkdiv_reg == CLK_DIV) begin
         SCLK <= !SCLK;
@@ -73,18 +75,14 @@ module spi_master #(
       end else begin
         clkdiv_reg <= clkdiv_reg + 1;
       end
-    end
-  end
-  always @(posedge SCLK or negedge SCLK) begin
-    if (state != IDLE) begin
+      
       if (state == START) begin
       end else if (stats == STOP) begin
       end else begin
       end
     end
-  end
 
-  always @(posedge i_clk) begin
+    // device register access
     if (i_en) begin
       if (i_addr == STATUS) begin
       end else if (i_addr == DATA_OUT) begin
@@ -102,6 +100,7 @@ module spi_master #(
       end
     end
     assign o_SS = !CTRL_reg[2];
+    state = START;
   end
 endmodule
 
