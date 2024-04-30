@@ -315,7 +315,7 @@ _dict_ _key_         | `dict` `get`        | _value_      | the first _value_ bo
 _dict_ _key_ _value_ | `dict` `add`        | _dict'_      | add a binding from _key_ to _value_ in _dict_
 _dict_ _key_ _value_ | `dict` `set`        | _dict'_      | replace or add a binding from _key_ to _value_ in _dict_
 _dict_ _key_         | `dict` `del`        | _dict'_      | remove first binding for _key_ in _dict_
-—                    | `deque` `new`       | _deque_      | create a new empty _deque_
+—                    | `deque` `new`       | _deque_      | an empty _deque_
 _deque_              | `deque` `empty`     | _bool_       | `#t` if _deque_ is empty, otherwise `#f`
 _deque_ _value_      | `deque` `push`      | _deque'_     | insert _value_ as the first item of _deque_
 _deque_              | `deque` `pop`       | _deque'_ _value_ | remove the first _value_ from _deque_, or `#?`
@@ -797,17 +797,118 @@ For `lt`, `le`, `ge`, and `gt`, fixnum values are compared.
 ---------------------|---------------------|--------------|-------------------------------------
 —                    | `debug`             | —            | debugger breakpoint
 
+Suspend the uFork machine and transfer control to the debugger.
+
+ T            | X (op)          | Y (imm)     | Z (k)
+--------------|-----------------|-------------|-------------
+ `#instr_t`   | `+0` (debug)    | —           | _instr_
+
+ 1. If the uFork machine is executing under a debugging environment
+    1. Suspend the machine
+    1. Transfer control to the debugger
+ 1. Otherwise, this instruction has no effect.
+
 #### `deque` instruction
 
  Input               | Instruction         | Output       | Description
 ---------------------|---------------------|--------------|-------------------------------------
-—                    | `deque` `new`       | _deque_      | create a new empty _deque_
+—                    | `deque` `new`       | _deque_      | an empty _deque_
 _deque_              | `deque` `empty`     | _bool_       | `#t` if _deque_ is empty, otherwise `#f`
 _deque_ _value_      | `deque` `push`      | _deque'_     | insert _value_ as the first item of _deque_
 _deque_              | `deque` `pop`       | _deque'_ _value_ | remove the first _value_ from _deque_, or `#?`
 _deque_ _value_      | `deque` `put`       | _deque'_     | insert _value_ as the last item of _deque_
 _deque_              | `deque` `pull`      | _deque'_ _value_ | remove the last _value_ from _deque_, or `#?`
 _deque_              | `deque` `len`       | _n_          | count items in the _deque_
+
+Perform operations on a deque (double-ended queue).
+A deque is represented by a `#pair_t(front, back)` of stacks.
+The _front_ stack contains elements ready to be taken from the queue, from first to last.
+The _back_ stack contains elements put on the queue, from last to first.
+A deque is managed as a
+[Banker's Queue](http://www.dalnefre.com/wp/2011/11/high-availability-for-mutable-shared-state/#queue).
+
+ T            | X (op)        | Y (imm)       | Z (k)
+--------------|---------------|---------------|-------------
+ `#instr_t`   | `+11` (deque) | `+0` (new)    | _instr_
+
+ 1. Push the empty-deque singleton `#pair_t(#nil, #nil)` onto the stack
+
+ T            | X (op)        | Y (imm)       | Z (k)
+--------------|---------------|---------------|-------------
+ `#instr_t`   | `+11` (deque) | `+1` (empty)  | _instr_
+
+ 1. Remove _deque_ from the stack (`#?` on underflow)
+ 1. If _deque_ is `#pair_t(front, back)`
+    1. If _front_ is a `#pair_t` or _back_ is a `#pair_t`
+        1. Push `#f` onto the stack
+    1. Otherwise
+        1. Push `#t` onto the stack
+ 1. Otherwise
+    1. Push `#t` onto the stack
+
+ T            | X (op)        | Y (imm)       | Z (k)
+--------------|---------------|---------------|-------------
+ `#instr_t`   | `+11` (deque) | `+2` (push)   | _instr_
+
+ 1. Remove _value_ from the stack (`#?` on underflow)
+ 1. Remove _deque_ from the stack (`#?` on underflow)
+ 1. Push `cons(cons(value, car(deque)), cdr(deque))` onto the stack
+
+ T            | X (op)        | Y (imm)       | Z (k)
+--------------|---------------|---------------|-------------
+ `#instr_t`   | `+11` (deque) | `+3` (pop)    | _instr_
+
+ 1. Remove _deque_ from the stack (`#?` on underflow)
+ 1. If _deque_ is `#pair_t(front, back)`
+    1. If _front_ is not a `#pair_t`
+        1. While _back_ is a `#pair_t`
+            1. Let _front_ become `cons(car(back), front)`
+            1. Let _back_ become `cdr(back)`
+    1. Push `cons(cdr(front), back)` onto the stack
+    1. Push `car(front)` onto the stack
+ 1. Otherwise
+    1. Push _deque_ onto the stack
+    1. Push `#?` onto the stack
+
+ T            | X (op)        | Y (imm)       | Z (k)
+--------------|---------------|---------------|-------------
+ `#instr_t`   | `+11` (deque) | `+4` (put)    | _instr_
+
+ 1. Remove _value_ from the stack (`#?` on underflow)
+ 1. Remove _deque_ from the stack (`#?` on underflow)
+ 1. Push `cons(car(deque), cons(value, cdr(deque)))` onto the stack
+
+ T            | X (op)        | Y (imm)       | Z (k)
+--------------|---------------|---------------|-------------
+ `#instr_t`   | `+11` (deque) | `+5` (pull)   | _instr_
+
+ 1. Remove _deque_ from the stack (`#?` on underflow)
+ 1. If _deque_ is `#pair_t(front, back)`
+    1. If _back_ is not a `#pair_t`
+        1. While _front_ is a `#pair_t`
+            1. Let _back_ become `cons(car(front), back)`
+            1. Let _front_ become `cdr(front)`
+    1. Push `cons(front, cdr(back))` onto the stack
+    1. Push `car(back)` onto the stack
+ 1. Otherwise
+    1. Push _deque_ onto the stack
+    1. Push `#?` onto the stack
+
+ T            | X (op)        | Y (imm)       | Z (k)
+--------------|---------------|---------------|-------------
+ `#instr_t`   | `+11` (deque) | `+6` (len)    | _instr_
+
+ 1. Remove _deque_ from the stack (`#?` on underflow)
+ 1. Let _count_ be `0`
+ 1. Let _front_ be `car(deque)`
+ 1. While _front_ is a `#pair_t`
+    1. Let _count_ become `count+1`
+    1. Let _front_ become `cdr(front)`
+ 1. Let _back_ be `cdr(deque)`
+ 1. While _back_ is a `#pair_t`
+    1. Let _count_ become `count+1`
+    1. Let _back_ become `cdr(back)`
+ 1. Push _count_ onto the stack
 
 #### `dict` instruction
 
@@ -819,17 +920,115 @@ _dict_ _key_ _value_ | `dict` `add`        | _dict'_      | add a binding from _
 _dict_ _key_ _value_ | `dict` `set`        | _dict'_      | replace or add a binding from _key_ to _value_ in _dict_
 _dict_ _key_         | `dict` `del`        | _dict'_      | remove first binding for _key_ in _dict_
 
+Perform operations on a dictionary (key-value store).
+An empty dictionary is represented by `#nil` (or any non-`#dict_t`).
+A dictionary entry is represented by a `#dict_t(key, value, next)`.
+
+ T            | X (op)        | Y (imm)     | Z (k)
+--------------|---------------|-------------|-------------
+ `#instr_t`   | `+10` (dict)  | `+0` (has)  | _instr_
+
+ 1. Remove _key_ from the stack (`#?` on underflow)
+ 1. Remove _dict_ from the stack (`#?` on underflow)
+ 1. Let _found_ be `#f`
+ 1. While not _found_ and _dict_ is `#dict_t(k, v, next)`
+    1. If _k_ == _key_
+        1. Let _found_ become `#t`
+    1. Otherwise
+        1. Let _dict_ become `next`
+ 1. Push _found_ onto the stack
+
+ T            | X (op)        | Y (imm)     | Z (k)
+--------------|---------------|-------------|-------------
+ `#instr_t`   | `+10` (dict)  | `+1` (get)  | _instr_
+
+ 1. Remove _key_ from the stack (`#?` on underflow)
+ 1. Remove _dict_ from the stack (`#?` on underflow)
+ 1. Let _found_ be `#?`
+ 1. While _found_ == `#?` and _dict_ is `#dict_t(k, v, next)`
+    1. If _k_ == _key_
+        1. Let _found_ become `v`
+    1. Otherwise
+        1. Let _dict_ become `next`
+ 1. Push _found_ onto the stack
+
+ T            | X (op)        | Y (imm)     | Z (k)
+--------------|---------------|-------------|-------------
+ `#instr_t`   | `+10` (dict)  | `+2` (add)  | _instr_
+
+ 1. Remove _value_ from the stack (`#?` on underflow)
+ 1. Remove _key_ from the stack (`#?` on underflow)
+ 1. Remove _dict_ from the stack (`#?` on underflow)
+ 1. Push `#dict_t(key, value, dict)` onto the stack
+
+ T            | X (op)        | Y (imm)     | Z (k)
+--------------|---------------|-------------|-------------
+ `#instr_t`   | `+10` (dict)  | `+3` (set)  | _instr_
+
+ 1. Remove _value_ from the stack (`#?` on underflow)
+ 1. Remove _key_ from the stack (`#?` on underflow)
+ 1. Remove _dict_ from the stack (`#?` on underflow)
+ 1. If `dict_has(key)`
+    1. Let _dict_ become `dict_del(key)`
+ 1. Push `#dict_t(key, value, dict)` onto the stack
+
+ T            | X (op)        | Y (imm)     | Z (k)
+--------------|---------------|-------------|-------------
+ `#instr_t`   | `+10` (dict)  | `+4` (del)  | _instr_
+
+ 1. Remove _key_ from the stack (`#?` on underflow)
+ 1. Remove _dict_ from the stack (`#?` on underflow)
+ 1. Let _orig_ be `dict`
+ 1. Let _copy_ be `#nil`
+ 1. While _dict_ is `#dict_t(k, v, next)`
+    1. Let _dict_ become `next`
+    1. If _k_ == _key_
+        1. While _copy_ is `#dict_t(k, v, next)`
+            1. Let _dict_ become `#dict_t(k, v, dict)`
+            1. Let _copy_ become `next`
+        1. Push _dict_ onto the stack
+        1. Return
+    1. Let _copy_ become `#dict_t(k, v, copy)`
+ 1. Push _orig_ onto the stack
+
 #### `drop` instruction
 
  Input               | Instruction         | Output       | Description
 ---------------------|---------------------|--------------|-------------------------------------
 _vₙ_ … _v₁_          | `drop` _n_          | —            | remove _n_ items from stack
 
+Discard items from the stack.
+
+ T            | X (op)        | Y (imm)     | Z (k)
+--------------|---------------|-------------|-------------
+ `#instr_t`   | `+23` (drop)  | _n_         | _instr_
+
+ 1. While _n_ > 0
+    1. Remove item from the stack
+    1. Let _n_ become `n-1`
+
 #### `dup` instruction
 
  Input               | Instruction         | Output       | Description
 ---------------------|---------------------|--------------|-------------------------------------
 _vₙ_ … _v₁_          | `dup` _n_           | _vₙ_ … _v₁_ _vₙ_ … _v₁_ | duplicate top _n_ items on stack
+
+Duplicate items on the top of the stack.
+
+ T            | X (op)        | Y (imm)     | Z (k)
+--------------|---------------|-------------|-------------
+ `#instr_t`   | `+22` (dup)   | _n_         | _instr_
+
+ 1. If _n_ > 0
+    1. Let _scan_ be the stack pointer
+    1. Let _copy_ be `#nil`
+    1. While _n_ > 0
+        1. Let _copy_ become `cons(car(scan), copy)`
+        1. Let _scan_ become `cdr(scan)`
+        1. Let _n_ become `n-1`
+    1. While _copy_ is a `#pair_t`
+        1. Push `car(copy)` onto the stack
+        1. Let _copy_ become `cdr(copy)`
 
 #### `end` instruction
 
@@ -839,11 +1038,52 @@ _reason_             | `end` `abort`       | —            | abort actor transa
 —                    | `end` `stop`        | —            | stop current continuation (thread)
 —                    | `end` `commit`      | —            | commit actor transaction
 
+End the current actor message-event processing transaction.
+This instruction has no _k_ field,
+so the continuation is not re-queued
+and the processing "thread" ends.
+
+ T            | X (op)        | Y (imm)       | Z (k)
+--------------|---------------|---------------|-------------
+ `#instr_t`   | `+15` (end)   | `-1` (abort)  | —
+
+ 1. Remove item _reason_ from the stack (`#?` on underflow)
+ 1. Record/report _reason_ to system-specific log or debugger
+ 1. Discard the current event and any pending effects
+ 1. Make actor ready for the next event
+
+ T            | X (op)        | Y (imm)       | Z (k)
+--------------|---------------|---------------|-------------
+ `#instr_t`   | `+15` (end)   | `+0` (stop)   | —
+
+ 1. Signal an `E_STOP` error
+
+ T            | X (op)        | Y (imm)       | Z (k)
+--------------|---------------|---------------|-------------
+ `#instr_t`   | `+15` (end)   | `+1` (commit) | —
+
+ 1. Update the current actor's state and behavior
+ 1. Add sent message-events to the message-queue
+ 1. Discard the current event
+ 1. Make actor ready for the next event
+
 #### `eq` instruction
 
  Input               | Instruction         | Output       | Description
 ---------------------|---------------------|--------------|-------------------------------------
 _u_                  | `eq` _v_            | _bool_       | `#t` if _u_ == _v_, otherwise `#f`
+
+Compare the top-of-stack item to an immediate value.
+
+ T            | X (op)      | Y (imm)     | Z (k)
+--------------|-------------|-------------|-------------
+ `#instr_t`   | `+6` (eq)   | _v_         | _instr_
+
+ 1. Remove item _u_ from the stack (`#?` on underflow)
+ 1. If _u_ and _v_ are the same raw value
+    1. Push `#t` onto the stack
+ 1. Otherwise
+    1. Push `#f` onto the stack
 
 #### `if` instruction
 
