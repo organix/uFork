@@ -55,22 +55,24 @@ module spi_master #(
   wire CPHA = CTRL_reg[0]; // spi clock phase
   wire [4:0] CLK_DIV = CTRL_reg[7:3];
 
-  reg [4:0] clkdiv_reg;
-  reg SCLK;
-  always @(posedge i_clk) begin
-    if (clkdiv_reg == CLK_DIV) begin
-      SCLK <= !SCLK;
-      clkdiv_reg <= 5'b00000;
-    end else begin
-      clkdiv_reg <= clkdiv_reg + 1;
-    end
-  end
-
   localparam IDLE  = 4'h0;
   localparam START = 4'h1;
   // 4'h2-4'h9 are the bits of the bytes
   localparam STOP  = 4'hA;
   reg [3:0] state;
+
+  reg [4:0] clkdiv_reg;
+  reg SCLK;
+  always @(posedge i_clk) begin
+    if (state != IDLE) begin
+      if (clkdiv_reg == CLK_DIV) begin
+        SCLK <= !SCLK;
+        clkdiv_reg <= 5'b00000;
+      end else begin
+        clkdiv_reg <= clkdiv_reg + 1;
+      end
+    end
+  end
 
   always @(posedge i_clk) begin
     if (i_en) begin
