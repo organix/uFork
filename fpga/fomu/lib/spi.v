@@ -76,7 +76,12 @@ module spi_master #(
     end
   end
   always @(posedge SCLK or negedge SCLK) begin
-    
+    if (state != IDLE) begin
+      if (state == START) begin
+      end else if (stats == STOP) begin
+      end else begin
+      end
+    end
   end
 
   always @(posedge i_clk) begin
