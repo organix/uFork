@@ -1090,8 +1090,24 @@ Compare the top-of-stack item to an immediate value.
  Input               | Instruction         | Output       | Description
 ---------------------|---------------------|--------------|-------------------------------------
 _bool_               | `if` _T_ [_F_]      | —            | if _bool_ is not falsy<sup>*</sup>, continue _T_ (else _F_)
+_bool_               | `if_not` _F_ [_T_]  | —            | if _bool_ is falsy<sup>*</sup>, continue _F_ (else _T_)
 
 <sup>*</sup> The values `#f`, `#?`, `#nil`, and `0` are considered "[falsy](https://developer.mozilla.org/en-US/docs/Glossary/Falsy)".
+
+Select one of two continuations
+based on the value on the top of the stack.
+Note: Both `if` and `if_not`
+generate the same machine instruction.
+
+ T            | X (op)      | Y (imm)     | Z (k)
+--------------|-------------|-------------|-------------
+ `#instr_t`   | `+3` (if)   | _t-instr_   | _f-instr_
+
+ 1. Remove item _bool_ from the stack (`#?` on underflow)
+ 1. If _bool_ is "falsy"
+    1. Continue execution at _f-instr_
+ 1. Otherwise
+    1. Continue execution at _t-instr_
 
 #### `jump` instruction
 
@@ -1106,7 +1122,7 @@ Continue execution at the address taken from the stack.
  `#instr_t`   | `+1` (jump) | `#?`        | `#?`
 
  1. Remove item _k_ from the stack (`#?` on underflow)
- 1. If _k_ is an instruction
+ 1. If _k_ is an instruction address
     1. Continue execution at _k_
  1. Otherwise
     1. Signal an error
@@ -1119,6 +1135,36 @@ Continue execution at the address taken from the stack.
 —                    | `msg` _n_           | _msgₙ_       | copy message item _n_ to stack
 —                    | `msg` -_n_          | _tailₙ_      | copy message tail _n_ to stack
 
+Copy data from the current message-event.
+
+ T (type)     | X (op)        | Y (imm)     | Z (k)
+--------------|---------------|-------------|-------------
+ `#instr_t`   | `+24` (msg)   | `+0`        | _instr_
+
+ 1. Push the entire message onto the stack as a single value
+
+ T (type)     | X (op)        | Y (imm)     | Z (k)
+--------------|---------------|-------------|-------------
+ `#instr_t`   | `+24` (msg)   | _positive_  | _instr_
+
+ 1. Let _n_ be `positive-1`
+ 1. Let _scan_ be the entire message
+ 1. While _n_ > 0
+    1. Let _scan_ become `cdr(scan)`
+    1. Let _n_ become `n-1`
+ 1. Push `car(scan)` onto the stack
+
+ T (type)     | X (op)        | Y (imm)     | Z (k)
+--------------|---------------|-------------|-------------
+ `#instr_t`   | `+24` (msg)   | _negative_  | _instr_
+
+ 1. Let _n_ be `negative+1`
+ 1. Let _scan_ be the entire message
+ 1. While _n_ < 0
+    1. Let _scan_ become `cdr(scan)`
+    1. Let _n_ become `n+1`
+ 1. Push `cdr(scan)` onto the stack
+
 #### `my` instruction
 
  Input               | Instruction         | Output       | Description
@@ -1126,6 +1172,33 @@ Continue execution at the address taken from the stack.
 —                    | `my` `self`         | _actor_      | push _actor_ address on stack
 —                    | `my` `beh`          | _beh_        | push _actor_ behavior on stack
 —                    | `my` `state`        | _vₙ_ … _v₁_  | spread _actor_ state onto stack
+
+Copy data relating to the current actor  (see also `new` and `beh`).
+
+ T            | X (op)        | Y (imm)       | Z (k)
+--------------|---------------|---------------|-------------
+ `#instr_t`   | `+12` (my)    | `+0` (self)   | —
+
+ 1. Push the current actor capability onto the stack
+
+ T            | X (op)        | Y (imm)       | Z (k)
+--------------|---------------|---------------|-------------
+ `#instr_t`   | `+12` (my)    | `+1` (beh)    | —
+
+ 1. Push the current actor's code address onto the stack
+
+ T            | X (op)        | Y (imm)       | Z (k)
+--------------|---------------|---------------|-------------
+ `#instr_t`   | `+12` (my)    | `+2` (state)  | —
+
+ 1. Let _scan_ be the current actor's data
+ 1. Let _copy_ be `#nil`
+ 1. While _scan_ is a `#pair_t`
+    1. Let _copy_ become `cons(car(scan), copy)`
+    1. Let _scan_ become `cdr(scan)`
+ 1. While _copy_ is a `#pair_t`
+    1. Push `car(copy)` onto the stack
+    1. Let _copy_ become `cdr(copy)`
 
 #### `new` instruction
 
