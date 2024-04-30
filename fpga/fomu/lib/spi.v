@@ -10,7 +10,8 @@ U  --->|i_wr       o_MOSI|--->  I
 S  =8=>|i_data   o_SS_bar|--->  S
 I  <=8=|o_data           |      I
 D      |                 |      D
-E   +->|i_clk            |      E
+E  <---|o_int            |      E
+    +->|i_clk            |      
     |  +-----------------+
 
 This component is an spi master that is meant to connect to an external spi slave.
@@ -33,15 +34,16 @@ module spi_master #(
     parameter CLK_FREQ      = 48_000_000,               // cpu clock frequency (Hz)
 ) (
     input                   i_clk,                      // system clock
-    output                  o_SCLK                      // Spi CLocK
-    output                  o_MOSI                      // spi Master Out Slave In
-    input                   i_MISO                      // spi Master In Slave Out
-    output                  o_SS                        // spi Slave Select
+    output                  o_SCLK,                     // Spi CLocK
+    output                  o_MOSI,                     // spi Mistress Out Sub In
+    input                   i_MISO,                     // spi Mistress In Sub Out
+    output                  o_SS,                       // spi Slave Select
     input                   i_en,                       // device enable
     input                   i_wr,                       // {0:read, 1:write}
     input             [3:0] i_addr,                     // {0:STATUS, 1:DATA_OUT, 2:DATA_IN, 3:CTRL}
     input             [7:0] i_data,                     // data to write
-    output reg        [7:0] o_data                      // last data read
+    output reg        [7:0] o_data,                     // last data read
+    output                  o_int,                      // interupt when byte transfer is done
   );
 
   // device registers
@@ -72,6 +74,9 @@ module spi_master #(
         clkdiv_reg <= clkdiv_reg + 1;
       end
     end
+  end
+  always @(posedge SCLK or negedge SCLK) begin
+    
   end
 
   always @(posedge i_clk) begin
