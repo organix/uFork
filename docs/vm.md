@@ -979,16 +979,16 @@ A dictionary entry is represented by a `#dict_t(key, value, next)`.
  1. Remove _key_ from the stack (`#?` on underflow)
  1. Remove _dict_ from the stack (`#?` on underflow)
  1. Let _orig_ be `dict`
- 1. Let _prefix_ be `#nil`
+ 1. Let _copy_ be `#nil`
  1. While _dict_ is `#dict_t(k, v, next)`
     1. Let _dict_ become `next`
     1. If _k_ == _key_
-        1. While _prefix_ is `#dict_t(k, v, next)`
+        1. While _copy_ is `#dict_t(k, v, next)`
             1. Let _dict_ become `#dict_t(k, v, dict)`
-            1. Let _prefix_ become `next`
+            1. Let _copy_ become `next`
         1. Push _dict_ onto the stack
         1. Return
-    1. Let _prefix_ become `#dict_t(k, v, prefix)`
+    1. Let _copy_ become `#dict_t(k, v, copy)`
  1. Push _orig_ onto the stack
 
 #### `drop` instruction
@@ -997,11 +997,38 @@ A dictionary entry is represented by a `#dict_t(key, value, next)`.
 ---------------------|---------------------|--------------|-------------------------------------
 _vₙ_ … _v₁_          | `drop` _n_          | —            | remove _n_ items from stack
 
+Discard items from the stack.
+
+ T            | X (op)        | Y (imm)     | Z (k)
+--------------|---------------|-------------|-------------
+ `#instr_t`   | `+23` (drop)  | _n_         | _instr_
+
+ 1. While _n_ > 0
+    1. Remove item from the stack
+    1. Let _n_ become `n-1`
+
 #### `dup` instruction
 
  Input               | Instruction         | Output       | Description
 ---------------------|---------------------|--------------|-------------------------------------
 _vₙ_ … _v₁_          | `dup` _n_           | _vₙ_ … _v₁_ _vₙ_ … _v₁_ | duplicate top _n_ items on stack
+
+Duplicate items on the top of the stack.
+
+ T            | X (op)        | Y (imm)     | Z (k)
+--------------|---------------|-------------|-------------
+ `#instr_t`   | `+22` (dup)   | _n_         | _instr_
+
+ 1. If _n_ > 0
+    1. Let _scan_ be the stack pointer
+    1. Let _copy_ be `#nil`
+    1. While _n_ > 0
+        1. Let _copy_ become `cons(car(scan), copy)`
+        1. Let _scan_ become `cdr(scan)`
+        1. Let _n_ become `n-1`
+    1. While _copy_ is a `#pair_t`
+        1. Push `car(copy)` onto the stack
+        1. Let _copy_ become `cdr(copy)`
 
 #### `end` instruction
 
@@ -1011,11 +1038,52 @@ _reason_             | `end` `abort`       | —            | abort actor transa
 —                    | `end` `stop`        | —            | stop current continuation (thread)
 —                    | `end` `commit`      | —            | commit actor transaction
 
+End the current actor message-event processing transaction.
+This instruction has no _k_ field,
+so the continuation is not re-queued
+and the processing "thread" ends.
+
+ T            | X (op)        | Y (imm)       | Z (k)
+--------------|---------------|---------------|-------------
+ `#instr_t`   | `+15` (end)   | `-1` (abort)  | —
+
+ 1. Remove item _reason_ from the stack (`#?` on underflow)
+ 1. Record/report _reason_ to system-specific log or debugger
+ 1. Discard the current event and any pending effects
+ 1. Make actor ready for the next event
+
+ T            | X (op)        | Y (imm)       | Z (k)
+--------------|---------------|---------------|-------------
+ `#instr_t`   | `+15` (end)   | `+0` (stop)   | —
+
+ 1. Signal an `E_STOP` error
+
+ T            | X (op)        | Y (imm)       | Z (k)
+--------------|---------------|---------------|-------------
+ `#instr_t`   | `+15` (end)   | `+1` (commit) | —
+
+ 1. Update the current actor's state and behavior
+ 1. Add sent message-events to the message-queue
+ 1. Discard the current event
+ 1. Make actor ready for the next event
+
 #### `eq` instruction
 
  Input               | Instruction         | Output       | Description
 ---------------------|---------------------|--------------|-------------------------------------
 _u_                  | `eq` _v_            | _bool_       | `#t` if _u_ == _v_, otherwise `#f`
+
+Compare the top-of-stack item to an immediate value.
+
+ T            | X (op)      | Y (imm)     | Z (k)
+--------------|-------------|-------------|-------------
+ `#instr_t`   | `+6` (eq)   | _v_         | _instr_
+
+ 1. Remove item _u_ from the stack (`#?` on underflow)
+ 1. If _u_ and _v_ are the same raw value
+    1. Push `#t` onto the stack
+ 1. Otherwise
+    1. Push `#f` onto the stack
 
 #### `if` instruction
 
