@@ -72,6 +72,20 @@ regardless of their original source language.
 Additional languages can be supported
 by generating interoperable uFork IR.
 
+## How To Run
+
+Install the [Nix](https://nixos.org/download/) package manager and run
+`nix-shell` from the root of this repository. Alternatively, manually install
+the relevant packages listed in [shell.nix](shell.nix).
+
+Available Deno tasks are declared in [deno.json](deno.json). They are:
+
+- `deno task build`: Build [the WASM component](vm/wasm/README.md).
+- `deno task serve`: Start an HTTP server to locally host Web applications, such
+  as the [uFork debugger](apps/debugger/README.md). Equivalent to starting
+  [Replete](https://github.com/jamesdiacono/Replete) from your editor.
+- `deno task test`: Run the project's [tests](docs/testing.md).
+
 ## Documentation
 
   * uFork [Project Summary](docs/summary.md)

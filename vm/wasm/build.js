@@ -1,8 +1,8 @@
 // A Deno program that builds the debug and release uFork WASM binaries.
 
 // It requires permission to spawn subprocesses (--allow-run) and to read and
-// write this directory. For brevity, however, it should be safe to run will
-// full permissions like
+// write this directory. For brevity, however, it can be run with full
+// permissions like
 
 //  $ deno run -A build.js [--opt]
 
