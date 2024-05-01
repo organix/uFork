@@ -67,7 +67,7 @@ It consists of four unsigned integers
 ----------|----------|----------|----------
 type/proc | head/car | tail/cdr | link/next
 
-The integers in each field carry a _type tag_
+The integers in each field carry a _type-tag_
 in their 3 most-significant bits (MSBs).
 The 1st MSB is {0=indirect-reference, 1=direct-value}.
 The 2nd MSB is {0=immutable, 1=mutable}.
@@ -1435,6 +1435,25 @@ Copy data from the current actor's state.
  Input               | Instruction         | Output       | Description
 ---------------------|---------------------|--------------|-------------------------------------
 _v_                  | `typeq` _T_         | _bool_       | `#t` if _v_ has type _T_, otherwise `#f`
+
+Check the type of an arbitrary value.
+Core types are represented by constants in low ROM.
+Custom types may be defined in ROM or RAM.
+Values with `#fixnum_t` or `#actor_t` types
+can be classified from their type-tags.
+Other values carry their type
+in the _T_ field of their quad
+(see [Representation](#representation)).
+
+ T            | X (op)        | Y (imm)     | Z (k)
+--------------|---------------|-------------|-------------
+ `#instr_t`   | `+5` (typeq)  | _T_         | _instr_
+
+ 1. Remove item _v_ from the stack
+ 1. If _v_ has type _T_
+    1. Push `#t` onto the stack
+ 1. Otherwise
+    1. Push `#f` onto the stack
 
 #### `quad` instruction
 
