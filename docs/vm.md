@@ -14,6 +14,7 @@
     * Pair-List Indexing
   * [Instructions](#instructions)
     * Instruction Summary
+    * Instruction Decoding
     * Instruction Details
         * [`alu`](#alu-instruction) instruction
         * [`assert`](#assert-instruction) instruction
@@ -1144,25 +1145,10 @@ Copy data from the current message-event.
 
  T (type)     | X (op)        | Y (imm)     | Z (k)
 --------------|---------------|-------------|-------------
- `#instr_t`   | `+24` (msg)   | _positive_  | _instr_
+ `#instr_t`   | `+24` (msg)   | _n_         | _instr_
 
- 1. Let _n_ be `positive-1`
- 1. Let _scan_ be the entire message
- 1. While _n_ > 0
-    1. Let _scan_ become `cdr(scan)`
-    1. Let _n_ become `n-1`
- 1. Push `car(scan)` onto the stack
-
- T (type)     | X (op)        | Y (imm)     | Z (k)
---------------|---------------|-------------|-------------
- `#instr_t`   | `+24` (msg)   | _negative_  | _instr_
-
- 1. Let _n_ be `negative+1`
- 1. Let _scan_ be the entire message
- 1. While _n_ < 0
-    1. Let _scan_ become `cdr(scan)`
-    1. Let _n_ become `n+1`
- 1. Push `cdr(scan)` onto the stack
+ 1. Let _msg_ be the entire message
+ 1. Push `nth(n, msg)` onto the stack
 
 #### `my` instruction
 
@@ -1172,32 +1158,27 @@ Copy data from the current message-event.
 —                    | `my` `beh`          | _beh_        | push _actor_ behavior on stack
 —                    | `my` `state`        | _vₙ_ … _v₁_  | spread _actor_ state onto stack
 
-Copy data relating to the current actor  (see also `new` and `beh`).
+Copy data relating to the current actor
+(see [`new`](#new-instruction), [`beh`](#beh-instruction), and [`state`](#state-instruction)).
 
  T            | X (op)        | Y (imm)       | Z (k)
 --------------|---------------|---------------|-------------
- `#instr_t`   | `+12` (my)    | `+0` (self)   | —
+ `#instr_t`   | `+12` (my)    | `+0` (self)   | _instr_
 
  1. Push the current actor capability onto the stack
 
  T            | X (op)        | Y (imm)       | Z (k)
 --------------|---------------|---------------|-------------
- `#instr_t`   | `+12` (my)    | `+1` (beh)    | —
+ `#instr_t`   | `+12` (my)    | `+1` (beh)    | _instr_
 
  1. Push the current actor's code address onto the stack
 
  T            | X (op)        | Y (imm)       | Z (k)
 --------------|---------------|---------------|-------------
- `#instr_t`   | `+12` (my)    | `+2` (state)  | —
+ `#instr_t`   | `+12` (my)    | `+2` (state)  | _instr_
 
- 1. Let _scan_ be the current actor's data
- 1. Let _copy_ be `#nil`
- 1. While _scan_ is a `#pair_t`
-    1. Let _copy_ become `cons(car(scan), copy)`
-    1. Let _scan_ become `cdr(scan)`
- 1. While _copy_ is a `#pair_t`
-    1. Push `car(copy)` onto the stack
-    1. Let _copy_ become `cdr(copy)`
+ 1. Let _list_ be the current actor's data
+ 1. Push `part(-1, list)` onto the stack
 
 #### `new` instruction
 
@@ -1212,7 +1193,7 @@ Provide the behavior (code and data) for a new actor.
 This is the actor "create" primitive.
 There are several ways to provide
 the code and data for the new actor,
-however both are always specified.
+however both are always specified together.
 
  T            | X (op)      | Y (imm)     | Z (k)
 --------------|-------------|-------------|-------------
@@ -1306,7 +1287,13 @@ Extract data from a pair-list.
 … _tail_ _head_      | `pair` _n_          | _pair_       | create _pair(s)_ from _head_ and _tail_ (_n_ times)
 _vₙ_ … _v₁_          | `pair` -1           | (_v₁_ … _vₙ_) | capture stack items as a single _pair_ list
 
-Create a _pair_ list from some number of stack items.
+Create a pair-list from some number of stack items.
+
+ T (type)     | X (op)        | Y (imm)     | Z (k)
+--------------|---------------|-------------|-------------
+ `#instr_t`   | `+17` (pair)  | `+0`        | _instr_
+
+ 1. Push `()` onto the stack
 
  T (type)     | X (op)        | Y (imm)     | Z (k)
 --------------|---------------|-------------|-------------
@@ -1316,12 +1303,6 @@ Create a _pair_ list from some number of stack items.
  1. Create an _n_ item list from removed stack items
     1. Item  _n_+1 will be the tail of the list
  1. Push the resulting list onto the stack
-
- T (type)     | X (op)        | Y (imm)     | Z (k)
---------------|---------------|-------------|-------------
- `#instr_t`   | `+17` (pair)  | `+0`        | _instr_
-
- 1. Push `()` onto the stack
 
  T (type)     | X (op)        | Y (imm)     | Z (k)
 --------------|---------------|-------------|-------------
@@ -1338,6 +1319,39 @@ Create a _pair_ list from some number of stack items.
 ---------------------|---------------------|--------------|-------------------------------------
 _pair_               | `part` _n_          | … _tail_ _head_ | split _pair_ into _head_ and _tail_ (_n_ times)
 (_v₁_ … _vₙ_)        | `part` -1           | _vₙ_ … _v₁_   | spread _pair_ list items onto stack
+
+Split items from a pair-list onto the stack.
+
+ T            | X (op)        | Y (imm)       | Z (k)
+--------------|---------------|---------------|-------------
+ `#instr_t`   | `+18` (part)  | _n_           | _instr_
+
+ 1. Remove _pair_ from the stack
+ 1. Let _copy_ be `#nil`
+ 1. While _n_ > 0
+    1. Let _copy_ become `cons(car(pair), copy)`
+    1. Let _pair_ become `cdr(pair)`
+    1. Let _n_ become `n-1`
+ 1. Push _pair_ onto the stack
+ 1. While _copy_ is a `#pair_t`
+    1. Push `car(copy)` onto the stack
+    1. Let _copy_ become `cdr(copy)`
+
+ T            | X (op)        | Y (imm)       | Z (k)
+--------------|---------------|---------------|-------------
+ `#instr_t`   | `+18` (part)  | _negative_    | _instr_
+
+ 1. If _n_ is `-1`
+    1. Remove _pair_ from the stack
+    1. Let _copy_ be `#nil`
+    1. While _pair_ is a `#pair_t`
+        1. Let _copy_ become `cons(car(pair), copy)`
+        1. Let _pair_ become `cdr(pair)`
+    1. While _copy_ is a `#pair_t`
+        1. Push `car(copy)` onto the stack
+        1. Let _copy_ become `cdr(copy)`
+ 1. Otherwise
+    1. Push `#?` onto the stack
 
 #### `pick` instruction
 
@@ -1400,6 +1414,21 @@ _sponsor_            | `sponsor` `stop`    | —            | reclaim all quotas
 —                    | `state` `0`         | _state_      | copy _actor_ state to stack
 —                    | `state` _n_         | _stateₙ_     | copy state item _n_ to stack
 —                    | `state` -_n_        | _tailₙ_      | copy state tail _n_ to stack
+
+Copy data from the current actor's state.
+
+ T (type)     | X (op)        | Y (imm)     | Z (k)
+--------------|---------------|-------------|-------------
+ `#instr_t`   | `+25` (state) | `+0`        | _instr_
+
+ 1. Push the entire state onto the stack as a single value
+
+ T (type)     | X (op)        | Y (imm)     | Z (k)
+--------------|---------------|-------------|-------------
+ `#instr_t`   | `+25` (state) | _n_         | _instr_
+
+ 1. Let _state_ be the current actor's state
+ 1. Push `nth(n, state)` onto the stack
 
 #### `typeq` instruction
 
