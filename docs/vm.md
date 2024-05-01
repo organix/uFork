@@ -482,7 +482,7 @@ Compute an ALU function of the arguments on the stack.
 --------------|-------------|-------------|-------------
  `#instr_t`   | `+13` (alu) | `+0` (not)  | _instr_
 
- 1. Remove item _n_ from the stack (`#?` on underflow)
+ 1. Remove item _n_ from the stack
  1. If _n_ is a fixnum
     1. Invert all bits of fixnum
     1. Push result onto the stack
@@ -493,8 +493,8 @@ Compute an ALU function of the arguments on the stack.
 --------------|-------------|-------------|-------------
  `#instr_t`   | `+13` (alu) | `+1` (and)  | _instr_
 
- 1. Remove item _m_ from the stack (`#?` on underflow)
- 1. Remove item _n_ from the stack (`#?` on underflow)
+ 1. Remove item _m_ from the stack
+ 1. Remove item _n_ from the stack
  1. If _n_ and _m_ are both fixnums
     1. Bitwise AND _n_ with _m_
     1. Push result onto the stack
@@ -505,8 +505,8 @@ Compute an ALU function of the arguments on the stack.
 --------------|-------------|-------------|-------------
  `#instr_t`   | `+13` (alu) | `+2` (or)  | _instr_
 
- 1. Remove item _m_ from the stack (`#?` on underflow)
- 1. Remove item _n_ from the stack (`#?` on underflow)
+ 1. Remove item _m_ from the stack
+ 1. Remove item _n_ from the stack
  1. If _n_ and _m_ are both fixnums
     1. Bitwise OR _n_ with _m_
     1. Push result onto the stack
@@ -517,8 +517,8 @@ Compute an ALU function of the arguments on the stack.
 --------------|-------------|-------------|-------------
  `#instr_t`   | `+13` (alu) | `+3` (xor)  | _instr_
 
- 1. Remove item _m_ from the stack (`#?` on underflow)
- 1. Remove item _n_ from the stack (`#?` on underflow)
+ 1. Remove item _m_ from the stack
+ 1. Remove item _n_ from the stack
  1. If _n_ and _m_ are both fixnums
     1. Bitwise XOR _n_ with _m_
     1. Push result onto the stack
@@ -529,8 +529,8 @@ Compute an ALU function of the arguments on the stack.
 --------------|-------------|-------------|-------------
  `#instr_t`   | `+13` (alu) | `+4` (add)  | _instr_
 
- 1. Remove item _m_ from the stack (`#?` on underflow)
- 1. Remove item _n_ from the stack (`#?` on underflow)
+ 1. Remove item _m_ from the stack
+ 1. Remove item _n_ from the stack
  1. If _n_ and _m_ are both fixnums
     1. Add _n_ and _m_
     1. Truncate 2's-complement result
@@ -542,8 +542,8 @@ Compute an ALU function of the arguments on the stack.
 --------------|-------------|-------------|-------------
  `#instr_t`   | `+13` (alu) | `+5` (sub)  | _instr_
 
- 1. Remove item _m_ from the stack (`#?` on underflow)
- 1. Remove item _n_ from the stack (`#?` on underflow)
+ 1. Remove item _m_ from the stack
+ 1. Remove item _n_ from the stack
  1. If _n_ and _m_ are both fixnums
     1. Subtract _m_ from _n_
     1. Truncate 2's-complement result
@@ -555,8 +555,8 @@ Compute an ALU function of the arguments on the stack.
 --------------|-------------|-------------|-------------
  `#instr_t`   | `+13` (alu) | `+6` (mul)  | _instr_
 
- 1. Remove item _m_ from the stack (`#?` on underflow)
- 1. Remove item _n_ from the stack (`#?` on underflow)
+ 1. Remove item _m_ from the stack
+ 1. Remove item _n_ from the stack
  1. If _n_ and _m_ are both fixnums
     1. Multiply _n_ by _m_
     1. Truncate 2's-complement result
@@ -568,8 +568,8 @@ Compute an ALU function of the arguments on the stack.
 --------------|-------------|-------------|-------------
  `#instr_t`   | `+13` (alu) | `+8` (lsl)  | _instr_
 
- 1. Remove item _m_ from the stack (`#?` on underflow)
- 1. Remove item _n_ from the stack (`#?` on underflow)
+ 1. Remove item _m_ from the stack
+ 1. Remove item _n_ from the stack
  1. If _n_ and _m_ are both fixnums
     1. Logical shift _n_ left by _m_ bits (fill w/ zero)
     1. Truncate 2's-complement result
@@ -581,8 +581,8 @@ Compute an ALU function of the arguments on the stack.
 --------------|-------------|-------------|-------------
  `#instr_t`   | `+13` (alu) | `+9` (lsr)  | _instr_
 
- 1. Remove item _m_ from the stack (`#?` on underflow)
- 1. Remove item _n_ from the stack (`#?` on underflow)
+ 1. Remove item _m_ from the stack
+ 1. Remove item _n_ from the stack
  1. If _n_ and _m_ are both fixnums
     1. Logical shift _n_ right by _m_ bits (fill w/ zero)
     1. Push result onto the stack
@@ -593,8 +593,8 @@ Compute an ALU function of the arguments on the stack.
 --------------|-------------|-------------|-------------
  `#instr_t`   | `+13` (alu) | `+10` (asr) | _instr_
 
- 1. Remove item _m_ from the stack (`#?` on underflow)
- 1. Remove item _n_ from the stack (`#?` on underflow)
+ 1. Remove item _m_ from the stack
+ 1. Remove item _n_ from the stack
  1. If _n_ and _m_ are both fixnums
     1. Arithmetic shift _n_ right by _m_ bits (sign extend)
     1. Push result onto the stack
@@ -605,8 +605,8 @@ Compute an ALU function of the arguments on the stack.
 --------------|-------------|-------------|-------------
  `#instr_t`   | `+13` (alu) | `+11` (rol) | _instr_
 
- 1. Remove item _m_ from the stack (`#?` on underflow)
- 1. Remove item _n_ from the stack (`#?` on underflow)
+ 1. Remove item _m_ from the stack
+ 1. Remove item _n_ from the stack
  1. If _n_ and _m_ are both fixnums
     1. Rotate _n_ left by _m_ bits
     1. Push result onto the stack
@@ -617,8 +617,8 @@ Compute an ALU function of the arguments on the stack.
 --------------|-------------|-------------|-------------
  `#instr_t`   | `+13` (alu) | `+12` (ror) | _instr_
 
- 1. Remove item _m_ from the stack (`#?` on underflow)
- 1. Remove item _n_ from the stack (`#?` on underflow)
+ 1. Remove item _m_ from the stack
+ 1. Remove item _n_ from the stack
  1. If _n_ and _m_ are both fixnums
     1. Rotate _n_ right by _m_ bits
     1. Push result onto the stack
@@ -637,7 +637,7 @@ Ensure that the item on the stack has the expected value.
 --------------|-----------------|-------------|-------------
  `#instr_t`   | `+7` (assert)   | _any_       | _instr_
 
- 1. Remove item _actual_ from the stack (`#?` on underflow)
+ 1. Remove item _actual_ from the stack
  1. If _actual_ is not equal to _expect_
     1. Signal an `E_ASSERT` error
 
@@ -660,7 +660,7 @@ however both are always replaced together.
 --------------|-------------|-------------|-------------
  `#instr_t`   | `+29` (beh) | _positive_  | _instr_
 
- 1. Remove item _beh_ from the stack (`#?` on underflow)
+ 1. Remove item _beh_ from the stack
  1. Record _beh_ as the code to execute when handling the next event
  1. Form a list from the number of stack items specified by the immediate argument
  1. Record this list as the private data when handling the next event
@@ -669,7 +669,7 @@ however both are always replaced together.
 --------------|-------------|-------------|-------------
  `#instr_t`   | `+29` (beh) | `+0`        | _instr_
 
- 1. Remove item _beh_ from the stack (`#?` on underflow)
+ 1. Remove item _beh_ from the stack
  1. Record _beh_ as the code to execute when handling the next event
  1. Record `()` as the private data when handling the next event
 
@@ -677,16 +677,16 @@ however both are always replaced together.
 --------------|-------------|-------------|-------------
  `#instr_t`   | `+29` (beh) | `-1`        | _instr_
 
- 1. Remove item _beh_ from the stack (`#?` on underflow)
+ 1. Remove item _beh_ from the stack
  1. Record _beh_ as the code to execute when handling the next event
- 1. Remove item _state_ from the stack (`#?` on underflow)
+ 1. Remove item _state_ from the stack
  1. Record _state_ as the private data when handling the next event
 
  T            | X (op)      | Y (imm)     | Z (k)
 --------------|-------------|-------------|-------------
  `#instr_t`   | `+29` (beh) | `-2`        | _instr_
 
- 1. Remove an item from the stack (`#?` on underflow)
+ 1. Remove an item from the stack
  1. Record the `X` field of this item as the code to execute when handling the next event
  1. Record the `Y` field of this item as the private data when handling the next event
 
@@ -694,7 +694,7 @@ however both are always replaced together.
 --------------|-------------|-------------|-------------
  `#instr_t`   | `+29` (beh) | `-3`        | _instr_
 
- 1. Remove an item from the stack (`#?` on underflow)
+ 1. Remove an item from the stack
  1. Record the `Z` field of this item as the code to execute when handling the next event
  1. Record this item as the private data when handling the next event
 
@@ -717,8 +717,8 @@ For `lt`, `le`, `ge`, and `gt`, fixnum values are compared.
 --------------|-------------|-------------|-------------
  `#instr_t`   | `+14` (cmp) | `+0` (eq)   | _instr_
 
- 1. Remove item _u_ from the stack (`#?` on underflow)
- 1. Remove item _v_ from the stack (`#?` on underflow)
+ 1. Remove item _u_ from the stack
+ 1. Remove item _v_ from the stack
  1. If _u_ and _v_ are the same raw value
     1. Push `#t` onto the stack
  1. Otherwise
@@ -728,8 +728,8 @@ For `lt`, `le`, `ge`, and `gt`, fixnum values are compared.
 --------------|-------------|-------------|-------------
  `#instr_t`   | `+14` (cmp) | `+5` (ne)   | _instr_
 
- 1. Remove item _u_ from the stack (`#?` on underflow)
- 1. Remove item _v_ from the stack (`#?` on underflow)
+ 1. Remove item _u_ from the stack
+ 1. Remove item _v_ from the stack
  1. If _u_ and _v_ are different raw values
     1. Push `#t` onto the stack
  1. Otherwise
@@ -739,8 +739,8 @@ For `lt`, `le`, `ge`, and `gt`, fixnum values are compared.
 --------------|-------------|-------------|-------------
  `#instr_t`   | `+14` (cmp) | `+3` (lt)   | _instr_
 
- 1. Remove item _m_ from the stack (`#?` on underflow)
- 1. Remove item _n_ from the stack (`#?` on underflow)
+ 1. Remove item _m_ from the stack
+ 1. Remove item _n_ from the stack
  1. If _n_ and _m_ are both fixnums
     1. If _n_ < _m_
         1. Push `#t` onto the stack
@@ -753,8 +753,8 @@ For `lt`, `le`, `ge`, and `gt`, fixnum values are compared.
 --------------|-------------|-------------|-------------
  `#instr_t`   | `+14` (cmp) | `+4` (le)   | _instr_
 
- 1. Remove item _m_ from the stack (`#?` on underflow)
- 1. Remove item _n_ from the stack (`#?` on underflow)
+ 1. Remove item _m_ from the stack
+ 1. Remove item _n_ from the stack
  1. If _n_ and _m_ are both fixnums
     1. If _n_ <= _m_
         1. Push `#t` onto the stack
@@ -767,8 +767,8 @@ For `lt`, `le`, `ge`, and `gt`, fixnum values are compared.
 --------------|-------------|-------------|-------------
  `#instr_t`   | `+14` (cmp) | `+1` (ge)   | _instr_
 
- 1. Remove item _m_ from the stack (`#?` on underflow)
- 1. Remove item _n_ from the stack (`#?` on underflow)
+ 1. Remove item _m_ from the stack
+ 1. Remove item _n_ from the stack
  1. If _n_ and _m_ are both fixnums
     1. If _n_ >= _m_
         1. Push `#t` onto the stack
@@ -781,8 +781,8 @@ For `lt`, `le`, `ge`, and `gt`, fixnum values are compared.
 --------------|-------------|-------------|-------------
  `#instr_t`   | `+14` (cmp) | `+2` (gt)   | _instr_
 
- 1. Remove item _m_ from the stack (`#?` on underflow)
- 1. Remove item _n_ from the stack (`#?` on underflow)
+ 1. Remove item _m_ from the stack
+ 1. Remove item _n_ from the stack
  1. If _n_ and _m_ are both fixnums
     1. If _n_ > _m_
         1. Push `#t` onto the stack
@@ -837,7 +837,7 @@ A deque is managed as a
 --------------|---------------|---------------|-------------
  `#instr_t`   | `+11` (deque) | `+1` (empty)  | _instr_
 
- 1. Remove _deque_ from the stack (`#?` on underflow)
+ 1. Remove _deque_ from the stack
  1. If _deque_ is `#pair_t(front, back)`
     1. If _front_ is a `#pair_t` or _back_ is a `#pair_t`
         1. Push `#f` onto the stack
@@ -850,15 +850,15 @@ A deque is managed as a
 --------------|---------------|---------------|-------------
  `#instr_t`   | `+11` (deque) | `+2` (push)   | _instr_
 
- 1. Remove _value_ from the stack (`#?` on underflow)
- 1. Remove _deque_ from the stack (`#?` on underflow)
+ 1. Remove _value_ from the stack
+ 1. Remove _deque_ from the stack
  1. Push `cons(cons(value, car(deque)), cdr(deque))` onto the stack
 
  T            | X (op)        | Y (imm)       | Z (k)
 --------------|---------------|---------------|-------------
  `#instr_t`   | `+11` (deque) | `+3` (pop)    | _instr_
 
- 1. Remove _deque_ from the stack (`#?` on underflow)
+ 1. Remove _deque_ from the stack
  1. If _deque_ is `#pair_t(front, back)`
     1. If _front_ is not a `#pair_t`
         1. While _back_ is a `#pair_t`
@@ -874,15 +874,15 @@ A deque is managed as a
 --------------|---------------|---------------|-------------
  `#instr_t`   | `+11` (deque) | `+4` (put)    | _instr_
 
- 1. Remove _value_ from the stack (`#?` on underflow)
- 1. Remove _deque_ from the stack (`#?` on underflow)
+ 1. Remove _value_ from the stack
+ 1. Remove _deque_ from the stack
  1. Push `cons(car(deque), cons(value, cdr(deque)))` onto the stack
 
  T            | X (op)        | Y (imm)       | Z (k)
 --------------|---------------|---------------|-------------
  `#instr_t`   | `+11` (deque) | `+5` (pull)   | _instr_
 
- 1. Remove _deque_ from the stack (`#?` on underflow)
+ 1. Remove _deque_ from the stack
  1. If _deque_ is `#pair_t(front, back)`
     1. If _back_ is not a `#pair_t`
         1. While _front_ is a `#pair_t`
@@ -898,7 +898,7 @@ A deque is managed as a
 --------------|---------------|---------------|-------------
  `#instr_t`   | `+11` (deque) | `+6` (len)    | _instr_
 
- 1. Remove _deque_ from the stack (`#?` on underflow)
+ 1. Remove _deque_ from the stack
  1. Let _count_ be `0`
  1. Let _front_ be `car(deque)`
  1. While _front_ is a `#pair_t`
@@ -928,8 +928,8 @@ A dictionary entry is represented by a `#dict_t(key, value, next)`.
 --------------|---------------|-------------|-------------
  `#instr_t`   | `+10` (dict)  | `+0` (has)  | _instr_
 
- 1. Remove _key_ from the stack (`#?` on underflow)
- 1. Remove _dict_ from the stack (`#?` on underflow)
+ 1. Remove _key_ from the stack
+ 1. Remove _dict_ from the stack
  1. Let _found_ be `#f`
  1. While not _found_ and _dict_ is `#dict_t(k, v, next)`
     1. If _k_ == _key_
@@ -942,8 +942,8 @@ A dictionary entry is represented by a `#dict_t(key, value, next)`.
 --------------|---------------|-------------|-------------
  `#instr_t`   | `+10` (dict)  | `+1` (get)  | _instr_
 
- 1. Remove _key_ from the stack (`#?` on underflow)
- 1. Remove _dict_ from the stack (`#?` on underflow)
+ 1. Remove _key_ from the stack
+ 1. Remove _dict_ from the stack
  1. Let _found_ be `#?`
  1. While _found_ == `#?` and _dict_ is `#dict_t(k, v, next)`
     1. If _k_ == _key_
@@ -956,18 +956,18 @@ A dictionary entry is represented by a `#dict_t(key, value, next)`.
 --------------|---------------|-------------|-------------
  `#instr_t`   | `+10` (dict)  | `+2` (add)  | _instr_
 
- 1. Remove _value_ from the stack (`#?` on underflow)
- 1. Remove _key_ from the stack (`#?` on underflow)
- 1. Remove _dict_ from the stack (`#?` on underflow)
+ 1. Remove _value_ from the stack
+ 1. Remove _key_ from the stack
+ 1. Remove _dict_ from the stack
  1. Push `#dict_t(key, value, dict)` onto the stack
 
  T            | X (op)        | Y (imm)     | Z (k)
 --------------|---------------|-------------|-------------
  `#instr_t`   | `+10` (dict)  | `+3` (set)  | _instr_
 
- 1. Remove _value_ from the stack (`#?` on underflow)
- 1. Remove _key_ from the stack (`#?` on underflow)
- 1. Remove _dict_ from the stack (`#?` on underflow)
+ 1. Remove _value_ from the stack
+ 1. Remove _key_ from the stack
+ 1. Remove _dict_ from the stack
  1. If `dict_has(key)`
     1. Let _dict_ become `dict_del(key)`
  1. Push `#dict_t(key, value, dict)` onto the stack
@@ -976,8 +976,8 @@ A dictionary entry is represented by a `#dict_t(key, value, next)`.
 --------------|---------------|-------------|-------------
  `#instr_t`   | `+10` (dict)  | `+4` (del)  | _instr_
 
- 1. Remove _key_ from the stack (`#?` on underflow)
- 1. Remove _dict_ from the stack (`#?` on underflow)
+ 1. Remove _key_ from the stack
+ 1. Remove _dict_ from the stack
  1. Let _orig_ be `dict`
  1. Let _copy_ be `#nil`
  1. While _dict_ is `#dict_t(k, v, next)`
@@ -1019,16 +1019,15 @@ Duplicate items on the top of the stack.
 --------------|---------------|-------------|-------------
  `#instr_t`   | `+22` (dup)   | _n_         | _instr_
 
- 1. If _n_ > 0
-    1. Let _scan_ be the stack pointer
-    1. Let _copy_ be `#nil`
-    1. While _n_ > 0
-        1. Let _copy_ become `cons(car(scan), copy)`
-        1. Let _scan_ become `cdr(scan)`
-        1. Let _n_ become `n-1`
-    1. While _copy_ is a `#pair_t`
-        1. Push `car(copy)` onto the stack
-        1. Let _copy_ become `cdr(copy)`
+ 1. Let _scan_ be the stack pointer
+ 1. Let _copy_ be `#nil`
+ 1. While _n_ > 0
+    1. Let _copy_ become `cons(car(scan), copy)`
+    1. Let _scan_ become `cdr(scan)`
+    1. Let _n_ become `n-1`
+ 1. While _copy_ is a `#pair_t`
+    1. Push `car(copy)` onto the stack
+    1. Let _copy_ become `cdr(copy)`
 
 #### `end` instruction
 
@@ -1047,7 +1046,7 @@ and the processing "thread" ends.
 --------------|---------------|---------------|-------------
  `#instr_t`   | `+15` (end)   | `-1` (abort)  | —
 
- 1. Remove item _reason_ from the stack (`#?` on underflow)
+ 1. Remove item _reason_ from the stack
  1. Record/report _reason_ to system-specific log or debugger
  1. Discard the current event and any pending effects
  1. Make actor ready for the next event
@@ -1079,7 +1078,7 @@ Compare the top-of-stack item to an immediate value.
 --------------|-------------|-------------|-------------
  `#instr_t`   | `+6` (eq)   | _v_         | _instr_
 
- 1. Remove item _u_ from the stack (`#?` on underflow)
+ 1. Remove item _u_ from the stack
  1. If _u_ and _v_ are the same raw value
     1. Push `#t` onto the stack
  1. Otherwise
@@ -1103,7 +1102,7 @@ generate the same machine instruction.
 --------------|-------------|-------------|-------------
  `#instr_t`   | `+3` (if)   | _t-instr_   | _f-instr_
 
- 1. Remove item _bool_ from the stack (`#?` on underflow)
+ 1. Remove item _bool_ from the stack
  1. If _bool_ is "falsy"
     1. Continue execution at _f-instr_
  1. Otherwise
@@ -1121,7 +1120,7 @@ Continue execution at the address taken from the stack.
 --------------|-------------|-------------|-------------
  `#instr_t`   | `+1` (jump) | `#?`        | `#?`
 
- 1. Remove item _k_ from the stack (`#?` on underflow)
+ 1. Remove item _k_ from the stack
  1. If _k_ is an instruction address
     1. Continue execution at _k_
  1. Otherwise
@@ -1219,7 +1218,7 @@ however both are always specified.
 --------------|-------------|-------------|-------------
  `#instr_t`   | `+28` (new) | _positive_  | _instr_
 
- 1. Remove item _beh_ from the stack (`#?` on underflow)
+ 1. Remove item _beh_ from the stack
  1. Form a list from the number of stack items specified by the immediate argument
  1. Create a new actor with _beh_ for code and this list for data
  1. Push a capability designating the new actor onto the stack
@@ -1228,7 +1227,7 @@ however both are always specified.
 --------------|-------------|-------------|-------------
  `#instr_t`   | `+28` (new) | `+0`        | _instr_
 
- 1. Remove item _beh_ from the stack (`#?` on underflow)
+ 1. Remove item _beh_ from the stack
  1. Create a new actor with _beh_ for code and `()` for data
  1. Push a capability designating the new actor onto the stack
 
@@ -1236,8 +1235,8 @@ however both are always specified.
 --------------|-------------|-------------|-------------
  `#instr_t`   | `+28` (new) | `-1`        | _instr_
 
- 1. Remove item _beh_ from the stack (`#?` on underflow)
- 1. Remove item _state_ from the stack (`#?` on underflow)
+ 1. Remove item _beh_ from the stack
+ 1. Remove item _state_ from the stack
  1. Create a new actor with _beh_ for code and _state_ for data
  1. Push a capability designating the new actor onto the stack
 
@@ -1245,7 +1244,7 @@ however both are always specified.
 --------------|-------------|-------------|-------------
  `#instr_t`   | `+28` (new) | `-2`        | _instr_
 
- 1. Remove an item from the stack (`#?` on underflow)
+ 1. Remove an item from the stack
  1. Create a new actor with the `X` field of this item for code and the `Y` field of this item for data
  1. Push a capability designating the new actor onto the stack
 
@@ -1253,7 +1252,7 @@ however both are always specified.
 --------------|-------------|-------------|-------------
  `#instr_t`   | `+28` (new) | `-3`        | _instr_
 
- 1. Remove an item from the stack (`#?` on underflow)
+ 1. Remove an item from the stack
  1. Create a new actor with the `Z` field of this item for code and this item for data
  1. Push a capability designating the new actor onto the stack
 
@@ -1263,6 +1262,42 @@ however both are always specified.
 ---------------------|---------------------|--------------|-------------------------------------
 (_v₁_ … _vₙ_ . _tailₙ_) | `nth` _n_         | _vₙ_         | copy item _n_ from a _pair_ list
 (_v₁_ … _vₙ_ . _tailₙ_) | `nth` -_n_        | _tailₙ_      | copy tail _n_ from a _pair_ list
+
+Extract data from a pair-list.
+
+ T (type)     | X (op)        | Y (imm)     | Z (k)
+--------------|---------------|-------------|-------------
+ `#instr_t`   | `+19` (nth)   | `+0`        | _instr_
+
+ 1. Remove _list_ from the stack
+ 1. If _list_ is a `#pair_t`
+    1. Push _list_ onto the stack
+ 1. Otherwise
+    1. Push `#?` onto the stack
+
+ T (type)     | X (op)        | Y (imm)     | Z (k)
+--------------|---------------|-------------|-------------
+ `#instr_t`   | `+19` (nth)   | _positive_  | _instr_
+
+ 1. Remove _list_ from the stack
+ 1. Let _n_ be `positive-1`
+ 1. Let _scan_ be _list_
+ 1. While _n_ > 0
+    1. Let _scan_ become `cdr(scan)`
+    1. Let _n_ become `n-1`
+ 1. Push `car(scan)` onto the stack
+
+ T (type)     | X (op)        | Y (imm)     | Z (k)
+--------------|---------------|-------------|-------------
+ `#instr_t`   | `+19` (nth)   | _negative_  | _instr_
+
+ 1. Remove _list_ from the stack
+ 1. Let _n_ be `negative+1`
+ 1. Let _scan_ be _list_
+ 1. While _n_ < 0
+    1. Let _scan_ become `cdr(scan)`
+    1. Let _n_ become `n+1`
+ 1. Push `cdr(scan)` onto the stack
 
 #### `pair` instruction
 
@@ -1277,7 +1312,7 @@ Create a _pair_ list from some number of stack items.
 --------------|---------------|-------------|-------------
  `#instr_t`   | `+17` (pair)  | _positive_  | _instr_
 
- 1. Remove _n_+1 items from the stack (`#?` on underflow)
+ 1. Remove _n_+1 items from the stack
  1. Create an _n_ item list from removed stack items
     1. Item  _n_+1 will be the tail of the list
  1. Push the resulting list onto the stack
