@@ -40,8 +40,8 @@ pkgs.mkShell {
     ];
 
     shellHook = ''
-        alias s="deno task debug"
         alias b="deno task build"
+        alias s="deno task serve"
         alias t="deno task test || echo FAIL"
     '';
 }

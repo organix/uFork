@@ -5,8 +5,8 @@
         "https://ufork.org/wasm/": "./vm/wasm/"
     },
     "tasks": {
-        "debug": "deno run --allow-all --importmap https://deno.land/x/replete/import_map.json tools/replete.js",
         "build": "deno run --allow-run --allow-read=vm/wasm  --allow-write=vm/wasm vm/wasm/build.js",
+        "serve": "deno run --allow-all --importmap https://deno.land/x/replete/import_map.json tools/replete.js",
         "test": "deno run --allow-run tools/test.js"
     }
 }
