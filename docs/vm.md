@@ -455,10 +455,16 @@ The semantics of each instruction are detailed below.
 A few general rules apply to all instructions.
 Unless stated otherwise in the description of an instruction:
 
- * Attempts to execute a non-instruction signals an error
- * Unknown instruction op-codes signal an error
- * Arguments of an invalid type signal an error
- * Items referenced beyond the bottom of the stack are treated as `#?`
+  * Attempts to execute a non-instruction signals an error (`E_NOT_EXE`)
+  * Unknown instruction op-codes signal an error
+  * Arguments of an invalid type signal an error
+  * Items referenced beyond the bottom of the stack are treated as `#?`
+
+The following functions are used in various instruction descriptions:
+
+  * Define `cons`(_x:any_, _y:any_) as: `#pair_t(x, y)`
+  * Define `car`(_x:any_) as: if `typeq(#pair_t, x)` then `x.X` else `#?`
+  * Define `cdr`(_x:any_) as: if `typeq(#pair_t, x)` then `x.Y` else `#?`
 
 #### `alu` instruction
 
@@ -1359,6 +1365,41 @@ Split items from a pair-list onto the stack.
 ---------------------|---------------------|--------------|-------------------------------------
 _vₙ_ … _v₁_          | `pick` _n_          | _vₙ_ … _v₁_ _vₙ_ | copy item _n_ to top of stack
 _vₙ_ … _v₁_          | `pick` -_n_         | _v₁_ _vₙ_ … _v₁_ | copy top of stack before item _n_
+
+Create a pair-list from some number of stack items.
+
+ T (type)     | X (op)        | Y (imm)     | Z (k)
+--------------|---------------|-------------|-------------
+ `#instr_t`   | `+20` (pick)  | `+0`        | _instr_
+
+ 1. Push `#?` onto the stack
+
+ T (type)     | X (op)        | Y (imm)     | Z (k)
+--------------|---------------|-------------|-------------
+ `#instr_t`   | `+20` (pick)  | _positive_  | _instr_
+
+ 1. Let _n_ be `positive-1`
+ 1. Let _scan_ be the stack pointer
+ 1. While n > 0
+    1. Let _scan_ become `cdr(scan)`
+    1. Let _n_ become `n-1`
+ 1. Push `car(scan)` onto the stack
+
+ T (type)     | X (op)        | Y (imm)     | Z (k)
+--------------|---------------|-------------|-------------
+ `#instr_t`   | `+20` (pick)  | _negative_  | _instr_
+
+ 1. Let _n_ be `negative+1`
+ 1. Let _scan_ be the stack pointer
+ 1. Let _item_ be `car(scan)`
+ 1. While n < 0
+    1. Let _scan_ become `cdr(scan)`
+    1. Let _n_ become `n+1`
+ 1. Insert _item_ before _scan_
+
+To Insert _x:any_ before _p:pair_:
+ 1. Let _entry_ be `cons(x, cdr(p))`
+ 1. Set `cdr(p)` to _entry_
 
 #### `push` instruction
 
