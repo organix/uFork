@@ -463,8 +463,23 @@ Unless stated otherwise in the description of an instruction:
 The following functions are used in various instruction descriptions:
 
   * Define `cons`(_x:any_, _y:any_) as: `#pair_t(x, y)`
-  * Define `car`(_x:any_) as: if `typeq(#pair_t, x)` then `x.X` else `#?`
-  * Define `cdr`(_x:any_) as: if `typeq(#pair_t, x)` then `x.Y` else `#?`
+  * Define `car`(_x:any_) as: if _x_ is a `#pair_t` then `x.X` else `#?`
+  * Define `cdr`(_x:any_) as: if _x_ is a `#pair_t` then `x.Y` else `#?`
+
+To Advance _p:any_ by _n:fixnum_:
+ 1. While _n_ > 0
+    1. Let _p_ become `cdr(p)`
+    1. Let _n_ become `n-1`
+
+To Insert _item:any_ at _prev:any_:
+ 1. If _prev_ is a `#pair_t`
+    1. Let _entry_ be `cons(item, cdr(prev))`
+    1. Set `prev.Y` to _entry_
+
+To Extract _next:any_ from _prev:any_:
+ 1. If _next_ is a `#pair_t`
+    1. Set `prev.Y` to `cdr(next)`
+    1. Set `next.Y` to `#nil`
 
 #### `alu` instruction
 
@@ -1366,7 +1381,7 @@ Split items from a pair-list onto the stack.
 _vₙ_ … _v₁_          | `pick` _n_          | _vₙ_ … _v₁_ _vₙ_ | copy item _n_ to top of stack
 _vₙ_ … _v₁_          | `pick` -_n_         | _v₁_ _vₙ_ … _v₁_ | copy top of stack before item _n_
 
-Create a pair-list from some number of stack items.
+Copy an item at a particular depth on the stack.
 
  T (type)     | X (op)        | Y (imm)     | Z (k)
 --------------|---------------|-------------|-------------
@@ -1380,26 +1395,18 @@ Create a pair-list from some number of stack items.
 
  1. Let _n_ be `positive-1`
  1. Let _scan_ be the stack pointer
- 1. While n > 0
-    1. Let _scan_ become `cdr(scan)`
-    1. Let _n_ become `n-1`
+ 1. Advance _scan_ by _n_
  1. Push `car(scan)` onto the stack
 
  T (type)     | X (op)        | Y (imm)     | Z (k)
 --------------|---------------|-------------|-------------
  `#instr_t`   | `+20` (pick)  | _negative_  | _instr_
 
- 1. Let _n_ be `negative+1`
+ 1. Let _n_ be `-negative-1`
  1. Let _scan_ be the stack pointer
  1. Let _item_ be `car(scan)`
- 1. While n < 0
-    1. Let _scan_ become `cdr(scan)`
-    1. Let _n_ become `n+1`
- 1. Insert _item_ before _scan_
-
-To Insert _x:any_ before _p:pair_:
- 1. Let _entry_ be `cons(x, cdr(p))`
- 1. Set `cdr(p)` to _entry_
+ 1. Advance _scan_ by _n_
+ 1. Insert _item_ at _scan_
 
 #### `push` instruction
 
@@ -1421,6 +1428,37 @@ Push an immediate value onto the top of the stack.
 ---------------------|---------------------|--------------|-------------------------------------
 _vₙ_ … _v₁_          | `roll` _n_          | _vₙ₋₁_ … _v₁_ _vₙ_ | roll item _n_ to top of stack
 _vₙ_ … _v₁_          | `roll` -_n_         | _v₁_ _vₙ_ … _v₂_ | roll top of stack to item _n_
+
+Rotate stack items up to a particular depth.
+
+ T (type)     | X (op)        | Y (imm)     | Z (k)
+--------------|---------------|-------------|-------------
+ `#instr_t`   | `+21` (roll)  | `+0`        | _instr_
+
+ 1. No effect
+
+ T (type)     | X (op)        | Y (imm)     | Z (k)
+--------------|---------------|-------------|-------------
+ `#instr_t`   | `+21` (roll)  | _positive_  | _instr_
+
+ 1. Let _n_ be `positive-1`
+ 1. If _n_ > 0
+    1. Let _p_ be the stack pointer
+    1. Advance _p_ by `n-1`
+    1. Let _q_ be `cdr(p)`
+    1. Extract _q_ from _p_
+    1. Push `car(q)` onto the stack
+
+ T (type)     | X (op)        | Y (imm)     | Z (k)
+--------------|---------------|-------------|-------------
+ `#instr_t`   | `+21` (roll)  | _negative_  | _instr_
+
+ 1. Let _n_ be `-negative-1`
+ 1. If _n_ > 0
+    1. Remove _item_ from the stack
+    1. Let _p_ be the stack pointer
+    1. Advance _p_ by `n-1`
+    1. Insert _item_ at _p_
 
 #### `send` instruction
 
