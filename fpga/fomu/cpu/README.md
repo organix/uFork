@@ -7,6 +7,7 @@ for implementing uFork instructions.
 Programs for the machine
 are written in [Forth](https://en.wikipedia.org/wiki/Forth_(programming_language)).
 Considerable inspiration was taken from
+the [`J1`](https://www.excamera.com/files/j1.pdf) CPU and
 [`J1a SwapForth`](https://github.com/jamesbowman/swapforth/tree/master/j1a).
 
 ## Build and Deploy

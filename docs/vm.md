@@ -1467,3 +1467,77 @@ _quad_               | `quad` `-1`         | _T_          | extract 1 _quad_ fie
 _quad_               | `quad` `-2`         | _X_ _T_      | extract 2 _quad_ fields
 _quad_               | `quad` `-3`         | _Y_ _X_ _T_  | extract 3 _quad_ fields
 _quad_               | `quad` `-4`         | _Z_ _Y_ _X_ _T_ | extract 4 _quad_ fields
+
+Allocate and initialize, or access, a cell in quad-memory (RAM).
+
+ T            | X (op)        | Y (imm)     | Z (k)
+--------------|---------------|-------------|-------------
+ `#instr_t`   | `+9` (quad)   | +1          | _instr_
+
+ 1. Remove item _T_ from the stack
+ 1. Allocate a new _quad_ intialized to \[_T_, `#?`, `#?`, `#?`\]
+ 1. Push _quad_ reference onto the stack
+
+ T            | X (op)        | Y (imm)     | Z (k)
+--------------|---------------|-------------|-------------
+ `#instr_t`   | `+9` (quad)   | +2          | _instr_
+
+ 1. Remove item _T_ from the stack
+ 1. Remove item _X_ from the stack
+ 1. Allocate a new _quad_ intialized to \[_T_, _X_, `#?`, `#?`\]
+ 1. Push _quad_ reference onto the stack
+
+ T            | X (op)        | Y (imm)     | Z (k)
+--------------|---------------|-------------|-------------
+ `#instr_t`   | `+9` (quad)   | +3          | _instr_
+
+ 1. Remove item _T_ from the stack
+ 1. Remove item _X_ from the stack
+ 1. Remove item _Y_ from the stack
+ 1. Allocate a new _quad_ intialized to \[_T_, _X_, _Y_, `#?`\]
+ 1. Push _quad_ reference onto the stack
+
+ T            | X (op)        | Y (imm)     | Z (k)
+--------------|---------------|-------------|-------------
+ `#instr_t`   | `+9` (quad)   | +4          | _instr_
+
+ 1. Remove item _T_ from the stack
+ 1. Remove item _X_ from the stack
+ 1. Remove item _Y_ from the stack
+ 1. Remove item _Z_ from the stack
+ 1. Allocate a new _quad_ intialized to \[_T_, _X_, _Y_, _Z_\]
+ 1. Push _quad_ reference onto the stack
+
+ T            | X (op)        | Y (imm)     | Z (k)
+--------------|---------------|-------------|-------------
+ `#instr_t`   | `+9` (quad)   | -1          | _instr_
+
+ 1. Remove _quad_ from the stack
+ 1. Push _quad_ field _T_ onto the stack
+
+ T            | X (op)        | Y (imm)     | Z (k)
+--------------|---------------|-------------|-------------
+ `#instr_t`   | `+9` (quad)   | -2          | _instr_
+
+ 1. Remove _quad_ from the stack
+ 1. Push _quad_ field _X_ onto the stack
+ 1. Push _quad_ field _T_ onto the stack
+
+ T            | X (op)        | Y (imm)     | Z (k)
+--------------|---------------|-------------|-------------
+ `#instr_t`   | `+9` (quad)   | -3          | _instr_
+
+ 1. Remove _quad_ from the stack
+ 1. Push _quad_ field _Y_ onto the stack
+ 1. Push _quad_ field _X_ onto the stack
+ 1. Push _quad_ field _T_ onto the stack
+
+ T            | X (op)        | Y (imm)     | Z (k)
+--------------|---------------|-------------|-------------
+ `#instr_t`   | `+9` (quad)   | -4          | _instr_
+
+ 1. Remove _quad_ from the stack
+ 1. Push _quad_ field _Z_ onto the stack
+ 1. Push _quad_ field _Y_ onto the stack
+ 1. Push _quad_ field _X_ onto the stack
+ 1. Push _quad_ field _T_ onto the stack
