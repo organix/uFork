@@ -479,7 +479,19 @@ To Insert _item:any_ at _prev:any_:
 To Extract _next:any_ from _prev:any_:
  1. If _next_ is a `#pair_t`
     1. Set `prev.Y` to `cdr(next)`
-    1. Set `next.Y` to `#nil`
+
+To Enlist _n_ as _list_:
+ 1. If _n_ > 0
+    1. Let _list_ be the stack pointer
+    1. Let _p_ be _list_
+    1. Advance _p_ by _n_
+    1. If _p_ is a `#pair_t`
+        1. Let the stack pointer become `cdr(p)`
+        1. Set `p.Y` to `#nil`
+    1. Otherwise
+        1. Let the stack pointer become `#nil`
+ 1. Otherwise
+    1. Let _list_ be `#nil`
 
 #### `alu` instruction
 
@@ -504,7 +516,7 @@ Compute an ALU function of the arguments on the stack.
 --------------|-------------|-------------|-------------
  `#instr_t`   | `+13` (alu) | `+0` (not)  | _instr_
 
- 1. Remove item _n_ from the stack
+ 1. Remove _n_ from the stack
  1. If _n_ is a fixnum
     1. Invert all bits of fixnum
     1. Push result onto the stack
@@ -515,8 +527,8 @@ Compute an ALU function of the arguments on the stack.
 --------------|-------------|-------------|-------------
  `#instr_t`   | `+13` (alu) | `+1` (and)  | _instr_
 
- 1. Remove item _m_ from the stack
- 1. Remove item _n_ from the stack
+ 1. Remove _m_ from the stack
+ 1. Remove _n_ from the stack
  1. If _n_ and _m_ are both fixnums
     1. Bitwise AND _n_ with _m_
     1. Push result onto the stack
@@ -527,8 +539,8 @@ Compute an ALU function of the arguments on the stack.
 --------------|-------------|-------------|-------------
  `#instr_t`   | `+13` (alu) | `+2` (or)  | _instr_
 
- 1. Remove item _m_ from the stack
- 1. Remove item _n_ from the stack
+ 1. Remove _m_ from the stack
+ 1. Remove _n_ from the stack
  1. If _n_ and _m_ are both fixnums
     1. Bitwise OR _n_ with _m_
     1. Push result onto the stack
@@ -539,8 +551,8 @@ Compute an ALU function of the arguments on the stack.
 --------------|-------------|-------------|-------------
  `#instr_t`   | `+13` (alu) | `+3` (xor)  | _instr_
 
- 1. Remove item _m_ from the stack
- 1. Remove item _n_ from the stack
+ 1. Remove _m_ from the stack
+ 1. Remove _n_ from the stack
  1. If _n_ and _m_ are both fixnums
     1. Bitwise XOR _n_ with _m_
     1. Push result onto the stack
@@ -551,8 +563,8 @@ Compute an ALU function of the arguments on the stack.
 --------------|-------------|-------------|-------------
  `#instr_t`   | `+13` (alu) | `+4` (add)  | _instr_
 
- 1. Remove item _m_ from the stack
- 1. Remove item _n_ from the stack
+ 1. Remove _m_ from the stack
+ 1. Remove _n_ from the stack
  1. If _n_ and _m_ are both fixnums
     1. Add _n_ and _m_
     1. Truncate 2's-complement result
@@ -564,8 +576,8 @@ Compute an ALU function of the arguments on the stack.
 --------------|-------------|-------------|-------------
  `#instr_t`   | `+13` (alu) | `+5` (sub)  | _instr_
 
- 1. Remove item _m_ from the stack
- 1. Remove item _n_ from the stack
+ 1. Remove _m_ from the stack
+ 1. Remove _n_ from the stack
  1. If _n_ and _m_ are both fixnums
     1. Subtract _m_ from _n_
     1. Truncate 2's-complement result
@@ -577,8 +589,8 @@ Compute an ALU function of the arguments on the stack.
 --------------|-------------|-------------|-------------
  `#instr_t`   | `+13` (alu) | `+6` (mul)  | _instr_
 
- 1. Remove item _m_ from the stack
- 1. Remove item _n_ from the stack
+ 1. Remove _m_ from the stack
+ 1. Remove _n_ from the stack
  1. If _n_ and _m_ are both fixnums
     1. Multiply _n_ by _m_
     1. Truncate 2's-complement result
@@ -590,8 +602,8 @@ Compute an ALU function of the arguments on the stack.
 --------------|-------------|-------------|-------------
  `#instr_t`   | `+13` (alu) | `+8` (lsl)  | _instr_
 
- 1. Remove item _m_ from the stack
- 1. Remove item _n_ from the stack
+ 1. Remove _m_ from the stack
+ 1. Remove _n_ from the stack
  1. If _n_ and _m_ are both fixnums
     1. Logical shift _n_ left by _m_ bits (fill w/ zero)
     1. Truncate 2's-complement result
@@ -603,8 +615,8 @@ Compute an ALU function of the arguments on the stack.
 --------------|-------------|-------------|-------------
  `#instr_t`   | `+13` (alu) | `+9` (lsr)  | _instr_
 
- 1. Remove item _m_ from the stack
- 1. Remove item _n_ from the stack
+ 1. Remove _m_ from the stack
+ 1. Remove _n_ from the stack
  1. If _n_ and _m_ are both fixnums
     1. Logical shift _n_ right by _m_ bits (fill w/ zero)
     1. Push result onto the stack
@@ -615,8 +627,8 @@ Compute an ALU function of the arguments on the stack.
 --------------|-------------|-------------|-------------
  `#instr_t`   | `+13` (alu) | `+10` (asr) | _instr_
 
- 1. Remove item _m_ from the stack
- 1. Remove item _n_ from the stack
+ 1. Remove _m_ from the stack
+ 1. Remove _n_ from the stack
  1. If _n_ and _m_ are both fixnums
     1. Arithmetic shift _n_ right by _m_ bits (sign extend)
     1. Push result onto the stack
@@ -627,8 +639,8 @@ Compute an ALU function of the arguments on the stack.
 --------------|-------------|-------------|-------------
  `#instr_t`   | `+13` (alu) | `+11` (rol) | _instr_
 
- 1. Remove item _m_ from the stack
- 1. Remove item _n_ from the stack
+ 1. Remove _m_ from the stack
+ 1. Remove _n_ from the stack
  1. If _n_ and _m_ are both fixnums
     1. Rotate _n_ left by _m_ bits
     1. Push result onto the stack
@@ -639,8 +651,8 @@ Compute an ALU function of the arguments on the stack.
 --------------|-------------|-------------|-------------
  `#instr_t`   | `+13` (alu) | `+12` (ror) | _instr_
 
- 1. Remove item _m_ from the stack
- 1. Remove item _n_ from the stack
+ 1. Remove _m_ from the stack
+ 1. Remove _n_ from the stack
  1. If _n_ and _m_ are both fixnums
     1. Rotate _n_ right by _m_ bits
     1. Push result onto the stack
@@ -659,7 +671,7 @@ Ensure that the item on the stack has the expected value.
 --------------|-----------------|-------------|-------------
  `#instr_t`   | `+7` (assert)   | _any_       | _instr_
 
- 1. Remove item _actual_ from the stack
+ 1. Remove _actual_ from the stack
  1. If _actual_ is not equal to _expect_
     1. Signal an `E_ASSERT` error
 
@@ -682,16 +694,16 @@ however both are always replaced together.
 --------------|-------------|-------------|-------------
  `#instr_t`   | `+29` (beh) | _positive_  | _instr_
 
- 1. Remove item _beh_ from the stack
+ 1. Remove _beh_ from the stack
  1. Record _beh_ as the code to execute when handling the next event
- 1. Form a list from the number of stack items specified by the immediate argument
- 1. Record this list as the private data when handling the next event
+ 1. Enlist _positive_ as _list_
+ 1. Record _list_ as the private data when handling the next event
 
  T            | X (op)      | Y (imm)     | Z (k)
 --------------|-------------|-------------|-------------
  `#instr_t`   | `+29` (beh) | `+0`        | _instr_
 
- 1. Remove item _beh_ from the stack
+ 1. Remove _beh_ from the stack
  1. Record _beh_ as the code to execute when handling the next event
  1. Record `()` as the private data when handling the next event
 
@@ -699,9 +711,9 @@ however both are always replaced together.
 --------------|-------------|-------------|-------------
  `#instr_t`   | `+29` (beh) | `-1`        | _instr_
 
- 1. Remove item _beh_ from the stack
+ 1. Remove _beh_ from the stack
  1. Record _beh_ as the code to execute when handling the next event
- 1. Remove item _state_ from the stack
+ 1. Remove _state_ from the stack
  1. Record _state_ as the private data when handling the next event
 
  T            | X (op)      | Y (imm)     | Z (k)
@@ -739,8 +751,8 @@ For `lt`, `le`, `ge`, and `gt`, fixnum values are compared.
 --------------|-------------|-------------|-------------
  `#instr_t`   | `+14` (cmp) | `+0` (eq)   | _instr_
 
- 1. Remove item _u_ from the stack
- 1. Remove item _v_ from the stack
+ 1. Remove _u_ from the stack
+ 1. Remove _v_ from the stack
  1. If _u_ and _v_ are the same raw value
     1. Push `#t` onto the stack
  1. Otherwise
@@ -750,8 +762,8 @@ For `lt`, `le`, `ge`, and `gt`, fixnum values are compared.
 --------------|-------------|-------------|-------------
  `#instr_t`   | `+14` (cmp) | `+5` (ne)   | _instr_
 
- 1. Remove item _u_ from the stack
- 1. Remove item _v_ from the stack
+ 1. Remove _u_ from the stack
+ 1. Remove _v_ from the stack
  1. If _u_ and _v_ are different raw values
     1. Push `#t` onto the stack
  1. Otherwise
@@ -761,8 +773,8 @@ For `lt`, `le`, `ge`, and `gt`, fixnum values are compared.
 --------------|-------------|-------------|-------------
  `#instr_t`   | `+14` (cmp) | `+3` (lt)   | _instr_
 
- 1. Remove item _m_ from the stack
- 1. Remove item _n_ from the stack
+ 1. Remove _m_ from the stack
+ 1. Remove _n_ from the stack
  1. If _n_ and _m_ are both fixnums
     1. If _n_ < _m_
         1. Push `#t` onto the stack
@@ -775,8 +787,8 @@ For `lt`, `le`, `ge`, and `gt`, fixnum values are compared.
 --------------|-------------|-------------|-------------
  `#instr_t`   | `+14` (cmp) | `+4` (le)   | _instr_
 
- 1. Remove item _m_ from the stack
- 1. Remove item _n_ from the stack
+ 1. Remove _m_ from the stack
+ 1. Remove _n_ from the stack
  1. If _n_ and _m_ are both fixnums
     1. If _n_ <= _m_
         1. Push `#t` onto the stack
@@ -789,8 +801,8 @@ For `lt`, `le`, `ge`, and `gt`, fixnum values are compared.
 --------------|-------------|-------------|-------------
  `#instr_t`   | `+14` (cmp) | `+1` (ge)   | _instr_
 
- 1. Remove item _m_ from the stack
- 1. Remove item _n_ from the stack
+ 1. Remove _m_ from the stack
+ 1. Remove _n_ from the stack
  1. If _n_ and _m_ are both fixnums
     1. If _n_ >= _m_
         1. Push `#t` onto the stack
@@ -803,8 +815,8 @@ For `lt`, `le`, `ge`, and `gt`, fixnum values are compared.
 --------------|-------------|-------------|-------------
  `#instr_t`   | `+14` (cmp) | `+2` (gt)   | _instr_
 
- 1. Remove item _m_ from the stack
- 1. Remove item _n_ from the stack
+ 1. Remove _m_ from the stack
+ 1. Remove _n_ from the stack
  1. If _n_ and _m_ are both fixnums
     1. If _n_ > _m_
         1. Push `#t` onto the stack
@@ -1026,7 +1038,7 @@ Discard items from the stack.
  `#instr_t`   | `+23` (drop)  | _n_         | _instr_
 
  1. While _n_ > 0
-    1. Remove item from the stack
+    1. Remove from the stack
     1. Let _n_ become `n-1`
 
 #### `dup` instruction
@@ -1068,7 +1080,7 @@ and the processing "thread" ends.
 --------------|---------------|---------------|-------------
  `#instr_t`   | `+15` (end)   | `-1` (abort)  | —
 
- 1. Remove item _reason_ from the stack
+ 1. Remove _reason_ from the stack
  1. Record/report _reason_ to system-specific log or debugger
  1. Discard the current event and any pending effects
  1. Make actor ready for the next event
@@ -1100,7 +1112,7 @@ Compare the top-of-stack item to an immediate value.
 --------------|-------------|-------------|-------------
  `#instr_t`   | `+6` (eq)   | _v_         | _instr_
 
- 1. Remove item _u_ from the stack
+ 1. Remove _u_ from the stack
  1. If _u_ and _v_ are the same raw value
     1. Push `#t` onto the stack
  1. Otherwise
@@ -1124,7 +1136,7 @@ generate the same machine instruction.
 --------------|-------------|-------------|-------------
  `#instr_t`   | `+3` (if)   | _t-instr_   | _f-instr_
 
- 1. Remove item _bool_ from the stack
+ 1. Remove _bool_ from the stack
  1. If _bool_ is "falsy"
     1. Continue execution at _f-instr_
  1. Otherwise
@@ -1142,7 +1154,7 @@ Continue execution at the address taken from the stack.
 --------------|-------------|-------------|-------------
  `#instr_t`   | `+1` (jump) | `#?`        | `#?`
 
- 1. Remove item _k_ from the stack
+ 1. Remove _k_ from the stack
  1. If _k_ is an instruction address
     1. Continue execution at _k_
  1. Otherwise
@@ -1220,16 +1232,16 @@ however both are always specified together.
 --------------|-------------|-------------|-------------
  `#instr_t`   | `+28` (new) | _positive_  | _instr_
 
- 1. Remove item _beh_ from the stack
- 1. Form a list from the number of stack items specified by the immediate argument
- 1. Create a new actor with _beh_ for code and this list for data
+ 1. Remove _beh_ from the stack
+ 1. Enlist _positive_ as _list_
+ 1. Create a new actor with _beh_ for code and _list_ for data
  1. Push a capability designating the new actor onto the stack
 
  T            | X (op)      | Y (imm)     | Z (k)
 --------------|-------------|-------------|-------------
  `#instr_t`   | `+28` (new) | `+0`        | _instr_
 
- 1. Remove item _beh_ from the stack
+ 1. Remove _beh_ from the stack
  1. Create a new actor with _beh_ for code and `()` for data
  1. Push a capability designating the new actor onto the stack
 
@@ -1237,8 +1249,8 @@ however both are always specified together.
 --------------|-------------|-------------|-------------
  `#instr_t`   | `+28` (new) | `-1`        | _instr_
 
- 1. Remove item _beh_ from the stack
- 1. Remove item _state_ from the stack
+ 1. Remove _beh_ from the stack
+ 1. Remove _state_ from the stack
  1. Create a new actor with _beh_ for code and _state_ for data
  1. Push a capability designating the new actor onto the stack
 
@@ -1467,12 +1479,80 @@ Rotate stack items up to a particular depth.
 _mₙ_ … _m₁_ _actor_  | `send` _n_          | —            | send (_m₁_ … _mₙ_) to _actor_
 _msg_ _actor_        | `send` `-1`         | —            | send _msg_ to _actor_
 
+Add a new message-event to the current actor's transactional effects.
+
+ T            | X (op)        | Y (imm)     | Z (k)
+--------------|---------------|-------------|-------------
+ `#instr_t`   | `+26` (send)  | _positive_  | _instr_
+
+ 1. Remove _actor_ from the stack
+ 1. Enlist _positive_ as _msg_
+ 1. Record in the current actor's effect a new _event_ with:
+    * _actor_ as the target
+    * _msg_ as the message
+
+ T            | X (op)        | Y (imm)     | Z (k)
+--------------|---------------|-------------|-------------
+ `#instr_t`   | `+26` (send)  | `+0`        | _instr_
+
+ 1. Remove _actor_ from the stack
+ 1. Record in the current actor's effect a new _event_ with:
+    * _actor_ as the target
+    * `()` as the message
+
+ T            | X (op)        | Y (imm)     | Z (k)
+--------------|---------------|-------------|-------------
+ `#instr_t`   | `+26` (send)  | `-1`        | _instr_
+
+ 1. Remove _actor_ from the stack
+ 1. Remove _msg_ from the stack
+ 1. Record in the current actor's effect a new _event_ with:
+    * _actor_ as the target
+    * _msg_ as the message
+
 #### `signal` instruction
 
  Input               | Instruction         | Output       | Description
 ---------------------|---------------------|--------------|-------------------------------------
 _sponsor_ _mₙ_ … _m₁_ _actor_ | `signal` _n_ | —          | send (_m₁_ … _mₙ_) to _actor_ using _sponsor_
 _sponsor_ _msg_ _actor_ | `signal` `-1`    | —            | send _msg_ to _actor_ using _sponsor_
+
+Add a new "sponsored" message-event to the current actor's transactional effects.
+
+ T            | X (op)        | Y (imm)     | Z (k)
+--------------|---------------|-------------|-------------
+ `#instr_t`   | `+26` (send)  | _positive_  | _instr_
+
+ 1. Remove _actor_ from the stack
+ 1. Enlist _positive_ as _msg_
+ 1. Remove _sponsor_ from the stack
+ 1. Record in the current actor's effect a new _event_ with:
+    * _sponsor_ as the sponsor
+    * _actor_ as the target
+    * _msg_ as the message
+
+ T            | X (op)        | Y (imm)     | Z (k)
+--------------|---------------|-------------|-------------
+ `#instr_t`   | `+26` (send)  | `+0`        | _instr_
+
+ 1. Remove _actor_ from the stack
+ 1. Remove _sponsor_ from the stack
+ 1. Record in the current actor's effect a new _event_ with:
+    * _sponsor_ as the sponsor
+    * _actor_ as the target
+    * `()` as the message
+
+ T            | X (op)        | Y (imm)     | Z (k)
+--------------|---------------|-------------|-------------
+ `#instr_t`   | `+26` (send)  | `-1`        | _instr_
+
+ 1. Remove _actor_ from the stack
+ 1. Remove _msg_ from the stack
+ 1. Remove _sponsor_ from the stack
+ 1. Record in the current actor's effect a new _event_ with:
+    * _sponsor_ as the sponsor
+    * _actor_ as the target
+    * _msg_ as the message
 
 #### `sponsor` instruction
 
@@ -1528,7 +1608,7 @@ in the _T_ field of their quad
 --------------|---------------|-------------|-------------
  `#instr_t`   | `+5` (typeq)  | _T_         | _instr_
 
- 1. Remove item _v_ from the stack
+ 1. Remove _v_ from the stack
  1. If _v_ has type _T_
     1. Push `#t` onto the stack
  1. Otherwise
@@ -1553,7 +1633,7 @@ Allocate and initialize, or access, a cell in quad-memory (RAM).
 --------------|---------------|-------------|-------------
  `#instr_t`   | `+9` (quad)   | +1          | _instr_
 
- 1. Remove item _T_ from the stack
+ 1. Remove _T_ from the stack
  1. Allocate a new _quad_ intialized to \[_T_, `#?`, `#?`, `#?`\]
  1. Push _quad_ reference onto the stack
 
@@ -1561,8 +1641,8 @@ Allocate and initialize, or access, a cell in quad-memory (RAM).
 --------------|---------------|-------------|-------------
  `#instr_t`   | `+9` (quad)   | +2          | _instr_
 
- 1. Remove item _T_ from the stack
- 1. Remove item _X_ from the stack
+ 1. Remove _T_ from the stack
+ 1. Remove _X_ from the stack
  1. Allocate a new _quad_ intialized to \[_T_, _X_, `#?`, `#?`\]
  1. Push _quad_ reference onto the stack
 
@@ -1570,9 +1650,9 @@ Allocate and initialize, or access, a cell in quad-memory (RAM).
 --------------|---------------|-------------|-------------
  `#instr_t`   | `+9` (quad)   | +3          | _instr_
 
- 1. Remove item _T_ from the stack
- 1. Remove item _X_ from the stack
- 1. Remove item _Y_ from the stack
+ 1. Remove _T_ from the stack
+ 1. Remove _X_ from the stack
+ 1. Remove _Y_ from the stack
  1. Allocate a new _quad_ intialized to \[_T_, _X_, _Y_, `#?`\]
  1. Push _quad_ reference onto the stack
 
@@ -1580,10 +1660,10 @@ Allocate and initialize, or access, a cell in quad-memory (RAM).
 --------------|---------------|-------------|-------------
  `#instr_t`   | `+9` (quad)   | +4          | _instr_
 
- 1. Remove item _T_ from the stack
- 1. Remove item _X_ from the stack
- 1. Remove item _Y_ from the stack
- 1. Remove item _Z_ from the stack
+ 1. Remove _T_ from the stack
+ 1. Remove _X_ from the stack
+ 1. Remove _Y_ from the stack
+ 1. Remove _Z_ from the stack
  1. Allocate a new _quad_ intialized to \[_T_, _X_, _Y_, _Z_\]
  1. Push _quad_ reference onto the stack
 
