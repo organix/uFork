@@ -5,4 +5,5 @@
   <text x="-25" y="18" fill="black" font-size="8" transform="rotate(-90,20,20)">DATASTACK</text>
   <polyline points="50,20 30,20 30,40 50,40"
   style="fill:none;stroke:black;stroke-width:1" />
+  <text x="35" y="25" font-size="6">DATA</text>
 </svg>
