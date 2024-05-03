@@ -19,7 +19,7 @@ The Effects produced by an Actor
 are applied in an all-or-nothing manner,
 as a transaction on the Configuration.
 The Configuration state is consistent
-between Event dispatches.
+between Effect commits.
 This can provide a stable checkpoint
 for persistence, suspension, migration, upgrade, and restart.
 
@@ -57,7 +57,7 @@ for any message it sends.
 An actor's behavior does not have direct access
 to the sponsor for the event it is processing.
 Any resources used to handle an event
-are charged to the sponsor for that event.
+are automatically charged to the sponsor for that event.
 An actor can create a new sponsor
 with a subset of the current sponsor's resources.
 The new sponsor is called the _peripheral_ sponsor.
@@ -171,7 +171,7 @@ The run-loop is the main entry-point for a host to run the uFork processor.
 The `limit` parameter controls the number of run-loop iterations.
 If the `limit` is positive, it defines the maximum number of iterations.
 Otherwise, the run-loop will continue until either an error is signalled
-or the processor runs out of work (event-queue and continue-queue empty).
+or the processor runs out of work (event-queue and continuation-queue empty).
 
 During each iteration of the run-loop, the processor will try to execute
 an instruction and then try to dispatch an event. Each instruction is

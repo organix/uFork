@@ -462,25 +462,25 @@ Unless stated otherwise in the description of an instruction:
 
 The following functions are used in various instruction descriptions:
 
-  * Define `cons`(_x:any_, _y:any_) as: `#pair_t(x, y)`
-  * Define `car`(_x:any_) as: if _x_ is a `#pair_t` then `x.X` else `#?`
-  * Define `cdr`(_x:any_) as: if _x_ is a `#pair_t` then `x.Y` else `#?`
+  * Define `cons`(_x_, _y_) as: `#pair_t(x, y)`
+  * Define `car`(_x_) as: if _x_ is a `#pair_t` then `x.X` else `#?`
+  * Define `cdr`(_x_) as: if _x_ is a `#pair_t` then `x.Y` else `#?`
 
-To Advance _p:any_ by _n:fixnum_:
+To Advance _p_ by _fixnum:n_:
  1. While _n_ > 0
     1. Let _p_ become `cdr(p)`
     1. Let _n_ become `n-1`
 
-To Insert _item:any_ at _prev:any_:
+To Insert _item_ at _prev_:
  1. If _prev_ is a `#pair_t`
     1. Let _entry_ be `cons(item, cdr(prev))`
     1. Set `prev.Y` to _entry_
 
-To Extract _next:any_ from _prev:any_:
+To Extract _next_ from _prev_:
  1. If _next_ is a `#pair_t`
     1. Set `prev.Y` to `cdr(next)`
 
-To Enlist _n_ as _list_:
+To Enlist _fixnum:n_ as _list_:
  1. If _n_ > 0
     1. Let _list_ be the stack pointer
     1. Let _p_ be _list_
@@ -1519,9 +1519,9 @@ _sponsor_ _msg_ _actor_ | `signal` `-1`    | —            | send _msg_ to _act
 
 Add a new "sponsored" message-event to the current actor's transactional effects.
 
- T            | X (op)        | Y (imm)     | Z (k)
---------------|---------------|-------------|-------------
- `#instr_t`   | `+26` (send)  | _positive_  | _instr_
+ T            | X (op)          | Y (imm)     | Z (k)
+--------------|-----------------|-------------|-------------
+ `#instr_t`   | `+27` (signal)  | _positive_  | _instr_
 
  1. Remove _actor_ from the stack
  1. Enlist _positive_ as _msg_
@@ -1531,9 +1531,9 @@ Add a new "sponsored" message-event to the current actor's transactional effects
     * _actor_ as the target
     * _msg_ as the message
 
- T            | X (op)        | Y (imm)     | Z (k)
---------------|---------------|-------------|-------------
- `#instr_t`   | `+26` (send)  | `+0`        | _instr_
+ T            | X (op)          | Y (imm)     | Z (k)
+--------------|-----------------|-------------|-------------
+ `#instr_t`   | `+27` (signal)  | `+0`        | _instr_
 
  1. Remove _actor_ from the stack
  1. Remove _sponsor_ from the stack
@@ -1542,9 +1542,9 @@ Add a new "sponsored" message-event to the current actor's transactional effects
     * _actor_ as the target
     * `()` as the message
 
- T            | X (op)        | Y (imm)     | Z (k)
---------------|---------------|-------------|-------------
- `#instr_t`   | `+26` (send)  | `-1`        | _instr_
+ T            | X (op)          | Y (imm)     | Z (k)
+--------------|-----------------|-------------|-------------
+ `#instr_t`   | `+27` (signal)  | `-1`        | _instr_
 
  1. Remove _actor_ from the stack
  1. Remove _msg_ from the stack
@@ -1628,14 +1628,23 @@ _quad_               | `quad` `-3`         | _Y_ _X_ _T_  | extract 3 _quad_ fie
 _quad_               | `quad` `-4`         | _Z_ _Y_ _X_ _T_ | extract 4 _quad_ fields
 
 Allocate and initialize, or access, a cell in quad-memory (RAM).
+The _T_ field must designate an explicit type.
+User-defined types can be created with _T_ = `#type_t`
+and _X_ = the arity (number of data fields from 1 to 3).
 
  T            | X (op)        | Y (imm)     | Z (k)
 --------------|---------------|-------------|-------------
  `#instr_t`   | `+9` (quad)   | +1          | _instr_
 
  1. Remove _T_ from the stack
- 1. Allocate a new _quad_ intialized to \[_T_, `#?`, `#?`, `#?`\]
- 1. Push _quad_ reference onto the stack
+ 1. If _T_ is a `#type_t`
+    1. Type _T_ has arity `0`
+        1. Allocate a new _quad_ intialized to \[_T_, `#?`, `#?`, `#?`\]
+        1. Push _quad_ reference onto the stack
+    1. Otherwise
+        1. Signal an error (`E_BOUNDS`)
+ 1. Otherwise
+    1. Signal an error (`E_NO_TYPE`)
 
  T            | X (op)        | Y (imm)     | Z (k)
 --------------|---------------|-------------|-------------
@@ -1643,8 +1652,14 @@ Allocate and initialize, or access, a cell in quad-memory (RAM).
 
  1. Remove _T_ from the stack
  1. Remove _X_ from the stack
- 1. Allocate a new _quad_ intialized to \[_T_, _X_, `#?`, `#?`\]
- 1. Push _quad_ reference onto the stack
+ 1. If _T_ is a `#type_t`
+    1. Type _T_ has arity `1`
+        1. Allocate a new _quad_ intialized to \[_T_, _X_, `#?`, `#?`\]
+        1. Push _quad_ reference onto the stack
+    1. Otherwise
+        1. Signal an error (`E_BOUNDS`)
+ 1. Otherwise
+    1. Signal an error (`E_NO_TYPE`)
 
  T            | X (op)        | Y (imm)     | Z (k)
 --------------|---------------|-------------|-------------
@@ -1653,8 +1668,14 @@ Allocate and initialize, or access, a cell in quad-memory (RAM).
  1. Remove _T_ from the stack
  1. Remove _X_ from the stack
  1. Remove _Y_ from the stack
- 1. Allocate a new _quad_ intialized to \[_T_, _X_, _Y_, `#?`\]
- 1. Push _quad_ reference onto the stack
+ 1. If _T_ is a `#type_t`
+    1. Type _T_ has arity `2`
+        1. Allocate a new _quad_ intialized to \[_T_, _X_, _Y_, `#?`\]
+        1. Push _quad_ reference onto the stack
+    1. Otherwise
+        1. Signal an error (`E_BOUNDS`)
+ 1. Otherwise
+    1. Signal an error (`E_NO_TYPE`)
 
  T            | X (op)        | Y (imm)     | Z (k)
 --------------|---------------|-------------|-------------
@@ -1664,8 +1685,14 @@ Allocate and initialize, or access, a cell in quad-memory (RAM).
  1. Remove _X_ from the stack
  1. Remove _Y_ from the stack
  1. Remove _Z_ from the stack
- 1. Allocate a new _quad_ intialized to \[_T_, _X_, _Y_, _Z_\]
- 1. Push _quad_ reference onto the stack
+ 1. If _T_ is a `#type_t`
+    1. Type _T_ has arity `3`
+        1. Allocate a new _quad_ intialized to \[_T_, _X_, _Y_, _Z_\]
+        1. Push _quad_ reference onto the stack
+    1. Otherwise
+        1. Signal an error (`E_BOUNDS`)
+ 1. Otherwise
+    1. Signal an error (`E_NO_TYPE`)
 
  T            | X (op)        | Y (imm)     | Z (k)
 --------------|---------------|-------------|-------------
