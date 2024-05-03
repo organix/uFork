@@ -8,5 +8,6 @@
      style="fill:none;stroke:black;stroke-width:1" />
     <text x="33" y="30" font-size="6">DATA</text>
     <text x="42" y="38" font-size="6">SE</text>
+    <text x="78" y="12" font-size="6">CLK</text>
   </g>
 </svg>
