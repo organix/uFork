@@ -477,7 +477,7 @@ To Insert _item_ at _prev_:
     1. Set `prev.Y` to _entry_
 
 To Extract _next_ from _prev_:
- 1. If _next_ is a `#pair_t`
+ 1. If _prev_ is a `#pair_t`
     1. Set `prev.Y` to `cdr(next)`
 
 To Enlist _fixnum:n_ as _list_:
@@ -1172,12 +1172,6 @@ Copy data from the current message-event.
 
  T (type)     | X (op)        | Y (imm)     | Z (k)
 --------------|---------------|-------------|-------------
- `#instr_t`   | `+24` (msg)   | `+0`        | _instr_
-
- 1. Push the entire message onto the stack as a single value
-
- T (type)     | X (op)        | Y (imm)     | Z (k)
---------------|---------------|-------------|-------------
  `#instr_t`   | `+24` (msg)   | _n_         | _instr_
 
  1. Let _msg_ be the entire message
@@ -1283,11 +1277,7 @@ Extract data from a pair-list.
 --------------|---------------|-------------|-------------
  `#instr_t`   | `+19` (nth)   | `+0`        | _instr_
 
- 1. Remove _list_ from the stack
- 1. If _list_ is a `#pair_t`
-    1. Push _list_ onto the stack
- 1. Otherwise
-    1. Push `#?` onto the stack
+ 1. No effect
 
  T (type)     | X (op)        | Y (imm)     | Z (k)
 --------------|---------------|-------------|-------------
@@ -1332,17 +1322,27 @@ Create a pair-list from some number of stack items.
 --------------|---------------|-------------|-------------
  `#instr_t`   | `+17` (pair)  | _positive_  | _instr_
 
- 1. Remove _n_+1 items from the stack
- 1. Create an _n_ item list from removed stack items
-    1. Item  _n_+1 will be the tail of the list
- 1. Push the resulting list onto the stack
+ 1. Let _list_ be the stack pointer
+ 1. Let _scan_ be `list`
+ 1. Advance _scan_ by `positive-1`
+ 1. If _scan_ is a `#pair_t`
+    1. Let _tail_ be `cdr(scan)`
+    1. Set `scan.Y` to `car(tail)`
+    1. If _tail_ is a `#pair_t`
+        1. Set `tail.X` to `list`
+        1. Let the stack pointer become `tail`
+    1. Otherwise
+        1. Let the stack pointer become `cons(list, #nil)`
+ 1. Otherwise
+    1. Let the stack pointer become `cons(list, #nil)`
 
  T (type)     | X (op)        | Y (imm)     | Z (k)
 --------------|---------------|-------------|-------------
  `#instr_t`   | `+17` (pair)  | _negative_  | _instr_
 
  1. If _n_ is `-1`
-    1. Capture the entire stack as a single item on the stack
+    1. Let _list_ be the stack pointer
+    1. Let the stack pointer become `cons(list, #nil)`
  1. Otherwise
     1. Push `#?` onto the stack
 
@@ -1374,7 +1374,7 @@ Split items from a pair-list onto the stack.
 --------------|---------------|---------------|-------------
  `#instr_t`   | `+18` (part)  | _negative_    | _instr_
 
- 1. If _n_ is `-1`
+ 1. If _negative_ is `-1`
     1. Remove _pair_ from the stack
     1. Let _copy_ be `#nil`
     1. While _pair_ is a `#pair_t`
@@ -1641,6 +1641,7 @@ because they don't have a `#type_t` in the _T_ field.
  1. Remove _control_ from the stack
  1. If _control_ is a `#actor_t`
     1. Set signal in _sponsor_ to _control_ (runable)
+    1. Remove _sponsor_ from the stack
  1. Otherwise
     1. Signal an error (`E_NOT_CAP`)
 
@@ -1650,6 +1651,7 @@ because they don't have a `#type_t` in the _T_ field.
 
  1. `sponsor_reclaim(sponsor)`
  1. Set signal in _sponsor_ to `0` (stopped)
+ 1. Remove _sponsor_ from the stack
 
 #### `state` instruction
 
@@ -1660,12 +1662,6 @@ because they don't have a `#type_t` in the _T_ field.
 —                    | `state` -_n_        | _tailₙ_      | copy state tail _n_ to stack
 
 Copy data from the current actor's state.
-
- T (type)     | X (op)        | Y (imm)     | Z (k)
---------------|---------------|-------------|-------------
- `#instr_t`   | `+25` (state) | `+0`        | _instr_
-
- 1. Push the entire state onto the stack as a single value
 
  T (type)     | X (op)        | Y (imm)     | Z (k)
 --------------|---------------|-------------|-------------
