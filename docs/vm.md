@@ -493,6 +493,24 @@ To Enlist _fixnum:n_ as _list_:
  1. Otherwise
     1. Let _list_ be `#nil`
 
+To Reverse _list_ onto _head_:
+ 1. While _list_ is a `#pair_t`
+    1. Let _next_ be `cdr(list)`
+    1. Set `list.Y` to `head`
+    1. Let _head_ become _list_
+    1. Let _list_ become _next_
+
+To Copy _list_ onto _head_:
+ 1. While _list_ is a `#pair_t`
+    1. Let _head_ be `cons(car(list), head)`
+    1. Let _list_ become `cdr(list)`
+
+To Copy _fixnum:n_ of _list_ onto _head_:
+ 1. While _list_ is a `#pair_t`
+    1. Let _head_ be `cons(car(list), head)`
+    1. Let _list_ become `cdr(list)`
+    1. Let _n_ become `n-1`
+
 #### `alu` instruction
 
  Input               | Instruction         | Output       | Description
@@ -1055,13 +1073,8 @@ Duplicate items on the top of the stack.
 
  1. Let _scan_ be the stack pointer
  1. Let _copy_ be `#nil`
- 1. While _n_ > 0
-    1. Let _copy_ become `cons(car(scan), copy)`
-    1. Let _scan_ become `cdr(scan)`
-    1. Let _n_ become `n-1`
- 1. While _copy_ is a `#pair_t`
-    1. Push `car(copy)` onto the stack
-    1. Let _copy_ become `cdr(copy)`
+ 1. Copy _n_ of _scan_ onto _copy_
+ 1. Reverse _copy_ onto the stack pointer
 
 #### `end` instruction
 
@@ -1340,7 +1353,7 @@ Create a pair-list from some number of stack items.
 --------------|---------------|-------------|-------------
  `#instr_t`   | `+17` (pair)  | _negative_  | _instr_
 
- 1. If _n_ is `-1`
+ 1. If _negative_ is `-1`
     1. Let _list_ be the stack pointer
     1. Let the stack pointer become `cons(list, #nil)`
  1. Otherwise
