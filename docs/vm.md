@@ -477,7 +477,7 @@ To Insert _item_ at _prev_:
     1. Set `prev.Y` to _entry_
 
 To Extract _next_ from _prev_:
- 1. If _next_ is a `#pair_t`
+ 1. If _prev_ is a `#pair_t`
     1. Set `prev.Y` to `cdr(next)`
 
 To Enlist _fixnum:n_ as _list_:
@@ -492,6 +492,24 @@ To Enlist _fixnum:n_ as _list_:
         1. Let the stack pointer become `#nil`
  1. Otherwise
     1. Let _list_ be `#nil`
+
+To Reverse _list_ onto _head_:
+ 1. While _list_ is a `#pair_t`
+    1. Let _next_ be `cdr(list)`
+    1. Set `list.Y` to `head`
+    1. Let _head_ become _list_
+    1. Let _list_ become _next_
+
+To Copy _list_ onto _head_:
+ 1. While _list_ is a `#pair_t`
+    1. Let _head_ be `cons(car(list), head)`
+    1. Let _list_ become `cdr(list)`
+
+To Copy _fixnum:n_ of _list_ onto _head_:
+ 1. While _list_ is a `#pair_t`
+    1. Let _head_ be `cons(car(list), head)`
+    1. Let _list_ become `cdr(list)`
+    1. Let _n_ become `n-1`
 
 #### `alu` instruction
 
@@ -1055,13 +1073,8 @@ Duplicate items on the top of the stack.
 
  1. Let _scan_ be the stack pointer
  1. Let _copy_ be `#nil`
- 1. While _n_ > 0
-    1. Let _copy_ become `cons(car(scan), copy)`
-    1. Let _scan_ become `cdr(scan)`
-    1. Let _n_ become `n-1`
- 1. While _copy_ is a `#pair_t`
-    1. Push `car(copy)` onto the stack
-    1. Let _copy_ become `cdr(copy)`
+ 1. Copy _n_ of _scan_ onto _copy_
+ 1. Reverse _copy_ onto the stack pointer
 
 #### `end` instruction
 
@@ -1155,10 +1168,10 @@ Continue execution at the address taken from the stack.
  `#instr_t`   | `+1` (jump) | `#?`        | `#?`
 
  1. Remove _k_ from the stack
- 1. If _k_ is an instruction address
+ 1. If _k_ is an `#instr_t`
     1. Continue execution at _k_
  1. Otherwise
-    1. Signal an error
+    1. Signal an error (`E_NOT_EXE`)
 
 #### `msg` instruction
 
@@ -1169,12 +1182,6 @@ Continue execution at the address taken from the stack.
 —                    | `msg` -_n_          | _tailₙ_      | copy message tail _n_ to stack
 
 Copy data from the current message-event.
-
- T (type)     | X (op)        | Y (imm)     | Z (k)
---------------|---------------|-------------|-------------
- `#instr_t`   | `+24` (msg)   | `+0`        | _instr_
-
- 1. Push the entire message onto the stack as a single value
 
  T (type)     | X (op)        | Y (imm)     | Z (k)
 --------------|---------------|-------------|-------------
@@ -1283,11 +1290,7 @@ Extract data from a pair-list.
 --------------|---------------|-------------|-------------
  `#instr_t`   | `+19` (nth)   | `+0`        | _instr_
 
- 1. Remove _list_ from the stack
- 1. If _list_ is a `#pair_t`
-    1. Push _list_ onto the stack
- 1. Otherwise
-    1. Push `#?` onto the stack
+ 1. No effect
 
  T (type)     | X (op)        | Y (imm)     | Z (k)
 --------------|---------------|-------------|-------------
@@ -1332,17 +1335,27 @@ Create a pair-list from some number of stack items.
 --------------|---------------|-------------|-------------
  `#instr_t`   | `+17` (pair)  | _positive_  | _instr_
 
- 1. Remove _n_+1 items from the stack
- 1. Create an _n_ item list from removed stack items
-    1. Item  _n_+1 will be the tail of the list
- 1. Push the resulting list onto the stack
+ 1. Let _list_ be the stack pointer
+ 1. Let _scan_ be `list`
+ 1. Advance _scan_ by `positive-1`
+ 1. If _scan_ is a `#pair_t`
+    1. Let _tail_ be `cdr(scan)`
+    1. Set `scan.Y` to `car(tail)`
+    1. If _tail_ is a `#pair_t`
+        1. Set `tail.X` to `list`
+        1. Let the stack pointer become `tail`
+    1. Otherwise
+        1. Let the stack pointer become `cons(list, #nil)`
+ 1. Otherwise
+    1. Let the stack pointer become `cons(list, #nil)`
 
  T (type)     | X (op)        | Y (imm)     | Z (k)
 --------------|---------------|-------------|-------------
  `#instr_t`   | `+17` (pair)  | _negative_  | _instr_
 
- 1. If _n_ is `-1`
-    1. Capture the entire stack as a single item on the stack
+ 1. If _negative_ is `-1`
+    1. Let _list_ be the stack pointer
+    1. Let the stack pointer become `cons(list, #nil)`
  1. Otherwise
     1. Push `#?` onto the stack
 
@@ -1374,7 +1387,7 @@ Split items from a pair-list onto the stack.
 --------------|---------------|---------------|-------------
  `#instr_t`   | `+18` (part)  | _negative_    | _instr_
 
- 1. If _n_ is `-1`
+ 1. If _negative_ is `-1`
     1. Remove _pair_ from the stack
     1. Let _copy_ be `#nil`
     1. While _pair_ is a `#pair_t`
@@ -1566,6 +1579,93 @@ _sponsor_            | `sponsor` `reclaim` | _sponsor_    | reclaim all quotas f
 _sponsor_ _control_  | `sponsor` `start`   | —            | run _sponsor_ under _control_
 _sponsor_            | `sponsor` `stop`    | —            | reclaim all quotas and remove _sponsor_
 
+Manage Sponsorships.
+Sponsors are associated with events, not actors.
+The "current sponsor" is the sponsor of the current event.
+An actor cannot access the current sponsor directly.
+Also, sponsors cannot be created by [`quad`](#quad-instruction)
+because they don't have a `#type_t` in the _T_ field.
+
+ T            | X (op)          | Y (imm)         | Z (k)
+--------------|-----------------|-----------------|-------------
+ `#instr_t`   | `+8` (sponsor)  | `+0` (new)      | _instr_
+
+ 1. Let _sponsor_ be a new sponsor with quotas:
+    * memory = 0
+    * events = 0
+    * cycles = 0
+ 1. Push _sponsor_ onto the stack
+
+ T            | X (op)          | Y (imm)         | Z (k)
+--------------|-----------------|-----------------|-------------
+ `#instr_t`   | `+8` (sponsor)  | `+1` (memory)   | _instr_
+
+ 1. Remove _n_ from the stack
+ 1. If _n_ < 0
+    1. Signal an error (`E_BOUNDS`)
+ 1. Otherwise
+    1. If the current sponsor has less than _n_ memory available
+        1. Signal an error (`E_MEM_LIM`)
+    1. Otherwise
+        1. Subtract _n_ to current sponsor memory
+        1. Add _n_ to _sponsor_ memory
+
+ T            | X (op)          | Y (imm)         | Z (k)
+--------------|-----------------|-----------------|-------------
+ `#instr_t`   | `+8` (sponsor)  | `+2` (events)   | _instr_
+
+ 1. Remove _n_ from the stack
+ 1. If _n_ < 0
+    1. Signal an error (`E_BOUNDS`)
+ 1. Otherwise
+    1. If the current sponsor has less than _n_ events available
+        1. Signal an error (`E_MSG_LIM`)
+    1. Otherwise
+        1. Subtract _n_ to current sponsor events
+        1. Add _n_ to _sponsor_ events
+
+ T            | X (op)          | Y (imm)         | Z (k)
+--------------|-----------------|-----------------|-------------
+ `#instr_t`   | `+8` (sponsor)  | `+3` (cycles)   | _instr_
+
+ 1. Remove _n_ from the stack
+ 1. If _n_ < 0
+    1. Signal an error (`E_BOUNDS`)
+ 1. Otherwise
+    1. If the current sponsor has less than _n_ cycles available
+        1. Signal an error (`E_CPU_LIM`)
+    1. Otherwise
+        1. Subtract _n_ to current sponsor cycles
+        1. Add _n_ to _sponsor_ cycles
+
+ T            | X (op)          | Y (imm)         | Z (k)
+--------------|-----------------|-----------------|-------------
+ `#instr_t`   | `+8` (sponsor)  | `+4` (reclaim)  | _instr_
+
+ 1. Add memory quota from _sponsor_ to current sponsor (saturating)
+ 1. Add events quota from _sponsor_ to current sponsor (saturating)
+ 1. Add cycles quota from _sponsor_ to current sponsor (saturating)
+ 1. Set memory, events, and cycles quota in _sponsor_ to `0`
+
+ T            | X (op)          | Y (imm)         | Z (k)
+--------------|-----------------|-----------------|-------------
+ `#instr_t`   | `+8` (sponsor)  | `+5` (start)    | _instr_
+
+ 1. Remove _control_ from the stack
+ 1. If _control_ is a `#actor_t`
+    1. Set signal in _sponsor_ to _control_ (runable)
+    1. Remove _sponsor_ from the stack
+ 1. Otherwise
+    1. Signal an error (`E_NOT_CAP`)
+
+ T            | X (op)          | Y (imm)         | Z (k)
+--------------|-----------------|-----------------|-------------
+ `#instr_t`   | `+8` (sponsor)  | `+6` (stop)     | _instr_
+
+ 1. `sponsor_reclaim(sponsor)`
+ 1. Set signal in _sponsor_ to `0` (stopped)
+ 1. Remove _sponsor_ from the stack
+
 #### `state` instruction
 
  Input               | Instruction         | Output       | Description
@@ -1575,12 +1675,6 @@ _sponsor_            | `sponsor` `stop`    | —            | reclaim all quotas
 —                    | `state` -_n_        | _tailₙ_      | copy state tail _n_ to stack
 
 Copy data from the current actor's state.
-
- T (type)     | X (op)        | Y (imm)     | Z (k)
---------------|---------------|-------------|-------------
- `#instr_t`   | `+25` (state) | `+0`        | _instr_
-
- 1. Push the entire state onto the stack as a single value
 
  T (type)     | X (op)        | Y (imm)     | Z (k)
 --------------|---------------|-------------|-------------
@@ -1630,7 +1724,7 @@ _quad_               | `quad` `-4`         | _Z_ _Y_ _X_ _T_ | extract 4 _quad_ 
 Allocate and initialize, or access, a cell in quad-memory (RAM).
 The _T_ field must designate an explicit type.
 User-defined types can be created with _T_ = `#type_t`
-and _X_ = the arity (number of data fields from 1 to 3).
+and _X_ = the arity (number of data fields) from 0 to 3.
 
  T            | X (op)        | Y (imm)     | Z (k)
 --------------|---------------|-------------|-------------
@@ -1638,7 +1732,7 @@ and _X_ = the arity (number of data fields from 1 to 3).
 
  1. Remove _T_ from the stack
  1. If _T_ is a `#type_t`
-    1. Type _T_ has arity `0`
+    1. If type _T_ has arity `0`
         1. Allocate a new _quad_ intialized to \[_T_, `#?`, `#?`, `#?`\]
         1. Push _quad_ reference onto the stack
     1. Otherwise
@@ -1653,7 +1747,7 @@ and _X_ = the arity (number of data fields from 1 to 3).
  1. Remove _T_ from the stack
  1. Remove _X_ from the stack
  1. If _T_ is a `#type_t`
-    1. Type _T_ has arity `1`
+    1. If type _T_ has arity `1`
         1. Allocate a new _quad_ intialized to \[_T_, _X_, `#?`, `#?`\]
         1. Push _quad_ reference onto the stack
     1. Otherwise
@@ -1669,7 +1763,7 @@ and _X_ = the arity (number of data fields from 1 to 3).
  1. Remove _X_ from the stack
  1. Remove _Y_ from the stack
  1. If _T_ is a `#type_t`
-    1. Type _T_ has arity `2`
+    1. If type _T_ has arity `2`
         1. Allocate a new _quad_ intialized to \[_T_, _X_, _Y_, `#?`\]
         1. Push _quad_ reference onto the stack
     1. Otherwise
@@ -1686,7 +1780,7 @@ and _X_ = the arity (number of data fields from 1 to 3).
  1. Remove _Y_ from the stack
  1. Remove _Z_ from the stack
  1. If _T_ is a `#type_t`
-    1. Type _T_ has arity `3`
+    1. If type _T_ has arity `3`
         1. Allocate a new _quad_ intialized to \[_T_, _X_, _Y_, _Z_\]
         1. Push _quad_ reference onto the stack
     1. Otherwise
