@@ -7,7 +7,7 @@
  */
 
 // @param {string} memh text string
-// @returns {[Map<number, number>, undefined]}
+// @returns {Map<Uint16, Uint16>, undefined]}
 export const memh2img = (inp) => {
   // this version only gives the image and not symbols
   const t1 = inp.split("\n"); // split into lines
