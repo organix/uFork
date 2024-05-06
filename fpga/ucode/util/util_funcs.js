@@ -19,12 +19,21 @@ export const makeArrayFromIterator = (iterator) => {
   return arr;
 };
 
+let promiseCounter = 0;
+const nextPromiseCount = () => {
+  promiseCounter += 1;
+  return promiseCounter;
+};
 export const makePromise = () => {
   let resolve = undefined;
   let reject  = undefined;
   let prom    = new Promise((res, rej) => {
     [resolve, reject] = [res, rej];
   });
+  const nr = nextPromiseCount();
+  prom.toString    = () => `[Promise #${nr}]`;
+  resolve.toString = () => `[Resolve #${nr}]`;
+  reject.toString  = () => `[Reject  #${nr}]`;
   return { promise: prom, resolve, reject };
 };
 

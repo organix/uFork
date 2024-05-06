@@ -2,8 +2,8 @@
 /**
  * @use JSDoc
  * @overview This is a utility to translate masm.js output into .memh format
- *           suitable for verilog inclusion via $readmemh() directive or
- *           into wozmon hexdump format
+ *           suitable for verilog inclusion via $readmemh() directive
+ *           or translate masm.js output into wozmon hexdump format
  * @author Zarutian
  **/
 

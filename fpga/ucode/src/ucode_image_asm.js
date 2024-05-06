@@ -7,123 +7,215 @@
 
 import { makeAssembler } from "../util/masm.js";
 import { uFork } from "./uFork.js";
-
-export const defineInstructionset = (asm) => {
-  const { def } = asm;
-  def("NOP",    0x0000);
-  def("PLUS",   0x0001);
-  def("AND",    0x0002);
-  def("XOR",    0x0003);
-  def("1LBR",   0x0004);
-  def("INCR",   0x0005);
-  def("FETCH",  0x0006);
-  def("STORE",  0x0007);
-  def("DUP",    0x0008);
-  def("DROP",   0x0009);
-  def("SWAP",   0x000A);
-  def("SKZ",    0x000B);
-  def("TO_R",   0x000C);
-  def("R_FROM", 0x000D);
-  def("EXT",    0x000E);
-  def("EXIT",   0x000F);
-
-  def("QUAD_T_FETCH", 0x0010);
-  def("QUAD_X_FETCH", 0x0011);
-  def("QUAD_Y_FETCH", 0x0012);
-  def("QUAD_Z_FETCH", 0x0013);
-  def("QUAD_T_STORE", 0x0014);
-  def("QUAD_X_STORE", 0x0015);
-  def("QUAD_Y_STORE", 0x0016);
-  def("QUAD_Z_STORE", 0x0017);
-  def("QUAD_ALLOCATE", 0x0018);
-  def("QUAD_FREE",    0x0019);
-  def("QUAD_GCSTEP",  0x001A);
-  def("QUAD_ISFULL",  0x001B);
-
-  /* tbd: unlikely to be implemented at all
-  fomu spefic
-  def("GPIO@",        0x0038); // gpio@ ( -- pins )
-  def("GPIO!",        0x0039); // gpio! ( pins -- )
-  def("GPIO_config",  0x003A); // gpio_config ( pins_config -- )
-
-  pins:
-   [0xF]: gpio pad 4
-   [0xE]: gpio pad 3
-   [0xD]: gpio pad 2
-   [0xC]: gpio pad 1
-   [0x7]: usb D-
-   [0x6]: usb D+
-   [0x5]: usb pull up
-   [0x4]: flash busy 
-   [0x3]: spi chip select flash
-   [0x2]: spi mclk
-   [0x1]: spi mosi
-   [0x0]: spi miso
-  */
-  def("DEBUG_LED",    0x003B); // led! ( colour -- )
-  def("DEBUG_RX?",    0x003C); // rx? ( -- ready )
-  def("DEBUG_RX@",    0x003D); // rx@ ( -- char )
-  def("DEBUG_TX?",    0x003E); // tx? ( -- ready )
-  def("DEBUG_TX!",    0x003F); // tx! ( char -- )
-  
-  def("+",   "PLUS");
-  def("&",   "AND");
-  def("⊕",   "XOR");
-  def("1+",  "INCR");
-  def("@",   "FETCH");
-  def("!",   "STORE");
-  def(">R",  "TO_R");
-  def("R>",  "R_FROM");
-
-  def("qt@", "QUAD_T_FETCH");
-  def("qx@", "QUAD_X_FETCH");
-  def("qy@", "QUAD_Y_FETCH");
-  def("qz@", "QUAD_Z_FETCH");
-  def("qt!", "QUAD_T_STORE");
-  def("qx!", "QUAD_X_STORE");
-  def("qy!", "QUAD_Y_STORE");
-  def("qz!", "QUAD_Z_STORE");
-
-  def("qallot",  "QUAD_ALLOCATE");
-  def("qfree",   "QUAD_FREE");
-  def("qgcstep", "QUAD_GCSTEP");
-  def("qfull?",  "QUAD_ISFULL");
-  
-  return asm;
-};
+import { defineInstructionset } from "./instruction_set.js";
 
 export const minicore = (asm, opts) => {
-  const { def, dat } = asm;
+  const { def, dat, isDefined } = asm;
 
-  def("(JMP)"); // JuMP
-  dat("R>");
+  if (!isDefined("(JMP)")) {
+    def("(JMP)"); // JuMP
+    dat("R>");
+    asm.macro.jmp = (dest) => {
+      asm.data("(JMP)", dest);
+    }
+  }
   def("@EXECUTE");
   dat("@");
   def("EXECUTE");
-  dat(">R", "EXIT");
+  if (isDefined("instrset_uFork_SM2") || isDefined("instrset_uFork_SM2.1")) {
+    dat("0x0FFF_&");
+  }
+  dat(">R");
+  def("(EXIT)");
+  dat("EXIT");
+
+  if (!isDefined("SKZ") && !isDefined("(BRZ)")) {
+    def("CELLWIDE_OR"); // ( cell -- cell )
+    dat("CELLWIDE_OR_8step");
+    def("CELLWIDE_OR_8step");
+    dat("CELLWIDE_OR_4step");
+    def("CELLWIDE_OR_4step");
+    dat("CELLWIDE_OR_2step");
+    def("CELLWIDE_OR_2step");
+    dat("CELLWIDE_OR_1step");
+    def("CELLWIDE_OR_1step");
+    dat("DUP", "1LBR", "OR");
+    dat("EXIT");
+
+    def("SKZ"); // ( cond -- ) R:( raddr -- raddr | raddr+1 )
+    dat("CELLWIDE_OR");
+    dat("INVERT");
+    dat("1_OR");
+    dat("R>");
+    dat("+");
+    dat(">R");
+    dat("EXIT");
+  }
 
   def("?:"); // ( alt conseq cond -- conseq | alt )
   dat("SKZ", "SWAP");
   def("(DROP)");
   dat("DROP", "EXIT");
 
-  def("(CONST)"); // ( -- constant )
-  dat("R>", "@", "EXIT");
+  def("(VAR)");
+  dat("R>", "EXIT");
+
+  if (!isDefined("(CONST)")) {
+    def("(CONST)"); // ( -- constant )
+    dat("R>", "@", "EXIT");
+  }
+
+  def("-15");
+  def("-0xF");
+  def("0xFFF1");
+  dat("(CONST)", 0xFFF1);
+
+  def("-14");
+  def("-0xE");
+  def("0xFFF2");
+  dat("(CONST)", 0xFFF2);
+
+  def("-13");
+  def("-0xD");
+  def("0xFFF3");
+  dat("(CONST)", 0xFFF3);
+
+  def("-12");
+  def("-0xC");
+  def("0xFFF4");
+  dat("(CONST)", 0xFFF4);
+
+  def("-11");
+  def("-0xB");
+  def("0xFFF5");
+  dat("(CONST)", 0xFFF5);
+  
+  def("-10");
+  def("-0xA");
+  def("0xFFF6");
+  dat("(CONST)", 0xFFF6);
+
+  def("-9");
+  def("0xFFF7");
+  dat("(CONST)", 0xFFF7);
+
+  def("-8");
+  def("0xFFF8");
+  dat("(CONST)", 0xFFF8);
+
+  def("-7");
+  def("0xFFF9");
+  dat("(CONST)", 0xFFF9);
+
+  def("-6");
+  def("0xFFFA");
+  dat("(CONST)", 0xFFFA);
+
+  def("-5");
+  def("0xFFFB");
+  dat("(CONST)", 0xFFFB);
+
+  def("-4");
+  def("0xFFFC");
+  dat("(CONST)", 0xFFFC);
+
+  def("-3");
+  def("0xFFFD");
+  dat("(CONST)", 0xFFFD);
+
+  def("-2");
+  def("0xFFFE");
+  dat("(CONST)", 0xFFFE);
 
   def("TRUE");
   def("-1");
-  dat("(CONST)", 0xFFFF);
+  if (isDefined("(TRUE)")) {
+    dat("(TRUE)", "EXIT");
+  } else {
+    dat("(CONST)", 0xFFFF);
+  }
 
   def("FALSE");
   def("0x0000");
   def("ZERO");
-  dat("(CONST)", 0x0000);
+  def("0");
+  if (isDefined("(FALSE)")) {
+    dat("(FALSE)", "EXIT");
+  } else {
+    dat("(CONST)", 0x0000);
+  }
 
+  if (!isDefined("1")) {
+    def("1");
+    dat("(CONST)", 0x0001);
+  }
+  def("0x01", "1");
+  def("0x0001", "1");
+  def("ONE", "1");
+
+  if (!isDefined("2")) {
+    def("2");
+    dat("(CONST)", 0x0002);
+  }
+  def("0x02", "2");
+  def("0x0002", "2");
+  def("TWO", "2");
+
+  if (!isDefined("3")) {
+    def("3");
+    dat("(CONST)", 0x0003);
+  }
+  def("0x03", "3");
+  def("0x0003", "3");
+  def("THREE", "3");
+
+  def("4");
+  dat("(CONST)", 0x0004);
+
+  def("5");
+  dat("(CONST)", 0x0005);
+
+  def("6");
+  dat("(CONST)", 0x0006);
+
+  def("7");
+  dat("(CONST)", 0x0007);
+
+  def("8");
+  dat("(CONST)", 0x0008);
+
+  def("9");
+  dat("(CONST)", 0x0009);
+
+  def("10");
+  def("0xA");
   def("0x0A");
-  dat("(CONST)", 0x0A);
+  dat("(CONST)", 0x000A);
 
+  def("11");
+  def("0xB");
+  def("0x0B");
+  dat("(CONST)", 0x000B);
+
+  def("12");
+  def("0xC");
+  def("0x0C");
+  dat("(CONST)", 0x000C);
+
+  def("13");
+  def("0xD");
+  def("0x0D");
+  dat("(CONST)", 0x000D);
+
+  def("14");
+  def("0xE");
+  def("0x0E");
+  dat("(CONST)", 0x000E);
+
+  def("15");
+  def("0xF");
   def("0x0F");
-  dat("(CONST)", 0x0F);
+  dat("(CONST)", 0x000F);
 
   def("0x30");
   dat("(CONST)", 0x30);
@@ -131,18 +223,60 @@ export const minicore = (asm, opts) => {
   def("0x41")
   dat("(CONST)", 0x41);
 
+  def("0xFF");
+  dat("(CONST)", 0xFF);
+
+  def("0x0FFF");
+  dat("(CONST)", 0x0FFF);
+
+  def("0x1FFF");
+  dat("(CONST)", 0x1FFF);
+
+  def("0x3FFF");
+  dat("(CONST)", 0x3FFF);
+
   def("0x4000");
   dat("(CONST)", 0x4000);
 
-  def("0x8000");
-  dat("(CONST)", 0x8000);
-
   def("0x7FFF");
   dat("(CONST)", 0x7FFF);
+  
+  if (!isDefined("0x8000")) {
+    def("0x8000");
+    dat("(CONST)", 0x8000);
+  }
 
-  def("0xFFFE");
-  dat("(CONST)", 0xFFFE);
+  if (!isDefined("1_&")) {
+    def("1_&");
+    dat("1", "&", "EXIT");
+  }
+  def("1&", "1_&");
 
+  def("3_&");
+  dat("3", "&", "EXIT");
+  
+  def("4&");
+  def("4_&");
+  dat("4", "&", "EXIT");
+
+  def("7_&");
+  dat("7", "&", "EXIT");
+
+  def("0x0F_&");
+  dat("0x0F", "&", "EXIT");
+
+  def("0xFF_&");
+  dat("0xFF", "&", "EXIT");
+
+  def("0x0FFF_&");
+  dat("0x0FFF", "&", "EXIT");
+
+  def("0x1FFF_&");
+  dat("0x1FFF", "&", "EXIT");
+
+  def("0x3FFF_&");
+  dat("0x3FFF", "&", "EXIT");
+  
   def("0x4000_&");
   dat("0x4000");
   def("(&)");
@@ -155,122 +289,242 @@ export const minicore = (asm, opts) => {
   dat("0x8000", "&", "EXIT");
 
   def("0x8000_OR");
-  dat("0x8000", "OR", "EXIT");
+  dat("0x8000");
+  def("(OR)");
+  dat("OR", "EXIT");
 
   def("CLEAN_BOOL");
   dat(">R", "FALSE", "TRUE", "R>", "?:", "EXIT");
-  
-  def("INVERT");
-  dat("TRUE");
+
+  if (!isDefined("INVERT")) {
+    def("INVERT");
+    dat("TRUE");
+  }
   def("(XOR)");
   dat("XOR", "EXIT");
 
-  def("OR");   // ( a b -- a|b )
-  dat("INVERT", "SWAP", "INVERT");
+  if (!isDefined("OR")) {
+    def("OR");   // ( a b -- a|b )
+    dat("INVERT", "SWAP", "INVERT");
+  }
   def("NAND"); // ( a b -- not(a & b)
   dat("&", "INVERT", "EXIT");
-
+  
   def("(BRNZ)"); // BRanch if Not Zero ( bool -- )
+  asm.macro.brnz = (dest) => { asm.data("(BRNZ)", dest); };
   dat("CLEAN_BOOL", "INVERT");
-  def("(BRZ)"); // BRanch if Zero ( bool -- )
-  dat("R>", "SWAP", ">R"); // ( raddr ) R:( bool )
+  // deliberate fall through
+  if (!isDefined("(BRZ)")) {
+    def("(BRZ)"); // BRanch if Zero ( bool -- )
+    asm.macro.brz = (dest) => {
+      asm.data("(BRZ)", dest);
+    };
+  }
+  def("(BRZ)_alt");
+  dat("R>");
+  if (isDefined("instrset_uFork_SM2")) {
+    dat("0x0FFF_&");
+  }
+  dat("SWAP", ">R"); // ( raddr ) R:( bool )
   dat("DUP", "@", "SWAP"); // ( dest raddr ) R:( bool )
   dat("1+", "R>", "?:");   // ( raddr ) R:( )
   dat(">R", "EXIT");
+
+  def("(BREQ)"); // ( a b -- )
+  dat("=", "(JMP)", "(BRNZ)");
+  asm.macro.breq = (dest) => { asm.data("(BREQ)", dest); };
+
+  def("(BRNE)"); // ( a b -- )
+  dat("=", "(JMP)", "(BRZ)_alt");
+  asm.macro.brne = (dest) => { asm.data("(BRNE)", dest); };
 
   def("(JMPTBL)"); // ( idx -- idx ) note: default case is after the table
   dat("R>");       // ( idx raddr )
   dat("2DUP");     // ( idx raddr idx raddr )
   dat("@");        // ( idx raddr idx nrOfEntries )
   dat("<");        // ( idx raddr bool )
-  dat("(BRZ)", "(JMPTBL)_l0"); // ( idx raddr )
-  dat("1+", "OVER", "+", "@", ">R", "EXIT");
+  asm.macro.brz("(JMPTBL)_l0"); // ( idx raddr )
+  dat("1+", "OVER", "+", "@");
+  if (isDefined("instrset_uFork_SM2")) {
+    dat("0x0FFF_&");
+  }
+  dat(">R", "EXIT");
   def("(JMPTBL)_l0"); // ( idx raddr )
-  dat("DUP", "@", "+", "1+", ">R", "EXIT");
+  dat("DUP", "@", "+", "1+");
+  if (isDefined("instrset_uFork_SM2")) {
+    dat("0x0FFF_&");
+  }
+  dat(">R", "EXIT");
+  
+  if (!isDefined("(NEXT)")) {
+    def("(NEXT)"); // ( ) R:( count raddr -- )
+    dat("R>", "R>", "DUP");
+    asm.macro.brz("(NEXT)_l0"); // ( raddr count )
+    dat("1-", ">R", "@");
+    if (isDefined("instrset_uFork_SM2")) {
+      dat("0x0FFF_&");
+    }
+    dat(">R", "EXIT");
+    def("(NEXT)_l0");
+    dat("DROP", "1+");
+    if (isDefined("instrset_uFork_SM2")) {
+      dat("0x0FFF_&");
+    }
+    dat(">R", "EXIT");
+  }
+  asm.macro.countDownLoop = (prefix, body) => {
+    dat(">R");
+    asm.macro.jmp(prefix.concat("_loopCheck"));
+    asm.symbols.define(prefix.concat("_loopStart"));
+    body();
+    def(prefix.concat("_loopCheck"));
+    if (asm.macro.loopMinus == undefined) {
+      asm.macro.loopMinus = (dest) => { dat("(NEXT)", dest); }
+    }
+    asm.macro.loopMinus(prefix.concat("_loopStart"));
+  };
+  asm.macro.beginAgainLoop = (prefix, body) => {
+    asm.symbols.define(prefix.concat("_loopStart"));
+    body();
+    asm.macro.jmp(prefix.concat("_loopStart"));
+  };
+  asm.macro.beginUntilLoop = (prefix, body) => {
+    asm.symbols.define(prefix.concat("_loopStart"));
+    body();
+    asm.macro.brz(prefix.concat("_loopStart"));
+  };
 
-  def("(NEXT)"); // ( ) R:( count raddr -- )
-  dat("R>", "R>", "DUP", "(BRZ)", "(NEXT)_l0"); // ( raddr count )
-  dat("1-", ">R", "@", ">R", "EXIT");
-  def("(NEXT)_l0");
-  dat("DROP", "1+", ">R", "EXIT");
+  //                  forskeyti, yrðing, afleiðing,  annars
+  asm.macro.efSegð = (prefix, condition, consequent, alternative) => {
+    condition();
+    if (alternative == undefined) {
+      asm.macro.brz(prefix.concat("_end"));
+      consequent();
+      asm.symbols.define(prefix.concat("_end"));
+    } else {
+      asm.macro.brz(prefix.concat("_alt"));
+      consequent();
+      asm.macro.jmp(prefix.concat("_end"));
+      asm.symbols.define(prefix.concat("_alt"));
+      alternative();
+      asm.symbols.define(prefix.concat("_end"));
+    }
+  };
 
   def("(BREXIT)"); // ( bool -- ) exit caller early if bool is true
-  dat("(BRZ)", "(BREXIT)_l0"); // ( )
+  asm.macro.brz("(BREXIT)_l0"); // ( )
   dat("R>", "DROP");
   def("(BREXIT)_l0");
   dat("EXIT");
   
+  if (!isDefined("(LIT)")) {
+    def("(LIT)"); // literal ( -- item )
+    dat("R>", "DUP", "1+", ">R", "@", "EXIT");
+  }
 
-  def("(LIT)"); // literal ( -- item )
-  dat("R>", "DUP", "1+", ">R", "@", "EXIT");
+  if (!isDefined("OVER")) {
+    def("OVER"); // ( a b -- a b a )
+    dat(">R", "DUP", "R>", "SWAP", "EXIT");
+  }
 
-  def("OVER"); // ( a b -- a b a )
-  dat(">R", "DUP", "R>", "SWAP", "EXIT");
+  if (!isDefined("ROT")) {
+    def("ROT"); // ( a b c -- b c a )
+    dat(">R", "SWAP", "R>", "SWAP", "EXIT");
+  }
 
-  def("ROT"); // ( a b c -- b c a )
-  dat(">R", "SWAP", "R>", "SWAP", "EXIT");
+  if (!isDefined("-ROT")) {
+    def("-ROT"); // ( a b c -- c a b )
+    dat("SWAP", ">R", "SWAP", "R>", "EXIT");
+  }
 
-  def("-ROT"); // ( a b c -- c a b )
-  dat("SWAP", ">R", "SWAP", "R>", "EXIT");
+  if (!isDefined("2DUP")) {
+    def("2DUP"); // ( a b -- a b a b )
+    dat("OVER", "OVER", "EXIT");
+  }
 
-  def("2DUP"); // ( a b -- a b a b )
-  dat("OVER", "OVER", "EXIT");
+  if (!isDefined("2DROP")) {
+    def("2DROP");
+    dat("DROP", "DROP", "EXIT");
+  }
 
-  def("2DROP");
-  dat("DROP", "DROP", "EXIT");
+  if (!isDefined("NIP")) {
+    def("NIP"); // ( a b c -- a c )
+    dat("SWAP", "DROP", "EXIT");
+  }
 
-  def("NIP"); // ( a b c -- a c )
-  dat("SWAP", "DROP", "EXIT");
+  if (!isDefined("TUCK")) {
+    def("TUCK"); // ( a b -- b a b )
+    dat("SWAP", "OVER", "EXIT");
+  }
 
-  def("R@"); // ( -- a ) R:( a ra -- a )
-  dat("R>", "R>", "DUP", ">R", "SWAP", ">R", "EXIT");
+  if (!isDefined("R@")) {
+    def("R@"); // ( -- a ) R:( a ra -- a )
+    dat("R>", "R>", "DUP", ">R", "SWAP", ">R", "EXIT");
+  }
 
-  def("RDROP"); // ( -- ) R:( x ra -- ra )
-  dat("R>", "R>", "DROP", ">R", "EXIT");
+  if (!isDefined("RDROP")) {
+    def("RDROP"); // ( -- ) R:( x ra -- ra )
+    dat("R>", "R>", "DROP", ">R", "EXIT");
+  }
 
-  /*
-  def("+"); // ( a b -- sum )
-  dat("UM+");
-  def("(DROP)");
-  dat("DROP", "EXIT");
-  */
+  if ((!isDefined("+")) && (!isDefined("UM+")) && isDefined("1+")) {
+    def("+"); // ( a b -- sum )
+    dat("0=");
+    asm.macro.brnz("(DROP)");
+    dat("1-", "SWAP", "1+", "SWAP");
+    asm.macro.jmp("+");
+  }
 
-  def("UM+");      // ( a b -- sum carry )
-  dat("2DUP");     // ( a b a b )
-  dat("0x7FFF_&"); // ( a b a b_masked )
-  dat("SWAP");     // ( a b b_masked a )
-  dat("0x7FFF_&"); // ( a b b_masked a_masked )
-  dat("+");        // ( a b sum1 )
-  dat("DUP");      // ( a b sum1 sum1 )
-  dat("0x7FFF_&"); // ( a b sum1 sum1_masked )
-  dat(">R");       // ( a b sum1 ) R:( sum1_masked )
-  dat("15>>");     // ( a b sum1Carry ) R:( sum1_masked )
-  dat("SWAP");     // ( a sum1Carry b ) R:( sum1_masked )
-  dat("15>>");     // ( a sum1Carry b[15] ) R:( sum1_masked )
-  dat("+");        // ( a sum2 ) R:( sum1_masked )
-  dat("SWAP");     // ( sum2 a ) R:( sum1_masked )
-  dat("15>>");     // ( sum2 a[15] ) R:( sum1_masked )
-  dat("+");        // ( sum3 ) R:( sum1_masked )
-  dat("DUP");      // ( sum3 sum3 ) R:( sum1_masked )
-  dat("15<<");     // ( sum3 sum3[15]<<15 ) R:( sum1_masked )
-  dat("R>");       // ( sum3 sum3[15]<<15 sum1_masked ) R:( )
-  dat("OR");       // ( sum3 final_sum )
-  dat("SWAP");     // ( final_sum sum3 )
-  dat("1>>");      // ( final_sum c )
-  dat("EXIT");
+  if ((!isDefined("+")) && isDefined("UM+")) {
+    def("+"); // ( a b -- sum )
+    dat("UM+","DROP", "EXIT");
+  }
+  
+  if ((!isDefined("UM+")) && isDefined("+")) {
+    def("UM+");      // ( a b -- sum carry )
+    dat("2DUP");     // ( a b a b )
+    dat("0x7FFF_&"); // ( a b a b_masked )
+    dat("SWAP");     // ( a b b_masked a )
+    dat("0x7FFF_&"); // ( a b b_masked a_masked )
+    dat("+");        // ( a b sum1 )
+    dat("DUP");      // ( a b sum1 sum1 )
+    dat("0x7FFF_&"); // ( a b sum1 sum1_masked )
+    dat(">R");       // ( a b sum1 ) R:( sum1_masked )
+    dat("15>>");     // ( a b sum1Carry ) R:( sum1_masked )
+    dat("SWAP");     // ( a sum1Carry b ) R:( sum1_masked )
+    dat("15>>");     // ( a sum1Carry b[15] ) R:( sum1_masked )
+    dat("+");        // ( a sum2 ) R:( sum1_masked )
+    dat("SWAP");     // ( sum2 a ) R:( sum1_masked )
+    dat("15>>");     // ( sum2 a[15] ) R:( sum1_masked )
+    dat("+");        // ( sum3 ) R:( sum1_masked )
+    dat("DUP");      // ( sum3 sum3 ) R:( sum1_masked )
+    dat("15<<");     // ( sum3 sum3[15]<<15 ) R:( sum1_masked )
+    dat("R>");       // ( sum3 sum3[15]<<15 sum1_masked ) R:( )
+    dat("OR");       // ( sum3 final_sum )
+    dat("SWAP");     // ( final_sum sum3 )
+    dat("1>>");      // ( final_sum c )
+    dat("EXIT");
+  }
 
-  def("NEGATE");
-  dat("INVERT", "1+", "EXIT");
+  if (!isDefined("NEGATE")) {
+    def("NEGATE");
+    dat("INVERT", "1+", "EXIT");
+  }
 
-  def("1-");
-  dat("NEGATE", "1+", "NEGATE", "EXIT");
+  if (!isDefined("1-")) {
+    def("1-");
+    dat("NEGATE", "1+", "NEGATE", "EXIT");
+  }
 
-  def("-"); // ( a b -- a-b )
-  dat("NEGATE", "+", "EXIT");
+  if (!isDefined("-")) {
+    def("-"); // ( a b -- a-b )
+    dat("NEGATE", "+", "EXIT");
+  }
 
   def("<<"); // ( u n -- u<<n )  doing the lazy way for now
   dat("0x0F_&");
-  dat(">R", "(JMP)", "<<_l1");
+  dat(">R");
+  asm.macro.jmp("<<_l1");
   def("<<_l0");
   dat("1<<");
   def("<<_l1");
@@ -278,23 +532,32 @@ export const minicore = (asm, opts) => {
   dat("EXIT");
 
   def("15<<");
-  dat("0x0F", "<<", "EXIT");
+  dat("1_&", "1RBR", "EXIT");
+
+  def("8/");
+  def("3>>");
+  dat("3LBR", "0x1FFF_&", "EXIT");
 
   def(">>"); // ( u n -- u>>n )  same lazy way
   dat("0x0F_&");
-  dat(">R", "(JMP)", ">>_l1");
+  dat(">R");
+  asm.macro.jmp(">>_l1");
   def(">>_l0");
   dat("1>>");
   def(">>_l1");
   dat("(NEXT)", ">>_l0", "EXIT");
 
-  def("15>>");
-  dat("0x0F", ">>", "EXIT");
+  def(">>>"); // ( number times -- result )
+  dat("OVER", "0x8000_&", ">R", ">>", "R>", "OR", "EXIT");
 
+  def("15>>");
+  dat("1_&", "1LBR", "EXIT");
+  
   def("LBR"); // ( u n -- u<<>n )  same lazy way
   def("<<>");
   dat("0x0F_&");
-  dat(">R", "(JMP)", "LBR_l1");
+  dat(">R");
+  asm.macro.jmp("LBR_l1");
   def("LBR_l0");
   dat("1LBR");
   def("LBR_l1");
@@ -303,28 +566,38 @@ export const minicore = (asm, opts) => {
   def("RBR"); // ( u n -- u<>>n )  same lazy way
   def("<>>");
   dat("0x0F_&");
-  dat(">R", "(JMP)", "RBR_l1");
+  dat(">R");
+  asm.macro.jmp("RBR_l1");
   def("RBR_l0");
   dat("1RBR");
   def("RBR_l1");
   dat("(NEXT)", "RBR_l0", "EXIT");
 
-  def("*"); // ( n m -- n*m )  using the lazy way here, need to find the old eForth impl
-  dat(">R", "ZERO");
-  dat("(JMP)", "*_l1");
-  def("*_l0");
-  dat("OVER", "+");
-  def("*_l1");
-  dat("(NEXT)", "*_l0");
-  dat("NIP", "EXIT");
+  if (!isDefined("*")) {
+    def("*"); // ( n m -- n*m )  using the lazy way here, need to find the old eForth impl
+    dat(">R", "ZERO");
+    asm.macro.jmp("*_l1");
+    def("*_l0");
+    dat("OVER", "+");
+    def("*_l1");
+    dat("(NEXT)", "*_l0");
+    dat("NIP", "EXIT");
+  }
 
   def("4<<"); // ( a -- a<<4 )
   dat("2<<");
+  def("4*");
   def("2<<"); // ( a -- a<<2 )
   dat("1<<");
-  def("1<<"); // ( a -- a<<1 )
-  dat("1LBR");
-  dat("0xFFFE", "&", "EXIT");
+  if (isDefined("2*")) {
+    dat("2*", "EXIT");
+    def("1<<", "2*");
+  } else {
+    def("2*");
+    def("1<<"); // ( a -- a<<1 )
+    dat("1LBR");
+    dat("0xFFFE", "&", "EXIT");
+  }
 
   def("15LBR"); def("1RBR");
   dat("1LBR");
@@ -339,23 +612,51 @@ export const minicore = (asm, opts) => {
   def("2LBR");
   dat("1LBR", "1LBR", "EXIT");
 
+  def("3LBR");
+  dat("2LBR", "1LBR", "EXIT");
+
+  def("3+");
+  dat("1+");
+  def("2+");
+  dat("1+");
+  dat("1+");
+  dat("EXIT");
+
   def("1>>"); // ( a -- a>>1 )
   dat("1RBR", "0x7FFF_&", "EXIT");
 
-  def("0x0F_&");
-  dat("0x0F", "&", "EXIT");
+  if (!isDefined("=")) {
+    def("="); // ( a b -- bool )
+    dat("XOR", "CLEAN_BOOL", "INVERT", "EXIT");
+  }
 
-  def("="); // ( a b -- bool )
-  dat("XOR", "CLEAN_BOOL", "INVERT", "EXIT");
+  if (!isDefined("0=")) {
+    def("0=");
+    dat("CLEAN_BOOL", "INVERT", "EXIT");
+  }
 
   def("0<"); // ( num -- bool )
   dat("0x8000", "&", "CLEAN_BOOL", "EXIT");
 
-  def("<"); // ( a b -- bool )
-  dat("-", "0<", "EXIT");
+  if (!isDefined("<")) {
+    def("<"); // ( a b -- bool )
+    dat("-", "0<", "EXIT");
+  }
 
   def("<="); // ( a b -- bool )
   dat("2DUP", "<", ">R", "=", "R>", "OR", "EXIT");
+
+  def("WITHIN"); // ( n min max -- )
+  dat(">R");     // ( n min ) R:( max )
+  dat("OVER");   // ( n min n ) R:( max )
+  dat("<=");     // ( n bool1 ) R:( max )
+  dat("R>");     // ( n bool1 max ) R:( )
+  dat("SWAP");   // ( n max bool1 ) R:( )
+  dat(">R");     // ( n max ) R:( bool1 )
+  dat("<=");     // ( bool2 ) R:( bool1 )
+  dat("R>");     // ( bool2 bool1 ) R:( )
+  dat("&");      // ( bool )
+  dat("EXIT");   //
 
   def(">");
   dat("SWAP", "(JMP)", "<");
@@ -363,15 +664,244 @@ export const minicore = (asm, opts) => {
   def(">=");
   dat("SWAP", "(JMP)", "<=");
 
+  def("MIN"); // ( a b -- a | b )
+  dat("2DUP", ">", "?:", "EXIT");
+
   def("MAX"); // ( a b -- a | b )
   dat("2DUP", "<", "?:", "EXIT");
+
+  def("ABSOLUTE"); // ( n | -n -- n )
+  def("ABS");
+  dat("DUP");      // ( n n )
+  dat("NEGATE");   // ( n -n )
+  dat("OVER");     // ( n -n n )
+  dat("0<");       // ( n -n bool )
+  dat("?:");       // ( n )
+  dat("EXIT");
+
+  if (!isDefined("DEBUG_TX?") ||
+      !isDefined("DEBUG_TX!") ||
+      !isDefined("DEBUG_RX?") ||
+      !isDefined("DEBUG_RX@")) {
+    if (isDefined("instrset_FCPU-16")) {
+      def("DEBUG_comms");
+      dat("(VAR)", 0);
+
+      def("DEBUG_commsport");
+      dat("(CONST)", 0xFFFD);
+
+      def("DEBUG_TX!"); // ( char -- )
+      dat("0xFF_&", "DEBUG_commsport", "!", "EXIT");
+
+      def("DEBUG_TX?", "TRUE"); // ( -- T )
+
+      def("DEBUG_RX?"); // ( -- bool )
+      dat("DEBUG_comms", "@", "0x10", "&");
+      dat("CLEAN_BOOL");
+      dat("DUP");
+      asm.macro.brnz("DEBUG_RX?_l0");
+      def("DEBUG_comms_common");
+      dat("DEBUG_commsport", "@", "DEBUG_comms", "!");
+      def("DEBUG_RX?_l0");
+      dat("EXIT");
+
+      def("DEBUG_RX@"); // ( -- char )
+      dat("DEBUG_comms", "@", "0xFF_&", "(JMP)", "DEBUG_comms_common");
+    }
+    if (isDefined("instrset_excamera_J1a")) {
+      def("DEBUG_RX?"); // ( -- bool )
+      dat("(LIT)", 0x2000, "io@", "2", "&", "CLEAN_BOOL", "EXIT");
+
+      def("DEBUG_TX?"); // ( -- bool )
+      dat("(LIT)", 0x2000, "io@", "1", "&", "CLEAN_BOOL", "EXIT");
+
+      def("DEBUG_RX@"); // ( -- char )
+      dat("(LIT)", 0x1000, "io@", "0xFF_&", "EXIT");
+
+      def("DEBUG_TX!"); // ( char -- )
+      dat("0xFF_&", "(LIT)", 0x1000, "io!", "EXIT");
+    }
+    if (isDefined("instrset_uFork_SM2")) {
+      // 0x3F00 is TX?, 0x3F01 is TX!, 0x3F02 is RX?, and 0x3F03 is RX@
+      def("DEBUG_RX?"); // ( -- bool )
+      dat("(LIT)", 0x3F02, "@", "CLEAN_BOOL", "EXIT");
+
+      def("DEBUG_TX?"); // ( -- bool )
+      dat("(LIT)", 0x3F00, "@", "CLEAN_BOOL", "EXIT");
+
+      def("DEBUG_RX@"); // ( -- char )
+      dat("(LIT)", 0x3F03, "@", "0xFF_&", "EXIT");
+
+      def("DEBUG_TX!"); // ( char -- )
+      dat("0xFF_&", "(LIT)", 0x3F01, "!", "EXIT");
+    }
+    if (isDefined("instrset_uFork_SM2.1")) {
+      def("DEBUG_TX?"); // ( -- bool )
+      dat("(LIT)", 0x00, "io@", "CLEAN_BOOL", "EXIT");
+
+      def("DEBUG_TX!"); // ( char -- )
+      dat("0xFF_&", "(LIT)", 0x01, "io!", "EXIT");
+
+      def("DEBUG_RX?"); // ( -- bool )
+      dat("(LIT)", 0x02, "io@", "CLEAN_BOOL", "EXIT");
+
+      def("DEBUG_RX@"); // ( -- char )
+      dat("(LIT)", 0x03, "io@", "0xFF_&", "EXIT");
+    }
+  }
+
+  if (isDefined("platform_fomu")) {
+    if (isDefined("instrset_uFork_SM2")) {
+      // addresses 0x3F04-5 is the Lattice ICE 40 UltraPlus 5K system bus
+      // 0x3F04 is the system bus address, only lower byte (mask 0x00FF) used
+      // 0x3F05 is the system bus data,    only lower byte (mask 0x00FF) used
+      //   only reads from and writes to 0x3F03 cause activity from uFork_CSM core
+      //   to lattice system bus
+      def("fomu_sysbus@"); // ( sysbus_addrbyte -- sysbus_databyte )
+      dat("0xFF_&", "(LIT)", 0x3F04, "!", "(LIT)", 0x3F05, "@", "0xFF_&", "EXIT");
+
+      def("fomu_sysbus!"); // ( sysbus_databyte sysbus_addrbyte -- )
+      dat("0xFF_&", "SWAP", "0xFF_&", "SWAP");
+      dat("(LIT)", 0x3F04, "!", "(LIT)", 0x3F05, "!", "EXIT");
+    } else if (isDefined("instrset_uFork_SM2.1")) {
+      def("fomu_sysbus@"); // ( sysbus_addrbyte -- sysbus_databyte )
+      dat("0xFF_&", "(LIT)", 0x010, "io!", "(LIT)", 0x0011, "io@", "0xFF_&", "EXIT");
+
+      def("fomu_sysbus!"); // ( sysbus_databyte sysbus_addrbyte -- )
+      dat("0xFF_&", "SWAP", "0xFF_&", "SWAP");
+      dat("(LIT)", 0x0010, "io!", "(LIT)", 0x0011, "io!", "0xFF_&", "EXIT");
+    }
+    if (isDefined("instrset_uFork_SM2") || isDefined("instrset_uFork_SM2.1")) {
+      def("spi1_start"); // ( SlaveSelectMask -- )
+      // asuming that the spi flash eeprom is connected to spi 1 hard block
+      dat("(LIT)", 0xFF, "(LIT)", 0x19, "fomu_sysbus!"); // SPIRC0 = 0b11_111_111
+                                                         //   most waits
+      dat("(LIT)", 0x80, "(LIT)", 0x1A, "fomu_sysbus!"); // SPIRC1 = 0b1_0000000
+                                                         // spi enabled
+      dat("(LIT)", 0x86, "(LIT)", 0x1B, "fomu_sysbus!"); // SPIRC2
+                                                         // fpga is master
+                                                         // spi mode is 3
+                                                         // most significant bit first
+      dat("(LIT)", 0x3D, "(LIT)", 0x1C, "fomu_sysbus!"); // SPIBR = nearly slowest
+                                                         // 12 MHz / 60 = 200 KHz
+      dat("0xF_&", "(LIT)", 0x1F, "fomu_sysbus!");       // SPICSR
+      dat("EXIT");
+
+      def("spi1_wait_if_busy"); // ( -- )
+      dat("(LIT)", 0x1C, "fomu_sysbus@"); // ( status_byte )
+      dat("(LIT)", 0xC0, "&");            // ( dirty_busy_flag )
+      asm.macro.brnz("spi1_wait_if_busy");
+      dat("EXIT");
+
+      def("spi1_wait_if_writebyte_not_ready"); // ( -- )
+      dat("(LIT)", 0x1C, "fomu_sysbus@");     // ( status_byte )
+      dat("(LIT)", 0x10, "&");
+      asm.macro.brnz("spi1_wait_if_writebyte_not_ready");
+      dat("EXIT");
+
+      def("spi1_wait_if_readbyte_not_ready"); // ( -- )
+      dat("(LIT)", 0x1C, "fomu_sysbus@");     // ( status_byte )
+      dat("(LIT)", 0x08, "&");
+      asm.macro.brnz("spi1_wait_if_readbyte_not_ready");
+      dat("EXIT");
+      
+      def("spi1_readbyte"); // ( -- byte ) blocking read of incomming byte
+      dat("spi1_wait_if_busy");
+      dat("spi1_wait_if_readbyte_not_ready");
+      dat("(LIT)", 0x1E, "fomu_sysbus@");
+      dat("EXIT");
+      
+      def("spi1_writebyte"); // ( byte -- )
+      dat("spi1_wait_if_busy");
+      dat("spi1_wait_if_writebyte_not_ready");
+      dat("(LIT)", 0x1D, "fomu_sysbus!");
+      dat("EXIT");
+      
+      def("spi1_end");
+      dat("0x0000", "(LIT)", 0x1F, "fomu_sysbus!"); // deselect slave
+      dat("0x0000", "(LIT)", 0x1A, "fomu_sysbus!"); // disable spi
+      dat("EXIT");
+    }
+    if (isDefined("instrset_uFork_SM2")) {
+      def("spi_flash_fastread"); // ( flash_upper_addr flash_lower_addr ucode_addr cells )
+      dat(">R", ">R");           // ( flash_upper_addr flash_lower_addr ) R:( cells ucode_addr )
+      dat("SWAP", "0xFF_&");     // ( flash_lower_addr flash_upper_addr ) R:( cells ucode_addr )
+      dat("1", "spi1_start");    // assume that spi flash is at slave 0
+      dat("(LIT)", 0xAB, "spi1_writebyte"); // wake the spi flash out of low power mode
+      dat("spi1_end");
+      dat("1", "spi1_start");
+      dat("(LIT)", 0x0B, "spi1_writebyte"); // JEDEC std fast read
+      dat("spi1_writebyte");     // first byte of flash address ( flash_lower_addr ) R:( cells ucode_addr  )
+      dat("DUP", "8LBR", "spi1_writebyte"); // second byte of flash address ( flash_lower_addr ) R:( cells ucode_addr )
+      dat("spi1_writebyte");     // third byte of flash address ( ) R:( cells ucode_addr )
+      dat("spi1_readbyte", "DROP"); // read dummy byte ( ) R:( cells ucode_addr )
+      dat("R>");                 // ( ucode_addr ) R:( cells )
+      asm.macro.jmp("spi_flash_fastread_l1");
+      def("spi_flash_fastread_l0");
+      dat("spi1_readbyte", "8LBR", "spi1_readbyte", "OR", "OVER", "!");
+      dat("1+");
+      def("spi_flash_fastread_l1");
+      dat("(NEXT)", "spi_flash_fastread_l0");
+      dat("DROP");
+      dat("spi1_end");
+      dat("1", "spi1_start");
+      dat("(LIT)", 0xB9, "spi1_writebyte"); // tell flash to into deep power down
+      dat("spi1_end");
+      dat("EXIT");
+    }
+    if (isDefined("instrset_uFork_SM2.1")) {
+      def("spi1_readcell"); // ( -- cell )
+      dat("spi1_readbyte", "8LBR", "spi1_readbyte", "OR", "EXIT");
+
+      def("spi_flash_wakeup");   // ( -- )
+      dat("1", "spi1_start");    // assume that spi flash is at slave 0
+      dat("(LIT)", 0xAB, "spi1_writebyte"); // wake the spi flash out of low power mode
+      dat("spi1_end", "EXIT");
+
+      def("spi_flash_deepsleep"); // ( -- )
+      dat("1", "spi1_start");
+      dat("(LIT)", 0xB9, "spi1_writebyte"); // tell flash to into deep power down
+      dat("spi1_end");
+      dat("EXIT");
+
+      /*
+      I am looking at https://github.com/im-tomu/foboot/blob/master/doc/FLASHLAYOUT.md and I am guessing that the uFork fpga bitstream starts at 0x01a000 in the spi flash
+      bitstream for the ice40up5k is 104250 bytes, so assume uFork rom+ram image start at 0x01a000 + 0x01973A ?
+      0x03373A if my addition is right
+      */
+      def("spi_flash_fastread_into_quads"); // ( flash_hi_addr flash_lo_addr start_quaddr nrOfQuads -- )
+      dat(">R", ">R");                      // ( flash_hi_addr flash_lo_addr ) R:( nrOfQuads start_quaddr )
+      dat("SWAP", "0xFF_&");                // ( flash_lo_addr flash_hi_dr ) R:( nrOfQuads start_quaddr )
+      dat("spi_flash_wakeup");
+      dat("(LIT)", 0x0B, "spi1_writebyte"); // JEDEC std fast read
+      dat("spi1_writebyte");     // first byte of flash address ( flash_lo_addr ) R:( nrOfQuads start_quaddr  )
+      dat("DUP", "8LBR", "spi1_writebyte"); // second byte of flash address ( flash_lo_addr ) R:( nrOfQuads start_quaddr )
+      dat("spi1_writebyte");     // third byte of flash address ( ) R:( nrOfQuads start_quaddr )
+      dat("spi1_readbyte", "DROP"); // read dummy byte ( ) R:( nrOfQuads start_quaddr )
+      dat("R>");                 // ( start_quaddr ) R:( nrOfQuads )
+      asm.macro.jmp("spi_flash_fastread_into_quads_l1");
+      def("spi_flash_fastread_into_quads_l0"); // ( quaddr ) R:( nrofQuads )
+      dat("spi1_readcell", "OVER", "qt!");
+      dat("spi1_readcell", "OVER", "qx!");
+      dat("spi1_readcell", "OVER", "qy!");
+      dat("spi1_readcell", "OVER", "qz!");
+      dat("1+");
+      def("spi_flash_fastread_into_quads_l1");
+      dat("(NEXT)", "spi_flash_fastread_into_quads_l0");
+      dat("DROP", "spi1_end");
+      dat("spi_flash_deepsleep");
+      dat("EXIT");
+    }
+  }
   
   def("TX!"); // ( char -- )
-  dat("DEBUG_TX?", "(BRZ)", "TX!");
+  dat("DEBUG_TX?");
+  asm.macro.brz("TX!");
   dat("DEBUG_TX!", "EXIT");
 
   def("RX?"); // ( -- char T | F )
-  dat("DEBUG_RX?", "DUP", "(BRZ)", "RX?_l0");
+  dat("DEBUG_RX?", "DUP");
+  asm.macro.brz("RX?_l0");
   dat("DEBUG_RX@", "SWAP");
   def("RX?_l0");
   dat("EXIT");
@@ -379,13 +909,15 @@ export const minicore = (asm, opts) => {
   def("EMIT", "TX!");
 
   def("RX"); // ( -- chr )
-  dat("RX?", "(BRZ)", "RX", "EXIT");
+  dat("RX?");
+  asm.macro.brz("RX");
+  dat("EXIT");
 
   def("(.chr)"); // emitts a char from the cell following the call
   dat(">R", "DUP", "1+", ">R", "@", "EMIT", "EXIT");
 
   def("(CRLF.)");
-  dat("(.chr)", 0x13, "(.chr)", 0x0D, "EXIT");
+  dat("(.chr)", 0x0D, "(.chr)", 0x0A, "EXIT");
 
   def("(BL.)");
   dat("(.chr)", 0x20, "EXIT");
@@ -411,12 +943,12 @@ export const wozmon = (asm, opts) => {
   // inspired by Wozniacs Monitor (see https://gist.github.com/zarutian/7074f12ea3ed5a44ee2c58e8fcf6d7ae for example )
   // not as small though
   opts = (opts == undefined) ? {} : opts ;
-  const linebuffer_start = (opts.linebuffer_start) ? 0x0200 : opts.linebuffer_start ;
-  const linebuffer_max   = (opts.linebuffer_max)   ? 0x0250 : opts.linebuffer_max ;
-  const mode_var_addr    = (opts.mode_var_addr)    ? 0x0251 : opts.mode_var_addr ;
-  const xam_var_addr     = (opts.xam_var_addr)     ? 0x0252 : opts.xam_var_addr ;
-  const st_var_addr      = (opts.st_var_addr)      ? 0x0253 : opts.st_var_addr ;
-  const tmp_var_addr     = (opts.tmp_var_addr)     ? 0x0254 : opts.tmp_var_addr ;
+  const linebuffer_start = (opts.linebuffer_start == undefined) ? 0x0300 : opts.linebuffer_start ;
+  const linebuffer_max   = (opts.linebuffer_max   == undefined) ? 0x0350 : opts.linebuffer_max ;
+  const mode_var_addr    = (opts.mode_var_addr    == undefined) ? 0x0351 : opts.mode_var_addr ;
+  const xam_var_addr     = (opts.xam_var_addr     == undefined) ? 0x0352 : opts.xam_var_addr ;
+  const st_var_addr      = (opts.st_var_addr      == undefined) ? 0x0353 : opts.st_var_addr ;
+  const tmp_var_addr     = (opts.tmp_var_addr     == undefined) ? 0x0354 : opts.tmp_var_addr ;
   const { def, dat } = asm;
 
   def("wozmon");
@@ -425,60 +957,77 @@ export const wozmon = (asm, opts) => {
   dat("wozmon_linebuffer_start");
   def("wozmon_notcr");   // ( buff_addr )
   dat("RX");             // ( buff_addr chr )
-  dat("DUP", "(LIT)", 0x1B, "=", "(BRNZ)", "wozmon_escape");
-  dat("DUP", "(LIT)", 0x08, "=", "(BRNZ)", "wozmon_backspace");
+  dat("DUP", "(LIT)", 0x1B, "=");
+  asm.macro.brnz("wozmon_escape");
+  dat("DUP", "(LIT)", 0x08, "=");
+  asm.macro.brnz("wozmon_backspace");
   dat("DUP", "EMIT");    // echo the character
   dat("SWAP", "2DUP", "!", "1+"); // store char to buffer and incr buffer ptr
-  dat("DUP", "(LIT)", linebuffer_max, "<", "(BRZ)", "wozmon_escape");
+  dat("DUP", "(LIT)", linebuffer_max, "<");
+  asm.macro.brz("wozmon_escape");
   dat("SWAP");
-  dat("(LIT)", 0x0D, "=", "(BRNZ)", "wozmon_notcr");
+  dat("(LIT)", 0x0D, "=");
+  asm.macro.brnz("wozmon_notcr");
   dat("FALSE", "wozmon_mode", "!");       // reset mode
   dat("DROP", "wozmon_linebuffer_start"); // reset text index
   dat("1-");
   def("wozmon_nextitem");  // ( buff_addr )
   dat("1+");               // ( ba+1 )
   dat("DUP", "@");         // ( ba+1 char )
-  dat("DUP", "(LIT)", 0x0D, "=", "(BRZ)", "wozmon_l0");
-  dat("2DROP", "(JMP)", "wozmon_getline"); // done the line, get the next one
+  dat("DUP", "(LIT)", 0x0D, "=");
+  asm.macro.brz("wozmon_l0");
+  dat("2DROP");
+  asm.macro.jmp("wozmon_getline"); // done the line, get the next one
   def("wozmon_l0");        // ( ba+1 char )
-  dat("DUP", "(LIT)", 0x2E, "=", "(BRZ)", "wozmon_l1");
+  dat("DUP", "(LIT)", 0x2E, "=");
+  asm.macro.brz("wozmon_l1");
   dat("(LIT)", 0xB8);      // set mode as BLOCK XAM
   def("wozmon_setmode");
-  dat("wozmon_mode", "!", "DROP", "(JMP)", "wozmon_nextitem");
+  dat("wozmon_mode", "!", "DROP");
+  asm.macro.jmp("wozmon_nextitem");
   def("wozmon_l1");        // ( ba+1 char )
-  dat("DUP", "(LIT)", 0x3A, "=", "(BRZ)", "wozmon_l2");
+  dat("DUP", "(LIT)", 0x3A, "=");
+  asm.macro.brz("wozmon_l2");
   dat("(LIT)", 0x74);      // set mode as store
-  dat("(JMP)", "wozmon_setmode");
+  asm.macro.jmp("wozmon_setmode");
   def("wozmon_l2");
-  dat("DUP", "(LIT)", 0x52, "=", "(BRNZ)", "wozmon_run");
-  dat(       "(LIT)", 0x51, "=", "(BRNZ)", "wozmon_quit");
+  dat("DUP", "(LIT)", 0x52, "=");
+  asm.macro.brnz("wozmon_run");
+  dat(       "(LIT)", 0x51, "=");
+  asm.macro.brnz("wozmon_quit");
   
   def("wozmon_nexthex"); // ( ba )
   dat("DUP", "@");       // get char ( ba chr )
   dat("(LIT)", 0x30, "XOR"); // map digits to 0-9 ( ba digit )
-  dat("DUP", "(LIT)", 0x0A, "<", "(BRNZ)", "wozmon_dig");
+  dat("DUP", "(LIT)", 0x0A, "<");
+  asm.macro.brnz("wozmon_dig");
   dat("(LIT)", 0x88, "+");   // map letter "A"-"F" to $FA-FF
-  dat("DUP", "(LIT)", 0xFA, "<", "(BRNZ)", "wozmon_nothex");
+  dat("DUP", "(LIT)", 0xFA, "<");
+  asm.macro.brnz("wozmon_nothex");
   def("wozmon_dig");
   dat("0x0F_&");
   dat("wozmon_tmp", "@", "4<<", "OR", "wozmon_tmp", "!");
-  dat("1+", "(JMP)", "wozmon_nexthex");
+  dat("1+");
+  asm.macro.jmp("wozmon_nexthex");
   
   def("wozmon_nothex");  // ( ba char )
   dat("2DROP");
-  dat("wozmon_tmp", "@", "wozmon_st", "@", "OR", "(BRZ)", "wozmon");
-  dat("(LIT)", 0x74, "wozmon_mode", "@", "=", "(BRZ)", "wozmon_notstore");
+  dat("wozmon_tmp", "@", "wozmon_st", "@", "OR");
+  asm.macro.brz("wozmon");
+  dat("(LIT)", 0x74, "wozmon_mode", "@", "=");
+  asm.macro.brz("wozmon_notstore");
   dat("wozmon_tmp", "@", "wozmon_st", "@", "!");
   dat("wozmon_st",  "@", "1+", "wozmon_st", "!");
-  dat("(JMP)", "wozmon_nextitem");
+  asm.macro.jmp("wozmon_nextitem");
 
   def("wozmon_notstore"); // ( )
-  dat("FALSE", "wozmon_mode", "@", "=", "(BRZ)", "wozmon_xamnext");
+  dat("FALSE", "wozmon_mode", "@", "=");
+  asm.macro.brz("wozmon_xamnext");
   dat("wozmon_tmp", "@", "DUP", "wozmon_st", "!", "wozmon_xam", "!");
 
   def("wozmon_nxtprnt");
   dat("wozmon_xam", "@", "(LIT)", 0x07, "&");
-  dat("(BRNZ)", "wozmon_prdata");
+  asm.macro.brnz("wozmon_prdata");
   dat("(CRLF.)");
   dat("wozmon_xam", "@", "EMIT_HEXWORD");
   dat("(LIT)", 0x3A, "EMIT");
@@ -490,16 +1039,19 @@ export const wozmon = (asm, opts) => {
 
   def("wozmon_xamnext");
   dat("FALSE", "wozmon_mode", "!");
-  dat("wozmon_xam", "@", "wozmon_tmp", "@", "<", "(BRZ)", "wozmon_nextitem");
+  dat("wozmon_xam", "@", "wozmon_tmp", "@", "<");
+  asm.macro.brz("wozmon_nextitem");
   dat("wozmon_xam", "@", "1+", "wozmon_xam", "!");
-  dat("(JMP)", "wozmon_nxtprnt");
+  asm.macro.jmp("wozmon_nxtprnt");
   
   def("wozmon_escape"); // ( buff_addr chr -- )
   dat("2DROP", "(JMP)", "wozmon");
   def("wozmon_backspace"); // ( buff_addr chr -- buff_addr )
-  dat("DROP", "1-", "wozmon_linebuffer_start", "MAX", "(JMP)", "wozmon_notcr");
+  dat("DROP", "1-", "wozmon_linebuffer_start", "MAX");
+  asm.macro.jmp("wozmon_notcr");
   def("wozmon_run"); // ( ba chr )
-  dat("2DROP", "wozmon_xam", "@", "EXECUTE", "(JMP)", "wozmon");
+  dat("2DROP", "wozmon_xam", "@", "EXECUTE");
+  asm.macro.jmp("wozmon");
   def("wozmon_quit"); // ( ba )
   dat("(JMP)", "(DROP)");
   
@@ -519,28 +1071,29 @@ export const wozmon = (asm, opts) => {
 
 export const makeUcodeImage = (opts) => {
   opts = (opts == undefined) ? {} : opts ;
-  const asm = makeAssembler(opts.assemblerOpts);
-  defineInstructionset(asm);
-  asm.org(0x0080);
-  minicore(asm); // always required as lot of subsequent assemblies relie on definitions there in
+  let asm = makeAssembler(opts.assemblerOpts);
+  asm = defineInstructionset(asm);
+  asm.org(0x0010);
+  asm = minicore(asm); // always required as lot of subsequent assemblies relie on definitions there in
   if (opts.wozmon != undefined) {
-    wozmon(asm, opts.wozmon);
+    asm = wozmon(asm, opts.wozmon);
   }
   if (opts.uFork != undefined) {
-    uFork(asm, opts.uFork);
+    asm.symbols.define("uFork_gc_algo1", 1);
+    asm = uFork(asm, opts.uFork);
   }
 
-  asm.org(0x0040); // default start address
+  asm.org(0x0000); // default start address
   if (opts.wozmon != undefined) {
     const startInWozmon = opts.wozmon.startInWozmon;
     if ((startInWozmon != undefined) || (startInWozmon != false)) {
-      asm.dat("wozmon", "(JMP)", 0x0040); // start in wozmon, and stay in it if it was quitted
+      asm.dat("wozmon", "(JMP)", 0x0000); // start in wozmon, and stay in it if it was quitted
     }
   }
   if (opts.uFork != undefined) {
     const startIn_uFork_runLoop = opts.uFork.startInRunLoop;
     if ((startIn_uFork_runLoop != undefined) || (startIn_uFork_runLoop != false)) {
-      asm.dat("uFork_runLoop", "(JMP)", 0x40);
+      asm.dat("uFork_runLoop", "(JMP)", 0x0000);
     }
   }
   asm.done();

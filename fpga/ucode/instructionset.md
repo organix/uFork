@@ -1,3 +1,7 @@
+This is the older uFork_CSM1 instructionset.
+
+See [cpu.md](../fomu/cpu/cpu.md) for the current instructionset. (Called uFork_SM2.2 in ucode)
+
 Instruction set, subject to change.
 
 Machine word (cell) size is 16 bits.
@@ -43,12 +47,14 @@ If the first 10 bits of an instruction are zero then it is an primitive instruct
 TBD: use a similiar unencoded instructions to what excamer J1 and Harris RTX2010?
      For now, go with the canonical dual stack machine from Koopmans book (see README.md)
      Why? Three reasons:
-     1. does not tie the ucode implementation to spefic fpga combination bool logic implementation
-     2. dead easy to make the macro assembler (just symbol to uint16 translations and no machine word/cell packing)
-     3. gives option to implement ucode instruction set via either hardwired with partial instruction decoding (see how the venerable 6502 did it) or ?nano?-code rom-logic
-     Other possibilities considered:
-     * the aforementioned unencoded instructions
-     * risc-v or blaze cores: not chosen due to lack of code density
+     
+1. does not tie the ucode implementation to spefic fpga combination bool logic implementation
+2. dead easy to make the macro assembler (just symbol to uint16 translations and no machine word/cell packing)
+3. gives option to implement ucode instruction set via either hardwired with partial instruction decoding (see how the venerable 6502 did it) or ?nano?-code rom-logic
+   
+Other possibilities considered:
+* the aforementioned unencoded instructions (uFork_SM2 uses a variation on that theme)
+* risc-v or blaze cores: not chosen due to lack of code density
 
 Combinational logic design tricks to implement the ucode instruction set:
 
