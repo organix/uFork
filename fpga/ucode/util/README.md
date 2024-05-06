@@ -32,3 +32,13 @@ const img = await imgp;
 const imgh = convert_img_to_memh(img.image);
 console.log(imgh);
 ```
+
+How to use verilog memh image with the emulator:
+```js
+  import { memh2img } from "./img_importer.js";
+  import { makeEmulator, makeMemory } from "./emulator.js";
+
+  const [image] = memh2img("<string of memh data>");
+  const emu = makeEmulator({ memory: makeMemory(image), });
+```
+
