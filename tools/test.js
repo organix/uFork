@@ -5,26 +5,56 @@
 /*jslint deno */
 
 import {fromFileUrl} from "https://deno.land/std@0.203.0/path/from_file_url.ts";
+import parseq from "https://ufork.org/lib/parseq.js";
+import unpromise from "https://ufork.org/lib/rq/unpromise.js";
 const root_dir_href = import.meta.resolve("../");
 const rust_dir_href = import.meta.resolve("../vm/rs");
 const asm_runner_href = import.meta.resolve("./run_asm_tests.js");
 
-// Run the test runners in parallel, allowing their stdouts to mingle.
-// Failure of either runner yields a non-zero exit code.
+function run(options) {
+    return unpromise(function () {
+        return Deno.run(options).status().then(function (status) {
+            return (
+                status.success
+                ? Promise.resolve(true)
+                : Promise.reject(status)
+            );
+        });
+    });
+}
 
-const rust_runner = Deno.run({
-    cmd: ["cargo", "test", "--lib"],
-    cwd: fromFileUrl(rust_dir_href)
-});
-const asm_runner = Deno.run({
-    cmd: ["deno", "run", "--allow-read=.", asm_runner_href, "apps", "lib"],
-    cwd: fromFileUrl(root_dir_href)
-});
-Promise.all([
-    rust_runner.status(),
-    asm_runner.status()
-]).then(function (statuses) {
-    Deno.exit(statuses.reduce(function (a, b) {
-        return a.code + b.code;
-    }));
+function build() {
+    return run({
+        cmd: ["deno", "task", "build"],
+        cwd: fromFileUrl(root_dir_href)
+    });
+}
+
+function test_rust() {
+    return run({
+        cmd: ["cargo", "test", "--lib"],
+        cwd: fromFileUrl(rust_dir_href)
+    });
+}
+
+function test_asm() {
+    return run({
+        cmd: ["deno", "run", "--allow-read=.", asm_runner_href, "apps", "lib"],
+        cwd: fromFileUrl(root_dir_href)
+    });
+}
+
+// The assembly tests rely on the WASM, so built that first. Building has the
+// side effect of choosing a version of cargo, a prerequisite for the Rust
+// tests. The tests are run in parallel, allowing their stdouts to mingle.
+
+parseq.sequence([
+    build(),
+    parseq.parallel([test_rust(), test_asm()])
+])(function callback(value, ignore) {
+    Deno.exit(
+        value === undefined
+        ? 1
+        : 0
+    );
 });
