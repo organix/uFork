@@ -466,25 +466,25 @@ The following functions are used in various instruction descriptions:
   * Define `car`(_x_) as: if _x_ is a `#pair_t` then `x.X` else `#?`
   * Define `cdr`(_x_) as: if _x_ is a `#pair_t` then `x.Y` else `#?`
 
-To Advance _p_ by _fixnum:n_:
+To <span id="Advance-by">Advance _p_ by _fixnum:n_</span>:
  1. While _n_ > 0
     1. Let _p_ become `cdr(p)`
     1. Let _n_ become `n-1`
 
-To Insert _item_ at _prev_:
+To <span id="Insert-at">Insert _item_ at _prev_</span>:
  1. If _prev_ is a `#pair_t`
     1. Let _entry_ be `cons(item, cdr(prev))`
     1. Set `prev.Y` to _entry_
 
-To Extract _next_ from _prev_:
+To <span id="Extract-from">Extract _next_ from _prev_</span>:
  1. If _prev_ is a `#pair_t`
     1. Set `prev.Y` to `cdr(next)`
 
-To Enlist _fixnum:n_ as _list_:
+To <span id="Enlist-as">Enlist _fixnum:n_ as _list_</span>:
  1. If _n_ > 0
     1. Let _list_ be the stack pointer
     1. Let _p_ be _list_
-    1. Advance _p_ by _n_
+    1. [Advance](#Advance-by) _p_ by _n_
     1. If _p_ is a `#pair_t`
         1. Let the stack pointer become `cdr(p)`
         1. Set `p.Y` to `#nil`
@@ -714,7 +714,7 @@ however both are always replaced together.
 
  1. Remove _beh_ from the stack
  1. Record _beh_ as the code to execute when handling the next event
- 1. Enlist _positive_ as _list_
+ 1. [Enlist](#Enlist-as) _positive_ as _list_
  1. Record _list_ as the private data when handling the next event
 
  T            | X (op)      | Y (imm)     | Z (k)
@@ -1073,8 +1073,8 @@ Duplicate items on the top of the stack.
 
  1. Let _scan_ be the stack pointer
  1. Let _copy_ be `#nil`
- 1. Copy _n_ of _scan_ onto _copy_
- 1. Reverse _copy_ onto the stack pointer
+ 1. [Copy](#Copy-of-onto) _n_ of _scan_ onto _copy_
+ 1. [Reverse](#Reverse-onto) _copy_ onto the stack pointer
 
 #### `end` instruction
 
@@ -1240,7 +1240,7 @@ however both are always specified together.
  `#instr_t`   | `+28` (new) | _positive_  | _instr_
 
  1. Remove _beh_ from the stack
- 1. Enlist _positive_ as _list_
+ 1. [Enlist](#Enlist-as) _positive_ as _list_
  1. Create a new actor with _beh_ for code and _list_ for data
  1. Push a capability designating the new actor onto the stack
 
@@ -1337,7 +1337,7 @@ Create a pair-list from some number of stack items.
 
  1. Let _list_ be the stack pointer
  1. Let _scan_ be `list`
- 1. Advance _scan_ by `positive-1`
+ 1. [Advance](#Advance-by) _scan_ by `positive-1`
  1. If _scan_ is a `#pair_t`
     1. Let _tail_ be `cdr(scan)`
     1. Set `scan.Y` to `car(tail)`
@@ -1411,7 +1411,7 @@ Copy an item at a particular depth on the stack.
 
  1. Let _n_ be `positive-1`
  1. Let _scan_ be the stack pointer
- 1. Advance _scan_ by _n_
+ 1. [Advance](#Advance-by) _scan_ by _n_
  1. Push `car(scan)` onto the stack
 
  T (type)     | X (op)        | Y (imm)     | Z (k)
@@ -1421,8 +1421,8 @@ Copy an item at a particular depth on the stack.
  1. Let _n_ be `-negative-1`
  1. Let _scan_ be the stack pointer
  1. Let _item_ be `car(scan)`
- 1. Advance _scan_ by _n_
- 1. Insert _item_ at _scan_
+ 1. [Advance](#Advance-by) _scan_ by _n_
+ 1. [Insert](#Insert-at) _item_ at _scan_
 
 #### `push` instruction
 
@@ -1460,9 +1460,9 @@ Rotate stack items up to a particular depth.
  1. Let _n_ be `positive-1`
  1. If _n_ > 0
     1. Let _p_ be the stack pointer
-    1. Advance _p_ by `n-1`
+    1. [Advance](#Advance-by) _p_ by `n-1`
     1. Let _q_ be `cdr(p)`
-    1. Extract _q_ from _p_
+    1. [Extract](#Extract-from) _q_ from _p_
     1. Push `car(q)` onto the stack
 
  T (type)     | X (op)        | Y (imm)     | Z (k)
@@ -1473,8 +1473,8 @@ Rotate stack items up to a particular depth.
  1. If _n_ > 0
     1. Remove _item_ from the stack
     1. Let _p_ be the stack pointer
-    1. Advance _p_ by `n-1`
-    1. Insert _item_ at _p_
+    1. [Advance](#Advance-by) _p_ by `n-1`
+    1. [Insert](#Insert-at) _item_ at _p_
 
 #### `send` instruction
 
@@ -1490,7 +1490,7 @@ Add a new message-event to the current actor's transactional effects.
  `#instr_t`   | `+26` (send)  | _positive_  | _instr_
 
  1. Remove _actor_ from the stack
- 1. Enlist _positive_ as _msg_
+ 1. [Enlist](#Enlist-as) _positive_ as _msg_
  1. Record in the current actor's effect a new _event_ with:
     * _actor_ as the target
     * _msg_ as the message
@@ -1528,7 +1528,7 @@ Add a new "sponsored" message-event to the current actor's transactional effects
  `#instr_t`   | `+27` (signal)  | _positive_  | _instr_
 
  1. Remove _actor_ from the stack
- 1. Enlist _positive_ as _msg_
+ 1. [Enlist](#Enlist-as) _positive_ as _msg_
  1. Remove _sponsor_ from the stack
  1. Record in the current actor's effect a new _event_ with:
     * _sponsor_ as the sponsor
