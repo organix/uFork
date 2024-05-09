@@ -493,19 +493,19 @@ To Enlist _fixnum:n_ as _list_:
  1. Otherwise
     1. Let _list_ be `#nil`
 
-To Reverse _list_ onto _head_:
+To <span id="Reverse-onto">Reverse _list_ onto _head_</span>:
  1. While _list_ is a `#pair_t`
     1. Let _next_ be `cdr(list)`
     1. Set `list.Y` to `head`
     1. Let _head_ become _list_
     1. Let _list_ become _next_
 
-To Copy _list_ onto _head_:
+To <span id="Copy-onto">Copy _list_ onto _head_</span>:
  1. While _list_ is a `#pair_t`
     1. Let _head_ be `cons(car(list), head)`
     1. Let _list_ become `cdr(list)`
 
-To Copy _fixnum:n_ of _list_ onto _head_:
+To <span id="Copy-of-onto">Copy _fixnum:n_ of _list_ onto _head_</span>:
  1. While _n_ > 0
     1. Let _head_ be `cons(car(list), head)`
     1. Let _list_ become `cdr(list)`
@@ -1374,9 +1374,9 @@ Split items from a pair-list onto the stack.
 
  1. Remove _pair_ from the stack
  1. Let _copy_ be `#nil`
- 1. Copy _n_ of _pair_ onto _copy_
+ 1. [Copy](#Copy-of-onto) _n_ of _pair_ onto _copy_
  1. Push _pair_ onto the stack
- 1. Reverse _copy_ onto the stack
+ 1. [Reverse](#Reverse-onto) _copy_ onto the stack
 
  T            | X (op)        | Y (imm)       | Z (k)
 --------------|---------------|---------------|-------------
@@ -1385,8 +1385,8 @@ Split items from a pair-list onto the stack.
  1. If _negative_ is `-1`
     1. Remove _pair_ from the stack
     1. Let _copy_ be `#nil`
-    1. Copy _pair_ onto _copy_
-    1. Reverse _copy_ onto the stack
+    1. [Copy](#Copy-onto) _pair_ onto _copy_
+    1. [Reverse](#Reverse-onto) _copy_ onto the stack
  1. Otherwise
     1. Push `#?` onto the stack
 
