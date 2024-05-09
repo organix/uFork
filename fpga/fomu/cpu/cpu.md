@@ -336,7 +336,7 @@ the immediate address is only used
 If `D0` is zero,
 otherwise it remains just `PC+1`.
 If auto-increment/decrement are selected,
-the ALU performs the operation on `D0`.
+the ALU performs the operation on `R0`.
 
 ### STACK phase
 
@@ -368,9 +368,9 @@ the stack operations (if any)
 are implied by the branch-type.
 If the branch is conditional,
 the test value (`D0`) is DROPed from the D-stack.
-If auto-increment/decrement are selected
-and `D0` was not zero,
-the ALU result is used to RPLC the `D0` value.
+If auto-increment/decrement are selected;
+if `R0` was zero it is DROPed,
+otherwise it is RPLCed by the ALU result.
 
 Finally, the `PC` selected in the ALU/MEM phase
 is used to fetch the next instruction to execute,
