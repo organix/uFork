@@ -191,14 +191,16 @@ VARIABLE here   ( bulk copy addr )
             0x7FFC AND MSB|
         THEN
     THEN ;
-: fetch ( addr -- data )
-    DUP 0xC000 AND IF
+: parse_qaddr ( qaddr -- field offset )
         DUP 0x3 AND SWAP    ( D: field addr )
         DUP MSB& IF
             2ASR 0x1FFF
         ELSE
             2ASR 0x0FFF
-        THEN AND            ( D: field offset )
+        THEN AND ;          ( D: field offset )
+: fetch ( addr -- data )
+    DUP 0xC000 AND IF
+        parse_qaddr         ( D: field offset )
         OVER 0x1 = IF
             QX@             ( D: field data )
         ELSE
@@ -218,12 +220,7 @@ VARIABLE here   ( bulk copy addr )
     THEN ;
 : store ( data addr -- )
     DUP 0xC000 AND IF
-        DUP 0x3 AND SWAP    ( D: data field addr )
-        DUP MSB& IF
-            2ASR 0x1FFF
-        ELSE
-            2ASR 0x0FFF
-        THEN AND SWAP       ( D: data offset field )
+        parse_qaddr SWAP    ( D: data offset field )
         DUP 0x1 = IF
             DROP QX!
         ELSE
