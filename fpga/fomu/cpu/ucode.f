@@ -145,8 +145,8 @@
 : CR ( -- )
     '\r' EMIT '\n' EMIT ;
 : ECHO ( char -- )
-    EMIT
-    DUP '\r' = IF
+    DUP EMIT
+    '\r' = IF
         '\n' EMIT
     THEN ;
 : X# ( n -- )
