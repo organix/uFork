@@ -41,7 +41,7 @@ function compile(text, src = "") {
         return token;
     }
 
-    const ADDR_MASK =           0x0FFF;                 // 12-bit uCode addresses
+    const ADDR_MASK =       0x0FFF;                     // 12-bit uCode addresses
 
     function uc_jump(addr) {    // jump (unconditional)
         return (0x8000 | (addr & ADDR_MASK));
@@ -164,6 +164,12 @@ function compile(text, src = "") {
         const word = uc_jump(addr);  // placeholder
         ctrl_ctx.push(word);
     };
+    words["AGAIN"] = function () {                      // ( -- )
+        // end infinite loop
+        const addr = ctrl_ctx.pop() & ADDR_MASK;
+        const word = uc_jump(prog[addr]);
+        prog.push(word);
+    };
     words["UNTIL"] = function () {                      // ( cond -- )
         // end bottom-test loop
         const addr = ctrl_ctx.pop() & ADDR_MASK;
@@ -188,7 +194,7 @@ function compile(text, src = "") {
         prog.push(UC_TO_R);
         const addr = prog.length;
 //debug console.log("compile_counted_loop:", "$"+addr.toString(16).padStart(3, "0"));
-        const word = uc_jump(addr);  // placeholder
+        const word = uc_dec_jnz(addr);  // placeholder
         ctrl_ctx.push(word);
         prog.push(word);
     };
@@ -240,6 +246,9 @@ function compile(text, src = "") {
     const prog = [
         uc_jump(0)
     ];
+    function exit_restricted() {
+        return ((ctrl_ctx[0] & 0x2000) === 0x2000);     // auto increment/decrement
+    }
     function compile_words(token) {
         const TAIL_NONE = 0;
         const TAIL_EVAL = 1;
@@ -251,8 +260,8 @@ function compile(text, src = "") {
             if (token === "(") {
                 compile_comment(next_token());
             } else if (token === ";") {
-                if (ctrl_ctx.length > 0) {
-                    return error("EXIT from control depth", ctrl_ctx.length);
+                if (exit_restricted()) {
+                    return error("EXIT from counted-loop at depth", ctrl_ctx.length);
                 }
                 if (tail_ctx === TAIL_EVAL) {
                     // attach "free" EXIT to previous word
