@@ -325,8 +325,7 @@ module cpu #(
         .i_push(r_se[1]),
         .i_pop(r_se[0]),
 
-        .o_s0(r0),
-        .o_s1(r1)
+        .o_s0(tors)                                     // top of return stack
     );
 
     //
@@ -341,8 +340,8 @@ module cpu #(
         .i_data(d_value),
         .i_se(d_se),
 
-        .o_s0(d0),
-        .o_s1(d1)
+        .o_s0(tos),                                     // top of stack
+        .o_s1(nos)                                      // next on stack
     );
 
     //
@@ -434,20 +433,20 @@ module cpu #(
     wire mem_wr = instr[7];                             // {0:read, 1:write} MEM
     wire [2:0] mem_rng = instr[6:4];                    // MEM range selector
     wire quad_op = mem_rng[2];                          // uFork quad-memory operation
-    wire d_zero = (d0 == 0);                            // zero check for TOS
-    wire r_zero = (r0 == 0);                            // zero check for TORS
+    wire d_zero = (tos == 0);                           // zero check for top-of-stack
+    wire r_zero = (tors == 0);                          // zero check for top-of-return-stack
     wire branch = (r_op == 2'b00)                       // branch taken
                 || ((r_op == 2'b01) && d_zero)
                 || (auto && !r_zero);
-    wire [3:0] dev_id = d0[7:4];                        // device id (mem_rng == `MEM_DEV)
-    wire [3:0] reg_id = d0[3:0];                        // register id (mem_rng == `MEM_DEV)
+    wire [3:0] dev_id = tos[7:4];                       // device id (mem_rng == `MEM_DEV)
+    wire [3:0] reg_id = tos[3:0];                       // register id (mem_rng == `MEM_DEV)
 
     wire uc_en = (p_alu && mem_op && mem_rng == `MEM_UC);
     assign uc_wr = (uc_en && mem_wr);
-    assign uc_waddr = d0[ADDR_SZ-1:0];
-    assign uc_wdata = d1;
+    assign uc_waddr = tos[ADDR_SZ-1:0];
+    assign uc_wdata = nos;
     assign uc_raddr =
-        ( uc_en ? d0[ADDR_SZ-1:0]
+        ( uc_en ? tos[ADDR_SZ-1:0]
         : pc );
 
     wire [DATA_SZ-1:0] r_value =
@@ -460,8 +459,7 @@ module cpu #(
             : `NO_SE )
         : !p_alu ? r_op
         : `NO_SE );
-    wire [DATA_SZ-1:0] r0;
-    wire [DATA_SZ-1:0] r1;
+    wire [DATA_SZ-1:0] tors;
 
     wire [DATA_SZ-1:0] mem_out =
         ( quad_op ? quad_rdata
@@ -475,38 +473,38 @@ module cpu #(
         : p_alu && d_drop ? `DROP_SE
         : !p_alu ? d_op
         : `NO_SE );
-    wire [DATA_SZ-1:0] d0;
-    wire [DATA_SZ-1:0] d1;
+    wire [DATA_SZ-1:0] tos;
+    wire [DATA_SZ-1:0] nos;
 
     wire [3:0] alu_fn =
         ( ctrl ? `ADD_OP
         : alu_op );
     wire [DATA_SZ-1:0] alu_arg0 =
-        ( alu_a == 2'b01 ? d1
-        : alu_a == 2'b10 ? r0
+        ( alu_a == 2'b01 ? nos
+        : alu_a == 2'b10 ? tors
         : alu_a == 2'b11 ? 0
-        : d0 );
+        : tos );
     wire [DATA_SZ-1:0] alu_arg1 =
         ( alu_b == 2'b01 ? 1
         : alu_b == 2'b10 ? 16'h8000
         : alu_b == 2'b11 ? -1
-        : d0 );
+        : tos );
     wire [DATA_SZ-1:0] alu_out;
 
     wire uart_en = (p_alu && mem_op && mem_rng == `MEM_DEV && dev_id == 4'h0);
     wire uart_wr = mem_wr;
     wire [3:0] uart_addr = reg_id;
-    wire [7:0] uart_wdata = d1[7:0];
+    wire [7:0] uart_wdata = nos[7:0];
     wire [7:0] uart_rdata;
 
     wire quad_en = (p_alu && mem_op && quad_op);
-    wire cs_qram = (quad_en && d0[15:14]==2'b01);
-    wire cs_qrom0 = (quad_en && d0[15:12]==4'b0000);
-    wire cs_qrom1 = (quad_en && d0[15:12]==4'b0001);
+    wire cs_qram = (quad_en && tos[15:14]==2'b01);
+    wire cs_qrom0 = (quad_en && tos[15:12]==4'b0000);
+    wire cs_qrom1 = (quad_en && tos[15:12]==4'b0001);
     wire quad_wr = (quad_en && mem_wr);
-    wire [11:0] quad_addr = d0[11:0];
+    wire [11:0] quad_addr = tos[11:0];
     wire [1:0] quad_field = mem_rng[1:0];
-    wire [15:0] quad_wdata = d1;
+    wire [15:0] quad_wdata = nos;
     wire [15:0] quad_rdata;
 
     reg p_alu = 0;                                      // 0: stack-phase, 1: alu-phase
@@ -517,7 +515,7 @@ module cpu #(
             instr_r <= UC_NOP;
         end else if (p_alu) begin
             if (!ctrl && r_pc) begin
-                pc <= r0[ADDR_SZ-1:0];                  // return from procedure
+                pc <= tors[ADDR_SZ-1:0];                // return from procedure
             end else if (mem_op && mem_rng == `MEM_PC) begin
                 pc <= pc + 1'b1;                        // auto-increment on [PC] access
             end else if (ctrl && branch) begin

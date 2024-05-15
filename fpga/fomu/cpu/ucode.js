@@ -247,7 +247,8 @@ function compile(text, src = "") {
         uc_jump(0)
     ];
     function exit_restricted() {
-        return ((ctrl_ctx[0] & 0x2000) === 0x2000);     // auto increment/decrement
+        // any auto increment/decrement contexts?
+        return ctrl_ctx.some((x) => ((x & 0x2000) === 0x2000));
     }
     function compile_words(token) {
         const TAIL_NONE = 0;

@@ -94,7 +94,7 @@ giving us a 12-bit quad-cell offset into each SPRAM.
 One SPRAM is used to hold mutable user-memory (RAM).
 Two SPRAMs are used to hold "immutable" code and data (ROM).
 
-**NOTE:** uCode must be able to write to ROM to implement a boot-loader.
+**NOTE:** uCode must be able to write to "ROM" to implement a boot-loader.
 
 ## Instruction Encoding
 
@@ -116,11 +116,11 @@ These instructions carry a memory address in an immediate field that
 that may be used to load the program counter. In addition, the current
 program counter may be pushed onto the R-stack. If the instruction is
 conditional, the program counter is only loaded from the immediate
-field if the value at the top of the data stack (D0) is zero, otherwise
+field if the value at the top of the data stack (TOS) is zero, otherwise
 the program counter is loaded with the address of the next instruction,
 which is the default behavior of all instructions. If the instruction
-is auto-increment/decrement, the top of the return stack (R0) is tested
-instead of D0, and if R0 _not_ zero, it is incremented/decremented by 1.
+is auto-increment/decrement, the top of the return stack (TORS) is tested
+instead of TOS, and if TORS _not_ zero, it is incremented/decremented by 1.
 
      15  14  13  12  11  10   9   8   7   6   5   4   3   2   1   0
     *---+---+---+---*---+---+---+---*---+---+---+---*---+---+---+---*
@@ -128,9 +128,9 @@ instead of D0, and if R0 _not_ zero, it is incremented/decremented by 1.
     *---+---+---+---*---+---+---+---*---+---+---+---*---+---+---+---*
       ^   ^  \_____/
       |   |  00: addr->PC
-      |   |  01: D0==0 ? addr->PC,DROP : PC+1->PC,DROP
-      |   |  10: R0==0 ? PC+1->PC,RDROP : addr->PC,R0+1->R0
-      |   |  11: R0==0 ? PC+1->PC,RDROP : addr->PC,R0-1->R0
+      |   |  01: TOS==0 ? addr->PC,DROP : PC+1->PC,DROP
+      |   |  10: TORS==0 ? PC+1->PC,RDROP : addr->PC,TORS+1->TORS
+      |   |  11: TORS==0 ? PC+1->PC,RDROP : addr->PC,TORS-1->TORS
       | PC+1->R {0:JUMP, 1:CALL}
     control
 
@@ -148,10 +148,10 @@ the next instruction, but may be loaded from the R-stack instead.
     | 0 |RPC|  R se | ? |    D se   | ALU A | ALU B |    ALU op     |
     *---+---+---+---*---+---+---+---*---+---+---+---*---+---+---+---*
       ^   ^  \_____/     \_________/ \_____/ \_____/ \______________/
-      |   |  00:NONE       000:NONE   00:D0   00:D0     0000:NONE
-      |   |  01:DROP       001:DROP   01:D1   01:+1     0001:ADD
-      |   |  10:PUSH       010:PUSH   10:R0   10:msb    0010:SUB
-      |   |  11:RPLC       011:RPLC   11:0    11:-1     0011:MUL
+      |   |  00:NONE       000:NONE  00:TOS   00:TOS    0000:NONE
+      |   |  01:DROP       001:DROP  01:NOS   01:+1     0001:ADD
+      |   |  10:PUSH       010:PUSH  10:TORS  10:msb    0010:SUB
+      |   |  11:RPLC       011:RPLC  11:0     11:-1     0011:MUL
       | R->PC              100:SWAP                     0100:AND
     evaluate               101:ROT3                     0101:XOR
                            110:RROT                     0110:OR 
@@ -194,7 +194,7 @@ These instructions bypass the normal evaluation ALU module.
 Instead they perform operations involving a memory cycle.
 The result is available as input to both the D-stack and R-stack.
 The top 8 bits are the same as other evaluation instructions.
-`D0` is routed to the address lines, and `D1` to the data lines.
+`TOS` is routed to the address lines, and `NOS` to the data lines.
 The `2DROP` bit performs an extra D-stack `DROP` during the
 ALU/memory cycle (usually for a write request).
 
@@ -302,15 +302,15 @@ Registered inputs include:
 
   * The current instruction
   * The incremented program-counter (`PC+1`)
-  * The top 2 elements of the D(ata)-Stack (`D0` and `D1`)
-  * The top element of the R(eturn)-Stack (`R0`)
+  * The top 2 elements of the D(ata)-Stack (`TOS` and `NOS`)
+  * The top element of the R(eturn)-Stack (`TORS`)
 
 For ALU instructions,
 fields of the instruction select
 the inputs to the ALU
 and the operation to perform.
 If the `RPC` bit is set,
-the `PC` is loaded from `R0`,
+the `PC` is loaded from `TORS`,
 otherwise it remains just `PC+1`.
 
 For MEM instructions,
@@ -318,11 +318,11 @@ fields of the instruction select
 the type of memory accessed
 and the operation to perform (read or write).
 If the `RPC` bit is set,
-the `PC` is loaded from `R0`,
+the `PC` is loaded from `TORS`,
 otherwise it remains just `PC+1`,
 or `PC+2` if the memory read is from `PC+1`.
-A memory write consumes both `D0` (the address)
-and `D1` (the data), so an extra DROP
+A memory write consumes both `TOS` (the address)
+and `NOS` (the data), so an extra DROP
 is performed on the D-stack in this phase.
 
 For control-transfer instructions,
@@ -333,10 +333,10 @@ If the `PRC` bit is set,
 as a return-address (a CALL versus a JUMP).
 If the branch is conditional,
 the immediate address is only used
-If `D0` is zero,
+If `TOS` is zero,
 otherwise it remains just `PC+1`.
 If auto-increment/decrement are selected,
-the ALU performs the operation on `R0`.
+the ALU performs the operation on `TORS`.
 
 ### STACK phase
 
@@ -367,9 +367,9 @@ For control-transfer instructions,
 the stack operations (if any)
 are implied by the branch-type.
 If the branch is conditional,
-the test value (`D0`) is DROPed from the D-stack.
+the test value (`TOS`) is DROPed from the D-stack.
 If auto-increment/decrement are selected;
-if `R0` was zero it is DROPed,
+if `TORS` was zero it is DROPed,
 otherwise it is RPLCed by the ALU result.
 
 Finally, the `PC` selected in the ALU/MEM phase

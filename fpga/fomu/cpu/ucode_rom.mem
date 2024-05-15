@@ -1,6 +1,6 @@
 //  CODE    ADR  DISASM                  NAMES                     //
 /////////////////////////////////////////////////////////////////////
-    c25f // 000: BOOT
+    c251 // 000: BOOT
     002f // 001: FAIL                    PANIC!
     8001 // 002: jump(001)
     521f // 003: (CONST)                 ^C
@@ -189,8 +189,8 @@
     c0a7 // 0ba: EMIT
     c009 // 0bb: '\n'
     80a7 // 0bc: jump(0a7)
-    c0a7 // 0bd: EMIT                    ECHO
-    0200 // 0be: DUP
+    0200 // 0bd: DUP                     ECHO
+    c0a7 // 0be: EMIT
     c00b // 0bf: '\r'
     c042 // 0c0: =
     90c4 // 0c1: jump_ifzero(0c4)
@@ -283,330 +283,316 @@
     0744 // 118: AND
     0326 // 119: MSB|
     5000 // 11a: NOP EXIT
-    0200 // 11b: DUP                     fetch
+    0200 // 11b: DUP                     parse_qaddr
     021f // 11c: (LIT)
-    c000 // 11d: call(000)
+    0003 // 11d: 0x0003
     0744 // 11e: AND
-    9148 // 11f: jump_ifzero(148)
+    0400 // 11f: SWAP
     0200 // 120: DUP
-    021f // 121: (LIT)
-    0003 // 122: 0x0003
-    0744 // 123: AND
-    0400 // 124: SWAP
-    0200 // 125: DUP
-    0324 // 126: MSB&
-    912c // 127: jump_ifzero(12c)
-    030c // 128: 2ASR
-    021f // 129: (LIT)
-    1fff // 12a: 0x1fff
-    812f // 12b: jump(12f)
-    030c // 12c: 2ASR
-    021f // 12d: (LIT)
-    0fff // 12e: 0x0fff
-    0744 // 12f: AND
-    0240 // 130: OVER
-    021f // 131: (LIT)
-    0001 // 132: 0x0001
-    c042 // 133: =
-    9137 // 134: jump_ifzero(137)
-    035f // 135: QX@
-    8146 // 136: jump(146)
-    0240 // 137: OVER
-    021f // 138: (LIT)
-    0002 // 139: 0x0002
-    c042 // 13a: =
-    913e // 13b: jump_ifzero(13e)
-    036f // 13c: QY@
-    8146 // 13d: jump(146)
-    0240 // 13e: OVER
-    021f // 13f: (LIT)
-    0003 // 140: 0x0003
-    c042 // 141: =
-    9145 // 142: jump_ifzero(145)
-    037f // 143: QZ@
-    8146 // 144: jump(146)
-    034f // 145: QT@
-    c031 // 146: NIP
-    8149 // 147: jump(149)
-    030f // 148: @
-    5000 // 149: NOP EXIT
-    0200 // 14a: DUP                     store
-    021f // 14b: (LIT)
-    c000 // 14c: call(000)
-    0744 // 14d: AND
-    917b // 14e: jump_ifzero(17b)
-    0200 // 14f: DUP
-    021f // 150: (LIT)
-    0003 // 151: 0x0003
-    0744 // 152: AND
-    0400 // 153: SWAP
-    0200 // 154: DUP
-    0324 // 155: MSB&
-    915b // 156: jump_ifzero(15b)
-    030c // 157: 2ASR
-    021f // 158: (LIT)
-    1fff // 159: 0x1fff
-    815e // 15a: jump(15e)
-    030c // 15b: 2ASR
-    021f // 15c: (LIT)
-    0fff // 15d: 0x0fff
-    0744 // 15e: AND
-    0400 // 15f: SWAP
-    0200 // 160: DUP
-    021f // 161: (LIT)
-    0001 // 162: 0x0001
-    c042 // 163: =
-    9168 // 164: jump_ifzero(168)
-    0100 // 165: DROP
-    09df // 166: QX!
-    817a // 167: jump(17a)
-    0200 // 168: DUP
-    021f // 169: (LIT)
-    0002 // 16a: 0x0002
-    c042 // 16b: =
-    9170 // 16c: jump_ifzero(170)
-    0100 // 16d: DROP
-    09ef // 16e: QY!
-    817a // 16f: jump(17a)
-    0200 // 170: DUP
-    021f // 171: (LIT)
-    0003 // 172: 0x0003
-    c042 // 173: =
-    9178 // 174: jump_ifzero(178)
-    0100 // 175: DROP
-    09ff // 176: QZ!
-    817a // 177: jump(17a)
-    0100 // 178: DROP
-    09cf // 179: QT!
-    817c // 17a: jump(17c)
-    098f // 17b: !
-    5000 // 17c: NOP EXIT
-    0240 // 17d: OVER                    dump
-    0742 // 17e: -
-    0200 // 17f: DUP
-    c04b // 180: 0<
-    9184 // 181: jump_ifzero(184)
-    c037 // 182: 2DROP
-    8196 // 183: jump(196)
+    0324 // 121: MSB&
+    9127 // 122: jump_ifzero(127)
+    030c // 123: 2ASR
+    021f // 124: (LIT)
+    1fff // 125: 0x1fff
+    812a // 126: jump(12a)
+    030c // 127: 2ASR
+    021f // 128: (LIT)
+    0fff // 129: 0x0fff
+    5744 // 12a: AND EXIT
+    0200 // 12b: DUP                     fetch
+    021f // 12c: (LIT)
+    c000 // 12d: call(000)
+    0744 // 12e: AND
+    9149 // 12f: jump_ifzero(149)
+    c11b // 130: parse_qaddr
+    0240 // 131: OVER
+    021f // 132: (LIT)
+    0001 // 133: 0x0001
+    c042 // 134: =
+    9138 // 135: jump_ifzero(138)
+    035f // 136: QX@
+    8147 // 137: jump(147)
+    0240 // 138: OVER
+    021f // 139: (LIT)
+    0002 // 13a: 0x0002
+    c042 // 13b: =
+    913f // 13c: jump_ifzero(13f)
+    036f // 13d: QY@
+    8147 // 13e: jump(147)
+    0240 // 13f: OVER
+    021f // 140: (LIT)
+    0003 // 141: 0x0003
+    c042 // 142: =
+    9146 // 143: jump_ifzero(146)
+    037f // 144: QZ@
+    8147 // 145: jump(147)
+    034f // 146: QT@
+    c031 // 147: NIP
+    814a // 148: jump(14a)
+    030f // 149: @
+    5000 // 14a: NOP EXIT
+    0200 // 14b: DUP                     store
+    021f // 14c: (LIT)
+    c000 // 14d: call(000)
+    0744 // 14e: AND
+    916d // 14f: jump_ifzero(16d)
+    c11b // 150: parse_qaddr
+    0400 // 151: SWAP
+    0200 // 152: DUP
+    021f // 153: (LIT)
+    0001 // 154: 0x0001
+    c042 // 155: =
+    915a // 156: jump_ifzero(15a)
+    0100 // 157: DROP
+    09df // 158: QX!
+    816c // 159: jump(16c)
+    0200 // 15a: DUP
+    021f // 15b: (LIT)
+    0002 // 15c: 0x0002
+    c042 // 15d: =
+    9162 // 15e: jump_ifzero(162)
+    0100 // 15f: DROP
+    09ef // 160: QY!
+    816c // 161: jump(16c)
+    0200 // 162: DUP
+    021f // 163: (LIT)
+    0003 // 164: 0x0003
+    c042 // 165: =
+    916a // 166: jump_ifzero(16a)
+    0100 // 167: DROP
+    09ff // 168: QZ!
+    816c // 169: jump(16c)
+    0100 // 16a: DROP
+    09cf // 16b: QT!
+    816e // 16c: jump(16e)
+    098f // 16d: !
+    5000 // 16e: NOP EXIT
+    0240 // 16f: OVER                    dump
+    0742 // 170: -
+    0200 // 171: DUP
+    c04b // 172: 0<
+    9176 // 173: jump_ifzero(176)
+    c037 // 174: 2DROP
+    8188 // 175: jump(188)
+    0311 // 176: 1+
+    2100 // 177: >R
+    8185 // 178: jump(185)
+    0200 // 179: DUP
+    c12b // 17a: fetch
+    0240 // 17b: OVER
+    021f // 17c: (LIT)
+    0007 // 17d: 0x0007
+    0744 // 17e: AND
+    9182 // 17f: jump_ifzero(182)
+    c0a6 // 180: SPACE
+    8183 // 181: jump(183)
+    c0b9 // 182: CR
+    c0c7 // 183: X.
     0311 // 184: 1+
-    2100 // 185: >R
-    8193 // 186: jump(193)
-    0200 // 187: DUP
-    c11b // 188: fetch
-    0240 // 189: OVER
-    021f // 18a: (LIT)
-    0007 // 18b: 0x0007
-    0744 // 18c: AND
-    9190 // 18d: jump_ifzero(190)
-    c0a6 // 18e: SPACE
-    8191 // 18f: jump(191)
-    c0b9 // 190: CR
-    c0c7 // 191: X.
-    0311 // 192: 1+
-    b187 // 193: jump_ifnz_dec(187)
-    c0b9 // 194: CR
-    0100 // 195: DROP
-    5000 // 196: NOP EXIT
-    c09a // 197: FROMHEX                 >inp
-    c0e9 // 198: inp
-    030f // 199: @
-    0309 // 19a: 4ROL
-    021f // 19b: (LIT)
-    fff0 // 19c: call_ifnz_dec(ff0)
-    0744 // 19d: AND
-    0746 // 19e: OR
-    c0e9 // 19f: inp
-    598f // 1a0: ! EXIT
-    c0f5 // 1a1: here                    >here
-    030f // 1a2: @
-    c14a // 1a3: store
-    c0f5 // 1a4: here
-    805a // 1a5: jump(05a)
-    c0d8 // 1a6: '>'                     prompt
-    c0a7 // 1a7: EMIT
-    c00d // 1a8: BL
-    80a7 // 1a9: jump(0a7)
-    c0e6 // 1aa: cmd                     del
-    030f // 1ab: @
-    0200 // 1ac: DUP
-    c00d // 1ad: BL
-    c04d // 1ae: >
-    91cd // 1af: jump_ifzero(1cd)
-    0200 // 1b0: DUP
-    c070 // 1b1: ISHEX
-    91c4 // 1b2: jump_ifzero(1c4)
+    b179 // 185: jump_ifnz_dec(179)
+    c0b9 // 186: CR
+    0100 // 187: DROP
+    5000 // 188: NOP EXIT
+    c09a // 189: FROMHEX                 >inp
+    c0e9 // 18a: inp
+    030f // 18b: @
+    0309 // 18c: 4ROL
+    021f // 18d: (LIT)
+    fff0 // 18e: call_ifnz_dec(ff0)
+    0744 // 18f: AND
+    0746 // 190: OR
+    c0e9 // 191: inp
+    598f // 192: ! EXIT
+    c0f5 // 193: here                    >here
+    030f // 194: @
+    c14b // 195: store
+    c0f5 // 196: here
+    805a // 197: jump(05a)
+    c0d8 // 198: '>'                     prompt
+    c0a7 // 199: EMIT
+    c00d // 19a: BL
+    80a7 // 19b: jump(0a7)
+    c0e6 // 19c: cmd                     del
+    030f // 19d: @
+    0200 // 19e: DUP
+    c00d // 19f: BL
+    c04d // 1a0: >
+    91bf // 1a1: jump_ifzero(1bf)
+    0200 // 1a2: DUP
+    c070 // 1a3: ISHEX
+    91b6 // 1a4: jump_ifzero(1b6)
+    c0e9 // 1a5: inp
+    030f // 1a6: @
+    030d // 1a7: 4ASR
+    021f // 1a8: (LIT)
+    0fff // 1a9: 0x0fff
+    0744 // 1aa: AND
+    0200 // 1ab: DUP
+    91b0 // 1ac: jump_ifzero(1b0)
+    0200 // 1ad: DUP
+    c08e // 1ae: TOHEX
+    81b1 // 1af: jump(1b1)
+    c00d // 1b0: BL
+    c0e6 // 1b1: cmd
+    098f // 1b2: !
     c0e9 // 1b3: inp
-    030f // 1b4: @
-    030d // 1b5: 4ASR
-    021f // 1b6: (LIT)
-    0fff // 1b7: 0x0fff
-    0744 // 1b8: AND
-    0200 // 1b9: DUP
-    91be // 1ba: jump_ifzero(1be)
-    0200 // 1bb: DUP
-    c08e // 1bc: TOHEX
-    81bf // 1bd: jump(1bf)
-    c00d // 1be: BL
-    c0e6 // 1bf: cmd
-    098f // 1c0: !
-    c0e9 // 1c1: inp
-    098f // 1c2: !
-    81c7 // 1c3: jump(1c7)
-    c00d // 1c4: BL
-    c0e6 // 1c5: cmd
-    098f // 1c6: !
-    c005 // 1c7: '\b'
-    c0a7 // 1c8: EMIT
-    c00d // 1c9: BL
-    c0a7 // 1ca: EMIT
-    c005 // 1cb: '\b'
-    c0a7 // 1cc: EMIT
-    5100 // 1cd: DROP EXIT
-    c0a7 // 1ce: EMIT                    eol
-    c0af // 1cf: KEY
-    0200 // 1d0: DUP
-    c00b // 1d1: '\r'
-    c042 // 1d2: =
-    91d5 // 1d3: jump_ifzero(1d5)
-    5000 // 1d4: NOP EXIT
-    81ce // 1d5: jump(1ce)
-    c0af // 1d6: KEY                     MONITOR
-    0200 // 1d7: DUP
-    c003 // 1d8: ^C
-    c042 // 1d9: =
-    91dc // 1da: jump_ifzero(1dc)
-    5000 // 1db: NOP EXIT
+    098f // 1b4: !
+    81b9 // 1b5: jump(1b9)
+    c00d // 1b6: BL
+    c0e6 // 1b7: cmd
+    098f // 1b8: !
+    c005 // 1b9: '\b'
+    c0a7 // 1ba: EMIT
+    c00d // 1bb: BL
+    c0a7 // 1bc: EMIT
+    c005 // 1bd: '\b'
+    c0a7 // 1be: EMIT
+    5100 // 1bf: DROP EXIT
+    c0a7 // 1c0: EMIT                    eol
+    c0af // 1c1: KEY
+    0200 // 1c2: DUP
+    c00b // 1c3: '\r'
+    c042 // 1c4: =
+    91c7 // 1c5: jump_ifzero(1c7)
+    5000 // 1c6: NOP EXIT
+    81c0 // 1c7: jump(1c0)
+    c0af // 1c8: KEY                     MONITOR
+    0200 // 1c9: DUP
+    c003 // 1ca: ^C
+    c042 // 1cb: =
+    91ce // 1cc: jump_ifzero(1ce)
+    5000 // 1cd: NOP EXIT
+    0200 // 1ce: DUP
+    c005 // 1cf: '\b'
+    c042 // 1d0: =
+    91d4 // 1d1: jump_ifzero(1d4)
+    0100 // 1d2: DROP
+    c021 // 1d3: DEL
+    0200 // 1d4: DUP
+    c021 // 1d5: DEL
+    0745 // 1d6: XOR
+    d19c // 1d7: call_ifzero(19c)
+    0200 // 1d8: DUP
+    c0d4 // 1d9: '/'
+    0745 // 1da: XOR
+    d1c0 // 1db: call_ifzero(1c0)
     0200 // 1dc: DUP
-    c005 // 1dd: '\b'
-    c042 // 1de: =
-    91e2 // 1df: jump_ifzero(1e2)
-    0100 // 1e0: DROP
-    c021 // 1e1: DEL
-    0200 // 1e2: DUP
-    c021 // 1e3: DEL
-    0745 // 1e4: XOR
-    d1aa // 1e5: call_ifzero(1aa)
-    0200 // 1e6: DUP
-    c0d4 // 1e7: '/'
-    0745 // 1e8: XOR
-    d1ce // 1e9: call_ifzero(1ce)
-    0200 // 1ea: DUP
-    c0bd // 1eb: ECHO
-    c0e6 // 1ec: cmd
-    030f // 1ed: @
-    0400 // 1ee: SWAP
-    0200 // 1ef: DUP
-    c00d // 1f0: BL
-    c052 // 1f1: <=
-    9247 // 1f2: jump_ifzero(247)
+    c0bd // 1dd: ECHO
+    c0e6 // 1de: cmd
+    030f // 1df: @
+    0400 // 1e0: SWAP
+    0200 // 1e1: DUP
+    c00d // 1e2: BL
+    c052 // 1e3: <=
+    9239 // 1e4: jump_ifzero(239)
+    c0f2 // 1e5: copy
+    030f // 1e6: @
+    91f6 // 1e7: jump_ifzero(1f6)
+    0240 // 1e8: OVER
+    c070 // 1e9: ISHEX
+    91ee // 1ea: jump_ifzero(1ee)
+    c0e9 // 1eb: inp
+    030f // 1ec: @
+    c193 // 1ed: >here
+    0240 // 1ee: OVER
+    c0e0 // 1ef: ']'
+    c042 // 1f0: =
+    91f5 // 1f1: jump_ifzero(1f5)
+    02c0 // 1f2: 0
     c0f2 // 1f3: copy
-    030f // 1f4: @
-    9204 // 1f5: jump_ifzero(204)
+    098f // 1f4: !
+    8231 // 1f5: jump(231)
     0240 // 1f6: OVER
     c070 // 1f7: ISHEX
     91fc // 1f8: jump_ifzero(1fc)
     c0e9 // 1f9: inp
     030f // 1fa: @
-    c1a1 // 1fb: >here
+    c0f8 // 1fb: push
     0240 // 1fc: OVER
-    c0e0 // 1fd: ']'
+    c0dc // 1fd: '@'
     c042 // 1fe: =
     9203 // 1ff: jump_ifzero(203)
-    02c0 // 200: 0
-    c0f2 // 201: copy
-    098f // 202: !
-    823f // 203: jump(23f)
-    0240 // 204: OVER
-    c070 // 205: ISHEX
+    c0fe // 200: pop
+    c12b // 201: fetch
+    c0f8 // 202: push
+    0240 // 203: OVER
+    c0d2 // 204: '.'
+    c042 // 205: =
     920a // 206: jump_ifzero(20a)
-    c0e9 // 207: inp
-    030f // 208: @
-    c0f8 // 209: push
+    c0fe // 207: pop
+    c0c7 // 208: X.
+    c0b9 // 209: CR
     0240 // 20a: OVER
-    c0dc // 20b: '@'
+    c0d0 // 20b: '!'
     c042 // 20c: =
-    9211 // 20d: jump_ifzero(211)
+    9212 // 20d: jump_ifzero(212)
     c0fe // 20e: pop
-    c11b // 20f: fetch
-    c0f8 // 210: push
-    0240 // 211: OVER
-    c0d2 // 212: '.'
-    c042 // 213: =
-    9218 // 214: jump_ifzero(218)
-    c0fe // 215: pop
-    c0c7 // 216: X.
-    c0b9 // 217: CR
-    0240 // 218: OVER
-    c0d0 // 219: '!'
-    c042 // 21a: =
-    9220 // 21b: jump_ifzero(220)
-    c0fe // 21c: pop
+    c0fe // 20f: pop
+    0400 // 210: SWAP
+    c14b // 211: store
+    0240 // 212: OVER
+    c0e2 // 213: 'q'
+    c042 // 214: =
+    9219 // 215: jump_ifzero(219)
+    c0fe // 216: pop
+    c104 // 217: quad
+    c0f8 // 218: push
+    0240 // 219: OVER
+    c0da // 21a: '?'
+    c042 // 21b: =
+    9221 // 21c: jump_ifzero(221)
     c0fe // 21d: pop
-    0400 // 21e: SWAP
-    c14a // 21f: store
-    0240 // 220: OVER
-    c0e2 // 221: 'q'
-    c042 // 222: =
-    9227 // 223: jump_ifzero(227)
-    c0fe // 224: pop
-    c104 // 225: quad
-    c0f8 // 226: push
-    0240 // 227: OVER
-    c0da // 228: '?'
-    c042 // 229: =
-    922f // 22a: jump_ifzero(22f)
-    c0fe // 22b: pop
-    c0fe // 22c: pop
-    0400 // 22d: SWAP
-    c17d // 22e: dump
-    0240 // 22f: OVER
-    c0de // 230: '['
-    c042 // 231: =
-    9239 // 232: jump_ifzero(239)
-    c0fe // 233: pop
-    c0f5 // 234: here
-    098f // 235: !
-    02f6 // 236: TRUE
-    c0f2 // 237: copy
-    098f // 238: !
-    0240 // 239: OVER
-    c0e4 // 23a: 'r'
-    c042 // 23b: =
-    923f // 23c: jump_ifzero(23f)
-    c0fe // 23d: pop
-    c025 // 23e: EXECUTE
-    02c0 // 23f: 0
-    c0e9 // 240: inp
-    098f // 241: !
-    0200 // 242: DUP
-    c00b // 243: '\r'
-    c042 // 244: =
-    9247 // 245: jump_ifzero(247)
-    c1a6 // 246: prompt
-    0200 // 247: DUP
-    c070 // 248: ISHEX
-    924c // 249: jump_ifzero(24c)
-    0200 // 24a: DUP
-    c197 // 24b: >inp
-    0200 // 24c: DUP
-    c021 // 24d: DEL
-    c042 // 24e: =
-    9252 // 24f: jump_ifzero(252)
-    c037 // 250: 2DROP
-    8255 // 251: jump(255)
-    c031 // 252: NIP
-    c0e6 // 253: cmd
-    098f // 254: !
-    81d6 // 255: jump(1d6)
-    c0af // 256: KEY                     ECHOLOOP
-    0200 // 257: DUP
-    c0c7 // 258: X.
-    c0b9 // 259: CR
-    c003 // 25a: ^C
-    c042 // 25b: =
-    925e // 25c: jump_ifzero(25e)
-    5000 // 25d: NOP EXIT
-    8256 // 25e: jump(256)
-    c256 // 25f: ECHOLOOP                BOOT
-    c1a6 // 260: prompt
-    81d6 // 261: jump(1d6)
+    c0fe // 21e: pop
+    0400 // 21f: SWAP
+    c16f // 220: dump
+    0240 // 221: OVER
+    c0de // 222: '['
+    c042 // 223: =
+    922b // 224: jump_ifzero(22b)
+    c0fe // 225: pop
+    c0f5 // 226: here
+    098f // 227: !
+    02f6 // 228: TRUE
+    c0f2 // 229: copy
+    098f // 22a: !
+    0240 // 22b: OVER
+    c0e4 // 22c: 'r'
+    c042 // 22d: =
+    9231 // 22e: jump_ifzero(231)
+    c0fe // 22f: pop
+    c025 // 230: EXECUTE
+    02c0 // 231: 0
+    c0e9 // 232: inp
+    098f // 233: !
+    0200 // 234: DUP
+    c00b // 235: '\r'
+    c042 // 236: =
+    9239 // 237: jump_ifzero(239)
+    c198 // 238: prompt
+    0200 // 239: DUP
+    c070 // 23a: ISHEX
+    923e // 23b: jump_ifzero(23e)
+    0200 // 23c: DUP
+    c189 // 23d: >inp
+    0200 // 23e: DUP
+    c021 // 23f: DEL
+    c042 // 240: =
+    9244 // 241: jump_ifzero(244)
+    c037 // 242: 2DROP
+    8247 // 243: jump(247)
+    c031 // 244: NIP
+    c0e6 // 245: cmd
+    098f // 246: !
+    81c8 // 247: jump(1c8)
+    c0af // 248: KEY                     ECHOLOOP
+    0200 // 249: DUP
+    c0c7 // 24a: X.
+    c0b9 // 24b: CR
+    c003 // 24c: ^C
+    c042 // 24d: =
+    9250 // 24e: jump_ifzero(250)
+    5000 // 24f: NOP EXIT
+    8248 // 250: jump(248)
+    c248 // 251: ECHOLOOP                BOOT
+    c198 // 252: prompt
+    81c8 // 253: jump(1c8)
