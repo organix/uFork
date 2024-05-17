@@ -198,6 +198,10 @@ Remove the result of the _test_ from the stack. If it is 0, jump to the instruct
 
 Remove the result of the _test_ from the stack. If it is 0, jump to the instruction after `ELSE` and execute _false-body_. If it is not 0, continue with _true-body_. When `ELSE` is encountered, jump to the instruction after `THEN`.
  
+> `BEGIN` ... _body_ ... `AGAIN`
+
+Execute the _body_. When `AGAIN` is encountered, jump to the instruction after `BEGIN`. Note that this infinite loop can also be constructed with a label for `BEGIN` and a tail-call to that label for `AGAIN`. Both compile to a single _jump_ instruction.
+
 > `BEGIN` ... _body_ ... _test_ `UNTIL`
 
 Execute _body_, including the _test_. Remove the result of the _test_ from the stack. If it is 0, jump to the instruction after `BEGIN`. If it is not 0, continue with the instruction after `UNTIL`. Note that this compiles to a single _jump-if-zero_ instruction from `UNTIL` to `BEGIN`.
@@ -206,15 +210,15 @@ Execute _body_, including the _test_. Remove the result of the _test_ from the s
 
 Execute _preamble_, including the _test_. Remove the result of the _test_ from the stack. If it is 0, jump to the instruction after `REPEAT`. If it is not 0, continue with the _body_. When `REPEAT` is encountered, jump to the instruction after `BEGIN`.
 
-The uCode compiler also implements several non-standard control-flow words (although the `?R0` loop is similar to the standard `?DO` loop).
+The uCode compiler also implements several non-standard control-flow words (although `?LOOP-` is similar to the standard `?DO` loop).
 
-> _count_ `?R0` ... _loop-body_ ... `LOOP-`
+> _count_ `?LOOP-` ... _loop-body_ ... `AGAIN`
 
-Move _count_ from the D-stack to the R-stack. If it is 0, remove the _count_ from the R-stack and jump to the instruction after `LOOP-`. If it is not 0, decrement the _count_ and continue with the _loop-body_. Inside the _loop-body_, the _count_ may be copied from the R-stack to the D-stack by the word `I` (as in, "loop index"). When `LOOP-` is encountered, jump back to `?R0`, repeating the test and decrement.
+Move _count_ from the D-stack to the R-stack. If it is 0, remove the _count_ from the R-stack and jump to the instruction after `AGAIN`. If it is not 0, decrement the _count_ and continue with the _loop-body_. Inside the _loop-body_, the _count_ may be copied from the R-stack to the D-stack by the word `I` (as in, "loop index"). When `AGAIN` is encountered, jump back to `?LOOP-`, repeating the test and decrement.
 
-> _-count_ `?R0` ... _loop-body_ ... `LOOP+`
+> _-count_ `?LOOP+` ... _loop-body_ ... `AGAIN`
 
-Move _-count_ from the D-stack to the R-stack. If it is 0, remove the _count_ from the R-stack and jump to the instruction after `LOOP+`. If it is not 0, increment the _count_ and continue with the _loop-body_. Inside the _loop-body_, the _count_ may be copied from the R-stack to the D-stack by the word `I` (as in, "loop index"). When `LOOP+` is encountered, jump back to `?R0`, repeating the test and increment.
+Move _-count_ from the D-stack to the R-stack. If it is 0, remove the _count_ from the R-stack and jump to the instruction after `AGAIN`. If it is not 0, increment the _count_ and continue with the _loop-body_. Inside the _loop-body_, the _count_ may be copied from the R-stack to the D-stack by the word `I` (as in, "loop index"). When `AGAIN` is encountered, jump back to `?LOOP+`, repeating the test and increment.
 
 > _test_ `SKZ` _word_
 

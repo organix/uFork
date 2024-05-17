@@ -61,6 +61,13 @@ function compile(text, src = "") {
     function uc_cz(addr) {      // call, if zero
         return (0xD000 | (addr & ADDR_MASK));
     }
+    function uc_is_auto(word) { // auto increment/decrement?
+        return ((word & 0xE000) === 0xA000);
+    }
+    function uc_fixup(word, addr) {
+        // replace immediate address in word
+        return (word & ~ADDR_MASK) | (addr & ADDR_MASK);
+    }
 
     const UC_LIT =          0x021F;                     // (LIT) item ( -- item )
     const UC_CONST =        0x521F;                     // (CONST) item ( -- item ) ( R: addr -- ) addr->pc
@@ -164,12 +171,6 @@ function compile(text, src = "") {
         const word = uc_jump(addr);  // placeholder
         ctrl_ctx.push(word);
     };
-    words["AGAIN"] = function () {                      // ( -- )
-        // end infinite loop
-        const addr = ctrl_ctx.pop() & ADDR_MASK;
-        const word = uc_jump(prog[addr]);
-        prog.push(word);
-    };
     words["UNTIL"] = function () {                      // ( cond -- )
         // end bottom-test loop
         const addr = ctrl_ctx.pop() & ADDR_MASK;
@@ -178,7 +179,7 @@ function compile(text, src = "") {
     words["WHILE"] = function () {                      // ( cond -- )
         // loop (top) test
         const addr = ctrl_ctx.pop() & ADDR_MASK;
-        const word = uc_jump(prog.length);
+        const word = uc_jz(prog.length);
         ctrl_ctx.push(word);
         prog.push(uc_jz(addr));  // placeholder
     };
@@ -189,33 +190,43 @@ function compile(text, src = "") {
         prog.push(word);
         prog[addr] = uc_jz(prog.length);  // patch
     };
-    words["?R0"] = function () {                        // ( n -- ) ( R: -- n' )
+    words["?LOOP-"] = function () {                     // ( n -- ) ( R: -- n' )
         // begin counted loop
         prog.push(UC_TO_R);
         const addr = prog.length;
-//debug console.log("compile_counted_loop:", "$"+addr.toString(16).padStart(3, "0"));
+//debug console.log("compile_countdown_loop:", "$"+addr.toString(16).padStart(3, "0"));
         const word = uc_dec_jnz(addr);  // placeholder
+        ctrl_ctx.push(word);
+        prog.push(word);
+    };
+    words["?LOOP+"] = function () {                     // ( n -- ) ( R: -- n' )
+        // begin counted loop
+        prog.push(UC_TO_R);
+        const addr = prog.length;
+//debug console.log("compile_countup_loop:", "$"+addr.toString(16).padStart(3, "0"));
+        const word = uc_inc_jnz(addr);  // placeholder
         ctrl_ctx.push(word);
         prog.push(word);
     };
     words["I"] = function () {                          // ( -- n ) ( R: n -- n )
         // fetch loop count (from R-stack)
-        if (ctrl_ctx.length < 1) {
-            return error("no `I` at control depth", ctrl_ctx.length);
+        const n = ctrl_ctx.length;
+        if (!uc_is_auto(ctrl_ctx[n - 1])) {
+            return error("no `I` at control depth", n);
         }
         prog.push(UC_R_FETCH);
     };
-    words["LOOP-"] = function () {                      // loop->pc
-        // end decrement loop
-        const addr = ctrl_ctx.pop() & ADDR_MASK;
-        prog[addr] = uc_jump(prog.length);  // patch
-        prog.push(uc_dec_jnz(addr + 1));
-    };
-    words["LOOP+"] = function () {                      // loop->pc
-        // end increment loop
-        const addr = ctrl_ctx.pop() & ADDR_MASK;
-        prog[addr] = uc_jump(prog.length);  // patch
-        prog.push(uc_inc_jnz(addr + 1));
+    words["AGAIN"] = function () {                      // ( -- )
+        // end infinite or counted loop
+//debug console.log("compile_again:", "$"+prog.length.toString(16).padStart(3, "0"));
+        const word = ctrl_ctx.pop();
+        const addr = word & ADDR_MASK;
+        if (uc_is_auto(word)) {
+            prog[addr] = uc_jump(prog.length);  // patch
+            prog.push(uc_fixup(word, addr + 1));
+        } else {
+            prog.push(uc_jump(addr));
+        }
     };
     words["IF"] = function () {                         // ( cond -- )
         // begin conditional
@@ -238,7 +249,7 @@ function compile(text, src = "") {
 //debug console.log("compile_then:", "$"+prog.length.toString(16).padStart(3, "0"));
         const word = ctrl_ctx.pop();
         const addr = word & ADDR_MASK;
-        prog[addr] = (word & ~ADDR_MASK) | (prog.length & ADDR_MASK);  // patch
+        prog[addr] = uc_fixup(word, prog.length);  // patch
     };
 
     const ctrl_ctx = [];  // stack of flow-control contexts
@@ -246,10 +257,6 @@ function compile(text, src = "") {
     const prog = [
         uc_jump(0)
     ];
-    function exit_restricted() {
-        // any auto increment/decrement contexts?
-        return ctrl_ctx.some((x) => ((x & 0x2000) === 0x2000));
-    }
     function compile_words(token) {
         const TAIL_NONE = 0;
         const TAIL_EVAL = 1;
@@ -261,7 +268,8 @@ function compile(text, src = "") {
             if (token === "(") {
                 compile_comment(next_token());
             } else if (token === ";") {
-                if (exit_restricted()) {
+                // check for auto increment/decrement contexts
+                if (ctrl_ctx.some(uc_is_auto)) {
                     return error("EXIT from counted-loop at depth", ctrl_ctx.length);
                 }
                 if (tail_ctx === TAIL_EVAL) {
@@ -380,7 +388,7 @@ function compile(text, src = "") {
 //debug : 0< ( n -- n<0 )
 //debug     MSB& BOOL ;
 //debug : 4DROP ( a b c d -- )
-//debug     4 ?R0 DROP I DROP LOOP- ;
+//debug     4 ?LOOP- DROP I DROP AGAIN ;
 //debug : EMIT ( ch -- )
 //debug     BEGIN 0x00 IO@ UNTIL 0x01 IO! ;
 //debug : KEY ( -- ch )
