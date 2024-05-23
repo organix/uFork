@@ -29,43 +29,9 @@ new Response(Deno.stdin.readable).text().then(function (text) {
         return Deno.exit(1);
     }
 
-// Compose rows of columns.
+// Pretty-print annotated Verilog memory image.
 
-    let lines = [
-        "//  CODE    ADR  DISASM                  NAMES                     //",
-        "/////////////////////////////////////////////////////////////////////"
-//           021f // 0ac: (LIT)                   RX? KEY?
-//           0002 // 0ad: 0x0002
-//           533f // 0ae: IO@ EXIT
-//           c0ac // 0af: RX?                     KEY
-//           90af // 0b0: jump_ifzero(0af)
-// E.g.      021f // 0b1: (LIT)                   RX@
-//           0003 // 0b2: 0x0003
-//           533f // 0b3: IO@ EXIT
-//           2100 // 0b4: >R                      SPACES
-//           80b7 // 0b5: jump(0b7)
-//           c0a6 // 0b6: SPACE
-//           b0b6 // 0b7: jump_ifnz_dec(0b6)
-//           5000 // 0b8: NOP EXIT
-    ];
-    lines = lines.concat(prog.map(function (code, address) {
-        const call = 0xC000 | address;
-        const line = (
-            "    " + code.toString(16).padStart(4, "0")             // CODE
-            + " // " + address.toString(16).padStart(3, "0") + ": " // ADR
-            + ucode.disasm(code, words).padEnd(24, " ")             // DISASM
-            + Object.entries(                                       // NAMES
-                words
-            ).filter(function ([ignore, word]) {
-                return word === call;
-            }).map(function ([name, ignore]) {
-                return name;
-            }).join(
-                " "
-            )
-        );
-        return line.trimEnd();
-    }));
-    Deno.stdout.write(text_encoder.encode(lines.join("\n") + "\n"));
+    const memh = ucode.print_memh(prog, words);
+    Deno.stdout.write(text_encoder.encode(memh));
     return Deno.exit(0);
 });

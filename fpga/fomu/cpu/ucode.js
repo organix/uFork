@@ -373,7 +373,7 @@ function compile(text, src = "") {
 
 // Disassemble a single uCode machine word.
 
-function disasm(code, dictionary = {}) {
+function disasm(code, words = {}) {
     if (code === 0x021F) {
         return "(LIT)";
     }
@@ -385,7 +385,7 @@ function disasm(code, dictionary = {}) {
         code &= 0x0FFF;
         suffix = " EXIT";
     }
-    const entry = Object.entries(dictionary).find(function ([ignore, value]) {
+    const entry = Object.entries(words).find(function ([_, value]) {
         return value === code;
     });
     if (entry !== undefined) {
@@ -419,8 +419,144 @@ function disasm(code, dictionary = {}) {
     return text;
 }
 
+// Print annotated Verilog memory image
+
+function print_memh(prog, words = {}) {
+    let lines = [
+        "//  CODE    ADR  DISASM                  NAMES                     //",
+        "/////////////////////////////////////////////////////////////////////"
+//           021f // 0ac: (LIT)                   RX? KEY?
+//           0002 // 0ad: 0x0002
+//           533f // 0ae: IO@ EXIT
+//           c0ac // 0af: RX?                     KEY
+//           90af // 0b0: jump_ifzero(0af)
+// E.g.      021f // 0b1: (LIT)                   RX@
+//           0003 // 0b2: 0x0003
+//           533f // 0b3: IO@ EXIT
+//           2100 // 0b4: >R                      SPACES
+//           80b7 // 0b5: jump(0b7)
+//           c0a6 // 0b6: SPACE
+//           b0b6 // 0b7: jump_ifnz_dec(0b6)
+//           5000 // 0b8: NOP EXIT
+    ];
+    lines = lines.concat(prog.map(function (code, address) {
+        const call = 0xC000 | address;
+        const line = (
+            "    " + code.toString(16).padStart(4, "0")             // CODE
+            + " // " + address.toString(16).padStart(3, "0") + ": " // ADR
+            + disasm(code, words).padEnd(24, " ")                   // DISASM
+            + Object.entries(                                       // NAMES
+                words
+            ).filter(function ([_, word]) {
+                return word === call;
+            }).map(function ([name, _]) {
+                return name;
+            }).join(
+                " "
+            )
+        );
+        return line.trimEnd();
+    }));
+    return lines.join("\n") + "\n";
+}
+
+// Parse Verilog hexadecimal memory image
+
+function parse_memh(text, src = "") {
+    const {next_char, error} = make_stream(text, src);
+
+    const CHAR_NL =         0x0A;                       // ASCII newline
+    const CHAR_SLASH =      0x2F;                       // ASCII forward slash
+    const CHAR_0 =          0x30;                       // ASCII digit zero
+    const CHAR_9 =          0x39;                       // ASCII digit nine
+    const HEX_UC_A =        0x37;                       // uppercase 'A' minus 10
+    const CHAR_UC_A =       0x41;                       // ASCII uppercase 'A'
+    const CHAR_UC_F =       0x46;                       // ASCII uppercase 'F'
+    const HEX_LC_A =        0x57;                       // lowercase 'A' minus 10
+    const CHAR_LC_A =       0x61;                       // ASCII lowercase 'A'
+    const CHAR_LC_F =       0x66;                       // ASCII lowercase 'F'
+
+    function is_hex_digit(char) {
+        return ((char >= CHAR_0) && (char <= CHAR_9))
+            || ((char >= CHAR_UC_A) && (char <= CHAR_UC_F))
+            || ((char >= CHAR_LC_A) && (char <= CHAR_LC_F));
+    }
+    function from_hex_digit(char) {
+        if ((char >= CHAR_0) && (char <= CHAR_9)) {
+            return (char - CHAR_0);
+        }
+        if ((char >= CHAR_UC_A) && (char <= CHAR_UC_F)) {
+            return (char - HEX_UC_A);
+        }
+        if ((char >= CHAR_LC_A) && (char <= CHAR_LC_F)) {
+            return (char - HEX_LC_A);
+        }
+    }
+    function parse_hex() {
+        // skip non-hex-digits
+        let cp = next_char();
+        while ((typeof cp === "number") && !is_hex_digit(cp)) {
+            if (cp === CHAR_SLASH) {
+                // skip comment to end-of-line
+                while ((typeof cp === "number") && (cp !== CHAR_NL)) {
+                    cp = next_char();
+                }
+            }
+            cp = next_char();
+        }
+        if (typeof cp !== "number") {
+            return cp;  // return `undefined` for end-of-stream
+        }
+        // collect hex-digits
+        let hex = 0;
+        while ((typeof cp === "number") && is_hex_digit(cp)) {
+            hex = (hex << 4) | from_hex_digit(cp);
+            cp = next_char();
+        }
+        // return final value
+        return hex;
+    }
+
+    const prog = [];
+    while (true) {
+        const hex = parse_hex();
+        if (typeof hex !== "number") {
+            break;
+        }
+        prog.push(hex);
+    }
+    return prog;
+}
+
 //debug console.log(disasm(0xA252));
 //debug console.log(disasm(0x5100, {DROP: 0x0100}));
+
+//debug console.log("["
+//debug     + parse_memh("  C0de // Data?")
+//debug         .map((n) => "0x" + n.toString(16).padStart(4, "0"))
+//debug         .join(", ")
+//debug     + "]");
+
+//debug const test_memh = `
+//debug //  CODE    ADR  DISASM                  NAMES                     //
+//debug /////////////////////////////////////////////////////////////////////
+//debug c042 // 000: BOOT
+//debug 521f // 001: (CONST)                 ADDR_MASK
+//debug 0fff // 002: 0x0fff
+//debug 521f // 003: (CONST)                 COUNTER
+//debug 0005 // 004: 0x0005
+//debug 0000 // 005: NOP
+//debug c003 // 006: COUNTER                 ADJUST
+//debug 030f // 007: @
+//debug 0741 // 008: +
+//debug 0200 // 009: DUP
+//debug c003 // 00a: COUNTER
+//debug 598f // 00b: ! EXIT
+//debug `;
+//debug const img = parse_memh(test_memh);
+//debug console.log(img.map(function (number, index) {
+//debug     return index.toString(16).padStart(3, "0") + ": " + number.toString(16).padStart(4, "0");
+//debug }).join("\n"));
 
 //debug const simple_source = ": BOOT R@ DROP BOOT ;";
 //debug const multiline_source = `
@@ -467,15 +603,22 @@ function disasm(code, dictionary = {}) {
 // const source = simple_source;
 //debug const source = multiline_source;
 //debug console.log(source);
-//debug const result = compile(source);
-//debug console.log(result);
-//debug const prog = result?.prog;
-//debug console.log(prog.map(function (number, index) {
-//debug    return index.toString(16).padStart(3, "0") + ": " + number.toString(16).padStart(4, "0");
-//debug }).join("\n"));
+//debug const {errors, words, prog} = compile(source);
+//debug if (errors !== undefined && errors.length > 0) {
+//debug     console.log(errors);
+//debug } else {
+//debug     const memh = print_memh(prog, words);
+//debug     console.log(memh);
+//debug     const img = parse_memh(memh);
+//debug     console.log(img.map(function (number, index) {
+//debug         return index.toString(16).padStart(3, "0") + ": " + number.toString(16).padStart(4, "0");
+//debug     }).join("\n"));
+//debug }
 
 export default Object.freeze({
     make_stream,
     compile,
     disasm,
+    print_memh,
+    parse_memh,
 });
