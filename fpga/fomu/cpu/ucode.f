@@ -21,8 +21,6 @@
 0x7A CONSTANT 'z'
 0x7F CONSTANT DEL
 
-: (JMP)
-    R>
 : @EXECUTE
     @
 : EXECUTE
@@ -33,10 +31,6 @@
     SKZ SWAP
 : (DROP)
     DROP ;
-: (VAR)
-    R> ;
-: (CONST)
-    R> @ ;
 : NIP ( a b -- b )
     SWAP DROP ;
 : TUCK ( a b -- b a b )

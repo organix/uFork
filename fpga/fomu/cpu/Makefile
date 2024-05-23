@@ -36,5 +36,5 @@ clean: ucode_rom.mem
 	cp $< $@
 	dfu-suffix -v 1209 -p 70b1 -a $@
 
-ucode_rom.mem: ucode.js ucode_cli.js ucode_disasm.js ucode.f
+ucode_rom.mem: ucode.js ucode_cli.js ucode.f
 	deno run ucode_cli.js <ucode.f >ucode_rom.mem

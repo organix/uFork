@@ -9,15 +9,14 @@
 
 /*jslint deno, bitwise */
 
-import compile from "./ucode.js";
-import disasm from "./ucode_disasm.js";
+import ucode from "./ucode.js";
 
 const text_encoder = new TextEncoder();
 
 // Read the entirety of STDIN as a string.
 
 new Response(Deno.stdin.readable).text().then(function (text) {
-    const {errors, words, prog} = compile(text);
+    const {errors, words, prog} = ucode.compile(text);
 
 // Fail if there was a compilation error.
 
@@ -54,7 +53,7 @@ new Response(Deno.stdin.readable).text().then(function (text) {
         const line = (
             "    " + code.toString(16).padStart(4, "0")             // CODE
             + " // " + address.toString(16).padStart(3, "0") + ": " // ADR
-            + disasm(code, words).padEnd(24, " ")                   // DISASM
+            + ucode.disasm(code, words).padEnd(24, " ")             // DISASM
             + Object.entries(                                       // NAMES
                 words
             ).filter(function ([ignore, word]) {

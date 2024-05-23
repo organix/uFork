@@ -2,7 +2,11 @@
 // Dale Schumacher
 // created: 2024-04-10
 
-function compile(text, src = "") {
+/*jslint bitwise */
+
+// Create a position-tracking character-stream.
+
+function make_stream(text, src = "") {
     let pos = 0;  // input position within `text`
     let line = 1;  // input line number
     function error(...msg) {
@@ -25,6 +29,13 @@ function compile(text, src = "") {
         }
         return cp;
     }
+    return { next_char, error };
+}
+
+// Compile uCode/Forth source.
+
+function compile(text, src = "") {
+    const {next_char, error} = make_stream(text, src);
     function next_token() {
         let token = "";
         // skip whitespace
@@ -360,6 +371,57 @@ function compile(text, src = "") {
     };
 }
 
+// Disassemble a single uCode machine word.
+
+function disasm(code, dictionary = {}) {
+    if (code === 0x021F) {
+        return "(LIT)";
+    }
+    if (code === 0x521F) {
+        return "(CONST)";
+    }
+    let suffix = "";
+    if ((code & 0xF000) === 0x5000) {
+        code &= 0x0FFF;
+        suffix = " EXIT";
+    }
+    const entry = Object.entries(dictionary).find(function ([ignore, value]) {
+        return value === code;
+    });
+    if (entry !== undefined) {
+        const name = entry[0];
+        return name + suffix;
+    }
+    let text = "";
+    if ((code & 0x8000) !== 0) {
+        text += (
+            (code & 0x4000) !== 0
+            ? "call"
+            : "jump"
+        );
+        if ((code & 0x3000) !== 0) {
+            text += (
+                (code & 0x2000) !== 0
+                ? (
+                    (code & 0x1000) !== 0
+                    ? "_ifnz_dec"
+                    : "_ifnz_inc"
+                )
+                : "_ifzero"
+            );
+        }
+        const addr = code & 0xFFF;
+        text += "(" + addr.toString(16).padStart(3, "0") + ")";
+    } else {
+        text += "0x";
+        text += code.toString(16).padStart(4, "0");
+    }
+    return text;
+}
+
+//debug console.log(disasm(0xA252));
+//debug console.log(disasm(0x5100, {DROP: 0x0100}));
+
 //debug const simple_source = ": BOOT R@ DROP BOOT ;";
 //debug const multiline_source = `
 //debug 0x0FFF CONSTANT ADDR_MASK
@@ -404,6 +466,7 @@ function compile(text, src = "") {
 //debug     R> DROP BOOT`;
 // const source = simple_source;
 //debug const source = multiline_source;
+//debug console.log(source);
 //debug const result = compile(source);
 //debug console.log(result);
 //debug const prog = result?.prog;
@@ -411,4 +474,8 @@ function compile(text, src = "") {
 //debug    return index.toString(16).padStart(3, "0") + ": " + number.toString(16).padStart(4, "0");
 //debug }).join("\n"));
 
-export default Object.freeze(compile);
+export default Object.freeze({
+    make_stream,
+    compile,
+    disasm,
+});
