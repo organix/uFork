@@ -4,6 +4,8 @@
 
 /*jslint bitwise */
 
+import ucode from "./ucode.js";
+
 const OP_NONE =             0x0;                        // no operation
 const OP_ADD =              0x1;                        // remove top
 const OP_SUB =              0x2;                        // push onto top
@@ -62,7 +64,7 @@ function make_stack(depth = 12) {
 
     function adjust(delta) {  // adjust usage statistics
         if (cnt < 0 && delta > 0) {
-            cnt = delta;  // reset after underflow
+            cnt = delta;  // reset after underflow (FIXME: what about underflow?)
         } else {
             cnt += delta;
         }
@@ -93,13 +95,42 @@ function make_machine(prog) {
     const dstack = make_stack();
     const rstack = make_stack();
 
+    function error(...msg) {
+        const err = {
+            pc,
+            dstack: dstack.copy(),
+            rstack: rstack.copy(),
+            error: msg.join(" ")
+        };
+//debug console.log("ERROR!", err);
+        return err;
+    }
+
     function step() {  // Execute a single instruction.
-        const instr = code[pc];                         // fetch current instruction
+        const instr = prog[pc];                         // fetch current instruction
         pc += 1;                                        // increment program counter
         const tos = dstack.tos();                       // top of data stack
         const nos = dstack.nos();                       // next on data stack
         const tors = rstack.tos();                      // top of return stack
-        //...
+
+        // decode instruction
+        const ctrl = (instr & 0x8000);                  // control instruction flag
+        const r_pc = (instr & 0x4000);                  // R-stack <--> PC transfer flag
+        const r_se = (instr & 0x3000) >> 12;            // R-stack effect (or ctrl selector)
+        const d_se = (instr & 0x0700) >> 8;             // D-stack effect
+        const alu_op = (instr & 0x000F);                // ALU operation
+
+        let result = 0;                                 // ALU result (default: 0)
+        if (ctrl) {
+            // control instruction
+            return error("control instructions not implemented");
+        } else if (alu_op === OP_MEM) {
+            // memory operation
+            return error("memory operations not implemented");
+        } else {
+            // evaluation instruction
+            return error("illegal instruction");
+        }
     }
 
     return {
@@ -132,6 +163,63 @@ function make_machine(prog) {
 //debug s.perform(SE_DROP);
 //debug console.log(s.tos(), s.nos(), s.copy());
 //debug console.log(s.stats());
+
+//debug const source = `
+//debug : PANIC! FAIL PANIC! ;      ( if BOOT returns... )
+//debug 
+//debug 0x03 CONSTANT ^C
+//debug 0x0A CONSTANT '\n'
+//debug 0x0D CONSTANT '\r'
+//debug 0x20 CONSTANT BL
+//debug 
+//debug : = ( a b -- a==b )
+//debug     XOR
+//debug : 0= ( n -- n==0 )
+//debug : NOT ( flag -- !flag )
+//debug     IF FALSE ELSE TRUE THEN ;
+//debug 
+//debug : TX? ( -- ready )
+//debug : EMIT?
+//debug     0x00 IO@ ;
+//debug : EMIT ( char -- )
+//debug     BEGIN TX? UNTIL
+//debug : TX! ( char -- )
+//debug     0x01 IO! ;
+//debug : RX? ( -- ready )
+//debug : KEY?
+//debug     0x02 IO@ ;
+//debug : KEY ( -- char )
+//debug     BEGIN RX? UNTIL
+//debug : RX@ ( -- char )
+//debug     0x03 IO@ ;
+//debug : ECHO ( char -- )
+//debug     DUP EMIT
+//debug     '\r' = IF
+//debug         '\n' EMIT
+//debug     THEN ;
+//debug 
+//debug : ECHOLOOP
+//debug     KEY DUP ECHO
+//debug     ^C = IF EXIT THEN       ( abort! )
+//debug     ECHOLOOP ;
+//debug 
+//debug ( WARNING! if BOOT returns we PANIC! )
+//debug : BOOT
+//debug     ECHOLOOP EXIT
+//debug `;
+//debug const {errors, words, prog} = ucode.compile(source);
+//debug if (errors !== undefined && errors.length > 0) {
+//debug     console.log(errors);
+//debug } else {
+//debug     const memh = ucode.print_memh(prog, words);
+//debug     console.log(memh);
+//debug     const mach = make_machine(prog);
+//debug     let rv;
+//debug     while (rv === undefined) {
+//debug         rv = mach.step();
+//debug     }
+//      console.log("rv:", rv);
+//debug }
 
 export default Object.freeze({
     make_machine,

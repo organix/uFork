@@ -5,8 +5,6 @@
 0x0D CONSTANT '\r'
 0x20 CONSTANT BL
 
-: (JMP)
-    R>
 : @EXECUTE
     @
 : EXECUTE
@@ -17,10 +15,6 @@
     SKZ SWAP
 : (DROP)
     DROP ;
-: (VAR)
-    R> ;
-: (CONST)
-    R> @ ;
 : NIP ( a b -- b )
     SWAP DROP ;
 : TUCK ( a b -- b a b )
