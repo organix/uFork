@@ -52,6 +52,23 @@ function make_stack(depth = 12) {
             adjust(1);
         } else if (se === SE_RPLC) {
             stack[0] = data;
+        } else if (se === SE_SWAP) {
+            data = stack[0];
+            stack[0] = stack[1];
+            stack[1] = data;
+        } else if (se === SE_ROT3) {
+            data = stack[2];
+            stack[2] = stack[1];
+            stack[1] = stack[0];
+            stack[0] = data;
+        } else if (se === SE_RROT) {
+            data = stack[0];
+            stack[0] = stack[1];
+            stack[1] = stack[2];
+            stack[2] = data;
+        } else if (se === SE_ALU2) {
+            stack = [data, ...stack.slice(2), ...stack.slice(-1)];
+            adjust(-1);
         }
     }
     function copy() {  // return a shallow copy of the stack
