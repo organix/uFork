@@ -106,6 +106,25 @@ function make_machine(prog) {
         return err;
     }
 
+    function alu_perform(op, a, b) {
+        if (op === OP_NONE) return a;
+        if (op === OP_ADD) return (a + b);
+        if (op === OP_SUB) return (a - b);
+        if (op === OP_MUL) return (a * b);
+        if (op === OP_AND) return (a & b);
+        if (op === OP_XOR) return (a ^ b);
+        if (op === OP_OR) return (a | b);
+        if (op === OP_ROL) return (a << 1) | (a >> 15);
+        if (op === OP_2ROL) return (a << 2) | (a >> 14);
+        if (op === OP_4ROL) return (a << 4) | (a >> 12);
+        if (op === OP_8ROL) return (a << 8) | (a >> 8);
+        const msb = a & 0x8000;
+        if (op === OP_ASR) return (a >> 1) | msb;
+        if (op === OP_2ASR) return (a >> 2) | msb | (msb >> 1);
+        if (op === OP_4ASR) return (a >> 4) | msb | (msb >> 1) | (msb >> 2) | (msb >> 3);
+        return 0;
+    }
+
     function step() {  // Execute a single instruction.
         const instr = prog[pc];                         // fetch current instruction
         pc += 1;                                        // increment program counter
@@ -118,18 +137,44 @@ function make_machine(prog) {
         const r_pc = (instr & 0x4000);                  // R-stack <--> PC transfer flag
         const r_se = (instr & 0x3000) >> 12;            // R-stack effect (or ctrl selector)
         const d_se = (instr & 0x0700) >> 8;             // D-stack effect
+        const sel_a = (instr & 0x00C0) >> 6;            // ALU A selector
+        const sel_b = (instr & 0x0030) >> 4;            // ALU B selector
         const alu_op = (instr & 0x000F);                // ALU operation
 
+        // execute instruction
         let result = 0;                                 // ALU result (default: 0)
         if (ctrl) {
             // control instruction
-            return error("control instructions not implemented");
+            const addr = (instr & 0x0FFF);
+            if (r_pc) {
+                rstack.perform(SE_PUSH, pc);
+            }
+            if (r_se === 0x0) {
+                pc = addr;
+            } else {
+                return error("illegal control instruction");
+            }
         } else if (alu_op === OP_MEM) {
             // memory operation
-            return error("memory operations not implemented");
+            return error("illegal memory operations");
         } else {
             // evaluation instruction
-            return error("illegal instruction");
+            const alu_a =
+                ( sel_a === 0x1 ? nos
+                : sel_a === 0x2 ? tors
+                : sel_a === 0x3 ? 0x0000
+                : tos );
+            const alu_b =
+                ( sel_b === 0x1 ? 0x0001
+                : sel_b === 0x2 ? 0x8000
+                : sel_b === 0x3 ? 0xFFFF
+                : tos );
+            result = alu_perform(alu_op, alu_a, alu_b) & 0xFFFF;
+            if (r_pc) {
+                pc = tors & 0x0FFF;
+            }
+            dstack.perform(d_se, result);
+            rstack.perform(r_se, result);
         }
     }
 
