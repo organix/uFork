@@ -4,8 +4,6 @@
 
 /*jslint bitwise */
 
-import ucode from "./ucode.js";
-
 const OP_NONE =             0x0;                        // no operation
 const OP_ADD =              0x1;                        // remove top
 const OP_SUB =              0x2;                        // push onto top
@@ -107,7 +105,7 @@ function make_stack(depth = 12) {
 
 // Create a virtual uCode processor.
 
-function make_machine(prog) {
+function make_machine(prog, io_device) {
     let pc = 0;
     const dstack = make_stack();
     const rstack = make_stack();
@@ -200,6 +198,7 @@ function make_machine(prog) {
     };
 }
 
+//debug import ucode from "./ucode.js";
 // const s = make_stack();
 //debug const s = make_stack(4);
 //debug console.log(s.tos(), s.nos(), s.copy());
