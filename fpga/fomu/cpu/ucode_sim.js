@@ -30,6 +30,15 @@ const SE_ROT3 =             0x5;                        // rotate top 3 elements
 const SE_RROT =             0x6;                        // reverse rotate top 3
 const SE_ALU2 =             0x7;                        // drop 2, push 1
 
+const MEM_UC =              0x0;                        // uCode memory
+const MEM_PC =              0x1;                        // contents of PC+1 & increment
+const MEM_ERR =             0x2;                        // RESERVED (signals failure)
+const MEM_DEV =             0x3;                        // memory-mapped devices
+const MEM_Q_T =             0x4;                        // uFork quad-memory field T
+const MEM_Q_X =             0x5;                        // uFork quad-memory field X
+const MEM_Q_Y =             0x6;                        // uFork quad-memory field Y
+const MEM_Q_Z =             0x7;                        // uFork quad-memory field Z
+
 // Create a bounded stack.
 
 function make_stack(depth = 12) {
@@ -105,7 +114,7 @@ function make_stack(depth = 12) {
 
 // Create a virtual uCode processor.
 
-function make_machine(prog, io_device) {
+function make_machine(prog = [], device = []) {
     let pc = 0;
     const dstack = make_stack();
     const rstack = make_stack();
@@ -122,6 +131,7 @@ function make_machine(prog, io_device) {
     }
 
     function alu_perform(op, a, b) {
+//debug console.log("alu_perform:", "op=", op, "a=", a, "b=", b);
         if (op === OP_NONE) return a;
         if (op === OP_ADD) return (a + b);
         if (op === OP_SUB) return (a - b);
@@ -140,12 +150,39 @@ function make_machine(prog, io_device) {
         return 0;
     }
 
+    function mem_perform(range, wr_en, addr, data) {
+//debug console.log("mem_perform:", "range=", range, "wr_en=", wr_en, "addr=", addr, "data=", data);
+        if (range === MEM_PC) {
+            return wr_en ? 0 : prog[pc];
+        }
+        if (range === MEM_DEV) {
+            const id = (addr & 0xF0) >> 4;
+            const reg = (addr & 0x0F);
+            const dev = device[id];
+//debug console.log("mem_perform MEM_DEV:", "id=", id, "reg=", reg, "dev=", dev);
+            if (typeof dev === "object") {
+                if (wr_en) {
+                    dev.write(reg, data);
+                } else {
+                    data = dev.read(reg);
+                }
+                return data;
+            }
+            return error("unknown device.", "id:", id, "reg:", reg);
+        }
+        return error("illegal memory operation.", "range:", range);
+    }
+
     function step() {  // Execute a single instruction.
-        const instr = prog[pc];                         // fetch current instruction
-        pc += 1;                                        // increment program counter
         const tos = dstack.tos();                       // top of data stack
         const nos = dstack.nos();                       // next on data stack
         const tors = rstack.tos();                      // top of return stack
+//debug console.log("step:", "pc=", pc, "tos=", tos, "nos=", nos, "tors=", tors);
+        const instr = prog[pc];                         // fetch current instruction
+        if (typeof instr !== "number") {
+            return error("program address", pc, "out of range!");
+        }
+        pc += 1;                                        // increment program counter
 
         // decode instruction
         const ctrl = (instr & 0x8000);                  // control instruction flag
@@ -161,6 +198,7 @@ function make_machine(prog, io_device) {
         if (ctrl) {
             // control instruction
             const addr = (instr & 0x0FFF);
+//debug console.log("step ctrl:", "pc=", pc, "r_pc=", r_pc, "r_se=", r_se, "addr=", addr);
             if (r_pc) {
                 rstack.perform(SE_PUSH, pc);
             }
@@ -169,22 +207,37 @@ function make_machine(prog, io_device) {
             } else {
                 return error("illegal control instruction");
             }
-        } else if (alu_op === OP_MEM) {
-            // memory operation
-            return error("illegal memory operations");
         } else {
-            // evaluation instruction
-            const alu_a =
-                ( sel_a === 0x1 ? nos
-                : sel_a === 0x2 ? tors
-                : sel_a === 0x3 ? 0x0000
-                : tos );
-            const alu_b =
-                ( sel_b === 0x1 ? 0x0001
-                : sel_b === 0x2 ? 0x8000
-                : sel_b === 0x3 ? 0xFFFF
-                : tos );
-            result = alu_perform(alu_op, alu_a, alu_b) & 0xFFFF;
+            if (alu_op === OP_MEM) {
+                // memory operation
+                const d_drop = (instr & 0x0800);            // 2DROP flag **deprecated**
+                const wr_en = (instr & 0x0080);             // {0:read, 1:write}
+                const range = (instr & 0x0070) >> 4;        // memory range
+                result = mem_perform(range, wr_en, tos, nos);
+//debug console.log(result, "=", "mem_perform()");
+                if (typeof result !== "number") {
+                    return result;                          // propagate error
+                }
+                if (range === MEM_PC) {
+                    pc += 1;                                // extra increment past data
+                }
+            } else {
+                // evaluation instruction
+                const alu_a =
+                    ( sel_a === 0x1 ? nos
+                    : sel_a === 0x2 ? tors
+                    : sel_a === 0x3 ? 0x0000
+                    : tos );
+                const alu_b =
+                    ( sel_b === 0x1 ? 0x0001
+                    : sel_b === 0x2 ? 0x8000
+                    : sel_b === 0x3 ? 0xFFFF
+                    : tos );
+                result = alu_perform(alu_op, alu_a, alu_b) & 0xFFFF;
+//debug console.log(result, "=", "alu_perform()");
+            }
+            // stack operations
+//debug console.log("step stack:", "r_pc=", r_pc, "d_se=", d_se, "r_se=", r_se, "result=", result);
             if (r_pc) {
                 pc = tors & 0x0FFF;
             }

@@ -11,33 +11,67 @@ import ucode from "./ucode.js";
 import ucode_sim from "./ucode_sim.js";
 
 const ucode_path = Deno.args[0];
-let read_buffer = new Uint8Array(65536); // 64KB
+let read_buffer = new Uint8Array(1<<14); // 16KB
+let rx_data = 0x00;
 let stdin_queue = [];
 let writing = false;
-const io_device = Object.freeze({
-    rx_ready() {
-        return stdin_queue.length > 0;
-    },
-    rx_fetch() {
-        if (stdin_queue.length === 0) {
-            throw new Error("Exhausted.");
-        }
-        return stdin_queue.shift();
-    },
-    tx_ready() {
-        return !writing;
-    },
-    tx_store(byte) {
-        if (writing) {
-            throw new Error("Busy.");
-        }
+function rx_ready() {
+    return stdin_queue.length > 0;
+}
+function rx_fetch() {
+    if (rx_ready()) {
+        rx_data = stdin_queue.shift();
+    }
+    return rx_data;  // infallible read
+}
+function tx_ready() {
+    return !writing;
+}
+function tx_store(byte) {
+    if (!writing) {  // overflow ignored
         writing = true;
         const chunk = new Uint8Array([byte]);
         Deno.stdout.write(chunk).then(function () {
             writing = false;
         });
     }
+}
+const io_device = Object.freeze({
+    rx_ready,
+    rx_fetch,
+    tx_ready,
+    tx_store,
 });
+
+// 8-bit UART register interface.
+
+const B_FALSE =             0x00;                       // 8-bit Boolean FALSE
+const B_TRUE =              0xFF;                       // 8-bit Boolean TRUE
+
+const TX_RDY =              0x0;                        // ready to transmit
+const TX_DAT =              0x1;                        // data to transmit
+const RX_RDY =              0x2;                        // receive complete
+const RX_DAT =              0x3;                        // data received
+
+const uart = Object.freeze({
+    read(reg) {
+        if (reg === TX_RDY) {
+            return (tx_ready() ? B_TRUE : B_FALSE);
+        }
+        if (reg === RX_RDY) {
+            return (rx_ready() ? B_TRUE : B_FALSE);
+        }
+        if (reg === RX_DAT) {
+            return rx_fetch();
+        }
+        return 0;  // infallible read
+    },
+    write(reg, data) {
+        if (reg === TX_DAT) {
+            tx_store(data);
+        }
+    },
+})
 
 // Read and compile the uCode program.
 
@@ -67,7 +101,7 @@ Deno.readTextFile(ucode_path).then(function (text) {
 
 // Make a simulator and run it in such a way as to not block STDIN.
 
-    let machine = ucode_sim.make_machine(prog, io_device);
+    let machine = ucode_sim.make_machine(prog, [uart]);
 
 //mock machine = {
 //mock     step() {
