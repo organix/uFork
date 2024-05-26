@@ -121,7 +121,7 @@ function make_machine(prog = [], device = []) {
 
     function error(...msg) {
         const err = {
-            pc,
+            next_pc: pc,
             dstack: dstack.copy(),
             rstack: rstack.copy(),
             error: msg.join(" ")
@@ -202,8 +202,21 @@ function make_machine(prog = [], device = []) {
             if (r_pc) {
                 rstack.perform(SE_PUSH, pc);
             }
-            if (r_se === 0x0) {
+            if (r_se === 0x0) {  // unconditional jump/call
                 pc = addr;
+            } else if (r_se == 0x1) {  // jump/call, if zero
+                if (tos === 0) {
+                    pc = addr;
+                }
+                dstack.perform(SE_DROP);
+            } else if (!r_pc && (r_se & 0x2)) {  // branch and increment/decrement, if not zero
+                if (tors === 0) {
+                    rstack.perform(SE_DROP);
+                } else {
+                    pc = addr;
+                    const data = (r_se & 0x1 ? tors - 1 : tors + 1);
+                    rstack.perform(SE_RPLC, data);
+                }
             } else {
                 return error("illegal control instruction");
             }
