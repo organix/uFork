@@ -150,10 +150,24 @@ function make_machine(prog = [], device = []) {
         return 0;
     }
 
+    const qram = Array(1<<12).fill(0);
+    qram.forEach(function (n, i) {
+        qram[i] = {t:n, x:n, y:n, z:n};
+    });
+    const qrom = Array(1<<13).fill(0);
+    qrom.forEach(function (n, i) {
+        qrom[i] = {t:n, x:n, y:n, z:n};
+    });
     function mem_perform(range, wr_en, addr, data) {
 //debug console.log("mem_perform:", "range=", range, "wr_en=", wr_en, "addr=", addr, "data=", data);
+        if (range === MEM_UC) {
+            if (wr_en) {
+                prog[addr] = data;
+            }
+            return prog[addr];
+        }
         if (range === MEM_PC) {
-            return wr_en ? 0 : prog[pc];
+            return prog[pc];  // writes ignored
         }
         if (range === MEM_DEV) {
             const id = (addr & 0xF0) >> 4;
@@ -170,7 +184,32 @@ function make_machine(prog = [], device = []) {
             }
             return error("unknown device.", "id:", id, "reg:", reg);
         }
-        return error("illegal memory operation.", "range:", range);
+        if (range & MEM_Q_T) {
+            const quad =
+                ( ((addr & 0xC000) === 0x4000) ? qram[addr & 0x0FFF]
+                : ((addr & 0xC000) === 0x0000) ? qrom[addr & 0x1FFF]
+                : {t:0, x:0, y:0, z:0} );
+            if (wr_en) {
+                if (range === MEM_Q_T) {
+                    quad.t = data;
+                }
+                if (range === MEM_Q_X) {
+                    quad.x = data;
+                }
+                if (range === MEM_Q_Y) {
+                    quad.y = data;
+                }
+                if (range === MEM_Q_Z) {
+                    quad.z = data;
+                }
+            }
+            return
+                ( range === MEM_Q_X ? quad.x
+                : range === MEM_Q_Y ? quad.y
+                : range === MEM_Q_Z ? quad.z
+                : quad.t );
+        }
+        return error("illegal memory operation.", "range:", range, "addr:", addr);
     }
 
     function step() {  // Execute a single instruction.
@@ -223,8 +262,12 @@ function make_machine(prog = [], device = []) {
         } else {
             if (alu_op === OP_MEM) {
                 // memory operation
-                const d_drop = (instr & 0x0800);            // 2DROP flag **deprecated**
                 const wr_en = (instr & 0x0080);             // {0:read, 1:write}
+                const d_drop = (instr & 0x0800) >> 4;       // 2DROP flag **deprecated**
+                if (d_drop !== wr_en) {
+                    console.log("WARNING! W/R does not match 2DROP.",
+                        "next_pc=", pc, "instr=", "0x"+instr.toString(16).padStart(4, "0"));
+                }
                 const range = (instr & 0x0070) >> 4;        // memory range
                 result = mem_perform(range, wr_en, tos, nos);
 //debug console.log(result, "=", "mem_perform()");
@@ -233,6 +276,9 @@ function make_machine(prog = [], device = []) {
                 }
                 if (range === MEM_PC) {
                     pc += 1;                                // extra increment past data
+                }
+                if (wr_en) {
+                    dstack.perform(SE_DROP);                // extra drop on memory write (2DROP)
                 }
             } else {
                 // evaluation instruction
