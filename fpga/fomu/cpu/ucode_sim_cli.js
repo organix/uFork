@@ -73,10 +73,17 @@ const uart = Object.freeze({
     },
 })
 
-// Read and compile the uCode program.
+// Read and compile/load the uCode program.
 
 Deno.readTextFile(ucode_path).then(function (text) {
-    const {errors, prog} = ucode.compile(text);
+    let errors, prog;
+    if (ucode_path.endsWith(".f")) {
+        ({errors, prog} = ucode.compile(text, ucode_path));
+    } else if (ucode_path.endsWith(".mem")) {
+        prog = ucode.parse_memh(text, ucode_path);
+    } else {
+        errors = [{error: "unsupported file extension", src: ucode_path, line: 0}];
+    }
 
 // Fail if there was a compilation error.
 
