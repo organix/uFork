@@ -1,0 +1,14 @@
+{
+    "name": "jslint",
+    "description": "JavaScript code quality extension for VSCode",
+    "version": "0.0.0",
+    "publisher": "jamesdiacono",
+    "repository": "https://github.com/jamesdiacono/JSLint",
+    "engines": {
+        "vscode": "^1.32.0"
+    },
+    "main": "./extension.js",
+    "activationEvents": [
+        "onStartupFinished"
+    ]
+}
