@@ -12,17 +12,28 @@ import ucode_sim from "./ucode_sim.js";
 
 const ucode_path = Deno.args[0];
 let read_buffer = new Uint8Array(1 << 14); // 16KB
+let read_queue = [];
 let rx_data = 0x00;
-let stdin_queue = [];
+let write_queue = [];
+let write_timer;
 let writing = false;
 
+function write() {
+    const chunk = new Uint8Array(write_queue);
+    write_queue = [];
+    writing = true;
+    Deno.stdout.write(chunk).then(function () {
+        writing = false;
+    });
+}
+
 function rx_ready() {
-    return stdin_queue.length > 0;
+    return read_queue.length > 0;
 }
 
 function rx_fetch() {
     if (rx_ready()) {
-        rx_data = stdin_queue.shift();
+        rx_data = read_queue.shift();
     }
     return rx_data;  // infallible read
 }
@@ -33,11 +44,13 @@ function tx_ready() {
 
 function tx_store(byte) {
     if (!writing) {  // overflow ignored
-        writing = true;
-        const chunk = new Uint8Array([byte]);
-        Deno.stdout.write(chunk).then(function () {
-            writing = false;
-        });
+        write_queue.push(byte);
+
+// Batch the writes to stdout, performing at most one per turn. This prevents
+// the simulation running at a crawl.
+
+        clearTimeout(write_timer);
+        write_timer = setTimeout(write);
     }
 }
 
@@ -115,19 +128,23 @@ Deno.readTextFile(ucode_path).then(function (text) {
             if (!Number.isSafeInteger(nr_bytes)) {
                 return Deno.exit(0); // EOF
             }
-            stdin_queue.push(...read_buffer.slice(0, nr_bytes));
+            read_queue.push(...read_buffer.slice(0, nr_bytes));
             return read();
         });
     }());
 
-// Make a simulator and run it in such a way as to not block STDIN.
+// Make a simulator and run it, pausing to handle interrupts every so often.
 
     let machine = ucode_sim.make_machine(prog, [uart]);
-    return (function step(rv) {
+    return (function step(rv, remaining = 1000) {
         if (rv !== undefined) {
             window.console.error(rv);
             return Deno.exit(1);
         }
-        return setTimeout(step, 0, machine.step());
+        return (
+            remaining <= 0
+            ? setTimeout(step, 0, machine.step())
+            : step(machine.step(), remaining - 1)
+        );
     }());
 });
