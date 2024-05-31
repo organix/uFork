@@ -150,13 +150,11 @@ function make_machine(prog = [], device = []) {
         return 0;
     }
 
-    const qram = Array(1<<12).fill(0);
-    qram.forEach(function (n, i) {
-        qram[i] = {t:n, x:n, y:n, z:n};
+    const qram = Array(1<<12).fill(0).map(function (n) {
+        return {t:n, x:n, y:n, z:n};
     });
-    const qrom = Array(1<<13).fill(0);
-    qrom.forEach(function (n, i) {
-        qrom[i] = {t:n, x:n, y:n, z:n};
+    const qrom = Array(1<<13).fill(0).map(function (n) {
+        return {t:n, x:n, y:n, z:n};
     });
     function mem_perform(range, wr_en, addr, data) {
 //debug console.log("mem_perform:", "range=", range, "wr_en=", wr_en, "addr=", addr, "data=", data);
