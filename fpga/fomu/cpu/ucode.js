@@ -80,11 +80,18 @@ function compile(text, src = "") {
         return (word & ~ADDR_MASK) | (addr & ADDR_MASK);
     }
 
-    const ctrl_ctx = [];  // stack of flow-control contexts
-
     const prog = [  // program "image" as 16-bit unsigned integers
         uc_jump(0)
     ];
+
+    const ctrl_ctx =        [];                         // stack of flow-control contexts
+
+    const TAIL_NONE =       0;
+    const TAIL_EVAL =       1;
+    const TAIL_CALL =       2;
+    const TAIL_DATA =       3;
+
+    let tail_ctx =          TAIL_NONE;
 
     const UC_LIT =          0x021F;                     // (LIT) item ( -- item )
     const UC_CONST =        0x521F;                     // (CONST) item ( -- item ) ( R: addr -- ) addr->pc
@@ -281,94 +288,90 @@ function compile(text, src = "") {
         }
         return token;
     }
-    function compile_words(token) {
-        const TAIL_NONE = 0;
-        const TAIL_EVAL = 1;
-        const TAIL_CALL = 2;
-        const TAIL_DATA = 3;
-        let tail_ctx = TAIL_NONE;
-        while (token.length > 0) {
-//debug console.log("compile_words:", token);
-            if (token === "(") {
-                compile_comment(next_token());
-            } else if (token === ";") {
-                // check for auto increment/decrement contexts
-                if (ctrl_ctx.some(uc_is_auto)) {
-                    return error("EXIT from counted-loop at depth", ctrl_ctx.length);
-                }
-                if (tail_ctx === TAIL_EVAL) {
-                    // attach "free" EXIT to previous word
-                    prog[prog.length - 1] |= UC_EXIT;
-                } else if (tail_ctx === TAIL_CALL) {
-                    // convert previous CALL to JUMP
-                    prog[prog.length - 1] &= ~0x4000;
-                } else {
-                    // compile EXIT
-                    prog.push(UC_EXIT);
-                }
-                tail_ctx = TAIL_NONE;
-            } else if (token === "CONSTANT") {
-                // allocate constant word
-                const name = next_token();
-                if (tail_ctx !== TAIL_DATA) {
-                    return error("invalid constant:", name);
-                }
-                const addr = prog.length - 2;
-                const word = uc_call(addr);
+    function compile_word(token) {
+//debug console.log("compile_word:", token);
+        if (token === "(") {
+            compile_comment(next_token());
+        } else if (token === ";") {
+            // check for auto increment/decrement contexts
+            if (ctrl_ctx.some(uc_is_auto)) {
+                return error("EXIT from counted-loop at depth", ctrl_ctx.length);
+            }
+            if (tail_ctx === TAIL_EVAL) {
+                // attach "free" EXIT to previous word
+                prog[prog.length - 1] |= UC_EXIT;
+            } else if (tail_ctx === TAIL_CALL) {
+                // convert previous CALL to JUMP
+                prog[prog.length - 1] &= ~0x4000;
+            } else {
+                // compile EXIT
+                prog.push(UC_EXIT);
+            }
+            tail_ctx = TAIL_NONE;
+        } else if (token === "CONSTANT") {
+            // allocate constant word
+            const name = next_token();
+            if (tail_ctx !== TAIL_DATA) {
+                return error("invalid constant:", name);
+            }
+            const addr = prog.length - 2;
+            const word = uc_call(addr);
 //debug console.log("compile_const:", name, "=", word.toString(16).padStart(4, "0"));
-                prog[addr] = UC_CONST;  // convert (LIT) to (CONST)
-                words[name] = word;  // add word to dictionary
-                tail_ctx = TAIL_NONE;
-            } else if (token === ",") {
-                // allocate raw data
-                if (tail_ctx !== TAIL_DATA) {
-                    return error("invalid data allocation");
+            prog[addr] = UC_CONST;  // convert (LIT) to (CONST)
+            words[name] = word;  // add word to dictionary
+            tail_ctx = TAIL_NONE;
+        } else if (token === ",") {
+            // allocate raw data
+            if (tail_ctx !== TAIL_DATA) {
+                return error("invalid data allocation");
+            }
+            const addr = prog.length - 2;
+            prog[addr] = prog[addr + 1];  // copy data over (LIT)
+            prog.pop();  // deallocate duplicated data
+            tail_ctx = TAIL_NONE;
+        } else {
+            const word = words[token];
+            if (typeof word === "number") {
+                // compile primitive or call
+                prog.push(word);
+                tail_ctx = (
+                    (word & 0xF000) === 0xC000
+                    ? TAIL_CALL
+                    : (
+                        (word & 0xF000) === 0x0000
+                        ? TAIL_EVAL
+                        : TAIL_NONE
+                    )
+                );
+            } else if (typeof word === "function") {
+                // invoke compiler function
+                const err = word();
+                if (err) {
+                    return err;
                 }
-                const addr = prog.length - 2;
-                prog[addr] = prog[addr + 1];  // copy data over (LIT)
-                prog.pop();  // deallocate duplicated data
                 tail_ctx = TAIL_NONE;
             } else {
-                const word = words[token];
-                if (typeof word === "number") {
-                    // compile primitive or call
-                    prog.push(word);
-                    tail_ctx = (
-                        (word & 0xF000) === 0xC000
-                        ? TAIL_CALL
-                        : (
-                            (word & 0xF000) === 0x0000
-                            ? TAIL_EVAL
-                            : TAIL_NONE
-                        )
-                    );
-                } else if (typeof word === "function") {
-                    // invoke compiler function
-                    const err = word();
-                    if (err) {
-                        return err;
-                    }
-                    tail_ctx = TAIL_NONE;
+                const num = Number(token);
+                if (Number.isSafeInteger(num)) {
+                    // push number literal
+                    prog.push(UC_LIT);
+                    prog.push(num & 0xFFFF);  // truncate to 16 bits
+                    tail_ctx = TAIL_DATA;
                 } else {
-                    const num = Number(token);
-                    if (Number.isSafeInteger(num)) {
-                        // push number literal
-                        prog.push(UC_LIT);
-                        prog.push(num & 0xFFFF);  // truncate to 16 bits
-                        tail_ctx = TAIL_DATA;
-                    } else {
-                        return error("invalid token:", token);
-                    }
+                    return error("invalid token:", token);
                 }
             }
-            token = next_token();
         }
         return token;
     }
 
-    const end = compile_words(next_token());
-    if (end?.error) {
-        return { errors: [ end ] };
+    let token = next_token();
+    while (token?.length > 0) {
+        const result = compile_word(token);
+        if (result?.error) {
+            return { errors: [ result ] };
+        }
+        token = next_token();
     }
     return {
         words,
