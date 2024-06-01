@@ -63,7 +63,7 @@
 function websockets_signalling_server(
     listen_options,
     on_error,
-    on_unhandled_request = function (ignore, respond_with) {
+    on_unhandled_request = function (_, respond_with) {
         return respond_with(new Response("Not found.", {status: 404}));
     }
 ) {

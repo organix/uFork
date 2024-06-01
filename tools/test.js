@@ -51,7 +51,7 @@ function test_asm() {
 parseq.sequence([
     build(),
     parseq.parallel([test_rust(), test_asm()])
-])(function callback(value, ignore) {
+])(function callback(value) {
     Deno.exit(
         value === undefined
         ? 1

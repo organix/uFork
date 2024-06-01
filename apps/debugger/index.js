@@ -146,7 +146,7 @@ function update_source_monitor(ip) {
         && sourcemap?.text !== undefined
     ) {
         $source_monitor.title = sourcemap.debug.src;
-        sourcemap.text.split(rx_crlf).forEach(function (ignore, line_nr) {
+        sourcemap.text.split(rx_crlf).forEach(function (_, line_nr) {
             $aside.textContent += line_nr + 1 + "\n";
         });
         if (sourcemap.debug.start !== undefined) {

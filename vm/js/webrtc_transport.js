@@ -610,7 +610,7 @@ function webrtc_transport(signaller, log) {
 //debug                         connection.close();
 //debug                     }
 //debug                 },
-//debug                 function on_close(ignore, reason) {
+//debug                 function on_close(_, reason) {
 //debug                     console.log("bob on_close", reason);
 //debug                 }
 //debug             );
@@ -634,7 +634,7 @@ function webrtc_transport(signaller, log) {
 //debug                     bob_stop();
 //debug                 }
 //debug             },
-//debug             function on_close(ignore, reason) {
+//debug             function on_close(_, reason) {
 //debug                 console.log("alice on_close", reason);
 //debug             }
 //debug         );

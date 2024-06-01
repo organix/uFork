@@ -73,7 +73,7 @@ function read_settings_object() {
     if (typeof json === "string") {
         try {
             return JSON.parse(json);
-        } catch (ignore) {}
+        } catch (_) {}
     }
     return {};
 }

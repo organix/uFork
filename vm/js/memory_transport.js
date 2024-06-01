@@ -198,7 +198,7 @@ function memory_transport(flakiness, max_latency) {
 //debug                 connection.close();
 //debug             }
 //debug         },
-//debug         function on_close(ignore, reason) {
+//debug         function on_close(_, reason) {
 //debug             console.log("bob on_close", reason);
 //debug         }
 //debug     ),
@@ -221,7 +221,7 @@ function memory_transport(flakiness, max_latency) {
 //debug                 connection.close();
 //debug             }
 //debug         },
-//debug         function on_close(ignore, reason) {
+//debug         function on_close(_, reason) {
 //debug             console.log("alice on_close", reason);
 //debug         }
 //debug     ),
