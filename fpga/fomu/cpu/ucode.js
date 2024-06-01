@@ -2,7 +2,7 @@
 // Dale Schumacher
 // created: 2024-04-10
 
-/*jslint bitwise */
+/*jslint bitwise, long */
 
 // Create a position-tracking character-stream.
 
@@ -80,6 +80,12 @@ function compile(text, src = "") {
         return (word & ~ADDR_MASK) | (addr & ADDR_MASK);
     }
 
+    const ctrl_ctx = [];  // stack of flow-control contexts
+
+    const prog = [  // program "image" as 16-bit unsigned integers
+        uc_jump(0)
+    ];
+
     const UC_LIT =          0x021F;                     // (LIT) item ( -- item )
     const UC_CONST =        0x521F;                     // (CONST) item ( -- item ) ( R: addr -- ) addr->pc
     const UC_TO_R =         0x2100;                     // >R ( a -- ) ( R: -- a )
@@ -152,7 +158,7 @@ function compile(text, src = "") {
 //debug console.log("compile_name:", name, "=", word.toString(16).padStart(4, "0"));
         words[name] = word;  // add word to dictionary
     };
-    words["VARIABLE"] = function () {
+    words.VARIABLE = function () {
         // new named variable
         const word = uc_call(prog.length);
         const name = next_token();
@@ -162,39 +168,39 @@ function compile(text, src = "") {
         prog.push(0);  // variable data field
         words[name] = word;  // add word to dictionary
     };
-    words["SKZ"] = function () {                        // ( 0 -- ) pc+2->pc | ( n -- )
+    words.SKZ = function () {                           // ( 0 -- ) pc+2->pc | ( n -- )
         // skip (next instruction), if TOS is zero
         prog.push(uc_jz(prog.length + 2));
     };
-    words["CALLZ"] = function () {                      // 0= IF <call> THEN
+    words.CALLZ = function () {                         // 0= IF <call> THEN
         // call (next word), if TOS is zero
         const name = next_token();
         const word = words[name];
-        if ((word & 0xF000) != 0xC000) {
+        if ((word & 0xF000) !== 0xC000) {
             return error(name, "is not a procedure");
         }
         prog.push(uc_cz(word));
     };
-    words["BEGIN"] = function () {                      // ( -- )
+    words.BEGIN = function () {                         // ( -- )
         // begin indefinite loop
         const addr = prog.length;
 //debug console.log("compile_indefinite_loop:", "$"+addr.toString(16).padStart(3, "0"));
         const word = uc_jump(addr);  // placeholder
         ctrl_ctx.push(word);
     };
-    words["UNTIL"] = function () {                      // ( cond -- )
+    words.UNTIL = function () {                         // ( cond -- )
         // end bottom-test loop
         const addr = ctrl_ctx.pop() & ADDR_MASK;
         prog.push(uc_jz(addr));
     };
-    words["WHILE"] = function () {                      // ( cond -- )
+    words.WHILE = function () {                         // ( cond -- )
         // loop (top) test
         const addr = ctrl_ctx.pop() & ADDR_MASK;
         const word = uc_jz(prog.length);
         ctrl_ctx.push(word);
         prog.push(uc_jz(addr));  // placeholder
     };
-    words["REPEAT"] = function () {                     // ( -- )
+    words.REPEAT = function () {                        // ( -- )
         // end top-test loop
         const addr = ctrl_ctx.pop() & ADDR_MASK;
         const word = uc_jump(prog[addr]);
@@ -219,7 +225,7 @@ function compile(text, src = "") {
         ctrl_ctx.push(word);
         prog.push(word);
     };
-    words["I"] = function () {                          // ( -- n ) ( R: n -- n )
+    words.I = function () {                             // ( -- n ) ( R: n -- n )
         // fetch loop count (from R-stack)
         const n = ctrl_ctx.length;
         if (!uc_is_auto(ctrl_ctx[n - 1])) {
@@ -227,7 +233,7 @@ function compile(text, src = "") {
         }
         prog.push(UC_R_FETCH);
     };
-    words["AGAIN"] = function () {                      // ( -- )
+    words.AGAIN = function () {                         // ( -- )
         // end infinite or counted loop
 //debug console.log("compile_again:", "$"+prog.length.toString(16).padStart(3, "0"));
         const word = ctrl_ctx.pop();
@@ -239,14 +245,14 @@ function compile(text, src = "") {
             prog.push(uc_jump(addr));
         }
     };
-    words["IF"] = function () {                         // ( cond -- )
+    words.IF = function () {                            // ( cond -- )
         // begin conditional
 //debug console.log("compile_if:", "$"+prog.length.toString(16).padStart(3, "0"));
         const word = uc_jz(prog.length);  // placeholder
         ctrl_ctx.push(word);
         prog.push(word);
     };
-    words["ELSE"] = function () {                       // ( -- )
+    words.ELSE = function () {                          // ( -- )
         // begin alternative
 //debug console.log("compile_else:", "$"+prog.length.toString(16).padStart(3, "0"));
         const addr = ctrl_ctx.pop() & ADDR_MASK;
@@ -255,7 +261,7 @@ function compile(text, src = "") {
         ctrl_ctx.push(word);
         prog.push(word);
     };
-    words["THEN"] = function () {                       // ( -- )
+    words.THEN = function () {                          // ( -- )
         // end conditional
 //debug console.log("compile_then:", "$"+prog.length.toString(16).padStart(3, "0"));
         const word = ctrl_ctx.pop();
@@ -263,11 +269,18 @@ function compile(text, src = "") {
         prog[addr] = uc_fixup(word, prog.length);  // patch
     };
 
-    const ctrl_ctx = [];  // stack of flow-control contexts
-
-    const prog = [
-        uc_jump(0)
-    ];
+    function compile_comment(token) {
+        while (token.length > 0) {
+//debug console.log("compile_comment:", token);
+            if (token === "(") {
+                compile_comment(next_token());
+            } else if (token === ")") {
+                break;
+            }
+            token = next_token();
+        }
+        return token;
+    }
     function compile_words(token) {
         const TAIL_NONE = 0;
         const TAIL_EVAL = 1;
@@ -320,11 +333,15 @@ function compile(text, src = "") {
                 if (typeof word === "number") {
                     // compile primitive or call
                     prog.push(word);
-                    tail_ctx = (word & 0xF000) === 0xC000
+                    tail_ctx = (
+                        (word & 0xF000) === 0xC000
                         ? TAIL_CALL
-                        : (word & 0xF000) === 0x0000
+                        : (
+                            (word & 0xF000) === 0x0000
                             ? TAIL_EVAL
-                            : TAIL_NONE;
+                            : TAIL_NONE
+                        )
+                    );
                 } else if (typeof word === "function") {
                     // invoke compiler function
                     const err = word();
@@ -343,18 +360,6 @@ function compile(text, src = "") {
                         return error("invalid token:", token);
                     }
                 }
-            }
-            token = next_token();
-        }
-        return token;
-    }
-    function compile_comment(token) {
-        while (token.length > 0) {
-//debug console.log("compile_comment:", token);
-            if (token === "(") {
-                compile_comment(next_token());
-            } else if (token == ")") {
-                break;
             }
             token = next_token();
         }
@@ -620,5 +625,5 @@ export default Object.freeze({
     compile,
     disasm,
     print_memh,
-    parse_memh,
+    parse_memh
 });

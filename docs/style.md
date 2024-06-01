@@ -103,6 +103,15 @@ Avoid `switch`, prefer `else if`.
             break;
     }
 
+Wrap ternary conditional in parens
+and place each sub-expression on its own line.
+
+    return (
+        (the_token.id === "(string)" || the_token.id === "(number)")
+        ? String(the_token.value)
+        : the_token.id
+    );
+
 Avoid `for` loops, prefer array methods or a `while` loop.
 
     let strings = ["1.2", "3.4"];
