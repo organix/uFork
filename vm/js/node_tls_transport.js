@@ -193,7 +193,7 @@ function generate_identity() {
             crypto.generateKeyPair(
                 "ed25519", // less NSA
                 undefined,
-                function (error, ignore, private_key_object) {
+                function (error, _, private_key_object) {
                     return (
                         error
                         ? callback(undefined, error)
@@ -425,7 +425,7 @@ function node_tls_transport() {
 //debug                     connection.close();
 //debug                 }
 //debug             },
-//debug             function on_close(ignore, reason) {
+//debug             function on_close(_, reason) {
 //debug                 console.log("bob on_close", reason);
 //debug             }
 //debug         );
@@ -451,7 +451,7 @@ function node_tls_transport() {
 //debug                     connection.close();
 //debug                 }
 //debug             },
-//debug             function on_close(ignore, reason) {
+//debug             function on_close(_, reason) {
 //debug                 console.log("alice on_close", reason);
 //debug             }
 //debug         );

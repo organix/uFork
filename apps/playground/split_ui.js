@@ -23,7 +23,7 @@ const split_ui = make_ui("split-ui", function (element, {
     size = 100,
     divider_color = "black",
     divider_width = "1px",
-    on_drag = function (ignore) {
+    on_drag = function () {
         return true;
     }
 }) {

@@ -385,7 +385,7 @@ function disasm(code, words = {}) {
         code &= 0x0FFF;
         suffix = " EXIT";
     }
-    const entry = Object.entries(words).find(function ([_, value]) {
+    const entry = Object.values(words).find(function (value) {
         return value === code;
     });
     if (entry !== undefined) {

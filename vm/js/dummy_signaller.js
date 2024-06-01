@@ -48,7 +48,7 @@ function dummy_signaller() {
         }
     }
 
-    function connect(name, ignore, on_receive) {
+    function connect(name, _, on_receive) {
         return function connect_requestor(callback, offer) {
             delay(function () {
                 const session_id = String(next_session_id);
@@ -78,7 +78,7 @@ function dummy_signaller() {
         };
     }
 
-    function listen(name, ignore, on_receive) {
+    function listen(name, _, on_receive) {
         return function listen_requestor(callback) {
             delay(function () {
                 if (listeners[name] === undefined) {
