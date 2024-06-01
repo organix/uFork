@@ -155,132 +155,149 @@ function compile(text, src = "") {
         "R@":               0x0280,                     // ( -- a ) ( R: a -- a )
         "RDROP":            0x1000,                     // ( -- ) ( R: a -- )
         "FAIL":             0x002F,                     // ( -- ) signal failure
-        "EXIT":             0x5000                      // ( -- ) ( R: addr -- ) addr->pc ; no TCO
-    };
-    words[":"] = function () {
-        // new entry-point
-        const word = uc_call(prog.length);
-        prog[0] = word;  // update bootstrap entry-point
-        const name = next_token();
+        ":": function () {
+            // new entry-point
+            const word = uc_call(prog.length);
+            prog[0] = word;  // update bootstrap entry-point
+            const name = next_token();
 //debug console.log("compile_name:", name, "=", word.toString(16).padStart(4, "0"));
-        words[name] = word;  // add word to dictionary
-    };
-    words.VARIABLE = function () {
-        // new named variable
-        const word = uc_call(prog.length);
-        const name = next_token();
+            words[name] = word;  // add word to dictionary
+        },
+        "VARIABLE": function () {
+            // new named variable
+            const word = uc_call(prog.length);
+            const name = next_token();
 //debug console.log("compile_var:", name, "=", word.toString(16).padStart(4, "0"));
-        prog.push(UC_CONST);
-        prog.push(prog.length + 1);  // variable address
-        prog.push(0);  // variable data field
-        words[name] = word;  // add word to dictionary
-    };
-    words.SKZ = function () {                           // ( 0 -- ) pc+2->pc | ( n -- )
-        // skip (next instruction), if TOS is zero
-        prog.push(uc_jz(prog.length + 2));
-    };
-    words.CALLZ = function () {                         // 0= IF <call> THEN
-        // call (next word), if TOS is zero
-        const name = next_token();
-        const word = words[name];
-        if ((word & 0xF000) !== 0xC000) {
-            return error(name, "is not a procedure");
-        }
-        prog.push(uc_cz(word));
-    };
-    words.BEGIN = function () {                         // ( -- )
-        // begin indefinite loop
-        const addr = prog.length;
-//debug console.log("compile_indefinite_loop:", "$"+addr.toString(16).padStart(3, "0"));
-        const word = uc_jump(addr);  // placeholder
-        ctrl_ctx.push(word);
-    };
-    words.UNTIL = function () {                         // ( cond -- )
-        // end bottom-test loop
-        const addr = ctrl_ctx.pop() & ADDR_MASK;
-        prog.push(uc_jz(addr));
-    };
-    words.WHILE = function () {                         // ( cond -- )
-        // loop (top) test
-        const addr = ctrl_ctx.pop() & ADDR_MASK;
-        const word = uc_jz(prog.length);
-        ctrl_ctx.push(word);
-        prog.push(uc_jz(addr));  // placeholder
-    };
-    words.REPEAT = function () {                        // ( -- )
-        // end top-test loop
-        const addr = ctrl_ctx.pop() & ADDR_MASK;
-        const word = uc_jump(prog[addr]);
-        prog.push(word);
-        prog[addr] = uc_jz(prog.length);  // patch
-    };
-    words["?LOOP-"] = function () {                     // ( n -- ) ( R: -- n' )
-        // begin counted loop
-        prog.push(UC_TO_R);
-        const addr = prog.length;
+            prog.push(UC_CONST);
+            prog.push(prog.length + 1);  // variable address
+            prog.push(0);  // variable data field
+            words[name] = word;  // add word to dictionary
+        },
+        "SKZ": function () {                            // ( 0 -- ) pc+2->pc | ( n -- )
+            // skip (next instruction), if TOS is zero
+            prog.push(uc_jz(prog.length + 2));
+        },
+        "CALLZ": function () {                          // 0= IF <call> THEN
+            // call (next word), if TOS is zero
+            const name = next_token();
+            const word = words[name];
+            if ((word & 0xF000) !== 0xC000) {
+                return error(name, "is not a procedure");
+            }
+            prog.push(uc_cz(word));
+        },
+        "BEGIN": function () {                          // ( -- )
+            // begin indefinite loop
+            const addr = prog.length;
+    //debug console.log("compile_indefinite_loop:", "$"+addr.toString(16).padStart(3, "0"));
+            const word = uc_jump(addr);  // placeholder
+            ctrl_ctx.push(word);
+        },
+        "UNTIL": function () {                          // ( cond -- )
+            // end bottom-test loop
+            const addr = ctrl_ctx.pop() & ADDR_MASK;
+            prog.push(uc_jz(addr));
+        },
+        "WHILE": function () {                          // ( cond -- )
+            // loop (top) test
+            const addr = ctrl_ctx.pop() & ADDR_MASK;
+            const word = uc_jz(prog.length);
+            ctrl_ctx.push(word);
+            prog.push(uc_jz(addr));  // placeholder
+        },
+        "REPEAT": function () {                         // ( -- )
+            // end top-test loop
+            const addr = ctrl_ctx.pop() & ADDR_MASK;
+            const word = uc_jump(prog[addr]);
+            prog.push(word);
+            prog[addr] = uc_jz(prog.length);  // patch
+        },
+        "?LOOP-": function () {                         // ( n -- ) ( R: -- n' )
+            // begin counted loop
+            prog.push(UC_TO_R);
+            const addr = prog.length;
 //debug console.log("compile_countdown_loop:", "$"+addr.toString(16).padStart(3, "0"));
-        const word = uc_dec_jnz(addr);  // placeholder
-        ctrl_ctx.push(word);
-        prog.push(word);
-    };
-    words["?LOOP+"] = function () {                     // ( n -- ) ( R: -- n' )
-        // begin counted loop
-        prog.push(UC_TO_R);
-        const addr = prog.length;
+            const word = uc_dec_jnz(addr);  // placeholder
+            ctrl_ctx.push(word);
+            prog.push(word);
+        },
+        "?LOOP+": function () {                         // ( n -- ) ( R: -- n' )
+            // begin counted loop
+            prog.push(UC_TO_R);
+            const addr = prog.length;
 //debug console.log("compile_countup_loop:", "$"+addr.toString(16).padStart(3, "0"));
-        const word = uc_inc_jnz(addr);  // placeholder
-        ctrl_ctx.push(word);
-        prog.push(word);
-    };
-    words.I = function () {                             // ( -- n ) ( R: n -- n )
-        // fetch loop count (from R-stack)
-        const n = ctrl_ctx.length;
-        if (!uc_is_auto(ctrl_ctx[n - 1])) {
-            return error("no `I` at control depth", n);
-        }
-        prog.push(UC_R_FETCH);
-    };
-    words.AGAIN = function () {                         // ( -- )
-        // end infinite or counted loop
+            const word = uc_inc_jnz(addr);  // placeholder
+            ctrl_ctx.push(word);
+            prog.push(word);
+        },
+        "I": function () {                              // ( -- n ) ( R: n -- n )
+            // fetch loop count (from R-stack)
+            const n = ctrl_ctx.length;
+            if (!uc_is_auto(ctrl_ctx[n - 1])) {
+                return error("no `I` at control depth", n);
+            }
+            prog.push(UC_R_FETCH);
+        },
+        "AGAIN": function () {                          // ( -- )
+            // end infinite or counted loop
 //debug console.log("compile_again:", "$"+prog.length.toString(16).padStart(3, "0"));
-        const word = ctrl_ctx.pop();
-        const addr = word & ADDR_MASK;
-        if (uc_is_auto(word)) {
-            prog[addr] = uc_jump(prog.length);  // patch
-            prog.push(uc_fixup(word, addr + 1));
-        } else {
-            prog.push(uc_jump(addr));
-        }
-    };
-    words.IF = function () {                            // ( cond -- )
-        // begin conditional
+            const word = ctrl_ctx.pop();
+            const addr = word & ADDR_MASK;
+            if (uc_is_auto(word)) {
+                prog[addr] = uc_jump(prog.length);  // patch
+                prog.push(uc_fixup(word, addr + 1));
+            } else {
+                prog.push(uc_jump(addr));
+            }
+        },
+        "IF": function () {                             // ( cond -- )
+            // begin conditional
 //debug console.log("compile_if:", "$"+prog.length.toString(16).padStart(3, "0"));
-        const word = uc_jz(prog.length);  // placeholder
-        ctrl_ctx.push(word);
-        prog.push(word);
-    };
-    words.ELSE = function () {                          // ( -- )
-        // begin alternative
+            const word = uc_jz(prog.length);  // placeholder
+            ctrl_ctx.push(word);
+            prog.push(word);
+        },
+        "ELSE": function () {                           // ( -- )
+            // begin alternative
 //debug console.log("compile_else:", "$"+prog.length.toString(16).padStart(3, "0"));
-        const addr = ctrl_ctx.pop() & ADDR_MASK;
-        prog[addr] = uc_jz(prog.length + 1);  // patch
-        const word = uc_jump(prog.length);  // placeholder
-        ctrl_ctx.push(word);
-        prog.push(word);
-    };
-    words.THEN = function () {                          // ( -- )
-        // end conditional
+            const addr = ctrl_ctx.pop() & ADDR_MASK;
+            prog[addr] = uc_jz(prog.length + 1);  // patch
+            const word = uc_jump(prog.length);  // placeholder
+            ctrl_ctx.push(word);
+            prog.push(word);
+        },
+        "THEN": function () {                           // ( -- )
+            // end conditional
 //debug console.log("compile_then:", "$"+prog.length.toString(16).padStart(3, "0"));
-        const word = ctrl_ctx.pop();
-        const addr = word & ADDR_MASK;
-        prog[addr] = uc_fixup(word, prog.length);  // patch
+            const word = ctrl_ctx.pop();
+            const addr = word & ADDR_MASK;
+            prog[addr] = uc_fixup(word, prog.length);  // patch
+        },
+        ";": function () {
+            // return from procedure
+            if (ctrl_ctx.some(uc_is_auto)) {
+                return error("EXIT from counted-loop at depth", ctrl_ctx.length);
+            }
+            if (tail_ctx === TAIL_EVAL) {
+                // attach "free" EXIT to previous word
+                prog[prog.length - 1] |= UC_EXIT;
+            } else if (tail_ctx === TAIL_CALL) {
+                // convert previous CALL to JUMP
+                prog[prog.length - 1] &= ~0x4000;
+            } else {
+                // compile EXIT
+                prog.push(UC_EXIT);
+            }
+            tail_ctx = TAIL_NONE;
+        },
+        "EXIT":             0x5000                      // ( -- ) ( R: addr -- ) addr->pc ; no TCO
     };
 
     function compile_comment(token) {
         while (token.length > 0) {
 //debug console.log("compile_comment:", token);
             if (token === "(") {
-                compile_comment(next_token());
+                token = compile_comment(next_token());
             } else if (token === ")") {
                 break;
             }
@@ -291,7 +308,8 @@ function compile(text, src = "") {
     function compile_word(token) {
 //debug console.log("compile_word:", token);
         if (token === "(") {
-            compile_comment(next_token());
+            token = compile_comment(next_token());
+/*
         } else if (token === ";") {
             // check for auto increment/decrement contexts
             if (ctrl_ctx.some(uc_is_auto)) {
@@ -308,6 +326,7 @@ function compile(text, src = "") {
                 prog.push(UC_EXIT);
             }
             tail_ctx = TAIL_NONE;
+*/
         } else if (token === "CONSTANT") {
             // allocate constant word
             const name = next_token();
