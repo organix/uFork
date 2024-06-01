@@ -136,15 +136,16 @@ Deno.readTextFile(ucode_path).then(function (text) {
 // Make a simulator and run it, pausing to handle interrupts every so often.
 
     let machine = ucode_sim.make_machine(prog, [uart]);
-    return (function step(rv, remaining = 1000) {
+    return (function step(remaining = 1000) {
+        const rv = machine.step();
         if (rv !== undefined) {
             window.console.error(rv);
             return Deno.exit(1);
         }
         return (
             remaining <= 0
-            ? setTimeout(step, 0, machine.step())
-            : step(machine.step(), remaining - 1)
+            ? setTimeout(step)
+            : step(remaining - 1)
         );
     }());
 });
