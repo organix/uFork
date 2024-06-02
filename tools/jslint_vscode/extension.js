@@ -14,7 +14,7 @@ let jslint;
 
 function lint(document, diagnostics) {
     if (typeof jslint === "function" && document.languageId === "javascript") {
-        const report = jslint(document.getText());
+        const report = jslint(document.getText(), {fudge: true});
         diagnostics.set(document.uri, report.warnings.map(function (warning) {
             return new Diagnostic(
                 new Range(
