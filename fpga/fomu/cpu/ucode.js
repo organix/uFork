@@ -627,6 +627,33 @@ function parse_memh(text, src = "") {
 //debug     }).join("\n"));
 //debug }
 
+//debug function toCodePoints(string) {
+//debug     return string.split("")/*.map((s) => s.codePointAt(0))*/;
+//debug }
+//debug console.log(toCodePoints(""));
+//debug console.log(toCodePoints("foo"));
+//debug console.log(toCodePoints("foobar"));
+//debug function verify(expect, actual) {
+//debug     expect = toCodePoints(expect);
+//debug     console.log("expect:", expect);
+//debug     actual = toCodePoints(actual);
+//debug     console.log("actual:", actual);
+//debug     if (actual.length < expect.length) {
+//debug         console.log("actual shorter than expect");
+//debug     }
+//debug     if (actual.length > expect.length) {
+//debug         console.log("actual longer than expect");
+//debug     }
+//debug     expect.forEach(function (c, i) {
+//debug         if (c !== actual[i]) {
+//debug             console.log("mismatch at index", i)
+//debug         }
+//debug     });
+//debug }
+//debug verify("", "");
+//debug verify("foo", "f");
+//debug verify("foo", "foobar");
+
 export default Object.freeze({
     make_stream,
     compile,
