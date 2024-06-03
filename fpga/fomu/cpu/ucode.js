@@ -22,14 +22,18 @@ function make_stream(text, src = "") {
     function next_char() {
         const cp = text.codePointAt(pos);  // returns `undefined` if out-of-bounds
         if (typeof cp === "number") {
-            pos += (cp <= 0xFFFF ? 1 : 2);
+            pos += (
+                cp <= 0xFFFF
+                ? 1
+                : 2
+            );
         }
         if (cp === 10) {  // watch for '\n'
             line += 1;
         }
         return cp;
     }
-    return { next_char, error };
+    return {next_char, error};
 }
 
 // Compile uCode/Forth source.
@@ -52,12 +56,12 @@ function compile(text, src = "") {
         return token;
     }
 
-    const ADDR_MASK =       0x0FFF;                     // 12-bit uCode addresses
+    const ADDR_MASK = 0x0FFF;  // 12-bit uCode addresses
 
-    function uc_jump(addr) {    // jump (unconditional)
+    function uc_jump(addr) {  // jump (unconditional)
         return (0x8000 | (addr & ADDR_MASK));
     }
-    function uc_jz(addr) {      // jump, if zero
+    function uc_jz(addr) {  // jump, if zero
         return (0x9000 | (addr & ADDR_MASK));
     }
     function uc_inc_jnz(addr) {  // increment and jump, if not zero
@@ -66,7 +70,7 @@ function compile(text, src = "") {
     function uc_dec_jnz(addr) {  // decrement and jump, if not zero
         return (0xB000 | (addr & ADDR_MASK));
     }
-    function uc_call(addr) {    // push return address and jump
+    function uc_call(addr) {  // push return address and jump
         return (0xC000 | (addr & ADDR_MASK));
     }
     function uc_cz(addr) {      // call, if zero
@@ -84,77 +88,77 @@ function compile(text, src = "") {
         uc_jump(0)
     ];
 
-    const ctrl_ctx =        [];                         // stack of flow-control contexts
+    const ctrl_ctx = [];  // stack of flow-control contexts
 
-    const TAIL_NONE =       0;
-    const TAIL_EVAL =       1;
-    const TAIL_CALL =       2;
-    const TAIL_DATA =       3;
+    const TAIL_NONE = 0;
+    const TAIL_EVAL = 1;
+    const TAIL_CALL = 2;
+    const TAIL_DATA = 3;
 
-    let tail_ctx =          TAIL_NONE;
+    let tail_ctx = TAIL_NONE;
 
-    const UC_LIT =          0x021F;                     // (LIT) item ( -- item )
-    const UC_CONST =        0x521F;                     // (CONST) item ( -- item ) ( R: addr -- ) addr->pc
-    const UC_TO_R =         0x2100;                     // >R ( a -- ) ( R: -- a )
-    const UC_R_FROM =       0x1280;                     // R> ( -- a ) ( R: a -- )
-    const UC_R_FETCH =      0x0280;                     // R@ ( -- a ) ( R: a -- a )
-    const UC_EXIT =         0x5000;                     // EXIT ( -- ) ( R: addr -- ) addr->pc
+    const UC_LIT = 0x021F;  // (LIT) item ( -- item )
+    const UC_CONST = 0x521F;  // (CONST) item ( -- item ) ( R: addr -- ) addr->pc
+    const UC_TO_R = 0x2100;  // >R ( a -- ) ( R: -- a )
+    //const UC_R_FROM = 0x1280;  // R> ( -- a ) ( R: a -- )
+    const UC_R_FETCH = 0x0280;  // R@ ( -- a ) ( R: a -- a )
+    const UC_EXIT = 0x5000;  // EXIT ( -- ) ( R: addr -- ) addr->pc
 
     const words = {
-        "NOP":              0x0000,                     // ( -- )
-        "DROP":             0x0100,                     // ( a -- )
-        "DUP":              0x0200,                     // ( a -- a a )
-        "SWAP":             0x0400,                     // ( a b -- b a )
-        "OVER":             0x0240,                     // ( a b -- a b a )
-        "ROT":              0x0500,                     // ( a b c -- b c a )
-        "-ROT":             0x0600,                     // ( a b c -- c a b )
-        "TRUE":             0x02F6,                     // ( -- -1 )
-        "FALSE":            0x02C0,                     // ( -- 0 )
-        "0":                0x02C0,                     // ( -- 0 )
-        "1":                0x02D6,                     // ( -- 1 )
-        "-1":               0x02F6,                     // ( -- -1 )
-        "LSB":              0x02D6,                     // ( -- 1 )
-        "MSB":              0x02E6,                     // ( -- 0x8000 )
-        "LSB&":             0x0314,                     // ( a -- a&1 )
-        "MSB&":             0x0324,                     // ( a -- a&0x8000 )
-        "LSB|":             0x0316,                     // ( a -- a|1 )
-        "MSB|":             0x0326,                     // ( a -- a|0x8000 )
-        "INVERT":           0x0335,                     // ( a -- ~a )
-        "NEGATE":           0x03C2,                     // ( a -- -a )
-        "1+":               0x0311,                     // ( a -- a+1 )
-        "1-":               0x0312,                     // ( a -- a-1 )
-        "2*":               0x0301,                     // ( a -- a*2 )
-        "2/":               0x030B,                     // ( a -- a/2 )
-        "+":                0x0741,                     // ( a b -- a+b )
-        "-":                0x0742,                     // ( a b -- a-b )
-        "*":                0x0743,                     // ( a b -- a*b )
-        "AND":              0x0744,                     // ( a b -- a&b )
-        "XOR":              0x0745,                     // ( a b -- a^b )
-        "OR":               0x0746,                     // ( a b -- a|b )
-        "ROL":              0x0307,                     // ( a -- {a[14:0],a[15]} )
-        "2ROL":             0x0308,                     // ( a -- {a[13:0],a[15:14]} )
-        "4ROL":             0x0309,                     // ( a -- {a[11:0],a[15:12]} )
-        "8ROL":             0x030A,                     // ( a -- {a[7:0],a[15:8]} )
-        "ASR":              0x030B,                     // ( a -- {a[15],a[15:1]} )
-        "2ASR":             0x030C,                     // ( a -- {a[15],a[15],a[15:2]} )
-        "4ASR":             0x030D,                     // ( a -- {a[15],a[15],a[15],a[15],a[15:4]} )
-        "@":                0x030F,                     // ( addr -- data )
-        "!":                0x098F,                     // ( data addr -- )
-        "IO@":              0x033F,                     // ( io_reg -- data )
-        "IO!":              0x09BF,                     // ( data io_reg -- )
-        "QT@":              0x034F,                     // ( qref -- data )
-        "QT!":              0x09CF,                     // ( data qref -- )
-        "QX@":              0x035F,                     // ( qref -- data )
-        "QX!":              0x09DF,                     // ( data qref -- )
-        "QY@":              0x036F,                     // ( qref -- data )
-        "QY!":              0x09EF,                     // ( data qref -- )
-        "QZ@":              0x037F,                     // ( qref -- data )
-        "QZ!":              0x09FF,                     // ( data qref -- )
-        ">R":               0x2100,                     // ( a -- ) ( R: -- a )
-        "R>":               0x1280,                     // ( -- a ) ( R: a -- )
-        "R@":               0x0280,                     // ( -- a ) ( R: a -- a )
-        "RDROP":            0x1000,                     // ( -- ) ( R: a -- )
-        "FAIL":             0x002F,                     // ( -- ) signal failure
+        "NOP": 0x0000,  // ( -- )
+        "DROP": 0x0100,  // ( a -- )
+        "DUP": 0x0200,  // ( a -- a a )
+        "SWAP": 0x0400,  // ( a b -- b a )
+        "OVER": 0x0240,  // ( a b -- a b a )
+        "ROT": 0x0500,  // ( a b c -- b c a )
+        "-ROT": 0x0600,  // ( a b c -- c a b )
+        "TRUE": 0x02F6,  // ( -- -1 )
+        "FALSE": 0x02C0,  // ( -- 0 )
+        "0": 0x02C0,  // ( -- 0 )
+        "1": 0x02D6,  // ( -- 1 )
+        "-1": 0x02F6,  // ( -- -1 )
+        "LSB": 0x02D6,  // ( -- 1 )
+        "MSB": 0x02E6,  // ( -- 0x8000 )
+        "LSB&": 0x0314,  // ( a -- a&1 )
+        "MSB&": 0x0324,  // ( a -- a&0x8000 )
+        "LSB|": 0x0316,  // ( a -- a|1 )
+        "MSB|": 0x0326,  // ( a -- a|0x8000 )
+        "INVERT": 0x0335,  // ( a -- ~a )
+        "NEGATE": 0x03C2,  // ( a -- -a )
+        "1+": 0x0311,  // ( a -- a+1 )
+        "1-": 0x0312,  // ( a -- a-1 )
+        "2*": 0x0301,  // ( a -- a*2 )
+        "2/": 0x030B,  // ( a -- a/2 )
+        "+": 0x0741,  // ( a b -- a+b )
+        "-": 0x0742,  // ( a b -- a-b )
+        "*": 0x0743,  // ( a b -- a*b )
+        "AND": 0x0744,  // ( a b -- a&b )
+        "XOR": 0x0745,  // ( a b -- a^b )
+        "OR": 0x0746,  // ( a b -- a|b )
+        "ROL": 0x0307,  // ( a -- {a[14:0],a[15]} )
+        "2ROL": 0x0308,  // ( a -- {a[13:0],a[15:14]} )
+        "4ROL": 0x0309,  // ( a -- {a[11:0],a[15:12]} )
+        "8ROL": 0x030A,  // ( a -- {a[7:0],a[15:8]} )
+        "ASR": 0x030B,  // ( a -- {a[15],a[15:1]} )
+        "2ASR": 0x030C,  // ( a -- {a[15],a[15],a[15:2]} )
+        "4ASR": 0x030D,  // ( a -- {a[15],a[15],a[15],a[15],a[15:4]} )
+        "@": 0x030F,  // ( addr -- data )
+        "!": 0x098F,  // ( data addr -- )
+        "IO@": 0x033F,  // ( io_reg -- data )
+        "IO!": 0x09BF,  // ( data io_reg -- )
+        "QT@": 0x034F,  // ( qref -- data )
+        "QT!": 0x09CF,  // ( data qref -- )
+        "QX@": 0x035F,  // ( qref -- data )
+        "QX!": 0x09DF,  // ( data qref -- )
+        "QY@": 0x036F,  // ( qref -- data )
+        "QY!": 0x09EF,  // ( data qref -- )
+        "QZ@": 0x037F,  // ( qref -- data )
+        "QZ!": 0x09FF,  // ( data qref -- )
+        ">R": 0x2100,  // ( a -- ) ( R: -- a )
+        "R>": 0x1280,  // ( -- a ) ( R: a -- )
+        "R@": 0x0280,  // ( -- a ) ( R: a -- a )
+        "RDROP": 0x1000,  // ( -- ) ( R: a -- )
+        "FAIL": 0x002F,  // ( -- ) signal failure
         ":": function () {
             // new entry-point
             const word = uc_call(prog.length);
@@ -313,7 +317,7 @@ function compile(text, src = "") {
             }
             tail_ctx = TAIL_NONE;
         },
-        "EXIT":             0x5000                      // ( -- ) ( R: addr -- ) addr->pc ; no TCO
+        "EXIT": 0x5000  // ( -- ) ( R: addr -- ) addr->pc ; no TCO
     };
 
     function compile_comment(token) {
@@ -371,7 +375,7 @@ function compile(text, src = "") {
     while (token?.length > 0) {
         const result = compile_word(token);
         if (result?.error) {
-            return { errors: [ result ] };
+            return {errors: [result]};
         }
         token = next_token();
     }
@@ -473,23 +477,23 @@ function print_memh(prog, words = {}) {
 // Parse Verilog hexadecimal memory image
 
 function parse_memh(text, src = "") {
-    const {next_char, error} = make_stream(text, src);
+    const {next_char} = make_stream(text, src);
 
-    const CHAR_NL =         0x0A;                       // ASCII newline
-    const CHAR_SLASH =      0x2F;                       // ASCII forward slash
-    const CHAR_0 =          0x30;                       // ASCII digit zero
-    const CHAR_9 =          0x39;                       // ASCII digit nine
-    const HEX_UC_A =        0x37;                       // uppercase 'A' minus 10
-    const CHAR_UC_A =       0x41;                       // ASCII uppercase 'A'
-    const CHAR_UC_F =       0x46;                       // ASCII uppercase 'F'
-    const HEX_LC_A =        0x57;                       // lowercase 'A' minus 10
-    const CHAR_LC_A =       0x61;                       // ASCII lowercase 'A'
-    const CHAR_LC_F =       0x66;                       // ASCII lowercase 'F'
+    const CHAR_NL = 0x0A;  // ASCII newline
+    const CHAR_SLASH = 0x2F;  // ASCII forward slash
+    const CHAR_0 = 0x30;  // ASCII digit zero
+    const CHAR_9 = 0x39;  // ASCII digit nine
+    const HEX_UC_A = 0x37;  // uppercase 'A' minus 10
+    const CHAR_UC_A = 0x41;  // ASCII uppercase 'A'
+    const CHAR_UC_F = 0x46;  // ASCII uppercase 'F'
+    const HEX_LC_A = 0x57;  // lowercase 'A' minus 10
+    const CHAR_LC_A = 0x61;  // ASCII lowercase 'A'
+    const CHAR_LC_F = 0x66;  // ASCII lowercase 'F'
 
     function is_hex_digit(char) {
         return ((char >= CHAR_0) && (char <= CHAR_9))
-            || ((char >= CHAR_UC_A) && (char <= CHAR_UC_F))
-            || ((char >= CHAR_LC_A) && (char <= CHAR_LC_F));
+        || ((char >= CHAR_UC_A) && (char <= CHAR_UC_F))
+        || ((char >= CHAR_LC_A) && (char <= CHAR_LC_F));
     }
     function from_hex_digit(char) {
         if ((char >= CHAR_0) && (char <= CHAR_9)) {
@@ -568,13 +572,12 @@ function parse_memh(text, src = "") {
 //debug     return index.toString(16).padStart(3, "0") + ": " + number.toString(16).padStart(4, "0");
 //debug }).join("\n"));
 
-//FIXME 0x0A CONSTANT '\n'
-
 //debug const simple_source = ": BOOT R@ DROP BOOT ;";
-//debug const multiline_source = `
+//debug const multiline_source = String.raw`
+//debug 0x0A CONSTANT '\n'
 //debug 0x0FFF CONSTANT ADDR_MASK
 //debug VARIABLE COUNTER
-//debug 
+//debug
 //debug : ADJUST ( n -- n+COUNTER )
 //debug     COUNTER @ +
 //debug     DUP COUNTER ! ;
@@ -608,7 +611,7 @@ function parse_memh(text, src = "") {
 //debug : store ( data addr -- )
 //debug     @ ;
 //debug : Hello 72 , 101 , 108 , 108 , 111 ,
-//debug 
+//debug
 //debug ( WARNING! BOOT should not return... )
 //debug : BOOT
 //debug     R> DROP BOOT`;
@@ -626,33 +629,6 @@ function parse_memh(text, src = "") {
 //debug         return index.toString(16).padStart(3, "0") + ": " + number.toString(16).padStart(4, "0");
 //debug     }).join("\n"));
 //debug }
-
-//debug function toCodePoints(string) {
-//debug     return string.split("")/*.map((s) => s.codePointAt(0))*/;
-//debug }
-//debug console.log(toCodePoints(""));
-//debug console.log(toCodePoints("foo"));
-//debug console.log(toCodePoints("foobar"));
-//debug function verify(expect, actual) {
-//debug     expect = toCodePoints(expect);
-//debug     console.log("expect:", expect);
-//debug     actual = toCodePoints(actual);
-//debug     console.log("actual:", actual);
-//debug     if (actual.length < expect.length) {
-//debug         console.log("actual shorter than expect");
-//debug     }
-//debug     if (actual.length > expect.length) {
-//debug         console.log("actual longer than expect");
-//debug     }
-//debug     expect.forEach(function (c, i) {
-//debug         if (c !== actual[i]) {
-//debug             console.log("mismatch at index", i)
-//debug         }
-//debug     });
-//debug }
-//debug verify("", "");
-//debug verify("foo", "f");
-//debug verify("foo", "foobar");
 
 export default Object.freeze({
     make_stream,
