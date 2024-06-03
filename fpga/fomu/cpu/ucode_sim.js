@@ -2,48 +2,67 @@
 // Dale Schumacher
 // created: 2024-05-24
 
-/*jslint bitwise */
+/*jslint bitwise, long */
 
-const OP_NONE =             0x0;                        // no operation
-const OP_ADD =              0x1;                        // remove top
-const OP_SUB =              0x2;                        // push onto top
-const OP_MUL =              0x3;                        // replace top
-const OP_AND =              0x4;                        // swap top and next
-const OP_XOR =              0x5;                        // rotate top 3 elements
-const OP_OR =               0x6;                        // reverse rotate top 3
-const OP_ROL =              0x7;                        // drop 2, push 1
-const OP_2ROL =             0x8;                        // no operation
-const OP_4ROL =             0x9;                        // remove top
-const OP_8ROL =             0xA;                        // push onto top
-const OP_ASR =              0xB;                        // replace top
-const OP_2ASR =             0xC;                        // swap top and next
-const OP_4ASR =             0xD;                        // rotate top 3 elements
-const OP_DSP =              0xE;                        // reverse rotate top 3
-const OP_MEM =              0xF;                        // drop 2, push 1
+const OP_NONE = 0x0;  // a
+const OP_ADD = 0x1;  // a+b
+const OP_SUB = 0x2;  // a-b
+const OP_MUL = 0x3;  // a*b
+const OP_AND = 0x4;  // a&b
+const OP_XOR = 0x5;  // a^b
+const OP_OR = 0x6;  // a|b
+const OP_ROL = 0x7;  // {a[14:0],a[15]}
+const OP_2ROL = 0x8;  // {a[13:0],a[15:14]}
+const OP_4ROL = 0x9;  // {a[11:0],a[15:12]}
+const OP_8ROL = 0xA;  // {a[7:0],a[15:8]}
+const OP_ASR = 0xB;  // {a[15],a[15:1]}
+const OP_2ASR = 0xC;  // {a[15],a[15],a[15:2]}
+const OP_4ASR = 0xD;  // {a[15],a[15],a[15],a[15],a[15:4]}
+//const OP_DSP = 0xE;  // RESERVED (default: 0)
+const OP_MEM = 0xF;  // memory operation
 
-const SE_NONE =             0x0;                        // no stack-effect
-const SE_DROP =             0x1;                        // remove top
-const SE_PUSH =             0x2;                        // push onto top
-const SE_RPLC =             0x3;                        // replace top
-const SE_SWAP =             0x4;                        // swap top and next
-const SE_ROT3 =             0x5;                        // rotate top 3 elements
-const SE_RROT =             0x6;                        // reverse rotate top 3
-const SE_ALU2 =             0x7;                        // drop 2, push 1
+//const SE_NONE = 0x0;  // no stack-effect
+const SE_DROP = 0x1;  // remove top
+const SE_PUSH = 0x2;  // push onto top
+const SE_RPLC = 0x3;  // replace top
+const SE_SWAP = 0x4;  // swap top and next
+const SE_ROT3 = 0x5;  // rotate top 3 elements
+const SE_RROT = 0x6;  // reverse rotate top 3
+const SE_ALU2 = 0x7;  // drop 2, push 1
 
-const MEM_UC =              0x0;                        // uCode memory
-const MEM_PC =              0x1;                        // contents of PC+1 & increment
-const MEM_ERR =             0x2;                        // RESERVED (signals failure)
-const MEM_DEV =             0x3;                        // memory-mapped devices
-const MEM_Q_T =             0x4;                        // uFork quad-memory field T
-const MEM_Q_X =             0x5;                        // uFork quad-memory field X
-const MEM_Q_Y =             0x6;                        // uFork quad-memory field Y
-const MEM_Q_Z =             0x7;                        // uFork quad-memory field Z
+const MEM_UC = 0x0;  // uCode memory
+const MEM_PC = 0x1;  // contents of PC+1 & increment
+//const MEM_ERR = 0x2;  // RESERVED (signals failure)
+const MEM_DEV = 0x3;  // memory-mapped devices
+const MEM_Q_T = 0x4;  // uFork quad-memory field T
+//const MEM_Q_X = 0x5;  // uFork quad-memory field X
+//const MEM_Q_Y = 0x6;  // uFork quad-memory field Y
+//const MEM_Q_Z = 0x7;  // uFork quad-memory field Z
 
 // Create a bounded stack.
 
 function make_stack(depth = 12) {
-    let stack = Array(depth);
+    let stack = new Array(depth);
+    let min = 0;
+    let cnt = 0;
+    let max = 0;
 
+    function adjust(delta) {  // adjust usage statistics
+        if (cnt < 0 && delta > 0) {
+            cnt = delta;  // reset after underflow (FIXME: what about underflow?)
+        } else {
+            cnt += delta;
+        }
+        if (cnt < min) {
+            min = cnt;
+        }
+        if (cnt > max) {
+            max = cnt;
+        }
+    }
+    function stats() {  // return stack usage statistics
+        return {min, cnt, max};
+    }
     function tos() {  // top of stack
         return stack[0];
     }
@@ -82,33 +101,12 @@ function make_stack(depth = 12) {
         return stack.slice();
     }
 
-    let min = 0;
-    let cnt = 0;
-    let max = 0;
-
-    function adjust(delta) {  // adjust usage statistics
-        if (cnt < 0 && delta > 0) {
-            cnt = delta;  // reset after underflow (FIXME: what about underflow?)
-        } else {
-            cnt += delta;
-        }
-        if (cnt < min) {
-            min = cnt;
-        }
-        if (cnt > max) {
-            max = cnt;
-        }
-    }
-    function stats() {  // return stack usage statistics
-        return { min, cnt, max };
-    }
-
     return {
         tos,
         nos,
         perform,
         copy,
-        stats,
+        stats
     };
 }
 
@@ -130,31 +128,66 @@ function make_machine(prog = [], device = []) {
         return err;
     }
 
+    // FIXME: warning() should be a machine option
+    function warning(...msg) {
+        const err = msg.join(" ");
+//debug console.log("WARNING!", err);
+        return err;
+    }
+
     function alu_perform(op, a, b) {
 //debug console.log("alu_perform:", "op=", op, "a=", a, "b=", b);
-        if (op === OP_NONE) return a;
-        if (op === OP_ADD) return (a + b);
-        if (op === OP_SUB) return (a - b);
-        if (op === OP_MUL) return (a * b);
-        if (op === OP_AND) return (a & b);
-        if (op === OP_XOR) return (a ^ b);
-        if (op === OP_OR) return (a | b);
-        if (op === OP_ROL) return (a << 1) | (a >> 15);
-        if (op === OP_2ROL) return (a << 2) | (a >> 14);
-        if (op === OP_4ROL) return (a << 4) | (a >> 12);
-        if (op === OP_8ROL) return (a << 8) | (a >> 8);
+        if (op === OP_NONE) {
+            return a;
+        }
+        if (op === OP_ADD) {
+            return (a + b);
+        }
+        if (op === OP_SUB) {
+            return (a - b);
+        }
+        if (op === OP_MUL) {
+            return (a * b);
+        }
+        if (op === OP_AND) {
+            return (a & b);
+        }
+        if (op === OP_XOR) {
+            return (a ^ b);
+        }
+        if (op === OP_OR) {
+            return (a | b);
+        }
+        if (op === OP_ROL) {
+            return (a << 1) | (a >> 15);
+        }
+        if (op === OP_2ROL) {
+            return (a << 2) | (a >> 14);
+        }
+        if (op === OP_4ROL) {
+            return (a << 4) | (a >> 12);
+        }
+        if (op === OP_8ROL) {
+            return (a << 8) | (a >> 8);
+        }
         const msb = a & 0x8000;
-        if (op === OP_ASR) return (a >> 1) | msb;
-        if (op === OP_2ASR) return (a >> 2) | msb | (msb >> 1);
-        if (op === OP_4ASR) return (a >> 4) | msb | (msb >> 1) | (msb >> 2) | (msb >> 3);
+        if (op === OP_ASR) {
+            return (a >> 1) | msb;
+        }
+        if (op === OP_2ASR) {
+            return (a >> 2) | msb | (msb >> 1);
+        }
+        if (op === OP_4ASR) {
+            return (a >> 4) | msb | (msb >> 1) | (msb >> 2) | (msb >> 3);
+        }
         return 0;
     }
 
-    const qram = Array(1<<12).fill(0).map(function (n) {
-        return {t:n, x:n, y:n, z:n};
+    const qram = new Array(1 << 12).fill(0).map(function (n) {
+        return {t: n, x: n, y: n, z: n};
     });
-    const qrom = Array(1<<13).fill(0).map(function (n) {
-        return {t:n, x:n, y:n, z:n};
+    const qrom = new Array(1 << 13).fill(0).map(function (n) {
+        return {t: n, x: n, y: n, z: n};
     });
     function mem_perform(range, wr_en, addr, data) {
 //debug console.log("mem_perform:", "range=", range, "wr_en=", wr_en, "addr=", addr, "data=", data);
@@ -182,30 +215,22 @@ function make_machine(prog = [], device = []) {
             }
             return error("unknown device.", "id:", id, "reg:", reg);
         }
-        if (range & MEM_Q_T) {
-            const quad =
-                ( ((addr & 0xC000) === 0x4000) ? qram[addr & 0x0FFF]
-                : ((addr & 0xC000) === 0x0000) ? qrom[addr & 0x1FFF]
-                : {t:0, x:0, y:0, z:0} );
+        if ((range & MEM_Q_T) !== 0) {
+            const quad = (
+                ((addr & 0xC000) === 0x4000)
+                ? qram[addr & 0x0FFF]
+                : (
+                    ((addr & 0xC000) === 0x0000)
+                    ? qrom[addr & 0x1FFF]
+                    : {t: 0, x: 0, y: 0, z: 0}
+                )
+            );
+            const field_names = ["t", "x", "y", "z"];
+            const field = field_names[range & 0x3];
             if (wr_en) {
-                if (range === MEM_Q_T) {
-                    quad.t = data;
-                }
-                if (range === MEM_Q_X) {
-                    quad.x = data;
-                }
-                if (range === MEM_Q_Y) {
-                    quad.y = data;
-                }
-                if (range === MEM_Q_Z) {
-                    quad.z = data;
-                }
+                quad[field] = data;
             }
-            return
-                ( range === MEM_Q_X ? quad.x
-                : range === MEM_Q_Y ? quad.y
-                : range === MEM_Q_Z ? quad.z
-                : quad.t );
+            return quad[field];
         }
         return error("illegal memory operation.", "range:", range, "addr:", addr);
     }
@@ -241,7 +266,7 @@ function make_machine(prog = [], device = []) {
             }
             if (r_se === 0x0) {  // unconditional jump/call
                 pc = addr;
-            } else if (r_se == 0x1) {  // jump/call, if zero
+            } else if (r_se === 0x1) {  // jump/call, if zero
                 if (tos === 0) {
                     pc = addr;
                 }
@@ -251,7 +276,11 @@ function make_machine(prog = [], device = []) {
                     rstack.perform(SE_DROP);
                 } else {
                     pc = addr;
-                    const data = (r_se & 0x1 ? tors - 1 : tors + 1);
+                    const data = (
+                        r_se & 0x1
+                        ? tors - 1
+                        : tors + 1
+                    );
                     rstack.perform(SE_RPLC, data);
                 }
             } else {
@@ -263,8 +292,13 @@ function make_machine(prog = [], device = []) {
                 const wr_en = (instr & 0x0080);             // {0:read, 1:write}
                 const d_drop = (instr & 0x0800) >> 4;       // 2DROP flag **deprecated**
                 if (d_drop !== wr_en) {
-                    console.log("WARNING! W/R does not match 2DROP.",
-                        "next_pc=", pc, "instr=", "0x"+instr.toString(16).padStart(4, "0"));
+                    warning(
+                        "W/R does not match 2DROP.",
+                        "next_pc=",
+                        pc,
+                        "instr=",
+                        "0x" + instr.toString(16).padStart(4, "0")
+                    );
                 }
                 const range = (instr & 0x0070) >> 4;        // memory range
                 result = mem_perform(range, wr_en, tos, nos);
@@ -280,16 +314,10 @@ function make_machine(prog = [], device = []) {
                 }
             } else {
                 // evaluation instruction
-                const alu_a =
-                    ( sel_a === 0x1 ? nos
-                    : sel_a === 0x2 ? tors
-                    : sel_a === 0x3 ? 0x0000
-                    : tos );
-                const alu_b =
-                    ( sel_b === 0x1 ? 0x0001
-                    : sel_b === 0x2 ? 0x8000
-                    : sel_b === 0x3 ? 0xFFFF
-                    : tos );
+                const src_a = [tos, nos, tors, 0x0000];
+                const alu_a = src_a[sel_a & 0x3];
+                const src_b = [tos, 0x0001, 0x8000, 0xFFFF];
+                const alu_b = src_b[sel_b & 0x3];
                 result = alu_perform(alu_op, alu_a, alu_b) & 0xFFFF;
 //debug console.log(result, "=", "alu_perform()");
             }
@@ -303,9 +331,7 @@ function make_machine(prog = [], device = []) {
         }
     }
 
-    return {
-        step,
-    };
+    return {step};
 }
 
 //debug import ucode from "./ucode.js";
@@ -335,20 +361,20 @@ function make_machine(prog = [], device = []) {
 //debug console.log(s.tos(), s.nos(), s.copy());
 //debug console.log(s.stats());
 
-//debug const source = `
+//debug const source = String.raw`
 //debug : PANIC! FAIL PANIC! ;      ( if BOOT returns... )
-//debug 
+//debug
 //debug 0x03 CONSTANT ^C
 //debug 0x0A CONSTANT '\n'
 //debug 0x0D CONSTANT '\r'
 //debug 0x20 CONSTANT BL
-//debug 
+//debug
 //debug : = ( a b -- a==b )
 //debug     XOR
 //debug : 0= ( n -- n==0 )
 //debug : NOT ( flag -- !flag )
 //debug     IF FALSE ELSE TRUE THEN ;
-//debug 
+//debug
 //debug : TX? ( -- ready )
 //debug : EMIT?
 //debug     0x00 IO@ ;
@@ -368,12 +394,12 @@ function make_machine(prog = [], device = []) {
 //debug     '\r' = IF
 //debug         '\n' EMIT
 //debug     THEN ;
-//debug 
+//debug
 //debug : ECHOLOOP
 //debug     KEY DUP ECHO
 //debug     ^C = IF EXIT THEN       ( abort! )
 //debug     ECHOLOOP ;
-//debug 
+//debug
 //debug ( WARNING! if BOOT returns we PANIC! )
 //debug : BOOT
 //debug     ECHOLOOP EXIT
@@ -392,6 +418,4 @@ function make_machine(prog = [], device = []) {
 //      console.log("rv:", rv);
 //debug }
 
-export default Object.freeze({
-    make_machine,
-});
+export default Object.freeze({make_machine});
