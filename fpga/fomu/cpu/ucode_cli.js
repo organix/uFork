@@ -7,7 +7,7 @@
 
 //      deno run ucode_cli.js <ucode.f >ucode_rom.mem
 
-/*jslint deno, bitwise */
+/*jslint deno */
 
 import ucode from "./ucode.js";
 

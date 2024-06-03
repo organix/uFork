@@ -1,4 +1,4 @@
-// Runs the uCode simulator as a terminal application, hooking up the CPI's I/O
+// Runs the uCode simulator as a terminal application, hooking up the CPU's I/O
 // to STDIN and STDOUT.
 
 // Usage:
@@ -56,29 +56,28 @@ function tx_store(byte) {
 
 // 8-bit UART register interface.
 
-const B_FALSE = 0x00;                               // 8-bit Boolean FALSE
-const B_TRUE = 0xFF;                                // 8-bit Boolean TRUE
+const B_FALSE = 0x00;                                   // 8-bit Boolean FALSE
+const B_TRUE = 0xFF;                                    // 8-bit Boolean TRUE
 
-const TX_RDY = 0x0;                                 // ready to transmit
-const TX_DAT = 0x1;                                 // data to transmit
-const RX_RDY = 0x2;                                 // receive complete
-const RX_DAT = 0x3;                                 // data received
+function uc_bool(value) {
+    if (value) {
+        return B_TRUE;
+    }
+    return B_FALSE;
+}
+
+const TX_RDY = 0x0;                                     // ready to transmit
+const TX_DAT = 0x1;                                     // data to transmit
+const RX_RDY = 0x2;                                     // receive complete
+const RX_DAT = 0x3;                                     // data received
 
 const uart = Object.freeze({
     read(reg) {
         if (reg === TX_RDY) {
-            return (
-                tx_ready()
-                ? B_TRUE
-                : B_FALSE
-            );
+            return uc_bool(tx_ready());
         }
         if (reg === RX_RDY) {
-            return (
-                rx_ready()
-                ? B_TRUE
-                : B_FALSE
-            );
+            return uc_bool(rx_ready());
         }
         if (reg === RX_DAT) {
             return rx_fetch();
