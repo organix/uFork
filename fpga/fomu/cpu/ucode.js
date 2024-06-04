@@ -439,9 +439,7 @@ function disasm(code, words = {}) {
 
 function print_memh(prog, words = {}) {
     let lines = [
-//      "/*  CODE    ADR  DISASM                  NAMES                     */"
-        "//  CODE    ADR  DISASM                  NAMES                     //",
-        "/////////////////////////////////////////////////////////////////////"
+        "/*  CODE    ADR  DISASM                  NAMES                     */"
 //           021f // 0ac: (LIT)                   RX? KEY?
 //           0002 // 0ad: 0x0002
 //           533f // 0ae: IO@ EXIT
@@ -483,6 +481,7 @@ function parse_memh(text, src = "") {
     const {next_char} = make_stream(text, src);
 
     const CHAR_NL = 0x0A;  // ASCII newline
+    const CHAR_STAR = 0x2A;  // ASCII asterisk
     const CHAR_SLASH = 0x2F;  // ASCII forward slash
     const CHAR_0 = 0x30;  // ASCII digit zero
     const CHAR_9 = 0x39;  // ASCII digit nine
@@ -514,9 +513,25 @@ function parse_memh(text, src = "") {
         let cp = next_char();
         while ((typeof cp === "number") && !is_hex_digit(cp)) {
             if (cp === CHAR_SLASH) {
-                // skip comment to end-of-line
-                while ((typeof cp === "number") && (cp !== CHAR_NL)) {
+                cp = next_char();
+                if (cp === CHAR_SLASH) {
+                    // skip comment to end-of-line
                     cp = next_char();
+                    while ((typeof cp === "number") && (cp !== CHAR_NL)) {
+                        cp = next_char();
+                    }
+                } else if (cp === CHAR_STAR) {
+                    // skip comment to closing delimiter
+                    cp = next_char();
+                    while (true) {
+                        while ((typeof cp === "number") && (cp !== CHAR_STAR)) {
+                            cp = next_char();
+                        }
+                        cp = next_char();
+                        if ((typeof cp !== "number") || (cp === CHAR_SLASH)) {
+                            break;
+                        }
+                    }
                 }
             }
             cp = next_char();
@@ -555,8 +570,7 @@ function parse_memh(text, src = "") {
 //debug     + "]");
 
 //debug const test_memh = `
-//debug //  CODE    ADR  DISASM                  NAMES                     //
-//debug /////////////////////////////////////////////////////////////////////
+//debug /*  CODE    ADR  DISASM                  NAMES                     */
 //debug     c042 // 000: BOOT
 //debug     521f // 001: (CONST)                 ADDR_MASK
 //debug     0fff // 002: 0x0fff

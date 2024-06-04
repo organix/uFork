@@ -69,12 +69,12 @@ to communicate with the serial device.
 
 On a Mac, determine the available devices like this:
 
-    $ ls /dev/tty.*
+    ls /dev/tty.*
 
 Then run the `screen` program to connect
 to the serial port at your desired baud-rate.
 
-    $ screen /dev/tty.usbserial-AD0JIXTZ 115200
+    screen /dev/tty.usbserial-AD0JIXTZ 115200
 
 Use the key sequence `Ctrl-a + k` to kill the terminal session.
 

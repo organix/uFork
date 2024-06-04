@@ -1,5 +1,4 @@
-//  CODE    ADR  DISASM                  NAMES                     //
-/////////////////////////////////////////////////////////////////////
+/*  CODE    ADR  DISASM                  NAMES                     */
     c24c // 000: BOOT
     002f // 001: FAIL                    PANIC!
     8001 // 002: jump(001)
