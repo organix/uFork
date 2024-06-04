@@ -4,6 +4,8 @@
 
 /*jslint bitwise, long */
 
+import hex from "https://ufork.org/lib/hex.js";
+
 const OP_NONE = 0x0;  // a
 const OP_ADD = 0x1;  // a+b
 const OP_SUB = 0x2;  // a-b
@@ -297,7 +299,7 @@ function make_machine(prog = [], device = []) {
                         "next_pc=",
                         pc,
                         "instr=",
-                        "0x" + instr.toString(16).padStart(4, "0")
+                        "0x" + hex.from(instr, 16)
                     );
                 }
                 const range = (instr & 0x0070) >> 4;        // memory range
