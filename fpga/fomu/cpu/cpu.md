@@ -18,6 +18,18 @@
     * `02`: RX?
     * `03`: RX@
 
+  * `1x`: SPI Flash Memory
+    * `16`: ISR
+    * `17`: ICR
+    * `18`: CR0
+    * `19`: CR1
+    * `1A`: CR2
+    * `1B`: BR
+    * `1C`: SR
+    * `1D`: TXDR
+    * `1E`: RXDR
+    * `1F`: CSR
+
 ## Memory Models
 
 The uCode micro-coded processor is designed to implement

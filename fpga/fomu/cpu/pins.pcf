@@ -34,12 +34,12 @@ set_io user_4 F5
 # set_io touch_4 F5
 
 # SPI interface
-# set_io spi_mosi F1
-# set_io spi_miso E1
-# set_io spi_clk D1
+set_io spi_mosi F1
+set_io spi_miso E1
+set_io spi_clk D1
 # set_io spi_io2 F2
 # set_io spi_io3 B1
-# set_io spi_cs C1
+set_io spi_cs C1
 
 # USB interface (should be statically driven if unused)
 set_io usb_dn A2
