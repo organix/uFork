@@ -10,17 +10,19 @@
 {
     pkgs ? import (
         fetchTarball
-        "https://github.com/NixOS/nixpkgs/archive/cc54fb41d137.tar.gz"
+        "https://github.com/NixOS/nixpkgs/archive/718895c14907b60069520b6394b4dbb6e3aa9c33.tar.gz"
     ) {}
 }:
 
 pkgs.mkShell {
     buildInputs = [
 
-# LiteX prerequisites.
+# LiteX prerequisites. Python 3.9 appears to be the highest version that works
+# correctly with Migen, so the Nix hash is pinned accordinly.
 
         pkgs.python3                      # https://www.python.org/
-        pkgs.python311Packages.pip        # https://pypi.org/project/pip/
+        pkgs.python39Packages.pip         # https://pypi.org/project/pip/
+        pkgs.python39Packages.setuptools  # https://pypi.org/project/setuptools/
         pkgs.json_c                       # https://github.com/json-c/json-c/
         pkgs.libevent                     # https://libevent.org/
         pkgs.verilator                    # https://www.veripool.org/verilator/
@@ -28,18 +30,26 @@ pkgs.mkShell {
 
     shellHook = ''
 
-# Instead of polluting the "site-packages" directory at the system or user
-# level, use one at the project level.
+# Instead of polluting the site-packages directory at the system or user level,
+# use a dedicated site-packages at the project level.
 
-        PYTHONPATH="$PYTHONPATH:$(pwd)/python_pkg/"
-        export PYTHONPATH
+        export PYTHONPATH="$(pwd)/site-packages/:$PYTHONPATH"
 
 # Take the absence of the Python packages directory to mean installation is
 # required.
 
-        if ! test -d python_pkg
+        if ! test -d site-packages
         then
             ./install.sh
         fi
+
+# We also shadow site-packages/* with litex_repos/*, because otherwise local
+# module resolution within litex_repos/litex-boards fails, and outdated packages
+# in site-packages override the up-to-date sources in litex_repos.
+
+        for repo in litex_repos/*
+        do
+            export PYTHONPATH="$(pwd)/$repo/:$PYTHONPATH"
+        done
     '';
 }
