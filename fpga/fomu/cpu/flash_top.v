@@ -233,14 +233,32 @@ module top (
             temp1 <= {4'b000, accum[3:0]};
             state <= 8'h14;
         end else if (state == 8'h14) begin
+            uart_wdata <= temp0 + (temp0 < 8'h0A ? "0" : ("A" - 10));
+            uart_wr <= 1'b1;
+            uart_addr <= TX_DAT;
+            uart_en <= 1'b1;
+            state <= 8'h15;
+            /*
             accum <= temp0 + (temp0 < 8'h0A ? "0" : ("A" - 10));
             linkr <= 8'h15;
             state <= 8'h80;
+            */
         end else if (state == 8'h15) begin
-            accum <= temp1 + (temp1 < 8'h0A ? "0" :("A" - 10));
+            uart_wdata <= temp1 + (temp1 < 8'h0A ? "0" : ("A" - 10));
+            //uart_wr <= 1'b1;
+            //uart_addr <= TX_DAT;
+            //uart_en <= 1'b1;
+            state <= 8'h16;
+            /*
+            accum <= temp1 + (temp1 < 8'h0A ? "0" : ("A" - 10));
             linkr <= 8'h16;
             state <= 8'h80;
+            */
         end else if (state == 8'h16) begin
+            uart_wr <= 1'b0;
+            uart_en <= 1'b0;
+            /*
+            */
             accum <= 8'h0D;
             state <= 8'h18;
         end else if (state == 8'h18) begin              // emit char
