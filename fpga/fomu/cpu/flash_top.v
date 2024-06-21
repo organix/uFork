@@ -204,6 +204,8 @@ module top (
     reg [7:0] state = 0;
     reg [7:0] accum = 0;
     reg [7:0] linkr = 0;
+    reg [7:0] temp0 = 0;
+    reg [7:0] temp1 = 0;
     always @(posedge clk) begin
         if (delay > 0) begin
             delay <= delay - 1'b1;
@@ -225,8 +227,23 @@ module top (
         end else if (state == 8'h11) begin
             state <= (accum == 8'h1B ? 8'h7F : 8'h12);
         end else if (state == 8'h12) begin
-            state <= (accum == 8'h03 ? 8'hFF : 8'h18);
-        end else if (state == 8'h18) begin
+            state <= (accum == 8'h03 ? 8'hFF : 8'h13);
+        end else if (state == 8'h13) begin              // emit hex
+            temp0 <= {4'b000, accum[7:4]};
+            temp1 <= {4'b000, accum[3:0]};
+            state <= 8'h14;
+        end else if (state == 8'h14) begin
+            accum <= temp0 + (temp0 < 8'h0A ? "0" : ("A" - 10));
+            linkr <= 8'h15;
+            state <= 8'h80;
+        end else if (state == 8'h15) begin
+            accum <= temp1 + (temp1 < 8'h0A ? "0" :("A" - 10));
+            linkr <= 8'h16;
+            state <= 8'h80;
+        end else if (state == 8'h16) begin
+            accum <= 8'h0D;
+            state <= 8'h18;
+        end else if (state == 8'h18) begin              // emit char
             linkr <= 8'h19;
             state <= 8'h80;
         end else if (state == 8'h19) begin
