@@ -220,9 +220,19 @@ module top (
         end else if (state == 8'h04) begin
             state <= 8'h10;
         end else if (state == 8'h10) begin              // echo loop
-            linkr <= 8'h18;
+            linkr <= 8'h11;
             state <= 8'h88;
+        end else if (state == 8'h11) begin
+            state <= (accum == 8'h1B ? 8'h7F : 8'h12);
+        end else if (state == 8'h12) begin
+            state <= (accum == 8'h03 ? 8'hFF : 8'h18);
         end else if (state == 8'h18) begin
+            linkr <= 8'h19;
+            state <= 8'h80;
+        end else if (state == 8'h19) begin
+            state <= (accum == 8'h0D ? 8'h1A : 8'h1F);
+        end else if (state == 8'h1A) begin
+            accum <= 8'h0A;
             linkr <= 8'h1F;
             state <= 8'h80;
         end else if (state == 8'h1F) begin
