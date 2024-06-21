@@ -32,7 +32,7 @@
 
 ## Memory Models
 
-The uCode micro-coded processor is designed to implement
+The uCode micro-code processor is designed to implement
 the uFork actor-oriented processor.
 The uCode memory is organized as 16-bit words
 with a 12-bit (4k) maximum address range.

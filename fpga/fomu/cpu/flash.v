@@ -40,6 +40,7 @@ module flash #(
     output                  o_sclk,                     // SPI controller clock
     input                   i_en,                       // device enable
     input                   i_wr,                       // {0:read, 1:write}
+    output                  o_ack,                      // acknowledgement
     input             [3:0] i_addr,                     // defined in "spi_reg.vh"
     input             [7:0] i_data,                     // data to write
     output reg        [7:0] o_data                      // last data read
@@ -55,6 +56,10 @@ module flash #(
         .SBADRI1(i_addr[1]),
         .SBADRI2(i_addr[2]),
         .SBADRI3(i_addr[3]),
+        .SBADRI4(1'b0),  // select the SPI block connected to the onboard Flash
+        .SBADRI5(1'b0),
+        .SBADRI6(1'b0),
+        .SBADRI7(1'b0),
         //.SBDATI(i_data),
         .SBDATI0(i_data[0]),
         .SBDATI1(i_data[1]),
@@ -73,6 +78,7 @@ module flash #(
         .SBDATO5(o_data[5]),
         .SBDATO6(o_data[6]),
         .SBDATO7(o_data[7]),
+        .SBACKO(o_ack),
         .MCSNO0(o_cs),
         .MO(o_copi),
         .MI(i_cipo),

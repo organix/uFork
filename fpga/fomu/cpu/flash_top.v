@@ -59,9 +59,9 @@ module top (
     wire clk = clk12;
 
     // connect RGB LED driver (see: FPGA-TN-1288-ICE40LEDDriverUsageGuide.pdf)
-    wire led_r;
-    wire led_g;
-    wire led_b;
+    reg led_r = 0;
+    reg led_g = 0;
+    reg led_b = 0;
     SB_RGBA_DRV #(
         .CURRENT_MODE("0b1"),                           // half current
         .RGB0_CURRENT("0b001111"),                      // 8 mA
@@ -120,6 +120,7 @@ module top (
 
         .i_en(flash_en),
         .i_wr(flash_wr),
+        .o_ack(flash_ack),
         .i_addr(flash_addr),
         .i_data(flash_wdata),
 
@@ -127,6 +128,7 @@ module top (
     );
     wire flash_en;
     wire flash_wr;
+    wire flash_ack;
     wire [3:0] flash_addr;
     wire [7:0] flash_wdata;
     wire [7:0] flash_rdata;
@@ -191,49 +193,89 @@ module top (
 
         .o_data(uart_rdata)
     );
-    wire uart_en = (state == 1)
-                || (state == 3)
-                || (state == 5)
-                || (state == 7);
-    wire uart_wr = (state == 7);
-    wire [3:0] uart_addr =
-        ( state == 1 ? RX_RDY
-        : state == 3 ? RX_DAT
-        : state == 5 ? TX_RDY
-        : state == 7 ? TX_DAT
-        : 4'h0 );
-    wire [7:0] uart_wdata =
-        ( state == 7 : buffer
-        : 8'h00 );
+    reg uart_en = 1'b0;
+    reg uart_wr = 1'b0;
+    reg [3:0] uart_addr;
+    reg [7:0] uart_wdata;
     wire [7:0] uart_rdata;
 
-    // console echo state-machine
-    reg [7:0] buffer = 0;
-    reg [2:0] state = 0;
+    // flash dump FSM
+    reg [7:0] delay = 0;
+    reg [7:0] state = 0;
+    reg [7:0] accum = 0;
+    reg [7:0] linkr = 0;
     always @(posedge clk) begin
-        if (state == 0) begin                           // wait for init
-            state <= run ? 1 : 0;
-        end else if (state == 1) begin                  // read rx status
-            state <= 2;
-        end else if (state == 2) begin                  // wait for rx ready
-            state <= uart_rdata ? 3 : 1;
-        end else if (state == 3) begin                  // read rx data
-            state <= 4;
-        end else if (state == 4) begin                  // copy to buffer
-            buffer <= uart_rdata;
-            state <= 5;
-        end else if (state == 5) begin                  // read tx status
-            state <= 6;
-        end else if (state == 6) begin                  // wait for tx ready
-            state <= uart_rdata ? 7 : 5;
-        end else if (state == 7) begin                  // write tx data
-            state <= 1;
+        if (delay > 0) begin
+            delay <= delay - 1'b1;
+        end else if (state == 8'h00) begin              // wait for init
+            state <= run ? 8'h01 : 8'h00;
+        end else if (state == 8'h01) begin
+            delay <= 8'hFF;
+            state <= 8'h02;
+        end else if (state == 8'h02) begin
+            {led_r, led_g, led_b} <= 3'b001;
+            state <= 8'h03;
+        end else if (state == 8'h03) begin
+            state <= 8'h04;
+        end else if (state == 8'h04) begin
+            state <= 8'h10;
+        end else if (state == 8'h10) begin              // echo loop
+            linkr <= 8'h18;
+            state <= 8'h88;
+        end else if (state == 8'h18) begin
+            linkr <= 8'h1F;
+            state <= 8'h80;
+        end else if (state == 8'h1F) begin
+            state <= 8'h10;
+        end else if (state == 8'h7F) begin
+            state <= 8'hFE;
+        end else if (state == 8'h80) begin              // putchar
+            uart_addr <= TX_RDY;
+            uart_en <= 1'b1;
+            state <= 8'h81;
+        end else if (state == 8'h81) begin
+            uart_en <= 1'b0;
+            state <= 8'h82;
+        end else if (state == 8'h82) begin
+            state <= (uart_rdata ? 8'h84 : 8'h80);
+        end else if (state == 8'h84) begin
+            uart_wdata <= accum;
+            uart_wr <= 1'b1;
+            uart_addr <= TX_DAT;
+            uart_en <= 1'b1;
+            state <= 8'h85;
+        end else if (state == 8'h85) begin
+            uart_wr <= 1'b0;
+            uart_en <= 1'b0;
+            state <= 8'h86;
+        end else if (state == 8'h86) begin
+            state <= linkr;
+        end else if (state == 8'h88) begin              // getchar
+            uart_addr <= RX_RDY;
+            uart_en <= 1'b1;
+            state <= 8'h89;
+        end else if (state == 8'h89) begin
+            uart_en <= 1'b0;
+            state <= 8'h8A;
+        end else if (state == 8'h8A) begin
+            state <= (uart_rdata ? 8'h8C : 8'h88);
+        end else if (state == 8'h8C) begin
+            uart_addr <= RX_DAT;
+            uart_en <= 1'b1;
+            state <= 8'h8D;
+        end else if (state == 8'h8D) begin
+            uart_en <= 1'b0;
+            state <= 8'h8E;
+        end else if (state == 8'h8E) begin
+            accum <= uart_rdata;
+            state <= linkr;
+        end else if (state == 8'hFE) begin              // Success!
+            {led_r, led_g, led_b} <= 3'b010;
+            state <= 8'hFE;
+        end else begin                                  // FAILURE!
+            {led_r, led_g, led_b} <= 3'b100;
+            state <= 8'hFF;
         end
     end
-
-    // drive LEDs
-    assign led_r = !serial_tx;
-    assign led_g = !serial_rx;
-//    assign led_b = run;
 
 endmodule
