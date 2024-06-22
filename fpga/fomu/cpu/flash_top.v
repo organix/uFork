@@ -126,11 +126,11 @@ module top (
 
         .o_data(flash_rdata)
     );
-    wire flash_en;
-    wire flash_wr;
+    reg flash_en;
+    reg flash_wr;
     wire flash_ack;
-    wire [3:0] flash_addr;
-    wire [7:0] flash_wdata;
+    reg [3:0] flash_addr;
+    reg [7:0] flash_wdata;
     wire [7:0] flash_rdata;
 
     // designate user i/o pins
@@ -206,6 +206,8 @@ module top (
     reg [7:0] linkr = 0;
     reg [7:0] temp0 = 0;
     reg [7:0] temp1 = 0;
+    wire [7:0] hex0 = {4'b000, accum[3:0]} + (accum[3:0] < 4'h0A ? "0" : ("A" - 10));
+    wire [7:0] hex1 = {4'b000, accum[7:4]} + (accum[7:4] < 4'h0A ? "0" : ("A" - 10));
     always @(posedge clk) begin
         if (delay > 0) begin
             delay <= delay - 1'b1;
@@ -217,9 +219,22 @@ module top (
         end else if (state == 8'h02) begin
             {led_r, led_g, led_b} <= 3'b001;
             state <= 8'h03;
-        end else if (state == 8'h03) begin
-            state <= 8'h04;
+        end else if (state == 8'h03) begin              // wait for key
+            linkr <= 8'h04;
+            state <= 8'h88;
         end else if (state == 8'h04) begin
+            accum <= `SPI_CR0;
+            linkr <= 8'h05;
+            state <= 8'h20;
+        end else if (state == 8'h05) begin
+            accum <= `SPI_CR1;
+            linkr <= 8'h06;
+            state <= 8'h20;
+        end else if (state == 8'h06) begin
+            accum <= `SPI_CR2;
+            linkr <= 8'h07;
+            state <= 8'h20;
+        end else if (state == 8'h07) begin
             state <= 8'h10;
         end else if (state == 8'h10) begin              // echo loop
             linkr <= 8'h11;
@@ -233,7 +248,7 @@ module top (
             temp1 <= {4'b000, accum[3:0]};
             state <= 8'h14;
         end else if (state == 8'h14) begin
-            uart_wdata <= temp0 + (temp0 < 8'h0A ? "0" : ("A" - 10));
+            uart_wdata <= hex1;//temp0 + (temp0 < 8'h0A ? "0" : ("A" - 10));
             uart_wr <= 1'b1;
             uart_addr <= TX_DAT;
             uart_en <= 1'b1;
@@ -244,7 +259,7 @@ module top (
             state <= 8'h80;
             */
         end else if (state == 8'h15) begin
-            uart_wdata <= temp1 + (temp1 < 8'h0A ? "0" : ("A" - 10));
+            uart_wdata <= hex0;//temp1 + (temp1 < 8'h0A ? "0" : ("A" - 10));
             //uart_wr <= 1'b1;
             //uart_addr <= TX_DAT;
             //uart_en <= 1'b1;
@@ -272,6 +287,45 @@ module top (
             state <= 8'h80;
         end else if (state == 8'h1F) begin
             state <= 8'h10;
+        end else if (state == 8'h20) begin              // dump SPI register
+            flash_addr <= accum;
+            flash_en <= 1'b1;
+            state <= 8'h21;
+        end else if (state == 8'h21) begin
+            //accum <= flash_rdata;
+            //flash_en <= 1'b0;
+            temp0 <= (flash_ack ? "+" : "-");
+            state <= 8'h22;
+        end else if (state == 8'h22) begin
+            accum <= flash_rdata;
+            flash_en <= 1'b0;
+            temp1 <= (flash_ack ? "+" : "-");
+            state <= 8'h23;
+        end else if (state == 8'h23) begin
+            uart_wdata <= hex1;
+            uart_wr <= 1'b1;
+            uart_addr <= TX_DAT;
+            uart_en <= 1'b1;
+            state <= 8'h24;
+        end else if (state == 8'h24) begin
+            uart_wdata <= hex0;
+            state <= 8'h25;
+        end else if (state == 8'h25) begin
+            uart_wdata <= temp0;
+            state <= 8'h26;
+        end else if (state == 8'h26) begin
+            uart_wdata <= temp1;
+            state <= 8'h27;
+        end else if (state == 8'h27) begin
+            uart_wdata <= 8'h0D;
+            state <= 8'h28;
+        end else if (state == 8'h28) begin
+            uart_wdata <= 8'h0A;
+            state <= 8'h2F;
+        end else if (state == 8'h2F) begin
+            uart_wr <= 1'b0;
+            uart_en <= 1'b0;
+            state <= linkr;
         end else if (state == 8'h7F) begin
             state <= 8'hFE;
         end else if (state == 8'h80) begin              // putchar
