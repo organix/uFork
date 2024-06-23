@@ -1,6 +1,6 @@
 // Installs the clock device.
 
-/*jslint browser */
+/*jslint web */
 
 import ufork from "./ufork.js";
 

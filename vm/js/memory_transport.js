@@ -9,7 +9,7 @@
 // Intermittent communication failure will be simulated if the 'flakiness'
 // parameter is a number between 0 and 1.
 
-/*jslint browser */
+/*jslint web */
 
 function memory_transport(flakiness, max_latency) {
     let listeners = Object.create(null);

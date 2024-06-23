@@ -1,7 +1,5 @@
 // The SVG device draws into an SVG element, based on the commands it receives.
 
-/*jslint browser */
-
 import ufork from "./ufork.js";
 import svg_drawing from "https://ufork.org/lib/svg_drawing.js";
 

@@ -74,7 +74,7 @@
 // To initialize the core, call the 'h_initialize' method and run the returned
 // requestor to completion.
 
-/*jslint browser, long, bitwise, white */
+/*jslint web, long, bitwise, white */
 
 import parseq from "https://ufork.org/lib/parseq.js";
 import requestorize from "https://ufork.org/lib/rq/requestorize.js";
