@@ -220,7 +220,8 @@ module top (
             {led_r, led_g, led_b} <= 3'b001;
             state <= 8'h03;
         end else if (state == 8'h03) begin              // wait for key
-            linkr <= 8'h04;
+            //linkr <= 8'h04;
+            linkr <= 8'h08;
             state <= 8'h88;
         end else if (state == 8'h04) begin
             accum <= `SPI_CR0;
@@ -236,6 +237,28 @@ module top (
             state <= 8'h20;
         end else if (state == 8'h07) begin
             state <= 8'h10;
+        end else if (state == 8'h08) begin              // set and check bit-rate
+            accum <= `SPI_BR;
+            linkr <= 8'h09;
+            state <= 8'h20;
+        end else if (state == 8'h09) begin
+            flash_wdata <= 8'b0011_1111;
+            accum <= `SPI_BR;
+            linkr <= 8'h0A;
+            state <= 8'h29;
+        end else if (state == 8'h0A) begin
+            accum <= `SPI_BR;
+            linkr <= 8'h0B;
+            state <= 8'h20;
+        end else if (state == 8'h0B) begin
+            flash_wdata <= 8'b0000_0111;
+            accum <= `SPI_BR;
+            linkr <= 8'h0C;
+            state <= 8'h29;
+        end else if (state == 8'h0C) begin
+            accum <= `SPI_BR;
+            linkr <= 8'h10;
+            state <= 8'h20;
         end else if (state == 8'h10) begin              // echo loop
             linkr <= 8'h11;
             state <= 8'h88;
@@ -322,6 +345,26 @@ module top (
         end else if (state == 8'h28) begin
             uart_wdata <= 8'h0A;
             state <= 8'h2F;
+        end else if (state == 8'h29) begin              // write SPI register
+            // asssume flash_wdata is already loaded
+            flash_addr <= accum;
+            flash_wr <= 1'b1;
+            flash_en <= 1'b1;
+            uart_wdata <= "*";
+            uart_wr <= 1'b1;
+            uart_addr <= TX_DAT;
+            uart_en <= 1'b1;
+            state <= 8'h2A;
+        end else if (state == 8'h2A) begin
+            //flash_en <= 1'b0;
+            temp0 <= (flash_ack ? "+" : "-");
+            uart_wdata <= hex1;
+            state <= 8'h2B;
+        end else if (state == 8'h2B) begin
+            flash_en <= 1'b0;
+            temp1 <= (flash_ack ? "+" : "-");
+            uart_wdata <= hex0;
+            state <= 8'h25;
         end else if (state == 8'h2F) begin
             uart_wr <= 1'b0;
             uart_en <= 1'b0;
