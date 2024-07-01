@@ -229,6 +229,7 @@ function make_machine(prog = [], device = []) {
             );
             const field_names = ["t", "x", "y", "z"];
             const field = field_names[range & 0x3];
+//debug console.log("mem_perform MEM_QUAD:", "range=", "0x" + hex.from(range, 3), "addr=", "0x" + hex.from(addr, 16), "quad=", quad, "field=", field);
             if (wr_en) {
                 quad[field] = data;
             }

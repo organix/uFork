@@ -237,26 +237,26 @@ module top (
             state <= 8'h20;
         end else if (state == 8'h07) begin
             state <= 8'h10;
-        end else if (state == 8'h08) begin              // set and check bit-rate
-            accum <= `SPI_BR;
+        end else if (state == 8'h08) begin              // set and check control register 1
+            accum <= `SPI_CR1;
             linkr <= 8'h09;
             state <= 8'h20;
         end else if (state == 8'h09) begin
-            flash_wdata <= 8'b0011_1111;
-            accum <= `SPI_BR;
+            flash_wdata <= 8'b1000_0000;
+            accum <= `SPI_CR1;
             linkr <= 8'h0A;
             state <= 8'h29;
         end else if (state == 8'h0A) begin
-            accum <= `SPI_BR;
+            accum <= `SPI_CR1;
             linkr <= 8'h0B;
             state <= 8'h20;
         end else if (state == 8'h0B) begin
-            flash_wdata <= 8'b0000_0111;
-            accum <= `SPI_BR;
+            flash_wdata <= 8'b0000_0000;
+            accum <= `SPI_CR1;
             linkr <= 8'h0C;
             state <= 8'h29;
         end else if (state == 8'h0C) begin
-            accum <= `SPI_BR;
+            accum <= `SPI_CR1;
             linkr <= 8'h10;
             state <= 8'h20;
         end else if (state == 8'h10) begin              // echo loop

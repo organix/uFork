@@ -160,6 +160,7 @@
 0x40 CONSTANT '@'
 0x5B CONSTANT '['
 0x5D CONSTANT ']'
+0x70 CONSTANT 'p'
 0x71 CONSTANT 'q'
 0x72 CONSTANT 'r'
 VARIABLE cmd    ( last command character read )
@@ -174,7 +175,7 @@ VARIABLE here   ( bulk copy addr )
 : pop ( -- a )
     tos @
     nos @ tos ! ;
-: quad ( raw -- addr )
+: quad ( raw -- qaddr )
     DUP MSB& IF
         0x0FFF AND          ( uCode | fixnum )
     ELSE
@@ -185,16 +186,17 @@ VARIABLE here   ( bulk copy addr )
             0x7FFC AND MSB|
         THEN
     THEN ;
-: parse_qaddr ( qaddr -- field offset )
+: parse_qaddr ( qaddr -- field raw )
         DUP 0x3 AND SWAP    ( D: field addr )
         DUP MSB& IF
-            2ASR 0x1FFF
+            2ASR 0x1FFF AND
         ELSE
-            2ASR 0x0FFF
-        THEN AND ;          ( D: field offset )
+            2ASR 0x0FFF AND
+            0x4000 OR
+        THEN ;              ( D: field raw )
 : fetch ( addr -- data )
     DUP 0xC000 AND IF
-        parse_qaddr         ( D: field offset )
+        parse_qaddr         ( D: field raw )
         OVER 0x1 = IF
             QX@             ( D: field data )
         ELSE
@@ -214,7 +216,7 @@ VARIABLE here   ( bulk copy addr )
     THEN ;
 : store ( data addr -- )
     DUP 0xC000 AND IF
-        parse_qaddr SWAP    ( D: data offset field )
+        parse_qaddr SWAP    ( D: data raw field )
         DUP 0x1 = IF
             DROP QX!
         ELSE
@@ -311,6 +313,9 @@ VARIABLE here   ( bulk copy addr )
             THEN
             OVER 'q' = IF
                 pop quad push
+            THEN
+            OVER 'p' = IF
+                pop parse_qaddr SWAP push push
             THEN
             OVER '?' = IF
                 pop pop SWAP dump
