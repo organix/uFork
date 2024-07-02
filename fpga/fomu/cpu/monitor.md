@@ -22,18 +22,28 @@ including `[SPACE]`, `[TAB]`, and `[RETURN]`.
 Word    | Monitor Stack Effect      | Description
 --------|---------------------------|-----------------------------------
 _hex_   | ( -- hex )                | Push _hex_ value onto the stack
-/       | ( -- )                    | Ignore input until end of line
 @       | ( addr -- data )          | Fetch _data_ from _addr_
 .       | ( hex -- )                | Pop top-of-stack and print _hex_
 !       | ( data addr -- )          | Store _data_ into _addr_
 q       | ( raw -- addr )           | Translate uFork _raw_ to uCode
 ?       | ( start end -- )          | Print data from _start_ thru _end_
 [       | ( addr -- )               | Start copying data to _addr_
-]       | ( -- )                    | Stop copying literal data
+]       | ( -- addr+len )           | Stop copying literal data
 r       | ( addr -- )               | Run (call) procedure at _addr_
 
 `[BACKSPACE]` or `[DELETE]` may be used
 to correct the preceeding word.
+
+### Bulk Upload
+
+The `[` and `]` commands provide a bulk upload facility.
+During upload, data is still provided as hex values, but not echoed.
+Instead a `~` is printed each time
+the least significant 4 bits of the upload address are `0`
+(every 16 words).
+If a `/` is encountered, input is ignored until the end of the line.
+The `]` signals the end of the upload
+and leaves the final address on the stack.
 
 ## Address Ranges
 
