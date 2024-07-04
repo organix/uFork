@@ -139,6 +139,7 @@ Deno.readTextFile(ucode_path).then(function (text) {
         const rv = machine.step();
         if (rv !== undefined) {
             window.console.error(rv);
+            Deno.stdin.setRaw(false);
             return Deno.exit(1);
         }
         return (

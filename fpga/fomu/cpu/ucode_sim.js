@@ -49,6 +49,9 @@ function make_stack(depth = 12) {
     let cnt = 0;
     let max = 0;
 
+    function copy() {  // return a shallow copy of the stack (for debugging)
+        return stack.slice();
+    }
     function adjust(delta) {  // adjust usage statistics
         if (cnt < 0 && delta > 0) {
             cnt = delta;  // reset after underflow (FIXME: what about underflow?)
@@ -99,9 +102,6 @@ function make_stack(depth = 12) {
             adjust(-1);
         }
     }
-    function copy() {  // return a shallow copy of the stack
-        return stack.slice();
-    }
 
     return {
         tos,
@@ -119,6 +119,16 @@ function make_machine(prog = [], device = []) {
     const dstack = make_stack();
     const rstack = make_stack();
 
+    function copy() {  // return a shallow copy of the machine state (for debugging)
+        const state = {
+            dstack: dstack.copy(),
+            dstats: dstack.stats(),
+            rstack: rstack.copy(),
+            rstats: rstack.stats(),
+            pc
+        };
+        return state;
+    }
     function error(...msg) {
         const err = {
             next_pc: pc,
@@ -334,7 +344,7 @@ function make_machine(prog = [], device = []) {
         }
     }
 
-    return {step};
+    return {step, copy};
 }
 
 //debug import ucode from "./ucode.js";

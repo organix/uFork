@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>uCode Debugger</title>
+<link rel="modulepreload" href="./ucode_dbg.js" as="script" />
+<style>
+body {
+    background: #EFF;
+    margin: 1em;
+}
+textarea, input {
+    font-family: monospace;
+}
+</style>
+</head>
+<body>
+    <noscript>
+        This single-page application requires JavaScript enabled.
+    </noscript>
+    <h1>uCode Debugger</h1>
+
+    <h2>Program</h2>
+    <h3>Source</h3>
+    <p>
+        <textarea id="program-src" cols="72" rows="20" autocomplete="off"></textarea>
+        <button id="program-compile">Compile</button>
+    </p>
+    <h3>Memory</h3>
+    <p>
+        <textarea id="program-mem" cols="72" rows="20" readonly="readonly"></textarea>
+    </p>
+
+    <h2>Machine</h2>
+    <h3>Program Counter</h3>
+    <p>
+        <label for="machine-pc">PC:</label>
+        <input id="machine-pc" type="text" readonly="readonly" />
+        <button id="machine-step">Step</button>
+    </p>
+    <p>
+        <label for="machine-code">Code:</label>
+        <input id="machine-code" type="text" readonly="readonly" />
+    </p>
+    <h3>Data Stack</h3>
+    <pre id="machine-dstack">
+    </pre>
+    <h3>Return Stack</h3>
+    <pre id="machine-rstack">
+    </pre>
+
+    <h2>Console I/O</h2>
+    <h3>Output</h3>
+    <p>
+        <textarea id="console-out" cols="72" rows="12" readonly="readonly"></textarea>
+    </p>
+    <h3>Input</h3>
+    <p>
+        <input id="console-in" type="text" size="66" autocomplete="off" />
+        <button id="console-send">Send</button>
+        <div>
+            <input type="radio" name="send-char" id="send-cr" value="&#x0D;" checked="checked" />
+            <label for="send-cr">CR</label>
+            <input type="radio" name="send-char" id="send-lf" value="&#x0A;" />
+            <label for="send-lf">LF</label>
+            <input type="radio" name="send-char" id="send-etx" value="&#x03;" />
+            <label for="send-etx">^C</label>
+            <input type="radio" name="send-char" id="send-bs" value="&#x08;" />
+            <label for="send-lf">BS</label>
+            <input type="radio" name="send-char" id="send-esc" value="&#x1B;" />
+            <label for="send-esc">ESC</label>
+            <input type="radio" name="send-char" id="send-del" value="&#x7F;" />
+            <label for="send-del">DEL</label>
+        </div>
+    </p>
+
+    <!-- importmap goes here -->
+    <script type="module" src="./ucode_dbg.js"></script>
+</body>
+</html>
