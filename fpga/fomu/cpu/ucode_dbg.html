@@ -23,7 +23,19 @@ textarea, input {
     <h2>Program</h2>
     <h3>Source</h3>
     <p>
-        <textarea id="program-src" cols="72" rows="20" autocomplete="off"></textarea>
+        <textarea id="program-src" cols="72" rows="20" autocomplete="off">
+: PANIC! FAIL PANIC! ;      ( if BOOT returns... )
+
+: TEST
+    0xC0DE
+    0xFADE
+    XOR DROP ;
+
+( WARNING! if BOOT returns we PANIC! )
+: BOOT
+    TEST
+    EXIT
+        </textarea>
         <button id="program-compile">Compile</button>
     </p>
     <h3>Memory</h3>
@@ -36,7 +48,7 @@ textarea, input {
     <p>
         <label for="machine-pc">PC:</label>
         <input id="machine-pc" type="text" readonly="readonly" />
-        <button id="machine-step">Step</button>
+        <button id="machine-step" disabled="disabled">Step</button>
     </p>
     <p>
         <label for="machine-code">Code:</label>
@@ -59,6 +71,7 @@ textarea, input {
         <input id="console-in" type="text" size="66" autocomplete="off" />
         <button id="console-send">Send</button>
         <div>
+            <span>Line Ending:</span>
             <input type="radio" name="send-char" id="send-cr" value="&#x0D;" checked="checked" />
             <label for="send-cr">CR</label>
             <input type="radio" name="send-char" id="send-lf" value="&#x0A;" />

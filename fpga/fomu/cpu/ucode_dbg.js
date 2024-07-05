@@ -1,4 +1,6 @@
-// uCode Debugger
+// ucode_dbg.js -- uCode Debugger
+// Dale Schumacher
+// created: 2024-07-01
 
 /*jslint browser, bitwise, devel */
 
@@ -29,7 +31,70 @@ const $console_out = $("console-out");
 const $console_in = $("console-in");
 const $console_send = $("console-send");
 
-let machine;  // uCode virtual machine
+const B_FALSE = 0x0000;  // 16-bit Boolean FALSE
+const B_TRUE = 0xFFFF;  // 16-bit Boolean TRUE
+function uc_bool(value) {
+    if (value) {
+        return B_TRUE;
+    }
+    return B_FALSE;
+}
+
+function make_uart(receive) {
+    let input_buffer = "";
+    function inject(text) {
+        input_buffer += text;
+    }
+    function rx_ready() {
+        return (input_buffer.length > 0);
+    }
+    let code_point = 0;
+    function rx_fetch() {
+        if (rx_ready()) {
+            code_point = input_buffer.codePointAt(0);
+            input_buffer = input_buffer.slice(
+                code_point <= 0xFFFF
+                ? 1
+                : 2
+            );
+        }
+        return code_point;
+    }
+
+    // 8-bit UART register interface
+    const TX_RDY = 0x0;  // ready to transmit
+    const TX_DAT = 0x1;  // data to transmit
+    const RX_RDY = 0x2;  // receive complete
+    const RX_DAT = 0x3;  // data received
+
+    function read(reg) {
+        if (reg === RX_RDY) {
+            return uc_bool(rx_ready());
+        }
+        if (reg === RX_DAT) {
+            return rx_fetch();
+        }
+        if (reg === TX_RDY) {
+            return uc_bool(B_TRUE);  // always ready...
+        }
+        return 0;  // infallible read
+    }
+    function write(reg, data) {
+        if (reg === TX_DAT) {
+            receive(String.fromCodePoint(data));
+        }
+    }
+
+    return Object.freeze({
+        read,
+        write,
+        TX_RDY,
+        TX_DAT,
+        RX_RDY,
+        RX_DAT,
+        inject
+    });
+}
 
 function format_stack(stack, stats) {
     let s = "";
@@ -72,27 +137,32 @@ $program_compile.onclick = function () {
         const memh = ucode.print_memh(prog, words);
         $program_mem.value = memh;
     }
+    // create simluated UART interface
+    const uart = make_uart(function receive(text) {
+        $console_out.value += text;
+    });
+    $console_send.onclick = function () {
+        const send_char = (
+            document.querySelector("input[name='send-char']:checked").value
+        );
+        uart.inject($console_in.value + send_char);
+        $console_in.value = "";
+    };
     // create new machine with compiled program
-    machine = ucode_sim.make_machine(prog);
+    const machine = ucode_sim.make_machine(prog, [uart]);
     machine.disasm = function disasm(pc) {
         return ucode.disasm(prog[pc], words);
     };
     display_machine(machine);
-};
-
-$machine_step.onclick = function () {
-    const result = machine.step();
-    if (result !== undefined) {
-        console.log("ERROR:", result);  // FIXME: display error and "halt"
-    }
-    display_machine(machine);
-};
-
-$console_send.onclick = function () {
-    const send_char = (
-        document.querySelector("input[name='send-char']:checked").value
-    );
-    const text = $console_in.value + send_char;
-    $console_out.value += text;
-    $console_in.value = "";
+    // add single-step control
+    $machine_step.onclick = function () {
+        const result = machine.step();
+        if (result !== undefined) {
+            // display error and "halt"
+            console.log("ERROR:", result);
+            $machine_step.disabled = true;
+        }
+        display_machine(machine);
+    };
+    $machine_step.disabled = false;
 };
