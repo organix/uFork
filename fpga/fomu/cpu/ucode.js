@@ -75,9 +75,6 @@ function compile(text, src = "") {
     function uc_call(addr) {  // push return address and jump
         return (0xC000 | (addr & ADDR_MASK));
     }
-    function uc_cz(addr) {      // call, if zero
-        return (0xD000 | (addr & ADDR_MASK));
-    }
     function uc_is_auto(word) { // auto increment/decrement?
         return ((word & 0xE000) === 0xA000);
     }
@@ -205,15 +202,6 @@ function compile(text, src = "") {
         "SKZ": function () {                            // ( 0 -- ) pc+2->pc | ( n -- )
             // skip (next instruction), if TOS is zero
             prog.push(uc_jz(prog.length + 2));
-        },
-        "CALLZ": function () {                          // 0= IF <call> THEN
-            // call (next word), if TOS is zero
-            const name = next_token();
-            const word = words[name];
-            if ((word & 0xF000) !== 0xC000) {
-                return error(name, "is not a procedure");
-            }
-            prog.push(uc_cz(word));
         },
         "BEGIN": function () {                          // ( -- )
             // begin indefinite loop

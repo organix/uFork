@@ -223,7 +223,3 @@ Move _-count_ from the D-stack to the R-stack. If it is 0, remove the _count_ fr
 > _test_ `SKZ` _word_
 
 Remove the result of the _test_ from the stack. If it is 0, jump to the instruction after _word_. If it is not 0, continue with _word_. SKZ stands for "skip, if zero".
- 
-> _test_ `CALLZ` _word_
-
-Remove the result of the _test_ from the stack. If it is 0, call _word_, which must be a procedure. If it is not 0, continue with the instruction after _word_. Note that this compiles to a single _call-if-zero_ instruction.

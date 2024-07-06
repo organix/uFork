@@ -281,7 +281,9 @@ VARIABLE here   ( upload address )
 : upload ( cmd' key' -- cmd key )
     2DROP                   ( D: -- )
     KEY                     ( D: key )
-    DUP '/' XOR CALLZ eol   ( comment to EOL )
+    DUP '/' = IF
+        eol                 ( comment to EOL )
+    THEN
     cmd @ SWAP              ( D: cmd key )
     DUP BL <= IF
         OVER ISHEX IF
@@ -311,7 +313,9 @@ VARIABLE here   ( upload address )
     DUP '\b' = IF
         DROP DEL
     THEN
-    DUP DEL XOR CALLZ del   ( delete previous )
+    DUP DEL = IF
+        del                 ( delete previous )
+    THEN
     DUP ECHO
     cmd @ SWAP              ( D: cmd key )
     ( '<' EMIT OVER X. '.' EMIT DUP X. '>' EMIT )

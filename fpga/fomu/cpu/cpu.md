@@ -18,7 +18,7 @@
     * `02`: RX?
     * `03`: RX@
 
-  * `1x`: SPI Flash Memory
+  * `1x`: SPI Flash Memory (planned)
     * `16`: ISR
     * `17`: ICR
     * `18`: CR0
@@ -226,6 +226,9 @@ ALU/memory cycle (usually for a write request).
 
 \* If `MEM range` is `[PC+1]`, then read from `PC+1` and increment again (write is ignored).
 
+NOTE: The unused memory range `3'b010` is currently used to implement `FAIL`,
+which halts the processor as an illegal instruction.
+
 #### Stack Operations
 
 Operation   | Encoding  | Description           | Stack Effect
@@ -255,7 +258,7 @@ ROL     | ( a -- {a[14:0],a[15]} )  | `0307` | `0000_0011_0000_0111`
 DUP     | ( a -- a a )              | `0200` | `0000_0010_0000_0000`
 DROP    | ( a -- )                  | `0100` | `0000_0001_0000_0000`
 SWAP    | ( a b -- b a )            | `0400` | `0000_0100_0000_0000`
-SKZ w   | ( cond -- )               | --     | _conditional jump macro_
+SKZ w   | ( cond -- )               | `9`(PC+2) | `1001_xxxx_xxxx_xxxx`
 \>R     | ( a -- ) ( R: -- a )      | `2100` | `0010_0001_0000_0000`
 R>      | ( -- a ) ( R: a -- )      | `1280` | `0001_0010_1000_0000`
 R@      | ( -- a ) ( R: a -- a )    | `0280` | `0000_0010_1000_0000`
@@ -274,6 +277,7 @@ TRUE    | ( -- -1 )                 | `02F6` | `0000_0010_1111_0110`
 LSB     | ( -- 1 )                  | `02D6` | `0000_0010_1101_0110`
 MSB     | ( -- 0x8000 )             | `02E6` | `0000_0010_1110_0110`
 2*      | ( a -- a+a )              | `0301` | `0000_0011_0000_0001`
+FAIL    | _illegal instruction_     | `002F` | `0000_0000_0010_1111`
 
 ## Operational Description
 
