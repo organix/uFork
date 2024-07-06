@@ -3,7 +3,6 @@
 <head>
 <meta charset="utf-8">
 <title>uCode Debugger</title>
-<link rel="modulepreload" href="./ucode_dbg.js" as="script" />
 <style>
 body {
     background: #EFF;
@@ -44,6 +43,7 @@ textarea, input {
     </p>
 
     <h2>Machine</h2>
+    <div id="machine-error" style="font-weight: bold; color: #F30;"></div>
     <h3>Program Counter</h3>
     <p>
         <label for="machine-pc">PC:</label>
@@ -93,126 +93,6 @@ textarea, input {
         </div>
     </p>
 
-    <!--
-    <div id="header">
-        <form id="boot-form">
-            <input id="boot-src" type="text" size="72" />
-            <input id="boot" type="submit" value="Boot" />
-        </form>
-    </div>
-    <div id="source" class="panel">
-        <aside></aside>
-        <code></code>
-    </div>
-    <div id="monitor">
-        <div id="controls">
-            <button id="revert-btn">Revert</button>
-            <div id="fault-ctl" title="ready">
-                <svg width="36" height="36" viewBox="-18 -18 36 36">
-                    <g stroke-width="1">
-                        <circle id="fault-led" cx="0" cy="0" r="5" fill="#FF3" stroke="#990"></circle>
-                    </g>
-                </svg>
-            </div>
-            <button id="play-pause"></button>
-            <input type="range" id="play-interval" min="0" max="1000" value="0">
-            <button id="next-step">Next</button>
-            <button id="single-step">Step</button>
-            <button id="gc-btn">GC</button>
-        </div>
-        <table border="1">
-            <tr>
-                <th>EQ</th>
-                <td><pre id="equeue"></pre></td>
-            </tr>
-            <tr>
-                <th>KQ</th>
-                <td><pre id="kqueue"></pre></td>
-            </tr>
-            <tr>
-                <th>Event</th>
-                <td><pre id="event"></pre></td>
-            </tr>
-            <tr>
-                <th>Self</th>
-                <td><pre id="self"></pre></td>
-            </tr>
-            <tr>
-                <th>Effect</th>
-                <td><pre id="effect"></pre></td>
-            </tr>
-            <tr>
-                <th>State</th>
-                <td><pre id="state"></pre></td>
-            </tr>
-            <tr>
-                <th>Msg</th>
-                <td><pre id="msg"></pre></td>
-            </tr>
-            <tr style="vertical-align: top;">
-                <th>IP</th>
-                <td><pre id="instr"></pre></td>
-            </tr>
-            <tr style="vertical-align: top;">
-                <th>SP</th>
-                <td><pre id="stack"></pre></td>
-            </tr>
-        </table>
-        <table border="1">
-            <tr>
-                <th>Sponsor</th>
-                <th>Memory</th>
-                <th>Events</th>
-                <th>Cycles</th>
-                <th>Signal</th>
-                <th>Pages</th>
-            </tr>
-            <tr>
-                <td><pre id="sponsor-ident" class="input-text" size="8"></pre></td>
-                <td><input id="sponsor-memory" class="input-text" size="8" /></td>
-                <td><input id="sponsor-events" class="input-text" size="8" /></td>
-                <td><input id="sponsor-cycles" class="input-text" size="8" /></td>
-                <td><pre id="sponsor-signal" class="input-text" size="8"></pre></td>
-                <td><pre id="mem-pages"></pre></td>
-            </tr>
-        </table>
-        <table border="1">
-            <tr>
-                <th>Max</th>
-                <th>RAM Top</th>
-                <th>Next</th>
-                <th>Free</th>
-                <th>GC Root</th>
-                <th>GC State</th>
-                <th>ROM Top</th>
-            </tr>
-            <tr>
-                <td><pre id="ram-max"></pre></td>
-                <td><pre id="ram-top"></pre></td>
-                <td><pre id="ram-next"></pre></td>
-                <td><pre id="ram-free"></pre></td>
-                <td><pre id="gc-root"></pre></td>
-                <td><pre id="gc-state"></pre></td>
-                <td><pre id="rom-top"></pre></td>
-            </tr>
-        </table>
-    </div>
-    <div id="stdio" class="panel" title="Console I/O">
-        <textarea id="stdout" readonly="readonly"></textarea>
-        <div id="input-ctls">
-            <input id="stdin" type="text" />
-            <button id="send-btn">Send</button>
-        </div>
-    </div>
-    <pre id="ram" class="panel" title="RAM Image"></pre>
-    <pre id="rom" class="panel" title="ROM Image"></pre>
-    <pre id="blob" class="panel" title="BLOB Image"></pre>
-    <div id="footer">
-        <button id="snapshot-btn">Snapshot</button>
-        <input id="restore-btn" type="file">
-    </div>
-    -->
-    <!-- importmap goes here -->
     <script type="module" src="./ucode_dbg.js"></script>
 </body>
 </html>
