@@ -73,9 +73,10 @@ textarea, input {
         <textarea id="console-out" cols="72" rows="12" readonly="readonly"></textarea>
     </p>
     <h3>Input</h3>
+    <pre id="console-buffer"></pre>
     <p>
         <input id="console-in" type="text" size="66" autocomplete="off" />
-        <button id="console-send">Send</button>
+        <button id="console-send" disabled="disabled">Send</button>
         <div>
             <span>Line Ending:</span>
             <input type="radio" name="send-char" id="send-cr" value="&#x0D;" checked="checked" />

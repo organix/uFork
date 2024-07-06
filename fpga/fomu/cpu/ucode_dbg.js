@@ -33,6 +33,7 @@ const $machine_dstack = $("machine-dstack");
 const $machine_rstack = $("machine-rstack");
 const $console_out = $("console-out");
 const $console_in = $("console-in");
+const $console_buffer = $("console-buffer");
 const $console_send = $("console-send");
 
 const B_FALSE = 0x0000;  // 16-bit Boolean FALSE
@@ -46,8 +47,14 @@ function uc_bool(value) {
 
 function make_uart(receive) {
     let input_buffer = "";
+    function display_buffer() {
+        $console_buffer.innerText = input_buffer.split("").map(function (c) {
+            return hex.from(c.codePointAt(0), 16);
+        }).join(" ");
+    }
     function inject(text) {
         input_buffer += text;
+        display_buffer();
     }
     function rx_ready() {
         return (input_buffer.length > 0);
@@ -61,6 +68,7 @@ function make_uart(receive) {
                 ? 1
                 : 2
             );
+            display_buffer();
         }
         return code_point;
     }
@@ -148,6 +156,7 @@ $program_compile.onclick = function () {
     const uart = make_uart(function receive(text) {
         $console_out.value += text;
     });
+    $console_send.disabled = false;
     $console_send.onclick = function () {
         const send_char = (
             document.querySelector("input[name='send-char']:checked").value
@@ -158,6 +167,7 @@ $program_compile.onclick = function () {
 
     // create new machine with compiled program
     $machine_error.textContent = "";
+    $machine_break.textContent = "";
     const machine = ucode_sim.make_machine(prog, [uart]);
     machine.disasm = function disasm(pc) {
         return ucode.disasm(prog[pc], words);
@@ -173,6 +183,7 @@ $program_compile.onclick = function () {
         $machine_step.disabled = true;
         $machine_play.textContent = "Play";
         $machine_play.disabled = true;
+        $console_send.disabled = true;
     }
     function pause() {
         clearTimeout(step_timer);
