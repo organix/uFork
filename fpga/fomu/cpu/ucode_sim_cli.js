@@ -119,13 +119,21 @@ Deno.readTextFile(ucode_path).then(function (text) {
         return Deno.exit(1);
     }
 
-// Begin consuming STDIN.
+// Put terminal in raw-mode so we see all the control characters
 
     Deno.stdin.setRaw(true);
+    function clean_exit(status) {
+        Deno.stdin.setRaw(false);  // turn off raw-mode before exit
+        return Deno.exit(status);
+    }
+
+// Begin consuming STDIN.
+
     (function read() {
         return Deno.stdin.read(read_buffer).then(function (nr_bytes) {
             if (!Number.isSafeInteger(nr_bytes)) {
-                return Deno.exit(0); // EOF
+                Deno.stdin.setRaw(false);
+                return clean_exit(0); // EOF
             }
             read_queue.push(...read_buffer.slice(0, nr_bytes));
             return read();
@@ -140,7 +148,7 @@ Deno.readTextFile(ucode_path).then(function (text) {
         if (rv !== undefined) {
             window.console.error(rv);
             Deno.stdin.setRaw(false);
-            return Deno.exit(1);
+            return clean_exit(1);
         }
         return (
             remaining <= 0
