@@ -41,12 +41,12 @@ Word        | Stack Effect                              | Description
 `0`         | ( -- 0 )                                  | Numeric `0`
 `1`         | ( -- 1 )                                  | Numeric `1`
 `-1`        | ( -- -1 )                                 | Numeric `-1`
-`LSB`       | ( -- 1 )                                  | Least-significant-bit
-`MSB`       | ( -- 0x8000 )                             | Most-significant-bit
-`LSB&`      | ( -- 1 )                                  | AND with (test) LSB
-`MSB&`      | ( -- 0x8000 )                             | AND with (test) MSB
-`LSB\|`     | ( -- 1 )                                  | OR with (set) LSB
-`MSB\|`     | ( -- 0x8000 )                             | OR with (set) MSB
+`LSB`       | ( -- 1 )                                  | Least-Significant-Bit
+`MSB`       | ( -- 0x8000 )                             | Most-Significant-Bit
+`LSB&`      | ( a -- a&1 )                              | AND with (test) LSB
+`MSB&`      | ( a -- a&0x8000 )                         | AND with (test) MSB
+`LSB\|`     | ( a -- a\|1 )                             | OR with (set) LSB
+`MSB\|`     | ( a -- a\|0x8000 )                        | OR with (set) MSB
 `INVERT`    | ( a -- ~a )                               | Bitwise invert
 `NEGATE`    | ( a -- -a )                               | Numeric negation
 `1+`        | ( a -- a+1 )                              | Increment
@@ -151,6 +151,14 @@ a variable location is allocated and initialized to `0`.
 The address of the variable is compiled as a `(CONST)`
 and the _name_ is added to the dictionary
 as a procedure that produces the address.
+
+> _number_ `,`
+
+If a literal _number_ is followed by `,`
+then the _number_ is compiled into the code
+**without** a `(LIT)` prefix.
+This allows insertion of raw data
+anywhere in the compiled program.
 
 ### Calls, Jumps, and Definitions
 

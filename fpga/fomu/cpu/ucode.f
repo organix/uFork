@@ -39,6 +39,8 @@
     OVER OVER ;
 : 2DROP ( a b -- )
     DROP DROP ;
+: DATA ( -- pc+1 )
+    R> EXIT
 
 : ABS ( n -- +n )
     DUP MSB& SKZ NEGATE ;
@@ -79,16 +81,28 @@
     DUP @ 1+ SWAP ! ;
 : @1- ( addr -- )
     DUP @ 1- SWAP ! ;
+: J ( -- j ) ( R: j i -- j i )
+    R>                      ( D: -- i ) ( R: j i -- j )
+    R@                      ( D: i -- i j ) ( R: j -- j )
+    SWAP                    ( D: i j -- j i ) ( R: j -- j )
+    >R ;                    ( D: j i -- j ) ( R: j -- j i )
+: JMPTBL ( index -- )
+    R>                      ( D: index table )
+    2DUP @                  ( D: index table index limit )
+    < IF                    ( D: index table )
+        SWAP 1+             ( D: table index+1 )
+        + @                 ( D: table[index+1] )
+    ELSE                    ( D: index table )
+        DUP @               ( D: index table limit )
+        + 1+                ( D: index table+limit+1 )
+    THEN
+    >R ;
 
 : INBOUNDS ( n lo hi -- lo<=n&&n<=hi )
     -ROT OVER SWAP -
     -ROT - OR MSB& 0= ;
 : ISDIGIT ( char -- flag )
     '0' '9' INBOUNDS ;
-: ISHEX ( char -- flag )
-    DUP 'A' 'F' INBOUNDS
-    OVER 'a' 'f' INBOUNDS OR
-    SWAP ISDIGIT OR ;
 : ISUPPER ( char -- flag )
     'A' 'Z' INBOUNDS ;
 : ISLOWER ( char -- flag )
@@ -101,6 +115,10 @@
     DUP ISUPPER IF
         BL XOR  ( flip case )
     THEN ;
+: ISHEX ( char -- flag )
+    DUP ISUPPER
+    OVER ISLOWER OR
+    SWAP ISDIGIT OR ;
 : TOHEX ( n -- x )
     0xF AND
     DUP 10 < IF
