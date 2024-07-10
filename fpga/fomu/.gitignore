@@ -3,3 +3,4 @@ abc.history
 *.json
 *.log
 *.vcd
+*.mem

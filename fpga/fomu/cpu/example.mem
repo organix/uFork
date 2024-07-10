@@ -1,6 +1,5 @@
-//  CODE    ADR  DISASM                  NAMES                     //
-/////////////////////////////////////////////////////////////////////
-    c059 // 000: BOOT
+/*  CODE    ADR  DISASM                  NAMES                     */
+    c04b // 000: BOOT
     002f // 001: FAIL                    PANIC!
     8001 // 002: jump(001)
     521f // 003: (CONST)                 ^C
@@ -11,83 +10,69 @@
     000d // 008: 0x000d
     521f // 009: (CONST)                 BL
     0020 // 00a: 0x0020
-    030f // 00b: @                       @EXECUTE
-    021f // 00c: (LIT)                   EXECUTE
-    0fff // 00d: 0x0fff
-    0744 // 00e: AND
-    2100 // 00f: >R
-    5000 // 010: NOP EXIT                (EXIT)
-    9013 // 011: jump_ifzero(013)        ?:
-    0400 // 012: SWAP
-    5100 // 013: DROP EXIT               (DROP)
-    0400 // 014: SWAP                    NIP
-    5100 // 015: DROP EXIT
-    0400 // 016: SWAP                    TUCK
-    5240 // 017: OVER EXIT
-    0240 // 018: OVER                    2DUP
-    5240 // 019: OVER EXIT
-    0100 // 01a: DROP                    2DROP
-    5100 // 01b: DROP EXIT
-    0200 // 01c: DUP                     ABS
-    0324 // 01d: MSB&
-    9020 // 01e: jump_ifzero(020)
-    53c2 // 01f: NEGATE EXIT
-    9023 // 020: jump_ifzero(023)        BOOL
-    02f6 // 021: TRUE
-    8024 // 022: jump(024)
-    02c0 // 023: 0
-    5000 // 024: NOP EXIT
-    0745 // 025: XOR                     =
-    02f6 // 026: TRUE                    0= NOT
-    02c0 // 027: 0
-    0500 // 028: ROT
-    8011 // 029: jump(011)
-    c025 // 02a: =                       <>
-    5335 // 02b: INVERT EXIT
-    03c2 // 02c: NEGATE                  0>
-    0324 // 02d: MSB&                    0<
-    8020 // 02e: jump(020)
-    021f // 02f: (LIT)                   TX? EMIT?
-    0000 // 030: NOP
+    900d // 00b: jump_ifzero(00d)        ?:
+    0400 // 00c: SWAP
+    5100 // 00d: DROP EXIT
+    0200 // 00e: DUP                     ABS
+    0324 // 00f: MSB&
+    9012 // 010: jump_ifzero(012)
+    53c2 // 011: NEGATE EXIT
+    9015 // 012: jump_ifzero(015)        BOOL
+    02f6 // 013: TRUE
+    8016 // 014: jump(016)
+    02c0 // 015: 0
+    5000 // 016: NOP EXIT
+    0745 // 017: XOR                     =
+    02f6 // 018: TRUE                    0= NOT
+    02c0 // 019: 0
+    0500 // 01a: ROT
+    800b // 01b: jump(00b)
+    c017 // 01c: =                       <>
+    5335 // 01d: INVERT EXIT
+    03c2 // 01e: NEGATE                  0>
+    0324 // 01f: MSB&                    0<
+    8012 // 020: jump(012)
+    021f // 021: (LIT)                   TX? EMIT?
+    0000 // 022: NOP
+    533f // 023: IO@ EXIT
+    c009 // 024: BL                      SPACE
+    c021 // 025: TX?                     EMIT
+    9025 // 026: jump_ifzero(025)
+    021f // 027: (LIT)                   TX!
+    0001 // 028: 0x0001
+    59bf // 029: IO! EXIT
+    021f // 02a: (LIT)                   RX? KEY?
+    0002 // 02b: 0x0002
+    533f // 02c: IO@ EXIT
+    c02a // 02d: RX?                     KEY
+    902d // 02e: jump_ifzero(02d)
+    021f // 02f: (LIT)                   RX@
+    0003 // 030: 0x0003
     533f // 031: IO@ EXIT
-    c009 // 032: BL                      SPACE
-    c02f // 033: TX?                     EMIT
-    9033 // 034: jump_ifzero(033)
-    021f // 035: (LIT)                   TX!
-    0001 // 036: 0x0001
-    59bf // 037: IO! EXIT
-    021f // 038: (LIT)                   RX? KEY?
-    0002 // 039: 0x0002
-    533f // 03a: IO@ EXIT
-    c038 // 03b: RX?                     KEY
-    903b // 03c: jump_ifzero(03b)
-    021f // 03d: (LIT)                   RX@
-    0003 // 03e: 0x0003
-    533f // 03f: IO@ EXIT
-    2100 // 040: >R                      SPACES
-    8043 // 041: jump(043)
-    c032 // 042: SPACE
-    b042 // 043: jump_ifnz_dec(042)
-    5000 // 044: NOP EXIT
-    c007 // 045: '\r'                    CR
-    c033 // 046: EMIT
-    c005 // 047: '\n'
-    8033 // 048: jump(033)
-    0200 // 049: DUP                     ECHO
-    c033 // 04a: EMIT
-    c007 // 04b: '\r'
-    c025 // 04c: =
-    9050 // 04d: jump_ifzero(050)
-    c005 // 04e: '\n'
-    c033 // 04f: EMIT
-    5000 // 050: NOP EXIT
-    c03b // 051: KEY                     ECHOLOOP
-    0200 // 052: DUP
-    c049 // 053: ECHO
-    c003 // 054: ^C
-    c025 // 055: =
-    9058 // 056: jump_ifzero(058)
-    5000 // 057: NOP EXIT
-    8051 // 058: jump(051)
-    c051 // 059: ECHOLOOP                BOOT
-    5000 // 05a: NOP EXIT
+    2100 // 032: >R                      SPACES
+    8035 // 033: jump(035)
+    c024 // 034: SPACE
+    b034 // 035: jump_ifnz_dec(034)
+    5000 // 036: NOP EXIT
+    c007 // 037: '\r'                    CR
+    c025 // 038: EMIT
+    c005 // 039: '\n'
+    8025 // 03a: jump(025)
+    0200 // 03b: DUP                     ECHO
+    c025 // 03c: EMIT
+    c007 // 03d: '\r'
+    c017 // 03e: =
+    9042 // 03f: jump_ifzero(042)
+    c005 // 040: '\n'
+    c025 // 041: EMIT
+    5000 // 042: NOP EXIT
+    c02d // 043: KEY                     ECHOLOOP
+    0200 // 044: DUP
+    c03b // 045: ECHO
+    c003 // 046: ^C
+    c017 // 047: =
+    904a // 048: jump_ifzero(04a)
+    5000 // 049: NOP EXIT
+    8043 // 04a: jump(043)
+    c043 // 04b: ECHOLOOP                BOOT
+    5000 // 04c: NOP EXIT

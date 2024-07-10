@@ -1,3 +1,6 @@
+(
+    $ deno run ucode_cli.js <example.f >example.mem
+)
 : PANIC! FAIL PANIC! ;      ( if BOOT returns... )
 
 0x03 CONSTANT ^C
@@ -5,25 +8,8 @@
 0x0D CONSTANT '\r'
 0x20 CONSTANT BL
 
-: @EXECUTE
-    @
-: EXECUTE
-    0x0FFF AND >R
-: (EXIT)
-    EXIT
 : ?: ( altn cnsq cond -- cnsq | altn )
-    SKZ SWAP
-: (DROP)
-    DROP ;
-: NIP ( a b -- b )
-    SWAP DROP ;
-: TUCK ( a b -- b a b )
-    SWAP OVER ;
-: 2DUP ( a b -- a b a b )
-    OVER OVER ;
-: 2DROP ( a b -- )
-    DROP DROP ;
-
+    SKZ SWAP DROP ;
 : ABS ( n -- +n )
     DUP MSB& SKZ NEGATE ;
 : BOOL ( n -- flag )
