@@ -149,8 +149,11 @@ $program_compile.onclick = function () {
         return;  // early exit
     }
     // display annotated memory image
-    const memh = ucode.print_memh(prog, words);
-    $program_mem.value = memh;
+    function display_memory() {
+        const memh = ucode.print_memh(prog, words);
+        $program_mem.value = memh;
+    }
+    display_memory();
 
     // create simluated UART interface
     const uart = make_uart(function receive(text) {
@@ -197,6 +200,7 @@ $program_compile.onclick = function () {
             if (result !== undefined) {
                 halt(result);
             }
+            display_memory();
             const state = display_machine(machine);
             const breakpoint = Number("0x" + $machine_break.value);
             if (Number.isSafeInteger(breakpoint) && (breakpoint === state.pc)) {
