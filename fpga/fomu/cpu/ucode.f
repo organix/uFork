@@ -116,8 +116,8 @@
         BL XOR  ( flip case )
     THEN ;
 : ISHEX ( char -- flag )
-    DUP ISUPPER
-    OVER ISLOWER OR
+    DUP 'A' 'F' INBOUNDS
+    OVER 'a' 'f' INBOUNDS OR
     SWAP ISDIGIT OR ;
 : TOHEX ( n -- x )
     0xF AND
