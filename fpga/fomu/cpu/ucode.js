@@ -40,6 +40,31 @@ function make_stream(text, src = "") {
 
 // Compile uCode/Forth source.
 
+const ADDR_MASK = 0x0FFF;  // 12-bit uCode addresses
+
+function uc_jump(addr) {  // jump (unconditional)
+    return (0x8000 | (addr & ADDR_MASK));
+}
+function uc_jz(addr) {  // jump, if zero
+    return (0x9000 | (addr & ADDR_MASK));
+}
+function uc_inc_jnz(addr) {  // increment and jump, if not zero
+    return (0xA000 | (addr & ADDR_MASK));
+}
+function uc_dec_jnz(addr) {  // decrement and jump, if not zero
+    return (0xB000 | (addr & ADDR_MASK));
+}
+function uc_call(addr) {  // push return address and jump
+    return (0xC000 | (addr & ADDR_MASK));
+}
+function uc_is_auto(word) { // auto increment/decrement?
+    return ((word & 0xE000) === 0xA000);
+}
+function uc_fixup(word, addr) {
+    // replace immediate address in word
+    return (word & ~ADDR_MASK) | (addr & ADDR_MASK);
+}
+
 function compile(text, src = "") {
     const {next_char, error} = make_stream(text, src);
     function next_token() {
@@ -56,31 +81,6 @@ function compile(text, src = "") {
         }
         // return completed token
         return token;
-    }
-
-    const ADDR_MASK = 0x0FFF;  // 12-bit uCode addresses
-
-    function uc_jump(addr) {  // jump (unconditional)
-        return (0x8000 | (addr & ADDR_MASK));
-    }
-    function uc_jz(addr) {  // jump, if zero
-        return (0x9000 | (addr & ADDR_MASK));
-    }
-    function uc_inc_jnz(addr) {  // increment and jump, if not zero
-        return (0xA000 | (addr & ADDR_MASK));
-    }
-    function uc_dec_jnz(addr) {  // decrement and jump, if not zero
-        return (0xB000 | (addr & ADDR_MASK));
-    }
-    function uc_call(addr) {  // push return address and jump
-        return (0xC000 | (addr & ADDR_MASK));
-    }
-    function uc_is_auto(word) { // auto increment/decrement?
-        return ((word & 0xE000) === 0xA000);
-    }
-    function uc_fixup(word, addr) {
-        // replace immediate address in word
-        return (word & ~ADDR_MASK) | (addr & ADDR_MASK);
     }
 
     const prog = [  // program "image" as 16-bit unsigned integers
@@ -378,6 +378,14 @@ function compile(text, src = "") {
 // Disassemble a single uCode machine word.
 
 function disasm(code, words = {}) {
+    function name_for(code) {
+        const entry = Object.entries(words).find(function ([_, value]) {
+            return value === code;
+        });
+        if (entry !== undefined) {
+            return entry[0];
+        }
+    }
     if (code === 0x021F) {
         return "(LIT)";
     }
@@ -388,13 +396,6 @@ function disasm(code, words = {}) {
     if ((code & 0xF000) === 0x5000) {
         code &= 0x0FFF;
         suffix = " EXIT";
-    }
-    const entry = Object.entries(words).find(function ([_, value]) {
-        return value === code;
-    });
-    if (entry !== undefined) {
-        const name = entry[0];
-        return name + suffix;
     }
     let text = "";
     if ((code & 0x8000) !== 0) {
@@ -414,11 +415,25 @@ function disasm(code, words = {}) {
                 : "_ifzero"
             );
         }
-        const addr = code & 0xFFF;
-        text += "(" + hex.from(addr, 12) + ")";
+        const addr = code & ADDR_MASK;
+        const label = name_for(uc_call(addr));
+        text += "(";
+        if (label !== undefined) {
+            text += label;
+        } else {
+            text += "0x";
+            text += hex.from(addr, 12);
+        }
+        text += ")";
     } else {
-        text += "0x";
-        text += hex.from(code, 16);
+        const name = name_for(code);
+        if (name !== undefined) {
+            text += name;  // get "name" key
+            text += suffix;
+        } else {
+            text += "0x";
+            text += hex.from(code, 16);
+        }
     }
     return text;
 }

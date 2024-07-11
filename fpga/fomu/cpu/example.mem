@@ -1,7 +1,7 @@
 /*  CODE    ADR  DISASM                  NAMES                     */
-    c04b // 000: BOOT
+    c04b // 000: call(BOOT)
     002f // 001: FAIL                    PANIC!
-    8001 // 002: jump(001)
+    8001 // 002: jump(PANIC!)
     521f // 003: (CONST)                 ^C
     0003 // 004: 0x0003
     521f // 005: (CONST)                 '\n'
@@ -10,69 +10,69 @@
     000d // 008: 0x000d
     521f // 009: (CONST)                 BL
     0020 // 00a: 0x0020
-    900d // 00b: jump_ifzero(00d)        ?:
+    900d // 00b: jump_ifzero(0x00d)      ?:
     0400 // 00c: SWAP
     5100 // 00d: DROP EXIT
     0200 // 00e: DUP                     ABS
     0324 // 00f: MSB&
-    9012 // 010: jump_ifzero(012)
+    9012 // 010: jump_ifzero(BOOL)
     53c2 // 011: NEGATE EXIT
-    9015 // 012: jump_ifzero(015)        BOOL
+    9015 // 012: jump_ifzero(0x015)      BOOL
     02f6 // 013: TRUE
-    8016 // 014: jump(016)
+    8016 // 014: jump(0x016)
     02c0 // 015: 0
     5000 // 016: NOP EXIT
     0745 // 017: XOR                     =
     02f6 // 018: TRUE                    0= NOT
     02c0 // 019: 0
     0500 // 01a: ROT
-    800b // 01b: jump(00b)
-    c017 // 01c: =                       <>
+    800b // 01b: jump(?:)
+    c017 // 01c: call(=)                 <>
     5335 // 01d: INVERT EXIT
     03c2 // 01e: NEGATE                  0>
     0324 // 01f: MSB&                    0<
-    8012 // 020: jump(012)
+    8012 // 020: jump(BOOL)
     021f // 021: (LIT)                   TX? EMIT?
     0000 // 022: NOP
     533f // 023: IO@ EXIT
-    c009 // 024: BL                      SPACE
-    c021 // 025: TX?                     EMIT
-    9025 // 026: jump_ifzero(025)
+    c009 // 024: call(BL)                SPACE
+    c021 // 025: call(TX?)               EMIT
+    9025 // 026: jump_ifzero(EMIT)
     021f // 027: (LIT)                   TX!
     0001 // 028: 0x0001
     59bf // 029: IO! EXIT
     021f // 02a: (LIT)                   RX? KEY?
     0002 // 02b: 0x0002
     533f // 02c: IO@ EXIT
-    c02a // 02d: RX?                     KEY
-    902d // 02e: jump_ifzero(02d)
+    c02a // 02d: call(RX?)               KEY
+    902d // 02e: jump_ifzero(KEY)
     021f // 02f: (LIT)                   RX@
     0003 // 030: 0x0003
     533f // 031: IO@ EXIT
     2100 // 032: >R                      SPACES
-    8035 // 033: jump(035)
-    c024 // 034: SPACE
-    b034 // 035: jump_ifnz_dec(034)
+    8035 // 033: jump(0x035)
+    c024 // 034: call(SPACE)
+    b034 // 035: jump_ifnz_dec(0x034)
     5000 // 036: NOP EXIT
-    c007 // 037: '\r'                    CR
-    c025 // 038: EMIT
-    c005 // 039: '\n'
-    8025 // 03a: jump(025)
+    c007 // 037: call('\r')              CR
+    c025 // 038: call(EMIT)
+    c005 // 039: call('\n')
+    8025 // 03a: jump(EMIT)
     0200 // 03b: DUP                     ECHO
-    c025 // 03c: EMIT
-    c007 // 03d: '\r'
-    c017 // 03e: =
-    9042 // 03f: jump_ifzero(042)
-    c005 // 040: '\n'
-    c025 // 041: EMIT
+    c025 // 03c: call(EMIT)
+    c007 // 03d: call('\r')
+    c017 // 03e: call(=)
+    9042 // 03f: jump_ifzero(0x042)
+    c005 // 040: call('\n')
+    c025 // 041: call(EMIT)
     5000 // 042: NOP EXIT
-    c02d // 043: KEY                     ECHOLOOP
+    c02d // 043: call(KEY)               ECHOLOOP
     0200 // 044: DUP
-    c03b // 045: ECHO
-    c003 // 046: ^C
-    c017 // 047: =
-    904a // 048: jump_ifzero(04a)
+    c03b // 045: call(ECHO)
+    c003 // 046: call(^C)
+    c017 // 047: call(=)
+    904a // 048: jump_ifzero(0x04a)
     5000 // 049: NOP EXIT
-    8043 // 04a: jump(043)
-    c043 // 04b: ECHOLOOP                BOOT
+    8043 // 04a: jump(ECHOLOOP)
+    c043 // 04b: call(ECHOLOOP)          BOOT
     5000 // 04c: NOP EXIT
