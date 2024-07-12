@@ -28,6 +28,13 @@ jobs:
       - run: mkdir _site/wasm
       - run: cp vm/wasm/*.wasm _site/wasm/
 
+# Deploy uCode tools.
+
+      - run: mkdir _site/ucode
+      - run: cp fpga/fomu/cpu/ucode.js _site/ucode/
+      - run: cp fpga/fomu/cpu/ucode_sim.js _site/ucode/
+      - run: cp fpga/fomu/cpu/ucode_dbg.* _site/ucode/
+
 # Deploy the apps.
 
       - run: cp -R apps/debugger _site/debugger
