@@ -428,7 +428,7 @@ function disasm(code, words = {}) {
     } else {
         const name = name_for(code);
         if (name !== undefined) {
-            text += name;  // get "name" key
+            text += name;
             text += suffix;
         } else {
             text += "0x";

@@ -36,6 +36,13 @@ const $console_in = $("console-in");
 const $console_buffer = $("console-buffer");
 const $console_send = $("console-send");
 
+function center_program_view(row = 0) {  // center align designated row
+    const view_height = $program_mem.getBoundingClientRect().height - 6;
+    const line_height = view_height / $program_mem.rows;
+    row += 2;  // adjust for headers, etc.
+    $program_mem.scrollTop = (line_height * row) - (view_height / 2);
+}
+
 const B_FALSE = 0x0000;  // 16-bit Boolean FALSE
 const B_TRUE = 0xFFFF;  // 16-bit Boolean TRUE
 function uc_bool(value) {
@@ -129,6 +136,7 @@ function display_machine(machine) {
     const state = machine.copy();
 //    console.log("machine_state:", state);
     $machine_pc.value = hex.from(state.pc, 12);
+    center_program_view(state.pc);
     $machine_code.value = machine.disasm(state.pc);
     $machine_dstack.innerText = format_stack(state.dstack, state.dstats);
     $machine_rstack.innerText = format_stack(state.rstack, state.rstats);
@@ -156,6 +164,8 @@ $program_compile.onclick = function () {
     display_memory();
 
     // create simluated UART interface
+    $console_out.value = "";
+    $console_in.value = "";
     const uart = make_uart(function receive(text) {
         $console_out.value += text;
     });
