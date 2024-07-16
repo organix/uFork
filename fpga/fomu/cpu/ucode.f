@@ -376,7 +376,14 @@
     #nil e_tail!
     #nil k_head!
     #nil k_tail!
-    ( TODO: initialize 13 device-actors ... )
+    13 ?LOOP-               ( initialize device-actors )
+        0x4002 I +
+        #actor_t OVER QT!
+        I MSB| OVER QX!
+        #nil OVER QY!
+        #? OVER QZ!
+        DROP
+    AGAIN
     0x9000 q_root_spn spn_memory!
     0x8100 q_root_spn spn_events!
     0xB000 q_root_spn spn_cycles!
