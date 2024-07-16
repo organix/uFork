@@ -97,6 +97,13 @@
         + 1+                ( D: index table+limit+1 )
     THEN
     >R ;
+: MEMCPY ( dst src count -- )
+    ?LOOP-                  ( D: dst src ) ( R: count-1 )
+        2DUP                ( D: dst src dst src )
+        I + @               ( D: dst src dst data )
+        SWAP I + !          ( D: dst src )
+    AGAIN
+    2DROP ;
 
 : INBOUNDS ( n lo hi -- lo<=n&&n<=hi )
     -ROT OVER SWAP -
@@ -168,31 +175,62 @@
         4ROL DUP X#
     AGAIN DROP ;
 
-( Debugging Monitor )
-0x21 CONSTANT '!'
-0x2E CONSTANT '.'
-0x2F CONSTANT '/'
-0x3C CONSTANT '<'
-0x3E CONSTANT '>'
-0x3F CONSTANT '?'
-0x40 CONSTANT '@'
-0x5B CONSTANT '['
-0x5D CONSTANT ']'
-0x70 CONSTANT 'p'
-0x71 CONSTANT 'q'
-0x72 CONSTANT 'r'
-0x7E CONSTANT '~'
-VARIABLE cmd    ( last command character read )
-VARIABLE inp    ( input data accumulator )
-VARIABLE tos    ( top of stack )
-VARIABLE nos    ( next on stack )
-VARIABLE here   ( upload address )
-: push ( a -- )
-    tos @ nos !
-    tos ! ;
-: pop ( -- a )
-    tos @
-    nos @ tos ! ;
+( uFork Virtual Machine )
+0x0000 CONSTANT #?          ( undefined )
+0x0001 CONSTANT #nil        ( empty list )
+0x0002 CONSTANT #f          ( boolean false )
+0x0003 CONSTANT #t          ( boolean true )
+0x0004 CONSTANT #unit       ( inert result )
+0x0005 CONSTANT EMPTY_DQ    ( empty deque )
+0x0006 CONSTANT #type_t     ( type of types )
+0x0007 CONSTANT #fixnum_t   ( integer fixnum )
+0x0008 CONSTANT #actor_t    ( actor address )
+0x0009 CONSTANT PROXY_T     ( outbound proxy )
+0x000A CONSTANT STUB_T      ( inbound stub )
+0x000B CONSTANT #instr_t    ( machine code )
+0x000C CONSTANT #pair_t     ( pair/cons-cell )
+0x000D CONSTANT #dict_t     ( name/value binding )
+0x000E CONSTANT FWD_REF_T   ( GC "broken heart" )
+0x000F CONSTANT FREE_T      ( GC free quad )
+
+: rom_image DATA            ( 16 x 4 cells )
+(   T           X           Y           Z           VALUE   NAME        )
+  0x0000 ,    0x0000 ,    0x0000 ,    0x0000 ,    ( ^0000   #?          )
+  0x0000 ,    0x0000 ,    0x0000 ,    0x0000 ,    ( ^0001   #nil        )
+  0x0000 ,    0x0000 ,    0x0000 ,    0x0000 ,    ( ^0002   #f          )
+  0x0000 ,    0x0000 ,    0x0000 ,    0x0000 ,    ( ^0003   #t          )
+  0x0000 ,    0x0000 ,    0x0000 ,    0x0000 ,    ( ^0004   #unit       )
+  0x000C ,    0x0001 ,    0x0001 ,    0x0000 ,    ( ^0005   EMPTY_DQ    )
+  0x0006 ,    0x8001 ,    0x0000 ,    0x0000 ,    ( ^0006   #type_t     )
+  0x0006 ,    0x0000 ,    0x0000 ,    0x0000 ,    ( ^0007   #fixnum_t   )
+  0x0006 ,    0x8002 ,    0x0000 ,    0x0000 ,    ( ^0008   #actor_t    )
+  0x0006 ,    0x8002 ,    0x0000 ,    0x0000 ,    ( ^0009   PROXY_T     )
+  0x0006 ,    0x8002 ,    0x0000 ,    0x0000 ,    ( ^000A   STUB_T      )
+  0x0006 ,    0x8003 ,    0x0000 ,    0x0000 ,    ( ^000B   #instr_t    )
+  0x0006 ,    0x8002 ,    0x0000 ,    0x0000 ,    ( ^000C   #pair_t     )
+  0x0006 ,    0x8003 ,    0x0000 ,    0x0000 ,    ( ^000D   #dict_t     )
+  0x0006 ,    0xFFFF ,    0x0000 ,    0x0000 ,    ( ^000E   FWD_REF_T   )
+  0x0006 ,    0x8000 ,    0x0000 ,    0x0000 ,    ( ^000F   FREE_T      )
+
+0x8000 CONSTANT E_OK        ( not an error )
+0xFFFF CONSTANT E_FAIL      ( general failure )
+0xFFFE CONSTANT E_BOUNDS    ( out of bounds )
+0xFFFD CONSTANT E_NO_MEM    ( no memory available )
+0xFFFC CONSTANT E_NOT_FIX   ( fixnum required )
+0xFFFB CONSTANT E_NOT_CAP   ( capability required )
+0xFFFA CONSTANT E_NOT_PTR   ( memory pointer required )
+0xFFF9 CONSTANT E_NOT_ROM   ( ROM pointer required )
+0xFFF8 CONSTANT E_NOT_RAM   ( RAM pointer required )
+0xFFF7 CONSTANT E_NOT_EXE   ( instruction required )
+0xFFF6 CONSTANT E_NO_TYPE   ( type required )
+0xFFF5 CONSTANT E_MEM_LIM   ( Sponsor memory limit reached )
+0xFFF4 CONSTANT E_CPU_LIM   ( Sponsor instruction limit reached )
+0xFFF3 CONSTANT E_MSG_LIM   ( Sponsor event limit reached )
+0xFFF2 CONSTANT E_ASSERT    ( assertion failed )
+0xFFF1 CONSTANT E_STOP      ( actor stopped )
+
+: signal ( error -- )
+    FAIL signal ;
 : quad ( raw -- qaddr )
     DUP MSB& IF
         0x0FFF AND          ( uCode | fixnum )
@@ -251,6 +289,130 @@ VARIABLE here   ( upload address )
     ELSE
         !
     THEN ;
+: memcpy ( dst src count -- )
+    ?LOOP-                  ( D: dst src ) ( R: count-1 )
+        2DUP                ( D: dst src dst src )
+        I + fetch           ( D: dst src dst data )
+        SWAP I + store      ( D: dst src )
+    AGAIN
+    2DROP ;
+
+0x4000 CONSTANT q_mem_desc  ( quad-memory descriptor )
+: mem_top@ ( -- data )
+    q_mem_desc QT@ ;
+: mem_next@ ( -- data )
+    q_mem_desc QX@ ;
+: mem_free@ ( -- data )
+    q_mem_desc QY@ ;
+: mem_root@ ( -- data )
+    q_mem_desc QZ@ ;
+: mem_top! ( data -- )
+    q_mem_desc QT! ;
+: mem_next! ( data -- )
+    q_mem_desc QX! ;
+: mem_free! ( data -- )
+    q_mem_desc QY! ;
+: mem_root! ( data -- )
+    q_mem_desc QZ! ;
+: reserve ( -- qref )
+    ( TODO: check free-list first ... )
+    mem_top@ DUP 0x5000 >= IF
+        E_NO_MEM signal ;
+    THEN
+    #? OVER QT!
+    #? OVER QX!
+    #? OVER QY!
+    #? OVER QZ!
+    DUP 1+ mem_top! ;
+: cons ( cdr car -- pair )
+    reserve #pair_t         ( D: cdr car pair #pair_t )
+    OVER QT!                ( D: cdr car pair )
+    TUCK QX!                ( D: cdr pair )
+    TUCK QY! ;              ( D: pair )
+
+0x4001 CONSTANT q_ek_queues ( event/continuation queues )
+: e_head@ ( -- data )
+    q_ek_queues QT@ ;
+: e_tail@ ( -- data )
+    q_ek_queues QX@ ;
+: k_head@ ( -- data )
+    q_ek_queues QY@ ;
+: k_tail@ ( -- data )
+    q_ek_queues QZ@ ;
+: e_head! ( data -- )
+    q_ek_queues QT! ;
+: e_tail! ( data -- )
+    q_ek_queues QX! ;
+: k_head! ( data -- )
+    q_ek_queues QY! ;
+: k_tail! ( data -- )
+    q_ek_queues QZ! ;
+
+0x400F CONSTANT q_root_spn  ( root sponsor )
+: spn_memory@ ( sponsor -- data )
+    QT@ ;
+: spn_events@ ( sponsor -- data )
+    QX@ ;
+: spn_cycles@ ( sponsor -- data )
+    QY@ ;
+: spn_signal@ ( sponsor -- data )
+    QZ@ ;
+: spn_memory! ( data sponsor -- )
+    QT! ;
+: spn_events! ( data sponsor -- )
+    QX! ;
+: spn_cycles! ( data sponsor -- )
+    QY! ;
+: spn_signal! ( data sponsor -- )
+    QZ! ;
+
+: ufork_init
+    0x8000 rom_image 64 memcpy
+    0x4010 mem_top!
+    #nil mem_next!
+    0x8000 mem_free!
+    #nil mem_root!
+    #nil e_head!
+    #nil e_tail!
+    #nil k_head!
+    #nil k_tail!
+    ( TODO: initialize 13 device-actors ... )
+    0x9000 q_root_spn spn_memory!
+    0x8100 q_root_spn spn_events!
+    0xB000 q_root_spn spn_cycles!
+    #? q_root_spn spn_signal!
+    EXIT
+
+: test_suite
+    ufork_init
+    #nil #f cons #t cons
+    EXIT
+
+( Debugging Monitor )
+0x21 CONSTANT '!'
+0x2E CONSTANT '.'
+0x2F CONSTANT '/'
+0x3C CONSTANT '<'
+0x3E CONSTANT '>'
+0x3F CONSTANT '?'
+0x40 CONSTANT '@'
+0x5B CONSTANT '['
+0x5D CONSTANT ']'
+0x70 CONSTANT 'p'
+0x71 CONSTANT 'q'
+0x72 CONSTANT 'r'
+0x7E CONSTANT '~'
+VARIABLE cmd    ( last command character read )
+VARIABLE inp    ( input data accumulator )
+VARIABLE tos    ( top of stack )
+VARIABLE nos    ( next on stack )
+VARIABLE here   ( upload address )
+: push ( a -- )
+    tos @ nos !
+    tos ! ;
+: pop ( -- a )
+    tos @
+    nos @ tos ! ;
 : dump ( start end -- )
     OVER -                  ( D: start span )
     DUP 0< IF
@@ -389,4 +551,4 @@ VARIABLE here   ( upload address )
 
 ( WARNING! if BOOT returns we PANIC! )
 : BOOT
-    ECHOLOOP prompt MONITOR ;
+    ECHOLOOP test_suite prompt MONITOR ;
