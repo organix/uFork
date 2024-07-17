@@ -161,10 +161,13 @@ function compile(text, src = "") {
         ":": function () {
             // new entry-point
             const word = uc_call(prog.length);
-            prog[0] = word;  // update bootstrap entry-point
             const name = next_token();
 //debug console.log("compile_name:", name, "=", hex.from(word, 16));
+            if (words[name] !== undefined) {
+                return error("redefined word:", name);
+            }
             words[name] = word;  // add word to dictionary
+            prog[0] = word;  // update bootstrap entry-point
         },
         ",": function () {
             // allocate raw data
@@ -355,7 +358,7 @@ function compile(text, src = "") {
                 prog.push(num & 0xFFFF);  // truncate to 16 bits
                 tail_ctx = TAIL_DATA;
             } else {
-                return error("invalid token:", token);
+                return error("unknown word:", token);
             }
         }
         return token;

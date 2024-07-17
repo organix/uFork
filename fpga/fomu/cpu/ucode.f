@@ -43,22 +43,18 @@
     R> EXIT
 
 : ABS ( n -- +n )
-    DUP MSB& SKZ NEGATE ;
-: BOOL ( n -- flag )
-    IF
-        TRUE
-    ELSE
-        FALSE
+    DUP MSB& IF
+        NEGATE
     THEN ;
+: BOOL ( truthy -- bool )
+    IF TRUE ;
+    THEN FALSE ;
 : = ( a b -- a==b )
     XOR
 : 0= ( n -- n==0 )
-: NOT ( flag -- !flag )
-    IF
-        FALSE
-    ELSE
-        TRUE
-    THEN ;
+: NOT ( truthy -- !bool )
+    IF FALSE ;
+    THEN TRUE ;
 : <> ( a b -- a!=b )
     = INVERT ;
 : 0> ( n -- n>0 )
@@ -82,10 +78,7 @@
 : @1- ( addr -- )
     DUP @ 1- SWAP ! ;
 : J ( -- j ) ( R: j i -- j i )
-    R>                      ( D: -- i ) ( R: j i -- j )
-    R@                      ( D: i -- i j ) ( R: j -- j )
-    SWAP                    ( D: i j -- j i ) ( R: j -- j )
-    >R ;                    ( D: j i -- j ) ( R: j -- j i )
+    R> R@ SWAP >R ;
 : JMPTBL ( index -- )
     R>                      ( D: index table )
     2DUP @                  ( D: index table index limit )
@@ -108,11 +101,11 @@
 : INBOUNDS ( n lo hi -- lo<=n&&n<=hi )
     -ROT OVER SWAP -
     -ROT - OR MSB& 0= ;
-: ISDIGIT ( char -- flag )
+: ISDIGIT ( char -- bool )
     '0' '9' INBOUNDS ;
-: ISUPPER ( char -- flag )
+: ISUPPER ( char -- bool )
     'A' 'Z' INBOUNDS ;
-: ISLOWER ( char -- flag )
+: ISLOWER ( char -- bool )
     'a' 'z' INBOUNDS ;
 : TOUPPER ( 'A' | 'a' -- 'A' )
     DUP ISLOWER IF
@@ -122,7 +115,7 @@
     DUP ISUPPER IF
         BL XOR  ( flip case )
     THEN ;
-: ISHEX ( char -- flag )
+: ISHEX ( char -- bool )
     DUP 'A' 'F' INBOUNDS
     OVER 'a' 'f' INBOUNDS OR
     SWAP ISDIGIT OR ;
@@ -176,23 +169,6 @@
     AGAIN DROP ;
 
 ( uFork Virtual Machine )
-0x0000 CONSTANT #?          ( undefined )
-0x0001 CONSTANT #nil        ( empty list )
-0x0002 CONSTANT #f          ( boolean false )
-0x0003 CONSTANT #t          ( boolean true )
-0x0004 CONSTANT #unit       ( inert result )
-0x0005 CONSTANT EMPTY_DQ    ( empty deque )
-0x0006 CONSTANT #type_t     ( type of types )
-0x0007 CONSTANT #fixnum_t   ( integer fixnum )
-0x0008 CONSTANT #actor_t    ( actor address )
-0x0009 CONSTANT PROXY_T     ( outbound proxy )
-0x000A CONSTANT STUB_T      ( inbound stub )
-0x000B CONSTANT #instr_t    ( machine code )
-0x000C CONSTANT #pair_t     ( pair/cons-cell )
-0x000D CONSTANT #dict_t     ( name/value binding )
-0x000E CONSTANT FWD_REF_T   ( GC "broken heart" )
-0x000F CONSTANT FREE_T      ( GC free quad )
-
 : rom_image DATA            ( 16 x 4 cells )
 (   T           X           Y           Z           VALUE   NAME        )
   0x0000 ,    0x0000 ,    0x0000 ,    0x0000 ,    ( ^0000   #?          )
@@ -211,6 +187,23 @@
   0x0006 ,    0x8003 ,    0x0000 ,    0x0000 ,    ( ^000D   #dict_t     )
   0x0006 ,    0xFFFF ,    0x0000 ,    0x0000 ,    ( ^000E   FWD_REF_T   )
   0x0006 ,    0x8000 ,    0x0000 ,    0x0000 ,    ( ^000F   FREE_T      )
+
+0x0000 CONSTANT #?          ( undefined )
+0x0001 CONSTANT #nil        ( empty list )
+0x0002 CONSTANT #f          ( boolean false )
+0x0003 CONSTANT #t          ( boolean true )
+0x0004 CONSTANT #unit       ( inert result )
+0x0005 CONSTANT EMPTY_DQ    ( empty deque )
+0x0006 CONSTANT #type_t     ( type of types )
+0x0007 CONSTANT #fixnum_t   ( integer fixnum )
+0x0008 CONSTANT #actor_t    ( actor address )
+0x0009 CONSTANT PROXY_T     ( outbound proxy )
+0x000A CONSTANT STUB_T      ( inbound stub )
+0x000B CONSTANT #instr_t    ( machine code )
+0x000C CONSTANT #pair_t     ( pair/cons-cell )
+0x000D CONSTANT #dict_t     ( name/value binding )
+0x000E CONSTANT FWD_REF_T   ( GC "broken heart" )
+0x000F CONSTANT FREE_T      ( GC free quad )
 
 0x8000 CONSTANT E_OK        ( not an error )
 0xFFFF CONSTANT E_FAIL      ( general failure )
@@ -297,6 +290,38 @@
     AGAIN
     2DROP ;
 
+(
+Type checking can produce the following errors:
+
+0xFFFC CONSTANT E_NOT_FIX   ( fixnum required )
+0xFFFB CONSTANT E_NOT_CAP   ( capability required )
+0xFFFA CONSTANT E_NOT_PTR   ( memory pointer required )
+0xFFF9 CONSTANT E_NOT_ROM   ( ROM pointer required )
+0xFFF8 CONSTANT E_NOT_RAM   ( RAM pointer required )
+0xFFF7 CONSTANT E_NOT_EXE   ( instruction required )
+0xFFF6 CONSTANT E_NO_TYPE   ( type required )
+)
+
+: is_fix ( raw -- truthy )
+    MSB& ;
+: is_cap ( raw -- bool )
+    0xE000 AND 0x6000 = ;
+: is_ptr ( raw -- bool )
+    0xA000 AND 0= ;         ( is_ram or is_rom )
+: is_ram ( raw -- bool )
+    0xE000 AND 0x4000 = ;   ( excludes ocaps )
+: is_rom ( raw -- bool )
+    0xC000 AND 0= ;
+
+: int2fix ( num -- raw )
+    MSB| ;
+: fix2int ( raw -- num )
+    ROL ASR ;
+: ptr2cap ( ptr -- cap )
+    0x2000 OR ;
+: cap2ptr ( cap -- ptr )
+    0xDFFF AND ;
+
 0x4000 CONSTANT q_mem_desc  ( quad-memory descriptor )
 : mem_top@ ( -- data )
     q_mem_desc QT@ ;
@@ -314,21 +339,6 @@
     q_mem_desc QY! ;
 : mem_root! ( data -- )
     q_mem_desc QZ! ;
-: reserve ( -- qref )
-    ( TODO: check free-list first ... )
-    mem_top@ DUP 0x5000 >= IF
-        E_NO_MEM signal ;
-    THEN
-    #? OVER QT!
-    #? OVER QX!
-    #? OVER QY!
-    #? OVER QZ!
-    DUP 1+ mem_top! ;
-: cons ( cdr car -- pair )
-    reserve #pair_t         ( D: cdr car pair #pair_t )
-    OVER QT!                ( D: cdr car pair )
-    TUCK QX!                ( D: cdr pair )
-    TUCK QY! ;              ( D: pair )
 
 0x4001 CONSTANT q_ek_queues ( event/continuation queues )
 : e_head@ ( -- data )
@@ -365,6 +375,112 @@
     QY! ;
 : spn_signal! ( data sponsor -- )
     QZ! ;
+
+: reserve ( -- qref )
+    ( TODO: check free-list first ... )
+    mem_top@ DUP 0x5000 >= IF
+        E_NO_MEM signal ;
+    THEN
+    #? OVER QT!
+    #? OVER QX!
+    #? OVER QY!
+    #? OVER QZ!
+    DUP 1+ mem_top! ;
+: cons ( cdr car -- pair )
+    reserve #pair_t         ( D: cdr car pair #pair_t )
+    OVER QT!                ( D: cdr car pair )
+    TUCK QX!                ( D: cdr pair )
+    TUCK QY! ;              ( D: pair )
+: is_pair ( raw -- bool )
+    DUP is_ptr IF
+        QT@ #pair_t = IF
+            TRUE ;
+        THEN
+    THEN FALSE ;
+: car ( pair -- first )
+    DUP is_pair IF
+        QX@ ;
+    THEN #? ;
+: cdr ( pair -- rest )
+    DUP is_pair IF
+        QY@ ;
+    THEN #? ;
+
+: typeq ( raw typ -- truthy )
+    DUP #fixnum_t = IF
+        DROP is_fix ;
+    THEN
+    DUP #actor_t = IF
+        DROP is_cap ;
+    THEN
+    2DUP SWAP QT@ = IF
+        PROXY_T = IF        ( D: raw )
+            is_cap ;
+        THEN
+        is_ptr ;
+    THEN
+    2DROP FALSE ;
+
+(
+
+The following functions are used in various instruction descriptions:
+
+    Define cons(x, y) as: #pair_t(x, y)
+    Define car(x) as: if x is a #pair_t then x.X else #?
+    Define cdr(x) as: if x is a #pair_t then x.Y else #?
+
+To Advance p by fixnum:n:
+
+    While n > 0
+        Let p become cdr(p)
+        Let n become n-1
+
+To Insert item at prev:
+
+    If prev is a #pair_t
+        Let entry be cons(item, cdr(prev))
+        Set prev.Y to entry
+
+To Extract next from prev:
+
+    If prev is a #pair_t
+        Set prev.Y to cdr(next)
+
+To Enlist fixnum:n as list:
+
+    If n > 0
+        Let list be the stack pointer
+        Let p be list
+        Advance p by n
+        If p is a #pair_t
+            Let the stack pointer become cdr(p)
+            Set p.Y to #nil
+        Otherwise
+            Let the stack pointer become #nil
+    Otherwise
+        Let list be #nil
+
+To Reverse list onto head:
+
+    While list is a #pair_t
+        Let next be cdr(list)
+        Set list.Y to head
+        Let head become list
+        Let list become next
+
+To Copy list onto head:
+
+    While list is a #pair_t
+        Let head be cons(car(list), head)
+        Let list become cdr(list)
+
+To Copy fixnum:n of list onto head:
+
+    While n > 0
+        Let head be cons(car(list), head)
+        Let list become cdr(list)
+        Let n become n-1
+)
 
 : ufork_init
     0x8000 rom_image 64 memcpy
