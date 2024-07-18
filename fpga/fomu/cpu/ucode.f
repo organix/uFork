@@ -188,8 +188,8 @@
   0x0006 ,    0xFFFF ,    0x0000 ,    0x0000 ,    ( ^000E   FWD_REF_T   )
   0x0006 ,    0x8000 ,    0x0000 ,    0x0000 ,    ( ^000F   FREE_T      )
 
-0x0000 CONSTANT #?          ( undefined )
-0x0001 CONSTANT #nil        ( empty list )
+( 0x0000 CONSTANT #?          ( undefined ) ... ucode.js )
+( 0x0001 CONSTANT #nil        ( empty list ) ... ucode.js )
 0x0002 CONSTANT #f          ( boolean false )
 0x0003 CONSTANT #t          ( boolean true )
 0x0004 CONSTANT #unit       ( inert result )
@@ -205,6 +205,7 @@
 0x000E CONSTANT FWD_REF_T   ( GC "broken heart" )
 0x000F CONSTANT FREE_T      ( GC free quad )
 
+( : #0                        ( fixnum zero ) ... ucode.js )
 0x8000 CONSTANT E_OK        ( not an error )
 0xFFFF CONSTANT E_FAIL      ( general failure )
 0xFFFE CONSTANT E_BOUNDS    ( out of bounds )
@@ -302,8 +303,8 @@ Type checking can produce the following errors:
 0xFFF6 CONSTANT E_NO_TYPE   ( type required )
 )
 
-: is_fix ( raw -- truthy )
-    MSB& ;
+( : is_fix ( raw -- truthy )
+    MSB& ; ... ucode.js )
 : is_cap ( raw -- bool )
     0xE000 AND 0x6000 = ;
 : is_ptr ( raw -- bool )
@@ -313,8 +314,8 @@ Type checking can produce the following errors:
 : is_rom ( raw -- bool )
     0xC000 AND 0= ;
 
-: int2fix ( num -- raw )
-    MSB| ;
+( : int2fix ( num -- raw )
+    MSB| ; ... ucode.js )
 : fix2int ( raw -- num )
     ROL ASR ;
 : ptr2cap ( ptr -- cap )
@@ -393,18 +394,20 @@ Type checking can produce the following errors:
     TUCK QY! ;              ( D: pair )
 : is_pair ( raw -- bool )
     DUP is_ptr IF
-        QT@ #pair_t = IF
-            TRUE ;
-        THEN
-    THEN FALSE ;
+        QT@ #pair_t = ;
+    THEN DROP FALSE ;
 : car ( pair -- first )
     DUP is_pair IF
         QX@ ;
-    THEN #? ;
+    THEN DROP #? ;
 : cdr ( pair -- rest )
     DUP is_pair IF
         QY@ ;
-    THEN #? ;
+    THEN DROP #? ;
+: part ( pair -- rest first )
+    DUP is_pair IF
+        DUP QY@ SWAP QX@ ;
+    THEN DROP #? DUP ;
 
 : typeq ( raw typ -- truthy )
     DUP #fixnum_t = IF
@@ -486,7 +489,7 @@ To Copy fixnum:n of list onto head:
     0x8000 rom_image 64 memcpy
     0x4010 mem_top!
     #nil mem_next!
-    0x8000 mem_free!
+    #0 mem_free!
     #nil mem_root!
     #nil e_head!
     #nil e_tail!
@@ -495,7 +498,7 @@ To Copy fixnum:n of list onto head:
     13 ?LOOP-               ( initialize device-actors )
         0x4002 I +
         #actor_t OVER QT!
-        I MSB| OVER QX!
+        I int2fix OVER QX!
         #nil OVER QY!
         #? OVER QZ!
         DROP
@@ -506,9 +509,59 @@ To Copy fixnum:n of list onto head:
     #? q_root_spn spn_signal!
     EXIT
 
+: assert ( truthy -- )
+    NOT IF
+        FAIL
+    THEN ;
+: =assert ( actual expect -- )
+    = assert ;
+
+: ufork_init_test
+    mem_free@ ( 0 int2fix ) #0 =assert
+    mem_next@ #nil =assert
+    e_head@ #nil =assert
+    k_head@ #nil =assert ;
+
+: cons_test
+    #nil #f cons #t cons
+    DUP car #t =assert
+    cdr
+    part #f =assert
+    DUP #nil =assert
+    cdr #? =assert ;
+
+(
+    #[test]
+    fn core_initialization() {
+        let core = Core::default();
+        assert_eq!(ZERO, core.ram_free());
+        assert_eq!(NIL, core.ram_next());
+        assert_eq!(NIL, core.e_first());
+        assert_eq!(NIL, core.k_first());
+        assert_eq!(UNDEF, core.kp());
+    }
+
+    #[test]
+    fn basic_memory_allocation() {
+        let mut core = Core::default();
+        let top_before = core.ram_top().ofs();
+        let m1 = core.reserve(&Quad::pair_t(PLUS_1, PLUS_1)).unwrap();
+        assert!(m1.is_ptr());
+        let m2 = core.reserve(&Quad::pair_t(PLUS_2, PLUS_2)).unwrap();
+        let m3 = core.reserve(&Quad::pair_t(PLUS_3, PLUS_3)).unwrap();
+        core.release(m2);
+        core.release(m3);
+        let _m4 = core.reserve(&Quad::pair_t(PLUS_4, PLUS_4)).unwrap();
+        let top_after = core.ram_top().ofs();
+        assert_eq!(3, top_after - top_before);
+        assert_eq!(PLUS_1, core.ram_free());
+    }
+)
+
 : test_suite
     ufork_init
-    #nil #f cons #t cons
+    ufork_init_test
+    cons_test
     EXIT
 
 ( Debugging Monitor )

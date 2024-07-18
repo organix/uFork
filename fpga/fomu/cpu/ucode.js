@@ -158,6 +158,14 @@ function compile(text, src = "") {
         "R@": 0x0280,  // ( -- a ) ( R: a -- a )
         "RDROP": 0x1000,  // ( -- ) ( R: a -- )
         "FAIL": 0x002F,  // ( -- ) signal failure
+        /*
+        */
+        "#?": 0x02C0,  // ( -- 0x0000 ) ... uFork primitive
+        "#nil": 0x02D6,  // ( -- 0x0001 ) ... uFork primitive
+        "#0": 0x02E6,  // ( -- 0x8000 ) ... uFork primitive
+        "#-1": 0x02F6,  // ( -- 0xFFFF ) ... uFork primitive
+        "is_fix": 0x0324,  // ( x -- x&0x8000 ) ... uFork primitive
+        "int2fix": 0x0326,  // ( x -- x|0x8000 ) ... uFork primitive
         ":": function () {
             // new entry-point
             const word = uc_call(prog.length);
@@ -182,6 +190,9 @@ function compile(text, src = "") {
         "CONSTANT": function () {
             // allocate constant word
             const name = next_token();
+            if (words[name] !== undefined) {
+                return error("redefined word:", name);
+            }
             if (tail_ctx !== TAIL_DATA) {
                 return error("invalid constant:", name);
             }
@@ -197,6 +208,9 @@ function compile(text, src = "") {
             const word = uc_call(prog.length);
             const name = next_token();
 //debug console.log("compile_var:", name, "=", hex.from(word, 16));
+            if (words[name] !== undefined) {
+                return error("redefined word:", name);
+            }
             prog.push(UC_CONST);
             prog.push(prog.length + 1);  // variable address
             prog.push(0);  // variable data field
