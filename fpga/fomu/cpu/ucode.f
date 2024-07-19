@@ -3,6 +3,7 @@
 )
 
 : PANIC! FAIL PANIC! ;      ( if BOOT returns... )
+: TODO 0x00AF , PANIC! ;    ( alternative HALT... )
 
 0x03 CONSTANT ^C
 0x08 CONSTANT '\b'
@@ -314,6 +315,25 @@ Type checking can produce the following errors:
 : is_rom ( raw -- bool )
     0xC000 AND 0= ;
 
+: is_pair ( raw -- bool )
+    DUP is_ptr IF
+        QT@ #pair_t = ;
+    THEN DROP FALSE ;
+: typeq ( raw typ -- truthy )
+    DUP #fixnum_t = IF
+        DROP is_fix ;
+    THEN
+    DUP #actor_t = IF
+        DROP is_cap ;
+    THEN
+    2DUP SWAP QT@ = IF
+        PROXY_T = IF        ( D: raw )
+            is_cap ;
+        THEN
+        is_ptr ;
+    THEN
+    2DROP FALSE ;
+
 ( : int2fix ( num -- raw )
     MSB| ; ... ucode.js )
 : fix2int ( raw -- num )
@@ -379,23 +399,46 @@ Type checking can produce the following errors:
 
 : reserve ( -- qref )
     ( TODO: check free-list first ... )
-    mem_top@ DUP 0x5000 >= IF
+    mem_top@ DUP 0x5000 >= IF       ( FIXME: consider rewrite using < )
         E_NO_MEM signal ;
     THEN
-    #? OVER QT!
-    #? OVER QX!
-    #? OVER QY!
-    #? OVER QZ!
     DUP 1+ mem_top! ;
+: release ( qref -- )
+    TODO
+    EXIT
+: alloc ( z y x t -- qref )
+    DUP #type_t typeq IF    ( determine cardinality )
+        DUP QX@ fix2int
+    ELSE
+        3
+    THEN                    ( D: z y x t c )
+    SWAP reserve            ( D: z y x c t qref )
+    DUP >R QT!              ( D: z y x c ) ( R: qref )
+    DUP IF
+        SWAP R@ QX!         ( D: z y c ) ( R: qref )
+        1- DUP IF
+            SWAP R@ QY!     ( D: z c ) ( R: qref )
+            1- DUP IF
+                SWAP        ( D: c z ) ( R: qref )
+            ELSE
+                #?          ( D: c #? ) ( R: qref )
+            THEN
+            R@ QZ!          ( D: c ) ( R: qref )
+        ELSE
+            #? R@ QY!
+            #? R@ QZ!
+        THEN
+    ELSE
+        #? R@ QX!
+        #? R@ QY!
+        #? R@ QZ!
+    THEN
+    DROP R> ;               ( D: qref ) ( R: -- )
 : cons ( cdr car -- pair )
     reserve #pair_t         ( D: cdr car pair #pair_t )
     OVER QT!                ( D: cdr car pair )
     TUCK QX!                ( D: cdr pair )
     TUCK QY! ;              ( D: pair )
-: is_pair ( raw -- bool )
-    DUP is_ptr IF
-        QT@ #pair_t = ;
-    THEN DROP FALSE ;
 : car ( pair -- first )
     DUP is_pair IF
         QX@ ;
@@ -408,21 +451,6 @@ Type checking can produce the following errors:
     DUP is_pair IF
         DUP QY@ SWAP QX@ ;
     THEN DROP #? DUP ;
-
-: typeq ( raw typ -- truthy )
-    DUP #fixnum_t = IF
-        DROP is_fix ;
-    THEN
-    DUP #actor_t = IF
-        DROP is_cap ;
-    THEN
-    2DUP SWAP QT@ = IF
-        PROXY_T = IF        ( D: raw )
-            is_cap ;
-        THEN
-        is_ptr ;
-    THEN
-    2DROP FALSE ;
 
 (
 
@@ -520,7 +548,8 @@ To Copy fixnum:n of list onto head:
     mem_free@ ( 0 int2fix ) #0 =assert
     mem_next@ #nil =assert
     e_head@ #nil =assert
-    k_head@ #nil =assert ;
+    k_head@ #nil =assert
+    EXIT
 
 : cons_test
     #nil #f cons #t cons
@@ -528,19 +557,23 @@ To Copy fixnum:n of list onto head:
     cdr
     part #f =assert
     DUP #nil =assert
-    cdr #? =assert ;
+    cdr #? =assert
+    EXIT
+
+: alloc_test
+    mem_top@                ( D: top_before )
+    cons_test
+    #-1 #0 #pair_t alloc
+    DUP QT@ #pair_t =assert
+    DUP QX@ #0 =assert
+    DUP QY@ #-1 =assert
+    DUP QZ@ #? =assert
+    is_ptr assert
+    mem_top@                ( D: top_before top_after )
+    SWAP - 3 =assert
+    EXIT
 
 (
-    #[test]
-    fn core_initialization() {
-        let core = Core::default();
-        assert_eq!(ZERO, core.ram_free());
-        assert_eq!(NIL, core.ram_next());
-        assert_eq!(NIL, core.e_first());
-        assert_eq!(NIL, core.k_first());
-        assert_eq!(UNDEF, core.kp());
-    }
-
     #[test]
     fn basic_memory_allocation() {
         let mut core = Core::default();
@@ -561,7 +594,7 @@ To Copy fixnum:n of list onto head:
 : test_suite
     ufork_init
     ufork_init_test
-    cons_test
+    alloc_test
     EXIT
 
 ( Debugging Monitor )
