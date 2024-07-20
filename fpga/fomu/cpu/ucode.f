@@ -366,14 +366,14 @@ Type checking can produce the following errors:
     q_ek_queues QT@ ;
 : e_tail@ ( -- data )
     q_ek_queues QX@ ;
-: k_head@ ( -- data )
-    q_ek_queues QY@ ;
-: k_tail@ ( -- data )
-    q_ek_queues QZ@ ;
 : e_head! ( data -- )
     q_ek_queues QT! ;
 : e_tail! ( data -- )
     q_ek_queues QX! ;
+: k_head@ ( -- data )
+    q_ek_queues QY@ ;
+: k_tail@ ( -- data )
+    q_ek_queues QZ@ ;
 : k_head! ( data -- )
     q_ek_queues QY! ;
 : k_tail! ( data -- )
@@ -396,6 +396,52 @@ Type checking can produce the following errors:
     QY! ;
 : spn_signal! ( data sponsor -- )
     QZ! ;
+
+: event_enqueue ( event -- )
+    #nil OVER QZ!
+    e_head@ is_ram IF
+        DUP e_tail@ QZ!
+    ELSE
+        DUP e_head!
+    THEN
+    e_tail! ;
+
+: event_dequeue ( -- event | #nil )
+    e_head@ DUP is_ram IF
+        DUP QZ@             ( D: event next )
+        DUP e_head!
+        is_ram NOT IF
+            #nil e_tail!
+        THEN                ( D: event )
+    THEN ;
+
+(
+    pub fn event_enqueue(&mut self, ep: Any) {
+        // add event to the back of the queue
+        self.ram_mut(ep).set_z(NIL);
+        if !self.e_first().is_ram() {
+            self.set_e_first(ep);
+        } else /* if self.e_last().is_ram() */ {
+            self.ram_mut(self.e_last()).set_z(ep);
+        }
+        self.set_e_last(ep);
+    }
+    fn event_dequeue(&mut self) -> Option<Any> {
+        // remove event from the front of the queue
+        let ep = self.e_first();
+        if ep.is_ram() {
+            let event = self.ram(ep);
+            let next = event.z();
+            self.set_e_first(next);
+            if !next.is_ram() {
+                self.set_e_last(NIL)
+            }
+            Some(ep)
+        } else {
+            None
+        }
+    }
+)
 
 : reserve ( -- qref )
     mem_next@ DUP #nil XOR IF
@@ -577,31 +623,29 @@ To Copy fixnum:n of list onto head:
     DROP                    ( D: top_before )
     mem_top@                ( D: top_before top_after )
     SWAP - 3 =assert
+    mem_free@ 1 =assert
     EXIT
 
-(
-    #[test]
-    fn basic_memory_allocation() {
-        let mut core = Core::default();
-        let top_before = core.ram_top().ofs();
-        let m1 = core.reserve(&Quad::pair_t(PLUS_1, PLUS_1)).unwrap();
-        assert!(m1.is_ptr());
-        let m2 = core.reserve(&Quad::pair_t(PLUS_2, PLUS_2)).unwrap();
-        let m3 = core.reserve(&Quad::pair_t(PLUS_3, PLUS_3)).unwrap();
-        core.release(m2);
-        core.release(m3);
-        let _m4 = core.reserve(&Quad::pair_t(PLUS_4, PLUS_4)).unwrap();
-        let top_after = core.ram_top().ofs();
-        assert_eq!(3, top_after - top_before);
-        assert_eq!(PLUS_1, core.ram_free());
-    }
-)
+: queue_test
+    #? #nil 0x6002 q_root_spn alloc
+    DUP event_enqueue
+    DUP e_head@ =assert
+    DUP e_tail@ =assert
+    #? #unit 0x600E q_root_spn alloc
+    DUP event_enqueue
+    OVER e_head@ =assert
+    DUP e_tail@ =assert
+    SWAP event_dequeue =assert
+    event_dequeue =assert
+    #nil event_dequeue =assert
+    EXIT
 
 : test_suite
     ufork_init
     ufork_init_test
-    alloc_test
     ( cons_test )
+    ( alloc_test )
+    queue_test
     EXIT
 
 ( Debugging Monitor )
