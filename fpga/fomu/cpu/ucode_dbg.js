@@ -35,6 +35,8 @@ const $console_out = $("console-out");
 const $console_in = $("console-in");
 const $console_buffer = $("console-buffer");
 const $console_send = $("console-send");
+const $ufork_ram = $("ufork-ram");
+const $ufork_rom = $("ufork-rom");
 
 function center_program_view(row = 0) {  // center align designated row
     const view_height = $program_mem.getBoundingClientRect().height - 6;
@@ -132,6 +134,27 @@ function format_stack(stack, stats) {
     return s;
 }
 
+const memory_header = "ADDR:  T    X    Y    Z     ADDR:  T    X    Y    Z";
+function format_memory(mem, base = 0) {
+    return memory_header + mem.map(function (value, index) {
+        let s = "";
+        if ((index & 0x1) === 0) {
+            s += "\n";
+        }
+        s += hex.from(base + index, 16);
+        s += ": ";
+        s += hex.from(value.t, 16);
+        s += " ";
+        s += hex.from(value.x, 16);
+        s += " ";
+        s += hex.from(value.y, 16);
+        s += " ";
+        s += hex.from(value.z, 16);
+        s += "   ";
+        return s;
+    }).join("");
+}
+
 function display_machine(machine) {
     const state = machine.copy();
 //    console.log("machine_state:", state);
@@ -140,6 +163,8 @@ function display_machine(machine) {
     $machine_code.value = machine.disasm(state.pc);
     $machine_dstack.innerText = format_stack(state.dstack, state.dstats);
     $machine_rstack.innerText = format_stack(state.rstack, state.rstats);
+    $ufork_ram.value = format_memory(state.qram, 0x4000);
+    $ufork_rom.value = format_memory(state.qrom, 0x0000);
     return state;
 }
 

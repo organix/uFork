@@ -118,6 +118,12 @@ function make_machine(prog = [], device = []) {
     let pc = 0;
     const dstack = make_stack();
     const rstack = make_stack();
+    const qram = new Array(1 << 12).fill(0).map(function (n) {
+        return {t: n, x: n, y: n, z: n};
+    });
+    const qrom = new Array(1 << 13).fill(0).map(function (n) {
+        return {t: n, x: n, y: n, z: n};
+    });
 
     function copy() {  // return a shallow copy of the machine state (for debugging)
         const state = {
@@ -125,6 +131,8 @@ function make_machine(prog = [], device = []) {
             dstats: dstack.stats(),
             rstack: rstack.copy(),
             rstats: rstack.stats(),
+            qram,           // FIXME: can we make a cheap read-only view?
+            qrom,           // FIXME: can we make a cheap read-only view?
             pc
         };
         return state;
@@ -195,12 +203,6 @@ function make_machine(prog = [], device = []) {
         return 0;
     }
 
-    const qram = new Array(1 << 12).fill(0).map(function (n) {
-        return {t: n, x: n, y: n, z: n};
-    });
-    const qrom = new Array(1 << 13).fill(0).map(function (n) {
-        return {t: n, x: n, y: n, z: n};
-    });
     function mem_perform(range, wr_en, addr, data) {
 //debug console.log("mem_perform:", "range=", range, "wr_en=", wr_en, "addr=", addr, "data=", data);
         if (range === MEM_UC) {

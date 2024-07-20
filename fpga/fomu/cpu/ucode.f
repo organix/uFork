@@ -398,26 +398,31 @@ Type checking can produce the following errors:
     QZ! ;
 
 : reserve ( -- qref )
-    ( TODO: check free-list first ... )
-    mem_top@ DUP 0x5000 >= IF       ( FIXME: consider rewrite using < )
-        E_NO_MEM signal ;
+    mem_next@ DUP #nil XOR IF
+        mem_free@ 1- mem_free!
+        DUP QZ@ mem_next! ;
+    THEN DROP
+    mem_top@ DUP 0x5000 < IF
+        DUP 1+ mem_top! ;
     THEN
-    DUP 1+ mem_top! ;
+    E_NO_MEM signal ;
 : release ( qref -- )
-    TODO
-    EXIT
-: alloc ( z y x t -- qref )
+    FREE_T OVER QT!
+    ( #? OVER QX! #? OVER QY! )
+    mem_next@ OVER QZ! mem_next!
+    mem_free@ 1+ mem_free! ;
+: alloc ( [[[z] y] x] t -- qref )
     DUP #type_t typeq IF    ( determine cardinality )
         DUP QX@ fix2int
     ELSE
         3
-    THEN                    ( D: z y x t c )
-    SWAP reserve            ( D: z y x c t qref )
-    DUP >R QT!              ( D: z y x c ) ( R: qref )
+    THEN                    ( D: [[[z] y] x] t c )
+    SWAP reserve            ( D: [[[z] y] x] c t qref )
+    DUP >R QT!              ( D: [[[z] y] x] c ) ( R: qref )
     DUP IF
-        SWAP R@ QX!         ( D: z y c ) ( R: qref )
+        SWAP R@ QX!         ( D: [[z] y] c ) ( R: qref )
         1- DUP IF
-            SWAP R@ QY!     ( D: z c ) ( R: qref )
+            SWAP R@ QY!     ( D: [z] c ) ( R: qref )
             1- DUP IF
                 SWAP        ( D: c z ) ( R: qref )
             ELSE
@@ -435,10 +440,7 @@ Type checking can produce the following errors:
     THEN
     DROP R> ;               ( D: qref ) ( R: -- )
 : cons ( cdr car -- pair )
-    reserve #pair_t         ( D: cdr car pair #pair_t )
-    OVER QT!                ( D: cdr car pair )
-    TUCK QX!                ( D: cdr pair )
-    TUCK QY! ;              ( D: pair )
+    #pair_t alloc ;
 : car ( pair -- first )
     DUP is_pair IF
         QX@ ;
@@ -562,13 +564,17 @@ To Copy fixnum:n of list onto head:
 
 : alloc_test
     mem_top@                ( D: top_before )
-    cons_test
-    #-1 #0 #pair_t alloc
+    #-1 #0 #pair_t alloc    ( D: top_before 1st )
     DUP QT@ #pair_t =assert
     DUP QX@ #0 =assert
     DUP QY@ #-1 =assert
     DUP QZ@ #? =assert
     is_ptr assert
+    0x2222 0x1111 cons      ( D: top_before 2nd )
+    0x4444 0x3333 cons      ( D: top_before 2nd 3rd )
+    SWAP release release    ( D: top_before )
+    0x6666 0x5555 cons      ( D: top_before 4th )
+    DROP                    ( D: top_before )
     mem_top@                ( D: top_before top_after )
     SWAP - 3 =assert
     EXIT
@@ -595,6 +601,7 @@ To Copy fixnum:n of list onto head:
     ufork_init
     ufork_init_test
     alloc_test
+    ( cons_test )
     EXIT
 
 ( Debugging Monitor )
@@ -760,4 +767,4 @@ VARIABLE here   ( upload address )
 
 ( WARNING! if BOOT returns we PANIC! )
 : BOOT
-    ECHOLOOP test_suite prompt MONITOR ;
+    ( ECHOLOOP ) test_suite prompt MONITOR ;
