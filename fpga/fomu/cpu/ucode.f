@@ -23,7 +23,7 @@
 0x7F CONSTANT DEL
 
 : @EXECUTE
-    @
+    @                       ( fallthrough to next definition )
 : EXECUTE
     0x0FFF AND >R
 : (EXIT)
@@ -48,7 +48,7 @@
         NEGATE
     THEN ;
 : BOOL ( truthy -- bool )
-    IF TRUE ;
+    IF TRUE ;               ( optimize early exit )
     THEN FALSE ;
 : = ( a b -- a==b )
     XOR
