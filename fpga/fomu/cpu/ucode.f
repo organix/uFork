@@ -206,8 +206,10 @@
 0x000E CONSTANT FWD_REF_T   ( GC "broken heart" )
 0x000F CONSTANT FREE_T      ( GC free quad )
 
+0x8001 CONSTANT #1          ( fixnum one )
 ( : #0                        ( fixnum zero ) ... ucode.js )
 0x8000 CONSTANT E_OK        ( not an error )
+( : #-1                       ( fixnum negative one ) ... ucode.js )
 0xFFFF CONSTANT E_FAIL      ( general failure )
 0xFFFE CONSTANT E_BOUNDS    ( out of bounds )
 0xFFFD CONSTANT E_NO_MEM    ( no memory available )
@@ -405,7 +407,6 @@ Type checking can produce the following errors:
         DUP e_head!
     THEN
     e_tail! ;
-
 : event_dequeue ( -- event | #nil )
     e_head@ DUP is_ram IF
         DUP QZ@             ( D: event next )
@@ -415,33 +416,22 @@ Type checking can produce the following errors:
         THEN                ( D: event )
     THEN ;
 
-(
-    pub fn event_enqueue(&mut self, ep: Any) {
-        // add event to the back of the queue
-        self.ram_mut(ep).set_z(NIL);
-        if !self.e_first().is_ram() {
-            self.set_e_first(ep);
-        } else /* if self.e_last().is_ram() */ {
-            self.ram_mut(self.e_last()).set_z(ep);
-        }
-        self.set_e_last(ep);
-    }
-    fn event_dequeue(&mut self) -> Option<Any> {
-        // remove event from the front of the queue
-        let ep = self.e_first();
-        if ep.is_ram() {
-            let event = self.ram(ep);
-            let next = event.z();
-            self.set_e_first(next);
-            if !next.is_ram() {
-                self.set_e_last(NIL)
-            }
-            Some(ep)
-        } else {
-            None
-        }
-    }
-)
+: cont_enqueue ( cont -- )
+    #nil OVER QZ!
+    k_head@ is_ram IF
+        DUP k_tail@ QZ!
+    ELSE
+        DUP k_head!
+    THEN
+    k_tail! ;
+: cont_dequeue ( -- cont | #nil )
+    k_head@ DUP is_ram IF
+        DUP QZ@             ( D: cont next )
+        DUP k_head!
+        is_ram NOT IF
+            #nil k_tail!
+        THEN                ( D: cont )
+    THEN ;
 
 : reserve ( -- qref )
     mem_next@ DUP #nil XOR IF
@@ -457,36 +447,37 @@ Type checking can produce the following errors:
     ( #? OVER QX! #? OVER QY! )
     mem_next@ OVER QZ! mem_next!
     mem_free@ 1+ mem_free! ;
-: alloc ( [[[z] y] x] t -- qref )
-    DUP #type_t typeq IF    ( determine cardinality )
-        DUP QX@ fix2int
-    ELSE
-        3
-    THEN                    ( D: [[[z] y] x] t c )
-    SWAP reserve            ( D: [[[z] y] x] c t qref )
-    DUP >R QT!              ( D: [[[z] y] x] c ) ( R: qref )
-    DUP IF
-        SWAP R@ QX!         ( D: [[z] y] c ) ( R: qref )
-        1- DUP IF
-            SWAP R@ QY!     ( D: [z] c ) ( R: qref )
-            1- DUP IF
-                SWAP        ( D: c z ) ( R: qref )
-            ELSE
-                #?          ( D: c #? ) ( R: qref )
-            THEN
-            R@ QZ!          ( D: c ) ( R: qref )
-        ELSE
-            #? R@ QY!
-            #? R@ QZ!
-        THEN
-    ELSE
-        #? R@ QX!
-        #? R@ QY!
-        #? R@ QZ!
-    THEN
-    DROP R> ;               ( D: qref ) ( R: -- )
+: 0alloc ( T -- qref )
+    reserve >R              ( D: T ) ( R: qref )
+    R@ QT!                  ( D: ) ( R: qref )
+    #? R@ QX!               ( D: ) ( R: qref )
+: _clear2
+    #? R@ QY!               ( D: ) ( R: qref )
+: _clear1
+    #? R@ QZ!               ( D: ) ( R: qref )
+: _clear0
+    R> ;                    ( D: qref ) ( R: )
+: 1alloc ( X T -- qref )
+    reserve >R              ( D: X T ) ( R: qref )
+    R@ QT!                  ( D: X ) ( R: qref )
+    R@ QX!                  ( D: ) ( R: qref )
+    _clear2 ;
+: 2alloc ( Y X T -- qref )
+    reserve >R              ( D: Y X T ) ( R: qref )
+    R@ QT!                  ( D: Y X ) ( R: qref )
+    R@ QX!                  ( D: Y ) ( R: qref )
+    R@ QY!                  ( D: ) ( R: qref )
+    _clear1 ;
+: 3alloc ( Z Y X T -- qref )
+    reserve >R              ( D: Z Y X T ) ( R: qref )
+    R@ QT!                  ( D: Z Y X ) ( R: qref )
+    R@ QX!                  ( D: Z Y ) ( R: qref )
+    R@ QY!                  ( D: Z ) ( R: qref )
+    R@ QZ!                  ( D: ) ( R: qref )
+    _clear0 ;
+
 : cons ( cdr car -- pair )
-    #pair_t alloc ;
+    #pair_t 2alloc ;
 : car ( pair -- first )
     DUP is_pair IF
         QX@ ;
@@ -610,7 +601,7 @@ To Copy fixnum:n of list onto head:
 
 : alloc_test
     mem_top@                ( D: top_before )
-    #-1 #0 #pair_t alloc    ( D: top_before 1st )
+    #-1 #0 #pair_t 2alloc   ( D: top_before 1st )
     DUP QT@ #pair_t =assert
     DUP QX@ #0 =assert
     DUP QY@ #-1 =assert
@@ -623,15 +614,15 @@ To Copy fixnum:n of list onto head:
     DROP                    ( D: top_before )
     mem_top@                ( D: top_before top_after )
     SWAP - 3 =assert
-    mem_free@ 1 =assert
+    mem_free@ #1 =assert
     EXIT
 
 : queue_test
-    #? #nil 0x6002 q_root_spn alloc
+    #nil 0x6002 q_root_spn 2alloc
     DUP event_enqueue
     DUP e_head@ =assert
     DUP e_tail@ =assert
-    #? #unit 0x600E q_root_spn alloc
+    #unit 0x600E q_root_spn 2alloc
     DUP event_enqueue
     OVER e_head@ =assert
     DUP e_tail@ =assert
@@ -643,8 +634,8 @@ To Copy fixnum:n of list onto head:
 : test_suite
     ufork_init
     ufork_init_test
-    ( cons_test )
-    ( alloc_test )
+    cons_test
+    alloc_test
     queue_test
     EXIT
 
