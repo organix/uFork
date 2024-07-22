@@ -89,3 +89,8 @@ If the _cancel_ capability is sent a message (any message),
 the request **may** be cancelled, if it has not already sent a result.
 
 **NOTE:** The initial implementation doesn't send a _cancel_ capability.
+
+## Demonstration
+
+A demonstration using this device in available
+[in the playground](https://ufork.org/playground/?src=https://ufork.org/debugger/examples/svg_demo.asm&dev=svg).
