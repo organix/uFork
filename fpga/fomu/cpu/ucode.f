@@ -188,6 +188,19 @@
   0x0006 ,    0x8003 ,    0x0000 ,    0x0000 ,    ( ^000D   #dict_t     )
   0x0006 ,    0xFFFF ,    0x0000 ,    0x0000 ,    ( ^000E   FWD_REF_T   )
   0x0006 ,    0x8000 ,    0x0000 ,    0x0000 ,    ( ^000F   FREE_T      )
+  0x000B ,    0x8018 ,    0x8001 ,    0x0011 ,    ( ^0010   msg 1       )
+  0x000B ,    0x801A ,    0xFFFF ,    0x0012 ,    ( ^0011   send -1     )
+  0x000B ,    0x800F ,    0x8001 ,    0x0000 ,    ( ^0012   end commit  )
+
+(
+cust_send:                  ; msg
+    msg 1                   ; msg cust
+send_msg:                   ; msg cust
+    send -1                 ; --
+sink_beh:                   ; _ <- _
+commit:
+    end commit
+)
 
 ( 0x0000 CONSTANT #?          ( undefined ) ... ucode.js )
 ( 0x0001 CONSTANT #nil        ( empty list ) ... ucode.js )
@@ -226,8 +239,10 @@
 0xFFF2 CONSTANT E_ASSERT    ( assertion failed )
 0xFFF1 CONSTANT E_STOP      ( actor stopped )
 
-: signal ( error -- )
-    FAIL signal ;
+: invalid ( -- )
+    E_FAIL
+: disrupt ( reason -- )
+    FAIL disrupt ;
 : quad ( raw -- qaddr )
     DUP MSB& IF
         0x0FFF AND          ( uCode | fixnum )
@@ -293,18 +308,6 @@
         SWAP I + store      ( D: dst src )
     AGAIN
     2DROP ;
-
-(
-Type checking can produce the following errors:
-
-0xFFFC CONSTANT E_NOT_FIX   ( fixnum required )
-0xFFFB CONSTANT E_NOT_CAP   ( capability required )
-0xFFFA CONSTANT E_NOT_PTR   ( memory pointer required )
-0xFFF9 CONSTANT E_NOT_ROM   ( ROM pointer required )
-0xFFF8 CONSTANT E_NOT_RAM   ( RAM pointer required )
-0xFFF7 CONSTANT E_NOT_EXE   ( instruction required )
-0xFFF6 CONSTANT E_NO_TYPE   ( type required )
-)
 
 ( : is_fix ( raw -- truthy )
     MSB& ; ... ucode.js )
@@ -433,6 +436,21 @@ Type checking can produce the following errors:
         THEN                ( D: cont )
     THEN ;
 
+: ip@
+    k_head@ QT@ ;
+: sp@
+    k_head@ QX@ ;
+: ep@
+    k_head@ QY@ ;
+: kp@
+    k_head@ QZ@ ;
+: ip!
+    k_head@ QT! ;
+: sp!
+    k_head@ QX! ;
+: ep!
+    k_head@ QY! ;
+
 : reserve ( -- qref )
     mem_next@ DUP #nil XOR IF
         mem_free@ 1- mem_free!
@@ -441,7 +459,7 @@ Type checking can produce the following errors:
     mem_top@ DUP 0x5000 < IF
         DUP 1+ mem_top! ;
     THEN
-    E_NO_MEM signal ;
+    E_NO_MEM disrupt ;
 : release ( qref -- )
     FREE_T OVER QT!
     ( #? OVER QX! #? OVER QY! )
@@ -551,6 +569,109 @@ To Copy fixnum:n of list onto head:
         Let list become cdr(list)
         Let n become n-1
 )
+
+(
+Type checking can produce the following errors:
+
+0xFFFC CONSTANT E_NOT_FIX   ( fixnum required )
+0xFFFB CONSTANT E_NOT_CAP   ( capability required )
+0xFFFA CONSTANT E_NOT_PTR   ( memory pointer required )
+0xFFF9 CONSTANT E_NOT_ROM   ( ROM pointer required )
+0xFFF8 CONSTANT E_NOT_RAM   ( RAM pointer required )
+0xFFF7 CONSTANT E_NOT_EXE   ( instruction required )
+0xFFF6 CONSTANT E_NO_TYPE   ( type required )
+)
+
+: perform_op JMPTBL 32 ,    ( opcode -- ip | error )
+    invalid                 ( 0x8000: debug )
+    invalid                 ( 0x8001: jump )
+    invalid                 ( 0x8002: push )
+    invalid                 ( 0x8003: if )
+    invalid                 ( 0x8004: -unused- )
+    invalid                 ( 0x8005: typeq )
+    invalid                 ( 0x8006: eq )
+    invalid                 ( 0x8007: assert )
+
+    invalid                 ( 0x8008: sponsor )
+    invalid                 ( 0x8009: quad )
+    invalid                 ( 0x800A: dict )
+    invalid                 ( 0x800B: deque )
+    invalid                 ( 0x800C: my )
+    invalid                 ( 0x800D: alu )
+    invalid                 ( 0x800E: cmp )
+    invalid                 ( 0x800F: end )
+
+    invalid                 ( 0x8010: -unused- )
+    invalid                 ( 0x8011: pair )
+    invalid                 ( 0x8012: part )
+    invalid                 ( 0x8013: nth )
+    invalid                 ( 0x8014: pick )
+    invalid                 ( 0x8015: roll )
+    invalid                 ( 0x8016: dup )
+    invalid                 ( 0x8017: drop )
+
+    invalid                 ( 0x8018: msg )
+    invalid                 ( 0x8019: state )
+    invalid                 ( 0x801A: send )
+    invalid                 ( 0x801B: signal )
+    invalid                 ( 0x801C: new )
+    invalid                 ( 0x801D: beh )
+    invalid                 ( 0x801E: -unused- )
+    invalid                 ( 0x801F: -unused- )
+
+    DROP invalid ;          ( default case )
+
+: dispatch_event ( -- )
+    event_dequeue           ( D: event )
+    DUP QX@ QZ@ IF          ( D: event )
+        ( target busy )
+        event_enqueue ;
+    THEN                    ( D: event )
+    #nil OVER QZ!
+    DUP QX@ >R              ( D: event ) ( R: target )
+    #nil R@ QX@             ( D: ep sp ip ) ( R: target )
+    2alloc                  ( D: cont ) ( R: target )
+    #nil R@ QY@ R@ QX@      ( D: cont event data code ) ( R: target )
+    #actor_t 3alloc         ( D: cont effect ) ( R: target )
+    R> QZ!                  ( D: cont )
+    cont_enqueue ;
+
+: run_exit ( limit -- )
+    DROP ;                  ( FIXME: may want to return the remaining limit... )
+VARIABLE saved_sp           ( sp before instruction execution )
+: run_loop ( limit -- )
+    #? q_root_spn spn_signal!
+    k_head@ is_ram IF
+        ( execute instruction )
+        sp@ saved_sp !
+        ip@ DUP #instr_t typeq IF
+            QT@ DUP is_fix IF
+                fix2int perform_op
+                DUP is_fix IF
+                    saved_sp @ sp!
+                    q_root_spn spn_signal! run_exit ;
+                THEN
+                ip!         ( update ip in continuation )
+                cont_dequeue
+                cont_enqueue
+            THEN
+        THEN
+        e_head@ is_ram IF
+            dispatch_event
+        THEN
+    ELSE
+        e_head@ is_ram IF
+            dispatch_event
+        ELSE
+            #0 q_root_spn spn_signal! run_exit ;
+        THEN
+    THEN
+    DUP 0> IF
+        1- DUP 0= IF
+            run_exit ;
+        THEN
+    THEN
+    run_loop ;
 
 : ufork_init
     0x8000 rom_image 64 memcpy
