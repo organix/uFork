@@ -118,10 +118,10 @@ function make_machine(prog = [], device = []) {
     let pc = 0;
     const dstack = make_stack();
     const rstack = make_stack();
-    const qram = new Array(1 << 12).fill(0).map(function (n) {
+    const qram = new Array(1 << 12).fill(0xDEAD).map(function (n) {
         return {t: n, x: n, y: n, z: n};
     });
-    const qrom = new Array(1 << 13).fill(0).map(function (n) {
+    const qrom = new Array(1 << 13).fill(0xDEAD).map(function (n) {
         return {t: n, x: n, y: n, z: n};
     });
 

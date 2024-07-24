@@ -170,7 +170,7 @@
     AGAIN DROP ;
 
 ( uFork Virtual Machine )
-: rom_image DATA            ( 16 x 4 cells )
+: rom_image DATA            ( 16+3 x 4 cells )
 (   T           X           Y           Z           VALUE   NAME        )
   0x0000 ,    0x0000 ,    0x0000 ,    0x0000 ,    ( ^0000   #?          )
   0x0000 ,    0x0000 ,    0x0000 ,    0x0000 ,    ( ^0001   #nil        )
@@ -636,20 +636,20 @@ Type checking can produce the following errors:
     R> QZ!                  ( D: cont )
     cont_enqueue ;
 
-: run_exit ( limit -- )
-    DROP ;                  ( FIXME: may want to return the remaining limit... )
+VARIABLE run_limit          ( number of iterations remaining )
 VARIABLE saved_sp           ( sp before instruction execution )
 : run_loop ( limit -- )
+    run_limit !
     #? q_root_spn spn_signal!
     k_head@ is_ram IF
         ( execute instruction )
         sp@ saved_sp !
         ip@ DUP #instr_t typeq IF
-            QT@ DUP is_fix IF
+            QX@ DUP is_fix IF
                 fix2int perform_op
                 DUP is_fix IF
                     saved_sp @ sp!
-                    q_root_spn spn_signal! run_exit ;
+                    q_root_spn spn_signal! ;
                 THEN
                 ip!         ( update ip in continuation )
                 cont_dequeue
@@ -663,18 +663,20 @@ VARIABLE saved_sp           ( sp before instruction execution )
         e_head@ is_ram IF
             dispatch_event
         ELSE
-            #0 q_root_spn spn_signal! run_exit ;
+            #0 q_root_spn spn_signal! ;
         THEN
     THEN
-    DUP 0> IF
+    run_limit @ DUP 0> IF
         1- DUP 0= IF
-            run_exit ;
+            DROP ;
         THEN
     THEN
     run_loop ;
 
 : ufork_init
-    0x8000 rom_image 64 memcpy
+    0x8000 rom_image
+    16 3 +                  ( reserved rom + program )
+    4 * memcpy              ( x quads )
     0x4010 mem_top!
     #nil mem_next!
     #0 mem_free!
@@ -753,12 +755,18 @@ VARIABLE saved_sp           ( sp before instruction execution )
     EXIT
 
 : test_suite
-    ufork_init
     ufork_init_test
     cons_test
     alloc_test
     queue_test
     EXIT
+
+: ufork_boot
+    #unit
+    #nil 0x0012 #actor_t 2alloc
+    ptr2cap q_root_spn 2alloc
+    event_enqueue
+    0 run_loop ;
 
 ( Debugging Monitor )
 0x21 CONSTANT '!'
@@ -923,4 +931,8 @@ VARIABLE here   ( upload address )
 
 ( WARNING! if BOOT returns we PANIC! )
 : BOOT
-    ( ECHOLOOP ) test_suite prompt MONITOR ;
+    ( ECHOLOOP )
+    ufork_init
+    ( test_suite )
+    ufork_boot
+    prompt MONITOR ;
