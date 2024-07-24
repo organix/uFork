@@ -1,6 +1,6 @@
 // Installs the IO device. See also io_dev.md.
 
-/*jslint browser, bitwise */
+/*jslint web, bitwise */
 
 import OED from "https://ufork.org/lib/oed.js";
 import ufork from "./ufork.js";

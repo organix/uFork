@@ -3,7 +3,7 @@
 
 // See host_dev.md.
 
-/*jslint browser */
+/*jslint web */
 
 import ufork from "./ufork.js";
 

@@ -23,9 +23,6 @@ pkgs.mkShell {
         pkgs.python3                      # https://www.python.org/
         pkgs.python39Packages.pip         # https://pypi.org/project/pip/
         pkgs.python39Packages.setuptools  # https://pypi.org/project/setuptools/
-        pkgs.json_c                       # https://github.com/json-c/json-c/
-        pkgs.libevent                     # https://libevent.org/
-        pkgs.verilator                    # https://www.veripool.org/verilator/
     ];
 
     shellHook = ''
@@ -35,12 +32,11 @@ pkgs.mkShell {
 
         export PYTHONPATH="$(pwd)/site-packages/:$PYTHONPATH"
 
-# Take the absence of the Python packages directory to mean installation is
-# required.
+# Take the absence of the Litex source to mean installation is required.
 
-        if ! test -d site-packages
+        if ! test -d litex_repos
         then
-            ./install.sh
+            ./update.sh
         fi
 
 # We also shadow site-packages/* with litex_repos/*, because otherwise local

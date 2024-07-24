@@ -8,8 +8,6 @@
 
 // See testing.md.
 
-/*jslint browser */
-
 import import_map from "./import_map.js";
 import parseq from "https://ufork.org/lib/parseq.js";
 import assemble from "https://ufork.org/lib/assemble.js";

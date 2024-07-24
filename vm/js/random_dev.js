@@ -15,7 +15,7 @@
 
 // The 'cust' is sent the random fixnum immediately.
 
-/*jslint browser */
+/*jslint web */
 
 import ufork from "./ufork.js";
 

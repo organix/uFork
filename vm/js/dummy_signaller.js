@@ -1,6 +1,6 @@
 // An in-memory signaller for use with the WebRTC transport.
 
-/*jslint browser */
+/*jslint web */
 
 function delay(callback, ...args) {
     const timer = setTimeout(callback, 500 * Math.random(), ...args);

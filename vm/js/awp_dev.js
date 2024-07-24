@@ -8,13 +8,13 @@
 //  - Stop capabilities (used to stop listening) have a wrapped fixnum as their
 //    tag.
 
+/*jslint web, null, devel, long */
+
 // TODO:
 // - distributed garbage collection
 // - acquaintance interning
 // - cancel/stop capabilities
 // - disconnect when all proxies are dropped?
-
-/*jslint browser, null, devel, long */
 
 import ufork from "./ufork.js";
 import assemble from "https://ufork.org/lib/assemble.js";
