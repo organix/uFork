@@ -187,12 +187,12 @@ for [garbage-collection](gc.md).
 e_queue: [e_head,e_tail]------------------------+
           |                                     V
           +-->[sponsor,to,msg,next]---> ... -->[sponsor,to,msg,()]
-                       |   |
-                       |   +--> actor message content
-                       V
-                      [#actor_t,code,data,#?]
-                                 |    |
-                                 |    +--> actor state
+                |      |   |
+                |      |   +--> actor message content
+                |      V
+                |     [#actor_t,code,data,#?]
+                V                |    |
+  [memory,events,cycles,signal]  |    +--> actor state
                                  |
                                  +--> actor behavior
 
@@ -200,16 +200,17 @@ k_queue: [k_head,k_tail]----------------+
           |                             V
           +-->[ip,sp,ep,kp]---> ... -->[ip,sp,ep,()]
                |  |  |
-               |  |  +-->[sponsor,to,msg,()]
-               |  |               |   |
-               |  |               |   +--> ...
-               |  |               V
-               |  |              [#actor_t,code,data,effect]
-               |  |                                   |
-               |  |                                   V
-               |  |                             [#actor_t,code',data',events]
-               |  V                                                    |
-               | [#pair_t,car,cdr,#?]                                  +--> ... -->[sponsor,to,msg,()]
+               |  |  V
+               |  | [sponsor,to,msg,()]
+               |  |          |   |
+               |  |          |   +--> ...
+               |  |          V
+               |  |    [#actor_t,code,data,effect]
+               |  |                         |
+               |  |                         V
+               |  |                   [#actor_t,code',data',events]
+               |  V                                          |
+               | [#pair_t,car,cdr,#?]                        +--> ... -->[sponsor,to,msg,()]
                |           |   |
                |           |   +--> ... -->[#pair_t,car,(),#?]
                |           V
