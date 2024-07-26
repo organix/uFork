@@ -170,7 +170,7 @@
     AGAIN DROP ;
 
 ( uFork Virtual Machine )
-: rom_image DATA            ( 16+4 x 4 cells )
+: rom_image DATA            ( 16+16 x 4 cells )
 (   T           X           Y           Z           VALUE   NAME        )
   0x0000 ,    0x0000 ,    0x0000 ,    0x0000 ,    ( ^0000   #?          )
   0x0000 ,    0x0000 ,    0x0000 ,    0x0000 ,    ( ^0001   #nil        )
@@ -192,6 +192,18 @@
   0x000B ,    0x801A ,    0xFFFF ,    0x0012 ,    ( ^0011   send -1     )
   0x000B ,    0x800F ,    0x8001 ,    0x0000 ,    ( ^0012   end commit  )
   0x000B ,    0x800F ,    0x8000 ,    0x0000 ,    ( ^0013   end stop    )
+  0x000B ,    0x8011 ,    0x8000 ,    0x0015 ,    ( ^0014   pair 0      )
+  0x000B ,    0x8007 ,    0x0001 ,    0x0016 ,    ( ^0015   assert #nil )
+  0x000B ,    0x8002 ,    0x8003 ,    0x0017 ,    ( ^0016   push 3      )
+  0x000B ,    0x8002 ,    0x8002 ,    0x0018 ,    ( ^0017   push 2      )
+  0x000B ,    0x8011 ,    0x8001 ,    0x0019 ,    ( ^0018   pair 1      )
+  0x000B ,    0x8002 ,    0x8001 ,    0x001A ,    ( ^0019   push 1      )
+  0x000B ,    0x8011 ,    0x8001 ,    0x001B ,    ( ^001A   pair 1      )
+  0x000B ,    0x8012 ,    0x8001 ,    0x001C ,    ( ^001B   part 1      )
+  0x000B ,    0x8007 ,    0x8001 ,    0x001D ,    ( ^001C   assert 1    )
+  0x000B ,    0x8012 ,    0x8001 ,    0x001E ,    ( ^001D   part 1      )
+  0x000B ,    0x8007 ,    0x8002 ,    0x001F ,    ( ^001E   assert 2    )
+  0x000B ,    0x8007 ,    0x8003 ,    0x0012 ,    ( ^001F   assert 3    )
 
 (
 cust_send:                  ; msg
@@ -511,16 +523,8 @@ stop:
     R@ QZ!                  ( D: ) ( R: qref )
     _clear0 ;
 
-: cons ( cdr car -- pair )
+: pair ( rest first -- pair )
     #pair_t 2alloc ;
-: car ( pair -- first )
-    DUP is_pair IF
-        QX@ ;
-    THEN DROP #? ;
-: cdr ( pair -- rest )
-    DUP is_pair IF
-        QY@ ;
-    THEN DROP #? ;
 : part ( pair -- rest first )
     DUP is_pair IF
         DUP QY@ SWAP QX@ ;
@@ -587,7 +591,7 @@ To Copy fixnum:n of list onto head:
         Let n become n-1
 )
 
-: op_end ( -- ip | error )
+: op_end ( -- ip' | error )
     imm@ #1 = IF
         self@ DUP QZ@       ( D: self effect )
         DUP QZ@             ( D: self effect events )
@@ -602,34 +606,57 @@ To Copy fixnum:n of list onto head:
         OVER QY@ OVER QY!   ( update data )
         #? SWAP QZ!         ( make actor ready )
         release             ( free effect )
-        k@ ;
+        #? ;                ( end continuation )
     THEN
     imm@ #0 = IF
         E_STOP ;
     THEN
     E_BOUNDS ;
 
-(
-Add sent message-events to the message-queue
-Update the current actor's state and behavior
-Make actor ready for the next event
-Discard the current event
+: nil_result ( -- )
+    sp@ #nil
+: push_result ( sp result -- )
+    pair
+: update_sp ( sp' -- )
+    sp! k@ ;
 
-    fn actor_commit(&mut self, me: Any) {
-        self.stack_clear(NIL);
-        let effect = self.ram(me).z();
-        let quad = self.ram(effect);
-        let beh = quad.x();
-        let state = quad.y();
-        self.event_commit(quad.z());
-        self.free(effect);
-        // commit actor transaction
-        let actor = self.ram_mut(me);
-        actor.set_x(beh);
-        actor.set_y(state);
-        actor.set_z(UNDEF);
-    }
-)
+: op_push ( -- ip' | error )
+    sp@ imm@                ( D: sp item )
+    push_result ;
+
+: op_assert ( -- ip' | error )
+    sp@ part                ( D: rest first )
+    imm@ = IF               ( D: rest )
+        update_sp ;
+    THEN
+    E_ASSERT ;
+
+: op_pair ( -- ip' | error )
+    imm@ #1 = IF
+        sp@ part >R         ( D: rest ) ( R: first )
+        part R>             ( D: rest' second first )
+        pair push_result ;
+    THEN
+    imm@ #0 = IF
+        nil_result ;
+    THEN
+    imm@ #-1 = IF
+        #nil sp@ push_result ;
+    THEN
+    E_BOUNDS ;
+
+: op_part ( -- ip' | error )
+    imm@ #1 = IF
+        sp@ part            ( D: rest pair )
+        part >R             ( D: rest tail ) ( R: head )
+        pair                ( D: (tail . rest) ) ( R: head )
+        R> pair             ( D: (head . (tail . rest)) )
+        update_sp ;
+    THEN
+    imm@ #0 = IF
+        nil_result ;
+    THEN
+    E_BOUNDS ;
 
 (
 Type checking can produce the following errors:
@@ -643,15 +670,15 @@ Type checking can produce the following errors:
 0xFFF6 CONSTANT E_NO_TYPE   ( type required )
 )
 
-: perform_op JMPTBL 32 ,    ( opcode -- ip | error )
+: perform_op JMPTBL 32 ,    ( opcode -- ip' | error )
     invalid                 ( 0x8000: debug )
     invalid                 ( 0x8001: jump )
-    invalid                 ( 0x8002: push )
+    op_push                 ( 0x8002: push )
     invalid                 ( 0x8003: if )
     invalid                 ( 0x8004: -unused- )
     invalid                 ( 0x8005: typeq )
     invalid                 ( 0x8006: eq )
-    invalid                 ( 0x8007: assert )
+    op_assert               ( 0x8007: assert )
 
     invalid                 ( 0x8008: sponsor )
     invalid                 ( 0x8009: quad )
@@ -663,8 +690,8 @@ Type checking can produce the following errors:
     op_end                  ( 0x800F: end )
 
     invalid                 ( 0x8010: -unused- )
-    invalid                 ( 0x8011: pair )
-    invalid                 ( 0x8012: part )
+    op_pair                 ( 0x8011: pair )
+    op_part                 ( 0x8012: part )
     invalid                 ( 0x8013: nth )
     invalid                 ( 0x8014: pick )
     invalid                 ( 0x8015: roll )
@@ -712,12 +739,12 @@ VARIABLE saved_sp           ( sp before instruction execution )
                     saved_sp @ sp!
                     q_root_spn spn_signal! ;
                 THEN        ( D: ip' )
-                #instr_t typeq IF
+                DUP #instr_t typeq IF
                     ip!     ( update ip in continuation )
                     cont_dequeue
                     cont_enqueue
                 ELSE        ( free terminated cont & event )
-                    cont_dequeue
+                    DROP cont_dequeue
                     DUP QY@ ( D: cont event )
                     release release
                 THEN
@@ -746,7 +773,7 @@ VARIABLE saved_sp           ( sp before instruction execution )
 
 : ufork_init
     0x8000 rom_image
-    16 4 +                  ( reserved rom + program )
+    16 16 +                 ( reserved rom + program )
     4 * memcpy              ( x quads )
     0x4010 mem_top!
     #nil mem_next!
@@ -784,13 +811,12 @@ VARIABLE saved_sp           ( sp before instruction execution )
     k_head@ #nil =assert
     EXIT
 
-: cons_test
-    #nil #f cons #t cons
-    DUP car #t =assert
-    cdr
+: pair_test
+    #nil #f pair #t pair
+    part #t =assert
     part #f =assert
     DUP #nil =assert
-    cdr #? =assert
+    part #? =assert #? =assert
     EXIT
 
 : alloc_test
@@ -801,10 +827,10 @@ VARIABLE saved_sp           ( sp before instruction execution )
     DUP QY@ #-1 =assert
     DUP QZ@ #? =assert
     is_ptr assert
-    0x2222 0x1111 cons      ( D: top_before 2nd )
-    0x4444 0x3333 cons      ( D: top_before 2nd 3rd )
+    0x2222 0x1111 pair      ( D: top_before 2nd )
+    0x4444 0x3333 pair      ( D: top_before 2nd 3rd )
     SWAP release release    ( D: top_before )
-    0x6666 0x5555 cons      ( D: top_before 4th )
+    0x6666 0x5555 pair      ( D: top_before 4th )
     DROP                    ( D: top_before )
     mem_top@                ( D: top_before top_after )
     SWAP - 3 =assert
@@ -827,13 +853,13 @@ VARIABLE saved_sp           ( sp before instruction execution )
 
 : test_suite
     ufork_init_test
-    cons_test
+    pair_test
     alloc_test
     queue_test
     EXIT
 
 : ufork_boot
-    #nil 0x0012 #actor_t 2alloc ptr2cap
+    #nil 0x0014 #actor_t 2alloc ptr2cap
     #unit SWAP q_root_spn 2alloc
     event_enqueue
     0 run_loop ;
@@ -1003,6 +1029,6 @@ VARIABLE here   ( upload address )
 : BOOT
     ( ECHOLOOP )
     ufork_init
-    ( test_suite )
-    ufork_boot TODO
+    test_suite
+    ufork_boot
     prompt MONITOR ;

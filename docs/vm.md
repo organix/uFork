@@ -1092,7 +1092,7 @@ and the processing "thread" ends.
 
  T            | X (op)        | Y (imm)       | Z (k)
 --------------|---------------|---------------|-------------
- `#instr_t`   | `+15` (end)   | `-1` (abort)  | —
+ `#instr_t`   | `+15` (end)   | `-1` (abort)  | `#?`
 
  1. Remove _reason_ from the stack
  1. Record/report _reason_ to system-specific log or debugger
@@ -1101,13 +1101,13 @@ and the processing "thread" ends.
 
  T            | X (op)        | Y (imm)       | Z (k)
 --------------|---------------|---------------|-------------
- `#instr_t`   | `+15` (end)   | `+0` (stop)   | —
+ `#instr_t`   | `+15` (end)   | `+0` (stop)   | `#?`
 
  1. Signal an `E_STOP` error
 
  T            | X (op)        | Y (imm)       | Z (k)
 --------------|---------------|---------------|-------------
- `#instr_t`   | `+15` (end)   | `+1` (commit) | —
+ `#instr_t`   | `+15` (end)   | `+1` (commit) | `#?`
 
  1. Update the current actor's state and behavior
  1. Add sent message-events to the message-queue

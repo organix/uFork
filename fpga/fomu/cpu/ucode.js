@@ -583,8 +583,8 @@ function parse_memh(text, src = "") {
 // Map 32-bit address space to 16-bits
 
 function from_uf(uf) {
-    const lsb13 = uf & 0x00001FFF;
-    const msb3 = (uf & 0xE0000000) >> 16;
+    const lsb13 = (uf >> 0) & 0x1FFF;
+    const msb3 = (uf >> 16) & 0xE000;
     return (msb3 | lsb13);
 }
 
