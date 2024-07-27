@@ -1057,7 +1057,7 @@ Discard items from the stack.
  `#instr_t`   | `+23` (drop)  | _n_         | _instr_
 
  1. While _n_ > 0
-    1. Remove from the stack
+    1. Remove top item from the stack
     1. Let _n_ become `n-1`
 
 #### `dup` instruction

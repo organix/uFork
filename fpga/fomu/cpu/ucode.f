@@ -170,7 +170,7 @@
     AGAIN DROP ;
 
 ( uFork Virtual Machine )
-: rom_image DATA            ( 16+16 x 4 cells )
+: rom_image DATA            ( 16+22 x 4 cells )
 (   T           X           Y           Z           VALUE   NAME        )
   0x0000 ,    0x0000 ,    0x0000 ,    0x0000 ,    ( ^0000   #?          )
   0x0000 ,    0x0000 ,    0x0000 ,    0x0000 ,    ( ^0001   #nil        )
@@ -188,6 +188,17 @@
   0x0006 ,    0x8003 ,    0x0000 ,    0x0000 ,    ( ^000D   #dict_t     )
   0x0006 ,    0xFFFF ,    0x0000 ,    0x0000 ,    ( ^000E   FWD_REF_T   )
   0x0006 ,    0x8000 ,    0x0000 ,    0x0000 ,    ( ^000F   FREE_T      )
+(
+cust_send:                  ; msg
+    msg 1                   ; msg cust
+send_msg:                   ; msg cust
+    send -1                 ; --
+sink_beh:                   ; _ <- _
+commit:
+    end commit
+stop:
+    end stop
+)
   0x000B ,    0x8018 ,    0x8001 ,    0x0011 ,    ( ^0010   msg 1       )
   0x000B ,    0x801A ,    0xFFFF ,    0x0012 ,    ( ^0011   send -1     )
   0x000B ,    0x800F ,    0x8001 ,    0x0000 ,    ( ^0012   end commit  )
@@ -201,21 +212,15 @@
   0x000B ,    0x8011 ,    0x8001 ,    0x001B ,    ( ^001A   pair 1      )
   0x000B ,    0x8012 ,    0x8001 ,    0x001C ,    ( ^001B   part 1      )
   0x000B ,    0x8007 ,    0x8001 ,    0x001D ,    ( ^001C   assert 1    )
-  0x000B ,    0x8012 ,    0x8001 ,    0x001E ,    ( ^001D   part 1      )
-  0x000B ,    0x8007 ,    0x8002 ,    0x001F ,    ( ^001E   assert 2    )
-  0x000B ,    0x8007 ,    0x8003 ,    0x0012 ,    ( ^001F   assert 3    )
-
-(
-cust_send:                  ; msg
-    msg 1                   ; msg cust
-send_msg:                   ; msg cust
-    send -1                 ; --
-sink_beh:                   ; _ <- _
-commit:
-    end commit
-stop:
-    end stop
-)
+  0x000B ,    0x8016 ,    0x8000 ,    0x001E ,    ( ^001D   dup 0       )
+  0x000B ,    0x8012 ,    0x8001 ,    0x001F ,    ( ^001E   part 1      )
+  0x000B ,    0x8007 ,    0x8002 ,    0x0020 ,    ( ^001F   assert 2    )
+  0x000B ,    0x8016 ,    0x8001 ,    0x0021 ,    ( ^0020   dup 1       )
+  0x000B ,    0x8007 ,    0x8003 ,    0x0022 ,    ( ^0021   assert 3    )
+  0x000B ,    0x8017 ,    0x8000 ,    0x0023 ,    ( ^0022   drop 0      )
+  0x000B ,    0x8012 ,    0x8001 ,    0x0024 ,    ( ^0023   part 1      )
+  0x000B ,    0x8017 ,    0x8001 ,    0x0025 ,    ( ^0024   drop 1      )
+  0x000B ,    0x8007 ,    0x0000 ,    0x0012 ,    ( ^0025   assert #?   )
 
 ( 0x0000 CONSTANT #?          ( undefined ) ... ucode.js )
 ( 0x0001 CONSTANT #nil        ( empty list ) ... ucode.js )
@@ -529,6 +534,14 @@ stop:
     DUP is_pair IF
         DUP QY@ SWAP QX@ ;
     THEN DROP #? DUP ;
+: first ( pair -- first )
+    DUP is_pair IF
+        QX@ ;
+    THEN DROP #? ;
+: rest ( pair -- rest )
+    DUP is_pair IF
+        QY@ ;
+    THEN DROP #? ;
 
 (
 
@@ -658,6 +671,26 @@ To Copy fixnum:n of list onto head:
     THEN
     E_BOUNDS ;
 
+: op_drop ( -- ip' | error )
+    sp@ imm@ fix2int        ( D: sp count )
+    DUP MSB& IF
+        2DROP k@ ;
+    THEN
+    ?LOOP-
+        rest                ( D: sp' )
+    AGAIN
+    update_sp ;
+
+: op_dup ( -- ip' | error )
+    imm@ #1 = IF
+        sp@ DUP first       ( D: sp tos )
+        push_result ;
+    THEN
+    imm@ #0 = IF
+        k@ ;                ( no-op )
+    THEN
+    E_BOUNDS ;
+
 (
 Type checking can produce the following errors:
 
@@ -695,8 +728,8 @@ Type checking can produce the following errors:
     invalid                 ( 0x8013: nth )
     invalid                 ( 0x8014: pick )
     invalid                 ( 0x8015: roll )
-    invalid                 ( 0x8016: dup )
-    invalid                 ( 0x8017: drop )
+    op_dup                  ( 0x8016: dup )
+    op_drop                 ( 0x8017: drop )
 
     invalid                 ( 0x8018: msg )
     invalid                 ( 0x8019: state )
@@ -773,7 +806,7 @@ VARIABLE saved_sp           ( sp before instruction execution )
 
 : ufork_init
     0x8000 rom_image
-    16 16 +                 ( reserved rom + program )
+    16 22 +                 ( reserved rom + program )
     4 * memcpy              ( x quads )
     0x4010 mem_top!
     #nil mem_next!
