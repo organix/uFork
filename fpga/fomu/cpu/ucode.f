@@ -84,8 +84,7 @@
     R>                      ( D: index table )
     2DUP @                  ( D: index table index limit )
     < IF                    ( D: index table )
-        SWAP 1+             ( D: table index+1 )
-        + @                 ( D: table[index+1] )
+        + 1+ @              ( D: table[index+1] )
     ELSE                    ( D: index table )
         DUP @               ( D: index table limit )
         + 1+                ( D: index table+limit+1 )
@@ -170,7 +169,7 @@
     AGAIN DROP ;
 
 ( uFork Virtual Machine )
-: rom_image DATA            ( 16+22 x 4 cells )
+: rom_image DATA            ( 16+34 x 4 cells )
 (   T           X           Y           Z           VALUE   NAME        )
   0x0000 ,    0x0000 ,    0x0000 ,    0x0000 ,    ( ^0000   #?          )
   0x0000 ,    0x0000 ,    0x0000 ,    0x0000 ,    ( ^0001   #nil        )
@@ -220,7 +219,19 @@ stop:
   0x000B ,    0x8017 ,    0x8000 ,    0x0023 ,    ( ^0022   drop 0      )
   0x000B ,    0x8012 ,    0x8001 ,    0x0024 ,    ( ^0023   part 1      )
   0x000B ,    0x8017 ,    0x8001 ,    0x0025 ,    ( ^0024   drop 1      )
-  0x000B ,    0x8007 ,    0x0000 ,    0x0012 ,    ( ^0025   assert #?   )
+  0x000B ,    0x8003 ,    0x0013 ,    0x0026 ,    ( ^0025   [#?] if     )
+  0x000B ,    0x8002 ,    0x8000 ,    0x0027 ,    ( ^0026   push 0      )
+  0x000B ,    0x8006 ,    0x8000 ,    0x0028 ,    ( ^0027   eq 0        )
+  0x000B ,    0x8003 ,    0x0029 ,    0x0013 ,    ( ^0028   [#t] if     )
+  0x000B ,    0x8002 ,    0xFFFF ,    0x002A ,    ( ^0029   push -1     )
+  0x000B ,    0x8006 ,    0x8000 ,    0x002B ,    ( ^002A   eq 0        )
+  0x000B ,    0x8003 ,    0x0013 ,    0x002C ,    ( ^002B   [#f] if     )
+  0x000B ,    0x8002 ,    0x0001 ,    0x002D ,    ( ^002C   push #nil   )
+  0x000B ,    0x8003 ,    0x0013 ,    0x002E ,    ( ^002D   [#nil] if   )
+  0x000B ,    0x8002 ,    0x0004 ,    0x002F ,    ( ^002E   push #unit  )
+  0x000B ,    0x8003 ,    0x0030 ,    0x0013 ,    ( ^002F   [#unit] if  )
+  0x000B ,    0x8002 ,    0x8000 ,    0x0031 ,    ( ^0030   push #0     )
+  0x000B ,    0x8003 ,    0x0013 ,    0x0012 ,    ( ^0031   [#0] if     )
 
 ( 0x0000 CONSTANT #?          ( undefined ) ... ucode.js )
 ( 0x0001 CONSTANT #nil        ( empty list ) ... ucode.js )
@@ -644,6 +655,29 @@ To Copy fixnum:n of list onto head:
     THEN
     E_ASSERT ;
 
+: op_eq ( -- ip' | error )
+    sp@ part                ( D: rest first )
+    imm@ = IF               ( D: rest )
+        #t
+    ELSE
+        #f
+    THEN
+    push_result ;
+
+: if_truthy                 ( D: sp' )
+    sp! imm@ ;              ( continue true )
+: op_if ( -- ip' | error )
+    sp@ part
+    JMPTBL 4 ,              ( sp cond -- )
+    update_sp               ( ^0000: #? )
+    update_sp               ( ^0001: #nil )
+    update_sp               ( ^0002: #f )
+    if_truthy               ( ^0003: #t )
+    #0 XOR IF               ( default case )
+        if_truthy ;
+    THEN
+    update_sp ;
+
 : op_pair ( -- ip' | error )
     imm@ #1 = IF
         sp@ part >R         ( D: rest ) ( R: first )
@@ -707,10 +741,10 @@ Type checking can produce the following errors:
     invalid                 ( 0x8000: debug )
     invalid                 ( 0x8001: jump )
     op_push                 ( 0x8002: push )
-    invalid                 ( 0x8003: if )
+    op_if                   ( 0x8003: if )
     invalid                 ( 0x8004: -unused- )
     invalid                 ( 0x8005: typeq )
-    invalid                 ( 0x8006: eq )
+    op_eq                   ( 0x8006: eq )
     op_assert               ( 0x8007: assert )
 
     invalid                 ( 0x8008: sponsor )
@@ -806,7 +840,7 @@ VARIABLE saved_sp           ( sp before instruction execution )
 
 : ufork_init
     0x8000 rom_image
-    16 22 +                 ( reserved rom + program )
+    16 34 +                 ( reserved rom + program )
     4 * memcpy              ( x quads )
     0x4010 mem_top!
     #nil mem_next!
