@@ -230,7 +230,7 @@ stop:
   0x000B ,    0x8003 ,    0x0013 ,    0x002E ,    ( ^002D   [#nil] if   )
   0x000B ,    0x8002 ,    0x0004 ,    0x002F ,    ( ^002E   push #unit  )
   0x000B ,    0x8003 ,    0x0030 ,    0x0013 ,    ( ^002F   [#unit] if  )
-  0x000B ,    0x8002 ,    0x8000 ,    0x0031 ,    ( ^0030   push #0     )
+  0x000B ,    0x8002 ,    0x8000 ,    0x0031 ,    ( ^0030   push 0      )
   0x000B ,    0x8003 ,    0x0013 ,    0x0012 ,    ( ^0031   [#0] if     )
 
 ( 0x0000 CONSTANT #?          ( undefined ) ... ucode.js )
@@ -725,6 +725,54 @@ To Copy fixnum:n of list onto head:
     THEN
     E_BOUNDS ;
 
+: send_effect ( msg target sponsor -- )
+    2alloc >R               ( D: ) ( R: event )
+    self@ QZ@               ( D: effect ) ( R: event )
+    DUP QZ@                 ( D: effect events ) ( R: event )
+    R> pair                 ( D: effect events' )
+    SWAP QZ! ;              ( D: )
+: op_send ( -- ip' | error )
+    imm@ #-1 = IF
+        sp@ part            ( D: sp' target )
+        DUP is_cap IF
+            SWAP part       ( D: target sp'' msg )
+            ROT sponsor@    ( D: sp'' msg target sponsor )
+            send_effect     ( D: sp'' )
+            update_sp ;
+        THEN
+        E_NOT_CAP ;
+    THEN
+    E_BOUNDS ;
+
+: create_effect ( state beh -- actor )
+    #actor_t 2alloc ptr2cap ;
+: op_new ( -- ip' | error )
+    imm@ #-1 = IF
+        sp@ part            ( D: sp' beh )
+        DUP #instr_t typeq IF
+            SWAP part ROT   ( D: sp'' state beh )
+            create_effect   ( D: sp'' actor )
+            push_result ;
+        THEN
+        E_NOT_EXE ;
+    THEN
+    E_BOUNDS ;
+
+: become_effect ( state beh -- )
+    self@ QZ@ TUCK          ( D: state effect beh effect )
+    QX! QY! ;               ( D: )
+: op_beh ( -- ip' | error )
+    imm@ #-1 = IF
+        sp@ part            ( D: sp' beh )
+        DUP #instr_t typeq IF
+            SWAP part ROT   ( D: sp'' state beh )
+            become_effect   ( D: sp'' )
+            update_sp ;
+        THEN
+        E_NOT_EXE ;
+    THEN
+    E_BOUNDS ;
+
 (
 Type checking can produce the following errors:
 
@@ -767,10 +815,10 @@ Type checking can produce the following errors:
 
     invalid                 ( 0x8018: msg )
     invalid                 ( 0x8019: state )
-    invalid                 ( 0x801A: send )
+    op_send                 ( 0x801A: send )
     invalid                 ( 0x801B: signal )
-    invalid                 ( 0x801C: new )
-    invalid                 ( 0x801D: beh )
+    op_new                  ( 0x801C: new )
+    op_beh                  ( 0x801D: beh )
     invalid                 ( 0x801E: -unused- )
     invalid                 ( 0x801F: -unused- )
 
