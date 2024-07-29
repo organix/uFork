@@ -1,15 +1,27 @@
 // Visualize the compiled ROM image of a uFork program.
 
-/*jslint browser */
+/*jslint browser, bitwise, long */
 
+import hex from "https://ufork.org/lib/hex.js";
 import hexdump from "https://ufork.org/lib/hexdump.js";
 import make_ui from "./ui.js";
 import dom from "./dom.js";
 import theme from "./theme.js";
 
+// Map 32-bit address space to 16-bits
+
+function from_uf(uf) {
+    const lsb13 = (uf >> 0) & 0x1FFF;
+    const msb3 = (uf >> 16) & 0xE000;
+    return (msb3 | lsb13);
+}
+
+// console.log(hex.from(from_uf(-1), 16));
+// console.log(hex.from(from_uf(0x60000002), 16));
+
 const rom_ui = make_ui("rom-ui", function (element, {
     buffer,
-    format = "memfile",
+    format = "memh",
     bitwidth = 16
 }) {
     const shadow = element.attachShadow({mode: "closed"});
@@ -42,15 +54,96 @@ const rom_ui = make_ui("rom-ui", function (element, {
         }
     `);
     const dump_element = dom("rom_dump", {
-        contentEditable: "true",
+        contentEditable: "false",
         spellcheck: false,
         title: "ROM dump"
     });
 
+    function memh_dump16(octets) {
+        const cells = new Uint32Array(octets.buffer);
+        let s = "/*   T     X     Y     Z      ADDR */\n";
+//                 0123  4567  89AB  CDEF  // ^0000
+        cells.forEach(function (cell, addr) {
+            s += "  " + hex.from(from_uf(cell), 16);
+            if ((addr & 0x3) === 0x3) {
+                s += "  // ^" + hex.from((addr >> 2), 16) + "\n";
+            }
+        });
+        const n = cells.length;
+        s += "/* " + n + " cells, " + (n >> 2) + " quads */\n";
+        return s;
+    }
+
+    function memh_dump32(octets) {
+        const cells = new Uint32Array(octets.buffer);
+        let s = "/*       T         X         Y         Z          ADDR */\n";
+//                 00112233  44556677  8899AABB  CCDDEEFF  // ^00000000
+        cells.forEach(function (cell, addr) {
+            s += "  " + hex.from(cell, 32);
+            if ((addr & 0x3) === 0x3) {
+                s += "  // ^" + hex.from((addr >> 2), 32) + "\n";
+            }
+        });
+        const n = cells.length;
+        s += "/* " + n + " cells, " + (n >> 2) + " quads */\n";
+        return s;
+    }
+
+    function forth_dump16(octets) {
+        const cells = new Uint32Array(octets.buffer);
+        let s = "(    T        X        Y        Z       ADDR )\n";
+//               0x0123 , 0x4567 , 0x89AB , 0xCDEF ,  ( ^0000 )
+        cells.forEach(function (cell, addr) {
+            s += "0x" + hex.from(from_uf(cell), 16);
+            s += (
+                (addr & 0x3) !== 0x3
+                ? " , "
+                : " ,  ( ^" + hex.from((addr >> 2), 16) + " )\n"
+            );
+        });
+        const n = cells.length;
+        s += "( " + n + " cells, " + (n >> 2) + " quads )\n";
+        return s;
+    }
+
+    function forth_dump32(octets) {
+        const cells = new Uint32Array(octets.buffer);
+        let s = "(        T            X            Y            Z           ADDR )\n";
+//               0x00112233 , 0x44556677 , 0x8899AABB , 0xCCDDEEFF ,  ( ^00000000 )
+        cells.forEach(function (cell, addr) {
+            s += "0x" + hex.from(cell, 32);
+            s += (
+                (addr & 0x3) !== 0x3
+                ? " , "
+                : " ,  ( ^" + hex.from((addr >> 2), 32) + " )\n"
+            );
+        });
+        const n = cells.length;
+        s += "( " + n + " cells, " + (n >> 2) + " quads )\n";
+        return s;
+    }
+
     function dump() {
+        const dump_fn = (
+            format === "memh"
+            ? (
+                bitwidth === 16
+                ? memh_dump16
+                : memh_dump32
+            )
+            : (
+                format === "forth"
+                ? (
+                    bitwidth === 16
+                    ? forth_dump16
+                    : forth_dump32
+                )
+                : hexdump
+            )
+        );
         dump_element.textContent = (
             buffer !== undefined
-            ? hexdump(buffer)
+            ? dump_fn(buffer)
             : "Press Run to load and display the ROM image."
         );
     }
@@ -73,7 +166,7 @@ const rom_ui = make_ui("rom-ui", function (element, {
     const controls_element = dom("rom_controls", [
         dom(
             "select",
-            {onclick: on_bitwidth_change, title: "Bit width", value: bitwidth},
+            {onchange: on_bitwidth_change, title: "Bit width", value: bitwidth},
             [
                 dom("option", {value: 16, textContent: "16 bit"}),
                 dom("option", {value: 32, textContent: "32 bit"})
@@ -81,9 +174,9 @@ const rom_ui = make_ui("rom-ui", function (element, {
         ),
         dom(
             "select",
-            {onclick: on_format_change, title: "Text format", value: format},
+            {onchange: on_format_change, title: "Text format", value: format},
             [
-                dom("option", {value: "memfile", textContent: "Memfile"}),
+                dom("option", {value: "memh", textContent: "Memfile"}),
                 dom("option", {value: "forth", textContent: "Forth"})
             ]
         )
@@ -95,10 +188,15 @@ const rom_ui = make_ui("rom-ui", function (element, {
 
 //debug document.documentElement.innerHTML = "";
 //debug const rom = dom(
-//debug     rom_ui({format: "forth", bitwidth: 32}),
+//debug     rom_ui({format: "hex", bitwidth: 32}),
 //debug     {style: {width: "400px", height: "400px", background: "black"}}
 //debug );
 //debug document.body.append(rom);
-//debug rom.set_buffer(new Uint8Array([1, 2, 3]));
+//debug rom.set_buffer(new Uint8Array([
+//debug     0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77,
+//debug     0x88, 0x99, 0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF,
+//debug     0x01, 0x23, 0x45, 0x67, 0x89, 0xAB, 0xCD, 0xEF,
+//debug     0xFE, 0xDC, 0xBA, 0x98, 0x76, 0x54, 0x32, 0x10
+//debug ]));
 
 export default Object.freeze(rom_ui);
