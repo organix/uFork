@@ -19,23 +19,9 @@ rom:
 ; 0x0006 ,    0xFFFF ,    0x0000 ,    0x0000 ,    ( ^000E   FWD_REF_T   )
 ; 0x0006 ,    0x8000 ,    0x0000 ,    0x0000 ,    ( ^000F   FREE_T      )
 
-cust_send:                  ; msg
-    msg 1                   ; msg cust
-; 0x000B ,    0x8018 ,    0x8001 ,    0x0011 ,    ( ^0010   msg 1       )
-send_msg:                   ; msg cust
-    send -1                 ; --
-; 0x000B ,    0x801A ,    0xFFFF ,    0x0012 ,    ( ^0011   send -1     )
-sink_beh:                   ; _ <- _
-commit:
-    end commit
-; 0x000B ,    0x800F ,    0x8001 ,    0x0000 ,    ( ^0012   end commit  )
-stop:
-    end stop
-; 0x000B ,    0x800F ,    0x8000 ,    0x0000 ,    ( ^0013   end stop    )
-
 boot:                       ; _ <- _
     pair 0
-; 0x000B ,    0x8011 ,    0x8000 ,    0x0015 ,    ( ^0014   pair 0      )
+; 0x000B ,    0x8011 ,    0x8000 ,    0x0015 ,    ( ^0010   pair 0      )
     assert #nil
 ; 0x000B ,    0x8007 ,    0x0001 ,    0x0016 ,    ( ^0015   assert #nil )
     push 3
@@ -95,6 +81,24 @@ boot:                       ; _ <- _
     if stop
 ; 0x000B ,    0x8003 ,    0x0013 ,    0x0012 ,    ( ^0031   [#0] if     )
     ref commit
+
+; 0x000b , 0x800f , 0x8001 , 0x0000 ,  ( ^0032: end stop )
+; 0x000b , 0x801a , 0xffff , 0x0034 ,  ( ^0033: send -1 )
+; 0x000b , 0x800f , 0x8001 , 0x0000 ,  ( ^0034: end stop )
+
+cust_send:                  ; msg
+    msg 1                   ; msg cust
+; 0x000B ,    0x8018 ,    0x8001 ,    0x0033 ,    ( ^0013   msg 1       )
+send_msg:                   ; msg cust
+    send -1                 ; --
+; 0x000B ,    0x801A ,    0xFFFF ,    0x0032 ,    ( ^0012   send -1     )
+sink_beh:                   ; _ <- _
+commit:
+    end commit
+; 0x000B ,    0x800F ,    0x8001 ,    0x0000 ,    ( ^0011   end commit  )
+stop:
+    end stop
+; 0x000B ,    0x800F ,    0x8000 ,    0x0000 ,    ( ^0014   end stop    )
 
 .export
     boot

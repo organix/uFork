@@ -10,7 +10,7 @@ import theme from "./theme.js";
 
 // Map 32-bit address space to 16-bits
 
-function from_uf(uf) {
+function from_uf(uf) {  // also exported from `fpga/fomu/cpu/ucode.js`
     const lsb13 = (uf >> 0) & 0x1FFF;
     const msb3 = (uf >> 16) & 0xE000;
     return (msb3 | lsb13);
@@ -62,7 +62,7 @@ const rom_ui = make_ui("rom-ui", function (element, {
     function memh_dump16(octets) {
         const cells = new Uint32Array(octets.buffer);
         let s = "/*   T     X     Y     Z      ADDR */\n";
-//                 0123  4567  89AB  CDEF  // ^0000
+        //         0123  4567  89AB  CDEF  // ^0000
         cells.forEach(function (cell, addr) {
             s += "  " + hex.from(from_uf(cell), 16);
             if ((addr & 0x3) === 0x3) {
@@ -77,7 +77,7 @@ const rom_ui = make_ui("rom-ui", function (element, {
     function memh_dump32(octets) {
         const cells = new Uint32Array(octets.buffer);
         let s = "/*       T         X         Y         Z          ADDR */\n";
-//                 00112233  44556677  8899AABB  CCDDEEFF  // ^00000000
+        //         00112233  44556677  8899AABB  CCDDEEFF  // ^00000000
         cells.forEach(function (cell, addr) {
             s += "  " + hex.from(cell, 32);
             if ((addr & 0x3) === 0x3) {
@@ -92,7 +92,7 @@ const rom_ui = make_ui("rom-ui", function (element, {
     function forth_dump16(octets) {
         const cells = new Uint32Array(octets.buffer);
         let s = "(    T        X        Y        Z       ADDR )\n";
-//               0x0123 , 0x4567 , 0x89AB , 0xCDEF ,  ( ^0000 )
+        //       0x0123 , 0x4567 , 0x89AB , 0xCDEF ,  ( ^0000 )
         cells.forEach(function (cell, addr) {
             s += "0x" + hex.from(from_uf(cell), 16);
             s += (
@@ -109,7 +109,7 @@ const rom_ui = make_ui("rom-ui", function (element, {
     function forth_dump32(octets) {
         const cells = new Uint32Array(octets.buffer);
         let s = "(        T            X            Y            Z           ADDR )\n";
-//               0x00112233 , 0x44556677 , 0x8899AABB , 0xCCDDEEFF ,  ( ^00000000 )
+        //       0x00112233 , 0x44556677 , 0x8899AABB , 0xCCDDEEFF ,  ( ^00000000 )
         cells.forEach(function (cell, addr) {
             s += "0x" + hex.from(cell, 32);
             s += (

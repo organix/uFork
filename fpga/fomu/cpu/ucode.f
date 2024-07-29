@@ -187,22 +187,11 @@
   0x0006 ,    0x8003 ,    0x0000 ,    0x0000 ,    ( ^000D   #dict_t     )
   0x0006 ,    0xFFFF ,    0x0000 ,    0x0000 ,    ( ^000E   FWD_REF_T   )
   0x0006 ,    0x8000 ,    0x0000 ,    0x0000 ,    ( ^000F   FREE_T      )
-(
-cust_send:                  ; msg
-    msg 1                   ; msg cust
-send_msg:                   ; msg cust
-    send -1                 ; --
-sink_beh:                   ; _ <- _
-commit:
-    end commit
-stop:
-    end stop
-)
-  0x000B ,    0x8018 ,    0x8001 ,    0x0011 ,    ( ^0010   msg 1       )
-  0x000B ,    0x801A ,    0xFFFF ,    0x0012 ,    ( ^0011   send -1     )
-  0x000B ,    0x800F ,    0x8001 ,    0x0000 ,    ( ^0012   end commit  )
-  0x000B ,    0x800F ,    0x8000 ,    0x0000 ,    ( ^0013   end stop    )
-  0x000B ,    0x8011 ,    0x8000 ,    0x0015 ,    ( ^0014   pair 0      )
+  0x000B ,    0x8011 ,    0x8000 ,    0x0015 ,    ( ^0010   pair 0      )
+  0x000B ,    0x800F ,    0x8001 ,    0x0000 ,    ( ^0011   end commit  )
+  0x000B ,    0x801A ,    0xFFFF ,    0x0011 ,    ( ^0012   send -1     )
+  0x000B ,    0x8018 ,    0x8001 ,    0x0012 ,    ( ^0013   msg 1       )
+  0x000B ,    0x800F ,    0x8000 ,    0x0000 ,    ( ^0014   end stop    )
   0x000B ,    0x8007 ,    0x0001 ,    0x0016 ,    ( ^0015   assert #nil )
   0x000B ,    0x8002 ,    0x8003 ,    0x0017 ,    ( ^0016   push 3      )
   0x000B ,    0x8002 ,    0x8002 ,    0x0018 ,    ( ^0017   push 2      )
@@ -974,7 +963,7 @@ VARIABLE saved_sp           ( sp before instruction execution )
     EXIT
 
 : ufork_boot
-    #nil 0x0014 #actor_t 2alloc ptr2cap
+    #nil 0x0010 #actor_t 2alloc ptr2cap
     #unit SWAP q_root_spn 2alloc
     event_enqueue
     0 run_loop ;
