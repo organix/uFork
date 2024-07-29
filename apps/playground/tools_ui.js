@@ -5,6 +5,7 @@
 import make_ui from "./ui.js";
 import dom from "./dom.js";
 import io_dev_ui from "./io_dev_ui.js";
+import rom_ui from "./rom_ui.js";
 import svg_dev_ui from "./svg_dev_ui.js";
 import parseq from "https://ufork.org/lib/parseq.js";
 import requestorize from "https://ufork.org/lib/rq/requestorize.js";
@@ -71,6 +72,7 @@ const tools_ui = make_ui("tools-ui", function (element, {
             }
         }
     });
+    devices.rom = rom_ui({});
     devices.svg = svg_dev_ui({
         background_color: "#ffffff"
     });
@@ -194,6 +196,7 @@ const tools_ui = make_ui("tools-ui", function (element, {
             core.h_initialize(),
             core.h_import(get_src(), ir),
             requestorize(function (imported_module) {
+                devices.rom.set_buffer(core.h_snapshot().rom);
                 clock_dev(core);
                 random_dev(core);
                 blob_dev(core);
@@ -249,7 +252,8 @@ const tools_ui = make_ui("tools-ui", function (element, {
         },
         [
             dom("option", {value: "io", textContent: "I/O"}),
-            dom("option", {value: "svg", textContent: "SVG"})
+            dom("option", {value: "svg", textContent: "SVG"}),
+            dom("option", {value: "rom", textContent: "ROM"})
         ]
     );
     lang_select = dom(
@@ -315,7 +319,7 @@ const tools_ui = make_ui("tools-ui", function (element, {
 //debug         on_debug: () => console.log("on_debug"),
 //debug         on_help: () => console.log("on_help")
 //debug     }),
-//debug     {style: {width: "320px", height: "400px"}}
+//debug     {style: {width: "400px", height: "400px"}}
 //debug );
 //debug document.body.append(tools);
 
