@@ -343,13 +343,6 @@
     ELSE
         !
     THEN ;
-: memcpy ( dst src count -- )
-    ?LOOP-                  ( D: dst src ) ( R: count-1 )
-        2DUP                ( D: dst src dst src )
-        I + fetch           ( D: dst src dst data )
-        SWAP I + store      ( D: dst src )
-    AGAIN
-    2DROP ;
 
 ( : is_fix ( raw -- truthy )
     MSB& ; ... ucode.js )
@@ -897,9 +890,17 @@ VARIABLE saved_sp           ( sp before instruction execution )
     THEN
     run_loop ;
 
-: ufork_init
-    0x8000 rom_image
-    68 4 * memcpy           ( quads * 4 = cells )
+: rom_init
+    68 DUP 2ROL             ( n_quads n_cells )
+    rom_image + SWAP        ( end_addr n_quads )
+    ?LOOP-                  ( for each quad... )
+        1- DUP @ I QZ!      ( D: end-1 )
+        1- DUP @ I QY!      ( D: end-2 )
+        1- DUP @ I QX!      ( D: end-3 )
+        1- DUP @ I QT!      ( D: end-4 )
+    AGAIN ;
+
+: ram_init
     0x4010 mem_top!
     #nil mem_next!
     #0 mem_free!
@@ -919,7 +920,11 @@ VARIABLE saved_sp           ( sp before instruction execution )
     0x9000 q_root_spn spn_memory!
     0x8100 q_root_spn spn_events!
     0xB000 q_root_spn spn_cycles!
-    #? q_root_spn spn_signal!
+    #? q_root_spn spn_signal! ;
+
+: ufork_init
+    rom_init
+    ram_init
     EXIT
 
 : assert ( truthy -- )
