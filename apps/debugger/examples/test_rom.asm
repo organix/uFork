@@ -21,6 +21,9 @@ rsvd_rom:
 
 boot:                       ; _ <- _
     dup 0                   ; --
+    ref test_nth
+
+test_pairs:
     pair 0                  ; ()
     assert #nil             ; --
     push 3                  ; 3
@@ -34,8 +37,14 @@ boot:                       ; _ <- _
     part 1                  ; 3 2
     assert 2                ; 3
     dup 1                   ; 3 3
-    assert 3                ; 3
+    part 1                  ; 3 #? #?
+    drop 1                  ; 3 #?
+    assert #?               ; 3
     drop 0                  ; 3
+    assert 3                ; --
+    ref test_if
+
+test_if:
     part 1                  ; #? #?
     drop 1                  ; #?
     if stop                 ; --
@@ -51,7 +60,25 @@ boot:                       ; _ <- _
     if_not stop             ; --
     push 0                  ; 0
     if stop                 ; --
+    ref test_nth
+
+test_nth:
+    push list_0             ; (273 546 819)
+    part 1                  ; (546 819) 273
+    assert 273              ; (546 819)
+    part 1                  ; (819) 546
+    assert 546              ; (819)
+    part 1                  ; () 819
+    assert 819              ; ()
+    assert #nil             ; --
     ref commit
+
+; static data
+list_0:                     ; (273 546 819)
+    pair_t 16#111           ; 273
+    pair_t 16#222           ; 546
+    pair_t 16#333           ; 819
+    ref #nil
 
 ; shared tails from `std.asm`
 cust_send:                  ; msg
