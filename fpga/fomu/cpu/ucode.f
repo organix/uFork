@@ -190,7 +190,7 @@
 0x0006 , 0x8000 , 0x0000 , 0x0000 ,  ( ^000f: FREE_T )
 : boot_rom
 (    T        X        Y        Z       ADDR )
-0x000b , 0x8016 , 0x8000 , 0x0013 ,  ( ^0010 )
+0x000b , 0x8016 , 0x8000 , 0x0011 ,  ( ^0010 )
 0x000b , 0x8011 , 0x8000 , 0x0019 ,  ( ^0011 )
 0x000b , 0x8012 , 0x8001 , 0x002a ,  ( ^0012 )
 0x000b , 0x8002 , 0x0014 , 0x0038 ,  ( ^0013 )
@@ -641,11 +641,11 @@ To Copy fixnum:n of list onto head:
     THEN
     E_BOUNDS ;
 
-: nil_result ( -- )
+: nil_result ( -- ip' )
     sp@ #nil
-: push_result ( sp result -- )
+: push_result ( sp' result -- ip' )
     pair
-: update_sp ( sp' -- )
+: update_sp ( sp' -- ip' )
     sp! k@ ;
 
 : op_push ( -- ip' | error )
@@ -724,10 +724,10 @@ To Copy fixnum:n of list onto head:
         sp@ DUP first       ( D: sp tos )
         push_result ;
     THEN
-    imm@ #0 = IF
-        k@ ;                ( no-op )
+    imm@ fix2int 1 > IF     ( TODO: implement n > 1 )
+        E_BOUNDS ;
     THEN
-    E_BOUNDS ;
+    k@ ;                    ( no-op )
 
 : send_effect ( msg target sponsor -- )
     2alloc >R               ( D: ) ( R: event )
