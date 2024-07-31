@@ -63,7 +63,7 @@ test_if:
     ref test_nth
 
 test_nth:
-    push list_0             ; (273 546 819)
+    push list-0             ; (273 546 819)
     part 1                  ; (546 819) 273
     assert 273              ; (546 819)
     part 1                  ; (819) 546
@@ -71,14 +71,56 @@ test_nth:
     part 1                  ; () 819
     assert 819              ; ()
     assert #nil             ; --
+    push list-0             ; (273 546 819)
+    nth 0                   ; (273 546 819)
+    assert list-0           ; --
+    push list-0             ; (273 546 819)
+    nth 1                   ; 273
+    assert 273              ; --
+;    push list-0             ; (273 546 819)
+;    nth -1                  ; (546 819)
+;    assert list-1           ; --
+    push list-0             ; (273 546 819)
+    nth 2                   ; 546
+    assert 546              ; --
+;    push list-0             ; (273 546 819)
+;    nth -2                  ; (819)
+;    assert list-2           ; --
+    push list-0             ; (273 546 819)
+    nth 3                   ; 819
+    assert 819              ; --
+    push list-0             ; (273 546 819)
+    nth -3                  ; ()
+    assert #nil             ; --
+;    assert list-3           ; --
+    push list-0             ; (273 546 819)
+    nth 4                   ; #?
+    assert #?               ; --
+    push list-0             ; (273 546 819)
+    nth -4                  ; #?
+    assert #?               ; --
     ref commit
 
 ; static data
-list_0:                     ; (273 546 819)
+list-0:                     ; (273 546 819)
     pair_t 16#111           ; 273
+;list-1:                     ; (546 819)
     pair_t 16#222           ; 546
+;list-2:                     ; (819)
     pair_t 16#333           ; 819
+;list-3:                     ; ()
     ref #nil
+
+; adaptated from `lib.asm`
+once_beh:                   ; (rcvr) <- msg
+    push #nil               ; state=()
+    push sink_beh           ; state beh=sink_beh
+    beh -1                  ; --
+    ; ref fwd_beh
+fwd_beh:                    ; (rcvr) <- msg
+    msg 0                   ; msg
+    state 1                 ; msg rcvr
+    ref send_msg
 
 ; shared tails from `std.asm`
 cust_send:                  ; msg

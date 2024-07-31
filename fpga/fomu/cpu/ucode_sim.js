@@ -296,7 +296,7 @@ function make_machine(prog = [], device = []) {
                         ? tors - 1
                         : tors + 1
                     );
-                    rstack.perform(SE_RPLC, data);
+                    rstack.perform(SE_RPLC, data & 0xFFFF);
                 }
             } else {
                 return error("illegal control instruction");
