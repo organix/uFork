@@ -1068,6 +1068,12 @@ _vₙ_ … _v₁_          | `dup` _n_           | _vₙ_ … _v₁_ _vₙ_ … 
 
 Duplicate items on the top of the stack.
 
+ T (type)     | X (op)        | Y (imm)     | Z (k)
+--------------|---------------|-------------|-------------
+ `#instr_t`   | `+22` (dup)   | `+0`        | _instr_
+
+ 1. No effect
+
  T            | X (op)        | Y (imm)     | Z (k)
 --------------|---------------|-------------|-------------
  `#instr_t`   | `+22` (dup)   | _n_         | _instr_
@@ -1368,6 +1374,12 @@ _pair_               | `part` _n_          | … _tail_ _head_ | split _pair_ in
 (_v₁_ … _vₙ_)        | `part` -1           | _vₙ_ … _v₁_   | spread _pair_ list items onto stack
 
 Split items from a pair-list onto the stack.
+
+ T (type)     | X (op)        | Y (imm)     | Z (k)
+--------------|---------------|-------------|-------------
+ `#instr_t`   | `+18` (part)  | `+0`        | _instr_
+
+ 1. No effect
 
  T            | X (op)        | Y (imm)       | Z (k)
 --------------|---------------|---------------|-------------

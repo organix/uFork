@@ -20,13 +20,14 @@ rsvd_rom:
 ; 0x0006 , 0x8000 , 0x0000 , 0x0000 ,  ( ^000f: FREE_T )
 
 boot:                       ; _ <- _
-    part 0                  ; state=()
+    pair 0                  ; state=()
     push reboot             ; state beh=reboot
     beh -1                  ; --
     ref test_actors
 
 reboot:                     ; _ <- _
     dup 0                   ; --
+    part 0                  ; --
     ref commit
 
 test_pairs:
