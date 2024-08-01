@@ -20,8 +20,14 @@ rsvd_rom:
 ; 0x0006 , 0x8000 , 0x0000 , 0x0000 ,  ( ^000f: FREE_T )
 
 boot:                       ; _ <- _
+    part 0                  ; state=()
+    push reboot             ; state beh=reboot
+    beh -1                  ; --
+    ref test_actors
+
+reboot:                     ; _ <- _
     dup 0                   ; --
-    ref test_nth
+    ref commit
 
 test_pairs:
     pair 0                  ; ()
@@ -77,38 +83,41 @@ test_nth:
     push list-0             ; (273 546 819)
     nth 1                   ; 273
     assert 273              ; --
-;    push list-0             ; (273 546 819)
-;    nth -1                  ; (546 819)
-;    assert list-1           ; --
+    push list-0             ; (273 546 819)
+    nth -1                  ; (546 819)
+    assert list-1           ; --
     push list-0             ; (273 546 819)
     nth 2                   ; 546
     assert 546              ; --
-;    push list-0             ; (273 546 819)
-;    nth -2                  ; (819)
-;    assert list-2           ; --
+    push list-0             ; (273 546 819)
+    nth -2                  ; (819)
+    assert list-2           ; --
     push list-0             ; (273 546 819)
     nth 3                   ; 819
     assert 819              ; --
     push list-0             ; (273 546 819)
     nth -3                  ; ()
-    assert #nil             ; --
-;    assert list-3           ; --
+    assert list-3           ; --
+;    assert #nil             ; --
     push list-0             ; (273 546 819)
     nth 4                   ; #?
     assert #?               ; --
     push list-0             ; (273 546 819)
     nth -4                  ; #?
     assert #?               ; --
+    ref test_actors
+
+test_actors:
     ref commit
 
 ; static data
 list-0:                     ; (273 546 819)
     pair_t 16#111           ; 273
-;list-1:                     ; (546 819)
+list-1:                     ; (546 819)
     pair_t 16#222           ; 546
-;list-2:                     ; (819)
+list-2:                     ; (819)
     pair_t 16#333           ; 819
-;list-3:                     ; ()
+list-3:                     ; ()
     ref #nil
 
 ; adaptated from `lib.asm`
