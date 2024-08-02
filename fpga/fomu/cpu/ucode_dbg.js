@@ -11,8 +11,6 @@ import hex from "https://ufork.org/lib/hex.js";
 //import OED from "https://ufork.org/lib/oed.js";
 //import oed from "https://ufork.org/lib/oed_lite.js";
 
-//const $importmap = document.querySelector("script[type=importmap]");
-
 function $(el) {
     if (typeof el === "string") {
         el = document.getElementById(el);
@@ -155,19 +153,34 @@ function format_memory(mem, base = 0) {
     }).join("");
 }
 
-function display_machine(machine) {
-    const state = machine.copy();
+// display annotated memory image
+function display_memory(prog, words) {
+    const memh = ucode.print_memh(prog, words);
+    $program_mem.value = memh;
+}
+
+function display_machine(state, prog, words) {
 //    console.log("machine_state:", state);
     $machine_pc.value = hex.from(state.pc, 12);
     center_program_view(state.pc);
-    $machine_code.value = machine.disasm(state.pc);
+    $machine_code.value = ucode.disasm(prog[state.pc], words);
     $machine_dstack.innerText = format_stack(state.dstack, state.dstats);
     $machine_rstack.innerText = format_stack(state.rstack, state.rstats);
 //if ($machine_play.textContent === "Play") {
     $ufork_ram.value = format_memory(state.qram, 0x4000);
     $ufork_rom.value = format_memory(state.qrom, 0x0000);
 //}
-    return state;
+}
+
+let schedule_timer_id;
+
+function schedule_display(state, prog, words) {
+    // Schedules exactly one redraw for the upcoming paint.
+    cancelAnimationFrame(schedule_timer_id);
+    schedule_timer_id = requestAnimationFrame(function () {
+        display_memory(prog, words);
+        display_machine(state, prog, words);
+    });
 }
 
 $program_compile.onclick = function () {
@@ -183,12 +196,6 @@ $program_compile.onclick = function () {
         $program_mem.value = report;
         return;  // early exit
     }
-    // display annotated memory image
-    function display_memory() {
-        const memh = ucode.print_memh(prog, words);
-        $program_mem.value = memh;
-    }
-    display_memory();
 
     // create simluated UART interface
     $console_out.value = "";
@@ -209,10 +216,7 @@ $program_compile.onclick = function () {
     $machine_error.textContent = "";
     $machine_break.textContent = "";
     const machine = ucode_sim.make_machine(prog, [uart]);
-    machine.disasm = function disasm(pc) {
-        return ucode.disasm(prog[pc], words);
-    };
-    display_machine(machine);
+    schedule_display(machine.copy(), prog, words);
 
     // add step/play/pause controls
     let step_timer;
@@ -232,21 +236,31 @@ $program_compile.onclick = function () {
     }
     function step() {
         const delay = Number($machine_delay.value);
-        step_timer = setTimeout(function () {
+        const begin = Date.now();
+        while (true) {
             const result = machine.step();
             if (result !== undefined) {
                 halt(result);
+                break;
             }
-            display_memory();
-            const state = display_machine(machine);
+            const state = machine.copy();
+            schedule_display(state, prog, words);
             const breakpoint = Number("0x" + $machine_break.value);
             if (Number.isSafeInteger(breakpoint) && (breakpoint === state.pc)) {
                 pause();
+                break;
             }
-            if ($machine_play.textContent === "Pause") {
-                step();
+            if ($machine_play.textContent !== "Pause") {
+                break;
             }
-        }, delay);
+            // Defer the next iteration if a non-zero interval has been
+            // specified, or if the render loop is being blocked.
+            const elapsed = Date.now() - begin;
+            if (delay > 0 || elapsed > 10) {
+                step_timer = setTimeout(step, delay);
+                break;
+            }
+        }
     }
     function play() {
         $machine_play.textContent = "Pause";
