@@ -163,8 +163,10 @@ function display_machine(machine) {
     $machine_code.value = machine.disasm(state.pc);
     $machine_dstack.innerText = format_stack(state.dstack, state.dstats);
     $machine_rstack.innerText = format_stack(state.rstack, state.rstats);
+//if ($machine_play.textContent === "Play") {
     $ufork_ram.value = format_memory(state.qram, 0x4000);
     $ufork_rom.value = format_memory(state.qrom, 0x0000);
+//}
     return state;
 }
 

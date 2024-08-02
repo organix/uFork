@@ -20,12 +20,14 @@ rsvd_rom:
 ; 0x0006 , 0x8000 , 0x0000 , 0x0000 ,  ( ^000f: FREE_T )
 
 boot:                       ; _ <- _
-    pair 0                  ; state=()
-    push reboot             ; state beh=reboot
+    pair 0                  ; ()
+    my self                 ; () self
+    pair 1                  ; (self)
+    push reboot             ; state=(self) beh=reboot
     beh -1                  ; --
     ref test_actors
 
-reboot:                     ; _ <- _
+reboot:                     ; (self) <- _
     dup 0                   ; --
     part 0                  ; --
     ref commit
@@ -109,6 +111,20 @@ test_nth:
     ref test_actors
 
 test_actors:
+    push #nil               ; ()
+    push #?                 ; () #?
+    push cell_beh           ; () #? cell_beh
+    new -1                  ; () rcvr=cell_beh.#?
+    pair 1                  ; (rcvr)
+    push once_beh           ; (rcvr) once_beh
+    new -1                  ; actor=once_beh.(rcvr)
+    push #t                 ; actor #t
+    pick 2                  ; actor #t actor
+    send -1                 ; actor
+    push #f                 ; actor #f
+    pick 2                  ; actor #f actor
+    send -1                 ; actor
+    drop 1                  ; --
     ref commit
 
 ; static data
@@ -120,6 +136,13 @@ list-2:                     ; (819)
     pair_t 16#333           ; 819
 list-3:                     ; ()
     ref #nil
+
+; dumb data cell
+cell_beh:                   ; value <- value'
+    msg 0                   ; value'
+    push cell_beh           ; value' cell_beh
+    beh -1                  ; --
+    ref commit
 
 ; adaptated from `lib.asm`
 once_beh:                   ; (rcvr) <- msg
