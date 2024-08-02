@@ -14,14 +14,14 @@
 import {toFileUrl} from "https://deno.land/std@0.203.0/path/to_file_url.ts";
 import {fromFileUrl} from "https://deno.land/std@0.203.0/path/from_file_url.ts";
 import ecomcon from "https://raw.githubusercontent.com/douglascrockford/ecomcon/b3eda9196a827666af178199aff1c5b8ad9e45b3/ecomcon.js";
-import run_replete from "https://deno.land/x/replete@0.0.22/run.js";
+import run_replete from "https://deno.land/x/replete@0.0.25/run.js";
 // import {minify} from "https://esm.sh/terser";
 import import_map from "./import_map.js";
 
-const mime_types = {
+const content_types = {
     asm: "text/plain",
     css: "text/css",
-    html: "text/html",
+    html: "text/html; charset=utf-8",
     jpg: "image/jpeg",
     js: "text/javascript",
     json: "application/json",
@@ -82,9 +82,12 @@ run_replete({
         // });
         return Deno.readFile(file_url);
     },
-    mime(locator) {
+    headers(locator) {
         const extension = new URL(locator).pathname.split(".").pop();
-        return mime_types[extension];
+        const type = content_types[extension];
+        if (type !== undefined) {
+            return {"Content-Type": type};
+        }
     },
     locate(specifier, parent_locator) {
 

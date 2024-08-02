@@ -394,15 +394,7 @@ function compile(text, src = "") {
 
 // Disassemble a single uCode machine word.
 
-function disasm(code, words = {}) {
-    function name_for(code) {
-        const entry = Object.entries(words).find(function ([_, value]) {
-            return value === code;
-        });
-        if (entry !== undefined) {
-            return entry[0];
-        }
-    }
+function fast_disasm(code, names_by_word) {
     if (code === 0x021F) {
         return "(LIT)";
     }
@@ -433,19 +425,20 @@ function disasm(code, words = {}) {
             );
         }
         const addr = code & ADDR_MASK;
-        const label = name_for(uc_call(addr));
+        const word = uc_call(addr);
+        const labels = names_by_word[word];
         text += "(";
-        if (label !== undefined) {
-            text += label;
+        if (labels !== undefined) {
+            text += labels[0];
         } else {
             text += "0x";
             text += hex.from(addr, 12);
         }
         text += ")";
     } else {
-        const name = name_for(code);
-        if (name !== undefined) {
-            text += name;
+        const names = names_by_word[code];
+        if (names !== undefined) {
+            text += names[0];
             text += suffix;
         } else {
             text += "0x";
@@ -455,10 +448,28 @@ function disasm(code, words = {}) {
     return text;
 }
 
+function invert_words(words) {
+    // Build an inverted index mapping each word to its names. This step is
+    // necessary for efficient disassembly.
+    let inverted = Object.create(null);
+    Object.entries(words).forEach(function ([name, word]) {
+        if (inverted[word] === undefined) {
+            inverted[word] = [];
+        }
+        inverted[word].push(name);
+    });
+    return inverted;
+}
+
+function disasm(code, words = {}) {
+    return fast_disasm(code, invert_words(words));
+}
+
 // Print annotated Verilog memory image
 
 function print_memh(prog, words = {}) {
-    let lines = [
+    const names_by_word = invert_words(words);
+    return [
         "/*  CODE    ADR  DISASM                  NAMES                     */"
 //           021f // 0ac: (LIT)                   RX? KEY?
 //           0002 // 0ad: 0x0002
@@ -473,26 +484,17 @@ function print_memh(prog, words = {}) {
 //           c0a6 // 0b6: SPACE
 //           b0b6 // 0b7: jump_ifnz_dec(0b6)
 //           5000 // 0b8: NOP EXIT
-    ];
-    lines = lines.concat(prog.map(function (code, address) {
+    ].concat(prog.map(function format_line(code, address) {
         const call = 0xC000 | address;
+        const names = names_by_word[call] ?? [];
         const line = (
             "    " + hex.from(code, 16)                             // CODE
             + " // " + hex.from(address, 12) + ": "                 // ADR
-            + disasm(code, words).padEnd(24, " ")                   // DISASM
-            + Object.entries(                                       // NAMES
-                words
-            ).filter(function ([_, word]) {
-                return word === call;
-            }).map(function ([name, _]) {
-                return name;
-            }).join(
-                " "
-            )
+            + fast_disasm(code, names_by_word).padEnd(24, " ")      // DISASM
+            + names.join(" ")                                       // NAMES
         );
         return line.trimEnd();
-    }));
-    return lines.join("\n") + "\n";
+    })).join("\n") + "\n";
 }
 
 // Parse Verilog hexadecimal memory image
