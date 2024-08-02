@@ -705,6 +705,9 @@ To Copy fixnum:n of list onto head:
     sp! k@ ;
 : undef_result ( -- ip' )
     sp@ #? push_result ;
+: rplc_result ( sp result -- ip' )
+    OVER QX!                ( WARNING! stack modified in-place )
+    update_sp ;
 
 : op_push ( -- ip' | error )
     sp@ imm@                ( D: sp item )
@@ -729,8 +732,8 @@ To Copy fixnum:n of list onto head:
 : if_truthy                 ( D: sp' )
     sp! imm@ ;              ( continue true )
 : op_if ( -- ip' | error )
-    sp@ part
-    JMPTBL 4 ,              ( sp cond -- )
+    sp@ part                ( sp cond )
+    JMPTBL 4 ,
     update_sp               ( ^0000: #? )
     update_sp               ( ^0001: #nil )
     update_sp               ( ^0002: #f )
@@ -739,6 +742,17 @@ To Copy fixnum:n of list onto head:
         if_truthy ;
     THEN
     update_sp ;
+
+: op_typeq ( -- ip' | error )
+    sp@ part imm@           ( D: sp' value type )
+    DUP #type_t typeq IF
+        typeq IF            ( D: sp' )
+            #t
+        ELSE
+            #f
+        THEN push_result ;
+    THEN
+    E_NO_TYPE ;
 
 : op_pair ( -- ip' | error )
     imm@ #1 = IF
@@ -838,6 +852,80 @@ To Copy fixnum:n of list onto head:
     THEN
     E_NOT_FIX ;
 
+: alu_result ( sp n -- ip' )
+    int2fix rplc_result ;   ( WARNING! stack modified in-place )
+: alu_not                   ( D: )
+    sp@ DUP QX@             ( D: sp' #n )
+    DUP is_fix IF
+        fix2int             ( D: sp' n )
+        INVERT alu_result ;
+    THEN
+    E_NOT_FIX ;
+: 2fix_args ( -- sp' #n #m 2is_fix )
+    sp@ part OVER QX@       ( D: sp' #n #m )
+    OVER is_fix OVER is_fix AND ;
+: 2fix2int ( #n #m -- n m )
+    SWAP fix2int            ( D: #m n )
+    SWAP fix2int ;          ( D: n m )
+: alu_and                   ( D: )
+    2fix_args IF            ( D: sp' #n #m )
+        2fix2int            ( D: sp' n m )
+        AND alu_result ;
+    THEN
+    E_NOT_FIX ;
+: alu_or                    ( D: )
+    2fix_args IF            ( D: sp' #n #m )
+        2fix2int            ( D: sp' n m )
+        OR alu_result ;
+    THEN
+    E_NOT_FIX ;
+: alu_xor                   ( D: )
+    2fix_args IF            ( D: sp' #n #m )
+        2fix2int            ( D: sp' n m )
+        XOR alu_result ;
+    THEN
+    E_NOT_FIX ;
+: alu_add                   ( D: )
+    2fix_args IF            ( D: sp' #n #m )
+        2fix2int            ( D: sp' n m )
+        + alu_result ;
+    THEN
+    E_NOT_FIX ;
+: alu_sub                   ( D: )
+    2fix_args IF            ( D: sp' #n #m )
+        2fix2int            ( D: sp' n m )
+        - alu_result ;
+    THEN
+    E_NOT_FIX ;
+: alu_mul                   ( D: )
+    2fix_args IF            ( D: sp' #n #m )
+        2fix2int            ( D: sp' n m )
+        * alu_result ;
+    THEN
+    E_NOT_FIX ;
+: alu_invalid               ( D: )
+    E_BOUNDS ;
+: op_alu ( -- ip' | error )
+    imm@ DUP is_fix IF
+        fix2int             ( imm )
+        JMPTBL 0xD ,
+        alu_not             ( 0000: not )
+        alu_and             ( 0001: and )
+        alu_or              ( 0002: or )
+        alu_xor             ( 0003: xor )
+        alu_add             ( 0004: add )
+        alu_sub             ( 0005: sub )
+        alu_mul             ( 0006: mul )
+        alu_invalid         ( 0007: -reserved- )
+        alu_invalid         ( 0008: lsl )
+        alu_invalid         ( 0009: lsr )
+        alu_invalid         ( 000A: asr )
+        alu_invalid         ( 000B: rol )
+        alu_invalid         ( 000C: ror )
+        DROP alu_invalid ;  ( default case )
+    THEN
+    E_NOT_FIX ;
+
 : send_effect ( msg target sponsor -- )
     2alloc >R               ( D: ) ( R: event )
     self@ QZ@               ( D: effect ) ( R: event )
@@ -907,13 +995,14 @@ To Copy fixnum:n of list onto head:
     sp@ self@ QY@ imm@      ( D: sp state #n )
     nth_result ;
 
-: perform_op JMPTBL 32 ,    ( opcode -- ip' | error )
+: perform_op ( opcode -- ip' | error )
+    JMPTBL 32 ,
     invalid                 ( 0x8000: debug )
     invalid                 ( 0x8001: jump )
     op_push                 ( 0x8002: push )
     op_if                   ( 0x8003: if )
     invalid                 ( 0x8004: -unused- )
-    invalid                 ( 0x8005: typeq )
+    op_typeq                ( 0x8005: typeq )
     op_eq                   ( 0x8006: eq )
     op_assert               ( 0x8007: assert )
 
