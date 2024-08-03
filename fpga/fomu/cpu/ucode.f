@@ -411,6 +411,27 @@
 : is_rom ( raw -- bool )
     0xC000 AND 0= ;
 
+: qt! ( data qref -- )
+    DUP is_ram IF
+        ( TODO: manage GC marking )
+        QT!
+    THEN ;
+: qx! ( data qref -- )
+    DUP is_ram IF
+        ( TODO: manage GC marking )
+        QX!
+    THEN ;
+: qy! ( data qref -- )
+    DUP is_ram IF
+        ( TODO: manage GC marking )
+        QY!
+    THEN ;
+: qz! ( data qref -- )
+    DUP is_ram IF
+        ( TODO: manage GC marking )
+        QZ!
+    THEN ;
+
 : is_pair ( raw -- bool )
     DUP is_ptr IF
         QT@ #pair_t = ;
@@ -494,9 +515,9 @@
     QZ! ;
 
 : event_enqueue ( event -- )
-    #nil OVER QZ!
+    #nil OVER qz!
     e_head@ is_ram IF
-        DUP e_tail@ QZ!
+        DUP e_tail@ qz!
     ELSE
         DUP e_head!
     THEN
@@ -511,9 +532,9 @@
     THEN ;
 
 : cont_enqueue ( cont -- )
-    #nil OVER QZ!
+    #nil OVER qz!
     k_head@ is_ram IF
-        DUP k_tail@ QZ!
+        DUP k_tail@ qz!
     ELSE
         DUP k_head!
     THEN
@@ -536,11 +557,11 @@
 : kp@
     k_head@ QZ@ ;
 : ip!
-    k_head@ QT! ;
+    k_head@ qt! ;
 : sp!
-    k_head@ QX! ;
+    k_head@ qx! ;
 : ep!
-    k_head@ QY! ;
+    k_head@ qy! ;
 
 : op@
     ip@ QX@ ;
@@ -686,9 +707,9 @@ To Copy fixnum:n of list onto head:
             SWAP event_enqueue
         REPEAT              ( D: self effect events )
         DROP SWAP           ( D: effect self )
-        OVER QX@ OVER QX!   ( update code )
-        OVER QY@ OVER QY!   ( update data )
-        #? SWAP QZ!         ( make actor ready )
+        OVER QX@ OVER qx!   ( update code )
+        OVER QY@ OVER qy!   ( update data )
+        #? SWAP qz!         ( make actor ready )
         release             ( free effect )
         #? ;                ( end continuation )
     THEN
@@ -706,7 +727,7 @@ To Copy fixnum:n of list onto head:
 : undef_result ( -- ip' )
     sp@ #? push_result ;
 : rplc_result ( sp result -- ip' )
-    OVER QX!                ( WARNING! stack modified in-place )
+    OVER qx!                ( WARNING! stack modified in-place )
     update_sp ;
 
 : op_push ( -- ip' | error )
@@ -976,8 +997,8 @@ To Copy fixnum:n of list onto head:
     2alloc >R               ( D: ) ( R: event )
     self@ QZ@               ( D: effect ) ( R: event )
     DUP QZ@                 ( D: effect events ) ( R: event )
-    R@ QZ!                  ( D: effect ) ( R: events' )
-    R> SWAP QZ! ;           ( D: )
+    R@ qz!                  ( D: effect ) ( R: events' )
+    R> SWAP qz! ;           ( D: )
 : op_send ( -- ip' | error )
     imm@ #-1 = IF
         sp@ part            ( D: sp' target )
@@ -1007,7 +1028,7 @@ To Copy fixnum:n of list onto head:
 
 : become_effect ( state beh -- )
     self@ QZ@ TUCK          ( D: state effect beh effect )
-    QX! QY! ;               ( D: )
+    qx! qy! ;               ( D: )
 : op_beh ( -- ip' | error )
     imm@ #-1 = IF
         sp@ part            ( D: sp' beh )
@@ -1087,13 +1108,13 @@ To Copy fixnum:n of list onto head:
         ( target busy )
         event_enqueue ;
     THEN                    ( D: event )
-    #nil OVER QZ!
+    #nil OVER qz!
     DUP QX@ >R              ( D: event ) ( R: target )
     #nil R@ QX@             ( D: ep sp ip ) ( R: target )
     2alloc                  ( D: cont ) ( R: target )
     #nil R@ QY@ R@ QX@      ( D: cont event data code ) ( R: target )
     #actor_t 3alloc         ( D: cont effect ) ( R: target )
-    R> QZ!                  ( D: cont )
+    R> qz!                  ( D: cont )
     cont_enqueue ;
 
 VARIABLE run_limit          ( number of iterations remaining )
