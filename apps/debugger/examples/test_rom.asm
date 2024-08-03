@@ -25,7 +25,7 @@ boot:                       ; _ <- _
     pair 1                  ; (self)
     push reboot             ; state=(self) beh=reboot
     beh -1                  ; --
-    ref test_actors
+    ref test_pairs
 
 reboot:                     ; (self) <- _
     dup 0                   ; --

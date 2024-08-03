@@ -209,7 +209,7 @@
 0x000b , 0x800c , 0x8000 , 0x0021 ,  ( ^0020 )
 0x000b , 0x8011 , 0x8001 , 0x0022 ,  ( ^0021 )
 0x000b , 0x8002 , 0x0011 , 0x0023 ,  ( ^0022 )
-0x000b , 0x801d , 0xffff , 0x0015 ,  ( ^0023 )
+0x000b , 0x801d , 0xffff , 0x0012 ,  ( ^0023 )
 0x000b , 0x8012 , 0x8000 , 0x001e ,  ( ^0024 )
 0x000b , 0x8007 , 0x0001 , 0x0026 ,  ( ^0025 )
 0x000b , 0x8002 , 0x8003 , 0x0027 ,  ( ^0026 )
@@ -341,64 +341,6 @@
     E_FAIL
 : disrupt ( reason -- )
     FAIL disrupt ;
-: quad ( raw -- qaddr )
-    DUP MSB& IF
-        0x0FFF AND          ( uCode | fixnum )
-    ELSE
-        2ROL
-        DUP LSB& IF         ( RAM address )
-            0x3FFC AND 0x4000 OR
-        ELSE                ( ROM address )
-            0x7FFC AND MSB|
-        THEN
-    THEN ;
-: parse_qaddr ( qaddr -- field raw )
-        DUP 0x3 AND SWAP    ( D: field addr )
-        DUP MSB& IF
-            2ASR 0x1FFF AND
-        ELSE
-            2ASR 0x0FFF AND
-            0x4000 OR
-        THEN ;              ( D: field raw )
-: fetch ( addr -- data )
-    DUP 0xC000 AND IF
-        parse_qaddr         ( D: field raw )
-        OVER 0x1 = IF
-            QX@             ( D: field data )
-        ELSE
-            OVER 0x2 = IF
-                QY@         ( D: field data )
-            ELSE
-                OVER 0x3 = IF
-                    QZ@     ( D: field data )
-                ELSE
-                    QT@     ( D: field data )
-                THEN
-            THEN
-        THEN
-        NIP                 ( D: data )
-    ELSE
-        @                   ( D: data )
-    THEN ;
-: store ( data addr -- )
-    DUP 0xC000 AND IF
-        parse_qaddr SWAP    ( D: data raw field )
-        DUP 0x1 = IF
-            DROP QX!
-        ELSE
-            DUP 0x2 = IF
-                DROP QY!
-            ELSE
-                DUP 0x3 = IF
-                    DROP QZ!
-                ELSE
-                    DROP QT!
-                THEN
-            THEN
-        THEN
-    ELSE
-        !
-    THEN ;
 
 ( : is_fix ( raw -- truthy )
     MSB& ; ... ucode.js )
@@ -411,26 +353,24 @@
 : is_rom ( raw -- bool )
     0xC000 AND 0= ;
 
-: qt! ( data qref -- )
+: wr_mark ( value qref -- value qref )
+    OVER DROP ;             ( TODO: if gc in progress, mark _value_ in-use )
+: qt! ( value qref -- )
     DUP is_ram IF
-        ( TODO: manage GC marking )
-        QT!
-    THEN ;
-: qx! ( data qref -- )
+        wr_mark QT! ;
+    THEN disrupt ;
+: qx! ( value qref -- )
     DUP is_ram IF
-        ( TODO: manage GC marking )
-        QX!
-    THEN ;
-: qy! ( data qref -- )
+        wr_mark QX! ;
+    THEN disrupt ;
+: qy! ( value qref -- )
     DUP is_ram IF
-        ( TODO: manage GC marking )
-        QY!
-    THEN ;
-: qz! ( data qref -- )
+        wr_mark QY! ;
+    THEN disrupt ;
+: qz! ( value qref -- )
     DUP is_ram IF
-        ( TODO: manage GC marking )
-        QZ!
-    THEN ;
+        wr_mark QZ! ;
+    THEN disrupt ;
 
 : is_pair ( raw -- bool )
     DUP is_ptr IF
@@ -706,7 +646,7 @@ To Copy fixnum:n of list onto head:
             DUP QZ@         ( D: self effect event events' )
             SWAP event_enqueue
         REPEAT              ( D: self effect events )
-        DROP SWAP           ( D: effect self )
+        DROP SWAP cap2ptr   ( D: effect ^self )
         OVER QX@ OVER qx!   ( update code )
         OVER QY@ OVER qy!   ( update data )
         #? SWAP qz!         ( make actor ready )
@@ -727,7 +667,11 @@ To Copy fixnum:n of list onto head:
 : undef_result ( -- ip' )
     sp@ #? push_result ;
 : rplc_result ( sp result -- ip' )
-    OVER qx!                ( WARNING! stack modified in-place )
+    OVER DUP is_ram IF      ( D: sp result sp )
+        qx!                 ( WARNING! stack modified in-place )
+    ELSE
+        2DROP
+    THEN                    ( D: sp )
     update_sp ;
 
 : op_push ( -- ip' | error )
@@ -1114,7 +1058,7 @@ To Copy fixnum:n of list onto head:
     2alloc                  ( D: cont ) ( R: target )
     #nil R@ QY@ R@ QX@      ( D: cont event data code ) ( R: target )
     #actor_t 3alloc         ( D: cont effect ) ( R: target )
-    R> qz!                  ( D: cont )
+    R> cap2ptr qz!          ( D: cont )
     cont_enqueue ;
 
 VARIABLE run_limit          ( number of iterations remaining )
@@ -1263,6 +1207,7 @@ VARIABLE saved_sp           ( sp before instruction execution )
     EXIT
 
 : ufork_boot
+    ram_init                ( reset RAM )
     ( create bootstrap actor and initial event )
     #nil 0x0010             ( state=() beh=boot )
     #actor_t 2alloc ptr2cap
@@ -1301,6 +1246,64 @@ VARIABLE inp    ( input data accumulator )
 VARIABLE tos    ( top of stack )
 VARIABLE nos    ( next on stack )
 VARIABLE here   ( upload address )
+: to_qaddr ( raw -- qaddr )
+    DUP MSB& IF
+        0x0FFF AND          ( uCode | fixnum )
+    ELSE
+        2ROL
+        DUP LSB& IF         ( RAM address )
+            0x3FFC AND 0x4000 OR
+        ELSE                ( ROM address )
+            0x7FFC AND MSB|
+        THEN
+    THEN ;
+: parse_qaddr ( qaddr -- field raw )
+        DUP 0x3 AND SWAP    ( D: field addr )
+        DUP MSB& IF
+            2ASR 0x1FFF AND
+        ELSE
+            2ASR 0x0FFF AND
+            0x4000 OR
+        THEN ;              ( D: field raw )
+: fetch ( addr -- data )
+    DUP 0xC000 AND IF
+        parse_qaddr         ( D: field raw )
+        OVER 0x1 = IF
+            QX@             ( D: field data )
+        ELSE
+            OVER 0x2 = IF
+                QY@         ( D: field data )
+            ELSE
+                OVER 0x3 = IF
+                    QZ@     ( D: field data )
+                ELSE
+                    QT@     ( D: field data )
+                THEN
+            THEN
+        THEN
+        NIP                 ( D: data )
+    ELSE
+        @                   ( D: data )
+    THEN ;
+: store ( data addr -- )
+    DUP 0xC000 AND IF
+        parse_qaddr SWAP    ( D: data raw field )
+        DUP 0x1 = IF
+            DROP QX!
+        ELSE
+            DUP 0x2 = IF
+                DROP QY!
+            ELSE
+                DUP 0x3 = IF
+                    DROP QZ!
+                ELSE
+                    DROP QT!
+                THEN
+            THEN
+        THEN
+    ELSE
+        !
+    THEN ;
 : push ( a -- )
     tos @ nos !
     tos ! ;
@@ -1407,7 +1410,7 @@ VARIABLE here   ( upload address )
             pop pop SWAP store
         THEN
         OVER 'q' = IF
-            pop quad push
+            pop to_qaddr push
         THEN
         OVER 'p' = IF
             pop parse_qaddr SWAP push push
@@ -1447,7 +1450,7 @@ VARIABLE here   ( upload address )
 : BOOT
     ( ECHOLOOP )
     ufork_init
-    ( test_suite )
+    test_suite
     ufork_boot
     ufork_reboot
     prompt MONITOR ;
