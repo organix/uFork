@@ -206,6 +206,7 @@ function make_machine(prog = [], device = []) {
     function mem_perform(range, wr_en, addr, data) {
 //debug console.log("mem_perform:", "range=", range, "wr_en=", wr_en, "addr=", addr, "data=", data);
         if (range === MEM_UC) {
+            addr &= 0x0FFF;  // 12-bit address space
             if (wr_en) {
                 prog[addr] = data;
             }

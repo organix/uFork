@@ -133,14 +133,21 @@ function format_stack(stack, stats) {
 }
 
 const memory_header = "ADDR:  T    X    Y    Z     ADDR:  T    X    Y    Z";
-function format_memory(mem, base = 0) {
+function no_annotation(index) {
+    return (
+        index < 0
+        ? "- "
+        : ": "
+    );
+}
+function format_memory(mem, base = 0, annotation = no_annotation) {
     return memory_header + mem.map(function (value, index) {
         let s = "";
         if ((index & 0x1) === 0) {
             s += "\n";
         }
         s += hex.from(base + index, 16);
-        s += ": ";
+        s += annotation(index);
         s += hex.from(value.t, 16);
         s += " ";
         s += hex.from(value.x, 16);
@@ -160,6 +167,16 @@ function display_memory(prog, words) {
 }
 
 function display_machine(state, prog, words) {
+    function gc_annotation(index) {
+        const base = words.rsvd_rom & 0x0FFF;
+        const symbol = [". ", "x ", "y ", "? "];
+        const note = symbol[prog[base + index]];
+        return (
+            typeof note === "string"
+            ? note
+            : ": "
+        );
+    }
 //    console.log("machine_state:", state);
     $machine_pc.value = hex.from(state.pc, 12);
     center_program_view(state.pc);
@@ -167,7 +184,7 @@ function display_machine(state, prog, words) {
     $machine_dstack.innerText = format_stack(state.dstack, state.dstats);
     $machine_rstack.innerText = format_stack(state.rstack, state.rstats);
 //if ($machine_play.textContent === "Play") {
-    $ufork_ram.value = format_memory(state.qram, 0x4000);
+    $ufork_ram.value = format_memory(state.qram, 0x4000, gc_annotation);
     $ufork_rom.value = format_memory(state.qrom, 0x0000);
 //}
 }
