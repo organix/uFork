@@ -170,7 +170,12 @@ function display_machine(state, prog, words) {
     function gc_annotation(index) {
         const base = words.rsvd_rom & 0x0FFF;
         const symbol = [". ", "x ", "y ", "? "];
-        const note = symbol[prog[base + index]];
+        const mem_top = state.qram[0].t & 0x0FFF;
+        const note = (
+            index < mem_top
+            ? symbol[prog[base + index]]
+            : "- "
+        );
         return (
             typeof note === "string"
             ? note

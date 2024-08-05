@@ -337,6 +337,11 @@
 0xFFF2 CONSTANT E_ASSERT    ( assertion failed )
 0xFFF1 CONSTANT E_STOP      ( actor stopped )
 
+: invalid ( -- )
+    E_FAIL
+: disrupt ( reason -- )
+    FAIL disrupt ;
+
 ( : is_fix ( raw -- truthy )
     MSB& ; ... ucode.js )
 : is_cap ( raw -- bool )
@@ -362,12 +367,13 @@
 0x400F CONSTANT q_root_spn  ( root sponsor )
 
 ( 2-bit gc color markings )
-0x0000 CONSTANT gc_free_color
-0x0001 CONSTANT gc_genx_color
-0x0002 CONSTANT gc_geny_color
-0x0003 CONSTANT gc_scan_color
+0x0 CONSTANT gc_free_color
+0x1 CONSTANT gc_genx_color
+0x2 CONSTANT gc_geny_color
+0x3 CONSTANT gc_scan_color
 VARIABLE gc_curr_gen        ( currently active gc generation {x, y} )
 VARIABLE gc_prev_gen        ( previously active gc generation {y, x} )
+VARIABLE gc_phase           ( current phase in gc state-machine )
 
 ( FIXME: re-use rom_image until we have dedicated space for gc colors )
 : gc_color@ ( qref -- color )
@@ -378,10 +384,10 @@ VARIABLE gc_prev_gen        ( previously active gc generation {y, x} )
     rom_image + ! ;
 
 : gc_init ( -- )
-    ( FIXME: use a loop to set reserved RAM to gc_free_color )
-    gc_free_color q_mem_desc gc_color!
-    gc_free_color q_ek_queues gc_color!
-    gc_free_color q_root_spn gc_color!
+    ( loop to set reserved RAM to gc_free_color )
+    gc_free_color 16 ?LOOP-
+        DUP I gc_color!
+    AGAIN DROP
     gc_genx_color gc_curr_gen !
     gc_geny_color gc_prev_gen ! ;
 
@@ -398,18 +404,6 @@ VARIABLE gc_prev_gen        ( previously active gc generation {y, x} )
             gc_scan_color gc_set_color ;
         THEN
     THEN DROP ;
-(
-static int_t gc_scan_cell(int_t addr) {  // mark cell be scanned
-    if (IS_CAP(addr)) {
-        addr = TO_REF(addr);
-    }
-    if (IN_HEAP(addr)) {
-        if (gc_marks[addr] == gc_prev_gen) {
-            gc_marks[addr] = GC_SCAN;
-        }
-    }
-    return addr;
-} )
 : gc_mark ( qref -- )
     gc_valid IF             ( D: addr )
         ( mark quad in-use )
@@ -419,40 +413,41 @@ static int_t gc_scan_cell(int_t addr) {  // mark cell be scanned
         DUP QY@ gc_scan
         QZ@ gc_scan ;
     THEN DROP ;
-(
-int_t gc_mark_cell(int_t addr) {  // mark cell in-use
-    if (IS_CAP(addr)) {
-        addr = TO_REF(addr);
-    }
-    if (IN_HEAP(addr)) {
-        gc_marks[addr] = gc_next_gen;
-        gc_scan_cell(get_t(addr));
-        gc_scan_cell(get_x(addr));
-        gc_scan_cell(get_y(addr));
-        gc_scan_cell(get_z(addr));
-    }
-    return addr;
-} )
 : gc_free ( qref -- )
     gc_valid IF             ( D: addr )
         ( mark quad in free-list )
         gc_free_color gc_set_color ;
     THEN DROP ;
-(
-int_t gc_free_cell(int_t addr) {  // mark cell free
-    if (IS_CAP(addr)) {
-        addr = TO_REF(addr);
-    }
-    if (IN_HEAP(addr)) {
-        gc_marks[addr] = GC_FREE;
-    }
-    return addr;
-} )
 
-: invalid ( -- )
-    E_FAIL
-: disrupt ( reason -- )
-    FAIL disrupt ;
+: gc_phase_0 ( -- )
+    EXIT
+
+: gc_phase_1 ( -- )
+    2 gc_phase ! ;
+
+: gc_phase_2 ( -- )
+    3 gc_phase ! ;
+
+: gc_phase_3 ( -- )
+    0 gc_phase ! ;
+
+: gc_step ( -- )
+    gc_phase @
+    JMPTBL 4 ,
+    gc_phase_0              ( idle phase )
+    gc_phase_1              ( prep phase )
+    gc_phase_2              ( mark phase )
+    gc_phase_3              ( sweep phase )
+    DROP                    ( default )
+    0 gc_phase ! ;
+
+: gc_collect ( -- )
+    ( stop-the-world garbage-collection )
+    1 gc_phase !
+    BEGIN
+        gc_step
+        gc_phase @ 0=
+    UNTIL ;
 
 : wr_mark ( value qref -- value qref )
     OVER gc_mark ;          ( mark _value_ in-use )
@@ -488,7 +483,7 @@ int_t gc_free_cell(int_t addr) {  // mark cell free
 : mem_free! ( data -- )
     q_mem_desc QY! ;
 : mem_root! ( data -- )
-    q_mem_desc QZ! ;       ( FIXME: use qz! to wr_mark for gc )
+    q_mem_desc qz! ;
 
 : e_head@ ( -- data )
     q_ek_queues QT@ ;
@@ -497,7 +492,7 @@ int_t gc_free_cell(int_t addr) {  // mark cell free
 : e_head! ( data -- )
     q_ek_queues QT! ;
 : e_tail! ( data -- )
-    q_ek_queues QX! ;       ( FIXME: use qx! to wr_mark for gc )
+    q_ek_queues qx! ;
 : k_head@ ( -- data )
     q_ek_queues QY@ ;
 : k_tail@ ( -- data )
@@ -505,7 +500,7 @@ int_t gc_free_cell(int_t addr) {  // mark cell free
 : k_head! ( data -- )
     q_ek_queues QY! ;
 : k_tail! ( data -- )
-    q_ek_queues QZ! ;       ( FIXME: use qz! to wr_mark for gc )
+    q_ek_queues qz! ;
 
 : spn_memory@ ( sponsor -- data )
     QT@ ;
@@ -522,12 +517,12 @@ int_t gc_free_cell(int_t addr) {  // mark cell free
 : spn_cycles! ( data sponsor -- )
     QY! ;
 : spn_signal! ( data sponsor -- )
-    QZ! ;                   ( FIXME: use qz! to wr_mark for gc )
+    qz! ;
 
 : event_enqueue ( event -- )
-    #nil OVER qz!           ( FIXME: use QZ! to set #nil )
+    #nil OVER QZ!
     e_head@ is_ram IF
-        DUP e_tail@ qz!
+        DUP e_tail@ QZ!
     ELSE
         DUP e_head!
     THEN
@@ -777,9 +772,10 @@ To Copy fixnum:n of list onto head:
 
 : peek_1arg ( -- sp tos )
     sp@ DUP QX@ ;
+: uf_bool ( truthy -- #t | #f )
+    IF #t ELSE #f THEN ;
 : cmp_result ( sp truthy -- ip' )
-    IF #t ELSE #f THEN
-    rplc_result ;           ( WARNING! stack modified in-place )
+    uf_bool rplc_result ;
 : op_eq ( -- ip' | error )
     peek_1arg               ( D: sp value )
     imm@ = cmp_result ;
@@ -794,7 +790,7 @@ To Copy fixnum:n of list onto head:
 : 2fix2int ( #n #m -- n m )
     SWAP fix2int            ( D: #m n )
     SWAP fix2int ;          ( D: n m )
-: 2not_fix ( sp' #n #m )
+: 2not_fix ( sp' #n #m -- ip' )
     2DROP #? rplc_result ;
 : cmp_eq                    ( D: )
     peek_2args = cmp_result ;
@@ -853,13 +849,10 @@ To Copy fixnum:n of list onto head:
     update_sp ;
 
 : op_typeq ( -- ip' | error )
-    sp@ part imm@           ( D: sp' value type )
+    peek_1arg imm@          ( D: sp value type )
     DUP #type_t typeq IF
-        typeq IF            ( D: sp' )
-            #t
-        ELSE
-            #f
-        THEN push_result ;
+        typeq uf_bool       ( D: sp uf_bool )
+        rplc_result ;
     THEN
     E_NO_TYPE ;
 
@@ -962,11 +955,11 @@ To Copy fixnum:n of list onto head:
     E_NOT_FIX ;
 
 : alu_result ( sp n -- ip' )
-    int2fix rplc_result ;   ( WARNING! stack modified in-place )
+    int2fix rplc_result ;
 : alu_not                   ( D: )
-    peek_1arg               ( D: sp' #n )
+    peek_1arg               ( D: sp #n )
     DUP is_fix IF
-        fix2int             ( D: sp' n )
+        fix2int             ( D: sp n )
         INVERT alu_result ;
     THEN
     DROP #? rplc_result ;
@@ -1174,6 +1167,7 @@ VARIABLE saved_sp           ( sp before instruction execution )
                     DROP cont_dequeue
                     DUP QY@ ( D: cont event )
                     release release
+                    gc_collect
                 THEN
             ELSE            ( D: op )
                 E_BOUNDS q_root_spn spn_signal! ;
