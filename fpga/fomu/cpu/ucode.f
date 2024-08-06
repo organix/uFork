@@ -362,9 +362,41 @@
 : cap2ptr ( cap -- ptr )
     0xDFFF AND ;
 
-0x4000 CONSTANT q_mem_desc  ( quad-memory descriptor )
-0x4001 CONSTANT q_ek_queues ( event/continuation queues )
-0x400F CONSTANT q_root_spn  ( root sponsor )
+0x4000 CONSTANT mem_desc    ( quad-memory descriptor )
+0x4001 CONSTANT ek_queues   ( event/continuation queues )
+0x400F CONSTANT root_spn    ( root sponsor )
+0x4010 CONSTANT ram_base    ( first allocatable RAM address )
+
+: mem_top@ ( -- data )
+    mem_desc QT@ ;
+: mem_next@ ( -- data )
+    mem_desc QX@ ;
+: mem_free@ ( -- data )
+    mem_desc QY@ ;
+: mem_root@ ( -- data )
+    mem_desc QZ@ ;
+: mem_next! ( data -- )
+    mem_desc QX! ;
+: mem_free! ( data -- )
+    mem_desc QY! ;
+
+: e_head@ ( -- data )
+    ek_queues QT@ ;
+: e_tail@ ( -- data )
+    ek_queues QX@ ;
+: k_head@ ( -- data )
+    ek_queues QY@ ;
+: k_tail@ ( -- data )
+    ek_queues QZ@ ;
+
+: spn_memory@ ( sponsor -- data )
+    QT@ ;
+: spn_events@ ( sponsor -- data )
+    QX@ ;
+: spn_cycles@ ( sponsor -- data )
+    QY@ ;
+: spn_signal@ ( sponsor -- data )
+    QZ@ ;
 
 ( 2-bit gc color markings )
 0x0 CONSTANT gc_free_color
@@ -374,6 +406,7 @@
 VARIABLE gc_curr_gen        ( currently active gc generation {x, y} )
 VARIABLE gc_prev_gen        ( previously active gc generation {y, x} )
 VARIABLE gc_phase           ( current phase in gc state-machine )
+VARIABLE gc_scan_ptr        ( scan-list processing pointer )
 
 ( FIXME: re-use rom_image until we have dedicated space for gc colors )
 : gc_color@ ( qref -- color )
@@ -401,6 +434,9 @@ VARIABLE gc_phase           ( current phase in gc state-machine )
     gc_valid IF             ( D: addr )
         ( mark quad to-be-scanned )
         DUP gc_color@ gc_prev_gen @ = IF
+            DUP gc_scan_ptr @ < IF
+                DUP gc_scan_ptr !
+            THEN
             gc_scan_color gc_set_color ;
         THEN
     THEN DROP ;
@@ -408,10 +444,12 @@ VARIABLE gc_phase           ( current phase in gc state-machine )
     gc_valid IF             ( D: addr )
         ( mark quad in-use )
         DUP gc_curr_gen @ gc_set_color
-        DUP QT@ gc_scan
-        DUP QX@ gc_scan
-        DUP QY@ gc_scan
-        QZ@ gc_scan ;
+        gc_phase @ 2 = IF
+            DUP QT@ gc_scan
+            DUP QX@ gc_scan
+            DUP QY@ gc_scan
+            DUP QZ@ gc_scan
+        THEN
     THEN DROP ;
 : gc_free ( qref -- )
     gc_valid IF             ( D: addr )
@@ -419,16 +457,43 @@ VARIABLE gc_phase           ( current phase in gc state-machine )
         gc_free_color gc_set_color ;
     THEN DROP ;
 
+: release ( qref -- )
+    cap2ptr DUP gc_free
+    FREE_T OVER QT!
+    ( #? OVER QX! #? OVER QY! )
+    mem_next@ OVER QZ! mem_next!
+    mem_free@ 1+ mem_free! ;
+
 : gc_phase_0 ( -- )
     EXIT
 
 : gc_phase_1 ( -- )
+    gc_gen_swap
+    mem_root@ gc_scan
+    e_head@ gc_scan
+    k_head@ gc_scan
+    root_spn spn_signal@ gc_scan
+    ram_base gc_scan_ptr !  ( start after reserved RAM )
     2 gc_phase ! ;
 
 : gc_phase_2 ( -- )
+    gc_scan_ptr @           ( D: addr )
+    DUP mem_top@ < IF
+        DUP gc_color@ gc_scan_color = IF
+            gc_mark ;
+        THEN
+        1+ gc_scan_ptr ! ;
+    THEN DROP
     3 gc_phase ! ;
 
 : gc_phase_3 ( -- )
+    gc_scan_ptr @ 1-        ( D: addr )
+    DUP gc_scan_ptr !
+    DUP ram_base >= IF
+        DUP gc_color@ gc_prev_gen @ = IF
+            release ;
+        THEN DROP ;
+    THEN DROP
     0 gc_phase ! ;
 
 : gc_step ( -- )
@@ -450,7 +515,7 @@ VARIABLE gc_phase           ( current phase in gc state-machine )
     UNTIL ;
 
 : wr_mark ( value qref -- value qref )
-    OVER gc_mark ;          ( mark _value_ in-use )
+    OVER gc_mark ;
 : qt! ( value qref -- )
     DUP is_ram IF
         wr_mark QT! ;
@@ -468,48 +533,20 @@ VARIABLE gc_phase           ( current phase in gc state-machine )
         wr_mark QZ! ;
     THEN disrupt ;
 
-: mem_top@ ( -- data )
-    q_mem_desc QT@ ;
-: mem_next@ ( -- data )
-    q_mem_desc QX@ ;
-: mem_free@ ( -- data )
-    q_mem_desc QY@ ;
-: mem_root@ ( -- data )
-    q_mem_desc QZ@ ;
 : mem_top! ( data -- )
-    q_mem_desc QT! ;
-: mem_next! ( data -- )
-    q_mem_desc QX! ;
-: mem_free! ( data -- )
-    q_mem_desc QY! ;
+    mem_desc QT! ;
 : mem_root! ( data -- )
-    q_mem_desc qz! ;
+    mem_desc qz! ;
 
-: e_head@ ( -- data )
-    q_ek_queues QT@ ;
-: e_tail@ ( -- data )
-    q_ek_queues QX@ ;
 : e_head! ( data -- )
-    q_ek_queues QT! ;
+    ek_queues QT! ;
 : e_tail! ( data -- )
-    q_ek_queues qx! ;
-: k_head@ ( -- data )
-    q_ek_queues QY@ ;
-: k_tail@ ( -- data )
-    q_ek_queues QZ@ ;
+    ek_queues qx! ;
 : k_head! ( data -- )
-    q_ek_queues QY! ;
+    ek_queues QY! ;
 : k_tail! ( data -- )
-    q_ek_queues qz! ;
+    ek_queues qz! ;
 
-: spn_memory@ ( sponsor -- data )
-    QT@ ;
-: spn_events@ ( sponsor -- data )
-    QX@ ;
-: spn_cycles@ ( sponsor -- data )
-    QY@ ;
-: spn_signal@ ( sponsor -- data )
-    QZ@ ;
 : spn_memory! ( data sponsor -- )
     QT! ;
 : spn_events! ( data sponsor -- )
@@ -537,9 +574,9 @@ VARIABLE gc_phase           ( current phase in gc state-machine )
     THEN ;
 
 : cont_enqueue ( cont -- )
-    #nil OVER qz!
+    #nil OVER QZ!
     k_head@ is_ram IF
-        DUP k_tail@ qz!
+        DUP k_tail@ QZ!
     ELSE
         DUP k_head!
     THEN
@@ -577,12 +614,6 @@ VARIABLE gc_phase           ( current phase in gc state-machine )
         DUP 1+ mem_top! ;
     THEN
     E_NO_MEM disrupt ;
-: release ( qref -- )
-    DUP gc_free
-    FREE_T OVER QT!
-    ( #? OVER QX! #? OVER QY! )
-    mem_next@ OVER QZ! mem_next!
-    mem_free@ 1+ mem_free! ;
 : 0alloc ( T -- qref )
     reserve >R              ( D: T ) ( R: qref )
     R@ QT!                  ( D: ) ( R: qref )
@@ -1148,7 +1179,7 @@ VARIABLE run_limit          ( number of iterations remaining )
 VARIABLE saved_sp           ( sp before instruction execution )
 : run_loop ( limit -- )
     run_limit !
-    #? q_root_spn spn_signal!
+    #? root_spn spn_signal!
     k_head@ is_ram IF
         ( execute instruction )
         sp@ saved_sp !
@@ -1157,7 +1188,7 @@ VARIABLE saved_sp           ( sp before instruction execution )
                 fix2int perform_op
                 DUP is_fix IF
                     saved_sp @ sp!
-                    q_root_spn spn_signal! ;
+                    root_spn spn_signal! ;
                 THEN        ( D: ip' )
                 DUP #instr_t typeq IF
                     ip!     ( update ip in continuation )
@@ -1170,10 +1201,10 @@ VARIABLE saved_sp           ( sp before instruction execution )
                     gc_collect
                 THEN
             ELSE            ( D: op )
-                E_BOUNDS q_root_spn spn_signal! ;
+                E_BOUNDS root_spn spn_signal! ;
             THEN
         ELSE                ( D: ip )
-            E_NOT_EXE q_root_spn spn_signal! ;
+            E_NOT_EXE root_spn spn_signal! ;
         THEN
         e_head@ is_ram IF
             dispatch_event
@@ -1182,7 +1213,7 @@ VARIABLE saved_sp           ( sp before instruction execution )
         e_head@ is_ram IF
             dispatch_event
         ELSE
-            E_OK q_root_spn spn_signal! ;
+            E_OK root_spn spn_signal! ;
         THEN
     THEN
     run_limit @ DUP 0> IF
@@ -1203,7 +1234,7 @@ VARIABLE saved_sp           ( sp before instruction execution )
     AGAIN DROP ;
 
 : ram_init
-    0x4010 mem_top!
+    ram_base mem_top!
     #nil mem_next!
     #0 mem_free!
     #nil mem_root!
@@ -1219,10 +1250,10 @@ VARIABLE saved_sp           ( sp before instruction execution )
         #? OVER QZ!
         DROP
     AGAIN
-    0x9000 q_root_spn spn_memory!
-    0x8100 q_root_spn spn_events!
-    0xB000 q_root_spn spn_cycles!
-    #? q_root_spn spn_signal!
+    0x9000 root_spn spn_memory!
+    0x8100 root_spn spn_events!
+    0xB000 root_spn spn_cycles!
+    #? root_spn spn_signal!
     gc_init ;
 
 : ufork_init
@@ -1271,11 +1302,11 @@ VARIABLE saved_sp           ( sp before instruction execution )
     EXIT
 
 : queue_test
-    #nil 0x6002 q_root_spn 2alloc
+    #nil 0x6002 root_spn 2alloc
     DUP event_enqueue
     DUP e_head@ =assert
     DUP e_tail@ =assert
-    #unit 0x600E q_root_spn 2alloc
+    #unit 0x600E root_spn 2alloc
     DUP event_enqueue
     OVER e_head@ =assert
     DUP e_tail@ =assert
@@ -1297,19 +1328,19 @@ VARIABLE saved_sp           ( sp before instruction execution )
     #nil 0x0010             ( state=() beh=boot )
     #actor_t 2alloc ptr2cap
     DUP 0x6010 =assert      ( bootstrap actor at known address )
-    #f SWAP q_root_spn 2alloc
+    #f SWAP root_spn 2alloc
     event_enqueue
     0 run_loop
-    q_root_spn spn_signal@ #0 =assert
+    root_spn spn_signal@ #0 =assert
     EXIT
 
 : ufork_reboot
     ( 2nd boot for test verification )
-    #? q_root_spn spn_signal!
-    #t 0x6010 q_root_spn 2alloc
+    #? root_spn spn_signal!
+    #t 0x6010 root_spn 2alloc
     event_enqueue
     0 run_loop
-    q_root_spn spn_signal@ #0 =assert
+    root_spn spn_signal@ #0 =assert
     EXIT
 
 ( Debugging Monitor )
@@ -1537,5 +1568,5 @@ VARIABLE here   ( upload address )
     ufork_init
     test_suite
     ufork_boot
-    ufork_reboot
+    ( ufork_reboot )
     prompt MONITOR ;
