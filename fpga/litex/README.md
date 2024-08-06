@@ -21,11 +21,11 @@ LiteX can be updated by running `./update.sh`.
 
 So far, it is possible to build and install a basic LiteX design by running
 
-    litex_repos/litex-boards/litex_boards/targets/lattice_ice40up5k_evn.py \
+    litex_repos/litex-boards/litex_boards/targets/kosagi_fomu.py \
         --cpu-type None \
         --build
 
-    dfu-util -D build/lattice_ice40up5k_evn/gateware/lattice_ice40up5k_evn.bin
+    dfu-util -D build/kosagi_fomu/gateware/kosagi_fomu.bin
 
 Alternatively,
 [a MicroPython image](https://workshop.fomu.im/en/latest/python.html) containing
