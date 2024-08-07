@@ -506,6 +506,15 @@ VARIABLE gc_scan_ptr        ( scan-list processing pointer )
     DROP                    ( default )
     0 gc_phase ! ;
 
+: gc_increment ( -- )
+    ( incremental garbage-collection )
+    gc_phase @ 0= IF
+        1 gc_phase ! ;
+    THEN
+    16 ?LOOP-               ( 16 steps per increment )
+        gc_step
+    AGAIN ;
+
 : gc_collect ( -- )
     ( stop-the-world garbage-collection )
     1 gc_phase !
@@ -1198,7 +1207,7 @@ VARIABLE saved_sp           ( sp before instruction execution )
                     DROP cont_dequeue
                     DUP QY@ ( D: cont event )
                     release release
-                    gc_collect
+                    ( gc_collect )
                 THEN
             ELSE            ( D: op )
                 E_BOUNDS root_spn spn_signal! ;
@@ -1221,6 +1230,7 @@ VARIABLE saved_sp           ( sp before instruction execution )
             DROP ;
         THEN
     THEN
+    gc_increment
     run_loop ;
 
 : rom_init
