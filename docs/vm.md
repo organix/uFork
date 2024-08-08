@@ -485,7 +485,7 @@ To <span id="Enlist-as">Enlist _fixnum:n_ as _list_</span>:
  1. If _n_ > 0
     1. Let _list_ be the stack pointer
     1. Let _p_ be _list_
-    1. [Advance](#Advance-by) _p_ by _n_
+    1. [Advance](#Advance-by) _p_ by `n-1`
     1. If _p_ is a `#pair_t`
         1. Let the stack pointer become `cdr(p)`
         1. Set `p.Y` to `#nil`
