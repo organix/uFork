@@ -108,6 +108,45 @@ test_nth:
     push list-0             ; (273 546 819)
     nth -4                  ; #?
     assert #?               ; --
+    ref test_pick_and_roll
+
+test_pick_and_roll:
+    push 3                  ; 3
+    push 2                  ; 3 2
+    push 1                  ; 3 2 1
+    pick 0                  ; 3 2 1 #?
+    assert #?               ; 3 2 1
+    pick 1                  ; 3 2 1 1
+    assert 1                ; 3 2 1
+    pick -1                 ; 3 2 1 1
+    assert 1                ; 3 2 1
+    pick 2                  ; 3 2 1 2
+    assert 2                ; 3 2 1
+    pick -2                 ; 3 1 2 1
+    assert 1                ; 3 1 2
+    roll 0                  ; 3 1 2
+    dup 1                   ; 3 1 2 2
+    assert 2                ; 3 1 2
+    roll 1                  ; 3 1 2
+    dup 1                   ; 3 1 2 2
+    assert 2                ; 3 1 2
+    roll -1                 ; 3 1 2
+    dup 1                   ; 3 1 2 2
+    assert 2                ; 3 1 2
+    roll 2                  ; 3 2 1
+    dup 1                   ; 3 2 1 1
+    assert 1                ; 3 2 1
+    roll -3                 ; 1 3 2
+    assert 2                ; 1 3
+    pick 3                  ; 1 3 #?
+    assert #?               ; 1 3
+    roll 3                  ; 1 3 #?
+    assert #?               ; 1 3
+    assert 3                ; 1
+    pick 3                  ; 1 #?
+    assert #?               ; 1
+    roll -2                 ; --
+    assert #?               ; #?
     ref test_actors
 
 test_actors:

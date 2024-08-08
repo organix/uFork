@@ -190,111 +190,147 @@
 0x0006 , 0x8000 , 0x0000 , 0x0000 ,  ( ^000f: FREE_T )
 : boot_rom
 (    T        X        Y        Z       ADDR )
-0x000b , 0x8011 , 0x8000 , 0x0020 ,  ( ^0010 )
-0x000b , 0x8016 , 0x8000 , 0x0024 ,  ( ^0011 )
-0x000b , 0x8011 , 0x8000 , 0x0025 ,  ( ^0012 )
-0x000b , 0x8012 , 0x8001 , 0x0036 ,  ( ^0013 )
-0x000b , 0x8002 , 0x0016 , 0x0044 ,  ( ^0014 )
-0x000b , 0x8002 , 0x0001 , 0x0066 ,  ( ^0015 )
-0x000c , 0x8111 , 0x0017 , 0x0000 ,  ( ^0016 )
-0x000c , 0x8222 , 0x0018 , 0x0000 ,  ( ^0017 )
-0x000c , 0x8333 , 0x0001 , 0x0000 ,  ( ^0018 )
-0x000b , 0x8018 , 0x8000 , 0x0073 ,  ( ^0019 )
-0x000b , 0x8002 , 0x0001 , 0x0075 ,  ( ^001a )
-0x000b , 0x8018 , 0x8000 , 0x0077 ,  ( ^001b )
-0x000b , 0x8018 , 0x8001 , 0x001d ,  ( ^001c )
-0x000b , 0x801a , 0xffff , 0x001e ,  ( ^001d )
-0x000b , 0x800f , 0x8001 , 0x0000 ,  ( ^001e )
-0x000b , 0x800f , 0x8000 , 0x0000 ,  ( ^001f )
-0x000b , 0x800c , 0x8000 , 0x0021 ,  ( ^0020 )
-0x000b , 0x8011 , 0x8001 , 0x0022 ,  ( ^0021 )
-0x000b , 0x8002 , 0x0011 , 0x0023 ,  ( ^0022 )
-0x000b , 0x801d , 0xffff , 0x0012 ,  ( ^0023 )
-0x000b , 0x8012 , 0x8000 , 0x001e ,  ( ^0024 )
-0x000b , 0x8007 , 0x0001 , 0x0026 ,  ( ^0025 )
-0x000b , 0x8002 , 0x8003 , 0x0027 ,  ( ^0026 )
-0x000b , 0x8002 , 0x8002 , 0x0028 ,  ( ^0027 )
-0x000b , 0x8011 , 0x8001 , 0x0029 ,  ( ^0028 )
-0x000b , 0x8002 , 0x8001 , 0x002a ,  ( ^0029 )
-0x000b , 0x8011 , 0x8001 , 0x002b ,  ( ^002a )
-0x000b , 0x8012 , 0x8001 , 0x002c ,  ( ^002b )
-0x000b , 0x8007 , 0x8001 , 0x002d ,  ( ^002c )
-0x000b , 0x8016 , 0x8000 , 0x002e ,  ( ^002d )
-0x000b , 0x8012 , 0x8001 , 0x002f ,  ( ^002e )
-0x000b , 0x8007 , 0x8002 , 0x0030 ,  ( ^002f )
-0x000b , 0x8016 , 0x8001 , 0x0031 ,  ( ^0030 )
-0x000b , 0x8012 , 0x8001 , 0x0032 ,  ( ^0031 )
-0x000b , 0x8017 , 0x8001 , 0x0033 ,  ( ^0032 )
-0x000b , 0x8007 , 0x0000 , 0x0034 ,  ( ^0033 )
-0x000b , 0x8017 , 0x8000 , 0x0035 ,  ( ^0034 )
-0x000b , 0x8007 , 0x8003 , 0x0013 ,  ( ^0035 )
-0x000b , 0x8017 , 0x8001 , 0x0037 ,  ( ^0036 )
-0x000b , 0x8003 , 0x001f , 0x0038 ,  ( ^0037 )
-0x000b , 0x8002 , 0x8000 , 0x0039 ,  ( ^0038 )
-0x000b , 0x8006 , 0x8000 , 0x003a ,  ( ^0039 )
-0x000b , 0x8003 , 0x003b , 0x001f ,  ( ^003a )
-0x000b , 0x8002 , 0xffff , 0x003c ,  ( ^003b )
-0x000b , 0x8006 , 0x8000 , 0x003d ,  ( ^003c )
-0x000b , 0x8003 , 0x001f , 0x003e ,  ( ^003d )
-0x000b , 0x8002 , 0x0001 , 0x003f ,  ( ^003e )
-0x000b , 0x8003 , 0x001f , 0x0040 ,  ( ^003f )
-0x000b , 0x8002 , 0x0004 , 0x0041 ,  ( ^0040 )
-0x000b , 0x8003 , 0x0042 , 0x001f ,  ( ^0041 )
-0x000b , 0x8002 , 0x8000 , 0x0043 ,  ( ^0042 )
-0x000b , 0x8003 , 0x001f , 0x0014 ,  ( ^0043 )
-0x000b , 0x8012 , 0x8001 , 0x0045 ,  ( ^0044 )
-0x000b , 0x8007 , 0x8111 , 0x0046 ,  ( ^0045 )
-0x000b , 0x8012 , 0x8001 , 0x0047 ,  ( ^0046 )
-0x000b , 0x8007 , 0x8222 , 0x0048 ,  ( ^0047 )
-0x000b , 0x8012 , 0x8001 , 0x0049 ,  ( ^0048 )
-0x000b , 0x8007 , 0x8333 , 0x004a ,  ( ^0049 )
-0x000b , 0x8007 , 0x0001 , 0x004b ,  ( ^004a )
-0x000b , 0x8002 , 0x0016 , 0x004c ,  ( ^004b )
-0x000b , 0x8013 , 0x8000 , 0x004d ,  ( ^004c )
-0x000b , 0x8007 , 0x0016 , 0x004e ,  ( ^004d )
-0x000b , 0x8002 , 0x0016 , 0x004f ,  ( ^004e )
-0x000b , 0x8013 , 0x8001 , 0x0050 ,  ( ^004f )
-0x000b , 0x8007 , 0x8111 , 0x0051 ,  ( ^0050 )
-0x000b , 0x8002 , 0x0016 , 0x0052 ,  ( ^0051 )
-0x000b , 0x8013 , 0xffff , 0x0053 ,  ( ^0052 )
-0x000b , 0x8007 , 0x0017 , 0x0054 ,  ( ^0053 )
-0x000b , 0x8002 , 0x0016 , 0x0055 ,  ( ^0054 )
-0x000b , 0x8013 , 0x8002 , 0x0056 ,  ( ^0055 )
-0x000b , 0x8007 , 0x8222 , 0x0057 ,  ( ^0056 )
-0x000b , 0x8002 , 0x0016 , 0x0058 ,  ( ^0057 )
-0x000b , 0x8013 , 0xfffe , 0x0059 ,  ( ^0058 )
-0x000b , 0x8007 , 0x0018 , 0x005a ,  ( ^0059 )
-0x000b , 0x8002 , 0x0016 , 0x005b ,  ( ^005a )
-0x000b , 0x8013 , 0x8003 , 0x005c ,  ( ^005b )
-0x000b , 0x8007 , 0x8333 , 0x005d ,  ( ^005c )
-0x000b , 0x8002 , 0x0016 , 0x005e ,  ( ^005d )
-0x000b , 0x8013 , 0xfffd , 0x005f ,  ( ^005e )
-0x000b , 0x8007 , 0x0001 , 0x0060 ,  ( ^005f )
-0x000b , 0x8002 , 0x0016 , 0x0061 ,  ( ^0060 )
-0x000b , 0x8013 , 0x8004 , 0x0062 ,  ( ^0061 )
-0x000b , 0x8007 , 0x0000 , 0x0063 ,  ( ^0062 )
-0x000b , 0x8002 , 0x0016 , 0x0064 ,  ( ^0063 )
-0x000b , 0x8013 , 0xfffc , 0x0065 ,  ( ^0064 )
-0x000b , 0x8007 , 0x0000 , 0x0015 ,  ( ^0065 )
-0x000b , 0x8002 , 0x0000 , 0x0067 ,  ( ^0066 )
-0x000b , 0x8002 , 0x0019 , 0x0068 ,  ( ^0067 )
-0x000b , 0x801c , 0xffff , 0x0069 ,  ( ^0068 )
-0x000b , 0x8011 , 0x8001 , 0x006a ,  ( ^0069 )
-0x000b , 0x8002 , 0x001a , 0x006b ,  ( ^006a )
-0x000b , 0x801c , 0xffff , 0x006c ,  ( ^006b )
-0x000b , 0x8002 , 0x0003 , 0x006d ,  ( ^006c )
-0x000b , 0x8014 , 0x8002 , 0x006e ,  ( ^006d )
-0x000b , 0x801a , 0xffff , 0x006f ,  ( ^006e )
-0x000b , 0x8002 , 0x0002 , 0x0070 ,  ( ^006f )
-0x000b , 0x8014 , 0x8002 , 0x0071 ,  ( ^0070 )
-0x000b , 0x801a , 0xffff , 0x0072 ,  ( ^0071 )
-0x000b , 0x8017 , 0x8001 , 0x001e ,  ( ^0072 )
-0x000b , 0x8002 , 0x0019 , 0x0074 ,  ( ^0073 )
-0x000b , 0x801d , 0xffff , 0x001e ,  ( ^0074 )
-0x000b , 0x8002 , 0x001e , 0x0076 ,  ( ^0075 )
-0x000b , 0x801d , 0xffff , 0x001b ,  ( ^0076 )
-0x000b , 0x8019 , 0x8001 , 0x001d ,  ( ^0077 )
-( 480 cells, 120 quads )
+0x000b , 0x8011 , 0x8000 , 0x0021 ,  ( ^0010 )
+0x000b , 0x8016 , 0x8000 , 0x0025 ,  ( ^0011 )
+0x000b , 0x8011 , 0x8000 , 0x0026 ,  ( ^0012 )
+0x000b , 0x8012 , 0x8001 , 0x0037 ,  ( ^0013 )
+0x000b , 0x8002 , 0x0017 , 0x0045 ,  ( ^0014 )
+0x000b , 0x8002 , 0x8003 , 0x0067 ,  ( ^0015 )
+0x000b , 0x8002 , 0x0001 , 0x008a ,  ( ^0016 )
+0x000c , 0x8111 , 0x0018 , 0x0000 ,  ( ^0017 )
+0x000c , 0x8222 , 0x0019 , 0x0000 ,  ( ^0018 )
+0x000c , 0x8333 , 0x0001 , 0x0000 ,  ( ^0019 )
+0x000b , 0x8018 , 0x8000 , 0x0097 ,  ( ^001a )
+0x000b , 0x8002 , 0x0001 , 0x0099 ,  ( ^001b )
+0x000b , 0x8018 , 0x8000 , 0x009b ,  ( ^001c )
+0x000b , 0x8018 , 0x8001 , 0x001e ,  ( ^001d )
+0x000b , 0x801a , 0xffff , 0x001f ,  ( ^001e )
+0x000b , 0x800f , 0x8001 , 0x0000 ,  ( ^001f )
+0x000b , 0x800f , 0x8000 , 0x0000 ,  ( ^0020 )
+0x000b , 0x800c , 0x8000 , 0x0022 ,  ( ^0021 )
+0x000b , 0x8011 , 0x8001 , 0x0023 ,  ( ^0022 )
+0x000b , 0x8002 , 0x0011 , 0x0024 ,  ( ^0023 )
+0x000b , 0x801d , 0xffff , 0x0012 ,  ( ^0024 )
+0x000b , 0x8012 , 0x8000 , 0x001f ,  ( ^0025 )
+0x000b , 0x8007 , 0x0001 , 0x0027 ,  ( ^0026 )
+0x000b , 0x8002 , 0x8003 , 0x0028 ,  ( ^0027 )
+0x000b , 0x8002 , 0x8002 , 0x0029 ,  ( ^0028 )
+0x000b , 0x8011 , 0x8001 , 0x002a ,  ( ^0029 )
+0x000b , 0x8002 , 0x8001 , 0x002b ,  ( ^002a )
+0x000b , 0x8011 , 0x8001 , 0x002c ,  ( ^002b )
+0x000b , 0x8012 , 0x8001 , 0x002d ,  ( ^002c )
+0x000b , 0x8007 , 0x8001 , 0x002e ,  ( ^002d )
+0x000b , 0x8016 , 0x8000 , 0x002f ,  ( ^002e )
+0x000b , 0x8012 , 0x8001 , 0x0030 ,  ( ^002f )
+0x000b , 0x8007 , 0x8002 , 0x0031 ,  ( ^0030 )
+0x000b , 0x8016 , 0x8001 , 0x0032 ,  ( ^0031 )
+0x000b , 0x8012 , 0x8001 , 0x0033 ,  ( ^0032 )
+0x000b , 0x8017 , 0x8001 , 0x0034 ,  ( ^0033 )
+0x000b , 0x8007 , 0x0000 , 0x0035 ,  ( ^0034 )
+0x000b , 0x8017 , 0x8000 , 0x0036 ,  ( ^0035 )
+0x000b , 0x8007 , 0x8003 , 0x0013 ,  ( ^0036 )
+0x000b , 0x8017 , 0x8001 , 0x0038 ,  ( ^0037 )
+0x000b , 0x8003 , 0x0020 , 0x0039 ,  ( ^0038 )
+0x000b , 0x8002 , 0x8000 , 0x003a ,  ( ^0039 )
+0x000b , 0x8006 , 0x8000 , 0x003b ,  ( ^003a )
+0x000b , 0x8003 , 0x003c , 0x0020 ,  ( ^003b )
+0x000b , 0x8002 , 0xffff , 0x003d ,  ( ^003c )
+0x000b , 0x8006 , 0x8000 , 0x003e ,  ( ^003d )
+0x000b , 0x8003 , 0x0020 , 0x003f ,  ( ^003e )
+0x000b , 0x8002 , 0x0001 , 0x0040 ,  ( ^003f )
+0x000b , 0x8003 , 0x0020 , 0x0041 ,  ( ^0040 )
+0x000b , 0x8002 , 0x0004 , 0x0042 ,  ( ^0041 )
+0x000b , 0x8003 , 0x0043 , 0x0020 ,  ( ^0042 )
+0x000b , 0x8002 , 0x8000 , 0x0044 ,  ( ^0043 )
+0x000b , 0x8003 , 0x0020 , 0x0014 ,  ( ^0044 )
+0x000b , 0x8012 , 0x8001 , 0x0046 ,  ( ^0045 )
+0x000b , 0x8007 , 0x8111 , 0x0047 ,  ( ^0046 )
+0x000b , 0x8012 , 0x8001 , 0x0048 ,  ( ^0047 )
+0x000b , 0x8007 , 0x8222 , 0x0049 ,  ( ^0048 )
+0x000b , 0x8012 , 0x8001 , 0x004a ,  ( ^0049 )
+0x000b , 0x8007 , 0x8333 , 0x004b ,  ( ^004a )
+0x000b , 0x8007 , 0x0001 , 0x004c ,  ( ^004b )
+0x000b , 0x8002 , 0x0017 , 0x004d ,  ( ^004c )
+0x000b , 0x8013 , 0x8000 , 0x004e ,  ( ^004d )
+0x000b , 0x8007 , 0x0017 , 0x004f ,  ( ^004e )
+0x000b , 0x8002 , 0x0017 , 0x0050 ,  ( ^004f )
+0x000b , 0x8013 , 0x8001 , 0x0051 ,  ( ^0050 )
+0x000b , 0x8007 , 0x8111 , 0x0052 ,  ( ^0051 )
+0x000b , 0x8002 , 0x0017 , 0x0053 ,  ( ^0052 )
+0x000b , 0x8013 , 0xffff , 0x0054 ,  ( ^0053 )
+0x000b , 0x8007 , 0x0018 , 0x0055 ,  ( ^0054 )
+0x000b , 0x8002 , 0x0017 , 0x0056 ,  ( ^0055 )
+0x000b , 0x8013 , 0x8002 , 0x0057 ,  ( ^0056 )
+0x000b , 0x8007 , 0x8222 , 0x0058 ,  ( ^0057 )
+0x000b , 0x8002 , 0x0017 , 0x0059 ,  ( ^0058 )
+0x000b , 0x8013 , 0xfffe , 0x005a ,  ( ^0059 )
+0x000b , 0x8007 , 0x0019 , 0x005b ,  ( ^005a )
+0x000b , 0x8002 , 0x0017 , 0x005c ,  ( ^005b )
+0x000b , 0x8013 , 0x8003 , 0x005d ,  ( ^005c )
+0x000b , 0x8007 , 0x8333 , 0x005e ,  ( ^005d )
+0x000b , 0x8002 , 0x0017 , 0x005f ,  ( ^005e )
+0x000b , 0x8013 , 0xfffd , 0x0060 ,  ( ^005f )
+0x000b , 0x8007 , 0x0001 , 0x0061 ,  ( ^0060 )
+0x000b , 0x8002 , 0x0017 , 0x0062 ,  ( ^0061 )
+0x000b , 0x8013 , 0x8004 , 0x0063 ,  ( ^0062 )
+0x000b , 0x8007 , 0x0000 , 0x0064 ,  ( ^0063 )
+0x000b , 0x8002 , 0x0017 , 0x0065 ,  ( ^0064 )
+0x000b , 0x8013 , 0xfffc , 0x0066 ,  ( ^0065 )
+0x000b , 0x8007 , 0x0000 , 0x0015 ,  ( ^0066 )
+0x000b , 0x8002 , 0x8002 , 0x0068 ,  ( ^0067 )
+0x000b , 0x8002 , 0x8001 , 0x0069 ,  ( ^0068 )
+0x000b , 0x8014 , 0x8000 , 0x006a ,  ( ^0069 )
+0x000b , 0x8007 , 0x0000 , 0x006b ,  ( ^006a )
+0x000b , 0x8014 , 0x8001 , 0x006c ,  ( ^006b )
+0x000b , 0x8007 , 0x8001 , 0x006d ,  ( ^006c )
+0x000b , 0x8014 , 0xffff , 0x006e ,  ( ^006d )
+0x000b , 0x8007 , 0x8001 , 0x006f ,  ( ^006e )
+0x000b , 0x8014 , 0x8002 , 0x0070 ,  ( ^006f )
+0x000b , 0x8007 , 0x8002 , 0x0071 ,  ( ^0070 )
+0x000b , 0x8014 , 0xfffe , 0x0072 ,  ( ^0071 )
+0x000b , 0x8007 , 0x8001 , 0x0073 ,  ( ^0072 )
+0x000b , 0x8015 , 0x8000 , 0x0074 ,  ( ^0073 )
+0x000b , 0x8016 , 0x8001 , 0x0075 ,  ( ^0074 )
+0x000b , 0x8007 , 0x8002 , 0x0076 ,  ( ^0075 )
+0x000b , 0x8015 , 0x8001 , 0x0077 ,  ( ^0076 )
+0x000b , 0x8016 , 0x8001 , 0x0078 ,  ( ^0077 )
+0x000b , 0x8007 , 0x8002 , 0x0079 ,  ( ^0078 )
+0x000b , 0x8015 , 0xffff , 0x007a ,  ( ^0079 )
+0x000b , 0x8016 , 0x8001 , 0x007b ,  ( ^007a )
+0x000b , 0x8007 , 0x8002 , 0x007c ,  ( ^007b )
+0x000b , 0x8015 , 0x8002 , 0x007d ,  ( ^007c )
+0x000b , 0x8016 , 0x8001 , 0x007e ,  ( ^007d )
+0x000b , 0x8007 , 0x8001 , 0x007f ,  ( ^007e )
+0x000b , 0x8015 , 0xfffd , 0x0080 ,  ( ^007f )
+0x000b , 0x8007 , 0x8002 , 0x0081 ,  ( ^0080 )
+0x000b , 0x8014 , 0x8003 , 0x0082 ,  ( ^0081 )
+0x000b , 0x8007 , 0x0000 , 0x0083 ,  ( ^0082 )
+0x000b , 0x8015 , 0x8003 , 0x0084 ,  ( ^0083 )
+0x000b , 0x8007 , 0x0000 , 0x0085 ,  ( ^0084 )
+0x000b , 0x8007 , 0x8003 , 0x0086 ,  ( ^0085 )
+0x000b , 0x8014 , 0x8003 , 0x0087 ,  ( ^0086 )
+0x000b , 0x8007 , 0x0000 , 0x0088 ,  ( ^0087 )
+0x000b , 0x8015 , 0xfffe , 0x0089 ,  ( ^0088 )
+0x000b , 0x8007 , 0x0000 , 0x0016 ,  ( ^0089 )
+0x000b , 0x8002 , 0x0000 , 0x008b ,  ( ^008a )
+0x000b , 0x8002 , 0x001a , 0x008c ,  ( ^008b )
+0x000b , 0x801c , 0xffff , 0x008d ,  ( ^008c )
+0x000b , 0x8011 , 0x8001 , 0x008e ,  ( ^008d )
+0x000b , 0x8002 , 0x001b , 0x008f ,  ( ^008e )
+0x000b , 0x801c , 0xffff , 0x0090 ,  ( ^008f )
+0x000b , 0x8002 , 0x0003 , 0x0091 ,  ( ^0090 )
+0x000b , 0x8014 , 0x8002 , 0x0092 ,  ( ^0091 )
+0x000b , 0x801a , 0xffff , 0x0093 ,  ( ^0092 )
+0x000b , 0x8002 , 0x0002 , 0x0094 ,  ( ^0093 )
+0x000b , 0x8014 , 0x8002 , 0x0095 ,  ( ^0094 )
+0x000b , 0x801a , 0xffff , 0x0096 ,  ( ^0095 )
+0x000b , 0x8017 , 0x8001 , 0x001f ,  ( ^0096 )
+0x000b , 0x8002 , 0x001a , 0x0098 ,  ( ^0097 )
+0x000b , 0x801d , 0xffff , 0x001f ,  ( ^0098 )
+0x000b , 0x8002 , 0x001f , 0x009a ,  ( ^0099 )
+0x000b , 0x801d , 0xffff , 0x001c ,  ( ^009a )
+0x000b , 0x8019 , 0x8001 , 0x001e ,  ( ^009b )
+( 624 cells, 156 quads )
 
 ( 0x0000 CONSTANT #?          ( undefined ) ... ucode.js )
 ( 0x0001 CONSTANT #nil        ( empty list ) ... ucode.js )
@@ -614,6 +650,20 @@ VARIABLE gc_scan_ptr        ( scan-list processing pointer )
 : ep!
     k_head@ qy! ;
 
+: op@
+    ip@ QX@ ;
+: imm@
+    ip@ QY@ ;
+: k@
+    ip@ QZ@ ;
+
+: sponsor@
+    ep@ QT@ ;
+: self@
+    ep@ QX@ ;
+: msg@
+    ep@ QY@ ;
+
 : reserve ( -- qref )
     mem_next@ DUP #nil XOR IF
         mem_free@ 1- mem_free!
@@ -686,61 +736,45 @@ VARIABLE gc_scan_ptr        ( scan-list processing pointer )
         QY@ ;
     THEN DROP #? ;
 
-: op@
-    ip@ QX@ ;
-: imm@
-    ip@ QY@ ;
-: k@
-    ip@ QZ@ ;
+: n_rest ( pair n -- tail )
+    ?LOOP-
+        rest
+    AGAIN ;
+: nth ( pair n -- item | tail )
+    DUP 0> IF
+        1- n_rest first ;
+    THEN
+    ?LOOP+                  ( D: pair )
+        rest
+    AGAIN ;
 
-: sponsor@
-    ep@ QT@ ;
-: self@
-    ep@ QX@ ;
-: msg@
-    ep@ QY@ ;
-
-: nil_result ( -- ip' )
-    sp@ #nil
-: push_result ( sp' result -- ip' )
-    pair
-: update_sp ( sp' -- ip' )
-    sp! k@ ;
-: undef_result ( -- ip' )
-    sp@ #? push_result ;
-: rplc_result ( sp result -- ip' )
-    OVER DUP is_ram IF      ( D: sp result sp )
-        qx!                 ( WARNING! stack modified in-place )
-    ELSE
-        2DROP
-    THEN                    ( D: sp )
-    update_sp ;
-
+: insert ( item prev -- )
+    DUP is_pair IF          ( D: item prev )
+        DUP rest            ( D: item prev next )
+        ROT pair            ( D: prev (item . next) )
+        SWAP qy! ;          ( D: -- )
+    THEN 2DROP ;
 (
-
-The following functions are used in various instruction descriptions:
-
-    Define cons(x, y) as: #pair_t(x, y)
-    Define car(x) as: if x is a #pair_t then x.X else #?
-    Define cdr(x) as: if x is a #pair_t then x.Y else #?
-
-To Advance p by fixnum:n:
-
-    While n > 0
-        Let p become cdr(p)
-        Let n become n-1
-
 To Insert item at prev:
 
     If prev is a #pair_t
         Let entry be cons(item, cdr(prev))
         Set prev.Y to entry
+)
 
+: extract ( next prev -- next )
+    DUP is_pair IF
+        OVER rest           ( D: next prev cdr(next) )
+        SWAP qy! ;          ( D: next )
+    THEN DROP ;
+(
 To Extract next from prev:
 
     If prev is a #pair_t
         Set prev.Y to cdr(next)
+)
 
+(
 To Enlist fixnum:n as list:
 
     If n > 0
@@ -776,6 +810,22 @@ To Copy fixnum:n of list onto head:
         Let list become cdr(list)
         Let n become n-1
 )
+
+: nil_result ( -- ip' )
+    sp@ #nil
+: push_result ( sp' result -- ip' )
+    pair
+: update_sp ( sp' -- ip' )
+    sp! k@ ;
+: undef_result ( -- ip' )
+    sp@ #? push_result ;
+: rplc_result ( sp result -- ip' )
+    OVER DUP is_ram IF      ( D: sp result sp )
+        qx!                 ( WARNING! stack modified in-place )
+    ELSE
+        2DROP
+    THEN                    ( D: sp )
+    update_sp ;
 
 : op_end ( -- ip' | error )
     imm@ #1 = IF
@@ -923,32 +973,6 @@ To Copy fixnum:n of list onto head:
     THEN
     E_BOUNDS ;
 
-(
-: n_rest ( pair n -- tail )
-    ?LOOP-
-        rest
-    AGAIN ;
-: nth' ( pair n -- item | tail )
-    DUP 0= IF               ( D: pair 0 )
-        DROP ;              ( D: pair )
-    THEN
-    DUP MSB& IF             ( D: pair -n )
-        NEGATE n_rest ;
-    THEN                    ( D: pair +n )
-    1- n_rest first ;
-)
-: nth ( pair n -- item | tail )
-    DUP 0= IF               ( D: pair 0 )
-        DROP ;              ( D: pair )
-    THEN
-    DUP MSB& IF             ( D: pair -n )
-        ?LOOP+              ( D: pair )
-            rest
-        AGAIN ;
-    THEN                    ( D: pair +n )
-    1- ?LOOP-               ( D: pair )
-        rest
-    AGAIN first ;
 : op_nth ( -- ip' | error )
     sp@ part imm@           ( D: sp' pair #n )
 : nth_result
@@ -981,16 +1005,47 @@ To Copy fixnum:n of list onto head:
     k@ ;                    ( no-op )
 
 : op_pick ( -- ip' | error )
-    imm@ is_fix IF
-        imm@ fix2int        ( D: n )
-        DUP MSB& IF         ( D: -n )
-            E_BOUNDS ;      ( TODO: implement n < 0 )
-        THEN
-        0= IF               ( D: 0 )
-            undef_result ;
-        THEN
-        sp@ DUP             ( D: sp sp )
-        imm@ nth_result ;
+    imm@ #0 = IF
+        undef_result ;
+    THEN
+    imm@ DUP is_fix IF      ( D: #n )
+        fix2int DUP MSB& IF ( D: -n )
+            sp@ TUCK first  ( D: sp -n item )
+            -ROT 1+ nth     ( D: item prev )
+            insert k@ ;
+        THEN                ( D: +n )
+        sp@ DUP             ( D: +n sp sp )
+        ROT nth             ( D: sp item )
+        push_result ;
+    THEN
+    E_NOT_FIX ;
+
+: op_roll ( -- ip' | error )
+    imm@ DUP is_fix IF      ( D: #n )
+        fix2int DUP MSB& IF ( D: -n )
+            NEGATE 1-       ( D: n-1 )
+            DUP 0> IF       ( D: n-1 )
+                sp@ part    ( D: n-1 sp' item )
+                >R          ( D: n-1 sp' ) ( R: item )
+                TUCK        ( D: sp' n-1 sp' ) ( R: item )
+                SWAP 1-     ( D: sp' sp' n-2 ) ( R: item )
+                n_rest      ( D: sp' prev ) ( R: item )
+                R> SWAP     ( D: sp' item prev )
+                insert      ( D: sp' )
+                update_sp ;
+            THEN
+        ELSE                ( D: +n )
+            1- DUP 0> IF    ( D: n-1 )
+                1- sp@      ( D: n-2 sp )
+                SWAP n_rest ( D: prev )
+                DUP rest    ( D: prev next )
+                SWAP        ( D: next prev )
+                extract sp@ ( D: next sp )
+                SWAP first  ( D: sp item )
+                push_result ;
+            THEN
+        THEN                ( D: n )
+        DROP k@ ;           ( no-op )
     THEN
     E_NOT_FIX ;
 
@@ -1129,9 +1184,12 @@ To Copy fixnum:n of list onto head:
     sp@ self@ QY@ imm@      ( D: sp state #n )
     nth_result ;
 
+: op_debug ( -- ip' | error )
+    k@ ;                    ( no-op )
+
 : perform_op ( opcode -- ip' | error )
     JMPTBL 32 ,
-    invalid                 ( 0x8000: debug )
+    op_debug                ( 0x8000: debug )
     invalid                 ( 0x8001: jump )
     op_push                 ( 0x8002: push )
     op_if                   ( 0x8003: if )
@@ -1154,7 +1212,7 @@ To Copy fixnum:n of list onto head:
     op_part                 ( 0x8012: part )
     op_nth                  ( 0x8013: nth )
     op_pick                 ( 0x8014: pick )
-    invalid                 ( 0x8015: roll )
+    op_roll                 ( 0x8015: roll )
     op_dup                  ( 0x8016: dup )
     op_drop                 ( 0x8017: drop )
 
@@ -1191,11 +1249,14 @@ VARIABLE saved_sp           ( sp before instruction execution )
     #? root_spn spn_signal!
     k_head@ is_ram IF
         ( execute instruction )
-        sp@ saved_sp !
         ip@ DUP #instr_t typeq IF
             QX@ DUP is_fix IF
+                sp@ saved_sp !
+                ( WARNING! the `saved_sp` must remain valid
+                  during execution of every instruction )
                 fix2int perform_op
                 DUP is_fix IF
+                    ( restore `saved_sp` and signal error )
                     saved_sp @ sp!
                     root_spn spn_signal! ;
                 THEN        ( D: ip' )
@@ -1210,7 +1271,7 @@ VARIABLE saved_sp           ( sp before instruction execution )
                     ( gc_collect )
                 THEN
             ELSE            ( D: op )
-                E_BOUNDS root_spn spn_signal! ;
+                E_NOT_FIX root_spn spn_signal! ;
             THEN
         ELSE                ( D: ip )
             E_NOT_EXE root_spn spn_signal! ;
@@ -1234,7 +1295,7 @@ VARIABLE saved_sp           ( sp before instruction execution )
     run_loop ;
 
 : rom_init
-    120 DUP 2ROL            ( n_quads n_cells )
+    156 DUP 2ROL            ( n_quads n_cells )
     rom_image + SWAP        ( end_addr n_quads )
     ?LOOP-                  ( for each quad... )
         1- DUP @ I QZ!      ( D: end-1 )

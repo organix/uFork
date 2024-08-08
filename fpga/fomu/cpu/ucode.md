@@ -34,8 +34,8 @@ Word        | Stack Effect                              | Description
 `DUP`       | ( a -- a a )                              | Copy TOS
 `SWAP`      | ( a b -- b a )                            | Swap TOS with NOS
 `OVER`      | ( a b -- a b a )                          | Copy NOS to TOS
-`ROT`       | ( a b c -- b c a )                        | Rotate top 3 stack items
-`-ROT`      | ( a b c -- c a b )                        | Reverse rotate top 3 stack items
+`ROT`       | ( a b c -- b c a )                        | Rotate 3rd item to TOS
+`-ROT`      | ( a b c -- c a b )                        | Rotate TOS to 3rd item
 `TRUE`      | ( -- -1 )                                 | Boolean TRUE (numeric `-1`)
 `FALSE`     | ( -- 0 )                                  | Boolean FALSE (numeric `0`)
 `0`         | ( -- 0 )                                  | Numeric `0`
