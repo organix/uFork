@@ -1131,25 +1131,31 @@ To Copy fixnum:n of list onto head:
     THEN
     E_NOT_FIX ;
 
-: new_target_and_msg ( -- sp' msg target TRUE | error FALSE )
-    sp@ part imm@           ( D: sp' actor #n )
+: common_actor_args ( -- sp' args tos TRUE | error FALSE )
+    sp@ part imm@           ( D: sp' tos #n )
     DUP is_fix IF
-        fix2int DUP MSB& IF ( D: sp' actor -n )
+        fix2int DUP MSB& IF ( D: sp' tos -n )
             DUP -1 = IF
-                DROP SWAP   ( D: actor sp' )
-                part ROT    ( D: sp'' msg actor )
-            ELSE
-                E_BOUNDS FALSE ;
+                DROP SWAP   ( D: tos sp' )
+                part ROT    ( D: sp'' args tos )
+                TRUE ;
             THEN
-        ELSE                ( D: sp' actor +n )
-            ROT SWAP        ( D: actor sp' +n )
-            enlist ROT      ( D: rest list actor )
-        THEN                ( D: sp' msg actor )
-        ( FIXME: factor common code up to here with `new_code_and_data` )
-        DUP is_cap IF
-            TRUE ;
-        THEN
-        E_NOT_CAP FALSE ;
+            DUP -2 = IF
+                DROP        ( D: sp' tos )
+                DUP QY@     ( D: sp' tos args )
+                SWAP QX@    ( D: sp' args tos' )
+                TRUE ;
+            THEN
+            DUP -3 = IF
+                DROP        ( D: sp' arg )
+                DUP QZ@     ( D: sp' arg tos' )
+                TRUE ;
+            THEN
+            E_BOUNDS FALSE ;
+        THEN                ( D: sp' tos +n )
+        ROT SWAP            ( D: tos sp' +n )
+        enlist ROT          ( D: rest list tos )
+        TRUE ;
     THEN
     E_NOT_FIX FALSE ;
 
@@ -1160,49 +1166,36 @@ To Copy fixnum:n of list onto head:
     R@ qz!                  ( D: effect ) ( R: events' )
     R> SWAP qz! ;           ( D: )
 : op_send ( -- ip' | error )
-    new_target_and_msg IF   ( D: sp' msg target )
-        sponsor@            ( D: sp' msg target sponsor )
-        send_effect         ( D: sp' )
-        update_sp ;
-    THEN ;                  ( D: error )
-
-: new_code_and_data ( -- sp' data code TRUE | error FALSE )
-    sp@ part imm@           ( D: sp' beh #n )
-    DUP is_fix IF
-        fix2int DUP MSB& IF ( D: sp' beh -n )
-            DUP -1 = IF
-                DROP SWAP   ( D: beh sp' )
-                part ROT    ( D: sp'' state beh )
-            ELSE
-                ( FIXME: handle -2 and -3 cases )
-                E_BOUNDS FALSE ;
-            THEN
-        ELSE                ( D: sp' beh +n )
-            ROT SWAP        ( D: beh sp' +n )
-            enlist ROT      ( D: rest list beh )
-        THEN                ( D: sp' state beh )
-        DUP #instr_t typeq IF
-            TRUE ;
+    common_actor_args IF    ( D: sp' msg target )
+        DUP is_cap IF
+            sponsor@        ( D: sp' msg target sponsor )
+            send_effect     ( D: sp' )
+            update_sp ;
         THEN
-        E_NOT_EXE FALSE ;
-    THEN
-    E_NOT_FIX FALSE ;
+        E_NOT_CAP ;
+    THEN ;                  ( D: error )
 
 : create_effect ( state beh -- actor )
     #actor_t 2alloc ptr2cap ;
 : op_new ( -- ip' | error )
-    new_code_and_data IF    ( D: sp' data code )
-        create_effect       ( D: sp' actor )
-        push_result ;
+    common_actor_args IF    ( D: sp' data code )
+        DUP #instr_t typeq IF
+            create_effect   ( D: sp' actor )
+            push_result ;
+        THEN
+        E_NOT_EXE ;
     THEN ;                  ( D: error )
 
 : become_effect ( state beh -- )
     self@ QZ@ TUCK          ( D: state effect beh effect )
     qx! qy! ;               ( D: )
 : op_beh ( -- ip' | error )
-    new_code_and_data IF    ( D: sp' data code )
-        become_effect       ( D: sp' )
-        update_sp ;
+    common_actor_args IF    ( D: sp' data code )
+        DUP #instr_t typeq IF
+            become_effect   ( D: sp' )
+            update_sp ;
+        THEN
+        E_NOT_EXE ;
     THEN ;                  ( D: error )
 
 : op_my ( -- ip' | error )
