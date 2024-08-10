@@ -804,6 +804,18 @@ To Enlist fixnum:n as list:
         Let list be #nil
 )
 
+: reverse_onto ( head list -- head' )
+    ( WARNING! this is a destructive in-place operation )
+    BEGIN                   ( D: head list )
+        DUP is_pair
+    WHILE
+        DUP QY@             ( D: head list next )
+        -ROT                ( D: next head list )
+        TUCK                ( D: next list head list )
+        qy!                 ( D: next list )
+        SWAP                ( D: list next )
+    REPEAT                  ( D: head' list' )
+    DROP ;                  ( D: head' )
 (
 To Reverse list onto head:
 
@@ -812,13 +824,33 @@ To Reverse list onto head:
         Set list.Y to head
         Let head become list
         Let list become next
+)
 
+: pair_onto ( head list -- head' list' )
+    part                ( D: head rest first )
+    SWAP -ROT           ( D: rest head first )
+    pair                ( D: rest (first . head) )
+    SWAP ;              ( D: (first . head) rest )
+: copy_onto ( head list -- head' )
+    BEGIN                   ( D: head list )
+        DUP is_pair
+    WHILE
+        pair_onto           ( D: head' list' )
+    REPEAT
+    DROP ;                  ( D: head' )
+(
 To Copy list onto head:
 
     While list is a #pair_t
         Let head be cons(car(list), head)
         Let list become cdr(list)
+)
 
+: n_copy_onto ( head list n -- head' list' )
+    ?LOOP-
+        pair_onto           ( D: head' list' )
+    AGAIN ;
+(
 To Copy fixnum:n of list onto head:
 
     While n > 0
@@ -962,6 +994,8 @@ To Copy fixnum:n of list onto head:
     THEN
     E_NO_TYPE ;
 
+: capture_stack             ( D: )
+    #nil sp@ push_result ;
 : op_pair ( -- ip' | error )
     imm@ DUP is_fix IF
         fix2int DUP 0> IF
@@ -979,31 +1013,43 @@ To Copy fixnum:n of list onto head:
                     update_sp ;
                 THEN DROP
             THEN DROP
-: capture_stack
-            #nil sp@ push_result ;
-        THEN
+            capture_stack ;
+        THEN                ( D: n )
         DUP 0= IF
             DROP nil_result ;
         THEN
         DUP -1 = IF
-            capture_stack ;
+            DROP capture_stack ;
         THEN
-        E_BOUNDS ;
+        DROP undef_result ;
     THEN
     E_NOT_FIX ;
 
 : op_part ( -- ip' | error )
-    imm@ #1 = IF
-        sp@ part            ( D: rest pair )
-        part >R             ( D: rest tail ) ( R: head )
-        pair                ( D: (tail . rest) ) ( R: head )
-        R> pair             ( D: (head . (tail . rest)) )
-        update_sp ;
+    imm@ DUP is_fix IF
+        fix2int DUP 0> IF
+            sp@ part        ( D: n sp' list )
+            ROT             ( D: sp' list n )
+            #nil -ROT       ( D: sp' copy=#nil list n )
+            n_copy_onto     ( D: sp' copy' list' )
+            ROT SWAP        ( D: copy' sp' list' )
+            pair SWAP       ( D: sp'' copy' )
+            reverse_onto    ( D: sp''' )
+            update_sp ;
+        THEN                ( D: n )
+        DUP 0= IF
+            DROP k@ ;       ( no effect )
+        THEN
+        DUP -1 = IF
+            DROP sp@ part   ( D: sp' list )
+            #nil SWAP       ( D: sp' copy=#nil list )
+            copy_onto       ( D: sp' copy' )
+            reverse_onto    ( D: sp'' )
+            update_sp ;
+        THEN
+        DROP undef_result ;
     THEN
-    imm@ #0 = IF
-        k@ ;                ( no-op )
-    THEN
-    E_BOUNDS ;
+    E_NOT_FIX ;
 
 : op_nth ( -- ip' | error )
     sp@ part imm@           ( D: sp' pair #n )
