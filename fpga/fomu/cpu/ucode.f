@@ -963,18 +963,34 @@ To Copy fixnum:n of list onto head:
     E_NO_TYPE ;
 
 : op_pair ( -- ip' | error )
-    imm@ #1 = IF
-        sp@ part >R         ( D: rest ) ( R: first )
-        part R>             ( D: rest' second first )
-        pair push_result ;
+    imm@ DUP is_fix IF
+        fix2int DUP 0> IF
+            sp@ SWAP        ( D: sp +n )
+            1- n_rest       ( D: prev )
+            DUP is_ram IF
+                DUP QY@     ( D: prev last )
+                DUP is_ram IF
+                    DUP QX@ ( D: prev last tail )
+                    ROT     ( D: last tail prev )
+                    qy!     ( D: last )
+                    sp@     ( D: last list )
+                    OVER    ( D: last list last )
+                    qx!     ( D: last )
+                    update_sp ;
+                THEN DROP
+            THEN DROP
+: capture_stack
+            #nil sp@ push_result ;
+        THEN
+        DUP 0= IF
+            DROP nil_result ;
+        THEN
+        DUP -1 = IF
+            capture_stack ;
+        THEN
+        E_BOUNDS ;
     THEN
-    imm@ #0 = IF
-        nil_result ;
-    THEN
-    imm@ #-1 = IF
-        #nil sp@ push_result ;
-    THEN
-    E_BOUNDS ;
+    E_NOT_FIX ;
 
 : op_part ( -- ip' | error )
     imm@ #1 = IF
