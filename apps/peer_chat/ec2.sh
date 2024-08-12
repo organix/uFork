@@ -18,8 +18,8 @@ chmod +x caddy
 # Install git
 sudo yum install git -y
 
-# Clone uFork repo (James's fork)
-git clone https://github.com/jamesdiacono/uFork.git
+# Clone uFork repo
+git clone https://github.com/organix/uFork.git
 
 # Server the Peer Chat example
 CHAT_PORT=3528
