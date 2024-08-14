@@ -1334,13 +1334,20 @@ To Copy fixnum:n of list onto head:
     sp@ self@ QY@ imm@      ( D: sp state #n )
     nth_result ;
 
+: op_jump ( -- ip' | error )
+    sp@ part                ( D: sp' k )
+    DUP #instr_t typeq IF
+        SWAP sp! ;          ( D: k )
+    THEN
+    E_NOT_EXE ;
+
 : op_debug ( -- ip' | error )
     k@ ;                    ( no-op )
 
 : perform_op ( opcode -- ip' | error )
     JMPTBL 32 ,
     op_debug                ( 0x8000: debug )
-    invalid                 ( 0x8001: jump )
+    op_jump                 ( 0x8001: jump )
     op_push                 ( 0x8002: push )
     op_if                   ( 0x8003: if )
     invalid                 ( 0x8004: -unused- )
