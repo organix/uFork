@@ -37,13 +37,13 @@
         * [`part`](#part-instruction) instruction
         * [`pick`](#pick-instruction) instruction
         * [`push`](#push-instruction) instruction
+        * [`quad`](#quad-instruction) instruction
         * [`roll`](#roll-instruction) instruction
         * [`send`](#send-instruction) instruction
         * [`signal`](#signal-instruction) instruction
         * [`sponsor`](#sponsor-instruction) instruction
         * [`state`](#state-instruction) instruction
         * [`typeq`](#typeq-instruction) instruction
-        * [`quad`](#quad-instruction) instruction
 
 ## Introduction
 
@@ -1451,6 +1451,120 @@ Push an immediate value onto the top of the stack.
 
  1. Push _value_ onto the stack
 
+#### `quad` instruction
+
+ Input               | Instruction         | Output       | Description
+---------------------|---------------------|--------------|-------------------------------------
+_T_                  | `quad` `1`          | _quad_       | create quad \[_T_, `#?`, `#?`, `#?`\]
+_X_ _T_              | `quad` `2`          | _quad_       | create quad \[_T_, _X_, `#?`, `#?`\]
+_Y_ _X_ _T_          | `quad` `3`          | _quad_       | create quad \[_T_, _X_, _Y_, `#?`\]
+_Z_ _Y_ _X_ _T_      | `quad` `4`          | _quad_       | create quad \[_T_, _X_, _Y_, _Z_\]
+_quad_               | `quad` `-1`         | _T_          | extract 1 _quad_ field
+_quad_               | `quad` `-2`         | _X_ _T_      | extract 2 _quad_ fields
+_quad_               | `quad` `-3`         | _Y_ _X_ _T_  | extract 3 _quad_ fields
+_quad_               | `quad` `-4`         | _Z_ _Y_ _X_ _T_ | extract 4 _quad_ fields
+
+Allocate and initialize, or access, a cell in quad-memory (RAM).
+The _T_ field must designate an explicit type.
+User-defined types can be created with _T_ = `#type_t`
+and _X_ = the arity (number of data fields) from 0 to 3.
+
+ T            | X (op)        | Y (imm)     | Z (k)
+--------------|---------------|-------------|-------------
+ `#instr_t`   | `+9` (quad)   | +1          | _instr_
+
+ 1. Remove _T_ from the stack
+ 1. If _T_ is a `#type_t`
+    1. If type _T_ has arity `0`
+        1. Allocate a new _quad_ intialized to \[_T_, `#?`, `#?`, `#?`\]
+        1. Push _quad_ reference onto the stack
+    1. Otherwise
+        1. Signal an error (`E_BOUNDS`)
+ 1. Otherwise
+    1. Signal an error (`E_NO_TYPE`)
+
+ T            | X (op)        | Y (imm)     | Z (k)
+--------------|---------------|-------------|-------------
+ `#instr_t`   | `+9` (quad)   | +2          | _instr_
+
+ 1. Remove _T_ from the stack
+ 1. Remove _X_ from the stack
+ 1. If _T_ is a `#type_t`
+    1. If type _T_ has arity `1`
+        1. Allocate a new _quad_ intialized to \[_T_, _X_, `#?`, `#?`\]
+        1. Push _quad_ reference onto the stack
+    1. Otherwise
+        1. Signal an error (`E_BOUNDS`)
+ 1. Otherwise
+    1. Signal an error (`E_NO_TYPE`)
+
+ T            | X (op)        | Y (imm)     | Z (k)
+--------------|---------------|-------------|-------------
+ `#instr_t`   | `+9` (quad)   | +3          | _instr_
+
+ 1. Remove _T_ from the stack
+ 1. Remove _X_ from the stack
+ 1. Remove _Y_ from the stack
+ 1. If _T_ is a `#type_t`
+    1. If type _T_ has arity `2`
+        1. Allocate a new _quad_ intialized to \[_T_, _X_, _Y_, `#?`\]
+        1. Push _quad_ reference onto the stack
+    1. Otherwise
+        1. Signal an error (`E_BOUNDS`)
+ 1. Otherwise
+    1. Signal an error (`E_NO_TYPE`)
+
+ T            | X (op)        | Y (imm)     | Z (k)
+--------------|---------------|-------------|-------------
+ `#instr_t`   | `+9` (quad)   | +4          | _instr_
+
+ 1. Remove _T_ from the stack
+ 1. Remove _X_ from the stack
+ 1. Remove _Y_ from the stack
+ 1. Remove _Z_ from the stack
+ 1. If _T_ is a `#type_t`
+    1. If type _T_ has arity `3`
+        1. Allocate a new _quad_ intialized to \[_T_, _X_, _Y_, _Z_\]
+        1. Push _quad_ reference onto the stack
+    1. Otherwise
+        1. Signal an error (`E_BOUNDS`)
+ 1. Otherwise
+    1. Signal an error (`E_NO_TYPE`)
+
+ T            | X (op)        | Y (imm)     | Z (k)
+--------------|---------------|-------------|-------------
+ `#instr_t`   | `+9` (quad)   | -1          | _instr_
+
+ 1. Remove _quad_ from the stack
+ 1. Push _quad_ field _T_ onto the stack
+
+ T            | X (op)        | Y (imm)     | Z (k)
+--------------|---------------|-------------|-------------
+ `#instr_t`   | `+9` (quad)   | -2          | _instr_
+
+ 1. Remove _quad_ from the stack
+ 1. Push _quad_ field _X_ onto the stack
+ 1. Push _quad_ field _T_ onto the stack
+
+ T            | X (op)        | Y (imm)     | Z (k)
+--------------|---------------|-------------|-------------
+ `#instr_t`   | `+9` (quad)   | -3          | _instr_
+
+ 1. Remove _quad_ from the stack
+ 1. Push _quad_ field _Y_ onto the stack
+ 1. Push _quad_ field _X_ onto the stack
+ 1. Push _quad_ field _T_ onto the stack
+
+ T            | X (op)        | Y (imm)     | Z (k)
+--------------|---------------|-------------|-------------
+ `#instr_t`   | `+9` (quad)   | -4          | _instr_
+
+ 1. Remove _quad_ from the stack
+ 1. Push _quad_ field _Z_ onto the stack
+ 1. Push _quad_ field _Y_ onto the stack
+ 1. Push _quad_ field _X_ onto the stack
+ 1. Push _quad_ field _T_ onto the stack
+
 #### `roll` instruction
 
  Input               | Instruction         | Output       | Description
@@ -1711,117 +1825,3 @@ in the _T_ field of their quad
     1. Push `#t` onto the stack
  1. Otherwise
     1. Push `#f` onto the stack
-
-#### `quad` instruction
-
- Input               | Instruction         | Output       | Description
----------------------|---------------------|--------------|-------------------------------------
-_T_                  | `quad` `1`          | _quad_       | create quad \[_T_, `#?`, `#?`, `#?`\]
-_X_ _T_              | `quad` `2`          | _quad_       | create quad \[_T_, _X_, `#?`, `#?`\]
-_Y_ _X_ _T_          | `quad` `3`          | _quad_       | create quad \[_T_, _X_, _Y_, `#?`\]
-_Z_ _Y_ _X_ _T_      | `quad` `4`          | _quad_       | create quad \[_T_, _X_, _Y_, _Z_\]
-_quad_               | `quad` `-1`         | _T_          | extract 1 _quad_ field
-_quad_               | `quad` `-2`         | _X_ _T_      | extract 2 _quad_ fields
-_quad_               | `quad` `-3`         | _Y_ _X_ _T_  | extract 3 _quad_ fields
-_quad_               | `quad` `-4`         | _Z_ _Y_ _X_ _T_ | extract 4 _quad_ fields
-
-Allocate and initialize, or access, a cell in quad-memory (RAM).
-The _T_ field must designate an explicit type.
-User-defined types can be created with _T_ = `#type_t`
-and _X_ = the arity (number of data fields) from 0 to 3.
-
- T            | X (op)        | Y (imm)     | Z (k)
---------------|---------------|-------------|-------------
- `#instr_t`   | `+9` (quad)   | +1          | _instr_
-
- 1. Remove _T_ from the stack
- 1. If _T_ is a `#type_t`
-    1. If type _T_ has arity `0`
-        1. Allocate a new _quad_ intialized to \[_T_, `#?`, `#?`, `#?`\]
-        1. Push _quad_ reference onto the stack
-    1. Otherwise
-        1. Signal an error (`E_BOUNDS`)
- 1. Otherwise
-    1. Signal an error (`E_NO_TYPE`)
-
- T            | X (op)        | Y (imm)     | Z (k)
---------------|---------------|-------------|-------------
- `#instr_t`   | `+9` (quad)   | +2          | _instr_
-
- 1. Remove _T_ from the stack
- 1. Remove _X_ from the stack
- 1. If _T_ is a `#type_t`
-    1. If type _T_ has arity `1`
-        1. Allocate a new _quad_ intialized to \[_T_, _X_, `#?`, `#?`\]
-        1. Push _quad_ reference onto the stack
-    1. Otherwise
-        1. Signal an error (`E_BOUNDS`)
- 1. Otherwise
-    1. Signal an error (`E_NO_TYPE`)
-
- T            | X (op)        | Y (imm)     | Z (k)
---------------|---------------|-------------|-------------
- `#instr_t`   | `+9` (quad)   | +3          | _instr_
-
- 1. Remove _T_ from the stack
- 1. Remove _X_ from the stack
- 1. Remove _Y_ from the stack
- 1. If _T_ is a `#type_t`
-    1. If type _T_ has arity `2`
-        1. Allocate a new _quad_ intialized to \[_T_, _X_, _Y_, `#?`\]
-        1. Push _quad_ reference onto the stack
-    1. Otherwise
-        1. Signal an error (`E_BOUNDS`)
- 1. Otherwise
-    1. Signal an error (`E_NO_TYPE`)
-
- T            | X (op)        | Y (imm)     | Z (k)
---------------|---------------|-------------|-------------
- `#instr_t`   | `+9` (quad)   | +4          | _instr_
-
- 1. Remove _T_ from the stack
- 1. Remove _X_ from the stack
- 1. Remove _Y_ from the stack
- 1. Remove _Z_ from the stack
- 1. If _T_ is a `#type_t`
-    1. If type _T_ has arity `3`
-        1. Allocate a new _quad_ intialized to \[_T_, _X_, _Y_, _Z_\]
-        1. Push _quad_ reference onto the stack
-    1. Otherwise
-        1. Signal an error (`E_BOUNDS`)
- 1. Otherwise
-    1. Signal an error (`E_NO_TYPE`)
-
- T            | X (op)        | Y (imm)     | Z (k)
---------------|---------------|-------------|-------------
- `#instr_t`   | `+9` (quad)   | -1          | _instr_
-
- 1. Remove _quad_ from the stack
- 1. Push _quad_ field _T_ onto the stack
-
- T            | X (op)        | Y (imm)     | Z (k)
---------------|---------------|-------------|-------------
- `#instr_t`   | `+9` (quad)   | -2          | _instr_
-
- 1. Remove _quad_ from the stack
- 1. Push _quad_ field _X_ onto the stack
- 1. Push _quad_ field _T_ onto the stack
-
- T            | X (op)        | Y (imm)     | Z (k)
---------------|---------------|-------------|-------------
- `#instr_t`   | `+9` (quad)   | -3          | _instr_
-
- 1. Remove _quad_ from the stack
- 1. Push _quad_ field _Y_ onto the stack
- 1. Push _quad_ field _X_ onto the stack
- 1. Push _quad_ field _T_ onto the stack
-
- T            | X (op)        | Y (imm)     | Z (k)
---------------|---------------|-------------|-------------
- `#instr_t`   | `+9` (quad)   | -4          | _instr_
-
- 1. Remove _quad_ from the stack
- 1. Push _quad_ field _Z_ onto the stack
- 1. Push _quad_ field _Y_ onto the stack
- 1. Push _quad_ field _X_ onto the stack
- 1. Push _quad_ field _T_ onto the stack

@@ -1246,6 +1246,66 @@ To Copy fixnum:n of list onto head:
     THEN
     E_NOT_FIX ;
 
+: quad_ZYXT ( sp quad -- ip' )
+    SWAP OVER QZ@           ( D: quad sp Z )
+    pair SWAP               ( D: sp' quad )
+: quad_YXT ( sp quad -- ip' )
+    SWAP OVER QY@           ( D: quad sp Y )
+    pair SWAP               ( D: sp' quad )
+: quad_XT ( sp quad -- ip' )
+    SWAP OVER QX@           ( D: quad sp X )
+    pair SWAP               ( D: sp' quad )
+: quad_T ( sp quad -- ip' )
+    QT@ pair update_sp ;    ( D: ip' )
+: quad_1 ( sp' -- ip' ) ( R: T -- )
+    R> 0alloc push_result ;
+: quad_2 ( sp' -- ip' ) ( R: T -- )
+    part >R                 ( D: sp'' ) ( R: T X )
+    R> R>                   ( D: sp'' X T )
+    1alloc push_result ;
+: quad_3 ( sp' -- ip' ) ( R: T -- )
+    part >R                 ( D: sp'' ) ( R: T X )
+    part >R                 ( D: sp''' ) ( R: T X Y )
+    R> R> R>                ( D: sp''' Y X T )
+    2alloc push_result ;
+: quad_4 ( sp' -- ip' ) ( R: T -- )
+    part >R                 ( D: sp'' ) ( R: T X )
+    part >R                 ( D: sp''' ) ( R: T X Y )
+    part >R                 ( D: sp'''' ) ( R: T X Y Z )
+    R> R> R> R>             ( D: sp'''' Z Y X T )
+    3alloc push_result ;
+: op_quad ( -- ip' | error )
+    imm@ DUP is_fix IF
+        fix2int DUP MSB& IF ( D: -n )
+            sp@ part        ( D: -n sp' quad )
+            ROT ABS 1-      ( D: sp' quad index )
+            JMPTBL 0x4 ,
+            quad_T
+            quad_XT
+            quad_YXT
+            quad_ZYXT
+            E_BOUNDS ;      ( default case )
+        THEN                ( D: +n )
+        sp@ part            ( D: +n sp' T )
+        DUP #type_t typeq IF
+            ROT 1-          ( D: sp' T arity )
+            2DUP int2fix    ( D: sp' T arity T #a )
+            SWAP QX@        ( D: sp' T arity #a #A )
+            = IF            ( D: sp' T arity )
+                SWAP >R     ( D: sp' arity ) ( R: T )
+                JMPTBL 0x4 ,
+                quad_1
+                quad_2
+                quad_3
+                quad_4
+                E_BOUNDS ;  ( default case )
+            THEN
+            E_BOUNDS ;
+        THEN
+        E_NO_TYPE ;
+    THEN
+    E_NOT_FIX ;
+
 : common_actor_args ( -- sp' args tos TRUE | error FALSE )
     sp@ part imm@           ( D: sp' tos #n )
     DUP is_fix IF
@@ -1356,7 +1416,7 @@ To Copy fixnum:n of list onto head:
     op_assert               ( 0x8007: assert )
 
     invalid                 ( 0x8008: sponsor )
-    invalid                 ( 0x8009: quad )
+    op_quad                 ( 0x8009: quad )
     invalid                 ( 0x800A: dict )
     invalid                 ( 0x800B: deque )
     op_my                   ( 0x800C: my )
