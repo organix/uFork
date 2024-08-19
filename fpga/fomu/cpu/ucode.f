@@ -1260,19 +1260,18 @@ To Copy fixnum:n of list onto head:
 : quad_1 ( sp' -- ip' ) ( R: T -- )
     R> 0alloc push_result ;
 : quad_2 ( sp' -- ip' ) ( R: T -- )
-    part >R                 ( D: sp'' ) ( R: T X )
-    R> R>                   ( D: sp'' X T )
+    part R>                 ( D: sp'' X T )
     1alloc push_result ;
 : quad_3 ( sp' -- ip' ) ( R: T -- )
     part >R                 ( D: sp'' ) ( R: T X )
-    part >R                 ( D: sp''' ) ( R: T X Y )
-    R> R> R>                ( D: sp''' Y X T )
+    part                    ( D: sp''' Y ) ( R: T X )
+    R> R>                   ( D: sp''' Y X T )
     2alloc push_result ;
 : quad_4 ( sp' -- ip' ) ( R: T -- )
     part >R                 ( D: sp'' ) ( R: T X )
     part >R                 ( D: sp''' ) ( R: T X Y )
-    part >R                 ( D: sp'''' ) ( R: T X Y Z )
-    R> R> R> R>             ( D: sp'''' Z Y X T )
+    part                    ( D: sp'''' Z ) ( R: T X Y )
+    R> R> R>                ( D: sp'''' Z Y X T )
     3alloc push_result ;
 : op_quad ( -- ip' | error )
     imm@ DUP is_fix IF

@@ -7,7 +7,7 @@
 
 ; Constant values do not depend on the environment.
 
-;;  LET constant(value) = \(cust, _).[ SEND value TO cust ]
+;;  DEF constant(value) AS \(cust, _).[ SEND value TO cust ]
 constant:                   ; value <- (cust . _)
     state 0                 ; value
     ref std.cust_send
@@ -15,7 +15,7 @@ constant:                   ; value <- (cust . _)
 ; Variables represent values in an expression
 ; that are dependent on the evaluation environment.
 
-;;  LET variable() = \(cust, env).[ SEND (cust, SELF) TO env ]
+;;  DEF variable() AS \(cust, env).[ SEND (cust, SELF) TO env ]
 variable:                   ; () <- (cust . env)
     my self                 ; SELF
     msg 1                   ; SELF cust
@@ -27,7 +27,7 @@ variable:                   ; () <- (cust . env)
 ; The empty environment has no bindings,
 ; so any attempted lookup yields "undefined".
 
-;;  LET empty_env() = \(cust, _).[ SEND #? TO cust ]
+;;  DEF empty_env() AS \(cust, _).[ SEND #? TO cust ]
 empty_env:                  ; () <- (cust . _)
     ref std.rv_undef
 
@@ -35,7 +35,7 @@ empty_env:                  ; () <- (cust . _)
 ; A lookup matching the variable yields the value.
 ; Bindings form an environment delegation chain.
 
-;;  LET binding(var, value, next) = \msg.[
+;;  DEF binding(var, value, next) AS \msg.[
 ;;      CASE msg OF
 ;;      (cust, $var) : [ SEND value TO cust ]
 ;;      _ : [ SEND msg TO next ]
@@ -56,7 +56,7 @@ binding:                    ; ({var:value} . next) <- (cust . var)
 ; They capture a _body_ expression and the definition environment,
 ; creating a closure that may be _applied_ later.
 
-;;  LET lambda(var, body) = \(cust, env).[
+;;  DEF lambda(var, body) AS \(cust, env).[
 ;;      SEND NEW closure(env, var, body) TO cust
 ;;  ]
 lambda:                     ; (var . body) <- (cust . env)
@@ -70,7 +70,7 @@ lambda:                     ; (var . body) <- (cust . env)
 ; Application expressions apply a function to the result
 ; of evaluating a parameter expression.
 
-;;  LET application(lambda, param) = \(cust, env).[
+;;  DEF application(lambda, param) AS \(cust, env).[
 ;;      CREATE appl WITH applicative(param, cust, env)
 ;;      SEND (appl, env) TO lambda
 ;;  ]
@@ -85,7 +85,7 @@ application:                ; (lambda . param) <- (cust . env)
     state 1                 ; lambda
     ref std.send_msg
 
-;;  LET applicative(param, cust, env) = \closure.[
+;;  DEF applicative(param, cust, env) AS \closure.[
 ;;      BECOME operative(closure, cust, env)
 ;;      SEND (SELF, env) TO param
 ;;  ]
@@ -101,7 +101,7 @@ applicative:                ; (param cust . env) <- closure
     state 1                 ; (SELF . env) param
     ref std.send_msg
 
-;;  LET operative(closure, cust, env) = \arg.[
+;;  DEF operative(closure, cust, env) AS \arg.[
 ;;      SEND (arg, cust, env) TO closure
 ;;  ]
 operative:                  ; (closure cust . env) <- arg
@@ -111,7 +111,7 @@ operative:                  ; (closure cust . env) <- arg
     state 1                 ; (arg cust . env) closure
     ref std.send_msg
 
-;;  LET closure(env, var, body) = \(arg, cust, _).[
+;;  DEF closure(env, var, body) AS \(arg, cust, _).[
 ;;      CREATE env' WITH binding(var, arg, env)
 ;;      SEND (cust, env') TO body
 ;;  ]
@@ -200,7 +200,7 @@ test_identity:
 
     push -77                ; (cust . env) lambda -77
     push constant           ; (cust . env) lambda -77 constant
-    new -1                  ; (cust . env) lambda param=constant.(-77)
+    new -1                  ; (cust . env) lambda param=constant.-77
     roll 2                  ; (cust . env) param lambda
     pair 1                  ; (cust . env) (lambda . param)
     push application        ; (cust . env) (lambda . param) application
@@ -218,19 +218,19 @@ assert_beh:                 ; expect <- actual
 ;;  # pure-functional conditional test-case
 ;;  #
 ;;
-;;  # LET fn_true = \cnsq.\altn.cnsq
+;;  # DEF fn_true AS \cnsq.\altn.cnsq
 ;;  CREATE fn_true
 ;;      WITH b_closure(#cnsq,
 ;;          NEW b_lambda(#altn,
 ;;              NEW b_variable(#cnsq)),
 ;;          a_empty_env)
-;;  # LET fn_false = \cnsq.\altn.altn
+;;  # DEF fn_false AS \cnsq.\altn.altn
 ;;  CREATE fn_false
 ;;      WITH b_closure(#cnsq,
 ;;          NEW b_lambda(#altn,
 ;;              NEW b_variable(#altn)),
 ;;          a_empty_env)
-;;  # LET fn_if = \pred.\cnsq.\altn.(pred(cnsq))(altn)
+;;  # DEF fn_if AS \pred.\cnsq.\altn.(pred(cnsq))(altn)
 ;;  CREATE fn_if
 ;;      WITH b_closure(#pred,
 ;;          NEW b_lambda(#cnsq,
