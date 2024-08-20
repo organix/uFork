@@ -15,4 +15,4 @@ Linux            | ~/.config/sublime-text/Packages
 To run the tests:
 - install the "UnitTesting" package via Package Control
 - open the syntax_test.asm file
-- search for and run the "Build With: Syntax Tests" command
+- search for and run "Build With: Syntax Tests" in the Command Palette

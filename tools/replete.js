@@ -85,7 +85,7 @@ run_replete({
     headers(locator) {
         const extension = new URL(locator).pathname.split(".").pop();
         const type = content_types[extension];
-        if (type !== undefined) {
+        if (typeof type === "string") {
             return {"Content-Type": type};
         }
     },

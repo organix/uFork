@@ -197,14 +197,14 @@ boot:                       ; () <- {caps}
 
 ; Call the 'double_sum' closure and print its return value.
 
-    ; push print_rv       ; k=print_rv
-    ; push #nil           ; k ()
-    ; push 4              ; k () d=4
-    ; push 3              ; k () d c=3
-    ; push 2              ; k () d c b=2
-    ; push 1              ; k () d c b a=1
-    ; pair 4              ; k args=(a b c d)
-    ; push double_sum     ; k args closure=double_sum
+    ; push print_rv           ; k=print_rv
+    ; push #nil               ; k ()
+    ; push 4                  ; k () d=4
+    ; push 3                  ; k () d c=3
+    ; push 2                  ; k () d c b=2
+    ; push 1                  ; k () d c b a=1
+    ; pair 4                  ; k args=(a b c d)
+    ; push double_sum         ; k args closure=double_sum
     ; ref call
 
 ; Print the factorial of 6.
@@ -219,24 +219,24 @@ boot:                       ; () <- {caps}
 
 ; Call the innermost lambda in hof3 and print its return value.
 
-;     push p_return       ; k=p_return
-;     push #nil           ; k ()
-;     push 1              ; k () p=1
-;     pair 1              ; k args=(p)
-;     push hof3           ; k args closure=hof3
+;     push p_return           ; k=p_return
+;     push #nil               ; k ()
+;     push 1                  ; k () p=1
+;     pair 1                  ; k args=(p)
+;     push hof3               ; k args closure=hof3
 ;     ref call
-; p_return:               ; qr
-;     push qr_return      ; qr k=qr_return
-;     push #nil           ; qr k ()
-;     push 3              ; qr k () r=3
-;     push 2              ; qr k () r q=2
-;     pair 2              ; qr k args=(q r)
-;     roll 3              ; k args closure=qr
+; p_return:                   ; qr
+;     push qr_return          ; qr k=qr_return
+;     push #nil               ; qr k ()
+;     push 3                  ; qr k () r=3
+;     push 2                  ; qr k () r q=2
+;     pair 2                  ; qr k args=(q r)
+;     roll 3                  ; k args closure=qr
 ;     ref call
-; qr_return:              ; s
-;     push print_rv       ; s k=print_rv
-;     push 4              ; s k args=4
-;     roll 3              ; k args closure=s
+; qr_return:                  ; s
+;     push print_rv           ; s k=print_rv
+;     push 4                  ; s k args=4
+;     roll 3                  ; k args closure=s
 ;     ref call
 
 print_rv:                   ; rv

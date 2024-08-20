@@ -34,7 +34,6 @@ function activate(context) {
     const diagnostics = languages.createDiagnosticCollection("JSLint");
     context.subscriptions.push(
         workspace.onDidChangeTextDocument(function (event) {
-            console.log("onDidChangeTextDocument", event.document.getText());
             lint(event.document, diagnostics);
         })
     );
