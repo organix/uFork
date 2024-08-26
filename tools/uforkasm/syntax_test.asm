@@ -84,6 +84,14 @@ beh:
 #            ^^^^^^^^ variable.other.member.uforkasm
     end abort
 
+proc:
+    call lib.procedure
+#   ^^^^ keyword.operator.word.uforkasm
+#        ^^^ entity.name.namespace.uforkasm
+#            ^^^^^^^^^ variable.other.member.uforkasm
+    return
+#   ^^^^^^ variable.language.uforkasm
+
     ; Provide a cancel capability.
 #   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ comment.line.uforkasm
 
