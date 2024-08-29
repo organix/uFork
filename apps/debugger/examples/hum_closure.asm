@@ -1,23 +1,9 @@
-; Some hand-assembled Humus that conforms to the assembly language calling
-; convention.
-
-; A closure is represented as a dynamically created 'push' instruction. It
-; expects a stack like that expected by an assembly procedure taking a single
-; argument:
-
-;   args k
-
-; The push instruction pushes the environment onto the stack, then continues to
-; precompiled code expecting a stack like:
-
-;   args k env
-
-; Upon returning, a closure leaves behind a single value:
-
-;   rv
+; Some hand-assembled Humus closures. They conform to the assembly language
+; calling conventions.
 
 .import
     dev: "https://ufork.org/lib/dev.asm"
+    hum: "https://ufork.org/lib/hum.asm"
     std: "https://ufork.org/lib/std.asm"
 
 ;
@@ -96,9 +82,7 @@ hof3:                       ; a k
     push #nil               ; a k bc_code ()
     pick 4                  ; a k bc_code () a
     pair 1                  ; a k bc_code env=(a)
-    push 2                  ; a k bc_code env op=#push
-    push #instr_t           ; a k bc_code env op #instr_t
-    quad 4                  ; a k bc_closure=[#instr_t, op=#push, imm=env, k=bc_code]
+    call hum.make_closure   ; a k bc_closure
     roll -3                 ; rv=bc_closure a k
     roll -2                 ; rv k a
     drop 1                  ; rv k
@@ -108,9 +92,7 @@ bc_code:                    ; args=(b . c) k env=(a)
     pick 2                  ; (b . c) k env d_code env
     pick 5                  ; (b . c) k env d_code env (b . c)
     pair 1                  ; (b . c) k env d_code env'=((b . c) a)
-    push 2                  ; (b . c) k env d_code env' op=#push
-    push #instr_t           ; (b . c) k env d_code env' op #instr_t
-    quad 4                  ; (b . c) k env d_closure=[#instr_t, op=#push, imm=env', k=d_code]
+    call hum.make_closure   ; (b . c) k env d_closure
     roll -4                 ; rv=d_closure (b . c) k env
     drop 1                  ; rv=d_closure (b . c) k
     roll -2                 ; rv k (b . c)
