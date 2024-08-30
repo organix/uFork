@@ -11,10 +11,6 @@
 ; CREATE top WITH top_beh(1)
 ; SEND (println, 2) TO top
 
-; Notice that 'state' instructions are never compiled. That is because there is
-; no way to know, in general, whether a closure will exclusively be used as an
-; actor behavior (as opposed to a procedure). See lib/hum.asm.
-
 .import
     dev: "https://ufork.org/lib/dev.asm"
     hum: "https://ufork.org/lib/hum.asm"
@@ -59,8 +55,8 @@ top_code:                   ; args k env=(p)
     pick 6                  ; args k env msg next_code env args
     pair 1                  ; args k env msg next_code env'=(args . env)
     call hum.make_closure   ; args k env msg closure
-    call hum.make_beh       ; args k env msg beh
-    new 0                   ; args k env msg next=beh.()
+    push hum.beh            ; args k env msg closure beh
+    new -1                  ; args k env msg next=beh.closure
 
 ; Send it the message.
 
@@ -88,8 +84,8 @@ boot:                       ; () <- {caps}
     push 1                  ; msg code () 1
     pair 1                  ; msg code env=(1)
     call hum.make_closure   ; msg top_closure
-    call hum.make_beh       ; msg top_beh
-    new 0                   ; msg top=top_beh.()
+    push hum.beh            ; msg top_closure beh
+    new -1                  ; msg top=top_closure.beh
 
 ; Send it the message.
 
