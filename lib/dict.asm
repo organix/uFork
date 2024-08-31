@@ -127,16 +127,14 @@ del_none:                   ; k orig key rev next value' key'
     drop 5                  ; k orig
     ref return_value
 
+; example usage
 example:
     dict_t 1 #nil
     dict_t 2 #f
     dict_t 3 #t
     ref #nil
 
-; unit test suite
-boot:                       ; () <- {caps}
-;    msg 0                   ; {caps}
-;    ref std.commit
+demo_del:
     push example
     push -1
     call del
@@ -150,7 +148,75 @@ boot:                       ; () <- {caps}
     push example
     push 3
     call del
+    drop 1
     end commit
+
+; self-checked demo
+demo:
+    push #?                 ; #?
+    push #?                 ; #? #?
+demo_0:
+    call has                ; #f
+    assert #f               ; --
+    push #nil               ; ()
+    push 0                  ; () 0
+    dup 2                   ; () 0 () 0
+    call has                ; () 0 #f
+    assert #f               ; () 0
+    call get                ; #?
+    assert #?               ; --
+demo_1:
+    push #nil               ; ()
+    push 0                  ; () 0
+    push #unit              ; () 0 #unit
+    call add                ; {0:#unit}
+    pick 1                  ; {0:#unit} {0:#unit}
+    push 0                  ; {0:#unit} {0:#unit} 0
+    call get                ; {0:#unit} #unit
+    assert #unit            ; {0:#unit}
+demo_2:
+    push 1                  ; {0:#unit} 1
+    push -1                 ; {0:#unit} 1 -1
+    call add                ; {1:-1, 0:#unit}
+    dup 1                   ; {1:-1, 0:#unit} {1:-1, 0:#unit}
+    push 0                  ; {1:-1, 0:#unit} {1:-1, 0:#unit} 0
+    call get                ; {1:-1, 0:#unit} #unit
+    assert #unit            ; {1:-1, 0:#unit}
+demo_3:
+    push 0                  ; {1:-1, 0:#unit} 0
+    call del                ; {1:-1}
+    dup 1                   ; {1:-1} {1:-1}
+    push 0                  ; {1:-1} {1:-1} 0
+    call get                ; {1:-1} #?
+    assert #?               ; {1:-1}
+demo_4:
+    push 1                  ; {1:-1} 1
+    push #f                 ; {1:-1} 1 #f
+    call add                ; {1:#f, 1:-1}
+    dup 1                   ; {1:#f, 1:-1} {1:#f, 1:-1}
+    push 1                  ; {1:#f, 1:-1} {1:#f, 1:-1} 1
+    push #t                 ; {1:#f, 1:-1} {1:#f, 1:-1} 1 #t
+    call set                ; {1:#f, 1:-1} {1:#t, 1:-1}
+    dup 1                   ; {1:#f, 1:-1} {1:#t, 1:-1} {1:#t, 1:-1}
+    push 1                  ; {1:#f, 1:-1} {1:#t, 1:-1} {1:#t, 1:-1} 1
+    call del                ; {1:#f, 1:-1} {1:#t, 1:-1} {1:-1}
+    push 1                  ; {1:#f, 1:-1} {1:#t, 1:-1} {1:-1} 1
+    call get                ; {1:#f, 1:-1} {1:#t, 1:-1} -1
+    assert -1               ; {1:#f, 1:-1} {1:#t, 1:-1}
+    push 1                  ; {1:#f, 1:-1} {1:#t, 1:-1} 1
+    dict get                ; {1:#f, 1:-1} #t
+    assert #t               ; {1:#f, 1:-1}
+    push 1                  ; {1:#f, 1:-1} 1
+    dict get                ; #f
+    assert #f               ; --
+    ref demo_del
+
+; unit test suite
+boot:                       ; () <- {caps}
+;    msg 0                   ; {caps}
+;    ref std.commit
+;    end commit
+    ref demo
 
 .export
     has
