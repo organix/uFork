@@ -17,7 +17,7 @@ sum:                        ; args=(a . b) k
     roll 2                  ; k args
     part 1                  ; k b a
     alu add                 ; k rv=a+b
-    roll -2                 ; rv k
+    roll 2                  ; rv k
     return
 
 ; DEF double_sum(a, b, c, d) AS sum(sum(a, b), sum(c, d))
@@ -34,7 +34,7 @@ double_sum:                 ; args=(a, b, c, d) k
     call sum                ; k c+d a+b
     pair 1                  ; k args=(a+b . c+d)
     call sum                ; k rv=a+b+c+d
-    roll -2                 ; rv k
+    roll 2                  ; rv k
     return
 
 ;
@@ -82,21 +82,22 @@ hof3:                       ; a k
     push #nil               ; a k bc_code ()
     pick 4                  ; a k bc_code () a
     pair 1                  ; a k bc_code env=(a)
-    call hum.make_closure   ; a k bc_closure
-    roll -3                 ; rv=bc_closure a k
-    roll -2                 ; rv k a
-    drop 1                  ; rv k
+    call hum.make_closure   ; a k rv=bc_closure
+    roll 3                  ; k rv a
+    drop 1                  ; k rv
+    roll 2                  ; rv k
     return
 bc_code:                    ; args=(b . c) k env=(a)
     push d_code             ; (b . c) k env d_code
     pick 2                  ; (b . c) k env d_code env
     pick 5                  ; (b . c) k env d_code env (b . c)
     pair 1                  ; (b . c) k env d_code env'=((b . c) a)
-    call hum.make_closure   ; (b . c) k env d_closure
-    roll -4                 ; rv=d_closure (b . c) k env
-    drop 1                  ; rv=d_closure (b . c) k
-    roll -2                 ; rv k (b . c)
-    drop 1                  ; rv k
+    call hum.make_closure   ; (b . c) k env rv=d_closure
+    roll 4                  ; k env rv (b . c)
+    drop 1                  ; k env rv
+    roll 2                  ; k rv env
+    drop 1                  ; k rv
+    roll 2                  ; rv k
     return
 d_code:                     ; args=d k env=((b . c) a)
     pick 3                  ; d k env d
@@ -109,10 +110,11 @@ d_code:                     ; args=d k env=((b . c) a)
     pick 4                  ; d k env d c b env
     nth 2                   ; d k env d c b a
     pair 3                  ; d k env rv=(a b c . d)
-    roll -4                 ; rv d k env
-    drop 1                  ; rv d k
-    roll -2                 ; rv k d
-    drop 1                  ; rv k
+    roll 2                  ; d k rv env
+    drop 1                  ; d k rv
+    roll 3                  ; k rv d
+    drop 1                  ; k rv
+    roll 2                  ; rv k
     return
 
 ; Test suite

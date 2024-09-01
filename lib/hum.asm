@@ -18,7 +18,7 @@ make_closure:               ; ( code env k -- closure )
     push push_op            ; k code env push_op
     push #instr_t           ; k code env push_op #instr_t
     quad 4                  ; k closure=[#instr_t, push_op, env, code]
-    roll -2                 ; closure k
+    roll 2                  ; closure k
     return
 
 ; At compile time, it is not always possible to discern the intended role of a
@@ -45,15 +45,16 @@ make_closure:               ; ( code env k -- closure )
 
 ; Use it with 'beh -1' or 'new -1', for example:
 
-;   push hum.beh            ; closure beh
-;   beh -1                  ; actor=beh.closure
+;   push closure            ; closure
+;   push hum.closure_beh    ; closure closure_beh
+;   beh -1                  ; actor=closure_beh.closure
 
-beh:                        ; closure <- msg
+closure_beh:                        ; closure <- msg
     msg 0                   ; args=msg
     push std.commit         ; args k=std.commit
     state 0                 ; args k closure
     jump
 
 .export
+    closure_beh
     make_closure
-    beh
