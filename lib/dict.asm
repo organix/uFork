@@ -12,16 +12,16 @@ has:                        ; ( dict key k -- bool )
 has_search:                 ; k key dict
     quad -4                 ; k key next value' key' type
     eq #dict_t              ; k key next value' key' type==#dict_t
-    if_not has_f            ; k key next value' key'
+    if_not has_none         ; k key next value' key'
     pick 4                  ; k key next value' key' key
     cmp eq                  ; k key next value' key'==key
-    if has_t                ; k key next value'
+    if has_found            ; k key next value'
     drop 1                  ; k key dict=next
     ref has_search
-has_t:                      ; k key next value'
+has_found:                  ; k key next value'
     drop 3                  ; k
     ref std.return_t
-has_f:                      ; k key next value' key'
+has_none:                   ; k key next value' key'
     drop 4                  ; k
     ref std.return_f
 
@@ -31,17 +31,17 @@ get:                        ; ( dict key k -- value )
 get_search:                 ; k key dict
     quad -4                 ; k key next value' key' type
     eq #dict_t              ; k key next value' key' type==#dict_t
-    if_not get_f            ; k key next value' key'
+    if_not get_none         ; k key next value' key'
     pick 4                  ; k key next value' key' key
     cmp eq                  ; k key next value' key'==key
-    if get_t                ; k key next value'
+    if get_found            ; k key next value'
     drop 1                  ; k key dict=next
     ref get_search
-get_t:                      ; k key next value'
+get_found:                  ; k key next value'
     roll -4                 ; value' k key next
     drop 2                  ; value' k
     return                  ; value'
-get_f:                      ; k key next value' key'
+get_none:                   ; k key next value' key'
     drop 4                  ; k
     ref std.return_undef
 

@@ -41,10 +41,8 @@ E_STOP:                     ; actor stopped
 
 cust_send:                  ; msg
     msg 1                   ; msg cust
-
 send_msg:                   ; msg cust
     send -1                 ; --
-
 sink_beh:                   ; _ <- _
 commit:
     end commit
@@ -90,24 +88,31 @@ abort:
 return_value:               ; k rv
     roll 2                  ; rv k
     return                  ; rv
+
 return_undef:               ; k
     push #?                 ; k rv=#?
     ref return_value
+
 return_nil:                 ; k
     push #nil               ; k rv=()
     ref return_value
+
 return_f:                   ; k
     push #f                 ; k rv=#f
     ref return_value
+
 return_t:                   ; k
     push #t                 ; k rv=#t
     ref return_value
+
 return_unit:                ; k
     push #unit              ; k rv=#unit
     ref return_value
+
 return_zero:                ; k
     push 0                  ; k rv=0
     ref return_value
+
 return_one:                 ; k
     push 1                  ; k rv=1
     ref return_value

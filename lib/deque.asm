@@ -22,7 +22,7 @@ demo:
     push #?                 ; #?
     deque empty             ; #t
     assert #t               ; --
-    deque new               ; (())
+    call new                ; (())
     dup 1                   ; (()) (())
     deque empty             ; (()) #t
     assert #t               ; (())
