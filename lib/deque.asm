@@ -6,25 +6,38 @@
     std: "./std.asm"
 ;    std: "https://ufork.org/lib/std.asm"
 
-new:                        ; ( -- deque )
+new:                        ; ( k -- deque )
     deque new               ; k deque
     ref std.return_value
 
-empty:                      ; ( deque -- bool )
-push:                       ; ( deque value -- deque' )
-pop:                        ; ( deque -- deque' value )
-put:                        ; ( deque value -- deque' )
-pull:                       ; ( deque -- deque' value )
-len:                        ; ( deque -- n )
+empty:                      ; ( deque k -- bool )
+    roll -2                 ; k deque
+    part 1                  ; k tail head
+    typeq #pair_t           ; k tail is_pair(head)
+    if not_empty            ; k tail
+    dup 1                   ; k tail tail
+    typeq #pair_t           ; k tail is_pair(tail)
+    if not_empty            ; k tail
+    drop 1                  ; k
+    ref std.return_t
+not_empty:                  ; k tail
+    drop 1                  ; k
+    ref std.return_f
+
+push:                       ; ( deque value k -- deque' )
+pop:                        ; ( deque k -- deque' value )
+put:                        ; ( deque value k -- deque' )
+pull:                       ; ( deque k -- deque' value )
+len:                        ; ( deque k -- n )
 
 ; self-checked demo
 demo:
     push #?                 ; #?
-    deque empty             ; #t
+    call empty              ; #t
     assert #t               ; --
     call new                ; (())
     dup 1                   ; (()) (())
-    deque empty             ; (()) #t
+    call empty              ; (()) #t
     assert #t               ; (())
 demo_1:
     push 1                  ; (()) 1
@@ -34,7 +47,7 @@ demo_1:
     push 3                  ; ((2 1)) 3
     deque push              ; ((3 2 1))
     pick 1                  ; ((3 2 1)) ((3 2 1))
-    deque empty             ; ((3 2 1)) #f
+    call empty              ; ((3 2 1)) #f
     assert #f               ; ((3 2 1))
 demo_2:
     dup 1                   ; ((3 2 1)) ((3 2 1))
@@ -67,7 +80,7 @@ demo_5:
     assert #unit            ; (()) {caps} ((()))
     deque pop               ; (()) {caps} (()) ()
     assert #nil             ; (()) {caps} (())
-    deque empty             ; (()) {caps} #t
+    call empty              ; (()) {caps} #t
     assert #t               ; (()) {caps}
     msg 0                   ; (()) {caps} {caps}
     cmp eq                  ; (()) #t
@@ -98,7 +111,7 @@ demo_8:
     assert #?               ; (()) (())
     deque len               ; (()) 0
     assert 0                ; (())
-    deque empty             ; #t
+    call empty              ; #t
     assert #t               ; --
     ref std.commit
 

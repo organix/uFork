@@ -49,7 +49,7 @@ make_closure:               ; ( code env k -- closure )
 ;   push hum.closure_beh    ; closure closure_beh
 ;   beh -1                  ; actor=closure_beh.closure
 
-closure_beh:                        ; closure <- msg
+closure_beh:                ; closure <- msg
     msg 0                   ; args=msg
     push std.commit         ; args k=std.commit
     state 0                 ; args k closure
