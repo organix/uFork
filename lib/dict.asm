@@ -2,34 +2,9 @@
 ; subroutines implementing an unbounded version of #dict_t
 ;
 
-;.import
-;    std: "./std.asm"
+.import
+    std: "./std.asm"
 ;    std: "https://ufork.org/lib/std.asm"
-
-return_value:               ; k rv
-    roll 2                  ; rv k
-    return                  ; rv
-return_undef:               ; k
-    push #?                 ; k rv=#?
-    ref return_value
-return_nil:                 ; k
-    push #nil               ; k rv=()
-    ref return_value
-return_f:                   ; k
-    push #f                 ; k rv=#f
-    ref return_value
-return_t:                   ; k
-    push #t                 ; k rv=#t
-    ref return_value
-return_unit:                ; k
-    push #unit              ; k rv=#unit
-    ref return_value
-return_zero:                ; k
-    push 0                  ; k rv=0
-    ref return_value
-return_one:                 ; k
-    push 1                  ; k rv=1
-    ref return_value
 
 has:                        ; ( dict key k -- bool )
     roll -3                 ; k dict key
@@ -45,10 +20,10 @@ has_search:                 ; k key dict
     ref has_search
 has_t:                      ; k key next value'
     drop 3                  ; k
-    ref return_t
+    ref std.return_t
 has_f:                      ; k key next value' key'
     drop 4                  ; k
-    ref return_f
+    ref std.return_f
 
 get:                        ; ( dict key k -- value )
     roll -3                 ; k dict key
@@ -68,7 +43,7 @@ get_t:                      ; k key next value'
     return                  ; value'
 get_f:                      ; k key next value' key'
     drop 4                  ; k
-    ref return_undef
+    ref std.return_undef
 
 add:                        ; ( dict key value k -- dict' )
     roll -4                 ; k dict key value
@@ -76,7 +51,7 @@ add_tail:                   ; k dict key value
     roll 2                  ; k dict value key
     push #dict_t            ; k dict value key #dict_t
     quad 4                  ; k dict'
-    ref return_value
+    ref std.return_value
 
 set:                        ; ( dict key value k -- dict' )
     roll -4                 ; k dict key value
@@ -125,7 +100,7 @@ del_done:                   ; k key dict' next value' key'
     return                  ; dict'
 del_none:                   ; k orig key rev next value' key'
     drop 5                  ; k orig
-    ref return_value
+    ref std.return_value
 
 ; example usage
 example:
@@ -149,7 +124,7 @@ demo_del:
     push 3
     call del
     drop 1
-    end commit
+    ref std.commit
 
 ; self-checked demo
 demo:

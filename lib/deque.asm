@@ -2,38 +2,13 @@
 ; subroutines implementing an unbounded version of `deque`
 ;
 
-;.import
-;    std: "./std.asm"
+.import
+    std: "./std.asm"
 ;    std: "https://ufork.org/lib/std.asm"
-
-return_value:               ; k rv
-    roll 2                  ; rv k
-    return                  ; rv
-return_undef:               ; k
-    push #?                 ; k rv=#?
-    ref return_value
-return_nil:                 ; k
-    push #nil               ; k rv=()
-    ref return_value
-return_f:                   ; k
-    push #f                 ; k rv=#f
-    ref return_value
-return_t:                   ; k
-    push #t                 ; k rv=#t
-    ref return_value
-return_unit:                ; k
-    push #unit              ; k rv=#unit
-    ref return_value
-return_zero:                ; k
-    push 0                  ; k rv=0
-    ref return_value
-return_one:                 ; k
-    push 1                  ; k rv=1
-    ref return_value
 
 new:                        ; ( -- deque )
     deque new               ; k deque
-    ref return_value
+    ref std.return_value
 
 empty:                      ; ( deque -- bool )
 push:                       ; ( deque value -- deque' )
@@ -125,12 +100,11 @@ demo_8:
     assert 0                ; (())
     deque empty             ; #t
     assert #t               ; --
-    end commit
+    ref std.commit
 
 ; unit test suite
 boot:                       ; () <- {caps}
 ;    msg 0                   ; {caps}
-;    ref std.commit
 ;    end commit
     ref demo
 
