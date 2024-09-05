@@ -14,7 +14,6 @@ const rainbow = [theme.yellow, theme.purple, theme.orange, theme.green];
 
 function highlight(element) {
     const text = element.textContent;
-    element.style.color = theme.blue;
     element.innerHTML = "";
     const ir = scm.compile(text);
     if (ir.errors !== undefined && ir.errors.length > 0) {
@@ -60,7 +59,11 @@ function highlight(element) {
                 });
                 element.append(close);
             } else {
-                element.append(glyph);
+                const char = dom("span", {
+                    textContent: glyph,
+                    style: {color: theme.blue}
+                });
+                element.append(char);
             }
         }
 
