@@ -8,6 +8,7 @@ import unpercent from "https://ufork.org/lib/unpercent.js";
 import hexdump from "https://ufork.org/lib/hexdump.js";
 import OED from "https://ufork.org/lib/oed.js";
 import assemble from "https://ufork.org/lib/assemble.js";
+import compile_humus from "https://ufork.org/lib/humus.js";
 import scm from "https://ufork.org/lib/scheme.js";
 import ufork from "https://ufork.org/js/ufork.js";
 import clock_dev from "https://ufork.org/js/clock_dev.js";
@@ -605,7 +606,11 @@ core = ufork.make_core({
         ? JSON.parse($importmap.textContent).imports
         : {}
     ),
-    compilers: {asm: assemble, scm: scm.compile}
+    compilers: {
+        asm: assemble,
+        hum: compile_humus,
+        scm: scm.compile
+    }
 });
 
 core.h_initialize()(function callback(value, reason) {
@@ -633,14 +638,8 @@ core.h_initialize()(function callback(value, reason) {
     if (text_enc) {
         base64.decode(text_enc).then(gzip.decode).then(function (bytes) {
             const text = new TextDecoder().decode(bytes);
-            boot(
-                src || (
-                    read_state("lang") === "scm"
-                    ? "untitled.scm"
-                    : "untitled.asm"
-                ),
-                text
-            );
+            const lang = read_state("lang") || "asm";
+            boot(src || "untitled." + lang, text);
         });
     } else if (src) {
         boot(src);

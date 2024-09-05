@@ -8,6 +8,7 @@
 import dom from "./dom.js";
 import theme from "./theme.js";
 import lang_asm from "./lang_asm.js";
+import lang_hum from "./lang_hum.js";
 import lang_scm from "./lang_scm.js";
 import tools_ui from "./tools_ui.js";
 import editor_ui from "./editor_ui.js";
@@ -23,6 +24,7 @@ const default_tools_width = 400;
 const default_tools_height = 200;
 const lang_packs = Object.create(null);
 lang_packs.asm = lang_asm;
+lang_packs.hum = lang_hum;
 lang_packs.scm = lang_scm;
 Object.freeze(lang_packs);
 

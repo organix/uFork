@@ -51,9 +51,9 @@ function highlight(element) {
 }
 
 function handle_keydown(editor, event) {
-    ed_tab(editor, event, indent);
     ed_comment(editor, event, rx_comment, comment_prefix);
     ed_duplication(editor, event);
+    ed_tab(editor, event, indent);
     if (event.defaultPrevented) {
         return;
     }
