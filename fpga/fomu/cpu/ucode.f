@@ -1305,6 +1305,174 @@ To Copy fixnum:n of list onto head:
     THEN
     E_NOT_FIX ;
 
+(
+: nil_result ( -- ip' )
+    sp@ #nil
+: push_result ( sp' result -- ip' )
+    pair
+: update_sp ( sp' -- ip' )
+    sp! k@ ;
+)
+
+: dict_has                  ( D: )
+    sp@ part                ( D: sp' key )
+    >R part                 ( D: sp'' dict ) ( R: key )
+: dict_has_search
+    DUP QT@                 ( D: sp'' dict type ) ( R: key )
+    #dict_t = IF            ( D: sp'' dict ) ( R: key )
+        DUP QX@             ( D: sp'' dict key' ) ( R: key )
+        R@ = IF             ( D: sp'' dict ) ( R: key )
+            R> 2DROP        ( D: sp'' )
+            #t push_result ;
+        THEN                ( D: sp'' dict ) ( R: key )
+        QZ@                 ( D: sp'' next' ) ( R: key )
+        dict_has_search ;
+    THEN                    ( D: sp'' dict ) ( R: key )
+    R> 2DROP                ( D: sp'' )
+    #f push_result ;
+
+: dict_get                  ( D: )
+    sp@ part                ( D: sp' key )
+    >R part                 ( D: sp'' dict ) ( R: key )
+: dict_get_search
+    DUP QT@                 ( D: sp'' dict type ) ( R: key )
+    #dict_t = IF            ( D: sp'' dict ) ( R: key )
+        DUP QX@             ( D: sp'' dict key' ) ( R: key )
+        R@ = IF             ( D: sp'' dict ) ( R: key )
+            R> DROP QY@     ( D: sp'' value' )
+            push_result ;
+        THEN                ( D: sp'' dict ) ( R: key )
+        QZ@                 ( D: sp'' next' ) ( R: key )
+        dict_get_search ;
+    THEN                    ( D: sp'' dict ) ( R: key )
+    R> 2DROP                ( D: sp'' )
+    #? push_result ;
+
+: dict_add                  ( D: )
+    sp@ part >R             ( D: sp' ) ( R: value )
+    part >R                 ( D: sp'' ) ( R: value key )
+    part R> R> SWAP         ( D: sp''' dict key ) ( R: value )
+    R> SWAP                 ( D: sp''' dict value key ) ( R: )
+    #dict_t 3alloc          ( D: [#dict_t, key, value, dict] )
+    push_result ;
+
+: dict_set                  ( D: )
+    E_BOUNDS ;
+: dict_del                  ( D: )
+    E_BOUNDS ;
+: op_dict ( -- ip' | error )
+    imm@ DUP is_fix IF
+        fix2int             ( imm )
+        JMPTBL 5 ,
+        dict_has            ( 0: has )
+        dict_get            ( 1: get )
+        dict_add            ( 2: add )
+        dict_set            ( 3: set )
+        dict_del            ( 4: del )
+        DROP E_BOUNDS ;     ( default case )
+    THEN
+    E_NOT_FIX ;
+
+(
+    #dict_t operations...
+
+has:                        ; ( dict key k -- bool )
+    roll -3                 ; k dict key
+    roll 2                  ; k key dict
+has_search:                 ; k key dict
+    quad -4                 ; k key next value' key' type
+    eq #dict_t              ; k key next value' key' type==#dict_t
+    if_not has_none         ; k key next value' key'
+    pick 4                  ; k key next value' key' key
+    cmp eq                  ; k key next value' key'==key
+    if has_found            ; k key next value'
+    drop 1                  ; k key dict=next
+    ref has_search
+has_found:                  ; k key next value'
+    drop 3                  ; k
+    ref std.return_t
+has_none:                   ; k key next value' key'
+    drop 4                  ; k
+    ref std.return_f
+
+get:                        ; ( dict key k -- value )
+    roll -3                 ; k dict key
+    roll 2                  ; k key dict
+get_search:                 ; k key dict
+    quad -4                 ; k key next value' key' type
+    eq #dict_t              ; k key next value' key' type==#dict_t
+    if_not get_none         ; k key next value' key'
+    pick 4                  ; k key next value' key' key
+    cmp eq                  ; k key next value' key'==key
+    if get_found            ; k key next value'
+    drop 1                  ; k key dict=next
+    ref get_search
+get_found:                  ; k key next value'
+    roll -4                 ; value' k key next
+    drop 2                  ; value' k
+    return                  ; value'
+get_none:                   ; k key next value' key'
+    drop 4                  ; k
+    ref std.return_undef
+
+add:                        ; ( dict key value k -- dict' )
+    roll -4                 ; k dict key value
+add_tail:                   ; k dict key value
+    roll 2                  ; k dict value key
+    push #dict_t            ; k dict value key #dict_t
+    quad 4                  ; k dict'
+    ref std.return_value
+
+set:                        ; ( dict key value k -- dict' )
+    roll -4                 ; k dict key value
+    roll 3                  ; k key value dict
+    pick 3                  ; k key value dict key
+    call del                ; k key value dict'
+    roll -3                 ; k dict' key value
+    ref add_tail
+
+del:                        ; ( dict key k -- dict' )
+    roll -3                 ; k dict key
+    push #nil               ; k dict key rev=()
+    pick 3                  ; k orig key rev dict
+del_rev:
+    quad -4                 ; k orig key rev next value' key' type
+    eq #dict_t              ; k orig key rev next value' key' type==#dict_t
+    if_not del_none         ; k orig key rev next value' key'
+    dup 1                   ; k orig key rev next value' key' key'
+    pick 6                  ; k orig key rev next value' key' key' key
+    cmp eq                  ; k orig key rev next value' key' key'==key
+    if del_found            ; k orig key rev next value' key'
+    roll 4                  ; k orig key next value' key' rev
+    roll -3                 ; k orig key next rev value' key'
+    push #dict_t            ; k orig key next rev value' key' #dict_t
+    quad 4                  ; k orig key next rev'
+    roll 2                  ; k orig key rev' next
+    ref del_rev
+del_found:                  ; k orig key rev next value' key'
+    roll 6                  ; k key rev next value' key' orig
+    drop 3                  ; k key rev dict'=next
+    roll 2                  ; k key dict' rev
+del_copy:
+    quad -4                 ; k key dict' next value' key' type'
+    eq #dict_t              ; k key dict' next value' key' type'==#dict_t
+    if_not del_done         ; k key dict' next value' key'
+    roll 4                  ; k key next value' key' dict'
+    roll -3                 ; k key next dict' value' key'
+    push #dict_t            ; k key next dict' value' key' #dict_t
+    quad 4                  ; k key next dict''
+    roll 2                  ; k key dict'' next
+    ref del_copy
+del_done:                   ; k key dict' next value' key'
+    drop 3                  ; k key dict'
+    roll -3                 ; dict' k key
+    drop 1                  ; dict' k
+    return                  ; dict'
+del_none:                   ; k orig key rev next value' key'
+    drop 5                  ; k orig
+    ref std.return_value
+)
+
 : common_actor_args ( -- sp' args tos TRUE | error FALSE )
     sp@ part imm@           ( D: sp' tos #n )
     DUP is_fix IF
