@@ -22,7 +22,7 @@ function highlight(element) {
             && Number.isSafeInteger(error.end)
         );
     }).sort(function (a, b) {
-        return b.start - a.start;
+        return a.start - b.start;
     }).forEach(function (error) {
         element.append(
             text.slice(position, error.start),
