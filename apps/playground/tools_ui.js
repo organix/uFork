@@ -82,8 +82,14 @@ const tools_ui = make_ui("tools-ui", function (element, {
             device = "io"; // default
         }
         const replacement = devices[device];
-        device_element.replaceWith(replacement);
-        device_element = replacement;
+
+// Replacing an element with itself seems to reset any scroll positions within,
+// so we avoid that.
+
+        if (device_element !== replacement) {
+            device_element.replaceWith(replacement);
+            device_element = replacement;
+        }
         device_select.value = device;
     }
 
