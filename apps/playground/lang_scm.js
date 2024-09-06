@@ -16,23 +16,34 @@ function highlight(element) {
     const text = element.textContent;
     element.innerHTML = "";
     const ir = scm.compile(text);
-    if (ir.errors !== undefined && ir.errors.length > 0) {
+    const errors = ir.errors.filter(function (error) {
+        return (
+            Number.isSafeInteger(error.start)
+            && Number.isSafeInteger(error.end)
+        );
+    }).sort(function (a, b) {
+        return a.start - b.start;
+    });
+    if (errors.length > 0) {
 
 // Show the position of the error.
 
-        const error = ir.errors[0];
-        element.append(
-            text.slice(0, error.start),
-            dom("span", {
-                textContent: text.slice(error.start, error.end),
-                title: error.error,
-                style: {
-                    outline: "1px solid " + theme.red,
-                    borderRadius: "2px"
-                }
-            }),
-            text.slice(error.end)
-        );
+        let position = 0;
+        errors.forEach(function (error) {
+            element.append(
+                text.slice(position, error.start),
+                dom("span", {
+                    textContent: text.slice(error.start, error.end),
+                    title: error.error,
+                    style: {
+                        borderRadius: "2px",
+                        outline: "1px solid " + theme.red
+                    }
+                })
+            );
+            position = error.end;
+        });
+        element.append(text.slice(position));  // remnant
     } else {
 
 // Rainbow parens, pending detailed token information.

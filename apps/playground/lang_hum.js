@@ -26,17 +26,14 @@ function highlight(element) {
     }).forEach(function (error) {
         element.append(
             text.slice(position, error.start),
-            dom(
-                "span",
-                {
-                    style: {
-                        borderRadius: "2px",
-                        outline: "1px solid " + theme.red
-                    },
-                    title: error.message
+            dom("span", {
+                textContent: text.slice(error.start, error.end),
+                style: {
+                    borderRadius: "2px",
+                    outline: "1px solid " + theme.red
                 },
-                text.slice(error.start, error.end)
-            )
+                title: error.message
+            })
         );
         position = error.end;
     });
