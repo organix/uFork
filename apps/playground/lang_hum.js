@@ -24,18 +24,23 @@ function highlight(element) {
     }).sort(function (a, b) {
         return a.start - b.start;
     }).forEach(function (error) {
-        element.append(
-            text.slice(position, error.start),
-            dom("span", {
-                textContent: text.slice(error.start, error.end),
-                style: {
-                    borderRadius: "2px",
-                    outline: "1px solid " + theme.red
-                },
-                title: error.message
-            })
-        );
-        position = error.end;
+
+// Skip overlapping errors.
+
+        if (error.start >= position) {
+            element.append(
+                text.slice(position, error.start),
+                dom("span", {
+                    textContent: text.slice(error.start, error.end),
+                    style: {
+                        borderRadius: "2px",
+                        outline: "1px solid " + theme.red
+                    },
+                    title: error.message
+                })
+            );
+            position = error.end;
+        }
     });
     element.append(text.slice(position));  // remnant
 }
