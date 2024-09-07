@@ -1,4 +1,6 @@
 # example Humus source code
 
 SEND sub(mul(2, 3), 4) TO println
-SEND 1, 2, 3 TO println
+
+DEF (a, _, b), c AS (1, 2, 3), 4
+SEND a, b, c TO println
