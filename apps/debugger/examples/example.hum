@@ -4,3 +4,7 @@ SEND sub(mul(2, 3), 4) TO println
 
 DEF (a, _, b), c AS (1, 2, 3), 4
 SEND a, b, c TO println
+
+DEF t AS TRUE
+DEF f AS FALSE
+SEND and(t, or(f, or(f, t))) TO println
