@@ -30,3 +30,7 @@ DEF bc_closure AS hof3(1)
 DEF d_closure AS bc_closure(2, 3)
 SEND d_closure(4) TO println
 # => (+1 +2 +3 . +4)
+
+DEF subtract AS sub
+SEND subtract(3, 2) TO println
+# => 1
