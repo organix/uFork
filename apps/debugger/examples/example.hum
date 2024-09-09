@@ -3,6 +3,10 @@
 SEND sub(mul(2, 3), 4) TO println
 # => +2
 
+DEF pair AS (2, 3)
+SEND sub(pair) TO println
+# => -1
+
 DEF (a, _, b), c AS (1, 2, 3), 4
 SEND a, b, c TO println
 # => (+1 +3 . +4)
