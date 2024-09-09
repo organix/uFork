@@ -1,10 +1,21 @@
-# example Humus source code
+# Test cases for the Humus compiler.
 
-SEND sub(mul(2, 3), 4) TO println
+SEND sub(mul(2, 3), 4) TO println  # => +2
 
 DEF (a, _, b), c AS (1, 2, 3), 4
-SEND a, b, c TO println
+SEND a, b, c TO println  # => (+1 +3 . +4)
 
 DEF t AS TRUE
 DEF f AS FALSE
-SEND and(t, or(f, or(f, t))) TO println
+SEND and(t, or(f, or(f, t))) TO println  # => #t
+
+DEF identity(x) AS x
+SEND identity(42) TO println  # => +42
+
+DEF m AS 42
+DEF by42(n) AS mul(m, n)
+SEND by42(100) TO println  # => +4200
+
+DEF hof3 AS \a.\(b, c).\d.(a, b, c, d)
+DEF result AS hof3(1)(2, 3)(4)
+SEND result TO println  # => (+1 +2 +3 . +4)
