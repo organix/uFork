@@ -34,3 +34,12 @@ SEND d_closure(4) TO println
 DEF subtract AS sub
 SEND subtract(3, 2) TO println
 # => 1
+
+DEF x AS \y.x
+SEND x(1) TO println
+# => <closure>
+
+DEF step AS 100
+DEF next AS \n.next(add(n, step))
+# SEND next(1000) TO println
+# => FAULT: no memory available
