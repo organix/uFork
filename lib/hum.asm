@@ -21,19 +21,33 @@ make_closure:               ; ( code env k -- closure )
     roll 2                  ; closure k
     return
 
+; Closure code expects a stack like
+
+;                           ; args k env
+
+; where 'args' is the single argument, 'k' is the continuation to return to,
+; and 'env' is the closure's environment.
+
+; Immediately, the arguments are incorporated into the environment.
+
+;   roll 3                  ; k env args
+;   pair 1                  ; k env'=(args . env)
+
+; After evaluating the return value, the code returns (or continues) to 'k'.
+
+closure_return:             ; k env' rv
+    roll -3                 ; rv k env'
+    drop 1                  ; rv k
+    return                  ; rv
+
 ; At compile time, it is not always possible to discern the intended role of a
 ; closure. Will it be used as the behavior for an actor, or called as a
 ; procedure?
 
 ; Consequently, the compiled code for a closure needs enough flexibility to
-; either handle a message or to be called as a procedure. Thus, compiled
-; closure code expects a stack like
-
-;   args k env
-
-; where 'args' is the single argument, 'k' is the continuation to return to,
-; and 'env' is the closure's environment. The code always ends with a 'return'
-; instruction. Clearly, closures can be called as procedures.
+; either handle a message or to be called as a procedure. Clearly closures can
+; be called as procedures, because they conform to the calling convention of
+; assembly procedures.
 
 ; Before a closure can be invoked as a behavior for an actor, the 'args' and 'k'
 ; values must be provided on the stack. This is accomplished by 'beh', the
@@ -57,4 +71,5 @@ closure_beh:                ; closure <- msg
 
 .export
     closure_beh
+    closure_return
     make_closure
