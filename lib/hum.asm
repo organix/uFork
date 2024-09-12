@@ -40,13 +40,19 @@ return:                     ; k env' rv
     drop 1                  ; rv k
     return                  ; rv
 
-; Tail calls require some additional stack manipulation.
+; Tail calls are achieved by modifying the existing frame before jumping
+; directly to the procedure or compiled closure code.
 
 tail_call:                  ; k env procedure args
     roll -4                 ; args k env procedure
     roll 2                  ; args k procedure env
     drop 1                  ; args k procedure
     jump                    ; args k
+self_tail_call:             ; k env env' code args
+    roll -5                 ; args k env env' code
+    roll 3                  ; args k env' code env
+    drop 1                  ; args k env' code
+    jump                    ; args k env'
 
 ; At compile time, it is not always possible to discern the intended role of a
 ; closure. Will it be used as the behavior for an actor, or called as a
@@ -81,4 +87,5 @@ closure_beh:                ; closure <- msg
     closure_beh
     make_closure
     return
+    self_tail_call
     tail_call
