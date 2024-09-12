@@ -35,10 +35,18 @@ make_closure:               ; ( code env k -- closure )
 
 ; After evaluating the return value, the code returns (or continues) to 'k'.
 
-closure_return:             ; k env' rv
+return:                     ; k env' rv
     roll -3                 ; rv k env'
     drop 1                  ; rv k
     return                  ; rv
+
+; Tail calls require some additional stack manipulation.
+
+tail_call:                  ; k env procedure args
+    roll -4                 ; args k env procedure
+    roll 2                  ; args k procedure env
+    drop 1                  ; args k procedure
+    jump                    ; args k
 
 ; At compile time, it is not always possible to discern the intended role of a
 ; closure. Will it be used as the behavior for an actor, or called as a
@@ -71,5 +79,6 @@ closure_beh:                ; closure <- msg
 
 .export
     closure_beh
-    closure_return
     make_closure
+    return
+    tail_call
