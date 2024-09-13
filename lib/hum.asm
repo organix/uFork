@@ -83,8 +83,49 @@ closure_beh:                ; closure <- msg
     state 0                 ; args k closure
     jump
 
+drop_return_f:              ; k value
+    drop 1                  ; k
+    ref std.return_f
+
+drop_return_t:              ; k value
+    drop 1                  ; k
+    ref std.return_t
+
+is_bool:                    ; value k
+    roll -2                 ; k value
+    dup 1                   ; k value value
+    eq #t                   ; k value value==#t
+    if drop_return_t        ; k value
+    eq #f                   ; k value==#f
+    if std.return_t         ; k
+    ref std.return_f
+
+is_bool_pair:               ; value k
+    roll -2                 ; k value=(head . tail)
+    dup 1                   ; k value value
+    nth 1                   ; k value head
+    call is_bool            ; k value bool?(head)
+    if_not drop_return_f    ; k value
+    nth -1                  ; k value tail
+    call is_bool            ; k bool?(tail)
+    if_not std.return_f     ; k
+    ref std.return_t
+
+boot:                       ; () <- {caps}
+    msg 0                   ; {caps}
+    push dev.debug_key      ; {caps} debug_key
+    dict get                ; debug_dev
+    push #t                 ; debug_dev #t
+    call is_bool            ; debug_dev bool?
+    pick 2                  ; bool? debug_dev
+    send -1                 ; --
+    ref std.commit
+
 .export
+    boot
     closure_beh
+    is_bool
+    is_bool_pair
     make_closure
     return
     self_tail_call
