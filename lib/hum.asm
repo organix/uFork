@@ -102,11 +102,9 @@ is_bool:                    ; value k
 
 is_bool_pair:               ; value k
     roll -2                 ; k value=(head . tail)
-    dup 1                   ; k value value
-    nth 1                   ; k value head
-    call is_bool            ; k value bool?(head)
-    if_not drop_return_f    ; k value
-    nth -1                  ; k value tail
+    part 1                  ; k tail head
+    call is_bool            ; k tail bool?(head)
+    if_not drop_return_f    ; k tail
     call is_bool            ; k bool?(tail)
     if_not std.return_f     ; k
     ref std.return_t
