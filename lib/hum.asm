@@ -107,7 +107,7 @@ beh:                        ; closure <- msg
     jump
 beh_end:                    ; commit rv
     quad -3                 ; commit Y X T
-    eq block_t              ; commit Y X block_t?(T)
+    eq block_t              ; commit Y X T==block_t
     if_not std.abort        ; k=commit env=Y code=X
     jump
 
