@@ -55,7 +55,7 @@ top_code:                   ; args k env=(p)
     pick 6                  ; args k env msg next_code env args
     pair 1                  ; args k env msg next_code env'=(args . env)
     call hum.make_closure   ; args k env msg closure
-    push hum.closure_beh    ; args k env msg closure beh
+    push hum.beh            ; args k env msg closure beh
     new -1                  ; args k env msg next=beh.closure
 
 ; Send it the message.
@@ -84,7 +84,7 @@ boot:                       ; () <- {caps}
     push 1                  ; msg code () 1
     pair 1                  ; msg code env=(1)
     call hum.make_closure   ; msg top_closure
-    push hum.closure_beh    ; msg top_closure beh
+    push hum.beh            ; msg top_closure beh
     new -1                  ; msg top=top_closure.beh
 
 ; Send it the message.

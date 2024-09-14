@@ -18,8 +18,7 @@ make_closure:               ; ( code env k -- closure )
     push push_op            ; k code env push_op
     push #instr_t           ; k code env push_op #instr_t
     quad 4                  ; k closure=[#instr_t, push_op, env, code]
-    roll 2                  ; closure k
-    return
+    ref std.return_value
 
 ; Closure code expects a stack like
 
@@ -54,6 +53,28 @@ self_tail_call:             ; k env env' code args
     drop 1                  ; args k env' code
     jump                    ; args k env'
 
+; A block is essentially a closure that take no arguments. Because blocks have a
+; different signature, and are executed implicitly, they must be
+; distinguishable from closures. A custom type is defined for this purpose.
+
+block_t:                    ; [block_t, code, env]
+    type_t 2
+
+make_block:                 ; ( env code k -- block )
+    roll -3                 ; k env code
+    push block_t            ; k env code block_t
+    quad 3                  ; k block=[block_t, code, env]
+    ref std.return_value
+
+execute_block:              ; ( value k -- )
+    roll -2                 ; k value
+    quad -3                 ; k Y X T
+    eq block_t              ; k Y X block_t?(T)
+    if execute_k            ; k env=Y code=X
+    drop 2                  ; k
+execute_k:
+    jump
+
 ; At compile time, it is not always possible to discern the intended role of a
 ; closure. Will it be used as the behavior for an actor, or called as a
 ; procedure?
@@ -67,21 +88,30 @@ self_tail_call:             ; k env env' code args
 ; values must be provided on the stack. This is accomplished by 'beh', the
 ; generic actor behavior.
 
-; It first pushes the message onto the stack as 'args', then pushes std.commit
-; onto the stack as 'k'. Finally it retrieves the closure from the actor's
-; state and jumps to it.
+; It first pushes the message onto the stack as 'args', then pushes a
+; continuation as 'k'. Finally it retrieves the closure from the actor's state
+; and calls it. If the returned value is a block, it is executed for its
+; effects. Otherwise the transaction is aborted.
 
-; Use it with 'beh -1' or 'new -1', for example:
+; Use 'beh' with 'beh -1' or 'new -1', for example:
 
 ;   push closure            ; closure
-;   push hum.closure_beh    ; closure closure_beh
-;   beh -1                  ; actor=closure_beh.closure
+;   push hum.beh            ; closure beh
+;   beh -1                  ; actor=beh.closure
 
-closure_beh:                ; closure <- msg
-    msg 0                   ; args=msg
-    push std.commit         ; args k=std.commit
-    state 0                 ; args k closure
+beh:                        ; closure <- msg
+    push std.commit         ; commit
+    msg 0                   ; commit args=msg
+    push beh_end            ; commit args k=beh_end
+    state 0                 ; commit args k closure
     jump
+beh_end:                    ; commit rv
+    quad -3                 ; commit Y X T
+    eq block_t              ; commit Y X block_t?(T)
+    if_not std.abort        ; k=commit env=Y code=X
+    jump
+
+; Lastly we provide some reusable procedures for argument checking.
 
 drop_return_f:              ; k value
     drop 1                  ; k
@@ -120,10 +150,13 @@ boot:                       ; () <- {caps}
     ref std.commit
 
 .export
+    block_t
     boot
-    closure_beh
+    beh
+    execute_block
     is_bool
     is_bool_pair
+    make_block
     make_closure
     return
     self_tail_call
