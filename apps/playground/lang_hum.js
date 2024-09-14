@@ -57,6 +57,12 @@ const contexts = {
     "CASE": "keyword",
     "OF": "keyword",
     "END": "keyword",
+    "NEW": "keyword",
+    "IF": "keyword",
+    "ELIF": "keyword",
+    "ELSE": "keyword",
+    "AFTER": "keyword",
+    "NOW": "keyword",
     "SELF": "keyword"
 };
 
