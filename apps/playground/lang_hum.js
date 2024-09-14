@@ -11,38 +11,112 @@ const indent = "    ";
 const rx_comment = /^(\s*)(#\u0020?)/;
 const comment_prefix = "# ";
 
+const styles = {
+    comment: {color: theme.silver},
+    literal: {color: theme.green},
+    number: {color: theme.green},
+    char: {color: theme.green},
+    string: {color: theme.green},
+    punct: {color: theme.purple},
+    symbol: {color: theme.yellow},
+    ident: {color: theme.yellow, fontStyle: "italic"},
+    keyword: {color: theme.blue},
+    conditional: {color: theme.purple},
+    data: {color: theme.blue, fontStyle: "italic"},
+    directive: {color: theme.purple},
+    name: {color: theme.yellow},
+    namespace: {color: theme.orange},
+    operator: {color: theme.blue},
+    terminal: {color: theme.purple, fontStyle: "italic"},
+    error: {color: theme.red, background: "black"},
+    warning: {borderRadius: "2px", outline: "1px solid " + theme.red}
+};
+
+function styled_text(text, style = "comment") {
+    return dom("span", {
+        textContent: text,
+        style: styles[style]
+    });
+}
+
+const contexts = {
+    "TRUE": "literal",
+    "FALSE": "literal",
+    "NIL": "literal",
+    "?": "literal",
+    "DEF": "keyword",
+    "AS": "keyword",
+    "CREATE": "keyword",
+    "WITH": "keyword",
+    "SEND": "keyword",
+    "TO": "keyword",
+    "BECOME": "keyword",
+    "THROW": "keyword",
+    "LET": "keyword",
+    "IN": "keyword",
+    "CASE": "keyword",
+    "OF": "keyword",
+    "END": "keyword",
+    "SELF": "keyword"
+};
+
+function contextualize(token) {
+    const context = contexts[token.value];
+    if (context) {
+        token.context = context;
+    } else if (token.type === "symbol") {
+        token.context = "ident";
+    }
+}
+
 function highlight(element) {
     const text = element.textContent;
     element.textContent = "";
     const result = compile(text);
     let position = 0;
-    result.errors.filter(function (error) {
-        return (
-            Number.isSafeInteger(error.start)
-            && Number.isSafeInteger(error.end)
-        );
-    }).sort(function (a, b) {
-        return a.start - b.start;
-    }).forEach(function (error) {
-
-// Skip overlapping errors.
-
-        if (error.start >= position) {
-            element.append(
-                text.slice(position, error.start),
-                dom("span", {
-                    textContent: text.slice(error.start, error.end),
-                    style: {
-                        borderRadius: "2px",
-                        outline: "1px solid " + theme.red
-                    },
-                    title: error.message
-                })
+    if (result.errors.length > 0) {
+        result.errors.filter(function (error) {
+            return (
+                Number.isSafeInteger(error.start)
+                && Number.isSafeInteger(error.end)
             );
-            position = error.end;
-        }
-    });
-    element.append(text.slice(position));  // remnant
+        }).sort(function (a, b) {
+            return a.start - b.start;
+        }).forEach(function (error) {
+
+            // Skip overlapping errors.
+
+            if (error.start >= position) {
+                element.append(
+                    text.slice(position, error.start),
+                    dom("span", {
+                        textContent: text.slice(error.start, error.end),
+                        style: styles.warning,
+                        title: error.message
+                    })
+                );
+                position = error.end;
+            }
+        });
+        element.append(text.slice(position));  // remnant
+    } else {
+        result.tokens.forEach(function (token) {
+            contextualize(token);
+            const start = token.start_ofs;
+            const end = token.end_ofs;
+            if (start >= position) {
+                element.append(
+                    styled_text(text.slice(position, start)),
+                    styled_text(
+                        text.slice(start, end),
+                        (token.context ?? token.type)
+                    )
+                );
+            }
+            position = end;
+        });
+        element.append(styled_text(text.slice(position)));  // remnant
+    }
 }
 
 function handle_keydown(editor, event) {
