@@ -407,8 +407,9 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
                     let v = self.alloc(&quad)?;
                     self.stack_push(v)?;
                 } else if (n <= -1) && (n >= -4) {
-                    let ptr = self.stack_pop();
-                    let quad = *self.quad(ptr);
+                    let val = self.stack_pop();
+                    let ptr = if val.is_ptr() { val } else { UNDEF };
+                    let quad = *self.mem(ptr);
                     if n < -3 { self.stack_push(quad.z())?; }
                     if n < -2 { self.stack_push(quad.y())?; }
                     if n < -1 { self.stack_push(quad.x())?; }
