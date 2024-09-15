@@ -28,6 +28,7 @@ const styles = {
     namespace: {color: theme.orange},
     operator: {color: theme.blue},
     terminal: {color: theme.purple, fontStyle: "italic"},
+    control: {color: theme.red, background: "white"},
     error: {color: theme.red, background: "black"},
     warning: {borderRadius: "2px", outline: "1px solid " + theme.red}
 };
@@ -44,6 +45,7 @@ const contexts = {
     "FALSE": "literal",
     "NIL": "literal",
     "?": "literal",
+    "#": "literal",
     "DEF": "keyword",
     "AS": "keyword",
     "CREATE": "keyword",
@@ -65,15 +67,6 @@ const contexts = {
     "NOW": "keyword",
     "SELF": "keyword"
 };
-
-function contextualize(token) {
-    const context = contexts[token.value];
-    if (context) {
-        token.context = context;
-    } else if (token.type === "symbol") {
-        token.context = "ident";
-    }
-}
 
 function highlight(element) {
     const text = element.textContent;
@@ -106,8 +99,18 @@ function highlight(element) {
         });
         element.append(text.slice(position));  // remnant
     } else {
+        let prev = {
+            type: "control",
+            value: "<start>",
+            start_ofs: 0,
+            end_ofs: 0
+        };
         result.tokens.forEach(function (token) {
-            contextualize(token);
+            if (token.value === "#" || prev.value === "#") {
+                token.context = "literal";
+            } else if (token.type === "symbol") {
+                token.context = contexts[token.value] ?? "ident";
+            }
             const start = token.start_ofs;
             const end = token.end_ofs;
             if (start >= position) {
@@ -120,6 +123,7 @@ function highlight(element) {
                 );
             }
             position = end;
+            prev = token;
         });
         element.append(styled_text(text.slice(position)));  // remnant
     }
