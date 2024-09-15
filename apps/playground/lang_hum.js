@@ -20,7 +20,7 @@ const styles = {
     punct: {color: theme.purple},
     symbol: {color: theme.yellow},
     ident: {color: theme.yellow, fontStyle: "italic"},
-    keyword: {color: theme.blue},
+    keyword: {color: theme.blue, fontWeight: "bold"},
     conditional: {color: theme.purple},
     data: {color: theme.blue, fontStyle: "italic"},
     directive: {color: theme.purple},
