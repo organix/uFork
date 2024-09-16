@@ -29,6 +29,7 @@ lang_packs.scm = lang_scm;
 Object.freeze(lang_packs);
 
 let initial_text = "; Write some uFork assembly here...";
+let text_override;
 
 function is_landscape() {
     return document.documentElement.clientWidth >= 720;
@@ -115,7 +116,11 @@ const editor = editor_ui({
     lang_packs,
     on_text_input(text) {
         return (
-            (text === initial_text && read_state("src") !== undefined)
+            (
+                text === initial_text
+                && text_override === undefined
+                && read_state("src") !== undefined
+            )
             ? write_state("text", undefined)
             : gzip.encode(text).then(base64.encode).then(function (base64) {
                 write_state("text", base64);
@@ -192,6 +197,7 @@ const split = dom(
 const src = read_state("src") || "";
 const src_extension = src.split(".").pop();
 const lang_override = read_state("lang");
+text_override = read_state("text");
 let lang = lang_override ?? src_extension;
 if (lang_packs[lang] === undefined) {
     lang = "asm"; // default
