@@ -117,7 +117,7 @@ beh_end:                    ; commit rv
 symbol_t:                   ; [symbol_t, string]
     type_t 1
 
-; Lastly we provide some reusable procedures for argument checking.
+; Lastly we provide some miscellaneous procedures.
 
 drop_return_f:              ; k value
     drop 1                  ; k
@@ -145,13 +145,37 @@ is_bool_pair:               ; value k
     if_not std.return_f     ; k
     ref std.return_t
 
+compare:                    ; args k
+    roll -2                 ; k args
+    part 1                  ; k b a
+    dup 2                   ; k b a b a
+    cmp eq                  ; k b a b==a
+    if compare_eq           ; k b a
+    dup 2                   ; k b a b a
+    cmp lt                  ; k b a b<a
+    if compare_gt           ; k b a
+    cmp gt                  ; k b>a
+    if compare_lt           ; k
+    ref std.return_undef
+compare_lt:                 ; k
+    push -1                 ; k -1
+    ref std.return_value
+compare_eq:                 ; k b a
+    drop 2                  ; k
+    ref std.return_zero
+compare_gt:                 ; k b a
+    drop 2                  ; k
+    ref std.return_one
+
 boot:                       ; () <- {caps}
     msg 0                   ; {caps}
     push dev.debug_key      ; {caps} debug_key
     dict get                ; debug_dev
-    push #t                 ; debug_dev #t
-    call is_bool            ; debug_dev bool?
-    pick 2                  ; bool? debug_dev
+    push 123                ; debug_dev b
+    push 123                ; debug_dev b a
+    pair 1                  ; debug_dev (a . b)
+    call compare            ; debug_dev cmp
+    pick 2                  ; cmp debug_dev
     send -1                 ; --
     ref std.commit
 
@@ -159,6 +183,7 @@ boot:                       ; () <- {caps}
     block_t
     boot
     beh
+    compare
     execute_block
     is_bool
     is_bool_pair
