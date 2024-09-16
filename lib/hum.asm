@@ -111,6 +111,12 @@ beh_end:                    ; commit rv
     if_not std.abort        ; k=commit env=Y code=X
     jump
 
+; Symbols are interned as quads where the X field is a pair list of code points
+; encoding the symbol text.
+
+symbol_t:                   ; [symbol_t, string]
+    type_t 1
+
 ; Lastly we provide some reusable procedures for argument checking.
 
 drop_return_f:              ; k value
@@ -160,4 +166,5 @@ boot:                       ; () <- {caps}
     make_closure
     return
     self_tail_call
+    symbol_t
     tail_call
