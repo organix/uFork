@@ -117,6 +117,30 @@ beh_end:                    ; commit rv
 symbol_t:                   ; [symbol_t, string]
     type_t 1
 
+; Construct the top level environment from capabilities in the boot message.
+
+timer_fwd_beh:              ; timer_dev <- (dt msg . actor)
+    msg 2                   ; message=msg
+    msg -2                  ; message target=actor
+    msg 1                   ; message target delay=dt
+    state 0                 ; message target delay timer_dev
+    send 3                  ; --
+    ref std.commit
+
+prepare_env:                ; ( k -- env )
+    push #?                 ; k #?
+    msg 0                   ; k #? {caps}
+    push dev.debug_key      ; k #? {caps} debug_key
+    dict get                ; k #? println=debug_dev
+    msg 0                   ; k #? println {caps}
+    push dev.timer_key      ; k #? println {caps} timer_key
+    dict get                ; k #? println timer_dev
+    push timer_fwd_beh      ; k #? println timer_dev timer_fwd_beh
+    new -1                  ; k #? println timer=timer_fwd_beh.timer_dev
+    pair 1                  ; k #? scope=(timer . println)
+    pair 1                  ; k env=(scope . #?)
+    ref std.return_value
+
 ; Lastly we provide some miscellaneous procedures.
 
 drop_return_f:              ; k value
@@ -180,15 +204,16 @@ boot:                       ; () <- {caps}
     ref std.commit
 
 .export
+    beh
     block_t
     boot
-    beh
     compare
     execute_block
     is_bool
     is_bool_pair
     make_block
     make_closure
+    prepare_env
     return
     self_tail_call
     symbol_t
