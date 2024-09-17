@@ -61,7 +61,6 @@ function highlight(element) {
         start_ofs: 0,
         end_ofs: 0
     };
-    console.log(ir);
     ir.tokens.forEach(function (token) {
         const errors = ir.errors.filter(function (error) {
             return token.start_ofs >= error.start && token.end_ofs <= error.end;
@@ -75,35 +74,34 @@ function highlight(element) {
         const start = token.start_ofs;
         const end = token.end_ofs;
         if (start >= position) {
-            element.append(
-                dom("span", {
-                    textContent: text.slice(position, start),
-                    style: styles.comment
-                }),
-                dom("span", {
-                    textContent: text.slice(start, end),
-                    style: (
-                        errors.length > 0
-                        ? Object.assign({}, styles[context], styles.warning)
-                        : styles[context]
-                    ),
-                    title: (
-                        errors.length > 0
-                        ? errors.map((error) => error.message).join("\n")
-                        : undefined
-                    )
-                })
-            );
+            const comment_element = dom("span", {
+                textContent: text.slice(position, start),
+                style: styles.comment
+            });
+            const token_properties = {
+                textContent: text.slice(start, end),
+                style: (
+                    errors.length > 0
+                    ? Object.assign({}, styles[context], styles.warning)
+                    : styles[context]
+                )
+            };
+            if (errors.length > 0) {
+                token_properties.title = errors.map(function (error) {
+                    return error.message;
+                }).join("\n");
+            }
+            const token_element = dom("span", token_properties);
+            element.append(comment_element, token_element);
         }
         position = end;
         prev = token;
     });
-    element.append(
-        dom("span", {
-            textContent: text.slice(position),
-            style: styles.comment
-        })
-    );
+    const remnant_element = dom("span", {
+        textContent: text.slice(position),
+        style: styles.comment
+    });
+    element.append(remnant_element);
 }
 
 function handle_keydown(editor, event) {
