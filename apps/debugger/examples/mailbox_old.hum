@@ -1,0 +1,85 @@
+#
+# http://www.dalnefre.com/wp/2011/10/erlang-style-mailboxes/
+#
+
+LET mailbox_beh = \msg.[
+    CREATE next WITH end_mailbox_beh(SELF)
+    BECOME root_mailbox_beh(next)
+    SEND msg TO SELF
+]
+
+LET root_mailbox_beh(next) = \msg.[
+    CASE msg OF
+    ($next, #prune, next') : [
+        BECOME root_mailbox_beh(next')
+    ]
+    _ : [ SEND msg TO next ]
+    END
+]
+
+LET end_mailbox_beh(root) = \msg.[
+    CASE msg OF
+    (cust, #recv, pred) : [
+        CREATE next WITH end_mailbox_beh(root)
+        BECOME recv_mailbox_beh(root, cust, pred, next)
+    ]
+    (cust, #send, m) : [
+        CREATE next WITH end_mailbox_beh(root)
+        BECOME send_mailbox_beh(root, m, next)
+        SEND root TO cust
+    ]
+    END
+]
+
+LET recv_mailbox_beh(root, cust, pred, next) = \msg.[
+    CASE msg OF
+    (cust', #send, m) : [
+        IF $pred(m) = TRUE [
+            SEND m TO cust
+            BECOME skip_mailbox_beh(next)
+            SEND (SELF, #prune, next) TO root
+            SEND root TO cust'
+        ] ELSE [
+            SEND msg TO next
+        ]
+    ]
+    ($next, #prune, next') : [
+        BECOME recv_mailbox_beh(root, cust, pred, next')
+    ]
+    _ : [ SEND msg TO next ]
+    END
+]
+
+LET send_mailbox_beh(root, m, next) = \msg.[
+    CASE msg OF
+    (cust, #recv, pred) : [
+        IF $pred(m) = TRUE [
+            SEND m TO cust
+            BECOME skip_mailbox_beh(next)
+            SEND (SELF, #prune, next) TO root
+        ] ELSE [
+            SEND msg TO next
+        ]
+    ]
+    ($next, #prune, next') : [
+        BECOME send_mailbox_beh(root, m, next')
+    ]
+    _ : [ SEND msg TO next ]
+    END
+]
+
+LET skip_mailbox_beh(next) = \msg.[
+    CASE msg OF
+    ($next, #prune, next') : [
+        BECOME skip_mailbox_beh(next')
+    ]
+    _ : [ SEND msg TO next ]
+    END
+]
+
+CREATE mbox WITH mailbox_beh
+SEND (println, #recv, \m.not(eq(m, 456))) TO mbox
+SEND (println, #send, 123) TO mbox
+SEND (println, #send, 456) TO mbox
+SEND (println, #send, 789) TO mbox
+SEND (println, #recv, \m.eq(m, 456)) TO mbox
