@@ -138,20 +138,28 @@ timer_fwd_beh:              ; timer_dev <- (dt msg . actor)
 
 prepare_env:                ; ( k -- env )
     push #?                 ; k #?
+
     msg 0                   ; k #? {caps}
     push dev.debug_key      ; k #? {caps} debug_key
     dict get                ; k #? println=debug_dev
+
     msg 0                   ; k #? println {caps}
     push dev.timer_key      ; k #? println {caps} timer_key
     dict get                ; k #? println timer_dev
     push timer_fwd_beh      ; k #? println timer_dev timer_fwd_beh
     new -1                  ; k #? println timer=timer_fwd_beh.timer_dev
+
     msg 0                   ; k #? println timer {caps}
     push dev.random_key     ; k #? println timer {caps} random_key
     dict get                ; k #? println timer random_dev
     push random_fwd_beh     ; k #? println timer random_dev random_fwd_beh
     new -1                  ; k #? println timer random=random_fwd_beh.random_dev
-    pair 2                  ; k #? scope=(random timer . println)
+
+    msg 0                   ; k #? println timer random {caps}
+    push dev.svg_key        ; k #? println timer random {caps} svg_key
+    dict get                ; k #? println timer random svgout
+
+    pair 3                  ; k #? scope=(svgout random timer . println)
     pair 1                  ; k env=(scope . #?)
     ref std.return_value
 
