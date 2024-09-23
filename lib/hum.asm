@@ -156,10 +156,14 @@ prepare_env:                ; ( k -- env )
     new -1                  ; k #? println timer random=random_fwd_beh.random_dev
 
     msg 0                   ; k #? println timer random {caps}
-    push dev.svg_key        ; k #? println timer random {caps} svg_key
-    dict get                ; k #? println timer random svgout
+    push dev.io_key         ; k #? println timer random {caps} io_key
+    dict get                ; k #? println timer random stdio
 
-    pair 3                  ; k #? scope=(svgout random timer . println)
+    msg 0                   ; k #? println timer random stdio {caps}
+    push dev.svg_key        ; k #? println timer random stdio {caps} svg_key
+    dict get                ; k #? println timer random stdio svgout
+
+    pair 4                  ; k #? scope=(svgout stdio random timer . println)
     pair 1                  ; k env=(scope . #?)
     ref std.return_value
 
