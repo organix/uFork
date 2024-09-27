@@ -617,6 +617,40 @@ Compute an ALU function of the arguments on the stack.
  1. Otherwise
     1. Push `#?` onto the stack
 
+> **SIDEBAR: INTEGER DIVISION**
+>
+> The immediate value `+7` (div) is reserved for fixnum division.
+>
+> _q_ = _a_ / _b_ and _r_ = _a_ % _b_ where, _a_ = _bq_ + _r_
+>
+> However, there are several reasonable definitions.
+>
+> ##### Truncated
+>  a | b | q | r
+> ---|---|---|---
+> +17|+5 |+3 |+2
+> -17|+5 |-3 |-2
+> +17|-5 |-3 |+2
+> -17|-5 |+3 |-2
+>
+> ##### Floored
+>  a | b | q | r
+> ---|---|---|---
+> +17|+5 |+3 |+2
+> -17|+5 |-4 |+3
+> +17|-5 |-4 |-3
+> -17|-5 |+3 |-2
+>
+> ##### Euclidean
+>  a | b | q | r
+> ---|---|---|---
+> +17|+5 |+3 |+2
+> -17|+5 |-4 |+3
+> +17|-5 |-3 |+2
+> -17|-5 |+4 |+3
+>
+> where, 0 ≤ r < |b|
+
  T            | X (op)      | Y (imm)     | Z (k)
 --------------|-------------|-------------|-------------
  `#instr_t`   | `+13` (alu) | `+8` (lsl)  | _instr_
