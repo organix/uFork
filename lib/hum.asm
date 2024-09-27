@@ -46,7 +46,20 @@ tail_call:                  ; k env procedure args
     roll -4                 ; args k env procedure
     roll 2                  ; args k procedure env
     drop 1                  ; args k procedure
+call:
+    dup 1                   ; args k procedure procedure
+    typeq #instr_t          ; args k procedure instr?
+    if_not fail_call        ; args k procedure
     jump                    ; args k
+
+fail_call:                  ; args k procedure
+    push #?                 ; args k procedure rv=#?
+    roll -4                 ; rv args k procedure
+    drop 1                  ; rv args k
+    roll 2                  ; rv k args
+    drop 1                  ; rv k
+    jump                    ; rv
+
 self_tail_call:             ; k env env' code args
     roll -5                 ; args k env env' code
     roll 3                  ; args k env' code env
@@ -335,6 +348,7 @@ boot:                       ; () <- {caps}
     beh
     block_t
     boot
+    call
     compare
     div_mod
     execute_block
