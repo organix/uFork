@@ -37,7 +37,7 @@ make_closure:               ; ( code env k -- closure )
 return:                     ; k env' rv
     roll -3                 ; rv k env'
     drop 1                  ; rv k
-    return                  ; rv
+    return
 
 ; Tail calls are achieved by modifying the existing frame before jumping
 ; directly to the procedure or compiled closure code.
@@ -50,7 +50,7 @@ call:
     dup 1                   ; args k procedure procedure
     typeq #instr_t          ; args k procedure instr?
     if_not fail_call        ; args k procedure
-    jump                    ; args k
+    jump
 
 fail_call:                  ; args k procedure
     push #?                 ; args k procedure rv=#?
@@ -58,13 +58,13 @@ fail_call:                  ; args k procedure
     drop 1                  ; rv args k
     roll 2                  ; rv k args
     drop 1                  ; rv k
-    jump                    ; rv
+    jump
 
 self_tail_call:             ; k env env' code args
     roll -5                 ; args k env env' code
     roll 3                  ; args k env' code env
     drop 1                  ; args k env' code
-    jump                    ; args k env'
+    jump
 
 ; A block is essentially a closure that take no arguments. Because blocks have a
 ; different signature, and are executed implicitly, they must be
@@ -180,7 +180,7 @@ prepare_env:                ; ( k -- env )
     pair 1                  ; k env=(scope . #?)
     ref std.return_value
 
-; Lastly we provide some miscellaneous procedures.
+; Miscellaneous procedures.
 
 drop_return_f:              ; k value
     drop 1                  ; k
@@ -196,8 +196,7 @@ is_bool:                    ; value k
     eq #t                   ; k value value==#t
     if drop_return_t        ; k value
     eq #f                   ; k value==#f
-    if std.return_t         ; k
-    ref std.return_f
+    ref std.return_value
 
 is_bool_pair:               ; value k
     roll -2                 ; k value=(head . tail)
@@ -205,8 +204,7 @@ is_bool_pair:               ; value k
     call is_bool            ; k tail bool?(head)
     if_not drop_return_f    ; k tail
     call is_bool            ; k bool?(tail)
-    if_not std.return_f     ; k
-    ref std.return_t
+    ref std.return_value
 
 compare:                    ; args k
     roll -2                 ; k args
@@ -236,7 +234,7 @@ test_compare_case:          ; expect b a k
     call compare            ; k expect actual
     cmp eq                  ; k eq?
     assert #t               ; k
-    jump
+    return
 
 test_compare:               ; k
     push -1                 ; k expect
@@ -251,7 +249,7 @@ test_compare:               ; k
     push 555                ; k expect b
     push 666                ; k expect b a
     call test_compare_case  ; k
-    jump
+    return
 
 ; Euclidean division is a slow, but simple, algorithm.
 ; It solves the equations: <latex> n = dq + r </latex>,
