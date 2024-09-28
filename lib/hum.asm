@@ -217,7 +217,109 @@ compare_gt:                 ; k b a
     drop 2                  ; k
     ref std.return_one
 
+; Euclidean division is a slow, but simple, algorithm.
+; It solves the equations: <latex> n = dq + r </latex>,
+;                     and <latex> 0 ≤ r < |d| </latex>.
+; (reference -- https://en.wikipedia.org/wiki/Division_algorithm)
+
+div_mod:                    ; args=(n . d) k
+    roll 2                  ; k (n . d)
+    part 1                  ; k d n
+    pick 2                  ; k d n d
+    eq 0                    ; k d n d==0
+    if div_err              ; k d n
+
+    dup 1                   ; k d n n
+    typeq #fixnum_t         ; k d n is_fix(n)
+    if_not div_err          ; k d n
+
+    pick 2                  ; k d n d
+    typeq #fixnum_t         ; k d n is_fix(d)
+    if_not div_err          ; k d n
+
+    pick 2                  ; k d n d
+    push 0                  ; k d n d 0
+    cmp lt                  ; k d n d<0
+    if div_neg_d            ; k d n
+
+    dup 1                   ; k d n n
+    push 0                  ; k d n n 0
+    cmp lt                  ; k d n n<0
+    if div_neg_n            ; k d n
+
+; function divide_unsigned(N, D)
+;   Q := 0; R := N
+;   while R ≥ D do
+;     Q := Q + 1
+;     R := R − D
+;   end
+;   return (Q, R)
+; end
+
+    push 0                  ; k d n q=0
+    pick 2                  ; k d n q r=n
+div_loop:                   ; k d n q r
+    dup 1                   ; k d n q r r
+    pick 5                  ; k d n q r r d
+    cmp lt                  ; k d n q r r<d
+    if div_done             ; k d n q r
+
+    roll 2                  ; k d n r q
+    push 1                  ; k d n r q 1
+    alu add                 ; k d n r q+1
+    roll 2                  ; k d n q+1 r
+    pick 4                  ; k d n q+1 r d
+    alu sub                 ; k d n q+1 r-d
+    ref div_loop
+
+div_done:                   ; k d n q r
+    roll 2                  ; k d n r q
+    pair 1                  ; k d n (q . r)
+    roll -3                 ; k (q . r) d n
+    drop 2                  ; k rv=(q . r)
+    ref std.return_value
+
+div_neg_d:                  ; k d n
+div_neg_n:                  ; k d n
+div_err:                    ; k d n
+    drop 2                  ; k
+    push #?                 ; k q=#?
+    push #?                 ; k q r=#?
+    pair 1                  ; k rv=(q . r)
+    ref std.return_value
+
+; function divide(N, D)
+;   if D = 0 then error(DivisionByZero) end
+;   if D < 0 then (Q, R) := divide(N, −D); return (−Q, R) end
+;   if N < 0 then
+;     (Q,R) := divide(−N, D)
+;     if R = 0 then return (−Q, 0)
+;     else return (−Q − 1, D − R) end
+;   end
+;   -- At this point, N ≥ 0 and D > 0
+;   return divide_unsigned(N, D)
+; end
+
 boot:                       ; () <- {caps}
+    push 17                 ; 17
+    push 5                  ; 17 5
+    roll 2                  ; 5 17
+    pair 1                  ; (17 . 5)
+    call div_mod            ; (3 . 2)
+    part 1                  ; 2 3
+    assert 3                ; 2
+    assert 2                ; --
+
+    push -17                ; -17
+    push 5                  ; -17 5
+    roll 2                  ; 5 -17
+    pair 1                  ; (-17 . 5)
+    call div_mod            ; (-4 . 3)
+    part 1                  ; 3 -4
+;    assert -4               ; 3
+;    assert 3                ; --
+    drop 2                  ; TODO: Implement div_neg_n case
+
     msg 0                   ; {caps}
     push dev.debug_key      ; {caps} debug_key
     dict get                ; debug_dev
@@ -234,6 +336,7 @@ boot:                       ; () <- {caps}
     block_t
     boot
     compare
+    div_mod
     execute_block
     is_bool
     is_bool_pair

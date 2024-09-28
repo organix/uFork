@@ -291,6 +291,7 @@ _n_ _m_              | `alu` `xor`         | _n_^_m_      | bitwise _n_ exclusiv
 _n_ _m_              | `alu` `add`         | _n_+_m_      | sum of _n_ and _m_
 _n_ _m_              | `alu` `sub`         | _n_-_m_      | difference of _n_ and _m_
 _n_ _m_              | `alu` `mul`         | _n_\*_m_     | product of _n_ and _m_
+_n_ _m_              | `alu` `div`         | _q_ _r_      | Euclidean quotient and remainder/modulus
 _n_ _m_              | `alu` `lsl`         | _n_<<_m_     | logical shift left _n_ by _m_
 _n_ _m_              | `alu` `lsr`         | _n_>>_m_     | logical shift right _n_ by _m_
 _n_ _m_              | `alu` `asr`         | _n_>>>_m_    | arithmetic shift right _n_ by _m_
