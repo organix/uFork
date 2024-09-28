@@ -14,8 +14,8 @@ const rainbow = [theme.yellow, theme.purple, theme.orange, theme.green];
 
 function highlight(element) {
     const text = element.textContent;
-    element.innerHTML = "";
     const ir = scm.compile(text);
+    element.innerHTML = "";
     const errors = ir.errors.filter(function (error) {
         return (
             Number.isSafeInteger(error.start)

@@ -29,8 +29,8 @@ const styles = {
 
 function highlight(element) {
     const text = element.textContent;
-    element.innerHTML = "";
     const ir = assemble(text);
+    element.innerHTML = "";
     ir.tokens.forEach(function (token) {
         const errors = ir.errors.filter(function (error) {
             return token.start >= error.start && token.end <= error.end;

@@ -52,8 +52,8 @@ const contexts = {
 
 function highlight(element) {
     const text = element.textContent;
-    element.textContent = "";
     const ir = compile(text);
+    element.textContent = "";
     let position = 0;
     let prev = {
         type: "control",
