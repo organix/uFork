@@ -316,7 +316,50 @@ div_done:                   ; k d n q r
     ref std.return_value
 
 div_neg_d:                  ; k d n
+    push 0                  ; k d n 0
+    roll 3                  ; k n 0 d
+    alu sub                 ; k n -d
+    roll 2                  ; k -d n
+    pair 1                  ; k (n . -d)
+    call div_mod            ; k (q . r)
+    part 1                  ; k r q
+    push 0                  ; k r q 0
+    roll 2                  ; k r 0 q
+    alu sub                 ; k r -q
+    pair 1                  ; k (-q . r)
+    ref std.return_value
+
 div_neg_n:                  ; k d n
+    push 0                  ; k d n 0
+    roll 2                  ; k d 0 n
+    alu sub                 ; k d -n
+    pick 2                  ; k d -n d
+    roll 2                  ; k d d -n
+    pair 1                  ; k d (-n . d)
+    call div_mod            ; k d (q . r)
+
+    part 1                  ; k d r q
+    pick 2                  ; k d r q r
+    eq 0                    ; k d r q r==0
+    if div_r_0              ; k d r q
+
+    roll -3                 ; k q d r
+    alu sub                 ; k q d-r
+    push -1                 ; k q d-r -1
+    roll 3                  ; k d-r -1 q
+    alu sub                 ; k d-r -q-1
+    pair 1                  ; k rv=(-q-1 . d-r)
+    ref std.return_value
+
+div_r_0:                    ; k d r=0 q
+    push 0                  ; k d r q 0
+    roll 2                  ; k d r 0 q
+    alu sub                 ; k d r -q
+    pair 1                  ; k d (-q . 0)
+    roll -2                 ; k (-q . 0) d
+    drop 1                  ; k rv=(-q . 0)
+    ref std.return_value
+
 div_err:                    ; k d n
     drop 2                  ; k
     push #?                 ; k q=#?
@@ -352,10 +395,27 @@ test_div:                   ; k
     pair 1                  ; k (-17 . 5)
     call div_mod            ; k (-4 . 3)
     part 1                  ; k 3 -4
-;    assert -4               ; k 3
-;    assert 3                ; k
-    drop 2                  ; TODO: Implement div_neg_n case
-    jump
+    assert -4               ; k 3
+    assert 3                ; k
+
+    push 17                 ; k 17
+    push -5                 ; k 17 -5
+    roll 2                  ; k -5 17
+    pair 1                  ; k (17 . -5)
+    call div_mod            ; k (-3 . 2)
+    part 1                  ; k 2 -3
+    assert -3               ; k 2
+    assert 2                ; k
+
+    push -17                ; k -17
+    push -5                 ; k -17 -5
+    roll 2                  ; k -5 -17
+    pair 1                  ; k (-17 . -5)
+    call div_mod            ; k (4 . 3)
+    part 1                  ; k 3 4
+    assert 4                ; k 3
+    assert 3                ; k
+    return
 
 boot:                       ; () <- {caps}
     call test_compare       ; --
