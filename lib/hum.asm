@@ -132,7 +132,7 @@ symbol_t:                   ; [symbol_t, string]
 
 ; Construct the top level environment from capabilities in the boot message.
 
-random_fwd_beh:             ; random_dev <- (cust . n)
+random_adapter_beh:         ; random_dev <- (cust . n)
     msg -1                  ; n
     push 1                  ; n 1
     alu sub                 ; limit=n-1
@@ -141,7 +141,7 @@ random_fwd_beh:             ; random_dev <- (cust . n)
     send 2                  ; --
     ref std.commit
 
-timer_fwd_beh:              ; timer_dev <- (dt msg . actor)
+timer_adapter_beh:          ; timer_dev <- (dt msg . actor)
     msg 2                   ; message=msg
     msg -2                  ; message target=actor
     msg 1                   ; message target delay=dt
@@ -159,14 +159,14 @@ prepare_env:                ; ( k -- env )
     msg 0                   ; k #? println {caps}
     push dev.timer_key      ; k #? println {caps} timer_key
     dict get                ; k #? println timer_dev
-    push timer_fwd_beh      ; k #? println timer_dev timer_fwd_beh
-    new -1                  ; k #? println timer=timer_fwd_beh.timer_dev
+    push timer_adapter_beh  ; k #? println timer_dev timer_adapter_beh
+    new -1                  ; k #? println timer=timer_adapter_beh.timer_dev
 
     msg 0                   ; k #? println timer {caps}
     push dev.random_key     ; k #? println timer {caps} random_key
     dict get                ; k #? println timer random_dev
-    push random_fwd_beh     ; k #? println timer random_dev random_fwd_beh
-    new -1                  ; k #? println timer random=random_fwd_beh.random_dev
+    push random_adapter_beh ; k #? println timer random_dev random_adapter_beh
+    new -1                  ; k #? println timer random=random_adapter_beh.random_dev
 
     msg 0                   ; k #? println timer random {caps}
     push dev.io_key         ; k #? println timer random {caps} io_key
@@ -229,6 +229,29 @@ compare_eq:                 ; k b a
 compare_gt:                 ; k b a
     drop 2                  ; k
     ref std.return_one
+
+test_compare_case:          ; expect b a k
+    roll -4                 ; k expect b a
+    pair 1                  ; k expect args=(a . b)
+    call compare            ; k expect actual
+    cmp eq                  ; k eq?
+    assert #t               ; k
+    jump
+
+test_compare:               ; k
+    push -1                 ; k expect
+    push 555                ; k expect b
+    push 444                ; k expect b a
+    call test_compare_case  ; k
+    push 0                  ; k expect
+    push 555                ; k expect b
+    push 555                ; k expect b a
+    call test_compare_case  ; k
+    push 1                  ; k expect
+    push 555                ; k expect b
+    push 666                ; k expect b a
+    call test_compare_case  ; k
+    jump
 
 ; Euclidean division is a slow, but simple, algorithm.
 ; It solves the equations: <latex> n = dq + r </latex>,
@@ -313,34 +336,37 @@ div_err:                    ; k d n
 ;   return divide_unsigned(N, D)
 ; end
 
-boot:                       ; () <- {caps}
-    push 17                 ; 17
-    push 5                  ; 17 5
-    roll 2                  ; 5 17
-    pair 1                  ; (17 . 5)
-    call div_mod            ; (3 . 2)
-    part 1                  ; 2 3
-    assert 3                ; 2
-    assert 2                ; --
+test_div:                   ; k
+    push 17                 ; k 17
+    push 5                  ; k 17 5
+    roll 2                  ; k 5 17
+    pair 1                  ; k (17 . 5)
+    call div_mod            ; k (3 . 2)
+    part 1                  ; k 2 3
+    assert 3                ; k 2
+    assert 2                ; k
 
-    push -17                ; -17
-    push 5                  ; -17 5
-    roll 2                  ; 5 -17
-    pair 1                  ; (-17 . 5)
-    call div_mod            ; (-4 . 3)
-    part 1                  ; 3 -4
-;    assert -4               ; 3
-;    assert 3                ; --
+    push -17                ; k -17
+    push 5                  ; k -17 5
+    roll 2                  ; k 5 -17
+    pair 1                  ; k (-17 . 5)
+    call div_mod            ; k (-4 . 3)
+    part 1                  ; k 3 -4
+;    assert -4               ; k 3
+;    assert 3                ; k
     drop 2                  ; TODO: Implement div_neg_n case
+    jump
 
-    msg 0                   ; {caps}
-    push dev.debug_key      ; {caps} debug_key
-    dict get                ; debug_dev
-    push 123                ; debug_dev b
-    push 123                ; debug_dev b a
-    pair 1                  ; debug_dev (a . b)
-    call compare            ; debug_dev cmp
-    pick 2                  ; cmp debug_dev
+boot:                       ; () <- {caps}
+    call test_compare       ; --
+    call test_div           ; --
+    ref std.commit
+
+test:                       ; (verdict) <- {caps}
+    call test_compare       ; --
+    call test_div           ; --
+    push #t                 ; pass=#t
+    state 1                 ; pass verdict
     send -1                 ; --
     ref std.commit
 
@@ -360,4 +386,5 @@ boot:                       ; () <- {caps}
     return
     self_tail_call
     symbol_t
+    test
     tail_call
