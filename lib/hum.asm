@@ -206,6 +206,55 @@ is_bool_pair:               ; value k
     call is_bool            ; k bool?(tail)
     ref std.return_value
 
+equal:                      ; args=(a . b) k
+    roll -2                 ; k args
+    part 1                  ; k b a
+equal_tail:                 ; k b a
+    dup 2                   ; k b a b a
+    cmp eq                  ; k b a b==a
+    if equal_t              ; k b a
+    dup 1                   ; k b a a
+    typeq #pair_t           ; k b a is_pair(a)
+    if_not equal_f          ; k b a
+    roll 2                  ; k a b
+    dup 1                   ; k a b b
+    typeq #pair_t           ; k a b is_pair(b)
+    if_not equal_f          ; k a b
+    part 1                  ; k a tl(b) hd(b)
+    roll 3                  ; k tl(b) hd(b) a
+    part 1                  ; k tl(b) hd(b) tl(a) hd(a)
+    roll 3                  ; k tl(b) tl(a) hd(a) hd(b)
+    pair 1                  ; k tl(b) tl(a) (hd(b) . hd(a))
+    call equal              ; k tl(b) tl(a) hd(b)==hd(a)
+    if equal_tail           ; k tl(b) tl(a)
+equal_f:                    ; k b a
+    drop 2                  ; k
+    ref std.return_f
+equal_t:                    ; k b a
+    drop 2                  ; k
+    ref std.return_t
+
+list_of_3:
+    pair_t 3 #nil           ; (3)
+test_equal:                 ; k
+    push #?                 ; k #?
+    push #?                 ; k #? #?
+    pair 1                  ; k (#? . #?)
+    call equal              ; k #?==#?
+    assert #t               ; k
+    push list_of_3          ; k (3)
+    push 2                  ; k (3) 2
+    push 1                  ; k (3) 2 1
+    pair 2                  ; k (1 2 3)
+    push list_of_3          ; k (1 2 3) (3)
+    push 2                  ; k (1 2 3) (3) 2
+    push 1                  ; k (1 2 3) (3) 2 1
+    pair 2                  ; k (1 2 3) (1 2 3)
+    pair 1                  ; k ((1 2 3) . (1 2 3))
+    call equal              ; k (1 2 3)==(1 2 3)
+    assert #t               ; k
+    return
+
 compare:                    ; args k
     roll -2                 ; k args
     part 1                  ; k b a
@@ -413,14 +462,25 @@ test_div:                   ; k
     part 1                  ; k 3 4
     assert 4                ; k 3
     assert 3                ; k
+
+    push -12                ; k -12
+    push 4                  ; k -12 4
+    roll 2                  ; k 4 -12
+    pair 1                  ; k (-12 . 4)
+    call div_mod            ; k (-3 . 0)
+    part 1                  ; k 0 -3
+    assert -3               ; k 0
+    assert 0                ; k
     return
 
 boot:                       ; () <- {caps}
+    call test_equal         ; --
     call test_compare       ; --
     call test_div           ; --
     ref std.commit
 
 test:                       ; (verdict) <- {caps}
+    call test_equal         ; --
     call test_compare       ; --
     call test_div           ; --
     push #t                 ; pass=#t
@@ -433,6 +493,7 @@ test:                       ; (verdict) <- {caps}
     block_t
     boot
     call
+    equal
     compare
     div_mod
     execute_block
