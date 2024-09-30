@@ -605,25 +605,24 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
             VM_CMP => {
                 let vv = self.stack_pop();
                 let v = self.stack_pop();
-                let b = if imm == CMP_EQ {
-                    v == vv
+                let r = if imm == CMP_EQ {
+                    if v == vv { TRUE } else { FALSE }
                 } else if imm == CMP_NE {
-                    v != vv
+                    if v != vv { TRUE } else { FALSE }
                 } else {
                     match (v.fix_num(), vv.fix_num()) {
                         (Some(n), Some(nn)) => {
                             match imm {
-                                CMP_GE => n >= nn,
-                                CMP_GT => n > nn,
-                                CMP_LT => n < nn,
-                                CMP_LE => n <= nn,
-                                _ => false,
+                                CMP_GE => if n >= nn { TRUE } else { FALSE },
+                                CMP_GT => if n > nn { TRUE } else { FALSE },
+                                CMP_LT => if n < nn { TRUE } else { FALSE },
+                                CMP_LE => if n <= nn { TRUE } else { FALSE },
+                                _ => UNDEF,
                             }
                         }
-                        _ => false
+                        _ => UNDEF
                     }
                 };
-                let r = if b { TRUE } else { FALSE };
                 self.stack_push(r)?;
                 kip
             },
