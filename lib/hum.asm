@@ -482,48 +482,6 @@ test_alu:                   ; ( -- )
     assert 70847            ; k
     return
 
-less:                       ; ( pair -- boolean | #? )
-    roll -2                 ; k pair=(a . b)
-    part 1                  ; k b a
-    cmp gt                  ; k b>a
-    ref std.return_value
-
-less_equal:                 ; ( pair -- boolean | #? )
-    roll -2                 ; k pair=(a . b)
-    part 1                  ; k b a
-    cmp ge                  ; k b>=a
-    ref std.return_value
-
-greater:                    ; ( pair -- boolean | #? )
-    roll -2                 ; k pair=(a . b)
-    part 1                  ; k b a
-    cmp lt                  ; k b<a
-    ref std.return_value
-
-greater_equal:              ; ( pair -- boolean | #? )
-    roll -2                 ; k pair=(a . b)
-    part 1                  ; k b a
-    cmp le                  ; k b<=a
-    ref std.return_value
-
-test_cmp:                   ; ( -- )
-    push 1729               ; k b=1729
-    push 42                 ; k b a=42
-    pair 1                  ; k (a . b)
-    call less               ; k a<b
-    assert #t               ; k
-    push 666                ; k b=666
-    push 666                ; k b a=666
-    pair 1                  ; k (a . b)
-    call greater_equal      ; k a>=b
-    assert #t               ; k
-    push 42                 ; k b=42
-    push #t                 ; k b a=#t
-    pair 1                  ; k (a . b)
-    call greater            ; k a>b
-    assert #?               ; k
-    return
-
 div:                        ; ( pair -- q )
     roll 2                  ; k pair=(n . d)
     part 1                  ; k d n
@@ -600,6 +558,48 @@ test_compare:               ; ( -- )
     push 555                ; k expect b
     push 666                ; k expect b a
     call test_compare_case  ; k
+    return
+
+less:                       ; ( pair -- boolean | #? )
+    roll -2                 ; k pair=(a . b)
+    part 1                  ; k b a
+    cmp gt                  ; k b>a
+    ref std.return_value
+
+less_equal:                 ; ( pair -- boolean | #? )
+    roll -2                 ; k pair=(a . b)
+    part 1                  ; k b a
+    cmp ge                  ; k b>=a
+    ref std.return_value
+
+greater:                    ; ( pair -- boolean | #? )
+    roll -2                 ; k pair=(a . b)
+    part 1                  ; k b a
+    cmp lt                  ; k b<a
+    ref std.return_value
+
+greater_equal:              ; ( pair -- boolean | #? )
+    roll -2                 ; k pair=(a . b)
+    part 1                  ; k b a
+    cmp le                  ; k b<=a
+    ref std.return_value
+
+test_cmp:                   ; ( -- )
+    push 1729               ; k b=1729
+    push 42                 ; k b a=42
+    pair 1                  ; k (a . b)
+    call less               ; k a<b
+    assert #t               ; k
+    push 666                ; k b=666
+    push 666                ; k b a=666
+    pair 1                  ; k (a . b)
+    call greater_equal      ; k a>=b
+    assert #t               ; k
+    push 42                 ; k b=42
+    push #t                 ; k b a=#t
+    pair 1                  ; k (a . b)
+    call greater            ; k a>b
+    assert #?               ; k
     return
 
 ; Test suite.
