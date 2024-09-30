@@ -1,7 +1,7 @@
 ; Runtime support for compiled Humus.
 
 .import
-    div: "https://ufork.org/lib/div_mod.asm"
+    div_mod: "https://ufork.org/lib/div_mod.asm"
     dev: "https://ufork.org/lib/dev.asm"
     std: "https://ufork.org/lib/std.asm"
 
@@ -183,65 +183,71 @@ prepare_env:                ; ( k -- env )
 
 ; Miscellaneous procedures.
 
-drop_return_f:              ; k value
+dreturn_undef:              ; k value
+    drop 1                  ; k
+    ref std.return_undef
+
+dreturn_f:                  ; k value
     drop 1                  ; k
     ref std.return_f
 
-drop_return_t:              ; k value
+dreturn_t:                  ; k value
     drop 1                  ; k
     ref std.return_t
 
-is_bool:                    ; value k
+is_bool:                    ; ( value -- boolean )
     roll -2                 ; k value
     dup 1                   ; k value value
     eq #t                   ; k value value==#t
-    if drop_return_t        ; k value
+    if dreturn_t            ; k value
     eq #f                   ; k value==#f
     ref std.return_value
 
-is_bool_pair:               ; value k
+is_bool_pair:               ; ( value -- boolean )
     roll -2                 ; k value=(head . tail)
     part 1                  ; k tail head
     call is_bool            ; k tail bool?(head)
-    if_not drop_return_f    ; k tail
+    if_not dreturn_f        ; k tail
     call is_bool            ; k bool?(tail)
     ref std.return_value
 
-equal:                      ; args=(a . b) k
-    roll -2                 ; k args
+; Primitive builtins.
+
+eq:                         ; ( args -- boolean )
+    roll -2                 ; k args=(a . b)
     part 1                  ; k b a
-equal_tail:                 ; k b a
+eq_tail:                    ; k b a
     dup 2                   ; k b a b a
     cmp eq                  ; k b a b==a
-    if equal_t              ; k b a
+    if eq_t                 ; k b a
     dup 1                   ; k b a a
     typeq #pair_t           ; k b a is_pair(a)
-    if_not equal_f          ; k b a
+    if_not eq_f             ; k b a
     roll 2                  ; k a b
     dup 1                   ; k a b b
     typeq #pair_t           ; k a b is_pair(b)
-    if_not equal_f          ; k a b
+    if_not eq_f             ; k a b
     part 1                  ; k a tl(b) hd(b)
     roll 3                  ; k tl(b) hd(b) a
     part 1                  ; k tl(b) hd(b) tl(a) hd(a)
     roll 3                  ; k tl(b) tl(a) hd(a) hd(b)
     pair 1                  ; k tl(b) tl(a) (hd(b) . hd(a))
-    call equal              ; k tl(b) tl(a) hd(b)==hd(a)
-    if equal_tail           ; k tl(b) tl(a)
-equal_f:                    ; k b a
+    call eq                 ; k tl(b) tl(a) hd(b)==hd(a)
+    if eq_tail              ; k tl(b) tl(a)
+eq_f:                       ; k b a
     drop 2                  ; k
     ref std.return_f
-equal_t:                    ; k b a
+eq_t:                       ; k b a
     drop 2                  ; k
     ref std.return_t
 
 list_of_3:
     pair_t 3 #nil           ; (3)
-test_equal:                 ; k
+test_eq:                    ; ( -- )
     push #?                 ; k #?
     push #?                 ; k #? #?
     pair 1                  ; k (#? . #?)
-    call equal              ; k #?==#?
+    call eq                 ; k #?==#?
     assert #t               ; k
     push list_of_3          ; k (3)
     push 2                  ; k (3) 2
@@ -252,11 +258,49 @@ test_equal:                 ; k
     push 1                  ; k (1 2 3) (3) 2 1
     pair 2                  ; k (1 2 3) (1 2 3)
     pair 1                  ; k ((1 2 3) . (1 2 3))
-    call equal              ; k (1 2 3)==(1 2 3)
+    call eq                 ; k (1 2 3)==(1 2 3)
     assert #t               ; k
     return
 
-compare:                    ; args k
+not:                        ; ( value -- boolean | #? )
+    roll -2                 ; k value
+    dup 1                   ; k value value
+    call is_bool            ; k value bool?(value)
+    if_not dreturn_undef    ; k value
+    if std.return_f         ; k
+    ref std.return_t
+
+test_not:                   ; ( -- )
+    push #t                 ; k value=#t
+    call not                ; k not(#t)
+    assert #f               ; k
+    push #f                 ; k value=#f
+    call not                ; k not(#f)
+    assert #t               ; k
+    push 123                ; k value=123
+    call not                ; k not(123)
+    assert #?               ; k
+    return
+
+neg:                        ; ( number -- number | #? )
+    roll -2                 ; k number
+    push -1                 ; k number -1
+    alu mul                 ; k -number
+    ref std.return_value
+
+test_neg:                   ; ( -- )
+    push #t                 ; k value=#t
+    call neg                ; k neg(#t)
+    assert #?               ; k
+    push 5                  ; k value=5
+    call neg                ; k neg(5)
+    assert -5               ; k
+    push -5                 ; k value=-5
+    call neg                ; k neg(-5)
+    assert 5                ; k
+    return
+
+compare:                    ; ( args -- -1 | 0 | 1 )
     roll -2                 ; k args
     part 1                  ; k b a
     dup 2                   ; k b a b a
@@ -278,7 +322,7 @@ compare_gt:                 ; k b a
     drop 2                  ; k
     ref std.return_one
 
-test_compare_case:          ; expect b a k
+test_compare_case:          ; ( expect b a -- )
     roll -4                 ; k expect b a
     pair 1                  ; k expect args=(a . b)
     call compare            ; k expect actual
@@ -286,7 +330,7 @@ test_compare_case:          ; expect b a k
     assert #t               ; k
     return
 
-test_compare:               ; k
+test_compare:               ; ( -- )
     push -1                 ; k expect
     push 555                ; k expect b
     push 444                ; k expect b a
@@ -301,75 +345,51 @@ test_compare:               ; k
     call test_compare_case  ; k
     return
 
-; Euclidean division, where <latex> n = dq + r </latex>,
-;                      and <latex> 0 ≤ r < |d| </latex>.
-
-div_mod:                    ; args=(n . d) k
-    roll 2                  ; k (n . d)
+div:                        ; ( args -- q )
+    roll 2                  ; k args=(n . d)
     part 1                  ; k d n
     roll 2                  ; k n d
-    call div.divmod         ; k q r
-    roll 2                  ; k r q
-    pair 1                  ; k (q . r)
+    call div_mod.divmod     ; k q r
+    drop 1                  ; k q
     ref std.return_value
 
-test_div:                   ; k
-    push 17                 ; k 17
-    push 5                  ; k 17 5
-    roll 2                  ; k 5 17
-    pair 1                  ; k (17 . 5)
-    call div_mod            ; k (3 . 2)
-    part 1                  ; k 2 3
-    assert 3                ; k 2
-    assert 2                ; k
-
-    push -17                ; k -17
-    push 5                  ; k -17 5
-    roll 2                  ; k 5 -17
-    pair 1                  ; k (-17 . 5)
-    call div_mod            ; k (-4 . 3)
-    part 1                  ; k 3 -4
-    assert -4               ; k 3
+test_div:                   ; ( -- )
+    push 5                  ; k d=5
+    push 17                 ; k d n=17
+    pair 1                  ; k args=(n . d)
+    call div                ; k q
     assert 3                ; k
-
-    push 17                 ; k 17
-    push -5                 ; k 17 -5
-    roll 2                  ; k -5 17
-    pair 1                  ; k (17 . -5)
-    call div_mod            ; k (-3 . 2)
-    part 1                  ; k 2 -3
-    assert -3               ; k 2
-    assert 2                ; k
-
-    push -17                ; k -17
-    push -5                 ; k -17 -5
-    roll 2                  ; k -5 -17
-    pair 1                  ; k (-17 . -5)
-    call div_mod            ; k (4 . 3)
-    part 1                  ; k 3 4
-    assert 4                ; k 3
-    assert 3                ; k
-
-    push -12                ; k -12
-    push 4                  ; k -12 4
-    roll 2                  ; k 4 -12
-    pair 1                  ; k (-12 . 4)
-    call div_mod            ; k (-3 . 0)
-    part 1                  ; k 0 -3
-    assert -3               ; k 0
-    assert 0                ; k
     return
 
-boot:                       ; () <- {caps}
-    call test_equal         ; --
-    call test_compare       ; --
-    call test_div           ; --
-    ref std.commit
+mod:                        ; ( args -- r )
+    roll 2                  ; k args=(n . d)
+    part 1                  ; k d n
+    roll 2                  ; k n d
+    call div_mod.divmod     ; k q r
+    roll 2                  ; k r q
+    drop 1                  ; k r
+    ref std.return_value
+
+test_mod:                   ; ( -- )
+    push 5                  ; k d=5
+    push 17                 ; k d n=17
+    pair 1                  ; k args=(n . d)
+    call mod                ; k r
+    assert 2                ; k
+    return
+
+; Test suite.
+
+boot:
+    ref test
 
 test:                       ; (verdict) <- {caps}
-    call test_equal         ; --
     call test_compare       ; --
     call test_div           ; --
+    call test_eq            ; --
+    call test_mod           ; --
+    call test_neg           ; --
+    call test_not           ; --
     push #t                 ; pass=#t
     state 1                 ; pass verdict
     send -1                 ; --
@@ -380,17 +400,20 @@ test:                       ; (verdict) <- {caps}
     block_t
     boot
     call
-    equal
     compare
-    div_mod
+    div
+    eq
     execute_block
     is_bool
     is_bool_pair
     make_block
     make_closure
+    mod
+    neg
+    not
     prepare_env
     return
     self_tail_call
     symbol_t
-    test
     tail_call
+    test
