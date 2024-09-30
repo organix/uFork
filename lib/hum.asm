@@ -199,20 +199,12 @@ ddreturn_undef:             ; k value value
     drop 2                  ; k
     ref std.return_undef
 
-is_bool:                    ; ( value -- boolean )
-    roll -2                 ; k value
-    dup 1                   ; k value value
-    eq #t                   ; k value value==#t
-    if dreturn_t            ; k value
-    eq #f                   ; k value==#f
-    ref std.return_value
-
 is_bool_pair:               ; ( value -- boolean )
     roll -2                 ; k value=(head . tail)
     part 1                  ; k tail head
-    call is_bool            ; k tail bool?(head)
+    call is_boolean         ; k tail bool?(head)
     if_not dreturn_f        ; k tail
-    call is_bool            ; k bool?(tail)
+    call is_boolean         ; k bool?(tail)
     ref std.return_value
 
 ; Primitive builtins.
@@ -269,7 +261,7 @@ test_eq:                    ; ( -- )
 not:                        ; ( value -- boolean | #? )
     roll -2                 ; k value
     dup 1                   ; k value value
-    call is_bool            ; k value bool?(value)
+    call is_boolean         ; k value bool?(value)
     if_not dreturn_undef    ; k value
     if std.return_f         ; k
     ref std.return_t
@@ -372,6 +364,72 @@ test_or:                    ; ( -- )
     push #t                 ; k expect b
     push 42                 ; k expect b a
     call test_or_case       ; k
+    return
+
+is_boolean:                 ; ( value -- boolean )
+    roll -2                 ; k value
+    dup 1                   ; k value value
+    eq #t                   ; k value value==#t
+    if dreturn_t            ; k value
+    eq #f                   ; k value==#f
+    ref std.return_value
+
+is_number:                  ; ( value -- boolean )
+    roll -2                 ; k value
+    typeq #fixnum_t         ; k number?(value)
+    ref std.return_value
+
+is_function:                ; ( value -- boolean )
+    roll -2                 ; k value
+    typeq #instr_t          ; k instr?(value)
+    ref std.return_value
+
+is_actor:                   ; ( value -- boolean )
+    roll -2                 ; k value
+    typeq #actor_t          ; k actor?(value)
+    ref std.return_value
+
+is_pair:                    ; ( value -- boolean )
+    roll -2                 ; k value
+    typeq #pair_t           ; k pair?(value)
+    ref std.return_value
+
+test_predicates:            ; ( -- )
+    push #t                 ; k value
+    call is_boolean         ; k actual
+    assert #t               ; k
+    push 42                 ; k value
+    call is_boolean         ; k actual
+    assert #f               ; k
+
+    push 42                 ; k value
+    call is_number          ; k actual
+    assert #t               ; k
+    push #t                 ; k value
+    call is_number          ; k actual
+    assert #f               ; k
+
+    push is_function        ; k value
+    call is_function        ; k actual
+    assert #t               ; k
+    push 42                 ; k value
+    call is_function        ; k actual
+    assert #f               ; k
+
+    push beh                ; k beh
+    new 0                   ; k actor=beh.()
+    call is_actor           ; k actual
+    assert #t               ; k
+    push is_actor           ; k value
+    call is_actor           ; k actual
+    assert #f               ; k
+
+    push list_of_3          ; k pair
+    call is_pair            ; k actual
+    assert #t               ; k
+    push #t                 ; k value
+    call is_pair            ; k actual
+    assert #f               ; k
     return
 
 neg:                        ; ( n -- n | #? )
@@ -560,6 +618,7 @@ test:                       ; (verdict) <- {caps}
     call test_neg           ; --
     call test_not           ; --
     call test_or            ; --
+    call test_predicates    ; --
     push #t                 ; pass=#t
     state 1                 ; pass verdict
     send -1                 ; --
@@ -578,7 +637,11 @@ test:                       ; (verdict) <- {caps}
     execute_block
     greater
     greater_equal
-    is_bool
+    is_actor
+    is_boolean
+    is_function
+    is_number
+    is_pair
     less
     less_equal
     make_block
