@@ -409,8 +409,8 @@ div_r_0:                    ; k d r=0 q
 
 div_err:                    ; k d n
     drop 2                  ; k
-    push #?                 ; k q=#?
-    push #?                 ; k q r=#?
+    push #?                 ; k r=#?
+    push #?                 ; k r q=#?
     pair 1                  ; k rv=(q . r)
     ref std.return_value
 
