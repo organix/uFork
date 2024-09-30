@@ -8,11 +8,11 @@
 ;                     and <latex> 0 ≤ r < |d| </latex>.
 ; (reference -- https://en.wikipedia.org/wiki/Division_algorithm)
 
-udivmod:                    ; n d -- q r
+udivmod:                    ; ( n d -- q r )
     roll -3                 ; k n d
     ref div_pos             ; k n d
 
-divmod:                     ; n d -- q r
+divmod:                     ; ( n d -- q r )
     roll -3                 ; k n d
     dup 1                   ; k n d d
     eq 0                    ; k n d d==0
@@ -127,7 +127,7 @@ return_2:                   ; k q r
 ;   return divide_unsigned(N, D)
 ; end
 
-test_udiv:                  ; k
+test_udiv:                  ; ( -- )
     push 17                 ; k n=17
     push 5                  ; k n d=5
     call divmod             ; k q=3 r=2
@@ -153,7 +153,7 @@ test_udiv:                  ; k
     assert #?               ; k
     return
 
-test_div:                   ; k
+test_div:                   ; ( -- )
     push -17                ; k n=-17
     push 5                  ; k n d=5
     call divmod             ; k q=-4 r=3
