@@ -210,8 +210,14 @@ is_bool_pair:               ; ( value -- boolean )
 ; Primitive builtins.
 
 eq:                         ; ( pair -- boolean )
-    roll -2                 ; k pair=(a . b)
+    roll -2                 ; k pair
+    dup 1                   ; k pair pair
+    typeq #pair_t           ; k pair is_pair(pair)
+    if_not dreturn_f        ; k pair=(a . b)
     part 1                  ; k b a
+    ref eq_tail
+eq_parted:                  ; ( b a -- boolean )
+    roll -3                 ; k b a
 eq_tail:                    ; k b a
     dup 2                   ; k b a b a
     cmp eq                  ; k b a b==a
@@ -227,8 +233,7 @@ eq_tail:                    ; k b a
     roll 3                  ; k tl(b) hd(b) a
     part 1                  ; k tl(b) hd(b) tl(a) hd(a)
     roll 3                  ; k tl(b) tl(a) hd(a) hd(b)
-    pair 1                  ; k tl(b) tl(a) (hd(b) . hd(a))
-    call eq                 ; k tl(b) tl(a) hd(b)==hd(a)
+    call eq_parted          ; k tl(b) tl(a) hd(b)==hd(a)
     if eq_tail              ; k tl(b) tl(a)
 eq_f:                       ; k b a
     drop 2                  ; k
@@ -245,6 +250,7 @@ test_eq:                    ; ( -- )
     pair 1                  ; k (#? . #?)
     call eq                 ; k #?==#?
     assert #t               ; k
+
     push list_of_3          ; k (3)
     push 2                  ; k (3) 2
     push 1                  ; k (3) 2 1
@@ -256,6 +262,16 @@ test_eq:                    ; ( -- )
     pair 1                  ; k ((1 2 3) . (1 2 3))
     call eq                 ; k (1 2 3)==(1 2 3)
     assert #t               ; k
+
+    push 1                  ; k 1
+    push 2                  ; k 1 2
+    pair 1                  ; k (1 . 2)
+    call eq                 ; k 1==2
+    assert #f               ; k
+
+    push 42                 ; k 42
+    call eq                 ; k ???
+    assert #f               ; k
     return
 
 not:                        ; ( value -- boolean | #? )
