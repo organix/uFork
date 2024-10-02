@@ -4,11 +4,6 @@
 
 DEF is_number(n) AS not(eq(neg(n), ?))
 
-# A write request looks like (to_cancel callback fixnum),
-# where to_cancel is the optional customer for a cancel capability,
-# and callback is the customer that will receive the result.
-# The result looks like (#unit) on success, and (#? . error) on failure.
-
 DEF strout_beh(cust, out, str) AS \(rv, err).[
     CASE str OF
     (first, rest) : [
@@ -21,11 +16,6 @@ DEF strout_beh(cust, out, str) AS \(rv, err).[
 CREATE say_hello WITH strout_beh(println, stdio,
     'H', 'e', 'l', 'l', 'o', '\n', NIL)
 SEND (?, NIL) TO say_hello
-
-# A read request looks like (to_cancel callback),
-# where to_cancel is the optional customer for a cancel capability,
-# and callback is the customer that will receive the result.
-# The result looks like (fixnum) on success, and (#? . error) on failure.
 
 DEF echo_beh(io) AS \(rv, err).[
     CASE is_number(rv) OF

@@ -5,11 +5,6 @@ import svg_drawing from "https://ufork.org/lib/svg_drawing.js";
 
 const svg_key = 101; // from dev.asm
 
-// A write request looks like (to_cancel callback fixnum),
-// where to_cancel is the optional customer for a cancel capability,
-// and callback is the customer that will receive the result.
-// The result looks like (#unit) on success, and (#? . error) on failure.
-
 function svg_dev(core, make_ddev, on_draw) {
     const on_code = svg_drawing(on_draw);
 
