@@ -33,7 +33,7 @@ If `offset` is out of bounds, the value is `#?`.
 
 A _write_ request looks like `(customer offset value)`.
 The byte `value` is written at `offset`,
-and `#unit` is sent to the `customer`.
+and `()` is sent to the `customer`.
 If `offset` is out of bounds, the write has no effect.
 
 ## Memory Layout

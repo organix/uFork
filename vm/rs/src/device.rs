@@ -313,7 +313,7 @@ fn blob_write(core: &mut Core, handle: Any, ofs: Any, val: Any) -> Result<Any, E
         let byte = val.get_fix()? as u8;
         core.blob_write(base + ofs, byte);
     }
-    Ok(UNIT)
+    Ok(NIL)
 }
 
 pub struct BlobDevice {
@@ -352,8 +352,8 @@ impl Device for BlobDevice {
                 let evt = core.reserve_event(sponsor, cust, data)?;
                 core.event_enqueue(evt);
             } else {  // write request
-                let unit = blob_write(core, handle, ofs, val)?;
-                let evt = core.reserve_event(sponsor, cust, unit)?;
+                let result = blob_write(core, handle, ofs, val)?;
+                let evt = core.reserve_event(sponsor, cust, result)?;
                 core.event_enqueue(evt);
             }
         } else {
