@@ -20,7 +20,6 @@ to the state of actors, managed with `BECOME`.
   * `#nil` — empty list, abbreviated `()`
   * `#f` — boolean **false**
   * `#t` — boolean **true**
-  * `#unit` — inert result
   * `#literal_t` — type of literal values
   * `#type_t` — type of types
   * `#fixnum_t` — type of _fixnums_ (31-bit signed integers)
