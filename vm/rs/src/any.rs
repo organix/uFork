@@ -22,7 +22,7 @@ pub const UNDEF: Any        = Any { raw: 0x0 };
 pub const NIL: Any          = Any { raw: 0x1 };
 pub const FALSE: Any        = Any { raw: 0x2 };
 pub const TRUE: Any         = Any { raw: 0x3 };
-pub const UNIT: Any         = Any { raw: 0x4 };
+pub const ROM_04: Any       = Any { raw: 0x4 };  // unused
 pub const EMPTY_DQ: Any     = Any { raw: 0x5 };
 
 pub const LITERAL_T: Any    = UNDEF;
