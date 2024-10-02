@@ -94,11 +94,10 @@ names.
 
 Expressions appear only in operand position.
 
-There are five _literal_ values:
+There are four _literal_ values:
 
 - `#?` (undefined)
 - `#nil` (empty list)
-- `#unit` (inert result)
 - `#t` (true)
 - `#f` (false)
 
@@ -456,7 +455,6 @@ optional.
     literal
         undef
         nil
-        unit
         true
         false
 
@@ -465,9 +463,6 @@ optional.
 
     nil
         "#nil"
-
-    unit
-        "#unit"
 
     true
         "#t"

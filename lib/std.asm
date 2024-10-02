@@ -62,9 +62,6 @@ rv_false:                   ; _ <- (cust . _)
 rv_true:                    ; _ <- (cust . _)
     push #t cust_send       ; msg=#t
 
-rv_unit:                    ; _ <- (cust . _)
-    push #unit cust_send    ; msg=#unit
-
 rv_zero:                    ; _ <- (cust . _)
     push 0 cust_send        ; msg=0
 
@@ -105,10 +102,6 @@ return_t:                   ; k
     push #t                 ; k rv=#t
     ref return_value
 
-return_unit:                ; k
-    push #unit              ; k rv=#unit
-    ref return_value
-
 return_zero:                ; k
     push 0                  ; k rv=0
     ref return_value
@@ -143,7 +136,6 @@ return_one:                 ; k
     rv_nil
     rv_false
     rv_true
-    rv_unit
     rv_zero
     rv_one
     resend
@@ -154,6 +146,5 @@ return_one:                 ; k
     return_nil
     return_f
     return_t
-    return_unit
     return_zero
     return_one
