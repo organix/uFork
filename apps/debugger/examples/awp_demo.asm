@@ -29,11 +29,11 @@ boot:                       ; () <- {caps}
     msg 0                   ; greeter bob {caps}
     push listening_beh      ; greeter bob {caps} listening_beh
     new -1                  ; greeter bob listening
-    push #?                 ; greeter bob listening #?
-    push dev.listen_tag     ; greeter bob listening #? #listen
-    msg 0                   ; greeter bob listening #? #listen {caps}
-    push dev.awp_key        ; greeter bob listening #? #listen {caps} awp_key
-    dict get                ; greeter bob listening #? #listen awp_dev
+    push #?                 ; greeter bob listening to_cancel=#?
+    push dev.listen_tag     ; greeter bob listening to_cancel #listen
+    msg 0                   ; greeter bob listening to_cancel #listen {caps}
+    push dev.awp_key        ; greeter bob listening to_cancel #listen {caps} awp_key
+    dict get                ; greeter bob listening to_cancel #listen awp_dev
     send 5                  ; --
     ref std.commit
 
@@ -51,11 +51,11 @@ listening_beh:              ; {caps} <- (stop . error)
     state 0                 ; hello @bob alice {caps}
     push introduced_beh     ; hello @bob alice {caps} introduced_beh
     new -1                  ; hello @bob alice introduced
-    push #?                 ; hello @bob alice introduced #?
-    push dev.intro_tag      ; hello @bob alice introduced #? #intro
-    state 0                 ; hello @bob alice introduced #? #intro {caps}
-    push dev.awp_key        ; hello @bob alice introduced #? #intro {caps} awp_key
-    dict get                ; hello @bob alice introduced #? #intro awp_dev
+    push #?                 ; hello @bob alice introduced to_cancel=#?
+    push dev.intro_tag      ; hello @bob alice introduced to_cancel #intro
+    state 0                 ; hello @bob alice introduced to_cancel #intro {caps}
+    push dev.awp_key        ; hello @bob alice introduced to_cancel #intro {caps} awp_key
+    dict get                ; hello @bob alice introduced to_cancel #intro awp_dev
     send 6                  ; --
     ref std.commit
 
@@ -89,11 +89,10 @@ introduced_beh:             ; {caps} <- (ping . error)
 ping_beh:                   ; () <- pong
     push #f                 ; #f
     push #t                 ; #f #t
-    push #unit              ; #f #t #unit
-    push #?                 ; #f #t #unit #?
-    push 123                ; #f #t #unit #? 123
-    msg 0                   ; #f #t #unit #? 123 pong
-    send 5                  ; --
+    push #?                 ; #f #t #?
+    push 123                ; #f #t #? 123
+    msg 0                   ; #f #t #? 123 pong
+    send 4                  ; --
     ref std.commit
 
 ; The pong actor sends the message to the debug device.
