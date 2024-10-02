@@ -80,9 +80,9 @@ join_beh:                   ; (debug_dev io_dev timer_dev awp_dev room_id) <- ()
     state 5                 ; party_rx party_rx petname=room_id
     push awp_store          ; party_rx party_rx petname store
     roll 4                  ; party_rx petname store callback=party_rx
-    push #?                 ; party_rx petname store callback #?
-    push dev.intro_tag      ; party_rx petname store callback #? #intro
-    state 4                 ; party_rx petname store callback #? #intro awp_dev
+    push #?                 ; party_rx petname store callback to_cancel=#?
+    push dev.intro_tag      ; party_rx petname store callback to_cancel #intro
+    state 4                 ; party_rx petname store callback to_cancel #intro awp_dev
     send 6                  ; --
 
     ref std.commit
@@ -129,7 +129,7 @@ intro_cb:
     beh 4                   ; party_tx // link_rx_beh.(cust timer tx seq)
 
     ; set party_rx_timer
-    push #unit              ; party_tx msg=#unit
+    push #nil               ; party_tx msg=()
     my self                 ; party_tx msg target=SELF
     push rx_timeout         ; party_tx msg target delay=rx_timeout
     state 3                 ; party_tx msg target delay timer_dev
@@ -179,9 +179,9 @@ host_beh:                   ; (debug_dev io_dev timer_dev awp_dev room_id) <- ()
     push awp_store          ; greeter store
     push listen_cb_beh      ; greeter store listen_cb_beh
     new 0                   ; greeter store callback=listen_cb_beh.()
-    push #?                 ; greeter store callback #?
-    push dev.listen_tag     ; greeter store callback #? #listen
-    state 4                 ; greeter store callback #? #listen awp_dev
+    push #?                 ; greeter store callback to_cancel=#?
+    push dev.listen_tag     ; greeter store callback to_cancel #listen
+    state 4                 ; greeter store callback to_cancel #listen awp_dev
     send 5                  ; --
 
     ref std.commit
@@ -232,7 +232,7 @@ greeter_beh:                ; (debug_dev timer_dev room) <- (to_cancel callback 
     new 4                   ; room_rx=link_rx_beh.(cust timer tx seq)
 
     ; set room_rx_timer
-    push #unit              ; room_rx msg=#unit
+    push #nil               ; room_rx msg=()
     pick 2                  ; room_rx msg target=room_rx
     push rx_timeout         ; room_rx msg target delay=rx_timeout
     state 2                 ; room_rx msg target delay timer_dev
@@ -450,9 +450,9 @@ tx_tmo_2:
 ;   seq: next message number expected (to receive)
 ;
 
-link_rx_beh:                ; (cust timer tx seq) <- (ack seq' . content) | #unit
+link_rx_beh:                ; (cust timer tx seq) <- (ack seq' . content) | ()
     msg 0                   ; msg
-    eq #unit                ; msg==#unit
+    eq #nil                 ; msg==()
     if_not link_rx_1
 
     ; timeout
@@ -461,7 +461,7 @@ link_rx_beh:                ; (cust timer tx seq) <- (ack seq' . content) | #uni
     beh -1                  ; --
 
     ; reset timer
-    push #unit              ; msg=#unit
+    push #nil               ; msg=()
     my self                 ; msg target=SELF
     push rx_timeout         ; msg target delay=rx_timeout
     state 2                 ; msg target delay timer
@@ -503,9 +503,9 @@ link_rx_2:
 
 ; One timeout has occurred. Another means disconnect.
 
-lost_rx_beh:                ; (cust timer tx seq) <- (ack seq' . content) | #unit
+lost_rx_beh:                ; (cust timer tx seq) <- (ack seq' . content) | ()
     msg 0                   ; msg
-    eq #unit                ; msg==#unit
+    eq #nil                 ; msg==()
     if_not lost_rx_1
 
     ; timeout

@@ -17,9 +17,9 @@
 (define value-beh
     (lambda (value)
         (BEH (op arg)
-            (if (eq? op 'read)
-                (SEND arg value)
-                #unit))))
+            (cond
+                ((eq? op 'read)
+                    (SEND arg value))))))
 
 (define send-to-all
     (lambda (waiting value)

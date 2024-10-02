@@ -210,11 +210,11 @@ not:                        ; (peg) <- ((ok . fail) accum . in)
     msg 1                   ; custs=(ok . fail)
     part 1                  ; fail ok
     msg -2                  ; fail ok in
-    push #unit              ; fail ok in #unit
-    pair 1                  ; fail ok (#unit . in)
-    roll 2                  ; fail (#unit . in) ok
-    push lib.relay_beh      ; fail (#unit . in) ok relay_beh
-    new 2                   ; fail fail'=relay_beh.(ok (#unit . in))
+    push #nil               ; fail ok in ()
+    pair 1                  ; fail ok (() . in)
+    roll 2                  ; fail (() . in) ok
+    push lib.relay_beh      ; fail (() . in) ok relay_beh
+    new 2                   ; fail fail'=relay_beh.(ok (() . in))
 
     msg -2                  ; fail fail' in
     roll 3                  ; fail' in fail
@@ -517,13 +517,13 @@ test_6:                     ; (debug_dev) <- ()
     send 2                  ; --
     ref std.commit
 
-test_6_data:                ; (('0' ('\r' . '\n') . #unit) . ())
+test_6_data:                ; (('0' ('\r' . '\n')))
     pair_t test_6_accum
     ref #nil
-test_6_accum:               ; ('0' ('\r' . '\n') . #unit)
+test_6_accum:               ; ('0' ('\r' . '\n'))
     pair_t '0'
     pair_t test_6_eol
-    ref #unit
+    ref #nil
 test_6_eol:                 ; ('\r' . '\n')
     pair_t '\r'
     ref '\n'

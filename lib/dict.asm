@@ -143,22 +143,22 @@ demo_0:
 demo_1:
     push #nil               ; ()
     push 0                  ; () 0
-    push #unit              ; () 0 #unit
-    call add                ; {0:#unit}
-    pick 1                  ; {0:#unit} {0:#unit}
-    push 0                  ; {0:#unit} {0:#unit} 0
-    call get                ; {0:#unit} #unit
-    assert #unit            ; {0:#unit}
+    push 42                 ; () 0 42
+    call add                ; {0:42}
+    pick 1                  ; {0:42} {0:42}
+    push 0                  ; {0:42} {0:42} 0
+    call get                ; {0:42} 42
+    assert 42               ; {0:42}
 demo_2:
-    push 1                  ; {0:#unit} 1
-    push -1                 ; {0:#unit} 1 -1
-    call add                ; {1:-1, 0:#unit}
-    dup 1                   ; {1:-1, 0:#unit} {1:-1, 0:#unit}
-    push 0                  ; {1:-1, 0:#unit} {1:-1, 0:#unit} 0
-    call get                ; {1:-1, 0:#unit} #unit
-    assert #unit            ; {1:-1, 0:#unit}
+    push 1                  ; {0:42} 1
+    push -1                 ; {0:42} 1 -1
+    call add                ; {1:-1, 0:42}
+    dup 1                   ; {1:-1, 0:42} {1:-1, 0:42}
+    push 0                  ; {1:-1, 0:42} {1:-1, 0:42} 0
+    call get                ; {1:-1, 0:42} 42
+    assert 42               ; {1:-1, 0:42}
 demo_3:
-    push 0                  ; {1:-1, 0:#unit} 0
+    push 0                  ; {1:-1, 0:42} 0
     call del                ; {1:-1}
     dup 1                   ; {1:-1} {1:-1}
     push 0                  ; {1:-1} {1:-1} 0
