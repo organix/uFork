@@ -1,0 +1,65 @@
+#
+# library of actor idioms
+#
+
+DEF sink_beh AS \_.[]
+CREATE sink WITH sink_beh
+
+DEF const_beh(value) AS \(cust, _).[ SEND value TO cust ]
+
+DEF fwd_beh(rcvr) AS \msg.[ SEND msg TO rcvr ]
+DEF init_fwd_beh AS \rcvr.[ BECOME fwd_beh(rcvr) ]
+
+DEF once_beh(rcvr) AS \msg.[
+    SEND msg TO rcvr
+    BECOME sink_beh
+]
+
+DEF label_beh(rcvr, label) AS \msg.[
+    SEND (label, msg) TO rcvr
+]
+
+DEF tag_beh(rcvr) AS \msg.[
+    SEND (SELF, msg) TO rcvr
+]
+DEF once_tag_beh(rcvr) AS \msg.[
+    SEND (SELF, msg) TO rcvr
+    BECOME sink_beh
+]
+
+DEF race_beh(list) AS \(cust, req).[
+    CREATE once WITH once_beh(cust)
+    send_to_all((once, req), list)
+]
+DEF send_to_all(msg, list) AS (
+    CASE list OF
+    () : []
+    (first, rest) : [
+        SEND msg TO first
+        send_to_all(msg, rest)
+    ]
+    (last) : [ SEND msg TO last ]
+    END
+)
+
+DEF fork_beh(cust, h_svc, t_svc) AS \(h_req, t_req).[
+    CREATE t_tag WITH tag_beh(SELF)
+    CREATE h_tag WITH tag_beh(SELF)
+    SEND (t_tag, t_req) TO t_svc
+    SEND (h_tag, h_req) TO h_svc
+    BECOME join_beh(cust, h_tag, t_tag)
+]
+DEF join_beh(cust, h_tag, t_tag) AS \msg.[
+    CASE msg OF
+    ($h_tag, head) : [
+        BECOME \($t_tag, tail).[
+            SEND (head, tail) TO cust
+        ]
+    ]
+    ($t_tag, tail) : [
+        BECOME \($h_tag, head).[
+            SEND (head, tail) TO cust
+        ]
+    ]
+    END
+]
