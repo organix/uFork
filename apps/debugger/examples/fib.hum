@@ -3,8 +3,8 @@
 #
 
 DEF fib_beh(m) AS \(cust, n).[
-    CASE less(n, m) OF
-    FALSE : [
+    CASE greater(n, m) OF
+    TRUE : [
         SEND (k_fib, sub(n, 1)) TO SELF
         SEND (k_fib, sub(n, 2)) TO SELF
         CREATE k_fib WITH \a.[
@@ -17,5 +17,5 @@ DEF fib_beh(m) AS \(cust, n).[
     END
 ]
 
-CREATE fib WITH fib_beh(2)
-SEND (println, 6) TO fib
+CREATE fib WITH fib_beh(1)
+SEND (println, 6) TO fib  # => 8

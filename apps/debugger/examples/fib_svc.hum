@@ -1,0 +1,46 @@
+#
+# Fibonacci requestor (service)
+#
+# Implements a Parseq Requestor-style API
+# for computing the nth Fibonacci number.
+#
+
+DEF falsy(x) AS (
+    CASE x OF
+    ? : TRUE
+    () : TRUE
+    FALSE : TRUE
+    0 : TRUE
+    _ : FALSE
+    END
+)
+DEF fib_req AS \(can, cb, n).[
+    # SEND (SELF, can, cb, n) TO println
+    CASE greater(n, 1) OF
+    TRUE : [
+        SEND (?, k_fib, sub(n, 1)) TO SELF # NEW fib_req
+        SEND (?, k_fib, sub(n, 2)) TO SELF # NEW fib_req
+        CREATE k_fib WITH \(rx, ex).[
+            # SEND (SELF, rx, ex) TO println
+            CASE falsy(ex) OF
+            TRUE : [
+                BECOME \(ry, ey).[
+                    # SEND (SELF, ry, ey) TO println
+                    CASE falsy(ey) OF
+                    TRUE : [
+                        SEND (add(rx, ry), ?) TO cb
+                    ]
+                    _ : [ SEND (ry, ey) TO cb ]
+                    END
+                ]
+            ]
+            _ : [ SEND (rx, ex) TO cb ]
+            END
+        ]
+    ]
+    _ : [ SEND (n, ?) TO cb ]
+    END
+]
+
+CREATE fib_svc WITH fib_req
+SEND (?, println, 9) TO fib_svc  # => (34, ?)
