@@ -1,7 +1,7 @@
 #
-# Fibonacci requestor (service)
+# Fibonacci Requestor
 #
-# Implements a Parseq Requestor-style API
+# Implements a Parseq-style Requestor API
 # for computing the nth Fibonacci number.
 #
 
@@ -30,5 +30,5 @@ DEF fib_req AS \(can, cb, n).[
     END
 ]
 
-CREATE fib_svc WITH fib_req
-SEND (?, println, 9) TO fib_svc  # => (TRUE, 34)
+CREATE fib WITH fib_req
+SEND (?, println, 9) TO fib  # => (TRUE, 34)
