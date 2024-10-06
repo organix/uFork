@@ -14,11 +14,6 @@ hello:                      ; (+72 +101 +108 +108 +111 +63 +10)
     pair_t '\n'
     ref #nil
 
-; A write request looks like (to_cancel callback fixnum),
-; where to_cancel is the optional customer for a cancel capability,
-; and callback is the customer that will receive the result.
-; The result looks like (#unit) on success, and (#? . error) on failure.
-
 str_out:                    ; (cb out . str) <- result
     state -2                ; str
     typeq #pair_t           ; is_pair(str)

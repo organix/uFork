@@ -103,21 +103,16 @@ refers to the `apple` definition.
 
 ## Literal
 
-There are five _literal_ values: _undef_, _nil_, _unit_, _true_, and _false_.
+There are four _literal_ values: _undef_, _nil_, _true_, and _false_.
 
     {"kind": "literal", "value": "undef"}
 
-_undef_ represents the absence of a value, usually indicating some kind of
- error.
+_undef_ represents the absence of a value.
 
     {"kind": "literal", "value": "nil"}
 
 _nil_ is used to terminate recursive data structures, for example a list
  of _pairs_.
-
-    {"kind": "literal", "value": "unit"}
-
-_unit_ represents the absence of information, without indicating an error.
 
     {"kind": "literal", "value": "true"}
     {"kind": "literal", "value": "false"}

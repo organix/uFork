@@ -70,14 +70,14 @@ demo_5:
     dup 1                   ; (()) (())
     msg 0                   ; (()) (()) {caps}
     deque put               ; (()) (() {caps})
-    push #unit              ; (()) (() {caps}) #unit
-    deque put               ; (()) (() #unit {caps})
-    push #nil               ; (()) (() #unit {caps}) ()
-    deque put               ; (()) (() () #unit {caps})
-    deque pop               ; (()) ((#unit ())) {caps}
-    roll -2                 ; (()) {caps} ((#unit ()))
-    deque pop               ; (()) {caps} ((())) #unit
-    assert #unit            ; (()) {caps} ((()))
+    push 42                 ; (()) (() {caps}) 42
+    deque put               ; (()) (() 42 {caps})
+    push #nil               ; (()) (() 42 {caps}) ()
+    deque put               ; (()) (() () 42 {caps})
+    deque pop               ; (()) ((42 ())) {caps}
+    roll -2                 ; (()) {caps} ((42 ()))
+    deque pop               ; (()) {caps} ((())) 42
+    assert 42               ; (()) {caps} ((()))
     deque pop               ; (()) {caps} (()) ()
     assert #nil             ; (()) {caps} (())
     call empty              ; (()) {caps} #t

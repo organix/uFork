@@ -139,7 +139,7 @@ contexts:
 
 # Constants.
 
-    - match: '#(literal_t|fixnum_t|type_t|pair_t|dict_t|instr_t|actor_t|t|f|\?|nil|unit)'
+    - match: '#(literal_t|fixnum_t|type_t|pair_t|dict_t|instr_t|actor_t|t|f|\?|nil)'
       scope: constant.language.uforkasm
 
 # Based fixnum.

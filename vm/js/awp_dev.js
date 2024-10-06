@@ -129,7 +129,6 @@ function awp_dev({
 //  uFork           | OED
 //  ----------------|---------------
 //  #?              | null
-//  #unit           | ext(null)
 //  #t              | true
 //  #f              | false
 //  #nil            | []
@@ -144,9 +143,6 @@ function awp_dev({
             }
             if (raw === ufork.UNDEF_RAW) {
                 return {value: null};
-            }
-            if (raw === ufork.UNIT_RAW) {
-                return {meta: null};
             }
             if (raw === ufork.TRUE_RAW) {
                 return {value: true};
@@ -218,9 +214,6 @@ function awp_dev({
             }
             if (object.value === null) {
                 return ufork.UNDEF_RAW;
-            }
-            if (object.meta === null) {
-                return ufork.UNIT_RAW;
             }
             if (object.value === true) {
                 return ufork.TRUE_RAW;

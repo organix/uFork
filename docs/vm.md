@@ -122,7 +122,7 @@ Quad-cells are used to encode most of the important data-structures in uFork.
  `()`        | `^00000001` | `#?`      | `#?` | `#?` | `#?` | Nil (empty list)
  `#f`        | `^00000002` | `#?`      | `#?` | `#?` | `#?` | Boolean False
  `#t`        | `^00000003` | `#?`      | `#?` | `#?` | `#?` | Boolean True
- `#unit`     | `^00000004` | `#?`      | `#?` | `#?` | `#?` | Unit (inert)
+ --          | `^00000004` | `#?`      | `#?` | `#?` | `#?` | Unused
  `EMPTY_DQ`  | `^00000005` | `#pair_t` | `()` | `()` | `#?` | Empty Deque
  `#type_t`   | `^00000006` | `#type_t` | `+1` | `#?` | `#?` | Type of Types
  `#fixnum_t` | `^00000007` | `#type_t` | `#?` | `#?` | `#?` | Fixnum Type

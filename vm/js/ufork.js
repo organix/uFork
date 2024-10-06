@@ -93,7 +93,7 @@ const UNDEF_RAW = 0x00000000;
 const NIL_RAW   = 0x00000001;
 const FALSE_RAW = 0x00000002;
 const TRUE_RAW  = 0x00000003;
-const UNIT_RAW  = 0x00000004;
+//const ROM_04    = 0x00000004;  // unused
 const EMPTY_DQ  = 0x00000005;
 const TYPE_T    = 0x00000006;
 const FIXNUM_T  = 0x00000007;
@@ -198,7 +198,7 @@ const rom_label = [
     "()",
     "#f",
     "#t",
-    "#unit",
+    "ROM_04",  // unused
     "EMPTY_DQ",
     "#type_t",
     "#fixnum_t",
@@ -328,8 +328,7 @@ const crlf_literals = {
     undef: UNDEF_RAW,
     nil: NIL_RAW,
     false: FALSE_RAW,
-    true: TRUE_RAW,
-    unit: UNIT_RAW
+    true: TRUE_RAW
 };
 const crlf_types = {
     fixnum: FIXNUM_T,
@@ -1772,7 +1771,6 @@ export default Object.freeze({
     NIL_RAW,
     FALSE_RAW,
     TRUE_RAW,
-    UNIT_RAW,
     EMPTY_DQ,
     TYPE_T,
     FIXNUM_T,

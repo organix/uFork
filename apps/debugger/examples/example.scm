@@ -33,7 +33,7 @@
             (list debug-dev)
         )))
 
-;(list () #? #nil #f #t #unit '(#pair_t . #actor_t))
+;(list () #? #nil #f #t '(#pair_t . #actor_t))
 
 ;((lambda (x) x) (list 1 2 3))
 

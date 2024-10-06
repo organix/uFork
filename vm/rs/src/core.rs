@@ -25,6 +25,8 @@ pub const RAM_BASE_OFS: usize = 16;  // RAM offsets below this value are reserve
 pub const GC_FIRST: usize   = 0;  // offset of "first" in gc_queue[]
 pub const GC_LAST: usize    = 1;  // offset of "last" in gc_queue[]
 pub const GC_STRIDE: usize  = 16;  // number of steps to take for each GC increment
+pub const GC_BLACK: Any     = TRUE;
+pub const GC_WHITE: Any     = FALSE;
 
 // core limits (repeated in `index.js`)
 //const QUAD_ROM_MAX: usize = 1<<10;  // 1K quad-cells of ROM
@@ -93,10 +95,8 @@ impl Core {
         quad_rom[NIL.ofs()]         = Quad::literal_t();
         quad_rom[FALSE.ofs()]       = Quad::literal_t();
         quad_rom[TRUE.ofs()]        = Quad::literal_t();
-        quad_rom[UNIT.ofs()]        = Quad::literal_t();
-
+        quad_rom[ROM_04.ofs()]      = Quad::literal_t();
         quad_rom[EMPTY_DQ.ofs()]    = Quad::pair_t(NIL, NIL);
-
         quad_rom[TYPE_T.ofs()]      = Quad::type_t(PLUS_1);
         quad_rom[FIXNUM_T.ofs()]    = Quad::type_t(UNDEF);
         quad_rom[ACTOR_T.ofs()]     = Quad::type_t(PLUS_2);
@@ -138,7 +138,7 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
         let mut gc_queue = [ UNDEF; QUAD_RAM_MAX ];
         let mut ofs = 0;
         while ofs < RAM_BASE_OFS {
-            gc_queue[ofs] = UNIT;  // mark "black" (reachable)
+            gc_queue[ofs] = GC_BLACK;  // mark "black" (reachable)
             ofs += 1;
         }
         gc_queue[GC_FIRST] = NIL;
@@ -714,15 +714,14 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
                         let _r = self.stack_pop();  // reason for abort
                         // FIXME: where should `reason` be recorded/reported?
                         self.actor_abort(me);
-                        UNIT
+                        UNDEF
                     },
                     END_STOP => {
-                        //UNDEF
                         return Err(E_STOP);  // End::Stop terminated continuation
                     },
                     END_COMMIT => {
                         self.actor_commit(me);
-                        TRUE
+                        UNDEF
                     },
                     _ => {
                         return Err(E_BOUNDS);  // unknown END op
@@ -1741,7 +1740,7 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
         while steps > 0 && ofs >= RAM_BASE_OFS {
             steps -= 1;
             let color = self.gc_queue[ofs];
-            if color == UNDEF {  // still "white"
+            if color == GC_WHITE {  // still "white"
                 let ptr = Any::ram(ofs);
                 let t = self.ram(ptr).t();
                 if t == PROXY_T {
@@ -1758,8 +1757,8 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
                     self.release(ptr);
                 }
             } else {
-                assert_eq!(UNIT, color);  // must be "black"
-                self.gc_queue[ofs] = UNDEF;  // mark "white"
+                assert_eq!(GC_BLACK, color);  // must be "black"
+                self.gc_queue[ofs] = GC_WHITE;  // mark "white"
             }
             ofs -= 1;
         }
@@ -1770,11 +1769,11 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
         let ofs = ptr.ofs();
         if self.gc_state.is_rom() {
             // between GC passes, new allocations are assumed to be unreachable
-            self.gc_queue[ofs] = UNDEF;  // mark "white"
+            self.gc_queue[ofs] = GC_WHITE;  // mark "white"
         } else if self.gc_state.is_fix() {
             // during GC scanning, new allocations are added to the scan queue
             let color = self.gc_queue[ofs];
-            if color == UNDEF || color == UNIT {
+            if color == GC_WHITE || color == GC_BLACK {
                 // change "white" or "black" to "grey"
                 self.gc_enqueue(ptr);
             }
@@ -1782,9 +1781,9 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
             // during GC sweeping, new allocations are assumed to be reachable
             let sweep = self.gc_state.ofs();
             self.gc_queue[ofs] = if ofs > sweep {
-                UNDEF  // mark "white"
+                GC_WHITE  // mark "white"
             } else {
-                UNIT  // mark "black"
+                GC_BLACK  // mark "black"
             }
         }
     }
@@ -1798,7 +1797,7 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
         let ptr = Any::new(raw);
         if ptr.is_ram() {
             let ofs = ptr.ofs();
-            if self.gc_queue[ofs] == UNDEF {
+            if self.gc_queue[ofs] == GC_WHITE {
                 // change "white" to "grey"
                 self.gc_enqueue(ptr);
             }
@@ -1834,7 +1833,7 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
             if !next.is_ram() {
                 queue[GC_LAST] = NIL;
             }
-            queue[first.ofs()] = UNIT;  // mark "black"
+            queue[first.ofs()] = GC_BLACK;  // mark "black"
             Some(first)
         } else {
             None
@@ -1845,11 +1844,11 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
         let queue = &mut self.gc_queue;
         let ofs = ptr.ofs();
         let next = queue[ofs];
-        if next == UNDEF {
+        if next == GC_WHITE {
             return;  // already "white"
         }
-        if next == UNIT {
-            queue[ofs] = UNDEF;  // change "black" to "white"
+        if next == GC_BLACK {
+            queue[ofs] = GC_WHITE;  // change "black" to "white"
             return;
         }
         let mut curr = GC_FIRST;
@@ -1869,14 +1868,14 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
             curr = item.ofs();
             item = queue[curr];
         }
-        queue[ofs] = UNDEF;  // change "grey" to "white"
+        queue[ofs] = GC_WHITE;  // change "grey" to "white"
     }
 
     pub fn gc_color(&self, ptr: Any) -> Any {
         if ptr.is_ram() {
             self.gc_queue[ptr.ofs()]
         } else {
-            FALSE  // since UNDEF="white", FALSE="no color"
+            UNDEF  // no color
         }
     }
     pub fn gc_state(&self) -> Any {
@@ -2073,22 +2072,20 @@ pub const RV_FALSE: Any = Any { raw: (STD_OFS+6) as Raw };
         quad_rom[RV_FALSE.ofs()]    = Quad::vm_push(FALSE, CUST_SEND);
 pub const RV_TRUE: Any = Any { raw: (STD_OFS+7) as Raw };
         quad_rom[RV_TRUE.ofs()]     = Quad::vm_push(TRUE, CUST_SEND);
-pub const RV_UNIT: Any = Any { raw: (STD_OFS+8) as Raw };
-        quad_rom[RV_UNIT.ofs()]     = Quad::vm_push(UNIT, CUST_SEND);
-pub const RV_ZERO: Any = Any { raw: (STD_OFS+9) as Raw };
+pub const RV_ZERO: Any = Any { raw: (STD_OFS+8) as Raw };
         quad_rom[RV_ZERO.ofs()]     = Quad::vm_push(ZERO, CUST_SEND);
-pub const RV_ONE: Any = Any { raw: (STD_OFS+10) as Raw };
+pub const RV_ONE: Any = Any { raw: (STD_OFS+9) as Raw };
         quad_rom[RV_ONE.ofs()]      = Quad::vm_push(PLUS_1, CUST_SEND);
-pub const RESEND: Any = Any { raw: (STD_OFS+11) as Raw };
+pub const RESEND: Any = Any { raw: (STD_OFS+10) as Raw };
         quad_rom[RESEND.ofs()+0]    = Quad::vm_msg(ZERO, Any::rom(RESEND.ofs()+1));
         quad_rom[RESEND.ofs()+1]    = Quad::vm_my_self(SEND_MSG);
-pub const STOP: Any = Any { raw: (STD_OFS+13) as Raw };
+pub const STOP: Any = Any { raw: (STD_OFS+12) as Raw };
         quad_rom[STOP.ofs()]        = Quad::vm_end_stop();
-pub const ABORT: Any = Any { raw: (STD_OFS+14) as Raw };
+pub const ABORT: Any = Any { raw: (STD_OFS+13) as Raw };
         quad_rom[ABORT.ofs()+0]     = Quad::vm_push(UNDEF, Any::rom(ABORT.ofs()+1));  // reason=#?
         quad_rom[ABORT.ofs()+1]     = Quad::vm_end_abort();
 
-        core.rom_top = Any::rom(STD_OFS+16);
+        core.rom_top = Any::rom(STD_OFS+15);
         SINK_BEH
     }
 
@@ -2189,22 +2186,22 @@ pub const T_DICT_BEH: Any  = Any { raw: T_DICT_OFS as Raw };
 
         quad_rom[T_DICT_OFS+9]      = Quad::vm_push(NIL, Any::rom(T_DICT_OFS+10));  // ()
         quad_rom[T_DICT_OFS+10]     = Quad::vm_push(ZERO, Any::rom(T_DICT_OFS+11));  // () 0
-        quad_rom[T_DICT_OFS+11]     = Quad::vm_push(UNIT, Any::rom(T_DICT_OFS+12));  // () 0 #unit
-        quad_rom[T_DICT_OFS+12]     = Quad::vm_dict_set(Any::rom(T_DICT_OFS+13));  // {0:#unit}
-        quad_rom[T_DICT_OFS+13]     = Quad::vm_pick(PLUS_1, Any::rom(T_DICT_OFS+14));  // {0:#unit} {0:#unit}
-        quad_rom[T_DICT_OFS+14]     = Quad::vm_push(ZERO, Any::rom(T_DICT_OFS+15));  // {0:#unit} {0:#unit} 0
-        quad_rom[T_DICT_OFS+15]     = Quad::vm_dict_get(Any::rom(T_DICT_OFS+16));  // {0:#unit} #unit
-        quad_rom[T_DICT_OFS+16]     = Quad::vm_assert(UNIT, Any::rom(T_DICT_OFS+17));  // {0:#unit}
+        quad_rom[T_DICT_OFS+11]     = Quad::vm_push(TRUE, Any::rom(T_DICT_OFS+12));  // () 0 #t
+        quad_rom[T_DICT_OFS+12]     = Quad::vm_dict_set(Any::rom(T_DICT_OFS+13));  // {0:#t}
+        quad_rom[T_DICT_OFS+13]     = Quad::vm_pick(PLUS_1, Any::rom(T_DICT_OFS+14));  // {0:#t} {0:#t}
+        quad_rom[T_DICT_OFS+14]     = Quad::vm_push(ZERO, Any::rom(T_DICT_OFS+15));  // {0:#t} {0:#t} 0
+        quad_rom[T_DICT_OFS+15]     = Quad::vm_dict_get(Any::rom(T_DICT_OFS+16));  // {0:#t} #t
+        quad_rom[T_DICT_OFS+16]     = Quad::vm_assert(TRUE, Any::rom(T_DICT_OFS+17));  // {0:#t}
 
-        quad_rom[T_DICT_OFS+17]     = Quad::vm_push(PLUS_1, Any::rom(T_DICT_OFS+18));  // {0:#unit} 1
-        quad_rom[T_DICT_OFS+18]     = Quad::vm_push(MINUS_1, Any::rom(T_DICT_OFS+19));  // {0:#unit} 1 -1
-        quad_rom[T_DICT_OFS+19]     = Quad::vm_dict_add(Any::rom(T_DICT_OFS+20));  // {1:-1, 0:#unit}
-        quad_rom[T_DICT_OFS+20]     = Quad::vm_pick(PLUS_1, Any::rom(T_DICT_OFS+21));  // {1:-1, 0:#unit} {1:-1, 0:#unit}
-        quad_rom[T_DICT_OFS+21]     = Quad::vm_push(ZERO, Any::rom(T_DICT_OFS+22));  // {1:-1, 0:#unit} {1:-1, 0:#unit} 0
-        quad_rom[T_DICT_OFS+22]     = Quad::vm_dict_get(Any::rom(T_DICT_OFS+23));  // {1:-1, 0:#unit} #unit
-        quad_rom[T_DICT_OFS+23]     = Quad::vm_assert(UNIT, Any::rom(T_DICT_OFS+24));  // {1:-1, 0:#unit}
+        quad_rom[T_DICT_OFS+17]     = Quad::vm_push(PLUS_1, Any::rom(T_DICT_OFS+18));  // {0:#t} 1
+        quad_rom[T_DICT_OFS+18]     = Quad::vm_push(MINUS_1, Any::rom(T_DICT_OFS+19));  // {0:#t} 1 -1
+        quad_rom[T_DICT_OFS+19]     = Quad::vm_dict_add(Any::rom(T_DICT_OFS+20));  // {1:-1, 0:#t}
+        quad_rom[T_DICT_OFS+20]     = Quad::vm_pick(PLUS_1, Any::rom(T_DICT_OFS+21));  // {1:-1, 0:#t} {1:-1, 0:#t}
+        quad_rom[T_DICT_OFS+21]     = Quad::vm_push(ZERO, Any::rom(T_DICT_OFS+22));  // {1:-1, 0:#t} {1:-1, 0:#t} 0
+        quad_rom[T_DICT_OFS+22]     = Quad::vm_dict_get(Any::rom(T_DICT_OFS+23));  // {1:-1, 0:#t} #t
+        quad_rom[T_DICT_OFS+23]     = Quad::vm_assert(TRUE, Any::rom(T_DICT_OFS+24));  // {1:-1, 0:#t}
 
-        quad_rom[T_DICT_OFS+24]     = Quad::vm_push(ZERO, Any::rom(T_DICT_OFS+25));  // {1:-1, 0:#unit} 0
+        quad_rom[T_DICT_OFS+24]     = Quad::vm_push(ZERO, Any::rom(T_DICT_OFS+25));  // {1:-1, 0:#t} 0
         quad_rom[T_DICT_OFS+25]     = Quad::vm_dict_del(Any::rom(T_DICT_OFS+26));  // {1:-1}
         quad_rom[T_DICT_OFS+26]     = Quad::vm_pick(PLUS_1, Any::rom(T_DICT_OFS+27));  // {1:-1} {1:-1}
         quad_rom[T_DICT_OFS+27]     = Quad::vm_push(ZERO, Any::rom(T_DICT_OFS+28));  // {1:-1} {1:-1} 0
@@ -2274,44 +2271,44 @@ pub const T_DEQUE_BEH: Any  = Any { raw: T_DEQUE_OFS as Raw };
         quad_rom[T_DEQUE_OFS+28]    = Quad::vm_assert(ZERO, Any::rom(T_DEQUE_OFS+29));  // (())
 
         quad_rom[T_DEQUE_OFS+29]    = Quad::vm_dup(PLUS_1, Any::rom(T_DEQUE_OFS+30));  // (()) (())
-        quad_rom[T_DEQUE_OFS+30]    = Quad::vm_msg(ZERO, Any::rom(T_DEQUE_OFS+31));  // (()) (()) (@4 #unit)
-        quad_rom[T_DEQUE_OFS+31]    = Quad::vm_deque_put(Any::rom(T_DEQUE_OFS+32));  // (()) (() (@4 #unit))
-        quad_rom[T_DEQUE_OFS+32]    = Quad::vm_msg(MINUS_1, Any::rom(T_DEQUE_OFS+33));  // (()) (() (@4 #unit)) (#unit)
-        quad_rom[T_DEQUE_OFS+33]    = Quad::vm_deque_put(Any::rom(T_DEQUE_OFS+34));  // (()) (() (#unit) (@4 #unit))
-        quad_rom[T_DEQUE_OFS+34]    = Quad::vm_msg(MINUS_2, Any::rom(T_DEQUE_OFS+35));  // (()) (() (#unit) (@4 #unit)) ()
-        quad_rom[T_DEQUE_OFS+35]    = Quad::vm_deque_put(Any::rom(T_DEQUE_OFS+36));  // (()) (() () (#unit) (@4 #unit))
-        quad_rom[T_DEQUE_OFS+36]    = Quad::vm_deque_pop(Any::rom(T_DEQUE_OFS+37));  // (()) (((#unit) ())) (@4 #unit)
-        quad_rom[T_DEQUE_OFS+37]    = Quad::vm_roll(MINUS_2, Any::rom(T_DEQUE_OFS+38));  // (()) (@4 #unit) (((#unit) ()))
-        quad_rom[T_DEQUE_OFS+38]    = Quad::vm_deque_pop(Any::rom(T_DEQUE_OFS+39));  // (()) (@4 #unit) ((())) (#unit)
-        quad_rom[T_DEQUE_OFS+39]    = Quad::vm_roll(MINUS_3, Any::rom(T_DEQUE_OFS+40));  // (()) (#unit) (@4 #unit) ((()))
-        quad_rom[T_DEQUE_OFS+40]    = Quad::vm_deque_pop(Any::rom(T_DEQUE_OFS+41));  // (()) (#unit) (@4 #unit) (()) ()
-        quad_rom[T_DEQUE_OFS+41]    = Quad::vm_assert(NIL, Any::rom(T_DEQUE_OFS+42));  // (()) (#unit) (@4 #unit) (())
+        quad_rom[T_DEQUE_OFS+30]    = Quad::vm_msg(ZERO, Any::rom(T_DEQUE_OFS+31));  // (()) (()) (@4 #t)
+        quad_rom[T_DEQUE_OFS+31]    = Quad::vm_deque_put(Any::rom(T_DEQUE_OFS+32));  // (()) (() (@4 #t))
+        quad_rom[T_DEQUE_OFS+32]    = Quad::vm_msg(MINUS_1, Any::rom(T_DEQUE_OFS+33));  // (()) (() (@4 #t)) (#t)
+        quad_rom[T_DEQUE_OFS+33]    = Quad::vm_deque_put(Any::rom(T_DEQUE_OFS+34));  // (()) (() (#t) (@4 #t))
+        quad_rom[T_DEQUE_OFS+34]    = Quad::vm_msg(MINUS_2, Any::rom(T_DEQUE_OFS+35));  // (()) (() (#t) (@4 #t)) ()
+        quad_rom[T_DEQUE_OFS+35]    = Quad::vm_deque_put(Any::rom(T_DEQUE_OFS+36));  // (()) (() () (#t) (@4 #t))
+        quad_rom[T_DEQUE_OFS+36]    = Quad::vm_deque_pop(Any::rom(T_DEQUE_OFS+37));  // (()) (((#t) ())) (@4 #t)
+        quad_rom[T_DEQUE_OFS+37]    = Quad::vm_roll(MINUS_2, Any::rom(T_DEQUE_OFS+38));  // (()) (@4 #t) (((#t) ()))
+        quad_rom[T_DEQUE_OFS+38]    = Quad::vm_deque_pop(Any::rom(T_DEQUE_OFS+39));  // (()) (@4 #t) ((())) (#t)
+        quad_rom[T_DEQUE_OFS+39]    = Quad::vm_roll(MINUS_3, Any::rom(T_DEQUE_OFS+40));  // (()) (#t) (@4 #t) ((()))
+        quad_rom[T_DEQUE_OFS+40]    = Quad::vm_deque_pop(Any::rom(T_DEQUE_OFS+41));  // (()) (#t) (@4 #t) (()) ()
+        quad_rom[T_DEQUE_OFS+41]    = Quad::vm_assert(NIL, Any::rom(T_DEQUE_OFS+42));  // (()) (#t) (@4 #t) (())
 
-        quad_rom[T_DEQUE_OFS+42]    = Quad::vm_push(PLUS_1, Any::rom(T_DEQUE_OFS+43));  // (()) (#unit) (@4 #unit) (()) 1
-        quad_rom[T_DEQUE_OFS+43]    = Quad::vm_deque_put(Any::rom(T_DEQUE_OFS+44));  // (()) (#unit) (@4 #unit) (() 1)
-        quad_rom[T_DEQUE_OFS+44]    = Quad::vm_push(PLUS_2, Any::rom(T_DEQUE_OFS+45));  // (()) (#unit) (@4 #unit) (() 1) 2
-        quad_rom[T_DEQUE_OFS+45]    = Quad::vm_deque_put(Any::rom(T_DEQUE_OFS+46));  // (()) (#unit) (@4 #unit) (() 2 1)
-        quad_rom[T_DEQUE_OFS+46]    = Quad::vm_dup(PLUS_1, Any::rom(T_DEQUE_OFS+47));  // (()) (#unit) (@4 #unit) (() 2 1) (() 2 1)
-        quad_rom[T_DEQUE_OFS+47]    = Quad::vm_deque_empty(Any::rom(T_DEQUE_OFS+48));  // (()) (#unit) (@4 #unit) (() 2 1) #f
-        quad_rom[T_DEQUE_OFS+48]    = Quad::vm_assert(FALSE, Any::rom(T_DEQUE_OFS+49));  // (()) (#unit) (@4 #unit) (() 2 1)
+        quad_rom[T_DEQUE_OFS+42]    = Quad::vm_push(PLUS_1, Any::rom(T_DEQUE_OFS+43));  // (()) (#t) (@4 #t) (()) 1
+        quad_rom[T_DEQUE_OFS+43]    = Quad::vm_deque_put(Any::rom(T_DEQUE_OFS+44));  // (()) (#t) (@4 #t) (() 1)
+        quad_rom[T_DEQUE_OFS+44]    = Quad::vm_push(PLUS_2, Any::rom(T_DEQUE_OFS+45));  // (()) (#t) (@4 #t) (() 1) 2
+        quad_rom[T_DEQUE_OFS+45]    = Quad::vm_deque_put(Any::rom(T_DEQUE_OFS+46));  // (()) (#t) (@4 #t) (() 2 1)
+        quad_rom[T_DEQUE_OFS+46]    = Quad::vm_dup(PLUS_1, Any::rom(T_DEQUE_OFS+47));  // (()) (#t) (@4 #t) (() 2 1) (() 2 1)
+        quad_rom[T_DEQUE_OFS+47]    = Quad::vm_deque_empty(Any::rom(T_DEQUE_OFS+48));  // (()) (#t) (@4 #t) (() 2 1) #f
+        quad_rom[T_DEQUE_OFS+48]    = Quad::vm_assert(FALSE, Any::rom(T_DEQUE_OFS+49));  // (()) (#t) (@4 #t) (() 2 1)
 
-        quad_rom[T_DEQUE_OFS+49]    = Quad::vm_deque_pop(Any::rom(T_DEQUE_OFS+50));  // (()) (#unit) (@4 #unit) ((2)) 1
-        quad_rom[T_DEQUE_OFS+50]    = Quad::vm_assert(PLUS_1, Any::rom(T_DEQUE_OFS+51));  // (()) (#unit) (@4 #unit) ((2))
-        quad_rom[T_DEQUE_OFS+51]    = Quad::vm_push(PLUS_3, Any::rom(T_DEQUE_OFS+52));  // (()) (#unit) (@4 #unit) ((2)) 3
-        quad_rom[T_DEQUE_OFS+52]    = Quad::vm_deque_put(Any::rom(T_DEQUE_OFS+53));  // (()) (#unit) (@4 #unit) ((2) 3)
-        quad_rom[T_DEQUE_OFS+53]    = Quad::vm_dup(PLUS_1, Any::rom(T_DEQUE_OFS+54));  // (()) (#unit) (@4 #unit) ((2) 3) ((2) 3)
-        quad_rom[T_DEQUE_OFS+54]    = Quad::vm_deque_len(Any::rom(T_DEQUE_OFS+55));  // (()) (#unit) (@4 #unit) ((2) 3) 2
-        quad_rom[T_DEQUE_OFS+55]    = Quad::vm_assert(PLUS_2, Any::rom(T_DEQUE_OFS+56));  // (()) (#unit) (@4 #unit) ((2) 3)
+        quad_rom[T_DEQUE_OFS+49]    = Quad::vm_deque_pop(Any::rom(T_DEQUE_OFS+50));  // (()) (#t) (@4 #t) ((2)) 1
+        quad_rom[T_DEQUE_OFS+50]    = Quad::vm_assert(PLUS_1, Any::rom(T_DEQUE_OFS+51));  // (()) (#t) (@4 #t) ((2))
+        quad_rom[T_DEQUE_OFS+51]    = Quad::vm_push(PLUS_3, Any::rom(T_DEQUE_OFS+52));  // (()) (#t) (@4 #t) ((2)) 3
+        quad_rom[T_DEQUE_OFS+52]    = Quad::vm_deque_put(Any::rom(T_DEQUE_OFS+53));  // (()) (#t) (@4 #t) ((2) 3)
+        quad_rom[T_DEQUE_OFS+53]    = Quad::vm_dup(PLUS_1, Any::rom(T_DEQUE_OFS+54));  // (()) (#t) (@4 #t) ((2) 3) ((2) 3)
+        quad_rom[T_DEQUE_OFS+54]    = Quad::vm_deque_len(Any::rom(T_DEQUE_OFS+55));  // (()) (#t) (@4 #t) ((2) 3) 2
+        quad_rom[T_DEQUE_OFS+55]    = Quad::vm_assert(PLUS_2, Any::rom(T_DEQUE_OFS+56));  // (()) (#t) (@4 #t) ((2) 3)
 
-        quad_rom[T_DEQUE_OFS+56]    = Quad::vm_deque_pop(Any::rom(T_DEQUE_OFS+57));  // (()) (#unit) (@4 #unit) (() 3) 2
-        quad_rom[T_DEQUE_OFS+57]    = Quad::vm_assert(PLUS_2, Any::rom(T_DEQUE_OFS+58));  // (()) (#unit) (@4 #unit) (() 3)
-        quad_rom[T_DEQUE_OFS+58]    = Quad::vm_deque_pop(Any::rom(T_DEQUE_OFS+59));  // (()) (#unit) (@4 #unit) (()) 3
-        quad_rom[T_DEQUE_OFS+59]    = Quad::vm_assert(PLUS_3, Any::rom(T_DEQUE_OFS+60));  // (()) (#unit) (@4 #unit) (())
-        quad_rom[T_DEQUE_OFS+60]    = Quad::vm_deque_pop(Any::rom(T_DEQUE_OFS+61));  // (()) (#unit) (@4 #unit) (()) #?
-        quad_rom[T_DEQUE_OFS+61]    = Quad::vm_assert(UNDEF, Any::rom(T_DEQUE_OFS+62));  // (()) (#unit) (@4 #unit) (())
-        quad_rom[T_DEQUE_OFS+62]    = Quad::vm_dup(PLUS_1, Any::rom(T_DEQUE_OFS+63));  // (()) (#unit) (@4 #unit) (()) (())
-        quad_rom[T_DEQUE_OFS+63]    = Quad::vm_deque_len(Any::rom(T_DEQUE_OFS+64));  // (()) (#unit) (@4 #unit) (()) 0
-        quad_rom[T_DEQUE_OFS+64]    = Quad::vm_assert(ZERO, Any::rom(T_DEQUE_OFS+65));  // (()) (#unit) (@4 #unit) (())
+        quad_rom[T_DEQUE_OFS+56]    = Quad::vm_deque_pop(Any::rom(T_DEQUE_OFS+57));  // (()) (#t) (@4 #t) (() 3) 2
+        quad_rom[T_DEQUE_OFS+57]    = Quad::vm_assert(PLUS_2, Any::rom(T_DEQUE_OFS+58));  // (()) (#t) (@4 #t) (() 3)
+        quad_rom[T_DEQUE_OFS+58]    = Quad::vm_deque_pop(Any::rom(T_DEQUE_OFS+59));  // (()) (#t) (@4 #t) (()) 3
+        quad_rom[T_DEQUE_OFS+59]    = Quad::vm_assert(PLUS_3, Any::rom(T_DEQUE_OFS+60));  // (()) (#t) (@4 #t) (())
+        quad_rom[T_DEQUE_OFS+60]    = Quad::vm_deque_pop(Any::rom(T_DEQUE_OFS+61));  // (()) (#t) (@4 #t) (()) #?
+        quad_rom[T_DEQUE_OFS+61]    = Quad::vm_assert(UNDEF, Any::rom(T_DEQUE_OFS+62));  // (()) (#t) (@4 #t) (())
+        quad_rom[T_DEQUE_OFS+62]    = Quad::vm_dup(PLUS_1, Any::rom(T_DEQUE_OFS+63));  // (()) (#t) (@4 #t) (()) (())
+        quad_rom[T_DEQUE_OFS+63]    = Quad::vm_deque_len(Any::rom(T_DEQUE_OFS+64));  // (()) (#t) (@4 #t) (()) 0
+        quad_rom[T_DEQUE_OFS+64]    = Quad::vm_assert(ZERO, Any::rom(T_DEQUE_OFS+65));  // (()) (#t) (@4 #t) (())
         quad_rom[T_DEQUE_OFS+65]    = Quad::vm_end_commit();
 
         core.rom_top = Any::rom(T_DEQUE_OFS+66);
@@ -2453,7 +2450,7 @@ pub const COUNT_TO: Any = Any { raw: COUNT_TO_OFS as Raw };
         let boot_beh = load_deque_test(&mut core);
         let boot_ptr = core.reserve(&Quad::new_actor(boot_beh, NIL)).unwrap();
         let a_boot = core.ptr_to_cap(boot_ptr);
-        let msg = core.reserve(&Quad::pair_t(UNIT, NIL)).unwrap();
+        let msg = core.reserve(&Quad::pair_t(TRUE, NIL)).unwrap();
         let msg = core.reserve(&Quad::pair_t(a_boot, msg)).unwrap();
         let evt = core.reserve_event(SPONSOR, a_boot, msg);
         core.event_enqueue(evt.unwrap());

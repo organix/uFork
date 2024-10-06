@@ -176,7 +176,7 @@
 0x0000 , 0x0000 , 0x0000 , 0x0000 ,  ( ^0001: #nil )
 0x0000 , 0x0000 , 0x0000 , 0x0000 ,  ( ^0002: #f )
 0x0000 , 0x0000 , 0x0000 , 0x0000 ,  ( ^0003: #t )
-0x0000 , 0x0000 , 0x0000 , 0x0000 ,  ( ^0004: #unit )
+0x0000 , 0x0000 , 0x0000 , 0x0000 ,  ( ^0004: unused )
 0x000c , 0x0001 , 0x0001 , 0x0000 ,  ( ^0005: EMPTY_DQ )
 0x0006 , 0x8001 , 0x0000 , 0x0000 ,  ( ^0006: #type_t )
 0x0006 , 0x0000 , 0x0000 , 0x0000 ,  ( ^0007: #fixnum_t )
@@ -392,7 +392,7 @@
 ( 0x0001 CONSTANT #nil        ( empty list ) ... ucode.js )
 0x0002 CONSTANT #f          ( boolean false )
 0x0003 CONSTANT #t          ( boolean true )
-0x0004 CONSTANT #unit       ( inert result )
+( 0x0004 CONSTANT ROM_04      ( unused ) )
 0x0005 CONSTANT EMPTY_DQ    ( empty deque )
 0x0006 CONSTANT #type_t     ( type of types )
 0x0007 CONSTANT #fixnum_t   ( integer fixnum )
@@ -1761,7 +1761,7 @@ VARIABLE saved_sp           ( sp before instruction execution )
     DUP event_enqueue
     DUP e_head@ =assert
     DUP e_tail@ =assert
-    #unit 0x600E root_spn 2alloc
+    #t 0x600E root_spn 2alloc
     DUP event_enqueue
     OVER e_head@ =assert
     DUP e_tail@ =assert

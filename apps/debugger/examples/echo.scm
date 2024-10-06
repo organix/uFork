@@ -23,7 +23,7 @@
 (define echo-beh
     (lambda (io-dev)
         (BEH (code . error)
-            (if (eq? #unit code)
+            (if (eq? code #nil)
                 (SEND io-dev (list #? SELF))        ; input character
                 (SEND io-dev (list #? SELF code))   ; output character
             )

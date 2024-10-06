@@ -29,7 +29,7 @@ do_13:                      ; (debug_dev io_dev) <- blob
     msg 0                   ; 42 7 SELF blob
     send 3                  ; --
     ref std.commit
-write_13:                   ; (debug_dev blob) <- #unit
+write_13:                   ; (debug_dev blob) <- ()
     state 0                 ; (debug_dev blob)
     push read_13            ; (debug_dev blob) read_13
     beh -1                  ; --
@@ -38,7 +38,7 @@ write_13:                   ; (debug_dev blob) <- #unit
     state 2                 ; 7 SELF blob
     send 2                  ; --
     msg 0                   ; msg
-    assert #unit            ; --
+    assert #nil             ; --
     ref std.commit
 read_13:                    ; (debug_dev blob) <- byte
     msg 0                   ; byte

@@ -57,11 +57,10 @@ Each of the messages in this protocol,
 both the request and the result,
 are simple single values.
 
-Simple values also include the five literal constants:
+Simple values also include the four literal constants:
 
   * `#?` (undefined)
   * `#nil` (empty list)
-  * `#unit`
   * `#t` (boolean true)
   * `#f` (boolean false)
 
