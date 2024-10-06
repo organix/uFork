@@ -110,7 +110,7 @@ impl Default for IoDevice {
 
     The new `IoDevice` interface is described in io_dev.md.
       * _read_: `(to_cancel callback)` → `(fixnum)` | `(#? . error)`
-      * _write_: `(to_cancel callback fixnum)` → `(#unit)` | `(#? . error)`
+      * _write_: `(to_cancel callback fixnum)` → `(())` | `(#? . error)`
       * _cancel_: `_` → `to_cancel`
 */
 impl Device for IoDevice {
@@ -156,7 +156,7 @@ impl Device for IoDevice {
                 // write request
                 (self.write)(data);
                 // in the current implementation, `write` is synchronous, so we reply immediately
-                let result = core.reserve(&Quad::pair_t(UNIT, NIL))?;  // (#unit)
+                let result = core.reserve(&Quad::pair_t(NIL, NIL))?;  // (())
                 let evt = core.reserve_event(sponsor, callback, result)?;
                 core.event_enqueue(evt);
             }

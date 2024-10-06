@@ -730,7 +730,7 @@ line_upd:                   ; line'
 line_out_beh:               ; (io_dev) <- result | line'
     ; distinguish result from line'
     msg 1                   ; first
-    eq #unit                ; first==#unit
+    eq #nil                 ; first==()
     if std.commit           ; --  // unexpected result!
 
     ; extract char from line
@@ -767,7 +767,7 @@ line_rem:                   ; line'
 line_buf:                   ; (io_dev line) <- result | line'
     ; distinguish result from line'
     msg 1                   ; first
-    eq #unit                ; first==#unit
+    eq #nil                 ; first==()
     if_not line_add         ; --
 
     ; extract char from line
@@ -790,7 +790,7 @@ line_add:                   ; --
 line_bufs:                  ; (io_dev line lines) <- result | line'
     ; distinguish result from line'
     msg 1                   ; first
-    eq #unit                ; first==#unit
+    eq #nil                 ; first==()
     if line_chr             ; --
 
     ; add line' to lines
