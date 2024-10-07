@@ -10,28 +10,14 @@ A _delayed-message_ request looks like `(delay target message)`.
 The `message` is sent to the `target` actor
 after a nominal `delay` in milliseconds as a `fixnum`.
 
-## Requestor-Style Interface
+## Requestor Interface
 
-The **Timer Device** also provides an interface
-following the [_requestor_](../lib/rq/README.md) pattern.
+The **Timer Device** is also a [_requestor_](../docs/requestor.md). It support
+cancellation.
 
-A _timer_ request looks like `(to_cancel callback delay . result)`,
-where `to_cancel` is the optional customer for a _cancel_ capability
-and `callback` is the customer that will receive `result`
-after a nominal `delay` in milliseconds as a `fixnum`.
-
-The `result` should be `(value)` to indicate success,
-or `(#? . error)` to indicate failure.
-
-**NOTE:** Cancellation does _not_ trigger a failure.
-
-### Cancellation
-
-In a _timer_ request, if `to_cancel` is a capability,
-the device **may** send a _cancel_ capability to that customer.
-If the _cancel_ capability is sent a message (any message),
-the request **may** be cancelled
-(if it has not already sent the `result`).
+The input value of a _timer_ request is a pair like `(delay . result)`. After
+`delay`milliseconds, the `result` is sent to the callback specified in the
+request.
 
 ## Reference Implementation
 

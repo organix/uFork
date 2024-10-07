@@ -89,8 +89,8 @@ are not called again.
 
 ## uFork device
 
-The uFork AWP interface is implemented as a dedicated device. The AWP device's
-messages all adhere to the "requestor" pattern (see lib/rq/README.md).
+The uFork AWP interface is implemented as a dedicated device with a
+[_requestor_](../docs/requestor.md)-like interface.
 
 ### Stores
 
@@ -139,9 +139,12 @@ A store's contents might look something like this:
 
 ### Introduction
 
-    (#intro to_cancel callback store petname . hello_data) -> awp_dev
+    (#intro . intro_request) -> awp_dev
 
-Requests an introduction to an acquaintance, producing a greeting.
+Requests an introduction to an acquaintance, producing a greeting. The input
+value if the `intro_request` looks like
+
+    (store petname . hello_data)
 
 The `store` fixnum chooses the local party's AWP store. In the future, `store`
 will be a capability rather than a fixnum.
@@ -153,20 +156,25 @@ greeter is available, the request fails.
 
 ### Listening
 
-    (#listen to_cancel callback store greeter) -> awp_dev
+    (#listen . request) -> awp_dev
 
 Listens for introduction requests, producing a `stop` capability on success that
 can be used to stop listening:
 
     () -> stop
 
+The input value of the `listen_request` looks like
+
+    (store greeter)
+
 The `store` fixnum chooses the local party's AWP store.
 
 The `greeter`, if provided, is a requestor actor that responds to introduction
 requests. It produces a "greeting" value, perhaps containing capabilities. In
 this way, the greeter lets remote parties bootstrap a relationship from scratch.
+The input value of greeter requests looks like
 
-    (to_cancel callback petname . hello_data) -> greeter
+    (petname . hello_data)
 
 The `petname` identifies the acquaintance requesting the introduction, and could
 be useful authentication and logging. Unknown parties are added to the store,
@@ -179,7 +187,9 @@ The `hello_data` is the value included in the introduction request.
 It is possible to be notified when a message has been successfully sent by the
 AWP device.
 
-    (#send to_cancel callback proxy . message) -> awp_dev
+    (#send . send_request) -> awp_dev
+
+The input value of the `send_request` looks like `(proxy . message)`.
 
 This requestor produces an acknowledgement if it becomes known that the
 `message` was sent by the local transport. An acknowledgement does not

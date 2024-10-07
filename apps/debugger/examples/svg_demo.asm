@@ -134,7 +134,7 @@ str_out:                    ; (cb out . str) <- result
 
 str_end:                    ; --
     msg 0                   ; result
-    state 1                 ; cb
+    state 1                 ; result cb
     ref std.send_msg
 
 boot:                       ; () <- {caps}

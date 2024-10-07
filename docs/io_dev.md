@@ -1,36 +1,18 @@
 # uFork Console Input/Output Device
 
-The **I/O Device** interface follows the
-[_requestor_](../lib/rq/README.md) pattern.
-and provides a simple `fixnum` read/write API.
+The **I/O Device**  is implemented as a [_requestor_](../docs/requestor.md) that
+responds to two kinds of requests. It does not yet support cancellation.
 
 ## Read Request
 
-A _read_ request looks like `(to_cancel callback)`,
-where `to_cancel` is the optional customer for a cancel capability,
-and `callback` is the customer that will receive the result.
-The result looks like `(fixnum)` on success,
-and `(#? . error)` on failure.
+When sent a request with input `()`, it produces the next character read
+from the input stream (as a fixnum).
 
-**WARNING:** It is an error to send another read request
-before receiving a result on your callback.
+**WARNING:** It is an error to request a read whilst one is in progress.
 
 ## Write Request
 
-A _write_ request looks like `(to_cancel callback fixnum)`,
-where `to_cancel` is the optional customer for a _cancel_ capability,
-and `callback` is the customer that will receive the result.
-The result looks like `(())` on success,
-and `(#? . error)` on failure.
+When sent a request with input `(fixnum)`, it writes that character to the
+output stream and produces `()`.
 
-**WARNING:** It is an error to send another write request
-before receiving a result on your callback.
-
-## Cancellation
-
-In either _read_ or _write_ requests, if `to_cancel` is a capability,
-the device **may** send a _cancel_ capability to that customer.
-If the _cancel_ capability is sent a message (any message),
-the request **may** be cancelled, if it has not already sent a result.
-
-**NOTE:** The initial implementation doesn't send a _cancel_ capability.
+**WARNING:** It is an error to request a write whilst one is in progress.
