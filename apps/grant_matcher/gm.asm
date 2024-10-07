@@ -12,17 +12,17 @@ boot:                       ; () <- {caps}
     push store              ; greeter store
     push listen_cb_beh      ; greeter store listen_cb_beh
     new 0                   ; greeter store listen_cb
-    push #?                 ; greeter store listen_cb #?
-    push dev.listen_tag     ; greeter store listen_cb #? #listen
-    msg 0                   ; greeter store listen_cb #? #listen {caps}
-    push dev.awp_key        ; greeter store listen_cb #? #listen {caps} awp_key
-    dict get                ; greeter store listen_cb #? #listen awp_dev
+    push #?                 ; greeter store listen_cb to_cancel=#?
+    push dev.listen_tag     ; greeter store listen_cb to_cancel #listen
+    msg 0                   ; greeter store listen_cb to_cancel #listen {caps}
+    push dev.awp_key        ; greeter store listen_cb to_cancel #listen {caps} awp_key
+    dict get                ; greeter store listen_cb to_cancel #listen awp_dev
     send 5                  ; --
     ref std.commit
 
-listen_cb_beh:              ; () <- (result . error)
-    msg -1                  ; error
-    assert #nil             ; --
+listen_cb_beh:              ; () <- (ok . result/error)
+    msg 1                   ; ok
+    assert #t               ; --
     ref std.commit
 
 greeter_beh:                ; {pledges} <- (to_cancel callback petname pledge)

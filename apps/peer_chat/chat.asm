@@ -59,7 +59,7 @@ start:
 ; Initially, SELF is the callback for the AWP introduction with the room. If
 ; that succeeds, it becomes party_rx.
 
-join_beh:                   ; (debug_dev io_dev timer_dev awp_dev room_id) <- () | (room_rx . error)
+join_beh:                   ; (debug_dev io_dev timer_dev awp_dev room_id) <- () | (ok . room_rx/error)
     msg 0                   ; msg
     eq #nil                 ; msg==()
     if_not intro_cb         ; --
@@ -89,15 +89,15 @@ join_beh:                   ; (debug_dev io_dev timer_dev awp_dev room_id) <- ()
 
 intro_cb:
     ; check for a successful introduction
-    msg -1                  ; error
-    assert #nil             ; error==()!
+    msg 1                   ; ok
+    assert #t               ; --
 
     ; build party_tx
     deque new               ; msgs
     push 1                  ; msgs seq=1
     push 0                  ; msgs seq ack=0
     state 3                 ; msgs seq ack timer=timer_dev
-    msg 1                   ; msgs seq ack timer link=room_rx
+    msg -1                  ; msgs seq ack timer link=room_rx
     push link_tx_beh        ; msgs seq ack timer link link_tx_beh
     new 5                   ; party_tx=link_tx_beh.(link timer ack seq msgs)
 
@@ -186,9 +186,9 @@ host_beh:                   ; (debug_dev io_dev timer_dev awp_dev room_id) <- ()
 
     ref std.commit
 
-listen_cb_beh:              ; () <- (stop . error)
-    msg -1                  ; error
-    assert #nil             ; error==()!
+listen_cb_beh:              ; () <- (ok . stop/error)
+    msg 1                   ; ok
+    assert #t               ; --
     ref std.commit
 
 greeter_beh:                ; (debug_dev timer_dev room) <- (to_cancel callback party party_rx)
@@ -249,8 +249,10 @@ greeter_beh:                ; (debug_dev timer_dev room) <- (to_cancel callback 
     new 2                   ; room_rx'=log_fwd_beh.(logr rcvr)
 
     ; complete the introduction
-    msg 2                   ; room_rx callback
-    send 1                  ; --
+    push #t                 ; room_rx ok=#t
+    pair 1                  ; result=(ok . room_rx)
+    msg 2                   ; result callback
+    send -1                 ; --
 
     ref std.commit
 
@@ -750,8 +752,8 @@ line_snd:                   ; line' char
     if_not line_rem         ; line'
 
     ; no more chars in line
-    state 1                 ; ... io_dev
-    push line_out_beh       ; ... io_dev line_out_beh
+    state 1                 ; io_dev
+    push line_out_beh       ; io_dev line_out_beh
     beh 1                   ; --
     ref std.commit
 

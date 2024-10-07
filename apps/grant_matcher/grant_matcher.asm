@@ -71,19 +71,19 @@ listen_svc_beh:             ; awp_dev <- (cust store . greeter)
     msg 1                   ; greeter store cust
     push listen_cb_beh      ; greeter store cust listen_cb_beh
     new -1                  ; greeter store listen_cb
-    push #?                 ; greeter store listen_cb #?
-    push dev.listen_tag     ; greeter store listen_cb #? #listen
-    state 0                 ; greeter store listen_cb #? #listen awp_dev
+    push #?                 ; greeter store listen_cb to_cancel=#?
+    push dev.listen_tag     ; greeter store listen_cb to_cancel #listen
+    state 0                 ; greeter store listen_cb to_cancel #listen awp_dev
     send 5                  ; --
     ref std.commit
 
-listen_cb_beh:              ; cust <- (stop . error)
-    msg -1                  ; error
-    assert #nil             ; --
-    msg 1                   ; stop
-    typeq #actor_t          ; actor?(stop)
+listen_cb_beh:              ; cust <- (ok . stop/error)
+    msg 1                   ; ok
     assert #t               ; --
-    msg 1                   ; stop
+    msg -1                  ; stop
+    dup 1                   ; stop stop
+    typeq #actor_t          ; stop actor?(stop)
+    assert #t               ; stop
     state 0                 ; stop cust
     ref std.send_msg
 
@@ -132,9 +132,9 @@ intro_svc_beh:              ; (awp_dev store) <- (cust petname hello)
     msg 1                   ; hello petname store cust
     push intro_cb_beh       ; hello petname store cust intro_cb_beh
     new -1                  ; hello petname store intro_cb
-    push #?                 ; hello petname store intro_cb #?
-    push dev.intro_tag      ; hello petname store intro_cb #? #intro
-    state 1                 ; hello petname store intro_cb #? #intro awp_dev
+    push #?                 ; hello petname store intro_cb to_cancel=#?
+    push dev.intro_tag      ; hello petname store intro_cb to_cancel #intro
+    state 1                 ; hello petname store intro_cb to_cancel #intro awp_dev
     send 6                  ; --
     ref std.commit
 
@@ -143,14 +143,16 @@ KEQD_greeter_beh:           ; deposit <- (to_cancel callback petname)
     typeq #fixnum_t         ; fixnum?
     assert #t               ; --
     state 0                 ; deposit
-    msg 2                   ; deposit callback
-    send 1                  ; --
+    push #t                 ; deposit ok=#t
+    pair 1                  ; result=(ok . deposit)
+    msg 2                   ; result callback
+    send -1                 ; --
     ref std.commit
 
-intro_cb_beh:               ; cust <- (greeting . error)
-    msg -1                  ; error
-    assert #nil             ; --
-    msg 1                   ; greeting
+intro_cb_beh:               ; cust <- (ok . greeting/error)
+    msg 1                   ; ok
+    assert #t               ; --
+    msg -1                  ; greeting
     state 0                 ; greeting cust
     ref std.send_msg
 

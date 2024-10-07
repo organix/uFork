@@ -14,6 +14,7 @@ import ufork from "https://ufork.org/js/ufork.js";
 import awp_dev from "https://ufork.org/js/awp_dev.js";
 import host_dev from "https://ufork.org/js/host_dev.js";
 import memory_transport from "https://ufork.org/js/memory_transport.js";
+const lib_url = import.meta.resolve("https://ufork.org/lib/");
 const wasm_url = import.meta.resolve("https://ufork.org/wasm/ufork.wasm");
 const donor_url = import.meta.resolve("./donor.asm");
 const gm_url = import.meta.resolve("./gm.asm");
@@ -73,7 +74,8 @@ parseq.sequence(
             },
             on_log: window.console.log,
             log_level: ufork.LOG_DEBUG,
-            compilers: {asm: assemble}
+            compilers: {asm: assemble},
+            import_map: {"https://ufork.org/lib/": lib_url}
         });
         return parseq.sequence([
             core.h_initialize(),

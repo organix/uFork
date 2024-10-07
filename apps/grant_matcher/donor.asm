@@ -15,35 +15,35 @@ boot:                       ; () <- {caps}
     push store              ; KEQD store
     msg 0                   ; KEQD store {caps}
     push intro_cb_beh       ; KEQD store {caps} intro_cb_beh
-    new -1                  ; KEQD store intro_cb
-    push #?                 ; KEQD store intro_cb #?
-    push dev.intro_tag      ; KEQD store intro_cb #? #intro
-    msg 0                   ; KEQD store intro_cb #? #intro {caps}
-    push dev.awp_key        ; KEQD store intro_cb #? #intro {caps} awp_key
-    dict get                ; KEQD store intro_cb #? #intro awp_dev
+    new -1                  ; KEQD store intro_cb=intro_cb_beh.{caps}
+    push #?                 ; KEQD store intro_cb to_cancel=#?
+    push dev.intro_tag      ; KEQD store intro_cb to_cancel #intro
+    msg 0                   ; KEQD store intro_cb to_cancel #intro {caps}
+    push dev.awp_key        ; KEQD store intro_cb to_cancel #intro {caps} awp_key
+    dict get                ; KEQD store intro_cb to_cancel #intro awp_dev
     send 5                  ; --
     ref std.commit
 
-intro_cb_beh:               ; {caps} <- (deposit . error)
-    msg -1                  ; error
-    assert #nil             ; --
+intro_cb_beh:               ; {caps} <- (ok . deposit/error)
+    msg 1                   ; ok
+    assert #t               ; --
     push store              ; store
     state 0                 ; store {caps}
     push dev.debug_key      ; store {caps} debug_key
     dict get                ; store debug_dev
     push lib.label_beh      ; store debug_dev label_beh
     new 2                   ; withdraw
-    msg 1                   ; withdraw deposit
+    msg -1                  ; withdraw deposit
     pair 1                  ; hello=(deposit . withdraw)
     push GM_petname         ; hello GM
     push store              ; hello GM store
     push std.sink_beh       ; hello GM store sink_beh
     new 0                   ; hello GM store sink
-    push #?                 ; hello GM store sink #?
-    push dev.intro_tag      ; hello GM store sink #? #intro
-    state 0                 ; hello GM store sink #? #intro {caps}
-    push dev.awp_key        ; hello GM store sink #? #intro {caps} awp_key
-    dict get                ; hello GM store sink #? #intro awp_dev
+    push #?                 ; hello GM store sink to_cancel=#?
+    push dev.intro_tag      ; hello GM store sink to_cancel #intro
+    state 0                 ; hello GM store sink to_cancel #intro {caps}
+    push dev.awp_key        ; hello GM store sink to_cancel #intro {caps} awp_key
+    dict get                ; hello GM store sink to_cancel #intro awp_dev
     send 6                  ; --
     ref std.commit
 

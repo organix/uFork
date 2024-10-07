@@ -513,7 +513,7 @@ function awp_dev({
                     x: intro_callback,
                     y: core.h_reserve_ram({
                         t: ufork.PAIR_T,
-                        x: ufork.UNDEF_RAW,
+                        x: ufork.FALSE_RAW,
                         y: core.u_fixnum(
                             store === undefined
                             ? E_NO_STORE
@@ -554,7 +554,7 @@ function awp_dev({
                     x: callback_fwd,
                     y: core.h_reserve_ram({
                         t: ufork.PAIR_T,
-                        x: ufork.UNDEF_RAW,
+                        x: ufork.FALSE_RAW,
                         y: core.u_fixnum(E_CONNECTION_LOST)
                     })
                 }));
@@ -629,7 +629,7 @@ function awp_dev({
             if (store === undefined) {
                 return resolve(core.h_reserve_ram({
                     t: ufork.PAIR_T,
-                    x: ufork.UNDEF_RAW,
+                    x: ufork.FALSE_RAW,
                     y: core.u_fixnum(E_NO_STORE)
                 }));
             }
@@ -667,7 +667,7 @@ function awp_dev({
                         }
                         return resolve(core.h_reserve_ram({
                             t: ufork.PAIR_T,
-                            x: ufork.UNDEF_RAW,
+                            x: ufork.FALSE_RAW,
                             y: core.u_fixnum(E_LISTEN_FAIL)
                         }));
                     }
@@ -679,7 +679,7 @@ function awp_dev({
                         stop();
                         return resolve(core.h_reserve_ram({
                             t: ufork.PAIR_T,
-                            x: ufork.UNDEF_RAW,
+                            x: ufork.FALSE_RAW,
                             y: core.u_fixnum(E_ALREADY_LISTENING)
                         }));
                     }
@@ -716,8 +716,8 @@ function awp_dev({
                     );
                     return resolve(core.h_reserve_ram({
                         t: ufork.PAIR_T,
-                        x: stop_proxy,
-                        y: ufork.NIL_RAW
+                        x: ufork.TRUE_RAW,
+                        y: stop_proxy
                     }));
                 }
             );
