@@ -109,9 +109,6 @@ impl Default for IoDevice {
     we retain the previous behavior.
 
     The new `IoDevice` interface is described in io_dev.md.
-      * _read_: `(to_cancel callback)` → `(fixnum)` | `(#? . error)`
-      * _write_: `(to_cancel callback fixnum)` → `(())` | `(#? . error)`
-      * _cancel_: `_` → `to_cancel`
 */
 impl Device for IoDevice {
     fn handle_event(&mut self, core: &mut Core, ep: Any) -> Result<(), Error> {
@@ -147,7 +144,7 @@ impl Device for IoDevice {
                 let char = (self.read)(stub);
                 if char.is_fix() {
                     // if `read` was synchronous, reply immediately
-                    let result = core.reserve(&Quad::pair_t(char, NIL))?;  // (char)
+                    let result = core.reserve(&Quad::pair_t(TRUE, char))?;  // (#t . char)
                     core.ram_mut(evt).set_y(result);  // msg = result
                     core.event_enqueue(evt);
                     core.release_stub(stub);
@@ -156,7 +153,7 @@ impl Device for IoDevice {
                 // write request
                 (self.write)(data);
                 // in the current implementation, `write` is synchronous, so we reply immediately
-                let result = core.reserve(&Quad::pair_t(NIL, NIL))?;  // (())
+                let result = core.reserve(&Quad::pair_t(TRUE, NIL))?;  // (#t)
                 let evt = core.reserve_event(sponsor, callback, result)?;
                 core.event_enqueue(evt);
             }
@@ -352,8 +349,8 @@ impl Device for BlobDevice {
                 let evt = core.reserve_event(sponsor, cust, data)?;
                 core.event_enqueue(evt);
             } else {  // write request
-                let result = blob_write(core, handle, ofs, val)?;
-                let evt = core.reserve_event(sponsor, cust, result)?;
+                let nil = blob_write(core, handle, ofs, val)?;
+                let evt = core.reserve_event(sponsor, cust, nil)?;
                 core.event_enqueue(evt);
             }
         } else {

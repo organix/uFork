@@ -22,10 +22,10 @@
 ;        )))
 (define echo-beh
     (lambda (io-dev)
-        (BEH (code . error)
-            (if (eq? code #nil)
-                (SEND io-dev (list #? SELF))        ; input character
+        (BEH (ok . code)
+            (if (number? code)
                 (SEND io-dev (list #? SELF code))   ; output character
+                (SEND io-dev (list #? SELF))        ; input character
             )
         )))
 

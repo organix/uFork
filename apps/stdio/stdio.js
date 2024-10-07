@@ -17,6 +17,7 @@ import assemble from "https://ufork.org/lib/assemble.js";
 import scm from "https://ufork.org/lib/scheme.js";
 import ufork from "https://ufork.org/js/ufork.js";
 import io_dev from "https://ufork.org/js/io_dev.js";
+const lib_url = import.meta.resolve("https://ufork.org/lib/");
 const wasm_url = import.meta.resolve("https://ufork.org/wasm/ufork.wasm");
 
 const utf8_encoder = new TextEncoder();
@@ -74,7 +75,8 @@ core = ufork.make_core({
     on_wakeup: run,
     on_log: window.console.error,
     log_level: ufork.LOG_WARN,
-    compilers: {asm: assemble, scm: scm.compile}
+    compilers: {asm: assemble, scm: scm.compile},
+    import_map: {"https://ufork.org/lib/": lib_url}
 });
 parseq.sequence([
     core.h_initialize(),

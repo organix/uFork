@@ -55,11 +55,10 @@ function io_dev(core, on_stdout) {
             if (core.u_trace !== undefined) {
                 core.u_trace("READ:", core.u_print(char));
             }
-            const message = core.h_reserve_ram({  // (char)
+            const message = core.h_reserve_ram({  // (#t . char)
                 t: ufork.PAIR_T,
-                x: char,
-                y: ufork.NIL_RAW,
-                z: ufork.UNDEF_RAW
+                x: ufork.TRUE_RAW,
+                y: char
             });
             const quad = core.u_read_quad(stdin_stub);
             const evt = quad.y;  // stub carries pre-allocated event

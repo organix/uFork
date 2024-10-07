@@ -7,8 +7,8 @@ _input_ value.
 
     (to_cancel callback . input) -> requestor
 
-The _callback_ actor is sent a "result" when the request completes (which could
-be never). The result is a pair whose head indicates success or failure.
+The _callback_ actor is sent a "result" like `(ok . value/error)` once the
+request completes (which could be never).
 
 On success, the result's head is `#t` and its tail is an optional _output_
 value. We say that a requestor "produces" its _output_ value.
