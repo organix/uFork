@@ -55,7 +55,7 @@ Unused: `BbEeGgIiJjKkNnOoPpRrUuWwxYy`
 ## I/O Interface
 
 The **I/O Interface** follows the
-[_Requestor_](https://github.com/douglascrockford/parseq) pattern
+[_Requestor_](https://ufork.org/lib/rq/README.md) pattern
 and provides a simple `fixnum` read/write API,
 just like the [I/O Device](io_dev.md).
 
@@ -64,8 +64,8 @@ just like the [I/O Device](io_dev.md).
 A _read_ request looks like `(to_cancel callback)`,
 where `to_cancel` is the optional customer for a cancel capability,
 and `callback` is the customer that will receive the result.
-The result looks like `(fixnum)` on success,
-and `(#? . error)` on failure.
+The result looks like `(#t . fixnum)` on success,
+and `(#f . error)` on failure.
 
 **WARNING:** It is an error to send another read request
 before receiving a result on your callback.
@@ -75,8 +75,8 @@ before receiving a result on your callback.
 A _write_ request looks like `(to_cancel callback fixnum)`,
 where `to_cancel` is the optional customer for a cancel capability,
 and `callback` is the customer that will receive the result.
-The result looks like `(())` on success,
-and `(#? . error)` on failure.
+The result looks like `(#t)` on success,
+and `(#f . error)` on failure.
 
 **WARNING:** It is an error to send another write request
 before receiving a result on your callback.

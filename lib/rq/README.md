@@ -18,16 +18,15 @@ the 'reason' for the cancellation, and can be any value.
     reason -> cancel
 
 The 'callback' actor is sent a "result" when the request completes (which could
-be never). The result is a pair whose tail indicates success or failure.
+be never). The result is a pair whose head indicates success or failure.
 
-On success, the result's tail is falsy and its head is the output value.
+On success, the result's head is `#t` and its tail is an optional output value.
 
-    (value) -> callback
+    (#t . value) -> callback
 
-On failure, the result's tail is the error and must not be falsy. The head
-is #?.
+On failure, the result's head is `#f` and its tail is an optional error reason.
 
-    (#? . error) -> callback
+    (#f . error) -> callback
 
 The requestor pattern was invented by Douglas Crockford, and was first
 implemented in JavaScript. See https://crockford.com/parseq.html.

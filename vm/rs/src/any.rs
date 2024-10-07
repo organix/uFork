@@ -22,7 +22,7 @@ pub const UNDEF: Any        = Any { raw: 0x0 };
 pub const NIL: Any          = Any { raw: 0x1 };
 pub const FALSE: Any        = Any { raw: 0x2 };
 pub const TRUE: Any         = Any { raw: 0x3 };
-pub const ROM_04: Any       = Any { raw: 0x4 };  // unused
+pub const ROM_04: Any       = Any { raw: 0x4 };  // RESERVED
 pub const EMPTY_DQ: Any     = Any { raw: 0x5 };
 
 pub const LITERAL_T: Any    = UNDEF;
@@ -42,7 +42,7 @@ pub const VM_DEBUG: Any     = Any { raw: DIR_RAW | 0x00 };  // +0
 pub const VM_JUMP: Any      = Any { raw: DIR_RAW | 0x01 };  // +1
 pub const VM_PUSH: Any      = Any { raw: DIR_RAW | 0x02 };  // +2
 pub const VM_IF: Any        = Any { raw: DIR_RAW | 0x03 };  // +3
-pub const VM_04: Any        = Any { raw: DIR_RAW | 0x04 };  // unused
+pub const VM_04: Any        = Any { raw: DIR_RAW | 0x04 };  // RESERVED
 pub const VM_TYPEQ: Any     = Any { raw: DIR_RAW | 0x05 };  // +5
 pub const VM_EQ: Any        = Any { raw: DIR_RAW | 0x06 };  // +6
 pub const VM_ASSERT: Any    = Any { raw: DIR_RAW | 0x07 };  // +7
@@ -56,7 +56,7 @@ pub const VM_ALU: Any       = Any { raw: DIR_RAW | 0x0D };  // +13
 pub const VM_CMP: Any       = Any { raw: DIR_RAW | 0x0E };  // +14
 pub const VM_END: Any       = Any { raw: DIR_RAW | 0x0F };  // +15
 
-pub const VM_10: Any        = Any { raw: DIR_RAW | 0x10 };  // unused
+pub const VM_10: Any        = Any { raw: DIR_RAW | 0x10 };  // RESERVED
 pub const VM_PAIR: Any      = Any { raw: DIR_RAW | 0x11 };  // +17
 pub const VM_PART: Any      = Any { raw: DIR_RAW | 0x12 };  // +18
 pub const VM_NTH: Any       = Any { raw: DIR_RAW | 0x13 };  // +19
@@ -71,8 +71,8 @@ pub const VM_SEND: Any      = Any { raw: DIR_RAW | 0x1A };  // +26
 pub const VM_SIGNAL: Any    = Any { raw: DIR_RAW | 0x1B };  // +27
 pub const VM_NEW: Any       = Any { raw: DIR_RAW | 0x1C };  // +28
 pub const VM_BEH: Any       = Any { raw: DIR_RAW | 0x1D };  // +29
-pub const VM_1E: Any        = Any { raw: DIR_RAW | 0x1E };  // unused
-pub const VM_1F: Any        = Any { raw: DIR_RAW | 0x1F };  // unused
+pub const VM_1E: Any        = Any { raw: DIR_RAW | 0x1E };  // RESERVED
+pub const VM_1F: Any        = Any { raw: DIR_RAW | 0x1F };  // RESERVED
 
 // VM_DICT dictionary operations
 pub const DICT_HAS: Any     = ZERO;

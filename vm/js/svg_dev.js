@@ -30,7 +30,7 @@ function svg_dev(core, make_ddev, on_draw) {
                 x: callback,
                 y: core.h_reserve_ram({
                     t: ufork.PAIR_T,
-                    x: ufork.NIL_RAW,
+                    x: ufork.TRUE_RAW,
                     y: ufork.NIL_RAW
                 })
             }));

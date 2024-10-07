@@ -93,7 +93,7 @@ const UNDEF_RAW = 0x00000000;
 const NIL_RAW   = 0x00000001;
 const FALSE_RAW = 0x00000002;
 const TRUE_RAW  = 0x00000003;
-//const ROM_04    = 0x00000004;  // unused
+//const ROM_04    = 0x00000004;  // reserved
 const EMPTY_DQ  = 0x00000005;
 const TYPE_T    = 0x00000006;
 const FIXNUM_T  = 0x00000007;
@@ -112,7 +112,7 @@ const VM_DEBUG  = 0x80000000;  // +0
 const VM_JUMP   = 0x80000001;  // +1
 const VM_PUSH   = 0x80000002;  // +2
 const VM_IF     = 0x80000003;  // +3
-//const VM_04     = 0x80000004;  // unused
+//const VM_04     = 0x80000004;  // reserved
 const VM_TYPEQ  = 0x80000005;  // +5
 const VM_EQ     = 0x80000006;  // +6
 const VM_ASSERT = 0x80000007;  // +7
@@ -126,7 +126,7 @@ const VM_ALU    = 0x8000000D;  // +13
 const VM_CMP    = 0x8000000E;  // +14
 const VM_END    = 0x8000000F;  // +15
 
-//const VM_10     = 0x80000010;  // unused
+//const VM_10     = 0x80000010;  // reserved
 const VM_PAIR   = 0x80000011;  // +17
 const VM_PART   = 0x80000012;  // +18
 const VM_NTH    = 0x80000013;  // +19
@@ -141,8 +141,8 @@ const VM_SEND   = 0x8000001A;  // +26
 const VM_SIGNAL = 0x8000001B;  // +27
 const VM_NEW    = 0x8000001C;  // +28
 const VM_BEH    = 0x8000001D;  // +29
-//const VM_1E     = 0x8000001E;  // unused
-//const VM_1F     = 0x8000001F;  // unused
+//const VM_1E     = 0x8000001E;  // reserved
+//const VM_1F     = 0x8000001F;  // reserved
 
 // Memory limits (from core.rs)
 
@@ -198,7 +198,7 @@ const rom_label = [
     "()",
     "#f",
     "#t",
-    "ROM_04",  // unused
+    "ROM_04",  // reserved
     "EMPTY_DQ",
     "#type_t",
     "#fixnum_t",
@@ -234,7 +234,7 @@ const instr_label = [
     "jump",
     "push",
     "if",
-    "VM_04",        // unused
+    "VM_04",        // reserved
     "typeq",
     "eq",
     "assert",
@@ -246,7 +246,7 @@ const instr_label = [
     "alu",
     "cmp",
     "end",
-    "VM_10",        // unused
+    "VM_10",        // reserved
     "pair",
     "part",
     "nth",
@@ -260,8 +260,8 @@ const instr_label = [
     "signal",
     "new",
     "beh",
-    "VM_1E",        // unused
-    "VM_1F"         // unused
+    "VM_1E",        // reserved
+    "VM_1F"         // reserved
 ];
 const dict_imm_label = [
     "has",
