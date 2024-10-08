@@ -156,34 +156,33 @@
         </div>
       </section>
       <section>
-        <h2 name="about">About</h2>
+        <h2 name="intro">Introduction</h2>
         <p class="text">
-          The µFork processor architecture features:
-        </p>
-        <ul>
-          <li>instruction-level concurrency</li>
-          <li>automatic memory-management</li>
-          <li>fine-grained resource limits</li>
-        </ul>
+          µFork is a novel machine architecture
+          based on the <a href="http://www.dalnefre.com/wp/2024/04/classic-actor-semantic-model/">Actor Model</a> of computation.
+          Actors are stateful objects that react to message-events.
+          Each actor has a unique address.
+          Each event designates the address of the actor to which it will be delivered.
+          An actor handles events one-at-a-time,
+          accumulating a set of effects which include:
+          <ul>
+            <li>creating new actors (create)</li>
+            <li>creating new message-events (send)</li>
+            <li>defining the actor's future behavior (become)</li>
+          </ul>
+          Event handling ends with either a <em>commit</em> or <em>abort</em>.
+          If the actor commits, the accumulated effects are applied to the system.
+          If the actor aborts, the effects are discarded.
         <p class="text">
-          Applying the design principle of actors-all-the-way-down,
-          µFork implements a virtual-machine that is memory-safe
-          at the level of assembly-language instructions.
-          All operations occur in the context of an actor message-event,
-          which provides object-capability security throughout the system.
-          The effects of individual instructions are isolated
-          so they can only affect the state of their host actor,
-          until a transactional commit releases additional asynchronous message-events
-          into the system.
-          This isolation allows interleaved execution of multiple instruction streams,
-          so multiple actors can make progress concurrently.
-          The virtual-machine implements automatic memory management with garbage-collection,
-          and fine-grained resource quotas are enforced by the processor.</p>
-        <p class="text">The blog post
+          All data values in µFork (including actor addresses) are immutable.
+          This makes them safe to share in message-events.
+          The only mutation allowed is actor behavior replacement (become),
+          which designates the code and data that will be used to handle future message-events.
+        <p class="text">
+          µFork is a realization of the ideas described in
           "<a href="http://www.dalnefre.com/wp/2022/08/memory-safety-simplifies-microprocessor-design/">Memory Safety
-            Simplifies Microprocessor Design</a>"
-          describes the high-level architecture,
-          and the rationale behind it.</p>
+            Simplifies Microprocessor Design</a>",
+          which explains the motivation and rationale in more detail.</p>
       </section>
 
       <section>
