@@ -72,8 +72,8 @@
       <section class="hero">
         <div>
           <h1>µFork</h1>
-          <h3>A pure actor-based virtual-machine</h3>
-          <h3>With memory-safety and object-capability security</h3>
+          <h3>A pure actor-based concurrent machine architecture</h3>
+          <h3>with memory-safety and object-capability security</h3>
         </div>
         <div>
           <img class="logo" src="/ufork_logo.svg"></p>
@@ -82,49 +82,76 @@
       <section class="grid">
         <div class="feature">
           <span class="badge">🎭</span>
-          <h2 class="title">Actor-based</h2>
+          <h2 class="title">Concurrency</h2>
           <p class="text">
-            µFork uses a new processor architecture driven by asynchronous message-events. This model,
-            called the actor model, is well suited as the target processor infrastructure for writing
-            concurrent programs.
-            <details class="text">
+            µFork is driven entirely by asynchronous events.
+            There are no blocking operations.
+            Instruction execution is efficiently interleaved,
+            so all ongoing activities make progress concurrently.
+          </p>
+          <details class="text">
               <summary class="text">Read more...</summary>
-              The actor Model is a style of software architecture where the unit of computation is called an actor.
-              Actors are similar to objects in object-oriented programming in that an actor, like an object encapsulates behavior and
-              state. Unlike objects, actors run concurrently, send messages asynchronously and do not share state.
+              Activities are extremely cheap to create.
+              In fact, a new activity is created
+              to handle the processing of each event.
+              An activity ends when the effects of the event
+              are either committed (releasing new events)
+              or aborted.
+              <p class="text">
+              µFork supports dynamic memory allocation.
+              A garbage-collector runs concurrently
+              with all other activities,
+              reclaiming unreachable storage.
             </details>
           </div>
         <div class="feature">
           <span class="badge">🦺</span>
           <h2 class="title">Safety</h2>
           <p class="text">
-            µFork is built to avoid the need for shared mutable state and is designed with safety
-            from the beginning. This simplifies its microprocessor design, uses less logic
-            and consumes less power.
-            <details class="text">
+            Activities are strongly isolated from each other.
+            State-change is always local to a particular activity.
+            Interaction occurs by generating asynchronous events.
+            This simple design uses less logic and consumes less power
+            to maintain coherency and prevent conflicts.
+          </p>
+          <details class="text">
               <summary class="text">Read more...</summary>
-              One of the classic sources of bugs and hard to understand code arises from the use of shared mutable state. µFork uses
-              the realization that shared state, if immutable, does not cause these kinds of problems. Nor does mutable state, if the
-              state is not shared. µFork uses the actor model to give controlled mutable state where state which is private to an
-              actor is effectively mutable but state that is shared is immutable.
+              µFork has strong memory-safety.
+              There are three primitive types of data:
+              <ul>
+                <li>Bounded Integers</li>
+                <li>Pointers to immutable data</li>
+                <li>Addresses for events</li>
+              </ul>
+              There is no conversion between these types
+              and no pointer/address arithmetic.
+              <p class="text">
+              µFork enforces fine-grained quotas on memory, instructions, and events.
+              These quotas can be used to prevent resource-exhaustion attacks.
             </details>
           </div>
         <div class="feature">
           <span class="badge">🔑</span>
-          <h2 class="title">Fine-grained Security</h2>
+          <h2 class="title">Security</h2>
           <p class="text">
-            µFork's design, based around actors and object-capabilties, relies on the principle of least
-            authority to
-            make it easy to create and run programs safely with fine-grained control over how programs use resources like memory,
-            CPU, networks and other devices.
+            µFork implements <a href="https://en.wikipedia.org/wiki/Object-capability_model">object-capability security</a>.
+            There is only one kind of capability,
+            to generate an asynchronous event
+            for a specific address.
+            This model can be summarized as,
+            "If you don't have it, you can't use it."
           </p>
           <details class="text">
             <summary class="text">Read more...</summary>
-              The object-capability model is a software security model. A capability describes a transferable right to perform
-              operations on a given object. In µFork, having a reference to an actor gives you the <i>de facto</i> authorization to
-              use it - specifically to send it messages. Among other
-              things, the typical split between kernel and user-space is rendered unnecessary and eliminates the cost of the calls
-              between the two.
+            You have to know an address to generate an event for that address.
+            The address-reference graph is the access-control graph.
+            As mentioned under "Safety",
+            an address cannot be created from an Integer or Pointer.
+            <p class="text">
+            An address is also opaque.
+            It can be used to generate an asynchronous event,
+            but it cannot be used to read memory.
+            Addresses may be communicated by events.
           </details>
         </div>
       </section>
