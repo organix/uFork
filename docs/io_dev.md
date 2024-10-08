@@ -1,6 +1,6 @@
 # uFork Console Input/Output Device
 
-The **I/O Device**  is implemented as a [_requestor_](../docs/requestor.md) that
+The **I/O Device**  is implemented as a [_requestor_](requestor.md) that
 responds to two kinds of requests. It does not yet support cancellation.
 
 ## Read Request

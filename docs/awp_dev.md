@@ -90,7 +90,7 @@ are not called again.
 ## uFork device
 
 The uFork AWP interface is implemented as a dedicated device with a
-[_requestor_](../docs/requestor.md)-like interface.
+[_requestor_](requestor.md)-like interface.
 
 ### Stores
 

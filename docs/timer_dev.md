@@ -12,7 +12,7 @@ after a nominal `delay` in milliseconds as a `fixnum`.
 
 ## Requestor Interface
 
-The **Timer Device** is also a [_requestor_](../docs/requestor.md). It supports
+The **Timer Device** is also a [_requestor_](requestor.md). It supports
 cancellation.
 
 The input value of a _timer_ request is a pair like `(delay . result)`. After
