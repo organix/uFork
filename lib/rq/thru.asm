@@ -4,13 +4,15 @@
     std: "../std.asm"
     dev: "../dev.asm"
     lib: "../lib.asm"
+    unwrap_result: "./unwrap_result.asm"
 
 beh:
 thru_beh:                   ; () <- request=(to_cancel callback . value)
     msg -2                  ; value
-    msg 2                   ; value callback
-    send 1                  ; --
-    ref std.commit
+    push #t                 ; value ok=#t
+    pair 1                  ; result=(ok . value)
+    msg 2                   ; result callback
+    ref std.send_msg
 
 ; Test suite
 
@@ -19,17 +21,14 @@ boot:                       ; () <- {caps}
     msg 0                   ; 42 {caps}
     push dev.debug_key      ; 42 {caps} debug_key
     dict get                ; 42 debug_dev
-    push #?                 ; 42 debug_dev to_cancel=#?
-    pair 2                  ; request=(#? debug_dev . 42)
-    push thru_beh           ; request thru_beh
-    new 0                   ; request thru=thru_beh.()
-    ref std.send_msg
+    ref suite
 
 test:                       ; (verdict) <- {caps}
     push #t                 ; value=#t
     state 1                 ; value verdict
-    push lib.unwrap_beh     ; value verdict unwrap_beh
-    new 1                   ; value callback=unwrap_beh.(verdict)
+    push unwrap_result.beh  ; value verdict unwrap_result_beh
+    new 1                   ; value callback=unwrap_result_beh.(verdict)
+suite:
     push #?                 ; value callback to_cancel=#?
     pair 2                  ; request=(to_cancel callback . value)
     push thru_beh           ; request thru_beh

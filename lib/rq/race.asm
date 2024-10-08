@@ -19,6 +19,7 @@
     lib: "../lib.asm"
     referee: "../testing/referee.asm"
     std: "../std.asm"
+    unwrap_result: "./unwrap_result.asm"
 
 cancel_tag:
     ref 0
@@ -67,7 +68,7 @@ runner_beh:                 ; (running queue callback value) <- message
 ;   (cancel_tag . reason)
 ;       Cancel all running requestors with the 'reason' and become inert.
 
-;   (canceller value . error)
+;   (canceller . result)
 ;       A result has arrived from a finished requestor, labelled with its
 ;       canceller.
 
@@ -113,8 +114,8 @@ check_result:               ; running'=dest src
 
 ; If the requestor succeeded, inform the callback and finish up.
 
-    msg -2                  ; running' error
-    if_not succeed          ; running'
+    msg 2                   ; running' ok
+    if finish               ; running'
 
 ; The requestor failed. Are there any queued requestors? If so, start the next
 ; one.
@@ -125,7 +126,7 @@ check_result:               ; running'=dest src
 ; If there are no queued or running requestors then the race has failed.
 
     dup 1                   ; running' running'
-    if_not fail             ; running'
+    if_not finish           ; running'
 become:
     state 4                 ; running' value
     state 3                 ; running' value callback
@@ -140,18 +141,10 @@ start_one:
     my self                 ; running' quota start_tag SELF
     send 2                  ; running'
     ref become
-fail:
-    msg -2                  ; running' error
-    push #?                 ; running' error #?
-    pair 1                  ; running' result=(#? . error)
+finish:
+    msg -1                  ; running' result
     state 3                 ; running' result callback
     send -1                 ; running'
-    push #?                 ; running' reason=#?
-    ref cancel
-succeed:
-    msg 2                   ; running' value
-    state 3                 ; running' value callback
-    send 1                  ; running'
     push #?                 ; running' reason=#?
     ref cancel
 start:
@@ -249,8 +242,8 @@ test:                       ; (verdict) <- {caps}
     state 1                 ; 4th 3rd 2nd 1st probation timer verdict
     push referee.beh        ; 4th 3rd 2nd 1st probation timer verdict referee_beh
     new 7                   ; referee=referee_beh.(verdict timer probation 1st 2nd 3rd 4th)
-    push lib.unwrap_beh     ; referee unwrap_beh
-    new 1                   ; referee'=unwrap_beh(referee)
+    push unwrap_result.beh  ; referee unwrap_result_beh
+    new 1                   ; referee'=unwrap_result_beh.(referee)
 pre_setup:
     msg 0                   ; referee {caps}
     push dev.timer_key      ; referee {caps} timer_key
@@ -263,20 +256,20 @@ pre_setup:
 setup_beh:                  ; (timer referee) <- ()
 
 ; Four requestors are raced, all of which fail except the third.
-; Expected output: (+1000) @ 15ms
+; Expected output: (#t . +1000) @ 15ms
 
     push 5                  ; ... 1st_delay=5ms
     push 666                ; ... 1st_error=666
-    push #?                 ; ... 1st_value=#?
+    push #f                 ; ... 1st_ok=#f
     push 10                 ; ... 2nd_delay=10ms
     push 666                ; ... 2nd_error=666
-    push #?                 ; ... 2nd_value=#?
+    push #f                 ; ... 2nd_ok=#f
     push 15                 ; ... 3rd_delay=15ms
-    push #nil               ; ... 3rd_error=()
     push 1000               ; ... 3rd_value=1000
+    push #t                 ; ... 3rd_ok=#t
     push 20                 ; ... 4th_delay=20ms
     push 666                ; ... 4th_error=666
-    push #?                 ; ... 4th_value=#?
+    push #f                 ; ... 4th_ok=#f
     push #?                 ; ... throttle=#?
     state 2                 ; ... throttle referee
     state 1                 ; ... throttle referee timer
@@ -285,14 +278,14 @@ setup_beh:                  ; (timer referee) <- ()
     send 12                 ; --
 
 ; Two requestors are raced, both of which fail.
-; Expected output: (#? . +666) @ 30ms
+; Expected output: (#f . +666) @ 30ms
 
     push 25                 ; ... 1st_delay=25ms
     push 666                ; ... 1st_error=666
-    push #?                 ; ... 1st_value=#?
+    push #f                 ; ... 1st_ok=#f
     push 30                 ; ... 2nd_delay=30ms
     push 666                ; ... 2nd_error=666
-    push #?                 ; ... 2nd_value=#?
+    push #f                 ; ... 2nd_ok=#f
     push #?                 ; ... throttle=#?
     state 2                 ; ... throttle referee
     state 1                 ; ... throttle referee timer
@@ -301,14 +294,14 @@ setup_beh:                  ; (timer referee) <- ()
     send 6                  ; --
 
 ; Two requestors are raced, both of which succeed.
-; Expected output: (+3000) @ 35ms
+; Expected output: (#t . +3000) @ 35ms
 
     push 35                 ; ... 1st_delay=35ms
-    push #nil               ; ... 1st_error=()
-    push 3000               ; ... 1st_value=
+    push 3000               ; ... 1st_value=3000
+    push #t                 ; ... 1st_ok=#t
     push 40                 ; ... 2nd_delay=40ms
-    push #nil               ; ... 2nd_error=()
     push -3000              ; ... 2nd_value=-3000
+    push #t                 ; ... 2nd_ok=#t
     push #?                 ; ... throttle=#?
     state 2                 ; ... throttle referee
     state 1                 ; ... throttle referee timer
@@ -321,10 +314,10 @@ setup_beh:                  ; (timer referee) <- ()
 
     push 45                 ; ... 1st_delay=45ms
     push 666                ; ... 1st_error=666
-    push #?                 ; ... 1st_value=#?
+    push #f                 ; ... 1st_ok=#f
     push 55                 ; ... 2nd_delay=55ms
-    push #nil               ; ... 2nd_error=()
     push 4000               ; ... 2nd_value=4000
+    push #t                 ; ... 2nd_ok=#t
     push 50                 ; ... cancel_at=50ms
     push #?                 ; ... cancel_at throttle=#?
     state 2                 ; ... cancel_at throttle referee
@@ -334,17 +327,17 @@ setup_beh:                  ; (timer referee) <- ()
     send 6                  ; --
 
 ; Fallback. Three requestors are raced, throttled one at a time.
-; Expected output: (+5000) @ 45ms
+; Expected output: (#t . +5000) @ 45ms
 
     push 30                 ; ... 1st_delay=30ms
     push 666                ; ... 1st_error=666
-    push #?                 ; ... 1st_value=#?
+    push #f                 ; ... 1st_ok=#f
     push 15                 ; ... 2nd_delay=15ms
-    push #nil               ; ... 2nd_error=()
     push 5000               ; ... 2nd_value=5000
+    push #t                 ; ... 2nd_ok=#t
     push 5                  ; ... 3rd_delay=5ms
-    push #nil               ; ... 3rd_error=()
     push -5000              ; ... 3rd_value=-5000
+    push #t                 ; ... 3rd_ok=#t
     push 1                  ; ... throttle=1
     state 2                 ; ... throttle referee
     state 1                 ; ... throttle referee timer
@@ -358,8 +351,8 @@ test_beh:                   ; (timer referee throttle cancel_at) <- spec
 ; The 'spec' is a list describing the requestors to be raced.
 ; It should look something like
 
-;   (value error delay ... value error delay value error delay)
-;    \----- nth -----/ ... \----- 2nd -----/ \----- 1st -----/
+;   (ok value delay ... ok value delay ok value delay)
+;    \---- nth ---/ ... \---- 2nd ---/ \---- 1st ---/
 
 ; where 1st denotes the first requestor, 2nd denotes the second requestor, etc.
 
@@ -371,8 +364,8 @@ test_beh:                   ; (timer referee throttle cancel_at) <- spec
 consume_spec:
     dup 1                   ; requestors spec spec
     if_not make_request     ; requestors spec
-    part 3                  ; requestors spec' delay error value
-    pair 1                  ; requestors spec' delay result=(value . error)
+    part 3                  ; requestors spec' delay value/error ok
+    pair 1                  ; requestors spec' delay result=(ok . value/error)
     roll -2                 ; requestors spec' result delay
     state 1                 ; requestors spec' result delay timer
     push mock_beh           ; requestors spec' result delay timer mock_beh

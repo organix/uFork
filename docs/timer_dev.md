@@ -12,11 +12,11 @@ after a nominal `delay` in milliseconds as a `fixnum`.
 
 ## Requestor Interface
 
-The **Timer Device** is also a [_requestor_](../docs/requestor.md). It support
+The **Timer Device** is also a [_requestor_](../docs/requestor.md). It supports
 cancellation.
 
 The input value of a _timer_ request is a pair like `(delay . result)`. After
-`delay`milliseconds, the `result` is sent to the callback specified in the
+`delay` milliseconds, the `result` is sent to the callback specified in the
 request.
 
 ## Reference Implementation

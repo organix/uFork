@@ -11,6 +11,7 @@
     lib: "../lib.asm"
     referee: "../testing/referee.asm"
     std: "../std.asm"
+    unwrap_result: "./unwrap_result.asm"
 
 start_tag:
     ref 0
@@ -59,7 +60,7 @@ runner_beh:                 ; (requestors callback canceller) <- message
 ;   (cancel_tag . reason)
 ;       Cancel the running requestor with the 'reason' and become inert.
 
-;   (result_tag value . error)
+;   (result_tag . result)
 ;       A result has arrived from the running requestor.
 
     debug
@@ -74,19 +75,17 @@ runner_beh:                 ; (requestors callback canceller) <- message
     if on_result            ; --
     ref std.commit
     
-on_result:                  ; (requestors callback canceller) <- (result_tag value . error)
-    msg -2                  ; error
-    if fail                 ; --
-    msg 2                   ; value
+on_result:                  ; (requestors callback canceller) <- (result_tag . result)
+    msg 2                   ; ok
+    if_not fail             ; --
+    msg -2                  ; value
     push start_tag          ; value start_tag
     my self                 ; value start_tag SELF
     send 2                  ; --
     ref std.commit
 
-fail:
-    msg -2                  ; error
-    push #?                 ; error value=#?
-    pair 1                  ; result=(value . error)
+fail:                       ; --
+    msg -1                  ; result
     state 2                 ; result callback
     send -1                 ; --
     ref done
@@ -115,8 +114,10 @@ on_start:                   ; (requestors callback) <- (start_tag value)
 
 succeed:
     msg 2                   ; value
-    state 2                 ; value callback
-    send 1                  ; --
+    push #t                 ; value ok=#t
+    pair 1                  ; result=(ok . value)
+    state 2                 ; result callback
+    send -1                 ; --
     ref done
 
 on_cancel:                  ; (requestors callback canceller) <- (cancel_tag . reason)
@@ -152,8 +153,8 @@ test:                       ; (verdict) <- {caps}
     state 1                 ; 3rd 2nd 1st probation timer verdict
     push referee.beh        ; 3rd 2nd 1st probation timer verdict referee_beh
     new 6                   ; referee=referee_beh.(verdict timer probation 1st 2nd 3rd)
-    push lib.unwrap_beh     ; referee unwrap_beh
-    new 1                   ; referee'=unwrap_beh(referee)
+    push unwrap_result.beh  ; referee unwrap_result_beh
+    new 1                   ; referee'=unwrap_result_beh.(referee)
 pre_setup:
     msg 0                   ; referee {caps}
     push dev.timer_key      ; referee {caps} timer_key
@@ -166,7 +167,7 @@ pre_setup:
 setup_beh:                  ; (timer referee) <- ()
 
 ; An empty requestor list is provided.
-; Expected output: (+1000) @ 0ms
+; Expected output: (#t . +1000) @ 0ms
 
     state 2                 ; referee
     state 1                 ; referee timer
@@ -175,7 +176,7 @@ setup_beh:                  ; (timer referee) <- ()
     send 0                  ; --
 
 ; Two successful requestors.
-; Expected output: (+4000) @ 15ms
+; Expected output: (#t . +4000) @ 15ms
 
     push #?                 ; ... 1st_error=#?
     push 5                  ; ... 1st_delay=5ms
@@ -204,7 +205,7 @@ setup_beh:                  ; (timer referee) <- ()
     send 6                  ; --
 
 ; Three requestors, the second one fails.
-; Expected output: (#? . 666) at 20ms
+; Expected output: (#f . 666) at 20ms
 
     push #?                 ; ... 1st_error=#?
     push 10                 ; ... 1st_delay=10ms
@@ -273,10 +274,18 @@ make_sequence:
     
 mock_double_beh:            ; (timer delay error) <- (to_cancel callback . value)
     state 3                 ; error
-    msg -2                  ; error value
-    push 2                  ; error value 2
-    alu mul                 ; error value'
-    pair 1                  ; result=(value' . error) // error trumps value
+    if mock_double_fail     ; --
+    msg -2                  ; value
+    push 2                  ; value 2
+    alu mul                 ; value'
+    push #t                 ; value' ok=#t
+    pair 1                  ; result=(ok . value')
+    ref mock_double_timer
+mock_double_fail:
+    state 3                 ; error
+    push #f                 ; error ok=#f
+    pair 1                  ; result=(ok . error)
+mock_double_timer:
     state 2                 ; result delay
     msg 2                   ; result delay callback
     msg 1                   ; result delay callback to_cancel

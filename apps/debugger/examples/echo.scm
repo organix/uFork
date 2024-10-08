@@ -6,7 +6,7 @@
 
 ;(define echo-in
 ;    (lambda (io-dev)
-;        (BEH (code . error)
+;        (BEH (ok . code)
 ;            ; output character-code to console
 ;            (SEND io-dev (list #? SELF code))
 ;            ; wait for output to complete

@@ -614,7 +614,7 @@ function awp_dev({
 
         function resolve(result) {
 
-// (stop . error) -> listen_callback
+// (ok . stop/error) -> listen_callback
 
             core.h_event_enqueue(core.h_reserve_ram({
                 t: sponsor,

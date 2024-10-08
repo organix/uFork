@@ -36,7 +36,7 @@ consisely. Here is an example specification of `double`, a requestor that
 doubles its input value.
 
 > The `double` requestor takes a fixnum and produces a fixnum twice the size.
-  It fails if the input is not a fixnum.
+> It fails if the input is not a fixnum.
 
 From this specification, the signatures of the request and result messages are
 known to be

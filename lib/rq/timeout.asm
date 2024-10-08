@@ -1,6 +1,6 @@
 ; The "timeout" requestor places a time limit on another requestor.
-; Upon timeout, the callback is sent a failed result like (#? . error), where
-; the error is the timeout requestor itself.
+; Upon timeout, the callback is sent a failed result whose error is the
+; timeout requestor itself.
 
 ; The 'timer_dev' is the timer device capability, and the 'time_limit' is the
 ; time allowed in milliseconds.
@@ -13,6 +13,7 @@
     std: "../std.asm"
     thru: "./thru.asm"
     referee: "../testing/referee.asm"
+    unwrap_result: "./unwrap_result.asm"
 
 beh:
 timeout_beh:                ; (requestor time_limit timer_dev) <- request
@@ -56,8 +57,8 @@ race:
     state 1                 ; t␘ r␘ callback rreq requestor
     send -1                 ; t␘ r␘ callback
     my self                 ; t␘ r␘ callback error=self
-    push #?                 ; t␘ r␘ callback error #?
-    pair 1                  ; t␘ r␘ callback result=(#? . error)
+    push #f                 ; t␘ r␘ callback error ok=#f
+    pair 1                  ; t␘ r␘ callback result=(ok . error)
     state 2                 ; t␘ r␘ callback result time_limit
     pick 4                  ; t␘ r␘ callback result time_limit r␘
     pick 4                  ; t␘ r␘ callback result time_limit r␘ callback
@@ -71,8 +72,8 @@ race:
 
 cancel_all_beh:             ; cancellers <- reason
     state 0                 ; cancellers
-    push #nil               ; cancellers #nil
-    msg 0                   ; cancellers #nil reason
+    push #nil               ; cancellers ()
+    msg 0                   ; cancellers () reason
     pair 1                  ; cancellers (reason)
     push lib.broadcast_beh  ; cancellers (reason) broadcast_beh
     new 1                   ; cancellers broadcast=broadcast_beh.((reason))
@@ -81,11 +82,11 @@ cancel_all_beh:             ; cancellers <- reason
     beh -1                  ; --
     ref std.commit
 
-win_beh:                    ; (callback loser␘) <- (value . error)
+win_beh:                    ; (callback loser␘) <- result
     state 2                 ; loser␘
     send 0                  ; --
-    msg 0                   ; (value . error)
-    state 1                 ; (value . error) callback
+    msg 0                   ; result
+    state 1                 ; result callback
     ref std.send_msg
 
 ; Test suite
@@ -94,9 +95,9 @@ boot:                       ; () <- {caps}
 
 ; The debug device's output, in order, should resemble:
 
-;   (#? . @600...)
-;   (222)
-;   (444)
+;   (#f . @600...)
+;   (#t . +222)
+;   (#t . +444)
 
     msg 0                   ; {caps}
     push dev.debug_key      ; {caps} debug_key
@@ -122,7 +123,7 @@ test:                       ; (verdict) <- {caps}
 ; The referee is not able to compare two lists, so unwrap the result before
 ; giving it to the referee.
 
-    push lib.unwrap_beh     ; timer referee unwrap_beh
+    push unwrap_result.beh  ; timer referee unwrap_result_beh
     new 1                   ; timer referee'
     roll 2                  ; referee' timer
 suite:
@@ -182,10 +183,8 @@ suite:
 test_beh:                   ; (referee timer value delay_ms time_limit cancel_ms) <- ()
     state 2                 ; timer
     state 4                 ; timer delay_ms
-    push thru.beh           ; timer delay_ms thru_beh
-    new 0                   ; timer delay_ms thru=thru_beh.()
-    push delay.beh          ; timer delay_ms thru delay_beh
-    new 3                   ; delay=delay_beh.(thru delay_ms timer)
+    push delay.beh          ; timer delay_ms delay_beh
+    new 2                   ; delay=delay_beh.(delay_ms timer)
     state 2                 ; delay timer
     state 5                 ; delay timer time_limit
     roll 3                  ; timer time_limit delay
