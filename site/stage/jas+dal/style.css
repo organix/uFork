@@ -16,7 +16,8 @@ a {
   color: var(--color-link);
 }
 
-ul {
+ul, ol {
+  margin-left: 1rex;
   padding-left: 1rem;
 }
 
@@ -65,25 +66,25 @@ nav ul {
   list-style: none;
   display: flex;
   justify-content: flex-end;
-  background-color: #9900cb;
+  background-color: #0d3a27;
+  margin: 0;
   padding: 1rem;
 }
 
 nav ul li {
-  background-color: #66cc33;
+  background-color: #cc9900;
 /*  border-radius: 10px; */
 }
 
 nav ul li a {
   text-decoration: none;
-  color: white;
   font-weight: bold;
 /*  border: 10px solid #349900;
 /*  border-radius: 10px; */
 }
 
 nav ul li:hover {
-  background-color: #349900;
+  background-color: #ffd966;
 }
 
 nav img {
@@ -95,8 +96,8 @@ nav img {
 
 
 .hero {
-  background-color: #9900cb;
-  color: white;
+  background-color: #0d3a27;
+  color: #ffd966;
   padding: 10px 10px;
 
   display: grid;
@@ -160,7 +161,7 @@ nav img {
 /* uFork copyright github etc */
 footer {
   width: 100%;
-  background-color: #9900cb;
+  background-color: #0d3a27;
 }
 
 .socials {
@@ -182,7 +183,7 @@ footer {
 .menu-item a {
   text-decoration: none;
   padding: 6px 10px;
-  color: #fff;
+  color: black;
   display: block;
 }
 
@@ -198,11 +199,11 @@ footer {
 }
 
 .drop-menu-item:hover {
-  background-color: #349900;
+  background-color: #ffd966;
 }
 
 .drop-menu-item a {
-  color: #555;
+  color: black;
 }
 
 .menu-item:hover .drop-menu {
@@ -210,7 +211,7 @@ footer {
 }
 
 .footer {
-  background-color: #9900cb;
+  background-color: #0d3a27;
   color: white;
   padding: 10px 10px;
   margin-top: 20px;

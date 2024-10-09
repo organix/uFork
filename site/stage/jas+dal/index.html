@@ -71,7 +71,7 @@
     <main>
       <section class="hero">
         <div>
-          <h1>µFork</h1>
+          <h1 style="color: white;">µFork</h1>
           <h3>A pure actor-based concurrent machine architecture</h3>
           <h3>with memory-safety and object-capability security</h3>
         </div>
@@ -151,7 +151,7 @@
             An address is also opaque.
             It can be used to generate an asynchronous event,
             but it cannot be used to read memory.
-            Addresses may be communicated by events.
+            Addresses can be communicated by events.
           </details>
         </div>
       </section>
@@ -165,24 +165,29 @@
           Each event designates the address of the actor to which it will be delivered.
           An actor handles events one-at-a-time,
           accumulating a set of effects which include:
-          <ul>
-            <li>creating new actors (create)</li>
-            <li>creating new message-events (send)</li>
-            <li>defining the actor's future behavior (become)</li>
-          </ul>
+        </p>
+        <ul>
+          <li>creating new actors (create)</li>
+          <li>creating new message-events (send)</li>
+          <li>defining the actor's future behavior (become)</li>
+        </ul>
+        <p class="text">
           Event handling ends with either a <em>commit</em> or <em>abort</em>.
           If the actor commits, the accumulated effects are applied to the system.
           If the actor aborts, the effects are discarded.
+        </p>
         <p class="text">
           All data values in µFork (including actor addresses) are immutable.
           This makes them safe to share in message-events.
           The only mutation allowed is actor behavior replacement (become),
           which designates the code and data that will be used to handle future message-events.
+        </p>
         <p class="text">
           µFork is a realization of the ideas described in
           "<a href="http://www.dalnefre.com/wp/2022/08/memory-safety-simplifies-microprocessor-design/">Memory Safety
             Simplifies Microprocessor Design</a>",
-          which explains the motivation and rationale in more detail.</p>
+          which explains the motivation and rationale in more detail.
+        </p>
       </section>
 
       <section>
