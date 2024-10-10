@@ -117,7 +117,7 @@
           <h2 class="title">Safety</h2>
           <p class="text">
             Activities are strongly isolated from each other.
-            State-change is always local to a particular activity.
+            State-change is always local.
             Interaction occurs by generating asynchronous events.
             This simple design uses less logic and consumes less power
             to maintain coherency and prevent conflicts.
@@ -183,15 +183,22 @@
             <li>Defining the actor's future behavior (<em>become</em>)</li>
           </ul>
           <p class="text">
-            Event handling ends with either a <em>commit</em> or <em>abort</em>.
-            If the actor commits, the accumulated effects are applied to the system.
-            If the actor aborts, the effects are discarded.
+            Actor creation is very cheap,
+            only one instruction and one memory cell.
+            Message send is equally cheap,
+            and can be used to extend the connectivity graph
+            by including actor addresses in the message.
           </p>
           <p class="text">
             All data values in µFork are immutable.
             This makes them safe to share in message-events.
             The only mutation allowed is actor behavior replacement (<em>become</em>),
             which designates the code and data that will be used to handle future message-events.
+          </p>
+          <p class="text">
+            Event handling ends with either a <em>commit</em> or <em>abort</em>.
+            If the actor commits, the accumulated effects are applied to the system.
+            If the actor aborts, the effects are discarded.
           </p>
           <p class="text">
             µFork is a realization of the ideas described in
