@@ -1,5 +1,5 @@
 ;
-; (fib 6) ==> 8
+; (fib 9) ==> 34
 ;
 
 (import dev "https://ufork.org/lib/dev.asm")
@@ -10,5 +10,5 @@
             n
             (+ (fib (- n 1)) (fib (- n 2))) )))
 
-;(fib 6)
-(SEND (DEVICE dev.debug_key) (fib 6))
+(fib 9)
+;(SEND (DEVICE dev.debug_key) (fib 6))
