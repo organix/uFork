@@ -100,20 +100,18 @@
             so all ongoing activities make progress concurrently.
           </p>
           <details class="text">
-              <summary class="text"><i>Read more...</i></summary>
-              Activities are extremely cheap to create.
-              In fact, a new activity is created
-              to handle the processing of each event.
-              An activity ends when the effects of the event
-              are either committed (releasing new events)
-              or aborted.
-              <p class="text">
-              µFork supports dynamic memory allocation.
-              A garbage-collector runs concurrently
-              with all other activities,
-              automatically reclaiming unreachable storage.
-            </details>
-          </div>
+            <summary class="more">Read more...</summary>
+            Activities are extremely cheap to create.
+            In fact, a new activity is created
+            to handle the processing of each event.
+            An activity ends when the effects of the event
+            are either committed (releasing new events)
+            or aborted.
+            <p class="text">
+            µFork supports dynamic memory allocation,
+            with concurrent automatic reclamation of unreachable storage.
+          </details>
+        </div>
         <div class="feature">
           <span class="badge">🦺</span>
           <h2 class="title">Safety</h2>
@@ -125,50 +123,51 @@
             to maintain coherency and prevent conflicts.
           </p>
           <details class="text">
-              <summary class="text"><i>Read more...</i></summary>
-              µFork has strong memory-safety.
-              There are three primitive types of data:
-              <ul>
-                <li>Bounded Integers</li>
-                <li>Pointers to immutable data</li>
-                <li>Addresses for events</li>
-              </ul>
-              There is no conversion between these types
-              and no pointer/address arithmetic.
-              <p class="text">
-              µFork enforces fine-grained quotas on memory, instructions, and events.
-              These quotas can be used to prevent resource-exhaustion attacks.
-            </details>
-          </div>
+            <summary class="more">Read more...</summary>
+            µFork instructions are memory-safe.
+            There are three primitive types of data:
+            <ul>
+              <li>Bounded Integers</li>
+              <li>Pointers to immutable data</li>
+              <li>Addresses for events</li>
+            </ul>
+            There is no conversion between these types
+            and no pointer/address arithmetic.
+            <p class="text">
+            µFork enforces fine-grained quotas on memory, instructions, and events.
+            These quotas can be used to prevent resource-exhaustion attacks.
+          </details>
+        </div>
         <div class="feature">
           <span class="badge">🔑</span>
           <h2 class="title">Security</h2>
           <p class="text">
-            µFork implements <a href="https://en.wikipedia.org/wiki/Object-capability_model">object-capability security</a>.
-            There is only one kind of capability,
-            to generate an asynchronous event
-            for a specific address.
-            This model can be summarized as,
+            µFork security can be summarized as,
             "If you don't have it, you can't use it."
-          </p>
-          <details class="text">
-            <summary class="text"><i>Read more...</i></summary>
             You have to know an address to generate an event for that address.
             The address-reference graph is the access-control graph.
+          </p>
+          <details class="text">
+            <summary class="more">Read more...</summary>
             As mentioned under "Safety",
             an address cannot be created from an Integer or Pointer.
+            You only know addresses:
+            <ul>
+              <li>Given to you at construction</li>
+              <li>Received in an event</li>
+              <li>Created by your actions</li>
+            </ul>
             <p class="text">
-            An address is also opaque.
-            It can be used to generate an asynchronous event,
-            but it cannot be used to read memory.
-            Addresses can be communicated by events.
+            Addresses are opaque.
+            They can be used only to generate an asynchronous event,
+            not to access memory.
           </details>
         </div>
       </section>
 
       <section class="grid">
         <div class="span10col">
-          <h2 name="intro">Introduction</h2>
+          <h2 name="overview">Overview</h2>
           <p class="text">
             µFork is a novel machine architecture
             based on the <a href="http://www.dalnefre.com/wp/2024/04/classic-actor-semantic-model/">Actor Model</a> of computation.
@@ -179,9 +178,9 @@
             accumulating a set of effects which include:
           </p>
           <ul>
-            <li>creating new actors (create)</li>
-            <li>creating new message-events (send)</li>
-            <li>defining the actor's future behavior (become)</li>
+            <li>Creating new actors (<em>create</em>)</li>
+            <li>Generating new message-events (<em>send</em>)</li>
+            <li>Defining the actor's future behavior (<em>become</em>)</li>
           </ul>
           <p class="text">
             Event handling ends with either a <em>commit</em> or <em>abort</em>.
@@ -189,9 +188,9 @@
             If the actor aborts, the effects are discarded.
           </p>
           <p class="text">
-            All data values in µFork (including actor addresses) are immutable.
+            All data values in µFork are immutable.
             This makes them safe to share in message-events.
-            The only mutation allowed is actor behavior replacement (become),
+            The only mutation allowed is actor behavior replacement (<em>become</em>),
             which designates the code and data that will be used to handle future message-events.
           </p>
           <p class="text">

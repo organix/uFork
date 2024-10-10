@@ -176,6 +176,11 @@ nav img {
   padding: 10px 0;
 }
 
+.more {
+  font-style: italic;
+  cursor: pointer;
+}
+
 /* uFork copyright github etc */
 footer {
   width: 100%;
