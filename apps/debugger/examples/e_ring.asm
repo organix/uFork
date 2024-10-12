@@ -7,7 +7,7 @@
     std: "https://ufork.org/lib/std.asm"
     dev: "https://ufork.org/lib/dev.asm"
 
-;;  CREATE log WITH stopwatch(clock, println)
+;;  CREATE log WITH \_.[ SEND println TO clock ]
 
 stopwatch:                  ; (clock_dev . debug_dev) <- _
     state 0                 ; (clock_dev . debug_dev)
@@ -15,11 +15,11 @@ stopwatch:                  ; (clock_dev . debug_dev) <- _
     ref std.send_msg
 
 ;;  DEF build(n, log) AS \(first, m).[
-;;      CASE m OF
+;;      CASE n OF
 ;;      1 : [
-;;          SEND () TO log
+;;          SEND () TO log  # start message passing phase
 ;;          BECOME ring_0(first, log)
-;;          SEND m TO first  # start message passing phase
+;;          SEND m TO first
 ;;      ]
 ;;      _ : [
 ;;          CREATE next WITH build(sub(n, 1), log)
@@ -68,7 +68,7 @@ build_0:
 ;;  DEF ring_0(first, log) AS \m.[
 ;;      CASE m OF
 ;;      1 : [
-;;          SEND () TO log
+;;          SEND () TO log  # message passing completed
 ;;          BECOME \_.[]
 ;;      ]
 ;;      _ : [
@@ -105,7 +105,7 @@ ring:                       ; next <- m
     state 0                 ; m next
     ref std.send_msg
 
-;;  SEND () TO log
+;;  SEND () TO log  # start construction phase
 ;;  CREATE e_ring WITH build(123456, log)
 ;;  SEND (e_ring, 789) TO e_ring
 

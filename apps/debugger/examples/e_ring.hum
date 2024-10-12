@@ -1,0 +1,44 @@
+# Joe Armstrong's Erlang challenge:
+#   Create a ring of N processes
+#   Send M simple messages around the ring
+#   Increase N until out of resources
+
+DEF build(n, log) AS \(first, m).[
+    CASE n OF
+    1 : [
+        SEND () TO log  # start message passing phase
+        BECOME ring_0(first, log)
+        SEND m TO first
+    ]
+    _ : [
+        CREATE next WITH build(sub(n, 1), log)
+        BECOME ring(next)
+        SEND (first, m) TO next
+    ]
+    END
+]
+
+DEF ring_0(first, log) AS \m.[
+    CASE m OF
+    1 : [
+        SEND () TO log  # message passing completed
+        BECOME \_.[]
+    ]
+    _ : [
+        SEND sub(m, 1) TO first
+    ]
+    END
+]
+
+DEF ring(next) AS \m.[
+    SEND m TO next
+]
+
+# Create a ring of _n_ actors, and send a message around _m_ times.
+
+DEF n AS 200
+DEF m AS 10
+CREATE log WITH \_.[ SEND println TO clock ]
+SEND () TO log  # start construction phase
+CREATE e_ring WITH build(n, log)
+SEND (e_ring, m) TO e_ring
