@@ -22,7 +22,7 @@ stopwatch:                  ; (clock_dev . debug_dev) <- _
 ;;          SEND m TO first  # start message passing phase
 ;;      ]
 ;;      _ : [
-;;          CREATE next WITH build(add(n, -1), log)
+;;          CREATE next WITH build(sub(n, 1), log)
 ;;          BECOME ring(next)
 ;;          SEND (first, m) TO next
 ;;      ]
