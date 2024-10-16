@@ -4,6 +4,7 @@
 
 import hex from "https://ufork.org/lib/hex.js";
 import hexdump from "https://ufork.org/lib/hexdump.js";
+import disassemble from "https://ufork.org/lib/disassemble.js";
 import make_ui from "./ui.js";
 import dom from "./dom.js";
 import theme from "./theme.js";
@@ -20,6 +21,7 @@ function from_uf(uf) {  // also exported from `fpga/fomu/cpu/ucode.js`
 // console.log(hex.from(from_uf(0x60000002), 16));
 
 const rom_ui = make_ui("rom-ui", function (element, {
+    module_ir,
     buffer,
     format = "memh",
     bitwidth = 16
@@ -124,28 +126,32 @@ const rom_ui = make_ui("rom-ui", function (element, {
     }
 
     function dump() {
-        const dump_fn = (
-            format === "memh"
+        const text = (
+            buffer !== undefined
             ? (
-                bitwidth === 16
-                ? memh_dump16
-                : memh_dump32
-            )
-            : (
-                format === "forth"
+                format === "memh"
                 ? (
                     bitwidth === 16
-                    ? forth_dump16
-                    : forth_dump32
+                    ? memh_dump16(buffer)
+                    : memh_dump32(buffer)
                 )
-                : hexdump
+                : (
+                    format === "forth"
+                    ? (
+                        bitwidth === 16
+                        ? forth_dump16(buffer)
+                        : forth_dump32(buffer)
+                    )
+                    : (
+                        (format === "asm" && module_ir !== undefined)
+                        ? disassemble(module_ir)
+                        : hexdump(buffer)
+                    )
+                )
             )
-        );
-        dump_element.textContent = (
-            buffer !== undefined
-            ? dump_fn(buffer)
             : "Press Run to load and display the ROM image."
         );
+        dump_element.textContent = text;
     }
 
     function on_bitwidth_change(event) {
@@ -158,8 +164,9 @@ const rom_ui = make_ui("rom-ui", function (element, {
         dump();
     }
 
-    function set_buffer(new_buffer) {
+    function set_buffer(new_buffer, new_ir) {
         buffer = new_buffer;
+        module_ir = new_ir;
         dump();
     }
 
@@ -177,7 +184,8 @@ const rom_ui = make_ui("rom-ui", function (element, {
             {onchange: on_format_change, title: "Text format", value: format},
             [
                 dom("option", {value: "memh", textContent: "Memfile"}),
-                dom("option", {value: "forth", textContent: "Forth"})
+                dom("option", {value: "forth", textContent: "Forth"}),
+                dom("option", {value: "asm", textContent: "Assembly"})
             ]
         )
     ]);

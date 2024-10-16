@@ -202,7 +202,7 @@ const tools_ui = make_ui("tools-ui", function (element, {
             core.h_initialize(),
             core.h_import(get_src(), ir),
             requestorize(function (imported_module) {
-                devices.rom.set_buffer(core.h_snapshot().rom);
+                devices.rom.set_buffer(core.h_snapshot().rom, ir);
                 clock_dev(core);
                 random_dev(core);
                 blob_dev(core);
