@@ -24,6 +24,56 @@ empty_env:                  ; (sp=#nil . env=#nil)
     pair_t #nil #nil        ; (())
 
 ;
+; Polyfill procedures for Actor primitives
+;
+
+new_2:                      ; ( (beh . state) -- beh.state )
+    roll -2                 ; k (beh . state)
+    quad -3                 ; k state beh type
+    drop 1                  ; k state beh
+create_return:              ; k state beh
+    new -1                  ; k beh.state
+    roll 2                  ; beh.state k
+    return                  ; beh.state
+
+new_3:                      ; ( [_, _, _, beh] -- beh.[_, _, _, beh] )
+    roll -2                 ; k state=[_, _, _, beh]
+    dup 1                   ; k state [_, _, _, beh]
+    quad -4                 ; k state beh _ _ _
+    drop 3                  ; k state beh
+    ref create_return
+
+beh_2:                      ; ( (beh . state) -- )
+    roll -2                 ; k (beh . state)
+    quad -3                 ; k state beh type
+    drop 1                  ; k state beh
+    beh -1                  ; k
+    return                  ; --
+
+beh_3:                      ; ( [_, _, _, beh] -- )
+    roll -2                 ; k state=[_, _, _, beh]
+    dup 1                   ; k state [_, _, _, beh]
+    quad -4                 ; k state beh _ _ _
+    drop 3                  ; k state beh
+    beh -1                  ; k
+    return                  ; --
+
+act_2:                      ; ( (beh . state) -- state beh )
+    roll -2                 ; k (beh . state)
+    quad -3                 ; k state beh type
+    drop 1                  ; k state beh
+    roll 3                  ; state beh k
+    return                  ; state beh
+
+act_3:                      ; ( [_, _, _, beh] -- state beh )
+    roll -2                 ; k state=[_, _, _, beh]
+    dup 1                   ; k state [_, _, _, beh]
+    quad -4                 ; k state beh _ _ _
+    drop 3                  ; k state beh
+    roll 3                  ; state beh k
+    return                  ; state beh
+
+;
 ; Continuations for non-tail function calls
 ;
 
