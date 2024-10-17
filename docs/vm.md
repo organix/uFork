@@ -122,7 +122,7 @@ Quad-cells are used to encode most of the important data-structures in uFork.
  `()`        | `^00000001` | `#?`      | `#?` | `#?` | `#?` | Nil (empty list)
  `#f`        | `^00000002` | `#?`      | `#?` | `#?` | `#?` | Boolean False
  `#t`        | `^00000003` | `#?`      | `#?` | `#?` | `#?` | Boolean True
- --          | `^00000004` | `#?`      | `#?` | `#?` | `#?` | Unused
+ --          | `^00000004` | `#?`      | `#?` | `#?` | `#?` | --reserved--
  `EMPTY_DQ`  | `^00000005` | `#pair_t` | `()` | `()` | `#?` | Empty Deque
  `#type_t`   | `^00000006` | `#type_t` | `+1` | `#?` | `#?` | Type of Types
  `#fixnum_t` | `^00000007` | `#type_t` | `#?` | `#?` | `#?` | Fixnum Type
@@ -420,7 +420,6 @@ in the range [0, 15].
 The qualified instructions are:
 
   * `sponsor`
-  * `quad`
   * `dict`
   * `deque`
   * `my`
@@ -437,6 +436,7 @@ define the (signed) index (or count) value
 in the range [-32, +31].
 The indexed instructions are:
 
+  * `quad`
   * `pair`
   * `part`
   * `nth`
@@ -1506,7 +1506,7 @@ and _X_ = the arity (number of data fields) from 0 to 3.
 
  T            | X (op)        | Y (imm)     | Z (k)
 --------------|---------------|-------------|-------------
- `#instr_t`   | `+9` (quad)   | +1          | _instr_
+ `#instr_t`   | `+16` (quad)  | +1          | _instr_
 
  1. Remove _T_ from the stack
  1. If _T_ is a `#type_t`
@@ -1514,13 +1514,13 @@ and _X_ = the arity (number of data fields) from 0 to 3.
         1. Allocate a new _quad_ intialized to \[_T_, `#?`, `#?`, `#?`\]
         1. Push _quad_ reference onto the stack
     1. Otherwise
-        1. Signal an error (`E_BOUNDS`)
+        1. Push `#?` onto the stack
  1. Otherwise
-    1. Signal an error (`E_NO_TYPE`)
+    1. Push `#?` onto the stack
 
  T            | X (op)        | Y (imm)     | Z (k)
 --------------|---------------|-------------|-------------
- `#instr_t`   | `+9` (quad)   | +2          | _instr_
+ `#instr_t`   | `+16` (quad)  | +2          | _instr_
 
  1. Remove _T_ from the stack
  1. Remove _X_ from the stack
@@ -1529,13 +1529,13 @@ and _X_ = the arity (number of data fields) from 0 to 3.
         1. Allocate a new _quad_ intialized to \[_T_, _X_, `#?`, `#?`\]
         1. Push _quad_ reference onto the stack
     1. Otherwise
-        1. Signal an error (`E_BOUNDS`)
+        1. Push `#?` onto the stack
  1. Otherwise
-    1. Signal an error (`E_NO_TYPE`)
+    1. Push `#?` onto the stack
 
  T            | X (op)        | Y (imm)     | Z (k)
 --------------|---------------|-------------|-------------
- `#instr_t`   | `+9` (quad)   | +3          | _instr_
+ `#instr_t`   | `+16` (quad)  | +3          | _instr_
 
  1. Remove _T_ from the stack
  1. Remove _X_ from the stack
@@ -1545,13 +1545,13 @@ and _X_ = the arity (number of data fields) from 0 to 3.
         1. Allocate a new _quad_ intialized to \[_T_, _X_, _Y_, `#?`\]
         1. Push _quad_ reference onto the stack
     1. Otherwise
-        1. Signal an error (`E_BOUNDS`)
+        1. Push `#?` onto the stack
  1. Otherwise
-    1. Signal an error (`E_NO_TYPE`)
+    1. Push `#?` onto the stack
 
  T            | X (op)        | Y (imm)     | Z (k)
 --------------|---------------|-------------|-------------
- `#instr_t`   | `+9` (quad)   | +4          | _instr_
+ `#instr_t`   | `+16` (quad)  | +4          | _instr_
 
  1. Remove _T_ from the stack
  1. Remove _X_ from the stack
@@ -1562,43 +1562,62 @@ and _X_ = the arity (number of data fields) from 0 to 3.
         1. Allocate a new _quad_ intialized to \[_T_, _X_, _Y_, _Z_\]
         1. Push _quad_ reference onto the stack
     1. Otherwise
-        1. Signal an error (`E_BOUNDS`)
+        1. Push `#?` onto the stack
  1. Otherwise
-    1. Signal an error (`E_NO_TYPE`)
+    1. Push `#?` onto the stack
 
  T            | X (op)        | Y (imm)     | Z (k)
 --------------|---------------|-------------|-------------
- `#instr_t`   | `+9` (quad)   | -1          | _instr_
+ `#instr_t`   | `+16` (quad)  | -1          | _instr_
 
  1. Remove _quad_ from the stack
- 1. Push _quad_ field _T_ onto the stack
+ 1. If _quad_ is a pointer (not fixnum or capability)
+    1. Push _quad_ field _T_ onto the stack
+ 1. Otherwise
+    1. Push `#?` onto the stack
 
  T            | X (op)        | Y (imm)     | Z (k)
 --------------|---------------|-------------|-------------
- `#instr_t`   | `+9` (quad)   | -2          | _instr_
+ `#instr_t`   | `+16` (quad)  | -2          | _instr_
 
  1. Remove _quad_ from the stack
- 1. Push _quad_ field _X_ onto the stack
- 1. Push _quad_ field _T_ onto the stack
+ 1. If _quad_ is a pointer (not fixnum or capability)
+    1. Push _quad_ field _X_ onto the stack
+    1. Push _quad_ field _T_ onto the stack
+ 1. Otherwise
+    1. Push `#?` onto the stack
+    1. Push `#?` onto the stack
 
  T            | X (op)        | Y (imm)     | Z (k)
 --------------|---------------|-------------|-------------
- `#instr_t`   | `+9` (quad)   | -3          | _instr_
+ `#instr_t`   | `+16` (quad)  | -3          | _instr_
 
  1. Remove _quad_ from the stack
- 1. Push _quad_ field _Y_ onto the stack
- 1. Push _quad_ field _X_ onto the stack
- 1. Push _quad_ field _T_ onto the stack
+ 1. If _quad_ is a pointer (not fixnum or capability)
+    1. Push _quad_ field _Y_ onto the stack
+    1. Push _quad_ field _X_ onto the stack
+    1. Push _quad_ field _T_ onto the stack
+ 1. Otherwise
+    1. Push `#?` onto the stack
+    1. Push `#?` onto the stack
+    1. Push `#?` onto the stack
 
  T            | X (op)        | Y (imm)     | Z (k)
 --------------|---------------|-------------|-------------
- `#instr_t`   | `+9` (quad)   | -4          | _instr_
+ `#instr_t`   | `+16` (quad)  | -4          | _instr_
 
  1. Remove _quad_ from the stack
- 1. Push _quad_ field _Z_ onto the stack
- 1. Push _quad_ field _Y_ onto the stack
- 1. Push _quad_ field _X_ onto the stack
- 1. Push _quad_ field _T_ onto the stack
+ 1. Remove _quad_ from the stack
+ 1. If _quad_ is a pointer (not fixnum or capability)
+    1. Push _quad_ field _Z_ onto the stack
+    1. Push _quad_ field _Y_ onto the stack
+    1. Push _quad_ field _X_ onto the stack
+    1. Push _quad_ field _T_ onto the stack
+ 1. Otherwise
+    1. Push `#?` onto the stack
+    1. Push `#?` onto the stack
+    1. Push `#?` onto the stack
+    1. Push `#?` onto the stack
 
 #### `roll` instruction
 

@@ -1283,7 +1283,8 @@ To Copy fixnum:n of list onto head:
             quad_XT
             quad_YXT
             quad_ZYXT
-            E_BOUNDS ;      ( default case )
+            2DROP           ( default case )
+            #? push_result ;
         THEN                ( D: +n )
         sp@ part            ( D: +n sp' T )
         DUP #type_t typeq IF
@@ -1297,13 +1298,16 @@ To Copy fixnum:n of list onto head:
                 quad_2
                 quad_3
                 quad_4
-                E_BOUNDS ;  ( default case )
+                R> 2DROP    ( default case )
+                #? push_result ;
             THEN
-            E_BOUNDS ;
+            2DROP           ( D: sp' )
+            #? push_result ;
         THEN
-        E_NO_TYPE ;
+        ROT 2DROP           ( D: sp' )
+        #? push_result ;
     THEN
-    E_NOT_FIX ;
+    DROP undef_result ;
 
 (
 : nil_result ( -- ip' )
@@ -1583,7 +1587,7 @@ del_none:                   ; k orig key rev next value' key'
     op_assert               ( 0x8007: assert )
 
     invalid                 ( 0x8008: sponsor )
-    op_quad                 ( 0x8009: quad )
+    invalid                 ( 0x8009: --reserved-- )
     invalid                 ( 0x800A: dict )
     invalid                 ( 0x800B: deque )
     op_my                   ( 0x800C: my )
@@ -1591,7 +1595,7 @@ del_none:                   ; k orig key rev next value' key'
     op_cmp                  ( 0x800E: cmp )
     op_end                  ( 0x800F: end )
 
-    invalid                 ( 0x8010: --reserved-- )
+    op_quad                 ( 0x8010: quad )
     op_pair                 ( 0x8011: pair )
     op_part                 ( 0x8012: part )
     op_nth                  ( 0x8013: nth )

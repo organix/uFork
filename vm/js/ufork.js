@@ -118,7 +118,7 @@ const VM_EQ     = 0x80000006;  // +6
 const VM_ASSERT = 0x80000007;  // +7
 
 const VM_SPONSOR= 0x80000008;  // +8
-const VM_QUAD   = 0x80000009;  // +9
+//const VM_ACTOR  = 0x80000009;  // +9
 const VM_DICT   = 0x8000000A;  // +10
 const VM_DEQUE  = 0x8000000B;  // +11
 const VM_MY     = 0x8000000C;  // +12
@@ -126,7 +126,7 @@ const VM_ALU    = 0x8000000D;  // +13
 const VM_CMP    = 0x8000000E;  // +14
 const VM_END    = 0x8000000F;  // +15
 
-//const VM_10     = 0x80000010;  // reserved
+const VM_QUAD   = 0x80000010;  // +16
 const VM_PAIR   = 0x80000011;  // +17
 const VM_PART   = 0x80000012;  // +18
 const VM_NTH    = 0x80000013;  // +19
@@ -239,14 +239,14 @@ const instr_label = [
     "eq",
     "assert",
     "sponsor",
-    "quad",
+    "actor",        // reserved
     "dict",
     "deque",
     "my",
     "alu",
     "cmp",
     "end",
-    "VM_10",        // reserved
+    "quad",
     "pair",
     "part",
     "nth",
