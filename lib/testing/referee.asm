@@ -58,7 +58,7 @@ referee_beh:                ; (verdict timer probation . expected_msgs) <- msg
 
     state 1                 ; verdict
     push lib.once_beh       ; verdict once_beh
-    new 1                   ; verdict'=once_beh.(verdict)
+    new -1                  ; verdict'=once_beh.verdict
     push #t                 ; verdict' result=#t
     pick 2                  ; verdict' result verdict'
     state 3                 ; verdict' result verdict' delay=probation
