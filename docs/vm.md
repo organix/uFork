@@ -108,9 +108,9 @@ Quad-cells are used to encode most of the important data-structures in uFork.
 [`#instr_t`, _opcode_, _data_, _next_]  | machine instruction (typical)
 [`#pair_t`, _head_, _tail_, `#?`]       | pair-lists of user data (cons)
 [`#pair_t`, _item_, _rest_, `#?`]       | stack entry holding _item_
-[`#actor_t`, _beh_, _sp_, `#?`]         | idle actor
-[`#actor_t`, _beh_, _sp_, _effects_]    | busy actor
-[`#actor_t`, _beh'_, _sp'_, _events_]   | effects, initial _events_=()
+[`#actor_t`, _code_, _data_, `#?`]      | idle actor
+[`#actor_t`, _code_, _data_, _effects_] | busy actor
+[`#actor_t`, _code'_, _data'_, _events_]| effects, initial _events_=()
 [`#dict_t`, _key_, _value_, _next_]     | dictionary binding entry
 [`FREE_T`, `#?`, `#?`, _next_]          | cell in the free-list
 

@@ -119,8 +119,9 @@ boot:                       ; () <- {caps}
 
     push -1                 ; future debug_dev -1
     pick 2                  ; future debug_dev -1 debug_dev
-    push lib.label_beh      ; future debug_dev -1 debug_dev label-beh
-    new 2                   ; future debug_dev label-1.(debug_beh -1)
+    pair 1                  ; future debug_dev (debug_dev . -1)
+    push lib.label_beh      ; future debug_dev (debug_dev . -1) label-beh
+    new -1                  ; future debug_dev label-1=label-beh.(debug_dev . -1)
     push 0                  ; future debug_dev label-1 rcap
     pair 1                  ; future debug_dev (rcap . label-1)
     pick 3                  ; future debug_dev (rcap . label-1) future
@@ -128,8 +129,9 @@ boot:                       ; () <- {caps}
 
     push -2                 ; future debug_dev -2
     pick 2                  ; future debug_dev -2 debug_dev
-    push lib.label_beh      ; future debug_dev -2 debug_dev label-beh
-    new 2                   ; future debug_dev label-2.(debug_beh -2)
+    pair 1                  ; future debug_dev (debug_dev . -2)
+    push lib.label_beh      ; future debug_dev (debug_dev . -2) label-beh
+    new -1                  ; future debug_dev label-2=label-beh.(debug_dev . -2)
     push 0                  ; future debug_dev label-2 rcap
     pair 1                  ; future debug_dev (rcap . label-2)
     pick 3                  ; future debug_dev (rcap . label-2) future

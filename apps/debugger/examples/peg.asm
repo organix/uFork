@@ -150,8 +150,9 @@ or:                         ; (first rest) <- ((ok . fail) accum . in)
     msg -1                  ; ctx=(accum . in)
     msg 0                   ; ctx msg=((ok . fail) accum . in)
     state 2                 ; ctx msg rest
-    push lib.relay_beh      ; ctx msg rest relay_beh
-    new 2                   ; ctx fail'=relay_beh.(rest msg)
+    pair 1                  ; ctx (rest . msg)
+    push lib.relay_beh      ; ctx (rest . msg) relay_beh
+    new -1                  ; ctx fail'=relay_beh.(rest . msg)
     msg 1                   ; ctx fail' custs=(ok . fail)
     nth 1                   ; ctx fail' ok
     pair 1                  ; ctx (ok . fail')
@@ -165,8 +166,9 @@ and:                        ; (first rest) <- ((ok . fail) accum . in)
     msg -2                  ; in
     msg 1                   ; in custs=(ok . fail)
     nth -1                  ; in fail
-    push lib.relay_beh      ; in fail relay_beh
-    new 2                   ; fail'=relay_beh.(fail in)
+    pair 1                  ; (fail . in)
+    push lib.relay_beh      ; (fail . in) relay_beh
+    new -1                  ; fail'=relay_beh.(fail . in)
 
     dup 1                   ; fail' fail'
     msg 1                   ; fail' fail' custs=(ok . fail)
@@ -213,13 +215,15 @@ not:                        ; (peg) <- ((ok . fail) accum . in)
     push #nil               ; fail ok in ()
     pair 1                  ; fail ok (() . in)
     roll 2                  ; fail (() . in) ok
-    push lib.relay_beh      ; fail (() . in) ok relay_beh
-    new 2                   ; fail fail'=relay_beh.(ok (() . in))
+    pair 1                  ; fail (ok () . in)
+    push lib.relay_beh      ; fail (ok () . in) relay_beh
+    new -1                  ; fail fail'=relay_beh.(ok () . in)
 
     msg -2                  ; fail fail' in
     roll 3                  ; fail' in fail
-    push lib.relay_beh      ; fail' in fail relay_beh
-    new 2                   ; fail' ok'=relay_beh.(fail in)
+    pair 1                  ; fail' (fail . in)
+    push lib.relay_beh      ; fail' (fail . in) relay_beh
+    new -1                  ; fail' ok'=relay_beh.(fail . in)
 
     pair 1                  ; (ok' . fail')
     msg -1                  ; (ok' . fail') (accum . in)

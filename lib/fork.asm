@@ -17,11 +17,11 @@ beh:
 fork_beh:                   ; (cust h_svc t_svc) <- (h_req . t_req)
     my self                 ; SELF
     push lib.tag_beh        ; SELF tag_beh
-    new 1                   ; t_tag=tag.(SELF)
+    new -1                  ; t_tag=tag.SELF
 
     my self                 ; t_tag SELF
     push lib.tag_beh        ; t_tag SELF tag_beh
-    new 1                   ; t_tag h_tag=tag.(SELF)
+    new -1                  ; t_tag h_tag=tag.SELF
 
     msg -1                  ; t_tag h_tag t_req
     pick 3                  ; t_tag h_tag t_req t_tag
@@ -107,11 +107,11 @@ join_2:                     ; tail head
 boot:                       ; () <- {caps}
     push -42                ; -42
     push lib.const_beh      ; -42 const_beh
-    new -1                  ; t_svc=const.-42
+    new -1                  ; t_svc=const_beh.-42
 
     push 42                 ; t_svc 42
-    push lib.memo_beh       ; t_svc 1 memo_beh
-    new 1                   ; t_svc h_svc=memo.(42)
+    push lib.const_beh      ; t_svc 42 const_beh
+    new -1                  ; t_svc h_svc=const_beh.42
 
     push verify             ; t_svc h_svc verify
     new 0                   ; t_svc h_svc cust=verify.()

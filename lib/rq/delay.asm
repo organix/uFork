@@ -31,7 +31,7 @@ test:                       ; (verdict) <- {caps}
     push #t                 ; value=#t
     state 1                 ; value verdict
     push lib.unwrap_beh     ; value verdict unwrap_beh
-    new 1                   ; value callback=unwrap_beh.(verdict)
+    new -1                  ; value callback=unwrap_beh.verdict
 suite:
     push #?                 ; value callback to_cancel=#?
     pair 2                  ; request=(to_cancel callback . value)

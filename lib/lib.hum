@@ -11,8 +11,8 @@ DEF fwd_beh(rcvr) AS \msg.[ SEND msg TO rcvr ]
 DEF init_fwd_beh AS \rcvr.[ BECOME fwd_beh(rcvr) ]
 
 DEF once_beh(rcvr) AS \msg.[
-    SEND msg TO rcvr
     BECOME sink_beh
+    SEND msg TO rcvr
 ]
 
 DEF label_beh(rcvr, label) AS \msg.[
@@ -22,9 +22,10 @@ DEF label_beh(rcvr, label) AS \msg.[
 DEF tag_beh(rcvr) AS \msg.[
     SEND (SELF, msg) TO rcvr
 ]
+
 DEF once_tag_beh(rcvr) AS \msg.[
-    SEND (SELF, msg) TO rcvr
     BECOME sink_beh
+    SEND (SELF, msg) TO rcvr
 ]
 
 DEF race_beh(list) AS \(cust, req).[

@@ -76,7 +76,7 @@ cancel_all_beh:             ; cancellers <- reason
     msg 0                   ; cancellers () reason
     pair 1                  ; cancellers (reason)
     push lib.broadcast_beh  ; cancellers (reason) broadcast_beh
-    new 1                   ; cancellers broadcast=broadcast_beh.((reason))
+    new -1                  ; cancellers broadcast=broadcast_beh.(reason)
     send -1                 ; --
     push std.sink_beh       ; sink_beh
     beh -1                  ; --

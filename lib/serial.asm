@@ -16,14 +16,14 @@ once_tag_beh:
 ;;  (define serial-beh
 ;;      (lambda (svc)
 ;;          (BEH (cust . req)
-;;              (define tag (CREATE (once-tag-beh SELF)))
+;;              (define tag (CREATE (once-tag-beh SELF)))   ; FIXME: REPLACE WITH HUMUS DEFINITIONS
 ;;              (SEND svc (tag . req))
 ;;              (BECOME (busy-beh (deque-new) tag cust svc)) )))
 beh:
 serial_beh:                 ; (svc) <- (cust . req)
     my self                 ; SELF
     push once_tag_beh       ; SELF once-tag-beh
-    new 1                   ; tag=once-tag.(SELF)
+    new -1                  ; tag=once-tag.SELF
 
     msg -1                  ; tag req
     pick 2                  ; tag req tag
