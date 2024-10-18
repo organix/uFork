@@ -16,6 +16,7 @@
     * Instruction Summary
     * Instruction Decoding
     * Instruction Details
+        * [`actor`](#actor-instruction) instruction
         * [`alu`](#alu-instruction) instruction
         * [`assert`](#assert-instruction) instruction
         * [`beh`](#beh-instruction) instruction
@@ -342,6 +343,10 @@ _quad_               | `quad` `-4`         | _Z_ _Y_ _X_ _T_ | extract 4 _quad_ 
 —                    | `my` `self`         | _actor_      | push _actor_ address on stack
 —                    | `my` `beh`          | _beh_        | push _actor_ behavior on stack
 —                    | `my` `state`        | _vₙ_ … _v₁_  | spread _actor_ state onto stack
+_msg_ _actor_        | `actor` `send`      | —            | send _msg_ to _actor_
+_spn_ _msg_ _actor_  | `actor` `post`      | —            | send _msg_ to _actor_ using sponsor _spn_
+_state_ _beh_        | `actor` `create`    | _actor_      | create an _actor_ with code _beh_ and data _state_
+_state_ _beh_        | `actor` `become`    | —            | replace code with _beh_ and data with _state_
 _mₙ_ … _m₁_ _actor_  | `send` _n_          | —            | send (_m₁_ … _mₙ_) to _actor_
 _msg_ _actor_        | `send` `-1`         | —            | send _msg_ to _actor_
 _sponsor_ _mₙ_ … _m₁_ _actor_ | `signal` _n_ | —          | send (_m₁_ … _mₙ_) to _actor_ using _sponsor_
@@ -420,6 +425,7 @@ in the range [0, 15].
 The qualified instructions are:
 
   * `sponsor`
+  * `actor`
   * `dict`
   * `deque`
   * `my`
@@ -513,6 +519,59 @@ To <span id="Copy-of-onto">Copy _fixnum:n_ of _list_ onto _head_</span>:
     1. Let _list_ become `cdr(list)`
     1. Let _n_ become `n-1`
 
+#### `actor` instruction
+
+ Input               | Instruction         | Output       | Description
+---------------------|---------------------|--------------|-------------------------------------
+_msg_ _actor_        | `actor` `send`      | —            | send _msg_ to _actor_
+_spn_ _msg_ _actor_  | `actor` `post`      | —            | send _msg_ to _actor_ using sponsor _spn_
+_state_ _beh_        | `actor` `create`    | _actor_      | create an _actor_ with code _beh_ and data _state_
+_state_ _beh_        | `actor` `become`    | —            | replace code with _beh_ and data with _state_
+
+Record effects of actor primitives.
+Note that effects are not released into the system
+until and unless the actor executes [`end` `commit`](#end-instruction).
+
+ T            | X (op)       | Y (imm)     | Z (k)
+--------------|--------------|-------------|-------------
+ `#instr_t`   | `+9` (actor) | `send`      | _instr_
+
+ 1. Remove _actor_ from the stack
+ 1. Remove _msg_ from the stack
+ 1. Record in the current actor's effect a new _event_ with:
+    * _actor_ as the target
+    * _msg_ as the message
+
+ T            | X (op)       | Y (imm)     | Z (k)
+--------------|--------------|-------------|-------------
+ `#instr_t`   | `+9` (actor) | `post`      | _instr_
+
+ 1. Remove _actor_ from the stack
+ 1. Remove _msg_ from the stack
+ 1. Remove _spn_ from the stack
+ 1. Record in the current actor's effect a new _event_ with:
+    * _spn_ as the sponsor
+    * _actor_ as the target
+    * _msg_ as the message
+
+ T            | X (op)       | Y (imm)     | Z (k)
+--------------|--------------|-------------|-------------
+ `#instr_t`   | `+9` (actor) | `create`    | _instr_
+
+ 1. Remove _beh_ from the stack
+ 1. Remove _state_ from the stack
+ 1. Create a new actor with _beh_ for code and _state_ for data
+ 1. Push a capability designating the new actor onto the stack
+
+ T            | X (op)       | Y (imm)     | Z (k)
+--------------|--------------|-------------|-------------
+ `#instr_t`   | `+9` (actor) | `become`    | _instr_
+
+ 1. Remove _beh_ from the stack
+ 1. Remove _state_ from the stack
+ 1. Record _beh_ as the code to execute when handling the next event
+ 1. Record _state_ as the private data when handling the next event
+
 #### `alu` instruction
 
  Input               | Instruction         | Output       | Description
@@ -524,6 +583,7 @@ _n_ _m_              | `alu` `xor`         | _n_^_m_      | bitwise _n_ exclusiv
 _n_ _m_              | `alu` `add`         | _n_+_m_      | sum of _n_ and _m_
 _n_ _m_              | `alu` `sub`         | _n_-_m_      | difference of _n_ and _m_
 _n_ _m_              | `alu` `mul`         | _n_\*_m_     | product of _n_ and _m_
+_n_ _d_              | `alu` `div`         | _r_ _q_      | Euclidean division
 _n_ _m_              | `alu` `lsl`         | _n_<<_m_     | logical shift left _n_ by _m_
 _n_ _m_              | `alu` `lsr`         | _n_>>_m_     | logical shift right _n_ by _m_
 _n_ _m_              | `alu` `asr`         | _n_>>>_m_    | arithmetic shift right _n_ by _m_
@@ -618,39 +678,23 @@ Compute an ALU function of the arguments on the stack.
  1. Otherwise
     1. Push `#?` onto the stack
 
-> **SIDEBAR: INTEGER DIVISION**
->
+ T            | X (op)      | Y (imm)     | Z (k)
+--------------|-------------|-------------|-------------
+ `#instr_t`   | `+13` (alu) | `+7` (div)  | _instr_
+
 > The immediate value `+7` (div) is reserved for fixnum division.
 >
-> _q_ = _a_ / _b_ and _r_ = _a_ % _b_ where, _a_ = _bq_ + _r_
+> _q_ = _n_ / _d_ and _r_ = _n_ % _d_ where, _n_ = _dq_ + _r_
 >
-> However, there are several reasonable definitions.
+> There are several reasonable definitions.
+> We choose Euclidean, where 0 ≤ r < |d|.
 >
-> ##### Truncated
->  a | b | q | r
-> ---|---|---|---
-> +17|+5 |+3 |+2
-> -17|+5 |-3 |-2
-> +17|-5 |-3 |+2
-> -17|-5 |+3 |-2
->
-> ##### Floored
->  a | b | q | r
-> ---|---|---|---
-> +17|+5 |+3 |+2
-> -17|+5 |-4 |+3
-> +17|-5 |-4 |-3
-> -17|-5 |+3 |-2
->
-> ##### Euclidean
->  a | b | q | r
+>  n | d | q | r
 > ---|---|---|---
 > +17|+5 |+3 |+2
 > -17|+5 |-4 |+3
 > +17|-5 |-3 |+2
 > -17|-5 |+4 |+3
->
-> where, 0 ≤ r < |b|
 
  T            | X (op)      | Y (imm)     | Z (k)
 --------------|-------------|-------------|-------------

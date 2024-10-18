@@ -118,7 +118,7 @@ const VM_EQ     = 0x80000006;  // +6
 const VM_ASSERT = 0x80000007;  // +7
 
 const VM_SPONSOR= 0x80000008;  // +8
-//const VM_ACTOR  = 0x80000009;  // +9
+const VM_ACTOR  = 0x80000009;  // +9
 const VM_DICT   = 0x8000000A;  // +10
 const VM_DEQUE  = 0x8000000B;  // +11
 const VM_MY     = 0x8000000C;  // +12
@@ -239,7 +239,7 @@ const instr_label = [
     "eq",
     "assert",
     "sponsor",
-    "actor",        // reserved
+    "actor",
     "dict",
     "deque",
     "my",
@@ -292,6 +292,12 @@ const cmp_imm_label = [
     "lt",
     "le",
     "ne"
+];
+const actor_imm_label = [
+    "send",
+    "post",
+    "create",
+    "become"
 ];
 const my_imm_label = [
     "self",
@@ -737,6 +743,8 @@ function make_core({
                     s += cmp_imm_label[imm];
                 } else if ((quad.x === VM_MY) && (imm < my_imm_label.length)) {
                     s += my_imm_label[imm];
+                } else if ((quad.x === VM_ACTOR) && (imm < actor_imm_label.length)) {
+                    s += actor_imm_label[imm];
                 } else if ((quad.x === VM_DEQUE) && (imm < deque_imm_label.length)) {
                     s += deque_imm_label[imm];
                 } else if (quad.x === VM_END) {
@@ -1039,6 +1047,9 @@ function make_core({
                     fields.z = instruction(node.k);
                 } else if (node.op === "my") {
                     fields.y = label(node.imm, my_imm_label);
+                    fields.z = instruction(node.k);
+                } else if (node.op === "actor") {
+                    fields.y = label(node.imm, actor_imm_label);
                     fields.z = instruction(node.k);
                 } else if (node.op === "end") {
                     fields.y = label(node.imm, end_imm_label, -1);
@@ -1800,6 +1811,7 @@ export default Object.freeze({
     VM_IF,
     VM_MSG,
     VM_MY,
+    VM_ACTOR,
     VM_SEND,
     VM_NEW,
     VM_BEH,
