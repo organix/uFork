@@ -50,8 +50,8 @@ race_beh:                   ; (requestors throttle) <- request
     if_not std.commit       ; runner
     push cancel_tag         ; runner label=cancel_tag
     roll 2                  ; label rcvr=runner
-    push lib.label_beh      ; label rcvr label_beh
-    new 2                   ; cancel=label_beh.(rcvr label)
+    push lib.label2_beh     ; label rcvr label2_beh
+    new 2                   ; cancel=label2_beh.(rcvr label)
     msg 1                   ; cancel to_cancel
     send -1                 ; --
     ref std.commit
@@ -179,8 +179,8 @@ pop:
     state 4                 ; ... requestor canceller value
     pick 2                  ; ... requestor canceller value label=canceller
     my self                 ; ... requestor canceller value label rcvr=SELF
-    push lib.label_beh      ; ... requestor canceller value label rcvr label_beh
-    new 2                   ; ... requestor canceller value callback=label_beh.(rcvr label)
+    push lib.label2_beh     ; ... requestor canceller value label rcvr label2_beh
+    new 2                   ; ... requestor canceller value callback=label2_beh.(rcvr label)
     pick 3                  ; ... requestor canceller value callback to_cancel=canceller
     pair 2                  ; ... requestor canceller request=(to_cancel callback . value)
     roll 3                  ; ... canceller request requestor
@@ -213,7 +213,7 @@ cancel:                     ; running reason
     roll 2                  ; running () reason
     pair 1                  ; running (reason)
     push lib.broadcast_beh  ; running (reason) broadcast_beh
-    new 1                   ; running broadcast=broadcast_beh.((reason))
+    new -1                  ; running broadcast=broadcast_beh.(reason)
     send -1                 ; --
     push std.sink_beh       ; sink_beh
     beh 0                   ; --

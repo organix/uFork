@@ -46,7 +46,7 @@ timeout_beh:                ; (requestor time_limit timer_dev) <- request
 race:
     msg 2                   ; t␘ r␘ raw_callback
     push lib.once_beh       ; t␘ r␘ raw_callback once_beh
-    new 1                   ; t␘ r␘ callback=once_beh.(raw_callback)
+    new -1                  ; t␘ r␘ callback=once_beh.raw_callback
     msg -2                  ; t␘ r␘ callback value
     pick 4                  ; t␘ r␘ callback value t␘
     pick 3                  ; t␘ r␘ callback value t␘ callback
