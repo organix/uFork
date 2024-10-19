@@ -214,17 +214,17 @@ write_tag:
 CAS_tag:
     ref -1
 
-cell_beh:               ; (value) <- (tag cust . req)
-    msg 1               ; tag
-    eq read_tag         ; tag=="read"
-    if read             ; --
-    msg 1               ; tag
-    eq write_tag        ; tag=="write"
-    if write            ; --
-    msg 1               ; tag
-    eq CAS_tag          ; tag=="CAS"
-    if CAS              ; --
-    end abort
+cell_beh:                   ; value <- (tag cust . req)
+    msg 1                   ; tag
+    eq read_tag             ; tag==read
+    if read                 ; --
+    msg 1                   ; tag
+    eq write_tag            ; tag==write
+    if write                ; --
+    msg 1                   ; tag
+    eq CAS_tag              ; tag==CAS
+    if CAS                  ; --
+    ref std.abort
 ```
 
 The first part of the behavior is essentially a _method dispatch table_
@@ -233,11 +233,10 @@ If a match is found, the behavior branches to the appropriate handler code.
 If no match is found, the message-event transaction is aborted.
 
 ```
-read:                   ; (value) <- (tag cust)
-    state 1             ; value
-    msg 2               ; value cust
-    send -1             ; --
-    end commit
+read:                       ; value <- (tag cust)
+    state 0                 ; value
+    msg 2                   ; value cust
+    ref std.send_msg
 ```
 
 The "read" handler expects a message matching `(tag cust)`.
@@ -247,17 +246,16 @@ Reading the cell entails sending the current state `value`
 to the customer actor `cust`.
 
 ```
-write:                  ; (value) <- (tag cust value')
-    msg -2              ; (value')
-    push cell_beh       ; (value') cell_beh
-    beh -1              ; --
-    my self             ; SELF
-    msg 2               ; SELF cust
-    send -1             ; --
-    end commit
+write:                      ; value <- (tag cust . value')
+    msg -2                  ; value'
+    push cell_beh           ; value' cell_beh
+    beh -1                  ; --
+    my self                 ; SELF
+    msg 2                   ; SELF cust
+    ref std.send_msg
 ```
 
-The "write" handler expects a message matching `(tag cust value')`.
+The "write" handler expects a message matching `(tag cust . value')`.
 Writing the cell entails updating the actor's state
 with the new `value'`,
 while maintaining the same behavior (instructions).
@@ -280,18 +278,18 @@ The "CAS" ([compare-and-swap](https://en.wikipedia.org/wiki/Compare-and-swap)) r
 provides a mechanism to avoid this corruption.
 
 ```
-CAS:                    ; (value) <- (tag cust old new)
-    msg 3               ; old
-    state 1             ; old value
-    cmp eq              ; old==value
-    if_not read         ; --
-    msg -3              ; (new)
-    push cell_beh       ; (new) cell_beh
-    beh -1              ; --
+CAS:                        ; value <- (tag cust old . new)
+    msg 3                   ; old
+    state 0                 ; old value
+    cmp eq                  ; old==value
+    if_not read             ; --
+    msg -3                  ; new
+    push cell_beh           ; new cell_beh
+    beh -1                  ; --
     ref read
 ```
 
-The "CAS" handler expects a message matching `(tag cust old new)`.
+The "CAS" handler expects a message matching `(tag cust old . new)`.
 If `old` does not match the state `value`,
 treat this as "read" request
 (returning the _current_ `value` to `cust`).
@@ -362,30 +360,30 @@ a customer `cust` and
 an initial cell value `init`:
 
 ```
-factory:                ; () <- (cust init)
-    msg 2               ; init
+factory:                ; () <- (cust . init)
+    msg -1              ; init
     push cell_beh       ; init cell_beh
-    new 1               ; cell=cell_beh.(init)
+    new -1              ; cell=cell_beh.init
 
-    push CAS_tag        ; cell "CAS"
-    pick 2              ; cell "CAS" cell
-    pair 1              ; cell (cell . "CAS")
-    push label_beh      ; cell (cell . "CAS") label_beh
-    new -1              ; cell CAS_facet=label_beh.(cell . "CAS")
+    push CAS_tag        ; cell #CAS
+    pick 2              ; cell #CAS cell
+    pair 1              ; cell (cell . #CAS)
+    push label_beh      ; cell (cell . #CAS) label_beh
+    new -1              ; cell CAS_facet=label_beh.(cell . #CAS)
     roll -2             ; CAS_facet cell
 
-    push write_tag      ; CAS_facet cell "write"
-    pick 2              ; CAS_facet cell "write" cell
-    pair 1              ; CAS_facet cell (cell . "write")
-    push label_beh      ; CAS_facet cell (cell . "write") label_beh
-    new -1              ; CAS_facet cell write_facet=label_beh.(cell . "write")
+    push write_tag      ; CAS_facet cell #write
+    pick 2              ; CAS_facet cell #write cell
+    pair 1              ; CAS_facet cell (cell . #write)
+    push label_beh      ; CAS_facet cell (cell . #write) label_beh
+    new -1              ; CAS_facet cell write_facet=label_beh.(cell . #write)
     roll -2             ; CAS_facet write_facet cell
 
-    push CAS_tag        ; CAS_facet write_facet cell "read"
-    roll 2              ; CAS_facet write_facet "read" cell
-    pair 1              ; CAS_facet write_facet (cell . "read")
-    push label_beh      ; CAS_facet write_facet (cell . "read") label_beh
-    new -1              ; CAS_facet write_facet read_facet=label_beh.(cell . "read")
+    push CAS_tag        ; CAS_facet write_facet cell #read
+    roll 2              ; CAS_facet write_facet #read cell
+    pair 1              ; CAS_facet write_facet (cell . #read)
+    push label_beh      ; CAS_facet write_facet (cell . #read) label_beh
+    new -1              ; CAS_facet write_facet read_facet=label_beh.(cell . #read)
     msg 1               ; CAS_facet write_facet read_facet cust
     send 3              ; --
     end commit

@@ -28,7 +28,7 @@ CAS_tag:
 ;;  ]
 ;;  CREATE cell WITH cell_beh(0)
 beh:
-cell_beh:                   ; (value) <- (tag cust . req)
+cell_beh:                   ; value <- (tag cust . req)
     msg 1                   ; tag
     eq read_tag             ; tag==read
     if read                 ; --
@@ -40,110 +40,109 @@ cell_beh:                   ; (value) <- (tag cust . req)
     if CAS                  ; --
     ref std.abort
 
-read:                       ; <- (tag cust)
-    state 1                 ; value
+read:                       ; value <- (tag cust)
+    state 0                 ; value
     msg 2                   ; value cust
     ref std.send_msg
 
-write:                      ; <- (tag cust value')
-    msg -2                  ; (value')
-    push cell_beh           ; (value') cell_beh
+write:                      ; value <- (tag cust . value')
+    msg -2                  ; value'
+    push cell_beh           ; value' cell_beh
     beh -1                  ; --
     my self                 ; SELF
     msg 2                   ; SELF cust
     ref std.send_msg
 
-CAS:                        ; <- (tag cust old new)
+CAS:                        ; value <- (tag cust old . new)
     msg 3                   ; old
-    state 1                 ; old value
+    state 0                 ; old value
     cmp eq                  ; old==value
     if_not read             ; --
-    msg -3                  ; (new)
-    push cell_beh           ; (new) cell_beh
+    msg -3                  ; new
+    push cell_beh           ; new cell_beh
     beh -1                  ; --
     ref read
 
 ; unit test suite
 boot:
-    push test_read_beh      ; test_read_beh
-    new 0                   ; test_read
-    send 0                  ; --
-    push test_write_beh     ; test_write_beh
-    new 0                   ; test_write
-    send 0                  ; --
-    push test_hit_beh       ; test_hit_beh
-    new 0                   ; test_hit
-    send 0                  ; --
-    push test_miss_beh      ; test_miss_beh
-    new 0                   ; test_miss
-    send 0                  ; --
-    push test_overlap       ; test_overlap
-    new 0                   ; test_overlap.()
-    send 0                  ; --
+    call test_read          ; --
+    call test_write         ; --
+    call test_hit           ; --
+    call test_miss          ; --
+    call test_overlap       ; --
     ref std.commit
 
-test_read_beh:
-    push 5                  ; 5
-    push cell_beh           ; 5 cell_beh
-    new 1                   ; cell(5)
-    push 5                  ; cell(5) 5
-    push check_read_beh     ; cell(5) 5 check_read_beh
-    new -1                  ; cell(5) check_read(5)
-    ref std.send_msg
+test_read:                  ; ( -- )
+    push 5                  ; k 5
+    push cell_beh           ; k 5 cell_beh
+    new -1                  ; k cell(5)
+    push 5                  ; k cell(5) 5
+    push check_read_beh     ; k cell(5) 5 check_read_beh
+    new -1                  ; k cell(5) check_read(5)
+    send -1                 ; k
+    return
 
-test_write_beh:
-    push 5                  ; 5
-    push 5                  ; 5 5
-    push check_read_beh     ; 5 5 check_read_beh
-    new -1                  ; 5 check_read(5)
-    push write_tag          ; 5 check_read(5) #write
-    push 4                  ; 5 check_read(5) #write 4
-    push cell_beh           ; 5 check_read(5) #write 4 cell_beh
-    new 1                   ; 5 check_read(5) #write cell(4)
-    send 3                  ; --
-    ref std.commit
+test_write:                 ; ( -- )
+    push 5                  ; k 5
+    dup 1                   ; k 5 5
+    push check_read_beh     ; k 5 5 check_read_beh
+    new -1                  ; k 5 check_read(5)
+    push write_tag          ; k 5 check_read(5) #write
+    pair 2                  ; k msg=(#write check_read(5) . 5)
+    push 4                  ; k msg 4
+    push cell_beh           ; k msg 4 cell_beh
+    new -1                  ; k msg cell(4)
+    send -1                 ; k
+    return
 
-test_hit_beh:
-    push 5                  ; new=5
-    push 4                  ; new=5 old=4
-    push 5                  ; new=5 old=4 expect=5
-    ref test_CAS
+test_hit:                   ; ( -- )
+    push 5                  ; k new=5
+    push 4                  ; k new=5 old=4
+    push 5                  ; k new=5 old=4 expect=5
+    call test_CAS           ; k
+    return
 
-test_miss_beh:
-    push 5                  ; new=5
-    push 3                  ; new=5 old=3
-    push 4                  ; new=5 old=3 expect=4
-    ref test_CAS
+test_miss:                  ; ( -- )
+    push 5                  ; k new=5
+    push 3                  ; k new=5 old=3
+    push 4                  ; k new=5 old=3 expect=4
+    call test_CAS           ; k
+    return
 
-test_CAS:                   ; new old expect
-    push 4                  ; new old expect 4
-    push cell_beh           ; new old expect 4 cell_beh
-    new 1                   ; new old expect cell(4)
-    roll 2                  ; new old cell(4) expect
-    pick 2                  ; new old cell(4) expect cell(4)
-    push check_CAS_beh      ; new old cell(4) expect cell(4) check_CAS_beh
-    new 2                   ; new old cell(4) check_CAS
-    push CAS_tag            ; new old cell(4) check_CAS #CAS
-    roll 3                  ; new old check_CAS #CAS cell(4)
-    send 4                  ; --
-    ref std.commit
+test_CAS:                   ; ( new old expect -- )
+    roll -4                 ; k new old expect
+    push 4                  ; k new old expect 4
+    push cell_beh           ; k new old expect 4 cell_beh
+    new -1                  ; k new old expect cell(4)
+    roll -4                 ; k cell(4) new old expect
+    pick 4                  ; k cell(4) new old expect cell(4)
+    pair 1                  ; k cell(4) new old state=(cell(4) . expect)
+    push check_CAS_beh      ; k cell(4) new old state check_CAS_beh
+    new -1                  ; k cell(4) new old check_CAS
+    push CAS_tag            ; k cell(4) new old check_CAS #CAS
+    pair 3                  ; k cell(4) msg=(#CAS check_CAS old . new)
+    roll 2                  ; k msg cell(4)
+    send -1                 ; k
+    return
 
-check_CAS_beh:              ; (cell expect) <- value
+check_CAS_beh:              ; (cell . expect) <- value
     msg 0                   ; value
     assert 4                ; --
     state 1                 ; cell
-    state 2                 ; cell expect
+    state -1                ; cell expect
     push check_read_beh     ; cell expect check_read_beh
     new -1                  ; cell check_read(expect)
     ref std.send_msg
 
 check_read_beh:             ; expect <- cell
-    state 0                 ; expect
-    push assert_eq_beh      ; expect assert_eq_beh
-    new -1                  ; assert_eq
-    push read_tag           ; assert_eq #read
-    msg 0                   ; assert_eq #read cell
-    send 2                  ; --
+    push #nil               ; ()
+    state 0                 ; () expect
+    push assert_eq_beh      ; () expect assert_eq_beh
+    new -1                  ; () cust=assert_eq
+    push read_tag           ; () cust #read
+    pair 2                  ; (#read cust)
+    msg 0                   ; (#read cust) cell
+    send -1                 ; --
     ref std.commit
 
 assert_eq_beh:              ; expect <- value
@@ -153,46 +152,46 @@ assert_eq_beh:              ; expect <- value
     assert #t               ; --
     ref std.commit
 
-test_overlap:               ; () <- ()
-    push 4                  ; 4
-    push cell_beh           ; 4 cell_beh
-    new 1                   ; cell=cell_beh.(4)
-    dup 1                   ; cell cell
-    push cell_set_bit       ; cell cell cell_set_bit
-    new 1                   ; cell svc1=cell_set_bit.(cell)
-    pick 2                  ; cell svc1 cell
-    push cell_set_bit       ; cell svc1 cell cell_set_bit
-    new 1                   ; cell svc1 svc2=cell_set_bit.(cell)
-    push 7                  ; cell svc1 svc2 7
-    roll 4                  ; svc1 svc2 7 cell
-    push cell_verify        ; svc1 svc2 7 cell cell_verify
-    new 2                   ; t_svc=svc1 h_svc=svc2 cust=cell_verify(cell 7)
+test_overlap:               ; ( -- )
+    push 4                  ; k 4
+    push cell_beh           ; k 4 cell_beh
+    new -1                  ; k cell=cell_beh.(4)
+    dup 1                   ; k cell cell
+    push cell_set_bit       ; k cell cell cell_set_bit
+    new -1                  ; k cell t_svc=cell_set_bit.cell
+    pick 2                  ; k cell t_svc cell
+    push cell_set_bit       ; k cell t_svc cell cell_set_bit
+    new -1                  ; k cell t_svc h_svc=cell_set_bit.cell
+    push 7                  ; k cell t_svc h_svc expect=7
+    roll 4                  ; k t_svc h_svc expect cell
+    pair 1                  ; k t_svc h_svc (cell . expect)
+    push cell_verify        ; k t_svc h_svc (cell . expect) cell_verify
+    new -1                  ; k t_svc h_svc cust=cell_verify.(cell . expect)
+    push fork.beh           ; k t_svc h_svc cust fork_beh
+    new 3                   ; k fork.(cust h_svc t_svc)
+    push 2                  ; k fork 2
+    push 1                  ; k fork 2 1
+    pair 1                  ; k fork (1 . 2)
+    roll 2                  ; k (1 . 2) fork
+    send -1                 ; k
+    return
 
-    push fork.beh           ; t_svc h_svc cust fork_beh
-    new 3                   ; fork.(cust h_svc t_svc)
-    push #nil               ; fork ()
-    push 2                  ; fork () 2
-    pair 1                  ; fork (2)
-    push #nil               ; fork (2) ()
-    push 1                  ; fork (2) () 1
-    pair 1                  ; fork (2) (1)
-    pair 1                  ; fork ((1) . (2))
-    roll 2                  ; ((1) . (2)) fork
-    ref std.send_msg
-
-cell_set_bit:               ; (cell) <- (cust bit)
-    msg 1                   ; cust
-    state 1                 ; cust cell
-    msg 2                   ; cust cell bit
-    push #?                 ; cust cell bit old=#?
-    push cell_try_bit       ; cust cell bit old cell_try_bit
-    new 4                   ; cust'=cell_try_bit.(old bit cell cust)
-    push read_tag           ; cust' tag=read_tag
-    state 1                 ; cust' tag cell
-    send 2                  ; --
+cell_set_bit:               ; cell <- (cust . bit)
+    push #nil               ; ()
+    msg 1                   ; () cust
+    state 0                 ; () cust cell
+    msg -1                  ; () cust cell bit
+    push #?                 ; () cust cell bit old=#?
+    pair 3                  ; () (old bit cell . cust)
+    push cell_try_bit       ; () (old bit cell . cust) cell_try_bit
+    new -1                  ; () cust'=cell_try_bit.(old bit cell . cust)
+    push read_tag           ; () cust' tag=read_tag
+    pair 2                  ; (#read cust')
+    state 0                 ; (#read cust') cell
+    send -1                 ; --
     ref std.commit
 
-cell_try_bit:               ; (old bit cell cust) <- val
+cell_try_bit:               ; (old bit cell . cust) <- val
     msg 0                   ; val
     state 1                 ; val old
     cmp eq                  ; val==old
@@ -203,26 +202,29 @@ cell_try_bit:               ; (old bit cell cust) <- val
     msg 0                   ; new old=val
     my self                 ; new old cust=SELF
     push CAS_tag            ; new old cust tag=CAS_tag
-    state 3                 ; new old cust tag cell
-    send 4                  ; --
-    state -1                ; (bit cell cust)
-    msg 0                   ; (bit cell cust) old'=val
-    pair 1                  ; (old' bit cell cust)
-    push cell_try_bit       ; (old' bit cell cust) cell_try_bit
+    pair 3                  ; (#CAS cust old . new)
+    state 3                 ; (#CAS cust old . new) cell
+    send -1                 ; --
+    state -1                ; (bit cell . cust)
+    msg 0                   ; (bit cell . cust) old'=val
+    pair 1                  ; (old' bit cell . cust)
+    push cell_try_bit       ; (old' bit cell . cust) cell_try_bit
     beh -1                  ; --
     ref std.commit
 set_bit_done:
     msg 0                   ; val
-    state 4                 ; val cust
+    state -3                ; val cust
     ref std.send_msg
 
-cell_verify:                ; (cell expect) <- _
-    state 2                 ; expect
-    push assert_eq_beh      ; expect assert_eq_beh
-    new -1                  ; cust=assert_eq_beh.expect
-    push read_tag           ; cust tag=read_tag
-    state 1                 ; cust tag cell
-    send 2                  ; --
+cell_verify:                ; (cell . expect) <- _
+    push #nil               ; ()
+    state -1                ; () expect
+    push assert_eq_beh      ; () expect assert_eq_beh
+    new -1                  ; () cust=assert_eq_beh.expect
+    push read_tag           ; () cust tag=read_tag
+    pair 2                  ; (#read cust)
+    state 1                 ; (#read cust) cell
+    send -1                 ; --
     ref std.commit
 
 .export
