@@ -48,8 +48,9 @@ boot:                       ; () <- {caps}
     msg 0                   ; listen_svc listen_svc {caps}
     push pledge_beh         ; listen_svc listen_svc {caps} pledge_beh
     new -1                  ; listen_svc listen_svc pledge
-    push fork.beh           ; listen_svc listen_svc pledge fork_beh
-    new 3                   ; fork
+    pair 2                  ; (pledge listen_svc . listen_svc)
+    push fork.beh           ; (pledge listen_svc . listen_svc) fork_beh
+    new -1                  ; fork=fork_beh.(pledge listen_svc . listen_svc)
     push #?                 ; fork #?
     push lib.broadcast_beh  ; fork #? broadcast_beh
     new -1                  ; fork deposit=broadcast_beh.#?

@@ -167,8 +167,9 @@ test_overlap:               ; ( -- )
     pair 1                  ; k t_svc h_svc (cell . expect)
     push cell_verify        ; k t_svc h_svc (cell . expect) cell_verify
     new -1                  ; k t_svc h_svc cust=cell_verify.(cell . expect)
-    push fork.beh           ; k t_svc h_svc cust fork_beh
-    new 3                   ; k fork.(cust h_svc t_svc)
+    pair 2                  ; k (cust h_svc . t_svc)
+    push fork.beh           ; k (cust h_svc . t_svc) fork_beh
+    new -1                  ; k fork.(cust h_svc . t_svc)
     push 2                  ; k fork 2
     push 1                  ; k fork 2 1
     pair 1                  ; k fork (1 . 2)
