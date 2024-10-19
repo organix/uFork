@@ -50,8 +50,9 @@ boot:                       ; () <- {caps}
     new -1                  ; listen_svc listen_svc pledge
     push fork.beh           ; listen_svc listen_svc pledge fork_beh
     new 3                   ; fork
-    push lib.broadcast_beh  ; fork broadcast_beh
-    new 0                   ; fork deposit
+    push #?                 ; fork #?
+    push lib.broadcast_beh  ; fork #? broadcast_beh
+    new -1                  ; fork deposit=broadcast_beh.#?
     push KEQD_greeter_beh   ; fork deposit KEQD_greeter_beh
     new -1                  ; fork KEQD_greeter
     push KEQD_store         ; fork KEQD_greeter KEQD_store
@@ -114,8 +115,9 @@ donor_beh:                  ; {caps} <- store
     state 0                 ; intro_svc store {caps}
     push dev.debug_key      ; intro_svc store {caps} debug_key
     dict get                ; intro_svc store debug_dev
-    push lib.label_beh      ; intro_svc store debug_dev label_beh
-    new 2                   ; intro_svc withdraw
+    pair 1                  ; intro_svc (debug_dev . store)
+    push lib.label_beh      ; intro_svc (debug_dev . store) label_beh
+    new -1                  ; intro_svc withdraw=label_beh.(debug_dev . store)
     pick 2                  ; intro_svc withdraw intro_svc
     push donor_k_beh        ; intro_svc withdraw intro_svc donor_k_beh
     new 2                   ; intro_svc donor_k

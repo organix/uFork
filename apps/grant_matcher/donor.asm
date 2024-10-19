@@ -31,8 +31,9 @@ intro_cb_beh:               ; {caps} <- (ok . deposit/error)
     state 0                 ; store {caps}
     push dev.debug_key      ; store {caps} debug_key
     dict get                ; store debug_dev
-    push lib.label_beh      ; store debug_dev label_beh
-    new 2                   ; withdraw
+    pair 1                  ; (debug_dev . store)
+    push lib.label_beh      ; (debug_dev . store) label_beh
+    new -1                  ; withdraw=label_beh.(debug_dev . store)
     msg -1                  ; withdraw deposit
     pair 1                  ; hello=(deposit . withdraw)
     push GM_petname         ; hello GM

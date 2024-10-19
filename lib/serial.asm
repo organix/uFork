@@ -10,9 +10,6 @@
     cell: "./cell.asm"
     dev:  "./dev.asm"
 
-once_tag_beh:
-    ref lib.once_tag_beh
-
 ;;  (define serial-beh
 ;;      (lambda (svc)
 ;;          (BEH (cust . req)
@@ -22,7 +19,7 @@ once_tag_beh:
 beh:
 serial_beh:                 ; (svc) <- (cust . req)
     my self                 ; SELF
-    push once_tag_beh       ; SELF once-tag-beh
+    push lib.once_tag_beh   ; SELF once-tag-beh
     new -1                  ; tag=once-tag.SELF
 
     msg -1                  ; tag req
@@ -88,8 +85,8 @@ busy_1:
 busy_2:
     part 1                  ; pending1 req1 cust1
     my self                 ; pending1 req1 cust1 SELF
-    push once_tag_beh       ; pending1 req1 cust1 SELF once-tag-beh
-    new 1                   ; pending1 req1 cust1 tag1=once-tag.(SELF)
+    push lib.once_tag_beh   ; pending1 req1 cust1 SELF once-tag-beh
+    new -1                  ; pending1 req1 cust1 tag1=once-tag.SELF
 
     roll 3                  ; pending1 cust1 tag1 req1
     pick 2                  ; pending1 cust1 tag1 req1 tag1

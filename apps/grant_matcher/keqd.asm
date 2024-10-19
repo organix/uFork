@@ -7,10 +7,11 @@ store:
     ref 0
 
 boot:                       ; () <- {caps}
-    push lib.broadcast_beh  ; broadcast_beh
-    new 0                   ; deposit
+    push #?                 ; #?
+    push lib.broadcast_beh  ; #? broadcast_beh
+    new -1                  ; deposit=broadcast_beh.#?
     push greeter_beh        ; deposit greeter_beh
-    new -1                  ; greeter
+    new -1                  ; greeter=greeter_beh.deposit
     push store              ; greeter store
     push listen_cb_beh      ; greeter store listen_cb_beh
     new 0                   ; greeter store listen_cb
