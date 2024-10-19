@@ -683,6 +683,41 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
                 }
                 kip
             },
+            VM_ACTOR => {
+                let tos = self.stack_pop();
+                let nos = self.stack_pop();
+                match imm {
+                    ACTOR_SEND => {
+                        if tos.is_cap() {
+                            let spn = self.event_sponsor(self.ep());  // implicit sponsor from event
+                            self.effect_send(spn, tos, nos)?;
+                        }
+                    },
+                    ACTOR_POST => {
+                        let spn = self.stack_pop();  // explicit sponsor from stack
+                        if tos.is_cap() {
+                            self.effect_send(spn, tos, nos)?;
+                        }
+                    },
+                    ACTOR_CREATE => {
+                        if self.typeq(INSTR_T, tos) {
+                            let actor = self.effect_create(tos, nos)?;
+                            self.stack_push(actor)?;
+                        } else {
+                            self.stack_push(UNDEF)?;  // invalid actor
+                        }
+                    },
+                    ACTOR_BECOME => {
+                        if self.typeq(INSTR_T, tos) {
+                            self.effect_become(tos, nos)?;
+                        }
+                    },
+                    _ => {
+                        // unknown ACTOR op (ignored)
+                    }
+                }
+                kip
+            },
             VM_SIGNAL => {
                 let n = imm.get_fix()?;
                 let target = self.stack_pop();

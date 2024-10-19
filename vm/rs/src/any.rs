@@ -118,6 +118,12 @@ pub const MY_SELF: Any      = ZERO;
 pub const MY_BEH: Any       = PLUS_1;
 pub const MY_STATE: Any     = PLUS_2;
 
+// VM_DEQUE deque operations
+pub const ACTOR_SEND: Any   = ZERO;
+pub const ACTOR_POST: Any   = PLUS_1;
+pub const ACTOR_CREATE: Any = PLUS_2;
+pub const ACTOR_BECOME: Any = PLUS_3;
+
 // VM_END thread actions
 pub const END_ABORT: Any    = MINUS_1;
 pub const END_STOP: Any     = ZERO;

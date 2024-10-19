@@ -532,9 +532,9 @@ Record effects of actor primitives.
 Note that effects are not released into the system
 until and unless the actor executes [`end` `commit`](#end-instruction).
 
- T            | X (op)       | Y (imm)     | Z (k)
---------------|--------------|-------------|-------------
- `#instr_t`   | `+9` (actor) | `send`      | _instr_
+ T            | X (op)       | Y (imm)       | Z (k)
+--------------|--------------|---------------|-------------
+ `#instr_t`   | `+9` (actor) | `+0` (send)   | _instr_
 
  1. Remove _actor_ from the stack
  1. Remove _msg_ from the stack
@@ -542,9 +542,9 @@ until and unless the actor executes [`end` `commit`](#end-instruction).
     * _actor_ as the target
     * _msg_ as the message
 
- T            | X (op)       | Y (imm)     | Z (k)
---------------|--------------|-------------|-------------
- `#instr_t`   | `+9` (actor) | `post`      | _instr_
+ T            | X (op)       | Y (imm)       | Z (k)
+--------------|--------------|---------------|-------------
+ `#instr_t`   | `+9` (actor) | `+1` (post)   | _instr_
 
  1. Remove _actor_ from the stack
  1. Remove _msg_ from the stack
@@ -554,18 +554,18 @@ until and unless the actor executes [`end` `commit`](#end-instruction).
     * _actor_ as the target
     * _msg_ as the message
 
- T            | X (op)       | Y (imm)     | Z (k)
---------------|--------------|-------------|-------------
- `#instr_t`   | `+9` (actor) | `create`    | _instr_
+ T            | X (op)       | Y (imm)       | Z (k)
+--------------|--------------|---------------|-------------
+ `#instr_t`   | `+9` (actor) | `+2` (create) | _instr_
 
  1. Remove _beh_ from the stack
  1. Remove _state_ from the stack
  1. Create a new actor with _beh_ for code and _state_ for data
  1. Push a capability designating the new actor onto the stack
 
- T            | X (op)       | Y (imm)     | Z (k)
---------------|--------------|-------------|-------------
- `#instr_t`   | `+9` (actor) | `become`    | _instr_
+ T            | X (op)       | Y (imm)       | Z (k)
+--------------|--------------|---------------|-------------
+ `#instr_t`   | `+9` (actor) | `+3` (become) | _instr_
 
  1. Remove _beh_ from the stack
  1. Remove _state_ from the stack
