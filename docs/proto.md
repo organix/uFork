@@ -152,9 +152,6 @@ in function/procedure calls.
 Note that some services
 (like the _clock_ device described above)
 expect the entire message to be just the _customer_.
-The idioms in [`lib.asm`](../lib/lib.asm)
-include adapters (`wrap`/`unwrap`)
-to convert between these conventions.
 
 ### Behavior Signatures
 
@@ -166,40 +163,7 @@ The _signature_ of a behavior describes
 the expected actor _state_ structure and _message_ structure.
 We write a behavior signature as `state <- message`.
 
-Consider the adapter [`wrap_beh`](../lib/lib.asm),
-which expects the state to be a single-element list designating the receiver
-and the message to be a single value:
-
-```
-wrap_beh:               ; (rcvr) <- msg
-    msg 0               ; msg
-    state 1             ; msg rcvr
-    send 1              ; --
-    end commit
-```
-
-An actor with "wrap" behavior
-creates a single-element list
-containing the message
-and sends it to the receiver.
-
-Now consider the adapter [`unwrap_beh`](../lib/lib.asm),
-which expects the state to be a single-element list designating the receiver
-and the message to be a single-element list:
-
-```
-unwrap_beh:             ; (rcvr) <- (msg)
-    msg 1               ; msg
-    state 1             ; msg rcvr
-    send -1             ; --
-    end commit
-```
-
-An actor with "unwrap" behavior
-extracts the message from a single-element list
-and sends it to the receiver.
-
-Finally, consider a constant-function [`const_beh`](../lib/lib.asm),
+Consider a constant-function [`const_beh`](../lib/lib.asm),
 which expects the state to be a single value,
 and the message to be a pair-list
 with the _customer_ as the first element:
@@ -361,14 +325,14 @@ for each available operation on a particular cell.
 Each _facet_ is represented by a distinct actor,
 separate from each other and from the state-holder.
 The behavior of a facet is an idiomatic [`label_beh`](../lib/lib.asm),
-which expects the state to be a list containing
+which expects the state to be a pair containing
 the receiver and the label.
 The message is arbitrary (simple or complex).
 
 ```
-label_beh:              ; (rcvr label) <- msg
+label_beh:              ; (rcvr . label) <- msg
     msg 0               ; msg
-    state 2             ; msg label
+    state -1            ; msg label
     pair 1              ; (label . msg)
     state 1             ; (label . msg) rcvr
     send -1             ; --
@@ -405,20 +369,23 @@ factory:                ; () <- (cust init)
 
     push CAS_tag        ; cell "CAS"
     pick 2              ; cell "CAS" cell
-    push label_beh      ; cell "CAS" cell label_beh
-    new 2               ; cell CAS_facet=label_beh.(cell "CAS")
+    pair 1              ; cell (cell . "CAS")
+    push label_beh      ; cell (cell . "CAS") label_beh
+    new -1              ; cell CAS_facet=label_beh.(cell . "CAS")
     roll -2             ; CAS_facet cell
 
     push write_tag      ; CAS_facet cell "write"
     pick 2              ; CAS_facet cell "write" cell
-    push label_beh      ; CAS_facet cell "write" cell label_beh
-    new 2               ; CAS_facet cell write_facet=label_beh.(cell "write")
+    pair 1              ; CAS_facet cell (cell . "write")
+    push label_beh      ; CAS_facet cell (cell . "write") label_beh
+    new -1              ; CAS_facet cell write_facet=label_beh.(cell . "write")
     roll -2             ; CAS_facet write_facet cell
 
     push CAS_tag        ; CAS_facet write_facet cell "read"
     roll 2              ; CAS_facet write_facet "read" cell
-    push label_beh      ; CAS_facet write_facet "read" cell label_beh
-    new 2               ; CAS_facet write_facet read_facet=label_beh.(cell "read")
+    pair 1              ; CAS_facet write_facet (cell . "read")
+    push label_beh      ; CAS_facet write_facet (cell . "read") label_beh
+    new -1              ; CAS_facet write_facet read_facet=label_beh.(cell . "read")
     msg 1               ; CAS_facet write_facet read_facet cust
     send 3              ; --
     end commit

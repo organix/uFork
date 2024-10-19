@@ -3,17 +3,13 @@
 ; requestor may eventually send.
 
 ; It is rare to provide a meaningful reason for cancellation, but if it is then
-; the reason must be wrapped in a list:
+; the reason must be wrapped in a pair:
 
-;   (reason) -> canceller
-
-; A more cancel-like capability can be made by wrapping a canceller in
-; 'wrap_beh' from `../lib.asm`.  **DEPRECATED**
+;   (reason . _) -> canceller
 
 .import
     std: "../std.asm"
     dev: "../dev.asm"
-;    lib: "../lib.asm"
     referee: "../testing/referee.asm"
 
 beh:

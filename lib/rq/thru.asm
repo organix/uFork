@@ -3,7 +3,6 @@
 .import
     std: "../std.asm"
     dev: "../dev.asm"
-;    lib: "../lib.asm"
     unwrap_result: "./unwrap_result.asm"
 
 beh:

@@ -141,13 +141,11 @@ test_pick_and_roll:
     ref test_actors
 
 test_actors:
-    push #nil               ; ()
-    push #?                 ; () #?
-    push cell_beh           ; () #? cell_beh
-    new -1                  ; () rcvr=cell_beh.#?
-    pair 1                  ; (rcvr)
-    push once_beh           ; (rcvr) once_beh
-    new -1                  ; actor=once_beh.(rcvr)
+    push #?                 ; #?
+    push cell_beh           ; #? cell_beh
+    new -1                  ; rcvr=cell_beh.#?
+    push once_beh           ; rcvr once_beh
+    new -1                  ; actor=once_beh.rcvr
     push #t                 ; actor #t
     pick 2                  ; actor #t actor
     send -1                 ; actor
@@ -242,17 +240,15 @@ fib_k2:                     ; (cust m) <- n
     ref send_msg
 
 ; adaptated from `lib.asm`
-once_beh:                   ; (rcvr) <- msg
+once_beh:                   ; rcvr <- msg
     push -3                 ; -3
     push -2                 ; -3 -2
     push -1                 ; -3 -2 -1
     push sink_beh           ; ... beh=sink_beh
     ; beh -1                  ; --
     beh 0                   ; --
-    ; ref fwd_beh
-fwd_beh:                    ; (rcvr) <- msg
     msg 0                   ; msg
-    state 1                 ; msg rcvr
+    state 0                 ; msg rcvr
     ref send_msg
 
 ; shared tails from `std.asm`

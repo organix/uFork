@@ -3,7 +3,6 @@
 
 .import
     std: "../std.asm"
-    lib: "../lib.asm"
     dev: "../dev.asm"
 
 beh:
@@ -27,10 +26,14 @@ boot:                       ; () <- {caps}
     dict get                ; value debug_dev
     ref suite
 
+unwrap_beh:                 ; rcvr <- (msg . _)
+    msg 1                   ; msg
+    state 0                 ; msg rcvr
+    ref std.send_msg
 test:                       ; (verdict) <- {caps}
     push #t                 ; value=#t
     state 1                 ; value verdict
-    push lib.unwrap_beh     ; value verdict unwrap_beh
+    push unwrap_beh         ; value verdict unwrap_beh
     new -1                  ; value callback=unwrap_beh.verdict
 suite:
     push #?                 ; value callback to_cancel=#?

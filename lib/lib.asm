@@ -52,12 +52,6 @@ label_beh:                  ; (rcvr . label) <- msg
     pair 1                  ; (label . msg)
     state 1                 ; (label . msg) rcvr
     ref std.send_msg
-label2_beh:                 ; (rcvr label) <- msg
-    msg 0                   ; msg
-    state 2                 ; msg label
-    pair 1                  ; (label . msg)
-    state 1                 ; (label . msg) rcvr
-    ref std.send_msg
 
 ;;  DEF tag_beh(rcvr) AS \msg.[
 ;;      SEND (SELF, msg) TO rcvr
@@ -78,24 +72,6 @@ once_tag_beh:               ; rcvr <- msg
     push sink_beh           ; () sink_beh
     beh -1                  ; --
     ref tag_beh
-
-;;  DEF wrap_beh(rcvr) AS \msg.[
-;;      SEND (msg, NIL) TO rcvr
-;;  ]
-wrap_beh:                   ; rcvr <- msg
-    push #nil               ; ()
-    msg 0                   ; () msg
-    pair 1                  ; (msg)
-    state 0                 ; (msg) rcvr
-    ref std.send_msg
-
-;;  DEF wrap_beh(rcvr) AS \(msg, _).[
-;;      SEND msg TO rcvr
-;;  ]
-unwrap_beh:                 ; rcvr <- (msg . _)
-    msg 1                   ; msg
-    state 0                 ; msg rcvr
-    ref std.send_msg
 
 ;;  DEF relay_beh(rcvr, msg) AS \_.[
 ;;      SEND msg TO rcvr
@@ -139,11 +115,6 @@ broadcast_beh:              ; value <- actors
     my self                 ; rest SELF
     ref std.send_msg
 
-; unit test suite
-boot:                       ; () <- {caps}
-    msg 0                   ; {caps}
-    ref std.commit
-
 .export
     sink_beh
     const_beh
@@ -151,13 +122,9 @@ boot:                       ; () <- {caps}
     init_fwd_beh
     once_beh
     label_beh
-    label2_beh              ; **DEPRECATED**
     tag_beh
     once_tag_beh
-    wrap_beh                ; **DEPRECATED**
-    unwrap_beh              ; **DEPRECATED**
 ;    call_beh                ; semantically `label_beh` with swapped parameters
     relay_beh
     tee_beh
     broadcast_beh
-    boot
