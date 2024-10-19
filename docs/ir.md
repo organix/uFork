@@ -227,6 +227,7 @@ and is not present on "jump" or "end" instructions.
 "msg"           | _fixnum_
 "state"         | _fixnum_
 "my"            | "self", "beh", "state"
+"actor"         | "send", "post", "create", "become"
 "send"          | _fixnum_
 "signal"        | _fixnum_
 "new"           | _fixnum_

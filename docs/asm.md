@@ -240,6 +240,10 @@ _quad_               | `quad` `-4`         | _Z_ _Y_ _X_ _T_ | extract 4 _quad_ 
 —                    | `my` `self`         | _actor_      | push _actor_ address on stack
 —                    | `my` `beh`          | _beh_        | push _actor_ behavior on stack
 —                    | `my` `state`        | _vₙ_ … _v₁_  | spread _actor_ state onto stack
+_msg_ _actor_        | `actor` `send`      | —            | send _msg_ to _actor_
+_spn_ _msg_ _actor_  | `actor` `post`      | —            | send _msg_ to _actor_ using sponsor _spn_
+_state_ _beh_        | `actor` `create`    | _actor_      | create an _actor_ with code _beh_ and data _state_
+_state_ _beh_        | `actor` `become`    | —            | replace code with _beh_ and data with _state_
 _mₙ_ … _m₁_ _actor_  | `send` _n_          | —            | send (_m₁_ … _mₙ_) to _actor_
 _msg_ _actor_        | `send` `-1`         | —            | send _msg_ to _actor_
 _sponsor_ _mₙ_ … _m₁_ _actor_ | `signal` _n_ | —          | send (_m₁_ … _mₙ_) to _actor_ using _sponsor_
