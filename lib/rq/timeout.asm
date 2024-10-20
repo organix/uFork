@@ -124,7 +124,7 @@ test:                       ; judge <- {caps}
 ; giving it to the referee.
 
     push unwrap_result.beh  ; timer referee unwrap_result_beh
-    new 1                   ; timer referee'
+    new -1                  ; timer referee'=unwrap_result_beh.referee
     roll 2                  ; referee' timer
 suite:
 

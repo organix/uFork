@@ -15,10 +15,10 @@ unwrap_result:              ; ( result -- value | #? )
     ref std.return_value
 
 beh:
-unwrap_result_beh:          ; (rcvr) <- result
+unwrap_result_beh:          ; rcvr <- result
     msg 0                   ; result
     call unwrap_result      ; value
-    state 1                 ; value rcvr
+    state 0                 ; value rcvr
     ref std.send_msg
 
 .export

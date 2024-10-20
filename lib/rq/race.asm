@@ -245,7 +245,7 @@ test:                       ; judge <- {caps}
     push referee.beh        ; 4th 3rd 2nd 1st probation timer judge referee_beh
     new 7                   ; referee=referee_beh.(judge timer probation 1st 2nd 3rd 4th)
     push unwrap_result.beh  ; referee unwrap_result_beh
-    new 1                   ; referee'=unwrap_result_beh.(referee)
+    new -1                  ; referee'=unwrap_result_beh.referee
 pre_setup:
     msg 0                   ; referee {caps}
     push dev.timer_key      ; referee {caps} timer_key
