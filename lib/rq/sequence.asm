@@ -144,7 +144,7 @@ boot:                       ; () <- {caps}
     msg 0                   ; {caps}
     push dev.debug_key      ; {caps} debug_key
     dict get                ; referee=debug
-    ref pre_setup
+    ref suite
 test:                       ; judge <- {caps}
 
 ; FIXME: Validate the entire result, not just the result's value. This requires
@@ -162,72 +162,64 @@ test:                       ; judge <- {caps}
     new 6                   ; referee=referee_beh.(judge timer probation 1st 2nd 3rd)
     push unwrap_result.beh  ; referee unwrap_result_beh
     new -1                  ; referee'=unwrap_result_beh.referee
-pre_setup:
+suite:
     msg 0                   ; referee {caps}
     push dev.timer_key      ; referee {caps} timer_key
     dict get                ; referee timer
-    push setup_beh          ; referee timer setup_beh
-    new 2                   ; setup=setup_beh.(timer referee)
-    send 0                  ; --
-    ref std.commit
-
-setup_beh:                  ; (timer referee) <- ()
 
 ; An empty requestor list is provided.
 ; Expected output: (#t . +1000) @ 0ms
 
-    state 2                 ; referee
-    state 1                 ; referee timer
-    push test_beh           ; referee timer test_beh
-    new 2                   ; test=test_beh.(timer referee)
-    send 0                  ; --
+    dup 2                   ; ... referee timer
+    push #?                 ; ... referee timer cancel_at=#?
+    push #nil               ; ... referee timer cancel_at spec=()
+    call run_test           ; ...
 
 ; Two successful requestors.
 ; Expected output: (#t . +4000) @ 15ms
 
-    push #?                 ; ... 1st_error=#?
-    push 5                  ; ... 1st_delay=5ms
-    push #?                 ; ... 2nd_error=#?
-    push 10                 ; ... 2nd_delay=10ms
-    state 2                 ; ... referee
-    state 1                 ; ... referee timer
-    push test_beh           ; ... referee timer test_beh
-    new 2                   ; ... test=test_beh.(timer referee)
-    send 4                  ; --
+    dup 2                   ; ... referee timer
+    push #?                 ; ... referee timer cancel_at=#?
+    push #nil               ; ... ... ()
+    push #?                 ; ... ... 1st_error=#?
+    push 5                  ; ... ... 1st_delay=5ms
+    push #?                 ; ... ... 2nd_error=#?
+    push 10                 ; ... ... 2nd_delay=10ms
+    pair 4                  ; ... referee timer cancel_at spec
+    call run_test           ; ...
 
 ; Three requestors, cancelled before the second one can finish.
 ; Expected output: nothing
 
-    push #?                 ; ... 1st_error=#?
-    push 10                 ; ... 1st_delay=10ms
-    push #?                 ; ... 2nd_error=#?
-    push 10                 ; ... 2nd_delay=10ms
-    push #?                 ; ... 3rd_error=#?
-    push 10                 ; ... 3rd_delay=10ms
-    push 15                 ; ... cancel_at=15ms
-    state 2                 ; ... cancel_at referee
-    state 1                 ; ... cancel_at referee timer
-    push test_beh           ; ... cancel_at referee timer test_beh
-    new 3                   ; ... test=test_beh.(timer referee cancel_at)
-    send 6                  ; --
+    dup 2                   ; ... referee timer
+    push 15                 ; ... referee timer cancel_at=15ms
+    push #nil               ; ... ... ()
+    push #?                 ; ... ... 1st_error=#?
+    push 10                 ; ... ... 1st_delay=10ms
+    push #?                 ; ... ... 2nd_error=#?
+    push 10                 ; ... ... 2nd_delay=10ms
+    push #?                 ; ... ... 3rd_error=#?
+    push 10                 ; ... ... 3rd_delay=10ms
+    pair 6                  ; ... referee timer cancel_at spec
+    call run_test           ; ...
 
 ; Three requestors, the second one fails.
 ; Expected output: (#f . 666) at 20ms
 
-    push #?                 ; ... 1st_error=#?
-    push 10                 ; ... 1st_delay=10ms
-    push 666                ; ... 2nd_error=666
-    push 10                 ; ... 2nd_delay=10ms
-    push #?                 ; ... 3rd_error=#?
-    push 10                 ; ... 3rd_delay=10ms
-    state 2                 ; ... referee
-    state 1                 ; ... referee timer
-    push test_beh           ; ... referee timer test_beh
-    new 2                   ; ... test=test_beh.(timer referee)
-    send 6                  ; --
+    dup 2                   ; ... referee timer
+    push #?                 ; ... referee timer cancel_at=#?
+    push #nil               ; ... ... ()
+    push #?                 ; ... ... 1st_error=#?
+    push 10                 ; ... ... 1st_delay=10ms
+    push 666                ; ... ... 2nd_error=666
+    push 10                 ; ... ... 2nd_delay=10ms
+    push #?                 ; ... ... 3rd_error=#?
+    push 10                 ; ... ... 3rd_delay=10ms
+    pair 6                  ; ... referee timer cancel_at spec
+    call run_test           ; ...
     ref std.commit
 
-test_beh:                   ; (timer referee cancel_at) <- spec
+run_test:                   ; ( referee timer cancel_at spec -- )
 
 ; The 'spec' is a list describing the sequence of requestors to be run.
 ; It should look something like
@@ -237,50 +229,53 @@ test_beh:                   ; (timer referee cancel_at) <- spec
 
 ; where 1st denotes the first requestor, 2nd denotes the second requestor, etc.
 
-    push #nil               ; requestors=()
-    msg 0                   ; requestors spec
+    roll -5                 ; k referee timer cancel_at spec
+    push #nil               ; k referee timer cancel_at spec requestors=()
 
 ; The spec is consumed two elements at a time, until it is empty.
 
 consume_spec:
-    dup 1                   ; requestors spec spec
-    if_not make_request     ; requestors spec
-    part 2                  ; requestors spec' error delay
-    state 1                 ; requestors spec' error delay timer
-    push mock_double_beh    ; requestors spec' error delay timer mock_double_beh
-    new 3                   ; requestors spec' mock=mock_double_beh.(error delay timer)
-    roll 3                  ; spec' mock requestors
-    roll 2                  ; spec' requestors mock
-    pair 1                  ; spec' requestors'=(mock . requestors)
-    roll 2                  ; requestors' spec'
+    roll 2                  ; k referee timer cancel_at requestors spec
+    dup 1                   ; k referee timer cancel_at requestors spec spec
+    if_not make_request     ; k referee timer cancel_at requestors spec
+    part 2                  ; k referee timer cancel_at requestors spec' error delay
+    pick 6                  ; k referee timer cancel_at requestors spec' error delay timer
+    pair 2                  ; k referee timer cancel_at requestors spec' (timer delay . error)
+    push mock_double_beh    ; k referee timer cancel_at requestors spec' (timer delay . error) mock_double_beh
+    new -1                  ; k referee timer cancel_at requestors spec' mock=mock_double_beh.(timer delay . error)
+    roll 3                  ; k referee timer cancel_at spec' mock requestors
+    roll 2                  ; k referee timer cancel_at spec' requestors mock
+    pair 1                  ; k referee timer cancel_at spec' requestors'=(mock . requestors)
     ref consume_spec
-make_request:
-    drop 1                  ; requestors
-    push 1000               ; requestors value=1000
-    state 2                 ; requestors value callback=referee
-    push #?                 ; requestors value callback to_cancel=#?
-    state 3                 ; requestors value callback to_cancel cancel_at
-    eq #?                   ; requestors value callback to_cancel cancel_at==#?
-    if make_sequence        ; requestors value callback to_cancel
-    drop 1                  ; requestors value callback
-    push canceller.beh      ; requestors value callback canceller_beh
-    new 0                   ; requestors value callback canceller=canceller_beh.()
-    push #?                 ; requestors value callback canceller message=#?
-    pick 2                  ; requestors value callback canceller message target=canceller
-    state 3                 ; requestors value callback canceller message target delay=cancel_at
-    state 1                 ; requestors value callback canceller message target delay timer
-    send 3                  ; requestors value callback to_cancel=canceller
-    ref make_sequence
+make_request:               ; k referee timer cancel_at requestors spec
+    drop 1                  ; k referee timer cancel_at requestors
+    push 1000               ; k referee timer cancel_at requestors value=1000
+    roll 5                  ; k timer cancel_at requestors value callback=referee
+    push #?                 ; k timer cancel_at requestors value callback to_cancel=#?
+    pick 5                  ; k timer cancel_at requestors value callback to_cancel cancel_at
+    eq #?                   ; k timer cancel_at requestors value callback to_cancel cancel_at==#?
+    if make_sequence        ; k timer cancel_at requestors value callback to_cancel
+    drop 1                  ; k timer cancel_at requestors value callback
+    push #?                 ; k timer cancel_at requestors value callback #?
+    push canceller.beh      ; k timer cancel_at requestors value callback #? canceller_beh
+    new -1                  ; k timer cancel_at requestors value callback canceller=canceller_beh.#?
+    push #?                 ; k timer cancel_at requestors value callback canceller message=#?
+    pick 2                  ; k timer cancel_at requestors value callback canceller message target=canceller
+    pick 7                  ; k timer cancel_at requestors value callback canceller message target delay=cancel_at
+    pair 2                  ; k timer cancel_at requestors value callback canceller (delay target . message)
+    pick 7                  ; k timer cancel_at requestors value callback canceller (delay target . message) timer
+    send -1                 ; k timer cancel_at requestors value callback to_cancel=canceller
 make_sequence:
-    pair 2                  ; requestors request=(to_cancel callback . value)
-    roll 2                  ; request requestors
-    push sequence_beh       ; request requestors sequence_beh
-    new -1                  ; request sequence=sequence_beh.requestors
-    send -1                 ; --
-    ref std.commit
+    pair 2                  ; k timer cancel_at requestors request=(to_cancel callback . value)
+    roll 2                  ; k timer cancel_at request requestors
+    push sequence_beh       ; k timer cancel_at request requestors sequence_beh
+    new -1                  ; k timer cancel_at request sequence=sequence_beh.requestors
+    send -1                 ; k timer cancel_at
+    drop 2                  ; k
+    return
     
-mock_double_beh:            ; (timer delay error) <- (to_cancel callback . value)
-    state 3                 ; error
+mock_double_beh:            ; (timer delay . error) <- (to_cancel callback . value)
+    state -2                ; error
     if mock_double_fail     ; --
     msg -2                  ; value
     push 2                  ; value 2
@@ -289,7 +284,7 @@ mock_double_beh:            ; (timer delay error) <- (to_cancel callback . value
     pair 1                  ; result=(ok . value')
     ref mock_double_timer
 mock_double_fail:
-    state 3                 ; error
+    state -2                ; error
     push #f                 ; error ok=#f
     pair 1                  ; result=(ok . error)
 mock_double_timer:
