@@ -21,19 +21,22 @@ result_tag:
     ref 2
 
 beh:
-sequence_beh:               ; (requestors) <- (to_cancel callback . value)
+sequence_beh:               ; requestors <- (to_cancel callback . value)
 
 ; The work of handling the request is deferred to a dedicated "runner" actor,
 ; freeing up the sequence requestor to accept additional requests.
 
-    msg 2                   ; callback
-    state 1                 ; callback requestors
-    push runner_beh         ; callback requestors runner_beh
-    new 2                   ; runner=runner_beh.(requestors callback)
+    push #?                 ; canceller=#?
+    msg 2                   ; canceller callback
+    state 0                 ; canceller callback requestors
+    pair 2                  ; (requestors callback . canceller)
+    push runner_beh         ; (requestors callback . canceller) runner_beh
+    new -1                  ; runner=runner_beh.(requestors callback . canceller)
     msg -2                  ; runner value
     push start_tag          ; runner value start_tag
-    pick 3                  ; runner value start_tag runner
-    send 2                  ; runner
+    pair 1                  ; runner (start_tag . value)
+    pick 2                  ; runner (start_tag . value) runner
+    send -1                 ; runner
 
 ; Provide a cancel capability if the request allows for it.
 
@@ -49,12 +52,12 @@ sequence_beh:               ; (requestors) <- (to_cancel callback . value)
     send -1                 ; --
     ref std.commit
 
-runner_beh:                 ; (requestors callback canceller) <- message
+runner_beh:                 ; (requestors callback . canceller) <- message
 
 ; The "runner" actor processes a single sequence request.
 ; There are three kinds of message it expects to receive:
 
-;   (start_tag value)
+;   (start_tag . value)
 ;       Start the next requestor, feeding it the 'value'. If there are no
 ;       more requestors, inform the callback and become inert.
 
@@ -76,13 +79,14 @@ runner_beh:                 ; (requestors callback canceller) <- message
     if on_result            ; --
     ref std.commit
     
-on_result:                  ; (requestors callback canceller) <- (result_tag . result)
+on_result:                  ; (requestors callback . canceller) <- (result_tag . result)
     msg 2                   ; ok
     if_not fail             ; --
     msg -2                  ; value
     push start_tag          ; value start_tag
-    my self                 ; value start_tag SELF
-    send 2                  ; --
+    pair 1                  ; (start_tag . value)
+    my self                 ; (start_tag . value) SELF
+    send -1                 ; --
     ref std.commit
 
 fail:                       ; --
@@ -91,14 +95,14 @@ fail:                       ; --
     send -1                 ; --
     ref done
 
-on_start:                   ; (requestors callback) <- (start_tag value)
+on_start:                   ; (requestors callback . _) <- (start_tag . value)
     state 1                 ; requestors
     if_not succeed          ; --
     push canceller.beh      ; canceller_beh
     new 0                   ; canceller=canceller_beh.()
     state 1                 ; canceller requestors
     part 1                  ; canceller pending next
-    msg 2                   ; canceller pending next value
+    msg -1                  ; canceller pending next value
     push result_tag         ; canceller pending next value label=result_tag
     my self                 ; canceller pending next value label rcvr=SELF
     pair 1                  ; canceller pending next value (rcvr . label)
@@ -110,21 +114,22 @@ on_start:                   ; (requestors callback) <- (start_tag value)
     send -1                 ; canceller pending
     state 2                 ; canceller pending callback
     roll 2                  ; canceller callback pending
-    push runner_beh         ; canceller callback pending runner_beh
-    beh 3                   ; --
+    pair 2                  ; (pending callback . canceller)
+    push runner_beh         ; (pending callback . canceller) runner_beh
+    beh -1                  ; --
     ref std.commit
 
 succeed:
-    msg 2                   ; value
+    msg -1                  ; value
     push #t                 ; value ok=#t
     pair 1                  ; result=(ok . value)
     state 2                 ; result callback
     send -1                 ; --
     ref done
 
-on_cancel:                  ; (requestors callback canceller) <- (cancel_tag . reason)
+on_cancel:                  ; (requestors callback . canceller) <- (cancel_tag . reason)
     msg -1                  ; reason
-    state 3                 ; reason canceller
+    state -2                ; reason canceller
     send 1                  ; --
     ref done
 
@@ -270,7 +275,7 @@ make_sequence:
     pair 2                  ; requestors request=(to_cancel callback . value)
     roll 2                  ; request requestors
     push sequence_beh       ; request requestors sequence_beh
-    new 1                   ; request sequence=sequence_beh.(requestors)
+    new -1                  ; request sequence=sequence_beh.requestors
     send -1                 ; --
     ref std.commit
     
