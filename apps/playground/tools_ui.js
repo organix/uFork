@@ -225,8 +225,8 @@ const tools_ui = make_ui("tools-ui", function (element, {
                         }
                         stop();
                     });
-                    const verdict = ddev.h_reserve_proxy();
-                    core.h_boot(imported_module[entry], verdict);
+                    const judge = ddev.h_reserve_proxy();
+                    core.h_boot(imported_module[entry], judge);
                 } else {
                     core.h_boot(imported_module[entry]);
                 }

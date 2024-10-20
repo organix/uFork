@@ -83,8 +83,8 @@ function asm_test(module_url) {
 
 // Run the test suite.
 
-                const verdict = ddev.h_reserve_proxy();
-                core.h_boot(asm_module.test, verdict);
+                const judge = ddev.h_reserve_proxy();
+                core.h_boot(asm_module.test, judge);
                 run_ufork();
                 return core.h_dispose; // cancel
             } catch (exception) {

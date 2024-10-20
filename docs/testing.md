@@ -10,15 +10,15 @@ relevant source code rather than being split into separate files.
 
 Eligible modules export a `test` entrypoint, for example:
 
-     test:                       ; verdict <- {caps}
+     test:                       ; judge <- {caps}
          push #f                 ; #f
-         state 0                 ; #f verdict
+         state 0                 ; #f judge
          ref std.send_msg        ; FAIL!
 
      .export
          test
 
-The `verdict` capability is sent the outcome of the test. Any value other than
+The `judge` capability is sent the outcome of the test. Any value other than
 `#t` is considered a failure, and reported to the user.
 
 To run only the automated tests for assembly, run

@@ -266,16 +266,16 @@ boot:                       ; () <- {caps}
     push dev.debug_key      ; {caps} debug_key
     dict get                ; referee=debug
     ref act
-test:                       ; verdict <- {caps}
+test:                       ; judge <- {caps}
     push 1                  ; 2nd=1
     push 0                  ; 2nd 1st=0
     push 10                 ; 2nd 1st probation=10ms
     msg 0                   ; 2nd 1st probation {caps}
     push dev.timer_key      ; 2nd 1st probation {caps} timer_key
     dict get                ; 2nd 1st probation timer
-    state 0                 ; 2nd 1st probation timer verdict
-    push referee.beh        ; 2nd 1st probation timer verdict referee_beh
-    new 5                   ; referee=referee_beh.(verdict timer probation 1st 2nd)
+    state 0                 ; 2nd 1st probation timer judge
+    push referee.beh        ; 2nd 1st probation timer judge referee_beh
+    new 5                   ; referee=referee_beh.(judge timer probation 1st 2nd)
 act:
     push count_0            ; referee beh=count_0
     new -3                  ; referee counter=get_Z(beh).beh

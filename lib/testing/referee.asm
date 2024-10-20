@@ -2,7 +2,7 @@
 ; expected values.
 
 ; If there is any discrepancy, or if any additional messages arrive during a
-; probationary period, the 'verdict' capability is sent #f. Otherwise 'verdict'
+; probationary period, the 'judge' capability is sent #f. Otherwise 'judge'
 ; is sent #t.
 
 ; The 'timer' is the timer device (optional), 'probation' a fixnum of
@@ -15,7 +15,7 @@
     dev: "../dev.asm"
 
 beh:
-referee_beh:                ; (verdict timer probation . expected_msgs) <- msg
+referee_beh:                ; (judge timer probation . expected_msgs) <- msg
 
 ; If the referee is not expecting any more message, fail.
 
@@ -35,8 +35,8 @@ referee_beh:                ; (verdict timer probation . expected_msgs) <- msg
     state -4                ; expected_msgs'
     state 3                 ; expected_msgs' probation
     state 2                 ; expected_msgs' probation timer
-    state 1                 ; expected_msgs' probation timer verdict
-    pair 3                  ; state'=(verdict timer probation . expected_msgs')
+    state 1                 ; expected_msgs' probation timer judge
+    pair 3                  ; state'=(judge timer probation . expected_msgs')
     push referee_beh        ; state' referee_beh
     beh -1                  ; --
 
@@ -56,19 +56,19 @@ referee_beh:                ; (verdict timer probation . expected_msgs) <- msg
 ; Otherwise set a timer to signal success after a probationary period, during
 ; which time the referee is on the lookout for unexpected messages.
 
-    state 1                 ; verdict
-    push lib.once_beh       ; verdict once_beh
-    new -1                  ; verdict'=once_beh.verdict
-    push #t                 ; verdict' result=#t
-    pick 2                  ; verdict' result verdict'
-    state 3                 ; verdict' result verdict' delay=probation
-    state 2                 ; verdict' result verdict' delay timer
-    send 3                  ; verdict'
-    state -4                ; verdict' expected_msgs'
-    state 3                 ; verdict' expected_msgs' probation
-    state 2                 ; verdict' expected_msgs' probation timer
-    roll 4                  ; expected_msgs' probation timer verdict'
-    pair 3                  ; state'=(verdict' timer probation . expected_msgs')
+    state 1                 ; judge
+    push lib.once_beh       ; judge once_beh
+    new -1                  ; judge'=once_beh.judge
+    push #t                 ; judge' result=#t
+    pick 2                  ; judge' result judge'
+    state 3                 ; judge' result judge' delay=probation
+    state 2                 ; judge' result judge' delay timer
+    send 3                  ; judge'
+    state -4                ; judge' expected_msgs'
+    state 3                 ; judge' expected_msgs' probation
+    state 2                 ; judge' expected_msgs' probation timer
+    roll 4                  ; expected_msgs' probation timer judge'
+    pair 3                  ; state'=(judge' timer probation . expected_msgs')
     push referee_beh        ; state' referee_beh
     beh -1                  ; --
     ref std.commit
@@ -81,7 +81,7 @@ fail:
 done_k:
     push std.sink_beh       ; msg sink_beh
     beh 0                   ; msg
-    state 1                 ; msg verdict
+    state 1                 ; msg judge
     ref std.send_msg
 
 ; Test suite
@@ -92,12 +92,12 @@ boot:                       ; () <- {caps}
     dict get                ; timer
     msg 0                   ; timer {caps}
     push dev.debug_key      ; timer {caps} debug_key
-    dict get                ; timer verdict'=debug
+    dict get                ; timer judge'=debug
     ref setup
 
 ; Employ a referee of referees.
 
-test:                       ; verdict <- {caps}
+test:                       ; judge <- {caps}
     msg 0                   ; {caps}
     push dev.timer_key      ; {caps} timer_key
     dict get                ; timer
@@ -107,38 +107,38 @@ test:                       ; verdict <- {caps}
     push #t                 ; timer expect_3 expect_2 wrong no_timer=#t
     push 100                ; timer expect_3 expect_2 wrong no_timer probation=100ms
     pick 5                  ; timer expect_3 expect_2 wrong no_timer probation timer
-    state 0                 ; timer expect_3 expect_2 wrong no_timer probation timer verdict
-    push referee_beh        ; timer expect_3 expect_2 wrong no_timer probation timer verdict referee_beh
-    new 7                   ; timer verdict'=referee_of_referees
+    state 0                 ; timer expect_3 expect_2 wrong no_timer probation timer judge
+    push referee_beh        ; timer expect_3 expect_2 wrong no_timer probation timer judge referee_beh
+    new 7                   ; timer judge'=referee_of_referees
 setup:
-    dup 2                   ; ... timer verdict'
-    push wrong_beh          ; ... timer verdict' wrong_beh
+    dup 2                   ; ... timer judge'
+    push wrong_beh          ; ... timer judge' wrong_beh
     new 2                   ; ... wrong
     send 0                  ; ...
-    dup 2                   ; ... timer verdict'
-    push no_timer_beh       ; ... timer verdict' no_timer_beh
+    dup 2                   ; ... timer judge'
+    push no_timer_beh       ; ... timer judge' no_timer_beh
     new 2                   ; ... no_timer
     send 0                  ; ...
-    dup 2                   ; ... timer verdict'
-    push expect_2_beh       ; ... timer verdict' expect_2_beh
+    dup 2                   ; ... timer judge'
+    push expect_2_beh       ; ... timer judge' expect_2_beh
     new 2                   ; ... expect_2
     send 0                  ; ...
-    dup 2                   ; ... timer verdict'
-    push expect_3_beh       ; ... timer verdict' expect_3_beh
+    dup 2                   ; ... timer judge'
+    push expect_3_beh       ; ... timer judge' expect_3_beh
     new 2                   ; ... expect_3
     send 0                  ; ...
     ref std.commit
 
 ; Get 3 messages, but one is wrong. FAIL in ~50ms.
 
-wrong_beh:                  ; (verdict timer) <- ()
+wrong_beh:                  ; (judge timer) <- ()
     push 3                  ; 3rd=3
     push 42                 ; 3rd 2nd=42 // actual==2
     push 1                  ; 3rd 2nd 1st=1
     push 100                ; 3rd 2nd 1st probation=100ms
     state 2                 ; 3rd 2nd 1st probation timer
-    state 1                 ; 3rd 2nd 1st probation timer verdict
-    push referee_beh        ; 3rd 2nd 1st probation timer verdict referee_beh
+    state 1                 ; 3rd 2nd 1st probation timer judge
+    push referee_beh        ; 3rd 2nd 1st probation timer judge referee_beh
     new 6                   ; referee
     state 2                 ; referee timer
     push fixture_beh        ; referee timer fixture_beh
@@ -148,13 +148,13 @@ wrong_beh:                  ; (verdict timer) <- ()
 
 ; Expect 2 messages, but get three. FAIL in ~75ms.
 
-expect_2_beh:               ; (verdict timer) <- ()
+expect_2_beh:               ; (judge timer) <- ()
     push 2                  ; 2nd=2
     push 1                  ; 2nd 1st=1
     push 100                ; 2nd 1st probation=100ms
     state 2                 ; 2nd 1st probation timer
-    state 1                 ; 2nd 1st probation timer verdict
-    push referee_beh        ; 2nd 1st probation timer verdict referee_beh
+    state 1                 ; 2nd 1st probation timer judge
+    push referee_beh        ; 2nd 1st probation timer judge referee_beh
     new 5                   ; referee
     state 2                 ; referee timer
     push fixture_beh        ; referee timer fixture_beh
@@ -164,12 +164,12 @@ expect_2_beh:               ; (verdict timer) <- ()
 
 ; Expect 1 message, get 3, but omit the timer. PASS in ~25ms.
 
-no_timer_beh:               ; (verdict timer) <- ()
+no_timer_beh:               ; (judge timer) <- ()
     push 1                  ; 1st=1
     push #?                 ; 1st probation=#?
     push #?                 ; 1st probation timer=#?
-    state 1                 ; 1st probation timer verdict
-    push referee_beh        ; 1st probation timer verdict referee_beh
+    state 1                 ; 1st probation timer judge
+    push referee_beh        ; 1st probation timer judge referee_beh
     new 4                   ; referee
     state 2                 ; referee timer
     push fixture_beh        ; referee timer fixture_beh
@@ -179,14 +179,14 @@ no_timer_beh:               ; (verdict timer) <- ()
 
 ; Get the 3 expected messages. PASS in ~175ms
 
-expect_3_beh:               ; (verdict timer) <- ()
+expect_3_beh:               ; (judge timer) <- ()
     push 3                  ; 3rd=3
     push 2                  ; 3rd 2nd=2
     push 1                  ; 3rd 2nd 1st=1
     push 100                ; 3rd 2nd 1st probation=100ms
     state 2                 ; 3rd 2nd 1st probation timer
-    state 1                 ; 3rd 2nd 1st probation timer verdict
-    push referee_beh        ; 3rd 2nd 1st probation timer verdict referee_beh
+    state 1                 ; 3rd 2nd 1st probation timer judge
+    push referee_beh        ; 3rd 2nd 1st probation timer judge referee_beh
     new 6                   ; referee
     state 2                 ; referee timer
     push fixture_beh        ; referee timer fixture_beh

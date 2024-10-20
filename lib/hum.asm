@@ -628,7 +628,7 @@ test_cmp:                   ; ( -- )
 boot:
     ref test
 
-test:                       ; verdict <- {caps}
+test:                       ; judge <- {caps}
     call test_alu           ; --
     call test_and           ; --
     call test_cmp           ; --
@@ -640,8 +640,8 @@ test:                       ; verdict <- {caps}
     call test_not           ; --
     call test_or            ; --
     call test_predicates    ; --
-    push #t                 ; pass=#t
-    state 0                 ; pass verdict
+    push #t                 ; verdict=#t
+    state 0                 ; verdict judge
     send -1                 ; --
     ref std.commit
 

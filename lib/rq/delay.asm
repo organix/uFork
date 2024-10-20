@@ -30,11 +30,11 @@ unwrap_beh:                 ; rcvr <- (msg . _)
     msg 1                   ; msg
     state 0                 ; msg rcvr
     ref std.send_msg
-test:                       ; verdict <- {caps}
+test:                       ; judge <- {caps}
     push #t                 ; value=#t
-    state 0                 ; value verdict
-    push unwrap_beh         ; value verdict unwrap_beh
-    new -1                  ; value callback=unwrap_beh.verdict
+    state 0                 ; value judge
+    push unwrap_beh         ; value judge unwrap_beh
+    new -1                  ; value callback=unwrap_beh.judge
 suite:
     push #?                 ; value callback to_cancel=#?
     pair 2                  ; request=(to_cancel callback . value)

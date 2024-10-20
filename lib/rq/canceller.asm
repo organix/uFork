@@ -58,7 +58,7 @@ boot:                       ; () <- {caps}
     dict get                ; timer referee=debug
     ref setup
 
-test:                       ; verdict <- {caps}
+test:                       ; judge <- {caps}
     msg 0                   ; {caps}
     push dev.timer_key      ; {caps} timer_key
     dict get                ; timer
@@ -66,9 +66,9 @@ test:                       ; verdict <- {caps}
     push 42                 ; timer 2nd 1st=42
     push 100                ; timer 2nd 1st probation_ms=100
     pick 4                  ; timer 2nd 1st probation_ms timer
-    state 0                 ; timer 2nd 1st probation_ms timer verdict
-    push referee.beh        ; timer 2nd 1st probation_ms timer verdict referee_beh
-    new 5                   ; timer referee=referee_beh.(verdict timer probation_ms 1st 2nd)
+    state 0                 ; timer 2nd 1st probation_ms timer judge
+    push referee.beh        ; timer 2nd 1st probation_ms timer judge referee_beh
+    new 5                   ; timer referee=referee_beh.(judge timer probation_ms 1st 2nd)
 setup:
 
 ; Cancel arrives before reason.

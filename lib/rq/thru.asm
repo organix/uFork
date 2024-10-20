@@ -22,11 +22,11 @@ boot:                       ; () <- {caps}
     dict get                ; 42 debug_dev
     ref suite
 
-test:                       ; verdict <- {caps}
+test:                       ; judge <- {caps}
     push #t                 ; value=#t
-    state 0                 ; value verdict
-    push unwrap_result.beh  ; value verdict unwrap_result_beh
-    new 1                   ; value callback=unwrap_result_beh.(verdict)
+    state 0                 ; value judge
+    push unwrap_result.beh  ; value judge unwrap_result_beh
+    new 1                   ; value callback=unwrap_result_beh.(judge)
 suite:
     push #?                 ; value callback to_cancel=#?
     pair 2                  ; request=(to_cancel callback . value)

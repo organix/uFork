@@ -107,7 +107,7 @@ boot:                       ; () <- {caps}
     dict get                ; debug timer
     ref suite
 
-test:                       ; verdict <- {caps}
+test:                       ; judge <- {caps}
     msg 0                   ; {caps}
     push dev.timer_key      ; {caps} timer_key
     dict get                ; timer
@@ -116,8 +116,8 @@ test:                       ; verdict <- {caps}
     push #?                 ; timer 3rd 2nd 1st=#?
     push 100                ; timer 3rd 2nd 1st probation=100ms
     pick 5                  ; timer 3rd 2nd 1st probation timer
-    state 0                 ; timer 3rd 2nd 1st probation timer verdict
-    push referee.beh        ; timer 3rd 2nd 1st probation timer verdict referee_beh
+    state 0                 ; timer 3rd 2nd 1st probation timer judge
+    push referee.beh        ; timer 3rd 2nd 1st probation timer judge referee_beh
     new 6                   ; timer referee
 
 ; The referee is not able to compare two lists, so unwrap the result before
