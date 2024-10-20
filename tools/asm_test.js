@@ -71,12 +71,6 @@ function asm_test(module_url) {
                     ]);
                     return callback({pass: false, logs});
                 });
-                const verdict = ddev.h_reserve_proxy();
-                const state = core.h_reserve_ram({
-                    t: ufork.PAIR_T,
-                    x: verdict,
-                    y: ufork.NIL_RAW
-                });
 
 // Provide generous resource limits.
 
@@ -89,7 +83,8 @@ function asm_test(module_url) {
 
 // Run the test suite.
 
-                core.h_boot(asm_module.test, state);
+                const verdict = ddev.h_reserve_proxy();
+                core.h_boot(asm_module.test, verdict);
                 run_ufork();
                 return core.h_dispose; // cancel
             } catch (exception) {

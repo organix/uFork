@@ -226,12 +226,7 @@ const tools_ui = make_ui("tools-ui", function (element, {
                         stop();
                     });
                     const verdict = ddev.h_reserve_proxy();
-                    const state = core.h_reserve_ram({
-                        t: ufork.PAIR_T,
-                        x: verdict,
-                        y: ufork.NIL_RAW
-                    });
-                    core.h_boot(imported_module[entry], state);
+                    core.h_boot(imported_module[entry], verdict);
                 } else {
                     core.h_boot(imported_module[entry]);
                 }

@@ -10,9 +10,9 @@ relevant source code rather than being split into separate files.
 
 Eligible modules export a `test` entrypoint, for example:
 
-     test:                       ; (verdict) <- {caps}
+     test:                       ; verdict <- {caps}
          push #f                 ; #f
-         state 1                 ; #f verdict
+         state 0                 ; #f verdict
          ref std.send_msg        ; FAIL!
 
      .export

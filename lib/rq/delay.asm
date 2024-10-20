@@ -30,9 +30,9 @@ unwrap_beh:                 ; rcvr <- (msg . _)
     msg 1                   ; msg
     state 0                 ; msg rcvr
     ref std.send_msg
-test:                       ; (verdict) <- {caps}
+test:                       ; verdict <- {caps}
     push #t                 ; value=#t
-    state 1                 ; value verdict
+    state 0                 ; value verdict
     push unwrap_beh         ; value verdict unwrap_beh
     new -1                  ; value callback=unwrap_beh.verdict
 suite:

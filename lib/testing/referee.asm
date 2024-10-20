@@ -97,7 +97,7 @@ boot:                       ; () <- {caps}
 
 ; Employ a referee of referees.
 
-test:                       ; (verdict) <- {caps}
+test:                       ; verdict <- {caps}
     msg 0                   ; {caps}
     push dev.timer_key      ; {caps} timer_key
     dict get                ; timer
@@ -107,7 +107,7 @@ test:                       ; (verdict) <- {caps}
     push #t                 ; timer expect_3 expect_2 wrong no_timer=#t
     push 100                ; timer expect_3 expect_2 wrong no_timer probation=100ms
     pick 5                  ; timer expect_3 expect_2 wrong no_timer probation timer
-    state 1                 ; timer expect_3 expect_2 wrong no_timer probation timer verdict
+    state 0                 ; timer expect_3 expect_2 wrong no_timer probation timer verdict
     push referee_beh        ; timer expect_3 expect_2 wrong no_timer probation timer verdict referee_beh
     new 7                   ; timer verdict'=referee_of_referees
 setup:

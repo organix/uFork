@@ -107,7 +107,7 @@ boot:                       ; () <- {caps}
     dict get                ; debug timer
     ref suite
 
-test:                       ; (verdict) <- {caps}
+test:                       ; verdict <- {caps}
     msg 0                   ; {caps}
     push dev.timer_key      ; {caps} timer_key
     dict get                ; timer
@@ -116,7 +116,7 @@ test:                       ; (verdict) <- {caps}
     push #?                 ; timer 3rd 2nd 1st=#?
     push 100                ; timer 3rd 2nd 1st probation=100ms
     pick 5                  ; timer 3rd 2nd 1st probation timer
-    state 1                 ; timer 3rd 2nd 1st probation timer verdict
+    state 0                 ; timer 3rd 2nd 1st probation timer verdict
     push referee.beh        ; timer 3rd 2nd 1st probation timer verdict referee_beh
     new 6                   ; timer referee
 

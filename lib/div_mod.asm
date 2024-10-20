@@ -179,11 +179,11 @@ test_div:                   ; ( -- )
     assert -3               ; k
     return
 
-test:                       ; (verdict) <- {caps}
+test:                       ; verdict <- {caps}
     call test_udiv          ; --
     call test_div           ; --
     push #t                 ; pass=#t
-    state 1                 ; pass verdict
+    state 0                 ; pass verdict
     send -1                 ; --
     ref std.commit
 

@@ -69,11 +69,11 @@ boot:                       ; () <- {caps}
     send 2
     ref std.commit
 
-test:                       ; (verdict) <- {caps}
+test:                       ; verdict <- {caps}
     push 6                  ; n=6
     push #t                 ; n yes=#t
     push 8                  ; n yes expected=8
-    state 1                 ; n yes expected verdict
+    state 0                 ; n yes expected verdict
     push is_eq.beh          ; n yes expected verdict is_eq_beh
     new 3                   ; n cust=is_eq_beh.(verdict expected yes)
     push fib_beh            ; n cust fib_beh

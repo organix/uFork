@@ -228,7 +228,7 @@ boot:                       ; () <- {caps}
     push dev.debug_key      ; {caps} debug_key
     dict get                ; referee=debug
     ref pre_setup
-test:                       ; (verdict) <- {caps}
+test:                       ; verdict <- {caps}
 
 ; FIXME: Validate the entire result, not just the result's value. This requires
 ; some kind of "deep" validator.
@@ -241,7 +241,7 @@ test:                       ; (verdict) <- {caps}
     msg 0                   ; 4th 3rd 2nd 1st probation {caps}
     push dev.timer_key      ; 4th 3rd 2nd 1st probation {caps} timer_key
     dict get                ; 4th 3rd 2nd 1st probation timer
-    state 1                 ; 4th 3rd 2nd 1st probation timer verdict
+    state 0                 ; 4th 3rd 2nd 1st probation timer verdict
     push referee.beh        ; 4th 3rd 2nd 1st probation timer verdict referee_beh
     new 7                   ; referee=referee_beh.(verdict timer probation 1st 2nd 3rd 4th)
     push unwrap_result.beh  ; referee unwrap_result_beh

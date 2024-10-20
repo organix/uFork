@@ -22,9 +22,9 @@ boot:                       ; () <- {caps}
     dict get                ; 42 debug_dev
     ref suite
 
-test:                       ; (verdict) <- {caps}
+test:                       ; verdict <- {caps}
     push #t                 ; value=#t
-    state 1                 ; value verdict
+    state 0                 ; value verdict
     push unwrap_result.beh  ; value verdict unwrap_result_beh
     new 1                   ; value callback=unwrap_result_beh.(verdict)
 suite:

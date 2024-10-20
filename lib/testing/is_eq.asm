@@ -30,12 +30,12 @@ boot:                       ; () <- {caps}
     dict get                ; debug_dev
     ref suite
 
-test:                       ; (verdict) <- {caps}
+test:                       ; verdict <- {caps}
     push #t                 ; 2nd=#t
     push #t                 ; 2nd 1st=#t // order doesn't matter
     push #?                 ; 2nd 1st probation=#?
     push #?                 ; 2nd 1st probation timer=#?
-    state 1                 ; 2nd 1st probation timer verdict
+    state 0                 ; 2nd 1st probation timer verdict
     push referee.beh        ; 2nd 1st probation timer verdict referee_beh
     new 5                   ; referee=referee_beh.(verdict timer probation 1st 2nd)
 suite:
