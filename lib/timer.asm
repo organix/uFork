@@ -15,11 +15,11 @@
 ; receive the current time from the clock device.
 
 beh:
-timer_beh:                  ; clock <- (delay target message)
-    msg 0                   ; (delay target message)
-    state 0                 ; (delay target message) clock
-    pair 1                  ; (clock delay target message)
-    push cust_beh           ; (clock delay target message) cust_beh
+timer_beh:                  ; clock <- (delay target . message)
+    msg 0                   ; msg
+    state 0                 ; msg clock
+    pair 1                  ; (clock . msg)
+    push cust_beh           ; (clock . msg) cust_beh
     new -1                  ; cust
     state 0                 ; cust clock
     ref std.send_msg
@@ -27,15 +27,16 @@ timer_beh:                  ; clock <- (delay target message)
 ; Once the current time is known, it is added to the delay to yield the end
 ; time.
 
-cust_beh:                   ; (clock delay target message) <- now
-    state 4                 ; message
+cust_beh:                   ; (clock delay target . message) <- now
+    state -3                ; message
     state 3                 ; message target
     msg 0                   ; message target now
     state 2                 ; message target now delay
     alu add                 ; message target end_time
     state 1                 ; message target end_time clock
-    push poll_beh           ; message target end_time clock poll_beh
-    beh 4                   ; --
+    pair 3                  ; (clock end_time target . message)
+    push poll_beh           ; (clock end_time target . message) poll_beh
+    beh -1                  ; --
     my self                 ; SELF
     state 1                 ; SELF clock
     ref std.send_msg
@@ -43,7 +44,7 @@ cust_beh:                   ; (clock delay target message) <- now
 ; The clock device is then repeatedly polled until the end time is reached, at
 ; which point the message is sent to the target.
 
-poll_beh:                   ; (clock end_time target message) <- now
+poll_beh:                   ; (clock end_time target . message) <- now
     msg 0                   ; now
     state 2                 ; now end_time
     alu sub                 ; (now-end_time)
@@ -51,7 +52,7 @@ poll_beh:                   ; (clock end_time target message) <- now
     cmp ge                  ; expired?
     if_not retry            ; --
 
-    state 4                 ; message
+    state -3                ; message
     state 3                 ; message target
     ref std.send_msg
 
@@ -75,13 +76,15 @@ boot:                       ; () <- {caps}
     push 42                 ; debug_dev timer 42
     pick 3                  ; debug_dev timer 42 debug_dev
     push 1000               ; debug_dev timer 42 debug_dev 1000
-    pick 4                  ; debug_dev timer 42 debug_dev 1000 timer
-    send 3                  ; debug_dev timer
+    pair 2                  ; debug_dev timer (1000 debug_dev . 42)
+    pick 2                  ; debug_dev timer (1000 debug_dev . 42) timer
+    send -1                 ; debug_dev timer
     push 1729               ; debug_dev timer 1729
     pick 3                  ; debug_dev timer 1729 debug_dev
     push 2000               ; debug_dev timer 1729 debug_dev 2000
-    pick 4                  ; debug_dev timer 1729 debug_dev 2000 timer
-    send 3                  ; debug_dev timer
+    pair 2                  ; debug_dev timer (2000 debug_dev . 1729)
+    pick 2                  ; debug_dev timer (2000 debug_dev . 1729) timer
+    send -1                 ; debug_dev timer
     ref std.commit
 
 .export
