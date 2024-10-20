@@ -15,6 +15,7 @@
 
 /*jslint node, long, bitwise */
 
+import {Buffer} from "node:buffer";
 import crypto from "node:crypto";
 import tls from "node:tls";
 import oed from "https://ufork.org/lib/oed_lite.js";
