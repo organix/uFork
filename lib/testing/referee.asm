@@ -111,110 +111,95 @@ test:                       ; judge <- {caps}
     push referee_beh        ; timer expect_3 expect_2 wrong no_timer probation timer judge referee_beh
     new 7                   ; timer judge'=referee_of_referees
 setup:
-    dup 2                   ; ... timer judge'
-    push wrong_beh          ; ... timer judge' wrong_beh
-    new 2                   ; ... wrong
-    send 0                  ; ...
-    dup 2                   ; ... timer judge'
-    push no_timer_beh       ; ... timer judge' no_timer_beh
-    new 2                   ; ... no_timer
-    send 0                  ; ...
-    dup 2                   ; ... timer judge'
-    push expect_2_beh       ; ... timer judge' expect_2_beh
-    new 2                   ; ... expect_2
-    send 0                  ; ...
-    dup 2                   ; ... timer judge'
-    push expect_3_beh       ; ... timer judge' expect_3_beh
-    new 2                   ; ... expect_3
-    send 0                  ; ...
+    roll 2                  ; judge' timer
+    dup 2                   ; ... judge' timer
+    call test_wrong         ; ...
+    dup 2                   ; ... judge' timer
+    call test_no_timer      ; ...
+    dup 2                   ; ... judge' timer
+    call test_expect_2      ; ...
+    dup 2                   ; ... judge' timer
+    call test_expect_3      ; ...
     ref std.commit
 
 ; Get 3 messages, but one is wrong. FAIL in ~50ms.
 
-wrong_beh:                  ; (judge timer) <- ()
-    push 3                  ; 3rd=3
-    push 42                 ; 3rd 2nd=42 // actual==2
-    push 1                  ; 3rd 2nd 1st=1
-    push 100                ; 3rd 2nd 1st probation=100ms
-    state 2                 ; 3rd 2nd 1st probation timer
-    state 1                 ; 3rd 2nd 1st probation timer judge
-    push referee_beh        ; 3rd 2nd 1st probation timer judge referee_beh
-    new 6                   ; referee
-    state 2                 ; referee timer
-    push fixture_beh        ; referee timer fixture_beh
-    new 2                   ; fixture
-    send 0                  ; --
-    ref std.commit
+test_wrong:                 ; ( judge timer -- )
+    roll -3                 ; k judge timer
+    push 3                  ; k judge timer 3rd=3
+    push 42                 ; k judge timer 3rd 2nd=42 // actual==2
+    push 1                  ; k judge timer 3rd 2nd 1st=1
+    push 100                ; k judge timer 3rd 2nd 1st probation=100ms
+    pick 5                  ; k judge timer 3rd 2nd 1st probation timer
+    roll 7                  ; k timer 3rd 2nd 1st probation timer judge
+    push referee_beh        ; k timer 3rd 2nd 1st probation timer judge referee_beh
+    new 6                   ; k timer referee
+    call send_thrice        ; k
+    return
 
 ; Expect 2 messages, but get three. FAIL in ~75ms.
 
-expect_2_beh:               ; (judge timer) <- ()
-    push 2                  ; 2nd=2
-    push 1                  ; 2nd 1st=1
-    push 100                ; 2nd 1st probation=100ms
-    state 2                 ; 2nd 1st probation timer
-    state 1                 ; 2nd 1st probation timer judge
-    push referee_beh        ; 2nd 1st probation timer judge referee_beh
-    new 5                   ; referee
-    state 2                 ; referee timer
-    push fixture_beh        ; referee timer fixture_beh
-    new 2                   ; fixture
-    send 0                  ; --
-    ref std.commit
+test_expect_2:              ; ( judge timer -- )
+    roll -3                 ; k judge timer
+    push 2                  ; k judge timer 2nd=2
+    push 1                  ; k judge timer 2nd 1st=1
+    push 100                ; k judge timer 2nd 1st probation=100ms
+    pick 4                  ; k judge timer 2nd 1st probation timer
+    roll 6                  ; k timer 2nd 1st probation timer judge
+    push referee_beh        ; k timer 2nd 1st probation timer judge referee_beh
+    new 5                   ; k timer referee
+    call send_thrice        ; k
+    return
 
 ; Expect 1 message, get 3, but omit the timer. PASS in ~25ms.
 
-no_timer_beh:               ; (judge timer) <- ()
-    push 1                  ; 1st=1
-    push #?                 ; 1st probation=#?
-    push #?                 ; 1st probation timer=#?
-    state 1                 ; 1st probation timer judge
-    push referee_beh        ; 1st probation timer judge referee_beh
-    new 4                   ; referee
-    state 2                 ; referee timer
-    push fixture_beh        ; referee timer fixture_beh
-    new 2                   ; fixture
-    send 0                  ; --
-    ref std.commit
+test_no_timer:              ; ( judge timer -- )
+    roll -3                 ; k judge timer
+    push 1                  ; k judge timer 1st=1
+    push #?                 ; k judge timer 1st probation=#?
+    push #?                 ; k judge timer 1st probation timer=#?
+    roll 5                  ; k timer 1st probation timer judge
+    push referee_beh        ; k timer 1st probation timer judge referee_beh
+    new 4                   ; k timer referee
+    call send_thrice        ; k
+    return
 
 ; Get the 3 expected messages. PASS in ~175ms
 
-expect_3_beh:               ; (judge timer) <- ()
-    push 3                  ; 3rd=3
-    push 2                  ; 3rd 2nd=2
-    push 1                  ; 3rd 2nd 1st=1
-    push 100                ; 3rd 2nd 1st probation=100ms
-    state 2                 ; 3rd 2nd 1st probation timer
-    state 1                 ; 3rd 2nd 1st probation timer judge
-    push referee_beh        ; 3rd 2nd 1st probation timer judge referee_beh
-    new 6                   ; referee
-    state 2                 ; referee timer
-    push fixture_beh        ; referee timer fixture_beh
-    new 2                   ; fixture
-    send 0                  ; --
-    ref std.commit
+test_expect_3:              ; ( judge timer -- )
+    roll -3                 ; k judge timer
+    push 3                  ; k judge timer 3rd=3
+    push 2                  ; k judge timer 3rd 2nd=2
+    push 1                  ; k judge timer 3rd 2nd 1st=1
+    push 100                ; k judge timer 3rd 2nd 1st probation=100ms
+    pick 5                  ; k judge timer 3rd 2nd 1st probation timer
+    roll 7                  ; k timer 3rd 2nd 1st probation timer judge
+    push referee_beh        ; k timer 3rd 2nd 1st probation timer judge referee_beh
+    new 6                   ; k timer referee
+    call send_thrice        ; k
+    return
 
 ; Sends three messages to the referee, a slight delay between each.
 
-fixture_beh:                ; (timer referee) <- ()
-    state 1                 ; timer
-    state 2                 ; timer referee
-    push 1                  ; timer referee 1st=1
-    pick 2                  ; timer referee 1st referee
-    push 25                 ; timer referee 1st referee 25ms
-    pick 5                  ; timer referee 1st referee 25ms timer
-    send 3                  ; timer referee
-    push 2                  ; timer referee 2nd=2
-    pick 2                  ; timer referee 2nd referee
-    push 50                 ; timer referee 2nd referee 50ms
-    pick 5                  ; timer referee 2nd referee 50ms timer
-    send 3                  ; timer referee
-    push 3                  ; timer referee 3rd=3
-    pick 2                  ; timer referee 3rd referee
-    push 75                 ; timer referee 3rd referee 75ms
-    pick 5                  ; timer referee 3rd referee 75ms timer
-    send 3                  ; timer referee
-    ref std.commit
+send_thrice:                ; ( timer referee -- )
+    roll -3                 ; k timer referee
+    push 1                  ; k timer referee 1st=1
+    pick 2                  ; k timer referee 1st referee
+    push 25                 ; k timer referee 1st referee 25ms
+    pick 5                  ; k timer referee 1st referee 25ms timer
+    send 3                  ; k timer referee
+    push 2                  ; k timer referee 2nd=2
+    pick 2                  ; k timer referee 2nd referee
+    push 50                 ; k timer referee 2nd referee 50ms
+    pick 5                  ; k timer referee 2nd referee 50ms timer
+    send 3                  ; k timer referee
+    push 3                  ; k timer referee 3rd=3
+    pick 2                  ; k timer referee 3rd referee
+    push 75                 ; k timer referee 3rd referee 75ms
+    pick 5                  ; k timer referee 3rd referee 75ms timer
+    send 3                  ; k timer referee
+    drop 2                  ; k
+    return
 
 .export
     beh
