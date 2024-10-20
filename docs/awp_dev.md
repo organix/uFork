@@ -161,11 +161,11 @@ greeter is available, the request fails.
 Listens for introduction requests, producing a `stop` capability on success that
 can be used to stop listening:
 
-    () -> stop
+    _ -> stop
 
 The input value of the `listen_request` looks like
 
-    (store greeter)
+    (store . greeter)
 
 The `store` fixnum chooses the local party's AWP store.
 

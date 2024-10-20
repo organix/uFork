@@ -14,10 +14,11 @@ boot:                       ; () <- {caps}
     new 0                   ; greeter store listen_cb
     push #?                 ; greeter store listen_cb to_cancel=#?
     push dev.listen_tag     ; greeter store listen_cb to_cancel #listen
-    msg 0                   ; greeter store listen_cb to_cancel #listen {caps}
-    push dev.awp_key        ; greeter store listen_cb to_cancel #listen {caps} awp_key
-    dict get                ; greeter store listen_cb to_cancel #listen awp_dev
-    send 5                  ; --
+    pair 4                  ; listen_request=(#listen to_cancel listen_cb store . greeter)
+    msg 0                   ; listen_request {caps}
+    push dev.awp_key        ; listen_request {caps} awp_key
+    dict get                ; listen_request awp_dev
+    send -1                 ; --
     ref std.commit
 
 listen_cb_beh:              ; () <- (ok . result/error)

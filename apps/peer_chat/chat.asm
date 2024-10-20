@@ -183,8 +183,9 @@ host_beh:                   ; (debug_dev io_dev timer_dev awp_dev room_id) <- ()
     new 0                   ; greeter store callback=listen_cb_beh.()
     push #?                 ; greeter store callback to_cancel=#?
     push dev.listen_tag     ; greeter store callback to_cancel #listen
-    state 4                 ; greeter store callback to_cancel #listen awp_dev
-    send 5                  ; --
+    pair 4                  ; listen_request=(#listen to_cancel callback store . greeter)
+    state 4                 ; listen_request awp_dev
+    send -1                 ; --
 
     ref std.commit
 

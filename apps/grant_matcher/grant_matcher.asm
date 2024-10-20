@@ -75,8 +75,9 @@ listen_svc_beh:             ; awp_dev <- (cust store . greeter)
     new -1                  ; greeter store listen_cb
     push #?                 ; greeter store listen_cb to_cancel=#?
     push dev.listen_tag     ; greeter store listen_cb to_cancel #listen
-    state 0                 ; greeter store listen_cb to_cancel #listen awp_dev
-    send 5                  ; --
+    pair 4                  ; listen_request=(#listen to_cancel listen_cb store . greeter)
+    state 0                 ; listen_request awp_dev
+    send -1                 ; --
     ref std.commit
 
 listen_cb_beh:              ; cust <- (ok . stop/error)
