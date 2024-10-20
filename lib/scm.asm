@@ -97,13 +97,14 @@ act_3:                      ; ( [_, _, _, beh] -- state beh )
 ;    state -1            ; sp' env
 ;    push cont           ; sp' env cont
 ;    msg 0               ; sp' env cont msg
-;    push continuation   ; sp' env cont msg continuation
-;    beh 4               ; -- SELF=continuation.(msg cont env sp')
+;    pair 3              ; (msg cont env . sp')
+;    push continuation   ; (msg cont env . sp') continuation
+;    beh -1              ; -- SELF=continuation.(msg cont env . sp')
 ;    ref scm.commit
 
-continuation:               ; (msg cont env sp) <- rv
+continuation:               ; (msg cont env . sp) <- rv
     state 3                 ; env
-    state 4                 ; env sp
+    state -3                ; env sp
     msg 0                   ; env sp rv
     pair 1                  ; env sp'=(rv . sp)
     pair 1                  ; (sp' . env)
@@ -144,24 +145,25 @@ txn_actor:                  ; beh pending msg
     new -2                  ; beh pending (SELF . msg) txn=code.data
     pick -3                 ; beh txn pending (SELF . msg) txn
     send -1                 ; beh txn pending
-    push bsy_actor          ; beh txn pending bsy_actor
-    beh 3                   ; -- SELF=bsy_actor.(pending txn beh)
+    pair 2                  ; (pending txn . beh)
+    push bsy_actor          ; (pending txn . beh) bsy_actor
+    beh -1                  ; -- SELF=bsy_actor.(pending txn . beh)
     ref std.commit
 
-bsy_actor:                  ; (pending txn beh) <- (txn? . beh') | msg
+bsy_actor:                  ; (pending txn . beh) <- (txn? . beh') | msg
     state 2                 ; txn
     msg 1                   ; txn txn?
     cmp eq                  ; txn==txn?
     if cmt_actor            ; --
 
     ; enqueue message for deferred processing
-    state 0                 ; (pending txn beh)
-    part 1                  ; (txn beh) pending
-    msg 0                   ; (txn beh) pending msg
-    deque put               ; (txn beh) pending'
-    pair 1                  ; (pending' txn beh)
-    push bsy_actor          ; (pending' txn beh) bsy_actor
-    beh -1                  ; -- SELF=bsy_actor.(pending' txn beh)
+    state 0                 ; (pending txn . beh)
+    part 1                  ; (txn . beh) pending
+    msg 0                   ; (txn . beh) pending msg
+    deque put               ; (txn . beh) pending'
+    pair 1                  ; (pending' txn . beh)
+    push bsy_actor          ; (pending' txn . beh) bsy_actor
+    beh -1                  ; -- SELF=bsy_actor.(pending' txn . beh)
     ref std.commit
 
 cmt_actor:                  ; --
@@ -173,7 +175,7 @@ cmt_actor:                  ; --
 
     ; retain existing behavior
 ;    drop 1              ; -- (no need to drop this from the stack)
-    state 3                 ; beh'=beh
+    state -2                ; beh'=beh
 
 nxt_actor:                  ; beh'
     ; process next msg
