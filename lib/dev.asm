@@ -94,15 +94,16 @@ boot:                       ; () <- {caps}
     dict get                ; callback to_cancel io_dev
     send 2                  ; --
 
-    push 4                  ; b=4
-    push -2                 ; b a=-2
+    push 40                 ; b=40
+    push -40                ; b a=-40
     msg 0                   ; b a {caps}
     push debug_key          ; b a {caps} debug_key
-    dict get                ; b a debug_dev
-    msg 0                   ; b a debug_dev {caps}
-    push random_key         ; b a debug_dev {caps} random_key
-    dict get                ; b a debug_dev random_dev
-    send 3                  ; --
+    dict get                ; b a cust=debug_dev
+    pair 2                  ; (cust a . b)
+    msg 0                   ; (cust a . b) {caps}
+    push random_key         ; (cust a . b) {caps} random_key
+    dict get                ; (cust a . b) random_dev
+    send -1                 ; --
 
     ref std.commit
 

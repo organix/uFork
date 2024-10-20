@@ -76,11 +76,22 @@ impl Device for RandomDevice {
     fn handle_event(&mut self, core: &mut Core, ep: Any) -> Result<(), Error> {
         let event = core.mem(ep);
         let sponsor = event.t();
-        let msg = event.y();  // (cust) | (cust size) | (cust a b)
-        let cust = core.nth(msg, PLUS_1);
+        let msg = event.y();  // cust | (cust . limit) | (cust a . b)
+        let cust = if msg.is_cap() {
+            msg
+        } else {
+            core.nth(msg, PLUS_1)
+        };
+        let limit = core.nth(msg, MINUS_1);
         let a = core.nth(msg, PLUS_2);
-        let b = core.nth(msg, PLUS_3);
-        let random = (self.get_random)(a, b);
+        let b = core.nth(msg, MINUS_2);
+        let random = if msg.is_cap() {
+            (self.get_random)(UNDEF, UNDEF)
+        } else if limit.is_fix() {
+            (self.get_random)(limit, UNDEF)
+        } else {
+            (self.get_random)(a, b)
+        };
         let evt = core.reserve_event(sponsor, cust, random)?;
         core.event_enqueue(evt);
         Ok(())  // event handled.

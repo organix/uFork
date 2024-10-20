@@ -25,8 +25,8 @@ The timestamps may advance more slowly than real-time
 in order to simulate a slow-motion world,
 or faster processor execution speed.
 
-On a uFork processor with 31-bit `fixnums` and microsecond precision,
+On a uFork processor with 31-bit fixnums and microsecond precision,
 the clock-wrapping period is nominally 2,147,483 seconds,
 or approximately 24.855 days.
-On a uFork processor with 15-bit `fixnums` and microsecond precision,
+On a uFork processor with 15-bit fixnums and microsecond precision,
 the clock-wrapping period is nominally 32.768 seconds.
