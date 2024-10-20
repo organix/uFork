@@ -272,8 +272,8 @@ _actual_             | `assert` _expect_   | —            | assert _actual_ ==
 <sup>*</sup> For conditionals (`if` and `if_not`) the values
 `#f`, `#?`, `#nil`, and `0` are considered "[falsy](https://developer.mozilla.org/en-US/docs/Glossary/Falsy)".
 
-Every instruction (except `end`) takes a continuation as its
-final operand. In the following example, the `msg` instruction continues to
+Most instructions take a continuation as their final operand.
+In the following example, the `msg` instruction continues to
 the `end` instruction.
 
     beh:
