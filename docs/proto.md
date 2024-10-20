@@ -249,7 +249,7 @@ to the customer actor `cust`.
 ```
 write:                  ; (value) <- (tag cust value')
     msg -2              ; (value')
-    my beh              ; (value') beh
+    push cell_beh       ; (value') cell_beh
     beh -1              ; --
     my self             ; SELF
     msg 2               ; SELF cust
@@ -286,7 +286,7 @@ CAS:                    ; (value) <- (tag cust old new)
     cmp eq              ; old==value
     if_not read         ; --
     msg -3              ; (new)
-    my beh              ; (new) beh
+    push cell_beh       ; (new) cell_beh
     beh -1              ; --
     ref read
 ```

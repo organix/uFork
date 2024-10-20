@@ -133,7 +133,7 @@ become:
     state 3                 ; running' value callback
     state 2                 ; running' value callback queue
     roll 4                  ; value callback queue running'
-    my beh                  ; value callback queue running' BEH
+    push runner_beh         ; value callback queue running' runner_beh
     beh 4                   ; --
     ref std.commit
 start_one:
@@ -203,7 +203,7 @@ pop:
     roll 5                  ; canceller value callback queue' running
     roll 5                  ; value callback queue' running canceller
     pair 1                  ; value callback queue' running'=(canceller . running)
-    my beh                  ; value callback queue' running' BEH
+    push runner_beh         ; value callback queue' running' runner_beh
     beh 4                   ; --
     ref std.commit
 cancel:                     ; running reason

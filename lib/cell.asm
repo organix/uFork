@@ -47,7 +47,7 @@ read:                       ; <- (tag cust)
 
 write:                      ; <- (tag cust value')
     msg -2                  ; (value')
-    my beh                  ; (value') beh
+    push cell_beh           ; (value') cell_beh
     beh -1                  ; --
     my self                 ; SELF
     msg 2                   ; SELF cust
@@ -59,7 +59,7 @@ CAS:                        ; <- (tag cust old new)
     cmp eq                  ; old==value
     if_not read             ; --
     msg -3                  ; (new)
-    my beh                  ; (new) beh
+    push cell_beh           ; (new) cell_beh
     beh -1                  ; --
     ref read
 
@@ -208,7 +208,7 @@ cell_try_bit:               ; (old bit cell cust) <- val
     state -1                ; (bit cell cust)
     msg 0                   ; (bit cell cust) old'=val
     pair 1                  ; (old' bit cell cust)
-    my beh                  ; (old' bit cell cust) beh
+    push cell_try_bit       ; (old' bit cell cust) cell_try_bit
     beh -1                  ; --
     ref std.commit
 set_bit_done:

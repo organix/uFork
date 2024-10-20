@@ -347,7 +347,7 @@ link_tx_msg:                ; (link timer ack seq msgs) <- (tx_msg . content)
     state 3                 ; msgs' msgs' seq+1 ack
     state 2                 ; msgs' msgs' seq+1 ack timer
     state 1                 ; msgs' msgs' seq+1 ack timer link
-    my beh                  ; msgs' msgs' seq+1 ack timer link beh
+    push link_tx_beh        ; msgs' msgs' seq+1 ack timer link link_tx_beh
     beh 5                   ; msgs'
 
     ; if the queue was empty previously,
@@ -401,7 +401,7 @@ tx_ack_1:                   ; msgs seq ack timer link msgs' content
 
 tx_ack_2:                   ; msgs seq ack timer link
     ; update tx state
-    my beh                  ; msgs seq ack timer link beh
+    push link_tx_beh        ; msgs seq ack timer link link_tx_beh
     beh 5                   ; --
     ref std.commit
 
@@ -574,7 +574,7 @@ room_add:                   ; --
 
     ; update room state
     dup 1                   ; {parties'} {parties'}
-    my beh                  ; {parties'} {parties'} beh
+    push room_beh           ; {parties'} {parties'} room_beh
     beh -1                  ; {parties'}
 
     ; broadcast to updated parties
@@ -590,7 +590,7 @@ room_del:                   ; --
 
     ; update room state
     dup 1                   ; {parties'} {parties'}
-    my beh                  ; {parties'} {parties'} beh
+    push room_beh           ; {parties'} {parties'} room_beh
     beh -1                  ; {parties'}
 
     ; broadcast "left" announcement
@@ -684,7 +684,7 @@ cnt_fwd_beh:                ; (limit rcvr) <- msg
     my state                ; rcvr limit
     push 1                  ; rcvr limit 1
     alu sub                 ; rcvr limit-1
-    my beh                  ; rcvr limit-1 beh
+    push cnt_fwd_beh        ; rcvr limit-1 cnt_fwd_beh
     beh 2                   ; --
     msg 0                   ; msg
     state 2                 ; msg rcvr

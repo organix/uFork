@@ -37,7 +37,7 @@ referee_beh:                ; (verdict timer probation . expected_msgs) <- msg
     state 2                 ; expected_msgs' probation timer
     state 1                 ; expected_msgs' probation timer verdict
     pair 3                  ; state'=(verdict timer probation . expected_msgs')
-    my beh                  ; state' beh
+    push referee_beh        ; state' referee_beh
     beh -1                  ; --
 
 ; Are we expecting any more messages?
@@ -69,7 +69,7 @@ referee_beh:                ; (verdict timer probation . expected_msgs) <- msg
     state 2                 ; verdict' expected_msgs' probation timer
     roll 4                  ; expected_msgs' probation timer verdict'
     pair 3                  ; state'=(verdict' timer probation . expected_msgs')
-    my beh                  ; state' beh
+    push referee_beh        ; state' referee_beh
     beh -1                  ; --
     ref std.commit
 

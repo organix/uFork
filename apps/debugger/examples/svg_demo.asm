@@ -128,7 +128,7 @@ str_out:                    ; (cb out . str) <- result
     state 2                 ; rest out cb code callback to_cancel out
     send 3                  ; rest out cb
     pair 2                  ; (cb out . rest)
-    my beh                  ; (cb out . str=rest) beh
+    push str_out            ; (cb out . str=rest) str_out
     beh -1                  ; --
     ref std.commit
 

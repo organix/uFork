@@ -328,10 +328,18 @@ If the module represents a behavior, the behavior's export should be named
 
 Non-library modules should use absolute URLs to import library modules.
 
-    // Good
+    ; Good
     .import
         std: "https://ufork.org/lib/std.asm"
 
-    // Bad
+    ; Bad
     .import
         std: "../../../lib/std.asm"
+
+Avoid use of `my beh` where possible, instead pushing behaviors by name.
+
+    ; Good
+    push example_beh            ; example_beh
+
+    ; Bad
+    my beh                      ; example_beh

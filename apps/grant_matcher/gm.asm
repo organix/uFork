@@ -42,7 +42,10 @@ greeter_beh:                ; {pledges} <- (to_cancel callback petname pledge)
     roll 2                  ; new_donor {pledges} deposit
     roll 3                  ; {pledges} deposit new_donor
     dict set                ; {pledges'}
-    ref save
+save:
+    push greeter_beh        ; {pledges'} greeter_beh
+    beh -1                  ; --
+    ref std.commit
 
 grant:                      ; new_donor deposit donor
     pick 3                  ; new_donor deposit donor new_donor
@@ -56,11 +59,6 @@ grant:                      ; new_donor deposit donor
     roll 2                  ; {pledges} deposit
     dict del                ; {pledges'}
     ref save
-
-save:                       ; ... {pledges'}
-    my beh                  ; {pledges'} beh
-    beh -1                  ; --
-    ref std.commit
 
 .export
     boot

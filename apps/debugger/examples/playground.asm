@@ -87,7 +87,7 @@ unbounded:                  ; num <- inc | cust
     my self                 ; num inc inc SELF
     send -1                 ; num inc
     alu add                 ; num+inc
-    my beh                  ; num+inc unbounded
+    push unbounded          ; num+inc unbounded
     beh -1                  ; --
     ref std.commit
 ub_stop:                    ; --

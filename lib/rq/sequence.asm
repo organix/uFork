@@ -110,7 +110,7 @@ on_start:                   ; (requestors callback) <- (start_tag value)
     send -1                 ; canceller pending
     state 2                 ; canceller pending callback
     roll 2                  ; canceller callback pending
-    my beh                  ; canceller callback pending BEH
+    push runner_beh         ; canceller callback pending runner_beh
     beh 3                   ; --
     ref std.commit
 
