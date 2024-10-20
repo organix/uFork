@@ -16,30 +16,31 @@
 ;;                  ((eq? tag wcap)
 ;;                      (BECOME (value-beh rcap arg))) ))))
 beh:
-future_beh:                 ; (rcap wcap) <- (tag . arg)
+future_beh:                 ; (rcap . wcap) <- (tag . arg)
     msg 1                   ; tag
     state 1                 ; tag rcap
     cmp eq                  ; tag==rcap
     if_not future_1         ; --
 future_0:
-    state 0                 ; (rcap wcap)
-    push #nil               ; (rcap wcap) ()
-    msg -1                  ; (rcap wcap) () cust=arg
-    pair 1                  ; (rcap wcap) (cust)
-    pair 1                  ; ((cust) rcap wcap)
-    push wait_beh           ; ((cust) rcap wcap) wait-beh
+    state 0                 ; (rcap . wcap)
+    push #nil               ; (rcap . wcap) ()
+    msg -1                  ; (rcap . wcap) () cust=arg
+    pair 1                  ; (rcap . wcap) waiting=(cust)
+    pair 1                  ; (waiting rcap . wcap)
+    push wait_beh           ; (waiting rcap . wcap) wait-beh
     beh -1                  ; --
     ref std.commit
 future_1:
     msg 1                   ; tag
-    state 2                 ; tag wcap
+    state -1                ; tag wcap
     cmp eq                  ; tag==wcap
     if_not std.abort        ; --
 future_2:
     msg -1                  ; value=arg
     state 1                 ; value rcap
-    push value_beh          ; value rcap value-beh
-    beh 2                   ; --
+    pair 1                  ; (rcap . value)
+    push value_beh          ; (rcap . value) value-beh
+    beh -1                  ; --
     ref std.commit
 
 ;;  (define wait-beh
@@ -51,21 +52,23 @@ future_2:
 ;;                  ((eq? tag wcap)
 ;;                      (send-to-all waiting arg)
 ;;                      (BECOME (value-beh rcap arg))) ))))
-wait_beh:                   ; (waiting rcap wcap) <- (tag . arg)
+wait_beh:                   ; (waiting rcap . wcap) <- (tag . arg)
     msg 1                   ; tag
     state 2                 ; tag rcap
     cmp eq                  ; tag==rcap
     if_not wait_1           ; --
 wait_0:
-    my state                ; wcap rcap waiting
-    msg -1                  ; wcap rcap waiting cust=arg
-    pair 1                  ; wcap rcap (cust . waiting)
-    push wait_beh           ; wcap rcap (cust . waiting) wait-beh
-    beh 3                   ; --
+    state 0                 ; (waiting rcap . wcap)
+    part 1                  ; (rcap . wcap) waiting
+    msg -1                  ; (rcap . wcap) waiting cust=arg
+    pair 1                  ; (rcap . wcap) waiting'=(cust . waiting)
+    pair 1                  ; (waiting' rcap . wcap)
+    push wait_beh           ; (waiting' rcap . wcap) wait-beh
+    beh -1                  ; --
     ref std.commit
 wait_1:
     msg 1                   ; tag
-    state 3                 ; tag wcap
+    state -2                ; tag wcap
     cmp eq                  ; tag==wcap
     if_not std.abort        ; --
     state 1                 ; waiting
@@ -82,8 +85,9 @@ wait_3:
 wait_4:
     msg -1                  ; waiting value=arg
     state 2                 ; waiting value rcap
-    push value_beh          ; waiting value rcap value-beh
-    beh 2                   ; waiting
+    pair 1                  ; waiting (rcap . value)
+    push value_beh          ; waiting (rcap . value) value-beh
+    beh -1                  ; waiting
     ref std.commit
 
 ;;  (define value-beh
@@ -92,12 +96,12 @@ wait_4:
 ;;              (cond
 ;;                  ((eq? tag rcap)
 ;;                      (SEND arg value))) )))
-value_beh:                  ; (rcap value) <- (tag . arg)
+value_beh:                  ; (rcap . value) <- (tag . arg)
     msg 1                   ; tag
     state 1                 ; tag rcap
     cmp eq                  ; tag==rcap
     if_not std.abort        ; --
-    state 2                 ; value
+    state -1                ; value
     msg -1                  ; value cust=arg
     ref std.send_msg
 
@@ -105,8 +109,9 @@ value_beh:                  ; (rcap value) <- (tag . arg)
 boot:                       ; () <- {caps}
     push 1                  ; wcap
     push 0                  ; wcap rcap
-    push future_beh         ; wcap rcap future-beh
-    new 2                   ; future.(rcap wcap)
+    pair 1                  ; (rcap . wcap)
+    push future_beh         ; (rcap . wcap) future-beh
+    new -1                  ; future.(rcap . wcap)
     msg 0                   ; future {caps}
     push dev.debug_key      ; future {caps} dev.debug_key
     dict get                ; future debug_dev
