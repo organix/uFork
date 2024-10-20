@@ -7,7 +7,7 @@
 ; Accumulate characters one-at-a-time until '\n'.
 ; When a `line` is complete, send it to `cust`.
 
-in_beh:                     ; (cust io_dev line) <- result
+in_beh:                     ; (cust io_dev . line) <- result
     msg 0                   ; result
     part 1                  ; char ok
     if_not std.commit       ; char
@@ -19,7 +19,7 @@ in_beh:                     ; (cust io_dev line) <- result
     send 2                  ; char
 
     ; add char to line
-    state 3                 ; char line
+    state -2                ; char line
     pick 2                  ; char line char
     deque put               ; char line'
 
@@ -37,59 +37,62 @@ in_upd:                     ; line'
     ; update state
     state 2                 ; line' io_dev
     state 1                 ; line' io_dev cust
-    my beh                  ; line' io_dev cust beh
-    beh 3                   ; --
+    pair 2                  ; (cust io_dev . line')
+    push in_beh             ; (cust io_dev . line') in_beh
+    beh -1                  ; --
     ref std.commit
 
 ; Buffer lines of output, sending characters one-at-a-time.
 ; Initially, no current line or lines to send.
 
-out_beh:                    ; (io_dev) <- result | line'
+out_beh:                    ; io_dev <- result | line'
     ; distinguish result from line'
     msg 1                   ; ok
     eq #t                   ; ok==#t
     if std.commit           ; --  // unexpected result!
 
+    state 0                 ; io_dev
     ; extract char from line
-    msg 0                   ; line
-    deque pop               ; line' char
+    msg 0                   ; io_dev line
+    deque pop               ; io_dev line' char
 
-out_snd:                    ; line' char
+out_snd:                    ; io_dev line' char
     ; send char to output
-    my self                 ; line' char callback=SELF
-    push #?                 ; line' char callback to_cancel=#?
-    state 1                 ; line' char callback to_cancel io_dev
-    send 3                  ; line'
+    my self                 ; io_dev line' char callback=SELF
+    push #?                 ; io_dev line' char callback to_cancel=#?
+    pick 5                  ; io_dev line' char callback to_cancel io_dev
+    send 3                  ; io_dev line'
 
     ; line empty?
-    dup 1                   ; line' line'
-    deque empty             ; line' is_empty(line')
-    if_not out_rem          ; line'
+    dup 1                   ; io_dev line' line'
+    deque empty             ; io_dev line' is_empty(line')
+    if_not out_rem          ; io_dev line'
 
     ; no more chars in line
-    state 1                 ; io_dev
+    drop 1                  ; io_dev
     push out_beh            ; io_dev out_beh
-    beh 1                   ; --
+    beh -1                  ; --
     ref std.commit
 
-out_rem:                    ; line'
+out_rem:                    ; io_dev line'
     ; chars remaining in line
-    state 1                 ; line' io_dev
-    push out_buf            ; line' io_dev out_buf
-    beh 2                   ; --
+    roll 2                  ; line' io_dev
+    pair 1                  ; (io_dev . line')
+    push out_buf            ; (io_dev . line') out_buf
+    beh -1                  ; --
     ref std.commit
 
 ; Writing current line, no additional lines buffered.
 
-out_buf:                    ; (io_dev line) <- result | line'
+out_buf:                    ; (io_dev . line) <- result | line'
     ; distinguish result from line'
     msg 1                   ; ok
     eq #t                   ; ok==#t
     if_not out_add          ; --
 
-    ; extract char from line
-    state 2                 ; line
-    deque pop               ; line' char
+    state 1                 ; io_dev
+    state -1                ; io_dev line
+    deque pop               ; io_dev line' char
     ref out_snd
 
 out_add:                    ; --
@@ -97,27 +100,30 @@ out_add:                    ; --
     deque new               ; lines
     msg 0                   ; lines line
     deque put               ; lines'
-    my state                ; lines' line io_dev
-    push out_bufs           ; lines' line io_dev out_bufs
-    beh 3                   ; --
+    state -1                ; lines' line
+    state 1                 ; lines' line io_dev
+    pair 2                  ; (io_dev line . lines')
+    push out_bufs           ; (io_dev line . lines') out_bufs
+    beh -1                  ; --
     ref std.commit
 
 ; Writing current line, one or more lines buffered.
 
-out_bufs:                   ; (io_dev line lines) <- result | line'
+out_bufs:                   ; (io_dev line . lines) <- result | line'
     ; distinguish result from line'
     msg 1                   ; ok
     eq #t                   ; ok==#t
     if out_chr              ; --
 
     ; add line' to lines
-    state 3                 ; lines
+    state -2                ; lines
     msg 0                   ; lines line
     deque put               ; lines'
     state 2                 ; lines' line
     state 1                 ; lines' line io_dev
-    push out_bufs           ; lines' line io_dev out_bufs
-    beh 3                   ; --
+    pair 2                  ; (io_dev line . lines')
+    push out_bufs           ; (io_dev line . lines') out_bufs
+    beh -1                  ; --
     ref std.commit
 
 out_chr:                    ; --
@@ -138,7 +144,7 @@ out_chr:                    ; --
 
     ; get next line
     drop 1                  ; --
-    state 3                 ; lines
+    state -2                ; lines
     deque pop               ; lines line
     pick 2                  ; lines line lines
     deque empty             ; lines line is_empty(lines)
@@ -146,27 +152,30 @@ out_chr:                    ; --
 
     ; no more lines
     state 1                 ; lines line io_dev
-    push out_buf            ; lines line io_dev out_buf
-    beh 2                   ; lines
+    pair 1                  ; lines (io_dev . line)
+    push out_buf            ; lines (io_dev . line) out_buf
+    beh -1                  ; lines
     ref std.commit
 
 out_chrs:                   ; line
     ; update state
-    state 3                 ; line lines
+    state -2                ; line lines
     roll -2                 ; lines line
 
 out_more:                   ; lines line
     state 1                 ; lines line io_dev
-    push out_bufs           ; lines line io_dev out_bufs
-    beh 3                   ; --
+    pair 2                  ; (io_dev line . lines)
+    push out_bufs           ; (io_dev line . lines) out_bufs
+    beh -1                  ; --
     ref std.commit
 
 in_demo:                    ; io_dev debug_dev
     deque new               ; io_dev debug_dev line
     pick 3                  ; io_dev debug_dev line io_dev
     pick 3                  ; io_dev debug_dev line io_dev cust=debug_dev
-    push in_beh             ; io_dev debug_dev line io_dev cust in_beh
-    new 3                   ; io_dev debug_dev in=in_beh.(cust io_dev line)
+    pair 2                  ; io_dev debug_dev (cust io_dev . line)
+    push in_beh             ; io_dev debug_dev (cust io_dev . line) in_beh
+    new -1                  ; io_dev debug_dev in=in_beh.(cust io_dev . line)
     push #?                 ; io_dev debug_dev callback=in to_cancel=#?
     pick 4                  ; io_dev debug_dev callback to_cancel io_dev
     send 2                  ; io_dev debug_dev
@@ -175,7 +184,7 @@ in_demo:                    ; io_dev debug_dev
 out_demo:                   ; io_dev debug_dev
     pick 2                  ; io_dev debug_dev io_dev
     push out_beh            ; io_dev debug_dev io_dev out_beh
-    new 1                   ; io_dev debug_dev out=out_beh.(io_dev)
+    new -1                  ; io_dev debug_dev out=out_beh.io_dev
     deque new               ; io_dev debug_dev out line
     push '\n'               ; io_dev debug_dev out line '\n'
     deque push              ; io_dev debug_dev out line'
@@ -190,12 +199,13 @@ out_demo:                   ; io_dev debug_dev
 in_out_demo:                ; io_dev debug_dev
     pick 2                  ; io_dev debug_dev io_dev
     push out_beh            ; io_dev debug_dev io_dev out_beh
-    new 1                   ; io_dev debug_dev out=out_beh.(io_dev)
+    new -1                  ; io_dev debug_dev out=out_beh.io_dev
     deque new               ; io_dev debug_dev out line
     pick 4                  ; io_dev debug_dev out line io_dev
     roll 3                  ; io_dev debug_dev line io_dev cust=out
-    push in_beh             ; io_dev debug_dev line io_dev cust in_beh
-    new 3                   ; io_dev debug_dev in=in_beh.(cust io_dev line)
+    pair 2                  ; io_dev debug_dev (cust io_dev . line)
+    push in_beh             ; io_dev debug_dev (cust io_dev . line) in_beh
+    new -1                  ; io_dev debug_dev in=in_beh.(cust io_dev . line)
     push #?                 ; io_dev debug_dev callback=in to_cancel=#?
     pick 4                  ; io_dev debug_dev callback to_cancel io_dev
     send 2                  ; io_dev debug_dev

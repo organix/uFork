@@ -115,7 +115,7 @@ intro_cb:
     ; build line_out
     state 2                 ; party_tx io_dev
     push line_buf.out_beh   ; party_tx io_dev line_out_beh
-    new 1                   ; party_tx line_out=line_out_beh.(io_dev)
+    new -1                  ; party_tx line_out=line_out_beh.io_dev
 
     ; build party_out
     push party_out_beh      ; party_tx line_out party_out_beh
@@ -144,8 +144,9 @@ intro_cb:
     deque new               ; party_in line
     state 2                 ; party_in line io_dev
     roll 3                  ; line io_dev cust=party_in
-    push line_buf.in_beh    ; line io_dev cust line_in_beh
-    new 3                   ; callback=line_in_beh.(cust io_dev line)
+    pair 2                  ; (cust io_dev . line)
+    push line_buf.in_beh    ; (cust io_dev . line) line_in_beh
+    new -1                  ; callback=line_in_beh.(cust io_dev . line)
 
     ; register read callback
     push #?                 ; callback to_cancel=#?
