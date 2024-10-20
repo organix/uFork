@@ -29,7 +29,7 @@ listen_cb_beh:              ; () <- (ok . result/error)
     assert #t               ; --
     ref std.commit
 
-greeter_beh:                ; deposit <- (to_cancel callback petname)
+greeter_beh:                ; deposit <- (to_cancel callback petname . _)
     msg 3                   ; petname
     typeq #fixnum_t         ; fixnum?
     assert #t               ; --

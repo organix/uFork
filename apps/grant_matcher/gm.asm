@@ -6,12 +6,13 @@ store:
     ref 0
 
 boot:                       ; () <- {caps}
-    push #nil               ; #nil
-    push greeter_beh        ; #nil greeter_beh
+    push #nil               ; {}
+    push greeter_beh        ; {} greeter_beh
     new -1                  ; greeter
     push store              ; greeter store
-    push listen_cb_beh      ; greeter store listen_cb_beh
-    new 0                   ; greeter store listen_cb
+    push #?                 ; greeter store #?
+    push listen_cb_beh      ; greeter store #? listen_cb_beh
+    new -1                  ; greeter store listen_cb
     push #?                 ; greeter store listen_cb to_cancel=#?
     push dev.listen_tag     ; greeter store listen_cb to_cancel #listen
     pair 4                  ; listen_request=(#listen to_cancel listen_cb store . greeter)
@@ -21,43 +22,44 @@ boot:                       ; () <- {caps}
     send -1                 ; --
     ref std.commit
 
-listen_cb_beh:              ; () <- (ok . result/error)
+listen_cb_beh:              ; _ <- (ok . result/error)
     msg 1                   ; ok
     assert #t               ; --
     ref std.commit
 
-greeter_beh:                ; {pledges} <- (to_cancel callback petname pledge)
+greeter_beh:                ; {pledges} <- (to_cancel callback petname deposit . withdraw)
     msg 3                   ; petname
     typeq #fixnum_t         ; fixnum?
     assert #t               ; --
-    msg 4                   ; pledge
-    part 1                  ; new_donor deposit
-    state 0                 ; new_donor deposit {pledges}
-    pick 2                  ; new_donor deposit {pledges} deposit
-    dict get                ; new_donor deposit donor
-    dup 1                   ; new_donor deposit donor donor
-    eq #?                   ; new_donor deposit donor donor==#?
-    if_not grant            ; new_donor deposit donor
-    drop 1                  ; new_donor deposit
-    state 0                 ; new_donor deposit {pledges}
-    roll 2                  ; new_donor {pledges} deposit
-    roll 3                  ; {pledges} deposit new_donor
+    state 0                 ; {pledges}
+    msg 4                   ; {pledges} deposit
+    dict get                ; donor
+    dup 1                   ; donor donor
+    eq #?                   ; donor donor==#?
+    if_not grant            ; donor
+    drop 1                  ;
+    state 0                 ; {pledges}
+    msg 4                   ; {pledges} deposit
+    msg -4                  ; {pledges} deposit withdraw
     dict set                ; {pledges'}
 save:
     push greeter_beh        ; {pledges'} greeter_beh
     beh -1                  ; --
     ref std.commit
 
-grant:                      ; new_donor deposit donor
-    pick 3                  ; new_donor deposit donor new_donor
-    pick 2                  ; new_donor deposit donor new_donor donor
-    cmp eq                  ; new_donor deposit donor new_donor==donor
-    if std.commit
-    roll 3                  ; deposit donor new_donor
-    pick 3                  ; deposit donor new_donor deposit
-    send 2                  ; deposit
-    state 0                 ; deposit {pledges}
-    roll 2                  ; {pledges} deposit
+grant:                      ; donor
+    dup 1                   ; donor donor
+    msg -4                  ; donor donor withdraw
+    cmp eq                  ; donor donor==withdraw
+    if std.commit           ; donor
+    push #nil               ; donor ()
+    roll 2                  ; () donor
+    msg -4                  ; () donor withdraw
+    pair 2                  ; (withdraw donor)
+    msg 4                   ; (withdraw donor) deposit
+    send -1                 ; --
+    state 0                 ; {pledges}
+    msg 4                   ; {pledges} deposit
     dict del                ; {pledges'}
     ref save
 
