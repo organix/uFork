@@ -3,8 +3,10 @@
 
 /*jslint node */
 
+import console from "node:console";
 import crypto from "node:crypto";
 import fs from "node:fs";
+import process from "node:process";
 import parseq from "https://ufork.org/lib/parseq.js";
 import requestorize from "https://ufork.org/lib/rq/requestorize.js";
 import assemble from "https://ufork.org/lib/assemble.js";
@@ -96,6 +98,7 @@ const core = ufork.make_core({
     },
     on_log: console.log,
     log_level: ufork.LOG_DEBUG,
+    compilers: {asm: assemble},
     import_map
 });
 parseq.sequence([
