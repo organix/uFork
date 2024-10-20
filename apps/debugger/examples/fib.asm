@@ -71,11 +71,13 @@ boot:                       ; () <- {caps}
 
 test:                       ; judge <- {caps}
     push 6                  ; n=6
-    push #t                 ; n yes=#t
-    push 8                  ; n yes expected=8
-    state 0                 ; n yes expected judge
-    push is_eq.beh          ; n yes expected judge is_eq_beh
-    new 3                   ; n cust=is_eq_beh.(judge expected yes)
+    push #f                 ; n no=#f
+    push #t                 ; n no yes=#t
+    push 8                  ; n no yes expected=8
+    state 0                 ; n no yes expected judge
+    pair 3                  ; n (judge expected yes . no)
+    push is_eq.beh          ; n (judge expected yes . no) is_eq_beh
+    new -1                  ; n cust=is_eq_beh.(judge expected yes . no)
     push fib_beh            ; n cust fib_beh
     new 0                   ; n cust fib=fib_beh.()
     send 2                  ; --

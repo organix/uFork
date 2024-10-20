@@ -8,7 +8,7 @@
     referee: "./referee.asm"
 
 beh:
-is_eq_beh:                  ; (receiver expected yes no) <- actual
+is_eq_beh:                  ; (receiver expected yes . no) <- actual
     state 2                 ; expected
     msg 0                   ; expected actual
     cmp eq                  ; expected==actual?
@@ -16,7 +16,7 @@ is_eq_beh:                  ; (receiver expected yes no) <- actual
     state 3                 ; yes
     ref send
 no:
-    state 4                 ; no
+    state -3                ; no
     ref send
 send:
     state 1                 ; yes/no receiver
@@ -47,8 +47,9 @@ suite:
     push #t                 ; referee actual no yes=#t
     push 42                 ; referee actual no yes expected=42
     pick 5                  ; referee actual no yes expected receiver=referee
-    push is_eq_beh          ; referee actual no yes expected receiver is_eq_beh
-    new 4                   ; referee actual is_eq=is_eq_beh.(receiver expected yes no)
+    pair 3                  ; referee actual (receiver expected yes . no)
+    push is_eq_beh          ; referee actual (receiver expected yes . no) is_eq_beh
+    new -1                  ; referee actual is_eq=is_eq_beh.(receiver expected yes . no)
 
 ; The actor is sent an unexpected value, emitting #t for 'no'.
 
@@ -58,8 +59,9 @@ suite:
     push #f                 ; referee actual no yes=#f
     push 42                 ; referee actual no yes expected=42
     pick 5                  ; referee actual no yes expected receiver=referee
-    push is_eq_beh          ; referee actual no yes expected receiver is_eq_beh
-    new 4                   ; referee actual is_eq=is_eq_beh.(receiver expected yes no)
+    pair 3                  ; referee actual (receiver expected yes . no)
+    push is_eq_beh          ; referee actual (receiver expected yes . no) is_eq_beh
+    new -1                  ; referee actual is_eq=is_eq_beh.(receiver expected yes . no)
     send -1                 ; referee
     ref std.commit
 
