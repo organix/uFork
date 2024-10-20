@@ -16,7 +16,7 @@
     unwrap_result: "./unwrap_result.asm"
 
 beh:
-timeout_beh:                ; (requestor time_limit timer_dev) <- request
+timeout_beh:                ; (requestor time_limit . timer_dev) <- request
 
 ; Create two cancellers, one for the requestor and one for the timer.
 
@@ -66,7 +66,7 @@ race:
     new 2                   ; t␘ r␘ callback result time_limit tcb=win_beh.(callback r␘)
     pick 6                  ; t␘ r␘ callback result time_limit tcb t␘
     pair 3                  ; t␘ r␘ callback treq=(t␘ tcb time_limit . result)
-    state 3                 ; t␘ r␘ callback treq timer_dev
+    state -2                ; t␘ r␘ callback treq timer_dev
     send -1                 ; t␘ r␘ callback
     ref std.commit
 
@@ -189,8 +189,9 @@ test_beh:                   ; (referee timer value delay_ms time_limit cancel_ms
     state 2                 ; delay timer
     state 5                 ; delay timer time_limit
     roll 3                  ; timer time_limit delay
-    push timeout_beh        ; timer time_limit delay timeout_beh
-    new 3                   ; timeout=timeout_beh.(delay time_limit timer)
+    pair 2                  ; (delay time_limit . timer)
+    push timeout_beh        ; (delay time_limit . timer) timeout_beh
+    new -1                  ; timeout=timeout_beh.(delay time_limit . timer)
     push canceller.beh      ; timeout canceller_beh
     new 0                   ; timeout canceller=canceller_beh.()
     state 3                 ; timeout canceller value
