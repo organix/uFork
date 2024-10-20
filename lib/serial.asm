@@ -17,7 +17,7 @@
 ;;              (SEND svc (tag . req))
 ;;              (BECOME (busy-beh (deque-new) tag cust svc)) )))
 beh:
-serial_beh:                 ; (svc) <- (cust . req)
+serial_beh:                 ; svc <- (cust . req)
     my self                 ; SELF
     push lib.once_tag_beh   ; SELF once-tag-beh
     new -1                  ; tag=once-tag.SELF
@@ -25,15 +25,16 @@ serial_beh:                 ; (svc) <- (cust . req)
     msg -1                  ; tag req
     pick 2                  ; tag req tag
     pair 1                  ; tag (tag . req)
-    state 1                 ; tag (tag . req) svc
+    state 0                 ; tag (tag . req) svc
     send -1                 ; tag
 
-    state 1                 ; tag svc
+    state 0                 ; tag svc
     msg 1                   ; tag svc cust
     roll 3                  ; svc cust tag
     deque new               ; svc cust tag pending
-    push busy_beh           ; svc cust tag pending busy-beh
-    beh 4                   ; --
+    pair 3                  ; (pending tag cust . svc)
+    push busy_beh           ; (pending tag cust . svc) busy-beh
+    beh -1                  ; --
     ref std.commit
 
 ;;  (define busy-beh
@@ -55,13 +56,14 @@ serial_beh:                 ; (svc) <- (cust . req)
 ;;                      (define pending1 (deque-put pending (cons cust0 req0)))
 ;;                      (BECOME (busy-beh pending1 tag cust svc))) ))))
 ;;              )))
-busy_beh:                   ; (pending tag cust svc) <- (cust0 . req0)
+busy_beh:                   ; (pending tag cust . svc) <- (cust0 . req0)
     msg 1                   ; cust0
     state 2                 ; cust0 tag
     cmp eq                  ; cust0==tag
     if busy_1               ; --
 
-    my state                ; svc cust tag pending
+    state 0                 ; (pending tag cust . svc)
+    part 3                  ; svc cust tag pending
     msg 0                   ; svc cust tag pending (cust0 . req0)
     deque put               ; svc cust tag pending1
     ref busy_3
@@ -77,9 +79,9 @@ busy_1:
     eq #?                   ; pending1 next next==#?
     if_not busy_2           ; pending1 next
 
-    state 4                 ; ... svc
+    state -3                ; ... svc
     push serial_beh         ; ... svc serial-beh
-    beh 1                   ; ... --
+    beh -1                  ; ... --
     ref std.commit
 
 busy_2:
@@ -91,16 +93,17 @@ busy_2:
     roll 3                  ; pending1 cust1 tag1 req1
     pick 2                  ; pending1 cust1 tag1 req1 tag1
     pair 1                  ; pending1 cust1 tag1 (tag1 . req1)
-    state 4                 ; pending1 cust1 tag1 (tag1 . req1) svc
+    state -3                ; pending1 cust1 tag1 (tag1 . req1) svc
     send -1                 ; pending1 cust1 tag1
 
     roll 3                  ; cust1 tag1 pending1
-    state 4                 ; cust1 tag1 pending1 svc
+    state -3                ; cust1 tag1 pending1 svc
     roll -4                 ; svc cust1 tag1 pending1
 
 busy_3:
-    push busy_beh           ; svc cust tag pending busy-beh
-    beh 4                   ; --
+    pair 3                  ; (pending tag cust . svc)
+    push busy_beh           ; (pending tag cust . svc) busy-beh
+    beh -1                  ; --
     ref std.commit
 
 ;;  LET counter_init(value) = \msg.[
@@ -109,16 +112,16 @@ busy_3:
 ;;      BECOME serial_beh(svc)
 ;;      SEND msg TO SELF
 ;;  ]
-counter_init:               ; (value) <- msg
-    state 1                 ; value
+counter_init:               ; value <- msg
+    state 0                 ; value
     push cell.beh           ; value cell_beh
-    new 1                   ; cell=cell_beh.(value)
+    new -1                  ; cell=cell_beh.value
 
     push counter_svc        ; cell counter_svc
-    new 1                   ; svc=counter_svc.(cell)
+    new -1                  ; svc=counter_svc.cell
 
     push serial_beh         ; svc serial_beh
-    beh 1                   ; --
+    beh -1                  ; --
 
     msg 0                   ; msg
     my self                 ; msg SELF
@@ -136,45 +139,50 @@ counter_init:               ; (value) <- msg
 ;;          ]
 ;;      ]
 ;;  ]
-counter_svc:                ; (cell) <- (cust change)
-    my self                 ; SELF
-    push cell.read_tag      ; SELF #read
-    state 1                 ; SELF #read cell
-    send 2                  ; --
+counter_svc:                ; cell <- (cust . change)
+    push #nil               ; ()
+    my self                 ; () SELF
+    push cell.read_tag      ; () SELF #read
+    pair 2                  ; (#read SELF)
+    state 0                 ; (#read SELF) cell
+    send -1                 ; --
 
-    msg 0                   ; (cust change)
-    state 1                 ; (cust change) cell
-    pair 1                  ; (cell cust change)
-    push counter_k1         ; (cell cust change) counter_k1
+    msg 0                   ; (cust . change)
+    state 0                 ; (cust . change) cell
+    pair 1                  ; (cell cust . change)
+    push counter_k1         ; (cell cust . change) counter_k1
     beh -1                  ; --
     ref std.commit
 
-counter_k1:                 ; (cell cust change) <- count
+counter_k1:                 ; (cell cust . change) <- count
     msg 0                   ; count
-    state 3                 ; change
+    state -2                ; count change
     alu add                 ; count'=count+change
 
     dup 1                   ; count' count'
     my self                 ; count' count' SELF
     push cell.write_tag     ; count' count' SELF #write
-    state 1                 ; count' count' SELF #write cell
-    send 3                  ; count'
+    pair 2                  ; count' (#write SELF . count')
+    state 1                 ; count' (#write SELF . count') cell
+    send -1                 ; count'
 
     state 2                 ; count' cust
-    push counter_k2         ; count' cust counter_k2
-    beh 2                   ; --
+    pair 1                  ; (cust . count')
+    push counter_k2         ; (cust . count') counter_k2
+    beh -1                  ; --
     ref std.commit
 
-counter_k2:                 ; (cust count') <- cell
-    my state                ; count' cust
+counter_k2:                 ; (cust . count') <- cell
+    state -1                ; count'
+    state 1                 ; count' cust
     send -1                 ; --
 
     msg 0                   ; cell
     push counter_svc        ; cell counter_svc
-    beh 1                   ; --
+    beh -1                  ; --
     ref std.commit
 
-; unit test suite
+; unit test suite (should eventually print +777)
 ;;  CREATE counter WITH counter_init(0)
 ;;  SEND (println, 7) TO counter
 ;;  SEND (println, 70) TO counter
@@ -186,22 +194,25 @@ boot:                       ; () <- {caps}
 
     push 0                  ; debug_dev 0
     push counter_init       ; debug_dev 0 counter_init
-    new 1                   ; debug_dev counter=counter_init.(0)
+    new -1                  ; debug_dev counter=counter_init.0
 
-    dup 2                   ; debug_dev counter debug_dev counter
-    push 7                  ; debug_dev counter debug_dev counter 7
-    roll -3                 ; debug_dev counter 7 debug_dev counter
-    send 2                  ; debug_dev counter
+    push 7                  ; debug_dev counter 7
+    pick 3                  ; debug_dev counter 7 debug_dev
+    pair 1                  ; debug_dev counter (debug_dev . 7)
+    pick 2                  ; debug_dev counter (debug_dev . 7) counter
+    send -1                 ; debug_dev counter
 
     push 70                 ; debug_dev counter 70
     pick 3                  ; debug_dev counter 70 debug_dev
-    pick 3                  ; debug_dev counter 70 debug_dev counter
-    send 2                  ; debug_dev counter
+    pair 1                  ; debug_dev counter (debug_dev . 70)
+    pick 2                  ; debug_dev counter (debug_dev . 70) counter
+    send -1                 ; debug_dev counter
 
     push 700                ; debug_dev counter 700
-    roll -3                 ; 700 debug_dev counter
-    send 2                  ; --
-
+    pick 3                  ; debug_dev counter 700 debug_dev
+    pair 1                  ; debug_dev counter (debug_dev . 700)
+    pick 2                  ; debug_dev counter (debug_dev . 700) counter
+    send -1                 ; debug_dev counter
     ref std.commit
 
 .export
