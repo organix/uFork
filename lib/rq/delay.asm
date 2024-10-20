@@ -6,7 +6,7 @@
     dev: "../dev.asm"
 
 beh:
-delay_beh:                  ; (delay timer_dev) <- request
+delay_beh:                  ; (delay . timer_dev) <- request
     msg -2                  ; value
     push #t                 ; value ok=#t
     pair 1                  ; result=(ok . value)
@@ -14,7 +14,7 @@ delay_beh:                  ; (delay timer_dev) <- request
     msg 2                   ; result delay callback
     msg 1                   ; result delay callback to_cancel
     pair 3                  ; request'=(to_cancel callback delay . result)
-    state 2                 ; request' timer_dev
+    state -1                ; request' timer_dev
     ref std.send_msg
 
 ; Test suite
@@ -42,8 +42,9 @@ suite:
     push dev.timer_key      ; request {caps} timer_key
     dict get                ; request timer_dev
     push 1000               ; request timer_dev delay=1000ms
-    push delay_beh          ; request timer_dev delay delay_beh
-    new 2                   ; request delay=delay_beh.(delay timer_dev)
+    pair 1                  ; request (delay . timer_dev)
+    push delay_beh          ; request (delay . timer_dev) delay_beh
+    new -1                  ; request delay=delay_beh.(delay . timer_dev)
     ref std.send_msg
 
 .export

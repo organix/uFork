@@ -183,8 +183,9 @@ suite:
 test_beh:                   ; (referee timer value delay_ms time_limit cancel_ms) <- ()
     state 2                 ; timer
     state 4                 ; timer delay_ms
-    push delay.beh          ; timer delay_ms delay_beh
-    new 2                   ; delay=delay_beh.(delay_ms timer)
+    pair 1                  ; (delay_ms . timer)
+    push delay.beh          ; (delay_ms . timer) delay_beh
+    new -1                  ; delay=delay_beh.(delay_ms . timer)
     state 2                 ; delay timer
     state 5                 ; delay timer time_limit
     roll 3                  ; timer time_limit delay

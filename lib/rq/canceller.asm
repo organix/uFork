@@ -23,12 +23,12 @@ canceller_beh:              ; _ <- message
     ref std.commit
 
 got_reason:
-    msg 0                   ; (reason)
-    push cancel_wait_beh    ; (reason) cancel_wait_beh
+    msg 0                   ; (reason . _)
+    push cancel_wait_beh    ; (reason . _) cancel_wait_beh
     beh -1                  ; --
     ref std.commit
 
-cancel_wait_beh:            ; (reason) <- message
+cancel_wait_beh:            ; (reason . _) <- message
     msg 0                   ; message
     typeq #actor_t          ; cap?
     if_not std.commit       ; --
