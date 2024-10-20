@@ -20,10 +20,12 @@ timeout_beh:                ; (requestor time_limit . timer_dev) <- request
 
 ; Create two cancellers, one for the requestor and one for the timer.
 
-    push canceller.beh      ; canceller_beh
-    new 0                   ; t␘=canceller_beh.()
-    push canceller.beh      ; t␘ canceller_beh
-    new 0                   ; t␘ r␘=canceller_beh.()
+    push #?                 ; #?
+    push canceller.beh      ; #? canceller_beh
+    new -1                  ; t␘=canceller_beh.#?
+    push #?                 ; t␘ #?
+    push canceller.beh      ; t␘ #? canceller_beh
+    new -1                  ; t␘ r␘=canceller_beh.#?
 
 ; Does the request contain a 'to_cancel' capability? If not, jump to 'race'.
 
@@ -34,9 +36,12 @@ timeout_beh:                ; (requestor time_limit . timer_dev) <- request
 ; Create a cancel capability that cancels both the requestor and timer. Send it
 ; to the 'to_cancel' capability from the request.
 
-    dup 2                   ; t␘ r␘ t␘ r␘
-    push cancel_all_beh     ; t␘ r␘ t␘ r␘ cancel_all_beh
-    new 2                   ; t␘ r␘ cancel_all=cancel_all_beh.(r␘ t␘)
+    push #nil               ; t␘ r␘ ()
+    pick 3                  ; t␘ r␘ () t␘
+    pick 3                  ; t␘ r␘ () t␘ r␘
+    pair 2                  ; t␘ r␘ (r␘ t␘)
+    push cancel_all_beh     ; t␘ r␘ (r␘ t␘) cancel_all_beh
+    new -1                  ; t␘ r␘ cancel_all=cancel_all_beh.(r␘ t␘)
     msg 1                   ; t␘ r␘ cancel_all to_cancel
     send -1                 ; t␘ r␘
 
@@ -50,8 +55,9 @@ race:
     msg -2                  ; t␘ r␘ callback value
     pick 4                  ; t␘ r␘ callback value t␘
     pick 3                  ; t␘ r␘ callback value t␘ callback
-    push win_beh            ; t␘ r␘ callback value t␘ callback win_beh
-    new 2                   ; t␘ r␘ callback value rcb=win_beh.(callback t␘)
+    pair 1                  ; t␘ r␘ callback value (callback . t␘)
+    push win_beh            ; t␘ r␘ callback value (callback . t␘) win_beh
+    new -1                  ; t␘ r␘ callback value rcb=win_beh.(callback . t␘)
     pick 4                  ; t␘ r␘ callback value rcb r␘
     pair 2                  ; t␘ r␘ callback rreq=(r␘ rcb . value)
     state 1                 ; t␘ r␘ callback rreq requestor
@@ -62,8 +68,9 @@ race:
     state 2                 ; t␘ r␘ callback result time_limit
     pick 4                  ; t␘ r␘ callback result time_limit r␘
     pick 4                  ; t␘ r␘ callback result time_limit r␘ callback
-    push win_beh            ; t␘ r␘ callback result time_limit r␘ callback win_beh
-    new 2                   ; t␘ r␘ callback result time_limit tcb=win_beh.(callback r␘)
+    pair 1                  ; t␘ r␘ callback result time_limit (callback . r␘)
+    push win_beh            ; t␘ r␘ callback result time_limit (callback . r␘) win_beh
+    new -1                  ; t␘ r␘ callback result time_limit tcb=win_beh.(callback . r␘)
     pick 6                  ; t␘ r␘ callback result time_limit tcb t␘
     pair 3                  ; t␘ r␘ callback treq=(t␘ tcb time_limit . result)
     state -2                ; t␘ r␘ callback treq timer_dev
@@ -82,9 +89,10 @@ cancel_all_beh:             ; cancellers <- reason
     beh -1                  ; --
     ref std.commit
 
-win_beh:                    ; (callback loser␘) <- result
-    state 2                 ; loser␘
-    send 0                  ; --
+win_beh:                    ; (callback . loser␘) <- result
+    push #?                 ; #?
+    state -1                ; #? loser␘
+    send -1                 ; --
     msg 0                   ; result
     state 1                 ; result callback
     ref std.send_msg
@@ -111,14 +119,16 @@ test:                       ; judge <- {caps}
     msg 0                   ; {caps}
     push dev.timer_key      ; {caps} timer_key
     dict get                ; timer
-    push 444                ; timer 3rd=444
-    push 222                ; timer 3rd 2nd=222
-    push #?                 ; timer 3rd 2nd 1st=#?
-    push 100                ; timer 3rd 2nd 1st probation=100ms
-    pick 5                  ; timer 3rd 2nd 1st probation timer
-    state 0                 ; timer 3rd 2nd 1st probation timer judge
-    push referee.beh        ; timer 3rd 2nd 1st probation timer judge referee_beh
-    new 6                   ; timer referee
+    push #nil               ; timer ()
+    push 444                ; timer () 3rd=444
+    push 222                ; timer () 3rd 2nd=222
+    push #?                 ; timer () 3rd 2nd 1st=#?
+    push 100                ; timer () 3rd 2nd 1st probation=100ms
+    pick 6                  ; timer () 3rd 2nd 1st probation timer
+    state 0                 ; timer () 3rd 2nd 1st probation timer judge
+    pair 6                  ; timer (judge timer probation 1st 2nd 3rd)
+    push referee.beh        ; timer (judge timer probation 1st 2nd 3rd) referee_beh
+    new -1                  ; timer referee=referee_beh.(judge timer probation 1st 2nd 3rd)
 
 ; The referee is not able to compare two lists, so unwrap the result before
 ; giving it to the referee.

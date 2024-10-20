@@ -40,8 +40,9 @@ intro_cb_beh:               ; {caps} <- (ok . deposit/error)
     pair 1                  ; hello=(deposit . withdraw)
     push GM_petname         ; hello GM
     push store              ; hello GM store
-    push std.sink_beh       ; hello GM store sink_beh
-    new 0                   ; hello GM store callback=sink_beh.()
+    push #?                 ; hello GM store #?
+    push std.sink_beh       ; hello GM store #? sink_beh
+    new -1                  ; hello GM store callback=sink_beh.#?
     push #?                 ; hello GM store callback to_cancel=#?
     push dev.intro_tag      ; hello GM store callback to_cancel #intro
     pair 5                  ; intro_request=(#intro to_cancel callback store GM . hello)

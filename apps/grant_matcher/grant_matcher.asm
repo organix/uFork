@@ -125,10 +125,12 @@ donor_beh:                  ; {caps} <- store
     pair 1                  ; intro_svc (intro_svc . withdraw)
     push donor_k_beh        ; intro_svc (intro_svc . withdraw) donor_k_beh
     new -1                  ; intro_svc donor_k
-    push KEQD_petname       ; intro_svc donor_k @KEQD
-    roll 2                  ; intro_svc @KEQD donor_k
-    roll 3                  ; @KEQD donor_k intro_svc
-    send 2                  ; --
+    push #?                 ; intro_svc donor_k hello=#?
+    push KEQD_petname       ; intro_svc donor_k hello @KEQD
+    roll 3                  ; intro_svc hello @KEQD donor_k
+    pair 2                  ; intro_svc (donor_k @KEQD . hello)
+    roll 2                  ; (donor_k @KEQD . hello) intro_svc
+    send -1                 ; --
     ref std.commit
 
 intro_svc_beh:              ; (awp_dev . store) <- (cust petname . hello)
@@ -171,8 +173,9 @@ donor_k_beh:                ; (intro_svc . withdraw) <- deposit
     msg 0                   ; withdraw deposit
     pair 1                  ; (deposit . withdraw)
     push GM_petname         ; (deposit . withdraw) @GM
-    push lib.sink_beh       ; (deposit . withdraw) @GM sink_beh
-    new 0                   ; (deposit . withdraw) @GM sink
+    push #?                 ; (deposit . withdraw) @GM #?
+    push lib.sink_beh       ; (deposit . withdraw) @GM #? sink_beh
+    new -1                  ; (deposit . withdraw) @GM sink=sink_beh.#?
     pair 2                  ; intro_request=(sink @GM deposit . withdraw)
     state 1                 ; intro_request intro_svc
     send -1                 ; --

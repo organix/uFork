@@ -36,8 +36,9 @@ beh:                    ; callback <- message
     msg 0               ; message
     state 0             ; message callback
     send -1             ; --
-    push sink_beh       ; sink_beh
-    beh 0               ; --
+    push #?             ; #?
+    push sink_beh       ; #? sink_beh
+    beh -1              ; --
     end commit
 
 .export

@@ -267,22 +267,26 @@ boot:                       ; () <- {caps}
     dict get                ; referee=debug
     ref act
 test:                       ; judge <- {caps}
-    push 1                  ; 2nd=1
-    push 0                  ; 2nd 1st=0
-    push 10                 ; 2nd 1st probation=10ms
-    msg 0                   ; 2nd 1st probation {caps}
-    push dev.timer_key      ; 2nd 1st probation {caps} timer_key
-    dict get                ; 2nd 1st probation timer
-    state 0                 ; 2nd 1st probation timer judge
-    push referee.beh        ; 2nd 1st probation timer judge referee_beh
-    new 5                   ; referee=referee_beh.(judge timer probation 1st 2nd)
+    push #nil               ; ()
+    push 1                  ; () 2nd=1
+    push 0                  ; () 2nd 1st=0
+    push 10                 ; () 2nd 1st probation=10ms
+    msg 0                   ; () 2nd 1st probation {caps}
+    push dev.timer_key      ; () 2nd 1st probation {caps} timer_key
+    dict get                ; () 2nd 1st probation timer
+    state 0                 ; () 2nd 1st probation timer judge
+    pair 5                  ; (judge timer probation 1st 2nd)
+    push referee.beh        ; (judge timer probation 1st 2nd) referee_beh
+    new -1                  ; referee=referee_beh.(judge timer probation 1st 2nd)
 act:
-    push count_0            ; referee beh=count_0
-    new -3                  ; referee counter=get_Z(beh).beh
-    dup 2                   ; referee counter referee counter
-    send 1                  ; referee counter
-    dup 2                   ; referee counter referee counter
-    send 1                  ; referee counter
+    push #nil               ; referee ()
+    roll 2                  ; () referee
+    pair 1                  ; (referee)
+    push count_0            ; (referee) beh=count_0
+    new -3                  ; (referee) counter=get_Z(beh).beh
+    dup 2                   ; (referee) counter (referee) counter
+    send -1                 ; (referee) counter
+    send -1                 ; --
     ref std.commit
 
 .export

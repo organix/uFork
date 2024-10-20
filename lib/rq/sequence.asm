@@ -98,8 +98,9 @@ fail:                       ; --
 on_start:                   ; (requestors callback . _) <- (start_tag . value)
     state 1                 ; requestors
     if_not succeed          ; --
-    push canceller.beh      ; canceller_beh
-    new 0                   ; canceller=canceller_beh.()
+    push #?                 ; #?
+    push canceller.beh      ; #? canceller_beh
+    new -1                  ; canceller=canceller_beh.#?
     state 1                 ; canceller requestors
     part 1                  ; canceller pending next
     msg -1                  ; canceller pending next value
@@ -128,14 +129,17 @@ succeed:
     ref done
 
 on_cancel:                  ; (requestors callback . canceller) <- (cancel_tag . reason)
-    msg -1                  ; reason
-    state -2                ; reason canceller
-    send 1                  ; --
+    push #nil               ; ()
+    msg -1                  ; () reason
+    pair 1                  ; (reason)
+    state -2                ; (reason) canceller
+    send -1                 ; --
     ref done
 
 done:
-    push std.sink_beh       ; sink_beh
-    beh 0                   ; --
+    push #?                 ; #?
+    push std.sink_beh       ; #? sink_beh
+    beh -1                  ; --
     ref std.commit
 
 ; Test suite
@@ -150,16 +154,18 @@ test:                       ; judge <- {caps}
 ; FIXME: Validate the entire result, not just the result's value. This requires
 ; some kind of "deep" validator.
 
-    push #?                 ; 3rd=#?
-    push 4000               ; 3rd 2nd=4000
-    push 1000               ; 3rd 2nd 1st=1000
-    push 50                 ; 3rd 2nd 1st probation=50ms
-    msg 0                   ; 3rd 2nd 1st probation {caps}
-    push dev.timer_key      ; 3rd 2nd 1st probation {caps} timer_key
-    dict get                ; 3rd 2nd 1st probation timer
-    state 0                 ; 3rd 2nd 1st probation timer judge
-    push referee.beh        ; 3rd 2nd 1st probation timer judge referee_beh
-    new 6                   ; referee=referee_beh.(judge timer probation 1st 2nd 3rd)
+    push #nil               ; ()
+    push #?                 ; () 3rd=#?
+    push 4000               ; () 3rd 2nd=4000
+    push 1000               ; () 3rd 2nd 1st=1000
+    push 50                 ; () 3rd 2nd 1st probation=50ms
+    msg 0                   ; () 3rd 2nd 1st probation {caps}
+    push dev.timer_key      ; () 3rd 2nd 1st probation {caps} timer_key
+    dict get                ; () 3rd 2nd 1st probation timer
+    state 0                 ; () 3rd 2nd 1st probation timer judge
+    pair 6                  ; (judge timer probation 1st 2nd 3rd)
+    push referee.beh        ; (judge timer probation 1st 2nd 3rd) referee_beh
+    new -1                  ; referee=referee_beh.(judge timer probation 1st 2nd 3rd)
     push unwrap_result.beh  ; referee unwrap_result_beh
     new -1                  ; referee'=unwrap_result_beh.referee
 suite:

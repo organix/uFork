@@ -31,13 +31,15 @@ boot:                       ; () <- {caps}
     ref suite
 
 test:                       ; judge <- {caps}
-    push #t                 ; 2nd=#t
-    push #t                 ; 2nd 1st=#t // order doesn't matter
-    push #?                 ; 2nd 1st probation=#?
-    push #?                 ; 2nd 1st probation timer=#?
-    state 0                 ; 2nd 1st probation timer judge
-    push referee.beh        ; 2nd 1st probation timer judge referee_beh
-    new 5                   ; referee=referee_beh.(judge timer probation 1st 2nd)
+    push #nil               ; ()
+    push #t                 ; () 2nd=#t
+    push #t                 ; () 2nd 1st=#t // order doesn't matter
+    push #?                 ; () 2nd 1st probation=#?
+    push #?                 ; () 2nd 1st probation timer=#?
+    state 0                 ; () 2nd 1st probation timer judge
+    pair 5                  ; (judge timer probation 1st 2nd)
+    push referee.beh        ; (judge timer probation 1st 2nd) referee_beh
+    new -1                  ; referee=referee_beh.(judge timer probation 1st 2nd)
 suite:
 
 ; The actor is sent the expected value, emitting #t for 'yes'.

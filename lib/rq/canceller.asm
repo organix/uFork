@@ -43,8 +43,9 @@ reason_wait_beh:            ; cancel <- message
     msg 1                   ; reason
     state 0                 ; reason cancel
 send_reason_to_cancel:      ; reason cancel
-    push std.sink_beh       ; reason cancel sink_beh
-    beh 0                   ; reason cancel
+    push #?                 ; reason cancel #?
+    push std.sink_beh       ; reason cancel #? sink_beh
+    beh -1                  ; reason cancel
     ref std.send_msg
 
 ; Test suite
@@ -62,13 +63,15 @@ test:                       ; judge <- {caps}
     msg 0                   ; {caps}
     push dev.timer_key      ; {caps} timer_key
     dict get                ; timer
-    push 1729               ; timer 2nd=1729
-    push 42                 ; timer 2nd 1st=42
-    push 100                ; timer 2nd 1st probation_ms=100
-    pick 4                  ; timer 2nd 1st probation_ms timer
-    state 0                 ; timer 2nd 1st probation_ms timer judge
-    push referee.beh        ; timer 2nd 1st probation_ms timer judge referee_beh
-    new 5                   ; timer referee=referee_beh.(judge timer probation_ms 1st 2nd)
+    push #nil               ; timer ()
+    push 1729               ; timer () 2nd=1729
+    push 42                 ; timer () 2nd 1st=42
+    push 100                ; timer () 2nd 1st probation_ms=100
+    pick 5                  ; timer () 2nd 1st probation_ms timer
+    state 0                 ; timer () 2nd 1st probation_ms timer judge
+    pair 5                  ; timer (judge timer probation_ms 1st 2nd)
+    push referee.beh        ; timer (judge timer probation_ms 1st 2nd) referee_beh
+    new -1                  ; timer referee=referee_beh.(judge timer probation_ms 1st 2nd)
 setup:
 
 ; Cancel arrives before reason.

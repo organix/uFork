@@ -361,31 +361,33 @@ an initial cell value `init`:
 
 ```
 factory:                ; () <- (cust . init)
-    msg -1              ; init
-    push cell_beh       ; init cell_beh
-    new -1              ; cell=cell_beh.init
+    push #nil           ; ()
+    msg -1              ; () init
+    push cell_beh       ; () init cell_beh
+    new -1              ; () cell=cell_beh.init
 
-    push CAS_tag        ; cell #CAS
-    pick 2              ; cell #CAS cell
-    pair 1              ; cell (cell . #CAS)
-    push label_beh      ; cell (cell . #CAS) label_beh
-    new -1              ; cell CAS_facet=label_beh.(cell . #CAS)
-    roll -2             ; CAS_facet cell
+    push CAS_tag        ; () cell #CAS
+    pick 2              ; () cell #CAS cell
+    pair 1              ; () cell (cell . #CAS)
+    push label_beh      ; () cell (cell . #CAS) label_beh
+    new -1              ; () cell CAS_facet=label_beh.(cell . #CAS)
+    roll -2             ; () CAS_facet cell
 
-    push write_tag      ; CAS_facet cell #write
-    pick 2              ; CAS_facet cell #write cell
-    pair 1              ; CAS_facet cell (cell . #write)
-    push label_beh      ; CAS_facet cell (cell . #write) label_beh
-    new -1              ; CAS_facet cell write_facet=label_beh.(cell . #write)
-    roll -2             ; CAS_facet write_facet cell
+    push write_tag      ; () CAS_facet cell #write
+    pick 2              ; () CAS_facet cell #write cell
+    pair 1              ; () CAS_facet cell (cell . #write)
+    push label_beh      ; () CAS_facet cell (cell . #write) label_beh
+    new -1              ; () CAS_facet cell write_facet=label_beh.(cell . #write)
+    roll -2             ; () CAS_facet write_facet cell
 
-    push CAS_tag        ; CAS_facet write_facet cell #read
-    roll 2              ; CAS_facet write_facet #read cell
-    pair 1              ; CAS_facet write_facet (cell . #read)
-    push label_beh      ; CAS_facet write_facet (cell . #read) label_beh
-    new -1              ; CAS_facet write_facet read_facet=label_beh.(cell . #read)
-    msg 1               ; CAS_facet write_facet read_facet cust
-    send 3              ; --
+    push CAS_tag        ; () CAS_facet write_facet cell #read
+    roll 2              ; () CAS_facet write_facet #read cell
+    pair 1              ; () CAS_facet write_facet (cell . #read)
+    push label_beh      ; () CAS_facet write_facet (cell . #read) label_beh
+    new -1              ; () CAS_facet write_facet read_facet=label_beh.(cell . #read)
+    new -1              ; facets=(read_facet write_facet CAS_facet)
+    msg 1               ; facets cust
+    send -1             ; --
     end commit
 ```
 

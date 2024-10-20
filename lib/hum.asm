@@ -437,8 +437,9 @@ test_predicates:            ; ( -- )
     call is_function        ; k actual
     assert #f               ; k
 
-    push beh                ; k beh
-    new 0                   ; k actor=beh.()
+    push #?                 ; k #?
+    push std.sink_beh       ; k #? sink_beh
+    new -1                  ; k sink=sink_beh.#?
     call is_actor           ; k actual
     assert #t               ; k
     push is_actor           ; k value

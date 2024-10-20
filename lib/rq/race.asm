@@ -179,8 +179,9 @@ pop:
 ; Start the next queued requestor. Provide it with a unique canceller. The
 ; result will be delivered to the runner, labelled with the canceller.
 
-    push canceller.beh      ; ... requestor canceller_beh
-    new 0                   ; ... requestor canceller=canceller_beh.()
+    push #?                 ; ... requestor #?
+    push canceller.beh      ; ... requestor #? canceller_beh
+    new -1                  ; ... requestor canceller=canceller_beh.#?
     state -3                ; ... requestor canceller value
     pick 2                  ; ... requestor canceller value label=canceller
     my self                 ; ... requestor canceller value label rcvr=SELF
@@ -223,8 +224,9 @@ cancel:                     ; running reason
     push lib.broadcast_beh  ; running (reason) broadcast_beh
     new -1                  ; running broadcast=broadcast_beh.(reason)
     send -1                 ; --
-    push std.sink_beh       ; sink_beh
-    beh 0                   ; --
+    push #?                 ; #?
+    push std.sink_beh       ; #? sink_beh
+    beh -1                  ; --
     ref std.commit
 
 ; Test suite
@@ -239,17 +241,19 @@ test:                       ; judge <- {caps}
 ; FIXME: Validate the entire result, not just the result's value. This requires
 ; some kind of "deep" validator.
 
-    push 5000               ; 4th=5000
-    push 3000               ; 4th 3rd=3000
-    push #?                 ; 4th 3rd 2nd=#?
-    push 1000               ; 4th 3rd 2nd 1st=1000
-    push 50                 ; 4th 3rd 2nd 1st probation=50ms
-    msg 0                   ; 4th 3rd 2nd 1st probation {caps}
-    push dev.timer_key      ; 4th 3rd 2nd 1st probation {caps} timer_key
-    dict get                ; 4th 3rd 2nd 1st probation timer
-    state 0                 ; 4th 3rd 2nd 1st probation timer judge
-    push referee.beh        ; 4th 3rd 2nd 1st probation timer judge referee_beh
-    new 7                   ; referee=referee_beh.(judge timer probation 1st 2nd 3rd 4th)
+    push #nil               ; ()
+    push 5000               ; () 4th=5000
+    push 3000               ; () 4th 3rd=3000
+    push #?                 ; () 4th 3rd 2nd=#?
+    push 1000               ; () 4th 3rd 2nd 1st=1000
+    push 50                 ; () 4th 3rd 2nd 1st probation=50ms
+    msg 0                   ; () 4th 3rd 2nd 1st probation {caps}
+    push dev.timer_key      ; () 4th 3rd 2nd 1st probation {caps} timer_key
+    dict get                ; () 4th 3rd 2nd 1st probation timer
+    state 0                 ; () 4th 3rd 2nd 1st probation timer judge
+    pair 7                  ; (judge timer probation 1st 2nd 3rd 4th)
+    push referee.beh        ; (judge timer probation 1st 2nd 3rd 4th) referee_beh
+    new -1                  ; referee=referee_beh.(judge timer probation 1st 2nd 3rd 4th)
     push unwrap_result.beh  ; referee unwrap_result_beh
     new -1                  ; referee'=unwrap_result_beh.referee
 suite:
