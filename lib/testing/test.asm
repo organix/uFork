@@ -9,67 +9,81 @@
 ; A mock-object representing a failed test.
 ; Non-verify messages are ignored.
 
-failed:                     ; (ctrl) <- (ctrl')
-    state 1                 ; ctrl
-    msg 1                   ; ctrl ctrl'
+failed:                     ; ctrl <- ctrl'
+    state 0                 ; ctrl
+    msg 0                   ; ctrl ctrl'
     cmp eq                  ; ctrl==ctrl'
-    if std.rv_false         ; --  // verify returns `#f` verdict
+    if mock_false           ; --  // verify returns `#f` verdict
     ref std.commit
+mock_false:
+    push #f                 ; #f
+    msg 0                   ; #f ctrl
+    ref std.send_msg
+
+; A mock-object representing a successful test.
+; Non-verify messages cause failure.
+
+success:                    ; ctrl <- ctrl'
+    state 0                 ; ctrl
+    msg 0                   ; ctrl ctrl'
+    cmp eq                  ; ctrl==ctrl'
+    if mock_true            ; --  // verify returns `#t` verdict
+    state 0                 ; ctrl
+    push failed             ; ctrl failed
+    actor become            ; --
+    ref std.commit
+mock_true:
+    push #t                 ; #t
+    msg 0                   ; #t ctrl
+    ref std.send_msg
+
+; A mock-object that expects a single matching message.
+
+mock_eq:                    ; (ctrl . expect) <- ctrl' | actual
+    state 1                 ; ctrl
+    msg 0                   ; ctrl ctrl'
+    cmp eq                  ; ctrl==ctrl'
+    if mock_false           ; --  // verify returns `#f` verdict
+
+    state -1                ; expect
+    msg 0                   ; expect actual
+    cmp eq                  ; expect==actual
+    if ok fail              ; --
 
 ; Become `failed`
 
 fail:                       ; --
     state 1                 ; ctrl
     push failed             ; ctrl failed
-    beh 1                   ; --
+    actor become            ; --
     ref std.commit
-
-; A mock-object representing a successful test.
-; Non-verify messages cause failure.
-
-success:                    ; (ctrl) <- (ctrl')
-    state 1                 ; ctrl
-    msg 1                   ; ctrl ctrl'
-    cmp eq                  ; ctrl==ctrl'
-    if std.rv_true          ; --  // verify returns `#t` verdict
-    ref fail
 
 ; Become `success`
 
 ok:                         ; --
     state 1                 ; ctrl
     push success            ; ctrl success
-    beh 1                   ; --
+    actor become            ; --
     ref std.commit
-
-; A mock-object that expects a single matching message.
-
-mock_eq:                    ; (ctrl expect) <- (ctrl') | actual
-    state 1                 ; ctrl
-    msg 1                   ; ctrl ctrl'
-    cmp eq                  ; ctrl==ctrl'
-    if std.rv_false         ; --  // verify returns `#f` verdict
-
-    state 2                 ; expect
-    msg 0                   ; expect actual
-    cmp eq                  ; expect==actual
-    if ok fail              ; --
 
 ; A mock-object that expects `pred(actual)` is truthy.
 
-mock_pred:                  ; (ctrl pred) <- (ctrl') | actual
+mock_pred:                  ; (ctrl . pred) <- ctrl' | actual
     state 1                 ; ctrl
-    msg 1                   ; ctrl ctrl'
+    msg 0                   ; ctrl ctrl'
     cmp eq                  ; ctrl==ctrl'
-    if std.rv_false         ; --  // verify returns `#f` verdict
+    if mock_false           ; --  // verify returns `#f` verdict
 
-    msg 0                   ; actual
-    state 1                 ; actual ctrl
-    push mock_pred_ok       ; actual ctrl mock_pred_ok
-    new 1                   ; actual cust=mock_pred_ok.(ctrl)
-    state 2                 ; actual cust pred
-    send 2                  ; --
-    ref std.commit
+    push #nil               ; () actual
+    msg 0                   ; () actual
+    push #nil               ; () actual ()
+    state 1                 ; () actual () ctrl
+    pair 1                  ; () actual (ctrl)
+    push mock_pred_ok       ; () actual (ctrl) mock_pred_ok
+    actor create            ; () actual cust=mock_pred_ok.(ctrl)
+    pair 2                  ; (cust actual)
+    state -1                ; (cust actual) pred
+    ref std.send_msg
 
 mock_pred_ok:               ; (ctrl) <- bool
     msg 0                   ; truthy
@@ -82,29 +96,29 @@ mock_list_setup:            ; (ctrl) <- mocks
     state 1                 ; mocks ctrl
     pair 1                  ; (ctrl . mocks)
     push mock_list          ; (ctrl . mocks) mock_list
-    beh -1                  ; --
+    actor become            ; --
     ref std.commit
 
-mock_list:                  ; (ctrl . mocks) <- (ctrl')
+mock_list:                  ; (ctrl . mocks) <- ctrl'
     state 1                 ; ctrl
-    msg 1                   ; ctrl ctrl'
+    msg 0                   ; ctrl ctrl'
     cmp eq                  ; ctrl==ctrl'
-    if_not std.rv_false     ; --  // verify returns `#f` verdict
+    if_not mock_false       ; --  // verify returns `#f` verdict
 
     state -1                ; mocks
     part 1                  ; mocks' mock
     dup 1                   ; mocks' mock mock
     typeq #actor_t          ; mocks' mock is_actor(mocks)
-    if_not std.rv_true      ; mocks' mock  // return `#t` verdict at end
+    if_not mock_true        ; mocks' mock  // return `#t` verdict at end
 
     my self                 ; mocks' mock SELF
     roll 2                  ; mocks' SELF mock
-    send 1                  ; mocks'
+    actor send              ; mocks'
 
     state 1                 ; mocks' ctrl
     pair 1                  ; (ctrl . mocks')
     push mock_list_ok       ; (ctrl . mocks') mock_list_ok
-    beh -1                  ; --
+    actor become            ; --
     ref std.commit
 
 mock_list_ok:               ; (ctrl . mocks) <- verdict
@@ -113,11 +127,11 @@ mock_list_ok:               ; (ctrl . mocks) <- verdict
 
     state 0                 ; (ctrl . mocks)
     push mock_list          ; (ctrl . mocks') mock_list
-    beh -1                  ; --
+    actor become            ; --
 
     state 1                 ; ctrl
     my self                 ; ctrl SELF
-    send 1                  ; --
+    actor send              ; --
     ref std.commit
 
 mock_list_f:                ; --
@@ -139,63 +153,65 @@ assert_ok:                  ; _ <- verdict
 
 ; setup the mock
 
-step_0:                     ; (debug timer) <- ()
+step_0:                     ; (debug . timer) <- ()
     push 42                 ; expect=42
     my self                 ; expect ctrl=SELF
-    push mock_eq            ; expect ctrl mock_eq
-    new 2                   ; mock=mock_eq.(ctrl 42)
+    pair 1                  ; (ctrl . expect)
+    push mock_eq            ; (ctrl . expect) mock_eq
+    actor create            ; mock=mock_eq.(ctrl . expect)
     my self                 ; mock SELF
-    send -1                 ; --
+    actor send              ; --
 
     state 0                 ; state
     push step_1             ; state beh=step_1
-    beh -1                  ; --
+    actor become            ; --
     ref std.commit
 
 ; first mock interaction
 
-step_1:                     ; (debug timer) <- mock
+step_1:                     ; (debug . timer) <- mock
     msg 0                   ; mock
     my self                 ; mock SELF
-    send -1                 ; --
+    actor send              ; --
 
 ;    push 86             ; 86  // non-matching message
     push 42                 ; 42  // matching message
     msg 0                   ; 42 mock
-    send -1                 ; --
+    actor send              ; --
 
     state 0                 ; state
 ;    push step_2         ; state beh=step_2  // step 2 causes failure...
     push step_3             ; state beh=step_3
-    beh -1                  ; --
+    actor become            ; --
     ref std.commit
 
 ; second mock interaction
 
-step_2:                     ; (debug timer) <- mock
+step_2:                     ; (debug . timer) <- mock
     msg 0                   ; mock
     my self                 ; mock SELF
-    send -1                 ; --
+    actor send              ; --
 
 ;    push 86             ; 86  // non-matching message
     push 42                 ; 42  // matching message
     msg 0                   ; 42 mock
-    send -1                 ; --
+    actor send              ; --
 
     state 0                 ; state
     push step_3             ; state beh=step_3
-    beh -1                  ; --
+    actor become            ; --
     ref std.commit
 
 ; verify the mock
 
-step_3:                     ; (debug timer) <- mock
+step_3:                     ; (debug . timer) <- mock
     my self                 ; ctrl=SELF
     msg 0                   ; ctrl mock
-    send 1                  ; --
+    actor send              ; --
 
-    push assert_ok          ; assert_ok
-    beh 0                   ; --
+    push #nil               ; ()
+    push assert_ok          ; () assert_ok
+    actor become            ; --
     ref std.commit
 
 ; run test suite on boot
@@ -207,9 +223,12 @@ boot:                       ; () <- {caps}
     msg 0                   ; timer {caps}
     push dev.debug_key      ; timer {caps} debug_key
     dict get                ; timer debug
-    push step_0             ; timer debug step_0
-    new 2                   ; test=step_0.(debug timer)
-    send 0                  ; --
+    pair 1                  ; (debug . timer)
+    push step_0             ; (debug . timer) step_0
+    actor create            ; test=step_0.(debug . timer)
+    push #nil               ; test ()
+    roll 2                  ; () test
+    actor send              ; --
     ref std.commit
 
 .export
