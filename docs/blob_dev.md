@@ -12,32 +12,34 @@ An _allocation_ request looks like `(customer . size)`.
 The `size` is the number of bytes requested.
 A capability designating the allocation
 is sent to the `customer`,
-or `#?` on failure.
+or `#?` if the allocation could not be satisfied.
 
-The allocation actor/capability handles
+## Blob Requests
+
+The Blob actor/capability handles
 _read_, _write_, and _size_ requests.
 The garbage-collector automatically releases allocations
 when they are no longer referenced.
 
-## Size Request
+### Size Request
 
-A _size_ request looks like `(customer)`.
+A _size_ request looks like `(customer . #?)`.
 The number of bytes in this allocation
 is sent to the `customer` as a _fixnum_.
 
-## Read Request
+### Read Request
 
 A _read_ request looks like `(customer . offset)`.
 The byte value at `offset` is sent to the `customer`.
 If `offset` is out of bounds, the value is `#?`.
 
-## Write Request
+### Write Request
 
 A _write_ request looks like `(customer offset . value)`.
 The byte `value` is written at `offset`,
-and `#?` is sent to the `customer`.
-[[ Should we send `#t`/`#f` to indicate success/failure? ]]
-If `offset` is out of bounds, the write has no effect.
+and `#t` is sent to the `customer`.
+If `offset` is out of bounds, the write has no effect,
+and `#f` is sent to the `customer`.
 
 ## Memory Layout
 
