@@ -112,66 +112,66 @@ test:                       ; judge <- {caps}
     state 0                 ; timer () expect_3 expect_2 wrong no_timer probation timer judge
     pair 7                  ; timer (judge timer probation no_timer wrong expect_2 expect_3)
     push referee_beh        ; timer (judge timer probation no_timer wrong expect_2 expect_3) referee_beh
-    new -1                  ; timer judge=referee_of_referees
+    new -1                  ; timer ref=referee_of_referees
 setup:
-    roll 2                  ; judge timer
+    roll 2                  ; ref timer
 
 ; Get 3 messages, but one is wrong. FAIL in ~50ms.
 
-    dup 1                   ; judge timer timer
-    push #nil               ; judge timer timer ()
-    push 3                  ; judge timer timer () 3rd=3
-    push 42                 ; judge timer timer () 3rd 2nd=42 // actual==2
-    push 1                  ; judge timer timer () 3rd 2nd 1st=1
-    push 100                ; judge timer timer () 3rd 2nd 1st probation=100ms
-    pick 7                  ; judge timer timer () 3rd 2nd 1st probation timer
-    pick 9                  ; judge timer timer () 3rd 2nd 1st probation timer judge
-    pair 6                  ; judge timer timer referee_state
-    push referee_beh        ; judge timer timer referee_state referee_beh
-    new -1                  ; judge timer timer referee
-    call send_thrice        ; judge timer
+    dup 1                   ; ref timer timer
+    push #nil               ; ref timer timer ()
+    push 3                  ; ref timer timer () 3rd=3
+    push 42                 ; ref timer timer () 3rd 2nd=42 // actual==2
+    push 1                  ; ref timer timer () 3rd 2nd 1st=1
+    push 100                ; ref timer timer () 3rd 2nd 1st probation=100ms
+    pick 7                  ; ref timer timer () 3rd 2nd 1st probation timer
+    pick 9                  ; ref timer timer () 3rd 2nd 1st probation timer judge=ref
+    pair 6                  ; ref timer timer referee_state
+    push referee_beh        ; ref timer timer referee_state referee_beh
+    new -1                  ; ref timer timer referee
+    call send_thrice        ; ref timer
 
 ; Expect 2 messages, but get three. FAIL in ~75ms.
 
-    dup 1                   ; judge timer timer
-    push #nil               ; judge timer timer ()
-    push 2                  ; judge timer timer () 2nd=2
-    push 1                  ; judge timer timer () 2nd 1st=1
-    push 100                ; judge timer timer () 2nd 1st probation=100ms
-    pick 6                  ; judge timer timer () 2nd 1st probation timer
-    pick 8                  ; judge timer timer () 2nd 1st probation timer judge
-    pair 5                  ; judge timer timer referee_state
-    push referee_beh        ; judge timer timer referee_state referee_beh
-    new -1                  ; judge timer timer referee
-    call send_thrice        ; judge timer
+    dup 1                   ; ref timer timer
+    push #nil               ; ref timer timer ()
+    push 2                  ; ref timer timer () 2nd=2
+    push 1                  ; ref timer timer () 2nd 1st=1
+    push 100                ; ref timer timer () 2nd 1st probation=100ms
+    pick 6                  ; ref timer timer () 2nd 1st probation timer
+    pick 8                  ; ref timer timer () 2nd 1st probation timer judge=ref
+    pair 5                  ; ref timer timer referee_state
+    push referee_beh        ; ref timer timer referee_state referee_beh
+    new -1                  ; ref timer timer referee
+    call send_thrice        ; ref timer
 
 ; Expect 1 message, get 3, but omit the timer. PASS in ~25ms.
 
-    dup 1                   ; judge timer timer
-    push #nil               ; judge timer timer ()
-    push 1                  ; judge timer timer () 1st=1
-    push #?                 ; judge timer timer () 1st probation=#?
-    push #?                 ; judge timer timer () 1st probation timer=#?
-    pick 7                  ; judge timer timer () 1st probation timer judge
-    pair 4                  ; judge timer timer referee_state
-    push referee_beh        ; judge timer timer referee_state referee_beh
-    new -1                  ; judge timer timer referee
-    call send_thrice        ; judge timer
+    dup 1                   ; ref timer timer
+    push #nil               ; ref timer timer ()
+    push 1                  ; ref timer timer () 1st=1
+    push #?                 ; ref timer timer () 1st probation=#?
+    push #?                 ; ref timer timer () 1st probation timer=#?
+    pick 7                  ; ref timer timer () 1st probation timer judge=ref
+    pair 4                  ; ref timer timer referee_state
+    push referee_beh        ; ref timer timer referee_state referee_beh
+    new -1                  ; ref timer timer referee
+    call send_thrice        ; ref timer
 
 ; Get the 3 expected messages. PASS in ~175ms
 
-    dup 1                   ; judge timer timer
-    push #nil               ; judge timer timer ()
-    push 3                  ; judge timer timer () 3rd=3
-    push 2                  ; judge timer timer () 3rd 2nd=2
-    push 1                  ; judge timer timer () 3rd 2nd 1st=1
-    push 100                ; judge timer timer () 3rd 2nd 1st probation=100ms
-    pick 7                  ; judge timer timer () 3rd 2nd 1st probation timer
-    pick 9                  ; judge timer timer () 3rd 2nd 1st probation timer judge
-    pair 6                  ; judge timer timer referee_state
-    push referee_beh        ; judge timer timer referee_state referee_beh
-    new -1                  ; judge timer timer referee
-    call send_thrice        ; judge timer
+    dup 1                   ; ref timer timer
+    push #nil               ; ref timer timer ()
+    push 3                  ; ref timer timer () 3rd=3
+    push 2                  ; ref timer timer () 3rd 2nd=2
+    push 1                  ; ref timer timer () 3rd 2nd 1st=1
+    push 100                ; ref timer timer () 3rd 2nd 1st probation=100ms
+    pick 7                  ; ref timer timer () 3rd 2nd 1st probation timer
+    pick 9                  ; ref timer timer () 3rd 2nd 1st probation timer judge=ref
+    pair 6                  ; ref timer timer referee_state
+    push referee_beh        ; ref timer timer referee_state referee_beh
+    new -1                  ; ref timer timer referee
+    call send_thrice        ; ref timer
     ref std.commit
 
 ; Sends three messages to the referee, a slight delay between each.
