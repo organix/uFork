@@ -287,7 +287,7 @@ fn blob_size(core: &Core, handle: Any) -> Result<Any, Error> {
     let pos = handle.get_fix()?;
     let top = core.blob_top().get_fix()?;
     if (pos < 5) || (pos >= top) {
-        return Err(E_BOUNDS);
+        return Err(E_BOUNDS);  // bad handle
     }
     let base = pos as usize;
     let len = get_u16(core, base - 4);
@@ -297,13 +297,13 @@ fn blob_read(core: &Core, handle: Any, ofs: Any) -> Result<Any, Error> {
     let pos = handle.get_fix()?;
     let top = core.blob_top().get_fix()?;
     if (pos < 5) || (pos >= top) {
-        return Ok(UNDEF);
+        return Err(E_BOUNDS);  // bad handle
     }
     let base = pos as usize;
     let len = get_u16(core, base - 4);
     let ofs = ofs.get_fix()? as usize;
     if ofs >= len {
-        return Ok(UNDEF);
+        return Err(E_BOUNDS);  // bad handle
     }
     let byte = core.blob_read(base + ofs);
     Ok(Any::fix(byte as isize))
@@ -312,7 +312,7 @@ fn blob_write(core: &mut Core, handle: Any, ofs: Any, val: Any) -> Result<Any, E
     let pos = handle.get_fix()?;
     let top = core.blob_top().get_fix()?;
     if (pos < 5) || (pos >= top) {
-        return Ok(FALSE);
+        return Err(E_BOUNDS);
     }
     let base = pos as usize;
     let len = get_u16(core, base - 4);
@@ -350,21 +350,21 @@ impl Device for BlobDevice {
             let handle = myself.y();
             let msg = event.y();  // (cust . #?) | (cust . ofs) | (cust ofs . val)
             let cust = core.nth(msg, PLUS_1);
-            let tail: Any = core.nth(msg, MINUS_1);
-            if tail == UNDEF {  // size request
-                let size = blob_size(core, handle)?;
-                let evt = core.reserve_event(sponsor, cust, size)?;
-                core.event_enqueue(evt);
-            } else if tail.is_fix() {  // read request
-                let ofs = tail;
+            let req = core.nth(msg, MINUS_1);
+            if req.is_fix() {  // read request
+                let ofs = req;
                 let data = blob_read(core, handle, ofs)?;
                 let evt = core.reserve_event(sponsor, cust, data)?;
                 core.event_enqueue(evt);
-            } else {  // write request
-                let ofs = core.nth(msg, PLUS_2);
-                let val = core.nth(msg, MINUS_2);
+            } else if core.typeq(PAIR_T, req) {  // write request
+                let ofs = core.nth(req, PLUS_1);
+                let val = core.nth(req, MINUS_1);
                 let ok = blob_write(core, handle, ofs, val)?;
                 let evt = core.reserve_event(sponsor, cust, ok)?;
+                core.event_enqueue(evt);
+            } else {  // size request
+                let size = blob_size(core, handle)?;
+                let evt = core.reserve_event(sponsor, cust, size)?;
                 core.event_enqueue(evt);
             }
         } else {

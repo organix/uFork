@@ -10,7 +10,7 @@ a random-access _read_ and _write_ byte interface.
 Allocation requests are sent directly to the Blob Device.
 An _allocation_ request looks like `(customer . size)`.
 The `size` is the number of bytes requested.
-A capability designating the allocation
+A capability designating the allocated Blob
 is sent to the `customer`,
 or `#?` if the allocation could not be satisfied.
 

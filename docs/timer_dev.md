@@ -17,7 +17,7 @@ cancellation.
 
 The input value of a _timer_ request is a pair like `(delay . result)`. After
 `delay` milliseconds, the `result` is sent to the callback specified in the
-request.
+request. The full request looks like `(to_cancel callback delay . result)`
 
 ## Reference Implementation
 
