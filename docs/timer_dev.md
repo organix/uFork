@@ -6,7 +6,7 @@ of the underlying clock.
 
 ## Delayed-Message Request
 
-A _delayed-message_ request looks like `(delay target message)`.
+A _delayed-message_ request looks like `(delay target . message)`.
 The `message` is sent to the `target` actor
 after a nominal `delay` in milliseconds as a `fixnum`.
 

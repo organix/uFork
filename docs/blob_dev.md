@@ -8,10 +8,12 @@ a random-access _read_ and _write_ byte interface.
 ## Allocation Request
 
 Allocation requests are sent directly to the Blob Device.
-An _allocation_ request looks like `(customer size)`.
+An _allocation_ request looks like `(customer . size)`.
 The `size` is the number of bytes requested.
 A capability designating the allocation
-is sent to the `customer`.
+is sent to the `customer`,
+or `#?` on failure.
+
 The allocation actor/capability handles
 _read_, _write_, and _size_ requests.
 The garbage-collector automatically releases allocations
@@ -25,15 +27,16 @@ is sent to the `customer` as a _fixnum_.
 
 ## Read Request
 
-A _read_ request looks like `(customer offset)`.
+A _read_ request looks like `(customer . offset)`.
 The byte value at `offset` is sent to the `customer`.
 If `offset` is out of bounds, the value is `#?`.
 
 ## Write Request
 
-A _write_ request looks like `(customer offset value)`.
+A _write_ request looks like `(customer offset . value)`.
 The byte `value` is written at `offset`,
-and `()` is sent to the `customer`.
+and `#?` is sent to the `customer`.
+[[ Should we send `#t`/`#f` to indicate success/failure? ]]
 If `offset` is out of bounds, the write has no effect.
 
 ## Memory Layout
