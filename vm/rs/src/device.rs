@@ -418,13 +418,13 @@ impl Device for TimerDevice {
             // start timer request
             let arg_1 = core.nth(msg, PLUS_1);
             if arg_1.is_fix() {  // simple delayed message
-                // (delay target message)
+                // (delay target . message)
                 let delay = arg_1;
                 let target = core.nth(msg, PLUS_2);
                 if !target.is_cap() {
                     return Err(E_NOT_CAP);
                 }
-                let message = core.nth(msg, PLUS_3);
+                let message = core.nth(msg, MINUS_2);
                 let delayed = Quad::new_event(sponsor, target, message);
                 let ptr = core.reserve(&delayed)?;
                 let stub = core.reserve_stub(dev, ptr)?;

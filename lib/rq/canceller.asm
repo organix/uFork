@@ -113,13 +113,11 @@ run_test:                   ; ( timer cancel cancel_ms reason_ms reason -- )
 
 schedule_twice:             ; ( timer message target delay -- )
     roll -5                 ; k timer message target delay
-    push #nil               ; k timer message target delay ()
-    roll -4                 ; k timer () message target delay
-    pair 3                  ; k timer timer_msg=(delay target message)
-    dup 1                   ; k timer timer_msg timer_msg
-    pick 3                  ; k timer timer_msg timer_msg timer
-    send -1                 ; k timer timer_msg
-    roll 2                  ; k timer_msg timer
+    pair 2                  ; k timer timer_req=(delay target . message)
+    dup 1                   ; k timer timer_req timer_req
+    pick 3                  ; k timer timer_req timer_req timer
+    send -1                 ; k timer timer_req
+    roll 2                  ; k timer_req timer
     send -1                 ; k
     return
 

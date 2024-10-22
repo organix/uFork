@@ -204,11 +204,11 @@ run_test:                   ; ( timer referee cancel_ms time_limit delay_ms valu
     pick 2                  ; k timer cancel_ms canceller cancel_ms
     typeq #fixnum_t         ; k timer cancel_ms canceller fixnum(cancel_ms)
     if_not skip_cancel      ; k timer cancel_ms canceller
-    push #nil               ; k timer cancel_ms canceller ()
-    roll 2                  ; k timer cancel_ms () canceller
-    roll 3                  ; k timer () canceller cancel_ms
-    pair 2                  ; k timer (cancel_ms canceller)
-    roll 2                  ; k (cancel_ms canceller) timer
+    push #?                 ; k timer cancel_ms canceller msg=#?
+    roll 2                  ; k timer cancel_ms msg canceller
+    roll 3                  ; k timer msg canceller cancel_ms
+    pair 2                  ; k timer timer_req=(cancel_ms canceller . msg)
+    roll 2                  ; k timer_req timer
     send -1                 ; k
     return
 

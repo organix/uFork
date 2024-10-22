@@ -59,11 +59,12 @@ boot:                       ; () <- {caps}
     msg 0                   ; msg {caps}
     push debug_key          ; msg {caps} debug_key
     dict get                ; msg debug_dev
-    push 6000               ; msg debug_dev delay=6000
-    msg 0                   ; msg debug_dev delay {caps}
-    push timer_key          ; msg debug_dev delay {caps} timer_key
-    dict get                ; msg debug_dev delay timer_dev
-    send 3                  ; --
+    push 1000               ; msg debug_dev delay=1000
+    pair 2                  ; timer_req=(delay debug_dev . msg)
+    msg 0                   ; timer_req {caps}
+    push timer_key          ; timer_req {caps} timer_key
+    dict get                ; timer_req timer_dev
+    send -1                 ; --
 
     push #nil               ; ()
     push -3                 ; () -3

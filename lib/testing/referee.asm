@@ -62,8 +62,9 @@ referee_beh:                ; (judge timer probation . expected_msgs) <- msg
     push #t                 ; judge' result=#t
     pick 2                  ; judge' result judge'
     state 3                 ; judge' result judge' delay=probation
-    state 2                 ; judge' result judge' delay timer
-    send 3                  ; judge'
+    pair 2                  ; judge' timer_req=(delay judge' . result)
+    state 2                 ; judge' timer_req timer
+    send -1                 ; judge'
     state -4                ; judge' expected_msgs'
     state 3                 ; judge' expected_msgs' probation
     state 2                 ; judge' expected_msgs' probation timer
@@ -129,7 +130,7 @@ setup:
     pair 6                  ; ref timer timer referee_state
     push referee_beh        ; ref timer timer referee_state referee_beh
     new -1                  ; ref timer timer referee
-    call send_thrice        ; ref timer
+    call send_sequence      ; ref timer
 
 ; Expect 2 messages, but get three. FAIL in ~75ms.
 
@@ -143,7 +144,7 @@ setup:
     pair 5                  ; ref timer timer referee_state
     push referee_beh        ; ref timer timer referee_state referee_beh
     new -1                  ; ref timer timer referee
-    call send_thrice        ; ref timer
+    call send_sequence      ; ref timer
 
 ; Expect 1 message, get 3, but omit the timer. PASS in ~25ms.
 
@@ -156,7 +157,7 @@ setup:
     pair 4                  ; ref timer timer referee_state
     push referee_beh        ; ref timer timer referee_state referee_beh
     new -1                  ; ref timer timer referee
-    call send_thrice        ; ref timer
+    call send_sequence      ; ref timer
 
 ; Get the 3 expected messages. PASS in ~175ms
 
@@ -171,29 +172,35 @@ setup:
     pair 6                  ; ref timer timer referee_state
     push referee_beh        ; ref timer timer referee_state referee_beh
     new -1                  ; ref timer timer referee
-    call send_thrice        ; ref timer
+    call send_sequence      ; ref timer
     ref std.commit
 
 ; Sends three messages to the referee, a slight delay between each.
 
-send_thrice:                ; ( timer referee -- )
+send_spec:                  ; (msg delay msg delay ...)
+    pair_t 1
+    pair_t 25
+    pair_t 2
+    pair_t 50
+    pair_t 3
+    pair_t 75
+    ref #nil
+
+send_sequence:              ; ( timer referee -- )
     roll -3                 ; k timer referee
-    push 1                  ; k timer referee 1st=1
-    pick 2                  ; k timer referee 1st referee
-    push 25                 ; k timer referee 1st referee 25ms
-    pick 5                  ; k timer referee 1st referee 25ms timer
-    send 3                  ; k timer referee
-    push 2                  ; k timer referee 2nd=2
-    pick 2                  ; k timer referee 2nd referee
-    push 50                 ; k timer referee 2nd referee 50ms
-    pick 5                  ; k timer referee 2nd referee 50ms timer
-    send 3                  ; k timer referee
-    push 3                  ; k timer referee 3rd=3
-    pick 2                  ; k timer referee 3rd referee
-    push 75                 ; k timer referee 3rd referee 75ms
-    pick 5                  ; k timer referee 3rd referee 75ms timer
-    send 3                  ; k timer referee
-    drop 2                  ; k
+    push send_spec          ; k timer referee send_spec
+send_next:
+    dup 1                   ; k timer referee send_spec send_spec
+    if_not send_done        ; k timer referee send_spec
+    part 2                  ; k timer referee send_spec' delay msg
+    pick 4                  ; k timer referee send_spec' delay msg referee
+    roll 3                  ; k timer referee send_spec' msg referee delay
+    pair 2                  ; k timer referee send_spec' timer_req=(delay referee . msg)
+    pick 4                  ; k timer referee send_spec' timer_req timer
+    send -1                 ; k timer referee send_spec'
+    ref send_next
+send_done:                  ; k timer referee send_spec
+    drop 3                  ; k
     return
 
 .export

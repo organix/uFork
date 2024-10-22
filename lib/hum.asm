@@ -144,11 +144,12 @@ random_adapter_beh:         ; random_dev <- (cust . n)
     ref std.commit
 
 timer_adapter_beh:          ; timer_dev <- (dt msg . actor)
-    msg 2                   ; message=msg
-    msg -2                  ; message target=actor
-    msg 1                   ; message target delay=dt
-    state 0                 ; message target delay timer_dev
-    send 3                  ; --
+    msg 2                   ; msg
+    msg -2                  ; msg target=actor
+    msg 1                   ; msg target delay=dt
+    pair 2                  ; timer_req=(delay target . msg)
+    state 0                 ; timer_req timer_dev
+    send -1                 ; --
     ref std.commit
 
 prepare_env:                ; ( k -- env )
