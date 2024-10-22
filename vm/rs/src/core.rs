@@ -2381,15 +2381,17 @@ pub const T_DEV_BEH: Any = Any { raw: T_DEV_OFS as Raw };
         quad_rom[T_DEV_OFS+6]       = Quad::vm_push(Any::fix(13), Any::rom(T_DEV_OFS+7));  // 13
         quad_rom[T_DEV_OFS+7]       = Quad::vm_push(BLOB_IO_BEH, Any::rom(T_DEV_OFS+8));  // 13 BLOB_IO_BEH
         quad_rom[T_DEV_OFS+8]       = Quad::vm_new(ZERO, Any::rom(T_DEV_OFS+9));  // 13 BLOB_IO.()
-        quad_rom[T_DEV_OFS+9]       = Quad::vm_push(BLOB_DEV, Any::rom(T_DEV_OFS+10));  // 13 BLOB_IO BLOB_DEV
-        quad_rom[T_DEV_OFS+10]      = Quad::vm_send(PLUS_2, Any::rom(T_DEV_OFS+11));  // --
+        quad_rom[T_DEV_OFS+9]       = Quad::vm_pair(PLUS_1, Any::rom(T_DEV_OFS+10));  // (BLOB_IO . 13)
+        quad_rom[T_DEV_OFS+10]       = Quad::vm_push(BLOB_DEV, Any::rom(T_DEV_OFS+11));  // (BLOB_IO . 13) BLOB_DEV
+        quad_rom[T_DEV_OFS+11]      = Quad::vm_send(MINUS_1, Any::rom(T_DEV_OFS+12));  // --
 
-        quad_rom[T_DEV_OFS+11]      = Quad::vm_push(Any::fix(3), Any::rom(T_DEV_OFS+12));  // 3
-        quad_rom[T_DEV_OFS+12]      = Quad::vm_push(DEBUG_DEV, Any::rom(T_DEV_OFS+13));  // 3 DEBUG_DEV
-        quad_rom[T_DEV_OFS+13]      = Quad::vm_push(BLOB_DEV, Any::rom(T_DEV_OFS+14));  // 3 DEBUG_DEV BLOB_DEV
-        quad_rom[T_DEV_OFS+14]      = Quad::vm_send(PLUS_2, COMMIT);  // --
+        quad_rom[T_DEV_OFS+12]      = Quad::vm_push(Any::fix(3), Any::rom(T_DEV_OFS+13));  // 3
+        quad_rom[T_DEV_OFS+13]      = Quad::vm_push(DEBUG_DEV, Any::rom(T_DEV_OFS+14));  // 3 DEBUG_DEV
+        quad_rom[T_DEV_OFS+14]      = Quad::vm_pair(PLUS_1, Any::rom(T_DEV_OFS+15));  // (DEBUG_DEV . 3)
+        quad_rom[T_DEV_OFS+15]      = Quad::vm_push(BLOB_DEV, Any::rom(T_DEV_OFS+16));  // (DEBUG_DEV . 3) BLOB_DEV
+        quad_rom[T_DEV_OFS+16]      = Quad::vm_send(MINUS_1, COMMIT);  // --
 
-pub const BLOB_IO_OFS: usize = T_DEV_OFS+15;
+pub const BLOB_IO_OFS: usize = T_DEV_OFS+17;
 pub const BLOB_IO_BEH: Any = Any { raw: BLOB_IO_OFS as Raw };
         // () <- blob
         quad_rom[BLOB_IO_OFS+0]     = Quad::vm_msg(ZERO, Any::rom(BLOB_IO_OFS+1));  // blob

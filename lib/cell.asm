@@ -3,6 +3,7 @@
 ;;;
 
 .import
+    assert_eq: "./testing/assert_eq.asm"
     std: "./std.asm"
     fork: "./fork.asm"
 
@@ -137,19 +138,12 @@ check_CAS_beh:              ; (cell . expect) <- value
 check_read_beh:             ; expect <- cell
     push #nil               ; ()
     state 0                 ; () expect
-    push assert_eq_beh      ; () expect assert_eq_beh
+    push assert_eq.beh      ; () expect assert_eq_beh
     new -1                  ; () cust=assert_eq
     push read_tag           ; () cust #read
     pair 2                  ; (#read cust)
     msg 0                   ; (#read cust) cell
     send -1                 ; --
-    ref std.commit
-
-assert_eq_beh:              ; expect <- value
-    msg 0                   ; value
-    state 0                 ; value expect
-    cmp eq                  ; value==expect
-    assert #t               ; --
     ref std.commit
 
 test_overlap:               ; ( -- )
@@ -220,7 +214,7 @@ set_bit_done:
 cell_verify:                ; (cell . expect) <- _
     push #nil               ; ()
     state -1                ; () expect
-    push assert_eq_beh      ; () expect assert_eq_beh
+    push assert_eq.beh      ; () expect assert_eq_beh
     new -1                  ; () cust=assert_eq_beh.expect
     push read_tag           ; () cust tag=read_tag
     pair 2                  ; (#read cust)

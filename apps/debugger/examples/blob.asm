@@ -3,80 +3,49 @@
 ;
 
 .import
+    assert_eq: "https://ufork.org/lib/testing/assert_eq.asm"
     std: "https://ufork.org/lib/std.asm"
     dev: "https://ufork.org/lib/dev.asm"
 
-do_3:                       ; (debug_dev io_dev) <- blob
+do_13:                      ; _ <- blob
     msg 0                   ; blob
-    state 2                 ; blob io_dev
-    send -1                 ; --
-    state 1                 ; debug_dev
-    msg 0                   ; debug_dev blob
-    send 1                  ; --
-    ref std.commit
-
-do_13:                      ; (debug_dev io_dev) <- blob
-    msg 0                   ; blob
-    state 2                 ; blob io_dev
-    send -1                 ; --
-    msg 0                   ; blob
-    state 1                 ; blob debug_dev
-    push write_13           ; blob debug_dev write_13
-    beh 2                   ; --
-    push 42                 ; 42
-    push 7                  ; 42 7
-    my self                 ; 42 7 SELF
-    msg 0                   ; 42 7 SELF blob
-    send 3                  ; --
-    ref std.commit
-write_13:                   ; (debug_dev blob) <- ()
-    state 0                 ; (debug_dev blob)
-    push read_13            ; (debug_dev blob) read_13
+    push write_13           ; blob write_13
     beh -1                  ; --
+    push 42                 ; value=42
+    push 7                  ; value offset=7
+    my self                 ; value offset SELF
+    pair 2                  ; write_req=(SELF offset . value)
+    msg 0                   ; write_req blob
+    send -1                 ; --
+    ref std.commit
+write_13:                   ; blob <- ok
+    msg 0                   ; ok
+    assert #t               ; --
     push 7                  ; 7
     my self                 ; 7 SELF
-    state 2                 ; 7 SELF blob
-    send 2                  ; --
-    msg 0                   ; msg
-    assert #nil             ; --
+    pair 1                  ; read_req=(SELF . 7)
+    state 0                 ; read_req blob
+    send -1                 ; --
+    push 42                 ; expect=42
+    push assert_eq.beh      ; expect assert_eq_beh
+    beh -1                  ; --
     ref std.commit
-read_13:                    ; (debug_dev blob) <- byte
-    msg 0                   ; byte
-    state 1                 ; byte debug_dev
-    ref std.send_msg
 
 boot_0:                     ; () <- {caps}
     push 13                 ; 13
-    msg 0                   ; 13 {caps}
-    push dev.io_key         ; 13 {caps} io_key
-    dict get                ; 13 io_dev
-    msg 0                   ; 13 io_dev {caps}
-    push dev.debug_key      ; 13 io_dev {caps} debug_key
-    dict get                ; 13 io_dev debug_dev
-    push do_13              ; 13 io_dev debug_dev do_13
-    new 2                   ; 13 do_13.(debug_dev io_dev)
-    msg 0                   ; 13 do_13 {caps}
-    push dev.blob_key       ; 13 do_13 {caps} blob_key
-    dict get                ; 13 do_13 blob_dev
-    send 2                  ; --
-
-    push 3                  ; 3
-    msg 0                   ; 3 {caps}
-    push dev.io_key         ; 3 {caps} io_key
-    dict get                ; 3 io_dev
-    msg 0                   ; 3 io_dev {caps}
-    push dev.debug_key      ; 3 io_dev {caps} debug_key
-    dict get                ; 3 io_dev debug_dev
-    push do_3               ; 3 io_dev debug_dev do_3
-    new 2                   ; 3 do_3.(debug_dev io_dev)
-    msg 0                   ; 3 do_3 {caps}
-    push dev.blob_key       ; 3 do_3 {caps} blob_key
-    dict get                ; 3 do_3 blob_dev
-    send 2                  ; --
+    push #?                 ; 13 #?
+    push do_13              ; 13 #? do_13
+    new -1                  ; 13 alloc_k=do_13.#?
+    pair 1                  ; alloc_req=(alloc_k . 13)
+    msg 0                   ; alloc_req {caps}
+    push dev.blob_key       ; alloc_req {caps} blob_key
+    dict get                ; alloc_req blob_dev
+    send -1                 ; --
+    ref std.commit
 
 boot:                       ; () <- {caps}
     dup 0                   ; no-op
-;    ref boot_0          ; redirect to `boot_0` behavior
+    ; ref boot_0              ; redirect to `boot_0` behavior
 
 step_0:
     msg 0                   ; {caps}
@@ -93,8 +62,9 @@ step_0:
 step_1:                     ; (blob_dev debug_dev) <- ()
     push 7                  ; 7
     my self                 ; 7 SELF
-    state 1                 ; 7 SELF blob_dev
-    send 2                  ; --
+    pair 1                  ; alloc_req=(SELF . 7)
+    state 1                 ; alloc_req blob_dev
+    send -1                 ; --
     my state                ; debug_dev blob_dev
     push step_2             ; debug_dev blob_dev step_2
     beh 2                   ; --
@@ -103,8 +73,9 @@ step_1:                     ; (blob_dev debug_dev) <- ()
 step_2:                     ; (blob_dev debug_dev) <- blob_1
     push 5                  ; 5
     my self                 ; 5 SELF
-    state 1                 ; 5 SELF blob_dev
-    send 2                  ; --
+    pair 1                  ; alloc_req=(SELF . 5)
+    state 1                 ; alloc_req blob_dev
+    send -1                 ; --
     msg 0                   ; blob_1
     my state                ; blob_1 debug_dev blob_dev
     push step_3             ; blob_1 debug_dev blob_dev step_3
@@ -114,8 +85,9 @@ step_2:                     ; (blob_dev debug_dev) <- blob_1
 step_3:                     ; (blob_dev debug_dev blob_1) <- blob_2
     push 3                  ; 3
     my self                 ; 3 SELF
-    state 1                 ; 3 SELF blob_dev
-    send 2                  ; --
+    pair 1                  ; alloc_req=(SELF . 3)
+    state 1                 ; alloc_req blob_dev
+    send -1                 ; --
     msg 0                   ; blob_2
     my state                ; blob_2 blob_1 debug_dev blob_dev
     push step_4             ; blob_2 blob_1 debug_dev blob_dev step_4

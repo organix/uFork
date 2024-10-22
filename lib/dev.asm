@@ -41,14 +41,17 @@ boot:                       ; () <- {caps}
     push blob_key           ; io_dev {caps} blob_key
     dict get                ; io_dev blob_dev
 
-    dup 2                   ; io_dev blob_dev io_dev blob_dev
-    push 13                 ; io_dev blob_dev io_dev blob_dev 13
-    roll -3                 ; io_dev blob_dev 13 io_dev blob_dev
-    send 2                  ; io_dev blob_dev
-
-    push 3                  ; io_dev blob_dev 3
-    roll -3                 ; 3 io_dev blob_dev
-    send 2                  ; --
+    push 13                 ; io_dev blob_dev size=13
+    pick 3                  ; io_dev blob_dev size io_dev
+    pair 1                  ; io_dev blob_dev alloc_req=(io_dev . size)
+    pick 2                  ; io_dev blob_dev alloc_req blob_dev
+    send -1                 ; io_dev blob_dev
+    push 13                 ; io_dev blob_dev size=3
+    pick 3                  ; io_dev blob_dev size io_dev
+    pair 1                  ; io_dev blob_dev alloc_req=(io_dev . size)
+    pick 2                  ; io_dev blob_dev alloc_req blob_dev
+    send -1                 ; io_dev blob_dev
+    drop 2                  ; --
 
     push 5                  ; 5
     push count              ; 5 count
