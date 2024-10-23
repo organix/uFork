@@ -64,7 +64,7 @@ lambda:                     ; (var . body) <- (cust . env)
     msg -1                  ; (var . body) env
     pair 1                  ; (env var . body)
     push closure            ; (env var . body) closure
-    new -1                  ; closure.(env var . body)
+    actor create            ; closure.(env var . body)
     ref std.cust_send
 
 ; Application expressions apply a function to the result
@@ -80,9 +80,9 @@ application:                ; (lambda . param) <- (cust . env)
     state -1                ; env (cust . env) param
     pair 1                  ; env (param cust . env)
     push applicative        ; env (param cust . env) applicative
-    new -1                  ; env appl=applicative.(param cust . env)
+    actor create            ; env appl=applicative.(param cust . env)
     pair 1                  ; (appl . env)
-    state 1                 ; lambda
+    state 1                 ; (appl . env) lambda
     ref std.send_msg
 
 ;;  DEF applicative(param, cust, env) AS \closure.[
@@ -94,7 +94,7 @@ applicative:                ; (param cust . env) <- closure
     msg 0                   ; (cust . env) closure
     pair 1                  ; (closure cust . env)
     push operative          ; (closure cust . env) operative
-    beh -1                  ; --
+    actor become            ; --
     state -2                ; env
     my self                 ; env SELF
     pair 1                  ; (SELF . env)
@@ -123,7 +123,7 @@ closure:                    ; (env var . body) <- (arg cust . _)
     dict add                ; next {var:value}
     pair 1                  ; ({var:value} . next)
     push binding            ; ({var:value} . next) binding
-    new -1                  ; env'=binding.({var:value} . next)
+    actor create            ; env'=binding.({var:value} . next)
     msg 2                   ; env' cust
     pair 1                  ; (cust . env')
     state -2                ; (cust . env') body
@@ -159,12 +159,12 @@ test_const:                 ; _ <- _
 
     push 42                 ; env 42
     push assert_beh         ; env 42 assert_beh
-    new -1                  ; env cust=assert_beh.42
+    actor create            ; env cust=assert_beh.42
     pair 1                  ; (cust . env)
 
     push 42                 ; (cust . env) 42
     push constant           ; (cust . env) 42 constant
-    new -1                  ; (cust . env) constant.42
+    actor create            ; (cust . env) constant.42
     ref std.send_msg
 
 ; eval[x, {x:13}] => 13
