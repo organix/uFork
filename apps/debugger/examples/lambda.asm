@@ -3,6 +3,7 @@
 ;;;
 
 .import
+    assert_eq: "https://ufork.org/lib/testing/assert_eq.asm"
     std: "https://ufork.org/lib/std.asm"
 
 ; Constant values do not depend on the environment.
@@ -130,49 +131,26 @@ closure:                    ; (env var . body) <- (arg cust . _)
     ref std.send_msg
 
 ; unit test suite
-boot:                       ; _ <- {caps}
-    push #?                 ; #?
-    push #?                 ; #? #?
-    push test_const         ; #? #? test_const
-    actor create            ; #? test_const.#?
-    actor send              ; --
-
-    push #?                 ; #?
-    push #?                 ; #? #?
-    push test_var           ; #? #? test_var
-    actor create            ; #? test_var.#?
-    actor send              ; --
-
-    push #?                 ; #?
-    push #?                 ; #? #?
-    push test_identity      ; #? #? test_identity
-    actor create            ; #? test_identity.#?
-    actor send              ; --
-
-    ref std.commit
-
-; eval[42, {}] => 42
-test_const:                 ; _ <- _
+boot:                       ; () <- {caps}
+    ; test const
+    ; eval[42, {}] => 42
     push #?                 ; #?
     push empty_env          ; #? empty_env
     actor create            ; env=empty_env.#?
-
     push 42                 ; env 42
-    push assert_beh         ; env 42 assert_beh
-    actor create            ; env cust=assert_beh.42
+    push assert_eq.beh      ; env 42 assert_eq_beh
+    actor create            ; env cust=assert_eq_beh.42
     pair 1                  ; (cust . env)
-
     push 42                 ; (cust . env) 42
     push constant           ; (cust . env) 42 constant
     actor create            ; (cust . env) constant.42
-    ref std.send_msg
+    actor send              ; --
 
-; eval[x, {x:13}] => 13
-test_var:                   ; _ <- _
+    ; test var
+    ; eval[x, {x:13}] => 13
     push #?                 ; #?
     push empty_env          ; #? empty_env
-    actor create            ; env=empty_env.#?
-
+    actor create            ; next=empty_env.#?
     push #nil               ; next ()
     push #?                 ; next () #?
     push variable           ; next () #? variable
@@ -184,26 +162,22 @@ test_var:                   ; _ <- _
     pair 1                  ; var ({var:value} . next)
     push binding            ; var ({var:value} . next) binding
     actor create            ; var env=binding.({var:value} . next)
-
     push 13                 ; var env 13
-    push assert_beh         ; var env 13 assert_beh
-    actor create            ; var env cust=assert_beh.13
+    push assert_eq.beh      ; var env 13 assert_eq_beh
+    actor create            ; var env cust=assert_eq_beh.13
     pair 1                  ; var (cust . env)
-
     roll 2                  ; (cust . env) var
-    ref std.send_msg
+    actor send              ; --
 
-; eval[(\x.x)(-77), {}] => -77
-test_identity:
+    ; test identity
+    ; eval[(\x.x)(-77), {}] => -77
     push #?                 ; #?
     push empty_env          ; #? empty_env
     actor create            ; env=empty_env.#?
-
     push -77                ; env -77
-    push assert_beh         ; env -77 assert_beh
-    actor create            ; env cust=assert_beh.-77
+    push assert_eq.beh      ; env -77 assert_eq_beh
+    actor create            ; env cust=assert_eq_beh.-77
     pair 1                  ; (cust . env)
-
     push #?                 ; (cust . env) #?
     push variable           ; (cust . env) #? variable
     actor create            ; (cust . env) _x_=variable.#?
@@ -211,7 +185,6 @@ test_identity:
     pair 1                  ; (cust . env) (_x_ . _x_)
     push lambda             ; (cust . env) (_x_ . _x_) lambda
     actor create            ; (cust . env) lambda.(_x_ . _x_)
-
     push -77                ; (cust . env) lambda -77
     push constant           ; (cust . env) lambda -77 constant
     actor create            ; (cust . env) lambda param=constant.-77
@@ -219,13 +192,7 @@ test_identity:
     pair 1                  ; (cust . env) (lambda . param)
     push application        ; (cust . env) (lambda . param) application
     actor create            ; (cust . env) application.(lambda . param)
-    ref std.send_msg
-
-assert_beh:                 ; expect <- actual
-    state 0                 ; expect
-    msg 0                   ; expect actual
-    cmp eq                  ; expect==actual
-    assert #t               ; assert(expect==actual)
+    actor send              ; --
     ref std.commit
 
 ;;  #
