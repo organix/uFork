@@ -15,8 +15,8 @@ constant:                   ; value <- (cust . _)
 ; Variables represent values in an expression
 ; that are dependent on the evaluation environment.
 
-;;  DEF variable() AS \(cust, env).[ SEND (cust, SELF) TO env ]
-variable:                   ; () <- (cust . env)
+;;  DEF variable AS \(cust, env).[ SEND (cust, SELF) TO env ]
+variable:                   ; _ <- (cust . env)
     my self                 ; SELF
     msg 1                   ; SELF cust
     pair 1                  ; (cust . SELF)
@@ -27,8 +27,8 @@ variable:                   ; () <- (cust . env)
 ; The empty environment has no bindings,
 ; so any attempted lookup yields "undefined".
 
-;;  DEF empty_env() AS \(cust, _).[ SEND #? TO cust ]
-empty_env:                  ; () <- (cust . _)
+;;  DEF empty_env AS \(cust, _).[ SEND #? TO cust ]
+empty_env:                  ; _ <- (cust . _)
     ref std.rv_undef
 
 ; A binding is a mapping from a variable to a value.
@@ -130,22 +130,32 @@ closure:                    ; (env var . body) <- (arg cust . _)
     ref std.send_msg
 
 ; unit test suite
-boot:                       ; () <- {caps}
-    push test_const         ; test_const
-    new 0                   ; test_const.()
-    send 0                  ; --
-    push test_var           ; test_var
-    new 0                   ; test_var.()
-    send 0                  ; --
-    push test_identity      ; test_identity
-    new 0                   ; test_identity.()
-    send 0                  ; --
+boot:                       ; _ <- {caps}
+    push #?                 ; #?
+    push #?                 ; #? #?
+    push test_const         ; #? #? test_const
+    actor create            ; #? test_const.#?
+    actor send              ; --
+
+    push #?                 ; #?
+    push #?                 ; #? #?
+    push test_var           ; #? #? test_var
+    actor create            ; #? test_var.#?
+    actor send              ; --
+
+    push #?                 ; #?
+    push #?                 ; #? #?
+    push test_identity      ; #? #? test_identity
+    actor create            ; #? test_identity.#?
+    actor send              ; --
+
     ref std.commit
 
 ; eval[42, {}] => 42
-test_const:                 ; () <- ()
-    push empty_env          ; empty_env
-    new 0                   ; env=empty_env.()
+test_const:                 ; _ <- _
+    push #?                 ; #?
+    push empty_env          ; #? empty_env
+    actor create            ; env=empty_env.#?
 
     push 42                 ; env 42
     push assert_beh         ; env 42 assert_beh
@@ -158,24 +168,26 @@ test_const:                 ; () <- ()
     ref std.send_msg
 
 ; eval[x, {x:13}] => 13
-test_var:                   ; () <- ()
-    push empty_env          ; empty_env
-    new 0                   ; next=empty_env.()
+test_var:                   ; _ <- _
+    push #?                 ; #?
+    push empty_env          ; #? empty_env
+    actor create            ; env=empty_env.#?
 
     push #nil               ; next ()
-    push variable           ; next () variable
-    new 0                   ; next () var=variable.()
+    push #?                 ; next () #?
+    push variable           ; next () #? variable
+    actor create            ; next () var=variable.#?
     dup 1                   ; next () var var
     roll -4                 ; var next () var
     push 13                 ; var next () var value=13
     dict add                ; var next {var:value}
     pair 1                  ; var ({var:value} . next)
     push binding            ; var ({var:value} . next) binding
-    new -1                  ; var env=binding.({var:value} . next)
+    actor create            ; var env=binding.({var:value} . next)
 
     push 13                 ; var env 13
     push assert_beh         ; var env 13 assert_beh
-    new -1                  ; var env cust=assert_beh.13
+    actor create            ; var env cust=assert_beh.13
     pair 1                  ; var (cust . env)
 
     roll 2                  ; (cust . env) var
@@ -183,28 +195,30 @@ test_var:                   ; () <- ()
 
 ; eval[(\x.x)(-77), {}] => -77
 test_identity:
-    push empty_env          ; empty_env
-    new 0                   ; env=empty_env.()
+    push #?                 ; #?
+    push empty_env          ; #? empty_env
+    actor create            ; env=empty_env.#?
 
     push -77                ; env -77
     push assert_beh         ; env -77 assert_beh
-    new -1                  ; env cust=assert_beh.-77
+    actor create            ; env cust=assert_beh.-77
     pair 1                  ; (cust . env)
 
-    push variable           ; (cust . env) variable
-    new 0                   ; (cust . env) _x_=variable.()
+    push #?                 ; (cust . env) #?
+    push variable           ; (cust . env) #? variable
+    actor create            ; (cust . env) _x_=variable.#?
     dup 1                   ; (cust . env) _x_ _x_
     pair 1                  ; (cust . env) (_x_ . _x_)
     push lambda             ; (cust . env) (_x_ . _x_) lambda
-    new -1                  ; (cust . env) lambda.(_x_ . _x_)
+    actor create            ; (cust . env) lambda.(_x_ . _x_)
 
     push -77                ; (cust . env) lambda -77
     push constant           ; (cust . env) lambda -77 constant
-    new -1                  ; (cust . env) lambda param=constant.-77
+    actor create            ; (cust . env) lambda param=constant.-77
     roll 2                  ; (cust . env) param lambda
     pair 1                  ; (cust . env) (lambda . param)
     push application        ; (cust . env) (lambda . param) application
-    new -1                  ; (cust . env) application.(lambda . param)
+    actor create            ; (cust . env) application.(lambda . param)
     ref std.send_msg
 
 assert_beh:                 ; expect <- actual
