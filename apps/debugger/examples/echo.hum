@@ -7,7 +7,7 @@ DEF is_number(n) AS not(eq(neg(n), ?))
 DEF strout_beh(cust, out, str) AS \result.[
     CASE str OF
     (first, rest) : [
-        SEND (?, SELF, first, NIL) TO out       # output character
+        SEND (?, SELF, first) TO out            # output character
         BECOME strout_beh(cust, out, rest)
     ]
     _ : [ SEND result TO cust ]
@@ -15,16 +15,16 @@ DEF strout_beh(cust, out, str) AS \result.[
 ]
 CREATE say_hello WITH strout_beh(println, stdio,
     'H', 'e', 'l', 'l', 'o', '\n', NIL)
-SEND (TRUE, NIL) TO say_hello
+SEND (TRUE, ?) TO say_hello
 
 DEF echo_beh(io) AS \(ok, char).[
     CASE is_number(char) OF
-    TRUE : [ SEND (?, SELF, char, NIL) TO io ]  # output character
-    _ : [ SEND (?, SELF, NIL) TO io ]           # input character
+    TRUE : [ SEND (?, SELF, char) TO io ]       # output character
+    _ : [ SEND (?, SELF, ?) TO io ]             # input character
     END
 ]
 CREATE echo WITH echo_beh(stdio)
-SEND (?, echo, NIL) TO stdio                    # input character
+SEND (?, echo, ?) TO stdio                      # input character
 
 # Documentation for the standard i/o device can be found at
 # https://github.com/organix/uFork/blob/main/docs/io_dev.md

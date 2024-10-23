@@ -17,7 +17,7 @@ function svg_dev(core, make_ddev, on_draw) {
         if (!core.u_is_cap(callback)) {
             return ufork.E_NOT_CAP;
         }
-        const code = core.u_nth(msg, 3);
+        const code = core.u_nth(msg, -2);
         if (!core.u_is_fix(code)) {
             return ufork.E_NOT_FIX;
         }
@@ -31,7 +31,7 @@ function svg_dev(core, make_ddev, on_draw) {
                 y: core.h_reserve_ram({
                     t: ufork.PAIR_T,
                     x: ufork.TRUE_RAW,
-                    y: ufork.NIL_RAW
+                    y: ufork.UNDEF_RAW
                 })
             }));
             core.h_wakeup(ufork.HOST_DEV_OFS);

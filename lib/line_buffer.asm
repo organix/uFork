@@ -13,10 +13,12 @@ in_beh:                     ; (cust io_dev . line) <- result
     if_not std.commit       ; char
 
     ; request next char
-    my self                 ; char callback=SELF
-    push #?                 ; char callback to_cancel=#?
-    state 2                 ; char callback to_cancel io_dev
-    send 2                  ; char
+    push #?                 ; char input=#?
+    my self                 ; char input callback=SELF
+    push #?                 ; char input callback to_cancel=#?
+    pair 2                  ; io_req=(to_cancel callback . input)
+    state 2                 ; io_req io_dev
+    send -1                 ; char
 
     ; add char to line
     state -2                ; char line
@@ -60,8 +62,9 @@ out_snd:                    ; io_dev line' char
     ; send char to output
     my self                 ; io_dev line' char callback=SELF
     push #?                 ; io_dev line' char callback to_cancel=#?
-    pick 5                  ; io_dev line' char callback to_cancel io_dev
-    send 3                  ; io_dev line'
+    pair 2                  ; io_dev line' io_req=(to_cancel callback . char)
+    pick 3                  ; io_dev line' io_req io_dev
+    send -1                 ; io_dev line'
 
     ; line empty?
     dup 1                   ; io_dev line' line'
@@ -134,8 +137,9 @@ out_chr:                    ; --
     ; send char to output
     my self                 ; line char callback=SELF
     push #?                 ; line char callback to_cancel=#?
-    state 1                 ; line char callback to_cancel io_dev
-    send 3                  ; line
+    pair 2                  ; line io_req=(to_cancel callback . char)
+    state 1                 ; line io_req io_dev
+    send -1                 ; line
 
     ; line empty?
     dup 1                   ; line line
@@ -170,15 +174,17 @@ out_more:                   ; lines line
     ref std.commit
 
 in_demo:                    ; io_dev debug_dev
-    deque new               ; io_dev debug_dev line
-    pick 3                  ; io_dev debug_dev line io_dev
-    pick 3                  ; io_dev debug_dev line io_dev cust=debug_dev
-    pair 2                  ; io_dev debug_dev (cust io_dev . line)
-    push in_beh             ; io_dev debug_dev (cust io_dev . line) in_beh
-    new -1                  ; io_dev debug_dev in=in_beh.(cust io_dev . line)
-    push #?                 ; io_dev debug_dev callback=in to_cancel=#?
-    pick 4                  ; io_dev debug_dev callback to_cancel io_dev
-    send 2                  ; io_dev debug_dev
+    push #?                 ; io_dev debug_dev input=#?
+    deque new               ; io_dev debug_dev input line
+    pick 4                  ; io_dev debug_dev input line io_dev
+    pick 4                  ; io_dev debug_dev input line io_dev cust=debug_dev
+    pair 2                  ; io_dev debug_dev input (cust io_dev . line)
+    push in_beh             ; io_dev debug_dev input (cust io_dev . line) in_beh
+    new -1                  ; io_dev debug_dev input callback=in_beh.(cust io_dev . line)
+    push #?                 ; io_dev debug_dev input callback to_cancel=#?
+    pair 2                  ; io_dev debug_dev io_req=(to_cancel callback . input)
+    pick 3                  ; io_dev debug_dev io_req io_dev
+    send -1                 ; io_dev debug_dev
     ref std.commit
 
 out_demo:                   ; io_dev debug_dev
@@ -197,18 +203,20 @@ out_demo:                   ; io_dev debug_dev
     ref std.commit
 
 in_out_demo:                ; io_dev debug_dev
-    pick 2                  ; io_dev debug_dev io_dev
-    push out_beh            ; io_dev debug_dev io_dev out_beh
-    new -1                  ; io_dev debug_dev out=out_beh.io_dev
-    deque new               ; io_dev debug_dev out line
-    pick 4                  ; io_dev debug_dev out line io_dev
-    roll 3                  ; io_dev debug_dev line io_dev cust=out
-    pair 2                  ; io_dev debug_dev (cust io_dev . line)
-    push in_beh             ; io_dev debug_dev (cust io_dev . line) in_beh
-    new -1                  ; io_dev debug_dev in=in_beh.(cust io_dev . line)
-    push #?                 ; io_dev debug_dev callback=in to_cancel=#?
-    pick 4                  ; io_dev debug_dev callback to_cancel io_dev
-    send 2                  ; io_dev debug_dev
+    push #?                 ; io_dev debug_dev input=#?
+    pick 3                  ; io_dev debug_dev input io_dev
+    push out_beh            ; io_dev debug_dev input io_dev out_beh
+    new -1                  ; io_dev debug_dev input out=out_beh.io_dev
+    deque new               ; io_dev debug_dev input out line
+    pick 5                  ; io_dev debug_dev input out line io_dev
+    roll 3                  ; io_dev debug_dev input line io_dev cust=out
+    pair 2                  ; io_dev debug_dev input (cust io_dev . line)
+    push in_beh             ; io_dev debug_dev input (cust io_dev . line) in_beh
+    new -1                  ; io_dev debug_dev input callback=in_beh.(cust io_dev . line)
+    push #?                 ; io_dev debug_dev input callback to_cancel=#?
+    pair 2                  ; io_dev debug_dev io_req=(to_cancel callback . input)
+    pick 3                  ; io_dev debug_dev io_req io_dev
+    send -1                 ; io_dev debug_dev
     ref std.commit
 
 boot:                       ; () <- {caps}
@@ -218,8 +226,8 @@ boot:                       ; () <- {caps}
     msg 0                   ; io_dev {caps}
     push dev.debug_key      ; io_dev {caps} debug_key
     dict get                ; io_dev debug_dev
-;     ref in_demo
-;     ref out_demo
+    ; ref in_demo
+    ; ref out_demo
     ref in_out_demo
 
 .export

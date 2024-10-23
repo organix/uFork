@@ -126,7 +126,7 @@ impl Device for IoDevice {
         let event = core.mem(ep);
         let sponsor = event.t();
         let dev = event.x();
-        let msg = event.y();  // blob | (to_cancel callback) | (to_cancel callback fixnum)
+        let msg = event.y();  // blob | (to_cancel callback . #?) | (to_cancel callback . fixnum)
         if msg.is_cap() {  // blob
             let buf = core.blob_buffer();
             let base = buf.as_ptr();
@@ -147,8 +147,8 @@ impl Device for IoDevice {
             if !callback.is_cap() {
                 return Err(E_NOT_CAP);
             }
-            let data = core.nth(msg, PLUS_3);
-            if data == UNDEF {  // (to_cancel callback)
+            let data = core.nth(msg, MINUS_2);
+            if data == UNDEF {  // (to_cancel callback . #?)
                 // read request
                 let evt = core.reserve_event(sponsor, callback, UNDEF)?;
                 let stub = core.reserve_stub(dev, evt)?;
@@ -160,11 +160,11 @@ impl Device for IoDevice {
                     core.event_enqueue(evt);
                     core.release_stub(stub);
                 }
-            } else if data.is_fix() {  // (to_cancel callback fixnum)
+            } else if data.is_fix() {  // (to_cancel callback . fixnum)
                 // write request
                 (self.write)(data);
                 // in the current implementation, `write` is synchronous, so we reply immediately
-                let result = core.reserve(&Quad::pair_t(TRUE, NIL))?;  // (#t)
+                let result = core.reserve(&Quad::pair_t(TRUE, UNDEF))?;  // (#t . #?)
                 let evt = core.reserve_event(sponsor, callback, result)?;
                 core.event_enqueue(evt);
             }

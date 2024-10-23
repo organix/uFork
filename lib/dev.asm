@@ -84,19 +84,22 @@ boot:                       ; () <- {caps}
     push std.sink_beh       ; char sink_beh
     new 0                   ; char callback=sink.()
     push #?                 ; char callback to_cancel=#?
-    msg 0                   ; char callback to_cancel {caps}
-    push io_key             ; char callback to_cancel {caps} io_key
-    dict get                ; char callback to_cancel io_dev
-    send 3                  ; --
+    pair 2                  ; io_req=(to_cancel callback . char)
+    msg 0                   ; io_req {caps}
+    push io_key             ; io_req {caps} io_key
+    dict get                ; io_req io_dev
+    send -1                 ; --
 
-    msg 0                   ; {caps}
-    push debug_key          ; {caps} debug_key
-    dict get                ; callback=debug_dev
-    push #?                 ; callback to_cancel=#?
-    msg 0                   ; callback to_cancel {caps}
-    push io_key             ; callback to_cancel {caps} io_key
-    dict get                ; callback to_cancel io_dev
-    send 2                  ; --
+    push #?                 ; input=#?
+    msg 0                   ; input {caps}
+    push debug_key          ; input {caps} debug_key
+    dict get                ; input callback=debug_dev
+    push #?                 ; input callback to_cancel=#?
+    pair 2                  ; io_req=(to_cancel callback . input)
+    msg 0                   ; io_req {caps}
+    push io_key             ; io_req {caps} io_key
+    dict get                ; io_req io_dev
+    send -1                 ; --
 
     push 40                 ; b=40
     push -40                ; b a=-40

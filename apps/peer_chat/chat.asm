@@ -151,9 +151,12 @@ intro_cb:
     new -1                  ; callback=line_in_beh.(cust io_dev . line)
 
     ; register read callback
-    push #?                 ; callback to_cancel=#?
-    state 2                 ; callback to_cancel io_dev
-    send 2                  ; --
+    push #?                 ; callback input=#?
+    roll 2                  ; input callback
+    push #?                 ; input callback to_cancel=#?
+    pair 2                  ; io_req=(to_cancel callback . input)
+    state 2                 ; io_req io_dev
+    send -1                 ; --
 
     ref std.commit
 

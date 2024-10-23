@@ -125,8 +125,9 @@ str_out:                    ; (cb out . str) <- result
     roll 3                  ; rest out cb code=first
     my self                 ; rest out cb code callback=SELF
     push #?                 ; rest out cb code callback to_cancel=#?
-    state 2                 ; rest out cb code callback to_cancel out
-    send 3                  ; rest out cb
+    pair 2                  ; rest out cb req=(to_cancel callback . code)
+    state 2                 ; rest out cb req out
+    send -1                 ; rest out cb
     pair 2                  ; (cb out . rest)
     push str_out            ; (cb out . str=rest) str_out
     beh -1                  ; --
