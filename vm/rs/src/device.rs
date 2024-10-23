@@ -303,7 +303,7 @@ fn blob_read(core: &Core, handle: Any, ofs: Any) -> Result<Any, Error> {
     let len = get_u16(core, base - 4);
     let ofs = ofs.get_fix()? as usize;
     if ofs >= len {
-        return Err(E_BOUNDS);  // bad handle
+        return Ok(UNDEF);  // out-of-bound
     }
     let byte = core.blob_read(base + ofs);
     Ok(Any::fix(byte as isize))
@@ -318,7 +318,7 @@ fn blob_write(core: &mut Core, handle: Any, ofs: Any, val: Any) -> Result<Any, E
     let len = get_u16(core, base - 4);
     let ofs = ofs.get_fix()? as usize;
     if ofs >= len {
-        return Ok(FALSE);
+        return Ok(FALSE);  // out-of-bound
     }
     let byte = val.get_fix()? as u8;
     core.blob_write(base + ofs, byte);
