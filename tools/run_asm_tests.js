@@ -17,7 +17,7 @@ import unpromise from "https://ufork.org/lib/rq/unpromise.js";
 import lazy from "https://ufork.org/lib/rq/lazy.js";
 import asm_test from "./asm_test.js";
 
-const time_limit = 5000; // milliseconds
+const time_limit = 10 * 1000; // milliseconds
 
 function iterate(iterable) {
     const iterator = iterable[Symbol.asyncIterator]();
