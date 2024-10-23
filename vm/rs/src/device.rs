@@ -283,7 +283,7 @@ fn blob_release(core: &mut Core, handle: Any) -> Result<(), Error> {
     }
     Ok(())
 }
-fn blob_size(core: &Core, handle: Any) -> Result<Any, Error> {
+fn blob_dims(core: &Core, handle: Any) -> Result<(usize, usize), Error> {
     let pos = handle.get_fix()?;
     let top = core.blob_top().get_fix()?;
     if (pos < 5) || (pos >= top) {
@@ -291,38 +291,42 @@ fn blob_size(core: &Core, handle: Any) -> Result<Any, Error> {
     }
     let base = pos as usize;
     let len = get_u16(core, base - 4);
+    Ok((base, len))
+}
+fn blob_size(core: &Core, handle: Any) -> Result<Any, Error> {
+    let (_base, len) = blob_dims(core, handle)?;
     Ok(Any::fix(len as isize))
 }
 fn blob_read(core: &Core, handle: Any, ofs: Any) -> Result<Any, Error> {
-    let pos = handle.get_fix()?;
-    let top = core.blob_top().get_fix()?;
-    if (pos < 5) || (pos >= top) {
-        return Err(E_BOUNDS);  // bad handle
+    let (base, len) = blob_dims(core, handle)?;
+    match ofs.fix_num() {
+        Some(idx) => {
+            let ofs = idx as usize;
+            if ofs < len {
+                let byte = core.blob_read(base + ofs);
+                Ok(Any::fix(byte as isize))
+            } else {
+                Ok(UNDEF)  // out-of-bounds
+            }
+        },
+        None => Ok(UNDEF),  // fixnum expected
     }
-    let base = pos as usize;
-    let len = get_u16(core, base - 4);
-    let ofs = ofs.get_fix()? as usize;
-    if ofs >= len {
-        return Ok(UNDEF);  // out-of-bound
-    }
-    let byte = core.blob_read(base + ofs);
-    Ok(Any::fix(byte as isize))
 }
 fn blob_write(core: &mut Core, handle: Any, ofs: Any, val: Any) -> Result<Any, Error> {
-    let pos = handle.get_fix()?;
-    let top = core.blob_top().get_fix()?;
-    if (pos < 5) || (pos >= top) {
-        return Err(E_BOUNDS);
+    let (base, len) = blob_dims(core, handle)?;
+    match (ofs.fix_num(), val.fix_num()) {
+        (Some(idx), Some(dat)) => {
+            let ofs = idx as usize;
+            if ofs < len {
+                let byte = dat as u8;
+                core.blob_write(base + ofs, byte);
+                Ok(TRUE)
+            } else {
+                Ok(FALSE)  // out-of-bounds
+            }
+        },
+        _ => Ok(UNDEF),  // bad parameters
     }
-    let base = pos as usize;
-    let len = get_u16(core, base - 4);
-    let ofs = ofs.get_fix()? as usize;
-    if ofs >= len {
-        return Ok(FALSE);  // out-of-bound
-    }
-    let byte = val.get_fix()? as u8;
-    core.blob_write(base + ofs, byte);
-    Ok(TRUE)
 }
 
 pub struct BlobDevice {
