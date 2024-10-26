@@ -4,7 +4,7 @@ use ::core::cell::RefCell;
 
 pub mod host;
 
-use ufork::{any::Any, quad::Quad, Error, Raw};
+use ufork::{core::Core, any::Any, quad::Quad, Error, Raw};
 
 use crate::host::*;
 
@@ -55,6 +55,15 @@ pub fn trace_event(ep: Any, _kp: Any) {
     let _ = ep; // place a breakpoint on this assignment
 }
 
+/* per Kevin Reid */
+/*
+struct GlobalHost(RefCell<Host>);
+unsafe impl Sync for GlobalHost {}
+fn the_host() -> &'static RefCell<Host> {
+     static THE_HOST: GlobalHost = GlobalHost(RefCell::new(Host::new()));
+    &THE_HOST.0
+}
+*/
 unsafe fn the_host() -> &'static RefCell<Host> {
     static mut THE_HOST: Option<RefCell<Host>> = None;
 
@@ -69,7 +78,10 @@ unsafe fn the_host() -> &'static RefCell<Host> {
 
 #[no_mangle]
 pub fn h_run_loop(limit: i32) -> Raw {
-    unsafe { the_host().borrow_mut().run_loop(limit) }
+    let mut host = unsafe { the_host().borrow_mut() };
+    let core = host.mut_core();
+    core.run_loop(limit).raw()
+//    unsafe { the_host().borrow_mut().run_loop(limit) }
 }
 
 #[no_mangle]
@@ -144,12 +156,18 @@ pub fn h_blob_top() -> Raw {
 
 #[no_mangle]
 pub fn h_car(raw: Raw) -> Raw {
-    unsafe { the_host().borrow().car(raw) }
+    let host = unsafe { the_host().borrow() };
+    let core = host.the_core();
+    core.car(Any::new(raw)).raw()
+//    unsafe { the_host().borrow().car(raw) }
 }
 
 #[no_mangle]
 pub fn h_cdr(raw: Raw) -> Raw {
-    unsafe { the_host().borrow().cdr(raw) }
+    let host = unsafe { the_host().borrow() };
+    let core = host.the_core();
+    core.cdr(Any::new(raw)).raw()
+//    unsafe { the_host().borrow().cdr(raw) }
 }
 
 #[no_mangle]

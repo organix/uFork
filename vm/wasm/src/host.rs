@@ -71,6 +71,13 @@ impl Host {
         });
         Host { core }
     }
+
+    pub fn the_core(&self) -> &Core {
+        &self.core
+    }
+    pub fn mut_core(&mut self) -> &mut Core {
+        &mut self.core
+    }
     pub fn run_loop(&mut self, limit: i32) -> Raw {
         self.core.run_loop(limit).raw()
     }
