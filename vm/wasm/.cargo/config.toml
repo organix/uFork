@@ -1,5 +1,9 @@
 [build]
 target = "wasm32-unknown-unknown"
+rustflags = [           # avoid "RuntimeError: memory access out of bounds"
+    "-C",
+    "link-args=-z stack-size=1500000"
+]
 
 [profile.dev]
 panic = "abort"         # abort on panic
