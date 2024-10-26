@@ -28,16 +28,18 @@ pub const GC_STRIDE: usize  = 16;  // number of steps to take for each GC increm
 pub const GC_BLACK: Any     = TRUE;
 pub const GC_WHITE: Any     = FALSE;
 
-// core limits (repeated in `index.js`)
+// core limits (repeated in `ufork.js`)
 //const QUAD_ROM_MAX: usize = 1<<10;  // 1K quad-cells of ROM
-const QUAD_ROM_MAX: usize = 1<<12;  // 4K quad-cells of ROM
+//const QUAD_ROM_MAX: usize = 1<<12;  // 4K quad-cells of ROM
+const QUAD_ROM_MAX: usize = 1<<13;  // 8K quad-cells of ROM (FPGA size)
 //const QUAD_RAM_MAX: usize = 1<<8;   // 256 quad-cells of RAM
-const QUAD_RAM_MAX: usize = 1<<10;   // 1K quad-cells of RAM
-//const QUAD_RAM_MAX: usize = 1<<12;   // 4K quad-cells of RAM
+//const QUAD_RAM_MAX: usize = 1<<10;   // 1K quad-cells of RAM
+const QUAD_RAM_MAX: usize = 1<<12;   // 4K quad-cells of RAM (FPGA size)
 //const BLOB_RAM_MAX: usize = 64;     // 64 octets of Blob RAM (for testing)
-const BLOB_RAM_MAX: usize = 1<<8;   // 256 octets of Blob RAM (for testing)
+//const BLOB_RAM_MAX: usize = 1<<8;   // 256 octets of Blob RAM (for testing)
 //const BLOB_RAM_MAX: usize = 1<<10;  // 1K octets of Blob RAM
 //const BLOB_RAM_MAX: usize = 1<<12;  // 4K octets of Blob RAM
+const BLOB_RAM_MAX: usize = 1<<14;  // 16K octets of Blob RAM
 //const BLOB_RAM_MAX: usize = 1<<16;  // 64K octets of Blob RAM (maximum value)
 const DEVICE_MAX:   usize = 8;      // number of Core devices
 
