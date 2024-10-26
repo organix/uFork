@@ -1,9 +1,15 @@
 [build]
 target = "wasm32-unknown-unknown"
-rustflags = [           # avoid "RuntimeError: memory access out of bounds"
-    "-C",
-    "link-args=-z stack-size=1500000"
-]
+
+# Debug builds of the WASM fail in apps/debugger with the exception
+# 'RuntimeError: memory access out of bounds' when the stack size is
+# insufficient.
+
+# The default stack size seems to be somewhere between 1MB and 1MiB, but we
+# need a bit more when QUAD_ROM_MAX, QUAD_RAM_MAX, etc are configured as they
+# are.
+
+rustflags = ["-C", "link-args=-z stack-size=2097152"]
 
 [profile.dev]
 panic = "abort"         # abort on panic
