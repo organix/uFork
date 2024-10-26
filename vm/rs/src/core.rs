@@ -37,9 +37,9 @@ const QUAD_ROM_MAX: usize = 1<<13;  // 8K quad-cells of ROM (FPGA size)
 const QUAD_RAM_MAX: usize = 1<<12;   // 4K quad-cells of RAM (FPGA size)
 //const BLOB_RAM_MAX: usize = 64;     // 64 octets of Blob RAM (for testing)
 //const BLOB_RAM_MAX: usize = 1<<8;   // 256 octets of Blob RAM (for testing)
-//const BLOB_RAM_MAX: usize = 1<<10;  // 1K octets of Blob RAM
+const BLOB_RAM_MAX: usize = 1<<10;  // 1K octets of Blob RAM
 //const BLOB_RAM_MAX: usize = 1<<12;  // 4K octets of Blob RAM
-const BLOB_RAM_MAX: usize = 1<<14;  // 16K octets of Blob RAM
+//const BLOB_RAM_MAX: usize = 1<<14;  // 16K octets of Blob RAM
 //const BLOB_RAM_MAX: usize = 1<<16;  // 64K octets of Blob RAM (maximum value)
 const DEVICE_MAX:   usize = 8;      // number of Core devices
 
