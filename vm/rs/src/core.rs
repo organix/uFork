@@ -30,8 +30,8 @@ pub const GC_WHITE: Any     = FALSE;
 
 // core limits (repeated in `ufork.js`)
 //const QUAD_ROM_MAX: usize = 1<<10;  // 1K quad-cells of ROM
-//const QUAD_ROM_MAX: usize = 1<<12;  // 4K quad-cells of ROM
-const QUAD_ROM_MAX: usize = 1<<13;  // 8K quad-cells of ROM (FPGA size)
+const QUAD_ROM_MAX: usize = 1<<12;  // 4K quad-cells of ROM
+//const QUAD_ROM_MAX: usize = 1<<13;  // 8K quad-cells of ROM (FPGA size)
 //const QUAD_RAM_MAX: usize = 1<<8;   // 256 quad-cells of RAM
 //const QUAD_RAM_MAX: usize = 1<<10;   // 1K quad-cells of RAM
 const QUAD_RAM_MAX: usize = 1<<12;   // 4K quad-cells of RAM (FPGA size)
