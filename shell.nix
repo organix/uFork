@@ -10,7 +10,7 @@
 {
     pkgs ? import (
         fetchTarball
-        "https://github.com/NixOS/nixpkgs/archive/51d906d2341c.tar.gz"
+        "https://github.com/NixOS/nixpkgs/archive/41dea55321e5.tar.gz"
     ) {}
 }:
 
@@ -20,8 +20,8 @@ pkgs.mkShell {
 # Two JavaScript runtimes: Deno and its predecessor, Node.js. Most of our
 # libraries and tools are written in JavaScript for portability.
 
-        pkgs.deno
-        pkgs.nodejs_21
+        pkgs.deno_1
+        pkgs.nodejs_22
 
 # The Rust toolchain, for the uFork VM.
 

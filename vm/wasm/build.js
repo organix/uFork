@@ -128,7 +128,7 @@ if (optimize) {
         "wasm-opt"
     ));
 } else {
-    tasks.push(run("rustup", "default", "stable"));
+    tasks.push(run("rustup", "default", "1.81.0"));
 }
 tasks.push(run("rustup", "target", "add", "wasm32-unknown-unknown"));
 tasks.push(parseq.parallel([
