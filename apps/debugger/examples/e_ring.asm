@@ -6,14 +6,9 @@
 .import
     std: "https://ufork.org/lib/std.asm"
     dev: "https://ufork.org/lib/dev.asm"
+    lib: "https://ufork.org/lib/lib.asm"
 
 ;;  CREATE log WITH \_.[ SEND println TO clock ]
-
-stopwatch:                  ; (clock_dev . debug_dev) <- _
-    state 0                 ; (clock_dev . debug_dev)
-    part 1                  ; debug_dev clock_dev
-    ref std.send_msg
-
 ;;  DEF build(n, log) AS \(first, m).[
 ;;      CASE n OF
 ;;      1 : [
@@ -52,8 +47,9 @@ build:                      ; (n . log) <- (first . m)
     ref std.send_msg
 
 build_0:
-    state -1                ; log
-    send 0                  ; --
+    push #?                 ; #?
+    state -1                ; #? log
+    send -1                 ; --
 
     state -1                ; log
     msg 1                   ; log first
@@ -89,11 +85,13 @@ ring_0:                     ; (first . log) <- m
     ref std.send_msg
 
 ring_end:
-    state -1                ; log
-    send 0                  ; --
+    push #?                 ; #?
+    state -1                ; #? log
+    send -1                 ; --
 
-    push std.sink_beh       ; sink_beh
-    beh 0                   ; --
+    push #?                 ; #?
+    push std.sink_beh       ; #? sink_beh
+    beh -1                  ; --
     ref std.commit
 
 ;;  DEF ring(next) AS \m.[
@@ -124,10 +122,11 @@ boot:                       ; _ <- {caps}
     push dev.clock_key      ; debug_dev {caps} clock_key
     dict get                ; debug_dev clock_dev
     pair 1                  ; (clock_dev . debug_dev)
-    push stopwatch          ; (clock_dev . debug_dev) stopwatch
-    new -1                  ; log=stopwatch.(clock_dev . debug_dev)
-    dup 1                   ; log log
-    send 0                  ; log
+    push lib.relay_beh      ; (clock_dev . debug_dev) relay_beh
+    new -1                  ; log=relay_beh.(clock_dev . debug_dev)
+    push #?                 ; log #?
+    pick 2                  ; log #? log
+    send -1                 ; log
 
     push n                  ; log n
     pair 1                  ; (n . log)
