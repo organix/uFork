@@ -38,7 +38,7 @@ KEQD_petname:
 ; listening. Requestor failures are not handled gracefully, instead resulting in
 ; a fault.
 
-boot:                       ; () <- {caps}
+boot:                       ; _ <- {caps}
     msg 0                   ; {caps}
     push dev.awp_key        ; {caps} awp_key
     dict get                ; awp_dev

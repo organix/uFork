@@ -33,7 +33,7 @@ listen_tag:
 svg_key:
     ref 101
 
-boot:                       ; () <- {caps}
+boot:                       ; _ <- {caps}
     msg 0                   ; {caps}
     push io_key             ; {caps} io_key
     dict get                ; io_dev

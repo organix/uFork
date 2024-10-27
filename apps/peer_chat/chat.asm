@@ -22,7 +22,7 @@ room_key:
 ; boot capabilities. If it is 0, the room is local and we are hosting it.
 ; Otherwise the room is remote and we are joining it.
 
-boot:                       ; () <- {caps}
+boot:                       ; _ <- {caps}
     msg 0                   ; {caps}
     push room_key           ; {caps} room_key
     dict get                ; room_id

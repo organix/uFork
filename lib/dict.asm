@@ -187,7 +187,7 @@ demo_4:
     ref demo_del
 
 ; unit test suite
-boot:                       ; () <- {caps}
+boot:                       ; _ <- {caps}
 ;    msg 0                   ; {caps}
 ;    ref std.commit
 ;    end commit

@@ -31,7 +31,7 @@ write_13:                   ; blob <- ok
     beh -1                  ; --
     ref std.commit
 
-boot_0:                     ; () <- {caps}
+boot_0:                     ; _ <- {caps}
     push 13                 ; 13
     push #?                 ; 13 #?
     push do_13              ; 13 #? do_13
@@ -43,7 +43,7 @@ boot_0:                     ; () <- {caps}
     send -1                 ; --
     ref std.commit
 
-boot:                       ; () <- {caps}
+boot:                       ; _ <- {caps}
     dup 0                   ; no-op
     ; ref boot_0              ; redirect to `boot_0` behavior
 

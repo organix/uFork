@@ -66,7 +66,7 @@ top_code:                   ; args k env=(p)
     drop 1                  ; k
     return
 
-boot:                       ; () <- {caps}
+boot:                       ; _ <- {caps}
 
 ; Construct the message to be sent to the 'top' actor.
 ; The debug device will receive the reply.

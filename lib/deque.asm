@@ -116,7 +116,7 @@ demo_8:
     ref std.commit
 
 ; unit test suite
-boot:                       ; () <- {caps}
+boot:                       ; _ <- {caps}
 ;    msg 0                   ; {caps}
 ;    end commit
     ref demo

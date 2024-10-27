@@ -37,7 +37,7 @@ str_end:                    ; --
     state 1                 ; result cb
     ref std.send_msg
 
-boot:                       ; () <- {caps}
+boot:                       ; _ <- {caps}
     push hello              ; str
     msg 0                   ; str {caps}
     push dev.io_key         ; str {caps} dev.io_key

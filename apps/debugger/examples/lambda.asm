@@ -131,7 +131,7 @@ closure:                    ; (env var . body) <- (arg cust . _)
     ref std.send_msg
 
 ; unit test suite
-boot:                       ; () <- {caps}
+boot:                       ; _ <- {caps}
     ; test const
     ; eval[42, {}] => 42
     push #?                 ; #?

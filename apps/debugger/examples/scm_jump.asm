@@ -193,7 +193,7 @@ hof3:
 
 ; Test suite
 
-boot:                       ; () <- {caps}
+boot:                       ; _ <- {caps}
 
 ; Call the 'double_sum' closure and print its return value.
 

@@ -219,7 +219,7 @@ in_out_demo:                ; io_dev debug_dev
     send -1                 ; io_dev debug_dev
     ref std.commit
 
-boot:                       ; () <- {caps}
+boot:                       ; _ <- {caps}
     msg 0                   ; {caps}
     push dev.io_key         ; {caps} io_key
     dict get                ; io_dev

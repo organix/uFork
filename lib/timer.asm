@@ -64,7 +64,7 @@ retry:                      ; (clock ...)
 ; The demo simply delays the sending of the numbers 42 and 1729 to the debug
 ; device.
 
-boot:                       ; () <- {caps}
+boot:                       ; _ <- {caps}
     msg 0                   ; {caps}
     push dev.debug_key      ; {caps} dev.debug_key
     dict get                ; debug_dev

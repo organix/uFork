@@ -59,7 +59,7 @@ k2:                         ; (cust m) <- n
 
 ; Test suite
 
-boot:                       ; () <- {caps}
+boot:                       ; _ <- {caps}
     push 9                  ; n
     msg 0                   ; n {caps}
     push dev.debug_key      ; n {caps} debug_key

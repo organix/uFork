@@ -5,7 +5,7 @@
 store:
     ref 0
 
-boot:                       ; () <- {caps}
+boot:                       ; _ <- {caps}
     push #nil               ; {}
     push greeter_beh        ; {} greeter_beh
     new -1                  ; greeter

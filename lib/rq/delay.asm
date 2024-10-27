@@ -19,7 +19,7 @@ delay_beh:                  ; (delay . timer_dev) <- request
 
 ; Test suite
 
-boot:                       ; () <- {caps}
+boot:                       ; _ <- {caps}
     push 42                 ; value=42
     msg 0                   ; value {caps}
     push dev.debug_key      ; value {caps} debug_key

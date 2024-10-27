@@ -105,7 +105,7 @@ join_2:                     ; tail head
     ref std.send_msg
 
 ; unit test suite
-boot:                       ; () <- {caps}
+boot:                       ; _ <- {caps}
     push #?                 ; #?
     push negate_beh         ; #? negate_beh
     new -1                  ; t_svc=negate_beh.#?

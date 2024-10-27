@@ -187,7 +187,7 @@ counter_k2:                 ; (cust . count') <- cell
 ;;  SEND (println, 7) TO counter
 ;;  SEND (println, 70) TO counter
 ;;  SEND (println, 700) TO counter
-boot:                       ; () <- {caps}
+boot:                       ; _ <- {caps}
     msg 0                   ; {caps}
     push dev.debug_key      ; {caps} dev.debug_key
     dict get                ; debug_dev

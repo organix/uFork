@@ -106,7 +106,7 @@ value_beh:                  ; (rcap . value) <- (tag . arg)
     ref std.send_msg
 
 ; unit test suite
-boot:                       ; () <- {caps}
+boot:                       ; _ <- {caps}
     push 1                  ; wcap
     push 0                  ; wcap rcap
     pair 1                  ; (rcap . wcap)

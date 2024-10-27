@@ -261,7 +261,7 @@ assert:                     ; expect <- actual
 ; Boot code runs when the module is loaded (but not when imported).
 ;
 
-boot:                       ; () <- {caps}
+boot:                       ; _ <- {caps}
     msg 0                   ; {caps}
     push dev.debug_key      ; {caps} debug_key
     dict get                ; referee=debug

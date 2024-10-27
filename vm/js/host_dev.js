@@ -127,7 +127,7 @@ function host_dev(core) {
 //debug const test_ir = assemble(`
 //debug proxy_key:
 //debug     ref ${proxy_key}
-//debug boot:                   ; () <- {caps}
+//debug boot:                   ; _ <- {caps}
 //debug     push 42             ; 42
 //debug     msg 0               ; 42 {caps}
 //debug     push proxy_key      ; 42 {caps} proxy_key

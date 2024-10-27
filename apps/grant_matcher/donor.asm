@@ -10,7 +10,7 @@ GM_petname:
 KEQD_petname:
     ref 2
 
-boot:                       ; () <- {caps}
+boot:                       ; _ <- {caps}
     push #?                 ; hello=#?
     push KEQD_petname       ; hello KEQD
     push store              ; hello KEQD store

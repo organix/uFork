@@ -127,7 +127,7 @@ count_next:
     my self                 ; count+1 SELF
     ref std.send_msg
 
-boot:                       ; () <- {caps}
+boot:                       ; _ <- {caps}
     msg 0                   ; {caps}
     push dev.debug_key      ; {caps} debug_key
     dict get                ; debug_dev

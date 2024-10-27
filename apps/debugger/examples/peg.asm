@@ -540,7 +540,7 @@ expect_6:                   ; () <- (accum . in)
     new -1                  ; (accum . in) is_equal.test_6_data
     ref std.send_msg
 
-boot:                       ; () <- {caps}
+boot:                       ; _ <- {caps}
     msg 0                   ; {caps}
     push dev.debug_key      ; {caps} debug_key
     dict get                ; debug_dev

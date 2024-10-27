@@ -1429,7 +1429,7 @@ function make_core({
         }
     }
 
-    function h_boot(instr_ptr, state_ptr = NIL_RAW) {
+    function h_boot(instr_ptr, state_ptr = UNDEF_RAW) {
         if (instr_ptr === undefined || !u_is_ptr(instr_ptr)) {
             throw new Error("Not an instruction: " + u_pprint(instr_ptr));
         }

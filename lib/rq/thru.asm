@@ -15,7 +15,7 @@ thru_beh:                   ; _ <- request=(to_cancel callback . value)
 
 ; Test suite
 
-boot:                       ; () <- {caps}
+boot:                       ; _ <- {caps}
     push 42                 ; 42
     msg 0                   ; 42 {caps}
     push dev.debug_key      ; 42 {caps} debug_key

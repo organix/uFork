@@ -2,7 +2,7 @@
     dev: "https://ufork.org/lib/dev.asm"
     std: "https://ufork.org/lib/std.asm"
 
-boot:                       ; () <- {caps}
+boot:                       ; _ <- {caps}
     push #?                 ; value=#?
     push #t                 ; value ok=#t
     pair 1                  ; result=(ok . value)

@@ -107,7 +107,7 @@ try_me:                     ; (sp . env) <- (cust . args)
     part -1                 ; ... ...
     end commit
 
-boot:                       ; () <- {caps}
+boot:                       ; _ <- {caps}
     msg 0                   ; {caps}
     push dev.debug_key      ; {caps} dev.debug_key
     dict get                ; debug_dev

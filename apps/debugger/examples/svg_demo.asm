@@ -138,7 +138,7 @@ str_end:                    ; --
     state 1                 ; result cb
     ref std.send_msg
 
-boot:                       ; () <- {caps}
+boot:                       ; _ <- {caps}
     push svg_cmds           ; svg_cmds
     msg 0                   ; svg_cmds {caps}
     push dev.svg_key        ; svg_cmds {caps} svg_key

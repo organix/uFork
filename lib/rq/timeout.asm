@@ -99,7 +99,7 @@ win_beh:                    ; (callback . loser␘) <- result
 
 ; Test suite
 
-boot:                       ; () <- {caps}
+boot:                       ; _ <- {caps}
 
 ; The debug device's output, in order, should resemble:
 

@@ -11,7 +11,7 @@ assert_eq_beh:              ; expect <- actual
     assert #t               ; --
     ref std.commit
 
-boot:                       ; () <- {caps}
+boot:                       ; _ <- {caps}
     push 1111               ; actual=1111
     push 2222               ; actual expect=2222
     push assert_eq_beh      ; actual expect assert_eq_beh

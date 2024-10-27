@@ -6,7 +6,7 @@
 store:
     ref 0
 
-boot:                       ; () <- {caps}
+boot:                       ; _ <- {caps}
     push #?                 ; #?
     push lib.broadcast_beh  ; #? broadcast_beh
     new -1                  ; deposit=broadcast_beh.#?
