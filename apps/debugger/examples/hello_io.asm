@@ -38,17 +38,18 @@ str_end:                    ; --
     ref std.send_msg
 
 boot:                       ; _ <- {caps}
-    push hello              ; str
-    msg 0                   ; str {caps}
-    push dev.io_key         ; str {caps} dev.io_key
-    dict get                ; str io_dev
-    push std.sink_beh       ; str io_dev sink_beh
-    new 0                   ; str out=io_dev cb=sink_beh.()
-    pair 2                  ; (cb out . str)
-    push str_out            ; (cb out . str) str_out
-    new -1                  ; str_out.(cb out . str)
-    send 0                  ; --
-    ref std.commit
+    push #?                 ; #?
+    push hello              ; #? str
+    msg 0                   ; #? str {caps}
+    push dev.io_key         ; #? str {caps} dev.io_key
+    dict get                ; #? str io_dev
+    push #?                 ; #? str io_dev #?
+    push std.sink_beh       ; #? str io_dev #? sink_beh
+    new -1                  ; #? str out=io_dev cb=sink_beh.#?
+    pair 2                  ; #? (cb out . str)
+    push str_out            ; #? (cb out . str) str_out
+    new -1                  ; #? str_out.(cb out . str)
+    ref std.send_msg
 
 .export
     boot
