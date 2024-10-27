@@ -96,25 +96,25 @@ Duplicate messages are discarded.
 Empty messages are acknowledged,
 then discarded.
 
-                  A_tx         A_rx                B_rx         B_tx
-              {ack:5,seq:1,  {seq:6}             {seq:1}    {ack:0,seq:6,
-                  Q:[]}         |                   |          Q:[]}
-                   |            |                   |            |
-    -(msg . m1)--->#            |                   |            |
-                   #-(5 1 . m1)------- - - - - ---->#            |
-              {ack:5,seq:2,     |                   #-m1------------------->
-              Q:[(1 . m1)]}     |                   #-(ack 5 1)->#
-                   |            |                {seq:2}         #
-                   |            |                   |       {ack:1,seq:6,
-                   |            |                   |          Q:[]}
-                   |            |                   |            |
-                   |            |                   |            #<-(tmo 6)-
-                   |            #<---- - - - - ------------(1 6)-#
-                   #<-(ack 1 6)-#                   |       {ack:1,seq:7,
-                   #         {seq:7}                |         Q:[(6)]}
-              {ack:6,seq:2,     |                   |            |
-                  Q:[]}         |                   |            |
-                   |            |                   |            |
+                A_tx           A_rx                B_rx           B_tx
+            {ack:5,seq:1,    {seq:6}             {seq:1}      {ack:0,seq:6,
+                Q:[]}           |                   |            Q:[]}
+                 |              |                   |              |
+    -(msg . m1)->#              |                   |              |
+                 #-(5 1 . m1)--------- - - - - ---->#              |
+            {ack:5,seq:2,       |                   #-m1--------------------->
+            Q:[(1 . m1)]}       |                   #-(ack 5 . 1)->#
+                 |              |                {seq:2}           #
+                 |              |                   |         {ack:1,seq:6,
+                 |              |                   |            Q:[]}
+                 |              |                   |              |
+                 |              |                   |              #<-(tmo . 6)-
+                 |              #<---- - - - - ------------(1 . 6)-#
+                 #<-(ack 1 . 6)-#                   |         {ack:1,seq:7,
+                 #           {seq:7}                |            Q:[6]}
+            {ack:6,seq:2,       |                   |              |
+                Q:[]}           |                   |              |
+                 |              |                   |              |
 
 This sequence diagram illustrates the transfer of message _m1_,
 and it's acknowledgment via the timer at the receiving end.

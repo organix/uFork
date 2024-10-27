@@ -6,6 +6,7 @@
     std: "https://ufork.org/lib/std.asm"
     dev: "https://ufork.org/lib/dev.asm"
     line_buf: "https://ufork.org/lib/line_buffer.asm"
+    link: "./link.asm"
 
 awp_store:
     ref 0
@@ -13,10 +14,6 @@ awp_petname:
     ref 0
 room_key:
     ref 1000
-tx_timeout:
-    ref 1000                ; 1000ms
-rx_timeout:
-    ref 3000                ; 3sec
 
 ; Capture the required boot capabilities, then start the app by joining or
 ; hosting a room.
@@ -29,64 +26,69 @@ boot:                       ; () <- {caps}
     msg 0                   ; {caps}
     push room_key           ; {caps} room_key
     dict get                ; room_id
+    dup 1                   ; room_id room_id
 
-    msg 0                   ; room_id {caps}
-    push dev.awp_key        ; room_id {caps} awp_key
-    dict get                ; room_id awp_dev
+    msg 0                   ; room_id room_id {caps}
+    push dev.awp_key        ; room_id room_id {caps} awp_key
+    dict get                ; room_id room_id awp_dev
 
-    msg 0                   ; room_id awp_dev {caps}
-    push dev.timer_key      ; room_id awp_dev {caps} timer_key
-    dict get                ; room_id awp_dev timer_dev
+    msg 0                   ; room_id room_id awp_dev {caps}
+    push dev.timer_key      ; room_id room_id awp_dev {caps} timer_key
+    dict get                ; room_id room_id awp_dev timer_dev
 
-    msg 0                   ; room_id awp_dev timer_dev {caps}
-    push dev.io_key         ; room_id awp_dev timer_dev {caps} io_key
-    dict get                ; room_id awp_dev timer_dev io_dev
+    msg 0                   ; room_id room_id awp_dev timer_dev {caps}
+    push dev.io_key         ; room_id room_id awp_dev timer_dev {caps} io_key
+    dict get                ; room_id room_id awp_dev timer_dev io_dev
 
-    msg 0                   ; room_id awp_dev timer_dev io_dev {caps}
-    push dev.debug_key      ; room_id awp_dev timer_dev io_dev {caps} debug_key
-    dict get                ; room_id awp_dev timer_dev io_dev debug_dev
+    msg 0                   ; room_id room_id awp_dev timer_dev io_dev {caps}
+    push dev.debug_key      ; room_id room_id awp_dev timer_dev io_dev {caps} debug_key
+    dict get                ; room_id room_id awp_dev timer_dev io_dev debug_dev
 
-    pick 5                  ; ... room_id
-    if join                 ; ...
-    push host_beh           ; ... beh=host_beh
+    pair 4                  ; room_id state=(debug_dev io_dev timer_dev awp_dev . room_id)
+    roll 2                  ; state room_id
+    if join                 ; state
+    push host_beh           ; state beh=host_beh
     ref start
 join:
-    push join_beh           ; ... beh=join_beh
+    push join_beh           ; state beh=join_beh
 start:
-    new 5                   ; beh.(debug_dev io_dev timer_dev awp_dev room_id)
-    send 0                  ; --
+    new -1                  ; beh.state
+    push #?                 ; beh.state #?
+    roll 2                  ; #? beh.state
+    send -1                 ; --
     ref std.commit
 
 ; Initially, SELF is the callback for the AWP introduction with the room. If
 ; that succeeds, it becomes party_rx.
 
-join_beh:                   ; (debug_dev io_dev timer_dev awp_dev room_id) <- () | (ok . room_rx/error)
+join_beh:                   ; (debug_dev io_dev timer_dev awp_dev . room_id) <- #? | (ok . room_rx/error)
     msg 0                   ; msg
-    eq #nil                 ; msg==()
+    eq #?                   ; msg==#?
     if_not intro_cb         ; --
     my self                 ; party_rx=SELF
 
     ; build room->party message-limited transport
     ; push 17             ; rcvr=party_rx limit=17
-    ; push cnt_fwd_beh    ; rcvr limit cnt_fwd_beh
-    ; new 2               ; party_rx'=cnt_fwd_beh.(limit rcvr)
+    ; pair 1              ; (limit . rcvr)
+    ; push cnt_fwd_beh    ; (limit . rcvr) cnt_fwd_beh
+    ; new -1              ; party_rx'=cnt_fwd_beh.(limit . rcvr)
 
     ; build room->party logger
     state 1                 ; rcvr=party_rx logr=debug_dev
-    push log_fwd_beh        ; rcvr logr log_fwd_beh
-    new 2                   ; party_rx'=log_fwd_beh.(logr rcvr)
+    pair 1                  ; (logr . rcvr)
+    push log_fwd_beh        ; (logr . rcvr) log_fwd_beh
+    new -1                  ; party_rx'=log_fwd_beh.(logr . rcvr)
 
     ; request an introduction with the room
     dup 1                   ; party_rx party_rx
-    state 5                 ; party_rx party_rx petname=room_id
+    state -4                ; party_rx party_rx petname=room_id
     push awp_store          ; party_rx party_rx petname store
     roll 4                  ; party_rx petname store callback=party_rx
     push #?                 ; party_rx petname store callback to_cancel=#?
     push dev.intro_tag      ; party_rx petname store callback to_cancel #intro
-    state 4                 ; party_rx petname store callback to_cancel #intro awp_dev
-    send 6                  ; --
-
-    ref std.commit
+    pair 5                  ; intro_req=(#intro to_cancel callback store petname . party_rx)
+    state 4                 ; intro_req awp_dev
+    ref std.send_msg
 
 intro_cb:
     ; check for a successful introduction
@@ -99,16 +101,16 @@ intro_cb:
     push 0                  ; msgs seq ack=0
     state 3                 ; msgs seq ack timer=timer_dev
     msg -1                  ; msgs seq ack timer link=room_rx
-    push link_tx_beh        ; msgs seq ack timer link link_tx_beh
-    new 5                   ; party_tx=link_tx_beh.(link timer ack seq msgs)
+    pair 4                  ; (link timer ack seq . msgs)
+    push link.tx_beh        ; (link timer ack seq . msgs) link_tx_beh
+    new -1                  ; party_tx=link_tx_beh.(link timer ack seq . msgs)
 
     ; set party_tx_timer
-    push #nil               ; party_tx ()
-    push 1                  ; party_tx () seq=1
-    push tx_tmo             ; party_tx () seq tx_tmo
-    pair 2                  ; party_tx msg=(tx_tmo seq)
+    push 1                  ; party_tx seq=1
+    push link.tx_tmo        ; party_tx seq tx_tmo
+    pair 1                  ; party_tx msg=(tx_tmo . seq)
     pick 2                  ; party_tx msg target=party_tx
-    push tx_timeout         ; party_tx msg target delay=tx_timeout
+    push link.tx_timeout    ; party_tx msg target delay=tx_timeout
     pair 2                  ; party_tx timer_req=(delay target . msg)
     state 3                 ; party_tx timer_req timer_dev
     send -1                 ; party_tx
@@ -120,27 +122,28 @@ intro_cb:
 
     ; build party_out
     push party_out_beh      ; party_tx line_out party_out_beh
-    new 1                   ; party_tx party_out=party_out_beh.(line_out)
+    new -1                  ; party_tx party_out=party_out_behline_out
 
     ; become party_rx
     push 1                  ; party_tx party_out seq=1
     pick 3                  ; party_tx party_out seq tx=party_tx
     state 3                 ; party_tx party_out seq tx timer=timer_dev
     roll 4                  ; party_tx seq tx timer cust=party_out
-    push link_rx_beh        ; party_tx seq tx timer cust link_rx_beh
-    beh 4                   ; party_tx // link_rx_beh.(cust timer tx seq)
+    pair 3                  ; party_tx (cust timer tx . seq)
+    push link.rx_beh        ; party_tx (cust timer tx . seq) link_rx_beh
+    beh -1                  ; party_tx // link_rx_beh.(cust timer tx . seq)
 
     ; set party_rx_timer
-    push #nil               ; party_tx msg=()
+    push #?                 ; party_tx msg=#?
     my self                 ; party_tx msg target=SELF
-    push rx_timeout         ; party_tx msg target delay=rx_timeout
+    push link.rx_timeout    ; party_tx msg target delay=rx_timeout
     pair 2                  ; party_tx timer_req=(delay target . msg)
     state 3                 ; party_tx timer_req timer_dev
     send -1                 ; party_tx
 
     ; build party_in
     push party_in_beh       ; party_tx party_in_beh
-    new 1                   ; party_in=party_in_beh.(party_tx)
+    new -1                  ; party_in=party_in_beh.party_tx
 
     ; build line_in
     deque new               ; party_in line
@@ -160,17 +163,18 @@ intro_cb:
 
     ref std.commit
 
-host_beh:                   ; (debug_dev io_dev timer_dev awp_dev room_id) <- ()
+host_beh:                   ; (debug_dev io_dev timer_dev awp_dev . _) <- _
     ; build the room.
     push #nil               ; parties={}
-    push room_beh           ; parties={} room_beh
+    push room_beh           ; parties room_beh
     new -1                  ; room=room_beh.{parties}
 
     ; build the greeter that introduces joining parties to the room
     state 3                 ; room timer_dev
     state 1                 ; room timer_dev debug_dev
-    push greeter_beh        ; room timer_dev debug_dev greeter_beh
-    new 3                   ; greeter=greeter_beh.(debug_dev timer_dev room)
+    pair 2                  ; (debug_dev timer_dev . room)
+    push greeter_beh        ; (debug_dev timer_dev . room) greeter_beh
+    new -1                  ; greeter=greeter_beh.(debug_dev timer_dev . room)
 
     ; join the room directly (not via the AWP device)
     state 0                 ; greeter state
@@ -179,13 +183,15 @@ host_beh:                   ; (debug_dev io_dev timer_dev awp_dev room_id) <- ()
     push awp_petname        ; greeter party_rx party=awp_petname
     pick 2                  ; greeter party_rx party callback=party_rx
     push #?                 ; greeter party_rx party callback to_cancel=#?
-    pick 5                  ; greeter party_rx party callback to_cancel greeter
-    send 4                  ; greeter
+    pair 3                  ; greeter intro_result=(to_cancel callback party . party_rx)
+    pick 2                  ; greeter intro_result greeter
+    send -1                 ; greeter
 
     ; listen for incoming connections
     push awp_store          ; greeter store
-    push listen_cb_beh      ; greeter store listen_cb_beh
-    new 0                   ; greeter store callback=listen_cb_beh.()
+    push #?                 ; greeter store #?
+    push listen_cb_beh      ; greeter store #? listen_cb_beh
+    new -1                  ; greeter store callback=listen_cb_beh.#?
     push #?                 ; greeter store callback to_cancel=#?
     push dev.listen_tag     ; greeter store callback to_cancel #listen
     pair 4                  ; listen_request=(#listen to_cancel callback store . greeter)
@@ -194,28 +200,28 @@ host_beh:                   ; (debug_dev io_dev timer_dev awp_dev room_id) <- ()
 
     ref std.commit
 
-listen_cb_beh:              ; () <- (ok . stop/error)
+listen_cb_beh:              ; _ <- (ok . stop/error)
     msg 1                   ; ok
     assert #t               ; --
     ref std.commit
 
-greeter_beh:                ; (debug_dev timer_dev room) <- (to_cancel callback party party_rx)
+greeter_beh:                ; (debug_dev timer_dev . room) <- (to_cancel callback party . party_rx)
     ; build room_tx
     deque new               ; msgs
     push 1                  ; msgs seq=1
     push 0                  ; msgs seq ack=0
     state 2                 ; msgs seq ack timer=timer_dev
-    msg 4                   ; msgs seq ack timer link=party_rx
-    push link_tx_beh        ; msgs seq ack timer link link_tx_beh
-    new 5                   ; room_tx=link_tx_beh.(link timer ack seq msgs)
+    msg -3                  ; msgs seq ack timer link=party_rx
+    pair 4                  ; (link timer ack seq . msgs)
+    push link.tx_beh        ; (link timer ack seq . msgs) link_tx_beh
+    new -1                  ; room_tx=link_tx_beh.(link timer ack seq . msgs)
 
     ; set room_tx_timer
-    push #nil               ; room_tx ()
-    push 1                  ; room_tx () seq=1
-    push tx_tmo             ; room_tx () seq tx_tmo
-    pair 2                  ; room_tx msg=(tx_tmo seq)
+    push 1                  ; room_tx seq=1
+    push link.tx_tmo        ; room_tx seq tx_tmo
+    pair 1                  ; room_tx msg=(tx_tmo . seq)
     pick 2                  ; room_tx msg target=room_tx
-    push tx_timeout         ; room_tx msg target delay=tx_timeout
+    push link.tx_timeout    ; room_tx msg target delay=tx_timeout
     pair 2                  ; room_tx timer_req=(delay target . msg)
     state 2                 ; room_tx timer_req timer_dev
     send -1                 ; room_tx
@@ -223,9 +229,10 @@ greeter_beh:                ; (debug_dev timer_dev room) <- (to_cancel callback 
     ; build room_in
     msg 3                   ; room_tx party
     pick 2                  ; room_tx party tx=room_tx
-    state 3                 ; room_tx party tx room
-    push room_in_beh        ; room_tx party tx room room_in_beh
-    new 3                   ; room_tx room_in=room_in_beh.(room tx party)
+    state -2                ; room_tx party tx room
+    pair 2                  ; room_tx (room tx . party)
+    push room_in_beh        ; room_tx (room tx . party) room_in_beh
+    new -1                  ; room_tx room_in=room_in_beh.(room tx . party)
 
     ; send "joined" announcement
     push txt_joined         ; room_tx room_in txt_joined
@@ -237,26 +244,29 @@ greeter_beh:                ; (debug_dev timer_dev room) <- (to_cancel callback 
     roll 3                  ; room_in seq tx=room_tx
     state 2                 ; room_in seq tx timer=timer_dev
     roll 4                  ; seq tx timer cust=room_in
-    push link_rx_beh        ; seq tx timer cust link_rx_beh
-    new 4                   ; room_rx=link_rx_beh.(cust timer tx seq)
+    pair 3                  ; (cust timer tx . seq)
+    push link.rx_beh        ; (cust timer tx . seq) link_rx_beh
+    new -1                  ; room_rx=link_rx_beh.(cust timer tx . seq)
 
     ; set room_rx_timer
-    push #nil               ; room_rx msg=()
+    push #?                 ; room_rx msg=#?
     pick 2                  ; room_rx msg target=room_rx
-    push rx_timeout         ; room_rx msg target delay=rx_timeout
+    push link.rx_timeout    ; room_rx msg target delay=rx_timeout
     pair 2                  ; room_rx timer_req=(delay target . msg)
     state 2                 ; room_rx timer_req timer_dev
     send -1                 ; room_rx
 
     ; build party->room message-limited transport
     ; push 13             ; rcvr=room_rx limit=13
-    ; push cnt_fwd_beh    ; rcvr limit cnt_fwd_beh
-    ; new 2               ; room_rx'=cnt_fwd_beh.(limit rcvr)
+    ; pair 1              ; (limit . rcvr)
+    ; push cnt_fwd_beh    ; (limit . rcvr) cnt_fwd_beh
+    ; new -1              ; room_rx'=cnt_fwd_beh.(limit . rcvr)
 
     ; build party->room logger
     state 1                 ; rcvr=room_rx logr=debug_dev
-    push log_fwd_beh        ; rcvr logr log_fwd_beh
-    new 2                   ; room_rx'=log_fwd_beh.(logr rcvr)
+    pair 1                  ; (logr . rcvr)
+    push log_fwd_beh        ; (logr . rcvr) log_fwd_beh
+    new -1                  ; room_rx'=log_fwd_beh.(logr . rcvr)
 
     ; complete the introduction
     push #t                 ; room_rx ok=#t
@@ -266,14 +276,14 @@ greeter_beh:                ; (debug_dev timer_dev room) <- (to_cancel callback 
 
     ref std.commit
 
-party_in_beh:               ; (tx) <- content
+party_in_beh:               ; tx <- content
     msg 0                   ; content
-    push tx_msg             ; content tx_msg
+    push link.tx_msg        ; content tx_msg
     pair 1                  ; (tx_msg . content)
-    state 1                 ; (tx_msg . content) tx
+    state 0                 ; (tx_msg . content) tx
     ref std.send_msg
 
-party_out_beh:              ; (line_out) <- (party . content)
+party_out_beh:              ; line_out <- (party . content)
     msg -1                  ; content
     msg 0                   ; content (party . content)
     if_not party_lost       ; content
@@ -288,7 +298,7 @@ party_out_beh:              ; (line_out) <- (party . content)
     msg 1                   ; content '@' party
     alu add                 ; content petname_char
     deque push              ; content
-    state 1                 ; content line_out
+    state 0                 ; content line_out
     ref std.send_msg
 
 party_lost:
@@ -296,253 +306,13 @@ party_lost:
     state 1                 ; ... content line_out
     ref std.send_msg
 
-room_in_beh:                ; (room tx party) <- content
+room_in_beh:                ; (room tx . party) <- content
     msg 0                   ; content
-    state 3                 ; content party
+    state -2                ; content party
     state 2                 ; content party tx
     pair 2                  ; (tx party . content)
     state 1                 ; (tx party . content) room
     ref std.send_msg
-
-;
-; Link transmitter
-;
-; Transmitter state:
-;   link: capability for network transport
-;   timer: capability for timer service
-;   ack: last message number successfully received (by rx)
-;   seq: next message number to transmit
-;   msgs: queue of unacknowledged messages
-;
-
-tx_msg:                     ; (tx_msg . content)
-    ref 1
-tx_ack:                     ; (tx_ack ack' seq')
-    ref -1
-tx_tmo:                     ; (tx_tmo seq')
-    ref 0
-
-link_tx_beh:                ; (link timer ack seq msgs) <- tx_evt
-    msg 1                   ; opr
-    eq tx_msg               ; opr==tx_msg
-    if link_tx_msg          ; --
-    msg 1                   ; opr
-    eq tx_ack               ; opr==tx_ack
-    if link_tx_ack          ; --
-    msg 1                   ; opr
-    eq tx_tmo               ; opr==tx_tmo
-    if link_tx_tmo          ; --
-
-    ; unknown operation
-    push std.sink_beh       ; sink_beh  // become inert
-    beh 0                   ; --
-    ref std.commit
-
-link_tx_msg:                ; (link timer ack seq msgs) <- (tx_msg . content)
-    ; add message to queue
-    state 5                 ; msgs
-    msg -1                  ; msgs content
-    state 4                 ; msgs content seq
-    pair 1                  ; msgs (seq . content)
-    deque put               ; msgs'
-
-    ; increment seq number
-    dup 1                   ; msgs' msgs'
-    state 4                 ; msgs' msgs' seq
-    push 1                  ; msgs' msgs' seq 1
-    alu add                 ; msgs' msgs' seq+1
-
-    ; update actor state
-    state 3                 ; msgs' msgs' seq+1 ack
-    state 2                 ; msgs' msgs' seq+1 ack timer
-    state 1                 ; msgs' msgs' seq+1 ack timer link
-    push link_tx_beh        ; msgs' msgs' seq+1 ack timer link link_tx_beh
-    beh 5                   ; msgs'
-
-    ; if the queue was empty previously,
-    state 5                 ; msgs' msgs
-    deque empty             ; msgs' is_empty(msgs)
-    if_not std.commit       ; msgs'
-
-    ; then send message to rx
-    deque pop               ; msgs (seq . content)
-    state 3                 ; msgs (seq . content) ack
-    pair 1                  ; msgs (ack seq . content)
-    state 1                 ; msgs (ack seq . content) link
-    ref std.send_msg
-
-link_tx_ack:                ; (link timer ack seq msgs) <- (tx_ack ack' seq')
-    ; update ack from seq'
-    my state                ; msgs seq ack timer link
-    roll 3                  ; msgs seq timer link ack
-    drop 1                  ; msgs seq timer link
-    msg 3                   ; msgs seq timer link seq'
-    roll -3                 ; msgs seq ack=seq' timer link
-
-    ; ack queued message?
-    pick 5                  ; msgs seq ack timer link msgs
-    deque pop               ; ... msgs' (seq . content)
-    part 1                  ; ... msgs' content seq
-    msg 2                   ; ... msgs' content seq ack'
-    cmp eq                  ; ... msgs' content seq==ack'
-    if tx_ack_1             ; msgs seq ack timer link msgs' content
-    drop 2                  ; msgs seq ack timer link
-    ref tx_ack_2
-
-tx_ack_1:                   ; msgs seq ack timer link msgs' content
-    ; remove message from queue
-    drop 1                  ; msgs seq ack timer link msgs'
-    roll -5                 ; ... msgs' seq ack timer link
-
-    ; if the queue is not empty,
-    pick 5                  ; ... msgs' seq ack timer link msgs'
-    deque empty             ; ... msgs' seq ack timer link is_empty(msgs)
-    if tx_ack_2             ; ... msgs' seq ack timer link
-
-    ; then send another message to rx
-    pick 5                  ; ... msgs' seq ack timer link msgs'
-    deque pop               ; ... msgs' seq ack timer link msgs'' (seq . content)
-    pick 5                  ; ... msgs' seq ack timer link msgs'' (seq . content) ack
-    pair 1                  ; ... msgs' seq ack timer link msgs'' (ack seq . content)
-    pick 3                  ; ... msgs' seq ack timer link msgs'' (ack seq . content) link
-    send -1                 ; ... msgs' seq ack timer link msgs''
-    drop 1                  ; ... msgs' seq ack timer link
-
-tx_ack_2:                   ; msgs seq ack timer link
-    ; update tx state
-    push link_tx_beh        ; msgs seq ack timer link link_tx_beh
-    beh 5                   ; --
-    ref std.commit
-
-link_tx_tmo:                ; (link timer ack seq msgs) <- (tx_tmo seq')
-    ; reset timer
-    push #nil               ; ()
-    state 4                 ; () seq
-    push tx_tmo             ; () seq tx_tmo
-    pair 2                  ; msg=(tx_tmo seq)
-    my self                 ; msg target=SELF
-    push tx_timeout         ; msg target delay=tx_timeout
-    pair 2                  ; timer_req=(delay target . msg)
-    state 2                 ; timer_req timer
-    send -1                 ; --
-
-    ; check timer message number
-    state 4                 ; seq
-    msg 2                   ; seq seq'
-    cmp eq                  ; seq==seq'
-    if_not std.commit       ; --
-
-tx_tmo_1:
-    ; check for empty queue
-    state 5                 ; msgs
-    deque empty             ; is_empty(msgs)
-    if_not tx_tmo_2         ; --
-
-    ; send empty message
-    push tx_msg             ; tx_msg
-    my self                 ; tx_msg SELF
-    send 1                  ; --
-    ref std.commit
-
-tx_tmo_2:
-    ; resend queued message
-    state 5                 ; msgs
-    deque pop               ; msgs (seq . content)
-    state 3                 ; msgs (seq . content) ack
-    pair 1                  ; msgs (ack seq . content)
-    state 1                 ; msgs (ack seq . content) link
-    ref std.send_msg
-
-;
-; Link receiver
-;
-; Receiver state:
-;   cust: capability for local delivery
-;   timer: capability for timer service
-;   tx: capability for tx
-;   seq: next message number expected (to receive)
-;
-
-link_rx_beh:                ; (cust timer tx seq) <- (ack seq' . content) | ()
-    msg 0                   ; msg
-    eq #nil                 ; msg==()
-    if_not link_rx_1
-
-    ; timeout
-    state 0                 ; state
-    push lost_rx_beh        ; state lost_rx_beh
-    beh -1                  ; --
-
-    ; reset timer
-    push #nil               ; msg=()
-    my self                 ; msg target=SELF
-    push rx_timeout         ; msg target delay=rx_timeout
-    pair 2                  ; timer_req=(delay target . msg)
-    state 2                 ; timer_req timer
-    send -1                 ; --
-    ref std.commit
-
-link_rx_1:
-    ; check inbound message number
-    state 4                 ; seq
-    msg 2                   ; seq seq'
-    cmp eq                  ; seq==seq'
-    if_not std.commit       ; // ignore unexpected message
-
-link_rx_2:
-    ; forward ack to tx
-    msg 2                   ; seq'
-    msg 1                   ; seq' ack
-    push tx_ack             ; seq' ack tx_ack
-    state 3                 ; seq' ack tx_ack tx
-    send 3                  ; --
-
-    ; increment expected message number
-    state 4                 ; seq
-    push 1                  ; seq 1
-    alu add                 ; seq+1
-    state 3                 ; seq+1 tx
-    state 2                 ; seq+1 tx timer
-    state 1                 ; seq+1 tx timer cust
-    push link_rx_beh        ; seq+1 tx timer cust link_rx_beh
-    beh 4                   ; --
-
-    ; forward message to cust
-    msg -2                  ; content
-    dup 1                   ; content content
-    eq #nil                 ; content content==()
-    if std.commit           ; content  // drop empty message
-    state 1                 ; content cust
-    ref std.send_msg
-
-; One timeout has occurred. Another means disconnect.
-
-lost_rx_beh:                ; (cust timer tx seq) <- (ack seq' . content) | ()
-    msg 0                   ; msg
-    eq #nil                 ; msg==()
-    if_not lost_rx_1
-
-    ; timeout
-    push std.sink_beh       ; sink_beh  // become inert
-    beh 0                   ; --
-    state 3                 ; tx  // stop transmitter
-    send 0                  ; --
-    state 1                 ; cust  // lost signal
-    send 0                  ; --
-    ref std.commit
-
-lost_rx_1:
-    ; check inbound message number
-    state 4                 ; seq
-    msg 2                   ; seq seq'
-    cmp eq                  ; seq==seq'
-    if link_rx_2            ; --
-
-    ; ignore unexpected message (but recover)
-    state 0                 ; state
-    push link_rx_beh        ; state link_rx_beh
-    beh -1                  ; --
-    ref std.commit
 
 ;
 ; Chat room (central mediator)
@@ -570,7 +340,7 @@ room_cast:                  ; msg=(party . content) {parties}
     quad -4                 ; msg next value key #dict_t
     drop 2                  ; msg next tx=value
     pick 3                  ; msg next tx msg
-    push tx_msg             ; msg next tx msg tx_msg
+    push link.tx_msg        ; msg next tx msg tx_msg
     pair 1                  ; msg next tx (tx_msg . msg)
     roll 2                  ; msg next (tx_msg . msg) tx
     send -1                 ; msg next
@@ -654,40 +424,22 @@ str_lost:
     pair_t '\n'
     ref #nil
 
-;
-; Line buffer and utilities
-;
-
-; An infinite loop will consume cycles, but no memory or events
-
-loop_forever:
-    dup 0 loop_forever
-
-; The "ticker" sends itself an incrementing number forever.
-
-ticker:                     ; () <- n
-    msg 0                   ; n
-    push 1                  ; n 1
-    alu add                 ; n+1
-    my self                 ; n+1 SELF
-    ref std.send_msg        ; --
-
 ; Pass messages unchanged, but also copy to log.
 ; FIXME: could be a combination of `tee` and `label`...
 
-log_fwd_beh:                ; (logr rcvr) <- msg
+log_fwd_beh:                ; (logr . rcvr) <- msg
     msg 0                   ; msg
     my self                 ; msg SELF
     pair 1                  ; (SELF . msg)  // label log entry
     state 1                 ; (SELF . msg) logr
     send -1                 ; --
     msg 0                   ; msg
-    state 2                 ; msg rcvr
+    state -1                ; msg rcvr
     ref std.send_msg
 
 ; Pass messages unchanged (a limited number of times).
 
-cnt_fwd_beh:                ; (limit rcvr) <- msg
+cnt_fwd_beh:                ; (limit . rcvr) <- msg
     state 1                 ; limit
     push 0                  ; limit 0
     cmp gt                  ; limit>0
@@ -695,10 +447,11 @@ cnt_fwd_beh:                ; (limit rcvr) <- msg
     my state                ; rcvr limit
     push 1                  ; rcvr limit 1
     alu sub                 ; rcvr limit-1
-    push cnt_fwd_beh        ; rcvr limit-1 cnt_fwd_beh
-    beh 2                   ; --
+    pair 1                  ; (limit-1 . rcvr)
+    push cnt_fwd_beh        ; (limit-1 . rcvr) cnt_fwd_beh
+    beh -1                  ; --
     msg 0                   ; msg
-    state 2                 ; msg rcvr
+    state -1                ; msg rcvr
     ref std.send_msg
 
 .export
