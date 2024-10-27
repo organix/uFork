@@ -86,72 +86,94 @@ pub fn h_run_loop(limit: i32) -> Raw {
 
 #[no_mangle]
 pub fn h_event_enqueue(evt: Raw) {
-    unsafe { the_host().borrow_mut().event_enqueue(evt) }
+    let mut host = unsafe { the_host().borrow_mut() };
+    let core = host.mut_core();
+    let ep = Any::new(evt);
+    core.event_enqueue(ep)
+//    unsafe { the_host().borrow_mut().event_enqueue(evt) }
 }
 
 #[no_mangle]
 pub fn h_revert() -> bool {
-    unsafe { the_host().borrow_mut().actor_revert() }
+    let mut host = unsafe { the_host().borrow_mut() };
+    let core = host.mut_core();
+    core.actor_revert()
+//    unsafe { the_host().borrow_mut().actor_revert() }
 }
 
 #[no_mangle]
 pub fn h_gc_run() {
-    unsafe { the_host().borrow_mut().gc_run() }
-}
-
-#[no_mangle]
-pub fn h_rom_buffer() -> *const Quad {
-    unsafe { the_host().borrow().rom_buffer() }
+    let mut host = unsafe { the_host().borrow_mut() };
+    let core = host.mut_core();
+    core.gc_collect()
+//    unsafe { the_host().borrow_mut().gc_run() }
 }
 
 #[no_mangle]
 pub fn h_rom_top() -> Raw {
-    unsafe { the_host().borrow().rom_top() }
+    let host = unsafe { the_host().borrow() };
+    let core = host.the_core();
+    core.rom_top().raw()
+//    unsafe { the_host().borrow().rom_top() }
 }
 
 #[no_mangle]
 pub fn h_set_rom_top(top: Raw) {
-    unsafe { the_host().borrow_mut().set_rom_top(top) }
+    let mut host = unsafe { the_host().borrow_mut() };
+    let core = host.mut_core();
+    let ptr = Any::new(top);
+    core.set_rom_top(ptr);
+//    unsafe { the_host().borrow_mut().set_rom_top(top) }
 }
 
 #[no_mangle]
 pub fn h_reserve_rom() -> Raw {
-    unsafe { the_host().borrow_mut().reserve_rom() }
-}
-
-#[no_mangle]
-pub fn h_ram_buffer() -> *const Quad {
-    unsafe { the_host().borrow().ram_buffer() }
+    let mut host = unsafe { the_host().borrow_mut() };
+    let core = host.mut_core();
+    core.reserve_rom().unwrap().raw()
+//    unsafe { the_host().borrow_mut().reserve_rom() }
 }
 
 #[no_mangle]
 pub fn h_ram_top() -> Raw {
-    unsafe { the_host().borrow().ram_top() }
+    let host = unsafe { the_host().borrow() };
+    let core = host.the_core();
+    core.ram_top().raw()
+//    unsafe { the_host().borrow().ram_top() }
 }
 
 #[no_mangle]
 pub fn h_reserve() -> Raw {
-    unsafe { the_host().borrow_mut().reserve() }
+    let mut host = unsafe { the_host().borrow_mut() };
+    let core = host.mut_core();
+    core.reserve(&Quad::empty_t()).unwrap().raw()
+//    unsafe { the_host().borrow_mut().reserve() }
 }
 
 #[no_mangle]
 pub fn h_reserve_stub(device: Raw, target: Raw) -> Raw {
-    unsafe { the_host().borrow_mut().reserve_stub(device, target) }
+    let mut host = unsafe { the_host().borrow_mut() };
+    let core = host.mut_core();
+    let device_ptr = Any::new(device);
+    let target_ptr = Any::new(target);
+    core.reserve_stub(device_ptr, target_ptr).unwrap().raw()
+//    unsafe { the_host().borrow_mut().reserve_stub(device, target) }
 }
 
 #[no_mangle]
 pub fn h_release_stub(ptr: Raw) {
-    unsafe { the_host().borrow_mut().release_stub(ptr) }
-}
-
-#[no_mangle]
-pub fn h_blob_buffer() -> *const u8 {
-    unsafe { the_host().borrow().blob_buffer() }
+    let mut host = unsafe { the_host().borrow_mut() };
+    let core = host.mut_core();
+    core.release_stub(Any::new(ptr))
+//    unsafe { the_host().borrow_mut().release_stub(ptr) }
 }
 
 #[no_mangle]
 pub fn h_blob_top() -> Raw {
-    unsafe { the_host().borrow().blob_top() }
+    let host = unsafe { the_host().borrow() };
+    let core = host.the_core();
+    core.blob_top().raw()
+//    unsafe { the_host().borrow().blob_top() }
 }
 
 #[no_mangle]
@@ -172,10 +194,46 @@ pub fn h_cdr(raw: Raw) -> Raw {
 
 #[no_mangle]
 pub fn h_gc_color(raw: Raw) -> Raw {
-    unsafe { the_host().borrow().gc_color(raw) }
+    let host = unsafe { the_host().borrow() };
+    let core = host.the_core();
+    core.gc_color(Any::new(raw)).raw()
+//    unsafe { the_host().borrow().gc_color(raw) }
 }
 
 #[no_mangle]
 pub fn h_gc_state() -> Raw {
-    unsafe { the_host().borrow().gc_state() }
+    let host = unsafe { the_host().borrow() };
+    let core = host.the_core();
+    core.gc_state().raw()
+//    unsafe { the_host().borrow().gc_state() }
+}
+
+/*
+*  WARNING! The methods below give _unsafe_ access
+*  to the underlying buffers. They are intended
+*  to provide access (read/write) to WASM Host.
+*/
+
+#[no_mangle]
+pub fn h_rom_buffer() -> *const Quad {
+    let host = unsafe { the_host().borrow() };
+    let core = host.the_core();
+    core.rom_buffer().as_ptr()
+//    unsafe { the_host().borrow().rom_buffer() }
+}
+
+#[no_mangle]
+pub fn h_ram_buffer() -> *const Quad {
+    let host = unsafe { the_host().borrow() };
+    let core = host.the_core();
+    core.ram_buffer().as_ptr()
+//    unsafe { the_host().borrow().ram_buffer() }
+}
+
+#[no_mangle]
+pub fn h_blob_buffer() -> *const u8 {
+    let host = unsafe { the_host().borrow() };
+    let core = host.the_core();
+    core.blob_buffer().as_ptr()
+//    unsafe { the_host().borrow().blob_buffer() }
 }

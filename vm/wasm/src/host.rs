@@ -108,9 +108,6 @@ impl Host {
     pub fn reserve(&mut self) -> Raw {
         self.core.reserve(&Quad::empty_t()).unwrap().raw()
     }
-    pub fn core(&mut self) -> &mut Core {
-        &mut self.core
-    }
     pub fn reserve_stub(&mut self, device: Raw, target: Raw) -> Raw {
         let device_ptr = Any::new(device);
         let target_ptr = Any::new(target);
