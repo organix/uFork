@@ -1,19 +1,6 @@
 ; Self-testing ROM image
 
-boot:                       ; _ <- caps
-    push 42                 ; 42
-    msg 0                   ; 42 caps
-    my self                 ; 42 caps self
-    push reboot             ; 42 state=(self caps) beh=reboot
-    beh 2                   ; 42 --
-    assert 42               ; --
-    ref test_pairs
-
-reboot:                     ; (self) <- _
-    dup 0                   ; --
-    part 0                  ; --
-    ref commit
-
+boot:                       ; _ <- {caps}
 test_pairs:
     pair 0                  ; ()
     assert #nil             ; --
