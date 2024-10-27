@@ -139,17 +139,17 @@ str_end:                    ; --
     ref std.send_msg
 
 boot:                       ; _ <- {caps}
-    push svg_cmds           ; svg_cmds
-    msg 0                   ; svg_cmds {caps}
-    push dev.svg_key        ; svg_cmds {caps} svg_key
-    dict get                ; svg_cmds svg_dev
-    push std.sink_beh       ; svg_cmds svg_dev sink_beh
-    new 0                   ; str=svg_cmds out=svg_dev cb=sink_beh.()
-    pair 2                  ; (cb out . str)
-    push str_out            ; (cb out . str) str_out
-    new -1                  ; str_out.(cb out . str)
-    send 0                  ; --
-    ref std.commit
+    push svg_cmds           ; #? str=svg_cmds
+    msg 0                   ; #? str {caps}
+    push dev.svg_key        ; #? str {caps} svg_key
+    dict get                ; #? str out=svg_dev
+    push #?                 ; #? str out #?
+    push std.sink_beh       ; #? str out #? sink_beh
+    new -1                  ; #? str out cb=sink_beh.#?
+    pair 2                  ; #? (cb out . str)
+    push str_out            ; #? (cb out . str) str_out
+    new -1                  ; #? str_out.(cb out . str)
+    ref std.send_msg
 
 .export
     boot
