@@ -10,48 +10,53 @@ This document describes a textual assembly language for uFork.
     ; fibonnacci number is calculated and sent to the customer.
 
     .import
-        std: "./std.asm"
+        std: "https://ufork.org/lib/std.asm"
 
-    beh:                    ; () <- (cust n)
-        msg 2               ; n
-        dup 1               ; n n
-        push 2              ; n n 2
-        cmp lt              ; n n<2
-        if std.cust_send    ; n
+    beh:
+    fib_beh:                    ; _ <- (cust . n)
+        msg -1                  ; n
+        dup 1                   ; n n
+        push 2                  ; n n 2
+        cmp lt                  ; n n<2
+        if std.cust_send        ; n
 
-        msg 1               ; n cust
-        push k              ; n cust k
-        new -1              ; n k.cust
+        msg 1                   ; n cust
+        push k                  ; n cust k
+        new -1                  ; n k=k.cust
 
-        pick 2              ; n k n
-        push 1              ; n k n 1
-        alu sub             ; n k n-1
-        pick 2              ; n k n-1 k
-        push beh            ; n k n-1 k beh
-        new 0               ; n k n-1 k fib.()
-        send 2              ; n k
+        pick 2                  ; n k n
+        push 1                  ; n k n 1
+        alu sub                 ; n k n-1
+        pick 2                  ; n k n-1 k
+        pair 1                  ; n k (k . n-1)
+        push #?                 ; n k (k . n-1) #?
+        push fib_beh            ; n k (k . n-1) #? fib_beh
+        new -1                  ; n k (k . n-1) fib.#?
+        send -1                 ; n k
 
-        roll 2              ; k n
-        push 2              ; k n 2
-        alu sub             ; k n-2
-        roll 2              ; n-2 k
-        push beh            ; n-2 k beh
-        new 0               ; n-2 k fib.()
-        send 2              ; --
+        roll 2                  ; k n
+        push 2                  ; k n 2
+        alu sub                 ; k n-2
+        roll 2                  ; n-2 k
+        pair 1                  ; (k . n-2)
+        push #?                 ; (k . n-2) #?
+        push fib_beh            ; (k . n-2) #? fib_beh
+        new -1                  ; (k . n-2) fib.#?
+        ref std.send_msg
+
+    k:                          ; cust <- m
+        msg 0                   ; m
+        state 0                 ; m cust
+        pair 1                  ; (cust . m)
+        push k2                 ; (cust . m) k2
+        beh -1                  ; k2.(cust . m)
         ref std.commit
 
-    k:                      ; cust <- m
-        state 0             ; cust
-        msg 0               ; cust m
-        push k2             ; cust m k2
-        beh 2               ; k2.(cust m)
-        ref std.commit
-
-    k2:                     ; (cust m) <- n
-        state 2             ; m
-        msg 0               ; m n
-        alu add             ; m+n
-        state 1             ; m+n cust
+    k2:                         ; (cust . m) <- n
+        state -1                ; m
+        msg 0                   ; m n
+        alu add                 ; m+n
+        state 1                 ; m+n cust
         ref std.send_msg
 
     .export

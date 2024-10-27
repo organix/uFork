@@ -44,8 +44,6 @@ test_pairs:
     part -1                 ; 1
     assert 1                ; --
     assert #?               ; --
-    ref test_if
-
 test_if:
     part 1                  ; #? #?
     drop 1                  ; #?
@@ -60,8 +58,6 @@ test_if:
     if stop                 ; --
     push 0                  ; 0
     if stop                 ; --
-    ref test_nth
-
 test_nth:
     push list-0             ; (273 546 819)
     part 1                  ; (546 819) 273
@@ -99,8 +95,6 @@ test_nth:
     push list-0             ; (273 546 819)
     nth -4                  ; #?
     assert #?               ; --
-    ref test_pick_and_roll
-
 test_pick_and_roll:
     push 3                  ; 3
     push 2                  ; 3 2
@@ -138,8 +132,6 @@ test_pick_and_roll:
     assert #?               ; 1
     roll -2                 ; --
     assert #?               ; #?
-    ref test_actors
-
 test_actors:
     push #?                 ; #?
     push cell_beh           ; #? cell_beh
@@ -153,17 +145,16 @@ test_actors:
     pick 2                  ; actor #f actor
     send -1                 ; actor
     drop 1                  ; --
-    ref test_fib
-
 test_fib:
     push 6                  ; n=6
     push 8                  ; n fib(n)=8
-    push assert_beh         ; n fib(n) assert_beh
-    new 1                   ; n cust=assert_beh.8
-    push fib_beh            ; n cust fib_beh
-    new 0                   ; n cust fib
-    send 2                  ; --
-    ref commit
+    push assert_eq_beh      ; n fib(n) assert_eq_beh
+    new -1                  ; n cust=assert_eq_beh.8
+    pair 1                  ; (cust . n)
+    push #?                 ; (cust . n) #?
+    push fib_beh            ; (cust . n) #? fib_beh
+    new -1                  ; (cust . n) fib
+    ref send_msg
 
 ; static data
 list-0:                     ; (273 546 819)
@@ -175,13 +166,12 @@ list-2:                     ; (819)
 list-3:                     ; ()
     ref #nil
 
-; test assertion
-assert_beh:                 ; (expect) <- actual
-    debug
-    state 1                 ; expect
-    msg 0                   ; expect actual
-    cmp eq                  ; expect==actual
-    assert #t
+; taken from `assert_eq.asm`
+assert_eq_beh:              ; expect <- actual
+    msg 0                   ; actual
+    state 0                 ; actual expect
+    cmp eq                  ; actual==expect
+    assert #t               ; --
     ref commit
 
 ; dumb data cell
@@ -192,48 +182,47 @@ cell_beh:                   ; value <- value'
     ref commit
 
 ; example from `fib.asm`
-;;  (define fib
-;;      (lambda (n)
-;;          (if (< n 2)
-;;              n
-;;              (+ (fib (- n 1)) (fib (- n 2))))))
-fib_beh:                    ; () <- (cust n)
-    msg 2                   ; n
+fib_beh:                    ; _ <- (cust . n)
+    msg -1                  ; n
     dup 1                   ; n n
     push 2                  ; n n 2
     cmp lt                  ; n n<2
     if cust_send            ; n
 
     msg 1                   ; n cust
-    push fib_k              ; n cust fib_k
-    new -1                  ; n k=fib_k.cust
+    push fib_k              ; n cust k
+    new -1                  ; n k=k.cust
 
     pick 2                  ; n k n
     push 1                  ; n k n 1
     alu sub                 ; n k n-1
     pick 2                  ; n k n-1 k
-    push fib_beh            ; n k n-1 k fib_beh
-    new 0                   ; n k n-1 k fib.()
-    send 2                  ; n k
+    pair 1                  ; n k (k . n-1)
+    push #?                 ; n k (k . n-1) #?
+    push fib_beh            ; n k (k . n-1) #? fib_beh
+    new -1                  ; n k (k . n-1) fib.#?
+    send -1                 ; n k
 
     roll 2                  ; k n
     push 2                  ; k n 2
     alu sub                 ; k n-2
     roll 2                  ; n-2 k
-    push fib_beh            ; n-2 k fib_beh
-    new 0                   ; n-2 k fib.()
-    send 2                  ;
-    ref commit
+    pair 1                  ; (k . n-2)
+    push #?                 ; (k . n-2) #?
+    push fib_beh            ; (k . n-2) #? fib_beh
+    new -1                  ; (k . n-2) fib.#?
+    ref send_msg
 
 fib_k:                      ; cust <- m
     msg 0                   ; m
     state 0                 ; m cust
-    push fib_k2             ; cust m fib_k2
-    beh 2                   ; fib_k2.(cust m)
+    pair 1                  ; (cust . m)
+    push fib_k2             ; (cust . m) k2
+    beh -1                  ; k2.(cust . m)
     ref commit
 
-fib_k2:                     ; (cust m) <- n
-    state 2                 ; m
+fib_k2:                     ; (cust . m) <- n
+    state -1                ; m
     msg 0                   ; m n
     alu add                 ; m+n
     state 1                 ; m+n cust
