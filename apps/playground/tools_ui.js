@@ -55,6 +55,7 @@ const tools_ui = make_ui("tools-ui", function (element, {
         }
     `);
     let core;
+    let run_loop_timer;
     let devices = Object.create(null);
     let device_element = document.createComment("placeholder");
     let device_select;
@@ -99,6 +100,7 @@ const tools_ui = make_ui("tools-ui", function (element, {
     }
 
     function stop() {
+        clearTimeout(run_loop_timer);
         run_button.textContent = "▶ Run";
         run_button.onclick = function () {
             run(get_text(), "boot");
@@ -149,7 +151,7 @@ const tools_ui = make_ui("tools-ui", function (element, {
             refill_sponsor();
             const elapsed = Date.now() - begin;
             if (elapsed > 20) {
-                return setTimeout(run_loop, 0);
+                run_loop_timer = setTimeout(run_loop, 0);
             }
         }
     }
