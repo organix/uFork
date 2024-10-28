@@ -2,6 +2,7 @@
 
 use crate::*;
 
+#[derive(Clone, Copy)]
 pub struct FailDevice {}
 impl FailDevice {
     pub const fn new() -> FailDevice {
@@ -21,9 +22,9 @@ mod tests {
 
     #[test]
     fn fail_dev_always_fails() {
-        static mut NULL_DEV: FailDevice = FailDevice::new();
+        static mut FAIL_DEV: FailDevice = FailDevice::new();
         let mut core = Core::default();
-        assert_eq!(E_FAIL, unsafe { NULL_DEV.handle_event(&mut core, UNDEF) }.unwrap_err() );
+        assert_eq!(E_FAIL, unsafe { FAIL_DEV.handle_event(&mut core, UNDEF) }.unwrap_err() );
         assert_eq!(0, ::core::mem::size_of::<FailDevice>());
     }
 

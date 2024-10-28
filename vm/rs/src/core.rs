@@ -15,7 +15,7 @@ pub const CLOCK_DEV: Any    = Any { raw: MUT_RAW | OPQ_RAW | 3 };
 pub const IO_DEV: Any       = Any { raw: MUT_RAW | OPQ_RAW | 4 };
 pub const BLOB_DEV: Any     = Any { raw: MUT_RAW | OPQ_RAW | 5 };
 pub const TIMER_DEV: Any    = Any { raw: MUT_RAW | OPQ_RAW | 6 };
-pub const MEMO_DEV: Any     = Any { raw: MUT_RAW | OPQ_RAW | 7 };  // FIXME: MEMO deprecated. replace with NULL?
+pub const MEMO_DEV: Any     = Any { raw: MUT_RAW | OPQ_RAW | 7 };  // FIXME: MEMO deprecated. replaced with null_dev
 pub const HOST_DEV: Any     = Any { raw: MUT_RAW | OPQ_RAW | 8 };
 pub const RANDOM_DEV: Any   = Any { raw: MUT_RAW | OPQ_RAW | 9 };
 pub const SPONSOR: Any      = Any { raw: MUT_RAW | 15 };
@@ -41,7 +41,7 @@ const BLOB_RAM_MAX: usize = 1<<10;  // 1K octets of Blob RAM
 //const BLOB_RAM_MAX: usize = 1<<12;  // 4K octets of Blob RAM
 //const BLOB_RAM_MAX: usize = 1<<14;  // 16K octets of Blob RAM
 //const BLOB_RAM_MAX: usize = 1<<16;  // 64K octets of Blob RAM (maximum value)
-const DEVICE_MAX:   usize = 13;      // number of Core devices
+const DEVICE_MAX:   usize = 13;     // number of Core devices
 
 pub struct Core<
     const QUAD_ROM_SIZE: usize = QUAD_ROM_MAX,
@@ -61,9 +61,21 @@ pub struct Core<
 
 impl Default for Core {
     fn default() -> Self {
-        Self::new(
-            CoreDevices::default(),
-        )
+        Self::new([
+            Some(Box::new(null_dev::NullDevice::new())),
+            None,
+            None,
+            Some(Box::new(blob_dev::BlobDevice::new())),
+            None,
+            None,
+            None,
+            None,
+            Some(Box::new(fail_dev::FailDevice::new())),
+            Some(Box::new(fail_dev::FailDevice::new())),
+            Some(Box::new(fail_dev::FailDevice::new())),
+            Some(Box::new(fail_dev::FailDevice::new())),
+            Some(Box::new(fail_dev::FailDevice::new())),
+        ])
     }
 }
 
@@ -80,7 +92,7 @@ pub struct CoreDevices {
 
 impl Core {
     pub fn new(
-        core_devices: CoreDevices,
+        devices: [Option<Box<dyn Device>>; DEVICE_MAX],
     ) -> Core {
 
         /*
@@ -173,36 +185,12 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
         blob_ram[16] = u16_lsb(nat);    //         size[0] (lsb)
         blob_ram[17] = u16_msb(nat);    //         size[1] (msb)
 
-        let CoreDevices {
-            debug_device,
-            clock_device,
-            random_device,
-            io_device,
-            blob_device,
-            timer_device,
-            host_device } = core_devices;
-        let memo_device = null_dev::NullDevice::new();
-
         Core {
             quad_rom,
             quad_ram,
             gc_queue,
             blob_ram,
-            device: [
-                Some(Box::new(debug_device)),
-                Some(Box::new(clock_device)),
-                Some(Box::new(io_device)),
-                Some(Box::new(blob_device)),
-                Some(Box::new(timer_device)),
-                Some(Box::new(memo_device)),
-                Some(Box::new(host_device)),
-                Some(Box::new(random_device)),
-                Some(Box::new(fail_dev::FailDevice::new())),
-                Some(Box::new(fail_dev::FailDevice::new())),
-                Some(Box::new(fail_dev::FailDevice::new())),
-                Some(Box::new(fail_dev::FailDevice::new())),
-                Some(Box::new(fail_dev::FailDevice::new())),
-            ],
+            device: devices,
             rom_top: Any::rom(ROM_TOP_OFS),
             gc_state: UNDEF,
             trace_event: Box::new(|_, _| {}),

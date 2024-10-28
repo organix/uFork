@@ -1,8 +1,10 @@
 // WASM host interface adapter for ufork::core::Core
 
+use alloc::boxed::Box;
+
 use crate::*;
 
-use ufork::{any::Any, core::{Core, CoreDevices}, device::*};
+use ufork::{any::*, core::Core, device::*};
 
 pub struct Host {
     core: Core,
@@ -10,30 +12,24 @@ pub struct Host {
 
 impl Host {
     pub fn new() -> Host {
-        let mut core = Core::new(
-            CoreDevices {
-            debug_device: DebugDevice {
+        let mut core = Core::new([
+            Some(Box::new(debug_dev::DebugDevice::new())),
+            /*Some(Box::new(DebugDevice {
                 debug_print: |value| {
                     let raw = value.raw();
                     unsafe {
                         crate::host_log(raw);
                     }
                 },
-            },
-            clock_device: ClockDevice {
+            })),*/
+            Some(Box::new(ClockDevice {
                 read_clock: || {
                     let raw = unsafe { crate::host_clock() };
                     let now = Any::fix(raw as isize);
                     now
                 },
-            },
-            random_device: RandomDevice {
-                get_random: |a, b| unsafe {
-                    let raw = crate::host_random(a.raw(), b.raw());
-                    Any::fix(raw as isize)
-                },
-            },
-            io_device: IoDevice {
+            })),
+            Some(Box::new(IoDevice {
                 dump_blob: |base, ofs| unsafe {
                     crate::host_print(base, ofs);
                 },
@@ -45,27 +41,40 @@ impl Host {
                     let raw = crate::host_read(stub.raw());
                     Any::new(raw)
                 }
-            },
-            blob_device: BlobDevice {
+            })),
+            Some(Box::new(ufork::blob_dev::BlobDevice::new())),
+            /*Some(Box::new(BlobDevice {
                 log_proxy: |proxy| unsafe {
                     let raw = proxy.raw();
                     crate::host_log(raw);
                 }
-            },
-            timer_device: TimerDevice {
+            })),*/
+            Some(Box::new(TimerDevice {
                 start_timer: |delay, stub| unsafe {
                     crate::host_start_timer(delay.raw(), stub.raw());
                 },
                 stop_timer: |stub| unsafe {
                     crate::host_stop_timer(stub.raw())
                 },
-            },
-            host_device: HostDevice {
+            })),
+            Some(Box::new(ufork::null_dev::NullDevice::new())),
+            Some(Box::new(HostDevice {
                 to_host: |event_stub_or_proxy| unsafe {
                     crate::host(event_stub_or_proxy.raw())
                 }
-            },
-        });
+            })),
+            Some(Box::new(RandomDevice {
+                get_random: |a, b| unsafe {
+                    let raw = crate::host_random(a.raw(), b.raw());
+                    Any::fix(raw as isize)
+                },
+            })),
+            Some(Box::new(ufork::fail_dev::FailDevice::new())),
+            Some(Box::new(ufork::fail_dev::FailDevice::new())),
+            Some(Box::new(ufork::fail_dev::FailDevice::new())),
+            Some(Box::new(ufork::fail_dev::FailDevice::new())),
+            Some(Box::new(ufork::fail_dev::FailDevice::new())),
+        ]);
         core.set_trace_event(|ep, kp| {
             trace_event(ep,kp);
         });

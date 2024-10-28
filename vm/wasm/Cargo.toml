@@ -13,3 +13,7 @@ crate-type = ["cdylib", "rlib"]
 [dependencies]
 lol_alloc = { version = "0.4.0" }
 ufork = { path = "../rs" }
+
+[features]
+default = ["no_std"]
+no_std = []

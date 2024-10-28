@@ -1,8 +1,11 @@
-#![no_std]
+#![cfg_attr(feature = "no_std", no_std)]
+
+extern crate alloc;
 
 use ::core::cell::RefCell;
 
 pub mod host;
+pub mod debug_dev;
 
 use ufork::{any::Any, quad::Quad, Error, Raw};
 
