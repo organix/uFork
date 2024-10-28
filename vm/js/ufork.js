@@ -146,9 +146,9 @@ const VM_BEH    = 0x8000001D;  // +29
 
 // Memory limits (from core.rs)
 
-const QUAD_ROM_MAX = 1 << 12;
+const QUAD_ROM_MAX = 1 << 13;
 const QUAD_RAM_MAX = 1 << 12;
-const BLOB_RAM_MAX = 1 << 10;
+const BLOB_RAM_MAX = 1 << 16;
 
 // Memory layout (from core.rs)
 
@@ -365,7 +365,6 @@ function make_core({
     let deferred_queue = [];
     let initial_rom_ofs;
     let initial_ram_ofs;
-    let initial_blob_ofs;
 
 // The presence of a particular logging method indicates that its associated log
 // level is enabled. Thus calling code can log conditionally, avoiding the
@@ -460,8 +459,6 @@ function make_core({
     const h_reserve = wasm_mutex_call(() => wasm_exports.h_reserve);
     const h_reserve_stub = wasm_mutex_call(() => wasm_exports.h_reserve_stub);
     const h_release_stub = wasm_mutex_call(() => wasm_exports.h_release_stub);
-    //const h_blob_buffer = wasm_mutex_call(() => wasm_exports.h_blob_buffer);
-    const h_blob_top = wasm_mutex_call(() => wasm_exports.h_blob_top);
     const h_car = wasm_mutex_call(() => wasm_exports.h_car);
     const h_cdr = wasm_mutex_call(() => wasm_exports.h_cdr);
     const h_gc_color = wasm_mutex_call(() => wasm_exports.h_gc_color);
@@ -484,10 +481,6 @@ function make_core({
 
     function u_ram_ofs() {
         return initial_ram_ofs;
-    }
-
-    function u_blob_ofs() {
-        return initial_blob_ofs;
     }
 
     function u_sourcemap(ip) {
@@ -719,10 +712,6 @@ function make_core({
             }
         }
         return UNDEF_RAW;
-    }
-
-    function u_blob_mem() {
-        return new Uint8Array(u_memory(), u_blob_ofs(), BLOB_RAM_MAX);
     }
 
     function u_quad_print(quad) {
@@ -1474,14 +1463,11 @@ function make_core({
         const ram_len = u_rawofs(h_ram_top()) << 4;
         const ram = new Uint8Array(mem_base, ram_ofs, ram_len);
 
-        const blob_ofs = u_blob_ofs();
-        const blob_len = u_fix_to_i32(h_blob_top());
-        const blob = new Uint8Array(mem_base, blob_ofs, blob_len);
+        // FIXME: need a general strategy for saving device state
 
         return {
             rom: rom.slice(),
-            ram: ram.slice(),
-            blob: blob.slice()
+            ram: ram.slice()
         };
     }
 
@@ -1498,10 +1484,7 @@ function make_core({
         const ram = new Uint8Array(mem_base, ram_ofs, ram_len);
         ram.set(snapshot.ram);
 
-        const blob_ofs = u_blob_ofs();
-        const blob_len = snapshot.blob.length;
-        const blob = new Uint8Array(mem_base, blob_ofs, blob_len);
-        blob.set(snapshot.blob);
+        // FIXME: need a general strategy for restoring device state
 
         const rom_top = u_romptr(rom_len >> 2);
         h_set_rom_top(rom_top);  // register new top-of-ROM
@@ -1594,7 +1577,6 @@ function make_core({
                 wasm_exports = wasm.instance.exports;
                 initial_rom_ofs = wasm.instance.exports.h_rom_buffer();
                 initial_ram_ofs = wasm.instance.exports.h_ram_buffer();
-                initial_blob_ofs = wasm.instance.exports.h_blob_buffer();
 
 // Install an anonymous plugin to handle trace information emitted by the debug
 // build of the WASM.
@@ -1636,7 +1618,6 @@ function make_core({
 
 // The non-reentrant methods.
 
-        h_blob_top,
         h_boot,
         h_car,
         h_cdr,
@@ -1665,8 +1646,6 @@ function make_core({
 
 // The reentrant methods.
 
-        u_blob_mem,
-        u_blob_ofs,
         u_cap_to_ptr,
         u_current_continuation,
         u_debug,

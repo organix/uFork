@@ -14,14 +14,6 @@ impl Host {
     pub fn new() -> Host {
         let mut core = Core::new([
             Some(Box::new(debug_dev::DebugDevice::new())),
-            /*Some(Box::new(DebugDevice {
-                debug_print: |value| {
-                    let raw = value.raw();
-                    unsafe {
-                        crate::host_log(raw);
-                    }
-                },
-            })),*/
             Some(Box::new(ClockDevice {
                 read_clock: || {
                     let raw = unsafe { crate::host_clock() };
@@ -30,9 +22,6 @@ impl Host {
                 },
             })),
             Some(Box::new(IoDevice {
-                dump_blob: |base, ofs| unsafe {
-                    crate::host_print(base, ofs);
-                },
                 write: |code| unsafe {
                     let raw = crate::host_write(code.raw());
                     Any::new(raw)
@@ -43,12 +32,6 @@ impl Host {
                 }
             })),
             Some(Box::new(ufork::blob_dev::BlobDevice::new())),
-            /*Some(Box::new(BlobDevice {
-                log_proxy: |proxy| unsafe {
-                    let raw = proxy.raw();
-                    crate::host_log(raw);
-                }
-            })),*/
             Some(Box::new(TimerDevice {
                 start_timer: |delay, stub| unsafe {
                     crate::host_start_timer(delay.raw(), stub.raw());
@@ -87,6 +70,8 @@ impl Host {
     pub fn mut_core(&mut self) -> &mut Core {
         &mut self.core
     }
+
+/*
     pub fn run_loop(&mut self, limit: i32) -> Raw {
         self.core.run_loop(limit).raw()
     }
@@ -158,4 +143,5 @@ impl Host {
     pub unsafe fn blob_buffer(&self) -> *const u8 {
         self.core.blob_buffer().as_ptr()
     }
+*/
 }

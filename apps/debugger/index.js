@@ -37,7 +37,7 @@ const $kqueue = document.getElementById("kqueue");
 
 const $mem_rom = document.getElementById("rom");
 const $mem_ram = document.getElementById("ram");
-const $mem_blob = document.getElementById("blob");
+//const $mem_blob = document.getElementById("blob");
 const $source_monitor = document.getElementById("source");
 
 const $instr = document.getElementById("instr");
@@ -47,6 +47,13 @@ const $self = document.getElementById("self");
 const $effect = document.getElementById("effect");
 const $state = document.getElementById("state");
 const $msg = document.getElementById("msg");
+
+const $gc_button = document.getElementById("gc-btn");
+const $revert_button = document.getElementById("revert-btn");
+const $next_button = document.getElementById("next-step");
+const $step_button = document.getElementById("single-step");
+const $pause_button = document.getElementById("play-pause");
+const $interval = document.getElementById("play-interval");
 
 const $fault_ctl = document.getElementById("fault-ctl");
 const $fault_led = document.getElementById("fault-led");
@@ -118,10 +125,11 @@ function update_ram_monitor() {
     }
     $mem_ram.textContent = a.join("\n");
 }
+/*
 function update_blob_monitor() {
     $mem_blob.textContent = hexdump(core.u_blob_mem());
 }
-/*
+
 import oed from "./oed_lite.js";
 function update_blob_monitor() {
     const result = oed.decode(core.u_blob_mem());
@@ -188,7 +196,7 @@ function enable_next() {
     $next_button.disabled = true;
 }
 function draw_host() {
-    update_blob_monitor();
+//    update_blob_monitor();
     update_ram_monitor();
     const top = core.u_rawofs(core.h_ram_top());
     if (top > ram_max) {
@@ -372,7 +380,14 @@ function next_step() {
     return !fault;
 }
 
-const $interval = document.getElementById("play-interval");
+function pause_action() {
+    $pause_button.textContent = "Play";
+    $pause_button.onclick = play_action;
+    $pause_button.title = "Continue execution (c)";
+    $step_button.disabled = false;
+    paused = true;
+    draw_host();
+}
 function render_loop() {
     //debugger;
     if (paused) {
@@ -402,29 +417,6 @@ function render_loop() {
         }
     }
 }
-
-const $gc_button = document.getElementById("gc-btn");
-$gc_button.onclick = gc_host;
-$gc_button.title = "Run garbage collection (g)";
-
-const $revert_button = document.getElementById("revert-btn");
-function revert_action() {
-    core.h_revert();  // FIXME: check `bool` result...
-    draw_host();
-}
-$revert_button.disabled = true;
-$revert_button.onclick = revert_action;
-$revert_button.title = "Revert actor message-event";
-
-const $next_button = document.getElementById("next-step");
-$next_button.onclick = next_step;
-$next_button.title = "Next instruction for this event (n)";
-
-const $step_button = document.getElementById("single-step");
-$step_button.onclick = single_step;
-$step_button.title = "Next instruction in KQ (s)";
-
-const $pause_button = document.getElementById("play-pause");
 function play_action() {
     $pause_button.textContent = "Pause";
     $pause_button.onclick = pause_action;
@@ -433,14 +425,23 @@ function play_action() {
     $step_button.disabled = true;
     render_loop();
 }
-function pause_action() {
-    $pause_button.textContent = "Play";
-    $pause_button.onclick = play_action;
-    $pause_button.title = "Continue execution (c)";
-    $step_button.disabled = false;
-    paused = true;
+
+$gc_button.onclick = gc_host;
+$gc_button.title = "Run garbage collection (g)";
+
+function revert_action() {
+    core.h_revert();  // FIXME: check `bool` result...
     draw_host();
 }
+$revert_button.disabled = true;
+$revert_button.onclick = revert_action;
+$revert_button.title = "Revert actor message-event";
+
+$next_button.onclick = next_step;
+$next_button.title = "Next instruction for this event (n)";
+
+$step_button.onclick = single_step;
+$step_button.title = "Next instruction in KQ (s)";
 
 function boot(unqualified_src, text) {
     const src = new URL(unqualified_src, window.location.href).href;

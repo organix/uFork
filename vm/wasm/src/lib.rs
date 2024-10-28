@@ -80,6 +80,14 @@ unsafe fn the_host() -> &'static RefCell<Host> {
 }
 
 #[no_mangle]
+pub fn h_init() {
+    // prepare the core for runtime use before any other entry-point is called
+    let mut host = unsafe { the_host().borrow_mut() };
+    let core = host.mut_core();
+    core.init()
+}
+
+#[no_mangle]
 pub fn h_run_loop(limit: i32) -> Raw {
     let mut host = unsafe { the_host().borrow_mut() };
     let core = host.mut_core();
@@ -172,14 +180,6 @@ pub fn h_release_stub(ptr: Raw) {
 }
 
 #[no_mangle]
-pub fn h_blob_top() -> Raw {
-    let host = unsafe { the_host().borrow() };
-    let core = host.the_core();
-    core.blob_top().raw()
-//    unsafe { the_host().borrow().blob_top() }
-}
-
-#[no_mangle]
 pub fn h_car(raw: Raw) -> Raw {
     let host = unsafe { the_host().borrow() };
     let core = host.the_core();
@@ -231,12 +231,4 @@ pub fn h_ram_buffer() -> *const Quad {
     let core = host.the_core();
     core.ram_buffer().as_ptr()
 //    unsafe { the_host().borrow().ram_buffer() }
-}
-
-#[no_mangle]
-pub fn h_blob_buffer() -> *const u8 {
-    let host = unsafe { the_host().borrow() };
-    let core = host.the_core();
-    core.blob_buffer().as_ptr()
-//    unsafe { the_host().borrow().blob_buffer() }
 }

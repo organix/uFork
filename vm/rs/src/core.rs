@@ -3,7 +3,6 @@
 use alloc::boxed::Box;
 
 use crate::*;
-use crate::device::*;
 
 pub const ROM_BASE_OFS: usize = 16;  // ROM offsets below this value are reserved
 
@@ -30,29 +29,22 @@ pub const GC_WHITE: Any     = FALSE;
 
 // core limits (repeated in `ufork.js`)
 //const QUAD_ROM_MAX: usize = 1<<10;  // 1K quad-cells of ROM
-const QUAD_ROM_MAX: usize = 1<<12;  // 4K quad-cells of ROM
-//const QUAD_ROM_MAX: usize = 1<<13;  // 8K quad-cells of ROM (FPGA size)
+//const QUAD_ROM_MAX: usize = 1<<12;  // 4K quad-cells of ROM
+const QUAD_ROM_MAX: usize = 1<<13;  // 8K quad-cells of ROM (FPGA size)
+//const QUAD_ROM_MAX: usize = 1<<14;  // 16K quad-cells of ROM
 //const QUAD_RAM_MAX: usize = 1<<8;   // 256 quad-cells of RAM
 //const QUAD_RAM_MAX: usize = 1<<10;   // 1K quad-cells of RAM
 const QUAD_RAM_MAX: usize = 1<<12;   // 4K quad-cells of RAM (FPGA size)
-//const BLOB_RAM_MAX: usize = 64;     // 64 octets of Blob RAM (for testing)
-//const BLOB_RAM_MAX: usize = 1<<8;   // 256 octets of Blob RAM (for testing)
-const BLOB_RAM_MAX: usize = 1<<10;  // 1K octets of Blob RAM
-//const BLOB_RAM_MAX: usize = 1<<12;  // 4K octets of Blob RAM
-//const BLOB_RAM_MAX: usize = 1<<14;  // 16K octets of Blob RAM
-//const BLOB_RAM_MAX: usize = 1<<16;  // 64K octets of Blob RAM (maximum value)
 const DEVICE_MAX:   usize = 13;     // number of Core devices
 
-pub struct Core<
+pub struct Core <
     const QUAD_ROM_SIZE: usize = QUAD_ROM_MAX,
     const QUAD_RAM_SIZE: usize = QUAD_RAM_MAX,
     const GC_QUEUE_SIZE: usize = QUAD_RAM_MAX,
-    const BLOB_RAM_SIZE: usize = BLOB_RAM_MAX,
 > {
     quad_rom:   [Quad; QUAD_ROM_SIZE],
     quad_ram:   [Quad; QUAD_RAM_SIZE],
     gc_queue:   [Any; GC_QUEUE_SIZE],
-    blob_ram:   [u8; BLOB_RAM_SIZE],
     device:     [Option<Box<dyn Device>>; DEVICE_MAX],
     rom_top:    Any,
     gc_state:   Any,
@@ -62,7 +54,7 @@ pub struct Core<
 impl Default for Core {
     fn default() -> Self {
         Self::new([
-            Some(Box::new(null_dev::NullDevice::new())),
+            None,
             None,
             None,
             Some(Box::new(blob_dev::BlobDevice::new())),
@@ -77,17 +69,6 @@ impl Default for Core {
             Some(Box::new(fail_dev::FailDevice::new())),
         ])
     }
-}
-
-#[derive(Default)]
-pub struct CoreDevices {
-    pub debug_device: DebugDevice,
-    pub clock_device: ClockDevice,
-    pub random_device: RandomDevice,
-    pub io_device: IoDevice,
-    pub blob_device: BlobDevice,
-    pub timer_device: TimerDevice,
-    pub host_device: HostDevice,
 }
 
 impl Core {
@@ -156,44 +137,26 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
         gc_queue[GC_FIRST] = NIL;
         gc_queue[GC_LAST] = NIL;
 
-        /*
-         * OED-encoded Blob Memory (64kB maximum)
-         */
-        let mut blob_ram = [
-            0x8F as u8;  // fill with OED-encoded `null` octets
-            BLOB_RAM_MAX
-        ];
-        let mut nat = BLOB_RAM_MAX;
-        nat -= 9;
-        blob_ram[0] = 0x88;             // Array
-        blob_ram[1] = 0x82;             //   length: +Integer elements
-        blob_ram[2] = 16;               //     length.size = 16 bits
-        blob_ram[3] = 1;                //     length[0] = 1 (lsb)
-        blob_ram[4] = 0;                //     length[1] = 0 (msb)
-        blob_ram[5] = 0x82;             //   size: +Integer octets
-        blob_ram[6] = 16;               //     size.size = 16 bits
-        blob_ram[7] = u16_lsb(nat);     //     size[0] (lsb)
-        blob_ram[8] = u16_msb(nat);     //     size[1] (msb)
-        nat -= 9;
-        blob_ram[9] = 0x8B;             //   [0] = Extension Blob
-        blob_ram[10] = 0x82;            //       meta: +Integer offset
-        blob_ram[11] = 16;              //         meta.size = 16 bits
-        blob_ram[12] = 0;               //         meta[0] = 0 (lsb)
-        blob_ram[13] = 0;               //         meta[1] = 0 (msb)
-        blob_ram[14] = 0x82;            //       size: +Integer octets
-        blob_ram[15] = 16;              //         size.size = 16 bits
-        blob_ram[16] = u16_lsb(nat);    //         size[0] (lsb)
-        blob_ram[17] = u16_msb(nat);    //         size[1] (msb)
-
         Core {
             quad_rom,
             quad_ram,
             gc_queue,
-            blob_ram,
             device: devices,
             rom_top: Any::rom(ROM_TOP_OFS),
             gc_state: UNDEF,
             trace_event: Box::new(|_, _| {}),
+        }
+    }
+
+    pub fn init(&mut self) {  // runtime initialization
+        let mut id = 0;
+        while id < DEVICE_MAX {
+            if self.device[id].is_some() {
+                let mut dev_mut = self.device[id].take().unwrap();
+                dev_mut.init();
+                self.device[id] = Some(dev_mut);
+            }
+            id += 1;
         }
     }
 
@@ -304,12 +267,14 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
         let target = self.event_target(ep);
         if let Ok(id) = self.device_id(target) {
             // synchronous message-event to device
-            let mut dev_mut = self.device[id].take().unwrap();
-            let result = dev_mut.handle_event(self, ep);
-            self.device[id] = Some(dev_mut);
-            #[cfg(debug_assertions)]
-            (self.trace_event)(ep, UNDEF);  // trace transactional effect(s)
-            result
+            if self.device[id].is_some() {  // ignore unavailable devices
+                let mut dev_mut = self.device[id].take().unwrap();
+                let result = dev_mut.handle_event(self, ep);
+                self.device[id] = Some(dev_mut);
+                #[cfg(debug_assertions)]
+                (self.trace_event)(ep, UNDEF);  // trace transactional effect(s)
+                return result
+            }
         } else {
             // begin actor-event transaction
             let ptr = self.cap_to_ptr(target);
@@ -319,8 +284,8 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
             let effect = self.reserve(&actor)?;  // event-effect accumulator
             self.ram_mut(ptr).set_z(effect);  // indicate actor is busy
             self.cont_enqueue(kp);
-            Ok(())
         }
+        Ok(())
     }
     fn execute_instruction(&mut self) -> Any {
         let kp = self.kp();
@@ -1350,7 +1315,6 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
     fn ram_root(&self) -> Any { self.ram(self.memory()).z() }
     fn set_ram_root(&mut self, ptr: Any) { self.ram_mut(self.memory()).set_z(ptr); }
     pub fn memory(&self) -> Any { MEMORY }
-    pub fn blob_top(&self) -> Any { Any::fix(BLOB_RAM_MAX as isize) }
 
     fn new_sponsor(&mut self) -> Result<Any, Error> {
         let spn = Quad::sponsor_t(ZERO, ZERO, ZERO, ZERO);
@@ -1678,6 +1642,7 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
         Ok(ptr)
     }
     pub fn reserve(&mut self, init: &Quad) -> Result<Any, Error> {
+        assert_ne!(self.ram_top(), UNDEF);  // WARNING! MUST CALL `init()` FIRST!
         let next = self.ram_next();
         let ptr = if self.typeq(FREE_T, next) {
             // use quad from free-list
@@ -2040,15 +2005,6 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
     pub fn ram_buffer(&self) -> &[Quad] {
         &self.quad_ram
     }
-    pub fn blob_buffer(&self) -> &[u8] {
-        &self.blob_ram
-    }
-    pub fn blob_read(&self, ofs: usize) -> u8 {
-        self.blob_ram[ofs]
-    }
-    pub fn blob_write(&mut self, ofs: usize, data: u8) {
-        self.blob_ram[ofs] = data;
-    }
 
     fn bitsr(&self, n: isize, nn: isize, carry: bool, rotate: bool) -> Any {
         // fixnum bitwise shift/rotate utility
@@ -2075,14 +2031,6 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
         }
         Any::new(a | FIX_OVF)  // OVF is fixnum type-tag
     }
-}
-
-fn u16_lsb(nat: usize) -> u8 {
-    (nat & 0xFF) as u8
-}
-
-fn u16_msb(nat: usize) -> u8 {
-    ((nat >> 8) & 0xFF) as u8
 }
 
 fn falsy(v: Any) -> bool {
@@ -2496,6 +2444,7 @@ pub const COUNT_TO: Any = Any { raw: COUNT_TO_OFS as Raw };
     #[test]
     fn dict_operations() {
         let mut core = Core::default();
+        core.init();
         let boot_beh = load_dict_test(&mut core);
         let boot_ptr = core.reserve(&Quad::new_actor(boot_beh, NIL)).unwrap();
         let a_boot = core.ptr_to_cap(boot_ptr);
@@ -2508,6 +2457,7 @@ pub const COUNT_TO: Any = Any { raw: COUNT_TO_OFS as Raw };
     #[test]
     fn deque_operations() {
         let mut core = Core::default();
+        core.init();
         let boot_beh = load_deque_test(&mut core);
         let boot_ptr = core.reserve(&Quad::new_actor(boot_beh, NIL)).unwrap();
         let a_boot = core.ptr_to_cap(boot_ptr);
@@ -2522,6 +2472,7 @@ pub const COUNT_TO: Any = Any { raw: COUNT_TO_OFS as Raw };
     #[test]
     fn device_operations() {
         let mut core = Core::default();
+        core.init();
         let boot_beh = load_device_test(&mut core);
         let boot_ptr = core.reserve(&Quad::new_actor(boot_beh, NIL)).unwrap();
         let a_boot = core.ptr_to_cap(boot_ptr);
