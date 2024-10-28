@@ -69,20 +69,6 @@ Promise.all([
 ]).then(function ([hrefs, html]) {
     const preload_elements = hrefs.map(function (href) {
         const extension = href.split(".").pop();
-        const as = (
-            extension === "js"
-            ? "script"
-            : (
-                extension === "woff2"
-                ? "font"
-                : "fetch"
-            )
-        );
-        const rel = (
-            extension === "js"
-            ? "modulepreload"
-            : "preload"
-        );
         const relative_href = href.replace(
             playground_href,
             ""
@@ -90,9 +76,20 @@ Promise.all([
             "https://ufork.org/",
             "../"
         );
-        return `<link rel="${rel}" href="${relative_href}" as="${as}" />`;
+        if (extension === "js") {
+            return `<link rel="modulepreload" href="${
+                relative_href
+            }" as="script" />`;
+        }
+        const as = (
+            extension === "woff2"
+            ? "font"
+            : "fetch"
+        );
+        return `<link rel="preload" crossorigin="anonymous" href="${
+            relative_href
+        }" as="${as}" />`;
     });
-
     return Deno.writeTextFile(
         path_to_index_html,
         html.replace(
