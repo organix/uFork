@@ -3,9 +3,11 @@
 extern crate alloc;
 
 pub mod any;
-pub mod core;
-pub mod device;
 pub mod quad;
+pub mod core;
+pub mod null_dev;
+pub mod fail_dev;
+pub mod device;
 
 use crate::any::*;
 use crate::core::*;
@@ -37,3 +39,9 @@ pub const MSK_RAW: Raw          = 0xF000_0000;  // mask for type-tag bits
 pub const DIR_RAW: Raw          = 0x8000_0000;  // 1=direct (fixnum), 0=indirect (pointer)
 pub const MUT_RAW: Raw          = 0x4000_0000;  // 1=read-write (mutable), 0=read-only (immutable)
 pub const OPQ_RAW: Raw          = 0x2000_0000;  // 1=opaque (capability), 0=transparent (navigable)
+
+// abstract device interface
+pub trait Device {
+    fn handle_event(&mut self, core: &mut Core, ep: Any) -> Result<(), Error>;
+    fn drop_proxy(&mut self, _core: &mut Core, _cap: Any) {}  // default: no-op
+}

@@ -4,7 +4,7 @@ use ::core::cell::RefCell;
 
 pub mod host;
 
-use ufork::{core::Core, any::Any, quad::Quad, Error, Raw};
+use ufork::{any::Any, quad::Quad, Error, Raw};
 
 use crate::host::*;
 

@@ -41,7 +41,7 @@ const BLOB_RAM_MAX: usize = 1<<10;  // 1K octets of Blob RAM
 //const BLOB_RAM_MAX: usize = 1<<12;  // 4K octets of Blob RAM
 //const BLOB_RAM_MAX: usize = 1<<14;  // 16K octets of Blob RAM
 //const BLOB_RAM_MAX: usize = 1<<16;  // 64K octets of Blob RAM (maximum value)
-const DEVICE_MAX:   usize = 8;      // number of Core devices
+const DEVICE_MAX:   usize = 13;      // number of Core devices
 
 pub struct Core<
     const QUAD_ROM_SIZE: usize = QUAD_ROM_MAX,
@@ -56,8 +56,6 @@ pub struct Core<
     device:     [Option<Box<dyn Device>>; DEVICE_MAX],
     rom_top:    Any,
     gc_state:   Any,
-
-
     trace_event: Box<dyn Fn(Any, Any)>,
 }
 
@@ -175,7 +173,15 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
         blob_ram[16] = u16_lsb(nat);    //         size[0] (lsb)
         blob_ram[17] = u16_msb(nat);    //         size[1] (msb)
 
-        let CoreDevices { debug_device, clock_device, random_device, io_device, blob_device, timer_device, host_device } = core_devices;
+        let CoreDevices {
+            debug_device,
+            clock_device,
+            random_device,
+            io_device,
+            blob_device,
+            timer_device,
+            host_device } = core_devices;
+        let memo_device = null_dev::NullDevice::new();
 
         Core {
             quad_rom,
@@ -188,9 +194,14 @@ pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
                 Some(Box::new(io_device)),
                 Some(Box::new(blob_device)),
                 Some(Box::new(timer_device)),
-                Some(Box::new(NullDevice::new())),
+                Some(Box::new(memo_device)),
                 Some(Box::new(host_device)),
                 Some(Box::new(random_device)),
+                Some(Box::new(fail_dev::FailDevice::new())),
+                Some(Box::new(fail_dev::FailDevice::new())),
+                Some(Box::new(fail_dev::FailDevice::new())),
+                Some(Box::new(fail_dev::FailDevice::new())),
+                Some(Box::new(fail_dev::FailDevice::new())),
             ],
             rom_top: Any::rom(ROM_TOP_OFS),
             gc_state: UNDEF,

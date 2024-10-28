@@ -2,25 +2,6 @@
 
 use crate::*;
 
-pub trait Device {
-    fn handle_event(&mut self, core: &mut Core, ep: Any) -> Result<(), Error>;
-    fn drop_proxy(&mut self, _core: &mut Core, _cap: Any) {}  // default: no-op
-}
-
-pub struct NullDevice {}
-impl NullDevice {
-    pub fn new() -> NullDevice {
-        NullDevice {}
-    }
-}
-impl Device for NullDevice {
-    fn handle_event(&mut self, core: &mut Core, ep: Any) -> Result<(), Error> {
-        let _event = core.mem(ep);
-        //Err(E_FAIL)  // force failure...
-        Ok(())  // event handled.
-    }
-}
-
 pub struct DebugDevice {
     pub debug_print: fn(Any),
 }
