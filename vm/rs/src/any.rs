@@ -118,7 +118,7 @@ pub const MY_SELF: Any      = ZERO;
 pub const MY_BEH: Any       = PLUS_1;
 pub const MY_STATE: Any     = PLUS_2;
 
-// VM_DEQUE deque operations
+// VM_ACTOR actor operations
 pub const ACTOR_SEND: Any   = ZERO;
 pub const ACTOR_POST: Any   = PLUS_1;
 pub const ACTOR_CREATE: Any = PLUS_2;
