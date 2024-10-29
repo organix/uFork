@@ -7,8 +7,8 @@ pub const MINUS_5: Any      = Any { raw: DIR_RAW | -5i32 as Raw };
 pub const MINUS_4: Any      = Any { raw: DIR_RAW | -4i32 as Raw };
 pub const MINUS_3: Any      = Any { raw: DIR_RAW | -3i32 as Raw };
 pub const MINUS_2: Any      = Any { raw: DIR_RAW | -2i32 as Raw };
-pub const MINUS_1: Any      = Any { raw: DIR_RAW | -1i32 as Raw };
-pub const ZERO: Any         = Any { raw: DIR_RAW | 0 };
+pub const MINUS_1: Any      = Any::fix(-1); //Any { raw: DIR_RAW | -1i32 as Raw };
+pub const ZERO: Any         = Any::fix(0); //Any { raw: DIR_RAW | 0 };
 pub const PLUS_1: Any       = Any { raw: DIR_RAW | 1 };
 pub const PLUS_2: Any       = Any { raw: DIR_RAW | 2 };
 pub const PLUS_3: Any       = Any { raw: DIR_RAW | 3 };
@@ -146,25 +146,26 @@ pub struct Any {
 }
 
 impl Any {
-    pub fn new(raw: Raw) -> Any {
+    pub const fn new(raw: Raw) -> Any {
         Any { raw }
     }
-    pub fn fix(num: isize) -> Any {
+    pub const fn fix(num: isize) -> Any {
         let raw = num as Raw;
         Any::new(DIR_RAW | raw)
     }
-    pub fn cap(ofs: usize) -> Any {
+    pub const fn cap(ofs: usize) -> Any {
         let raw = (ofs as Raw) & !MSK_RAW;
         Any::new(OPQ_RAW | MUT_RAW | raw)
     }
-    pub fn rom(ofs: usize) -> Any {
+    pub const fn rom(ofs: usize) -> Any {
         let raw = (ofs as Raw) & !MSK_RAW;
         Any::new(raw)
     }
-    pub fn ram(ofs: usize) -> Any {
+    pub const fn ram(ofs: usize) -> Any {
         let raw = (ofs as Raw) & !MSK_RAW;
         Any::new(MUT_RAW | raw)
     }
+
     pub fn raw(&self) -> Raw {
         self.raw
     }

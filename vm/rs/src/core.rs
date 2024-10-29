@@ -34,8 +34,8 @@ pub const GC_WHITE: Any     = FALSE;
 // core limits (repeated in `ufork.js`)
 //const QUAD_ROM_MAX: usize = 1<<10;  // 1K quad-cells of ROM
 //const QUAD_ROM_MAX: usize = 1<<12;  // 4K quad-cells of ROM
-//const QUAD_ROM_MAX: usize = 1<<13;  // 8K quad-cells of ROM (FPGA size)
-const QUAD_ROM_MAX: usize = 1<<14;  // 16K quad-cells of ROM
+const QUAD_ROM_MAX: usize = 1<<13;  // 8K quad-cells of ROM (FPGA size)
+//const QUAD_ROM_MAX: usize = 1<<14;  // 16K quad-cells of ROM
 //const QUAD_RAM_MAX: usize = 1<<8;   // 256 quad-cells of RAM
 //const QUAD_RAM_MAX: usize = 1<<10;   // 1K quad-cells of RAM
 const QUAD_RAM_MAX: usize = 1<<12;   // 4K quad-cells of RAM (FPGA size)
@@ -51,7 +51,7 @@ pub struct Core <
     gc_state:   Any,
     rom_top:    Any,
     device:     [Option<Box<dyn Device>>; DEVICE_MAX],
-    trace_event: Box<dyn Fn(Any, Any)>,
+    trace_fn:   Option<Box<dyn Fn(Any, Any)>>,
 }
 
 impl Default for Core {
@@ -75,7 +75,7 @@ impl Default for Core {
 }
 
 impl Core {
-    pub fn new(
+    pub const fn new(
         devices: [Option<Box<dyn Device>>; DEVICE_MAX],
     ) -> Core {
         Core {
@@ -85,7 +85,7 @@ impl Core {
             gc_state: UNDEF,
             rom_top: Any::rom(ROM_BASE_OFS),
             device: devices,
-            trace_event: Box::new(|_, _| {}),
+            trace_fn: None,
         }
     }
 
@@ -156,8 +156,13 @@ impl Core {
         }
     }
 
-    pub fn set_trace_event<F: Fn(Any, Any) + 'static>(&mut self, trace_event: F) {
-        self.trace_event = Box::new(trace_event);
+    fn trace_event(&self, ep: Any, kp: Any) {
+        if let Some(trace) = &self.trace_fn {
+            (trace)(ep, kp);
+        }
+    }
+    pub fn set_trace_event<F: Fn(Any, Any) + 'static>(&mut self, trace_handler: F) {
+        self.trace_fn = Some(Box::new(trace_handler));
     }
 
     /*
@@ -268,7 +273,7 @@ impl Core {
                 let result = dev_mut.handle_event(self, ep);
                 self.device[id] = Some(dev_mut);
                 #[cfg(debug_assertions)]
-                (self.trace_event)(ep, UNDEF);  // trace transactional effect(s)
+                self.trace_event(ep, UNDEF);  // trace transactional effect(s)
                 return result
             }
         } else {
@@ -711,7 +716,7 @@ impl Core {
             },
             VM_END => {
                 #[cfg(debug_assertions)]
-                (self.trace_event)(self.ep(), self.kp());  // trace transactional effect(s)
+                self.trace_event(self.ep(), self.kp());  // trace transactional effect(s)
                 let me = self.self_ptr();
                 let rv = match imm {
                     END_ABORT => {
@@ -2395,6 +2400,17 @@ pub const COUNT_TO: Any = Any { raw: COUNT_TO_OFS as Raw };
         assert_eq!(NIL, core.e_first());
         assert_eq!(NIL, core.k_first());
         assert_eq!(UNDEF, core.kp());
+        /*
+        static mut CORE: Core = Core::default();
+        unsafe {
+            CORE.init();
+            assert_eq!(ZERO, CORE.ram_free());
+            assert_eq!(NIL, CORE.ram_next());
+            assert_eq!(NIL, CORE.e_first());
+            assert_eq!(NIL, CORE.k_first());
+            assert_eq!(UNDEF, CORE.kp());
+        }
+        */
     }
 
     #[test]

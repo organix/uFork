@@ -60,7 +60,7 @@ impl Host {
         ]);
         core.init();
         core.set_trace_event(|ep, kp| {
-            trace_event(ep,kp);
+            trace_event(ep, kp);
         });
         Host { core }
     }

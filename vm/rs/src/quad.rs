@@ -12,7 +12,7 @@ pub struct Quad {
 }
 
 impl Quad {
-    pub fn new(t: Any, x: Any, y: Any, z: Any) -> Quad {
+    pub const fn new(t: Any, x: Any, y: Any, z: Any) -> Quad {
         Quad { t, x, y, z }
     }
     pub fn t(&self) -> Any { self.t }
@@ -25,13 +25,13 @@ impl Quad {
     pub fn set_z(&mut self, v: Any) { self.z = v; }
 
     // construct basic Quad types
-    pub fn empty_t() -> Quad {
+    pub const fn empty_t() -> Quad {
         Self::new(UNDEF, UNDEF, UNDEF, UNDEF)
     }
-    pub fn literal_t() -> Quad {
+    pub const fn literal_t() -> Quad {
         Self::new(LITERAL_T, UNDEF, UNDEF, UNDEF)
     }
-    pub fn type_t(n: Any) -> Quad {
+    pub const fn type_t(n: Any) -> Quad {
         Self::new(TYPE_T, n, UNDEF, UNDEF)
     }
     pub fn event_t(sponsor: Any, target: Any, msg: Any, next: Any) -> Quad {
