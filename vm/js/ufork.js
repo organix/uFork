@@ -146,7 +146,7 @@ const VM_BEH    = 0x8000001D;  // +29
 
 // Memory limits (from core.rs)
 
-const QUAD_ROM_MAX = 1 << 13;
+const QUAD_ROM_MAX = 1 << 14;
 const QUAD_RAM_MAX = 1 << 12;
 const BLOB_RAM_MAX = 1 << 16;
 

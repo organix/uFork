@@ -8,15 +8,19 @@ pub const ROM_BASE_OFS: usize = 16;  // ROM offsets below this value are reserve
 
 pub const MEMORY: Any       = Any { raw: MUT_RAW | 0 };
 pub const DDEQUE: Any       = Any { raw: MUT_RAW | 1 };
-//pub const NULL_DEV: Any    = Any { raw: MUT_RAW | OPQ_RAW | 2 };
 pub const DEBUG_DEV: Any    = Any { raw: MUT_RAW | OPQ_RAW | 2 };
 pub const CLOCK_DEV: Any    = Any { raw: MUT_RAW | OPQ_RAW | 3 };
 pub const IO_DEV: Any       = Any { raw: MUT_RAW | OPQ_RAW | 4 };
 pub const BLOB_DEV: Any     = Any { raw: MUT_RAW | OPQ_RAW | 5 };
 pub const TIMER_DEV: Any    = Any { raw: MUT_RAW | OPQ_RAW | 6 };
-pub const MEMO_DEV: Any     = Any { raw: MUT_RAW | OPQ_RAW | 7 };  // FIXME: MEMO deprecated. replaced with null_dev
+pub const NULL_DEV: Any     = Any { raw: MUT_RAW | OPQ_RAW | 7 };
 pub const HOST_DEV: Any     = Any { raw: MUT_RAW | OPQ_RAW | 8 };
 pub const RANDOM_DEV: Any   = Any { raw: MUT_RAW | OPQ_RAW | 9 };
+pub const RSVD_A_DEV: Any   = Any { raw: MUT_RAW | OPQ_RAW | 10 };
+pub const RSVD_B_DEV: Any   = Any { raw: MUT_RAW | OPQ_RAW | 11 };
+pub const RSVD_C_DEV: Any   = Any { raw: MUT_RAW | OPQ_RAW | 12 };
+pub const RSVD_D_DEV: Any   = Any { raw: MUT_RAW | OPQ_RAW | 13 };
+pub const RSVD_E_DEV: Any   = Any { raw: MUT_RAW | OPQ_RAW | 14 };
 pub const SPONSOR: Any      = Any { raw: MUT_RAW | 15 };
 
 pub const RAM_BASE_OFS: usize = 16;  // RAM offsets below this value are reserved
@@ -30,8 +34,8 @@ pub const GC_WHITE: Any     = FALSE;
 // core limits (repeated in `ufork.js`)
 //const QUAD_ROM_MAX: usize = 1<<10;  // 1K quad-cells of ROM
 //const QUAD_ROM_MAX: usize = 1<<12;  // 4K quad-cells of ROM
-const QUAD_ROM_MAX: usize = 1<<13;  // 8K quad-cells of ROM (FPGA size)
-//const QUAD_ROM_MAX: usize = 1<<14;  // 16K quad-cells of ROM
+//const QUAD_ROM_MAX: usize = 1<<13;  // 8K quad-cells of ROM (FPGA size)
+const QUAD_ROM_MAX: usize = 1<<14;  // 16K quad-cells of ROM
 //const QUAD_RAM_MAX: usize = 1<<8;   // 256 quad-cells of RAM
 //const QUAD_RAM_MAX: usize = 1<<10;   // 1K quad-cells of RAM
 const QUAD_RAM_MAX: usize = 1<<12;   // 4K quad-cells of RAM (FPGA size)
@@ -40,14 +44,13 @@ const DEVICE_MAX:   usize = 13;     // number of Core devices
 pub struct Core <
     const QUAD_ROM_SIZE: usize = QUAD_ROM_MAX,
     const QUAD_RAM_SIZE: usize = QUAD_RAM_MAX,
-    const GC_QUEUE_SIZE: usize = QUAD_RAM_MAX,
 > {
     quad_rom:   [Quad; QUAD_ROM_SIZE],
     quad_ram:   [Quad; QUAD_RAM_SIZE],
-    gc_queue:   [Any; GC_QUEUE_SIZE],
-    device:     [Option<Box<dyn Device>>; DEVICE_MAX],
-    rom_top:    Any,
+    gc_queue:   [Any; QUAD_RAM_SIZE],
     gc_state:   Any,
+    rom_top:    Any,
+    device:     [Option<Box<dyn Device>>; DEVICE_MAX],
     trace_event: Box<dyn Fn(Any, Any)>,
 }
 
@@ -103,52 +106,55 @@ impl Core {
 
 pub const ROM_TOP_OFS: usize = ROM_BASE_OFS;
 
-        /*
-         * Random-Access Memory (RAM) image (read/write + GC)
-         */
-        let mut quad_ram = [
-            Quad::empty_t();
-            QUAD_RAM_MAX
-        ];
-        quad_ram[MEMORY.ofs()]      = Quad::memory_t(Any::ram(RAM_TOP_OFS), NIL, ZERO, NIL);
-        quad_ram[DDEQUE.ofs()]      = Quad::ddeque_t(NIL, NIL, NIL, NIL);  // no events, no continuations
-        quad_ram[DEBUG_DEV.ofs()]   = Quad::actor_t(ZERO, NIL, UNDEF);    // debug device #0
-        quad_ram[CLOCK_DEV.ofs()]   = Quad::actor_t(PLUS_1, NIL, UNDEF);  // clock device #1
-        quad_ram[IO_DEV.ofs()]      = Quad::actor_t(PLUS_2, NIL, UNDEF);  // i/o device #2
-        quad_ram[BLOB_DEV.ofs()]    = Quad::actor_t(PLUS_3, NIL, UNDEF);  // blob device #3
-        quad_ram[TIMER_DEV.ofs()]   = Quad::actor_t(PLUS_4, NIL, UNDEF);  // timer device #4
-        quad_ram[MEMO_DEV.ofs()]    = Quad::actor_t(PLUS_5, NIL, UNDEF);  // memo device #5
-        quad_ram[HOST_DEV.ofs()]    = Quad::actor_t(PLUS_6, NIL, UNDEF);  // host device #6
-        quad_ram[RANDOM_DEV.ofs()]  = Quad::actor_t(PLUS_7, NIL, UNDEF);  // random device #7
-        quad_ram[SPONSOR.ofs()]     = Quad::sponsor_t(
-                                    Any::fix(4096),
-                                    Any::fix(256),
-                                    Any::fix(8192),
-                                    UNDEF);  // root configuration sponsor
-
-pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
-
-        let mut gc_queue = [ UNDEF; QUAD_RAM_MAX ];
-        let mut ofs = 0;
-        while ofs < RAM_BASE_OFS {
-            gc_queue[ofs] = GC_BLACK;  // mark "black" (reachable)
-            ofs += 1;
-        }
-        gc_queue[GC_FIRST] = NIL;
-        gc_queue[GC_LAST] = NIL;
-
         Core {
             quad_rom,
-            quad_ram,
-            gc_queue,
-            device: devices,
-            rom_top: Any::rom(ROM_TOP_OFS),
+            quad_ram: [ Quad::empty_t(); QUAD_RAM_MAX ],
+            gc_queue: [ UNDEF; QUAD_RAM_MAX ],
             gc_state: UNDEF,
+            rom_top: Any::rom(ROM_TOP_OFS),
+            device: devices,
             trace_event: Box::new(|_, _| {}),
         }
     }
 
     pub fn init(&mut self) {  // runtime initialization
+        /*
+         * Random-Access Memory (RAM) image (read/write + GC)
+         */
+        self.quad_ram[MEMORY.ofs()]      = Quad::memory_t(Any::ram(RAM_TOP_OFS), NIL, ZERO, NIL);
+        self.quad_ram[DDEQUE.ofs()]      = Quad::ddeque_t(NIL, NIL, NIL, NIL);  // no events, no continuations
+        self.quad_ram[DEBUG_DEV.ofs()]   = Quad::actor_t(ZERO, NIL, UNDEF);    // debug device #0
+        self.quad_ram[CLOCK_DEV.ofs()]   = Quad::actor_t(PLUS_1, NIL, UNDEF);  // clock device #1
+        self.quad_ram[IO_DEV.ofs()]      = Quad::actor_t(PLUS_2, NIL, UNDEF);  // i/o device #2
+        self.quad_ram[BLOB_DEV.ofs()]    = Quad::actor_t(PLUS_3, NIL, UNDEF);  // blob device #3
+        self.quad_ram[TIMER_DEV.ofs()]   = Quad::actor_t(PLUS_4, NIL, UNDEF);  // timer device #4
+        self.quad_ram[NULL_DEV.ofs()]    = Quad::actor_t(PLUS_5, NIL, UNDEF);  // null device #5
+        self.quad_ram[HOST_DEV.ofs()]    = Quad::actor_t(PLUS_6, NIL, UNDEF);  // host device #6
+        self.quad_ram[RANDOM_DEV.ofs()]  = Quad::actor_t(PLUS_7, NIL, UNDEF);  // random device #7
+        self.quad_ram[RSVD_A_DEV.ofs()]  = Quad::actor_t(Any::fix(8), NIL, UNDEF);  // --reserved-- device #8
+        self.quad_ram[RSVD_B_DEV.ofs()]  = Quad::actor_t(Any::fix(9), NIL, UNDEF);  // --reserved-- device #9
+        self.quad_ram[RSVD_C_DEV.ofs()]  = Quad::actor_t(Any::fix(10), NIL, UNDEF);  // --reserved-- device #10
+        self.quad_ram[RSVD_D_DEV.ofs()]  = Quad::actor_t(Any::fix(11), NIL, UNDEF);  // --reserved-- device #11
+        self.quad_ram[RSVD_E_DEV.ofs()]  = Quad::actor_t(Any::fix(12), NIL, UNDEF);  // --reserved-- device #12
+        self.quad_ram[SPONSOR.ofs()]     = Quad::sponsor_t(
+                                        Any::fix(4096),
+                                        Any::fix(256),
+                                        Any::fix(8192),
+                                        UNDEF);  // root configuration sponsor
+
+pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
+
+        let mut ofs = 0;
+        while ofs < RAM_BASE_OFS {
+            self.gc_queue[ofs] = GC_BLACK;  // mark "black" (reachable)
+            ofs += 1;
+        }
+        self.gc_queue[GC_FIRST] = NIL;
+        self.gc_queue[GC_LAST] = NIL;
+
+        /*
+         * External Device Interfaces
+         */
         let mut id = 0;
         while id < DEVICE_MAX {
             if self.device[id].is_some() {
@@ -2392,7 +2398,8 @@ pub const COUNT_TO: Any = Any { raw: COUNT_TO_OFS as Raw };
 
     #[test]
     fn core_initialization() {
-        let core = Core::default();
+        let mut core = Core::default();
+        core.init();
         assert_eq!(ZERO, core.ram_free());
         assert_eq!(NIL, core.ram_next());
         assert_eq!(NIL, core.e_first());
@@ -2403,6 +2410,7 @@ pub const COUNT_TO: Any = Any { raw: COUNT_TO_OFS as Raw };
     #[test]
     fn basic_memory_allocation() {
         let mut core = Core::default();
+        core.init();
         let top_before = core.ram_top().ofs();
         let m1 = core.reserve(&Quad::pair_t(PLUS_1, PLUS_1)).unwrap();
         assert!(m1.is_ptr());
@@ -2419,6 +2427,7 @@ pub const COUNT_TO: Any = Any { raw: COUNT_TO_OFS as Raw };
     #[test]
     fn run_loop_terminates() {
         let mut core = Core::default();
+        core.init();
         let boot_beh = load_std(&mut core);
         let boot_ptr = core.reserve(&Quad::new_actor(boot_beh, NIL)).unwrap();
         let a_boot = core.ptr_to_cap(boot_ptr);
@@ -2431,6 +2440,7 @@ pub const COUNT_TO: Any = Any { raw: COUNT_TO_OFS as Raw };
     #[test]
     fn gc_before_and_after_run() {
         let mut core = Core::default();
+        core.init();
         let boot_beh = load_fib_test(&mut core);
         let boot_ptr = core.reserve(&Quad::new_actor(boot_beh, NIL)).unwrap();
         let a_boot = core.ptr_to_cap(boot_ptr);
@@ -2488,6 +2498,7 @@ pub const COUNT_TO: Any = Any { raw: COUNT_TO_OFS as Raw };
         const OUT_OF_MSG: Any = Any { raw: DIR_RAW | E_MSG_LIM as u32 };
         const OUT_OF_CPU: Any = Any { raw: DIR_RAW | E_CPU_LIM as u32 };
         let mut core = Core::default();
+        core.init();
         let boot_beh = load_fib_test(&mut core);
         let boot_ptr = core.reserve(&Quad::new_actor(boot_beh, NIL)).unwrap();
         let a_boot = core.ptr_to_cap(boot_ptr);
@@ -2511,6 +2522,7 @@ pub const COUNT_TO: Any = Any { raw: COUNT_TO_OFS as Raw };
     #[test]
     fn gc_queue_management() {
         let mut core = Core::default();
+        core.init();
         assert_eq!(NIL, core.gc_queue[GC_FIRST]);
         assert_eq!(NIL, core.gc_queue[GC_LAST]);
         let mut item;
