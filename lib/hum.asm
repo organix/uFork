@@ -219,7 +219,7 @@ eq:                         ; ( pair -- boolean )
     roll -2                 ; k pair
     dup 1                   ; k pair pair
     typeq #pair_t           ; k pair is_pair(pair)
-    if_not dreturn_f        ; k pair=(a . b)
+    if_not dreturn_undef    ; k pair=(a . b)
     part 1                  ; k b a
     ref eq_tail
 eq_parted:                  ; ( b a -- boolean )
@@ -277,7 +277,7 @@ test_eq:                    ; ( -- )
 
     push 42                 ; k 42
     call eq                 ; k ???
-    assert #f               ; k
+    assert #?               ; k
     return
 
 not:                        ; ( value -- boolean | #? )
