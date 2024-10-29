@@ -78,40 +78,12 @@ impl Core {
     pub fn new(
         devices: [Option<Box<dyn Device>>; DEVICE_MAX],
     ) -> Core {
-
-        /*
-         * Read-Only Memory (ROM) image (read/execute)
-         */
-        let mut quad_rom = [
-            Quad::empty_t();
-            QUAD_ROM_MAX
-        ];
-
-        quad_rom[UNDEF.ofs()]       = Quad::literal_t();
-        quad_rom[NIL.ofs()]         = Quad::literal_t();
-        quad_rom[FALSE.ofs()]       = Quad::literal_t();
-        quad_rom[TRUE.ofs()]        = Quad::literal_t();
-        quad_rom[ROM_04.ofs()]      = Quad::literal_t();
-        quad_rom[EMPTY_DQ.ofs()]    = Quad::pair_t(NIL, NIL);
-        quad_rom[TYPE_T.ofs()]      = Quad::type_t(PLUS_1);
-        quad_rom[FIXNUM_T.ofs()]    = Quad::type_t(UNDEF);
-        quad_rom[ACTOR_T.ofs()]     = Quad::type_t(PLUS_2);
-        quad_rom[PROXY_T.ofs()]     = Quad::type_t(PLUS_2);
-        quad_rom[STUB_T.ofs()]      = Quad::type_t(PLUS_2);
-        quad_rom[INSTR_T.ofs()]     = Quad::type_t(PLUS_3);
-        quad_rom[PAIR_T.ofs()]      = Quad::type_t(PLUS_2);
-        quad_rom[DICT_T.ofs()]      = Quad::type_t(PLUS_3);
-        quad_rom[FWD_REF_T.ofs()]   = Quad::type_t(MINUS_1);
-        quad_rom[FREE_T.ofs()]      = Quad::type_t(ZERO);
-
-pub const ROM_TOP_OFS: usize = ROM_BASE_OFS;
-
         Core {
-            quad_rom,
+            quad_rom: [ Quad::empty_t(); QUAD_ROM_MAX ],
             quad_ram: [ Quad::empty_t(); QUAD_RAM_MAX ],
             gc_queue: [ UNDEF; QUAD_RAM_MAX ],
             gc_state: UNDEF,
-            rom_top: Any::rom(ROM_TOP_OFS),
+            rom_top: Any::rom(ROM_BASE_OFS),
             device: devices,
             trace_event: Box::new(|_, _| {}),
         }
@@ -119,9 +91,29 @@ pub const ROM_TOP_OFS: usize = ROM_BASE_OFS;
 
     pub fn init(&mut self) {  // runtime initialization
         /*
+         * Read-Only Memory (ROM) image (read/execute)
+         */
+        self.quad_rom[UNDEF.ofs()]       = Quad::literal_t();
+        self.quad_rom[NIL.ofs()]         = Quad::literal_t();
+        self.quad_rom[FALSE.ofs()]       = Quad::literal_t();
+        self.quad_rom[TRUE.ofs()]        = Quad::literal_t();
+        self.quad_rom[ROM_04.ofs()]      = Quad::literal_t();
+        self.quad_rom[EMPTY_DQ.ofs()]    = Quad::pair_t(NIL, NIL);
+        self.quad_rom[TYPE_T.ofs()]      = Quad::type_t(PLUS_1);
+        self.quad_rom[FIXNUM_T.ofs()]    = Quad::type_t(UNDEF);
+        self.quad_rom[ACTOR_T.ofs()]     = Quad::type_t(PLUS_2);
+        self.quad_rom[PROXY_T.ofs()]     = Quad::type_t(PLUS_2);
+        self.quad_rom[STUB_T.ofs()]      = Quad::type_t(PLUS_2);
+        self.quad_rom[INSTR_T.ofs()]     = Quad::type_t(PLUS_3);
+        self.quad_rom[PAIR_T.ofs()]      = Quad::type_t(PLUS_2);
+        self.quad_rom[DICT_T.ofs()]      = Quad::type_t(PLUS_3);
+        self.quad_rom[FWD_REF_T.ofs()]   = Quad::type_t(MINUS_1);
+        self.quad_rom[FREE_T.ofs()]      = Quad::type_t(ZERO);
+
+        /*
          * Random-Access Memory (RAM) image (read/write + GC)
          */
-        self.quad_ram[MEMORY.ofs()]      = Quad::memory_t(Any::ram(RAM_TOP_OFS), NIL, ZERO, NIL);
+        self.quad_ram[MEMORY.ofs()]      = Quad::memory_t(Any::ram(RAM_BASE_OFS), NIL, ZERO, NIL);
         self.quad_ram[DDEQUE.ofs()]      = Quad::ddeque_t(NIL, NIL, NIL, NIL);  // no events, no continuations
         self.quad_ram[DEBUG_DEV.ofs()]   = Quad::actor_t(ZERO, NIL, UNDEF);    // debug device #0
         self.quad_ram[CLOCK_DEV.ofs()]   = Quad::actor_t(PLUS_1, NIL, UNDEF);  // clock device #1
@@ -141,8 +133,6 @@ pub const ROM_TOP_OFS: usize = ROM_BASE_OFS;
                                         Any::fix(256),
                                         Any::fix(8192),
                                         UNDEF);  // root configuration sponsor
-
-pub const RAM_TOP_OFS: usize = RAM_BASE_OFS;
 
         let mut ofs = 0;
         while ofs < RAM_BASE_OFS {
