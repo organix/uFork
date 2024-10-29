@@ -627,25 +627,29 @@ test_cmp:                   ; ( -- )
 
 ; Test suite.
 
-boot:
-    ref test
+boot:                       ; _ <- {caps}
+    msg 0                   ; {caps}
+    push dev.debug_key      ; {caps} debug_key
+    dict get                ; judge=debug
+    ref suite
 
 test:                       ; judge <- {caps}
-    call test_alu           ; --
-    call test_and           ; --
-    call test_cmp           ; --
-    call test_compare       ; --
-    call test_div           ; --
-    call test_eq            ; --
-    call test_mod           ; --
-    call test_neg           ; --
-    call test_not           ; --
-    call test_or            ; --
-    call test_predicates    ; --
-    push #t                 ; verdict=#t
-    state 0                 ; verdict judge
-    send -1                 ; --
-    ref std.commit
+    state 0                 ; judge
+suite:
+    call test_alu           ; judge
+    call test_and           ; judge
+    call test_cmp           ; judge
+    call test_compare       ; judge
+    call test_div           ; judge
+    call test_eq            ; judge
+    call test_mod           ; judge
+    call test_neg           ; judge
+    call test_not           ; judge
+    call test_or            ; judge
+    call test_predicates    ; judge
+    push #t                 ; judge verdict=#t
+    roll 2                  ; verdict judge
+    ref std.send_msg
 
 .export
     add
