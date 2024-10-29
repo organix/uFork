@@ -217,12 +217,9 @@ fib_k2:                     ; (cust . m) <- n
 
 ; adaptated from `lib.asm`
 once_beh:                   ; rcvr <- msg
-    push -3                 ; -3
-    push -2                 ; -3 -2
-    push -1                 ; -3 -2 -1
-    push sink_beh           ; ... beh=sink_beh
-    ; beh -1                  ; --
-    beh 0                   ; --
+    push #?                 ; #?
+    push sink_beh           ; #? sink_beh
+    beh -1                  ; --
     msg 0                   ; msg
     state 0                 ; msg rcvr
     ref send_msg
