@@ -36,11 +36,11 @@ build:                      ; (n . log) <- (first . m)
     alu sub                 ; log n-1
     pair 1                  ; (n-1 . log)
     push build              ; (n-1 . log) build
-    new -1                  ; next=build.(n-1 . log)
+    actor create            ; next=build.(n-1 . log)
 
     dup 1                   ; next next
     push ring               ; next next ring
-    beh -1                  ; next
+    actor become            ; next
 
     msg 0                   ; next (first . m)
     roll 2                  ; (first . m) next
@@ -49,13 +49,13 @@ build:                      ; (n . log) <- (first . m)
 build_0:
     push #?                 ; #?
     state -1                ; #? log
-    send -1                 ; --
+    actor send              ; --
 
     state -1                ; log
     msg 1                   ; log first
     pair 1                  ; (first . log)
     push ring_0             ; (first . log) ring_0
-    beh -1                  ; --
+    actor become            ; --
 
     msg 0                   ; (first . m)
     part 1                  ; m first
@@ -87,11 +87,11 @@ ring_0:                     ; (first . log) <- m
 ring_end:
     push #?                 ; #?
     state -1                ; #? log
-    send -1                 ; --
+    actor send              ; --
 
     push #?                 ; #?
     push std.sink_beh       ; #? sink_beh
-    beh -1                  ; --
+    actor become            ; --
     ref std.commit
 
 ;;  DEF ring(next) AS \m.[
@@ -123,15 +123,15 @@ boot:                       ; _ <- {caps}
     dict get                ; debug_dev clock_dev
     pair 1                  ; (clock_dev . debug_dev)
     push lib.relay_beh      ; (clock_dev . debug_dev) relay_beh
-    new -1                  ; log=relay_beh.(clock_dev . debug_dev)
+    actor create            ; log=relay_beh.(clock_dev . debug_dev)
     push #?                 ; log #?
     pick 2                  ; log #? log
-    send -1                 ; log
+    actor send              ; log
 
     push n                  ; log n
     pair 1                  ; (n . log)
     push build              ; (n . log) build
-    new -1                  ; first=build.(n . log)
+    actor create            ; first=build.(n . log)
 
     push m                  ; first m
     pick 2                  ; first m first

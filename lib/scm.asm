@@ -46,7 +46,7 @@ new_2:                      ; ( (beh . state) -- beh.state )
     roll -2                 ; k (beh . state)
     call act_2              ; k state beh
 new_return:                 ; k state beh
-    new -1                  ; k beh.state
+    actor create            ; k beh.state
     roll 2                  ; beh.state k
     return                  ; beh.state
 
@@ -59,7 +59,7 @@ beh_2:                      ; ( (beh . state) -- )
     roll -2                 ; k (beh . state)
     call act_2              ; k state beh
 beh_return:
-    beh -1                  ; k
+    actor become            ; k
     return                  ; --
 
 beh_3:                      ; ( [_, _, _, beh] -- )
@@ -86,7 +86,7 @@ beh_3:                      ; ( [_, _, _, beh] -- )
 ;    pair nargs+1        ; args=(cust arg1 arg2 arg3)
 ;    push func           ; args closure
 ;    call new_2          ; args code.data
-;    send -1             ; --
+;    actor send          ; --
 
 ; Prefix to create/become continuation
 ;    pair -1             ; sp'=(...)
@@ -95,7 +95,7 @@ beh_3:                      ; ( [_, _, _, beh] -- )
 ;    msg 0               ; sp' env cont msg
 ;    pair 3              ; (msg cont env . sp')
 ;    push continuation   ; (msg cont env . sp') continuation
-;    beh -1              ; -- SELF=continuation.(msg cont env . sp')
+;    actor become        ; -- SELF=continuation.(msg cont env . sp')
 ;    ref scm.commit
 
 continuation:               ; (msg cont env . sp) <- rv
@@ -105,7 +105,7 @@ continuation:               ; (msg cont env . sp) <- rv
     pair 1                  ; env sp'=(rv . sp)
     pair 1                  ; (sp' . env)
     state 2                 ; (sp' . env) cont
-    beh -1                  ; -- SELF=cont.(sp' . env)
+    actor become            ; -- SELF=cont.(sp' . env)
     state 1                 ; msg
     my self                 ; msg SELF
     ref std.send_msg
@@ -140,10 +140,10 @@ txn_actor:                  ; beh pending msg
     pick 3                  ; beh pending (SELF . msg) beh
     call new_2              ; beh pending (SELF . msg) txn=code.data
     pick -3                 ; beh txn pending (SELF . msg) txn
-    send -1                 ; beh txn pending
+    actor send              ; beh txn pending
     pair 2                  ; (pending txn . beh)
     push bsy_actor          ; (pending txn . beh) bsy_actor
-    beh -1                  ; -- SELF=bsy_actor.(pending txn . beh)
+    actor become            ; -- SELF=bsy_actor.(pending txn . beh)
     ref std.commit
 
 bsy_actor:                  ; (pending txn . beh) <- (txn? . beh') | msg
@@ -159,7 +159,7 @@ bsy_actor:                  ; (pending txn . beh) <- (txn? . beh') | msg
     deque put               ; (txn . beh) pending'
     pair 1                  ; (pending' txn . beh)
     push bsy_actor          ; (pending' txn . beh) bsy_actor
-    beh -1                  ; -- SELF=bsy_actor.(pending' txn . beh)
+    actor become            ; -- SELF=bsy_actor.(pending' txn . beh)
     ref std.commit
 
 cmt_actor:                  ; --
@@ -207,7 +207,7 @@ rst_msgs:                   ; pending
     if std.commit           ; pending
     deque pop               ; pending' msg'
     my self                 ; pending' msg' SELF
-    send -1                 ; pending'
+    actor send              ; pending'
     ref rst_msgs
 
 ;
@@ -229,7 +229,7 @@ count_data:
 count_code:                 ; (_ n) <- (self cust)
     state 2                 ; n
     msg 2                   ; n cust
-    send -1                 ; --
+    actor send              ; --
     push #nil               ; ()
     state 2                 ; () n
     push 1                  ; () n 1
@@ -273,7 +273,7 @@ test:                       ; judge <- {caps}
     state 0                 ; () 2nd 1st probation timer judge
     pair 5                  ; (judge timer probation 1st 2nd)
     push referee.beh        ; (judge timer probation 1st 2nd) referee_beh
-    new -1                  ; referee=referee_beh.(judge timer probation 1st 2nd)
+    actor create            ; referee=referee_beh.(judge timer probation 1st 2nd)
 act:
     push #nil               ; referee ()
     roll 2                  ; () referee
@@ -281,8 +281,8 @@ act:
     push count_0            ; (referee) beh=count_0
     call new_3              ; (referee) counter=get_Z(beh).beh
     dup 2                   ; (referee) counter (referee) counter
-    send -1                 ; (referee) counter
-    send -1                 ; --
+    actor send              ; (referee) counter
+    actor send              ; --
     ref std.commit
 
 .export

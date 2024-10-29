@@ -2,4 +2,4 @@
     fixture: "./fixtures/data.asm"
 
 a:
-    new -1 fixture.data
+    dup 0 fixture.data

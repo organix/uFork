@@ -18,7 +18,7 @@ in_beh:                     ; (cust io_dev . line) <- result
     push #?                 ; char input callback to_cancel=#?
     pair 2                  ; io_req=(to_cancel callback . input)
     state 2                 ; io_req io_dev
-    send -1                 ; char
+    actor send              ; char
 
     ; add char to line
     state -2                ; char line
@@ -32,7 +32,7 @@ in_beh:                     ; (cust io_dev . line) <- result
 
     ; send line to cust
     state 1                 ; line' cust
-    send -1                 ; --
+    actor send              ; --
     deque new               ; line
 
 in_upd:                     ; line'
@@ -41,7 +41,7 @@ in_upd:                     ; line'
     state 1                 ; line' io_dev cust
     pair 2                  ; (cust io_dev . line')
     push in_beh             ; (cust io_dev . line') in_beh
-    beh -1                  ; --
+    actor become            ; --
     ref std.commit
 
 ; Buffer lines of output, sending characters one-at-a-time.
@@ -64,7 +64,7 @@ out_snd:                    ; io_dev line' char
     push #?                 ; io_dev line' char callback to_cancel=#?
     pair 2                  ; io_dev line' io_req=(to_cancel callback . char)
     pick 3                  ; io_dev line' io_req io_dev
-    send -1                 ; io_dev line'
+    actor send              ; io_dev line'
 
     ; line empty?
     dup 1                   ; io_dev line' line'
@@ -74,7 +74,7 @@ out_snd:                    ; io_dev line' char
     ; no more chars in line
     drop 1                  ; io_dev
     push out_beh            ; io_dev out_beh
-    beh -1                  ; --
+    actor become            ; --
     ref std.commit
 
 out_rem:                    ; io_dev line'
@@ -82,7 +82,7 @@ out_rem:                    ; io_dev line'
     roll 2                  ; line' io_dev
     pair 1                  ; (io_dev . line')
     push out_buf            ; (io_dev . line') out_buf
-    beh -1                  ; --
+    actor become            ; --
     ref std.commit
 
 ; Writing current line, no additional lines buffered.
@@ -107,7 +107,7 @@ out_add:                    ; --
     state 1                 ; lines' line io_dev
     pair 2                  ; (io_dev line . lines')
     push out_bufs           ; (io_dev line . lines') out_bufs
-    beh -1                  ; --
+    actor become            ; --
     ref std.commit
 
 ; Writing current line, one or more lines buffered.
@@ -126,7 +126,7 @@ out_bufs:                   ; (io_dev line . lines) <- result | line'
     state 1                 ; lines' line io_dev
     pair 2                  ; (io_dev line . lines')
     push out_bufs           ; (io_dev line . lines') out_bufs
-    beh -1                  ; --
+    actor become            ; --
     ref std.commit
 
 out_chr:                    ; --
@@ -139,7 +139,7 @@ out_chr:                    ; --
     push #?                 ; line char callback to_cancel=#?
     pair 2                  ; line io_req=(to_cancel callback . char)
     state 1                 ; line io_req io_dev
-    send -1                 ; line
+    actor send              ; line
 
     ; line empty?
     dup 1                   ; line line
@@ -158,7 +158,7 @@ out_chr:                    ; --
     state 1                 ; lines line io_dev
     pair 1                  ; lines (io_dev . line)
     push out_buf            ; lines (io_dev . line) out_buf
-    beh -1                  ; lines
+    actor become            ; lines
     ref std.commit
 
 out_chrs:                   ; line
@@ -170,7 +170,7 @@ out_more:                   ; lines line
     state 1                 ; lines line io_dev
     pair 2                  ; (io_dev line . lines)
     push out_bufs           ; (io_dev line . lines) out_bufs
-    beh -1                  ; --
+    actor become            ; --
     ref std.commit
 
 in_demo:                    ; io_dev debug_dev
@@ -180,17 +180,17 @@ in_demo:                    ; io_dev debug_dev
     pick 4                  ; io_dev debug_dev input line io_dev cust=debug_dev
     pair 2                  ; io_dev debug_dev input (cust io_dev . line)
     push in_beh             ; io_dev debug_dev input (cust io_dev . line) in_beh
-    new -1                  ; io_dev debug_dev input callback=in_beh.(cust io_dev . line)
+    actor create            ; io_dev debug_dev input callback=in_beh.(cust io_dev . line)
     push #?                 ; io_dev debug_dev input callback to_cancel=#?
     pair 2                  ; io_dev debug_dev io_req=(to_cancel callback . input)
     pick 3                  ; io_dev debug_dev io_req io_dev
-    send -1                 ; io_dev debug_dev
+    actor send              ; io_dev debug_dev
     ref std.commit
 
 out_demo:                   ; io_dev debug_dev
     pick 2                  ; io_dev debug_dev io_dev
     push out_beh            ; io_dev debug_dev io_dev out_beh
-    new -1                  ; io_dev debug_dev out=out_beh.io_dev
+    actor create            ; io_dev debug_dev out=out_beh.io_dev
     deque new               ; io_dev debug_dev out line
     push '\n'               ; io_dev debug_dev out line '\n'
     deque push              ; io_dev debug_dev out line'
@@ -199,24 +199,24 @@ out_demo:                   ; io_dev debug_dev
     push 'O'                ; io_dev debug_dev out line'' 'O'
     deque push              ; io_dev debug_dev out line'''
     pick 2                  ; io_dev debug_dev out line''' out
-    send -1                 ; io_dev debug_dev out
+    actor send              ; io_dev debug_dev out
     ref std.commit
 
 in_out_demo:                ; io_dev debug_dev
     push #?                 ; io_dev debug_dev input=#?
     pick 3                  ; io_dev debug_dev input io_dev
     push out_beh            ; io_dev debug_dev input io_dev out_beh
-    new -1                  ; io_dev debug_dev input out=out_beh.io_dev
+    actor create            ; io_dev debug_dev input out=out_beh.io_dev
     deque new               ; io_dev debug_dev input out line
     pick 5                  ; io_dev debug_dev input out line io_dev
     roll 3                  ; io_dev debug_dev input line io_dev cust=out
     pair 2                  ; io_dev debug_dev input (cust io_dev . line)
     push in_beh             ; io_dev debug_dev input (cust io_dev . line) in_beh
-    new -1                  ; io_dev debug_dev input callback=in_beh.(cust io_dev . line)
+    actor create            ; io_dev debug_dev input callback=in_beh.(cust io_dev . line)
     push #?                 ; io_dev debug_dev input callback to_cancel=#?
     pair 2                  ; io_dev debug_dev io_req=(to_cancel callback . input)
     pick 3                  ; io_dev debug_dev io_req io_dev
-    send -1                 ; io_dev debug_dev
+    actor send              ; io_dev debug_dev
     ref std.commit
 
 boot:                       ; _ <- {caps}

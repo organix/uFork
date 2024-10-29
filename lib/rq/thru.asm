@@ -26,13 +26,13 @@ test:                       ; judge <- {caps}
     push #t                 ; value=#t
     state 0                 ; value judge
     push unwrap_result.beh  ; value judge unwrap_result_beh
-    new -1                  ; value callback=unwrap_result_beh.judge
+    actor create            ; value callback=unwrap_result_beh.judge
 suite:
     push #?                 ; value callback to_cancel=#?
     pair 2                  ; request=(to_cancel callback . value)
     push #?                 ; request #?
     push thru_beh           ; request #? thru_beh
-    new -1                  ; request thru=thru_beh.#?
+    actor create            ; request thru=thru_beh.#?
     ref std.send_msg
 
 .export

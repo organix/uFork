@@ -52,10 +52,10 @@ boot:                       ; _ <- {caps}
 join:
     push join_beh           ; state beh=join_beh
 start:
-    new -1                  ; beh.state
+    actor create            ; beh.state
     push #?                 ; beh.state #?
     roll 2                  ; #? beh.state
-    send -1                 ; --
+    actor send              ; --
     ref std.commit
 
 ; Initially, SELF is the callback for the AWP introduction with the room. If
@@ -71,13 +71,13 @@ join_beh:                   ; (debug_dev io_dev timer_dev awp_dev . room_id) <- 
     ; push 17             ; rcvr=party_rx limit=17
     ; pair 1              ; (limit . rcvr)
     ; push cnt_fwd_beh    ; (limit . rcvr) cnt_fwd_beh
-    ; new -1              ; party_rx'=cnt_fwd_beh.(limit . rcvr)
+    ; actor create        ; party_rx'=cnt_fwd_beh.(limit . rcvr)
 
     ; build room->party logger
     state 1                 ; rcvr=party_rx logr=debug_dev
     pair 1                  ; (logr . rcvr)
     push log_fwd_beh        ; (logr . rcvr) log_fwd_beh
-    new -1                  ; party_rx'=log_fwd_beh.(logr . rcvr)
+    actor create            ; party_rx'=log_fwd_beh.(logr . rcvr)
 
     ; request an introduction with the room
     dup 1                   ; party_rx party_rx
@@ -103,7 +103,7 @@ intro_cb:
     msg -1                  ; msgs seq ack timer link=room_rx
     pair 4                  ; (link timer ack seq . msgs)
     push link.tx_beh        ; (link timer ack seq . msgs) link_tx_beh
-    new -1                  ; party_tx=link_tx_beh.(link timer ack seq . msgs)
+    actor create            ; party_tx=link_tx_beh.(link timer ack seq . msgs)
 
     ; set party_tx_timer
     push 1                  ; party_tx seq=1
@@ -113,16 +113,16 @@ intro_cb:
     push link.tx_timeout    ; party_tx msg target delay=tx_timeout
     pair 2                  ; party_tx timer_req=(delay target . msg)
     state 3                 ; party_tx timer_req timer_dev
-    send -1                 ; party_tx
+    actor send              ; party_tx
 
     ; build line_out
     state 2                 ; party_tx io_dev
     push line_buf.out_beh   ; party_tx io_dev line_out_beh
-    new -1                  ; party_tx line_out=line_out_beh.io_dev
+    actor create            ; party_tx line_out=line_out_beh.io_dev
 
     ; build party_out
     push party_out_beh      ; party_tx line_out party_out_beh
-    new -1                  ; party_tx party_out=party_out_behline_out
+    actor create            ; party_tx party_out=party_out_behline_out
 
     ; become party_rx
     push 1                  ; party_tx party_out seq=1
@@ -131,7 +131,7 @@ intro_cb:
     roll 4                  ; party_tx seq tx timer cust=party_out
     pair 3                  ; party_tx (cust timer tx . seq)
     push link.rx_beh        ; party_tx (cust timer tx . seq) link_rx_beh
-    beh -1                  ; party_tx // link_rx_beh.(cust timer tx . seq)
+    actor become            ; party_tx // link_rx_beh.(cust timer tx . seq)
 
     ; set party_rx_timer
     push #?                 ; party_tx msg=#?
@@ -139,11 +139,11 @@ intro_cb:
     push link.rx_timeout    ; party_tx msg target delay=rx_timeout
     pair 2                  ; party_tx timer_req=(delay target . msg)
     state 3                 ; party_tx timer_req timer_dev
-    send -1                 ; party_tx
+    actor send              ; party_tx
 
     ; build party_in
     push party_in_beh       ; party_tx party_in_beh
-    new -1                  ; party_in=party_in_beh.party_tx
+    actor create            ; party_in=party_in_beh.party_tx
 
     ; build line_in
     deque new               ; party_in line
@@ -151,7 +151,7 @@ intro_cb:
     roll 3                  ; line io_dev cust=party_in
     pair 2                  ; (cust io_dev . line)
     push line_buf.in_beh    ; (cust io_dev . line) line_in_beh
-    new -1                  ; callback=line_in_beh.(cust io_dev . line)
+    actor create            ; callback=line_in_beh.(cust io_dev . line)
 
     ; register read callback
     push #?                 ; callback input=#?
@@ -159,7 +159,7 @@ intro_cb:
     push #?                 ; input callback to_cancel=#?
     pair 2                  ; io_req=(to_cancel callback . input)
     state 2                 ; io_req io_dev
-    send -1                 ; --
+    actor send              ; --
 
     ref std.commit
 
@@ -167,36 +167,36 @@ host_beh:                   ; (debug_dev io_dev timer_dev awp_dev . _) <- _
     ; build the room.
     push #nil               ; parties={}
     push room_beh           ; parties room_beh
-    new -1                  ; room=room_beh.{parties}
+    actor create            ; room=room_beh.{parties}
 
     ; build the greeter that introduces joining parties to the room
     state 3                 ; room timer_dev
     state 1                 ; room timer_dev debug_dev
     pair 2                  ; (debug_dev timer_dev . room)
     push greeter_beh        ; (debug_dev timer_dev . room) greeter_beh
-    new -1                  ; greeter=greeter_beh.(debug_dev timer_dev . room)
+    actor create            ; greeter=greeter_beh.(debug_dev timer_dev . room)
 
     ; join the room directly (not via the AWP device)
     state 0                 ; greeter state
     push join_beh           ; greeter state join_beh
-    new -1                  ; greeter party_rx=join_beh.state
+    actor create            ; greeter party_rx=join_beh.state
     push awp_petname        ; greeter party_rx party=awp_petname
     pick 2                  ; greeter party_rx party callback=party_rx
     push #?                 ; greeter party_rx party callback to_cancel=#?
     pair 3                  ; greeter intro_result=(to_cancel callback party . party_rx)
     pick 2                  ; greeter intro_result greeter
-    send -1                 ; greeter
+    actor send              ; greeter
 
     ; listen for incoming connections
     push awp_store          ; greeter store
     push #?                 ; greeter store #?
     push listen_cb_beh      ; greeter store #? listen_cb_beh
-    new -1                  ; greeter store callback=listen_cb_beh.#?
+    actor create            ; greeter store callback=listen_cb_beh.#?
     push #?                 ; greeter store callback to_cancel=#?
     push dev.listen_tag     ; greeter store callback to_cancel #listen
     pair 4                  ; listen_request=(#listen to_cancel callback store . greeter)
     state 4                 ; listen_request awp_dev
-    send -1                 ; --
+    actor send              ; --
 
     ref std.commit
 
@@ -214,7 +214,7 @@ greeter_beh:                ; (debug_dev timer_dev . room) <- (to_cancel callbac
     msg -3                  ; msgs seq ack timer link=party_rx
     pair 4                  ; (link timer ack seq . msgs)
     push link.tx_beh        ; (link timer ack seq . msgs) link_tx_beh
-    new -1                  ; room_tx=link_tx_beh.(link timer ack seq . msgs)
+    actor create            ; room_tx=link_tx_beh.(link timer ack seq . msgs)
 
     ; set room_tx_timer
     push 1                  ; room_tx seq=1
@@ -224,7 +224,7 @@ greeter_beh:                ; (debug_dev timer_dev . room) <- (to_cancel callbac
     push link.tx_timeout    ; room_tx msg target delay=tx_timeout
     pair 2                  ; room_tx timer_req=(delay target . msg)
     state 2                 ; room_tx timer_req timer_dev
-    send -1                 ; room_tx
+    actor send              ; room_tx
 
     ; build room_in
     msg 3                   ; room_tx party
@@ -232,12 +232,12 @@ greeter_beh:                ; (debug_dev timer_dev . room) <- (to_cancel callbac
     state -2                ; room_tx party tx room
     pair 2                  ; room_tx (room tx . party)
     push room_in_beh        ; room_tx (room tx . party) room_in_beh
-    new -1                  ; room_tx room_in=room_in_beh.(room tx . party)
+    actor create            ; room_tx room_in=room_in_beh.(room tx . party)
 
     ; send "joined" announcement
     push txt_joined         ; room_tx room_in txt_joined
     pick 2                  ; room_tx room_in txt_joined room_in
-    send -1                 ; room_tx room_in
+    actor send              ; room_tx room_in
 
     ; build room_rx
     push 1                  ; room_tx room_in seq=1
@@ -246,7 +246,7 @@ greeter_beh:                ; (debug_dev timer_dev . room) <- (to_cancel callbac
     roll 4                  ; seq tx timer cust=room_in
     pair 3                  ; (cust timer tx . seq)
     push link.rx_beh        ; (cust timer tx . seq) link_rx_beh
-    new -1                  ; room_rx=link_rx_beh.(cust timer tx . seq)
+    actor create            ; room_rx=link_rx_beh.(cust timer tx . seq)
 
     ; set room_rx_timer
     push #?                 ; room_rx msg=#?
@@ -254,25 +254,25 @@ greeter_beh:                ; (debug_dev timer_dev . room) <- (to_cancel callbac
     push link.rx_timeout    ; room_rx msg target delay=rx_timeout
     pair 2                  ; room_rx timer_req=(delay target . msg)
     state 2                 ; room_rx timer_req timer_dev
-    send -1                 ; room_rx
+    actor send              ; room_rx
 
     ; build party->room message-limited transport
     ; push 13             ; rcvr=room_rx limit=13
     ; pair 1              ; (limit . rcvr)
     ; push cnt_fwd_beh    ; (limit . rcvr) cnt_fwd_beh
-    ; new -1              ; room_rx'=cnt_fwd_beh.(limit . rcvr)
+    ; actor create        ; room_rx'=cnt_fwd_beh.(limit . rcvr)
 
     ; build party->room logger
     state 1                 ; rcvr=room_rx logr=debug_dev
     pair 1                  ; (logr . rcvr)
     push log_fwd_beh        ; (logr . rcvr) log_fwd_beh
-    new -1                  ; room_rx'=log_fwd_beh.(logr . rcvr)
+    actor create            ; room_rx'=log_fwd_beh.(logr . rcvr)
 
     ; complete the introduction
     push #t                 ; room_rx ok=#t
     pair 1                  ; result=(ok . room_rx)
     msg 2                   ; result callback
-    send -1                 ; --
+    actor send              ; --
 
     ref std.commit
 
@@ -343,7 +343,7 @@ room_cast:                  ; msg=(party . content) {parties}
     push link.tx_msg        ; msg next tx msg tx_msg
     pair 1                  ; msg next tx (tx_msg . msg)
     roll 2                  ; msg next (tx_msg . msg) tx
-    send -1                 ; msg next
+    actor send              ; msg next
     ref room_cast
 
 room_add:                   ; --
@@ -356,7 +356,7 @@ room_add:                   ; --
     ; update room state
     dup 1                   ; {parties'} {parties'}
     push room_beh           ; {parties'} {parties'} room_beh
-    beh -1                  ; {parties'}
+    actor become            ; {parties'}
 
     ; broadcast to updated parties
     msg -1                  ; {parties'} (party . content)
@@ -372,7 +372,7 @@ room_del:                   ; --
     ; update room state
     dup 1                   ; {parties'} {parties'}
     push room_beh           ; {parties'} {parties'} room_beh
-    beh -1                  ; {parties'}
+    actor become            ; {parties'}
 
     ; broadcast "left" announcement
     push txt_left           ; {parties'} txt_left
@@ -432,7 +432,7 @@ log_fwd_beh:                ; (logr . rcvr) <- msg
     my self                 ; msg SELF
     pair 1                  ; (SELF . msg)  // label log entry
     state 1                 ; (SELF . msg) logr
-    send -1                 ; --
+    actor send              ; --
     msg 0                   ; msg
     state -1                ; msg rcvr
     ref std.send_msg
@@ -450,7 +450,7 @@ cnt_fwd_beh:                ; (limit . rcvr) <- msg
     alu sub                 ; rcvr limit-1
     pair 1                  ; (limit-1 . rcvr)
     push cnt_fwd_beh        ; (limit-1 . rcvr) cnt_fwd_beh
-    beh -1                  ; --
+    actor become            ; --
     msg 0                   ; msg
     state -1                ; msg rcvr
     ref std.send_msg

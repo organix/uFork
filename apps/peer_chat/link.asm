@@ -41,7 +41,7 @@ tx_beh:                     ; (link timer ack seq . msgs) <- tx_evt
     ; unknown operation
     push #?                 ; #?
     push std.sink_beh       ; #? sink_beh
-    beh -1                  ; --  // become inert
+    actor become            ; --  // become inert
     ref std.commit
 
 tx_msg_tail:                ; (link timer ack seq . msgs) <- (tx_msg . content)
@@ -64,7 +64,7 @@ tx_msg_tail:                ; (link timer ack seq . msgs) <- (tx_msg . content)
     state 1                 ; msgs' msgs' seq+1 ack timer link
     pair 4                  ; msgs' tx_state=(link timer ack seq+1 . msgs')
     push tx_beh             ; msgs' tx_state tx_beh
-    beh -1                  ; msgs'
+    actor become            ; msgs'
 
     ; if the queue was empty previously,
     state -4                ; msgs' msgs
@@ -113,14 +113,14 @@ tx_ack_1:                   ; msgs seq ack timer link msgs' content
     pick 5                  ; ... msgs' seq ack timer link msgs'' (seq . content) ack
     pair 1                  ; ... msgs' seq ack timer link msgs'' (ack seq . content)
     pick 3                  ; ... msgs' seq ack timer link msgs'' (ack seq . content) link
-    send -1                 ; ... msgs' seq ack timer link msgs''
+    actor send              ; ... msgs' seq ack timer link msgs''
     drop 1                  ; ... msgs' seq ack timer link
 
 tx_ack_2:                   ; msgs seq ack timer link
     ; update tx state
     pair 4                  ; tx_state=(link timer ack seq . msgs)
     push tx_beh             ; tx_state tx_beh
-    beh -1                  ; --
+    actor become            ; --
     ref std.commit
 
 tx_tmo_tail:                ; (link timer ack seq . msgs) <- (tx_tmo . seq')
@@ -132,7 +132,7 @@ tx_tmo_tail:                ; (link timer ack seq . msgs) <- (tx_tmo . seq')
     push tx_timeout         ; msg target delay=tx_timeout
     pair 2                  ; timer_req=(delay target . msg)
     state 2                 ; timer_req timer
-    send -1                 ; --
+    actor send              ; --
 
     ; check timer message number
     state 4                 ; seq
@@ -151,7 +151,7 @@ tx_tmo_1:
     push tx_msg             ; #? tx_msg
     pair 1                  ; (tx_msg . #?)
     my self                 ; (tx_msg . #?) SELF
-    send -1                 ; --
+    actor send              ; --
     ref std.commit
 
 tx_tmo_2:
@@ -181,7 +181,7 @@ rx_beh:                     ; (cust timer tx . seq) <- #? | (ack seq' . content)
     ; timeout
     state 0                 ; state
     push lost_rx_beh        ; state lost_rx_beh
-    beh -1                  ; --
+    actor become            ; --
 
     ; reset timer
     push #?                 ; msg=#?
@@ -189,7 +189,7 @@ rx_beh:                     ; (cust timer tx . seq) <- #? | (ack seq' . content)
     push rx_timeout         ; msg target delay=rx_timeout
     pair 2                  ; timer_req=(delay target . msg)
     state 2                 ; timer_req timer
-    send -1                 ; --
+    actor send              ; --
     ref std.commit
 
 rx_1:
@@ -206,7 +206,7 @@ rx_2:
     push tx_ack             ; seq' ack tx_ack
     pair 2                  ; (tx_ack ack . seq')
     state 3                 ; (tx_ack ack . seq') tx
-    send -1                 ; --
+    actor send              ; --
 
     ; increment expected message number
     state -3                ; seq
@@ -217,7 +217,7 @@ rx_2:
     state 1                 ; seq+1 tx timer cust
     pair 3                  ; (cust timer tx . seq+1)
     push rx_beh             ; (cust timer tx . seq+1) rx_beh
-    beh -1                  ; --
+    actor become            ; --
 
     ; forward message to cust
     msg -2                  ; content
@@ -237,13 +237,13 @@ lost_rx_beh:                ; (cust timer tx . seq) <- #? | (ack seq' . content)
     ; timeout
     push #?                 ; #?
     push std.sink_beh       ; #? sink_beh
-    beh -1                  ; --  // become inert
+    actor become            ; --  // become inert
     push #?                 ; #?
     state 3                 ; #? tx
-    send -1                 ; --  // stop transmitter
+    actor send              ; --  // stop transmitter
     push #?                 ; #?
     state 1                 ; #? cust
-    send -1                 ; --  // lost signal
+    actor send              ; --  // lost signal
     ref std.commit
 
 lost_rx_1:
@@ -256,7 +256,7 @@ lost_rx_1:
     ; ignore unexpected message (but recover)
     state 0                 ; state
     push rx_beh             ; state rx_beh
-    beh -1                  ; --
+    actor become            ; --
     ref std.commit
 
 .export

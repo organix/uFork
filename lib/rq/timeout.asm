@@ -22,10 +22,10 @@ timeout_beh:                ; (requestor time_limit . timer_dev) <- request
 
     push #?                 ; #?
     push canceller.beh      ; #? canceller_beh
-    new -1                  ; t␘=canceller_beh.#?
+    actor create            ; t␘=canceller_beh.#?
     push #?                 ; t␘ #?
     push canceller.beh      ; t␘ #? canceller_beh
-    new -1                  ; t␘ r␘=canceller_beh.#?
+    actor create            ; t␘ r␘=canceller_beh.#?
 
 ; Does the request contain a 'to_cancel' capability? If not, jump to 'race'.
 
@@ -41,9 +41,9 @@ timeout_beh:                ; (requestor time_limit . timer_dev) <- request
     pick 3                  ; t␘ r␘ () t␘ r␘
     pair 2                  ; t␘ r␘ (r␘ t␘)
     push cancel_all_beh     ; t␘ r␘ (r␘ t␘) cancel_all_beh
-    new -1                  ; t␘ r␘ cancel_all=cancel_all_beh.(r␘ t␘)
+    actor create            ; t␘ r␘ cancel_all=cancel_all_beh.(r␘ t␘)
     msg 1                   ; t␘ r␘ cancel_all to_cancel
-    send -1                 ; t␘ r␘
+    actor send              ; t␘ r␘
 
 ; Set up a race between the requestor and the timer. Whichever finishes first
 ; sends its result to the callback and cancels the loser.
@@ -51,17 +51,17 @@ timeout_beh:                ; (requestor time_limit . timer_dev) <- request
 race:
     msg 2                   ; t␘ r␘ raw_callback
     push lib.once_beh       ; t␘ r␘ raw_callback once_beh
-    new -1                  ; t␘ r␘ callback=once_beh.raw_callback
+    actor create            ; t␘ r␘ callback=once_beh.raw_callback
     msg -2                  ; t␘ r␘ callback value
     pick 4                  ; t␘ r␘ callback value t␘
     pick 3                  ; t␘ r␘ callback value t␘ callback
     pair 1                  ; t␘ r␘ callback value (callback . t␘)
     push win_beh            ; t␘ r␘ callback value (callback . t␘) win_beh
-    new -1                  ; t␘ r␘ callback value rcb=win_beh.(callback . t␘)
+    actor create            ; t␘ r␘ callback value rcb=win_beh.(callback . t␘)
     pick 4                  ; t␘ r␘ callback value rcb r␘
     pair 2                  ; t␘ r␘ callback rreq=(r␘ rcb . value)
     state 1                 ; t␘ r␘ callback rreq requestor
-    send -1                 ; t␘ r␘ callback
+    actor send              ; t␘ r␘ callback
     my self                 ; t␘ r␘ callback error=self
     push #f                 ; t␘ r␘ callback error ok=#f
     pair 1                  ; t␘ r␘ callback result=(ok . error)
@@ -70,11 +70,11 @@ race:
     pick 4                  ; t␘ r␘ callback result time_limit r␘ callback
     pair 1                  ; t␘ r␘ callback result time_limit (callback . r␘)
     push win_beh            ; t␘ r␘ callback result time_limit (callback . r␘) win_beh
-    new -1                  ; t␘ r␘ callback result time_limit tcb=win_beh.(callback . r␘)
+    actor create            ; t␘ r␘ callback result time_limit tcb=win_beh.(callback . r␘)
     pick 6                  ; t␘ r␘ callback result time_limit tcb t␘
     pair 3                  ; t␘ r␘ callback treq=(t␘ tcb time_limit . result)
     state -2                ; t␘ r␘ callback treq timer_dev
-    send -1                 ; t␘ r␘ callback
+    actor send              ; t␘ r␘ callback
     ref std.commit
 
 cancel_all_beh:             ; cancellers <- reason
@@ -83,16 +83,16 @@ cancel_all_beh:             ; cancellers <- reason
     msg 0                   ; cancellers #? reason
     pair 1                  ; cancellers (reason . #?)
     push lib.broadcast_beh  ; cancellers (reason . #?) broadcast_beh
-    new -1                  ; cancellers broadcast=broadcast_beh.(reason. #?)
-    send -1                 ; --
+    actor create            ; cancellers broadcast=broadcast_beh.(reason. #?)
+    actor send              ; --
     push std.sink_beh       ; sink_beh
-    beh -1                  ; --
+    actor become            ; --
     ref std.commit
 
 win_beh:                    ; (callback . loser␘) <- result
     push #?                 ; #?
     state -1                ; #? loser␘
-    send -1                 ; --
+    actor send              ; --
     msg 0                   ; result
     state 1                 ; result callback
     ref std.send_msg
@@ -128,13 +128,13 @@ test:                       ; judge <- {caps}
     state 0                 ; timer () 3rd 2nd 1st probation timer judge
     pair 6                  ; timer (judge timer probation 1st 2nd 3rd)
     push referee.beh        ; timer (judge timer probation 1st 2nd 3rd) referee_beh
-    new -1                  ; timer referee=referee_beh.(judge timer probation 1st 2nd 3rd)
+    actor create            ; timer referee=referee_beh.(judge timer probation 1st 2nd 3rd)
 
 ; The referee is not able to compare two lists, so unwrap the result before
 ; giving it to the referee.
 
     push unwrap_result.beh  ; timer referee unwrap_result_beh
-    new -1                  ; timer referee'=unwrap_result_beh.referee
+    actor create            ; timer referee'=unwrap_result_beh.referee
 suite:
 
 ; Scenario 1: there is a timeout before the requestor can succeed.
@@ -185,22 +185,22 @@ run_test:                   ; ( timer referee cancel_ms time_limit delay_ms valu
     roll 3                  ; k timer referee cancel_ms time_limit value timer delay_ms
     pair 1                  ; k timer referee cancel_ms time_limit value (delay_ms . timer)
     push delay.beh          ; k timer referee cancel_ms time_limit value (delay_ms . timer) delay_beh
-    new -1                  ; k timer referee cancel_ms time_limit value delay=delay_beh.(delay_ms . timer)
+    actor create            ; k timer referee cancel_ms time_limit value delay=delay_beh.(delay_ms . timer)
     pick 6                  ; k timer referee cancel_ms time_limit value delay timer
     roll 4                  ; k timer referee cancel_ms value delay timer time_limit
     roll 3                  ; k timer referee cancel_ms value timer time_limit delay
     pair 2                  ; k timer referee cancel_ms value (delay time_limit . timer)
     push timeout_beh        ; k timer referee cancel_ms value (delay time_limit . timer) timeout_beh
-    new -1                  ; k timer referee cancel_ms value timeout=timeout_beh.(delay time_limit . timer)
+    actor create            ; k timer referee cancel_ms value timeout=timeout_beh.(delay time_limit . timer)
     push #?                 ; k timer referee cancel_ms value timeout #?
     push canceller.beh      ; k timer referee cancel_ms value timeout #? canceller_beh
-    new -1                  ; k timer referee cancel_ms value timeout canceller=canceller_beh.#?
+    actor create            ; k timer referee cancel_ms value timeout canceller=canceller_beh.#?
     roll 3                  ; k timer referee cancel_ms timeout canceller value
     roll 5                  ; k timer cancel_ms timeout canceller value referee
     pick 3                  ; k timer cancel_ms timeout canceller value referee canceller
     pair 2                  ; k timer cancel_ms timeout canceller timeout_request=(canceller referee . value)
     roll 3                  ; k timer cancel_ms canceller timeout_request timeout
-    send -1                 ; k timer cancel_ms canceller
+    actor send              ; k timer cancel_ms canceller
     pick 2                  ; k timer cancel_ms canceller cancel_ms
     typeq #fixnum_t         ; k timer cancel_ms canceller fixnum(cancel_ms)
     if_not skip_cancel      ; k timer cancel_ms canceller
@@ -209,7 +209,7 @@ run_test:                   ; ( timer referee cancel_ms time_limit delay_ms valu
     roll 3                  ; k timer msg canceller cancel_ms
     pair 2                  ; k timer timer_req=(cancel_ms canceller . msg)
     roll 2                  ; k timer_req timer
-    send -1                 ; k
+    actor send              ; k
     return
 
 skip_cancel:

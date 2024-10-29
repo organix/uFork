@@ -45,7 +45,7 @@ boot:                       ; _ <- {caps}
     msg 0                   ; msg {caps}
     push debug_key          ; msg {caps} debug_key
     dict get                ; msg debug_dev
-    send -1                 ; --
+    actor send              ; --
 
 ; Allocate a blob and pass it on to the I/O device.
 
@@ -59,12 +59,12 @@ boot:                       ; _ <- {caps}
     pick 3                  ; io_dev blob_dev size io_dev
     pair 1                  ; io_dev blob_dev alloc_req=(io_dev . size)
     pick 2                  ; io_dev blob_dev alloc_req blob_dev
-    send -1                 ; io_dev blob_dev
+    actor send              ; io_dev blob_dev
     push 13                 ; io_dev blob_dev size=3
     roll 3                  ; blob_dev size io_dev
     pair 1                  ; blob_dev alloc_req=(io_dev . size)
     roll 2                  ; alloc_req blob_dev
-    send -1                 ; --
+    actor send              ; --
 
 ; Send +42 to the debug device after a short delay.
 
@@ -77,20 +77,20 @@ boot:                       ; _ <- {caps}
     msg 0                   ; timer_req {caps}
     push timer_key          ; timer_req {caps} timer_key
     dict get                ; timer_req timer_dev
-    send -1                 ; --
+    actor send              ; --
 
 ; Write an emoji to the I/O device.
 
     push '😀'               ; char
     push #?                 ; char #?
     push std.sink_beh       ; char #? sink_beh
-    new -1                  ; char callback=sink.#?
+    actor create            ; char callback=sink.#?
     push #?                 ; char callback to_cancel=#?
     pair 2                  ; io_req=(to_cancel callback . char)
     msg 0                   ; io_req {caps}
     push io_key             ; io_req {caps} io_key
     dict get                ; io_req io_dev
-    send -1                 ; --
+    actor send              ; --
 
 ; Read a character from the I/O device, passing it on to the debug device.
 
@@ -103,7 +103,7 @@ boot:                       ; _ <- {caps}
     msg 0                   ; io_req {caps}
     push io_key             ; io_req {caps} io_key
     dict get                ; io_req io_dev
-    send -1                 ; --
+    actor send              ; --
 
 ; Send a random number in the range [-40, 40] to the debug device.
 
@@ -116,7 +116,7 @@ boot:                       ; _ <- {caps}
     msg 0                   ; (cust a . b) {caps}
     push random_key         ; (cust a . b) {caps} random_key
     dict get                ; (cust a . b) random_dev
-    send -1                 ; --
+    actor send              ; --
 
     ref std.commit
 

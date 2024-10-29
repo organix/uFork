@@ -32,7 +32,7 @@ fib_beh:                    ; _ <- (cust . n)
 
     msg 1                   ; n cust
     push k                  ; n cust k
-    new -1                  ; n k=k.cust
+    actor create            ; n k=k.cust
 
     pick 2                  ; n k n
     push 1                  ; n k n 1
@@ -41,8 +41,8 @@ fib_beh:                    ; _ <- (cust . n)
     pair 1                  ; n k (k . n-1)
     push #?                 ; n k (k . n-1) #?
     push fib_beh            ; n k (k . n-1) #? fib_beh
-    new -1                  ; n k (k . n-1) fib.#?
-    send -1                 ; n k
+    actor create            ; n k (k . n-1) fib.#?
+    actor send              ; n k
 
     roll 2                  ; k n
     push 2                  ; k n 2
@@ -51,7 +51,7 @@ fib_beh:                    ; _ <- (cust . n)
     pair 1                  ; (k . n-2)
     push #?                 ; (k . n-2) #?
     push fib_beh            ; (k . n-2) #? fib_beh
-    new -1                  ; (k . n-2) fib.#?
+    actor create            ; (k . n-2) fib.#?
     ref std.send_msg
 
 k:                          ; cust <- m
@@ -59,7 +59,7 @@ k:                          ; cust <- m
     state 0                 ; m cust
     pair 1                  ; (cust . m)
     push k2                 ; (cust . m) k2
-    beh -1                  ; k2.(cust . m)
+    actor become            ; k2.(cust . m)
     ref std.commit
 
 k2:                         ; (cust . m) <- n
@@ -86,12 +86,12 @@ test:                       ; judge <- {caps}
     state 0                 ; n no yes expected judge
     pair 3                  ; n (judge expected yes . no)
     push is_eq.beh          ; n (judge expected yes . no) is_eq_beh
-    new -1                  ; n cust=is_eq_beh.(judge expected yes . no)
+    actor create            ; n cust=is_eq_beh.(judge expected yes . no)
 suite:
     pair 1                  ; (cust . n)
     push #?                 ; (cust . n) #?
     push fib_beh            ; (cust . n) #? fib_beh
-    new -1                  ; (cust . n) fib
+    actor create            ; (cust . n) fib
     ref std.send_msg
 
 .export

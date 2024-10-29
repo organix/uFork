@@ -17,28 +17,28 @@ beh:
 fork_beh:                   ; (cust h_svc . t_svc) <- (h_req . t_req)
     my self                 ; SELF
     push lib.tag_beh        ; SELF tag_beh
-    new -1                  ; t_tag=tag.SELF
+    actor create            ; t_tag=tag.SELF
 
     my self                 ; t_tag SELF
     push lib.tag_beh        ; t_tag SELF tag_beh
-    new -1                  ; t_tag h_tag=tag.SELF
+    actor create            ; t_tag h_tag=tag.SELF
 
     msg -1                  ; t_tag h_tag t_req
     pick 3                  ; t_tag h_tag t_req t_tag
     pair 1                  ; t_tag h_tag (t_tag . t_req)
     state -2                ; t_tag h_tag (t_tag . t_req) t_svc
-    send -1                 ; t_tag h_tag
+    actor send              ; t_tag h_tag
 
     msg 1                   ; t_tag h_tag h_req
     pick 2                  ; t_tag h_tag h_req h_tag
     pair 1                  ; t_tag h_tag (h_tag . h_req)
     state 2                 ; t_tag h_tag (h_tag . h_req) h_svc
-    send -1                 ; t_tag h_tag
+    actor send              ; t_tag h_tag
 
     state 1                 ; t_tag h_tag cust
     pair 2                  ; (cust h_tag . t_tag)
     push join_beh           ; (cust h_tag . t_tag) join_beh
-    beh -1                  ; --
+    actor become            ; --
     ref std.commit
 
 ;;  LET join_beh(cust, h_tag, t_tag) = \msg.[
@@ -65,7 +65,7 @@ join_beh:                   ; (cust h_tag . t_tag) <- (tag . res)
     msg -1                  ; (cust h_tag . t_tag) head=res
     pair 1                  ; (head cust h_tag . t_tag)
     push join_t             ; (head cust h_tag . t_tag) join_t
-    beh -1                  ; --
+    actor become            ; --
     ref std.commit
 
 join_1:                     ; --
@@ -78,7 +78,7 @@ join_1:                     ; --
     msg -1                  ; (cust h_tag . t_tag) tail=res
     pair 1                  ; (tail cust h_tag . t_tag)
     push join_h             ; (tail cust h_tag . t_tag) join_h
-    beh -1                  ; --
+    actor become            ; --
     ref std.commit
 
 join_h:                     ; (tail cust h_tag . t_tag) <- (tag . head)
@@ -108,15 +108,15 @@ join_2:                     ; tail head
 boot:                       ; _ <- {caps}
     push #?                 ; #?
     push negate_beh         ; #? negate_beh
-    new -1                  ; t_svc=negate_beh.#?
+    actor create            ; t_svc=negate_beh.#?
     dup 1                   ; t_svc h_svc
     push #?                 ; t_svc h_svc #?
     push verify             ; t_svc h_svc #? verify
-    new -1                  ; t_svc h_svc cust=verify.#?
+    actor create            ; t_svc h_svc cust=verify.#?
     pair 2                  ; (cust h_svc . t_svc)
 
     push fork_beh           ; (cust h_svc . t_svc) fork_beh
-    new -1                  ; fork.(cust h_svc . t_svc)
+    actor create            ; fork.(cust h_svc . t_svc)
     push 42                 ; fork 42
     push -42                ; fork 42 -42
     pair 1                  ; fork (-42 . 42)

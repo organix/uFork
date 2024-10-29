@@ -122,25 +122,25 @@ test_pick_and_roll:
 test_actors:
     push #?                 ; #?
     push cell_beh           ; #? cell_beh
-    new -1                  ; rcvr=cell_beh.#?
+    actor create            ; rcvr=cell_beh.#?
     push once_beh           ; rcvr once_beh
-    new -1                  ; actor=once_beh.rcvr
+    actor create            ; actor=once_beh.rcvr
     push #t                 ; actor #t
     pick 2                  ; actor #t actor
-    send -1                 ; actor
+    actor send              ; actor
     push #f                 ; actor #f
     pick 2                  ; actor #f actor
-    send -1                 ; actor
+    actor send              ; actor
     drop 1                  ; --
 test_fib:
     push 6                  ; n=6
     push 8                  ; n fib(n)=8
     push assert_eq_beh      ; n fib(n) assert_eq_beh
-    new -1                  ; n cust=assert_eq_beh.8
+    actor create            ; n cust=assert_eq_beh.8
     pair 1                  ; (cust . n)
     push #?                 ; (cust . n) #?
     push fib_beh            ; (cust . n) #? fib_beh
-    new -1                  ; (cust . n) fib
+    actor create            ; (cust . n) fib
     ref send_msg
 
 ; static data
@@ -165,7 +165,7 @@ assert_eq_beh:              ; expect <- actual
 cell_beh:                   ; value <- value'
     msg 0                   ; value'
     push cell_beh           ; value' cell_beh
-    beh -1                  ; --
+    actor become            ; --
     ref commit
 
 ; example from `fib.asm`
@@ -178,7 +178,7 @@ fib_beh:                    ; _ <- (cust . n)
 
     msg 1                   ; n cust
     push fib_k              ; n cust k
-    new -1                  ; n k=k.cust
+    actor create            ; n k=k.cust
 
     pick 2                  ; n k n
     push 1                  ; n k n 1
@@ -187,8 +187,8 @@ fib_beh:                    ; _ <- (cust . n)
     pair 1                  ; n k (k . n-1)
     push #?                 ; n k (k . n-1) #?
     push fib_beh            ; n k (k . n-1) #? fib_beh
-    new -1                  ; n k (k . n-1) fib.#?
-    send -1                 ; n k
+    actor create            ; n k (k . n-1) fib.#?
+    actor send              ; n k
 
     roll 2                  ; k n
     push 2                  ; k n 2
@@ -197,7 +197,7 @@ fib_beh:                    ; _ <- (cust . n)
     pair 1                  ; (k . n-2)
     push #?                 ; (k . n-2) #?
     push fib_beh            ; (k . n-2) #? fib_beh
-    new -1                  ; (k . n-2) fib.#?
+    actor create            ; (k . n-2) fib.#?
     ref send_msg
 
 fib_k:                      ; cust <- m
@@ -205,7 +205,7 @@ fib_k:                      ; cust <- m
     state 0                 ; m cust
     pair 1                  ; (cust . m)
     push fib_k2             ; (cust . m) k2
-    beh -1                  ; k2.(cust . m)
+    actor become            ; k2.(cust . m)
     ref commit
 
 fib_k2:                     ; (cust . m) <- n
@@ -219,7 +219,7 @@ fib_k2:                     ; (cust . m) <- n
 once_beh:                   ; rcvr <- msg
     push #?                 ; #?
     push sink_beh           ; #? sink_beh
-    beh -1                  ; --
+    actor become            ; --
     msg 0                   ; msg
     state 0                 ; msg rcvr
     ref send_msg
@@ -228,7 +228,7 @@ once_beh:                   ; rcvr <- msg
 cust_send:                  ; msg
     msg 1                   ; msg cust
 send_msg:                   ; msg cust
-    send -1                 ; --
+    actor send              ; --
 sink_beh:                   ; _ <- _
 commit:
     end commit

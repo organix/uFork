@@ -21,7 +21,7 @@ boot:                       ; _ <- {caps}
 ;    msg 0               ; ... debug_dev {caps}
 ;    push dev.clock_key  ; ... debug_dev {caps} dev.clock_key
 ;    dict get            ; ... cust=debug_dev clock_dev
-    send -1                 ; --
+    actor send              ; --
     end commit
 
 .export

@@ -42,7 +42,7 @@ E_STOP:                     ; actor stopped
 cust_send:                  ; msg
     msg 1                   ; msg cust
 send_msg:                   ; msg cust
-    send -1                 ; --
+    actor send              ; --
 sink_beh:                   ; _ <- _
 commit:
     end commit

@@ -31,12 +31,12 @@ sequence_beh:               ; requestors <- (to_cancel callback . value)
     state 0                 ; canceller callback requestors
     pair 2                  ; (requestors callback . canceller)
     push runner_beh         ; (requestors callback . canceller) runner_beh
-    new -1                  ; runner=runner_beh.(requestors callback . canceller)
+    actor create            ; runner=runner_beh.(requestors callback . canceller)
     msg -2                  ; runner value
     push start_tag          ; runner value start_tag
     pair 1                  ; runner (start_tag . value)
     pick 2                  ; runner (start_tag . value) runner
-    send -1                 ; runner
+    actor send              ; runner
 
 ; Provide a cancel capability if the request allows for it.
 
@@ -47,9 +47,9 @@ sequence_beh:               ; requestors <- (to_cancel callback . value)
     roll 2                  ; label rcvr=runner
     pair 1                  ; (rcvr . label)
     push lib.label_beh      ; (rcvr . label) label_beh
-    new -1                  ; cancel=label_beh.(rcvr label)
+    actor create            ; cancel=label_beh.(rcvr label)
     msg 1                   ; cancel to_cancel
-    send -1                 ; --
+    actor send              ; --
     ref std.commit
 
 runner_beh:                 ; (requestors callback . canceller) <- message
@@ -86,13 +86,13 @@ on_result:                  ; (requestors callback . canceller) <- (result_tag .
     push start_tag          ; value start_tag
     pair 1                  ; (start_tag . value)
     my self                 ; (start_tag . value) SELF
-    send -1                 ; --
+    actor send              ; --
     ref std.commit
 
 fail:                       ; --
     msg -1                  ; result
     state 2                 ; result callback
-    send -1                 ; --
+    actor send              ; --
     ref done
 
 on_start:                   ; (requestors callback . _) <- (start_tag . value)
@@ -100,7 +100,7 @@ on_start:                   ; (requestors callback . _) <- (start_tag . value)
     if_not succeed          ; --
     push #?                 ; #?
     push canceller.beh      ; #? canceller_beh
-    new -1                  ; canceller=canceller_beh.#?
+    actor create            ; canceller=canceller_beh.#?
     state 1                 ; canceller requestors
     part 1                  ; canceller pending next
     msg -1                  ; canceller pending next value
@@ -108,16 +108,16 @@ on_start:                   ; (requestors callback . _) <- (start_tag . value)
     my self                 ; canceller pending next value label rcvr=SELF
     pair 1                  ; canceller pending next value (rcvr . label)
     push lib.label_beh      ; canceller pending next value (rcvr . label) label_beh
-    new -1                  ; canceller pending next value callback=label_beh.(rcvr . label)
+    actor create            ; canceller pending next value callback=label_beh.(rcvr . label)
     pick 5                  ; canceller pending next value callback to_cancel=canceller
     pair 2                  ; canceller pending next request=(to_cancel callbackvalue)
     roll 2                  ; canceller pending request=(to_cancel callback=SELF value) next
-    send -1                 ; canceller pending
+    actor send              ; canceller pending
     state 2                 ; canceller pending callback
     roll 2                  ; canceller callback pending
     pair 2                  ; (pending callback . canceller)
     push runner_beh         ; (pending callback . canceller) runner_beh
-    beh -1                  ; --
+    actor become            ; --
     ref std.commit
 
 succeed:
@@ -125,7 +125,7 @@ succeed:
     push #t                 ; value ok=#t
     pair 1                  ; result=(ok . value)
     state 2                 ; result callback
-    send -1                 ; --
+    actor send              ; --
     ref done
 
 on_cancel:                  ; (requestors callback . canceller) <- (cancel_tag . reason)
@@ -133,13 +133,13 @@ on_cancel:                  ; (requestors callback . canceller) <- (cancel_tag .
     msg -1                  ; #? reason
     pair 1                  ; (reason . #?)
     state -2                ; (reason . #?) canceller
-    send -1                 ; --
+    actor send              ; --
     ref done
 
 done:
     push #?                 ; #?
     push std.sink_beh       ; #? sink_beh
-    beh -1                  ; --
+    actor become            ; --
     ref std.commit
 
 ; Test suite
@@ -165,9 +165,9 @@ test:                       ; judge <- {caps}
     state 0                 ; () 3rd 2nd 1st probation timer judge
     pair 6                  ; (judge timer probation 1st 2nd 3rd)
     push referee.beh        ; (judge timer probation 1st 2nd 3rd) referee_beh
-    new -1                  ; referee=referee_beh.(judge timer probation 1st 2nd 3rd)
+    actor create            ; referee=referee_beh.(judge timer probation 1st 2nd 3rd)
     push unwrap_result.beh  ; referee unwrap_result_beh
-    new -1                  ; referee'=unwrap_result_beh.referee
+    actor create            ; referee'=unwrap_result_beh.referee
 suite:
     msg 0                   ; referee {caps}
     push dev.timer_key      ; referee {caps} timer_key
@@ -248,7 +248,7 @@ consume_spec:
     pick 6                  ; k referee timer cancel_at requestors spec' error delay timer
     pair 2                  ; k referee timer cancel_at requestors spec' (timer delay . error)
     push mock_double_beh    ; k referee timer cancel_at requestors spec' (timer delay . error) mock_double_beh
-    new -1                  ; k referee timer cancel_at requestors spec' mock=mock_double_beh.(timer delay . error)
+    actor create            ; k referee timer cancel_at requestors spec' mock=mock_double_beh.(timer delay . error)
     roll 3                  ; k referee timer cancel_at spec' mock requestors
     roll 2                  ; k referee timer cancel_at spec' requestors mock
     pair 1                  ; k referee timer cancel_at spec' requestors'=(mock . requestors)
@@ -264,19 +264,19 @@ make_request:               ; k referee timer cancel_at requestors spec
     drop 1                  ; k timer cancel_at requestors value callback
     push #?                 ; k timer cancel_at requestors value callback #?
     push canceller.beh      ; k timer cancel_at requestors value callback #? canceller_beh
-    new -1                  ; k timer cancel_at requestors value callback canceller=canceller_beh.#?
+    actor create            ; k timer cancel_at requestors value callback canceller=canceller_beh.#?
     push #?                 ; k timer cancel_at requestors value callback canceller message=#?
     pick 2                  ; k timer cancel_at requestors value callback canceller message target=canceller
     pick 7                  ; k timer cancel_at requestors value callback canceller message target delay=cancel_at
     pair 2                  ; k timer cancel_at requestors value callback canceller (delay target . message)
     pick 7                  ; k timer cancel_at requestors value callback canceller (delay target . message) timer
-    send -1                 ; k timer cancel_at requestors value callback to_cancel=canceller
+    actor send              ; k timer cancel_at requestors value callback to_cancel=canceller
 make_sequence:
     pair 2                  ; k timer cancel_at requestors request=(to_cancel callback . value)
     roll 2                  ; k timer cancel_at request requestors
     push sequence_beh       ; k timer cancel_at request requestors sequence_beh
-    new -1                  ; k timer cancel_at request sequence=sequence_beh.requestors
-    send -1                 ; k timer cancel_at
+    actor create            ; k timer cancel_at request sequence=sequence_beh.requestors
+    actor send              ; k timer cancel_at
     drop 2                  ; k
     return
     
@@ -299,7 +299,7 @@ mock_double_timer:
     msg 1                   ; result delay callback to_cancel
     pair 3                  ; timer_request=(to_cancel callback delay . result)
     state 1                 ; timer_request timer
-    send -1                 ; --
+    actor send              ; --
     ref std.commit
 
 .export

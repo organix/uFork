@@ -20,7 +20,7 @@ timer_beh:                  ; clock <- (delay target . message)
     state 0                 ; msg clock
     pair 1                  ; (clock . msg)
     push cust_beh           ; (clock . msg) cust_beh
-    new -1                  ; cust
+    actor create            ; cust
     state 0                 ; cust clock
     ref std.send_msg
 
@@ -36,7 +36,7 @@ cust_beh:                   ; (clock delay target . message) <- now
     state 1                 ; message target end_time clock
     pair 3                  ; (clock end_time target . message)
     push poll_beh           ; (clock end_time target . message) poll_beh
-    beh -1                  ; --
+    actor become            ; --
     my self                 ; SELF
     state 1                 ; SELF clock
     ref std.send_msg
@@ -72,19 +72,19 @@ boot:                       ; _ <- {caps}
     push dev.clock_key      ; debug_dev {caps} dev.clock_key
     dict get                ; debug_dev clock_dev
     push timer_beh          ; debug_dev clock_dev timer_beh
-    new -1                  ; debug_dev timer
+    actor create            ; debug_dev timer
     push 42                 ; debug_dev timer 42
     pick 3                  ; debug_dev timer 42 debug_dev
     push 1000               ; debug_dev timer 42 debug_dev 1000
     pair 2                  ; debug_dev timer (1000 debug_dev . 42)
     pick 2                  ; debug_dev timer (1000 debug_dev . 42) timer
-    send -1                 ; debug_dev timer
+    actor send              ; debug_dev timer
     push 1729               ; debug_dev timer 1729
     pick 3                  ; debug_dev timer 1729 debug_dev
     push 2000               ; debug_dev timer 1729 debug_dev 2000
     pair 2                  ; debug_dev timer (2000 debug_dev . 1729)
     pick 2                  ; debug_dev timer (2000 debug_dev . 1729) timer
-    send -1                 ; debug_dev timer
+    actor send              ; debug_dev timer
     ref std.commit
 
 .export

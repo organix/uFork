@@ -132,7 +132,7 @@ function host_dev(core) {
 //debug     msg 0               ; 42 {caps}
 //debug     push proxy_key      ; 42 {caps} proxy_key
 //debug     dict get            ; 42 proxy
-//debug     send -1             ; --
+//debug     actor send          ; --
 //debug     end commit
 //debug .export
 //debug     boot

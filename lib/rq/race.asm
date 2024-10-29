@@ -38,12 +38,12 @@ race_beh:                   ; (requestors . throttle) <- request
     push #nil               ; value callback queue running=()
     pair 3                  ; (running queue callback . value)
     push runner_beh         ; (running queue callback . value) runner_beh
-    new -1                  ; runner=runner_beh.(running queue callback . value)
+    actor create            ; runner=runner_beh.(running queue callback . value)
     state -1                ; runner throttle
     push start_tag          ; runner throttle start_tag
     pair 1                  ; runner (start_tag . throttle)
     pick 2                  ; runner (start_tag . throttle) runner
-    send -1                 ; runner
+    actor send              ; runner
 
 ; Provide a cancel capability if the request allows for it.
 
@@ -54,9 +54,9 @@ race_beh:                   ; (requestors . throttle) <- request
     roll 2                  ; label rcvr=runner
     pair 1                  ; (rcvr . label)
     push lib.label_beh      ; (rcvr . label) label_beh
-    new -1                  ; cancel=label_beh.(rcvr . label)
+    actor create            ; cancel=label_beh.(rcvr . label)
     msg 1                   ; cancel to_cancel
-    send -1                 ; --
+    actor send              ; --
     ref std.commit
 
 runner_beh:                 ; (running queue callback . value) <- message
@@ -137,19 +137,19 @@ become:
     roll 4                  ; value callback queue running'
     pair 3                  ; (running' queue callback . value)
     push runner_beh         ; (running' queue callback . value) runner_beh
-    beh -1                  ; --
+    actor become            ; --
     ref std.commit
 start_one:
     push 1                  ; running' quota=1
     push start_tag          ; running' quota start_tag
     pair 1                  ; running' (start_tag . quota)
     my self                 ; running' (start_tag . quota) SELF
-    send -1                 ; running'
+    actor send              ; running'
     ref become
 finish:
     msg -1                  ; running' result
     state 3                 ; running' result callback
-    send -1                 ; running'
+    actor send              ; running'
     push #?                 ; running' reason=#?
     ref cancel
 start:
@@ -181,17 +181,17 @@ pop:
 
     push #?                 ; ... requestor #?
     push canceller.beh      ; ... requestor #? canceller_beh
-    new -1                  ; ... requestor canceller=canceller_beh.#?
+    actor create            ; ... requestor canceller=canceller_beh.#?
     state -3                ; ... requestor canceller value
     pick 2                  ; ... requestor canceller value label=canceller
     my self                 ; ... requestor canceller value label rcvr=SELF
     pair 1                  ; ... requestor canceller value (rcvr . label)
     push lib.label_beh      ; ... requestor canceller value (rcvr . label) label_beh
-    new -1                  ; ... requestor canceller value callback=label_beh.(rcvr . label)
+    actor create            ; ... requestor canceller value callback=label_beh.(rcvr . label)
     pick 3                  ; ... requestor canceller value callback to_cancel=canceller
     pair 2                  ; ... requestor canceller request=(to_cancel callback . value)
     roll 3                  ; ... canceller request requestor
-    send -1                 ; ... canceller
+    actor send              ; ... canceller
 
 ; Recurse.
 
@@ -199,7 +199,7 @@ pop:
     push start_tag          ; running queue' canceller quota' start_tag
     pair 1                  ; running queue' canceller (start_tag . quota')
     my self                 ; running queue' canceller (start_tag . quota') SELF
-    send -1                 ; running queue' canceller
+    actor send              ; running queue' canceller
 
 ; Mark the requestor as running.
 
@@ -211,7 +211,7 @@ pop:
     pair 1                  ; value callback queue' running'=(canceller . running)
     pair 3                  ; (running' queue' callback . value)
     push runner_beh         ; (running' queue' callback . value) runner_beh
-    beh -1                  ; --
+    actor become            ; --
     ref std.commit
 cancel:                     ; running reason
 
@@ -222,11 +222,11 @@ cancel:                     ; running reason
     roll 2                  ; running #? reason
     pair 1                  ; running (reason . #?)
     push lib.broadcast_beh  ; running (reason . #?) broadcast_beh
-    new -1                  ; running broadcast=broadcast_beh.(reason . #?)
-    send -1                 ; --
+    actor create            ; running broadcast=broadcast_beh.(reason . #?)
+    actor send              ; --
     push #?                 ; #?
     push std.sink_beh       ; #? sink_beh
-    beh -1                  ; --
+    actor become            ; --
     ref std.commit
 
 ; Test suite
@@ -253,9 +253,9 @@ test:                       ; judge <- {caps}
     state 0                 ; () 4th 3rd 2nd 1st probation timer judge
     pair 7                  ; (judge timer probation 1st 2nd 3rd 4th)
     push referee.beh        ; (judge timer probation 1st 2nd 3rd 4th) referee_beh
-    new -1                  ; referee=referee_beh.(judge timer probation 1st 2nd 3rd 4th)
+    actor create            ; referee=referee_beh.(judge timer probation 1st 2nd 3rd 4th)
     push unwrap_result.beh  ; referee unwrap_result_beh
-    new -1                  ; referee'=unwrap_result_beh.referee
+    actor create            ; referee'=unwrap_result_beh.referee
 suite:
     msg 0                   ; referee {caps}
     push dev.timer_key      ; referee {caps} timer_key
@@ -375,7 +375,7 @@ consume_spec:
     pick 7                  ; k referee timer throttle cancel_at requestors spec' delay result timer
     pair 2                  ; k referee timer throttle cancel_at requestors spec' (timer result . delay)
     push mock_beh           ; k referee timer throttle cancel_at requestors spec' (timer result . delay) mock_beh
-    new -1                  ; k referee timer throttle cancel_at requestors spec' mock=mock_beh.(timer delay . result)
+    actor create            ; k referee timer throttle cancel_at requestors spec' mock=mock_beh.(timer delay . result)
     roll 3                  ; k referee timer throttle cancel_at spec' mock requestors
     roll 2                  ; k referee timer throttle cancel_at spec' requestors mock
     pair 1                  ; k referee timer throttle cancel_at spec' requestors'=(mock . requestors)
@@ -391,21 +391,21 @@ make_request:               ; k referee timer throttle cancel_at requestors spec
     drop 1                  ; k timer throttle cancel_at requestors value callback
     push #?                 ; k timer throttle cancel_at requestors value callback #?
     push canceller.beh      ; k timer throttle cancel_at requestors value callback #? canceller_beh
-    new -1                  ; k timer throttle cancel_at requestors value callback canceller=canceller_beh.#?
+    actor create            ; k timer throttle cancel_at requestors value callback canceller=canceller_beh.#?
     push #?                 ; k timer throttle cancel_at requestors value callback canceller message=#?
     pick 2                  ; k timer throttle cancel_at requestors value callback canceller message target=canceller
     pick 7                  ; k timer throttle cancel_at requestors value callback canceller message target delay=cancel_at
     pair 2                  ; k timer throttle cancel_at requestors value callback canceller (delay target . message)
     pick 8                  ; k timer throttle cancel_at requestors value callback canceller (delay target . message) timer
-    send -1                 ; k timer throttle cancel_at requestors value callback to_cancel=canceller
+    actor send              ; k timer throttle cancel_at requestors value callback to_cancel=canceller
 make_race:
     pair 2                  ; k timer throttle cancel_at requestors request=(to_cancel callback . value)
     roll 4                  ; k timer cancel_at requestors request throttle
     roll 3                  ; k timer cancel_at request throttle requestors
     pair 1                  ; k timer cancel_at request (requestors . throttle)
     push race_beh           ; k timer cancel_at request (requestors . throttle) race_beh
-    new -1                  ; k timer cancel_at request race=race_beh.(requestors . throttle)
-    send -1                 ; k timer cancel_at
+    actor create            ; k timer cancel_at request race=race_beh.(requestors . throttle)
+    actor send              ; k timer cancel_at
     drop 2                  ; k
     return
 
@@ -419,7 +419,7 @@ mock_beh:                   ; (timer result . delay) <- request
     msg 1                   ; result delay callback to_cancel
     pair 3                  ; timer_request=(to_cancel callback delay . result)
     state 1                 ; timer_request timer
-    send -1                 ; --
+    actor send              ; --
     ref std.commit
 
 .export

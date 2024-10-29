@@ -51,7 +51,7 @@ boot:                   ; _ <- {caps}
     msg 0               ; 42 {caps}
     push 1234           ; 42 {caps} 1234
     dict get            ; 42 proxy
-    send -1             ; --
+    actor send          ; --
     end commit
 .export
     boot

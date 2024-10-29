@@ -43,24 +43,24 @@ boot:                       ; _ <- {caps}
     push dev.awp_key        ; {caps} awp_key
     dict get                ; awp_dev
     push listen_svc_beh     ; awp_dev listen_svc_beh
-    new -1                  ; listen_svc
+    actor create            ; listen_svc
     dup 1                   ; listen_svc listen_svc
     msg 0                   ; listen_svc listen_svc {caps}
     push pledge_beh         ; listen_svc listen_svc {caps} pledge_beh
-    new -1                  ; listen_svc listen_svc pledge
+    actor create            ; listen_svc listen_svc pledge
     pair 2                  ; (pledge listen_svc . listen_svc)
     push fork.beh           ; (pledge listen_svc . listen_svc) fork_beh
-    new -1                  ; fork=fork_beh.(pledge listen_svc . listen_svc)
+    actor create            ; fork=fork_beh.(pledge listen_svc . listen_svc)
     push #?                 ; fork #?
     push lib.broadcast_beh  ; fork #? broadcast_beh
-    new -1                  ; fork deposit=broadcast_beh.#?
+    actor create            ; fork deposit=broadcast_beh.#?
     push KEQD_greeter_beh   ; fork deposit KEQD_greeter_beh
-    new -1                  ; fork KEQD_greeter
+    actor create            ; fork KEQD_greeter
     push KEQD_store         ; fork KEQD_greeter KEQD_store
     pair 1                  ; fork KEQD_req
     push #nil               ; fork KEQD_req {}
     push GM_greeter_beh     ; fork KEQD_req {} GM_greeter_beh
-    new -1                  ; fork KEQD_req GM_greeter
+    actor create            ; fork KEQD_req GM_greeter
     push GM_store           ; fork KEQD_req GM_greeter GM_store
     pair 1                  ; fork KEQD_req GM_req
     pair 1                  ; fork (GM_req . KEQD_req)
@@ -72,12 +72,12 @@ listen_svc_beh:             ; awp_dev <- (cust store . greeter)
     msg 2                   ; greeter store
     msg 1                   ; greeter store cust
     push listen_cb_beh      ; greeter store cust listen_cb_beh
-    new -1                  ; greeter store listen_cb
+    actor create            ; greeter store listen_cb
     push #?                 ; greeter store listen_cb to_cancel=#?
     push dev.listen_tag     ; greeter store listen_cb to_cancel #listen
     pair 4                  ; listen_request=(#listen to_cancel listen_cb store . greeter)
     state 0                 ; listen_request awp_dev
-    send -1                 ; --
+    actor send              ; --
     ref std.commit
 
 listen_cb_beh:              ; cust <- (ok . stop/error)
@@ -98,10 +98,10 @@ listen_cb_beh:              ; cust <- (ok . stop/error)
 pledge_beh:                 ; {caps} <- (GM_stop . KEQD_stop)
     state 0                 ; {caps}
     push donor_beh          ; {caps} donor_beh
-    new -1                  ; donor
+    actor create            ; donor
     push alice_store        ; donor &alice
     pick 2                  ; donor &alice donor
-    send -1                 ; donor
+    actor send              ; donor
     push dana_store         ; donor &dana
     roll 2                  ; &dana donor
     ref std.send_msg
@@ -113,24 +113,24 @@ donor_beh:                  ; {caps} <- store
     dict get                ; store awp_dev
     pair 1                  ; (awp_dev . store)
     push intro_svc_beh      ; (awp_dev . store) intro_svc_beh
-    new -1                  ; intro_svc
+    actor create            ; intro_svc
     msg 0                   ; intro_svc store
     state 0                 ; intro_svc store {caps}
     push dev.debug_key      ; intro_svc store {caps} debug_key
     dict get                ; intro_svc store debug_dev
     pair 1                  ; intro_svc (debug_dev . store)
     push lib.label_beh      ; intro_svc (debug_dev . store) label_beh
-    new -1                  ; intro_svc withdraw=label_beh.(debug_dev . store)
+    actor create            ; intro_svc withdraw=label_beh.(debug_dev . store)
     pick 2                  ; intro_svc withdraw intro_svc
     pair 1                  ; intro_svc (intro_svc . withdraw)
     push donor_k_beh        ; intro_svc (intro_svc . withdraw) donor_k_beh
-    new -1                  ; intro_svc donor_k
+    actor create            ; intro_svc donor_k
     push #?                 ; intro_svc donor_k hello=#?
     push KEQD_petname       ; intro_svc donor_k hello @KEQD
     roll 3                  ; intro_svc hello @KEQD donor_k
     pair 2                  ; intro_svc (donor_k @KEQD . hello)
     roll 2                  ; (donor_k @KEQD . hello) intro_svc
-    send -1                 ; --
+    actor send              ; --
     ref std.commit
 
 intro_svc_beh:              ; (awp_dev . store) <- (cust petname . hello)
@@ -138,12 +138,12 @@ intro_svc_beh:              ; (awp_dev . store) <- (cust petname . hello)
     state -1                ; (petname . hello) store
     msg 1                   ; (petname . hello) store cust
     push intro_cb_beh       ; (petname . hello) store cust intro_cb_beh
-    new -1                  ; (petname . hello) store intro_cb
+    actor create            ; (petname . hello) store intro_cb
     push #?                 ; (petname . hello) store intro_cb to_cancel=#?
     push dev.intro_tag      ; (petname . hello) store intro_cb to_cancel #intro
     pair 4                  ; intro_request=(#intro to_cancel intro_cb store petname . hello)
     state 1                 ; intro_request awp_dev
-    send -1                 ; --
+    actor send              ; --
     ref std.commit
 
 KEQD_greeter_beh:           ; deposit <- (to_cancel callback petname . _)
@@ -154,7 +154,7 @@ KEQD_greeter_beh:           ; deposit <- (to_cancel callback petname . _)
     push #t                 ; deposit ok=#t
     pair 1                  ; result=(ok . deposit)
     msg 2                   ; result callback
-    send -1                 ; --
+    actor send              ; --
     ref std.commit
 
 intro_cb_beh:               ; cust <- (ok . greeting/error)
@@ -175,10 +175,10 @@ donor_k_beh:                ; (intro_svc . withdraw) <- deposit
     push GM_petname         ; (deposit . withdraw) @GM
     push #?                 ; (deposit . withdraw) @GM #?
     push lib.sink_beh       ; (deposit . withdraw) @GM #? sink_beh
-    new -1                  ; (deposit . withdraw) @GM sink=sink_beh.#?
+    actor create            ; (deposit . withdraw) @GM sink=sink_beh.#?
     pair 2                  ; intro_request=(sink @GM deposit . withdraw)
     state 1                 ; intro_request intro_svc
-    send -1                 ; --
+    actor send              ; --
     ref std.commit
 
 ; The grant matching is done by the Grant Matcher's greeter. Its state is a
@@ -201,7 +201,7 @@ GM_greeter_beh:             ; {pledges} <- (to_cancel callback petname deposit .
     dict set                ; {pledges'}
 GM_save:
     push GM_greeter_beh     ; {pledges'} GM_greeter_beh
-    beh -1                  ; --
+    actor become            ; --
     ref std.commit
 
 GM_grant:                   ; donor
@@ -214,7 +214,7 @@ GM_grant:                   ; donor
     msg -4                  ; () donor withdraw
     pair 2                  ; (withdraw donor)
     msg 4                   ; (withdraw donor) deposit
-    send -1                 ; --
+    actor send              ; --
     state 0                 ; {pledges}
     msg 4                   ; {pledges} deposit
     dict del                ; {pledges'}

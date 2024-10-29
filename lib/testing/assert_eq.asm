@@ -17,8 +17,8 @@ boot:                       ; _ <- {caps}
     push 1111               ; actual=1111
     push 2222               ; actual expect=2222
     push assert_eq_beh      ; actual expect assert_eq_beh
-    new -1                  ; actual assert_eq
-    send -1                 ; --
+    actor create            ; actual assert_eq
+    actor send              ; --
     ref std.commit
 
 .export

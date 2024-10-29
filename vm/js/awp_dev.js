@@ -35,10 +35,10 @@ sink_beh:
 beh:                    ; callback <- message
     msg 0               ; message
     state 0             ; message callback
-    send -1             ; --
+    actor send          ; --
     push #?             ; #?
     push sink_beh       ; #? sink_beh
-    beh -1              ; --
+    actor become        ; --
     end commit
 
 .export

@@ -108,11 +108,11 @@ execute_k:
 ; and calls it. If the returned value is a block, it is executed for its
 ; effects. Otherwise the transaction is aborted.
 
-; Use 'beh' with 'beh -1' or 'new -1', for example:
+; Use 'beh' with 'actor become' or 'actor create', for example:
 
 ;   push closure            ; closure
 ;   push hum.beh            ; closure beh
-;   beh -1                  ; actor=beh.closure
+;   actor become            ; actor=beh.closure
 
 beh:                        ; closure <- msg
     push std.commit         ; commit
@@ -141,7 +141,7 @@ random_adapter_beh:         ; random_dev <- (cust . n)
     msg 1                   ; limit cust
     pair 1                  ; (cust . limit)
     state 0                 ; (cust . limit) random_dev
-    send -1                 ; --
+    actor send              ; --
     ref std.commit
 
 timer_adapter_beh:          ; timer_dev <- (dt msg . actor)
@@ -150,7 +150,7 @@ timer_adapter_beh:          ; timer_dev <- (dt msg . actor)
     msg 1                   ; msg target delay=dt
     pair 2                  ; timer_req=(delay target . msg)
     state 0                 ; timer_req timer_dev
-    send -1                 ; --
+    actor send              ; --
     ref std.commit
 
 prepare_env:                ; ( k -- env )
@@ -164,13 +164,13 @@ prepare_env:                ; ( k -- env )
     push dev.timer_key      ; k #? println {caps} timer_key
     dict get                ; k #? println timer_dev
     push timer_adapter_beh  ; k #? println timer_dev timer_adapter_beh
-    new -1                  ; k #? println timer=timer_adapter_beh.timer_dev
+    actor create            ; k #? println timer=timer_adapter_beh.timer_dev
 
     msg 0                   ; k #? println timer {caps}
     push dev.random_key     ; k #? println timer {caps} random_key
     dict get                ; k #? println timer random_dev
     push random_adapter_beh ; k #? println timer random_dev random_adapter_beh
-    new -1                  ; k #? println timer random=random_adapter_beh.random_dev
+    actor create            ; k #? println timer random=random_adapter_beh.random_dev
 
     msg 0                   ; k #? println timer random {caps}
     push dev.io_key         ; k #? println timer random {caps} io_key
@@ -417,7 +417,7 @@ test_predicates:            ; ( -- )
 
     push #?                 ; k #?
     push std.sink_beh       ; k #? sink_beh
-    new -1                  ; k sink=sink_beh.#?
+    actor create            ; k sink=sink_beh.#?
     call is_actor           ; k actual
     assert #t               ; k
     push is_actor           ; k value

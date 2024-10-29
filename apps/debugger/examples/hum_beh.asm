@@ -33,7 +33,7 @@ next_code:                  ; args k env=((cust . q) p)
     pick 2                  ; args k env msg env
     nth 1                   ; args k env msg (cust . q)
     nth 1                   ; args k env msg cust
-    send -1                 ; args k env
+    actor send              ; args k env
     roll 3                  ; k env args
     drop 2                  ; k
     return
@@ -56,11 +56,11 @@ top_code:                   ; args k env=(p)
     pair 1                  ; args k env msg next_code env'=(args . env)
     call hum.make_closure   ; args k env msg closure
     push hum.beh            ; args k env msg closure beh
-    new -1                  ; args k env msg next=beh.closure
+    actor create            ; args k env msg next=beh.closure
 
 ; Send it the message.
 
-    send -1                 ; args k env
+    actor send              ; args k env
     drop 1                  ; args k
     roll 2                  ; k args
     drop 1                  ; k
@@ -85,11 +85,11 @@ boot:                       ; _ <- {caps}
     pair 1                  ; msg code env=(1)
     call hum.make_closure   ; msg top_closure
     push hum.beh            ; msg top_closure beh
-    new -1                  ; msg top=top_closure.beh
+    actor create            ; msg top=top_closure.beh
 
 ; Send it the message.
 
-    send -1                 ; --
+    actor send              ; --
     ref std.commit
 
 .export

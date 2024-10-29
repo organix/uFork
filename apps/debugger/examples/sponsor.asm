@@ -48,30 +48,30 @@ start:                      ; debug_dev <- _
     dup 1                   ; sponsor sponsor
     state 0                 ; sponsor sponsor debug_dev
     push control_1          ; sponsor sponsor debug_dev control_1
-    new -1                  ; sponsor sponsor control_1.debug_dev
+    actor create            ; sponsor sponsor control_1.debug_dev
     sponsor start           ; sponsor
     push #?                 ; sponsor msg=#?
     push #?                 ; sponsor msg #?
     push start_1            ; sponsor msg #? start_1
-    new -1                  ; sponsor msg actor=start_1.#?
-    signal -1               ; --
+    actor create            ; sponsor msg actor=start_1.#?
+    actor post              ; --
     ref std.commit
 
 start_1:                    ; _ <- _
     push #?                 ; #?
     push #?                 ; #? #?
     push msg_bomb           ; #? #? msg_bomb
-    new -1                  ; #? msg_bomb.#?
-    send -1                 ; --
+    actor create            ; #? msg_bomb.#?
+    actor send              ; --
     push #?                 ; #?
     push #?                 ; #? #?
     push fork_bomb          ; #? #? fork_bomb
-    new -1                  ; #? fork_bomb.#?
-    send -1                 ; --
+    actor create            ; #? fork_bomb.#?
+    actor send              ; --
     push 0                  ; 0
     push #?                 ; 0 #?
     push count_to           ; 0 #? count_to
-    new -1                  ; 0 count_to.#?
+    actor create            ; 0 count_to.#?
     ref std.send_msg
 
 control_1:                  ; debug_dev <- sponsor
@@ -93,10 +93,10 @@ loop_forever:
 msg_bomb:                   ; _ <- _
     push #?                 ; #?
     my self                 ; #? SELF
-    send -1                 ; --
+    actor send              ; --
     push #?                 ; #?
     my self                 ; #? SELF
-    send -1                 ; --
+    actor send              ; --
     ref std.commit
 
 ; Create and activate two clones for each message received.
@@ -105,13 +105,13 @@ fork_bomb:                  ; _ <- _
     push #?                 ; #?
     push #?                 ; #? #?
     push fork_bomb          ; #? #? fork_bomb
-    new -1                  ; #? fork_bomb.#?
-    send -1                 ; --
+    actor create            ; #? fork_bomb.#?
+    actor send              ; --
     push #?                 ; #?
     push #?                 ; #? #?
     push fork_bomb          ; #? #? fork_bomb
-    new -1                  ; #? fork_bomb.#?
-    send -1                 ; --
+    actor create            ; #? fork_bomb.#?
+    actor send              ; --
     ref std.commit
 
 ; Count up to a specified `limit` (forever, if `limit==#?`).
@@ -137,8 +137,8 @@ boot:                       ; _ <- {caps}
     push dev.debug_key      ; #? {caps} debug_key
     dict get                ; #? debug_dev
     push start              ; #? debug_dev start
-    new -1                  ; #? start.debug_dev
-    send -1                 ; --
+    actor create            ; #? start.debug_dev
+    actor send              ; --
 
     sponsor new             ; sponsor
     push 1                  ; sponsor 1
@@ -149,13 +149,13 @@ boot:                       ; _ <- {caps}
     push 8                  ; sponsor sponsor cycles events memory=5
     pair 2                  ; sponsor sponsor (memory events . cycles)
     push refill             ; sponsor sponsor (memory events . cycles) refill
-    new -1                  ; sponsor sponsor refill.(memory events . cycles)
+    actor create            ; sponsor sponsor refill.(memory events . cycles)
     sponsor start           ; sponsor
     push #?                 ; sponsor msg=#?
     push #?                 ; sponsor msg #?
     push loop_forever       ; sponsor msg #? loop_forever
-    new -1                  ; sponsor msg actor=loop_forever.#?
-    signal -1               ; --
+    actor create            ; sponsor msg actor=loop_forever.#?
+    actor post              ; --
 
     ref std.commit
 

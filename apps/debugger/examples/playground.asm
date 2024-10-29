@@ -29,10 +29,10 @@ ticker:                     ; _ <- n
 msg_bomb:                   ; _ <- _
     push #?                 ; #?
     my self                 ; #? SELF
-    send -1                 ; --
+    actor send              ; --
     push #?                 ; #?
     my self                 ; #? SELF
-    send -1                 ; --
+    actor send              ; --
     ref std.commit
 
 ; Create and activate two clones for each message received.
@@ -41,13 +41,13 @@ fork_bomb:                  ; _ <- _
     push #?                 ; #?
     push #?                 ; #? #?
     push fork_bomb          ; #? #? fork_bomb
-    new -1                  ; #? fork_bomb.#?
-    send -1                 ; --
+    actor create            ; #? fork_bomb.#?
+    actor send              ; --
     push #?                 ; #?
     push #?                 ; #? #?
     push fork_bomb          ; #? #? fork_bomb
-    new -1                  ; #? fork_bomb.#?
-    send -1                 ; --
+    actor create            ; #? fork_bomb.#?
+    actor send              ; --
     ref std.commit
 
 ; Count up to a specified `limit` (forever, if `limit==#?`).
@@ -96,18 +96,18 @@ unbounded:                  ; num <- inc | cust
     msg 0                   ; num inc
     dup 1                   ; num inc inc
     my self                 ; num inc inc SELF
-    send -1                 ; num inc
+    actor send              ; num inc
     alu add                 ; num+inc
     push unbounded          ; num+inc unbounded
-    beh -1                  ; --
+    actor become            ; --
     ref std.commit
 ub_stop:                    ; --
     state 0                 ; num
     msg 0                   ; num cust
-    send -1                 ; --
+    actor send              ; --
     push #?                 ; #?
     push std.sink_beh       ; #? sink_beh
-    beh -1                  ; --
+    actor become            ; --
     ref std.commit
 
 ; Boot code runs when the module is loaded (but not when imported).
@@ -167,40 +167,40 @@ boot:                       ; _ <- {caps}
     dup 1                   ; debug_dev debug_dev
     push 0                  ; debug_dev debug_dev 0
     push unbounded          ; debug_dev debug_dev 0 unbounded
-    new -1                  ; debug_dev debug_dev unbounded.0
+    actor create            ; debug_dev debug_dev unbounded.0
     push 1                  ; debug_dev debug_dev unbounded.0 1
     pick 2                  ; debug_dev debug_dev unbounded.0 1 unbounded.0
 
     dup 2                   ; debug_dev debug_dev unbounded.0 1 unbounded.0 1 unbounded.0
-    send -1                 ; debug_dev debug_dev unbounded.0 1 unbounded.0
+    actor send              ; debug_dev debug_dev unbounded.0 1 unbounded.0
     dup 2                   ; debug_dev debug_dev unbounded.0 1 unbounded.0 1 unbounded.0
-    send -1                 ; debug_dev debug_dev unbounded.0 1 unbounded.0
+    actor send              ; debug_dev debug_dev unbounded.0 1 unbounded.0
     dup 2                   ; debug_dev debug_dev unbounded.0 1 unbounded.0 1 unbounded.0
-    send -1                 ; debug_dev debug_dev unbounded.0 1 unbounded.0
+    actor send              ; debug_dev debug_dev unbounded.0 1 unbounded.0
     dup 2                   ; debug_dev debug_dev unbounded.0 1 unbounded.0 1 unbounded.0
-    send -1                 ; debug_dev debug_dev unbounded.0 1 unbounded.0
+    actor send              ; debug_dev debug_dev unbounded.0 1 unbounded.0
 
-    send -1                 ; debug_dev debug_dev unbounded.0
-    send -1                 ; debug_dev
+    actor send              ; debug_dev debug_dev unbounded.0
+    actor send              ; debug_dev
     if std.commit           ; -- early exit
 
     push 1                  ; debug_dev 1
     pick 2                  ; debug_dev 1 debug_dev
-    send -1                 ; debug_dev
+    actor send              ; debug_dev
     push 2                  ; debug_dev 2
     pick 2                  ; debug_dev 1 debug_dev
-    send -1                 ; debug_dev
+    actor send              ; debug_dev
     push 3                  ; debug_dev 3
     pick 2                  ; debug_dev 1 debug_dev
-    send -1                 ; debug_dev
+    actor send              ; debug_dev
     if std.commit           ; -- early exit
 
     ; start counting forever
 ;    push #?             ; ... #?
 ;    push #?             ; ... #? #?
 ;    push count_to       ; ... #? #? count_to
-;    new -1              ; ... #? count_to.#?
-;    send -1             ; ...
+;    actor create        ; ... #? count_to.#?
+;    actor send          ; ...
 
     ref std.commit
 

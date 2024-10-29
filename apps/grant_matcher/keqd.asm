@@ -9,20 +9,20 @@ store:
 boot:                       ; _ <- {caps}
     push #?                 ; #?
     push lib.broadcast_beh  ; #? broadcast_beh
-    new -1                  ; deposit=broadcast_beh.#?
+    actor create            ; deposit=broadcast_beh.#?
     push greeter_beh        ; deposit greeter_beh
-    new -1                  ; greeter=greeter_beh.deposit
+    actor create            ; greeter=greeter_beh.deposit
     push store              ; greeter store
     push #?                 ; greeter store #?
     push listen_cb_beh      ; greeter store #? listen_cb_beh
-    new -1                  ; greeter store listen_cb=listen_cb_beh.#?
+    actor create            ; greeter store listen_cb=listen_cb_beh.#?
     push #?                 ; greeter store listen_cb to_cancel=#?
     push dev.listen_tag     ; greeter store listen_cb to_cancel #listen
     pair 4                  ; listen_request=(#listen to_cancel listen_cb store . greeter)
     msg 0                   ; listen_request {caps}
     push dev.awp_key        ; listen_request {caps} awp_key
     dict get                ; listen_request awp_dev
-    send -1                 ; --
+    actor send              ; --
     ref std.commit
 
 listen_cb_beh:              ; _ <- (ok . result/error)
@@ -38,7 +38,7 @@ greeter_beh:                ; deposit <- (to_cancel callback petname . _)
     push #t                 ; deposit ok=#t
     pair 1                  ; result=(ok . deposit)
     msg 2                   ; result callback
-    send -1                 ; --
+    actor send              ; --
     ref std.commit
 
 .export

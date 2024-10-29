@@ -34,7 +34,7 @@ test:                       ; judge <- {caps}
     push #t                 ; value=#t
     state 0                 ; value judge
     push unwrap_beh         ; value judge unwrap_beh
-    new -1                  ; value callback=unwrap_beh.judge
+    actor create            ; value callback=unwrap_beh.judge
 suite:
     push #?                 ; value callback to_cancel=#?
     pair 2                  ; request=(to_cancel callback . value)
@@ -44,7 +44,7 @@ suite:
     push 1000               ; request timer_dev delay=1000ms
     pair 1                  ; request (delay . timer_dev)
     push delay_beh          ; request (delay . timer_dev) delay_beh
-    new -1                  ; request delay=delay_beh.(delay . timer_dev)
+    actor create            ; request delay=delay_beh.(delay . timer_dev)
     ref std.send_msg
 
 .export

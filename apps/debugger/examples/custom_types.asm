@@ -34,22 +34,22 @@ boot:
     dict get                ; debug_dev
     push nullary_quad       ; debug_dev nullary_quad
     pick 2                  ; debug_dev nullary_quad debug_dev
-    send -1                 ; debug_dev
+    actor send              ; debug_dev
     push unary_quad         ; debug_dev unary_quad
     pick 2                  ; debug_dev unary_quad debug_dev
-    send -1                 ; debug_dev
+    actor send              ; debug_dev
     push binary_quad        ; debug_dev binary_quad
     pick 2                  ; debug_dev binary_quad debug_dev
-    send -1                 ; debug_dev
+    actor send              ; debug_dev
     push ternary_quad       ; debug_dev ternary_quad
     pick 2                  ; debug_dev ternary_quad debug_dev
-    send -1                 ; debug_dev
+    actor send              ; debug_dev
     push pairlike_quad      ; debug_dev pairlike_quad
     pick 2                  ; debug_dev pairlike_quad debug_dev
-    send -1                 ; debug_dev
+    actor send              ; debug_dev
     ; push bad_quad       ; debug_dev bad_quad
     ; pick 2              ; debug_dev bad_quad debug_dev
-    ; send -1             ; debug_dev
+    ; actor send          ; debug_dev
     end commit
 
 .export

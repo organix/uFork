@@ -32,7 +32,7 @@ s_list:                     ; list <- cust
 
     state -1                ; rest
     push s_list             ; rest s_list
-    new -1                  ; next=s_list(rest)
+    actor create            ; next=s_list(rest)
     state 1                 ; next token=first
     pair 1                  ; (token . next)
     msg 0                   ; (token . next) cust
@@ -78,7 +78,7 @@ ok:                         ; --
     nth 1                   ; token ok
     pair 1                  ; (ok . token)
     push k_next             ; (ok . token) k_next
-    new -1                  ; k=k_next.(ok . token)
+    actor create            ; k=k_next.(ok . token)
     msg -3                  ; k next
     ref std.send_msg
 
@@ -111,7 +111,7 @@ if:                         ; pred <- ((ok . fail) accum . in)
     msg 3                   ; token
     msg 0                   ; token ((ok . fail) accum . in)
     push k_if               ; token ((ok . fail) accum . in) k_if
-    new -1                  ; token k=k_if.((ok . fail) accum . in)
+    actor create            ; token k=k_if.((ok . fail) accum . in)
     pair 1                  ; (k . token)
     state 0                 ; (k . token) pred
     ref std.send_msg
@@ -131,7 +131,7 @@ k_ok:                       ; --
     nth 1                   ; token ok
     pair 1                  ; (ok . token)
     push k_next             ; (ok . token) k_next
-    new -1                  ; k=k_next.(ok . token)
+    actor create            ; k=k_next.(ok . token)
     state -3                ; k next
     ref std.send_msg
 
@@ -155,7 +155,7 @@ or:                         ; (first . rest) <- ((ok . fail) accum . in)
     state -1                ; ctx msg rest
     pair 1                  ; ctx (rest . msg)
     push lib.relay_beh      ; ctx (rest . msg) relay_beh
-    new -1                  ; ctx fail'=relay_beh.(rest . msg)
+    actor create            ; ctx fail'=relay_beh.(rest . msg)
     msg 1                   ; ctx fail' custs=(ok . fail)
     nth 1                   ; ctx fail' ok
     pair 1                  ; ctx (ok . fail')
@@ -171,7 +171,7 @@ and:                        ; (first . rest) <- ((ok . fail) accum . in)
     nth -1                  ; in fail
     pair 1                  ; (fail . in)
     push lib.relay_beh      ; (fail . in) relay_beh
-    new -1                  ; fail'=relay_beh.(fail . in)
+    actor create            ; fail'=relay_beh.(fail . in)
 
     dup 1                   ; fail' fail'
     msg 1                   ; fail' fail' custs=(ok . fail)
@@ -179,7 +179,7 @@ and:                        ; (first . rest) <- ((ok . fail) accum . in)
     state -1                ; fail' fail' ok rest
     pair 2                  ; fail' (rest ok . fail')
     push and_ok             ; fail' (rest ok . fail') and_ok
-    new -1                  ; fail' ok'=and_ok.(rest ok . fail')
+    actor create            ; fail' ok'=and_ok.(rest ok . fail')
 
     pair 1                  ; (ok' . fail')
     msg -1                  ; (ok' . fail') (accum . in)
@@ -195,7 +195,7 @@ and_ok:                     ; (rest ok . fail') <- (accum' . in')
     state 2                 ; (accum' . in') fail' accum' ok
     pair 1                  ; (accum' . in') fail' (ok . accum')
     push and_pair           ; (accum' . in') fail' (ok . accum') and_pair
-    new -1                  ; (accum' . in') fail' ok'=and_pair.(ok . accum')
+    actor create            ; (accum' . in') fail' ok'=and_pair.(ok . accum')
 
     pair 1                  ; (accum' . in') (ok' . fail')
     pair 1                  ; ((ok' . fail') accum . in)
@@ -222,13 +222,13 @@ not:                        ; peg <- ((ok . fail) accum . in)
     roll 2                  ; fail (() . in) ok
     pair 1                  ; fail (ok () . in)
     push lib.relay_beh      ; fail (ok () . in) relay_beh
-    new -1                  ; fail fail'=relay_beh.(ok () . in)
+    actor create            ; fail fail'=relay_beh.(ok () . in)
 
     msg -2                  ; fail fail' in
     roll 3                  ; fail' in fail
     pair 1                  ; fail' (fail . in)
     push lib.relay_beh      ; fail' (fail . in) relay_beh
-    new -1                  ; fail' ok'=relay_beh.(fail . in)
+    actor create            ; fail' ok'=relay_beh.(fail . in)
 
     pair 1                  ; (ok' . fail')
     msg -1                  ; (ok' . fail') (accum . in)
@@ -244,7 +244,7 @@ start:                      ; peg <- ((ok . fail) . source)
     state 0                 ; custs peg
     pair 1                  ; (peg . custs)
     push k_start            ; (peg . custs) k_start
-    new -1                  ; cust=k_start.(peg . custs)
+    actor create            ; cust=k_start.(peg . custs)
     msg -1                  ; cust source
     ref std.send_msg
 
@@ -324,7 +324,7 @@ expect_6:                   ; _ <- (accum . in)
     msg 0                   ; (accum . in)
     push test_6_data        ; (accum . in) test_6_data
     push assert_eq.beh      ; (accum . in) test_6_data assert_eq.beh
-    new -1                  ; (accum . in) assert_eq.beh.test_6_data
+    actor create            ; (accum . in) assert_eq.beh.test_6_data
     ref std.send_msg
 
 boot:                       ; _ <- {caps}
@@ -335,16 +335,16 @@ boot:                       ; _ <- {caps}
     push #?                 ; in accum=#?
     push #?                 ; in accum #?
     push unexpected         ; in accum #? unexpected
-    new -1                  ; in accum fail=unexpected.#?
+    actor create            ; in accum fail=unexpected.#?
     push #?                 ; in accum fail #?
     push expect_1           ; in accum fail #? expect_1
-    new -1                  ; in accum fail ok=expect_1.#?
+    actor create            ; in accum fail ok=expect_1.#?
     pair 1                  ; in accum (ok . fail)
     pair 2                  ; ((ok . fail) accum . in)
     push #?                 ; ((ok . fail) accum . in) #?
     push empty              ; ((ok . fail) accum . in) #? empty
-    new -1                  ; ((ok . fail) accum . in) peg=empty.#?
-    send -1                 ; --
+    actor create            ; ((ok . fail) accum . in) peg=empty.#?
+    actor send              ; --
 
 ; test 2: `fail` fails at end-of-stream
 
@@ -352,16 +352,16 @@ boot:                       ; _ <- {caps}
     push #?                 ; in accum=#?
     push #?                 ; in accum #?
     push expect_2           ; in accum #? expect_2
-    new -1                  ; in accum fail=expect_2.#?
+    actor create            ; in accum fail=expect_2.#?
     push #?                 ; in accum fail #?
     push unexpected         ; in accum fail #? unexpected
-    new -1                  ; in accum fail ok=unexpected.#?
+    actor create            ; in accum fail ok=unexpected.#?
     pair 1                  ; in accum (ok . fail)
     pair 2                  ; ((ok . fail) accum . in)
     push #?                 ; ((ok . fail) accum . in) #?
     push fail               ; ((ok . fail) accum . in) #? fail
-    new -1                  ; ((ok . fail) accum . in) peg=fail.#?
-    send -1                 ; --
+    actor create            ; ((ok . fail) accum . in) peg=fail.#?
+    actor send              ; --
 
 ; test 3: `any` fails at end-of-stream
 
@@ -369,61 +369,61 @@ boot:                       ; _ <- {caps}
     push #?                 ; in accum=#?
     push #?                 ; in accum #?
     push expect_3           ; in accum #? expect_3
-    new -1                  ; in accum fail=expect_3.#?
+    actor create            ; in accum fail=expect_3.#?
     push #?                 ; in accum fail #?
     push unexpected         ; in accum fail #? unexpected
-    new -1                  ; in accum fail ok=unexpected.#?
+    actor create            ; in accum fail ok=unexpected.#?
     pair 1                  ; in accum (ok . fail)
     pair 2                  ; ((ok . fail) accum . in)
     push #?                 ; ((ok . fail) accum . in) #?
     push any                ; ((ok . fail) accum . in) #? any
-    new -1                  ; ((ok . fail) accum . in) peg=any.#?
-    send -1                 ; --
+    actor create            ; ((ok . fail) accum . in) peg=any.#?
+    actor send              ; --
 
 
 ; test 4: `any` succeeds on non-empty stream
 
     push test_source        ; list=test_source
     push s_list             ; test_source s_list
-    new -1                  ; source=s_list.test_source
+    actor create            ; source=s_list.test_source
     push #?                 ; source #?
     push unexpected         ; source #? unexpected
-    new -1                  ; source fail=unexpected.#?
+    actor create            ; source fail=unexpected.#?
     push #?                 ; source fail #?
     push expect_4           ; source fail #? expect_4
-    new -1                  ; source fail ok=expect_4.#?
+    actor create            ; source fail ok=expect_4.#?
     pair 1                  ; source (ok . fail)
     pair 1                  ; msg=((ok . fail) . source)
     push #?                 ; msg #?
     push any                ; msg #? any
-    new -1                  ; msg peg=any.#?
+    actor create            ; msg peg=any.#?
     push start              ; msg peg start
-    new -1                  ; msg start.peg
-    send -1                 ; --
+    actor create            ; msg start.peg
+    actor send              ; --
 
 ; test 5: [0-9] succeeds on stream starting with '0'
 
     push test_source        ; list=test_source
     push s_list             ; test_source s_list
-    new -1                  ; source=s_list.test_source
+    actor create            ; source=s_list.test_source
     push #?                 ; source #?
     push unexpected         ; source #? unexpected
-    new -1                  ; source fail=unexpected.#?
+    actor create            ; source fail=unexpected.#?
     push #?                 ; source fail #?
     push expect_5           ; source fail #? expect_5
-    new -1                  ; source fail ok=expect_5.#?
+    actor create            ; source fail ok=expect_5.#?
     pair 1                  ; source (ok . fail)
     pair 1                  ; msg=((ok . fail) . source)
     push '9'                ; ... '9'
     push '0'                ; ... '9' '0'
     pair 1                  ; ... ('0' . '9')
     push in_range           ; ... ('0' . '9') in_range
-    new -1                  ; ... pred=in_range.('0' . '9')
+    actor create            ; ... pred=in_range.('0' . '9')
     push if                 ; ... pred if
-    new -1                  ; msg peg=if.pred
+    actor create            ; msg peg=if.pred
     push start              ; msg peg start
-    new -1                  ; msg start.peg
-    send -1                 ; --
+    actor create            ; msg start.peg
+    actor send              ; --
 
 ; test 6: and/or/not grammar
 ;
@@ -438,51 +438,51 @@ boot:                       ; _ <- {caps}
 
     push test_source        ; list=test_source
     push s_list             ; test_source s_list
-    new -1                  ; source=s_list.test_source
+    actor create            ; source=s_list.test_source
     push #?                 ; source #?
     push unexpected         ; source #? unexpected
-    new -1                  ; source fail=unexpected.#?
+    actor create            ; source fail=unexpected.#?
     push #?                 ; source fail #?
     push expect_6           ; source fail #? expect_6
-    new -1                  ; source fail ok=expect_6.#?
+    actor create            ; source fail ok=expect_6.#?
     pair 1                  ; source (ok . fail)
     pair 1                  ; msg=((ok . fail) . source)
     push #?                 ; msg #?
     push any                ; msg #? any
-    new -1                  ; msg any.#?
+    actor create            ; msg any.#?
     push not                ; msg any.#? not
-    new -1                  ; msg eos=not.any.#?
+    actor create            ; msg eos=not.any.#?
     push '\n'               ; msg eos '\n'
     push eq                 ; msg eos '\n' eq
-    new -1                  ; msg eos lf=eq.'\n'
+    actor create            ; msg eos lf=eq.'\n'
     push #?                 ; msg eos lf #?
     push empty              ; msg eos lf #? empty
-    new -1                  ; msg eos lf e=empty.#?
+    actor create            ; msg eos lf e=empty.#?
     pick 2                  ; msg eos lf e lf
     pair 1                  ; msg eos lf (lf . e)
     push or                 ; msg eos lf (lf . e) or
-    new -1                  ; msg eos lf opt_lf=or.(lf . e)
+    actor create            ; msg eos lf opt_lf=or.(lf . e)
     push '\r'               ; msg eos lf opt_lf '\r'
     push eq                 ; msg eos lf opt_lf '\r' eq
-    new -1                  ; msg eos lf opt_lf cr=eq.'\r'
+    actor create            ; msg eos lf opt_lf cr=eq.'\r'
     pair 1                  ; msg eos lf (cr . opt_lf)
     push and                ; msg eos lf (cr . opt_lf) and
-    new -1                  ; msg eos lf and.(cr . opt_lf)
+    actor create            ; msg eos lf and.(cr . opt_lf)
     roll 2                  ; msg eos and.(cr opt_lf) lf
     pair 1                  ; msg eos (lf . and.(cr opt_lf))
     push or                 ; msg eos (lf . and.(cr opt_lf)) or
-    new -1                  ; msg eos eol=or.(lf . and.(cr opt_lf))
+    actor create            ; msg eos eol=or.(lf . and.(cr opt_lf))
     pair 1                  ; msg (eol . eos)
     push and                ; msg (eol . eos) and
-    new -1                  ; msg and.(eol . eos)
+    actor create            ; msg and.(eol . eos)
     push '0'                ; msg and.(eol eos) '0'
     push eq                 ; msg and.(eol eos) '0' eq
-    new -1                  ; msg and.(eol eos) eq.'0'
+    actor create            ; msg and.(eol eos) eq.'0'
     pair 1                  ; msg (eq.'0' . and.(eol eos))
     push and                ; msg (eq.'0' . and.(eol eos)) and
-    new -1                  ; msg peg=and.(eq.'0' . and.(eol eos))
+    actor create            ; msg peg=and.(eq.'0' . and.(eol eos))
     push start              ; msg peg start
-    new -1                  ; msg start.peg
+    actor create            ; msg start.peg
     ref std.send_msg
 
 .export

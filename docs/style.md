@@ -316,7 +316,7 @@ In the stack diagram, label values as they are pushed onto the stack:
 In the stack diagram, depict actor creation like `beh.state`:
 
     push example_beh            ; (a . b) example_beh
-    new -1                      ; example=example_beh.(a . b)
+    actor create                ; example=example_beh.(a . b)
 
 At the entry point of each behavior, show the signature of the state and
 message like `state <- msg`. For example:

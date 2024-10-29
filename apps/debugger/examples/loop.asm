@@ -11,12 +11,12 @@ boot:
     msg 0                   ; #? {caps}
     push #?                 ; #? {caps} #?
     push std.resend         ; #? {caps} #? std.resend
-    new -1                  ; #? {caps} a_resend
-    send -1                 ; --
+    actor create            ; #? {caps} a_resend
+    actor send              ; --
     push #?                 ; #?
     push #?                 ; #? #?
     push loop               ; #? #? loop
-    new -1                  ; #? a_loop
+    actor create            ; #? a_loop
     ref std.send_msg
 
 .export

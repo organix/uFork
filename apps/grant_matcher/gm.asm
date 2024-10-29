@@ -8,18 +8,18 @@ store:
 boot:                       ; _ <- {caps}
     push #nil               ; {}
     push greeter_beh        ; {} greeter_beh
-    new -1                  ; greeter
+    actor create            ; greeter
     push store              ; greeter store
     push #?                 ; greeter store #?
     push listen_cb_beh      ; greeter store #? listen_cb_beh
-    new -1                  ; greeter store listen_cb
+    actor create            ; greeter store listen_cb
     push #?                 ; greeter store listen_cb to_cancel=#?
     push dev.listen_tag     ; greeter store listen_cb to_cancel #listen
     pair 4                  ; listen_request=(#listen to_cancel listen_cb store . greeter)
     msg 0                   ; listen_request {caps}
     push dev.awp_key        ; listen_request {caps} awp_key
     dict get                ; listen_request awp_dev
-    send -1                 ; --
+    actor send              ; --
     ref std.commit
 
 listen_cb_beh:              ; _ <- (ok . result/error)
@@ -44,7 +44,7 @@ greeter_beh:                ; {pledges} <- (to_cancel callback petname deposit .
     dict set                ; {pledges'}
 save:
     push greeter_beh        ; {pledges'} greeter_beh
-    beh -1                  ; --
+    actor become            ; --
     ref std.commit
 
 grant:                      ; donor
@@ -57,7 +57,7 @@ grant:                      ; donor
     msg -4                  ; () donor withdraw
     pair 2                  ; (withdraw donor)
     msg 4                   ; (withdraw donor) deposit
-    send -1                 ; --
+    actor send              ; --
     state 0                 ; {pledges}
     msg 4                   ; {pledges} deposit
     dict del                ; {pledges'}

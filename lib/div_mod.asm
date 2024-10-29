@@ -184,7 +184,7 @@ test:                       ; judge <- {caps}
     call test_div           ; --
     push #t                 ; verdict=#t
     state 0                 ; verdict judge
-    send -1                 ; --
+    actor send              ; --
     ref std.commit
 
 .export

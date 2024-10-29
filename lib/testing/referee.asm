@@ -38,7 +38,7 @@ referee_beh:                ; (judge timer probation . expected_msgs) <- msg
     state 1                 ; expected_msgs' probation timer judge
     pair 3                  ; state'=(judge timer probation . expected_msgs')
     push referee_beh        ; state' referee_beh
-    beh -1                  ; --
+    actor become            ; --
 
 ; Are we expecting any more messages?
 
@@ -58,20 +58,20 @@ referee_beh:                ; (judge timer probation . expected_msgs) <- msg
 
     state 1                 ; judge
     push lib.once_beh       ; judge once_beh
-    new -1                  ; judge'=once_beh.judge
+    actor create            ; judge'=once_beh.judge
     push #t                 ; judge' result=#t
     pick 2                  ; judge' result judge'
     state 3                 ; judge' result judge' delay=probation
     pair 2                  ; judge' timer_req=(delay judge' . result)
     state 2                 ; judge' timer_req timer
-    send -1                 ; judge'
+    actor send              ; judge'
     state -4                ; judge' expected_msgs'
     state 3                 ; judge' expected_msgs' probation
     state 2                 ; judge' expected_msgs' probation timer
     roll 4                  ; expected_msgs' probation timer judge'
     pair 3                  ; state'=(judge' timer probation . expected_msgs')
     push referee_beh        ; state' referee_beh
-    beh -1                  ; --
+    actor become            ; --
     ref std.commit
 
 succeed:
@@ -82,7 +82,7 @@ fail:
 done_k:
     push #?                 ; msg #?
     push std.sink_beh       ; msg #? sink_beh
-    beh -1                  ; msg
+    actor become            ; msg
     state 1                 ; msg judge
     ref std.send_msg
 
@@ -113,7 +113,7 @@ test:                       ; judge <- {caps}
     state 0                 ; timer () expect_3 expect_2 wrong no_timer probation timer judge
     pair 7                  ; timer (judge timer probation no_timer wrong expect_2 expect_3)
     push referee_beh        ; timer (judge timer probation no_timer wrong expect_2 expect_3) referee_beh
-    new -1                  ; timer ref=referee_of_referees
+    actor create            ; timer ref=referee_of_referees
 setup:
     roll 2                  ; ref timer
 
@@ -129,7 +129,7 @@ setup:
     pick 9                  ; ref timer timer () 3rd 2nd 1st probation timer judge=ref
     pair 6                  ; ref timer timer referee_state
     push referee_beh        ; ref timer timer referee_state referee_beh
-    new -1                  ; ref timer timer referee
+    actor create            ; ref timer timer referee
     call send_sequence      ; ref timer
 
 ; Expect 2 messages, but get three. FAIL in ~75ms.
@@ -143,7 +143,7 @@ setup:
     pick 8                  ; ref timer timer () 2nd 1st probation timer judge=ref
     pair 5                  ; ref timer timer referee_state
     push referee_beh        ; ref timer timer referee_state referee_beh
-    new -1                  ; ref timer timer referee
+    actor create            ; ref timer timer referee
     call send_sequence      ; ref timer
 
 ; Expect 1 message, get 3, but omit the timer. PASS in ~25ms.
@@ -156,7 +156,7 @@ setup:
     pick 7                  ; ref timer timer () 1st probation timer judge=ref
     pair 4                  ; ref timer timer referee_state
     push referee_beh        ; ref timer timer referee_state referee_beh
-    new -1                  ; ref timer timer referee
+    actor create            ; ref timer timer referee
     call send_sequence      ; ref timer
 
 ; Get the 3 expected messages. PASS in ~175ms
@@ -171,7 +171,7 @@ setup:
     pick 9                  ; ref timer timer () 3rd 2nd 1st probation timer judge=ref
     pair 6                  ; ref timer timer referee_state
     push referee_beh        ; ref timer timer referee_state referee_beh
-    new -1                  ; ref timer timer referee
+    actor create            ; ref timer timer referee
     call send_sequence      ; ref timer
     ref std.commit
 
@@ -197,7 +197,7 @@ send_next:
     roll 3                  ; k timer referee send_spec' msg referee delay
     pair 2                  ; k timer referee send_spec' timer_req=(delay referee . msg)
     pick 4                  ; k timer referee send_spec' timer_req timer
-    send -1                 ; k timer referee send_spec'
+    actor send              ; k timer referee send_spec'
     ref send_next
 send_done:                  ; k timer referee send_spec
     drop 3                  ; k

@@ -39,7 +39,7 @@ test:                       ; judge <- {caps}
     state 0                 ; () 2nd 1st probation timer judge
     pair 5                  ; (judge timer probation 1st 2nd)
     push referee.beh        ; (judge timer probation 1st 2nd) referee_beh
-    new -1                  ; referee=referee_beh.(judge timer probation 1st 2nd)
+    actor create            ; referee=referee_beh.(judge timer probation 1st 2nd)
 suite:
 
 ; The actor is sent the expected value, emitting #t for 'yes'.
@@ -51,11 +51,11 @@ suite:
     pick 5                  ; referee actual no yes expected receiver=referee
     pair 3                  ; referee actual (receiver expected yes . no)
     push is_eq_beh          ; referee actual (receiver expected yes . no) is_eq_beh
-    new -1                  ; referee actual is_eq=is_eq_beh.(receiver expected yes . no)
+    actor create            ; referee actual is_eq=is_eq_beh.(receiver expected yes . no)
 
 ; The actor is sent an unexpected value, emitting #t for 'no'.
 
-    send -1                 ; referee
+    actor send              ; referee
     push 43                 ; referee actual=43
     push #t                 ; referee actual no=#t
     push #f                 ; referee actual no yes=#f
@@ -63,8 +63,8 @@ suite:
     pick 5                  ; referee actual no yes expected receiver=referee
     pair 3                  ; referee actual (receiver expected yes . no)
     push is_eq_beh          ; referee actual (receiver expected yes . no) is_eq_beh
-    new -1                  ; referee actual is_eq=is_eq_beh.(receiver expected yes . no)
-    send -1                 ; referee
+    actor create            ; referee actual is_eq=is_eq_beh.(receiver expected yes . no)
+    actor send              ; referee
     ref std.commit
 
 .export
