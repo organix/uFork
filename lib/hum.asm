@@ -1,9 +1,10 @@
 ; Runtime support for compiled Humus.
 
 .import
-    div_mod: "https://ufork.org/lib/div_mod.asm"
-    dev: "https://ufork.org/lib/dev.asm"
-    std: "https://ufork.org/lib/std.asm"
+    div_mod: "./div_mod.asm"
+    dev: "./dev.asm"
+    eq: "./eq.asm"
+    std: "./std.asm"
 
 push_op:
     ref 2
@@ -221,32 +222,8 @@ eq:                         ; ( pair -- boolean )
     typeq #pair_t           ; k pair is_pair(pair)
     if_not dreturn_undef    ; k pair=(a . b)
     part 1                  ; k b a
-    ref eq_tail
-eq_parted:                  ; ( b a -- boolean )
-    roll -3                 ; k b a
-eq_tail:                    ; k b a
-    dup 2                   ; k b a b a
-    cmp eq                  ; k b a b==a
-    if eq_t                 ; k b a
-    dup 1                   ; k b a a
-    typeq #pair_t           ; k b a is_pair(a)
-    if_not eq_f             ; k b a
-    roll 2                  ; k a b
-    dup 1                   ; k a b b
-    typeq #pair_t           ; k a b is_pair(b)
-    if_not eq_f             ; k a b
-    part 1                  ; k a tl(b) hd(b)
-    roll 3                  ; k tl(b) hd(b) a
-    part 1                  ; k tl(b) hd(b) tl(a) hd(a)
-    roll 3                  ; k tl(b) tl(a) hd(a) hd(b)
-    call eq_parted          ; k tl(b) tl(a) hd(b)==hd(a)
-    if eq_tail              ; k tl(b) tl(a)
-eq_f:                       ; k b a
-    drop 2                  ; k
-    ref std.return_f
-eq_t:                       ; k b a
-    drop 2                  ; k
-    ref std.return_t
+    call eq.proc            ; k boolean
+    ref std.return_value
 
 list_of_3:
     pair_t 3 #nil           ; (3)
