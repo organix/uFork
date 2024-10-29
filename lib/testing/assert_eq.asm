@@ -1,13 +1,15 @@
-; A behavior asserting that every message it receives is equal to its state.
+; A behavior asserting that every message it receives is deeply equal to its
+; state.
 
 .import
     std: "../std.asm"
+    eq: "../eq.asm"
 
 beh:
 assert_eq_beh:              ; expect <- actual
     msg 0                   ; actual
     state 0                 ; actual expect
-    cmp eq                  ; actual==expect
+    call eq.proc            ; actual==expect
     assert #t               ; --
     ref std.commit
 
