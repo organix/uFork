@@ -67,79 +67,70 @@ step_1:                     ; (blob_dev . debug_dev) <- _
     pair 1                  ; alloc_req=(SELF . 7)
     state 1                 ; alloc_req blob_dev
     send -1                 ; --
-    my state                ; debug_dev blob_dev
-    pair 1                  ; (blob_dev . debug_dev)
+    state 0                 ; (blob_dev . debug_dev)
     push step_2             ; (blob_dev . debug_dev) step_2
     beh -1                  ; --
     ref std.commit
 
 step_2:                     ; (blob_dev . debug_dev) <- blob_1
-    push 5                  ; 5
-    my self                 ; 5 SELF
-    pair 1                  ; alloc_req=(SELF . 5)
-    state 1                 ; alloc_req blob_dev
-    send -1                 ; --
-    msg 0                   ; blob_1
-    my state                ; blob_1 debug_dev blob_dev
-    pair 2                  ; (blob_dev debug_dev . blob_1)
-    push step_3             ; (blob_dev debug_dev . blob_1) step_3
-    beh -1                  ; --
+    ; push 5                  ; 5
+    ; my self                 ; 5 SELF
+    ; pair 1                  ; alloc_req=(SELF . 5)
+    ; state 1                 ; alloc_req blob_dev
+    ; send -1                 ; --
+    ; state 0                 ; (blob_dev . debug_dev)
+    ; msg 0                   ; (blob_dev . debug_dev) blob_1
+    ; pair 1                  ; (blob_1 blob_dev . debug_dev)
+    ; push step_3             ; (blob_1 blob_dev . debug_dev) step_3
+    ; beh -1                  ; --
     ref std.commit
 
-step_3:                     ; (blob_dev debug_dev . blob_1) <- blob_2
-    push 3                  ; 3
-    my self                 ; 3 SELF
-    pair 1                  ; alloc_req=(SELF . 3)
-    state 1                 ; alloc_req blob_dev
-    send -1                 ; --
-    msg 0                   ; blob_2
-    my state                ; blob_2 blob_1 debug_dev blob_dev
-    pair 3                  ; (blob_dev debug_dev blob_1 . blob_2)
-    push step_4             ; (blob_dev debug_dev blob_1 . blob_2) step_4
-    beh -1                  ; --
-    ref std.commit
+; step_3:                     ; (blob_1 blob_dev . debug_dev) <- blob_2
+;     push 3                  ; 3
+;     my self                 ; 3 SELF
+;     pair 1                  ; alloc_req=(SELF . 3)
+;     state 2                 ; alloc_req blob_dev
+;     send -1                 ; --
+;     state 0                 ; (blob_1 blob_dev . debug_dev)
+;     msg 0                   ; (blob_1 blob_dev . debug_dev) blob_2
+;     pair 1                  ; (blob_2 blob_1 blob_dev . debug_dev)
+;     push step_4             ; (blob_2 blob_1 blob_dev . debug_dev) step_4
+;     beh -1                  ; --
+;     ref std.commit
 
-step_4:                     ; (blob_dev debug_dev blob_1 . blob_2) <- blob_3
-    my state                ; blob_2 blob_1 debug_dev blob_dev
-    roll 4                  ; blob_1 debug_dev blob_dev blob_2  --- release blob_2 first
-;    roll 3              ; blob_2 debug_dev blob_dev blob_1  --- release blob_1 first
-    drop 1                  ; blob_1 debug_dev blob_dev
-    msg 0                   ; blob_1 debug_dev blob_dev blob_3
-    roll -4                 ; blob_3 blob_1 debug_dev blob_dev
-    pair 3                  ; (blob_dev debug_dev blob_1 . blob_3)
-    push step_5             ; (blob_dev debug_dev blob_1 . blob_3) step_5
-    beh -1                  ; --
-    push #?                 ; #?
-    my self                 ; #? SELF
-    send -1                 ; --
-    ref std.commit
+; step_4:                     ; (blob_2 blob_1 blob_dev . debug_dev) <- blob_3
+;     state -1                ; (blob_1 blob_dev . debug_dev)  --- release blob_2
+;     msg 0                   ; (blob_1 blob_dev . debug_dev) blob_3
+;     pair 1                  ; (blob_3 blob_1 blob_dev . debug_dev)
+;     push step_5             ; (blob_3 blob_1 blob_dev . debug_dev) step_5
+;     beh -1                  ; --
+;     push #?                 ; #?
+;     my self                 ; #? SELF
+;     send -1                 ; --
+;     ref std.commit
 
-step_5:                     ; (blob_dev debug_dev blob_1 . blob_3) <- _
-    my state                ; blob_3 blob_1 debug_dev blob_dev
-    roll 3                  ; blob_3 debug_dev blob_dev blob_1
-    drop 1                  ; blob_3 debug_dev blob_dev
-    pair 2                  ; (blob_dev debug_dev . blob_3)
-    push step_6             ; (blob_dev debug_dev . blob_3) step_6
-    beh -1                  ; --
-    push #?                 ; #?
-    my self                 ; #? SELF
-    send -1                 ; --
-    ref std.commit
+; step_5:                     ; (blob_3 blob_1 blob_dev . debug_dev) <- _
+;     state -2                ; (blob_dev . debug_dev)  --- release blob_1
+;     state 1                 ; (blob_dev . debug_dev) blob_3
+;     pair 1                  ; (blob_3 blob_dev . debug_dev)
+;     push step_6             ; (blob_3 blob_dev . debug_dev) step_6
+;     beh -1                  ; --
+;     push #?                 ; #?
+;     my self                 ; #? SELF
+;     send -1                 ; --
+;     ref std.commit
 
-step_6:                     ; (blob_dev debug_dev . blob_3) <- _
-    my state                ; blob_3 debug_dev blob_dev
-    roll 3                  ; debug_dev blob_dev blob_3
-    drop 1                  ; debug_dev blob_dev
-    pair 1                  ; (blob_dev . debug_dev)
-    push step_7             ; (blob_dev . debug_dev) step_7
-    beh -1                  ; --
-    push #?                 ; #?
-    my self                 ; #? SELF
-    send -1                 ; --
-    ref std.commit
+; step_6:                     ; (blob_3 blob_dev . debug_dev) <- _
+;     state -1                ; (blob_dev . debug_dev)  --- release blob_3
+;     push step_7             ; (blob_dev . debug_dev) step_7
+;     beh -1                  ; --
+;     push #?                 ; #?
+;     my self                 ; #? SELF
+;     send -1                 ; --
+;     ref std.commit
 
-step_7:                     ; (blob_dev . debug_dev) <- _
-    ref std.commit
+; step_7:                     ; (blob_dev . debug_dev) <- _
+;     ref std.commit
 
 .export
     boot

@@ -444,7 +444,8 @@ cnt_fwd_beh:                ; (limit . rcvr) <- msg
     push 0                  ; limit 0
     cmp gt                  ; limit>0
     if_not std.commit       ; --
-    my state                ; rcvr limit
+    state -1                ; rcvr
+    state 1                 ; rcvr limit
     push 1                  ; rcvr limit 1
     alu sub                 ; rcvr limit-1
     pair 1                  ; (limit-1 . rcvr)
