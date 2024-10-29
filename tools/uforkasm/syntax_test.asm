@@ -82,6 +82,9 @@ beh:
 #      ^^^ entity.name.namespace.uforkasm
     eq "lib".race_beh
 #            ^^^^^^^^ variable.other.member.uforkasm
+    actor send
+#   ^^^^^ keyword.operator.word.uforkasm
+#         ^^^^ keyword.operator.word.uforkasm
     end abort
 
 proc:

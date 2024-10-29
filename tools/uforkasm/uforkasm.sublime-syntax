@@ -87,6 +87,11 @@ contexts:
 
 # Two-part operators.
 
+    - match: '^{{spaces}}(actor){{spaces}}(send|post|create|become)\b'
+      captures:
+        1: keyword.operator.word.uforkasm
+        2: keyword.operator.word.uforkasm
+      push: operand_list
     - match: '^{{spaces}}(dict){{spaces}}(has|get|add|set|del)\b'
       captures:
         1: keyword.operator.word.uforkasm
