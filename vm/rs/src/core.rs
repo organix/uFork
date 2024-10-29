@@ -54,35 +54,33 @@ pub struct Core <
 
 impl Default for Core {
     fn default() -> Self {
-        Self::new([
-            None,
-            None,
-            None,
-            Some(Box::new(blob_dev::BlobDevice::new())),
-            None,
-            None,
-            None,
-            None,
-            Some(Box::new(fail_dev::FailDevice::new())),
-            Some(Box::new(fail_dev::FailDevice::new())),
-            Some(Box::new(fail_dev::FailDevice::new())),
-            Some(Box::new(fail_dev::FailDevice::new())),
-            Some(Box::new(fail_dev::FailDevice::new())),
-        ])
+        Self::new()
     }
 }
 
 impl Core {
-    pub const fn new(
-        devices: [Option<Box<dyn Device>>; DEVICE_MAX],
-    ) -> Core {
+    pub const fn new() -> Core {
         Core {
             quad_rom: [ Quad::empty_t(); QUAD_ROM_MAX ],
             quad_ram: [ Quad::empty_t(); QUAD_RAM_MAX ],
             gc_queue: [ UNDEF; QUAD_RAM_MAX ],
             gc_state: UNDEF,
             rom_top: Any::rom(ROM_BASE_OFS),
-            device: devices,
+            device: [
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+            ],
             trace_fn: None,
         }
     }
@@ -132,6 +130,9 @@ impl Core {
                                         Any::fix(8192),
                                         UNDEF);  // root configuration sponsor
 
+        /*
+         * Garbage-Collector Metadata
+         */
         let mut ofs = 0;
         while ofs < RAM_BASE_OFS {
             self.gc_queue[ofs] = GC_BLACK;  // mark "black" (reachable)
@@ -139,18 +140,12 @@ impl Core {
         }
         self.gc_queue[GC_FIRST] = NIL;
         self.gc_queue[GC_LAST] = NIL;
+    }
 
-        /*
-         * External Device Interfaces
-         */
-        let mut id = 0;
-        while id < DEVICE_MAX {
-            if self.device[id].is_some() {
-                let mut dev_mut = self.device[id].take().unwrap();
-                dev_mut.init();
-                self.device[id] = Some(dev_mut);
-            }
-            id += 1;
+    pub fn install_device(&mut self, cap: Any, mut dev: Box<dyn Device>) {
+        if let Ok(id) = self.device_id(cap) {
+            dev.init();
+            self.device[id] = Some(dev);
         }
     }
 
@@ -2039,6 +2034,8 @@ fn falsy(v: Any) -> bool {
 
 #[cfg(test)]
 mod tests {
+    use blob_dev::BlobDevice;
+
     use super::*;
 
     fn load_std(core: &mut Core) -> Any {
@@ -2347,7 +2344,7 @@ pub const T_DEV_BEH: Any = Any { raw: T_DEV_OFS as Raw };
         quad_rom[T_DEV_OFS+7]       = Quad::vm_push(BLOB_IO_BEH, Any::rom(T_DEV_OFS+8));  // 13 BLOB_IO_BEH
         quad_rom[T_DEV_OFS+8]       = Quad::vm_new(ZERO, Any::rom(T_DEV_OFS+9));  // 13 BLOB_IO.()
         quad_rom[T_DEV_OFS+9]       = Quad::vm_pair(PLUS_1, Any::rom(T_DEV_OFS+10));  // (BLOB_IO . 13)
-        quad_rom[T_DEV_OFS+10]       = Quad::vm_push(BLOB_DEV, Any::rom(T_DEV_OFS+11));  // (BLOB_IO . 13) BLOB_DEV
+        quad_rom[T_DEV_OFS+10]      = Quad::vm_push(BLOB_DEV, Any::rom(T_DEV_OFS+11));  // (BLOB_IO . 13) BLOB_DEV
         quad_rom[T_DEV_OFS+11]      = Quad::vm_send(MINUS_1, Any::rom(T_DEV_OFS+12));  // --
 
         quad_rom[T_DEV_OFS+12]      = Quad::vm_push(Any::fix(3), Any::rom(T_DEV_OFS+13));  // 3
@@ -2488,6 +2485,8 @@ pub const COUNT_TO: Any = Any { raw: COUNT_TO_OFS as Raw };
     fn device_operations() {
         let mut core = Core::default();
         core.init();
+        core.install_device(BLOB_DEV, Box::new(BlobDevice::new()));
+//        core.install_device(BLOB_DEV, Box::new(FailDevice::new()));
         let boot_beh = load_device_test(&mut core);
         let boot_ptr = core.reserve(&Quad::new_actor(boot_beh, NIL)).unwrap();
         let a_boot = core.ptr_to_cap(boot_ptr);

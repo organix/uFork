@@ -92,7 +92,6 @@ pub fn h_run_loop(limit: i32) -> Raw {
     let mut host = unsafe { the_host().borrow_mut() };
     let core = host.mut_core();
     core.run_loop(limit).raw()
-//    unsafe { the_host().borrow_mut().run_loop(limit) }
 }
 
 #[no_mangle]
@@ -101,7 +100,6 @@ pub fn h_event_enqueue(evt: Raw) {
     let core = host.mut_core();
     let ep = Any::new(evt);
     core.event_enqueue(ep)
-//    unsafe { the_host().borrow_mut().event_enqueue(evt) }
 }
 
 #[no_mangle]
@@ -109,7 +107,6 @@ pub fn h_revert() -> bool {
     let mut host = unsafe { the_host().borrow_mut() };
     let core = host.mut_core();
     core.actor_revert()
-//    unsafe { the_host().borrow_mut().actor_revert() }
 }
 
 #[no_mangle]
@@ -117,7 +114,6 @@ pub fn h_gc_run() {
     let mut host = unsafe { the_host().borrow_mut() };
     let core = host.mut_core();
     core.gc_collect()
-//    unsafe { the_host().borrow_mut().gc_run() }
 }
 
 #[no_mangle]
@@ -125,7 +121,6 @@ pub fn h_rom_top() -> Raw {
     let host = unsafe { the_host().borrow() };
     let core = host.the_core();
     core.rom_top().raw()
-//    unsafe { the_host().borrow().rom_top() }
 }
 
 #[no_mangle]
@@ -134,7 +129,6 @@ pub fn h_set_rom_top(top: Raw) {
     let core = host.mut_core();
     let ptr = Any::new(top);
     core.set_rom_top(ptr);
-//    unsafe { the_host().borrow_mut().set_rom_top(top) }
 }
 
 #[no_mangle]
@@ -142,7 +136,6 @@ pub fn h_reserve_rom() -> Raw {
     let mut host = unsafe { the_host().borrow_mut() };
     let core = host.mut_core();
     core.reserve_rom().unwrap().raw()
-//    unsafe { the_host().borrow_mut().reserve_rom() }
 }
 
 #[no_mangle]
@@ -150,7 +143,6 @@ pub fn h_ram_top() -> Raw {
     let host = unsafe { the_host().borrow() };
     let core = host.the_core();
     core.ram_top().raw()
-//    unsafe { the_host().borrow().ram_top() }
 }
 
 #[no_mangle]
@@ -158,7 +150,6 @@ pub fn h_reserve() -> Raw {
     let mut host = unsafe { the_host().borrow_mut() };
     let core = host.mut_core();
     core.reserve(&Quad::empty_t()).unwrap().raw()
-//    unsafe { the_host().borrow_mut().reserve() }
 }
 
 #[no_mangle]
@@ -168,7 +159,6 @@ pub fn h_reserve_stub(device: Raw, target: Raw) -> Raw {
     let device_ptr = Any::new(device);
     let target_ptr = Any::new(target);
     core.reserve_stub(device_ptr, target_ptr).unwrap().raw()
-//    unsafe { the_host().borrow_mut().reserve_stub(device, target) }
 }
 
 #[no_mangle]
@@ -176,7 +166,6 @@ pub fn h_release_stub(ptr: Raw) {
     let mut host = unsafe { the_host().borrow_mut() };
     let core = host.mut_core();
     core.release_stub(Any::new(ptr))
-//    unsafe { the_host().borrow_mut().release_stub(ptr) }
 }
 
 #[no_mangle]
@@ -184,7 +173,6 @@ pub fn h_car(raw: Raw) -> Raw {
     let host = unsafe { the_host().borrow() };
     let core = host.the_core();
     core.car(Any::new(raw)).raw()
-//    unsafe { the_host().borrow().car(raw) }
 }
 
 #[no_mangle]
@@ -192,7 +180,6 @@ pub fn h_cdr(raw: Raw) -> Raw {
     let host = unsafe { the_host().borrow() };
     let core = host.the_core();
     core.cdr(Any::new(raw)).raw()
-//    unsafe { the_host().borrow().cdr(raw) }
 }
 
 #[no_mangle]
@@ -200,7 +187,6 @@ pub fn h_gc_color(raw: Raw) -> Raw {
     let host = unsafe { the_host().borrow() };
     let core = host.the_core();
     core.gc_color(Any::new(raw)).raw()
-//    unsafe { the_host().borrow().gc_color(raw) }
 }
 
 #[no_mangle]
@@ -208,7 +194,6 @@ pub fn h_gc_state() -> Raw {
     let host = unsafe { the_host().borrow() };
     let core = host.the_core();
     core.gc_state().raw()
-//    unsafe { the_host().borrow().gc_state() }
 }
 
 /*
@@ -222,7 +207,6 @@ pub fn h_rom_buffer() -> *const Quad {
     let host = unsafe { the_host().borrow() };
     let core = host.the_core();
     core.rom_buffer().as_ptr()
-//    unsafe { the_host().borrow().rom_buffer() }
 }
 
 #[no_mangle]
@@ -230,5 +214,4 @@ pub fn h_ram_buffer() -> *const Quad {
     let host = unsafe { the_host().borrow() };
     let core = host.the_core();
     core.ram_buffer().as_ptr()
-//    unsafe { the_host().borrow().ram_buffer() }
 }
