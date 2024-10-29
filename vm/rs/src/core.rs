@@ -4,26 +4,24 @@ use alloc::boxed::Box;
 
 use crate::*;
 
-pub const ROM_BASE_OFS: usize = 16;  // ROM offsets below this value are reserved
+pub const MEMORY: Any       = Any::ram(0x0);
+pub const DDEQUE: Any       = Any::ram(0x1);
+pub const DEBUG_DEV: Any    = Any::cap(0x2);
+pub const CLOCK_DEV: Any    = Any::cap(0x3);
+pub const IO_DEV: Any       = Any::cap(0x4);
+pub const BLOB_DEV: Any     = Any::cap(0x5);
+pub const TIMER_DEV: Any    = Any::cap(0x6);
+pub const NULL_DEV: Any     = Any::cap(0x7);
+pub const HOST_DEV: Any     = Any::cap(0x8);
+pub const RANDOM_DEV: Any   = Any::cap(0x9);
+pub const RSVD_A_DEV: Any   = Any::cap(0xA);
+pub const RSVD_B_DEV: Any   = Any::cap(0xB);
+pub const RSVD_C_DEV: Any   = Any::cap(0xC);
+pub const RSVD_D_DEV: Any   = Any::cap(0xD);
+pub const RSVD_E_DEV: Any   = Any::cap(0xE);
+pub const SPONSOR: Any      = Any::ram(0xF);
 
-pub const MEMORY: Any       = Any { raw: MUT_RAW | 0 };
-pub const DDEQUE: Any       = Any { raw: MUT_RAW | 1 };
-pub const DEBUG_DEV: Any    = Any { raw: MUT_RAW | OPQ_RAW | 2 };
-pub const CLOCK_DEV: Any    = Any { raw: MUT_RAW | OPQ_RAW | 3 };
-pub const IO_DEV: Any       = Any { raw: MUT_RAW | OPQ_RAW | 4 };
-pub const BLOB_DEV: Any     = Any { raw: MUT_RAW | OPQ_RAW | 5 };
-pub const TIMER_DEV: Any    = Any { raw: MUT_RAW | OPQ_RAW | 6 };
-pub const NULL_DEV: Any     = Any { raw: MUT_RAW | OPQ_RAW | 7 };
-pub const HOST_DEV: Any     = Any { raw: MUT_RAW | OPQ_RAW | 8 };
-pub const RANDOM_DEV: Any   = Any { raw: MUT_RAW | OPQ_RAW | 9 };
-pub const RSVD_A_DEV: Any   = Any { raw: MUT_RAW | OPQ_RAW | 10 };
-pub const RSVD_B_DEV: Any   = Any { raw: MUT_RAW | OPQ_RAW | 11 };
-pub const RSVD_C_DEV: Any   = Any { raw: MUT_RAW | OPQ_RAW | 12 };
-pub const RSVD_D_DEV: Any   = Any { raw: MUT_RAW | OPQ_RAW | 13 };
-pub const RSVD_E_DEV: Any   = Any { raw: MUT_RAW | OPQ_RAW | 14 };
-pub const SPONSOR: Any      = Any { raw: MUT_RAW | 15 };
-
-pub const RAM_BASE_OFS: usize = 16;  // RAM offsets below this value are reserved
+pub const RAM_BASE_OFS: usize = 0x10;  // RAM offsets below this value are reserved
 
 pub const GC_FIRST: usize   = 0;  // offset of "first" in gc_queue[]
 pub const GC_LAST: usize    = 1;  // offset of "last" in gc_queue[]
@@ -2170,7 +2168,7 @@ pub const TEST_BEH: Any    = Any { raw: TEST_OFS as Raw };
 
 pub const EQ_8_BEH: Any = Any { raw: (TEST_OFS+8) as Raw };
         quad_rom[TEST_OFS+8]        = Quad::vm_msg(ZERO, Any::rom(TEST_OFS+9));  // msg
-        quad_rom[TEST_OFS+9]        = Quad::vm_assert(PLUS_8, COMMIT);  // assert_eq(8, msg)
+        quad_rom[TEST_OFS+9]        = Quad::vm_assert(Any::fix(8), COMMIT);  // assert_eq(8, msg)
 
         core.rom_top = Any::rom(TEST_OFS+10);
         TEST_BEH
@@ -2513,15 +2511,15 @@ pub const COUNT_TO: Any = Any { raw: COUNT_TO_OFS as Raw };
         core.event_enqueue(evt.unwrap());
         core.set_sponsor_memory(SPONSOR, PLUS_3);
         core.set_sponsor_events(SPONSOR, PLUS_1);
-        core.set_sponsor_cycles(SPONSOR, PLUS_8);
+        core.set_sponsor_cycles(SPONSOR, Any::fix(8));
         let sig = core.run_loop(256);
         assert_eq!(OUT_OF_MEM, sig);
-        core.set_sponsor_memory(SPONSOR, PLUS_8);
+        core.set_sponsor_memory(SPONSOR, Any::fix(8));
         core.set_sponsor_cycles(SPONSOR, PLUS_2);
         let sig = core.run_loop(256);
         assert_eq!(OUT_OF_CPU, sig);
-        core.set_sponsor_memory(SPONSOR, PLUS_8);
-        core.set_sponsor_cycles(SPONSOR, PLUS_8);
+        core.set_sponsor_memory(SPONSOR, Any::fix(8));
+        core.set_sponsor_cycles(SPONSOR, Any::fix(8));
         let sig = core.run_loop(256);
         assert_eq!(OUT_OF_MSG, sig);
     }
