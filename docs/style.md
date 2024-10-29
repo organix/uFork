@@ -321,7 +321,7 @@ In the stack diagram, depict actor creation like `beh.state`:
 At the entry point of each behavior, show the signature of the state and
 message like `state <- msg`. For example:
 
-    my_beh:                     ; (count limit) <- (cust selector . rest)
+    my_beh:                     ; (count . limit) <- (cust selector . rest)
 
 If the module represents a behavior, the behavior's export should be named
 `beh`.

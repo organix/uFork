@@ -129,10 +129,10 @@ succeed:
     ref done
 
 on_cancel:                  ; (requestors callback . canceller) <- (cancel_tag . reason)
-    push #nil               ; ()
-    msg -1                  ; () reason
-    pair 1                  ; (reason)
-    state -2                ; (reason) canceller
+    push #?                 ; #?
+    msg -1                  ; #? reason
+    pair 1                  ; (reason . #?)
+    state -2                ; (reason . #?) canceller
     send -1                 ; --
     ref done
 

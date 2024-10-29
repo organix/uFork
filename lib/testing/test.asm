@@ -76,22 +76,22 @@ mock_pred:                  ; (ctrl . pred) <- ctrl' | actual
 
     push #nil               ; () actual
     msg 0                   ; () actual
-    push #nil               ; () actual ()
-    state 1                 ; () actual () ctrl
-    pair 1                  ; () actual (ctrl)
-    push mock_pred_ok       ; () actual (ctrl) mock_pred_ok
-    actor create            ; () actual cust=mock_pred_ok.(ctrl)
+    push #?                 ; () actual #?
+    state 1                 ; () actual #? ctrl
+    pair 1                  ; () actual (ctrl . #?)
+    push mock_pred_ok       ; () actual (ctrl . #?) mock_pred_ok
+    actor create            ; () actual cust=mock_pred_ok.(ctrl . #?)
     pair 2                  ; (cust actual)
     state -1                ; (cust actual) pred
     ref std.send_msg
 
-mock_pred_ok:               ; (ctrl) <- bool
+mock_pred_ok:               ; (ctrl . _) <- bool
     msg 0                   ; truthy
     if ok fail              ; --
 
 ; A mock-object that verifies a list of mocks.
 
-mock_list_setup:            ; (ctrl) <- mocks
+mock_list_setup:            ; (ctrl . _) <- mocks
     msg 0                   ; mocks
     state 1                 ; mocks ctrl
     pair 1                  ; (ctrl . mocks)
@@ -153,7 +153,7 @@ assert_ok:                  ; _ <- verdict
 
 ; setup the mock
 
-step_0:                     ; (debug . timer) <- ()
+step_0:                     ; (debug . timer) <- _
     push 42                 ; expect=42
     my self                 ; expect ctrl=SELF
     pair 1                  ; (ctrl . expect)
@@ -209,8 +209,8 @@ step_3:                     ; (debug . timer) <- mock
     msg 0                   ; ctrl mock
     actor send              ; --
 
-    push #nil               ; ()
-    push assert_ok          ; () assert_ok
+    push #?                 ; #?
+    push assert_ok          ; #? assert_ok
     actor become            ; --
     ref std.commit
 
@@ -226,8 +226,8 @@ boot:                       ; _ <- {caps}
     pair 1                  ; (debug . timer)
     push step_0             ; (debug . timer) step_0
     actor create            ; test=step_0.(debug . timer)
-    push #nil               ; test ()
-    roll 2                  ; () test
+    push #?                 ; test #?
+    roll 2                  ; #? test
     actor send              ; --
     ref std.commit
 

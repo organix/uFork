@@ -20,7 +20,7 @@ closure_t:                  ; [closure_t, code, data]
 behavior_t:                 ; [behavior_t, code, data, meta]
     type_t 3                ; [#type_t, 3]
 
-empty_env:                  ; (sp=#nil . env=#nil)
+empty_env:                  ; (sp=() . env=())
     pair_t #nil #nil        ; (())
 
 ;

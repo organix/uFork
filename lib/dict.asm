@@ -63,7 +63,7 @@ set:                        ; ( dict key value k -- dict' )
 
 del:                        ; ( dict key k -- dict' )
     roll -3                 ; k dict key
-    push #nil               ; k dict key rev=()
+    push #nil               ; k dict key rev={}
     pick 3                  ; k orig key rev dict
 del_rev:
     quad -4                 ; k orig key rev next value' key' type
@@ -133,17 +133,17 @@ demo:
 demo_0:
     call has                ; #f
     assert #f               ; --
-    push #nil               ; ()
-    push 0                  ; () 0
-    dup 2                   ; () 0 () 0
-    call has                ; () 0 #f
-    assert #f               ; () 0
+    push #nil               ; {}
+    push 0                  ; {} 0
+    dup 2                   ; {} 0 {} 0
+    call has                ; {} 0 #f
+    assert #f               ; {} 0
     call get                ; #?
     assert #?               ; --
 demo_1:
-    push #nil               ; ()
-    push 0                  ; () 0
-    push 42                 ; () 0 42
+    push #nil               ; {}
+    push 0                  ; {} 0
+    push 42                 ; {} 0 42
     call add                ; {0:42}
     pick 1                  ; {0:42} {0:42}
     push 0                  ; {0:42} {0:42} 0

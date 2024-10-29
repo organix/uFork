@@ -79,11 +79,11 @@ race:
 
 cancel_all_beh:             ; cancellers <- reason
     state 0                 ; cancellers
-    push #nil               ; cancellers ()
-    msg 0                   ; cancellers () reason
-    pair 1                  ; cancellers (reason)
-    push lib.broadcast_beh  ; cancellers (reason) broadcast_beh
-    new -1                  ; cancellers broadcast=broadcast_beh.(reason)
+    push #?                 ; cancellers #?
+    msg 0                   ; cancellers #? reason
+    pair 1                  ; cancellers (reason . #?)
+    push lib.broadcast_beh  ; cancellers (reason . #?) broadcast_beh
+    new -1                  ; cancellers broadcast=broadcast_beh.(reason. #?)
     send -1                 ; --
     push std.sink_beh       ; sink_beh
     beh -1                  ; --

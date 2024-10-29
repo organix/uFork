@@ -218,11 +218,11 @@ cancel:                     ; running reason
 ; Cancel all running requestors and become a sink. Each canceller is sent the
 ; reason wrapped in a list.
 
-    push #nil               ; running reason ()
-    roll 2                  ; running () reason
-    pair 1                  ; running (reason)
-    push lib.broadcast_beh  ; running (reason) broadcast_beh
-    new -1                  ; running broadcast=broadcast_beh.(reason)
+    push #?                 ; running reason #?
+    roll 2                  ; running #? reason
+    pair 1                  ; running (reason . #?)
+    push lib.broadcast_beh  ; running (reason . #?) broadcast_beh
+    new -1                  ; running broadcast=broadcast_beh.(reason . #?)
     send -1                 ; --
     push #?                 ; #?
     push std.sink_beh       ; #? sink_beh

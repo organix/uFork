@@ -118,9 +118,9 @@ operative:                  ; (closure cust . env) <- arg
 ;;  ]
 closure:                    ; (env var . body) <- (arg cust . _)
     state 1                 ; next=env
-    push #nil               ; next ()
-    state 2                 ; next () var
-    msg 1                   ; next () var value=arg
+    push #nil               ; next {}
+    state 2                 ; next {} var
+    msg 1                   ; next {} var value=arg
     dict add                ; next {var:value}
     pair 1                  ; ({var:value} . next)
     push binding            ; ({var:value} . next) binding
@@ -151,13 +151,13 @@ boot:                       ; _ <- {caps}
     push #?                 ; #?
     push empty_env          ; #? empty_env
     actor create            ; next=empty_env.#?
-    push #nil               ; next ()
-    push #?                 ; next () #?
-    push variable           ; next () #? variable
-    actor create            ; next () var=variable.#?
-    dup 1                   ; next () var var
-    roll -4                 ; var next () var
-    push 13                 ; var next () var value=13
+    push #nil               ; next {}
+    push #?                 ; next {} #?
+    push variable           ; next {} #? variable
+    actor create            ; next {} var=variable.#?
+    dup 1                   ; next {} var var
+    roll -4                 ; var next {} var
+    push 13                 ; var next {} var value=13
     dict add                ; var next {var:value}
     pair 1                  ; var ({var:value} . next)
     push binding            ; var ({var:value} . next) binding

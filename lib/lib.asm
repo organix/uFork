@@ -6,7 +6,7 @@
     std: "./std.asm"
 
 ;;  DEF sink_beh AS \_.[]
-sink_beh:                   ; () <- _
+sink_beh:                   ; _ <- _
     ref std.sink_beh        ; re-export
 
 ;;  DEF const_beh(value) AS \(cust, _).[
@@ -27,7 +27,7 @@ fwd_beh:                    ; rcvr <- msg
 ;;  DEF init_fwd_beh AS \rcvr.[
 ;;      BECOME fwd_beh(rcvr)
 ;;  ]
-init_fwd_beh:               ; () <- rcvr
+init_fwd_beh:               ; _ <- rcvr
     msg 0                   ; rcvr
     push fwd_beh            ; rcvr fwd_beh
     beh -1                  ; --
@@ -38,8 +38,8 @@ init_fwd_beh:               ; () <- rcvr
 ;;      SEND msg TO rcvr
 ;;  ]
 once_beh:                   ; rcvr <- msg
-    push #nil               ; ()
-    push sink_beh           ; () sink_beh
+    push #?                 ; #?
+    push sink_beh           ; #? sink_beh
     beh -1                  ; --
     ref fwd_beh
 
@@ -68,8 +68,8 @@ tag_beh:                    ; rcvr <- msg
 ;;      SEND (SELF, msg) TO rcvr
 ;;  ]
 once_tag_beh:               ; rcvr <- msg
-    push #nil               ; ()
-    push sink_beh           ; () sink_beh
+    push #?                 ; #?
+    push sink_beh           ; #? sink_beh
     beh -1                  ; --
     ref tag_beh
 

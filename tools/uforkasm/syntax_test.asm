@@ -41,10 +41,10 @@ quad:
 beh:
 # <- entity.name.label.uforkasm
 #  ^ punctuation.separator.uforkasm
-"race_beh":                 ; (requestors throttle) <- request
+"race_beh":                 ; (requestors . throttle) <- request
 # <- string.quoted.double.uforkasm
 #         ^ punctuation.separator.uforkasm
-#                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ comment.line.uforkasm
+#                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ comment.line.uforkasm
 
 ; The work of handling the request is deferred to a dedicated "runner" actor,
 ; freeing up the race requestor to accept additional requests.

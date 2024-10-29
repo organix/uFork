@@ -16,7 +16,7 @@ CAS_tag:
 
 ;;  LET cell_beh(value) = \(cust, req).[
 ;;      CASE req OF
-;;      (#read) : [ SEND value TO cust ]
+;;      (#read, ?) : [ SEND value TO cust ]
 ;;      (#write, value') : [
 ;;          BECOME cell_beh(value')
 ;;          SEND SELF TO cust
@@ -41,7 +41,7 @@ cell_beh:                   ; value <- (tag cust . req)
     if CAS                  ; --
     ref std.abort
 
-read:                       ; value <- (tag cust)
+read:                       ; value <- (tag cust . _)
     state 0                 ; value
     msg 2                   ; value cust
     ref std.send_msg
@@ -136,13 +136,13 @@ check_CAS_beh:              ; (cell . expect) <- value
     ref std.send_msg
 
 check_read_beh:             ; expect <- cell
-    push #nil               ; ()
-    state 0                 ; () expect
-    push assert_eq.beh      ; () expect assert_eq_beh
-    new -1                  ; () cust=assert_eq
-    push read_tag           ; () cust #read
-    pair 2                  ; (#read cust)
-    msg 0                   ; (#read cust) cell
+    push #?                 ; #?
+    state 0                 ; #? expect
+    push assert_eq.beh      ; #? expect assert_eq_beh
+    new -1                  ; #? cust=assert_eq
+    push read_tag           ; #? cust #read
+    pair 2                  ; (#read cust . #?)
+    msg 0                   ; (#read cust . #?) cell
     send -1                 ; --
     ref std.commit
 
@@ -172,17 +172,17 @@ test_overlap:               ; ( -- )
     return
 
 cell_set_bit:               ; cell <- (cust . bit)
-    push #nil               ; ()
-    msg 1                   ; () cust
-    state 0                 ; () cust cell
-    msg -1                  ; () cust cell bit
-    push #?                 ; () cust cell bit old=#?
-    pair 3                  ; () (old bit cell . cust)
-    push cell_try_bit       ; () (old bit cell . cust) cell_try_bit
-    new -1                  ; () cust'=cell_try_bit.(old bit cell . cust)
-    push read_tag           ; () cust' tag=read_tag
-    pair 2                  ; (#read cust')
-    state 0                 ; (#read cust') cell
+    push #?                 ; #?
+    msg 1                   ; #? cust
+    state 0                 ; #? cust cell
+    msg -1                  ; #? cust cell bit
+    push #?                 ; #? cust cell bit old=#?
+    pair 3                  ; #? (old bit cell . cust)
+    push cell_try_bit       ; #? (old bit cell . cust) cell_try_bit
+    new -1                  ; #? cust'=cell_try_bit.(old bit cell . cust)
+    push read_tag           ; #? cust' tag=read_tag
+    pair 2                  ; (#read cust' . #?)
+    state 0                 ; (#read cust' . #?) cell
     send -1                 ; --
     ref std.commit
 
@@ -212,13 +212,13 @@ set_bit_done:
     ref std.send_msg
 
 cell_verify:                ; (cell . expect) <- _
-    push #nil               ; ()
-    state -1                ; () expect
-    push assert_eq.beh      ; () expect assert_eq_beh
-    new -1                  ; () cust=assert_eq_beh.expect
-    push read_tag           ; () cust tag=read_tag
-    pair 2                  ; (#read cust)
-    state 1                 ; (#read cust) cell
+    push #?                 ; #?
+    state -1                ; #? expect
+    push assert_eq.beh      ; #? expect assert_eq_beh
+    new -1                  ; #? cust=assert_eq_beh.expect
+    push read_tag           ; #? cust tag=read_tag
+    pair 2                  ; (#read cust . #?)
+    state 1                 ; (#read cust . #?) cell
     send -1                 ; --
     ref std.commit
 

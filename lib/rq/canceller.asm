@@ -101,11 +101,11 @@ run_test:                   ; ( timer cancel cancel_ms reason_ms reason -- )
     push canceller_beh      ; k timer cancel cancel_ms reason_ms reason #? canceller_beh
     new -1                  ; k timer cancel cancel_ms reason_ms reason canceller=canceller_beh.#?
     pick 6                  ; k timer cancel cancel_ms reason_ms reason canceller timer
-    push #nil               ; k timer cancel cancel_ms reason_ms reason canceller timer ()
-    roll 4                  ; k timer cancel cancel_ms reason_ms canceller timer () reason
-    pair 1                  ; k timer cancel cancel_ms reason_ms canceller timer (reason)
-    pick 3                  ; k timer cancel cancel_ms reason_ms canceller timer (reason) canceller
-    roll 5                  ; k timer cancel cancel_ms canceller timer (reason) canceller reason_ms
+    push #?                 ; k timer cancel cancel_ms reason_ms reason canceller timer #?
+    roll 4                  ; k timer cancel cancel_ms reason_ms canceller timer #? reason
+    pair 1                  ; k timer cancel cancel_ms reason_ms canceller timer (reason . #?)
+    pick 3                  ; k timer cancel cancel_ms reason_ms canceller timer (reason . #?) canceller
+    roll 5                  ; k timer cancel cancel_ms canceller timer (reason . #?) canceller reason_ms
     call schedule_twice     ; k timer cancel cancel_ms canceller
     roll -2                 ; k timer cancel canceller cancel_ms
     call schedule_twice     ; k

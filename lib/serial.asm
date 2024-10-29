@@ -140,11 +140,11 @@ counter_init:               ; value <- msg
 ;;      ]
 ;;  ]
 counter_svc:                ; cell <- (cust . change)
-    push #nil               ; ()
-    my self                 ; () SELF
-    push cell.read_tag      ; () SELF #read
-    pair 2                  ; (#read SELF)
-    state 0                 ; (#read SELF) cell
+    push #?                 ; #?
+    my self                 ; #? SELF
+    push cell.read_tag      ; #? SELF #read
+    pair 2                  ; (#read SELF . #?)
+    state 0                 ; (#read SELF . #?) cell
     send -1                 ; --
 
     msg 0                   ; (cust . change)
