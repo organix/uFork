@@ -445,6 +445,7 @@ function make_core({
         };
     }
 
+    //const h_init = wasm_mutex_call(() => wasm_exports.h_init);
     const h_run_loop = wasm_mutex_call(() => wasm_exports.h_run_loop);
     const h_step = wasm_mutex_call(() => wasm_exports.h_step);
     const h_event_enqueue = wasm_mutex_call(() => wasm_exports.h_event_enqueue);
@@ -1575,6 +1576,7 @@ function make_core({
             }),
             requestorize(function (wasm) {
                 wasm_exports = wasm.instance.exports;
+                wasm.instance.exports.h_init();  // initialize uFork Core in WASM
                 initial_rom_ofs = wasm.instance.exports.h_rom_buffer();
                 initial_ram_ofs = wasm.instance.exports.h_ram_buffer();
 
