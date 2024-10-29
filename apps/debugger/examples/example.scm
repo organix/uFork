@@ -57,4 +57,11 @@
 ;    (and)                               ; ==> #t
 ;)
 
+; (define tail
+;     (lambda (n)
+;         (if (<= n 0)
+;             n
+;             (tail (- n 1)))))
+; (tail 5)                  ; ⇒ 0
+
 (start (DEVICE dev.debug_key))

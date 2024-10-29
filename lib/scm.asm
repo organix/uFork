@@ -24,39 +24,8 @@ empty_env:                  ; (sp=#nil . env=#nil)
     pair_t #nil #nil        ; (())
 
 ;
-; Polyfill procedures for Actor primitives
+; Meta-actor creation and behavior replacement.
 ;
-
-new_2:                      ; ( (beh . state) -- beh.state )
-    roll -2                 ; k (beh . state)
-    quad -3                 ; k state beh type
-    drop 1                  ; k state beh
-create_return:              ; k state beh
-    new -1                  ; k beh.state
-    roll 2                  ; beh.state k
-    return                  ; beh.state
-
-new_3:                      ; ( [_, _, _, beh] -- beh.[_, _, _, beh] )
-    roll -2                 ; k state=[_, _, _, beh]
-    dup 1                   ; k state [_, _, _, beh]
-    quad -4                 ; k state beh _ _ _
-    drop 3                  ; k state beh
-    ref create_return
-
-beh_2:                      ; ( (beh . state) -- )
-    roll -2                 ; k (beh . state)
-    quad -3                 ; k state beh type
-    drop 1                  ; k state beh
-    beh -1                  ; k
-    return                  ; --
-
-beh_3:                      ; ( [_, _, _, beh] -- )
-    roll -2                 ; k state=[_, _, _, beh]
-    dup 1                   ; k state [_, _, _, beh]
-    quad -4                 ; k state beh _ _ _
-    drop 3                  ; k state beh
-    beh -1                  ; k
-    return                  ; --
 
 act_2:                      ; ( (beh . state) -- state beh )
     roll -2                 ; k (beh . state)
@@ -73,6 +42,31 @@ act_3:                      ; ( [_, _, _, beh] -- state beh )
     roll 3                  ; state beh k
     return                  ; state beh
 
+new_2:                      ; ( (beh . state) -- beh.state )
+    roll -2                 ; k (beh . state)
+    call act_2              ; k state beh
+new_return:                 ; k state beh
+    new -1                  ; k beh.state
+    roll 2                  ; beh.state k
+    return                  ; beh.state
+
+new_3:                      ; ( [_, _, _, beh] -- beh.[_, _, _, beh] )
+    roll -2                 ; k state=[_, _, _, beh]
+    call act_3              ; k state beh
+    ref new_return
+
+beh_2:                      ; ( (beh . state) -- )
+    roll -2                 ; k (beh . state)
+    call act_2              ; k state beh
+beh_return:
+    beh -1                  ; k
+    return                  ; --
+
+beh_3:                      ; ( [_, _, _, beh] -- )
+    roll -2                 ; k state=[_, _, _, beh]
+    call act_3              ; k state beh
+    ref beh_return
+
 ;
 ; Continuations for non-tail function calls
 ;
@@ -84,13 +78,15 @@ act_3:                      ; ( [_, _, _, beh] -- state beh )
 ;    ...
 
 ; Prepare args for function call
-;    push 3              ; arg3
-;    push 2              ; arg3 arg2
-;    push 1              ; arg3 arg2 arg1
-;    my self             ; args... cust=SELF
-;    push func           ; args... cust closure
-;    new -2              ; args... cust code.data
-;    send 4              ; -- nargs+1
+;    push #nil           ; ()
+;    push 3              ; () arg3
+;    push 2              ; () arg3 arg2
+;    push 1              ; () arg3 arg2 arg1
+;    my self             ; () arg3 arg2 arg1 cust=SELF
+;    pair nargs+1        ; args=(cust arg1 arg2 arg3)
+;    push func           ; args closure
+;    call new_2          ; args code.data
+;    send -1             ; --
 
 ; Prefix to create/become continuation
 ;    pair -1             ; sp'=(...)
@@ -129,7 +125,7 @@ imm_actor:                  ; beh <- msg
     my self                 ; msg SELF
     pair 1                  ; (SELF . msg)
     state 0                 ; (SELF . msg) beh=[behavior_t, code, data, meta]
-    new -2                  ; (SELF . msg) code.data
+    call new_2              ; (SELF . msg) code.data
     ref std.send_msg
 
 mut_actor:                  ; beh <- msg
@@ -142,7 +138,7 @@ txn_actor:                  ; beh pending msg
     my self                 ; beh pending msg SELF
     pair 1                  ; beh pending (SELF . msg)
     pick 3                  ; beh pending (SELF . msg) beh
-    new -2                  ; beh pending (SELF . msg) txn=code.data
+    call new_2              ; beh pending (SELF . msg) txn=code.data
     pick -3                 ; beh txn pending (SELF . msg) txn
     send -1                 ; beh txn pending
     pair 2                  ; (pending txn . beh)
@@ -197,12 +193,12 @@ nxt_actor:                  ; beh'
 
 rdy_actor:                  ; beh'
     ; no more deferred, become ready
-    beh -3                  ; -- SELF=get_Z(beh').beh'
+    call beh_3              ; -- SELF=get_Z(beh').beh'
     ref std.commit
 
 rst_actor:                  ; beh'
     ; reset entry-point (e.g.: transition to `imm_actor`)
-    beh -3                  ; -- SELF=get_Z(beh').beh'
+    call beh_3              ; -- SELF=get_Z(beh').beh'
     state 1                 ; pending
 
 rst_msgs:                   ; pending
@@ -283,13 +279,17 @@ act:
     roll 2                  ; () referee
     pair 1                  ; (referee)
     push count_0            ; (referee) beh=count_0
-    new -3                  ; (referee) counter=get_Z(beh).beh
+    call new_3              ; (referee) counter=get_Z(beh).beh
     dup 2                   ; (referee) counter (referee) counter
     send -1                 ; (referee) counter
     send -1                 ; --
     ref std.commit
 
 .export
+    beh_2
+    beh_3
+    new_2
+    new_3
     symbol_t
     closure_t
     behavior_t
