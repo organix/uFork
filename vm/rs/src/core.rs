@@ -156,7 +156,8 @@ impl Core {
         }
     }
 
-    fn trace_event(&self, ep: Any, kp: Any) {
+    #[cfg(debug_assertions)]
+    fn call_trace_event(&self, ep: Any, kp: Any) {
         if let Some(trace) = &self.trace_fn {
             (trace)(ep, kp);
         }
@@ -273,7 +274,7 @@ impl Core {
                 let result = dev_mut.handle_event(self, ep);
                 self.device[id] = Some(dev_mut);
                 #[cfg(debug_assertions)]
-                self.trace_event(ep, UNDEF);  // trace transactional effect(s)
+                self.call_trace_event(ep, UNDEF);  // trace transactional effect(s)
                 return result
             }
         } else {
@@ -716,7 +717,7 @@ impl Core {
             },
             VM_END => {
                 #[cfg(debug_assertions)]
-                self.trace_event(self.ep(), self.kp());  // trace transactional effect(s)
+                self.call_trace_event(self.ep(), self.kp());  // trace transactional effect(s)
                 let me = self.self_ptr();
                 let rv = match imm {
                     END_ABORT => {
