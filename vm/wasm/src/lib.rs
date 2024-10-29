@@ -7,6 +7,8 @@ use ::core::cell::RefCell;
 pub mod host;
 pub mod debug_dev;
 pub mod clock_dev;
+pub mod timer_dev;
+pub mod io_dev;
 pub mod random_dev;
 pub mod host_dev;
 

@@ -8,7 +8,6 @@ pub mod core;
 pub mod null_dev;
 pub mod fail_dev;
 pub mod blob_dev;
-pub mod device;
 
 use crate::any::*;
 use crate::core::*;
