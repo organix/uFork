@@ -2,64 +2,6 @@
 
 use crate::*;
 
-pub struct ClockDevice {
-    pub read_clock: fn() -> Any,
-}
-impl Default for ClockDevice {
-    fn default() -> Self {
-        Self {
-            read_clock: || Any::new(0),
-        }
-    }
-}
-impl Device for ClockDevice {
-    fn handle_event(&mut self, core: &mut Core, ep: Any) -> Result<(), Error> {
-        let event = core.mem(ep);
-        let sponsor = event.t();
-        let cust = event.y();  // cust
-        let now = (self.read_clock)();
-        let evt = core.reserve_event(sponsor, cust, now)?;
-        core.event_enqueue(evt);
-        Ok(())  // event handled.
-    }
-}
-
-pub struct RandomDevice {
-    pub get_random: fn(Any, Any) -> Any,
-}
-impl Default for RandomDevice {
-    fn default() -> Self {
-        Self {
-            get_random: |_, _| Any::new(0),
-        }
-    }
-}
-impl Device for RandomDevice {
-    fn handle_event(&mut self, core: &mut Core, ep: Any) -> Result<(), Error> {
-        let event = core.mem(ep);
-        let sponsor = event.t();
-        let msg = event.y();  // cust | (cust . limit) | (cust a . b)
-        let cust = if msg.is_cap() {
-            msg
-        } else {
-            core.nth(msg, PLUS_1)
-        };
-        let limit = core.nth(msg, MINUS_1);
-        let a = core.nth(msg, PLUS_2);
-        let b = core.nth(msg, MINUS_2);
-        let random = if msg.is_cap() {
-            (self.get_random)(UNDEF, UNDEF)
-        } else if limit.is_fix() {
-            (self.get_random)(limit, UNDEF)
-        } else {
-            (self.get_random)(a, b)
-        };
-        let evt = core.reserve_event(sponsor, cust, random)?;
-        core.event_enqueue(evt);
-        Ok(())  // event handled.
-    }
-}
-
 pub struct IoDevice {
     pub write: fn (code: Any) -> Any,
     pub read: fn (stub: Any) -> Any,
@@ -184,33 +126,5 @@ impl Device for TimerDevice {
             }
         }
         Ok(())  // event handled.
-    }
-}
-
-pub struct HostDevice {
-    pub to_host: fn(Any) -> Error,
-}
-impl Default for HostDevice {
-    fn default() -> Self {
-        Self {
-            to_host: |_| E_OK,
-        }
-    }
-}
-impl Device for HostDevice {
-    fn handle_event(&mut self, core: &mut Core, ep: Any) -> Result<(), Error> {
-        let event = core.mem(ep);
-        let device = event.x();
-        let event_stub = core.reserve_stub(device, ep)?;
-        match (self.to_host)(event_stub) {
-            E_OK => Ok(()),
-            code => {
-                core.release_stub(event_stub);
-                Err(code)
-            }
-        }
-    }
-    fn drop_proxy(&mut self, _core: &mut Core, proxy: Any) {
-        (self.to_host)(proxy);
     }
 }

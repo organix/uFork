@@ -6,6 +6,9 @@ use ::core::cell::RefCell;
 
 pub mod host;
 pub mod debug_dev;
+pub mod clock_dev;
+pub mod random_dev;
+pub mod host_dev;
 
 use ufork::{any::Any, quad::Quad, Error, Raw};
 
