@@ -297,10 +297,10 @@ mod tests {
     #[test]
     fn blob_dev_can_be_statically_allocated() {
         static mut DEV: BlobDevice = BlobDevice::new();
-        let mut core = Core::default();
+        static mut CORE: Core = Core::new();
         unsafe {
-            DEV.init();
-            DEV.drop_proxy(&mut core, UNDEF);
+            CORE.init();
+            CORE.install_device(BLOB_DEV, ::alloc::boxed::Box::new(DEV));
         }
         assert_ne!(0, ::core::mem::size_of::<BlobDevice>());
     }

@@ -9,18 +9,16 @@ debug_key:
     ref 0
 clock_key:
     ref 1
-io_key:
-    ref 2
-blob_key:
-    ref 3
 timer_key:
+    ref 2
+io_key:
+    ref 3
+blob_key:
     ref 4
-memo_key:
+random_key:
     ref 5
 host_key:
-    ref 6
-random_key:
-    ref 7
+    ref 12
 
 ; Dynamic devices. These are provided by the host device.
 
@@ -123,12 +121,11 @@ boot:                       ; _ <- {caps}
 .export
     debug_key
     clock_key
+    timer_key
     io_key
     blob_key
-    timer_key
-    memo_key
-    host_key
     random_key
+    host_key
     awp_key
     intro_tag
     listen_tag
