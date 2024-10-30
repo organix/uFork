@@ -156,12 +156,11 @@ const MEMORY_OFS = 0;
 const DDEQUE_OFS = 1;
 const DEBUG_DEV_OFS = 2;
 const CLOCK_DEV_OFS = 3;
-const IO_DEV_OFS = 4;
-const BLOB_DEV_OFS = 5;
-const TIMER_DEV_OFS = 6;
-const MEMO_DEV_OFS = 7;
-const HOST_DEV_OFS = 8;
-const RANDOM_DEV_OFS = 9;
+const TIMER_DEV_OFS = 4;
+const IO_DEV_OFS = 5;
+const BLOB_DEV_OFS = 6;
+const RANDOM_DEV_OFS = 7;
+const HOST_DEV_OFS = 14;
 const SPONSOR_OFS = 15;
 
 // Error codes (from core.rs)
@@ -1810,12 +1809,11 @@ export default Object.freeze({
     DDEQUE_OFS,
     DEBUG_DEV_OFS,
     CLOCK_DEV_OFS,
+    TIMER_DEV_OFS,
     IO_DEV_OFS,
     BLOB_DEV_OFS,
-    TIMER_DEV_OFS,
-    MEMO_DEV_OFS,
-    HOST_DEV_OFS,
     RANDOM_DEV_OFS,
+    HOST_DEV_OFS,
     SPONSOR_OFS,
     E_OK,
     E_FAIL,
