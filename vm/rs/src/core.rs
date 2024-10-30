@@ -1065,13 +1065,6 @@ impl Core {
         };
         n
     }
-    fn push_list(&mut self, ptr: Any) -> Result<(), Error> {
-        if self.typeq(PAIR_T, ptr) {
-            self.push_list(self.cdr(ptr))?;
-            self.stack_push(self.car(ptr))?;
-        }
-        Ok(())
-    }
     fn pop_counted(&mut self, n: isize) -> Any {
         if n > 0 {  // build list from stack
             let mut n = n;
