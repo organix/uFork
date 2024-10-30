@@ -21,17 +21,6 @@ test_pairs:
     assert #?               ; 3
     drop 0                  ; 3
     assert 3                ; --
-    part -1                 ; --
-    assert #?               ; --
-    push #nil               ; ()
-    part -1                 ; --
-    assert #?               ; --
-    push #nil               ; ()
-    push 1                  ; () 1
-    pair 1                  ; (1)
-    part -1                 ; 1
-    assert 1                ; --
-    assert #?               ; --
 test_if:
     part 1                  ; #? #?
     drop 1                  ; #?

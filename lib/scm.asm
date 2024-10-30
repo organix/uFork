@@ -129,7 +129,7 @@ spread_done:                ; × vₙ … v₁ k ()
 ;    actor send          ; --
 
 ; Prefix to create/become continuation
-;    pair -1             ; sp'=(...)
+;    call gather         ; sp'=(...)
 ;    state -1            ; sp' env
 ;    push cont           ; sp' env cont
 ;    msg 0               ; sp' env cont msg
@@ -154,7 +154,7 @@ continuation:               ; (msg cont env . sp) <- rv
 ; Suffix to restore stack and continue
 ;cont:                   ; (sp . env) <- (cust . args)
 ;    state 1             ; sp=(...)
-;    part -1             ; ...
+;    call spread         ; × ...
 ;    ref <k>
 
 ;

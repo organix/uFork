@@ -309,9 +309,7 @@ _n_ _m_              | `cmp` `gt`          | _bool_       | `#t` if _n_ > _m_, o
 _bool_               | `if` _T_ [_F_]      | —            | if _bool_ is not falsy<sup>*</sup>, continue _T_ (else _F_)
 _k_                  | `jump`              | —            | continue at _k_
 … _tail_ _head_      | `pair` _n_          | _pair_       | create _pair(s)_ from _head_ and _tail_ (_n_ times)
-_vₙ_ … _v₁_          | `pair` -1           | (_v₁_ … _vₙ_) | capture stack items as a single _pair_ list
 _pair_               | `part` _n_          | … _tail_ _head_ | split _pair_ into _head_ and _tail_ (_n_ times)
-(_v₁_ … _vₙ_)        | `part` -1           | _vₙ_ … _v₁_   | spread _pair_ list items onto stack
 (_v₁_ … _vₙ_ . _tailₙ_) | `nth` _n_         | _vₙ_         | copy item _n_ from a _pair_ list
 (_v₁_ … _vₙ_ . _tailₙ_) | `nth` -_n_        | _tailₙ_      | copy tail _n_ from a _pair_ list
 _dict_ _key_         | `dict` `has`        | _bool_       | `#t` if _dict_ has a binding for _key_, otherwise `#f`
@@ -342,7 +340,6 @@ _quad_               | `quad` `-4`         | _Z_ _Y_ _X_ _T_ | extract 4 _quad_ 
 —                    | `state` -_n_        | _tailₙ_      | copy state tail _n_ to stack
 —                    | `my` `self`         | _actor_      | push _actor_ address on stack
 —                    | `my` `beh`          | _beh_        | push _actor_ behavior on stack
-—                    | `my` `state`        | _vₙ_ … _v₁_  | spread _actor_ state onto stack
 _msg_ _actor_        | `actor` `send`      | —            | send _msg_ to _actor_
 _spn_ _msg_ _actor_  | `actor` `post`      | —            | send _msg_ to _actor_ using sponsor _spn_
 _state_ _beh_        | `actor` `create`    | _actor_      | create an _actor_ with code _beh_ and data _state_
@@ -1282,7 +1279,6 @@ Copy data from the current message-event.
 ---------------------|---------------------|--------------|-------------------------------------
 —                    | `my` `self`         | _actor_      | push _actor_ address on stack
 —                    | `my` `beh`          | _beh_        | push _actor_ behavior on stack
-—                    | `my` `state`        | _vₙ_ … _v₁_  | spread _actor_ state onto stack
 
 Copy data relating to the current actor
 (see [`new`](#new-instruction), [`beh`](#beh-instruction), and [`state`](#state-instruction)).
@@ -1298,13 +1294,6 @@ Copy data relating to the current actor
  `#instr_t`   | `+12` (my)    | `+1` (beh)    | _instr_
 
  1. Push the current actor's code address onto the stack
-
- T            | X (op)        | Y (imm)       | Z (k)
---------------|---------------|---------------|-------------
- `#instr_t`   | `+12` (my)    | `+2` (state)  | _instr_
-
- 1. Let _list_ be the current actor's data
- 1. Push `part(-1, list)` onto the stack
 
 #### `new` instruction
 
@@ -1407,7 +1396,6 @@ Extract data from a pair-list.
  Input               | Instruction         | Output       | Description
 ---------------------|---------------------|--------------|-------------------------------------
 … _tail_ _head_      | `pair` _n_          | _pair_       | create _pair(s)_ from _head_ and _tail_ (_n_ times)
-_vₙ_ … _v₁_          | `pair` -1           | (_v₁_ … _vₙ_) | capture stack items as a single _pair_ list
 
 Create a pair-list from some number of stack items.
 
@@ -1439,18 +1427,13 @@ Create a pair-list from some number of stack items.
 --------------|---------------|-------------|-------------
  `#instr_t`   | `+17` (pair)  | _negative_  | _instr_
 
- 1. If _negative_ is `-1`
-    1. Let _list_ be the stack pointer
-    1. Let the stack pointer become `cons(list, #nil)`
- 1. Otherwise
-    1. Push `#?` onto the stack
+ 1. Push `#?` onto the stack
 
 #### `part` instruction
 
  Input               | Instruction         | Output       | Description
 ---------------------|---------------------|--------------|-------------------------------------
 _pair_               | `part` _n_          | … _tail_ _head_ | split _pair_ into _head_ and _tail_ (_n_ times)
-(_v₁_ … _vₙ_)        | `part` -1           | _vₙ_ … _v₁_   | spread _pair_ list items onto stack
 
 Split items from a pair-list onto the stack.
 
@@ -1474,13 +1457,7 @@ Split items from a pair-list onto the stack.
 --------------|---------------|---------------|-------------
  `#instr_t`   | `+18` (part)  | _negative_    | _instr_
 
- 1. If _negative_ is `-1`
-    1. Remove _pair_ from the stack
-    1. Let _copy_ be `#nil`
-    1. [Copy](#Copy-onto) _pair_ onto _copy_
-    1. [Reverse](#Reverse-onto) _copy_ onto the stack
- 1. Otherwise
-    1. Push `#?` onto the stack
+ 1. Push `#?` onto the stack
 
 #### `pick` instruction
 

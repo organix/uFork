@@ -355,10 +355,6 @@ impl Quad {
         assert!(k.is_ptr());
         Self::vm_my(MY_BEH, k)
     }
-    pub fn vm_my_state(k: Any) -> Quad {
-        assert!(k.is_ptr());
-        Self::vm_my(MY_STATE, k)
-    }
 
     // construct VM_ACTOR instructions
     pub fn vm_actor_send(k: Any) -> Quad {
