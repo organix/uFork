@@ -107,7 +107,7 @@ contexts:
         1: keyword.operator.word.uforkasm
         2: keyword.operator.word.uforkasm
       push: operand_list
-    - match: '^{{spaces}}(my){{spaces}}(self|beh|state)\b'
+    - match: '^{{spaces}}(my){{spaces}}(self|beh)\b'
       captures:
         1: keyword.operator.word.uforkasm
         2: keyword.operator.word.uforkasm

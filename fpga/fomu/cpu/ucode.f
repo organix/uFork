@@ -1573,9 +1573,6 @@ del_none:                   ; k orig key rev next value' key'
     imm@ #1 = IF            ( D: sp self )
         QX@ push_result ;
     THEN
-    imm@ #2 = IF            ( D: sp self )
-        2DROP               ( TODO: implement state spread onto stack )
-    THEN
     E_BOUNDS ;
 
 : op_msg ( -- ip' | error )

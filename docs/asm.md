@@ -242,7 +242,6 @@ _quad_               | `quad` `-4`         | _Z_ _Y_ _X_ _T_ | extract 4 _quad_ 
 —                    | `state` -_n_        | _tailₙ_      | copy state tail _n_ to stack
 —                    | `my` `self`         | _actor_      | push _actor_ address on stack
 —                    | `my` `beh`          | _beh_        | push _actor_ behavior on stack
-—                    | `my` `state`        | _vₙ_ … _v₁_  | spread _actor_ state onto stack
 _msg_ _actor_        | `actor` `send`      | —            | send _msg_ to _actor_
 _spn_ _msg_ _actor_  | `actor` `post`      | —            | send _msg_ to _actor_ using sponsor _spn_
 _state_ _beh_        | `actor` `create`    | _actor_      | create an _actor_ with code _beh_ and data _state_

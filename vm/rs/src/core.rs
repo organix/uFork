@@ -634,10 +634,6 @@ impl Core {
                         let beh = self.ram(me).x();
                         self.stack_push(beh)?;
                     },
-                    MY_STATE => {
-                        let state = self.ram(me).y();
-                        self.push_list(state)?;
-                    },
                     _ => {
                         return Err(E_BOUNDS);  // unknown MY op
                     }
