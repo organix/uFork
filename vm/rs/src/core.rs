@@ -1351,11 +1351,7 @@ impl Core {
             let t = self.stack_pop();
             self.set_cdr(p, t);
             self.stack_push(lst)?;
-        } else if n == -1 {
-            // capture entire stack
-            let sp = self.cons(self.sp(), NIL)?;
-            self.set_sp(sp);
-        } else if n != 0 {
+        } else if n < 0 {
             self.stack_push(UNDEF)?;
         }
         Ok(())
@@ -1377,19 +1373,8 @@ impl Core {
             let t = self.cons(self.cdr(s), self.sp())?;
             self.set_cdr(p, t);
             self.set_sp(lst);
-        } else if (n == -1) && self.typeq(PAIR_T, s) {
-            // spread entire list
-            let lst = self.cons(self.car(s), NIL)?;
-            s = self.cdr(s);
-            let mut p = lst;
-            while self.typeq(PAIR_T, s) {
-                let q = self.cons(self.car(s), NIL)?;
-                self.set_cdr(p, q);
-                p = q;
-                s = self.cdr(s);
-            }
-            self.set_cdr(p, self.sp());
-            self.set_sp(lst);
+        } else if n < 0 {
+            self.stack_push(UNDEF)?;
         }
         Ok(())
     }
