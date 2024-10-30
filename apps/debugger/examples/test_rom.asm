@@ -2,8 +2,9 @@
 
 boot:                       ; _ <- {caps}
 test_pairs:
-    pair 0                  ; ()
-    assert #nil             ; --
+    push 422                ; 422
+    pair 0                  ; 422
+    assert 422              ; --
     push 3                  ; 3
     push 2                  ; 3 2
     pair 1                  ; (2 . 3)

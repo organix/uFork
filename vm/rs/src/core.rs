@@ -1351,13 +1351,11 @@ impl Core {
             let t = self.stack_pop();
             self.set_cdr(p, t);
             self.stack_push(lst)?;
-        } else if n == 0 {
-            self.stack_push(NIL)?;
         } else if n == -1 {
             // capture entire stack
             let sp = self.cons(self.sp(), NIL)?;
             self.set_sp(sp);
-        } else {
+        } else if n != 0 {
             self.stack_push(UNDEF)?;
         }
         Ok(())

@@ -1069,7 +1069,7 @@ To Copy fixnum:n of list onto head:
             capture_stack ;
         THEN                ( D: n )
         DUP 0= IF
-            DROP nil_result ;
+            DROP k@ ;       ( no effect )
         THEN
         DUP -1 = IF
             DROP capture_stack ;

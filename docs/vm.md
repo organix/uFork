@@ -1415,7 +1415,7 @@ Create a pair-list from some number of stack items.
 --------------|---------------|-------------|-------------
  `#instr_t`   | `+17` (pair)  | `+0`        | _instr_
 
- 1. Push `()` onto the stack
+ 1. No effect
 
  T (type)     | X (op)        | Y (imm)     | Z (k)
 --------------|---------------|-------------|-------------
