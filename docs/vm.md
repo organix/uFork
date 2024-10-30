@@ -1462,7 +1462,7 @@ Split items from a pair-list onto the stack.
 
  T            | X (op)        | Y (imm)       | Z (k)
 --------------|---------------|---------------|-------------
- `#instr_t`   | `+18` (part)  | _n_           | _instr_
+ `#instr_t`   | `+18` (part)  | _positive_    | _instr_
 
  1. Remove _pair_ from the stack
  1. Let _copy_ be `#nil`
