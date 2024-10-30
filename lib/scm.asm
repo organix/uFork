@@ -68,6 +68,46 @@ beh_3:                      ; ( [_, _, _, beh] -- )
     ref beh_return
 
 ;
+; Stack gathering and spreading.
+;
+
+stack_bottom:               ; ×
+    pair_t #? #?
+
+gather:                     ; ( × vₙ … v₁ -- sp )
+    push #nil               ; × vₙ … v₂ v₁ k sp=()
+    roll -2                 ; × vₙ … v₂ v₁ sp k
+gather_loop:
+    roll 3                  ; × vₙ … v₂ sp k v₁
+    dup 1                   ; × vₙ … v₂ sp k v₁ v₁
+    push stack_bottom       ; × vₙ … v₂ sp k v₁ v₁ ×
+    cmp eq                  ; × vₙ … v₂ sp k v₁ v₁==×
+    if gather_done          ; × vₙ … v₂ sp k v₁
+    roll 3                  ; × vₙ … v₂ k v₁ sp
+    roll 2                  ; × vₙ … v₂ k sp v₁
+    pair 1                  ; × vₙ … v₂ k sp'=(v₁ . sp)
+    roll -2                 ; × vₙ … v₂ sp' k
+    ref gather_loop
+gather_done:                ; sp k v₁
+    drop 1                  ; sp k
+    return
+
+spread:                     ; ( sp -- × vₙ … v₁ )
+    roll -2                 ; k sp
+    push stack_bottom       ; k sp ×
+    roll -3                 ; × k sp
+spread_loop:                ; × vₙ … vₘ k sp
+    dup 1                   ; × vₙ … vₘ k sp sp
+    typeq #pair_t           ; × vₙ … vₘ k sp is_pair(sp)
+    if_not spread_done      ; × vₙ … vₘ k sp=(vₘ₋₁ . sp')
+    part 1                  ; × vₙ … vₘ k sp' vₘ₋₁
+    roll -3                 ; × vₙ … vₘ vₘ₋₁ k sp'
+    ref spread_loop
+spread_done:                ; × vₙ … v₁ k ()
+    drop 1                  ; × vₙ … v₁ k
+    return
+
+;
 ; Continuations for non-tail function calls
 ;
 
@@ -101,8 +141,9 @@ beh_3:                      ; ( [_, _, _, beh] -- )
 continuation:               ; (msg cont env . sp) <- rv
     state 3                 ; env
     state -3                ; env sp
-    msg 0                   ; env sp rv
-    pair 1                  ; env sp'=(rv . sp)
+    call spread             ; env × vₙ … v₁
+    msg 0                   ; env × vₙ … v₁ rv
+    call gather             ; env sp'
     pair 1                  ; (sp' . env)
     state 2                 ; (sp' . env) cont
     actor become            ; -- SELF=cont.(sp' . env)
@@ -253,9 +294,7 @@ assert:                     ; expect <- actual
     assert #t               ; assert(expect==actual)
     ref std.commit
 
-;
-; Boot code runs when the module is loaded (but not when imported).
-;
+; Test suite
 
 boot:                       ; _ <- {caps}
     msg 0                   ; {caps}
@@ -283,6 +322,18 @@ act:
     dup 2                   ; (referee) counter (referee) counter
     actor send              ; (referee) counter
     actor send              ; --
+
+    push stack_bottom       ; ×
+    push 1                  ; × 1
+    push 2                  ; × 1 2
+    push 3                  ; × 1 2 3
+    call gather             ; sp=(1 2 3)
+    call spread             ; × 1 2 3
+    assert 3                ; × 1 2
+    assert 2                ; × 1
+    assert 1                ; ×
+    assert stack_bottom     ; --
+    assert #?               ; --!  // stack empty
     ref std.commit
 
 .export
@@ -294,6 +345,9 @@ act:
     closure_t
     behavior_t
     empty_env
+    stack_bottom
+    gather
+    spread
     continuation
     imm_actor
     mut_actor
