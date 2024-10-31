@@ -214,7 +214,7 @@ in a single CPU-instruction cycle.
 
       7   6   5   4   3   2   1   0
     *---+---+---+---*---+---+---+---*
-    |     device ID |  register ID  |
+    |    device ID  |  register ID  |
     *---+---+---+---*---+---+---+---*
 
   * `0x`: Serial UART

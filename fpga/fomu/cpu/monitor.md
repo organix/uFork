@@ -1,6 +1,6 @@
 # uCode Monitor
 
-Then run the `screen` program (or equivalent)
+Run the `screen` program (or equivalent)
 and connect to the serial debugging port
 at 115200 baud, 8 bits, no parity.
 

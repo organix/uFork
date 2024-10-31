@@ -10,6 +10,16 @@ Considerable inspiration was taken from
 the [`J1`](https://www.excamera.com/files/j1.pdf) CPU and
 [`J1a SwapForth`](https://github.com/jamesbowman/swapforth/tree/master/j1a).
 
+## Documentation
+
+  * [uCode processor design](cpu.md)
+  * [uCode Forth programming language](ucode.md)
+  * [Interactive hardware monitor](monitor.md)
+
+## Sample CPU Trace (Simulated)
+
+![CPU Trace](sample_cpu_trace.png)
+
 ## Build and Deploy
 
 We use a `Makefile` to define the build process.
@@ -78,10 +88,6 @@ to the serial port at your desired baud-rate.
 
 Use the key sequence `Ctrl-a + k` to kill the terminal session.
 
-## Sample CPU Trace (Simulated)
-
-![CPU Trace](sample_cpu_trace.png)
-
 ## uCode Programming Tools
 
 Various JavaScript-based tools are available
@@ -102,3 +108,21 @@ with console i/o connected to the simulated UART.
 The simulator can also load and run a memory-image file.
 
     deno run --allow-read ucode_sim_cli.js ucode_rom.mem
+
+### Web-based Tools
+
+If the [Replete server](https://github.com/organix/uFork#how-to-run) is running,
+an interactive uCode debugger is available.
+
+[http://localhost:3675/fpga/fomu/cpu/ucode_dbg.html]()
+
+Paste your uCode/Forth source program into the _Source_ panel
+and hit the **Compile** button to generate a _Memory_ image.
+The resulting program can be single-stepped
+or run with a variable delay (default: none).
+A breakpoint can be set (in hexadecimal)
+which will pause before executing the instruction
+at the specific `PC` (program counter) value.
+Stack and memory contents are displayed at all times.
+A simulated _Console I/O_ device is connected to
+controls on the page.
