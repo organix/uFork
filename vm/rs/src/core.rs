@@ -39,13 +39,10 @@ const QUAD_ROM_MAX: usize = 1<<13;  // 8K quad-cells of ROM (FPGA size)
 const QUAD_RAM_MAX: usize = 1<<12;   // 4K quad-cells of RAM (FPGA size)
 const DEVICE_MAX:   usize = 13;     // number of Core devices
 
-pub struct Core <
-    const QUAD_ROM_SIZE: usize = QUAD_ROM_MAX,
-    const QUAD_RAM_SIZE: usize = QUAD_RAM_MAX,
-> {
-    quad_rom:   [Quad; QUAD_ROM_SIZE],
-    quad_ram:   [Quad; QUAD_RAM_SIZE],
-    gc_queue:   [Any; QUAD_RAM_SIZE],
+pub struct Core {
+    quad_rom:   [Quad; QUAD_ROM_MAX],
+    quad_ram:   [Quad; QUAD_RAM_MAX],
+    gc_queue:   [Any; QUAD_RAM_MAX],
     gc_state:   Any,
     rom_top:    Any,
     device:     [Option<Box<dyn Device>>; DEVICE_MAX],
