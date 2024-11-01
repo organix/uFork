@@ -10,7 +10,7 @@
 {
     pkgs ? import (
         fetchTarball
-        "https://github.com/NixOS/nixpkgs/archive/64b80bfb316b.tar.gz"
+        "https://github.com/NixOS/nixpkgs/archive/2d2a9ddbe3f2.tar.gz"
     ) {}
 }:
 
