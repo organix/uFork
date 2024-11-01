@@ -7,7 +7,7 @@
 
 // Public Domain.
 
-/*jslint browser */
+/*jslint browser, global */
 
 function find(node, callback) {
     let result = callback(node);
@@ -362,7 +362,7 @@ function ed({
 //debug console.log("Rendering in ShadowRoot");
 //debug const shadow = document.body.attachShadow({mode: "closed"});
 //debug shadow.append(source, preview);
-//debug //console.log("Rendering in window.document");
+//debug //console.log("Rendering in document");
 //debug //document.body.append(source, preview);
 //debug const caret_anchor = "▶";
 //debug const caret_focus = "◀";
@@ -513,7 +513,7 @@ function ed({
 //debug         console.log(JSON.stringify(text));
 //debug     }
 //debug });
-//debug window.oninput = refresh_preview;
+//debug globalThis.oninput = refresh_preview;
 //debug document.onselectionchange = refresh_preview;
 //debug refresh_preview();
 

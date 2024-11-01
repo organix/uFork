@@ -14,7 +14,7 @@
 // Alternatively, install the GNU toolchain described at
 // https://rust-lang.github.io/rustup/installation/windows.html.
 
-/*jslint deno */
+/*jslint deno, global */
 
 import {fromFileUrl} from "https://deno.land/std@0.203.0/path/from_file_url.ts";
 import parseq from "https://ufork.org/lib/parseq.js";
@@ -57,7 +57,7 @@ function log_size(file_url) {
         return Deno.stat(file_url).then(function (info) {
             const name = file_url.pathname.split("/").pop();
             const kilobytes = Math.round(info.size / 1000) + "K";
-            window.console.log(kilobytes, name);
+            globalThis.console.log(kilobytes, name);
         });
     }, true);
 }
@@ -137,7 +137,7 @@ tasks.push(parseq.parallel([
 ]));
 parseq.sequence(tasks)(function callback(value, reason) {
     if (value === undefined) {
-        window.console.error(reason);
+        globalThis.console.error(reason);
         Deno.exit(1);
     }
 });

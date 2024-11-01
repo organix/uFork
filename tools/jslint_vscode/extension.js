@@ -53,8 +53,6 @@ function activate(context) {
         if (window.activeTextEditor !== undefined) {
             lint(window.activeTextEditor.document, diagnostics);
         }
-    }).catch(function (error) {
-        console.error("Failed to load JSLint.", error);
     });
 }
 

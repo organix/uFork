@@ -17,7 +17,7 @@ function indexed_db(
         }
 
         try {
-            const open_request = window.indexedDB.open(db_name, db_version);
+            const open_request = indexedDB.open(db_name, db_version);
             open_request.onupgradeneeded = function (event) {
                 on_upgrade(open_request.result, event.oldVersion);
             };

@@ -223,7 +223,7 @@ function compile(text, src = "") {
         "BEGIN": function () {                          // ( -- )
             // begin indefinite loop
             const addr = prog.length;
-//debug console.log("compile_indefinite_loop:", "$"+hex.from(addr, 12));
+//debug console.log("compile_indefinite_loop:", "$" + hex.from(addr, 12));
             const word = uc_jump(addr);  // placeholder
             ctrl_ctx.push(word);
         },
@@ -250,7 +250,7 @@ function compile(text, src = "") {
             // begin counted loop
             prog.push(UC_TO_R);
             const addr = prog.length;
-//debug console.log("compile_countdown_loop:", "$"+hex.from(addr, 12));
+//debug console.log("compile_countdown_loop:", "$" + hex.from(addr, 12));
             const word = uc_dec_jnz(addr);  // placeholder
             ctrl_ctx.push(word);
             prog.push(word);
@@ -259,7 +259,7 @@ function compile(text, src = "") {
             // begin counted loop
             prog.push(UC_TO_R);
             const addr = prog.length;
-//debug console.log("compile_countup_loop:", "$"+hex.from(addr, 12));
+//debug console.log("compile_countup_loop:", "$" + hex.from(addr, 12));
             const word = uc_inc_jnz(addr);  // placeholder
             ctrl_ctx.push(word);
             prog.push(word);
@@ -274,7 +274,7 @@ function compile(text, src = "") {
         },
         "AGAIN": function () {                          // ( -- )
             // end infinite or counted loop
-//debug console.log("compile_again:", "$"+hex.from(prog.length, 12));
+//debug console.log("compile_again:", "$" + hex.from(prog.length, 12));
             const word = ctrl_ctx.pop();
             const addr = word & ADDR_MASK;
             if (uc_is_auto(word)) {
@@ -286,14 +286,14 @@ function compile(text, src = "") {
         },
         "IF": function () {                             // ( cond -- )
             // begin conditional
-//debug console.log("compile_if:", "$"+hex.from(prog.length, 12));
+//debug console.log("compile_if:", "$" + hex.from(prog.length, 12));
             const word = uc_jz(prog.length);  // placeholder
             ctrl_ctx.push(word);
             prog.push(word);
         },
         "ELSE": function () {                           // ( -- )
             // begin alternative
-//debug console.log("compile_else:", "$"+hex.from(prog.length, 12));
+//debug console.log("compile_else:", "$" + hex.from(prog.length, 12));
             const addr = ctrl_ctx.pop() & ADDR_MASK;
             prog[addr] = uc_jz(prog.length + 1);  // patch
             const word = uc_jump(prog.length);  // placeholder
@@ -302,7 +302,7 @@ function compile(text, src = "") {
         },
         "THEN": function () {                           // ( -- )
             // end conditional
-//debug console.log("compile_then:", "$"+hex.from(prog.length, 12));
+//debug console.log("compile_then:", "$" + hex.from(prog.length, 12));
             const word = ctrl_ctx.pop();
             const addr = word & ADDR_MASK;
             prog[addr] = uc_fixup(word, prog.length);  // patch
@@ -596,11 +596,13 @@ function from_uf(uf) {
 //debug console.log(disasm(0xA252));
 //debug console.log(disasm(0x5100, {DROP: 0x0100}));
 
-//debug console.log("["
-//debug     + parse_memh("  C0de // Data?")
-//debug         .map((n) => "0x" + hex.from(n, 16))
-//debug         .join(", ")
-//debug     + "]");
+//debug console.log(
+//debug     "["
+//debug     + parse_memh("  C0de // Data?").map(
+//debug         (n) => "0x" + hex.from(n, 16)
+//debug     ).join(", ")
+//debug     + "]"
+//debug );
 
 //debug const test_memh = `
 //debug /*  CODE    ADR  DISASM                  NAMES                     */
@@ -617,17 +619,15 @@ function from_uf(uf) {
 //debug     c003 // 00a: COUNTER
 //debug     598f // 00b: ! EXIT
 //debug `;
-//debug const img = parse_memh(test_memh);
-//debug console.log(img.map(function (number, index) {
+//debug const test_memh_img = parse_memh(test_memh);
+//debug console.log(test_memh_img.map(function (number, index) {
 //debug     return hex.from(index, 12) + ": " + hex.from(number, 16);
 //debug }).join("\n"));
 
-//debug const simple_source = ": BOOT R@ DROP BOOT ;";
 //debug const multiline_source = String.raw`
 //debug 0x0A CONSTANT '\n'
 //debug 0x0FFF CONSTANT ADDR_MASK
 //debug VARIABLE COUNTER
-//debug
 //debug : ADJUST ( n -- n+COUNTER )
 //debug     COUNTER @ +
 //debug     DUP COUNTER ! ;
@@ -661,12 +661,10 @@ function from_uf(uf) {
 //debug : store ( data addr -- )
 //debug     @ ;
 //debug : Hello 72 , 101 , 108 , 108 , 111 ,
-//debug
 //debug ( WARNING! BOOT should not return... )
 //debug : BOOT
 //debug     R> DROP BOOT`;
-// const source = simple_source;
-//debug const source = multiline_source;
+//debug const source = multiline_source;  // or ": BOOT R@ DROP BOOT ;"
 //debug console.log(source);
 //debug const {errors, words, prog} = compile(source);
 //debug if (errors !== undefined && errors.length > 0) {

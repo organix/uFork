@@ -1,11 +1,11 @@
 // A Node.js port of the signalling server. See websockets_signalling_server.js
 // for a description of the protocol.
 
-// This module really should live in ../../vm/js, but Node.js refuses to load
-// modules over the network so there is no benefit to hosting the source at
+// This module really should live in ../../vm/js, but since Node.js refuses to
+// load modules over the network there is no benefit to hosting the source at
 // https://ufork.org.
 
-/*jslint node, deno, browser */
+/*jslint node, browser, global */
 
 import websocketify from "./websocketify.js";
 
@@ -137,7 +137,10 @@ function websockets_signalling_server(http_server, on_error) {
 //debug const hostname = "localhost";
 //debug const port = 4455;
 //debug const origin = "ws://" + hostname + ":" + port;
-//debug const browser = typeof window === "object" && typeof Deno !== "object";
+//debug const browser = (
+//debug     globalThis.window !== undefined
+//debug     && globalThis.Deno === undefined
+//debug );
 //debug if (browser) {
 //debug     const alice = new WebSocket(
 //debug         origin + "/connect?name=bob&signal=\"ALICE OFFER\""
@@ -175,7 +178,7 @@ function websockets_signalling_server(http_server, on_error) {
 //debug     // bob_mobile.close();
 //debug }
 
-// Run the whole demo in Node.js.
+// Run the whole demo in Node.js or Deno.
 
 //debug import http from "node:http";
 //debug const server = http.createServer(function (req, res) {

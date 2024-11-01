@@ -141,7 +141,7 @@ function identity_to_name(identity) {
 
 function generate_certificate() {
     return unpromise(function () {
-        return window.RTCPeerConnection.generateCertificate({
+        return RTCPeerConnection.generateCertificate({
             name: "ECDSA",
             namedCurve: "P-256",
             expires: 31536000000 // one year is the maximum
@@ -157,9 +157,7 @@ function get_fingerprints() {
 
     return parseq.sequence([
         unpromise(function (certificate) {
-            const peer = new window.RTCPeerConnection(
-                {certificates: [certificate]}
-            );
+            const peer = new RTCPeerConnection({certificates: [certificate]});
             peer.createDataChannel("");
             return peer.createOffer();
         }),
@@ -284,7 +282,7 @@ function webrtc_transport(signaller, log) {
             }
 
             try {
-                peer = new window.RTCPeerConnection({
+                peer = new RTCPeerConnection({
                     certificates: [identity.certificate],
                     iceServers: ice_servers
                 });
@@ -423,7 +421,7 @@ function webrtc_transport(signaller, log) {
 
 // Make a new RTCPeerConnection object that expects a single data channel.
 
-                    peer = new window.RTCPeerConnection({
+                    peer = new RTCPeerConnection({
                         certificates: [identity.certificate],
                         iceServers: ice_servers
                     });

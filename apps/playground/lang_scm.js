@@ -44,57 +44,47 @@ function highlight(element) {
             position = error.end;
         });
         element.append(text.slice(position));  // remnant
-    } else {
+        return;
+    }
 
 // Rainbow parens, pending detailed token information.
 
-        let depth = 0;
-        let mode = source_mode;
-
-        function source_mode(glyph) {
-            if (glyph === ";") {
-                mode = comment_mode;
-                mode(glyph);
-            } else if (glyph === "(") {
-                const open = dom("span", {
-                    textContent: glyph,
-                    style: {color: rainbow[depth % rainbow.length]}
-                });
-                element.append(open);
-                depth += 1;
-            } else if (glyph === ")") {
-                depth -= 1;
-                const close = dom("span", {
-                    textContent: glyph,
-                    style: {color: rainbow[depth % rainbow.length]}
-                });
-                element.append(close);
-            } else {
-                const char = dom("span", {
-                    textContent: glyph,
-                    style: {color: theme.blue}
-                });
-                element.append(char);
-            }
+    let depth = 0;
+    let in_comment = false;
+    Array.from(text).forEach(function (glyph) {
+        in_comment = (
+            in_comment
+            ? glyph !== "\n"
+            : glyph === ";"
+        );
+        if (in_comment) {
+            const dim = dom("span", {
+                textContent: glyph,
+                style: {color: theme.silver}
+            });
+            element.append(dim);
+        } else if (glyph === "(") {
+            const open = dom("span", {
+                textContent: glyph,
+                style: {color: rainbow[depth % rainbow.length]}
+            });
+            element.append(open);
+            depth += 1;
+        } else if (glyph === ")") {
+            depth -= 1;
+            const close = dom("span", {
+                textContent: glyph,
+                style: {color: rainbow[depth % rainbow.length]}
+            });
+            element.append(close);
+        } else {
+            const char = dom("span", {
+                textContent: glyph,
+                style: {color: theme.blue}
+            });
+            element.append(char);
         }
-
-        function comment_mode(glyph) {
-            if (glyph === "\n") {
-                mode = source_mode;
-                mode(glyph);
-            } else {
-                const dim = dom("span", {
-                    textContent: glyph,
-                    style: {color: theme.silver}
-                });
-                element.append(dim);
-            }
-        }
-
-        Array.from(text).forEach(function (glyph) {
-            mode(glyph);  // handle `gylph` in current `mode`
-        });
-    }
+    });
 }
 
 function handle_keydown(editor, event) {

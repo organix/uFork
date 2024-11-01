@@ -3,7 +3,7 @@
 // This module is mostly responsible for configuring the split view, handling
 // URL state, and persisting user settings.
 
-/*jslint browser */
+/*jslint browser, global */
 
 import dom from "./dom.js";
 import theme from "./theme.js";
@@ -156,10 +156,10 @@ const tools = tools_ui({
         ));
     },
     on_debug() {
-        window.open(location.href.replace("playground", "debugger"));
+        globalThis.open(location.href.replace("playground", "debugger"));
     },
     on_help() {
-        window.open(lang_packs[editor.get_lang()].docs_url);
+        globalThis.open(lang_packs[editor.get_lang()].docs_url);
     }
 });
 const split = dom(
@@ -212,7 +212,7 @@ fetch_text().then(function (text) {
     editor.set_text(initial_text);
     tools.warn("Failed to load source: " + error.message);
 });
-window.onresize = function () {
+addEventListener("resize", function () {
     if (is_landscape()) {
         split.set_placement("right");
         split.set_size(read_setting("tools_width") ?? default_tools_width);
@@ -220,5 +220,5 @@ window.onresize = function () {
         split.set_placement("bottom");
         split.set_size(read_setting("tools_height") ?? default_tools_height);
     }
-};
+});
 document.body.append(split);

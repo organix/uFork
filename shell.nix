@@ -10,7 +10,7 @@
 {
     pkgs ? import (
         fetchTarball
-        "https://github.com/NixOS/nixpkgs/archive/41dea55321e5.tar.gz"
+        "https://github.com/NixOS/nixpkgs/archive/64b80bfb316b.tar.gz"
     ) {}
 }:
 
@@ -20,12 +20,12 @@ pkgs.mkShell {
 # Two JavaScript runtimes: Deno and its predecessor, Node.js. Most of our
 # libraries and tools are written in JavaScript for portability.
 
-        pkgs.deno_1
-        pkgs.nodejs_22
+        pkgs.deno               # https://deno.com
+        pkgs.nodejs_22          # https://nodejs.org
 
 # The Rust toolchain, for the uFork VM.
 
-        pkgs.rustup
+        pkgs.rustup             # https://www.rust-lang.org
 
 # The Fomu development toolchain, for FPGA development.
 # This includes yosys for synthesis, nextpnr for place and route, iverilog for

@@ -1,7 +1,7 @@
 // Runs the distributed Grant Matcher demo on Node.js, using TLS to encrypt
 // communications.
 
-/*jslint node */
+/*jslint node, global */
 
 import console from "node:console";
 import crypto from "node:crypto";

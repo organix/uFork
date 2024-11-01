@@ -7,7 +7,7 @@
 // where <src> is the relative path (or absolute URL) to a .asm or .scm module
 // to boot from.
 
-/*jslint deno */
+/*jslint deno, global */
 
 import {join} from "https://deno.land/std@0.203.0/path/join.ts";
 import {toFileUrl} from "https://deno.land/std@0.203.0/path/to_file_url.ts";
@@ -52,11 +52,11 @@ function run() {
             ) {
                 refill();
             } else {
-                window.console.error("FAULT", msg);
+                globalThis.console.error("FAULT", msg);
                 break;  // report error, then exit...
             }
         } else {
-            window.console.error("SIGNAL", core.u_print(sig));
+            globalThis.console.error("SIGNAL", core.u_print(sig));
             break;  // report signal, then exit...
         }
     }
@@ -64,7 +64,7 @@ function run() {
 
 const unqualified_src = Deno.args[0];
 if (unqualified_src === undefined || unqualified_src === "") {
-    window.console.error("Missing src. Try \"echo.asm\".");
+    globalThis.console.error("Missing src. Try \"echo.asm\".");
     Deno.exit(1);
 }
 const cwd_dir = toFileUrl(join(Deno.cwd(), "./")); // ensure trailing slash
@@ -73,7 +73,7 @@ const src = new URL(unqualified_src, cwd_dir).href;
 core = ufork.make_core({
     wasm_url,
     on_wakeup: run,
-    on_log: window.console.error,
+    on_log: globalThis.console.error,
     log_level: ufork.LOG_WARN,
     compilers: {asm: assemble, scm: scm.compile},
     import_map: {"https://ufork.org/lib/": lib_url}
@@ -101,7 +101,7 @@ parseq.sequence([
     })
 ])(function (ok, reason) {
     if (ok === undefined) {
-        window.console.error(reason);
+        globalThis.console.error(reason);
         Deno.exit(1);
     }
 });

@@ -5,7 +5,7 @@
 
 //      deno run --allow-read ucode_sim_cli.js <path_to_ucode_file>
 
-/*jslint deno, bitwise */
+/*jslint deno, global, bitwise */
 
 import ucode from "./ucode.js";
 import ucode_sim from "./ucode_sim.js";
@@ -114,7 +114,9 @@ Deno.readTextFile(ucode_path).then(function (text) {
 
     if (errors !== undefined && errors.length > 0) {
         errors.forEach(function (err) {
-            window.console.error(err.src + ":" + err.line + " " + err.error);
+            globalThis.console.error(
+                err.src + ":" + err.line + " " + err.error
+            );
         });
         return Deno.exit(1);
     }
@@ -146,7 +148,7 @@ Deno.readTextFile(ucode_path).then(function (text) {
     return (function step(remaining = 1000) {
         const rv = machine.step();
         if (rv !== undefined) {
-            window.console.error(rv);
+            globalThis.console.error(rv);
             Deno.stdin.setRaw(false);
             return clean_exit(1);
         }

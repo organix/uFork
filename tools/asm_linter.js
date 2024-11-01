@@ -3,7 +3,7 @@
 
 //  <line>:<col> <msg>
 
-/*jslint deno */
+/*jslint deno, global */
 
 import assemble from "https://ufork.org/lib/assemble.js";
 
@@ -21,7 +21,7 @@ Deno.stdin.read(buffer).then(function on_chunk(nr_bytes) {
     const ir = assemble(text);
     if (Array.isArray(ir.errors)) {
         ir.errors.forEach(function (error) {
-            window.console.log(
+            globalThis.console.log(
                 error.line + ":" + error.column + " " + error.message
             );
         });

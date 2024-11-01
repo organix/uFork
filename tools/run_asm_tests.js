@@ -5,7 +5,7 @@
 
 //  $ deno run --allow-read=.. run_asm_tests.js [...file_or_directory]
 
-/*jslint deno */
+/*jslint deno, global */
 
 import {toFileUrl} from "https://deno.land/std@0.203.0/path/to_file_url.ts";
 import {isAbsolute} from "https://deno.land/std@0.203.0/path/is_absolute.ts";
@@ -144,7 +144,7 @@ run_asm_tests(
     if (summary === undefined) {
         throw reason;
     }
-    window.console.log(summary);
+    globalThis.console.log(summary);
     return Deno.exit(
         Object.keys(summary.lost).length + Object.keys(summary.fail).length
     );

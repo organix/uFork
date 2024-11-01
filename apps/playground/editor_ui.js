@@ -180,13 +180,13 @@ const editor_ui = make_ui("editor-ui", function (element, {
         connect() {
             reset_editor();
             set_text(text);
-            window.addEventListener("pointerup", end_line_selection);
-            window.addEventListener("pointercancel", end_line_selection);
+            addEventListener("pointerup", end_line_selection);
+            addEventListener("pointercancel", end_line_selection);
         },
         disconnect() {
             editor.destroy();
-            window.removeEventListener("pointerup", end_line_selection);
-            window.removeEventListener("pointercancel", end_line_selection);
+            removeEventListener("pointerup", end_line_selection);
+            removeEventListener("pointercancel", end_line_selection);
         }
     };
 });

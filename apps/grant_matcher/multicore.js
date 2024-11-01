@@ -5,7 +5,7 @@
 
 //  $ deno run --allow-read multicore.js
 
-/*jslint deno */
+/*jslint deno, global */
 
 import parseq from "https://ufork.org/lib/parseq.js";
 import requestorize from "https://ufork.org/lib/rq/requestorize.js";
@@ -68,11 +68,11 @@ parseq.sequence(
         const core = ufork.make_core({
             wasm_url,
             on_wakeup() {
-                window.console.log("IDLE", name, core.u_fault_msg(
+                globalThis.console.log("IDLE", name, core.u_fault_msg(
                     core.u_fix_to_i32(core.h_run_loop())
                 ));
             },
-            on_log: window.console.log,
+            on_log: globalThis.console.log,
             log_level: ufork.LOG_DEBUG,
             compilers: {asm: assemble},
             import_map: {"https://ufork.org/lib/": lib_url}
@@ -95,4 +95,4 @@ parseq.sequence(
             })
         ]);
     })
-)(window.console.log);
+)(globalThis.console.log);

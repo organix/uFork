@@ -444,7 +444,7 @@ $step_button.onclick = single_step;
 $step_button.title = "Next instruction in KQ (s)";
 
 function boot(unqualified_src, text) {
-    const src = new URL(unqualified_src, window.location.href).href;
+    const src = new URL(unqualified_src, location.href).href;
     core.h_import(src, text)(function callback(module, reason) {
         if (module === undefined) {
             return console.error("Import failed", src, reason);

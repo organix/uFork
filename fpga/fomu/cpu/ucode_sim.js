@@ -379,18 +379,15 @@ function make_machine(prog = [], device = []) {
 
 //debug const source = String.raw`
 //debug : PANIC! FAIL PANIC! ;      ( if BOOT returns... )
-//debug
 //debug 0x03 CONSTANT ^C
 //debug 0x0A CONSTANT '\n'
 //debug 0x0D CONSTANT '\r'
 //debug 0x20 CONSTANT BL
-//debug
 //debug : = ( a b -- a==b )
 //debug     XOR
 //debug : 0= ( n -- n==0 )
 //debug : NOT ( flag -- !flag )
 //debug     IF FALSE ELSE TRUE THEN ;
-//debug
 //debug : TX? ( -- ready )
 //debug : EMIT?
 //debug     0x00 IO@ ;
@@ -410,28 +407,30 @@ function make_machine(prog = [], device = []) {
 //debug     '\r' = IF
 //debug         '\n' EMIT
 //debug     THEN ;
-//debug
 //debug : ECHOLOOP
 //debug     KEY DUP ECHO
 //debug     ^C = IF EXIT THEN       ( abort! )
 //debug     ECHOLOOP ;
-//debug
 //debug ( WARNING! if BOOT returns we PANIC! )
 //debug : BOOT
 //debug     ECHOLOOP EXIT
 //debug `;
 //debug const {errors, words, prog} = ucode.compile(source);
+//debug function run_loop(mach) {
+//debug     let rv;
+//debug     while (rv === undefined) {
+//debug         rv = mach.step();
+//debug     }
+//debug     return rv;
+//debug }
 //debug if (errors !== undefined && errors.length > 0) {
 //debug     console.log(errors);
 //debug } else {
 //debug     const memh = ucode.print_memh(prog, words);
 //debug     console.log(memh);
 //debug     const mach = make_machine(prog);
-//debug     let rv;
-//debug     while (rv === undefined) {
-//debug         rv = mach.step();
-//debug     }
-//      console.log("rv:", rv);
+//debug     const rv = run_loop(mach);
+//debug     console.log("rv:", rv);
 //debug }
 
 export default Object.freeze({make_machine});
