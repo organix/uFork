@@ -13,7 +13,7 @@ jobs:
 
 # Build the WASMs and check everything is working.
 
-      - uses: denoland/setup-deno@v1
+      - uses: denoland/setup-deno@v2
       - run: deno task test
 
 # Create the web root directory.
