@@ -59,7 +59,7 @@ impl Default for Core {
 }
 
 impl Core {
-    pub const fn new() -> Core {
+    pub const fn new() -> Self {
         Core {
             quad_rom: [ Quad::empty_t(); QUAD_ROM_MAX ],
             quad_ram: [ Quad::empty_t(); QUAD_RAM_MAX ],

@@ -145,22 +145,22 @@ pub struct Any {
 }
 
 impl Any {
-    pub const fn new(raw: Raw) -> Any {
+    pub const fn new(raw: Raw) -> Self {
         Any { raw }
     }
-    pub const fn fix(num: isize) -> Any {
+    pub const fn fix(num: isize) -> Self {
         let raw = num as Raw;
         Any::new(DIR_RAW | raw)
     }
-    pub const fn cap(ofs: usize) -> Any {
+    pub const fn cap(ofs: usize) -> Self {
         let raw = (ofs as Raw) & !MSK_RAW;
         Any::new(OPQ_RAW | MUT_RAW | raw)
     }
-    pub const fn rom(ofs: usize) -> Any {
+    pub const fn rom(ofs: usize) -> Self {
         let raw = (ofs as Raw) & !MSK_RAW;
         Any::new(raw)
     }
-    pub const fn ram(ofs: usize) -> Any {
+    pub const fn ram(ofs: usize) -> Self {
         let raw = (ofs as Raw) & !MSK_RAW;
         Any::new(MUT_RAW | raw)
     }
