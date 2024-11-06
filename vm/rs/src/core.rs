@@ -23,11 +23,21 @@ pub const SPONSOR: Any      = Any::ram(0xF);
 
 pub const RAM_BASE_OFS: usize = 0x10;  // RAM offsets below this value are reserved
 
-pub const GC_FIRST: usize   = 0;  // offset of "first" in gc_queue[]
-pub const GC_LAST: usize    = 1;  // offset of "last" in gc_queue[]
-pub const GC_STRIDE: usize  = 16;  // number of steps to take for each GC increment
-pub const GC_BLACK: Any     = TRUE;
-pub const GC_WHITE: Any     = FALSE;
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum GcPhase {
+    Idle,
+    Prep,
+    Mark,
+    Sweep,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum GcColor {
+    Free,
+    GenX,
+    GenY,
+    Scan,
+}
 
 // core limits (repeated in `ufork.js`)
 //const QUAD_ROM_MAX: usize = 1<<10;  // 1K quad-cells of ROM
@@ -42,9 +52,13 @@ const DEVICE_MAX:   usize = 13;     // number of Core devices
 pub struct Core {
     quad_rom:   [Quad; QUAD_ROM_MAX],
     quad_ram:   [Quad; QUAD_RAM_MAX],
-    gc_queue:   [Any; QUAD_RAM_MAX],
-    gc_state:   Any,
     rom_top:    Any,
+    gc_addr:    Any,
+    gc_stride:  u8,
+    gc_phase:   GcPhase,
+    gc_curr:    GcColor,
+    gc_prev:    GcColor,
+    gc_marks:   [GcColor; QUAD_RAM_MAX],
     device:     [Option<Box<dyn Device>>; DEVICE_MAX],
     trace_fn:   Option<Box<dyn Fn(Any, Any)>>,
 }
@@ -60,9 +74,13 @@ impl Core {
         Core {
             quad_rom: [ Quad::empty_t(); QUAD_ROM_MAX ],
             quad_ram: [ Quad::empty_t(); QUAD_RAM_MAX ],
-            gc_queue: [ UNDEF; QUAD_RAM_MAX ],
-            gc_state: UNDEF,
             rom_top: Any::rom(ROM_BASE_OFS),
+            gc_addr: Any::ram(RAM_BASE_OFS),
+            gc_stride: 16,
+            gc_phase: GcPhase::Idle,
+            gc_curr: GcColor::GenX,
+            gc_prev: GcColor::GenY,
+            gc_marks: [ GcColor::Free; QUAD_RAM_MAX ],
             device: [
                 None,
                 None,
@@ -127,16 +145,6 @@ impl Core {
                                         Any::fix(8192),
                                         UNDEF);  // root configuration sponsor
 
-        /*
-         * Garbage-Collector Metadata
-         */
-        let mut ofs = 0;
-        while ofs < RAM_BASE_OFS {
-            self.gc_queue[ofs] = GC_BLACK;  // mark "black" (reachable)
-            ofs += 1;
-        }
-        self.gc_queue[GC_FIRST] = NIL;
-        self.gc_queue[GC_LAST] = NIL;
     }
 
     pub fn install_device(&mut self, cap: Any, mut dev: Box<dyn Device>) {
@@ -199,6 +207,7 @@ impl Core {
         while (limit <= 0) || (steps < limit) {
             if !self.k_first().is_ram() && !self.e_first().is_ram() {
                 self.set_sponsor_signal(SPONSOR, ZERO);  // processor idle
+                // FIXME: CALL STOP-THE-WORLD GC FROM HERE?
                 break;  // return signal
             }
             let sig = self.execute_instruction();
@@ -209,6 +218,7 @@ impl Core {
             if sig.is_fix() {
                 break;  // return signal
             }
+            // FIXME! CALL CONCURRENT GC FROM HERE...
             steps += 1;  // count step
         }
         self.sponsor_signal(SPONSOR)  // return SPONSOR signal
@@ -310,7 +320,7 @@ impl Core {
                     // free dead continuation and associated event
                     self.free(ep);
                     self.free(kp);
-                    self.gc_collect();  // FIXME! REMOVE FORCED GC...
+                    self.gc_collect_all();  // FIXME! REMOVE FORCED STOP-THE-WORLD GC...
                 }
             },
             Err(error) => {
@@ -320,7 +330,7 @@ impl Core {
                 }
             },
         }
-        //self.gc_increment();  // WARNING! incremental and stop-the-world GC are incompatible!
+        //self.gc_increment();  // FIXME! PREFER INCREMENTAL GC TO STOP-THE-WORLD...
         self.sponsor_signal(sponsor)  // instruction executed, return signal
     }
     pub fn report_error(&mut self, sponsor: Any, error: Error) -> bool {
@@ -1621,7 +1631,7 @@ impl Core {
             let ofs = top.ofs() + 1;
             if ofs > QUAD_RAM_MAX {
                 /*
-                self.gc_collect();
+                self.gc_collect_all();  // FIXME! HOW DO WE ENSURE CONSISTENCY WHILE EXECUTING AN INSTRUCTION?
                 if let Some(m) = self.ram_free().fix_num() {
                     if m >= 16 {  // ensure some margin after GC
                         return self.reserve(init);
@@ -1634,7 +1644,7 @@ impl Core {
             top
         };
         self.gc_store(ptr, *init);  // copy initial value
-        self.gc_reserve(ptr);
+        self.gc_mark_cell(ptr);  // mark cell in-use when first allocated
         Ok(ptr)
     }
     pub fn free(&mut self, _ptr: Any) {
@@ -1646,212 +1656,24 @@ impl Core {
         if self.typeq(FREE_T, ptr) {
             panic!("double-free {}", ptr.raw());
         }
-        self.gc_release(ptr);
         *self.ram_mut(ptr) = Quad::free_t(self.ram_next());  // clear cell to "free"
+        self.gc_free_cell(ptr);  // mark cell as not-in-use when freed
         self.set_ram_next(ptr);  // link into free-list
         let n = self.ram_free().fix_num().unwrap();
         self.set_ram_free(Any::fix(n + 1));  // increment cells available
     }
 
-    pub fn gc_increment(&mut self) {
-        if self.gc_state.is_rom() {
-            self.gc_init_phase();
-            self.gc_state = Any::fix(0);
-        } else if self.gc_state.is_fix() {
-            let steps = self.gc_scan_phase(GC_STRIDE);
-            if steps > 0 {
-                let ofs = self.ram_top().ofs() - 1;
-                self.gc_state = Any::ram(ofs);
-            }
-        } else if self.gc_state.is_ram() {
-            let mut ofs = self.gc_state.ofs();
-            if ofs >= RAM_BASE_OFS {
-                ofs = self.gc_sweep_phase(GC_STRIDE, ofs);
-                self.gc_state = Any::ram(ofs);
-            } else {
-                self.gc_state = UNDEF;
-            }
-        }
-    }
-    pub fn gc_collect(&mut self) {
-        assert_eq!(UNDEF, self.gc_state);  // WARNING! cannot overlap with `gc_increment` phases
-        self.gc_init_phase();
-        while self.gc_scan_phase(GC_STRIDE) == 0
-            {}
-        let mut ofs = self.ram_top().ofs() - 1;
-        while ofs >= RAM_BASE_OFS {
-            ofs = self.gc_sweep_phase(GC_STRIDE, ofs);
-        }
-    }
-    fn gc_init_phase(&mut self) {
-        // clear gc queue
-        self.gc_queue[GC_FIRST] = NIL;
-        self.gc_queue[GC_LAST] = NIL;
-        // scan reserved RAM
-        let mut ofs = DDEQUE.ofs();
-        while ofs < RAM_BASE_OFS {
-            let ptr = Any::ram(ofs);
-            self.gc_scan(ptr);
-            ofs += 1;
-        }
-        self.gc_mark(self.ram_root());
-    }
-    fn gc_scan_phase(&mut self, mut steps: usize) -> usize {
-        // scan items in gc queue
-        while steps > 0 {
-            steps -= 1;
-            match self.gc_dequeue() {
-                Some(item) => self.gc_scan(item),
-                None => break,
-            }
-        }
-        steps
-    }
-    fn gc_sweep_phase(&mut self, mut steps: usize, mut ofs: usize) -> usize {
-        // sweep unreachable cells into free-list
-        while steps > 0 && ofs >= RAM_BASE_OFS {
-            steps -= 1;
-            let color = self.gc_queue[ofs];
-            if color == GC_WHITE {  // still "white"
-                let ptr = Any::ram(ofs);
-                let t = self.ram(ptr).t();
-                if t == PROXY_T {
-                    // drop proxy
-                    if let Ok(id) = self.device_id(ptr) {
-                        let mut dev_mut = self.device[id].take().unwrap();
-                        let cap = self.ptr_to_cap(ptr);
-                        dev_mut.drop_proxy(self, cap);
-                        self.device[id] = Some(dev_mut);
-                    }
-                }
-                if t != FREE_T {  // not already free
-                    // add to free-list
-                    self.release(ptr);
-                }
-            } else {
-                assert_eq!(GC_BLACK, color);  // must be "black"
-                self.gc_queue[ofs] = GC_WHITE;  // mark "white"
-            }
-            ofs -= 1;
-        }
-        ofs
-    }
-    fn gc_reserve(&mut self, ptr: Any) {
-        // sync reservation with GC
-        let ofs = ptr.ofs();
-        if self.gc_state.is_rom() {
-            // between GC passes, new allocations are assumed to be unreachable
-            self.gc_queue[ofs] = GC_WHITE;  // mark "white"
-        } else if self.gc_state.is_fix() {
-            // during GC scanning, new allocations are added to the scan queue
-            let color = self.gc_queue[ofs];
-            if color == GC_WHITE || color == GC_BLACK {
-                // change "white" or "black" to "grey"
-                self.gc_enqueue(ptr);
-            }
-        } else if self.gc_state.is_ram() {
-            // during GC sweeping, new allocations are assumed to be reachable
-            let sweep = self.gc_state.ofs();
-            self.gc_queue[ofs] = if ofs > sweep {
-                GC_WHITE  // mark "white"
-            } else {
-                GC_BLACK  // mark "black"
-            }
-        }
-    }
-    fn gc_release(&mut self, ptr: Any) {
-        // sync release with GC
-        self.gc_remove(ptr);
-    }
-
-    fn gc_mark(&mut self, val: Any) {
-        let raw = val.raw() & !OPQ_RAW;  // strip opaque bit
-        let ptr = Any::new(raw);
+    pub fn gc_color(&self, ptr: Any) -> Any {  // report color to debugger
         if ptr.is_ram() {
-            let ofs = ptr.ofs();
-            if self.gc_queue[ofs] == GC_WHITE {
-                // change "white" to "grey"
-                self.gc_enqueue(ptr);
-            }
-        }
-    }
-    fn gc_scan(&mut self, ptr: Any) {
-        let quad = self.gc_load(ptr);
-        self.gc_mark(quad.t());
-        self.gc_mark(quad.x());
-        self.gc_mark(quad.y());
-        self.gc_mark(quad.z());
-    }
-    fn gc_enqueue(&mut self, ptr: Any) {
-        // add location to the back of the queue
-        let queue = &mut self.gc_queue;
-        queue[ptr.ofs()] = NIL;
-        if !queue[GC_FIRST].is_ram() {
-            queue[GC_FIRST] = ptr;
-        } else {
-            let last = queue[GC_LAST];
-            queue[last.ofs()] = ptr;
-        }
-        queue[GC_LAST] = ptr;
-    }
-    fn gc_dequeue(&mut self) -> Option<Any> {
-        // remove location from the front of the queue
-        let queue = &mut self.gc_queue;
-        let first = queue[GC_FIRST];
-        if first.is_ram() {
-            //assert_ne!(self.quad_ram[first.ofs()].t(), FREE_T);  // FIXME: this should be impossible...
-            let next = queue[first.ofs()];
-            queue[GC_FIRST] = next;
-            if !next.is_ram() {
-                queue[GC_LAST] = NIL;
-            }
-            queue[first.ofs()] = GC_BLACK;  // mark "black"
-            Some(first)
-        } else {
-            None
-        }
-    }
-    fn gc_remove(&mut self, ptr: Any) {
-        // remove `ptr` from queue (if present), and mark it "white"
-        let queue = &mut self.gc_queue;
-        let ofs = ptr.ofs();
-        let next = queue[ofs];
-        if next == GC_WHITE {
-            return;  // already "white"
-        }
-        if next == GC_BLACK {
-            queue[ofs] = GC_WHITE;  // change "black" to "white"
-            return;
-        }
-        let mut curr = GC_FIRST;
-        let mut item = queue[curr];
-        while item.is_ram() {
-            if ptr == item {
-                queue[curr] = next;
-                if next == NIL {
-                    queue[GC_LAST] = if curr == GC_FIRST {
-                        NIL
-                    } else {
-                        Any::ram(curr)
-                    }
-                }
-                break;
-            }
-            curr = item.ofs();
-            item = queue[curr];
-        }
-        queue[ofs] = GC_WHITE;  // change "grey" to "white"
-    }
-
-    pub fn gc_color(&self, ptr: Any) -> Any {
-        if ptr.is_ram() {
-            self.gc_queue[ptr.ofs()]
+            let mark = self.gc_marks[ptr.ofs()];
+            Any::fix(mark as isize)
         } else {
             UNDEF  // no color
         }
     }
-    pub fn gc_state(&self) -> Any {
-        self.gc_state
+    pub fn gc_state(&self) -> Any {  // report phase to debugger
+        let state = self.gc_phase;
+        Any::fix(state as isize)
     }
     fn gc_load(&self, ptr: Any) -> Quad {  // load quad directly
         let raw = ptr.raw();
@@ -1868,6 +1690,110 @@ impl Core {
         }
         let ofs = (raw & !MSK_RAW) as usize;
         self.quad_ram[ofs] = quad;
+    }
+
+    /*
+     * concurrent garbage-collection strategy
+     */
+    pub fn gc_collect_all(&mut self) {
+        loop {
+            self.gc_do_stride();
+            if self.gc_phase == GcPhase::Idle {
+                return;
+            }
+        }
+    }
+    pub fn gc_do_stride(&mut self) {
+        let mut count = 0;
+        while count < self.gc_stride {
+            match self.gc_phase {
+                GcPhase::Idle => {
+                    if count == 0 {
+                        self.gc_phase = GcPhase::Prep;
+                    }
+                },
+                GcPhase::Prep => {
+                    let swap = self.gc_prev;
+                    self.gc_prev = self.gc_curr;
+                    self.gc_curr = swap;
+                    self.gc_addr = Any::ram(RAM_BASE_OFS);  // start after reserved RAM
+                    self.gc_scan_cell(self.ram_root());
+                    self.gc_scan_cell(self.e_first());
+                    self.gc_scan_cell(self.k_first());
+                    self.gc_scan_cell(self.sponsor_signal(SPONSOR));
+                    self.gc_phase = GcPhase::Mark;
+                },
+                GcPhase::Mark => {
+                    let addr = self.gc_addr;
+                    if addr.ofs() < self.ram_top().ofs() {
+                        self.gc_addr = Any::ram(addr.ofs() + 1);
+                        if self.gc_get_color(addr) == GcColor::Scan {
+                            self.gc_mark_cell(addr);
+                        }
+                    } else {
+                        self.gc_phase = GcPhase::Sweep;
+                    }
+                },
+                GcPhase::Sweep => {
+                    if self.gc_addr.ofs() > RAM_BASE_OFS {
+                        let addr = Any::ram(self.gc_addr.ofs() - 1);
+                        self.gc_addr = addr;
+                        if self.gc_get_color(addr) == self.gc_prev {
+                            self.release(addr);
+                        }
+                    } else {
+                        self.gc_phase = GcPhase::Idle;
+                    }
+                },
+            }
+            count += 1;
+        }
+    }
+    fn gc_mark_cell(&mut self, addr: Any) {
+        if let Some(ptr) = self.gc_valid(addr) {
+            self.gc_set_color(ptr, self.gc_curr);
+            if self.gc_phase == GcPhase::Mark {
+                let quad = self.gc_load(ptr);
+                self.gc_scan_cell(quad.t());
+                self.gc_scan_cell(quad.x());
+                self.gc_scan_cell(quad.y());
+                self.gc_scan_cell(quad.z());
+            }
+        }
+    }
+    fn gc_scan_cell(&mut self, addr: Any) {
+        if let Some(ptr) = self.gc_valid(addr) {
+            if self.gc_get_color(ptr) == self.gc_prev {
+                self.gc_set_color(ptr, GcColor::Scan);
+                if ptr.ofs() < self.gc_addr.ofs() {
+                    self.gc_addr = ptr;
+                }
+            }
+        }
+    }
+    fn gc_free_cell(&mut self, addr: Any) {
+        if let Some(ptr) = self.gc_valid(addr) {
+            self.gc_set_color(ptr, GcColor::Free);
+        }
+    }
+    fn gc_get_color(&mut self, addr: Any) -> GcColor {
+        // pre-condition: self.gc_valid(addr).is_some()
+        let ofs = addr.ofs();
+        self.gc_marks[ofs]
+    }
+    fn gc_set_color(&mut self, addr: Any, color: GcColor) {
+        // pre-condition: self.gc_valid(addr).is_some()
+        let ofs = addr.ofs();
+        self.gc_marks[ofs] = color;
+    }
+    fn gc_valid(&self, addr: Any) -> Option<Any> {
+        if addr.is_cap() {
+            Some(self.cap_to_ptr(addr))
+        } else if addr.is_ram() {
+            Some(addr)
+        } else {
+            None
+        }
     }
 
     fn device_id(&self, dev: Any) -> Result<usize, Error> {
@@ -1958,7 +1884,7 @@ impl Core {
         }
         let ofs = fwd.ofs();
         if ofs >= RAM_BASE_OFS {
-            self.gc_reserve(fwd);  // FIXME: this is conservative, but it could be fairly expensive.
+            self.gc_mark_cell(fwd);  // mark cell in-use if it could be mutated
         }
         &mut self.quad_ram[ofs]
     }
@@ -2416,7 +2342,7 @@ pub const COUNT_TO: Any = Any { raw: COUNT_TO_OFS as Raw };
         let a_boot = core.ptr_to_cap(boot_ptr);
         let evt = core.reserve_event(SPONSOR, a_boot, UNDEF);
         core.event_enqueue(evt.unwrap());
-        core.gc_collect();
+        core.gc_collect_all();
         let sig = core.run_loop(1024);
         assert_eq!(ZERO, sig);
     }
@@ -2489,37 +2415,6 @@ pub const COUNT_TO: Any = Any { raw: COUNT_TO_OFS as Raw };
         core.set_sponsor_cycles(SPONSOR, Any::fix(8));
         let sig = core.run_loop(256);
         assert_eq!(OUT_OF_MSG, sig);
-    }
-
-    #[test]
-    fn gc_queue_management() {
-        let mut core = Core::default();
-        core.init();
-        assert_eq!(NIL, core.gc_queue[GC_FIRST]);
-        assert_eq!(NIL, core.gc_queue[GC_LAST]);
-        let mut item;
-        let a = Any::ram(23);
-        let b = Any::ram(45);
-        let c = Any::ram(67);
-        let d = Any::ram(89);
-        core.gc_enqueue(a);
-        core.gc_remove(a);
-        core.gc_enqueue(a);
-        core.gc_enqueue(b);
-        core.gc_remove(b);
-        core.gc_enqueue(c);
-        core.gc_enqueue(d);
-        core.gc_remove(b);
-        item = core.gc_dequeue();
-        assert_eq!(Some(a), item);
-        //item = core.gc_dequeue();
-        //assert_eq!(Some(b), item);
-        item = core.gc_dequeue();
-        assert_eq!(Some(c), item);
-        item = core.gc_dequeue();
-        assert_eq!(Some(d), item);
-        item = core.gc_dequeue();
-        assert_eq!(None, item);
     }
 
 }

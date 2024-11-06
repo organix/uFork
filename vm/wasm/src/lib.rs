@@ -91,7 +91,7 @@ pub fn h_revert() -> bool {
 #[no_mangle]
 pub fn h_gc_run() {
     let mut core = the_core().borrow_mut();
-    core.gc_collect()
+    core.gc_collect_all()
 }
 
 #[no_mangle]
