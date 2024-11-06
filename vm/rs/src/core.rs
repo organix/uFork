@@ -76,7 +76,7 @@ impl Core {
             quad_ram: [ Quad::empty_t(); QUAD_RAM_MAX ],
             rom_top: Any::rom(ROM_BASE_OFS),
             gc_addr: Any::ram(RAM_BASE_OFS),
-            gc_stride: 16,
+            gc_stride: 32,
             gc_phase: GcPhase::Idle,
             gc_curr: GcColor::GenX,
             gc_prev: GcColor::GenY,
@@ -218,7 +218,7 @@ impl Core {
             if sig.is_fix() {
                 break;  // return signal
             }
-            // FIXME! CALL CONCURRENT GC FROM HERE...
+            self.gc_increment();  // FIXME! CALL CONCURRENT GC FROM HERE...
             steps += 1;  // count step
         }
         self.sponsor_signal(SPONSOR)  // return SPONSOR signal
@@ -320,7 +320,7 @@ impl Core {
                     // free dead continuation and associated event
                     self.free(ep);
                     self.free(kp);
-                    self.gc_collect_all();  // FIXME! REMOVE FORCED STOP-THE-WORLD GC...
+                    //self.gc_collect_all();  // FIXME! REMOVE FORCED STOP-THE-WORLD GC...
                 }
             },
             Err(error) => {
@@ -1697,13 +1697,13 @@ impl Core {
      */
     pub fn gc_collect_all(&mut self) {
         loop {
-            self.gc_do_stride();
+            self.gc_increment();
             if self.gc_phase == GcPhase::Idle {
                 return;
             }
         }
     }
-    pub fn gc_do_stride(&mut self) {
+    pub fn gc_increment(&mut self) {
         let mut count = 0;
         while count < self.gc_stride {
             match self.gc_phase {
