@@ -256,6 +256,13 @@ test:                       ; judge <- {caps}
     actor create            ; referee=referee_beh.(judge timer probation 1st 2nd 3rd 4th)
     push unwrap_result.beh  ; referee unwrap_result_beh
     actor create            ; referee'=unwrap_result_beh.referee
+    ; msg 0                   ; referee' {caps}
+    ; push dev.debug_key      ; referee' {caps} debug_key
+    ; dict get                ; referee' debug
+    ; pair 1                  ; (debug . referee')
+    ; push lib.tee_beh        ; (debug . referee') tee_beh
+    ; actor create            ; referee''
+
 suite:
     msg 0                   ; referee {caps}
     push dev.timer_key      ; referee {caps} timer_key
@@ -336,7 +343,7 @@ suite:
 
     dup 2                   ; ... referee timer
     push 1                  ; ... referee timer throttle=1
-    push 50                 ; ... referee timer throttle cancel_at=50ms
+    push #?                 ; ... referee timer throttle cancel_at=#?
     push #nil               ; ... ... ()
     push 30                 ; ... ... 1st_delay=30ms
     push 666                ; ... ... 1st_error=666

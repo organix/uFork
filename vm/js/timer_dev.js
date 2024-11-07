@@ -25,6 +25,7 @@ function timer_dev(core, slowdown = 1) {
                     const evt = quad.y;  // stub carries pre-allocated event
                     timer_map[stub] = setTimeout(
                         function () {
+                            core.u_trace("timer_fired", timer_map[stub]);
                             delete timer_map[stub];
                             core.h_release_stub(stub);
                             core.h_event_enqueue(evt);
@@ -33,7 +34,7 @@ function timer_dev(core, slowdown = 1) {
                         slowdown * core.u_fix_to_i32(delay)
                     );
                     if (core.u_trace !== undefined) {
-                        core.u_trace("host_start_timer", timer_map[stub]);
+                        core.u_trace("timer_started", timer_map[stub]);
                     }
                 }
             },
@@ -43,7 +44,7 @@ function timer_dev(core, slowdown = 1) {
                     clearTimeout(id);
                     delete timer_map[stub];
                     if (core.u_trace !== undefined) {
-                        core.u_trace("host_stop_timer", id);
+                        core.u_trace("timer_stopped", id);
                     }
                     return true;
                 }
