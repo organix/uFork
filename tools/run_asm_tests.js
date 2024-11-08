@@ -116,10 +116,8 @@ function run_asm_tests(url_filters, root_file_url) {
 let path_filters = Deno.args;
 let file_root_url = directorify(toFileUrl(Deno.cwd()));
 
-if (import.meta.main) {
-    path_filters = ["/Users/me/code/uFork/lib", "/Users/me/code/uFork/apps"];
-    file_root_url = toFileUrl("/Users/me/code/uFork/");
-}
+// path_filters = ["/Users/me/code/uFork/lib", "/Users/me/code/uFork/apps"];
+// file_root_url = toFileUrl("/Users/me/code/uFork/");
 
 run_asm_tests(
     path_filters.map(function (path) {
