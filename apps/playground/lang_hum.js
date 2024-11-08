@@ -3,11 +3,9 @@
 import compile from "https://ufork.org/lib/humus.js";
 import dom from "./dom.js";
 import ed_comment from "./ed_comment.js";
-import ed_duplication from "./ed_duplication.js";
-import ed_tab from "./ed_tab.js";
 import theme from "./theme.js";
 
-const indent = "\u0020".repeat(4);
+const indent = "    ";
 const rx_comment = /^(\s*)(#\u0020?)/;
 const comment_prefix = "# ";
 const styles = {
@@ -106,8 +104,6 @@ function highlight(element) {
 
 function handle_keydown(editor, event) {
     ed_comment(editor, event, rx_comment, comment_prefix);
-    ed_duplication(editor, event);
-    ed_tab(editor, event, indent);
 }
 
 function stringify_error(error) {
@@ -119,5 +115,6 @@ export default Object.freeze({
     handle_keydown,
     highlight,
     stringify_error,
-    docs_url: "https://dalnefre.github.io/humus_js/"
+    docs_url: "https://dalnefre.github.io/humus_js/",
+    indent
 });

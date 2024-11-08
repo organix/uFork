@@ -1,9 +1,10 @@
-// Support for duplicating the selection, or just the current line.
+// Ed keybinding that duplicates the selection, or just the current line.
 
-import alter_string from "./alter_string.js";
-import alter_cursor from "./alter_cursor.js";
+/*jslint browser */
 
-function ed_duplication(editor, event) {
+import ed from "./ed.js";
+
+function ed_duplicate(editor, event) {
     if (event.defaultPrevented) {
         return;
     }
@@ -37,9 +38,23 @@ function ed_duplication(editor, event) {
                 replacement: text.slice(cursor_start, cursor_end)
             }];
         }
-        editor.set_text(alter_string(text, alterations));
-        editor.set_cursor(alter_cursor(cursor, alterations));
+        editor.edit(alterations);
     }
 }
 
-export default Object.freeze(ed_duplication);
+if (import.meta.main) {
+    document.documentElement.innerHTML = "";
+    document.body.style.whiteSpace = "pre";
+    document.body.textContent = `Ctrl+Shift+D (Windows) or ⌘⇧D (Mac)
+
+Duplicate the current line, or the current selection.
+`;
+    const editor = ed({
+        element: document.body,
+        on_keydown(event) {
+            ed_duplicate(editor, event);
+        }
+    });
+}
+
+export default Object.freeze(ed_duplicate);

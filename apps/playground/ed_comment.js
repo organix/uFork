@@ -1,7 +1,8 @@
-// Support for commenting and uncommenting single or multiple lines.
+// Ed keybinding that comments or uncomments single or multiple lines.
 
-import alter_string from "./alter_string.js";
-import alter_cursor from "./alter_cursor.js";
+/*jslint browser */
+
+import ed from "./ed.js";
 
 function ed_comment(editor, event, rx_comment, comment_prefix) {
     if (event.defaultPrevented) {
@@ -59,9 +60,27 @@ function ed_comment(editor, event, rx_comment, comment_prefix) {
             }
             line_start += line.length + 1; // account for \n
         });
-        editor.set_text(alter_string(text, alterations));
-        editor.set_cursor(alter_cursor(cursor, alterations));
+        editor.edit(alterations);
     }
+}
+
+if (import.meta.main) {
+    document.documentElement.innerHTML = "";
+    document.body.style.whiteSpace = "pre";
+    document.body.textContent = `Ctrl+/ (Windows) or ⌘/ (Mac)
+
+Comment or uncomment the current line,
+or each line of selected text.
+
+Blank lines are left alone.
+`;
+    const editor = ed({
+        element: document.body,
+        on_keydown(event) {
+            ed_comment(editor, event, /^(\s*)(#\u0020?)/, "# ");
+        }
+    });
+    document.body.focus();
 }
 
 export default Object.freeze(ed_comment);

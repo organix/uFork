@@ -2,8 +2,6 @@
 
 import scm from "https://ufork.org/lib/scheme.js";
 import ed_comment from "./ed_comment.js";
-import ed_duplication from "./ed_duplication.js";
-import ed_tab from "./ed_tab.js";
 import dom from "./dom.js";
 import theme from "./theme.js";
 
@@ -89,8 +87,6 @@ function highlight(element) {
 
 function handle_keydown(editor, event) {
     ed_comment(editor, event, rx_comment, comment_prefix);
-    ed_duplication(editor, event);
-    ed_tab(editor, event, indent);
 }
 
 function stringify_error(error) {
@@ -102,5 +98,6 @@ export default Object.freeze({
     handle_keydown,
     highlight,
     stringify_error,
-    docs_url: "https://github.com/organix/uFork/blob/main/docs/scheme.md"
+    docs_url: "https://github.com/organix/uFork/blob/main/docs/scheme.md",
+    indent
 });

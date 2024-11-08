@@ -114,7 +114,8 @@ function fetch_text() {
 const editor = editor_ui({
     text: "; Loading...",
     lang_packs,
-    on_text_input(text) {
+    theme,
+    on_text_change(text) {
         return (
             (
                 text === initial_text

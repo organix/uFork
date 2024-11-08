@@ -3,9 +3,7 @@
 /*jslint browser */
 
 import assemble from "https://ufork.org/lib/assemble.js";
-import ed_tab from "./ed_tab.js";
 import ed_comment from "./ed_comment.js";
-import ed_duplication from "./ed_duplication.js";
 import theme from "./theme.js";
 
 const indent = "    ";
@@ -52,8 +50,6 @@ function highlight(element) {
 
 function handle_keydown(editor, event) {
     ed_comment(editor, event, rx_comment, comment_prefix);
-    ed_duplication(editor, event);
-    ed_tab(editor, event, indent);
     if (event.defaultPrevented) {
         return;
     }
@@ -81,7 +77,7 @@ function handle_keydown(editor, event) {
         && line_post === ""
     ) {
         event.preventDefault();
-        editor.insert_text("\n" + indent);
+        editor.insert("\n" + indent);
     }
 }
 
@@ -95,5 +91,6 @@ export default Object.freeze({
     highlight,
     stringify_error,
     docs_url: "https://github.com/organix/uFork/blob/main/docs/asm.md",
-    ruler_position: 28
+    ruler: 28,
+    indent
 });
