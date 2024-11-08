@@ -8,6 +8,8 @@
 
 // See testing.md.
 
+/*jslint web, global */
+
 import import_map from "./import_map.js";
 import parseq from "https://ufork.org/lib/parseq.js";
 import assemble from "https://ufork.org/lib/assemble.js";
@@ -108,6 +110,8 @@ function asm_test(module_url, time_limit = 5000) {
     ]);
 }
 
-//debug asm_test(demo_href)(console.log);
+if (import.meta.main) {
+    asm_test(demo_href)(globalThis.console.log);
+}
 
 export default Object.freeze(asm_test);

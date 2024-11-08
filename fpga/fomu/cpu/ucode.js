@@ -2,9 +2,11 @@
 // Dale Schumacher
 // created: 2024-04-10
 
-/*jslint bitwise, long */
+/*jslint bitwise, long, global */
 
 import hex from "https://ufork.org/lib/hex.js";
+
+const trace = globalThis.console.log;
 
 // Create a position-tracking character-stream.
 
@@ -18,7 +20,9 @@ function make_stream(text, src = "") {
             line,
             error: msg.join(" ")
         };
-//debug console.log("ERROR!", err);
+        if (import.meta.main) {
+            trace("ERROR!", err);
+        }
         return err;
     }
     function next_char() {
@@ -170,7 +174,9 @@ function compile(text, src = "") {
             // new entry-point
             const word = uc_call(prog.length);
             const name = next_token();
-//debug console.log("compile_name:", name, "=", hex.from(word, 16));
+            if (import.meta.main) {
+                trace("compile_name:", name, "=", hex.from(word, 16));
+            }
             if (words[name] !== undefined) {
                 return error("redefined word:", name);
             }
@@ -198,7 +204,9 @@ function compile(text, src = "") {
             }
             const addr = prog.length - 2;
             const word = uc_call(addr);
-//debug console.log("compile_const:", name, "=", hex.from(word, 16));
+            if (import.meta.main) {
+                trace("compile_const:", name, "=", hex.from(word, 16));
+            }
             prog[addr] = UC_CONST;  // convert (LIT) to (CONST)
             words[name] = word;  // add word to dictionary
             tail_ctx = TAIL_NONE;
@@ -207,7 +215,9 @@ function compile(text, src = "") {
             // new named variable
             const word = uc_call(prog.length);
             const name = next_token();
-//debug console.log("compile_var:", name, "=", hex.from(word, 16));
+            if (import.meta.main) {
+                trace("compile_var:", name, "=", hex.from(word, 16));
+            }
             if (words[name] !== undefined) {
                 return error("redefined word:", name);
             }
@@ -223,7 +233,9 @@ function compile(text, src = "") {
         "BEGIN": function () {                          // ( -- )
             // begin indefinite loop
             const addr = prog.length;
-//debug console.log("compile_indefinite_loop:", "$" + hex.from(addr, 12));
+            if (import.meta.main) {
+                trace("compile_indefinite_loop:", "$" + hex.from(addr, 12));
+            }
             const word = uc_jump(addr);  // placeholder
             ctrl_ctx.push(word);
         },
@@ -250,7 +262,9 @@ function compile(text, src = "") {
             // begin counted loop
             prog.push(UC_TO_R);
             const addr = prog.length;
-//debug console.log("compile_countdown_loop:", "$" + hex.from(addr, 12));
+            if (import.meta.main) {
+                trace("compile_countdown_loop:", "$" + hex.from(addr, 12));
+            }
             const word = uc_dec_jnz(addr);  // placeholder
             ctrl_ctx.push(word);
             prog.push(word);
@@ -259,7 +273,9 @@ function compile(text, src = "") {
             // begin counted loop
             prog.push(UC_TO_R);
             const addr = prog.length;
-//debug console.log("compile_countup_loop:", "$" + hex.from(addr, 12));
+            if (import.meta.main) {
+                trace("compile_countup_loop:", "$" + hex.from(addr, 12));
+            }
             const word = uc_inc_jnz(addr);  // placeholder
             ctrl_ctx.push(word);
             prog.push(word);
@@ -274,7 +290,9 @@ function compile(text, src = "") {
         },
         "AGAIN": function () {                          // ( -- )
             // end infinite or counted loop
-//debug console.log("compile_again:", "$" + hex.from(prog.length, 12));
+            if (import.meta.main) {
+                trace("compile_again:", "$" + hex.from(prog.length, 12));
+            }
             const word = ctrl_ctx.pop();
             const addr = word & ADDR_MASK;
             if (uc_is_auto(word)) {
@@ -286,14 +304,18 @@ function compile(text, src = "") {
         },
         "IF": function () {                             // ( cond -- )
             // begin conditional
-//debug console.log("compile_if:", "$" + hex.from(prog.length, 12));
+            if (import.meta.main) {
+                trace("compile_if:", "$" + hex.from(prog.length, 12));
+            }
             const word = uc_jz(prog.length);  // placeholder
             ctrl_ctx.push(word);
             prog.push(word);
         },
         "ELSE": function () {                           // ( -- )
             // begin alternative
-//debug console.log("compile_else:", "$" + hex.from(prog.length, 12));
+            if (import.meta.main) {
+                trace("compile_else:", "$" + hex.from(prog.length, 12));
+            }
             const addr = ctrl_ctx.pop() & ADDR_MASK;
             prog[addr] = uc_jz(prog.length + 1);  // patch
             const word = uc_jump(prog.length);  // placeholder
@@ -302,7 +324,9 @@ function compile(text, src = "") {
         },
         "THEN": function () {                           // ( -- )
             // end conditional
-//debug console.log("compile_then:", "$" + hex.from(prog.length, 12));
+            if (import.meta.main) {
+                trace("compile_then:", "$" + hex.from(prog.length, 12));
+            }
             const word = ctrl_ctx.pop();
             const addr = word & ADDR_MASK;
             prog[addr] = uc_fixup(word, prog.length);  // patch
@@ -329,7 +353,9 @@ function compile(text, src = "") {
 
     function compile_comment(token) {
         while (token.length > 0) {
-//debug console.log("compile_comment:", token);
+            if (import.meta.main) {
+                trace("compile_comment:", token);
+            }
             if (token === "(") {
                 token = compile_comment(next_token());
             } else if (token === ")") {
@@ -340,7 +366,9 @@ function compile(text, src = "") {
         return token;
     }
     function compile_word(token) {
-//debug console.log("compile_word:", token);
+        if (import.meta.main) {
+            trace("compile_word:", token);
+        }
         if (token === "(") {
             return compile_comment(next_token());
         }
@@ -590,93 +618,98 @@ function from_uf(uf) {
     return (msb3 | lsb13);
 }
 
-//debug console.log(hex.from(from_uf(-1), 16));
-//debug console.log(hex.from(from_uf(0x60000002), 16));
+function demo(log) {
+    log(hex.from(from_uf(-1), 16));
+    log(hex.from(from_uf(0x60000002), 16));
 
-//debug console.log(disasm(0xA252));
-//debug console.log(disasm(0x5100, {DROP: 0x0100}));
+    log(disasm(0xA252));
+    log(disasm(0x5100, {DROP: 0x0100}));
 
-//debug console.log(
-//debug     "["
-//debug     + parse_memh("  C0de // Data?").map(
-//debug         (n) => "0x" + hex.from(n, 16)
-//debug     ).join(", ")
-//debug     + "]"
-//debug );
+    log(
+        "["
+        + parse_memh("  C0de // Data?").map(
+            (n) => "0x" + hex.from(n, 16)
+        ).join(", ")
+        + "]"
+    );
 
-//debug const test_memh = `
-//debug /*  CODE    ADR  DISASM                  NAMES                     */
-//debug     c042 // 000: BOOT
-//debug     521f // 001: (CONST)                 ADDR_MASK
-//debug     0fff // 002: 0x0fff
-//debug     521f // 003: (CONST)                 COUNTER
-//debug     0005 // 004: 0x0005
-//debug     0000 // 005: NOP
-//debug     c003 // 006: COUNTER                 ADJUST
-//debug     030f // 007: @
-//debug     0741 // 008: +
-//debug     0200 // 009: DUP
-//debug     c003 // 00a: COUNTER
-//debug     598f // 00b: ! EXIT
-//debug `;
-//debug const test_memh_img = parse_memh(test_memh);
-//debug console.log(test_memh_img.map(function (number, index) {
-//debug     return hex.from(index, 12) + ": " + hex.from(number, 16);
-//debug }).join("\n"));
+    const test_memh = `
+    /*  CODE    ADR  DISASM                  NAMES                     */
+        c042 // 000: BOOT
+        521f // 001: (CONST)                 ADDR_MASK
+        0fff // 002: 0x0fff
+        521f // 003: (CONST)                 COUNTER
+        0005 // 004: 0x0005
+        0000 // 005: NOP
+        c003 // 006: COUNTER                 ADJUST
+        030f // 007: @
+        0741 // 008: +
+        0200 // 009: DUP
+        c003 // 00a: COUNTER
+        598f // 00b: ! EXIT
+    `;
+    const test_memh_img = parse_memh(test_memh);
+    log(test_memh_img.map(function (number, index) {
+        return hex.from(index, 12) + ": " + hex.from(number, 16);
+    }).join("\n"));
 
-//debug const multiline_source = String.raw`
-//debug 0x0A CONSTANT '\n'
-//debug 0x0FFF CONSTANT ADDR_MASK
-//debug VARIABLE COUNTER
-//debug : ADJUST ( n -- n+COUNTER )
-//debug     COUNTER @ +
-//debug     DUP COUNTER ! ;
-//debug : EXECUTE ( addr -- ) ( R: -- addr )
-//debug     ADDR_MASK ( 0x0FFF ) AND >R
-//debug : (EXIT)
-//debug     EXIT
-//debug : NIP ( a b -- b )
-//debug     SWAP DROP ;
-//debug : TUCK ( a b -- b a b )
-//debug     SWAP OVER ;
-//debug : ?: ( altn cnsq cond -- cnqs | altn )
-//debug     SKZ SWAP
-//debug : (DROP)
-//debug     DROP ;
-//debug : 0= ( n -- n==0 )
-//debug : NOT ( flag -- !flag )
-//debug     TRUE FALSE ROT ?: ;
-//debug : BOOL ( n -- flag )
-//debug     IF TRUE ELSE FALSE THEN ;
-//debug : 0< ( n -- n<0 )
-//debug     MSB& BOOL ;
-//debug : 4DROP ( a b c d -- )
-//debug     4 ?LOOP- DROP I DROP AGAIN ;
-//debug : EMIT ( ch -- )
-//debug     BEGIN 0x00 IO@ UNTIL 0x01 IO! ;
-//debug : KEY ( -- ch )
-//debug     BEGIN 0x02 IO@ NOT WHILE REPEAT 0x03 IO@ ;
-//debug : fetch ( addr -- data )
-//debug     ! ;
-//debug : store ( data addr -- )
-//debug     @ ;
-//debug : Hello 72 , 101 , 108 , 108 , 111 ,
-//debug ( WARNING! BOOT should not return... )
-//debug : BOOT
-//debug     R> DROP BOOT`;
-//debug const source = multiline_source;  // or ": BOOT R@ DROP BOOT ;"
-//debug console.log(source);
-//debug const {errors, words, prog} = compile(source);
-//debug if (errors !== undefined && errors.length > 0) {
-//debug     console.log(errors);
-//debug } else {
-//debug     const memh = print_memh(prog, words);
-//debug     console.log(memh);
-//debug     const img = parse_memh(memh);
-//debug     console.log(img.map(function (number, index) {
-//debug         return hex.from(index, 12) + ": " + hex.from(number, 16);
-//debug     }).join("\n"));
-//debug }
+    const multiline_source = String.raw`
+    0x0A CONSTANT '\n'
+    0x0FFF CONSTANT ADDR_MASK
+    VARIABLE COUNTER
+    : ADJUST ( n -- n+COUNTER )
+        COUNTER @ +
+        DUP COUNTER ! ;
+    : EXECUTE ( addr -- ) ( R: -- addr )
+        ADDR_MASK ( 0x0FFF ) AND >R
+    : (EXIT)
+        EXIT
+    : NIP ( a b -- b )
+        SWAP DROP ;
+    : TUCK ( a b -- b a b )
+        SWAP OVER ;
+    : ?: ( altn cnsq cond -- cnqs | altn )
+        SKZ SWAP
+    : (DROP)
+        DROP ;
+    : 0= ( n -- n==0 )
+    : NOT ( flag -- !flag )
+        TRUE FALSE ROT ?: ;
+    : BOOL ( n -- flag )
+        IF TRUE ELSE FALSE THEN ;
+    : 0< ( n -- n<0 )
+        MSB& BOOL ;
+    : 4DROP ( a b c d -- )
+        4 ?LOOP- DROP I DROP AGAIN ;
+    : EMIT ( ch -- )
+        BEGIN 0x00 IO@ UNTIL 0x01 IO! ;
+    : KEY ( -- ch )
+        BEGIN 0x02 IO@ NOT WHILE REPEAT 0x03 IO@ ;
+    : fetch ( addr -- data )
+        ! ;
+    : store ( data addr -- )
+        @ ;
+    : Hello 72 , 101 , 108 , 108 , 111 ,
+    ( WARNING! BOOT should not return... )
+    : BOOT
+        R> DROP BOOT`;
+    const source = multiline_source;  // or ": BOOT R@ DROP BOOT ;"
+    log(source);
+    const {errors, words, prog} = compile(source);
+    if (errors !== undefined && errors.length > 0) {
+        return log(errors);
+    }
+    const memh = print_memh(prog, words);
+    log(memh);
+    const img = parse_memh(memh);
+    log(img.map(function (number, index) {
+        return hex.from(index, 12) + ": " + hex.from(number, 16);
+    }).join("\n"));
+}
+
+if (import.meta.main) {
+    demo(globalThis.console.log);
+}
 
 export default Object.freeze({
     make_stream,

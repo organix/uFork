@@ -2,9 +2,10 @@
 // Dale Schumacher
 // created: 2024-05-24
 
-/*jslint bitwise, long */
+/*jslint bitwise, long, global */
 
 import hex from "https://ufork.org/lib/hex.js";
+import ucode from "./ucode.js";
 
 const OP_NONE = 0x0;  // a
 const OP_ADD = 0x1;  // a+b
@@ -40,6 +41,8 @@ const MEM_Q_T = 0x4;  // uFork quad-memory field T
 //const MEM_Q_X = 0x5;  // uFork quad-memory field X
 //const MEM_Q_Y = 0x6;  // uFork quad-memory field Y
 //const MEM_Q_Z = 0x7;  // uFork quad-memory field Z
+
+const trace = globalThis.console.log;
 
 // Create a bounded stack.
 
@@ -144,19 +147,25 @@ function make_machine(prog = [], device = []) {
             rstack: rstack.copy(),
             error: msg.join(" ")
         };
-//debug console.log("ERROR!", err);
+        if (import.meta.main) {
+            trace("ERROR!", err);
+        }
         return err;
     }
 
     // FIXME: warning() should be a machine option
     function warning(...msg) {
         const err = msg.join(" ");
-//debug console.log("WARNING!", err);
+        if (import.meta.main) {
+            trace("WARNING!", err);
+        }
         return err;
     }
 
     function alu_perform(op, a, b) {
-//debug console.log("alu_perform:", "op=", op, "a=", a, "b=", b);
+        if (import.meta.main) {
+            trace("alu_perform:", "op=", op, "a=", a, "b=", b);
+        }
         if (op === OP_NONE) {
             return a;
         }
@@ -204,7 +213,9 @@ function make_machine(prog = [], device = []) {
     }
 
     function mem_perform(range, wr_en, addr, data) {
-//debug console.log("mem_perform:", "range=", range, "wr_en=", wr_en, "addr=", addr, "data=", data);
+        if (import.meta.main) {
+            trace("mem_perform:", "range=", range, "wr_en=", wr_en, "addr=", addr, "data=", data);
+        }
         if (range === MEM_UC) {
             addr &= 0x0FFF;  // 12-bit address space
             if (wr_en) {
@@ -219,7 +230,9 @@ function make_machine(prog = [], device = []) {
             const id = (addr & 0xF0) >> 4;
             const reg = (addr & 0x0F);
             const dev = device[id];
-//debug console.log("mem_perform MEM_DEV:", "id=", id, "reg=", reg, "dev=", dev);
+            if (import.meta.main) {
+                trace("mem_perform MEM_DEV:", "id=", id, "reg=", reg, "dev=", dev);
+            }
             if (typeof dev === "object") {
                 if (wr_en) {
                     dev.write(reg, data);
@@ -242,7 +255,9 @@ function make_machine(prog = [], device = []) {
             );
             const field_names = ["t", "x", "y", "z"];
             const field = field_names[range & 0x3];
-//debug console.log("mem_perform MEM_QUAD:", "range=", "0x" + hex.from(range, 3), "addr=", "0x" + hex.from(addr, 16), "quad=", quad, "field=", field);
+            if (import.meta.main) {
+                trace("mem_perform MEM_QUAD:", "range=", "0x" + hex.from(range, 3), "addr=", "0x" + hex.from(addr, 16), "quad=", quad, "field=", field);
+            }
             if (wr_en) {
                 quad[field] = data;
             }
@@ -255,7 +270,9 @@ function make_machine(prog = [], device = []) {
         const tos = dstack.tos();                       // top of data stack
         const nos = dstack.nos();                       // next on data stack
         const tors = rstack.tos();                      // top of return stack
-//debug console.log("step:", "pc=", pc, "tos=", tos, "nos=", nos, "tors=", tors);
+        if (import.meta.main) {
+            trace("step:", "pc=", pc, "tos=", tos, "nos=", nos, "tors=", tors);
+        }
         const instr = prog[pc];                         // fetch current instruction
         if (typeof instr !== "number") {
             return error("program address", pc, "out of range!");
@@ -276,7 +293,9 @@ function make_machine(prog = [], device = []) {
         if (ctrl) {
             // control instruction
             const addr = (instr & 0x0FFF);
-//debug console.log("step ctrl:", "pc=", pc, "r_pc=", r_pc, "r_se=", r_se, "addr=", addr);
+            if (import.meta.main) {
+                trace("step ctrl:", "pc=", pc, "r_pc=", r_pc, "r_se=", r_se, "addr=", addr);
+            }
             if (r_pc) {
                 rstack.perform(SE_PUSH, pc);
             }
@@ -318,7 +337,9 @@ function make_machine(prog = [], device = []) {
                 }
                 const range = (instr & 0x0070) >> 4;        // memory range
                 result = mem_perform(range, wr_en, tos, nos);
-//debug console.log(result, "=", "mem_perform()");
+                if (import.meta.main) {
+                    trace(result, "=", "mem_perform()");
+                }
                 if (typeof result !== "number") {
                     return result;                          // propagate error
                 }
@@ -335,10 +356,14 @@ function make_machine(prog = [], device = []) {
                 const src_b = [tos, 0x0001, 0x8000, 0xFFFF];
                 const alu_b = src_b[sel_b & 0x3];
                 result = alu_perform(alu_op, alu_a, alu_b) & 0xFFFF;
-//debug console.log(result, "=", "alu_perform()");
+                if (import.meta.main) {
+                    trace(result, "=", "alu_perform()");
+                }
             }
             // stack operations
-//debug console.log("step stack:", "r_pc=", r_pc, "d_se=", d_se, "r_se=", r_se, "result=", result);
+            if (import.meta.main) {
+                trace("step stack:", "r_pc=", r_pc, "d_se=", d_se, "r_se=", r_se, "result=", result);
+            }
             if (r_pc) {
                 pc = tors & 0x0FFF;
             }
@@ -350,87 +375,93 @@ function make_machine(prog = [], device = []) {
     return {step, copy};
 }
 
-//debug import ucode from "./ucode.js";
-// const s = make_stack();
-//debug const s = make_stack(4);
-//debug console.log(s.tos(), s.nos(), s.copy());
-//debug console.log(s.stats());
-//debug s.perform(SE_DROP);
-//debug console.log(s.tos(), s.nos(), s.copy());
-//debug s.perform(SE_PUSH, 123);
-//debug console.log(s.tos(), s.nos(), s.copy());
-//debug s.perform(SE_PUSH, 45);
-//debug console.log(s.tos(), s.nos(), s.copy());
-//debug s.perform(SE_PUSH, 6);
-//debug console.log(s.tos(), s.nos(), s.copy());
-//debug s.perform(SE_DROP);
-//debug console.log(s.tos(), s.nos(), s.copy());
-//debug s.perform(SE_PUSH, 78);
-//debug console.log(s.tos(), s.nos(), s.copy());
-//debug s.perform(SE_PUSH, 9);
-//debug console.log(s.tos(), s.nos(), s.copy());
-//debug s.perform(SE_PUSH, 10);
-//debug console.log(s.tos(), s.nos(), s.copy());
-//debug s.perform(SE_DROP);
-//debug console.log(s.tos(), s.nos(), s.copy());
-//debug s.perform(SE_DROP);
-//debug console.log(s.tos(), s.nos(), s.copy());
-//debug console.log(s.stats());
+function run_loop(mach) {
+    let rv;
+    while (rv === undefined) {
+        rv = mach.step();
+    }
+    return rv;
+}
 
-//debug const source = String.raw`
-//debug : PANIC! FAIL PANIC! ;      ( if BOOT returns... )
-//debug 0x03 CONSTANT ^C
-//debug 0x0A CONSTANT '\n'
-//debug 0x0D CONSTANT '\r'
-//debug 0x20 CONSTANT BL
-//debug : = ( a b -- a==b )
-//debug     XOR
-//debug : 0= ( n -- n==0 )
-//debug : NOT ( flag -- !flag )
-//debug     IF FALSE ELSE TRUE THEN ;
-//debug : TX? ( -- ready )
-//debug : EMIT?
-//debug     0x00 IO@ ;
-//debug : EMIT ( char -- )
-//debug     BEGIN TX? UNTIL
-//debug : TX! ( char -- )
-//debug     0x01 IO! ;
-//debug : RX? ( -- ready )
-//debug : KEY?
-//debug     0x02 IO@ ;
-//debug : KEY ( -- char )
-//debug     BEGIN RX? UNTIL
-//debug : RX@ ( -- char )
-//debug     0x03 IO@ ;
-//debug : ECHO ( char -- )
-//debug     DUP EMIT
-//debug     '\r' = IF
-//debug         '\n' EMIT
-//debug     THEN ;
-//debug : ECHOLOOP
-//debug     KEY DUP ECHO
-//debug     ^C = IF EXIT THEN       ( abort! )
-//debug     ECHOLOOP ;
-//debug ( WARNING! if BOOT returns we PANIC! )
-//debug : BOOT
-//debug     ECHOLOOP EXIT
-//debug `;
-//debug const {errors, words, prog} = ucode.compile(source);
-//debug function run_loop(mach) {
-//debug     let rv;
-//debug     while (rv === undefined) {
-//debug         rv = mach.step();
-//debug     }
-//debug     return rv;
-//debug }
-//debug if (errors !== undefined && errors.length > 0) {
-//debug     console.log(errors);
-//debug } else {
-//debug     const memh = ucode.print_memh(prog, words);
-//debug     console.log(memh);
-//debug     const mach = make_machine(prog);
-//debug     const rv = run_loop(mach);
-//debug     console.log("rv:", rv);
-//debug }
+function demo(log) {
+    // const s = make_stack();
+    const s = make_stack(4);
+    log(s.tos(), s.nos(), s.copy());
+    log(s.stats());
+    s.perform(SE_DROP);
+    log(s.tos(), s.nos(), s.copy());
+    s.perform(SE_PUSH, 123);
+    log(s.tos(), s.nos(), s.copy());
+    s.perform(SE_PUSH, 45);
+    log(s.tos(), s.nos(), s.copy());
+    s.perform(SE_PUSH, 6);
+    log(s.tos(), s.nos(), s.copy());
+    s.perform(SE_DROP);
+    log(s.tos(), s.nos(), s.copy());
+    s.perform(SE_PUSH, 78);
+    log(s.tos(), s.nos(), s.copy());
+    s.perform(SE_PUSH, 9);
+    log(s.tos(), s.nos(), s.copy());
+    s.perform(SE_PUSH, 10);
+    log(s.tos(), s.nos(), s.copy());
+    s.perform(SE_DROP);
+    log(s.tos(), s.nos(), s.copy());
+    s.perform(SE_DROP);
+    log(s.tos(), s.nos(), s.copy());
+    log(s.stats());
+
+    const source = String.raw`
+    : PANIC! FAIL PANIC! ;      ( if BOOT returns... )
+    0x03 CONSTANT ^C
+    0x0A CONSTANT '\n'
+    0x0D CONSTANT '\r'
+    0x20 CONSTANT BL
+    : = ( a b -- a==b )
+        XOR
+    : 0= ( n -- n==0 )
+    : NOT ( flag -- !flag )
+        IF FALSE ELSE TRUE THEN ;
+    : TX? ( -- ready )
+    : EMIT?
+        0x00 IO@ ;
+    : EMIT ( char -- )
+        BEGIN TX? UNTIL
+    : TX! ( char -- )
+        0x01 IO! ;
+    : RX? ( -- ready )
+    : KEY?
+        0x02 IO@ ;
+    : KEY ( -- char )
+        BEGIN RX? UNTIL
+    : RX@ ( -- char )
+        0x03 IO@ ;
+    : ECHO ( char -- )
+        DUP EMIT
+        '\r' = IF
+            '\n' EMIT
+        THEN ;
+    : ECHOLOOP
+        KEY DUP ECHO
+        ^C = IF EXIT THEN       ( abort! )
+        ECHOLOOP ;
+    ( WARNING! if BOOT returns we PANIC! )
+    : BOOT
+        ECHOLOOP EXIT
+    `;
+    const {errors, words, prog} = ucode.compile(source);
+    if (errors !== undefined && errors.length > 0) {
+        log(errors);
+    } else {
+        const memh = ucode.print_memh(prog, words);
+        log(memh);
+        const mach = make_machine(prog);
+        const rv = run_loop(mach);
+        log("rv:", rv);
+    }
+}
+
+if (import.meta.main) {
+    demo(globalThis.console.log);
+}
 
 export default Object.freeze({make_machine});

@@ -9,7 +9,10 @@
 // Intermittent communication failure will be simulated if the 'flakiness'
 // parameter is a number between 0 and 1.
 
-/*jslint web */
+/*jslint web, global */
+
+import parseq from "https://ufork.org/lib/parseq.js";
+import requestorize from "https://ufork.org/lib/rq/requestorize.js";
 
 function memory_transport(flakiness, max_latency) {
     let listeners = Object.create(null);
@@ -179,62 +182,66 @@ function memory_transport(flakiness, max_latency) {
     return Object.freeze({listen, connect});
 }
 
-//debug import parseq from "https://ufork.org/lib/parseq.js";
-//debug import requestorize from "https://ufork.org/lib/rq/requestorize.js";
-//debug const flake = 0.1;
-//debug const transport = memory_transport(flake, 50);
-//debug const cancel = parseq.sequence([
-//debug     transport.listen(
-//debug         "bob",
-//debug         "@bob",
-//debug         function on_open(connection) {
-//debug             console.log("bob on_open", connection.name());
-//debug         },
-//debug         function on_receive(connection, frame) {
-//debug             console.log("bob on_receive", frame);
-//debug             if (frame > 0) {
-//debug                 connection.send(frame - 1);
-//debug             } else {
-//debug                 connection.close();
-//debug             }
-//debug         },
-//debug         function on_close(_, reason) {
-//debug             console.log("bob on_close", reason);
-//debug         }
-//debug     ),
-//debug     requestorize(function maybe_stop(stop) {
-//debug         if (Math.random() < flake) {
-//debug             console.log("bob stop");
-//debug             stop();
-//debug         }
-//debug         return true;
-//debug     }),
-//debug     transport.connect(
-//debug         "alice",
-//debug         "bob",
-//debug         "@bob",
-//debug         function on_receive(connection, frame) {
-//debug             console.log("alice on_receive", frame);
-//debug             if (frame > 0) {
-//debug                 connection.send(frame - 1);
-//debug             } else {
-//debug                 connection.close();
-//debug             }
-//debug         },
-//debug         function on_close(_, reason) {
-//debug             console.log("alice on_close", reason);
-//debug         }
-//debug     ),
-//debug     requestorize(function send_message(connection) {
-//debug         console.log("alice on_open", connection.name());
-//debug         const message = Math.floor(Math.random() * 10);
-//debug         connection.send(message);
-//debug         return "Sent " + message;
-//debug     })
-//debug ])(console.log);
-//debug if (Math.random() < flake) {
-//debug     console.log("cancel");
-//debug     cancel();
-//debug }
+function demo(log) {
+    const flake = 0.1;
+    const transport = memory_transport(flake, 50);
+    const cancel = parseq.sequence([
+        transport.listen(
+            "bob",
+            "@bob",
+            function on_open(connection) {
+                log("bob on_open", connection.name());
+            },
+            function on_receive(connection, frame) {
+                log("bob on_receive", frame);
+                if (frame > 0) {
+                    connection.send(frame - 1);
+                } else {
+                    connection.close();
+                }
+            },
+            function on_close(_, reason) {
+                log("bob on_close", reason);
+            }
+        ),
+        requestorize(function maybe_stop(stop) {
+            if (Math.random() < flake) {
+                log("bob stop");
+                stop();
+            }
+            return true;
+        }),
+        transport.connect(
+            "alice",
+            "bob",
+            "@bob",
+            function on_receive(connection, frame) {
+                log("alice on_receive", frame);
+                if (frame > 0) {
+                    connection.send(frame - 1);
+                } else {
+                    connection.close();
+                }
+            },
+            function on_close(_, reason) {
+                log("alice on_close", reason);
+            }
+        ),
+        requestorize(function send_message(connection) {
+            log("alice on_open", connection.name());
+            const message = Math.floor(Math.random() * 10);
+            connection.send(message);
+            return "Sent " + message;
+        })
+    ])(log);
+    if (Math.random() < flake) {
+        log("cancel");
+        cancel();
+    }
+}
+
+if (import.meta.main) {
+    demo(globalThis.console.log);
+}
 
 export default Object.freeze(memory_transport);

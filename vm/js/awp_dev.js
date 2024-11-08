@@ -8,7 +8,7 @@
 //  - Stop capabilities (used to stop listening) have a wrapped fixnum as their
 //    tag.
 
-/*jslint web, null, devel, long */
+/*jslint web, global, null, devel, long */
 
 // TODO:
 // - distributed garbage collection
@@ -16,10 +16,16 @@
 // - cancel/stop capabilities
 // - disconnect when all proxies are dropped?
 
-import ufork from "./ufork.js";
 import assemble from "https://ufork.org/lib/assemble.js";
-import OED from "https://ufork.org/lib/oed.js";
 import hex from "https://ufork.org/lib/hex.js";
+import OED from "https://ufork.org/lib/oed.js";
+import parseq from "https://ufork.org/lib/parseq.js";
+import requestorize from "https://ufork.org/lib/rq/requestorize.js";
+import ufork from "./ufork.js";
+import host_dev from "./host_dev.js";
+const wasm_url = import.meta.resolve("https://ufork.org/wasm/ufork.wasm");
+const grant_matcher_url = import.meta.resolve("../../apps/grant_matcher/grant_matcher.asm");
+const lib_url = import.meta.resolve("../../lib/");
 
 const E_CONNECTION_LOST = -1;
 const E_ALREADY_LISTENING = -2;
@@ -850,136 +856,134 @@ function awp_dev({
     ddev.h_reserve_stub(dev_cap);
 }
 
-//debug import parseq from "https://ufork.org/lib/parseq.js";
-//debug import requestorize from "https://ufork.org/lib/rq/requestorize.js";
-//debug import host_dev from "./host_dev.js";
-//debug const wasm_url = import.meta.resolve("https://ufork.org/wasm/ufork.wasm");
-//debug const asm_url = import.meta.resolve("../../apps/grant_matcher/grant_matcher.asm");
-//debug const lib_url = import.meta.resolve("../../lib/");
-//debug const core = ufork.make_core({
-//debug     wasm_url,
-//debug     on_wakeup(device_offset) {
-//debug         console.log("WAKE:", device_offset);
-//debug         console.log("IDLE:", core.u_fault_msg(core.u_fix_to_i32(
-//debug             core.h_run_loop()
-//debug         )));
-//debug     },
-//debug     on_log: console.log,
-//debug     log_level: ufork.LOG_DEBUG,
-//debug     import_map: {"https://ufork.org/lib/": lib_url},
-//debug     compilers: {asm: assemble}
-//debug });
-//debug function demo({
-//debug     transport,
-//debug     bob_address,
-//debug     bob_bind_info = bob_address,
-//debug     carol_address,
-//debug     carol_bind_info = carol_address,
-//debug     webcrypto
-//debug }) {
-//debug     return parseq.sequence([
-//debug         core.h_initialize(),
-//debug         parseq.parallel([
-//debug             core.h_import(asm_url),
-//debug             transport.generate_identity(),
-//debug             transport.generate_identity(),
-//debug             transport.generate_identity(),
-//debug             transport.generate_identity()
-//debug         ]),
-//debug         requestorize(function ([
-//debug             asm_module,
-//debug             alice_identity,
-//debug             bob_identity,
-//debug             carol_identity,
-//debug             dana_identity
-//debug         ]) {
-//debug             const alice = {
-//debug                 name: transport.identity_to_name(alice_identity)
-//debug             };
-//debug             const bob = {
-//debug                 name: transport.identity_to_name(bob_identity),
-//debug                 address: bob_address
-//debug             };
-//debug             const carol = {
-//debug                 name: transport.identity_to_name(carol_identity),
-//debug                 address: carol_address
-//debug             };
-//debug             const dana = {
-//debug                 name: transport.identity_to_name(dana_identity)
-//debug             };
-//debug             const stores = [
-//debug                 {
-//debug                     identity: alice_identity,
-//debug                     acquaintances: [alice, bob, carol]
-//debug                 },
-//debug                 {
-//debug                     identity: bob_identity,
-//debug                     bind_info: bob_bind_info,
-//debug                     acquaintances: [bob]
-//debug                 },
-//debug                 {
-//debug                     identity: carol_identity,
-//debug                     bind_info: carol_bind_info,
-//debug                     acquaintances: [carol]
-//debug                 },
-//debug                 {
-//debug                     identity: dana_identity,
-//debug                     acquaintances: [dana, bob, carol]
-//debug                 }
-//debug             ];
-//debug             const make_ddev = host_dev(core);
-//debug             awp_dev({
-//debug                 core,
-//debug                 make_ddev,
-//debug                 transport,
-//debug                 stores,
-//debug                 webcrypto
-//debug             });
-//debug             core.h_boot(asm_module.boot);
-//debug             console.log("IDLE:", core.u_fault_msg(core.u_fix_to_i32(
-//debug                 core.h_run_loop()
-//debug             )));
-//debug             return true;
-//debug         })
-//debug     ]);
-//debug }
+function demo({
+    core,
+    transport,
+    bob_address,
+    bob_bind_info = bob_address,
+    carol_address,
+    carol_bind_info = carol_address
+}) {
+    return parseq.sequence([
+        core.h_initialize(),
+        parseq.parallel([
+            core.h_import(grant_matcher_url),
+            transport.generate_identity(),
+            transport.generate_identity(),
+            transport.generate_identity(),
+            transport.generate_identity()
+        ]),
+        requestorize(function ([
+            asm_module,
+            alice_identity,
+            bob_identity,
+            carol_identity,
+            dana_identity
+        ]) {
+            const alice = {
+                name: transport.identity_to_name(alice_identity)
+            };
+            const bob = {
+                name: transport.identity_to_name(bob_identity),
+                address: bob_address
+            };
+            const carol = {
+                name: transport.identity_to_name(carol_identity),
+                address: carol_address
+            };
+            const dana = {
+                name: transport.identity_to_name(dana_identity)
+            };
+            const stores = [
+                {
+                    identity: alice_identity,
+                    acquaintances: [alice, bob, carol]
+                },
+                {
+                    identity: bob_identity,
+                    bind_info: bob_bind_info,
+                    acquaintances: [bob]
+                },
+                {
+                    identity: carol_identity,
+                    bind_info: carol_bind_info,
+                    acquaintances: [carol]
+                },
+                {
+                    identity: dana_identity,
+                    acquaintances: [dana, bob, carol]
+                }
+            ];
+            const make_ddev = host_dev(core);
+            awp_dev({
+                core,
+                make_ddev,
+                transport,
+                stores
+            });
+            core.h_boot(asm_module.boot);
+            console.log("IDLE:", core.u_fault_msg(core.u_fix_to_i32(
+                core.h_run_loop()
+            )));
+            return true;
+        })
+    ]);
+}
 
-// Browser demo.
+function browser_demo(core, log) {
+    Promise.all([
+        import("./dummy_signaller.js"),
+        import("./webrtc_transport.js")
+    ]).then(function ([
+        signaller_module,
+        transport_module
+    ]) {
+        demo({
+            core,
+            transport: transport_module.default(
+                signaller_module.default(),
+                log
+            ),
+            bob_address: "connect:?name=bob",
+            bob_bind_info: "listen:?name=bob",
+            carol_address: "connect:?name=carol",
+            carol_bind_info: "listen:?name=carol"
+        })(log);
+    });
+}
 
-//debug import dummy_signaller from "./dummy_signaller.js";
-//debug import webrtc_transport from "./webrtc_transport.js";
-//debug if (typeof window === "object") {
-//debug     demo({
-//debug         transport: webrtc_transport(dummy_signaller(), console.log),
-//debug         bob_address: "connect:?name=bob",
-//debug         bob_bind_info: "listen:?name=bob",
-//debug         carol_address: "connect:?name=carol",
-//debug         carol_bind_info: "listen:?name=carol",
-//debug         webcrypto: crypto
-//debug     })(console.log);
-//debug }
+function node_demo(core, log) {
+    import("./node_tls_transport.js").then(function (transport_module) {
+        demo({
+            core,
+            transport: transport_module.default(),
+            bob_address: {host: "localhost", port: 5001},
+            carol_address: {host: "localhost", port: 5002}
+        })(log);
+    });
+}
 
-// Node.js demo.
-
-//debug if (typeof process === "object") {
-//debug     Promise.all([
-//debug         import("node:crypto"),
-//debug         import("./node_tls_transport.js")
-//debug     ]).then(function ([
-//debug         crypto_module,
-//debug         transport_module
-//debug     ]) {
-//debug         demo({
-//debug             transport: transport_module.default(),
-//debug             bob_address: {host: "localhost", port: 5001},
-//debug             carol_address: {host: "localhost", port: 5002},
-//debug             webcrypto: crypto_module.webcrypto
-//debug         })(console.log);
-//debug     });
-//debug }
-
-// Clean up.
-
+let core;
+if (import.meta.main) {
+    core = ufork.make_core({
+        wasm_url,
+        on_wakeup(device_offset) {
+            globalThis.console.log("WAKE:", device_offset);
+            globalThis.console.log("IDLE:", core.u_fault_msg(core.u_fix_to_i32(
+                core.h_run_loop()
+            )));
+        },
+        on_log: globalThis.console.log,
+        log_level: ufork.LOG_DEBUG,
+        import_map: {"https://ufork.org/lib/": lib_url},
+        compilers: {asm: assemble}
+    });
+    if (globalThis.window !== undefined) {
+        browser_demo(core, globalThis.console.log);
+    } else {
+        node_demo(core, globalThis.console.log);
+    }
+}
 // core.h_dispose();
 
 export default Object.freeze(awp_dev);

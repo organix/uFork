@@ -1,7 +1,7 @@
 // Observe and interact with the IO device. Also displays generic textual output
 // at a variety of log levels.
 
-/*jslint browser */
+/*jslint browser, global */
 
 import make_ui from "./ui.js";
 import dom from "./dom.js";
@@ -130,16 +130,18 @@ const io_dev_ui = make_ui("io-dev-ui", function (element, {on_input}) {
     element.clear = clear_output;
 });
 
-//debug document.documentElement.innerHTML = "";
-//debug const io_dev = dom(
-//debug     io_dev_ui({on_input: console.log}),
-//debug     {style: {width: "400px", height: "400px", background: "black"}}
-//debug );
-//debug document.body.append(io_dev);
-//debug io_dev.warn("A warning!");
-//debug io_dev.debug("Debuggage...");
-//debug io_dev.info("INFORMATION");
-//debug io_dev.output("Some IO out");
-//debug io_dev.output("put.");
+if (import.meta.main) {
+    document.documentElement.innerHTML = "";
+    const io_dev = dom(
+        io_dev_ui({on_input: globalThis.console.log}),
+        {style: {width: "400px", height: "400px", background: "black"}}
+    );
+    document.body.append(io_dev);
+    io_dev.warn("A warning!");
+    io_dev.debug("Debuggage...");
+    io_dev.info("INFORMATION");
+    io_dev.output("Some IO out");
+    io_dev.output("put.");
+}
 
 export default Object.freeze(io_dev_ui);

@@ -3,9 +3,13 @@
 
 // See host_dev.md.
 
-/*jslint web */
+/*jslint web, global */
 
+import assemble from "https://ufork.org/lib/assemble.js";
+import parseq from "https://ufork.org/lib/parseq.js";
+import requestorize from "https://ufork.org/lib/rq/requestorize.js";
 import ufork from "./ufork.js";
+const wasm_url = import.meta.resolve("https://ufork.org/wasm/ufork.wasm");
 
 function host_dev(core) {
     let next_key = 0;
@@ -117,87 +121,89 @@ function host_dev(core) {
     };
 }
 
-//debug import assemble from "https://ufork.org/lib/assemble.js";
-//debug import parseq from "https://ufork.org/lib/parseq.js";
-//debug import requestorize from "https://ufork.org/lib/rq/requestorize.js";
-//debug const wasm_url = import.meta.resolve(
-//debug     "https://ufork.org/wasm/ufork.wasm"
-//debug );
-//debug const proxy_key = 1000;
-//debug const test_ir = assemble(`
-//debug proxy_key:
-//debug     ref ${proxy_key}
-//debug boot:                   ; _ <- {caps}
-//debug     push 42             ; 42
-//debug     msg 0               ; 42 {caps}
-//debug     push proxy_key      ; 42 {caps} proxy_key
-//debug     dict get            ; 42 proxy
-//debug     actor send          ; --
-//debug     end commit
-//debug .export
-//debug     boot
-//debug `);
-//debug let core;
-//debug function dummy_dev(make_ddev) {
-//debug     const ddev = make_ddev(
-//debug         function on_event_stub(ptr) {
-//debug             const event_stub = core.u_read_quad(ptr);
-//debug             const target = core.u_read_quad(
-//debug                 core.u_cap_to_ptr(event_stub.x)
-//debug             );
-//debug             const event = core.u_read_quad(event_stub.y);
-//debug             console.log(
-//debug                 "on_event_stub",
-//debug                 core.u_pprint(event.y), // message
-//debug                 core.u_pprint(ddev.u_tag(target.y)), // tag
-//debug                 ddev.u_owns_proxy(event_stub.x)
-//debug             );
-//debug         },
-//debug         function on_drop_proxy(proxy_raw) {
-//debug             const quad = core.u_read_quad(core.u_cap_to_ptr(proxy_raw));
-//debug             const tag = ddev.u_tag(quad.y);
-//debug             console.log("on_drop_proxy", core.u_pprint(tag));
-//debug         }
-//debug     );
-//debug     ddev.h_reserve_proxy(ufork.FALSE_RAW); // dropped
-//debug     let proxy = ddev.h_reserve_proxy(ufork.TRUE_RAW);
-//debug     let stub = ddev.h_reserve_stub(proxy);
-//debug     core.h_install(
-//debug         core.u_fixnum(proxy_key),
-//debug         proxy,
-//debug         function on_dispose() {
-//debug             console.log("disposing");
-//debug             ddev.h_dispose();
-//debug             if (stub !== undefined) {
-//debug                 core.h_release_stub(stub);
-//debug                 stub = undefined;
-//debug             }
-//debug         }
-//debug     );
-//debug }
-//debug function run_core() {
-//debug     console.log(
-//debug         "IDLE:",
-//debug         core.u_fault_msg(core.u_fix_to_i32(core.h_run_loop()))
-//debug     );
-//debug }
-//debug core = ufork.make_core({
-//debug     wasm_url,
-//debug     on_wakeup: run_core,
-//debug     on_log: console.log,
-//debug     log_level: ufork.LOG_DEBUG,
-//debug     compilers: {asm: assemble}
-//debug });
-//debug parseq.sequence([
-//debug     core.h_initialize(),
-//debug     core.h_import(undefined, test_ir),
-//debug     requestorize(function (asm_module) {
-//debug         dummy_dev(host_dev(core));
-//debug         core.h_boot(asm_module.boot);
-//debug         run_core();
-//debug         return true;
-//debug     })
-//debug ])(console.log);
-//debug setTimeout(core.h_dispose, 1000);
+const proxy_key = 1000;
+const test_asm = `
+proxy_key:
+    ref ${proxy_key}
+boot:                   ; _ <- {caps}
+    push 42             ; 42
+    msg 0               ; 42 {caps}
+    push proxy_key      ; 42 {caps} proxy_key
+    dict get            ; 42 proxy
+    actor send          ; --
+    end commit
+.export
+    boot
+`;
+
+function demo(log) {
+    let core;
+
+    function dummy_dev(make_ddev) {
+        const ddev = make_ddev(
+            function on_event_stub(ptr) {
+                const event_stub = core.u_read_quad(ptr);
+                const target = core.u_read_quad(
+                    core.u_cap_to_ptr(event_stub.x)
+                );
+                const event = core.u_read_quad(event_stub.y);
+                log(
+                    "on_event_stub",
+                    core.u_pprint(event.y), // message
+                    core.u_pprint(ddev.u_tag(target.y)), // tag
+                    ddev.u_owns_proxy(event_stub.x)
+                );
+            },
+            function on_drop_proxy(proxy_raw) {
+                const quad = core.u_read_quad(core.u_cap_to_ptr(proxy_raw));
+                const tag = ddev.u_tag(quad.y);
+                log("on_drop_proxy", core.u_pprint(tag));
+            }
+        );
+        ddev.h_reserve_proxy(ufork.FALSE_RAW); // dropped
+        let proxy = ddev.h_reserve_proxy(ufork.TRUE_RAW);
+        let stub = ddev.h_reserve_stub(proxy);
+        core.h_install(
+            core.u_fixnum(proxy_key),
+            proxy,
+            function on_dispose() {
+                log("disposing");
+                ddev.h_dispose();
+                if (stub !== undefined) {
+                    core.h_release_stub(stub);
+                    stub = undefined;
+                }
+            }
+        );
+    }
+
+    function run_core() {
+        log("IDLE:", core.u_fault_msg(core.u_fix_to_i32(core.h_run_loop())));
+    }
+
+    core = ufork.make_core({
+        wasm_url,
+        on_wakeup: run_core,
+        on_log: log,
+        log_level: ufork.LOG_DEBUG,
+        compilers: {asm: assemble}
+    });
+    parseq.sequence([
+        core.h_initialize(),
+        core.h_import(undefined, assemble(test_asm)),
+        requestorize(function (asm_module) {
+            dummy_dev(host_dev(core));
+            core.h_boot(asm_module.boot);
+            run_core();
+            return true;
+        })
+    ])(log);
+    setTimeout(core.h_dispose, 1000);
+}
+
+
+if (import.meta.main) {
+    demo(globalThis.console.log);
+}
 
 export default Object.freeze(host_dev);

@@ -1,7 +1,7 @@
 // The playground's text editor component, complete with line numbers and
 // syntax highlighting.
 
-/*jslint browser */
+/*jslint browser, global */
 
 import make_ui from "./ui.js";
 import dom from "./dom.js";
@@ -191,17 +191,19 @@ const editor_ui = make_ui("editor-ui", function (element, {
     };
 });
 
-//debug document.documentElement.innerHTML = "<body></body>\n"; // Firefox v122
-//debug const editor = editor_ui({
-//debug     text: "hello there",
-//debug     on_text_input: console.log
-//debug });
-//debug document.documentElement.style.height = "100%";
-//debug document.body.style.background = "black";
-//debug document.body.style.height = "100%";
-//debug document.body.style.margin = "0";
-//debug editor.style.width = "100%";
-//debug editor.style.height = "100%";
-//debug document.body.append(editor);
+if (import.meta.main) {
+    document.documentElement.innerHTML = "<body></body>\n"; // Firefox v122
+    const editor = editor_ui({
+        text: "hello there",
+        on_text_input: globalThis.console.log
+    });
+    document.documentElement.style.height = "100%";
+    document.body.style.background = "black";
+    document.body.style.height = "100%";
+    document.body.style.margin = "0";
+    editor.style.width = "100%";
+    editor.style.height = "100%";
+    document.body.append(editor);
+}
 
 export default Object.freeze(editor_ui);

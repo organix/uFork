@@ -389,7 +389,6 @@ function pause_action() {
     draw_host();
 }
 function render_loop() {
-    //debugger;
     if (paused) {
         return;
     }

@@ -132,17 +132,19 @@ const svg_dev_ui = make_ui("svg-dev-ui", function (element, {
     element.set_background_color = set_background_color;
 });
 
-//debug document.documentElement.innerHTML = "";
-//debug document.body.style.background = "black";
-//debug const svg_dev = dom(
-//debug     svg_dev_ui({viewbox_size: 24, background_color: "#FF99FF"}),
-//debug     {style: {width: "400px", height: "400px"}}
-//debug );
-//debug document.body.append(svg_dev);
-//debug svg_dev.draw(`
-//debug     <circle cx="12" cy="12" r="12" stroke="red" />
-//debug `);
-//debug //svg_dev.set_background_color("#99FF99");
-//debug //svg_dev.set_viewbox_size(100);
+if (import.meta.main) {
+    document.documentElement.innerHTML = "";
+    document.body.style.background = "black";
+    const svg_dev = dom(
+        svg_dev_ui({viewbox_size: 24, background_color: "#FF99FF"}),
+        {style: {width: "400px", height: "400px"}}
+    );
+    document.body.append(svg_dev);
+    svg_dev.draw(`
+        <circle cx="12" cy="12" r="12" stroke="red" />
+    `);
+    //svg_dev.set_background_color("#99FF99");
+    //svg_dev.set_viewbox_size(100);
+}
 
 export default Object.freeze(svg_dev_ui);

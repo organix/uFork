@@ -13,7 +13,7 @@
 // returns true, the gesture will have a visible effect. If it returns false,
 // the gesture will do nothing.
 
-/*jslint browser */
+/*jslint browser, global */
 
 import make_ui from "./ui.js";
 import dom from "./dom.js";
@@ -145,40 +145,42 @@ const split_ui = make_ui("split-ui", function (element, {
     };
 });
 
-//debug document.documentElement.innerHTML = "";
-//debug const placements = ["right", "bottom", "left", "top"];
-//debug let placement_nr = 0;
-//debug const split = dom(
-//debug     split_ui({
-//debug         placement: placements[placement_nr],
-//debug         size: 50,
-//debug         on_drag(divider_width) {
-//debug             console.log("on_drag", divider_width);
-//debug             return true;
-//debug         },
-//debug         divider_color: "green",
-//debug         divider_width: "5px"
-//debug     }),
-//debug     {style: {width: "400px", height: "400px"}},
-//debug     [
-//debug         dom("div", {
-//debug             style: {backgroundColor: "red"},
-//debug             slot: "main"
-//debug         }),
-//debug         dom("div", {
-//debug             style: {backgroundColor: "blue"},
-//debug             slot: "peripheral"
-//debug         })
-//debug     ]
-//debug );
-//debug const button = dom("button", {
-//debug     textContent: "Toggle placement",
-//debug     onclick() {
-//debug         placement_nr = (placement_nr + 1) % placements.length;
-//debug         split.set_placement(placements[placement_nr]);
-//debug         split.set_size(100);
-//debug     }
-//debug });
-//debug document.body.append(split, button);
+if (import.meta.main) {
+    document.documentElement.innerHTML = "";
+    const placements = ["right", "bottom", "left", "top"];
+    let placement_nr = 0;
+    const split = dom(
+        split_ui({
+            placement: placements[placement_nr],
+            size: 50,
+            on_drag(divider_width) {
+                globalThis.console.log("on_drag", divider_width);
+                return true;
+            },
+            divider_color: "green",
+            divider_width: "5px"
+        }),
+        {style: {width: "400px", height: "400px"}},
+        [
+            dom("div", {
+                style: {backgroundColor: "red"},
+                slot: "main"
+            }),
+            dom("div", {
+                style: {backgroundColor: "blue"},
+                slot: "peripheral"
+            })
+        ]
+    );
+    const button = dom("button", {
+        textContent: "Toggle placement",
+        onclick() {
+            placement_nr = (placement_nr + 1) % placements.length;
+            split.set_placement(placements[placement_nr]);
+            split.set_size(100);
+        }
+    });
+    document.body.append(split, button);
+}
 
 export default Object.freeze(split_ui);

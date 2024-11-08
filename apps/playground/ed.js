@@ -341,180 +341,192 @@ function ed({
     };
 }
 
-//debug document.documentElement.innerHTML = "<body></body>\n"; // Firefox v122
-//debug const source = document.createElement("div"); // Firefox v122
-//debug source.style.flex = "1 1 50%";
-//debug source.style.whiteSpace = "pre";
-//debug source.style.caretColor = "black";
-//debug source.style.fontFamily = "monospace";
-//debug source.style.outline = "none";
-//debug source.style.padding = "0 5px";
-//debug //source.textContent = "abc\r\ndef\rstuff\nthings";
-//debug source.textContent = "abc\ndef\nstuff\nthings";
-//debug const preview = document.createElement("html_preview");
-//debug preview.style.flex = "1 1 50%";
-//debug preview.style.whiteSpace = "pre";
-//debug preview.style.fontFamily = "monospace";
-//debug document.documentElement.style.height = "100%";
-//debug document.body.style.margin = "0px";
-//debug document.body.style.height = "100%";
-//debug document.body.style.display = "flex";
-//debug console.log("Rendering in ShadowRoot");
-//debug const shadow = document.body.attachShadow({mode: "closed"});
-//debug shadow.append(source, preview);
-//debug //console.log("Rendering in document");
-//debug //document.body.append(source, preview);
-//debug const caret_anchor = "▶";
-//debug const caret_focus = "◀";
-//debug function alter_string(string, alterations) {
-//debug     alterations = alterations.slice().sort(
-//debug         function compare(a, b) {
-//debug             return a.range[0] - b.range[0] || a.range[1] - b.range[1];
-//debug         }
-//debug     );
-//debug     let end = 0;
-//debug     return alterations.map(
-//debug         function ({range, replacement}) {
-//debug             const chunk = string.slice(end, range[0]) + replacement;
-//debug             end = range[1];
-//debug             return chunk;
-//debug         }
-//debug     ).concat(
-//debug         string.slice(end)
-//debug     ).join(
-//debug         ""
-//debug     );
-//debug }
-//debug function visualize_selection_range(node, range) {
-//debug     let string = "";
-//debug     let indent = "";
-//debug     function caret(node, caret, selection_node, selection_offset) {
-//debug         return (
-//debug             (
-//debug                 node.parentNode === selection_node
-//debug                 && Array.from(
-//debug                     node.parentNode.childNodes
-//debug                 ).indexOf(
-//debug                     node
-//debug                 ) === selection_offset
-//debug             )
-//debug             ? caret
-//debug             : ""
-//debug         );
-//debug     }
-//debug     function carets(node, offset_offset) {
-//debug         return caret(
-//debug             node,
-//debug             caret_anchor,
-//debug             range?.startContainer,
-//debug             range?.startOffset + offset_offset
-//debug         ) + caret(
-//debug             node,
-//debug             caret_focus,
-//debug             range?.endContainer,
-//debug             range?.endOffset + offset_offset
-//debug         );
-//debug     }
-//debug     function append_text(node) {
-//debug         let alterations = [];
-//debug         if (range?.startContainer === node) {
-//debug             alterations.push({
-//debug                 range: [range.startOffset, range.startOffset],
-//debug                 replacement: caret_anchor
-//debug             });
-//debug         }
-//debug         if (range?.endContainer === node) {
-//debug             alterations.push({
-//debug                 range: [range.endOffset, range.endOffset],
-//debug                 replacement: caret_focus
-//debug             });
-//debug         }
-//debug         const text = alter_string(node.textContent, alterations);
-//debug         const pre = carets(node, 0);
-//debug         const post = (
-//debug             node.nextSibling
-//debug             ? ""
-//debug             : carets(node, -1)
-//debug         );
-//debug         string += indent + pre + JSON.stringify(text) + post + "\n";
-//debug     }
-//debug     function append_element(node) {
-//debug         const children = Array.from(node.childNodes);
-//debug         const tag = node.tagName.toLowerCase();
-//debug         const pre = carets(node, 0);
-//debug         const post = (
-//debug             node.nextSibling
-//debug             ? ""
-//debug             : carets(node, -1)
-//debug         );
-//debug         if (children.length === 0) {
-//debug             string += indent + pre + "<" + tag + " />" + post + "\n";
-//debug         } else {
-//debug             string += indent + pre + "<" + tag + ">" + post + "\n";
-//debug             indent += "    ";
-//debug             children.forEach(append_node);
-//debug             indent = indent.slice(4);
-//debug             string += indent + "</" + tag + ">\n";
-//debug         }
-//debug     }
-//debug     function append_node(node) {
-//debug         return (
-//debug             node.nodeType === Node.ELEMENT_NODE
-//debug             ? append_element(node)
-//debug             : append_text(node)
-//debug         );
-//debug     }
-//debug     append_node(node);
-//debug     return string;
-//debug }
-//debug function refresh_preview() {
-//debug     preview.textContent = (
-//debug         "HTML\n"
-//debug         + visualize_selection_range(source, get_selection_range(source))
-//debug         + "\nTEXT\n"
-//debug         + JSON.stringify(source.textContent)
-//debug     );
-//debug }
-//debug const colors = ["red", "purple", "orange", "green", "blue"];
-//debug function highlight(element) {
-//debug     let text = element.textContent;
-//debug     element.innerHTML = "";
-//debug     const rx_token = /(\w+)|(\s+)|(.)/g;
-//debug     while (true) {
-//debug         const matches = rx_token.exec(text);
-//debug         if (!matches) {
-//debug             break;
-//debug         }
-//debug         const word = matches[1];
-//debug         const space = matches[2];
-//debug         const other = matches[3];
-//debug         if (word !== undefined || other !== undefined) {
-//debug             const span = document.createElement("span");
-//debug             span.style.color = colors[
-//debug                 rx_token.lastIndex % colors.length
-//debug             ];
-//debug             span.textContent = word ?? other;
-//debug             element.append(span);
-//debug         } else if (space !== undefined) {
-//debug             element.append(space);
-//debug         }
-//debug     }
-//debug }
-//debug const editor = ed({
-//debug     element: source,
-//debug     highlight,
-//debug     on_keydown(event) {
-//debug         if (event.key === "Tab") {
-//debug             event.preventDefault();
-//debug             editor.insert_text("    ");
-//debug         }
-//debug     },
-//debug     on_input(text) {
-//debug         console.log(JSON.stringify(text));
-//debug     }
-//debug });
-//debug globalThis.oninput = refresh_preview;
-//debug document.onselectionchange = refresh_preview;
-//debug refresh_preview();
+const caret_anchor = "▶";
+const caret_focus = "◀";
+const colors = ["red", "purple", "orange", "green", "blue"];
+
+function alter_string(string, alterations) {
+    alterations = alterations.slice().sort(
+        function compare(a, b) {
+            return a.range[0] - b.range[0] || a.range[1] - b.range[1];
+        }
+    );
+    let end = 0;
+    return alterations.map(
+        function ({range, replacement}) {
+            const chunk = string.slice(end, range[0]) + replacement;
+            end = range[1];
+            return chunk;
+        }
+    ).concat(
+        string.slice(end)
+    ).join(
+        ""
+    );
+}
+
+function visualize_selection_range(node, range) {
+    let string = "";
+    let indent = "";
+
+    function caret(node, caret, selection_node, selection_offset) {
+        return (
+            (
+                node.parentNode === selection_node
+                && Array.from(
+                    node.parentNode.childNodes
+                ).indexOf(
+                    node
+                ) === selection_offset
+            )
+            ? caret
+            : ""
+        );
+    }
+
+    function carets(node, offset_offset) {
+        return caret(
+            node,
+            caret_anchor,
+            range?.startContainer,
+            range?.startOffset + offset_offset
+        ) + caret(
+            node,
+            caret_focus,
+            range?.endContainer,
+            range?.endOffset + offset_offset
+        );
+    }
+
+    function append_text(node) {
+        let alterations = [];
+        if (range?.startContainer === node) {
+            alterations.push({
+                range: [range.startOffset, range.startOffset],
+                replacement: caret_anchor
+            });
+        }
+        if (range?.endContainer === node) {
+            alterations.push({
+                range: [range.endOffset, range.endOffset],
+                replacement: caret_focus
+            });
+        }
+        const text = alter_string(node.textContent, alterations);
+        const pre = carets(node, 0);
+        const post = (
+            node.nextSibling
+            ? ""
+            : carets(node, -1)
+        );
+        string += indent + pre + JSON.stringify(text) + post + "\n";
+    }
+
+    function append_element(node) {
+        const children = Array.from(node.childNodes);
+        const tag = node.tagName.toLowerCase();
+        const pre = carets(node, 0);
+        const post = (
+            node.nextSibling
+            ? ""
+            : carets(node, -1)
+        );
+        if (children.length === 0) {
+            string += indent + pre + "<" + tag + " />" + post + "\n";
+        } else {
+            string += indent + pre + "<" + tag + ">" + post + "\n";
+            indent += "    ";
+            children.forEach(append_node);
+            indent = indent.slice(4);
+            string += indent + "</" + tag + ">\n";
+        }
+    }
+
+    function append_node(node) {
+        return (
+            node.nodeType === Node.ELEMENT_NODE
+            ? append_element(node)
+            : append_text(node)
+        );
+    }
+
+    append_node(node);
+    return string;
+}
+
+function highlight(element) {
+    let text = element.textContent;
+    element.innerHTML = "";
+    const rx_token = /(\w+)|(\s+)|(.)/g;
+    while (true) {
+        const matches = rx_token.exec(text);
+        if (!matches) {
+            break;
+        }
+        const word = matches[1];
+        const space = matches[2];
+        const other = matches[3];
+        if (word !== undefined || other !== undefined) {
+            const span = document.createElement("span");
+            span.style.color = colors[
+                rx_token.lastIndex % colors.length
+            ];
+            span.textContent = word ?? other;
+            element.append(span);
+        } else if (space !== undefined) {
+            element.append(space);
+        }
+    }
+}
+
+if (import.meta.main) {
+    document.documentElement.innerHTML = "<body></body>\n"; // Firefox v122
+    const source = document.createElement("div"); // Firefox v122
+    source.style.flex = "1 1 50%";
+    source.style.whiteSpace = "pre";
+    source.style.caretColor = "black";
+    source.style.fontFamily = "monospace";
+    source.style.outline = "none";
+    source.style.padding = "0 5px";
+    //source.textContent = "abc\r\ndef\rstuff\nthings";
+    source.textContent = "abc\ndef\nstuff\nthings";
+    const preview = document.createElement("html_preview");
+    preview.style.flex = "1 1 50%";
+    preview.style.whiteSpace = "pre";
+    preview.style.fontFamily = "monospace";
+    document.documentElement.style.height = "100%";
+    document.body.style.margin = "0px";
+    document.body.style.height = "100%";
+    document.body.style.display = "flex";
+    globalThis.console.log("Rendering in ShadowRoot");
+    const shadow = document.body.attachShadow({mode: "closed"});
+    shadow.append(source, preview);
+    //console.log("Rendering in document");
+    //document.body.append(source, preview);
+    const editor = ed({
+        element: source,
+        highlight,
+        on_keydown(event) {
+            if (event.key === "Tab") {
+                event.preventDefault();
+                editor.insert_text("    ");
+            }
+        },
+        on_input(text) {
+            globalThis.console.log(JSON.stringify(text));
+        }
+    });
+    const refresh_preview = function () {
+        preview.textContent = (
+            "HTML\n"
+            + visualize_selection_range(source, get_selection_range(source))
+            + "\nTEXT\n"
+            + JSON.stringify(source.textContent)
+        );
+    };
+    globalThis.oninput = refresh_preview;
+    document.onselectionchange = refresh_preview;
+    refresh_preview();
+}
 
 export default Object.freeze(ed);

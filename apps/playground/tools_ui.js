@@ -1,12 +1,7 @@
 // The playground's "devtools" panel.
 
-/*jslint browser */
+/*jslint browser, global */
 
-import make_ui from "./ui.js";
-import dom from "./dom.js";
-import io_dev_ui from "./io_dev_ui.js";
-import rom_ui from "./rom_ui.js";
-import svg_dev_ui from "./svg_dev_ui.js";
 import parseq from "https://ufork.org/lib/parseq.js";
 import requestorize from "https://ufork.org/lib/rq/requestorize.js";
 import ufork from "https://ufork.org/js/ufork.js";
@@ -17,6 +12,13 @@ import timer_dev from "https://ufork.org/js/timer_dev.js";
 import io_dev from "https://ufork.org/js/io_dev.js";
 import host_dev from "https://ufork.org/js/host_dev.js";
 import svg_dev from "https://ufork.org/js/svg_dev.js";
+import make_ui from "./ui.js";
+import dom from "./dom.js";
+import lang_asm from "./lang_asm.js";
+import lang_scm from "./lang_scm.js";
+import io_dev_ui from "./io_dev_ui.js";
+import rom_ui from "./rom_ui.js";
+import svg_dev_ui from "./svg_dev_ui.js";
 const wasm_url = import.meta.resolve("https://ufork.org/wasm/ufork.wasm");
 
 const tools_ui = make_ui("tools-ui", function (element, {
@@ -304,26 +306,26 @@ const tools_ui = make_ui("tools-ui", function (element, {
     element.warn = warn;
 });
 
-//debug import lang_asm from "./lang_asm.js";
-//debug import lang_scm from "./lang_scm.js";
-//debug document.documentElement.innerHTML = "";
-//debug document.body.style.background = "black";
-//debug const tools = dom(
-//debug     tools_ui({
-//debug         get_text() {
-//debug             return "";
-//debug         },
-//debug         get_src() {
-//debug             return new URL("example.asm", location.href).href;
-//debug         },
-//debug         lang_packs: {asm: lang_asm, scm: lang_scm},
-//debug         on_lang_change: console.log,
-//debug         on_device_change: console.log,
-//debug         on_debug: () => console.log("on_debug"),
-//debug         on_help: () => console.log("on_help")
-//debug     }),
-//debug     {style: {width: "400px", height: "400px"}}
-//debug );
-//debug document.body.append(tools);
+if (import.meta.main) {
+    document.documentElement.innerHTML = "";
+    document.body.style.background = "black";
+    const tools = dom(
+        tools_ui({
+            get_text() {
+                return "";
+            },
+            get_src() {
+                return new URL("example.asm", location.href).href;
+            },
+            lang_packs: {asm: lang_asm, scm: lang_scm},
+            on_lang_change: globalThis.console.log,
+            on_device_change: globalThis.console.log,
+            on_debug: () => globalThis.console.log("on_debug"),
+            on_help: () => globalThis.console.log("on_help")
+        }),
+        {style: {width: "400px", height: "400px"}}
+    );
+    document.body.append(tools);
+}
 
 export default Object.freeze(tools_ui);

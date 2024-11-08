@@ -74,11 +74,15 @@
 // To initialize the core, call the 'h_initialize' method and run the returned
 // requestor to completion.
 
-/*jslint web, long, bitwise, white */
+/*jslint web, global, long, bitwise, white */
 
+import assemble from "https://ufork.org/lib/assemble.js";
 import parseq from "https://ufork.org/lib/parseq.js";
 import requestorize from "https://ufork.org/lib/rq/requestorize.js";
 import unpromise from "https://ufork.org/lib/rq/unpromise.js";
+const wasm_url = import.meta.resolve("https://ufork.org/wasm/ufork.wasm");
+const asm_url = import.meta.resolve("../../lib/eq.asm");
+const lib_url = import.meta.resolve("../../lib/");
 
 // Type-tag bits
 
@@ -1685,65 +1689,61 @@ function make_core({
     });
 }
 
-//debug import assemble from "https://ufork.org/lib/assemble.js";
-//debug import scm from "https://ufork.org/lib/scheme.js";
-//debug import clock_dev from "./clock_dev.js";
-//debug import random_dev from "./random_dev.js";
-//debug import io_dev from "./io_dev.js";
-//debug import blob_dev from "./blob_dev.js";
-//debug import timer_dev from "./timer_dev.js";
-//debug const wasm_url = import.meta.resolve("https://ufork.org/wasm/ufork.wasm");
-//debug const asm_url = import.meta.resolve("../../lib/scm.asm");
-//debug const lib_url = import.meta.resolve("../../lib/");
-//debug let core;
-//debug function run_ufork() {
-//debug     const status = core.h_run_loop(0);
-//debug     console.log("IDLE:", core.u_fault_msg(core.u_fix_to_i32(status)));
-//debug }
-//debug core = make_core({
-//debug     wasm_url,
-//debug     on_wakeup(device_offset) {
-//debug         console.log("WAKE:", device_offset);
-//debug         run_ufork();
-//debug     },
-//debug     on_log: console.log,
-//debug     log_level: LOG_DEBUG,
-//debug     import_map: {"https://ufork.org/lib/": lib_url},
-//debug     compilers: {asm: assemble, scm: scm.compile}
-//debug });
-//debug parseq.sequence([
-//debug     core.h_initialize(),
-//debug     core.h_import(asm_url),
-//debug     requestorize(function (asm_module) {
-//debug         // Install devices
-//debug         clock_dev(core);
-//debug         random_dev(core);
-//debug         io_dev(core);
-//debug         blob_dev(core);
-//debug         timer_dev(core);
-//debug         // Test suite
-//debug         console.log("u_fixnum(0) =", core.u_fixnum(0), core.u_fixnum(0).toString(16), core.u_print(core.u_fixnum(0)));
-//debug         console.log("u_fixnum(1) =", core.u_fixnum(1), core.u_fixnum(1).toString(16), core.u_print(core.u_fixnum(1)));
-//debug         console.log("u_fixnum(-1) =", core.u_fixnum(-1), core.u_fixnum(-1).toString(16), core.u_print(core.u_fixnum(-1)));
-//debug         console.log("u_fixnum(-2) =", core.u_fixnum(-2), core.u_fixnum(-2).toString(16), core.u_print(core.u_fixnum(-2)));
-//debug         console.log("h_rom_top() =", core.h_rom_top(), core.u_print(core.h_rom_top()));
-//debug         console.log("h_ram_top() =", core.h_ram_top(), core.u_print(core.h_ram_top()));
-//debug         console.log("u_ramptr(5) =", core.u_ramptr(5), core.u_print(core.u_ramptr(5)));
-//debug         console.log("u_ptr_to_cap(u_ramptr(3)) =", core.u_ptr_to_cap(core.u_ramptr(3)), core.u_print(core.u_ptr_to_cap(core.u_ramptr(3))));
-//debug         // Boot
-//debug         const sponsor_ptr = core.u_ramptr(SPONSOR_OFS);
-//debug         const sponsor = core.u_read_quad(sponsor_ptr);
-//debug         sponsor.t = core.u_fixnum(4096);    // memory
-//debug         sponsor.x = core.u_fixnum(256);     // events
-//debug         sponsor.y = core.u_fixnum(4096);    // cycles
-//debug         core.u_write_quad(sponsor_ptr, sponsor);
-//debug         core.h_boot(asm_module.boot);
-//debug         const start = performance.now();
-//debug         run_ufork();
-//debug         const duration = performance.now() - start;
-//debug         return duration.toFixed(3) + "ms";
-//debug     })
-//debug ])(console.log);
+function demo(log) {
+    let core;
+
+    function run_ufork() {
+        const status = core.h_run_loop(0);
+        log("IDLE:", core.u_fault_msg(core.u_fix_to_i32(status)));
+    }
+
+    core = make_core({
+        wasm_url,
+        on_wakeup(device_offset) {
+            log("WAKE:", device_offset);
+            run_ufork();
+        },
+        on_log: log,
+        log_level: LOG_DEBUG,
+        import_map: {"https://ufork.org/lib/": lib_url},
+        compilers: {asm: assemble}
+    });
+    parseq.sequence([
+        core.h_initialize(),
+        core.h_import(asm_url),
+        requestorize(function (asm_module) {
+
+// Test.
+
+            log("u_fixnum(0) =", core.u_fixnum(0), core.u_fixnum(0).toString(16), core.u_print(core.u_fixnum(0)));
+            log("u_fixnum(1) =", core.u_fixnum(1), core.u_fixnum(1).toString(16), core.u_print(core.u_fixnum(1)));
+            log("u_fixnum(-1) =", core.u_fixnum(-1), core.u_fixnum(-1).toString(16), core.u_print(core.u_fixnum(-1)));
+            log("u_fixnum(-2) =", core.u_fixnum(-2), core.u_fixnum(-2).toString(16), core.u_print(core.u_fixnum(-2)));
+            log("h_rom_top() =", core.h_rom_top(), core.u_print(core.h_rom_top()));
+            log("h_ram_top() =", core.h_ram_top(), core.u_print(core.h_ram_top()));
+            log("u_ramptr(5) =", core.u_ramptr(5), core.u_print(core.u_ramptr(5)));
+            log("u_ptr_to_cap(u_ramptr(3)) =", core.u_ptr_to_cap(core.u_ramptr(3)), core.u_print(core.u_ptr_to_cap(core.u_ramptr(3))));
+
+// Boot.
+
+            const sponsor_ptr = core.u_ramptr(SPONSOR_OFS);
+            const sponsor = core.u_read_quad(sponsor_ptr);
+            sponsor.t = core.u_fixnum(4096);    // memory
+            sponsor.x = core.u_fixnum(256);     // events
+            sponsor.y = core.u_fixnum(4096);    // cycles
+            core.u_write_quad(sponsor_ptr, sponsor);
+            core.h_boot(asm_module.boot);
+            const start = performance.now();
+            run_ufork();
+            const duration = performance.now() - start;
+            return duration.toFixed(3) + "ms";
+        })
+    ])(log);
+}
+
+if (import.meta.main) {
+    demo(globalThis.console.log);
+}
 
 export default Object.freeze({
 

@@ -13,12 +13,17 @@
 //  identity
 //      A Node.js KeyObject representing a Ed25519 private key.
 
-/*jslint node, long, bitwise */
+/*jslint node, global, long, bitwise */
 
 import {Buffer} from "node:buffer";
 import crypto from "node:crypto";
 import tls from "node:tls";
 import oed from "https://ufork.org/lib/oed_lite.js";
+import hex from "https://ufork.org/lib/hex.js";
+import parseq from "https://ufork.org/lib/parseq.js";
+import lazy from "https://ufork.org/lib/rq/lazy.js";
+import pair from "https://ufork.org/lib/rq/pair.js";
+import requestorize from "https://ufork.org/lib/rq/requestorize.js";
 
 const min_tls_version = "TLSv1.3";              // more secure than v1.2
 const ciphers = "TLS_CHACHA20_POLY1305_SHA256"; // no negotiation
@@ -393,78 +398,77 @@ function node_tls_transport() {
     });
 }
 
-//debug import hex from "https://ufork.org/lib/hex.js";
-//debug import parseq from "https://ufork.org/lib/parseq.js";
-//debug import lazy from "https://ufork.org/lib/rq/lazy.js";
-//debug import pair from "https://ufork.org/lib/rq/pair.js";
-//debug import requestorize from "https://ufork.org/lib/rq/requestorize.js";
-//debug function halve(buffer) {
-//debug     return new Uint8Array(buffer).slice(
-//debug         0,
-//debug         Math.floor(buffer.length / 2)
-//debug     );
-//debug }
-//debug const bob_address = {host: "localhost", port: 4444};
-//debug const flake = 0;
-//debug const cancel = parseq.sequence([
-//debug     generate_identity(),
-//debug     pair(lazy(function (bob_identity) {
-//debug         return listen(
-//debug             bob_identity,
-//debug             bob_address,
-//debug             function on_open(connection) {
-//debug                 console.log(
-//debug                     "bob on_open",
-//debug                     hex.encode(connection.name())
-//debug                 );
-//debug             },
-//debug             function on_receive(connection, frame_buffer) {
-//debug                 console.log("bob on_receive", frame_buffer);
-//debug                 if (frame_buffer.length > 0) {
-//debug                     connection.send(halve(frame_buffer));
-//debug                 } else {
-//debug                     connection.close();
-//debug                 }
-//debug             },
-//debug             function on_close(_, reason) {
-//debug                 console.log("bob on_close", reason);
-//debug             }
-//debug         );
-//debug     })),
-//debug     requestorize(function maybe_stop([stop, bob_identity]) {
-//debug         if (Math.random() < flake) {
-//debug             console.log("bob stop");
-//debug             stop();
-//debug         }
-//debug         return identity_to_name(bob_identity);
-//debug     }),
-//debug     pair(generate_identity()),
-//debug     lazy(function ([alice_identity, bob_name]) {
-//debug         return connect(
-//debug             alice_identity,
-//debug             bob_name,
-//debug             bob_address,
-//debug             function on_receive(connection, frame_buffer) {
-//debug                 console.log("alice on_receive", frame_buffer);
-//debug                 if (frame_buffer.length > 0) {
-//debug                     connection.send(halve(frame_buffer));
-//debug                 } else {
-//debug                     connection.close();
-//debug                 }
-//debug             },
-//debug             function on_close(_, reason) {
-//debug                 console.log("alice on_close", reason);
-//debug             }
-//debug         );
-//debug     }),
-//debug     requestorize(function send_message(connection) {
-//debug         console.log("alice on_open", hex.encode(connection.name()));
-//debug         connection.send(new Uint8Array(1e5));
-//debug     })
-//debug ])(console.log);
-//debug if (Math.random() < flake) {
-//debug     console.log("cancel");
-//debug     cancel();
-//debug }
+function halve(buffer) {
+    return new Uint8Array(buffer).slice(
+        0,
+        Math.floor(buffer.length / 2)
+    );
+}
+
+function demo(log) {
+    const bob_address = {host: "localhost", port: 4444};
+    const flake = 0;
+    const cancel = parseq.sequence([
+        generate_identity(),
+        pair(lazy(function (bob_identity) {
+            return listen(
+                bob_identity,
+                bob_address,
+                function on_open(connection) {
+                    log("bob on_open", hex.encode(connection.name()));
+                },
+                function on_receive(connection, frame_buffer) {
+                    log("bob on_receive", frame_buffer);
+                    if (frame_buffer.length > 0) {
+                        connection.send(halve(frame_buffer));
+                    } else {
+                        connection.close();
+                    }
+                },
+                function on_close(_, reason) {
+                    log("bob on_close", reason);
+                }
+            );
+        })),
+        requestorize(function maybe_stop([stop, bob_identity]) {
+            if (Math.random() < flake) {
+                log("bob stop");
+                stop();
+            }
+            return identity_to_name(bob_identity);
+        }),
+        pair(generate_identity()),
+        lazy(function ([alice_identity, bob_name]) {
+            return connect(
+                alice_identity,
+                bob_name,
+                bob_address,
+                function on_receive(connection, frame_buffer) {
+                    log("alice on_receive", frame_buffer);
+                    if (frame_buffer.length > 0) {
+                        connection.send(halve(frame_buffer));
+                    } else {
+                        connection.close();
+                    }
+                },
+                function on_close(_, reason) {
+                    log("alice on_close", reason);
+                }
+            );
+        }),
+        requestorize(function send_message(connection) {
+            log("alice on_open", hex.encode(connection.name()));
+            connection.send(new Uint8Array(1e5));
+        })
+    ])(log);
+    if (Math.random() < flake) {
+        log("cancel");
+        cancel();
+    }
+}
+
+if (import.meta.main) {
+    demo(globalThis.console.log);
+}
 
 export default Object.freeze(node_tls_transport);

@@ -42,29 +42,32 @@ function ui(tag, create) {
     });
 }
 
-//debug const make_blink = ui("blink-ui", function create(element, params) {
-//debug     let {interval} = params;
-//debug     let timer;
-//debug     let shadow = element.attachShadow({mode: "closed"});
-//debug     shadow.append(document.createElement("slot"));
-//debug     function toggle_visibility() {
-//debug         element.style.visibility = (
-//debug             element.style.visibility === "hidden"
-//debug             ? "visible"
-//debug             : "hidden"
-//debug         );
-//debug     }
-//debug     return {
-//debug         connect() {
-//debug             timer = setInterval(toggle_visibility, interval);
-//debug         },
-//debug         disconnect() {
-//debug             clearInterval(timer);
-//debug         }
-//debug     };
-//debug });
-//debug const blink_element = make_blink({interval: 300});
-//debug blink_element.textContent = "Look at me!";
-//debug document.body.append(blink_element);
+if (import.meta.main) {
+    document.documentElement.innerHTML = "";
+    const make_blink = ui("blink-ui", function create(element, params) {
+        let {interval} = params;
+        let timer;
+        let shadow = element.attachShadow({mode: "closed"});
+        shadow.append(document.createElement("slot"));
+        function toggle_visibility() {
+            element.style.visibility = (
+                element.style.visibility === "hidden"
+                ? "visible"
+                : "hidden"
+            );
+        }
+        return {
+            connect() {
+                timer = setInterval(toggle_visibility, interval);
+            },
+            disconnect() {
+                clearInterval(timer);
+            }
+        };
+    });
+    const blink_element = make_blink({interval: 300});
+    blink_element.textContent = "Look at me!";
+    document.body.append(blink_element);
+}
 
 export default Object.freeze(ui);

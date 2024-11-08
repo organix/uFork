@@ -58,7 +58,7 @@
 //          usernameFragment: "7SPZ"
 //      }
 
-/*jslint deno */
+/*jslint deno, global */
 
 function websockets_signalling_server(
     listen_options,
@@ -218,50 +218,66 @@ function websockets_signalling_server(
         );
     }());
     return function stop() {
+        on_error = undefined;
         listener.close();
     };
 }
 
-//debug const hostname = "localhost";
-//debug const port = 4455;
-//debug const origin = "ws://" + hostname + ":" + port;
-//debug websockets_signalling_server({hostname, port}, function (reason) {
-//debug     console.log("Signalling server error", reason);
-//debug });
-//debug const alice = new WebSocket(
-//debug     origin + "/connect?name=bob&signal=\"ALICE OFFER\""
-//debug );
-//debug alice.onopen = function () {
-//debug     alice.send(JSON.stringify("ICE"));
-//debug };
-//debug alice.onmessage = function (event) {
-//debug     console.log("alice got mail", JSON.parse(event.data));
-//debug };
-//debug const bob_desktop = new WebSocket(
-//debug     origin + "/listen?name=bob&password=uFork"
-//debug );
-//debug bob_desktop.onmessage = function (event) {
-//debug     const {session, signal} = JSON.parse(event.data);
-//debug     console.log("bob desktop got mail", signal);
-//debug     bob_desktop.send(JSON.stringify({
-//debug         session,
-//debug         signal: "BOB DESKTOP ANSWER"
-//debug     }));
-//debug };
-//debug const bob_mobile = new WebSocket(
-//debug     origin + "/listen?name=bob&password=uFork"
-//debug );
-//debug bob_mobile.onmessage = function (event) {
-//debug     const {session, signal} = JSON.parse(event.data);
-//debug     console.log("bob mobile got mail", signal);
-//debug     bob_mobile.send(JSON.stringify({
-//debug         session,
-//debug         signal: "BOB MOBILE ANSWER"
-//debug     }));
-//debug };
-//debug // alice.close();
-//debug // bob_desktop.close();
-//debug // bob_mobile.close();
+function demo(log) {
+    const hostname = "localhost";
+    const port = 4455;
+    const origin = "ws://" + hostname + ":" + port;
+    const stop_server = websockets_signalling_server(
+        {hostname, port},
+        function (reason) {
+            log("Signalling server error", reason);
+        }
+    );
+    const alice = new WebSocket(
+        origin + "/connect?name=bob&signal=\"ALICE OFFER\""
+    );
+    alice.onopen = function () {
+        alice.send(JSON.stringify("ICE"));
+    };
+    alice.onmessage = function (event) {
+        log("alice got mail", JSON.parse(event.data));
+    };
+    const bob_desktop = new WebSocket(
+        origin + "/listen?name=bob&password=uFork"
+    );
+    bob_desktop.onmessage = function (event) {
+        const {session, signal} = JSON.parse(event.data);
+        log("bob desktop got mail", signal);
+        bob_desktop.send(JSON.stringify({
+            session,
+            signal: "BOB DESKTOP ANSWER"
+        }));
+    };
+    const bob_mobile = new WebSocket(
+        origin + "/listen?name=bob&password=uFork"
+    );
+    bob_mobile.onmessage = function (event) {
+        const {session, signal} = JSON.parse(event.data);
+        log("bob mobile got mail", signal);
+        bob_mobile.send(JSON.stringify({
+            session,
+            signal: "BOB MOBILE ANSWER"
+        }));
+    };
+    return function stop() {
+        log("stopping");
+        alice.close();
+        bob_desktop.close();
+        bob_mobile.close();
+        stop_server();
+    };
+}
 
+let stop;
+if (import.meta.main) {
+    stop = demo(globalThis.console.log);
+    setTimeout(stop, 2000);
+}
+// stop();
 
 export default Object.freeze(websockets_signalling_server);

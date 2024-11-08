@@ -13,7 +13,6 @@
 
 import {toFileUrl} from "https://deno.land/std@0.203.0/path/to_file_url.ts";
 import {fromFileUrl} from "https://deno.land/std@0.203.0/path/from_file_url.ts";
-import ecomcon from "https://raw.githubusercontent.com/douglascrockford/ecomcon/b3eda9196a827666af178199aff1c5b8ad9e45b3/ecomcon.js";
 import run_replete from "https://deno.land/x/replete@0.0.28/run.js";
 // import {minify} from "https://esm.sh/terser";
 import import_map from "./import_map.js";
@@ -58,7 +57,6 @@ run_replete({
     deno_args: ["--allow-all"],
     root_locator: "file:///", // cwd
     command(message) {
-        message.source = ecomcon(message.source, ["debug"]);
         if (message.locator !== undefined) {
             message.locator = url_to_locator(message.locator);
         }

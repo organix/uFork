@@ -7,6 +7,7 @@
 
 /*jslint node, browser, global */
 
+import http from "node:http";
 import websocketify from "./websocketify.js";
 
 function websockets_signalling_server(http_server, on_error) {
@@ -132,62 +133,80 @@ function websockets_signalling_server(http_server, on_error) {
     );
 }
 
-// Run just this part of the demo in the browser.
+// To run the demo with Replete:
 
-//debug const hostname = "localhost";
-//debug const port = 4455;
-//debug const origin = "ws://" + hostname + ":" + port;
-//debug const browser = (
-//debug     globalThis.window !== undefined
-//debug     && globalThis.Deno === undefined
-//debug );
-//debug if (browser) {
-//debug     const alice = new WebSocket(
-//debug         origin + "/connect?name=bob&signal=\"ALICE OFFER\""
-//debug     );
-//debug     alice.onopen = function () {
-//debug         alice.send(JSON.stringify("ICE"));
-//debug     };
-//debug     alice.onmessage = function (event) {
-//debug         console.log("alice got mail", JSON.parse(event.data));
-//debug     };
-//debug     const bob_desktop = new WebSocket(
-//debug         origin + "/listen?name=bob&password=uFork"
-//debug     );
-//debug     bob_desktop.onmessage = function (event) {
-//debug         const {session, signal} = JSON.parse(event.data);
-//debug         console.log("bob desktop got mail", signal);
-//debug         bob_desktop.send(JSON.stringify({
-//debug             session,
-//debug             signal: "BOB DESKTOP ANSWER"
-//debug         }));
-//debug     };
-//debug     const bob_mobile = new WebSocket(
-//debug         origin + "/listen?name=bob&password=uFork"
-//debug     );
-//debug     bob_mobile.onmessage = function (event) {
-//debug         const {session, signal} = JSON.parse(event.data);
-//debug         console.log("bob mobile got mail", signal);
-//debug         bob_mobile.send(JSON.stringify({
-//debug             session,
-//debug             signal: "BOB MOBILE ANSWER"
-//debug         }));
-//debug     };
-//debug     // alice.close();
-//debug     // bob_desktop.close();
-//debug     // bob_mobile.close();
-//debug }
+//  1. Evaluate the whole file in Node.js (or Deno).
+//  2. Evaluate the following code in a browser.
 
-// Run the whole demo in Node.js or Deno.
+const hostname = "localhost";
+const port = 4455;
+const origin = "ws://" + hostname + ":" + port;
 
-//debug import http from "node:http";
-//debug const server = http.createServer(function (req, res) {
-//debug     console.log("on_request", req.url);
-//debug     res.end();
-//debug });
-//debug websockets_signalling_server(server, function on_error(reason) {
-//debug     console.log("on_error", reason);
-//debug });
-//debug server.listen(port, hostname);
+function browser_demo(log) {
+    const alice = new WebSocket(
+        origin + "/connect?name=bob&signal=\"ALICE OFFER\""
+    );
+    alice.onopen = function () {
+        alice.send(JSON.stringify("ICE"));
+    };
+    alice.onmessage = function (event) {
+        log("alice got mail", JSON.parse(event.data));
+    };
+    const bob_desktop = new WebSocket(
+        origin + "/listen?name=bob&password=uFork"
+    );
+    bob_desktop.onmessage = function (event) {
+        const {session, signal} = JSON.parse(event.data);
+        log("bob desktop got mail", signal);
+        bob_desktop.send(JSON.stringify({
+            session,
+            signal: "BOB DESKTOP ANSWER"
+        }));
+    };
+    const bob_mobile = new WebSocket(
+        origin + "/listen?name=bob&password=uFork"
+    );
+    bob_mobile.onmessage = function (event) {
+        const {session, signal} = JSON.parse(event.data);
+        log("bob mobile got mail", signal);
+        bob_mobile.send(JSON.stringify({
+            session,
+            signal: "BOB MOBILE ANSWER"
+        }));
+    };
+    return function stop() {
+        alice.close();
+        bob_desktop.close();
+        bob_mobile.close();
+    };
+}
+
+function server_demo(log) {
+    const server = http.createServer(function (req, res) {
+        log("on_request", req.url);
+        res.end();
+    });
+    websockets_signalling_server(server, function on_error(reason) {
+        log("on_error", reason);
+    });
+    server.listen(port, hostname);
+    return function stop() {
+        server.close();
+    };
+}
+
+let stop;
+if (import.meta.main) {
+    stop = (
+        (
+            globalThis.window !== undefined
+            && globalThis.Deno === undefined
+        )
+        ? browser_demo(globalThis.console.log)
+        : server_demo(globalThis.console.log)
+    );
+    setTimeout(stop, 5000);
+}
+// stop();
 
 export default Object.freeze(websockets_signalling_server);

@@ -1,7 +1,7 @@
 // A signaller that acts as the intermediary between the WebRTC transport and
 // the WebSockets signalling server.
 
-/*jslint browser */
+/*jslint browser, global */
 
 import hex from "https://ufork.org/lib/hex.js";
 
@@ -107,55 +107,67 @@ function websockets_signaller() {
     return Object.freeze({connect, listen});
 }
 
-//debug const signaller = websockets_signaller();
-//debug const origin = "ws://localhost:4455";
-//debug const name = new TextEncoder().encode("bob");
-//debug const address = origin;
-//debug const bind_info = {
-//debug     origin,
-//debug     password: "uFork"
-//debug };
-//debug let alice_connector;
-//debug signaller.connect(name, address, function on_receive(message) {
-//debug     console.log("alice on_receive", message);
-//debug })(
-//debug     function (connector, reason) {
-//debug         if (connector === undefined) {
-//debug             return console.log("alice failed", reason);
-//debug         }
-//debug         console.log("alice connected");
-//debug         alice_connector = connector;
-//debug         alice_connector.send({
-//debug             candidate: "Alice's ICE."
-//debug         });
-//debug     },
-//debug     {type: "offer", sdp: "Alice's offer."}
-//debug );
-//debug let bob_listener;
-//debug signaller.listen(
-//debug     name,
-//debug     bind_info,
-//debug     function on_receive(session_id, message) {
-//debug         console.log("bob on_receive", session_id, message);
-//debug         if (message.type === "offer") {
-//debug             bob_listener.send(session_id, {
-//debug                 type: "answer",
-//debug                 sdp: "Bob's answer."
-//debug             });
-//debug         } else {
-//debug             bob_listener.send(session_id, {
-//debug                 candidate: "Bob's ICE."
-//debug             });
-//debug         }
-//debug     }
-//debug )(function (listener, reason) {
-//debug     if (listener === undefined) {
-//debug         return console.log("bob failed", reason);
-//debug     }
-//debug     console.log("bob listening");
-//debug     bob_listener = listener;
-//debug });
-//debug // bob_listener.stop();
-//debug // alice_connector.stop();
+function demo(log) {
+    let alice_connector;
+    let bob_listener;
+    const signaller = websockets_signaller();
+    const origin = "ws://localhost:4455";
+    const name = new TextEncoder().encode("bob");
+    const address = origin;
+    const bind_info = {
+        origin,
+        password: "uFork"
+    };
+    signaller.connect(name, address, function on_receive(message) {
+        log("alice on_receive", message);
+    })(
+        function (connector, reason) {
+            if (connector === undefined) {
+                return log("alice failed", reason);
+            }
+            log("alice connected");
+            alice_connector = connector;
+            alice_connector.send({
+                candidate: "Alice's ICE."
+            });
+        },
+        {type: "offer", sdp: "Alice's offer."}
+    );
+    signaller.listen(
+        name,
+        bind_info,
+        function on_receive(session_id, message) {
+            log("bob on_receive", session_id, message);
+            if (message.type === "offer") {
+                bob_listener.send(session_id, {
+                    type: "answer",
+                    sdp: "Bob's answer."
+                });
+            } else {
+                bob_listener.send(session_id, {
+                    candidate: "Bob's ICE."
+                });
+            }
+        }
+    )(function (listener, reason) {
+        if (listener === undefined) {
+            return log("bob failed", reason);
+        }
+        log("bob listening");
+        bob_listener = listener;
+    });
+    return function stop() {
+        log("stopping");
+        bob_listener.stop();
+        alice_connector.stop();
+    };
+}
+
+let stop;
+if (import.meta.main) {
+    stop = demo(globalThis.console.log);
+    setTimeout(stop, 5000);
+}
+// stop();
 
 export default Object.freeze(websockets_signaller);

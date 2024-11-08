@@ -39,21 +39,25 @@ from the ../vm/rs directory.
 ## JavaScript
 
 Currently, there are no automated tests for our JavaScript modules. However,
-most modules contain a demo that can be run manually with
-[Replete](https://github.com/jamesdiacono/Replete). A demo should show how the module can be used, whilst also providing a clear indication of whether the
+most modules contain a demo that can be run manually using
+[Replete](https://github.com/jamesdiacono/Replete). A demo should show how the
+module can be used, whilst also providing a clear indication of whether the
 module is functioning correctly.
 
-Each line of a demo begins with `//debug`, a tagged comment ensuring that
-the demo does not run in production. When asked to evaluate a module's source
-code, Replete has been configured to first use
-[ecomcon](https://github.com/douglascrockford/ecomcon/) to remove occurrences
-of `//debug` and thus activate the demo. For example, evaluating the following
-module with Replete prints `4 doubled is 8`:
+Demos will only be run when `import.meta.main` is `true`. For example,
+evaluating the following module using Replete (or running it via `deno run`)
+prints `4 doubled is 8`:
 
     function double(x) {
         return 2 * x;
     }
 
-    //debug console.log("4 doubled is " + double(4));
+    if (import.meta.main) {
+        globalThis.console.log("4 doubled is " + double(4));
+    }
 
     export default Object.freeze(double);
+
+In demos, qualify all calls to `console.log` with `globalThis`. This reassures
+JSLint that the call has not been accidentally left behind following a debugging
+session.

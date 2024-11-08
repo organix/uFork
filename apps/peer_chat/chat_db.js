@@ -1,4 +1,4 @@
-/*jslint browser */
+/*jslint browser, global */
 
 import parseq from "https://ufork.org/lib/parseq.js";
 import requestorize from "https://ufork.org/lib/rq/requestorize.js";
@@ -64,6 +64,8 @@ function make_chat_db(signaller_origin) {
     return Object.freeze({get_store, set_store});
 }
 
-//debug make_chat_db().get_store()(console.log);
+if (import.meta.main) {
+    make_chat_db().get_store()(globalThis.console.log);
+}
 
 export default Object.freeze(make_chat_db);

@@ -1,6 +1,6 @@
 // An in-memory signaller for use with the WebRTC transport.
 
-/*jslint web */
+/*jslint web, global */
 
 function delay(callback, ...args) {
     const timer = setTimeout(callback, 500 * Math.random(), ...args);
@@ -109,46 +109,58 @@ function dummy_signaller() {
     return Object.freeze({connect, listen});
 }
 
-//debug const signaller = dummy_signaller();
-//debug let alice_connector;
-//debug signaller.connect(
-//debug     "bob",
-//debug     undefined,
-//debug     function on_receive(message) {
-//debug         console.log("alice on_receive", message);
-//debug     }
-//debug )(
-//debug     function (connector, reason) {
-//debug         console.log("alice connected", reason);
-//debug         alice_connector = connector;
-//debug         alice_connector.send({
-//debug             candidate: "Alice's ICE."
-//debug         });
-//debug     },
-//debug     {type: "offer", sdp: "Alice's offer."}
-//debug );
-//debug let bob_listener;
-//debug signaller.listen(
-//debug     "bob",
-//debug     undefined,
-//debug     function on_receive(session_id, message) {
-//debug         console.log("bob on_receive", session_id, message);
-//debug         if (message.type === "offer") {
-//debug             bob_listener.send(session_id, {
-//debug                 type: "answer",
-//debug                 sdp: "Bob's answer."
-//debug             });
-//debug         } else {
-//debug             bob_listener.send(session_id, {
-//debug                 candidate: "Bob's ICE."
-//debug             });
-//debug         }
-//debug     }
-//debug )(function (listener, reason) {
-//debug     console.log("bob listening", reason);
-//debug     bob_listener = listener;
-//debug });
-//debug // bob_listener.stop();
-//debug // alice_connector.stop();
+function demo(log) {
+    let alice_connector;
+    let bob_listener;
+    const signaller = dummy_signaller();
+    signaller.connect(
+        "bob",
+        undefined,
+        function on_receive(message) {
+            log("alice on_receive", message);
+        }
+    )(
+        function (connector, reason) {
+            log("alice connected", reason);
+            alice_connector = connector;
+            alice_connector.send({
+                candidate: "Alice's ICE."
+            });
+        },
+        {type: "offer", sdp: "Alice's offer."}
+    );
+    signaller.listen(
+        "bob",
+        undefined,
+        function on_receive(session_id, message) {
+            log("bob on_receive", session_id, message);
+            if (message.type === "offer") {
+                bob_listener.send(session_id, {
+                    type: "answer",
+                    sdp: "Bob's answer."
+                });
+            } else {
+                bob_listener.send(session_id, {
+                    candidate: "Bob's ICE."
+                });
+            }
+        }
+    )(function (listener, reason) {
+        log("bob listening", reason);
+        bob_listener = listener;
+    });
+    return function stop() {
+        log("stopping");
+        bob_listener.stop();
+        alice_connector.stop();
+    };
+}
+
+let stop;
+if (import.meta.main) {
+    stop = demo(globalThis.console.log);
+    setTimeout(stop, 5000);
+}
+// stop();
 
 export default Object.freeze(dummy_signaller);

@@ -41,7 +41,7 @@ function random32(webcrypto, a, b) {
     return b + (integer % (a + 1 - b));
 }
 
-//debug random32(crypto, -3, 2);
+// random32(crypto, -3, 2)
 
 function random_dev(core, webcrypto = crypto) {
     const dev_ptr = core.u_ramptr(ufork.RANDOM_DEV_OFS);

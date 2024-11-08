@@ -1,6 +1,8 @@
 // A requestor-based interface for the browser's IndexedDB storage.
 
-/*jslint browser */
+/*jslint browser, global */
+
+import parseq from "https://ufork.org/lib/parseq.js";
 
 function indexed_db(
     db_name,
@@ -55,30 +57,32 @@ function indexed_db(
     };
 }
 
-//debug import parseq from "https://ufork.org/lib/parseq.js";
-//debug function feijoa(...args) {
-//debug     return indexed_db(
-//debug         "fruit_basket",
-//debug         1,
-//debug         function on_upgrade(db, old_version) {
-//debug             if (old_version < 1) {
-//debug                 db.createObjectStore("feijoa", {keyPath: "color"});
-//debug             }
-//debug         },
-//debug         "feijoa",
-//debug         ...args
-//debug     );
-//debug }
-//debug parseq.sequence([
-//debug     feijoa(function (store, object) {
-//debug         return store.put(object);
-//debug     }),
-//debug     feijoa(function (store) {
-//debug         return store.get("deep orange");
-//debug     })
-//debug ])(
-//debug     console.log,
-//debug     {color: "deep orange", ripeness: "very"}
-//debug );
+function feijoa(...args) {
+    return indexed_db(
+        "fruit_basket",
+        1,
+        function on_upgrade(db, old_version) {
+            if (old_version < 1) {
+                db.createObjectStore("feijoa", {keyPath: "color"});
+            }
+        },
+        "feijoa",
+        ...args
+    );
+}
+
+if (import.meta.main) {
+    parseq.sequence([
+        feijoa(function (store, object) {
+            return store.put(object);
+        }),
+        feijoa(function (store) {
+            return store.get("deep orange");
+        })
+    ])(
+        globalThis.console.log,
+        {color: "deep orange", ripeness: "very"}
+    );
+}
 
 export default Object.freeze(indexed_db);
