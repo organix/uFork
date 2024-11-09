@@ -682,35 +682,6 @@ impl Core {
                 }
                 kip
             },
-            VM_SIGNAL => {
-                let n = imm.get_fix()?;
-                let target = self.stack_pop();
-                let msg = self.pop_counted(n);
-                let spn = self.stack_pop();  // explicit sponsor from stack
-                self.effect_send(spn, target, msg)?;
-                kip
-            },
-            VM_SEND => {
-                let n = imm.get_fix()?;
-                let target = self.stack_pop();
-                let msg = self.pop_counted(n);
-                let spn = self.event_sponsor(self.ep());  // implicit sponsor from event
-                self.effect_send(spn, target, msg)?;
-                kip
-            },
-            VM_NEW => {
-                let n = imm.get_fix()?;
-                let (beh, state) = self.pop_beh_and_state(n);
-                let a = self.effect_create(beh, state)?;
-                self.stack_push(a)?;
-                kip
-            },
-            VM_BEH => {
-                let n = imm.get_fix()?;
-                let (beh, state) = self.pop_beh_and_state(n);
-                self.effect_become(beh, state)?;
-                kip
-            },
             VM_END => {
                 #[cfg(debug_assertions)]
                 self.call_trace_event(self.ep(), self.kp());  // trace transactional effect(s)
@@ -1072,28 +1043,6 @@ impl Core {
         };
         n
     }
-    fn pop_counted(&mut self, n: isize) -> Any {
-        if n > 0 {  // build list from stack
-            let mut n = n;
-            let sp = self.sp();
-            let mut v = sp;
-            let mut p = UNDEF;
-            while n > 0 && self.typeq(PAIR_T, v) {
-                p = v;
-                v = self.cdr(p);
-                n -= 1;
-            }
-            if self.typeq(PAIR_T, p) {
-                self.set_cdr(p, NIL);
-            }
-            self.set_sp(v);
-            sp
-        } else if n == -1 {  // pre-composed
-            self.stack_pop()
-        } else {  // empty list
-            NIL
-        }
-    }
     fn split_nth(&self, lst: Any, n: isize) -> (Any, Any) {
         // Safely determine the `nth` item of a list and its `pred`ecessor.
         let mut nth = lst;
@@ -1142,24 +1091,6 @@ impl Core {
             }
         }
         v
-    }
-    fn pop_beh_and_state(&mut self, n: isize) -> (Any, Any) {
-        if n == -3 {
-            // take state=[_, _, _, beh] from stack
-            let state = self.stack_pop();
-            let beh = self.mem(state).z();
-            (beh, state)
-        } else if n == -2 {
-            // take (beh . state) pair from stack
-            let closure = self.stack_pop();
-            let beh = self.mem(closure).x();
-            let state = self.mem(closure).y();
-            (beh, state)
-        } else {
-            let beh = self.stack_pop();
-            let state = self.pop_counted(n);
-            (beh, state)
-        }
     }
 
     pub fn dict_has(&self, dict: Any, key: Any) -> bool {

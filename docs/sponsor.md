@@ -162,8 +162,6 @@ _sponsor_ _n_                 | `sponsor` `cycles`  | _sponsor_    | transfer _n
 _sponsor_                     | `sponsor` `reclaim` | _sponsor_    | reclaim all quotas from _sponsor_
 _sponsor_ _control_           | `sponsor` `start`   | —            | run _sponsor_ under _control_
 _sponsor_                     | `sponsor` `stop`    | —            | reclaim all quotas and remove _sponsor_
-_sponsor_ _msg_ _actor_       | `signal` `-1`       | —            | send _msg_ to _actor_ using _sponsor_
-_sponsor_ _mₙ_ … _m₁_ _actor_ | `signal` _n_        | —            | send (_m₁_ … _mₙ_) to _actor_ using _sponsor_
 
 ## Processor Run-Loop
 

@@ -205,26 +205,6 @@ impl Quad {
         assert!(k.is_ptr());
         Self::instr_t(VM_ACTOR, op, k)
     }
-    pub fn vm_send(n: Any, k: Any) -> Quad {
-        assert!(n.is_fix());
-        assert!(k.is_ptr());
-        Self::instr_t(VM_SEND, n, k)
-    }
-    pub fn vm_new(n: Any, k: Any) -> Quad {
-        assert!(n.is_fix());
-        assert!(k.is_ptr());
-        Self::instr_t(VM_NEW, n, k)
-    }
-    pub fn vm_beh(n: Any, k: Any) -> Quad {
-        assert!(n.is_fix());
-        assert!(k.is_ptr());
-        Self::instr_t(VM_BEH, n, k)
-    }
-    pub fn vm_signal(n: Any, k: Any) -> Quad {
-        assert!(n.is_fix());
-        assert!(k.is_ptr());
-        Self::instr_t(VM_SIGNAL, n, k)
-    }
     pub fn vm_end(op: Any) -> Quad {
         assert!(op.is_fix());
         Self::instr_t(VM_END, op, UNDEF)

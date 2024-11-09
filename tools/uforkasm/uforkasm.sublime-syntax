@@ -125,7 +125,7 @@ contexts:
 
 # Other operators.
 
-    - match: '^{{spaces}}(assert|beh|call|debug|drop|dup|eq|msg|new|nth|pair|part|pick|push|quad|roll|send|signal|state|typeq)\b'
+    - match: '^{{spaces}}(assert|call|debug|drop|dup|eq|msg|nth|pair|part|pick|push|quad|roll|state|typeq)\b'
       captures:
         1: keyword.operator.word.uforkasm
       push: operand_list

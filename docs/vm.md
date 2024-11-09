@@ -19,7 +19,6 @@
         * [`actor`](#actor-instruction) instruction
         * [`alu`](#alu-instruction) instruction
         * [`assert`](#assert-instruction) instruction
-        * [`beh`](#beh-instruction) instruction
         * [`cmp`](#cmp-instruction) instruction
         * [`debug`](#debug-instruction) instruction
         * [`deque`](#deque-instruction) instruction
@@ -32,7 +31,6 @@
         * [`jump`](#jump-instruction) instruction
         * [`msg`](#msg-instruction) instruction
         * [`my`](#my-instruction) instruction
-        * [`new`](#new-instruction) instruction
         * [`nth`](#nth-instruction) instruction
         * [`pair`](#pair-instruction) instruction
         * [`part`](#part-instruction) instruction
@@ -40,8 +38,6 @@
         * [`push`](#push-instruction) instruction
         * [`quad`](#quad-instruction) instruction
         * [`roll`](#roll-instruction) instruction
-        * [`send`](#send-instruction) instruction
-        * [`signal`](#signal-instruction) instruction
         * [`sponsor`](#sponsor-instruction) instruction
         * [`state`](#state-instruction) instruction
         * [`typeq`](#typeq-instruction) instruction
@@ -344,18 +340,6 @@ _msg_ _actor_        | `actor` `send`      | —            | send _msg_ to _act
 _spn_ _msg_ _actor_  | `actor` `post`      | —            | send _msg_ to _actor_ using sponsor _spn_
 _state_ _beh_        | `actor` `create`    | _actor_      | create an _actor_ with code _beh_ and data _state_
 _state_ _beh_        | `actor` `become`    | —            | replace code with _beh_ and data with _state_
-_mₙ_ … _m₁_ _actor_  | `send` _n_          | —            | send (_m₁_ … _mₙ_) to _actor_
-_msg_ _actor_        | `send` `-1`         | —            | send _msg_ to _actor_
-_sponsor_ _mₙ_ … _m₁_ _actor_ | `signal` _n_ | —          | send (_m₁_ … _mₙ_) to _actor_ using _sponsor_
-_sponsor_ _msg_ _actor_ | `signal` `-1`    | —            | send _msg_ to _actor_ using _sponsor_
-_vₙ_ … _v₁_ _beh_    | `new` _n_           | _actor_      | create an _actor_ with code _beh_ and data (_v₁_ … _vₙ_)
-_state_ _beh_        | `new` `-1`          | _actor_      | create an _actor_ with code _beh_ and data _state_
-(_beh_ . _state_)    | `new` `-2`          | _actor_      | create an _actor_ with code _beh_ and data _state_
-\[_, _, _, _beh_\]   | `new` `-3`          | _actor_      | create an _actor_ with code _beh_ and data \[_, _, _, _beh_\]
-_vₙ_ … _v₁_ _beh_    | `beh` _n_           | —            | replace code with _beh_ and data with (_v₁_ … _vₙ_)
-_state_ _beh_        | `beh` `-1`          | —            | replace code with _beh_ and data with _state_
-(_beh_ . _state_)    | `beh` `-2`          | —            | replace code with _beh_ and data with _state_
-\[_, _, _, _beh_\]   | `beh` `-3`          | —            | replace code with _beh_ and data with \[_, _, _, _beh_\]
 _reason_             | `end` `abort`       | —            | abort actor transaction with _reason_
 —                    | `end` `stop`        | —            | stop current continuation (thread)
 —                    | `end` `commit`      | —            | commit actor transaction
@@ -449,10 +433,6 @@ The indexed instructions are:
   * `drop`
   * `msg`
   * `state`
-  * `send`
-  * `signal`
-  * `new`
-  * `beh`
 
 ### Instruction Details
 
@@ -484,19 +464,6 @@ To <span id="Insert-at">Insert _item_ at _prev_</span>:
 To <span id="Extract-from">Extract _next_ from _prev_</span>:
  1. If _prev_ is a `#pair_t`
     1. Set `prev.Y` to `cdr(next)`
-
-To <span id="Enlist-as">Enlist _fixnum:n_ as _list_</span>:
- 1. If _n_ > 0
-    1. Let _list_ be the stack pointer
-    1. Let _p_ be _list_
-    1. [Advance](#Advance-by) _p_ by `n-1`
-    1. If _p_ is a `#pair_t`
-        1. Let the stack pointer become `cdr(p)`
-        1. Set `p.Y` to `#nil`
-    1. Otherwise
-        1. Let the stack pointer become `#nil`
- 1. Otherwise
-    1. Let _list_ be `#nil`
 
 To <span id="Reverse-onto">Reverse _list_ onto _head_</span>:
  1. While _list_ is a `#pair_t`
@@ -769,63 +736,6 @@ Ensure that the item on the stack has the expected value.
  1. Remove _actual_ from the stack
  1. If _actual_ is not equal to _expect_
     1. Signal an `E_ASSERT` error
-
-#### `beh` instruction
-
- Input               | Instruction         | Output       | Description
----------------------|---------------------|--------------|-------------------------------------
-_vₙ_ … _v₁_ _beh_    | `beh` _n_           | —            | replace code with _beh_ and data with (_v₁_ … _vₙ_)
-_state_ _beh_        | `beh` `-1`          | —            | replace code with _beh_ and data with _state_
-(_beh_ . _state_)    | `beh` `-2`          | —            | replace code with _beh_ and data with _state_
-\[_, _, _, _beh_\]   | `beh` `-3`          | —            | replace code with _beh_ and data with \[_, _, _, _beh_\]
-
-Provide a new behavior (code and data) for the current actor.
-This is the actor "become" primitive.
-There are several ways to provide the code and data
-for handling the next event,
-however both are always replaced together.
-
- T            | X (op)      | Y (imm)     | Z (k)
---------------|-------------|-------------|-------------
- `#instr_t`   | `+29` (beh) | _positive_  | _instr_
-
- 1. Remove _beh_ from the stack
- 1. Record _beh_ as the code to execute when handling the next event
- 1. [Enlist](#Enlist-as) _positive_ as _list_
- 1. Record _list_ as the private data when handling the next event
-
- T            | X (op)      | Y (imm)     | Z (k)
---------------|-------------|-------------|-------------
- `#instr_t`   | `+29` (beh) | `+0`        | _instr_
-
- 1. Remove _beh_ from the stack
- 1. Record _beh_ as the code to execute when handling the next event
- 1. Record `()` as the private data when handling the next event
-
- T            | X (op)      | Y (imm)     | Z (k)
---------------|-------------|-------------|-------------
- `#instr_t`   | `+29` (beh) | `-1`        | _instr_
-
- 1. Remove _beh_ from the stack
- 1. Record _beh_ as the code to execute when handling the next event
- 1. Remove _state_ from the stack
- 1. Record _state_ as the private data when handling the next event
-
- T            | X (op)      | Y (imm)     | Z (k)
---------------|-------------|-------------|-------------
- `#instr_t`   | `+29` (beh) | `-2`        | _instr_
-
- 1. Remove an item from the stack
- 1. Record the `X` field of this item as the code to execute when handling the next event
- 1. Record the `Y` field of this item as the private data when handling the next event
-
- T            | X (op)      | Y (imm)     | Z (k)
---------------|-------------|-------------|-------------
- `#instr_t`   | `+29` (beh) | `-3`        | _instr_
-
- 1. Remove an item from the stack
- 1. Record the `Z` field of this item as the code to execute when handling the next event
- 1. Record this item as the private data when handling the next event
 
 #### `cmp` instruction
 
@@ -1280,8 +1190,7 @@ Copy data from the current message-event.
 —                    | `my` `self`         | _actor_      | push _actor_ address on stack
 —                    | `my` `beh`          | _beh_        | push _actor_ behavior on stack
 
-Copy data relating to the current actor
-(see [`new`](#new-instruction), [`beh`](#beh-instruction), and [`state`](#state-instruction)).
+Copy data relating to the current actor.
 
  T            | X (op)        | Y (imm)       | Z (k)
 --------------|---------------|---------------|-------------
@@ -1294,63 +1203,6 @@ Copy data relating to the current actor
  `#instr_t`   | `+12` (my)    | `+1` (beh)    | _instr_
 
  1. Push the current actor's code address onto the stack
-
-#### `new` instruction
-
- Input               | Instruction         | Output       | Description
----------------------|---------------------|--------------|-------------------------------------
-_vₙ_ … _v₁_ _beh_    | `new` _n_           | _actor_      | create an _actor_ with code _beh_ and data (_v₁_ … _vₙ_)
-_state_ _beh_        | `new` `-1`          | _actor_      | create an _actor_ with code _beh_ and data _state_
-(_beh_ . _state_)    | `new` `-2`          | _actor_      | create an _actor_ with code _beh_ and data _state_
-\[_, _, _, _beh_\]   | `new` `-3`          | _actor_      | create an _actor_ with code _beh_ and data \[_, _, _, _beh_\]
-
-Provide the behavior (code and data) for a new actor.
-This is the actor "create" primitive.
-There are several ways to provide
-the code and data for the new actor,
-however both are always specified together.
-
- T            | X (op)      | Y (imm)     | Z (k)
---------------|-------------|-------------|-------------
- `#instr_t`   | `+28` (new) | _positive_  | _instr_
-
- 1. Remove _beh_ from the stack
- 1. [Enlist](#Enlist-as) _positive_ as _list_
- 1. Create a new actor with _beh_ for code and _list_ for data
- 1. Push a capability designating the new actor onto the stack
-
- T            | X (op)      | Y (imm)     | Z (k)
---------------|-------------|-------------|-------------
- `#instr_t`   | `+28` (new) | `+0`        | _instr_
-
- 1. Remove _beh_ from the stack
- 1. Create a new actor with _beh_ for code and `()` for data
- 1. Push a capability designating the new actor onto the stack
-
- T            | X (op)      | Y (imm)     | Z (k)
---------------|-------------|-------------|-------------
- `#instr_t`   | `+28` (new) | `-1`        | _instr_
-
- 1. Remove _beh_ from the stack
- 1. Remove _state_ from the stack
- 1. Create a new actor with _beh_ for code and _state_ for data
- 1. Push a capability designating the new actor onto the stack
-
- T            | X (op)      | Y (imm)     | Z (k)
---------------|-------------|-------------|-------------
- `#instr_t`   | `+28` (new) | `-2`        | _instr_
-
- 1. Remove an item from the stack
- 1. Create a new actor with the `X` field of this item for code and the `Y` field of this item for data
- 1. Push a capability designating the new actor onto the stack
-
- T            | X (op)      | Y (imm)     | Z (k)
---------------|-------------|-------------|-------------
- `#instr_t`   | `+28` (new) | `-3`        | _instr_
-
- 1. Remove an item from the stack
- 1. Create a new actor with the `Z` field of this item for code and this item for data
- 1. Push a capability designating the new actor onto the stack
 
 #### `nth` instruction
 
@@ -1677,88 +1529,6 @@ Rotate stack items up to a particular depth.
     1. Let _p_ be the stack pointer
     1. [Advance](#Advance-by) _p_ by `n-1`
     1. [Insert](#Insert-at) _item_ at _p_
-
-#### `send` instruction
-
- Input               | Instruction         | Output       | Description
----------------------|---------------------|--------------|-------------------------------------
-_mₙ_ … _m₁_ _actor_  | `send` _n_          | —            | send (_m₁_ … _mₙ_) to _actor_
-_msg_ _actor_        | `send` `-1`         | —            | send _msg_ to _actor_
-
-Add a new message-event to the current actor's transactional effects.
-
- T            | X (op)        | Y (imm)     | Z (k)
---------------|---------------|-------------|-------------
- `#instr_t`   | `+26` (send)  | _positive_  | _instr_
-
- 1. Remove _actor_ from the stack
- 1. [Enlist](#Enlist-as) _positive_ as _msg_
- 1. Record in the current actor's effect a new _event_ with:
-    * _actor_ as the target
-    * _msg_ as the message
-
- T            | X (op)        | Y (imm)     | Z (k)
---------------|---------------|-------------|-------------
- `#instr_t`   | `+26` (send)  | `+0`        | _instr_
-
- 1. Remove _actor_ from the stack
- 1. Record in the current actor's effect a new _event_ with:
-    * _actor_ as the target
-    * `()` as the message
-
- T            | X (op)        | Y (imm)     | Z (k)
---------------|---------------|-------------|-------------
- `#instr_t`   | `+26` (send)  | `-1`        | _instr_
-
- 1. Remove _actor_ from the stack
- 1. Remove _msg_ from the stack
- 1. Record in the current actor's effect a new _event_ with:
-    * _actor_ as the target
-    * _msg_ as the message
-
-#### `signal` instruction
-
- Input               | Instruction         | Output       | Description
----------------------|---------------------|--------------|-------------------------------------
-_sponsor_ _mₙ_ … _m₁_ _actor_ | `signal` _n_ | —          | send (_m₁_ … _mₙ_) to _actor_ using _sponsor_
-_sponsor_ _msg_ _actor_ | `signal` `-1`    | —            | send _msg_ to _actor_ using _sponsor_
-
-Add a new "sponsored" message-event to the current actor's transactional effects.
-
- T            | X (op)          | Y (imm)     | Z (k)
---------------|-----------------|-------------|-------------
- `#instr_t`   | `+27` (signal)  | _positive_  | _instr_
-
- 1. Remove _actor_ from the stack
- 1. [Enlist](#Enlist-as) _positive_ as _msg_
- 1. Remove _sponsor_ from the stack
- 1. Record in the current actor's effect a new _event_ with:
-    * _sponsor_ as the sponsor
-    * _actor_ as the target
-    * _msg_ as the message
-
- T            | X (op)          | Y (imm)     | Z (k)
---------------|-----------------|-------------|-------------
- `#instr_t`   | `+27` (signal)  | `+0`        | _instr_
-
- 1. Remove _actor_ from the stack
- 1. Remove _sponsor_ from the stack
- 1. Record in the current actor's effect a new _event_ with:
-    * _sponsor_ as the sponsor
-    * _actor_ as the target
-    * `()` as the message
-
- T            | X (op)          | Y (imm)     | Z (k)
---------------|-----------------|-------------|-------------
- `#instr_t`   | `+27` (signal)  | `-1`        | _instr_
-
- 1. Remove _actor_ from the stack
- 1. Remove _msg_ from the stack
- 1. Remove _sponsor_ from the stack
- 1. Record in the current actor's effect a new _event_ with:
-    * _sponsor_ as the sponsor
-    * _actor_ as the target
-    * _msg_ as the message
 
 #### `sponsor` instruction
 

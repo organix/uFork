@@ -67,10 +67,10 @@ pub const VM_DROP: Any      = Any::fix(0x17);  // +23
 
 pub const VM_MSG: Any       = Any::fix(0x18);  // +24
 pub const VM_STATE: Any     = Any::fix(0x19);  // +25
-pub const VM_SEND: Any      = Any::fix(0x1A);  // +26
-pub const VM_SIGNAL: Any    = Any::fix(0x1B);  // +27
-pub const VM_NEW: Any       = Any::fix(0x1C);  // +28
-pub const VM_BEH: Any       = Any::fix(0x1D);  // +29
+pub const VM_1A: Any        = Any::fix(0x1A);  // RESERVED
+pub const VM_1B: Any        = Any::fix(0x1B);  // RESERVED
+pub const VM_1C: Any        = Any::fix(0x1C);  // RESERVED
+pub const VM_1D: Any        = Any::fix(0x1D);  // RESERVED
 pub const VM_1E: Any        = Any::fix(0x1E);  // RESERVED
 pub const VM_1F: Any        = Any::fix(0x1F);  // RESERVED
 

@@ -228,10 +228,6 @@ and is not present on "jump" or "end" instructions.
 "state"         | _fixnum_
 "my"            | "self", "beh"
 "actor"         | "send", "post", "create", "become"
-"send"          | _fixnum_
-"signal"        | _fixnum_
-"new"           | _fixnum_
-"beh"           | _fixnum_
 "end"           | "abort", "stop", "commit"
 "sponsor"       | "new", "memory", "events", "cycles", "reclaim", "start", "stop"
 "assert"        | _value_

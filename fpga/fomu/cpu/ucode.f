@@ -813,33 +813,6 @@ To Extract next from prev:
         Set prev.Y to cdr(next)
 )
 
-: enlist ( head n -- rest list )
-    DUP 0> IF
-        OVER SWAP 1-        ( D: list head n-1 )
-        n_rest              ( D: list last )
-        DUP is_pair IF
-            DUP QY@ -ROT    ( D: rest list last )
-            #nil SWAP QY! ; ( D: rest list )
-        THEN
-        DROP #nil SWAP ;    ( D: #nil list )
-    THEN                    ( D: head n )
-    DROP #nil ;             ( D: head #nil )
-(
-To Enlist fixnum:n as list:
-
-    If n > 0
-        Let list be the stack pointer
-        Let p be list
-        Advance p by n-1
-        If p is a #pair_t
-            Let the stack pointer become cdr(p)
-            Set p.Y to #nil
-        Otherwise
-            Let the stack pointer become #nil
-    Otherwise
-        Let list be #nil
-)
-
 : reverse_onto ( head list -- head' )
     ( WARNING! this is a destructive in-place operation )
     BEGIN                   ( D: head list )
@@ -1443,73 +1416,12 @@ del_none:                   ; k orig key rev next value' key'
     ref std.return_value
 )
 
-: common_actor_args ( -- sp' args tos TRUE | error FALSE )
-    sp@ part imm@           ( D: sp' tos #n )
-    DUP is_fix IF
-        fix2int DUP MSB& IF ( D: sp' tos -n )
-            DUP -1 = IF
-                DROP SWAP   ( D: tos sp' )
-                part ROT    ( D: sp'' args tos )
-                TRUE ;
-            THEN
-            DUP -2 = IF
-                DROP        ( D: sp' tos )
-                DUP QY@     ( D: sp' tos args )
-                SWAP QX@    ( D: sp' args tos' )
-                TRUE ;
-            THEN
-            DUP -3 = IF
-                DROP        ( D: sp' arg )
-                DUP QZ@     ( D: sp' arg tos' )
-                TRUE ;
-            THEN
-            E_BOUNDS FALSE ;
-        THEN                ( D: sp' tos +n )
-        ROT SWAP            ( D: tos sp' +n )
-        enlist ROT          ( D: rest list tos )
-        TRUE ;
-    THEN
-    E_NOT_FIX FALSE ;
-
 : send_effect ( msg target sponsor -- )
     2alloc >R               ( D: ) ( R: event )
     self@ QZ@               ( D: effect ) ( R: event )
     DUP QZ@                 ( D: effect events ) ( R: event )
     R@ qz!                  ( D: effect ) ( R: events' )
     R> SWAP qz! ;           ( D: )
-: op_send ( -- ip' | error )
-    common_actor_args IF    ( D: sp' msg target )
-        DUP is_cap IF
-            sponsor@        ( D: sp' msg target sponsor )
-            send_effect     ( D: sp' )
-            update_sp ;
-        THEN
-        E_NOT_CAP ;
-    THEN ;                  ( D: error )
-
-: create_effect ( state beh -- actor )
-    #actor_t 2alloc ptr2cap ;
-: op_new ( -- ip' | error )
-    common_actor_args IF    ( D: sp' data code )
-        DUP #instr_t typeq IF
-            create_effect   ( D: sp' actor )
-            push_result ;
-        THEN
-        E_NOT_EXE ;
-    THEN ;                  ( D: error )
-
-: become_effect ( state beh -- )
-    self@ QZ@ TUCK          ( D: state effect beh effect )
-    qx! qy! ;               ( D: )
-: op_beh ( -- ip' | error )
-    common_actor_args IF    ( D: sp' data code )
-        DUP #instr_t typeq IF
-            become_effect   ( D: sp' )
-            update_sp ;
-        THEN
-        E_NOT_EXE ;
-    THEN ;                  ( D: error )
-
 : actor_send ( sp -- ip' | error )
     part                    ( D: sp' target )
     DUP is_cap IF
@@ -1542,7 +1454,8 @@ del_none:                   ; k orig key rev next value' key'
         >R                  ( D: sp' ) ( R: beh )
         part                ( D: sp'' state ) ( R: beh )
         R>                  ( D: sp'' state beh )
-        create_effect       ( D: sp'' actor )
+        #actor_t            ( D: sp'' state beh #actor_t )
+        2alloc ptr2cap      ( D: sp'' actor )
         push_result ;
     THEN
     2DROP k@ ;
@@ -1552,7 +1465,8 @@ del_none:                   ; k orig key rev next value' key'
         >R                  ( D: sp' ) ( R: beh )
         part                ( D: sp'' state ) ( R: beh )
         R>                  ( D: sp'' state beh )
-        become_effect       ( D: sp'' )
+        self@ QZ@ TUCK      ( D: sp'' state effect beh effect )
+        qx! qy!             ( D: sp'' )
         update_sp ;
     THEN
     2DROP k@ ;
@@ -1627,10 +1541,10 @@ del_none:                   ; k orig key rev next value' key'
 
     op_msg                  ( 0x8018: msg )
     op_state                ( 0x8019: state )
-    op_send                 ( 0x801A: send )
-    invalid                 ( 0x801B: signal )
-    op_new                  ( 0x801C: new )
-    op_beh                  ( 0x801D: beh )
+    invalid                 ( 0x801A: --reserved-- )
+    invalid                 ( 0x801B: --reserved-- )
+    invalid                 ( 0x801C: --reserved-- )
+    invalid                 ( 0x801D: --reserved-- )
     invalid                 ( 0x801E: --reserved-- )
     invalid                 ( 0x801F: --reserved-- )
 

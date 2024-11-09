@@ -141,10 +141,10 @@ const VM_DROP   = 0x80000017;  // +23
 
 const VM_MSG    = 0x80000018;  // +24
 const VM_STATE  = 0x80000019;  // +25
-const VM_SEND   = 0x8000001A;  // +26
-const VM_SIGNAL = 0x8000001B;  // +27
-const VM_NEW    = 0x8000001C;  // +28
-const VM_BEH    = 0x8000001D;  // +29
+//const VM_1A     = 0x8000001A;  // reserved
+//const VM_1B     = 0x8000001B;  // reserved
+//const VM_1C     = 0x8000001C;  // reserved
+//const VM_1D     = 0x8000001D;  // reserved
 //const VM_1E     = 0x8000001E;  // reserved
 //const VM_1F     = 0x8000001F;  // reserved
 
@@ -259,10 +259,10 @@ const instr_label = [
     "drop",
     "msg",
     "state",
-    "send",
-    "signal",
-    "new",
-    "beh",
+    "VM_1A",        // reserved
+    "VM_1B",        // reserved
+    "VM_1C",        // reserved
+    "VM_1D",        // reserved
     "VM_1E",        // reserved
     "VM_1F"         // reserved
 ];
@@ -1006,10 +1006,6 @@ function make_core({
                     || node.op === "roll"
                     || node.op === "msg"
                     || node.op === "state"
-                    || node.op === "signal"
-                    || node.op === "send"
-                    || node.op === "new"
-                    || node.op === "beh"
                 ) {
                     fields.y = fixnum(node.imm);
                     fields.z = instruction(node.k);
@@ -1791,15 +1787,11 @@ export default Object.freeze({
     VM_MSG,
     VM_MY,
     VM_ACTOR,
-    VM_SEND,
-    VM_NEW,
-    VM_BEH,
     VM_END,
     VM_SPONSOR,
     VM_DEBUG,
     VM_DEQUE,
     VM_STATE,
-    VM_SIGNAL,
     VM_ASSERT,
     QUAD_ROM_MAX,
     QUAD_RAM_MAX,
