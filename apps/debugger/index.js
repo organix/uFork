@@ -27,6 +27,9 @@ const $gc_root = document.getElementById("gc-root");
 const $gc_state = document.getElementById("gc-state");
 const $rom_top = document.getElementById("rom-top");
 const $mem_pages = document.getElementById("mem-pages");
+const $mem_graph = document.getElementById("mem-graph");
+const $mem_graph_used = document.getElementById("mem-graph-used");
+const $mem_graph_free = document.getElementById("mem-graph-free");
 const $sponsor_ident = document.getElementById("sponsor-ident");
 const $sponsor_memory = document.getElementById("sponsor-memory");
 const $sponsor_events = document.getElementById("sponsor-events");
@@ -195,6 +198,25 @@ function enable_next() {
     }
     $next_button.disabled = true;
 }
+const mem_history = [];
+function draw_mem_graph(free_cnt) {
+    if (mem_history.length >= 512) {
+        mem_history.shift();
+    }
+    mem_history.push({ free: free_cnt, max: ram_max });
+    let pts = "";
+    mem_history.forEach(function draw(data, index) {
+        const free = 256 - (data.max >> 4);
+        pts += " " + index + "," + free;
+    });
+    $mem_graph_free.setAttribute("points", pts);
+    pts = "";
+    mem_history.forEach(function draw(data, index) {
+        const used = 256 - ((data.max - data.free) >> 4);
+        pts += " " + index + "," + used;
+    });
+    $mem_graph_used.setAttribute("points", pts);
+}
 function draw_host() {
 //    update_blob_monitor();
     update_ram_monitor();
@@ -217,6 +239,7 @@ function draw_host() {
     update_element_text($gc_state, core.u_print(gc_state));
     update_element_text($rom_top, core.u_print(rom_top));
     update_element_text($mem_pages, core.u_mem_pages());
+    draw_mem_graph(core.u_rawofs(ram_free));
     const ddeque_quad = core.u_read_quad(core.u_ramptr(ufork.DDEQUE_OFS));
     const e_first = ddeque_quad.t;
     //const e_last = ddeque_quad.x;

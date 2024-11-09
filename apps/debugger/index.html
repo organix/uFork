@@ -62,6 +62,10 @@ table {
 #blob {
     color: #FE3;
 }
+#mem-graph {
+    background-color: #FFF;
+    border: 1px solid #CCC;
+}
 #stdio {
     display: flex;
     flex-direction: column;
@@ -159,6 +163,12 @@ table {
             <button id="next-step">Next</button>
             <button id="single-step">Step</button>
             <button id="gc-btn">GC</button>
+        </div>
+        <div id="graph" title="Memory Use Graph">
+            <svg id="mem-graph" width="512" height="256" viewBox="0 0 512 256" stroke-width="1" >
+                <polyline id="mem-graph-free" fill="none" stroke="#09F" />
+                <polyline id="mem-graph-used" fill="none" stroke="#F60" />
+            </svg>
         </div>
         <table border="1">
             <tr>
