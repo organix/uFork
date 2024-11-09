@@ -861,8 +861,6 @@ To Copy fixnum:n of list onto head:
         Let n become n-1
 )
 
-: nil_result ( -- ip' )
-    sp@ #nil
 : push_result ( sp' result -- ip' )
     pair
 : update_sp ( sp' -- ip' )
@@ -1247,15 +1245,6 @@ To Copy fixnum:n of list onto head:
         #? push_result ;
     THEN
     DROP undef_result ;
-
-(
-: nil_result ( -- ip' )
-    sp@ #nil
-: push_result ( sp' result -- ip' )
-    pair
-: update_sp ( sp' -- ip' )
-    sp! k@ ;
-)
 
 : dict_has                  ( D: )
     sp@ part                ( D: sp' key )
