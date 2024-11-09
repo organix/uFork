@@ -113,6 +113,9 @@ test_actors:
     push #?                 ; #?
     push cell_beh           ; #? cell_beh
     actor create            ; rcvr=cell_beh.#?
+    dup 1                   ; rcvr rcvr
+    typeq #actor_t          ; rcvr is_actor(rcvr)
+    assert #t               ; rcvr
     push once_beh           ; rcvr once_beh
     actor create            ; actor=once_beh.rcvr
     push #t                 ; actor #t
