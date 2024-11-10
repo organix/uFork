@@ -256,17 +256,18 @@ $program_compile.onclick = function () {
         $machine_play.textContent = "Play";
         $machine_step.disabled = false;
     }
+    let state = machine.copy();
     function step() {
         const delay = Number($machine_delay.value);
         const begin = Date.now();
         while (true) {
             const result = machine.step();
             if (result !== undefined) {
+                schedule_display(state, prog, words);
                 halt(result);
-                break;
+                return;
             }
-            const state = machine.copy();
-            schedule_display(state, prog, words);
+            state = machine.copy();
             const breakpoint = Number("0x" + $machine_break.value);
             if (Number.isSafeInteger(breakpoint) && (breakpoint === state.pc)) {
                 pause();
@@ -283,6 +284,7 @@ $program_compile.onclick = function () {
                 break;
             }
         }
+        schedule_display(state, prog, words);
     }
     function play() {
         $machine_play.textContent = "Pause";
