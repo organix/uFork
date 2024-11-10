@@ -370,6 +370,7 @@
 0x000b , 0x8018 , 0x8000 , 0x00c2 ,  ( ^00c1 )
 0x000b , 0x8019 , 0x8000 , 0x0020 ,  ( ^00c2 )
 ( 780 cells, 195 quads )
+195 CONSTANT rom_quads      ( number of quads in ROM image )
 
 ( 0x0000 CONSTANT #?          ( undefined ) ... ucode.js )
 ( 0x0001 CONSTANT #nil        ( empty list ) ... ucode.js )
@@ -1597,7 +1598,7 @@ VARIABLE saved_sp           ( sp before instruction execution )
     run_loop ;
 
 : rom_init
-    212 DUP 2ROL            ( n_quads n_cells )
+    rom_quads DUP 2ROL      ( n_quads n_cells )
     rom_image + SWAP        ( end_addr n_quads )
     ?LOOP-                  ( for each quad... )
         1- DUP @ I QZ!      ( D: end-1 )
