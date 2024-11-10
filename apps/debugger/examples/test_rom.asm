@@ -1,6 +1,8 @@
 ; Self-testing ROM image
 
 boot:                       ; _ <- {caps}
+    dup 0 test_pairs
+
 test_pairs:
     push 422                ; 422
     pair 0                  ; 422
