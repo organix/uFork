@@ -161,13 +161,11 @@ function format_memory(mem, base = 0, annotation = no_annotation) {
     }).join("");
 }
 
-// display annotated memory image
-function display_memory(prog, words, current_address) {
-    const memh = ucode.print_memh(prog, words, current_address);
-    $program_mem.value = memh;
-}
-
 function display_machine(state, prog, words) {
+    // display annotated memory image
+    const memh = ucode.print_memh(prog, words, state.pc);
+    $program_mem.value = memh;
+    center_program_view(state.pc);
     function gc_annotation(index) {
         const base = words.rsvd_rom & 0x0FFF;
         const symbol = [". ", "x ", "y ", "? "];
@@ -183,27 +181,12 @@ function display_machine(state, prog, words) {
             : ": "
         );
     }
-//    console.log("machine_state:", state);
     $machine_pc.value = hex.from(state.pc, 12);
-    center_program_view(state.pc);
     $machine_code.value = ucode.disasm(prog[state.pc], words);
     $machine_dstack.innerText = format_stack(state.dstack, state.dstats);
     $machine_rstack.innerText = format_stack(state.rstack, state.rstats);
-//if ($machine_play.textContent === "Play") {
     $ufork_ram.value = format_memory(state.qram, 0x4000, gc_annotation);
     $ufork_rom.value = format_memory(state.qrom, 0x0000);
-//}
-}
-
-let schedule_timer_id;
-
-function schedule_display(state, prog, words) {
-    // Schedules exactly one redraw for the upcoming paint.
-    cancelAnimationFrame(schedule_timer_id);
-    schedule_timer_id = requestAnimationFrame(function () {
-        display_memory(prog, words, state.pc);
-        display_machine(state, prog, words);
-    });
 }
 
 $program_compile.onclick = function () {
@@ -239,7 +222,8 @@ $program_compile.onclick = function () {
     $machine_error.textContent = "";
     $machine_break.textContent = "";
     const machine = ucode_sim.make_machine(prog, [uart]);
-    schedule_display(machine.copy(), prog, words);
+    let state = machine.copy();
+    display_machine(state, prog, words);
 
     // add step/play/pause controls
     let step_timer;
@@ -257,14 +241,13 @@ $program_compile.onclick = function () {
         $machine_play.textContent = "Play";
         $machine_step.disabled = false;
     }
-    let state = machine.copy();
     function step() {
         const delay = Number($machine_delay.value);
         const begin = Date.now();
         while (true) {
             const result = machine.step();
             if (result !== undefined) {
-                schedule_display(state, prog, words);
+                display_machine(state, prog, words);
                 halt(result);
                 return;
             }
@@ -278,14 +261,14 @@ $program_compile.onclick = function () {
                 break;
             }
             // Defer the next iteration if a non-zero interval has been
-            // specified, or if the render loop is being blocked.
+            // specified, or if the frame rate drops below 24 FPS.
             const elapsed = Date.now() - begin;
-            if (delay > 0 || elapsed > 10) {
+            if (delay > 0 || elapsed > (1000 / 24)) {
                 step_timer = setTimeout(step, delay);
                 break;
             }
         }
-        schedule_display(state, prog, words);
+        display_machine(state, prog, words);
     }
     function play() {
         $machine_play.textContent = "Pause";
@@ -310,6 +293,7 @@ fetch(ucode_href).then(function (response) {
     if (response.ok) {
         response.text().then(function (text) {
             $program_src.textContent = text;
+            $program_compile.onclick();
         });
     }
 });
