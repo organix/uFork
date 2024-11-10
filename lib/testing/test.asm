@@ -111,7 +111,7 @@ mock_list:                  ; (ctrl . mocks) <- ctrl'
     typeq #actor_t          ; mocks' mock is_actor(mocks)
     if_not mock_true        ; mocks' mock  // return `#t` verdict at end
 
-    my self                 ; mocks' mock SELF
+    actor self              ; mocks' mock SELF
     roll 2                  ; mocks' SELF mock
     actor send              ; mocks'
 
@@ -130,7 +130,7 @@ mock_list_ok:               ; (ctrl . mocks) <- verdict
     actor become            ; --
 
     state 1                 ; ctrl
-    my self                 ; ctrl SELF
+    actor self              ; ctrl SELF
     actor send              ; --
     ref std.commit
 
@@ -155,11 +155,11 @@ assert_ok:                  ; _ <- verdict
 
 step_0:                     ; (debug . timer) <- _
     push 42                 ; expect=42
-    my self                 ; expect ctrl=SELF
+    actor self              ; expect ctrl=SELF
     pair 1                  ; (ctrl . expect)
     push mock_eq            ; (ctrl . expect) mock_eq
     actor create            ; mock=mock_eq.(ctrl . expect)
-    my self                 ; mock SELF
+    actor self              ; mock SELF
     actor send              ; --
 
     state 0                 ; state
@@ -171,7 +171,7 @@ step_0:                     ; (debug . timer) <- _
 
 step_1:                     ; (debug . timer) <- mock
     msg 0                   ; mock
-    my self                 ; mock SELF
+    actor self              ; mock SELF
     actor send              ; --
 
 ;    push 86             ; 86  // non-matching message
@@ -189,7 +189,7 @@ step_1:                     ; (debug . timer) <- mock
 
 step_2:                     ; (debug . timer) <- mock
     msg 0                   ; mock
-    my self                 ; mock SELF
+    actor self              ; mock SELF
     actor send              ; --
 
 ;    push 86             ; 86  // non-matching message
@@ -205,7 +205,7 @@ step_2:                     ; (debug . timer) <- mock
 ; verify the mock
 
 step_3:                     ; (debug . timer) <- mock
-    my self                 ; ctrl=SELF
+    actor self              ; ctrl=SELF
     msg 0                   ; ctrl mock
     actor send              ; --
 

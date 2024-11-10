@@ -21,17 +21,17 @@ ticker:                     ; _ <- n
     msg 0                   ; n
     push 1                  ; n 1
     alu add                 ; n+1
-    my self                 ; n+1 SELF
+    actor self              ; n+1 SELF
     ref std.send_msg        ; --
 
 ; Send yourself two messages for each one received.
 
 msg_bomb:                   ; _ <- _
     push #?                 ; #?
-    my self                 ; #? SELF
+    actor self              ; #? SELF
     actor send              ; --
     push #?                 ; #?
-    my self                 ; #? SELF
+    actor self              ; #? SELF
     actor send              ; --
     ref std.commit
 
@@ -64,7 +64,7 @@ count_next:
     msg 0                   ; count
     push 1                  ; count 1
     alu add                 ; count+1
-    my self                 ; count+1 SELF
+    actor self              ; count+1 SELF
     ref std.send_msg
 
 ;;; Hewitt Go/Stop "Unbounded Integer" Example
@@ -95,7 +95,7 @@ unbounded:                  ; num <- inc | cust
     state 0                 ; num
     msg 0                   ; num inc
     dup 1                   ; num inc inc
-    my self                 ; num inc inc SELF
+    actor self              ; num inc inc SELF
     actor send              ; num inc
     alu add                 ; num+inc
     push unbounded          ; num+inc unbounded

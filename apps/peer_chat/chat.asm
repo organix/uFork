@@ -65,7 +65,7 @@ join_beh:                   ; (debug_dev io_dev timer_dev awp_dev . room_id) <- 
     msg 0                   ; msg
     eq #?                   ; msg==#?
     if_not intro_cb         ; --
-    my self                 ; party_rx=SELF
+    actor self              ; party_rx=SELF
 
     ; build room->party message-limited transport
     ; push 17             ; rcvr=party_rx limit=17
@@ -135,7 +135,7 @@ intro_cb:
 
     ; set party_rx_timer
     push #?                 ; party_tx msg=#?
-    my self                 ; party_tx msg target=SELF
+    actor self              ; party_tx msg target=SELF
     push link.rx_timeout    ; party_tx msg target delay=rx_timeout
     pair 2                  ; party_tx timer_req=(delay target . msg)
     state 3                 ; party_tx timer_req timer_dev
@@ -429,7 +429,7 @@ str_lost:
 
 log_fwd_beh:                ; (logr . rcvr) <- msg
     msg 0                   ; msg
-    my self                 ; msg SELF
+    actor self              ; msg SELF
     pair 1                  ; (SELF . msg)  // label log entry
     state 1                 ; (SELF . msg) logr
     actor send              ; --

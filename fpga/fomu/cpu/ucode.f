@@ -1459,6 +1459,9 @@ del_none:                   ; k orig key rev next value' key'
         update_sp ;
     THEN
     2DROP k@ ;
+: actor_self ( sp -- ip' )
+    self@                   ( D: sp self )
+    push_result ;
 : op_actor ( -- ip' | error )
     sp@ imm@ DUP is_fix IF
         fix2int             ( imm )
@@ -1467,16 +1470,10 @@ del_none:                   ; k orig key rev next value' key'
         actor_post          ( 1: post )
         actor_create        ( 2: create )
         actor_become        ( 3: become )
+        actor_self          ( 4: self )
         DROP                ( default case )
     THEN
     update_sp ;
-
-: op_my ( -- ip' | error )
-    sp@ self@
-    imm@ #0 = IF            ( D: sp self )
-        push_result ;
-    THEN
-    E_BOUNDS ;
 
 : op_msg ( -- ip' | error )
     sp@ msg@ imm@           ( D: sp msg #n )
@@ -1511,7 +1508,7 @@ del_none:                   ; k orig key rev next value' key'
     op_actor                ( 0x8009: actor )
     invalid                 ( 0x800A: dict )
     invalid                 ( 0x800B: deque )
-    op_my                   ( 0x800C: my )
+    invalid                 ( 0x800C: --reserved-- )
     op_alu                  ( 0x800D: alu )
     op_cmp                  ( 0x800E: cmp )
     op_end                  ( 0x800F: end )

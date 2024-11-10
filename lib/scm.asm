@@ -122,7 +122,7 @@ spread_done:                ; × vₙ … v₁ k ()
 ;    push 3              ; () arg3
 ;    push 2              ; () arg3 arg2
 ;    push 1              ; () arg3 arg2 arg1
-;    my self             ; () arg3 arg2 arg1 cust=SELF
+;    actor self          ; () arg3 arg2 arg1 cust=SELF
 ;    pair nargs+1        ; args=(cust arg1 arg2 arg3)
 ;    push func           ; args closure
 ;    call new_2          ; args code.data
@@ -148,7 +148,7 @@ continuation:               ; (msg cont env . sp) <- rv
     state 2                 ; (sp' . env) cont
     actor become            ; -- SELF=cont.(sp' . env)
     state 1                 ; msg
-    my self                 ; msg SELF
+    actor self              ; msg SELF
     ref std.send_msg
 
 ; Suffix to restore stack and continue
@@ -163,7 +163,7 @@ continuation:               ; (msg cont env . sp) <- rv
 
 imm_actor:                  ; beh <- msg
     msg 0                   ; msg
-    my self                 ; msg SELF
+    actor self              ; msg SELF
     pair 1                  ; (SELF . msg)
     state 0                 ; (SELF . msg) beh=[behavior_t, code, data, meta]
     call new_2              ; (SELF . msg) code.data
@@ -176,7 +176,7 @@ mut_actor:                  ; beh <- msg
 
 txn_actor:                  ; beh pending msg
     ; begin transaction
-    my self                 ; beh pending msg SELF
+    actor self              ; beh pending msg SELF
     pair 1                  ; beh pending (SELF . msg)
     pick 3                  ; beh pending (SELF . msg) beh
     call new_2              ; beh pending (SELF . msg) txn=code.data
@@ -247,7 +247,7 @@ rst_msgs:                   ; pending
     deque empty             ; is_empty(pending)
     if std.commit           ; pending
     deque pop               ; pending' msg'
-    my self                 ; pending' msg' SELF
+    actor self              ; pending' msg' SELF
     actor send              ; pending'
     ref rst_msgs
 
@@ -282,7 +282,7 @@ count_code:                 ; (_ n) <- (self cust)
     roll -3                 ; meta data code
     push behavior_t         ; meta data code behavior_t
     quad 4                  ; beh'=[behavior_t, code, data, meta]
-    my self                 ; beh' txn=SELF
+    actor self              ; beh' txn=SELF
     pair 1                  ; (txn . beh')
     msg 1                   ; (txn . beh') self
     ref std.send_msg

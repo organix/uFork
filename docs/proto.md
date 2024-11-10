@@ -250,7 +250,7 @@ write:                      ; value <- (tag cust . value')
     msg -2                  ; value'
     push cell_beh           ; value' cell_beh
     actor become            ; --
-    my self                 ; SELF
+    actor self              ; SELF
     msg 2                   ; SELF cust
     ref std.send_msg
 ```

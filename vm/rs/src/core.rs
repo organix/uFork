@@ -629,47 +629,45 @@ impl Core {
                 self.stack_push(r)?;
                 kip
             },
-            VM_MY => {
-                match imm {
-                    MY_SELF => {
-                        let ep = self.ep();
-                        let target = self.ram(ep).x();
-                        self.stack_push(target)?;
-                    },
-                    _ => {
-                        return Err(E_BOUNDS);  // unknown MY op
-                    }
-                }
-                kip
-            },
             VM_ACTOR => {
-                let tos = self.stack_pop();
-                let nos = self.stack_pop();
                 match imm {
                     ACTOR_SEND => {
-                        if tos.is_cap() {
+                        let target = self.stack_pop();
+                        let msg = self.stack_pop();
+                        if target.is_cap() {
                             let spn = self.event_sponsor(self.ep());  // implicit sponsor from event
-                            self.effect_send(spn, tos, nos)?;
+                            self.effect_send(spn, target, msg)?;
                         }
                     },
                     ACTOR_POST => {
+                        let target = self.stack_pop();
+                        let msg = self.stack_pop();
                         let spn = self.stack_pop();  // explicit sponsor from stack
-                        if tos.is_cap() {
-                            self.effect_send(spn, tos, nos)?;
+                        if target.is_cap() {
+                            self.effect_send(spn, target, msg)?;
                         }
                     },
                     ACTOR_CREATE => {
-                        if self.typeq(INSTR_T, tos) {
-                            let actor = self.effect_create(tos, nos)?;
+                        let beh = self.stack_pop();
+                        let state = self.stack_pop();
+                        if self.typeq(INSTR_T, beh) {
+                            let actor = self.effect_create(beh, state)?;
                             self.stack_push(actor)?;
                         } else {
                             self.stack_push(UNDEF)?;  // invalid actor
                         }
                     },
                     ACTOR_BECOME => {
-                        if self.typeq(INSTR_T, tos) {
-                            self.effect_become(tos, nos)?;
+                        let beh = self.stack_pop();
+                        let state = self.stack_pop();
+                        if self.typeq(INSTR_T, beh) {
+                            self.effect_become(beh, state)?;
                         }
+                    },
+                    ACTOR_SELF => {
+                        let ep = self.ep();
+                        let target = self.ram(ep).x();
+                        self.stack_push(target)?;
                     },
                     _ => {
                         // unknown ACTOR op (ignored)
@@ -1872,7 +1870,7 @@ pub const SEND_MSG: Any = Any { raw: (STD_OFS+1) as Raw };
 pub const CUST_SEND: Any = Any { raw: (STD_OFS+2) as Raw };
         quad_rom[CUST_SEND.ofs()]   = Quad::vm_msg(PLUS_1, SEND_MSG);
 pub const RV_SELF: Any = Any { raw: (STD_OFS+3) as Raw };
-        quad_rom[RV_SELF.ofs()]     = Quad::vm_my_self(CUST_SEND);
+        quad_rom[RV_SELF.ofs()]     = Quad::vm_actor_self(CUST_SEND);
 pub const RV_UNDEF: Any = Any { raw: (STD_OFS+4) as Raw };
         quad_rom[RV_UNDEF.ofs()]    = Quad::vm_push(UNDEF, CUST_SEND);
 pub const RV_NIL: Any = Any { raw: (STD_OFS+5) as Raw };
@@ -1887,7 +1885,7 @@ pub const RV_ONE: Any = Any { raw: (STD_OFS+9) as Raw };
         quad_rom[RV_ONE.ofs()]      = Quad::vm_push(PLUS_1, CUST_SEND);
 pub const RESEND: Any = Any { raw: (STD_OFS+10) as Raw };
         quad_rom[RESEND.ofs()+0]    = Quad::vm_msg(ZERO, Any::rom(RESEND.ofs()+1));
-        quad_rom[RESEND.ofs()+1]    = Quad::vm_my_self(SEND_MSG);
+        quad_rom[RESEND.ofs()+1]    = Quad::vm_actor_self(SEND_MSG);
 pub const STOP: Any = Any { raw: (STD_OFS+12) as Raw };
         quad_rom[STOP.ofs()]        = Quad::vm_end_stop();
 pub const ABORT: Any = Any { raw: (STD_OFS+13) as Raw };
@@ -2158,7 +2156,7 @@ pub const T_DEV_BEH: Any = Any { raw: T_DEV_OFS as Raw };
         quad_rom[T_DEV_OFS+1]       = Quad::vm_push(COUNT_TO, Any::rom(T_DEV_OFS+2));  // 7 count_to
         quad_rom[T_DEV_OFS+2]       = Quad::vm_actor_become(Any::rom(T_DEV_OFS+3));  // --
         quad_rom[T_DEV_OFS+3]       = Quad::vm_push(PLUS_5, Any::rom(T_DEV_OFS+4));  // 5
-        quad_rom[T_DEV_OFS+4]       = Quad::vm_my(MY_SELF, Any::rom(T_DEV_OFS+5));  // 5 SELF
+        quad_rom[T_DEV_OFS+4]       = Quad::vm_actor_self(Any::rom(T_DEV_OFS+5));  // 5 SELF
         quad_rom[T_DEV_OFS+5]       = Quad::vm_actor_send(Any::rom(T_DEV_OFS+6));  // --
 
         quad_rom[T_DEV_OFS+6]       = Quad::vm_push(Any::fix(13), Any::rom(T_DEV_OFS+7));  // 13
@@ -2190,7 +2188,7 @@ pub const COUNT_TO: Any = Any { raw: COUNT_TO_OFS as Raw };
         quad_rom[COUNT_TO_OFS+4]    = Quad::vm_msg(ZERO, Any::rom(COUNT_TO_OFS+5));  // n
         quad_rom[COUNT_TO_OFS+5]    = Quad::vm_push(PLUS_1, Any::rom(COUNT_TO_OFS+6));  // n 1
         quad_rom[COUNT_TO_OFS+6]    = Quad::vm_alu_add(Any::rom(COUNT_TO_OFS+7));  // n+1
-        quad_rom[COUNT_TO_OFS+7]    = Quad::vm_my(MY_SELF, Any::rom(COUNT_TO_OFS+8));  // n+1 SELF
+        quad_rom[COUNT_TO_OFS+7]    = Quad::vm_actor_self(Any::rom(COUNT_TO_OFS+8));  // n+1 SELF
         quad_rom[COUNT_TO_OFS+8]    = Quad::vm_actor_send(Any::rom(COUNT_TO_OFS+9));  // --
         quad_rom[COUNT_TO_OFS+9]    = Quad::vm_dup(ZERO, COMMIT);  // --
 

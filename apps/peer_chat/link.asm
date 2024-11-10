@@ -128,7 +128,7 @@ tx_tmo_tail:                ; (link timer ack seq . msgs) <- (tx_tmo . seq')
     state 4                 ; seq
     push tx_tmo             ; seq tx_tmo
     pair 1                  ; msg=(tx_tmo . seq)
-    my self                 ; msg target=SELF
+    actor self              ; msg target=SELF
     push tx_timeout         ; msg target delay=tx_timeout
     pair 2                  ; timer_req=(delay target . msg)
     state 2                 ; timer_req timer
@@ -150,7 +150,7 @@ tx_tmo_1:
     push #?                 ; #?
     push tx_msg             ; #? tx_msg
     pair 1                  ; (tx_msg . #?)
-    my self                 ; (tx_msg . #?) SELF
+    actor self              ; (tx_msg . #?) SELF
     actor send              ; --
     ref std.commit
 
@@ -185,7 +185,7 @@ rx_beh:                     ; (cust timer tx . seq) <- #? | (ack seq' . content)
 
     ; reset timer
     push #?                 ; msg=#?
-    my self                 ; msg target=SELF
+    actor self              ; msg target=SELF
     push rx_timeout         ; msg target delay=rx_timeout
     pair 2                  ; timer_req=(delay target . msg)
     state 2                 ; timer_req timer

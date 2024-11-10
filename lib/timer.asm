@@ -37,7 +37,7 @@ cust_beh:                   ; (clock delay target . message) <- now
     pair 3                  ; (clock end_time target . message)
     push poll_beh           ; (clock end_time target . message) poll_beh
     actor become            ; --
-    my self                 ; SELF
+    actor self              ; SELF
     state 1                 ; SELF clock
     ref std.send_msg
 
@@ -57,7 +57,7 @@ poll_beh:                   ; (clock end_time target . message) <- now
     ref std.send_msg
 
 retry:                      ; (clock ...)
-    my self                 ; SELF
+    actor self              ; SELF
     state 1                 ; SELF clock
     ref std.send_msg
 

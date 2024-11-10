@@ -143,7 +143,7 @@ start_one:
     push 1                  ; running' quota=1
     push start_tag          ; running' quota start_tag
     pair 1                  ; running' (start_tag . quota)
-    my self                 ; running' (start_tag . quota) SELF
+    actor self              ; running' (start_tag . quota) SELF
     actor send              ; running'
     ref become
 finish:
@@ -184,7 +184,7 @@ pop:
     actor create            ; ... requestor canceller=canceller_beh.#?
     state -3                ; ... requestor canceller value
     pick 2                  ; ... requestor canceller value label=canceller
-    my self                 ; ... requestor canceller value label rcvr=SELF
+    actor self              ; ... requestor canceller value label rcvr=SELF
     pair 1                  ; ... requestor canceller value (rcvr . label)
     push lib.label_beh      ; ... requestor canceller value (rcvr . label) label_beh
     actor create            ; ... requestor canceller value callback=label_beh.(rcvr . label)
@@ -198,7 +198,7 @@ pop:
     roll 3                  ; running queue' canceller quota'
     push start_tag          ; running queue' canceller quota' start_tag
     pair 1                  ; running queue' canceller (start_tag . quota')
-    my self                 ; running queue' canceller (start_tag . quota') SELF
+    actor self              ; running queue' canceller (start_tag . quota') SELF
     actor send              ; running queue' canceller
 
 ; Mark the requestor as running.

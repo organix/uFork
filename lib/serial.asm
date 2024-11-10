@@ -18,7 +18,7 @@
 ;;              (BECOME (busy-beh (deque-new) tag cust svc)) )))
 beh:
 serial_beh:                 ; svc <- (cust . req)
-    my self                 ; SELF
+    actor self              ; SELF
     push lib.once_tag_beh   ; SELF once-tag-beh
     actor create            ; tag=once-tag.SELF
 
@@ -86,7 +86,7 @@ busy_1:
 
 busy_2:
     part 1                  ; pending1 req1 cust1
-    my self                 ; pending1 req1 cust1 SELF
+    actor self              ; pending1 req1 cust1 SELF
     push lib.once_tag_beh   ; pending1 req1 cust1 SELF once-tag-beh
     actor create            ; pending1 req1 cust1 tag1=once-tag.SELF
 
@@ -124,7 +124,7 @@ counter_init:               ; value <- msg
     actor become            ; --
 
     msg 0                   ; msg
-    my self                 ; msg SELF
+    actor self              ; msg SELF
     ref std.send_msg
 
 ;;  # WARNING! `counter_svc` must be protected by a serializer!
@@ -141,7 +141,7 @@ counter_init:               ; value <- msg
 ;;  ]
 counter_svc:                ; cell <- (cust . change)
     push #?                 ; #?
-    my self                 ; #? SELF
+    actor self              ; #? SELF
     push cell.read_tag      ; #? SELF #read
     pair 2                  ; (#read SELF . #?)
     state 0                 ; (#read SELF . #?) cell
@@ -160,7 +160,7 @@ counter_k1:                 ; (cell cust . change) <- count
     alu add                 ; count'=count+change
 
     dup 1                   ; count' count'
-    my self                 ; count' count' SELF
+    actor self              ; count' count' SELF
     push cell.write_tag     ; count' count' SELF #write
     pair 2                  ; count' (#write SELF . count')
     state 1                 ; count' (#write SELF . count') cell

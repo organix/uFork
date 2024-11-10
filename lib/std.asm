@@ -48,7 +48,7 @@ commit:
     end commit
 
 rv_self:                    ; _ <- (cust . _)
-    my self cust_send       ; msg=SELF
+    actor self cust_send    ; msg=SELF
 
 rv_undef:                   ; _ <- (cust . _)
     push #? cust_send       ; msg=#?
@@ -70,7 +70,7 @@ rv_one:                     ; _ <- (cust . _)
 
 resend:                     ; _ <- msg
     msg 0                   ; msg
-    my self                 ; msg cust=SELF
+    actor self              ; msg cust=SELF
     ref send_msg
 
 stop:

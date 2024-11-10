@@ -13,7 +13,7 @@ do_13:                      ; _ <- blob
     actor become            ; --
     push 42                 ; value=42
     push 7                  ; value offset=7
-    my self                 ; value offset SELF
+    actor self              ; value offset SELF
     pair 2                  ; write_req=(SELF offset . value)
     msg 0                   ; write_req blob
     actor send              ; --
@@ -22,7 +22,7 @@ write_13:                   ; blob <- ok
     msg 0                   ; ok
     assert #t               ; --
     push 7                  ; 7
-    my self                 ; 7 SELF
+    actor self              ; 7 SELF
     pair 1                  ; read_req=(SELF . 7)
     state 0                 ; read_req blob
     actor send              ; --
@@ -63,7 +63,7 @@ step_0:
 
 step_1:                     ; (blob_dev . debug_dev) <- _
     push 7                  ; 7
-    my self                 ; 7 SELF
+    actor self              ; 7 SELF
     pair 1                  ; alloc_req=(SELF . 7)
     state 1                 ; alloc_req blob_dev
     actor send              ; --
@@ -74,7 +74,7 @@ step_1:                     ; (blob_dev . debug_dev) <- _
 
 step_2:                     ; (blob_dev . debug_dev) <- blob_1
     ; push 5                  ; 5
-    ; my self                 ; 5 SELF
+    ; actor self              ; 5 SELF
     ; pair 1                  ; alloc_req=(SELF . 5)
     ; state 1                 ; alloc_req blob_dev
     ; actor send              ; --
@@ -87,7 +87,7 @@ step_2:                     ; (blob_dev . debug_dev) <- blob_1
 
 ; step_3:                     ; (blob_1 blob_dev . debug_dev) <- blob_2
 ;     push 3                  ; 3
-;     my self                 ; 3 SELF
+;     actor self              ; 3 SELF
 ;     pair 1                  ; alloc_req=(SELF . 3)
 ;     state 2                 ; alloc_req blob_dev
 ;     actor send              ; --
@@ -105,7 +105,7 @@ step_2:                     ; (blob_dev . debug_dev) <- blob_1
 ;     push step_5             ; (blob_3 blob_1 blob_dev . debug_dev) step_5
 ;     actor become            ; --
 ;     push #?                 ; #?
-;     my self                 ; #? SELF
+;     actor self              ; #? SELF
 ;     actor send              ; --
 ;     ref std.commit
 
@@ -116,7 +116,7 @@ step_2:                     ; (blob_dev . debug_dev) <- blob_1
 ;     push step_6             ; (blob_3 blob_dev . debug_dev) step_6
 ;     actor become            ; --
 ;     push #?                 ; #?
-;     my self                 ; #? SELF
+;     actor self              ; #? SELF
 ;     actor send              ; --
 ;     ref std.commit
 
@@ -125,7 +125,7 @@ step_2:                     ; (blob_dev . debug_dev) <- blob_1
 ;     push step_7             ; (blob_dev . debug_dev) step_7
 ;     actor become            ; --
 ;     push #?                 ; #?
-;     my self                 ; #? SELF
+;     actor self              ; #? SELF
 ;     actor send              ; --
 ;     ref std.commit
 

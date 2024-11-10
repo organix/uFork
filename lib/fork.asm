@@ -15,11 +15,11 @@
 ;;  ]
 beh:
 fork_beh:                   ; (cust h_svc . t_svc) <- (h_req . t_req)
-    my self                 ; SELF
+    actor self              ; SELF
     push lib.tag_beh        ; SELF tag_beh
     actor create            ; t_tag=tag.SELF
 
-    my self                 ; t_tag SELF
+    actor self              ; t_tag SELF
     push lib.tag_beh        ; t_tag SELF tag_beh
     actor create            ; t_tag h_tag=tag.SELF
 

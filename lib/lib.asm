@@ -58,7 +58,7 @@ label_beh:                  ; (rcvr . label) <- msg
 ;;  ]
 tag_beh:                    ; rcvr <- msg
     msg 0                   ; msg
-    my self                 ; msg label=SELF
+    actor self              ; msg label=SELF
     pair 1                  ; (label . msg)
     state 0                 ; (label . msg) rcvr
     ref std.send_msg
@@ -112,7 +112,7 @@ broadcast_beh:              ; value <- actors
     state 0                 ; rest first value
     roll 2                  ; rest value first
     actor send              ; rest
-    my self                 ; rest SELF
+    actor self              ; rest SELF
     ref std.send_msg
 
 .export

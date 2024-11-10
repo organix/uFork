@@ -14,7 +14,7 @@ in_beh:                     ; (cust io_dev . line) <- result
 
     ; request next char
     push #?                 ; char input=#?
-    my self                 ; char input callback=SELF
+    actor self              ; char input callback=SELF
     push #?                 ; char input callback to_cancel=#?
     pair 2                  ; io_req=(to_cancel callback . input)
     state 2                 ; io_req io_dev
@@ -60,7 +60,7 @@ out_beh:                    ; io_dev <- result | line'
 
 out_snd:                    ; io_dev line' char
     ; send char to output
-    my self                 ; io_dev line' char callback=SELF
+    actor self              ; io_dev line' char callback=SELF
     push #?                 ; io_dev line' char callback to_cancel=#?
     pair 2                  ; io_dev line' io_req=(to_cancel callback . char)
     pick 3                  ; io_dev line' io_req io_dev
@@ -135,7 +135,7 @@ out_chr:                    ; --
     deque pop               ; line char
 
     ; send char to output
-    my self                 ; line char callback=SELF
+    actor self              ; line char callback=SELF
     push #?                 ; line char callback to_cancel=#?
     pair 2                  ; line io_req=(to_cancel callback . char)
     state 1                 ; line io_req io_dev

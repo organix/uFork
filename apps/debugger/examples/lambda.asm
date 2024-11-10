@@ -18,7 +18,7 @@ constant:                   ; value <- (cust . _)
 
 ;;  DEF variable AS \(cust, env).[ SEND (cust, SELF) TO env ]
 variable:                   ; _ <- (cust . env)
-    my self                 ; SELF
+    actor self              ; SELF
     msg 1                   ; SELF cust
     pair 1                  ; (cust . SELF)
     msg -1                  ; (cust . SELF) env
@@ -97,7 +97,7 @@ applicative:                ; (param cust . env) <- closure
     push operative          ; (closure cust . env) operative
     actor become            ; --
     state -2                ; env
-    my self                 ; env SELF
+    actor self              ; env SELF
     pair 1                  ; (SELF . env)
     state 1                 ; (SELF . env) param
     ref std.send_msg

@@ -125,7 +125,7 @@ const VM_SPONSOR= 0x80000008;  // +8
 const VM_ACTOR  = 0x80000009;  // +9
 const VM_DICT   = 0x8000000A;  // +10
 const VM_DEQUE  = 0x8000000B;  // +11
-const VM_MY     = 0x8000000C;  // +12
+//const VM_0C     = 0x8000000C;  // reserved
 const VM_ALU    = 0x8000000D;  // +13
 const VM_CMP    = 0x8000000E;  // +14
 const VM_END    = 0x8000000F;  // +15
@@ -245,7 +245,7 @@ const instr_label = [
     "actor",
     "dict",
     "deque",
-    "my",
+    "VM_0C",        // reserved
     "alu",
     "cmp",
     "end",
@@ -300,9 +300,7 @@ const actor_imm_label = [
     "send",
     "post",
     "create",
-    "become"
-];
-const my_imm_label = [
+    "become",
     "self"
 ];
 const deque_imm_label = [
@@ -732,8 +730,6 @@ function make_core({
                     s += alu_imm_label[imm];
                 } else if ((quad.x === VM_CMP) && (imm < cmp_imm_label.length)) {
                     s += cmp_imm_label[imm];
-                } else if ((quad.x === VM_MY) && (imm < my_imm_label.length)) {
-                    s += my_imm_label[imm];
                 } else if ((quad.x === VM_ACTOR) && (imm < actor_imm_label.length)) {
                     s += actor_imm_label[imm];
                 } else if ((quad.x === VM_DEQUE) && (imm < deque_imm_label.length)) {
@@ -1031,9 +1027,6 @@ function make_core({
                     fields.z = instruction(node.k);
                 } else if (node.op === "cmp") {
                     fields.y = label(node.imm, cmp_imm_label);
-                    fields.z = instruction(node.k);
-                } else if (node.op === "my") {
-                    fields.y = label(node.imm, my_imm_label);
                     fields.z = instruction(node.k);
                 } else if (node.op === "actor") {
                     fields.y = label(node.imm, actor_imm_label);
@@ -1784,7 +1777,6 @@ export default Object.freeze({
     VM_CMP,
     VM_IF,
     VM_MSG,
-    VM_MY,
     VM_ACTOR,
     VM_END,
     VM_SPONSOR,

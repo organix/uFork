@@ -123,7 +123,7 @@ str_out:                    ; (cb out . str) <- result
     state 0                 ; (cb out . str)
     part 3                  ; rest first out cb
     roll 3                  ; rest out cb code=first
-    my self                 ; rest out cb code callback=SELF
+    actor self              ; rest out cb code callback=SELF
     push #?                 ; rest out cb code callback to_cancel=#?
     pair 2                  ; rest out cb req=(to_cancel callback . code)
     state 2                 ; rest out cb req out

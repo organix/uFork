@@ -85,7 +85,7 @@ on_result:                  ; (requestors callback . canceller) <- (result_tag .
     msg -2                  ; value
     push start_tag          ; value start_tag
     pair 1                  ; (start_tag . value)
-    my self                 ; (start_tag . value) SELF
+    actor self              ; (start_tag . value) SELF
     actor send              ; --
     ref std.commit
 
@@ -105,7 +105,7 @@ on_start:                   ; (requestors callback . _) <- (start_tag . value)
     part 1                  ; canceller pending next
     msg -1                  ; canceller pending next value
     push result_tag         ; canceller pending next value label=result_tag
-    my self                 ; canceller pending next value label rcvr=SELF
+    actor self              ; canceller pending next value label rcvr=SELF
     pair 1                  ; canceller pending next value (rcvr . label)
     push lib.label_beh      ; canceller pending next value (rcvr . label) label_beh
     actor create            ; canceller pending next value callback=label_beh.(rcvr . label)

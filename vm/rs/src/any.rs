@@ -51,7 +51,7 @@ pub const VM_SPONSOR: Any   = Any::fix(0x08);  // +8
 pub const VM_ACTOR: Any     = Any::fix(0x09);  // +9
 pub const VM_DICT: Any      = Any::fix(0x0A);  // +10
 pub const VM_DEQUE: Any     = Any::fix(0x0B);  // +11
-pub const VM_MY: Any        = Any::fix(0x0C);  // +12
+pub const VM_0C: Any        = Any::fix(0x0C);  // RESERVED
 pub const VM_ALU: Any       = Any::fix(0x0D);  // +13
 pub const VM_CMP: Any       = Any::fix(0x0E);  // +14
 pub const VM_END: Any       = Any::fix(0x0F);  // +15
@@ -113,14 +113,12 @@ pub const CMP_LT: Any       = PLUS_3;
 pub const CMP_LE: Any       = PLUS_4;
 pub const CMP_NE: Any       = PLUS_5;
 
-// VM_MY actor operations
-pub const MY_SELF: Any      = ZERO;
-
 // VM_ACTOR actor operations
 pub const ACTOR_SEND: Any   = ZERO;
 pub const ACTOR_POST: Any   = PLUS_1;
 pub const ACTOR_CREATE: Any = PLUS_2;
 pub const ACTOR_BECOME: Any = PLUS_3;
+pub const ACTOR_SELF: Any   = PLUS_4;
 
 // VM_END thread actions
 pub const END_ABORT: Any    = MINUS_1;

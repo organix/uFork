@@ -33,7 +33,7 @@ refill_0:
     sponsor events          ; ... sponsor
     state -2                ; ... sponsor cycles
     sponsor cycles          ; ... sponsor
-    my self                 ; ... sponsor control=SELF
+    actor self              ; ... sponsor control=SELF
     sponsor start           ; ...
     ref std.commit
 
@@ -92,10 +92,10 @@ loop_forever:
 
 msg_bomb:                   ; _ <- _
     push #?                 ; #?
-    my self                 ; #? SELF
+    actor self              ; #? SELF
     actor send              ; --
     push #?                 ; #?
-    my self                 ; #? SELF
+    actor self              ; #? SELF
     actor send              ; --
     ref std.commit
 
@@ -128,7 +128,7 @@ count_next:
     msg 0                   ; count
     push 1                  ; count 1
     alu add                 ; count+1
-    my self                 ; count+1 SELF
+    actor self              ; count+1 SELF
     ref std.send_msg
 
 boot:                       ; _ <- {caps}

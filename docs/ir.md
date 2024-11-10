@@ -226,8 +226,7 @@ and is not present on "jump" or "end" instructions.
 "cmp"           | "eq", "ge", "gt", "lt", "le", "ne"
 "msg"           | _fixnum_
 "state"         | _fixnum_
-"my"            | "self"
-"actor"         | "send", "post", "create", "become"
+"actor"         | "send", "post", "create", "become", "self"
 "end"           | "abort", "stop", "commit"
 "sponsor"       | "new", "memory", "events", "cycles", "reclaim", "start", "stop"
 "assert"        | _value_

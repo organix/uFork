@@ -50,7 +50,7 @@ write:                      ; value <- (tag cust . value')
     msg -2                  ; value'
     push cell_beh           ; value' cell_beh
     actor become            ; --
-    my self                 ; SELF
+    actor self              ; SELF
     msg 2                   ; SELF cust
     ref std.send_msg
 
@@ -195,7 +195,7 @@ cell_try_bit:               ; (old bit cell . cust) <- val
     state 2                 ; val bit
     alu or                  ; new=val|bit
     msg 0                   ; new old=val
-    my self                 ; new old cust=SELF
+    actor self              ; new old cust=SELF
     push CAS_tag            ; new old cust tag=CAS_tag
     pair 3                  ; (#CAS cust old . new)
     state 3                 ; (#CAS cust old . new) cell

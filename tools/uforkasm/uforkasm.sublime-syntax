@@ -87,7 +87,7 @@ contexts:
 
 # Two-part operators.
 
-    - match: '^{{spaces}}(actor){{spaces}}(send|post|create|become)\b'
+    - match: '^{{spaces}}(actor){{spaces}}(send|post|create|become|self)\b'
       captures:
         1: keyword.operator.word.uforkasm
         2: keyword.operator.word.uforkasm
@@ -103,11 +103,6 @@ contexts:
         2: keyword.operator.word.uforkasm
       push: operand_list
     - match: '^{{spaces}}(cmp){{spaces}}(eq|ge|gt|lt|le|ne)\b'
-      captures:
-        1: keyword.operator.word.uforkasm
-        2: keyword.operator.word.uforkasm
-      push: operand_list
-    - match: '^{{spaces}}(my){{spaces}}(self)\b'
       captures:
         1: keyword.operator.word.uforkasm
         2: keyword.operator.word.uforkasm

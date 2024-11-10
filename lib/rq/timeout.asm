@@ -62,7 +62,7 @@ race:
     pair 2                  ; t␘ r␘ callback rreq=(r␘ rcb . value)
     state 1                 ; t␘ r␘ callback rreq requestor
     actor send              ; t␘ r␘ callback
-    my self                 ; t␘ r␘ callback error=self
+    actor self              ; t␘ r␘ callback error=self
     push #f                 ; t␘ r␘ callback error ok=#f
     pair 1                  ; t␘ r␘ callback result=(ok . error)
     state 2                 ; t␘ r␘ callback result time_limit

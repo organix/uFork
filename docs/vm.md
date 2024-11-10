@@ -30,7 +30,6 @@
         * [`if`](#if-instruction) instruction
         * [`jump`](#jump-instruction) instruction
         * [`msg`](#msg-instruction) instruction
-        * [`my`](#my-instruction) instruction
         * [`nth`](#nth-instruction) instruction
         * [`pair`](#pair-instruction) instruction
         * [`part`](#part-instruction) instruction
@@ -334,11 +333,11 @@ _quad_               | `quad` `-4`         | _Z_ _Y_ _X_ _T_ | extract 4 _quad_ 
 —                    | `state` `0`         | _state_      | copy _actor_ state to stack
 —                    | `state` _n_         | _stateₙ_     | copy state item _n_ to stack
 —                    | `state` -_n_        | _tailₙ_      | copy state tail _n_ to stack
-—                    | `my` `self`         | _actor_      | push _actor_ address on stack
 _msg_ _actor_        | `actor` `send`      | —            | send _msg_ to _actor_
 _spn_ _msg_ _actor_  | `actor` `post`      | —            | send _msg_ to _actor_ using sponsor _spn_
 _state_ _beh_        | `actor` `create`    | _actor_      | create an _actor_ with code _beh_ and data _state_
 _state_ _beh_        | `actor` `become`    | —            | replace code with _beh_ and data with _state_
+—                    | `actor` `self`      | _actor_      | push _actor_ address on stack
 _reason_             | `end` `abort`       | —            | abort actor transaction with _reason_
 —                    | `end` `stop`        | —            | stop current continuation (thread)
 —                    | `end` `commit`      | —            | commit actor transaction
@@ -408,7 +407,6 @@ The qualified instructions are:
   * `actor`
   * `dict`
   * `deque`
-  * `my`
   * `alu`
   * `cmp`
   * `end`
@@ -490,6 +488,7 @@ _msg_ _actor_        | `actor` `send`      | —            | send _msg_ to _act
 _spn_ _msg_ _actor_  | `actor` `post`      | —            | send _msg_ to _actor_ using sponsor _spn_
 _state_ _beh_        | `actor` `create`    | _actor_      | create an _actor_ with code _beh_ and data _state_
 _state_ _beh_        | `actor` `become`    | —            | replace code with _beh_ and data with _state_
+—                    | `actor` `self`      | _actor_      | push _actor_ address on stack
 
 Record effects of actor primitives.
 Note that effects are not released into the system
@@ -534,6 +533,12 @@ until and unless the actor executes [`end` `commit`](#end-instruction).
  1. Remove _state_ from the stack
  1. Record _beh_ as the code to execute when handling the next event
  1. Record _state_ as the private data when handling the next event
+
+ T            | X (op)        | Y (imm)       | Z (k)
+--------------|---------------|---------------|-------------
+ `#instr_t`   | `+9` (actor)  | `+4` (self)   | _instr_
+
+ 1. Push the current actor capability onto the stack
 
 #### `alu` instruction
 
@@ -1181,20 +1186,6 @@ Copy data from the current message-event.
 
  1. Let _msg_ be the entire message
  1. Push `nth(n, msg)` onto the stack
-
-#### `my` instruction
-
- Input               | Instruction         | Output       | Description
----------------------|---------------------|--------------|-------------------------------------
-—                    | `my` `self`         | _actor_      | push _actor_ address on stack
-
-Copy data relating to the current actor.
-
- T            | X (op)        | Y (imm)       | Z (k)
---------------|---------------|---------------|-------------
- `#instr_t`   | `+12` (my)    | `+0` (self)   | _instr_
-
- 1. Push the current actor capability onto the stack
 
 #### `nth` instruction
 
