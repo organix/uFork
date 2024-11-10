@@ -390,7 +390,7 @@ The immediate instructions are:
 
 The `debug` and `jump` instructions
 do not use the immediate value.
-They can be distinguish, if needed,
+They can be distinguished, if needed,
 by the `2#1000_0000_0000_000x` format.
 
 #### Qualifed Instructions
