@@ -495,8 +495,8 @@ function disasm(code, words = {}) {
 
 // Print annotated Verilog memory image
 
-function print_memh(prog, words = {}) {
-    const names_by_word = invert_words(words);
+function print_memh(prog, words, mark_address) {
+    const names_by_word = invert_words(words ?? {});
     return [
         "/*  CODE    ADR  DISASM                  NAMES                     */"
 //           021f // 0ac: (LIT)                   RX? KEY?
@@ -506,7 +506,7 @@ function print_memh(prog, words = {}) {
 //           90af // 0b0: jump_ifzero(0af)
 // E.g.      021f // 0b1: (LIT)                   RX@
 //           0003 // 0b2: 0x0003
-//           533f // 0b3: IO@ EXIT
+//       >>> 533f // 0b3: IO@ EXIT
 //           2100 // 0b4: >R                      SPACES
 //           80b7 // 0b5: jump(0b7)
 //           c0a6 // 0b6: SPACE
@@ -515,8 +515,14 @@ function print_memh(prog, words = {}) {
     ].concat(prog.map(function format_line(code, address) {
         const call = 0xC000 | address;
         const names = names_by_word[call] ?? [];
+        const mark = (
+            address === mark_address
+            ? ">>> "
+            : "    "
+        );
         const line = (
-            "    " + hex.from(code, 16)                             // CODE
+            mark
+            + hex.from(code, 16)                                    // CODE
             + " // " + hex.from(address, 12) + ": "                 // ADR
             + fast_disasm(code, names_by_word).padEnd(24, " ")      // DISASM
             + names.join(" ")                                       // NAMES

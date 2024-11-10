@@ -161,8 +161,8 @@ function format_memory(mem, base = 0, annotation = no_annotation) {
 }
 
 // display annotated memory image
-function display_memory(prog, words) {
-    const memh = ucode.print_memh(prog, words);
+function display_memory(prog, words, current_address) {
+    const memh = ucode.print_memh(prog, words, current_address);
     $program_mem.value = memh;
 }
 
@@ -200,7 +200,7 @@ function schedule_display(state, prog, words) {
     // Schedules exactly one redraw for the upcoming paint.
     cancelAnimationFrame(schedule_timer_id);
     schedule_timer_id = requestAnimationFrame(function () {
-        display_memory(prog, words);
+        display_memory(prog, words, state.pc);
         display_machine(state, prog, words);
     });
 }
