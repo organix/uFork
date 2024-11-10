@@ -10,6 +10,7 @@ import hex from "https://ufork.org/lib/hex.js";
 //import hexdump from "https://ufork.org/lib/hexdump.js";
 //import OED from "https://ufork.org/lib/oed.js";
 //import oed from "https://ufork.org/lib/oed_lite.js";
+const ucode_href = import.meta.resolve("./ucode.f");
 
 function $(el) {
     if (typeof el === "string") {
@@ -304,3 +305,11 @@ $program_compile.onclick = function () {
         }
     };
 };
+
+fetch(ucode_href).then(function (response) {
+    if (response.ok) {
+        response.text().then(function (text) {
+            $program_src.textContent = text;
+        });
+    }
+});

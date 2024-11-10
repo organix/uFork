@@ -27,6 +27,7 @@ const content_types = {
     map: "application/json",
     mjs: "text/javascript",
     png: "image/png",
+    f: "text/plain",
     hum: "text/plain",
     scm: "text/plain",
     svg: "image/svg+xml",
