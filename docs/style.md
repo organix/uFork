@@ -335,11 +335,3 @@ Non-library modules should use absolute URLs to import library modules.
     ; Bad
     .import
         std: "../../../lib/std.asm"
-
-Avoid use of `my beh` where possible, instead pushing behaviors by name.
-
-    ; Good
-    push example_beh            ; example_beh
-
-    ; Bad
-    my beh                      ; example_beh

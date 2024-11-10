@@ -1476,9 +1476,6 @@ del_none:                   ; k orig key rev next value' key'
     imm@ #0 = IF            ( D: sp self )
         push_result ;
     THEN
-    imm@ #1 = IF            ( D: sp self )
-        QX@ push_result ;
-    THEN
     E_BOUNDS ;
 
 : op_msg ( -- ip' | error )

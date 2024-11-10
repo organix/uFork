@@ -630,16 +630,11 @@ impl Core {
                 kip
             },
             VM_MY => {
-                let me = self.self_ptr();
                 match imm {
                     MY_SELF => {
                         let ep = self.ep();
                         let target = self.ram(ep).x();
                         self.stack_push(target)?;
-                    },
-                    MY_BEH => {
-                        let beh = self.ram(me).x();
-                        self.stack_push(beh)?;
                     },
                     _ => {
                         return Err(E_BOUNDS);  // unknown MY op

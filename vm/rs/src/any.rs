@@ -115,7 +115,6 @@ pub const CMP_NE: Any       = PLUS_5;
 
 // VM_MY actor operations
 pub const MY_SELF: Any      = ZERO;
-pub const MY_BEH: Any       = PLUS_1;
 
 // VM_ACTOR actor operations
 pub const ACTOR_SEND: Any   = ZERO;

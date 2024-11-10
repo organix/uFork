@@ -303,8 +303,7 @@ const actor_imm_label = [
     "become"
 ];
 const my_imm_label = [
-    "self",
-    "beh"
+    "self"
 ];
 const deque_imm_label = [
     "new",
