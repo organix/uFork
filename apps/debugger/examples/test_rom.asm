@@ -1,7 +1,8 @@
 ; Self-testing ROM image
 
 boot:                       ; _ <- {caps}
-    dup 0 test_actors
+;    dup 0 test_actors
+    dup 0 test_pairs
 
 test_pairs:
     push 422                ; 422
@@ -14,8 +15,8 @@ test_pairs:
     pair 1                  ; (1 2 . 3)
     part 1                  ; (2 . 3) 1
     assert 1                ; (2 . 3)
-;    dup 0                   ; (2 . 3)
-;    dup 0                   ; (2 . 3)
+    dup 0                   ; (2 . 3) -- nop
+;    dup 0                   ; (2 . 3) -- nop
     part 1                  ; 3 2
     assert 2                ; 3
     dup 1                   ; 3 3
