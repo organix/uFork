@@ -1571,7 +1571,7 @@ VARIABLE saved_sp           ( sp before instruction execution )
                     DROP cont_dequeue
                     DUP QY@ ( D: cont event )
                     release release
-                    ( gc_collect )
+                    gc_collect
                 THEN
             ELSE            ( D: op )
                 E_NOT_FIX root_spn spn_signal! ;
@@ -1594,7 +1594,7 @@ VARIABLE saved_sp           ( sp before instruction execution )
             DROP ;
         THEN
     THEN
-    gc_increment
+    ( gc_increment )
     run_loop ;
 
 : rom_init
