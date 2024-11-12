@@ -24,6 +24,13 @@ pub const SPONSOR: Any      = Any::ram(0xF);
 pub const RAM_BASE_OFS: usize = 0x10;  // RAM offsets below this value are reserved
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum GcStrategy {
+    Interleaved,
+    FullAtCommit,
+}
+const GC_STRATEGY: GcStrategy = GcStrategy::FullAtCommit;
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum GcPhase {
     Idle,
     Prep,
@@ -44,10 +51,10 @@ enum GcColor {
 //const QUAD_ROM_MAX: usize = 1<<12;  // 4K quad-cells of ROM
 const QUAD_ROM_MAX: usize = 1<<13;  // 8K quad-cells of ROM (FPGA size)
 //const QUAD_ROM_MAX: usize = 1<<14;  // 16K quad-cells of ROM
-//const QUAD_RAM_MAX: usize = 1<<8;   // 256 quad-cells of RAM
-//const QUAD_RAM_MAX: usize = 1<<10;   // 1K quad-cells of RAM
-const QUAD_RAM_MAX: usize = 1<<12;   // 4K quad-cells of RAM (FPGA size)
-const DEVICE_MAX:   usize = 13;     // number of Core devices
+//const QUAD_RAM_MAX: usize = 1<<8;  // 256 quad-cells of RAM
+//const QUAD_RAM_MAX: usize = 1<<10;  // 1K quad-cells of RAM
+const QUAD_RAM_MAX: usize = 1<<12;  // 4K quad-cells of RAM (FPGA size)
+const DEVICE_MAX: usize = 13;  // number of Core devices
 
 pub struct Core {
     quad_rom:   [Quad; QUAD_ROM_MAX],
@@ -206,8 +213,8 @@ impl Core {
         let mut steps = 0;
         while (limit <= 0) || (steps < limit) {
             if !self.k_first().is_ram() && !self.e_first().is_ram() {
+                self.gc_collect_all();  // full GC collection before becoming idle
                 self.set_sponsor_signal(SPONSOR, ZERO);  // processor idle
-                // FIXME: CALL STOP-THE-WORLD GC FROM HERE?
                 break;  // return signal
             }
             let sig = self.execute_instruction();
@@ -218,7 +225,9 @@ impl Core {
             if sig.is_fix() {
                 break;  // return signal
             }
-            self.gc_increment();  // FIXME! CALL CONCURRENT GC FROM HERE...
+            if GC_STRATEGY == GcStrategy::Interleaved {
+                self.gc_increment();  // take `self.gc_stride` incremental GC steps
+            }
             steps += 1;  // count step
         }
         self.sponsor_signal(SPONSOR)  // return SPONSOR signal
@@ -320,7 +329,9 @@ impl Core {
                     // free dead continuation and associated event
                     self.free(ep);
                     self.free(kp);
-                    //self.gc_collect_all();  // FIXME! REMOVE FORCED STOP-THE-WORLD GC...
+                    if GC_STRATEGY == GcStrategy::FullAtCommit {
+                        self.gc_collect_all();  // full GC collection after `end` instruction
+                    }
                 }
             },
             Err(error) => {
@@ -330,7 +341,6 @@ impl Core {
                 }
             },
         }
-        //self.gc_increment();  // FIXME! PREFER INCREMENTAL GC TO STOP-THE-WORLD...
         self.sponsor_signal(sponsor)  // instruction executed, return signal
     }
     pub fn report_error(&mut self, sponsor: Any, error: Error) -> bool {

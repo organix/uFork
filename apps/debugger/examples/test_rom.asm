@@ -130,10 +130,12 @@ test_actors:
     actor send              ; actor
     drop 1                  ; --
 test_fib:
-    push 6                  ; n=6
-    push 8                  ; n fib(n)=8
+;    push 6                  ; n=6
+;    push 8                  ; n fib(n)=8
+    push 9                  ; n=9
+    push 34                 ; n fib(n)=34
     push assert_eq_beh      ; n fib(n) assert_eq_beh
-    actor create            ; n cust=assert_eq_beh.8
+    actor create            ; n cust=assert_eq_beh.fib(n)
     pair 1                  ; (cust . n)
     push #?                 ; (cust . n) #?
     push fib_beh            ; (cust . n) #? fib_beh
