@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>μFork Tutorial</title>
+  <link rel="icon" type="image/png" sizes="128x128" href="/favicon-128.png">
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css"
+    integrity="sha512-1ycn6IcaQQ40/MKBW2W4Rhis/DbILU74C1vSrLJxCq57o941Ym01SwNsOMqvEBFlcgUa6xLiPY/NS5R+E6ztJQ=="
+    crossorigin="anonymous" referrerpolicy="no-referrer" />
+</head>
+
+<body>
+  <div class="container">
+    <header></header>
+    <main>
+
+      <section class="hero">
+        <div>
+          <h1 style="color: white;">µFork Tutorial</h1>
+          <h3>A pure actor-based concurrent machine architecture</h3>
+          <h3>with memory-safety and object-capability security</h3>
+        </div>
+        <div>
+          <p>
+            <a href="https://ufork.org"><img class="logo" src="/ufork_logo.svg"></a>
+          </p>
+        </div>
+      </section>
+
+      <section class="grid">
+        <div class="span10col">
+          <h2 name="overview">Introduction</h2>
+          <p class="text">
+            uFork is a novel machine architecture
+            based on the <a href="http://www.dalnefre.com/wp/2024/04/classic-actor-semantic-model/">Actor Model</a> of computation.
+            Actors are stateful objects that react to message-events.
+            Each actor has a unique address
+            and manages its own private data and code.
+          </p>
+          <p class="text">
+            At start-up, a single actor is created with <code>boot</code> behavior.
+            This actor receives a message containing system-device capabilities.
+            The <em>boot actor</em> is responsible for creating the initial system configuration
+            and distributing device capabilities to actors that need them.
+          </p>
+          <p class="text">
+            uFork Assembly-Language is organized into modules.
+            A module can import symbols exported by other modules.
+            If a module exports a <code>boot</code> symbol,
+            it can provide the behavior for the boot actor.
+            Let's take a look at a small example.
+          </p>
+          <p>
+            <a class="play" target="_blank" href="https://ufork.org/playground/?text=H4sIAAAAAAAAE23RSw6CMBQF0HlXccOcIsZIgroWArQWArVNP0Rj3LuhNQywnb6T2/eho9TKOAIAjC81ssE5beui8HdlJqqMKOaxKxhfaGtlRkinlKuRfhc0uOZ49622n5CpvR1QpWQV//QaZTKp+omQkCBBoAymnT2s75LmvAnp54SQVtxOx4CkFTgkm1kr+6nWlTDeedFM/PUPsdXioGPvILhLZ0fL+BKb7Z0ysPzB9jbPA1grvZJydIRQ/twuuN6GfAGS7FqX0wEAAA%3D%3D">Open in Playground</a>
+<pre class="code">.import
+    dev: "https://ufork.org/lib/dev.asm"
+
+boot:                       ; _ &lt;- {caps}
+    push 7                  ; 7
+    dup 1                   ; 7 7
+    push 1                  ; 7 7 1
+    alu sub                 ; 7 6
+    alu mul                 ; msg=42
+    msg 0                   ; msg {caps}
+    push dev.debug_key      ; msg {caps} debug_key
+    dict get                ; msg debug_dev
+    actor send              ; --
+    end commit
+
+.export
+    boot</pre>
+          </p>
+          <p class="text">
+            uFork is a stack-machine.
+            Instructions generally remove arguments from the stack
+            and leave results on the stack for subsequent instructions.
+            Many instructions also have an immediate argument
+            that influences the operation.
+            When an actor begins processing a message,
+            it starts with an empty stack.
+            The first few instructions put data on the stack
+            and perform computations resulting in the value <code>42</code>.
+            Comments at the end of each line
+            depict the contents of the stack
+            after each instruction.
+          </p>
+          <p class="text">
+            The boot message is a dictionary
+            of device capabilities.
+            The <code>dev.asm</code> module
+            exports a set of keys
+            used to retrieve specific capabilities
+            from the dictionary.
+            The <code>.import</code> directive
+            specifies a <code>dev</code> namespace prefix
+            for symbols imported from the <code>dev.asm</code> module.
+            Finally, the message <code>42</code>
+            is sent to the debug device,
+            and the message-handling transaction
+            ends with a <em>commit</em>.
+          </p>
+          <p class="text">
+            A capability is the address that designates a specific actor
+            and confers the ability to send messages to that address.
+            Devices capabilities are indistinguishable from actor capabilities,
+            but are implemented directly by the machine rather than in code.
+            If you run this example in the uFork Playground,
+            the debug device will display <code>+42</code> in the I/O panel.
+          </p>
+        </div>
+      </section>
+
+    </main>
+    <footer>
+      <section class="footer">
+        <p class="text">Copyright &copy; 2024</p>
+        <p class="text"><a href="https://github.com/organix/uFork"><i class="fab fa-github fa-2x"></i></a></p>
+      </section>
+    </footer>
+
+  </div>
+</body>
+
+</html>

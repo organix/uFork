@@ -1,0 +1,201 @@
+/* Basic Reset */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: "Trebuchet MS","Lucida Grande",arial;
+  font-weight: 100;
+  background-color: var(--color-bg);
+  color: var(--color-fg);
+}
+
+a {
+  color: var(--color-link);
+  cursor: pointer;
+}
+
+a pre {
+  text-decoration: none;
+}
+
+ul, ol {
+  margin-left: 1rex;
+  padding-left: 1rem;
+}
+
+.container {
+  width: 100%;
+  margin: 0 0;
+  padding: 0 5%;
+}
+
+/* uFork header and navigation */
+header {
+  width: 100%;
+}
+
+h1 {
+  font-size: 30px;
+  font-weight: 600;
+  padding: 1rem;
+}
+
+h2 {
+  font-size: 20px;
+  font-weight: 600;
+  padding: 1rem 0;
+}
+
+h3 {
+  font-size: 15px;
+  font-weight: 500;
+  padding: 0 1rem;
+}
+
+.hero {
+  background-color: #0d3a27;
+  color: #ffd966;
+  padding: 10px 10px;
+
+  display: grid;
+  grid-template-columns: auto min-content;
+  gap: 1rem;
+  padding: 0.5ex 2rem;
+}
+
+/* Main features that it provides */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 5rem;
+  padding: 1rem 10rem;
+}
+
+.feature {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  grid-column: span 4;
+  text-align: center;
+}
+
+.span10col {
+  display: flex;
+  flex-direction: column;
+  grid-column: span 10;
+}
+
+.span8col {
+  display: flex;
+  flex-direction: column;
+  grid-column: span 8;
+}
+
+.span6col {
+  display: flex;
+  flex-direction: column;
+  grid-column: span 6;
+}
+
+.center6col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  grid-column: span 6;
+  text-align: center;
+}
+
+.center4col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  grid-column: span 4;
+  text-align: center;
+}
+
+.title {
+  margin: 1rem 0;
+}
+
+.text {
+  text-align: left;
+  vertical-align: middle;
+  padding: 10px 0;
+}
+
+.code {
+  margin: 1px solid #777;
+  padding: 1rem;
+  background-color: #ffd966;
+  color: #0d3a27;
+}
+
+.play {
+  float: right;
+  background-color: #0d3a27;
+  color: #ffd966;
+  font-size: 80%;
+}
+
+/* uFork copyright github etc */
+footer {
+  width: 100%;
+  background-color: #0d3a27;
+}
+
+.socials {
+  padding: 10px;
+  align-self: flex-end;
+}
+
+.footer {
+  background-color: #0d3a27;
+  color: white;
+  padding: 10px 10px;
+  margin-top: 20px;
+
+  display: grid;
+  grid-template-columns: auto min-content;
+  gap: 1rem;
+}
+
+.footer a {
+  color: white;
+}
+
+@media (max-width: 768px) {
+  .grid {
+    grid-template-columns: repeat(6, 1fr);
+  }
+
+  .feature {
+    grid-column: span 6; /* Each feature spans 6 out of 6 columns on smaller screens */
+  }
+}
+
+@media (max-width: 480px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+
+  .feature {
+    grid-column: span 1; /* Each feature spans the full width on the smallest screens */
+  }
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    --color-bg: #ffffff;
+    --color-fg: #000000;
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-bg: #000000;
+    --color-fg: #ffffff;
+  }
+}
