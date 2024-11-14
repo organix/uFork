@@ -75,13 +75,14 @@ boot:                       ; _ &lt;- {caps}
           </p>
           <p class="text">
             uFork is a stack-machine.
+            When an actor begins processing a message,
+            it starts with an empty stack.
             Instructions generally remove arguments from the stack
             and leave results on the stack for subsequent instructions.
             Many instructions also have an immediate argument
             that influences the operation.
-            When an actor begins processing a message,
-            it starts with an empty stack.
-            The first few instructions put data on the stack
+            In our example,
+            the first few instructions put data on the stack
             and perform computations resulting in the value <code>42</code>.
             Comments at the end of each line
             depict the contents of the stack
@@ -97,7 +98,8 @@ boot:                       ; _ &lt;- {caps}
             The <code>.import</code> directive
             specifies a <code>dev</code> namespace prefix
             for symbols imported from the <code>dev.asm</code> module.
-            Finally, the message <code>42</code>
+            In our example,
+            the message <code>42</code>
             is sent to the debug device,
             and the message-handling transaction
             ends with a <em>commit</em>.
@@ -106,7 +108,8 @@ boot:                       ; _ &lt;- {caps}
             A capability is the address that designates a specific actor
             and confers the ability to send messages to that address.
             Devices capabilities are indistinguishable from actor capabilities,
-            but are implemented directly by the machine rather than in code.
+            but are implemented directly by the machine,
+            rather than in code.
             If you run this example in the uFork Playground,
             the debug device will display <code>+42</code> in the I/O panel.
           </p>
