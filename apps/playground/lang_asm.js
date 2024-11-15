@@ -3,6 +3,7 @@
 /*jslint browser */
 
 import assemble from "https://ufork.org/lib/assemble.js";
+import dom from "./dom.js";
 import ed_comment from "./ed_comment.js";
 import theme from "./theme.js";
 
@@ -33,18 +34,27 @@ function highlight(element) {
         const errors = ir.errors.filter(function (error) {
             return token.start >= error.start && token.end <= error.end;
         });
-        const span = document.createElement("span");
-        span.textContent = text.slice(token.start, token.end);
-        Object.assign(span.style, styles[token.context ?? token.kind]);
+
+// Chrome has a weird layout performance bug that can be worked around by giving
+// all elements the same set of properties. That is why all elements get a
+// "title" property when only some need it.
+// See https://issues.chromium.org/issues/379186294.
+
+        let title = "";
+        let style = styles[token.context ?? token.kind];
         if (errors.length > 0) {
-            span.title = errors.map(function (error) {
+            title = errors.map(function (error) {
                 return error.message;
             }).join(
                 "\n"
             );
-            Object.assign(span.style, styles.warning);
+            style = Object.assign({}, style, styles.warning);
         }
-        element.append(span);
+        element.append(dom(
+            "span",
+            {title, style},
+            text.slice(token.start, token.end)
+        ));
     });
 }
 
