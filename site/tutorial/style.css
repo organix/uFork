@@ -39,18 +39,24 @@ header {
 
 h1 {
   font-size: 30px;
-  font-weight: 600;
+  font-weight: 800;
   padding: 1rem;
 }
 
 h2 {
+  font-size: 24px;
+  font-weight: 700;
+  padding: 1rem 0;
+}
+
+h3 {
   font-size: 20px;
   font-weight: 600;
   padding: 1rem 0;
 }
 
-h3 {
-  font-size: 15px;
+h4 {
+  font-size: 16px;
   font-weight: 500;
   padding: 0 1rem;
 }
@@ -117,18 +123,21 @@ h3 {
 }
 
 .title {
-  margin: 1rem 0;
+  padding: 1rem 0;
 }
 
 .text {
+  padding: 1rex 0;
   text-align: left;
   vertical-align: middle;
-  padding: 10px 0;
+}
+
+.list, .graphic {
+  padding: 1rex 1rem;
 }
 
 .code {
-  margin: 1px solid #777;
-  padding: 1rem;
+  padding: 1rex;
   background-color: #ffd966;
   color: #0d3a27;
 }
