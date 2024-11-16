@@ -261,9 +261,9 @@ $program_compile.onclick = function () {
                 break;
             }
             // Defer the next iteration if a non-zero interval has been
-            // specified, or if the frame rate drops below 24 FPS.
+            // specified, or if the frame rate drops too low.
             const elapsed = Date.now() - begin;
-            if (delay > 0 || elapsed > (1000 / 24)) {
+            if (delay > 0 || elapsed > 16) {
                 step_timer = setTimeout(step, delay);
                 break;
             }

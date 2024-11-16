@@ -23,7 +23,7 @@ function from_uf(uf) {  // also exported from `fpga/fomu/cpu/ucode.js`
 const rom_ui = make_ui("rom-ui", function (element, {
     module_ir,
     buffer,
-    format = "memh",
+    format = "forth",
     bitwidth = 16
 }) {
     const shadow = element.attachShadow({mode: "closed"});

@@ -13,7 +13,7 @@
 
 import {toFileUrl} from "https://deno.land/std@0.203.0/path/to_file_url.ts";
 import {fromFileUrl} from "https://deno.land/std@0.203.0/path/from_file_url.ts";
-import run_replete from "https://deno.land/x/replete@0.0.28/run.js";
+import run_replete from "https://deno.land/x/replete@0.0.30/run.js";
 // import {minify} from "https://esm.sh/terser";
 import import_map from "./import_map.js";
 
@@ -55,7 +55,7 @@ function url_to_locator(url) {
 run_replete({
     browser_port: 3675,
     which_node: "node",
-    deno_args: ["--allow-all"],
+    deno_args: ["--allow-all", "--no-lock"],
     root_locator: "file:///", // cwd
     command(message) {
         if (message.locator !== undefined) {
