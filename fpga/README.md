@@ -34,6 +34,9 @@ that can be integrated with the LiteX framework.
 
 The initial target hardware is the [Fomu](fomu/README.md),
 which features a Lattice iCE40 UP5K FPGA.
+The uFork processor is implemented in [uCode](ucode/README.md),
+a Forth-based microcode language,
+which is itself executed directly by [the CPU](cpu.md).
 
 ## Project Support
 

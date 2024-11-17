@@ -5,20 +5,10 @@
 import hex from "https://ufork.org/lib/hex.js";
 import hexdump from "https://ufork.org/lib/hexdump.js";
 import disassemble from "https://ufork.org/lib/disassemble.js";
+import ucode from "https://ufork.org/ucode/ucode.js";
 import make_ui from "./ui.js";
 import dom from "./dom.js";
 import theme from "./theme.js";
-
-// Map 32-bit address space to 16-bits
-
-function from_uf(uf) {  // also exported from `fpga/fomu/cpu/ucode.js`
-    const lsb13 = (uf >> 0) & 0x1FFF;
-    const msb3 = (uf >> 16) & 0xE000;
-    return (msb3 | lsb13);
-}
-
-// console.log(hex.from(from_uf(-1), 16));
-// console.log(hex.from(from_uf(0x60000002), 16));
 
 const rom_ui = make_ui("rom-ui", function (element, {
     module_ir,
@@ -66,7 +56,7 @@ const rom_ui = make_ui("rom-ui", function (element, {
         let s = "/*   T     X     Y     Z      ADDR */\n";
         //         0123  4567  89AB  CDEF  // ^0000
         cells.forEach(function (cell, addr) {
-            s += "  " + hex.from(from_uf(cell), 16);
+            s += "  " + hex.from(ucode.from_uf(cell), 16);
             if ((addr & 0x3) === 0x3) {
                 s += "  // ^" + hex.from((addr >> 2), 16) + "\n";
             }
@@ -96,7 +86,7 @@ const rom_ui = make_ui("rom-ui", function (element, {
         let s = "(    T        X        Y        Z       ADDR )\n";
         //       0x0123 , 0x4567 , 0x89AB , 0xCDEF ,  ( ^0000 )
         cells.forEach(function (cell, addr) {
-            s += "0x" + hex.from(from_uf(cell), 16);
+            s += "0x" + hex.from(ucode.from_uf(cell), 16);
             s += (
                 (addr & 0x3) !== 0x3
                 ? " , "

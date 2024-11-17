@@ -2,7 +2,8 @@
     "imports": {
         "https://ufork.org/lib/": "./lib/",
         "https://ufork.org/js/": "./vm/js/",
-        "https://ufork.org/wasm/": "./vm/wasm/"
+        "https://ufork.org/wasm/": "./vm/wasm/",
+        "https://ufork.org/ucode/": "./fpga/ucode/"
     },
     "tasks": {
         "build": "deno run --allow-run --allow-read=vm/wasm  --allow-write=vm/wasm vm/wasm/build.js",

@@ -5,15 +5,13 @@ implement a Forth-oriented processor
 that serves as the microcode machine
 for implementing uFork instructions.
 Programs for the machine
-are written in [Forth](https://en.wikipedia.org/wiki/Forth_(programming_language)).
-Considerable inspiration was taken from
-the [`J1`](https://www.excamera.com/files/j1.pdf) CPU and
-[`J1a SwapForth`](https://github.com/jamesbowman/swapforth/tree/master/j1a).
+are written in
+[Forth](https://en.wikipedia.org/wiki/Forth_(programming_language)).
 
 ## Documentation
 
-  * [uCode processor design](cpu.md)
-  * [uCode Forth programming language](ucode.md)
+  * [uCode processor design](../../cpu.md)
+  * [uCode Forth programming language](../../ucode/README.md)
   * [Interactive hardware monitor](monitor.md)
 
 ## Sample CPU Trace (Simulated)
@@ -88,41 +86,207 @@ to the serial port at your desired baud-rate.
 
 Use the key sequence `Ctrl-a + k` to kill the terminal session.
 
-## uCode Programming Tools
+## Resource Usage
 
-Various JavaScript-based tools are available
-to support uCode program development.
+This section tracks usage of FPGA resources
+as the design and implementation evolves.
 
-### Command-line Tools
+###  Baseline (1k uCode, no devices)
 
-To compile uCode/Forth source into a memory-image file
-for inclusion into Verilog designs.
+    Info: Device utilisation:
+    Info:            ICESTORM_LC:   928/ 5280    17%
+    Info:           ICESTORM_RAM:     4/   30    13%
+    Info:                  SB_IO:     8/   96     8%
+    Info:                  SB_GB:     7/    8    87%
+    Info:           ICESTORM_PLL:     0/    1     0%
+    Info:            SB_WARMBOOT:     0/    1     0%
+    Info:           ICESTORM_DSP:     0/    8     0%
+    Info:         ICESTORM_HFOSC:     0/    1     0%
+    Info:         ICESTORM_LFOSC:     0/    1     0%
+    Info:                 SB_I2C:     0/    2     0%
+    Info:                 SB_SPI:     0/    2     0%
+    Info:                 IO_I3C:     0/    2     0%
+    Info:            SB_LEDDA_IP:     0/    1     0%
+    Info:            SB_RGBA_DRV:     1/    1   100%
+    Info:         ICESTORM_SPRAM:     0/    4     0%
+    Info: Max frequency for clock 'clk': 30.75 MHz (PASS at 12.00 MHz)
 
-    deno run ucode_cli.js <ucode.f >ucode_rom.mem
+### Expand uCode Memory (2k uCode, no devices)
 
-To run uCode in a simulator of the uCode machine,
-with console i/o connected to the simulated UART.
+    Info: Device utilisation:
+    Info:            ICESTORM_LC:   931/ 5280    17%
+    Info:           ICESTORM_RAM:     8/   30    26%
+    Info:                  SB_IO:     8/   96     8%
+    Info:                  SB_GB:     7/    8    87%
+    Info:           ICESTORM_PLL:     0/    1     0%
+    Info:            SB_WARMBOOT:     0/    1     0%
+    Info:           ICESTORM_DSP:     0/    8     0%
+    Info:         ICESTORM_HFOSC:     0/    1     0%
+    Info:         ICESTORM_LFOSC:     0/    1     0%
+    Info:                 SB_I2C:     0/    2     0%
+    Info:                 SB_SPI:     0/    2     0%
+    Info:                 IO_I3C:     0/    2     0%
+    Info:            SB_LEDDA_IP:     0/    1     0%
+    Info:            SB_RGBA_DRV:     1/    1   100%
+    Info:         ICESTORM_SPRAM:     0/    4     0%
+    Info: Max frequency for clock 'clk': 29.83 MHz (PASS at 12.00 MHz)
 
-    deno run --allow-read ucode_sim_cli.js ucode.f
+### Expand uCode Memory (4k uCode, no devices)
 
-The simulator can also load and run a memory-image file.
+    Info: Device utilisation:
+    Info:            ICESTORM_LC:   939/ 5280    17%
+    Info:           ICESTORM_RAM:    16/   30    53%
+    Info:                  SB_IO:     8/   96     8%
+    Info:                  SB_GB:     7/    8    87%
+    Info:           ICESTORM_PLL:     0/    1     0%
+    Info:            SB_WARMBOOT:     0/    1     0%
+    Info:           ICESTORM_DSP:     0/    8     0%
+    Info:         ICESTORM_HFOSC:     0/    1     0%
+    Info:         ICESTORM_LFOSC:     0/    1     0%
+    Info:                 SB_I2C:     0/    2     0%
+    Info:                 SB_SPI:     0/    2     0%
+    Info:                 IO_I3C:     0/    2     0%
+    Info:            SB_LEDDA_IP:     0/    1     0%
+    Info:            SB_RGBA_DRV:     1/    1   100%
+    Info:         ICESTORM_SPRAM:     0/    4     0%
+    Info: Max frequency for clock 'clk': 24.60 MHz (PASS at 12.00 MHz)
 
-    deno run --allow-read ucode_sim_cli.js ucode_rom.mem
+### UART Device Component (2k uCode)
 
-### Web-based Tools
+    Info: Device utilisation:
+    Info:            ICESTORM_LC:  1042/ 5280    19%
+    Info:           ICESTORM_RAM:     8/   30    26%
+    Info:                  SB_IO:     8/   96     8%
+    Info:                  SB_GB:     7/    8    87%
+    Info:           ICESTORM_PLL:     0/    1     0%
+    Info:            SB_WARMBOOT:     0/    1     0%
+    Info:           ICESTORM_DSP:     0/    8     0%
+    Info:         ICESTORM_HFOSC:     0/    1     0%
+    Info:         ICESTORM_LFOSC:     0/    1     0%
+    Info:                 SB_I2C:     0/    2     0%
+    Info:                 SB_SPI:     0/    2     0%
+    Info:                 IO_I3C:     0/    2     0%
+    Info:            SB_LEDDA_IP:     0/    1     0%
+    Info:            SB_RGBA_DRV:     1/    1   100%
+    Info:         ICESTORM_SPRAM:     0/    4     0%
+    Info: Max frequency for clock 'clk': 29.31 MHz (PASS at 12.00 MHz)
 
-If the [Replete server](https://github.com/organix/uFork#how-to-run) is running,
-an interactive uCode debugger is available.
+### uFork Quad-Memory Component (2k uCode)
 
-[http://localhost:3675/fpga/fomu/cpu/ucode_dbg.html]()
+    Info: Device utilisation:
+    Info:            ICESTORM_LC:  1077/ 5280    20%
+    Info:           ICESTORM_RAM:     8/   30    26%
+    Info:                  SB_IO:     8/   96     8%
+    Info:                  SB_GB:     8/    8   100%
+    Info:           ICESTORM_PLL:     0/    1     0%
+    Info:            SB_WARMBOOT:     0/    1     0%
+    Info:           ICESTORM_DSP:     0/    8     0%
+    Info:         ICESTORM_HFOSC:     0/    1     0%
+    Info:         ICESTORM_LFOSC:     0/    1     0%
+    Info:                 SB_I2C:     0/    2     0%
+    Info:                 SB_SPI:     0/    2     0%
+    Info:                 IO_I3C:     0/    2     0%
+    Info:            SB_LEDDA_IP:     0/    1     0%
+    Info:            SB_RGBA_DRV:     1/    1   100%
+    Info:         ICESTORM_SPRAM:     3/    4    75%
+    Info: Max frequency for clock 'clk': 30.08 MHz (PASS at 12.00 MHz)
 
-Paste your uCode/Forth source program into the _Source_ panel
-and hit the **Compile** button to generate a _Memory_ image.
-The resulting program can be single-stepped
-or run with a variable delay (default: none).
-A breakpoint can be set (in hexadecimal)
-which will pause before executing the instruction
-at the specific `PC` (program counter) value.
-Stack and memory contents are displayed at all times.
-A simulated _Console I/O_ device is connected to
-controls on the page.
+### uFork Quad-Memory Component (4k uCode)
+
+    Info: Device utilisation:
+    Info:            ICESTORM_LC:  1079/ 5280    20%
+    Info:           ICESTORM_RAM:    16/   30    53%
+    Info:                  SB_IO:     8/   96     8%
+    Info:                  SB_GB:     8/    8   100%
+    Info:           ICESTORM_PLL:     0/    1     0%
+    Info:            SB_WARMBOOT:     0/    1     0%
+    Info:           ICESTORM_DSP:     0/    8     0%
+    Info:         ICESTORM_HFOSC:     0/    1     0%
+    Info:         ICESTORM_LFOSC:     0/    1     0%
+    Info:                 SB_I2C:     0/    2     0%
+    Info:                 SB_SPI:     0/    2     0%
+    Info:                 IO_I3C:     0/    2     0%
+    Info:            SB_LEDDA_IP:     0/    1     0%
+    Info:            SB_RGBA_DRV:     1/    1   100%
+    Info:         ICESTORM_SPRAM:     3/    4    75%
+    Info: Max frequency for clock 'clk': 27.37 MHz (PASS at 12.00 MHz)
+
+### Single-cycle Multiply w/ DSP block
+
+    Info: Device utilisation:
+    Info:            ICESTORM_LC:  1114/ 5280    21%
+    Info:           ICESTORM_RAM:    16/   30    53%
+    Info:                  SB_IO:     8/   96     8%
+    Info:                  SB_GB:     8/    8   100%
+    Info:           ICESTORM_PLL:     0/    1     0%
+    Info:            SB_WARMBOOT:     0/    1     0%
+    Info:           ICESTORM_DSP:     1/    8    12%
+    Info:         ICESTORM_HFOSC:     0/    1     0%
+    Info:         ICESTORM_LFOSC:     0/    1     0%
+    Info:                 SB_I2C:     0/    2     0%
+    Info:                 SB_SPI:     0/    2     0%
+    Info:                 IO_I3C:     0/    2     0%
+    Info:            SB_LEDDA_IP:     0/    1     0%
+    Info:            SB_RGBA_DRV:     1/    1   100%
+    Info:         ICESTORM_SPRAM:     3/    4    75%
+    Info: Max frequency for clock 'clk': 25.19 MHz (PASS at 12.00 MHz)
+
+### Counting Loops Use R-stack Directly
+
+    Info: Device utilisation:
+    Info:            ICESTORM_LC:  1137/ 5280    21%
+    Info:           ICESTORM_RAM:    16/   30    53%
+    Info:                  SB_IO:     8/   96     8%
+    Info:                  SB_GB:     8/    8   100%
+    Info:           ICESTORM_PLL:     0/    1     0%
+    Info:            SB_WARMBOOT:     0/    1     0%
+    Info:           ICESTORM_DSP:     1/    8    12%
+    Info:         ICESTORM_HFOSC:     0/    1     0%
+    Info:         ICESTORM_LFOSC:     0/    1     0%
+    Info:                 SB_I2C:     0/    2     0%
+    Info:                 SB_SPI:     0/    2     0%
+    Info:                 IO_I3C:     0/    2     0%
+    Info:            SB_LEDDA_IP:     0/    1     0%
+    Info:            SB_RGBA_DRV:     1/    1   100%
+    Info:         ICESTORM_SPRAM:     3/    4    75%
+    Info: Max frequency for clock 'clk': 26.65 MHz (PASS at 12.00 MHz)
+
+### 16-deep FIFOs for UART RX/TX
+
+    Info: Device utilisation:
+    Info:            ICESTORM_LC:  1627/ 5280    30%
+    Info:           ICESTORM_RAM:    16/   30    53%
+    Info:                  SB_IO:     8/   96     8%
+    Info:                  SB_GB:     8/    8   100%
+    Info:           ICESTORM_PLL:     0/    1     0%
+    Info:            SB_WARMBOOT:     0/    1     0%
+    Info:           ICESTORM_DSP:     1/    8    12%
+    Info:         ICESTORM_HFOSC:     0/    1     0%
+    Info:         ICESTORM_LFOSC:     0/    1     0%
+    Info:                 SB_I2C:     0/    2     0%
+    Info:                 SB_SPI:     0/    2     0%
+    Info:                 IO_I3C:     0/    2     0%
+    Info:            SB_LEDDA_IP:     0/    1     0%
+    Info:            SB_RGBA_DRV:     1/    1   100%
+    Info:         ICESTORM_SPRAM:     3/    4    75%
+    Info: Max frequency for clock 'clk': 25.76 MHz (PASS at 12.00 MHz)
+
+### 256-deep BRAM FIFOs for UART
+
+    Info: Device utilisation:
+    Info:            ICESTORM_LC:  1216/ 5280    23%
+    Info:           ICESTORM_RAM:    18/   30    60%
+    Info:                  SB_IO:     8/   96     8%
+    Info:                  SB_GB:     8/    8   100%
+    Info:           ICESTORM_PLL:     0/    1     0%
+    Info:            SB_WARMBOOT:     0/    1     0%
+    Info:           ICESTORM_DSP:     1/    8    12%
+    Info:         ICESTORM_HFOSC:     0/    1     0%
+    Info:         ICESTORM_LFOSC:     0/    1     0%
+    Info:                 SB_I2C:     0/    2     0%
+    Info:                 SB_SPI:     0/    2     0%
+    Info:                 IO_I3C:     0/    2     0%
+    Info:            SB_LEDDA_IP:     0/    1     0%
+    Info:            SB_RGBA_DRV:     1/    1   100%
+    Info:         ICESTORM_SPRAM:     3/    4    75%
+    Info: Max frequency for clock 'clk': 26.33 MHz (PASS at 12.00 MHz)

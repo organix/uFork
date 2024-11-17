@@ -23,22 +23,17 @@ jobs:
 
 # Deploy the libs.
 
+      - run: cp -R fpga/ucode _site/ucode
       - run: cp -R lib _site/lib
       - run: cp -R vm/js _site/js
       - run: mkdir _site/wasm
       - run: cp vm/wasm/*.wasm _site/wasm/
 
-# Deploy uCode tools.
-
-      - run: mkdir _site/ucode
-      - run: cp fpga/fomu/cpu/ucode.js _site/ucode/
-      - run: cp fpga/fomu/cpu/ucode_sim.js _site/ucode/
-      - run: cp fpga/fomu/cpu/ucode_dbg.* _site/ucode/
-
 # Deploy the apps.
 
       - run: cp -R apps/debugger _site/debugger
       - run: cp -R apps/playground _site/playground
+      - run: cp -R apps/ucode_dbg _site/ucode_dbg
       - run: deno run -A apps/playground/optimize.js _site/playground/index.html
       - uses: actions/upload-pages-artifact@v3
       - uses: actions/deploy-pages@v4
