@@ -500,9 +500,11 @@ until and unless the actor executes [`end` `commit`](#end-instruction).
 
  1. Remove _actor_ from the stack
  1. Remove _msg_ from the stack
- 1. Record in the current actor's effect a new _event_ with:
-    * _actor_ as the target
-    * _msg_ as the message
+ 1. If _actor_ is a capability
+    1. Record in the current actor's effect a new _event_ with:
+       * the sponsor of the current event as the sponsor
+       * _actor_ as the target
+       * _msg_ as the message
 
  T            | X (op)       | Y (imm)       | Z (k)
 --------------|--------------|---------------|-------------
@@ -511,10 +513,11 @@ until and unless the actor executes [`end` `commit`](#end-instruction).
  1. Remove _actor_ from the stack
  1. Remove _msg_ from the stack
  1. Remove _spn_ from the stack
- 1. Record in the current actor's effect a new _event_ with:
-    * _spn_ as the sponsor
-    * _actor_ as the target
-    * _msg_ as the message
+ 1. If _actor_ is a capability and _spn_ is a sponsor
+    1. Record in the current actor's effect a new _event_ with:
+       * _spn_ as the sponsor
+       * _actor_ as the target
+       * _msg_ as the message
 
  T            | X (op)       | Y (imm)       | Z (k)
 --------------|--------------|---------------|-------------
@@ -522,8 +525,11 @@ until and unless the actor executes [`end` `commit`](#end-instruction).
 
  1. Remove _beh_ from the stack
  1. Remove _state_ from the stack
- 1. Create a new actor with _beh_ for code and _state_ for data
- 1. Push a capability designating the new actor onto the stack
+ 1. If _beh_ is an instruction
+    1. Create a new actor with _beh_ for code and _state_ for data
+    1. Push a capability designating the new actor onto the stack
+ 1. Otherwise
+    1. Push `#?` onto the stack
 
  T            | X (op)       | Y (imm)       | Z (k)
 --------------|--------------|---------------|-------------
@@ -531,8 +537,9 @@ until and unless the actor executes [`end` `commit`](#end-instruction).
 
  1. Remove _beh_ from the stack
  1. Remove _state_ from the stack
- 1. Record _beh_ as the code to execute when handling the next event
- 1. Record _state_ as the private data when handling the next event
+ 1. If _beh_ is an instruction
+    1. Record _beh_ as the code to execute when handling the next event
+    1. Record _state_ as the private data when handling the next event
 
  T            | X (op)        | Y (imm)       | Z (k)
 --------------|---------------|---------------|-------------
