@@ -1463,7 +1463,7 @@ del_none:                   ; k orig key rev next value' key'
 : op_actor ( -- ip' | error )
     sp@ imm@ DUP is_fix IF
         fix2int             ( imm )
-        JMPTBL 4 ,
+        JMPTBL 5 ,
         actor_send          ( 0: send )
         actor_post          ( 1: post )
         actor_create        ( 2: create )
