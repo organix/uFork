@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>μFork Tutorial</title>
+  <link rel="icon" type="image/png" sizes="128x128" href="/favicon-128.png">
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css"
+    integrity="sha512-1ycn6IcaQQ40/MKBW2W4Rhis/DbILU74C1vSrLJxCq57o941Ym01SwNsOMqvEBFlcgUa6xLiPY/NS5R+E6ztJQ=="
+    crossorigin="anonymous" referrerpolicy="no-referrer" />
+</head>
+
+<body>
+  <div class="container">
+    <header></header>
+    <main>
+
+      <section class="hero">
+        <div>
+          <h1 style="color: white;">µFork Tutorial</h1>
+          <h4>A pure actor-based concurrent machine architecture</h4>
+          <h4>with memory-safety and object-capability security</h4>
+        </div>
+        <div>
+          <p>
+            <a href="https://ufork.org"><img class="logo" src="/ufork_logo.svg"></a>
+          </p>
+        </div>
+      </section>
+
+      <section class="grid">
+        <div class="span10col">
+          <h2 name="race">Off To The Races</h2>
+          <p class="text">
+            Actors are ideal for coordinating asynchronous activity.
+            A good example of that is
+            arranging a "race" among multiple services.
+            The idea is you make a request to multiple services
+            and the first one to reply wins the race.
+            All other replies are ignored.
+          </p>
+          <p class="text">
+            Each request to a service actor
+            includes a "reply-to" address
+            called the <em>customer</em> actor.
+            In a race, we provide a "once" customer
+            that forwards one message
+            (to the <em>real</em> customer)
+            and ignores any subsequent messages.
+          </p>
+          <p>
+            <pre class="code">
+once_beh:                   ; rcvr &lt;- msg
+    push #?                 ; data=#?
+    push sink_beh           ; data code=sink_beh
+    actor become            ; --
+fwd_beh:                    ; rcvr &lt;- msg
+    msg 0                   ; msg
+    state 0                 ; msg rcvr
+    actor send              ; --
+sink_beh:                   ; _ &lt;- _
+    end commit</pre>
+          </p>
+          <p class="text">
+            By labeling multiple entry-points
+            and sharing common tail-sequences
+            of instructions,
+            we define the behavior
+            of three useful actors.
+            The <code>sink_beh</code>
+            ignores/discards all messages.
+            The <code>fwd_beh</code>
+            forwards messages to another actor.
+            And the <code>once_beh</code>
+            forwards exactly one message.
+          </p>
+          <p class="text">
+            Notice how the receiver
+            of the forwarded message
+            is provided as the private data/state
+            of the actor.
+            Also the actor primitive <code>become</code>,
+            which is similar to <code>create</code> but
+            provides new code and data for the current actor
+            rather than creating a new actor.
+            This is important because <code>become</code>
+            is the only mutation mechanism available in uFork.
+          </p>
+          <h3 name="iteration">Iteration</h3>
+          <p class="text">
+            In <a href="https://en.wikipedia.org/wiki/Imperative_programming">Imperative Programming</a>
+            iteration over a collection is usually expressed as some kind of loop.
+            In <a href="https://en.wikipedia.org/wiki/Functional_programming">Functional Programming</a>
+            iteration can be expressed by recursion.
+            In Actor-Based Programming
+            iteration can be expressed through asynchonous messaging.
+          </p>
+          <p class="text">
+            We will need a broadcast actor
+            to send a request to each participant in the race.
+            The broadcast actor sends the same message
+            to each actor in a nil-terminated pair-list.
+            We use nil-termination because
+            we don't know how many actors there will be.
+          </p>
+          <p>
+            <pre class="code">
+broadcast_beh:              ; value &lt;- actors
+    msg 0                   ; actors
+    typeq #pair_t           ; is_pair(actors)
+    if_not broadcast_done   ; --
+    msg 0                   ; actors
+    part 1                  ; rest first
+    state 0                 ; rest first value
+    roll 2                  ; rest value first
+    actor send              ; rest
+    actor self              ; rest SELF
+    actor send              ; --
+broadcast_done:
+    end commit</pre>
+          </p>
+          <p class="text">
+            If the message is not a pair,
+            the broadcast is done.
+            Otherwise we split the pair
+            and send the <code>value</code> to the <code>first</code> actor.
+            We send the <code>rest</code> of the list to ourself,
+            thus iterating over the list.
+          </p>
+          <h3 name="delta">Delta Service</h3>
+          <p class="text">
+            A <em>service</em> is an actor
+            that responds to each <code>cust,args</code> message
+            with exactly one reply to the <code>cust</code> actor.
+            For the puposes of our race,
+            we will create several instances
+            of a "delta" service.
+          </p>
+          <p>
+            <pre class="code">
+delta_beh:                  ; delta &lt;- cust,num
+    msg -1                  ; num
+    state 0                 ; num delta
+    alu add                 ; reply=num+delta
+    msg 1                   ; reply cust
+    actor send              ; --
+    end commit</pre>
+          </p>
+          <p class="text">
+            When a <code>cust,num</code> message arrives,
+            the delta service sends
+            <code>num+delta</code> to <code>cust</code>.
+          </p>
+          <h3 name="delay">Delay Proxy</h3>
+          <p class="text">
+            There is no point in running a race
+            if the winner is decided deterministic.
+            Instead, we will introduce random delays
+            to simulate variable network/processing time.
+            The first step is to request a random number
+            between <code>min</code> and <code>min+range-1</code>.
+          </p>
+          <p>
+            <pre class="code">
+delay_beh:                  ; rcvr,min,range,random,timer &lt;- msg
+    state 3                 ; range
+    state 0                 ; range cfg
+    msg 0                   ; range cfg msg
+    pair 1                  ; range data=msg,cfg
+    push k_delay_beh        ; range data code=k_delay_beh
+    actor create            ; range k_delay=k_delay_beh.data
+    pair 1                  ; k_delay,range
+    state 4                 ; k_delay,range random
+    actor send              ; --
+    end commit</pre>
+          </p>
+          <p class="text">
+            A <em>delay</em> actor serves as a proxy
+            with the same API as the service.
+            It has more private state
+            than our previous examples.
+            It needs capabilities for both
+            <code>timer</code> and <code>random</code> devices.
+            Configuration parameters <code>min</code> and <code>range</code>
+            specify the desired delay in milliseconds.
+            And finally, <code>rcvr</code> is the service
+            to eventually invoke.
+          </p>
+          <p class="text">
+            The delay actor introduces a new
+            asynchronous coordination challenge.
+            We need a number from the <code>random</code> device
+            before we can do anything else,
+            but the device is accessed via actor messages.
+            Our solution is to create
+            a <em>continuation</em> customer <code>k_delay</code>
+            with all the information needed
+            to perform the rest of the computation.
+            Since all data-structures are immutable
+            after construction,
+            we can safely share the configuration data
+            while adding the <code>msg</code> to the front.
+          </p>
+          <p>
+            <pre class="code">
+k_delay_beh:                ; msg,rcvr,min,range,random,timer &lt;- num
+    state 1                 ; msg
+    state 2                 ; msg rcvr
+    state 3                 ; msg rcvr min
+    msg 0                   ; msg rcvr min num
+    alu add                 ; msg rcvr delay=min+num
+    pair 2                  ; delay,rcvr,msg
+    state -5                ; delay,rcvr,msg timer
+    actor send              ; --
+    end commit</pre>
+          </p>
+          <p class="text">
+            When the <code>random</code> device provides <code>num</code>,
+            we compose the request for the <code>timer</code> device,
+            including <code>delay=min+num</code>.
+            Note that the <code>timer</code> is the 5th tail
+            of the state pair-list, not the 6th element.
+            After the requested <code>delay</code>,
+            the <code>timer</code> device will send
+            the original <code>msg</code>
+            to the <code>rcvr</code> actor.
+          </p>
+          <h3 name="boot">Boot Behavior</h3>
+          <p class="text">
+            With these definitions in place,
+            we can now put all the pieces together
+            and demonstrate a race among services.
+          </p>
+          <p>
+            <pre class="code">
+boot:                       ; _ &lt;- {caps}
+    msg 0                   ; {caps}
+    push dev.timer_key      ; {caps} timer_key
+    dict get                ; timer_dev
+    msg 0                   ; timer_dev {caps}
+    push dev.random_key     ; timer_dev {caps} random_key
+    dict get                ; timer_dev random_dev
+    push 100                ; timer_dev random_dev range=100ms
+    push 20                 ; timer_dev random_dev range min=20ms
+    pair 3                  ; cfg=min,range,random,timer</pre>
+          </p>
+          <p class="text">
+            We start by obtaining the device capabilities
+            the services will need,
+            and define the configuration parameters
+            they will share.
+          </p>
+          <p>
+            <pre class="code">
+    dup 1                   ; cfg cfg
+    push 1                  ; cfg cfg delta=1
+    push delta_beh          ; cfg cfg delta code=delta_beh
+    actor create            ; cfg cfg rcvr=delta_beh.1
+    pair 1                  ; cfg data=rcvr,cfg
+    push delay_beh          ; cfg data code=delay_beh
+    actor create            ; cfg delay_inc</pre>
+          </p>
+          <p class="text">
+            The first service uses
+            a <code>delta</code> value of <code>+1</code>.
+            We wrap the service with a delay-proxy
+            and call it <code>delay_inc</code>.
+          </p>
+          <p>
+            <pre class="code">
+    pick 2                  ; cfg delay_inc cfg
+    push 0                  ; ... cfg delta=0
+    push delta_beh          ; ... cfg delta code=delta_beh
+    actor create            ; ... cfg rcvr=delta_beh.0
+    pair 1                  ; ... data=rcvr,cfg
+    push delay_beh          ; ... data code=delay_beh
+    actor create            ; ... delay_zero</pre>
+          </p>
+          <p class="text">
+            The second service uses
+            a <code>delta</code> value of <code>0</code>.
+            We wrap the service with a delay-proxy
+            and call it <code>delay_zero</code>.
+          </p>
+          <p>
+            <pre class="code">
+    roll 3                  ; delay_inc delay_zero cfg
+    push -1                 ; ... cfg delta=-1
+    push delta_beh          ; ... cfg delta code=delta_beh
+    actor create            ; ... cfg rcvr=delta_beh.-1
+    pair 1                  ; ... data=rcvr,cfg
+    push delay_beh          ; ... data code=delay_beh
+    actor create            ; ... delay_dec</pre>
+          </p>
+          <p class="text">
+            The third service uses
+            a <code>delta</code> value of <code>-1</code>.
+            We wrap the service with a delay-proxy
+            and call it <code>delay_dec</code>.
+          </p>
+          <p>
+            <pre class="code">
+    push #nil               ; delay_inc delay_zero delay_dec #nil
+    roll -4                 ; #nil delay_inc delay_zero delay_dec
+    pair 3                  ; list=delay_dec,delay_zero,delay_inc,#nil</pre>
+          </p>
+          <p class="text">
+            Our broadcast actor wants
+            a nil-terminated list of actors,
+            so we <code>roll</code> a <code>#nil</code> into place
+            and build the list.
+          </p>
+          <p>
+            <pre class="code">
+    push 5                  ; list num=5
+    msg 0                   ; list num {caps}
+    push dev.debug_key      ; list num {caps} debug_key
+    dict get                ; list num debug_dev
+    push once_beh           ; list num debug_dev once_beh
+    actor create            ; list num cust=once_beh.debug_dev
+    pair 1                  ; list msg=cust,num
+    push broadcast_beh      ; list msg broadcast_beh
+    actor create            ; list broadcast_beh.msg
+    actor send              ; ---
+    end commit</pre>
+          </p>
+          <p class="text">
+            The service request we broadcast
+            has a <code>num</code> value of <code>5</code>
+            and a <code>cust</code> that is a forward-once
+            to the debug device.
+            Each time we run this example
+            one value will appear on the console,
+            either <code>4</code>, <code>5</code>, or <code>6</code>
+            depending on which delta-service
+            replies first.
+          </p>
+          <p>
+            <a class="play" target="_blank" href="https://ufork.org/playground/?text=H4sIAAAAAAAAE72YwXLbIBCG73oKJrm0E0m20+ZiV5NTe+qtD6DBEpYZC6ECcut2+u4dwICQULBnOs0hB+f7l+XfZcHJMekpEwkAANTovAUPRyF6vl2thgNlp5yyZtXi/apG5xxy8pAktKtQuUfHLZj/7ACrzgx8ygDhjYrZD/wIHl8D5OOrAzjuTjLmBLCfKxJWgjKwRxUlyA+VZcnhR72UVCArwhuwDpKG4AIKFGAUoeKNcuKoq6dYliUm+7BTpUyoVFGkvKKEYJEke0ZhXUEuAsodOMN2QFKoFuaRzYwgcenRd/DYQ8xK4UGYl/LTdxp+r2h8KDsqgMulph0y27p5zR4yATYhiCEuwAEzLiJmO1BvXeGMti14XoyrPXLRl2skcQ9pD8GI3z5//RIvt+/WdlbZGrUCLvTDDqi/yspWAxdpNxDrcxa00BDL3nUD0VF16u0AYF0HOIb69lJ0A3lytFw3sKyhVZJxRwIOwMuiA/JQpQR3KYNdg+TvmpJUYIK8s6s3/CEUQOpiDSUZUB1ic8BybpJBzBa6WbE1FLAgvElNcDXZTqXddEgAKlqjYgSNTK0YkrsILHXlx7pcRovkecXTqU8fYyzQtbi/4KMEZyVXkzSNFN3v8vmupgN7PhUmA3u5ewwGCO7il4RFbYrLB8ziumoEd09GpIoVHGVX+5U93hazlxgMlH33V2tPqQheoO6++l3Bnv+J2DOC1BmQbweVUnlCFx8C9nP9AsGVAA0S85iaq9E5srblglno9rJpzHHgiFsTMhKTm1pss56lF5boE11s1mvCnfw5NLqW5bIPi2cbQfbUvMPBTo6zInzWEr3boV+Y+nIQenMtOGCulL51is3Y++vVt0jrQWi5yBg0UtnxTpRvIgNQrSbHtDop3n5mU3rM2+RumtHXPcFLibtKG9vj6hQ+5h7sWxxo8B3I83xk8TpisUffZ7GRTixeRyyWsnssNvx9FiuVYn8hRhP3Kgy2vfPXaXyrA0+sqdVZrJ3/vddZrJ//t9k1Mv2svtV1uL3Na6tWGletLPTyUGHfDhMZcy3morBw6iKkNmyqEnF7md2pJo683ouXyKVjwOCdU6P90IxvvgkNLBC5caxOC7z7xnwpjwgsFym5Vcp3fmFE+WThxb5UcsKbwvsuoxL1vt5Oef+vt+ToCXLzUHrr1TN/9uTop/0XiHwCJX8BBguPYRQRAAA%3D">Open in Playground</a>
+<pre class="code">
+.import
+    dev: "https://ufork.org/lib/dev.asm"
+
+once_beh:                   ; rcvr &lt;- msg
+    ...
+
+broadcast_beh:              ; value &lt;- actors
+    ...
+
+delta_beh:                  ; delta &lt;- cust,num
+    ...
+
+
+delay_beh:                  ; rcvr,min,range,random,timer &lt;- msg
+    ...
+
+boot:                       ; _ &lt;- {caps}
+    ...
+
+.export
+    boot</pre>
+          </p>
+        </div>
+        <div class="span6col">
+          <h4 name="page-nav">Prev: <a href="index.html">Introduction</a></h4>
+        </div>
+        <div class="span6col">
+          <h4 name="page-nav">Next: <a href="reuse.html">Reduce, Reuse, Recycle</a></h4>
+        </div>
+      </section>
+
+    </main>
+    <footer>
+      <section class="footer">
+        <p class="text">Copyright &copy; 2024</p>
+        <p class="text"><a href="https://github.com/organix/uFork"><i class="fab fa-github fa-2x"></i></a></p>
+      </section>
+    </footer>
+
+  </div>
+</body>
+
+</html>

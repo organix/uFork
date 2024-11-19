@@ -52,7 +52,7 @@
             that influences the operation.
             Let's take a look at the code for a simple "service" actor.
           </p>
-<pre class="code">
+            <pre class="code">
 svc_beh:                    ; _ &lt;- cust,num
     msg -1                  ; num
     dup 1                   ; num num
@@ -74,7 +74,8 @@ svc_beh:                    ; _ &lt;- cust,num
           </p>
           <h3 name="indexing">Pair-List Indexing</h3>
           <p class="text">
-            The ordered <em>pair</em> is the most commonly used data-structure in uFork.
+            The ordered <em>pair</em> is the most commonly used data-structure in uFork,
+            so a more-detailed explanation is warranted.
             A <em>list</em> is a linked sequence of pairs.
             Instructions like <code>msg</code>, <code>state</code>, and <code>nth</code>
             have an immediate index argument (<var>n</var>) to succinctly designate parts of a pair-list.
@@ -90,6 +91,24 @@ svc_beh:                    ; _ &lt;- cust,num
      V        V        V</pre>
           <p class="text">
             If the index is out-of-bounds, the result is <code>#?</code> (undefined).
+            Pair-list indexing is used to access parts of the message
+            in the preceeding example.
+            The following code fragment demonstrates
+            several pair-manipulation instructions.
+          </p>
+          <p>
+            <pre class="code">
+    push 3                  ; 3
+    push 2                  ; 3 2
+    push 1                  ; 3 2 1
+    pair 2                  ; 1,2,3
+    nth -1                  ; 2,3
+    part 1                  ; 3 2</pre>
+          </p>
+          <p class="text">
+            In our comment notation, each comma denotes a pair.
+            Note that comma groups right-to-left,
+            so <code>a,b,c</code> means <code>(a,(b,c))</code>.
           </p>
           <h3 name="boot">Boot Behavior</h3>
           <p class="text">
@@ -108,7 +127,7 @@ svc_beh:                    ; _ &lt;- cust,num
           <p>
             <a class="play" target="_blank" href="https://ufork.org/playground/?text=H4sIAAAAAAAAE5WTy26DMBBF9/6KUbJpqwLNKhItyqcgP6aAgrHlB2pU9d8rDDFtaiLVW5+5nrl3nHdSK+MIAIDAsYRd65y2ZVH4d2XOuTJN0XesEDjm1ModIXbkNcO2hMR5hRreMuDeuufBy6AqbQPZIcVeCeE1JICZiJT2tk1hkYJD4GjvwXq2zWUrJ32f4Azq/lINXj49BPwxzpHuMvBh6FmYO2XA4iBuwSwLwHTDlZSdI4Qp5ZJWrm5+cqrt1+rBccOD6hj7fEmqTfPfik25CmS+qc94+QtCvJuT6riDBl1ae3KgmgsEjvMbtDPp0H7tSGhlf7qDgaCOVvvTii97eAcHrgRWC/cjGm6QOtwotCO/luTLc/8KNMeP+KGmcMk3JP5EEWIDAAA%3D">Open in Playground</a>
           </p>
-          <pre class="code">
+            <pre class="code">
 .import
     dev: "https://ufork.org/lib/dev.asm"
 
@@ -169,6 +188,14 @@ boot:                       ; _ &lt;- {caps}
             If you run this example in the uFork Playground,
             the debug device will display <code>+42</code> in the I/O panel.
           </p>
+        </div>
+        <div class="span6col">
+          <!--
+          <h4 name="page-nav">Prev: <a href="index.html">Introduction</a></h4>
+          -->
+        </div>
+        <div class="span6col">
+          <h4 name="page-nav">Next: <a href="race.html">Off To The Races</a></h4>
         </div>
       </section>
 
