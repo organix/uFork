@@ -68,6 +68,7 @@ pub struct Core {
     gc_marks:   [GcColor; QUAD_RAM_MAX],
     device:     [Option<Box<dyn Device>>; DEVICE_MAX],
     trace_fn:   Option<Box<dyn Fn(Any, Any)>>,
+    audit_fn:   Option<Box<dyn Fn(Any, Any, Any)>>,
 }
 
 impl Default for Core {
@@ -104,6 +105,7 @@ impl Core {
                 None,
             ],
             trace_fn: None,
+            audit_fn: None,
         }
     }
 
@@ -169,6 +171,17 @@ impl Core {
     }
     pub fn set_trace_event<F: Fn(Any, Any) + 'static>(&mut self, trace_handler: F) {
         self.trace_fn = Some(Box::new(trace_handler));
+    }
+
+    fn call_audit_event(&self, reason: Any) {
+        if let Some(audit) = &self.audit_fn {
+            let ep = self.ep();
+            let kp = self.kp();
+            (audit)(reason, ep, kp);
+        }
+    }
+    pub fn set_audit_event<F: Fn(Any, Any, Any) + 'static>(&mut self, audit_handler: F) {
+        self.audit_fn = Some(Box::new(audit_handler));
     }
 
     /*
@@ -691,8 +704,8 @@ impl Core {
                 let me = self.self_ptr();
                 let rv = match imm {
                     END_ABORT => {
-                        let _r = self.stack_pop();  // reason for abort
-                        // FIXME: where should `reason` be recorded/reported?
+                        let reason = self.stack_pop();  // reason for abort
+                        self.call_audit_event(reason);
                         self.actor_abort(me);
                         UNDEF
                     },

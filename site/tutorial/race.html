@@ -77,16 +77,19 @@ sink_beh:                   ; _ &lt;- _
             forwards exactly one message.
           </p>
           <p class="text">
-            Notice how the receiver
-            of the forwarded message
+            The receiver of the forwarded message
             is provided as the private data/state
-            of the actor.
-            Also the actor primitive <code>become</code>,
-            which is similar to <code>create</code> but
+            of the actor at creation.
+            The actor primitive <code>become</code>
+            is similar to <code>create</code> but
             provides new code and data for the current actor
             rather than creating a new actor.
             This is important because <code>become</code>
             is the only mutation mechanism available in uFork.
+            Note that actor primitives
+            like <code>become</code> and <code>send</code>
+            do not take effect until and unless
+            the actor executes <code>end commit</code>.
           </p>
           <h3 name="iteration">Iteration</h3>
           <p class="text">
