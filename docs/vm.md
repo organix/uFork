@@ -505,6 +505,8 @@ until and unless the actor executes [`end` `commit`](#end-instruction).
        * the sponsor of the current event as the sponsor
        * _actor_ as the target
        * _msg_ as the message
+ 1. Otherwise
+    1. Abort transaction with `E_NOT_CAP` reason
 
  T            | X (op)       | Y (imm)       | Z (k)
 --------------|--------------|---------------|-------------
@@ -518,6 +520,8 @@ until and unless the actor executes [`end` `commit`](#end-instruction).
        * _spn_ as the sponsor
        * _actor_ as the target
        * _msg_ as the message
+ 1. Otherwise
+    1. Abort transaction with `E_NOT_CAP` reason
 
  T            | X (op)       | Y (imm)       | Z (k)
 --------------|--------------|---------------|-------------
@@ -529,7 +533,7 @@ until and unless the actor executes [`end` `commit`](#end-instruction).
     1. Create a new actor with _beh_ for code and _state_ for data
     1. Push a capability designating the new actor onto the stack
  1. Otherwise
-    1. Push `#?` onto the stack
+    1. Abort transaction with `E_NOT_EXE` reason
 
  T            | X (op)       | Y (imm)       | Z (k)
 --------------|--------------|---------------|-------------
@@ -540,6 +544,8 @@ until and unless the actor executes [`end` `commit`](#end-instruction).
  1. If _beh_ is an instruction
     1. Record _beh_ as the code to execute when handling the next event
     1. Record _state_ as the private data when handling the next event
+ 1. Otherwise
+    1. Abort transaction with `E_NOT_EXE` reason
 
  T            | X (op)        | Y (imm)       | Z (k)
 --------------|---------------|---------------|-------------

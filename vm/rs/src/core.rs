@@ -660,6 +660,8 @@ impl Core {
                         if target.is_cap() {
                             let spn = self.event_sponsor(self.ep());  // implicit sponsor from event
                             self.effect_send(spn, target, msg)?;
+                        } else {
+                            return Ok(self.error_abort(E_NOT_CAP));
                         }
                     },
                     ACTOR_POST => {
@@ -668,6 +670,8 @@ impl Core {
                         let spn = self.stack_pop();  // explicit sponsor from stack
                         if target.is_cap() {
                             self.effect_send(spn, target, msg)?;
+                        } else {
+                            return Ok(self.error_abort(E_NOT_CAP));
                         }
                     },
                     ACTOR_CREATE => {
@@ -677,7 +681,7 @@ impl Core {
                             let actor = self.effect_create(beh, state)?;
                             self.stack_push(actor)?;
                         } else {
-                            self.stack_push(UNDEF)?;  // invalid actor
+                            return Ok(self.error_abort(E_NOT_EXE));
                         }
                     },
                     ACTOR_BECOME => {
@@ -685,6 +689,8 @@ impl Core {
                         let state = self.stack_pop();
                         if self.typeq(INSTR_T, beh) {
                             self.effect_become(beh, state)?;
+                        } else {
+                            return Ok(self.error_abort(E_NOT_EXE));
                         }
                     },
                     ACTOR_SELF => {
@@ -693,7 +699,8 @@ impl Core {
                         self.stack_push(target)?;
                     },
                     _ => {
-                        // unknown ACTOR op (ignored)
+                        // unknown ACTOR op
+                        return Ok(self.error_abort(E_BOUNDS));
                     }
                 }
                 kip
@@ -705,9 +712,7 @@ impl Core {
                 let rv = match imm {
                     END_ABORT => {
                         let reason = self.stack_pop();  // reason for abort
-                        self.call_audit_event(reason);
-                        self.actor_abort(me);
-                        UNDEF
+                        self.audit_abort(reason)
                     },
                     END_STOP => {
                         return Err(E_STOP);  // End::Stop terminated continuation
@@ -942,6 +947,16 @@ impl Core {
         Ok(())
     }
 
+    fn error_abort(&mut self, error: Error) -> Any {
+        let reason = Any::fix(error as isize);
+        self.audit_abort(reason)
+    }
+    fn audit_abort(&mut self, reason: Any) -> Any {
+        let me = self.self_ptr();
+        self.call_audit_event(reason);
+        self.actor_abort(me);
+        UNDEF  // end actor transaction
+    }
     fn actor_busy(&self, cap: Any) -> bool {
         let ptr = self.cap_to_ptr(cap);
         let txn = self.mem(ptr).z();
