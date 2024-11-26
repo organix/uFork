@@ -25,7 +25,9 @@ function timer_dev(core, slowdown = 1) {
                     const evt = quad.y;  // stub carries pre-allocated event
                     timer_map[stub] = setTimeout(
                         function () {
-                            core.u_trace("timer_fired", timer_map[stub]);
+                            if (core.u_trace !== undefined) {
+                                core.u_trace("timer_fired", timer_map[stub]);
+                            }
                             delete timer_map[stub];
                             core.h_release_stub(stub);
                             core.h_event_enqueue(evt);
