@@ -67,12 +67,12 @@ sink_beh:                   ; _ &lt;- _
             By labeling multiple entry-points
             and sharing common tail-sequences
             of instructions,
-            we define the behavior
-            of three useful actors.
+            we define three useful actor behaviors.
             The <code>sink_beh</code>
             ignores/discards all messages.
             The <code>fwd_beh</code>
-            forwards messages to another actor.
+            forwards messages to another actor
+            (not used in this example).
             And the <code>once_beh</code>
             forwards exactly one message.
           </p>
@@ -201,8 +201,7 @@ delay_beh:                  ; rcvr,min,range,random,timer &lt;- msg
             a <em>continuation</em> customer <code>k_delay</code>
             with all the information needed
             to perform the rest of the computation.
-            Since all data-structures are immutable
-            after construction,
+            Since all data-structures are immutable,
             we can safely share the configuration data
             while adding the <code>msg</code> to the front.
           </p>
