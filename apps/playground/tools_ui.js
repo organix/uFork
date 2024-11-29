@@ -144,7 +144,7 @@ const tools_ui = make_ui("tools-ui", function (element, {
                     devices.io.warn("FAULT:", message);
                     stop();
                 }
-                return;
+                break;
             }
 
 // There is work left in the continuation queue. Refill and continue, deferring
@@ -154,6 +154,7 @@ const tools_ui = make_ui("tools-ui", function (element, {
             const elapsed = Date.now() - begin;
             if (elapsed > 20) {
                 run_loop_timer = setTimeout(run_loop, 0);
+                break;
             }
         }
     }

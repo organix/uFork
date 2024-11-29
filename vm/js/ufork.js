@@ -1573,7 +1573,6 @@ function make_core({
 // Install an anonymous plugin to handle trace information emitted by the debug
 // build of the WASM.
 
-
                 Object.assign(wasm_caps, {
                     host_trace(event) { // (i32) -> nil
                         if (typeof on_trace === "function") {
