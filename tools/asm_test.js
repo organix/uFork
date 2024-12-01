@@ -27,6 +27,7 @@ function asm_test(module_url, time_limit = 5000) {
     let start_time = 0;
     let timer;
     let the_callback;
+    let nr_audits = 0;
 
     function log(...values) {
         const elapsed = Date.now() - start_time;
@@ -48,8 +49,17 @@ function asm_test(module_url, time_limit = 5000) {
             log(ufork.LOG_WARN, "WAKE", device_offset);
             run_ufork();
         },
-        on_log: log,
         log_level: ufork.LOG_TRACE,
+        on_log: log,
+        on_audit(code, evidence) {
+            nr_audits += 1;
+            log(
+                ufork.LOG_WARN,
+                "AUDIT",
+                core.u_fault_msg(core.u_fix_to_i32(code)),
+                core.u_pprint(evidence)
+            );
+        },
         import_map,
         compilers: {asm: assemble}
     });
@@ -74,7 +84,7 @@ function asm_test(module_url, time_limit = 5000) {
                     const event = core.u_read_quad(event_stub.y);
                     const message = event.y;
                     core.h_dispose();
-                    if (message === ufork.TRUE_RAW) {
+                    if (message === ufork.TRUE_RAW && nr_audits === 0) {
                         return callback({pass: true, logs});
                     }
                     log(ufork.LOG_WARN, "VERDICT", core.u_pprint(message));

@@ -17,9 +17,22 @@
 //      A function that is called with any values logged by the core.
 //      The 'values' may or may not be strings. Optional.
 
-//  on_trace(event)
+//  on_trace(ep, kp)
 //      A function that is called before an event transaction is committed.
-//      NOTE: This function is independent of the TRACE logging level. Optional.
+//      It is passed a pointer to the current event, and continuation if there
+//      is one. Optional.
+
+//      NOTE: This function is independent of the TRACE logging level.
+
+//  on_audit(code, evidence, ep, kp)
+//      A function that is called when a non-fatal error (such as an aborted
+//      transaction) occurs. Optional.
+
+//      The 'code' is an error fixnum such as E_ABORT.
+//      The 'evidence' is a value associated with the error, such as the reason
+//      provided to the 'end abort' instruction.
+//      The 'ep' points to the current event.
+//      The 'kp' points to the current continuation, if there is one.
 
 //  log_level
 //      An integer controlling the core's logging verbosity. Each level includes
@@ -185,6 +198,7 @@ const E_CPU_LIM = -12;
 const E_MSG_LIM = -13;
 const E_ASSERT = -14;
 const E_STOP = -15;
+const E_ABORT = -16;
 
 // Log levels
 
@@ -230,7 +244,8 @@ const error_messages = [
     "sponsor cycle limit reached",      // E_CPU_LIM = -12
     "sponsor event limit reached",      // E_MSG_LIM = -13
     "assertion failed",                 // E_ASSERT = -14
-    "actor stopped"                     // E_STOP = -15
+    "actor stopped",                    // E_STOP = -15
+    "actor transaction aborted"         // E_ABORT = -16
 ];
 const instr_label = [
     "debug",
@@ -349,6 +364,7 @@ function make_core({
     on_wakeup,
     on_log,
     on_trace,
+    on_audit,
     log_level = LOG_WARN,
     import_map = {},
     compilers = {}
@@ -394,6 +410,12 @@ function make_core({
     }
     if (log_level >= LOG_TRACE) {
         u_trace = make_log_method(LOG_TRACE);
+    }
+
+    function u_audit(code, evidence, ep, kp) {
+        if (typeof on_audit === "function") {
+            on_audit(code, evidence, ep, kp);
+        }
     }
 
     function bottom_out(...values) {
@@ -1558,6 +1580,9 @@ function make_core({
                         host_trace(...args) {
                             return wasm_caps.host_trace(...args);
                         },
+                        host_audit(...args) {
+                            return wasm_caps.host_audit(...args);
+                        },
                         host(...args) {
                             return wasm_caps.host(...args);
                         }
@@ -1570,15 +1595,15 @@ function make_core({
                 initial_rom_ofs = wasm.instance.exports.h_rom_buffer();
                 initial_ram_ofs = wasm.instance.exports.h_ram_buffer();
 
-// Install an anonymous plugin to handle trace information emitted by the debug
-// build of the WASM.
+// Install an anonymous plugin to handle audit and trace information.
 
                 Object.assign(wasm_caps, {
-                    host_trace(event) { // (i32) -> nil
+                    host_trace(ep, kp) {
                         if (typeof on_trace === "function") {
-                            on_trace(event);
+                            on_trace(ep, kp);
                         }
-                    }
+                    },
+                    host_audit: u_audit
                 });
 
 // Install the debug device, if debug logging is enabled.
@@ -1637,6 +1662,7 @@ function make_core({
 
 // The reentrant methods.
 
+        u_audit,
         u_cap_to_ptr,
         u_current_continuation,
         u_debug,
@@ -1676,6 +1702,15 @@ function make_core({
     });
 }
 
+const abort_src = `
+boot:                       ; _ <- {caps}
+    push 123                ; reason
+    end abort               ; --
+
+.export
+    boot
+`;
+
 function demo(log) {
     let core;
 
@@ -1690,15 +1725,27 @@ function demo(log) {
             log("WAKE:", device_offset);
             run_ufork();
         },
-        on_log: log,
         log_level: LOG_DEBUG,
+        on_log: log,
+        on_audit(code, evidence, ep, kp) {
+            log(
+                "AUDIT:",
+                core.u_fault_msg(core.u_fix_to_i32(code)),
+                core.u_print(evidence),
+                core.u_print(ep),
+                core.u_print(kp)
+            );
+        },
         import_map: {"https://ufork.org/lib/": lib_url},
         compilers: {asm: assemble}
     });
     parseq.sequence([
         core.h_initialize(),
-        core.h_import(asm_url),
-        requestorize(function (asm_module) {
+        parseq.parallel([
+            core.h_import(asm_url),
+            core.h_import("abort.asm", abort_src)
+        ]),
+        requestorize(function ([test_module, audit_module]) {
 
 // Test.
 
@@ -1719,8 +1766,10 @@ function demo(log) {
             sponsor.x = core.u_fixnum(256);     // events
             sponsor.y = core.u_fixnum(4096);    // cycles
             core.u_write_quad(sponsor_ptr, sponsor);
-            core.h_boot(asm_module.boot);
             const start = performance.now();
+            core.h_boot(test_module.boot);
+            run_ufork();
+            core.h_boot(audit_module.boot);
             run_ufork();
             const duration = performance.now() - start;
             return duration.toFixed(3) + "ms";
@@ -1812,6 +1861,7 @@ export default Object.freeze({
     E_MSG_LIM,
     E_ASSERT,
     E_STOP,
+    E_ABORT,
     LOG_NONE,
     LOG_INFO,
     LOG_WARN,

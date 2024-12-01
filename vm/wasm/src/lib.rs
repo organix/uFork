@@ -37,7 +37,8 @@ fn out_of_memory(_: ::core::alloc::Layout) -> ! {
 
 #[link(wasm_import_module = "capabilities")]
 extern "C" {
-    pub fn host_trace(event: Raw);
+    pub fn host_trace(ep: Raw, kp: Raw);
+    pub fn host_audit(code: Raw, evidence: Raw, ep: Raw, kp: Raw);
 }
 
 /* Static Singleton per Kevin Reid */
@@ -62,9 +63,14 @@ pub fn h_init() {
     core.install_device(BLOB_DEV, Box::new(ufork::blob_dev::BlobDevice::new()));
     core.install_device(RANDOM_DEV, Box::new(random_dev::RandomDevice::new()));
     core.install_device(HOST_DEV, Box::new(host_dev::HostDevice::new()));
-    core.set_trace_event(|ep, _kp| {
+    core.set_trace_fn(|ep, kp| {
         unsafe {
-            host_trace(ep.raw());
+            host_trace(ep.raw(), kp.raw());
+        }
+    });
+    core.set_audit_fn(|code, evidence, ep, kp| {
+        unsafe {
+            host_audit(code.raw(), evidence.raw(), ep.raw(), kp.raw());
         }
     });
 }

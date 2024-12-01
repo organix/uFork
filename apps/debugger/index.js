@@ -622,6 +622,16 @@ core = ufork.make_core({
         core.u_debug(event);
         //console.log(JSON.stringify(event, undefined, 2));
     },
+    on_audit(code, evidence, ep, kp) {
+        console.error(
+            "AUDIT:",
+            core.u_fault_msg(core.u_fix_to_i32(code)),
+            core.u_pprint(evidence),
+            core.u_pprint(ep),
+            core.u_pprint(kp)
+        );
+        //debugger;
+    },
     log_level: ufork.LOG_DEBUG,
     import_map: (
         location.hostname !== "ufork.org"

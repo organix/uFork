@@ -36,6 +36,8 @@ E_ASSERT:                   ; assertion failed
     ref -14
 E_STOP:                     ; actor stopped
     ref -15
+E_ABORT:                    ; actor transaction aborted
+    ref -16
 
 ; Common Tail-Sequences
 

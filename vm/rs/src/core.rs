@@ -68,7 +68,7 @@ pub struct Core {
     gc_marks:   [GcColor; QUAD_RAM_MAX],
     device:     [Option<Box<dyn Device>>; DEVICE_MAX],
     trace_fn:   Option<Box<dyn Fn(Any, Any)>>,
-    audit_fn:   Option<Box<dyn Fn(Any, Any, Any)>>,
+    audit_fn:   Option<Box<dyn Fn(Any, Any, Any, Any)>>,
 }
 
 impl Default for Core {
@@ -164,24 +164,25 @@ impl Core {
     }
 
     #[cfg(debug_assertions)]
-    fn call_trace_event(&self, ep: Any, kp: Any) {
+    fn call_trace_fn(&self, ep: Any, kp: Any) {
         if let Some(trace) = &self.trace_fn {
             (trace)(ep, kp);
         }
     }
-    pub fn set_trace_event<F: Fn(Any, Any) + 'static>(&mut self, trace_handler: F) {
-        self.trace_fn = Some(Box::new(trace_handler));
+    pub fn set_trace_fn<F: Fn(Any, Any) + 'static>(&mut self, trace_fn: F) {
+        self.trace_fn = Some(Box::new(trace_fn));
     }
 
-    fn call_audit_event(&self, reason: Any) {
+    fn call_audit_fn(&self, error: Error, evidence: Any) {
         if let Some(audit) = &self.audit_fn {
+            let code = Any::fix(error as isize);
             let ep = self.ep();
             let kp = self.kp();
-            (audit)(reason, ep, kp);
+            (audit)(code, evidence, ep, kp);
         }
     }
-    pub fn set_audit_event<F: Fn(Any, Any, Any) + 'static>(&mut self, audit_handler: F) {
-        self.audit_fn = Some(Box::new(audit_handler));
+    pub fn set_audit_fn<F: Fn(Any, Any, Any, Any) + 'static>(&mut self, audit_fn: F) {
+        self.audit_fn = Some(Box::new(audit_fn));
     }
 
     /*
@@ -296,7 +297,7 @@ impl Core {
                 let result = dev_mut.handle_event(self, ep);
                 self.device[id] = Some(dev_mut);
                 #[cfg(debug_assertions)]
-                self.call_trace_event(ep, UNDEF);  // trace transactional effect(s)
+                self.call_trace_fn(ep, UNDEF);  // trace transactional effect(s)
                 return result
             }
         } else {
@@ -661,7 +662,7 @@ impl Core {
                             let spn = self.event_sponsor(self.ep());  // implicit sponsor from event
                             self.effect_send(spn, target, msg)?;
                         } else {
-                            return Ok(self.error_abort(E_NOT_CAP));
+                            return Ok(self.audit_abort(E_NOT_CAP, target));
                         }
                     },
                     ACTOR_POST => {
@@ -671,7 +672,7 @@ impl Core {
                         if target.is_cap() {
                             self.effect_send(spn, target, msg)?;
                         } else {
-                            return Ok(self.error_abort(E_NOT_CAP));
+                            return Ok(self.audit_abort(E_NOT_CAP, target));
                         }
                     },
                     ACTOR_CREATE => {
@@ -681,7 +682,7 @@ impl Core {
                             let actor = self.effect_create(beh, state)?;
                             self.stack_push(actor)?;
                         } else {
-                            return Ok(self.error_abort(E_NOT_EXE));
+                            return Ok(self.audit_abort(E_NOT_EXE, beh));
                         }
                     },
                     ACTOR_BECOME => {
@@ -690,7 +691,7 @@ impl Core {
                         if self.typeq(INSTR_T, beh) {
                             self.effect_become(beh, state)?;
                         } else {
-                            return Ok(self.error_abort(E_NOT_EXE));
+                            return Ok(self.audit_abort(E_NOT_EXE, beh));
                         }
                     },
                     ACTOR_SELF => {
@@ -700,19 +701,19 @@ impl Core {
                     },
                     _ => {
                         // unknown ACTOR op
-                        return Ok(self.error_abort(E_BOUNDS));
+                        return Ok(self.audit_abort(E_BOUNDS, imm));
                     }
                 }
                 kip
             },
             VM_END => {
                 #[cfg(debug_assertions)]
-                self.call_trace_event(self.ep(), self.kp());  // trace transactional effect(s)
+                self.call_trace_fn(self.ep(), self.kp());  // trace transactional effect(s)
                 let me = self.self_ptr();
                 let rv = match imm {
                     END_ABORT => {
                         let reason = self.stack_pop();  // reason for abort
-                        self.audit_abort(reason)
+                        self.audit_abort(E_ABORT, reason)
                     },
                     END_STOP => {
                         return Err(E_STOP);  // End::Stop terminated continuation
@@ -947,13 +948,9 @@ impl Core {
         Ok(())
     }
 
-    fn error_abort(&mut self, error: Error) -> Any {
-        let reason = Any::fix(error as isize);
-        self.audit_abort(reason)
-    }
-    fn audit_abort(&mut self, reason: Any) -> Any {
+    fn audit_abort(&mut self, error: Error, evidence: Any) -> Any {
         let me = self.self_ptr();
-        self.call_audit_event(reason);
+        self.call_audit_fn(error, evidence);
         self.actor_abort(me);
         UNDEF  // end actor transaction
     }

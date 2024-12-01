@@ -194,6 +194,13 @@ const tools_ui = make_ui("tools-ui", function (element, {
                 );
                 logger(value);
             },
+            on_audit(code, evidence) {
+                devices.io.warn(
+                    "AUDIT:",
+                    core.u_fault_msg(core.u_fix_to_i32(code)),
+                    core.u_pprint(evidence)
+                );
+            },
             import_map,
             compilers
         });
