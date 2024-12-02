@@ -34,6 +34,132 @@
         <div class="span10col">
           <h2 name="race">Reduce, Reuse, Recycle</h2>
           <p class="text">
+            Both code and data structures in uFork are immutable.
+            This makes it safe to share these structures among actors.
+            We can take advantage of commonality
+            to reduce our memory footprint,
+            and also to pass information efficiently between actors
+            (without making copies).
+          </p>
+          <h3 name="tail">Common Tail-Sequences</h3>
+          <p class="text">
+            In our previous examples,
+            you may have noticed
+            that the code for many actors
+            ends with the some of the same instructions.
+            Almost all actors end with
+            an <code>end commit</code> instruction.
+            Many actors preceed this with
+            an <code>actor send</code> instruction.
+            A common pattern is to send to a <em>customer</em>
+            provided as <code>msg 1</code>.
+            These patterns are so common,
+            they are provided in the
+            <a href="https://ufork.org/playground/?src=https://ufork.org/lib/std.asm" target="_blank"><code>std.asm</code></a>
+            module.
+          </p>
+          <p>
+            <pre class="code">
+; Common Tail-Sequences
+
+cust_send:                  ; msg
+    msg 1                   ; msg cust
+send_msg:                   ; msg cust
+    actor send              ; --
+sink_beh:                   ; _ &lt;- _
+commit:
+    end commit</pre>
+          </p>
+          <p class="text">
+            It may come as a surprise that these instructions
+            may not be sequential in memory.
+            In fact, there is no way to tell
+            if they are sequential or not!
+            This is because uFork memory is organized
+            into linked structures called <em>quad-cells</em>.
+            Quad-cells have 4 <em>value</em> fields.
+            Each value is a <em>fixnum</em>,
+            a <em>capability</em> (actor address),
+            or a <em>pointer</em> to a quad-cell.
+            There is no conversion between these types,
+            thus you can't determine the numeric value of an address.
+            The code fragment above is illustrated by this diagram:
+          </p>
+          <pre class="graphic">
+cust_send ---> [#instr_t, "msg", 1, k]
+                                    |
+                                    V
+send_msg ----> [#instr_t, "actor", "send", k]
+                                           |
+sink_beh ---------+                        |
+                  V                        V
+commit ------> [#instr_t, "end", "commit", #?]</pre>
+          <p class="text">
+            This code fragment consists of 3 instructions
+            and occupies 3 quad-cells.
+            This first field of each quad
+            designates the type of the quad,
+            in this case <code>#instr_t</code>
+            for executable instructions.
+            The labels <code>cust_send</code>, <code>send_msg</code>,
+            <code>sink_beh</code>, and <code>commit</code>
+            denote pointers to these instruction quads.
+            The final field of each quad
+            contains a pointer to the next instruction
+            in the code sequence (the <em>continuation</em>),
+            regardless of where it resides in memory.
+          </p>
+          <p class="text">
+            By default,
+            the assembler translates a sequence of instructions
+            into a linked-list of quad-cells.
+            However, the continuation
+            can always be specified explicitly
+            by including an extra argument
+            at the end of an instruction.
+            For example,
+            <code>cust_send</code> could be written as:
+          </p>
+          <p>
+            <pre class="code">
+cust_send:                  ; msg
+    msg 1 send_msg          ; msg cust</pre>
+          </p>
+          <p class="text">
+            A more common approach is
+            to use a <code>ref</code> pseudo-instruction
+            to provide the continuation,
+            as shown here:
+          </p>
+          <p>
+            <pre class="code">
+cust_send:                  ; msg
+    msg 1                   ; msg cust
+    ref send_msg</pre>
+          </p>
+          <p class="text">
+            A <code>ref</code> can also be used
+            to introduce a named constant.
+            The following code associates the label <code>E_OK</code>
+            with the fixnum value <code>0</code>.
+          </p>
+          <p>
+            <pre class="code">
+E_OK:                       ; not an error
+    ref 0</pre>
+          </p>
+          <p class="text">
+            A <code>ref</code> occupies no storage.
+            It's just a reference to another value.
+            You should use <code>ref commit</code>
+            instead of <code>end commit</code>
+            to avoid creating redundant instructions.
+            The <code>send_msg</code> and <code>cust_send</code>
+            labels allow sharing of longer common tail-sequences.
+            Watch for opportunities to use them.
+          </p>
+          <h3 name="cell">Shared Mutable Storage</h3>
+          <p class="text">
             lorem ipsum
           </p>
           <p>
@@ -43,9 +169,7 @@
 ;;;
 
 .import
-    assert_eq: "https://ufork.org/lib/testing/assert_eq.asm"
     std: "https://ufork.org/lib/std.asm"
-    fork: "https://ufork.org/lib/fork.asm"
 
 read_op:
     ref 0
@@ -60,20 +184,6 @@ op_table:
     dict_t CAS_op CAS
     ref #nil
 
-;;  LET cell_beh(value) = \(cust, req).[
-;;      CASE req OF
-;;      (#read, _) : [ SEND value TO cust ]
-;;      (#write, value') : [
-;;          BECOME cell_beh(value')
-;;          SEND SELF TO cust
-;;      ]
-;;      (#CAS, old, new) : [
-;;          IF $old = $value [ BECOME cell_beh(new) ]
-;;          SEND value TO cust
-;;      ]
-;;      END
-;;  ]
-;;  CREATE cell WITH cell_beh(0)
 beh:
 cell_beh:                   ; value &lt;- cust,op,args
     push op_table           ; op_table
@@ -81,8 +191,7 @@ cell_beh:                   ; value &lt;- cust,op,args
     dict get                ; op_code
     dup 1                   ; op_code op_code
     eq #?                   ; op_code op_code==#?
-;    if std.abort            ; op_code
-    if std.stop             ; op_code
+    if std.abort            ; op_code
     jump                    ; --
 
 read:                       ; value &lt;- cust,#read,_
@@ -107,6 +216,13 @@ CAS:                        ; value &lt;- cust,#CAS,old,new
     ref read
 
 ; test fixtures
+expect_eq:                  ; judge,expect &lt;- actual
+    state -1                ; expect
+    msg 0                   ; expect actual
+    cmp eq                  ; expect==actual
+    state 1                 ; expect==actual judge
+    ref std.send_msg
+
 expect_one:                 ; judge,expect &lt;- actual | timeout
     state 1                 ; judge
     msg 0                   ; judge timeout
@@ -116,6 +232,7 @@ expect_one:                 ; judge,expect &lt;- actual | timeout
     msg 0                   ; expect actual
     cmp ne                  ; expect!=actual
     if fail_verdict         ; --
+got_expected:
     state 1                 ; data=judge
     push expect_none        ; data code=expect_none
     actor become            ; --
@@ -364,16 +481,22 @@ cell_verify:                ; (cell . expect) &lt;- _
             lorem ipsum
           </p>
           <p>
-            <pre class="code">
-; Common Tail-Sequences
+            <a class="play" target="_blank" href="https://ufork.org/playground/?text=H4sIAAAAAAAAE72YwXLbIBCG73oKJrm0E0m20+ZiV5NTe+qtD6DBEpYZC6ECcut2+u4dwICQULBnOs0hB+f7l+XfZcHJMekpEwkAANTovAUPRyF6vl2thgNlp5yyZtXi/apG5xxy8pAktKtQuUfHLZj/7ACrzgx8ygDhjYrZD/wIHl8D5OOrAzjuTjLmBLCfKxJWgjKwRxUlyA+VZcnhR72UVCArwhuwDpKG4AIKFGAUoeKNcuKoq6dYliUm+7BTpUyoVFGkvKKEYJEke0ZhXUEuAsodOMN2QFKoFuaRzYwgcenRd/DYQ8xK4UGYl/LTdxp+r2h8KDsqgMulph0y27p5zR4yATYhiCEuwAEzLiJmO1BvXeGMti14XoyrPXLRl2skcQ9pD8GI3z5//RIvt+/WdlbZGrUCLvTDDqi/yspWAxdpNxDrcxa00BDL3nUD0VF16u0AYF0HOIb69lJ0A3lytFw3sKyhVZJxRwIOwMuiA/JQpQR3KYNdg+TvmpJUYIK8s6s3/CEUQOpiDSUZUB1ic8BybpJBzBa6WbE1FLAgvElNcDXZTqXddEgAKlqjYgSNTK0YkrsILHXlx7pcRovkecXTqU8fYyzQtbi/4KMEZyVXkzSNFN3v8vmupgN7PhUmA3u5ewwGCO7il4RFbYrLB8ziumoEd09GpIoVHGVX+5U93hazlxgMlH33V2tPqQheoO6++l3Bnv+J2DOC1BmQbweVUnlCFx8C9nP9AsGVAA0S85iaq9E5srblglno9rJpzHHgiFsTMhKTm1pss56lF5boE11s1mvCnfw5NLqW5bIPi2cbQfbUvMPBTo6zInzWEr3boV+Y+nIQenMtOGCulL51is3Y++vVt0jrQWi5yBg0UtnxTpRvIgNQrSbHtDop3n5mU3rM2+RumtHXPcFLibtKG9vj6hQ+5h7sWxxo8B3I83xk8TpisUffZ7GRTixeRyyWsnssNvx9FiuVYn8hRhP3Kgy2vfPXaXyrA0+sqdVZrJ3/vddZrJ//t9k1Mv2svtV1uL3Na6tWGletLPTyUGHfDhMZcy3morBw6iKkNmyqEnF7md2pJo683ouXyKVjwOCdU6P90IxvvgkNLBC5caxOC7z7xnwpjwgsFym5Vcp3fmFE+WThxb5UcsKbwvsuoxL1vt5Oef+vt+ToCXLzUHrr1TN/9uTop/0XiHwCJX8BBguPYRQRAAA%3D">Open in Playground</a>
+<pre class="code">
+.import
+    std: "https://ufork.org/lib/std.asm"
+    dev: "https://ufork.org/lib/dev.asm"
 
-cust_send:                  ; msg
-    msg 1                   ; msg cust
-send_msg:                   ; msg cust
-    actor send              ; --
-sink_beh:                   ; _ &lt;- _
-commit:
-    end commit</pre>
+beh:
+cell_beh:                   ; value &lt;- cust,op,args
+    ...
+
+boot:                       ; _ &lt;- {caps}
+    ...
+
+.export
+    beh
+    boot</pre>
           </p>
           <p class="text">
             lorem ipsum
