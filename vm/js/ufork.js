@@ -1190,14 +1190,16 @@ function make_core({
     }
 
     function h_map_src(src) {
-        const alias = Object.keys(import_map).find(function (key) {
-            return src.startsWith(key);
-        });
-        return (
-            alias !== undefined
-            ? src.replace(alias, import_map[alias])
-            : src
-        );
+        if (src !== undefined) {
+            const alias = Object.keys(import_map).find(function (key) {
+                return src.startsWith(key);
+            });
+            return (
+                alias !== undefined
+                ? src.replace(alias, import_map[alias])
+                : src
+            );
+        }
     }
 
     function h_import_promise(src, content) {

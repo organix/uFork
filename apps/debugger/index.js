@@ -15,6 +15,7 @@ import clock_dev from "https://ufork.org/js/clock_dev.js";
 import random_dev from "https://ufork.org/js/random_dev.js";
 import io_dev from "https://ufork.org/js/io_dev.js";
 import blob_dev from "https://ufork.org/js/blob_dev.js";
+import host_dev from "https://ufork.org/js/host_dev.js";
 import timer_dev from "https://ufork.org/js/timer_dev.js";
 const lib_url = import.meta.resolve("../../lib/");
 const wasm_url = import.meta.resolve("https://ufork.org/wasm/ufork.debug.wasm");
@@ -654,7 +655,7 @@ core.h_initialize()(function callback(value, reason) {
     clock_dev(core);
     random_dev(core);
     on_stdin = io_dev(core, on_stdout);
-    blob_dev(core);
+    blob_dev(core, host_dev(core));
     timer_dev(core, 1);
 
     // draw initial state

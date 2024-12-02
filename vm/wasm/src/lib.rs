@@ -60,7 +60,6 @@ pub fn h_init() {
     core.install_device(CLOCK_DEV, Box::new(clock_dev::ClockDevice::new()));
     core.install_device(TIMER_DEV, Box::new(timer_dev::TimerDevice::new()));
     core.install_device(IO_DEV, Box::new(io_dev::IoDevice::new()));
-    core.install_device(BLOB_DEV, Box::new(ufork::blob_dev::BlobDevice::new()));
     core.install_device(RANDOM_DEV, Box::new(random_dev::RandomDevice::new()));
     core.install_device(HOST_DEV, Box::new(host_dev::HostDevice::new()));
     core.set_trace_fn(|ep, kp| {

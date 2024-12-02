@@ -1,7 +1,6 @@
 # uFork Binary Large-Object (Blob) Device
 
 The **Blob Device** manages dynamically-allocated byte-arrays.
-There is a moderate (~64K maximum) allocation size limit.
 Each allocation is an actor/capability that implements
 a random-access _read_ and _write_ byte interface.
 
@@ -41,11 +40,25 @@ and `#t` is sent to the `customer`.
 If `offset` is out of bounds, the write has no effect,
 and `#f` is sent to the `customer`.
 
-## Memory Layout
+## JavaScript implementation
+
+There is no allocation size limit.
+Blobs are stored on the JavaScript heap,
+so blob memory expands as necessary.
+See [blob_dev.js](../vm/js/blob_dev.js).
+
+## Rust implementation
+
+There is a moderate (~64K maximum) allocation size limit.
+The amount of blob memory available is limited to the
+compiled constant `BLOB_RAM_MAX`.
+See [blob_dev.rs](../vm/rs/src/blob_dev.rs).
+
+### Memory Layout
 
 Blob memory is managed outside of
 the uFork accessable quad-space.
-The following snippent of JavaScript
+The following snippet of JavaScript
 illustrates the layout of Blob memory.
 
 ```

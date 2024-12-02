@@ -45,25 +45,6 @@ boot:                       ; _ <- {caps}
     dict get                ; msg debug_dev
     actor send              ; --
 
-; Allocate a blob and pass it on to the I/O device.
-
-    msg 0                   ; {caps}
-    push io_key             ; {caps} io_key
-    dict get                ; io_dev
-    msg 0                   ; io_dev {caps}
-    push blob_key           ; io_dev {caps} blob_key
-    dict get                ; io_dev blob_dev
-    push 13                 ; io_dev blob_dev size=13
-    pick 3                  ; io_dev blob_dev size io_dev
-    pair 1                  ; io_dev blob_dev alloc_req=(io_dev . size)
-    pick 2                  ; io_dev blob_dev alloc_req blob_dev
-    actor send              ; io_dev blob_dev
-    push 13                 ; io_dev blob_dev size=3
-    roll 3                  ; blob_dev size io_dev
-    pair 1                  ; blob_dev alloc_req=(io_dev . size)
-    roll 2                  ; alloc_req blob_dev
-    actor send              ; --
-
 ; Send +42 to the debug device after a short delay.
 
     push 42                 ; msg=42

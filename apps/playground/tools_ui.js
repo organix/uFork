@@ -215,12 +215,12 @@ const tools_ui = make_ui("tools-ui", function (element, {
             core.h_import(get_src(), ir),
             requestorize(function (imported_module) {
                 devices.rom.set_buffer(core.h_snapshot().rom, ir);
+                const make_ddev = host_dev(core);
                 clock_dev(core);
                 random_dev(core);
-                blob_dev(core);
+                blob_dev(core, make_ddev);
                 timer_dev(core);
                 on_stdin = io_dev(core, devices.io.output);
-                const make_ddev = host_dev(core);
                 svg_dev(core, make_ddev, devices.svg.draw);
                 if (imported_module[entry] === undefined) {
                     throw new Error("Missing '" + entry + "' export.");
