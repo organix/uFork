@@ -1612,8 +1612,18 @@ impl Core {
     }
     fn release(&mut self, ptr: Any) {
         assert!(self.in_heap(ptr));
-        if self.typeq(FREE_T, ptr) {
+        let t = self.ram(ptr).t();
+        if t == FREE_T {  // already free
             panic!("double-free {}", ptr.raw());
+        }
+        if t == PROXY_T {
+            // drop proxy
+            if let Ok(id) = self.device_id(ptr) {
+                let mut dev_mut = self.device[id].take().unwrap();
+                let cap = self.ptr_to_cap(ptr);
+                dev_mut.drop_proxy(self, cap);
+                self.device[id] = Some(dev_mut);
+            }
         }
         *self.ram_mut(ptr) = Quad::free_t(self.ram_next());  // clear cell to "free"
         self.gc_free_cell(ptr);  // mark cell as not-in-use when freed
