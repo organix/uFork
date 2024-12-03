@@ -39,7 +39,7 @@ function tcp_dev(
 //  - false (the connection failed)
 
     let connections = [];                   // conn_nr -> connection/boolean
-    let conn_caps = [];                     // conn_nr -> conn_cap
+    let conn_stubs = [];                    // conn_nr -> conn_stub
     let read_chunks = [];                   // conn_nr -> Uint8Array
     let read_stubs = [];                    // conn_nr -> callback_stub
     let listeners = [];                     // listener_nr -> {stop, h_release}
@@ -65,8 +65,9 @@ function tcp_dev(
     // console.log(decode_tag(encode_tag({conn_nr: 7})));
 
     function stub_to_cap(stub) {
-        const quad = core.u_read_quad(stub);
-        return core.u_read_quad(quad.y);
+        const stub_quad = core.u_read_quad(stub);
+        const target = stub_quad.y;
+        return target;
     }
 
     function h_send(target, message) {
@@ -102,7 +103,8 @@ function tcp_dev(
         }
         const tag = encode_tag({conn_nr});
         const conn_cap = ddev.h_reserve_proxy(tag);
-        conn_caps[conn_nr] = conn_cap;
+        const conn_stub = ddev.h_reserve_stub(conn_cap);
+        conn_stubs[conn_nr] = conn_stub;
         return conn_cap;
     }
 
@@ -126,7 +128,7 @@ function tcp_dev(
             : (
                 connection === false
                 ? h_reply_fail()
-                : h_reply_ok(the_blob_dev.h_alloc_blob(chunk))
+                : h_reply_ok(the_blob_dev.h_alloc_blob(chunk).cap)
             )
         ));
     }
@@ -138,7 +140,11 @@ function tcp_dev(
             core.u_trace(`TCP #${conn_nr} closed`, reason);
         }
         h_flush_read(conn_nr);
-        conn_caps[conn_nr] = undefined;
+        const conn_stub = conn_stubs[conn_nr];
+        if (conn_stub !== undefined) {
+            core.h_release_stub(conn_stub);
+        }
+        conn_stubs[conn_nr] = undefined;
         read_chunks[conn_nr] = undefined; // discard unread chunks
         read_stubs[conn_nr] = undefined;
     }
@@ -146,7 +152,7 @@ function tcp_dev(
     function h_receive(connection, chunk) {
         const conn_nr = connections.indexOf(connection);
         if (core.u_trace !== undefined) {
-            core.u_trace(`TCP #${conn_nr} ${chunk.length}B received`);
+            core.u_trace(`TCP #${conn_nr} received ${chunk.length}B`);
         }
 
 // Enqueue the chunk. We should be applying backpressure instead, but the
@@ -171,7 +177,8 @@ function tcp_dev(
 
         function on_close(connection, reason) {
             const conn_nr = connections.indexOf(connection);
-            const conn_cap = conn_caps[conn_nr];
+            const conn_stub = conn_stubs[conn_nr];
+            const conn_cap = stub_to_cap(conn_stub);
             h_unregister(connection, reason);
             h_send(on_close_cap, conn_cap);
         }
@@ -278,6 +285,9 @@ function tcp_dev(
                         }
                         return h_send(callback, h_reply_fail());
                     }
+                    if (core.u_trace !== undefined) {
+                        core.u_trace(`TCP #${conn_nr} read`);
+                    }
                     const stub = ddev.h_reserve_stub(callback);
                     read_stubs[conn_nr] = stub;
                     h_flush_read(conn_nr);
@@ -301,6 +311,9 @@ function tcp_dev(
                             core.u_trace(`TCP #${conn_nr} write after close`);
                         }
                         return h_send(callback, h_reply_fail());
+                    }
+                    if (core.u_trace !== undefined) {
+                        core.u_trace(`TCP #${conn_nr} write ${bytes.length}B`);
                     }
                     connection.send(bytes);
                     h_send(callback, h_reply_ok(ufork.UNDEF_RAW));
@@ -425,7 +438,7 @@ function demo(log) {
             return true;
         })
     ])(log);
-    setTimeout(core.h_dispose, 500);
+    setTimeout(core.h_dispose, 5000);
 }
 
 if (import.meta.main) {

@@ -192,7 +192,7 @@ function demo(log) {
             return u_get_bytes(blob.cap);
         })
     ])(log);
-    setTimeout(core.h_dispose, 200);
+    setTimeout(core.h_dispose, 500);
 }
 
 if (import.meta.main) {
