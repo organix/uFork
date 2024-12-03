@@ -426,27 +426,16 @@ function make_core({
         return UNDEF_RAW;
     }
 
-// Throw an exception if the non-reentrant methods are reentered. This provides
-// a clearer indication of the problem than a panic stacktrace.
-
-    function wasm_mutex_call(get_wasm_function) {
+    function wrap_wasm_call(get_wasm_function) {
         return function (...args) {
-            if (wasm_call_in_progress) {
-                throw new Error("re-entrant WASM call");
-            }
-            wasm_call_in_progress = true;  // obtain "mutex"
-            let result;
-            let threw;
-            try {
-                result = get_wasm_function()(...args);
-            } catch (exception) {
-                result = exception;
-                threw = true;
-            }
-            wasm_call_in_progress = false;  // release "mutex"
-            if (threw) {
-                throw result;
-            }
+
+// It is only valid to call 'u_defer' during a non-reentrant call into WASM.
+// There is no need to implement a mutex here because Rust's RefCell will panic
+// upon illegal reentry.
+
+            wasm_call_in_progress = true;
+            let result = get_wasm_function()(...args);
+            wasm_call_in_progress = false;
 
 // Some callbacks that make non-reentrant calls may have been scheduled
 // by 'u_defer' whilst the WASM component had control. Run them now and flush
@@ -466,25 +455,25 @@ function make_core({
         };
     }
 
-    //const h_init = wasm_mutex_call(() => wasm_exports.h_init);
-    const h_run_loop = wasm_mutex_call(() => wasm_exports.h_run_loop);
-    const h_step = wasm_mutex_call(() => wasm_exports.h_step);
-    const h_event_enqueue = wasm_mutex_call(() => wasm_exports.h_event_enqueue);
-    const h_revert = wasm_mutex_call(() => wasm_exports.h_revert);
-    const h_gc_run = wasm_mutex_call(() => wasm_exports.h_gc_run);
-    //const h_rom_buffer = wasm_mutex_call(() => wasm_exports.h_rom_buffer);
-    const h_rom_top = wasm_mutex_call(() => wasm_exports.h_rom_top);
-    const h_set_rom_top = wasm_mutex_call(() => wasm_exports.h_set_rom_top);
-    const h_reserve_rom = wasm_mutex_call(() => wasm_exports.h_reserve_rom);
-    //const h_ram_buffer = wasm_mutex_call(() => wasm_exports.h_ram_buffer);
-    const h_ram_top = wasm_mutex_call(() => wasm_exports.h_ram_top);
-    const h_reserve = wasm_mutex_call(() => wasm_exports.h_reserve);
-    const h_reserve_stub = wasm_mutex_call(() => wasm_exports.h_reserve_stub);
-    const h_release_stub = wasm_mutex_call(() => wasm_exports.h_release_stub);
-    const h_car = wasm_mutex_call(() => wasm_exports.h_car);
-    const h_cdr = wasm_mutex_call(() => wasm_exports.h_cdr);
-    const h_gc_color = wasm_mutex_call(() => wasm_exports.h_gc_color);
-    const h_gc_state = wasm_mutex_call(() => wasm_exports.h_gc_state);
+    //const h_init = wrap_wasm_call(() => wasm_exports.h_init);
+    const h_run_loop = wrap_wasm_call(() => wasm_exports.h_run_loop);
+    const h_step = wrap_wasm_call(() => wasm_exports.h_step);
+    const h_event_enqueue = wrap_wasm_call(() => wasm_exports.h_event_enqueue);
+    const h_revert = wrap_wasm_call(() => wasm_exports.h_revert);
+    const h_gc_run = wrap_wasm_call(() => wasm_exports.h_gc_run);
+    //const h_rom_buffer = wrap_wasm_call(() => wasm_exports.h_rom_buffer);
+    const h_rom_top = wrap_wasm_call(() => wasm_exports.h_rom_top);
+    const h_set_rom_top = wrap_wasm_call(() => wasm_exports.h_set_rom_top);
+    const h_reserve_rom = wrap_wasm_call(() => wasm_exports.h_reserve_rom);
+    //const h_ram_buffer = wrap_wasm_call(() => wasm_exports.h_ram_buffer);
+    const h_ram_top = wrap_wasm_call(() => wasm_exports.h_ram_top);
+    const h_reserve = wrap_wasm_call(() => wasm_exports.h_reserve);
+    const h_reserve_stub = wrap_wasm_call(() => wasm_exports.h_reserve_stub);
+    const h_release_stub = wrap_wasm_call(() => wasm_exports.h_release_stub);
+    const h_car = wrap_wasm_call(() => wasm_exports.h_car);
+    const h_cdr = wrap_wasm_call(() => wasm_exports.h_cdr);
+    const h_gc_color = wrap_wasm_call(() => wasm_exports.h_gc_color);
+    const h_gc_state = wrap_wasm_call(() => wasm_exports.h_gc_state);
 
     function u_memory() {
 
