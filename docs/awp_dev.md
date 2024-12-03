@@ -156,7 +156,7 @@ greeter is available, the request fails.
 
 ### Listening
 
-    (#listen . request) -> awp_dev
+    (#listen . listen_request) -> awp_dev
 
 Listens for introduction requests, producing a `stop` capability on success that
 can be used to stop listening:
