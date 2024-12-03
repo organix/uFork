@@ -18,7 +18,7 @@ use ufork::{core::*, any::Any, quad::Quad, Raw};
 #[panic_handler]
 #[cfg(not(test))]
 fn panic(_: &::core::panic::PanicInfo) -> ! {
-    ::core::unreachable!()
+    ::core::arch::wasm32::unreachable()
 }
 
 //static ALLOCATOR: lol_alloc::LeakingPageAllocator = lol_alloc::LeakingPageAllocator;
