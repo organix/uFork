@@ -184,7 +184,15 @@ prepare_env:                ; ( k -- env )
     push dev.svg_key        ; k #? println timer random stdio clock {caps} svg_key
     dict get                ; k #? println timer random stdio clock svgout
 
-    pair 5                  ; k #? scope=(svgout clock stdio random timer . println)
+    msg 0                   ; k #? println timer random stdio clock svgout {caps}
+    push dev.blob_key       ; k #? println timer random stdio clock svgout {caps} blob_key
+    dict get                ; k #? println timer random stdio clock svgout blob_dev
+
+    msg 0                   ; k #? println timer random stdio clock svgout blob_dev {caps}
+    push dev.tcp_key        ; k #? println timer random stdio clock svgout blob_dev {caps} tcp_key
+    dict get                ; k #? println timer random stdio clock svgout blob_dev tcp_dev
+
+    pair 7                  ; k #? scope=(tcp_dev blob_dev svgout clock stdio random timer . println)
     pair 1                  ; k env=(scope . #?)
     ref std.return_value
 

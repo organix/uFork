@@ -30,6 +30,8 @@ listen_tag:
     ref 1
 svg_key:
     ref 101
+tcp_key:
+    ref 102
 
 boot:                       ; _ <- {caps}
 
@@ -111,4 +113,5 @@ boot:                       ; _ <- {caps}
     intro_tag
     listen_tag
     svg_key
+    tcp_key
     boot

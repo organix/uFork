@@ -1,0 +1,53 @@
+# Demonstrates the TCP networking device
+
+DEF petname AS 0
+DEF tag_open AS 5000
+DEF tag_close AS 5001
+DEF tag_listen AS 5002
+DEF tag_connect AS 5003
+DEF tag_write AS 5004
+
+DEF label_beh(rcvr, label) AS \msg.[
+    SEND (label, msg) TO rcvr
+]
+
+DEF make_blob AS \(cust, data).[
+    SEND (println, 1) TO blob_dev
+    # CREATE k WITH \blob.[]
+]
+
+CREATE listen_cb WITH \result.[
+    CASE result OF
+    (FALSE, error) : [
+        SEND (tag_listen, error) TO println
+    ]
+    (TRUE, stop) : [
+        SEND (tag_listen, stop) TO println
+        SEND (?, connect_cb, petname) TO tcp_dev
+        CREATE connect_cb WITH \result.[
+            CASE result OF
+            (FALSE, error) : [
+                SEND (tag_connect, error) TO println
+            ]
+            (TRUE, conn) : [
+                SEND (tag_connect, conn) TO println
+                SEND (?, write_cb, NIL) TO conn
+                CREATE write_cb WITH \result.[
+                    CASE result OF
+                    (TRUE, value) : [
+                        SEND (tag_write, value) TO println
+                    ]
+                    (FALSE, error) : [
+                        SEND (tag_write, error) TO println
+                    ]
+                    END
+                ]
+            ]
+            END
+        ]
+    ]
+    END
+]
+CREATE on_open WITH label_beh(println, tag_open)
+CREATE on_close WITH label_beh(println, tag_close)
+SEND (?, listen_cb, petname, on_open, on_close) TO tcp_dev

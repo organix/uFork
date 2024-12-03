@@ -6,32 +6,22 @@ TCP, a reliable binary stream protocol that is not secure.
 The uFork interface is implemented as a [dynamic device](host_dev.md) with a
 [requestor](requestor.md) interface.
 
-## Stores
+## Config
 
-The store holds the bind address of the local party and the addresses of remote
-parties. It is configured upon creation of the TCP device.
+The config holds the bind address of the local party and the addresses of remote
+parties. It is specified upon creation of the TCP device and does not change.
 
-An address is selected from the store using its petname, a non-negative integer
-that indexes into the array.
+An address is selected from the config using its petname, a non-negative integer
+indexing into the array.
 
 Addresses are strings like `<hostname>:<port>`.
 
-A store's contents might look something like
+A config might look something like
 
-    {
-        addresses: ["0.0.0.0:3000", "2.2.2.2:3000", "3.3.3.3:3000"]
-    }
+    ["0.0.0.0:3000", "2.2.2.2:3000", "3.3.3.3:3000"]
 
 where petname `0` refers to a bind address and petnames `1` and `2` refer to
 remote addresses.
-
-## Connecting
-
-    connect_request -> tcp_dev
-
-Requests a new connection with a remote party. The input value of the
-`connect_request` is a petname fixnum that selects a remote address from the
-store.
 
 ## Listening
 
@@ -42,12 +32,21 @@ can be used to stop listening:
 
     _ -> stop
 
-The input value of the `listen_request` is a pair like
+The input value of the `listen_request` is a pair list like
 
-    (on_open . on_close)
+    (petname on_open . on_close)
 
-where the `on_open` actor receives connections as they are opened, and the
-`on_close` actor receives connections as they are closed.
+where the `petname` is a fixnum that selects a bind address from the config, the
+`on_open` actor receives connections as they are opened, and the `on_close`
+actor receives connections as they are closed.
+
+## Connecting
+
+    connect_request -> tcp_dev
+
+Requests a new connection with a remote party. The input value of the
+`connect_request` is a petname fixnum that selects a remote address from the
+config. On success, the requestor produces a connection actor.
 
 ## Connections
 
@@ -58,19 +57,20 @@ interface similar to the [I/O device](io_dev.md), except that a stream of
 ### Read request
 
 When sent a request with input `#?`, it produces the next blob received over the
-connection.
+connection, or `#nil` if the connection was closed by the other party.
 
-**WARNING:** It is an error to request a read whilst one is in progress.
+Fails if the connection failed or the previous read request has not yet
+completed.
 
-## Write request
+### Write request
 
-When sent a request with an input blob, it writes that blob to the
-output stream and produces `#?`.
+When sent a request with an input blob, it writes that blob to the connection
+and produces `#?`. Fails if the connection failed.
 
-**WARNING:** It is an error to request a write whilst one is in progress.
+Fails if the connection failed or the previous write request has not yet
+completed.
 
-## Close request
+### Close request
 
 When sent a request with input `#nil` (indicating end-of-stream) the connection
-is closed gracefully and `#?` is produced. Sending a close request
-to a closed stream is not an error.
+is closed (if it is open) and `#?` is produced. Infallible.

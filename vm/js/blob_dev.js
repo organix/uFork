@@ -1,9 +1,16 @@
 // Installs the blob device. See also blob_dev.md.
 
-// The returned function 'h_alloc_blob' can be used to make blobs host-side.
-// It is passed a size (or an existing TypedArray) and returns an object like
-// {cap, buffer} where the 'cap' is the blob capability and the 'buffer' is
-// a mutable Uint8Array containing the blob's bytes.
+// The returned object contains several functions:
+
+//  h_alloc_blob(size_or_bytes)
+//      Used to make blobs host-side. It is passed a size (or an existing
+//      TypedArray) and returns an object like {cap, bytes} where the 'cap' is
+//      the blob capability and the 'bytes' is a mutable Uint8Array containing
+//      the blob's bytes.
+
+//  u_get_bytes(cap)
+//      Returns the mutable Uint8Array associated with a blob capability, or
+//      undefined if there isn't one.
 
 /*jslint web, global */
 
@@ -14,22 +21,30 @@ import host_dev from "./host_dev.js";
 import ufork from "./ufork.js";
 const lib_url = import.meta.resolve("https://ufork.org/lib/");
 const wasm_url = import.meta.resolve("https://ufork.org/wasm/ufork.wasm");
+const demo_url = import.meta.resolve("./blob_dev_demo.asm");
 
 function blob_dev(core, make_ddev) {
     const sponsor = core.u_ramptr(ufork.SPONSOR_OFS);
     let ddev;
-    let buffers = [];
+    let blobs = [];
 
     function h_alloc_blob(size_or_bytes) {
-        const next_blob_nr = buffers.length;
-        const buffer = new Uint8Array(size_or_bytes);
-        buffers.push(buffer);
+        const next_blob_nr = blobs.length;
+        const bytes = new Uint8Array(size_or_bytes);
         const tag = core.u_fixnum(next_blob_nr);
         const cap = ddev.h_reserve_proxy(tag);
         if (core.u_trace !== undefined) {
-            core.u_trace(`alloc blob #${next_blob_nr} size ${buffer.length}`);
+            core.u_trace(`alloc blob #${next_blob_nr} size ${bytes.length}`);
         }
-        return {cap, buffer};
+        const blob = {cap, bytes};
+        blobs.push(blob);
+        return blob;
+    }
+
+    function u_get_bytes(cap) {
+        return blobs.find(function (blob) {
+            return blob?.cap === cap;
+        })?.bytes;
     }
 
     ddev = make_ddev(
@@ -45,8 +60,8 @@ function blob_dev(core, make_ddev) {
             }
             if (core.u_is_fix(tag)) {
                 const blob_nr = core.u_fix_to_i32(tag);
-                const buffer = buffers[blob_nr];
-                if (buffer === undefined) {
+                const bytes = blobs[blob_nr]?.bytes;
+                if (bytes === undefined) {
                     return ufork.E_BOUNDS;
                 }
                 let reply;
@@ -55,16 +70,16 @@ function blob_dev(core, make_ddev) {
 
 // Size request.
 
-                    reply = core.u_fixnum(buffer.length);
+                    reply = core.u_fixnum(bytes.length);
                 } else if (core.u_is_fix(request)) {
 
 // Read request.
 
                     const read_at = core.u_fix_to_i32(request);
-                    const read_byte = buffer[read_at];
+                    const read_byte = bytes[read_at];
                     reply = (
                         read_byte !== undefined
-                        ? core.u_fixnum(buffer[read_at])
+                        ? core.u_fixnum(bytes[read_at])
                         : ufork.UNDEF_RAW
                     );
                 } else {
@@ -81,9 +96,9 @@ function blob_dev(core, make_ddev) {
                         return ufork.E_BOUNDS;
                     }
                     const write_at = core.u_fix_to_i32(offset);
-                    buffer[write_at] = byte;
+                    bytes[write_at] = byte;
                     reply = (
-                        buffer[write_at] !== undefined // in bounds?
+                        bytes[write_at] !== undefined // in bounds?
                         ? ufork.TRUE_RAW
                         : ufork.FALSE_RAW
                     );
@@ -95,7 +110,7 @@ function blob_dev(core, make_ddev) {
                         x: customer,
                         y: reply
                     }));
-                    core.h_wakeup(ufork.BLOB_DEV_OFS);
+                    core.h_wakeup(ufork.HOST_DEV_OFS);
                 });
                 return ufork.E_OK;
             }
@@ -129,7 +144,7 @@ function blob_dev(core, make_ddev) {
             const tag = ddev.u_tag(quad.y);
             if (core.u_is_fix(tag)) {
                 const blob_nr = core.u_fix_to_i32(tag);
-                delete buffers[blob_nr];
+                delete blobs[blob_nr];
                 if (core.u_trace !== undefined) {
                     core.u_trace(`disposed blob #${blob_nr}`);
                 }
@@ -139,72 +154,16 @@ function blob_dev(core, make_ddev) {
     const dev_cap = ddev.h_reserve_proxy();
     const dev_ptr = core.u_ramptr(ufork.BLOB_DEV_OFS);
     const dev_id = core.u_read_quad(dev_ptr).x;
-    let stub = ddev.h_reserve_stub(dev_cap);
     core.h_install(dev_id, dev_cap, function on_dispose() {
         ddev.h_dispose();
-        if (stub !== undefined) {
-            if (core.u_trace !== undefined) {
-                core.u_trace("disposing blobs");
-            }
-            core.h_release_stub(stub);
-            stub = undefined;
+        if (core.u_trace !== undefined) {
+            core.u_trace("disposing blobs");
         }
-        buffers.length = 0;
+        blobs.length = 0;
     });
-    return h_alloc_blob;
+    ddev.h_reserve_stub(dev_cap);
+    return Object.freeze({h_alloc_blob, u_get_bytes});
 }
-
-const test_asm = `
-.import
-    dev: "https://ufork.org/lib/dev.asm"
-    std: "https://ufork.org/lib/std.asm"
-boot:                   ; _ <- {caps}
-    push 8              ; size=8
-    msg 0               ; size {caps}
-    push dev.debug_key  ; size {caps} debug_key
-    dict get            ; size debug_dev
-    push write_beh      ; size debug_dev write_beh
-    actor create        ; size cust=write_beh.debug_dev
-    pair 1              ; (cust . size)
-    msg 0               ; (cust . size) {caps}
-    push dev.blob_key   ; (cust . size) {caps} blob_key
-    dict get            ; (cust . size) blob_dev
-    ref std.send_msg
-write_beh:              ; debug_dev <- blob
-    push 42             ; value=42
-    push 1              ; value offset=1
-    state 0             ; value offset debug_dev
-    msg 0               ; value offset debug_dev blob
-    pair 1              ; value offset (blob . debug_dev)
-    push read_beh       ; value offset (blob . debug_dev) read_beh
-    actor create        ; value offset cust=read_beh.(blob . debug_dev)
-    pair 2              ; (cust offset . value)
-    msg 0               ; (cust offset . value) blob
-    actor send          ; --
-    push #?             ; #? // size request
-    state 0             ; #? debug_dev
-    pair 1              ; (debug_dev . #?)
-    msg 0               ; (debug_dev . #?) blob
-    ref std.send_msg
-read_beh:               ; (blob . debug_dev) <- ok
-    msg 0               ; ok
-    assert #t           ; --
-    push 1              ; offset=1
-    state -1            ; offset debug_dev
-    push check_beh      ; offset debug_dev check_beh
-    actor create        ; offset cust=check_beh.debug_dev
-    pair 1              ; (cust . offset)
-    state 1             ; (cust . offset) blob
-    ref std.send_msg
-check_beh:              ; debug_dev <- value
-    msg 0               ; value
-    assert 42           ; --
-    push 1729           ; 1729
-    state 0             ; 1729 debug_dev
-    ref std.send_msg
-.export
-    boot
-`;
 
 function demo(log) {
     let core;
@@ -223,14 +182,14 @@ function demo(log) {
     });
     parseq.sequence([
         core.h_initialize(),
-        core.h_import(undefined, assemble(test_asm)),
+        core.h_import(demo_url),
         requestorize(function (asm_module) {
-            const h_alloc_blob = blob_dev(core, host_dev(core));
+            const {h_alloc_blob, u_get_bytes} = blob_dev(core, host_dev(core));
             core.h_boot(asm_module.boot);
             run_core();
             const blob = h_alloc_blob(2);
-            blob.buffer[1] = 255;
-            return blob;
+            blob.bytes[1] = 255;
+            return u_get_bytes(blob.cap);
         })
     ])(log);
     setTimeout(core.h_dispose, 200);
