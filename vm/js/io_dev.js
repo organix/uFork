@@ -20,7 +20,7 @@ function io_dev(core, on_stdout) {
         const first = stdin_buffer[0];
         stdin_buffer = stdin_buffer.slice(1);
         const code = first.codePointAt(0);
-        const char = core.u_fixnum(code);  // character read
+        const char = ufork.fixnum(code);  // character read
         return char;
     }
 
@@ -33,7 +33,7 @@ function io_dev(core, on_stdout) {
                 "READ:",
                 stub,
                 "=",
-                core.u_print(stub),
+                ufork.print(stub),
                 "->",
                 core.u_pprint(stub)
             );
@@ -53,7 +53,7 @@ function io_dev(core, on_stdout) {
         if (stdin_stub !== undefined && stdin_buffer.length > 0) {
             const char = read_stdin();
             if (core.u_trace !== undefined) {
-                core.u_trace("READ:", core.u_print(char));
+                core.u_trace("READ:", ufork.print(char));
             }
             const message = core.h_reserve_ram({  // (#t . char)
                 t: ufork.PAIR_T,
@@ -72,8 +72,8 @@ function io_dev(core, on_stdout) {
         }
     }
 
-    const dev_ptr = core.u_ramptr(ufork.IO_DEV_OFS);
-    const dev_cap = core.u_ptr_to_cap(dev_ptr);
+    const dev_ptr = ufork.ramptr(ufork.IO_DEV_OFS);
+    const dev_cap = ufork.ptr_to_cap(dev_ptr);
     const dev_id = core.u_read_quad(dev_ptr).x;
     core.h_install(dev_id, dev_cap, undefined, {
         host_print(base, ofs) { // (i32, i32) -> nil
@@ -101,7 +101,7 @@ function io_dev(core, on_stdout) {
             if (typeof on_stdout === "function") {
                 on_stdout(char);
             }
-            return core.u_fixnum(core.E_OK);
+            return ufork.fixnum(core.E_OK);
         }
     });
     return function on_stdin(string_or_utf8) {

@@ -31,21 +31,21 @@ let db = make_chat_db(default_signaller_origin);
 
 function refill_all(spn) {
     const sponsor = core.u_read_quad(spn);
-    sponsor.t = core.u_fixnum(4096);  // memory
-    sponsor.x = core.u_fixnum(256);  // events
-    sponsor.y = core.u_fixnum(8192);  // cycles
+    sponsor.t = ufork.fixnum(4096);  // memory
+    sponsor.x = ufork.fixnum(256);  // events
+    sponsor.y = ufork.fixnum(8192);  // cycles
     core.u_write_quad(spn, sponsor);
     //console.log("filled:", core.u_disasm(spn));
 }
 
 function ufork_run() {
-    const spn = core.u_ramptr(ufork.SPONSOR_OFS);
+    const spn = ufork.ramptr(ufork.SPONSOR_OFS);
     refill_all(spn);  // pre-load root-sponsor with resources
     // run until there is no more work, or an error occurs
     const sig = core.h_run_loop(0);
-    if (core.u_is_fix(sig)) {
-        const err = core.u_fix_to_i32(sig);
-        const msg = core.u_fault_msg(err);
+    if (ufork.is_fix(sig)) {
+        const err = ufork.fix_to_i32(sig);
+        const msg = ufork.fault_msg(err);
         console.log("IDLE", core.u_disasm(spn), "error:", err, "=", msg);
         const sponsor = core.u_read_quad(spn);
         if (err === ufork.E_OK) {
@@ -53,11 +53,11 @@ function ufork_run() {
             return ufork.E_OK;
         }
         if (err === ufork.E_MEM_LIM) {
-            sponsor.t = core.u_fixnum(256);
+            sponsor.t = ufork.fixnum(256);
         } else if (err === ufork.E_MSG_LIM) {
-            sponsor.x = core.u_fixnum(16);
+            sponsor.x = ufork.fixnum(16);
         } else if (err === ufork.E_CPU_LIM) {
-            sponsor.y = core.u_fixnum(64);
+            sponsor.y = ufork.fixnum(64);
         } else {
             // processor error
             return err;
@@ -66,7 +66,7 @@ function ufork_run() {
         console.log("refilled:", core.u_disasm(spn));
     }
     setTimeout(function wakeup() {  // run again on a subsequent turn
-        console.log("RUN:", core.u_print(sig));
+        console.log("RUN:", ufork.print(sig));
         ufork_run();
     }, 0);
 }
@@ -163,7 +163,7 @@ function boot(entrypoint, awp_store) {
 // provide it to the uFork program as a boot capability.
 
     const petname = room_petname(awp_store);
-    core.h_install(core.u_fixnum(room_key), core.u_fixnum(petname));
+    core.h_install(ufork.fixnum(room_key), ufork.fixnum(petname));
     core.h_boot(entrypoint);
     return ufork_run();
 }

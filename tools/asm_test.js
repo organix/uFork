@@ -35,11 +35,11 @@ function asm_test(module_url, time_limit = 5000) {
     }
 
     function run_ufork() {
-        const status = core.u_fix_to_i32(core.h_run_loop(0));
+        const status = ufork.fix_to_i32(core.h_run_loop(0));
         if (status === ufork.E_OK) {
             return log(ufork.LOG_DEBUG, "IDLE");
         }
-        log(ufork.LOG_WARN, "FAULT", core.u_fault_msg(status));
+        log(ufork.LOG_WARN, "FAULT", ufork.fault_msg(status));
         the_callback({pass: false, logs});
     }
 
@@ -56,7 +56,7 @@ function asm_test(module_url, time_limit = 5000) {
             log(
                 ufork.LOG_WARN,
                 "AUDIT",
-                core.u_fault_msg(core.u_fix_to_i32(code)),
+                ufork.fault_msg(ufork.fix_to_i32(code)),
                 core.u_pprint(evidence)
             );
         },
@@ -93,11 +93,11 @@ function asm_test(module_url, time_limit = 5000) {
 
 // Provide generous resource limits.
 
-                const sponsor_ptr = core.u_ramptr(ufork.SPONSOR_OFS);
+                const sponsor_ptr = ufork.ramptr(ufork.SPONSOR_OFS);
                 const sponsor = core.u_read_quad(sponsor_ptr);
-                sponsor.t = core.u_fixnum(4096);    // memory
-                sponsor.x = core.u_fixnum(256);     // events
-                sponsor.y = core.u_fixnum(4096);    // cycles
+                sponsor.t = ufork.fixnum(4096);    // memory
+                sponsor.x = ufork.fixnum(256);     // events
+                sponsor.y = ufork.fixnum(4096);    // cycles
                 core.u_write_quad(sponsor_ptr, sponsor);
 
 // Set a timeout timer and run the test suite.

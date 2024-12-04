@@ -106,12 +106,12 @@ function update_element_value(el, val) {
 }
 function update_rom_monitor() {
     let a = [];
-    const top = core.u_rawofs(core.h_rom_top());
+    const top = ufork.rawofs(core.h_rom_top());
     let ofs = 0;
     while (ofs < top) {
-        const ptr = core.u_romptr(ofs);
+        const ptr = ufork.romptr(ofs);
         const quad = core.u_read_quad(ptr);
-        const line = core.u_print(ptr).padStart(9) + ": " + core.u_quad_print(quad);
+        const line = ufork.print(ptr).padStart(9) + ": " + core.u_quad_print(quad);
         a.push(line);
         ofs += 1;
     }
@@ -119,12 +119,12 @@ function update_rom_monitor() {
 }
 function update_ram_monitor() {
     let a = [];
-    const top = core.u_rawofs(core.h_ram_top());
+    const top = ufork.rawofs(core.h_ram_top());
     let ofs = 0;
     while (ofs < top) {
-        const ptr = core.u_ramptr(ofs);
+        const ptr = ufork.ramptr(ofs);
         const color = core.h_gc_color(ptr);
-        const line = core.u_disasm(ptr) + " -- " + core.u_print(color);
+        const line = core.u_disasm(ptr) + " -- " + ufork.print(color);
         a.push(line);
         ofs += 1;
     }
@@ -154,7 +154,7 @@ function update_source_monitor(ip) {
     $code.innerHTML = "";
     const sourcemap = core.u_sourcemap(ip);
     if (
-        core.u_is_rom(ip)
+        ufork.is_rom(ip)
         && ip !== ufork.UNDEF_RAW
         && sourcemap?.text !== undefined
     ) {
@@ -222,37 +222,37 @@ function draw_mem_graph(free_cnt) {
 function draw_host() {
 //    update_blob_monitor();
     update_ram_monitor();
-    const top = core.u_rawofs(core.h_ram_top());
+    const top = ufork.rawofs(core.h_ram_top());
     if (top > ram_max) {
         ram_max = top;
     }
     update_element_text($ram_max, ram_max.toString());
-    const memory_quad = core.u_read_quad(core.u_ramptr(ufork.MEMORY_OFS));
+    const memory_quad = core.u_read_quad(ufork.ramptr(ufork.MEMORY_OFS));
     const ram_top = memory_quad.t;
     const ram_next = memory_quad.x;
     const ram_free = memory_quad.y;
     const gc_root = memory_quad.z;
     const gc_state = core.h_gc_state();
-    const rom_top = core.u_rawofs(core.h_rom_top());
-    update_element_text($ram_top, core.u_print(ram_top));
-    update_element_text($ram_next, core.u_print(ram_next));
-    update_element_text($ram_free, core.u_print(ram_free));
-    update_element_text($gc_root, core.u_print(gc_root));
-    update_element_text($gc_state, core.u_print(gc_state));
-    update_element_text($rom_top, core.u_print(rom_top));
+    const rom_top = ufork.rawofs(core.h_rom_top());
+    update_element_text($ram_top, ufork.print(ram_top));
+    update_element_text($ram_next, ufork.print(ram_next));
+    update_element_text($ram_free, ufork.print(ram_free));
+    update_element_text($gc_root, ufork.print(gc_root));
+    update_element_text($gc_state, ufork.print(gc_state));
+    update_element_text($rom_top, ufork.print(rom_top));
     update_element_text($mem_pages, core.u_mem_pages());
-    draw_mem_graph(core.u_rawofs(ram_free));
-    const ddeque_quad = core.u_read_quad(core.u_ramptr(ufork.DDEQUE_OFS));
+    draw_mem_graph(ufork.rawofs(ram_free));
+    const ddeque_quad = core.u_read_quad(ufork.ramptr(ufork.DDEQUE_OFS));
     const e_first = ddeque_quad.t;
     //const e_last = ddeque_quad.x;
     const k_first = ddeque_quad.y;
     //const k_last = ddeque_quad.z;
     let p;
     let a;
-    if (core.u_in_mem(k_first)) {
+    if (ufork.in_mem(k_first)) {
         p = k_first;
         a = [];
-        while (core.u_in_mem(p)) {
+        while (ufork.in_mem(p)) {
             a.push(core.u_disasm(p));  // disasm continuation
             p = core.u_next(p);
         }
@@ -260,10 +260,10 @@ function draw_host() {
     } else {
         update_element_text($kqueue, "--");
     }
-    if (core.u_in_mem(e_first)) {
+    if (ufork.in_mem(e_first)) {
         p = e_first;
         a = [];
-        while (core.u_in_mem(p)) {
+        while (ufork.in_mem(p)) {
             a.push(core.u_disasm(p));  // disasm event
             p = core.u_next(p);
         }
@@ -275,16 +275,16 @@ function draw_host() {
     const ip = cont_quad.t;
     const sp = cont_quad.x;
     const ep = cont_quad.y;
-    if (core.u_in_mem(ip)) {
+    if (ufork.in_mem(ip)) {
         let n = 5;
         p = ip;
         a = [];
-        while ((n > 0) && core.u_in_mem(p)) {
+        while ((n > 0) && ufork.in_mem(p)) {
             a.push(core.u_disasm(p));
             p = core.u_next(p);
             n -= 1;
         }
-        if (core.u_in_mem(p)) {
+        if (ufork.in_mem(p)) {
             a.push("...");
         }
         update_element_text($instr, a.join("\n"));
@@ -292,10 +292,10 @@ function draw_host() {
         update_element_text($instr, "--");
     }
     update_source_monitor(ip);
-    if (core.u_in_mem(sp)) {
+    if (ufork.in_mem(sp)) {
         p = sp;
         a = [];
-        while (core.u_in_mem(p)) {
+        while (ufork.in_mem(p)) {
             //a.push(core.h_disasm(p));  // disasm stack Pair
             //a.push(core.h_print(core.h_car(p)));  // print stack item
             a.push(core.u_pprint(core.h_car(p)));  // pretty-print stack item
@@ -311,15 +311,15 @@ function draw_host() {
     const sponsor = event_quad.t;
     const target = event_quad.x;
     const message = event_quad.y;
-    const actor = core.u_read_quad(core.u_cap_to_ptr(target));
+    const actor = core.u_read_quad(ufork.cap_to_ptr(target));
     const effect = actor.z;
     const state = actor.y;
     update_element_text($self, core.u_disasm(target));
     //update_element_text($effect, core.h_disasm(effect));
-    if (core.u_in_mem(effect)) {
+    if (ufork.in_mem(effect)) {
         p = effect;
         a = [];
-        while (core.u_in_mem(p)) {
+        while (ufork.in_mem(p)) {
             a.push(core.u_disasm(p));  // disasm event
             p = core.u_next(p);
         }
@@ -331,17 +331,17 @@ function draw_host() {
     update_element_text($msg, core.u_pprint(message));  // pretty-print message
     // sponsor details
     let err = ufork.E_OK;
-    let spn = core.u_ramptr(ufork.SPONSOR_OFS);
+    let spn = ufork.ramptr(ufork.SPONSOR_OFS);
     let spn_quad = core.u_read_quad(spn);
-    if (!core.u_is_fix(spn_quad.z) && core.u_is_ram(sponsor)) {
+    if (!ufork.is_fix(spn_quad.z) && ufork.is_ram(sponsor)) {
         // if no error and current continuation valid, show event sponsor...
         spn = sponsor;
         spn_quad = core.u_read_quad(spn);
-        if (core.u_is_fix(spn_quad.z)) {
+        if (ufork.is_fix(spn_quad.z)) {
             // display idle (yellow) indicator
             $fault_led.setAttribute("fill", "#FF3");
             $fault_led.setAttribute("stroke", "#990");
-            err = core.u_fix_to_i32(spn_quad.z);
+            err = ufork.fix_to_i32(spn_quad.z);
         } else {
             // display run (green) indicator
             $fault_led.setAttribute("fill", "#0F3");
@@ -351,14 +351,14 @@ function draw_host() {
         // display fault (red) indicator
         $fault_led.setAttribute("fill", "#F30");
         $fault_led.setAttribute("stroke", "#900");
-        err = core.u_fix_to_i32(spn_quad.z);
+        err = ufork.fix_to_i32(spn_quad.z);
     }
-    $fault_ctl.title = core.u_fault_msg(err);
-    update_element_text($sponsor_ident, core.u_print(spn));
-    update_element_value($sponsor_memory, core.u_fix_to_i32(spn_quad.t));
-    update_element_value($sponsor_events, core.u_fix_to_i32(spn_quad.x));
-    update_element_value($sponsor_cycles, core.u_fix_to_i32(spn_quad.y));
-    update_element_text($sponsor_signal, core.u_print(spn_quad.z));
+    $fault_ctl.title = ufork.fault_msg(err);
+    update_element_text($sponsor_ident, ufork.print(spn));
+    update_element_value($sponsor_memory, ufork.fix_to_i32(spn_quad.t));
+    update_element_value($sponsor_events, ufork.fix_to_i32(spn_quad.x));
+    update_element_value($sponsor_cycles, ufork.fix_to_i32(spn_quad.y));
+    update_element_text($sponsor_signal, ufork.print(spn_quad.z));
     $revert_button.disabled = !fault;
     enable_next();
 }
@@ -376,9 +376,9 @@ function gc_host() {
 function single_step() {
     fault = false;
     const sig = core.h_run_loop(1);
-    if (core.u_is_fix(sig)) {
-        const err = core.u_fix_to_i32(sig);
-        const msg = core.u_fault_msg(err);
+    if (ufork.is_fix(sig)) {
+        const err = ufork.fix_to_i32(sig);
+        const msg = ufork.fault_msg(err);
         fault = true;
         console.log("single_step:", err, "=", msg);
     }
@@ -550,14 +550,14 @@ function current_sponsor() {
     if (cc) {
         return cc.spn;
     }
-    return core.u_ramptr(ufork.SPONSOR_OFS);
+    return ufork.ramptr(ufork.SPONSOR_OFS);
 }
 $sponsor_memory.oninput = function () {
     const num = Number($sponsor_memory.value);
     if (Number.isSafeInteger(num) && (num >= 0)) {
         const spn = current_sponsor();
         const sponsor = core.u_read_quad(spn);
-        sponsor.t = core.u_fixnum(num);
+        sponsor.t = ufork.fixnum(num);
         core.u_write_quad(spn, sponsor);
         draw_host();
     }
@@ -567,7 +567,7 @@ $sponsor_events.oninput = function () {
     if (Number.isSafeInteger(num) && (num >= 0)) {
         const spn = current_sponsor();
         const sponsor = core.u_read_quad(spn);
-        sponsor.x = core.u_fixnum(num);
+        sponsor.x = ufork.fixnum(num);
         core.u_write_quad(spn, sponsor);
         draw_host();
     }
@@ -577,7 +577,7 @@ $sponsor_cycles.oninput = function () {
     if (Number.isSafeInteger(num) && (num >= 0)) {
         const spn = current_sponsor();
         const sponsor = core.u_read_quad(spn);
-        sponsor.y = core.u_fixnum(num);
+        sponsor.y = ufork.fixnum(num);
         core.u_write_quad(spn, sponsor);
         draw_host();
     }
@@ -627,7 +627,7 @@ core = ufork.make_core({
     on_audit(code, evidence, ep, kp) {
         console.error(
             "AUDIT:",
-            core.u_fault_msg(core.u_fix_to_i32(code)),
+            ufork.fault_msg(ufork.fix_to_i32(code)),
             core.u_pprint(evidence),
             core.u_pprint(ep),
             core.u_pprint(kp)

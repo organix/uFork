@@ -24,14 +24,14 @@ const wasm_url = import.meta.resolve("https://ufork.org/wasm/ufork.wasm");
 const demo_url = import.meta.resolve("./blob_dev_demo.asm");
 
 function blob_dev(core, make_ddev) {
-    const sponsor = core.u_ramptr(ufork.SPONSOR_OFS);
+    const sponsor = ufork.ramptr(ufork.SPONSOR_OFS);
     let ddev;
     let blobs = [];
 
     function h_alloc_blob(size_or_bytes) {
         const next_blob_nr = blobs.length;
         const bytes = new Uint8Array(size_or_bytes);
-        const tag = core.u_fixnum(next_blob_nr);
+        const tag = ufork.fixnum(next_blob_nr);
         const cap = ddev.h_reserve_proxy(tag);
         if (core.u_trace !== undefined) {
             core.u_trace(`alloc blob #${next_blob_nr} size ${bytes.length}`);
@@ -50,16 +50,16 @@ function blob_dev(core, make_ddev) {
     ddev = make_ddev(
         function on_event_stub(event_stub_ptr) {
             const event_stub = core.u_read_quad(event_stub_ptr);
-            const target = core.u_read_quad(core.u_cap_to_ptr(event_stub.x));
+            const target = core.u_read_quad(ufork.cap_to_ptr(event_stub.x));
             const tag = ddev.u_tag(target.y);
             const event = core.u_read_quad(event_stub.y);
             const message = event.y;
             const customer = core.u_nth(message, 1);
-            if (!core.u_is_cap(customer)) {
+            if (!ufork.is_cap(customer)) {
                 return ufork.E_NOT_CAP;
             }
-            if (core.u_is_fix(tag)) {
-                const blob_nr = core.u_fix_to_i32(tag);
+            if (ufork.is_fix(tag)) {
+                const blob_nr = ufork.fix_to_i32(tag);
                 const bytes = blobs[blob_nr]?.bytes;
                 if (bytes === undefined) {
                     return ufork.E_BOUNDS;
@@ -70,16 +70,16 @@ function blob_dev(core, make_ddev) {
 
 // Size request.
 
-                    reply = core.u_fixnum(bytes.length);
-                } else if (core.u_is_fix(request)) {
+                    reply = ufork.fixnum(bytes.length);
+                } else if (ufork.is_fix(request)) {
 
 // Read request.
 
-                    const read_at = core.u_fix_to_i32(request);
+                    const read_at = ufork.fix_to_i32(request);
                     const read_byte = bytes[read_at];
                     reply = (
                         read_byte !== undefined
-                        ? core.u_fixnum(bytes[read_at])
+                        ? ufork.fixnum(bytes[read_at])
                         : ufork.UNDEF_RAW
                     );
                 } else {
@@ -88,14 +88,14 @@ function blob_dev(core, make_ddev) {
 
                     const offset = core.u_nth(message, 2);
                     const value = core.u_nth(message, -2);
-                    if (!core.u_is_fix(offset) || !core.u_is_fix(value)) {
+                    if (!ufork.is_fix(offset) || !ufork.is_fix(value)) {
                         return ufork.E_NOT_FIX;
                     }
-                    const byte = core.u_fix_to_i32(value);
+                    const byte = ufork.fix_to_i32(value);
                     if (byte < 0 || byte > 255) {
                         return ufork.E_BOUNDS;
                     }
-                    const write_at = core.u_fix_to_i32(offset);
+                    const write_at = ufork.fix_to_i32(offset);
                     bytes[write_at] = byte;
                     reply = (
                         bytes[write_at] !== undefined // in bounds?
@@ -118,10 +118,10 @@ function blob_dev(core, make_ddev) {
 // Allocation request.
 
             const size_raw = core.u_nth(message, -1);
-            if (!core.u_is_fix(size_raw)) {
+            if (!ufork.is_fix(size_raw)) {
                 return ufork.E_NOT_FIX;
             }
-            const size = core.u_fix_to_i32(size_raw);
+            const size = ufork.fix_to_i32(size_raw);
             if (size < 0) {
                 return ufork.E_BOUNDS;
             }
@@ -140,10 +140,10 @@ function blob_dev(core, make_ddev) {
             return ufork.E_OK;
         },
         function on_drop_proxy(proxy_raw) {
-            const quad = core.u_read_quad(core.u_cap_to_ptr(proxy_raw));
+            const quad = core.u_read_quad(ufork.cap_to_ptr(proxy_raw));
             const tag = ddev.u_tag(quad.y);
-            if (core.u_is_fix(tag)) {
-                const blob_nr = core.u_fix_to_i32(tag);
+            if (ufork.is_fix(tag)) {
+                const blob_nr = ufork.fix_to_i32(tag);
                 delete blobs[blob_nr];
                 if (core.u_trace !== undefined) {
                     core.u_trace(`disposed blob #${blob_nr}`);
@@ -152,7 +152,7 @@ function blob_dev(core, make_ddev) {
         }
     );
     const dev_cap = ddev.h_reserve_proxy();
-    const dev_ptr = core.u_ramptr(ufork.BLOB_DEV_OFS);
+    const dev_ptr = ufork.ramptr(ufork.BLOB_DEV_OFS);
     const dev_id = core.u_read_quad(dev_ptr).x;
     core.h_install(dev_id, dev_cap, function on_dispose() {
         ddev.h_dispose();
@@ -169,7 +169,7 @@ function demo(log) {
     let core;
 
     function run_core() {
-        log("IDLE:", core.u_fault_msg(core.u_fix_to_i32(core.h_run_loop())));
+        log("IDLE:", ufork.fault_msg(ufork.fix_to_i32(core.h_run_loop())));
     }
 
     core = ufork.make_core({

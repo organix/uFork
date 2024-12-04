@@ -93,7 +93,7 @@ const core = ufork.make_core({
         console.log(
             "IDLE",
             store_name,
-            core.u_fault_msg(core.u_fix_to_i32(core.h_run_loop()))
+            ufork.fault_msg(ufork.fix_to_i32(core.h_run_loop()))
         );
     },
     on_log: console.log,
@@ -114,6 +114,6 @@ parseq.sequence([
             webscrypto: crypto.webcrypto
         });
         core.h_boot(asm_module.boot);
-        return core.u_fault_msg(core.u_fix_to_i32(core.h_run_loop()));
+        return ufork.fault_msg(ufork.fix_to_i32(core.h_run_loop()));
     })
 ])(console.log);

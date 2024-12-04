@@ -14,14 +14,14 @@ function svg_dev(core, make_ddev, on_draw) {
         const sponsor = event.t;
         const msg = event.y;
         const callback = core.u_nth(msg, 2);
-        if (!core.u_is_cap(callback)) {
+        if (!ufork.is_cap(callback)) {
             return ufork.E_NOT_CAP;
         }
         const code = core.u_nth(msg, -2);
-        if (!core.u_is_fix(code)) {
+        if (!ufork.is_fix(code)) {
             return ufork.E_NOT_FIX;
         }
-        on_code(core.u_fix_to_i32(code));
+        on_code(ufork.fix_to_i32(code));
         core.u_defer(function () {
             // send ack to callback
             core.h_release_stub(event_stub_ptr);
@@ -41,7 +41,7 @@ function svg_dev(core, make_ddev, on_draw) {
 
     const ddev = make_ddev(on_event_stub);
     const svg_proxy = ddev.h_reserve_proxy();
-    core.h_install(core.u_fixnum(svg_key), svg_proxy);
+    core.h_install(ufork.fixnum(svg_key), svg_proxy);
 }
 
 export default Object.freeze(svg_dev);

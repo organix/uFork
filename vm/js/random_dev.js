@@ -44,21 +44,21 @@ function random32(webcrypto, a, b) {
 // random32(crypto, -3, 2)
 
 function random_dev(core, webcrypto = crypto) {
-    const dev_ptr = core.u_ramptr(ufork.RANDOM_DEV_OFS);
-    const dev_cap = core.u_ptr_to_cap(dev_ptr);
+    const dev_ptr = ufork.ramptr(ufork.RANDOM_DEV_OFS);
+    const dev_cap = ufork.ptr_to_cap(dev_ptr);
     const dev_id = core.u_read_quad(dev_ptr).x;
     core.h_install(dev_id, dev_cap, undefined, {
         host_random(a_raw, b_raw) {
-            return core.u_fixnum(random32(
+            return ufork.fixnum(random32(
                 webcrypto,
                 (
-                    core.u_is_fix(a_raw)
-                    ? core.u_fix_to_i32(a_raw)
+                    ufork.is_fix(a_raw)
+                    ? ufork.fix_to_i32(a_raw)
                     : undefined
                 ),
                 (
-                    core.u_is_fix(b_raw)
-                    ? core.u_fix_to_i32(b_raw)
+                    ufork.is_fix(b_raw)
+                    ? ufork.fix_to_i32(b_raw)
                     : undefined
                 )
             ));

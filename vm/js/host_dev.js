@@ -21,13 +21,13 @@ function host_dev(core) {
 
         const event_stub = core.u_read_quad(event_stub_ptr);
         const event = core.u_read_quad(event_stub.y);
-        const proxy = core.u_read_quad(core.u_cap_to_ptr(event.x));
+        const proxy = core.u_read_quad(ufork.cap_to_ptr(event.x));
         const handle = proxy.y;
         const key = core.u_nth(handle, 1);
-        if (!core.u_is_fix(key)) {
+        if (!ufork.is_fix(key)) {
             return ufork.E_NOT_FIX;
         }
-        const dynamic_dev = dynamic_devs[core.u_fix_to_i32(key)];
+        const dynamic_dev = dynamic_devs[ufork.fix_to_i32(key)];
         if (dynamic_dev === undefined) {
             return ufork.E_BOUNDS;
         }
@@ -38,11 +38,11 @@ function host_dev(core) {
 
 // A proxy has been garbage collected. Inform it's dynamic device.
 
-        const quad = core.u_read_quad(core.u_cap_to_ptr(proxy_raw));
+        const quad = core.u_read_quad(ufork.cap_to_ptr(proxy_raw));
         const handle = quad.y;
         const key = core.u_nth(handle, 1);
-        if (core.u_is_fix(key)) {
-            const dynamic_dev = dynamic_devs[core.u_fix_to_i32(key)];
+        if (ufork.is_fix(key)) {
+            const dynamic_dev = dynamic_devs[ufork.fix_to_i32(key)];
             if (typeof dynamic_dev?.on_drop_proxy === "function") {
                 dynamic_dev.on_drop_proxy(proxy_raw);
             }
@@ -51,13 +51,13 @@ function host_dev(core) {
 
 // Install the host device.
 
-    const dev_ptr = core.u_ramptr(ufork.HOST_DEV_OFS);
-    const dev_cap = core.u_ptr_to_cap(dev_ptr);
+    const dev_ptr = ufork.ramptr(ufork.HOST_DEV_OFS);
+    const dev_cap = ufork.ptr_to_cap(dev_ptr);
     const dev_id = core.u_read_quad(dev_ptr).x;
     core.h_install(dev_id, dev_cap, undefined, {
         host(raw) {
             return (
-                core.u_is_cap(raw)
+                ufork.is_cap(raw)
                 ? drop_proxy(raw)
                 : handle_event(raw)
             );
@@ -70,12 +70,12 @@ function host_dev(core) {
         dynamic_devs[key] = {on_event_stub, on_drop_proxy};
 
         function h_reserve_proxy(tag_raw = ufork.UNDEF_RAW) {
-            return core.u_ptr_to_cap(core.h_reserve_ram({
+            return ufork.ptr_to_cap(core.h_reserve_ram({
                 t: ufork.PROXY_T,
                 x: dev_cap,
                 y: core.h_reserve_ram({
                     t: ufork.PAIR_T,
-                    x: core.u_fixnum(key),
+                    x: ufork.fixnum(key),
                     y: tag_raw
                 })
             }));
@@ -93,15 +93,15 @@ function host_dev(core) {
 
 // Returns true if this dynamic device issued the proxy via 'h_reserve_proxy'.
 
-            if (core.u_is_cap(raw)) {
-                const quad = core.u_read_quad(core.u_cap_to_ptr(raw));
+            if (ufork.is_cap(raw)) {
+                const quad = core.u_read_quad(ufork.cap_to_ptr(raw));
                 const dev = quad.x;
                 const handle = quad.y;
                 const key_raw = core.u_nth(handle, 1);
                 return (
                     quad.t === ufork.PROXY_T
                     && dev === dev_cap
-                    && core.u_fix_to_i32(key_raw) === key
+                    && ufork.fix_to_i32(key_raw) === key
                 );
             }
             return false;
@@ -144,7 +144,7 @@ function demo(log) {
             function on_event_stub(ptr) {
                 const event_stub = core.u_read_quad(ptr);
                 const target = core.u_read_quad(
-                    core.u_cap_to_ptr(event_stub.x)
+                    ufork.cap_to_ptr(event_stub.x)
                 );
                 const event = core.u_read_quad(event_stub.y);
                 log(
@@ -155,7 +155,7 @@ function demo(log) {
                 );
             },
             function on_drop_proxy(proxy_raw) {
-                const quad = core.u_read_quad(core.u_cap_to_ptr(proxy_raw));
+                const quad = core.u_read_quad(ufork.cap_to_ptr(proxy_raw));
                 const tag = ddev.u_tag(quad.y);
                 log("on_drop_proxy", core.u_pprint(tag));
             }
@@ -164,7 +164,7 @@ function demo(log) {
         let proxy = ddev.h_reserve_proxy(ufork.TRUE_RAW);
         let stub = ddev.h_reserve_stub(proxy);
         core.h_install(
-            core.u_fixnum(proxy_key),
+            ufork.fixnum(proxy_key),
             proxy,
             function on_dispose() {
                 log("disposing");
@@ -178,7 +178,7 @@ function demo(log) {
     }
 
     function run_core() {
-        log("IDLE:", core.u_fault_msg(core.u_fix_to_i32(core.h_run_loop())));
+        log("IDLE:", ufork.fault_msg(ufork.fix_to_i32(core.h_run_loop())));
     }
 
     core = ufork.make_core({

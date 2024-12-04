@@ -66,7 +66,7 @@ function awp_dev({
     stores = [],
     webcrypto = crypto // Node.js does not have a 'crypto' global as of v19.
 }) {
-    const sponsor = core.u_ramptr(ufork.SPONSOR_OFS);
+    const sponsor = ufork.ramptr(ufork.SPONSOR_OFS);
     const once_fwd_beh = core.h_load(once_fwd_ir).beh;
 
     let ddev;                                 // the dynamic device
@@ -100,7 +100,7 @@ function awp_dev({
         const remote_tag = next_proxy_tag;
         next_proxy_tag += 1;
         proxy_keys[remote_tag] = proxy_key;
-        const raw = ddev.h_reserve_proxy(core.u_fixnum(remote_tag));
+        const raw = ddev.h_reserve_proxy(ufork.fixnum(remote_tag));
         proxies[proxy_key] = {raw, swiss, store, petname};
         return raw;
     }
@@ -160,24 +160,24 @@ function awp_dev({
             if (raw === ufork.NIL_RAW) {
                 return {value: []};
             }
-            if (core.u_is_fix(raw)) {
-                return {value: core.u_fix_to_i32(raw)};
+            if (ufork.is_fix(raw)) {
+                return {value: ufork.fix_to_i32(raw)};
             }
-            if (core.u_is_ptr(raw)) {
+            if (ufork.is_ptr(raw)) {
                 const pair = core.u_read_quad(raw);
                 if (pair.t === ufork.PAIR_T) {
                     return {value: [pair.x, pair.y]};
                 }
             }
-            if (core.u_is_cap(raw)) {
-                const quad = core.u_read_quad(core.u_cap_to_ptr(raw));
+            if (ufork.is_cap(raw)) {
+                const quad = core.u_read_quad(ufork.cap_to_ptr(raw));
                 const tag_raw = ddev.u_tag(quad.y);
-                if (ddev.u_owns_proxy(raw) && core.u_is_fix(tag_raw)) {
+                if (ddev.u_owns_proxy(raw) && ufork.is_fix(tag_raw)) {
 
 // The proxy's tag is a fixnum only if the proxy refers to a remote actor.
 // Rather than allocating it a Swiss number, pass on its details directly.
 
-                    const remote_tag = core.u_fix_to_i32(tag_raw);
+                    const remote_tag = ufork.fix_to_i32(tag_raw);
                     const proxy = proxies[proxy_keys[remote_tag]];
                     if (proxy !== undefined) {
                         const acquaintance = proxy.store.acquaintances[
@@ -244,7 +244,7 @@ function awp_dev({
                 object.natural !== undefined
                 || Number.isSafeInteger(object.value)
             ) {
-                return core.u_fixnum(canonical());
+                return ufork.fixnum(canonical());
             }
             if (typeof object.meta === "object") {
                 return get_proxy(
@@ -317,7 +317,7 @@ function awp_dev({
                         x: greeting_callback,
                         y: core.h_reserve_ram({
                             t: ufork.PAIR_T,
-                            x: core.u_fixnum(petname),
+                            x: ufork.fixnum(petname),
                             y: hello_data
                         })
                     })
@@ -473,7 +473,7 @@ function awp_dev({
 
 // Validate the message.
 
-        if (!core.u_is_cap(intro_callback)) {
+        if (!ufork.is_cap(intro_callback)) {
             if (core.u_warn !== undefined) {
                 core.u_warn(
                     "#intro",
@@ -483,7 +483,7 @@ function awp_dev({
             }
             return ufork.E_NOT_CAP;
         }
-        if (!core.u_is_fix(store_fix)) {
+        if (!ufork.is_fix(store_fix)) {
             if (core.u_warn !== undefined) {
                 core.u_warn(
                     "#intro",
@@ -493,7 +493,7 @@ function awp_dev({
             }
             return ufork.E_NOT_FIX;
         }
-        if (!core.u_is_fix(petname_fix)) {
+        if (!ufork.is_fix(petname_fix)) {
             if (core.u_warn !== undefined) {
                 core.u_warn(
                     "#intro",
@@ -503,8 +503,8 @@ function awp_dev({
             }
             return ufork.E_NOT_FIX;
         }
-        const store_nr = core.u_fix_to_i32(store_fix);
-        const petname = core.u_fix_to_i32(petname_fix);
+        const store_nr = ufork.fix_to_i32(store_fix);
+        const petname = ufork.fix_to_i32(petname_fix);
         core.u_defer(function () {
             core.h_release_stub(event_stub_ptr);
 
@@ -521,7 +521,7 @@ function awp_dev({
                     y: core.h_reserve_ram({
                         t: ufork.PAIR_T,
                         x: ufork.FALSE_RAW,
-                        y: core.u_fixnum(
+                        y: ufork.fixnum(
                             store === undefined
                             ? E_NO_STORE
                             : E_NO_ACQUAINTANCE
@@ -530,7 +530,7 @@ function awp_dev({
                 }));
                 return resume();
             }
-            const callback_fwd = core.u_ptr_to_cap(core.h_reserve_ram({
+            const callback_fwd = ufork.ptr_to_cap(core.h_reserve_ram({
                 t: ufork.ACTOR_T,
                 x: once_fwd_beh,
                 y: intro_callback
@@ -562,7 +562,7 @@ function awp_dev({
                     y: core.h_reserve_ram({
                         t: ufork.PAIR_T,
                         x: ufork.FALSE_RAW,
-                        y: core.u_fixnum(E_CONNECTION_LOST)
+                        y: ufork.fixnum(E_CONNECTION_LOST)
                     })
                 }));
             });
@@ -581,7 +581,7 @@ function awp_dev({
 
 // Validate the message.
 
-        if (!core.u_is_cap(listen_callback)) {
+        if (!ufork.is_cap(listen_callback)) {
             if (core.u_warn !== undefined) {
                 core.u_warn(
                     "#listen",
@@ -591,7 +591,7 @@ function awp_dev({
             }
             return ufork.E_NOT_CAP;
         }
-        if (!core.u_is_fix(store_fix)) {
+        if (!ufork.is_fix(store_fix)) {
             if (core.u_warn !== undefined) {
                 core.u_warn(
                     "#listen",
@@ -601,7 +601,7 @@ function awp_dev({
             }
             return ufork.E_NOT_FIX;
         }
-        if (!core.u_is_cap(greeter)) {
+        if (!ufork.is_cap(greeter)) {
             if (core.u_warn !== undefined) {
                 core.u_warn(
                     "#listen",
@@ -632,12 +632,12 @@ function awp_dev({
             return resume();
         }
         core.u_defer(function () {
-            const store = stores[core.u_fix_to_i32(store_fix)];
+            const store = stores[ufork.fix_to_i32(store_fix)];
             if (store === undefined) {
                 return resolve(core.h_reserve_ram({
                     t: ufork.PAIR_T,
                     x: ufork.FALSE_RAW,
-                    y: core.u_fixnum(E_NO_STORE)
+                    y: ufork.fixnum(E_NO_STORE)
                 }));
             }
             // TODO send cancel to to_cancel
@@ -675,7 +675,7 @@ function awp_dev({
                         return resolve(core.h_reserve_ram({
                             t: ufork.PAIR_T,
                             x: ufork.FALSE_RAW,
-                            y: core.u_fixnum(E_LISTEN_FAIL)
+                            y: ufork.fixnum(E_LISTEN_FAIL)
                         }));
                     }
 
@@ -687,7 +687,7 @@ function awp_dev({
                         return resolve(core.h_reserve_ram({
                             t: ufork.PAIR_T,
                             x: ufork.FALSE_RAW,
-                            y: core.u_fixnum(E_ALREADY_LISTENING)
+                            y: ufork.fixnum(E_ALREADY_LISTENING)
                         }));
                     }
 
@@ -717,7 +717,7 @@ function awp_dev({
                     const stop_proxy = ddev.h_reserve_proxy(
                         core.h_reserve_ram({
                             t: ufork.PAIR_T,
-                            x: core.u_fixnum(stop_tag),
+                            x: ufork.fixnum(stop_tag),
                             y: ufork.NIL_RAW
                         })
                     );
@@ -756,13 +756,13 @@ function awp_dev({
 // Inspect the event target. If it is a proxy, check if it is a stop capability
 // or a reference to a remote actor.
 
-            const target_quad = core.u_read_quad(core.u_cap_to_ptr(event.x));
+            const target_quad = core.u_read_quad(ufork.cap_to_ptr(event.x));
             const tag_raw = ddev.u_tag(target_quad.y);
 
 // Remote actor proxies have a fixnum tag.
 
-            if (core.u_is_fix(tag_raw)) {
-                const remote_tag = core.u_fix_to_i32(tag_raw);
+            if (ufork.is_fix(tag_raw)) {
+                const remote_tag = ufork.fix_to_i32(tag_raw);
                 core.u_defer(function () {
                     const proxy = proxies[proxy_keys[remote_tag]];
                     if (proxy !== undefined) {
@@ -781,9 +781,9 @@ function awp_dev({
 // "Stop listening" proxy tags are a wrapped fixnum.
 
             const stop_tag_raw = core.u_nth(tag_raw, 1);
-            if (core.u_is_fix(stop_tag_raw)) {
+            if (ufork.is_fix(stop_tag_raw)) {
                 core.u_defer(function () {
-                    const stop_tag = core.u_fix_to_i32(stop_tag_raw);
+                    const stop_tag = ufork.fix_to_i32(stop_tag_raw);
                     const listener_key = listener_keys[stop_tag];
                     if (listener_key !== undefined) {
                         const listener = listeners[listener_key];
@@ -802,13 +802,13 @@ function awp_dev({
 
             const tag = core.u_nth(message, 1);
             const method_array = [intro, listen];
-            const method = method_array[core.u_fix_to_i32(tag)];
+            const method = method_array[ufork.fix_to_i32(tag)];
             if (method === undefined) {
                 if (core.u_warn !== undefined) {
                     core.u_warn("not a tag", core.u_pprint(tag));
                 }
                 return (
-                    core.u_is_fix(tag)
+                    ufork.is_fix(tag)
                     ? ufork.E_BOUNDS
                     : ufork.E_NOT_FIX
                 );
@@ -824,14 +824,14 @@ function awp_dev({
 
 // A proxy has been garbage collected.
 
-            const quad = core.u_read_quad(core.u_cap_to_ptr(proxy_raw));
+            const quad = core.u_read_quad(ufork.cap_to_ptr(proxy_raw));
 
 // Is it a reference to a remote actor? If so, clean up any references to it and
 // inform the relevant party.
 
             const tag_raw = ddev.u_tag(quad.y);
-            if (core.u_is_fix(tag_raw)) {
-                const remote_tag = core.u_fix_to_i32(tag_raw);
+            if (ufork.is_fix(tag_raw)) {
+                const remote_tag = ufork.fix_to_i32(tag_raw);
                 const proxy_key = proxy_keys[remote_tag];
                 if (proxy_key !== undefined) {
 
@@ -848,7 +848,7 @@ function awp_dev({
 // we must reserve a stub to keep the capability from being released.
 
     const dev_cap = ddev.h_reserve_proxy(ufork.UNDEF_RAW);
-    const dev_id = core.u_fixnum(awp_key);
+    const dev_id = ufork.fixnum(awp_key);
     core.h_install(dev_id, dev_cap, function on_dispose() {
         Object.values(connections).forEach((connection) => connection.close());
         Object.values(listeners).forEach((listener) => listener.stop());
@@ -922,7 +922,7 @@ function demo({
                 stores
             });
             core.h_boot(asm_module.boot);
-            console.log("IDLE:", core.u_fault_msg(core.u_fix_to_i32(
+            console.log("IDLE:", ufork.fault_msg(ufork.fix_to_i32(
                 core.h_run_loop()
             )));
             return true;
@@ -969,7 +969,7 @@ if (import.meta.main) {
         wasm_url,
         on_wakeup(device_offset) {
             globalThis.console.log("WAKE:", device_offset);
-            globalThis.console.log("IDLE:", core.u_fault_msg(core.u_fix_to_i32(
+            globalThis.console.log("IDLE:", ufork.fault_msg(ufork.fix_to_i32(
                 core.h_run_loop()
             )));
         },

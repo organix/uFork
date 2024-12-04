@@ -30,7 +30,7 @@ function tcp_dev(
     addresses,
     transport = mock_transport()
 ) {
-    const sponsor = core.u_ramptr(ufork.SPONSOR_OFS);
+    const sponsor = ufork.ramptr(ufork.SPONSOR_OFS);
     let ddev;
 
 // Each element in the 'connections' array is either:
@@ -47,13 +47,13 @@ function tcp_dev(
     function encode_tag({listener_nr, conn_nr}) {
         return (
             listener_nr !== undefined
-            ? core.u_fixnum(-listener_nr - 1)
-            : core.u_fixnum(conn_nr)
+            ? ufork.fixnum(-listener_nr - 1)
+            : ufork.fixnum(conn_nr)
         );
     }
 
     function decode_tag(tag) {
-        const integer = core.u_fix_to_i32(tag);
+        const integer = ufork.fix_to_i32(tag);
         return (
             integer < 0
             ? {listener_nr: -1 - integer}
@@ -87,7 +87,7 @@ function tcp_dev(
         });
     }
 
-    function h_reply_fail(error = core.u_fixnum(ufork.E_FAIL)) {
+    function h_reply_fail(error = ufork.fixnum(ufork.E_FAIL)) {
         return core.h_reserve_ram({
             t: ufork.PAIR_T,
             x: ufork.FALSE_RAW,
@@ -237,16 +237,16 @@ function tcp_dev(
 
     ddev = make_ddev(function on_event_stub(event_stub_ptr) {
         const event_stub = core.u_read_quad(event_stub_ptr);
-        const target = core.u_read_quad(core.u_cap_to_ptr(event_stub.x));
+        const target = core.u_read_quad(ufork.cap_to_ptr(event_stub.x));
         const tag = ddev.u_tag(target.y);
         const event = core.u_read_quad(event_stub.y);
         const message = event.y;
         const callback = core.u_nth(message, 2);
         const request = core.u_nth(message, -2);
-        if (!core.u_is_cap(callback)) {
+        if (!ufork.is_cap(callback)) {
             return ufork.E_NOT_CAP;
         }
-        if (core.u_is_fix(tag)) {
+        if (ufork.is_fix(tag)) {
             const {listener_nr, conn_nr} = decode_tag(tag);
             if (listener_nr !== undefined) {
 
@@ -294,7 +294,7 @@ function tcp_dev(
                 });
                 return ufork.E_OK;
             }
-            if (core.u_is_cap(request)) {
+            if (ufork.is_cap(request)) {
 
 // Write request.
 
@@ -337,11 +337,11 @@ function tcp_dev(
             }
             return ufork.E_BOUNDS;
         }
-        if (core.u_is_fix(request)) {
+        if (ufork.is_fix(request)) {
 
 // Connect request.
 
-            const remote_petname = core.u_fix_to_i32(request);
+            const remote_petname = ufork.fix_to_i32(request);
             const remote_address = addresses[remote_petname];
             if (remote_address === undefined) {
                 return ufork.E_BOUNDS;
@@ -356,19 +356,19 @@ function tcp_dev(
 // Listen request.
 
         const bind_petname_raw = core.u_nth(request, 1);
-        if (!core.u_is_fix(bind_petname_raw)) {
+        if (!ufork.is_fix(bind_petname_raw)) {
             return ufork.E_NOT_FIX;
         }
-        const bind_address = addresses[core.u_fix_to_i32(bind_petname_raw)];
+        const bind_address = addresses[ufork.fix_to_i32(bind_petname_raw)];
         if (bind_address === undefined) {
             return ufork.E_BOUNDS;
         }
         const on_open = core.u_nth(request, 2);
-        if (!core.u_is_cap(on_open)) {
+        if (!ufork.is_cap(on_open)) {
             return ufork.E_NOT_CAP;
         }
         const on_close = core.u_nth(request, -2);
-        if (!core.u_is_cap(on_close)) {
+        if (!ufork.is_cap(on_close)) {
             return ufork.E_NOT_CAP;
         }
         core.u_defer(function () {
@@ -379,7 +379,7 @@ function tcp_dev(
         return ufork.E_OK;
     });
     const dev_cap = ddev.h_reserve_proxy();
-    const dev_id = core.u_fixnum(tcp_key);
+    const dev_id = ufork.fixnum(tcp_key);
     core.h_install(dev_id, dev_cap, function on_dispose() {
         if (core.u_trace !== undefined) {
             core.u_trace("TCP disposing all connections");
@@ -403,7 +403,7 @@ function demo(log) {
     let core;
 
     function run_core() {
-        log("IDLE:", core.u_fault_msg(core.u_fix_to_i32(core.h_run_loop())));
+        log("IDLE:", ufork.fault_msg(ufork.fix_to_i32(core.h_run_loop())));
     }
 
     core = ufork.make_core({
@@ -413,7 +413,7 @@ function demo(log) {
         on_audit(code, evidence) {
             log(
                 "AUDIT:",
-                core.u_fault_msg(core.u_fix_to_i32(code)),
+                ufork.fault_msg(ufork.fix_to_i32(code)),
                 core.u_pprint(evidence)
             );
         },

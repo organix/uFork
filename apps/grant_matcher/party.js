@@ -36,8 +36,8 @@ function party(asm_url, acquaintance_names = []) {
         wasm_url,
         on_wakeup() {
             const sig = core.h_run_loop(0);
-            const err = core.u_fix_to_i32(sig);
-            print("WAKE:", core.u_print(sig), core.u_fault_msg(err));
+            const err = ufork.fix_to_i32(sig);
+            print("WAKE:", ufork.print(sig), ufork.fault_msg(err));
         },
         on_log(log_level, ...values) {
             print(log_level, ...values);
@@ -83,8 +83,8 @@ function party(asm_url, acquaintance_names = []) {
             });
             core.h_boot(asm_module.boot);
             const sig = core.h_run_loop(0);
-            const err = core.u_fix_to_i32(sig);
-            print("IDLE:", core.u_print(sig), core.u_fault_msg(err));
+            const err = ufork.fix_to_i32(sig);
+            print("IDLE:", ufork.print(sig), ufork.fault_msg(err));
             return name;
         })
     ])(function callback(name, reason) {

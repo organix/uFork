@@ -359,6 +359,101 @@ const crlf_types = {
     actor: ACTOR_T
 };
 
+function fault_msg(error_code) {
+    return (
+        error_code < 0
+        ? error_messages[-error_code] ?? "unknown fault"
+        : error_messages[0]
+    );
+}
+
+function is_raw(value) {
+    return (Number.isSafeInteger(value) && value >= 0 && value < 2 ** 32);
+}
+
+function is_fix(raw) {
+    return ((raw & DIR_RAW) !== 0);
+}
+
+function is_cap(raw) {
+    return ((raw & (DIR_RAW | MUT_RAW | OPQ_RAW)) === (MUT_RAW | OPQ_RAW));
+}
+
+function is_rom(raw) {
+    return ((raw & (DIR_RAW | MUT_RAW)) === 0);
+}
+
+function is_ram(raw) {
+    return ((raw & (DIR_RAW | MUT_RAW | OPQ_RAW)) === MUT_RAW);
+}
+
+function is_ptr(raw) {
+    return is_rom(raw) || is_ram(raw);  // excludes ocaps
+}
+
+function fixnum(i32) {
+    return ((i32 | DIR_RAW) >>> 0);
+}
+
+function rawofs(raw) {
+    return (raw & ~MSK_RAW);
+}
+
+function romptr(ofs) {
+    return rawofs(ofs);
+}
+
+function ramptr(ofs) {
+    return (rawofs(ofs) | MUT_RAW);
+}
+
+function fix_to_i32(fixnum) {
+    return (fixnum << 1) >> 1;
+}
+
+function cap_to_ptr(cap) {
+    return (
+        (cap & (DIR_RAW | MUT_RAW)) === MUT_RAW  // mutable
+        ? cap & ~OPQ_RAW  // clear opaque bit
+        : UNDEF_RAW
+    );
+}
+
+function ptr_to_cap(ptr) {
+    return (
+        (ptr & (DIR_RAW | MUT_RAW)) === MUT_RAW  // mutable
+        ? ptr | OPQ_RAW  // set opaque bit
+        : UNDEF_RAW
+    );
+}
+
+function in_mem(ptr) {
+    return (ptr > FREE_T) && !is_fix(ptr);
+}
+
+function print(raw) {
+    if (typeof raw !== "number") {
+        return String(raw);
+    }
+    if (is_fix(raw)) {  // fixnum
+        const i32 = fix_to_i32(raw);
+        if (i32 < 0) {
+            return String(i32);
+        } else {
+            return "+" + i32;
+        }
+    }
+    if (raw < rom_label.length) {
+        return rom_label[raw];
+    }
+    const prefix = (
+        is_cap(raw)
+        ? "@"
+        : "^"
+    );
+    return prefix + raw.toString(16).padStart(8, "0");
+}
+
 function make_core({
     wasm_url,
     on_wakeup,
@@ -504,105 +599,20 @@ function make_core({
         }
     }
 
-    function u_fault_msg(error_code) {
-        return (
-            error_code < 0
-            ? error_messages[-error_code] ?? "unknown fault"
-            : error_messages[0]
-        );
-    }
-
-    function u_is_raw(value) {
-        return (Number.isSafeInteger(value) && value >= 0 && value < 2 ** 32);
-    }
-
-    function u_is_fix(raw) {
-        return ((raw & DIR_RAW) !== 0);
-    }
-
-    function u_is_cap(raw) {
-        return ((raw & (DIR_RAW | MUT_RAW | OPQ_RAW)) === (MUT_RAW | OPQ_RAW));
-    }
-
-    function u_is_rom(raw) {
-        return ((raw & (DIR_RAW | MUT_RAW)) === 0);
-    }
-
-    function u_is_ram(raw) {
-        return ((raw & (DIR_RAW | MUT_RAW | OPQ_RAW)) === MUT_RAW);
-    }
-
-    function u_is_ptr(raw) {
-        return u_is_rom(raw) || u_is_ram(raw);  // excludes ocaps
-    }
-
-    function u_fixnum(i32) {
-        return ((i32 | DIR_RAW) >>> 0);
-    }
-
-    function u_rawofs(raw) {
-        return (raw & ~MSK_RAW);
-    }
-
-    function u_romptr(ofs) {
-        return u_rawofs(ofs);
-    }
-
-    function u_ramptr(ofs) {
-        return (u_rawofs(ofs) | MUT_RAW);
-    }
-
-    function u_fix_to_i32(fix) {
-        return (fix << 1) >> 1;
-    }
-
-    function u_in_mem(ptr) {
-        return (ptr > FREE_T) && !u_is_fix(ptr);
-    }
-
-    function u_print(raw) {
-        if (typeof raw !== "number") {
-            return String(raw);
-        }
-        if (u_is_fix(raw)) {  // fixnum
-            const i32 = u_fix_to_i32(raw);
-            if (i32 < 0) {
-                return String(i32);
-            } else {
-                return "+" + i32;
-            }
-        }
-        if (raw < rom_label.length) {
-            return rom_label[raw];
-        }
-        const prefix = (
-            u_is_cap(raw)
-            ? "@"
-            : "^"
-        );
-        return prefix + raw.toString(16).padStart(8, "0");
-    }
-
     function u_cap_to_ptr(cap) {
-        if (cap === UNDEF_RAW) {
-            return UNDEF_RAW;
+        const ptr = cap_to_ptr(cap);
+        if (ptr === UNDEF_RAW) {
+            return bottom_out("cap_to_ptr: must be mutable", print(cap));
         }
-        return (
-            ((cap & (DIR_RAW | MUT_RAW)) === MUT_RAW)  // mutable
-            ? (cap & ~OPQ_RAW)  // clear opaque bit
-            : bottom_out("cap_to_ptr: must be mutable", u_print(cap))
-        );
+        return ptr;
     }
 
     function u_ptr_to_cap(ptr) {
-        if (ptr === UNDEF_RAW) {
-            return UNDEF_RAW;
+        const cap = ptr_to_cap(ptr);
+        if (cap === UNDEF_RAW) {
+            return bottom_out("ptr_to_cap: must be mutable", print(ptr));
         }
-        return (
-            ((ptr & (DIR_RAW | MUT_RAW)) === MUT_RAW)  // mutable
-            ? (ptr | OPQ_RAW)  // set opaque bit
-            : bottom_out("ptr_to_cap: must be mutable", u_print(ptr))
-        );
+        return cap;
     }
 
     function u_mem_pages() {
@@ -610,8 +620,8 @@ function make_core({
     }
 
     function u_read_quad(ptr) {
-        if (u_is_ram(ptr)) {
-            const ram_ofs = u_rawofs(ptr);
+        if (is_ram(ptr)) {
+            const ram_ofs = rawofs(ptr);
             if (ram_ofs < QUAD_RAM_MAX) {
                 const ram = new Uint32Array(u_memory(), u_ram_ofs(), (QUAD_RAM_MAX << 2));
                 const ram_idx = ram_ofs << 2;  // convert quad address to Uint32Array index
@@ -622,11 +632,11 @@ function make_core({
                     z: ram[ram_idx + 3]
                 };
             } else {
-                return bottom_out("h_read_quad: RAM ptr out of bounds", u_print(ptr));
+                return bottom_out("h_read_quad: RAM ptr out of bounds", print(ptr));
             }
         }
-        if (u_is_rom(ptr)) {
-            const rom_ofs = u_rawofs(ptr);
+        if (is_rom(ptr)) {
+            const rom_ofs = rawofs(ptr);
             if (rom_ofs < QUAD_ROM_MAX) {
                 const rom = new Uint32Array(u_memory(), u_rom_ofs(), (QUAD_ROM_MAX << 2));
                 const rom_idx = rom_ofs << 2;  // convert quad address to Uint32Array index
@@ -637,15 +647,15 @@ function make_core({
                     z: rom[rom_idx + 3]
                 };
             } else {
-                return bottom_out("h_read_quad: ROM ptr out of bounds", u_print(ptr));
+                return bottom_out("h_read_quad: ROM ptr out of bounds", print(ptr));
             }
         }
-        return bottom_out("h_read_quad: required ptr, got", u_print(ptr));
+        return bottom_out("h_read_quad: required ptr, got", print(ptr));
     }
 
     function u_write_quad(ptr, quad) {
-        if (u_is_ram(ptr)) {
-            const ofs = u_rawofs(ptr);
+        if (is_ram(ptr)) {
+            const ofs = rawofs(ptr);
             if (ofs < QUAD_RAM_MAX) {
                 const ram = new Uint32Array(u_memory(), u_ram_ofs(), (QUAD_RAM_MAX << 2));
                 const idx = ofs << 2;  // convert quad address to Uint32Array index
@@ -655,16 +665,16 @@ function make_core({
                 ram[idx + 3] = quad.z ?? UNDEF_RAW;
                 return;
             } else {
-                return bottom_out("h_write_quad: RAM ptr out of bounds", u_print(ptr));
+                return bottom_out("h_write_quad: RAM ptr out of bounds", print(ptr));
             }
         }
-        return bottom_out("h_write_quad: required RAM ptr, got", u_print(ptr));
+        return bottom_out("h_write_quad: required RAM ptr, got", print(ptr));
     }
 
     function u_current_continuation() {
-        const dd_quad = u_read_quad(u_ramptr(DDEQUE_OFS));
+        const dd_quad = u_read_quad(ramptr(DDEQUE_OFS));
         const k_first = dd_quad.y;
-        if (u_in_mem(k_first)) {
+        if (in_mem(k_first)) {
             const k_quad = u_read_quad(k_first);
             const e_quad = u_read_quad(k_quad.y);
             return {
@@ -690,7 +700,7 @@ function make_core({
         if (n === 0) {
             return list_ptr;
         }
-        if (!u_is_ptr(list_ptr)) {
+        if (!is_ptr(list_ptr)) {
             return UNDEF_RAW;
         }
         const pair = u_read_quad(list_ptr);
@@ -708,7 +718,7 @@ function make_core({
     }
 
     function u_next(ptr) {
-        if (u_is_ptr(ptr)) {
+        if (is_ptr(ptr)) {
             const quad = u_read_quad(ptr);
             const t = quad.t;
             if (t === INSTR_T) {
@@ -727,14 +737,14 @@ function make_core({
 
     function u_quad_print(quad) {
         let s = "[";
-        s += u_print(quad.t);
+        s += print(quad.t);
         s += ", ";
         if (quad.t === INSTR_T) {
-            const op = u_fix_to_i32(quad.x);  // translate opcode
+            const op = fix_to_i32(quad.x);  // translate opcode
             if (op < instr_label.length) {
                 s += instr_label[op];
                 s += ", ";
-                const imm = u_fix_to_i32(quad.y);  // translate immediate
+                const imm = fix_to_i32(quad.y);  // translate immediate
                 if ((quad.x === VM_DICT) && (imm < dict_imm_label.length)) {
                     s += dict_imm_label[imm];
                 } else if ((quad.x === VM_ALU) && (imm < alu_imm_label.length)) {
@@ -750,20 +760,20 @@ function make_core({
                 } else if ((quad.x === VM_SPONSOR) && (imm < sponsor_imm_label.length)) {
                     s += sponsor_imm_label[imm];
                 } else {
-                    s += u_print(quad.y);
+                    s += print(quad.y);
                 }
             } else {
-                s += u_print(quad.x);
+                s += print(quad.x);
                 s += ", ";
-                s += u_print(quad.y);
+                s += print(quad.y);
             }
         } else {
-            s += u_print(quad.x);
+            s += print(quad.x);
             s += ", ";
-            s += u_print(quad.y);
+            s += print(quad.y);
         }
         s += ", ";
-        s += u_print(quad.z);
+        s += print(quad.z);
         s += "]";
         return s;
     }
@@ -799,7 +809,7 @@ function make_core({
 
 // FIXME: could we use `u_write_quad()` directly here?
 
-                const ofs = u_rawofs(raw) << 4; // convert quad offset to byte offset
+                const ofs = rawofs(raw) << 4; // convert quad offset to byte offset
                 const quad = new Uint32Array(u_memory(), u_rom_ofs() + ofs, 4);
                 if (t !== undefined) {
                     quad[0] = t;
@@ -838,7 +848,7 @@ function make_core({
             return (
                 definitions[name] !== undefined
                 ? (
-                    u_is_raw(definitions[name])
+                    is_raw(definitions[name])
                     ? definitions[name]
                     : definitions[name].raw()
                 )
@@ -853,7 +863,7 @@ function make_core({
                 : (
                     imports[ref.module] !== undefined
                     ? (
-                        u_is_raw(imports[ref.module][ref.name])
+                        is_raw(imports[ref.module][ref.name])
                         ? imports[ref.module][ref.name]
                         : fail("Not exported", ref.module + "." + ref.name, ref)
                     )
@@ -868,7 +878,7 @@ function make_core({
             });
             return (
                 (Number.isSafeInteger(index) && index >= 0)
-                ? u_fixnum(index + offset)
+                ? fixnum(index + offset)
                 : fail("Bad label", name)
             );
         }
@@ -884,16 +894,16 @@ function make_core({
         function literal(node) {
             const raw = crlf_literals[node.value];
             return (
-                u_is_raw(raw)
+                is_raw(raw)
                 ? raw
                 : fail("Not a literal", node)
             );
         }
 
-        function fixnum(node) {
+        function fix(node) {
             return (
                 kind(node) === "fixnum"
-                ? u_fixnum(node) // FIXME: check integer bounds?
+                ? fixnum(node) // FIXME: check integer bounds?
                 : fail("Not a fixnum", node)
             );
         }
@@ -904,7 +914,7 @@ function make_core({
                 return literal(node);
             }
             if (the_kind === "fixnum") {
-                return fixnum(node);
+                return fix(node);
             }
             if (the_kind === "ref") {
                 return lookup(node);
@@ -920,7 +930,7 @@ function make_core({
             if (the_kind === "type") {
                 const raw = crlf_types[node.name];
                 return (
-                    u_is_raw(raw)
+                    is_raw(raw)
                     ? raw
                     : (
                         Number.isSafeInteger(node.arity)
@@ -948,7 +958,7 @@ function make_core({
             let fields = {};
             if (the_kind === "type") {
                 fields.t = TYPE_T;
-                fields.x = fixnum(node.arity);
+                fields.x = fix(node.arity);
             } else if (the_kind === "pair") {
                 fields.t = PAIR_T;
                 fields.x = value(node.head);
@@ -1013,7 +1023,7 @@ function make_core({
                     || node.op === "msg"
                     || node.op === "state"
                 ) {
-                    fields.y = fixnum(node.imm);
+                    fields.y = fix(node.imm);
                     fields.z = instruction(node.k);
                 } else if (
                     node.op === "eq"
@@ -1124,7 +1134,7 @@ function make_core({
 // Check the type of dubious quads now they are fully populated.
 
         type_checks.forEach(function ({raw, t, node, msg}) {
-            if (!u_is_ptr(raw) || u_read_quad(raw).t !== t) {
+            if (!is_ptr(raw) || u_read_quad(raw).t !== t) {
                 return fail(msg, node);
             }
         });
@@ -1134,7 +1144,7 @@ function make_core({
 
         cyclic_data_checks.forEach(function ([raw, t, k_field, node]) {
             let seen = [];
-            while (u_is_ptr(raw)) {
+            while (is_ptr(raw)) {
                 if (seen.includes(raw)) {
                     return fail("Cyclic", node);
                 }
@@ -1152,7 +1162,7 @@ function make_core({
 
         arity_checks.forEach(function ([type_raw, arity, node]) {
             if (
-                !u_in_mem(type_raw)
+                !in_mem(type_raw)
                 && type_raw !== TYPE_T
                 && type_raw !== INSTR_T
                 && type_raw !== PAIR_T
@@ -1164,7 +1174,7 @@ function make_core({
             if (type_quad.t !== TYPE_T) {
                 return fail("Not a type", node);
             }
-            if (arity !== u_fix_to_i32(type_quad.x)) {
+            if (arity !== fix_to_i32(type_quad.x)) {
                 return fail("Wrong arity for type", node);
             }
         });
@@ -1260,11 +1270,11 @@ function make_core({
     }
 
     function u_disasm(raw) {
-        let s = u_print(raw);
-        if (u_is_cap(raw)) {
+        let s = print(raw);
+        if (is_cap(raw)) {
             raw = u_cap_to_ptr(raw);
         }
-        if (u_is_ptr(raw)) {
+        if (is_ptr(raw)) {
             s += ": ";
             const quad = u_read_quad(raw);
             s += u_quad_print(quad);
@@ -1274,7 +1284,7 @@ function make_core({
 
     function u_pprint(raw) {
         let s = "";
-        if (u_is_ptr(raw)) {
+        if (is_ptr(raw)) {
             let quad = u_read_quad(raw);
             let sep;
             if (quad.t === PAIR_T) {
@@ -1285,7 +1295,7 @@ function make_core({
                     s += u_pprint(quad.x);  // car
                     sep = " ";
                     p = quad.y;  // cdr
-                    if (!u_is_ptr(p)) {
+                    if (!is_ptr(p)) {
                         break;
                     }
                     quad = u_read_quad(p);
@@ -1312,26 +1322,26 @@ function make_core({
             }
             if (quad.t === STUB_T) {
                 s += "STUB[";
-                s += u_print(quad.x);  // device
+                s += print(quad.x);  // device
                 s += ",";
-                s += u_print(quad.y);  // target
+                s += print(quad.y);  // target
                 s += "]";
                 return s;
             }
         }
-        if (u_is_cap(raw)) {
+        if (is_cap(raw)) {
             const ptr = u_cap_to_ptr(raw);
             const cap_quad = u_read_quad(ptr);
             if (cap_quad.t === PROXY_T) {
                 s += "PROXY[";
-                s += u_print(cap_quad.x);  // device
+                s += print(cap_quad.x);  // device
                 s += ",";
-                s += u_print(cap_quad.y);  // handle
+                s += print(cap_quad.y);  // handle
                 s += "]";
                 return s;
             }
         }
-        return u_print(raw);
+        return print(raw);
     }
 
     function u_event_as_object(event) {
@@ -1345,38 +1355,38 @@ function make_core({
         quad = u_read_quad(u_cap_to_ptr(evt.x));
         const prev = quad;
         obj.target = Object.create(null);
-        obj.target.raw = u_print(evt.x);
-        if (u_is_ram(prev.z)) {
+        obj.target.raw = print(evt.x);
+        if (is_ram(prev.z)) {
             // actor effect
             const next = u_read_quad(prev.z);
-            obj.target.code = u_print(prev.x);
+            obj.target.code = print(prev.x);
             obj.target.data = u_pprint(prev.y);
             obj.become = Object.create(null);
             obj.become.code = u_pprint(next.x);
             obj.become.data = u_pprint(next.y);
             obj.sent = [];
             let pending = next.z;
-            while (u_is_ram(pending)) {
+            while (is_ram(pending)) {
                 quad = u_read_quad(pending);
                 obj.sent.push({
-                    target: u_print(quad.x),
+                    target: print(quad.x),
                     message: u_pprint(quad.y),
-                    sponsor: u_print(quad.t)
+                    sponsor: print(quad.t)
                 });
                 pending = pending.z;
             }
         } else {
             // device effect
-            obj.target.device = u_print(prev.x);
+            obj.target.device = print(prev.x);
             obj.target.data = u_pprint(prev.y);
         }
         quad = u_read_quad(evt.t);
         obj.sponsor = Object.create(null);
-        obj.sponsor.raw = u_print(evt.t);
-        obj.sponsor.memory = u_fix_to_i32(quad.t);
-        obj.sponsor.events = u_fix_to_i32(quad.x);
-        obj.sponsor.cycles = u_fix_to_i32(quad.y);
-        obj.sponsor.signal = u_print(quad.z);
+        obj.sponsor.raw = print(evt.t);
+        obj.sponsor.memory = fix_to_i32(quad.t);
+        obj.sponsor.events = fix_to_i32(quad.x);
+        obj.sponsor.cycles = fix_to_i32(quad.y);
+        obj.sponsor.signal = print(quad.z);
         return obj;
     }
 
@@ -1423,7 +1433,7 @@ function make_core({
     }
 
     function h_boot(instr_ptr, state_ptr = UNDEF_RAW) {
-        if (instr_ptr === undefined || !u_is_ptr(instr_ptr)) {
+        if (instr_ptr === undefined || !is_ptr(instr_ptr)) {
             throw new Error("Not an instruction: " + u_pprint(instr_ptr));
         }
 
@@ -1440,7 +1450,7 @@ function make_core({
 // of the event queue.
 
         const evt = h_reserve_ram({
-            t: u_ramptr(SPONSOR_OFS),
+            t: ramptr(SPONSOR_OFS),
             x: u_ptr_to_cap(actor),
             y: boot_caps_dict.reduce(function (dict, [key_raw, value_raw]) {
                 return h_reserve_ram({
@@ -1460,11 +1470,11 @@ function make_core({
 // WASM mandates little-endian byte ordering
 
         const rom_ofs = u_rom_ofs();
-        const rom_len = u_rawofs(h_rom_top()) << 4;
+        const rom_len = rawofs(h_rom_top()) << 4;
         const rom = new Uint8Array(mem_base, rom_ofs, rom_len);
 
         const ram_ofs = u_ram_ofs();
-        const ram_len = u_rawofs(h_ram_top()) << 4;
+        const ram_len = rawofs(h_ram_top()) << 4;
         const ram = new Uint8Array(mem_base, ram_ofs, ram_len);
 
         // FIXME: need a general strategy for saving device state
@@ -1483,14 +1493,14 @@ function make_core({
         const rom = new Uint8Array(mem_base, rom_ofs, rom_len);
         rom.set(snapshot.rom);
 
-        const ram_ofs = u_ramptr(MEMORY_OFS);
+        const ram_ofs = ramptr(MEMORY_OFS);
         const ram_len = snapshot.ram.byteLength;
         const ram = new Uint8Array(mem_base, ram_ofs, ram_len);
         ram.set(snapshot.ram);
 
         // FIXME: need a general strategy for restoring device state
 
-        const rom_top = u_romptr(rom_len >> 2);
+        const rom_top = romptr(rom_len >> 2);
         h_set_rom_top(rom_top);  // register new top-of-ROM
     }
 
@@ -1600,16 +1610,16 @@ function make_core({
 // Install the debug device, if debug logging is enabled.
 
                 if (u_debug !== undefined) {
-                    const dev_ptr = u_ramptr(DEBUG_DEV_OFS);
+                    const dev_ptr = ramptr(DEBUG_DEV_OFS);
                     const dev_cap = u_ptr_to_cap(dev_ptr);
                     const dev_id = u_read_quad(dev_ptr).x;
                     boot_caps_dict.push([dev_id, dev_cap]);
                     Object.assign(wasm_caps, {
                         host_log(x) { // (i32) -> nil
                             const u = (x >>> 0);  // convert i32 -> u32
-                            //u_debug(u_print(u), "->", u_pprint(u));
-                            let s = u_print(u);
-                            if (u_in_mem(u)) {
+                            //u_debug(print(u), "->", u_pprint(u));
+                            let s = print(u);
+                            if (in_mem(u)) {
                                 s += ": " + u_pprint(u);
                             }
                             u_debug(s);
@@ -1654,37 +1664,21 @@ function make_core({
 // The reentrant methods.
 
         u_audit,
-        u_cap_to_ptr,
         u_current_continuation,
         u_debug,
         u_disasm,
         u_event_as_object,
-        u_fault_msg,
-        u_fix_to_i32,
-        u_fixnum,
-        u_in_mem,
         u_info,
-        u_is_cap,
-        u_is_fix,
-        u_is_ptr,
-        u_is_ram,
-        u_is_raw,
-        u_is_rom,
         u_log_event,
         u_mem_pages,
         u_memory,
         u_next,
         u_nth,
         u_pprint,
-        u_print,
-        u_ptr_to_cap,
         u_quad_print,
         u_ram_ofs,
-        u_ramptr,
-        u_rawofs,
         u_read_quad,
         u_rom_ofs,
-        u_romptr,
         u_defer,
         u_sourcemap,
         u_trace,
@@ -1707,7 +1701,7 @@ function demo(log) {
 
     function run_ufork() {
         const status = core.h_run_loop(0);
-        log("IDLE:", core.u_fault_msg(core.u_fix_to_i32(status)));
+        log("IDLE:", fault_msg(fix_to_i32(status)));
     }
 
     core = make_core({
@@ -1721,10 +1715,10 @@ function demo(log) {
         on_audit(code, evidence, ep, kp) {
             log(
                 "AUDIT:",
-                core.u_fault_msg(core.u_fix_to_i32(code)),
-                core.u_print(evidence),
-                core.u_print(ep),
-                core.u_print(kp)
+                fault_msg(fix_to_i32(code)),
+                print(evidence),
+                print(ep),
+                print(kp)
             );
         },
         import_map: {"https://ufork.org/lib/": lib_url},
@@ -1740,22 +1734,22 @@ function demo(log) {
 
 // Test.
 
-            log("u_fixnum(0) =", core.u_fixnum(0), core.u_fixnum(0).toString(16), core.u_print(core.u_fixnum(0)));
-            log("u_fixnum(1) =", core.u_fixnum(1), core.u_fixnum(1).toString(16), core.u_print(core.u_fixnum(1)));
-            log("u_fixnum(-1) =", core.u_fixnum(-1), core.u_fixnum(-1).toString(16), core.u_print(core.u_fixnum(-1)));
-            log("u_fixnum(-2) =", core.u_fixnum(-2), core.u_fixnum(-2).toString(16), core.u_print(core.u_fixnum(-2)));
-            log("h_rom_top() =", core.h_rom_top(), core.u_print(core.h_rom_top()));
-            log("h_ram_top() =", core.h_ram_top(), core.u_print(core.h_ram_top()));
-            log("u_ramptr(5) =", core.u_ramptr(5), core.u_print(core.u_ramptr(5)));
-            log("u_ptr_to_cap(u_ramptr(3)) =", core.u_ptr_to_cap(core.u_ramptr(3)), core.u_print(core.u_ptr_to_cap(core.u_ramptr(3))));
+            log("fixnum(0) =", fixnum(0), fixnum(0).toString(16), print(fixnum(0)));
+            log("fixnum(1) =", fixnum(1), fixnum(1).toString(16), print(fixnum(1)));
+            log("fixnum(-1) =", fixnum(-1), fixnum(-1).toString(16), print(fixnum(-1)));
+            log("fixnum(-2) =", fixnum(-2), fixnum(-2).toString(16), print(fixnum(-2)));
+            log("ramptr(5) =", ramptr(5), print(ramptr(5)));
+            log("u_ptr_to_cap(ramptr(3)) =", ptr_to_cap(ramptr(3)), print(ptr_to_cap(ramptr(3))));
+            log("h_rom_top() =", core.h_rom_top(), print(core.h_rom_top()));
+            log("h_ram_top() =", core.h_ram_top(), print(core.h_ram_top()));
 
 // Boot.
 
-            const sponsor_ptr = core.u_ramptr(SPONSOR_OFS);
+            const sponsor_ptr = ramptr(SPONSOR_OFS);
             const sponsor = core.u_read_quad(sponsor_ptr);
-            sponsor.t = core.u_fixnum(4096);    // memory
-            sponsor.x = core.u_fixnum(256);     // events
-            sponsor.y = core.u_fixnum(4096);    // cycles
+            sponsor.t = fixnum(4096);    // memory
+            sponsor.x = fixnum(256);     // events
+            sponsor.y = fixnum(4096);    // cycles
             core.u_write_quad(sponsor_ptr, sponsor);
             const start = performance.now();
             core.h_boot(test_module.boot);
@@ -1774,9 +1768,25 @@ if (import.meta.main) {
 
 export default Object.freeze({
 
-// The constructor function.
+// The functions.
 
+    cap_to_ptr,
+    fault_msg,
+    fix_to_i32,
+    fixnum,
+    in_mem,
+    is_cap,
+    is_fix,
+    is_ptr,
+    is_ram,
+    is_raw,
+    is_rom,
     make_core,
+    print,
+    ptr_to_cap,
+    ramptr,
+    rawofs,
+    romptr,
 
 // The constants.
 

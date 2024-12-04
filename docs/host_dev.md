@@ -39,7 +39,7 @@ collection by a stub.
 ```javascript
 let proxy = ddev.h_reserve_proxy();
 let stub = ddev.h_reserve_stub(proxy);
-core.h_install(core.u_fixnum(1234), proxy);
+core.h_install(ufork.fixnum(1234), proxy);
 ```
 
 The following assembly program would extract `proxy` from the boot caps dict and
@@ -82,11 +82,11 @@ function on_event_stub(event_stub_raw) {
     const event_stub = core.u_read_quad(event_stub_raw);
     const event = core.u_read_quad(event_stub.y);
     const message = event.y;
-    if (!core.u_is_fix(message)) {
+    if (!ufork.is_fix(message)) {
         return ufork.E_NOT_FIX;
     }
     core.u_defer(function callback() {
-        console.log("message", core.u_fix_to_i32(message));
+        console.log("message", ufork.fix_to_i32(message));
         core.h_release_stub(event_stub_raw);
     });
     return ufork.E_OK;
@@ -110,7 +110,7 @@ used by the host device. To retrieve the tag, use the `u_tag` method.
 ```javascript
 function on_event_stub(event_stub_raw) {
     const event_stub = core.u_read_quad(event_stub_raw);
-    const proxy = core.u_read_quad(core.u_cap_to_ptr(event_stub.x));
+    const proxy = core.u_read_quad(ufork.cap_to_ptr(event_stub.x));
     const handle = proxy.y;
     const tag = ddev.u_tag(handle);
     if (tag === ufork.TRUE_RAW) {
@@ -128,7 +128,7 @@ prints the tag of proxies as they are dropped.
 
 ```javascript
 function on_drop_proxy(proxy_raw) {
-    const quad = core.u_read_quad(core.u_cap_to_ptr(proxy_raw));
+    const quad = core.u_read_quad(ufork.cap_to_ptr(proxy_raw));
     const tag = ddev.u_tag(quad.y);
     console.log("dropped", core.u_pprint(tag));
 }
@@ -145,7 +145,7 @@ supplied to `h_install`, like so:
 
 ```javascript
 core.h_install(
-    core.u_fixnum(1234),
+    ufork.fixnum(1234),
     proxy,
     function on_dispose() {
         // release resources...

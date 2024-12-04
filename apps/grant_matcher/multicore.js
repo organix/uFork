@@ -68,8 +68,8 @@ parseq.sequence(
         const core = ufork.make_core({
             wasm_url,
             on_wakeup() {
-                globalThis.console.log("IDLE", name, core.u_fault_msg(
-                    core.u_fix_to_i32(core.h_run_loop())
+                globalThis.console.log("IDLE", name, ufork.fault_msg(
+                    ufork.fix_to_i32(core.h_run_loop())
                 ));
             },
             on_log: globalThis.console.log,
@@ -89,8 +89,8 @@ parseq.sequence(
                     stores: [store]
                 });
                 core.h_boot(asm_module.boot);
-                return core.u_fault_msg(
-                    core.u_fix_to_i32(core.h_run_loop())
+                return ufork.fault_msg(
+                    ufork.fix_to_i32(core.h_run_loop())
                 );
             })
         ]);

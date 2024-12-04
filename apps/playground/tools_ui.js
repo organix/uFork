@@ -114,11 +114,11 @@ const tools_ui = make_ui("tools-ui", function (element, {
     }
 
     function refill_sponsor() {
-        const spn = core.u_ramptr(ufork.SPONSOR_OFS);
+        const spn = ufork.ramptr(ufork.SPONSOR_OFS);
         const sponsor = core.u_read_quad(spn);
-        sponsor.t = core.u_fixnum(4096);  // memory
-        sponsor.x = core.u_fixnum(256);  // events
-        sponsor.y = core.u_fixnum(8192);  // cycles
+        sponsor.t = ufork.fixnum(4096);  // memory
+        sponsor.x = ufork.fixnum(256);  // events
+        sponsor.y = ufork.fixnum(8192);  // cycles
         core.u_write_quad(spn, sponsor);
     }
 
@@ -134,12 +134,12 @@ const tools_ui = make_ui("tools-ui", function (element, {
 
             if (
                 status !== ufork.UNDEF_RAW  // step limit not reached
-                && status !== core.u_fixnum(ufork.E_MEM_LIM)
-                && status !== core.u_fixnum(ufork.E_CPU_LIM)
-                && status !== core.u_fixnum(ufork.E_MSG_LIM)
+                && status !== ufork.fixnum(ufork.E_MEM_LIM)
+                && status !== ufork.fixnum(ufork.E_CPU_LIM)
+                && status !== ufork.fixnum(ufork.E_MSG_LIM)
             ) {
-                const message = core.u_fault_msg(core.u_fix_to_i32(status));
-                if (status === core.u_fixnum(ufork.E_OK)) {
+                const message = ufork.fault_msg(ufork.fix_to_i32(status));
+                if (status === ufork.fixnum(ufork.E_OK)) {
                     devices.io.info("IDLE:", message);
                 } else {
                     devices.io.warn("FAULT:", message);
@@ -198,7 +198,7 @@ const tools_ui = make_ui("tools-ui", function (element, {
             on_audit(code, evidence) {
                 devices.io.warn(
                     "AUDIT:",
-                    core.u_fault_msg(core.u_fix_to_i32(code)),
+                    ufork.fault_msg(ufork.fix_to_i32(code)),
                     core.u_pprint(evidence)
                 );
             },

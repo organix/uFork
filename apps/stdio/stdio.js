@@ -27,11 +27,11 @@ let core;
 
 function refill() {
     // refill root-sponsor with resources
-    const spn = core.u_ramptr(ufork.SPONSOR_OFS);
+    const spn = ufork.ramptr(ufork.SPONSOR_OFS);
     const sponsor = core.u_read_quad(spn);
-    sponsor.t = core.u_fixnum(4096);  // memory
-    sponsor.x = core.u_fixnum(256);  // events
-    sponsor.y = core.u_fixnum(8192);  // cycles
+    sponsor.t = ufork.fixnum(4096);  // memory
+    sponsor.x = ufork.fixnum(256);  // events
+    sponsor.y = ufork.fixnum(8192);  // cycles
     core.u_write_quad(spn, sponsor);
 }
 
@@ -39,9 +39,9 @@ function run() {
     while (true) {
         // run until there is no more work, or an error occurs
         const sig = core.h_run_loop(0);
-        if (core.u_is_fix(sig)) {
-            const err = core.u_fix_to_i32(sig);
-            const msg = core.u_fault_msg(err);
+        if (ufork.is_fix(sig)) {
+            const err = ufork.fix_to_i32(sig);
+            const msg = ufork.fault_msg(err);
             if (err === ufork.E_OK) {
                 break;  // no more work to do, so we exit...
             }
@@ -56,7 +56,7 @@ function run() {
                 break;  // report error, then exit...
             }
         } else {
-            globalThis.console.error("SIGNAL", core.u_print(sig));
+            globalThis.console.error("SIGNAL", ufork.print(sig));
             break;  // report signal, then exit...
         }
     }
