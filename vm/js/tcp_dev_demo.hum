@@ -12,7 +12,14 @@
 #                       | Reads blob
 #                       | Closes connection
 
+DEF blob_key AS 4 # from dev.asm
+DEF tcp_key AS 102 # from dev.asm
+DEF blob_dev AS system(blob_key)
+DEF tcp_dev AS system(tcp_key)
 DEF alice_petname AS 0
+DEF payload AS 42
+DEF blob_size AS 16
+DEF blob_offset AS 15 # last byte
 DEF tag_listen AS 5000
 DEF tag_connect AS 5001
 DEF tag_open AS 5002
@@ -29,6 +36,9 @@ CREATE write_cb WITH \result.[
     ]
     END
 ]
+CREATE blob_read_cust WITH \byte.[
+    SEND (tag_read, byte) TO println
+]
 CREATE listen_cb WITH \result.[
     CASE result OF
     (TRUE, stop) : [
@@ -38,15 +48,18 @@ CREATE listen_cb WITH \result.[
             CASE result OF
             (TRUE, conn) : [
                 SEND (tag_connect, conn) TO println
-                SEND (blob_cust, 1) TO blob_dev # alloc blob
+                SEND (blob_cust, blob_size) TO blob_dev # alloc blob
                 CREATE blob_cust WITH \blob.[
-                    SEND (?, write_cb, blob) TO conn
+                    SEND (blob_write_cust, blob_offset, payload) TO blob
+                    CREATE blob_write_cust WITH \_.[
+                        SEND (?, write_cb, blob) TO conn
+                    ]
                 ]
                 SEND (?, read_cb, ?) TO conn
                 CREATE read_cb WITH \result.[
                     CASE result OF
                     (TRUE, blob) : [
-                        SEND (tag_read, blob) TO println
+                        SEND (blob_read_cust, blob_offset) TO blob
                         SEND (?, write_cb, NIL) TO conn # close connection
                     ]
                     (FALSE, error) : [
@@ -72,7 +85,7 @@ CREATE on_open WITH \conn.[
     CREATE read_cb WITH \result.[
         CASE result OF
         (TRUE, blob) : [
-            SEND (tag_read, blob) TO println
+            SEND (blob_read_cust, blob_offset) TO blob
             SEND (?, write_cb, blob) TO conn
         ]
         (FALSE, error) : [

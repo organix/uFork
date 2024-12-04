@@ -2,6 +2,8 @@
 # Demonstrate Console I/O Device (stdio)
 #
 
+DEF io_key AS 3  # from dev.asm
+DEF stdio AS system(io_key)
 DEF is_number(n) AS not(eq(neg(n), ?))
 
 DEF strout_beh(cust, out, str) AS \result.[

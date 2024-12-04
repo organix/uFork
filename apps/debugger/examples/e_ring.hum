@@ -3,6 +3,9 @@
 #   Send M simple messages around the ring
 #   Increase N until out of resources
 
+DEF clock_key AS 1  # from dev.asm
+DEF clock AS system(clock_key)
+
 DEF build(n, log) AS \(first, m).[
     CASE n OF
     1 : [

@@ -134,6 +134,11 @@ symbol_t:                   ; [symbol_t, string]
 
 ; Construct the top level environment from capabilities in the boot message.
 
+system_code:                ; ( key k {caps} -- cap )
+    roll 3                  ; k {caps} key
+    dict get                ; k cap
+    ref std.return_value
+
 random_adapter_beh:         ; random_dev <- (cust . n)
     msg -1                  ; n
     push 1                  ; n 1
@@ -156,43 +161,27 @@ timer_adapter_beh:          ; timer_dev <- (dt msg . actor)
 prepare_env:                ; ( k -- env )
     push #?                 ; k #?
 
-    msg 0                   ; k #? {caps}
-    push dev.debug_key      ; k #? {caps} debug_key
-    dict get                ; k #? println=debug_dev
+    push system_code        ; k #? code=system_code
+    msg 0                   ; k #? code env={caps}
+    call make_closure       ; k #? system
 
-    msg 0                   ; k #? println {caps}
-    push dev.timer_key      ; k #? println {caps} timer_key
-    dict get                ; k #? println timer_dev
-    push timer_adapter_beh  ; k #? println timer_dev timer_adapter_beh
-    actor create            ; k #? println timer=timer_adapter_beh.timer_dev
+    msg 0                   ; k #? system {caps}
+    push dev.debug_key      ; k #? system {caps} debug_key
+    dict get                ; k #? system println=debug_dev
 
-    msg 0                   ; k #? println timer {caps}
-    push dev.random_key     ; k #? println timer {caps} random_key
-    dict get                ; k #? println timer random_dev
-    push random_adapter_beh ; k #? println timer random_dev random_adapter_beh
-    actor create            ; k #? println timer random=random_adapter_beh.random_dev
+    msg 0                   ; k #? system println {caps}
+    push dev.timer_key      ; k #? system println {caps} timer_key
+    dict get                ; k #? system println timer_dev
+    push timer_adapter_beh  ; k #? system println timer_dev timer_adapter_beh
+    actor create            ; k #? system println timer=timer_adapter_beh.timer_dev
 
-    msg 0                   ; k #? println timer random {caps}
-    push dev.io_key         ; k #? println timer random {caps} io_key
-    dict get                ; k #? println timer random stdio
+    msg 0                   ; k #? system println timer {caps}
+    push dev.random_key     ; k #? system println timer {caps} random_key
+    dict get                ; k #? system println timer random_dev
+    push random_adapter_beh ; k #? system println timer random_dev random_adapter_beh
+    actor create            ; k #? system println timer random=random_adapter_beh.random_dev
 
-    msg 0                   ; k #? println timer random stdio {caps}
-    push dev.clock_key      ; k #? println timer random stdio {caps} clock_key
-    dict get                ; k #? println timer random stdio clock
-
-    msg 0                   ; k #? println timer random stdio clock {caps}
-    push dev.svg_key        ; k #? println timer random stdio clock {caps} svg_key
-    dict get                ; k #? println timer random stdio clock svgout
-
-    msg 0                   ; k #? println timer random stdio clock svgout {caps}
-    push dev.blob_key       ; k #? println timer random stdio clock svgout {caps} blob_key
-    dict get                ; k #? println timer random stdio clock svgout blob_dev
-
-    msg 0                   ; k #? println timer random stdio clock svgout blob_dev {caps}
-    push dev.tcp_key        ; k #? println timer random stdio clock svgout blob_dev {caps} tcp_key
-    dict get                ; k #? println timer random stdio clock svgout blob_dev tcp_dev
-
-    pair 7                  ; k #? scope=(tcp_dev blob_dev svgout clock stdio random timer . println)
+    pair 3                  ; k #? scope=(random timer println . system)
     pair 1                  ; k env=(scope . #?)
     ref std.return_value
 
