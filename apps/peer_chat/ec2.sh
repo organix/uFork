@@ -21,19 +21,26 @@ sudo yum install git -y
 # Clone uFork repo
 git clone https://github.com/organix/uFork.git
 
-# Server the Peer Chat example
-CHAT_PORT=3528
+# Serve the Peer Chat example, automatically checking for updates from the
+# repo.
 echo "
 chat.ufork.org {
-    reverse_proxy :$CHAT_PORT
+    reverse_proxy :3528
 }
 " > Caddyfile
 sudo ./caddy start --config Caddyfile &
 cd uFork
 nohup deno run \
+    --watch \
     --allow-net \
     --allow-read=. \
     apps/peer_chat/chat_server.js \
-    localhost:$CHAT_PORT \
+    localhost:3528 \
     &
-cd -
+nohup bash -c "
+    while true
+    do
+        sleep 60
+        git pull --rebase
+    done
+" &
