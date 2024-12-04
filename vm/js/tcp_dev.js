@@ -70,6 +70,12 @@ function tcp_dev(
         return target;
     }
 
+    function u_trace(...values) {
+        if (core.u_trace !== undefined) {
+            core.u_trace("TCP", ...values);
+        }
+    }
+
     function h_send(target, message) {
         core.h_event_enqueue(core.h_reserve_ram({
             t: sponsor,
@@ -98,9 +104,7 @@ function tcp_dev(
     function h_register(connection) {
         const conn_nr = connections.length;
         connections.push(connection);
-        if (core.u_trace !== undefined) {
-            core.u_trace(`TCP #${conn_nr} opened`);
-        }
+        u_trace(`#${conn_nr} opened`);
         const tag = encode_tag({conn_nr});
         const conn_cap = ddev.h_reserve_proxy(tag);
         const conn_stub = ddev.h_reserve_stub(conn_cap);
@@ -136,9 +140,7 @@ function tcp_dev(
     function h_unregister(connection, reason) {
         const conn_nr = connections.indexOf(connection);
         connections[conn_nr] = (reason === undefined);
-        if (core.u_trace !== undefined) {
-            core.u_trace(`TCP #${conn_nr} closed`, reason);
-        }
+        u_trace(`#${conn_nr} closed`, reason);
         h_flush_read(conn_nr);
         const conn_stub = conn_stubs[conn_nr];
         if (conn_stub !== undefined) {
@@ -151,9 +153,7 @@ function tcp_dev(
 
     function h_receive(connection, chunk) {
         const conn_nr = connections.indexOf(connection);
-        if (core.u_trace !== undefined) {
-            core.u_trace(`TCP #${conn_nr} received ${chunk.length}B`);
-        }
+        u_trace(`#${conn_nr} received ${chunk.length}B`);
 
 // Enqueue the chunk. We should be applying backpressure instead, but the
 // transport interface does not yet support that.
@@ -200,14 +200,10 @@ function tcp_dev(
                 }
             });
             const stop_cap = ddev.h_reserve_proxy(listener_tag);
-            if (core.u_trace !== undefined) {
-                core.u_trace(`TCP %${listener_nr} listening`);
-            }
+            u_trace(`%${listener_nr} listening`);
             return h_reply_ok(stop_cap);
         } catch (exception) {
-            if (core.u_trace !== undefined) {
-                core.u_trace("TCP listen failed", exception);
-            }
+            u_trace("listen failed", exception);
             return h_reply_fail();
         }
     }
@@ -225,9 +221,7 @@ function tcp_dev(
             if (connection !== undefined) {
                 return h_unregister(connection, reason);
             }
-            if (core.u_trace !== undefined) {
-                core.u_trace("TCP connect failed", reason);
-            }
+            u_trace("connect failed", reason);
             core.h_release_stub(callback_stub);
             h_send(callback_cap, h_reply_fail());
         }
@@ -268,26 +262,18 @@ function tcp_dev(
                     core.h_release_stub(event_stub_ptr);
                     const connection = connections[conn_nr];
                     if (connection === true) {
-                        if (core.u_trace !== undefined) {
-                            core.u_trace(`TCP #${conn_nr} read end of stream`);
-                        }
+                        u_trace(`#${conn_nr} read end of stream`);
                         return h_send(callback, h_reply_ok(ufork.NIL_RAW));
                     }
                     if (connection === false) {
-                        if (core.u_trace !== undefined) {
-                            core.u_trace(`TCP #${conn_nr} read after fail`);
-                        }
+                        u_trace(`#${conn_nr} read after fail`);
                         return h_send(callback, h_reply_fail());
                     }
                     if (read_stubs[conn_nr] !== undefined) {
-                        if (core.u_trace !== undefined) {
-                            core.u_trace(`TCP #${conn_nr} double read`);
-                        }
+                        u_trace(`#${conn_nr} double read`);
                         return h_send(callback, h_reply_fail());
                     }
-                    if (core.u_trace !== undefined) {
-                        core.u_trace(`TCP #${conn_nr} read`);
-                    }
+                    u_trace(`#${conn_nr} read`);
                     const stub = ddev.h_reserve_stub(callback);
                     read_stubs[conn_nr] = stub;
                     h_flush_read(conn_nr);
@@ -299,24 +285,24 @@ function tcp_dev(
 // Write request.
 
                 const blob_cap = request;
-                const bytes = the_blob_dev.u_get_bytes(blob_cap);
-                if (bytes === undefined) {
-                    return ufork.E_BOUNDS; // not a blob
-                }
                 core.u_defer(function () {
-                    core.h_release_stub(event_stub_ptr);
-                    const connection = connections[conn_nr];
-                    if (typeof connection !== "object") {
-                        if (core.u_trace !== undefined) {
-                            core.u_trace(`TCP #${conn_nr} write after close`);
+                    the_blob_dev.h_read_bytes(
+                        blob_cap
+                    )(function (bytes, reason) {
+                        core.h_release_stub(event_stub_ptr);
+                        if (bytes === undefined) {
+                            u_trace(`#${conn_nr} write failed`, reason);
+                            return h_send(callback, h_reply_fail());
                         }
-                        return h_send(callback, h_reply_fail());
-                    }
-                    if (core.u_trace !== undefined) {
-                        core.u_trace(`TCP #${conn_nr} write ${bytes.length}B`);
-                    }
-                    connection.send(bytes);
-                    h_send(callback, h_reply_ok(ufork.UNDEF_RAW));
+                        const connection = connections[conn_nr];
+                        if (typeof connection !== "object") {
+                            u_trace(`#${conn_nr} write after close`);
+                            return h_send(callback, h_reply_fail());
+                        }
+                        u_trace(`#${conn_nr} write ${bytes.length}B`);
+                        connection.send(bytes);
+                        h_send(callback, h_reply_ok(ufork.UNDEF_RAW));
+                    });
                 });
                 return ufork.E_OK;
             }
@@ -381,9 +367,7 @@ function tcp_dev(
     const dev_cap = ddev.h_reserve_proxy();
     const dev_id = ufork.fixnum(tcp_key);
     core.h_install(dev_id, dev_cap, function on_dispose() {
-        if (core.u_trace !== undefined) {
-            core.u_trace("TCP disposing all connections");
-        }
+        u_trace("disposing all connections");
         connections.forEach(function (connection) {
             if (typeof connection === "object") {
                 connection.close();

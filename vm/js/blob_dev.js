@@ -1,6 +1,6 @@
 // Installs the blob device. See also blob_dev.md.
 
-// The returned object contains several functions:
+// The returned object contains some functions:
 
 //  h_alloc_blob(size_or_bytes)
 //      Used to make blobs host-side. It is passed a size (or an existing
@@ -8,42 +8,95 @@
 //      the blob capability and the 'bytes' is a mutable Uint8Array containing
 //      the blob's bytes.
 
-//  u_get_bytes(cap)
-//      Returns the mutable Uint8Array associated with a blob capability, or
+//  h_read_bytes(blob_cap)
+//      Returns a requestor that reads a blob's bytes, one by one, producing a
+//      Uint8Array.
+
+//  u_get_bytes(blob_cap)
+//      Returns the mutable Uint8Array associated with the blob capability, or
 //      undefined if there isn't one.
 
 /*jslint web, global */
 
 import assemble from "https://ufork.org/lib/assemble.js";
 import parseq from "https://ufork.org/lib/parseq.js";
+import lazy from "https://ufork.org/lib/rq/lazy.js";
 import requestorize from "https://ufork.org/lib/rq/requestorize.js";
 import host_dev from "./host_dev.js";
 import ufork from "./ufork.js";
 const lib_url = import.meta.resolve("https://ufork.org/lib/");
-const wasm_url = import.meta.resolve("https://ufork.org/wasm/ufork.wasm");
+const wasm_url = import.meta.resolve("https://ufork.org/wasm/ufork.debug.wasm");
 const demo_url = import.meta.resolve("./blob_dev_demo.asm");
 
 function blob_dev(core, make_ddev) {
     const sponsor = ufork.ramptr(ufork.SPONSOR_OFS);
     let ddev;
     let blobs = [];
+    let reads = [];
+
+    function encode_tag({blob_nr, read_nr}) {
+        return ufork.fixnum(
+            read_nr !== undefined
+            ? -read_nr - 1
+            : blob_nr
+        );
+    }
+
+    function decode_tag(tag) {
+        const integer = ufork.fix_to_i32(tag);
+        return (
+            integer < 0
+            ? {read_nr: -1 - integer}
+            : {blob_nr: integer}
+        );
+    }
 
     function h_alloc_blob(size_or_bytes) {
-        const next_blob_nr = blobs.length;
-        const bytes = new Uint8Array(size_or_bytes);
-        const tag = ufork.fixnum(next_blob_nr);
-        const cap = ddev.h_reserve_proxy(tag);
+        const blob_nr = blobs.length;
+        const bytes = new Uint8Array(size_or_bytes); // TODO unnecessary copy
+        const cap = ddev.h_reserve_proxy(encode_tag({blob_nr}));
         if (core.u_trace !== undefined) {
-            core.u_trace(`alloc blob #${next_blob_nr} size ${bytes.length}`);
+            core.u_trace(`alloc blob #${blob_nr} size ${bytes.length}`);
         }
         const blob = {cap, bytes};
         blobs.push(blob);
         return blob;
     }
 
-    function u_get_bytes(cap) {
+    function h_read_bytes(blob_cap) {
+        const read_nr = reads.length;
+        reads.push(undefined); // placeholder
+        let byte_array = [];
+        let blob_stub = ddev.h_reserve_stub(blob_cap);
+        return function h_read_bytes_requestor(callback) {
+            const cust_cap = ddev.h_reserve_proxy(encode_tag({read_nr}));
+            const cust_stub = ddev.h_reserve_stub(cust_cap);
+            reads[read_nr] = function (message) {
+                core.h_release_stub(cust_stub);
+                if (ufork.is_fix(message)) {
+                    byte_array.push(ufork.fix_to_i32(message));
+                    return h_read_bytes_requestor(callback);
+                }
+                core.h_release_stub(blob_stub);
+                return callback(new Uint8Array(byte_array));
+            };
+            const offset = byte_array.length;
+            core.h_event_enqueue(core.h_reserve_ram({
+                t: sponsor,
+                x: blob_cap,
+                y: core.h_reserve_ram({
+                    t: ufork.PAIR_T,
+                    x: cust_cap,
+                    y: ufork.fixnum(offset)
+                })
+            }));
+            core.h_wakeup(ufork.HOST_DEV_OFS);
+        };
+    }
+
+    function u_get_bytes(blob_cap) {
         return blobs.find(function (blob) {
-            return blob?.cap === cap;
+            return blob?.cap === blob_cap;
         })?.bytes;
     }
 
@@ -55,11 +108,23 @@ function blob_dev(core, make_ddev) {
             const event = core.u_read_quad(event_stub.y);
             const message = event.y;
             const customer = core.u_nth(message, 1);
-            if (!ufork.is_cap(customer)) {
-                return ufork.E_NOT_CAP;
-            }
             if (ufork.is_fix(tag)) {
-                const blob_nr = ufork.fix_to_i32(tag);
+                const {blob_nr, read_nr} = decode_tag(tag);
+                if (read_nr !== undefined) {
+
+// Read response.
+
+                    core.u_defer(function () {
+                        const h_reply = reads[read_nr];
+                        if (h_reply !== undefined) {
+                            h_reply(message);
+                        }
+                    });
+                    return ufork.E_OK;
+                }
+                if (!ufork.is_cap(customer)) {
+                    return ufork.E_NOT_CAP;
+                }
                 const bytes = blobs[blob_nr]?.bytes;
                 if (bytes === undefined) {
                     return ufork.E_BOUNDS;
@@ -117,6 +182,9 @@ function blob_dev(core, make_ddev) {
 
 // Allocation request.
 
+            if (!ufork.is_cap(customer)) {
+                return ufork.E_NOT_CAP;
+            }
             const size_raw = core.u_nth(message, -1);
             if (!ufork.is_fix(size_raw)) {
                 return ufork.E_NOT_FIX;
@@ -125,9 +193,6 @@ function blob_dev(core, make_ddev) {
             if (size < 0) {
                 return ufork.E_BOUNDS;
             }
-
-// Make a new blob capability and send it to the customer.
-
             core.u_defer(function () {
                 core.h_release_stub(event_stub_ptr);
                 core.h_event_enqueue(core.h_reserve_ram({
@@ -143,10 +208,12 @@ function blob_dev(core, make_ddev) {
             const quad = core.u_read_quad(ufork.cap_to_ptr(proxy_raw));
             const tag = ddev.u_tag(quad.y);
             if (ufork.is_fix(tag)) {
-                const blob_nr = ufork.fix_to_i32(tag);
-                delete blobs[blob_nr];
-                if (core.u_trace !== undefined) {
-                    core.u_trace(`disposed blob #${blob_nr}`);
+                const {blob_nr} = decode_tag(tag);
+                if (blob_nr !== undefined) {
+                    delete blobs[blob_nr];
+                    if (core.u_trace !== undefined) {
+                        core.u_trace(`disposed blob #${blob_nr}`);
+                    }
                 }
             }
         }
@@ -162,7 +229,7 @@ function blob_dev(core, make_ddev) {
         blobs.length = 0;
     });
     ddev.h_reserve_stub(dev_cap);
-    return Object.freeze({h_alloc_blob, u_get_bytes});
+    return Object.freeze({h_alloc_blob, h_read_bytes, u_get_bytes});
 }
 
 function demo(log) {
@@ -183,13 +250,17 @@ function demo(log) {
     parseq.sequence([
         core.h_initialize(),
         core.h_import(demo_url),
-        requestorize(function (asm_module) {
-            const {h_alloc_blob, u_get_bytes} = blob_dev(core, host_dev(core));
+        lazy(function (asm_module) {
+            const {
+                h_alloc_blob,
+                h_read_bytes,
+                u_get_bytes
+            } = blob_dev(core, host_dev(core));
             core.h_boot(asm_module.boot);
             run_core();
-            const blob = h_alloc_blob(2);
-            blob.bytes[1] = 255;
-            return u_get_bytes(blob.cap);
+            const blob = h_alloc_blob([5, 6, 7, 8]);
+            // return u_get_bytes(blob.cap);
+            return h_read_bytes(blob.cap);
         })
     ])(log);
     setTimeout(core.h_dispose, 500);
