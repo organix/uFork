@@ -174,7 +174,7 @@ const tools_ui = make_ui("tools-ui", function (element, {
                 run_loop();
             },
             log_level: ufork.LOG_TRACE,
-            on_log(log_level, value) {
+            on_log(log_level, ...values) {
                 const logger = (
                     log_level === ufork.LOG_WARN
                     ? devices.io.warn
@@ -184,7 +184,7 @@ const tools_ui = make_ui("tools-ui", function (element, {
                         : devices.io.info
                     )
                 );
-                logger(value);
+                logger(...values);
             },
             on_audit(code, evidence) {
                 devices.io.warn(
