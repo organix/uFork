@@ -35,7 +35,7 @@ DEF tag_read_byte AS 5006
 DEF label_beh(rcvr, label) AS \msg.[
     SEND (label, msg) TO rcvr
 ]
-DEF log_beh(tag, ok_cust, fail_cust) AS \result.[
+DEF callback_beh(tag, ok_cust, fail_cust) AS \result.[
     CASE result OF
     (TRUE, value) : [
         SEND (tag, value) TO println
@@ -59,7 +59,7 @@ DEF write(conn, n) AS [
 DEF read_beh(consumed) AS \conn.[
     DEF self AS SELF
     SEND (?, read_cb, ?) TO conn
-    CREATE read_cb WITH log_beh(tag_read, read_cust, sink)
+    CREATE read_cb WITH callback_beh(tag_read, read_cust, sink)
     CREATE read_cust WITH \blob.[
         CASE is_actor(blob) OF
         TRUE : [
@@ -93,38 +93,15 @@ DEF read_beh(consumed) AS \conn.[
     ]
 ]
 CREATE sink WITH \_.[]
-CREATE write_cb WITH log_beh(tag_write, sink, sink)
-CREATE conn_cust WITH \conn.[
-    DEF x AS SELF
-    SEND (?, read_cb, ?) TO conn
-    CREATE read_cb WITH log_beh(tag_read, read_cust, sink)
-    CREATE read_cust WITH \blob.[
-        CASE is_actor(blob) OF
-        TRUE : [
-            SEND (blob_read_cust, blob_offset) TO blob
-            CREATE blob_read_cust WITH \n.[
-                SEND (tag_read_byte, n) TO println
-                CASE greater(n, 0) OF
-                TRUE : [
-                    SEND conn TO x
-                    write(conn, sub(n, 1))
-                ]
-                FALSE : [
-                    SEND (?, write_cb, NIL) TO conn # close connection
-                ]
-                END
-            ]
-        ]
-        END
-    ]
-]
-CREATE listen_cb WITH log_beh(tag_listen, listen_cust, sink)
+CREATE write_cb WITH callback_beh(tag_write, sink, sink)
+CREATE listen_cb WITH callback_beh(tag_listen, listen_cust, sink)
 CREATE listen_cust WITH \stop.[
     SEND (?, connect_cb, alice_petname) TO tcp_dev
-    CREATE connect_cb WITH log_beh(tag_connect, connect_cust, sink)
+    CREATE connect_cb WITH callback_beh(tag_connect, connect_cust, sink)
     CREATE connect_cust WITH \conn.[
         write(conn, nr_writes)
-        SEND conn TO NEW read_beh(0)
+        BECOME read_beh(0)
+        SEND conn TO SELF
     ]
 ]
 CREATE on_close WITH label_beh(println, tag_close)
