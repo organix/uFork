@@ -3,6 +3,7 @@
 .import
     dev: "https://ufork.org/lib/dev.asm"
     std: "https://ufork.org/lib/std.asm"
+    div_mod: "https://ufork.org/lib/div_mod.asm"
 
 hello:                      ; 72,101,108,108,111,63,10,#nil
     pair_t 'H'
@@ -11,6 +12,7 @@ hello:                      ; 72,101,108,108,111,63,10,#nil
     pair_t 'l'
     pair_t 'o'
     pair_t '?'
+nl:
     pair_t '\n'
     ref #nil
 
@@ -147,6 +149,22 @@ http_response:
     pair_t '\n'
     ref #nil
 
+num_to_dec:                 ; ( str +num -- char,char,...,str )
+    roll -3                 ; k str n=+num
+num_loop:                   ; k str n
+    push 10                 ; k str n d=10
+    call div_mod.udivmod    ; k str q r
+    roll 3                  ; k q r str
+    roll 2                  ; k q str r
+    push '0'                ; k q str r '0'
+    alu add                 ; k q str char=r+'0'
+    pair 1                  ; k q str'=char,str
+    roll 2                  ; k str' q
+    dup 1                   ; k str' q q
+    eq 0                    ; k str' q q==0
+    if_not num_loop         ; k str' q
+    drop 1                  ; k str'
+    ref std.return_value
 
 ; stream `str` to `out` until `#nil`
 ; sending the final `result` to `cb`
@@ -361,7 +379,9 @@ stage_1c:                   ; {caps},in <- result
     ref tgt_start
 
 stage_2:                    ; {caps} <- result
-    push hello              ; str
+    push nl                 ; nl
+    push 1337               ; nl 1337
+    call num_to_dec         ; str="1337"+nl
     state 0                 ; str {caps}
     push dev.io_key         ; str {caps} io_key
     dict get                ; str io_dev
