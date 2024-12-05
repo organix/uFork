@@ -32,6 +32,7 @@ function tcp_dev(
 ) {
     const sponsor = ufork.ramptr(ufork.SPONSOR_OFS);
     let ddev;
+    let disposed = false;
 
 // Each element in the 'connections' array is either:
 //  - a connection object (the connection is open)
@@ -152,6 +153,9 @@ function tcp_dev(
     }
 
     function h_receive(connection, chunk) {
+        if (disposed) {
+            return;
+        }
         const conn_nr = connections.indexOf(connection);
         u_trace(`#${conn_nr} received ${chunk.length}B`);
 
@@ -171,11 +175,17 @@ function tcp_dev(
         const on_close_stub = ddev.h_reserve_stub(on_close_cap);
 
         function on_open(connection) {
+            if (disposed) {
+                return;
+            }
             const conn_cap = h_register(connection);
             h_send(on_open_cap, conn_cap);
         }
 
         function on_close(connection, reason) {
+            if (disposed) {
+                return;
+            }
             const conn_nr = connections.indexOf(connection);
             const conn_stub = conn_stubs[conn_nr];
             const conn_cap = stub_to_cap(conn_stub);
@@ -212,12 +222,18 @@ function tcp_dev(
         const callback_stub = ddev.h_reserve_stub(callback_cap);
 
         function on_open(connection) {
+            if (disposed) {
+                return;
+            }
             core.h_release_stub(callback_stub);
             const conn_cap = h_register(connection);
             h_send(callback_cap, h_reply_ok(conn_cap));
         }
 
         function on_close(connection, reason) {
+            if (disposed) {
+                return;
+            }
             if (connection !== undefined) {
                 return h_unregister(connection, reason);
             }
@@ -368,6 +384,7 @@ function tcp_dev(
     const dev_id = ufork.fixnum(tcp_key);
     core.h_install(dev_id, dev_cap, function on_dispose() {
         u_trace("disposing all connections");
+        disposed = true;
         connections.forEach(function (connection) {
             if (typeof connection === "object") {
                 connection.close();
@@ -383,7 +400,7 @@ function tcp_dev(
     ddev.h_reserve_stub(dev_cap);
 }
 
-function demo(log) {
+function demo(log, flakiness = 0.05, max_chunk_size = 16) {
     let core;
 
     function run_core() {
@@ -415,7 +432,7 @@ function demo(log) {
                 make_ddev,
                 blob_dev(core, make_ddev),
                 ["127.0.0.1:8370"],
-                mock_transport()
+                mock_transport(flakiness, max_chunk_size)
             );
             core.h_boot(asm_module.boot);
             core.h_refill({memory: 65536, events: 65536, cycles: 65536});
@@ -423,7 +440,7 @@ function demo(log) {
             return true;
         })
     ])(log);
-    setTimeout(core.h_dispose, 5000);
+    setTimeout(core.h_dispose, 1000);
 }
 
 if (import.meta.main) {

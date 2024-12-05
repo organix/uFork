@@ -6,10 +6,15 @@
 #   --------------------+-------------------
 #   Listens             |
 #                       | Connects to alice
-#                       | Writes blob
-#   Reads blob          |
-#   Writes blob         |
-#                       | Reads blob
+#                       | Writes the fixnum n
+#   Reads n             |
+#   Writes n-1          |
+#                       | Reads n-1
+#                       | Write n-2
+#                      ...
+#   Reads 1             |
+#   Writes 0            |
+#                       | Reads 0
 #                       | Closes connection
 
 DEF blob_key AS 4 # from dev.asm
@@ -17,84 +22,115 @@ DEF tcp_key AS 102 # from dev.asm
 DEF blob_dev AS system(blob_key)
 DEF tcp_dev AS system(tcp_key)
 DEF alice_petname AS 0
-DEF payload AS 42
-DEF blob_size AS 16
-DEF blob_offset AS 15 # last byte
+DEF nr_writes AS 5
+DEF blob_size AS 8
+DEF blob_offset AS sub(blob_size, 1) # last byte
 DEF tag_listen AS 5000
 DEF tag_connect AS 5001
 DEF tag_open AS 5002
 DEF tag_close AS 5003
 DEF tag_write AS 5004
 DEF tag_read AS 5005
-CREATE write_cb WITH \result.[
+DEF tag_read_byte AS 5006
+DEF label_beh(rcvr, label) AS \msg.[
+    SEND (label, msg) TO rcvr
+]
+DEF log_beh(tag, ok_cust, fail_cust) AS \result.[
     CASE result OF
     (TRUE, value) : [
-        SEND (tag_write, value) TO println
+        SEND (tag, value) TO println
+        SEND value TO ok_cust
     ]
     (FALSE, error) : [
-        SEND (tag_write, error) TO println
+        SEND (tag, error) TO println
+        SEND error TO fail_cust
     ]
     END
 ]
-CREATE blob_read_cust WITH \byte.[
-    SEND (tag_read, byte) TO println
-]
-CREATE listen_cb WITH \result.[
-    CASE result OF
-    (TRUE, stop) : [
-        SEND (tag_listen, stop) TO println
-        SEND (?, connect_cb, alice_petname) TO tcp_dev
-        CREATE connect_cb WITH \result.[
-            CASE result OF
-            (TRUE, conn) : [
-                SEND (tag_connect, conn) TO println
-                SEND (blob_cust, blob_size) TO blob_dev # alloc blob
-                CREATE blob_cust WITH \blob.[
-                    SEND (blob_write_cust, blob_offset, payload) TO blob
-                    CREATE blob_write_cust WITH \_.[
-                        SEND (?, write_cb, blob) TO conn
-                    ]
-                ]
-                SEND (?, read_cb, ?) TO conn
-                CREATE read_cb WITH \result.[
-                    CASE result OF
-                    (TRUE, blob) : [
-                        SEND (blob_read_cust, blob_offset) TO blob
-                        SEND (?, write_cb, NIL) TO conn # close connection
-                    ]
-                    (FALSE, error) : [
-                        SEND (tag_read, error) TO println
-                    ]
-                    END
-                ]
-            ]
-            (FALSE, error) : [
-                SEND (tag_connect, error) TO println
-            ]
-            END
-        ]
-    ]
-    (FALSE, error) : [
-        SEND (tag_listen, error) TO println
-    ]
-    END
-]
-CREATE on_open WITH \conn.[
-    SEND (tag_open, conn) TO println
-    SEND (?, read_cb, ?) TO conn
-    CREATE read_cb WITH \result.[
-        CASE result OF
-        (TRUE, blob) : [
-            SEND (blob_read_cust, blob_offset) TO blob
+DEF write(conn, n) AS [
+    SEND (blob_cust, blob_size) TO blob_dev # alloc blob
+    CREATE blob_cust WITH \blob.[
+        SEND (blob_write_cust, blob_offset, n) TO blob
+        CREATE blob_write_cust WITH \_.[
             SEND (?, write_cb, blob) TO conn
         ]
-        (FALSE, error) : [
-            SEND (tag_read, error) TO println
+    ]
+]
+DEF read_beh(consumed) AS \conn.[
+    DEF self AS SELF
+    SEND (?, read_cb, ?) TO conn
+    CREATE read_cb WITH log_beh(tag_read, read_cust, sink)
+    CREATE read_cust WITH \blob.[
+        CASE is_actor(blob) OF
+        TRUE : [
+            SEND (blob_size_cust, ?) TO blob
+            CREATE blob_size_cust WITH \size.[
+                DEF sub_offset AS sub(blob_offset, consumed)
+                CASE less(sub_offset, size) OF
+                TRUE : [
+                    SEND (blob_read_cust, sub_offset) TO blob
+                    CREATE blob_read_cust WITH \n.[
+                        SEND (tag_read_byte, n) TO println
+                        CASE greater(n, 0) OF
+                        TRUE : [
+                            SEND conn TO self
+                            write(conn, sub(n, 1))
+                        ]
+                        FALSE : [
+                            SEND (?, write_cb, NIL) TO conn # close connection
+                        ]
+                        END
+                    ]
+                ]
+                FALSE : [
+                    BECOME read_beh(add(consumed, size))
+                    SEND conn TO SELF # read next blob
+                ]
+                END
+            ]
         ]
         END
     ]
 ]
-CREATE on_close WITH \conn.[
-    SEND (tag_close, conn) TO println
+CREATE sink WITH \_.[]
+CREATE write_cb WITH log_beh(tag_write, sink, sink)
+CREATE conn_cust WITH \conn.[
+    DEF x AS SELF
+    SEND (?, read_cb, ?) TO conn
+    CREATE read_cb WITH log_beh(tag_read, read_cust, sink)
+    CREATE read_cust WITH \blob.[
+        CASE is_actor(blob) OF
+        TRUE : [
+            SEND (blob_read_cust, blob_offset) TO blob
+            CREATE blob_read_cust WITH \n.[
+                SEND (tag_read_byte, n) TO println
+                CASE greater(n, 0) OF
+                TRUE : [
+                    SEND conn TO x
+                    write(conn, sub(n, 1))
+                ]
+                FALSE : [
+                    SEND (?, write_cb, NIL) TO conn # close connection
+                ]
+                END
+            ]
+        ]
+        END
+    ]
+]
+CREATE listen_cb WITH log_beh(tag_listen, listen_cust, sink)
+CREATE listen_cust WITH \stop.[
+    SEND (?, connect_cb, alice_petname) TO tcp_dev
+    CREATE connect_cb WITH log_beh(tag_connect, connect_cust, sink)
+    CREATE connect_cust WITH \conn.[
+        write(conn, nr_writes)
+        SEND conn TO NEW read_beh(0)
+    ]
+]
+CREATE on_close WITH label_beh(println, tag_close)
+CREATE on_open WITH \conn.[
+    SEND (tag_open, conn) TO println
+    BECOME read_beh(0)
+    SEND conn TO SELF
 ]
 SEND (?, listen_cb, alice_petname, on_open, on_close) TO tcp_dev

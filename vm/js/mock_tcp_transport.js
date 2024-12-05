@@ -10,12 +10,12 @@ function delay(callback, ...args) {
     setTimeout(callback, 50 * Math.random(), ...args);
 }
 
-function random_chunk_size() {
-    return Math.floor(128 * Math.random());
-}
-
-function mock_transport(flakiness = 0) {
+function mock_tcp_transport(flakiness = 0, max_chunk_size = 128) {
     let listeners = Object.create(null);
+
+    function random_chunk_size() {
+        return Math.floor(max_chunk_size * Math.random());
+    }
 
     function flake() {
         return Math.random() < flakiness;
@@ -174,4 +174,4 @@ function mock_transport(flakiness = 0) {
     return Object.freeze({listen, connect});
 }
 
-export default Object.freeze(mock_transport);
+export default Object.freeze(mock_tcp_transport);
