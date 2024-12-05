@@ -10,7 +10,8 @@
 
 //  h_read_bytes(blob_cap)
 //      Returns a requestor that reads a blob's bytes, one by one, producing a
-//      Uint8Array.
+//      Uint8Array. The caller is responsible for ensuring 'blob_cap' is not
+//      garbage collected during the request.
 
 //  u_get_bytes(blob_cap)
 //      Returns the mutable Uint8Array associated with the blob capability, or
@@ -67,7 +68,6 @@ function blob_dev(core, make_ddev) {
         const read_nr = reads.length;
         reads.push(undefined); // placeholder
         let byte_array = [];
-        let blob_stub = ddev.h_reserve_stub(blob_cap);
         return function h_read_bytes_requestor(callback) {
             const cust_cap = ddev.h_reserve_proxy(encode_tag({read_nr}));
             const cust_stub = ddev.h_reserve_stub(cust_cap);
@@ -77,7 +77,6 @@ function blob_dev(core, make_ddev) {
                     byte_array.push(ufork.fix_to_i32(message));
                     return h_read_bytes_requestor(callback);
                 }
-                core.h_release_stub(blob_stub);
                 return callback(new Uint8Array(byte_array));
             };
             const offset = byte_array.length;
@@ -259,6 +258,7 @@ function demo(log) {
             core.h_boot(asm_module.boot);
             run_core();
             const blob = h_alloc_blob([5, 6, 7, 8]);
+            core.h_reserve_stub(blob.cap, blob.cap); // TODO pass #? as device
             // return u_get_bytes(blob.cap);
             return h_read_bytes(blob.cap);
         })

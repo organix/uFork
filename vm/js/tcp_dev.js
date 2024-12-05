@@ -289,7 +289,7 @@ function tcp_dev(
                     the_blob_dev.h_read_bytes(
                         blob_cap
                     )(function (bytes, reason) {
-                        core.h_release_stub(event_stub_ptr);
+                        core.h_release_stub(event_stub_ptr); // release blob_cap
                         if (bytes === undefined) {
                             u_trace(`#${conn_nr} write failed`, reason);
                             return h_send(callback, h_reply_fail());
