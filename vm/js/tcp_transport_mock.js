@@ -4,13 +4,18 @@
 // The 'flakiness' parameter, between 0 and 1, controls the propensity for
 // network errors.
 
+// This module was originally part of the WebSeif project, see
+// https://github.com/jamesdiacono/WebSeif.
+
 /*jslint browser */
+
+import tcp_transport_demo from "./tcp_transport_demo.js";
 
 function delay(callback, ...args) {
     setTimeout(callback, 50 * Math.random(), ...args);
 }
 
-function mock_tcp_transport(flakiness = 0, max_chunk_size = 128) {
+function tcp_transport_mock(flakiness = 0, max_chunk_size = 128) {
     let listeners = Object.create(null);
 
     function random_chunk_size() {
@@ -174,4 +179,8 @@ function mock_tcp_transport(flakiness = 0, max_chunk_size = 128) {
     return Object.freeze({listen, connect});
 }
 
-export default Object.freeze(mock_tcp_transport);
+if (import.meta.main) {
+    tcp_transport_demo(tcp_transport_mock(), "127.0.0.1:1234");
+}
+
+export default Object.freeze(tcp_transport_mock);

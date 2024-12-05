@@ -9,7 +9,7 @@ import requestorize from "https://ufork.org/lib/rq/requestorize.js";
 import blob_dev from "./blob_dev.js";
 import host_dev from "./host_dev.js";
 import ufork from "./ufork.js";
-import mock_transport from "./mock_tcp_transport.js";
+import tcp_transport_mock from "./tcp_transport_mock.js";
 const lib_url = import.meta.resolve("https://ufork.org/lib/");
 const wasm_url = import.meta.resolve("https://ufork.org/wasm/ufork.debug.wasm");
 const hum_demo_url = import.meta.resolve("./tcp_dev_demo.hum");
@@ -28,7 +28,7 @@ function tcp_dev(
     make_ddev,
     the_blob_dev,
     addresses,
-    transport = mock_transport()
+    transport = tcp_transport_mock()
 ) {
     const sponsor = ufork.ramptr(ufork.SPONSOR_OFS);
     let ddev;
@@ -432,7 +432,7 @@ function demo(log, flakiness = 0.05, max_chunk_size = 16) {
                 make_ddev,
                 blob_dev(core, make_ddev),
                 ["127.0.0.1:8370"],
-                mock_transport(flakiness, max_chunk_size)
+                tcp_transport_mock(flakiness, max_chunk_size)
             );
             core.h_boot(asm_module.boot);
             core.h_refill({memory: 65536, events: 65536, cycles: 65536});

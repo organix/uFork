@@ -47,17 +47,16 @@ DEF callback_beh(tag, ok_cust, fail_cust) AS \result.[
     ]
     END
 ]
-DEF write(conn, n) AS [
+DEF write(conn, integer) AS [
     SEND (blob_cust, blob_size) TO blob_dev # alloc blob
     CREATE blob_cust WITH \blob.[
-        SEND (blob_write_cust, blob_offset, n) TO blob
+        SEND (blob_write_cust, blob_offset, integer) TO blob
         CREATE blob_write_cust WITH \_.[
             SEND (?, write_cb, blob) TO conn
         ]
     ]
 ]
-DEF read_beh(consumed) AS \conn.[
-    DEF self AS SELF
+DEF read(conn, consumed) AS [
     SEND (?, read_cb, ?) TO conn
     CREATE read_cb WITH callback_beh(tag_read, read_cust, sink)
     CREATE read_cust WITH \blob.[
@@ -69,12 +68,12 @@ DEF read_beh(consumed) AS \conn.[
                 CASE less(sub_offset, size) OF
                 TRUE : [
                     SEND (blob_read_cust, sub_offset) TO blob
-                    CREATE blob_read_cust WITH \n.[
-                        SEND (tag_read_byte, n) TO println
-                        CASE greater(n, 0) OF
+                    CREATE blob_read_cust WITH \integer.[
+                        SEND (tag_read_byte, integer) TO println
+                        CASE greater(integer, 0) OF
                         TRUE : [
-                            SEND conn TO self
-                            write(conn, sub(n, 1))
+                            read(conn, 0)
+                            write(conn, sub(integer, 1))
                         ]
                         FALSE : [
                             SEND (?, write_cb, NIL) TO conn # close connection
@@ -83,8 +82,7 @@ DEF read_beh(consumed) AS \conn.[
                     ]
                 ]
                 FALSE : [
-                    BECOME read_beh(add(consumed, size))
-                    SEND conn TO SELF # read next blob
+                    read(conn, add(consumed, size)) # read next blob
                 ]
                 END
             ]
@@ -100,14 +98,12 @@ CREATE listen_cust WITH \stop.[
     CREATE connect_cb WITH callback_beh(tag_connect, connect_cust, sink)
     CREATE connect_cust WITH \conn.[
         write(conn, nr_writes)
-        BECOME read_beh(0)
-        SEND conn TO SELF
+        read(conn, 0)
     ]
 ]
 CREATE on_close WITH label_beh(println, tag_close)
 CREATE on_open WITH \conn.[
     SEND (tag_open, conn) TO println
-    BECOME read_beh(0)
-    SEND conn TO SELF
+    read(conn, 0)
 ]
 SEND (?, listen_cb, alice_petname, on_open, on_close) TO tcp_dev
