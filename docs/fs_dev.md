@@ -13,9 +13,9 @@ An open request produces a file capability.
 
 The input value of the `open_request` is a pair like
 
-    (#open . path)
+    (fs_open . path)
 
-where `#open` is the `fs_open` export of [dev.asm](../lib/dev.asm), and `path`
+where `fs_open` is exported by [dev.asm](../lib/dev.asm), and `path`
 is a blob containing the UTF-8 encoded file path.
 
 ## Files
@@ -57,13 +57,13 @@ The cursor is not moved.
 
 A request with input `(origin . offset)` moves the cursor to `offset` bytes
 relative to the `origin`. The `offset` is a signed fixnum and the `origin` is
-one of 3 values:
+one of the following values exported by [dev.asm](../lib/dev.asm):
 
  `origin`    | Meaning
 -------------|----------------
-`0`          | beginning of file
-`1`          | current cursor position
-`2`          | end of file
+`fs_begin`   | beginning of file
+`fs_cursor`  | current cursor position
+`fs_end`     | end of file
 
 If the requested cursor position was within the file, `#t` is produced.
 Otherwise the cursor is clamped to the beginning or end of the file and `#f` is
