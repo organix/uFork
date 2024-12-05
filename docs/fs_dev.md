@@ -21,18 +21,15 @@ is a blob containing the UTF-8 encoded file path.
 ## Files
 
 Each file is represented as an actor with a [requestor](requestor.md)
-interface similar to the [I/O device](io_dev.md), except that a stream of
-[blobs](blob_dev.md) are read and written rather than a stream of characters.
+interface.
 
-A file actor maintains a cursor, the current position within the file in bytes.
-Reads and writes always begin at this cursor. When a file is first opened the
-cursor is at position `0`, the beginning of the file.
+A file actor maintains a cursor, which is the current position within the file
+in bytes. Reads and writes always begin at this cursor. When a file is opened
+the cursor is initially at position `0`, the beginning of the file.
 
-File requests fail if made whilst another request to the same file is in
-progress.
-
-The underlying file handle is automatically closed once a file capability is
-garbage collected.
+File requests fail if made whilst any other request to the same file is in
+progress. The underlying file handle is automatically closed when a file
+capability is garbage collected.
 
 ### Read request
 
@@ -52,21 +49,22 @@ The cursor position is incremented by the number of bytes written.
 
 ### Truncate request
 
-A request with `#nil` as the input value, the file is truncated at the
-cursor.
+A request with input `#nil` truncates the file at the cursor.
 
 The cursor is not moved.
 
 ### Seek request
 
-A request like `(offset . origin)` moves the cursor to `offset` bytes relative
-to the `origin`. The `offset` is a signed fixnum and the `origin` is one of
-3 values:
+A request with input `(origin . offset)` moves the cursor to `offset` bytes
+relative to the `origin`. The `offset` is a signed fixnum and the `origin` is
+one of 3 values:
 
-- `0`: beginning of the file
-- `1`: current cursor position
-- `2`: end of file
+ `origin`    | Meaning
+-------------|----------------
+`0`          | beginning of file
+`1`          | current cursor position
+`2`          | end of file
 
-If the requested cursor position landed within the file, `#t` is produced.
+If the requested cursor position was within the file, `#t` is produced.
 Otherwise the cursor is clamped to the beginning or end of the file and `#f` is
 produced.
