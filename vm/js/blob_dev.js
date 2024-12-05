@@ -69,27 +69,31 @@ function blob_dev(core, make_ddev) {
         reads.push(undefined); // placeholder
         let byte_array = [];
         return function h_read_bytes_requestor(callback) {
-            const cust_cap = ddev.h_reserve_proxy(encode_tag({read_nr}));
-            const cust_stub = ddev.h_reserve_stub(cust_cap);
-            reads[read_nr] = function (message) {
-                core.h_release_stub(cust_stub);
-                if (ufork.is_fix(message)) {
-                    byte_array.push(ufork.fix_to_i32(message));
-                    return h_read_bytes_requestor(callback);
-                }
-                return callback(new Uint8Array(byte_array));
-            };
-            const offset = byte_array.length;
-            core.h_event_enqueue(core.h_reserve_ram({
-                t: sponsor,
-                x: blob_cap,
-                y: core.h_reserve_ram({
-                    t: ufork.PAIR_T,
-                    x: cust_cap,
-                    y: ufork.fixnum(offset)
-                })
-            }));
-            core.h_wakeup(ufork.HOST_DEV_OFS);
+            try {
+                const cust_cap = ddev.h_reserve_proxy(encode_tag({read_nr}));
+                const cust_stub = ddev.h_reserve_stub(cust_cap);
+                reads[read_nr] = function h_reply(message) {
+                    core.h_release_stub(cust_stub);
+                    if (ufork.is_fix(message)) {
+                        byte_array.push(ufork.fix_to_i32(message));
+                        return h_read_bytes_requestor(callback);
+                    }
+                    return callback(new Uint8Array(byte_array));
+                };
+                const offset = byte_array.length;
+                core.h_event_enqueue(core.h_reserve_ram({
+                    t: sponsor,
+                    x: blob_cap,
+                    y: core.h_reserve_ram({
+                        t: ufork.PAIR_T,
+                        x: cust_cap,
+                        y: ufork.fixnum(offset)
+                    })
+                }));
+                core.h_wakeup(ufork.HOST_DEV_OFS);
+            } catch (exception) {
+                return callback(undefined, exception);
+            }
         };
     }
 
