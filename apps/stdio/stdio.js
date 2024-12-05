@@ -25,16 +25,6 @@ const stdin_buffer_size = 65536; // 64KB
 
 let core;
 
-function refill() {
-    // refill root-sponsor with resources
-    const spn = ufork.ramptr(ufork.SPONSOR_OFS);
-    const sponsor = core.u_read_quad(spn);
-    sponsor.t = ufork.fixnum(4096);  // memory
-    sponsor.x = ufork.fixnum(256);  // events
-    sponsor.y = ufork.fixnum(8192);  // cycles
-    core.u_write_quad(spn, sponsor);
-}
-
 function run() {
     while (true) {
         // run until there is no more work, or an error occurs
@@ -50,7 +40,7 @@ function run() {
                 || err === ufork.E_MSG_LIM
                 || err === ufork.E_CPU_LIM
             ) {
-                refill();
+                core.h_refill({memory: 4096, events: 256, cycles: 8192});
             } else {
                 globalThis.console.error("FAULT", msg);
                 break;  // report error, then exit...

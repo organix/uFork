@@ -113,15 +113,6 @@ const tools_ui = make_ui("tools-ui", function (element, {
         }
     }
 
-    function refill_sponsor() {
-        const spn = ufork.ramptr(ufork.SPONSOR_OFS);
-        const sponsor = core.u_read_quad(spn);
-        sponsor.t = ufork.fixnum(4096);  // memory
-        sponsor.x = ufork.fixnum(256);  // events
-        sponsor.y = ufork.fixnum(8192);  // cycles
-        core.u_write_quad(spn, sponsor);
-    }
-
     function run_loop() {
         const begin = Date.now();
         while (true) {
@@ -151,7 +142,7 @@ const tools_ui = make_ui("tools-ui", function (element, {
 // There is work left in the continuation queue. Refill and continue, deferring
 // the next iteration if the browser's event loop is being blocked.
 
-            refill_sponsor();
+            core.h_refill({memory: 4096, events: 256, cycles: 8192});
             const elapsed = Date.now() - begin;
             if (elapsed > 20) {
                 run_loop_timer = setTimeout(run_loop, 0);

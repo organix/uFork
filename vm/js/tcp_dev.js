@@ -418,6 +418,7 @@ function demo(log) {
                 mock_transport()
             );
             core.h_boot(asm_module.boot);
+            core.h_refill({memory: 65536, events: 65536, cycles: 65536});
             run_core();
             return true;
         })

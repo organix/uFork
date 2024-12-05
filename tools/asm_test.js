@@ -91,15 +91,6 @@ function asm_test(module_url, time_limit = 5000) {
                     return callback({pass: false, logs});
                 });
 
-// Provide generous resource limits.
-
-                const sponsor_ptr = ufork.ramptr(ufork.SPONSOR_OFS);
-                const sponsor = core.u_read_quad(sponsor_ptr);
-                sponsor.t = ufork.fixnum(4096);    // memory
-                sponsor.x = ufork.fixnum(256);     // events
-                sponsor.y = ufork.fixnum(4096);    // cycles
-                core.u_write_quad(sponsor_ptr, sponsor);
-
 // Set a timeout timer and run the test suite.
 
                 timer = setTimeout(function () {
@@ -109,6 +100,7 @@ function asm_test(module_url, time_limit = 5000) {
                 }, time_limit);
                 const judge = ddev.h_reserve_proxy();
                 core.h_boot(asm_module.test, judge);
+                core.h_refill({memory: 4096, events: 256, cycles: 4096});
                 run_ufork();
                 return core.h_dispose; // cancel
             } catch (exception) {

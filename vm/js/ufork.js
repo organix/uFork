@@ -1545,6 +1545,21 @@ function make_core({
         }
     }
 
+    function h_refill({memory, events, cycles}) {
+        const sponsor_ptr = ramptr(SPONSOR_OFS);
+        const sponsor = u_read_quad(sponsor_ptr);
+        if (Number.isSafeInteger(memory)) {
+            sponsor.t = fixnum(memory);
+        }
+        if (Number.isSafeInteger(events)) {
+            sponsor.x = fixnum(events);
+        }
+        if (Number.isSafeInteger(cycles)) {
+            sponsor.y = fixnum(cycles);
+        }
+        u_write_quad(sponsor_ptr, sponsor);
+    }
+
     function h_initialize() {
 
 // Initializes the core. This requestor should be run exactly once before the
@@ -1648,6 +1663,7 @@ function make_core({
         h_install,
         h_load,
         h_ram_top,
+        h_refill,
         h_release_stub,
         h_reserve_ram,
         h_reserve_rom,
@@ -1745,17 +1761,14 @@ function demo(log) {
 
 // Boot.
 
-            const sponsor_ptr = ramptr(SPONSOR_OFS);
-            const sponsor = core.u_read_quad(sponsor_ptr);
-            sponsor.t = fixnum(4096);    // memory
-            sponsor.x = fixnum(256);     // events
-            sponsor.y = fixnum(4096);    // cycles
-            core.u_write_quad(sponsor_ptr, sponsor);
             const start = performance.now();
             core.h_boot(test_module.boot);
-            run_ufork();
+            core.h_refill({cycles: 100});
+            run_ufork(); // sponsor cycle limit reached
+            core.h_refill({cycles: 4096});
+            run_ufork(); // #t
             core.h_boot(audit_module.boot);
-            run_ufork();
+            run_ufork(); // actor transaction aborted
             const duration = performance.now() - start;
             return duration.toFixed(3) + "ms";
         })

@@ -29,44 +29,29 @@ let core;  // uFork wasm processor core
 let on_stdin;
 let db = make_chat_db(default_signaller_origin);
 
-function refill_all(spn) {
-    const sponsor = core.u_read_quad(spn);
-    sponsor.t = ufork.fixnum(4096);  // memory
-    sponsor.x = ufork.fixnum(256);  // events
-    sponsor.y = ufork.fixnum(8192);  // cycles
-    core.u_write_quad(spn, sponsor);
-    //console.log("filled:", core.u_disasm(spn));
-}
-
 function ufork_run() {
-    const spn = ufork.ramptr(ufork.SPONSOR_OFS);
-    refill_all(spn);  // pre-load root-sponsor with resources
     // run until there is no more work, or an error occurs
-    const sig = core.h_run_loop(0);
-    if (ufork.is_fix(sig)) {
-        const err = ufork.fix_to_i32(sig);
-        const msg = ufork.fault_msg(err);
-        console.log("IDLE", core.u_disasm(spn), "error:", err, "=", msg);
-        const sponsor = core.u_read_quad(spn);
+    const status = core.h_run_loop(0);
+    if (ufork.is_fix(status)) {
+        const err = ufork.fix_to_i32(status);
+        console.log("IDLE:", ufork.fault_msg(err));
         if (err === ufork.E_OK) {
             // processor idle
             return ufork.E_OK;
         }
         if (err === ufork.E_MEM_LIM) {
-            sponsor.t = ufork.fixnum(256);
+            core.h_refill({memory: 256});
         } else if (err === ufork.E_MSG_LIM) {
-            sponsor.x = ufork.fixnum(16);
+            core.h_refill({events: 16});
         } else if (err === ufork.E_CPU_LIM) {
-            sponsor.y = ufork.fixnum(64);
+            core.h_refill({cycles: 64});
         } else {
             // processor error
             return err;
         }
-        core.u_write_quad(spn, sponsor);
-        console.log("refilled:", core.u_disasm(spn));
     }
     setTimeout(function wakeup() {  // run again on a subsequent turn
-        console.log("RUN:", ufork.print(sig));
+        console.log("RUN:", ufork.print(status));
         ufork_run();
     }, 0);
 }
