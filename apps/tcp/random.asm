@@ -1,5 +1,5 @@
-; A uFork program that listens for TCP connections, sending each a random ASCII
-; character before it is closed.
+; A uFork program that listens for TCP connections, sending each connection a
+; random byte then closing it.
 
 .import
     dev: "https://ufork.org/lib/dev.asm"

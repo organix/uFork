@@ -37,6 +37,17 @@ nohup deno run \
     apps/peer_chat/chat_server.js \
     localhost:3528 \
     &
+nohup deno run \
+    --no-config \
+    --watch \
+    --no-lock \
+    --allow-read=. \
+    --allow-net \
+    --allow-import \
+    apps/tcp/tcp.js \
+    apps/tcp/random.asm \
+    0.0.0.0:8370 \
+    &
 nohup bash -c "
     while true
     do
