@@ -149,6 +149,24 @@ http_response:
     pair_t '\n'
     ref #nil
 
+list_len:                   ; ( list -- len )
+    roll -2                 ; k list
+    push 0                  ; k list len=0
+list_len_loop:              ; k list len
+    pick 2                  ; k list len list
+    typeq #pair_t           ; k list len is_pair(list)
+    if_not list_len_end     ; k list len
+    push 1                  ; k list len 1
+    alu add                 ; k list len+1
+    roll 2                  ; k len+1 list
+    nth -1                  ; k len+1 rest(list)
+    roll 2                  ; k rest(list) len+1
+    ref list_len_loop
+list_len_end:               ; k list len
+    roll 2                  ; k len list
+    drop 1                  ; k len
+    ref std.return_value
+
 num_to_dec:                 ; ( str +num -- char,char,...,str )
     roll -3                 ; k str n=+num
 num_loop:                   ; k str n
@@ -337,7 +355,8 @@ tgt_start:                  ; tgt
     ref std.send_msg
 
 stage_1a:                   ; {caps} <- _
-    push 64                 ; size=64
+    push http_request       ; list
+    call list_len           ; size=len
     state 0                 ; size {caps}
     push stage_1b           ; size {caps} stage_1b
     actor create            ; size cust=stage_1b.{caps}
