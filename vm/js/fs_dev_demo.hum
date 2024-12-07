@@ -6,7 +6,7 @@ DEF fs_file AS 0 # from dev.asm
 DEF fs_begin AS 0 # from dev.asm
 DEF blob_dev AS system(blob_key)
 DEF fs_dev AS system(fs_key)
-DEF file_path AS ('/', 'd', '/', 'f', '.', 't', 'x', 't', NIL)
+DEF file_path AS "/d/f.txt"
 DEF tag_file AS 5000
 DEF tag_write AS 5001
 DEF tag_seek AS 5002
