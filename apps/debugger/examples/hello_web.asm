@@ -135,6 +135,7 @@ http_response:
 ;;
     pair_t '\r'
     pair_t '\n'
+content:
 ;; Not Found
     pair_t 'N'
     pair_t 'o'
@@ -336,6 +337,44 @@ k_fail:                     ; --
     state 1                 ; #f,msg cb
     ref std.send_msg
 
+; blob interface to a blob sub-range
+blob_slice:                 ; base,len,blob <- cust,req
+    msg -1                  ; req
+    eq #?                   ; req==#?
+    if slice_size           ; --
+    msg -1                  ; req
+    typeq #fixnum_t         ; is_fix(req)
+    if slice_read           ; --
+    ref slice_write
+
+slice_size:
+    state 2                 ; size=len
+    ; FIXME: clamp to size of underlying blob...
+    ref std.cust_send
+
+slice_read:
+    msg 0                   ; cust,ofs
+    part 1                  ; ofs cust
+    state 1                 ; ofs cust base
+    roll 3                  ; cust base ofs
+    alu add                 ; cust base+ofs
+    roll -2                 ; base+ofs cust
+    pair 1                  ; cust,base+ofs
+    state -2                ; cust,base+ofs blob
+    ref std.send_msg
+
+slice_write:
+    msg 0                   ; cust,ofs,value
+    part 2                  ; value ofs cust
+    state 1                 ; value ofs cust base
+    roll 3                  ; value cust base ofs
+    alu add                 ; value cust base+ofs
+    roll -2                 ; value base+ofs cust
+    pair 2                  ; cust,base+ofs,value
+    state -2                ; cust,base+ofs,value blob
+    ref std.send_msg
+
+; main program execution stages
 stage_1:                    ; {caps} <- _
     push http_request       ; str
     state 0                 ; str {caps}
@@ -374,7 +413,21 @@ stage_1b:                   ; {caps} <- blob
     pair 2                  ; str 0,0,blob
     push str_blob           ; str 0,0,blob str_blob
     actor create            ; str out=str_blob.0,0,blob
-    dup 1                   ; str out in
+;    dup 1                   ; str out in
+
+    ; sliced input stream
+    msg 0                   ; ... blob
+    push 17                 ; ... blob len=17
+    push 16                 ; ... blob len base=16
+    pair 2                  ; ... base,len,blob
+    push blob_slice         ; ... base,len,blob blob_slice
+    actor create            ; ... sblob=blob_slice.base,len,blob
+    push 0                  ; ... sblob rofs=0
+    push 17                 ; ... sblob rofs wofs=17
+    pair 2                  ; ... wofs,rofs,sblob
+    push str_blob           ; ... wofs,rofs,sblob str_blob
+    actor create            ; ... in=str_blob.wofs,rofs,sblob
+
     state 0                 ; str out in {caps}
     pair 1                  ; str out {caps},in
     push stage_1c           ; str out {caps},in stage_1c
