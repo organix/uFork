@@ -168,6 +168,10 @@ list_len_end:               ; k list len
     drop 1                  ; k len
     ref std.return_value
 
+;;; TODO
+;;;  * list_last ( list -- last )
+;;;  * reverse_onto ( list last -- rev )
+
 num_to_dec:                 ; ( str +num -- char,char,...,str )
     roll -3                 ; k str n=+num
 num_loop:                   ; k str n
@@ -185,17 +189,17 @@ num_loop:                   ; k str n
     drop 1                  ; k str'
     ref std.return_value
 
-; stream `str` to `out` until `#nil`
+; copy `list` to stream `out` until `#nil`
 ; sending the final `result` to `cb`
-str_out:                    ; cb,out,str <- result
+list_out:                   ; cb,out,list <- result
     msg 1                   ; ok
     if_not str_end          ; --
 
-    state -2                ; str
-    typeq #pair_t           ; is_pair(str)
-    if_not str_end
+    state -2                ; list
+    typeq #pair_t           ; is_pair(list)
+    if_not str_end          ; --
 
-    state 0                 ; cb,out,str
+    state 0                 ; cb,out,list
     part 3                  ; rest first out cb
     roll 3                  ; rest out cb char=first
     actor self              ; rest out cb char callback=SELF
@@ -204,7 +208,7 @@ str_out:                    ; cb,out,str <- result
     state 2                 ; rest out cb req out
     actor send              ; rest out cb
     pair 2                  ; cb,out,rest
-    push str_out            ; cb,out,rest str_out
+    push list_out           ; cb,out,rest list_out
     actor become            ; --
     ref std.commit
 
@@ -337,6 +341,43 @@ k_fail:                     ; --
     state 1                 ; #f,msg cb
     ref std.send_msg
 
+; blob interface to a #nil-terminated list
+blob_list:                  ; list <- cust,req
+    msg -1                  ; req
+    eq #?                   ; req==#?
+    if list_size            ; --
+    msg -1                  ; req
+    typeq #fixnum_t         ; is_fix(req)
+    if list_read            ; --
+    ref std.rv_false        ; write always fails
+
+list_size:
+    state 0                 ; list
+    call list_len           ; size=len
+    ref std.cust_send
+
+list_read:
+    msg 0                   ; cust,ofs
+    part 1                  ; ofs cust
+    state 0                 ; ofs cust list
+list_read_loop:
+    dup 1                   ; ofs cust list list
+    typeq #pair_t           ; ofs cust list is_pair(list)
+    if_not std.rv_undef     ; ofs cust list
+    part 1                  ; ofs cust rest first
+    pick 4                  ; ofs cust rest first ofs
+    eq 0                    ; ofs cust rest first ofs==0
+    if list_read_done       ; ofs cust rest first
+    drop 1                  ; ofs cust rest
+    roll 3                  ; cust rest ofs
+    push 1                  ; cust rest ofs 1
+    alu sub                 ; cust rest ofs-1
+    roll -3                 ; ofs-1 cust rest
+    ref list_read_loop
+list_read_done:             ; ofs cust rest first
+    roll 3                  ; ofs rest first cust
+    ref std.send_msg
+
 ; blob interface to a blob sub-range
 blob_slice:                 ; base,len,blob <- cust,req
     msg -1                  ; req
@@ -346,6 +387,7 @@ blob_slice:                 ; base,len,blob <- cust,req
     typeq #fixnum_t         ; is_fix(req)
     if slice_read           ; --
     ref slice_write
+    ; FIXME: handle unknown requests...
 
 slice_size:
     state 2                 ; size=len
@@ -374,9 +416,94 @@ slice_write:
     state -2                ; cust,base+ofs,value blob
     ref std.send_msg
 
+; blob interface to a concatenation of blobs
+blob_concat:                ; (len,blob),...,#nil <- cust,req
+    msg -1                  ; req
+    eq #?                   ; req==#?
+    if concat_size          ; --
+    msg -1                  ; req
+    typeq #fixnum_t         ; is_fix(req)
+    if concat_read          ; --
+    ref concat_write
+    ; FIXME: handle unknown requests...
+
+concat_size:
+    push 0                  ; size=0
+    state 0                 ; size list=(len,blob),...,#nil
+concat_size_loop:           ; size list
+    dup 1                   ; size list list
+    typeq #pair_t           ; size list is_pair(list)
+    if_not concat_size_done ; size list
+    part 1                  ; size rest first
+    part 1                  ; size rest blob len
+    roll 4                  ; rest blob len size
+    alu add                 ; rest blob len+size
+    roll -3                 ; len+size rest blob
+    drop 1                  ; len+size rest
+    ref concat_size_loop
+concat_size_done:           ; size list
+    drop 1                  ; size
+    ref std.cust_send
+
+concat_read:
+    msg 0                   ; cust,ofs
+    part 1                  ; ofs cust
+    state 0                 ; ofs cust list=(len,blob),...,#nil
+concat_read_loop:           ; ofs cust list
+    dup 1                   ; ofs cust list list
+    typeq #pair_t           ; ofs cust list is_pair(list)
+    if_not std.rv_undef     ; ofs cust list
+    part 1                  ; ofs cust rest first
+    part 1                  ; ofs cust rest blob len
+    pick 5                  ; ofs cust rest blob len ofs
+    pick 2                  ; ofs cust rest blob len ofs len
+    cmp lt                  ; ofs cust rest blob len ofs<len
+    if concat_read_done     ; ofs cust rest blob len
+    roll 5                  ; cust rest blob len ofs
+    roll 2                  ; cust rest blob ofs len
+    alu sub                 ; cust rest blob ofs-len
+    roll -4                 ; ofs-len cust rest blob
+    drop 1                  ; ofs-len cust rest
+    ref concat_read_loop
+concat_read_done:           ; ofs cust rest blob len
+    drop 1                  ; ofs cust rest blob
+    roll -4                 ; blob ofs cust rest
+    drop 1                  ; blob ofs cust
+    pair 1                  ; blob cust,ofs
+    roll 2                  ; cust,ofs blob
+    ref std.send_msg
+
+concat_write:
+    msg 0                   ; cust,ofs,value
+    part 2                  ; value ofs cust
+    state 0                 ; value ofs cust list=(len,blob),...,#nil
+concat_write_loop:          ; value ofs cust list
+    dup 1                   ; value ofs cust list list
+    typeq #pair_t           ; value ofs cust list is_pair(list)
+    if_not std.rv_false     ; value ofs cust list
+    part 1                  ; value ofs cust rest first
+    part 1                  ; value ofs cust rest blob len
+    pick 5                  ; value ofs cust rest blob len ofs
+    pick 2                  ; value ofs cust rest blob len ofs len
+    cmp lt                  ; value ofs cust rest blob len ofs<len
+    if concat_write_done    ; value ofs cust rest blob len
+    roll 5                  ; value cust rest blob len ofs
+    roll 2                  ; value cust rest blob ofs len
+    alu sub                 ; value cust rest blob ofs-len
+    roll -4                 ; value ofs-len cust rest blob
+    drop 1                  ; value ofs-len cust rest
+    ref concat_write_loop
+concat_write_done:          ; value ofs cust rest blob len
+    drop 1                  ; value ofs cust rest blob
+    roll -5                 ; blob value ofs cust rest
+    drop 1                  ; blob value ofs cust
+    pair 2                  ; blob cust,ofs,value
+    roll 2                  ; cust,ofs,value blob
+    ref std.send_msg
+
 ; main program execution stages
 stage_1:                    ; {caps} <- _
-    push http_request       ; str
+    push hello              ; str
     state 0                 ; str {caps}
     push dev.io_key         ; str {caps} io_key
     dict get                ; str io_dev
@@ -384,8 +511,8 @@ stage_1:                    ; {caps} <- _
     push stage_2            ; str io_dev {caps} stage_2
     actor create            ; str out=io_dev cb=stage_2.{caps}
     pair 2                  ; cb,out,str
-    push str_out            ; cb,out,str str_out
-    actor create            ; tgt=str_out.cb,out,str
+    push list_out           ; cb,out,str list_out
+    actor create            ; tgt=list_out.cb,out,str
 tgt_start:                  ; tgt
     push #?                 ; tgt value=#?
     push #t                 ; tgt #? ok=#t
@@ -433,8 +560,8 @@ stage_1b:                   ; {caps} <- blob
     push stage_1c           ; str out {caps},in stage_1c
     actor create            ; str out cb=stage_1c.{caps},in
     pair 2                  ; cb,out,str
-    push str_out            ; cb,out,str str_out
-    actor create            ; tgt=str_out.cb,out,str
+    push list_out           ; cb,out,str list_out
+    actor create            ; tgt=list_out.cb,out,str
     ref tgt_start
 
 stage_1c:                   ; {caps},in <- result
@@ -458,11 +585,11 @@ stage_2:                    ; {caps} <- result
     push dev.io_key         ; str {caps} io_key
     dict get                ; str io_dev
     state 0                 ; str io_dev {caps}
-    push stage_3            ; str io_dev {caps} stage_3
-    actor create            ; str out=io_dev cb=stage_3.{caps}
+    push stage_3a           ; str io_dev {caps} stage_3a
+    actor create            ; str out=io_dev cb=stage_3a.{caps}
     pair 2                  ; cb,out,str
-    push str_out            ; cb,out,str str_out
-    actor create            ; tgt=str_out.cb,out,str
+    push list_out           ; cb,out,str list_out
+    actor create            ; tgt=list_out.cb,out,str
     ref tgt_start
 
 stage_3:                    ; {caps} <- result
@@ -474,8 +601,32 @@ stage_3:                    ; {caps} <- result
     push dev.debug_key      ; str io_dev {caps} debug_key
     dict get                ; str out=io_dev cb=debug_dev
     pair 2                  ; cb,out,str
-    push str_out            ; cb,out,str str_out
-    actor create            ; tgt=str_out.cb,out,str
+    push list_out           ; cb,out,str list_out
+    actor create            ; tgt=list_out.cb,out,str
+    ref tgt_start
+
+stage_3a:                   ; {caps} <- result
+    push http_response      ; list
+    push blob_list          ; list blob_list
+    actor create            ; blob=blob_list.list
+    push 0                  ; blob rofs=0
+    push http_response      ; blob rofs list
+    call list_len           ; blob rofs wofs=len
+    pair 2                  ; wofs,rofs,blob
+    push str_blob           ; wofs,rofs,blob str_blob
+    actor create            ; in=str_blob.wofs,rofs,blob
+
+    state 0                 ; in {caps}
+    push dev.io_key         ; in {caps} io_key
+    dict get                ; in out=io_dev
+
+    state 0                 ; in out {caps}
+    push dev.debug_key      ; in out {caps} debug_key
+    dict get                ; in out cb=debug_dev
+
+    pair 2                  ; cb,out,in
+    push str_copy           ; cb,out,in str_copy
+    actor create            ; tgt=str_copy.cb,out,in
     ref tgt_start
 
 boot:                       ; _ <- {caps}
