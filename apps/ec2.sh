@@ -1,7 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 
-# Configures an Amazon Linux box to host the uFork Peer Chat app.
+# Configures an Amazon Linux box to host some of the apps.
 
 # Install Deno
 curl -fsSL https://deno.land/x/install/install.sh | sh
@@ -47,6 +47,18 @@ nohup deno run \
     apps/tcp/tcp.js \
     apps/tcp/random.asm \
     0.0.0.0:8370 \
+    &
+nohup deno run \
+    --no-config \
+    --watch \
+    --no-lock \
+    --allow-read=. \
+    --allow-net \
+    --allow-import \
+    apps/www/www.js \
+    apps/www/static.asm \
+    site \
+    0.0.0.0:5887 \
     &
 nohup bash -c "
     while true
