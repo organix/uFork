@@ -618,9 +618,38 @@ create_str_list:            ; ( list -- str )
     actor create            ; k in=str_blob.wofs,rofs,blob
     ref std.return_value
 
+create_len_blob:            ; ( list -- len,blob )
+    roll -2                 ; k list
+    dup 1                   ; k list list
+    push blob_list          ; k list list blob_list
+    actor create            ; k list blob=blob_list.list
+    roll 2                  ; k blob list
+    call list_len           ; k blob len
+    pair 1                  ; k len,blob
+    ref std.return_value
+
 stage_3a:                   ; {caps} <- result
-    push http_response      ; list
-    call create_str_list    ; in=str
+    push #nil               ; #nil
+    push content            ; #nil content
+    call create_len_blob    ; #nil len,blob
+    push http_response      ; #nil len,blob response
+    call create_len_blob    ; #nil len1,blob1 len0,blob0
+
+    part 1                  ; #nil len1,blob1 blob0 len0
+    pick 3                  ; #nil len1,blob1 blob0 len0 len1,blob1
+    nth 1                   ; #nil len1,blob1 blob0 len0 len1
+    alu sub                 ; #nil len1,blob1 blob0 len0-len1
+    pair 1                  ; #nil len1,blob1 len0-len1,blob0
+    pair 2                  ; blobs=(len0-len1,blob0),(len1,blob1),#nil
+    push blob_concat        ; blobs blob_concat
+    actor create            ; blob=blob_concat.blobs
+
+    push 0                  ; blob rofs=0
+    push http_response      ; blob rofs list
+    call list_len           ; blob rofs wofs=len
+    pair 2                  ; wofs,rofs,blob
+    push str_blob           ; wofs,rofs,blob str_blob
+    actor create            ; in=str_blob.wofs,rofs,blob
 
     state 0                 ; in {caps}
     push dev.io_key         ; in {caps} io_key
