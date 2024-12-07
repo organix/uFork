@@ -5,31 +5,33 @@ The **Filesystem** device provides access to the filesystem.
 The uFork interface is implemented as a [dynamic device](host_dev.md) with a
 [requestor](requestor.md) interface.
 
-## Open request
+## File request
 
-An open request produces a file capability.
+A file request produces a file capability.
 
-    open_request -> fs_dev
+    file_request -> fs_dev
 
-The input value of the `open_request` is a pair like
+The input value of the `file_request` is a pair list like
 
-    (fs_open . path)
+    (fs_file path . create)
 
-where `fs_open` is exported by [dev.asm](../lib/dev.asm), and `path`
-is a blob containing the UTF-8 encoded file path.
+where `fs_file` is exported by [dev.asm](../lib/dev.asm), `path` is a blob
+containing the UTF-8 encoded file path, and `create` is a boolean indicating
+whether the file should be created if necessary.
 
-## Files
+The request fails if `create` is `#f` and the file does not exist.
 
-Each file is represented as an actor with a [requestor](requestor.md)
-interface.
+## File actor
+
+Files are represented as actors with a [requestor](requestor.md) interface.
 
 A file actor maintains a cursor, which is the current position within the file
-in bytes. Reads and writes always begin at this cursor. When a file is opened
-the cursor is initially at position `0`, the beginning of the file.
+in bytes. Reads and writes always begin at this cursor. A file actor's cursor
+is initially at the beginning of the file, position `0`.
 
-File requests fail if made whilst any other request to the same file is in
-progress. The underlying file handle is automatically closed when a file
-capability is garbage collected.
+Requests sent to a file actor that is busy processing an existing request will
+fail. Any system resources in use by the file actor are released automatically
+once it is garbage collected and all requests to it have ended.
 
 ### Read request
 

@@ -1,7 +1,8 @@
 // Installs the TCP network device.
 
-/*jslint web, global, long */
+/*jslint web, global */
 
+import concat_bytes from "https://ufork.org/lib/concat_bytes.js";
 import assemble from "https://ufork.org/lib/assemble.js";
 import compile_humus from "https://ufork.org/lib/humus.js";
 import parseq from "https://ufork.org/lib/parseq.js";
@@ -15,13 +16,6 @@ const wasm_url = import.meta.resolve("https://ufork.org/wasm/ufork.debug.wasm");
 const hum_demo_url = import.meta.resolve("./tcp_dev_demo.hum");
 
 const tcp_key = 102; // from dev.asm
-
-function concat_bytes(a, b) {
-    let array = new Uint8Array(a.byteLength + b.byteLength);
-    array.set(a, 0);
-    array.set(b, a.byteLength);
-    return array;
-}
 
 function tcp_dev(
     core,
@@ -159,8 +153,10 @@ function tcp_dev(
         const conn_nr = connections.indexOf(connection);
         u_trace(`#${conn_nr} received ${chunk.length}B`);
 
-// Enqueue the chunk. We should be applying backpressure instead, but the
-// transport interface does not yet support that.
+// Enqueue the chunk.
+
+// TODO We should be applying backpressure instead, but the transport interface
+// does not yet support that.
 
         const queue = read_chunks[conn_nr] ?? new Uint8Array(0);
         read_chunks[conn_nr] = concat_bytes(queue, chunk);
@@ -302,23 +298,24 @@ function tcp_dev(
 
                 const blob_cap = request;
                 core.u_defer(function () {
-                    the_blob_dev.h_read_bytes(
+                    the_blob_dev.h_read_bytes()(
+                        function (bytes, reason) {
+                            core.h_release_stub(event_stub_ptr); // release blob
+                            if (bytes === undefined) {
+                                u_trace(`#${conn_nr} write failed`, reason);
+                                return h_send(callback, h_reply_fail());
+                            }
+                            const connection = connections[conn_nr];
+                            if (typeof connection !== "object") {
+                                u_trace(`#${conn_nr} write after close`);
+                                return h_send(callback, h_reply_fail());
+                            }
+                            u_trace(`#${conn_nr} write ${bytes.length}B`);
+                            connection.send(bytes);
+                            h_send(callback, h_reply_ok(ufork.UNDEF_RAW));
+                        },
                         blob_cap
-                    )(function (bytes, reason) {
-                        core.h_release_stub(event_stub_ptr); // release blob_cap
-                        if (bytes === undefined) {
-                            u_trace(`#${conn_nr} write failed`, reason);
-                            return h_send(callback, h_reply_fail());
-                        }
-                        const connection = connections[conn_nr];
-                        if (typeof connection !== "object") {
-                            u_trace(`#${conn_nr} write after close`);
-                            return h_send(callback, h_reply_fail());
-                        }
-                        u_trace(`#${conn_nr} write ${bytes.length}B`);
-                        connection.send(bytes);
-                        h_send(callback, h_reply_ok(ufork.UNDEF_RAW));
-                    });
+                    );
                 });
                 return ufork.E_OK;
             }
@@ -425,7 +422,7 @@ function demo(log, flakiness = 0.05, max_chunk_size = 16) {
     parseq.sequence([
         core.h_initialize(),
         core.h_import(hum_demo_url),
-        requestorize(function (asm_module) {
+        requestorize(function (demo_module) {
             const make_ddev = host_dev(core);
             tcp_dev(
                 core,
@@ -434,7 +431,7 @@ function demo(log, flakiness = 0.05, max_chunk_size = 16) {
                 ["127.0.0.1:8370"],
                 tcp_transport_mock(flakiness, max_chunk_size)
             );
-            core.h_boot(asm_module.boot);
+            core.h_boot(demo_module.boot);
             core.h_refill({memory: 65536, events: 65536, cycles: 65536});
             run_core();
             return true;

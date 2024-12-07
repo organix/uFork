@@ -15,6 +15,7 @@ import clock_dev from "https://ufork.org/js/clock_dev.js";
 import random_dev from "https://ufork.org/js/random_dev.js";
 import io_dev from "https://ufork.org/js/io_dev.js";
 import blob_dev from "https://ufork.org/js/blob_dev.js";
+import fs_dev from "https://ufork.org/js/fs_dev.js";
 import tcp_dev from "https://ufork.org/js/tcp_dev.js";
 import host_dev from "https://ufork.org/js/host_dev.js";
 import timer_dev from "https://ufork.org/js/timer_dev.js";
@@ -659,6 +660,7 @@ core.h_initialize()(function callback(value, reason) {
     const make_ddev = host_dev(core);
     const the_blob_dev = blob_dev(core, make_ddev);
     tcp_dev(core, make_ddev, the_blob_dev, ["127.0.0.1:8370"]);
+    fs_dev(core, make_ddev, the_blob_dev);
     timer_dev(core, 1);
 
     // draw initial state

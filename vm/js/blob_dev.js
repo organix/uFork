@@ -8,10 +8,11 @@
 //      the blob capability and the 'bytes' is a mutable Uint8Array containing
 //      the blob's bytes.
 
-//  h_read_bytes(blob_cap)
-//      Returns a requestor that reads a blob's bytes, one by one, producing a
-//      Uint8Array. The caller is responsible for ensuring 'blob_cap' is not
-//      garbage collected during the request.
+//  h_read_bytes()
+//      Returns a requestor that takes a blob capability and reads a blob's
+//      bytes, one by one, producing a Uint8Array. The caller is responsible for
+//      ensuring the blob capability is not garbage collected during the
+//      request.
 
 //  u_get_bytes(blob_cap)
 //      Returns the mutable Uint8Array associated with the blob capability, or
@@ -21,6 +22,7 @@
 
 import assemble from "https://ufork.org/lib/assemble.js";
 import parseq from "https://ufork.org/lib/parseq.js";
+import bind from "https://ufork.org/lib/rq/bind.js";
 import lazy from "https://ufork.org/lib/rq/lazy.js";
 import requestorize from "https://ufork.org/lib/rq/requestorize.js";
 import host_dev from "./host_dev.js";
@@ -64,11 +66,11 @@ function blob_dev(core, make_ddev) {
         return blob;
     }
 
-    function h_read_bytes(blob_cap) {
+    function h_read_bytes() {
         const read_nr = reads.length;
         reads.push(undefined); // placeholder
         let byte_array = [];
-        return function h_read_bytes_requestor(callback) {
+        return function h_read_bytes_requestor(callback, blob_cap) {
             try {
                 const cust_cap = ddev.h_reserve_proxy(encode_tag({read_nr}));
                 const cust_stub = ddev.h_reserve_stub(cust_cap);
@@ -76,7 +78,7 @@ function blob_dev(core, make_ddev) {
                     core.h_release_stub(cust_stub);
                     if (ufork.is_fix(message)) {
                         byte_array.push(ufork.fix_to_i32(message));
-                        return h_read_bytes_requestor(callback);
+                        return h_read_bytes_requestor(callback, blob_cap);
                     }
                     return callback(new Uint8Array(byte_array));
                 };
@@ -256,15 +258,14 @@ function demo(log) {
         lazy(function (asm_module) {
             const {
                 h_alloc_blob,
-                h_read_bytes,
-                u_get_bytes
+                h_read_bytes
             } = blob_dev(core, host_dev(core));
             core.h_boot(asm_module.boot);
             run_core();
             const blob = h_alloc_blob([5, 6, 7, 8]);
             core.h_reserve_stub(blob.cap, blob.cap); // TODO pass #? as device
-            // return u_get_bytes(blob.cap);
-            return h_read_bytes(blob.cap);
+            // return the_blob_dev.u_get_bytes(blob.cap);
+            return bind(h_read_bytes(), blob.cap);
         })
     ])(log);
     setTimeout(core.h_dispose, 500);

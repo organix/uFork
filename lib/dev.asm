@@ -32,6 +32,12 @@ svg_key:
     ref 101
 tcp_key:
     ref 102
+fs_key:
+    ref 103
+fs_file:
+    ref 0
+fs_begin:
+    ref 0
 
 boot:                       ; _ <- {caps}
 
@@ -114,4 +120,7 @@ boot:                       ; _ <- {caps}
     listen_tag
     svg_key
     tcp_key
+    fs_key
+    fs_file
+    fs_begin
     boot

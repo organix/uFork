@@ -2,14 +2,8 @@
 
 /*jslint browser, devel */
 
+import concat_bytes from "https://ufork.org/lib/concat_bytes.js";
 import hex from "https://ufork.org/lib/hex.js";
-
-function concat_bytes(a, b) {
-    let array = new Uint8Array(a.byteLength + b.byteLength);
-    array.set(a, 0);
-    array.set(b, a.byteLength);
-    return array;
-}
 
 function random_size() {
     if (Math.random() < 0.05) {
