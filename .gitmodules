@@ -1,0 +1,3 @@
+[submodule "submodules/humus_js"]
+	path = submodules/humus_js
+	url = https://github.com/dalnefre/humus_js

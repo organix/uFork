@@ -74,6 +74,10 @@ by generating interoperable uFork IR.
 
 ## How To Run
 
+Clone this repository and its submodules:
+
+    git clone --recurse-submodules https://github.com/organix/uFork
+
 Install the [Nix](https://nixos.org/download/) package manager and run
 `nix-shell` from the root of this repository. Alternatively, manually install
 the relevant packages listed in [shell.nix](shell.nix).
