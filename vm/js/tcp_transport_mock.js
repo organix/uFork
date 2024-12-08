@@ -11,22 +11,31 @@
 
 import tcp_transport_demo from "./tcp_transport_demo.js";
 
-function delay(callback, ...args) {
-    setTimeout(callback, 50 * Math.random(), ...args);
+function delay(callback) {
+    setTimeout(callback, 50 * Math.random());
 }
 
-function tcp_transport_mock(flakiness = 0, max_chunk_size = 128) {
-    let listeners = Object.create(null);
+function pause() {
+    return new Promise(delay);
+}
 
-    function random_chunk_size() {
-        return Math.floor(max_chunk_size * Math.random());
-    }
+function random_chunk_size() {
+    return Math.floor(128 * Math.random());
+}
+
+function tcp_transport_mock(flakiness = 0) {
+    let listeners = Object.create(null);
 
     function flake() {
         return Math.random() < flakiness;
     }
 
-    function listen(address, on_open, on_receive, on_close) {
+    function listen(
+        address,
+        on_open,
+        on_receive,
+        on_close
+    ) {
         let connections = [];
         if (listeners[address] !== undefined) {
             throw new Error("Listen failed.");
@@ -36,16 +45,11 @@ function tcp_transport_mock(flakiness = 0, max_chunk_size = 128) {
             on_initiator_close
         ) {
             let connection = Object.create(null);
-            let queue = [];
+            let queue = Promise.resolve();
 
-            function dequeue() {
-                const [handler, ...args] = queue.shift();
-                handler(...args);
-            }
-
-            function enqueue(handler, ...args) {
-                queue.push([handler, ...args]);
-                delay(dequeue);
+            function enqueue(make_promise) {
+                queue = queue.then(pause).then(make_promise);
+                return queue;
             }
 
             function forget_connection() {
@@ -75,7 +79,7 @@ function tcp_transport_mock(flakiness = 0, max_chunk_size = 128) {
                     if (flake()) {
                         return simulate_failure("Send failed.");
                     }
-                    on_initiator_receive(subchunk);
+                    return on_initiator_receive(subchunk);
                 }
 
 // Slice up the chunk into subchunks, so that they arrive at different times.
@@ -85,8 +89,9 @@ function tcp_transport_mock(flakiness = 0, max_chunk_size = 128) {
                     const take = random_chunk_size();
                     const subchunk = chunk.slice(0, take);
                     chunk = chunk.slice(take);
-                    enqueue(consume, subchunk);
+                    enqueue(consume.bind(undefined, subchunk));
                 }
+                return pause(); // backpressure
             };
             connection.close = function () {
                 if (!connections.includes(connection)) {
@@ -115,14 +120,15 @@ function tcp_transport_mock(flakiness = 0, max_chunk_size = 128) {
                         if (flake()) {
                             return simulate_failure("Receive failed.");
                         }
-                        on_receive(connection, subchunk);
+                        return on_receive(connection, subchunk);
                     }
                     while (chunk.length > 0) {
                         const take = random_chunk_size();
                         const subchunk = chunk.slice(0, take);
                         chunk = chunk.slice(take);
-                        enqueue(consume, subchunk);
+                        enqueue(consume.bind(undefined, subchunk));
                     }
+                    return pause(); // backpressure
                 },
                 close: function close_from_initiating_party() {
                     initiator_closed = true;
@@ -144,7 +150,12 @@ function tcp_transport_mock(flakiness = 0, max_chunk_size = 128) {
         };
     }
 
-    function connect(address, on_open, on_receive, on_close) {
+    function connect(
+        address,
+        on_open,
+        on_receive,
+        on_close
+    ) {
         let closed = false;
         let connection;
         delay(function () {
@@ -180,7 +191,7 @@ function tcp_transport_mock(flakiness = 0, max_chunk_size = 128) {
 }
 
 if (import.meta.main) {
-    tcp_transport_demo(tcp_transport_mock(), "127.0.0.1:1234");
+    tcp_transport_demo(tcp_transport_mock(0), "bob");
 }
 
 export default Object.freeze(tcp_transport_mock);

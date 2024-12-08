@@ -300,19 +300,24 @@ function tcp_dev(
                 core.u_defer(function () {
                     the_blob_dev.h_read_bytes()(
                         function (bytes, reason) {
-                            core.h_release_stub(event_stub_ptr); // release blob
                             if (bytes === undefined) {
+                                core.h_release_stub(event_stub_ptr);
                                 u_trace(`#${conn_nr} write failed`, reason);
                                 return h_send(callback, h_reply_fail());
                             }
                             const connection = connections[conn_nr];
                             if (typeof connection !== "object") {
+                                core.h_release_stub(event_stub_ptr);
                                 u_trace(`#${conn_nr} write after close`);
                                 return h_send(callback, h_reply_fail());
                             }
                             u_trace(`#${conn_nr} write ${bytes.length}B`);
-                            connection.send(bytes);
-                            h_send(callback, h_reply_ok(ufork.UNDEF_RAW));
+                            Promise.resolve(
+                                connection.send(bytes)
+                            ).then(function () {
+                                core.h_release_stub(event_stub_ptr);
+                                h_send(callback, h_reply_ok(ufork.UNDEF_RAW));
+                            });
                         },
                         blob_cap
                     );

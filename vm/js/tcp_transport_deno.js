@@ -6,7 +6,7 @@
 // This module was originally part of the WebSeif project, see
 // https://github.com/jamesdiacono/WebSeif.
 
-/*jslint deno */
+/*jslint deno, null */
 
 import tcp_transport_demo from "./tcp_transport_demo.js";
 
@@ -18,6 +18,31 @@ function parse_address(address) {
         host,
         port: parseInt(port, 10)
     };
+}
+
+function read(socket, on_chunk, on_end) {
+    const scratch = new Uint8Array(chunk_size);
+    return socket.read(scratch).then(function (nr_bytes) {
+        return (
+            nr_bytes === null
+            ? on_end()
+            : Promise.resolve(
+                on_chunk(scratch.slice(0, nr_bytes))
+            ).then(function () {
+                return read(socket, on_chunk, on_end);
+            })
+        );
+    });
+}
+
+function write(socket, chunk) {
+    return (
+        chunk.length > 0
+        ? socket.write(chunk).then(function (nr_bytes) {
+            return write(socket, chunk.slice(nr_bytes));
+        })
+        : Promise.resolve()
+    );
 }
 
 function connect(address, on_open, on_receive, on_close) {
@@ -34,8 +59,8 @@ function connect(address, on_open, on_receive, on_close) {
                 }
             }
             connection = Object.freeze({
-                send(buffer) {
-                    socket.write(new Uint8Array(buffer)).catch(fail);
+                send(chunk) {
+                    return write(socket, chunk).catch(fail);
                 },
                 close() {
                     if (on_close !== undefined) {
@@ -44,20 +69,18 @@ function connect(address, on_open, on_receive, on_close) {
                     }
                 }
             });
-            (function wait_for_next_chunk() {
-                const scratch = new Uint8Array(chunk_size);
-                return socket.read(scratch).then(function (nr_bytes) {
-                    if (nr_bytes) {
-                        on_receive(connection, scratch.slice(0, nr_bytes));
-                        wait_for_next_chunk();
-                    } else {
-                        on_close(connection);
-                        on_close = undefined;
-                    }
-                }).catch(
-                    fail
-                );
-            }());
+            read(
+                socket,
+                function on_chunk(chunk) {
+                    return on_receive(connection, chunk);
+                },
+                function on_end() {
+                    on_close(connection);
+                    on_close = undefined;
+                }
+            ).catch(
+                fail
+            );
             return on_open(connection);
         }
     ).catch(function (reason) {
@@ -92,8 +115,8 @@ function listen(address, on_open, on_receive, on_close) {
             }
         }
         connection = Object.freeze({
-            send(buffer) {
-                socket.write(new Uint8Array(buffer)).catch(fail);
+            send(chunk) {
+                return write(socket, chunk).catch(fail);
             },
             close() {
                 if (registrations.includes(connection)) {
@@ -103,44 +126,39 @@ function listen(address, on_open, on_receive, on_close) {
             }
         });
         registrations.push(connection);
-        (function wait_for_next_chunk() {
-            const scratch = new Uint8Array(chunk_size);
-            return socket.read(scratch).then(function (nr_bytes) {
-                if (nr_bytes) {
-                    on_receive(connection, scratch.slice(0, nr_bytes));
-                    wait_for_next_chunk();
-                } else {
-                    on_close(connection);
-                    unregister();
-                }
-            }).catch(function () {
+        read(
+            socket,
+            connection,
+            function on_chunk(chunk) {
+                return on_receive(connection, chunk);
+            },
+            function on_end() {
+                on_close(connection);
+                unregister();
+            }
+        ).catch(function () {
 
-// The connection closed during the read.
+// The connection was closed during read.
 
-                return fail();
-            });
-        }());
+            fail();
+        });
         return on_open(connection);
     }
 
     (function wait_for_next_socket() {
-        return listener.accept().then(
-            function (socket) {
-                wait_for_next_socket();
-                register(socket);
-            }
-        ).catch(
-            function () {
+        return listener.accept().then(function (socket) {
+            wait_for_next_socket();
+            register(socket);
+        }).catch(function () {
 
 // The listener.close function has just been called. Calling listener.close only
 // prevents the listener from accepting new connections. Any open sockets must
 // be closed explicitly.
 
-                return registrations.forEach(function (connection) {
-                    connection.close();
-                });
-            }
-        );
+            return registrations.forEach(function (connection) {
+                connection.close();
+            });
+        });
     }());
     return function stop() {
 
