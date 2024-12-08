@@ -51,6 +51,7 @@ http_request:
     pair_t 'o'
     pair_t 's'
     pair_t 't'
+blankln:
     pair_t '\r'
     pair_t '\n'
 crlf:
@@ -172,7 +173,7 @@ http_ok_status:
     ref crlf
 
 content_type_html:
-;; Content-Type: text/html;charset=utf-8
+;; Content-Type: text/html; charset=utf-8
     pair_t 'C'
     pair_t 'o'
     pair_t 'n'
@@ -282,7 +283,66 @@ html_content:
     pair_t '\r'
     pair_t '\n'
 ;;   <meta charset="utf-8">
+    pair_t ' '
+    pair_t ' '
+    pair_t '<'
+    pair_t 'm'
+    pair_t 'e'
+    pair_t 't'
+    pair_t 'a'
+    pair_t ' '
+    pair_t 'c'
+    pair_t 'h'
+    pair_t 'a'
+    pair_t 'r'
+    pair_t 's'
+    pair_t 'e'
+    pair_t 't'
+    pair_t '='
+    pair_t '"'
+    pair_t 'u'
+    pair_t 't'
+    pair_t 'f'
+    pair_t '-'
+    pair_t '8'
+    pair_t '"'
+    pair_t '>'
+    pair_t '\r'
+    pair_t '\n'
 ;;   <title>uFork Web Demo</title>
+    pair_t ' '
+    pair_t ' '
+    pair_t '<'
+    pair_t 't'
+    pair_t 'i'
+    pair_t 't'
+    pair_t 'l'
+    pair_t 'e'
+    pair_t '>'
+    pair_t 'u'
+    pair_t 'F'
+    pair_t 'o'
+    pair_t 'r'
+    pair_t 'k'
+    pair_t ' '
+    pair_t 'W'
+    pair_t 'e'
+    pair_t 'b'
+    pair_t ' '
+    pair_t 'D'
+    pair_t 'e'
+    pair_t 'm'
+    pair_t 'o'
+    pair_t '<'
+    pair_t '/'
+    pair_t 't'
+    pair_t 'i'
+    pair_t 't'
+    pair_t 'l'
+    pair_t 'e'
+    pair_t '>'
+    pair_t '\r'
+    pair_t '\n'
 ;; </head>
     pair_t '<'
     pair_t '/'
@@ -294,10 +354,81 @@ html_content:
     pair_t '\r'
     pair_t '\n'
 ;; <body>
+    pair_t '<'
+    pair_t 'b'
+    pair_t 'o'
+    pair_t 'd'
+    pair_t 'y'
+    pair_t '>'
+    pair_t '\r'
+    pair_t '\n'
 ;;   <h1>Greeting</h1>
-;;   <p>Hello, world!</p>
+    pair_t ' '
+    pair_t ' '
+    pair_t '<'
+    pair_t 'h'
+    pair_t '1'
+    pair_t '>'
+    pair_t 'G'
+    pair_t 'r'
+    pair_t 'e'
+    pair_t 'e'
+    pair_t 't'
+    pair_t 'i'
+    pair_t 'n'
+    pair_t 'g'
+    pair_t '<'
+    pair_t '/'
+    pair_t 'h'
+    pair_t '1'
+    pair_t '>'
+    pair_t '\r'
+    pair_t '\n'
+;;   <p>Hello, World!</p>
+    pair_t ' '
+    pair_t ' '
+    pair_t '<'
+    pair_t 'p'
+    pair_t '>'
+    pair_t 'H'
+    pair_t 'e'
+    pair_t 'l'
+    pair_t 'l'
+    pair_t 'o'
+    pair_t ','
+    pair_t ' '
+    pair_t 'W'
+    pair_t 'o'
+    pair_t 'r'
+    pair_t 'l'
+    pair_t 'd'
+    pair_t '!'
+    pair_t '<'
+    pair_t '/'
+    pair_t 'p'
+    pair_t '>'
+    pair_t '\r'
+    pair_t '\n'
 ;; </body>
+    pair_t '<'
+    pair_t '/'
+    pair_t 'b'
+    pair_t 'o'
+    pair_t 'd'
+    pair_t 'y'
+    pair_t '>'
+    pair_t '\r'
+    pair_t '\n'
 ;; </html>
+    pair_t '<'
+    pair_t '/'
+    pair_t 'h'
+    pair_t 't'
+    pair_t 'm'
+    pair_t 'l'
+    pair_t '>'
+    pair_t '\r'
+    pair_t '\n'
 
 list_len:                   ; ( list -- len )
     roll -2                 ; k list
@@ -650,6 +781,24 @@ concat_write_done:          ; value ofs cust rest blob len
     roll 2                  ; cust,ofs,value blob
     ref std.send_msg
 
+concat_len:                 ; ( (len,blob),...,#nil -- total )
+    roll -2                 ; k blobs
+    push 0                  ; k blobs total=0
+concat_len_loop:            ; k blobs total
+    pick 2                  ; k blobs total blobs
+    typeq #pair_t           ; k blobs total is_pair(blobs)
+    if_not concat_len_end   ; k blobs total
+    roll 2                  ; k total blobs
+    part 1                  ; k total rest first
+    nth 1                   ; k total rest len
+    roll 3                  ; k rest len total
+    alu add                 ; k rest len+total
+    ref concat_len_loop
+concat_len_end:             ; k blobs total
+    roll 2                  ; k total blobs
+    drop 1                  ; k total
+    ref std.return_value
+
 ; main program execution stages
 stage_1:                    ; {caps} <- _
     push hello              ; str
@@ -734,8 +883,8 @@ stage_2:                    ; {caps} <- result
     push dev.io_key         ; str {caps} io_key
     dict get                ; str io_dev
     state 0                 ; str io_dev {caps}
-    push stage_3a           ; str io_dev {caps} stage_3a
-    actor create            ; str out=io_dev cb=stage_3a.{caps}
+    push stage_3b           ; str io_dev {caps} stage_3b
+    actor create            ; str out=io_dev cb=stage_3b.{caps}
     pair 2                  ; cb,out,str
     push list_out           ; cb,out,str list_out
     actor create            ; tgt=list_out.cb,out,str
@@ -800,6 +949,7 @@ stage_3a:                   ; {caps} <- result
     push str_blob           ; wofs,rofs,blob str_blob
     actor create            ; in=str_blob.wofs,rofs,blob
 
+copy_in_out:
     state 0                 ; in {caps}
     push dev.io_key         ; in {caps} io_key
     dict get                ; in out=io_dev
@@ -812,6 +962,39 @@ stage_3a:                   ; {caps} <- result
     push str_copy           ; cb,out,in str_copy
     actor create            ; tgt=str_copy.cb,out,in
     ref tgt_start
+
+stage_3b:                   ; {caps} <- result
+    push #nil               ; #nil
+    push html_content       ; #nil html_content
+    call create_len_blob    ; #nil len,blob
+
+    push blankln            ; ... blankln
+    push html_content       ; ... blankln html_content
+    call list_len           ; ... blankln content_len
+    call num_to_dec         ; ... dec
+    call create_len_blob    ; #nil (len,blob)x2
+
+    push content_length_hdr ; #nil content_length_hdr
+    call create_len_blob    ; #nil (len,blob)x3
+
+    push content_type_html  ; #nil content_type_html
+    call create_len_blob    ; #nil (len,blob)x4
+
+    push http_ok_status     ; #nil http_ok_status
+    call create_len_blob    ; #nil (len,blob)x5
+
+    pair 5                  ; blobs
+    dup 1                   ; blobs blobs
+    push blob_concat        ; blobs blobs blob_concat
+    actor create            ; blobs blob=blob_concat.blobs
+
+    push 0                  ; blobs blob rofs=0
+    roll 3                  ; blob rofs blobs
+    call concat_len         ; blob rofs wofs=len
+    pair 2                  ; wofs,rofs,blob
+    push str_blob           ; wofs,rofs,blob str_blob
+    actor create            ; in=str_blob.wofs,rofs,blob
+    ref copy_in_out
 
 boot:                       ; _ <- {caps}
     push #?                 ; value=#?
