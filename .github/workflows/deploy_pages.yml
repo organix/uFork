@@ -10,6 +10,8 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: true
 
 # Build the WASMs and check everything is working.
 
