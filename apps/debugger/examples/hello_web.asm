@@ -427,8 +427,7 @@ html_content:
     pair_t 'm'
     pair_t 'l'
     pair_t '>'
-    pair_t '\r'
-    pair_t '\n'
+    ref crlf
 
 list_len:                   ; ( list -- len )
     roll -2                 ; k list
