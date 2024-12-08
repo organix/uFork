@@ -53,6 +53,7 @@ http_request:
     pair_t 't'
     pair_t '\r'
     pair_t '\n'
+crlf:
     pair_t '\r'
     pair_t '\n'
     ref #nil
@@ -149,6 +150,154 @@ content:
     pair_t '\r'
     pair_t '\n'
     ref #nil
+
+;;; HTTP 200 OK status line
+http_ok_status:
+;; HTTP/1.0 200 OK
+    pair_t 'H'
+    pair_t 'T'
+    pair_t 'T'
+    pair_t 'P'
+    pair_t '/'
+    pair_t '1'
+    pair_t '.'
+    pair_t '0'
+    pair_t ' '
+    pair_t '2'
+    pair_t '0'
+    pair_t '0'
+    pair_t ' '
+    pair_t 'O'
+    pair_t 'K'
+    ref crlf
+
+content_type_html:
+;; Content-Type: text/html;charset=utf-8
+    pair_t 'C'
+    pair_t 'o'
+    pair_t 'n'
+    pair_t 't'
+    pair_t 'e'
+    pair_t 'n'
+    pair_t 't'
+    pair_t '-'
+    pair_t 'T'
+    pair_t 'y'
+    pair_t 'p'
+    pair_t 'e'
+    pair_t ':'
+    pair_t ' '
+    pair_t 't'
+    pair_t 'e'
+    pair_t 'x'
+    pair_t 't'
+    pair_t '/'
+    pair_t 'h'
+    pair_t 't'
+    pair_t 'm'
+    pair_t 'l'
+    pair_t ';'
+    pair_t ' '
+    pair_t 'c'
+    pair_t 'h'
+    pair_t 'a'
+    pair_t 'r'
+    pair_t 's'
+    pair_t 'e'
+    pair_t 't'
+    pair_t '='
+    pair_t 'u'
+    pair_t 't'
+    pair_t 'f'
+    pair_t '-'
+    pair_t '8'
+    ref crlf
+
+content_length_hdr:
+;; Content-Length: 
+    pair_t 'C'
+    pair_t 'o'
+    pair_t 'n'
+    pair_t 't'
+    pair_t 'e'
+    pair_t 'n'
+    pair_t 't'
+    pair_t '-'
+    pair_t 'L'
+    pair_t 'e'
+    pair_t 'n'
+    pair_t 'g'
+    pair_t 't'
+    pair_t 'h'
+    pair_t ':'
+    pair_t ' '
+    ref #nil
+
+;;; Example HTML page content
+html_content:
+;; <!doctype html>
+    pair_t '<'
+    pair_t '!'
+    pair_t 'd'
+    pair_t 'o'
+    pair_t 'c'
+    pair_t 't'
+    pair_t 'y'
+    pair_t 'p'
+    pair_t 'e'
+    pair_t ' '
+    pair_t 'h'
+    pair_t 't'
+    pair_t 'm'
+    pair_t 'l'
+    pair_t '>'
+    pair_t '\r'
+    pair_t '\n'
+;; <html lang="en">
+    pair_t '<'
+    pair_t 'h'
+    pair_t 't'
+    pair_t 'm'
+    pair_t 'l'
+    pair_t ' '
+    pair_t 'l'
+    pair_t 'a'
+    pair_t 'n'
+    pair_t 'g'
+    pair_t '='
+    pair_t '"'
+    pair_t 'e'
+    pair_t 'n'
+    pair_t '"'
+    pair_t '>'
+    pair_t '\r'
+    pair_t '\n'
+;; <head>
+    pair_t '<'
+    pair_t 'h'
+    pair_t 'e'
+    pair_t 'a'
+    pair_t 'd'
+    pair_t '>'
+    pair_t '\r'
+    pair_t '\n'
+;;   <meta charset="utf-8">
+;;   <title>uFork Web Demo</title>
+;; </head>
+    pair_t '<'
+    pair_t '/'
+    pair_t 'h'
+    pair_t 'e'
+    pair_t 'a'
+    pair_t 'd'
+    pair_t '>'
+    pair_t '\r'
+    pair_t '\n'
+;; <body>
+;;   <h1>Greeting</h1>
+;;   <p>Hello, world!</p>
+;; </body>
+;; </html>
 
 list_len:                   ; ( list -- len )
     roll -2                 ; k list
