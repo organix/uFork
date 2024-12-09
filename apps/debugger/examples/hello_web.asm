@@ -440,6 +440,50 @@ abs:                        ; ( n -- |n| )
     alu sub                 ; k -n
     ref std.return_value
 
+nth:                        ; ( list index -- item )
+    roll -3                 ; k list index
+    dup 1                   ; k list index index
+    typeq #fixnum_t         ; k list index is_fix(index)
+    if_not nth_fail         ; k list index
+    dup 1                   ; k list index index
+    eq 0                    ; k list index index==0
+    if nth_rest             ; k list index
+    dup 1                   ; k list index index
+    push 0                  ; k list index index 0
+    cmp lt                  ; k list index index<0
+    if nth_neg              ; k list index
+nth_pos:                    ; k list index
+    roll 2                  ; k index list
+    part 1                  ; k index rest first
+    roll 3                  ; k rest first index
+    push 1                  ; k rest first index 1
+    alu sub                 ; k rest first index-1
+    dup 1                   ; k rest first index-1 index-1
+    eq 0                    ; k rest first index-1 index-1==0
+    if nth_first            ; k rest first index-1
+    roll 2                  ; k rest index-1 first
+    drop 1                  ; k rest index-1
+    ref nth_pos
+nth_first:                  ; k rest first index-1
+    roll 3                  ; k first index-1 rest
+    drop 2                  ; k first
+    ref std.return_value
+nth_neg:                    ; k list index
+    roll 2                  ; k index list
+    nth -1                  ; k index rest
+    roll 2                  ; k rest index
+    push 1                  ; k rest index 1
+    alu add                 ; k rest index+1
+    dup 1                   ; k rest index+1 index+1
+    eq 0                    ; k rest index+1 index+1==0
+    if_not nth_neg          ; k rest index+1
+nth_rest:                   ; k list index
+    drop 1                  ; k list
+    ref std.return_value
+nth_fail:                   ; k list index
+    drop 2                  ; k
+    ref std.return_undef
+
 list_len:                   ; ( list -- len )
     roll -2                 ; k list
     push 0                  ; k list len=0
@@ -482,9 +526,6 @@ reverse_loop:               ; k list last
 reverse_done:               ; k last list
     drop 1                  ; k last
     ref std.return_value
-
-;;; TODO
-;;;  * nth ( list index -- item )
 
 num_to_dec:                 ; ( str +num -- char,char,...,str )
     roll -3                 ; k str n=+num
@@ -1032,43 +1073,62 @@ stage_3b:                   ; {caps} <- result
 
 list_1_2_3:
     pair_t 1
+list_2_3:
     pair_t 2
+list_3:
     pair_t 3
     ref #nil
 
-pair_4_5:
-    pair_t 4 5
-
 boot:                       ; _ <- {caps}
-    push 5                  ; 5
-    call abs                ; 5
-    assert 5                ; --
-
-    push -3                 ; -3
-    call abs                ; 3
-    assert 3                ; --
-
-    push 0                  ; 0
-    call abs                ; 0
-    assert 0                ; --
+    push list_1_2_3         ; 1,2,3,#nil
+    push #nil               ; 1,2,3,#nil #nil
+    call nth                ; #?
+    assert #?               ; --
 
     push list_1_2_3         ; 1,2,3,#nil
-    call list_last          ; #nil
+    push 0                  ; 1,2,3,#nil 0
+    call nth                ; 1,2,3,#nil
+    assert list_1_2_3       ; --
+
+    push list_1_2_3         ; 1,2,3,#nil
+    push 1                  ; 1,2,3,#nil 1
+    call nth                ; 1
+    assert 1                ; --
+
+    push list_1_2_3         ; 1,2,3,#nil
+    push -1                 ; 1,2,3,#nil -1
+    call nth                ; 2,3,#nil
+    assert list_2_3         ; --
+
+    push list_1_2_3         ; 1,2,3,#nil
+    push 2                  ; 1,2,3,#nil 2
+    call nth                ; 2
+    assert 2                ; --
+
+    push list_1_2_3         ; 1,2,3,#nil
+    push -2                 ; 1,2,3,#nil -2
+    call nth                ; 3,#nil
+    assert list_3           ; --
+
+    push list_1_2_3         ; 1,2,3,#nil
+    push 3                  ; 1,2,3,#nil 3
+    call nth                ; 3
+    assert 3                ; --
+
+    push list_1_2_3         ; 1,2,3,#nil
+    push -3                 ; 1,2,3,#nil -3
+    call nth                ; #nil
     assert #nil             ; --
 
-    push pair_4_5           ; 4,5
-    call list_last          ; 5
-    assert 5                ; --
+    push list_1_2_3         ; 1,2,3,#nil
+    push 4                  ; 1,2,3,#nil 4
+    call nth                ; #?
+    assert #?               ; --
 
-    push list_1_2_3         ; list=1,2,3,#nil
-    push pair_4_5           ; list last=4,5
-    call reverse_onto       ; 3,2,1,4,5
-    part 4                  ; 5 4 1 2 3
-    assert 3                ; 5 4 1 2
-    assert 2                ; 5 4 1
-    assert 1                ; 5 4
-    assert 4                ; 5
-    assert 5                ; --
+    push list_1_2_3         ; 1,2,3,#nil
+    push -4                 ; 1,2,3,#nil -4
+    call nth                ; #?
+    assert #?               ; --
 
     push #?                 ; value=#?
     push #t                 ; value ok=#t
