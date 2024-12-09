@@ -429,6 +429,17 @@ html_content:
     pair_t '>'
     ref crlf
 
+abs:                        ; ( n -- |n| )
+    roll -2                 ; k n
+    dup 1                   ; k n n
+    push 0                  ; k n n 0
+    cmp lt                  ; k n n<0
+    if_not std.return_value ; k n
+    push 0                  ; k n 0
+    roll 2                  ; k 0 n
+    alu sub                 ; k -n
+    ref std.return_value
+
 list_len:                   ; ( list -- len )
     roll -2                 ; k list
     push 0                  ; k list len=0
@@ -447,9 +458,33 @@ list_len_end:               ; k list len
     drop 1                  ; k len
     ref std.return_value
 
+list_last:                  ; ( list -- last )
+    roll -2                 ; k list
+list_last_loop:             ; k list
+    dup 1                   ; k list list
+    typeq #pair_t           ; k list is_pair(list)
+    if_not std.return_value ; k list
+    nth -1                  ; k rest(list)
+    ref list_last_loop
+
+reverse_onto:               ; ( list last -- rev )
+    roll -3                 ; k list last
+reverse_loop:               ; k list last
+    roll 2                  ; k last list
+    dup 1                   ; k last list list
+    typeq #pair_t           ; k last list is_pair(list)
+    if_not reverse_done     ; k last list
+    part 1                  ; k last rest first
+    roll 3                  ; k rest first last
+    roll 2                  ; k rest last first
+    pair 1                  ; k rest first,last
+    ref reverse_loop
+reverse_done:               ; k last list
+    drop 1                  ; k last
+    ref std.return_value
+
 ;;; TODO
-;;;  * list_last ( list -- last )
-;;;  * reverse_onto ( list last -- rev )
+;;;  * nth ( list index -- item )
 
 num_to_dec:                 ; ( str +num -- char,char,...,str )
     roll -3                 ; k str n=+num
@@ -995,7 +1030,46 @@ stage_3b:                   ; {caps} <- result
     actor create            ; in=str_blob.wofs,rofs,blob
     ref copy_in_out
 
+list_1_2_3:
+    pair_t 1
+    pair_t 2
+    pair_t 3
+    ref #nil
+
+pair_4_5:
+    pair_t 4 5
+
 boot:                       ; _ <- {caps}
+    push 5                  ; 5
+    call abs                ; 5
+    assert 5                ; --
+
+    push -3                 ; -3
+    call abs                ; 3
+    assert 3                ; --
+
+    push 0                  ; 0
+    call abs                ; 0
+    assert 0                ; --
+
+    push list_1_2_3         ; 1,2,3,#nil
+    call list_last          ; #nil
+    assert #nil             ; --
+
+    push pair_4_5           ; 4,5
+    call list_last          ; 5
+    assert 5                ; --
+
+    push list_1_2_3         ; list=1,2,3,#nil
+    push pair_4_5           ; list last=4,5
+    call reverse_onto       ; 3,2,1,4,5
+    part 4                  ; 5 4 1 2 3
+    assert 3                ; 5 4 1 2
+    assert 2                ; 5 4 1
+    assert 1                ; 5 4
+    assert 4                ; 5
+    assert 5                ; --
+
     push #?                 ; value=#?
     push #t                 ; value ok=#t
     pair 1                  ; result=ok,value
