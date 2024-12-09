@@ -511,6 +511,11 @@ list_last_loop:             ; k list
     nth -1                  ; k rest(list)
     ref list_last_loop
 
+reverse:                    ; ( list -- rev )
+    roll -2                 ; k list
+    push #nil               ; k list last=#nil
+    ref reverse_loop
+
 reverse_onto:               ; ( list last -- rev )
     roll -3                 ; k list last
 reverse_loop:               ; k list last
@@ -1071,65 +1076,7 @@ stage_3b:                   ; {caps} <- result
     actor create            ; in=str_blob.wofs,rofs,blob
     ref copy_in_out
 
-list_1_2_3:
-    pair_t 1
-list_2_3:
-    pair_t 2
-list_3:
-    pair_t 3
-    ref #nil
-
 boot:                       ; _ <- {caps}
-    push list_1_2_3         ; 1,2,3,#nil
-    push #nil               ; 1,2,3,#nil #nil
-    call nth                ; #?
-    assert #?               ; --
-
-    push list_1_2_3         ; 1,2,3,#nil
-    push 0                  ; 1,2,3,#nil 0
-    call nth                ; 1,2,3,#nil
-    assert list_1_2_3       ; --
-
-    push list_1_2_3         ; 1,2,3,#nil
-    push 1                  ; 1,2,3,#nil 1
-    call nth                ; 1
-    assert 1                ; --
-
-    push list_1_2_3         ; 1,2,3,#nil
-    push -1                 ; 1,2,3,#nil -1
-    call nth                ; 2,3,#nil
-    assert list_2_3         ; --
-
-    push list_1_2_3         ; 1,2,3,#nil
-    push 2                  ; 1,2,3,#nil 2
-    call nth                ; 2
-    assert 2                ; --
-
-    push list_1_2_3         ; 1,2,3,#nil
-    push -2                 ; 1,2,3,#nil -2
-    call nth                ; 3,#nil
-    assert list_3           ; --
-
-    push list_1_2_3         ; 1,2,3,#nil
-    push 3                  ; 1,2,3,#nil 3
-    call nth                ; 3
-    assert 3                ; --
-
-    push list_1_2_3         ; 1,2,3,#nil
-    push -3                 ; 1,2,3,#nil -3
-    call nth                ; #nil
-    assert #nil             ; --
-
-    push list_1_2_3         ; 1,2,3,#nil
-    push 4                  ; 1,2,3,#nil 4
-    call nth                ; #?
-    assert #?               ; --
-
-    push list_1_2_3         ; 1,2,3,#nil
-    push -4                 ; 1,2,3,#nil -4
-    call nth                ; #?
-    assert #?               ; --
-
     push #?                 ; value=#?
     push #t                 ; value ok=#t
     pair 1                  ; result=ok,value
