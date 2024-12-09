@@ -738,6 +738,20 @@ list_read_done:             ; ofs cust rest first
     roll 3                  ; ofs rest first cust
     ref std.send_msg
 
+; blob that must be read only once in sequential order
+blob_once:                  ; list <- cust,req
+    msg -1                  ; req
+    eq #?                   ; req==#?
+    if list_size            ; --
+    msg -1                  ; req
+    typeq #fixnum_t         ; is_fix(req)
+    if_not std.rv_false     ; --
+    state -1                ; rest
+    push blob_once          ; rest blob_once
+    actor become            ; --
+    state 1                 ; first
+    ref std.cust_send
+
 ; blob interface to a blob sub-range
 blob_slice:                 ; base,len,blob <- cust,req
     msg -1                  ; req
@@ -999,7 +1013,8 @@ create_str_list:            ; ( list -- str )
 create_len_blob:            ; ( list -- len,blob )
     roll -2                 ; k list
     dup 1                   ; k list list
-    push blob_list          ; k list list blob_list
+;    push blob_list          ; k list list blob_list
+    push blob_once          ; k list list blob_once
     actor create            ; k list blob=blob_list.list
     roll 2                  ; k blob list
     call list_len           ; k blob len
