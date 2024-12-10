@@ -2,6 +2,7 @@
 
 .import
     std: "https://ufork.org/lib/std.asm"
+    dev: "https://ufork.org/lib/dev.asm"
 
 ; Euclidean division is a slow, but simple, algorithm.
 ; It solves the equations: <latex> n = dq + r </latex>,
@@ -187,7 +188,18 @@ test:                       ; judge <- {caps}
     actor send              ; --
     ref std.commit
 
+boot:                       ; _ <- {caps}
+    msg 0                   ; {caps}
+    push dev.debug_key      ; {caps} debug_key
+    dict get                ; judge=debug_dev
+    push test               ; judge test
+    actor create            ; test.judge
+    msg 0                   ; test.judge {caps}
+    roll 2                  ; {caps} test.judge
+    ref std.send_msg
+
 .export
     divmod
     udivmod
     test
+    boot
