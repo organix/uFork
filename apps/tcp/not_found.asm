@@ -175,7 +175,7 @@ on_open_beh:                ; {caps} <- conn
     actor create            ; blob callback=close_beh.conn,{caps}
     push #?                 ; blob callback to_cancel=#?
     pair 2                  ; write_req=(to_cancel callback . blob)
-    state -1                ; write_req conn
+    msg 0                   ; write_req conn
     ref std.send_msg
 
 close_beh:                  ; conn,{caps} <- _
