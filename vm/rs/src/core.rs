@@ -28,7 +28,7 @@ enum GcStrategy {
     Interleaved,
     FullAtCommit,
 }
-const GC_STRATEGY: GcStrategy = GcStrategy::FullAtCommit;
+const GC_STRATEGY: GcStrategy = GcStrategy::Interleaved;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum GcPhase {
@@ -1608,7 +1608,7 @@ impl Core {
     }
     pub fn free(&mut self, _ptr: Any) {
         // NOTE: comment out the next line to remove "proactive" calls to `release`
-        //self.release(_ptr)
+        self.release(_ptr)
     }
     fn release(&mut self, ptr: Any) {
         assert!(self.in_heap(ptr));
