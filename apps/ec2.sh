@@ -31,7 +31,7 @@ chat.ufork.org {
 sudo ./caddy start --config Caddyfile &
 cd uFork
 nohup deno run \
-    --watch \
+    --watch=apps/peer_chat/chat.asm \
     --allow-net \
     --allow-read=. \
     apps/peer_chat/chat_server.js \
@@ -39,7 +39,7 @@ nohup deno run \
     &
 nohup deno run \
     --no-config \
-    --watch \
+    --watch=apps/tcp/random.asm \
     --no-lock \
     --allow-read=. \
     --allow-net \
@@ -50,7 +50,7 @@ nohup deno run \
     &
 nohup deno run \
     --no-config \
-    --watch \
+    --watch=apps/www/static.asm \
     --no-lock \
     --allow-read=. \
     --allow-net \
