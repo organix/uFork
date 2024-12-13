@@ -407,6 +407,9 @@ match_one:                  ; pred <- cust,ofs,blob
     ref std.send_msg
 k_pred_one:                 ; pred,cust,ofs,blob <- value | #?
     msg 0                   ; value
+    eq #?                   ; value==#?
+    if k_fail_one           ; --
+    msg 0                   ; value
     state 0                 ; value state=pred,cust,ofs,blob
     push k_match_one        ; value state k_match_one
     actor create            ; value k=k_match_one.state
@@ -507,8 +510,8 @@ pred_not:                   ; pred <- cust,value
     actor create            ; value k=k_pred_not.cust
     pair 1                  ; k,value
     state 0                 ; k,value pred
-    ref std.cust_send
-k_pred_not:                 ; cust <- #t | #f
+    ref std.send_msg
+k_pred_not:                 ; cust <- bool
     if k_not_true           ; --
     push #t                 ; #t
     state 0                 ; #t cust
@@ -576,6 +579,8 @@ demo:                       ; {caps} <- _
     push 'G'                ; ... list value
     push pred_eq            ; ... list value beh=pred_eq
     actor create            ; ... list pred=beh.value
+    push pred_not           ; ... list pred pred_not
+    actor create            ; ... list pred=pred_not.pred
     push match_one          ; ... list pred match_one
     actor create            ; ... list ptrn=match.pred
     pair 1                  ; ... list=ptrn,list
