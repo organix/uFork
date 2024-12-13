@@ -159,6 +159,61 @@ list_len_end:               ; k list len
     drop 1                  ; k len
     ref std.return_value
 
+; initialized blob builder
+; cust,list -> blob
+blob_init:                  ; blob_dev <- cust,list
+    msg -1                  ; list
+    call list_len           ; len
+    msg 0                   ; len cust,list
+    push k_blob_init        ; len cust,list k_blob_init
+    actor create            ; len k
+    pair 1                  ; k,len
+    state 0                 ; k,len blob_dev
+    ref std.send_msg
+k_blob_init:                ; cust,list <- blob
+    state 0                 ; cust,list
+    part 1                  ; list cust
+    msg 0                   ; list cust blob
+    push 0                  ; list cust blob ofs=0
+    roll 4                  ; cust blob ofs list
+    pair 3                  ; list,ofs,blob,cust
+    push k_blob_copy        ; list,ofs,blob,cust k_blob_copy
+    actor become            ; --
+    push #t                 ; #t
+    actor self              ; #t SELF
+    ref std.send_msg
+k_blob_copy:                ; list,ofs,blob,cust <- bool
+    msg 0                   ; bool
+    if_not k_blob_fail      ; --
+    state 1                 ; list
+    typeq #pair_t           ; is_pair(list)
+    if_not k_blob_done      ; --
+    state 1                 ; list
+    part 1                  ; rest first
+    state 2                 ; rest first ofs
+    dup 1                   ; rest first ofs ofs
+    push 1                  ; rest first ofs ofs 1
+    alu add                 ; rest first ofs ofs+1
+    roll -4                 ; ofs+1 rest first ofs
+    actor self              ; ofs+1 rest first ofs SELF
+    pair 2                  ; ofs+1 rest SELF,ofs,first
+    state 3                 ; ofs+1 rest SELF,ofs,first blob
+    actor send              ; ofs+1 rest
+    state -2                ; ofs+1 rest blob,cust
+    roll -3                 ; blob,cust ofs+1 rest
+    pair 2                  ; rest,ofs+1,blob,cust
+    push k_blob_copy        ; rest,ofs+1,blob,cust k_blob_copy
+    actor become            ; --
+    ref std.commit
+k_blob_done:
+    state 3                 ; blob
+    state -3                ; blob cust
+    ref std.send_msg
+k_blob_fail:
+    push #?                 ; #?
+    state -3                ; #? cust
+    ref std.send_msg
+
 ; blob interface to a #nil-terminated list
 blob_list:                  ; list <- cust,req
     msg -1                  ; req
@@ -512,6 +567,7 @@ pred_not:                   ; pred <- cust,value
     state 0                 ; k,value pred
     ref std.send_msg
 k_pred_not:                 ; cust <- bool
+    msg 0                   ; bool
     if k_not_true           ; --
     push #t                 ; #t
     state 0                 ; #t cust
@@ -550,11 +606,8 @@ lo_range:                   ; rest hi
 
 ; main program execution stages
 
-demo:                       ; {caps} <- _
-    push http_request       ; http_request
-    push blob_once          ; http_request blob_once
-    actor create            ; blob=blob_once.http_request
-
+demo:                       ; {caps} <- blob
+    msg 0                   ; blob
     push 0                  ; blob ofs=0
     state 0                 ; blob ofs {caps}
     push dev.debug_key      ; blob ofs {caps} debug_key
@@ -579,8 +632,8 @@ demo:                       ; {caps} <- _
     push 'G'                ; ... list value
     push pred_eq            ; ... list value beh=pred_eq
     actor create            ; ... list pred=beh.value
-    push pred_not           ; ... list pred pred_not
-    actor create            ; ... list pred=pred_not.pred
+;    push pred_not           ; ... list pred pred_not
+;    actor create            ; ... list pred=pred_not.pred
     push match_one          ; ... list pred match_one
     actor create            ; ... list ptrn=match.pred
     pair 1                  ; ... list=ptrn,list
@@ -591,12 +644,24 @@ demo:                       ; {caps} <- _
     ref std.send_msg
 
 boot:                       ; _ <- {caps}
-    push #?                 ; value=#?
-    push #t                 ; value ok=#t
-    pair 1                  ; result=ok,value
-    msg 0                   ; result {caps}
-    push demo               ; result {caps} beh=demo
-    actor create            ; result beh.{caps}
+    push http_request       ; list=http_request
+
+;    push blob_once          ; list blob_once
+;    actor create            ; blob=blob_once.list
+;    msg 0                   ; blob {caps}
+;    push demo               ; blob {caps} beh=demo
+;    actor create            ; blob beh.{caps}
+
+    msg 0                   ; list {caps}
+    push demo               ; list {caps} beh=demo
+    actor create            ; list cust=beh.{caps}
+    pair 1                  ; cust,list
+    msg 0                   ; cust,list {caps}
+    push dev.blob_key       ; cust,list {caps} blob_key
+    dict get                ; cust,list blob_dev
+    push blob_init          ; cust,list blob_dev blob_init
+    actor create            ; cust,list blob_init.blob_dev
+
     ref std.send_msg
 
 .export
