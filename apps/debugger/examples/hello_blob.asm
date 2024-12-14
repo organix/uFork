@@ -4,6 +4,49 @@
     dev: "https://ufork.org/lib/dev.asm"
     std: "https://ufork.org/lib/std.asm"
 
+;;; Digit range
+digit:
+    pair_t '0' '9'
+
+;;; Uppercase range
+upper:
+    pair_t 'A' 'Z'
+
+;;; Lowercase range
+lower:
+    pair_t 'a' 'z'
+
+;;; Whitespace character
+wsp:
+    pair_t ' '
+    pair_t '\t'
+    ref #nil
+
+;;; Token character
+tchar:
+;; tchar = "!" / "#" / "$" / "%" / "&" / "'" / "*"
+;;         / "+" / "-" / "." / "^" / "_" / "`" / "|" / "~"
+;;         / DIGIT / ALPHA
+    pair_t upper
+    pair_t lower
+    pair_t digit
+    pair_t '!'
+    pair_t '#'
+    pair_t '$'
+    pair_t '%'
+    pair_t '&'
+    pair_t '\''
+    pair_t '*'
+    pair_t '+'
+    pair_t '-'
+    pair_t '.'
+    pair_t '^'
+    pair_t '_'
+    pair_t '`'
+    pair_t '|'
+    pair_t '~'
+    ref #nil
+
 ;;; Example HTTP request
 http_request:
 ;; GET / HTTP/1.0
@@ -517,13 +560,13 @@ k_try_star:                 ; len,ptrn,cust,ofs,blob <- base,len',blob
     alu add                 ; ptrn,cust,ofs,blob len''=len+len'
     pair 1                  ; len'',ptrn,cust,ofs,blob
     push k_try_star         ; len'',ptrn,cust,ofs,blob k_try_star
-    actor create            ; k=k_try_star.len'',ptrn,cust,ofs,blob
+    actor become            ; --
     msg 0                   ; base,len',blob
     part 2                  ; blob len' base
     alu add                 ; blob ofs=len'+base
     actor self              ; blob ofs k=SELF
     pair 2                  ; k,ofs,blob
-    state 0                 ; k,ofs,blob ptrn
+    state 2                 ; k,ofs,blob ptrn
     ref std.send_msg
 k_done_star:
     state -3                ; ofs,blob
@@ -604,15 +647,51 @@ demo:                       ; {caps} <- blob
     dict get                ; blob ofs cust=debug_dev
     pair 2                  ; cust,ofs,blob
 
-    push 'G'                ; ... value
-    push pred_eq            ; ... value beh=pred_eq
-    actor create            ; ... pred=beh.value
-    push match_one          ; ... pred match_one
-    actor create            ; ... ptrn=match.pred
+; wsp = [ \t]
 
-    push match_star         ; cust,ofs,blob ptrn match_star
-    actor create            ; cust,ofs,blob ptrn=match_star.ptrn
+    push wsp                ; ... set=wsp
+    push pred_in            ; ... set pred_in
+    actor create            ; ... wsp_pred=pred_in.set
+    push #nil               ; ... wsp_pred list=#nil
 
+    pick 2                  ; ... wsp_pred list wsp_pred
+    push match_one          ; ... wsp_pred list wsp_pred match_one
+    actor create            ; ... wsp_pred list wsp_ptrn=match_one.pred
+    pick -2                 ; ... wsp_pred wsp_ptrn list wsp_ptrn
+
+; ows = wsp*
+
+    push match_star         ; ... wsp_pred wsp_ptrn list wsp_ptrn match_star
+    actor create            ; ... wsp_pred wsp_ptrn list ows_ptrn=match_star.ptrn
+    pair 1                  ; ... wsp_pred wsp_ptrn list=ows_ptrn,list
+
+; rws = wsp ows
+
+    roll 2                  ; ... wsp_pred list wsp_ptrn
+    pair 1                  ; ... wsp_pred list=wsp_ptrn,list
+
+; tchar = [^ \t]
+
+    roll 2                  ; ... list wsp_pred
+    push pred_not           ; ... list wsp_pred pred_not
+    actor create            ; ... list tchar_pred=pred_not.wsp_pred
+    push match_one          ; ... list tchar_pred match_one
+    actor create            ; ... list tchar_ptrn=match_one.tchar_pred
+
+    pick -2                 ; ... tchar_ptrn list tchar_ptrn
+    push match_star         ; ... tchar_ptrn list tchar_ptrn match_star
+    actor create            ; ... tchar_ptrn list token_ptrn=match_star.tchar_ptrn
+    pair 1                  ; ... tchar_ptrn list=token_ptrn,list
+
+; token = tchar tchar*
+
+    roll 2                  ; ... list tchar_ptrn
+    pair 1                  ; ... list=tchar_ptrn,list
+
+; method = token rws
+
+    push match_seq          ; cust,ofs,blob list match_seq
+    actor create            ; cust,ofs,blob ptrn=match_seq.list
     ref std.send_msg
 
 boot:                       ; _ <- {caps}
