@@ -45,6 +45,16 @@ http_request:
     pair_t 'T'
     pair_t ' '
     pair_t '/'
+    pair_t 'i'
+    pair_t 'n'
+    pair_t 'd'
+    pair_t 'e'
+    pair_t 'x'
+    pair_t '.'
+    pair_t 'h'
+    pair_t 't'
+    pair_t 'm'
+    pair_t 'l'
     pair_t ' '
     pair_t 'H'
     pair_t 'T'
@@ -691,23 +701,103 @@ new_token_ptrn:             ; ( -- token_ptrn )
     call new_plus_ptrn      ; k token_ptrn
     ref std.return_value
 
+;;  get = 'G' 'E' 'T' rws
+new_get_ptrn:               ; ( -- get_ptrn )
+    push #nil               ; k list=#nil
+    call new_rws_ptrn       ; k list rws_ptrn
+    pair 1                  ; k list=rws_ptrn,list
+
+    push 'T'                ; k list 'T'
+    push pred_eq            ; k list 'T' pred_eq
+    actor create            ; k list pred=pred_eq.'T'
+    push match_one          ; k list pred match_one
+    actor create            ; k list T_ptrn=match_one.pred
+    pair 1                  ; k list=T_ptrn,list
+
+    push 'E'                ; k list 'E'
+    push pred_eq            ; k list 'E' pred_eq
+    actor create            ; k list pred=pred_eq.'E'
+    push match_one          ; k list pred match_one
+    actor create            ; k list E_ptrn=match_one.pred
+    pair 1                  ; k list=E_ptrn,list
+
+    push 'G'                ; k list 'G'
+    push pred_eq            ; k list 'G' pred_eq
+    actor create            ; k list pred=pred_eq.'G'
+    push match_one          ; k list pred match_one
+    actor create            ; k list G_ptrn=match_one.pred
+    pair 1                  ; k list=G_ptrn,list
+
+    push match_seq          ; k list match_seq
+    actor create            ; k get_ptrn=match_seq.list
+    ref std.return_value
+
+;;  get = 'H' 'E' 'A' 'D' rws
+new_head_ptrn:              ; ( -- head_ptrn )
+    push #nil               ; k list=#nil
+    call new_rws_ptrn       ; k list rws_ptrn
+    pair 1                  ; k list=rws_ptrn,list
+
+    push 'D'                ; k list 'D'
+    push pred_eq            ; k list 'D' pred_eq
+    actor create            ; k list pred=pred_eq.'D'
+    push match_one          ; k list pred match_one
+    actor create            ; k list D_ptrn=match_one.pred
+    pair 1                  ; k list=D_ptrn,list
+
+    push 'A'                ; k list 'A'
+    push pred_eq            ; k list 'A' pred_eq
+    actor create            ; k list pred=pred_eq.'A'
+    push match_one          ; k list pred match_one
+    actor create            ; k list A_ptrn=match_one.pred
+    pair 1                  ; k list=A_ptrn,list
+
+    push 'E'                ; k list 'E'
+    push pred_eq            ; k list 'E' pred_eq
+    actor create            ; k list pred=pred_eq.'E'
+    push match_one          ; k list pred match_one
+    actor create            ; k list E_ptrn=match_one.pred
+    pair 1                  ; k list=E_ptrn,list
+
+    push 'H'                ; k list 'H'
+    push pred_eq            ; k list 'H' pred_eq
+    actor create            ; k list pred=pred_eq.'H'
+    push match_one          ; k list pred match_one
+    actor create            ; k list H_ptrn=match_one.pred
+    pair 1                  ; k list=H_ptrn,list
+
+    push match_seq          ; k list match_seq
+    actor create            ; k get_ptrn=match_seq.list
+    ref std.return_value
+
 ; main program execution stages
 
 demo:                       ; {caps} <- blob
     msg 0                   ; blob
     push 0                  ; blob ofs=0
     state 0                 ; blob ofs {caps}
-    push dev.debug_key      ; blob ofs {caps} debug_key
-    dict get                ; blob ofs cust=debug_dev
+    push get_path           ; blob ofs {caps} get_path
+    actor create            ; blob ofs cust=get_path.{caps}
     pair 2                  ; cust,ofs,blob
+    call new_get_ptrn       ; cust,ofs,blob ptrn
+    ref std.send_msg
 
-    push #nil               ; ... #nil
-    call new_rws_ptrn       ; ... #nil rws_ptrn
-    call new_token_ptrn     ; ... #nil rws_ptrn token_ptrn
-    pair 2                  ; ... list=token_ptrn,rws_ptrn,#nil
+get_path:                   ; {caps} <- base,len,blob
+    msg 0                   ; base,len,blob
+    part 2                  ; blob len base
+    alu add                 ; blob ofs=len+base
+    state 0                 ; blob ofs {caps}
+    push debug_out          ; blob ofs {caps} debug_out
+    actor create            ; blob ofs cust=get_path.{caps}
+    pair 2                  ; cust,ofs,blob
+    call new_token_ptrn     ; cust,ofs,blob ptrn
+    ref std.send_msg
 
-    push match_seq          ; cust,ofs,blob list match_seq
-    actor create            ; cust,ofs,blob ptrn=match_seq.list
+debug_out:                  ; {caps} <- msg
+    msg 0                   ; msg
+    state 0                 ; msg {caps}
+    push dev.debug_key      ; msg {caps} debug_key
+    dict get                ; msg cust=debug_dev
     ref std.send_msg
 
 boot:                       ; _ <- {caps}
