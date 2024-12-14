@@ -214,57 +214,6 @@ k_blob_fail:
     state -3                ; #? cust
     ref std.send_msg
 
-; blob interface to a #nil-terminated list
-blob_list:                  ; list <- cust,req
-    msg -1                  ; req
-    eq #?                   ; req==#?
-    if list_size            ; --
-    msg -1                  ; req
-    typeq #fixnum_t         ; is_fix(req)
-    if list_read            ; --
-    ref std.rv_false        ; write always fails
-
-list_size:
-    state 0                 ; list
-    call list_len           ; size=len
-    ref std.cust_send
-
-list_read:
-    msg 0                   ; cust,ofs
-    part 1                  ; ofs cust
-    state 0                 ; ofs cust list
-list_read_loop:
-    dup 1                   ; ofs cust list list
-    typeq #pair_t           ; ofs cust list is_pair(list)
-    if_not std.rv_undef     ; ofs cust list
-    part 1                  ; ofs cust rest first
-    pick 4                  ; ofs cust rest first ofs
-    eq 0                    ; ofs cust rest first ofs==0
-    if list_read_done       ; ofs cust rest first
-    drop 1                  ; ofs cust rest
-    roll 3                  ; cust rest ofs
-    push 1                  ; cust rest ofs 1
-    alu sub                 ; cust rest ofs-1
-    roll -3                 ; ofs-1 cust rest
-    ref list_read_loop
-list_read_done:             ; ofs cust rest first
-    roll 3                  ; ofs rest first cust
-    ref std.send_msg
-
-; blob that must be read only once in sequential order
-blob_once:                  ; list <- cust,req
-    msg -1                  ; req
-    eq #?                   ; req==#?
-    if list_size            ; --
-    msg -1                  ; req
-    typeq #fixnum_t         ; is_fix(req)
-    if_not std.rv_false     ; --
-    state -1                ; rest
-    push blob_once          ; rest blob_once
-    actor become            ; --
-    state 1                 ; first
-    ref std.cust_send
-
 ; blob interface to a blob sub-range
 blob_slice:                 ; base,len,blob <- cust,req
     msg -1                  ; req
@@ -447,7 +396,7 @@ conn_io_out:
 ; blob interface to a blob sub-range
 ;;blob_slice:                 ; base,len,blob <- cust,req
 
-; search blob for a pattern
+; match a pattern in a blob
 ;   cust,ofs,blob -> base,len,blob | #?,ofs,blob
 match_one:                  ; pred <- cust,ofs,blob
     msg 0                   ; cust,ofs,blob
@@ -487,7 +436,7 @@ k_fail_one:                 ; --
     state 2                 ; #?,ofs,blob cust
     ref std.send_msg
 
-; search blob for a pattern
+; match a sequence of patterns in a blob
 ;   cust,ofs,blob -> base,len,blob | #?,ofs,blob
 match_seq:                  ; list <- cust,ofs,blob
     state 0                 ; list
@@ -542,6 +491,47 @@ k_fail_seq:                 ; --
     push #?                 ; ofs,blob #?
     pair 1                  ; #?,ofs,blob
     state 2                 ; #?,ofs,blob cust
+    ref std.send_msg
+
+; match a repeating pattern in a blob (Kleene star)
+;   cust,ofs,blob -> base,len,blob | #?,ofs,blob
+match_star:                 ; ptrn <- cust,ofs,blob
+    msg 0                   ; cust,ofs,blob
+    state 0                 ; cust,ofs,blob ptrn
+    push 0                  ; cust,ofs,blob ptrn len=0
+    pair 2                  ; len,ptrn,cust,ofs,blob
+    push k_try_star         ; len,ptrn,cust,ofs,blob k_try_star
+    actor create            ; k=k_try_star.len,ptrn,cust,ofs,blob
+    msg -1                  ; k ofs,blob
+    roll 2                  ; ofs,blob k
+    pair 1                  ; k,ofs,blob
+    state 0                 ; k,ofs,blob ptrn
+    ref std.send_msg
+k_try_star:                 ; len,ptrn,cust,ofs,blob <- base,len',blob
+    msg 1                   ; base
+    eq #?                   ; base==#?
+    if k_done_star          ; --
+    state 0                 ; len,ptrn,cust,ofs,blob
+    part 1                  ; ptrn,cust,ofs,blob len
+    msg 2                   ; ptrn,cust,ofs,blob len len'
+    alu add                 ; ptrn,cust,ofs,blob len''=len+len'
+    pair 1                  ; len'',ptrn,cust,ofs,blob
+    push k_try_star         ; len'',ptrn,cust,ofs,blob k_try_star
+    actor create            ; k=k_try_star.len'',ptrn,cust,ofs,blob
+    msg 0                   ; base,len',blob
+    part 2                  ; blob len' base
+    alu add                 ; blob ofs=len'+base
+    actor self              ; blob ofs k=SELF
+    pair 2                  ; k,ofs,blob
+    state 0                 ; k,ofs,blob ptrn
+    ref std.send_msg
+k_done_star:
+    state -3                ; ofs,blob
+    part 1                  ; blob base=ofs
+    state 1                 ; blob base len
+    roll -2                 ; blob len base
+    pair 2                  ; base,len,blob
+    state 3                 ; base,len,blob cust
     ref std.send_msg
 
 ; predicate "function" actors
@@ -613,56 +603,33 @@ demo:                       ; {caps} <- blob
     push dev.debug_key      ; blob ofs {caps} debug_key
     dict get                ; blob ofs cust=debug_dev
     pair 2                  ; cust,ofs,blob
-    push #nil               ; cust,ofs,blob list=#nil
 
-    push 'T'                ; ... list value
-    push pred_eq            ; ... list value beh=pred_eq
-    actor create            ; ... list pred=beh.value
-    push match_one          ; ... list pred match_one
-    actor create            ; ... list ptrn=match.pred
-    pair 1                  ; ... list=ptrn,list
+    push 'G'                ; ... value
+    push pred_eq            ; ... value beh=pred_eq
+    actor create            ; ... pred=beh.value
+    push match_one          ; ... pred match_one
+    actor create            ; ... ptrn=match.pred
 
-    push 'E'                ; ... list value
-    push pred_eq            ; ... list value beh=pred_eq
-    actor create            ; ... list pred=beh.value
-    push match_one          ; ... list pred match_one
-    actor create            ; ... list ptrn=match.pred
-    pair 1                  ; ... list=ptrn,list
-
-    push 'G'                ; ... list value
-    push pred_eq            ; ... list value beh=pred_eq
-    actor create            ; ... list pred=beh.value
-;    push pred_not           ; ... list pred pred_not
-;    actor create            ; ... list pred=pred_not.pred
-    push match_one          ; ... list pred match_one
-    actor create            ; ... list ptrn=match.pred
-    pair 1                  ; ... list=ptrn,list
-
-    push match_seq          ; cust,ofs,blob list match_seq
-    actor create            ; cust,ofs,blob ptrn=match_seq.list
+    push match_star         ; cust,ofs,blob ptrn match_star
+    actor create            ; cust,ofs,blob ptrn=match_star.ptrn
 
     ref std.send_msg
 
 boot:                       ; _ <- {caps}
     push http_request       ; list=http_request
-
-;    push blob_once          ; list blob_once
-;    actor create            ; blob=blob_once.list
-;    msg 0                   ; blob {caps}
-;    push demo               ; blob {caps} beh=demo
-;    actor create            ; blob beh.{caps}
-
     msg 0                   ; list {caps}
-    push demo               ; list {caps} beh=demo
-    actor create            ; list cust=beh.{caps}
+    push demo               ; list {caps} demo
+    actor create            ; list cust=demo.{caps}
     pair 1                  ; cust,list
     msg 0                   ; cust,list {caps}
     push dev.blob_key       ; cust,list {caps} blob_key
     dict get                ; cust,list blob_dev
     push blob_init          ; cust,list blob_dev blob_init
     actor create            ; cust,list blob_init.blob_dev
-
     ref std.send_msg
 
 .export
+    blob_init
+    blob_slice
+    blob_concat
     boot
