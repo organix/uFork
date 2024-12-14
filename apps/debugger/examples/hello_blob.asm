@@ -4,47 +4,37 @@
     dev: "https://ufork.org/lib/dev.asm"
     std: "https://ufork.org/lib/std.asm"
 
-;;; Digit range
+;;  digit = [0-9]
 digit:
     pair_t '0' '9'
 
-;;; Uppercase range
+;;  upper = [A-Z]
 upper:
     pair_t 'A' 'Z'
 
-;;; Lowercase range
+;;  lower = [a-z]
 lower:
     pair_t 'a' 'z'
 
-;;; Whitespace character
+;;  print = [!-~]
+print:
+    pair_t '!' '~'
+
+;;  wsp = ' ' | '\t'
 wsp:
     pair_t ' '
     pair_t '\t'
     ref #nil
 
-;;; Token character
-tchar:
-;; tchar = "!" / "#" / "$" / "%" / "&" / "'" / "*"
-;;         / "+" / "-" / "." / "^" / "_" / "`" / "|" / "~"
-;;         / DIGIT / ALPHA
-    pair_t upper
-    pair_t lower
-    pair_t digit
-    pair_t '!'
-    pair_t '#'
-    pair_t '$'
-    pair_t '%'
-    pair_t '&'
-    pair_t '\''
-    pair_t '*'
-    pair_t '+'
-    pair_t '-'
-    pair_t '.'
-    pair_t '^'
-    pair_t '_'
-    pair_t '`'
-    pair_t '|'
-    pair_t '~'
+;;  ctrl = [\x00-\x1F]
+ctrl:
+    pair_t 0 31
+
+;;  blank = ' ' | ctrl | 127
+blank:
+    pair_t ' '
+    pair_t ctrl
+    pair_t 127
     ref #nil
 
 ;;; Example HTTP request
@@ -637,6 +627,70 @@ lo_range:                   ; rest hi
     if std.rv_true          ; rest
     ref pred_in_loop
 
+; pattern factories
+
+; match 1 or more repeats of a pattern
+;;  ptrn+ = ptrn ptrn*
+new_plus_ptrn:              ; ( ptrn -- ptrn+ )
+    roll -2                 ; k ptrn
+
+    push #nil               ; k ptrn list=#nil
+    pick 2                  ; k ptrn list ptrn
+    push match_star         ; k ptrn list ptrn match_star
+    actor create            ; k ptrn list ptrn*=match_star.ptrn
+    pair 1                  ; k ptrn list=ptrn*,list
+
+    roll 2                  ; k list ptrn
+    pair 1                  ; k list=ptrn,list
+
+    push match_seq          ; k list match_seq
+    actor create            ; k ptrn+=match_seq.list
+    ref std.return_value
+
+;;  rws = [ \t]+
+new_rws_ptrn:               ; ( -- rws_ptrn )
+    push wsp                ; k set=wsp
+    push pred_in            ; k set pred_in
+    actor create            ; k wsp_pred=pred_in.set
+    push match_one          ; k wsp_pred match_one
+    actor create            ; k wsp_ptrn=match_one.pred
+    call new_plus_ptrn      ; k rws_ptrn
+    ref std.return_value
+
+;;  crlf = '\r' '\n'
+new_crlf_ptrn:              ; ( -- crlf_ptrn )
+    push #nil               ; k list=#nil
+
+    push '\n'               ; k list lf
+    push pred_eq            ; k list lf pred_eq
+    actor create            ; k list pred=pred_eq.lf
+    push match_one          ; k list pred match_one
+    actor create            ; k list lf_ptrn=match_one.pred
+    pair 1                  ; k list=lf_ptrn,list
+
+    push '\r'               ; k list cr
+    push pred_eq            ; k list cr pred_eq
+    actor create            ; k list pred=pred_eq.cr
+    push match_one          ; k list pred match_one
+    actor create            ; k list cr_ptrn=match_one.pred
+    pair 1                  ; k list=cr_ptrn,list
+
+    push match_seq          ; k list match_seq
+    actor create            ; k crlf_ptrn=match_seq.list
+    ref std.return_value
+
+;;  token = print+
+new_token_ptrn:             ; ( -- token_ptrn )
+    push #nil               ; k #nil
+    push print              ; k #nil print
+    pair 1                  ; k set=print,#nil
+    push pred_in            ; k set pred_in
+    actor create            ; k print_pred=pred_in.set
+    push match_one          ; k print_pred match_one
+    actor create            ; k print_ptrn=match_one.pred
+    call new_plus_ptrn      ; k token_ptrn
+    ref std.return_value
+
 ; main program execution stages
 
 demo:                       ; {caps} <- blob
@@ -647,48 +701,10 @@ demo:                       ; {caps} <- blob
     dict get                ; blob ofs cust=debug_dev
     pair 2                  ; cust,ofs,blob
 
-; wsp = [ \t]
-
-    push wsp                ; ... set=wsp
-    push pred_in            ; ... set pred_in
-    actor create            ; ... wsp_pred=pred_in.set
-    push #nil               ; ... wsp_pred list=#nil
-
-    pick 2                  ; ... wsp_pred list wsp_pred
-    push match_one          ; ... wsp_pred list wsp_pred match_one
-    actor create            ; ... wsp_pred list wsp_ptrn=match_one.pred
-    pick -2                 ; ... wsp_pred wsp_ptrn list wsp_ptrn
-
-; ows = wsp*
-
-    push match_star         ; ... wsp_pred wsp_ptrn list wsp_ptrn match_star
-    actor create            ; ... wsp_pred wsp_ptrn list ows_ptrn=match_star.ptrn
-    pair 1                  ; ... wsp_pred wsp_ptrn list=ows_ptrn,list
-
-; rws = wsp ows
-
-    roll 2                  ; ... wsp_pred list wsp_ptrn
-    pair 1                  ; ... wsp_pred list=wsp_ptrn,list
-
-; tchar = [^ \t]
-
-    roll 2                  ; ... list wsp_pred
-    push pred_not           ; ... list wsp_pred pred_not
-    actor create            ; ... list tchar_pred=pred_not.wsp_pred
-    push match_one          ; ... list tchar_pred match_one
-    actor create            ; ... list tchar_ptrn=match_one.tchar_pred
-
-    pick -2                 ; ... tchar_ptrn list tchar_ptrn
-    push match_star         ; ... tchar_ptrn list tchar_ptrn match_star
-    actor create            ; ... tchar_ptrn list token_ptrn=match_star.tchar_ptrn
-    pair 1                  ; ... tchar_ptrn list=token_ptrn,list
-
-; token = tchar tchar*
-
-    roll 2                  ; ... list tchar_ptrn
-    pair 1                  ; ... list=tchar_ptrn,list
-
-; method = token rws
+    push #nil               ; ... #nil
+    call new_rws_ptrn       ; ... #nil rws_ptrn
+    call new_token_ptrn     ; ... #nil rws_ptrn token_ptrn
+    pair 2                  ; ... list=token_ptrn,rws_ptrn,#nil
 
     push match_seq          ; cust,ofs,blob list match_seq
     actor create            ; cust,ofs,blob ptrn=match_seq.list
