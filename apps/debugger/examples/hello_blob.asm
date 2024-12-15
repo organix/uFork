@@ -787,10 +787,22 @@ get_path:                   ; {caps} <- base,len,blob
     part 2                  ; blob len base
     alu add                 ; blob ofs=len+base
     state 0                 ; blob ofs {caps}
+;    push get_rws            ; blob ofs {caps} get_rws
     push debug_out          ; blob ofs {caps} debug_out
-    actor create            ; blob ofs cust=get_path.{caps}
+    actor create            ; blob ofs cust=get_rws.{caps}
     pair 2                  ; cust,ofs,blob
     call new_token_ptrn     ; cust,ofs,blob ptrn
+    ref std.send_msg
+
+get_rws:                    ; {caps} <- base,len,blob
+    msg 0                   ; base,len,blob
+    part 2                  ; blob len base
+    alu add                 ; blob ofs=len+base
+    state 0                 ; blob ofs {caps}
+    push debug_out          ; blob ofs {caps} debug_out
+    actor create            ; blob ofs cust=debug_out.{caps}
+    pair 2                  ; cust,ofs,blob
+    call new_rws_ptrn       ; cust,ofs,blob ptrn
     ref std.send_msg
 
 debug_out:                  ; {caps} <- msg
