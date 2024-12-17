@@ -1320,10 +1320,10 @@ has_search:                 ; k key dict
     ref has_search
 has_found:                  ; k key next value'
     drop 3                  ; k
-    ref std.return_t
+    ref std.return_true
 has_none:                   ; k key next value' key'
     drop 4                  ; k
-    ref std.return_f
+    ref std.return_false
 
 get:                        ; ( dict key k -- value )
     roll -3                 ; k dict key

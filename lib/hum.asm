@@ -189,11 +189,11 @@ prepare_env:                ; ( k -- env )
 
 dreturn_f:                  ; k value
     drop 1                  ; k
-    ref std.return_f
+    ref std.return_false
 
 dreturn_t:                  ; k value
     drop 1                  ; k
-    ref std.return_t
+    ref std.return_true
 
 dreturn_undef:              ; k value
     drop 1                  ; k
@@ -259,8 +259,8 @@ not:                        ; ( value -- boolean | #? )
     dup 1                   ; k value value
     call is_boolean         ; k value bool?(value)
     if_not dreturn_undef    ; k value
-    if std.return_f         ; k
-    ref std.return_t
+    if std.return_false     ; k
+    ref std.return_true
 
 test_not:                   ; ( -- )
     push #t                 ; k value=#t

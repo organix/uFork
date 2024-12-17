@@ -19,10 +19,10 @@ empty:                      ; ( deque k -- bool )
     typeq #pair_t           ; k tail is_pair(tail)
     if not_empty            ; k tail
     drop 1                  ; k
-    ref std.return_t
+    ref std.return_true
 not_empty:                  ; k tail
     drop 1                  ; k
-    ref std.return_f
+    ref std.return_false
 
 push:                       ; ( deque value k -- deque' )
 pop:                        ; ( deque k -- deque' value )

@@ -27,10 +27,10 @@ eq_tail:                    ; k b a
     if eq_tail              ; k tl(b) tl(a)
 eq_f:                       ; k b a
     drop 2                  ; k
-    ref std.return_f
+    ref std.return_false
 eq_t:                       ; k b a
     drop 2                  ; k
-    ref std.return_t
+    ref std.return_true
 
 ; Test suite
 

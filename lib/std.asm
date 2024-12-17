@@ -96,11 +96,11 @@ return_nil:                 ; k
     push #nil               ; k rv=()
     ref return_value
 
-return_f:                   ; k
+return_false:               ; k
     push #f                 ; k rv=#f
     ref return_value
 
-return_t:                   ; k
+return_true:                ; k
     push #t                 ; k rv=#t
     ref return_value
 
@@ -146,7 +146,7 @@ return_one:                 ; k
     return_value
     return_undef
     return_nil
-    return_f
-    return_t
+    return_false
+    return_true
     return_zero
     return_one
