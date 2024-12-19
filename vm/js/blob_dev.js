@@ -112,7 +112,11 @@ function blob_dev(core, make_ddev) {
             const tag = ddev.u_tag(target.y);
             const event = core.u_read_quad(event_stub.y);
             const message = event.y;
-            const customer = core.u_nth(message, 1);
+            const customer = (
+                ufork.is_cap(message)
+                ? message
+                : core.u_nth(message, 1)
+            );
             if (ufork.is_fix(tag)) {
                 const {blob_nr, read_nr} = decode_tag(tag);
                 if (read_nr !== undefined) {
@@ -135,43 +139,45 @@ function blob_dev(core, make_ddev) {
                     return ufork.E_BOUNDS;
                 }
                 let reply;
-                const request = core.u_nth(message, -1);
-                if (request === ufork.UNDEF_RAW) {
+                if (ufork.is_cap(message)) {
 
 // Size request.
 
                     reply = ufork.fixnum(bytes.length);
-                } else if (ufork.is_fix(request)) {
+                } else {
+                    const request = core.u_nth(message, -1);
+                    if (ufork.is_fix(request)) {
 
 // Read request.
 
-                    const read_at = ufork.fix_to_i32(request);
-                    const read_byte = bytes[read_at];
-                    reply = (
-                        read_byte !== undefined
-                        ? ufork.fixnum(bytes[read_at])
-                        : ufork.UNDEF_RAW
-                    );
-                } else {
+                        const read_at = ufork.fix_to_i32(request);
+                        const read_byte = bytes[read_at];
+                        reply = (
+                            read_byte !== undefined
+                            ? ufork.fixnum(bytes[read_at])
+                            : ufork.UNDEF_RAW
+                        );
+                    } else {
 
 // Write request.
 
-                    const offset = core.u_nth(message, 2);
-                    const value = core.u_nth(message, -2);
-                    if (!ufork.is_fix(offset) || !ufork.is_fix(value)) {
-                        return ufork.E_NOT_FIX;
+                        const offset = core.u_nth(request, 1);
+                        const value = core.u_nth(request, -1);
+                        if (!ufork.is_fix(offset) || !ufork.is_fix(value)) {
+                            return ufork.E_NOT_FIX;
+                        }
+                        const byte = ufork.fix_to_i32(value);
+                        if (byte < 0 || byte > 255) {
+                            return ufork.E_BOUNDS;
+                        }
+                        const write_at = ufork.fix_to_i32(offset);
+                        bytes[write_at] = byte;
+                        reply = (
+                            bytes[write_at] !== undefined // in bounds?
+                            ? ufork.TRUE_RAW
+                            : ufork.FALSE_RAW
+                        );
                     }
-                    const byte = ufork.fix_to_i32(value);
-                    if (byte < 0 || byte > 255) {
-                        return ufork.E_BOUNDS;
-                    }
-                    const write_at = ufork.fix_to_i32(offset);
-                    bytes[write_at] = byte;
-                    reply = (
-                        bytes[write_at] !== undefined // in bounds?
-                        ? ufork.TRUE_RAW
-                        : ufork.FALSE_RAW
-                    );
                 }
                 core.u_defer(function () {
                     core.h_release_stub(event_stub_ptr);

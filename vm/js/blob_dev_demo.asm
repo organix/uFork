@@ -28,10 +28,8 @@ write_beh:                  ; debug_dev <- blob
     pair 2                  ; (cust offset . value)
     msg 0                   ; (cust offset . value) blob
     actor send              ; --
-    push #?                 ; #? // size request
-    state 0                 ; #? debug_dev
-    pair 1                  ; (debug_dev . #?)
-    msg 0                   ; (debug_dev . #?) blob
+    state 0                 ; cust=debug_dev // size request
+    msg 0                   ; cust blob
     ref std.send_msg
 
 read_beh:                   ; (blob . debug_dev) <- ok
@@ -48,8 +46,8 @@ read_beh:                   ; (blob . debug_dev) <- ok
 check_beh:                  ; debug_dev <- value
     msg 0                   ; value
     assert 42               ; --
-    push 1729               ; 1729
-    state 0                 ; 1729 debug_dev
+    msg 0                   ; value
+    state 0                 ; value debug_dev
     ref std.send_msg
 
 .export

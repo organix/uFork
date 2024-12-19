@@ -22,7 +22,7 @@ when they are no longer referenced.
 
 ### Size Request
 
-A _size_ request looks like `(customer . #?)`.
+A _size_ request is simply a `customer`.
 The number of bytes in this allocation
 is sent to the `customer` as a _fixnum_.
 

@@ -249,24 +249,27 @@ impl Device for BlobDevice {
             // request to allocated blob
             let _dev = myself.x();
             let handle = myself.y();
-            let msg = event.y();  // (cust . #?) | (cust . ofs) | (cust ofs . val)
-            let cust = core.nth(msg, PLUS_1);
-            let req = core.nth(msg, MINUS_1);
-            if req.is_fix() {  // read request
-                let ofs = req;
-                let data = self.blob_read(handle, ofs)?;
-                let evt = core.reserve_event(sponsor, cust, data)?;
-                core.event_enqueue(evt);
-            } else if core.typeq(PAIR_T, req) {  // write request
-                let ofs = core.nth(req, PLUS_1);
-                let val = core.nth(req, MINUS_1);
-                let ok = self.blob_write(handle, ofs, val)?;
-                let evt = core.reserve_event(sponsor, cust, ok)?;
-                core.event_enqueue(evt);
-            } else {  // size request
+            let msg = event.y();  // cust | (cust . ofs) | (cust ofs . val)
+            if msg.is_cap() { // size request
+                let cust = msg;
                 let size = self.blob_size(handle)?;
                 let evt = core.reserve_event(sponsor, cust, size)?;
                 core.event_enqueue(evt);
+            } else {
+                let cust = core.nth(msg, PLUS_1);
+                let req = core.nth(msg, MINUS_1);
+                if req.is_fix() {  // read request
+                    let ofs = req;
+                    let data = self.blob_read(handle, ofs)?;
+                    let evt = core.reserve_event(sponsor, cust, data)?;
+                    core.event_enqueue(evt);
+                } else if core.typeq(PAIR_T, req) {  // write request
+                    let ofs = core.nth(req, PLUS_1);
+                    let val = core.nth(req, MINUS_1);
+                    let ok = self.blob_write(handle, ofs, val)?;
+                    let evt = core.reserve_event(sponsor, cust, ok)?;
+                    core.event_enqueue(evt);
+                }
             }
         } else {
             // request to allocator

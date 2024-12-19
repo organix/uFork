@@ -62,7 +62,7 @@ DEF read(conn, consumed) AS [
     CREATE read_cust WITH \blob.[
         CASE is_actor(blob) OF
         TRUE : [
-            SEND (blob_size_cust, ?) TO blob
+            SEND blob_size_cust TO blob
             CREATE blob_size_cust WITH \size.[
                 DEF sub_offset AS sub(blob_offset, consumed)
                 CASE less(sub_offset, size) OF
