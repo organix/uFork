@@ -273,7 +273,7 @@ impl Device for BlobDevice {
             }
         } else {
             // request to allocator
-            let msg = event.y();  // (cust size)
+            let msg = event.y();  // (cust . size)
             let cust = core.nth(msg, PLUS_1);
             let size = core.nth(msg, MINUS_1);
             let handle = self.blob_reserve(size)?;

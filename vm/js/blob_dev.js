@@ -32,6 +32,17 @@ const wasm_url = import.meta.resolve("https://ufork.org/wasm/ufork.debug.wasm");
 const demo_url = import.meta.resolve("./blob_dev_demo.asm");
 
 function blob_dev(core, make_ddev) {
+    const dev_ptr = ufork.ramptr(ufork.BLOB_DEV_OFS);
+    const dev_id = core.u_read_quad(dev_ptr).x;
+    if (make_ddev === undefined) {
+
+// We are unable to install a dynamic device, so install the more limited native
+// blob device instead.
+
+        const static_dev_cap = ufork.ptr_to_cap(dev_ptr);
+        core.h_install(dev_id, static_dev_cap);
+        return;
+    }
     const sponsor = ufork.ramptr(ufork.SPONSOR_OFS);
     let ddev;
     let blobs = [];
@@ -230,8 +241,6 @@ function blob_dev(core, make_ddev) {
         }
     );
     const dev_cap = ddev.h_reserve_proxy();
-    const dev_ptr = ufork.ramptr(ufork.BLOB_DEV_OFS);
-    const dev_id = core.u_read_quad(dev_ptr).x;
     core.h_install(dev_id, dev_cap, function on_dispose() {
         ddev.h_dispose();
         if (core.u_trace !== undefined) {
@@ -243,7 +252,7 @@ function blob_dev(core, make_ddev) {
     return Object.freeze({h_alloc_blob, h_read_bytes, u_get_bytes});
 }
 
-function demo(log) {
+function demo(log, use_static) {
     let core;
 
     function run_core() {
@@ -261,24 +270,34 @@ function demo(log) {
     parseq.sequence([
         core.h_initialize(),
         core.h_import(demo_url),
-        lazy(function (asm_module) {
-            const {
-                h_alloc_blob,
-                h_read_bytes
-            } = blob_dev(core, host_dev(core));
-            core.h_boot(asm_module.boot);
-            run_core();
-            const blob = h_alloc_blob([5, 6, 7, 8]);
-            core.h_reserve_stub(blob.cap, blob.cap); // TODO pass #? as device
-            // return the_blob_dev.u_get_bytes(blob.cap);
-            return bind(h_read_bytes(), blob.cap);
-        })
+        (
+            use_static
+            ? requestorize(function use_static_blob_dev(asm_module) {
+                blob_dev(core);
+                core.h_boot(asm_module.boot);
+                run_core();
+                return true;
+            })
+            : lazy(function use_dynamic_blob_dev(asm_module) {
+                const {
+                    h_alloc_blob,
+                    h_read_bytes
+                } = blob_dev(core, host_dev(core));
+                core.h_boot(asm_module.boot);
+                run_core();
+                const blob = h_alloc_blob([5, 6, 7, 8]);
+                core.h_reserve_stub(blob.cap, blob.cap); // TODO pass #? as device
+                // return u_get_bytes(blob.cap);
+                return bind(h_read_bytes(), blob.cap);
+            })
+        )
     ])(log);
     setTimeout(core.h_dispose, 500);
 }
 
 if (import.meta.main) {
-    demo(globalThis.console.log);
+    demo(globalThis.console.log, true);
+    demo(globalThis.console.log, false);
 }
 
 export default Object.freeze(blob_dev);
