@@ -8,31 +8,8 @@
     list: "https://ufork.org/lib/list.asm"
 
 ;
-; legacy API adapter
-;
-
-legacy:                     ; blob <- cust | cust,ofs | cust,ofs,data | base',len',cust
-    msg 0                   ; msg
-    dup 1                   ; msg cust=msg
-    typeq #actor_t          ; msg is_cap(cust)
-    if_not legacy_api       ; msg
-    push #?                 ; msg #?
-    roll 2                  ; #? cust=msg
-    pair 1                  ; msg=cust,#?
-legacy_api:                 ; msg
-    dup 1                   ; msg msg
-    typeq #pair_t           ; msg is_pair(msg)
-    if_not std.abort        ; msg
-    dup 1                   ; msg cust,req=msg
-    nth 1                   ; msg cust
-    typeq #actor_t          ; msg is_pair(msg)
-    if_not std.abort        ; msg
-    state 0                 ; msg blob
-    ref std.send_msg
-
-;
 ; initialized blob builder
-; cust,list -> blob
+;   cust,list -> blob
 ;
 
 init:                       ; blob_dev <- cust,list
@@ -49,10 +26,6 @@ init_blob:                  ; cust,list <- blob
     state 0                 ; cust,list
     part 1                  ; list cust
     msg 0                   ; list cust blob
-
-;    push legacy             ; list cust blob legacy
-;    actor create            ; list cust blob=legacy.blob
-
     push 0                  ; list cust blob ofs=0
     roll 4                  ; cust blob ofs list
     pair 3                  ; list,ofs,blob,cust
@@ -183,94 +156,6 @@ slice_clipped:              ; cust base'' len''
     ref std.send_msg
 
 ;
-; blob interface to a concatenation of blobs
-;
-
-concat:                     ; (len,blob),...,#nil <- cust,req
-    msg -1                  ; req
-    eq #?                   ; req==#?
-    if concat_size          ; --
-    msg -1                  ; req
-    typeq #fixnum_t         ; is_fix(req)
-    if concat_read          ; --
-    ref concat_write
-    ; FIXME: handle unknown requests...
-
-concat_size:
-    push 0                  ; size=0
-    state 0                 ; size list=(len,blob),...,#nil
-concat_size_loop:           ; size list
-    dup 1                   ; size list list
-    typeq #pair_t           ; size list is_pair(list)
-    if_not concat_size_done ; size list
-    part 1                  ; size rest first
-    part 1                  ; size rest blob len
-    roll 4                  ; rest blob len size
-    alu add                 ; rest blob len+size
-    roll -3                 ; len+size rest blob
-    drop 1                  ; len+size rest
-    ref concat_size_loop
-concat_size_done:           ; size list
-    drop 1                  ; size
-    ref std.cust_send
-
-concat_read:
-    msg 0                   ; cust,ofs
-    part 1                  ; ofs cust
-    state 0                 ; ofs cust list=(len,blob),...,#nil
-concat_read_loop:           ; ofs cust list
-    dup 1                   ; ofs cust list list
-    typeq #pair_t           ; ofs cust list is_pair(list)
-    if_not std.rv_undef     ; ofs cust list
-    part 1                  ; ofs cust rest first
-    part 1                  ; ofs cust rest blob len
-    pick 5                  ; ofs cust rest blob len ofs
-    pick 2                  ; ofs cust rest blob len ofs len
-    cmp lt                  ; ofs cust rest blob len ofs<len
-    if concat_read_done     ; ofs cust rest blob len
-    roll 5                  ; cust rest blob len ofs
-    roll 2                  ; cust rest blob ofs len
-    alu sub                 ; cust rest blob ofs-len
-    roll -4                 ; ofs-len cust rest blob
-    drop 1                  ; ofs-len cust rest
-    ref concat_read_loop
-concat_read_done:           ; ofs cust rest blob len
-    drop 1                  ; ofs cust rest blob
-    roll -4                 ; blob ofs cust rest
-    drop 1                  ; blob ofs cust
-    pair 1                  ; blob cust,ofs
-    roll 2                  ; cust,ofs blob
-    ref std.send_msg
-
-concat_write:
-    msg 0                   ; cust,ofs,value
-    part 2                  ; value ofs cust
-    state 0                 ; value ofs cust list=(len,blob),...,#nil
-concat_write_loop:          ; value ofs cust list
-    dup 1                   ; value ofs cust list list
-    typeq #pair_t           ; value ofs cust list is_pair(list)
-    if_not std.rv_false     ; value ofs cust list
-    part 1                  ; value ofs cust rest first
-    part 1                  ; value ofs cust rest blob len
-    pick 5                  ; value ofs cust rest blob len ofs
-    pick 2                  ; value ofs cust rest blob len ofs len
-    cmp lt                  ; value ofs cust rest blob len ofs<len
-    if concat_write_done    ; value ofs cust rest blob len
-    roll 5                  ; value cust rest blob len ofs
-    roll 2                  ; value cust rest blob ofs len
-    alu sub                 ; value cust rest blob ofs-len
-    roll -4                 ; value ofs-len cust rest blob
-    drop 1                  ; value ofs-len cust rest
-    ref concat_write_loop
-concat_write_done:          ; value ofs cust rest blob len
-    drop 1                  ; value ofs cust rest blob
-    roll -5                 ; blob value ofs cust rest
-    drop 1                  ; blob value ofs cust
-    pair 2                  ; blob cust,ofs,value
-    roll 2                  ; cust,ofs,value blob
-    ref std.send_msg
-
-;
 ; blob interface to a pair of consecutive blobs
 ;
 
@@ -329,10 +214,26 @@ k_pair_write:               ; (head,tail),cust,req <- size
 
 ;
 ; input stream-requestor interface to a blob
+;   cust,blob -> stream
 ;
 
-reader:                     ; ofs,blob <- can,cb,req | data,cb
-; FIXME: need `size` to distinguish end-of-stream from read-error...
+reader_factory:             ; _ <- cust,blob
+    msg 0                   ; cust,blob
+    push k_reader_init      ; cust,blob k_reader_init
+    actor create            ; k=k_reader_init.cust,blob
+    msg -1                  ; k blob
+    ref std.send_msg
+k_reader_init:              ; cust,blob <- size
+    state -1                ; blob
+    msg 0                   ; blob size
+    push 0                  ; blob size ofs=0
+    pair 2                  ; ofs,size,blob
+    push reader             ; ofs,size,blob reader
+    actor create            ; stream=reader.ofs,size,blob
+    state 1                 ; stream cust
+    ref std.send_msg
+
+reader:                     ; ofs,size,blob <- can,cb,req | data,cb
     msg 0                   ; msg
     typeq #pair_t           ; is_pair(msg)
     if_not std.abort        ; --
@@ -353,13 +254,17 @@ reader_fail:                ; --
     ref std.send_msg
 reader_read:                ; --
     state 1                 ; ofs
+    state 2                 ; ofs size
+    cmp lt                  ; ofs<size
+    if_not reader_end       ; --
+    state 1                 ; ofs
     actor self              ; ofs SELF
     msg 2                   ; ofs SELF cb
     pair 1                  ; ofs cb,SELF
     push k_blob_r           ; ofs cb,SELF k_blob_r
     actor create            ; ofs cust=k_blob_r.cb,SELF
     pair 1                  ; cust,ofs
-    state -1                ; cust,ofs blob
+    state -2                ; cust,ofs blob
     ref std.send_msg
 reader_end:                 ; --
     push #nil               ; #nil
@@ -368,12 +273,12 @@ reader_end:                 ; --
     msg 2                   ; #t,#nil cb
     ref std.send_msg
 reader_ok:                  ; --
-    state 0                 ; ofs,blob
-    part 1                  ; blob ofs
-    push 1                  ; blob ofs 1
-    alu add                 ; blob ofs+1
-    pair 1                  ; state'=ofs+1,blob
-update_blob:                ; state'
+    state 0                 ; ofs,size,blob
+    part 1                  ; size,blob ofs
+    push 1                  ; size,blob ofs 1
+    alu add                 ; size,blob ofs+1
+    pair 1                  ; state'=ofs+1,size,blob
+reader_update:              ; state'
     push reader             ; state' reader
     actor become            ; --
     msg 1                   ; data
@@ -404,6 +309,7 @@ k_cb_fail:                  ; --
 
 ;
 ; output stream-requestor interface to an auto-allocated blob
+;   cust,blk_size -> stream
 ;
 
 writer_factory:             ; blob_dev <- cust,blk_size
@@ -541,10 +447,17 @@ demo_size:                  ; {caps} <- blob
 demo_print:                 ; {caps} <- blob
     debug
     msg 0                   ; blob
-    push 0                  ; blob ofs=0
-    pair 1                  ; ofs,blob
-    push reader             ; ofs,blob reader
-    actor create            ; in=reader.ofs,blob
+    state 0                 ; blob {caps}
+    push k_demo_print       ; blob {caps} k_demo_print
+    actor create            ; blob cust=k_demo_print.{caps}
+    pair 1                  ; cust,blob
+    push #?                 ; cust,blob #?
+    push reader_factory     ; cust,blob #? reader_factory
+    actor create            ; cust,blob reader_factory._
+    ref std.send_msg
+
+k_demo_print:               ; {caps} <- in
+    msg 0                   ; in
     state 0                 ; in {caps}
     push dev.io_key         ; in {caps} io_key
     dict get                ; in out=io_dev
@@ -579,6 +492,8 @@ boot:                       ; _ <- {caps}
 .export
     init
     slice
-    concat
     pair
+    reader_factory
+    writer_factory
+    stream_copy
     boot
