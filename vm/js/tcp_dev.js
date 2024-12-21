@@ -6,7 +6,9 @@ import concat_bytes from "https://ufork.org/lib/concat_bytes.js";
 import assemble from "https://ufork.org/lib/assemble.js";
 import compile_humus from "https://ufork.org/lib/humus.js";
 import parseq from "https://ufork.org/lib/parseq.js";
+import lazy from "https://ufork.org/lib/rq/lazy.js";
 import requestorize from "https://ufork.org/lib/rq/requestorize.js";
+import unpromise from "https://ufork.org/lib/rq/unpromise.js";
 import blob_dev from "./blob_dev.js";
 import host_dev from "./host_dev.js";
 import ufork from "./ufork.js";
@@ -252,6 +254,23 @@ function tcp_dev(
         if (!ufork.is_cap(callback)) {
             return ufork.E_NOT_CAP;
         }
+
+        function u_write_chunks(conn_nr) {
+            const undefined_value = true;
+            return lazy(function (chunk_array) {
+                return parseq.sequence(chunk_array.map(function (chunk) {
+                    return unpromise(function () {
+                        const connection = connections[conn_nr];
+                        return (
+                            typeof connection === "object"
+                            ? connection.send(chunk)
+                            : Promise.reject("Write interrupted.")
+                        );
+                    }, undefined_value);
+                }));
+            }, undefined_value);
+        }
+
         if (ufork.is_fix(tag)) {
             const {listener_nr, conn_nr} = decode_tag(tag);
             if (listener_nr !== undefined) {
@@ -298,29 +317,17 @@ function tcp_dev(
 
                 const blob_cap = request;
                 core.u_defer(function () {
-                    the_blob_dev.h_read_bytes()(
-                        function (bytes, reason) {
-                            if (bytes === undefined) {
-                                core.h_release_stub(event_stub_ptr);
-                                u_trace(`#${conn_nr} write failed`, reason);
-                                return h_send(callback, h_reply_fail());
-                            }
-                            const connection = connections[conn_nr];
-                            if (typeof connection !== "object") {
-                                core.h_release_stub(event_stub_ptr);
-                                u_trace(`#${conn_nr} write after close`);
-                                return h_send(callback, h_reply_fail());
-                            }
-                            u_trace(`#${conn_nr} write ${bytes.length}B`);
-                            Promise.resolve(
-                                connection.send(bytes)
-                            ).then(function () {
-                                core.h_release_stub(event_stub_ptr);
-                                h_send(callback, h_reply_ok(ufork.UNDEF_RAW));
-                            });
-                        },
-                        blob_cap
-                    );
+                    parseq.sequence([
+                        the_blob_dev.h_read_chunks(),
+                        u_write_chunks(conn_nr)
+                    ])(function (value, reason) {
+                        core.h_release_stub(event_stub_ptr);
+                        if (value === undefined) {
+                            u_trace(`#${conn_nr} write failed`, reason);
+                            return h_send(callback, h_reply_fail());
+                        }
+                        return h_send(callback, h_reply_ok(ufork.UNDEF_RAW));
+                    }, blob_cap);
                 });
                 return ufork.E_OK;
             }

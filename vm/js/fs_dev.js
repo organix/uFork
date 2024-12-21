@@ -2,10 +2,12 @@
 
 /*jslint deno, web, global */
 
+import concat_bytes from "https://ufork.org/lib/concat_bytes.js";
 import assemble from "https://ufork.org/lib/assemble.js";
 import compile_humus from "https://ufork.org/lib/humus.js";
 import parseq from "https://ufork.org/lib/parseq.js";
 import bind from "https://ufork.org/lib/rq/bind.js";
+import lazy from "https://ufork.org/lib/rq/lazy.js";
 import requestorize from "https://ufork.org/lib/rq/requestorize.js";
 import blob_dev from "./blob_dev.js";
 import host_dev from "./host_dev.js";
@@ -119,6 +121,14 @@ function fs_dev(
             return ufork.E_OK;
         }
 
+        function u_write_chunks(handle) {
+            return lazy(function (chunk_array) {
+                return parseq.sequence(chunk_array.map(function (chunk) {
+                    return bind(handle.write(), chunk);
+                }));
+            });
+        }
+
         if (ufork.is_fix(tag)) {
             const file_nr = ufork.fix_to_i32(tag);
             if (ufork.is_fix(request)) {
@@ -155,8 +165,8 @@ function fs_dev(
                     function make_requestor(handle) {
                         const blob_cap = request;
                         return parseq.sequence([
-                            bind(the_blob_dev.h_read_bytes(), blob_cap),
-                            handle.write()
+                            bind(the_blob_dev.h_read_chunks(), blob_cap),
+                            u_write_chunks(handle)
                         ]);
                     },
                     function get_output(length) {
@@ -210,8 +220,9 @@ function fs_dev(
             }
             core.u_defer(function () {
                 const cancel = parseq.sequence([
-                    the_blob_dev.h_read_bytes(),
-                    requestorize(function decode_path(bytes) {
+                    the_blob_dev.h_read_chunks(),
+                    requestorize(function decode_path(chunks) {
+                        const bytes = chunks.reduce(concat_bytes);
                         const path = text_decoder.decode(bytes); // can throw
                         u_trace("decoded path", path);
                         return path;
