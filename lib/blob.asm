@@ -82,8 +82,14 @@ slice:                      ; base,len,blob <- cust | cust,ofs | cust,ofs,data |
     if slice_read           ; --
     msg -1                  ; req
     typeq #pair_t           ; is_pair(req)
+    if_not std.abort        ; --
+    msg 1                   ; cust
+    typeq #actor_t          ; is_cap(cust)
     if slice_write          ; --
-    ref std.commit
+    msg 1                   ; base'
+    typeq #fixnum_t         ; is_fix(base')
+    if slice_source         ; --
+    ref std.abort
 
 slice_size:
     state 2                 ; size=len
@@ -159,7 +165,7 @@ slice_clipped:              ; cust base'' len''
 ; blob interface to a pair of consecutive blobs
 ;
 
-pair:                       ; head,tail <- cust | cust,ofs | cust,ofs,data
+pair:                       ; head,tail <- cust | cust,ofs | cust,ofs,data | base',len',cust
     msg 0                   ; msg
     state 0                 ; msg head,tail
     pair 1                  ; (head,tail),msg
@@ -169,9 +175,15 @@ pair:                       ; head,tail <- cust | cust,ofs | cust,ofs,data
     msg -1                  ; (head,tail),msg ofs
     typeq #fixnum_t         ; (head,tail),msg is_fix(ofs)
     if pair_read            ; (head,tail),cust,ofs
-    msg -1                  ; (head,tail),msg ofs,data
-    typeq #pair_t           ; (head,tail),msg is_pair(ofs,data)
+    msg -1                  ; (head,tail),msg req
+    typeq #pair_t           ; (head,tail),msg is_pair(req)
+    if_not std.abort        ; (head,tail),msg
+    msg 1                   ; (head,tail),msg cust
+    typeq #actor_t          ; (head,tail),msg is_cap(cust)
     if pair_write           ; (head,tail),cust,ofs,data
+    msg 1                   ; (head,tail),msg base'
+    typeq #fixnum_t         ; (head,tail),msg is_fix(base')
+    if pair_source          ; (head,tail),base',len',cust
     ref std.abort
 
 pair_size:                  ; (head,tail),cust
@@ -185,6 +197,9 @@ pair_read:                  ; (head,tail),cust,ofs
     ref pair_head
 pair_write:                 ; (head,tail),cust,ofs,data
     push k_pair_write       ; (head,tail),msg k_beh=k_pair_write
+    ref pair_head
+pair_source:                ; (head,tail),base',len',cust
+    push k_pair_source      ; (head,tail),msg k_beh=k_pair_source
     ref pair_head
 
 k_pair_size:                ; (head,tail),cust <- size
@@ -209,8 +224,11 @@ k_pair_size2:               ; size,cust <- size'
 k_pair_read:                ; (head,tail),cust,ofs <- size
     ref std.commit
 
-k_pair_write:               ; (head,tail),cust,req <- size
+k_pair_write:               ; (head,tail),cust,ofs,data <- size
     ref std.commit
+
+k_pair_source:              ; (head,tail),base',len',cust <- size
+    ref std.abort
 
 ;
 ; input stream-requestor interface to a blob
@@ -426,7 +444,8 @@ http_request:
 demo_slice:                 ; {caps} <- blob
     state 0                 ; {caps}
 ;    push demo_size          ; {caps} demo=demo_size
-    push demo_print         ; {caps} demo=demo_print
+;    push demo_print         ; {caps} demo=demo_print
+    push demo_source        ; {caps} demo=demo_source
     actor become            ; --
     msg 0                   ; blob
     push 11                 ; blob len=11
@@ -445,7 +464,6 @@ demo_size:                  ; {caps} <- blob
     ref std.send_msg
 
 demo_print:                 ; {caps} <- blob
-    debug
     msg 0                   ; blob
     state 0                 ; blob {caps}
     push k_demo_print       ; blob {caps} k_demo_print
@@ -455,7 +473,6 @@ demo_print:                 ; {caps} <- blob
     push reader_factory     ; cust,blob #? reader_factory
     actor create            ; cust,blob reader_factory._
     ref std.send_msg
-
 k_demo_print:               ; {caps} <- in
     msg 0                   ; in
     state 0                 ; in {caps}
@@ -472,6 +489,17 @@ tgt_start:                  ; tgt
     push #t                 ; tgt #? ok=#t
     pair 1                  ; tgt result=ok,value
     roll 2                  ; result tgt
+    ref std.send_msg
+
+demo_source:                ; {caps} <- blob
+    debug
+    state 0                 ; {caps}
+    push dev.debug_key      ; {caps} debug_key
+    dict get                ; cust=debug_dev
+    push 4096               ; cust len=4096
+    push 0                  ; cust len base=0
+    pair 2                  ; base,len,cust
+    msg 0                   ; base,len,cust blob
     ref std.send_msg
 
 boot:                       ; _ <- {caps}
