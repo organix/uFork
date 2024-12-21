@@ -15,8 +15,11 @@ or `#?` if the allocation could not be satisfied.
 
 ## Blob Requests
 
-The Blob actor/capability handles
-_read_, _write_, and _size_ requests.
+Blob capabilities issued by the Blob Device respond
+to _read_, _write_, _size_, and _source_ requests.
+For maximum composability, blob actors implemented in
+userspace should respond to all four kinds of request.
+
 The garbage-collector automatically releases allocations
 when they are no longer referenced.
 
@@ -39,6 +42,24 @@ The byte `value` is written at `offset`,
 and `#t` is sent to the `customer`.
 If `offset` is out of bounds, the write has no effect,
 and `#f` is sent to the `customer`.
+
+### Source Request
+
+The _source_ request is intended to faciliate
+direct memory access (DMA) between devices,
+even when a blob is composed of other blobs
+(via [blob.slice](../lib/blob.asm), for example).
+Generally, _source_ requests are issued by the system.
+
+A _source_ request looks like `(offset size . customer)`.
+The source `blob` at `offset` is located and
+`(base length . blob)` is sent to the `customer`.
+The `base` and `length` together delineate
+a range of bytes within `blob`.
+The `length` never exceeds the requested `size`.
+
+A source blob is any blob that can not be decomposed
+any further, such as a blob issued by the Blob Device.
 
 ## JavaScript implementation
 

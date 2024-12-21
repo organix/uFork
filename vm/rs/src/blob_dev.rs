@@ -178,6 +178,18 @@ impl BlobDevice {
         }
     }
 
+    fn blob_source(&mut self, handle: Any, base: Any, len: Any) -> Result<Any, Error> {
+        let ofs = base.get_fix()? as usize;
+        let limit = len.get_fix()? as usize;
+        let (_base, blob_len) = self.blob_dims(handle)?;
+        if ofs >= blob_len {
+            return Err(E_BOUNDS);
+        }
+        let available = blob_len - ofs;
+        let take = if available < limit { available } else { limit };
+        Ok(Any::fix(take as isize))
+    }
+
     fn get_u16(&self, ofs: usize) -> usize {
         assert_eq!(OED_POS_INT, self.blob_ram[ofs + 0]);
         assert_eq!(16, self.blob_ram[ofs + 1]);  // size = 16 bits
@@ -249,25 +261,39 @@ impl Device for BlobDevice {
             // request to allocated blob
             let _dev = myself.x();
             let handle = myself.y();
-            let msg = event.y();  // cust | (cust . ofs) | (cust ofs . val)
+            let msg = event.y();  // cust | (cust . ofs) | (cust ofs . val) | (base len . cust)
             if msg.is_cap() { // size request
                 let cust = msg;
                 let size = self.blob_size(handle)?;
                 let evt = core.reserve_event(sponsor, cust, size)?;
                 core.event_enqueue(evt);
             } else {
-                let cust = core.nth(msg, PLUS_1);
-                let req = core.nth(msg, MINUS_1);
-                if req.is_fix() {  // read request
-                    let ofs = req;
-                    let data = self.blob_read(handle, ofs)?;
-                    let evt = core.reserve_event(sponsor, cust, data)?;
-                    core.event_enqueue(evt);
-                } else if core.typeq(PAIR_T, req) {  // write request
-                    let ofs = core.nth(req, PLUS_1);
-                    let val = core.nth(req, MINUS_1);
-                    let ok = self.blob_write(handle, ofs, val)?;
-                    let evt = core.reserve_event(sponsor, cust, ok)?;
+                let head = core.nth(msg, PLUS_1);
+                if head.is_cap() {
+                    let cust = head;
+                    let req = core.nth(msg, MINUS_1);
+                    if req.is_fix() {  // read request
+                        let ofs = req;
+                        let data = self.blob_read(handle, ofs)?;
+                        let evt = core.reserve_event(sponsor, cust, data)?;
+                        core.event_enqueue(evt);
+                    } else if core.typeq(PAIR_T, req) {  // write request
+                        let ofs = core.nth(req, PLUS_1);
+                        let val = core.nth(req, MINUS_1);
+                        let ok = self.blob_write(handle, ofs, val)?;
+                        let evt = core.reserve_event(sponsor, cust, ok)?;
+                        core.event_enqueue(evt);
+                    }
+                } else { // source request
+                    let base = head;
+                    let len = core.nth(msg, PLUS_2);
+                    let cust = core.nth(msg, MINUS_2);
+                    let shorter_len = self.blob_source(handle, base, len)?;
+                    let pair = Quad::pair_t(shorter_len,target);
+                    let pair_ptr = core.reserve(&pair)?;
+                    let reply = Quad::pair_t(base, pair_ptr);
+                    let reply_ptr = core.reserve(&reply)?;
+                    let evt = core.reserve_event(sponsor, cust, reply_ptr)?;
                     core.event_enqueue(evt);
                 }
             }

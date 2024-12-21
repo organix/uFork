@@ -39,7 +39,15 @@ function test_rust() {
 
 function test_asm() {
     return run({
-        cmd: ["deno", "run", "--allow-read=.", asm_runner_href, "apps", "lib"],
+        cmd: [
+            "deno",
+            "run",
+            "--allow-read=.",
+            asm_runner_href,
+            "apps",
+            "lib",
+            "vm/js"
+        ],
         cwd: fromFileUrl(root_dir_href)
     });
 }
