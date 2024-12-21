@@ -14,10 +14,6 @@
 //      The caller is responsible for ensuring the blob capability is not
 //      garbage collected during the request.
 
-//  u_get_chunk(blob_cap)
-//      Returns the mutable Uint8Array associated with the blob capability, or
-//      undefined if there isn't one.
-
 /*jslint web, global */
 
 import assemble from "https://ufork.org/lib/assemble.js";
@@ -30,6 +26,48 @@ import ufork from "./ufork.js";
 const lib_url = import.meta.resolve("https://ufork.org/lib/");
 const wasm_url = import.meta.resolve("https://ufork.org/wasm/ufork.debug.wasm");
 const demo_url = import.meta.resolve("./blob_dev_demo.asm");
+
+function encode_tag({blob_nr, read_nr, source_nr}) {
+    return ufork.fixnum(
+        blob_nr !== undefined
+        ? blob_nr                   // positive
+        : (
+            read_nr !== undefined
+            ? (-2 * read_nr) - 1    // negative odd
+            : (-2 * source_nr) - 2  // negative even
+        )
+    );
+}
+
+function decode_tag(tag) {
+    const integer = ufork.fix_to_i32(tag);
+    return (
+        integer >= 0
+        ? {blob_nr: integer}
+        : (
+            integer % 2 === 0
+            ? {source_nr: (-2 - integer) / 2}
+            : {read_nr: (-1 - integer) / 2}
+        )
+    );
+}
+
+function test_tags() {
+    const nrs = [0, 1, 2];
+    const keys = ["blob_nr", "read_nr", "source_nr"];
+    if (
+        nrs.some(function (nr) {
+            return keys.some(function (key) {
+                const expected = {};
+                expected[key] = nr;
+                const actual = decode_tag(encode_tag(expected));
+                return actual[key] !== nr;
+            });
+        })
+    ) {
+        throw new Error("FAIL test_tags");
+    }
+}
 
 function blob_dev(core, make_ddev) {
     const dev_ptr = ufork.ramptr(ufork.BLOB_DEV_OFS);
@@ -47,23 +85,7 @@ function blob_dev(core, make_ddev) {
     let ddev;
     let blobs = [];
     let reads = [];
-
-    function encode_tag({blob_nr, read_nr}) {
-        return ufork.fixnum(
-            read_nr !== undefined
-            ? -read_nr - 1
-            : blob_nr
-        );
-    }
-
-    function decode_tag(tag) {
-        const integer = ufork.fix_to_i32(tag);
-        return (
-            integer < 0
-            ? {read_nr: -1 - integer}
-            : {blob_nr: integer}
-        );
-    }
+    let sources = [];
 
     function h_alloc_blob(size_or_bytes) {
         const blob_nr = blobs.length;
@@ -77,12 +99,15 @@ function blob_dev(core, make_ddev) {
         return blob;
     }
 
-    function h_read_chunks() {
+    function h_read_bytes() {
+
+// Read a blob's bytes one by one. Should only be used for unrecognized blobs,
+// because it is much slower than direct memory access.
+
         const read_nr = reads.length;
         reads.push(undefined); // placeholder
         let byte_array = [];
-        // TODO use source requests to avoid reading bytes one-by-one
-        return function h_read_chunks_requestor(callback, blob_cap) {
+        return function h_read_bytes_requestor(callback, blob_cap) {
             try {
                 const cust_cap = ddev.h_reserve_proxy(encode_tag({read_nr}));
                 const cust_stub = ddev.h_reserve_stub(cust_cap);
@@ -90,9 +115,9 @@ function blob_dev(core, make_ddev) {
                     core.h_release_stub(cust_stub);
                     if (ufork.is_fix(message)) {
                         byte_array.push(ufork.fix_to_i32(message));
-                        return h_read_chunks_requestor(callback, blob_cap);
+                        return h_read_bytes_requestor(callback, blob_cap);
                     }
-                    return callback([new Uint8Array(byte_array)]);
+                    return callback(new Uint8Array(byte_array));
                 };
                 const offset = byte_array.length;
                 core.h_event_enqueue(core.h_reserve_ram({
@@ -111,10 +136,133 @@ function blob_dev(core, make_ddev) {
         };
     }
 
-    function u_get_chunk(blob_cap) {
+    function u_get_bytes(blob_cap) {
+
+// Returns the mutable Uint8Array associated with the blob capability, or
+// undefined if there isn't one.
+
         return blobs.find(function (blob) {
             return blob?.cap === blob_cap;
         })?.bytes;
+    }
+
+    function h_source_chunks() {
+
+// Read the chunks of a blob by iteratively issuing source requests.
+// For each source blob, ascertain if it is known to the blob device.
+// If so, its bytes can be read directly.
+// Otherwise its bytes must be read one by one, via a sequence of read requests.
+
+        const source_nr = sources.length;
+        sources.push(undefined); // placeholder
+        let chunk_array = [];
+        return function advance(callback, blob_cap) {
+            try {
+                const cust_cap = ddev.h_reserve_proxy(encode_tag({source_nr}));
+                const cust_stub = ddev.h_reserve_stub(cust_cap);
+                sources[source_nr] = function h_reply(message) {
+                    core.h_release_stub(cust_stub);
+                    const base_raw = core.u_nth(message, 1);
+                    const base = ufork.fix_to_i32(base_raw);
+                    const length_raw = core.u_nth(message, 2);
+                    const length = ufork.fix_to_i32(length_raw);
+                    const source_blob_cap = core.u_nth(message, -2);
+                    if (
+                        !ufork.is_fix(base_raw)
+                        || base < 0
+                        || !ufork.is_fix(length_raw)
+                        || length < 0
+                        || !ufork.is_cap(source_blob_cap)
+                    ) {
+
+// Bad source reply. Fallback to reading the entire blob byte-by-byte instead.
+
+                        if (core.u_trace !== undefined) {
+                            core.u_trace("blob bad source reply");
+                        }
+                        return parseq.sequence([
+                            h_read_bytes(),
+                            requestorize(function (bytes) {
+                                return [bytes];
+                            })
+                        ])(
+                            callback,
+                            blob_cap
+                        );
+                    }
+                    if (length === 0) {
+
+// There are no more bytes to be read. We are done.
+
+                        return callback(chunk_array);
+                    }
+                    const bytes = u_get_bytes(source_blob_cap);
+                    if (bytes !== undefined) {
+
+// The source blob was issued by the blob device. Without copying, extract the
+// chunk from it and advance.
+
+                        const chunk = new Uint8Array(
+                            bytes.buffer,
+                            base,
+                            length
+                        );
+                        chunk_array.push(chunk);
+                        return advance(callback, blob_cap);
+                    }
+
+// The source blob was not issued by the blob device. Read its bytes one by one,
+// then advance.
+
+                    return h_read_bytes()(
+                        function (bytes, reason) {
+                            if (bytes === undefined) {
+                                return callback(undefined, reason);
+                            }
+                            chunk_array.push(bytes);
+                            return advance(callback, blob_cap);
+                        },
+                        source_blob_cap
+                    );
+                };
+                const base = chunk_array.reduce(function (total, chunk) {
+                    return total + chunk.length;
+                }, 0);
+                const length = 2 ** 26; // 64MB
+                const source_req = core.h_reserve_ram({
+                    t: ufork.PAIR_T,
+                    x: ufork.fixnum(base),
+                    y: core.h_reserve_ram({
+                        t: ufork.PAIR_T,
+                        x: ufork.fixnum(length),
+                        y: cust_cap
+                    })
+                });
+                core.h_event_enqueue(core.h_reserve_ram({
+                    t: sponsor,
+                    x: blob_cap,
+                    y: source_req
+                }));
+                core.h_wakeup(ufork.HOST_DEV_OFS);
+            } catch (exception) {
+                return callback(undefined, exception);
+            }
+        };
+    }
+
+    function h_read_chunks() {
+        return function h_read_chunks_requestor(callback, blob_cap) {
+
+// If the blob was issued by the blob device, we don't need to make any source
+// requests.
+
+            const bytes = u_get_bytes(blob_cap);
+            return (
+                bytes !== undefined
+                ? callback([bytes])
+                : h_source_chunks()(callback, blob_cap)
+            );
+        };
     }
 
     ddev = make_ddev(
@@ -152,13 +300,25 @@ function blob_dev(core, make_ddev) {
                 });
                 return ufork.E_OK;
             }
-            const {blob_nr, read_nr} = decode_tag(tag);
+            const {blob_nr, read_nr, source_nr} = decode_tag(tag);
             if (read_nr !== undefined) {
 
 // Read response.
 
                 core.u_defer(function () {
                     const h_reply = reads[read_nr];
+                    if (h_reply !== undefined) {
+                        h_reply(message);
+                    }
+                });
+                return ufork.E_OK;
+            }
+            if (source_nr !== undefined) {
+
+// Source response.
+
+                core.u_defer(function () {
+                    const h_reply = sources[source_nr];
                     if (h_reply !== undefined) {
                         h_reply(message);
                     }
@@ -203,7 +363,7 @@ function blob_dev(core, make_ddev) {
                 const length_num = ufork.fix_to_i32(length);
                 if (
                     base_num < 0
-                    || base_num >= bytes.length
+                    || base_num > bytes.length
                     || length_num < 0
                 ) {
                     return ufork.E_BOUNDS;
@@ -309,7 +469,7 @@ function blob_dev(core, make_ddev) {
         blobs.length = 0;
     });
     ddev.h_reserve_stub(dev_cap);
-    return Object.freeze({h_alloc_blob, h_read_chunks, u_get_chunk});
+    return Object.freeze({h_alloc_blob, h_read_chunks});
 }
 
 function demo(log, use_static) {
@@ -344,7 +504,6 @@ function demo(log, use_static) {
                 run_core();
                 const blob = the_blob_dev.h_alloc_blob([5, 6, 7, 8]);
                 core.h_reserve_stub(blob.cap, blob.cap); // TODO pass #? as device
-                log(the_blob_dev.u_get_chunk(blob.cap));
                 return bind(the_blob_dev.h_read_chunks(), blob.cap);
             })
         )
@@ -353,6 +512,7 @@ function demo(log, use_static) {
 }
 
 if (import.meta.main) {
+    test_tags();
     demo(globalThis.console.log, true);
     demo(globalThis.console.log, false);
 }
