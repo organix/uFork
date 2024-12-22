@@ -80,9 +80,6 @@ slice:                      ; base,len,blob <- cust | cust,ofs | cust,ofs,data |
     msg -1                  ; req
     typeq #fixnum_t         ; is_fix(req)
     if slice_read           ; --
-    msg -1                  ; req
-    typeq #pair_t           ; is_pair(req)
-    if_not std.abort        ; --
     msg 1                   ; cust
     typeq #actor_t          ; is_cap(cust)
     if slice_write          ; --
@@ -177,9 +174,6 @@ pair:                       ; head,tail <- cust | cust,ofs | cust,ofs,data | bas
     msg -1                  ; (head,tail),msg ofs
     typeq #fixnum_t         ; (head,tail),msg is_fix(ofs)
     if pair_read            ; (head,tail),cust,ofs
-    msg -1                  ; (head,tail),msg req
-    typeq #pair_t           ; (head,tail),msg is_pair(req)
-    if_not std.abort        ; (head,tail),msg
     msg 1                   ; (head,tail),msg cust
     typeq #actor_t          ; (head,tail),msg is_cap(cust)
     if pair_write           ; (head,tail),cust,ofs,data
