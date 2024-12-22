@@ -515,10 +515,43 @@ http_request:
     pair_t '\n'
     ref #nil                ; size=26
 
-demo_pair:                  ; {caps} <- blob
+demo_composite:             ; {caps} <- blob
+    state 0                 ; {caps}
+    push k_demo_composite   ; {caps} demo=k_demo_composite
+    actor become            ; --
+
+    msg 0                   ; blob
+    push 2                  ; blob len=2
+    push 24                 ; blob len base=24
+    pair 2                  ; base,len,blob
+    push slice              ; base,len,blob slice
+    actor create            ; tail=slice.base,len,blob
+
+    msg 0                   ; tail blob
+    push 11                 ; tail blob len=11
+    push 4                  ; tail blob len base=4
+    pair 2                  ; tail base,len,blob
+    push slice              ; tail base,len,blob slice
+    actor create            ; tail head=slice.base,len,blob
+
+    pair 1                  ; head,tail
+    push pair               ; head,tail pair
+    actor create            ; blob=pair.head,tail
+
+    actor self              ; blob SELF
+    ref std.send_msg
+k_demo_composite:           ; {caps} <- blob
     state 0                 ; {caps}
 ;    push demo_size          ; {caps} demo=demo_size
-;    push demo_print         ; {caps} demo=demo_print
+    push demo_print         ; {caps} demo=demo_print
+;    push demo_source        ; {caps} demo=demo_source
+    actor become            ; --
+    msg 0                   ; blob
+    actor self              ; blob SELF
+    ref std.send_msg
+
+demo_pair:                  ; {caps} <- blob
+    state 0                 ; {caps}
     push k_demo_pair        ; {caps} demo=k_demo_pair
     actor become            ; --
     msg 0                   ; tail=blob
@@ -610,12 +643,11 @@ tgt_start:                  ; tgt
     ref std.send_msg
 
 demo_source:                ; {caps} <- blob
-    debug
     state 0                 ; {caps}
     push dev.debug_key      ; {caps} debug_key
     dict get                ; cust=debug_dev
     push 4096               ; cust len=4096
-    push 0                  ; cust len base=0
+    push 7                  ; cust len base=7
     pair 2                  ; base,len,cust
     msg 0                   ; base,len,cust blob
     ref std.send_msg
@@ -626,7 +658,8 @@ boot:                       ; _ <- {caps}
 ;    push demo_size          ; list {caps} demo=demo_size
 ;    push demo_print         ; list {caps} demo=demo_print
 ;    push demo_slice         ; list {caps} demo=demo_slice
-    push demo_pair          ; list {caps} demo=demo_pair
+;    push demo_pair          ; list {caps} demo=demo_pair
+    push demo_composite     ; list {caps} demo=demo_composite
     actor create            ; list cust=demo.{caps}
     pair 1                  ; cust,list
     msg 0                   ; cust,list {caps}
