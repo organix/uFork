@@ -222,10 +222,47 @@ k_pair_size2:               ; size,cust <- size'
     ref std.send_msg
 
 k_pair_read:                ; (head,tail),cust,ofs <- size
-    ref std.commit
+    state -2                ; ofs
+    msg 0                   ; ofs size
+    cmp lt                  ; ofs<size
+    if_not k_pair_read2     ; --
+
+    state -1                ; cust,ofs
+    state 1                 ; cust,ofs (head,tail)
+    nth 1                   ; cust,ofs head
+    ref std.send_msg
+
+k_pair_read2:               ; --
+    state -2                ; ofs
+    msg 0                   ; ofs size
+    alu sub                 ; ofs'=ofs-size
+    state 2                 ; ofs' cust
+    pair 1                  ; cust,ofs'
+    state 1                 ; cust,ofs' (head,tail)
+    nth -1                  ; cust,ofs' tail
+    ref std.send_msg
 
 k_pair_write:               ; (head,tail),cust,ofs,data <- size
-    ref std.commit
+    state 3                 ; ofs
+    msg 0                   ; ofs size
+    cmp lt                  ; ofs<size
+    if_not k_pair_write2    ; --
+
+    state -1                ; cust,ofs,data
+    state 1                 ; cust,ofs,data (head,tail)
+    nth 1                   ; cust,ofs,data head
+    ref std.send_msg
+
+k_pair_write2:              ; --
+    state -2                ; ofs,data
+    part 1                  ; data ofs
+    msg 0                   ; data ofs size
+    alu sub                 ; data ofs'=ofs-size
+    state 2                 ; data ofs' cust
+    pair 2                  ; cust,ofs',data
+    state 1                 ; cust,ofs',data (head,tail)
+    nth -1                  ; cust,ofs',data tail
+    ref std.send_msg
 
 k_pair_source:              ; (head,tail),base',len',cust <- size
     ref std.abort
@@ -439,7 +476,50 @@ http_request:
     pair_t '0'
     pair_t '\r'
     pair_t '\n'
-    ref #nil
+    ref #nil                ; size=26
+
+demo_pair:                  ; {caps} <- blob
+    state 0                 ; {caps}
+;    push demo_size          ; {caps} demo=demo_size
+;    push demo_print         ; {caps} demo=demo_print
+    push k_demo_pair        ; {caps} demo=k_demo_pair
+    actor become            ; --
+    msg 0                   ; tail=blob
+    dup 1                   ; blob head=blob
+    pair 1                  ; head,tail
+    push pair               ; head,tail pair
+    actor create            ; blob=pair.head,tail
+    actor self              ; blob SELF
+    ref std.send_msg
+k_demo_pair:                ; {caps} <- blob
+    state 0                 ; {caps}
+    msg 0                   ; {caps} blob
+    pair 1                  ; blob,{caps}
+    push k_demo_pair2       ; blob,{caps} demo=k_demo_pair2
+    actor become            ; --
+    push '1'                ; data='1'
+    push 49                 ; data ofs=49
+    actor self              ; data ofs cust=SELF
+    pair 2                  ; cust,ofs,data
+    msg 0                   ; cust,ofs,data blob
+    ref std.send_msg
+k_demo_pair2:               ; blob,{caps} <- wr_ok
+    state 0                 ; blob,{caps}
+    push k_demo_pair3       ; blob,{caps} demo=k_demo_pair3
+    actor become            ; --
+    push '\t'               ; data='\t'
+    push 3                  ; data ofs=3
+    actor self              ; data ofs cust=SELF
+    pair 2                  ; cust,ofs,data
+    state 1                 ; cust,ofs,data blob
+    ref std.send_msg
+k_demo_pair3:               ; blob,{caps} <- wr_ok
+    state -1                ; {caps}
+    push demo_print         ; {caps} demo=demo_print
+    actor become            ; --
+    state 1                 ; blob
+    actor self              ; blob SELF
+    ref std.send_msg
 
 demo_slice:                 ; {caps} <- blob
     state 0                 ; {caps}
@@ -507,7 +587,8 @@ boot:                       ; _ <- {caps}
     msg 0                   ; list {caps}
 ;    push demo_size          ; list {caps} demo=demo_size
 ;    push demo_print         ; list {caps} demo=demo_print
-    push demo_slice         ; list {caps} demo=demo_slice
+;    push demo_slice         ; list {caps} demo=demo_slice
+    push demo_pair          ; list {caps} demo=demo_pair
     actor create            ; list cust=demo.{caps}
     pair 1                  ; cust,list
     msg 0                   ; cust,list {caps}
