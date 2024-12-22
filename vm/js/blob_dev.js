@@ -178,7 +178,7 @@ function blob_dev(core, make_ddev) {
 // Bad source reply. Fallback to reading the entire blob byte-by-byte instead.
 
                         if (core.u_trace !== undefined) {
-                            core.u_trace("blob bad source reply");
+                            core.u_trace("blob bad source");
                         }
                         return parseq.sequence([
                             h_read_bytes(),
@@ -463,7 +463,7 @@ function blob_dev(core, make_ddev) {
     const dev_cap = ddev.h_reserve_proxy();
     core.h_install(dev_id, dev_cap, function on_dispose() {
         ddev.h_dispose();
-        if (core.u_trace !== undefined) {
+        if (core.u_trace !== undefined && blobs.length > 0) {
             core.u_trace("disposing blobs");
         }
         blobs.length = 0;

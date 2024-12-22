@@ -286,15 +286,15 @@ function fs_dev(
     const dev_cap = ddev.h_reserve_proxy();
     const dev_id = ufork.fixnum(fs_key);
     core.h_install(dev_id, dev_cap, function on_dispose() {
-        u_trace("closing all files");
         cancels.forEach(function (cancel) {
             if (typeof cancel === "function") {
                 cancel();
             }
         });
         cancels.length = 0;
-        files.forEach(function (handle) {
+        files.forEach(function (handle, file_nr) {
             if (handle !== undefined) {
+                u_trace(`#${file_nr} closed`);
                 handle.close();
             }
         });
