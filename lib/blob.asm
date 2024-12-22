@@ -145,20 +145,22 @@ slice_source:
     msg 0                   ; base',len',cust
     part 2                  ; cust len' base'
     state 1                 ; cust len' base' base
-    pick -2                 ; cust len' base base' base
-    alu add                 ; cust len' base base'+base
-    roll -3                 ; cust base'+base len' base
-    alu add                 ; cust base'+base len'+base
-    dup 1                   ; cust base'+base len'+base len'+base
-    state 2                 ; cust base'+base len'+base len'+base len
-    cmp gt                  ; cust base'+base len'+base len'+base>len
-    if_not slice_clipped    ; cust base'+base len'+base
-    drop 1                  ; cust base'+base
-    state 2                 ; cust base'+base len
-slice_clipped:              ; cust base'' len''
-    roll 2                  ; cust len'' base''
-    pair 2                  ; base'',len'',cust
-    state -2                ; base'',len'',cust blob
+    alu add                 ; cust len' base''=base'+base
+    state 2                 ; cust len' base'' len
+    msg 1                   ; cust len' base'' len base'
+    alu sub                 ; cust len' base'' size'=len-base'
+    pick 3                  ; cust len' base'' size' len'
+    pick 2                  ; cust len' base'' size' len' size'
+    cmp gt                  ; cust len' base'' size' len'>size'
+    if_not k_slice_fit      ; cust len' base'' size'
+
+    roll 2                  ; cust len' size' base''
+    roll 3                  ; cust size' base'' len'
+
+k_slice_fit:                ; cust len' base' _
+    drop 1                  ; cust len' base'
+    pair 2                  ; base',len',cust
+    state -2                ; base',len',cust blob
     ref std.send_msg
 
 ;
@@ -543,8 +545,8 @@ demo_composite:             ; {caps} <- blob
 k_demo_composite:           ; {caps} <- blob
     state 0                 ; {caps}
 ;    push demo_size          ; {caps} demo=demo_size
-    push demo_print         ; {caps} demo=demo_print
-;    push demo_source        ; {caps} demo=demo_source
+;    push demo_print         ; {caps} demo=demo_print
+    push demo_source        ; {caps} demo=demo_source
     actor become            ; --
     msg 0                   ; blob
     actor self              ; blob SELF
@@ -585,6 +587,7 @@ k_demo_pair2:               ; blob,{caps} <- wr_ok
     ref std.send_msg
 k_demo_pair3:               ; blob,{caps} <- wr_ok
     state -1                ; {caps}
+;    push demo_size          ; {caps} demo=demo_size
     push demo_print         ; {caps} demo=demo_print
 ;    push demo_source        ; {caps} demo=demo_source
     actor become            ; --
@@ -595,8 +598,8 @@ k_demo_pair3:               ; blob,{caps} <- wr_ok
 demo_slice:                 ; {caps} <- blob
     state 0                 ; {caps}
 ;    push demo_size          ; {caps} demo=demo_size
-;    push demo_print         ; {caps} demo=demo_print
-    push demo_source        ; {caps} demo=demo_source
+    push demo_print         ; {caps} demo=demo_print
+;    push demo_source        ; {caps} demo=demo_source
     actor become            ; --
     msg 0                   ; blob
     push 11                 ; blob len=11
@@ -646,7 +649,9 @@ demo_source:                ; {caps} <- blob
     state 0                 ; {caps}
     push dev.debug_key      ; {caps} debug_key
     dict get                ; cust=debug_dev
-    push 4096               ; cust len=4096
+;    push 4096               ; cust len=4096
+    push 13                 ; cust len=13
+;    push 0                  ; cust len base=0
     push 7                  ; cust len base=7
     pair 2                  ; base,len,cust
     msg 0                   ; base,len,cust blob
@@ -657,6 +662,7 @@ boot:                       ; _ <- {caps}
     msg 0                   ; list {caps}
 ;    push demo_size          ; list {caps} demo=demo_size
 ;    push demo_print         ; list {caps} demo=demo_print
+;    push demo_source        ; list {caps} demo=demo_source
 ;    push demo_slice         ; list {caps} demo=demo_slice
 ;    push demo_pair          ; list {caps} demo=demo_pair
     push demo_composite     ; list {caps} demo=demo_composite
