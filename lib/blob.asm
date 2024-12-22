@@ -265,7 +265,44 @@ k_pair_write2:              ; --
     ref std.send_msg
 
 k_pair_source:              ; (head,tail),base',len',cust <- size
-    ref std.abort
+    state 2                 ; base'
+    msg 0                   ; base' size
+    cmp lt                  ; base'<size
+    if_not k_pair_source2   ; --
+
+    state -1                ; base',len',cust
+    part 2                  ; cust len' base'
+    msg 0                   ; cust len' base' size
+    pick 2                  ; cust len' base' size base'
+    alu sub                 ; cust len' base' size'=size-base'
+    pick 3                  ; cust len' base' size' len'
+    pick 2                  ; cust len' base' size' len' size'
+    cmp gt                  ; cust len' base' size' len'>size'
+    if_not k_pair_fit       ; cust len' base' size'
+
+    roll 2                  ; cust len' size' base'
+    roll 3                  ; cust size' base' len'
+
+k_pair_fit:                 ; cust len' base' _
+    drop 1                  ; cust len' base'
+    pair 2                  ; base',len',cust
+    state 1                 ; base',len',cust (head,tail)
+    nth 1                   ; base',len',cust head
+    ref std.send_msg
+
+k_pair_source2:             ; --
+    state -1                ; base',len',cust
+    part 2                  ; cust len' base'
+    roll 2                  ; cust base' len'
+    msg 0                   ; cust base' len' size
+    alu sub                 ; cust base' len''=len'-size
+    roll 2                  ; cust len'' base'
+    msg 0                   ; cust len'' base' size
+    alu sub                 ; cust len'' base''=base'-size
+    pair 2                  ; base'',len'',cust
+    state 1                 ; base'',len'',cust (head,tail)
+    nth -1                  ; base'',len'',cust tail
+    ref std.send_msg
 
 ;
 ; input stream-requestor interface to a blob
@@ -516,6 +553,7 @@ k_demo_pair2:               ; blob,{caps} <- wr_ok
 k_demo_pair3:               ; blob,{caps} <- wr_ok
     state -1                ; {caps}
     push demo_print         ; {caps} demo=demo_print
+;    push demo_source        ; {caps} demo=demo_source
     actor become            ; --
     state 1                 ; blob
     actor self              ; blob SELF
