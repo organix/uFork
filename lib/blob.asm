@@ -415,35 +415,142 @@ writer_factory:             ; blob_dev <- cust,blk_size
     state 0                 ; k,len blob_dev
     ref std.send_msg
 
+wr_blob:                    ; blob <- cust,len | cust,next | cust,ofs,data
+    msg 1                   ; cust
+    typeq #actor_t          ; is_cap(cust)
+    if_not std.abort        ; --
+    msg -1                  ; req
+    typeq #fixnum_t         ; is_fix(req)
+    if wr_slice             ; --
+    msg -1                  ; req
+    typeq #actor_t          ; is_cap(req)
+    if wr_pair              ; --
+    msg -1                  ; req
+    typeq #pair_t           ; is_pair(req)
+    if_not std.abort        ; --
+wr_write:                   ; write into blob
+    msg 0                   ; cust,ofs,data
+    state 0                 ; cust,ofs,data blob
+    ref std.send_msg
+wr_slice:                   ; convert to blob.slice
+;    msg 0                   ; cust,len
+    state 0                 ; blob
+    msg -1                  ; blob len
+    push 0                  ; blob len base=0
+    pair 2                  ; base,len,blob
+    push slice              ; base,len,blob slice
+    actor become            ; --
+    actor self              ; SELF
+    msg 1                   ; SELF cust
+    ref std.send_msg
+wr_pair:                    ; convert to blob.pair
+;    msg 0                   ; cust,next
+    msg -1                  ; tail=next
+    state 0                 ; tail head=blob
+    pair 1                  ; head,tail
+    push pair               ; head,tail pair
+    actor become            ; --
+    msg 0                   ; cust,next
+    part 1                  ; next cust
+    ref std.send_msg
+
 k_writer_init:              ; cust,blk_size <- blob
     msg 0                   ; blob
     typeq #actor_t          ; is_cap(blob)
     if_not writer_init_fail ; --
-    ;...
+    msg 0                   ; blob
+    push wr_blob            ; blob wr_blob
+    actor create            ; first=wr_blob.blob
+    state -1                ; first size=blk_size
+    pick 2                  ; first size first
+    push 0                  ; first size first ofs=0
+    pair 3                  ; ofs,first,size,first
+    push writer             ; ofs,first,size,first writer
+    actor become            ; --
+    actor self              ; SELF
+    state 1                 ; SELF cust
+    ref std.send_msg
 writer_init_fail:           ; --
     push #?                 ; #?
     state 1                 ; #? cust
     ref std.send_msg
 
-writer:                     ; ofs,size,blob,blk_size <- can,cb,req | wr_ok
+writer:                     ; ofs,blob,size,blobs <- can,cb,req | ok,cb
+    msg 0                   ; msg
+    typeq #pair_t           ; is_pair(msg)
+    if_not std.abort        ; --
+    msg -1                  ; cb
+    typeq #actor_t          ; is_cap(cb)
+    if writer_done          ; --
     msg -2                  ; req
     eq #?                   ; req==#?
     if writer_read          ; --
     msg -2                  ; req
     typeq #fixnum_t         ; is_fix(req)
     if writer_write         ; --
-writer_fail:                ; --
+    ref std.abort
+
+writer_read:                ; --
+    state 1                 ; len=ofs
+    state -3                ; len blobs
+    msg 2                   ; len blobs cb
+    pair 1                  ; len cb,blobs
+    push writer_stone       ; len cb,blobs writer_stone
+    actor create            ; len cust=writer_stone.cb,blobs
+    pair 1                  ; cust,len
+    state 2                 ; cust,len blob
+    ref std.send_msg
+writer_stone:               ; cb,blobs <- slice
+    state -1                ; blobs
+    push #t                 ; blobs #t
+    pair 1                  ; #t,blobs
+    state 1                 ; #t,blobs cb
+    ref std.send_msg
+
+writer_write:               ; --
+    state 1                 ; ofs
+    state 3                 ; ofs size
+    cmp lt                  ; ofs<size
+    if_not writer_grow      ; --
+    msg -2                  ; data
+    state 1                 ; data ofs
+    actor self              ; data ofs SELF
+    msg 2                   ; data ofs SELF cb
+    pair 1                  ; data ofs cb,SELF
+    push k_blob_w           ; data ofs cb,SELF k_blob_w
+    actor create            ; data ofs cust=k_blob_w.wr,cb
+    pair 2                  ; cust,ofs,data
+    state 2                 ; cust,ofs,data blob
+    ref std.send_msg
+
+writer_done:                ; --
+    msg 1                   ; ok
+    if writer_ok            ; --
     push #?                 ; #?
     push #f                 ; #? #f
     pair 1                  ; #f,#?
-    msg 2                   ; #f,#? cb
+    msg -1                  ; #f,#? cb
+    ref std.send_msg
+writer_ok:                  ; --
+    state 0                 ; ofs,blob,size,blobs
+    part 1                  ; blob,size,blobs ofs
+    push 1                  ; blob,size,blobs ofs 1
+    alu add                 ; blob,size,blobs ofs+1
+    pair 1                  ; ofs+1,blob,size,blobs
+    push writer             ; ofs+1,blob,size,blobs writer
+    actor become            ; --
+    push #?                 ; #?
+    push #t                 ; #? #t
+    pair 1                  ; #t,#?
+    msg -1                  ; #t,#? cb
     ref std.send_msg
 
-writer_read:                ; --
-    ref writer_fail
-
-writer_write:               ; --
-    ref writer_fail
+writer_grow:                ; --
+    state 1                 ; ofs
+    push #f                 ; ofs #f
+    pair 1                  ; ofs,#?
+    msg 2                   ; #f,ofs cb
+    ref std.send_msg
 
 ;
 ; copy stream `in` to stream `out`
@@ -517,6 +624,70 @@ http_request:
     pair_t '\n'
     ref #nil                ; size=26
 
+demo_writer:                ; {caps} <- blob
+    msg 0                   ; blob
+    state 0                 ; blob {caps}
+    push k_demo_writer      ; blob {caps} k_demo_writer
+    actor create            ; blob cust=k_demo_print.{caps}
+    pair 1                  ; cust,blob
+    push #?                 ; cust,blob #?
+    push reader_factory     ; cust,blob #? reader_factory
+    actor create            ; cust,blob reader_factory._
+    ref std.send_msg
+k_demo_writer:              ; {caps} <- in
+    state 0                 ; {caps}
+    msg 0                   ; {caps} in
+    pair 1                  ; in,{caps}
+    push k_demo_writer2     ; in,{caps} k_demo_writer2
+    actor become            ; --
+
+    push 10                 ; blk_size=10
+    actor self              ; blk_size cust=SELF
+    pair 1                  ; cust,blk_size
+
+    state 0                 ; cust,blk_size {caps}
+    push dev.blob_key       ; cust,blk_size {caps} blob_key
+    dict get                ; cust,blk_size blob_dev
+    push writer_factory     ; cust,blk_size blob_dev writer_factory
+    actor create            ; cust,blk_size writer_factory.blob_dev
+    ref std.send_msg
+k_demo_writer2:             ; in,{caps} <- out
+    state -1                ; {caps}
+    msg 0                   ; {caps} out
+    pair 1                  ; out,{caps}
+    push k_demo_writer3     ; out,{caps} k_demo_writer3
+    actor become            ; --
+
+    state 1                 ; in
+    msg 0                   ; in out
+    actor self              ; in out cb=SELF
+    pair 2                  ; cb,out,in
+    push stream_copy        ; cb,out,in stream_copy
+    actor create            ; tgt=stream_copy.cb,out,in
+    ref tgt_start
+k_demo_writer3:             ; out,{caps} <- result
+    state -1                ; {caps}
+    push k_demo_writer4     ; {caps} k_demo_writer4
+    actor become            ; --
+
+    push #?                 ; #?
+    actor self              ; #? cb=SELF
+    push #?                 ; #? cb can=#?
+    pair 2                  ; can,cb,#?
+    state 1                 ; can,cb,#? out
+    ref std.send_msg
+k_demo_writer4:           ; {caps} <- result
+    state 0                 ; {caps}
+;    push demo_debug         ; {caps} demo=demo_debug
+;    push demo_size          ; {caps} demo=demo_size
+    push demo_print         ; {caps} demo=demo_print
+;    push demo_source        ; {caps} demo=demo_source
+    actor become            ; --
+
+    msg -1                  ; blob
+    actor self              ; blob SELF
+    ref std.send_msg
+
 demo_composite:             ; {caps} <- blob
     state 0                 ; {caps}
     push k_demo_composite   ; {caps} demo=k_demo_composite
@@ -557,7 +728,7 @@ demo_pair:                  ; {caps} <- blob
     push k_demo_pair        ; {caps} demo=k_demo_pair
     actor become            ; --
     msg 0                   ; tail=blob
-    dup 1                   ; blob head=blob
+    dup 1                   ; tail head=blob
     pair 1                  ; head,tail
     push pair               ; head,tail pair
     actor create            ; blob=pair.head,tail
@@ -610,6 +781,13 @@ demo_slice:                 ; {caps} <- blob
     actor self              ; blob SELF
     ref std.send_msg
 
+demo_debug:                 ; {caps} <- blob
+    msg 0                   ; blob
+    state 0                 ; blob {caps}
+    push dev.debug_key      ; blob {caps} debug_key
+    dict get                ; blob debug_dev
+    ref std.send_msg
+
 demo_size:                  ; {caps} <- blob
     state 0                 ; {caps}
     push dev.debug_key      ; {caps} debug_key
@@ -651,7 +829,6 @@ demo_source:                ; {caps} <- blob
     dict get                ; cust=debug_dev
 ;    push 4096               ; cust len=4096
     push 13                 ; cust len=13
-;    push 0                  ; cust len base=0
     push 7                  ; cust len base=7
     pair 2                  ; base,len,cust
     msg 0                   ; base,len,cust blob
@@ -660,12 +837,14 @@ demo_source:                ; {caps} <- blob
 boot:                       ; _ <- {caps}
     push http_request       ; list=http_request
     msg 0                   ; list {caps}
+;    push demo_debug         ; list {caps} demo=demo_debug
 ;    push demo_size          ; list {caps} demo=demo_size
 ;    push demo_print         ; list {caps} demo=demo_print
 ;    push demo_source        ; list {caps} demo=demo_source
 ;    push demo_slice         ; list {caps} demo=demo_slice
 ;    push demo_pair          ; list {caps} demo=demo_pair
-    push demo_composite     ; list {caps} demo=demo_composite
+;    push demo_composite     ; list {caps} demo=demo_composite
+    push demo_writer        ; list {caps} demo=demo_writer
     actor create            ; list cust=demo.{caps}
     pair 1                  ; cust,list
     msg 0                   ; cust,list {caps}
