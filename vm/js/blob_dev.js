@@ -30,7 +30,7 @@ const demo_url = import.meta.resolve("./blob_dev_demo.asm");
 function encode_tag({blob_nr, read_nr, source_nr}) {
     return ufork.fixnum(
         blob_nr !== undefined
-        ? blob_nr                   // positive
+        ? blob_nr                   // non-negative
         : (
             read_nr !== undefined
             ? (-2 * read_nr) - 1    // negative odd
@@ -91,10 +91,10 @@ function blob_dev(core, make_ddev) {
         const blob_nr = blobs.length;
         const bytes = new Uint8Array(size_or_bytes); // TODO unnecessary copy
         const cap = ddev.h_reserve_proxy(encode_tag({blob_nr}));
+        const blob = {cap, bytes};
         if (core.u_trace !== undefined) {
             core.u_trace(`alloc blob #${blob_nr} size ${bytes.length}`);
         }
-        const blob = {cap, bytes};
         blobs.push(blob);
         return blob;
     }
@@ -136,14 +136,15 @@ function blob_dev(core, make_ddev) {
         };
     }
 
-    function u_get_bytes(blob_cap) {
+    function h_get_bytes(blob_cap) {
 
 // Returns the mutable Uint8Array associated with the blob capability, or
 // undefined if there isn't one.
 
-        return blobs.find(function (blob) {
-            return blob?.cap === blob_cap;
-        })?.bytes;
+        const target = core.u_read_quad(ufork.cap_to_ptr(blob_cap));
+        const tag = ddev.u_tag(target.y);
+        const {blob_nr} = decode_tag(tag);
+        return blobs[blob_nr]?.bytes;
     }
 
     function h_source_chunks() {
@@ -196,7 +197,7 @@ function blob_dev(core, make_ddev) {
 
                         return callback(chunk_array);
                     }
-                    const bytes = u_get_bytes(source_blob_cap);
+                    const bytes = h_get_bytes(source_blob_cap);
                     if (bytes !== undefined) {
 
 // The source blob was issued by the blob device. Without copying, extract the
@@ -256,7 +257,7 @@ function blob_dev(core, make_ddev) {
 // If the blob was issued by the blob device, we don't need to make any source
 // requests.
 
-            const bytes = u_get_bytes(blob_cap);
+            const bytes = h_get_bytes(blob_cap);
             return (
                 bytes !== undefined
                 ? callback([bytes])
@@ -484,6 +485,13 @@ function demo(log, use_static) {
         on_wakeup: run_core,
         on_log: log,
         log_level: ufork.LOG_TRACE,
+        on_audit(code, evidence) {
+            log(
+                "AUDIT:",
+                ufork.fault_msg(ufork.fix_to_i32(code)),
+                core.u_pprint(evidence)
+            );
+        },
         import_map: {"https://ufork.org/lib/": lib_url},
         compilers: {asm: assemble}
     });
