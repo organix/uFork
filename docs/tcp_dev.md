@@ -1,7 +1,7 @@
 # uFork TCP networking device
 
 uFork programs can use the TCP device to communicate over the network using
-TCP, a reliable binary stream protocol that is not secure.
+TCP, an insecure reliable binary stream protocol.
 
 The uFork interface is implemented as a [dynamic device](host_dev.md) with a
 [requestor](requestor.md) interface.
@@ -32,13 +32,12 @@ can be used to stop listening:
 
     _ -> stop
 
-The input value of the `listen_request` is a pair list like
+The input value of the `listen_request` is a pair like
 
-    (petname on_open . on_close)
+    (petname . on_open)
 
-where the `petname` is a fixnum that selects a bind address from the config, the
-`on_open` actor receives connections as they are opened, and the `on_close`
-actor receives connections as they are closed.
+where the `petname` is a fixnum that selects a bind address from the config, and
+the `on_open` capability receives connections as they are opened.
 
 ## Connecting
 
@@ -46,31 +45,30 @@ actor receives connections as they are closed.
 
 Requests a new connection with a remote party. The input value of the
 `connect_request` is a petname fixnum that selects a remote address from the
-config. On success, the requestor produces a connection actor.
+config. On success, the requestor produces a connection capability.
 
 ## Connections
 
-Each connection is represented as an actor with a [requestor](requestor.md)
+Each connection is represented as a capability with a [requestor](requestor.md)
 interface similar to the [I/O device](io_dev.md), except that a stream of
 [blobs](blob_dev.md) are read and written rather than a stream of characters.
 
+The underlying connection is disposed once the connection capability has been
+garbage collected and has no pending requests.
+
 ### Read request
 
-When sent a request with input `#?`, it produces the next blob received over the
-connection, or `#nil` if the connection was closed by the other party.
+A request with input `#?` produces the next blob received over the connection,
+or `#nil` if there is nothing more to read.
 
-Fails if the connection failed or the previous read request has not yet
-completed.
+The request fails if the underlying connection failed or a previous read request
+has not yet completed.
 
 ### Write request
 
-When sent a request with an input blob, it writes that blob to the connection
-and produces `#?`. Fails if the connection failed.
+A request with a blob input causes that blob to be written in its entirety.
+A request with input `#nil` (EOF) closes the connection.
+In both cases, `#?` is produced on success.
 
-Fails if the connection failed or the previous write request has not yet
-completed.
-
-### Close request
-
-When sent a request with input `#nil` (indicating end-of-stream) the connection
-is closed (if it is open) and `#?` is produced. Infallible.
+The request fails if the underlying connection is closed or failed, or a
+previous write request has not yet completed.

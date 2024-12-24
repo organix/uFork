@@ -28,10 +28,9 @@ DEF blob_offset AS sub(blob_size, 1) # last byte
 DEF tag_listen AS 5000
 DEF tag_connect AS 5001
 DEF tag_open AS 5002
-DEF tag_close AS 5003
-DEF tag_write AS 5004
-DEF tag_read AS 5005
-DEF tag_read_byte AS 5006
+DEF tag_write AS 5003
+DEF tag_read AS 5004
+DEF tag_read_byte AS 5005
 DEF label_beh(rcvr, label) AS \msg.[
     SEND (label, msg) TO rcvr
 ]
@@ -101,9 +100,8 @@ CREATE listen_cust WITH \stop.[
         read(conn, 0)
     ]
 ]
-CREATE on_close WITH label_beh(println, tag_close)
 CREATE on_open WITH \conn.[
     SEND (tag_open, conn) TO println
     read(conn, 0)
 ]
-SEND (?, listen_cb, alice_petname, on_open, on_close) TO tcp_dev
+SEND (?, listen_cb, alice_petname, on_open) TO tcp_dev

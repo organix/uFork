@@ -4,9 +4,12 @@
 
 //  h_alloc_blob(size_or_bytes)
 //      Used to make blobs host-side. It is passed a size (or an existing
-//      TypedArray) and returns an object like {cap, bytes} where the 'cap' is
+//      Uint8Array) and returns an object like {cap, bytes} where the 'cap' is
 //      the blob capability and the 'bytes' is a mutable Uint8Array containing
 //      the blob's bytes.
+
+//      When providing an existing Uint8Array, be aware that it may be modified
+//      in place. You can always make a copy and pass that Uint8Array instead.
 
 //  h_read_chunks()
 //      Returns a requestor that takes a blob capability and produces an array
@@ -89,7 +92,11 @@ function blob_dev(core, make_ddev) {
 
     function h_alloc_blob(size_or_bytes) {
         const blob_nr = blobs.length;
-        const bytes = new Uint8Array(size_or_bytes); // TODO unnecessary copy
+        const bytes = (
+            size_or_bytes.constructor === Uint8Array
+            ? size_or_bytes
+            : new Uint8Array(size_or_bytes)
+        );
         const cap = ddev.h_reserve_proxy(encode_tag({blob_nr}));
         const blob = {cap, bytes};
         if (core.u_trace !== undefined) {

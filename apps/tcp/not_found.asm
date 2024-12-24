@@ -142,20 +142,18 @@ boot:                       ; _ <- {caps}
 
 ; Send a listen request to the TCP device.
 
-    push #?                 ; #?
-    push std.sink_beh       ; #? sink_beh
-    actor create            ; sink=sink_beh.#?
-    pick 1                  ; sink on_close=sink
-    msg 0                   ; sink on_close {caps}
-    push on_open_beh        ; sink on_close {caps} on_open_beh
-    actor create            ; sink on_close on_open=on_open_beh.{caps}
-    push petname            ; sink on_close on_open petname
-    pick 4                  ; sink on_close on_open petname callback=sink
-    push #?                 ; sink on_close on_open petname callback to_cancel=#?
-    pair 4                  ; sink listen_req=(to_cancel callback petname on_open . on_close)
-    msg 0                   ; sink listen_req {caps}
-    push dev.tcp_key        ; sink listen_req {caps} tcp_key
-    dict get                ; sink listen_req tcp_dev
+    msg 0                   ; {caps}
+    push on_open_beh        ; {caps} on_open_beh
+    actor create            ; on_open=on_open_beh.{caps}
+    push petname            ; on_open petname
+    push #?                 ; on_open petname #?
+    push std.sink_beh       ; on_open petname #? sink_beh
+    actor create            ; on_open petname callback=sink_beh.#?
+    push #?                 ; on_open petname callback to_cancel=#?
+    pair 3                  ; listen_req=(to_cancel callback petname . on_open)
+    msg 0                   ; listen_req {caps}
+    push dev.tcp_key        ; listen_req {caps} tcp_key
+    dict get                ; listen_req tcp_dev
     ref std.send_msg
 
 on_open_beh:                ; {caps} <- conn

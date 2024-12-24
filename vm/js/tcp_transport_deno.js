@@ -3,14 +3,12 @@
 // The address parameter of both the 'listen' and 'connect' functions must be a
 // string of the form <ip_address>:<port>.
 
-// This module was originally part of the WebSeif project, see
-// https://github.com/jamesdiacono/WebSeif.
-
-/*jslint deno, null */
+/*jslint deno, null, global */
 
 import tcp_transport_demo from "./tcp_transport_demo.js";
 
 const chunk_size = 8192;
+const eof = undefined;
 
 function parse_address(address) {
     const [host, port] = address.split(":");
@@ -20,128 +18,62 @@ function parse_address(address) {
     };
 }
 
-function read(socket, on_chunk, on_end) {
-    const scratch = new Uint8Array(chunk_size);
+function read(socket) {
+    let scratch = new Uint8Array(chunk_size);
     return socket.read(scratch).then(function (nr_bytes) {
         return (
             nr_bytes === null
-            ? on_end()
-            : Promise.resolve(
-                on_chunk(scratch.slice(0, nr_bytes))
-            ).then(function () {
-                return read(socket, on_chunk, on_end);
-            })
+            ? eof
+            : new Uint8Array(scratch.buffer, 0, nr_bytes)
         );
     });
 }
 
 function write(socket, chunk) {
-    return (
-        chunk.length > 0
-        ? socket.write(chunk).then(function (nr_bytes) {
+    if (chunk === eof) {
+        socket.close();
+        return Promise.resolve();
+    }
+    return socket.write(chunk).then(function (nr_bytes) {
+        if (chunk.length - nr_bytes > 0) {
             return write(socket, chunk.slice(nr_bytes));
-        })
-        : Promise.resolve()
-    );
-}
-
-function connect(address, on_open, on_receive, on_close) {
-    let connection;
-    Deno.connect(
-        parse_address(address)
-    ).then(
-        function (socket) {
-            function fail(reason) {
-                if (on_close !== undefined) {
-                    socket.close();
-                    on_close(connection, reason);
-                    on_close = undefined;
-                }
-            }
-            connection = Object.freeze({
-                send(chunk) {
-                    return write(socket, chunk).catch(fail);
-                },
-                close() {
-                    if (on_close !== undefined) {
-                        socket.close();
-                        on_close = undefined;
-                    }
-                }
-            });
-            read(
-                socket,
-                function on_chunk(chunk) {
-                    return on_receive(connection, chunk);
-                },
-                function on_end() {
-                    on_close(connection);
-                    on_close = undefined;
-                }
-            ).catch(
-                fail
-            );
-            return on_open(connection);
         }
-    ).catch(function (reason) {
-        on_close(undefined, reason);
     });
-    return function close() {
-        if (on_close !== undefined) {
-            if (connection !== undefined) {
-                connection.close();
-            }
-            on_close = undefined;
-        }
-    };
 }
 
-function listen(address, on_open, on_receive, on_close) {
+function connect(address) {
+    return Deno.connect(parse_address(address)).then(function (socket) {
+        return Object.freeze({
+            read() {
+                return read(socket);
+            },
+            write(chunk) {
+                return write(socket, chunk);
+            },
+            dispose() {
+                socket[Symbol.dispose]();
+            }
+        });
+    });
+}
+
+function listen(address, on_open) {
     let listener = Deno.listen(parse_address(address));
-    let registrations = [];
+    let connections = [];
 
     function register(socket) {
-        let connection;
-        function unregister() {
-            registrations = registrations.filter(function (value) {
-                return value !== connection;
-            });
-        }
-        function fail(reason) {
-            if (registrations.includes(connection)) {
-                socket.close();
-                on_close(connection, reason);
-                unregister();
-            }
-        }
-        connection = Object.freeze({
-            send(chunk) {
-                return write(socket, chunk).catch(fail);
+        const connection = Object.freeze({
+            read() {
+                return read(socket);
             },
-            close() {
-                if (registrations.includes(connection)) {
-                    socket.close();
-                    unregister();
-                }
+            write(chunk) {
+                return write(socket, chunk);
+            },
+            dispose() {
+                socket[Symbol.dispose]();
             }
         });
-        registrations.push(connection);
-        read(
-            socket,
-            connection,
-            function on_chunk(chunk) {
-                return on_receive(connection, chunk);
-            },
-            function on_end() {
-                on_close(connection);
-                unregister();
-            }
-        ).catch(function () {
-
-// The connection was closed during read.
-
-            fail();
-        });
+        connections.push(connection);
         return on_open(connection);
     }
 
@@ -155,8 +87,8 @@ function listen(address, on_open, on_receive, on_close) {
 // prevents the listener from accepting new connections. Any open sockets must
 // be closed explicitly.
 
-            return registrations.forEach(function (connection) {
-                connection.close();
+            return connections.forEach(function (connection) {
+                connection.dispose();
             });
         });
     }());
@@ -177,7 +109,11 @@ function tcp_transport_deno() {
 }
 
 if (import.meta.main) {
-    tcp_transport_demo(tcp_transport_deno(), "127.0.0.1:1234");
+    tcp_transport_demo(
+        tcp_transport_deno(),
+        "127.0.0.1:1234",
+        globalThis.console.log
+    );
 }
 
 export default Object.freeze(tcp_transport_deno);
