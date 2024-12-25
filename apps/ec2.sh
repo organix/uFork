@@ -41,6 +41,7 @@ nohup deno run \
     --no-config \
     --watch=apps/tcp/random.asm \
     --no-lock \
+    --reload \
     --allow-read=. \
     --allow-net \
     --allow-import \
@@ -52,6 +53,7 @@ nohup deno run \
     --no-config \
     --watch=apps/www/static.asm \
     --no-lock \
+    --reload \
     --allow-read=. \
     --allow-net \
     --allow-import \
