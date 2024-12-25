@@ -402,11 +402,36 @@ k_cb_fail:                  ; --
 
 writer_factory:             ; blob_dev <- cust,blk_size
     msg -1                  ; len=blk_size
-    msg 0                   ; len cust,blk_size
-    push k_writer_init      ; len cust,blk_size k_writer_init
-    actor create            ; len k=k_writer_init.cust,blk_size
+    state 0                 ; len blob_dev
+    msg 0                   ; len blob_dev cust,blk_size
+    part 1                  ; len blob_dev blk_size cust
+    pair 2                  ; len cust,blk_size,blob_dev
+    push k_writer_init      ; len cust,blk_size,blob_dev k_writer_init
+    actor create            ; len k=k_writer_init.cust,blk_size,blob_dev
     pair 1                  ; k,len
     state 0                 ; k,len blob_dev
+    ref std.send_msg
+
+k_writer_init:              ; cust,blk_size,blob_dev <- blob
+    msg 0                   ; blob
+    typeq #actor_t          ; is_cap(blob)
+    if_not writer_init_fail ; --
+    state -2                ; blob_dev
+    msg 0                   ; blob_dev blob
+    push wr_blob            ; blob_dev blob wr_blob
+    actor create            ; blob_dev first=wr_blob.blob
+    state 2                 ; blob_dev first size=blk_size
+    pick 2                  ; blob_dev first size first
+    push 0                  ; blob_dev first size first ofs=0
+    pair 4                  ; ofs,first,size,first,blob_dev
+    push writer             ; ofs,first,size,first,blob_dev writer
+    actor become            ; --
+    actor self              ; SELF
+    state 1                 ; SELF cust
+    ref std.send_msg
+writer_init_fail:           ; --
+    push #?                 ; #?
+    state 1                 ; #? cust
     ref std.send_msg
 
 wr_blob:                    ; blob <- cust,len | cust,next | cust,ofs,data
@@ -448,31 +473,13 @@ wr_pair:                    ; convert to blob.pair
     part 1                  ; next cust
     ref std.send_msg
 
-k_writer_init:              ; cust,blk_size <- blob
-    msg 0                   ; blob
-    typeq #actor_t          ; is_cap(blob)
-    if_not writer_init_fail ; --
-    msg 0                   ; blob
-    push wr_blob            ; blob wr_blob
-    actor create            ; first=wr_blob.blob
-    state -1                ; first size=blk_size
-    pick 2                  ; first size first
-    push 0                  ; first size first ofs=0
-    pair 3                  ; ofs,first,size,first
-    push writer             ; ofs,first,size,first writer
-    actor become            ; --
-    actor self              ; SELF
-    state 1                 ; SELF cust
-    ref std.send_msg
-writer_init_fail:           ; --
-    push #?                 ; #?
-    state 1                 ; #? cust
-    ref std.send_msg
-
-writer:                     ; ofs,blob,size,blobs <- can,cb,req | ok,cb
+writer:                     ; ofs,blob,size,blobs,blob_dev <- can,cb,req | ok,cb | (can,cb,req),blob''
     msg 0                   ; msg
     typeq #pair_t           ; is_pair(msg)
     if_not std.abort        ; --
+    msg 1                   ; (can,cb,req)
+    typeq #pair_t           ; is_pair((can,cb,req))
+    if writer_grown         ; --
     msg -1                  ; cb
     typeq #actor_t          ; is_cap(cb)
     if writer_done          ; --
@@ -486,7 +493,7 @@ writer:                     ; ofs,blob,size,blobs <- can,cb,req | ok,cb
 
 writer_read:                ; --
     state 1                 ; len=ofs
-    state -3                ; len blobs
+    state 4                 ; len blobs
     msg 2                   ; len blobs cb
     pair 1                  ; len cb,blobs
     push writer_stone       ; len cb,blobs writer_stone
@@ -526,12 +533,12 @@ writer_done:                ; --
     msg -1                  ; #f,#? cb
     ref std.send_msg
 writer_ok:                  ; --
-    state 0                 ; ofs,blob,size,blobs
-    part 1                  ; blob,size,blobs ofs
-    push 1                  ; blob,size,blobs ofs 1
-    alu add                 ; blob,size,blobs ofs+1
-    pair 1                  ; ofs+1,blob,size,blobs
-    push writer             ; ofs+1,blob,size,blobs writer
+    state 0                 ; ofs,blob,size,blobs,blob_dev
+    part 1                  ; blob,size,blobs,blob_dev ofs
+    push 1                  ; blob,size,blobs,blob_dev ofs 1
+    alu add                 ; blob,size,blobs,blob_dev ofs+1
+    pair 1                  ; ofs+1,blob,size,blobs,blob_dev
+    push writer             ; ofs+1,blob,size,blobs,blob_dev writer
     actor become            ; --
     push #?                 ; #?
     push #t                 ; #? #t
@@ -540,10 +547,44 @@ writer_ok:                  ; --
     ref std.send_msg
 
 writer_grow:                ; --
-    state 1                 ; ofs
-    push #f                 ; ofs #f
-    pair 1                  ; ofs,#?
-    msg 2                   ; #f,ofs cb
+    state 3                 ; len=size
+    state 0                 ; len state=ofs,blob,size,blobs,blob_dev
+    msg 0                   ; len state msg=can,cb,req
+    actor self              ; len state msg wr=SELF
+    pair 2                  ; len wr,msg,state
+    push k_writer_grow      ; len wr,msg,state k_writer_grow
+    actor create            ; len k=k_writer_grow.wr,msg,state
+    pair 1                  ; k,len
+    state -4                ; k,len blob_dev
+    ref std.send_msg
+k_writer_grow:              ; wr,(can,cb,req),ofs,blob,size,blobs,blob_dev <- blob'
+    msg 0                   ; blob'
+    push wr_blob            ; blob' wr_blob
+    actor create            ; next=wr_blob.blob'
+    state 0                 ; next state
+    push k_writer_grow2     ; next state k_writer_grow2
+    actor create            ; next k=k_writer_grow2.state
+    pair 1                  ; k,next
+    state 4                 ; k,next blob
+    ref std.send_msg
+k_writer_grow2:             ; wr,(can,cb,req),ofs,blob,size,blobs,blob_dev <- blob''
+    state 0                 ; wr,(can,cb,req),ofs,blob,size,blobs,blob_dev
+    part 2                  ; ofs,blob,size,blobs,blob_dev (can,cb,req) wr
+    msg 0                   ; ... (can,cb,req) wr blob''
+    roll 3                  ; ... wr blob'' (can,cb,req)
+    pair 1                  ; ... wr (can,cb,req),blob''
+    roll 2                  ; ... (can,cb,req),blob'' wr
+    ref std.send_msg
+
+writer_grown:               ; --
+    state -2                ; size,blobs,blob_dev
+    msg -1                  ; size,blobs,blob_dev blob''
+    push 0                  ; size,blobs,blob_dev blob'' ofs=0
+    pair 2                  ; ofs,blob'',size,blobs,blob_dev
+    push writer             ; ofs,blob'',size,blobs,blob_dev writer
+    actor become            ; --
+    msg 1                   ; (can,cb,req)
+    actor self              ; (can,cb,req) SELF
     ref std.send_msg
 
 ;
@@ -636,6 +677,7 @@ k_demo_writer:              ; {caps} <- in
     actor become            ; --
 
     push 10                 ; blk_size=10
+;    push 7                  ; blk_size=7
     actor self              ; blk_size cust=SELF
     pair 1                  ; cust,blk_size
 
