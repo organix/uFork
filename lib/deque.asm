@@ -3,14 +3,14 @@
 ;
 
 .import
-    std: "./std.asm"
-;    std: "https://ufork.org/lib/std.asm"
+    std: "https://ufork.org/lib/std.asm"
+    list: "https://ufork.org/lib/list.asm"
 
-new:                        ; ( k -- deque )
+new:                        ; ( -- deque )
     deque new               ; k deque
     ref std.return_value
 
-empty:                      ; ( deque k -- bool )
+empty:                      ; ( deque -- bool )
     roll -2                 ; k deque
     part 1                  ; k tail head
     typeq #pair_t           ; k tail is_pair(head)
@@ -24,11 +24,81 @@ not_empty:                  ; k tail
     drop 1                  ; k
     ref std.return_false
 
-push:                       ; ( deque value k -- deque' )
-pop:                        ; ( deque k -- deque' value )
-put:                        ; ( deque value k -- deque' )
-pull:                       ; ( deque k -- deque' value )
-len:                        ; ( deque k -- n )
+push:                       ; ( deque value -- deque' )
+    roll 3                  ; value k deque
+    part 1                  ; value k back front
+    roll 4                  ; k back front value
+    pair 1                  ; k back front'=value,front
+    pair 1                  ; k deque'=front',back
+    ref std.return_value
+
+pop:                        ; ( deque -- deque' value )
+    roll -2                 ; k deque
+    part 1                  ; k back front
+    dup 1                   ; k back front front
+    typeq #pair_t           ; k back front is_pair(front)
+    if pop_front            ; k back front
+    call list.rev_onto      ; k front'
+    push #nil               ; k front' back'=#nil
+    roll -2                 ; k back' front'
+    dup 1                   ; k back' front' front'
+    typeq #pair_t           ; k back' front' is_pair(front')
+    if pop_front            ; k back' front'
+    pair 1                  ; k deque'=front',back'
+    push #?                 ; k deque' value=#?
+    roll 3                  ; deque' value k
+    return
+pop_front:                  ; k back front
+    part 1                  ; k back rest value=first
+    roll -4                 ; value k back front'=rest
+    pair 1                  ; value k deque'=front',back
+    roll -3                 ; deque' value k
+    return
+
+put:                        ; ( deque value -- deque' )
+    roll 3                  ; value k deque
+    part 1                  ; value k back front
+    roll 2                  ; value k front back
+    roll 4                  ; k front back value
+    pair 1                  ; k front back'=value,back
+    roll 2                  ; k back' front
+    pair 1                  ; k deque'=front,back'
+    ref std.return_value
+
+pull:                       ; ( deque -- deque' value )
+    roll -2                 ; k deque
+    part 1                  ; k back front
+    roll 2                  ; k front back
+    dup 1                   ; k front back back
+    typeq #pair_t           ; k front back is_pair(back)
+    if pull_back            ; k front back
+    call list.rev_onto      ; k back'
+    push #nil               ; k back' front'=#nil
+    roll -2                 ; k front' back'
+    dup 1                   ; k front' back' back'
+    typeq #pair_t           ; k front' back' is_pair(back')
+    if pull_back            ; k front' back'
+    roll 2                  ; k back' front'
+    pair 1                  ; k deque'=front',back'
+    push #?                 ; k deque' value=#?
+    roll 3                  ; deque' value k
+    return
+pull_back:                  ; k front back
+    part 1                  ; k front rest value=first
+    roll -4                 ; value k front back'=rest
+    roll 2                  ; value k back' front
+    pair 1                  ; value k deque'=front,back'
+    roll -3                 ; deque' value k
+    return
+
+len:                        ; ( deque -- n )
+    roll -2                 ; k deque
+    part 1                  ; k back front
+    call list.len           ; k back len(front)
+    roll 2                  ; k len(front) back
+    call list.len           ; k len(front) len(back)
+    alu add                 ; k len=len(front)+len(back)
+    ref std.return_value
 
 ; self-checked demo
 demo:
@@ -41,44 +111,44 @@ demo:
     assert #t               ; (())
 demo_1:
     push 1                  ; (()) 1
-    deque push              ; ((1))
+    call push               ; ((1))
     push 2                  ; ((1)) 2
-    deque push              ; ((2 1))
+    call push               ; ((2 1))
     push 3                  ; ((2 1)) 3
-    deque push              ; ((3 2 1))
+    call push               ; ((3 2 1))
     pick 1                  ; ((3 2 1)) ((3 2 1))
     call empty              ; ((3 2 1)) #f
     assert #f               ; ((3 2 1))
 demo_2:
     dup 1                   ; ((3 2 1)) ((3 2 1))
-    deque len               ; ((3 2 1)) 3
+    call len                ; ((3 2 1)) 3
     assert 3                ; ((3 2 1))
 demo_3:
-    deque pull              ; (() 2 3) 1
+    call pull               ; (() 2 3) 1
     assert 1                ; (() 2 3)
-    deque pull              ; (() 3) 2
+    call pull               ; (() 3) 2
     assert 2                ; (() 3)
-    deque pull              ; (()) 3
+    call pull               ; (()) 3
     assert 3                ; (())
-    deque pull              ; (()) #?
+    call pull               ; (()) #?
     assert #?               ; (())
 demo_4:
     dup 1                   ; (()) (())
-    deque len               ; (()) 0
+    call len                ; (()) 0
     assert 0                ; (())
 demo_5:
     dup 1                   ; (()) (())
     msg 0                   ; (()) (()) {caps}
-    deque put               ; (()) (() {caps})
+    call put                ; (()) (() {caps})
     push 42                 ; (()) (() {caps}) 42
-    deque put               ; (()) (() 42 {caps})
+    call put                ; (()) (() 42 {caps})
     push #nil               ; (()) (() 42 {caps}) ()
-    deque put               ; (()) (() () 42 {caps})
-    deque pop               ; (()) ((42 ())) {caps}
+    call put                ; (()) (() () 42 {caps})
+    call pop                ; (()) ((42 ())) {caps}
     roll -2                 ; (()) {caps} ((42 ()))
-    deque pop               ; (()) {caps} ((())) 42
+    call pop                ; (()) {caps} ((())) 42
     assert 42               ; (()) {caps} ((()))
-    deque pop               ; (()) {caps} (()) ()
+    call pop                ; (()) {caps} (()) ()
     assert #nil             ; (()) {caps} (())
     call empty              ; (()) {caps} #t
     assert #t               ; (()) {caps}
@@ -88,38 +158,42 @@ demo_5:
 demo_6:
     dup 1                   ; (()) (())
     push 1                  ; (()) (()) 1
-    deque put               ; (()) (() 1)
+    call put                ; (()) (() 1)
     push 2                  ; (()) (() 1) 2
-    deque put               ; (()) (() 2 1)
+    call put                ; (()) (() 2 1)
     dup 1                   ; (()) (() 2 1) (() 2 1)
-    deque empty             ; (()) (() 2 1) #f
+    call empty              ; (()) (() 2 1) #f
     assert #f               ; (()) (() 2 1)
 demo_7:
-    deque pop               ; (()) (() 2) 1
+    call pop                ; (()) (() 2) 1
     assert 1                ; (()) ((2))
     push 3                  ; (()) ((2)) 3
-    deque put               ; (()) ((2) 3)
+    call put                ; (()) ((2) 3)
     dup 1                   ; (()) ((2) 3) ((2) 3)
-    deque len               ; (()) ((2) 3) 2
+    call len                ; (()) ((2) 3) 2
     assert 2                ; (()) ((2) 3)
 demo_8:
-    deque pop               ; (()) (() 3) 2
+    call pop                ; (()) (() 3) 2
     assert 2                ; (()) (() 3)
-    deque pop               ; (()) (()) 3
+    call pop                ; (()) (()) 3
     assert 3                ; (()) (())
-    deque pop               ; (()) (()) #?
+    call pop                ; (()) (()) #?
     assert #?               ; (()) (())
-    deque len               ; (()) 0
+    call len                ; (()) 0
     assert 0                ; (())
     call empty              ; #t
     assert #t               ; --
+    return
+
+boot:                       ; _ <- {caps}
+    call demo
     ref std.commit
 
-; unit test suite
-boot:                       ; _ <- {caps}
-;    msg 0                   ; {caps}
-;    end commit
-    ref demo
+test:                       ; judge <- {caps}
+    call demo               ; --
+    push #t                 ; if demo returns, report success!
+    state 0                 ; #t judge
+    ref std.send_msg
 
 .export
     empty
@@ -129,3 +203,4 @@ boot:                       ; _ <- {caps}
     pull
     len
     boot
+    test

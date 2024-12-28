@@ -3,10 +3,9 @@
 ;
 
 .import
-    std: "./std.asm"
-;    std: "https://ufork.org/lib/std.asm"
+    std: "https://ufork.org/lib/std.asm"
 
-has:                        ; ( dict key k -- bool )
+has:                        ; ( dict key -- bool )
     roll -3                 ; k dict key
     roll 2                  ; k key dict
 has_search:                 ; k key dict
@@ -25,7 +24,7 @@ has_none:                   ; k key next value' key'
     drop 4                  ; k
     ref std.return_false
 
-get:                        ; ( dict key k -- value )
+get:                        ; ( dict key -- value )
     roll -3                 ; k dict key
     roll 2                  ; k key dict
 get_search:                 ; k key dict
@@ -45,7 +44,7 @@ get_none:                   ; k key next value' key'
     drop 4                  ; k
     ref std.return_undef
 
-add:                        ; ( dict key value k -- dict' )
+add:                        ; ( dict key value -- dict' )
     roll -4                 ; k dict key value
 add_tail:                   ; k dict key value
     roll 2                  ; k dict value key
@@ -53,7 +52,7 @@ add_tail:                   ; k dict key value
     quad 4                  ; k dict'
     ref std.return_value
 
-set:                        ; ( dict key value k -- dict' )
+set:                        ; ( dict key value -- dict' )
     roll -4                 ; k dict key value
     roll 3                  ; k key value dict
     pick 3                  ; k key value dict key
@@ -61,7 +60,7 @@ set:                        ; ( dict key value k -- dict' )
     roll -3                 ; k dict' key value
     ref add_tail
 
-del:                        ; ( dict key k -- dict' )
+del:                        ; ( dict key -- dict' )
     roll -3                 ; k dict key
     push #nil               ; k dict key rev={}
     pick 3                  ; k orig key rev dict
@@ -124,10 +123,10 @@ demo_del:
     push 3
     call del
     drop 1
-    ref std.commit
+    return
 
 ; self-checked demo
-demo:
+demo:                       ; ( -- )
     push #?                 ; #?
     push #?                 ; #? #?
 demo_0:
@@ -186,12 +185,15 @@ demo_4:
     assert #f               ; --
     ref demo_del
 
-; unit test suite
 boot:                       ; _ <- {caps}
-;    msg 0                   ; {caps}
-;    ref std.commit
-;    end commit
-    ref demo
+    call demo
+    ref std.commit
+
+test:                       ; judge <- {caps}
+    call demo               ; --
+    push #t                 ; if demo returns, report success!
+    state 0                 ; #t judge
+    ref std.send_msg
 
 .export
     has
@@ -200,3 +202,4 @@ boot:                       ; _ <- {caps}
     set
     del
     boot
+    test

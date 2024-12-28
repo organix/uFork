@@ -317,8 +317,9 @@ k_reader_init:              ; cust,blob <- size
     push 0                  ; blob size ofs=0
     pair 2                  ; ofs,size,blob
     push reader             ; ofs,size,blob reader
-    actor create            ; stream=reader.ofs,size,blob
-    state 1                 ; stream cust
+    actor become            ; --
+    actor self              ; SELF
+    state 1                 ; SELF cust
     ref std.send_msg
 
 reader:                     ; ofs,size,blob <- can,cb,req | data,cb
