@@ -101,6 +101,23 @@ del_none:                   ; k orig key rev next value' key'
     drop 5                  ; k orig
     ref std.return_value
 
+len:                        ; ( dict -- len )
+    push 0                  ; dict k len
+    roll 3                  ; k len dict
+len_iter:                   ; k len dict
+    quad -4                 ; k len next value' key' type
+    eq #dict_t              ; k len next value' key' type==#dict_t
+    if_not len_done         ; k len next value' key'
+    drop 2                  ; k len next
+    roll 2                  ; k next len
+    push 1                  ; k next len 1
+    alu add                 ; k next len+1
+    roll 2                  ; k len+1 next
+    ref len_iter
+len_done:                   ; k len next value' key'
+    drop 3                  ; k len
+    ref std.return_value
+
 ; example usage
 example:
     dict_t 1 #nil
@@ -123,6 +140,16 @@ demo_del:
     push 3
     call del
     drop 1
+demo_len:
+    push #nil               ; #nil
+    call len                ; len=0
+    assert 0                ; --    
+    push example            ; example
+    call len                ; len=3
+    assert 3                ; --    
+    push #?                 ; #?
+    call len                ; len=0
+    assert 0                ; --    
     return
 
 ; self-checked demo
@@ -201,5 +228,6 @@ test:                       ; judge <- {caps}
     add
     set
     del
+    len                     ; not primitive
     boot
     test
