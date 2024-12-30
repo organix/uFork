@@ -322,10 +322,13 @@ k_reader_init:              ; cust,blob <- size
     state 1                 ; SELF cust
     ref std.send_msg
 
-reader:                     ; ofs,size,blob <- can,cb,req | data,cb
+reader:                     ; ofs,size,blob <- can,cb,req | data,cb | (len,blob'),k
     msg 0                   ; msg
     typeq #pair_t           ; is_pair(msg)
     if_not std.abort        ; --
+    msg 1                   ; (len,blob)
+    typeq #pair_t           ; is_pair((len,blob))
+    if reader_grow          ; --
     msg 1                   ; data
     typeq #fixnum_t         ; is_fix(data)
     if reader_ok            ; --
@@ -367,13 +370,33 @@ reader_ok:                  ; --
     push 1                  ; size,blob ofs 1
     alu add                 ; size,blob ofs+1
     pair 1                  ; state'=ofs+1,size,blob
-reader_update:              ; state'
     push reader             ; state' reader
     actor become            ; --
     msg 1                   ; data
     push #t                 ; data #t
     pair 1                  ; #t,data
     msg -1                  ; #t,data cb
+    ref std.send_msg
+reader_grow:                ; --
+;    msg 0                   ; (len,blob'),k
+    state 0                 ; ofs,size,blob
+    part 2                  ; blob size ofs
+    msg 1                   ; blob size ofs (len,blob')
+    part 1                  ; blob size ofs blob' len
+    roll 2                  ; blob size ofs len blob'
+    roll 5                  ; size ofs len blob' blob
+    pair 1                  ; size ofs len blob,blob'
+    push pair               ; size ofs len blob,blob' pair
+    actor create            ; size ofs len blob''=pair.blob,blob'
+    roll 2                  ; size ofs blob'' len
+    roll 4                  ; ofs blob'' len size
+    alu add                 ; ofs blob'' size'=len+size
+    roll 3                  ; blob'' size'' ofs
+    pair 2                  ; state'=ofs,size',blob''
+    push reader             ; state' reader
+    actor become            ; --
+    actor self              ; SELF
+    msg -1                  ; SELF k
     ref std.send_msg
 
 k_blob_r:                   ; cb,stream <- byte | #?
@@ -631,7 +654,7 @@ stream_end:                 ; --
 
 ;;; Example HTTP request
 http_request:
-;; GET / HTTP/1.0
+;; GET /index.html HTTP/1.0
     pair_t 'G'
     pair_t 'E'
     pair_t 'T'
@@ -659,6 +682,31 @@ http_request:
     pair_t '\r'
     pair_t '\n'
     ref #nil                ; size=26
+
+http_req_hdrs:
+;; Host: localhost
+    pair_t 'H'
+    pair_t 'o'
+    pair_t 's'
+    pair_t 't'
+    pair_t ':'
+    pair_t ' '
+    pair_t 'l'
+    pair_t 'o'
+    pair_t 'c'
+    pair_t 'a'
+    pair_t 'l'
+    pair_t 'h'
+    pair_t 'o'
+    pair_t 's'
+    pair_t 't'
+blankln:
+    pair_t '\r'
+    pair_t '\n'
+crlf:
+    pair_t '\r'
+    pair_t '\n'
+    ref #nil                ; size=19
 
 demo_writer:                ; {caps} <- blob
     msg 0                   ; blob
@@ -762,16 +810,36 @@ k_demo_composite:           ; {caps} <- blob
 
 demo_pair:                  ; {caps} <- blob
     state 0                 ; {caps}
-    push k_demo_pair        ; {caps} demo=k_demo_pair
+    msg 0                   ; {caps} head=blob
+    pair 1                  ; head,{caps}
+    push k_demo_pair        ; head,{caps} demo=k_demo_pair
     actor become            ; --
-    msg 0                   ; tail=blob
-    dup 1                   ; tail head=blob
+demo_pair_aliased:
+;    msg 0                   ; tail=blob
+;    actor self              ; tail SELF
+;    ref std.send_msg
+demo_pair_composed:
+    push http_req_hdrs      ; list=http_req_hdrs
+    actor self              ; list cust=SELF
+    pair 1                  ; cust,list
+    state 0                 ; cust,list {caps}
+    push dev.blob_key       ; cust,list {caps} blob_key
+    dict get                ; cust,list blob_dev
+    push init               ; cust,list blob_dev init
+    actor create            ; cust,list init.blob_dev
+    ref std.send_msg
+k_demo_pair:                ; head,{caps} <- tail
+    state -1                ; {caps}
+    push k_demo_pair1       ; {caps} demo=k_demo_pair1
+    actor become            ; --
+    msg 0                   ; tail
+    state 1                 ; tail head
     pair 1                  ; head,tail
     push pair               ; head,tail pair
     actor create            ; blob=pair.head,tail
     actor self              ; blob SELF
     ref std.send_msg
-k_demo_pair:                ; {caps} <- blob
+k_demo_pair1:               ; {caps} <- blob
     state 0                 ; {caps}
     msg 0                   ; {caps} blob
     pair 1                  ; blob,{caps}
@@ -879,9 +947,9 @@ boot:                       ; _ <- {caps}
 ;    push demo_print         ; list {caps} demo=demo_print
 ;    push demo_source        ; list {caps} demo=demo_source
 ;    push demo_slice         ; list {caps} demo=demo_slice
-;    push demo_pair          ; list {caps} demo=demo_pair
+    push demo_pair          ; list {caps} demo=demo_pair
 ;    push demo_composite     ; list {caps} demo=demo_composite
-    push demo_writer        ; list {caps} demo=demo_writer
+;    push demo_writer        ; list {caps} demo=demo_writer
     actor create            ; list cust=demo.{caps}
     pair 1                  ; cust,list
     msg 0                   ; cust,list {caps}
