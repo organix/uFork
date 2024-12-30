@@ -649,6 +649,43 @@ stream_end:                 ; --
     ref std.send_msg
 
 ;
+; blob interface to a blob-stream
+;
+
+blobstr:                    ; blob,str <- ok,blob' | cust | cust,ofs | cust,ofs,data | base',len',cust
+    msg 1                   ; ok
+    eq #t                   ; ok==#t
+    if blobstr_ok           ; --
+    msg 1                   ; ok
+    eq #f                   ; ok==#f
+    if blobstr_fail         ; --
+    msg 0                   ; msg
+    state 1                 ; msg blob
+    ref std.send_msg
+blobstr_ok:                 ; --
+    msg -1                  ; blob'
+    typeq #actor_t          ; is_cap(blob')
+    if_not blobstr_fail     ; --
+    state 0                 ; blob,str
+    part 1                  ; str blob
+    msg -1                  ; str blob blob'
+    roll 2                  ; str blob' blob
+    pair 1                  ; str blob,blob'
+    push pair               ; str blob,blob' pair
+    actor create            ; str blob''=pair.blob,blob'
+    pair 1                  ; blob'',str
+    push blobstr            ; blob'',str blobstr
+    actor become            ; --
+    push #?                 ; req=#?
+    actor self              ; req cb=SELF
+    push #?                 ; req cb can=#?
+    pair 2                  ; can,cb,req
+    state -1                ; can,cb,req str
+    ref std.send_msg
+blobstr_fail:               ; --
+    ref std.commit
+
+;
 ; usage demonstration
 ;
 
@@ -966,4 +1003,5 @@ boot:                       ; _ <- {caps}
     reader_factory
     writer_factory
     stream_copy
+    blobstr
     boot
