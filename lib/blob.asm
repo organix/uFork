@@ -796,6 +796,82 @@ crlf:
     pair_t '\n'
     ref #nil                ; size=19
 
+demo_strsource:             ; {caps} <- blob
+    state 0                 ; {caps}
+    msg 0                   ; {caps} head=blob
+    pair 1                  ; head,{caps}
+    push k_demo_strsource   ; head,{caps} demo=k_demo_strsource
+    actor become            ; --
+;    msg 0                   ; tail=blob
+;    actor self              ; tail SELF
+;    ref std.send_msg
+    push http_req_hdrs      ; list=http_req_hdrs
+    actor self              ; list cust=SELF
+    pair 1                  ; cust,list
+    state 0                 ; cust,list {caps}
+    push dev.blob_key       ; cust,list {caps} blob_key
+    dict get                ; cust,list blob_dev
+    push init               ; cust,list blob_dev init
+    actor create            ; cust,list init.blob_dev
+    ref std.send_msg
+k_demo_strsource:           ; head,{caps} <- tail
+    state -1                ; {caps}
+    push k_demo_strsource1  ; {caps} demo=k_demo_strsource1
+    actor become            ; --
+    msg 0                   ; tail
+    state 1                 ; tail head
+    pair 1                  ; head,tail
+    push pair               ; head,tail pair
+    actor create            ; blob=pair.head,tail
+    actor self              ; blob SELF
+    ref std.send_msg
+k_demo_strsource1:          ; {caps} <- blob
+    msg 0                   ; blob
+    push 1024               ; blob size=1024
+    push 0                  ; blob size offset=0
+    pair 2                  ; offset,size,blob
+    push strsource          ; offset,size,blob strsource
+    actor create            ; str=strsource.offset,size,blob
+    push #?                 ; str req=#?
+    state 0                 ; str req {caps}
+    pick 3                  ; str req {caps} str
+    pair 1                  ; str req str,{caps}
+    push k_demo_strsource2  ; str req str,{caps} k_demo_strsource2
+    actor create            ; str req cb=k_demo_strsource2.str,{caps}
+    push #?                 ; str req cb can=#?
+    pair 2                  ; str can,cb,req
+    roll 2                  ; can,cb,req str
+    ref std.send_msg
+k_demo_strsource2:          ; str,{caps} <- ok,blob'
+    msg 1                   ; ok
+    eq #t                   ; ok==#t
+    if_not k_demo_strsource3; --
+    msg -1                  ; blob'
+    typeq #actor_t          ; is_cap(blob')
+    if_not k_demo_strsource3; --
+
+    push #?                 ; req=#?
+    actor self              ; req cb=SELF
+    push #?                 ; req cb can=#?
+    pair 2                  ; can,cb,req
+    state 1                 ; can,cb,req str
+    actor send              ; --
+
+    msg -1                  ; blob'
+    state -1                ; blob' {caps}
+;    push demo_debug         ; blob' {caps} demo=demo_debug
+    push demo_size          ; blob' {caps} demo=demo_size
+;    push demo_print         ; blob' {caps} demo=demo_print -- CAUTION: scrambled output
+;    push demo_source        ; blob' {caps} demo=demo_source
+    actor create            ; blob' demo.{caps}
+    ref std.send_msg
+k_demo_strsource3:          ; --
+    msg 0                   ; ok,blob'
+    state -1                ; ok,blob' {caps}
+    push dev.debug_key      ; ok,blob' {caps} debug_key
+    dict get                ; ok,blob' debug_dev
+    ref std.send_msg
+
 demo_writer:                ; {caps} <- blob
     msg 0                   ; blob
     state 0                 ; blob {caps}
@@ -1035,9 +1111,10 @@ boot:                       ; _ <- {caps}
 ;    push demo_print         ; list {caps} demo=demo_print
 ;    push demo_source        ; list {caps} demo=demo_source
 ;    push demo_slice         ; list {caps} demo=demo_slice
-    push demo_pair          ; list {caps} demo=demo_pair
+;    push demo_pair          ; list {caps} demo=demo_pair
 ;    push demo_composite     ; list {caps} demo=demo_composite
 ;    push demo_writer        ; list {caps} demo=demo_writer
+    push demo_strsource     ; list {caps} demo=demo_strsource
     actor create            ; list cust=demo.{caps}
     pair 1                  ; cust,list
     msg 0                   ; cust,list {caps}
