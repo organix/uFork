@@ -686,6 +686,57 @@ blobstr_fail:               ; --
     ref std.commit
 
 ;
+; read-stream of source-blobs
+;
+
+strsource:                  ; offset,size,blob <- can,cb,#? | (base,len,blob'),cb
+    msg 1                   ; (base,len,blob')
+    typeq #pair_t           ; is_pair((base,len,blob'))
+    if strsource_result     ; --
+    state 0                 ; offset,size,blob
+    part 2                  ; blob size offset
+    actor self              ; blob size offset SELF
+    msg 2                   ; blob size offset SELF cb
+    pair 1                  ; blob size offset cb,SELF
+    push k_strsource        ; blob size offset cb,SELF k_strsource
+    actor create            ; blob size offset cust=k_strsource.cb,SELF
+    roll -3                 ; blob cust len=size base=offset
+    pair 2                  ; blob base,len,cust
+    roll 2                  ; base,len,cust blob
+    ref std.send_msg
+strsource_result:           ; --
+    msg 1                   ; base,len,blob'
+    nth 2                   ; len
+    eq 0                    ; len==0
+    if strsource_done       ; --
+    state 0                 ; offset,size,blob
+    part 1                  ; size,blob offset
+    msg 1                   ; size,blob offset base,len,blob'
+    nth 2                   ; size,blob offset len
+    alu add                 ; size,blob offset+len
+    pair 1                  ; offset+len,size,blob
+    push strsource          ; offset+len,size,blob strsource
+    actor become            ; --
+    msg 1                   ; base,len,blob'
+    push slice              ; base,len,blob' slice
+    actor create            ; blob''=slice.base,len,blob'
+strsource_send:             ; blob''
+    push #t                 ; blob'' #t
+    pair 1                  ; #t,blob''
+    msg -1                  ; #t,blob'' cb
+    ref std.send_msg
+strsource_done:             ; --
+    push #nil               ; blob''=#nil
+    ref strsource_send
+
+k_strsource:                ; cb,str <- base,len,blob'
+    state 1                 ; cb
+    msg 0                   ; cb base,len,blob'
+    pair 1                  ; (base,len,blob'),cb
+    state -1                ; (base,len,blob'),cb str
+    ref std.send_msg
+
+;
 ; usage demonstration
 ;
 
@@ -1004,4 +1055,5 @@ boot:                       ; _ <- {caps}
     writer_factory
     stream_copy
     blobstr
+    strsource
     boot
