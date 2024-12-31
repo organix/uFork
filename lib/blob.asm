@@ -290,14 +290,12 @@ k_pair_source2:             ; --
     state -1                ; base',len',cust
     part 2                  ; cust len' base'
     roll 2                  ; cust base' len'
-    msg 0                   ; cust base' len' size
-    alu sub                 ; cust base' len''=len'-size
-    roll 2                  ; cust len'' base'
-    msg 0                   ; cust len'' base' size
-    alu sub                 ; cust len'' base''=base'-size
-    pair 2                  ; base'',len'',cust
-    state 1                 ; base'',len'',cust (head,tail)
-    nth -1                  ; base'',len'',cust tail
+    roll 2                  ; cust len' base'
+    msg 0                   ; cust len' base' size
+    alu sub                 ; cust len' base''=base'-size
+    pair 2                  ; base'',len',cust
+    state 1                 ; base'',len',cust (head,tail)
+    nth -1                  ; base'',len',cust tail
     ref std.send_msg
 
 ;
@@ -827,7 +825,8 @@ k_demo_strsource:           ; head,{caps} <- tail
     ref std.send_msg
 k_demo_strsource1:          ; {caps} <- blob
     msg 0                   ; blob
-    push 1024               ; blob size=1024
+;    push 1024               ; blob size=1024
+    push 10                 ; blob size=10
     push 0                  ; blob size offset=0
     pair 2                  ; offset,size,blob
     push strsource          ; offset,size,blob strsource
