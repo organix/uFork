@@ -650,38 +650,51 @@ stream_end:                 ; --
 ; blob interface to a blob-stream
 ;
 
-blobstr:                    ; blob,str <- ok,blob' | cust | cust,ofs | cust,ofs,data | base',len',cust
+blobstr:                    ; blob,str,cb <- ok,blob' | cust | cust,ofs | cust,ofs,data | base',len',cust
     msg 1                   ; ok
     eq #t                   ; ok==#t
     if blobstr_ok           ; --
     msg 1                   ; ok
     eq #f                   ; ok==#f
-    if blobstr_fail         ; --
+    if blobstr_done         ; --
     msg 0                   ; msg
     state 1                 ; msg blob
     ref std.send_msg
 blobstr_ok:                 ; --
     msg -1                  ; blob'
     typeq #actor_t          ; is_cap(blob')
-    if_not blobstr_fail     ; --
-    state 0                 ; blob,str
-    part 1                  ; str blob
-    msg -1                  ; str blob blob'
-    roll 2                  ; str blob' blob
-    pair 1                  ; str blob,blob'
-    push pair               ; str blob,blob' pair
-    actor create            ; str blob''=pair.blob,blob'
-    pair 1                  ; blob'',str
-    push blobstr            ; blob'',str blobstr
+    if_not blobstr_done     ; --
+    state 0                 ; blob,str,cb
+    part 1                  ; str,cb blob
+    dup 1                   ; str,cb blob blob
+    typeq #actor_t          ; str,cb blob is_cap(blob)
+    if blobstr_pair         ; str,cb blob
+    drop 1                  ; str,cb
+    msg -1                  ; str,cb blob'
+    ref blobstr_update
+blobstr_pair:               ; str,cb blob
+    msg -1                  ; str,cb blob blob'
+    roll 2                  ; str,cb blob' blob
+    pair 1                  ; str,cb blob,blob'
+    push pair               ; str,cb blob,blob' pair
+    actor create            ; str,cb blob''=pair.blob,blob'
+blobstr_update:             ; str,cb blob''
+    pair 1                  ; blob'',str,cb
+    push blobstr            ; blob'',str,cb blobstr
     actor become            ; --
     push #?                 ; req=#?
     actor self              ; req cb=SELF
     push #?                 ; req cb can=#?
     pair 2                  ; can,cb,req
-    state -1                ; can,cb,req str
+    state 2                 ; can,cb,req str
     ref std.send_msg
-blobstr_fail:               ; --
-    ref std.commit
+blobstr_done:               ; --
+    state -2                ; cb
+    typeq #actor_t          ; is_cap(cb)
+    if_not std.commit       ; --
+    msg 0                   ; ok,value
+    state -2                ; ok,value cb
+    ref std.send_msg
 
 ;
 ; read-stream of source-blobs
@@ -794,6 +807,81 @@ crlf:
     pair_t '\n'
     ref #nil                ; size=19
 
+demo_blobstr:               ; {caps} <- blob
+;blobstr:                    ; blob,str,cb <- ok,blob' | cust | cust,ofs | cust,ofs,data | base',len',cust
+    state 0                 ; {caps}
+    msg 0                   ; {caps} head=blob
+    pair 1                  ; head,{caps}
+    push k_demo_blobstr     ; head,{caps} demo=k_demo_blobstr
+    actor become            ; --
+;    msg 0                   ; tail=blob
+;    actor self              ; tail SELF
+;    ref std.send_msg
+    push http_req_hdrs      ; list=http_req_hdrs
+    actor self              ; list cust=SELF
+    pair 1                  ; cust,list
+    state 0                 ; cust,list {caps}
+    push dev.blob_key       ; cust,list {caps} blob_key
+    dict get                ; cust,list blob_dev
+    push init               ; cust,list blob_dev init
+    actor create            ; cust,list init.blob_dev
+    ref std.send_msg
+k_demo_blobstr:             ; head,{caps} <- tail
+    state -1                ; {caps}
+    push k_demo_blobstr1    ; {caps} demo=k_demo_blobstr1
+    actor become            ; --
+    msg 0                   ; tail
+    state 1                 ; tail head
+    pair 1                  ; head,tail
+    push pair               ; head,tail pair
+    actor create            ; blob=pair.head,tail
+    actor self              ; blob SELF
+    ref std.send_msg
+k_demo_blobstr1:            ; {caps} <- blob
+    actor self              ; cb=SELF
+    msg 0                   ; cb blob
+;    push 1024               ; cb blob size=1024
+    push 10                 ; cb blob size=10
+    push 0                  ; cb blob size offset=0
+    pair 2                  ; cb offset,size,blob
+    push strsource          ; cb offset,size,blob strsource
+    actor create            ; cb str=strsource.offset,size,blob
+
+    pick -2                 ; str cb str
+    push #nil               ; str cb str blob=#nil
+    pair 2                  ; str blob,str,cb
+    push blobstr            ; str blob,str,cb blobstr
+    actor create            ; str blob'=blobstr.blob,str,cb
+
+    state 0                 ; str blob' {caps}
+    pick 2                  ; str blob' {caps} blob'
+    pair 1                  ; str blob' blob',{caps}
+    push k_demo_blobstr2    ; str blob' blob',{caps} k_demo_blobstr2
+    actor become            ; str blob'
+
+    push #?                 ; str blob' req=#?
+    roll 2                  ; str req cb=blob'
+    push #?                 ; str req cb can=#?
+    pair 2                  ; str can,cb,req
+    roll 2                  ; can,cb,req str
+    ref std.send_msg
+k_demo_blobstr2:            ; blob',{caps} <- ok,value
+    state -1                ; {caps}
+    push k_demo_blobstr9    ; {caps} k_demo_blobstr9
+    actor become            ; --
+    state 1                 ; blob'
+    actor self              ; blob' SELF
+    ref std.send_msg
+k_demo_blobstr9:            ; {caps} <- blob
+    msg 0                   ; blob
+    state 0                 ; blob {caps}
+;    push demo_debug         ; blob {caps} demo=demo_debug
+;    push demo_size          ; blob {caps} demo=demo_size
+    push demo_print         ; blob {caps} demo=demo_print
+;    push demo_source        ; blob {caps} demo=demo_source
+    actor create            ; blob demo.{caps}
+    ref std.send_msg
+
 demo_strsource:             ; {caps} <- blob
     state 0                 ; {caps}
     msg 0                   ; {caps} head=blob
@@ -859,9 +947,9 @@ k_demo_strsource2:          ; str,{caps} <- ok,blob'
     msg -1                  ; blob'
     state -1                ; blob' {caps}
 ;    push demo_debug         ; blob' {caps} demo=demo_debug
-    push demo_size          ; blob' {caps} demo=demo_size
+;    push demo_size          ; blob' {caps} demo=demo_size
 ;    push demo_print         ; blob' {caps} demo=demo_print -- CAUTION: scrambled output
-;    push demo_source        ; blob' {caps} demo=demo_source
+    push demo_source        ; blob' {caps} demo=demo_source
     actor create            ; blob' demo.{caps}
     ref std.send_msg
 k_demo_strsource3:          ; --
@@ -1092,12 +1180,15 @@ tgt_start:                  ; tgt
     ref std.send_msg
 
 demo_source:                ; {caps} <- blob
+    debug
     state 0                 ; {caps}
     push dev.debug_key      ; {caps} debug_key
     dict get                ; cust=debug_dev
-;    push 4096               ; cust len=4096
-    push 13                 ; cust len=13
-    push 7                  ; cust len base=7
+    push 4096               ; cust len=4096
+;    push 13                 ; cust len=13
+    push 0                  ; cust len base=0
+;    push 7                  ; cust len base=7
+;    push 42                 ; cust len base=42
     pair 2                  ; base,len,cust
     msg 0                   ; base,len,cust blob
     ref std.send_msg
@@ -1113,7 +1204,8 @@ boot:                       ; _ <- {caps}
 ;    push demo_pair          ; list {caps} demo=demo_pair
 ;    push demo_composite     ; list {caps} demo=demo_composite
 ;    push demo_writer        ; list {caps} demo=demo_writer
-    push demo_strsource     ; list {caps} demo=demo_strsource
+;    push demo_strsource     ; list {caps} demo=demo_strsource
+    push demo_blobstr       ; list {caps} demo=demo_blobstr
     actor create            ; list cust=demo.{caps}
     pair 1                  ; cust,list
     msg 0                   ; cust,list {caps}
