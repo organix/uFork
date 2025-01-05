@@ -323,7 +323,7 @@ CAS:                        ; value &lt;- cust,#CAS,old,new
             The one-at-a-time transactional nature
             of actor event handling ensures consistency.
           </p>
-          <h3 name="demo">Demonstration</h3>
+          <h3 name="demo">CAS Demonstration</h3>
           <p class="text">
             lorem ipsum
           </p>
@@ -334,6 +334,7 @@ CAS:                        ; value &lt;- cust,#CAS,old,new
 ;;;
 
 .import
+    dev: "https://ufork.org/lib/dev.asm"
     std: "https://ufork.org/lib/std.asm"
     lib: "https://ufork.org/lib/lib.asm"
 
@@ -382,6 +383,7 @@ CAS:                        ; value &lt;- cust,#CAS,old,new
     ref read
 
 ; demonstration
+
 cas_add:                    ; old,inc,cell &lt;- old'
     state 1                 ; old
     msg 0                   ; old old'
@@ -510,16 +512,17 @@ validate:                   ; expect,judge &lt;- actual
           <p class="text">
             lorem ipsum
           </p>
-          <h3 name="boot">Boot Behavior</h3>
+          <h3 name="module">Complete Module</h3>
           <p class="text">
             lorem ipsum
           </p>
           <p>
-            <a class="play" target="_blank" href="https://ufork.org/playground/?text=H4sIAAAAAAAAE72YwXLbIBCG73oKJrm0E0m20+ZiV5NTe+qtD6DBEpYZC6ECcut2+u4dwICQULBnOs0hB+f7l+XfZcHJMekpEwkAANTovAUPRyF6vl2thgNlp5yyZtXi/apG5xxy8pAktKtQuUfHLZj/7ACrzgx8ygDhjYrZD/wIHl8D5OOrAzjuTjLmBLCfKxJWgjKwRxUlyA+VZcnhR72UVCArwhuwDpKG4AIKFGAUoeKNcuKoq6dYliUm+7BTpUyoVFGkvKKEYJEke0ZhXUEuAsodOMN2QFKoFuaRzYwgcenRd/DYQ8xK4UGYl/LTdxp+r2h8KDsqgMulph0y27p5zR4yATYhiCEuwAEzLiJmO1BvXeGMti14XoyrPXLRl2skcQ9pD8GI3z5//RIvt+/WdlbZGrUCLvTDDqi/yspWAxdpNxDrcxa00BDL3nUD0VF16u0AYF0HOIb69lJ0A3lytFw3sKyhVZJxRwIOwMuiA/JQpQR3KYNdg+TvmpJUYIK8s6s3/CEUQOpiDSUZUB1ic8BybpJBzBa6WbE1FLAgvElNcDXZTqXddEgAKlqjYgSNTK0YkrsILHXlx7pcRovkecXTqU8fYyzQtbi/4KMEZyVXkzSNFN3v8vmupgN7PhUmA3u5ewwGCO7il4RFbYrLB8ziumoEd09GpIoVHGVX+5U93hazlxgMlH33V2tPqQheoO6++l3Bnv+J2DOC1BmQbweVUnlCFx8C9nP9AsGVAA0S85iaq9E5srblglno9rJpzHHgiFsTMhKTm1pss56lF5boE11s1mvCnfw5NLqW5bIPi2cbQfbUvMPBTo6zInzWEr3boV+Y+nIQenMtOGCulL51is3Y++vVt0jrQWi5yBg0UtnxTpRvIgNQrSbHtDop3n5mU3rM2+RumtHXPcFLibtKG9vj6hQ+5h7sWxxo8B3I83xk8TpisUffZ7GRTixeRyyWsnssNvx9FiuVYn8hRhP3Kgy2vfPXaXyrA0+sqdVZrJ3/vddZrJ//t9k1Mv2svtV1uL3Na6tWGletLPTyUGHfDhMZcy3morBw6iKkNmyqEnF7md2pJo683ouXyKVjwOCdU6P90IxvvgkNLBC5caxOC7z7xnwpjwgsFym5Vcp3fmFE+WThxb5UcsKbwvsuoxL1vt5Oef+vt+ToCXLzUHrr1TN/9uTop/0XiHwCJX8BBguPYRQRAAA%3D">Open in Playground</a>
+            <a class="play" target="_blank" href="https://ufork.org/playground/?src=https://ufork.org/lib/cell.asm">Open in Playground</a>
 <pre class="code">
 .import
-    std: "https://ufork.org/lib/std.asm"
     dev: "https://ufork.org/lib/dev.asm"
+    std: "https://ufork.org/lib/std.asm"
+    lib: "https://ufork.org/lib/lib.asm"
 
 ...
 
@@ -530,12 +533,16 @@ cell_beh:                   ; value &lt;- cust,op,args
 boot:                       ; _ &lt;- {caps}
     ...
 
+test:                       ; judge &lt;- {caps}
+    ...
+
 .export
     beh
     read_op
     write_op
     CAS_op
-    boot</pre>
+    boot
+    test</pre>
           </p>
           <p class="text">
             lorem ipsum
