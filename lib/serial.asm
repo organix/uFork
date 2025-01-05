@@ -142,7 +142,7 @@ counter_init:               ; value <- msg
 counter_svc:                ; cell <- (cust . change)
     push #?                 ; #?
     actor self              ; #? SELF
-    push cell.read_tag      ; #? SELF #read
+    push cell.read_op       ; #? SELF #read
     pair 2                  ; (#read SELF . #?)
     state 0                 ; (#read SELF . #?) cell
     actor send              ; --
@@ -161,7 +161,7 @@ counter_k1:                 ; (cell cust . change) <- count
 
     dup 1                   ; count' count'
     actor self              ; count' count' SELF
-    push cell.write_tag     ; count' count' SELF #write
+    push cell.write_op      ; count' count' SELF #write
     pair 2                  ; count' (#write SELF . count')
     state 1                 ; count' (#write SELF . count') cell
     actor send              ; count'
