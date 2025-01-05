@@ -322,6 +322,7 @@ writer_grown:               ; --
 ; copy stream `in` to stream `out`
 ; sending the final `result` to `cb`
 ;
+
 stream_copy:                ; cb,out,in <- result
     msg 1                   ; ok
     if_not stream_end       ; --

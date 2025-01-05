@@ -298,7 +298,6 @@ k_pair_source2:             ; --
     nth -1                  ; base'',len',cust tail
     ref std.send_msg
 
-
 ;
 ; usage demonstration
 ;

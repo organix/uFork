@@ -32,7 +32,7 @@
 
       <section class="grid">
         <div class="span10col">
-          <h2 name="race">Reduce, Reuse, Recycle</h2>
+          <h2 name="cell">Reduce, Reuse, Recycle</h2>
           <p class="text">
             Both code and data structures in uFork are immutable.
             This makes it safe to share these structures among actors.
@@ -40,6 +40,16 @@
             to reduce our memory footprint,
             and also to pass information efficiently between actors
             (without making copies).
+          </p>
+          <p class="text">
+            When two or more actors need access to the same mutable state,
+            we define a "state holder" actor for that state.
+            Since shared data is immutable,
+            the state-holder maintains the mutable state privately,
+            and the sharing actors coordinate
+            by sending messages to the state-holder.
+            We will define a "storage cell" actor
+            as a simple state-holder example.
           </p>
           <h3 name="tail">Common Tail-Sequences</h3>
           <p class="text">
@@ -158,7 +168,162 @@ E_OK:                       ; not an error
             labels allow sharing of longer common tail-sequences.
             Watch for opportunities to use them.
           </p>
-          <h3 name="cell">Shared Mutable Storage</h3>
+          <h3 name="static">Static Data</h3>
+          <p class="text">
+            We will use the <code>ref</code> mechanism
+            to define a set of operation-codes,
+            and then use the <code>dict_t</code> data constructor
+            to define a dictionary of code-addresses.
+          </p>
+          <p>
+            <pre class="code">
+read_op:
+    ref 0
+write_op:
+    ref 1
+CAS_op:
+    ref 2
+
+op_table:
+    dict_t read_op read
+    dict_t write_op write
+    dict_t CAS_op CAS
+    ref #nil</pre>
+          </p>
+          <p class="text">
+            The <code>dict_t</code> data constructor
+            defines statically-initialized instances
+            of type <code>#dict_t</code>.
+            It takes a <var>key</var>, a <var>value</var>,
+            and an optional <var>next</var> pointer.
+            As with instructions,
+            if the final <var>next</var> pointer is missing,
+            it defaults to the next item in the source code.
+            The <code>#nil</code> value
+            represents the empty dictionary,
+            which terminates the sequence.
+          </p>
+          <h3 name="dispatch">Method Dispatch Table</h3>
+          <p class="text">
+            We begin defining the "storage cell" behavior
+            by using the staically-defined <code>op_table</code>
+            to dispatch to the code specified by the <code>op</code>
+            selector in the incomming message.
+          </p>
+          <p>
+            <pre class="code">
+beh:
+cell_beh:                   ; value &lt;- cust,op,args
+    push op_table           ; op_table
+    msg 2                   ; op_table op
+    dict get                ; op_code
+    dup 1                   ; op_code op_code
+    typeq #instr_t          ; op_code is_instr(op_code)
+    if_not std.abort        ; op_code
+    jump                    ; --</pre>
+          </p>
+          <p class="text">
+            If the dictionary lookup produces a code-pointer,
+            we <code>jump</code> to the selected method.
+            Otherwise, the actor transaction is aborted.
+            The message is discarded
+            and there is no effect on the actor or the system.
+            On some platforms,
+            an "auditor" may be notified
+            and the anomoly can be reported.
+          </p>
+          <h3 name="read">Read Method</h3>
+          <p class="text">
+            The method code is executed in the same transaction,
+            with the same message and the same private state
+            as the method dispatch.
+            The "read" method simply sends the current <code>value</code>
+            to the <code>cust</code> provided in the message.
+          </p>
+          <p>
+            <pre class="code">
+read:                       ; value &lt;- cust,#read,_
+    state 0                 ; value
+    ref std.cust_send</pre>
+          </p>
+          <h3 name="write">Write Method</h3>
+          <p class="text">
+            The "write" method updates the cell's private state
+            with a new <code>value'</code> from the message,
+            and sends it's own identity to the provided <code>cust</code>.
+          </p>
+          <p>
+            <pre class="code">
+write:                      ; value &lt;- cust,#write,value'
+    msg -2                  ; value'
+    push cell_beh           ; value' cell_beh
+    actor become            ; --
+    actor self              ; SELF
+    ref std.cust_send</pre>
+          </p>
+          <p class="text">
+            Sending the actor's identity to the customer
+            is the "sync signal" pattern.
+            It allows the customer to continue processing,
+            knowing that the write has been completed.
+          </p>
+          <h3 name="CAS">Compare-and-Swap Method</h3>
+          <p class="text">
+            You might think that "read" and "write"
+            are all the operations you need
+            for a mutable storage cell.
+            However, consider trying to do something
+            as simple as incrementing a shared counter.
+            This requires a read-modify-write cycle.
+            With only a read/write API,
+            the cell's value could change
+            between the read of the original value
+            and the write of the modified value.
+            This is called a
+            "<a href="https://en.wikipedia.org/wiki/Race_condition#In_software">data race</a>".
+            One mechanism to avoid this kind of hazard
+            is to add a
+            "<a href="https://en.wikipedia.org/wiki/Compare-and-swap">compare-and-swap</a>"
+            operation to the API.
+          </p>
+          <p>
+            <pre class="code">
+CAS:                        ; value &lt;- cust,#CAS,old,new
+    msg 3                   ; old
+    state 0                 ; old value
+    cmp eq                  ; old==value
+    if_not read             ; --
+    msg -3                  ; new
+    push cell_beh           ; new cell_beh
+    actor become            ; --
+    ref read</pre>
+          </p>
+          <p class="text">
+            The "CAS" method request message provides
+            the expected <code>old</code> value
+            and the desired <code>new</code> value.
+            If <code>old</code> matches the current <code>value</code>,
+            then the cell's private state is updated to <code>new</code>.
+            In either case, "CAS" acts like "read"
+            (literally reusing the same code),
+            sending <code>value</code> to <code>cust</code>.
+            Note that, by definition, this is the <code>value</code>
+            before any updates.
+          </p>
+          <p>
+            If the "CAS" <code>cust</code> receives
+            the <code>old</code> value they expected,
+            they know the operation was successful.
+            Otherwise, they can use the returned value
+            as <code>old</code> and retry the operation,
+            possibly with a recalculated <code>new</code>.
+            With actors, nothing blocks
+            and everyone makes progress,
+            even when there is contention.
+            The one-at-a-time transactional nature
+            of actor event handling ensures consistency.
+          </p>
+          <h3 name="demo">Demonstration</h3>
           <p class="text">
             lorem ipsum
           </p>
@@ -170,6 +335,7 @@ E_OK:                       ; not an error
 
 .import
     std: "https://ufork.org/lib/std.asm"
+    lib: "https://ufork.org/lib/lib.asm"
 
 read_op:
     ref 0
@@ -190,8 +356,8 @@ cell_beh:                   ; value &lt;- cust,op,args
     msg 2                   ; op_table op
     dict get                ; op_code
     dup 1                   ; op_code op_code
-    eq #?                   ; op_code op_code==#?
-    if std.abort            ; op_code
+    typeq #instr_t          ; op_code is_instr(op_code)
+    if_not std.abort        ; op_code
     jump                    ; --
 
 read:                       ; value &lt;- cust,#read,_
@@ -215,255 +381,123 @@ CAS:                        ; value &lt;- cust,#CAS,old,new
     actor become            ; --
     ref read
 
-; test fixtures
-expect_eq:                  ; judge,expect &lt;- actual
-    state -1                ; expect
-    msg 0                   ; expect actual
-    cmp eq                  ; expect==actual
-    state 1                 ; expect==actual judge
-    ref std.send_msg
+; demonstration
+cas_add:                    ; old,inc,cell &lt;- old'
+    state 1                 ; old
+    msg 0                   ; old old'
+    cmp eq                  ; old==old'
+    if std.commit           ; --
 
-expect_one:                 ; judge,expect &lt;- actual | timeout
-    state 1                 ; judge
-    msg 0                   ; judge timeout
-    cmp eq                  ; judge==timeout
-    if fail_verdict         ; --
-    state -1                ; expect
-    msg 0                   ; expect actual
-    cmp ne                  ; expect!=actual
-    if fail_verdict         ; --
-got_expected:
-    state 1                 ; data=judge
-    push expect_none        ; data code=expect_none
-    actor become            ; --
-    ref std.commit
-fail_verdict:               ; --
-    push #f                 ; verdict=#f
-    state 1                 ; verdict judge
-send_verdict:               ; verdict judge
-    push #?                 ; verdict judge data=#?
-    push std.sink_beh       ; verdict judge data code=sink_beh
-    actor become            ; verdict judge
-    ref std.send_msg
-expect_none:                ; judge &lt;- actual | timeout
-    state 0                 ; judge
-    msg 0                   ; judge timeout
-    cmp eq                  ; verdict=(judge==timeout)
-    state 0                 ; verdict judge
-    ref send_verdict
+    state 0                 ; old,inc,cell
+    part 2                  ; cell inc old
+    drop 1                  ; cell inc
+    msg 0                   ; cell inc old'
 
-jury_beh:                   ; judge,count &lt;- boolish | timeout
-    state 1                 ; judge
-    msg 0                   ; judge timeout
-    cmp eq                  ; judge==timeout
-    if fail_verdict         ; --
+    dup 2                   ; cell inc old' inc old'
+    alu add                 ; cell inc old' new=inc+old'
+    pick 2                  ; cell inc old' new old'
+    push CAS_op             ; cell inc old' new old' #CAS
+    actor self              ; cell inc old' new old' #CAS cust=SELF
+    pair 3                  ; cell inc old' cust,#CAS,old',new
+    state -2                ; cell inc old' cust,#CAS,old',new cell
+    actor send              ; cell inc old'
 
-    msg 0                   ; boolish
-    if_not fail_verdict     ; --
-    state -1                ; count
-    push 1                  ; count 1
-    alu sub                 ; count-1
-
-    dup 1                   ; count-1 count-1
-    eq 0                    ; count-1 count-1==0
-    if got_expected         ; count-1
-
-    state 1                 ; count-1 judge
-    pair 1                  ; judge,count-1
-    push jury_beh           ; judge,count-1 jury_beh
+    pair 2                  ; old',inc,cell
+    push cas_add            ; old',inc,cell cas_add
     actor become            ; --
     ref std.commit
 
-; standard entry-points
 boot:                       ; _ &lt;- {caps}
     msg 0                   ; {caps}
     push dev.debug_key      ; {caps} debug_key
-    dict get                ; debug_dev
-    push std.once_beh       ; debug_dev once_beh
-    actor create            ; judge=once_beh.debug_dev
+    dict get                ; rcvr=debug_dev
+    push lib.once_beh       ; rcvr once_beh
+    actor create            ; judge=once_beh.rcvr
 
-    push 42                 ; judge expect=42
-    pick 2                  ; judge expect judge
-    pair 1                  ; judge judge,expect
-    push expect_one         ; judge judge,expect expect_one
-    actor create            ; judge cust=expect_one.judge,expect
-
-    pick -2                 ; cust judge cust
-    push 500                ; cust judge cust delay=500ms
-    pair 2                  ; cust delay,cust,judge
-    msg 0                   ; cust delay,cust,judge {caps}
-    push dev.timer_key      ; cust delay,cust,judge {caps} timer_key
-    dict get                ; cust delay,cust,judge timer_dev
-    actor send              ; cust
-
-    ref std.commit
+    push test               ; judge test
+    actor become            ; --
+    msg 0                   ; {caps}
+    actor self              ; {caps} SELF
+    ref std.send_msg
 
 test:                       ; judge &lt;- {caps}
-    push #f                 ; verdict=#t
-    state 0                 ; verdict judge
-    actor send              ; --
-    call test_suite         ; --
-    push #t                 ; verdict=#t
-    state 0                 ; verdict judge
-    ref std.send_msg
-
-; unit test suite
-test_suite:
-    call test_read          ; --
-    call test_write         ; --
-    call test_hit           ; --
-    call test_miss          ; --
-    call test_overlap       ; --
-    return
-    
-test_read:                  ; ( -- )
-    push 5                  ; k 5
-    push cell_beh           ; k 5 cell_beh
-    actor create            ; k cell(5)
-    push 5                  ; k cell(5) 5
-    push check_read_beh     ; k cell(5) 5 check_read_beh
-    actor create            ; k cell(5) check_read(5)
-    actor send              ; k
-    return
-
-test_write:                 ; ( -- )
-    push 5                  ; k 5
-    dup 1                   ; k 5 5
-    push check_read_beh     ; k 5 5 check_read_beh
-    actor create            ; k 5 check_read(5)
-    push write_op           ; k 5 check_read(5) #write
-    pair 2                  ; k msg=(#write check_read(5) . 5)
-    push 4                  ; k msg 4
-    push cell_beh           ; k msg 4 cell_beh
-    actor create            ; k msg cell(4)
-    actor send              ; k
-    return
-
-test_hit:                   ; ( -- )
-    push 5                  ; k new=5
-    push 4                  ; k new=5 old=4
-    push 5                  ; k new=5 old=4 expect=5
-    call test_CAS           ; k
-    return
-
-test_miss:                  ; ( -- )
-    push 5                  ; k new=5
-    push 3                  ; k new=5 old=3
-    push 4                  ; k new=5 old=3 expect=4
-    call test_CAS           ; k
-    return
-
-test_CAS:                   ; ( new old expect -- )
-    roll -4                 ; k new old expect
-    push 4                  ; k new old expect 4
-    push cell_beh           ; k new old expect 4 cell_beh
-    actor create            ; k new old expect cell(4)
-    roll -4                 ; k cell(4) new old expect
-    pick 4                  ; k cell(4) new old expect cell(4)
-    pair 1                  ; k cell(4) new old state=(cell(4) . expect)
-    push check_CAS_beh      ; k cell(4) new old state check_CAS_beh
-    actor create            ; k cell(4) new old check_CAS
-    push CAS_op             ; k cell(4) new old check_CAS #CAS
-    pair 3                  ; k cell(4) msg=(#CAS check_CAS old . new)
-    roll 2                  ; k msg cell(4)
-    actor send              ; k
-    return
-
-check_CAS_beh:              ; (cell . expect) &lt;- value
-    msg 0                   ; value
-    assert 4                ; --
-    state 1                 ; cell
-    state -1                ; cell expect
-    push check_read_beh     ; cell expect check_read_beh
-    actor create            ; cell check_read(expect)
-    ref std.send_msg
-
-check_read_beh:             ; expect &lt;- cell
-    push #?                 ; #?
-    state 0                 ; #? expect
-    push assert_eq.beh      ; #? expect assert_eq_beh
-    actor create            ; #? cust=assert_eq
-    push read_op            ; #? cust #read
-    pair 2                  ; (#read cust . #?)
-    msg 0                   ; (#read cust . #?) cell
-    actor send              ; --
-    ref std.commit
-
-test_overlap:               ; ( -- )
-    push 4                  ; k 4
-    push cell_beh           ; k 4 cell_beh
-    actor create            ; k cell=cell_beh.(4)
-    dup 1                   ; k cell cell
-    push cell_set_bit       ; k cell cell cell_set_bit
-    actor create            ; k cell t_svc=cell_set_bit.cell
-    pick 2                  ; k cell t_svc cell
-    push cell_set_bit       ; k cell t_svc cell cell_set_bit
-    actor create            ; k cell t_svc h_svc=cell_set_bit.cell
-    push 7                  ; k cell t_svc h_svc expect=7
-    roll 4                  ; k t_svc h_svc expect cell
-    pair 1                  ; k t_svc h_svc (cell . expect)
-    push cell_verify        ; k t_svc h_svc (cell . expect) cell_verify
-    actor create            ; k t_svc h_svc cust=cell_verify.(cell . expect)
-    pair 2                  ; k (cust h_svc . t_svc)
-    push fork.beh           ; k (cust h_svc . t_svc) fork_beh
-    actor create            ; k fork.(cust h_svc . t_svc)
-    push 2                  ; k fork 2
-    push 1                  ; k fork 2 1
-    pair 1                  ; k fork (1 . 2)
-    roll 2                  ; k (1 . 2) fork
-    actor send              ; k
-    return
-
-cell_set_bit:               ; cell &lt;- (cust . bit)
-    push #?                 ; #?
-    msg 1                   ; #? cust
-    state 0                 ; #? cust cell
-    msg -1                  ; #? cust cell bit
-    push #?                 ; #? cust cell bit old=#?
-    pair 3                  ; #? (old bit cell . cust)
-    push cell_try_bit       ; #? (old bit cell . cust) cell_try_bit
-    actor create            ; #? cust'=cell_try_bit.(old bit cell . cust)
-    push read_op            ; #? cust' tag=read_tag
-    pair 2                  ; (#read cust' . #?)
-    state 0                 ; (#read cust' . #?) cell
-    actor send              ; --
-    ref std.commit
-
-cell_try_bit:               ; (old bit cell . cust) &lt;- val
-    msg 0                   ; val
-    state 1                 ; val old
-    cmp eq                  ; val==old
-    if set_bit_done
-    msg 0                   ; val
-    state 2                 ; val bit
-    alu or                  ; new=val|bit
-    msg 0                   ; new old=val
-    actor self              ; new old cust=SELF
-    push CAS_op             ; new old cust tag=CAS_tag
-    pair 3                  ; (#CAS cust old . new)
-    state 3                 ; (#CAS cust old . new) cell
-    actor send              ; --
-    state -1                ; (bit cell . cust)
-    msg 0                   ; (bit cell . cust) old'=val
-    pair 1                  ; (old' bit cell . cust)
-    push cell_try_bit       ; (old' bit cell . cust) cell_try_bit
+    state 0                 ; judge
+    msg 0                   ; judge {caps}
+    pair 1                  ; {caps},judge
+    push test2              ; {caps},judge test2
     actor become            ; --
-    ref std.commit
-set_bit_done:
-    msg 0                   ; val
-    state -3                ; val cust
+
+    push 0                  ; value=0
+    push cell_beh           ; value cell_beh
+    actor create            ; cell=cell_beh.value
+
+    push #?                 ; cell _
+    push read_op            ; cell _ #read
+    state 0                 ; cell _ #read judge
+    push 1234               ; cell _ #read judge 1234
+    pair 1                  ; cell _ #read 1234,judge
+    push validate           ; cell _ #read 1234,judge validate
+    actor create            ; cell _ #read cust=validate.1234,judge
+    pair 2                  ; cell msg=cust,#read,_
+
+    pick 2                  ; cell msg cust=cell
+    push 100                ; cell msg cust delay=0.1s
+    pair 2                  ; cell delay,cust,msg
+    msg 0                   ; cell delay,cust,msg {caps}
+    push dev.timer_key      ; cell delay,cust,msg {caps} timer_key
+    dict get                ; cell delay,cust,msg timer_dev
+    actor send              ; cell
+
+    push 1000               ; cell value'=1000
+    push write_op           ; cell value' #write
+    actor self              ; cell value' #write cust=SELF
+    pair 2                  ; cell cust,#write,value'
+    roll 2                  ; cust,#write,value' cell
     ref std.send_msg
 
-cell_verify:                ; (cell . expect) &lt;- _
-    push #?                 ; #?
-    state -1                ; #? expect
-    push assert_eq.beh      ; #? expect assert_eq_beh
-    actor create            ; #? cust=assert_eq_beh.expect
-    push read_op            ; #? cust tag=read_tag
-    pair 2                  ; (#read cust . #?)
-    state 1                 ; (#read cust . #?) cell
+test2:                      ; {caps},judge &lt;- cell
+    push 0                  ; old'=0
+    msg 0                   ; old' cell
+    push 200                ; old' cell inc=200
+    push #?                 ; old' cell inc old=#?
+    pair 2                  ; old' old,inc,cell
+    push cas_add            ; old' old,inc,cell cas_add
+    actor create            ; old' cas_add.old,inc,cell
     actor send              ; --
-    ref std.commit
+
+    push 0                  ; old'=0
+    msg 0                   ; old' cell
+    push 30                 ; old' cell inc=30
+    push #?                 ; old' cell inc old=#?
+    pair 2                  ; old' old,inc,cell
+    push cas_add            ; old' old,inc,cell cas_add
+    actor create            ; old' cas_add.old,inc,cell
+    actor send              ; --
+
+    push 0                  ; old'=0
+    msg 0                   ; old' cell
+    push 4                  ; old' cell inc=4
+    push #?                 ; old' cell inc old=#?
+    pair 2                  ; old' old,inc,cell
+    push cas_add            ; old' old,inc,cell cas_add
+    actor create            ; old' cas_add.old,inc,cell
+    actor send              ; --
+
+    push #f                 ; msg=#f
+    state -1                ; msg cust=judge
+    push 200                ; msg cust delay=0.2s
+    pair 2                  ; delay,cust,msg
+    state 1                 ; delay,cust,msg {caps}
+    push dev.timer_key      ; delay,cust,msg {caps} timer_key
+    dict get                ; delay,cust,msg timer_dev
+    ref std.send_msg
+
+validate:                   ; expect,judge &lt;- actual
+    state 1                 ; expect
+    msg 0                   ; expect actual
+    cmp eq                  ; expect==actual
+    state -1                ; expect==actual judge
+    ref std.send_msg
 
 .export
     beh
@@ -487,6 +521,8 @@ cell_verify:                ; (cell . expect) &lt;- _
     std: "https://ufork.org/lib/std.asm"
     dev: "https://ufork.org/lib/dev.asm"
 
+...
+
 beh:
 cell_beh:                   ; value &lt;- cust,op,args
     ...
@@ -496,6 +532,9 @@ boot:                       ; _ &lt;- {caps}
 
 .export
     beh
+    read_op
+    write_op
+    CAS_op
     boot</pre>
           </p>
           <p class="text">
