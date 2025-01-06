@@ -3,8 +3,8 @@
 ;
 
 .import
-    dev: "https://ufork.org/lib/dev.asm"
-    std: "https://ufork.org/lib/std.asm"
+    dev: "./dev.asm"
+    std: "./std.asm"
 
 len:                        ; ( list -- len )
     roll -2                 ; k list

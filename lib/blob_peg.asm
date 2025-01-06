@@ -3,8 +3,8 @@
 ;
 
 .import
-    dev: "https://ufork.org/lib/dev.asm"
-    std: "https://ufork.org/lib/std.asm"
+    dev: "./dev.asm"
+    std: "./std.asm"
 
 ;;  digit = [0-9]
 digit_rng:

@@ -1188,16 +1188,14 @@ function make_core({
         return exports_object;
     }
 
-    function h_map_src(src) {
+    function u_map_src(src) {
         if (src !== undefined) {
             const alias = Object.keys(import_map).find(function (key) {
                 return src.startsWith(key);
             });
-            return (
-                alias !== undefined
-                ? src.replace(alias, import_map[alias])
-                : src
-            );
+            if (alias !== undefined) {
+                return src.replace(alias, import_map[alias]);
+            }
         }
     }
 
@@ -1242,8 +1240,26 @@ function make_core({
 
                 return Promise.all(Object.values(ir.ast.import).map(
                     function (import_src) {
+                        import_src = u_map_src(import_src) ?? import_src;
                         return h_import_promise(
-                            new URL(h_map_src(import_src), src).href
+
+// We need to resolve the import specifier if it is relative.
+
+                            import_src.startsWith(".")
+                            ? (
+
+// The URL constructor chokes when 'base' is an absolute path, rather than a
+// fully qualified URL. We work around this using a dummy origin so that we can
+// produce an absolute path if 'src' is an absolute path.
+
+                                src.startsWith("/")
+                                ? new URL(
+                                    import_src,
+                                    new URL(src, "http://_")
+                                ).pathname
+                                : new URL(import_src, src).href
+                            )
+                            : import_src
                         );
                     }
                 )).then(function (imported_modules) {
@@ -1265,7 +1281,7 @@ function make_core({
 // imports.
 
         return unpromise(function () {
-            return h_import_promise(h_map_src(src), content);
+            return h_import_promise(u_map_src(src) ?? src, content);
         });
     }
 

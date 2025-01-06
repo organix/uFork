@@ -3,9 +3,9 @@
 ;
 
 .import
-    dev: "https://ufork.org/lib/dev.asm"
-    std: "https://ufork.org/lib/std.asm"
-    blob: "https://ufork.org/lib/blob.asm"
+    dev: "./dev.asm"
+    std: "./std.asm"
+    blob: "./blob.asm"
 
 ;
 ; input stream-requestor interface to a blob

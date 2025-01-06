@@ -1,8 +1,8 @@
 ; Line buffering utilities for the I/O device.
 
 .import
-    std: "https://ufork.org/lib/std.asm"
-    dev: "https://ufork.org/lib/dev.asm"
+    std: "./std.asm"
+    dev: "./dev.asm"
 
 ; Accumulate characters one-at-a-time until '\n'.
 ; When a `line` is complete, send it to `cust`.

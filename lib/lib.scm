@@ -2,7 +2,7 @@
 ;;; Actor idioms in Scheme
 ;;;
 
-(import dev "https://ufork.org/lib/dev.asm")  ; for testing...
+(import dev "./dev.asm")  ; for testing...
 
 (define sink-beh (BEH _))
 

@@ -3,9 +3,9 @@
 ;;;
 
 .import
-    dev: "https://ufork.org/lib/dev.asm"
-    std: "https://ufork.org/lib/std.asm"
-    lib: "https://ufork.org/lib/lib.asm"
+    dev: "./dev.asm"
+    std: "./std.asm"
+    lib: "./lib.asm"
 
 read_op:
     ref 0

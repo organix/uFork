@@ -3,7 +3,7 @@
 ;
 
 .import
-    std: "https://ufork.org/lib/std.asm"
+    std: "./std.asm"
 
 has:                        ; ( dict key -- bool )
     roll -3                 ; k dict key

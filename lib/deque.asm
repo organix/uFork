@@ -3,8 +3,8 @@
 ;
 
 .import
-    std: "https://ufork.org/lib/std.asm"
-    list: "https://ufork.org/lib/list.asm"
+    std: "./std.asm"
+    list: "./list.asm"
 
 new:                        ; ( -- deque )
     deque new               ; k deque

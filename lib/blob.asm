@@ -3,9 +3,9 @@
 ;
 
 .import
-    dev: "https://ufork.org/lib/dev.asm"
-    std: "https://ufork.org/lib/std.asm"
-    list: "https://ufork.org/lib/list.asm"
+    dev: "./dev.asm"
+    std: "./std.asm"
+    list: "./list.asm"
 
 ;
 ; initialized blob builder

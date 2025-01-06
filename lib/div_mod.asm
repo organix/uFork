@@ -1,8 +1,8 @@
 ; Euclidean division and remainder/modulus
 
 .import
-    std: "https://ufork.org/lib/std.asm"
-    dev: "https://ufork.org/lib/dev.asm"
+    std: "./std.asm"
+    dev: "./dev.asm"
 
 ; Euclidean division is a slow, but simple, algorithm.
 ; It solves the equations: <latex> n = dq + r </latex>,
