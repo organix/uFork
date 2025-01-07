@@ -369,14 +369,10 @@ function blob_dev(core, make_ddev) {
                 }
                 const base_num = ufork.fix_to_i32(base);
                 const length_num = ufork.fix_to_i32(length);
-                if (
-                    base_num < 0
-                    || base_num > bytes.length
-                    || length_num < 0
-                ) {
+                if (base_num < 0 || length_num < 0) {
                     return ufork.E_BOUNDS;
                 }
-                const available = bytes.length - base_num;
+                const available = Math.max(0, bytes.length - base_num);
                 const take = Math.min(available, length_num);
                 core.u_defer(function () {
                     core.h_release_stub(event_stub_ptr);
