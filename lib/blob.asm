@@ -166,10 +166,10 @@ k_slice_fit:                ; cust len' base' _
     ref std.send_msg
 
 k_slice_zero:               ; cust len' base'' len base'
-    roll 4                  ; cust base'' len base' len'
-    drop 3                  ; cust base''
-    push 0                  ; cust base'' len'=0
-    roll -2                 ; cust len' base''
+    drop 2                  ; cust len' base''
+    push 0                  ; cust len' base'' size'=0
+    roll 2                  ; cust len' size' base''
+    roll 3                  ; cust size' base'' len'
     ref k_slice_fit
 
 ;
