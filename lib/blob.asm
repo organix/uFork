@@ -145,6 +145,11 @@ slice_source:
     alu add                 ; cust len' base''=base'+base
     state 2                 ; cust len' base'' len
     msg 1                   ; cust len' base'' len base'
+
+    dup 2                   ; cust len' base'' len base' len base'
+    cmp gt                  ; cust len' base'' len base' len>base'
+    if k_slice_zero         ; cust len' base'' len base'
+
     alu sub                 ; cust len' base'' size'=len-base'
     pick 3                  ; cust len' base'' size' len'
     pick 2                  ; cust len' base'' size' len' size'
@@ -159,6 +164,13 @@ k_slice_fit:                ; cust len' base' _
     pair 2                  ; base',len',cust
     state -2                ; base',len',cust blob
     ref std.send_msg
+
+k_slice_zero:               ; cust len' base'' len base'
+    roll 4                  ; cust base'' len base' len'
+    drop 3                  ; cust base''
+    push 0                  ; cust base'' len'=0
+    roll -2                 ; cust len' base''
+    ref k_slice_fit
 
 ;
 ; blob interface to a pair of consecutive blobs
@@ -289,8 +301,6 @@ k_pair_fit:                 ; cust len' base' _
 k_pair_source2:             ; --
     state -1                ; base',len',cust
     part 2                  ; cust len' base'
-    roll 2                  ; cust base' len'
-    roll 2                  ; cust len' base'
     msg 0                   ; cust len' base' size
     alu sub                 ; cust len' base''=base'-size
     pair 2                  ; base'',len',cust

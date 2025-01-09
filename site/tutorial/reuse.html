@@ -87,7 +87,8 @@ commit:
             if they are sequential or not!
             This is because uFork memory is organized
             into linked structures called <em>quad-cells</em>.
-            Quad-cells have 4 <em>value</em> fields.
+            Quad-cells are the minimum addressable unit.
+            They have 4 <em>value</em> fields.
             Each value is a <em>fixnum</em>,
             a <em>capability</em> (actor address),
             or a <em>pointer</em> to a quad-cell.
@@ -98,11 +99,15 @@ commit:
           <pre class="graphic">
 cust_send ---> [#instr_t, "msg", 1, k]
                                     |
-                                    V
+               +--------------------+
+               |
+               V
 send_msg ----> [#instr_t, "actor", "send", k]
                                            |
-sink_beh ---------+                        |
-                  V                        V
+                                           |
+sink_beh ------+---------------------------+
+               |
+               V
 commit ------> [#instr_t, "end", "commit", #?]</pre>
           <p class="text">
             This code fragment consists of 3 instructions
@@ -137,7 +142,7 @@ cust_send:                  ; msg
           </p>
           <p class="text">
             A more common approach is
-            to use a <code>ref</code> pseudo-instruction
+            to use a <a href="https://github.com/organix/uFork/blob/main/docs/asm.md#ref"><code>ref</code></a> pseudo-instruction
             to provide the continuation,
             as shown here:
           </p>
@@ -191,7 +196,7 @@ op_table:
     ref #nil</pre>
           </p>
           <p class="text">
-            The <code>dict_t</code> data constructor
+            The <a href="https://github.com/organix/uFork/blob/main/docs/asm.md#data"><code>dict_t</code></a> data constructor
             defines statically-initialized instances
             of type <code>#dict_t</code>.
             It takes a <var>key</var>, a <var>value</var>,
@@ -323,7 +328,59 @@ CAS:                        ; value &lt;- cust,#CAS,old,new
             The one-at-a-time transactional nature
             of actor event handling ensures consistency.
           </p>
-          <h3 name="demo">CAS Demonstration</h3>
+          <h3 name="usage">Usage Example</h3>
+          <p class="text">
+            An actor with <code>cas_add</code> behavior
+            uses a cell's "CAS" method
+            to safely update the cell's value.
+            ...
+          </p>
+          <p>
+            <pre class="code">
+cas_add:                    ; old,inc,cell &lt;- old'
+    state 1                 ; old
+    msg 0                   ; old old'
+    cmp eq                  ; old==old'
+    if std.commit           ; --</pre>
+          </p>
+          <p class="text">
+            lorem ipsum
+          </p>
+          <p>
+            <pre class="code">
+    state 0                 ; old,inc,cell
+    part 2                  ; cell inc old
+    drop 1                  ; cell inc
+    msg 0                   ; cell inc old'</pre>
+          </p>
+          <p class="text">
+            lorem ipsum
+          </p>
+          <p>
+            <pre class="code">
+    dup 2                   ; cell inc old' inc old'
+    alu add                 ; cell inc old' new=inc+old'
+    pick 2                  ; cell inc old' new old'
+    push CAS_op             ; cell inc old' new old' #CAS
+    actor self              ; cell inc old' new old' #CAS cust=SELF
+    pair 3                  ; cell inc old' cust,#CAS,old',new
+    state -2                ; cell inc old' cust,#CAS,old',new cell
+    actor send              ; cell inc old'</pre>
+          </p>
+          <p class="text">
+            lorem ipsum
+          </p>
+          <p>
+            <pre class="code">
+    pair 2                  ; old',inc,cell
+    push cas_add            ; old',inc,cell cas_add
+    actor become            ; --
+    ref std.commit</pre>
+          </p>
+          <p class="text">
+            lorem ipsum
+          </p>
+          <h3 name="source">Source Code</h3>
           <p class="text">
             lorem ipsum
           </p>
