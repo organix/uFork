@@ -148,7 +148,7 @@ slice_source:
 
     dup 2                   ; cust len' base'' len base' len base'
     cmp gt                  ; cust len' base'' len base' len>base'
-    if k_slice_zero         ; cust len' base'' len base'
+    if_not k_slice_zero     ; cust len' base'' len base'
 
     alu sub                 ; cust len' base'' size'=len-base'
     pick 3                  ; cust len' base'' size' len'
