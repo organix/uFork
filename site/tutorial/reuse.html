@@ -66,7 +66,7 @@
             These patterns are so common,
             they are provided in the
             <a href="https://ufork.org/playground/?src=https://ufork.org/lib/std.asm" target="_blank"><code>std.asm</code></a>
-            module.
+            module (usually imported with an <code>std</code> prefix).
           </p>
           <p>
             <pre class="code">
@@ -166,9 +166,9 @@ E_OK:                       ; not an error
           <p class="text">
             A <code>ref</code> occupies no storage.
             It's just a reference to another value.
-            You should use <code>ref commit</code>
+            You should use <code>ref std.commit</code>
             instead of <code>end commit</code>
-            to avoid creating redundant instructions.
+            to avoid creating redundant instruction-quads.
             The <code>send_msg</code> and <code>cust_send</code>
             labels allow sharing of longer common tail-sequences.
             Watch for opportunities to use them.
@@ -203,17 +203,20 @@ op_table:
             and an optional <var>next</var> pointer.
             As with instructions,
             if the final <var>next</var> pointer is missing,
-            it defaults to the next item in the source code.
+            it defaults to the next statement in the source code.
             The <code>#nil</code> value
             represents the empty dictionary,
             which terminates the sequence.
+            Note that the named constants
+            (<code>#?</code>, <code>#nil</code>, <code>#f</code> and <code>#t</code>)
+            are <em>pointers</em> to read-only memory.
           </p>
           <h3 name="dispatch">Method Dispatch Table</h3>
           <p class="text">
             We begin defining the "storage cell" behavior
             by using the staically-defined <code>op_table</code>
             to dispatch to the code specified by the <code>op</code>
-            selector in the incomming message.
+            selector in the incoming message.
           </p>
           <p>
             <pre class="code">
@@ -235,7 +238,7 @@ cell_beh:                   ; value &lt;- cust,op,args
             and there is no effect on the actor or the system.
             On some platforms,
             an "auditor" may be notified
-            and the anomoly can be reported.
+            and the anomaly can be reported.
           </p>
           <h3 name="read">Read Method</h3>
           <p class="text">
@@ -255,7 +258,7 @@ read:                       ; value &lt;- cust,#read,_
           <p class="text">
             The "write" method updates the cell's private state
             with a new <code>value'</code> from the message,
-            and sends it's own identity to the provided <code>cust</code>.
+            and sends its own address to the provided <code>cust</code>.
           </p>
           <p>
             <pre class="code">
@@ -267,7 +270,7 @@ write:                      ; value &lt;- cust,#write,value'
     ref std.cust_send</pre>
           </p>
           <p class="text">
-            Sending the actor's identity to the customer
+            Sending the actor's address to the customer
             is the "sync signal" pattern.
             It allows the customer to continue processing,
             knowing that the write has been completed.
