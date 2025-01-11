@@ -1,6 +1,6 @@
 /*
 
-LIFO (stack)
+LIFO (stack) w/ Stack-Effects
 
     +---------------+
     | lifo          |
@@ -118,7 +118,7 @@ module lifo_se #(
                 o_s9 <= o_s10;
                 o_s10 <= o_s11;
             end
-    endcase
+        endcase
     end
 
 endmodule

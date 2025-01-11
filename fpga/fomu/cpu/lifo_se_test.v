@@ -1,6 +1,6 @@
 /*
 
-Test fixture for LIFO (stack)
+Test fixture for LIFO (stack) w/ Stack-Effects
 
     +-------------------+
     | lifo_test         |
@@ -19,9 +19,9 @@ Once `o_running` is de-asserted, the value of `o_passed` indicates success or fa
 
 `default_nettype none
 
-`include "lifo.v"
+`include "lifo_se.v"
 
-module lifo_test (
+module lifo_se_test (
     input                   i_clk,                      // system clock
     input                   i_run,                      // start the test
     output                  o_running,                  // test in progress

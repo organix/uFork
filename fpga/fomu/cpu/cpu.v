@@ -23,7 +23,7 @@ the value of `o_status` indicates success (1) or failure (0).
 `default_nettype none
 
 `include "../lib/lifo.v"
-`include "lifo.v"
+`include "lifo_se.v"
 `include "alu.v"
 //`include "alu_nr.v"
 `include "uart.v"
