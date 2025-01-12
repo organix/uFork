@@ -83,7 +83,7 @@ cancel_all_beh:             ; cancellers <- reason
     msg 0                   ; cancellers #? reason
     pair 1                  ; cancellers (reason . #?)
     push lib.broadcast_beh  ; cancellers (reason . #?) broadcast_beh
-    actor create            ; cancellers broadcast=broadcast_beh.(reason. #?)
+    actor create            ; cancellers broadcast=broadcast_beh.(reason . #?)
     actor send              ; --
     push std.sink_beh       ; sink_beh
     actor become            ; --

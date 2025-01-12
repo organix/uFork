@@ -475,12 +475,12 @@ boot:                       ; _ <- {caps}
     pair 1                  ; msg (eol . eos)
     push and                ; msg (eol . eos) and
     actor create            ; msg and.(eol . eos)
-    push '0'                ; msg and.(eol eos) '0'
-    push eq                 ; msg and.(eol eos) '0' eq
-    actor create            ; msg and.(eol eos) eq.'0'
-    pair 1                  ; msg (eq.'0' . and.(eol eos))
-    push and                ; msg (eq.'0' . and.(eol eos)) and
-    actor create            ; msg peg=and.(eq.'0' . and.(eol eos))
+    push '0'                ; msg and.(eol . eos) '0'
+    push eq                 ; msg and.(eol . eos) '0' eq
+    actor create            ; msg and.(eol . eos) eq.'0'
+    pair 1                  ; msg (eq.'0' . and.(eol . eos))
+    push and                ; msg (eq.'0' . and.(eol . eos)) and
+    actor create            ; msg peg=and.(eq.'0' . and.(eol . eos))
     push start              ; msg peg start
     actor create            ; msg start.peg
     ref std.send_msg

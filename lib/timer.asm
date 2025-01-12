@@ -47,8 +47,8 @@ cust_beh:                   ; (clock delay target . message) <- now
 poll_beh:                   ; (clock end_time target . message) <- now
     msg 0                   ; now
     state 2                 ; now end_time
-    alu sub                 ; (now-end_time)
-    push 0                  ; (now-end_time) 0
+    alu sub                 ; now-end_time
+    push 0                  ; now-end_time 0
     cmp ge                  ; expired?
     if_not retry            ; --
 
@@ -56,7 +56,7 @@ poll_beh:                   ; (clock end_time target . message) <- now
     state 3                 ; message target
     ref std.send_msg
 
-retry:                      ; (clock ...)
+retry:                      ; (clock end_time target . message)
     actor self              ; SELF
     state 1                 ; SELF clock
     ref std.send_msg

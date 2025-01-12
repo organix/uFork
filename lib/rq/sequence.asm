@@ -47,7 +47,7 @@ sequence_beh:               ; requestors <- (to_cancel callback . value)
     roll 2                  ; label rcvr=runner
     pair 1                  ; (rcvr . label)
     push lib.label_beh      ; (rcvr . label) label_beh
-    actor create            ; cancel=label_beh.(rcvr label)
+    actor create            ; cancel=label_beh.(rcvr . label)
     msg 1                   ; cancel to_cancel
     actor send              ; --
     ref std.commit
@@ -110,7 +110,7 @@ on_start:                   ; (requestors callback . _) <- (start_tag . value)
     push lib.label_beh      ; canceller pending next value (rcvr . label) label_beh
     actor create            ; canceller pending next value callback=label_beh.(rcvr . label)
     pick 5                  ; canceller pending next value callback to_cancel=canceller
-    pair 2                  ; canceller pending next request=(to_cancel callbackvalue)
+    pair 2                  ; canceller pending next request=(to_cancel callback value)
     roll 2                  ; canceller pending request=(to_cancel callback=SELF value) next
     actor send              ; canceller pending
     state 2                 ; canceller pending callback
