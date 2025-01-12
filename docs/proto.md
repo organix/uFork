@@ -73,7 +73,7 @@ by combining pairs of values.
 
 A _pair_ combines two values (simple or complex)
 called the _head_ and the _tail_.
-A pair can be printed as `(head . tail)`
+A pair can be printed as `head,tail`
 in order to emphasize its components.
 
 A _list_ can be represented by a sequence of pairs,
@@ -83,8 +83,8 @@ The base-case is the empty list,
 represented by the `#nil` literal in uFork assembly.
 
 A list is usually printed in a more compact form than a pair.
-The list `(1 2 3)` is an abbreviation for
-the pair structure `(1 . (2 . (3 . #nil)))`.
+The list `1,2,3,#nil` is an abbreviation for
+the pair structure `1,(2,(3,#nil))`.
 uFork instructions provide convenient accessors for pair-lists.
 An index argument _n_ succinctly designates a component:
 
@@ -94,21 +94,21 @@ An index argument _n_ succinctly designates a component:
 
 ```
   0                -1                -2                -3
----->(head . tail)---->(head . tail)---->(head . tail)---->...
+---->head,tail-------->head,tail-------->head,tail-------->...
     +1 |              +2 |              +3 |
        V                 V                 V
 ```
 
 If the index is out-of-bounds, the result is `#?` (undefined).
-As an example, consider indexing into the list `(1 2 3)`:
+As an example, consider indexing into the list `1,2,3,#nil`:
 
  Index | Value
 -------|----------
- 0     | `(1 2 3)`
+ 0     | `1,2,3,#nil`
  1     | `1`
--1     | `(2 3)`
+-1     | `2,3,#nil`
  2     | `2`
--2     | `(3)`
+-2     | `3,#nil`
  3     | `3`
 -3     | `#nil`
  4     | `#?`
@@ -141,9 +141,9 @@ For example, the customer could be the next actor in a processing pipeline.
 
 The usual convention is to provide the _customer_
 as the first element of a list-structured message.
-Viewed as a pair, a _call_ looks like `(customer . request)`.
+Viewed as a pair, a _call_ looks like `customer,request`.
 If the _request_ is `#nil`,
-the call degenerates to the one-element list `(customer)`.
+the call degenerates to the one-element list `customer,#nil`.
 This convention is most appropriate
 for representing arguments lists
 in function/procedure calls.
@@ -168,7 +168,7 @@ and the message to be a pair-list
 with the _customer_ as the first element:
 
 ```
-const_beh:              ; value <- (cust . _)
+const_beh:              ; value <- cust,_
     state 0             ; value
     msg 1               ; value cust
     actor send          ; --
@@ -189,7 +189,7 @@ an _object-oriented_ actor protocol requires the addition
 of a _method selector_ to the message.
 We still need a _customer_ to receive the _result_,
 so prepending the selector to the argument-list
-produces the message pattern `(selector customer . request)`.
+produces the message pattern `selector,customer,request`.
 
 There is no shared mutable state in an actor system.
 There can be lots of shared **immutable** state,
@@ -213,7 +213,7 @@ write_tag:
 CAS_tag:
     ref -1
 
-cell_beh:                   ; value <- (tag cust . req)
+cell_beh:                   ; value <- tag,cust,req
     msg 1                   ; tag
     eq read_tag             ; tag==read
     if read                 ; --
@@ -232,20 +232,20 @@ If a match is found, the behavior branches to the appropriate handler code.
 If no match is found, the message-event transaction is aborted.
 
 ```
-read:                       ; value <- (tag cust . _)
+read:                       ; value <- tag,cust,_
     state 0                 ; value
     msg 2                   ; value cust
     ref std.send_msg
 ```
 
-The "read" handler expects a message matching `(tag cust)`.
-Note that this is a subset of the top-level pattern `(tag cust . req)`
+The "read" handler expects a message matching `tag,cust,#nil`.
+Note that this is a subset of the top-level pattern `tag,cust,req`
 where `req` is `#nil`.
 Reading the cell entails sending the current state `value`
 to the customer actor `cust`.
 
 ```
-write:                      ; value <- (tag cust . value')
+write:                      ; value <- tag,cust,value'
     msg -2                  ; value'
     push cell_beh           ; value' cell_beh
     actor become            ; --
@@ -254,7 +254,7 @@ write:                      ; value <- (tag cust . value')
     ref std.send_msg
 ```
 
-The "write" handler expects a message matching `(tag cust . value')`.
+The "write" handler expects a message matching `tag,cust,value'`.
 Writing the cell entails updating the actor's state
 with the new `value'`,
 while maintaining the same behavior (instructions).
@@ -277,7 +277,7 @@ The "CAS" ([compare-and-swap](https://en.wikipedia.org/wiki/Compare-and-swap)) r
 provides a mechanism to avoid this corruption.
 
 ```
-CAS:                        ; value <- (tag cust old . new)
+CAS:                        ; value <- tag,cust,old,new
     msg 3                   ; old
     state 0                 ; old value
     cmp eq                  ; old==value
@@ -288,7 +288,7 @@ CAS:                        ; value <- (tag cust old . new)
     ref read
 ```
 
-The "CAS" handler expects a message matching `(tag cust old . new)`.
+The "CAS" handler expects a message matching `tag,cust,old,new`.
 If `old` does not match the state `value`,
 treat this as "read" request
 (returning the _current_ `value` to `cust`).
@@ -327,11 +327,11 @@ the receiver and the label.
 The message is arbitrary (simple or complex).
 
 ```
-label_beh:              ; (rcvr . label) <- msg
+label_beh:              ; rcvr,label <- msg
     msg 0               ; msg
     state -1            ; msg label
-    pair 1              ; (label . msg)
-    state 1             ; (label . msg) rcvr
+    pair 1              ; label,msg
+    state 1             ; label,msg rcvr
     actor send          ; --
     end commit
 ```
@@ -359,31 +359,31 @@ a customer `cust` and
 an initial cell value `init`:
 
 ```
-factory:                ; _ <- (cust . init)
+factory:                ; _ <- cust,init
     msg -1              ; init
     push cell_beh       ; init cell_beh
     actor create        ; cell=cell_beh.init
 
     push CAS_tag        ; cell #CAS
     pick 2              ; cell #CAS cell
-    pair 1              ; cell (cell . #CAS)
-    push label_beh      ; cell (cell . #CAS) label_beh
-    actor create        ; cell CAS_facet=label_beh.(cell . #CAS)
+    pair 1              ; cell cell,#CAS
+    push label_beh      ; cell cell,#CAS label_beh
+    actor create        ; cell CAS_facet=label_beh.cell,#CAS
     roll -2             ; CAS_facet cell
 
     push write_tag      ; CAS_facet cell #write
     pick 2              ; CAS_facet cell #write cell
-    pair 1              ; CAS_facet cell (cell . #write)
-    push label_beh      ; CAS_facet cell (cell . #write) label_beh
-    actor create        ; CAS_facet cell write_facet=label_beh.(cell . #write)
+    pair 1              ; CAS_facet cell cell,#write
+    push label_beh      ; CAS_facet cell cell,#write label_beh
+    actor create        ; CAS_facet cell write_facet=label_beh.cell,#write
     roll -2             ; CAS_facet write_facet cell
 
     push CAS_tag        ; CAS_facet write_facet cell #read
     roll 2              ; CAS_facet write_facet #read cell
-    pair 1              ; CAS_facet write_facet (cell . #read)
-    push label_beh      ; CAS_facet write_facet (cell . #read) label_beh
-    actor create        ; CAS_facet write_facet read_facet=label_beh.(cell . #read)
-    pair 2              ; facets=(read_facet write_facet . CAS_facet)
+    pair 1              ; CAS_facet write_facet cell,#read
+    push label_beh      ; CAS_facet write_facet cell,#read label_beh
+    actor create        ; CAS_facet write_facet read_facet=label_beh.cell,#read
+    pair 2              ; facets=read_facet,write_facet,CAS_facet
     msg 1               ; facets cust
     actor send          ; --
     end commit
@@ -392,7 +392,7 @@ factory:                ; _ <- (cust . init)
 An actor with "factory" behavior
 creates a _cell_ with value `init`.
 Then it creates _facets_ for each cell operation.
-A list of the facets `(read write . CAS)`
+A list of the facets `read,write,CAS`
 is sent to the customer `cust`.
 The cell is never directly exposed.
 

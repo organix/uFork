@@ -261,7 +261,7 @@ impl Device for BlobDevice {
             // request to allocated blob
             let _dev = myself.x();
             let handle = myself.y();
-            let msg = event.y();  // cust | (cust . ofs) | (cust ofs . val) | (base len . cust)
+            let msg = event.y();  // cust | cust,ofs | cust,ofs,val | base,len,cust
             if msg.is_cap() { // size request
                 let cust = msg;
                 let size = self.blob_size(handle)?;
@@ -289,7 +289,7 @@ impl Device for BlobDevice {
                     let len = core.nth(msg, PLUS_2);
                     let cust = core.nth(msg, MINUS_2);
                     let shorter_len = self.blob_source(handle, base, len)?;
-                    let pair = Quad::pair_t(shorter_len,target);
+                    let pair = Quad::pair_t(shorter_len, target);
                     let pair_ptr = core.reserve(&pair)?;
                     let reply = Quad::pair_t(base, pair_ptr);
                     let reply_ptr = core.reserve(&reply)?;
@@ -299,7 +299,7 @@ impl Device for BlobDevice {
             }
         } else {
             // request to allocator
-            let msg = event.y();  // (cust . size)
+            let msg = event.y();  // cust,size
             let cust = core.nth(msg, PLUS_1);
             let size = core.nth(msg, MINUS_1);
             let handle = self.blob_reserve(size)?;

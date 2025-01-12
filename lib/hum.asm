@@ -32,7 +32,7 @@ make_closure:               ; ( code env k -- closure )
 ; Immediately, the arguments are incorporated into the environment.
 
 ;   roll 3                  ; k env args
-;   pair 1                  ; k env'=(args . env)
+;   pair 1                  ; k env'=args,env
 
 ; After evaluating the return value, the code returns (or continues) to 'k'.
 
@@ -139,21 +139,21 @@ system_code:                ; ( key k {caps} -- cap )
     dict get                ; k cap
     ref std.return_value
 
-random_adapter_beh:         ; random_dev <- (cust . n)
+random_adapter_beh:         ; random_dev <- cust,n
     msg -1                  ; n
     push 1                  ; n 1
     alu sub                 ; limit=n-1
     msg 1                   ; limit cust
-    pair 1                  ; (cust . limit)
-    state 0                 ; (cust . limit) random_dev
+    pair 1                  ; cust,limit
+    state 0                 ; cust,limit random_dev
     actor send              ; --
     ref std.commit
 
-timer_adapter_beh:          ; timer_dev <- (dt msg . actor)
+timer_adapter_beh:          ; timer_dev <- dt,msg,actor
     msg 2                   ; msg
     msg -2                  ; msg target=actor
     msg 1                   ; msg target delay=dt
-    pair 2                  ; timer_req=(delay target . msg)
+    pair 2                  ; timer_req=delay,target,msg
     state 0                 ; timer_req timer_dev
     actor send              ; --
     ref std.commit
@@ -181,8 +181,8 @@ prepare_env:                ; ( k -- env )
     push random_adapter_beh ; k #? system println timer random_dev random_adapter_beh
     actor create            ; k #? system println timer random=random_adapter_beh.random_dev
 
-    pair 3                  ; k #? scope=(random timer println . system)
-    pair 1                  ; k env=(scope . #?)
+    pair 3                  ; k #? scope=random,timer,println,system
+    pair 1                  ; k env=scope,#?
     ref std.return_value
 
 ; Miscellaneous procedures.
@@ -204,7 +204,7 @@ ddreturn_undef:             ; k value value
     ref std.return_undef
 
 is_bool_pair:               ; ( value -- boolean )
-    roll -2                 ; k value=(head . tail)
+    roll -2                 ; k value=head,tail
     part 1                  ; k tail head
     call is_boolean         ; k tail bool?(head)
     if_not dreturn_f        ; k tail
@@ -217,35 +217,35 @@ eq:                         ; ( pair -- boolean )
     roll -2                 ; k pair
     dup 1                   ; k pair pair
     typeq #pair_t           ; k pair is_pair(pair)
-    if_not dreturn_undef    ; k pair=(a . b)
+    if_not dreturn_undef    ; k pair=a,b
     part 1                  ; k b a
     call eq.proc            ; k boolean
     ref std.return_value
 
 list_of_3:
-    pair_t 3 #nil           ; (3)
+    pair_t 3 #nil           ; 3,#nil
 test_eq:                    ; ( -- )
     push #?                 ; k #?
     push #?                 ; k #? #?
-    pair 1                  ; k (#? . #?)
+    pair 1                  ; k #?,#?
     call eq                 ; k #?==#?
     assert #t               ; k
 
-    push list_of_3          ; k (3)
-    push 2                  ; k (3) 2
-    push 1                  ; k (3) 2 1
-    pair 2                  ; k (1 2 3)
-    push list_of_3          ; k (1 2 3) (3)
-    push 2                  ; k (1 2 3) (3) 2
-    push 1                  ; k (1 2 3) (3) 2 1
-    pair 2                  ; k (1 2 3) (1 2 3)
-    pair 1                  ; k ((1 2 3) . (1 2 3))
-    call eq                 ; k (1 2 3)==(1 2 3)
+    push list_of_3          ; k 3,#nil
+    push 2                  ; k 3,#nil 2
+    push 1                  ; k 3,#nil 2 1
+    pair 2                  ; k 1,2,3,#nil
+    push list_of_3          ; k 1,2,3,#nil 3,#nil
+    push 2                  ; k 1,2,3,#nil 3,#nil 2
+    push 1                  ; k 1,2,3,#nil 3,#nil 2 1
+    pair 2                  ; k 1,2,3,#nil 1,2,3,#nil
+    pair 1                  ; k (1,2,3,#nil),(1,2,3,#nil)
+    call eq                 ; k 1,2,3,#nil==1,2,3,#nil
     assert #t               ; k
 
     push 1                  ; k 1
     push 2                  ; k 1 2
-    pair 1                  ; k (1 . 2)
+    pair 1                  ; k 1,2
     call eq                 ; k 1==2
     assert #f               ; k
 
@@ -278,14 +278,14 @@ and:                        ; ( pair -- boolean | #? )
     roll -2                 ; k pair
     dup 1                   ; k pair pair
     call is_bool_pair       ; k pair ok?
-    if_not dreturn_undef    ; k pair=(a . b)
+    if_not dreturn_undef    ; k pair=a,b
     part 1                  ; k b a
     if_not dreturn_f        ; k b
     ref std.return_value
 
 test_and_case:              ; ( expect b a -- )
     roll -4                 ; k expect b a
-    pair 1                  ; k expect pair=(a . b)
+    pair 1                  ; k expect pair=a,b
     call and                ; k expect actual
     cmp eq                  ; k expect==actual
     assert #t               ; k
@@ -322,14 +322,14 @@ or:                         ; ( pair -- boolean | #? )
     roll -2                 ; k pair
     dup 1                   ; k pair pair
     call is_bool_pair       ; k pair ok?
-    if_not dreturn_undef    ; k pair=(a . b)
+    if_not dreturn_undef    ; k pair=a,b
     part 1                  ; k b a
     if dreturn_t            ; k b
     ref std.return_value
 
 test_or_case:               ; ( expect b a -- )
     roll -4                 ; k expect b a
-    pair 1                  ; k expect pair=(a . b)
+    pair 1                  ; k expect pair=a,b
     call or                 ; k expect actual
     cmp eq                  ; k expect==actual
     assert #t               ; k
@@ -448,20 +448,20 @@ test_neg:                   ; ( -- )
     return
 
 add:                        ; ( pair -- n | #? )
-    roll -2                 ; k pair=(a . b)
+    roll -2                 ; k pair=a,b
     part 1                  ; k b a
     alu add                 ; k b+a
     ref std.return_value
 
 sub:                        ; ( pair -- n | #? )
-    roll -2                 ; k pair=(a . b)
+    roll -2                 ; k pair=a,b
     part 1                  ; k b a
     roll 2                  ; k a b
     alu sub                 ; k a-b
     ref std.return_value
 
 mul:                        ; ( pair -- n | #? )
-    roll -2                 ; k pair=(a . b)
+    roll -2                 ; k pair=a,b
     part 1                  ; k b a
     alu mul                 ; k b*a
     ref std.return_value
@@ -469,18 +469,18 @@ mul:                        ; ( pair -- n | #? )
 test_alu:                   ; ( -- )
     push 1729               ; k b=1729
     push 42                 ; k b a=42
-    pair 1                  ; k pair=(a . b)
+    pair 1                  ; k pair=a,b
     dup 1                   ; k pair pair
     call add                ; k pair a+b
     roll 2                  ; k a+b pair
     call mul                ; k a+b a*b
-    pair 1                  ; k (a*b . a+b)
+    pair 1                  ; k a*b,a+b
     call sub                ; k (a*b)-(a+b)
     assert 70847            ; k
     return
 
 div:                        ; ( pair -- q )
-    roll 2                  ; k pair=(n . d)
+    roll 2                  ; k pair=n,d
     part 1                  ; k d n
     roll 2                  ; k n d
     call div_mod.divmod     ; k q r
@@ -490,13 +490,13 @@ div:                        ; ( pair -- q )
 test_div:                   ; ( -- )
     push 5                  ; k d=5
     push 17                 ; k d n=17
-    pair 1                  ; k pair=(n . d)
+    pair 1                  ; k pair=n,d
     call div                ; k q
     assert 3                ; k
     return
 
 mod:                        ; ( pair -- r )
-    roll 2                  ; k pair=(n . d)
+    roll 2                  ; k pair=n,d
     part 1                  ; k d n
     roll 2                  ; k n d
     call div_mod.divmod     ; k q r
@@ -507,7 +507,7 @@ mod:                        ; ( pair -- r )
 test_mod:                   ; ( -- )
     push 5                  ; k d=5
     push 17                 ; k d n=17
-    pair 1                  ; k pair=(n . d)
+    pair 1                  ; k pair=n,d
     call mod                ; k r
     assert 2                ; k
     return
@@ -536,7 +536,7 @@ compare_gt:                 ; k b a
 
 test_compare_case:          ; ( expect b a -- )
     roll -4                 ; k expect b a
-    pair 1                  ; k expect pair=(a . b)
+    pair 1                  ; k expect pair=a,b
     call compare            ; k expect actual
     cmp eq                  ; k eq?
     assert #t               ; k
@@ -558,25 +558,25 @@ test_compare:               ; ( -- )
     return
 
 less:                       ; ( pair -- boolean | #? )
-    roll -2                 ; k pair=(a . b)
+    roll -2                 ; k pair=a,b
     part 1                  ; k b a
     cmp gt                  ; k b>a
     ref std.return_value
 
 less_equal:                 ; ( pair -- boolean | #? )
-    roll -2                 ; k pair=(a . b)
+    roll -2                 ; k pair=a,b
     part 1                  ; k b a
     cmp ge                  ; k b>=a
     ref std.return_value
 
 greater:                    ; ( pair -- boolean | #? )
-    roll -2                 ; k pair=(a . b)
+    roll -2                 ; k pair=a,b
     part 1                  ; k b a
     cmp lt                  ; k b<a
     ref std.return_value
 
 greater_equal:              ; ( pair -- boolean | #? )
-    roll -2                 ; k pair=(a . b)
+    roll -2                 ; k pair=a,b
     part 1                  ; k b a
     cmp le                  ; k b<=a
     ref std.return_value
@@ -584,17 +584,17 @@ greater_equal:              ; ( pair -- boolean | #? )
 test_cmp:                   ; ( -- )
     push 1729               ; k b=1729
     push 42                 ; k b a=42
-    pair 1                  ; k (a . b)
+    pair 1                  ; k a,b
     call less               ; k a<b
     assert #t               ; k
     push 666                ; k b=666
     push 666                ; k b a=666
-    pair 1                  ; k (a . b)
+    pair 1                  ; k a,b
     call greater_equal      ; k a>=b
     assert #t               ; k
     push 42                 ; k b=42
     push #t                 ; k b a=#t
-    pair 1                  ; k (a . b)
+    pair 1                  ; k a,b
     call greater            ; k a>b
     assert #?               ; k
     return

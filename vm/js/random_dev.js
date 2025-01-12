@@ -5,11 +5,11 @@
 //  cust
 //      Use the entire fixnum range.
 
-//  (cust . limit)
+//  cust,limit
 //      Pick a fixnum between 0 and 'limit' inclusive. The 'limit' may be
 //      negative.
 
-//  (cust a . b)
+//  cust,a,b
 //      Pick a fixnum between 'a' and 'b', inclusive. Either of 'a' or 'b' may
 //      be the larger.
 

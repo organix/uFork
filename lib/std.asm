@@ -49,25 +49,25 @@ sink_beh:                   ; _ <- _
 commit:
     end commit
 
-rv_self:                    ; _ <- (cust . _)
+rv_self:                    ; _ <- cust,_
     actor self cust_send    ; msg=SELF
 
-rv_undef:                   ; _ <- (cust . _)
+rv_undef:                   ; _ <- cust,_
     push #? cust_send       ; msg=#?
 
-rv_nil:                     ; _ <- (cust . _)
+rv_nil:                     ; _ <- cust,_
     push #nil cust_send     ; msg=#nil
 
-rv_false:                   ; _ <- (cust . _)
+rv_false:                   ; _ <- cust,_
     push #f cust_send       ; msg=#f
 
-rv_true:                    ; _ <- (cust . _)
+rv_true:                    ; _ <- cust,_
     push #t cust_send       ; msg=#t
 
-rv_zero:                    ; _ <- (cust . _)
+rv_zero:                    ; _ <- cust,_
     push 0 cust_send        ; msg=0
 
-rv_one:                     ; _ <- (cust . _)
+rv_one:                     ; _ <- cust,_
     push 1 cust_send        ; msg=1
 
 resend:                     ; _ <- msg

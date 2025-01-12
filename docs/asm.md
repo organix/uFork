@@ -13,7 +13,7 @@ This document describes a textual assembly language for uFork.
         std: "https://ufork.org/lib/std.asm"
 
     beh:
-    fib_beh:                    ; _ <- (cust . n)
+    fib_beh:                    ; _ <- cust,n
         msg -1                  ; n
         dup 1                   ; n n
         push 2                  ; n n 2
@@ -28,31 +28,31 @@ This document describes a textual assembly language for uFork.
         push 1                  ; n k n 1
         alu sub                 ; n k n-1
         pick 2                  ; n k n-1 k
-        pair 1                  ; n k (k . n-1)
-        push #?                 ; n k (k . n-1) #?
-        push fib_beh            ; n k (k . n-1) #? fib_beh
-        actor create            ; n k (k . n-1) fib.#?
+        pair 1                  ; n k k,n-1
+        push #?                 ; n k k,n-1 #?
+        push fib_beh            ; n k k,n-1 #? fib_beh
+        actor create            ; n k k,n-1 fib.#?
         actor send              ; n k
 
         roll 2                  ; k n
         push 2                  ; k n 2
         alu sub                 ; k n-2
         roll 2                  ; n-2 k
-        pair 1                  ; (k . n-2)
-        push #?                 ; (k . n-2) #?
-        push fib_beh            ; (k . n-2) #? fib_beh
-        actor create            ; (k . n-2) fib.#?
+        pair 1                  ; k,n-2
+        push #?                 ; k,n-2 #?
+        push fib_beh            ; k,n-2 #? fib_beh
+        actor create            ; k,n-2 fib.#?
         ref std.send_msg
 
     k:                          ; cust <- m
         msg 0                   ; m
         state 0                 ; m cust
-        pair 1                  ; (cust . m)
-        push k2                 ; (cust . m) k2
-        actor become            ; k2.(cust . m)
+        pair 1                  ; cust,m
+        push k2                 ; cust,m k2
+        actor become            ; k2.cust,m
         ref std.commit
 
-    k2:                         ; (cust . m) <- n
+    k2:                         ; cust,m <- n
         state -1                ; m
         msg 0                   ; m n
         alu add                 ; m+n
@@ -212,8 +212,8 @@ _k_                  | `jump`              | —            | continue at _k_
 _k_                  | `return`            | —            | return to _k_
 … _tail_ _head_      | `pair` _n_          | _pair_       | create _pair_ from _head_ and _tail_ (_n_ times)
 _pair_               | `part` _n_          | … _tail_ _head_ | split _pair_ into _head_ and _tail_ (_n_ times)
-(_v₁_ … _vₙ_ . _tailₙ_) | `nth` _n_         | _vₙ_         | copy item _n_ from a _pair_ list
-(_v₁_ … _vₙ_ . _tailₙ_) | `nth` -_n_        | _tailₙ_      | copy tail _n_ from a _pair_ list
+_v₁_,…,_vₙ_,_tailₙ_  | `nth` _n_         | _vₙ_         | copy item _n_ from a _pair_ list
+_v₁_,…,_vₙ_,_tailₙ_  | `nth` -_n_        | _tailₙ_      | copy tail _n_ from a _pair_ list
 _dict_ _key_         | `dict` `has`        | _bool_       | `#t` if _dict_ has a binding for _key_, otherwise `#f`
 _dict_ _key_         | `dict` `get`        | _value_      | the first _value_ bound to _key_ in _dict_, or `#?`
 _dict_ _key_ _value_ | `dict` `add`        | _dict'_      | add a binding from _key_ to _value_ in _dict_
@@ -309,18 +309,10 @@ to succinctly designate parts of a pair-list.
   * Zero designates the whole list/value
 
 ```
-  0              -1              -2              -3
----->[head,tail]---->[head,tail]---->[head,tail]---->...
-    +1 |            +2 |            +3 |
-       V               V               V
-```
-
-...or more compactly...
-
-```
-0-->[1,-1]-->[2,-2]-->[3,-3]--> ...
-     |        |        |
-     V        V        V
+  0                -1                -2                -3
+---->head,tail-------->head,tail-------->head,tail-------->...
+    +1 |              +2 |              +3 |
+       V                 V                 V
 ```
 
 If the index is out-of-bounds, the result is `#?` (undefined).

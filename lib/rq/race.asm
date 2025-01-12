@@ -27,7 +27,7 @@ start_tag:
     ref 1
 
 beh:
-race_beh:                   ; (requestors . throttle) <- request
+race_beh:                   ; requestors,throttle <- request
 
 ; The work of handling the request is deferred to a dedicated "runner" actor,
 ; freeing up the race requestor to accept additional requests.
@@ -36,13 +36,13 @@ race_beh:                   ; (requestors . throttle) <- request
     msg 2                   ; value callback
     state 1                 ; value callback queue=requestors
     push #nil               ; value callback queue running=#nil
-    pair 3                  ; (running queue callback . value)
-    push runner_beh         ; (running queue callback . value) runner_beh
-    actor create            ; runner=runner_beh.(running queue callback . value)
+    pair 3                  ; running,queue,callback,value
+    push runner_beh         ; running,queue,callback,value runner_beh
+    actor create            ; runner=runner_beh.running,queue,callback,value
     state -1                ; runner throttle
     push start_tag          ; runner throttle start_tag
-    pair 1                  ; runner (start_tag . throttle)
-    pick 2                  ; runner (start_tag . throttle) runner
+    pair 1                  ; runner start_tag,throttle
+    pick 2                  ; runner start_tag,throttle runner
     actor send              ; runner
 
 ; Provide a cancel capability if the request allows for it.
@@ -52,26 +52,26 @@ race_beh:                   ; (requestors . throttle) <- request
     if_not std.commit       ; runner
     push cancel_tag         ; runner label=cancel_tag
     roll 2                  ; label rcvr=runner
-    pair 1                  ; (rcvr . label)
-    push lib.label_beh      ; (rcvr . label) label_beh
-    actor create            ; cancel=label_beh.(rcvr . label)
+    pair 1                  ; rcvr,label
+    push lib.label_beh      ; rcvr,label label_beh
+    actor create            ; cancel=label_beh.rcvr,label
     msg 1                   ; cancel to_cancel
     actor send              ; --
     ref std.commit
 
-runner_beh:                 ; (running queue callback . value) <- message
+runner_beh:                 ; running,queue,callback,value <- message
 
 ; The "runner" actor processes a single race request.
 ; There are three kinds of message it expects to receive:
 
-;   (start_tag . quota)
+;   start_tag,quota
 ;       Start up to 'quota' requestors from the queue. If 'quota' is omitted,
 ;       the entire queue is started.
 
-;   (cancel_tag . reason)
+;   cancel_tag,reason
 ;       Cancel all running requestors with the 'reason' and become inert.
 
-;   (canceller . result)
+;   canceller,result
 ;       A result has arrived from a finished requestor, labelled with its
 ;       canceller.
 
@@ -98,7 +98,7 @@ loop:
 ; that doesn't matter.
 
     pick 1                  ; dest src src
-    if_not check_result     ; dest src=(first . rest)
+    if_not check_result     ; dest src=first,rest
     part 1                  ; dest rest first
     msg 1                   ; dest rest first canceller
     pick 2                  ; dest rest first canceller first
@@ -106,7 +106,7 @@ loop:
     if skip                 ; dest rest first
     roll 3                  ; rest first dest
     roll 2                  ; rest dest first
-    pair 1                  ; rest dest'=(first . dest)
+    pair 1                  ; rest dest'=first,dest
     roll 2                  ; dest' rest
     ref loop
 skip:
@@ -135,15 +135,15 @@ become:
     state 3                 ; running' value callback
     state 2                 ; running' value callback queue
     roll 4                  ; value callback queue running'
-    pair 3                  ; (running' queue callback . value)
-    push runner_beh         ; (running' queue callback . value) runner_beh
+    pair 3                  ; running',queue,callback,value
+    push runner_beh         ; running',queue,callback,value runner_beh
     actor become            ; --
     ref std.commit
 start_one:
     push 1                  ; running' quota=1
     push start_tag          ; running' quota start_tag
-    pair 1                  ; running' (start_tag . quota)
-    actor self              ; running' (start_tag . quota) SELF
+    pair 1                  ; running' start_tag,quota
+    actor self              ; running' start_tag,quota SELF
     actor send              ; running'
     ref become
 finish:
@@ -185,11 +185,11 @@ pop:
     state -3                ; ... requestor canceller value
     pick 2                  ; ... requestor canceller value label=canceller
     actor self              ; ... requestor canceller value label rcvr=SELF
-    pair 1                  ; ... requestor canceller value (rcvr . label)
-    push lib.label_beh      ; ... requestor canceller value (rcvr . label) label_beh
-    actor create            ; ... requestor canceller value callback=label_beh.(rcvr . label)
+    pair 1                  ; ... requestor canceller value rcvr,label
+    push lib.label_beh      ; ... requestor canceller value rcvr,label label_beh
+    actor create            ; ... requestor canceller value callback=label_beh.rcvr,label
     pick 3                  ; ... requestor canceller value callback to_cancel=canceller
-    pair 2                  ; ... requestor canceller request=(to_cancel callback . value)
+    pair 2                  ; ... requestor canceller request=to_cancel,callback,value
     roll 3                  ; ... canceller request requestor
     actor send              ; ... canceller
 
@@ -197,8 +197,8 @@ pop:
 
     roll 3                  ; running queue' canceller quota'
     push start_tag          ; running queue' canceller quota' start_tag
-    pair 1                  ; running queue' canceller (start_tag . quota')
-    actor self              ; running queue' canceller (start_tag . quota') SELF
+    pair 1                  ; running queue' canceller start_tag,quota'
+    actor self              ; running queue' canceller start_tag,quota' SELF
     actor send              ; running queue' canceller
 
 ; Mark the requestor as running.
@@ -208,9 +208,9 @@ pop:
     roll 4                  ; running canceller value callback queue'
     roll 5                  ; canceller value callback queue' running
     roll 5                  ; value callback queue' running canceller
-    pair 1                  ; value callback queue' running'=(canceller . running)
-    pair 3                  ; (running' queue' callback . value)
-    push runner_beh         ; (running' queue' callback . value) runner_beh
+    pair 1                  ; value callback queue' running'=canceller,running
+    pair 3                  ; running',queue',callback,value
+    push runner_beh         ; running',queue',callback,value runner_beh
     actor become            ; --
     ref std.commit
 cancel:                     ; running reason
@@ -220,9 +220,9 @@ cancel:                     ; running reason
 
     push #?                 ; running reason #?
     roll 2                  ; running #? reason
-    pair 1                  ; running (reason . #?)
-    push lib.broadcast_beh  ; running (reason . #?) broadcast_beh
-    actor create            ; running broadcast=broadcast_beh.(reason . #?)
+    pair 1                  ; running reason,#?
+    push lib.broadcast_beh  ; running reason,#? broadcast_beh
+    actor create            ; running broadcast=broadcast_beh.reason,#?
     actor send              ; --
     push #?                 ; #?
     push std.sink_beh       ; #? sink_beh
@@ -251,16 +251,16 @@ test:                       ; judge <- {caps}
     push dev.timer_key      ; #nil 4th 3rd 2nd 1st probation {caps} timer_key
     dict get                ; #nil 4th 3rd 2nd 1st probation timer
     state 0                 ; #nil 4th 3rd 2nd 1st probation timer judge
-    pair 7                  ; (judge timer probation 1st 2nd 3rd 4th)
-    push referee.beh        ; (judge timer probation 1st 2nd 3rd 4th) referee_beh
-    actor create            ; referee=referee_beh.(judge timer probation 1st 2nd 3rd 4th)
+    pair 7                  ; judge,timer,probation,1st,2nd,3rd,4th,#nil
+    push referee.beh        ; judge,timer,probation,1st,2nd,3rd,4th,#nil referee_beh
+    actor create            ; referee=referee_beh.judge,timer,probation,1st,2nd,3rd,4th,#nil
     push unwrap_result.beh  ; referee unwrap_result_beh
     actor create            ; referee'=unwrap_result_beh.referee
     ; msg 0                   ; referee' {caps}
     ; push dev.debug_key      ; referee' {caps} debug_key
     ; dict get                ; referee' debug
-    ; pair 1                  ; (debug . referee')
-    ; push lib.tee_beh        ; (debug . referee') tee_beh
+    ; pair 1                  ; debug,referee'
+    ; push lib.tee_beh        ; debug,referee' tee_beh
     ; actor create            ; referee''
 
 suite:
@@ -269,7 +269,7 @@ suite:
     dict get                ; referee timer
 
 ; Four requestors are raced, all of which fail except the third.
-; Expected output: (#t . +1000) @ 15ms
+; Expected output: #t,+1000 @ 15ms
 
     dup 2                   ; ... referee timer
     push #?                 ; ... referee timer throttle=#?
@@ -291,7 +291,7 @@ suite:
     call run_test           ; ...
 
 ; Two requestors are raced, both of which fail.
-; Expected output: (#f . +666) @ 30ms
+; Expected output: #f,+666 @ 30ms
 
     dup 2                   ; ... referee timer
     push #?                 ; ... referee timer throttle=#?
@@ -307,7 +307,7 @@ suite:
     call run_test           ; ...
 
 ; Two requestors are raced, both of which succeed.
-; Expected output: (#t . +3000) @ 35ms
+; Expected output: #t,+3000 @ 35ms
 
     dup 2                   ; ... referee timer
     push #?                 ; ... referee timer throttle=#?
@@ -339,7 +339,7 @@ suite:
     call run_test           ; ...
 
 ; Fallback. Three requestors are raced, throttled one at a time.
-; Expected output: (#t . +5000) @ 45ms
+; Expected output: #t,+5000 @ 45ms
 
     dup 2                   ; ... referee timer
     push 1                  ; ... referee timer throttle=1
@@ -363,8 +363,8 @@ run_test:                   ; ( referee timer throttle cancel_at spec -- )
 ; The 'spec' is a list describing the requestors to be raced.
 ; It should look something like
 
-;   (ok value delay ... ok value delay ok value delay)
-;    \---- nth ---/ ... \---- 2nd ---/ \---- 1st ---/
+;   ok,value,delay,...,ok,value,delay,ok,value,delay,#nil
+;   \---- nth ---/     \---- 2nd ---/ \---- 1st ---/
 
 ; where 1st denotes the first requestor, 2nd denotes the second requestor, etc.
 
@@ -378,14 +378,14 @@ consume_spec:
     dup 1                   ; k referee timer throttle cancel_at requestors spec spec
     if_not make_request     ; k referee timer throttle cancel_at requestors spec
     part 3                  ; k referee timer throttle cancel_at requestors spec' delay value/error ok
-    pair 1                  ; k referee timer throttle cancel_at requestors spec' delay result=(ok . value/error)
+    pair 1                  ; k referee timer throttle cancel_at requestors spec' delay result=ok,value/error
     pick 7                  ; k referee timer throttle cancel_at requestors spec' delay result timer
-    pair 2                  ; k referee timer throttle cancel_at requestors spec' (timer result . delay)
-    push mock_beh           ; k referee timer throttle cancel_at requestors spec' (timer result . delay) mock_beh
-    actor create            ; k referee timer throttle cancel_at requestors spec' mock=mock_beh.(timer delay . result)
+    pair 2                  ; k referee timer throttle cancel_at requestors spec' timer,result,delay
+    push mock_beh           ; k referee timer throttle cancel_at requestors spec' timer,result,delay mock_beh
+    actor create            ; k referee timer throttle cancel_at requestors spec' mock=mock_beh.timer,delay,result
     roll 3                  ; k referee timer throttle cancel_at spec' mock requestors
     roll 2                  ; k referee timer throttle cancel_at spec' requestors mock
-    pair 1                  ; k referee timer throttle cancel_at spec' requestors'=(mock . requestors)
+    pair 1                  ; k referee timer throttle cancel_at spec' requestors'=mock,requestors
     ref consume_spec
 make_request:               ; k referee timer throttle cancel_at requestors spec
     drop 1                  ; k referee timer throttle cancel_at requestors
@@ -402,21 +402,21 @@ make_request:               ; k referee timer throttle cancel_at requestors spec
     push #?                 ; k timer throttle cancel_at requestors value callback canceller message=#?
     pick 2                  ; k timer throttle cancel_at requestors value callback canceller message target=canceller
     pick 7                  ; k timer throttle cancel_at requestors value callback canceller message target delay=cancel_at
-    pair 2                  ; k timer throttle cancel_at requestors value callback canceller (delay target . message)
-    pick 8                  ; k timer throttle cancel_at requestors value callback canceller (delay target . message) timer
+    pair 2                  ; k timer throttle cancel_at requestors value callback canceller delay,target,message
+    pick 8                  ; k timer throttle cancel_at requestors value callback canceller delay,target,message timer
     actor send              ; k timer throttle cancel_at requestors value callback to_cancel=canceller
 make_race:
-    pair 2                  ; k timer throttle cancel_at requestors request=(to_cancel callback . value)
+    pair 2                  ; k timer throttle cancel_at requestors request=to_cancel,callback,value
     roll 4                  ; k timer cancel_at requestors request throttle
     roll 3                  ; k timer cancel_at request throttle requestors
-    pair 1                  ; k timer cancel_at request (requestors . throttle)
-    push race_beh           ; k timer cancel_at request (requestors . throttle) race_beh
-    actor create            ; k timer cancel_at request race=race_beh.(requestors . throttle)
+    pair 1                  ; k timer cancel_at request requestors,throttle
+    push race_beh           ; k timer cancel_at request requestors,throttle race_beh
+    actor create            ; k timer cancel_at request race=race_beh.requestors,throttle
     actor send              ; k timer cancel_at
     drop 2                  ; k
     return
 
-mock_beh:                   ; (timer result . delay) <- request
+mock_beh:                   ; timer,result,delay <- request
 
 ; A requestor that produces a given 'result' after 'delay' milliseconds.
 
@@ -424,7 +424,7 @@ mock_beh:                   ; (timer result . delay) <- request
     state -2                ; result delay
     msg 2                   ; result delay callback
     msg 1                   ; result delay callback to_cancel
-    pair 3                  ; timer_request=(to_cancel callback delay . result)
+    pair 3                  ; timer_request=to_cancel,callback,delay,result
     state 1                 ; timer_request timer
     actor send              ; --
     ref std.commit

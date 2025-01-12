@@ -55,7 +55,7 @@ function io_dev(core, on_stdout) {
             if (core.u_trace !== undefined) {
                 core.u_trace("READ:", ufork.print(char));
             }
-            const message = core.h_reserve_ram({  // (#t . char)
+            const message = core.h_reserve_ram({  // #t,char
                 t: ufork.PAIR_T,
                 x: ufork.TRUE_RAW,
                 y: char

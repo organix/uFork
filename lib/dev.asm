@@ -47,7 +47,7 @@ boot:                       ; _ <- {caps}
     push -3                 ; #nil -3
     push -2                 ; #nil -3 -2
     push -1                 ; #nil -3 -2 -1
-    pair 3                  ; msg=(-1 -2 -3)
+    pair 3                  ; msg=-1,-2,-3,#nil
     msg 0                   ; msg {caps}
     push debug_key          ; msg {caps} debug_key
     dict get                ; msg debug_dev
@@ -60,7 +60,7 @@ boot:                       ; _ <- {caps}
     push debug_key          ; msg {caps} debug_key
     dict get                ; msg debug_dev
     push 1000               ; msg debug_dev delay=1000
-    pair 2                  ; timer_req=(delay debug_dev . msg)
+    pair 2                  ; timer_req=delay,debug_dev,msg
     msg 0                   ; timer_req {caps}
     push timer_key          ; timer_req {caps} timer_key
     dict get                ; timer_req timer_dev
@@ -73,7 +73,7 @@ boot:                       ; _ <- {caps}
     push std.sink_beh       ; char #? sink_beh
     actor create            ; char callback=sink.#?
     push #?                 ; char callback to_cancel=#?
-    pair 2                  ; io_req=(to_cancel callback . char)
+    pair 2                  ; io_req=to_cancel,callback,char
     msg 0                   ; io_req {caps}
     push io_key             ; io_req {caps} io_key
     dict get                ; io_req io_dev
@@ -86,7 +86,7 @@ boot:                       ; _ <- {caps}
     push debug_key          ; input {caps} debug_key
     dict get                ; input callback=debug_dev
     push #?                 ; input callback to_cancel=#?
-    pair 2                  ; io_req=(to_cancel callback . input)
+    pair 2                  ; io_req=to_cancel,callback,input
     msg 0                   ; io_req {caps}
     push io_key             ; io_req {caps} io_key
     dict get                ; io_req io_dev
@@ -99,10 +99,10 @@ boot:                       ; _ <- {caps}
     msg 0                   ; b a {caps}
     push debug_key          ; b a {caps} debug_key
     dict get                ; b a cust=debug_dev
-    pair 2                  ; (cust a . b)
-    msg 0                   ; (cust a . b) {caps}
-    push random_key         ; (cust a . b) {caps} random_key
-    dict get                ; (cust a . b) random_dev
+    pair 2                  ; cust,a,b
+    msg 0                   ; cust,a,b {caps}
+    push random_key         ; cust,a,b {caps} random_key
+    dict get                ; cust,a,b random_dev
     actor send              ; --
 
     ref std.commit

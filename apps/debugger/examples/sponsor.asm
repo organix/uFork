@@ -8,7 +8,7 @@
 
 ; Sponsor controller that refills all quotas
 
-refill:                     ; (memory events . cycles) <- sponsor
+refill:                     ; memory,events,cycles <- sponsor
     msg 0                   ; sponsor
     quad -4                 ; error=Z Y X T
     drop 3                  ; error
@@ -147,9 +147,9 @@ boot:                       ; _ <- {caps}
     push 16                 ; sponsor sponsor cycles=8
     push 4                  ; sponsor sponsor cycles events=3
     push 8                  ; sponsor sponsor cycles events memory=5
-    pair 2                  ; sponsor sponsor (memory events . cycles)
-    push refill             ; sponsor sponsor (memory events . cycles) refill
-    actor create            ; sponsor sponsor refill.(memory events . cycles)
+    pair 2                  ; sponsor sponsor memory,events,cycles
+    push refill             ; sponsor sponsor memory,events,cycles refill
+    actor create            ; sponsor sponsor refill.memory,events,cycles
     sponsor start           ; sponsor
     push #?                 ; sponsor msg=#?
     push #?                 ; sponsor msg #?

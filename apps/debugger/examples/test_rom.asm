@@ -10,13 +10,13 @@ test_pairs:
     assert 422              ; --
     push 3                  ; 3
     push 2                  ; 3 2
-    pair 1                  ; (2 . 3)
-    push 1                  ; (2 . 3) 1
-    pair 1                  ; (1 2 . 3)
-    part 1                  ; (2 . 3) 1
-    assert 1                ; (2 . 3)
-    dup 0                   ; (2 . 3) -- nop
-;    dup 0                   ; (2 . 3) -- nop
+    pair 1                  ; 2,3
+    push 1                  ; 2,3 1
+    pair 1                  ; 1,2,3
+    part 1                  ; 2,3 1
+    assert 1                ; 2,3
+    dup 0                   ; 2,3 -- nop
+;    dup 0                   ; 2,3 -- nop
     part 1                  ; 3 2
     assert 2                ; 3
     dup 1                   ; 3 3
@@ -40,40 +40,40 @@ test_if:
     push 0                  ; 0
     if stop                 ; --
 test_nth:
-    push list-0             ; (273 546 819)
-    part 1                  ; (546 819) 273
-    assert 273              ; (546 819)
-    part 1                  ; (819) 546
-    assert 546              ; (819)
+    push list-0             ; 273,546,819,#nil
+    part 1                  ; 546,819,#nil 273
+    assert 273              ; 546,819,#nil
+    part 1                  ; 819,#nil 546
+    assert 546              ; 819,#nil
     part 1                  ; #nil 819
     assert 819              ; #nil
     assert #nil             ; --
-    push list-0             ; (273 546 819)
-    nth 0                   ; (273 546 819)
+    push list-0             ; 273,546,819,#nil
+    nth 0                   ; 273,546,819,#nil
     assert list-0           ; --
-    push list-0             ; (273 546 819)
+    push list-0             ; 273,546,819,#nil
     nth 1                   ; 273
     assert 273              ; --
-    push list-0             ; (273 546 819)
-    nth -1                  ; (546 819)
+    push list-0             ; 273,546,819,#nil
+    nth -1                  ; 546,819,#nil
     assert list-1           ; --
-    push list-0             ; (273 546 819)
+    push list-0             ; 273,546,819,#nil
     nth 2                   ; 546
     assert 546              ; --
-    push list-0             ; (273 546 819)
-    nth -2                  ; (819)
+    push list-0             ; 273,546,819,#nil
+    nth -2                  ; 819,#nil
     assert list-2           ; --
-    push list-0             ; (273 546 819)
+    push list-0             ; 273,546,819,#nil
     nth 3                   ; 819
     assert 819              ; --
-    push list-0             ; (273 546 819)
+    push list-0             ; 273,546,819,#nil
     nth -3                  ; #nil
     assert list-3           ; --
 ;    assert #nil             ; --
-    push list-0             ; (273 546 819)
+    push list-0             ; 273,546,819,#nil
     nth 4                   ; #?
     assert #?               ; --
-    push list-0             ; (273 546 819)
+    push list-0             ; 273,546,819,#nil
     nth -4                  ; #?
     assert #?               ; --
 test_pick_and_roll:
@@ -136,18 +136,18 @@ test_fib:
     push 34                 ; n fib(n)=34
     push assert_eq_beh      ; n fib(n) assert_eq_beh
     actor create            ; n cust=assert_eq_beh.fib(n)
-    pair 1                  ; (cust . n)
-    push #?                 ; (cust . n) #?
-    push fib_beh            ; (cust . n) #? fib_beh
-    actor create            ; (cust . n) fib
+    pair 1                  ; cust,n
+    push #?                 ; cust,n #?
+    push fib_beh            ; cust,n #? fib_beh
+    actor create            ; cust,n fib
     ref send_msg
 
 ; static data
-list-0:                     ; (273 546 819)
+list-0:                     ; 273,546,819,#nil
     pair_t 16#111           ; 273
-list-1:                     ; (546 819)
+list-1:                     ; 546,819,#nil
     pair_t 16#222           ; 546
-list-2:                     ; (819)
+list-2:                     ; 819,#nil
     pair_t 16#333           ; 819
 list-3:                     ; #nil
     ref #nil
@@ -168,7 +168,7 @@ cell_beh:                   ; value <- value'
     ref commit
 
 ; example from `fib.asm`
-fib_beh:                    ; _ <- (cust . n)
+fib_beh:                    ; _ <- cust,n
     msg -1                  ; n
     dup 1                   ; n n
     push 2                  ; n n 2
@@ -183,31 +183,31 @@ fib_beh:                    ; _ <- (cust . n)
     push 1                  ; n k n 1
     alu sub                 ; n k n-1
     pick 2                  ; n k n-1 k
-    pair 1                  ; n k (k . n-1)
-    push #?                 ; n k (k . n-1) #?
-    push fib_beh            ; n k (k . n-1) #? fib_beh
-    actor create            ; n k (k . n-1) fib.#?
+    pair 1                  ; n k k,n-1
+    push #?                 ; n k k,n-1 #?
+    push fib_beh            ; n k k,n-1 #? fib_beh
+    actor create            ; n k k,n-1 fib.#?
     actor send              ; n k
 
     roll 2                  ; k n
     push 2                  ; k n 2
     alu sub                 ; k n-2
     roll 2                  ; n-2 k
-    pair 1                  ; (k . n-2)
-    push #?                 ; (k . n-2) #?
-    push fib_beh            ; (k . n-2) #? fib_beh
-    actor create            ; (k . n-2) fib.#?
+    pair 1                  ; k,n-2
+    push #?                 ; k,n-2 #?
+    push fib_beh            ; k,n-2 #? fib_beh
+    actor create            ; k,n-2 fib.#?
     ref send_msg
 
 fib_k:                      ; cust <- m
     msg 0                   ; m
     state 0                 ; m cust
-    pair 1                  ; (cust . m)
-    push fib_k2             ; (cust . m) k2
-    actor become            ; k2.(cust . m)
+    pair 1                  ; cust,m
+    push fib_k2             ; cust,m k2
+    actor become            ; k2.cust,m
     ref commit
 
-fib_k2:                     ; (cust . m) <- n
+fib_k2:                     ; cust,m <- n
     state -1                ; m
     msg 0                   ; m n
     alu add                 ; m+n

@@ -19,25 +19,25 @@ boot:                       ; _ <- {caps}
     actor create            ; hello KEQD store callback=intro_cb_beh.{caps}
     push #?                 ; hello KEQD store callback to_cancel=#?
     push dev.intro_tag      ; hello KEQD store callback to_cancel #intro
-    pair 5                  ; intro_request=(#intro to_cancel callback store KEQD . hello)
+    pair 5                  ; intro_request=#intro,to_cancel,callback,store,KEQD,hello
     msg 0                   ; intro_request {caps}
     push dev.awp_key        ; intro_request {caps} awp_key
     dict get                ; intro_request awp_dev
     actor send              ; --
     ref std.commit
 
-intro_cb_beh:               ; {caps} <- (ok . deposit/error)
+intro_cb_beh:               ; {caps} <- ok,deposit/error
     msg 1                   ; ok
     assert #t               ; --
     push store              ; store
     state 0                 ; store {caps}
     push dev.debug_key      ; store {caps} debug_key
     dict get                ; store debug_dev
-    pair 1                  ; (debug_dev . store)
-    push lib.label_beh      ; (debug_dev . store) label_beh
-    actor create            ; withdraw=label_beh.(debug_dev . store)
+    pair 1                  ; debug_dev,store
+    push lib.label_beh      ; debug_dev,store label_beh
+    actor create            ; withdraw=label_beh.debug_dev,store
     msg -1                  ; withdraw deposit
-    pair 1                  ; hello=(deposit . withdraw)
+    pair 1                  ; hello=deposit,withdraw
     push GM_petname         ; hello GM
     push store              ; hello GM store
     push #?                 ; hello GM store #?
@@ -45,7 +45,7 @@ intro_cb_beh:               ; {caps} <- (ok . deposit/error)
     actor create            ; hello GM store callback=sink_beh.#?
     push #?                 ; hello GM store callback to_cancel=#?
     push dev.intro_tag      ; hello GM store callback to_cancel #intro
-    pair 5                  ; intro_request=(#intro to_cancel callback store GM . hello)
+    pair 5                  ; intro_request=#intro,to_cancel,callback,store,GM,hello
     state 0                 ; intro_request {caps}
     push dev.awp_key        ; intro_request {caps} awp_key
     dict get                ; intro_request awp_dev

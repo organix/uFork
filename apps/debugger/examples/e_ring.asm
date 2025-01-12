@@ -24,26 +24,26 @@
 ;;      END
 ;;  ]
 
-build:                      ; (n . log) <- (first . m)
+build:                      ; n,log <- first,m
     state 1                 ; n
     push 1                  ; n 1
     cmp le                  ; n<=1
     if build_0              ; --
 
-    state 0                 ; (n . log)
+    state 0                 ; n,log
     part 1                  ; log n
     push 1                  ; log n 1
     alu sub                 ; log n-1
-    pair 1                  ; (n-1 . log)
-    push build              ; (n-1 . log) build
-    actor create            ; next=build.(n-1 . log)
+    pair 1                  ; n-1,log
+    push build              ; n-1,log build
+    actor create            ; next=build.n-1,log
 
     dup 1                   ; next next
     push ring               ; next next ring
     actor become            ; next
 
-    msg 0                   ; next (first . m)
-    roll 2                  ; (first . m) next
+    msg 0                   ; next first,m
+    roll 2                  ; first,m next
     ref std.send_msg
 
 build_0:
@@ -53,11 +53,11 @@ build_0:
 
     state -1                ; log
     msg 1                   ; log first
-    pair 1                  ; (first . log)
-    push ring_0             ; (first . log) ring_0
+    pair 1                  ; first,log
+    push ring_0             ; first,log ring_0
     actor become            ; --
 
-    msg 0                   ; (first . m)
+    msg 0                   ; first,m
     part 1                  ; m first
     ref std.send_msg
 
@@ -73,7 +73,7 @@ build_0:
 ;;      END
 ;;  ]
 
-ring_0:                     ; (first . log) <- m
+ring_0:                     ; first,log <- m
     msg 0                   ; m
     eq 1                    ; m==1
     if ring_end             ; --
@@ -121,22 +121,22 @@ boot:                       ; _ <- {caps}
     msg 0                   ; debug_dev {caps}
     push dev.clock_key      ; debug_dev {caps} clock_key
     dict get                ; debug_dev clock_dev
-    pair 1                  ; (clock_dev . debug_dev)
-    push lib.relay_beh      ; (clock_dev . debug_dev) relay_beh
-    actor create            ; log=relay_beh.(clock_dev . debug_dev)
+    pair 1                  ; clock_dev,debug_dev
+    push lib.relay_beh      ; clock_dev,debug_dev relay_beh
+    actor create            ; log=relay_beh.clock_dev,debug_dev
     push #?                 ; log #?
     pick 2                  ; log #? log
     actor send              ; log
 
     push n                  ; log n
-    pair 1                  ; (n . log)
-    push build              ; (n . log) build
-    actor create            ; first=build.(n . log)
+    pair 1                  ; n,log
+    push build              ; n,log build
+    actor create            ; first=build.n,log
 
     push m                  ; first m
     pick 2                  ; first m first
-    pair 1                  ; first (first . m)
-    roll 2                  ; (first . m) first
+    pair 1                  ; first first,m
+    roll 2                  ; first,m first
     ref std.send_msg
 
 .export

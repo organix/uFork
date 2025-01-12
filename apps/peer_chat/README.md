@@ -84,7 +84,7 @@ on a link running in the opposite direction.
 Messages from _tx_ to _rx_
 have the following structure:
 
-    (ack seq . content)
+    ack,seq,content
 
 When a message is acknowledged,
 it is removed from the sender's
@@ -100,17 +100,17 @@ then discarded.
             {ack:5,seq:1,    {seq:6}             {seq:1}      {ack:0,seq:6,
                 Q:[]}           |                   |            Q:[]}
                  |              |                   |              |
-    -(msg . m1)->#              |                   |              |
-                 #-(5 1 . m1)--------- - - - - ---->#              |
+    ---msg,m1--->#              |                   |              |
+                 #---5,1,m1----------- - - - - ---->#              |
             {ack:5,seq:2,       |                   #-m1--------------------->
-            Q:[(1 . m1)]}       |                   #-(ack 5 . 1)->#
+             Q:[1,m1]}          |                   #---ack,5,1--->#
                  |              |                {seq:2}           #
                  |              |                   |         {ack:1,seq:6,
                  |              |                   |            Q:[]}
                  |              |                   |              |
-                 |              |                   |              #<-(tmo . 6)-
-                 |              #<---- - - - - ------------(1 . 6)-#
-                 #<-(ack 1 . 6)-#                   |         {ack:1,seq:7,
+                 |              |                   |              #<--tmo,6--
+                 |              #<---- - - - - --------------1,6---#
+                 #<---ack,1,6---#                   |         {ack:1,seq:7,
                  #           {seq:7}                |            Q:[6]}
             {ack:6,seq:2,       |                   |              |
                 Q:[]}           |                   |              |

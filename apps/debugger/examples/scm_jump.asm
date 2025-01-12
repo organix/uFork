@@ -64,7 +64,7 @@ tail:                       ; ... k args env args' closure
 ;     (lambda (a b)
 ;         (+ a b)))
 
-sum_code:                   ; k args=(a b) env=#nil
+sum_code:                   ; k args=a,b,#nil env=#nil
     pick 2                  ; k args env |1| args
     nth 1                   ; k args env |1| a
     pick 3                  ; k args env |2| a args
@@ -79,14 +79,14 @@ sum:
 ;     (lambda (a b c d)
 ;         (+ (sum a b) (sum c d))))
 
-double_sum_code:            ; k args=(a b c d) env=#nil
+double_sum_code:            ; k args=a,b,c,d,#nil env=#nil
     push k1                 ; k args env |1| k1
     push #nil               ; k args env |2| k1 #nil
     pick 4                  ; k args env |3| k1 #nil args
     nth 2                   ; k args env |3| k1 #nil b
     pick 5                  ; k args env |4| k1 #nil b args
     nth 1                   ; k args env |4| k1 #nil b a
-    pair 2                  ; k args env |2| k1 args'=(a b)
+    pair 2                  ; k args env |2| k1 args'=a,b,#nil
     push sum                ; k args env |3| k1 args' sum
     ref call
 k1:                         ; k args env |1| a+b
@@ -96,7 +96,7 @@ k1:                         ; k args env |1| a+b
     nth 4                   ; k args env |4| a+b k2 #nil d
     pick 6                  ; k args env |5| a+b k2 #nil d args
     nth 3                   ; k args env |5| a+b k2 #nil d c
-    pair 2                  ; k args env |3| a+b k2 args'=(c d)
+    pair 2                  ; k args env |3| a+b k2 args'=c,d,#nil
     push sum                ; k args env |4| a+b k2 args' sum
     ref call
 k2:                         ; k args env |2| a+b c+d
@@ -117,7 +117,7 @@ double_sum:
 ;             (ifact (- n 1) (* a n))
 ;             a)))
 
-ifact_code:                 ; k args=(n a) env=#nil
+ifact_code:                 ; k args=n,a,#nil env=#nil
     pick 2                  ; k args env |1| args
     nth 1                   ; k args env |1| n
     push 1                  ; k args env |2| n 1
@@ -137,7 +137,7 @@ recurse:
     nth 1                   ; k args env |3| #nil a*n n
     push 1                  ; k args env |4| #nil a*n n 1
     alu sub                 ; k args env |3| #nil a*n n-1
-    pair 2                  ; k args env |1| args=(n-1 a*n)
+    pair 2                  ; k args env |1| args=n-1,a*n,#nil
     push ifact              ; k args env |2| args closure=ifact
     ref tail
 
@@ -156,37 +156,37 @@ ifact:
 ;             (lambda s
 ;                 (list p q r s) ))))
 
-hof3_code:                  ; k args=(p) env=#nil
+hof3_code:                  ; k args=p,#nil env=#nil
     pick 1                  ; k args env |1| env
     pick 3                  ; k args env |2| env args
-    pair 1                  ; k args env |1| env'=(args . env)
+    pair 1                  ; k args env |1| env'=args,env
     push qr_code            ; k args env |2| env' qr_code
     push scm.closure_t      ; k args env |3| env' qr_code #closure_t
     quad 3                  ; k args env |1| qr=[#closure_t, qr_code, env']
     ref return
 
-qr_code:                    ; k args=(qr) env=((p))
+qr_code:                    ; k args=qr,#nil env=(p,#nil),#nil
     pick 1                  ; k args env |1| env
     pick 3                  ; k args env |2| env args
-    pair 1                  ; k args env |1| env'=(args . env)
+    pair 1                  ; k args env |1| env'=args,env
     push s_code             ; k args env |2| env' s_code
     push scm.closure_t      ; k args env |3| env' s_code #closure_t
     quad 3                  ; k args env |1| yz=[#closure_t, s_code, env']
     ref return
 
-s_code:                     ; k args=s env=((q r) (p))
+s_code:                     ; k args=s env=(q,r,#nil),(p,#nil),#nil
     push #nil               ; k args env |1| #nil
     pick 3                  ; k args env |2| #nil s
     pick 3                  ; k args env |3| #nil s env
-    nth 1                   ; k args env |3| #nil s (q r)
+    nth 1                   ; k args env |3| #nil s q,r,#nil
     nth 2                   ; k args env |3| #nil s r
     pick 4                  ; k args env |4| #nil s r env
-    nth 1                   ; k args env |4| #nil s r (q r)
+    nth 1                   ; k args env |4| #nil s r q,r,#nil
     nth 1                   ; k args env |4| #nil s r q
     pick 5                  ; k args env |5| #nil s r q env
-    nth 2                   ; k args env |5| #nil s r q (p)
+    nth 2                   ; k args env |5| #nil s r q p,#nil
     nth 1                   ; k args env |5| #nil s r q p
-    pair 4                  ; k args env |1| (p q r s)
+    pair 4                  ; k args env |1| p,q,r,s,#nil
     ref return
 
 hof3:
@@ -204,7 +204,7 @@ boot:                       ; _ <- {caps}
     ; push 3                  ; k #nil d c=3
     ; push 2                  ; k #nil d c b=2
     ; push 1                  ; k #nil d c b a=1
-    ; pair 4                  ; k args=(a b c d)
+    ; pair 4                  ; k args=a,b,c,d,#nil
     ; push double_sum         ; k args closure=double_sum
     ; ref call
 
@@ -214,7 +214,7 @@ boot:                       ; _ <- {caps}
     push #nil               ; k #nil
     push 1                  ; k #nil a=1
     push 6                  ; k #nil a n=6
-    pair 2                  ; k args=(n a)
+    pair 2                  ; k args=n,a,#nil
     push ifact              ; k args closure=ifact
     ref call
 
@@ -223,7 +223,7 @@ boot:                       ; _ <- {caps}
 ;     push p_return           ; k=p_return
 ;     push #nil               ; k #nil
 ;     push 1                  ; k #nil p=1
-;     pair 1                  ; k args=(p)
+;     pair 1                  ; k args=p,#nil
 ;     push hof3               ; k args closure=hof3
 ;     ref call
 ; p_return:                   ; qr
@@ -231,7 +231,7 @@ boot:                       ; _ <- {caps}
 ;     push #nil               ; qr k #nil
 ;     push 3                  ; qr k #nil r=3
 ;     push 2                  ; qr k #nil r q=2
-;     pair 2                  ; qr k args=(q r)
+;     pair 2                  ; qr k args=q,r,#nil
 ;     roll 3                  ; k args closure=qr
 ;     ref call
 ; qr_return:                  ; s

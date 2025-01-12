@@ -15,7 +15,7 @@
     dev: "../dev.asm"
 
 beh:
-referee_beh:                ; (judge timer probation . expected_msgs) <- msg
+referee_beh:                ; judge,timer,probation,expected_msgs <- msg
 
 ; If the referee is not expecting any more messages, fail.
 
@@ -36,7 +36,7 @@ referee_beh:                ; (judge timer probation . expected_msgs) <- msg
     state 3                 ; expected_msgs' probation
     state 2                 ; expected_msgs' probation timer
     state 1                 ; expected_msgs' probation timer judge
-    pair 3                  ; state'=(judge timer probation . expected_msgs')
+    pair 3                  ; state'=judge,timer,probation,expected_msgs'
     push referee_beh        ; state' referee_beh
     actor become            ; --
 
@@ -62,14 +62,14 @@ referee_beh:                ; (judge timer probation . expected_msgs) <- msg
     push #t                 ; judge' result=#t
     pick 2                  ; judge' result judge'
     state 3                 ; judge' result judge' delay=probation
-    pair 2                  ; judge' timer_req=(delay judge' . result)
+    pair 2                  ; judge' timer_req=delay,judge',result
     state 2                 ; judge' timer_req timer
     actor send              ; judge'
     state -4                ; judge' expected_msgs'
     state 3                 ; judge' expected_msgs' probation
     state 2                 ; judge' expected_msgs' probation timer
     roll 4                  ; expected_msgs' probation timer judge'
-    pair 3                  ; state'=(judge' timer probation . expected_msgs')
+    pair 3                  ; state'=judge',timer,probation,expected_msgs'
     push referee_beh        ; state' referee_beh
     actor become            ; --
     ref std.commit
@@ -111,8 +111,8 @@ test:                       ; judge <- {caps}
     push 100                ; timer #nil expect_3 expect_2 wrong no_timer probation=100ms
     pick 7                  ; timer #nil expect_3 expect_2 wrong no_timer probation timer
     state 0                 ; timer #nil expect_3 expect_2 wrong no_timer probation timer judge
-    pair 7                  ; timer (judge timer probation no_timer wrong expect_2 expect_3)
-    push referee_beh        ; timer (judge timer probation no_timer wrong expect_2 expect_3) referee_beh
+    pair 7                  ; timer judge,timer,probation,no_timer,wrong,expect_2,expect_3,#nil
+    push referee_beh        ; timer judge,timer,probation,no_timer,wrong,expect_2,expect_3,#nil referee_beh
     actor create            ; timer ref=referee_of_referees
 setup:
     roll 2                  ; ref timer
@@ -177,7 +177,7 @@ setup:
 
 ; Sends three messages to the referee, a slight delay between each.
 
-send_spec:                  ; (msg delay msg delay ...)
+send_spec:                  ; msg,delay,msg,delay,...,#nil
     pair_t 1
     pair_t 25
     pair_t 2
@@ -195,7 +195,7 @@ send_next:
     part 2                  ; k timer referee send_spec' delay msg
     pick 4                  ; k timer referee send_spec' delay msg referee
     roll 3                  ; k timer referee send_spec' msg referee delay
-    pair 2                  ; k timer referee send_spec' timer_req=(delay referee . msg)
+    pair 2                  ; k timer referee send_spec' timer_req=delay,referee,msg
     pick 4                  ; k timer referee send_spec' timer_req timer
     actor send              ; k timer referee send_spec'
     ref send_next

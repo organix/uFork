@@ -139,7 +139,7 @@ function awp_dev({
 //  #t              | true
 //  #f              | false
 //  #nil            | []
-//  (a . b)         | [a, b]
+//  a,b             | [a, b]
 //  fixnum          | integer
 //  capability      | ext(acquaintance, swiss)
 
@@ -304,7 +304,7 @@ function awp_dev({
             const greeting_callback = core.u_nth(message, 1);
             const hello_data = core.u_nth(message, -1);
 
-// (to_cancel greeting_callback petname . hello) -> greeter
+// to_cancel,greeting_callback,petname,hello -> greeter
 
             core.h_event_enqueue(core.h_reserve_ram({
                 t: sponsor,
@@ -621,7 +621,7 @@ function awp_dev({
 
         function resolve(result) {
 
-// (ok . stop/error) -> listen_callback
+// ok,stop/error -> listen_callback
 
             core.h_event_enqueue(core.h_reserve_ram({
                 t: sponsor,

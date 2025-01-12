@@ -22,7 +22,7 @@ impl Device for IoDevice {
         let event = core.mem(ep);
         let sponsor = event.t();
         let dev = event.x();
-        let msg = event.y();  // (to_cancel callback . #?) | (to_cancel callback . fixnum)
+        let msg = event.y();  // to_cancel,callback,#? | to_cancel,callback,fixnum
         if core.typeq(PAIR_T, msg) {
             let _to_cancel = core.nth(msg, PLUS_1);
             // FIXME: cancel option not implemented
@@ -31,7 +31,7 @@ impl Device for IoDevice {
                 return Err(E_NOT_CAP);
             }
             let data = core.nth(msg, MINUS_2);
-            if data == UNDEF {  // (to_cancel callback . #?)
+            if data == UNDEF {  // to_cancel,callback,#?
                 // read request
                 let evt = core.reserve_event(sponsor, callback, UNDEF)?;
                 let stub = core.reserve_stub(dev, evt)?;
@@ -41,18 +41,18 @@ impl Device for IoDevice {
                 let char = Any::new(raw);
                 if char.is_fix() {
                     // if `read` was synchronous, reply immediately
-                    let result = core.reserve(&Quad::pair_t(TRUE, char))?;  // (#t . char)
+                    let result = core.reserve(&Quad::pair_t(TRUE, char))?;  // #t,char
                     core.ram_mut(evt).set_y(result);  // msg = result
                     core.event_enqueue(evt);
                     core.release_stub(stub);
                 }
-            } else if data.is_fix() {  // (to_cancel callback . fixnum)
+            } else if data.is_fix() {  // to_cancel,callback,fixnum
                 // write request
                 unsafe {
                     host_write(data.raw());  // FIXME: what does `host_write` return?
                 }
                 // in the current implementation, `write` is synchronous, so we reply immediately
-                let result = core.reserve(&Quad::pair_t(TRUE, UNDEF))?;  // (#t . #?)
+                let result = core.reserve(&Quad::pair_t(TRUE, UNDEF))?;  // #t,#?
                 let evt = core.reserve_event(sponsor, callback, result)?;
                 core.event_enqueue(evt);
             }

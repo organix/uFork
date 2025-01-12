@@ -41,7 +41,7 @@ function party(asm_url, acquaintance_names = []) {
         },
         on_log(log_level, ...values) {
             print(log_level, ...values);
-            if (values.includes("(+0 . #?)")) {
+            if (values.includes("+0,#?")) {
                 const div = document.createElement("div");
                 div.textContent = "💸";
                 div.style.fontSize = "100px";

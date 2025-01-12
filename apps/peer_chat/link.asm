@@ -4,11 +4,11 @@
 .import
     std: "https://ufork.org/lib/std.asm"
 
-tx_msg:                     ; (tx_msg . content)
+tx_msg:                     ; tx_msg,content
     ref 1
-tx_ack:                     ; (tx_ack ack' . seq')
+tx_ack:                     ; tx_ack,ack',seq'
     ref -1
-tx_tmo:                     ; (tx_tmo . seq')
+tx_tmo:                     ; tx_tmo,seq'
     ref 0
 
 tx_timeout:
@@ -27,7 +27,7 @@ rx_timeout:
 ;   msgs: queue of unacknowledged messages
 ;
 
-tx_beh:                     ; (link timer ack seq . msgs) <- tx_evt
+tx_beh:                     ; link,timer,ack,seq,msgs <- tx_evt
     msg 1                   ; opr
     eq tx_msg               ; opr==tx_msg
     if tx_msg_tail          ; --
@@ -44,12 +44,12 @@ tx_beh:                     ; (link timer ack seq . msgs) <- tx_evt
     actor become            ; --  // become inert
     ref std.commit
 
-tx_msg_tail:                ; (link timer ack seq . msgs) <- (tx_msg . content)
+tx_msg_tail:                ; link,timer,ack,seq,msgs <- tx_msg,content
     ; add message to queue
     state -4                ; msgs
     msg -1                  ; msgs content
     state 4                 ; msgs content seq
-    pair 1                  ; msgs (seq . content)
+    pair 1                  ; msgs seq,content
     deque put               ; msgs'
 
     ; increment seq number
@@ -62,7 +62,7 @@ tx_msg_tail:                ; (link timer ack seq . msgs) <- (tx_msg . content)
     state 3                 ; msgs' msgs' seq+1 ack
     state 2                 ; msgs' msgs' seq+1 ack timer
     state 1                 ; msgs' msgs' seq+1 ack timer link
-    pair 4                  ; msgs' tx_state=(link timer ack seq+1 . msgs')
+    pair 4                  ; msgs' tx_state=link,timer,ack,seq+1,msgs'
     push tx_beh             ; msgs' tx_state tx_beh
     actor become            ; msgs'
 
@@ -72,15 +72,15 @@ tx_msg_tail:                ; (link timer ack seq . msgs) <- (tx_msg . content)
     if_not std.commit       ; msgs'
 
     ; then send message to rx
-    deque pop               ; msgs (seq . content)
-    state 3                 ; msgs (seq . content) ack
-    pair 1                  ; msgs (ack seq . content)
-    state 1                 ; msgs (ack seq . content) link
+    deque pop               ; msgs seq,content
+    state 3                 ; msgs seq,content ack
+    pair 1                  ; msgs ack,seq,content
+    state 1                 ; msgs ack,seq,content link
     ref std.send_msg
 
-tx_ack_tail:                ; (link timer ack seq . msgs) <- (tx_ack ack' . seq')
+tx_ack_tail:                ; link,timer,ack,seq,msgs <- tx_ack,ack',seq'
     ; update ack from seq'
-    state 0                 ; (link timer ack seq . msgs)
+    state 0                 ; link,timer,ack,seq,msgs
     part 4                  ; msgs seq ack timer link
     roll 3                  ; msgs seq timer link ack
     drop 1                  ; msgs seq timer link
@@ -89,7 +89,7 @@ tx_ack_tail:                ; (link timer ack seq . msgs) <- (tx_ack ack' . seq'
 
     ; ack queued message?
     pick 5                  ; msgs seq ack timer link msgs
-    deque pop               ; ... msgs' (seq . content)
+    deque pop               ; ... msgs' seq,content
     part 1                  ; ... msgs' content seq
     msg 2                   ; ... msgs' content seq ack'
     cmp eq                  ; ... msgs' content seq==ack'
@@ -109,28 +109,28 @@ tx_ack_1:                   ; msgs seq ack timer link msgs' content
 
     ; then send another message to rx
     pick 5                  ; ... msgs' seq ack timer link msgs'
-    deque pop               ; ... msgs' seq ack timer link msgs'' (seq . content)
-    pick 5                  ; ... msgs' seq ack timer link msgs'' (seq . content) ack
-    pair 1                  ; ... msgs' seq ack timer link msgs'' (ack seq . content)
-    pick 3                  ; ... msgs' seq ack timer link msgs'' (ack seq . content) link
+    deque pop               ; ... msgs' seq ack timer link msgs'' seq,content
+    pick 5                  ; ... msgs' seq ack timer link msgs'' seq,content ack
+    pair 1                  ; ... msgs' seq ack timer link msgs'' ack,seq,content
+    pick 3                  ; ... msgs' seq ack timer link msgs'' ack,seq,content link
     actor send              ; ... msgs' seq ack timer link msgs''
     drop 1                  ; ... msgs' seq ack timer link
 
 tx_ack_2:                   ; msgs seq ack timer link
     ; update tx state
-    pair 4                  ; tx_state=(link timer ack seq . msgs)
+    pair 4                  ; tx_state=link,timer,ack,seq,msgs
     push tx_beh             ; tx_state tx_beh
     actor become            ; --
     ref std.commit
 
-tx_tmo_tail:                ; (link timer ack seq . msgs) <- (tx_tmo . seq')
+tx_tmo_tail:                ; link,timer,ack,seq,msgs <- tx_tmo,seq'
     ; reset timer
     state 4                 ; seq
     push tx_tmo             ; seq tx_tmo
-    pair 1                  ; msg=(tx_tmo . seq)
+    pair 1                  ; msg=tx_tmo,seq
     actor self              ; msg target=SELF
     push tx_timeout         ; msg target delay=tx_timeout
-    pair 2                  ; timer_req=(delay target . msg)
+    pair 2                  ; timer_req=delay,target,msg
     state 2                 ; timer_req timer
     actor send              ; --
 
@@ -149,18 +149,18 @@ tx_tmo_1:
     ; send empty message
     push #?                 ; #?
     push tx_msg             ; #? tx_msg
-    pair 1                  ; (tx_msg . #?)
-    actor self              ; (tx_msg . #?) SELF
+    pair 1                  ; tx_msg,#?
+    actor self              ; tx_msg,#? SELF
     actor send              ; --
     ref std.commit
 
 tx_tmo_2:
     ; resend queued message
     state 5                 ; msgs
-    deque pop               ; msgs (seq . content)
-    state 3                 ; msgs (seq . content) ack
-    pair 1                  ; msgs (ack seq . content)
-    state 1                 ; msgs (ack seq . content) link
+    deque pop               ; msgs seq,content
+    state 3                 ; msgs seq,content ack
+    pair 1                  ; msgs ack,seq,content
+    state 1                 ; msgs ack,seq,content link
     ref std.send_msg
 
 ;
@@ -173,7 +173,7 @@ tx_tmo_2:
 ;   seq: next message number expected (to receive)
 ;
 
-rx_beh:                     ; (cust timer tx . seq) <- #? | (ack seq' . content)
+rx_beh:                     ; cust,timer,tx,seq <- #? | ack,seq',content
     msg 0                   ; msg
     eq #?                   ; msg==#?
     if_not rx_1
@@ -187,7 +187,7 @@ rx_beh:                     ; (cust timer tx . seq) <- #? | (ack seq' . content)
     push #?                 ; msg=#?
     actor self              ; msg target=SELF
     push rx_timeout         ; msg target delay=rx_timeout
-    pair 2                  ; timer_req=(delay target . msg)
+    pair 2                  ; timer_req=delay,target,msg
     state 2                 ; timer_req timer
     actor send              ; --
     ref std.commit
@@ -204,8 +204,8 @@ rx_2:
     msg 2                   ; seq'
     msg 1                   ; seq' ack
     push tx_ack             ; seq' ack tx_ack
-    pair 2                  ; (tx_ack ack . seq')
-    state 3                 ; (tx_ack ack . seq') tx
+    pair 2                  ; tx_ack,ack,seq'
+    state 3                 ; tx_ack,ack,seq' tx
     actor send              ; --
 
     ; increment expected message number
@@ -215,8 +215,8 @@ rx_2:
     state 3                 ; seq+1 tx
     state 2                 ; seq+1 tx timer
     state 1                 ; seq+1 tx timer cust
-    pair 3                  ; (cust timer tx . seq+1)
-    push rx_beh             ; (cust timer tx . seq+1) rx_beh
+    pair 3                  ; cust,timer,tx,seq+1
+    push rx_beh             ; cust,timer,tx,seq+1 rx_beh
     actor become            ; --
 
     ; forward message to cust
@@ -229,7 +229,7 @@ rx_2:
 
 ; One timeout has occurred. Another means disconnect.
 
-lost_rx_beh:                ; (cust timer tx . seq) <- #? | (ack seq' . content)
+lost_rx_beh:                ; cust,timer,tx,seq <- #? | ack,seq',content
     msg 0                   ; msg
     eq #?                   ; msg==#?
     if_not lost_rx_1

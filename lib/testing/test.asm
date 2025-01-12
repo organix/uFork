@@ -39,7 +39,7 @@ mock_true:
 
 ; A mock-object that expects a single matching message.
 
-mock_eq:                    ; (ctrl . expect) <- ctrl' | actual
+mock_eq:                    ; ctrl,expect <- ctrl' | actual
     state 1                 ; ctrl
     msg 0                   ; ctrl ctrl'
     cmp eq                  ; ctrl==ctrl'
@@ -68,7 +68,7 @@ ok:                         ; --
 
 ; A mock-object that expects `pred(actual)` is truthy.
 
-mock_pred:                  ; (ctrl . pred) <- ctrl' | actual
+mock_pred:                  ; ctrl,pred <- ctrl' | actual
     state 1                 ; ctrl
     msg 0                   ; ctrl ctrl'
     cmp eq                  ; ctrl==ctrl'
@@ -78,28 +78,28 @@ mock_pred:                  ; (ctrl . pred) <- ctrl' | actual
     msg 0                   ; #nil actual
     push #?                 ; #nil actual #?
     state 1                 ; #nil actual #? ctrl
-    pair 1                  ; #nil actual (ctrl . #?)
-    push mock_pred_ok       ; #nil actual (ctrl . #?) mock_pred_ok
-    actor create            ; #nil actual cust=mock_pred_ok.(ctrl . #?)
-    pair 2                  ; (cust actual)
-    state -1                ; (cust actual) pred
+    pair 1                  ; #nil actual ctrl,#?
+    push mock_pred_ok       ; #nil actual ctrl,#? mock_pred_ok
+    actor create            ; #nil actual cust=mock_pred_ok.ctrl,#?
+    pair 2                  ; cust,actual,#nil
+    state -1                ; cust,actual,#nil pred
     ref std.send_msg
 
-mock_pred_ok:               ; (ctrl . _) <- bool
+mock_pred_ok:               ; ctrl,_ <- bool
     msg 0                   ; truthy
     if ok fail              ; --
 
 ; A mock-object that verifies a list of mocks.
 
-mock_list_setup:            ; (ctrl . _) <- mocks
+mock_list_setup:            ; ctrl,_ <- mocks
     msg 0                   ; mocks
     state 1                 ; mocks ctrl
-    pair 1                  ; (ctrl . mocks)
-    push mock_list          ; (ctrl . mocks) mock_list
+    pair 1                  ; ctrl,mocks
+    push mock_list          ; ctrl,mocks mock_list
     actor become            ; --
     ref std.commit
 
-mock_list:                  ; (ctrl . mocks) <- ctrl'
+mock_list:                  ; ctrl,mocks <- ctrl'
     state 1                 ; ctrl
     msg 0                   ; ctrl ctrl'
     cmp eq                  ; ctrl==ctrl'
@@ -116,17 +116,17 @@ mock_list:                  ; (ctrl . mocks) <- ctrl'
     actor send              ; mocks'
 
     state 1                 ; mocks' ctrl
-    pair 1                  ; (ctrl . mocks')
-    push mock_list_ok       ; (ctrl . mocks') mock_list_ok
+    pair 1                  ; ctrl,mocks'
+    push mock_list_ok       ; ctrl,mocks' mock_list_ok
     actor become            ; --
     ref std.commit
 
-mock_list_ok:               ; (ctrl . mocks) <- verdict
+mock_list_ok:               ; ctrl,mocks <- verdict
     msg 0                   ; truthy
     if_not mock_list_f      ; --
 
-    state 0                 ; (ctrl . mocks)
-    push mock_list          ; (ctrl . mocks') mock_list
+    state 0                 ; ctrl,mocks
+    push mock_list          ; ctrl,mocks' mock_list
     actor become            ; --
 
     state 1                 ; ctrl
@@ -153,12 +153,12 @@ assert_ok:                  ; _ <- verdict
 
 ; setup the mock
 
-step_0:                     ; (debug . timer) <- _
+step_0:                     ; debug,timer <- _
     push 42                 ; expect=42
     actor self              ; expect ctrl=SELF
-    pair 1                  ; (ctrl . expect)
-    push mock_eq            ; (ctrl . expect) mock_eq
-    actor create            ; mock=mock_eq.(ctrl . expect)
+    pair 1                  ; ctrl,expect
+    push mock_eq            ; ctrl,expect mock_eq
+    actor create            ; mock=mock_eq.ctrl,expect
     actor self              ; mock SELF
     actor send              ; --
 
@@ -169,7 +169,7 @@ step_0:                     ; (debug . timer) <- _
 
 ; first mock interaction
 
-step_1:                     ; (debug . timer) <- mock
+step_1:                     ; debug,timer <- mock
     msg 0                   ; mock
     actor self              ; mock SELF
     actor send              ; --
@@ -187,7 +187,7 @@ step_1:                     ; (debug . timer) <- mock
 
 ; second mock interaction
 
-step_2:                     ; (debug . timer) <- mock
+step_2:                     ; debug,timer <- mock
     msg 0                   ; mock
     actor self              ; mock SELF
     actor send              ; --
@@ -204,7 +204,7 @@ step_2:                     ; (debug . timer) <- mock
 
 ; verify the mock
 
-step_3:                     ; (debug . timer) <- mock
+step_3:                     ; debug,timer <- mock
     actor self              ; ctrl=SELF
     msg 0                   ; ctrl mock
     actor send              ; --
@@ -223,9 +223,9 @@ boot:                       ; _ <- {caps}
     msg 0                   ; timer {caps}
     push dev.debug_key      ; timer {caps} debug_key
     dict get                ; timer debug
-    pair 1                  ; (debug . timer)
-    push step_0             ; (debug . timer) step_0
-    actor create            ; test=step_0.(debug . timer)
+    pair 1                  ; debug,timer
+    push step_0             ; debug,timer step_0
+    actor create            ; test=step_0.debug,timer
     push #?                 ; test #?
     roll 2                  ; #? test
     actor send              ; --

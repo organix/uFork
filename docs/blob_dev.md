@@ -7,7 +7,7 @@ a random-access _read_ and _write_ byte interface.
 ## Allocation Request
 
 Allocation requests are sent directly to the Blob Device.
-An _allocation_ request looks like `(customer . size)`.
+An _allocation_ request looks like `customer,size`.
 The `size` is the number of bytes requested.
 A capability designating the allocated Blob
 is sent to the `customer`,
@@ -31,13 +31,13 @@ is sent to the `customer` as a _fixnum_.
 
 ### Read Request
 
-A _read_ request looks like `(customer . offset)`.
+A _read_ request looks like `customer,offset`.
 The byte value at `offset` is sent to the `customer`.
 If `offset` is out of bounds, the value is `#?`.
 
 ### Write Request
 
-A _write_ request looks like `(customer offset . value)`.
+A _write_ request looks like `customer,offset,value`.
 The byte `value` is written at `offset`,
 and `#t` is sent to the `customer`.
 If `offset` is out of bounds, the write has no effect,
@@ -51,9 +51,9 @@ even when a blob is composed of other blobs
 (via [blob.slice](../lib/blob.asm), for example).
 Generally, _source_ requests are issued by the system.
 
-A _source_ request looks like `(offset size . customer)`.
+A _source_ request looks like `offset,size,customer`.
 The source `blob` at `offset` is located and
-`(base length . blob)` is sent to the `customer`.
+`base,length,blob` is sent to the `customer`.
 The `base` and `length` together delineate
 a range of bytes within `blob`.
 The `length` never exceeds the requested `size`.

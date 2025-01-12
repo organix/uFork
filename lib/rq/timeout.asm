@@ -16,7 +16,7 @@
     unwrap_result: "./unwrap_result.asm"
 
 beh:
-timeout_beh:                ; (requestor time_limit . timer_dev) <- request
+timeout_beh:                ; requestor,time_limit,timer_dev <- request
 
 ; Create two cancellers, one for the requestor and one for the timer.
 
@@ -39,9 +39,9 @@ timeout_beh:                ; (requestor time_limit . timer_dev) <- request
     push #nil               ; t␘ r␘ #nil
     pick 3                  ; t␘ r␘ #nil t␘
     pick 3                  ; t␘ r␘ #nil t␘ r␘
-    pair 2                  ; t␘ r␘ (r␘ t␘)
-    push cancel_all_beh     ; t␘ r␘ (r␘ t␘) cancel_all_beh
-    actor create            ; t␘ r␘ cancel_all=cancel_all_beh.(r␘ t␘)
+    pair 2                  ; t␘ r␘ r␘,t␘,#nil
+    push cancel_all_beh     ; t␘ r␘ r␘,t␘,#nil cancel_all_beh
+    actor create            ; t␘ r␘ cancel_all=cancel_all_beh.r␘,t␘,#nil
     msg 1                   ; t␘ r␘ cancel_all to_cancel
     actor send              ; t␘ r␘
 
@@ -55,24 +55,24 @@ race:
     msg -2                  ; t␘ r␘ callback value
     pick 4                  ; t␘ r␘ callback value t␘
     pick 3                  ; t␘ r␘ callback value t␘ callback
-    pair 1                  ; t␘ r␘ callback value (callback . t␘)
-    push win_beh            ; t␘ r␘ callback value (callback . t␘) win_beh
-    actor create            ; t␘ r␘ callback value rcb=win_beh.(callback . t␘)
+    pair 1                  ; t␘ r␘ callback value callback,t␘
+    push win_beh            ; t␘ r␘ callback value callback,t␘ win_beh
+    actor create            ; t␘ r␘ callback value rcb=win_beh.callback,t␘
     pick 4                  ; t␘ r␘ callback value rcb r␘
-    pair 2                  ; t␘ r␘ callback rreq=(r␘ rcb . value)
+    pair 2                  ; t␘ r␘ callback rreq=r␘,rcb,value
     state 1                 ; t␘ r␘ callback rreq requestor
     actor send              ; t␘ r␘ callback
     actor self              ; t␘ r␘ callback error=self
     push #f                 ; t␘ r␘ callback error ok=#f
-    pair 1                  ; t␘ r␘ callback result=(ok . error)
+    pair 1                  ; t␘ r␘ callback result=ok,error
     state 2                 ; t␘ r␘ callback result time_limit
     pick 4                  ; t␘ r␘ callback result time_limit r␘
     pick 4                  ; t␘ r␘ callback result time_limit r␘ callback
-    pair 1                  ; t␘ r␘ callback result time_limit (callback . r␘)
-    push win_beh            ; t␘ r␘ callback result time_limit (callback . r␘) win_beh
-    actor create            ; t␘ r␘ callback result time_limit tcb=win_beh.(callback . r␘)
+    pair 1                  ; t␘ r␘ callback result time_limit callback,r␘
+    push win_beh            ; t␘ r␘ callback result time_limit callback,r␘ win_beh
+    actor create            ; t␘ r␘ callback result time_limit tcb=win_beh.callback,r␘
     pick 6                  ; t␘ r␘ callback result time_limit tcb t␘
-    pair 3                  ; t␘ r␘ callback treq=(t␘ tcb time_limit . result)
+    pair 3                  ; t␘ r␘ callback treq=t␘,tcb,time_limit,result
     state -2                ; t␘ r␘ callback treq timer_dev
     actor send              ; t␘ r␘ callback
     ref std.commit
@@ -81,15 +81,15 @@ cancel_all_beh:             ; cancellers <- reason
     state 0                 ; cancellers
     push #?                 ; cancellers #?
     msg 0                   ; cancellers #? reason
-    pair 1                  ; cancellers (reason . #?)
-    push lib.broadcast_beh  ; cancellers (reason . #?) broadcast_beh
-    actor create            ; cancellers broadcast=broadcast_beh.(reason . #?)
+    pair 1                  ; cancellers reason,#?
+    push lib.broadcast_beh  ; cancellers reason,#? broadcast_beh
+    actor create            ; cancellers broadcast=broadcast_beh.reason,#?
     actor send              ; --
     push std.sink_beh       ; sink_beh
     actor become            ; --
     ref std.commit
 
-win_beh:                    ; (callback . loser␘) <- result
+win_beh:                    ; callback,loser␘ <- result
     push #?                 ; #?
     state -1                ; #? loser␘
     actor send              ; --
@@ -103,9 +103,9 @@ boot:                       ; _ <- {caps}
 
 ; The debug device's output, in order, should resemble:
 
-;   (#f . @600...)
-;   (#t . +222)
-;   (#t . +444)
+;   #f,@600...
+;   #t,+222
+;   #t,+444
 
     msg 0                   ; {caps}
     push dev.timer_key      ; {caps} timer_key
@@ -126,9 +126,9 @@ test:                       ; judge <- {caps}
     push 100                ; timer #nil 3rd 2nd 1st probation=100ms
     pick 6                  ; timer #nil 3rd 2nd 1st probation timer
     state 0                 ; timer #nil 3rd 2nd 1st probation timer judge
-    pair 6                  ; timer (judge timer probation 1st 2nd 3rd)
-    push referee.beh        ; timer (judge timer probation 1st 2nd 3rd) referee_beh
-    actor create            ; timer referee=referee_beh.(judge timer probation 1st 2nd 3rd)
+    pair 6                  ; timer judge,timer,probation,1st,2nd,3rd,#nil
+    push referee.beh        ; timer judge,timer,probation,1st,2nd,3rd,#nil referee_beh
+    actor create            ; timer referee=referee_beh.judge,timer,probation,1st,2nd,3rd,#nil
 
 ; The referee is not able to compare two lists, so unwrap the result before
 ; giving it to the referee.
@@ -183,22 +183,22 @@ run_test:                   ; ( timer referee cancel_ms time_limit delay_ms valu
     roll -7                 ; k timer referee cancel_ms time_limit delay_ms value
     pick 6                  ; k timer referee cancel_ms time_limit delay_ms value timer
     roll 3                  ; k timer referee cancel_ms time_limit value timer delay_ms
-    pair 1                  ; k timer referee cancel_ms time_limit value (delay_ms . timer)
-    push delay.beh          ; k timer referee cancel_ms time_limit value (delay_ms . timer) delay_beh
-    actor create            ; k timer referee cancel_ms time_limit value delay=delay_beh.(delay_ms . timer)
+    pair 1                  ; k timer referee cancel_ms time_limit value delay_ms,timer
+    push delay.beh          ; k timer referee cancel_ms time_limit value delay_ms,timer delay_beh
+    actor create            ; k timer referee cancel_ms time_limit value delay=delay_beh.delay_ms,timer
     pick 6                  ; k timer referee cancel_ms time_limit value delay timer
     roll 4                  ; k timer referee cancel_ms value delay timer time_limit
     roll 3                  ; k timer referee cancel_ms value timer time_limit delay
-    pair 2                  ; k timer referee cancel_ms value (delay time_limit . timer)
-    push timeout_beh        ; k timer referee cancel_ms value (delay time_limit . timer) timeout_beh
-    actor create            ; k timer referee cancel_ms value timeout=timeout_beh.(delay time_limit . timer)
+    pair 2                  ; k timer referee cancel_ms value delay,time_limit,timer
+    push timeout_beh        ; k timer referee cancel_ms value delay,time_limit,timer timeout_beh
+    actor create            ; k timer referee cancel_ms value timeout=timeout_beh.delay,time_limit,timer
     push #?                 ; k timer referee cancel_ms value timeout #?
     push canceller.beh      ; k timer referee cancel_ms value timeout #? canceller_beh
     actor create            ; k timer referee cancel_ms value timeout canceller=canceller_beh.#?
     roll 3                  ; k timer referee cancel_ms timeout canceller value
     roll 5                  ; k timer cancel_ms timeout canceller value referee
     pick 3                  ; k timer cancel_ms timeout canceller value referee canceller
-    pair 2                  ; k timer cancel_ms timeout canceller timeout_request=(canceller referee . value)
+    pair 2                  ; k timer cancel_ms timeout canceller timeout_request=canceller,referee,value
     roll 3                  ; k timer cancel_ms canceller timeout_request timeout
     actor send              ; k timer cancel_ms canceller
     pick 2                  ; k timer cancel_ms canceller cancel_ms
@@ -207,7 +207,7 @@ run_test:                   ; ( timer referee cancel_ms time_limit delay_ms valu
     push #?                 ; k timer cancel_ms canceller msg=#?
     roll 2                  ; k timer cancel_ms msg canceller
     roll 3                  ; k timer msg canceller cancel_ms
-    pair 2                  ; k timer timer_req=(cancel_ms canceller . msg)
+    pair 2                  ; k timer timer_req=cancel_ms,canceller,msg
     roll 2                  ; k timer_req timer
     actor send              ; k
     return

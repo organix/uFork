@@ -13,7 +13,7 @@ A file request produces a file capability.
 
 The input value of the `file_request` is a pair list like
 
-    (fs_file path . create)
+    fs_file,path,create
 
 where `fs_file` is exported by [dev.asm](../lib/dev.asm), `path` is a blob
 containing the UTF-8 encoded file path, and `create` is a boolean indicating
@@ -57,7 +57,7 @@ The cursor is not moved.
 
 ### Seek request
 
-A request with input `(origin . offset)` moves the cursor to `offset` bytes
+A request with input `origin,offset` moves the cursor to `offset` bytes
 relative to the `origin`. The `offset` is a signed fixnum and the `origin` is
 one of the following values exported by [dev.asm](../lib/dev.asm):
 

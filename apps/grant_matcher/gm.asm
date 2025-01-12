@@ -15,19 +15,19 @@ boot:                       ; _ <- {caps}
     actor create            ; greeter store listen_cb
     push #?                 ; greeter store listen_cb to_cancel=#?
     push dev.listen_tag     ; greeter store listen_cb to_cancel #listen
-    pair 4                  ; listen_request=(#listen to_cancel listen_cb store . greeter)
+    pair 4                  ; listen_request=#listen,to_cancel,listen_cb,store,greeter
     msg 0                   ; listen_request {caps}
     push dev.awp_key        ; listen_request {caps} awp_key
     dict get                ; listen_request awp_dev
     actor send              ; --
     ref std.commit
 
-listen_cb_beh:              ; _ <- (ok . result/error)
+listen_cb_beh:              ; _ <- ok,result/error
     msg 1                   ; ok
     assert #t               ; --
     ref std.commit
 
-greeter_beh:                ; {pledges} <- (to_cancel callback petname deposit . withdraw)
+greeter_beh:                ; {pledges} <- to_cancel,callback,petname,deposit,withdraw
     msg 3                   ; petname
     typeq #fixnum_t         ; fixnum?
     assert #t               ; --
@@ -55,8 +55,8 @@ grant:                      ; donor
     push #nil               ; donor #nil
     roll 2                  ; #nil donor
     msg -4                  ; #nil donor withdraw
-    pair 2                  ; (withdraw donor)
-    msg 4                   ; (withdraw donor) deposit
+    pair 2                  ; withdraw,donor,#nil
+    msg 4                   ; withdraw,donor,#nil deposit
     actor send              ; --
     state 0                 ; {pledges}
     msg 4                   ; {pledges} deposit

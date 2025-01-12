@@ -105,82 +105,82 @@ demo:
     push #?                 ; #?
     call empty              ; #t
     assert #t               ; --
-    call new                ; (#nil)
-    dup 1                   ; (#nil) (#nil)
-    call empty              ; (#nil) #t
-    assert #t               ; (#nil)
+    call new                ; []
+    dup 1                   ; [] []
+    call empty              ; [] #t
+    assert #t               ; []
 demo_1:
-    push 1                  ; (#nil) 1
-    call push               ; ((1))
-    push 2                  ; ((1)) 2
-    call push               ; ((2 1))
-    push 3                  ; ((2 1)) 3
-    call push               ; ((3 2 1))
-    pick 1                  ; ((3 2 1)) ((3 2 1))
-    call empty              ; ((3 2 1)) #f
-    assert #f               ; ((3 2 1))
+    push 1                  ; [] 1
+    call push               ; [1]
+    push 2                  ; [1] 2
+    call push               ; [2 1]
+    push 3                  ; [2 1] 3
+    call push               ; [3 2 1]
+    pick 1                  ; [3 2 1] [3 2 1]
+    call empty              ; [3 2 1] #f
+    assert #f               ; [3 2 1]
 demo_2:
-    dup 1                   ; ((3 2 1)) ((3 2 1))
-    call len                ; ((3 2 1)) 3
-    assert 3                ; ((3 2 1))
+    dup 1                   ; [3 2 1] [3 2 1]
+    call len                ; [3 2 1] 3
+    assert 3                ; [3 2 1]
 demo_3:
-    call pull               ; (#nil 2 3) 1
-    assert 1                ; (#nil 2 3)
-    call pull               ; (#nil 3) 2
-    assert 2                ; (#nil 3)
-    call pull               ; (#nil) 3
-    assert 3                ; (#nil)
-    call pull               ; (#nil) #?
-    assert #?               ; (#nil)
+    call pull               ; [3 2] 1
+    assert 1                ; [3 2]
+    call pull               ; [3] 2
+    assert 2                ; [3]
+    call pull               ; [] 3
+    assert 3                ; []
+    call pull               ; [] #?
+    assert #?               ; []
 demo_4:
-    dup 1                   ; (#nil) (#nil)
-    call len                ; (#nil) 0
-    assert 0                ; (#nil)
+    dup 1                   ; [] []
+    call len                ; [] 0
+    assert 0                ; []
 demo_5:
-    dup 1                   ; (#nil) (#nil)
-    msg 0                   ; (#nil) (#nil) {caps}
-    call put                ; (#nil) (#nil {caps})
-    push 42                 ; (#nil) (#nil {caps}) 42
-    call put                ; (#nil) (#nil 42 {caps})
-    push #nil               ; (#nil) (#nil 42 {caps}) #nil
-    call put                ; (#nil) (#nil #nil 42 {caps})
-    call pop                ; (#nil) ((42 #nil)) {caps}
-    roll -2                 ; (#nil) {caps} ((42 #nil))
-    call pop                ; (#nil) {caps} ((#nil)) 42
-    assert 42               ; (#nil) {caps} ((#nil))
-    call pop                ; (#nil) {caps} (#nil) #nil
-    assert #nil             ; (#nil) {caps} (#nil)
-    call empty              ; (#nil) {caps} #t
-    assert #t               ; (#nil) {caps}
-    msg 0                   ; (#nil) {caps} {caps}
-    cmp eq                  ; (#nil) #t
-    assert #t               ; (#nil)
+    dup 1                   ; [] []
+    msg 0                   ; [] [] {caps}
+    call put                ; [] [{caps}]
+    push 42                 ; [] [{caps}] 42
+    call put                ; [] [{caps} 42]
+    push #nil               ; [] [{caps} 42] #nil
+    call put                ; [] [{caps} 42 #nil]
+    call pop                ; [] [42 #nil] {caps}
+    roll -2                 ; [] {caps} [42 #nil]
+    call pop                ; [] {caps} [#nil] 42
+    assert 42               ; [] {caps} [#nil]
+    call pop                ; [] {caps} [] #nil
+    assert #nil             ; [] {caps} []
+    call empty              ; [] {caps} #t
+    assert #t               ; [] {caps}
+    msg 0                   ; [] {caps} {caps}
+    cmp eq                  ; [] #t
+    assert #t               ; []
 demo_6:
-    dup 1                   ; (#nil) (#nil)
-    push 1                  ; (#nil) (#nil) 1
-    call put                ; (#nil) (#nil 1)
-    push 2                  ; (#nil) (#nil 1) 2
-    call put                ; (#nil) (#nil 2 1)
-    dup 1                   ; (#nil) (#nil 2 1) (#nil 2 1)
-    call empty              ; (#nil) (#nil 2 1) #f
-    assert #f               ; (#nil) (#nil 2 1)
+    dup 1                   ; [] []
+    push 1                  ; [] [] 1
+    call put                ; [] [1]
+    push 2                  ; [] [1] 2
+    call put                ; [] [1 2]
+    dup 1                   ; [] [1 2] [1 2]
+    call empty              ; [] [1 2] #f
+    assert #f               ; [] [1 2]
 demo_7:
-    call pop                ; (#nil) (#nil 2) 1
-    assert 1                ; (#nil) ((2))
-    push 3                  ; (#nil) ((2)) 3
-    call put                ; (#nil) ((2) 3)
-    dup 1                   ; (#nil) ((2) 3) ((2) 3)
-    call len                ; (#nil) ((2) 3) 2
-    assert 2                ; (#nil) ((2) 3)
+    call pop                ; [] [2] 1
+    assert 1                ; [] [2]
+    push 3                  ; [] [2] 3
+    call put                ; [] [2 3]
+    dup 1                   ; [] [2 3] [2 3]
+    call len                ; [] [2 3] 2
+    assert 2                ; [] [2 3]
 demo_8:
-    call pop                ; (#nil) (#nil 3) 2
-    assert 2                ; (#nil) (#nil 3)
-    call pop                ; (#nil) (#nil) 3
-    assert 3                ; (#nil) (#nil)
-    call pop                ; (#nil) (#nil) #?
-    assert #?               ; (#nil) (#nil)
-    call len                ; (#nil) 0
-    assert 0                ; (#nil)
+    call pop                ; [] [3] 2
+    assert 2                ; [] [3]
+    call pop                ; [] [] 3
+    assert 3                ; [] []
+    call pop                ; [] [] #?
+    assert #?               ; [] []
+    call len                ; [] 0
+    assert 0                ; []
     call empty              ; #t
     assert #t               ; --
     return

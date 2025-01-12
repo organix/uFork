@@ -17,23 +17,23 @@
 ;;              (SEND svc (tag . req))
 ;;              (BECOME (busy-beh (deque-new) tag cust svc)) )))
 beh:
-serial_beh:                 ; svc <- (cust . req)
+serial_beh:                 ; svc <- cust,req
     actor self              ; SELF
     push lib.once_tag_beh   ; SELF once-tag-beh
     actor create            ; tag=once-tag.SELF
 
     msg -1                  ; tag req
     pick 2                  ; tag req tag
-    pair 1                  ; tag (tag . req)
-    state 0                 ; tag (tag . req) svc
+    pair 1                  ; tag tag,req
+    state 0                 ; tag tag,req svc
     actor send              ; tag
 
     state 0                 ; tag svc
     msg 1                   ; tag svc cust
     roll 3                  ; svc cust tag
     deque new               ; svc cust tag pending
-    pair 3                  ; (pending tag cust . svc)
-    push busy_beh           ; (pending tag cust . svc) busy-beh
+    pair 3                  ; pending,tag,cust,svc
+    push busy_beh           ; pending,tag,cust,svc busy-beh
     actor become            ; --
     ref std.commit
 
@@ -56,15 +56,15 @@ serial_beh:                 ; svc <- (cust . req)
 ;;                      (define pending1 (deque-put pending (cons cust0 req0)))
 ;;                      (BECOME (busy-beh pending1 tag cust svc))) ))))
 ;;              )))
-busy_beh:                   ; (pending tag cust . svc) <- (cust0 . req0)
+busy_beh:                   ; pending,tag,cust,svc <- cust0,req0
     msg 1                   ; cust0
     state 2                 ; cust0 tag
     cmp eq                  ; cust0==tag
     if busy_1               ; --
 
-    state 0                 ; (pending tag cust . svc)
+    state 0                 ; pending,tag,cust,svc
     part 3                  ; svc cust tag pending
-    msg 0                   ; svc cust tag pending (cust0 . req0)
+    msg 0                   ; svc cust tag pending cust0,req0
     deque put               ; svc cust tag pending1
     ref busy_3
 
@@ -92,8 +92,8 @@ busy_2:
 
     roll 3                  ; pending1 cust1 tag1 req1
     pick 2                  ; pending1 cust1 tag1 req1 tag1
-    pair 1                  ; pending1 cust1 tag1 (tag1 . req1)
-    state -3                ; pending1 cust1 tag1 (tag1 . req1) svc
+    pair 1                  ; pending1 cust1 tag1 tag1,req1
+    state -3                ; pending1 cust1 tag1 tag1,req1 svc
     actor send              ; pending1 cust1 tag1
 
     roll 3                  ; cust1 tag1 pending1
@@ -101,8 +101,8 @@ busy_2:
     roll -4                 ; svc cust1 tag1 pending1
 
 busy_3:
-    pair 3                  ; (pending tag cust . svc)
-    push busy_beh           ; (pending tag cust . svc) busy-beh
+    pair 3                  ; pending,tag,cust,svc
+    push busy_beh           ; pending,tag,cust,svc busy-beh
     actor become            ; --
     ref std.commit
 
@@ -139,22 +139,22 @@ counter_init:               ; value <- msg
 ;;          ]
 ;;      ]
 ;;  ]
-counter_svc:                ; cell <- (cust . change)
+counter_svc:                ; cell <- cust,change
     push #?                 ; #?
     actor self              ; #? SELF
     push cell.read_op       ; #? SELF #read
-    pair 2                  ; (#read SELF . #?)
-    state 0                 ; (#read SELF . #?) cell
+    pair 2                  ; #read,SELF,#?
+    state 0                 ; #read,SELF,#? cell
     actor send              ; --
 
-    msg 0                   ; (cust . change)
-    state 0                 ; (cust . change) cell
-    pair 1                  ; (cell cust . change)
-    push counter_k1         ; (cell cust . change) counter_k1
+    msg 0                   ; cust,change
+    state 0                 ; cust,change cell
+    pair 1                  ; cell,cust,change
+    push counter_k1         ; cell,cust,change counter_k1
     actor become            ; --
     ref std.commit
 
-counter_k1:                 ; (cell cust . change) <- count
+counter_k1:                 ; cell,cust,change <- count
     msg 0                   ; count
     state -2                ; count change
     alu add                 ; count'=count+change
@@ -162,17 +162,17 @@ counter_k1:                 ; (cell cust . change) <- count
     dup 1                   ; count' count'
     actor self              ; count' count' SELF
     push cell.write_op      ; count' count' SELF #write
-    pair 2                  ; count' (#write SELF . count')
-    state 1                 ; count' (#write SELF . count') cell
+    pair 2                  ; count' #write,SELF,count'
+    state 1                 ; count' #write,SELF,count' cell
     actor send              ; count'
 
     state 2                 ; count' cust
-    pair 1                  ; (cust . count')
-    push counter_k2         ; (cust . count') counter_k2
+    pair 1                  ; cust,count'
+    push counter_k2         ; cust,count' counter_k2
     actor become            ; --
     ref std.commit
 
-counter_k2:                 ; (cust . count') <- cell
+counter_k2:                 ; cust,count' <- cell
     state -1                ; count'
     state 1                 ; count' cust
     actor send              ; --
@@ -198,20 +198,20 @@ boot:                       ; _ <- {caps}
 
     push 7                  ; debug_dev counter 7
     pick 3                  ; debug_dev counter 7 debug_dev
-    pair 1                  ; debug_dev counter (debug_dev . 7)
-    pick 2                  ; debug_dev counter (debug_dev . 7) counter
+    pair 1                  ; debug_dev counter debug_dev,7
+    pick 2                  ; debug_dev counter debug_dev,7 counter
     actor send              ; debug_dev counter
 
     push 70                 ; debug_dev counter 70
     pick 3                  ; debug_dev counter 70 debug_dev
-    pair 1                  ; debug_dev counter (debug_dev . 70)
-    pick 2                  ; debug_dev counter (debug_dev . 70) counter
+    pair 1                  ; debug_dev counter debug_dev,70
+    pick 2                  ; debug_dev counter debug_dev,70 counter
     actor send              ; debug_dev counter
 
     push 700                ; debug_dev counter 700
     pick 3                  ; debug_dev counter 700 debug_dev
-    pair 1                  ; debug_dev counter (debug_dev . 700)
-    pick 2                  ; debug_dev counter (debug_dev . 700) counter
+    pair 1                  ; debug_dev counter debug_dev,700
+    pick 2                  ; debug_dev counter debug_dev,700 counter
     actor send              ; debug_dev counter
     ref std.commit
 

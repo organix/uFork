@@ -40,7 +40,7 @@ boot:                       ; _ <- {caps}
     dict get                ; judge=debug
     ref suite
 
-list:                       ; (1 2 3)
+list:                       ; 1,2,3,#nil
     pair_t 1
     pair_t 2
     pair_t 3
@@ -67,7 +67,7 @@ suite:
 ; Primitive versus pair.
 
     push 42                 ; judge 42
-    push list               ; judge 42 (1 2 3)
+    push list               ; judge 42 1,2,3,#nil
     call eq                 ; judge #f
     assert #f               ; judge
 
@@ -76,13 +76,13 @@ suite:
     push #nil               ; judge #nil
     push 2                  ; judge #nil 2
     push 1                  ; judge #nil 2 1
-    pair 1                  ; judge #nil (1 . 2)
-    pair 1                  ; judge ((1 . 2))
-    push #nil               ; judge ((1 . 2)) #nil
-    push 2                  ; judge ((1 . 2)) #nil 2
-    push 1                  ; judge ((1 . 2)) #nil 2 1
-    pair 1                  ; judge ((1 . 2)) #nil (1 . 2)
-    pair 1                  ; judge ((1 . 2)) ((1 . 2))
+    pair 1                  ; judge #nil 1,2
+    pair 1                  ; judge (1,2),#nil
+    push #nil               ; judge (1,2),#nil #nil
+    push 2                  ; judge (1,2),#nil #nil 2
+    push 1                  ; judge (1,2),#nil #nil 2 1
+    pair 1                  ; judge (1,2),#nil #nil 1,2
+    pair 1                  ; judge (1,2),#nil (1,2),#nil
     call eq                 ; judge #t
     assert #t               ; judge
 
@@ -91,13 +91,13 @@ suite:
     push #nil               ; judge #nil
     push 2                  ; judge #nil 2
     push 1                  ; judge #nil 2 1
-    pair 1                  ; judge #nil (1 . 2)
-    pair 1                  ; judge ((1 . 2))
-    push #nil               ; judge ((1 . 2)) #nil
-    push 42                 ; judge ((1 . 2)) #nil 42
-    push 1                  ; judge ((1 . 2)) #nil 42 1
-    pair 1                  ; judge ((1 . 2)) #nil (1 . 42)
-    pair 1                  ; judge ((1 . 2)) ((1 . 42))
+    pair 1                  ; judge #nil 1,2
+    pair 1                  ; judge (1,2),#nil
+    push #nil               ; judge (1,2),#nil #nil
+    push 42                 ; judge (1,2),#nil #nil 42
+    push 1                  ; judge (1,2),#nil #nil 42 1
+    pair 1                  ; judge (1,2),#nil #nil 1,42
+    pair 1                  ; judge (1,2),#nil (1,42),#nil
     call eq                 ; judge #f
     assert #f               ; judge
 

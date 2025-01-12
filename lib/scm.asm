@@ -20,15 +20,15 @@ closure_t:                  ; [closure_t, code, data]
 behavior_t:                 ; [behavior_t, code, data, meta]
     type_t 3                ; [#type_t, 3]
 
-empty_env:                  ; (sp=#nil . env=#nil)
-    pair_t #nil #nil        ; (#nil)
+empty_env:                  ; sp=#nil,env=#nil
+    pair_t #nil #nil        ; #nil,#nil
 
 ;
 ; Meta-actor creation and behavior replacement.
 ;
 
-act_2:                      ; ( (beh . state) -- state beh )
-    roll -2                 ; k (beh . state)
+act_2:                      ; ( beh,state -- state beh )
+    roll -2                 ; k beh,state
     quad -3                 ; k state beh type
     drop 1                  ; k state beh
     roll 3                  ; state beh k
@@ -42,8 +42,8 @@ act_3:                      ; ( [_, _, _, beh] -- state beh )
     roll 3                  ; state beh k
     return                  ; state beh
 
-new_2:                      ; ( (beh . state) -- beh.state )
-    roll -2                 ; k (beh . state)
+new_2:                      ; ( beh,state -- beh.state )
+    roll -2                 ; k beh,state
     call act_2              ; k state beh
 new_return:                 ; k state beh
     actor create            ; k beh.state
@@ -55,8 +55,8 @@ new_3:                      ; ( [_, _, _, beh] -- beh.[_, _, _, beh] )
     call act_3              ; k state beh
     ref new_return
 
-beh_2:                      ; ( (beh . state) -- )
-    roll -2                 ; k (beh . state)
+beh_2:                      ; ( beh,state -- )
+    roll -2                 ; k beh,state
     call act_2              ; k state beh
 beh_return:
     actor become            ; k
@@ -85,7 +85,7 @@ gather_loop:
     if gather_done          ; × vₙ … v₂ sp k v₁
     roll 3                  ; × vₙ … v₂ k v₁ sp
     roll 2                  ; × vₙ … v₂ k sp v₁
-    pair 1                  ; × vₙ … v₂ k sp'=(v₁ . sp)
+    pair 1                  ; × vₙ … v₂ k sp'=v₁,sp
     roll -2                 ; × vₙ … v₂ sp' k
     ref gather_loop
 gather_done:                ; sp k v₁
@@ -99,7 +99,7 @@ spread:                     ; ( sp -- × vₙ … v₁ )
 spread_loop:                ; × vₙ … vₘ k sp
     dup 1                   ; × vₙ … vₘ k sp sp
     typeq #pair_t           ; × vₙ … vₘ k sp is_pair(sp)
-    if_not spread_done      ; × vₙ … vₘ k sp=(vₘ₋₁ . sp')
+    if_not spread_done      ; × vₙ … vₘ k sp=vₘ₋₁,sp'
     part 1                  ; × vₙ … vₘ k sp' vₘ₋₁
     roll -3                 ; × vₙ … vₘ vₘ₋₁ k sp'
     ref spread_loop
@@ -114,7 +114,7 @@ spread_done:                ; × vₙ … v₁ k #nil
 ; Function template for compiled lambda-closure
 ;func:                   ; [closure_t, code, data]
 ;    quad_3 closure_t code data
-;code:                   ; (sp . env) <- (cust . args)
+;code:                   ; sp,env <- cust,args
 ;    ...
 
 ; Prepare args for function call
@@ -123,37 +123,37 @@ spread_done:                ; × vₙ … v₁ k #nil
 ;    push 2              ; #nil arg3 arg2
 ;    push 1              ; #nil arg3 arg2 arg1
 ;    actor self          ; #nil arg3 arg2 arg1 cust=SELF
-;    pair nargs+1        ; args=(cust arg1 arg2 arg3)
+;    pair nargs+1        ; args=cust,arg1,arg2,arg3,#nil
 ;    push func           ; args closure
 ;    call new_2          ; args code.data
 ;    actor send          ; --
 
 ; Prefix to create/become continuation
-;    call gather         ; sp'=(...)
+;    call gather         ; sp'=...,#nil
 ;    state -1            ; sp' env
 ;    push cont           ; sp' env cont
 ;    msg 0               ; sp' env cont msg
-;    pair 3              ; (msg cont env . sp')
-;    push continuation   ; (msg cont env . sp') continuation
-;    actor become        ; -- SELF=continuation.(msg cont env . sp')
+;    pair 3              ; msg,cont,env,sp'
+;    push continuation   ; msg,cont,env,sp' continuation
+;    actor become        ; -- SELF=continuation.msg,cont,env,sp'
 ;    ref scm.commit
 
-continuation:               ; (msg cont env . sp) <- rv
+continuation:               ; msg,cont,env,sp <- rv
     state 3                 ; env
     state -3                ; env sp
     call spread             ; env × vₙ … v₁
     msg 0                   ; env × vₙ … v₁ rv
     call gather             ; env sp'
-    pair 1                  ; (sp' . env)
-    state 2                 ; (sp' . env) cont
-    actor become            ; -- SELF=cont.(sp' . env)
+    pair 1                  ; sp',env
+    state 2                 ; sp',env cont
+    actor become            ; -- SELF=cont.sp',env
     state 1                 ; msg
     actor self              ; msg SELF
     ref std.send_msg
 
 ; Suffix to restore stack and continue
-;cont:                   ; (sp . env) <- (cust . args)
-;    state 1             ; sp=(...)
+;cont:                   ; sp,env <- cust,args
+;    state 1             ; sp=...,#nil
 ;    call spread         ; × ...
 ;    ref <k>
 
@@ -164,9 +164,9 @@ continuation:               ; (msg cont env . sp) <- rv
 imm_actor:                  ; beh <- msg
     msg 0                   ; msg
     actor self              ; msg SELF
-    pair 1                  ; (SELF . msg)
-    state 0                 ; (SELF . msg) beh=[behavior_t, code, data, meta]
-    call new_2              ; (SELF . msg) code.data
+    pair 1                  ; SELF,msg
+    state 0                 ; SELF,msg beh=[behavior_t, code, data, meta]
+    call new_2              ; SELF,msg code.data
     ref std.send_msg
 
 mut_actor:                  ; beh <- msg
@@ -177,30 +177,30 @@ mut_actor:                  ; beh <- msg
 txn_actor:                  ; beh pending msg
     ; begin transaction
     actor self              ; beh pending msg SELF
-    pair 1                  ; beh pending (SELF . msg)
-    pick 3                  ; beh pending (SELF . msg) beh
-    call new_2              ; beh pending (SELF . msg) txn=code.data
-    pick -3                 ; beh txn pending (SELF . msg) txn
+    pair 1                  ; beh pending SELF,msg
+    pick 3                  ; beh pending SELF,msg beh
+    call new_2              ; beh pending SELF,msg txn=code.data
+    pick -3                 ; beh txn pending SELF,msg txn
     actor send              ; beh txn pending
-    pair 2                  ; (pending txn . beh)
-    push bsy_actor          ; (pending txn . beh) bsy_actor
-    actor become            ; -- SELF=bsy_actor.(pending txn . beh)
+    pair 2                  ; pending,txn,beh
+    push bsy_actor          ; pending,txn,beh bsy_actor
+    actor become            ; -- SELF=bsy_actor.pending,txn,beh
     ref std.commit
 
-bsy_actor:                  ; (pending txn . beh) <- (txn? . beh') | msg
+bsy_actor:                  ; pending,txn,beh <- txn?,beh' | msg
     state 2                 ; txn
     msg 1                   ; txn txn?
     cmp eq                  ; txn==txn?
     if cmt_actor            ; --
 
     ; enqueue message for deferred processing
-    state 0                 ; (pending txn . beh)
-    part 1                  ; (txn . beh) pending
-    msg 0                   ; (txn . beh) pending msg
-    deque put               ; (txn . beh) pending'
-    pair 1                  ; (pending' txn . beh)
-    push bsy_actor          ; (pending' txn . beh) bsy_actor
-    actor become            ; -- SELF=bsy_actor.(pending' txn . beh)
+    state 0                 ; pending,txn,beh
+    part 1                  ; txn,beh pending
+    msg 0                   ; txn,beh pending msg
+    deque put               ; txn,beh pending'
+    pair 1                  ; pending',txn,beh
+    push bsy_actor          ; pending',txn,beh bsy_actor
+    actor become            ; -- SELF=bsy_actor.pending',txn,beh
     ref std.commit
 
 cmt_actor:                  ; --
@@ -261,13 +261,13 @@ rst_msgs:                   ; pending
 ;;              (SEND cust n)
 ;;              (BECOME (count-beh (+ n 1))) )))
 
-count_0:                    ; [behavior_t, count_code, (#? 0), meta]
+count_0:                    ; [behavior_t, count_code, #?,0,#nil, meta]
     quad_4 behavior_t count_code count_data mut_actor
 count_data:
     pair_t #?
     pair_t 0
     ref #nil
-count_code:                 ; (_ n) <- (self cust)
+count_code:                 ; _,n,#nil <- self,cust,#nil
     state 2                 ; n
     msg 2                   ; n cust
     actor send              ; --
@@ -276,15 +276,15 @@ count_code:                 ; (_ n) <- (self cust)
     push 1                  ; #nil n 1
     alu add                 ; #nil n+1
     state 1                 ; #nil n+1 _
-    pair 2                  ; data=(_ n+1)
+    pair 2                  ; data=_,n+1,#nil
     push count_code         ; data code=count_code
     push mut_actor          ; data code meta=mut_actor
     roll -3                 ; meta data code
     push behavior_t         ; meta data code behavior_t
     quad 4                  ; beh'=[behavior_t, code, data, meta]
     actor self              ; beh' txn=SELF
-    pair 1                  ; (txn . beh')
-    msg 1                   ; (txn . beh') self
+    pair 1                  ; txn,beh'
+    msg 1                   ; txn,beh' self
     ref std.send_msg
 
 assert:                     ; expect <- actual
@@ -310,24 +310,24 @@ test:                       ; judge <- {caps}
     push dev.timer_key      ; #nil 2nd 1st probation {caps} timer_key
     dict get                ; #nil 2nd 1st probation timer
     state 0                 ; #nil 2nd 1st probation timer judge
-    pair 5                  ; (judge timer probation 1st 2nd)
-    push referee.beh        ; (judge timer probation 1st 2nd) referee_beh
-    actor create            ; referee=referee_beh.(judge timer probation 1st 2nd)
+    pair 5                  ; judge,timer,probation,1st,2nd,#nil
+    push referee.beh        ; judge,timer,probation,1st,2nd,#nil referee_beh
+    actor create            ; referee=referee_beh.judge,timer,probation,1st,2nd,#nil
 act:
     push #nil               ; referee #nil
     roll 2                  ; #nil referee
-    pair 1                  ; (referee)
-    push count_0            ; (referee) beh=count_0
-    call new_3              ; (referee) counter=get_Z(beh).beh
-    dup 2                   ; (referee) counter (referee) counter
-    actor send              ; (referee) counter
+    pair 1                  ; referee,#nil
+    push count_0            ; referee,#nil beh=count_0
+    call new_3              ; referee,#nil counter=get_Z(beh).beh
+    dup 2                   ; referee,#nil counter referee,#nil counter
+    actor send              ; referee,#nil counter
     actor send              ; --
 
     push stack_bottom       ; ×
     push 1                  ; × 1
     push 2                  ; × 1 2
     push 3                  ; × 1 2 3
-    call gather             ; sp=(1 2 3)
+    call gather             ; sp=1,2,3,#nil
     call spread             ; × 1 2 3
     assert 3                ; × 1 2
     assert 2                ; × 1

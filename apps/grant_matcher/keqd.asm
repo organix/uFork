@@ -18,25 +18,25 @@ boot:                       ; _ <- {caps}
     actor create            ; greeter store listen_cb=listen_cb_beh.#?
     push #?                 ; greeter store listen_cb to_cancel=#?
     push dev.listen_tag     ; greeter store listen_cb to_cancel #listen
-    pair 4                  ; listen_request=(#listen to_cancel listen_cb store . greeter)
+    pair 4                  ; listen_request=#listen,to_cancel,listen_cb,store,greeter
     msg 0                   ; listen_request {caps}
     push dev.awp_key        ; listen_request {caps} awp_key
     dict get                ; listen_request awp_dev
     actor send              ; --
     ref std.commit
 
-listen_cb_beh:              ; _ <- (ok . result/error)
+listen_cb_beh:              ; _ <- ok,result/error
     msg 1                   ; ok
     assert #t               ; --
     ref std.commit
 
-greeter_beh:                ; deposit <- (to_cancel callback petname . _)
+greeter_beh:                ; deposit <- to_cancel,callback,petname,_
     msg 3                   ; petname
     typeq #fixnum_t         ; fixnum?
     assert #t               ; --
     state 0                 ; deposit
     push #t                 ; deposit ok=#t
-    pair 1                  ; result=(ok . deposit)
+    pair 1                  ; result=ok,deposit
     msg 2                   ; result callback
     actor send              ; --
     ref std.commit

@@ -15,11 +15,11 @@
 ; receive the current time from the clock device.
 
 beh:
-timer_beh:                  ; clock <- (delay target . message)
+timer_beh:                  ; clock <- delay,target,message
     msg 0                   ; msg
     state 0                 ; msg clock
-    pair 1                  ; (clock . msg)
-    push cust_beh           ; (clock . msg) cust_beh
+    pair 1                  ; clock,msg
+    push cust_beh           ; clock,msg cust_beh
     actor create            ; cust
     state 0                 ; cust clock
     ref std.send_msg
@@ -27,15 +27,15 @@ timer_beh:                  ; clock <- (delay target . message)
 ; Once the current time is known, it is added to the delay to yield the end
 ; time.
 
-cust_beh:                   ; (clock delay target . message) <- now
+cust_beh:                   ; clock,delay,target,message <- now
     state -3                ; message
     state 3                 ; message target
     msg 0                   ; message target now
     state 2                 ; message target now delay
     alu add                 ; message target end_time
     state 1                 ; message target end_time clock
-    pair 3                  ; (clock end_time target . message)
-    push poll_beh           ; (clock end_time target . message) poll_beh
+    pair 3                  ; clock,end_time,target,message
+    push poll_beh           ; clock,end_time,target,message poll_beh
     actor become            ; --
     actor self              ; SELF
     state 1                 ; SELF clock
@@ -44,7 +44,7 @@ cust_beh:                   ; (clock delay target . message) <- now
 ; The clock device is then repeatedly polled until the end time is reached, at
 ; which point the message is sent to the target.
 
-poll_beh:                   ; (clock end_time target . message) <- now
+poll_beh:                   ; clock,end_time,target,message <- now
     msg 0                   ; now
     state 2                 ; now end_time
     alu sub                 ; now-end_time
@@ -56,7 +56,7 @@ poll_beh:                   ; (clock end_time target . message) <- now
     state 3                 ; message target
     ref std.send_msg
 
-retry:                      ; (clock end_time target . message)
+retry:                      ; clock,end_time,target,message
     actor self              ; SELF
     state 1                 ; SELF clock
     ref std.send_msg
@@ -76,14 +76,14 @@ boot:                       ; _ <- {caps}
     push 42                 ; debug_dev timer 42
     pick 3                  ; debug_dev timer 42 debug_dev
     push 1000               ; debug_dev timer 42 debug_dev 1000
-    pair 2                  ; debug_dev timer (1000 debug_dev . 42)
-    pick 2                  ; debug_dev timer (1000 debug_dev . 42) timer
+    pair 2                  ; debug_dev timer 1000,debug_dev,42
+    pick 2                  ; debug_dev timer 1000,debug_dev,42 timer
     actor send              ; debug_dev timer
     push 1729               ; debug_dev timer 1729
     pick 3                  ; debug_dev timer 1729 debug_dev
     push 2000               ; debug_dev timer 1729 debug_dev 2000
-    pair 2                  ; debug_dev timer (2000 debug_dev . 1729)
-    pick 2                  ; debug_dev timer (2000 debug_dev . 1729) timer
+    pair 2                  ; debug_dev timer 2000,debug_dev,1729
+    pick 2                  ; debug_dev timer 2000,debug_dev,1729 timer
     actor send              ; debug_dev timer
     ref std.commit
 

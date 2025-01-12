@@ -6,10 +6,10 @@
     unwrap_result: "./unwrap_result.asm"
 
 beh:
-thru_beh:                   ; _ <- request=(to_cancel callback . value)
+thru_beh:                   ; _ <- request=to_cancel,callback,value
     msg -2                  ; value
     push #t                 ; value ok=#t
-    pair 1                  ; result=(ok . value)
+    pair 1                  ; result=ok,value
     msg 2                   ; result callback
     ref std.send_msg
 
@@ -29,7 +29,7 @@ test:                       ; judge <- {caps}
     actor create            ; value callback=unwrap_result_beh.judge
 suite:
     push #?                 ; value callback to_cancel=#?
-    pair 2                  ; request=(to_cancel callback . value)
+    pair 2                  ; request=to_cancel,callback,value
     push #?                 ; request #?
     push thru_beh           ; request #? thru_beh
     actor create            ; request thru=thru_beh.#?

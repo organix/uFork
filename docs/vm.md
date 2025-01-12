@@ -305,8 +305,8 @@ _bool_               | `if` _T_ [_F_]      | —            | if _bool_ is not f
 _k_                  | `jump`              | —            | continue at _k_
 … _tail_ _head_      | `pair` _n_          | _pair_       | create _pair(s)_ from _head_ and _tail_ (_n_ times)
 _pair_               | `part` _n_          | … _tail_ _head_ | split _pair_ into _head_ and _tail_ (_n_ times)
-(_v₁_ … _vₙ_ . _tailₙ_) | `nth` _n_         | _vₙ_         | copy item _n_ from a _pair_ list
-(_v₁_ … _vₙ_ . _tailₙ_) | `nth` -_n_        | _tailₙ_      | copy tail _n_ from a _pair_ list
+_v₁_,…,_vₙ_,_tailₙ_  | `nth` _n_         | _vₙ_         | copy item _n_ from a _pair_ list
+_v₁_,…,_vₙ_,_tailₙ_  | `nth` -_n_        | _tailₙ_      | copy tail _n_ from a _pair_ list
 _dict_ _key_         | `dict` `has`        | _bool_       | `#t` if _dict_ has a binding for _key_, otherwise `#f`
 _dict_ _key_         | `dict` `get`        | _value_      | the first _value_ bound to _key_ in _dict_, or `#?`
 _dict_ _key_ _value_ | `dict` `add`        | _dict'_      | add a binding from _key_ to _value_ in _dict_
@@ -1204,8 +1204,8 @@ Copy data from the current message-event.
 
  Input               | Instruction         | Output       | Description
 ---------------------|---------------------|--------------|-------------------------------------
-(_v₁_ … _vₙ_ . _tailₙ_) | `nth` _n_         | _vₙ_         | copy item _n_ from a _pair_ list
-(_v₁_ … _vₙ_ . _tailₙ_) | `nth` -_n_        | _tailₙ_      | copy tail _n_ from a _pair_ list
+_v₁_,…,_vₙ_,_tailₙ_  | `nth` _n_         | _vₙ_         | copy item _n_ from a _pair_ list
+_v₁_,…,_vₙ_,_tailₙ_  | `nth` -_n_        | _tailₙ_      | copy tail _n_ from a _pair_ list
 
 Extract data from a pair-list.
 

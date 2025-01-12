@@ -33,8 +33,8 @@ reader:                     ; ofs,size,blob <- can,cb,req | data,cb | (len,blob'
     msg 0                   ; msg
     typeq #pair_t           ; is_pair(msg)
     if_not std.abort        ; --
-    msg 1                   ; (len,blob)
-    typeq #pair_t           ; is_pair((len,blob))
+    msg 1                   ; len,blob
+    typeq #pair_t           ; is_pair(len,blob)
     if reader_grow          ; --
     msg 1                   ; data
     typeq #fixnum_t         ; is_fix(data)
@@ -88,7 +88,7 @@ reader_grow:                ; --
 ;    msg 0                   ; (len,blob'),k
     state 0                 ; ofs,size,blob
     part 2                  ; blob size ofs
-    msg 1                   ; blob size ofs (len,blob')
+    msg 1                   ; blob size ofs len,blob'
     part 1                  ; blob size ofs blob' len
     roll 2                  ; blob size ofs len blob'
     roll 5                  ; size ofs len blob' blob
@@ -208,8 +208,8 @@ writer:                     ; ofs,blob,size,blobs,blob_dev <- can,cb,req | ok,cb
     msg 0                   ; msg
     typeq #pair_t           ; is_pair(msg)
     if_not std.abort        ; --
-    msg 1                   ; (can,cb,req)
-    typeq #pair_t           ; is_pair((can,cb,req))
+    msg 1                   ; can,cb,req
+    typeq #pair_t           ; is_pair(can,cb,req)
     if writer_grown         ; --
     msg -1                  ; cb
     typeq #actor_t          ; is_cap(cb)
@@ -300,9 +300,9 @@ k_writer_grow:              ; wr,(can,cb,req),ofs,blob,size,blobs,blob_dev <- bl
     ref std.send_msg
 k_writer_grow2:             ; wr,(can,cb,req),ofs,blob,size,blobs,blob_dev <- blob''
     state 0                 ; wr,(can,cb,req),ofs,blob,size,blobs,blob_dev
-    part 2                  ; ofs,blob,size,blobs,blob_dev (can,cb,req) wr
-    msg 0                   ; ... (can,cb,req) wr blob''
-    roll 3                  ; ... wr blob'' (can,cb,req)
+    part 2                  ; ofs,blob,size,blobs,blob_dev can,cb,req wr
+    msg 0                   ; ... can,cb,req wr blob''
+    roll 3                  ; ... wr blob'' can,cb,req
     pair 1                  ; ... wr (can,cb,req),blob''
     roll 2                  ; ... (can,cb,req),blob'' wr
     ref std.send_msg
@@ -314,8 +314,8 @@ writer_grown:               ; --
     pair 2                  ; ofs,blob'',size,blobs,blob_dev
     push writer             ; ofs,blob'',size,blobs,blob_dev writer
     actor become            ; --
-    msg 1                   ; (can,cb,req)
-    actor self              ; (can,cb,req) SELF
+    msg 1                   ; can,cb,req
+    actor self              ; can,cb,req SELF
     ref std.send_msg
 
 ;
@@ -411,8 +411,8 @@ blobstr_done:               ; --
 ;
 
 strsource:                  ; offset,size,blob <- can,cb,#? | (base,len,blob'),cb
-    msg 1                   ; (base,len,blob')
-    typeq #pair_t           ; is_pair((base,len,blob'))
+    msg 1                   ; base,len,blob'
+    typeq #pair_t           ; is_pair(base,len,blob')
     if strsource_result     ; --
     state 0                 ; offset,size,blob
     part 2                  ; blob size offset

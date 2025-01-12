@@ -41,7 +41,7 @@ impl Device for TimerDevice {
             // start timer request
             let arg_1 = core.nth(msg, PLUS_1);
             if arg_1.is_fix() {  // simple delayed message
-                // (delay target . message)
+                // delay,target,message
                 let delay = arg_1;
                 let target = core.nth(msg, PLUS_2);
                 if !target.is_cap() {
@@ -55,7 +55,7 @@ impl Device for TimerDevice {
                     host_start_timer(delay.raw(), stub.raw());
                 }
             } else {  // requestor-style interface
-                // (to_cancel callback delay . result)
+                // to_cancel,callback,delay,result
                 let to_cancel = arg_1;
                 let callback = core.nth(msg, PLUS_2);
                 if !callback.is_cap() {

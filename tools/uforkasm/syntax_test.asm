@@ -41,7 +41,7 @@ quad:
 beh:
 # <- entity.name.label.uforkasm
 #  ^ punctuation.separator.uforkasm
-"race_beh":                 ; (requestors . throttle) <- request
+"race_beh":                 ; requestors,throttle <- request
 # <- string.quoted.double.uforkasm
 #         ^ punctuation.separator.uforkasm
 #                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ comment.line.uforkasm

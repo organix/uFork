@@ -788,7 +788,7 @@ VARIABLE gc_scan_ptr        ( scan-list processing pointer )
 : insert ( item prev -- )
     DUP is_pair IF          ( D: item prev )
         DUP rest            ( D: item prev next )
-        ROT pair            ( D: prev (item . next) )
+        ROT pair            ( D: prev item,next )
         SWAP qy! ;          ( D: -- )
     THEN 2DROP ;
 (
@@ -836,8 +836,8 @@ To Reverse list onto head:
 : pair_onto ( head list -- head' list' )
     part                ( D: head rest first )
     SWAP -ROT           ( D: rest head first )
-    pair                ( D: rest (first . head) )
-    SWAP ;              ( D: (first . head) rest )
+    pair                ( D: rest first,head )
+    SWAP ;              ( D: first,head rest )
 (
 To Copy list onto head:
 

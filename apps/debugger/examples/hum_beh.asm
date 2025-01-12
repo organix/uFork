@@ -16,35 +16,35 @@
     hum: "https://ufork.org/lib/hum.asm"
     std: "https://ufork.org/lib/std.asm"
 
-next_code:                  ; args k env=((cust . q) p)
+next_code:                  ; args k env=(cust,q),p,#nil
 
 ; Assemble the (p, q, r) tuple from the message and captured environments.
 
     pick 3                  ; args k env r=args
     pick 2                  ; args k env r env
-    nth 1                   ; args k env r (cust . q)
+    nth 1                   ; args k env r cust,q
     nth -1                  ; args k env r q
     pick 3                  ; args k env r q env
     nth 2                   ; args k env r q p
-    pair 2                  ; args k env msg=(p q . r)
+    pair 2                  ; args k env msg=p,q,r
 
 ; Send the tuple to the customer.
 
     pick 2                  ; args k env msg env
-    nth 1                   ; args k env msg (cust . q)
+    nth 1                   ; args k env msg cust,q
     nth 1                   ; args k env msg cust
     actor send              ; args k env
     roll 3                  ; k env args
     drop 2                  ; k
     return
 
-top_code:                   ; args k env=(p)
+top_code:                   ; args k env=p,#nil
 
 ; Construct the message to be sent to the 'next' actor.
 
-    pick 1                  ; args k env (p)
+    pick 1                  ; args k env p,#nil
     nth 1                   ; args k env p
-    pick 4                  ; args k env p (cust . q)
+    pick 4                  ; args k env p cust,q
     nth -1                  ; args k env p q
     alu add                 ; args k env msg=p+q
 
@@ -53,7 +53,7 @@ top_code:                   ; args k env=(p)
     push next_code          ; args k env msg next_code
     pick 3                  ; args k env msg next_code env
     pick 6                  ; args k env msg next_code env args
-    pair 1                  ; args k env msg next_code env'=(args . env)
+    pair 1                  ; args k env msg next_code env'=args,env
     call hum.make_closure   ; args k env msg closure
     push hum.beh            ; args k env msg closure beh
     actor create            ; args k env msg next=beh.closure
@@ -75,14 +75,14 @@ boot:                       ; _ <- {caps}
     msg 0                   ; q {caps}
     push dev.debug_key      ; q {caps} debug_key
     dict get                ; q cust=debug
-    pair 1                  ; msg=(cust . q)
+    pair 1                  ; msg=cust,q
 
 ; Create the 'top' actor.
 
     push top_code           ; msg code=top_code
     push #nil               ; msg code #nil
     push 1                  ; msg code #nil 1
-    pair 1                  ; msg code env=(1)
+    pair 1                  ; msg code env=1,#nil
     call hum.make_closure   ; msg top_closure
     push hum.beh            ; msg top_closure beh
     actor create            ; msg top=top_closure.beh

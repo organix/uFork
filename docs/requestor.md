@@ -5,20 +5,20 @@ are like services that support cancellation and failure notification. The
 message sent to a requestor is called a "request", which optionally contains an
 _input_ value.
 
-    (to_cancel callback . input) -> requestor
+    to_cancel,callback,input -> requestor
 
-The _callback_ actor is sent a "result" like `(ok . value/error)` once the
+The _callback_ actor is sent a "result" like `ok,value/error` once the
 request completes (which could be never).
 
 On success, the result's head is `#t` and its tail is an optional _output_
 value. We say that a requestor "produces" its _output_ value.
 
-    (#t . output) -> callback
+    #t,output -> callback
 
 On failure, the result's head is `#f` and its tail is an optional _error_
 reason.
 
-    (#f . error) -> callback
+    #f,error -> callback
 
 If _to_cancel_ is an actor, the requestor may send it a _cancel_ actor.
 
@@ -41,9 +41,9 @@ doubles its input value.
 From this specification, the signatures of the request and result messages are
 known to be
 
-    (to_cancel callback . n) -> double
-    (#t . 2*n) -> callback
-    (#f . error) -> callback
+    to_cancel,callback,n -> double
+    #t,2*n -> callback
+    #f,error -> callback
 
 The requestor pattern was invented by Douglas Crockford, and was first
 implemented in JavaScript. See https://crockford.com/parseq.html.

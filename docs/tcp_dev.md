@@ -34,7 +34,7 @@ can be used to stop listening:
 
 The input value of the `listen_request` is a pair like
 
-    (petname . on_open)
+    petname,on_open
 
 where the `petname` is a fixnum that selects a bind address from the config, and
 the `on_open` capability receives connections as they are opened.

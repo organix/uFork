@@ -5,7 +5,7 @@
 boot:                       ; _ <- {caps}
     push #?                 ; value=#?
     push #t                 ; value ok=#t
-    pair 1                  ; result=(ok . value)
+    pair 1                  ; result=ok,value
     msg 0                   ; result {caps}
     push dev.io_key         ; result {caps} io_key
     dict get                ; result io_dev
@@ -18,7 +18,7 @@ fail:
     msg -1                  ; reason=error
     end abort               ; --
 
-write_cb_beh:               ; io_dev <- (ok . value/error)
+write_cb_beh:               ; io_dev <- ok,value/error
     msg 1                   ; ok
     if_not fail             ; --
     push #?                 ; input=#?
@@ -26,12 +26,12 @@ write_cb_beh:               ; io_dev <- (ok . value/error)
     push read_cb_beh        ; input io_dev read_cb_beh
     actor create            ; input callback=read_cb_beh.io_dev
     push #?                 ; input callback to_cancel=#?
-    pair 2                  ; io_req=(to_cancel callback . input)
+    pair 2                  ; io_req=to_cancel,callback,input
     state 0                 ; io_req io_dev
     actor send              ; --
     ref std.commit
 
-read_cb_beh:                ; io_dev <- (ok . char/error)
+read_cb_beh:                ; io_dev <- ok,char/error
     msg 1                   ; ok
     if_not fail             ; --
     msg -1                  ; char
@@ -39,7 +39,7 @@ read_cb_beh:                ; io_dev <- (ok . char/error)
     push write_cb_beh       ; char io_dev write_cb_beh
     actor create            ; char callback=write_cb_beh.io_dev
     push #?                 ; char callback to_cancel=#?
-    pair 2                  ; io_req=(to_cancel callback . char)
+    pair 2                  ; io_req=to_cancel,callback,char
     state 0                 ; io_req io_dev
     actor send              ; --
     ref std.commit

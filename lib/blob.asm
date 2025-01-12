@@ -218,7 +218,7 @@ k_pair_size:                ; (head,tail),cust <- size
     actor become            ; --
 
     actor self              ; k=SELF
-    state 1                 ; k (head,tail)
+    state 1                 ; k head,tail
     nth -1                  ; k tail
     ref std.send_msg
 
@@ -236,7 +236,7 @@ k_pair_read:                ; (head,tail),cust,ofs <- size
     if_not k_pair_read2     ; --
 
     state -1                ; cust,ofs
-    state 1                 ; cust,ofs (head,tail)
+    state 1                 ; cust,ofs head,tail
     nth 1                   ; cust,ofs head
     ref std.send_msg
 
@@ -246,7 +246,7 @@ k_pair_read2:               ; --
     alu sub                 ; ofs'=ofs-size
     state 2                 ; ofs' cust
     pair 1                  ; cust,ofs'
-    state 1                 ; cust,ofs' (head,tail)
+    state 1                 ; cust,ofs' head,tail
     nth -1                  ; cust,ofs' tail
     ref std.send_msg
 
@@ -257,7 +257,7 @@ k_pair_write:               ; (head,tail),cust,ofs,data <- size
     if_not k_pair_write2    ; --
 
     state -1                ; cust,ofs,data
-    state 1                 ; cust,ofs,data (head,tail)
+    state 1                 ; cust,ofs,data head,tail
     nth 1                   ; cust,ofs,data head
     ref std.send_msg
 
@@ -268,7 +268,7 @@ k_pair_write2:              ; --
     alu sub                 ; data ofs'=ofs-size
     state 2                 ; data ofs' cust
     pair 2                  ; cust,ofs',data
-    state 1                 ; cust,ofs',data (head,tail)
+    state 1                 ; cust,ofs',data head,tail
     nth -1                  ; cust,ofs',data tail
     ref std.send_msg
 
@@ -294,7 +294,7 @@ k_pair_source:              ; (head,tail),base',len',cust <- size
 k_pair_fit:                 ; cust len' base' _
     drop 1                  ; cust len' base'
     pair 2                  ; base',len',cust
-    state 1                 ; base',len',cust (head,tail)
+    state 1                 ; base',len',cust head,tail
     nth 1                   ; base',len',cust head
     ref std.send_msg
 
@@ -304,7 +304,7 @@ k_pair_source2:             ; --
     msg 0                   ; cust len' base' size
     alu sub                 ; cust len' base''=base'-size
     pair 2                  ; base'',len',cust
-    state 1                 ; base'',len',cust (head,tail)
+    state 1                 ; base'',len',cust head,tail
     nth -1                  ; base'',len',cust tail
     ref std.send_msg
 

@@ -12,7 +12,7 @@ sink_beh:                   ; _ <- _
 ;;  DEF const_beh(value) AS \(cust, _).[
 ;;      SEND value TO cust
 ;;  ]
-const_beh:                  ; value <- (cust . _)
+const_beh:                  ; value <- cust,_
     state 0                 ; value
     ref std.cust_send
 
@@ -46,11 +46,11 @@ once_beh:                   ; rcvr <- msg
 ;;  DEF label_beh(rcvr, label) AS \msg.[
 ;;      SEND (label, msg) TO rcvr
 ;;  ]
-label_beh:                  ; (rcvr . label) <- msg
+label_beh:                  ; rcvr,label <- msg
     msg 0                   ; msg
     state -1                ; msg label
-    pair 1                  ; (label . msg)
-    state 1                 ; (label . msg) rcvr
+    pair 1                  ; label,msg
+    state 1                 ; label,msg rcvr
     ref std.send_msg
 
 ;;  DEF tag_beh(rcvr) AS \msg.[
@@ -59,8 +59,8 @@ label_beh:                  ; (rcvr . label) <- msg
 tag_beh:                    ; rcvr <- msg
     msg 0                   ; msg
     actor self              ; msg label=SELF
-    pair 1                  ; (label . msg)
-    state 0                 ; (label . msg) rcvr
+    pair 1                  ; label,msg
+    state 0                 ; label,msg rcvr
     ref std.send_msg
 
 ;;  DEF once_tag_beh(rcvr) AS \msg.[
@@ -76,10 +76,10 @@ once_tag_beh:               ; rcvr <- msg
 ;;  DEF relay_beh(rcvr, msg) AS \_.[
 ;;      SEND msg TO rcvr
 ;;  ]
-relay_beh:                  ; (rcvr . msg) <- _
+relay_beh:                  ; rcvr,msg <- _
     state -1                ; msg
     state 1                 ; msg rcvr
-;    state 0                 ; (rcvr . msg)
+;    state 0                 ; rcvr,msg
 ;    part 1                  ; msg rcvr
     ref std.send_msg
 
@@ -87,7 +87,7 @@ relay_beh:                  ; (rcvr . msg) <- _
 ;;      SEND msg TO rcvr1
 ;;      SEND msg TO rcvr2
 ;;  ]
-tee_beh:                    ; (rcvr1 . rcvr2) <- msg
+tee_beh:                    ; rcvr1,rcvr2 <- msg
     msg 0                   ; msg
     state 1                 ; msg rcvr1
     actor send              ; --

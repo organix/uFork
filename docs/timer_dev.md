@@ -6,7 +6,7 @@ of the underlying clock.
 
 ## Delayed-Message Request
 
-A _delayed-message_ request looks like `(delay target . message)`.
+A _delayed-message_ request looks like `delay,target,message`.
 The `message` is sent to the `target` actor
 after a nominal `delay` in milliseconds as a `fixnum`.
 
@@ -15,9 +15,9 @@ after a nominal `delay` in milliseconds as a `fixnum`.
 The **Timer Device** is also a [_requestor_](requestor.md). It supports
 cancellation.
 
-The input value of a _timer_ request is a pair like `(delay . result)`. After
+The input value of a _timer_ request is a pair like `delay,result`. After
 `delay` milliseconds, the `result` is sent to the callback specified in the
-request. The full request looks like `(to_cancel callback delay . result)`
+request. The full request looks like `to_cancel,callback,delay,result`
 
 ## Reference Implementation
 

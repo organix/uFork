@@ -150,7 +150,7 @@ boot:                       ; _ <- {caps}
     push std.sink_beh       ; on_open petname #? sink_beh
     actor create            ; on_open petname callback=sink_beh.#?
     push #?                 ; on_open petname callback to_cancel=#?
-    pair 3                  ; listen_req=(to_cancel callback petname . on_open)
+    pair 3                  ; listen_req=to_cancel,callback,petname,on_open
     msg 0                   ; listen_req {caps}
     push dev.tcp_key        ; listen_req {caps} tcp_key
     dict get                ; listen_req tcp_dev
@@ -172,7 +172,7 @@ on_open_beh:                ; {caps} <- conn
     push close_beh          ; blob conn,{caps} close_beh
     actor create            ; blob callback=close_beh.conn,{caps}
     push #?                 ; blob callback to_cancel=#?
-    pair 2                  ; write_req=(to_cancel callback . blob)
+    pair 2                  ; write_req=to_cancel,callback,blob
     msg 0                   ; write_req conn
     ref std.send_msg
 
@@ -188,7 +188,7 @@ close_beh:                  ; conn,{caps} <- _
     push dev.debug_key      ; #nil {caps} debug_key
     dict get                ; #nil callback=debug_dev
     push #?                 ; #nil callback to_cancel=#?
-    pair 2                  ; close_req=(to_cancel callback . #nil)
+    pair 2                  ; close_req=to_cancel,callback,#nil
     state 1                 ; close_req conn
     ref std.send_msg
 

@@ -5,7 +5,7 @@
 ; It is rare to provide a meaningful reason for cancellation, but if it is then
 ; the reason must be wrapped in a pair:
 
-;   (reason . _) -> canceller
+;   reason,_ -> canceller
 
 .import
     std: "../std.asm"
@@ -23,12 +23,12 @@ canceller_beh:              ; _ <- message
     ref std.commit
 
 got_reason:
-    msg 0                   ; (reason . _)
-    push cancel_wait_beh    ; (reason . _) cancel_wait_beh
+    msg 0                   ; reason,_
+    push cancel_wait_beh    ; reason,_ cancel_wait_beh
     actor become            ; --
     ref std.commit
 
-cancel_wait_beh:            ; (reason . _) <- message
+cancel_wait_beh:            ; reason,_ <- message
     msg 0                   ; message
     typeq #actor_t          ; cap?
     if_not std.commit       ; --
@@ -69,9 +69,9 @@ test:                       ; judge <- {caps}
     push 100                ; timer #nil 2nd 1st probation_ms=100
     pick 5                  ; timer #nil 2nd 1st probation_ms timer
     state 0                 ; timer #nil 2nd 1st probation_ms timer judge
-    pair 5                  ; timer (judge timer probation_ms 1st 2nd)
-    push referee.beh        ; timer (judge timer probation_ms 1st 2nd) referee_beh
-    actor create            ; timer referee=referee_beh.(judge timer probation_ms 1st 2nd)
+    pair 5                  ; timer judge,timer,probation_ms,1st,2nd,#nil
+    push referee.beh        ; timer judge,timer,probation_ms,1st,2nd,#nil referee_beh
+    actor create            ; timer referee=referee_beh.judge,timer,probation_ms,1st,2nd,#nil
 setup:
 
 ; Cancel arrives before reason.
@@ -103,9 +103,9 @@ run_test:                   ; ( timer cancel cancel_ms reason_ms reason -- )
     pick 6                  ; k timer cancel cancel_ms reason_ms reason canceller timer
     push #?                 ; k timer cancel cancel_ms reason_ms reason canceller timer #?
     roll 4                  ; k timer cancel cancel_ms reason_ms canceller timer #? reason
-    pair 1                  ; k timer cancel cancel_ms reason_ms canceller timer (reason . #?)
-    pick 3                  ; k timer cancel cancel_ms reason_ms canceller timer (reason . #?) canceller
-    roll 5                  ; k timer cancel cancel_ms canceller timer (reason . #?) canceller reason_ms
+    pair 1                  ; k timer cancel cancel_ms reason_ms canceller timer reason,#?
+    pick 3                  ; k timer cancel cancel_ms reason_ms canceller timer reason,#? canceller
+    roll 5                  ; k timer cancel cancel_ms canceller timer reason,#? canceller reason_ms
     call schedule_twice     ; k timer cancel cancel_ms canceller
     roll -2                 ; k timer cancel canceller cancel_ms
     call schedule_twice     ; k
@@ -113,7 +113,7 @@ run_test:                   ; ( timer cancel cancel_ms reason_ms reason -- )
 
 schedule_twice:             ; ( timer message target delay -- )
     roll -5                 ; k timer message target delay
-    pair 2                  ; k timer timer_req=(delay target . message)
+    pair 2                  ; k timer timer_req=delay,target,message
     dup 1                   ; k timer timer_req timer_req
     pick 3                  ; k timer timer_req timer_req timer
     actor send              ; k timer timer_req

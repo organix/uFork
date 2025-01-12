@@ -18,13 +18,13 @@ Use snake case for identifiers and file names.
 
 When describing uFork pair-based data structures, use Scheme list-notation.
 A dot surrounded by whitespace separates the two components of a pair.
-A list formed from pairs may be abbreviated such that `(a b c)` is equivalent
-to `(a . (b . (c . #nil)))`. A _dotted-tail_ denotes the rest of the list.
+A list formed from pairs may be abbreviated such that `a,b,c,#nil` is equivalent
+to `a,(b,(c,#nil))`. A _dotted-tail_ denotes the rest of the list.
 
-    (first second . rest) = -->[*,*]-->[*,*]--> rest
-                                |       |
-                                V       V
-                              first   second
+    first,second,rest = -->[*,*]-->[*,*]--> rest
+                            |       |
+                            V       V
+                          first   second
 
 ## JavaScript
 
@@ -311,17 +311,17 @@ In the stack diagram, label values as they are pushed onto the stack:
 
     push 1000                   ; a=1000
     push 2000                   ; a b=2000
-    pair 1                      ; c=(b . a)
+    pair 1                      ; c=b,a
 
 In the stack diagram, depict actor creation like `beh.state`:
 
-    push example_beh            ; (a . b) example_beh
-    actor create                ; example=example_beh.(a . b)
+    push example_beh            ; a,b example_beh
+    actor create                ; example=example_beh.a,b
 
 At the entry point of each behavior, show the signature of the state and
 message like `state <- msg`. For example:
 
-    my_beh:                     ; (count . limit) <- (cust selector . rest)
+    my_beh:                     ; count,limit <- cust,selector,rest
 
 If the module represents a behavior, the behavior's export should be named
 `beh`.

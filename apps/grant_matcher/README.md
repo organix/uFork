@@ -19,7 +19,7 @@ Run each of the following commands in separate terminal windows:
 
 On success, the donors (Alice and Dana) will each print something like
 
-     LOG: 536870959 = ^2000002f -> (+0 . #?)
+     LOG: 536870959 = ^2000002f -> +0,#?
 
 to stdout, indicating that their money has been transferred to the charity.
 

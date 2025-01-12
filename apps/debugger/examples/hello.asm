@@ -3,7 +3,7 @@
 .import
     dev: "https://ufork.org/lib/dev.asm"
 
-hello:                      ; (+72 +101 +108 +108 +111 +63 +10)
+hello:                      ; +72,+101,+108,+108,+111,+63,+10,#nil
     pair_t 'H'
     pair_t 'e'
     pair_t 'l'
