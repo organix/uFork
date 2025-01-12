@@ -1305,22 +1305,22 @@ function make_core({
             let sep;
             if (quad.t === PAIR_T) {
                 let p = raw;
-                sep = "(";
+                sep = ",";
                 while (quad.t === PAIR_T) {
+                    const car = u_pprint(quad.x);
+                    s += (
+                        car.includes(sep)
+                        ? "(" + car + ")"
+                        : car
+                    );
                     s += sep;
-                    s += u_pprint(quad.x);  // car
-                    sep = " ";
                     p = quad.y;  // cdr
                     if (!is_ptr(p)) {
                         break;
                     }
                     quad = u_read_quad(p);
                 }
-                if (p !== NIL_RAW) {
-                    s += " . ";
-                    s += u_pprint(p);
-                }
-                s += ")";
+                s += u_pprint(p);
                 return s;
             }
             if (quad.t === DICT_T) {
