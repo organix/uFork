@@ -73,30 +73,30 @@ suite:
 
 ; Equal pair structure.
 
-    push #nil               ; judge ()
-    push 2                  ; judge () 2
-    push 1                  ; judge () 2 1
-    pair 1                  ; judge () (1 . 2)
+    push #nil               ; judge #nil
+    push 2                  ; judge #nil 2
+    push 1                  ; judge #nil 2 1
+    pair 1                  ; judge #nil (1 . 2)
     pair 1                  ; judge ((1 . 2))
-    push #nil               ; judge ((1 . 2)) ()
-    push 2                  ; judge ((1 . 2)) () 2
-    push 1                  ; judge ((1 . 2)) () 2 1
-    pair 1                  ; judge ((1 . 2)) () (1 . 2)
+    push #nil               ; judge ((1 . 2)) #nil
+    push 2                  ; judge ((1 . 2)) #nil 2
+    push 1                  ; judge ((1 . 2)) #nil 2 1
+    pair 1                  ; judge ((1 . 2)) #nil (1 . 2)
     pair 1                  ; judge ((1 . 2)) ((1 . 2))
     call eq                 ; judge #t
     assert #t               ; judge
 
 ; Non-equal pair structure.
 
-    push #nil               ; judge ()
-    push 2                  ; judge () 2
-    push 1                  ; judge () 2 1
-    pair 1                  ; judge () (1 . 2)
+    push #nil               ; judge #nil
+    push 2                  ; judge #nil 2
+    push 1                  ; judge #nil 2 1
+    pair 1                  ; judge #nil (1 . 2)
     pair 1                  ; judge ((1 . 2))
-    push #nil               ; judge ((1 . 2)) ()
-    push 42                 ; judge ((1 . 2)) () 42
-    push 1                  ; judge ((1 . 2)) () 42 1
-    pair 1                  ; judge ((1 . 2)) () (1 . 42)
+    push #nil               ; judge ((1 . 2)) #nil
+    push 42                 ; judge ((1 . 2)) #nil 42
+    push 1                  ; judge ((1 . 2)) #nil 42 1
+    pair 1                  ; judge ((1 . 2)) #nil (1 . 42)
     pair 1                  ; judge ((1 . 2)) ((1 . 42))
     call eq                 ; judge #f
     assert #f               ; judge

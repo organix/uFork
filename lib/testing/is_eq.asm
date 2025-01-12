@@ -31,12 +31,12 @@ boot:                       ; _ <- {caps}
     ref suite
 
 test:                       ; judge <- {caps}
-    push #nil               ; ()
-    push #t                 ; () 2nd=#t
-    push #t                 ; () 2nd 1st=#t // order doesn't matter
-    push #?                 ; () 2nd 1st probation=#?
-    push #?                 ; () 2nd 1st probation timer=#?
-    state 0                 ; () 2nd 1st probation timer judge
+    push #nil               ; #nil
+    push #t                 ; #nil 2nd=#t
+    push #t                 ; #nil 2nd 1st=#t // order doesn't matter
+    push #?                 ; #nil 2nd 1st probation=#?
+    push #?                 ; #nil 2nd 1st probation timer=#?
+    state 0                 ; #nil 2nd 1st probation timer judge
     pair 5                  ; (judge timer probation 1st 2nd)
     push referee.beh        ; (judge timer probation 1st 2nd) referee_beh
     actor create            ; referee=referee_beh.(judge timer probation 1st 2nd)

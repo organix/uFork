@@ -106,30 +106,30 @@ Quad-cells are used to encode most of the important data-structures in uFork.
 [`#pair_t`, _item_, _rest_, `#?`]       | stack entry holding _item_
 [`#actor_t`, _code_, _data_, `#?`]      | idle actor
 [`#actor_t`, _code_, _data_, _effects_] | busy actor
-[`#actor_t`, _code'_, _data'_, _events_]| effects, initial _events_=()
+[`#actor_t`, _code'_, _data'_, _events_]| effects, initial _events_=#nil
 [`#dict_t`, _key_, _value_, _next_]     | dictionary binding entry
 [`FREE_T`, `#?`, `#?`, _next_]          | cell in the free-list
 
 ### Reserved ROM
 
- Name        | Address     | T         | X    | Y    | Z    | Description
--------------|-------------|-----------|------|------|------|------------------
- `#?`        | `^00000000` | `#?`      | `#?` | `#?` | `#?` | Undefined
- `()`        | `^00000001` | `#?`      | `#?` | `#?` | `#?` | Nil (empty list)
- `#f`        | `^00000002` | `#?`      | `#?` | `#?` | `#?` | Boolean False
- `#t`        | `^00000003` | `#?`      | `#?` | `#?` | `#?` | Boolean True
- --          | `^00000004` | `#?`      | `#?` | `#?` | `#?` | --reserved--
- `EMPTY_DQ`  | `^00000005` | `#pair_t` | `()` | `()` | `#?` | Empty Deque
- `#type_t`   | `^00000006` | `#type_t` | `+1` | `#?` | `#?` | Type of Types
- `#fixnum_t` | `^00000007` | `#type_t` | `#?` | `#?` | `#?` | Fixnum Type
- `#actor_t`  | `^00000008` | `#type_t` | `+2` | `#?` | `#?` | Actor (ocap) Type
- `PROXY_T`   | `^00000009` | `#type_t` | `+2` | `#?` | `#?` | Proxy Type
- `STUB_T`    | `^0000000A` | `#type_t` | `+2` | `#?` | `#?` | Stub Type
- `#instr_t`  | `^0000000B` | `#type_t` | `+3` | `#?` | `#?` | Instruction Type
- `#pair_t`   | `^0000000C` | `#type_t` | `+2` | `#?` | `#?` | Pair Type
- `#dict_t`   | `^0000000D` | `#type_t` | `+3` | `#?` | `#?` | Dictionary Type
- `FWD_REF_T` | `^0000000E` | `#type_t` | `-1` | `#?` | `#?` | GC Fwd-Ref Type
- `FREE_T`    | `^0000000F` | `#type_t` | `+0` | `#?` | `#?` | Free-Quad Type
+ Name        | Address     | T         | X      | Y      | Z    | Description
+-------------|-------------|-----------|--------|--------|------|------------------
+ `#?`        | `^00000000` | `#?`      | `#?`   | `#?`   | `#?` | Undefined
+ `#nil`      | `^00000001` | `#?`      | `#?`   | `#?`   | `#?` | Nil (empty list)
+ `#f`        | `^00000002` | `#?`      | `#?`   | `#?`   | `#?` | Boolean False
+ `#t`        | `^00000003` | `#?`      | `#?`   | `#?`   | `#?` | Boolean True
+ --          | `^00000004` | `#?`      | `#?`   | `#?`   | `#?` | --reserved--
+ `EMPTY_DQ`  | `^00000005` | `#pair_t` | `#nil` | `#nil` | `#?` | Empty Deque
+ `#type_t`   | `^00000006` | `#type_t` | `+1`   | `#?`   | `#?` | Type of Types
+ `#fixnum_t` | `^00000007` | `#type_t` | `#?`   | `#?`   | `#?` | Fixnum Type
+ `#actor_t`  | `^00000008` | `#type_t` | `+2`   | `#?`   | `#?` | Actor (ocap) Type
+ `PROXY_T`   | `^00000009` | `#type_t` | `+2`   | `#?`   | `#?` | Proxy Type
+ `STUB_T`    | `^0000000A` | `#type_t` | `+2`   | `#?`   | `#?` | Stub Type
+ `#instr_t`  | `^0000000B` | `#type_t` | `+3`   | `#?`   | `#?` | Instruction Type
+ `#pair_t`   | `^0000000C` | `#type_t` | `+2`   | `#?`   | `#?` | Pair Type
+ `#dict_t`   | `^0000000D` | `#type_t` | `+3`   | `#?`   | `#?` | Dictionary Type
+ `FWD_REF_T` | `^0000000E` | `#type_t` | `-1`   | `#?`   | `#?` | GC Fwd-Ref Type
+ `FREE_T`    | `^0000000F` | `#type_t` | `+0`   | `#?`   | `#?` | Free-Quad Type
 
 ### Reserved RAM
 
@@ -137,19 +137,19 @@ Quad-cells are used to encode most of the important data-structures in uFork.
 -------------|------------|----------|----------|----------|------------------
  `^40000000` | _top_      | _next_   | _free_   | _root_   | Memory Descriptor
  `^40000001` | _e_head_   | _e_tail_ | _k_head_ | _k_tail_ | Events and Continuations
- `@60000002` | `#actor_t` | `+0`     | `()`     | `#?`     | Device Actor #0
- `@60000003` | `#actor_t` | `+1`     | `()`     | `#?`     | Device Actor #1
- `@60000004` | `#actor_t` | `+2`     | `()`     | `#?`     | Device Actor #2
- `@60000005` | `#actor_t` | `+3`     | `()`     | `#?`     | Device Actor #3
- `@60000006` | `#actor_t` | `+4`     | `()`     | `#?`     | Device Actor #4
- `@60000007` | `#actor_t` | `+5`     | `()`     | `#?`     | Device Actor #5
- `@60000008` | `#actor_t` | `+6`     | `()`     | `#?`     | Device Actor #6
- `@60000009` | `#actor_t` | `+7`     | `()`     | `#?`     | Device Actor #7
- `@6000000A` | `#actor_t` | `+8`     | `()`     | `#?`     | Device Actor #8
- `@6000000B` | `#actor_t` | `+9`     | `()`     | `#?`     | Device Actor #9
- `@6000000C` | `#actor_t` | `+10`    | `()`     | `#?`     | Device Actor #10
- `@6000000D` | `#actor_t` | `+11`    | `()`     | `#?`     | Device Actor #11
- `@6000000E` | `#actor_t` | `+12`    | `()`     | `#?`     | Device Actor #12
+ `@60000002` | `#actor_t` | `+0`     | `#nil`   | `#?`     | Device Actor #0
+ `@60000003` | `#actor_t` | `+1`     | `#nil`   | `#?`     | Device Actor #1
+ `@60000004` | `#actor_t` | `+2`     | `#nil`   | `#?`     | Device Actor #2
+ `@60000005` | `#actor_t` | `+3`     | `#nil`   | `#?`     | Device Actor #3
+ `@60000006` | `#actor_t` | `+4`     | `#nil`   | `#?`     | Device Actor #4
+ `@60000007` | `#actor_t` | `+5`     | `#nil`   | `#?`     | Device Actor #5
+ `@60000008` | `#actor_t` | `+6`     | `#nil`   | `#?`     | Device Actor #6
+ `@60000009` | `#actor_t` | `+7`     | `#nil`   | `#?`     | Device Actor #7
+ `@6000000A` | `#actor_t` | `+8`     | `#nil`   | `#?`     | Device Actor #8
+ `@6000000B` | `#actor_t` | `+9`     | `#nil`   | `#?`     | Device Actor #9
+ `@6000000C` | `#actor_t` | `+10`    | `#nil`   | `#?`     | Device Actor #10
+ `@6000000D` | `#actor_t` | `+11`    | `#nil`   | `#?`     | Device Actor #11
+ `@6000000E` | `#actor_t` | `+12`    | `#nil`   | `#?`     | Device Actor #12
  `^4000000F` | _memory_   | _events_ | _cycles_ | _signal_ | Root Sponsor
 
 ### Memory Descriptor
@@ -182,7 +182,7 @@ for [garbage-collection](gc.md).
 ```
 e_queue: [e_head,e_tail]------------------------+
           |                                     V
-          +-->[sponsor,to,msg,next]---> ... -->[sponsor,to,msg,()]
+          +-->[sponsor,to,msg,next]---> ... -->[sponsor,to,msg,#nil]
                 |      |   |
                 |      |   +--> actor message content
                 |      V
@@ -194,10 +194,10 @@ e_queue: [e_head,e_tail]------------------------+
 
 k_queue: [k_head,k_tail]----------------+
           |                             V
-          +-->[ip,sp,ep,kp]---> ... -->[ip,sp,ep,()]
+          +-->[ip,sp,ep,kp]---> ... -->[ip,sp,ep,#nil]
                |  |  |
                |  |  V
-               |  | [sponsor,to,msg,()]
+               |  | [sponsor,to,msg,#nil]
                |  |          |   |
                |  |          |   +--> ...
                |  |          V
@@ -206,9 +206,9 @@ k_queue: [k_head,k_tail]----------------+
                |  |                         V
                |  |                   [#actor_t,code',data',events]
                |  V                                          |
-               | [#pair_t,car,cdr,#?]                        +--> ... -->[sponsor,to,msg,()]
+               | [#pair_t,car,cdr,#?]                        +--> ... -->[sponsor,to,msg,#nil]
                |           |   |
-               |           |   +--> ... -->[#pair_t,car,(),#?]
+               |           |   +--> ... -->[#pair_t,car,#nil,#?]
                |           V
                |          item
                V

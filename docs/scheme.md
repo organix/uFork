@@ -17,7 +17,7 @@ to the state of actors, managed with `BECOME`.
 ## Literal Values
 
   * `#?` — undefined value
-  * `#nil` — empty list, abbreviated `()`
+  * `#nil` — empty list, abbreviated `#nil`
   * `#f` — boolean **false**
   * `#t` — boolean **true**
   * `#literal_t` — type of literal values

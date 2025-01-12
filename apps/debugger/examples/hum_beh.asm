@@ -80,8 +80,8 @@ boot:                       ; _ <- {caps}
 ; Create the 'top' actor.
 
     push top_code           ; msg code=top_code
-    push #nil               ; msg code ()
-    push 1                  ; msg code () 1
+    push #nil               ; msg code #nil
+    push 1                  ; msg code #nil 1
     pair 1                  ; msg code env=(1)
     call hum.make_closure   ; msg top_closure
     push hum.beh            ; msg top_closure beh

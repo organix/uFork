@@ -35,7 +35,7 @@ test_if:
     push -1                 ; -1
     eq 0                    ; #f
     if stop                 ; --
-    push #nil               ; ()
+    push #nil               ; #nil
     if stop                 ; --
     push 0                  ; 0
     if stop                 ; --
@@ -45,8 +45,8 @@ test_nth:
     assert 273              ; (546 819)
     part 1                  ; (819) 546
     assert 546              ; (819)
-    part 1                  ; () 819
-    assert 819              ; ()
+    part 1                  ; #nil 819
+    assert 819              ; #nil
     assert #nil             ; --
     push list-0             ; (273 546 819)
     nth 0                   ; (273 546 819)
@@ -67,7 +67,7 @@ test_nth:
     nth 3                   ; 819
     assert 819              ; --
     push list-0             ; (273 546 819)
-    nth -3                  ; ()
+    nth -3                  ; #nil
     assert list-3           ; --
 ;    assert #nil             ; --
     push list-0             ; (273 546 819)
@@ -149,7 +149,7 @@ list-1:                     ; (546 819)
     pair_t 16#222           ; 546
 list-2:                     ; (819)
     pair_t 16#333           ; 819
-list-3:                     ; ()
+list-3:                     ; #nil
     ref #nil
 
 ; taken from `assert_eq.asm`

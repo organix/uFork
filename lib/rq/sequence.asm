@@ -154,15 +154,15 @@ test:                       ; judge <- {caps}
 ; FIXME: Validate the entire result, not just the result's value. This requires
 ; some kind of "deep" validator.
 
-    push #nil               ; ()
-    push #?                 ; () 3rd=#?
-    push 4000               ; () 3rd 2nd=4000
-    push 1000               ; () 3rd 2nd 1st=1000
-    push 50                 ; () 3rd 2nd 1st probation=50ms
-    msg 0                   ; () 3rd 2nd 1st probation {caps}
-    push dev.timer_key      ; () 3rd 2nd 1st probation {caps} timer_key
-    dict get                ; () 3rd 2nd 1st probation timer
-    state 0                 ; () 3rd 2nd 1st probation timer judge
+    push #nil               ; #nil
+    push #?                 ; #nil 3rd=#?
+    push 4000               ; #nil 3rd 2nd=4000
+    push 1000               ; #nil 3rd 2nd 1st=1000
+    push 50                 ; #nil 3rd 2nd 1st probation=50ms
+    msg 0                   ; #nil 3rd 2nd 1st probation {caps}
+    push dev.timer_key      ; #nil 3rd 2nd 1st probation {caps} timer_key
+    dict get                ; #nil 3rd 2nd 1st probation timer
+    state 0                 ; #nil 3rd 2nd 1st probation timer judge
     pair 6                  ; (judge timer probation 1st 2nd 3rd)
     push referee.beh        ; (judge timer probation 1st 2nd 3rd) referee_beh
     actor create            ; referee=referee_beh.(judge timer probation 1st 2nd 3rd)
@@ -178,7 +178,7 @@ suite:
 
     dup 2                   ; ... referee timer
     push #?                 ; ... referee timer cancel_at=#?
-    push #nil               ; ... referee timer cancel_at spec=()
+    push #nil               ; ... referee timer cancel_at spec=#nil
     call run_test           ; ...
 
 ; Two successful requestors.
@@ -186,7 +186,7 @@ suite:
 
     dup 2                   ; ... referee timer
     push #?                 ; ... referee timer cancel_at=#?
-    push #nil               ; ... ... ()
+    push #nil               ; ... ... #nil
     push #?                 ; ... ... 1st_error=#?
     push 5                  ; ... ... 1st_delay=5ms
     push #?                 ; ... ... 2nd_error=#?
@@ -199,7 +199,7 @@ suite:
 
     dup 2                   ; ... referee timer
     push 15                 ; ... referee timer cancel_at=15ms
-    push #nil               ; ... ... ()
+    push #nil               ; ... ... #nil
     push #?                 ; ... ... 1st_error=#?
     push 10                 ; ... ... 1st_delay=10ms
     push #?                 ; ... ... 2nd_error=#?
@@ -214,7 +214,7 @@ suite:
 
     dup 2                   ; ... referee timer
     push #?                 ; ... referee timer cancel_at=#?
-    push #nil               ; ... ... ()
+    push #nil               ; ... ... #nil
     push #?                 ; ... ... 1st_error=#?
     push 10                 ; ... ... 1st_delay=10ms
     push 666                ; ... ... 2nd_error=666
@@ -236,7 +236,7 @@ run_test:                   ; ( referee timer cancel_at spec -- )
 ; where 1st denotes the first requestor, 2nd denotes the second requestor, etc.
 
     roll -5                 ; k referee timer cancel_at spec
-    push #nil               ; k referee timer cancel_at spec requestors=()
+    push #nil               ; k referee timer cancel_at spec requestors=#nil
 
 ; The spec is consumed two elements at a time, until it is empty.
 

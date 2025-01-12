@@ -80,8 +80,7 @@ A _list_ can be represented by a sequence of pairs,
 where the _head_ of each pair is an element of the list,
 and the _tail_ of each pair is another list.
 The base-case is the empty list,
-represented by the `#nil` literal in uFork assembly,
-and usually printed as `()`.
+represented by the `#nil` literal in uFork assembly.
 
 A list is usually printed in a more compact form than a pair.
 The list `(1 2 3)` is an abbreviation for
@@ -111,7 +110,7 @@ As an example, consider indexing into the list `(1 2 3)`:
  2     | `2`
 -2     | `(3)`
  3     | `3`
--3     | `()`
+-3     | `#nil`
  4     | `#?`
 -4     | `#?`
 
@@ -143,7 +142,7 @@ For example, the customer could be the next actor in a processing pipeline.
 The usual convention is to provide the _customer_
 as the first element of a list-structured message.
 Viewed as a pair, a _call_ looks like `(customer . request)`.
-If the _request_ is `()`,
+If the _request_ is `#nil`,
 the call degenerates to the one-element list `(customer)`.
 This convention is most appropriate
 for representing arguments lists
@@ -241,7 +240,7 @@ read:                       ; value <- (tag cust . _)
 
 The "read" handler expects a message matching `(tag cust)`.
 Note that this is a subset of the top-level pattern `(tag cust . req)`
-where `req` is `()`.
+where `req` is `#nil`.
 Reading the cell entails sending the current state `value`
 to the customer actor `cust`.
 

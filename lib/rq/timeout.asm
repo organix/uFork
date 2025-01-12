@@ -36,9 +36,9 @@ timeout_beh:                ; (requestor time_limit . timer_dev) <- request
 ; Create a cancel capability that cancels both the requestor and timer. Send it
 ; to the 'to_cancel' capability from the request.
 
-    push #nil               ; t␘ r␘ ()
-    pick 3                  ; t␘ r␘ () t␘
-    pick 3                  ; t␘ r␘ () t␘ r␘
+    push #nil               ; t␘ r␘ #nil
+    pick 3                  ; t␘ r␘ #nil t␘
+    pick 3                  ; t␘ r␘ #nil t␘ r␘
     pair 2                  ; t␘ r␘ (r␘ t␘)
     push cancel_all_beh     ; t␘ r␘ (r␘ t␘) cancel_all_beh
     actor create            ; t␘ r␘ cancel_all=cancel_all_beh.(r␘ t␘)
@@ -119,13 +119,13 @@ test:                       ; judge <- {caps}
     msg 0                   ; {caps}
     push dev.timer_key      ; {caps} timer_key
     dict get                ; timer
-    push #nil               ; timer ()
-    push 444                ; timer () 3rd=444
-    push 222                ; timer () 3rd 2nd=222
-    push #?                 ; timer () 3rd 2nd 1st=#?
-    push 100                ; timer () 3rd 2nd 1st probation=100ms
-    pick 6                  ; timer () 3rd 2nd 1st probation timer
-    state 0                 ; timer () 3rd 2nd 1st probation timer judge
+    push #nil               ; timer #nil
+    push 444                ; timer #nil 3rd=444
+    push 222                ; timer #nil 3rd 2nd=222
+    push #?                 ; timer #nil 3rd 2nd 1st=#?
+    push 100                ; timer #nil 3rd 2nd 1st probation=100ms
+    pick 6                  ; timer #nil 3rd 2nd 1st probation timer
+    state 0                 ; timer #nil 3rd 2nd 1st probation timer judge
     pair 6                  ; timer (judge timer probation 1st 2nd 3rd)
     push referee.beh        ; timer (judge timer probation 1st 2nd 3rd) referee_beh
     actor create            ; timer referee=referee_beh.(judge timer probation 1st 2nd 3rd)

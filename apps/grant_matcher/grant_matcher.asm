@@ -209,9 +209,9 @@ GM_grant:                   ; donor
     msg -4                  ; donor donor withdraw
     cmp eq                  ; donor donor==withdraw
     if std.commit           ; donor
-    push #nil               ; donor ()
-    roll 2                  ; () donor
-    msg -4                  ; () donor withdraw
+    push #nil               ; donor #nil
+    roll 2                  ; #nil donor
+    msg -4                  ; #nil donor withdraw
     pair 2                  ; (withdraw donor)
     msg 4                   ; (withdraw donor) deposit
     actor send              ; --

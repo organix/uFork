@@ -19,7 +19,7 @@ Use snake case for identifiers and file names.
 When describing uFork pair-based data structures, use Scheme list-notation.
 A dot surrounded by whitespace separates the two components of a pair.
 A list formed from pairs may be abbreviated such that `(a b c)` is equivalent
-to `(a . (b . (c . ())))`. A _dotted-tail_ denotes the rest of the list.
+to `(a . (b . (c . #nil)))`. A _dotted-tail_ denotes the rest of the list.
 
     (first second . rest) = -->[*,*]-->[*,*]--> rest
                                 |       |

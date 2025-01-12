@@ -103,14 +103,14 @@ test:                       ; judge <- {caps}
     msg 0                   ; {caps}
     push dev.timer_key      ; {caps} timer_key
     dict get                ; timer
-    push #nil               ; timer ()
-    push #t                 ; timer () expect_3=#t
-    push #f                 ; timer () expect_3 expect_2=#f
-    push #f                 ; timer () expect_3 expect_2 wrong=#f
-    push #t                 ; timer () expect_3 expect_2 wrong no_timer=#t
-    push 100                ; timer () expect_3 expect_2 wrong no_timer probation=100ms
-    pick 7                  ; timer () expect_3 expect_2 wrong no_timer probation timer
-    state 0                 ; timer () expect_3 expect_2 wrong no_timer probation timer judge
+    push #nil               ; timer #nil
+    push #t                 ; timer #nil expect_3=#t
+    push #f                 ; timer #nil expect_3 expect_2=#f
+    push #f                 ; timer #nil expect_3 expect_2 wrong=#f
+    push #t                 ; timer #nil expect_3 expect_2 wrong no_timer=#t
+    push 100                ; timer #nil expect_3 expect_2 wrong no_timer probation=100ms
+    pick 7                  ; timer #nil expect_3 expect_2 wrong no_timer probation timer
+    state 0                 ; timer #nil expect_3 expect_2 wrong no_timer probation timer judge
     pair 7                  ; timer (judge timer probation no_timer wrong expect_2 expect_3)
     push referee_beh        ; timer (judge timer probation no_timer wrong expect_2 expect_3) referee_beh
     actor create            ; timer ref=referee_of_referees
@@ -120,13 +120,13 @@ setup:
 ; Get 3 messages, but one is wrong. FAIL in ~50ms.
 
     dup 1                   ; ref timer timer
-    push #nil               ; ref timer timer ()
-    push 3                  ; ref timer timer () 3rd=3
-    push 42                 ; ref timer timer () 3rd 2nd=42 // actual==2
-    push 1                  ; ref timer timer () 3rd 2nd 1st=1
-    push 100                ; ref timer timer () 3rd 2nd 1st probation=100ms
-    pick 7                  ; ref timer timer () 3rd 2nd 1st probation timer
-    pick 9                  ; ref timer timer () 3rd 2nd 1st probation timer judge=ref
+    push #nil               ; ref timer timer #nil
+    push 3                  ; ref timer timer #nil 3rd=3
+    push 42                 ; ref timer timer #nil 3rd 2nd=42 // actual==2
+    push 1                  ; ref timer timer #nil 3rd 2nd 1st=1
+    push 100                ; ref timer timer #nil 3rd 2nd 1st probation=100ms
+    pick 7                  ; ref timer timer #nil 3rd 2nd 1st probation timer
+    pick 9                  ; ref timer timer #nil 3rd 2nd 1st probation timer judge=ref
     pair 6                  ; ref timer timer referee_state
     push referee_beh        ; ref timer timer referee_state referee_beh
     actor create            ; ref timer timer referee
@@ -135,12 +135,12 @@ setup:
 ; Expect 2 messages, but get three. FAIL in ~75ms.
 
     dup 1                   ; ref timer timer
-    push #nil               ; ref timer timer ()
-    push 2                  ; ref timer timer () 2nd=2
-    push 1                  ; ref timer timer () 2nd 1st=1
-    push 100                ; ref timer timer () 2nd 1st probation=100ms
-    pick 6                  ; ref timer timer () 2nd 1st probation timer
-    pick 8                  ; ref timer timer () 2nd 1st probation timer judge=ref
+    push #nil               ; ref timer timer #nil
+    push 2                  ; ref timer timer #nil 2nd=2
+    push 1                  ; ref timer timer #nil 2nd 1st=1
+    push 100                ; ref timer timer #nil 2nd 1st probation=100ms
+    pick 6                  ; ref timer timer #nil 2nd 1st probation timer
+    pick 8                  ; ref timer timer #nil 2nd 1st probation timer judge=ref
     pair 5                  ; ref timer timer referee_state
     push referee_beh        ; ref timer timer referee_state referee_beh
     actor create            ; ref timer timer referee
@@ -149,11 +149,11 @@ setup:
 ; Expect 1 message, get 3, but omit the timer. PASS in ~25ms.
 
     dup 1                   ; ref timer timer
-    push #nil               ; ref timer timer ()
-    push 1                  ; ref timer timer () 1st=1
-    push #?                 ; ref timer timer () 1st probation=#?
-    push #?                 ; ref timer timer () 1st probation timer=#?
-    pick 7                  ; ref timer timer () 1st probation timer judge=ref
+    push #nil               ; ref timer timer #nil
+    push 1                  ; ref timer timer #nil 1st=1
+    push #?                 ; ref timer timer #nil 1st probation=#?
+    push #?                 ; ref timer timer #nil 1st probation timer=#?
+    pick 7                  ; ref timer timer #nil 1st probation timer judge=ref
     pair 4                  ; ref timer timer referee_state
     push referee_beh        ; ref timer timer referee_state referee_beh
     actor create            ; ref timer timer referee
@@ -162,13 +162,13 @@ setup:
 ; Get the 3 expected messages. PASS in ~175ms
 
     dup 1                   ; ref timer timer
-    push #nil               ; ref timer timer ()
-    push 3                  ; ref timer timer () 3rd=3
-    push 2                  ; ref timer timer () 3rd 2nd=2
-    push 1                  ; ref timer timer () 3rd 2nd 1st=1
-    push 100                ; ref timer timer () 3rd 2nd 1st probation=100ms
-    pick 7                  ; ref timer timer () 3rd 2nd 1st probation timer
-    pick 9                  ; ref timer timer () 3rd 2nd 1st probation timer judge=ref
+    push #nil               ; ref timer timer #nil
+    push 3                  ; ref timer timer #nil 3rd=3
+    push 2                  ; ref timer timer #nil 3rd 2nd=2
+    push 1                  ; ref timer timer #nil 3rd 2nd 1st=1
+    push 100                ; ref timer timer #nil 3rd 2nd 1st probation=100ms
+    pick 7                  ; ref timer timer #nil 3rd 2nd 1st probation timer
+    pick 9                  ; ref timer timer #nil 3rd 2nd 1st probation timer judge=ref
     pair 6                  ; ref timer timer referee_state
     push referee_beh        ; ref timer timer referee_state referee_beh
     actor create            ; ref timer timer referee

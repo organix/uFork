@@ -64,7 +64,7 @@ tail:                       ; ... k args env args' closure
 ;     (lambda (a b)
 ;         (+ a b)))
 
-sum_code:                   ; k args=(a b) env=()
+sum_code:                   ; k args=(a b) env=#nil
     pick 2                  ; k args env |1| args
     nth 1                   ; k args env |1| a
     pick 3                  ; k args env |2| a args
@@ -79,23 +79,23 @@ sum:
 ;     (lambda (a b c d)
 ;         (+ (sum a b) (sum c d))))
 
-double_sum_code:            ; k args=(a b c d) env=()
+double_sum_code:            ; k args=(a b c d) env=#nil
     push k1                 ; k args env |1| k1
-    push #nil               ; k args env |2| k1 ()
-    pick 4                  ; k args env |3| k1 () args
-    nth 2                   ; k args env |3| k1 () b
-    pick 5                  ; k args env |4| k1 () b args
-    nth 1                   ; k args env |4| k1 () b a
+    push #nil               ; k args env |2| k1 #nil
+    pick 4                  ; k args env |3| k1 #nil args
+    nth 2                   ; k args env |3| k1 #nil b
+    pick 5                  ; k args env |4| k1 #nil b args
+    nth 1                   ; k args env |4| k1 #nil b a
     pair 2                  ; k args env |2| k1 args'=(a b)
     push sum                ; k args env |3| k1 args' sum
     ref call
 k1:                         ; k args env |1| a+b
     push k2                 ; k args env |2| a+b k2
-    push #nil               ; k args env |3| a+b k2 ()
-    pick 5                  ; k args env |4| a+b k2 () args
-    nth 4                   ; k args env |4| a+b k2 () d
-    pick 6                  ; k args env |5| a+b k2 () d args
-    nth 3                   ; k args env |5| a+b k2 () d c
+    push #nil               ; k args env |3| a+b k2 #nil
+    pick 5                  ; k args env |4| a+b k2 #nil args
+    nth 4                   ; k args env |4| a+b k2 #nil d
+    pick 6                  ; k args env |5| a+b k2 #nil d args
+    nth 3                   ; k args env |5| a+b k2 #nil d c
     pair 2                  ; k args env |3| a+b k2 args'=(c d)
     push sum                ; k args env |4| a+b k2 args' sum
     ref call
@@ -117,7 +117,7 @@ double_sum:
 ;             (ifact (- n 1) (* a n))
 ;             a)))
 
-ifact_code:                 ; k args=(n a) env=()
+ifact_code:                 ; k args=(n a) env=#nil
     pick 2                  ; k args env |1| args
     nth 1                   ; k args env |1| n
     push 1                  ; k args env |2| n 1
@@ -127,16 +127,16 @@ ifact_code:                 ; k args=(n a) env=()
     nth 2                   ; k args env |1| a
     ref return
 recurse:
-    push #nil               ; k args env |1| ()
-    pick 3                  ; k args env |2| () args
-    nth 2                   ; k args env |2| () a
-    pick 4                  ; k args env |3| () a args
-    nth 1                   ; k args env |3| () a n
-    alu mul                 ; k args env |2| () a*n
-    pick 4                  ; k args env |3| () a*n args
-    nth 1                   ; k args env |3| () a*n n
-    push 1                  ; k args env |4| () a*n n 1
-    alu sub                 ; k args env |3| () a*n n-1
+    push #nil               ; k args env |1| #nil
+    pick 3                  ; k args env |2| #nil args
+    nth 2                   ; k args env |2| #nil a
+    pick 4                  ; k args env |3| #nil a args
+    nth 1                   ; k args env |3| #nil a n
+    alu mul                 ; k args env |2| #nil a*n
+    pick 4                  ; k args env |3| #nil a*n args
+    nth 1                   ; k args env |3| #nil a*n n
+    push 1                  ; k args env |4| #nil a*n n 1
+    alu sub                 ; k args env |3| #nil a*n n-1
     pair 2                  ; k args env |1| args=(n-1 a*n)
     push ifact              ; k args env |2| args closure=ifact
     ref tail
@@ -156,7 +156,7 @@ ifact:
 ;             (lambda s
 ;                 (list p q r s) ))))
 
-hof3_code:                  ; k args=(p) env=()
+hof3_code:                  ; k args=(p) env=#nil
     pick 1                  ; k args env |1| env
     pick 3                  ; k args env |2| env args
     pair 1                  ; k args env |1| env'=(args . env)
@@ -175,17 +175,17 @@ qr_code:                    ; k args=(qr) env=((p))
     ref return
 
 s_code:                     ; k args=s env=((q r) (p))
-    push #nil               ; k args env |1| ()
-    pick 3                  ; k args env |2| () s
-    pick 3                  ; k args env |3| () s env
-    nth 1                   ; k args env |3| () s (q r)
-    nth 2                   ; k args env |3| () s r
-    pick 4                  ; k args env |4| () s r env
-    nth 1                   ; k args env |4| () s r (q r)
-    nth 1                   ; k args env |4| () s r q
-    pick 5                  ; k args env |5| () s r q env
-    nth 2                   ; k args env |5| () s r q (p)
-    nth 1                   ; k args env |5| () s r q p
+    push #nil               ; k args env |1| #nil
+    pick 3                  ; k args env |2| #nil s
+    pick 3                  ; k args env |3| #nil s env
+    nth 1                   ; k args env |3| #nil s (q r)
+    nth 2                   ; k args env |3| #nil s r
+    pick 4                  ; k args env |4| #nil s r env
+    nth 1                   ; k args env |4| #nil s r (q r)
+    nth 1                   ; k args env |4| #nil s r q
+    pick 5                  ; k args env |5| #nil s r q env
+    nth 2                   ; k args env |5| #nil s r q (p)
+    nth 1                   ; k args env |5| #nil s r q p
     pair 4                  ; k args env |1| (p q r s)
     ref return
 
@@ -199,11 +199,11 @@ boot:                       ; _ <- {caps}
 ; Call the 'double_sum' closure and print its return value.
 
     ; push print_rv           ; k=print_rv
-    ; push #nil               ; k ()
-    ; push 4                  ; k () d=4
-    ; push 3                  ; k () d c=3
-    ; push 2                  ; k () d c b=2
-    ; push 1                  ; k () d c b a=1
+    ; push #nil               ; k #nil
+    ; push 4                  ; k #nil d=4
+    ; push 3                  ; k #nil d c=3
+    ; push 2                  ; k #nil d c b=2
+    ; push 1                  ; k #nil d c b a=1
     ; pair 4                  ; k args=(a b c d)
     ; push double_sum         ; k args closure=double_sum
     ; ref call
@@ -211,9 +211,9 @@ boot:                       ; _ <- {caps}
 ; Print the factorial of 6.
 
     push print_rv           ; k=print_rv
-    push #nil               ; k ()
-    push 1                  ; k () a=1
-    push 6                  ; k () a n=6
+    push #nil               ; k #nil
+    push 1                  ; k #nil a=1
+    push 6                  ; k #nil a n=6
     pair 2                  ; k args=(n a)
     push ifact              ; k args closure=ifact
     ref call
@@ -221,16 +221,16 @@ boot:                       ; _ <- {caps}
 ; Call the innermost lambda in hof3 and print its return value.
 
 ;     push p_return           ; k=p_return
-;     push #nil               ; k ()
-;     push 1                  ; k () p=1
+;     push #nil               ; k #nil
+;     push 1                  ; k #nil p=1
 ;     pair 1                  ; k args=(p)
 ;     push hof3               ; k args closure=hof3
 ;     ref call
 ; p_return:                   ; qr
 ;     push qr_return          ; qr k=qr_return
-;     push #nil               ; qr k ()
-;     push 3                  ; qr k () r=3
-;     push 2                  ; qr k () r q=2
+;     push #nil               ; qr k #nil
+;     push 3                  ; qr k #nil r=3
+;     push 2                  ; qr k #nil r q=2
 ;     pair 2                  ; qr k args=(q r)
 ;     roll 3                  ; k args closure=qr
 ;     ref call

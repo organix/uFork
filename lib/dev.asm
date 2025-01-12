@@ -43,10 +43,10 @@ boot:                       ; _ <- {caps}
 
 ; Send a nil-terminated list to the debug device.
 
-    push #nil               ; ()
-    push -3                 ; () -3
-    push -2                 ; () -3 -2
-    push -1                 ; () -3 -2 -1
+    push #nil               ; #nil
+    push -3                 ; #nil -3
+    push -2                 ; #nil -3 -2
+    push -1                 ; #nil -3 -2 -1
     pair 3                  ; msg=(-1 -2 -3)
     msg 0                   ; msg {caps}
     push debug_key          ; msg {caps} debug_key

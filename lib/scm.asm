@@ -20,8 +20,8 @@ closure_t:                  ; [closure_t, code, data]
 behavior_t:                 ; [behavior_t, code, data, meta]
     type_t 3                ; [#type_t, 3]
 
-empty_env:                  ; (sp=() . env=())
-    pair_t #nil #nil        ; (())
+empty_env:                  ; (sp=#nil . env=#nil)
+    pair_t #nil #nil        ; (#nil)
 
 ;
 ; Meta-actor creation and behavior replacement.
@@ -75,7 +75,7 @@ stack_bottom:               ; ×
     pair_t #? #?
 
 gather:                     ; ( × vₙ … v₁ -- sp )
-    push #nil               ; × vₙ … v₂ v₁ k sp=()
+    push #nil               ; × vₙ … v₂ v₁ k sp=#nil
     roll -2                 ; × vₙ … v₂ v₁ sp k
 gather_loop:
     roll 3                  ; × vₙ … v₂ sp k v₁
@@ -103,7 +103,7 @@ spread_loop:                ; × vₙ … vₘ k sp
     part 1                  ; × vₙ … vₘ k sp' vₘ₋₁
     roll -3                 ; × vₙ … vₘ vₘ₋₁ k sp'
     ref spread_loop
-spread_done:                ; × vₙ … v₁ k ()
+spread_done:                ; × vₙ … v₁ k #nil
     drop 1                  ; × vₙ … v₁ k
     return
 
@@ -118,11 +118,11 @@ spread_done:                ; × vₙ … v₁ k ()
 ;    ...
 
 ; Prepare args for function call
-;    push #nil           ; ()
-;    push 3              ; () arg3
-;    push 2              ; () arg3 arg2
-;    push 1              ; () arg3 arg2 arg1
-;    actor self          ; () arg3 arg2 arg1 cust=SELF
+;    push #nil           ; #nil
+;    push 3              ; #nil arg3
+;    push 2              ; #nil arg3 arg2
+;    push 1              ; #nil arg3 arg2 arg1
+;    actor self          ; #nil arg3 arg2 arg1 cust=SELF
 ;    pair nargs+1        ; args=(cust arg1 arg2 arg3)
 ;    push func           ; args closure
 ;    call new_2          ; args code.data
@@ -271,11 +271,11 @@ count_code:                 ; (_ n) <- (self cust)
     state 2                 ; n
     msg 2                   ; n cust
     actor send              ; --
-    push #nil               ; ()
-    state 2                 ; () n
-    push 1                  ; () n 1
-    alu add                 ; () n+1
-    state 1                 ; () n+1 _
+    push #nil               ; #nil
+    state 2                 ; #nil n
+    push 1                  ; #nil n 1
+    alu add                 ; #nil n+1
+    state 1                 ; #nil n+1 _
     pair 2                  ; data=(_ n+1)
     push count_code         ; data code=count_code
     push mut_actor          ; data code meta=mut_actor
@@ -302,20 +302,20 @@ boot:                       ; _ <- {caps}
     dict get                ; referee=debug
     ref act
 test:                       ; judge <- {caps}
-    push #nil               ; ()
-    push 1                  ; () 2nd=1
-    push 0                  ; () 2nd 1st=0
-    push 10                 ; () 2nd 1st probation=10ms
-    msg 0                   ; () 2nd 1st probation {caps}
-    push dev.timer_key      ; () 2nd 1st probation {caps} timer_key
-    dict get                ; () 2nd 1st probation timer
-    state 0                 ; () 2nd 1st probation timer judge
+    push #nil               ; #nil
+    push 1                  ; #nil 2nd=1
+    push 0                  ; #nil 2nd 1st=0
+    push 10                 ; #nil 2nd 1st probation=10ms
+    msg 0                   ; #nil 2nd 1st probation {caps}
+    push dev.timer_key      ; #nil 2nd 1st probation {caps} timer_key
+    dict get                ; #nil 2nd 1st probation timer
+    state 0                 ; #nil 2nd 1st probation timer judge
     pair 5                  ; (judge timer probation 1st 2nd)
     push referee.beh        ; (judge timer probation 1st 2nd) referee_beh
     actor create            ; referee=referee_beh.(judge timer probation 1st 2nd)
 act:
-    push #nil               ; referee ()
-    roll 2                  ; () referee
+    push #nil               ; referee #nil
+    roll 2                  ; #nil referee
     pair 1                  ; (referee)
     push count_0            ; (referee) beh=count_0
     call new_3              ; (referee) counter=get_Z(beh).beh

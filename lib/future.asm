@@ -23,8 +23,8 @@ future_beh:                 ; (rcap . wcap) <- (tag . arg)
     if_not future_1         ; --
 future_0:
     state 0                 ; (rcap . wcap)
-    push #nil               ; (rcap . wcap) ()
-    msg -1                  ; (rcap . wcap) () cust=arg
+    push #nil               ; (rcap . wcap) #nil
+    msg -1                  ; (rcap . wcap) #nil cust=arg
     pair 1                  ; (rcap . wcap) waiting=(cust)
     pair 1                  ; (waiting rcap . wcap)
     push wait_beh           ; (waiting rcap . wcap) wait-beh

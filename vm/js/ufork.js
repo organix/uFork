@@ -212,7 +212,7 @@ const LOG_TRACE = 4;
 
 const rom_label = [
     "#?",
-    "()",
+    "#nil",
     "#f",
     "#t",
     "ROM_04",  // reserved

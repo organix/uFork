@@ -1363,7 +1363,7 @@ set:                        ; ( dict key value k -- dict' )
 
 del:                        ; ( dict key k -- dict' )
     roll -3                 ; k dict key
-    push #nil               ; k dict key rev=()
+    push #nil               ; k dict key rev=#nil
     pick 3                  ; k orig key rev dict
 del_rev:
     quad -4                 ; k orig key rev next value' key' type
@@ -1700,7 +1700,7 @@ VARIABLE saved_sp           ( sp before instruction execution )
 : ufork_boot
     ram_init                ( reset RAM )
     ( create bootstrap actor and initial event )
-    #nil 0x0010             ( state=() beh=boot )
+    #nil 0x0010             ( state=#nil beh=boot )
     #actor_t 2alloc ptr2cap
     DUP 0x6010 =assert      ( bootstrap actor at known address )
     #f SWAP root_spn 2alloc

@@ -74,13 +74,13 @@ mock_pred:                  ; (ctrl . pred) <- ctrl' | actual
     cmp eq                  ; ctrl==ctrl'
     if mock_false           ; --  // verify returns `#f` verdict
 
-    push #nil               ; () actual
-    msg 0                   ; () actual
-    push #?                 ; () actual #?
-    state 1                 ; () actual #? ctrl
-    pair 1                  ; () actual (ctrl . #?)
-    push mock_pred_ok       ; () actual (ctrl . #?) mock_pred_ok
-    actor create            ; () actual cust=mock_pred_ok.(ctrl . #?)
+    push #nil               ; #nil actual
+    msg 0                   ; #nil actual
+    push #?                 ; #nil actual #?
+    state 1                 ; #nil actual #? ctrl
+    pair 1                  ; #nil actual (ctrl . #?)
+    push mock_pred_ok       ; #nil actual (ctrl . #?) mock_pred_ok
+    actor create            ; #nil actual cust=mock_pred_ok.(ctrl . #?)
     pair 2                  ; (cust actual)
     state -1                ; (cust actual) pred
     ref std.send_msg

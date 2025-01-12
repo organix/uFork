@@ -55,7 +55,7 @@ beh:
 #       ^^ constant.numeric.integer.uforkasm
 #                           ^^^^^^^ comment.line.uforkasm
 
-    push #nil               ; value callback queue running=()
+    push #nil               ; value callback queue running=#nil
 #        ^^^^ constant.language.uforkasm
     push runner_beh         ; value callback queue running runner_beh
 #        ^^^^^^^^^^ entity.name.label.uforkasm

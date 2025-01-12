@@ -35,7 +35,7 @@ race_beh:                   ; (requestors . throttle) <- request
     msg -2                  ; value
     msg 2                   ; value callback
     state 1                 ; value callback queue=requestors
-    push #nil               ; value callback queue running=()
+    push #nil               ; value callback queue running=#nil
     pair 3                  ; (running queue callback . value)
     push runner_beh         ; (running queue callback . value) runner_beh
     actor create            ; runner=runner_beh.(running queue callback . value)
@@ -89,7 +89,7 @@ runner_beh:                 ; (running queue callback . value) <- message
 ; the requestor as finished by removing its canceller from the list of those
 ; running.
 
-    push #nil               ; dest=()
+    push #nil               ; dest=#nil
     state 1                 ; dest src=running
 loop:
 
@@ -241,16 +241,16 @@ test:                       ; judge <- {caps}
 ; FIXME: Validate the entire result, not just the result's value. This requires
 ; some kind of "deep" validator.
 
-    push #nil               ; ()
-    push 5000               ; () 4th=5000
-    push 3000               ; () 4th 3rd=3000
-    push #?                 ; () 4th 3rd 2nd=#?
-    push 1000               ; () 4th 3rd 2nd 1st=1000
-    push 50                 ; () 4th 3rd 2nd 1st probation=50ms
-    msg 0                   ; () 4th 3rd 2nd 1st probation {caps}
-    push dev.timer_key      ; () 4th 3rd 2nd 1st probation {caps} timer_key
-    dict get                ; () 4th 3rd 2nd 1st probation timer
-    state 0                 ; () 4th 3rd 2nd 1st probation timer judge
+    push #nil               ; #nil
+    push 5000               ; #nil 4th=5000
+    push 3000               ; #nil 4th 3rd=3000
+    push #?                 ; #nil 4th 3rd 2nd=#?
+    push 1000               ; #nil 4th 3rd 2nd 1st=1000
+    push 50                 ; #nil 4th 3rd 2nd 1st probation=50ms
+    msg 0                   ; #nil 4th 3rd 2nd 1st probation {caps}
+    push dev.timer_key      ; #nil 4th 3rd 2nd 1st probation {caps} timer_key
+    dict get                ; #nil 4th 3rd 2nd 1st probation timer
+    state 0                 ; #nil 4th 3rd 2nd 1st probation timer judge
     pair 7                  ; (judge timer probation 1st 2nd 3rd 4th)
     push referee.beh        ; (judge timer probation 1st 2nd 3rd 4th) referee_beh
     actor create            ; referee=referee_beh.(judge timer probation 1st 2nd 3rd 4th)
@@ -274,7 +274,7 @@ suite:
     dup 2                   ; ... referee timer
     push #?                 ; ... referee timer throttle=#?
     push #?                 ; ... referee timer throttle cancel_at=#?
-    push #nil               ; ... ... ()
+    push #nil               ; ... ... #nil
     push 5                  ; ... ... 1st_delay=5ms
     push 666                ; ... ... 1st_error=666
     push #f                 ; ... ... 1st_ok=#f
@@ -296,7 +296,7 @@ suite:
     dup 2                   ; ... referee timer
     push #?                 ; ... referee timer throttle=#?
     push #?                 ; ... referee timer throttle cancel_at=#?
-    push #nil               ; ... ... ()
+    push #nil               ; ... ... #nil
     push 25                 ; ... ... 1st_delay=25ms
     push 666                ; ... ... 1st_error=666
     push #f                 ; ... ... 1st_ok=#f
@@ -312,7 +312,7 @@ suite:
     dup 2                   ; ... referee timer
     push #?                 ; ... referee timer throttle=#?
     push #?                 ; ... referee timer throttle cancel_at=#?
-    push #nil               ; ... ... ()
+    push #nil               ; ... ... #nil
     push 35                 ; ... ... 1st_delay=35ms
     push 3000               ; ... ... 1st_value=3000
     push #t                 ; ... ... 1st_ok=#t
@@ -328,7 +328,7 @@ suite:
     dup 2                   ; ... referee timer
     push #?                 ; ... referee timer throttle=#?
     push 50                 ; ... referee timer throttle cancel_at=50ms
-    push #nil               ; ... ... ()
+    push #nil               ; ... ... #nil
     push 45                 ; ... ... 1st_delay=45ms
     push 666                ; ... ... 1st_error=666
     push #f                 ; ... ... 1st_ok=#f
@@ -344,7 +344,7 @@ suite:
     dup 2                   ; ... referee timer
     push 1                  ; ... referee timer throttle=1
     push #?                 ; ... referee timer throttle cancel_at=#?
-    push #nil               ; ... ... ()
+    push #nil               ; ... ... #nil
     push 30                 ; ... ... 1st_delay=30ms
     push 666                ; ... ... 1st_error=666
     push #f                 ; ... ... 1st_ok=#f
@@ -369,7 +369,7 @@ run_test:                   ; ( referee timer throttle cancel_at spec -- )
 ; where 1st denotes the first requestor, 2nd denotes the second requestor, etc.
 
     roll -6                 ; k referee timer throttle cancel_at spec
-    push #nil               ; k referee timer throttle cancel_at spec requestors=()
+    push #nil               ; k referee timer throttle cancel_at spec requestors=#nil
 
 ; The spec is consumed three elements at a time, until it is empty.
 

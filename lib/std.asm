@@ -56,7 +56,7 @@ rv_undef:                   ; _ <- (cust . _)
     push #? cust_send       ; msg=#?
 
 rv_nil:                     ; _ <- (cust . _)
-    push #nil cust_send     ; msg=()
+    push #nil cust_send     ; msg=#nil
 
 rv_false:                   ; _ <- (cust . _)
     push #f cust_send       ; msg=#f
@@ -93,7 +93,7 @@ return_undef:               ; k
     ref return_value
 
 return_nil:                 ; k
-    push #nil               ; k rv=()
+    push #nil               ; k rv=#nil
     ref return_value
 
 return_false:               ; k

@@ -8,7 +8,7 @@
 ; and `in` is the current position of the input stream.
 
 ; The input stream `in` is either `(token . next)`
-; or `()` at the end of the stream.
+; or `#nil` at the end of the stream.
 ; The `token` is the input data at the current position
 ; and `next` is the actor to ask for the next input.
 
@@ -39,8 +39,8 @@ s_list:                     ; list <- cust
     ref std.send_msg
 
 s_eos:
-    push #nil               ; ()
-    msg 0                   ; () cust
+    push #nil               ; #nil
+    msg 0                   ; #nil cust
     ref std.send_msg
 
 ;
@@ -51,7 +51,7 @@ s_eos:
 
 empty:                      ; _ <- ((ok . fail) accum . in)
     msg -2                  ; in
-    push #nil               ; in accum'=()
+    push #nil               ; in accum'=#nil
     pair 1                  ; (accum' . in)
     msg 1                   ; (accum' . in) custs=(ok . fail)
     nth 1                   ; (accum' . in) ok
@@ -69,7 +69,7 @@ fail:                       ; _ <- ((ok . fail) accum . in)
 
 any:                        ; _ <- ((ok . fail) accum . in)
     msg -2                  ; in
-    eq #nil                 ; in==()
+    eq #nil                 ; in==#nil
     if fail                 ; --
 
 ok:                         ; --
@@ -93,7 +93,7 @@ k_next:                     ; (ok . token) <- in
 
 eq:                         ; expect <- ((ok . fail) accum . in)
     msg -2                  ; in
-    eq #nil                 ; in==()
+    eq #nil                 ; in==#nil
     if fail                 ; --
 
     msg 3                   ; token
@@ -105,7 +105,7 @@ eq:                         ; expect <- ((ok . fail) accum . in)
 
 if:                         ; pred <- ((ok . fail) accum . in)
     msg -2                  ; in
-    eq #nil                 ; in==()
+    eq #nil                 ; in==#nil
     if fail                 ; --
 
     msg 3                   ; token
@@ -217,12 +217,12 @@ not:                        ; peg <- ((ok . fail) accum . in)
     msg 1                   ; custs=(ok . fail)
     part 1                  ; fail ok
     msg -2                  ; fail ok in
-    push #nil               ; fail ok in ()
-    pair 1                  ; fail ok (() . in)
-    roll 2                  ; fail (() . in) ok
-    pair 1                  ; fail (ok () . in)
-    push lib.relay_beh      ; fail (ok () . in) relay_beh
-    actor create            ; fail fail'=relay_beh.(ok () . in)
+    push #nil               ; fail ok in #nil
+    pair 1                  ; fail ok (#nil . in)
+    roll 2                  ; fail (#nil . in) ok
+    pair 1                  ; fail (ok #nil . in)
+    push lib.relay_beh      ; fail (ok #nil . in) relay_beh
+    actor create            ; fail fail'=relay_beh.(ok #nil . in)
 
     msg -2                  ; fail fail' in
     roll 3                  ; fail' in fail
@@ -265,7 +265,7 @@ unexpected:                 ; _ <- _
     assert #t               ; assert(#f==#t)
     ref std.commit
 
-test_1_data:                ; (())
+test_1_data:                ; (#nil)
     pair_t #nil
     ref #nil
 
@@ -331,7 +331,7 @@ boot:                       ; _ <- {caps}
 
 ; test 1: `empty` succeeds at end-of-stream
 
-    push #nil               ; in=()
+    push #nil               ; in=#nil
     push #?                 ; in accum=#?
     push #?                 ; in accum #?
     push unexpected         ; in accum #? unexpected
@@ -348,7 +348,7 @@ boot:                       ; _ <- {caps}
 
 ; test 2: `fail` fails at end-of-stream
 
-    push #nil               ; in=()
+    push #nil               ; in=#nil
     push #?                 ; in accum=#?
     push #?                 ; in accum #?
     push expect_2           ; in accum #? expect_2
@@ -365,7 +365,7 @@ boot:                       ; _ <- {caps}
 
 ; test 3: `any` fails at end-of-stream
 
-    push #nil               ; in=()
+    push #nil               ; in=#nil
     push #?                 ; in accum=#?
     push #?                 ; in accum #?
     push expect_3           ; in accum #? expect_3

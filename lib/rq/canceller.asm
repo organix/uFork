@@ -63,12 +63,12 @@ test:                       ; judge <- {caps}
     msg 0                   ; {caps}
     push dev.timer_key      ; {caps} timer_key
     dict get                ; timer
-    push #nil               ; timer ()
-    push 1729               ; timer () 2nd=1729
-    push 42                 ; timer () 2nd 1st=42
-    push 100                ; timer () 2nd 1st probation_ms=100
-    pick 5                  ; timer () 2nd 1st probation_ms timer
-    state 0                 ; timer () 2nd 1st probation_ms timer judge
+    push #nil               ; timer #nil
+    push 1729               ; timer #nil 2nd=1729
+    push 42                 ; timer #nil 2nd 1st=42
+    push 100                ; timer #nil 2nd 1st probation_ms=100
+    pick 5                  ; timer #nil 2nd 1st probation_ms timer
+    state 0                 ; timer #nil 2nd 1st probation_ms timer judge
     pair 5                  ; timer (judge timer probation_ms 1st 2nd)
     push referee.beh        ; timer (judge timer probation_ms 1st 2nd) referee_beh
     actor create            ; timer referee=referee_beh.(judge timer probation_ms 1st 2nd)
