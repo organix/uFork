@@ -17,7 +17,7 @@
 beh:
 referee_beh:                ; (judge timer probation . expected_msgs) <- msg
 
-; If the referee is not expecting any more message, fail.
+; If the referee is not expecting any more messages, fail.
 
     state -3                ; expected_msgs
     eq #nil                 ; is_empty(expected_msgs)
