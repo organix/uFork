@@ -41,10 +41,10 @@ which is itself executed directly by [the CPU](cpu.md).
 ## Project Support
 
 <img src="../NLnet_banner.png" alt="Logo NLnet: abstract logo of four people seen from above" width="128" height="48" style="padding: 1ex 1em; background: #FFF;" />
-<img src="../NGI0Entrust_tag.svg" alt="Logo NGI Zero: letterlogo shaped like a tag" width="128" height="48" style="padding: 1ex 1em; background: inherit;" />
+<img src="../NGI0Core_tag.svg" alt="Logo NGI Zero: letterlogo shaped like a tag" width="128" height="48" style="padding: 1ex 1em; background: inherit;" />
 
 [This project](https://nlnet.nl/project/uFork-FPGA/)
-was funded through the [NGI0 Entrust](https://nlnet.nl/entrust) Fund,
+was funded through the [NGI0 Core](https://nlnet.nl/core) Fund,
 a fund established by [NLnet](https://nlnet.nl/) with financial support from
 the European Commission's [Next Generation Internet](https://ngi.eu/) programme,
 under the aegis of DG Communications Networks,
