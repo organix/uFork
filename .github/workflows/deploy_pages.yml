@@ -18,12 +18,11 @@ jobs:
       - uses: denoland/setup-deno@v2
       - run: deno task test
 
-# Create the web root directory.
+# Publish the website.
 
-      - run: mkdir _site
-      - run: cp -R site/* _site
+      - run: cp -R site _site
 
-# Deploy the libs.
+# Publish the libs.
 
       - run: cp -R fpga/ucode _site/ucode
       - run: cp -R lib _site/lib
@@ -31,11 +30,15 @@ jobs:
       - run: mkdir _site/wasm
       - run: cp vm/wasm/*.wasm _site/wasm/
 
-# Deploy the apps.
+# Publish the apps.
 
       - run: cp -R apps/debugger _site/debugger
       - run: cp -R apps/playground _site/playground
       - run: cp -R apps/ucode_dbg _site/ucode_dbg
+
+# Apply some optimizations and deploy.
+
+      - run: find _site -name '*.js' -exec deno run -A tools/purify.js {} \+
       - run: deno run -A apps/playground/optimize.js _site/playground/index.html
       - uses: actions/upload-pages-artifact@v3
       - uses: actions/deploy-pages@v4
