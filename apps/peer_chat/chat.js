@@ -26,7 +26,7 @@ const default_signaller_origin = (
 ) + location.host;
 
 let core;  // uFork wasm processor core
-let on_stdin;
+let h_on_stdin;
 let db = make_chat_db(default_signaller_origin);
 
 function ufork_run() {
@@ -69,7 +69,7 @@ $input_form.onsubmit = function (event) {
     let text = $stdin.value;
     if (text.length > 0) {
         text += "\n";
-        on_stdin(text);
+        h_on_stdin(text);
         $stdin.value = "";
     }
 };
@@ -185,7 +185,7 @@ parseq.sequence([
         core.h_import(asm_url)
     ]),
     requestorize(function ([the_awp_store, asm_module]) {
-        on_stdin = io_dev(core, on_stdout);
+        h_on_stdin = io_dev(core, on_stdout);
         timer_dev(core);
 //        timer_dev(core, 5);  // slow-down factor 5x
         const make_ddev = host_dev(core);

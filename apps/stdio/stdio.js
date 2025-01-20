@@ -72,7 +72,7 @@ parseq.sequence([
     core.h_initialize(),
     core.h_import(src),
     requestorize(function (asm_module) {
-        const on_stdin = io_dev(core, function on_stdout(string) {
+        const h_on_stdin = io_dev(core, function on_stdout(string) {
             Deno.stdout.write(utf8_encoder.encode(string));
         });
         let in_buffer = new Uint8Array(stdin_buffer_size);
@@ -81,7 +81,7 @@ parseq.sequence([
                 if (!Number.isSafeInteger(nr_bytes)) {
                     return; // EOF
                 }
-                on_stdin(in_buffer.slice(0, nr_bytes));
+                h_on_stdin(in_buffer.slice(0, nr_bytes));
                 return read();
             });
         }());

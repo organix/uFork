@@ -104,7 +104,7 @@ function io_dev(core, on_stdout) {
             return ufork.fixnum(core.E_OK);
         }
     });
-    return function on_stdin(string_or_utf8) {
+    return function h_on_stdin(string_or_utf8) {
         stdin_buffer = stdin_buffer.concat(Array.from(
             typeof string_or_utf8 === "string"
             ? string_or_utf8

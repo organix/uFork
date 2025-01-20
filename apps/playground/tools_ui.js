@@ -68,18 +68,24 @@ const tools_ui = make_ui("tools-ui", function (element, {
     let debug_button;
     let test_button;
     let help_button;
-    let on_stdin;
+    let h_on_stdin;
+    let h_on_svgin;
 
     devices.io = io_dev_ui({
         on_input(character) {
-            if (on_stdin !== undefined) {
-                on_stdin(character);
+            if (h_on_stdin !== undefined) {
+                h_on_stdin(character);
             }
         }
     });
     devices.rom = rom_ui({});
     devices.svg = svg_dev_ui({
-        background_color: "#ffffff"
+        background_color: "#ffffff",
+        on_pointer_input(x, y, button_mask) {
+            if (h_on_svgin !== undefined) {
+                h_on_svgin(x, y, button_mask);
+            }
+        }
     });
 
     function set_device(device) {
@@ -109,6 +115,7 @@ const tools_ui = make_ui("tools-ui", function (element, {
         run_button.onclick = function () {
             run(get_text(), "boot");
         };
+        h_on_svgin = undefined;
         if (core !== undefined) {
             core.h_dispose();
         }
@@ -215,8 +222,8 @@ const tools_ui = make_ui("tools-ui", function (element, {
                 tcp_dev(core, make_ddev, the_blob_dev, ["127.0.0.1:8370"]);
                 fs_dev(core, make_ddev, the_blob_dev);
                 timer_dev(core);
-                on_stdin = io_dev(core, devices.io.output);
-                svg_dev(core, make_ddev, devices.svg.draw);
+                h_on_stdin = io_dev(core, devices.io.output);
+                h_on_svgin = svg_dev(core, make_ddev, devices.svg.draw);
                 if (imported_module[entry] === undefined) {
                     throw new Error("Missing '" + entry + "' export.");
                 }

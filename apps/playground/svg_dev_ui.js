@@ -97,9 +97,12 @@ const svg_dev_ui = make_ui("svg-dev-ui", function (element, {
         svg_element.onpointerdown = on_pointer_event;
         svg_element.onpointermove = on_pointer_event;
         svg_element.onpointerup = on_pointer_event;
-        svg_element.oncontextmenu = function (event) {
-            event.preventDefault();
-        };
+
+// Uncomment the below to prevent right click from opening a context menu.
+
+        // svg_element.oncontextmenu = function (event) {
+        //     event.preventDefault();
+        // };
     }
     background_input = dom("input", {
         type: "color",

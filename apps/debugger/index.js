@@ -70,7 +70,7 @@ let fault = false;  // execution fault flag
 const rx_crlf = /\n|\r\n?/;
 let ram_max = 0;
 let core;  // uFork wasm processor core
-let on_stdin;
+let h_on_stdin;
 
 function read_state(name) {
     // pluses are not spaces
@@ -591,7 +591,7 @@ $send_button.onclick = function () {
     let text = $stdin.value;
     if (text.length > 0) {
         text += "\n";
-        on_stdin(text);
+        h_on_stdin(text);
         const utf8 = utf8encoder.encode(text);
         console.log("Send", hexdump(utf8, 0, utf8.length));
         $stdin.value = "";
@@ -656,7 +656,7 @@ core.h_initialize()(function callback(value, reason) {
     // install devices
     clock_dev(core);
     random_dev(core);
-    on_stdin = io_dev(core, on_stdout);
+    h_on_stdin = io_dev(core, on_stdout);
     const make_ddev = host_dev(core);
     const the_blob_dev = blob_dev(core, make_ddev);
     tcp_dev(core, make_ddev, the_blob_dev, ["127.0.0.1:8370"]);
