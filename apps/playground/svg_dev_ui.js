@@ -1,8 +1,6 @@
-// Observe the output of the SVG device.
+// The SVG device. It draws SVG graphics and accepts pointer events.
 
-// Planned feature: accept input from the mouse.
-
-/*jslint browser */
+/*jslint browser, bitwise */
 
 import make_ui from "./ui.js";
 import dom from "./dom.js";
@@ -11,7 +9,8 @@ import theme from "./theme.js";
 const svg_dev_ui = make_ui("svg-dev-ui", function (element, {
     viewbox_size = 32, // defaults to slider's halfway position
     max_viewbox_size = 1024,
-    background_color = "#ffffff"
+    background_color = "#ffffff",
+    on_pointer_input
 }) {
     const shadow = element.attachShadow({mode: "closed"});
     const style = dom("style", `
@@ -60,7 +59,7 @@ const svg_dev_ui = make_ui("svg-dev-ui", function (element, {
     svg_element.setAttribute("fill", "transparent");
     svg_element.setAttribute("stroke", "transparent");
     const dimensions_element = dom("svg_dimensions");
-    let scale_input;
+    let size_input;
     let background_input;
 
     function set_viewbox_size(new_viewbox_size) {
@@ -72,7 +71,7 @@ const svg_dev_ui = make_ui("svg-dev-ui", function (element, {
         dimensions_element.textContent = (
             Math.round(viewbox_size) + "x" + Math.round(viewbox_size)
         );
-        scale_input.value = Math.log(viewbox_size) / Math.log(max_viewbox_size);
+        size_input.value = Math.log(viewbox_size) / Math.log(max_viewbox_size);
     }
 
     function set_background_color(new_background_color) {
@@ -81,20 +80,41 @@ const svg_dev_ui = make_ui("svg-dev-ui", function (element, {
         background_input.value = background_color;
     }
 
+    function on_pointer_event(event) {
+        const {width, height} = svg_element.getBoundingClientRect();
+        const pixel_size = Math.min(width, height);
+        const x_offset = (width - pixel_size) / 2;
+        const y_offset = (height - pixel_size) / 2;
+        const resolution = pixel_size / viewbox_size;
+        on_pointer_input(
+            (event.offsetX - x_offset) / resolution,
+            (event.offsetY - y_offset) / resolution,
+            event.buttons
+        );
+    }
+
+    if (on_pointer_input !== undefined) {
+        svg_element.onpointerdown = on_pointer_event;
+        svg_element.onpointermove = on_pointer_event;
+        svg_element.onpointerup = on_pointer_event;
+        svg_element.oncontextmenu = function (event) {
+            event.preventDefault();
+        };
+    }
     background_input = dom("input", {
         type: "color",
         oninput() {
             set_background_color(background_input.value);
         }
     });
-    scale_input = dom("input", {
+    size_input = dom("input", {
         type: "range",
         min: 0,
         max: 1,
         step: 0.01,
         oninput() {
-            const scale = parseFloat(scale_input.value);
-            set_viewbox_size(Math.round(max_viewbox_size ** scale));
+            const size = parseFloat(size_input.value);
+            set_viewbox_size(Math.round(max_viewbox_size ** size));
         }
     });
     const controls_element = dom("svg_controls", [
@@ -102,7 +122,7 @@ const svg_dev_ui = make_ui("svg-dev-ui", function (element, {
             dom(
                 "label",
                 {title: "Adjust the drawing's viewbox"},
-                ["Scale", scale_input, dimensions_element]
+                ["Size", size_input, dimensions_element]
             ),
             dom(
                 "label",
@@ -136,7 +156,23 @@ if (import.meta.main) {
     document.documentElement.innerHTML = "";
     document.body.style.background = "black";
     const svg_dev = dom(
-        svg_dev_ui({viewbox_size: 24, background_color: "#FF99FF"}),
+        svg_dev_ui({
+            viewbox_size: 24,
+            background_color: "#FF99FF",
+            on_pointer_input(x, y, button_mask) {
+                const leftness = button_mask & 1;
+                const rightness = (button_mask & 2) / 2;
+                const auxness = (button_mask & 4) / 4;
+                const fill = `rgb(
+                    ${255 * leftness},
+                    ${255 * rightness},
+                    ${255 * auxness}
+                )`;
+                svg_dev.draw(`
+                    <circle cx="${x}" cy="${y}" r="0.1" fill="${fill}" />
+                `);
+            }
+        }),
         {style: {width: "400px", height: "400px"}}
     );
     document.body.append(svg_dev);
