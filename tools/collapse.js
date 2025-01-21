@@ -3,14 +3,14 @@
 
 // USAGE
 
-//  $ deno run -A tools/purify.js path...
+//  $ deno run -A tools/collapse.js path...
 
 /*jslint deno */
 
-import bind_main from "https://ufork.org/lib/bind_main.js";
+import collapse from "https://repletejs.org/collapse.js";
 
 Promise.all(Deno.args.map(function (path) {
     return Deno.readTextFile(path).then(function (text) {
-        return Deno.writeTextFile(path, bind_main(text, false));
+        return Deno.writeTextFile(path, collapse(text, false));
     });
 }));

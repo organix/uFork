@@ -4,7 +4,9 @@
         "https://ufork.org/js/": "./vm/js/",
         "https://ufork.org/wasm/": "./vm/wasm/",
         "https://ufork.org/ucode/": "./fpga/ucode/",
-        "https://dalnefre.github.io/humus_js/": "./submodules/humus_js/"
+        "https://dalnefre.github.io/humus_js/": "./submodules/humus_js/",
+        "acorn": "https://github.com/acornjs/acorn/raw/refs/tags/8.14.0/acorn/src/index.js",
+        "acorn-walk": "https://github.com/acornjs/acorn/raw/refs/tags/8.14.0/acorn-walk/src/index.js"
     },
     "tasks": {
         "build": "deno run --allow-run --allow-read=vm/wasm  --allow-write=vm/wasm vm/wasm/build.js",

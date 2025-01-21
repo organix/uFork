@@ -10,7 +10,7 @@
 
 /*jslint deno */
 
-import bind_main from "https://ufork.org/lib/bind_main.js";
+import collapse from "https://repletejs.org/collapse.js";
 import import_map from "../../tools/import_map.js";
 const playground_href = import.meta.resolve("./");
 const main_href = import.meta.resolve("./main.js");
@@ -47,7 +47,7 @@ function follow_imports(url, seen = []) {
         ).then(function (response) {
             return response.text();
         }).then(function (text) {
-            text = bind_main(text, false); // strip demos
+            text = collapse(text, false); // strip demos
             const match_array = [
                 ...text.matchAll(rx_import_statement),
                 ...text.matchAll(rx_import_meta_resolve)

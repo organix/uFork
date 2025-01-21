@@ -1,4 +1,4 @@
-// The SVG device. It draws SVG graphics and accepts pointer events.
+// The SVG device. It draws SVG graphics and accepts pointer input.
 
 /*jslint browser, bitwise */
 
