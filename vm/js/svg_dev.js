@@ -88,10 +88,19 @@ function svg_dev(core, make_ddev, on_draw) {
 
 // Write request.
 
-        if (!ufork.is_fix(code)) {
-            return ufork.E_NOT_FIX;
+        if (ufork.is_fix(code)) {
+            on_code(ufork.fix_to_i32(code));
+        } else {
+            let list = code;
+            while (code !== ufork.NIL_RAW) {
+                const first = core.u_nth(list, 1);
+                if (!ufork.is_fix(first)) {
+                    break;
+                }
+                on_code(ufork.fix_to_i32(first));
+                list = core.u_nth(list, -1);
+            }
         }
-        on_code(ufork.fix_to_i32(code));
         core.u_defer(function () {
             core.h_release_stub(event_stub_ptr);
             h_send(callback, h_reply_ok(ufork.UNDEF_RAW), sponsor);
