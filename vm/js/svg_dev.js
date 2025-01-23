@@ -92,7 +92,7 @@ function svg_dev(core, make_ddev, on_draw) {
             on_code(ufork.fix_to_i32(code));
         } else {
             let list = code;
-            while (code !== ufork.NIL_RAW) {
+            while (list !== ufork.NIL_RAW) {
                 const first = core.u_nth(list, 1);
                 if (!ufork.is_fix(first)) {
                     break;
