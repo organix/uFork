@@ -1,0 +1,32 @@
+a.play {
+    display: block;
+    float: right;
+    font-size: 14px;
+    padding: 5px 10px 0;
+    background: var(--yellow);
+    border-top-left-radius: 3px;
+    border-top-right-radius: 3px;
+    color: var(--green);
+}
+pre.code {
+    font-family: monospace;
+    color: black;
+    background: var(--yellow);
+    padding: 10px;
+    font-size: 15px;
+    clear: both; /* a.play */
+    overflow-x: auto;
+}
+pre.graphic {
+    font-family: monospace;
+    display: inline-block;
+    margin-left: 50%;
+    transform: translateX(-50%);
+    max-width: 100%;
+    overflow-x: auto;
+}
+nav.bidirectional {
+    display: flex;
+    justify-content: space-between;
+    font-weight: bold;
+}

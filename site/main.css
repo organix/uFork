@@ -1,0 +1,122 @@
+:root {
+    --bg: white;
+    --fg: black;
+    --green: #0d3a27;
+    --gold: #cc9900;
+    --yellow: #ffd966;
+    --highlight: darkgoldenrod;
+}
+@media (prefers-color-scheme: dark) {
+    :root {
+        --bg: black;
+        --fg: white;
+        --highlight: var(--yellow);
+    }
+}
+body {
+    font-family: "Trebuchet MS", "Lucida Grande", sans-serif;
+    font-size: 16px;
+    background-color: var(--bg);
+    color: var(--fg);
+    margin: 0;
+}
+header {
+    background: var(--green);
+    padding: 64px 20px 20px;
+    position: relative;
+}
+@media (min-width: 768px) {
+    header {
+        padding: 70px 40px 28px;
+    }
+}
+header > img {
+    float: right;
+    margin-left: 10px;
+    margin-bottom: 10px;
+}
+header > h1 {
+    color: white;
+}
+header > p {
+    line-height: 1.4;
+    max-width: 400px; /* ideally two lines */
+    color: var(--yellow);
+    margin-bottom: 0;
+}
+header > ul {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+}
+header > ul > li {
+    position: relative;
+}
+header > ul a {
+    text-decoration: none;
+    font-weight: bold;
+    padding: 6px 10px;
+    color: black;
+    background: var(--gold);
+    display: block;
+}
+header > ul > li:hover > a,
+header > ul > li > div > a:hover {
+    background: var(--yellow);
+}
+header > ul > li > div {
+    display: none;
+    position: absolute;
+    right: 0;
+    min-width: 200px;
+    box-shadow:
+        0 2px 5px 0 rgba(0, 0, 0, 0.16),
+        0 2px 10px 0 rgba(0, 0, 0, 0.12);
+}
+header > ul > li:hover > div {
+    display: block;
+}
+main {
+    margin: 32px 16px;
+    line-height: 1.3;
+}
+@media (min-width: calc(960px + 32px)) {
+    main {
+        max-width: 960px;
+        margin-left: auto;
+        margin-right: auto;
+    }
+}
+main > h2 {
+    margin-top: 40px;
+}
+main a {
+    color: var(--fg);
+}
+main p > code {
+    color: var(--highlight);
+}
+main ul {
+    padding-left: 24px;
+}
+footer {
+    color: white;
+    background: var(--green);
+    display: flex;
+    padding: 16px 20px;
+    justify-content: space-between;
+    align-items: center;
+}
+@media (min-width: 768px) {
+    footer {
+        padding-left: 40px;
+        padding-right: 40px;
+    }
+}
+footer > a > img {
+    width: 40px;
+}

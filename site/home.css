@@ -1,0 +1,30 @@
+@media (min-width: 768px) {
+    .features {
+        display: flex;
+        justify-content: space-between;
+        gap: 40px;
+    }
+    .features > div > h2 {
+        text-align: center;
+    }
+    .features > div > h2 > span {
+        display: block;
+        font-size: 100px;
+    }
+}
+.sponsors {
+    display: flex;
+    justify-content: space-around;
+    gap: 5%;
+}
+.sponsors > a {
+    flex: 1 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+.sponsors > a > img {
+    flex: 1 1;
+    min-width: 0;
+    max-width: min(100%, 180px);
+}

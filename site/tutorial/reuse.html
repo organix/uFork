@@ -1,75 +1,61 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>μFork Tutorial</title>
-  <link rel="icon" href="/favicon.png">
-  <link rel="stylesheet" href="style.css">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css"
-    integrity="sha512-1ycn6IcaQQ40/MKBW2W4Rhis/DbILU74C1vSrLJxCq57o941Ym01SwNsOMqvEBFlcgUa6xLiPY/NS5R+E6ztJQ=="
-    crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width">
+    <title>μFork Tutorial: Off To The Races</title>
+    <link rel="icon" href="/favicon.png">
+    <link rel="stylesheet" href="/main.css">
+    <link rel="stylesheet" href="tutorial.css">
 </head>
-
 <body>
-  <div class="container">
-    <header></header>
-    <main>
-
-      <section class="hero">
-        <div>
-          <h1 style="color: white;">µFork Tutorial</h1>
-          <h4>A pure actor-based concurrent machine architecture</h4>
-          <h4>with memory-safety and object-capability security</h4>
-        </div>
-        <div>
-          <p>
-            <a href="https://ufork.org"><img class="logo" src="/ufork_logo.svg"></a>
-          </p>
-        </div>
-      </section>
-
-      <section class="grid">
-        <div class="span10col">
-          <h2 name="cell">Reduce, Reuse, Recycle</h2>
-          <p class="text">
-            Both code and data structures in uFork are immutable.
-            This makes it safe to share these structures among actors.
-            We can take advantage of commonality
-            to reduce our memory footprint,
-            and also to pass information efficiently between actors
-            (without making copies).
-          </p>
-          <p class="text">
-            When two or more actors need access to the same mutable state,
-            we define a "state holder" actor for that state.
-            Since shared data is immutable,
-            the state-holder maintains the mutable state privately,
-            and the sharing actors coordinate
-            by sending messages to the state-holder.
-            We will define a "storage cell" actor
-            as a simple state-holder example.
-          </p>
-          <h3 name="tail">Common Tail-Sequences</h3>
-          <p class="text">
-            In our previous examples,
-            you may have noticed
-            that the code for many actors
-            ends with the some of the same instructions.
-            Almost all actors end with
-            an <code>end commit</code> instruction.
-            Many actors preceed this with
-            an <code>actor send</code> instruction.
-            A common pattern is to send to a <em>customer</em>
-            provided as <code>msg 1</code>.
-            These patterns are so common,
-            they are provided in the
-            <a href="https://ufork.org/playground/?src=https://ufork.org/lib/std.asm" target="_blank"><code>std.asm</code></a>
-            module (usually imported with an <code>std</code> prefix).
-          </p>
-          <p>
-            <pre class="code">
+<header>
+<img src="/ufork_logo.svg" alt="uFork logo">
+<h1>µFork Tutorial</h1>
+<p>
+    A pure actor-based concurrent machine architecture
+    with memory-safety and object-capability security.
+</p>
+<ul><li><a href="/">Home</a></li></ul>
+</header>
+<main>
+<h2 name="cell">Reduce, Reuse, Recycle</h2>
+<p>
+    Both code and data structures in uFork are immutable.
+    This makes it safe to share these structures among actors.
+    We can take advantage of commonality
+    to reduce our memory footprint,
+    and also to pass information efficiently between actors
+    (without making copies).
+</p>
+<p>
+    When two or more actors need access to the same mutable state,
+    we define a "state holder" actor for that state.
+    Since shared data is immutable,
+    the state-holder maintains the mutable state privately,
+    and the sharing actors coordinate
+    by sending messages to the state-holder.
+    We will define a "storage cell" actor
+    as a simple state-holder example.
+</p>
+<h3 name="tail">Common Tail-Sequences</h3>
+<p>
+    In our previous examples,
+    you may have noticed
+    that the code for many actors
+    ends with the some of the same instructions.
+    Almost all actors end with
+    an <code>end commit</code> instruction.
+    Many actors preceed this with
+    an <code>actor send</code> instruction.
+    A common pattern is to send to a <em>customer</em>
+    provided as <code>msg 1</code>.
+    These patterns are so common,
+    they are provided in the
+    <a href="https://ufork.org/playground/?src=https://ufork.org/lib/std.asm">std.asm</a>
+    module (usually imported with an <code>std</code> prefix).
+</p>
+<pre class="code">
 ; Common Tail-Sequences
 
 cust_send:                  ; msg
@@ -78,25 +64,25 @@ send_msg:                   ; msg cust
     actor send              ; --
 sink_beh:                   ; _ &lt;- _
 commit:
-    end commit</pre>
-          </p>
-          <p class="text">
-            It may come as a surprise that these instructions
-            may not be sequential in memory.
-            In fact, there is no way to tell
-            if they are sequential or not!
-            This is because uFork memory is organized
-            into linked structures called <em>quad-cells</em>.
-            Quad-cells are the minimum addressable unit.
-            They have 4 <em>value</em> fields.
-            Each value is a <em>fixnum</em>,
-            a <em>capability</em> (actor address),
-            or a <em>pointer</em> to a quad-cell.
-            There is no conversion between these types,
-            thus you can't determine the numeric value of an address.
-            The code fragment above is illustrated by this diagram:
-          </p>
-          <pre class="graphic">
+    end commit
+</pre>
+<p>
+    It may come as a surprise that these instructions
+    may not be sequential in memory.
+    In fact, there is no way to tell
+    if they are sequential or not!
+    This is because uFork memory is organized
+    into linked structures called <em>quad-cells</em>.
+    Quad-cells are the minimum addressable unit.
+    They have 4 <em>value</em> fields.
+    Each value is a <em>fixnum</em>,
+    a <em>capability</em> (actor address),
+    or a <em>pointer</em> to a quad-cell.
+    There is no conversion between these types,
+    thus you can't determine the numeric value of an address.
+    The code fragment above is illustrated by this diagram:
+</p>
+<pre class="graphic">
 cust_send ---> [#instr_t, "msg", 1, k]
                                     |
                +--------------------+
@@ -108,80 +94,77 @@ send_msg ----> [#instr_t, "actor", "send", k]
 sink_beh ------+---------------------------+
                |
                V
-commit ------> [#instr_t, "end", "commit", #?]</pre>
-          <p class="text">
-            This code fragment consists of 3 instructions
-            and occupies 3 quad-cells.
-            This first field of each quad
-            designates the type of the quad,
-            in this case <code>#instr_t</code>
-            for executable instructions.
-            The labels <code>cust_send</code>, <code>send_msg</code>,
-            <code>sink_beh</code>, and <code>commit</code>
-            denote pointers to these instruction quads.
-            The final field of each quad
-            contains a pointer to the next instruction
-            in the code sequence (the <em>continuation</em>),
-            regardless of where it resides in memory.
-          </p>
-          <p class="text">
-            By default,
-            the assembler translates a sequence of instructions
-            into a linked-list of quad-cells.
-            However, the continuation
-            can always be specified explicitly
-            by including an extra argument
-            at the end of an instruction.
-            For example,
-            <code>cust_send</code> could be written as:
-          </p>
-          <p>
-            <pre class="code">
+commit ------> [#instr_t, "end", "commit", #?]
+</pre>
+<p>
+    This code fragment consists of 3 instructions
+    and occupies 3 quad-cells.
+    This first field of each quad
+    designates the type of the quad,
+    in this case <code>#instr_t</code>
+    for executable instructions.
+    The labels <code>cust_send</code>, <code>send_msg</code>,
+    <code>sink_beh</code>, and <code>commit</code>
+    denote pointers to these instruction quads.
+    The final field of each quad
+    contains a pointer to the next instruction
+    in the code sequence (the <em>continuation</em>),
+    regardless of where it resides in memory.
+</p>
+<p>
+    By default,
+    the assembler translates a sequence of instructions
+    into a linked-list of quad-cells.
+    However, the continuation
+    can always be specified explicitly
+    by including an extra argument
+    at the end of an instruction.
+    For example,
+    <code>cust_send</code> could be written as:
+</p>
+<pre class="code">
 cust_send:                  ; msg
-    msg 1 send_msg          ; msg cust</pre>
-          </p>
-          <p class="text">
-            A more common approach is
-            to use a <a href="https://github.com/organix/uFork/blob/main/docs/asm.md#ref"><code>ref</code></a> pseudo-instruction
-            to provide the continuation,
-            as shown here:
-          </p>
-          <p>
-            <pre class="code">
+    msg 1 send_msg          ; msg cust
+</pre>
+<p>
+    A more common approach is
+    to use a <a href="https://github.com/organix/uFork/blob/main/docs/asm.md#ref"><code>ref</code></a> pseudo-instruction
+    to provide the continuation,
+    as shown here:
+</p>
+<pre class="code">
 cust_send:                  ; msg
     msg 1                   ; msg cust
-    ref send_msg</pre>
-          </p>
-          <p class="text">
-            A <code>ref</code> can also be used
-            to introduce a named constant.
-            The following code associates the label <code>E_OK</code>
-            with the fixnum value <code>0</code>.
-          </p>
-          <p>
-            <pre class="code">
+    ref send_msg
+</pre>
+<p>
+    A <code>ref</code> can also be used
+    to introduce a named constant.
+    The following code associates the label <code>E_OK</code>
+    with the fixnum value <code>0</code>.
+</p>
+<pre class="code">
 E_OK:                       ; not an error
-    ref 0</pre>
-          </p>
-          <p class="text">
-            A <code>ref</code> occupies no storage.
-            It's just a reference to another value.
-            You should use <code>ref std.commit</code>
-            instead of <code>end commit</code>
-            to avoid creating redundant instruction-quads.
-            The <code>send_msg</code> and <code>cust_send</code>
-            labels allow sharing of longer common tail-sequences.
-            Watch for opportunities to use them.
-          </p>
-          <h3 name="static">Static Data</h3>
-          <p class="text">
-            We will use the <code>ref</code> mechanism
-            to define a set of operation-codes,
-            and then use the <code>dict_t</code> data constructor
-            to define a dictionary of code-addresses.
-          </p>
-          <p>
-            <pre class="code">
+    ref 0
+</pre>
+<p>
+    A <code>ref</code> occupies no storage.
+    It's just a reference to another value.
+    You should use <code>ref std.commit</code>
+    instead of <code>end commit</code>
+    to avoid creating redundant instruction-quads.
+    The <code>send_msg</code> and <code>cust_send</code>
+    labels allow sharing of longer common tail-sequences.
+    Watch for opportunities to use them.
+</p>
+<h3 name="static">Static Data</h3>
+<p>
+    We will use the <code>ref</code> mechanism
+    to define a set of operation-codes,
+    and then use the <code>dict_t</code> data constructor
+    to define a dictionary of code-addresses.
+</p>
+<pre class="code">
 read_op:
     ref 0
 write_op:
@@ -193,33 +176,32 @@ op_table:
     dict_t read_op read
     dict_t write_op write
     dict_t CAS_op CAS
-    ref #nil</pre>
-          </p>
-          <p class="text">
-            The <a href="https://github.com/organix/uFork/blob/main/docs/asm.md#data"><code>dict_t</code></a> data constructor
-            defines statically-initialized instances
-            of type <code>#dict_t</code>.
-            It takes a <var>key</var>, a <var>value</var>,
-            and an optional <var>next</var> pointer.
-            As with instructions,
-            if the final <var>next</var> pointer is missing,
-            it defaults to the next statement in the source code.
-            The <code>#nil</code> value
-            represents the empty dictionary,
-            which terminates the sequence.
-            Note that the named constants
-            (<code>#?</code>, <code>#nil</code>, <code>#f</code> and <code>#t</code>)
-            are <em>pointers</em> to read-only memory.
-          </p>
-          <h3 name="dispatch">Method Dispatch Table</h3>
-          <p class="text">
-            We begin defining the "storage cell" behavior
-            by using the staically-defined <code>op_table</code>
-            to dispatch to the code specified by the <code>op</code>
-            selector in the incoming message.
-          </p>
-          <p>
-            <pre class="code">
+    ref #nil
+</pre>
+<p>
+    The <a href="https://github.com/organix/uFork/blob/main/docs/asm.md#data"><code>dict_t</code></a> data constructor
+    defines statically-initialized instances
+    of type <code>#dict_t</code>.
+    It takes a <var>key</var>, a <var>value</var>,
+    and an optional <var>next</var> pointer.
+    As with instructions,
+    if the final <var>next</var> pointer is missing,
+    it defaults to the next statement in the source code.
+    The <code>#nil</code> value
+    represents the empty dictionary,
+    which terminates the sequence.
+    Note that the named constants
+    (<code>#?</code>, <code>#nil</code>, <code>#f</code> and <code>#t</code>)
+    are <em>pointers</em> to read-only memory.
+</p>
+<h3 name="dispatch">Method Dispatch Table</h3>
+<p>
+    We begin defining the "storage cell" behavior
+    by using the staically-defined <code>op_table</code>
+    to dispatch to the code specified by the <code>op</code>
+    selector in the incoming message.
+</p>
+<pre class="code">
 beh:
 cell_beh:                   ; value &lt;- cust,op,args
     push op_table           ; op_table
@@ -228,74 +210,71 @@ cell_beh:                   ; value &lt;- cust,op,args
     dup 1                   ; op_code op_code
     typeq #instr_t          ; op_code is_instr(op_code)
     if_not std.abort        ; op_code
-    jump                    ; --</pre>
-          </p>
-          <p class="text">
-            If the dictionary lookup produces a code-pointer,
-            we <code>jump</code> to the selected method.
-            Otherwise, the actor transaction is aborted.
-            The message is discarded
-            and there is no effect on the actor or the system.
-            On some platforms,
-            an "auditor" may be notified
-            and the anomaly can be reported.
-          </p>
-          <h3 name="read">Read Method</h3>
-          <p class="text">
-            The method code is executed in the same transaction,
-            with the same message and the same private state
-            as the method dispatch.
-            The "read" method simply sends the current <code>value</code>
-            to the <code>cust</code> provided in the message.
-          </p>
-          <p>
-            <pre class="code">
+    jump                    ; --
+</pre>
+<p>
+    If the dictionary lookup produces a code-pointer,
+    we <code>jump</code> to the selected method.
+    Otherwise, the actor transaction is aborted.
+    The message is discarded
+    and there is no effect on the actor or the system.
+    On some platforms,
+    an "auditor" may be notified
+    and the anomaly can be reported.
+</p>
+<h3 name="read">Read Method</h3>
+<p>
+    The method code is executed in the same transaction,
+    with the same message and the same private state
+    as the method dispatch.
+    The "read" method simply sends the current <code>value</code>
+    to the <code>cust</code> provided in the message.
+</p>
+<pre class="code">
 read:                       ; value &lt;- cust,#read,_
     state 0                 ; value
-    ref std.cust_send</pre>
-          </p>
-          <h3 name="write">Write Method</h3>
-          <p class="text">
-            The "write" method updates the cell's private state
-            with a new <code>value'</code> from the message,
-            and sends its own address to the provided <code>cust</code>.
-          </p>
-          <p>
-            <pre class="code">
+    ref std.cust_send
+</pre>
+<h3 name="write">Write Method</h3>
+<p>
+    The "write" method updates the cell's private state
+    with a new <code>value'</code> from the message,
+    and sends its own address to the provided <code>cust</code>.
+</p>
+<pre class="code">
 write:                      ; value &lt;- cust,#write,value'
     msg -2                  ; value'
     push cell_beh           ; value' cell_beh
     actor become            ; --
     actor self              ; SELF
-    ref std.cust_send</pre>
-          </p>
-          <p class="text">
-            Sending the actor's address to the customer
-            is the "sync signal" pattern.
-            It allows the customer to continue processing,
-            knowing that the write has been completed.
-          </p>
-          <h3 name="CAS">Compare-and-Swap Method</h3>
-          <p class="text">
-            You might think that "read" and "write"
-            are all the operations you need
-            for a mutable storage cell.
-            However, consider trying to do something
-            as simple as incrementing a shared counter.
-            This requires a read-modify-write cycle.
-            With only a read/write API,
-            the cell's value could change
-            between the read of the original value
-            and the write of the modified value.
-            This is called a
-            "<a href="https://en.wikipedia.org/wiki/Race_condition#In_software">data race</a>".
-            One mechanism to avoid this kind of hazard
-            is to add a
-            "<a href="https://en.wikipedia.org/wiki/Compare-and-swap">compare-and-swap</a>"
-            operation to the API.
-          </p>
-          <p>
-            <pre class="code">
+    ref std.cust_send
+</pre>
+<p>
+    Sending the actor's address to the customer
+    is the "sync signal" pattern.
+    It allows the customer to continue processing,
+    knowing that the write has been completed.
+</p>
+<h3 name="CAS">Compare-and-Swap Method</h3>
+<p>
+    You might think that "read" and "write"
+    are all the operations you need
+    for a mutable storage cell.
+    However, consider trying to do something
+    as simple as incrementing a shared counter.
+    This requires a read-modify-write cycle.
+    With only a read/write API,
+    the cell's value could change
+    between the read of the original value
+    and the write of the modified value.
+    This is called a
+    "<a href="https://en.wikipedia.org/wiki/Race_condition#In_software">data race</a>".
+    One mechanism to avoid this kind of hazard
+    is to add a
+    "<a href="https://en.wikipedia.org/wiki/Compare-and-swap">compare-and-swap</a>"
+    operation to the API.
+</p>
+<pre class="code">
 CAS:                        ; value &lt;- cust,#CAS,old,new
     msg 3                   ; old
     state 0                 ; old value
@@ -304,75 +283,72 @@ CAS:                        ; value &lt;- cust,#CAS,old,new
     msg -3                  ; new
     push cell_beh           ; new cell_beh
     actor become            ; --
-    ref read</pre>
-          </p>
-          <p class="text">
-            The "CAS" method request message provides
-            the expected <code>old</code> value
-            and the desired <code>new</code> value.
-            If <code>old</code> matches the current <code>value</code>,
-            then the cell's private state is updated to <code>new</code>.
-            In either case, "CAS" acts like "read"
-            (literally reusing the same code),
-            sending <code>value</code> to <code>cust</code>.
-            Note that, by definition, this is the <code>value</code>
-            before any updates.
-          </p>
-          <p>
-            If the "CAS" <code>cust</code> receives
-            the <code>old</code> value they expected,
-            they know the operation was successful.
-            Otherwise, they can use the returned value
-            as <code>old</code> and retry the operation,
-            possibly with a recalculated <code>new</code>.
-            With actors, nothing blocks
-            and everyone makes progress,
-            even when there is contention.
-            The one-at-a-time transactional nature
-            of actor event handling ensures consistency.
-          </p>
-          <h3 name="usage">Usage Example</h3>
-          <p class="text">
-            An actor with <code>cas_add</code> behavior
-            uses a cell's "CAS" method
-            to safely update the cell's value.
-            The actor's state includes
-            the expected <code>old</code> value
-            (initialized to <code>#?</code>),
-            the <code>inc</code>rement to add,
-            and the <code>cell</code> holding the value.
-            It receives the cell's
-            updated <code>old'</code> value
-            as the customer of a "CAS" operation.
-          </p>
-          <p>
-            <pre class="code">
+    ref read
+</pre>
+<p>
+    The "CAS" method request message provides
+    the expected <code>old</code> value
+    and the desired <code>new</code> value.
+    If <code>old</code> matches the current <code>value</code>,
+    then the cell's private state is updated to <code>new</code>.
+    In either case, "CAS" acts like "read"
+    (literally reusing the same code),
+    sending <code>value</code> to <code>cust</code>.
+    Note that, by definition, this is the <code>value</code>
+    before any updates.
+</p>
+<p>
+    If the "CAS" <code>cust</code> receives
+    the <code>old</code> value they expected,
+    they know the operation was successful.
+    Otherwise, they can use the returned value
+    as <code>old</code> and retry the operation,
+    possibly with a recalculated <code>new</code>.
+    With actors, nothing blocks
+    and everyone makes progress,
+    even when there is contention.
+    The one-at-a-time transactional nature
+    of actor event handling ensures consistency.
+</p>
+<h3 name="usage">Usage Example</h3>
+<p>
+    An actor with <code>cas_add</code> behavior
+    uses a cell's "CAS" method
+    to safely update the cell's value.
+    The actor's state includes
+    the expected <code>old</code> value
+    (initialized to <code>#?</code>),
+    the <code>inc</code>rement to add,
+    and the <code>cell</code> holding the value.
+    It receives the cell's
+    updated <code>old'</code> value
+    as the customer of a "CAS" operation.
+</p>
+<pre class="code">
 cas_add:                    ; old,inc,cell &lt;- old'
     state 1                 ; old
     msg 0                   ; old old'
     cmp eq                  ; old==old'
-    if std.commit           ; --</pre>
-          </p>
-          <p class="text">
-            If the <code>old'</code> value received
-            matches the expected <code>old</code> value,
-            the operation was successful
-            and there is no more work to do.
-          </p>
-          <p>
-            <pre class="code">
+    if std.commit           ; --
+</pre>
+<p>
+    If the <code>old'</code> value received
+    matches the expected <code>old</code> value,
+    the operation was successful
+    and there is no more work to do.
+</p>
+<pre class="code">
     state 0                 ; old,inc,cell
     part 2                  ; cell inc old
     drop 1                  ; cell inc
-    msg 0                   ; cell inc old'</pre>
-          </p>
-          <p class="text">
-            Otherwise,
-            we replace the <code>old</code> value
-            with the updated <code>old'</code>.
-          </p>
-          <p>
-            <pre class="code">
+    msg 0                   ; cell inc old'
+</pre>
+<p>
+    Otherwise,
+    we replace the <code>old</code> value
+    with the updated <code>old'</code>.
+</p>
+<pre class="code">
     dup 2                   ; cell inc old' inc old'
     alu add                 ; cell inc old' new=inc+old'
     pick 2                  ; cell inc old' new old'
@@ -380,34 +356,32 @@ cas_add:                    ; old,inc,cell &lt;- old'
     actor self              ; cell inc old' new old' #CAS cust=SELF
     pair 3                  ; cell inc old' cust,#CAS,old',new
     state -2                ; cell inc old' cust,#CAS,old',new cell
-    actor send              ; cell inc old'</pre>
-          </p>
-          <p class="text">
-            Then we recalculate <code>new=inc+old'</code>
-            and prepare another "CAS" request
-            for the <code>cell</code>,
-            designating ourself as the customer.
-          </p>
-          <p>
-            <pre class="code">
+    actor send              ; cell inc old'
+</pre>
+<p>
+    Then we recalculate <code>new=inc+old'</code>
+    and prepare another "CAS" request
+    for the <code>cell</code>,
+    designating ourself as the customer.
+</p>
+<pre class="code">
     pair 2                  ; old',inc,cell
     push cas_add            ; old',inc,cell cas_add
     actor become            ; --
-    ref std.commit</pre>
-          </p>
-          <p class="text">
-            Finally,
-            we update our private state
-            and commit the transaction.
-          </p>
-          <h3 name="module">Complete Module</h3>
-          <p class="text">
-            The complete module is available
-            in the uFork library at
-            <a href="https://ufork.org/lib/cell.asm"><code>https://ufork.org/lib/cell.asm</code></a>
-          </p>
-          <p>
-            <a class="play" target="_blank" href="https://ufork.org/playground/?src=https://ufork.org/lib/cell.asm">Open in Playground</a>
+    ref std.commit
+</pre>
+<p>
+    Finally,
+    we update our private state
+    and commit the transaction.
+</p>
+<h3 name="module">Complete Module</h3>
+<p>
+    The complete module is available
+    in the uFork library at
+    <a href="https://ufork.org/lib/cell.asm">https://ufork.org/lib/cell.asm</a>.
+</p>
+<a class="play" href="https://ufork.org/playground/?src=https://ufork.org/lib/cell.asm">Open in Playground</a>
 <pre class="code">
 .import
     dev: "https://ufork.org/lib/dev.asm"
@@ -432,40 +406,28 @@ test:                       ; judge &lt;- {caps}
     write_op
     CAS_op
     boot
-    test</pre>
-          </p>
-          <p class="text">
-            The module exports <code>beh</code>,
-            rather than <code>cell_beh</code>,
-            so when the module is imported
-            with a namespace prefix of <code>cell</code>
-            it can be referenced as <code>cell.beh</code>
-          </p>
-          <p class="text">
-            The module also defines
-            demonstration and testing procedures
-            which are a subject for future tutorials.
-          </p>
-        </div>
-        <div class="span6col">
-          <h4 name="page-nav">Prev: <a href="race.html">Off To The Races</a></h4>
-        </div>
-        <div class="span6col">
-          <!--
-          <h4 name="page-nav">Next: <a href="index.html">Introduction</a></h4>
-          -->
-        </div>
-    </section>
-
-    </main>
-    <footer>
-      <section class="footer">
-        <p class="text">Copyright &copy; 2024</p>
-        <p class="text"><a href="https://github.com/organix/uFork"><i class="fab fa-github fa-2x"></i></a></p>
-      </section>
-    </footer>
-
-  </div>
+    test
+</pre>
+<p>
+    The module exports <code>beh</code>,
+    rather than <code>cell_beh</code>,
+    so when the module is imported
+    with a namespace prefix of <code>cell</code>
+    it can be referenced as <code>cell.beh</code>
+</p>
+<p>
+    The module also defines
+    demonstration and testing procedures
+    which are a subject for future tutorials.
+</p>
+<nav class="bidirectional">
+    <div class="prev">Previous: <a href="race.html">Off To The Races</a></div>
+    <div class="next"></div>
+</nav>
+</main>
+<footer>
+    Copyright &copy; 2025
+    <a href="https://github.com/organix/uFork"><img src="/github_logo.svg"></a>
+</footer>
 </body>
-
 </html>

@@ -1,62 +1,51 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>μFork Tutorial</title>
-  <link rel="icon" href="/favicon.png">
-  <link rel="stylesheet" href="style.css">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css"
-    integrity="sha512-1ycn6IcaQQ40/MKBW2W4Rhis/DbILU74C1vSrLJxCq57o941Ym01SwNsOMqvEBFlcgUa6xLiPY/NS5R+E6ztJQ=="
-    crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width">
+    <title>μFork Tutorial: Introduction</title>
+    <link rel="icon" href="/favicon.png">
+    <link rel="stylesheet" href="/main.css">
+    <link rel="stylesheet" href="tutorial.css">
 </head>
-
 <body>
-  <div class="container">
-    <header></header>
-    <main>
-
-      <section class="hero">
-        <div>
-          <h1 style="color: white;">µFork Tutorial</h1>
-          <h4>A pure actor-based concurrent machine architecture</h4>
-          <h4>with memory-safety and object-capability security</h4>
-        </div>
-        <div>
-          <p>
-            <a href="https://ufork.org"><img class="logo" src="/ufork_logo.svg"></a>
-          </p>
-        </div>
-      </section>
-
-      <section class="grid">
-        <div class="span10col">
-          <h2 name="overview">Introduction</h2>
-          <p class="text">
-            uFork is a novel machine architecture
-            based on the <a href="http://www.dalnefre.com/wp/2024/04/classic-actor-semantic-model/">Actor Model</a> of computation.
-            Actors are stateful objects that react to message-events.
-            Each actor has a unique address
-            and manages its own private state.
-            All computation occurs in the context
-            of an actor's message-handler.
-          </p>
-          <p class="text">
-            uFork is a stack-machine.
-            When an actor begins processing a message,
-            it starts with an empty stack.
-            Instructions generally remove arguments from the stack
-            and leave results on the stack for subsequent instructions.
-            Many instructions also have an immediate argument
-            that influences the operation.
-            Let's take a look at the code for a simple actor
-            (following the "service" pattern).
-            You may find it useful to have the
-            <a href="https://github.com/organix/uFork/blob/main/docs/asm.md" target="_blank">uFork Assembly Language</a>
-            manual open for reference.
-          </p>
-            <pre class="code">
+<header>
+<img src="/ufork_logo.svg" alt="uFork logo">
+<h1>µFork Tutorial</h1>
+<p>
+    A pure actor-based concurrent machine architecture
+    with memory-safety and object-capability security.
+</p>
+<ul><li><a href="/">Home</a></li></ul>
+</header>
+<main>
+<h2 name="overview">Introduction</h2>
+<p>
+    uFork is a novel machine architecture
+    based on the
+    <a href="http://www.dalnefre.com/wp/2024/04/classic-actor-semantic-model/">Actor Model</a>
+    of computation.
+    Actors are stateful objects that react to message-events.
+    Each actor has a unique address
+    and manages its own private state.
+    All computation occurs in the context
+    of an actor's message-handler.
+</p>
+<p>
+    uFork is a stack-machine.
+    When an actor begins processing a message,
+    it starts with an empty stack.
+    Instructions generally remove arguments from the stack
+    and leave results on the stack for subsequent instructions.
+    Many instructions also have an immediate argument
+    that influences the operation.
+    Let's take a look at the code for a simple actor
+    (following the "service" pattern).
+    You may find it useful to have the
+    <a href="https://github.com/organix/uFork/blob/main/docs/asm.md" target="_blank">uFork Assembly Language manual</a>
+    open for reference.
+</p>
+<pre class="code">
 svc_beh:                    ; _ &lt;- cust,num
     msg -1                  ; num
     dup 1                   ; num num
@@ -65,73 +54,74 @@ svc_beh:                    ; _ &lt;- cust,num
     alu mul                 ; reply=num*(num-1)
     msg 1                   ; reply cust
     actor send              ; --
-    end commit</pre>
-          <p class="text">
-            This actor expects a message containing a <code>cust,num</code> pair.
-            It calculates <code>num*(num-1)</code>
-            and sends that reply to the <code>cust</code> actor.
-            Comments at the end of each line
-            depict the contents of the stack
-            after that instruction.
-            Note that the reply message is not actually sent
-            until the message-handling transaction is committed.
-          </p>
-          <h3 name="indexing">Pair-List Indexing</h3>
-          <p class="text">
-            The ordered <em>pair</em> is the most commonly used data-structure in uFork,
-            so a more-detailed explanation is warranted.
-            A <em>list</em> is a linked sequence of pairs.
-            Instructions like <code>msg</code>, <code>state</code>, and <code>nth</code>
-            have an immediate index argument (<var>n</var>) to succinctly designate parts of a pair-list.
-          </p>
-          <ul class="list">
-            <li>Positive <var>n</var> designates elements of the list, starting at 1</li>
-            <li>Negative <var>n</var> designates list tails, starting at -1</li>
-            <li>Zero designates the whole list/value</li>
-          </ul>
-          <pre class="graphic">
+    end commit
+</pre>
+<p>
+    This actor expects a message containing a <code>cust,num</code> pair.
+    It calculates <code>num*(num-1)</code>
+    and sends that reply to the <code>cust</code> actor.
+    Comments at the end of each line
+    depict the contents of the stack
+    after that instruction.
+    Note that the reply message is not actually sent
+    until the message-handling transaction is committed.
+</p>
+<h3 name="indexing">Pair-List Indexing</h3>
+<p>
+    The ordered <em>pair</em> is the most commonly used data-structure in uFork,
+    so a more-detailed explanation is warranted.
+    A <em>list</em> is a linked sequence of pairs.
+    Instructions like <code>msg</code>, <code>state</code>, and <code>nth</code>
+    have an immediate index argument (<var>n</var>) to succinctly designate
+    parts of a pair-list.
+</p>
+<ul>
+    <li>Positive <var>n</var> designates elements of the list, starting at 1</li>
+    <li>Negative <var>n</var> designates list tails, starting at -1</li>
+    <li>Zero designates the whole list/value</li>
+</ul>
+<pre class="graphic">
 0-->[1,-1]-->[2,-2]-->[3,-3]--> ...
      |        |        |
-     V        V        V</pre>
-          <p class="text">
-            If the index is out-of-bounds, the result is <code>#?</code> (undefined).
-            Pair-list indexing is used to access parts of the message
-            in the preceeding example.
-            The following code fragment demonstrates
-            several pair-manipulation instructions.
-          </p>
-          <p>
-            <pre class="code">
+     V        V        V
+</pre>
+<p>
+    If the index is out-of-bounds, the result is <code>#?</code> (undefined).
+    Pair-list indexing is used to access parts of the message
+    in the preceeding example.
+    The following code fragment demonstrates
+    several pair-manipulation instructions.
+</p>
+<pre class="code">
     push 3                  ; 3
     push 2                  ; 3 2
     push 1                  ; 3 2 1
     pair 2                  ; 1,2,3
     nth -1                  ; 2,3
-    part 1                  ; 3 2</pre>
-          </p>
-          <p class="text">
-            In our comment notation, each comma denotes a pair.
-            Note that comma groups right-to-left,
-            so <code>a,b,c</code> means <code>(a,(b,c))</code>.
-          </p>
-          <h3 name="boot">Boot Behavior</h3>
-          <p class="text">
-            At start-up, a single actor is created with <code>boot</code> behavior.
-            This actor receives a message containing system-device capabilities.
-            The <em>boot actor</em> is responsible for creating the initial system configuration
-            and distributing device capabilities to actors that need them.
-          </p>
-          <p class="text">
-            uFork Assembly-Language is organized into modules.
-            A module can import symbols exported by other modules.
-            If a module exports a <code>boot</code> symbol,
-            it can provide the behavior for the boot actor.
-            Here is a complete example using <code>svc_beh</code>:
-          </p>
-          <p>
-            <a class="play" target="_blank" href="https://ufork.org/playground/?text=H4sIAAAAAAAAE5WTy26DMBBF9/6KUbJpqwLNKhItyqcgP6aAgrHlB2pU9d8rDDFtaiLVW5+5nrl3nHdSK+MIAIDAsYRd65y2ZVH4d2XOuTJN0XesEDjm1ModIXbkNcO2hMR5hRreMuDeuufBy6AqbQPZIcVeCeE1JICZiJT2tk1hkYJD4GjvwXq2zWUrJ32f4Azq/lINXj49BPwxzpHuMvBh6FmYO2XA4iBuwSwLwHTDlZSdI4Qp5ZJWrm5+cqrt1+rBccOD6hj7fEmqTfPfik25CmS+qc94+QtCvJuT6riDBl1ae3KgmgsEjvMbtDPp0H7tSGhlf7qDgaCOVvvTii97eAcHrgRWC/cjGm6QOtwotCO/luTLc/8KNMeP+KGmcMk3JP5EEWIDAAA%3D">Open in Playground</a>
-          </p>
-            <pre class="code">
+    part 1                  ; 3 2
+</pre>
+<p>
+    In our comment notation, each comma denotes a pair.
+    Note that comma groups right-to-left,
+    so <code>a,b,c</code> means <code>(a,(b,c))</code>.
+</p>
+<h3 name="boot">Boot Behavior</h3>
+<p>
+    At start-up, a single actor is created with <code>boot</code> behavior.
+    This actor receives a message containing system-device capabilities.
+    The <em>boot actor</em> is responsible
+    for creating the initial system configuration
+    and distributing device capabilities to actors that need them.
+</p>
+<p>
+    uFork Assembly-Language is organized into modules.
+    A module can import symbols exported by other modules.
+    If a module exports a <code>boot</code> symbol,
+    it can provide the behavior for the boot actor.
+    Here is a complete example using <code>svc_beh</code>:
+</p>
+<a class="play" href="https://ufork.org/playground/?text=H4sIAAAAAAAAE5WTy26DMBBF9/6KUbJpqwLNKhItyqcgP6aAgrHlB2pU9d8rDDFtaiLVW5+5nrl3nHdSK+MIAIDAsYRd65y2ZVH4d2XOuTJN0XesEDjm1ModIXbkNcO2hMR5hRreMuDeuufBy6AqbQPZIcVeCeE1JICZiJT2tk1hkYJD4GjvwXq2zWUrJ32f4Azq/lINXj49BPwxzpHuMvBh6FmYO2XA4iBuwSwLwHTDlZSdI4Qp5ZJWrm5+cqrt1+rBccOD6hj7fEmqTfPfik25CmS+qc94+QtCvJuT6riDBl1ae3KgmgsEjvMbtDPp0H7tSGhlf7qDgaCOVvvTii97eAcHrgRWC/cjGm6QOtwotCO/luTLc/8KNMeP+KGmcMk3JP5EEWIDAAA%3D">Open in Playground</a>
+<pre class="code">
 .import
     dev: "https://ufork.org/lib/dev.asm"
 
@@ -158,60 +148,49 @@ boot:                       ; _ &lt;- {caps}
     end commit
 
 .export
-    boot</pre>
-          <p class="text">
-            The boot message is a dictionary
-            of device capabilities.
-            The <code>dev.asm</code> module
-            exports a set of keys
-            used to retrieve specific capabilities
-            from this dictionary.
-            The <code>.import</code> directive
-            specifies a <code>dev</code> namespace prefix
-            for symbols imported from the <code>dev.asm</code> module.
-          </p>
-          <p class="text">
-            A capability is the address that designates a specific actor
-            and confers the ability to send messages to that address.
-            Devices capabilities are indistinguishable from actor capabilities,
-            but are implemented directly by the machine,
-            rather than in code.
-          </p>
-          <p class="text">
-            In the example program, the boot actor
-            defines <code>num</code> as 7
-            and <code>cust</code> as the debug device.
-            A new stateless actor with <code>svc_beh</code> for code is created,
-            and sent a <code>cust,num</code> message.
-            Then the boot actor ends the transaction with a <em>commit</em>.
-          </p>
-          <p class="text">
-            The <code>svc</code> actor receives the <code>cust,num</code> message,
-            computes <code>num*(num-1) = 42</code>,
-            and sends this reply to the debug device.
-            If you run this example in the uFork Playground,
-            the debug device will display <code>+42</code> in the I/O panel.
-          </p>
-        </div>
-        <div class="span6col">
-          <!--
-          <h4 name="page-nav">Prev: <a href="index.html">Introduction</a></h4>
-          -->
-        </div>
-        <div class="span6col">
-          <h4 name="page-nav">Next: <a href="race.html">Off To The Races</a></h4>
-        </div>
-      </section>
-
-    </main>
-    <footer>
-      <section class="footer">
-        <p class="text">Copyright &copy; 2024</p>
-        <p class="text"><a href="https://github.com/organix/uFork"><i class="fab fa-github fa-2x"></i></a></p>
-      </section>
-    </footer>
-
-  </div>
+    boot
+</pre>
+<p>
+    The boot message is a dictionary
+    of device capabilities.
+    The <code>dev.asm</code> module
+    exports a set of keys
+    used to retrieve specific capabilities
+    from this dictionary.
+    The <code>.import</code> directive
+    specifies a <code>dev</code> namespace prefix
+    for symbols imported from the <code>dev.asm</code> module.
+</p>
+<p>
+    A capability is the address that designates a specific actor
+    and confers the ability to send messages to that address.
+    Devices capabilities are indistinguishable from actor capabilities,
+    but are implemented directly by the machine,
+    rather than in code.
+</p>
+<p>
+    In the example program, the boot actor
+    defines <code>num</code> as 7
+    and <code>cust</code> as the debug device.
+    A new stateless actor with <code>svc_beh</code> for code is created,
+    and sent a <code>cust,num</code> message.
+    Then the boot actor ends the transaction with a <em>commit</em>.
+</p>
+<p>
+    The <code>svc</code> actor receives the <code>cust,num</code> message,
+    computes <code>num*(num-1) = 42</code>,
+    and sends this reply to the debug device.
+    If you run this example in the uFork Playground,
+    the debug device will display <code>+42</code> in the I/O panel.
+</p>
+<nav class="bidirectional">
+    <div class="prev"></div>
+    <div class="next">Next: <a href="race.html">Off To The Races</a></div>
+</nav>
+</main>
+<footer>
+    Copyright &copy; 2025
+    <a href="https://github.com/organix/uFork"><img src="/github_logo.svg"></a>
+</footer>
 </body>
-
 </html>

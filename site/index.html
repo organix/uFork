@@ -1,266 +1,207 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>μFork</title>
-  <link rel="icon" href="/favicon.png">
-  <link rel="stylesheet" href="style.css">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css"
-    integrity="sha512-1ycn6IcaQQ40/MKBW2W4Rhis/DbILU74C1vSrLJxCq57o941Ym01SwNsOMqvEBFlcgUa6xLiPY/NS5R+E6ztJQ=="
-    crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width">
+    <title>μFork</title>
+    <link rel="icon" href="/favicon.png">
+    <link rel="stylesheet" href="/main.css">
+    <link rel="stylesheet" href="/home.css">
 </head>
-
 <body>
-  <div class="container">
-    <header>
-      <nav>
-        <ul>
-          <li>
-            <ul class="menu">
-              <li class="menu-item">
-                <a href="#">Documentation</a>
-                  <ul class="drop-menu">
-                  <li class="drop-menu-item">
-                    <a href="https://github.com/organix/uFork/blob/main/docs/asm.md">Assembly Language</a></li>
-                  <li class="drop-menu-item">
-                    <a href="https://github.com/organix/uFork/blob/main/docs/ir.md">Intermediate Representation</a></li>
-                  <li class="drop-menu-item">
-                    <a href="https://github.com/organix/uFork/blob/main/docs/scheme.md">LISP/Scheme Compiler</a></li>
-                  <li class="drop-menu-item">
-                    <a href="https://github.com/organix/uFork/blob/main/docs/requestor.md">Requestor Protocol</a></li>
-                  <li class="drop-menu-item">
-                    <a href="https://github.com/organix/uFork/blob/main/docs/clock_dev.md">Clock Device</a></li>
-                  <li class="drop-menu-item">
-                    <a href="https://github.com/organix/uFork/blob/main/docs/timer_dev.md">Timer Device</a></li>
-                  <li class="drop-menu-item">
-                    <a href="https://github.com/organix/uFork/blob/main/docs/io_dev.md">Console I/O Device</a></li>
-                  <li class="drop-menu-item">
-                    <a href="https://github.com/organix/uFork/blob/main/docs/blob_dev.md">BLOB Device</a></li>
-                  <li class="drop-menu-item">
-                    <a href="https://github.com/organix/uFork/blob/main/docs/random_dev.md">Random Number Device</a></li>
-                  <li class="drop-menu-item">
-                    <a href="https://github.com/organix/uFork/blob/main/docs/host_dev.md">Host-Extension Device</a></li>
-                  <li class="drop-menu-item">
-                    <a href="https://github.com/organix/uFork/blob/main/docs/svg_drawing.md">SVG Drawing Device</a></li>
-                  <li class="drop-menu-item">
-                    <a href="https://github.com/organix/uFork/blob/main/docs/awp_dev.md">Network Device</a></li>
-                </ul>
-              </li>
-              <li class="menu-item">
-                <a href="https://ufork.org/playground/">Examples</a>
-                <ul class="drop-menu">
-                  <li class="drop-menu-item">
-                    <a href="https://ufork.org/playground/?src=https://ufork.org/debugger/examples/hello.asm">Hello World</a></li>
-                  <li class="drop-menu-item">
-                    <a href="https://ufork.org/playground/?src=https://ufork.org/debugger/examples/hello_io.asm">Hello I/O</a></li>
-                  <li class="drop-menu-item">
-                    <a href="https://ufork.org/playground/?src=https://ufork.org/debugger/examples/echo.hum">Console Echo (Humus)</a></li>
-                  <li class="drop-menu-item">
-                    <a href="https://ufork.org/playground/?src=https://ufork.org/debugger/examples/echo.scm">Console Echo (Scheme)</a></li>
-                  <li class="drop-menu-item">
-                    <a href="https://ufork.org/playground/?src=https://ufork.org/debugger/examples/fib.asm">Fibonacci (ASM)</a></li>
-                  <li class="drop-menu-item">
-                    <a href="https://ufork.org/playground/?src=https://ufork.org/debugger/examples/fib.hum">Fibonacci (Humus)</a></li>
-                  <li class="drop-menu-item">
-                    <a href="https://ufork.org/playground/?src=https://ufork.org/debugger/examples/fib.scm">Fibonacci (Scheme)</a></li>
-                  <li class="drop-menu-item">
-                    <a href="https://ufork.org/playground/?src=https://ufork.org/debugger/examples/fib_req.hum">Fibonacci Requestor</a></li>
-                  <li class="drop-menu-item">
-                    <a href="https://ufork.org/playground/?src=https://ufork.org/debugger/examples/lambda.asm">Lambda Calculus</a></li>
-                  <li class="drop-menu-item">
-                    <a href="https://ufork.org/playground/?src=https://ufork.org/debugger/examples/svg_demo.asm&dev=svg">SVG Drawing</a></li>
-                </ul>
-              </li>
-            </ul>
-          </li>
-        </ul>
-      </nav>
-    </header>
-    <main>
-
-      <section class="hero">
+<header>
+<img src="/ufork_logo.svg" alt="uFork logo">
+<h1>µFork</h1>
+<p>
+    A pure actor-based concurrent machine architecture
+    with memory-safety and object-capability security.
+</p>
+<ul>
+    <li>
+        <a href="tutorial/index.html">Tutorial</a>
+    </li>
+    <li>
+        <a href="#">Documentation</a>
         <div>
-          <h1 style="color: white;">µFork</h1>
-          <h3>A pure actor-based concurrent machine architecture</h3>
-          <h3>with memory-safety and object-capability security</h3>
+            <a href="https://github.com/organix/uFork/blob/main/docs/asm.md">Assembly Language</a>
+            <a href="https://github.com/organix/uFork/blob/main/docs/ir.md">Intermediate Representation</a>
+            <a href="https://github.com/organix/uFork/blob/main/docs/scheme.md">LISP/Scheme Compiler</a>
+            <a href="https://github.com/organix/uFork/blob/main/docs/requestor.md">Requestor Protocol</a>
+            <a href="https://github.com/organix/uFork/blob/main/docs/clock_dev.md">Clock Device</a>
+            <a href="https://github.com/organix/uFork/blob/main/docs/timer_dev.md">Timer Device</a>
+            <a href="https://github.com/organix/uFork/blob/main/docs/io_dev.md">Console I/O Device</a>
+            <a href="https://github.com/organix/uFork/blob/main/docs/blob_dev.md">BLOB Device</a>
+            <a href="https://github.com/organix/uFork/blob/main/docs/random_dev.md">Random Number Device</a>
+            <a href="https://github.com/organix/uFork/blob/main/docs/host_dev.md">Host-Extension Device</a>
+            <a href="https://github.com/organix/uFork/blob/main/docs/svg_drawing.md">SVG Drawing Device</a>
+            <a href="https://github.com/organix/uFork/blob/main/docs/awp_dev.md">Network Device</a>
         </div>
+    </li>
+    <li>
+        <a href="https://ufork.org/playground/">Examples</a>
         <div>
-          <img class="logo" src="/ufork_logo.svg"></p>
+            <a href="https://ufork.org/playground/?src=../debugger/examples/hello.asm">Hello World</a>
+            <a href="https://ufork.org/playground/?src=../debugger/examples/hello_io.asm">Hello I/O</a>
+            <a href="https://ufork.org/playground/?src=../debugger/examples/echo.hum">Console Echo (Humus)</a>
+            <a href="https://ufork.org/playground/?src=../debugger/examples/echo.scm">Console Echo (Scheme)</a>
+            <a href="https://ufork.org/playground/?src=../debugger/examples/fib.asm">Fibonacci (ASM)</a>
+            <a href="https://ufork.org/playground/?src=../debugger/examples/fib.hum">Fibonacci (Humus)</a>
+            <a href="https://ufork.org/playground/?src=../debugger/examples/fib.scm">Fibonacci (Scheme)</a>
+            <a href="https://ufork.org/playground/?src=../debugger/examples/fib_req.hum">Fibonacci Requestor</a>
+            <a href="https://ufork.org/playground/?src=../debugger/examples/lambda.asm">Lambda Calculus</a>
+            <a href="https://ufork.org/playground/?src=../debugger/examples/svg_demo.asm&dev=svg">SVG Drawing</a>
         </div>
-      </section>
-
-      <section class="grid">
-        <div class="feature">
-          <span class="badge">🎭</span>
-          <h2 class="title">Concurrency</h2>
-          <p class="text">
+    </li>
+</ul>
+</header>
+<main>
+<h2>Overview</h2>
+<p>
+    µFork is a novel machine architecture based on the
+    <a href="http://www.dalnefre.com/wp/2024/04/classic-actor-semantic-model/">Actor Model</a> of computation.
+    Actors are stateful objects that react to message-events.
+    Each actor has a unique address.
+    Each event designates the address of the actor to which it will be delivered.
+    An actor handles events one-at-a-time,
+    accumulating a set of effects which include:
+</p>
+<ul>
+    <li>Creating new actors (<em>create</em>)</li>
+    <li>Generating new message-events (<em>send</em>)</li>
+    <li>Defining the actor's future behavior (<em>become</em>)</li>
+</ul>
+<p>
+    Actor creation is very cheap,
+    just one instruction and one memory cell.
+    Message send is equally cheap,
+    and can extend the connectivity graph
+    by transmitting actor addresses.
+</p>
+<p>
+    All data values in µFork are immutable.
+    This makes them safe to share in message-events.
+    The only mutation allowed is actor behavior replacement (<em>become</em>),
+    which designates the code and data that will be used to handle future message-events.
+</p>
+<p>
+    Event handling ends with either a <em>commit</em> or <em>abort</em>.
+    If the actor commits, the accumulated effects are applied to the system.
+    If the actor aborts, the effects are discarded.
+</p>
+<p>
+    µFork is a realization of the ideas described in
+    <a href="http://www.dalnefre.com/wp/2022/08/memory-safety-simplifies-microprocessor-design/">Memory Safety Simplifies Microprocessor Design</a>,
+    which explains the motivation and rationale in more detail.
+</p>
+<section class="features">
+    <div>
+        <h2><span>🎭</span> Concurrency</h2>
+        <p>
             µFork is driven entirely by asynchronous events.
             There are no blocking operations.
             Instruction execution is efficiently interleaved,
             so all ongoing activities make progress concurrently.
-          </p>
-          <details class="text">
-            <summary class="more">Read more...</summary>
+        </p>
+        <p>
             Activities are extremely cheap to create.
             In fact, a new activity is created
             to handle the processing of each event.
             An activity ends when the effects of the event
             are either committed (releasing new events)
             or aborted.
-            <p class="text">
+        </p>
+        <p>
             µFork supports dynamic memory allocation,
             with concurrent automatic reclamation of unreachable storage.
-          </details>
-        </div>
-        <div class="feature">
-          <span class="badge">🦺</span>
-          <h2 class="title">Safety</h2>
-          <p class="text">
+        </p>
+    </div>
+    <div>
+        <h2><span>🦺</span> Safety</h2>
+        <p>
             Activities are strongly isolated from each other.
             State-change is always local.
             Interaction occurs by generating asynchronous events.
             This simple design uses less logic and consumes less power
             to maintain coherency and prevent conflicts.
-          </p>
-          <details class="text">
-            <summary class="more">Read more...</summary>
+        </p>
+        <p>
             µFork instructions are memory-safe.
             There are three primitive types of data:
-            <ul>
-              <li>Bounded Integers</li>
-              <li>Pointers to immutable data</li>
-              <li>Addresses for events</li>
-            </ul>
+        </p>
+        <ul>
+            <li>Bounded Integers</li>
+            <li>Pointers to immutable data</li>
+            <li>Addresses for events</li>
+        </ul>
+        <p>
             There is no conversion between these types
             and no pointer/address arithmetic.
-            <p class="text">
+        </p>
+        <p>
             µFork enforces fine-grained quotas on memory, instructions, and events.
             These quotas can be used to prevent resource-exhaustion attacks.
-          </details>
-        </div>
-        <div class="feature">
-          <span class="badge">🔑</span>
-          <h2 class="title">Security</h2>
-          <p class="text">
+        </p>
+    </div>
+    <div>
+        <h2><span>🔑</span> Security</h2>
+        <p>
             µFork security can be summarized as,
-            "If you don't have it, you can't use it."
+            &ldquo;If you don't have it, you can't use it.&rdquo;
             You have to know an address to generate an event for that address.
             The address-reference graph is the access-control graph.
-          </p>
-          <details class="text">
-            <summary class="more">Read more...</summary>
-            As mentioned under "Safety",
+        </p>
+        <p>
+            As mentioned under &ldquo;Safety&rdquo;,
             an address cannot be created from an Integer or Pointer.
             You only know addresses:
-            <ul>
-              <li>Given to you at construction</li>
-              <li>Received in an event</li>
-              <li>Created by your actions</li>
-            </ul>
-            <p class="text">
+        </p>
+        <ul>
+            <li>Given to you at construction</li>
+            <li>Received in an event</li>
+            <li>Created by your actions</li>
+        </ul>
+        <p>
             Addresses are opaque.
             They can be used only to generate an asynchronous event,
             not to access memory.
-          </details>
-        </div>
-      </section>
-
-      <section class="grid">
-        <div class="span10col">
-          <h2 name="overview">Overview</h2>
-          <p class="text">
-            µFork is a novel machine architecture
-            based on the <a href="http://www.dalnefre.com/wp/2024/04/classic-actor-semantic-model/">Actor Model</a> of computation.
-            Actors are stateful objects that react to message-events.
-            Each actor has a unique address.
-            Each event designates the address of the actor to which it will be delivered.
-            An actor handles events one-at-a-time,
-            accumulating a set of effects which include:
-          </p>
-          <ul>
-            <li>Creating new actors (<em>create</em>)</li>
-            <li>Generating new message-events (<em>send</em>)</li>
-            <li>Defining the actor's future behavior (<em>become</em>)</li>
-          </ul>
-          <p class="text">
-            Actor creation is very cheap,
-            just one instruction and one memory cell.
-            Message send is equally cheap,
-            and can extend the connectivity graph
-            by transmitting actor addresses.
-          </p>
-          <p class="text">
-            All data values in µFork are immutable.
-            This makes them safe to share in message-events.
-            The only mutation allowed is actor behavior replacement (<em>become</em>),
-            which designates the code and data that will be used to handle future message-events.
-          </p>
-          <p class="text">
-            Event handling ends with either a <em>commit</em> or <em>abort</em>.
-            If the actor commits, the accumulated effects are applied to the system.
-            If the actor aborts, the effects are discarded.
-          </p>
-          <p class="text">
-            µFork is a realization of the ideas described in
-            "<a href="http://www.dalnefre.com/wp/2022/08/memory-safety-simplifies-microprocessor-design/">Memory Safety
-              Simplifies Microprocessor Design</a>",
-            which explains the motivation and rationale in more detail.
-          </p>
-        </div>
-        <div class="span10col">
-          <h2 name="resources">Resources</h2>
-          <ul>
-            <li>A <a href="./tutorial/index.html"><code>tutorial</code></a> is available to help you get started.</li>
-            <li>The main project repository is <a href="https://github.com/organix/uFork"><code>github.com/organix/uFork</code></a></li>
-            <li>An FPGA implementation is underway at <a href="https://github.com/organix/uFork/tree/main/fpga"><code>github.com/organix/uFork/tree/main/fpga</code></a></li>
-            <li>The legacy prototype is available at <a href="https://github.com/organix/ufork-c"><code>github.com/organix/ufork-c</code></a></li>
-            <li>The NLnet project pages are <a href="https://nlnet.nl/project/uFork/">uFork</a> and <a href="https://nlnet.nl/project/uFork-FPGA/">uFork/FPGA</a></li>
-          </ul>
-        </div>
-      </section>
-
-      <section>
-        <h2 name="support">Project Support</h2>
-        <p>
-          <a href="https://NLnet.nl" target="_blank">
-            <img src="https://www.github.com/organix/uFork/raw/main/NLnet_banner.png"
-              alt="Logo NLnet: abstract logo of four people seen from above"
-              style="width: 150px; margin: 0 10px 10px; max-width: 50%;">
-          </a>
-          <a href="https://NLnet.nl/NGI0" target="_blank">
-            <img src="https://www.github.com/organix/uFork/raw/main/NGI0Entrust_tag.svg"
-              alt="Logo NGI Zero: letterlogo shaped like a tag"
-              style="width: 150px; margin: 0 10px 10px; max-width: 50%;">
-          </a>
-          <a href="https://NLnet.nl/NGI0" target="_blank">
-            <img src="https://www.github.com/organix/uFork/raw/main/NGI0Core_tag.svg"
-              alt="Logo NGI Zero: letterlogo shaped like a tag"
-              style="width: 150px; margin: 0 10px 10px; max-width: 50%;">
-          </a>
         </p>
-        <p>
-          The <a href="https://nlnet.nl/project/uFork/">uFork</a> project was funded
-          through the <a href="https://nlnet.nl/entrust">NGI0 Entrust</a> Fund.
-          The <a href="https://nlnet.nl/project/uFork-FPGA/">uFork/FPGA</a> project was funded
-          through the <a href="https://nlnet.nl/core">NGI0 Core</a> Fund.
-          Funds established by <a href="https://nlnet.nl/">NLnet</a>
-          with financial support from the European Commission's
-          <a href="https://ngi.eu/">Next Generation Internet</a> programme,
-          under the aegis of DG Communications Networks,
-          Content and Technology under grant agreement N<sup>o</sup> 101069594.</p>
-      </section>
-
-    </main>
-    <footer>
-      <section class="footer">
-        <p class="text">Copyright &copy; 2024</p>
-        <p class="text"><a href="https://github.com/organix/uFork"><i class="fab fa-github fa-2x"></i></a></p>
-      </section>
-    </footer>
-
-  </div>
+    </div>
+</section>
+<h2>Resources</h2>
+<ul>
+    <li>A <a href="./tutorial/index.html">tutorial</a> is available to help you get started.</li>
+    <li>The main project repository is <a href="https://github.com/organix/uFork">github.com/organix/uFork</a></li>
+    <li>An FPGA implementation is underway at <a href="https://github.com/organix/uFork/tree/main/fpga">github.com/organix/uFork/tree/main/fpga</a></li>
+    <li>The legacy prototype is available at <a href="https://github.com/organix/ufork-c">github.com/organix/ufork-c</a></li>
+    <li>The NLnet project pages are <a href="https://nlnet.nl/project/uFork/">uFork</a> and <a href="https://nlnet.nl/project/uFork-FPGA/">uFork/FPGA</a></li>
+</ul>
+<h2>Project Support</h2>
+<div class="sponsors">
+    <a href="https://NLnet.nl">
+        <img src="/nlnet_banner.svg"
+            alt="Logo NLnet: abstract logo of four people seen from above"></a>
+    <a href="https://NLnet.nl/NGI0">
+        <img src="/ngi0_entrust_banner.svg"
+            alt="Logo NGI Zero: letterlogo shaped like a tag"></a>
+    <a href="https://NLnet.nl/NGI0">
+        <img src="/ngi0_core_banner.svg"
+            alt="Logo NGI Zero: letterlogo shaped like a tag"></a>
+</div>
+<p>
+    The <a href="https://nlnet.nl/project/uFork/">uFork</a> project was funded
+    through the <a href="https://nlnet.nl/entrust">NGI0 Entrust</a> Fund.
+    The <a href="https://nlnet.nl/project/uFork-FPGA/">uFork/FPGA</a> project was funded
+    through the <a href="https://nlnet.nl/core">NGI0 Core</a> Fund.
+    Funds established by <a href="https://nlnet.nl/">NLnet</a>
+    with financial support from the European Commission's
+    <a href="https://ngi.eu/">Next Generation Internet</a> programme,
+    under the aegis of DG Communications Networks,
+    Content and Technology under grant agreement N<sup>o</sup> 101069594.
+</p>
+</main>
+<footer>
+    Copyright &copy; 2025
+    <a href="https://github.com/organix/uFork"><img src="/github_logo.svg"></a>
+</footer>
 </body>
-
 </html>
