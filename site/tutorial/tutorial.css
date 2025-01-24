@@ -19,10 +19,6 @@ pre.code {
 }
 pre.graphic {
     font-family: monospace;
-    display: inline-block;
-    margin-left: 50%;
-    transform: translateX(-50%);
-    max-width: 100%;
     overflow-x: auto;
 }
 nav.bidirectional {
