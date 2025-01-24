@@ -28,3 +28,8 @@
     min-width: 0;
     max-width: min(100%, 180px);
 }
+@media (prefers-color-scheme: dark) {
+    .sponsors > a:first-child > img {
+        filter: invert(1); /* white -> black */
+    }
+}
