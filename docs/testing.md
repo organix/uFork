@@ -40,7 +40,7 @@ from the ../vm/rs directory.
 
 Currently, there are no automated tests for our JavaScript modules. However,
 most modules contain a demo that can be run manually using
-[Replete](https://github.com/jamesdiacono/Replete). A demo should show how the
+[Replete](https://repletejs.org). A demo should show how the
 module can be used, whilst also providing a clear indication of whether the
 module is functioning correctly.
 

@@ -87,7 +87,7 @@ Available Deno tasks are declared in [deno.json](deno.json). They are:
 - `deno task build`: Build [the WASM component](vm/wasm/README.md).
 - `deno task serve`: Start an HTTP server to locally host Web applications, such
   as the [uFork debugger](apps/debugger/README.md). Equivalent to starting
-  [Replete](https://github.com/jamesdiacono/Replete) from your editor.
+  [Replete](https://repletejs.org) from your editor.
 - `deno task test`: Run the project's [tests](docs/testing.md).
 
 ## Documentation
