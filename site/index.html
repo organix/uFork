@@ -55,6 +55,89 @@
 </ul>
 </header>
 <main>
+<section class="features">
+    <div>
+        <h2><span>🎭</span> Concurrency</h2>
+        <p>
+            µFork is driven entirely by asynchronous events.
+            There are no blocking operations.
+            Instruction execution is efficiently interleaved,
+            so all ongoing activities make progress concurrently.
+        </p>
+        <details>
+            <summary>Show more</summary>
+            <p>
+                Activities are extremely cheap to create.
+                In fact, a new activity is created
+                to handle the processing of each event.
+                An activity ends when the effects of the event
+                are either committed (releasing new events)
+                or aborted.
+            </p>
+            <p>
+                µFork supports dynamic memory allocation,
+                with concurrent automatic reclamation of unreachable storage.
+            </p>
+        </details>
+    </div>
+    <div>
+        <h2><span>🦺</span> Safety</h2>
+        <p>
+            Activities are strongly isolated from each other.
+            State-change is always local.
+            Interaction occurs by generating asynchronous events.
+            This simple design uses less logic and consumes less power
+            to maintain coherency and prevent conflicts.
+        </p>
+        <details>
+            <summary>Show more</summary>
+            <p>
+                µFork instructions are memory-safe.
+                There are three primitive types of data:
+            </p>
+            <ul>
+                <li>Bounded Integers</li>
+                <li>Pointers to immutable data</li>
+                <li>Addresses for events</li>
+            </ul>
+            <p>
+                There is no conversion between these types
+                and no pointer/address arithmetic.
+            </p>
+            <p>
+                µFork enforces fine-grained quotas on memory, instructions, and events.
+                These quotas can be used to prevent resource-exhaustion attacks.
+            </p>
+        </details>
+    </div>
+    <div>
+        <h2><span>🔑</span> Security</h2>
+        <p>
+            µFork security can be summarized as,
+            &ldquo;If you don't have it, you can't use it.&rdquo;
+            You have to know an address to generate an event for that address.
+            The address-reference graph is the access-control graph.
+        </p>
+        <details>
+            <summary>Show more</summary>
+            <p>
+                As mentioned under &ldquo;Safety&rdquo;,
+                an address cannot be created from an Integer or Pointer.
+                You only know addresses:
+            </p>
+            <ul>
+                <li>Given to you at construction</li>
+                <li>Received in an event</li>
+                <li>Created by your actions</li>
+            </ul>
+            <p>
+                Addresses are opaque.
+                They can be used only to generate an asynchronous event,
+                not to access memory.
+            </p>
+        </details>
+    </div>
+</section>
 <h2>Overview</h2>
 <p>
     µFork is a novel machine architecture based on the
@@ -93,80 +176,6 @@
     <a href="http://www.dalnefre.com/wp/2022/08/memory-safety-simplifies-microprocessor-design/">Memory Safety Simplifies Microprocessor Design</a>,
     which explains the motivation and rationale in more detail.
 </p>
-<section class="features">
-    <div>
-        <h2><span>🎭</span> Concurrency</h2>
-        <p>
-            µFork is driven entirely by asynchronous events.
-            There are no blocking operations.
-            Instruction execution is efficiently interleaved,
-            so all ongoing activities make progress concurrently.
-        </p>
-        <p>
-            Activities are extremely cheap to create.
-            In fact, a new activity is created
-            to handle the processing of each event.
-            An activity ends when the effects of the event
-            are either committed (releasing new events)
-            or aborted.
-        </p>
-        <p>
-            µFork supports dynamic memory allocation,
-            with concurrent automatic reclamation of unreachable storage.
-        </p>
-    </div>
-    <div>
-        <h2><span>🦺</span> Safety</h2>
-        <p>
-            Activities are strongly isolated from each other.
-            State-change is always local.
-            Interaction occurs by generating asynchronous events.
-            This simple design uses less logic and consumes less power
-            to maintain coherency and prevent conflicts.
-        </p>
-        <p>
-            µFork instructions are memory-safe.
-            There are three primitive types of data:
-        </p>
-        <ul>
-            <li>Bounded Integers</li>
-            <li>Pointers to immutable data</li>
-            <li>Addresses for events</li>
-        </ul>
-        <p>
-            There is no conversion between these types
-            and no pointer/address arithmetic.
-        </p>
-        <p>
-            µFork enforces fine-grained quotas on memory, instructions, and events.
-            These quotas can be used to prevent resource-exhaustion attacks.
-        </p>
-    </div>
-    <div>
-        <h2><span>🔑</span> Security</h2>
-        <p>
-            µFork security can be summarized as,
-            &ldquo;If you don't have it, you can't use it.&rdquo;
-            You have to know an address to generate an event for that address.
-            The address-reference graph is the access-control graph.
-        </p>
-        <p>
-            As mentioned under &ldquo;Safety&rdquo;,
-            an address cannot be created from an Integer or Pointer.
-            You only know addresses:
-        </p>
-        <ul>
-            <li>Given to you at construction</li>
-            <li>Received in an event</li>
-            <li>Created by your actions</li>
-        </ul>
-        <p>
-            Addresses are opaque.
-            They can be used only to generate an asynchronous event,
-            not to access memory.
-        </p>
-    </div>
-</section>
 <h2>Resources</h2>
 <ul>
     <li>A <a href="tutorial/index.html">tutorial</a> is available to help you get started.</li>

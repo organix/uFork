@@ -4,6 +4,9 @@
         justify-content: space-between;
         gap: 40px;
     }
+    .features > div {
+        flex: 1 1; /* equal widths */
+    }
     .features > div > h2 {
         text-align: center;
     }
