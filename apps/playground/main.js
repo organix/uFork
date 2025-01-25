@@ -28,7 +28,7 @@ lang_packs.hum = lang_hum;
 lang_packs.scm = lang_scm;
 Object.freeze(lang_packs);
 
-let initial_text = "; Write some uFork assembly here...";
+let initial_text = "";
 let text_override;
 
 function is_landscape() {
@@ -108,7 +108,7 @@ function fetch_text() {
             );
         });
     }
-    return Promise.resolve(initial_text);
+    return Promise.resolve("");
 }
 
 const editor = editor_ui({
@@ -195,6 +195,10 @@ const split = dom(
         dom(tools, {slot: "peripheral"})
     ]
 );
+
+if (read_state("src") === undefined && read_state("text") === undefined) {
+    write_state("src", "../debugger/examples/hello.asm");
+}
 const src = read_state("src") || "";
 const src_extension = src.split(".").pop();
 const lang_override = read_state("lang");
