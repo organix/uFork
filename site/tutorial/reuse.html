@@ -30,12 +30,12 @@
 </p>
 <p>
     When two or more actors need access to the same mutable state,
-    we define a "state holder" actor for that state.
+    we define a &ldquo;state holder&rdquo; actor for that state.
     Since shared data is immutable,
     the state-holder maintains the mutable state privately,
     and the sharing actors coordinate
     by sending messages to the state-holder.
-    We will define a "storage cell" actor
+    We will define a &ldquo;storage cell&rdquo; actor
     as a simple state-holder example.
 </p>
 <h3 name="tail">Common Tail-Sequences</h3>
@@ -196,7 +196,7 @@ op_table:
 </p>
 <h3 name="dispatch">Method Dispatch Table</h3>
 <p>
-    We begin defining the "storage cell" behavior
+    We begin defining the &ldquo;storage cell&rdquo; behavior
     by using the staically-defined <code>op_table</code>
     to dispatch to the code specified by the <code>op</code>
     selector in the incoming message.
@@ -219,7 +219,7 @@ cell_beh:                   ; value &lt;- cust,op,args
     The message is discarded
     and there is no effect on the actor or the system.
     On some platforms,
-    an "auditor" may be notified
+    an &ldquo;auditor&rdquo; may be notified
     and the anomaly can be reported.
 </p>
 <h3 name="read">Read Method</h3>
@@ -227,7 +227,7 @@ cell_beh:                   ; value &lt;- cust,op,args
     The method code is executed in the same transaction,
     with the same message and the same private state
     as the method dispatch.
-    The "read" method simply sends the current <code>value</code>
+    The &ldquo;read&rdquo; method simply sends the current <code>value</code>
     to the <code>cust</code> provided in the message.
 </p>
 <pre class="code">
@@ -237,7 +237,7 @@ read:                       ; value &lt;- cust,#read,_
 </pre>
 <h3 name="write">Write Method</h3>
 <p>
-    The "write" method updates the cell's private state
+    The &ldquo;write&rdquo; method updates the cell's private state
     with a new <code>value'</code> from the message,
     and sends its own address to the provided <code>cust</code>.
 </p>
@@ -251,13 +251,13 @@ write:                      ; value &lt;- cust,#write,value'
 </pre>
 <p>
     Sending the actor's address to the customer
-    is the "sync signal" pattern.
+    is the &ldquo;sync signal&rdquo; pattern.
     It allows the customer to continue processing,
     knowing that the write has been completed.
 </p>
 <h3 name="CAS">Compare-and-Swap Method</h3>
 <p>
-    You might think that "read" and "write"
+    You might think that &ldquo;read&rdquo; and &ldquo;write&rdquo;
     are all the operations you need
     for a mutable storage cell.
     However, consider trying to do something
@@ -268,10 +268,10 @@ write:                      ; value &lt;- cust,#write,value'
     between the read of the original value
     and the write of the modified value.
     This is called a
-    "<a href="https://en.wikipedia.org/wiki/Race_condition#In_software">data race</a>".
+    &ldquo;<a href="https://en.wikipedia.org/wiki/Race_condition#In_software">data race</a>&rdquo;.
     One mechanism to avoid this kind of hazard
     is to add a
-    "<a href="https://en.wikipedia.org/wiki/Compare-and-swap">compare-and-swap</a>"
+    &ldquo;<a href="https://en.wikipedia.org/wiki/Compare-and-swap">compare-and-swap</a>&rdquo;
     operation to the API.
 </p>
 <pre class="code">
@@ -286,19 +286,19 @@ CAS:                        ; value &lt;- cust,#CAS,old,new
     ref read
 </pre>
 <p>
-    The "CAS" method request message provides
+    The &ldquo;CAS&rdquo; method request message provides
     the expected <code>old</code> value
     and the desired <code>new</code> value.
     If <code>old</code> matches the current <code>value</code>,
     then the cell's private state is updated to <code>new</code>.
-    In either case, "CAS" acts like "read"
+    In either case, &ldquo;CAS&rdquo; acts like &ldquo;read&rdquo;
     (literally reusing the same code),
     sending <code>value</code> to <code>cust</code>.
     Note that, by definition, this is the <code>value</code>
     before any updates.
 </p>
 <p>
-    If the "CAS" <code>cust</code> receives
+    If the &ldquo;CAS&rdquo; <code>cust</code> receives
     the <code>old</code> value they expected,
     they know the operation was successful.
     Otherwise, they can use the returned value
@@ -313,7 +313,7 @@ CAS:                        ; value &lt;- cust,#CAS,old,new
 <h3 name="usage">Usage Example</h3>
 <p>
     An actor with <code>cas_add</code> behavior
-    uses a cell's "CAS" method
+    uses a cell's &ldquo;CAS&rdquo; method
     to safely update the cell's value.
     The actor's state includes
     the expected <code>old</code> value
@@ -322,7 +322,7 @@ CAS:                        ; value &lt;- cust,#CAS,old,new
     and the <code>cell</code> holding the value.
     It receives the cell's
     updated <code>old'</code> value
-    as the customer of a "CAS" operation.
+    as the customer of a &ldquo;CAS&rdquo; operation.
 </p>
 <pre class="code">
 cas_add:                    ; old,inc,cell &lt;- old'
@@ -360,7 +360,7 @@ cas_add:                    ; old,inc,cell &lt;- old'
 </pre>
 <p>
     Then we recalculate <code>new=inc+old'</code>
-    and prepare another "CAS" request
+    and prepare another &ldquo;CAS&rdquo; request
     for the <code>cell</code>,
     designating ourself as the customer.
 </p>

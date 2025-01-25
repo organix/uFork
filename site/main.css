@@ -82,7 +82,7 @@ header > ul > li:hover > div {
 }
 main {
     margin: 32px 16px;
-    line-height: 1.3;
+    line-height: 1.4;
 }
 @media (min-width: calc(960px + 32px)) {
     main {

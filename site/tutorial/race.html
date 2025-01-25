@@ -23,16 +23,16 @@
 <p>
     Actors are ideal for coordinating asynchronous activity.
     A good example of that is
-    arranging a "race" among multiple services.
+    arranging a &ldquo;race&rdquo; among multiple services.
     The idea is you make a request to multiple services
     and the first one to reply wins the race.
     All other replies are ignored.
 </p>
 <p>
     Each request to a service actor
-    includes a "reply-to" address
+    includes a &ldquo;reply-to&rdquo; address
     called the <em>customer</em> actor.
-    In a race, we provide a "once" customer
+    In a race, we provide a &ldquo;once&rdquo; customer
     that forwards one message
     (to the <em>real</em> customer)
     and ignores any subsequent messages.
@@ -124,7 +124,7 @@ broadcast_done:
     with exactly one reply to the <code>cust</code> actor.
     For the puposes of our race,
     we will create several instances
-    of a "delta" service.
+    of a &ldquo;delta&rdquo; service.
 </p>
 <pre class="code">
 delta_beh:                  ; delta &lt;- cust,num
