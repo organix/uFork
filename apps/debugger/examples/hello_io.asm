@@ -41,21 +41,21 @@ str_end:                    ; --
     ref std.send_msg
 
 boot:                       ; _ <- {caps}
-    push #?                 ; #?
-    push #t                 ; #t
-    pair 1                  ; #t,#?
+    push #?                 ; value=#?
+    push #t                 ; #? ok=#t
+    pair 1                  ; ok,value
 
-    push hello              ; #t,#? str
-    msg 0                   ; #t,#? str {caps}
-    push dev.io_key         ; #t,#? str {caps} dev.io_key
-    dict get                ; #t,#? str io_dev
-    push #?                 ; #t,#? str io_dev #?
-    push std.sink_beh       ; #t,#? str io_dev #? sink_beh
-    actor create            ; #t,#? str out=io_dev cb=sink_beh.#?
+    push hello              ; ok,value str=hello
+    msg 0                   ; ok,value str {caps}
+    push dev.io_key         ; ok,value str {caps} io_key
+    dict get                ; ok,value str out=io_dev
+    push #?                 ; ok,value str out #?
+    push std.sink_beh       ; ok,value str out #? sink_beh
+    actor create            ; ok,value str out cb=sink_beh.#?
 
-    pair 2                  ; #t,#? cb,out,str
-    push str_out            ; #t,#? cb,out,str str_out
-    actor create            ; #t,#? str_out.cb,out,str
+    pair 2                  ; ok,value cb,out,str
+    push str_out            ; ok,value cb,out,str str_out
+    actor create            ; ok,value str_out.cb,out,str
     ref std.send_msg
 
 .export

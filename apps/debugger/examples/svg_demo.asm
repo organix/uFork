@@ -7,7 +7,14 @@
     std: "https://ufork.org/lib/std.asm"
 
 svg_cmds:
-    ; background
+    pair_t svg_background
+    pair_t svg_square
+    pair_t svg_triangle
+    pair_t svg_cross
+    pair_t svg_circle
+    ref #nil
+
+svg_background:
     pair_t 'M'
     pair_t 0
     pair_t 0
@@ -23,7 +30,9 @@ svg_cmds:
     pair_t 92
     pair_t 92
     pair_t 255
-    ; square
+    ref #nil
+
+svg_square:
     pair_t 'M'
     pair_t 4
     pair_t 18
@@ -42,7 +51,9 @@ svg_cmds:
     pair_t 1
     pair_t 0
     pair_t 0
-    ; triangle
+    ref #nil
+
+svg_triangle:
     pair_t 'M'
     pair_t 22
     pair_t 18
@@ -61,7 +72,9 @@ svg_cmds:
     pair_t 1
     pair_t 0
     pair_t 0
-    ; cross
+    ref #nil
+
+svg_cross:
     pair_t 'M'
     pair_t 4
     pair_t 38
@@ -82,7 +95,9 @@ svg_cmds:
     pair_t 1
     pair_t 0
     pair_t 0
-    ; circle
+    ref #nil
+
+svg_circle:
     pair_t 'M'
     pair_t 22
     pair_t 38
@@ -115,10 +130,13 @@ svg_cmds:
     pair_t 1
     ref #nil
 
-str_out:                    ; cb,out,str <- result
+str_out:                    ; cb,out,str <- ok,value
+    msg 1                   ; ok
+    if_not str_end          ; --
+
     state -2                ; str
     typeq #pair_t           ; is_pair(str)
-    if_not str_end
+    if_not str_end          ; --
 
     state 0                 ; cb,out,str
     part 3                  ; rest first out cb
@@ -134,21 +152,26 @@ str_out:                    ; cb,out,str <- result
     ref std.commit
 
 str_end:                    ; --
-    msg 0                   ; result
-    state 1                 ; result cb
+    msg 0                   ; ok,value
+    state 1                 ; ok,value cb
     ref std.send_msg
 
 boot:                       ; _ <- {caps}
-    push svg_cmds           ; #? str=svg_cmds
-    msg 0                   ; #? str {caps}
-    push dev.svg_key        ; #? str {caps} svg_key
-    dict get                ; #? str out=svg_dev
-    push #?                 ; #? str out #?
-    push std.sink_beh       ; #? str out #? sink_beh
-    actor create            ; #? str out cb=sink_beh.#?
-    pair 2                  ; #? cb,out,str
-    push str_out            ; #? cb,out,str str_out
-    actor create            ; #? str_out.cb,out,str
+    push #?                 ; value=#?
+    push #t                 ; #? ok=#t
+    pair 1                  ; ok,value
+
+    push svg_cmds           ; ok,value str=svg_cmds
+    msg 0                   ; ok,value str {caps}
+    push dev.svg_key        ; ok,value str {caps} svg_key
+    dict get                ; ok,value str out=svg_dev
+    push #?                 ; ok,value str out #?
+    push std.sink_beh       ; ok,value str out #? sink_beh
+    actor create            ; ok,value str out cb=sink_beh.#?
+
+    pair 2                  ; ok,value cb,out,str
+    push str_out            ; ok,value cb,out,str str_out
+    actor create            ; ok,value str_out.cb,out,str
     ref std.send_msg
 
 .export

@@ -57,6 +57,31 @@ Unused: `BbEeGgIiJjKkNnOoPpRrUuWwxYy`
 The **I/O Interface** is a requestor with the same interface as the
 [I/O Device](io_dev.md). It does not yet support cancellation.
 
+### Read Request
+
+When sent a request with input `#?`, it produces the next pointer event
+(mouse, pen, touch, etc.) from the drawing device.
+A pointer event is a three-tuple _x_,_y_,_b_
+where _x_ and _y_ are `fixnum` coordinates
+and _b_ is the button state as a `fixnum` bitmask.
+The primary button occupies least-significant position.
+If multiple pointer events occur before a read request,
+the most-recent is returned.
+
+**WARNING:** It is an error to request a read whilst one is in progress.
+
+### Write Request
+
+When sent a request with input `fixnum`,
+it writes that character to the drawing device and produces `#?`.
+When sent a request with a nil-terminated pair-list of `fixnum`s,
+it writes each character in sequential order to the drawing device and produces `#?`.
+
+For example, `'X',5,21,3,'F','o','o','F',0,127,0,255,#nil`
+draws the text "Foo" filled with medium green starting at 5,21.
+
+**WARNING:** It is an error to request a write whilst one is in progress.
+
 ## Demonstration
 
 A demonstration using this device in available
