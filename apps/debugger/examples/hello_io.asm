@@ -14,10 +14,13 @@ hello:                      ; +72,+101,+108,+108,+111,+63,+10,#nil
     pair_t '\n'
     ref #nil
 
-str_out:                    ; cb,out,str <- result
+str_out:                    ; cb,out,str <- ok,value
+    msg 1                   ; ok
+    if_not str_end          ; --
+
     state -2                ; str
     typeq #pair_t           ; is_pair(str)
-    if_not str_end
+    if_not str_end          ; --
 
     state 0                 ; cb,out,str
     part 3                  ; rest first out cb
@@ -33,22 +36,26 @@ str_out:                    ; cb,out,str <- result
     ref std.commit
 
 str_end:                    ; --
-    msg 0                   ; result
-    state 1                 ; result cb
+    msg 0                   ; ok,value
+    state 1                 ; ok,value cb
     ref std.send_msg
 
 boot:                       ; _ <- {caps}
     push #?                 ; #?
-    push hello              ; #? str
-    msg 0                   ; #? str {caps}
-    push dev.io_key         ; #? str {caps} dev.io_key
-    dict get                ; #? str io_dev
-    push #?                 ; #? str io_dev #?
-    push std.sink_beh       ; #? str io_dev #? sink_beh
-    actor create            ; #? str out=io_dev cb=sink_beh.#?
-    pair 2                  ; #? cb,out,str
-    push str_out            ; #? cb,out,str str_out
-    actor create            ; #? str_out.cb,out,str
+    push #t                 ; #t
+    pair 1                  ; #t,#?
+
+    push hello              ; #t,#? str
+    msg 0                   ; #t,#? str {caps}
+    push dev.io_key         ; #t,#? str {caps} dev.io_key
+    dict get                ; #t,#? str io_dev
+    push #?                 ; #t,#? str io_dev #?
+    push std.sink_beh       ; #t,#? str io_dev #? sink_beh
+    actor create            ; #t,#? str out=io_dev cb=sink_beh.#?
+
+    pair 2                  ; #t,#? cb,out,str
+    push str_out            ; #t,#? cb,out,str str_out
+    actor create            ; #t,#? str_out.cb,out,str
     ref std.send_msg
 
 .export

@@ -2,6 +2,7 @@
 
 .import
     dev: "https://ufork.org/lib/dev.asm"
+    std: "https://ufork.org/lib/std.asm"
 
 hello:                      ; +72,+101,+108,+108,+111,+63,+10,#nil
     pair_t 'H'
@@ -18,11 +19,8 @@ boot:                       ; _ <- {caps}
     msg 0                   ; value {caps}
     push dev.debug_key      ; value {caps} dev.debug_key
     dict get                ; value debug_dev
-;    msg 0               ; ... debug_dev {caps}
-;    push dev.clock_key  ; ... debug_dev {caps} dev.clock_key
-;    dict get            ; ... cust=debug_dev clock_dev
     actor send              ; --
-    end commit
+    ref std.commit
 
 .export
     boot
