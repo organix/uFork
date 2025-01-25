@@ -71,11 +71,13 @@ header > ul > li > div > a:hover {
 header > ul > li > div {
     display: none;
     position: absolute;
-    right: 0;
     min-width: 200px;
     box-shadow:
         0 2px 5px 0 rgba(0, 0, 0, 0.16),
         0 2px 10px 0 rgba(0, 0, 0, 0.12);
+}
+header > ul > li:last-child > div {
+    right: 0;
 }
 header > ul > li:hover > div {
     display: block;
