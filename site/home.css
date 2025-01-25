@@ -16,6 +16,7 @@
     display: flex;
     justify-content: space-around;
     gap: 5%;
+    padding: 16px 0;
 }
 .sponsors > a {
     flex: 1 1;
@@ -26,10 +27,6 @@
 .sponsors > a > img {
     flex: 1 1;
     min-width: 0;
-    max-width: min(100%, 180px);
-}
-@media (prefers-color-scheme: dark) {
-    .sponsors > a:first-child > img {
-        filter: invert(1); /* white -> black */
-    }
+    max-width: 100%;
+    max-height: 60px;
 }
