@@ -12,6 +12,6 @@ Make sure you have Deno installed, then run
 
 You can test it by running something like
 
-    nc 127.0.0.1 8370 | od -x
+    nc 127.0.0.1 8370 | od -t x1z
 
 and inspecting the output for a random byte.

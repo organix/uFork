@@ -13,8 +13,9 @@
 // where <src> is the relative path (or absolute URL) to a .asm or .hum module
 // to boot from, and <bind_address> defaults to 127.0.0.1:8370.
 
-/*jslint deno, global */
+/*jslint deno, global, long */
 
+import hex from "https://ufork.org/lib/hex.js";
 import {join} from "https://deno.land/std@0.203.0/path/join.ts";
 import {toFileUrl} from "https://deno.land/std@0.203.0/path/to_file_url.ts";
 import parseq from "https://ufork.org/lib/parseq.js";
@@ -54,6 +55,17 @@ function run() {
     }
 }
 
+function audit(code, evidence, ep, kp) {
+    globalThis.console.error("code:", code, "evidence:", hex.from(evidence), "ep:", hex.from(ep), "kp:", hex.from(kp));
+    //const k_quad = core.u_read_quad(kp);
+    //globalThis.console.error("k_quad:", k_quad);
+    //const ip = k_quad.t;
+    //const sp = k_quad.x;
+    //hex.from(ucode.from_uf(cell), 16);
+    //globalThis.console.error("ip:", hex.from(ip), "sp:", hex.from(sp), "ep:", hex.from(k_quad.y));
+    //globalThis.console.error(core.u_sourcemap(ip));
+}
+
 const unqualified_src = Deno.args[0];
 const bind_address = Deno.args[1] ?? "127.0.0.1:8370";
 if (unqualified_src === undefined || unqualified_src === "") {
@@ -66,7 +78,7 @@ const src = new URL(unqualified_src, cwd_dir).href;
 core = ufork.make_core({
     wasm_url,
     on_wakeup: run,
-    on_audit: globalThis.console.error,
+    on_audit: audit,
     on_log: globalThis.console.error,
     log_level: ufork.LOG_TRACE,
     compilers: {asm: assemble, hum: compile_humus},

@@ -73,9 +73,9 @@ the most-recent is returned.
 ### Write Request
 
 When sent a request with input `fixnum`,
-it writes that character to the drawing device and produces `#?`.
+it writes that value to the drawing device and produces `#?`.
 When sent a request with a nil-terminated pair-list of `fixnum`s,
-it writes each character in sequential order to the drawing device and produces `#?`.
+it writes each value in sequential order to the drawing device and produces `#?`.
 
 For example, `'X',5,21,3,'F','o','o','F',0,127,0,255,#nil`
 draws the text "Foo" filled with medium green starting at 5,21.

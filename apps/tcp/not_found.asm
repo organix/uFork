@@ -1,192 +1,96 @@
 ; A uFork program that listens for TCP connections, sending each connection
-; a 404 Not Found HTTP response, then closing it.
+; a "404 Not Found" HTTP response, then closing it.
 
 .import
     dev: "https://ufork.org/lib/dev.asm"
     std: "https://ufork.org/lib/std.asm"
+    blob: "https://ufork.org/lib/blob.asm"
+    http: "https://ufork.org/lib/http_data.asm"
 
 petname:                    ; the bind address
     ref 0
 
-;;; Example HTTP response
-http_response:
-;; HTTP/1.0 404 Not Found
-    pair_t 'H'
-    pair_t 'T'
-    pair_t 'T'
-    pair_t 'P'
-    pair_t '/'
-    pair_t '1'
-    pair_t '.'
-    pair_t '0'
-    pair_t ' '
-    pair_t '4'
-    pair_t '0'
-    pair_t '4'
-    pair_t ' '
-    pair_t 'N'
-    pair_t 'o'
-    pair_t 't'
-    pair_t ' '
-    pair_t 'F'
-    pair_t 'o'
-    pair_t 'u'
-    pair_t 'n'
-    pair_t 'd'
-    pair_t '\r'
-    pair_t '\n'
-;; Content-Type: text/plain
-    pair_t 'C'
-    pair_t 'o'
-    pair_t 'n'
-    pair_t 't'
-    pair_t 'e'
-    pair_t 'n'
-    pair_t 't'
-    pair_t '-'
-    pair_t 'T'
-    pair_t 'y'
-    pair_t 'p'
-    pair_t 'e'
-    pair_t ':'
-    pair_t ' '
-    pair_t 't'
-    pair_t 'e'
-    pair_t 'x'
-    pair_t 't'
-    pair_t '/'
-    pair_t 'p'
-    pair_t 'l'
-    pair_t 'a'
-    pair_t 'i'
-    pair_t 'n'
-    pair_t '\r'
-    pair_t '\n'
-;; Content-Length: 11
-    pair_t 'C'
-    pair_t 'o'
-    pair_t 'n'
-    pair_t 't'
-    pair_t 'e'
-    pair_t 'n'
-    pair_t 't'
-    pair_t '-'
-    pair_t 'L'
-    pair_t 'e'
-    pair_t 'n'
-    pair_t 'g'
-    pair_t 't'
-    pair_t 'h'
-    pair_t ':'
-    pair_t ' '
-    pair_t '1'
-    pair_t '1'
-    pair_t '\r'
-    pair_t '\n'
-;;
-    pair_t '\r'
-    pair_t '\n'
-content:
-;; Not Found
-    pair_t 'N'
-    pair_t 'o'
-    pair_t 't'
-    pair_t ' '
-    pair_t 'F'
-    pair_t 'o'
-    pair_t 'u'
-    pair_t 'n'
-    pair_t 'd'
-    pair_t '\r'
-    pair_t '\n'
-    ref #nil
-
-list_len:                   ; ( list -- len )
-    roll -2                 ; k list
-    push 0                  ; k list len=0
-list_len_loop:              ; k list len
-    pick 2                  ; k list len list
-    typeq #pair_t           ; k list len is_pair(list)
-    if_not list_len_end     ; k list len
-    push 1                  ; k list len 1
-    alu add                 ; k list len+1
-    roll 2                  ; k len+1 list
-    nth -1                  ; k len+1 rest(list)
-    roll 2                  ; k rest(list) len+1
-    ref list_len_loop
-list_len_end:               ; k list len
-    roll 2                  ; k len list
-    drop 1                  ; k len
-    ref std.return_value
-
-list_size:                  ; --
-    state 0                 ; list
-    call list_len           ; size=len
-    ref std.cust_send
-
-; blob that must be read only once in sequential order
-blob_once:                  ; list <- cust,req
-    msg -1                  ; req
-    eq #?                   ; req==#?
-    if list_size            ; --
-    msg -1                  ; req
-    typeq #fixnum_t         ; is_fix(req)
-    if_not std.rv_false     ; --
-    state -1                ; rest
-    push blob_once          ; rest blob_once
-    actor become            ; --
-    state 1                 ; first
-    ref std.cust_send
-
 boot:                       ; _ <- {caps}
+
+; Initialize static-content blob
+
+    push http.not_found_rsp ; list=http_request
+    msg 0                   ; list {caps}
+    push listen             ; list {caps} listen
+    actor create            ; list cust=listen.{caps}
+    pair 1                  ; cust,list
+    msg 0                   ; cust,list {caps}
+    push dev.blob_key       ; cust,list {caps} blob_key
+    dict get                ; cust,list blob_dev
+    push blob.init          ; cust,list blob_dev init
+    actor create            ; cust,list init.blob_dev
+    ref std.send_msg
+
+listen:                     ; {caps} <- blob
 
 ; Send a listen request to the TCP device.
 
-    msg 0                   ; {caps}
-    push on_open_beh        ; {caps} on_open_beh
-    actor create            ; on_open=on_open_beh.{caps}
+    msg 0                   ; blob
+;    push #?                 ; blob #?
+;    push std.sink_beh       ; blob #? sink_beh
+;    actor create            ; blob log=sink_beh.#?
+    state 0                 ; blob {caps}
+    push dev.debug_key      ; blob {caps} debug_key
+    dict get                ; blob log=debug_dev
+    pair 1                  ; log,blob
+
+    dup 1                   ; log,blob log,blob
+    push listening          ; log,blob log,blob listening
+    actor become            ; log,blob
+
+    push open_beh           ; log,blob open_beh
+    actor create            ; on_open=open_beh.log,blob
     push petname            ; on_open petname
-    push #?                 ; on_open petname #?
-    push std.sink_beh       ; on_open petname #? sink_beh
-    actor create            ; on_open petname callback=sink_beh.#?
+    actor self              ; on_open petname callback=SELF
     push #?                 ; on_open petname callback to_cancel=#?
     pair 3                  ; listen_req=to_cancel,callback,petname,on_open
-    msg 0                   ; listen_req {caps}
+    state 0                 ; listen_req {caps}
     push dev.tcp_key        ; listen_req {caps} tcp_key
     dict get                ; listen_req tcp_dev
     ref std.send_msg
 
-on_open_beh:                ; {caps} <- conn
+listening:                  ; log,blob <- ok,value
 
-; Create a read-once "blob" wrapping a static pair-list response.
+; Log result of listen request
 
-    push http_response      ; http_response
-    push blob_once          ; http_response blob_once
-    actor create            ; blob=blob_once.http_response
+    state -1                ; blob
+    msg 0                   ; blob ok,value
+    pair 1                  ; (ok,value),blob
+    state 1                 ; (ok,value),blob log
+    ref std.send_msg
+
+open_beh:                   ; log,blob <- conn
 
 ; Send the blob over the connection.
 
-    state 0                 ; blob {caps}
-    msg 0                   ; blob {caps} conn
-    pair 1                  ; blob conn,{caps}
-    push close_beh          ; blob conn,{caps} close_beh
-    actor create            ; blob callback=close_beh.conn,{caps}
+    state 0                 ; log,blob
+    part 1                  ; blob log
+    msg 0                   ; blob log conn
+    pair 1                  ; blob conn,log
+    push close_beh          ; blob conn,log close_beh
+    actor create            ; blob callback=close_beh.conn,log
     push #?                 ; blob callback to_cancel=#?
     pair 2                  ; write_req=to_cancel,callback,blob
     msg 0                   ; write_req conn
     ref std.send_msg
 
-close_beh:                  ; conn,{caps} <- _
+close_beh:                  ; conn,log <- ok,value
+
+; Log result of write request
+
+    msg 0                   ; ok,value
+    state -1                ; ok,value log
+    actor send              ; --
 
 ; Close the connection.
 
     push #nil               ; #nil
-;    push #?                 ; #nil #?
-;    push std.sink_beh       ; #nil #? sink_beh
-;    actor create            ; #nil callback=sink_beh.#?
-    state -1                ; #nil {caps}
-    push dev.debug_key      ; #nil {caps} debug_key
-    dict get                ; #nil callback=debug_dev
+    state -1                ; #nil callback=log
     push #?                 ; #nil callback to_cancel=#?
     pair 2                  ; close_req=to_cancel,callback,#nil
     state 1                 ; close_req conn
