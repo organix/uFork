@@ -17,7 +17,7 @@ hello:                      ; +72,+101,+108,+108,+111,+63,+10,#nil
 boot:                       ; _ <- {caps}
     push hello              ; value
     msg 0                   ; value {caps}
-    push dev.debug_key      ; value {caps} dev.debug_key
+    push dev.debug_key      ; value {caps} debug_key
     dict get                ; value debug_dev
     actor send              ; --
     ref std.commit

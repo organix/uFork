@@ -5,6 +5,7 @@
     std: "https://ufork.org/lib/std.asm"
     blob: "https://ufork.org/lib/blob.asm"
     io: "https://ufork.org/lib/blob_io.asm"
+    peg: "https://ufork.org/lib/blob_peg.asm"
     http: "https://ufork.org/lib/http_data.asm"
 
 petname:                    ; the bind address
@@ -13,6 +14,85 @@ petname:                    ; the bind address
 ; TODO
 ; ../tcp/random.asm shows how to listen for TCP connections
 ; ../../vm/js/fs_dev_demo.hum shows how to read files from disk
+
+; pattern factories
+
+;;  rws = [ \t]+
+new_rws_ptrn:               ; ( -- rws_ptrn )
+    push peg.wsp            ; k set=wsp
+    push peg.pred_in        ; k set pred_in
+    actor create            ; k wsp_pred=pred_in.set
+    push peg.match_one      ; k wsp_pred match_one
+    actor create            ; k wsp_ptrn=match_one.pred
+    call peg.new_plus_ptrn  ; k rws_ptrn
+    ref std.return_value
+
+;;  crlf = '\r' '\n'
+new_crlf_ptrn:              ; ( -- crlf_ptrn )
+    push #nil               ; k list=#nil
+
+    push '\n'               ; k list lf
+    push peg.pred_eq        ; k list lf pred_eq
+    actor create            ; k list pred=pred_eq.lf
+    push peg.match_one      ; k list pred match_one
+    actor create            ; k list lf_ptrn=match_one.pred
+    pair 1                  ; k list=lf_ptrn,list
+
+    push '\r'               ; k list cr
+    push peg.pred_eq        ; k list cr pred_eq
+    actor create            ; k list pred=pred_eq.cr
+    push peg.match_one      ; k list pred match_one
+    actor create            ; k list cr_ptrn=match_one.pred
+    pair 1                  ; k list=cr_ptrn,list
+
+    push peg.match_seq      ; k list match_seq
+    actor create            ; k crlf_ptrn=match_seq.list
+    ref std.return_value
+
+;;  token = print+
+new_token_ptrn:             ; ( -- token_ptrn )
+    push #nil               ; k #nil
+    push peg.print_rng      ; k #nil print
+    pair 1                  ; k set=print,#nil
+    push peg.pred_in        ; k set pred_in
+    actor create            ; k print_pred=pred_in.set
+    push peg.match_one      ; k print_pred match_one
+    actor create            ; k print_ptrn=match_one.pred
+    call peg.new_plus_ptrn  ; k token_ptrn
+    ref std.return_value
+
+;;  get = 'G' 'E' 'T' rws
+new_get_ptrn:               ; ( -- get_ptrn )
+    push #nil               ; k list=#nil
+    call new_rws_ptrn       ; k list rws_ptrn
+    pair 1                  ; k list=rws_ptrn,list
+
+    push 'T'                ; k list 'T'
+    push peg.pred_eq        ; k list 'T' pred_eq
+    actor create            ; k list pred=pred_eq.'T'
+    push peg.match_one      ; k list pred match_one
+    actor create            ; k list T_ptrn=match_one.pred
+    pair 1                  ; k list=T_ptrn,list
+
+    push 'E'                ; k list 'E'
+    push peg.pred_eq        ; k list 'E' pred_eq
+    actor create            ; k list pred=pred_eq.'E'
+    push peg.match_one      ; k list pred match_one
+    actor create            ; k list E_ptrn=match_one.pred
+    pair 1                  ; k list=E_ptrn,list
+
+    push 'G'                ; k list 'G'
+    push peg.pred_eq        ; k list 'G' pred_eq
+    actor create            ; k list pred=pred_eq.'G'
+    push peg.match_one      ; k list pred match_one
+    actor create            ; k list G_ptrn=match_one.pred
+    pair 1                  ; k list=G_ptrn,list
+
+    push peg.match_seq      ; k list match_seq
+    actor create            ; k get_ptrn=match_seq.list
+    ref std.return_value
+
+; main program execution stages
 
 boot:                       ; _ <- {caps}
 
@@ -64,6 +144,15 @@ stage_1a:                   ; {caps} <- src
     push io.blobstr         ; src blob,src,cb blobstr
     actor create            ; src blob'=blobstr.blob,src,cb
 
+; Start concurrent PEG parsing of the virtual blob
+; [FIXME: consider adding a short delay here...]
+
+    dup 1                   ; src blob' blob'
+    state 0                 ; src blob' blob' {caps}
+    push stage_2            ; src blob' blob' {caps} stage_2
+    actor create            ; src blob' blob' stage_2.{caps}
+    actor send              ; src blob'
+
 ; Remember the virtual blob for processing in the next stage
 
     state 0                 ; src blob' {caps}
@@ -96,9 +185,62 @@ stage_1b:                   ; blob',{caps} <- ok,value
 ; Pass completed blob to next stage
 
     state -1                ; {caps}
-    push stage_9            ; {caps} stage_9
+;    push stage_2            ; {caps} stage_2
+;    push stage_9            ; {caps} stage_9
+    push std.sink_beh       ; {caps} sink_beh
     actor become            ; --
     state 1                 ; blob'
+    actor self              ; blob' SELF
+    ref std.send_msg
+
+stage_2:                    ; {caps} <- blob
+    state 0                 ; {caps}
+    push stage_2a           ; {caps} stage_2a
+    actor become            ; --
+
+; Attempt to match "GET" command prefix
+
+    msg 0                   ; blob
+    push 0                  ; blob ofs=0
+    actor self              ; blob ofs cust=SELF
+    pair 2                  ; cust,ofs,blob
+    call new_get_ptrn       ; cust,ofs,blob ptrn
+    ref std.send_msg
+
+stage_2a:                   ; {caps} <- base,len,blob
+    state 0                 ; {caps}
+    push stage_8            ; {caps} stage_8
+    actor become            ; --
+
+; Attempt to match the requested "path" token
+; [FIXME: verify that "GET" matched successfully...]
+
+    msg 0                   ; base,len,blob
+    part 2                  ; blob len base
+    alu add                 ; blob ofs=len+base
+    actor self              ; blob ofs cust=SELF
+    pair 2                  ; cust,ofs,blob
+    call new_token_ptrn     ; cust,ofs,blob ptrn
+    ref std.send_msg
+
+stage_8:                    ; {caps} <- base,len,blob
+    state 0                 ; {caps}
+    push stage_9            ; {caps} stage_9
+    actor become            ; --
+
+; Report PEG parser results
+
+    msg 0                   ; base,len,blob
+    state 0                 ; base,len,blob {caps}
+    push dev.debug_key      ; base,len,blob {caps} debug_key
+    dict get                ; base,len,blob debug_dev
+    actor send              ; --
+
+; Create a blob-slice with just the "path" match
+
+    msg 0                   ; base,len,blob
+    push blob.slice         ; base,len,blob slice
+    actor create            ; blob'=slice.base,len,blob
     actor self              ; blob' SELF
     ref std.send_msg
 
