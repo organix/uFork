@@ -3,6 +3,7 @@
 .import
     dev: "https://ufork.org/lib/dev.asm"
     std: "https://ufork.org/lib/std.asm"
+    div_mod: "https://ufork.org/lib/div_mod.asm"
     blob: "https://ufork.org/lib/blob.asm"
     io: "https://ufork.org/lib/blob_io.asm"
     peg: "https://ufork.org/lib/blob_peg.asm"
@@ -14,6 +15,25 @@ petname:                    ; the bind address
 ; TODO
 ; ../tcp/random.asm shows how to listen for TCP connections
 ; ../../vm/js/fs_dev_demo.hum shows how to read files from disk
+
+; Convert a positive fixnum to a list of base-10 digit-characters
+
+num_to_dec:                 ; ( str +num -- char,char,...,str )
+    roll -3                 ; k str n=+num
+num_loop:                   ; k str n
+    push 10                 ; k str n d=10
+    call div_mod.udivmod    ; k str q r
+    roll 3                  ; k q r str
+    roll 2                  ; k q str r
+    push '0'                ; k q str r '0'
+    alu add                 ; k q str char=r+'0'
+    pair 1                  ; k q str'=char,str
+    roll 2                  ; k str' q
+    dup 1                   ; k str' q q
+    eq 0                    ; k str' q q==0
+    if_not num_loop         ; k str' q
+    drop 1                  ; k str'
+    ref std.return_value
 
 ; pattern factories
 
@@ -99,8 +119,7 @@ boot:                       ; _ <- {caps}
 ; Select next stage
 
     msg 0                   ; {caps}
-    push stage_0            ; {caps} stage
-;    push stage_1            ; {caps} stage
+    push stage_1            ; {caps} stage
 ;    push stage_9            ; {caps} stage
     actor become            ; --
 
@@ -114,64 +133,6 @@ boot:                       ; _ <- {caps}
     dict get                ; cust,list blob_dev
     push blob.init          ; cust,list blob_dev init
     actor create            ; cust,list init.blob_dev
-    ref std.send_msg
-
-stage_0:                    ; {caps} <- blob
-    state 0                 ; {caps}
-    msg 0                   ; {caps} get_req_blob
-    pair 1                  ; get_req_blob,{caps}
-    push stage_0a           ; get_req_blob,{caps} stage_0a
-    actor become            ; --
-
-; Initialize test fail-response blob
-
-    push http.not_found_rsp ; list=not_found_rsp
-    actor self              ; list cust=SELF
-    pair 1                  ; cust,list
-    state 0                 ; cust,list {caps}
-    push dev.blob_key       ; cust,list {caps} blob_key
-    dict get                ; cust,list blob_dev
-    push blob.init          ; cust,list blob_dev init
-    actor create            ; cust,list init.blob_dev
-    ref std.send_msg
-
-stage_0a:                   ; get_req_blob,{caps} <- blob
-    state 0                 ; get_req_blob,{caps}
-    msg 0                   ; get_req_blob,{caps} fail_rsp_blob
-    pair 1                  ; fail_rsp_blob,get_req_blob,{caps}
-    push stage_0b           ; fail_rsp_blob,get_req_blob,{caps} stage_0b
-    actor become            ; --
-
-; Initialize test ok-response blob
-
-    push http.ok_rsp        ; list=ok_rsp
-    actor self              ; list cust=SELF
-    pair 1                  ; cust,list
-    state 0                 ; cust,list {caps}
-    push dev.blob_key       ; cust,list {caps} blob_key
-    dict get                ; cust,list blob_dev
-    push blob.init          ; cust,list blob_dev init
-    actor create            ; cust,list init.blob_dev
-    ref std.send_msg
-
-stage_0b:                   ; fail_rsp_blob,get_req_blob,{caps} <- blob
-    state 0                 ; fail_rsp_blob,get_req_blob,{caps}
-    msg 0                   ; fail_rsp_blob,get_req_blob,{caps} ok_rsp_blob
-    pair 1                  ; ok_rsp_blob,fail_rsp_blob,get_req_blob,{caps}
-    push stage_0c           ; ok_rsp_blob,fail_rsp_blob,get_req_blob,{caps} stage_0c
-    actor become            ; --
-
-    push #?                 ; _
-    actor self              ; _ SELF
-    ref std.send_msg
-
-stage_0c:                   ; ok_rsp_blob,fail_rsp_blob,get_req_blob,{caps} <- blob
-    state -3                ; {caps}
-    push stage_1            ; {caps} stage_1
-    actor become            ; --
-
-    state 3                 ; get_req_blob
-    actor self              ; get_req_blob SELF
     ref std.send_msg
 
 stage_1:                    ; {caps} <- blob
@@ -268,7 +229,7 @@ stage_2:                    ; {caps} <- blob
 
 stage_2a:                   ; {caps} <- base,len,blob
     state 0                 ; {caps}
-    push stage_3            ; {caps} stage_3
+    push stage_5            ; {caps} stage_5
     actor become            ; --
 
 ; Attempt to match the requested "path" token
@@ -282,10 +243,7 @@ stage_2a:                   ; {caps} <- base,len,blob
     call new_token_ptrn     ; cust,ofs,blob ptrn
     ref std.send_msg
 
-stage_3:                    ; {caps} <- base,len,blob
-    state 0                 ; {caps}
-    push stage_4            ; {caps} stage_4
-    actor become            ; --
+stage_5:                    ; {caps} <- base,len,blob
 
 ; Report PEG parser results
 
@@ -297,21 +255,71 @@ stage_3:                    ; {caps} <- base,len,blob
 
 ; Create a blob-slice with just the "path" match
 
-    msg 0                   ; base,len,blob
-    push blob.slice         ; base,len,blob slice
-    actor create            ; blob'=slice.base,len,blob
-    actor self              ; blob' SELF
+    state 0                 ; {caps}
+    msg 0                   ; {caps} base,len,blob
+    push blob.slice         ; {caps} base,len,blob slice
+    actor create            ; {caps} path=slice.base,len,blob
+    pair 1                  ; path,{caps}
+    push stage_5a           ; path,{caps} stage_5a
+    actor become            ; --
+
+; Initialize content-length + end-of-headers blob
+
+    push http.blankln       ; blankln='\r','\n','\r','\n',#nil
+    msg 2                   ; blankln len
+    call num_to_dec         ; list
+    actor self              ; list cust=SELF
+    pair 1                  ; cust,list
+    state 0                 ; cust,list {caps}
+    push dev.blob_key       ; cust,list {caps} blob_key
+    dict get                ; cust,list blob_dev
+    push blob.init          ; cust,list blob_dev init
+    actor create            ; cust,list init.blob_dev
     ref std.send_msg
 
-stage_4:                    ; {caps} <- blob
-    state 0                 ; {caps}
+stage_5a:                   ; path,{caps} <- length
+    state 0                 ; path,{caps}
+    msg 0                   ; path,{caps} length
+    pair 1                  ; length,path,{caps}
+    push stage_5b           ; length,path,{caps} stage_5b
+    actor become            ; --
+
+; Initialize test ok-response blob
+
+    push http.ok_rsp        ; list=ok_rsp
+    actor self              ; list cust=SELF
+    pair 1                  ; cust,list
+    state -1                ; cust,list {caps}
+    push dev.blob_key       ; cust,list {caps} blob_key
+    dict get                ; cust,list blob_dev
+    push blob.init          ; cust,list blob_dev init
+    actor create            ; cust,list init.blob_dev
+    ref std.send_msg
+
+stage_5b:                   ; length,path,{caps} <- ok_rsp
+    state -2                ; {caps}
     push stage_9            ; {caps} stage_9
     actor become            ; --
 
-; Forward blob to next stage
-; [TODO: create response from "path" blob]
+; Begin composing blob-pairs from the tail
 
-    msg 0                   ; blob
+    state 2                 ; tail=path
+    state 1                 ; tail head=length
+    pair 1                  ; head,tail
+    push blob.pair          ; head,tail pair
+    actor create            ; tail'=pair.head,tail
+
+; A slice of the "OK" response up to the "Content-length:" value
+
+    msg 0                   ; tail' blob=ok_rsp
+    push 59                 ; tail' blob len=59
+    push 0                  ; tail' blob len base=0
+    pair 2                  ; tail' base,len,blob
+    push blob.slice         ; tail' base,len,blob slice
+    actor create            ; tail' head=slice.base,len,blob
+    pair 1                  ; head,tail'
+    push blob.pair          ; head,tail' pair
+    actor create            ; blob=pair.head,tail'
     actor self              ; blob SELF
     ref std.send_msg
 
