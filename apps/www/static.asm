@@ -99,11 +99,12 @@ boot:                       ; _ <- {caps}
 ; Select next stage
 
     msg 0                   ; {caps}
-    push stage_1            ; {caps} stage
+    push stage_0            ; {caps} stage
+;    push stage_1            ; {caps} stage
 ;    push stage_9            ; {caps} stage
     actor become            ; --
 
-; Initialize test request-blob
+; Initialize test get-request blob
 
     push http.get_req       ; list=get_req
     actor self              ; list cust=SELF
@@ -113,6 +114,64 @@ boot:                       ; _ <- {caps}
     dict get                ; cust,list blob_dev
     push blob.init          ; cust,list blob_dev init
     actor create            ; cust,list init.blob_dev
+    ref std.send_msg
+
+stage_0:                    ; {caps} <- blob
+    state 0                 ; {caps}
+    msg 0                   ; {caps} get_req_blob
+    pair 1                  ; get_req_blob,{caps}
+    push stage_0a           ; get_req_blob,{caps} stage_0a
+    actor become            ; --
+
+; Initialize test fail-response blob
+
+    push http.not_found_rsp ; list=not_found_rsp
+    actor self              ; list cust=SELF
+    pair 1                  ; cust,list
+    state 0                 ; cust,list {caps}
+    push dev.blob_key       ; cust,list {caps} blob_key
+    dict get                ; cust,list blob_dev
+    push blob.init          ; cust,list blob_dev init
+    actor create            ; cust,list init.blob_dev
+    ref std.send_msg
+
+stage_0a:                   ; get_req_blob,{caps} <- blob
+    state 0                 ; get_req_blob,{caps}
+    msg 0                   ; get_req_blob,{caps} fail_rsp_blob
+    pair 1                  ; fail_rsp_blob,get_req_blob,{caps}
+    push stage_0b           ; fail_rsp_blob,get_req_blob,{caps} stage_0b
+    actor become            ; --
+
+; Initialize test ok-response blob
+
+    push http.ok_rsp        ; list=ok_rsp
+    actor self              ; list cust=SELF
+    pair 1                  ; cust,list
+    state 0                 ; cust,list {caps}
+    push dev.blob_key       ; cust,list {caps} blob_key
+    dict get                ; cust,list blob_dev
+    push blob.init          ; cust,list blob_dev init
+    actor create            ; cust,list init.blob_dev
+    ref std.send_msg
+
+stage_0b:                   ; fail_rsp_blob,get_req_blob,{caps} <- blob
+    state 0                 ; fail_rsp_blob,get_req_blob,{caps}
+    msg 0                   ; fail_rsp_blob,get_req_blob,{caps} ok_rsp_blob
+    pair 1                  ; ok_rsp_blob,fail_rsp_blob,get_req_blob,{caps}
+    push stage_0c           ; ok_rsp_blob,fail_rsp_blob,get_req_blob,{caps} stage_0c
+    actor become            ; --
+
+    push #?                 ; _
+    actor self              ; _ SELF
+    ref std.send_msg
+
+stage_0c:                   ; ok_rsp_blob,fail_rsp_blob,get_req_blob,{caps} <- blob
+    state -3                ; {caps}
+    push stage_1            ; {caps} stage_1
+    actor become            ; --
+
+    state 3                 ; get_req_blob
+    actor self              ; get_req_blob SELF
     ref std.send_msg
 
 stage_1:                    ; {caps} <- blob
@@ -209,7 +268,7 @@ stage_2:                    ; {caps} <- blob
 
 stage_2a:                   ; {caps} <- base,len,blob
     state 0                 ; {caps}
-    push stage_8            ; {caps} stage_8
+    push stage_3            ; {caps} stage_3
     actor become            ; --
 
 ; Attempt to match the requested "path" token
@@ -223,9 +282,9 @@ stage_2a:                   ; {caps} <- base,len,blob
     call new_token_ptrn     ; cust,ofs,blob ptrn
     ref std.send_msg
 
-stage_8:                    ; {caps} <- base,len,blob
+stage_3:                    ; {caps} <- base,len,blob
     state 0                 ; {caps}
-    push stage_9            ; {caps} stage_9
+    push stage_4            ; {caps} stage_4
     actor become            ; --
 
 ; Report PEG parser results
@@ -242,6 +301,18 @@ stage_8:                    ; {caps} <- base,len,blob
     push blob.slice         ; base,len,blob slice
     actor create            ; blob'=slice.base,len,blob
     actor self              ; blob' SELF
+    ref std.send_msg
+
+stage_4:                    ; {caps} <- blob
+    state 0                 ; {caps}
+    push stage_9            ; {caps} stage_9
+    actor become            ; --
+
+; Forward blob to next stage
+; [TODO: create response from "path" blob]
+
+    msg 0                   ; blob
+    actor self              ; blob SELF
     ref std.send_msg
 
 stage_9:                    ; {caps} <- blob

@@ -86,7 +86,7 @@ not_found_rsp:
     pair_t '\n'
 rsp_hdrs:
 ;; Content-Type: text/plain
-    pair_t 'C'
+    pair_t 'C'              ; offset=24
     pair_t 'o'
     pair_t 'n'
     pair_t 't'
@@ -100,7 +100,7 @@ rsp_hdrs:
     pair_t 'e'
     pair_t ':'
     pair_t ' '
-    pair_t 't'
+    pair_t 't'              ; offset=38
     pair_t 'e'
     pair_t 'x'
     pair_t 't'
@@ -113,7 +113,7 @@ rsp_hdrs:
     pair_t '\r'
     pair_t '\n'
 ;; Content-Length: 11
-    pair_t 'C'
+    pair_t 'C'              ; offset=50
     pair_t 'o'
     pair_t 'n'
     pair_t 't'
@@ -129,7 +129,7 @@ rsp_hdrs:
     pair_t 'h'
     pair_t ':'
     pair_t ' '
-    pair_t '1'
+    pair_t '1'              ; offset=66
     pair_t '1'
     pair_t '\r'
     pair_t '\n'
@@ -138,7 +138,7 @@ rsp_hdrs:
     pair_t '\n'
 content:
 ;; Not Found
-    pair_t 'N'
+    pair_t 'N'              ; offset=72
     pair_t 'o'
     pair_t 't'
     pair_t ' '
@@ -147,7 +147,28 @@ content:
     pair_t 'u'
     pair_t 'n'
     pair_t 'd'
-    ref crlf
+    ref crlf                ; offset=81
+
+ok_rsp:
+;; HTTP/1.0 200 OK
+    pair_t 'H'
+    pair_t 'T'
+    pair_t 'T'
+    pair_t 'P'
+    pair_t '/'
+    pair_t '1'
+    pair_t '.'
+    pair_t '0'
+    pair_t ' '
+    pair_t '2'
+    pair_t '0'
+    pair_t '0'
+    pair_t ' '
+    pair_t 'O'
+    pair_t 'K'
+    pair_t '\r'
+    pair_t '\n'
+    ref rsp_hdrs            ; offset=17
 
 .export
     get_req
@@ -158,3 +179,4 @@ content:
     not_found_rsp
     rsp_hdrs
     content
+    ok_rsp
