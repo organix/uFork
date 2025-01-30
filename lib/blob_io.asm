@@ -332,8 +332,16 @@ stream_copy:                ; cb,out,in <- result
     if stream_end           ; --
 
     msg -1                  ; value
-    typeq #fixnum_t         ; is_fix(value)
-    if stream_write         ; --
+    eq #?                   ; value==#?
+    if stream_read          ; --
+
+stream_write:               ; --
+    msg -1                  ; value
+    actor self              ; value callback=SELF
+    push #?                 ; value callback to_cancel=#?
+    pair 2                  ; req=to_cancel,callback,value
+    state 2                 ; req out
+    ref std.send_msg
 
 stream_read:                ; --
     push #?                 ; #?
@@ -341,14 +349,6 @@ stream_read:                ; --
     push #?                 ; #? callback to_cancel=#?
     pair 2                  ; req=to_cancel,callback,#?
     state -2                ; req in
-    ref std.send_msg
-
-stream_write:               ; --
-    msg -1                  ; char
-    actor self              ; char callback=SELF
-    push #?                 ; char callback to_cancel=#?
-    pair 2                  ; req=to_cancel,callback,char
-    state 2                 ; req out
     ref std.send_msg
 
 stream_end:                 ; --
