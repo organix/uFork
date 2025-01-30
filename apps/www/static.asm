@@ -69,6 +69,32 @@ new_crlf_ptrn:              ; ( -- crlf_ptrn )
     actor create            ; k crlf_ptrn=match_seq.list
     ref std.return_value
 
+;;  line = [^\n]* '\n'
+new_line_ptrn:              ; ( -- line_ptrn )
+    push #nil               ; k list=#nil
+
+    push '\n'               ; k list nl
+    push peg.pred_eq        ; k list nl pred_eq
+    actor create            ; k list pred=pred_eq.nl
+    push peg.match_one      ; k list pred match_one
+    actor create            ; k list nl_ptrn=match_one.pred
+    pair 1                  ; k list=nl_ptrn,list
+
+    push '\n'               ; k list nl
+    push peg.pred_eq        ; k list nl pred_eq
+    actor create            ; k list pred=pred_eq.nl
+    push peg.pred_not       ; k list pred pred_not
+    actor create            ; k list not_pred=pred_not.pred
+    push peg.match_one      ; k list not_pred match_one
+    actor create            ; k list not_nl_ptrn=match_one.not_pred
+    push peg.match_star     ; k list not_nl_ptrn match_star
+    actor create            ; k list star_ptrn=match_star.not_nl_ptrn
+    pair 1                  ; k list=star_ptrn,list
+
+    push peg.match_seq      ; k list match_seq
+    actor create            ; k line_ptrn=match_seq.list
+    ref std.return_value
+
 ;;  token = print+
 new_token_ptrn:             ; ( -- token_ptrn )
     push #nil               ; k #nil
