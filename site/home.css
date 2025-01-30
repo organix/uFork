@@ -14,6 +14,10 @@
         display: block;
         font-size: 100px;
     }
+    .features > div > details > summary {
+        font-style: italic;
+        user-select: none;
+    }
 }
 .sponsors {
     display: flex;

@@ -25,9 +25,9 @@ The request fails if `create` is `#f` and the file does not exist.
 
 Files are represented as actors with a [requestor](requestor.md) interface.
 
-A file actor maintains a cursor, which is the current position within the file
-in bytes. Reads and writes always begin at this cursor. A file actor's cursor
-is initially at the beginning of the file, position `0`.
+A file actor maintains a cursor, which is the current byte position within the
+file. Reads and writes always begin at this cursor. A file actor's cursor is
+initially at the beginning of the file, position `0`.
 
 Requests sent to a file actor that is busy processing an existing request will
 fail. Any system resources in use by the file actor are released automatically
