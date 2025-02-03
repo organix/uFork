@@ -143,7 +143,11 @@ const svg_dev_ui = make_ui("svg-dev-ui", function (element, {
     ]);
 
     function draw(html) {
-        svg_element.innerHTML += html;
+        if (typeof html === "string") {
+            svg_element.innerHTML += html;
+        } else if (html === undefined) {
+            svg_element.innerHTML = "";
+        }
     }
 
     set_background_color(background_color);
