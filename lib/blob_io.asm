@@ -585,7 +585,6 @@ k_demo_blobstr9:            ; {caps} <- blob
     msg 0                   ; blob
     state 0                 ; blob {caps}
 ;    push demo_debug         ; blob {caps} demo=demo_debug
-;    push demo_size          ; blob {caps} demo=demo_size
     push demo_print         ; blob {caps} demo=demo_print
 ;    push demo_source        ; blob {caps} demo=demo_source
     actor create            ; blob demo.{caps}
@@ -656,7 +655,6 @@ k_demo_strsource2:          ; str,{caps} <- ok,blob'
     msg -1                  ; blob'
     state -1                ; blob' {caps}
 ;    push demo_debug         ; blob' {caps} demo=demo_debug
-;    push demo_size          ; blob' {caps} demo=demo_size
 ;    push demo_print         ; blob' {caps} demo=demo_print -- CAUTION: scrambled output
     push demo_source        ; blob' {caps} demo=demo_source
     actor create            ; blob' demo.{caps}
@@ -674,8 +672,8 @@ demo_writer:                ; {caps} <- blob
     push k_demo_writer      ; blob {caps} k_demo_writer
     actor create            ; blob cust=k_demo_print.{caps}
     pair 1                  ; cust,blob
-    push #?                 ; cust,blob #?
-    push reader_factory     ; cust,blob #? reader_factory
+    push #?                 ; cust,blob _
+    push reader_factory     ; cust,blob _ reader_factory
     actor create            ; cust,blob reader_factory._
     ref std.send_msg
 k_demo_writer:              ; {caps} <- in
@@ -724,125 +722,11 @@ k_demo_writer3:             ; out,{caps} <- result
 k_demo_writer4:           ; {caps} <- result
     state 0                 ; {caps}
 ;    push demo_debug         ; {caps} demo=demo_debug
-;    push demo_size          ; {caps} demo=demo_size
     push demo_print         ; {caps} demo=demo_print
 ;    push demo_source        ; {caps} demo=demo_source
     actor become            ; --
 
     msg -1                  ; blob
-    actor self              ; blob SELF
-    ref std.send_msg
-
-demo_composite:             ; {caps} <- blob
-    state 0                 ; {caps}
-    push k_demo_composite   ; {caps} demo=k_demo_composite
-    actor become            ; --
-
-    msg 0                   ; blob
-    push 2                  ; blob len=2
-    push 24                 ; blob len base=24
-    pair 2                  ; base,len,blob
-    push blob.slice         ; base,len,blob slice
-    actor create            ; tail=slice.base,len,blob
-
-    msg 0                   ; tail blob
-    push 11                 ; tail blob len=11
-    push 4                  ; tail blob len base=4
-    pair 2                  ; tail base,len,blob
-    push blob.slice         ; tail base,len,blob slice
-    actor create            ; tail head=slice.base,len,blob
-
-    pair 1                  ; head,tail
-    push blob.pair          ; head,tail pair
-    actor create            ; blob=pair.head,tail
-
-    actor self              ; blob SELF
-    ref std.send_msg
-k_demo_composite:           ; {caps} <- blob
-    state 0                 ; {caps}
-;    push demo_size          ; {caps} demo=demo_size
-;    push demo_print         ; {caps} demo=demo_print
-    push demo_source        ; {caps} demo=demo_source
-    actor become            ; --
-    msg 0                   ; blob
-    actor self              ; blob SELF
-    ref std.send_msg
-
-demo_pair:                  ; {caps} <- blob
-    state 0                 ; {caps}
-    msg 0                   ; {caps} head=blob
-    pair 1                  ; head,{caps}
-    push k_demo_pair        ; head,{caps} demo=k_demo_pair
-    actor become            ; --
-demo_pair_aliased:
-;    msg 0                   ; tail=blob
-;    actor self              ; tail SELF
-;    ref std.send_msg
-demo_pair_composed:
-    push http_req_hdrs      ; list=http_req_hdrs
-    actor self              ; list cust=SELF
-    pair 1                  ; cust,list
-    state 0                 ; cust,list {caps}
-    push dev.blob_key       ; cust,list {caps} blob_key
-    dict get                ; cust,list blob_dev
-    push blob.init          ; cust,list blob_dev init
-    actor create            ; cust,list init.blob_dev
-    ref std.send_msg
-k_demo_pair:                ; head,{caps} <- tail
-    state -1                ; {caps}
-    push k_demo_pair1       ; {caps} demo=k_demo_pair1
-    actor become            ; --
-    msg 0                   ; tail
-    state 1                 ; tail head
-    pair 1                  ; head,tail
-    push blob.pair          ; head,tail pair
-    actor create            ; blob=pair.head,tail
-    actor self              ; blob SELF
-    ref std.send_msg
-k_demo_pair1:               ; {caps} <- blob
-    state 0                 ; {caps}
-    msg 0                   ; {caps} blob
-    pair 1                  ; blob,{caps}
-    push k_demo_pair2       ; blob,{caps} demo=k_demo_pair2
-    actor become            ; --
-    push '1'                ; data='1'
-    push 49                 ; data ofs=49
-    actor self              ; data ofs cust=SELF
-    pair 2                  ; cust,ofs,data
-    msg 0                   ; cust,ofs,data blob
-    ref std.send_msg
-k_demo_pair2:               ; blob,{caps} <- wr_ok
-    state 0                 ; blob,{caps}
-    push k_demo_pair3       ; blob,{caps} demo=k_demo_pair3
-    actor become            ; --
-    push '\t'               ; data='\t'
-    push 3                  ; data ofs=3
-    actor self              ; data ofs cust=SELF
-    pair 2                  ; cust,ofs,data
-    state 1                 ; cust,ofs,data blob
-    ref std.send_msg
-k_demo_pair3:               ; blob,{caps} <- wr_ok
-    state -1                ; {caps}
-;    push demo_size          ; {caps} demo=demo_size
-    push demo_print         ; {caps} demo=demo_print
-;    push demo_source        ; {caps} demo=demo_source
-    actor become            ; --
-    state 1                 ; blob
-    actor self              ; blob SELF
-    ref std.send_msg
-
-demo_slice:                 ; {caps} <- blob
-    state 0                 ; {caps}
-;    push demo_size          ; {caps} demo=demo_size
-    push demo_print         ; {caps} demo=demo_print
-;    push demo_source        ; {caps} demo=demo_source
-    actor become            ; --
-    msg 0                   ; blob
-    push 11                 ; blob len=11
-    push 4                  ; blob len base=4
-    pair 2                  ; base,len,blob
-    push blob.slice         ; base,len,blob slice
-    actor create            ; blob=slice.base,len,blob
     actor self              ; blob SELF
     ref std.send_msg
 
@@ -853,21 +737,14 @@ demo_debug:                 ; {caps} <- blob
     dict get                ; blob debug_dev
     ref std.send_msg
 
-demo_size:                  ; {caps} <- blob
-    state 0                 ; {caps}
-    push dev.debug_key      ; {caps} debug_key
-    dict get                ; cust=debug_dev
-    msg 0                   ; debug_dev blob
-    ref std.send_msg
-
 demo_print:                 ; {caps} <- blob
     msg 0                   ; blob
     state 0                 ; blob {caps}
     push k_demo_print       ; blob {caps} k_demo_print
     actor create            ; blob cust=k_demo_print.{caps}
     pair 1                  ; cust,blob
-    push #?                 ; cust,blob #?
-    push reader_factory     ; cust,blob #? reader_factory
+    push #?                 ; cust,blob _
+    push reader_factory     ; cust,blob _ reader_factory
     actor create            ; cust,blob reader_factory._
     ref std.send_msg
 k_demo_print:               ; {caps} <- in
@@ -905,12 +782,8 @@ boot:                       ; _ <- {caps}
     push http_request       ; list=http_request
     msg 0                   ; list {caps}
 ;    push demo_debug         ; list {caps} demo=demo_debug
-;    push demo_size          ; list {caps} demo=demo_size
 ;    push demo_print         ; list {caps} demo=demo_print
 ;    push demo_source        ; list {caps} demo=demo_source
-;    push demo_slice         ; list {caps} demo=demo_slice
-;    push demo_pair          ; list {caps} demo=demo_pair
-;    push demo_composite     ; list {caps} demo=demo_composite
 ;    push demo_writer        ; list {caps} demo=demo_writer
 ;    push demo_strsource     ; list {caps} demo=demo_strsource
     push demo_blobstr       ; list {caps} demo=demo_blobstr
