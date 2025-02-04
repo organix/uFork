@@ -44,7 +44,7 @@ Prefix     | Parameters                       | Operation
 `F`        | _r_ _g_ _b_ _a_                  | fill with color (_a_=255 for opaque)
 `f`        | _r_ _g_ _b_ _a_                  | fill pending (followed by `D`)
 `D`        | _r_ _g_ _b_ _a_ _w_ _cap_ _join_ | draw stroke _w_ wide (0=butt, 1=round, 2=square)
-`f`        | _r_ _g_ _b_ _a_ _w_ _cap_ _join_ | draw pending (followed by `F`)
+`d`        | _r_ _g_ _b_ _a_ _w_ _cap_ _join_ | draw pending (followed by `F`)
 `E`        | &mdash;                          | erase all drawing elements
 
 Standard: `AaCcHhLlMmQqSsTtVvZz`
