@@ -70,7 +70,23 @@ function fs_deno() {
         ]);
     }
 
-    return Object.freeze({open});
+    function stat() {
+        return unpromise(function (file_url) {
+            return Deno.stat(
+                file_url
+            ).then(function (file_info) {
+                return {size: file_info.size};
+            }).catch(function (error) {
+                return (
+                    error.code === "ENOENT"
+                    ? false // nonexistant
+                    : Promise.reject(error)
+                );
+            });
+        });
+    }
+
+    return Object.freeze({open, stat});
 }
 
 if (import.meta.main) {

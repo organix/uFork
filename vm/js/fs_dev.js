@@ -20,6 +20,8 @@ const hum_demo_url = import.meta.resolve("./fs_dev_demo.hum");
 const fs_key = 103; // from dev.asm
 const fs_file = 0; // from dev.asm
 const fs_begin = 0; // from dev.asm
+const fs_meta = 1; // from dev.asm
+const fs_size = 0; // from dev.asm
 const text_decoder = new TextDecoder("utf-8", {fatal: true});
 
 function fs_dev(
@@ -79,6 +81,28 @@ function fs_dev(
             handle.close();
         }
         files[file_nr] = undefined;
+    }
+
+    function h_read_path_blob() {
+        return parseq.sequence([
+            the_blob_dev.h_read_chunks(),
+            requestorize(function decode_path(chunks) {
+                const bytes = chunks.reduce(concat_bytes);
+                const path = text_decoder.decode(bytes); // can throw
+                u_trace("decoded path", path);
+                return path;
+            }),
+            requestorize(function resolve_path_to_url(path) {
+                const url = new URL(
+                    path.slice(1), // remove leading slash
+                    root_dir_href
+                );
+                if (!url.href.startsWith(root_dir_href)) {
+                    throw new Error("path escaped: " + path);
+                }
+                return url;
+            })
+        ]);
     }
 
     function on_event_stub(event_stub_ptr) {
@@ -210,8 +234,8 @@ function fs_dev(
 
 // File request.
 
-            const path_blob_cap = core.u_nth(request, 2);
-            if (!ufork.is_cap(path_blob_cap)) {
+            const file_path_cap = core.u_nth(request, 2);
+            if (!ufork.is_cap(file_path_cap)) {
                 return ufork.E_NOT_CAP;
             }
             const create = core.u_nth(request, -2);
@@ -220,23 +244,7 @@ function fs_dev(
             }
             core.u_defer(function () {
                 const cancel = parseq.sequence([
-                    the_blob_dev.h_read_chunks(),
-                    requestorize(function decode_path(chunks) {
-                        const bytes = chunks.reduce(concat_bytes);
-                        const path = text_decoder.decode(bytes); // can throw
-                        u_trace("decoded path", path);
-                        return path;
-                    }),
-                    requestorize(function resolve_path_to_url(path) {
-                        const url = new URL(
-                            path.slice(1), // remove leading slash
-                            root_dir_href
-                        );
-                        if (!url.href.startsWith(root_dir_href)) {
-                            throw new Error("path escaped: " + path);
-                        }
-                        return url;
-                    }),
+                    h_read_path_blob(),
                     fs.open(create === ufork.TRUE_RAW)
                 ])(
                     function (file_handle, reason) {
@@ -252,7 +260,47 @@ function fs_dev(
                         u_trace(`#${new_file_nr} opened`);
                         return h_send(callback, h_reply_ok(file_cap));
                     },
-                    path_blob_cap
+                    file_path_cap
+                );
+                cancels.push(cancel);
+            });
+            return ufork.E_OK;
+        }
+        if (kind === ufork.fixnum(fs_meta)) {
+
+// Metadata request.
+
+            const meta_path_cap = core.u_nth(request, -1);
+            if (!ufork.is_cap(meta_path_cap)) {
+                return ufork.E_NOT_CAP;
+            }
+            core.u_defer(function () {
+                const cancel = parseq.sequence([
+                    h_read_path_blob(),
+                    fs.stat()
+                ])(
+                    function (stats, reason) {
+                        core.h_release_stub(event_stub_ptr); // release blob
+                        if (stats === undefined) {
+                            u_trace("failed to stat file", reason);
+                            return h_send(callback, h_reply_fail());
+                        }
+                        if (stats === false) {
+                            return h_send(
+                                callback,
+                                h_reply_ok(ufork.UNDEF_RAW)
+                            );
+                        }
+                        const metadata_dict = core.h_reserve_ram({
+                            t: ufork.DICT_T,
+                            x: ufork.fixnum(fs_size),
+                            y: ufork.fixnum(stats.size),
+                            z: ufork.NIL_RAW
+                        });
+                        u_trace(`stat`, stats);
+                        return h_send(callback, h_reply_ok(metadata_dict));
+                    },
+                    meta_path_cap
                 );
                 cancels.push(cancel);
             });

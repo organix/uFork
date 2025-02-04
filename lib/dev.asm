@@ -38,6 +38,10 @@ fs_file:
     ref 0
 fs_begin:
     ref 0
+fs_meta:
+    ref 1
+fs_size:
+    ref 0
 
 boot:                       ; _ <- {caps}
 
@@ -123,4 +127,6 @@ boot:                       ; _ <- {caps}
     fs_key
     fs_file
     fs_begin
+    fs_meta
+    fs_size
     boot

@@ -4,15 +4,19 @@ DEF blob_key AS 4 # from dev.asm
 DEF fs_key AS 103 # from dev.asm
 DEF fs_file AS 0 # from dev.asm
 DEF fs_begin AS 0 # from dev.asm
+DEF fs_meta AS 1 # from dev.asm
+DEF fs_size AS 0 # from dev.asm
 DEF blob_dev AS system(blob_key)
 DEF fs_dev AS system(fs_key)
-DEF file_path AS "/d/f.txt"
-DEF tag_file AS 5000
-DEF tag_write AS 5001
-DEF tag_seek AS 5002
-DEF tag_read AS 5003
-DEF tag_pass AS 5004
-DEF tag_fail AS 5005
+DEF file_path_0 AS "/d/e.txt"
+DEF file_path_1 AS "/d/f.txt"
+DEF tag_meta AS 5000
+DEF tag_file AS 5001
+DEF tag_write AS 5002
+DEF tag_seek AS 5003
+DEF tag_read AS 5004
+DEF tag_pass AS 5005
+DEF tag_fail AS 5006
 DEF length(list) AS CASE list OF
 (_, rest) : add(1, length(rest))
 _ : 0
@@ -62,8 +66,8 @@ CREATE sink WITH \_.[]
 #   Read the second byte from the file
 #   Check the byte matches
 
-SEND (path_blob_cust, file_path) TO NEW make_blob_beh
-CREATE path_blob_cust WITH \path_blob.[
+SEND (test_file_cust, file_path_0) TO NEW make_blob_beh
+CREATE test_file_cust WITH \path_blob.[
     SEND (?, file_cb, fs_file, path_blob, TRUE) TO fs_dev
     CREATE file_cb WITH callback_beh(tag_file, file_cust, sink)
     CREATE file_cust WITH \file.[
@@ -76,7 +80,7 @@ CREATE path_blob_cust WITH \path_blob.[
                 SEND (?, read_cb, 1) TO file
                 CREATE read_cb WITH callback_beh(tag_read, read_cust, sink)
                 CREATE read_cust WITH \blob.[
-                    DEF (_, expected_byte, rest) AS file_path
+                    DEF (_, expected_byte, rest) AS file_path_0
                     SEND (read_byte_cust, 0) TO blob
                     CREATE read_byte_cust WITH \actual_byte.[
                         CASE actual_byte OF
@@ -94,3 +98,21 @@ CREATE path_blob_cust WITH \path_blob.[
     ]
 ]
 
+# Steps:
+#   Get size of nonexistant file
+#   Make an empty file
+#   Check size of newly created file
+
+SEND (test_meta_cust, file_path_1) TO NEW make_blob_beh
+CREATE test_meta_cust WITH \path_blob.[
+    SEND (?, no_meta_cb, fs_meta, path_blob) TO fs_dev
+    CREATE no_meta_cb WITH callback_beh(tag_meta, no_meta_cust, sink)
+    CREATE no_meta_cust WITH \no_meta.[
+        SEND (?, file_cb, fs_file, path_blob, TRUE) TO fs_dev
+        CREATE file_cb WITH callback_beh(tag_file, file_cust, sink)
+        CREATE file_cust WITH \file.[
+            SEND (?, meta_cb, fs_meta, path_blob) TO fs_dev
+            CREATE meta_cb WITH callback_beh(tag_meta, sink, sink)
+        ]
+    ]
+]

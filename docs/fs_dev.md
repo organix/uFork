@@ -5,6 +5,27 @@ The **Filesystem** device provides access to the filesystem.
 The uFork interface is implemented as a [dynamic device](host_dev.md) with a
 [requestor](requestor.md) interface.
 
+## Metadata request
+
+A metadata request produces a dictionary containing various file properties,
+such as file size, or `#?` if the file does not exist.
+
+    meta_request -> fs_dev
+
+The input value of the `meta_request` is a pair list like
+
+    fs_meta,path
+
+where `fs_meta` is a constant exported by [dev.asm](../lib/dev.asm) and
+`path` is a blob containing the UTF-8 encoded file path.
+
+A metadata dictionary has the following keys, each exported by
+[dev.asm](../lib/dev.asm):
+
+ Key            | Value
+----------------|----------
+`fs_size`       | The size of the file in bytes, as a fixnum.
+
 ## File request
 
 A file request produces a file capability.
@@ -15,9 +36,9 @@ The input value of the `file_request` is a pair list like
 
     fs_file,path,create
 
-where `fs_file` is exported by [dev.asm](../lib/dev.asm), `path` is a blob
-containing the UTF-8 encoded file path, and `create` is a boolean indicating
-whether the file should be created if necessary.
+where `fs_file` is a constant exported by [dev.asm](../lib/dev.asm), `path` is a
+blob containing the UTF-8 encoded file path, and `create` is a boolean
+indicating whether the file should be created if necessary.
 
 The request fails if `create` is `#f` and the file does not exist.
 

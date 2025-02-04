@@ -14,6 +14,14 @@ function random_file_name() {
 function fs_demo(fs, log) {
     const file_url = new URL("file:///tmp/" + random_file_name());
     return parseq.sequence([
+        bind(fs.stat(), file_url),
+        requestorize(function (stats) {
+            if (stats !== false) {
+                log(stats);
+                throw new Error("FAIL stat nonexistant file");
+            }
+            return true;
+        }),
         bind(fs.open(true), file_url),
         lazy(function (handle) {
             log("open(true)");
@@ -25,6 +33,14 @@ function fs_demo(fs, log) {
                 }),
                 handle.write()
             ]);
+        }),
+        bind(fs.stat(), file_url),
+        requestorize(function (stats) {
+            if (stats.size !== 4) {
+                log(stats);
+                throw new Error("FAIL stat wrong size");
+            }
+            return true;
         }),
         bind(fs.open(false), file_url),
         lazy(function (handle) {

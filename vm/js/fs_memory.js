@@ -80,7 +80,17 @@ function fs_memory() {
         });
     }
 
-    return Object.freeze({open});
+    function stat() {
+        return requestorize(function (file_url) {
+            const href = new URL(file_url).href;
+            if (files[href] === undefined) {
+                return false;
+            }
+            return {size: files[href].length};
+        });
+    }
+
+    return Object.freeze({open, stat});
 }
 
 if (import.meta.main) {
