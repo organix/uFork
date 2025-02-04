@@ -359,6 +359,10 @@ stream_end:                 ; --
 ;
 ; blob interface to a blob-stream
 ;
+; 'blob' is the initial state of the blob, and may be #nil
+; 'str' is the blob-stream to read
+; 'cb' is an optional capability that is sent #? each time new data is
+;   available, then the final reply from `str` once the stream ends or fails
 
 blobstr:                    ; blob,str,cb <- ok,blob' | cust | cust,ofs | cust,ofs,data | base',len',cust
     msg 1                   ; ok
@@ -392,6 +396,13 @@ blobstr_update:             ; str,cb blob''
     pair 1                  ; blob'',str,cb
     push blobstr            ; blob'',str,cb blobstr
     actor become            ; --
+    state -2                ; cb
+    typeq #actor_t          ; is_cap(cb)
+    if_not blobstr_read     ; --
+    push #?                 ; #?
+    state -2                ; #? cb
+    actor send              ; --
+blobstr_read:               ; --
     push #?                 ; req=#?
     actor self              ; req cb=SELF
     push #?                 ; req cb can=#?
@@ -574,12 +585,23 @@ k_demo_blobstr1:            ; {caps} <- blob
     pair 2                  ; str can,cb,req
     roll 2                  ; can,cb,req str
     ref std.send_msg
-k_demo_blobstr2:            ; blob',{caps} <- ok,value
+k_demo_blobstr2:            ; blob',{caps} <- ok,value | #?
+    msg 0                   ; msg
+    eq #?                   ; msg==#?
+    if k_demo_blobstr3      ; --
+    msg 1                   ; ok
+    assert #t               ; --
     state -1                ; {caps}
     push k_demo_blobstr9    ; {caps} k_demo_blobstr9
     actor become            ; --
     state 1                 ; blob'
     actor self              ; blob' SELF
+    ref std.send_msg
+k_demo_blobstr3:            ; blob',{caps} <- #?
+    state -1                ; {caps}
+    push dev.debug_key      ; {caps} debug_key
+    dict get                ; cust=debug_dev
+    state 1                 ; cust blob' // size request
     ref std.send_msg
 k_demo_blobstr9:            ; {caps} <- blob
     msg 0                   ; blob

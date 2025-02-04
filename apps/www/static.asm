@@ -216,17 +216,18 @@ stage_1a:                   ; {caps} <- src
     roll 2                  ; can,cb,req src
     ref std.send_msg
 
-stage_1b:                   ; blob',{caps} <- ok,value
+stage_1b:                   ; blob',{caps} <- ok,value | #?
 
-; Report results after final read from source
+; Report stream progress
 
-    msg 0                   ; ok,value
-    state 1                 ; ok,value blob'
-    pair 1                  ; blob',ok,value
-    state -1                ; blob',ok,value {caps}
-    push dev.debug_key      ; blob',ok,value {caps} debug_key
-    dict get                ; blob',ok,value debug_dev
+    state -1                ; {caps}
+    push dev.debug_key      ; {caps} debug_key
+    dict get                ; cust=debug_dev
+    state 1                 ; cust blob' // size request
     actor send              ; --
+    msg 0                   ; msg
+    eq #?                   ; msg==#?
+    if std.commit
 
 ; Pass completed blob to next stage
 

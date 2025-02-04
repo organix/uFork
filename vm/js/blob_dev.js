@@ -161,6 +161,9 @@ function blob_dev(core, make_ddev) {
 // If so, its bytes can be read directly.
 // Otherwise its bytes must be read one by one, via a sequence of read requests.
 
+// Some of this code could be removed if we made use of the new 'strsource'
+// behavior in blob_io.asm.
+
         const source_nr = sources.length;
         sources.push(undefined); // placeholder
         let chunk_array = [];
