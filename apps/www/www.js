@@ -5,6 +5,7 @@
 //  $ deno run \
 //      --no-lock \
 //      --allow-read=../..,<www_dir> \
+//      --allow-write=<www_dir> \
 //      --allow-net \
 //      --allow-import \
 //      tcp.js \

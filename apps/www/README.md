@@ -9,6 +9,7 @@ Make sure you have Deno installed, then run
     deno run \
         --no-lock \
         --allow-read=../.. \
+        --allow-write=../../site \
         --allow-net \
         --allow-import \
         www.js \

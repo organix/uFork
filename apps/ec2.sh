@@ -55,6 +55,7 @@ nohup deno run \
     --no-lock \
     --reload \
     --allow-read=. \
+    --allow-write=site \
     --allow-net \
     --allow-import \
     apps/www/www.js \
