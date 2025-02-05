@@ -1,20 +1,101 @@
 ; HTTP static file server.
 
 .import
-    dev: "https://ufork.org/lib/dev.asm"
-    std: "https://ufork.org/lib/std.asm"
-    div_mod: "https://ufork.org/lib/div_mod.asm"
+    bind: "https://ufork.org/lib/rq/bind.asm"
     blob: "https://ufork.org/lib/blob.asm"
-    io: "https://ufork.org/lib/blob_io.asm"
-    peg: "https://ufork.org/lib/blob_peg.asm"
+    dev: "https://ufork.org/lib/dev.asm"
+    div_mod: "https://ufork.org/lib/div_mod.asm"
     http: "https://ufork.org/lib/http_data.asm"
+    io: "https://ufork.org/lib/blob_io.asm"
+    list: "https://ufork.org/lib/list.asm"
+    peg: "https://ufork.org/lib/blob_peg.asm"
+    std: "https://ufork.org/lib/std.asm"
 
 petname:                    ; the bind address
     ref 0
 
-; TODO
-; ../tcp/random.asm shows how to listen for TCP connections
-; ../../vm/js/fs_dev_demo.hum shows how to read files from disk
+chunk_size:
+    ; ref 10                  ; 10B
+    ; ref 8192                ; 8KB
+    ; ref 65536               ; 64KB
+    ref 1048576             ; 1MB
+
+status_200:                 ; "HTTP/1.0 200 OK"
+    pair_t 'H'
+    pair_t 'T'
+    pair_t 'T'
+    pair_t 'P'
+    pair_t '/'
+    pair_t '1'
+    pair_t '.'
+    pair_t '0'
+    pair_t ' '
+    pair_t '2'
+    pair_t '0'
+    pair_t '0'
+    pair_t ' '
+    pair_t 'O'
+    pair_t 'K'
+    ref #nil
+
+length_prefix:              ; "\r\nContent-Length: "
+    pair_t '\r'
+    pair_t '\n'
+    pair_t 'C'
+    pair_t 'o'
+    pair_t 'n'
+    pair_t 't'
+    pair_t 'e'
+    pair_t 'n'
+    pair_t 't'
+    pair_t '-'
+    pair_t 'L'
+    pair_t 'e'
+    pair_t 'n'
+    pair_t 'g'
+    pair_t 't'
+    pair_t 'h'
+    pair_t ':'
+    pair_t ' '
+    ref #nil
+
+type_prefix:                ; "\r\nContent-Type: "
+    pair_t '\r'
+    pair_t '\n'
+    pair_t 'C'
+    pair_t 'o'
+    pair_t 'n'
+    pair_t 't'
+    pair_t 'e'
+    pair_t 'n'
+    pair_t 't'
+    pair_t '-'
+    pair_t 'T'
+    pair_t 'y'
+    pair_t 'p'
+    pair_t 'e'
+    pair_t ':'
+    pair_t ' '
+    ref #nil
+
+mime_html:                  ; "text/html"
+    pair_t 't'
+    pair_t 'e'
+    pair_t 'x'
+    pair_t 't'
+    pair_t '/'
+    pair_t 'h'
+    pair_t 't'
+    pair_t 'm'
+    pair_t 'l'
+    ref #nil
+
+list_concat:                ; ( b a -- ab )
+    roll -3                 ; k b a
+    call list.rev           ; k b a'
+    roll 2                  ; k a' b
+    call list.rev_onto      ; k ab
+    ref std.return_value
 
 ; Convert a positive fixnum to a list of base-10 digit-characters
 
@@ -37,36 +118,13 @@ num_loop:                   ; k str n
 
 ; pattern factories
 
-;;  rws = [ \t]+
-new_rws_ptrn:               ; ( -- rws_ptrn )
-    push peg.wsp            ; k set=wsp
-    push peg.pred_in        ; k set pred_in
-    actor create            ; k wsp_pred=pred_in.set
-    push peg.match_one      ; k wsp_pred match_one
-    actor create            ; k wsp_ptrn=match_one.pred
-    call peg.new_plus_ptrn  ; k rws_ptrn
-    ref std.return_value
-
-;;  crlf = '\r' '\n'
-new_crlf_ptrn:              ; ( -- crlf_ptrn )
-    push #nil               ; k list=#nil
-
-    push '\n'               ; k list lf
-    push peg.pred_eq        ; k list lf pred_eq
-    actor create            ; k list pred=pred_eq.lf
-    push peg.match_one      ; k list pred match_one
-    actor create            ; k list lf_ptrn=match_one.pred
-    pair 1                  ; k list=lf_ptrn,list
-
-    push '\r'               ; k list cr
-    push peg.pred_eq        ; k list cr pred_eq
-    actor create            ; k list pred=pred_eq.cr
-    push peg.match_one      ; k list pred match_one
-    actor create            ; k list cr_ptrn=match_one.pred
-    pair 1                  ; k list=cr_ptrn,list
-
-    push peg.match_seq      ; k list match_seq
-    actor create            ; k crlf_ptrn=match_seq.list
+;;  sp = ' '
+new_sp_ptrn:                ; ( -- sp_ptrn )
+    push ' '                ; k sp
+    push peg.pred_eq        ; k sp pred_eq
+    actor create            ; k pred=pred_eq.sp
+    push peg.match_one      ; k pred match_one
+    actor create            ; k sp_ptrn=match_one.pred
     ref std.return_value
 
 ;;  line = [^\n]* '\n'
@@ -107,11 +165,11 @@ new_token_ptrn:             ; ( -- token_ptrn )
     call peg.new_plus_ptrn  ; k token_ptrn
     ref std.return_value
 
-;;  get = 'G' 'E' 'T' rws
+;;  get = 'G' 'E' 'T' sp
 new_get_ptrn:               ; ( -- get_ptrn )
     push #nil               ; k list=#nil
-    call new_rws_ptrn       ; k list rws_ptrn
-    pair 1                  ; k list=rws_ptrn,list
+    call new_sp_ptrn        ; k list sp_ptrn
+    pair 1                  ; k list=sp_ptrn,list
 
     push 'T'                ; k list 'T'
     push peg.pred_eq        ; k list 'T' pred_eq
@@ -138,289 +196,290 @@ new_get_ptrn:               ; ( -- get_ptrn )
     actor create            ; k get_ptrn=match_seq.list
     ref std.return_value
 
-; main program execution stages
+; Request handling stages.
 
-boot:                       ; _ <- {caps}
-
-; Select next stage
-
-    msg 0                   ; {caps}
-    push stage_1            ; {caps} stage
-;    push stage_9            ; {caps} stage
-    actor become            ; --
-
-; Initialize test get-request blob
-
-    push http.get_req       ; list=get_req
-    actor self              ; list cust=SELF
-    pair 1                  ; cust,list
-    msg 0                   ; cust,list {caps}
-    push dev.blob_key       ; cust,list {caps} blob_key
-    dict get                ; cust,list blob_dev
-    push blob.init          ; cust,list blob_dev init
-    actor create            ; cust,list init.blob_dev
+spawn_handler:              ; blob_dev,fs_dev,debug_dev <- tcp_conn
+    msg 0                   ; tcp_conn
+    state 0                 ; tcp_conn state
+    push handler            ; tcp_conn state handler
+    actor create            ; tcp_conn handler.state
     ref std.send_msg
 
-stage_1:                    ; {caps} <- blob
-    state 0                 ; {caps}
-    push stage_1a           ; {caps} stage_1a
-    actor become
+handler:                    ; blob_dev,fs_dev,debug_dev <- tcp_conn
 
-; Create a blob-stream source to mimic an inbound connection
+; Respond to an HTTP request with the matching file. The request is read from
+; the connection, the response is written to the connection which is then
+; closed.
 
-    msg 0                   ; blob
-;    push 1024               ; blob size=1024
-    push 10                 ; blob size=10
-    push 0                  ; blob size offset=0
-    pair 2                  ; offset,size,blob
-    push io.strsource       ; offset,size,blob strsource
-    actor create            ; src=strsource.offset,size,blob
-    actor self              ; src SELF
-    ref std.send_msg
-
-stage_1a:                   ; {caps} <- src
-
-; Create a virtual blob to be filled from the blob-stream source
+; Read the request into a virtual blob, using it to parse the request as it
+; arrives. Note that the incoming stream remains open until the response is
+; sent off, so we can't just wait for EOF before parsing.
 
     actor self              ; cb=SELF
-    msg 0                   ; cb src
-    pick -2                 ; src cb src
-    push #nil               ; src cb src blob=#nil
-    pair 2                  ; src blob,src,cb
-    push io.blobstr         ; src blob,src,cb blobstr
-    actor create            ; src blob'=blobstr.blob,src,cb
+    msg 0                   ; cb str=tcp_conn
+    push #nil               ; cb str blob=#nil
+    pair 2                  ; blob,str,cb
+    push io.blobstr         ; blob,str,cb blobstr
+    actor create            ; blob'=blobstr.blob,str,cb
 
-; Start concurrent PEG parsing of the virtual blob
-; [FIXME: consider adding a short delay here...]
+; Become the virtual blob's callback.
 
-    dup 1                   ; src blob' blob'
-    state 0                 ; src blob' blob' {caps}
-    push stage_2            ; src blob' blob' {caps} stage_2
-    actor create            ; src blob' blob' stage_2.{caps}
-    actor send              ; src blob'
+    state 0                 ; blob' state
+    msg 0                   ; blob' state tcp_conn
+    pick 3                  ; blob' state tcp_conn blob'
+    pair 2                  ; blob' state'=blob',tcp_conn,state
+    push receive            ; blob' state' receive
+    actor become            ; blob'
 
-; Remember the virtual blob for processing in the next stage
+; Read from the connection to prime the pump.
 
-    state 0                 ; src blob' {caps}
-    pick 2                  ; src blob' {caps} blob'
-    pair 1                  ; src blob' blob',{caps}
-    push stage_1b           ; src blob' blob',{caps} stage_1b
-    actor become            ; src blob'
-
-; Begin reading from the source to prime the pump
-
-    push #?                 ; src blob' req=#?
-    roll 2                  ; src req cb=blob'
-    push #?                 ; src req cb can=#?
-    pair 2                  ; src can,cb,req
-    roll 2                  ; can,cb,req src
+    push #?                 ; blob' #?
+    roll 2                  ; #? cb=blob'
+    push #?                 ; #? cb can=#?
+    pair 2                  ; read_req=can,cb,#?
+    msg 0                   ; read_req tcp_conn
     ref std.send_msg
 
-stage_1b:                   ; blob',{caps} <- ok,value | #?
+receive:                    ; blob,tcp_conn,blob_dev,fs_dev,debug_dev <- ok,value | #?
+    msg 1                   ; ok
+    eq #f                   ; ok==#f
+    if receive_fail         ; --
 
-; Report stream progress
+; More bytes of the request have arrived. Check if we have the whole first line
+; of the request (the Request-Line).
 
-    state -1                ; {caps}
-    push dev.debug_key      ; {caps} debug_key
-    dict get                ; cust=debug_dev
-    state 1                 ; cust blob' // size request
-    actor send              ; --
-    msg 0                   ; msg
-    eq #?                   ; msg==#?
-    if std.commit
-
-; Pass completed blob to next stage
-
-    state -1                ; {caps}
-;    push stage_2            ; {caps} stage_2
-;    push stage_9            ; {caps} stage_9
-    push std.sink_beh       ; {caps} sink_beh
+    state -1                ; state'=tcp_conn,blob_dev,fs_dev,debug_dev
+    push parse_method       ; state' parse_method
     actor become            ; --
-    state 1                 ; blob'
-    actor self              ; blob' SELF
-    ref std.send_msg
-
-stage_2:                    ; {caps} <- blob
-    state 0                 ; {caps}
-    push stage_2a           ; {caps} stage_2a
-    actor become            ; --
-
-; Attempt to match "GET" command prefix
-
-    msg 0                   ; blob
+    state 1                 ; blob
     push 0                  ; blob ofs=0
     actor self              ; blob ofs cust=SELF
     pair 2                  ; cust,ofs,blob
-    call new_get_ptrn       ; cust,ofs,blob ptrn
+    call new_line_ptrn      ; cust,ofs,blob line_ptrn
     ref std.send_msg
 
-stage_2a:                   ; {caps} <- base,len,blob
-    state 0                 ; {caps}
-    push stage_5            ; {caps} stage_5
+receive_fail:               ; _,_,_,_,debug_dev <- #f,reason
+    msg 0                   ; #f,reason
+    state -4                ; #f,reason debug_dev
+    ref std.send_msg
+
+parse_method:               ; tcp_conn,blob_dev,fs_dev,debug_dev <- base,len,blob
+
+; Keep waiting if the Request-Line is not yet available.
+
+    msg 1                   ; base
+    typeq #fixnum_t         ; is_fixnum(base)
+    if_not std.commit       ; --
+
+; We have the Request-Line. Ignore future messages from the virtual blob.
+
+    push #?                 ; _
+    push std.sink_beh       ; _ sink_beh
     actor become            ; --
 
-; Attempt to match the requested "path" token
-; [FIXME: verify that "GET" matched successfully...]
+; Ensure that the request is a GET.
 
+    msg -2                  ; blob
+    push 0                  ; blob ofs=0
+    state 0                 ; blob ofs state
+    push parse_path         ; blob ofs state parse_path
+    actor create            ; blob ofs cust=parse_path.state
+    pair 2                  ; cust,ofs,blob
+    call new_get_ptrn       ; cust,ofs,blob get_ptrn
+    ref std.send_msg
+
+parse_path:                 ; tcp_conn,blob_dev,fs_dev,debug_dev <- base,len,blob
+
+; If the request was not a GET, fail.
+
+    msg 1                   ; base
+    typeq #fixnum_t         ; is_fixnum(base)
+    if_not bad_request      ; --
+
+; Match the path in the Request-Line.
+
+    state 0                 ; state
+    push get_file_meta      ; state get_file_meta
+    actor become            ; --
     msg 0                   ; base,len,blob
     part 2                  ; blob len base
     alu add                 ; blob ofs=len+base
     actor self              ; blob ofs cust=SELF
     pair 2                  ; cust,ofs,blob
-    call new_token_ptrn     ; cust,ofs,blob ptrn
+    call new_token_ptrn     ; cust,ofs,blob token_ptrn
     ref std.send_msg
 
-stage_5:                    ; {caps} <- base,len,blob
+get_file_meta:              ; tcp_conn,blob_dev,fs_dev,debug_dev <- base,len,blob
 
-; Report PEG parser results
+; If a path was not matched, fail.
+
+    msg 1                   ; base
+    typeq #fixnum_t         ; is_fixnum(base)
+    if_not bad_request      ; --
+
+; Slice the path from the request.
 
     msg 0                   ; base,len,blob
-    state 0                 ; base,len,blob {caps}
-    push dev.debug_key      ; base,len,blob {caps} debug_key
-    dict get                ; base,len,blob debug_dev
-    actor send              ; --
+    push blob.slice         ; base,len,blob slice
+    actor create            ; path=slice.base,len,blob
 
-; Create a blob-slice with just the "path" match
+; Get the metadata of the file at the requested path.
 
-    state 0                 ; {caps}
-    msg 0                   ; {caps} base,len,blob
-    push blob.slice         ; {caps} base,len,blob slice
-    actor create            ; {caps} path=slice.base,len,blob
-    pair 1                  ; path,{caps}
-    push stage_5a           ; path,{caps} stage_5a
-    actor become            ; --
+    state 0                 ; path state
+    pick 2                  ; path state path
+    pair 1                  ; path state'=path,state
+    push init_headers       ; path state' init_headers
+    actor become            ; path
+    push dev.fs_meta        ; path fs_meta
+    actor self              ; path fs_meta cb=SELF
+    push #?                 ; path fs_meta cb can=#?
+    pair 3                  ; meta_req=can,cb,fs_meta,path
+    state 3                 ; meta_req fs_dev
+    ref std.send_msg
 
-; Initialize content-length + end-of-headers blob
+init_headers:               ; path,tcp_conn,blob_dev,fs_dev,debug_dev <- ok,value
+    msg -1                  ; value
+    typeq #dict_t           ; is_dict(value)
+    if_not not_found        ; --
 
-    push http.blankln       ; blankln='\r','\n','\r','\n',#nil
-    msg 2                   ; blankln len
-    call num_to_dec         ; list
+; The file exists and we know how big it is.
+
+    msg -1                  ; metadata
+    push dev.fs_size        ; metadata fs_size
+    dict get                ; size
+    ; dup 1                   ; size size
+    ; state -4                ; size size debug_dev
+    ; actor send              ; size
+
+; Construct the headers. This is done in reverse to minimize unnecessary work
+; during list concatenation.
+
+    push http.blankln       ; size blankln
+    roll 2                  ; blankln size
+    call num_to_dec         ; head=size+blankln
+    push length_prefix      ; head length_prefix
+    call list_concat        ; head
+    ; push mime_html          ; head mime_html
+    ; call list_concat        ; head
+    ; push type_prefix        ; head type_prefix
+    ; call list_concat        ; head
+    push status_200         ; head status_200
+    call list_concat        ; head
+    state 0                 ; head state
+    push write_headers      ; head state write_headers
+    actor become            ; list=head''
     actor self              ; list cust=SELF
     pair 1                  ; cust,list
-    state 0                 ; cust,list {caps}
-    push dev.blob_key       ; cust,list {caps} blob_key
-    dict get                ; cust,list blob_dev
+    state 3                 ; cust,list blob_dev
     push blob.init          ; cust,list blob_dev init
     actor create            ; cust,list init.blob_dev
     ref std.send_msg
 
-stage_5a:                   ; path,{caps} <- length
-    state 0                 ; path,{caps}
-    msg 0                   ; path,{caps} length
-    pair 1                  ; length,path,{caps}
-    push stage_5b           ; length,path,{caps} stage_5b
-    actor become            ; --
-
-; Initialize test ok-response blob
-
-    push http.ok_rsp        ; list=ok_rsp
-    actor self              ; list cust=SELF
-    pair 1                  ; cust,list
-    state -1                ; cust,list {caps}
-    push dev.blob_key       ; cust,list {caps} blob_key
-    dict get                ; cust,list blob_dev
-    push blob.init          ; cust,list blob_dev init
-    actor create            ; cust,list init.blob_dev
-    ref std.send_msg
-
-stage_5b:                   ; length,path,{caps} <- ok_rsp
-    state -2                ; {caps}
-    push stage_9            ; {caps} stage_9
-    actor become            ; --
-
-; Begin composing blob-pairs from the tail
-
-    state 2                 ; tail=path
-    state 1                 ; tail head=length
-    pair 1                  ; head,tail
-    push blob.pair          ; head,tail pair
-    actor create            ; tail'=pair.head,tail
-
-; A slice of the "OK" response up to the "Content-length:" value
-
-    msg 0                   ; tail' blob=ok_rsp
-    push 59                 ; tail' blob len=59
-    push 0                  ; tail' blob len base=0
-    pair 2                  ; tail' base,len,blob
-    push blob.slice         ; tail' base,len,blob slice
-    actor create            ; tail' head=slice.base,len,blob
-    pair 1                  ; head,tail'
-    push blob.pair          ; head,tail' pair
-    actor create            ; blob=pair.head,tail'
-    actor self              ; blob SELF
-    ref std.send_msg
-
-stage_9:                    ; {caps} <- blob
-
-; Select display strategy for blob
-
-    state 0                 ; {caps}
-;    push blob_debug         ; {caps} blob_debug
-;    push blob_size          ; {caps} blob_size
-    push blob_print         ; {caps} blob_print
-;    push blob_source        ; {caps} blob_source
-    actor become            ; --
-
-; Forward blob to next stage
-
+write_headers:              ; path,tcp_conn,blob_dev,fs_dev,debug_dev <- blob
     msg 0                   ; blob
-    actor self              ; blob SELF
-    ref std.send_msg
-
-blob_debug:                 ; {caps} <- blob
+    typeq #actor_t          ; is_cap(blob)
+    if_not std.abort        ; -- // alloc failed
+    state 0                 ; state
+    push open_file          ; state open_file
+    actor become            ; --
     msg 0                   ; blob
-    state 0                 ; blob {caps}
-    push dev.debug_key      ; blob {caps} debug_key
-    dict get                ; blob debug_dev
+    actor self              ; blob cb=SELF
+    push #?                 ; blob cb can=#?
+    pair 2                  ; write_req=can,cb,blob
+    state 2                 ; write_req tcp_conn
     ref std.send_msg
 
-blob_size:                  ; {caps} <- blob
-    state 0                 ; {caps}
-    push dev.debug_key      ; {caps} debug_key
-    dict get                ; cust=debug_dev
-    msg 0                   ; debug_dev blob
+open_file:                  ; path,tcp_conn,blob_dev,fs_dev,debug_dev <- ok,value
+    msg 1                   ; ok
+    eq #t                   ; ok==#t
+    if_not std.commit       ; -- // write failed, drop the connection
+    state 0                 ; state
+    push read_file          ; state read_file
+    actor become            ; --
+    push #f                 ; create=#f
+    state 1                 ; create path
+    push dev.fs_file        ; create path fs_file
+    actor self              ; create path fs_file cb=SELF
+    push #?                 ; create path fs_file cb can=#?
+    pair 4                  ; file_req=can,cb,fs_file,path,create
+    state 4                 ; file_req fs_dev
     ref std.send_msg
 
-blob_print:                 ; {caps} <- blob
-    msg 0                   ; blob
-    state 0                 ; blob {caps}
-    push k_blob_print       ; blob {caps} k_blob_print
-    actor create            ; blob cust=k_blob_print.{caps}
-    pair 1                  ; cust,blob
-    push #?                 ; cust,blob #?
-    push io.reader_factory  ; cust,blob #? reader_factory
-    actor create            ; cust,blob reader_factory._
-    ref std.send_msg
-k_blob_print:               ; {caps} <- in
-    msg 0                   ; in
-    state 0                 ; in {caps}
-    push dev.io_key         ; in {caps} io_key
-    dict get                ; in out=io_dev
-    state 0                 ; in out {caps}
-    push dev.debug_key      ; in out {caps} debug_key
-    dict get                ; in out cb=debug_dev
+read_file:                  ; path,tcp_conn,blob_dev,fs_dev,debug_dev <- ok,value
+    msg 1                   ; ok
+    eq #t                   ; ok==#t
+    if_not std.commit       ; -- // open failed, drop the connection
+    state 0                 ; state
+    push close_connection   ; state close_connection
+    actor become            ; --
+    msg -1                  ; requestor=file
+    push chunk_size         ; requestor input=chunk_size
+    pair 1                  ; input,requestor
+    push bind.beh           ; input,requestor bind_beh
+    actor create            ; in=bind_beh.input,requestor
+    state 2                 ; in out=tcp_conn
+    actor self              ; in out cb=SELF
     pair 2                  ; cb,out,in
     push io.stream_copy     ; cb,out,in stream_copy
-    actor create            ; tgt=stream_copy.cb,out,in
-tgt_start:                  ; tgt
-    push #?                 ; tgt value=#?
-    push #t                 ; tgt #? ok=#t
-    pair 1                  ; tgt result=ok,value
-    roll 2                  ; result tgt
+    actor create            ; copier=stream_copy.cb,out,in
+    push #?                 ; copier value=#?
+    push #t                 ; copier value ok=#t
+    pair 1                  ; copier ok,value
+    roll 2                  ; ok,value copier
     ref std.send_msg
 
-blob_source:                ; {caps} <- blob
-    state 0                 ; {caps}
+close_connection:           ; path,tcp_conn,blob_dev,fs_dev,debug_dev <- ok,value
+    push #?                 ; _
+    push std.sink_beh       ; _ sink_beh
+    actor become            ; --
+    push #nil               ; #nil
+    actor self              ; #nil cb=SELF
+    push #?                 ; #nil cb can=#?
+    pair 2                  ; write_req=can,cb,#nil
+    state 2                 ; write_req tcp_conn
+    ref std.send_msg
+
+; Pending proper error responses, we simply close the connection.
+
+not_found:                  ; path,tcp_conn,fs_dev,debug_dev <- _
+    state -1                ; tcp_conn,fs_dev,debug_dev
+    push bad_request        ; tcp_conn,fs_dev,debug_dev bad_request
+    actor become            ; --
+    ref std.resend
+
+bad_request:                ; tcp_conn,fs_dev,debug_dev <- _
+    push #nil               ; #nil
+    state -2                ; #nil cb=debug_dev
+    push #?                 ; #nil cb can=#?
+    pair 2                  ; close_req=can,cb,#nil
+    state 1                 ; close_req tcp_conn
+    ref std.send_msg
+
+boot:                       ; _ <- {caps}
+
+; Send a listen request to the TCP device.
+
+    msg 0                   ; {caps}
     push dev.debug_key      ; {caps} debug_key
-    dict get                ; cust=debug_dev
-    push 4096               ; cust len=4096
-;    push 13                 ; cust len=13
-    push 0                  ; cust len base=0
-;    push 7                  ; cust len base=7
-;    push 21                 ; cust len base=21
-;    push 42                 ; cust len base=42
-    pair 2                  ; base,len,cust
-    msg 0                   ; base,len,cust blob
+    dict get                ; debug_dev
+    msg 0                   ; debug_dev {caps}
+    push dev.fs_key         ; debug_dev {caps} fs_key
+    dict get                ; debug_dev fs_dev
+    msg 0                   ; debug_dev fs_dev {caps}
+    push dev.blob_key       ; debug_dev fs_dev {caps} blob_key
+    dict get                ; debug_dev fs_dev blob_dev
+    pair 2                  ; blob_dev,fs_dev,debug_dev
+    push spawn_handler      ; blob_dev,fs_dev,debug_dev spawn_handler
+    actor create            ; on_open=spawn_handler.blob_dev,fs_dev,debug_dev
+    push petname            ; on_open petname
+    push #?                 ; on_open petname #?
+    push std.sink_beh       ; on_open petname #? sink_beh
+    actor create            ; on_open petname cb=sink_beh.#?
+    push #?                 ; on_open petname cb can=#?
+    pair 3                  ; listen_req=can,cb,petname,on_open
+    msg 0                   ; listen_req {caps}
+    push dev.tcp_key        ; listen_req {caps} tcp_key
+    dict get                ; listen_req tcp_dev
     ref std.send_msg
 
 .export
