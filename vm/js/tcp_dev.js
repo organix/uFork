@@ -246,6 +246,7 @@ function tcp_dev(
 
 // Write request.
 
+                const is_close = request === ufork.NIL_RAW;
                 core.u_defer(function () {
                     if (writing[conn_nr] === true) {
                         core.h_release_stub(event_stub_ptr);
@@ -255,8 +256,8 @@ function tcp_dev(
                     writing[conn_nr] = true;
                     parseq.sequence([
                         (
-                            request === ufork.NIL_RAW
-                            ? requestorize(() => [undefined]) // close
+                            is_close
+                            ? requestorize(() => [undefined])
                             : bind(the_blob_dev.h_read_chunks(), request)
                         ),
                         u_write_chunks(conn_nr)
@@ -271,7 +272,11 @@ function tcp_dev(
                             u_trace(`#${conn_nr} write failed`, reason);
                             return h_send(callback, h_reply_fail());
                         }
-                        u_trace(`#${conn_nr} write`);
+                        u_trace(`#${conn_nr} ` + (
+                            is_close
+                            ? "close"
+                            : "write"
+                        ));
                         return h_send(callback, h_reply_ok(ufork.UNDEF_RAW));
                     });
                 });

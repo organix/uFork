@@ -90,6 +90,12 @@ function blob_dev(core, make_ddev) {
     let reads = [];
     let sources = [];
 
+    function u_trace(...values) {
+        if (core.u_trace !== undefined) {
+            core.u_trace("BLOB", ...values);
+        }
+    }
+
     function h_alloc_blob(size_or_bytes) {
         const blob_nr = blobs.length;
         const bytes = (
@@ -99,9 +105,7 @@ function blob_dev(core, make_ddev) {
         );
         const cap = ddev.h_reserve_proxy(encode_tag({blob_nr}));
         const blob = {cap, bytes};
-        if (core.u_trace !== undefined) {
-            core.u_trace(`alloc blob #${blob_nr} size ${bytes.length}`);
-        }
+        u_trace(`#${blob_nr} alloc ${bytes.length}B`);
         blobs.push(blob);
         return blob;
     }
@@ -188,9 +192,7 @@ function blob_dev(core, make_ddev) {
 
 // Bad source reply. Fallback to reading the entire blob byte-by-byte instead.
 
-                        if (core.u_trace !== undefined) {
-                            core.u_trace("blob bad source");
-                        }
+                        u_trace("bad source");
                         return parseq.sequence([
                             h_read_bytes(),
                             requestorize(function (bytes) {
@@ -460,9 +462,7 @@ function blob_dev(core, make_ddev) {
                 const {blob_nr} = decode_tag(tag);
                 if (blob_nr !== undefined) {
                     delete blobs[blob_nr];
-                    if (core.u_trace !== undefined) {
-                        core.u_trace(`disposed blob #${blob_nr}`);
-                    }
+                    u_trace(`#${blob_nr} disposed`);
                 }
             }
         }
@@ -470,8 +470,8 @@ function blob_dev(core, make_ddev) {
     const dev_cap = ddev.h_reserve_proxy();
     core.h_install(dev_id, dev_cap, function on_dispose() {
         ddev.h_dispose();
-        if (core.u_trace !== undefined && blobs.length > 0) {
-            core.u_trace("disposing blobs");
+        if (blobs.length > 0) {
+            u_trace(`disposing ${blobs.length} blobs`);
         }
         blobs.length = 0;
     });
