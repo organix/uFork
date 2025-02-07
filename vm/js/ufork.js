@@ -341,6 +341,12 @@ const sponsor_imm_label = [
     "start",
     "stop"
 ];
+const gc_labels = [
+    "free",
+    "gen_x",
+    "gen_y",
+    "scan"
+];
 
 // CRLF
 
@@ -452,6 +458,11 @@ function print(raw) {
         : "^"
     );
     return prefix + raw.toString(16).padStart(8, "0");
+}
+
+function print_gc_color(color) {
+    const integer = fix_to_i32(color);
+    return gc_labels[integer];
 }
 
 function make_core({
@@ -1480,24 +1491,28 @@ function make_core({
         h_event_enqueue(evt);
     }
 
-    function h_snapshot() {
+// WASM mandates little-endian byte ordering.
+
+    function h_ram() {
         const mem_base = u_memory();
-
-// WASM mandates little-endian byte ordering
-
-        const rom_ofs = u_rom_ofs();
-        const rom_len = rawofs(h_rom_top()) << 4;
-        const rom = new Uint8Array(mem_base, rom_ofs, rom_len);
-
         const ram_ofs = u_ram_ofs();
         const ram_len = rawofs(h_ram_top()) << 4;
-        const ram = new Uint8Array(mem_base, ram_ofs, ram_len);
+        return new Uint8Array(mem_base, ram_ofs, ram_len); // not copied
+    }
 
-        // FIXME: need a general strategy for saving device state
+    function h_rom() {
+        const mem_base = u_memory();
+        const rom_ofs = u_rom_ofs();
+        const rom_len = rawofs(h_rom_top()) << 4;
+        return new Uint8Array(mem_base, rom_ofs, rom_len); // not copied
+    }
 
+// FIXME: need a general strategy for saving device state
+
+    function h_snapshot() {
         return {
-            rom: rom.slice(),
-            ram: ram.slice()
+            rom: h_rom().slice(),
+            ram: h_ram().slice()
         };
     }
 
@@ -1678,6 +1693,7 @@ function make_core({
         h_initialize,
         h_install,
         h_load,
+        h_ram,
         h_ram_top,
         h_refill,
         h_release_stub,
@@ -1686,6 +1702,7 @@ function make_core({
         h_reserve_stub,
         h_restore,
         h_revert,
+        h_rom,
         h_rom_top,
         h_run_loop,
         h_set_rom_top,
@@ -1812,6 +1829,7 @@ export default Object.freeze({
     is_rom,
     make_core,
     print,
+    print_gc_color,
     ptr_to_cap,
     ramptr,
     rawofs,

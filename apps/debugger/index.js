@@ -19,6 +19,7 @@ import fs_dev from "https://ufork.org/js/fs_dev.js";
 import tcp_dev from "https://ufork.org/js/tcp_dev.js";
 import host_dev from "https://ufork.org/js/host_dev.js";
 import timer_dev from "https://ufork.org/js/timer_dev.js";
+import memory_dump from "https://ufork.org/js/dbg/memory_dump.js";
 const lib_url = import.meta.resolve("../../lib/");
 const wasm_url = import.meta.resolve("https://ufork.org/wasm/ufork.debug.wasm");
 
@@ -106,30 +107,21 @@ function update_element_value(el, val) {
     el.value = txt;
 }
 function update_rom_monitor() {
-    let a = [];
-    const top = ufork.rawofs(core.h_rom_top());
-    let ofs = 0;
-    while (ofs < top) {
-        const ptr = ufork.romptr(ofs);
-        const quad = core.u_read_quad(ptr);
-        const line = ufork.print(ptr).padStart(9) + ": " + core.u_quad_print(quad);
-        a.push(line);
-        ofs += 1;
-    }
-    $mem_rom.textContent = a.join("\n");
+    $mem_rom.textContent = memory_dump(
+        core.h_rom(),
+        ufork.romptr(0)
+    );
 }
 function update_ram_monitor() {
-    let a = [];
-    const top = ufork.rawofs(core.h_ram_top());
-    let ofs = 0;
-    while (ofs < top) {
-        const ptr = ufork.ramptr(ofs);
-        const color = core.h_gc_color(ptr);
-        const line = core.u_disasm(ptr) + " -- " + ufork.print(color);
-        a.push(line);
-        ofs += 1;
-    }
-    $mem_ram.textContent = a.join("\n");
+    const ram_size = ufork.rawofs(core.h_ram_top());
+    const gc_colors = new Array(ram_size).fill().map(function (_, ofs) {
+        return core.h_gc_color(ufork.ramptr(ofs));
+    });
+    $mem_ram.textContent = memory_dump(
+        core.h_ram(),
+        ufork.ramptr(0),
+        gc_colors
+    );
 }
 /*
 function update_blob_monitor() {

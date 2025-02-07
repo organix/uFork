@@ -199,7 +199,7 @@ impl Core {
     error occurs (including exceeding the sponsor's quota), it is stored in
     the _signal_ field of the sponsor. If the sponsor is the root-sponsor,
     the run-loop is terminated and the error signal is returned to the host.
-    For a peripheral sponsor, sponsor's controller is notified using a
+    For a peripheral sponsor, the sponsor's controller is notified using a
     pre-allocated event, and no error is reported to the run-loop.
 
     If no error is reported from the instruction execution (or no instruction
