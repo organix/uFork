@@ -775,9 +775,8 @@ function make_core({
         } else if (is_rom(ptr)) {
             const rom_ofs = rawofs(ptr);
             if (rom_ofs < QUAD_ROM_MAX) {
-                return write_quad(u_rom(), rom_ofs, quad);
-            }
-            if (u_warn !== undefined) {
+                write_quad(u_rom(), rom_ofs, quad);
+            } else if (u_warn !== undefined) {
                 u_warn("u_write_quad: ROM ptr out of bounds", print(ptr));
             }
         } else if (u_warn !== undefined) {
@@ -855,8 +854,6 @@ function make_core({
 // non-reentrant method, for example 'h_run_loop'. The callback can safely call
 // the core's non-reentrant methods.
 
-// This method is more performant than scheduling the callback using setTimeout.
-
         if (!wasm_call_in_progress) {
             throw new Error("u_defer called outside of WASM control.");
         }
@@ -872,32 +869,12 @@ function make_core({
     function h_rom_alloc(debug_info) {
         const ptr = h_reserve_rom();
         rom_sourcemap[ptr] = debug_info;
-        return Object.freeze({
-            raw() {
-                return ptr;
-            },
-            write({t, x, y, z}) {
-                const quad = u_read_quad(ptr);
-                if (t !== undefined) {
-                    quad.t = t;
-                }
-                if (x !== undefined) {
-                    quad.x = x;
-                }
-                if (y !== undefined) {
-                    quad.y = y;
-                }
-                if (z !== undefined) {
-                    quad.z = z;
-                }
-                u_write_quad(ptr, quad);
-            }
-        });
+        return ptr;
     }
 
     function h_load(ir, imports) {
 
-// Load a module after its imports have been loaded.
+// Load a module into ROM. At this point its imports have already been loaded.
 
         let definitions = Object.create(null);
         let type_checks = [];
@@ -915,11 +892,7 @@ function make_core({
         function definition_raw(name) {
             return (
                 definitions[name] !== undefined
-                ? (
-                    is_raw(definitions[name])
-                    ? definitions[name]
-                    : definitions[name].raw()
-                )
+                ? definitions[name]
                 : fail("Not defined", name)
             );
         }
@@ -1021,54 +994,54 @@ function make_core({
             return raw;
         }
 
-        function populate(quad, node) {
+        function populate(ptr, node) {
             const the_kind = kind(node);
-            let fields = {};
+            let quad = {};
             if (the_kind === "type") {
-                fields.t = TYPE_T;
-                fields.x = fix(node.arity);
+                quad.t = TYPE_T;
+                quad.x = fix(node.arity);
             } else if (the_kind === "pair") {
-                fields.t = PAIR_T;
-                fields.x = value(node.head);
-                fields.y = value(node.tail);
+                quad.t = PAIR_T;
+                quad.x = value(node.head);
+                quad.y = value(node.tail);
                 if (node.tail.kind === "ref" && node.tail.module === undefined) {
-                    cyclic_data_checks.push([fields.y, PAIR_T, "y", node.tail]);
+                    cyclic_data_checks.push([quad.y, PAIR_T, "y", node.tail]);
                 }
             } else if (the_kind === "dict") {
-                fields.t = DICT_T;
-                fields.x = value(node.key);
-                fields.y = value(node.value);
-                fields.z = value(node.next); // dict/nil
-                if (fields.z !== NIL_RAW) {
+                quad.t = DICT_T;
+                quad.x = value(node.key);
+                quad.y = value(node.value);
+                quad.z = value(node.next); // dict/nil
+                if (quad.z !== NIL_RAW) {
                     type_checks.push({
-                        raw: fields.z,
+                        raw: quad.z,
                         t: DICT_T,
                         node: node.next,
                         msg: "Expected a dict"
                     });
                 }
                 if (node.next.kind === "ref" && node.next.module === undefined) {
-                    cyclic_data_checks.push([fields.z, DICT_T, "z", node.next]);
+                    cyclic_data_checks.push([quad.z, DICT_T, "z", node.next]);
                 }
             } else if (the_kind === "quad") {
-                fields.t = value(node.t);
+                quad.t = value(node.t);
                 let arity = 0;
                 if (node.x !== undefined) {
-                    fields.x = value(node.x);
+                    quad.x = value(node.x);
                     arity = 1;
                 }
                 if (node.y !== undefined) {
-                    fields.y = value(node.y);
+                    quad.y = value(node.y);
                     arity = 2;
                 }
                 if (node.z !== undefined) {
-                    fields.z = value(node.z);
+                    quad.z = value(node.z);
                     arity = 3;
                 }
-                arity_checks.push([fields.t, arity, node.t]);
+                arity_checks.push([quad.t, arity, node.t]);
             } else if (the_kind === "instr") {
-                fields.t = INSTR_T;
-                fields.x = label(node.op, instr_label);
+                quad.t = INSTR_T;
+                quad.x = label(node.op, instr_label);
                 if (node.op === "typeq") {
                     const imm_raw = value(node.imm);
                     type_checks.push({
@@ -1077,8 +1050,8 @@ function make_core({
                         node: node.imm,
                         msg: "Expected a type"
                     });
-                    fields.y = imm_raw;
-                    fields.z = instruction(node.k);
+                    quad.y = imm_raw;
+                    quad.z = instruction(node.k);
                 } else if (
                     node.op === "quad"
                     || node.op === "pair"
@@ -1091,40 +1064,40 @@ function make_core({
                     || node.op === "msg"
                     || node.op === "state"
                 ) {
-                    fields.y = fix(node.imm);
-                    fields.z = instruction(node.k);
+                    quad.y = fix(node.imm);
+                    quad.z = instruction(node.k);
                 } else if (
                     node.op === "eq"
                     || node.op === "push"
                     || node.op === "assert"
                 ) {
-                    fields.y = value(node.imm);
-                    fields.z = instruction(node.k);
+                    quad.y = value(node.imm);
+                    quad.z = instruction(node.k);
                 } else if (node.op === "debug") {
-                    fields.z = instruction(node.k);
+                    quad.z = instruction(node.k);
                 } else if (node.op === "if") {
-                    fields.y = instruction(node.t);
-                    fields.z = instruction(node.f);
+                    quad.y = instruction(node.t);
+                    quad.z = instruction(node.f);
                 } else if (node.op === "dict") {
-                    fields.y = label(node.imm, dict_imm_label);
-                    fields.z = instruction(node.k);
+                    quad.y = label(node.imm, dict_imm_label);
+                    quad.z = instruction(node.k);
                 } else if (node.op === "deque") {
-                    fields.y = label(node.imm, deque_imm_label);
-                    fields.z = instruction(node.k);
+                    quad.y = label(node.imm, deque_imm_label);
+                    quad.z = instruction(node.k);
                 } else if (node.op === "alu") {
-                    fields.y = label(node.imm, alu_imm_label);
-                    fields.z = instruction(node.k);
+                    quad.y = label(node.imm, alu_imm_label);
+                    quad.z = instruction(node.k);
                 } else if (node.op === "cmp") {
-                    fields.y = label(node.imm, cmp_imm_label);
-                    fields.z = instruction(node.k);
+                    quad.y = label(node.imm, cmp_imm_label);
+                    quad.z = instruction(node.k);
                 } else if (node.op === "actor") {
-                    fields.y = label(node.imm, actor_imm_label);
-                    fields.z = instruction(node.k);
+                    quad.y = label(node.imm, actor_imm_label);
+                    quad.z = instruction(node.k);
                 } else if (node.op === "end") {
-                    fields.y = label(node.imm, end_imm_label, -1);
+                    quad.y = label(node.imm, end_imm_label, -1);
                 } else if (node.op === "sponsor") {
-                    fields.y = label(node.imm, sponsor_imm_label);
-                    fields.z = instruction(node.k);
+                    quad.y = label(node.imm, sponsor_imm_label);
+                    quad.z = instruction(node.k);
                 } else if (node.op !== "jump") {
 
 // The 'jump' instruction has no fields.
@@ -1134,8 +1107,8 @@ function make_core({
             } else {
                 return fail("Not a quad", node);
             }
-            quad.write(fields);
-            return quad.raw();
+            u_write_quad(ptr, quad);
+            return ptr;
         }
 
         function is_quad(node) {
