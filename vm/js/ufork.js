@@ -576,11 +576,6 @@ function make_core({
 // performance overhead of producing diagnostics that would just be discarded
 // anyway.
 
-    let u_info;
-    let u_warn;
-    let u_debug;
-    let u_trace;
-
     function make_log_method(log_level) {
         if (on_log !== undefined) {
             return function (...values) {
@@ -589,18 +584,26 @@ function make_core({
         }
     }
 
-    if (log_level >= LOG_INFO) {
-        u_info = make_log_method(LOG_INFO);
-    }
-    if (log_level >= LOG_WARN) {
-        u_warn = make_log_method(LOG_WARN);
-    }
-    if (log_level >= LOG_DEBUG) {
-        u_debug = make_log_method(LOG_DEBUG);
-    }
-    if (log_level >= LOG_TRACE) {
-        u_trace = make_log_method(LOG_TRACE);
-    }
+    const u_info = (
+        log_level >= LOG_INFO
+        ? make_log_method(LOG_INFO)
+        : undefined
+    );
+    const u_warn = (
+        log_level >= LOG_WARN
+        ? make_log_method(LOG_WARN)
+        : undefined
+    );
+    const u_debug = (
+        log_level >= LOG_DEBUG
+        ? make_log_method(LOG_DEBUG)
+        : undefined
+    );
+    const u_trace = (
+        log_level >= LOG_TRACE
+        ? make_log_method(LOG_TRACE)
+        : undefined
+    );
 
     function u_audit(code, evidence, ep, kp) {
         if (typeof on_audit === "function") {
@@ -1667,15 +1670,15 @@ function make_core({
                     host_audit: u_audit
                 });
 
-// Install the debug device, if debug logging is enabled.
+// Install the debug device, regardless of whether debug logging is enabled.
 
-                if (u_debug !== undefined) {
-                    const dev_ptr = ramptr(DEBUG_DEV_OFS);
-                    const dev_cap = u_ptr_to_cap(dev_ptr);
-                    const dev_id = u_read_quad(dev_ptr).x;
-                    boot_caps_dict.push([dev_id, dev_cap]);
-                    Object.assign(wasm_caps, {
-                        host_log(x) { // (i32) -> nil
+                const dev_ptr = ramptr(DEBUG_DEV_OFS);
+                const dev_cap = u_ptr_to_cap(dev_ptr);
+                const dev_id = u_read_quad(dev_ptr).x;
+                boot_caps_dict.push([dev_id, dev_cap]);
+                Object.assign(wasm_caps, {
+                    host_log(x) { // (i32) -> nil
+                        if (u_debug !== undefined) {
                             const u = (x >>> 0);  // convert i32 -> u32
                             //u_debug(print(u), "->", u_pprint(u));
                             let s = print(u);
@@ -1684,8 +1687,8 @@ function make_core({
                             }
                             u_debug(s);
                         }
-                    });
-                }
+                    }
+                });
                 return true;
             })
         ]);
