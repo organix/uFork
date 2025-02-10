@@ -10,6 +10,70 @@ import make_ui from "./ui.js";
 import dom from "./dom.js";
 import theme from "./theme.js";
 
+function memh_dump16(octets) {
+    const cells = new Uint32Array(octets.buffer);
+    let s = "/*   T     X     Y     Z      ADDR */\n";
+    //         0123  4567  89AB  CDEF  // ^0000
+    cells.forEach(function (cell, addr) {
+        s += "  " + hex.from(ucode.from_uf(cell), 16);
+        if ((addr & 0x3) === 0x3) {
+            s += "  // ^" + hex.from((addr >> 2), 16) + "\n";
+        }
+    });
+    const n = cells.length;
+    s += "/* " + n + " cells, " + (n >> 2) + " quads */\n";
+    return s;
+}
+
+function memh_dump32(octets) {
+    const cells = new Uint32Array(octets.buffer);
+    let s = "/*       T         X         Y         Z          ADDR */\n";
+    //         00112233  44556677  8899AABB  CCDDEEFF  // ^00000000
+    cells.forEach(function (cell, addr) {
+        s += "  " + hex.from(cell, 32);
+        if ((addr & 0x3) === 0x3) {
+            s += "  // ^" + hex.from((addr >> 2), 32) + "\n";
+        }
+    });
+    const n = cells.length;
+    s += "/* " + n + " cells, " + (n >> 2) + " quads */\n";
+    return s;
+}
+
+function forth_dump16(octets) {
+    const cells = new Uint32Array(octets.buffer);
+    let s = "(    T        X        Y        Z       ADDR )\n";
+    //       0x0123 , 0x4567 , 0x89AB , 0xCDEF ,  ( ^0000 )
+    cells.forEach(function (cell, addr) {
+        s += "0x" + hex.from(ucode.from_uf(cell), 16);
+        s += (
+            (addr & 0x3) !== 0x3
+            ? " , "
+            : " ,  ( ^" + hex.from((addr >> 2), 16) + " )\n"
+        );
+    });
+    const n = cells.length;
+    s += "( " + n + " cells, " + (n >> 2) + " quads )\n";
+    return s;
+}
+
+function forth_dump32(octets) {
+    const cells = new Uint32Array(octets.buffer);
+    let s = "(        T            X            Y            Z           ADDR )\n";
+    //       0x00112233 , 0x44556677 , 0x8899AABB , 0xCCDDEEFF ,  ( ^00000000 )
+    cells.forEach(function (cell, addr) {
+        s += "0x" + hex.from(cell, 32);
+        s += (
+            (addr & 0x3) !== 0x3
+            ? " , "
+            : " ,  ( ^" + hex.from((addr >> 2), 32) + " )\n"
+        );
+    });
+    const n = cells.length;
+    s += "( " + n + " cells, " + (n >> 2) + " quads )\n";
+    return s;
+}
+
 const rom_ui = make_ui("rom-ui", function (element, {
     module_ir,
     buffer,
@@ -50,70 +114,6 @@ const rom_ui = make_ui("rom-ui", function (element, {
         spellcheck: false,
         title: "ROM dump"
     });
-
-    function memh_dump16(octets) {
-        const cells = new Uint32Array(octets.buffer);
-        let s = "/*   T     X     Y     Z      ADDR */\n";
-        //         0123  4567  89AB  CDEF  // ^0000
-        cells.forEach(function (cell, addr) {
-            s += "  " + hex.from(ucode.from_uf(cell), 16);
-            if ((addr & 0x3) === 0x3) {
-                s += "  // ^" + hex.from((addr >> 2), 16) + "\n";
-            }
-        });
-        const n = cells.length;
-        s += "/* " + n + " cells, " + (n >> 2) + " quads */\n";
-        return s;
-    }
-
-    function memh_dump32(octets) {
-        const cells = new Uint32Array(octets.buffer);
-        let s = "/*       T         X         Y         Z          ADDR */\n";
-        //         00112233  44556677  8899AABB  CCDDEEFF  // ^00000000
-        cells.forEach(function (cell, addr) {
-            s += "  " + hex.from(cell, 32);
-            if ((addr & 0x3) === 0x3) {
-                s += "  // ^" + hex.from((addr >> 2), 32) + "\n";
-            }
-        });
-        const n = cells.length;
-        s += "/* " + n + " cells, " + (n >> 2) + " quads */\n";
-        return s;
-    }
-
-    function forth_dump16(octets) {
-        const cells = new Uint32Array(octets.buffer);
-        let s = "(    T        X        Y        Z       ADDR )\n";
-        //       0x0123 , 0x4567 , 0x89AB , 0xCDEF ,  ( ^0000 )
-        cells.forEach(function (cell, addr) {
-            s += "0x" + hex.from(ucode.from_uf(cell), 16);
-            s += (
-                (addr & 0x3) !== 0x3
-                ? " , "
-                : " ,  ( ^" + hex.from((addr >> 2), 16) + " )\n"
-            );
-        });
-        const n = cells.length;
-        s += "( " + n + " cells, " + (n >> 2) + " quads )\n";
-        return s;
-    }
-
-    function forth_dump32(octets) {
-        const cells = new Uint32Array(octets.buffer);
-        let s = "(        T            X            Y            Z           ADDR )\n";
-        //       0x00112233 , 0x44556677 , 0x8899AABB , 0xCCDDEEFF ,  ( ^00000000 )
-        cells.forEach(function (cell, addr) {
-            s += "0x" + hex.from(cell, 32);
-            s += (
-                (addr & 0x3) !== 0x3
-                ? " , "
-                : " ,  ( ^" + hex.from((addr >> 2), 32) + " )\n"
-            );
-        });
-        const n = cells.length;
-        s += "( " + n + " cells, " + (n >> 2) + " quads )\n";
-        return s;
-    }
 
     function dump() {
         const text = (
@@ -187,7 +187,7 @@ const rom_ui = make_ui("rom-ui", function (element, {
 if (import.meta.main) {
     document.documentElement.innerHTML = "";
     const rom = dom(
-        rom_ui({format: "hex", bitwidth: 32}),
+        rom_ui({format: "memh", bitwidth: 32}),
         {style: {width: "400px", height: "400px", background: "black"}}
     );
     document.body.append(rom);
