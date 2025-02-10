@@ -91,7 +91,7 @@ module spi_phy #(
     reg [1:0] state = START;                            // initial state
     always @(posedge i_clk) begin
         case (state)
-            IDLE: begin
+            START: begin
                 if (o_bsy) begin
                     wdata_sr <= wdata;                  // load shift-register
                     o_bsy <= 1'b0;
