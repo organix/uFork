@@ -2,7 +2,8 @@
 
 /*jslint browser, global */
 
-import dom from "./dom.js";
+import dom from "https://ufork.org/lib/dom.js";
+import make_ui from "https://ufork.org/lib/ui.js";
 import ed from "./ed.js";
 import ed_duplicate from "./ed_duplicate.js";
 import ed_indent from "./ed_indent.js";
@@ -10,7 +11,6 @@ import ed_join_lines from "./ed_join_lines.js";
 import ed_select_paragraph from "./ed_select_paragraph.js";
 import ed_select_word from "./ed_select_word.js";
 import ed_wrap_lines from "./ed_wrap_lines.js";
-import make_ui from "./ui.js";
 
 function render_css(theme, ruler = 80) {
     return `

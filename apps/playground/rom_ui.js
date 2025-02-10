@@ -2,12 +2,12 @@
 
 /*jslint browser, bitwise, long */
 
+import disassemble from "https://ufork.org/lib/disassemble.js";
+import dom from "https://ufork.org/lib/dom.js";
 import hex from "https://ufork.org/lib/hex.js";
 import hexdump from "https://ufork.org/lib/hexdump.js";
-import disassemble from "https://ufork.org/lib/disassemble.js";
+import make_ui from "https://ufork.org/lib/ui.js";
 import ucode from "https://ufork.org/ucode/ucode.js";
-import make_ui from "./ui.js";
-import dom from "./dom.js";
 import theme from "./theme.js";
 
 function memh_dump16(octets) {

@@ -15,8 +15,8 @@
 
 /*jslint browser, global */
 
-import make_ui from "./ui.js";
-import dom from "./dom.js";
+import dom from "https://ufork.org/lib/dom.js";
+import make_ui from "https://ufork.org/lib/ui.js";
 
 const split_ui = make_ui("split-ui", function (element, {
     placement = "right",

@@ -5,7 +5,10 @@
 
 /*jslint browser, global */
 
-import dom from "./dom.js";
+import base64 from "https://ufork.org/lib/base64.js";
+import dom from "https://ufork.org/lib/dom.js";
+import gzip from "https://ufork.org/lib/gzip.js";
+import unpercent from "https://ufork.org/lib/unpercent.js";
 import theme from "./theme.js";
 import lang_asm from "./lang_asm.js";
 import lang_hum from "./lang_hum.js";
@@ -13,9 +16,6 @@ import lang_scm from "./lang_scm.js";
 import tools_ui from "./tools_ui.js";
 import editor_ui from "./editor_ui.js";
 import split_ui from "./split_ui.js";
-import base64 from "https://ufork.org/lib/base64.js";
-import gzip from "https://ufork.org/lib/gzip.js";
-import unpercent from "https://ufork.org/lib/unpercent.js";
 const unqualified_dev_lib_url = import.meta.resolve("../../lib/");
 
 const dev_lib_url = new URL(unqualified_dev_lib_url, location.href).href;

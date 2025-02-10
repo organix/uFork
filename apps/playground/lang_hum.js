@@ -1,7 +1,7 @@
 // Text editor support for Humus.
 
 import compile from "https://ufork.org/lib/humus.js";
-import dom from "./dom.js";
+import dom from "https://ufork.org/lib/dom.js";
 import ed_comment from "./ed_comment.js";
 import theme from "./theme.js";
 

@@ -2,6 +2,8 @@
 
 /*jslint browser, global */
 
+import dom from "https://ufork.org/lib/dom.js";
+import make_ui from "https://ufork.org/lib/ui.js";
 import parseq from "https://ufork.org/lib/parseq.js";
 import requestorize from "https://ufork.org/lib/rq/requestorize.js";
 import ufork from "https://ufork.org/js/ufork.js";
@@ -14,8 +16,6 @@ import timer_dev from "https://ufork.org/js/timer_dev.js";
 import io_dev from "https://ufork.org/js/io_dev.js";
 import host_dev from "https://ufork.org/js/host_dev.js";
 import svg_dev from "https://ufork.org/js/svg_dev.js";
-import make_ui from "./ui.js";
-import dom from "./dom.js";
 import lang_asm from "./lang_asm.js";
 import lang_scm from "./lang_scm.js";
 import io_dev_ui from "./io_dev_ui.js";

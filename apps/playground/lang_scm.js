@@ -1,8 +1,8 @@
 // Text editor support for Scheme.
 
+import dom from "https://ufork.org/lib/dom.js";
 import scm from "https://ufork.org/lib/scheme.js";
 import ed_comment from "./ed_comment.js";
-import dom from "./dom.js";
 import theme from "./theme.js";
 
 const indent = "    ";
