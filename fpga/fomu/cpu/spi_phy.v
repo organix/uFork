@@ -88,7 +88,7 @@ module spi_phy #(
     end
 
     // read buffer
-    wire [WIDTH-1:0] rdata = { s_cipo, rdata_sr[WIDTH-1:1] };
+    wire [WIDTH-1:0] rdata = { rdata_sr[WIDTH-2:0], s_cipo };
     always @(posedge i_clk) begin
         if (i_rd && o_rdy) begin
             o_rdy <= 1'b0;

@@ -66,6 +66,14 @@ module spi_phy_test (
     reg [WIDTH-1:0] wdata = 0;
 
     //
+    // feed COPI back into CIPO (delayed & inverted)
+    //
+
+    always @(posedge i_clk) begin
+        cipo <= !cs && !copi;
+    end
+
+    //
     // test sequencer
     //
 
@@ -89,6 +97,11 @@ module spi_phy_test (
         if (o_running) begin
             if (step == 8'h7F) begin
                 o_passed <= 1'b0;                       // register failure
+            end else if (step == 8'h05) begin
+                wdata <= 8'b10011011;
+                wr <= 1'b1;
+            end else if (step == 8'h06) begin
+                wr <= 1'b0;
             end
         end
     end
