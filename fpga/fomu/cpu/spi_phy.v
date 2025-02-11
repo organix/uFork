@@ -16,6 +16,8 @@ SPI (Serial Peripheral Interface) -- physical layer
  +->|i_clk              |
  |  +-------------------+
 
+ SPI Mode: 0 (CPOL=0, CPHA=0)
+ https://www.analog.com/en/resources/analog-dialogue/articles/introduction-to-spi-interface.html
          _   _   _   _   _   _   _   _   _   _   _   _   _   _   _   _   _   _   _   _
  i_clk  | |_| |_| |_| |_| |_| |_| |_| |_| |_| |_| |_| |_| |_| |_| |_| |_| |_| |_| |_| |_
         _____                                                                     ______
@@ -51,7 +53,7 @@ module spi_phy #(
     output                  s_copi,                     // serial controller out / peripheral in
     input                   s_cipo,                     // serial controller in / peripheral out
 
-    output reg  [WIDTH-1:0] o_rdata                     // data received
+    output reg  [WIDTH-1:0] o_rdata,                    // data received
     output reg              o_rdy,                      // data is ready
     input                   i_rd,                       // read acknowledgement
 
