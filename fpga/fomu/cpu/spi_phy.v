@@ -131,6 +131,7 @@ module spi_phy #(
                     if (o_bsy) begin
                         wdata_sr <= wdata;              // reload shift-register
                         o_bsy <= 1'b0;
+                        bit_count <= WIDTH-1;
                         state <= SAMPLE;
                     end else begin
                         state <= STOP;

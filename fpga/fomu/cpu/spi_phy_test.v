@@ -102,6 +102,25 @@ module spi_phy_test (
                 wr <= 1'b1;
             end else if (step == 8'h06) begin
                 wr <= 1'b0;
+            end else if (step == 8'h20) begin
+                wdata <= 8'b01010011;
+                wr <= 1'b1;
+                rd <= 1'b1;
+            end else if (step == 8'h21) begin
+                wr <= 1'b0;
+                rd <= 1'b0;
+            end else if (step == 8'h2A) begin
+                wdata <= 8'b01110100;
+                wr <= 1'b1;
+            end else if (step == 8'h2B) begin
+                wr <= 1'b0;
+            end else if (step == 8'h33) begin
+                if (!rdy) begin
+                    o_passed <= 1'b0;                   // register failure
+                end
+                rd <= 1'b1;
+            end else if (step == 8'h34) begin
+                rd <= 1'b0;
             end
         end
     end
