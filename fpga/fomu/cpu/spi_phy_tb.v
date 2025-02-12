@@ -8,7 +8,7 @@ Test Bench for spi_phy.v
 
 `include "spi_phy_test.v"
 
-`timescale 10ns/1ns
+`timescale 100ns/10ns
 
 module test_bench;
 
@@ -16,7 +16,7 @@ module test_bench;
     initial begin
         $dumpfile("spi_phy.vcd");
         $dumpvars(0, test_bench);
-        #300;
+        #520;
         $finish;
     end
 

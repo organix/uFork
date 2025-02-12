@@ -7,6 +7,7 @@ ALL =	alu.vcd \
 	lifo_se.vcd \
 	lifo_se.dfu \
 	spi_phy.vcd \
+	spi_phy.dfu \
 	cpu.vcd \
 	cpu.dfu
 

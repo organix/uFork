@@ -230,7 +230,7 @@ in a single CPU-instruction cycle.
     * `02`: RX?
     * `03`: RX@
 
-  * `1x`: SPI Flash Memory (planned)
+  * `1x`: SPI Controller (planned)
     * `16`: ISR
     * `17`: ICR
     * `18`: CR0
@@ -242,6 +242,12 @@ in a single CPU-instruction cycle.
     * `1E`: RXDR
     * `1F`: CSR
 
+  * `Fx`: SPI Flash Memory
+    * `F0`: SO?
+    * `F1`: SO!
+    * `F2`: SI?
+    * `F3`: SI@
+
 ## Instruction Encoding
 
 There are two primary instruction encoding patterns. One for control
@@ -250,7 +256,7 @@ for evaluation instructions, which affect the ALU, D-stack, and R-stack.
 
      15  14  13  12  11  10   9   8   7   6   5   4   3   2   1   0
     *---+---+---+---*---+---+---+---*---+---+---+---*---+---+---+---*
-    |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |
+    |   :   :   :   |   :   :   :   |   :   :   :   |   :   :   :   |
     *---+---+---+---*---+---+---+---*---+---+---+---*---+---+---+---*
      \_/
       0=Evaluate
