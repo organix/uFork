@@ -35,6 +35,15 @@ module test_bench;
         end
     end
 
+    // feed COPI back into CIPO (delayed & inverted)
+    wire cs;
+    wire copi;
+    reg cipo = 1'b0;
+    wire sclk;
+    always @(posedge clk) begin
+        cipo <= !cs && !copi;
+    end
+
     // instantiate CPU
     wire running;
     wire passed;
@@ -46,6 +55,10 @@ module test_bench;
         .i_run(!waiting),
         .i_rx(rx),
         .o_tx(tx),
+        .o_cs(cs),
+        .o_copi(copi),
+        .i_cipo(cipo),
+        .o_sclk(sclk),
         .o_running(running),
         .o_status(passed)
     );

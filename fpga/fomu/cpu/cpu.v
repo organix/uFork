@@ -5,11 +5,13 @@ uCode Central Processing Unit (CPU)
     +-------------------+
     | cpu               |
     |                   |
---->|i_run     o_running|--->
-    |           o_status|--->
-    |                   |
-    |               i_rx|<---
+--->|i_run          i_rx|<---
     |               o_tx|--->
+<---|o_running          |
+<---|o_status       o_cs|--->
+    |             o_copi|--->
+    |             i_cipo|<---
+    |             o_sclk|--->
  +->|i_clk              |
  |  +-------------------+
 
@@ -33,6 +35,7 @@ the value of `o_status` indicates success (1) or failure (0).
 `include "quad_spram.v"
 //`include "quad_bram.v"
 `endif
+`include "flash.v"
 
 // Memory Ranges
 `define MEM_UC  (3'h0)      // uCode memory
@@ -55,8 +58,15 @@ module cpu #(
 ) (
     input                   i_clk,                      // system clock
     input                   i_run,                      // run the processor
+
     input                   i_rx,                       // serial port transmit
     output                  o_tx,                       // serial port receive
+
+    output                  o_cs,                       // SPI chip select
+    output                  o_copi,                     // SPI controller output
+    input                   i_cipo,                     // SPI controller input
+    output                  o_sclk,                     // SPI controller clock
+
     output                  o_running,                  // processor active
     output reg              o_status                    // final status
 );
@@ -398,6 +408,25 @@ module cpu #(
     );
 
     //
+    // SPI flash memory
+    //
+
+    flash FLASH (
+        .i_clk(i_clk),
+        .o_cs(o_cs),
+        .o_copi(o_copi),
+        .i_cipo(i_cipo),
+        .o_sclk(o_sclk),
+
+        .i_en(flash_en),
+        .i_wr(flash_wr),
+        .i_addr(flash_addr),
+        .i_data(flash_wdata),
+
+        .o_data(flash_rdata)
+    );
+    
+    //
     // uCode execution engine
     //
 
@@ -463,7 +492,8 @@ module cpu #(
 
     wire [DATA_SZ-1:0] mem_out =
         ( quad_op ? quad_rdata
-        : mem_rng == `MEM_DEV ? { {(DATA_SZ-8){uart_rdata[7]}}, uart_rdata }
+        : mem_rng == `MEM_DEV && dev_id == 4'h0 ? { {(DATA_SZ-8){uart_rdata[7]}}, uart_rdata }
+        : mem_rng == `MEM_DEV && dev_id == 4'hF ? { {(DATA_SZ-8){flash_rdata[7]}}, flash_rdata }
         : uc_rdata );
     wire [DATA_SZ-1:0] d_value =
         ( mem_op ? mem_out
@@ -506,6 +536,12 @@ module cpu #(
     wire [1:0] quad_field = mem_rng[1:0];
     wire [15:0] quad_wdata = nos;
     wire [15:0] quad_rdata;
+
+    wire flash_en = (p_alu && mem_op && mem_rng == `MEM_DEV && dev_id == 4'hF);
+    wire flash_wr = mem_wr;
+    wire [3:0] flash_addr = reg_id;
+    wire [7:0] flash_wdata = nos[7:0];
+    wire [7:0] flash_rdata;
 
     reg p_alu = 0;                                      // 0: stack-phase, 1: alu-phase
     always @(posedge i_clk) begin

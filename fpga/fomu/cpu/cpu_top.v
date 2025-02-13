@@ -17,6 +17,10 @@ module top (
     output                  user_2,                     // User I/O Pad #2
     input                   user_3,                     // User I/O Pad #3
     output                  user_4,                     // User I/O Pad #4
+    output                  spi_cs,                     // SPI chip select
+    output                  spi_mosi,                   // SPI controller output
+    input                   spi_miso,                   // SPI controller input
+    output                  spi_clk,                    // SPI controller clock
     output                  usb_dp,                     // USB D+
     output                  usb_dn,                     // USB D-
     output                  usb_dp_pu                   // USB D+ pull-up
@@ -62,12 +66,14 @@ module top (
     );
 
     // designate user i/o pins
+    localparam SB_IO_TYPE_SIMPLE_OUTPUT = 6'b011000;
+    localparam SB_IO_TYPE_SIMPLE_INPUT = 6'b000001;
+
     assign user_1 = 1'b0;                               // GND
 //    assign user_2 = 1'b1;                               // TX (configured below)
 //    assign user_3 = 1'b0;                               // RX (configured below)
     assign user_4 = 1'b1;                               // 3v3 (weak)
 
-    localparam SB_IO_TYPE_SIMPLE_OUTPUT = 6'b011000;
     wire serial_tx;                                     // TX
     SB_IO #(
         .PIN_TYPE(SB_IO_TYPE_SIMPLE_OUTPUT)
@@ -78,7 +84,6 @@ module top (
         .D_OUT_0(serial_tx),
     );
 
-    localparam SB_IO_TYPE_SIMPLE_INPUT = 6'b000001;
     wire serial_rx;                                     // RX
     SB_IO #(
         .PIN_TYPE(SB_IO_TYPE_SIMPLE_INPUT),
@@ -89,6 +94,57 @@ module top (
         .INPUT_CLK(clk),
         .D_IN_0(serial_rx),
     );
+
+    // configure SPI Flash pins (master mode)
+    wire cs;
+    SB_IO #(
+        .PIN_TYPE(SB_IO_TYPE_SIMPLE_OUTPUT),
+        .PULLUP(1'b1)
+    ) spi_cs_io (
+        .PACKAGE_PIN(spi_cs),
+        .OUTPUT_ENABLE(1'b1), // FIXME: is this needed?
+        .OUTPUT_CLK(clk),
+        .D_OUT_0(cs),
+    );
+
+    wire copi = spi_mosi;
+    /*
+    wire copi;
+    SB_IO #(
+        .PIN_TYPE(SB_IO_TYPE_SIMPLE_OUTPUT)
+    ) spi_mosi_io (
+        .PACKAGE_PIN(spi_mosi),
+        .OUTPUT_ENABLE(1'b1), // FIXME: is this needed?
+        .OUTPUT_CLK(clk),
+        .D_OUT_0(copi),
+    );
+    */
+
+    wire cipo = spi_miso;
+    /*
+    wire cipo;
+    SB_IO #(
+        .PIN_TYPE(SB_IO_TYPE_SIMPLE_INPUT)
+    ) spi_miso_io (
+        .PACKAGE_PIN(spi_miso),
+        .OUTPUT_ENABLE(1'b0), // FIXME: is this needed?
+        .INPUT_CLK(clk),
+        .D_IN_0(cipo),
+    );
+    */
+
+    wire sclk = spi_clk;
+    /*
+    wire sclk;
+    SB_IO #(
+        .PIN_TYPE(SB_IO_TYPE_SIMPLE_OUTPUT)
+    ) spi_clk_io (
+        .PACKAGE_PIN(spi_clk),
+        .OUTPUT_ENABLE(1'b1), // FIXME: is this needed?
+        .OUTPUT_CLK(clk),
+        .D_OUT_0(sclk),
+    );
+    */
 
     // start-up delay
     reg run = 1'b0;
@@ -109,6 +165,10 @@ module top (
         .i_run(run),
         .i_rx(serial_rx),
         .o_tx(serial_tx),
+        .o_cs(cs),
+        .o_copi(copi),
+        .i_cipo(cipo),
+        .o_sclk(sclk),
         .o_running(running),
         .o_status(passed)
     );

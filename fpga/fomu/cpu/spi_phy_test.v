@@ -114,6 +114,10 @@ module spi_phy_test (
                     o_passed <= 1'b0;                   // register failure
                 end
                 */
+            end else if (step == 8'h1C) begin
+                if (rdata != 8'b01100100) begin
+                    o_passed <= 1'b0;                   // register failure
+                end
             end else if (step == 8'h20) begin
                 wdata <= 8'b01010011;
                 wr <= 1'b1;
