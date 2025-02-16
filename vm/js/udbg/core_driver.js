@@ -55,7 +55,7 @@
 
 // Status messages provides real-time updates on the state of the core. Status
 // messages of a particular kind are only emitted if the controller has
-// expressed interest in a "subscribe" command.
+// expressed interest with a "subscribe" command.
 
 //  {kind: "signal", signal: <raw>}
 

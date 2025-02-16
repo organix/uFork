@@ -62,11 +62,7 @@ function demo() {
         return response.text();
     }).then(function (text) {
         element.set_sourcemap({
-            debug: {
-                src: asm_href,
-                start: 1321,
-                end: 1331
-            },
+            debug: {src: asm_href, start: 1321, end: 1331},
             text
         });
     });

@@ -42,7 +42,6 @@ const wasm_url = import.meta.resolve("https://ufork.org/wasm/ufork.wasm");
 let bridge;
 let core;
 let driver;
-let udbg_url;
 
 const unqualified_src = Deno.args[0];
 const www_dir_path = Deno.args[1];
@@ -69,22 +68,6 @@ core = ufork.make_core({
 driver = make_core_driver(core, function on_status(message) {
     bridge.send(message);
 });
-if (udbg_address !== undefined) {
-    const [udbg_hostname, udbg_port] = udbg_address.split(":");
-    const udbg_session = ""; // persistent
-    udbg_url = `ws://${udbg_hostname}:${udbg_port}/${udbg_session}`;
-    bridge = websockets_bridge.listen(
-        udbg_hostname,
-        udbg_port,
-        udbg_session,
-        function on_message(message) {
-            driver.command(message);
-        },
-        function on_open() {
-            globalThis.console.log("udbg connected");
-        }
-    );
-}
 parseq.sequence([
     core.h_initialize(),
     core.h_import(src),
@@ -115,7 +98,21 @@ parseq.sequence([
         globalThis.console.error(reason);
         Deno.exit(1);
     }
-    if (udbg_url !== undefined) {
+    if (udbg_address !== undefined) {
+        const [udbg_hostname, udbg_port] = udbg_address.split(":");
+        const udbg_session = ""; // persistent
+        const udbg_url = `ws://${udbg_hostname}:${udbg_port}/${udbg_session}`;
+        bridge = websockets_bridge.listen(
+            udbg_hostname,
+            udbg_port,
+            udbg_session,
+            function on_message(message) {
+                driver.command(message);
+            },
+            function on_open() {
+                globalThis.console.log("udbg connected");
+            }
+        );
         globalThis.console.log(`udbg listening at ${udbg_url}`);
     }
     globalThis.console.log("www listening at http://" + bind_address);

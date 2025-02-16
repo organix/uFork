@@ -1,7 +1,7 @@
 # udbg (interactive debugging protocol)
 
 This directory provides facilities for the interactive debugging of uFork WASM
-cores running under a remote JavaScript host.
+cores running under remote JavaScript hosts.
 
 The following diagram illustrates the components involved in attaching a
 debugger to a running core.
@@ -11,7 +11,7 @@ debugger to a running core.
     +-------+-------+
             |
     +-------+-------+
-    | Bridge client |   Relays message to and from the bridge server.
+    | Bridge client |   Relays messages to and from the bridge server.
     +-------+-------+
             |
             |
@@ -29,8 +29,6 @@ debugger to a running core.
     +-------+-------+
     |     Core      |   JavaScript interface (ufork.js) for a WASM core.
     +---------------+
-
-## Messages
 
 Between the debugger UI and the core driver, all communication is with messages.
 The message protocol is described in ./core_driver.js.
