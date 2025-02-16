@@ -685,7 +685,9 @@ function make_core({
     }
 
 // We avoid unnecessary reentrancy by caching the offsets at initialization
-// time. Even if the WASM memory is rearranged, offsets should not change.
+// time. Even if the WASM memory is rearranged, offsets should not change. We
+// can not, however, avoid reentrancy if we wish to check the current top of
+// ROM or RAM.
 
     function u_rom_ofs() {
         return initial_rom_ofs;

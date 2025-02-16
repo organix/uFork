@@ -19,7 +19,7 @@ import fs_dev from "https://ufork.org/js/fs_dev.js";
 import tcp_dev from "https://ufork.org/js/tcp_dev.js";
 import host_dev from "https://ufork.org/js/host_dev.js";
 import timer_dev from "https://ufork.org/js/timer_dev.js";
-import memory_dump from "https://ufork.org/js/dbg/memory_dump.js";
+import memory_dump from "https://ufork.org/js/udbg/memory_dump.js";
 const lib_url = import.meta.resolve("../../lib/");
 const wasm_url = import.meta.resolve("https://ufork.org/wasm/ufork.debug.wasm");
 

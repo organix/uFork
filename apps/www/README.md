@@ -14,6 +14,7 @@ Make sure you have Deno installed, then run
         --allow-import \
         www.js \
         static.asm \
-        ../../site
+        ../../site \
+        127.0.0.1:5887
 
 Then navigate to http://127.0.0.1:5887 in a browser.
