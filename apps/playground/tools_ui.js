@@ -16,6 +16,7 @@ import timer_dev from "https://ufork.org/js/timer_dev.js";
 import io_dev from "https://ufork.org/js/io_dev.js";
 import host_dev from "https://ufork.org/js/host_dev.js";
 import svg_dev from "https://ufork.org/js/svg_dev.js";
+import make_core_driver from "https://ufork.org/js/udbg/core_driver.js";
 import lang_asm from "./lang_asm.js";
 import lang_scm from "./lang_scm.js";
 import io_dev_ui from "./io_dev_ui.js";
@@ -59,7 +60,7 @@ const tools_ui = make_ui("tools-ui", function (element, {
         }
     `);
     let core;
-    let run_loop_timer;
+    let driver;
     let devices = Object.create(null);
     let device_element = document.createComment("placeholder");
     let device_select;
@@ -110,52 +111,16 @@ const tools_ui = make_ui("tools-ui", function (element, {
     }
 
     function stop() {
-        clearTimeout(run_loop_timer);
         run_button.textContent = "▶ Run";
         run_button.onclick = function () {
             run(get_text(), "boot");
         };
         h_on_svgin = undefined;
+        if (driver !== undefined) {
+            driver.dispose();
+        }
         if (core !== undefined) {
             core.h_dispose();
-        }
-    }
-
-    function run_loop() {
-        const begin = Date.now();
-        while (true) {
-
-// Run a step.
-
-            const status = core.h_run_loop(1);
-
-// Are we done?
-
-            if (
-                status !== ufork.UNDEF_RAW  // step limit not reached
-                && status !== ufork.fixnum(ufork.E_MEM_LIM)
-                && status !== ufork.fixnum(ufork.E_CPU_LIM)
-                && status !== ufork.fixnum(ufork.E_MSG_LIM)
-            ) {
-                const message = ufork.fault_msg(ufork.fix_to_i32(status));
-                if (status === ufork.fixnum(ufork.E_OK)) {
-                    devices.io.info("IDLE:", message);
-                } else {
-                    devices.io.warn("FAULT:", message);
-                    stop();
-                }
-                break;
-            }
-
-// There is work left in the continuation queue. Refill and continue, deferring
-// the next iteration if the browser's event loop is being blocked.
-
-            core.h_refill({memory: 4096, events: 256, cycles: 8192});
-            const elapsed = Date.now() - begin;
-            if (elapsed > 20) {
-                run_loop_timer = setTimeout(run_loop, 0);
-                break;
-            }
         }
     }
 
@@ -179,7 +144,7 @@ const tools_ui = make_ui("tools-ui", function (element, {
             wasm_url,
             on_wakeup(device_offset) {
                 devices.io.info("WAKE:", device_offset);
-                run_loop();
+                driver.wakeup(device_offset);
             },
             log_level: ufork.LOG_TRACE,
             on_log(log_level, ...values) {
@@ -203,6 +168,18 @@ const tools_ui = make_ui("tools-ui", function (element, {
             },
             import_map,
             compilers
+        });
+        driver = make_core_driver(core, function on_status(message) {
+            if (message.kind === "signal") {
+                const error_code = ufork.fix_to_i32(message.signal);
+                const error_text = ufork.fault_msg(error_code);
+                if (error_code === ufork.E_OK) {
+                    devices.io.info("IDLE:", error_text);
+                } else {
+                    devices.io.warn("FAULT:", error_text);
+                    stop();
+                }
+            }
         });
         const {compile, stringify_error} = lang_packs[lang_select.value];
         const ir = compile(text);
@@ -246,7 +223,8 @@ const tools_ui = make_ui("tools-ui", function (element, {
                 }
                 run_button.textContent = "⏹ Stop";
                 run_button.onclick = stop;
-                run_loop();
+                driver.command({kind: "subscribe", topic: "signal"});
+                driver.command({kind: "play"});
                 return true;
             })
         ])(function callback(value, reason) {

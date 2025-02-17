@@ -267,7 +267,11 @@ function make_driver(core, on_status) {
         throw new Error("Unknown command kind: " + message.kind);
     }
 
-    return Object.freeze({command, wakeup});
+    function dispose() {
+        clearTimeout(play_timer);
+    }
+
+    return Object.freeze({command, dispose, wakeup});
 }
 
 function demo(log) {

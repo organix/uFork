@@ -3,7 +3,6 @@
 /*jslint browser, devel */
 
 import hex from "https://ufork.org/lib/hex.js";
-import hexdump from "https://ufork.org/lib/hexdump.js";
 import parseq from "https://ufork.org/lib/parseq.js";
 import requestorize from "https://ufork.org/lib/rq/requestorize.js";
 import assemble from "https://ufork.org/lib/assemble.js";
@@ -14,6 +13,7 @@ import awp_dev from "https://ufork.org/js/awp_dev.js";
 import host_dev from "https://ufork.org/js/host_dev.js";
 import websockets_signaller from "https://ufork.org/js/websockets_signaller.js";
 import webrtc_transport from "https://ufork.org/js/webrtc_transport.js";
+import make_core_driver from "https://ufork.org/js/udbg/core_driver.js";
 import make_chat_db from "./chat_db.js";
 const wasm_url = import.meta.resolve("https://ufork.org/wasm/ufork.wasm");
 const asm_url = import.meta.resolve("./chat.asm");
@@ -25,43 +25,11 @@ const default_signaller_origin = (
     : "ws://"
 ) + location.host;
 
-let core;  // uFork wasm processor core
+let core;
+let driver;
 let h_on_stdin;
 let db = make_chat_db(default_signaller_origin);
 
-function ufork_run() {
-    // run until there is no more work, or an error occurs
-    const status = core.h_run_loop(0);
-    if (ufork.is_fix(status)) {
-        const err = ufork.fix_to_i32(status);
-        console.log("IDLE:", ufork.fault_msg(err));
-        if (err === ufork.E_OK) {
-            // processor idle
-            return ufork.E_OK;
-        }
-        if (err === ufork.E_MEM_LIM) {
-            core.h_refill({memory: 256});
-        } else if (err === ufork.E_MSG_LIM) {
-            core.h_refill({events: 16});
-        } else if (err === ufork.E_CPU_LIM) {
-            core.h_refill({cycles: 64});
-        } else {
-            // processor error
-            return err;
-        }
-    }
-    setTimeout(function wakeup() {  // run again on a subsequent turn
-        console.log("RUN:", ufork.print(status));
-        ufork_run();
-    }, 0);
-}
-
-function ufork_wake(dev_ofs) {
-    console.log("WAKE:", dev_ofs);
-    ufork_run();
-}
-
-//const $room = document.getElementById("room");
 const $stdin = document.getElementById("stdin");
 const $input_form = document.getElementById("input-form");
 $input_form.onsubmit = function (event) {
@@ -73,23 +41,13 @@ $input_form.onsubmit = function (event) {
         $stdin.value = "";
     }
 };
-
-const utf8encoder = new TextEncoder();
 const $stdout = document.getElementById("stdout");
-$stdout.onclick = function () {
-    const text = $stdout.value;
-    const utf8 = utf8encoder.encode(text);
-    const hexd = hexdump(utf8, 0, utf8.length);
-    console.log(hexd);
-};
 $stdout.value = ""; // prevent Firefox retaining the text thru a page reload
+
 function on_stdout(char) {
-    if ($stdout) {
-        const text = $stdout.value;
-        //console.log("$stdout.value =", text);
-        if (typeof text === "string") {
-            $stdout.value = text + char;
-        }
+    const text = $stdout?.value;
+    if (typeof text === "string") {
+        $stdout.value = text + char;
     }
 }
 
@@ -142,41 +100,31 @@ function room_petname(awp_store) {
     return petname;
 }
 
-function boot(entrypoint, awp_store) {
-
-// Get the integer petname of the acquaintance who is hosting the room, and
-// provide it to the uFork program as a boot capability.
-
-    const petname = room_petname(awp_store);
-    core.h_install(ufork.fixnum(room_key), ufork.fixnum(petname));
-    core.h_boot(entrypoint);
-    return ufork_run();
-}
-
 function save_store(store) {
-    db.set_store()(
-        function callback(value, reason) {
-            if (value === undefined) {
-                console.error(reason);
-            }
-        },
-        store
-    );
+    db.set_store()(console.log, store);
 }
 
 const $importmap = document.querySelector("[type=importmap]");
 const transport = webrtc_transport(websockets_signaller(), console.log);
 core = ufork.make_core({
     wasm_url,
-    on_wakeup: ufork_wake,
-    on_log: console.log,
-    log_level: ufork.LOG_DEBUG,
+    on_wakeup(device_offset) {
+        driver.wakeup(device_offset);
+    },
     import_map: (
         $importmap
         ? JSON.parse($importmap.textContent).imports
         : {}
     ),
     compilers: {asm: assemble}
+});
+driver = make_core_driver(core, function on_status(message) {
+    if (message.kind === "signal") {
+        const error_code = ufork.fix_to_i32(message.signal);
+        if (error_code !== ufork.E_OK) {
+            console.error("FAULT", ufork.fault_msg(error_code));
+        }
+    }
 });
 parseq.sequence([
     core.h_initialize(),
@@ -187,7 +135,6 @@ parseq.sequence([
     requestorize(function ([the_awp_store, asm_module]) {
         h_on_stdin = io_dev(core, on_stdout);
         timer_dev(core);
-//        timer_dev(core, 5);  // slow-down factor 5x
         const make_ddev = host_dev(core);
         awp_dev({
             core,
@@ -196,10 +143,15 @@ parseq.sequence([
             stores: [the_awp_store],
             on_store_change: save_store
         });
-        return boot(asm_module.boot, the_awp_store);
+
+// Get the integer petname of the acquaintance who is hosting the room, and
+// provide it to the uFork program as a boot capability.
+
+        const petname = room_petname(the_awp_store);
+        core.h_install(ufork.fixnum(room_key), ufork.fixnum(petname));
+        core.h_boot(asm_module.boot);
+        driver.command({kind: "subscribe", topic: "signal"});
+        driver.command({kind: "play"});
+        return true;
     })
-])(function callback(value, reason) {
-    if (value === undefined) {
-        console.error(reason);
-    }
-});
+])(console.log);

@@ -17,40 +17,13 @@ import assemble from "https://ufork.org/lib/assemble.js";
 import scm from "https://ufork.org/lib/scheme.js";
 import ufork from "https://ufork.org/js/ufork.js";
 import io_dev from "https://ufork.org/js/io_dev.js";
+import make_core_driver from "https://ufork.org/js/udbg/core_driver.js";
 const lib_url = import.meta.resolve("https://ufork.org/lib/");
 const wasm_url = import.meta.resolve("https://ufork.org/wasm/ufork.wasm");
 
-const utf8_encoder = new TextEncoder();
-const stdin_buffer_size = 65536; // 64KB
-
 let core;
-
-function run() {
-    while (true) {
-        // run until there is no more work, or an error occurs
-        const sig = core.h_run_loop(0);
-        if (ufork.is_fix(sig)) {
-            const err = ufork.fix_to_i32(sig);
-            const msg = ufork.fault_msg(err);
-            if (err === ufork.E_OK) {
-                break;  // no more work to do, so we exit...
-            }
-            if (
-                err === ufork.E_MEM_LIM
-                || err === ufork.E_MSG_LIM
-                || err === ufork.E_CPU_LIM
-            ) {
-                core.h_refill({memory: 4096, events: 256, cycles: 8192});
-            } else {
-                globalThis.console.error("FAULT", msg);
-                break;  // report error, then exit...
-            }
-        } else {
-            globalThis.console.error("SIGNAL", ufork.print(sig));
-            break;  // report signal, then exit...
-        }
-    }
-}
+let driver;
+let utf8_encoder = new TextEncoder();
 
 const unqualified_src = Deno.args[0];
 if (unqualified_src === undefined || unqualified_src === "") {
@@ -59,14 +32,23 @@ if (unqualified_src === undefined || unqualified_src === "") {
 }
 const cwd_dir = toFileUrl(join(Deno.cwd(), "./")); // ensure trailing slash
 const src = new URL(unqualified_src, cwd_dir).href;
-
 core = ufork.make_core({
     wasm_url,
-    on_wakeup: run,
+    on_wakeup(device_offset) {
+        driver.wakeup(device_offset);
+    },
     on_log: globalThis.console.error,
     log_level: ufork.LOG_WARN,
     compilers: {asm: assemble, scm: scm.compile},
     import_map: {"https://ufork.org/lib/": lib_url}
+});
+driver = make_core_driver(core, function on_status(message) {
+    if (message.kind === "signal") {
+        const error_code = ufork.fix_to_i32(message.signal);
+        if (error_code !== ufork.E_OK) {
+            globalThis.console.error("FAULT", ufork.fault_msg(error_code));
+        }
+    }
 });
 parseq.sequence([
     core.h_initialize(),
@@ -75,7 +57,7 @@ parseq.sequence([
         const h_on_stdin = io_dev(core, function on_stdout(string) {
             Deno.stdout.write(utf8_encoder.encode(string));
         });
-        let in_buffer = new Uint8Array(stdin_buffer_size);
+        let in_buffer = new Uint8Array(65536);
         (function read() {
             return Deno.stdin.read(in_buffer).then(function (nr_bytes) {
                 if (!Number.isSafeInteger(nr_bytes)) {
@@ -86,7 +68,8 @@ parseq.sequence([
             });
         }());
         core.h_boot(asm_module.boot);
-        run();
+        driver.command({kind: "subscribe", topic: "signal"});
+        driver.command({kind: "play"});
         return true;
     })
 ])(function (ok, reason) {

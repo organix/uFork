@@ -28,43 +28,12 @@ import host_dev from "https://ufork.org/js/host_dev.js";
 import blob_dev from "https://ufork.org/js/blob_dev.js";
 import tcp_dev from "https://ufork.org/js/tcp_dev.js";
 import tcp_transport_deno from "https://ufork.org/js/tcp_transport_deno.js";
+import make_core_driver from "https://ufork.org/js/udbg/core_driver.js";
 const lib_url = import.meta.resolve("https://ufork.org/lib/");
 const wasm_url = import.meta.resolve("https://ufork.org/wasm/ufork.wasm");
 
 let core;
-
-function run() {
-    while (true) {
-        // run until there is no more work, or an error occurs
-        const sig = core.h_run_loop(0);
-        const err = ufork.fix_to_i32(sig);
-        const msg = ufork.fault_msg(err);
-        if (err === ufork.E_OK) {
-            break;  // no more work to do, so we exit...
-        }
-        if (
-            err === ufork.E_MEM_LIM
-            || err === ufork.E_MSG_LIM
-            || err === ufork.E_CPU_LIM
-        ) {
-            core.h_refill({memory: 4096, events: 256, cycles: 8192});
-        } else {
-            globalThis.console.error("FAULT", msg);
-            break;  // report error, then exit...
-        }
-    }
-}
-
-function audit(code, evidence, ep, kp) {
-    globalThis.console.error("code:", code, "evidence:", hex.from(evidence), "ep:", hex.from(ep), "kp:", hex.from(kp));
-    //const k_quad = core.u_read_quad(kp);
-    //globalThis.console.error("k_quad:", k_quad);
-    //const ip = k_quad.t;
-    //const sp = k_quad.x;
-    //hex.from(ucode.from_uf(cell), 16);
-    //globalThis.console.error("ip:", hex.from(ip), "sp:", hex.from(sp), "ep:", hex.from(k_quad.y));
-    //globalThis.console.error(core.u_sourcemap(ip));
-}
+let driver;
 
 const unqualified_src = Deno.args[0];
 const bind_address = Deno.args[1] ?? "127.0.0.1:8370";
@@ -77,12 +46,29 @@ const src = new URL(unqualified_src, cwd_dir).href;
 
 core = ufork.make_core({
     wasm_url,
-    on_wakeup: run,
-    on_audit: audit,
+    on_wakeup(device_offset) {
+        driver.wakeup(device_offset);
+    },
+    on_audit(code, evidence, ep, kp) {
+        globalThis.console.error(
+            "code: " + code,
+            "evidence: " + hex.from(evidence),
+            "ep: " + hex.from(ep),
+            "kp: " + hex.from(kp)
+        );
+    },
     on_log: globalThis.console.error,
     log_level: ufork.LOG_TRACE,
     compilers: {asm: assemble, hum: compile_humus},
     import_map: {"https://ufork.org/lib/": lib_url}
+});
+driver = make_core_driver(core, function on_status(message) {
+    if (message.kind === "signal") {
+        globalThis.console.error(
+            "SIGNAL",
+            ufork.fault_msg(ufork.fix_to_i32(message.signal))
+        );
+    }
 });
 parseq.sequence([
     core.h_initialize(),
@@ -99,7 +85,8 @@ parseq.sequence([
             tcp_transport_deno()
         );
         core.h_boot(module.boot);
-        run();
+        driver.command({kind: "subscribe", topic: "signal"});
+        driver.command({kind: "play"});
         return true;
     })
 ])(function (ok, reason) {
