@@ -5,9 +5,13 @@ SPI (Serial Peripheral Interface) -- physical layer
     +-------------------+
     | spi_phy           |
     |                   |
-<---|s_cs        o_rdata|=8=>
-    |              o_rdy|--->
+<---|s_cs               |
+    |               CPOL|<---
+    |               CPHA|<---
+    |                   |
+    |            o_rdata|=8=>
 <---|s_clk          i_rd|<---
+    |              o_rdy|--->
     |                   |
 <---|s_copi        o_bsy|--->
     |               i_wr|<---
@@ -47,9 +51,9 @@ module spi_phy #(
     parameter WIDTH         = 8                         // data bus width (in bits)
 ) (
     input                   i_clk,                      // system clock
-
+    
     output reg              s_cs,                       // serial chip select
-    output reg              s_clk,                      // serial clock
+    output wire             s_clk,                      // serial clock
     output                  s_copi,                     // serial controller out / peripheral in
     input                   s_cipo,                     // serial controller in / peripheral out
 
@@ -68,7 +72,6 @@ module spi_phy #(
 
     // initialize output registers
     initial s_cs = 1'b1;
-    initial s_clk = 1'b0;
     initial o_rdata = 0;
     initial o_rdy = 1'b0;
     initial o_bsy = 1'b0;
@@ -95,6 +98,9 @@ module spi_phy #(
         end
     end
 
+    reg int_clk = 1'b0;
+    s_clk = CPOL ^ int_clk;
+
     // enumerated values for state
     localparam START        = 2'h0;
     localparam SAMPLE       = 2'h1;
@@ -103,7 +109,7 @@ module spi_phy #(
 
     // state-machine
     reg [1:0] state = START;                            // initial state
-    always @(posedge i_clk) begin
+    always @(posedge (i_clk ^ CPHA)) begin
         case (state)
             START: begin
                 if (o_bsy) begin
@@ -115,11 +121,11 @@ module spi_phy #(
                 end
             end
             SAMPLE: begin
-                s_clk <= 1'b1;                          // sample edge
+                int_clk <= 1'b1;                          // sample edge
                 state <= SHIFT;
             end
             SHIFT: begin
-                s_clk <= 1'b0;                          // shift edge
+                int_clk <= 1'b0;                          // shift edge
                 wdata_sr <= { wdata_sr[WIDTH-2:0], 1'b0 };
                 rdata_sr <= rdata;
                 if (bit_count != 0) begin
