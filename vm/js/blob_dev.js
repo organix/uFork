@@ -319,6 +319,7 @@ function blob_dev(core, make_ddev) {
 // Read response.
 
                 core.u_defer(function () {
+                    core.h_release_stub(event_stub_ptr);
                     const h_reply = reads[read_nr];
                     if (h_reply !== undefined) {
                         h_reply(message);
@@ -331,6 +332,7 @@ function blob_dev(core, make_ddev) {
 // Source response.
 
                 core.u_defer(function () {
+                    core.h_release_stub(event_stub_ptr);
                     const h_reply = sources[source_nr];
                     if (h_reply !== undefined) {
                         h_reply(message);
