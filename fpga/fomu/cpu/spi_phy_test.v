@@ -38,40 +38,26 @@ module spi_phy_test (
     ) SPI (
         .i_clk(i_clk),
 
-        .s_cs(cs),
+//        .s_cs(cs),
         .s_clk(sclk),
         .s_copi(copi),
         .s_cipo(cipo),
 
-        .o_rdata(rdata),
-        .o_rdy(rdy),
-        .i_rd(rd),
-
-        .o_bsy(bsy),
         .i_wr(wr),
-        .i_wdata(wdata)
+        .i_wdata(wdata),
+        .o_bsy(bsy),
+        .o_rdata(rdata)
     );
 
-    wire cs;
+    reg cs = 1'b1;
     wire sclk;
     wire copi;
-    reg cipo = 1'b0;
+    wire cipo = !cs && !copi;
 
-    wire [WIDTH-1:0] rdata;
-    wire rdy;
-    reg rd = 1'b0;
-
-    wire bsy;
     reg wr = 1'b0;
     reg [WIDTH-1:0] wdata = 0;
-
-    //
-    // feed COPI back into CIPO (delayed & inverted)
-    //
-
-    always @(posedge i_clk) begin
-        cipo <= !cs && !copi;
-    end
+    wire bsy;
+    wire [WIDTH-1:0] rdata;
 
     //
     // test sequencer
@@ -97,6 +83,8 @@ module spi_phy_test (
         if (o_running) begin
             if (step == 8'hFF) begin
                 o_passed <= 1'b0;                       // register failure
+            end else if (step == 8'h03) begin
+                cs <= 1'b0;
             end else if (step == 8'h05) begin
                 wdata <= 8'b10011011;
                 wr <= 1'b1;
@@ -104,46 +92,35 @@ module spi_phy_test (
                 wr <= 1'b0;
             end else if (step == 8'h07) begin
                 /*
+                */
                 if (!bsy) begin
                     o_passed <= 1'b0;                   // register failure
                 end
-                */
-            end else if (step == 8'h08) begin
+            end else if (step == 8'h17) begin
                 /*
+                */
                 if (bsy) begin
                     o_passed <= 1'b0;                   // register failure
                 end
-                */
             end else if (step == 8'h1C) begin
+                /*
+                */
                 if (rdata != 8'b01100100) begin
                     o_passed <= 1'b0;                   // register failure
                 end
             end else if (step == 8'h20) begin
                 wdata <= 8'b01010011;
                 wr <= 1'b1;
-                /*
-                if (!rdy) begin
-                    o_passed <= 1'b0;                   // register failure
-                end
-                */
-                rd <= 1'b1;
             end else if (step == 8'h21) begin
-                wr <= 1'b0;
-                rd <= 1'b0;
-            end else if (step == 8'h2A) begin
-                wdata <= 8'b01110100;
-                wr <= 1'b1;
-            end else if (step == 8'h2B) begin
                 wr <= 1'b0;
             end else if (step == 8'h33) begin
                 /*
-                if (!rdy) begin
+                */
+                if (bsy || rdata != 8'b10101100) begin
                     o_passed <= 1'b0;                   // register failure
                 end
-                */
-                rd <= 1'b1;
-            end else if (step == 8'h34) begin
-                rd <= 1'b0;
+            end else if (step == 8'h36) begin
+                cs <= 1'b1;
             end
         end
     end
