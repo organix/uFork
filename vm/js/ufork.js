@@ -1526,7 +1526,7 @@ function make_core({
         h_event_enqueue(evt);
     }
 
-// FIXME: need a general strategy for saving device state
+// FIXME: need a general strategy for saving and restoring device state
 
     function h_snapshot() {
         return {
@@ -1547,8 +1547,6 @@ function make_core({
         const ram_len = snapshot.ram.byteLength;
         const ram = new Uint8Array(mem_base, ram_ofs, ram_len);
         ram.set(snapshot.ram);
-
-        // FIXME: need a general strategy for restoring device state
 
         const rom_top = romptr(rom_len >> 2);
         h_set_rom_top(rom_top);  // register new top-of-ROM

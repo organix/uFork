@@ -87,7 +87,10 @@ function debugger_ui({
     );
     const statuses = {
         interval(message) {
-            if (document.activeElement !== play_slider) {
+            const is_sliding = (
+                document.activeElement === play_slider && document.hasFocus()
+            );
+            if (!is_sliding) {
                 play_slider.value = message.milliseconds;
             }
         },

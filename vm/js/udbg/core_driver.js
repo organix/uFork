@@ -32,7 +32,7 @@
 
 //  {kind: "step"}
 
-//      Execute a single instruction from the KQ and halt, producing a "signal"
+//      Execute a single VM instruction cycle and produce a "signal"
 //      status message.
 
 //  {kind: "auto_refill", enabled: <boolean>}
@@ -60,7 +60,7 @@
 //  {kind: "signal", signal: <raw>}
 
 //      The core halted, producing a raw 'signal' value:
-//          - The fixnum 0 (E_OK) indicates that core is idle.
+//          - The fixnum 0 (E_OK) indicates that the core is idle.
 //          - A negative fixnum indicates a fault occurred, e.g. E_FAIL.
 //          - #? indicates that the core hit the step limit, but is not idle.
 
@@ -73,7 +73,8 @@
 //      Whether the driver is currently "playing". This does not necessarily
 //      mean the core is running, just that the core will run when it is given
 //      some work. The driver can pause due to conditions detected in the core,
-//      for example when a 'debug' instruction reaches the front of the KQ.
+//      for example when a 'debug' instruction is encountered.
+
 //      The driver is initially paused (false).
 
 //  {kind: "ram", bytes: <Uint8Array>}
@@ -141,7 +142,7 @@ function make_driver(core, on_status) {
         publish("source");
     }
 
-    function refilled(signal) {
+    function auto_refill(signal) {
         if (auto_refill_enabled && signal !== ufork.UNDEF_RAW) {
             const error_code = ufork.fix_to_i32(signal);
             if (
@@ -158,7 +159,7 @@ function make_driver(core, on_status) {
 
     function step() {
         const signal = core.h_run_loop(1);
-        if (refilled(signal)) {
+        if (auto_refill(signal)) {
             return step();  // try again
         }
         if (topics.has("signal")) {
@@ -182,8 +183,8 @@ function make_driver(core, on_status) {
 
         while (true) {
             const signal = core.h_run_loop(
-                play_debug
-                ? 1  // watch for a 'debug' instruction
+                (play_debug || interval > 0)
+                ? 1  // step by step
                 : 0  // run free
             );
 
@@ -203,7 +204,7 @@ function make_driver(core, on_status) {
 
 // Handle resource exhaustion.
 
-            if (!refilled(signal)) {
+            if (!auto_refill(signal)) {
                 if (ufork.is_fix(signal)) {
                     if (topics.has("signal")) {
                         on_status({kind: "signal", signal});
