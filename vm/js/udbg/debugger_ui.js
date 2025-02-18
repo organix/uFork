@@ -43,6 +43,13 @@ const debugger_ui = make_ui("debugger-ui", function (element, {
             flex: 1 1;
             min-height: 0;
         }
+        controls_container {
+            display: flex;
+            gap: 7px;
+            padding: 7px;
+            align-items: stretch;
+            border-bottom: 1px solid ${theme.gray};
+        }
         fault_message {
             font-family: monospace;
             border: 1px solid currentcolor;
@@ -51,6 +58,9 @@ const debugger_ui = make_ui("debugger-ui", function (element, {
             align-items: center;
             justify-content: center;
             padding: 0 6px;
+        }
+        flex_spacer {
+            flex: 1 1;
         }
     `);
     const play_button = dom("button", {
@@ -68,6 +78,7 @@ const debugger_ui = make_ui("debugger-ui", function (element, {
         type: "range",
         min: 0,
         max: 1000,
+        title: "Slowdown",
         oninput() {
             send_command({
                 kind: "interval",
@@ -84,8 +95,8 @@ const debugger_ui = make_ui("debugger-ui", function (element, {
     });
     const fault_message = dom("fault_message");
     const views = {
-        sources: source_monitor_ui({}),
-        ram: ram_explorer_ui({text_color: theme.blue})
+        ram: ram_explorer_ui({text_color: theme.blue}),
+        sources: source_monitor_ui({})
     };
 
     function set_view(new_view) {
@@ -109,7 +120,7 @@ const debugger_ui = make_ui("debugger-ui", function (element, {
                 ? theme.green
                 : theme.red
             )
-            : theme.white
+            : "inherit"
         );
     }
 
@@ -122,25 +133,13 @@ const debugger_ui = make_ui("debugger-ui", function (element, {
             }
         },
         [
-            dom("option", {value: "sources"}, "Sources"),
-            dom("option", {value: "registers"}, "CPU Registers"),
             dom("option", {value: "ram"}, "RAM Explorer"),
-            dom("option", {value: "rom"}, "ROM Explorer"),
-            dom("option", {value: "memory"}, "Memory Profiler")
+            dom("option", {value: "sources"}, "Sources")
         ]
     );
-    const spacer = dom("flex_spacer", {style: {flex: "1 1"}});
+    const spacer = dom("flex_spacer");
     const controls = dom(
         "controls_container",
-        {
-            style: {
-                display: "flex",
-                gap: "6px",
-                padding: "10px",
-                alignItems: "stretch",
-                borderBottom: "1px solid " + theme.gray
-            }
-        },
         [menu, step_button, play_button, play_slider, spacer, fault_message]
     );
     const statuses = {
@@ -180,13 +179,19 @@ const debugger_ui = make_ui("debugger-ui", function (element, {
         const was_connected = connected;
         connected = new_connected;
         step_button.disabled = !connected;
-        if (!was_connected && connected) {
-            send_command({kind: "subscribe", topic: "interval"});
-            send_command({kind: "subscribe", topic: "playing"});
-            send_command({kind: "subscribe", topic: "ram"});
-            send_command({kind: "subscribe", topic: "signal"});
-            send_command({kind: "subscribe", topic: "source"});
-            send_command({kind: "subscribe", topic: "wakeup"});
+        if (connected) {
+            if (!was_connected) {
+                on_signal(ufork.UNDEF_RAW);
+                send_command({kind: "subscribe", topic: "interval"});
+                send_command({kind: "subscribe", topic: "playing"});
+                send_command({kind: "subscribe", topic: "ram"});
+                send_command({kind: "subscribe", topic: "signal"});
+                send_command({kind: "subscribe", topic: "source"});
+                send_command({kind: "subscribe", topic: "wakeup"});
+            }
+        } else {
+            fault_message.textContent = "connecting";
+            fault_message.style.color = theme.yellow;
         }
     }
 
