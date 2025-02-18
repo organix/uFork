@@ -1,5 +1,4 @@
-// An interactive remote debugger for remote uFork cores. It is simply a DOM
-// element that can be embedded in existing web applications.
+// An interactive debugger for remote uFork cores.
 
 /*jslint browser, global */
 
@@ -7,47 +6,53 @@ import assemble from "https://ufork.org/lib/assemble.js";
 import dom from "https://ufork.org/lib/dom.js";
 import parseq from "https://ufork.org/lib/parseq.js";
 import requestorize from "https://ufork.org/lib/rq/requestorize.js";
+import make_ui from "https://ufork.org/lib/ui.js";
 import ufork from "../ufork.js";
 import timer_dev from "../timer_dev.js";
 import make_core_driver from "./core_driver.js";
-import memory_dump from "./memory_dump.js";
 import source_monitor_ui from "./source_monitor_ui.js";
+import ram_explorer_ui from "./ram_explorer_ui.js";
 const wasm_url = import.meta.resolve("https://ufork.org/wasm/ufork.debug.wasm");
 const lib_url = import.meta.resolve("../../../lib/");
 
-const blue = "#3CF";
-const green = "#3F0";
-const red = "#F30";
-
-function debugger_ui({
+const default_view = "ram";
+const theme = {
+    red: "#F92672",
+    orange: "#FD971F",
+    silver: "#BFBFBF",
+    gray: "#484848",
+    black: "#222222",
+    blue: "#60B8EF",
+    green: "#28C846",
+    purple: "#CE80FF",
+    yellow: "#E6DB74"
+};
+const debugger_ui = make_ui("debugger-ui", function (element, {
     send_command,
-    connected = false
+    connected = false,
+    view = default_view
 }) {
-    const element = dom("debugger-ui", {
-        style: {
-            display: "flex",
-            flexDirection: "column",
-            gap: "10px",
-            padding: "10px",
-            background: "#333" // dark gray
+    const shadow = element.attachShadow({mode: "closed"});
+    const style = dom("style", `
+        :host {
+            display: flex;
+            flex-direction: column;
+            background: ${theme.black};
         }
-    });
-    const source = source_monitor_ui({});
-    const ram = dom("ram_monitor", {
-        style: {
-            display: "block",
-            color: blue,
-            fontFamily: "monospace",
-            whiteSpace: "pre",
-            flex: "1 1",
-            overflow: "auto"
+        :host > :last-child { /* view */
+            flex: 1 1;
+            min-height: 0;
         }
-    });
-    const monitors = dom(
-        "monitor_container",
-        {style: {display: "flex", flex: "1 1", gap: "10px", minHeight: "0"}},
-        [source, ram]
-    );
+        fault_message {
+            font-family: monospace;
+            border: 1px solid currentcolor;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 6px;
+        }
+    `);
     const play_button = dom("button", {
         type: "button",
         onclick() {
@@ -77,13 +82,66 @@ function debugger_ui({
         },
         textContent: "Step"
     });
-    const fault_message = dom("fault_message", {
-        style: {fontFamily: "monospace"}
-    });
+    const fault_message = dom("fault_message");
+    const views = {
+        sources: source_monitor_ui({}),
+        ram: ram_explorer_ui({text_color: theme.blue})
+    };
+
+    function set_view(new_view) {
+        if (typeof views[new_view] !== "object") {
+            new_view = default_view;
+        }
+        view = new_view;
+        shadow.lastChild.replaceWith(views[view]);
+    }
+
+    function on_signal(signal) {
+        fault_message.textContent = (
+            ufork.is_fix(signal)
+            ? ufork.fault_msg(ufork.fix_to_i32(signal))
+            : "?"
+        );
+        fault_message.style.color = (
+            ufork.is_fix(signal)
+            ? (
+                ufork.fix_to_i32(signal) === ufork.E_OK
+                ? theme.green
+                : theme.red
+            )
+            : theme.white
+        );
+    }
+
+    const menu = dom(
+        "select",
+        {
+            value: view,
+            oninput() {
+                set_view(menu.value);
+            }
+        },
+        [
+            dom("option", {value: "sources"}, "Sources"),
+            dom("option", {value: "registers"}, "CPU Registers"),
+            dom("option", {value: "ram"}, "RAM Explorer"),
+            dom("option", {value: "rom"}, "ROM Explorer"),
+            dom("option", {value: "memory"}, "Memory Profiler")
+        ]
+    );
+    const spacer = dom("flex_spacer", {style: {flex: "1 1"}});
     const controls = dom(
         "controls_container",
-        {style: {display: "flex", gap: "6px", alignItems: "center"}},
-        [step_button, play_button, play_slider, fault_message]
+        {
+            style: {
+                display: "flex",
+                gap: "6px",
+                padding: "10px",
+                alignItems: "stretch",
+                borderBottom: "1px solid " + theme.gray
+            }
+        },
+        [menu, step_button, play_button, play_slider, spacer, fault_message]
     );
     const statuses = {
         interval(message) {
@@ -102,22 +160,13 @@ function debugger_ui({
             );
         },
         ram(message) {
-            ram.textContent = memory_dump(message.bytes, ufork.ramptr(0));
+            views.ram.set_bytes(message.bytes);
         },
         signal(message) {
-            fault_message.textContent = (
-                ufork.is_fix(message.signal)
-                ? ufork.fault_msg(ufork.fix_to_i32(message.signal))
-                : ""
-            );
-            fault_message.style.color = (
-                message.signal === ufork.fixnum(ufork.E_OK)
-                ? green
-                : red
-            );
+            on_signal(message.signal);
         },
         source(message) {
-            source.set_sourcemap(message.sourcemap);
+            views.sources.set_sourcemap(message.sourcemap);
         }
     };
 
@@ -141,12 +190,13 @@ function debugger_ui({
         }
     }
 
-    element.append(monitors, controls);
+    shadow.append(style, controls, dom("view_placeholder"));
+    on_signal(ufork.UNDEF_RAW);
     set_connected(connected);
+    set_view(view);
     element.receive_status = receive_status;
     element.set_connected = set_connected;
-    return element;
-}
+});
 
 function demo(log) {
     document.documentElement.innerHTML = "";
@@ -179,6 +229,9 @@ function demo(log) {
     });
     element.style.position = "fixed";
     element.style.inset = "0";
+    document.head.append(
+        dom("meta", {name: "color-scheme", content: "dark"})
+    );
     document.body.append(element);
 }
 

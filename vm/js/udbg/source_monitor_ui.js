@@ -17,11 +17,10 @@ function source_monitor_ui({sourcemap}) {
     const element = dom("source_monitor-ui", {
         style: {
             display: "block",
-            color: "#F6F",
             fontFamily: "monospace",
             whiteSpace: "pre",
-            flex: "1 1",
-            overflow: "auto"
+            overflow: "auto",
+            padding: "10px"
         }
     });
 

@@ -107,6 +107,7 @@ function make_driver(core, on_status) {
     let interval = 0;
     let play_debug;
     let play_timer;
+    let signal;
     let topics = new Set();
 
     function publish(kind) {
@@ -123,6 +124,8 @@ function make_driver(core, on_status) {
             on_status({kind: "ram", bytes: core.h_ram()});
         } else if (kind === "rom") {
             on_status({kind: "rom", bytes: core.h_rom()});
+        } else if (kind === "signal" && signal !== undefined) {
+            on_status({kind: "signal", signal});
         } else if (kind === "source") {
             const ip = core.u_current_continuation()?.ip;
             on_status({
@@ -158,7 +161,7 @@ function make_driver(core, on_status) {
     }
 
     function step() {
-        const signal = core.h_run_loop(1);
+        signal = core.h_run_loop(1);
         if (auto_refill(signal)) {
             return step();  // try again
         }
@@ -182,7 +185,7 @@ function make_driver(core, on_status) {
 // Run until there is no more work or an unrecoverable error occurs.
 
         while (true) {
-            const signal = core.h_run_loop(
+            signal = core.h_run_loop(
                 (play_debug || interval > 0)
                 ? 1  // step by step
                 : 0  // run free
