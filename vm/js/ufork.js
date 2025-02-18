@@ -247,7 +247,7 @@ const error_messages = [
     "actor stopped",                    // E_STOP = -15
     "actor transaction aborted"         // E_ABORT = -16
 ];
-const instr_label = [
+const instr_labels = [
     "debug",
     "jump",
     "push",
@@ -281,14 +281,21 @@ const instr_label = [
     "VM_1E",        // reserved
     "VM_1F"         // reserved
 ];
-const dict_imm_label = [
+const gc_labels = [
+    "free",
+    "gen_x",
+    "gen_y",
+    "scan"
+];
+let imm_labels = Object.create(null);
+imm_labels[VM_DICT] = [
     "has",
     "get",
     "add",
     "set",
     "del"
 ];
-const alu_imm_label = [
+imm_labels[VM_ALU] = [
     "not",
     "and",
     "or",
@@ -303,7 +310,7 @@ const alu_imm_label = [
     "rol",
     "ror"
 ];
-const cmp_imm_label = [
+imm_labels[VM_CMP] = [
     "eq",
     "ge",
     "gt",
@@ -311,14 +318,14 @@ const cmp_imm_label = [
     "le",
     "ne"
 ];
-const actor_imm_label = [
+imm_labels[VM_ACTOR] = [
     "send",
     "post",
     "create",
     "become",
     "self"
 ];
-const deque_imm_label = [
+imm_labels[VM_DEQUE] = [
     "new",
     "empty",
     "push",
@@ -327,12 +334,12 @@ const deque_imm_label = [
     "pull",
     "len"
 ];
-const end_imm_label = [
+imm_labels[VM_END] = [
     "abort",
     "stop",
     "commit"
 ];
-const sponsor_imm_label = [
+imm_labels[VM_SPONSOR] = [
     "new",
     "memory",
     "events",
@@ -340,12 +347,6 @@ const sponsor_imm_label = [
     "reclaim",
     "start",
     "stop"
-];
-const gc_labels = [
-    "free",
-    "gen_x",
-    "gen_y",
-    "scan"
 ];
 
 // CRLF
@@ -512,24 +513,23 @@ function print_quad(quad) {
     s += ", ";
     if (quad.t === INSTR_T) {
         const op = fix_to_i32(quad.x);  // translate opcode
-        if (op < instr_label.length) {
-            s += instr_label[op];
+        const op_label = instr_labels[op];
+        if (op_label !== undefined) {
+            s += op_label;
             s += ", ";
             const imm = fix_to_i32(quad.y);  // translate immediate
-            if ((quad.x === VM_DICT) && (imm < dict_imm_label.length)) {
-                s += dict_imm_label[imm];
-            } else if ((quad.x === VM_ALU) && (imm < alu_imm_label.length)) {
-                s += alu_imm_label[imm];
-            } else if ((quad.x === VM_CMP) && (imm < cmp_imm_label.length)) {
-                s += cmp_imm_label[imm];
-            } else if ((quad.x === VM_ACTOR) && (imm < actor_imm_label.length)) {
-                s += actor_imm_label[imm];
-            } else if ((quad.x === VM_DEQUE) && (imm < deque_imm_label.length)) {
-                s += deque_imm_label[imm];
-            } else if (quad.x === VM_END) {
-                s += end_imm_label[imm + 1];  // END_ABORT === -1
-            } else if ((quad.x === VM_SPONSOR) && (imm < sponsor_imm_label.length)) {
-                s += sponsor_imm_label[imm];
+            const op_imm_labels = imm_labels[quad.x];
+            const fudge = (
+                quad.x === VM_END
+                ? 1
+                : 0
+            );
+            if (
+                is_fix(quad.y)
+                && op_imm_labels !== undefined
+                && op_imm_labels[imm + fudge] !== undefined
+            ) {
+                s += op_imm_labels[imm + fudge];
             } else {
                 s += print(quad.y);
             }
@@ -1046,7 +1046,7 @@ function make_core({
                 arity_checks.push([quad.t, arity, node.t]);
             } else if (the_kind === "instr") {
                 quad.t = INSTR_T;
-                quad.x = label(node.op, instr_label);
+                quad.x = label(node.op, instr_labels);
                 if (node.op === "typeq") {
                     const imm_raw = value(node.imm);
                     type_checks.push({
@@ -1084,24 +1084,24 @@ function make_core({
                     quad.y = instruction(node.t);
                     quad.z = instruction(node.f);
                 } else if (node.op === "dict") {
-                    quad.y = label(node.imm, dict_imm_label);
+                    quad.y = label(node.imm, imm_labels[VM_DICT]);
                     quad.z = instruction(node.k);
                 } else if (node.op === "deque") {
-                    quad.y = label(node.imm, deque_imm_label);
+                    quad.y = label(node.imm, imm_labels[VM_DEQUE]);
                     quad.z = instruction(node.k);
                 } else if (node.op === "alu") {
-                    quad.y = label(node.imm, alu_imm_label);
+                    quad.y = label(node.imm, imm_labels[VM_ALU]);
                     quad.z = instruction(node.k);
                 } else if (node.op === "cmp") {
-                    quad.y = label(node.imm, cmp_imm_label);
+                    quad.y = label(node.imm, imm_labels[VM_CMP]);
                     quad.z = instruction(node.k);
                 } else if (node.op === "actor") {
-                    quad.y = label(node.imm, actor_imm_label);
+                    quad.y = label(node.imm, imm_labels[VM_ACTOR]);
                     quad.z = instruction(node.k);
                 } else if (node.op === "end") {
-                    quad.y = label(node.imm, end_imm_label, -1);
+                    quad.y = label(node.imm, imm_labels[VM_END], -1);
                 } else if (node.op === "sponsor") {
-                    quad.y = label(node.imm, sponsor_imm_label);
+                    quad.y = label(node.imm, imm_labels[VM_SPONSOR]);
                     quad.z = instruction(node.k);
                 } else if (node.op !== "jump") {
 
