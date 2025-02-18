@@ -243,10 +243,10 @@ in a single CPU-instruction cycle.
     * `1F`: CSR
 
   * `Fx`: SPI Flash Memory
-    * `F0`: SO?
-    * `F1`: SO!
-    * `F2`: SI?
-    * `F3`: SI@
+    * `F0`: CS!
+    * `F1`: DO!
+    * `F2`: DR?
+    * `F3`: DI@
 
 ## Instruction Encoding
 

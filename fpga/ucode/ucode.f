@@ -1930,6 +1930,40 @@ VARIABLE here   ( upload address )
     THEN
     MONITOR ;
 
+: spi_buf DATA ( 16 cells )
+0xffff , 0xffff , 0xffff , 0xffff ,
+0xffff , 0xffff , 0xffff , 0xffff ,
+0xffff , 0xffff , 0xffff , 0xffff ,
+0xffff , 0xffff , 0xffff , 0xffff ,
+
+: spi_out ( byte -- )
+    BEGIN
+        0xf2 IO@            ( wait until ready/done )
+    UNTIL
+    0xf1 IO! ;              ( transmit byte )
+
+: spi_in ( -- byte )
+    -1 spi_out              ( send dummy byte )
+    BEGIN
+        0xf2 IO@            ( wait until ready/done )
+    UNTIL
+    0xf3 IO@ ;              ( byte received )
+
+: spi_test
+    TRUE 0xf0 IO!           ( assert chip-select )
+    0x03 spi_out            ( "Read Array" command )
+    0x04 spi_out            ( address[23:16] )
+    0x00 spi_out            ( address[15:8] )
+    0x00 spi_out            ( address[7:0] )
+    spi_buf 1-              ( D: buf-1 )
+    12 ?LOOP-               ( receive 12 bytes )
+        1+ DUP              ( D: buf+1 buf+1 )
+        spi_in              ( D: buf+1 buf+1 byte )
+        OVER !              ( D: buf+1 )
+    AGAIN
+    FALSE 0xf0 IO!          ( deassert chip-select )
+    EXIT
+
 : ECHOLOOP
     KEY
     DUP X. CR
@@ -1939,9 +1973,12 @@ VARIABLE here   ( upload address )
 
 ( WARNING! if BOOT returns we PANIC! )
 : BOOT
-    ( ECHOLOOP )
+    ECHOLOOP
+    (
     ufork_init
     test_suite
     ufork_boot
+    )
+    spi_test
     ( ufork_reboot )
     prompt MONITOR ;
