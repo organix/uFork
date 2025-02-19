@@ -12,10 +12,13 @@
 
 // COMMAND MESSAGES
 
-//  {kind: "subscribe", topic: <string>}
+//  {kind: "subscribe", topic: <string>, throttle: <number>}
 //  {kind: "unsubscribe", topic: <string>}
 
 //      Subscribe or unsubscribe from a particular kind of status message.
+
+//      Specify a 'throttle' in milliseconds ensures that no more than one
+//      status message of that kind is emitted in a given interval.
 
 //  {kind: "play", debug: <boolean>}
 
@@ -95,6 +98,7 @@
 /*jslint web, global */
 
 import assemble from "https://ufork.org/lib/assemble.js";
+import throttle from "https://ufork.org/lib/throttle.js";
 import parseq from "https://ufork.org/lib/parseq.js";
 import requestorize from "https://ufork.org/lib/rq/requestorize.js";
 import ufork from "../ufork.js";
@@ -108,27 +112,28 @@ function make_driver(core, on_status) {
     let play_debug;
     let play_timer;
     let signal;
-    let topics = new Set();
+    let subscriptions = Object.create(null);
 
     function publish(kind) {
-        if (!topics.has(kind)) {
+        const callback = subscriptions[kind];
+        if (callback === undefined) {
             return;
         }
         if (kind === "auto_refill") {
-            on_status({kind: "auto_refill", value: auto_refill_enabled});
+            callback({kind: "auto_refill", value: auto_refill_enabled});
         } else if (kind === "interval") {
-            on_status({kind: "interval", milliseconds: interval});
+            callback({kind: "interval", milliseconds: interval});
         } else if (kind === "playing") {
-            on_status({kind: "playing", value: play_debug !== undefined});
+            callback({kind: "playing", value: play_debug !== undefined});
         } else if (kind === "ram") {
-            on_status({kind: "ram", bytes: core.h_ram()});
+            callback({kind: "ram", bytes: core.h_ram()});
         } else if (kind === "rom") {
-            on_status({kind: "rom", bytes: core.h_rom()});
+            callback({kind: "rom", bytes: core.h_rom()});
         } else if (kind === "signal" && signal !== undefined) {
-            on_status({kind: "signal", signal});
+            callback({kind: "signal", signal});
         } else if (kind === "source") {
             const ip = core.u_current_continuation()?.ip;
-            on_status({
+            callback({
                 kind: "source",
                 sourcemap: (
                     ip !== undefined
@@ -142,6 +147,7 @@ function make_driver(core, on_status) {
     function publish_state() {
         publish("ram");
         publish("rom");
+        publish("signal");
         publish("source");
     }
 
@@ -164,9 +170,6 @@ function make_driver(core, on_status) {
         signal = core.h_run_loop(1);
         if (auto_refill(signal)) {
             return step();  // try again
-        }
-        if (topics.has("signal")) {
-            on_status({kind: "signal", signal});
         }
         publish_state();
     }
@@ -209,9 +212,6 @@ function make_driver(core, on_status) {
 
             if (!auto_refill(signal)) {
                 if (ufork.is_fix(signal)) {
-                    if (topics.has("signal")) {
-                        on_status({kind: "signal", signal});
-                    }
                     return publish_state();
                 }
 
@@ -227,8 +227,8 @@ function make_driver(core, on_status) {
 
     function wakeup(device_offset) {
         if (play_debug === undefined) {
-            if (topics.has("wakeup")) {
-                on_status({kind: "wakeup", device_offset});
+            if (subscriptions.wakeup !== undefined) {
+                subscriptions.wakeup({kind: "wakeup", device_offset});
             }
             publish_state();
         } else {
@@ -256,11 +256,15 @@ function make_driver(core, on_status) {
         },
         step,
         subscribe(message) {
-            topics.add(message.topic);
+            subscriptions[message.topic] = (
+                message.throttle !== undefined
+                ? throttle(on_status, message.throttle)
+                : on_status
+            );
             publish(message.topic);
         },
         unsubscribe(message) {
-            topics.delete(message.topic);
+            delete subscriptions[message.topic];
         }
     };
 
@@ -308,9 +312,9 @@ function demo(log) {
         requestorize(function (module) {
             timer_dev(core);
             core.h_boot(module.boot);
-            driver.command({kind: "subscribe", topic: "signal"});
+            driver.command({kind: "subscribe", topic: "signal", throttle: 50});
             driver.command({kind: "subscribe", topic: "wakeup"});
-            // driver.command({kind: "subscribe", topic: "ram"});
+            driver.command({kind: "subscribe", topic: "ram", throttle: 1000});
             // driver.command({kind: "subscribe", topic: "rom"});
             // driver.command({kind: "auto_refill", enabled: false});
             driver.command({kind: "refill", resources: {cycles: 3}});

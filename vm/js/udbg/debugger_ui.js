@@ -10,12 +10,15 @@ import make_ui from "https://ufork.org/lib/ui.js";
 import ufork from "../ufork.js";
 import timer_dev from "../timer_dev.js";
 import make_core_driver from "./core_driver.js";
-import source_monitor_ui from "./source_monitor_ui.js";
+import actor_graph_ui from "./actor_graph_ui.js";
 import ram_explorer_ui from "./ram_explorer_ui.js";
+import source_monitor_ui from "./source_monitor_ui.js";
 const wasm_url = import.meta.resolve("https://ufork.org/wasm/ufork.debug.wasm");
 const lib_url = import.meta.resolve("../../../lib/");
 
-const default_view = "ram";
+const throttle = 1000 / 24; // limit status-triggered rerenders to 24 FPS
+const max_play_interval = 1000;
+const default_view = "actor_graph";
 const theme = {
     red: "#F92672",
     orange: "#FD971F",
@@ -32,6 +35,8 @@ const debugger_ui = make_ui("debugger-ui", function (element, {
     connected = false,
     view = default_view
 }) {
+    let menu;
+
     const shadow = element.attachShadow({mode: "closed"});
     const style = dom("style", `
         :host {
@@ -74,15 +79,19 @@ const debugger_ui = make_ui("debugger-ui", function (element, {
         },
         textContent: "Play"
     });
-    const play_slider = dom("input", {
+    const speed_slider = dom("input", {
+        title: "Playback Speed",
         type: "range",
         min: 0,
-        max: 1000,
-        title: "Slowdown",
+        max: 1,
+        step: 0.01,
         oninput() {
+            const slowness = 1 - Number(speed_slider.value);
             send_command({
                 kind: "interval",
-                milliseconds: Number(play_slider.value)
+                milliseconds: Math.round(
+                    (max_play_interval + 1) ** slowness
+                ) - 1
             });
         }
     });
@@ -95,6 +104,12 @@ const debugger_ui = make_ui("debugger-ui", function (element, {
     });
     const fault_message = dom("fault_message");
     const views = {
+        actor_graph: actor_graph_ui({
+            background_color: theme.black,
+            foreground_color: theme.yellow,
+            device_color: theme.green,
+            proxy_color: theme.orange
+        }),
         ram: ram_explorer_ui({text_color: theme.blue}),
         sources: source_monitor_ui({})
     };
@@ -104,7 +119,29 @@ const debugger_ui = make_ui("debugger-ui", function (element, {
             new_view = default_view;
         }
         view = new_view;
+        menu.value = view;
         shadow.lastChild.replaceWith(views[view]);
+    }
+
+    function on_keydown(event) {
+
+// Previous view: alt+up
+// Next view: alt+down
+
+        if (event.altKey && !event.metaKey && !event.ctrlKey) {
+            const view_names = Object.keys(views);
+            const view_nr = view_names.indexOf(view);
+            let new_view;
+            if (event.key === "ArrowUp") {
+                new_view = view_names[view_nr - 1];
+            } else if (event.key === "ArrowDown") {
+                new_view = view_names[view_nr + 1];
+            }
+            if (new_view !== undefined) {
+                set_view(new_view);
+                event.preventDefault();
+            }
+        }
     }
 
     function on_signal(signal) {
@@ -124,7 +161,7 @@ const debugger_ui = make_ui("debugger-ui", function (element, {
         );
     }
 
-    const menu = dom(
+    menu = dom(
         "select",
         {
             value: view,
@@ -133,6 +170,7 @@ const debugger_ui = make_ui("debugger-ui", function (element, {
             }
         },
         [
+            dom("option", {value: "actor_graph"}, "Actor Graph"),
             dom("option", {value: "ram"}, "RAM Explorer"),
             dom("option", {value: "sources"}, "Sources")
         ]
@@ -140,15 +178,21 @@ const debugger_ui = make_ui("debugger-ui", function (element, {
     const spacer = dom("flex_spacer");
     const controls = dom(
         "controls_container",
-        [menu, step_button, play_button, play_slider, spacer, fault_message]
+        [menu, step_button, play_button, speed_slider, spacer, fault_message]
     );
     const statuses = {
         interval(message) {
             const is_sliding = (
-                document.activeElement === play_slider && document.hasFocus()
+                document.activeElement === element
+                && shadow.activeElement === speed_slider
+                && document.hasFocus()
             );
             if (!is_sliding) {
-                play_slider.value = message.milliseconds;
+                const slowness = (
+                    Math.log(message.milliseconds + 1)
+                    / Math.log(max_play_interval)
+                );
+                speed_slider.value = 1 - slowness;
             }
         },
         playing(message) {
@@ -160,6 +204,7 @@ const debugger_ui = make_ui("debugger-ui", function (element, {
         },
         ram(message) {
             views.ram.set_bytes(message.bytes);
+            views.actor_graph.set_ram(message.bytes);
         },
         signal(message) {
             on_signal(message.signal);
@@ -182,12 +227,12 @@ const debugger_ui = make_ui("debugger-ui", function (element, {
         if (connected) {
             if (!was_connected) {
                 on_signal(ufork.UNDEF_RAW);
-                send_command({kind: "subscribe", topic: "interval"});
-                send_command({kind: "subscribe", topic: "playing"});
-                send_command({kind: "subscribe", topic: "ram"});
-                send_command({kind: "subscribe", topic: "signal"});
-                send_command({kind: "subscribe", topic: "source"});
-                send_command({kind: "subscribe", topic: "wakeup"});
+                send_command({kind: "subscribe", topic: "interval", throttle});
+                send_command({kind: "subscribe", topic: "playing", throttle});
+                send_command({kind: "subscribe", topic: "ram", throttle});
+                send_command({kind: "subscribe", topic: "signal", throttle});
+                send_command({kind: "subscribe", topic: "source", throttle});
+                send_command({kind: "subscribe", topic: "wakeup", throttle});
             }
         } else {
             fault_message.textContent = "connecting";
@@ -201,6 +246,14 @@ const debugger_ui = make_ui("debugger-ui", function (element, {
     set_view(view);
     element.receive_status = receive_status;
     element.set_connected = set_connected;
+    return {
+        connect() {
+            document.addEventListener("keydown", on_keydown);
+        },
+        disconnect() {
+            document.removeEventListener("keydown", on_keydown);
+        }
+    };
 });
 
 function demo(log) {
