@@ -3,7 +3,7 @@
 // development scenarios.
 
 // Message delivery is assumed to be reliable and in order.
-// Messages are cloneable (ala structuredClone) objects with a 'kind' property.
+// Messages are objects with a 'kind' property.
 // The driver receives command messages and emits status messages.
 // The protocol follows a publish-subscribe (rather than a request-response)
 // model, in an attempt to mitigate the effects of network latency.
