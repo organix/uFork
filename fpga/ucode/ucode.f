@@ -1964,6 +1964,17 @@ VARIABLE here   ( upload address )
     FALSE 0xf0 IO!          ( deassert chip-select )
     EXIT
 
+: spi_wake ( -- id )
+    TRUE 0xf0 IO!           ( assert chip-select )
+    5 ?LOOP-
+        0xAB spi_out        ( "Resume from Deep Power-Down and Read Device ID" command )
+    AGAIN
+    BEGIN
+        0xf2 IO@            ( wait until ready/done )
+    UNTIL
+    0xf3 IO@                ( id received )
+    FALSE 0xf0 IO! ;        ( deassert chip-select )
+
 : ECHOLOOP
     KEY
     DUP X. CR
@@ -1979,6 +1990,7 @@ VARIABLE here   ( upload address )
     test_suite
     ufork_boot
     )
+    spi_wake X. CR          ( printing the id gives sufficient wake-up delay )
     spi_test
     ( ufork_reboot )
     prompt MONITOR ;

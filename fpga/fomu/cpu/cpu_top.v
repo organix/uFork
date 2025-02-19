@@ -79,9 +79,9 @@ module top (
         .PIN_TYPE(SB_IO_TYPE_SIMPLE_OUTPUT)
     ) user_2_io (
         .PACKAGE_PIN(user_2),
-        .OUTPUT_ENABLE(1'b1), // FIXME: is this needed?
+        .OUTPUT_ENABLE(1'b1),
         .OUTPUT_CLK(clk),
-        .D_OUT_0(serial_tx),
+        .D_OUT_0(serial_tx)
     );
 
     wire serial_rx;                                     // RX
@@ -90,48 +90,53 @@ module top (
         .PULLUP(1'b1)
     ) user_3_io (
         .PACKAGE_PIN(user_3),
-        .OUTPUT_ENABLE(1'b0), // FIXME: is this needed?
+        .OUTPUT_ENABLE(1'b0),
         .INPUT_CLK(clk),
-        .D_IN_0(serial_rx),
+        .D_IN_0(serial_rx)
     );
 
     // configure SPI Flash pins (master mode)
+    wire cs = spi_cs;
+    /*
     wire cs;
     SB_IO #(
         .PIN_TYPE(SB_IO_TYPE_SIMPLE_OUTPUT),
         .PULLUP(1'b1)
     ) spi_cs_io (
         .PACKAGE_PIN(spi_cs),
-        .OUTPUT_ENABLE(1'b1), // FIXME: is this needed?
+        .OUTPUT_ENABLE(1'b1),
         .OUTPUT_CLK(clk),
-        .D_OUT_0(cs),
+        .D_OUT_0(cs)
     );
+    */
 
-    wire copi = spi_mosi;
     /*
+    wire copi = spi_mosi;
+    */
     wire copi;
     SB_IO #(
-        .PIN_TYPE(SB_IO_TYPE_SIMPLE_OUTPUT)
+        .PIN_TYPE(6'b101001)
+//        .PIN_TYPE(SB_IO_TYPE_SIMPLE_OUTPUT)
     ) spi_mosi_io (
         .PACKAGE_PIN(spi_mosi),
-        .OUTPUT_ENABLE(1'b1), // FIXME: is this needed?
+        .OUTPUT_ENABLE(1'b1),
         .OUTPUT_CLK(clk),
-        .D_OUT_0(copi),
+        .D_OUT_0(copi)
     );
-    */
 
-    wire cipo = spi_miso;
     /*
+    wire cipo = spi_miso;
+    */
     wire cipo;
     SB_IO #(
-        .PIN_TYPE(SB_IO_TYPE_SIMPLE_INPUT)
+        .PIN_TYPE(6'b101001)
+//        .PIN_TYPE(SB_IO_TYPE_SIMPLE_INPUT)
     ) spi_miso_io (
         .PACKAGE_PIN(spi_miso),
-        .OUTPUT_ENABLE(1'b0), // FIXME: is this needed?
+        .OUTPUT_ENABLE(1'b0),
         .INPUT_CLK(clk),
-        .D_IN_0(cipo),
+        .D_IN_0(cipo)
     );
-    */
 
     wire sclk = spi_clk;
     /*
@@ -140,9 +145,9 @@ module top (
         .PIN_TYPE(SB_IO_TYPE_SIMPLE_OUTPUT)
     ) spi_clk_io (
         .PACKAGE_PIN(spi_clk),
-        .OUTPUT_ENABLE(1'b1), // FIXME: is this needed?
+        .OUTPUT_ENABLE(1'b1),
         .OUTPUT_CLK(clk),
-        .D_OUT_0(sclk),
+        .D_OUT_0(sclk)
     );
     */
 
