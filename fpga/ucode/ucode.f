@@ -1936,21 +1936,25 @@ VARIABLE here   ( upload address )
 0xffff , 0xffff , 0xffff , 0xffff ,
 0xffff , 0xffff , 0xffff , 0xffff ,
 
-: spi_out ( byte -- )
-    BEGIN
-        0xf2 IO@            ( wait until ready/done )
-    UNTIL
-    0xf1 IO! ;              ( transmit byte )
+: CS! ( bool -- )
+    0xf0 IO! ;              ( assert chip-select )
+: DO! ( byte -- )
+    0xf1 IO! ;              ( send data byte )
+: DR? ( -- bool )
+    0xf2 IO@ ;              ( data ready/done )
+: DI@ ( -- byte )
+    0xf3 IO@ ;              ( last byte received )
+: WAIT_DR ( -- )
+    BEGIN DR? UNTIL ;       ( wait until ready/done )
 
+: spi_out ( byte -- )
+    WAIT_DR DO! ;
 : spi_in ( -- byte )
     -1 spi_out              ( send dummy byte )
-    BEGIN
-        0xf2 IO@            ( wait until ready/done )
-    UNTIL
-    0xf3 IO@ ;              ( byte received )
+    WAIT_DR DI@ ;
 
 : spi_test
-    TRUE 0xf0 IO!           ( assert chip-select )
+    TRUE CS!                ( assert chip-select )
     0x03 spi_out            ( "Read Array" command )
     0x04 spi_out            ( address[23:16] )
     0x00 spi_out            ( address[15:8] )
@@ -1961,19 +1965,15 @@ VARIABLE here   ( upload address )
         spi_in              ( D: buf+1 buf+1 byte )
         OVER !              ( D: buf+1 )
     AGAIN
-    FALSE 0xf0 IO!          ( deassert chip-select )
-    EXIT
+    FALSE CS! ;             ( deassert chip-select )
 
 : spi_wake ( -- id )
-    TRUE 0xf0 IO!           ( assert chip-select )
+    TRUE CS!                ( assert chip-select )
     5 ?LOOP-
         0xAB spi_out        ( "Resume from Deep Power-Down and Read Device ID" command )
     AGAIN
-    BEGIN
-        0xf2 IO@            ( wait until ready/done )
-    UNTIL
-    0xf3 IO@                ( id received )
-    FALSE 0xf0 IO! ;        ( deassert chip-select )
+    WAIT_DR DI@             ( id received )
+    FALSE CS! ;             ( deassert chip-select )
 
 : ECHOLOOP
     KEY
@@ -1990,7 +1990,7 @@ VARIABLE here   ( upload address )
     test_suite
     ufork_boot
     )
-    spi_wake X. CR          ( printing the id gives sufficient wake-up delay )
+    spi_wake X. CR          ( printing the id gives sufficient wake-up delay > 5us )
     spi_test
     ( ufork_reboot )
     prompt MONITOR ;

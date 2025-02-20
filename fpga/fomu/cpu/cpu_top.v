@@ -110,9 +110,8 @@ module top (
     );
     */
 
-    /*
     wire copi = spi_mosi;
-    */
+    /*
     wire copi;
     SB_IO #(
         .PIN_TYPE(6'b101001)
@@ -123,10 +122,10 @@ module top (
         .OUTPUT_CLK(clk),
         .D_OUT_0(copi)
     );
-
-    /*
-    wire cipo = spi_miso;
     */
+
+    wire cipo = spi_miso;
+    /*
     wire cipo;
     SB_IO #(
         .PIN_TYPE(6'b101001)
@@ -137,6 +136,7 @@ module top (
         .INPUT_CLK(clk),
         .D_IN_0(cipo)
     );
+    */
 
     wire sclk = spi_clk;
     /*
