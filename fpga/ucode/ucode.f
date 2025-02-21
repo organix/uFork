@@ -1718,6 +1718,79 @@ VARIABLE saved_sp           ( sp before instruction execution )
     root_spn spn_signal@ #0 =assert
     EXIT
 
+( SPI Flash Interface )
+VARIABLE spi_page ( bits [31:16] of SPI address )
+
+: spi_buf DATA ( 16 cells )
+0xffff , 0xffff , 0xffff , 0xffff ,
+0xffff , 0xffff , 0xffff , 0xffff ,
+0xffff , 0xffff , 0xffff , 0xffff ,
+0xffff , 0xffff , 0xffff , 0xffff ,
+
+: CS! ( bool -- )
+    0xf0 IO! ;              ( assert chip-select )
+: DO! ( byte -- )
+    0xf1 IO! ;              ( send data byte )
+: DR? ( -- bool )
+    0xf2 IO@ ;              ( data ready/done )
+: DI@ ( -- byte )
+    0xf3 IO@ ;              ( last byte received )
+: WAIT_DR ( -- )
+    BEGIN DR? UNTIL ;       ( wait until ready/done )
+
+: spi_out ( byte -- )
+    WAIT_DR DO! ;
+: spi_in ( -- byte )
+    -1 spi_out              ( send dummy byte )
+    WAIT_DR DI@ ;
+
+: spi_test
+    TRUE CS!                ( assert chip-select )
+    0x03 spi_out            ( "Read Array" command )
+    spi_page @ spi_out      ( address[23:16] )
+    0x00 spi_out            ( address[15:8] )
+    0x00 spi_out            ( address[7:0] )
+    spi_buf 1-              ( D: buf-1 )
+    12 ?LOOP-               ( receive 12 bytes )
+        1+ DUP              ( D: buf+1 buf+1 )
+        spi_in              ( D: buf+1 buf+1 byte )
+        OVER !              ( D: buf+1 )
+    AGAIN
+    FALSE CS! ;             ( deassert chip-select )
+
+: spi_wake ( -- id )
+    0x04 spi_page !         ( set default base address )
+    TRUE CS!                ( assert chip-select )
+    5 ?LOOP-
+        0xAB spi_out        ( "Resume from Deep Power-Down and Read Device ID" command )
+    AGAIN
+    WAIT_DR DI@             ( id received )
+    FALSE CS! ;             ( deassert chip-select )
+
+: spi_dump ( start end -- )
+    OVER -                  ( D: start span )
+    DUP 0< IF
+        2DROP
+    ELSE
+        OVER                ( D: start span start )
+        TRUE CS!            ( assert chip-select )
+        0x03 spi_out        ( "Read Array" command )
+        spi_page @ spi_out  ( address[23:16] )
+        DUP 8ROL spi_out    ( address[15:8] )
+        spi_out             ( address[7:0] )
+        1+ ?LOOP-
+            spi_in          ( D: addr data )
+            OVER 0x7 AND IF
+                SPACE
+            ELSE
+                CR
+            THEN
+            X. 1+           ( D: addr+1 )
+        AGAIN
+        FALSE CS!           ( deassert chip-select )
+        CR DROP
+    THEN ;
+
 ( Debugging Monitor )
 0x21 CONSTANT '!'
 0x2E CONSTANT '.'
@@ -1909,6 +1982,9 @@ VARIABLE here   ( upload address )
         OVER '?' = IF
             pop pop SWAP dump
         THEN
+        OVER '~' = IF
+            pop pop SWAP spi_dump
+        THEN
         OVER '[' = IF
             pop here ! upload
         THEN
@@ -1929,51 +2005,6 @@ VARIABLE here   ( upload address )
         NIP cmd !           ( key -> cmd )
     THEN
     MONITOR ;
-
-: spi_buf DATA ( 16 cells )
-0xffff , 0xffff , 0xffff , 0xffff ,
-0xffff , 0xffff , 0xffff , 0xffff ,
-0xffff , 0xffff , 0xffff , 0xffff ,
-0xffff , 0xffff , 0xffff , 0xffff ,
-
-: CS! ( bool -- )
-    0xf0 IO! ;              ( assert chip-select )
-: DO! ( byte -- )
-    0xf1 IO! ;              ( send data byte )
-: DR? ( -- bool )
-    0xf2 IO@ ;              ( data ready/done )
-: DI@ ( -- byte )
-    0xf3 IO@ ;              ( last byte received )
-: WAIT_DR ( -- )
-    BEGIN DR? UNTIL ;       ( wait until ready/done )
-
-: spi_out ( byte -- )
-    WAIT_DR DO! ;
-: spi_in ( -- byte )
-    -1 spi_out              ( send dummy byte )
-    WAIT_DR DI@ ;
-
-: spi_test
-    TRUE CS!                ( assert chip-select )
-    0x03 spi_out            ( "Read Array" command )
-    0x04 spi_out            ( address[23:16] )
-    0x00 spi_out            ( address[15:8] )
-    0x00 spi_out            ( address[7:0] )
-    spi_buf 1-              ( D: buf-1 )
-    12 ?LOOP-               ( receive 12 bytes )
-        1+ DUP              ( D: buf+1 buf+1 )
-        spi_in              ( D: buf+1 buf+1 byte )
-        OVER !              ( D: buf+1 )
-    AGAIN
-    FALSE CS! ;             ( deassert chip-select )
-
-: spi_wake ( -- id )
-    TRUE CS!                ( assert chip-select )
-    5 ?LOOP-
-        0xAB spi_out        ( "Resume from Deep Power-Down and Read Device ID" command )
-    AGAIN
-    WAIT_DR DI@             ( id received )
-    FALSE CS! ;             ( deassert chip-select )
 
 : ECHOLOOP
     KEY
