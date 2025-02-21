@@ -14,7 +14,6 @@ SPI (Serial Peripheral Interface) -- physical layer
  |  +-------------------+
 
  SPI Mode: 0 (CPOL=0, CPHA=0)
- https://www.analog.com/en/resources/analog-dialogue/articles/introduction-to-spi-interface.html
          _   _   _   _   _   _   _   _   _   _   _   _   _   _   _   _   _   _   _   _
  i_clk  | |_| |_| |_| |_| |_| |_| |_| |_| |_| |_| |_| |_| |_| |_| |_| |_| |_| |_| |_| |_
         _____                                                                     ______
@@ -41,8 +40,8 @@ https://wavedrom.com/
 `default_nettype none
 
 module spi_phy #(
-    parameter CPOL          = 1'b0,                     // sclk polarity
-    parameter CPHA          = 1'b0,                     // sclk phase
+    parameter CPOL          = 1'b0,                     // s_clk polarity
+    parameter CPHA          = 1'b0,                     // s_clk phase
     parameter WIDTH         = 8                         // data bus width (in bits)
 ) (
     input                   i_clk,                      // system clock
@@ -63,7 +62,7 @@ module spi_phy #(
     reg [COUNT_WIDTH-1:0] bit_count = 0;
 
     // initialize output registers
-    initial s_clk = 1'b0;
+    initial s_clk = CPOL;
 
     reg [WIDTH-1:0] data_sr = 0;                        // data shift-register
     reg data_in = 0;                                    // input data sample
@@ -85,26 +84,30 @@ module spi_phy #(
                 if (i_wr) begin
                     data_sr <= i_wdata;                 // parallel load shift-register
                     bit_count <= WIDTH-1;
+                    if (CPHA) begin
+                        s_clk <= ~s_clk;
+                    end
                     state <= SAMPLE;
                 end
             end
-            SAMPLE: begin
-                s_clk <= 1'b1;                          // sample edge
+            SAMPLE: begin                               // sample edge
                 data_in <= s_cipo;
+                s_clk <= ~s_clk;
                 state <= SHIFT;
             end
-            SHIFT: begin
-                s_clk <= 1'b0;                          // shift edge
+            SHIFT: begin                                // shift edge
                 data_sr <= { data_sr[WIDTH-2:0], data_in };
                 if (bit_count != 0) begin
                     bit_count <= bit_count - 1;
+                    s_clk <= ~s_clk;
                     state <= SAMPLE;
                 end else begin
+                    s_clk <= CPOL;
                     state <= IDLE;
                 end
             end
             default: begin
-                s_clk <= 1'b0;
+                s_clk <= CPOL;
                 state <= IDLE;
             end
         endcase

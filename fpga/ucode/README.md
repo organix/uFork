@@ -130,7 +130,7 @@ Word        | Stack Effect                              | Description
 `>R`        | ( a -- ) ( R: -- a )                      | Move TOS to TORS
 `R>`        | ( -- a ) ( R: a -- )                      | Move TORS to TOS
 `R@`        | ( -- a ) ( R: a -- a )                    | Copy TORS to TOS
-`RDROP`     | ( -- a ) ( R: a -- a )                    | Discard TORS
+`RDROP`     | ( -- ) ( R: a -- )                        | Discard TORS
 `FAIL`      | ( -- )                                    | Signal processor failure (HALT!)
 `EXIT`      | ( R: addr -- ) addr->PC                   | Move TORS to PC<sup>*</sup>
 

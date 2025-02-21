@@ -34,6 +34,8 @@ module spi_phy_test (
     //
 
     spi_phy #(
+//        .CPOL(1),
+//        .CPHA(1),
         .WIDTH(WIDTH)
     ) SPI (
         .i_clk(i_clk),
