@@ -90,6 +90,11 @@
 //      The full text of the source file, and range within, of the current
 //      instruction. The 'sourcemap' is an object like {debug, text}.
 
+//  {kind: "labels", mapping: <object>}
+
+//      A partial mapping from ROM pointers to debug labels, for
+//      example {"54": "fork_beh", "63": "join_beh", "82": "list_of_3"}.
+
 //  {kind: "auto_refill", enabled: <boolean>}
 //  {kind: "interval", milliseconds: <number>}
 
@@ -123,6 +128,16 @@ function make_driver(core, on_status) {
             callback({kind: "auto_refill", value: auto_refill_enabled});
         } else if (kind === "interval") {
             callback({kind: "interval", milliseconds: interval});
+        } else if (kind === "labels") {
+            let mapping = Object.create(null);
+            new Array(core.h_rom_top()).fill().forEach(function (_, ofs) {
+                const ptr = ufork.romptr(ofs);
+                const debug = core.u_sourcemap(ptr)?.debug;
+                if (debug?.label !== undefined) {
+                    mapping[ptr] = debug.label;
+                }
+            });
+            callback({kind: "labels", mapping});
         } else if (kind === "playing") {
             callback({kind: "playing", value: play_debug !== undefined});
         } else if (kind === "ram") {

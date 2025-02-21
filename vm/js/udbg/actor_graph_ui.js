@@ -18,10 +18,39 @@ function is_device(ofs) {
     return ofs > ufork.DDEQUE_OFS && ofs < ufork.SPONSOR_OFS;
 }
 
+function print_short_cap(ram_ofs) {
+    return ufork.print(ufork.ptr_to_cap(ufork.ramptr(ram_ofs))).replace(
+        /@60*/,
+        "@"
+    );
+}
+
+function device_label(ram_ofs) {
+    if (ram_ofs === ufork.DEBUG_DEV_OFS) {
+        return "debug_dev";
+    }
+    if (ram_ofs === ufork.CLOCK_DEV_OFS) {
+        return "clock_dev";
+    }
+    if (ram_ofs === ufork.TIMER_DEV_OFS) {
+        return "timer_dev";
+    }
+    if (ram_ofs === ufork.IO_DEV_OFS) {
+        return "io_dev";
+    }
+    if (ram_ofs === ufork.RANDOM_DEV_OFS) {
+        return "random_dev";
+    }
+    if (ram_ofs === ufork.HOST_DEV_OFS) {
+        return "host_dev";
+    }
+}
+
 const bytes_per_word = 4; // 32 bits
 const bytes_per_quad = bytes_per_word * 4;
 const actor_graph_ui = make_ui("actor-graph-ui", function (element, {
     ram = new Uint8Array(),
+    labels = Object.create(null),
     background_color = "black",
     foreground_color = "white",
     device_color = "red",
@@ -42,8 +71,10 @@ const actor_graph_ui = make_ui("actor-graph-ui", function (element, {
     springy_element.style.width = "100%";
     springy_element.style.height = "100%";
 
-    function set_ram(new_ram) {
-        ram = new_ram;
+    function invalidate() {
+        if (!element.isConnected) {
+            return;
+        }
 
         function find_capabilities(raw) {
             if (ufork.is_cap(raw)) {
@@ -88,9 +119,17 @@ const actor_graph_ui = make_ui("actor-graph-ui", function (element, {
         let edges = Object.create(null);
         Object.entries(actors).forEach(function ([key, quad]) {
             const ofs = Number(key);
-            const address = ufork.print(ufork.ptr_to_cap(ufork.ramptr(ofs)));
+            const beh_label = labels[quad.x];
             nodes.push(springy.make_node(ofs, {
-                label: address.replace(/@60*/, "@"), // shorten
+                label: (
+                    is_device(ofs)
+                    ? device_label(ofs) ?? print_short_cap(ofs)
+                    : print_short_cap(ofs) + (
+                        beh_label !== undefined
+                        ? ":" + beh_label
+                        : ""
+                    )
+                ),
                 color: (
                     is_device(ofs)
                     ? device_color
@@ -150,9 +189,21 @@ const actor_graph_ui = make_ui("actor-graph-ui", function (element, {
         springy_element.invalidate();
     }
 
+    function set_labels(new_labels) {
+        labels = new_labels;
+        invalidate();
+    }
+
+    function set_ram(new_ram) {
+        ram = new_ram;
+        invalidate();
+    }
+
     shadow.append(springy_element);
+    set_labels(labels);
     set_ram(ram);
     element.style.background = background_color;
+    element.set_labels = set_labels;
     element.set_ram = set_ram;
 });
 
@@ -169,6 +220,8 @@ function demo(log) {
     const driver = make_core_driver(core, function on_status(message) {
         if (message.kind === "ram") {
             element.set_ram(message.bytes);
+        } else if (message.kind === "labels") {
+            element.set_labels(message.mapping);
         } else {
             log(message);
         }
@@ -178,6 +231,7 @@ function demo(log) {
         core.h_import("https://ufork.org/lib/cell.asm"),
         requestorize(function (module) {
             core.h_boot(module.boot);
+            driver.command({kind: "subscribe", topic: "labels"});
             driver.command({kind: "subscribe", topic: "signal"});
             driver.command({kind: "subscribe", topic: "ram"});
             driver.command({kind: "interval", milliseconds: 100});

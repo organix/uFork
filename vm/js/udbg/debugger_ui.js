@@ -195,6 +195,9 @@ const debugger_ui = make_ui("debugger-ui", function (element, {
                 speed_slider.value = 1 - slowness;
             }
         },
+        labels(message) {
+            views.actor_graph.set_labels(message.mapping);
+        },
         playing(message) {
             play_button.textContent = (
                 message.value
@@ -228,6 +231,7 @@ const debugger_ui = make_ui("debugger-ui", function (element, {
             if (!was_connected) {
                 on_signal(ufork.UNDEF_RAW);
                 send_command({kind: "subscribe", topic: "interval", throttle});
+                send_command({kind: "subscribe", topic: "labels", throttle});
                 send_command({kind: "subscribe", topic: "playing", throttle});
                 send_command({kind: "subscribe", topic: "ram", throttle});
                 send_command({kind: "subscribe", topic: "signal", throttle});
