@@ -53,8 +53,8 @@ const actor_graph_ui = make_ui("actor-graph-ui", function (element, {
     labels = Object.create(null),
     background_color = "black",
     foreground_color = "white",
-    device_color = "red",
-    proxy_color = "pink"
+    device_color = "limegreen",
+    proxy_color = "orange"
 }) {
     const shadow = element.attachShadow({mode: "closed"});
     const graph = springy.make_graph();
@@ -66,7 +66,8 @@ const actor_graph_ui = make_ui("actor-graph-ui", function (element, {
         layout,
         node_font_size: 18,
         background_color,
-        foreground_color
+        foreground_color,
+        stop_energy: 0.001
     });
     springy_element.style.width = "100%";
     springy_element.style.height = "100%";

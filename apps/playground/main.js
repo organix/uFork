@@ -9,6 +9,7 @@ import base64 from "https://ufork.org/lib/base64.js";
 import dom from "https://ufork.org/lib/dom.js";
 import gzip from "https://ufork.org/lib/gzip.js";
 import unpercent from "https://ufork.org/lib/unpercent.js";
+import make_window_bridge from "https://ufork.org/js/udbg/window_bridge.js";
 import theme from "./theme.js";
 import lang_asm from "./lang_asm.js";
 import lang_hum from "./lang_hum.js";
@@ -16,6 +17,7 @@ import lang_scm from "./lang_scm.js";
 import tools_ui from "./tools_ui.js";
 import editor_ui from "./editor_ui.js";
 import split_ui from "./split_ui.js";
+const udbg_url = import.meta.resolve("../udbg/index.html");
 const unqualified_dev_lib_url = import.meta.resolve("../../lib/");
 
 const dev_lib_url = new URL(unqualified_dev_lib_url, location.href).href;
@@ -30,6 +32,9 @@ Object.freeze(lang_packs);
 
 let initial_text = "";
 let text_override;
+let tools;
+let udbg_bridge;
+let udbg_window;
 
 function is_landscape() {
     return document.documentElement.clientWidth >= 720;
@@ -129,7 +134,7 @@ const editor = editor_ui({
         );
     }
 });
-const tools = tools_ui({
+tools = tools_ui({
     get_text: editor.get_text,
     get_src() {
         const unqualified_src = read_state("src") ?? "untitled.asm";
@@ -156,8 +161,42 @@ const tools = tools_ui({
             : undefined // omit default
         ));
     },
+    on_attach() {
+        if (udbg_window === undefined || udbg_window.closed) {
+            if (udbg_bridge !== undefined) {
+                udbg_bridge.dispose();
+            }
+            const session = "playground";
+            let url = new URL(udbg_url, globalThis.origin);
+            let params = new URLSearchParams();
+            params.set("origin", globalThis.origin);
+            params.set("session", session);
+            url.hash = params;
+            udbg_window = globalThis.open(url, "udbg");
+            udbg_bridge = make_window_bridge(
+                udbg_window,
+                url.origin,
+                session,
+                tools.command
+            );
+            udbg_bridge.send({kind: "reset"});
+        }
+    },
+    on_detach() {
+        if (udbg_bridge !== undefined) {
+            udbg_bridge.dispose();
+        }
+        if (udbg_window !== undefined) {
+            udbg_window.close();
+        }
+    },
     on_debug() {
         globalThis.open(location.href.replace("playground", "debugger"));
+    },
+    on_status(message) {
+        if (udbg_bridge !== undefined) {
+            udbg_bridge.send(message);
+        }
     },
     on_help() {
         globalThis.open(lang_packs[editor.get_lang()].docs_url);

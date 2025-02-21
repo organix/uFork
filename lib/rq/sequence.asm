@@ -67,7 +67,6 @@ runner_beh:                 ; requestors,callback,canceller <- message
 ;   result_tag,result
 ;       A result has arrived from the running requestor.
 
-    debug
     msg 1                   ; tag
     eq start_tag            ; tag==start_tag?
     if on_start             ; --

@@ -33,7 +33,10 @@ const tools_ui = make_ui("tools-ui", function (element, {
     import_map,
     on_lang_change,
     on_device_change,
+    on_attach,
+    on_detach,
     on_debug,
+    on_status,
     on_help
 }) {
     const shadow = element.attachShadow({mode: "closed"});
@@ -112,9 +115,10 @@ const tools_ui = make_ui("tools-ui", function (element, {
 
     function stop() {
         run_button.textContent = "▶ Run";
-        run_button.onclick = function () {
-            run(get_text(), "boot");
+        run_button.onclick = function (event) {
+            run(get_text(), "boot", event.shiftKey);
         };
+        on_detach();
         h_on_svgin = undefined;
         if (driver !== undefined) {
             driver.dispose();
@@ -130,7 +134,7 @@ const tools_ui = make_ui("tools-ui", function (element, {
         devices.io.warn(...args);
     }
 
-    function run(text, entry) {
+    function run(text, entry, debug) {
         stop();
 
 // The module may import modules written in a different language, so provide
@@ -169,7 +173,7 @@ const tools_ui = make_ui("tools-ui", function (element, {
             import_map,
             compilers
         });
-        driver = make_core_driver(core, function on_status(message) {
+        driver = make_core_driver(core, function (message) {
             if (message.kind === "signal") {
                 const error_code = ufork.fix_to_i32(message.signal);
                 const error_text = ufork.fault_msg(error_code);
@@ -180,6 +184,7 @@ const tools_ui = make_ui("tools-ui", function (element, {
                     stop();
                 }
             }
+            on_status(message);
         });
         const {compile, stringify_error} = lang_packs[lang_select.value];
         const ir = compile(text);
@@ -224,7 +229,11 @@ const tools_ui = make_ui("tools-ui", function (element, {
                 run_button.textContent = "⏹ Stop";
                 run_button.onclick = stop;
                 driver.command({kind: "subscribe", topic: "signal"});
-                driver.command({kind: "play"});
+                if (debug) {
+                    on_attach();
+                } else {
+                    driver.command({kind: "play"});
+                }
                 return true;
             })
         ])(function callback(value, reason) {
@@ -232,6 +241,10 @@ const tools_ui = make_ui("tools-ui", function (element, {
                 warn(reason.message ?? reason);
             }
         });
+    }
+
+    function command(message) {
+        driver.command(message);
     }
 
     device_select = dom(
@@ -262,15 +275,18 @@ const tools_ui = make_ui("tools-ui", function (element, {
             return dom("option", {value: name, textContent: name});
         })
     );
-    run_button = dom("button");
+    run_button = dom("button", {
+        title: "shift+click to debug"
+    });
     debug_button = dom("button", {
         textContent: "⛐ Debug",
         onclick: on_debug
     });
     test_button = dom("button", {
         textContent: "✔ Test",
-        onclick() {
-            run(get_text(), "test");
+        title: "shift+click to debug",
+        onclick(event) {
+            run(get_text(), "test", event.shiftKey);
         }
     });
     help_button = dom("button", {
@@ -289,6 +305,7 @@ const tools_ui = make_ui("tools-ui", function (element, {
     set_lang(lang);
     stop();
     shadow.append(style, controls_element, device_element);
+    element.command = command;
     element.set_device = set_device;
     element.set_lang = set_lang;
     element.warn = warn;
@@ -308,7 +325,10 @@ if (import.meta.main) {
             lang_packs: {asm: lang_asm, scm: lang_scm},
             on_lang_change: globalThis.console.log,
             on_device_change: globalThis.console.log,
+            on_attach: () => globalThis.console.log("on_attach"),
+            on_detach: () => globalThis.console.log("on_detach"),
             on_debug: () => globalThis.console.log("on_debug"),
+            on_status: () => globalThis.console.log("on_status"),
             on_help: () => globalThis.console.log("on_help")
         }),
         {style: {width: "400px", height: "400px"}}
