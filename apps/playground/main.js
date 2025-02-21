@@ -172,7 +172,13 @@ tools = tools_ui({
             params.set("origin", globalThis.origin);
             params.set("session", session);
             url.hash = params;
-            udbg_window = globalThis.open(url, "udbg");
+            const window_features = [
+                "popup",
+                "width=" + globalThis.innerWidth / 2,
+                "height=" + globalThis.innerHeight,
+                "left=" + globalThis.innerWidth / 2
+            ].join(", ");
+            udbg_window = globalThis.open(url, "udbg", window_features);
             udbg_bridge = make_window_bridge(
                 udbg_window,
                 url.origin,
