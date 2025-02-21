@@ -194,7 +194,7 @@ const tools_ui = make_ui("tools-ui", function (element, {
         }
         parseq.sequence([
             core.h_initialize(),
-            core.h_import(get_src(), ir),
+            core.h_import(get_src(), text),
             requestorize(function (imported_module) {
                 devices.rom.set_buffer(core.h_snapshot().rom, ir);
                 const make_ddev = host_dev(core);
