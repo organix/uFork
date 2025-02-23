@@ -1744,20 +1744,6 @@ VARIABLE spi_page ( bits [31:16] of SPI address )
     -1 spi_out              ( send dummy byte )
     WAIT_DR DI@ ;
 
-: spi_test
-    TRUE CS!                ( assert chip-select )
-    0x03 spi_out            ( "Read Array" command )
-    spi_page @ spi_out      ( address[23:16] )
-    0x00 spi_out            ( address[15:8] )
-    0x00 spi_out            ( address[7:0] )
-    spi_buf 1-              ( D: buf-1 )
-    12 ?LOOP-               ( receive 12 bytes )
-        1+ DUP              ( D: buf+1 buf+1 )
-        spi_in              ( D: buf+1 buf+1 byte )
-        OVER !              ( D: buf+1 )
-    AGAIN
-    FALSE CS! ;             ( deassert chip-select )
-
 : spi_wake ( -- id )
     0x04 spi_page !         ( set default base address )
     TRUE CS!                ( assert chip-select )
@@ -1790,6 +1776,49 @@ VARIABLE spi_page ( bits [31:16] of SPI address )
         FALSE CS!           ( deassert chip-select )
         CR DROP
     THEN ;
+
+: spi_test
+    TRUE CS!                ( assert chip-select )
+    0x03 spi_out            ( "Read Array" command )
+    spi_page @ spi_out      ( address[23:16] )
+    0x00 spi_out            ( address[15:8] )
+    0x00 spi_out            ( address[7:0] )
+    spi_buf 1-              ( D: buf-1 )
+    12 ?LOOP-               ( receive 12 bytes )
+        1+ DUP              ( D: buf+1 buf+1 )
+        spi_in              ( D: buf+1 buf+1 byte )
+        OVER !              ( D: buf+1 )
+    AGAIN
+    FALSE CS! ;             ( deassert chip-select )
+
+: spif_status ( -- status )
+    TRUE CS!                ( assert chip-select )
+    0x05 spi_out            ( "Read Status Register" command )
+    spi_in                  ( status received )
+    FALSE CS! ;             ( deassert chip-select )
+
+: spif_write_enable ( -- )
+    TRUE CS!                ( assert chip-select )
+    0x06 spi_out            ( "Write Enable" command )
+    WAIT_DR                 ( wait until ready/done )
+    FALSE CS! ;             ( deassert chip-select )
+
+: spif_write_disable ( -- )
+    TRUE CS!                ( assert chip-select )
+    0x04 spi_out            ( "Write Disable" command )
+    WAIT_DR                 ( wait until ready/done )
+    FALSE CS! ;             ( deassert chip-select )
+
+: spif_erase_64k ( page -- )
+    TRUE CS!                ( assert chip-select )
+    0xD8 spi_out            ( "Block Erase 64k" command )
+    spi_out                 ( address[23:16]=page )
+    0 spi_out               ( address[15:8] )
+    0 spi_out               ( address[7:0] )
+    spi_buf 1-              ( D: buf-1 )
+    WAIT_DR                 ( wait until ready/done )
+    FALSE CS! ;             ( deassert chip-select )
+
 
 ( Debugging Monitor )
 0x21 CONSTANT '!'
@@ -2015,13 +2044,22 @@ VARIABLE here   ( upload address )
 
 ( WARNING! if BOOT returns we PANIC! )
 : BOOT
+    spi_wake X. CR          ( printing the id gives sufficient wake-up delay > 5us )
     ECHOLOOP
     (
     ufork_init
     test_suite
     ufork_boot
-    )
-    spi_wake X. CR          ( printing the id gives sufficient wake-up delay > 5us )
     spi_test
+    )
+    spif_status X. CR
+    spif_write_enable
+    spif_status X. CR
+    0x06 spif_erase_64k
+    spif_status X. CR
+    BEGIN
+        spif_status LSB& 0=
+    UNTIL
+    spif_status X. CR
     ( ufork_reboot )
     prompt MONITOR ;
