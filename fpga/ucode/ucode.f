@@ -17,6 +17,7 @@
 0x41 CONSTANT 'A'
 0x46 CONSTANT 'F'
 0x5A CONSTANT 'Z'
+0x5F CONSTANT '_'
 0x61 CONSTANT 'a'
 0x66 CONSTANT 'f'
 0x7A CONSTANT 'z'
@@ -1753,6 +1754,10 @@ VARIABLE spi_page ( bits [31:16] of SPI address )
     WAIT_DR DI@             ( id received )
     FALSE CS! ;             ( deassert chip-select )
 
+: XB. ( byte -- )
+    8ROL
+    4ROL DUP X#
+    4ROL X# ;
 : spi_dump ( start end -- )
     OVER -                  ( D: start span )
     DUP 0< IF
@@ -1766,36 +1771,31 @@ VARIABLE spi_page ( bits [31:16] of SPI address )
         spi_out             ( address[7:0] )
         1+ ?LOOP-
             spi_in          ( D: addr data )
-            OVER 0x7 AND IF
-                SPACE
+            OVER LSB& IF
+                '_' EMIT
             ELSE
-                CR
+                OVER 0x7 AND IF
+                    SPACE
+                ELSE
+                    CR
+                THEN
             THEN
-            X. 1+           ( D: addr+1 )
+            XB. 1+          ( D: addr+1 )
         AGAIN
         FALSE CS!           ( deassert chip-select )
         CR DROP
     THEN ;
-
-: spi_test
-    TRUE CS!                ( assert chip-select )
-    0x03 spi_out            ( "Read Array" command )
-    spi_page @ spi_out      ( address[23:16] )
-    0x00 spi_out            ( address[15:8] )
-    0x00 spi_out            ( address[7:0] )
-    spi_buf 1-              ( D: buf-1 )
-    12 ?LOOP-               ( receive 12 bytes )
-        1+ DUP              ( D: buf+1 buf+1 )
-        spi_in              ( D: buf+1 buf+1 byte )
-        OVER !              ( D: buf+1 )
-    AGAIN
-    FALSE CS! ;             ( deassert chip-select )
 
 : spif_status ( -- status )
     TRUE CS!                ( assert chip-select )
     0x05 spi_out            ( "Read Status Register" command )
     spi_in                  ( status received )
     FALSE CS! ;             ( deassert chip-select )
+
+: spif_wait ( -- )
+    BEGIN                   ( wait for "busy" status to clear )
+        spif_status LSB& 0=
+    UNTIL ;
 
 : spif_write_enable ( -- )
     TRUE CS!                ( assert chip-select )
@@ -1819,6 +1819,62 @@ VARIABLE spi_page ( bits [31:16] of SPI address )
     WAIT_DR                 ( wait until ready/done )
     FALSE CS! ;             ( deassert chip-select )
 
+: spif_program_block ( buf n=[1,128] lsb msb page -- buf' )
+    spif_write_enable
+    TRUE CS!                ( assert chip-select )
+    0x02 spi_out            ( "Byte/Page Program" command )
+    spi_out                 ( address[23:16]=page )
+    spi_out                 ( address[15:8]=msb )
+    spi_out                 ( address[7:0]=lsb )
+    ?LOOP-                  ( for each cell )
+        DUP @               ( D: buf cell )
+        DUP 8ROL            ( D: buf lsb msb )
+        spi_out             ( start sending msb )
+        WAIT_DR             ( wait until ready/done )
+        spi_out             ( start sending lsb )
+        1+                  ( D: buf+1 )
+        WAIT_DR             ( wait until ready/done )
+    AGAIN
+    FALSE CS!               ( deassert chip-select )
+    spif_wait ;
+
+: spif_program_page ( buf nblks -- buf' )
+    0 SWAP                  ( D: buf cnt nblks )
+    ?LOOP-                  ( for each block )
+        >R                  ( D: buf ) ( R: I cnt )
+        128 0 R@ 6          ( D: buf n lsb msb page ) ( R: I cnt )
+        spif_program_block  ( D: buf' ) ( R: I cnt )
+        R> 1+               ( D: buf' cnt+1 ) ( R: I )
+    AGAIN DROP ;            ( D: buf' ) ( R: -- )
+
+: spi_test ( -- )
+    TRUE CS!                ( assert chip-select )
+    0x03 spi_out            ( "Read Array" command )
+    spi_page @ spi_out      ( address[23:16] )
+    0 spi_out               ( address[15:8] )
+    0 spi_out               ( address[7:0] )
+    spi_buf 1-              ( D: buf-1 )
+    12 ?LOOP-               ( receive 12 bytes )
+        1+ DUP              ( D: buf+1 buf+1 )
+        spi_in              ( D: buf+1 buf+1 byte )
+        OVER !              ( D: buf+1 )
+    AGAIN
+    FALSE CS! ;             ( deassert chip-select )
+
+: rom_blks ( -- nblks )
+    ( rom_quads 2ROL ROL 0xFF + 8ROL 0xFF AND ; )
+    rom_quads 0x1F + 4ASR 2/ ;
+
+: spif_test ( -- )
+    spif_status X. CR
+    spif_write_enable
+    spif_status X. CR
+    6 spif_erase_64k
+    spif_status X. CR
+    spif_wait
+    spif_status X. CR
+    ( rom_image 128 0 0 6 spif_program_block DROP )
+    rom_image rom_blks spif_program_page X. CR
 
 ( Debugging Monitor )
 0x21 CONSTANT '!'
@@ -2050,16 +2106,7 @@ VARIABLE here   ( upload address )
     ufork_init
     test_suite
     ufork_boot
-    spi_test
     )
-    spif_status X. CR
-    spif_write_enable
-    spif_status X. CR
-    0x06 spif_erase_64k
-    spif_status X. CR
-    BEGIN
-        spif_status LSB& 0=
-    UNTIL
-    spif_status X. CR
+    spif_test
     ( ufork_reboot )
     prompt MONITOR ;
