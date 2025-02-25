@@ -1728,6 +1728,14 @@ VARIABLE spi_page ( bits [31:16] of SPI address )
 0xffff , 0xffff , 0xffff , 0xffff ,
 0xffff , 0xffff , 0xffff , 0xffff ,
 
+: b2c ( msb lsb -- cell )
+    0xFF AND
+    SWAP 8ROL 0xFF00 AND
+    OR ;
+: c2b ( cell -- msb lsb )
+    DUP 8ROL 0xFF AND
+    SWAP 0xFF AND ;
+
 : CS! ( bool -- )
     0xf0 IO! ;              ( assert chip-select )
 : DO! ( byte -- )
@@ -1846,6 +1854,24 @@ VARIABLE spi_page ( bits [31:16] of SPI address )
         spif_program_block  ( D: buf' ) ( R: I cnt )
         R> 1+               ( D: buf' cnt+1 ) ( R: I )
     AGAIN DROP ;            ( D: buf' ) ( R: -- )
+
+: spif_cell_in ( -- cell )
+    spi_in spi_in b2c ;
+: spif2qrom ( qaddr nquads -- )
+    TRUE CS!                ( assert chip-select )
+    0x03 spi_out            ( "Read Array" command )
+    6 spi_out               ( address[23:16] )
+    0 spi_out               ( address[15:8] )
+    0 spi_out               ( address[7:0] )
+    ?LOOP-
+        spif_cell_in OVER QT!
+        spif_cell_in OVER QX!
+        spif_cell_in OVER QY!
+        spif_cell_in OVER QZ!
+        1+
+    AGAIN
+    FALSE CS!               ( deassert chip-select )
+    DROP ;
 
 : spi_test ( -- )
     TRUE CS!                ( assert chip-select )
@@ -2102,11 +2128,12 @@ VARIABLE here   ( upload address )
 : BOOT
     spi_wake X. CR          ( printing the id gives sufficient wake-up delay > 5us )
     ECHOLOOP
+    0 rom_quads spif2qrom   ( init from flash )
     (
     ufork_init
     test_suite
     ufork_boot
-    )
     spif_test
+    )
     ( ufork_reboot )
     prompt MONITOR ;
