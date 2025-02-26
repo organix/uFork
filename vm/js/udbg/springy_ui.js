@@ -44,7 +44,8 @@ const springy_ui = make_ui("springy-ui", function (element, {
     scale = globalThis.devicePixelRatio,
     background_color = "white",
     foreground_color = "black",
-    on_node_select,
+    on_node_click,
+    on_node_hover,
     timestep,
     stop_energy
 }) {
@@ -57,6 +58,7 @@ const springy_ui = make_ui("springy-ui", function (element, {
 
     let selected;
     let nearest;
+    let hovered;
     let dragged;
 
 // Auto adjust the bounding box of graph layout, with ease-in.
@@ -483,19 +485,11 @@ const springy_ui = make_ui("springy-ui", function (element, {
         selected = dragged;
         if (selected.node !== undefined) {
             dragged.point.m = 10000;
-            if (on_node_select !== undefined) {
-                on_node_select(selected.node);
+            if (on_node_click !== undefined) {
+                on_node_click(selected.node.id);
             }
         }
         renderer.start();
-    };
-    canvas.ondblclick = function (e) {
-        const p = mouse_point(e);
-        selected = layout.nearest(p);
-        const node = selected.node;
-        if (node && node.data && node.data.ondoubleclick) {
-            node.data.ondoubleclick();
-        }
     };
     canvas.onmousemove = function (e) {
         const p = mouse_point(e);
@@ -503,7 +497,14 @@ const springy_ui = make_ui("springy-ui", function (element, {
         if (dragged?.node !== undefined) {
             dragged.point.p.x = p.x;
             dragged.point.p.y = p.y;
+        } else if (
+            nearest.node !== undefined
+            && hovered?.id !== nearest.node.id
+            && on_node_hover !== undefined
+        ) {
+            on_node_hover(nearest.node.id);
         }
+        hovered = nearest.node;
         renderer.start();
     };
     canvas.onmouseup = function () {
@@ -530,7 +531,7 @@ const springy_ui = make_ui("springy-ui", function (element, {
     };
 });
 
-function demo() {
+function demo(log) {
     document.documentElement.innerHTML = "";
     const graph = springy.make_graph();
     const layout = springy.make_layout({
@@ -551,7 +552,13 @@ function demo() {
     const element = springy_ui({
         layout,
         foreground_color: "white",
-        background_color: "black"
+        background_color: "black",
+        on_node_click(node_id) {
+            log("click", node_id);
+        },
+        on_node_hover(node_id) {
+            log("hover", node_id);
+        }
     });
     element.style.position = "fixed";
     element.style.inset = "0";
