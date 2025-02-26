@@ -87,6 +87,19 @@ type_prefix:                ; "\r\nContent-Type: "
     pair_t ' '
     ref #nil
 
+index_html:                 ; "index.html"
+    pair_t 'i'
+    pair_t 'n'
+    pair_t 'd'
+    pair_t 'e'
+    pair_t 'x'
+    pair_t '.'
+    pair_t 'h'
+    pair_t 't'
+    pair_t 'm'
+    pair_t 'l'
+    ref #nil
+
 list_concat:                ; ( b a -- ab )
     roll -3                 ; k b a
     call list.rev           ; k b a'
@@ -275,7 +288,7 @@ parse_path:                 ; tcp_conn,blob_dev,fs_dev,debug_dev <- base,len,blo
 ; Match the pathname (discarding the query string) from the Request-Line.
 
     state 0                 ; state
-    push get_file_meta      ; state get_file_meta
+    push read_trailing      ; state read_trailing
     actor become            ; --
     msg 0                   ; base,len,blob
     part 2                  ; blob len base
@@ -285,7 +298,7 @@ parse_path:                 ; tcp_conn,blob_dev,fs_dev,debug_dev <- base,len,blo
     call new_pathname_ptrn  ; cust,ofs,blob pathname_ptrn
     ref std.send_msg
 
-get_file_meta:              ; tcp_conn,blob_dev,fs_dev,debug_dev <- base,len,blob
+read_trailing:              ; tcp_conn,blob_dev,fs_dev,debug_dev <- base,len,blob
 
 ; If a pathname was not matched, fail.
 
@@ -295,17 +308,79 @@ get_file_meta:              ; tcp_conn,blob_dev,fs_dev,debug_dev <- base,len,blo
 
 ; Slice the pathname from the request.
 
-    msg 0                   ; base,len,blob
-    push blob.slice         ; base,len,blob slice
-    actor create            ; pathname=slice.base,len,blob
+    state 0                 ; state
+    msg 0                   ; state base,len,blob
+    push blob.slice         ; state base,len,blob slice
+    actor create            ; state pathname=slice.base,len,blob
+    pair 1                  ; state'=pathname,state
+    push check_directory    ; state' check_directory
+    actor become            ; --
+
+; Read the trailing character from the pathname.
+
+    msg 1                   ; base
+    msg 2                   ; base len
+    alu add                 ; base+len
+    push 1                  ; base+len 1
+    alu sub                 ; ofs=base+len-1
+    actor self              ; ofs cust=SELF
+    pair 1                  ; cust,ofs
+    msg -2                  ; cust,ofs blob
+    ref std.send_msg
+
+check_directory:            ; pathname,tcp_conn,blob_dev,fs_dev,debug_dev <- trailing
+
+; Is the pathname a directory?
+
+    msg 0                   ; trailing
+    eq '/'                  ; trailing=='/'
+    if is_directory         ; --
+    state -1                ; state'
+    push get_file_meta      ; state' get_file_meta
+    actor become            ; --
+    state 1                 ; pathname
+    actor self              ; pathname SELF
+    ref std.send_msg
+is_directory:               ; --
+
+; Construct "index.html" blob.
+
+    state 0                 ; state
+    push concat_directory   ; state concat_directory
+    actor become            ; --
+    push index_html         ; list=index_html
+    actor self              ; list cust=SELF
+    pair 1                  ; cust,list
+    state 3                 ; cust,list blob_dev
+    push blob.init          ; cust,list blob_dev init
+    actor create            ; cust,list init.blob_dev
+    ref std.send_msg
+
+concat_directory:           ; pathname,tcp_conn,blob_dev,fs_dev,debug_dev <- blob
+
+; Append "index.html" to the directory pathname.
+
+    state -1                ; state'
+    push get_file_meta      ; state' get_file_meta
+    actor become            ; --
+    msg 0                   ; tail=blob
+    state 1                 ; tail head=pathname
+    pair 1                  ; head,tail
+    push blob.pair          ; head,tail pair
+    actor create            ; pathname'=pair.head,tail
+    actor self              ; pathname' SELF
+    ref std.send_msg
+
+get_file_meta:              ; tcp_conn,blob_dev,fs_dev,debug_dev <- pathname
 
 ; Get the metadata of the file at the requested pathname.
 
-    state 0                 ; pathname state
-    pick 2                  ; pathname state pathname
-    pair 1                  ; pathname state'=pathname,state
-    push init_headers       ; pathname state' init_headers
-    actor become            ; pathname
+    state 0                 ; state
+    msg 0                   ; state pathname
+    pair 1                  ; state'=pathname,state
+    push init_headers       ; state' init_headers
+    actor become            ; --
+    msg 0                   ; pathname
     push dev.fs_meta        ; pathname fs_meta
     actor self              ; pathname fs_meta cb=SELF
     push #?                 ; pathname fs_meta cb can=#?
