@@ -19,7 +19,9 @@ function is_device(ofs) {
 }
 
 function print_short_cap(ram_ofs) {
-    return ufork.print(ufork.ptr_to_cap(ufork.ramptr(ram_ofs))).replace(
+    return ufork.print(
+        ufork.ptr_to_cap(ufork.ramptr(ram_ofs))
+    ).replace(
         /@60*/,
         "@"
     );

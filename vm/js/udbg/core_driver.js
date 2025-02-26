@@ -227,6 +227,9 @@ function make_driver(core, on_status) {
 
             if (!auto_refill(signal)) {
                 if (ufork.is_fix(signal)) {
+                    if (ufork.fix_to_i32(signal) !== ufork.E_OK) {
+                        pause();
+                    }
                     return publish_state();
                 }
 
