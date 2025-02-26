@@ -27,11 +27,14 @@ echo "
 chat.ufork.org {
     reverse_proxy :3528
 }
+www.ufork.org {
+    reverse_proxy :5887
+}
 " > Caddyfile
 sudo ./caddy start --config Caddyfile &
 cd uFork
 nohup deno run \
-    --watch=apps/peer_chat/chat.asm \
+    --watch=lib,apps/peer_chat \
     --allow-net \
     --allow-read=. \
     apps/peer_chat/chat_server.js \
@@ -39,19 +42,7 @@ nohup deno run \
     &
 nohup deno run \
     --no-config \
-    --watch=apps/tcp/random.asm \
-    --no-lock \
-    --reload \
-    --allow-read=. \
-    --allow-net \
-    --allow-import \
-    apps/tcp/tcp.js \
-    apps/tcp/random.asm \
-    0.0.0.0:8370 \
-    &
-nohup deno run \
-    --no-config \
-    --watch=apps/www/static.asm \
+    --watch=lib,apps/www \
     --no-lock \
     --reload \
     --allow-read=. \
@@ -61,7 +52,7 @@ nohup deno run \
     apps/www/www.js \
     apps/www/static.asm \
     site \
-    0.0.0.0:5887 \
+    localhost:5887 \
     &
 nohup bash -c "
     while true

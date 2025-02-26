@@ -8,7 +8,7 @@
 //      --allow-write=<www_dir> \
 //      --allow-net \
 //      --allow-import \
-//      tcp.js \
+//      www.js \
 //      <src> \
 //      <www_dir> \
 //      <bind_address> \
