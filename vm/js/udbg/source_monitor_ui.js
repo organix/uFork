@@ -4,6 +4,7 @@
 /*jslint browser, global */
 
 import dom from "https://ufork.org/lib/dom.js";
+import make_ui from "https://ufork.org/lib/ui.js";
 const asm_href = import.meta.resolve("https://ufork.org/lib/std.asm");
 
 function keep_centered(child, parent) {
@@ -13,16 +14,10 @@ function keep_centered(child, parent) {
     parent.scrollTop = offset - parent_rect.height / 2 + child_rect.height / 2;
 }
 
-function source_monitor_ui({sourcemap}) {
-    const element = dom("source_monitor-ui", {
-        style: {
-            display: "block",
-            fontFamily: "monospace",
-            whiteSpace: "pre",
-            overflow: "auto",
-            padding: "10px"
-        }
-    });
+const source_monitor_ui = make_ui("source-monitor-ui", function (
+    element,
+    {sourcemap}
+) {
 
     function set_sourcemap(new_sourcemap) {
         sourcemap = new_sourcemap;
@@ -46,17 +41,28 @@ function source_monitor_ui({sourcemap}) {
         element.textContent = "No source available.";
     }
 
+    element.style.display = "block";
+    element.style.fontFamily = "monospace";
+    element.style.whiteSpace = "pre";
+    element.style.overflow = "auto";
+    element.style.padding = "10px";
     set_sourcemap(sourcemap);
     element.set_sourcemap = set_sourcemap;
-    return element;
-}
+    return {
+        connect() {
+            const mark = element.querySelector("mark");
+            if (mark) {
+                keep_centered(mark, element);
+            }
+        }
+    };
+});
 
 function demo() {
     document.documentElement.innerHTML = "";
     const element = source_monitor_ui({});
     element.style.position = "fixed";
     element.style.inset = "0";
-    document.body.append(element);
     fetch(asm_href).then(function (response) {
         return response.text();
     }).then(function (text) {
@@ -64,6 +70,7 @@ function demo() {
             debug: {src: asm_href, start: 1321, end: 1331},
             text
         });
+        document.body.append(element);
     });
 }
 
