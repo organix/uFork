@@ -5,7 +5,6 @@
     blob: "https://ufork.org/lib/blob.asm"
     dev: "https://ufork.org/lib/dev.asm"
     div_mod: "https://ufork.org/lib/div_mod.asm"
-    http: "https://ufork.org/lib/http_data.asm"
     io: "https://ufork.org/lib/blob_io.asm"
     list: "https://ufork.org/lib/list.asm"
     peg: "https://ufork.org/lib/blob_peg.asm"
@@ -21,6 +20,15 @@ chunk_size:
     ref 8192                ; 8KB
     ; ref 65536               ; 64KB
     ; ref 1048576             ; 1MB
+
+blankln:
+    pair_t '\r'
+    pair_t '\n'
+crlf:
+    pair_t '\r'
+nl:
+    pair_t '\n'
+    ref #nil
 
 get:                        ; "GET "
     pair_t 'G'
@@ -457,7 +465,7 @@ construct_headers:          ; metadata,pathname,tcp_conn,blob_dev,fs_dev,debug_d
     state 1                 ; metadata
     push dev.fs_size        ; metadata fs_size
     dict get                ; size
-    push http.blankln       ; size blankln
+    push blankln            ; size blankln
     roll 2                  ; blankln size
     call num_to_dec         ; head=size+blankln
     push length_prefix      ; head length_prefix
