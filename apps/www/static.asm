@@ -100,6 +100,44 @@ index_html:                 ; "index.html"
     pair_t 'l'
     ref #nil
 
+not_found_response:         ; "HTTP/1.0 404 Not Found\r\n\r\nNot Found"
+    pair_t 'H'
+    pair_t 'T'
+    pair_t 'T'
+    pair_t 'P'
+    pair_t '/'
+    pair_t '1'
+    pair_t '.'
+    pair_t '0'
+    pair_t ' '
+    pair_t '4'
+    pair_t '0'
+    pair_t '4'
+    pair_t ' '
+    pair_t 'N'
+    pair_t 'o'
+    pair_t 't'
+    pair_t ' '
+    pair_t 'F'
+    pair_t 'o'
+    pair_t 'u'
+    pair_t 'n'
+    pair_t 'd'
+    pair_t '\r'
+    pair_t '\n'
+    pair_t '\r'
+    pair_t '\n'
+    pair_t 'N'
+    pair_t 'o'
+    pair_t 't'
+    pair_t ' '
+    pair_t 'F'
+    pair_t 'o'
+    pair_t 'u'
+    pair_t 'n'
+    pair_t 'd'
+    ref #nil
+
 list_concat:                ; ( b a -- ab )
     roll -3                 ; k b a
     call list.rev           ; k b a'
@@ -478,8 +516,8 @@ read_file:                  ; pathname,tcp_conn,blob_dev,fs_dev,debug_dev <- ok,
     msg 1                   ; ok
     eq #t                   ; ok==#t
     if_not not_found        ; -- // open failed
-    state 0                 ; state
-    push close_connection   ; state close_connection
+    state -1                ; state'
+    push close_connection   ; state' close_connection
     actor become            ; --
     msg -1                  ; requestor=file
     push chunk_size         ; requestor input=chunk_size
@@ -497,7 +535,7 @@ read_file:                  ; pathname,tcp_conn,blob_dev,fs_dev,debug_dev <- ok,
     roll 2                  ; ok,value copier
     ref std.send_msg
 
-close_connection:           ; pathname,tcp_conn,blob_dev,fs_dev,debug_dev <- ok,value
+close_connection:           ; tcp_conn,blob_dev,fs_dev,debug_dev <- ok,value
     push #?                 ; _
     push std.sink_beh       ; _ sink_beh
     actor become            ; --
@@ -505,10 +543,10 @@ close_connection:           ; pathname,tcp_conn,blob_dev,fs_dev,debug_dev <- ok,
     actor self              ; #nil cb=SELF
     push #?                 ; #nil cb can=#?
     pair 2                  ; write_req=can,cb,#nil
-    state 2                 ; write_req tcp_conn
+    state 1                 ; write_req tcp_conn
     ref std.send_msg
 
-; Pending proper error responses, we simply close the connection.
+; Standard error response.
 
 not_found:                  ; pathname,tcp_conn,blob_dev,fs_dev,debug_dev <- _
     state -1                ; state'
@@ -517,12 +555,25 @@ not_found:                  ; pathname,tcp_conn,blob_dev,fs_dev,debug_dev <- _
     ref std.resend
 
 bad_request:                ; tcp_conn,blob_dev,fs_dev,debug_dev <- _
-    push #nil               ; #nil
-    state -3                ; #nil cb=debug_dev
-    push #?                 ; #nil cb can=#?
-    pair 2                  ; close_req=can,cb,#nil
-    state 1                 ; close_req tcp_conn
-    debug
+    state 0                 ; state
+    push k_bad_request      ; state k_bad_request
+    actor become            ; --
+    push not_found_response ; list=not_found_response
+    actor self              ; list cust=SELF
+    pair 1                  ; cust,list
+    state 2                 ; cust,list blob_dev
+    push blob.init          ; cust,list blob_dev init
+    actor create            ; cust,list init.blob_dev
+    ref std.send_msg
+k_bad_request:              ; tcp_conn,blob_dev,fs_dev,debug_dev <- blob
+    state 0                 ; state
+    push close_connection   ; state close_connection
+    actor become            ; --
+    msg 0                   ; blob
+    actor self              ; blob cb=SELF
+    push #?                 ; blob cb can=#?
+    pair 2                  ; write_req=can,cb,blob
+    state 1                 ; write_req tcp_conn
     ref std.send_msg
 
 boot:                       ; _ <- {caps}
