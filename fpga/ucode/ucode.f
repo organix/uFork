@@ -169,6 +169,11 @@
         4ROL DUP X#
     AGAIN DROP ;
 
+: us_delay ( us -- )
+    6 * ?LOOP- AGAIN ;     ( FIXME: adjust multiplier if CPU clock-rate changes )
+: ms_delay ( ms -- )
+    ?LOOP- 1000 us_delay AGAIN ;
+
 ( uFork Virtual Machine )
 : rom_image DATA
 : rsvd_rom
@@ -2126,7 +2131,7 @@ VARIABLE here   ( upload address )
 
 ( WARNING! if BOOT returns we PANIC! )
 : BOOT
-    spi_wake X. CR          ( printing the id gives sufficient wake-up delay > 5us )
+    spi_wake 10 us_delay    ( wake-up delay > 5us )
     ECHOLOOP
     0 rom_quads spif2qrom   ( init from flash )
     (
@@ -2135,5 +2140,11 @@ VARIABLE here   ( upload address )
     ufork_boot
     spif_test
     )
+    1 X. 1000 ms_delay
+    1 X. 1000 ms_delay
+    2 X. 2000 ms_delay
+    1 X. 1000 ms_delay
+    3 X. 2000 ms_delay
+    CR
     ( ufork_reboot )
     prompt MONITOR ;
