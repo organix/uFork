@@ -164,12 +164,6 @@ table {
             <button id="single-step">Step</button>
             <button id="gc-btn">GC</button>
         </div>
-        <div id="graph" title="Memory Use Graph">
-            <svg id="mem-graph" width="512" height="256" viewBox="0 0 512 256" stroke-width="1" >
-                <polyline id="mem-graph-free" fill="none" stroke="#09F" />
-                <polyline id="mem-graph-used" fill="none" stroke="#F60" />
-            </svg>
-        </div>
         <table border="1">
             <tr>
                 <th>EQ</th>
@@ -259,6 +253,12 @@ table {
     <!--
     <pre id="blob" class="panel" title="BLOB Image"></pre>
     -->
+    <div id="graph" title="Memory Use Graph">
+        <svg id="mem-graph" width="512" height="256" viewBox="0 0 512 256" stroke-width="1" >
+            <polyline id="mem-graph-free" fill="none" stroke="#09F" />
+            <polyline id="mem-graph-used" fill="none" stroke="#F60" />
+        </svg>
+    </div>
     <div id="footer">
         <button id="snapshot-btn">Snapshot</button>
         <input id="restore-btn" type="file">
