@@ -10,15 +10,24 @@
     list: "https://ufork.org/lib/list.asm"
     peg: "https://ufork.org/lib/blob_peg.asm"
     std: "https://ufork.org/lib/std.asm"
+    match_string: "./match_string.asm"
+    sniff_mime: "./sniff_mime.asm"
 
 petname:                    ; the bind address
     ref 0
 
 chunk_size:
     ; ref 10                  ; 10B
-    ; ref 8192                ; 8KB
+    ref 8192                ; 8KB
     ; ref 65536               ; 64KB
-    ref 1048576             ; 1MB
+    ; ref 1048576             ; 1MB
+
+get:                        ; "GET "
+    pair_t 'G'
+    pair_t 'E'
+    pair_t 'T'
+    pair_t ' '
+    ref #nil
 
 status_200:                 ; "HTTP/1.0 200 OK"
     pair_t 'H'
@@ -78,18 +87,6 @@ type_prefix:                ; "\r\nContent-Type: "
     pair_t ' '
     ref #nil
 
-mime_html:                  ; "text/html"
-    pair_t 't'
-    pair_t 'e'
-    pair_t 'x'
-    pair_t 't'
-    pair_t '/'
-    pair_t 'h'
-    pair_t 't'
-    pair_t 'm'
-    pair_t 'l'
-    ref #nil
-
 list_concat:                ; ( b a -- ab )
     roll -3                 ; k b a
     call list.rev           ; k b a'
@@ -117,15 +114,6 @@ num_loop:                   ; k str n
     ref std.return_value
 
 ; pattern factories
-
-;;  sp = ' '
-new_sp_ptrn:                ; ( -- sp_ptrn )
-    push ' '                ; k sp
-    push peg.pred_eq        ; k sp pred_eq
-    actor create            ; k pred=pred_eq.sp
-    push peg.match_one      ; k pred match_one
-    actor create            ; k sp_ptrn=match_one.pred
-    ref std.return_value
 
 ;;  line = [^\n]* '\n'
 new_line_ptrn:              ; ( -- line_ptrn )
@@ -165,35 +153,10 @@ new_token_ptrn:             ; ( -- token_ptrn )
     call peg.new_plus_ptrn  ; k token_ptrn
     ref std.return_value
 
-;;  get = 'G' 'E' 'T' sp
+;;  get = 'G' 'E' 'T' ' '
 new_get_ptrn:               ; ( -- get_ptrn )
-    push #nil               ; k list=#nil
-    call new_sp_ptrn        ; k list sp_ptrn
-    pair 1                  ; k list=sp_ptrn,list
-
-    push 'T'                ; k list 'T'
-    push peg.pred_eq        ; k list 'T' pred_eq
-    actor create            ; k list pred=pred_eq.'T'
-    push peg.match_one      ; k list pred match_one
-    actor create            ; k list T_ptrn=match_one.pred
-    pair 1                  ; k list=T_ptrn,list
-
-    push 'E'                ; k list 'E'
-    push peg.pred_eq        ; k list 'E' pred_eq
-    actor create            ; k list pred=pred_eq.'E'
-    push peg.match_one      ; k list pred match_one
-    actor create            ; k list E_ptrn=match_one.pred
-    pair 1                  ; k list=E_ptrn,list
-
-    push 'G'                ; k list 'G'
-    push peg.pred_eq        ; k list 'G' pred_eq
-    actor create            ; k list pred=pred_eq.'G'
-    push peg.match_one      ; k list pred match_one
-    actor create            ; k list G_ptrn=match_one.pred
-    pair 1                  ; k list=G_ptrn,list
-
-    push peg.match_seq      ; k list match_seq
-    actor create            ; k get_ptrn=match_seq.list
+    push get                ; k get
+    call match_string.new   ; k get_ptrn
     ref std.return_value
 
 ; Request handling stages.
@@ -337,40 +300,58 @@ get_file_meta:              ; tcp_conn,blob_dev,fs_dev,debug_dev <- base,len,blo
     state 3                 ; meta_req fs_dev
     ref std.send_msg
 
-init_headers:               ; path,tcp_conn,blob_dev,fs_dev,debug_dev <- ok,value
-    msg -1                  ; value
-    typeq #dict_t           ; is_dict(value)
+init_headers:               ; path,tcp_conn,blob_dev,fs_dev,debug_dev <- ok,metadata
+    msg -1                  ; metadata
+    typeq #dict_t           ; is_dict(metadata)
     if_not not_found        ; --
 
-; The file exists and we know how big it is.
+; The file exists. Retain its metadata.
 
-    msg -1                  ; metadata
-    push dev.fs_size        ; metadata fs_size
-    dict get                ; size
-    ; dup 1                   ; size size
-    ; state -4                ; size size debug_dev
-    ; actor send              ; size
+    state 0                 ; state
+    msg -1                  ; state metadata
+    pair 1                  ; metadata,state
+    push construct_headers  ; metadata,state construct_headers
+    actor become            ; --
+
+; Infer the Content-Type from the path.
+
+    state 1                 ; path
+    actor self              ; path cust=SELF
+    pair 1                  ; cust,path
+    push #?                 ; cust,path _
+    push sniff_mime.beh     ; cust,path _ sniff_mime
+    actor create            ; cust,path sniff_mime._
+    ref std.send_msg
+
+construct_headers:          ; metadata,path,tcp_conn,blob_dev,fs_dev,debug_dev <- mime | #?
 
 ; Construct the headers. This is done in reverse to minimize unnecessary work
 ; during list concatenation.
 
+    state 1                 ; metadata
+    push dev.fs_size        ; metadata fs_size
+    dict get                ; size
     push http.blankln       ; size blankln
     roll 2                  ; blankln size
     call num_to_dec         ; head=size+blankln
     push length_prefix      ; head length_prefix
     call list_concat        ; head
-    ; push mime_html          ; head mime_html
-    ; call list_concat        ; head
-    ; push type_prefix        ; head type_prefix
-    ; call list_concat        ; head
+    msg 0                   ; head mime
+    typeq #pair_t           ; head mime==#?
+    if_not construct_status ; head
+    msg 0                   ; head mime
+    call list_concat        ; head
+    push type_prefix        ; head type_prefix
+    call list_concat        ; head
+construct_status:           ; head
     push status_200         ; head status_200
     call list_concat        ; head
-    state 0                 ; head state
-    push write_headers      ; head state write_headers
+    state -1                ; head state'
+    push write_headers      ; head state' write_headers
     actor become            ; list=head''
     actor self              ; list cust=SELF
     pair 1                  ; cust,list
-    state 3                 ; cust,list blob_dev
+    state 4                 ; cust,list blob_dev
     push blob.init          ; cust,list blob_dev init
     actor create            ; cust,list init.blob_dev
     ref std.send_msg
@@ -408,7 +389,7 @@ open_file:                  ; path,tcp_conn,blob_dev,fs_dev,debug_dev <- ok,valu
 read_file:                  ; path,tcp_conn,blob_dev,fs_dev,debug_dev <- ok,value
     msg 1                   ; ok
     eq #t                   ; ok==#t
-    if_not std.commit       ; -- // open failed, drop the connection
+    if_not not_found        ; -- // open failed
     state 0                 ; state
     push close_connection   ; state close_connection
     actor become            ; --
@@ -441,18 +422,19 @@ close_connection:           ; path,tcp_conn,blob_dev,fs_dev,debug_dev <- ok,valu
 
 ; Pending proper error responses, we simply close the connection.
 
-not_found:                  ; path,tcp_conn,fs_dev,debug_dev <- _
-    state -1                ; tcp_conn,fs_dev,debug_dev
-    push bad_request        ; tcp_conn,fs_dev,debug_dev bad_request
+not_found:                  ; path,tcp_conn,blob_dev,fs_dev,debug_dev <- _
+    state -1                ; state'
+    push bad_request        ; state' bad_request
     actor become            ; --
     ref std.resend
 
-bad_request:                ; tcp_conn,fs_dev,debug_dev <- _
+bad_request:                ; tcp_conn,blob_dev,fs_dev,debug_dev <- _
     push #nil               ; #nil
-    state -2                ; #nil cb=debug_dev
+    state -3                ; #nil cb=debug_dev
     push #?                 ; #nil cb can=#?
     pair 2                  ; close_req=can,cb,#nil
     state 1                 ; close_req tcp_conn
+    debug
     ref std.send_msg
 
 boot:                       ; _ <- {caps}
