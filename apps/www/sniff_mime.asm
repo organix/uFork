@@ -1,4 +1,4 @@
-; Infer the MIME type from a request path blob.
+; Infer the MIME type from a pathname blob.
 
 ; The customer is sent the MIME type as a list of characters,
 ; or #? if not found.
@@ -77,7 +77,7 @@ map:                        ; {"css": "text/css", ...}
     dict_t svg_ext svg_mime
     ref #nil
 
-;;  pre_ext = ([^.]*\.)* (FIXME: stop at query string)
+;;  pre_ext = ([^.]*\.)*
 new_pre_ext_ptrn:           ; ( -- pre_ext_ptrn )
     push #nil               ; k #nil
     push '.'                ; k #nil dot
@@ -101,7 +101,7 @@ new_pre_ext_ptrn:           ; ( -- pre_ext_ptrn )
     actor create            ; k pre_ext_ptrn=match_star.segment_ptrn
     ref std.return_value
 
-;;  ext = string EOF (FIXME: ignore query string)
+;;  ext = string EOF
 new_ext_ptrn:               ; ( ext -- ext_ptrn )
     roll -2                 ; k ext
     push #nil               ; k ext #nil

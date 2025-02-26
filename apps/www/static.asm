@@ -141,22 +141,34 @@ new_line_ptrn:              ; ( -- line_ptrn )
     actor create            ; k line_ptrn=match_seq.list
     ref std.return_value
 
-;;  token = print+
-new_token_ptrn:             ; ( -- token_ptrn )
-    push #nil               ; k #nil
-    push peg.print_rng      ; k #nil print
-    pair 1                  ; k set=print,#nil
-    push peg.pred_in        ; k set pred_in
-    actor create            ; k print_pred=pred_in.set
-    push peg.match_one      ; k print_pred match_one
-    actor create            ; k print_ptrn=match_one.pred
-    call peg.new_plus_ptrn  ; k token_ptrn
-    ref std.return_value
+pre_q_rng:
+    pair_t '!' '>'
+post_q_rng:
+    pair_t '@' '~'
+;;  non_q = [print \ ?]
+non_q_rng:
+    pair_t pre_q_rng
+    pair_t post_q_rng
+    ref #nil
 
-;;  get = 'G' 'E' 'T' ' '
-new_get_ptrn:               ; ( -- get_ptrn )
-    push get                ; k get
-    call match_string.new   ; k get_ptrn
+;;  pathname = '/' non_q*
+new_pathname_ptrn:          ; ( -- pathname_ptrn )
+    push #nil               ; k #nil
+    push non_q_rng          ; k #nil set=non_q
+    push peg.pred_in        ; k #nil set pred_in
+    actor create            ; k #nil print_pred=pred_in.set
+    push peg.match_one      ; k #nil pred match_one
+    actor create            ; k #nil ptrn=match_one.pred
+    push peg.match_star     ; k #nil ptrn match_star
+    actor create            ; k #nil star_ptrn=match_star.ptrn
+    push '/'                ; k #nil star_ptrn '/'
+    push peg.pred_eq        ; k #nil star_ptrn '/' pred_eq
+    actor create            ; k #nil star_ptrn slash_pred=pred_eq.'/'
+    push peg.match_one      ; k #nil star_ptrn slash_pred match_one
+    actor create            ; k #nil star_ptrn slash_ptrn=match_one.slash_pred
+    pair 2                  ; k list=slash_ptrn,star_ptrn,#nil
+    push peg.match_seq      ; k list match_seq
+    actor create            ; k pathname_ptrn=match_seq.list
     ref std.return_value
 
 ; Request handling stages.
@@ -248,7 +260,8 @@ parse_method:               ; tcp_conn,blob_dev,fs_dev,debug_dev <- base,len,blo
     push parse_path         ; blob ofs state parse_path
     actor create            ; blob ofs cust=parse_path.state
     pair 2                  ; cust,ofs,blob
-    call new_get_ptrn       ; cust,ofs,blob get_ptrn
+    push get                ; cust,ofs,blob get
+    call match_string.new   ; cust,ofs,blob get_ptrn
     ref std.send_msg
 
 parse_path:                 ; tcp_conn,blob_dev,fs_dev,debug_dev <- base,len,blob
@@ -259,7 +272,7 @@ parse_path:                 ; tcp_conn,blob_dev,fs_dev,debug_dev <- base,len,blo
     typeq #fixnum_t         ; is_fixnum(base)
     if_not bad_request      ; --
 
-; Match the path in the Request-Line.
+; Match the pathname (discarding the query string) from the Request-Line.
 
     state 0                 ; state
     push get_file_meta      ; state get_file_meta
@@ -269,38 +282,38 @@ parse_path:                 ; tcp_conn,blob_dev,fs_dev,debug_dev <- base,len,blo
     alu add                 ; blob ofs=len+base
     actor self              ; blob ofs cust=SELF
     pair 2                  ; cust,ofs,blob
-    call new_token_ptrn     ; cust,ofs,blob token_ptrn
+    call new_pathname_ptrn  ; cust,ofs,blob pathname_ptrn
     ref std.send_msg
 
 get_file_meta:              ; tcp_conn,blob_dev,fs_dev,debug_dev <- base,len,blob
 
-; If a path was not matched, fail.
+; If a pathname was not matched, fail.
 
     msg 1                   ; base
     typeq #fixnum_t         ; is_fixnum(base)
     if_not bad_request      ; --
 
-; Slice the path from the request.
+; Slice the pathname from the request.
 
     msg 0                   ; base,len,blob
     push blob.slice         ; base,len,blob slice
-    actor create            ; path=slice.base,len,blob
+    actor create            ; pathname=slice.base,len,blob
 
-; Get the metadata of the file at the requested path.
+; Get the metadata of the file at the requested pathname.
 
-    state 0                 ; path state
-    pick 2                  ; path state path
-    pair 1                  ; path state'=path,state
-    push init_headers       ; path state' init_headers
-    actor become            ; path
-    push dev.fs_meta        ; path fs_meta
-    actor self              ; path fs_meta cb=SELF
-    push #?                 ; path fs_meta cb can=#?
-    pair 3                  ; meta_req=can,cb,fs_meta,path
+    state 0                 ; pathname state
+    pick 2                  ; pathname state pathname
+    pair 1                  ; pathname state'=pathname,state
+    push init_headers       ; pathname state' init_headers
+    actor become            ; pathname
+    push dev.fs_meta        ; pathname fs_meta
+    actor self              ; pathname fs_meta cb=SELF
+    push #?                 ; pathname fs_meta cb can=#?
+    pair 3                  ; meta_req=can,cb,fs_meta,pathname
     state 3                 ; meta_req fs_dev
     ref std.send_msg
 
-init_headers:               ; path,tcp_conn,blob_dev,fs_dev,debug_dev <- ok,metadata
+init_headers:               ; pathname,tcp_conn,blob_dev,fs_dev,debug_dev <- ok,metadata
     msg -1                  ; metadata
     typeq #dict_t           ; is_dict(metadata)
     if_not not_found        ; --
@@ -313,17 +326,17 @@ init_headers:               ; path,tcp_conn,blob_dev,fs_dev,debug_dev <- ok,meta
     push construct_headers  ; metadata,state construct_headers
     actor become            ; --
 
-; Infer the Content-Type from the path.
+; Infer the Content-Type from the pathname.
 
-    state 1                 ; path
-    actor self              ; path cust=SELF
-    pair 1                  ; cust,path
-    push #?                 ; cust,path _
-    push sniff_mime.beh     ; cust,path _ sniff_mime
-    actor create            ; cust,path sniff_mime._
+    state 1                 ; pathname
+    actor self              ; pathname cust=SELF
+    pair 1                  ; cust,pathname
+    push #?                 ; cust,pathname _
+    push sniff_mime.beh     ; cust,pathname _ sniff_mime
+    actor create            ; cust,pathname sniff_mime._
     ref std.send_msg
 
-construct_headers:          ; metadata,path,tcp_conn,blob_dev,fs_dev,debug_dev <- mime | #?
+construct_headers:          ; metadata,pathname,tcp_conn,blob_dev,fs_dev,debug_dev <- mime | #?
 
 ; Construct the headers. This is done in reverse to minimize unnecessary work
 ; during list concatenation.
@@ -356,7 +369,7 @@ construct_status:           ; head
     actor create            ; cust,list init.blob_dev
     ref std.send_msg
 
-write_headers:              ; path,tcp_conn,blob_dev,fs_dev,debug_dev <- blob
+write_headers:              ; pathname,tcp_conn,blob_dev,fs_dev,debug_dev <- blob
     msg 0                   ; blob
     typeq #actor_t          ; is_cap(blob)
     if_not std.abort        ; -- // alloc failed
@@ -370,7 +383,7 @@ write_headers:              ; path,tcp_conn,blob_dev,fs_dev,debug_dev <- blob
     state 2                 ; write_req tcp_conn
     ref std.send_msg
 
-open_file:                  ; path,tcp_conn,blob_dev,fs_dev,debug_dev <- ok,value
+open_file:                  ; pathname,tcp_conn,blob_dev,fs_dev,debug_dev <- ok,value
     msg 1                   ; ok
     eq #t                   ; ok==#t
     if_not std.commit       ; -- // write failed, drop the connection
@@ -378,15 +391,15 @@ open_file:                  ; path,tcp_conn,blob_dev,fs_dev,debug_dev <- ok,valu
     push read_file          ; state read_file
     actor become            ; --
     push #f                 ; create=#f
-    state 1                 ; create path
-    push dev.fs_file        ; create path fs_file
-    actor self              ; create path fs_file cb=SELF
-    push #?                 ; create path fs_file cb can=#?
-    pair 4                  ; file_req=can,cb,fs_file,path,create
+    state 1                 ; create pathname
+    push dev.fs_file        ; create pathname fs_file
+    actor self              ; create pathname fs_file cb=SELF
+    push #?                 ; create pathname fs_file cb can=#?
+    pair 4                  ; file_req=can,cb,fs_file,pathname,create
     state 4                 ; file_req fs_dev
     ref std.send_msg
 
-read_file:                  ; path,tcp_conn,blob_dev,fs_dev,debug_dev <- ok,value
+read_file:                  ; pathname,tcp_conn,blob_dev,fs_dev,debug_dev <- ok,value
     msg 1                   ; ok
     eq #t                   ; ok==#t
     if_not not_found        ; -- // open failed
@@ -409,7 +422,7 @@ read_file:                  ; path,tcp_conn,blob_dev,fs_dev,debug_dev <- ok,valu
     roll 2                  ; ok,value copier
     ref std.send_msg
 
-close_connection:           ; path,tcp_conn,blob_dev,fs_dev,debug_dev <- ok,value
+close_connection:           ; pathname,tcp_conn,blob_dev,fs_dev,debug_dev <- ok,value
     push #?                 ; _
     push std.sink_beh       ; _ sink_beh
     actor become            ; --
@@ -422,7 +435,7 @@ close_connection:           ; path,tcp_conn,blob_dev,fs_dev,debug_dev <- ok,valu
 
 ; Pending proper error responses, we simply close the connection.
 
-not_found:                  ; path,tcp_conn,blob_dev,fs_dev,debug_dev <- _
+not_found:                  ; pathname,tcp_conn,blob_dev,fs_dev,debug_dev <- _
     state -1                ; state'
     push bad_request        ; state' bad_request
     actor become            ; --
