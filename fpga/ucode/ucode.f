@@ -170,7 +170,7 @@
     AGAIN DROP ;
 
 : us_delay ( us -- )
-    6 * ?LOOP- AGAIN ;     ( FIXME: adjust multiplier if CPU clock-rate changes )
+    6 * ?LOOP- AGAIN ;      ( FIXME: adjust multiplier if CPU clock-rate changes )
 : ms_delay ( ms -- )
     ?LOOP- 1000 us_delay AGAIN ;
 
@@ -1920,6 +1920,7 @@ VARIABLE spi_page ( bits [31:16] of SPI address )
 0x70 CONSTANT 'p'
 0x71 CONSTANT 'q'
 0x72 CONSTANT 'r'
+0x78 CONSTANT 'x'
 0x7E CONSTANT '~'
 VARIABLE cmd    ( last command character read )
 VARIABLE inp    ( input data accumulator )
@@ -2064,6 +2065,117 @@ VARIABLE here   ( upload address )
     THEN
     DUP cmd !               ( key -> cmd )
     upload ;
+( XMODEM file transfer )
+0x01 CONSTANT SOH           ( Start of Header )
+0x06 CONSTANT ACK           ( Acknowledge )
+0x15 CONSTANT NAK           ( Negative Ack )
+0x04 CONSTANT EOT           ( End of Transmission )
+0x18 CONSTANT CAN           ( Cancel )
+VARIABLE xm_pkt             ( current packet number )
+VARIABLE xm_retry           ( number of retries )
+VARIABLE xm_here            ( upload address )
+: xm_250ms_rcv ( -- byte | -1 )
+    250
+: xm_timed_rcv ( ms -- byte | -1 )
+    RX? IF
+        DROP RX@            ( D: byte )
+        0xFF AND ;
+    THEN
+    DUP IF
+        1000 us_delay       ( D: ms )
+        1- xm_timed_rcv ;
+    THEN
+    DROP -1 ;               ( timeout )
+: xm_flush_rcv ( -- )
+    xm_250ms_rcv MSB& IF
+        EXIT
+    THEN xm_flush_rcv ;
+: xm_rcv_failed
+    3 ?LOOP-
+        CAN EMIT
+    AGAIN
+    xm_flush_rcv
+    0 ;
+: xm_rcv_bad                ( D: rem chk data )
+    2DROP DROP              ( D -- )
+    xm_here @ here !        ( restore starting addr )
+: xm_rcv_try
+    xm_retry @ 0= IF
+        xm_rcv_failed ;
+    THEN
+    xm_retry @1-
+    xm_flush_rcv
+    NAK EMIT                ( send NAK to start or retry )
+: xm_rcv_soh
+    3000 xm_timed_rcv
+    DUP EOT = IF
+        ACK EMIT
+        xm_pkt @ ;          ( successful transfer )
+    THEN
+    SOH <> IF
+        xm_rcv_try ;        ( try again... )
+    THEN
+: xm_rcv_npkt
+    xm_250ms_rcv
+    DUP MSB& IF
+        xm_rcv_try ;        ( try again... )
+    THEN
+    DUP xm_pkt @ 0xFF AND = IF
+        xm_flush_rcv
+        ACK EMIT            ( ACK dup packet )
+        xm_rcv_soh ;
+    THEN
+    xm_pkt @ 1+ 0xFF AND <> IF
+        xm_rcv_failed ;     ( transfer failed )
+    THEN
+: xm_rcv_ipkt
+    xm_250ms_rcv
+    DUP MSB& IF
+        xm_rcv_try ;        ( try again... )
+    THEN
+    xm_pkt @ 1+ INVERT 0xFF AND <> IF
+        xm_rcv_try ;        ( try again... )
+    THEN
+: xm_rcv_pkt
+    here @ xm_here !        ( remember starting addr )
+    128 0                   ( D: rem chk )
+: xm_rcv_cell
+    xm_250ms_rcv            ( D: rem chk msb )
+    DUP MSB& IF
+        xm_rcv_bad ;        ( bad packet... )
+    THEN
+    SWAP OVER +             ( D: rem msb chk+msb )
+    xm_250ms_rcv            ( D: rem msb chk+msb lsb )
+    DUP MSB& IF
+        DROP xm_rcv_bad ;   ( bad packet... )
+    THEN
+    SWAP OVER +             ( D: rem msb lsb chk+msb+lsb )
+    -ROT b2c                ( D: rem chk' cell )
+    >here                   ( D: rem chk' )
+    SWAP 2 -                ( D: chk' rem-2 )
+    DUP IF
+        SWAP                ( D: rem' chk' )
+        xm_rcv_cell ;
+    THEN
+: xm_rcv_chk
+    xm_250ms_rcv            ( D: rem' chk' chk )
+    DUP MSB& IF
+        xm_rcv_bad ;        ( bad packet... )
+    THEN
+    2DUP XOR 0xFF AND       ( D: rem' chk' chk (chk'^chk)&0xFF )
+    IF
+        xm_rcv_bad ;        ( bad packet... )
+    THEN
+    2DROP DROP              ( D: -- )
+    xm_pkt @ 1+ xm_pkt !
+    10 xm_retry !
+    ACK EMIT                ( ACK good packet )
+    xm_rcv_soh ;
+: xm_rcv_file ( -- npkts )
+    0 xm_pkt !
+    10 xm_retry !
+    0x8000 here !           ( upload to uFork ROM )
+    xm_rcv_try ;
 : MONITOR
     KEY                     ( D: key )
     DUP ^C = SKZ EXIT       ( abort! )
@@ -2104,6 +2216,9 @@ VARIABLE here   ( upload address )
         OVER '[' = IF
             pop here ! upload
         THEN
+        OVER 'x' = IF
+            xm_rcv_file
+        THEN
         OVER 'r' = IF
             pop EXECUTE
         THEN
@@ -2131,7 +2246,8 @@ VARIABLE here   ( upload address )
 
 ( WARNING! if BOOT returns we PANIC! )
 : BOOT
-    spi_wake 10 us_delay    ( wake-up delay > 5us )
+    spi_wake DROP
+    10 us_delay             ( wake-up delay > 5us )
     ECHOLOOP
     0 rom_quads spif2qrom   ( init from flash )
     (
@@ -2140,11 +2256,5 @@ VARIABLE here   ( upload address )
     ufork_boot
     spif_test
     )
-    1 X. 1000 ms_delay
-    1 X. 1000 ms_delay
-    2 X. 2000 ms_delay
-    1 X. 1000 ms_delay
-    3 X. 2000 ms_delay
-    CR
     ( ufork_reboot )
     prompt MONITOR ;
