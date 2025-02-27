@@ -81,19 +81,14 @@
 //      The driver is initially paused (false).
 
 //  {kind: "ram", bytes: <Uint8Array>}
-//  {kind: "rom", bytes: <Uint8Array>}
 
-//      Current contents of quad memory.
+//      Current contents of quad RAM.
 
-//  {kind: "source", sourcemap: <object>}
+//  {kind: "rom", bytes: <Uint8Array>, debugs: <object>, module_texts: <object>}
 
-//      The full text of the source file, and range within, of the current
-//      instruction. The 'sourcemap' is an object like {debug, text}.
-
-//  {kind: "labels", mapping: <object>}
-
-//      A partial mapping from ROM pointers to debug labels, for
-//      example {"54": "fork_beh", "63": "join_beh", "82": "list_of_3"}.
+//      Current contents of quad ROM. The 'debugs' object contains debug objects
+//      like {src, label, start, end}, keyed by pointer. The 'module_texts'
+//      object contains the source text of each loaded module, keyed by src.
 
 //  {kind: "auto_refill", enabled: <boolean>}
 //  {kind: "interval", milliseconds: <number>}
@@ -128,42 +123,25 @@ function make_driver(core, on_status) {
             callback({kind: "auto_refill", value: auto_refill_enabled});
         } else if (kind === "interval") {
             callback({kind: "interval", milliseconds: interval});
-        } else if (kind === "labels") {
-            let mapping = Object.create(null);
-            new Array(core.h_rom_top()).fill().forEach(function (_, ofs) {
-                const ptr = ufork.romptr(ofs);
-                const debug = core.u_sourcemap(ptr)?.debug;
-                if (debug?.label !== undefined) {
-                    mapping[ptr] = debug.label;
-                }
-            });
-            callback({kind: "labels", mapping});
         } else if (kind === "playing") {
             callback({kind: "playing", value: play_debug !== undefined});
         } else if (kind === "ram") {
             callback({kind: "ram", bytes: core.h_ram()});
         } else if (kind === "rom") {
-            callback({kind: "rom", bytes: core.h_rom()});
+            callback({
+                kind: "rom",
+                bytes: core.h_rom(),
+                debugs: core.u_rom_debugs(),
+                module_texts: core.u_module_texts()
+            });
         } else if (kind === "signal" && signal !== undefined) {
             callback({kind: "signal", signal});
-        } else if (kind === "source") {
-            const ip = core.u_current_continuation()?.ip;
-            callback({
-                kind: "source",
-                sourcemap: (
-                    ip !== undefined
-                    ? core.u_sourcemap(ip)
-                    : undefined  // no source available
-                )
-            });
         }
     }
 
     function publish_state() {
         publish("ram");
-        publish("rom");
         publish("signal");
-        publish("source");
     }
 
     function auto_refill(signal) {
@@ -332,6 +310,7 @@ function demo(log) {
             core.h_boot(module.boot);
             driver.command({kind: "subscribe", topic: "signal", throttle: 50});
             driver.command({kind: "subscribe", topic: "wakeup"});
+            driver.command({kind: "subscribe", topic: "rom"});
             driver.command({kind: "subscribe", topic: "ram", throttle: 1000});
             // driver.command({kind: "subscribe", topic: "rom"});
             // driver.command({kind: "auto_refill", enabled: false});

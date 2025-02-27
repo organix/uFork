@@ -479,8 +479,25 @@ function test_read_write_quad() {
     }
 }
 
+function current_continuation(ram) {
+    const dd_quad = read_quad(ram, DDEQUE_OFS);
+    const k_first = dd_quad.y;
+    if (in_mem(k_first)) {
+        const k_quad = read_quad(ram, rawofs(k_first));
+        const e_quad = read_quad(ram, rawofs(k_quad.y));
+        return {
+            ip: k_quad.t,
+            sp: k_quad.x,
+            ep: k_quad.y,
+            act: e_quad.x,
+            msg: e_quad.y,
+            spn: e_quad.t
+        };
+    }
+}
+
 function print(raw) {
-    if (typeof raw !== "number") {
+    if (!Number.isSafeInteger(raw)) {
         return String(raw);
     }
     if (is_fix(raw)) {  // fixnum
@@ -564,8 +581,8 @@ function make_core({
     let wasm_caps = Object.create(null);
     let on_dispose_callbacks = [];
     let import_promises = Object.create(null);
-    let module_text = Object.create(null);
-    let rom_sourcemap = Object.create(null);
+    let module_texts = Object.create(null);
+    let rom_debugs = Object.create(null);
     let wasm_call_in_progress = false;
     let deferred_queue = [];
     let initial_rom_ofs;
@@ -711,14 +728,12 @@ function make_core({
         return new Uint8Array(mem_base, ram_ofs, ram_len); // not copied
     }
 
-    function u_sourcemap(ip) {
-        const debug = rom_sourcemap[ip];
-        if (debug !== undefined) {
-            return {
-                debug,
-                text: module_text[debug.src]
-            };
-        }
+    function u_rom_debugs() {
+        return Object.assign(Object.create(null), rom_debugs);
+    }
+
+    function u_module_texts() {
+        return Object.assign(Object.create(null), module_texts);
     }
 
     function u_cap_to_ptr(cap) {
@@ -790,20 +805,7 @@ function make_core({
     }
 
     function u_current_continuation() {
-        const dd_quad = u_read_quad(ramptr(DDEQUE_OFS));
-        const k_first = dd_quad.y;
-        if (in_mem(k_first)) {
-            const k_quad = u_read_quad(k_first);
-            const e_quad = u_read_quad(k_quad.y);
-            return {
-                ip: k_quad.t,
-                sp: k_quad.x,
-                ep: k_quad.y,
-                act: e_quad.x,
-                msg: e_quad.y,
-                spn: e_quad.t
-            };
-        }
+        return current_continuation(u_ram());
     }
 
     function u_nth(list_ptr, n) {
@@ -873,7 +875,7 @@ function make_core({
 
     function h_rom_alloc(debug_info) {
         const ptr = h_reserve_rom();
-        rom_sourcemap[ptr] = debug_info;
+        rom_debugs[ptr] = debug_info;
         return ptr;
     }
 
@@ -1253,7 +1255,7 @@ function make_core({
                 throw new Error("No compiler for '" + src + "'.");
             }
             const compiler = compilers[extension];
-            module_text[src] = text;
+            module_texts[src] = text;
             return compiler(text, src);
         }
 
@@ -1743,9 +1745,10 @@ function make_core({
         u_pprint,
         u_ram_ofs,
         u_read_quad,
+        u_rom_debugs,
         u_rom_ofs,
         u_defer,
-        u_sourcemap,
+        u_module_texts,
         u_trace,
         u_warn,
         u_write_quad
@@ -1834,6 +1837,7 @@ export default Object.freeze({
 // The functions.
 
     cap_to_ptr,
+    current_continuation,
     fault_msg,
     fix_to_i32,
     fixnum,

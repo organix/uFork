@@ -52,7 +52,7 @@ const bytes_per_word = 4; // 32 bits
 const bytes_per_quad = bytes_per_word * 4;
 const actor_graph_ui = make_ui("actor-graph-ui", function (element, {
     ram = new Uint8Array(),
-    labels = Object.create(null),
+    rom_debugs = Object.create(null),
     background_color = "black",
     foreground_color = "white",
     device_color = "limegreen",
@@ -73,6 +73,12 @@ const actor_graph_ui = make_ui("actor-graph-ui", function (element, {
     });
     springy_element.style.width = "100%";
     springy_element.style.height = "100%";
+
+    function label(raw) {
+        if (ufork.is_rom(raw)) {
+            return rom_debugs[raw]?.label;
+        }
+    }
 
     function invalidate() {
         if (!element.isConnected) {
@@ -122,7 +128,7 @@ const actor_graph_ui = make_ui("actor-graph-ui", function (element, {
         let edges = Object.create(null);
         Object.entries(actors).forEach(function ([key, quad]) {
             const ofs = Number(key);
-            const beh_label = labels[quad.x];
+            const beh_label = label(quad.x);
             nodes.push(springy.make_node(ofs, {
                 label: (
                     is_device(ofs)
@@ -192,8 +198,12 @@ const actor_graph_ui = make_ui("actor-graph-ui", function (element, {
         springy_element.invalidate();
     }
 
-    function set_labels(new_labels) {
-        labels = new_labels;
+    function get_rom_debugs() {
+        return rom_debugs;
+    }
+
+    function set_rom_debugs(new_rom_debugs) {
+        rom_debugs = new_rom_debugs;
         invalidate();
     }
 
@@ -203,10 +213,11 @@ const actor_graph_ui = make_ui("actor-graph-ui", function (element, {
     }
 
     shadow.append(springy_element);
-    set_labels(labels);
+    set_rom_debugs(rom_debugs);
     set_ram(ram);
     element.style.background = background_color;
-    element.set_labels = set_labels;
+    element.get_rom_debugs = get_rom_debugs;
+    element.set_rom_debugs = set_rom_debugs;
     element.set_ram = set_ram;
 });
 
@@ -223,8 +234,8 @@ function demo(log) {
     const driver = make_core_driver(core, function on_status(message) {
         if (message.kind === "ram") {
             element.set_ram(message.bytes);
-        } else if (message.kind === "labels") {
-            element.set_labels(message.mapping);
+        } else if (message.kind === "rom") {
+            element.set_rom_debugs(message.debugs);
         } else {
             log(message);
         }
@@ -234,9 +245,9 @@ function demo(log) {
         core.h_import("https://ufork.org/lib/cell.asm"),
         requestorize(function (module) {
             core.h_boot(module.boot);
-            driver.command({kind: "subscribe", topic: "labels"});
-            driver.command({kind: "subscribe", topic: "signal"});
+            driver.command({kind: "subscribe", topic: "rom"});
             driver.command({kind: "subscribe", topic: "ram"});
+            driver.command({kind: "subscribe", topic: "signal"});
             driver.command({kind: "interval", milliseconds: 100});
             driver.command({kind: "play"});
             return true;

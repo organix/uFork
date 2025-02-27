@@ -35,6 +35,10 @@ const ram_explorer_ui = make_ui("ram-explorer-ui", function (element, {
     const dump = dom("ram_dump");
     let hide_free_checkbox;
 
+    function get_bytes() {
+        return bytes;
+    }
+
     function set_bytes(new_bytes) {
         bytes = new_bytes;
         const text = memory_dump(bytes, ufork.ramptr(0));
@@ -72,6 +76,7 @@ const ram_explorer_ui = make_ui("ram-explorer-ui", function (element, {
     shadow.append(style, dump, hide_free_label);
     set_bytes(bytes);
     set_hide_free(hide_free);
+    element.get_bytes = get_bytes;
     element.set_bytes = set_bytes;
 });
 

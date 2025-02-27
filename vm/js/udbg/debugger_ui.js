@@ -36,6 +36,7 @@ const debugger_ui = make_ui("debugger-ui", function (element, {
     view = default_view
 }) {
     let menu;
+    let module_texts = Object.create(null);
 
     const shadow = element.attachShadow({mode: "closed"});
     const style = dom("style", `
@@ -111,7 +112,7 @@ const debugger_ui = make_ui("debugger-ui", function (element, {
             proxy_color: theme.orange
         }),
         ram: ram_explorer_ui({text_color: theme.blue}),
-        sources: source_monitor_ui({})
+        source: source_monitor_ui({})
     };
 
     function set_view(new_view) {
@@ -121,6 +122,18 @@ const debugger_ui = make_ui("debugger-ui", function (element, {
         view = new_view;
         menu.value = view;
         shadow.lastChild.replaceWith(views[view]);
+    }
+
+    function refresh_source() {
+        const cc = ufork.current_continuation(views.ram.get_bytes());
+        const rom_debugs = views.actor_graph.get_rom_debugs();
+        if (cc?.ip !== undefined) {
+            const debug = rom_debugs[ufork.rawofs(cc.ip)];
+            const text = module_texts[debug.src];
+            views.source.set_sourcemap({debug, text});
+        } else {
+            views.source.set_sourcemap(undefined);
+        }
     }
 
     function on_keydown(event) {
@@ -172,7 +185,7 @@ const debugger_ui = make_ui("debugger-ui", function (element, {
         [
             dom("option", {value: "actor_graph"}, "Actor Graph"),
             dom("option", {value: "ram"}, "RAM Explorer"),
-            dom("option", {value: "sources"}, "Sources")
+            dom("option", {value: "source"}, "Source Code")
         ]
     );
     const spacer = dom("flex_spacer");
@@ -195,9 +208,6 @@ const debugger_ui = make_ui("debugger-ui", function (element, {
                 speed_slider.value = 1 - slowness;
             }
         },
-        labels(message) {
-            views.actor_graph.set_labels(message.mapping);
-        },
         playing(message) {
             play_button.textContent = (
                 message.value
@@ -208,12 +218,15 @@ const debugger_ui = make_ui("debugger-ui", function (element, {
         ram(message) {
             views.ram.set_bytes(message.bytes);
             views.actor_graph.set_ram(message.bytes);
+            refresh_source();
+        },
+        rom(message) {
+            views.actor_graph.set_rom_debugs(message.debugs);
+            module_texts = message.module_texts;
+            refresh_source();
         },
         signal(message) {
             on_signal(message.signal);
-        },
-        source(message) {
-            views.sources.set_sourcemap(message.sourcemap);
         }
     };
 
@@ -231,11 +244,10 @@ const debugger_ui = make_ui("debugger-ui", function (element, {
             if (!was_connected) {
                 on_signal(ufork.UNDEF_RAW);
                 send_command({kind: "subscribe", topic: "interval", throttle});
-                send_command({kind: "subscribe", topic: "labels", throttle});
                 send_command({kind: "subscribe", topic: "playing", throttle});
                 send_command({kind: "subscribe", topic: "ram", throttle});
+                send_command({kind: "subscribe", topic: "rom", throttle});
                 send_command({kind: "subscribe", topic: "signal", throttle});
-                send_command({kind: "subscribe", topic: "source", throttle});
                 send_command({kind: "subscribe", topic: "wakeup", throttle});
             }
         } else {

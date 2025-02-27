@@ -145,33 +145,26 @@ function update_source_monitor(ip) {
     const $code = $source_monitor.querySelector("code");
     $aside.innerHTML = "";
     $code.innerHTML = "";
-    const sourcemap = core.u_sourcemap(ip);
+    const debug = core.u_rom_debugs()[ip];
+    const text = core.u_module_texts()[debug?.src];
     if (
         ufork.is_rom(ip)
         && ip !== ufork.UNDEF_RAW
-        && sourcemap?.text !== undefined
+        && text !== undefined
     ) {
-        $source_monitor.title = sourcemap.debug.src;
-        sourcemap.text.split(rx_crlf).forEach(function (_, line_nr) {
+        $source_monitor.title = debug.src;
+        text.split(rx_crlf).forEach(function (_, line_nr) {
             $aside.textContent += line_nr + 1 + "\n";
         });
-        if (sourcemap.debug.start !== undefined) {
-            const $pre_text = document.createTextNode(sourcemap.text.slice(
-                0,
-                sourcemap.debug.start
-            ));
+        if (debug.start !== undefined) {
+            const pre_text = text.slice(0, debug.start);
             const $mark = document.createElement("mark");
-            $mark.textContent = sourcemap.text.slice(
-                sourcemap.debug.start,
-                sourcemap.debug.end
-            );
-            const $post_text = document.createTextNode(sourcemap.text.slice(
-                sourcemap.debug.end
-            ));
-            $code.append($pre_text, $mark, $post_text);
+            $mark.textContent = text.slice(debug.start, debug.end);
+            const post_text = text.slice(debug.end);
+            $code.append(pre_text, $mark, post_text);
             keep_centered($mark, $source_monitor);
         } else {
-            $code.textContent = sourcemap.text;
+            $code.textContent = text;
         }
     } else {
         $code.textContent = "No source available.";
