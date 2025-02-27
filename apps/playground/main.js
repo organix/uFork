@@ -17,8 +17,8 @@ import lang_scm from "./lang_scm.js";
 import tools_ui from "./tools_ui.js";
 import editor_ui from "./editor_ui.js";
 import split_ui from "./split_ui.js";
+const unqualified_dev_lib_url = import.meta.resolve("https://ufork.org/lib/");
 const udbg_url = import.meta.resolve("../udbg/index.html");
-const unqualified_dev_lib_url = import.meta.resolve("../../lib/");
 
 const dev_lib_url = new URL(unqualified_dev_lib_url, location.href).href;
 const min_tools_size = 200;

@@ -23,9 +23,9 @@ import parseq from "https://ufork.org/lib/parseq.js";
 import requestorize from "https://ufork.org/lib/rq/requestorize.js";
 import ufork from "./ufork.js";
 import host_dev from "./host_dev.js";
+const lib_url = import.meta.resolve("https://ufork.org/lib/");
 const wasm_url = import.meta.resolve("https://ufork.org/wasm/ufork.wasm");
 const grant_matcher_url = import.meta.resolve("../../apps/grant_matcher/grant_matcher.asm");
-const lib_url = import.meta.resolve("../../lib/");
 
 const E_CONNECTION_LOST = -1;
 const E_ALREADY_LISTENING = -2;

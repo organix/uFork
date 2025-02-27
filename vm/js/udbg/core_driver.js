@@ -108,8 +108,8 @@ import parseq from "https://ufork.org/lib/parseq.js";
 import requestorize from "https://ufork.org/lib/rq/requestorize.js";
 import ufork from "../ufork.js";
 import timer_dev from "../timer_dev.js";
+const lib_url = import.meta.resolve("https://ufork.org/lib/");
 const wasm_url = import.meta.resolve("https://ufork.org/wasm/ufork.debug.wasm");
-const lib_url = import.meta.resolve("../../../lib/");
 
 function make_driver(core, on_status) {
     let auto_refill_enabled = true;

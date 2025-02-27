@@ -11,8 +11,8 @@ import make_core_driver from "./core_driver.js";
 import ufork from "../ufork.js";
 import springy from "./springy.js";
 import springy_ui from "./springy_ui.js";
+const lib_url = import.meta.resolve("https://ufork.org/lib/");
 const wasm_url = import.meta.resolve("https://ufork.org/wasm/ufork.debug.wasm");
-const lib_url = import.meta.resolve("../../../lib/");
 
 function is_device(ofs) {
     return ofs > ufork.DDEQUE_OFS && ofs < ufork.SPONSOR_OFS;

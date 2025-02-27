@@ -13,8 +13,8 @@ import make_core_driver from "./core_driver.js";
 import actor_graph_ui from "./actor_graph_ui.js";
 import ram_explorer_ui from "./ram_explorer_ui.js";
 import source_monitor_ui from "./source_monitor_ui.js";
+const lib_url = import.meta.resolve("https://ufork.org/lib/");
 const wasm_url = import.meta.resolve("https://ufork.org/wasm/ufork.debug.wasm");
-const lib_url = import.meta.resolve("../../../lib/");
 
 const throttle = 1000 / 24; // limit status-triggered rerenders to 24 FPS
 const max_play_interval = 1000;

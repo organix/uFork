@@ -93,9 +93,9 @@ import assemble from "https://ufork.org/lib/assemble.js";
 import parseq from "https://ufork.org/lib/parseq.js";
 import requestorize from "https://ufork.org/lib/rq/requestorize.js";
 import unpromise from "https://ufork.org/lib/rq/unpromise.js";
+const lib_url = import.meta.resolve("https://ufork.org/lib/");
 const wasm_url = import.meta.resolve("https://ufork.org/wasm/ufork.debug.wasm");
 const asm_url = import.meta.resolve("../../lib/eq.asm");
-const lib_url = import.meta.resolve("../../lib/");
 
 // Type-tag bits
 
