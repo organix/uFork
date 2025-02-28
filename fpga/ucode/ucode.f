@@ -2184,9 +2184,8 @@ VARIABLE xm_here            ( upload address )
     -ROT b2c                ( D: rem chk' cell )
     log_2
     >here                   ( D: rem chk' )
-    SWAP 2 -                ( D: chk' rem-2 )
-    DUP IF
-        SWAP                ( D: rem' chk' )
+    SWAP 2 - SWAP           ( D: rem-2 chk' )
+    OVER IF
         xm_rcv_cell ;
     THEN
 : xm_rcv_chk
