@@ -2182,7 +2182,7 @@ VARIABLE xm_here            ( upload address )
     THEN
     SWAP OVER +             ( D: rem msb lsb chk+msb+lsb )
     -ROT b2c                ( D: rem chk' cell )
-    log_2
+    ( log_2 )
     >here                   ( D: rem chk' )
     SWAP 2 - SWAP           ( D: rem-2 chk' )
     OVER IF
@@ -2252,7 +2252,7 @@ VARIABLE xm_here            ( upload address )
             pop here ! upload
         THEN
         OVER 'x' = IF
-            xm_rcv_file
+            xm_rcv_file push
         THEN
         OVER 'r' = IF
             pop EXECUTE
