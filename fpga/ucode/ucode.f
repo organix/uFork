@@ -2065,6 +2065,31 @@ VARIABLE here   ( upload address )
     THEN
     DUP cmd !               ( key -> cmd )
     upload ;
+VARIABLE log_addr
+: log_0 ( -- )
+    log_addr @
+    0x7060 OVER QT!
+    -1 OVER QX!
+    -1 OVER QY!
+    R@ OVER QZ!
+    DROP
+    log_addr @1+ ;
+: log_1 ( x -- x )
+    DUP log_addr @          ( D: x addr )
+    0x7061 OVER QT!
+    SWAP OVER QX!           ( D: addr )
+    -1 OVER QY!
+    R@ OVER QZ!
+    DROP
+    log_addr @1+ ;
+: log_2 ( x y -- x y )
+    2DUP log_addr @         ( D: x y addr )
+    0x7062 OVER QT!
+    SWAP OVER QY!           ( D: x addr )
+    SWAP OVER QX!           ( D: addr )
+    R@ OVER QZ!
+    DROP
+    log_addr @1+ ;
 ( XMODEM file transfer )
 0x01 CONSTANT SOH           ( Start of Header )
 0x06 CONSTANT ACK           ( Acknowledge )
@@ -2091,13 +2116,16 @@ VARIABLE xm_here            ( upload address )
         EXIT
     THEN xm_flush_rcv ;
 : xm_rcv_failed
+    log_0
     3 ?LOOP-
         CAN EMIT
     AGAIN
     xm_flush_rcv
     0 ;
 : xm_rcv_bad                ( D: rem chk data )
-    2DROP DROP              ( D -- )
+    DROP
+    log_2
+    2DROP                   ( D -- )
     xm_here @ here !        ( restore starting addr )
 : xm_rcv_try
     xm_retry @ 0= IF
@@ -2105,6 +2133,7 @@ VARIABLE xm_here            ( upload address )
     THEN
     xm_retry @1-
     xm_flush_rcv
+    log_0
     NAK EMIT                ( send NAK to start or retry )
 : xm_rcv_soh
     3000 xm_timed_rcv
@@ -2137,7 +2166,9 @@ VARIABLE xm_here            ( upload address )
         xm_rcv_try ;        ( try again... )
     THEN
 : xm_rcv_pkt
-    here @ xm_here !        ( remember starting addr )
+    here @
+    log_1
+    xm_here !               ( remember starting addr )
     128 0                   ( D: rem chk )
 : xm_rcv_cell
     xm_250ms_rcv            ( D: rem chk msb )
@@ -2151,6 +2182,7 @@ VARIABLE xm_here            ( upload address )
     THEN
     SWAP OVER +             ( D: rem msb lsb chk+msb+lsb )
     -ROT b2c                ( D: rem chk' cell )
+    log_2
     >here                   ( D: rem chk' )
     SWAP 2 -                ( D: chk' rem-2 )
     DUP IF
@@ -2159,6 +2191,7 @@ VARIABLE xm_here            ( upload address )
     THEN
 : xm_rcv_chk
     xm_250ms_rcv            ( D: rem' chk' chk )
+    log_2
     DUP MSB& IF
         xm_rcv_bad ;        ( bad packet... )
     THEN
@@ -2167,11 +2200,14 @@ VARIABLE xm_here            ( upload address )
         xm_rcv_bad ;        ( bad packet... )
     THEN
     2DROP DROP              ( D: -- )
-    xm_pkt @ 1+ xm_pkt !
+    xm_pkt @1+
     10 xm_retry !
+    log_0
     ACK EMIT                ( ACK good packet )
     xm_rcv_soh ;
 : xm_rcv_file ( -- npkts )
+    0x1000 log_addr !
+    log_0
     0 xm_pkt !
     10 xm_retry !
     0x8000 here !           ( upload to uFork ROM )
