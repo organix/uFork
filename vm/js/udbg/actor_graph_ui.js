@@ -198,6 +198,11 @@ const actor_graph_ui = make_ui("actor-graph-ui", function (element, {
         springy_element.invalidate();
     }
 
+    function set_ram(new_ram) {
+        ram = new_ram;
+        invalidate();
+    }
+
     function get_rom_debugs() {
         return rom_debugs;
     }
@@ -207,18 +212,13 @@ const actor_graph_ui = make_ui("actor-graph-ui", function (element, {
         invalidate();
     }
 
-    function set_ram(new_ram) {
-        ram = new_ram;
-        invalidate();
-    }
-
     shadow.append(springy_element);
-    set_rom_debugs(rom_debugs);
     set_ram(ram);
+    set_rom_debugs(rom_debugs);
     element.style.background = background_color;
+    element.set_ram = set_ram;
     element.get_rom_debugs = get_rom_debugs;
     element.set_rom_debugs = set_rom_debugs;
-    element.set_ram = set_ram;
 });
 
 function demo(log) {

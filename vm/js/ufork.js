@@ -524,17 +524,12 @@ function print_gc_color(color) {
     return gc_labels[integer];
 }
 
-function print_quad(quad) {
-    let s = "[";
-    s += print(quad.t);
-    s += ", ";
-    if (quad.t === INSTR_T) {
-        const op = fix_to_i32(quad.x);  // translate opcode
+function instr_parts(quad) {
+    if (quad.t === INSTR_T && is_fix(quad.x)) {
+        const op = fix_to_i32(quad.x);
         const op_label = instr_labels[op];
         if (op_label !== undefined) {
-            s += op_label;
-            s += ", ";
-            const imm = fix_to_i32(quad.y);  // translate immediate
+            const imm = fix_to_i32(quad.y);
             const op_imm_labels = imm_labels[quad.x];
             const fudge = (
                 quad.x === VM_END
@@ -546,7 +541,24 @@ function print_quad(quad) {
                 && op_imm_labels !== undefined
                 && op_imm_labels[imm + fudge] !== undefined
             ) {
-                s += op_imm_labels[imm + fudge];
+                return {op: op_label, imm: op_imm_labels[imm + fudge]};
+            }
+            return {op: op_label};
+        }
+    }
+}
+
+function print_quad(quad) {
+    let s = "[";
+    s += print(quad.t);
+    s += ", ";
+    if (quad.t === INSTR_T) {
+        const parts = instr_parts(quad);
+        if (parts?.op !== undefined) {
+            s += parts.op;
+            s += ", ";
+            if (parts.imm !== undefined) {
+                s += parts.imm;
             } else {
                 s += print(quad.y);
             }
@@ -1842,6 +1854,7 @@ export default Object.freeze({
     fix_to_i32,
     fixnum,
     in_mem,
+    instr_parts,
     is_cap,
     is_fix,
     is_ptr,
