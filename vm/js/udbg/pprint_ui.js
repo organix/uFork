@@ -302,12 +302,12 @@ function pprint_ui({
                         ufork.is_cap(value)
                         ? (
                             t === ufork.PROXY_T
-                            ? {device: x, tag: y}
-                            : {code: x, data: y, effect: z}
+                            ? {type: t, device: x, tag: y}
+                            : {type: t, code: x, data: y, effect: z}
                         )
                         : (
                             t === ufork.STUB_T
-                            ? {device: x, target: y}
+                            ? {type: t, device: x, target: y}
                             : quad
                         )
                     )));
