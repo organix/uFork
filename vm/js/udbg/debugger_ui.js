@@ -73,7 +73,7 @@ const debugger_ui = make_ui("debugger-ui", function (element, {
         type: "button",
         onclick() {
             if (play_button.textContent === "Play") {
-                send_command({kind: "play", debug: true});
+                send_command({kind: "play"});
             } else {
                 send_command({kind: "pause"});
             }
@@ -99,7 +99,7 @@ const debugger_ui = make_ui("debugger-ui", function (element, {
     const step_button = dom("button", {
         type: "button",
         onclick() {
-            send_command({kind: "step"});
+            send_command({kind: "play", steps: 1});
         },
         textContent: "Step"
     });
@@ -161,7 +161,7 @@ const debugger_ui = make_ui("debugger-ui", function (element, {
         fault_message.textContent = (
             ufork.is_fix(signal)
             ? ufork.fault_msg(ufork.fix_to_i32(signal))
-            : "?"
+            : "..."
         );
         fault_message.style.color = (
             ufork.is_fix(signal)
@@ -243,6 +243,7 @@ const debugger_ui = make_ui("debugger-ui", function (element, {
         if (connected) {
             if (!was_connected) {
                 on_signal(ufork.UNDEF_RAW);
+                send_command({kind: "debug", enabled: true});
                 send_command({kind: "subscribe", topic: "interval", throttle});
                 send_command({kind: "subscribe", topic: "playing", throttle});
                 send_command({kind: "subscribe", topic: "ram", throttle});

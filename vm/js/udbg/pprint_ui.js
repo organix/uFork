@@ -152,7 +152,7 @@ function pprint_ui({
     const {t, x, y, z} = quad;
     if (typeof debug?.label === "string") {
 
-// Label. Truncate if too long.
+// Labelled quad.
 
         const short = truncate(debug.label, 9);
         element.textContent = (
@@ -164,94 +164,107 @@ function pprint_ui({
             element.title += "\nlabel: " + debug.label;
         }
         element.style.color = theme.yellow;
-    } else {
-        if (
-            ufork.is_cap(value)
-            && (t === ufork.ACTOR_T || t === ufork.PROXY_T)
+    } else if (
+        ufork.is_cap(value)
+        && (t === ufork.ACTOR_T || t === ufork.PROXY_T)
+    ) {
+
+// Capability.
+
+        const is_device = ofs < ufork.SPONSOR_OFS;
+        element.append("@");
+        const proxy_dev = (
+            t === ufork.PROXY_T
+            ? device_label(ufork.rawofs(x))
+            : undefined
+        );
+        if (is_device) {
+            element.append(device_label(ofs) ?? ufork.fix_to_i32(x));
+        } else if (depth > 0) {
+            element.append(proxy_dev ?? sub(x), ".", sub(y));
+        } else if (
+            t === ufork.ACTOR_T
+            && typeof rom_debugs[x]?.label === "string"
         ) {
-            const is_device = ofs < ufork.SPONSOR_OFS;
-            element.append("@");
-            const proxy_dev = (
+            element.append(sub(x, 0));
+        } else if (proxy_dev !== undefined) {
+            element.append(proxy_dev);
+        }
+        element.style.color = (
+            is_device
+            ? theme.purple
+            : (
                 t === ufork.PROXY_T
-                ? device_label(ufork.rawofs(x))
-                : undefined
-            );
-            if (is_device) {
-                element.append(device_label(ofs) ?? ufork.fix_to_i32(x));
-            } else if (depth > 0) {
-                element.append(proxy_dev ?? sub(x), ".", sub(y));
-            } else if (
-                t === ufork.ACTOR_T
-                && typeof rom_debugs[x]?.label === "string"
-            ) {
-                element.append(sub(x, 0));
-            } else if (proxy_dev !== undefined) {
-                element.append(proxy_dev);
-            }
-            element.style.color = (
-                is_device
-                ? theme.purple
-                : (
-                    t === ufork.PROXY_T
-                    ? theme.orange
-                    : theme.yellow
-                )
-            );
-        } else if (t === ufork.INSTR_T) {
-            const parts = ufork.instr_parts(quad);
-            element.append("<", parts?.op ?? sub(x));
-            if (depth > 0 && x !== ufork.VM_JUMP) {
-                element.append(" ");
-                if (x === ufork.VM_IF) {
+                ? theme.orange
+                : theme.yellow
+            )
+        );
+    } else if (t === ufork.INSTR_T) {
+
+// Instruction.
+
+        const parts = ufork.instr_parts(quad);
+        element.append("<", parts?.op ?? sub(x));
+        if (depth > 0 && x !== ufork.VM_JUMP) {
+            element.append(" ");
+            if (x === ufork.VM_IF) {
+                element.append(
+                    key_ui("t: ", theme.white),
+                    sub(y),
+                    " ",
+                    key_ui("f: ", theme.white),
+                    sub(z)
+                );
+            } else {
+                if (parts?.imm !== undefined) {
+                    element.append(parts.imm);
+                } else if (x !== ufork.VM_DEBUG) {
+                    element.append(sub(y));
+                }
+                if (x !== ufork.VM_END) {
                     element.append(
-                        key_ui("t: ", theme.white),
-                        sub(y),
                         " ",
-                        key_ui("f: ", theme.white),
+                        key_ui("k: ", theme.white),
                         sub(z)
                     );
-                } else {
-                    if (parts?.imm !== undefined) {
-                        element.append(parts.imm);
-                    } else if (x !== ufork.VM_DEBUG) {
-                        element.append(sub(y));
-                    }
-                    if (x !== ufork.VM_END) {
-                        element.append(
-                            " ",
-                            key_ui("k: ", theme.white),
-                            sub(z)
-                        );
-                    }
                 }
             }
-            element.append(">");
-            element.style.color = theme.blue;
-        } else if (t === ufork.PAIR_T && depth > 0) {
-            element.append(sub(x), ",", sub(y, depth));
-        } else if (t === ufork.DICT_T && depth > 0) {
-            element.append("{");
-            let dict = quad;
-            while (dict !== undefined) {
-                element.append(sub(dict.x), ":", sub(dict.y));
-                if (!ufork.in_mem(dict.z)) {
-                    break;
-                }
-                dict = read_quad(dict.z);
-                element.append(" ");
-            }
-            element.append("}");
-        } else {
-            element.append("[");
-            if (depth > 0) {
-                element.append(sub(t), " ", sub(x), " ", sub(y), " ", sub(z));
-            } else if (typeof rom_debugs[t]?.label === "string") {
-                element.append(sub(t)); // symbol_t, etc
-            } else {
-                element.append(ufork.print(t));
-            }
-            element.append(["]"]);
         }
+        element.append(">");
+        element.style.color = theme.blue;
+    } else if (t === ufork.PAIR_T && depth > 0) {
+
+// Pair.
+
+        element.append(sub(x), ",", sub(y, depth));
+    } else if (t === ufork.DICT_T && depth > 0) {
+
+// Dictionary.
+
+        element.append("{");
+        let dict = quad;
+        while (dict !== undefined) {
+            element.append(sub(dict.x), ":", sub(dict.y));
+            if (!ufork.in_mem(dict.z)) {
+                break;
+            }
+            dict = read_quad(dict.z);
+            element.append(" ");
+        }
+        element.append("}");
+    } else {
+
+// Generic quad.
+
+        element.append("[");
+        if (depth > 0) {
+            element.append(sub(t), " ", sub(x), " ", sub(y), " ", sub(z));
+        } else if (typeof rom_debugs[t]?.label === "string") {
+            element.append(sub(t)); // symbol_t, etc
+        } else {
+            element.append(ufork.print(t));
+        }
+        element.append(["]"]);
     }
 
     function cells(entries) {
@@ -294,23 +307,23 @@ function pprint_ui({
             {
                 open: expand > 0,
                 ontoggle() {
-                    if (!details.open) {
-                        dl.innerHTML = ""; // clear
-                        return;
+                    if (details.open) {
+                        dl.append(...cells(Object.entries(
+                            ufork.is_cap(value)
+                            ? (
+                                t === ufork.PROXY_T
+                                ? {type: t, device: x, tag: y}
+                                : {type: t, code: x, data: y, effect: z}
+                            )
+                            : (
+                                t === ufork.STUB_T
+                                ? {type: t, device: x, target: y}
+                                : quad
+                            )
+                        )));
+                    } else {
+                        dl.innerHTML = "";
                     }
-                    dl.append(...cells(Object.entries(
-                        ufork.is_cap(value)
-                        ? (
-                            t === ufork.PROXY_T
-                            ? {type: t, device: x, tag: y}
-                            : {type: t, code: x, data: y, effect: z}
-                        )
-                        : (
-                            t === ufork.STUB_T
-                            ? {type: t, device: x, target: y}
-                            : quad
-                        )
-                    )));
                 },
                 style: {whiteSpace: "nowrap"} // forbid linebreak after triangle
             },

@@ -6,7 +6,7 @@
 // Messages are objects with a 'kind' property.
 // The driver receives command messages and emits status messages.
 // The protocol follows a publish-subscribe (rather than a request-response)
-// model, in an attempt to mitigate the effects of network latency.
+// model, in order to mitigate the effects of network latency.
 
 // The message protocol is described below.
 
@@ -20,39 +20,45 @@
 //      Specify a 'throttle' in milliseconds ensures that no more than one
 //      status message of that kind is emitted in a given interval.
 
-//  {kind: "play", debug: <boolean>}
+//  {kind: "play", steps: <number>}
 
-//      Run indefinitely. The core not only runs until idle, but also continues
-//      whenever it is awoken by a device.
+//      Start running the core. The playing state persists even through periods
+//      of idleness, automatically continuing when the core is awoken by a
+//      device.
 
-//      If the optional 'debug' property is true, the driver will pause upon
-//      encountering a 'debug' instruction. (Maximum execution speed is
-//      significantly reduced when using this feature.)
+//      The optional 'steps' property dictates how many steps to run before
+//      pausing. If omitted, the core will run indefinitely.
+
+//      The driver will pause when one of the following conditions is met:
+//          - an unrecoverable fault, such as E_FAIL, occurs
+//          - a breakpoint is hit is 'debug' is true
+//          - enough 'steps' have been performed
 
 //  {kind: "pause"}
 
 //      Stop running the core.
 
-//  {kind: "step"}
+//  {kind: "debug", enabled: <boolean>}
 
-//      Execute a single VM instruction cycle and produce a "signal"
-//      status message.
-
-//  {kind: "auto_refill", enabled: <boolean>}
-
-//      Enables or disables automatic refilling of the root sponsor.
-//      When 'enabled' is true, commands such as "play" and "step" are made to
-//      behave as if the root sponsor is inexhaustible. Enabled by default.
+//      If enabled, the driver will pause upon encountering a 'debug'
+//      instruction. Note that maximum execution speed will be significantly
+//      reduced. Disabled by default.
 
 //  {kind: "interval", milliseconds: <number>}
 
 //      If 'milliseconds' is greater than 0, an artificial delay is inserted
-//      between instructions when playing. Defaults to 0.
+//      between steps when playing. Defaults to 0.
 
 //  {kind: "refill", resources: <object>}
 
 //      Refill the root sponsor with the given 'resources', an object like
 //      {memory, events, cycles}.
+
+//  {kind: "auto_refill", enabled: <boolean>}
+
+//      Enables or disables automatic refilling of the root sponsor.
+//      When 'enabled' is true, the "play" command behaves as if the root
+//      sponsor is inexhaustible. Enabled by default.
 
 // STATUS MESSAGES
 
@@ -91,9 +97,10 @@
 //      object contains the source text of each loaded module, keyed by src.
 
 //  {kind: "auto_refill", enabled: <boolean>}
+//  {kind: "debug", enabled: <boolean>}
 //  {kind: "interval", milliseconds: <number>}
 
-//      Current value as set by commands of the same name.
+//      Current value as set by the command of the same name.
 
 /*jslint web, global */
 
@@ -106,12 +113,15 @@ import timer_dev from "../timer_dev.js";
 const lib_url = import.meta.resolve("https://ufork.org/lib/");
 const wasm_url = import.meta.resolve("https://ufork.org/wasm/ufork.debug.wasm");
 
+const max_fixnum = ufork.fixnum(2 ** 30 - 1);
+
 function make_driver(core, on_status) {
     let auto_refill_enabled = true;
+    let debug = false;
     let interval = 0;
-    let play_debug;
     let play_timer;
     let signal;
+    let steps;
     let subscriptions = Object.create(null);
 
     function publish(kind) {
@@ -121,10 +131,12 @@ function make_driver(core, on_status) {
         }
         if (kind === "auto_refill") {
             callback({kind: "auto_refill", value: auto_refill_enabled});
+        } else if (kind === "debug") {
+            callback({kind: "debug", enabled: debug});
         } else if (kind === "interval") {
             callback({kind: "interval", milliseconds: interval});
         } else if (kind === "playing") {
-            callback({kind: "playing", value: play_debug !== undefined});
+            callback({kind: "playing", value: steps !== undefined});
         } else if (kind === "ram") {
             callback({kind: "ram", bytes: core.h_ram()});
         } else if (kind === "rom") {
@@ -144,52 +156,36 @@ function make_driver(core, on_status) {
         publish("signal");
     }
 
-    function auto_refill(signal) {
-        if (auto_refill_enabled && signal !== ufork.UNDEF_RAW) {
-            const error_code = ufork.fix_to_i32(signal);
-            if (
-                error_code === ufork.E_MEM_LIM
-                || error_code === ufork.E_MSG_LIM
-                || error_code === ufork.E_CPU_LIM
-            ) {
-                core.h_refill({memory: 65536, events: 8192, cycles: 65536});
-                return true;
-            }
-        }
-        return false;
-    }
-
-    function step() {
-        signal = core.h_run_loop(1);
-        if (auto_refill(signal)) {
-            return step();  // try again
-        }
-        publish_state();
-    }
-
     function pause() {
-        play_debug = undefined;
+        steps = undefined;
         clearTimeout(play_timer);
         publish("playing");
     }
 
     function run() {
-        if (play_debug === undefined) {
+        if (steps === undefined) {
             return;  // paused
         }
-
-// Run until there is no more work or an unrecoverable error occurs.
-
         while (true) {
+
+// Pause if we have reached the step limit.
+
+            if (steps <= 0) {
+                pause();
+                return publish_state();
+            }
+
+// Run the core.
+
             signal = core.h_run_loop(
-                (play_debug || interval > 0)
-                ? 1  // step by step
+                (debug || interval > 0)
+                ? 1  // cycle by cycle
                 : 0  // run free
             );
 
-// Have we hit a breakpoint?
+// Pause if we have hit a breakpoint.
 
-            if (play_debug) {
+            if (debug) {
                 const cc = core.u_current_continuation();
                 if (cc !== undefined) {
                     const instruction_quad = core.u_read_quad(cc.ip);
@@ -201,34 +197,51 @@ function make_driver(core, on_status) {
                 }
             }
 
-// Handle resource exhaustion.
+// Refill the root sponsor if it is exhausted.
 
-            if (!auto_refill(signal)) {
-                if (ufork.is_fix(signal)) {
-                    if (ufork.fix_to_i32(signal) !== ufork.E_OK) {
-                        pause();
-                    }
-                    return publish_state();
+            if (auto_refill_enabled && signal !== ufork.UNDEF_RAW) {
+                const error_code = ufork.fix_to_i32(signal);
+                if (
+                    error_code === ufork.E_MEM_LIM
+                    || error_code === ufork.E_MSG_LIM
+                    || error_code === ufork.E_CPU_LIM
+                ) {
+                    core.h_refill({
+                        memory: max_fixnum,
+                        events: max_fixnum,
+                        cycles: max_fixnum
+                    });
+                    signal = ufork.UNDEF_RAW;  // recovered
                 }
+            }
+
+// Pause if we have run out of work or experienced a fault.
+
+            if (ufork.is_fix(signal)) {
+                if (ufork.fix_to_i32(signal) !== ufork.E_OK) {
+                    pause();
+                }
+                return publish_state();
+            }
+            steps -= 1;
 
 // Add artificial delay if requested.
 
-                if (interval > 0) {
-                    play_timer = setTimeout(run, interval);
-                    return publish_state();
-                }
+            if (interval > 0) {
+                play_timer = setTimeout(run, interval);
+                return publish_state();
             }
         }
     }
 
     function wakeup(device_offset) {
-        if (play_debug === undefined) {
-            if (subscriptions.wakeup !== undefined) {
-                subscriptions.wakeup({kind: "wakeup", device_offset});
-            }
-            publish_state();
-        } else {
+        if (subscriptions.wakeup !== undefined) {
+            subscriptions.wakeup({kind: "wakeup", device_offset});
+        }
+        if (steps !== undefined) {
             run();
+        } else {
+            publish_state();
         }
     }
 
@@ -237,20 +250,31 @@ function make_driver(core, on_status) {
             auto_refill_enabled = message.enabled === true;
             publish("auto_refill");
         },
+        debug(message) {
+            debug = message.enabled === true;
+            publish("debug");
+        },
         interval(message) {
-            interval = message.milliseconds ?? 0;
+            interval = (
+                Number.isSafeInteger(message.milliseconds)
+                ? message.milliseconds
+                : 0
+            );
             publish("interval");
         },
+        pause,
         play(message) {
-            play_debug = message.debug === true;
+            steps = (
+                Number.isSafeInteger(message.steps)
+                ? message.steps
+                : Infinity
+            );
             publish("playing");
             run();
         },
-        pause,
         refill(message) {
             core.h_refill(message.resources);
         },
-        step,
         subscribe(message) {
             subscriptions[message.topic] = (
                 message.throttle !== undefined
@@ -315,9 +339,7 @@ function demo(log) {
             // driver.command({kind: "subscribe", topic: "rom"});
             // driver.command({kind: "auto_refill", enabled: false});
             driver.command({kind: "refill", resources: {cycles: 3}});
-            new Array(30).fill().forEach(function () {
-                driver.command({kind: "step"});  // kick it off
-            });
+            driver.command({kind: "play", steps: 30});
             return true;
         })
     ])(log);
