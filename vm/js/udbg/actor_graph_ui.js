@@ -109,6 +109,14 @@ const actor_graph_ui = make_ui("actor-graph-ui", function (element, {
             }
         });
 
+// A busy actor's effect quad is an #actor_t, yet it is not an actor.
+
+        Object.values(actors).forEach(function (quad) {
+            if (ufork.is_ram(quad.z)) {
+                delete actors[ufork.rawofs(quad.z)];
+            }
+        });
+
 // Find any actors directly or indirectly stubbed.
 
         let stubbed = Object.create(null);
