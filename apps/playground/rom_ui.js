@@ -156,6 +156,7 @@ const rom_ui = make_ui("rom-ui", function (element, {
         rom_controls {
             display: flex;
             justify-content: flex-end;
+            align-items: center;
             margin-top: 6px;
         }
         rom_controls > * {
