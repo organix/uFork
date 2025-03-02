@@ -1,4 +1,4 @@
-// An interactive, explorable representation of any uFork value.
+// An explorable representation of any uFork value.
 
 /*jslint browser, global */
 
@@ -295,6 +295,14 @@ function pprint_ui({
             [element]
         );
         const dl = dom("dl", {
+            title: "alt+click for t, x, y, z",
+            onclick(event) {
+                if (event.altKey) {
+                    dl.innerHTML = "";
+                    dl.append(...cells(Object.entries(quad)));
+                    event.stopPropagation();
+                }
+            },
             style: {
                 margin: "0",
                 display: "grid",
