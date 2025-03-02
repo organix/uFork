@@ -150,16 +150,18 @@ function pprint_ui({
     );
     const ofs = ufork.rawofs(value);
     const {t, x, y, z} = quad;
-    if (typeof debug?.label === "string") {
+    if (typeof debug?.label === "string" && depth > 0) {
+
+        element.append(
+            dom("span", {style: {color: theme.yellow}}, debug.label),
+            " "
+        );
+    }
+    if (typeof debug?.label === "string" && depth <= 0) {
 
 // Labelled quad.
 
-        const short = truncate(debug.label, 9);
-        element.textContent = (
-            depth > 0
-            ? debug.label
-            : short
-        );
+        element.append(truncate(debug.label, 9));
         if (element.textContent !== debug.label) {
             element.title += "\nlabel: " + debug.label;
         }
@@ -325,7 +327,7 @@ function pprint_ui({
                             )
                             : (
                                 t === ufork.STUB_T
-                                ? {type: t, device: x, target: y}
+                                ? {type: t, device: x, target: y, next: z}
                                 : quad
                             )
                         )));
