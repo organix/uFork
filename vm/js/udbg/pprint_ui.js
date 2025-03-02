@@ -134,6 +134,34 @@ function pprint_ui({
         );
     }
 
+    function pair_entries(quad, limit = Infinity) {
+        limit -= 1;  // include tail in count
+        let entries = [];
+        while (quad?.t === ufork.PAIR_T) {
+            const n = String(entries.length + 1);
+            entries.push([n, quad.x]);
+            limit -= 1;
+            if (!ufork.in_mem(quad.y) || limit <= 0) {
+                entries.push(["-" + n, quad.y]);  // tail
+                break;
+            }
+            quad = read_quad(quad.y);
+        }
+        return entries;
+    }
+
+    function dict_entries(quad) {
+        let entries = [];
+        while (quad?.t === ufork.DICT_T) {
+            entries.push([quad.x, quad.y]);
+            if (!ufork.in_mem(quad.z)) {
+                break;
+            }
+            quad = read_quad(quad.z);
+        }
+        return entries;
+    }
+
     const debug = rom_debugs[value];
     const quad = read_quad(value);
     if (quad === undefined) {
@@ -238,21 +266,23 @@ function pprint_ui({
 
 // Pair.
 
-        element.append(sub(x), ",", sub(y, depth));
+        pair_entries(quad, 30).forEach(function ([_, value], entry_nr) {
+            if (entry_nr > 0) {
+                element.append(",");
+            }
+            element.append(sub(value));
+        });
     } else if (t === ufork.DICT_T && depth > 0) {
 
-// Dictionary.
+// Dict.
 
         element.append("{");
-        let dict = quad;
-        while (dict !== undefined) {
-            element.append(sub(dict.x), ":", sub(dict.y));
-            if (!ufork.in_mem(dict.z)) {
-                break;
+        dict_entries(quad).forEach(function ([key, value], entry_nr) {
+            if (entry_nr > 0) {
+                element.append(" ");
             }
-            dict = read_quad(dict.z);
-            element.append(" ");
-        }
+            element.append(sub(key), ":", sub(value));
+        });
         element.append("}");
     } else {
 
@@ -290,6 +320,30 @@ function pprint_ui({
         }).flat();
     }
 
+    function entrify(quad) {
+        return (
+            t === ufork.DICT_T
+            ? dict_entries(quad)
+            : (
+                t === ufork.PAIR_T
+                ? pair_entries(quad, 100)
+                : Object.entries(
+                    ufork.is_cap(value)
+                    ? (
+                        t === ufork.PROXY_T
+                        ? {type: t, device: x, tag: y}
+                        : {type: t, code: x, data: y, effect: z}
+                    )
+                    : (
+                        t === ufork.STUB_T
+                        ? {type: t, device: x, target: y, next: z}
+                        : quad
+                    )
+                )
+            )
+        );
+    }
+
     if (expand >= 0) {
         const summary = dom(
             "summary",
@@ -318,19 +372,7 @@ function pprint_ui({
                 open: expand > 0,
                 ontoggle() {
                     if (details.open) {
-                        dl.append(...cells(Object.entries(
-                            ufork.is_cap(value)
-                            ? (
-                                t === ufork.PROXY_T
-                                ? {type: t, device: x, tag: y}
-                                : {type: t, code: x, data: y, effect: z}
-                            )
-                            : (
-                                t === ufork.STUB_T
-                                ? {type: t, device: x, target: y, next: z}
-                                : quad
-                            )
-                        )));
+                        dl.append(...cells(entrify(quad)));
                     } else {
                         dl.innerHTML = "";
                     }
