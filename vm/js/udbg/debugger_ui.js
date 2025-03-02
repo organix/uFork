@@ -35,7 +35,7 @@ const debugger_ui = make_ui("debugger-ui", function (element, {
     connected = false,
     view = default_view
 }) {
-    let menu;
+    let view_select;
     let module_texts = Object.create(null);
 
     const shadow = element.attachShadow({mode: "closed"});
@@ -115,13 +115,28 @@ const debugger_ui = make_ui("debugger-ui", function (element, {
         source: source_monitor_ui({})
     };
 
+    function set_step_size(step_size) {
+        send_command({kind: "step_size", value: step_size});
+    }
+
+    function auto_step_size() {
+        if (connected && play_button.textContent === "Play") {
+            if (view === "actor_graph") {
+                set_step_size("transaction");
+            } else if (view === "source") {
+                set_step_size("instruction");
+            }
+        }
+    }
+
     function set_view(new_view) {
         if (typeof views[new_view] !== "object") {
             new_view = default_view;
         }
         view = new_view;
-        menu.value = view;
+        view_select.value = view;
         shadow.lastChild.replaceWith(views[view]);
+        auto_step_size();
     }
 
     function refresh_source() {
@@ -129,7 +144,7 @@ const debugger_ui = make_ui("debugger-ui", function (element, {
         const rom_debugs = views.actor_graph.get_rom_debugs();
         if (cc?.ip !== undefined) {
             const debug = rom_debugs[ufork.rawofs(cc.ip)];
-            const text = module_texts[debug.src];
+            const text = module_texts[debug?.src];
             views.source.set_sourcemap({debug, text});
         } else {
             views.source.set_sourcemap(undefined);
@@ -174,12 +189,26 @@ const debugger_ui = make_ui("debugger-ui", function (element, {
         );
     }
 
-    menu = dom(
+    const step_select = dom(
         "select",
         {
+            title: "Step size",
+            oninput() {
+                set_step_size(step_select.value);
+            }
+        },
+        [
+            dom("option", {value: "instruction"}, "Instruction"),
+            dom("option", {value: "transaction"}, "Transaction")
+        ]
+    );
+    view_select = dom(
+        "select",
+        {
+            title: "View",
             value: view,
             oninput() {
-                set_view(menu.value);
+                set_view(view_select.value);
             }
         },
         [
@@ -189,10 +218,15 @@ const debugger_ui = make_ui("debugger-ui", function (element, {
         ]
     );
     const spacer = dom("flex_spacer");
-    const controls = dom(
-        "controls_container",
-        [menu, step_button, play_button, speed_slider, spacer, fault_message]
-    );
+    const controls = dom("controls_container", [
+        view_select,
+        step_button,
+        play_button,
+        speed_slider,
+        step_select,
+        spacer,
+        fault_message
+    ]);
     const statuses = {
         interval(message) {
             const is_sliding = (
@@ -227,6 +261,9 @@ const debugger_ui = make_ui("debugger-ui", function (element, {
         },
         signal(message) {
             on_signal(message.signal);
+        },
+        step_size(message) {
+            step_select.value = message.value;
         }
     };
 
@@ -249,7 +286,9 @@ const debugger_ui = make_ui("debugger-ui", function (element, {
                 send_command({kind: "subscribe", topic: "ram", throttle});
                 send_command({kind: "subscribe", topic: "rom", throttle});
                 send_command({kind: "subscribe", topic: "signal", throttle});
+                send_command({kind: "subscribe", topic: "step_size", throttle});
                 send_command({kind: "subscribe", topic: "wakeup", throttle});
+                auto_step_size();
             }
         } else {
             fault_message.textContent = "connecting";

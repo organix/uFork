@@ -27,7 +27,8 @@
 //      device.
 
 //      The optional 'steps' property dictates how many steps to run before
-//      pausing. If omitted, the core will run indefinitely.
+//      pausing, where the size of each step is controlled by the "step_size"
+//      command. If omitted, the core will run indefinitely.
 
 //      The driver will pause when one of the following conditions is met:
 //          - an unrecoverable fault, such as E_FAIL, occurs
@@ -48,6 +49,21 @@
 
 //      If 'milliseconds' is greater than 0, an artificial delay is inserted
 //      between steps when playing. Defaults to 0.
+
+//  {kind: "step_size", value: <string>}
+
+//      Set the step size. The 'value' controls how much activity is performed
+//      in a single step:
+
+//          "instruction"
+//              One iteration of the run-loop. This involves executing the
+//              instruction at the front of the continuation queue (if any),
+//              dispatching the event at the front of the event queue (if any),
+//              and possibly performing some GC. Default.
+
+//          "transaction"
+//              Until the conclusion of an actor transaction, right before
+//              an 'end commit' or 'end abort' instruction is executed.
 
 //  {kind: "refill", resources: <object>}
 
@@ -99,6 +115,7 @@
 //  {kind: "auto_refill", enabled: <boolean>}
 //  {kind: "debug", enabled: <boolean>}
 //  {kind: "interval", milliseconds: <number>}
+//  {kind: "step_size", value: <string>}
 
 //      Current value as set by the command of the same name.
 
@@ -121,6 +138,7 @@ function make_driver(core, on_status) {
     let interval = 0;
     let play_timer;
     let signal;
+    let step_size = "instruction";
     let steps;
     let subscriptions = Object.create(null);
 
@@ -148,6 +166,8 @@ function make_driver(core, on_status) {
             });
         } else if (kind === "signal" && signal !== undefined) {
             callback({kind: "signal", signal});
+        } else if (kind === "step_size") {
+            callback({kind: "step_size", value: step_size});
         }
     }
 
@@ -160,6 +180,13 @@ function make_driver(core, on_status) {
         steps = undefined;
         clearTimeout(play_timer);
         publish("playing");
+    }
+
+    function ip() {
+        const cc = core.u_current_continuation();
+        if (cc !== undefined) {
+            return core.u_read_quad(cc.ip);
+        }
     }
 
     function run() {
@@ -178,23 +205,20 @@ function make_driver(core, on_status) {
 // Run the core.
 
             signal = core.h_run_loop(
-                (debug || interval > 0)
-                ? 1  // cycle by cycle
-                : 0  // run free
+                (
+                    debug                           // monitor for VM_DEBUG
+                    || step_size === "transaction"  // monitor for VM_END
+                    || interval > 0                 // artificial delay
+                )
+                ? 1
+                : 0
             );
 
 // Pause if we have hit a breakpoint.
 
-            if (debug) {
-                const cc = core.u_current_continuation();
-                if (cc !== undefined) {
-                    const instruction_quad = core.u_read_quad(cc.ip);
-                    const op_code = instruction_quad.x;
-                    if (op_code === ufork.VM_DEBUG) {
-                        pause();
-                        return publish_state();
-                    }
-                }
+            if (debug && ip()?.x === ufork.VM_DEBUG) {
+                pause();
+                return publish_state();
             }
 
 // Refill the root sponsor if it is exhausted.
@@ -223,13 +247,18 @@ function make_driver(core, on_status) {
                 }
                 return publish_state();
             }
-            steps -= 1;
 
-// Add artificial delay if requested.
+// Have we completed a step?
 
-            if (interval > 0) {
-                play_timer = setTimeout(run, interval);
-                return publish_state();
+            if (
+                step_size === "instruction"
+                || (step_size === "transaction" && ip()?.x === ufork.VM_END)
+            ) {
+                steps -= 1;
+                if (interval > 0) {
+                    play_timer = setTimeout(run, interval);
+                    return publish_state();
+                }
             }
         }
     }
@@ -274,6 +303,14 @@ function make_driver(core, on_status) {
         },
         refill(message) {
             core.h_refill(message.resources);
+        },
+        step_size(message) {
+            step_size = (
+                message.value === "transaction"
+                ? "transaction"
+                : "instruction"
+            );
+            publish("step_size");
         },
         subscribe(message) {
             subscriptions[message.topic] = (
