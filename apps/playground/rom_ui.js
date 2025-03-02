@@ -1,6 +1,6 @@
 // Visualize the compiled ROM image of a uFork program.
 
-/*jslint browser, bitwise, long */
+/*jslint browser, bitwise */
 
 import disassemble from "https://ufork.org/lib/disassemble.js";
 import dom from "https://ufork.org/lib/dom.js";
@@ -10,8 +10,58 @@ import make_ui from "https://ufork.org/lib/ui.js";
 import ucode from "https://ufork.org/ucode/ucode.js";
 import theme from "./theme.js";
 
-function memh_dump16(octets) {
-    const cells = new Uint32Array(octets.buffer);
+const dummy_bytes = new Uint8Array([
+    0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77,
+    0x88, 0x99, 0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF,
+    0x01, 0x23, 0x45, 0x67, 0x89, 0xAB, 0xCD, 0xEF,
+    0xFE, 0xDC, 0xBA, 0x98, 0x76, 0x54, 0x32, 0x10
+]);
+
+function bin_dump16(bytes) {
+    let bin = new Uint8Array(bytes.byteLength / 2);
+    let data_view = new DataView(bin.buffer);
+    new Uint32Array(bytes.buffer).forEach(function (cell, addr) {
+        data_view.setUint16(addr << 1, ucode.from_uf(cell), false);
+    });
+    return bin;
+}
+
+function test_bin_dump16() {
+    const bin = bin_dump16(dummy_bytes);
+    if (
+        bin[0] !== 0x31
+        || bin[1] !== 0x00
+        || bin[2] !== 0x75
+        || bin[3] !== 0x44
+    ) {
+        throw new Error("FAIL bin_dump16");
+    }
+}
+
+function bin_dump32(bytes) {
+    let bin = new Uint8Array(bytes.byteLength);
+    let data_view = new DataView(bin.buffer);
+    new Uint32Array(bytes.buffer).forEach(function (cell, addr) {
+        data_view.setUint32(addr << 2, cell, false);
+    });
+    return bin;
+}
+
+function test_bin_dump32() {
+    const bin = bin_dump32(dummy_bytes);
+    if (
+        bin[0] !== 0x33
+        || bin[1] !== 0x22
+        || bin[2] !== 0x11
+        || bin[3] !== 0x00
+        || bin[4] !== 0x77
+    ) {
+        throw new Error("FAIL bin_dump32");
+    }
+}
+
+function memh_dump16(bytes) {
+    const cells = new Uint32Array(bytes.buffer);
     let s = "/*   T     X     Y     Z      ADDR */\n";
     //         0123  4567  89AB  CDEF  // ^0000
     cells.forEach(function (cell, addr) {
@@ -25,8 +75,8 @@ function memh_dump16(octets) {
     return s;
 }
 
-function memh_dump32(octets) {
-    const cells = new Uint32Array(octets.buffer);
+function memh_dump32(bytes) {
+    const cells = new Uint32Array(bytes.buffer);
     let s = "/*       T         X         Y         Z          ADDR */\n";
     //         00112233  44556677  8899AABB  CCDDEEFF  // ^00000000
     cells.forEach(function (cell, addr) {
@@ -40,8 +90,8 @@ function memh_dump32(octets) {
     return s;
 }
 
-function forth_dump16(octets) {
-    const cells = new Uint32Array(octets.buffer);
+function forth_dump16(bytes) {
+    const cells = new Uint32Array(bytes.buffer);
     let s = "(    T        X        Y        Z       ADDR )\n";
     //       0x0123 , 0x4567 , 0x89AB , 0xCDEF ,  ( ^0000 )
     cells.forEach(function (cell, addr) {
@@ -57,10 +107,12 @@ function forth_dump16(octets) {
     return s;
 }
 
-function forth_dump32(octets) {
-    const cells = new Uint32Array(octets.buffer);
-    let s = "(        T            X            Y            Z           ADDR )\n";
-    //       0x00112233 , 0x44556677 , 0x8899AABB , 0xCCDDEEFF ,  ( ^00000000 )
+function forth_dump32(bytes) {
+    const cells = new Uint32Array(bytes.buffer);
+    let s = (
+        "(        T            X            Y            Z           ADDR )\n"
+    //   0x00112233 , 0x44556677 , 0x8899AABB , 0xCCDDEEFF ,  ( ^00000000 )
+    );
     cells.forEach(function (cell, addr) {
         s += "0x" + hex.from(cell, 32);
         s += (
@@ -75,11 +127,12 @@ function forth_dump32(octets) {
 }
 
 const rom_ui = make_ui("rom-ui", function (element, {
+    bytes,
     module_ir,
-    buffer,
-    format = "forth",
-    bitwidth = 16
+    format = "bin",
+    word_size = 16
 }) {
+    let download_element;
     const shadow = element.attachShadow({mode: "closed"});
     const style = dom("style", `
         :host {
@@ -108,6 +161,11 @@ const rom_ui = make_ui("rom-ui", function (element, {
         rom_controls > * {
             margin-left: 4px;
         }
+        rom_controls > a {
+            font-family: system-ui;
+            font-size: 12px;
+            color: white;
+        }
     `);
     const dump_element = dom("rom_dump", {
         contentEditable: "false",
@@ -116,54 +174,79 @@ const rom_ui = make_ui("rom-ui", function (element, {
     });
 
     function dump() {
-        const text = (
-            buffer !== undefined
-            ? (
-                format === "memh"
-                ? (
-                    bitwidth === 16
-                    ? memh_dump16(buffer)
-                    : memh_dump32(buffer)
-                )
-                : (
-                    format === "forth"
-                    ? (
-                        bitwidth === 16
-                        ? forth_dump16(buffer)
-                        : forth_dump32(buffer)
-                    )
-                    : (
-                        (format === "asm" && module_ir !== undefined)
-                        ? disassemble(module_ir)
-                        : hexdump(buffer)
-                    )
-                )
-            )
-            : "Press Run to load and display the ROM image."
-        );
-        dump_element.textContent = text;
+        if (bytes !== undefined) {
+            if (format === "memh") {
+                return (
+                    word_size === 16
+                    ? memh_dump16(bytes)
+                    : memh_dump32(bytes)
+                );
+            }
+            if (format === "forth") {
+                return (
+                    word_size === 16
+                    ? forth_dump16(bytes)
+                    : forth_dump32(bytes)
+                );
+            }
+            if (format === "bin") {
+                return (
+                    word_size === 16
+                    ? bin_dump16(bytes)
+                    : bin_dump32(bytes)
+                );
+            }
+            if (format === "asm" && module_ir !== undefined) {
+                return disassemble(module_ir);
+            }
+        }
     }
 
-    function on_bitwidth_change(event) {
-        bitwidth = parseInt(event.target.value);
-        dump();
+    function refresh() {
+        const contents = dump();
+        if (contents !== undefined) {
+            dump_element.textContent = (
+                typeof contents === "string"
+                ? contents
+                : hexdump(contents)
+            );
+            const blob = new Blob([contents]);
+            const url = URL.createObjectURL(blob);
+            const filename = "rom" + word_size + (
+                typeof contents === "string"
+                ? ".txt"
+                : ".bin"
+            );
+            download_element.download = filename;
+            download_element.textContent = "Download " + filename;
+            download_element.href = url;
+        } else {
+            dump_element.textContent = (
+                "Press Run to load and display the ROM image."
+            );
+            download_element.textContent = "";
+        }
     }
 
-    function on_format_change(event) {
-        format = event.target.value;
-        dump();
-    }
-
-    function set_buffer(new_buffer, new_ir) {
-        buffer = new_buffer;
+    function set_bytes(new_bytes, new_ir) {
+        bytes = new_bytes;
         module_ir = new_ir;
-        dump();
+        refresh();
     }
 
+    download_element = dom("a", {title: "Download as file"});
     const controls_element = dom("rom_controls", [
+        download_element,
         dom(
             "select",
-            {onchange: on_bitwidth_change, title: "Bit width", value: bitwidth},
+            {
+                title: "Word size",
+                value: word_size,
+                onchange(event) {
+                    word_size = parseInt(event.target.value);
+                    refresh();
+                }
+            },
             [
                 dom("option", {value: 16, textContent: "16 bit"}),
                 dom("option", {value: 32, textContent: "32 bit"})
@@ -171,32 +254,41 @@ const rom_ui = make_ui("rom-ui", function (element, {
         ),
         dom(
             "select",
-            {onchange: on_format_change, title: "Text format", value: format},
+            {
+                title: "Format",
+                value: format,
+                onchange(event) {
+                    format = event.target.value;
+                    refresh();
+                }
+            },
             [
+                dom("option", {value: "bin", textContent: "Binary"}),
                 dom("option", {value: "memh", textContent: "Memfile"}),
                 dom("option", {value: "forth", textContent: "Forth"}),
                 dom("option", {value: "asm", textContent: "Assembly"})
             ]
         )
     ]);
-    set_buffer(buffer);
+    set_bytes(bytes);
     shadow.append(style, dump_element, controls_element);
-    element.set_buffer = set_buffer;
+    element.set_bytes = set_bytes;
 });
 
-if (import.meta.main) {
+function demo() {
     document.documentElement.innerHTML = "";
     const rom = dom(
-        rom_ui({format: "memh", bitwidth: 32}),
-        {style: {width: "400px", height: "400px", background: "black"}}
+        rom_ui({}),
+        {style: {width: "100%", height: "500px", background: "black"}}
     );
     document.body.append(rom);
-    rom.set_buffer(new Uint8Array([
-        0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77,
-        0x88, 0x99, 0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF,
-        0x01, 0x23, 0x45, 0x67, 0x89, 0xAB, 0xCD, 0xEF,
-        0xFE, 0xDC, 0xBA, 0x98, 0x76, 0x54, 0x32, 0x10
-    ]));
+    rom.set_bytes(dummy_bytes);
+}
+
+if (import.meta.main) {
+    test_bin_dump16();
+    test_bin_dump32();
+    demo();
 }
 
 export default Object.freeze(rom_ui);

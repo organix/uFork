@@ -196,7 +196,7 @@ const tools_ui = make_ui("tools-ui", function (element, {
             core.h_initialize(),
             core.h_import(get_src(), text),
             requestorize(function (imported_module) {
-                devices.rom.set_buffer(core.h_snapshot().rom, ir);
+                devices.rom.set_bytes(core.h_snapshot().rom, ir);
                 const make_ddev = host_dev(core);
                 clock_dev(core);
                 random_dev(core);
