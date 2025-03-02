@@ -391,7 +391,7 @@ function demo(log, flakiness = 0, max_chunk_size = 16) {
     parseq.sequence([
         core.h_initialize(),
         core.h_import(hum_demo_url),
-        requestorize(function (demo_module) {
+        requestorize(function () {
             const make_ddev = host_dev(core);
             tcp_dev(
                 core,
@@ -400,7 +400,7 @@ function demo(log, flakiness = 0, max_chunk_size = 16) {
                 ["127.0.0.1:8370"],
                 tcp_transport_mock(flakiness, max_chunk_size)
             );
-            core.h_boot(demo_module.boot);
+            core.h_boot();
             core.h_refill({memory: 65536, events: 65536, cycles: 65536});
             run_core();
             return true;

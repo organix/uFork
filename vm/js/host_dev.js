@@ -191,9 +191,9 @@ function demo(log) {
     parseq.sequence([
         core.h_initialize(),
         core.h_import(undefined, assemble(test_asm)),
-        requestorize(function (asm_module) {
+        requestorize(function () {
             dummy_dev(host_dev(core));
-            core.h_boot(asm_module.boot);
+            core.h_boot();
             run_core();
             return true;
         })

@@ -329,9 +329,9 @@ function demo(log) {
     parseq.sequence([
         core.h_initialize(),
         core.h_import("https://ufork.org/lib/rq/delay.asm"),
-        requestorize(function (module) {
+        requestorize(function () {
             timer_dev(core);
-            core.h_boot(module.boot);
+            core.h_boot();
             driver.command({kind: "subscribe", topic: "signal", throttle: 50});
             driver.command({kind: "subscribe", topic: "wakeup"});
             driver.command({kind: "subscribe", topic: "rom"});

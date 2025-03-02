@@ -403,10 +403,10 @@ function demo(log) {
         core.h_initialize(),
         core.h_import("https://ufork.org/lib/blob.asm"),
         // core.h_import("https://ufork.org/lib/future.scm"),
-        requestorize(function (module) {
+        requestorize(function () {
             const make_ddev = host_dev(core);
             blob_dev(core, make_ddev);
-            core.h_boot(module.boot);
+            core.h_boot();
             core.h_run_loop(1);
             document.body.append(
                 print_bank("RAM", core.h_ram(), ufork.ramptr(0)),

@@ -459,7 +459,7 @@ function boot(unqualified_src, text) {
         if (module === undefined) {
             return console.error("Import failed", src, reason);
         }
-        core.h_boot(module.boot);
+        core.h_boot();
         update_rom_monitor();
         draw_host();
     });

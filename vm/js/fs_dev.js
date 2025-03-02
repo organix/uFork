@@ -376,7 +376,7 @@ function demo(log) {
     parseq.sequence([
         core.h_initialize(),
         core.h_import(hum_demo_url),
-        requestorize(function (demo_module) {
+        requestorize(function () {
             const make_ddev = host_dev(core);
             fs_dev(
                 core,
@@ -385,7 +385,7 @@ function demo(log) {
                 "file:///tmp",
                 fs_memory()
             );
-            core.h_boot(demo_module.boot);
+            core.h_boot();
             core.h_refill({memory: 65536, events: 65536, cycles: 65536});
             run_core();
             return true;

@@ -56,10 +56,10 @@ function party(asm_url, acquaintance_names = []) {
     return parseq.sequence([
         core.h_initialize(),
         parseq.parallel([
-            core.h_import(asm_url),
-            transport.generate_identity()
+            transport.generate_identity(),
+            core.h_import(asm_url)
         ]),
-        requestorize(function ([asm_module, identity]) {
+        requestorize(function ([identity]) {
             const name = transport.identity_to_name(identity);
             const address = signaller_origin;
             const make_ddev = host_dev(core);
@@ -81,7 +81,7 @@ function party(asm_url, acquaintance_names = []) {
                     ]
                 }]
             });
-            core.h_boot(asm_module.boot);
+            core.h_boot();
             const sig = core.h_run_loop(0);
             const err = ufork.fix_to_i32(sig);
             print("IDLE:", ufork.print(sig), ufork.fault_msg(err));

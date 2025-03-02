@@ -599,6 +599,7 @@ function make_core({
     let deferred_queue = [];
     let initial_rom_ofs;
     let initial_ram_ofs;
+    let entry_ptr;
 
 // The presence of a particular logging method indicates that its associated log
 // level is enabled. Thus calling code can log conditionally, avoiding the
@@ -1340,9 +1341,25 @@ function make_core({
 // string or IR object) is provided, the 'src' is used only to resolve relative
 // imports.
 
-        return unpromise(function () {
-            return h_import_promise(u_map_src(src) ?? src, content);
-        });
+        return parseq.sequence([
+            unpromise(function () {
+                return h_import_promise(u_map_src(src) ?? src, content);
+            }),
+            requestorize(function (module) {
+
+// If the module exports a boot behavior, make that the entrypoint.
+
+                if (module.boot !== undefined) {
+                    u_write_quad(entry_ptr, {
+                        t: INSTR_T,
+                        x: VM_DUP,
+                        y: fixnum(0),
+                        z: module.boot
+                    });
+                }
+                return module;
+            })
+        ]);
     }
 
     function u_disasm(raw) {
@@ -1508,8 +1525,8 @@ function make_core({
         }
     }
 
-    function h_boot(instr_ptr, state_ptr = UNDEF_RAW) {
-        if (instr_ptr === undefined || !is_ptr(instr_ptr)) {
+    function h_boot(instr_ptr = entry_ptr, state_ptr = UNDEF_RAW) {
+        if (!is_ptr(instr_ptr)) {
             throw new Error("Not an instruction: " + u_pprint(instr_ptr));
         }
 
@@ -1703,6 +1720,11 @@ function make_core({
                         }
                     }
                 });
+
+// The first quad of non-reserved ROM is the default entry point. Unless
+// overwritten during load, it will trigger an E_NOT_EXE fault.
+
+                entry_ptr = h_reserve_rom();
                 return true;
             })
         ]);

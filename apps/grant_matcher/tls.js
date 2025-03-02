@@ -104,7 +104,7 @@ const core = ufork.make_core({
 parseq.sequence([
     core.h_initialize(),
     core.h_import(asm_urls[store_name]),
-    requestorize(function (asm_module) {
+    requestorize(function () {
         const make_ddev = host_dev(core);
         awp_dev({
             core,
@@ -113,7 +113,7 @@ parseq.sequence([
             stores: [stores[store_name]],
             webscrypto: crypto.webcrypto
         });
-        core.h_boot(asm_module.boot);
+        core.h_boot();
         return ufork.fault_msg(ufork.fix_to_i32(core.h_run_loop()));
     })
 ])(console.log);

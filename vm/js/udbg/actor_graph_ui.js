@@ -251,8 +251,8 @@ function demo(log) {
     parseq.sequence([
         core.h_initialize(),
         core.h_import("https://ufork.org/lib/cell.asm"),
-        requestorize(function (module) {
-            core.h_boot(module.boot);
+        requestorize(function () {
+            core.h_boot();
             driver.command({kind: "subscribe", topic: "rom"});
             driver.command({kind: "subscribe", topic: "ram"});
             driver.command({kind: "subscribe", topic: "signal"});

@@ -71,7 +71,7 @@ driver = make_core_driver(core, function on_status(message) {
 parseq.sequence([
     core.h_initialize(),
     core.h_import(src),
-    requestorize(function (module) {
+    requestorize(function () {
         const make_ddev = host_dev(core);
         random_dev(core);
         const the_blob_dev = blob_dev(core, make_ddev);
@@ -89,7 +89,7 @@ parseq.sequence([
             toFileUrl(resolve(Deno.cwd(), www_dir_path)),
             fs_deno()
         );
-        core.h_boot(module.boot);
+        core.h_boot();
         driver.command({kind: "play"});
         return true;
     })

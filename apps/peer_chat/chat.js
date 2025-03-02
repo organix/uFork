@@ -132,7 +132,7 @@ parseq.sequence([
         db.get_store(),
         core.h_import(asm_url)
     ]),
-    requestorize(function ([the_awp_store, asm_module]) {
+    requestorize(function ([the_awp_store]) {
         h_on_stdin = io_dev(core, on_stdout);
         timer_dev(core);
         const make_ddev = host_dev(core);
@@ -149,7 +149,7 @@ parseq.sequence([
 
         const petname = room_petname(the_awp_store);
         core.h_install(ufork.fixnum(room_key), ufork.fixnum(petname));
-        core.h_boot(asm_module.boot);
+        core.h_boot();
         driver.command({kind: "subscribe", topic: "signal"});
         driver.command({kind: "play"});
         return true;

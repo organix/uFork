@@ -291,9 +291,9 @@ function demo(log) {
     parseq.sequence([
         core.h_initialize(),
         core.h_import("https://ufork.org/lib/rq/delay.asm"),
-        requestorize(function (module) {
+        requestorize(function () {
             timer_dev(core);
-            core.h_boot(module.boot);
+            core.h_boot();
             element.set_connected(true);
             return true;
         })

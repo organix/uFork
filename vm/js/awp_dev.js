@@ -867,14 +867,13 @@ function demo({
     return parseq.sequence([
         core.h_initialize(),
         parseq.parallel([
-            core.h_import(grant_matcher_url),
             transport.generate_identity(),
             transport.generate_identity(),
             transport.generate_identity(),
-            transport.generate_identity()
+            transport.generate_identity(),
+            core.h_import(grant_matcher_url)
         ]),
         requestorize(function ([
-            asm_module,
             alice_identity,
             bob_identity,
             carol_identity,
@@ -921,7 +920,7 @@ function demo({
                 transport,
                 stores
             });
-            core.h_boot(asm_module.boot);
+            core.h_boot();
             console.log("IDLE:", ufork.fault_msg(ufork.fix_to_i32(
                 core.h_run_loop()
             )));

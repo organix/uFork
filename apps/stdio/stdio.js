@@ -53,7 +53,7 @@ driver = make_core_driver(core, function on_status(message) {
 parseq.sequence([
     core.h_initialize(),
     core.h_import(src),
-    requestorize(function (asm_module) {
+    requestorize(function () {
         const h_on_stdin = io_dev(core, function on_stdout(string) {
             Deno.stdout.write(utf8_encoder.encode(string));
         });
@@ -67,7 +67,7 @@ parseq.sequence([
                 return read();
             });
         }());
-        core.h_boot(asm_module.boot);
+        core.h_boot();
         driver.command({kind: "subscribe", topic: "signal"});
         driver.command({kind: "play"});
         return true;

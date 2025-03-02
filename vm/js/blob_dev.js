@@ -508,15 +508,15 @@ function demo(log, use_static) {
         core.h_import(demo_url),
         (
             use_static
-            ? requestorize(function use_static_blob_dev(asm_module) {
+            ? requestorize(function use_static_blob_dev() {
                 blob_dev(core);
-                core.h_boot(asm_module.boot);
+                core.h_boot();
                 run_core();
                 return true;
             })
-            : lazy(function use_dynamic_blob_dev(asm_module) {
+            : lazy(function use_dynamic_blob_dev() {
                 const the_blob_dev = blob_dev(core, host_dev(core));
-                core.h_boot(asm_module.boot);
+                core.h_boot();
                 run_core();
                 const blob = the_blob_dev.h_alloc_blob([5, 6, 7, 8]);
                 core.h_reserve_stub(blob.cap, blob.cap); // TODO pass #? as device
