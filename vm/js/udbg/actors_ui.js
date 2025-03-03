@@ -159,7 +159,11 @@ const actors_ui = make_ui("actor-ui", function (element, {
         let edges = Object.create(null);
         Object.entries(actors).forEach(function ([key, quad]) {
             const ofs = Number(key);
-            const beh_label = label(quad.x);
+            const beh_label = (
+                quad.t === ufork.PROXY_T
+                ? device_label(ufork.rawofs(quad.x)) ?? print_short_cap(ofs)
+                : label(quad.x)
+            );
             nodes.push(springy.make_node(ofs, {
                 label: "@" + (
                     is_device(ofs)
