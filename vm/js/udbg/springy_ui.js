@@ -41,6 +41,7 @@ const springy_ui = make_ui("springy-ui", function (element, {
     layout,
     node_font_size = 16,
     edge_font_size = 12,
+    font_family = "system-ui",
     scale = globalThis.devicePixelRatio,
     background_color = "white",
     foreground_color = "black",
@@ -132,7 +133,10 @@ const springy_ui = make_ui("springy-ui", function (element, {
             return node.text_widths[text];
         }
         ctx.save();
-        ctx.font = node.data.font ?? (scale * node_font_size) + "px system-ui";
+        ctx.font = (
+            node.data.font
+            ?? (scale * node_font_size) + "px " + font_family
+        );
         const width = ctx.measureText(text).width;
         ctx.restore();
         if (!node.text_widths) {
@@ -341,7 +345,7 @@ const springy_ui = make_ui("springy-ui", function (element, {
             ctx.textBaseline = "top";
             ctx.font = (
                 edge.data.font
-                ?? (scale * edge_font_size) + "px system-ui"
+                ?? (scale * edge_font_size) + "px " + font_family
             );
             ctx.fillStyle = stroke;
             let angle = Math.atan2(s2.y - s1.y, s2.x - s1.x);
@@ -408,7 +412,7 @@ const springy_ui = make_ui("springy-ui", function (element, {
             ctx.textBaseline = "top";
             ctx.font = (
                 node.data.font
-                ?? (scale * node_font_size) + "px system-ui"
+                ?? (scale * node_font_size) + "px " + font_family
             );
             ctx.fillStyle = node.data.color ?? foreground_color;
             const text = node.data.label ?? node.id;

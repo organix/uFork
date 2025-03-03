@@ -205,16 +205,22 @@ function pprint_ui({
             : undefined
         );
         if (is_device) {
-            element.append(device_label(ofs) ?? ufork.fix_to_i32(x));
-        } else if (depth > 0) {
-            element.append(proxy_dev ?? sub(x), ".", sub(y));
-        } else if (
-            t === ufork.ACTOR_T
-            && typeof rom_debugs[x]?.label === "string"
-        ) {
-            element.append(sub(x, 0));
-        } else if (proxy_dev !== undefined) {
-            element.append(proxy_dev);
+            element.append(
+                device_label(ofs)
+                ?? ufork.fix_to_i32(x).toString(16)
+            );
+        } else {
+            element.append(ofs.toString(16));
+            if (depth > 0) {
+                element.append(":", proxy_dev ?? sub(x), ".", sub(y));
+            } else if (
+                t === ufork.ACTOR_T
+                && typeof rom_debugs[x]?.label === "string"
+            ) {
+                element.append(":", sub(x, 0));
+            } else if (proxy_dev !== undefined) {
+                element.append(":", proxy_dev);
+            }
         }
         element.style.color = (
             is_device

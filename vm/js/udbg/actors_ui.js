@@ -23,15 +23,6 @@ function is_device(ofs) {
     return ofs > ufork.DDEQUE_OFS && ofs < ufork.SPONSOR_OFS;
 }
 
-function print_short_cap(ram_ofs) {
-    return ufork.print(
-        ufork.ptr_to_cap(ufork.ramptr(ram_ofs))
-    ).replace(
-        /@60*/,
-        ""
-    );
-}
-
 function device_label(ram_ofs) {
     if (ram_ofs === ufork.DEBUG_DEV_OFS) {
         return "debug";
@@ -69,6 +60,7 @@ const actors_ui = make_ui("actor-ui", function (element, {
     const graph_element = springy_ui({
         layout,
         node_font_size: 18,
+        font_family: theme.monospace_font_family,
         background_color: theme.black,
         foreground_color: theme.white,
         stop_energy: 0.001
@@ -161,14 +153,18 @@ const actors_ui = make_ui("actor-ui", function (element, {
             const ofs = Number(key);
             const beh_label = (
                 quad.t === ufork.PROXY_T
-                ? device_label(ufork.rawofs(quad.x)) ?? print_short_cap(ofs)
+                ? device_label(ufork.rawofs(quad.x))
                 : label(quad.x)
             );
             nodes.push(springy.make_node(ofs, {
                 label: "@" + (
                     is_device(ofs)
-                    ? device_label(ofs) ?? print_short_cap(ofs)
-                    : beh_label ?? print_short_cap(ofs)
+                    ? device_label(ofs) ?? ofs.toString(16)
+                    : ofs.toString(16) + (
+                        beh_label !== undefined
+                        ? ":" + beh_label
+                        : ""
+                    )
                 ),
 
 // Copy colors used in pprint_ui.js.
