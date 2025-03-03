@@ -171,7 +171,7 @@ function pprint_ui({
         element.title = "Out of bounds.";
         return element;
     }
-    element.title = ufork.print(value) + (
+    element.title = "address: " + ufork.print(value) + (
         debug?.src !== undefined
         ? "\nsrc: " + debug.src
         : ""
@@ -284,6 +284,36 @@ function pprint_ui({
             element.append(sub(key), ":", sub(value));
         });
         element.append("}");
+    } else if (ufork.is_ram(t) && ufork.is_cap(x)) {
+
+// Event.
+
+        element.append(sub(y));
+        element.append(
+            depth > 0
+            ? " -> "
+            : "->"
+        );
+        element.append(sub(x));
+    } else if (ufork.is_fix(t)) {
+
+// Sponsor.
+
+        if (depth > 0) {
+            element.append(
+                "[",
+                key_ui("mem: ", theme.white),
+                sub(t),
+                key_ui(" evt: ", theme.white),
+                sub(x),
+                key_ui(" cyc: ", theme.white),
+                sub(y),
+                key_ui(" sig: ", theme.white),
+                sub(z)
+            );
+        } else {
+            element.append("[SPONSOR]");
+        }
     } else {
 
 // Generic quad.
@@ -320,14 +350,20 @@ function pprint_ui({
         }).flat();
     }
 
-    function entrify(quad) {
-        return (
-            t === ufork.DICT_T
-            ? dict_entries(quad)
+    function entrify() {
+        if (t === ufork.DICT_T) {
+            return dict_entries(quad);
+        }
+        if (t === ufork.PAIR_T) {
+            return pair_entries(quad, 100);
+        }
+        return Object.entries(
+            value === ufork.ramptr(ufork.MEMORY_OFS)
+            ? {"top addr": t, "next free": x, "free count": y, "GC root": z}
             : (
-                t === ufork.PAIR_T
-                ? pair_entries(quad, 100)
-                : Object.entries(
+                value === ufork.ramptr(ufork.DDEQUE_OFS)
+                ? {"e head": t, "e tail": x, "k head": y, "k tail": z}
+                : (
                     ufork.is_cap(value)
                     ? (
                         t === ufork.PROXY_T
@@ -337,7 +373,22 @@ function pprint_ui({
                     : (
                         t === ufork.STUB_T
                         ? {type: t, device: x, target: y, next: z}
-                        : quad
+                        : (
+                            (ufork.is_ram(t) && ufork.is_cap(x))
+                            ? {sponsor: t, target: x, message: y, next: z}
+                            : (
+                                ufork.is_fix(t)
+                                ? {memory: t, events: x, cycles: y, signal: z}
+                                : (
+                                    (
+                                        ufork.in_mem(t)
+                                        && read_quad(t)?.t === ufork.INSTR_T
+                                    )
+                                    ? {ip: t, sp: x, ep: y, next: z}
+                                    : quad
+                                )
+                            )
+                        )
                     )
                 )
             )
@@ -372,7 +423,7 @@ function pprint_ui({
                 open: expand > 0,
                 ontoggle() {
                     if (details.open) {
-                        dl.append(...cells(entrify(quad)));
+                        dl.append(...cells(entrify()));
                     } else {
                         dl.innerHTML = "";
                     }
@@ -459,7 +510,7 @@ function demo(log) {
             const make_ddev = host_dev(core);
             blob_dev(core, make_ddev);
             core.h_boot();
-            core.h_run_loop(1);
+            core.h_run_loop(50);
             document.body.append(
                 print_bank("RAM", core.h_ram(), ufork.ramptr(0)),
                 print_bank("ROM", core.h_rom(), ufork.romptr(0))
