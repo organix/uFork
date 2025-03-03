@@ -137,7 +137,10 @@ const editor = editor_ui({
 tools = tools_ui({
     get_text: editor.get_text,
     get_src() {
-        const unqualified_src = read_state("src") ?? "untitled.asm";
+        const unqualified_src = (
+            read_state("src")
+            ?? "untitled." + (read_state("lang") ?? "asm")
+        );
         return new URL(unqualified_src, location.href).href;
     },
     lang_packs,
