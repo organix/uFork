@@ -4,8 +4,8 @@
 
 import assemble from "https://ufork.org/lib/assemble.js";
 import dom from "https://ufork.org/lib/dom.js";
+import theme from "https://ufork.org/lib/theme.js";
 import ed_comment from "./ed_comment.js";
-import theme from "./theme.js";
 
 const indent = "    ";
 const rx_comment = /^(\s*)(;+\u0020?)/;

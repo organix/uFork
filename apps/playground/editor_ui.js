@@ -16,7 +16,7 @@ function render_css(theme, ruler = 80) {
     return `
         ${theme.monospace_font_css}
         :host {
-            font-family: ${theme.monospace_font_family}, monospace;
+            font-family: ${theme.monospace_font_family};
             font-size: 17px;
             line-height: 1.17;
             display: flex;

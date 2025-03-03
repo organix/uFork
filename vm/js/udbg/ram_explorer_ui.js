@@ -3,6 +3,7 @@
 /*jslint browser, global */
 
 import dom from "https://ufork.org/lib/dom.js";
+import theme from "https://ufork.org/lib/theme.js";
 import make_ui from "https://ufork.org/lib/ui.js";
 import ufork from "../ufork.js";
 import memory_dump from "./memory_dump.js";
@@ -29,7 +30,10 @@ const ram_explorer_ui = make_ui("ram-explorer-ui", function (element, {
             flex: 1 1;
         }
         label {
-            font-family: system-ui;
+            display: flex;
+            align-items: center;
+            font-family: ${theme.proportional_font_family};
+            font-size: 12px;
         }
     `);
     const dump = dom("ram_dump");
@@ -69,8 +73,7 @@ const ram_explorer_ui = make_ui("ram-explorer-ui", function (element, {
         }
     });
     const hide_free_label = dom("label", [
-        "Hide ",
-        dom("code", "FREE_T"),
+        dom("span", ["Hide ", dom("code", "FREE_T")]),
         hide_free_checkbox
     ]);
     shadow.append(style, dump, hide_free_label);

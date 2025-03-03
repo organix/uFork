@@ -6,6 +6,7 @@ import assemble from "https://ufork.org/lib/assemble.js";
 import dom from "https://ufork.org/lib/dom.js";
 import parseq from "https://ufork.org/lib/parseq.js";
 import requestorize from "https://ufork.org/lib/rq/requestorize.js";
+import theme from "https://ufork.org/lib/theme.js";
 import make_ui from "https://ufork.org/lib/ui.js";
 import ufork from "../ufork.js";
 import timer_dev from "../timer_dev.js";
@@ -19,17 +20,6 @@ const wasm_url = import.meta.resolve("https://ufork.org/wasm/ufork.debug.wasm");
 const throttle = 1000 / 24; // limit status-triggered rerenders to 24 FPS
 const max_play_interval = 1000;
 const default_view = "actor_graph";
-const theme = {
-    red: "#F92672",
-    orange: "#FD971F",
-    silver: "#BFBFBF",
-    gray: "#484848",
-    black: "#222222",
-    blue: "#60B8EF",
-    green: "#28C846",
-    purple: "#CE80FF",
-    yellow: "#E6DB74"
-};
 const debugger_ui = make_ui("debugger-ui", function (element, {
     send_command,
     connected = false,

@@ -4,8 +4,8 @@
 /*jslint browser, global */
 
 import dom from "https://ufork.org/lib/dom.js";
+import theme from "https://ufork.org/lib/theme.js";
 import make_ui from "https://ufork.org/lib/ui.js";
-import theme from "./theme.js";
 
 const io_dev_ui = make_ui("io-dev-ui", function (element, {on_input}) {
     const shadow = element.attachShadow({mode: "closed"});
@@ -17,7 +17,7 @@ const io_dev_ui = make_ui("io-dev-ui", function (element, {on_input}) {
         }
         ${theme.monospace_font_css}
         io_output {
-            font-family: ${theme.monospace_font_family}, monospace;
+            font-family: ${theme.monospace_font_family};
             font-size: 17px;
             line-height: 1.3;
             white-space: pre;
@@ -48,8 +48,10 @@ const io_dev_ui = make_ui("io-dev-ui", function (element, {on_input}) {
             margin-top: 6px;
         }
         label {
-            font-family: system-ui;
-            font-size: 15px;
+            display: flex;
+            align-items: center;
+            font-family: ${theme.proportional_font_family};
+            font-size: 12px;
         }
     `);
     const text_element = dom("io_output", {

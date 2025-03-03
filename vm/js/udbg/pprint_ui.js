@@ -7,6 +7,7 @@ import scheme from "https://ufork.org/lib/scheme.js";
 import dom from "https://ufork.org/lib/dom.js";
 import parseq from "https://ufork.org/lib/parseq.js";
 import requestorize from "https://ufork.org/lib/rq/requestorize.js";
+import theme from "https://ufork.org/lib/theme.js";
 import blob_dev from "../blob_dev.js";
 import host_dev from "../host_dev.js";
 import ufork from "../ufork.js";
@@ -30,7 +31,7 @@ function key_ui(text, color = "inherit") {
         "key-ui",
         {
             style: {
-                fontFamily: "system-ui",
+                fontFamily: theme.proportional_font_family,
                 fontSize: "0.8em",
                 color
             }
@@ -64,23 +65,15 @@ function pprint_ui({
     value,
     depth = 0,
     expand = -1,
-    theme = {
-        red: "red",
-        orange: "orange",
-        silver: "silver",
-        white: "white",
-        black: "black",
-        blue: "lightskyblue",
-        green: "limegreen",
-        purple: "violet",
-        yellow: "gold"
-    },
     ram,
     rom,
     rom_debugs
 }) {
     const element = dom("value-ui", {
-        style: {fontFamily: "monospace", whiteSpace: "nowrap"}
+        style: {
+            fontFamily: theme.monospace_font_family,
+            whiteSpace: "nowrap"
+        }
     });
     if (
         !Number.isSafeInteger(value)
@@ -521,7 +514,8 @@ function demo(log) {
         })
     ])(log);
     document.head.append(
-        dom("meta", {name: "color-scheme", content: "dark"})
+        dom("meta", {name: "color-scheme", content: "dark"}),
+        dom("style", theme.monospace_font_css)
     );
 }
 

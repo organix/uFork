@@ -3,8 +3,8 @@
 /*jslint browser, bitwise */
 
 import dom from "https://ufork.org/lib/dom.js";
+import theme from "https://ufork.org/lib/theme.js";
 import make_ui from "https://ufork.org/lib/ui.js";
-import theme from "./theme.js";
 
 const svg_dev_ui = make_ui("svg-dev-ui", function (element, {
     viewbox_size = 32, // defaults to slider's halfway position
@@ -23,7 +23,7 @@ const svg_dev_ui = make_ui("svg-dev-ui", function (element, {
             flex: 1 1;
         }
         svg_controls {
-            font-family: system-ui;
+            font-family: ${theme.proportional_font_family};
             font-size: 15px;
             color: white;
             display: flex;

@@ -6,9 +6,9 @@ import disassemble from "https://ufork.org/lib/disassemble.js";
 import dom from "https://ufork.org/lib/dom.js";
 import hex from "https://ufork.org/lib/hex.js";
 import hexdump from "https://ufork.org/lib/hexdump.js";
+import theme from "https://ufork.org/lib/theme.js";
 import make_ui from "https://ufork.org/lib/ui.js";
 import ucode from "https://ufork.org/ucode/ucode.js";
-import theme from "./theme.js";
 
 const dummy_bytes = new Uint8Array([
     0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77,
@@ -142,7 +142,7 @@ const rom_ui = make_ui("rom-ui", function (element, {
         }
         ${theme.monospace_font_css}
         rom_dump {
-            font-family: ${theme.monospace_font_family}, monospace;
+            font-family: ${theme.monospace_font_family};
             font-size: 17px;
             line-height: 1.3;
             white-space: pre;
@@ -163,7 +163,7 @@ const rom_ui = make_ui("rom-ui", function (element, {
             margin-left: 4px;
         }
         rom_controls > a {
-            font-family: system-ui;
+            font-family: ${theme.proportional_font_family};
             font-size: 12px;
             color: white;
         }
