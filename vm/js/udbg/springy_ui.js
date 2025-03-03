@@ -45,10 +45,11 @@ const springy_ui = make_ui("springy-ui", function (element, {
     scale = globalThis.devicePixelRatio,
     background_color = "white",
     foreground_color = "black",
-    on_node_click,
-    on_node_hover,
+    on_click,
+    on_hover,
     timestep,
-    stop_energy
+    stop_energy,
+    min_select_distance = 1
 }) {
     let images = {};
     let resize_observer;
@@ -57,9 +58,7 @@ const springy_ui = make_ui("springy-ui", function (element, {
 
 // Drag & drop.
 
-    let selected;
-    let nearest;
-    let hovered;
+    let hovered_id;
     let dragged;
 
 // Auto adjust the bounding box of graph layout, with ease-in.
@@ -394,10 +393,10 @@ const springy_ui = make_ui("springy-ui", function (element, {
 
 // Fill background.
 
-        if (selected !== undefined && selected.node?.id === node.id) {
+        if (node.data.selected) {
             ctx.fillStyle = translucent(foreground_color, 0.3);
-        } else if (nearest !== undefined && nearest.node?.id === node.id) {
-            ctx.fillStyle = translucent(foreground_color, 0.15);
+        } else if (hovered_id === node.id) {
+            ctx.fillStyle = translucent(foreground_color, 0.1);
         } else {
             ctx.fillStyle = "transparent";
         }
@@ -484,39 +483,58 @@ const springy_ui = make_ui("springy-ui", function (element, {
     canvas.style.backgroundColor = background_color;
     canvas.onmousedown = function (e) {
         const p = mouse_point(e);
-        dragged = layout.nearest(p);
-        nearest = dragged;
-        selected = dragged;
-        if (selected.node !== undefined) {
+        const nearest = layout.nearest(p);
+        const hit = (
+            nearest.node !== undefined
+            && nearest.distance < min_select_distance
+        );
+        if (on_click !== undefined) {
+            on_click(
+                hit
+                ? nearest.node.id
+                : undefined
+            );
+        }
+        if (hit) {
+            dragged = nearest;
+            dragged.original_m = dragged.point.m;
             dragged.point.m = 10000;
-            if (on_node_click !== undefined) {
-                on_node_click(selected.node.id);
-            }
         }
         renderer.start();
     };
     canvas.onmousemove = function (e) {
         const p = mouse_point(e);
-        nearest = layout.nearest(p);
+        const nearest = layout.nearest(p);
         if (dragged?.node !== undefined) {
             dragged.point.p.x = p.x;
             dragged.point.p.y = p.y;
-        } else if (
-            nearest.node !== undefined
-            && hovered?.id !== nearest.node.id
-            && on_node_hover !== undefined
-        ) {
-            on_node_hover(nearest.node.id);
+        } else {
+            if (
+                nearest.node !== undefined
+                && nearest.distance < min_select_distance
+            ) {
+                hovered_id = nearest.node.id;
+                if (on_hover !== undefined) {
+                    on_hover(nearest.node.id);
+                }
+            } else {
+                hovered_id = undefined;
+                if (on_hover !== undefined) {
+                    on_hover(undefined);
+                }
+            }
         }
-        hovered = nearest.node;
         renderer.start();
     };
     canvas.onmouseup = function () {
+        if (dragged !== undefined) {
+            dragged.point.m = dragged.original_m;
+        }
         dragged = undefined;
     };
     element.style.display = "block";
     element.invalidate = function () {
-        if (resize_observer !== undefined) {
+        if (element.isConnected) {
             renderer.start();
         }
     };
@@ -529,7 +547,6 @@ const springy_ui = make_ui("springy-ui", function (element, {
         },
         disconnect() {
             resize_observer.disconnect();
-            resize_observer = undefined;
             renderer.stop();
         }
     };
@@ -557,10 +574,10 @@ function demo(log) {
         layout,
         foreground_color: "white",
         background_color: "black",
-        on_node_click(node_id) {
+        on_click(node_id) {
             log("click", node_id);
         },
-        on_node_hover(node_id) {
+        on_hover(node_id) {
             log("hover", node_id);
         }
     });

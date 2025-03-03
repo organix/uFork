@@ -51,19 +51,13 @@ const actors_ui = make_ui("actor-ui", function (element, {
     rom = new Uint8Array(),
     rom_debugs = Object.create(null)
 }) {
+    let graph_element;
+    let selected_ofs;
     const shadow = element.attachShadow({mode: "closed"});
     const graph = springy.make_graph();
     const layout = springy.make_layout({
         graph,
         random: prng(42)
-    });
-    const graph_element = springy_ui({
-        layout,
-        node_font_size: 18,
-        font_family: theme.monospace_font_family,
-        background_color: theme.black,
-        foreground_color: theme.white,
-        stop_energy: 0.001
     });
     const inspector_element = dom("actor-inspector", {
         style: {
@@ -88,16 +82,29 @@ const actors_ui = make_ui("actor-ui", function (element, {
 // Update inspector panel.
 
         inspector_element.innerHTML = "";
-        const cc = ufork.current_continuation(ram);
-        if (cc?.ep !== undefined) {
+        if (selected_ofs !== undefined) {
             inspector_element.append(pprint_ui({
-                value: cc.ep,
+                value: ufork.ptr_to_cap(ufork.ramptr(selected_ofs)),
                 depth: 1,
                 expand: 3,
                 ram,
                 rom,
                 rom_debugs
             }));
+        } else {
+            const cc = ufork.current_continuation(ram);
+            if (cc?.ep !== undefined) {
+                const target = ufork.read_quad(ram, ufork.rawofs(cc.ep)).x;
+                selected_ofs = ufork.rawofs(target);
+                inspector_element.append(pprint_ui({
+                    value: cc.ep,
+                    depth: 1,
+                    expand: 3,
+                    ram,
+                    rom,
+                    rom_debugs
+                }));
+            }
         }
 
         function find_capabilities(raw) {
@@ -157,6 +164,7 @@ const actors_ui = make_ui("actor-ui", function (element, {
                 : label(quad.x)
             );
             nodes.push(springy.make_node(ofs, {
+                selected: ofs === selected_ofs,
                 label: "@" + (
                     is_device(ofs)
                     ? device_label(ofs) ?? ofs.toString(16)
@@ -166,9 +174,6 @@ const actors_ui = make_ui("actor-ui", function (element, {
                         : ""
                     )
                 ),
-
-// Copy colors used in pprint_ui.js.
-
                 color: (
                     is_device(ofs)
                     ? theme.purple
@@ -229,6 +234,7 @@ const actors_ui = make_ui("actor-ui", function (element, {
     }
 
     function set_ram(new_ram) {
+        selected_ofs = undefined;  // deselect
         ram = new_ram;
         invalidate();
     }
@@ -239,6 +245,18 @@ const actors_ui = make_ui("actor-ui", function (element, {
         invalidate();
     }
 
+    graph_element = springy_ui({
+        layout,
+        node_font_size: 18,
+        font_family: theme.monospace_font_family,
+        background_color: theme.black,
+        foreground_color: theme.white,
+        stop_energy: 0.001,
+        on_click(ofs) {
+            selected_ofs = ofs;  // undefined will deselect
+            invalidate();
+        }
+    });
     const split_element = dom(
         split_ui({
             placement: "right",
