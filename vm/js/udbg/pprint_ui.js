@@ -26,14 +26,14 @@ function truncate(string, max_length) {
     );
 }
 
-function key_ui(text, color = "inherit") {
+function key_ui(text) {
     return dom(
         "key-ui",
         {
             style: {
                 fontFamily: theme.proportional_font_family,
                 fontSize: "0.8em",
-                color
+                color: theme.white
             }
         },
         text
@@ -71,6 +71,7 @@ function pprint_ui({
 }) {
     const element = dom("value-ui", {
         style: {
+            color: theme.white,
             fontFamily: theme.monospace_font_family,
             whiteSpace: "nowrap"
         }
@@ -128,18 +129,20 @@ function pprint_ui({
     }
 
     function pair_entries(quad, limit = Infinity) {
-        limit -= 1;  // include tail in count
         let entries = [];
+        let tail = quad.y;
         while (quad?.t === ufork.PAIR_T) {
-            const n = String(entries.length + 1);
-            entries.push([n, quad.x]);
-            limit -= 1;
-            if (!ufork.in_mem(quad.y) || limit <= 0) {
-                entries.push(["-" + n, quad.y]);  // tail
+            const head = quad.x;
+            const head_n = String(entries.length + 1);
+            entries.push([head_n, head]);
+            tail = quad.y;
+            if (!ufork.in_mem(tail) || entries.length >= limit - 1) {
                 break;
             }
-            quad = read_quad(quad.y);
+            quad = read_quad(tail);
         }
+        const tail_n = String(-entries.length);
+        entries.push([tail_n, tail]);
         return entries;
     }
 
@@ -232,10 +235,10 @@ function pprint_ui({
             element.append(" ");
             if (x === ufork.VM_IF) {
                 element.append(
-                    key_ui("t: ", theme.white),
+                    key_ui("t: "),
                     sub(y),
                     " ",
-                    key_ui("f: ", theme.white),
+                    key_ui("f: "),
                     sub(z)
                 );
             } else {
@@ -245,11 +248,7 @@ function pprint_ui({
                     element.append(sub(y));
                 }
                 if (x !== ufork.VM_END) {
-                    element.append(
-                        " ",
-                        key_ui("k: ", theme.white),
-                        sub(z)
-                    );
+                    element.append(" ", key_ui("k: "), sub(z));
                 }
             }
         }
@@ -295,14 +294,15 @@ function pprint_ui({
         if (depth > 0) {
             element.append(
                 "[",
-                key_ui("mem: ", theme.white),
+                key_ui("mem: "),
                 sub(t),
-                key_ui(" evt: ", theme.white),
+                key_ui(" evt: "),
                 sub(x),
-                key_ui(" cyc: ", theme.white),
+                key_ui(" cyc: "),
                 sub(y),
-                key_ui(" sig: ", theme.white),
-                sub(z)
+                key_ui(" sig: "),
+                sub(z),
+                "]"
             );
         } else {
             element.append("[SPONSOR]");
@@ -325,20 +325,26 @@ function pprint_ui({
     function cells(entries) {
         return entries.map(function ([key, value]) {
             return [
-                dom("dt", {style: {textAlign: "right"}}, (
-                    typeof key === "string"
-                    ? key_ui(key + ":")
-                    : [sub(key), ":"]
-                )),
-                dom("dd", {
-                    style: {
-                        margin: "0",
-                        textOverflow: "ellipsis",
-                        overflowX: "hidden"
-                    }
-                }, [
+                dom(
+                    "dt",
+                    {style: {display: "flex", justifyContent: "flex-end"}},
+                    (
+                        typeof key === "string"
+                        ? key_ui(key + ":")
+                        : [sub(key, undefined, 0), ":"]
+                    )
+                ),
+                dom(
+                    "dd",
+                    {
+                        style: {
+                            margin: "0",
+                            textOverflow: "ellipsis",
+                            overflowX: "hidden"
+                        }
+                    },
                     sub(value, Math.max(1, depth), Math.max(0, expand - 1))
-                ])
+                )
             ];
         }).flat();
     }
@@ -374,11 +380,18 @@ function pprint_ui({
                                 ? {memory: t, events: x, cycles: y, signal: z}
                                 : (
                                     (
-                                        ufork.in_mem(t)
-                                        && read_quad(t)?.t === ufork.INSTR_T
+                                        t === ufork.ACTOR_T
+                                        && !ufork.is_cap(value)
                                     )
-                                    ? {ip: t, sp: x, ep: y, next: z}
-                                    : quad
+                                    ? {"new code": x, "new data": y, events: z}
+                                    : (
+                                        (
+                                            ufork.in_mem(t)
+                                            && read_quad(t)?.t === ufork.INSTR_T
+                                        )
+                                        ? {ip: t, sp: x, ep: y, next: z}
+                                        : quad
+                                    )
                                 )
                             )
                         )
@@ -503,7 +516,7 @@ function demo(log) {
             const make_ddev = host_dev(core);
             blob_dev(core, make_ddev);
             core.h_boot();
-            core.h_run_loop(50);
+            core.h_run_loop(1);
             document.body.append(
                 print_bank("RAM", core.h_ram(), ufork.ramptr(0)),
                 print_bank("ROM", core.h_rom(), ufork.romptr(0))

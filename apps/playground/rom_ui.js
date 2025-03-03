@@ -164,7 +164,7 @@ const rom_ui = make_ui("rom-ui", function (element, {
         }
         rom_controls > a {
             font-family: ${theme.proportional_font_family};
-            font-size: 12px;
+            font-size: 13px;
             color: white;
         }
     `);

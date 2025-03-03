@@ -55,13 +55,13 @@
 //      Set the step size. The 'value' controls how much activity is performed
 //      in a single step:
 
-//          "instruction"
+//          "instr"
 //              One iteration of the run-loop. This involves executing the
 //              instruction at the front of the continuation queue (if any),
 //              dispatching the event at the front of the event queue (if any),
 //              and possibly performing some GC. Default.
 
-//          "transaction"
+//          "txn"
 //              Until the conclusion of an actor transaction, right before
 //              an 'end commit' or 'end abort' instruction is executed.
 
@@ -131,6 +131,7 @@ const lib_url = import.meta.resolve("https://ufork.org/lib/");
 const wasm_url = import.meta.resolve("https://ufork.org/wasm/ufork.debug.wasm");
 
 const max_fixnum = ufork.fixnum(2 ** 30 - 1);
+const busy = Object.freeze({});
 
 function make_driver(core, on_status) {
     let auto_refill_enabled = true;
@@ -138,7 +139,7 @@ function make_driver(core, on_status) {
     let interval = 0;
     let play_timer;
     let signal;
-    let step_size = "instruction";
+    let step_size = "instr";
     let steps;
     let subscriptions = Object.create(null);
 
@@ -164,7 +165,7 @@ function make_driver(core, on_status) {
                 debugs: core.u_rom_debugs(),
                 module_texts: core.u_module_texts()
             });
-        } else if (kind === "signal" && signal !== undefined) {
+        } else if (kind === "signal" && ufork.is_raw(signal)) {
             callback({kind: "signal", signal});
         } else if (kind === "step_size") {
             callback({kind: "step_size", value: step_size});
@@ -190,8 +191,8 @@ function make_driver(core, on_status) {
     }
 
     function run() {
-        if (steps === undefined) {
-            return;  // paused
+        if (steps === undefined || signal === busy) {
+            return;  // paused or already running
         }
         while (true) {
 
@@ -202,13 +203,16 @@ function make_driver(core, on_status) {
                 return publish_state();
             }
 
-// Run the core.
+// Run the core. It is possible that 'h_run_loop' will call 'wakeup'
+// causing 'run' to be reentered, so we guard against that with a special
+// signal value.
 
+            signal = busy;
             signal = core.h_run_loop(
                 (
-                    debug                           // monitor for VM_DEBUG
-                    || step_size === "transaction"  // monitor for VM_END
-                    || interval > 0                 // artificial delay
+                    debug                   // monitor for VM_DEBUG
+                    || step_size === "txn"  // monitor for VM_END
+                    || interval > 0         // artificial delay
                 )
                 ? 1
                 : 0
@@ -250,12 +254,9 @@ function make_driver(core, on_status) {
 
 // Have we completed a step?
 
-            if (
-                step_size === "instruction"
-                || (step_size === "transaction" && ip()?.x === ufork.VM_END)
-            ) {
+            if (step_size === "instr" || ip()?.x === ufork.VM_END) {
                 steps -= 1;
-                if (interval > 0) {
+                if (interval > 0 && steps > 0) {
                     play_timer = setTimeout(run, interval);
                     return publish_state();
                 }
@@ -268,7 +269,11 @@ function make_driver(core, on_status) {
             subscriptions.wakeup({kind: "wakeup", device_offset});
         }
         if (steps !== undefined) {
-            run();
+
+// It is possible that 'wakeup' was called by 'u_defer' within 'h_run_loop'.
+//
+
+            setTimeout(run); // avoid reentry of h_run_loop
         } else {
             publish_state();
         }
@@ -306,9 +311,9 @@ function make_driver(core, on_status) {
         },
         step_size(message) {
             step_size = (
-                message.value === "transaction"
-                ? "transaction"
-                : "instruction"
+                message.value === "txn"
+                ? "txn"
+                : "instr"
             );
             publish("step_size");
         },

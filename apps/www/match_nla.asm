@@ -7,7 +7,8 @@
     peg: "https://ufork.org/lib/blob_peg.asm"
     std: "https://ufork.org/lib/std.asm"
 
-beh:                        ; ptrn <- cust,ofs,blob
+beh:
+match_nla:                  ; ptrn <- cust,ofs,blob
     msg -1                  ; ofs,blob
     msg 1                   ; ofs,blob cust
     push k_check            ; ofs,blob cust k_check

@@ -51,7 +51,7 @@ const io_dev_ui = make_ui("io-dev-ui", function (element, {on_input}) {
             display: flex;
             align-items: center;
             font-family: ${theme.proportional_font_family};
-            font-size: 12px;
+            font-size: 13px;
         }
     `);
     const text_element = dom("io_output", {
@@ -106,7 +106,7 @@ const io_dev_ui = make_ui("io-dev-ui", function (element, {on_input}) {
                     scroll_to_bottom(false);
                 }
             }),
-            " Show info"
+            " Show trace info"
         ]),
         dom("button", {
             textContent: "⨉ Clear",

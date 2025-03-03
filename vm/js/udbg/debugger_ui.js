@@ -11,7 +11,7 @@ import make_ui from "https://ufork.org/lib/ui.js";
 import ufork from "../ufork.js";
 import timer_dev from "../timer_dev.js";
 import make_core_driver from "./core_driver.js";
-import actor_graph_ui from "./actor_graph_ui.js";
+import actors_ui from "./actors_ui.js";
 import ram_explorer_ui from "./ram_explorer_ui.js";
 import source_monitor_ui from "./source_monitor_ui.js";
 const lib_url = import.meta.resolve("https://ufork.org/lib/");
@@ -19,14 +19,15 @@ const wasm_url = import.meta.resolve("https://ufork.org/wasm/ufork.debug.wasm");
 
 const throttle = 1000 / 24; // limit status-triggered rerenders to 24 FPS
 const max_play_interval = 1000;
-const default_view = "actor_graph";
+const default_view = "actors";
 const debugger_ui = make_ui("debugger-ui", function (element, {
     send_command,
     connected = false,
     view = default_view
 }) {
-    let view_select;
     let module_texts = Object.create(null);
+    let view_select;
+    let rom_debugs = Object.create(null);
 
     const shadow = element.attachShadow({mode: "closed"});
     const style = dom("style", `
@@ -95,7 +96,7 @@ const debugger_ui = make_ui("debugger-ui", function (element, {
     });
     const fault_message = dom("fault_message");
     const views = {
-        actor_graph: actor_graph_ui({
+        actors: actors_ui({
             background_color: theme.black,
             foreground_color: theme.yellow,
             device_color: theme.green,
@@ -111,10 +112,10 @@ const debugger_ui = make_ui("debugger-ui", function (element, {
 
     function auto_step_size() {
         if (connected && play_button.textContent === "Play") {
-            if (view === "actor_graph") {
-                set_step_size("transaction");
+            if (view === "actors") {
+                set_step_size("txn");
             } else if (view === "source") {
-                set_step_size("instruction");
+                set_step_size("instr");
             }
         }
     }
@@ -131,7 +132,6 @@ const debugger_ui = make_ui("debugger-ui", function (element, {
 
     function refresh_source() {
         const cc = ufork.current_continuation(views.ram.get_bytes());
-        const rom_debugs = views.actor_graph.get_rom_debugs();
         if (cc?.ip !== undefined) {
             const debug = rom_debugs[ufork.rawofs(cc.ip)];
             const text = module_texts[debug?.src];
@@ -188,8 +188,8 @@ const debugger_ui = make_ui("debugger-ui", function (element, {
             }
         },
         [
-            dom("option", {value: "instruction"}, "Instruction"),
-            dom("option", {value: "transaction"}, "Transaction")
+            dom("option", {value: "instr"}, "Instruction"),
+            dom("option", {value: "txn"}, "Transaction")
         ]
     );
     view_select = dom(
@@ -202,9 +202,9 @@ const debugger_ui = make_ui("debugger-ui", function (element, {
             }
         },
         [
-            dom("option", {value: "actor_graph"}, "Actor Graph"),
-            dom("option", {value: "ram"}, "RAM Explorer"),
-            dom("option", {value: "source"}, "Source Code")
+            dom("option", {value: "actors"}, "Actors"),
+            dom("option", {value: "ram"}, "RAM"),
+            dom("option", {value: "source"}, "Source")
         ]
     );
     const spacer = dom("flex_spacer");
@@ -238,15 +238,17 @@ const debugger_ui = make_ui("debugger-ui", function (element, {
                 ? "Pause"
                 : "Play"
             );
+            step_button.disabled = message.value;
         },
         ram(message) {
             views.ram.set_bytes(message.bytes);
-            views.actor_graph.set_ram(message.bytes);
+            views.actors.set_ram(message.bytes);
             refresh_source();
         },
         rom(message) {
-            views.actor_graph.set_rom_debugs(message.debugs);
+            views.actors.set_rom(message.bytes, message.debugs);
             module_texts = message.module_texts;
+            rom_debugs = message.debugs;
             refresh_source();
         },
         signal(message) {

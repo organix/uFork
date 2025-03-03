@@ -113,7 +113,8 @@ new_ext_ptrn:               ; ( ext -- ext_ptrn )
     actor create            ; k get_ptrn=match_seq.list
     ref std.return_value
 
-beh:                        ; _ <- cust,path
+beh:
+sniff_mime:                 ; _ <- cust,path
 
 ; Find the starting position of the file extension in the path.
 

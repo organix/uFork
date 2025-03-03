@@ -1,14 +1,19 @@
-// Visualize uFork actors as a directed graph.
+// Visualize the actors in a uFork core.
 
 /*jslint browser, global */
 
 import assemble from "https://ufork.org/lib/assemble.js";
+import dom from "https://ufork.org/lib/dom.js";
 import parseq from "https://ufork.org/lib/parseq.js";
 import requestorize from "https://ufork.org/lib/rq/requestorize.js";
 import prng from "https://ufork.org/lib/prng.js";
+import split_ui from "https://ufork.org/lib/split_ui.js";
+import theme from "https://ufork.org/lib/theme.js";
 import make_ui from "https://ufork.org/lib/ui.js";
 import make_core_driver from "./core_driver.js";
 import ufork from "../ufork.js";
+import timer_dev from "../timer_dev.js";
+import pprint_ui from "./pprint_ui.js";
 import springy from "./springy.js";
 import springy_ui from "./springy_ui.js";
 const lib_url = import.meta.resolve("https://ufork.org/lib/");
@@ -23,40 +28,37 @@ function print_short_cap(ram_ofs) {
         ufork.ptr_to_cap(ufork.ramptr(ram_ofs))
     ).replace(
         /@60*/,
-        "@"
+        ""
     );
 }
 
 function device_label(ram_ofs) {
     if (ram_ofs === ufork.DEBUG_DEV_OFS) {
-        return "debug_dev";
+        return "debug";
     }
     if (ram_ofs === ufork.CLOCK_DEV_OFS) {
-        return "clock_dev";
+        return "clock";
     }
     if (ram_ofs === ufork.TIMER_DEV_OFS) {
-        return "timer_dev";
+        return "timer";
     }
     if (ram_ofs === ufork.IO_DEV_OFS) {
-        return "io_dev";
+        return "io";
     }
     if (ram_ofs === ufork.RANDOM_DEV_OFS) {
-        return "random_dev";
+        return "random";
     }
     if (ram_ofs === ufork.HOST_DEV_OFS) {
-        return "host_dev";
+        return "host";
     }
 }
 
 const bytes_per_word = 4; // 32 bits
 const bytes_per_quad = bytes_per_word * 4;
-const actor_graph_ui = make_ui("actor-graph-ui", function (element, {
+const actors_ui = make_ui("actor-ui", function (element, {
     ram = new Uint8Array(),
-    rom_debugs = Object.create(null),
-    background_color = "black",
-    foreground_color = "white",
-    device_color = "limegreen",
-    proxy_color = "orange"
+    rom = new Uint8Array(),
+    rom_debugs = Object.create(null)
 }) {
     const shadow = element.attachShadow({mode: "closed"});
     const graph = springy.make_graph();
@@ -64,15 +66,21 @@ const actor_graph_ui = make_ui("actor-graph-ui", function (element, {
         graph,
         random: prng(42)
     });
-    const springy_element = springy_ui({
+    const graph_element = springy_ui({
         layout,
         node_font_size: 18,
-        background_color,
-        foreground_color,
+        background_color: theme.black,
+        foreground_color: theme.white,
         stop_energy: 0.001
     });
-    springy_element.style.width = "100%";
-    springy_element.style.height = "100%";
+    const inspector_element = dom("actor-inspector", {
+        style: {
+            color: theme.white,
+            background: theme.black,
+            overflowY: "auto",
+            padding: "12px"
+        }
+    });
 
     function label(raw) {
         if (ufork.is_rom(raw)) {
@@ -83,6 +91,21 @@ const actor_graph_ui = make_ui("actor-graph-ui", function (element, {
     function invalidate() {
         if (!element.isConnected) {
             return;
+        }
+
+// Update inspector panel.
+
+        inspector_element.innerHTML = "";
+        const cc = ufork.current_continuation(ram);
+        if (cc?.ep !== undefined) {
+            inspector_element.append(pprint_ui({
+                value: cc.ep,
+                depth: 1,
+                expand: 3,
+                ram,
+                rom,
+                rom_debugs
+            }));
         }
 
         function find_capabilities(raw) {
@@ -138,22 +161,21 @@ const actor_graph_ui = make_ui("actor-graph-ui", function (element, {
             const ofs = Number(key);
             const beh_label = label(quad.x);
             nodes.push(springy.make_node(ofs, {
-                label: (
+                label: "@" + (
                     is_device(ofs)
                     ? device_label(ofs) ?? print_short_cap(ofs)
-                    : print_short_cap(ofs) + (
-                        beh_label !== undefined
-                        ? ":" + beh_label
-                        : ""
-                    )
+                    : beh_label ?? print_short_cap(ofs)
                 ),
+
+// Copy colors used in pprint_ui.js.
+
                 color: (
                     is_device(ofs)
-                    ? device_color
+                    ? theme.purple
                     : (
                         quad.t === ufork.PROXY_T
-                        ? proxy_color
-                        : undefined
+                        ? theme.orange
+                        : theme.yellow
                     )
                 )
             }));
@@ -203,7 +225,7 @@ const actor_graph_ui = make_ui("actor-graph-ui", function (element, {
             }
         });
         edge_array.forEach(graph.add_edge);
-        springy_element.invalidate();
+        graph_element.invalidate();
     }
 
     function set_ram(new_ram) {
@@ -211,27 +233,40 @@ const actor_graph_ui = make_ui("actor-graph-ui", function (element, {
         invalidate();
     }
 
-    function get_rom_debugs() {
-        return rom_debugs;
-    }
-
-    function set_rom_debugs(new_rom_debugs) {
+    function set_rom(new_rom, new_rom_debugs) {
+        rom = new_rom;
         rom_debugs = new_rom_debugs;
         invalidate();
     }
 
-    shadow.append(springy_element);
+    const split_element = dom(
+        split_ui({
+            placement: "right",
+            divider_color: theme.gray,
+            divider_width: "3px"
+        }),
+        {style: {width: "100%", height: "100%"}},
+        [
+            dom(graph_element, {slot: "main"}),
+            dom(inspector_element, {slot: "peripheral"})
+        ]
+    );
+    shadow.append(split_element);
     set_ram(ram);
-    set_rom_debugs(rom_debugs);
-    element.style.background = background_color;
+    set_rom(rom, rom_debugs);
+    element.style.background = theme.black;
     element.set_ram = set_ram;
-    element.get_rom_debugs = get_rom_debugs;
-    element.set_rom_debugs = set_rom_debugs;
+    element.set_rom = set_rom;
+    return {
+        connect() {
+            split_element.set_size(0.4 * globalThis.innerWidth);
+        }
+    };
 });
 
 function demo(log) {
     document.documentElement.innerHTML = "";
-    const element = actor_graph_ui({});
+    const element = actors_ui({});
     element.style.position = "fixed";
     element.style.inset = "0";
     const core = ufork.make_core({
@@ -243,7 +278,9 @@ function demo(log) {
         if (message.kind === "ram") {
             element.set_ram(message.bytes);
         } else if (message.kind === "rom") {
-            element.set_rom_debugs(message.debugs);
+            element.set_rom(message.bytes, message.debugs);
+        } else if (message.kind === "signal") {
+            log("signal", ufork.print(message.signal));
         } else {
             log(message);
         }
@@ -252,11 +289,14 @@ function demo(log) {
         core.h_initialize(),
         core.h_import("https://ufork.org/lib/cell.asm"),
         requestorize(function () {
+            timer_dev(core);
             core.h_boot();
             driver.command({kind: "subscribe", topic: "rom"});
             driver.command({kind: "subscribe", topic: "ram"});
+            driver.command({kind: "subscribe", topic: "playing"});
             driver.command({kind: "subscribe", topic: "signal"});
-            driver.command({kind: "interval", milliseconds: 100});
+            driver.command({kind: "step_size", value: "txn"});
+            driver.command({kind: "interval", milliseconds: 2000});
             driver.command({kind: "play"});
             return true;
         })
@@ -268,4 +308,4 @@ if (import.meta.main) {
     demo(globalThis.console.log);
 }
 
-export default Object.freeze(actor_graph_ui);
+export default Object.freeze(actors_ui);

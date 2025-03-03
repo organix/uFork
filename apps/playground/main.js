@@ -8,6 +8,7 @@
 import base64 from "https://ufork.org/lib/base64.js";
 import dom from "https://ufork.org/lib/dom.js";
 import gzip from "https://ufork.org/lib/gzip.js";
+import split_ui from "https://ufork.org/lib/split_ui.js";
 import theme from "https://ufork.org/lib/theme.js";
 import unpercent from "https://ufork.org/lib/unpercent.js";
 import make_window_bridge from "https://ufork.org/js/udbg/window_bridge.js";
@@ -16,7 +17,6 @@ import lang_hum from "./lang_hum.js";
 import lang_scm from "./lang_scm.js";
 import tools_ui from "./tools_ui.js";
 import editor_ui from "./editor_ui.js";
-import split_ui from "./split_ui.js";
 const unqualified_dev_lib_url = import.meta.resolve("https://ufork.org/lib/");
 const udbg_url = import.meta.resolve("../udbg/index.html");
 
@@ -174,9 +174,8 @@ tools = tools_ui({
             url.hash = params;
             const window_features = [
                 "popup",
-                "width=" + globalThis.innerWidth / 2,
-                "height=" + globalThis.innerHeight,
-                "left=" + globalThis.innerWidth / 2
+                "width=" + 0.75 * globalThis.innerWidth,
+                "height=" + globalThis.innerHeight
             ].join(", ");
             udbg_window = globalThis.open(url, "udbg", window_features);
             udbg_bridge = make_window_bridge(

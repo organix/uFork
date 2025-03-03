@@ -33,7 +33,7 @@ const ram_explorer_ui = make_ui("ram-explorer-ui", function (element, {
             display: flex;
             align-items: center;
             font-family: ${theme.proportional_font_family};
-            font-size: 12px;
+            font-size: 13px;
         }
     `);
     const dump = dom("ram_dump");

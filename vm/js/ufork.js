@@ -481,18 +481,20 @@ function test_read_write_quad() {
 
 function current_continuation(ram) {
     const dd_quad = read_quad(ram, DDEQUE_OFS);
-    const k_first = dd_quad.y;
-    if (in_mem(k_first)) {
-        const k_quad = read_quad(ram, rawofs(k_first));
-        const e_quad = read_quad(ram, rawofs(k_quad.y));
-        return {
-            ip: k_quad.t,
-            sp: k_quad.x,
-            ep: k_quad.y,
-            act: e_quad.x,
-            msg: e_quad.y,
-            spn: e_quad.t
-        };
+    if (dd_quad !== undefined) {
+        const k_first = dd_quad.y;
+        if (in_mem(k_first)) {
+            const k_quad = read_quad(ram, rawofs(k_first));
+            const e_quad = read_quad(ram, rawofs(k_quad.y));
+            return {
+                ip: k_quad.t,
+                sp: k_quad.x,
+                ep: k_quad.y,
+                act: e_quad.x,
+                msg: e_quad.y,
+                spn: e_quad.t
+            };
+        }
     }
 }
 
