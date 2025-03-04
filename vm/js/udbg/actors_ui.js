@@ -1,4 +1,4 @@
-// Visualize the actors in a uFork core.
+// Visualize the actors within a uFork core.
 
 /*jslint browser, global */
 
@@ -89,12 +89,30 @@ function find_stubs(
     return object;
 }
 
+function find_events(
+    ram,
+    ptr = ufork.read_quad(ram, ufork.DDEQUE_OFS).t  // event queue
+) {
+    if (ufork.is_ram(ptr)) {
+        const quad = ufork.read_quad(ram, ufork.rawofs(ptr));
+        return [ptr, ...find_events(ram, quad.z)];
+    }
+    return [];
+}
+
+function heading_ui(text, level = 1) {
+    return dom(
+        "h" + level,
+        {style: {fontFamily: theme.proportional_font_family, margin: 0}},
+        text
+    );
+}
+
 const actors_ui = make_ui("actor-ui", function (element, {
     ram = new Uint8Array(),
     rom = new Uint8Array(),
     rom_debugs = Object.create(null)
 }) {
-    let controls;
     let isolate_checkbox;
     let graph_element;
     let selected_ofs;
@@ -103,7 +121,7 @@ const actors_ui = make_ui("actor-ui", function (element, {
         :host {
             background-color: ${theme.black};
         }
-        inspector-ui {
+        actor_inspector {
             background-color: ${theme.black};
             color: ${theme.white};
             overflow-y: auto;
@@ -111,16 +129,19 @@ const actors_ui = make_ui("actor-ui", function (element, {
             flex-direction: column;
             justify-content: space-between;
         }
-        details-ui {
+        actor_details {
             overflow-y: auto;
             scrollbar-color: ${theme.gray} transparent;
             padding: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
         }
-        controls-ui {
+        actor_controls {
             padding: 8px 10px;
             border-top: 1px solid ${theme.gray};
         }
-        label {
+        actor_controls > label {
             display: flex;
             align-items: center;
             font-family: ${theme.proportional_font_family};
@@ -133,7 +154,11 @@ const actors_ui = make_ui("actor-ui", function (element, {
         graph,
         random: prng(42)
     });
-    const inspector_element = dom("inspector-ui");
+    const details = dom("actor_details");
+
+    function print(value, depth, expand) {
+        return raw_ui({value, depth, expand, ram, rom, rom_debugs});
+    }
 
     function invalidate() {
         if (!element.isConnected || ram.length === 0) {
@@ -143,33 +168,38 @@ const actors_ui = make_ui("actor-ui", function (element, {
 // Update inspector panel.
 
         let selected_actor_ofs;
-        let value;
-        inspector_element.innerHTML = "";
+        details.innerHTML = "";
         if (selected_ofs !== undefined) {
             selected_actor_ofs = selected_ofs;
-            value = ufork.ptr_to_cap(ufork.ramptr(selected_ofs));
+            const selected_cap = ufork.ptr_to_cap(ufork.ramptr(selected_ofs));
+            details.append(heading_ui("Actor", 1));
+            details.append(print(selected_cap, 1, [[3]]));
         } else {
             const cc = ufork.current_continuation(ram);
             if (cc?.ep !== undefined) {
-                value = cc.ep;
-                const target = ufork.read_quad(ram, ufork.rawofs(cc.ep)).x;
+                const event = ufork.read_quad(ram, ufork.rawofs(cc.ep));
+                details.append(heading_ui("Current event", 1));
+                details.append(print(cc.ep, 1, [[1, 3]]));
+                // details.append(heading_ui("Message", 2));
+                // details.append(print(event.y, 1, 0));
+                const target = event.x;
                 selected_actor_ofs = ufork.rawofs(target);
             }
         }
-        if (value !== undefined) {
-            inspector_element.append(
-                dom("details-ui", [
-                    raw_ui({
-                        value,
-                        depth: 1,
-                        expand: 3,
-                        ram,
-                        rom,
-                        rom_debugs
-                    })
-                ]),
-                controls
-            );
+        if (selected_actor_ofs !== undefined) {
+            const actor_quad = ufork.read_quad(ram, selected_actor_ofs);
+            const effect_ptr = actor_quad.z;
+            if (ufork.is_ram(effect_ptr)) {
+                details.append(heading_ui("Effect", 2));
+                const effect_quad = ufork.read_quad(
+                    ram,
+                    ufork.rawofs(effect_ptr)
+                );
+                const events = find_events(ram, effect_quad.z);
+                details.append(...events.map(function (event_ptr) {
+                    return print(event_ptr, 1, 0);
+                }));
+            }
         }
         const caps = (
             (isolate_checkbox.checked && selected_actor_ofs !== undefined)
@@ -188,13 +218,7 @@ const actors_ui = make_ui("actor-ui", function (element, {
         let edges = Object.create(null);
         Array.from(caps).forEach(function (raw) {
             const ofs = ufork.rawofs(raw);
-            const raw_element = raw_ui({
-                value: raw,
-                depth: 0,
-                ram,
-                rom,
-                rom_debugs
-            });
+            const raw_element = print(raw, 0);
             nodes.push(springy.make_node(ofs, {
                 label: raw_element.get_text(),
                 color: raw_element.get_color(),
@@ -282,12 +306,16 @@ const actors_ui = make_ui("actor-ui", function (element, {
         type: "checkbox",
         oninput: invalidate
     });
-    controls = dom("controls-ui", [
+    const controls = dom("actor_controls", [
         dom(
             "label",
             {title: "Direct references only (i)"},
             ["Isolate", isolate_checkbox]
         )
+    ]);
+    const inspector_element = dom("actor_inspector", [
+        details,
+        controls
     ]);
     graph_element = springy_ui({
         layout,

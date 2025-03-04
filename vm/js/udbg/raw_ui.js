@@ -41,6 +41,37 @@ function key_ui(text) {
     );
 }
 
+function descend(expand, entry_nr) {
+    if (Number.isSafeInteger(expand)) {
+        return Math.max(0, expand - 1);
+    }
+    const matching = expand.filter(function (path) {
+        return path[0] === entry_nr;
+    });
+    if (matching.length === 0) {
+        return 0;  // closed
+    }
+    return matching.filter(function (path) {
+        return path.length > 1;
+    }).map(function (path) {
+        return path.slice(1);
+    });
+}
+
+function test_descend() {
+    if (
+        descend(0, 0) !== 0
+        || descend(1, 0) !== 0
+        || descend(2, 0) !== 1
+        || descend([], 0) !== 0
+        || descend([[1]], 0) !== 0
+        || JSON.stringify(descend([[1]], 1)) !== "[]"
+        || JSON.stringify(descend([[1], [1, 2, 3]], 1)) !== "[[2,3]]"
+    ) {
+        throw new Error("FAIL descend");
+    }
+}
+
 function device_label(ram_ofs) {
     if (ram_ofs === ufork.DEBUG_DEV_OFS) {
         return "debug";
@@ -63,10 +94,34 @@ function device_label(ram_ofs) {
 }
 
 function raw_ui({
+
+// The raw value.
+
     value,
+
+// The verbosity of the text:
+
+//      0   Compact. No spaces, commas, or periods.
+//      1   Verbose. May contain spaces, commas, or periods.
+
     depth = 0,
-    expand = -1,
+
+// Expansion:
+
+//      undefined   Not expandable.
+//      0           Expandable but not expanded.
+//      1           Expanded, but entries not expanded. Same as [].
+//      n           All entries expanded to a depth of n.
+//      Array       The entries to expand, for example [[2, 3], [2, 4, 1]].
+
+    expand,
+
+// ROM constants are printed as quads, not constants, to this depth.
+
     rom_constant_depth = 0,
+
+// The remaining parameters describe the state of the core.
+
     ram,
     rom,
     rom_debugs
@@ -356,7 +411,7 @@ function raw_ui({
     }
 
     function cells(entries) {
-        return entries.map(function ([key, value]) {
+        return entries.map(function ([key, value], entry_nr) {
             return [
                 dom(
                     "dt",
@@ -376,7 +431,11 @@ function raw_ui({
                             overflowX: "hidden"
                         }
                     },
-                    sub(value, Math.max(1, depth), Math.max(0, expand - 1))
+                    sub(
+                        value,
+                        Math.max(1, depth),
+                        descend(expand, entry_nr)
+                    )
                 )
             ];
         }).flat();
@@ -434,7 +493,7 @@ function raw_ui({
         );
     }
 
-    if (expand >= 0) {
+    if (expand !== undefined) {
         const summary = dom(
             "summary",
             {style: {overflowX: "hidden", textOverflow: "ellipsis"}},
@@ -456,13 +515,16 @@ function raw_ui({
                 gap: "0.2em 0.4em"
             }
         });
+        const open = Array.isArray(expand) || expand > 0;
         const details = dom(
             "details",
             {
-                open: expand > 0,
+                open,
                 ontoggle() {
                     if (details.open) {
-                        dl.append(...cells(entrify()));
+                        if (dl.children.length === 0) {
+                            dl.append(...cells(entrify()));
+                        }
                     } else {
                         dl.innerHTML = "";
                     }
@@ -471,6 +533,9 @@ function raw_ui({
             },
             [summary, dl]
         );
+        if (open) {
+            dl.append(...cells(entrify()));
+        }
         return details;
     }
     return element;
@@ -503,7 +568,7 @@ function demo(log) {
         compilers: {asm: assemble, scm: scheme.compile}
     });
 
-    function cells(value) {
+    function row(value, expand) {
         const ram = core.h_ram();
         const rom = core.h_rom();
         const rom_debugs = core.u_rom_debugs();
@@ -528,7 +593,7 @@ function demo(log) {
                 rom,
                 rom_debugs,
                 depth: 1,
-                expand: 0,
+                expand,
                 rom_constant_depth: 1
             })
         ];
@@ -537,7 +602,11 @@ function demo(log) {
     function print_bank(caption, bytes, bottom_ptr) {
         const nr_quads = Math.floor(bytes.length / bytes_per_quad);
         const rows = new Array(nr_quads).fill().map(function (_, quad_nr) {
-            return cells(bottom_ptr + quad_nr);
+            return row(bottom_ptr + quad_nr, (
+                quad_nr === 0
+                ? [[3, 2, 1], [3, 2, 2]]
+                : 0
+            ));
         });
         return tabulate(caption, rows);
     }
@@ -567,6 +636,7 @@ function demo(log) {
 }
 
 if (import.meta.main) {
+    test_descend();
     demo(globalThis.console.log);
 }
 
