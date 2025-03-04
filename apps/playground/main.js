@@ -116,11 +116,20 @@ function fetch_text() {
     return Promise.resolve("");
 }
 
+function get_src() {
+    const unqualified_src = (
+        read_state("src")
+        ?? "untitled." + (read_state("lang") ?? "asm")
+    );
+    return new URL(unqualified_src, location.href).href;
+}
+
 const editor = editor_ui({
     text: "; Loading...",
     lang_packs,
     theme,
     on_text_change(text) {
+        tools.set_text(text);
         return (
             (
                 text === initial_text
@@ -135,14 +144,6 @@ const editor = editor_ui({
     }
 });
 tools = tools_ui({
-    get_text: editor.get_text,
-    get_src() {
-        const unqualified_src = (
-            read_state("src")
-            ?? "untitled." + (read_state("lang") ?? "asm")
-        );
-        return new URL(unqualified_src, location.href).href;
-    },
     lang_packs,
     import_map: (
         location.href.startsWith("https://ufork.org/")
@@ -156,6 +157,7 @@ tools = tools_ui({
             ? lang
             : undefined // omit default
         ));
+        tools.set_src(get_src());
     },
     on_device_change(device) {
         write_state("dev", (
@@ -257,11 +259,15 @@ if (lang_packs[lang] === undefined) {
 editor.set_lang(lang);
 tools.set_lang(lang);
 tools.set_device(read_state("dev") || "io");
+tools.set_text(editor.get_text());
+tools.set_src(get_src());
 fetch_text().then(function (text) {
     editor.set_text(text);
+    tools.set_text(text);
     initial_text = text;
 }).catch(function (error) {
     editor.set_text(initial_text);
+    tools.set_text(initial_text);
     tools.warn("Failed to load source: " + error.message);
 });
 addEventListener("resize", function () {

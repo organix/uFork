@@ -13,6 +13,7 @@ import timer_dev from "../timer_dev.js";
 import make_core_driver from "./core_driver.js";
 import actors_ui from "./actors_ui.js";
 import ram_ui from "./ram_ui.js";
+import rom_ui from "./rom_ui.js";
 import source_monitor_ui from "./source_monitor_ui.js";
 const lib_url = import.meta.resolve("https://ufork.org/lib/");
 const wasm_url = import.meta.resolve("https://ufork.org/wasm/ufork.debug.wasm");
@@ -106,14 +107,27 @@ const debugger_ui = make_ui("debugger-ui", function (element, {
     });
     const fault_message = dom("fault_message");
     const views = {
-        actors: actors_ui({
-            background_color: theme.black,
-            foreground_color: theme.yellow,
-            device_color: theme.green,
-            proxy_color: theme.orange
-        }),
-        source: source_monitor_ui({}),
-        ram: ram_ui({})
+        actors: {
+            name: "Actors",
+            element: actors_ui({
+                background_color: theme.black,
+                foreground_color: theme.yellow,
+                device_color: theme.green,
+                proxy_color: theme.orange
+            })
+        },
+        source: {
+            name: "Source",
+            element: source_monitor_ui({})
+        },
+        ram: {
+            name: "RAM",
+            element: ram_ui({})
+        },
+        rom: {
+            name: "ROM",
+            element: rom_ui({})
+        }
     };
 
     function set_step_size(step_size) {
@@ -136,18 +150,18 @@ const debugger_ui = make_ui("debugger-ui", function (element, {
         }
         view = new_view;
         view_select.value = view;
-        shadow.lastChild.replaceWith(views[view]);
+        shadow.lastChild.replaceWith(views[view].element);
         auto_step_size();
     }
 
     function refresh_source() {
-        const cc = ufork.current_continuation(views.ram.get_ram());
+        const cc = ufork.current_continuation(views.ram.element.get_ram());
         if (cc?.ip !== undefined) {
             const debug = rom_debugs[ufork.rawofs(cc.ip)];
             const text = module_texts[debug?.src];
-            views.source.set_sourcemap({debug, text});
+            views.source.element.set_sourcemap({debug, text});
         } else {
-            views.source.set_sourcemap(undefined);
+            views.source.element.set_sourcemap(undefined);
         }
     }
 
@@ -213,11 +227,9 @@ const debugger_ui = make_ui("debugger-ui", function (element, {
                 set_view(view_select.value);
             }
         },
-        [
-            dom("option", {value: "actors"}, "Actors"),
-            dom("option", {value: "ram"}, "RAM"),
-            dom("option", {value: "source"}, "Source")
-        ]
+        Object.entries(views).map(function ([value, info]) {
+            return dom("option", {value}, info.name);
+        })
     );
     const spacer = dom("flex_spacer");
     const controls = dom("controls_container", [
@@ -253,13 +265,14 @@ const debugger_ui = make_ui("debugger-ui", function (element, {
             step_button.disabled = message.value;
         },
         ram(message) {
-            views.ram.set_ram(message.bytes);
-            views.actors.set_ram(message.bytes);
+            views.ram.element.set_ram(message.bytes);
+            views.actors.element.set_ram(message.bytes);
             refresh_source();
         },
         rom(message) {
-            views.ram.set_rom(message.bytes, message.debugs);
-            views.actors.set_rom(message.bytes, message.debugs);
+            views.ram.element.set_rom(message.bytes, message.debugs);
+            views.rom.element.set_rom(message.bytes, message.debugs);
+            views.actors.element.set_rom(message.bytes, message.debugs);
             module_texts = message.module_texts;
             rom_debugs = message.debugs;
             refresh_source();

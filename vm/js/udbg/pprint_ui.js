@@ -65,6 +65,7 @@ function pprint_ui({
     value,
     depth = 0,
     expand = -1,
+    rom_constant_depth = 0,
     ram,
     rom,
     rom_debugs
@@ -90,7 +91,10 @@ function pprint_ui({
         element.title = "Invalid value.";
         return element;
     }
-    if (ufork.is_fix(value) || value <= ufork.FREE_T) {
+    if (
+        ufork.is_fix(value)
+        || (value <= ufork.FREE_T && rom_constant_depth <= 0)
+    ) {
 
 // Constant.
 
@@ -111,6 +115,7 @@ function pprint_ui({
             value,
             depth: sub_depth ?? depth - 1,
             expand: sub_expand,
+            rom_constant_depth: Math.max(0, rom_constant_depth - 1),
             ram,
             rom,
             rom_debugs
@@ -501,7 +506,8 @@ function demo(log) {
                 rom,
                 rom_debugs,
                 depth: 1,
-                expand: 0
+                expand: 0,
+                rom_constant_depth: 1
             })
         ];
     }

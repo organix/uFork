@@ -134,10 +134,12 @@ const actors_ui = make_ui("actor-ui", function (element, {
         }
         details-ui {
             overflow-y: auto;
+            scrollbar-color: ${theme.gray} transparent;
             padding: 12px;
         }
         controls-ui {
-            padding: 6px;
+            padding: 8px 10px;
+            border-top: 1px solid ${theme.gray};
         }
         label {
             display: flex;

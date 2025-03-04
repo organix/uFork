@@ -20,13 +20,13 @@ import make_core_driver from "https://ufork.org/js/udbg/core_driver.js";
 import lang_asm from "./lang_asm.js";
 import lang_scm from "./lang_scm.js";
 import io_dev_ui from "./io_dev_ui.js";
-import rom_ui from "./rom_ui.js";
 import svg_dev_ui from "./svg_dev_ui.js";
+import disasm_ui from "./disasm_ui.js";
 const wasm_url = import.meta.resolve("https://ufork.org/wasm/ufork.wasm");
 
 const tools_ui = make_ui("tools-ui", function (element, {
-    get_text,
-    get_src,
+    text = "",
+    src,
     device,
     lang = "asm",
     lang_packs = {},
@@ -82,7 +82,6 @@ const tools_ui = make_ui("tools-ui", function (element, {
             }
         }
     });
-    devices.rom = rom_ui({});
     devices.svg = svg_dev_ui({
         background_color: "#ffffff",
         on_pointer_input(x, y, button_mask) {
@@ -91,6 +90,14 @@ const tools_ui = make_ui("tools-ui", function (element, {
             }
         }
     });
+    devices.disasm = disasm_ui({});
+
+    function refresh_disasm() {
+        if (device_select.value === "disasm") {
+            const lang_pack = lang_packs[lang_select.value];
+            devices.disasm.set_ir(lang_pack.compile(text));
+        }
+    }
 
     function set_device(device) {
         if (devices[device] === undefined) {
@@ -106,17 +113,28 @@ const tools_ui = make_ui("tools-ui", function (element, {
             device_element = replacement;
         }
         device_select.value = device;
+        refresh_disasm();
     }
 
     function set_lang(new_lang) {
         lang_select.value = new_lang;
         test_button.disabled = new_lang !== "asm";
+        refresh_disasm();
+    }
+
+    function set_text(new_text) {
+        text = new_text;
+        refresh_disasm();
+    }
+
+    function set_src(new_src) {
+        src = new_src;
     }
 
     function stop() {
         run_button.textContent = "▶ Run";
         run_button.onclick = function (event) {
-            run(get_text(), "boot", event.shiftKey);
+            run(text, "boot", event.shiftKey);
         };
         on_detach();
         h_on_svgin = undefined;
@@ -194,9 +212,8 @@ const tools_ui = make_ui("tools-ui", function (element, {
         }
         parseq.sequence([
             core.h_initialize(),
-            core.h_import(get_src(), text),
+            core.h_import(src, text),
             requestorize(function (imported_module) {
-                devices.rom.set_bytes(core.h_snapshot().rom, ir);
                 const make_ddev = host_dev(core);
                 clock_dev(core);
                 random_dev(core);
@@ -259,7 +276,7 @@ const tools_ui = make_ui("tools-ui", function (element, {
         [
             dom("option", {value: "io", textContent: "I/O"}),
             dom("option", {value: "svg", textContent: "SVG"}),
-            dom("option", {value: "rom", textContent: "ROM"})
+            dom("option", {value: "disasm", textContent: "Disasm"})
         ]
     );
     lang_select = dom(
@@ -286,7 +303,7 @@ const tools_ui = make_ui("tools-ui", function (element, {
         textContent: "✔ Test",
         title: "shift+click to debug",
         onclick(event) {
-            run(get_text(), "test", event.shiftKey);
+            run(text, "test", event.shiftKey);
         }
     });
     help_button = dom("button", {
@@ -303,11 +320,15 @@ const tools_ui = make_ui("tools-ui", function (element, {
     ]);
     set_device(device);
     set_lang(lang);
+    set_text(text);
+    set_src(src);
     stop();
     shadow.append(style, controls_element, device_element);
     element.command = command;
     element.set_device = set_device;
     element.set_lang = set_lang;
+    element.set_text = set_text;
+    element.set_src = set_src;
     element.warn = warn;
 });
 
@@ -316,12 +337,7 @@ if (import.meta.main) {
     document.body.style.background = "black";
     const tools = dom(
         tools_ui({
-            get_text() {
-                return "";
-            },
-            get_src() {
-                return new URL("example.asm", location.href).href;
-            },
+            src: new URL("example.asm", location.href).href,
             lang_packs: {asm: lang_asm, scm: lang_scm},
             on_lang_change: globalThis.console.log,
             on_device_change: globalThis.console.log,
@@ -331,7 +347,7 @@ if (import.meta.main) {
             on_status: () => globalThis.console.log("on_status"),
             on_help: () => globalThis.console.log("on_help")
         }),
-        {style: {width: "400px", height: "400px"}}
+        {style: {position: "fixed", inset: "0"}}
     );
     document.body.append(tools);
 }

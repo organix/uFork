@@ -27,26 +27,37 @@ const ram_ui = make_ui("ram-explorer-ui", function (element, {
             display: flex;
             flex-direction: column;
             justify-content: stretch;
-            padding: 10px;
-            gap: 10px;
         }
-        dl {
+        :host > dl {
             margin: 0;
             flex: 1 1;
             display: grid;
             grid-template-columns: max-content 1fr;
+            gap: 0 10px;
             align-content: start;
-            overflow: auto;
+            overflow-x: hidden;
+            overflow-y: auto;
+            scrollbar-color: ${theme.gray} transparent;
+            padding: 10px;
         }
-        dt {
+        :host > dl > dt {
+            display: flex;
+            justify-content: flex-end;
+            align-items: baseline;
             font-family: ${theme.monospace_font_family};
             white-space: pre;
         }
-        label {
+        :host > dl > dd {
+            margin: 0;
+            min-width: 0; /* truncate long summaries */
+        }
+        :host > label {
             display: flex;
             align-items: center;
             font-family: ${theme.proportional_font_family};
             font-size: 13px;
+            padding: 8px 10px;
+            border-top: 1px solid ${theme.gray};
         }
     `);
     const dl = dom("dl");
