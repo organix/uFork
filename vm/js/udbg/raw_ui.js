@@ -95,7 +95,7 @@ function raw_ui({
         element.textContent = String(value);
         element.style.color = theme.white;
         element.style.background = theme.red;
-        element.title = "Invalid value.";
+        element.title = "Error: invalid raw";
         return element;
     }
     if (
@@ -176,12 +176,12 @@ function raw_ui({
         element.textContent = ufork.print(value);
         element.style.color = theme.white;
         element.style.background = theme.red;
-        element.title = "Out of bounds.";
+        element.title = "Error: out of bounds";
         return element;
     }
-    element.title = "address: " + ufork.print(value) + (
+    element.title = "Address: " + ufork.print(value) + (
         debug?.src !== undefined
-        ? "\nsrc: " + debug.src
+        ? "\nModule: " + debug.src
         : ""
     );
     const ofs = ufork.rawofs(value);
@@ -199,7 +199,7 @@ function raw_ui({
 
         element.append(truncate(debug.label, 9));
         if (element.textContent !== debug.label) {
-            element.title += "\nlabel: " + debug.label;
+            element.title += "\nLabel: " + debug.label;
         }
         element.style.color = theme.yellow;
     } else if (
@@ -243,6 +243,15 @@ function raw_ui({
                 : theme.yellow
             )
         );
+        element.title += "\nKind: " + (
+            is_device
+            ? "device"
+            : (
+                t === ufork.PROXY_T
+                ? "proxy"
+                : "actor"
+            )
+        ) + " capability";
     } else if (t === ufork.INSTR_T) {
 
 // Instruction.
@@ -272,6 +281,7 @@ function raw_ui({
         }
         element.append(">");
         element.style.color = theme.blue;
+        element.title += "\nKind: instruction";
     } else if (t === ufork.PAIR_T && depth > 0) {
 
 // Pair.
@@ -282,6 +292,7 @@ function raw_ui({
             }
             element.append(sub(value));
         });
+        element.title += "\nKind: pair";
     } else if (t === ufork.DICT_T && depth > 0) {
 
 // Dict.
@@ -294,6 +305,7 @@ function raw_ui({
             element.append(sub(key), ":", sub(value));
         });
         element.append("}");
+        element.title += "\nKind: dictionary";
     } else if (ufork.is_ram(t) && ufork.is_cap(x)) {
 
 // Event.
@@ -305,6 +317,7 @@ function raw_ui({
             : "->"
         );
         element.append(sub(x));
+        element.title += "\nKind: event";
     } else if (ufork.is_fix(t)) {
 
 // Sponsor.
@@ -323,8 +336,9 @@ function raw_ui({
                 "]"
             );
         } else {
-            element.append("[SPONSOR]");
+            element.append("[", ufork.print(t), "]");
         }
+        element.title += "\nKind: sponsor";
     } else {
 
 // Generic quad.
@@ -338,6 +352,7 @@ function raw_ui({
             element.append(ufork.print(t));
         }
         element.append(["]"]);
+        element.title += "\nKind: quad";
     }
 
     function cells(entries) {
@@ -426,7 +441,7 @@ function raw_ui({
             [element]
         );
         const dl = dom("dl", {
-            title: "alt+click for t, x, y, z",
+            title: "Alt+click for t, x, y, z",
             onclick(event) {
                 if (event.altKey) {
                     dl.innerHTML = "";
