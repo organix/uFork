@@ -1,4 +1,5 @@
-// An explorable representation of any uFork value.
+// An explorable representation of any 32-bit raw. A raw is a 32-bit unsigned
+// integer representing a uFork value, as described in vm.md.
 
 /*jslint browser, global */
 
@@ -61,7 +62,7 @@ function device_label(ram_ofs) {
     }
 }
 
-function pprint_ui({
+function raw_ui({
     value,
     depth = 0,
     expand = -1,
@@ -111,7 +112,7 @@ function pprint_ui({
 // Quad.
 
     function sub(value, sub_depth, sub_expand) {
-        return pprint_ui({
+        return raw_ui({
             value,
             depth: sub_depth ?? depth - 1,
             expand: sub_expand,
@@ -493,14 +494,14 @@ function demo(log) {
         }
         return [
             ufork.print(value),
-            pprint_ui({
+            raw_ui({
                 value,
                 ram,
                 rom,
                 rom_debugs,
                 depth: 0
             }),
-            pprint_ui({
+            raw_ui({
                 value,
                 ram,
                 rom,
@@ -548,4 +549,4 @@ if (import.meta.main) {
     demo(globalThis.console.log);
 }
 
-export default Object.freeze(pprint_ui);
+export default Object.freeze(raw_ui);

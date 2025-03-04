@@ -11,7 +11,7 @@ import theme from "https://ufork.org/lib/theme.js";
 import make_ui from "https://ufork.org/lib/ui.js";
 import ucode from "https://ufork.org/ucode/ucode.js";
 import ufork from "../ufork.js";
-import pprint_ui from "./pprint_ui.js";
+import raw_ui from "./raw_ui.js";
 const lib_url = import.meta.resolve("https://ufork.org/lib/");
 const wasm_url = import.meta.resolve("https://ufork.org/wasm/ufork.debug.wasm");
 
@@ -224,7 +224,7 @@ const rom_ui = make_ui("rom-ui", function (element, {
             new Array(nr_quads).fill().forEach(function (_, ofs) {
                 const ptr = ufork.romptr(ofs);
                 dl_element.append(dom("dt", ufork.print(ptr)));
-                const value_element = pprint_ui({
+                const value_element = raw_ui({
                     value: ptr,
                     depth: 1,
                     expand: 0,

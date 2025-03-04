@@ -13,7 +13,7 @@ import make_ui from "https://ufork.org/lib/ui.js";
 import make_core_driver from "./core_driver.js";
 import ufork from "../ufork.js";
 import timer_dev from "../timer_dev.js";
-import pprint_ui from "./pprint_ui.js";
+import raw_ui from "./raw_ui.js";
 import springy from "./springy.js";
 import springy_ui from "./springy_ui.js";
 const lib_url = import.meta.resolve("https://ufork.org/lib/");
@@ -186,7 +186,7 @@ const actors_ui = make_ui("actor-ui", function (element, {
         if (value !== undefined) {
             inspector_element.append(
                 dom("details-ui", [
-                    pprint_ui({
+                    raw_ui({
                         value,
                         depth: 1,
                         expand: 3,

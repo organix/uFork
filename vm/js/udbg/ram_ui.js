@@ -9,7 +9,7 @@ import requestorize from "https://ufork.org/lib/rq/requestorize.js";
 import theme from "https://ufork.org/lib/theme.js";
 import make_ui from "https://ufork.org/lib/ui.js";
 import ufork from "../ufork.js";
-import pprint_ui from "./pprint_ui.js";
+import raw_ui from "./raw_ui.js";
 const lib_url = import.meta.resolve("https://ufork.org/lib/");
 const wasm_url = import.meta.resolve("https://ufork.org/wasm/ufork.debug.wasm");
 
@@ -71,7 +71,7 @@ const ram_ui = make_ui("ram-explorer-ui", function (element, {
             if (!hide_free || quad.t !== ufork.FREE_T) {
                 const ptr = ufork.ramptr(ofs);
                 dl.append(dom("dt", ufork.print(ptr)));
-                const value = pprint_ui({
+                const value = raw_ui({
                     value: (
                         (quad.t === ufork.ACTOR_T || quad.t === ufork.PROXY_T)
                         ? ufork.ptr_to_cap(ptr)
