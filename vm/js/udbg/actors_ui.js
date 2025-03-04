@@ -23,27 +23,6 @@ function is_device_ofs(ofs) {
     return ofs > ufork.DDEQUE_OFS && ofs < ufork.SPONSOR_OFS;
 }
 
-function device_label(ram_ofs) {
-    if (ram_ofs === ufork.DEBUG_DEV_OFS) {
-        return "debug";
-    }
-    if (ram_ofs === ufork.CLOCK_DEV_OFS) {
-        return "clock";
-    }
-    if (ram_ofs === ufork.TIMER_DEV_OFS) {
-        return "timer";
-    }
-    if (ram_ofs === ufork.IO_DEV_OFS) {
-        return "io";
-    }
-    if (ram_ofs === ufork.RANDOM_DEV_OFS) {
-        return "random";
-    }
-    if (ram_ofs === ufork.HOST_DEV_OFS) {
-        return "host";
-    }
-}
-
 function find_caps(ram, raws, deep = false) {
     let caps = new Set();
     let seen = new Set();  // cycle protection
@@ -156,12 +135,6 @@ const actors_ui = make_ui("actor-ui", function (element, {
     });
     const inspector_element = dom("inspector-ui");
 
-    function label(raw) {
-        if (ufork.is_rom(raw)) {
-            return rom_debugs[raw]?.label;
-        }
-    }
-
     function invalidate() {
         if (!element.isConnected || ram.length === 0) {
             return;
@@ -215,33 +188,19 @@ const actors_ui = make_ui("actor-ui", function (element, {
         let edges = Object.create(null);
         Array.from(caps).forEach(function (raw) {
             const ofs = ufork.rawofs(raw);
-            const quad = ufork.read_quad(ram, ofs);
-            const beh_label = (
-                quad.t === ufork.PROXY_T
-                ? device_label(ufork.rawofs(quad.x))
-                : label(quad.x)
-            );
+            const raw_element = raw_ui({
+                value: raw,
+                depth: 0,
+                ram,
+                rom,
+                rom_debugs
+            });
             nodes.push(springy.make_node(ofs, {
-                selected: ofs === selected_actor_ofs,
-                label: "@" + (
-                    is_device_ofs(ofs)
-                    ? device_label(ofs) ?? ofs.toString(16)
-                    : ofs.toString(16) + (
-                        beh_label !== undefined
-                        ? ":" + beh_label
-                        : ""
-                    )
-                ),
-                color: (
-                    is_device_ofs(ofs)
-                    ? theme.purple
-                    : (
-                        quad.t === ufork.PROXY_T
-                        ? theme.orange
-                        : theme.yellow
-                    )
-                )
+                label: raw_element.get_text(),
+                color: raw_element.get_color(),
+                selected: ofs === selected_actor_ofs
             }));
+            const quad = ufork.read_quad(ram, ofs);
             const target_caps = find_caps(ram, [
                 quad.x,  // ACTOR_T code or PROXY_T device
                 quad.y,  // ACTOR_T data or PROXY_T tag

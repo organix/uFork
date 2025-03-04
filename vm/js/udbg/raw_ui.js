@@ -72,6 +72,12 @@ function raw_ui({
     rom_debugs
 }) {
     const element = dom("value-ui", {
+        get_text() {
+            return element.textContent;
+        },
+        get_color() {
+            return element.style.color;
+        },
         style: {
             color: theme.white,
             fontFamily: theme.monospace_font_family,
