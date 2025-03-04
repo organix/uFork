@@ -26,9 +26,10 @@ const debugger_ui = make_ui("debugger-ui", function (element, {
     view = default_view
 }) {
     let module_texts = Object.create(null);
-    let view_select;
+    let play_button;
     let rom_debugs = Object.create(null);
-
+    let step_button;
+    let view_select;
     const shadow = element.attachShadow({mode: "closed"});
     const style = dom("style", `
         :host {
@@ -60,15 +61,31 @@ const debugger_ui = make_ui("debugger-ui", function (element, {
             flex: 1 1;
         }
     `);
-    const play_button = dom("button", {
+
+    function toggle_play() {
+        if (play_button.textContent === "Play") {
+            send_command({kind: "play"});
+        } else {
+            send_command({kind: "pause"});
+        }
+    }
+
+    function step() {
+        if (!step_button.disabled) {
+            send_command({kind: "play", steps: 1});
+        }
+    }
+
+    step_button = dom("button", {
         type: "button",
-        onclick() {
-            if (play_button.textContent === "Play") {
-                send_command({kind: "play"});
-            } else {
-                send_command({kind: "pause"});
-            }
-        },
+        onclick: step,
+        title: "Single step (s)",
+        textContent: "Step"
+    });
+    play_button = dom("button", {
+        type: "button",
+        onclick: toggle_play,
+        title: "Toggle playback (c)",
         textContent: "Play"
     });
     const speed_slider = dom("input", {
@@ -86,13 +103,6 @@ const debugger_ui = make_ui("debugger-ui", function (element, {
                 ) - 1
             });
         }
-    });
-    const step_button = dom("button", {
-        type: "button",
-        onclick() {
-            send_command({kind: "play", steps: 1});
-        },
-        textContent: "Step"
     });
     const fault_message = dom("fault_message");
     const views = {
@@ -142,22 +152,24 @@ const debugger_ui = make_ui("debugger-ui", function (element, {
     }
 
     function on_keydown(event) {
-
-// Previous view: alt+up
-// Next view: alt+down
-
-        if (event.altKey && !event.metaKey && !event.ctrlKey) {
-            const view_names = Object.keys(views);
-            const view_nr = view_names.indexOf(view);
-            let new_view;
-            if (event.key === "ArrowUp") {
-                new_view = view_names[view_nr - 1];
-            } else if (event.key === "ArrowDown") {
-                new_view = view_names[view_nr + 1];
-            }
-            if (new_view !== undefined) {
-                set_view(new_view);
-                event.preventDefault();
+        if (!event.altKey && !event.metaKey && !event.ctrlKey) {
+            if (event.key === "s") {
+                step();
+            } else if (event.key === "c") {
+                toggle_play();
+            } else {
+                const view_names = Object.keys(views);
+                const view_nr = view_names.indexOf(view);
+                let new_view;
+                if (event.key === "ArrowUp") {
+                    new_view = view_names[view_nr - 1];
+                } else if (event.key === "ArrowDown") {
+                    new_view = view_names[view_nr + 1];
+                }
+                if (new_view !== undefined) {
+                    set_view(new_view);
+                    event.preventDefault();
+                }
             }
         }
     }
@@ -195,7 +207,7 @@ const debugger_ui = make_ui("debugger-ui", function (element, {
     view_select = dom(
         "select",
         {
-            title: "View",
+            title: "View (up/down arrow)",
             value: view,
             oninput() {
                 set_view(view_select.value);
@@ -210,10 +222,10 @@ const debugger_ui = make_ui("debugger-ui", function (element, {
     const spacer = dom("flex_spacer");
     const controls = dom("controls_container", [
         view_select,
+        step_select,
+        speed_slider,
         step_button,
         play_button,
-        speed_slider,
-        step_select,
         spacer,
         fault_message
     ]);
