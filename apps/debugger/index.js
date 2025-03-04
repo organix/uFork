@@ -19,7 +19,6 @@ import fs_dev from "https://ufork.org/js/fs_dev.js";
 import tcp_dev from "https://ufork.org/js/tcp_dev.js";
 import host_dev from "https://ufork.org/js/host_dev.js";
 import timer_dev from "https://ufork.org/js/timer_dev.js";
-import memory_dump from "https://ufork.org/js/udbg/memory_dump.js";
 const lib_url = import.meta.resolve("https://ufork.org/lib/");
 const wasm_url = import.meta.resolve("https://ufork.org/wasm/ufork.debug.wasm");
 
@@ -73,6 +72,20 @@ let ram_max = 0;
 let core;  // uFork wasm processor core
 let h_on_stdin;
 
+function memory_dump(bytes, bottom_ptr, gc_colors = []) {
+    const nr_quads = Math.floor(bytes.length / 16);
+    const lines = new Array(nr_quads).fill().map(function (_, quad_nr) {
+        const address = ufork.print(bottom_ptr + quad_nr).padStart(9);
+        const quad = ufork.read_quad(bytes, quad_nr);
+        const line = address + ": " + ufork.print_quad(quad);
+        if (gc_colors[quad_nr] !== undefined) {
+            const color = gc_colors[quad_nr];
+            return line.padEnd(64) + ufork.print_gc_color(color).toUpperCase();
+        }
+        return line;
+    });
+    return lines.join("\n");
+}
 function read_state(name) {
     // pluses are not spaces
     const url = new URL(location.href.replaceAll("+", "%2B"));

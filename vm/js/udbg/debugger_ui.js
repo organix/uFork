@@ -12,7 +12,7 @@ import ufork from "../ufork.js";
 import timer_dev from "../timer_dev.js";
 import make_core_driver from "./core_driver.js";
 import actors_ui from "./actors_ui.js";
-import ram_explorer_ui from "./ram_explorer_ui.js";
+import ram_ui from "./ram_ui.js";
 import source_monitor_ui from "./source_monitor_ui.js";
 const lib_url = import.meta.resolve("https://ufork.org/lib/");
 const wasm_url = import.meta.resolve("https://ufork.org/wasm/ufork.debug.wasm");
@@ -102,8 +102,8 @@ const debugger_ui = make_ui("debugger-ui", function (element, {
             device_color: theme.green,
             proxy_color: theme.orange
         }),
-        ram: ram_explorer_ui({text_color: theme.blue}),
-        source: source_monitor_ui({})
+        source: source_monitor_ui({}),
+        ram: ram_ui({})
     };
 
     function set_step_size(step_size) {
@@ -131,7 +131,7 @@ const debugger_ui = make_ui("debugger-ui", function (element, {
     }
 
     function refresh_source() {
-        const cc = ufork.current_continuation(views.ram.get_bytes());
+        const cc = ufork.current_continuation(views.ram.get_ram());
         if (cc?.ip !== undefined) {
             const debug = rom_debugs[ufork.rawofs(cc.ip)];
             const text = module_texts[debug?.src];
@@ -241,11 +241,12 @@ const debugger_ui = make_ui("debugger-ui", function (element, {
             step_button.disabled = message.value;
         },
         ram(message) {
-            views.ram.set_bytes(message.bytes);
+            views.ram.set_ram(message.bytes);
             views.actors.set_ram(message.bytes);
             refresh_source();
         },
         rom(message) {
+            views.ram.set_rom(message.bytes, message.debugs);
             views.actors.set_rom(message.bytes, message.debugs);
             module_texts = message.module_texts;
             rom_debugs = message.debugs;
@@ -321,7 +322,7 @@ function demo(log) {
     });
     parseq.sequence([
         core.h_initialize(),
-        core.h_import("https://ufork.org/lib/rq/delay.asm"),
+        core.h_import("https://ufork.org/lib/cell.asm"),
         requestorize(function () {
             timer_dev(core);
             core.h_boot();
