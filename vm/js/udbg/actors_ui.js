@@ -19,7 +19,7 @@ import springy_ui from "./springy_ui.js";
 const lib_url = import.meta.resolve("https://ufork.org/lib/");
 const wasm_url = import.meta.resolve("https://ufork.org/wasm/ufork.debug.wasm");
 
-function is_device(ofs) {
+function is_device_ofs(ofs) {
     return ofs > ufork.DDEQUE_OFS && ofs < ufork.SPONSOR_OFS;
 }
 
@@ -44,29 +44,115 @@ function device_label(ram_ofs) {
     }
 }
 
-const bytes_per_word = 4; // 32 bits
-const bytes_per_quad = bytes_per_word * 4;
+function find_caps(ram, raws, deep = false) {
+    let caps = new Set();
+    let seen = new Set();  // cycle protection
+    let stack = Array.from(raws);
+    while (stack.length > 0) {
+        let raw = stack.pop();
+        if (!seen.has(raw)) {
+            seen.add(raw);
+            if (ufork.is_cap(raw)) {
+                caps.add(raw);
+                if (deep) {
+                    stack.push(ufork.cap_to_ptr(raw));
+                }
+            } else if (ufork.is_ram(raw)) {
+                const quad = ufork.read_quad(ram, ufork.rawofs(raw));
+                if (quad !== undefined) {
+                    stack.push(...Object.values(quad));  // t, x, y, z
+                }
+            }
+        }
+    }
+    return caps;
+}
+
+function rooted_caps(ram) {
+
+// Search RAM for all capabilities, beginning at the roots.
+
+    const gc_root = ufork.read_quad(ram, ufork.MEMORY_OFS).z;
+    const e_head = ufork.read_quad(ram, ufork.DDEQUE_OFS).t;
+    const k_head = ufork.read_quad(ram, ufork.DDEQUE_OFS).y;
+    const device_start = ufork.DDEQUE_OFS + 1;
+    const nr_devices = ufork.SPONSOR_OFS - device_start;
+    const devices = new Array(nr_devices).fill().map(function (_, device_nr) {
+        const device_ofs = device_start + device_nr;
+        return ufork.ptr_to_cap(ufork.ramptr(device_ofs));
+    });
+    const root_sponsor = ufork.ramptr(ufork.SPONSOR_OFS);
+    const roots = [gc_root, e_head, k_head, ...devices, root_sponsor];
+    return find_caps(ram, roots, true);
+}
+
+function find_stubs(
+    ram,
+    stub = ufork.read_quad(ram, ufork.MEMORY_OFS).z,
+    object = Object.create(null)
+) {
+
+// Find any actors directly or indirectly stubbed.
+
+    if (ufork.is_ram(stub)) {
+        const quad = ufork.read_quad(ram, ufork.rawofs(stub));
+        if (quad.t === ufork.STUB_T) {
+            const device_ofs = ufork.rawofs(quad.x);
+            Array.from(
+                find_caps(ram, [quad.y])
+            ).forEach(function (cap) {
+                const cap_ofs = ufork.rawofs(cap);
+                object[cap_ofs] = device_ofs;
+            });
+        }
+        return find_stubs(ram, quad.z, object);
+    }
+    return object;
+}
+
 const actors_ui = make_ui("actor-ui", function (element, {
     ram = new Uint8Array(),
     rom = new Uint8Array(),
     rom_debugs = Object.create(null)
 }) {
+    let controls;
+    let isolate_checkbox;
     let graph_element;
     let selected_ofs;
     const shadow = element.attachShadow({mode: "closed"});
+    const style = dom("style", `
+        :host {
+            background-color: ${theme.black};
+        }
+        inspector-ui {
+            background-color: ${theme.black};
+            color: ${theme.white};
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+        details-ui {
+            overflow-y: auto;
+            padding: 12px;
+        }
+        controls-ui {
+            padding: 6px;
+        }
+        label {
+            display: flex;
+            align-items: center;
+            font-family: ${theme.proportional_font_family};
+            font-size: 13px;
+            color: ${theme.white};
+        }
+    `);
     const graph = springy.make_graph();
     const layout = springy.make_layout({
         graph,
         random: prng(42)
     });
-    const inspector_element = dom("actor-inspector", {
-        style: {
-            color: theme.white,
-            background: theme.black,
-            overflowY: "auto",
-            padding: "12px"
-        }
-    });
+    const inspector_element = dom("inspector-ui");
 
     function label(raw) {
         if (ufork.is_rom(raw)) {
@@ -75,98 +161,68 @@ const actors_ui = make_ui("actor-ui", function (element, {
     }
 
     function invalidate() {
-        if (!element.isConnected) {
+        if (!element.isConnected || ram.length === 0) {
             return;
         }
 
 // Update inspector panel.
 
+        let selected_actor_ofs;
+        let value;
         inspector_element.innerHTML = "";
         if (selected_ofs !== undefined) {
-            inspector_element.append(pprint_ui({
-                value: ufork.ptr_to_cap(ufork.ramptr(selected_ofs)),
-                depth: 1,
-                expand: 3,
-                ram,
-                rom,
-                rom_debugs
-            }));
+            selected_actor_ofs = selected_ofs;
+            value = ufork.ptr_to_cap(ufork.ramptr(selected_ofs));
         } else {
             const cc = ufork.current_continuation(ram);
             if (cc?.ep !== undefined) {
+                value = cc.ep;
                 const target = ufork.read_quad(ram, ufork.rawofs(cc.ep)).x;
-                selected_ofs = ufork.rawofs(target);
-                inspector_element.append(pprint_ui({
-                    value: cc.ep,
-                    depth: 1,
-                    expand: 3,
-                    ram,
-                    rom,
-                    rom_debugs
-                }));
+                selected_actor_ofs = ufork.rawofs(target);
             }
         }
-
-        function find_capabilities(raw) {
-            if (ufork.is_cap(raw)) {
-                return [raw];
-            }
-            if (ufork.is_ram(raw)) {
-                const quad = ufork.read_quad(ram, ufork.rawofs(raw));
-                return Object.values(quad).map(find_capabilities).flat();
-            }
-            return [];
+        if (value !== undefined) {
+            inspector_element.append(
+                dom("details-ui", [
+                    pprint_ui({
+                        value,
+                        depth: 1,
+                        expand: 3,
+                        ram,
+                        rom,
+                        rom_debugs
+                    })
+                ]),
+                controls
+            );
         }
+        const caps = (
+            (isolate_checkbox.checked && selected_actor_ofs !== undefined)
+            ? find_caps(ram, [
+                ufork.ptr_to_cap(ufork.ramptr(selected_actor_ofs)),
+                ufork.ramptr(selected_actor_ofs)
+            ])
+            : rooted_caps(ram)
+        );
+        const stubbed = find_stubs(ram);
 
-// Parse the RAM into quads. Identify all actors, proxies, and stubs.
-
-        const nr_quads = ram.byteLength / bytes_per_quad;
-        const quads = new Array(nr_quads).fill().map(function (_, ofs) {
-            return ufork.read_quad(ram, ofs);
-        });
-        let actors = Object.create(null);
-        quads.forEach(function (quad, ofs) {
-            if (quad.t === ufork.ACTOR_T || quad.t === ufork.PROXY_T) {
-                actors[ofs] = quad;
-            }
-        });
-
-// A busy actor's effect quad is an #actor_t, yet it is not an actor.
-
-        Object.values(actors).forEach(function (quad) {
-            if (ufork.is_ram(quad.z)) {
-                delete actors[ufork.rawofs(quad.z)];
-            }
-        });
-
-// Find any actors directly or indirectly stubbed.
-
-        let stubbed = Object.create(null);
-        quads.filter(function (quad) {
-            return quad.t === ufork.STUB_T;
-        }).forEach(function (quad) {
-            const device_ofs = ufork.rawofs(quad.x);
-            find_capabilities(quad.y).forEach(function (cap) {
-                stubbed[ufork.rawofs(cap)] = device_ofs;
-            });
-        });
-
-// Show one node per actor.
-// Show an edge to indicate one or more references from one actor to another.
+// Show one node per capability. Show an edge to indicate one or more references
+// from one capability to another.
 
         let nodes = [];
         let edges = Object.create(null);
-        Object.entries(actors).forEach(function ([key, quad]) {
-            const ofs = Number(key);
+        Array.from(caps).forEach(function (raw) {
+            const ofs = ufork.rawofs(raw);
+            const quad = ufork.read_quad(ram, ofs);
             const beh_label = (
                 quad.t === ufork.PROXY_T
                 ? device_label(ufork.rawofs(quad.x))
                 : label(quad.x)
             );
             nodes.push(springy.make_node(ofs, {
-                selected: ofs === selected_ofs,
+                selected: ofs === selected_actor_ofs,
                 label: "@" + (
-                    is_device(ofs)
+                    is_device_ofs(ofs)
                     ? device_label(ofs) ?? ofs.toString(16)
                     : ofs.toString(16) + (
                         beh_label !== undefined
@@ -175,7 +231,7 @@ const actors_ui = make_ui("actor-ui", function (element, {
                     )
                 ),
                 color: (
-                    is_device(ofs)
+                    is_device_ofs(ofs)
                     ? theme.purple
                     : (
                         quad.t === ufork.PROXY_T
@@ -184,22 +240,28 @@ const actors_ui = make_ui("actor-ui", function (element, {
                     )
                 )
             }));
-            const target_caps = [
-                ...find_capabilities(quad.x),  // ACTOR_T code or PROXY_T device
-                ...find_capabilities(quad.y),  // ACTOR_T data or PROXY_T tag
-                ...find_capabilities(quad.z)   // ACTOR_T effect
-            ];
-            target_caps.map(ufork.rawofs).forEach(function (target_ofs) {
-                const id = ofs + ">" + target_ofs;
-                edges[id] = springy.make_edge(id, ofs, target_ofs);
+            const target_caps = find_caps(ram, [
+                quad.x,  // ACTOR_T code or PROXY_T device
+                quad.y,  // ACTOR_T data or PROXY_T tag
+                quad.z   // ACTOR_T effect
+            ]);
+            Array.from(target_caps).forEach(function (cap) {
+                const target_ofs = ufork.rawofs(cap);
+                if (ofs !== target_ofs && caps.has(cap)) {
+                    const id = ofs + ">" + target_ofs;
+                    edges[id] = springy.make_edge(id, ofs, target_ofs);
+                }
             });
 
 // If the actor is stubbed, draw an edge from the device.
 
             const device_ofs = stubbed[ofs];
             if (device_ofs !== undefined) {
-                const id = device_ofs + ">" + ofs;
-                edges[id] = springy.make_edge(id, device_ofs, ofs);
+                const cap = ufork.ptr_to_cap(ufork.ramptr(device_ofs));
+                if (caps.has(cap)) {
+                    const id = device_ofs + ">" + ofs;
+                    edges[id] = springy.make_edge(id, device_ofs, ofs);
+                }
             }
         });
 
@@ -211,7 +273,8 @@ const actors_ui = make_ui("actor-ui", function (element, {
             }
         });
         graph.get_nodes().forEach(function (node) {
-            if (actors[node.id] === undefined) {
+            const cap = ufork.ptr_to_cap(ufork.ramptr(node.id));
+            if (!caps.has(cap)) {
                 graph.remove_node(node.id);
             }
         });
@@ -221,9 +284,9 @@ const actors_ui = make_ui("actor-ui", function (element, {
         const edge_array = Object.values(edges);
         nodes.forEach(function (node) {
 
-// Hide device actors until they are referenced.
+// Hide device actors until they are referenced for the first time.
 
-            if (!is_device(node.id) || edge_array.some(function (edge) {
+            if (!is_device_ofs(node.id) || edge_array.some(function (edge) {
                 return edge.source_id === node.id || edge.target_id === node.id;
             })) {
                 graph.add_node(node);
@@ -245,6 +308,26 @@ const actors_ui = make_ui("actor-ui", function (element, {
         invalidate();
     }
 
+    function on_keydown(event) {
+        if (!event.altKey && !event.metaKey && !event.ctrlKey) {
+            if (event.key === "i") {
+                isolate_checkbox.checked = !isolate_checkbox.checked;
+                invalidate();
+            }
+        }
+    }
+
+    isolate_checkbox = dom("input", {
+        type: "checkbox",
+        oninput: invalidate
+    });
+    controls = dom("controls-ui", [
+        dom(
+            "label",
+            {title: "Direct references only (i)"},
+            ["Isolate", isolate_checkbox]
+        )
+    ]);
     graph_element = springy_ui({
         layout,
         node_font_size: 18,
@@ -269,15 +352,18 @@ const actors_ui = make_ui("actor-ui", function (element, {
             dom(inspector_element, {slot: "peripheral"})
         ]
     );
-    shadow.append(split_element);
+    shadow.append(style, split_element);
     set_ram(ram);
     set_rom(rom, rom_debugs);
-    element.style.background = theme.black;
     element.set_ram = set_ram;
     element.set_rom = set_rom;
     return {
         connect() {
             split_element.set_size(0.4 * globalThis.innerWidth);
+            document.addEventListener("keydown", on_keydown);
+        },
+        disconnect() {
+            document.removeEventListener("keydown", on_keydown);
         }
     };
 });
@@ -315,11 +401,16 @@ function demo(log) {
             driver.command({kind: "subscribe", topic: "signal"});
             driver.command({kind: "step_size", value: "txn"});
             driver.command({kind: "interval", milliseconds: 2000});
-            driver.command({kind: "play"});
+            driver.command({kind: "play", steps: 1});
             return true;
         })
     ])(log);
     document.body.append(element);
+    document.onkeydown = function (event) {
+        if (event.key === "s") {
+            driver.command({kind: "play", steps: 1});
+        }
+    };
 }
 
 if (import.meta.main) {
