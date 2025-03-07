@@ -116,6 +116,38 @@ function make_uart(receive) {
     });
 }
 
+function make_spif() {
+    let cs = false;
+
+    // 8-bit SPIF register interface
+    const SPI_CS = 0x0;  // chip select
+    const SPI_OUT = 0x1;  // data to transmit
+    const SPI_RDY = 0x2;  // ready to transmit / receive complete
+    const SPI_IN = 0x3;  // data received
+
+    function read(reg) {
+        if (reg === SPI_RDY) {
+            return uc_bool(cs);  // ready if chip selected
+        }
+        return 0;  // infallible read
+    }
+    function write(reg, data) {
+        if (reg === SPI_CS) {
+            cs = (data !== 0);
+        }
+        // ignore unknown writes
+    }
+
+    return Object.freeze({
+        read,
+        write,
+        SPI_CS,
+        SPI_OUT,
+        SPI_RDY,
+        SPI_IN
+    });
+}
+
 function format_stack(stack, stats) {
     let s = "";
     if (typeof stats === "object") {
@@ -221,7 +253,9 @@ $program_compile.onclick = function () {
     // create new machine with compiled program
     $machine_error.textContent = "";
     $machine_break.textContent = "";
-    const machine = ucode_sim.make_machine(prog, [uart]);
+    const devs = [uart];
+    devs[0xF] = make_spif();
+    const machine = ucode_sim.make_machine(prog, devs);
     let state = machine.copy();
     display_machine(state, prog, words);
 
