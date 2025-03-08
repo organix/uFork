@@ -290,3 +290,23 @@ as the design and implementation evolves.
     Info:            SB_RGBA_DRV:     1/    1   100%
     Info:         ICESTORM_SPRAM:     3/    4    75%
     Info: Max frequency for clock 'clk': 26.33 MHz (PASS at 12.00 MHz)
+
+### SPI Flash Device
+
+    Info: Device utilisation:
+    Info: 	         ICESTORM_LC:  1224/ 5280    23%
+    Info: 	        ICESTORM_RAM:    18/   30    60%
+    Info: 	               SB_IO:    12/   96    12%
+    Info: 	               SB_GB:     8/    8   100%
+    Info: 	        ICESTORM_PLL:     0/    1     0%
+    Info: 	         SB_WARMBOOT:     0/    1     0%
+    Info: 	        ICESTORM_DSP:     1/    8    12%
+    Info: 	      ICESTORM_HFOSC:     0/    1     0%
+    Info: 	      ICESTORM_LFOSC:     0/    1     0%
+    Info: 	              SB_I2C:     0/    2     0%
+    Info: 	              SB_SPI:     0/    2     0%
+    Info: 	              IO_I3C:     0/    2     0%
+    Info: 	         SB_LEDDA_IP:     0/    1     0%
+    Info: 	         SB_RGBA_DRV:     1/    1   100%
+    Info: 	      ICESTORM_SPRAM:     3/    4    75%
+    Info: Max frequency for clock 'clk': 28.88 MHz (PASS at 12.00 MHz)

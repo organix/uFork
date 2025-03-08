@@ -35,6 +35,7 @@ the value of `o_status` indicates success (1) or failure (0).
 `include "quad_spram.v"
 //`include "quad_bram.v"
 `endif
+`include "gcc.v"
 `include "flash.v"
 
 // Memory Ranges
@@ -408,6 +409,21 @@ module cpu #(
     );
 
     //
+    // Garbage Collector Color storage
+    //
+
+    gcc GCC (
+        .i_clk(i_clk),
+
+        .i_en(gcc_en),
+        .i_wr(gcc_wr),
+        .i_addr(gcc_addr),
+        .i_data(gcc_wdata),
+
+        .o_data(gcc_rdata)
+    );
+
+    //
     // SPI flash memory
     //
 
@@ -471,12 +487,20 @@ module cpu #(
     wire [3:0] reg_id = tos[3:0];                       // register id (mem_rng == `MEM_DEV)
 
     wire uc_en = (p_alu && mem_op && mem_rng == `MEM_UC);
-    assign uc_wr = (uc_en && mem_wr);
+    assign uc_wr = (uc_en && mem_wr && !d_gcc);
     assign uc_waddr = tos[ADDR_SZ-1:0];
     assign uc_wdata = nos;
     assign uc_raddr =
         ( uc_en ? tos[ADDR_SZ-1:0]
         : pc );
+
+//    wire d_gcc = (tos[DATA_SZ-1:ADDR_SZ] == 4'b1000);   // check top-of-stack for GCC range
+    wire d_gcc = tos[DATA_SZ-1];                        // check top-of-stack for GCC flag
+    wire gcc_en = (uc_en && d_gcc);
+    wire gcc_wr = mem_wr;
+    wire [ADDR_SZ-1:0] gcc_addr = tos[ADDR_SZ-1:0];
+    wire [1:0] gcc_wdata = nos[1:0];
+    wire [1:0] gcc_rdata;
 
     wire [DATA_SZ-1:0] r_value =
         ( ctrl && !auto ? { {PAD_ADDR{1'b0}}, pc }
@@ -491,9 +515,10 @@ module cpu #(
     wire [DATA_SZ-1:0] tors;
 
     wire [DATA_SZ-1:0] mem_out =
-        ( quad_op ? quad_rdata
+        ( gcc_en ? { {(DATA_SZ-2){1'b0}}, gcc_rdata }
         : mem_rng == `MEM_DEV && dev_id == 4'h0 ? { {(DATA_SZ-8){uart_rdata[7]}}, uart_rdata }
         : mem_rng == `MEM_DEV && dev_id == 4'hF ? { {(DATA_SZ-8){flash_rdata[7]}}, flash_rdata }
+        : quad_op ? quad_rdata
         : uc_rdata );
     wire [DATA_SZ-1:0] d_value =
         ( mem_op ? mem_out

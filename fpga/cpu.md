@@ -230,18 +230,6 @@ in a single CPU-instruction cycle.
     * `02`: RX?
     * `03`: RX@
 
-  * `1x`: SPI Controller (planned)
-    * `16`: ISR
-    * `17`: ICR
-    * `18`: CR0
-    * `19`: CR1
-    * `1A`: CR2
-    * `1B`: BR
-    * `1C`: SR
-    * `1D`: TXDR
-    * `1E`: RXDR
-    * `1F`: CSR
-
   * `Fx`: SPI Flash Memory
     * `F0`: CS!
     * `F1`: DO!

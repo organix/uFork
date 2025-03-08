@@ -196,7 +196,7 @@
 0x0006 , 0x8000 , 0x0000 , 0x0000 ,  ( ^000f: FREE_T )
 : boot_rom
 (    T        X        Y        Z       ADDR )
-0x000b , 0x8016 , 0x8000 , 0x005a ,  ( ^0010 )
+0x000b , 0x8016 , 0x8000 , 0x005c ,  ( ^0010 )
 0x000b , 0x8018 , 0x8001 , 0x0012 ,  ( ^0011 )
 0x000b , 0x8009 , 0x8000 , 0x0013 ,  ( ^0012 )
 0x000b , 0x800f , 0x8001 , 0x0000 ,  ( ^0013 )
@@ -269,20 +269,50 @@
 0x000b , 0x8002 , 0x8005 , 0x0057 ,  ( ^0056 )
 0x000b , 0x800a , 0x8001 , 0x0058 ,  ( ^0057 )
 0x000b , 0x8009 , 0x8000 , 0x0013 ,  ( ^0058 )
-0x000c , 0x8048 , 0x005b , 0x0000 ,  ( ^0059 )
-0x000b , 0x8002 , 0x0059 , 0x0061 ,  ( ^005a )
-0x000c , 0x8065 , 0x005c , 0x0000 ,  ( ^005b )
-0x000c , 0x806c , 0x005d , 0x0000 ,  ( ^005c )
-0x000c , 0x806c , 0x005e , 0x0000 ,  ( ^005d )
-0x000c , 0x806f , 0x005f , 0x0000 ,  ( ^005e )
-0x000c , 0x803f , 0x0060 , 0x0000 ,  ( ^005f )
-0x000c , 0x800a , 0x0001 , 0x0000 ,  ( ^0060 )
-0x000b , 0x8018 , 0x8000 , 0x0062 ,  ( ^0061 )
-0x000b , 0x8002 , 0x8000 , 0x0063 ,  ( ^0062 )
-0x000b , 0x800a , 0x8001 , 0x0064 ,  ( ^0063 )
-0x000b , 0x8009 , 0x8000 , 0x0013 ,  ( ^0064 )
-( 404 cells, 101 quads )
-101 CONSTANT rom_quads      ( number of quads in ROM image )
+0x000b , 0x8018 , 0xffff , 0x005d ,  ( ^0059 )
+0x000b , 0x8018 , 0x8000 , 0x0075 ,  ( ^005a )
+0x000b , 0x8019 , 0xffff , 0x0079 ,  ( ^005b )
+0x000b , 0x8002 , 0x8009 , 0x007c ,  ( ^005c )
+0x000b , 0x8016 , 0x8001 , 0x005e ,  ( ^005d )
+0x000b , 0x8002 , 0x8002 , 0x005f ,  ( ^005e )
+0x000b , 0x800e , 0x8003 , 0x0060 ,  ( ^005f )
+0x000b , 0x8003 , 0x0011 , 0x0061 ,  ( ^0060 )
+0x000b , 0x8018 , 0x8001 , 0x0062 ,  ( ^0061 )
+0x000b , 0x8002 , 0x005a , 0x0063 ,  ( ^0062 )
+0x000b , 0x8009 , 0x8002 , 0x0064 ,  ( ^0063 )
+0x000b , 0x8014 , 0x8002 , 0x0065 ,  ( ^0064 )
+0x000b , 0x8002 , 0x8001 , 0x0066 ,  ( ^0065 )
+0x000b , 0x800d , 0x8005 , 0x0067 ,  ( ^0066 )
+0x000b , 0x8014 , 0x8002 , 0x0068 ,  ( ^0067 )
+0x000b , 0x8011 , 0x8001 , 0x0069 ,  ( ^0068 )
+0x000b , 0x8002 , 0x0000 , 0x006a ,  ( ^0069 )
+0x000b , 0x8002 , 0x0059 , 0x006b ,  ( ^006a )
+0x000b , 0x8009 , 0x8002 , 0x006c ,  ( ^006b )
+0x000b , 0x8009 , 0x8000 , 0x006d ,  ( ^006c )
+0x000b , 0x8015 , 0x8002 , 0x006e ,  ( ^006d )
+0x000b , 0x8002 , 0x8002 , 0x006f ,  ( ^006e )
+0x000b , 0x800d , 0x8005 , 0x0070 ,  ( ^006f )
+0x000b , 0x8015 , 0x8002 , 0x0071 ,  ( ^0070 )
+0x000b , 0x8011 , 0x8001 , 0x0072 ,  ( ^0071 )
+0x000b , 0x8002 , 0x0000 , 0x0073 ,  ( ^0072 )
+0x000b , 0x8002 , 0x0059 , 0x0074 ,  ( ^0073 )
+0x000b , 0x8009 , 0x8002 , 0x0012 ,  ( ^0074 )
+0x000b , 0x8019 , 0x8000 , 0x0076 ,  ( ^0075 )
+0x000b , 0x8011 , 0x8001 , 0x0077 ,  ( ^0076 )
+0x000b , 0x8002 , 0x005b , 0x0078 ,  ( ^0077 )
+0x000b , 0x8009 , 0x8003 , 0x0013 ,  ( ^0078 )
+0x000b , 0x8018 , 0x8000 , 0x007a ,  ( ^0079 )
+0x000b , 0x800d , 0x8004 , 0x007b ,  ( ^007a )
+0x000b , 0x8019 , 0x8001 , 0x0012 ,  ( ^007b )
+0x000b , 0x8018 , 0x8000 , 0x007d ,  ( ^007c )
+0x000b , 0x8002 , 0x8000 , 0x007e ,  ( ^007d )
+0x000b , 0x800a , 0x8001 , 0x007f ,  ( ^007e )
+0x000b , 0x8011 , 0x8001 , 0x0080 ,  ( ^007f )
+0x000b , 0x8002 , 0x0000 , 0x0081 ,  ( ^0080 )
+0x000b , 0x8002 , 0x0059 , 0x0082 ,  ( ^0081 )
+0x000b , 0x8009 , 0x8002 , 0x0012 ,  ( ^0082 )
+( 524 cells, 131 quads )
+131 CONSTANT rom_quads      ( number of quads in ROM image )
 
 ( 0x0000 CONSTANT #?          ( undefined ) ... ucode.js )
 ( 0x0001 CONSTANT #nil        ( empty list ) ... ucode.js )
@@ -394,11 +424,27 @@ VARIABLE gc_scan_ptr        ( scan-list processing pointer )
 
 ( FIXME: re-use rom_image until we have dedicated space for gc colors )
 : gc_color@ ( qref -- color )
-    rom_image + @ ;
+    ( rom_image + ) 0x0FFF AND MSB| @ ;
 : gc_set_color ( qref color -- )
     SWAP
 : gc_color! ( color qref -- )
-    rom_image + ! ;
+    ( rom_image + ) 0x0FFF AND MSB| ! ;
+
+: gc_dump ( start end -- )
+    OVER -                  ( D: start span )
+    DUP 0< IF
+        2DROP
+    ELSE
+        1+ ?LOOP-
+            DUP gc_color@   ( D: addr color )
+            OVER 0xF AND IF
+                SPACE
+            ELSE
+                CR
+            THEN
+            X# 1+           ( D: addr+1 )
+        AGAIN CR DROP
+    THEN ;
 
 : gc_init ( -- )
     ( loop to set reserved RAM to gc_free_color )
@@ -1570,6 +1616,7 @@ VARIABLE saved_sp           ( sp before instruction execution )
         FAIL
     THEN ;
 
+(   --- disable test suite ---
 : ufork_init_test
     mem_free@ ( 0 int2fix ) #0 =assert
     mem_next@ #nil =assert
@@ -1623,6 +1670,7 @@ VARIABLE saved_sp           ( sp before instruction execution )
     alloc_test
     queue_test
     EXIT
+--- disable test suite ---  )
 
 : ufork_boot
     ram_init                ( reset RAM )
@@ -1639,23 +1687,8 @@ VARIABLE saved_sp           ( sp before instruction execution )
     root_spn spn_signal@ #0 =assert
     EXIT
 
-: ufork_reboot
-    ( 2nd boot for test verification )
-    #? root_spn spn_signal!
-    #t 0x6010 root_spn 2alloc
-    event_enqueue
-    0 run_loop
-    root_spn spn_signal@ #0 =assert
-    EXIT
-
 ( SPI Flash Interface )
 VARIABLE spi_page ( bits [31:16] of SPI address )
-
-: spi_buf DATA ( 16 cells )
-0xffff , 0xffff , 0xffff , 0xffff ,
-0xffff , 0xffff , 0xffff , 0xffff ,
-0xffff , 0xffff , 0xffff , 0xffff ,
-0xffff , 0xffff , 0xffff , 0xffff ,
 
 : b2c ( msb lsb -- cell )
     0xFF AND
@@ -1740,19 +1773,12 @@ VARIABLE spi_page ( bits [31:16] of SPI address )
     WAIT_DR                 ( wait until ready/done )
     FALSE CS! ;             ( deassert chip-select )
 
-: spif_write_disable ( -- )
-    TRUE CS!                ( assert chip-select )
-    0x04 spi_out            ( "Write Disable" command )
-    WAIT_DR                 ( wait until ready/done )
-    FALSE CS! ;             ( deassert chip-select )
-
 : spif_erase_64k ( page -- )
     TRUE CS!                ( assert chip-select )
     0xD8 spi_out            ( "Block Erase 64k" command )
     spi_out                 ( address[23:16]=page )
     0 spi_out               ( address[15:8] )
     0 spi_out               ( address[7:0] )
-    spi_buf 1-              ( D: buf-1 )
     WAIT_DR                 ( wait until ready/done )
     FALSE CS! ;             ( deassert chip-select )
 
@@ -1801,20 +1827,6 @@ VARIABLE spi_page ( bits [31:16] of SPI address )
     AGAIN
     FALSE CS!               ( deassert chip-select )
     DROP ;
-
-: spi_test ( -- )
-    TRUE CS!                ( assert chip-select )
-    0x03 spi_out            ( "Read Array" command )
-    spi_page @ spi_out      ( address[23:16] )
-    0 spi_out               ( address[15:8] )
-    0 spi_out               ( address[7:0] )
-    spi_buf 1-              ( D: buf-1 )
-    12 ?LOOP-               ( receive 12 bytes )
-        1+ DUP              ( D: buf+1 buf+1 )
-        spi_in              ( D: buf+1 buf+1 byte )
-        OVER !              ( D: buf+1 )
-    AGAIN
-    FALSE CS! ;             ( deassert chip-select )
 
 : rom_blks ( -- nblks )
     ( rom_quads 2ROL ROL 0xFF + 8ROL 0xFF AND ; )
@@ -1960,35 +1972,6 @@ VARIABLE here   ( upload address )
     ( EMIT ) KEY
     DUP '\r' = SKZ EXIT
     eol ;
-: upload ( cmd' key' -- cmd key )
-    2DROP                   ( D: -- )
-    KEY                     ( D: key )
-    DUP '/' = IF
-        eol                 ( comment to EOL )
-    THEN
-    cmd @ SWAP              ( D: cmd key )
-    DUP BL <= IF
-        OVER ISHEX IF
-            here @ 0xF AND NOT IF
-                '~' EMIT    ( show upload progress )
-            THEN
-            inp @ >here
-        THEN
-        OVER ']' = IF       ( end of upload )
-            here @ push
-            DUP ECHO
-            EXIT
-        THEN
-        0 inp !             ( clear input accum )
-    THEN
-    DUP ISHEX IF
-        DUP >inp            ( add digit to accum )
-    THEN
-    DUP ']' = IF
-        DUP EMIT
-    THEN
-    DUP cmd !               ( key -> cmd )
-    upload ;
 VARIABLE log_addr
 : log_0 ( -- )
     log_addr @
@@ -2172,9 +2155,6 @@ VARIABLE xm_here            ( upload address )
         OVER '~' = IF
             pop pop SWAP spi_dump
         THEN
-        OVER '[' = IF
-            pop here ! upload
-        THEN
         OVER 'x' = IF
             xm_rcv_file push
         THEN
@@ -2209,11 +2189,11 @@ VARIABLE xm_here            ( upload address )
     10 us_delay             ( wake-up delay > 5us )
     ECHOLOOP
     ufork_init
+    0x000 0x03f gc_dump
     (
     test_suite
     spif_test
     0 rom_quads spif2qrom   ( init from flash )
-    )
     ufork_boot
-    ( ufork_reboot )
+    )
     prompt MONITOR ;
