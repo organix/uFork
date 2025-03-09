@@ -1784,7 +1784,7 @@ impl Core {
         }
         let mut ptr = Any::new(dev.raw() & !OPQ_RAW);  // ignore opaque bit
         let mut quad = self.ram(ptr);
-        if quad.t() == PROXY_T || quad.t() == STUB_T {
+        while quad.t() == PROXY_T || quad.t() == STUB_T {
             // follow device reference...
             ptr = self.cap_to_ptr(quad.x());
             quad = self.ram(ptr);

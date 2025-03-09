@@ -69,10 +69,10 @@ function host_dev(core) {
         next_key += 1;
         dynamic_devs[key] = {on_event_stub, on_drop_proxy};
 
-        function h_reserve_proxy(tag_raw = ufork.UNDEF_RAW) {
+        function h_reserve_proxy(device = dev_cap, tag_raw = ufork.UNDEF_RAW) {
             return ufork.ptr_to_cap(core.h_reserve_ram({
                 t: ufork.PROXY_T,
-                x: dev_cap,
+                x: device,
                 y: core.h_reserve_ram({
                     t: ufork.PAIR_T,
                     x: ufork.fixnum(key),
@@ -81,8 +81,8 @@ function host_dev(core) {
             }));
         }
 
-        function h_reserve_stub(target_raw) {
-            return core.h_reserve_stub(dev_cap, target_raw);
+        function u_dev_cap() {
+            return dev_cap;
         }
 
         function u_tag(proxy_handle_raw) {
@@ -113,8 +113,8 @@ function host_dev(core) {
 
         return Object.freeze({
             h_dispose,
-            h_reserve_stub,
             h_reserve_proxy,
+            u_dev_cap,
             u_tag,
             u_owns_proxy
         });
@@ -160,9 +160,9 @@ function demo(log) {
                 log("on_drop_proxy", core.u_pprint(tag));
             }
         );
-        ddev.h_reserve_proxy(ufork.FALSE_RAW); // dropped
-        let proxy = ddev.h_reserve_proxy(ufork.TRUE_RAW);
-        let stub = ddev.h_reserve_stub(proxy);
+        ddev.h_reserve_proxy(undefined, ufork.FALSE_RAW); // dropped
+        const proxy = ddev.h_reserve_proxy(undefined, ufork.TRUE_RAW);
+        let stub = core.h_reserve_stub(ddev.u_dev_cap(), proxy);
         core.h_install(
             ufork.fixnum(proxy_key),
             proxy,

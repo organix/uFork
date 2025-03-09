@@ -125,7 +125,7 @@ function tcp_dev(
         referenced[conn_nr] = true;
         u_trace(`#${conn_nr} opened`);
         const tag = encode_tag({conn_nr});
-        return ddev.h_reserve_proxy(tag);
+        return ddev.h_reserve_proxy(dev_cap, tag);
     }
 
     function u_check_forgotten(conn_nr) {
@@ -139,7 +139,7 @@ function tcp_dev(
     }
 
     function h_listen(bind_address, on_open_cap) {
-        const on_open_stub = ddev.h_reserve_stub(on_open_cap);
+        const on_open_stub = core.h_reserve_stub(dev_cap, on_open_cap);
         try {
             const listener_nr = listeners.length;
             const listener_tag = encode_tag({listener_nr});
@@ -159,7 +159,7 @@ function tcp_dev(
                     core.h_release_stub(on_open_stub);
                 }
             });
-            const stop_cap = ddev.h_reserve_proxy(listener_tag);
+            const stop_cap = ddev.h_reserve_proxy(dev_cap, listener_tag);
             u_trace(`%${listener_nr} listening`);
             return h_reply_ok(stop_cap);
         } catch (exception) {
@@ -364,7 +364,7 @@ function tcp_dev(
             }
         });
     });
-    ddev.h_reserve_stub(dev_cap);
+    core.h_reserve_stub(ddev.u_dev_cap(), dev_cap);
 }
 
 function demo(log, flakiness = 0, max_chunk_size = 16) {

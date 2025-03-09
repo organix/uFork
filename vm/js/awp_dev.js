@@ -101,7 +101,7 @@ function awp_dev({
         const remote_tag = next_proxy_tag;
         next_proxy_tag += 1;
         proxy_keys[remote_tag] = proxy_key;
-        const raw = ddev.h_reserve_proxy(ufork.fixnum(remote_tag));
+        const raw = ddev.h_reserve_proxy(dev_cap, ufork.fixnum(remote_tag));
         proxies[proxy_key] = {raw, swiss, store, petname};
         return raw;
     }
@@ -203,7 +203,10 @@ function awp_dev({
 // garbage collection. Generate a new Swiss number and reserve a stub.
 
                     swiss = random_swiss();
-                    stubs[hex.encode(swiss)] = ddev.h_reserve_stub(raw);
+                    stubs[hex.encode(swiss)] = core.h_reserve_stub(
+                        dev_cap,
+                        raw
+                    );
                     raw_to_swiss[raw] = swiss;
                 }
                 return {
@@ -704,7 +707,7 @@ function awp_dev({
                     }
 
                     listeners[key] = {
-                        greeter: ddev.h_reserve_stub(greeter),
+                        greeter: core.h_reserve_stub(dev_cap, greeter),
                         stop: safe_stop
                     };
 
@@ -715,6 +718,7 @@ function awp_dev({
                     next_proxy_tag += 1;
                     listener_keys[stop_tag] = key;
                     const stop_proxy = ddev.h_reserve_proxy(
+                        dev_cap,
                         core.h_reserve_ram({
                             t: ufork.PAIR_T,
                             x: ufork.fixnum(stop_tag),
@@ -847,13 +851,13 @@ function awp_dev({
 // Install the dynamic device as if it were a real device. Unlike a real device,
 // we must reserve a stub to keep the capability from being released.
 
-    dev_cap = ddev.h_reserve_proxy(ufork.UNDEF_RAW);
+    dev_cap = ddev.h_reserve_proxy();
     const dev_id = ufork.fixnum(awp_key);
     core.h_install(dev_id, dev_cap, function on_dispose() {
         Object.values(connections).forEach((connection) => connection.close());
         Object.values(listeners).forEach((listener) => listener.stop());
     });
-    ddev.h_reserve_stub(dev_cap);
+    core.h_reserve_stub(ddev.u_dev_cap(), dev_cap);
 }
 
 function demo({

@@ -37,8 +37,8 @@ install it as a boot capability. Here, the proxy is protected from garbage
 collection by a stub.
 
 ```javascript
-let proxy = ddev.h_reserve_proxy();
-let stub = ddev.h_reserve_stub(proxy);
+const proxy = ddev.h_reserve_proxy();
+const stub = core.h_reserve_stub(ddev.u_dev_cap(), proxy);
 core.h_install(ufork.fixnum(1234), proxy);
 ```
 
@@ -100,8 +100,8 @@ proxies in `on_event_stub` and `on_drop_proxy`. A tag may be any value, and
 does not have to be unique.
 
 ```javascript
-let proxy_true = ddev.h_reserve_proxy(ufork.TRUE_RAW);
-let proxy_false = ddev.h_reserve_proxy(ufork.FALSE_RAW);
+let proxy_true = ddev.h_reserve_proxy(proxy, ufork.TRUE_RAW);
+let proxy_false = ddev.h_reserve_proxy(proxy, ufork.FALSE_RAW);
 ```
 
 The tag is stored in the proxy's handle, which also contains routing information

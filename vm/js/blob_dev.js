@@ -73,14 +73,14 @@ function test_tags() {
 }
 
 function blob_dev(core, make_ddev) {
-    const dev_ptr = ufork.ramptr(ufork.BLOB_DEV_OFS);
-    const dev_id = core.u_read_quad(dev_ptr).x;
+    const static_dev_ptr = ufork.ramptr(ufork.BLOB_DEV_OFS);
+    const dev_id = core.u_read_quad(static_dev_ptr).x;
     if (make_ddev === undefined) {
 
 // We are unable to install a dynamic device, so install the more limited native
 // blob device instead.
 
-        const static_dev_cap = ufork.ptr_to_cap(dev_ptr);
+        const static_dev_cap = ufork.ptr_to_cap(static_dev_ptr);
         core.h_install(dev_id, static_dev_cap);
         return;
     }
@@ -113,7 +113,7 @@ function blob_dev(core, make_ddev) {
             ? size_or_bytes
             : new Uint8Array(size_or_bytes)
         );
-        const cap = ddev.h_reserve_proxy(encode_tag({blob_nr}));
+        const cap = ddev.h_reserve_proxy(dev_cap, encode_tag({blob_nr}));
         const blob = {cap, bytes};
         u_trace(`#${blob_nr} alloc ${bytes.length}B`);
         blobs.push(blob);
@@ -130,8 +130,9 @@ function blob_dev(core, make_ddev) {
         let byte_array = [];
         return function h_read_bytes_requestor(callback, blob_cap) {
             try {
-                const cust_cap = ddev.h_reserve_proxy(encode_tag({read_nr}));
-                const cust_stub = ddev.h_reserve_stub(cust_cap);
+                const cust_tag = encode_tag({read_nr});
+                const cust_cap = ddev.h_reserve_proxy(dev_cap, cust_tag);
+                const cust_stub = core.h_reserve_stub(dev_cap, cust_cap);
                 reads[read_nr] = function h_reply(message) {
                     core.h_release_stub(cust_stub);
                     if (ufork.is_fix(message)) {
@@ -178,8 +179,9 @@ function blob_dev(core, make_ddev) {
         let chunk_array = [];
         return function advance(callback, blob_cap) {
             try {
-                const cust_cap = ddev.h_reserve_proxy(encode_tag({source_nr}));
-                const cust_stub = ddev.h_reserve_stub(cust_cap);
+                const cust_tag = encode_tag({source_nr});
+                const cust_cap = ddev.h_reserve_proxy(dev_cap, cust_tag);
+                const cust_stub = core.h_reserve_stub(dev_cap, cust_cap);
                 sources[source_nr] = function h_reply(message) {
                     core.h_release_stub(cust_stub);
                     const base_raw = core.u_nth(message, 1);
@@ -452,7 +454,7 @@ function blob_dev(core, make_ddev) {
         }
         blobs.length = 0;
     });
-    ddev.h_reserve_stub(dev_cap);
+    core.h_reserve_stub(ddev.u_dev_cap(), dev_cap);
     return Object.freeze({h_alloc_blob, h_read_chunks});
 }
 
@@ -494,7 +496,7 @@ function demo(log, use_static) {
                 core.h_boot();
                 run_core();
                 const blob = the_blob_dev.h_alloc_blob([5, 6, 7, 8]);
-                core.h_reserve_stub(blob.cap, blob.cap); // TODO pass #? as device
+                core.h_reserve_stub(blob.cap, blob.cap);
                 return bind(the_blob_dev.h_read_chunks(), blob.cap);
             })
         )

@@ -257,7 +257,10 @@ function fs_dev(
                         const new_file_nr = files.length;
                         files.push(file_handle);
                         const file_tag = ufork.fixnum(new_file_nr);
-                        const file_cap = ddev.h_reserve_proxy(file_tag);
+                        const file_cap = ddev.h_reserve_proxy(
+                            dev_cap,
+                            file_tag
+                        );
                         u_trace(`#${new_file_nr} opened`);
                         return h_send(callback, h_reply_ok(file_cap));
                     },
@@ -349,7 +352,7 @@ function fs_dev(
         });
         files.length = 0;
     });
-    ddev.h_reserve_stub(dev_cap);
+    core.h_reserve_stub(ddev.u_dev_cap(), dev_cap);
 }
 
 function demo(log) {
