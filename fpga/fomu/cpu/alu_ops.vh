@@ -21,10 +21,7 @@ Operation Encoding for ALU
 `define ASR_OP      (4'hB)  // {a[15],a[15:1]}
 `define ASR2_OP     (4'hC)  // {a[15],a[15],a[15:2]}
 `define ASR4_OP     (4'hD)  // {a[15],a[15],a[15],a[15],a[15:4]}
-/*
-`define FETCH_OP    (4'hE)  // @
-`define STORE_OP    (4'hF)  // !
-*/
+`define FAIL_OP     (4'hE)  // illegal instruction
 `define MEM_OP      (4'hF)  // memory operation
 
 `endif

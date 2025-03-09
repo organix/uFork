@@ -85,11 +85,6 @@ module alu #(
             `ASR4_OP: begin
                 o_data <= { i_arg0[WIDTH-1], i_arg0[WIDTH-1], i_arg0[WIDTH-1], i_arg0[WIDTH-1], i_arg0[WIDTH-1:4] };
             end
-            /*
-            `MEM_OP: begin
-                // memory operations are handled by the CPU bypassing the ALU
-            end
-            */
             default: begin                              // ignore
                 o_data <= 0;
             end

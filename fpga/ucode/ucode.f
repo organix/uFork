@@ -3,7 +3,7 @@
 )
 
 : PANIC! FAIL PANIC! ;      ( if BOOT returns... )
-: TODO 0x00AF , PANIC! ;    ( alternative HALT... )
+: TODO 0x05EE , PANIC! ;    ( alternative HALT... )
 
 0x03 CONSTANT ^C
 0x08 CONSTANT '\b'
@@ -423,10 +423,12 @@ VARIABLE gc_phase           ( current phase in gc state-machine )
 VARIABLE gc_scan_ptr        ( scan-list processing pointer )
 
 ( FIXME: re-use rom_image until we have dedicated space for gc colors )
+: GCC@
 : gc_color@ ( qref -- color )
     ( rom_image + ) 0x0FFF AND MSB| @ ;
 : gc_set_color ( qref color -- )
     SWAP
+: GCC!
 : gc_color! ( color qref -- )
     ( rom_image + ) 0x0FFF AND MSB| ! ;
 
@@ -436,7 +438,7 @@ VARIABLE gc_scan_ptr        ( scan-list processing pointer )
         2DROP
     ELSE
         1+ ?LOOP-
-            DUP gc_color@   ( D: addr color )
+            DUP GCC@        ( D: addr color )
             OVER 0xF AND IF
                 SPACE
             ELSE
@@ -1900,7 +1902,11 @@ VARIABLE here   ( upload address )
         THEN
         NIP                 ( D: data )
     ELSE
-        @                   ( D: data )
+        DUP 0xF000 AND 0x2000 = IF
+            GCC@            ( D: color )
+        ELSE
+            @               ( D: data )
+        THEN
     THEN ;
 : store ( data addr -- )
     DUP 0xC000 AND IF
@@ -1919,7 +1925,11 @@ VARIABLE here   ( upload address )
             THEN
         THEN
     ELSE
-        !
+        DUP 0xF000 AND 0x2000 = IF
+            GCC!
+        ELSE
+            !
+        THEN
     THEN ;
 : push ( a -- )
     tos @ nos !

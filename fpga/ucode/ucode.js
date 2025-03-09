@@ -52,10 +52,10 @@ function uc_jump(addr) {  // jump (unconditional)
 function uc_jz(addr) {  // jump, if zero
     return (0x9000 | (addr & ADDR_MASK));
 }
-function uc_inc_jnz(addr) {  // increment and jump, if not zero
+function uc_jnz_inc(addr) {  // increment and jump, if not zero
     return (0xA000 | (addr & ADDR_MASK));
 }
-function uc_dec_jnz(addr) {  // decrement and jump, if not zero
+function uc_jnz_dec(addr) {  // decrement and jump, if not zero
     return (0xB000 | (addr & ADDR_MASK));
 }
 function uc_call(addr) {  // push return address and jump
@@ -161,7 +161,7 @@ function compile(text, src = "") {
         "R>": 0x1280,  // ( -- a ) ( R: a -- )
         "R@": 0x0280,  // ( -- a ) ( R: a -- a )
         "RDROP": 0x1000,  // ( -- ) ( R: a -- )
-        "FAIL": 0x002F,  // ( -- ) signal failure
+        "FAIL": 0x000E,  // ( -- ) signal failure
         /*
         */
         "#?": 0x02C0,  // ( -- 0x0000 ) ... uFork primitive
@@ -265,7 +265,7 @@ function compile(text, src = "") {
             if (import.meta.main) {
                 trace("compile_countdown_loop:", "$" + hex.from(addr, 12));
             }
-            const word = uc_dec_jnz(addr);  // placeholder
+            const word = uc_jnz_dec(addr);  // placeholder
             ctrl_ctx.push(word);
             prog.push(word);
         },
@@ -276,7 +276,7 @@ function compile(text, src = "") {
             if (import.meta.main) {
                 trace("compile_countup_loop:", "$" + hex.from(addr, 12));
             }
-            const word = uc_inc_jnz(addr);  // placeholder
+            const word = uc_jnz_inc(addr);  // placeholder
             ctrl_ctx.push(word);
             prog.push(word);
         },

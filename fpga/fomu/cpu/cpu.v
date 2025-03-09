@@ -111,7 +111,7 @@ module cpu #(
     localparam UC_R_FETCH   = 16'h0280;                 // R@ ( -- a ) ( R: a -- a )
     localparam UC_2MUL      = 16'h0301;                 // 2* ( a -- a+a )
 
-    localparam UC_FAIL      = 16'h002F;                 // ( -- ) signal failure
+    localparam UC_FAIL      = 16'h000E;                 // ( -- ) signal failure
     localparam UC_CALL      = 16'hC000;                 // <addr> ( -- ) ( R: -- pc+1 ) @pc->pc
 
     //
@@ -570,7 +570,7 @@ module cpu #(
 
     reg p_alu = 0;                                      // 0: stack-phase, 1: alu-phase
     always @(posedge i_clk) begin
-        if (mem_op && mem_rng == `MEM_ERR) begin
+        if (!ctrl && alu_op == `FAIL_OP) begin
             o_status <= 1'b0;                           // signal failure
             p_alu <= 1'b0;
             instr_r <= UC_NOP;

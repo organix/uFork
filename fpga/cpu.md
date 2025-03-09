@@ -302,10 +302,12 @@ the next instruction, but may be loaded from the R-stack instead.
                                                         1011:ASR
                                                         1100:2ASR
                                                         1101:4ASR
-                                                        1110:DSP?
-                                                        1111:MEM*
+                                                        1110:FAIL*
+                                                        1111:MEM**
 
-\* If `ALU op` is `MEM`, then it's a _memory instruction_ instead.
+\* `FAIL` is an illegal instruction, which halts the processor.
+
+\** If `ALU op` is `MEM`, then it's a _memory instruction_ instead.
 
 #### ALU Operations
 
@@ -325,7 +327,7 @@ ROL8_OP     | `(4'hA)`  | {a[7:0],a[15:8]}
 ASR_OP      | `(4'hB)`  | {a[15],a[15:1]}
 ASR2_OP     | `(4'hC)`  | {a[15],a[15],a[15:2]}
 ASR4_OP     | `(4'hD)`  | {a[15],a[15],a[15],a[15],a[15:4]}
-_reserved_  | `(4'hE)`  | DSP/co-processor hook?
+FAIL        | `(4'hE)`  | illegal instruction
 MEM_OP      | `(4'hF)`  | memory operation
 
 #### Memory Instructions
@@ -351,9 +353,6 @@ The top 8 bits are the same as other evaluation instructions.
                            111:ALU2        111:Q_Z
 
 \* If `MEM range` is `[PC+1]`, then read from `PC+1` and increment again (write is ignored).
-
-NOTE: The unused memory range `3'b010` is currently used to implement `FAIL`,
-which halts the processor as an illegal instruction.
 
 #### Stack Operations
 
@@ -424,5 +423,5 @@ QY@     | ( qref -- data )          | `036F` | `0000_0011_0110_1111`
 QY!     | ( data qref -- )          | `09EF` | `0000_1001_1110_1111`
 QZ@     | ( qref -- data )          | `037F` | `0000_0011_0111_1111`
 QZ!     | ( data qref -- )          | `09FF` | `0000_1001_1111_1111`
-FAIL    | _illegal instruction_     | `002F` | `0000_0000_0010_1111`
+FAIL    | _illegal instruction_     | `000E` | `0000_0000_0000_1110`
 EXIT    | ( R: addr -- ) addr->PC   | `5000` | `0101_0000_0000_0000`

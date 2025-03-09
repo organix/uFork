@@ -21,7 +21,7 @@ const OP_8ROL = 0xA;  // {a[7:0],a[15:8]}
 const OP_ASR = 0xB;  // {a[15],a[15:1]}
 const OP_2ASR = 0xC;  // {a[15],a[15],a[15:2]}
 const OP_4ASR = 0xD;  // {a[15],a[15],a[15],a[15],a[15:4]}
-//const OP_DSP = 0xE;  // RESERVED (default: 0)
+const OP_FAIL = 0xE;  // illegal instruction
 const OP_MEM = 0xF;  // memory operation
 
 //const SE_NONE = 0x0;  // no stack-effect
@@ -322,6 +322,9 @@ function make_machine(prog = [], device = []) {
                 return error("illegal control instruction");
             }
         } else {
+            if (alu_op === OP_FAIL) {
+                return error("illegal instruction", "0x" + hex.from(instr, 16));
+            }
             if (alu_op === OP_MEM) {
                 // memory operation
                 const wr_en = (instr & 0x0080);             // {0:read, 1:write}

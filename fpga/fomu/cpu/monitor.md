@@ -27,23 +27,12 @@ _hex_   | ( -- hex )                | Push _hex_ value onto the stack
 !       | ( data addr -- )          | Store _data_ into _addr_
 q       | ( raw -- addr )           | Translate uFork _raw_ to uCode
 ?       | ( start end -- )          | Print data from _start_ thru _end_
-[       | ( addr -- )               | Start copying data to _addr_
-]       | ( -- addr+len )           | Stop copying literal data
+x       | ( -- blks )               | XMODEM upload
+~       | ( start end -- )          | Dump SPI flash from _start_ thru _end_
 r       | ( addr -- )               | Run (call) procedure at _addr_
 
 `[BACKSPACE]` or `[DELETE]` may be used
 to correct the preceeding word.
-
-### Bulk Upload
-
-The `[` and `]` commands provide a bulk upload facility.
-During upload, data is still provided as hex values, but not echoed.
-Instead a `~` is printed each time
-the least significant 4 bits of the upload address are `0`
-(every 16 words).
-If a `/` is encountered, input is ignored until the end of the line.
-The `]` signals the end of the upload
-and leaves the final address on the stack.
 
 ## Address Ranges
 
@@ -62,7 +51,8 @@ uFork Address           | uCode Address         | Description
 `1snn_nnnn_nnnn_nnnn`   | _no mapping_          | uFork 15-bit _fixnum_
 `00xb_aaaa_aaaa_aaaa`   | `1baa_aaaa_aaaa_aaff` | uFork quad-space ROM
 `01cx_aaaa_aaaa_aaaa`   | `01aa_aaaa_aaaa_aaff` | uFork quad-space RAM
-_not applicable_        | `00xx_aaaa_aaaa_aaaa` | uCode program/data
+_not applicable_        | `0000_aaaa_aaaa_aaaa` | uCode program/data
+_not applicable_        | `0010_aaaa_aaaa_aaaa` | GC color markers
 
 uFork addresses designate quad-memory cells (4 16-bit words).
 uCode addresses designate 16-bit words (1 quad field).
