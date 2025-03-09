@@ -38,6 +38,7 @@ function fs_dev(
 
     const root_dir_href = new URL(root_dir_url).href.replace(/\/?$/, "/");
     let ddev;
+    let dev_cap;
     let cancels = [];
     let files = [];                 // file_nr -> handle/undefined
     let locked = new WeakMap();     // handle -> true/undefined
@@ -50,12 +51,12 @@ function fs_dev(
     }
 
     function h_send(target, message) {
-        core.h_event_enqueue(core.h_reserve_ram({
+        const event_ptr = core.h_reserve_ram({
             t: sponsor,
             x: target,
             y: message
-        }));
-        core.h_wakeup(ufork.HOST_DEV_OFS);
+        });
+        core.h_wakeup(dev_cap, [event_ptr]);
     }
 
     function h_reply_ok(output_value) {
@@ -331,7 +332,7 @@ function fs_dev(
     }
 
     ddev = make_ddev(on_event_stub, on_drop_proxy);
-    const dev_cap = ddev.h_reserve_proxy();
+    dev_cap = ddev.h_reserve_proxy();
     const dev_id = ufork.fixnum(fs_key);
     core.h_install(dev_id, dev_cap, function on_dispose() {
         cancels.forEach(function (cancel) {

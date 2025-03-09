@@ -164,9 +164,9 @@ const tools_ui = make_ui("tools-ui", function (element, {
         });
         core = ufork.make_core({
             wasm_url,
-            on_wakeup(device_offset) {
-                devices.io.info("WAKE:", device_offset);
-                driver.wakeup(device_offset);
+            on_wakeup(cap, events) {
+                devices.io.info("WAKE:", ufork.print(cap));
+                driver.wakeup(cap, events);
             },
             log_level: ufork.LOG_TRACE,
             on_log(log_level, ...values) {

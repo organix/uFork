@@ -8,16 +8,17 @@ const svg_key = 101; // from dev.asm
 
 function svg_dev(core, make_ddev, on_draw) {
     const on_code = svg_drawing(on_draw);
+    let dev_cap;
     let pending_event;
     let pending_read;
 
     function h_send(target, message, sponsor) {
-        core.h_event_enqueue(core.h_reserve_ram({
+        const event_ptr = core.h_reserve_ram({
             t: sponsor,
             x: target,
             y: message
-        }));
-        core.h_wakeup(ufork.HOST_DEV_OFS);
+        });
+        core.h_wakeup(dev_cap, [event_ptr]);
     }
 
     function h_reply_ok(output_value) {
@@ -109,8 +110,8 @@ function svg_dev(core, make_ddev, on_draw) {
     }
 
     const ddev = make_ddev(on_event_stub);
-    const svg_proxy = ddev.h_reserve_proxy();
-    core.h_install(ufork.fixnum(svg_key), svg_proxy);
+    dev_cap = ddev.h_reserve_proxy();
+    core.h_install(ufork.fixnum(svg_key), dev_cap);
     return function h_on_pointer_input(x, y, button_mask) {
         pending_event = {x, y, button_mask}; // overwrite stale
         h_poll_input();

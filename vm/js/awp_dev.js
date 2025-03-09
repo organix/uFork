@@ -70,6 +70,7 @@ function awp_dev({
     const once_fwd_beh = core.h_load(once_fwd_ir).beh;
 
     let ddev;                                 // the dynamic device
+    let dev_cap;                              // the dynamic device's capability
     let connections = Object.create(null);    // local:remote -> connection
     let opening = Object.create(null);        // local:remote -> cancel function
     let outbox = Object.create(null);         // local:remote -> messages
@@ -275,11 +276,6 @@ function awp_dev({
         return event_ptr_array;
     }
 
-    function resume(event_ptrs) {
-        event_ptrs.map(core.h_event_enqueue);
-        core.h_wakeup(ufork.HOST_DEV_OFS);
-    }
-
     function unregister(key) {
         delete outbox[key];
         delete connections[key];
@@ -326,7 +322,7 @@ function awp_dev({
                     })
                 })
             });
-            return resume([request_event]);
+            return core.h_wakeup(dev_cap, [request_event]);
         }
 
 // The frame is a message addressed to a particular actor (or proxy).
@@ -338,7 +334,7 @@ function awp_dev({
                 x: core.u_read_quad(stub).y,
                 y: unmarshall(store, frame.message)
             });
-            return resume([message_event]);
+            return core.h_wakeup(dev_cap, [message_event]);
         }
         if (core.u_warn !== undefined) {
             core.u_warn("Missing stub", store, frame);
@@ -394,7 +390,7 @@ function awp_dev({
                     store.acquaintances[0].name, // self
                     connection.name()
                 ));
-                return resume(failure_events);
+                return core.h_wakeup(dev_cap, failure_events);
             }
         )(
             function connected_callback(connection, reason) {
@@ -404,7 +400,7 @@ function awp_dev({
                         core.u_trace("connect fail", reason);
                     }
                     const failure_events = lose(key);
-                    return resume(failure_events);
+                    return core.h_wakeup(dev_cap, failure_events);
                 }
                 if (core.u_trace !== undefined) {
                     core.u_trace("connect open");
@@ -531,7 +527,7 @@ function awp_dev({
                         )
                     })
                 });
-                return resume([event_ptr]);
+                return core.h_wakeup(dev_cap, [event_ptr]);
             }
             const callback_fwd = ufork.ptr_to_cap(core.h_reserve_ram({
                 t: ufork.ACTOR_T,
@@ -632,7 +628,7 @@ function awp_dev({
                 x: listen_callback,
                 y: result
             });
-            return resume([reply_event]);
+            return core.h_wakeup(dev_cap, [reply_event]);
         }
 
         core.u_defer(function () {
@@ -851,7 +847,7 @@ function awp_dev({
 // Install the dynamic device as if it were a real device. Unlike a real device,
 // we must reserve a stub to keep the capability from being released.
 
-    const dev_cap = ddev.h_reserve_proxy(ufork.UNDEF_RAW);
+    dev_cap = ddev.h_reserve_proxy(ufork.UNDEF_RAW);
     const dev_id = ufork.fixnum(awp_key);
     core.h_install(dev_id, dev_cap, function on_dispose() {
         Object.values(connections).forEach((connection) => connection.close());
@@ -970,8 +966,8 @@ let core;
 if (import.meta.main) {
     core = ufork.make_core({
         wasm_url,
-        on_wakeup(device_offset) {
-            globalThis.console.log("WAKE:", device_offset);
+        on_wakeup(cap, events) {
+            globalThis.console.log("WAKE:", ufork.print(cap), events.length);
             globalThis.console.log("IDLE:", ufork.fault_msg(ufork.fix_to_i32(
                 core.h_run_loop()
             )));

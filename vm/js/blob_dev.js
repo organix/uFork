@@ -86,6 +86,7 @@ function blob_dev(core, make_ddev) {
     }
     const sponsor = ufork.ramptr(ufork.SPONSOR_OFS);
     let ddev;
+    let dev_cap;
     let blobs = [];
     let reads = [];
     let sources = [];
@@ -97,12 +98,12 @@ function blob_dev(core, make_ddev) {
     }
 
     function h_send(target, message) {
-        core.h_event_enqueue(core.h_reserve_ram({
+        const event_ptr = core.h_reserve_ram({
             t: sponsor,
             x: target,
             y: message
-        }));
-        core.h_wakeup(ufork.HOST_DEV_OFS);
+        });
+        core.h_wakeup(dev_cap, [event_ptr]);
     }
 
     function h_alloc_blob(size_or_bytes) {
@@ -443,7 +444,7 @@ function blob_dev(core, make_ddev) {
             }
         }
     );
-    const dev_cap = ddev.h_reserve_proxy();
+    dev_cap = ddev.h_reserve_proxy();
     core.h_install(dev_id, dev_cap, function on_dispose() {
         ddev.h_dispose();
         if (blobs.length > 0) {

@@ -108,8 +108,8 @@ const $importmap = document.querySelector("[type=importmap]");
 const transport = webrtc_transport(websockets_signaller(), console.log);
 core = ufork.make_core({
     wasm_url,
-    on_wakeup(device_offset) {
-        driver.wakeup(device_offset);
+    on_wakeup(...args) {
+        driver.wakeup(...args);
     },
     import_map: (
         $importmap

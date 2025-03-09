@@ -30,8 +30,7 @@ function timer_dev(core, slowdown = 1) {
                             }
                             delete timer_map[stub];
                             core.h_release_stub(stub);
-                            core.h_event_enqueue(evt);
-                            core.h_wakeup(ufork.TIMER_DEV_OFS);
+                            core.h_wakeup(dev_cap, [evt]);
                         },
                         slowdown * ufork.fix_to_i32(delay)
                     );

@@ -89,7 +89,7 @@
 //          - A negative fixnum indicates a fault occurred, e.g. E_FAIL.
 //          - #? indicates that the core hit the step limit, but is not idle.
 
-//  {kind: "wakeup", device_offset: <number>}
+//  {kind: "wakeup", cap: <raw>, events: <Array>}
 
 //      A device has attempted to wake up the core.
 
@@ -264,18 +264,18 @@ function make_driver(core, on_status) {
         }
     }
 
-    function wakeup(device_offset) {
-        if (subscriptions.wakeup !== undefined) {
-            subscriptions.wakeup({kind: "wakeup", device_offset});
-        }
+    function wakeup(cap, events) {
         if (steps !== undefined) {
 
-// It is possible that 'wakeup' was called by 'u_defer' within 'h_run_loop'.
-//
+// It is possible that 'wakeup' was called by 'u_defer' within 'h_run_loop',
+// so defer the call to a future turn to avoid reentry.
 
-            setTimeout(run); // avoid reentry of h_run_loop
+            setTimeout(run);
         } else {
             publish_state();
+        }
+        if (subscriptions.wakeup !== undefined) {
+            subscriptions.wakeup({kind: "wakeup", cap, events});
         }
     }
 
@@ -348,8 +348,8 @@ function demo(log) {
     let driver;
     const core = ufork.make_core({
         wasm_url,
-        on_wakeup(device_offset) {
-            driver.wakeup(device_offset);
+        on_wakeup(...args) {
+            driver.wakeup(...args);
         },
         import_map: {"https://ufork.org/lib/": lib_url},
         compilers: {asm: assemble}

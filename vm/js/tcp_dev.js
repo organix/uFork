@@ -80,6 +80,7 @@ function tcp_dev(
 ) {
     const sponsor = ufork.ramptr(ufork.SPONSOR_OFS);
     let ddev;
+    let dev_cap;
     let disposed = false;
     let connections = [];                   // conn_nr -> connection
     let referenced = [];                    // conn_nr -> true/undefined
@@ -94,12 +95,12 @@ function tcp_dev(
     }
 
     function h_send(target, message) {
-        core.h_event_enqueue(core.h_reserve_ram({
+        const event_ptr = core.h_reserve_ram({
             t: sponsor,
             x: target,
             y: message
-        }));
-        core.h_wakeup(ufork.HOST_DEV_OFS);
+        });
+        core.h_wakeup(dev_cap, [event_ptr]);
     }
 
     function h_reply_ok(output_value) {
@@ -350,7 +351,7 @@ function tcp_dev(
     }
 
     ddev = make_ddev(on_event_stub, on_drop_proxy);
-    const dev_cap = ddev.h_reserve_proxy();
+    dev_cap = ddev.h_reserve_proxy();
     const dev_id = ufork.fixnum(tcp_key);
     core.h_install(dev_id, dev_cap, function on_dispose() {
         disposed = true;

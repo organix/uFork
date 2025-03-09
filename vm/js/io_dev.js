@@ -9,6 +9,9 @@ function io_dev(core, on_stdout) {
     let utf8_decoder = new TextDecoder("utf-8", {fatal: true}); // stateful
     let stdin_buffer = [];
     let stdin_stub;
+    const dev_ptr = ufork.ramptr(ufork.IO_DEV_OFS);
+    const dev_cap = ufork.ptr_to_cap(dev_ptr);
+    const dev_id = core.u_read_quad(dev_ptr).x;
 
     function read_stdin() {
 
@@ -39,7 +42,7 @@ function io_dev(core, on_stdout) {
             );
         }
         if (stdin_stub !== undefined) {
-            throw new Error(
+            core.u_warn(
                 "stdin_stub already set to " + core.u_pprint(stdin_stub)
             );
         }
@@ -67,14 +70,10 @@ function io_dev(core, on_stdout) {
             core.u_write_quad(evt, event);
             core.h_release_stub(stdin_stub);
             stdin_stub = undefined;
-            core.h_event_enqueue(evt);
-            core.h_wakeup(ufork.IO_DEV_OFS);
+            core.h_wakeup(dev_cap, [evt]);
         }
     }
 
-    const dev_ptr = ufork.ramptr(ufork.IO_DEV_OFS);
-    const dev_cap = ufork.ptr_to_cap(dev_ptr);
-    const dev_id = core.u_read_quad(dev_ptr).x;
     core.h_install(dev_id, dev_cap, undefined, {
         host_print(base, ofs) { // (i32, i32) -> nil
             if (core.u_info !== undefined) {

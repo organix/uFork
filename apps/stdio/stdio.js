@@ -34,8 +34,8 @@ const cwd_dir = toFileUrl(join(Deno.cwd(), "./")); // ensure trailing slash
 const src = new URL(unqualified_src, cwd_dir).href;
 core = ufork.make_core({
     wasm_url,
-    on_wakeup(device_offset) {
-        driver.wakeup(device_offset);
+    on_wakeup(...args) {
+        driver.wakeup(...args);
     },
     on_log: globalThis.console.error,
     log_level: ufork.LOG_WARN,

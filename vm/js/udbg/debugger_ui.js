@@ -336,8 +336,8 @@ function demo(log) {
     let element;
     const core = ufork.make_core({
         wasm_url,
-        on_wakeup(device_offset) {
-            driver.wakeup(device_offset);
+        on_wakeup(...args) {
+            driver.wakeup(...args);
         },
         import_map: {"https://ufork.org/lib/": lib_url},
         compilers: {asm: assemble}
