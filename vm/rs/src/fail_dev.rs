@@ -10,7 +10,7 @@ impl FailDevice {
     }
 }
 impl Device for FailDevice {
-    fn handle_event(&mut self, core: &mut Core, ep: Any) -> Result<(), Error> {
+    fn handle_event(&mut self, core: &mut Core, ep: Any) -> Result<Any, Error> {
         let _event = core.mem(ep);
         Err(E_FAIL)  // force failure...
     }

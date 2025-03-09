@@ -67,7 +67,7 @@ pub struct Core {
     gc_prev:    GcColor,
     gc_marks:   [GcColor; QUAD_RAM_MAX],
     device:     [Option<Box<dyn Device>>; DEVICE_MAX],
-    trace_fn:   Option<Box<dyn Fn(Any, Any)>>,
+    txn_fn:     Option<Box<dyn Fn(Any, Any)>>,
     audit_fn:   Option<Box<dyn Fn(Any, Any, Any, Any)>>,
 }
 
@@ -104,7 +104,7 @@ impl Core {
                 None,
                 None,
             ],
-            trace_fn: None,
+            txn_fn: None,
             audit_fn: None,
         }
     }
@@ -164,13 +164,13 @@ impl Core {
     }
 
     #[cfg(debug_assertions)]
-    fn call_trace_fn(&self, ep: Any, kp: Any) {
-        if let Some(trace) = &self.trace_fn {
-            (trace)(ep, kp);
+    fn call_txn_fn(&self, ep: Any, kp_or_fx: Any) {
+        if let Some(txn) = &self.txn_fn {
+            (txn)(ep, kp_or_fx);
         }
     }
-    pub fn set_trace_fn<F: Fn(Any, Any) + 'static>(&mut self, trace_fn: F) {
-        self.trace_fn = Some(Box::new(trace_fn));
+    pub fn set_txn_fn<F: Fn(Any, Any) + 'static>(&mut self, txn_fn: F) {
+        self.txn_fn = Some(Box::new(txn_fn));
     }
 
     fn call_audit_fn(&self, error: Error, evidence: Any) {
@@ -296,9 +296,15 @@ impl Core {
                 let mut dev_mut = self.device[id].take().unwrap();
                 let result = dev_mut.handle_event(self, ep);
                 self.device[id] = Some(dev_mut);
-                #[cfg(debug_assertions)]
-                self.call_trace_fn(ep, UNDEF);  // trace transactional effect(s)
-                return result
+                if let Ok(evt) = result {
+                    if evt.is_ram() {
+                        self.event_enqueue(evt);
+                        #[cfg(debug_assertions)]
+                        self.call_txn_fn(ep, evt);  // trace transactional effects
+                    }
+                } else if let Err(error) = result {
+                    return Err(error);
+                }
             }
         } else {
             // begin actor-event transaction
@@ -707,8 +713,6 @@ impl Core {
                 kip
             },
             VM_END => {
-                #[cfg(debug_assertions)]
-                self.call_trace_fn(self.ep(), self.kp());  // trace transactional effect(s)
                 let me = self.self_ptr();
                 let rv = match imm {
                     END_ABORT => {
@@ -719,6 +723,8 @@ impl Core {
                         return Err(E_STOP);  // End::Stop terminated continuation
                     },
                     END_COMMIT => {
+                        #[cfg(debug_assertions)]
+                        self.call_txn_fn(self.ep(), self.kp());  // trace transactional effects
                         self.actor_commit(me);
                         UNDEF
                     },
@@ -1003,7 +1009,9 @@ impl Core {
     }
     fn self_ptr(&self) -> Any {
         let ep = self.ep();
-        if !ep.is_ram() { return UNDEF }  // no event means no `self`
+        if !ep.is_ram() {
+            return UNDEF;  // no event means no `self`
+        }
         let target = self.ram(ep).x();
         let a_ptr = self.cap_to_ptr(target);
         a_ptr
@@ -1127,7 +1135,7 @@ impl Core {
             let entry = self.mem(d);
             let k = entry.x();  // key
             if key == k {
-                return true
+                return true;
             }
             d = entry.z();  // next
         }
@@ -1139,7 +1147,7 @@ impl Core {
             let entry = self.mem(d);
             let k = entry.x();  // key
             if key == k {
-                return entry.y()  // value
+                return entry.y();  // value
             }
             d = entry.z();  // next
         }
@@ -1206,7 +1214,7 @@ impl Core {
                 let item = self.car(front);
                 front = self.cdr(front);
                 let deque = self.cons(front, back)?;
-                return Ok((deque, item))
+                return Ok((deque, item));
             }
         }
         Ok((deque, UNDEF))
@@ -1233,7 +1241,7 @@ impl Core {
                 let item = self.car(back);
                 back = self.cdr(back);
                 let deque = self.cons(front, back)?;
-                return Ok((deque, item))
+                return Ok((deque, item));
             }
         }
         Ok((deque, UNDEF))
@@ -1453,24 +1461,32 @@ impl Core {
 
     pub fn kp(&self) -> Any {  // continuation pointer
         let kp = self.k_first();
-        if !kp.is_ram() { return UNDEF }
+        if !kp.is_ram() {
+            return UNDEF;
+        }
         kp
     }
     pub fn ip(&self) -> Any {  // instruction pointer
         let kp = self.kp();
-        if !kp.is_ram() { return UNDEF }
+        if !kp.is_ram() {
+            return UNDEF;
+        }
         let quad = self.mem(kp);
         quad.t()
     }
     pub fn sp(&self) -> Any {  // stack pointer
         let kp = self.kp();
-        if !kp.is_ram() { return UNDEF }
+        if !kp.is_ram() {
+            return UNDEF;
+        }
         let quad = self.mem(kp);
         quad.x()
     }
     pub fn ep(&self) -> Any {  // event pointer
         let kp = self.kp();
-        if !kp.is_ram() { return UNDEF }
+        if !kp.is_ram() {
+            return UNDEF;
+        }
         let quad = self.mem(kp);
         quad.y()
     }

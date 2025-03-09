@@ -16,13 +16,13 @@ impl DebugDevice {
     }
 }
 impl Device for DebugDevice {
-    fn handle_event(&mut self, core: &mut Core, ep: Any) -> Result<(), Error> {
+    fn handle_event(&mut self, core: &mut Core, ep: Any) -> Result<Any, Error> {
         let event = core.mem(ep);
         let message = event.y();  // message
         let raw = message.raw();
         unsafe {
             host_log(raw);
         }
-        Ok(())  // event handled.
+        Ok(UNDEF)  // event handled.
     }
 }

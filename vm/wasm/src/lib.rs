@@ -37,7 +37,7 @@ fn out_of_memory(_: ::core::alloc::Layout) -> ! {
 
 #[link(wasm_import_module = "capabilities")]
 extern "C" {
-    pub fn host_trace(ep: Raw, kp: Raw);
+    pub fn host_txn(ep: Raw, kp_or_fx: Raw);
     pub fn host_audit(code: Raw, evidence: Raw, ep: Raw, kp: Raw);
 }
 
@@ -63,9 +63,9 @@ pub fn h_init() {
     core.install_device(BLOB_DEV, Box::new(ufork::blob_dev::BlobDevice::new()));
     core.install_device(RANDOM_DEV, Box::new(random_dev::RandomDevice::new()));
     core.install_device(HOST_DEV, Box::new(host_dev::HostDevice::new()));
-    core.set_trace_fn(|ep, kp| {
+    core.set_txn_fn(|ep, kp_or_fx| {
         unsafe {
-            host_trace(ep.raw(), kp.raw());
+            host_txn(ep.raw(), kp_or_fx.raw());
         }
     });
     core.set_audit_fn(|code, evidence, ep, kp| {

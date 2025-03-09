@@ -695,7 +695,7 @@ core = ufork.make_core({
         //console.log(level + ": " + args.join(" "));
         console.log(level, ...args);
     },
-    on_trace(event) {
+    on_txn(event) {
         event = event_as_object(event);
         // log_event_object(event);
         core.u_trace(event);

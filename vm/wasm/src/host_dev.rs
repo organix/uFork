@@ -16,7 +16,7 @@ impl HostDevice {
     }
 }
 impl Device for HostDevice {
-    fn handle_event(&mut self, core: &mut Core, ep: Any) -> Result<(), Error> {
+    fn handle_event(&mut self, core: &mut Core, ep: Any) -> Result<Any, Error> {
         let event = core.mem(ep);
         let device = event.x(); // FIXME: this can be a PROXY_T
         let event_stub = core.reserve_stub(device, ep)?;
@@ -24,7 +24,7 @@ impl Device for HostDevice {
             host(event_stub.raw())
         };
         match raw {
-            E_OK => Ok(()),
+            E_OK => Ok(UNDEF),  // to avoid reentrancy, effects are always async
             code => {
                 core.release_stub(event_stub);
                 Err(code)

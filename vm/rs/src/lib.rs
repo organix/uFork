@@ -44,6 +44,6 @@ pub const OPQ_RAW: Raw          = 0x2000_0000;  // 1=opaque (capability), 0=tran
 // abstract device interface
 pub trait Device {
     fn init(&mut self) {}  // runtime initialization, default: no-op
-    fn handle_event(&mut self, core: &mut Core, ep: Any) -> Result<(), Error>;
+    fn handle_event(&mut self, core: &mut Core, ep: Any) -> Result<Any, Error>;
     fn drop_proxy(&mut self, _core: &mut Core, _cap: Any) {}  // default: no-op
 }

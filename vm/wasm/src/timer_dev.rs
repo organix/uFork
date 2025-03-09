@@ -18,7 +18,7 @@ impl TimerDevice {
     }
 }
 impl Device for TimerDevice {
-    fn handle_event(&mut self, core: &mut Core, ep: Any) -> Result<(), Error> {
+    fn handle_event(&mut self, core: &mut Core, ep: Any) -> Result<Any, Error> {
         let event = core.mem(ep);
         let sponsor = event.t();
         let dev = event.x();
@@ -75,10 +75,10 @@ impl Device for TimerDevice {
                 if to_cancel.is_cap() {
                     let proxy = core.reserve_proxy(dev, stub)?;
                     let evt = core.reserve_event(sponsor, to_cancel, proxy)?;
-                    core.event_enqueue(evt);
+                    return Ok(evt);
                 }
             }
         }
-        Ok(())  // event handled.
+        Ok(UNDEF)  // no effect
     }
 }

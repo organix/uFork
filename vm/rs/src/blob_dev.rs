@@ -70,7 +70,7 @@ impl BlobDevice {
                 }
                 let count = self.get_u16(1);  // get number of Array elements
                 self.set_u16(1, count + 1);  // add element for new Blob
-                return Ok(blob)
+                return Ok(blob);
             }
             ofs = next;
         }
@@ -252,52 +252,12 @@ impl Device for BlobDevice {
         self.blob_ram[16] = u16_lsb(nat);   //         size[0] (lsb)
         self.blob_ram[17] = u16_msb(nat);   //         size[1] (msb)
     }
-    fn handle_event(&mut self, core: &mut Core, ep: Any) -> Result<(), Error> {
+    fn handle_event(&mut self, core: &mut Core, ep: Any) -> Result<Any, Error> {
         let event = core.mem(ep);
         let sponsor = event.t();
         let target = event.x();
         let myself = core.ram(core.cap_to_ptr(target));
-        if myself.t() == PROXY_T {
-            // request to allocated blob
-            let _dev = myself.x();
-            let handle = myself.y();
-            let msg = event.y();  // cust | cust,ofs | cust,ofs,val | base,len,cust
-            if msg.is_cap() { // size request
-                let cust = msg;
-                let size = self.blob_size(handle)?;
-                let evt = core.reserve_event(sponsor, cust, size)?;
-                core.event_enqueue(evt);
-            } else {
-                let head = core.nth(msg, PLUS_1);
-                if head.is_cap() {
-                    let cust = head;
-                    let req = core.nth(msg, MINUS_1);
-                    if req.is_fix() {  // read request
-                        let ofs = req;
-                        let data = self.blob_read(handle, ofs)?;
-                        let evt = core.reserve_event(sponsor, cust, data)?;
-                        core.event_enqueue(evt);
-                    } else if core.typeq(PAIR_T, req) {  // write request
-                        let ofs = core.nth(req, PLUS_1);
-                        let val = core.nth(req, MINUS_1);
-                        let ok = self.blob_write(handle, ofs, val)?;
-                        let evt = core.reserve_event(sponsor, cust, ok)?;
-                        core.event_enqueue(evt);
-                    }
-                } else { // source request
-                    let base = head;
-                    let len = core.nth(msg, PLUS_2);
-                    let cust = core.nth(msg, MINUS_2);
-                    let shorter_len = self.blob_source(handle, base, len)?;
-                    let pair = Quad::pair_t(shorter_len, target);
-                    let pair_ptr = core.reserve(&pair)?;
-                    let reply = Quad::pair_t(base, pair_ptr);
-                    let reply_ptr = core.reserve(&reply)?;
-                    let evt = core.reserve_event(sponsor, cust, reply_ptr)?;
-                    core.event_enqueue(evt);
-                }
-            }
-        } else {
+        if myself.t() != PROXY_T {
             // request to allocator
             let msg = event.y();  // cust,size
             let cust = core.nth(msg, PLUS_1);
@@ -305,9 +265,47 @@ impl Device for BlobDevice {
             let handle = self.blob_reserve(size)?;
             let proxy = core.reserve_proxy(target, handle)?;
             let evt = core.reserve_event(sponsor, cust, proxy)?;
-            core.event_enqueue(evt);
+            return Ok(evt);
         }
-        Ok(())  // event handled.
+        // request to allocated blob
+        let _dev = myself.x();
+        let handle = myself.y();
+        let msg = event.y();  // cust | cust,ofs | cust,ofs,val | base,len,cust
+        if msg.is_cap() { // size request
+            let cust = msg;
+            let size = self.blob_size(handle)?;
+            let evt = core.reserve_event(sponsor, cust, size)?;
+            return Ok(evt);
+        }
+        let head = core.nth(msg, PLUS_1);
+        if !head.is_cap() {  // source request
+            let base = head;
+            let len = core.nth(msg, PLUS_2);
+            let cust = core.nth(msg, MINUS_2);
+            let shorter_len = self.blob_source(handle, base, len)?;
+            let pair = Quad::pair_t(shorter_len, target);
+            let pair_ptr = core.reserve(&pair)?;
+            let reply = Quad::pair_t(base, pair_ptr);
+            let reply_ptr = core.reserve(&reply)?;
+            let evt = core.reserve_event(sponsor, cust, reply_ptr)?;
+            return Ok(evt);
+        }
+        let cust = head;
+        let req = core.nth(msg, MINUS_1);
+        if req.is_fix() {  // read request
+            let ofs = req;
+            let data = self.blob_read(handle, ofs)?;
+            let evt = core.reserve_event(sponsor, cust, data)?;
+            return Ok(evt);
+        }
+        if core.typeq(PAIR_T, req) {  // write request
+            let ofs = core.nth(req, PLUS_1);
+            let val = core.nth(req, MINUS_1);
+            let ok = self.blob_write(handle, ofs, val)?;
+            let evt = core.reserve_event(sponsor, cust, ok)?;
+            return Ok(evt);
+        }
+        Err(E_BOUNDS)
     }
     fn drop_proxy(&mut self, core: &mut Core, proxy: Any) {
         if proxy.is_cap() {

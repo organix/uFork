@@ -18,7 +18,7 @@ impl IoDevice {
     }
 }
 impl Device for IoDevice {
-    fn handle_event(&mut self, core: &mut Core, ep: Any) -> Result<(), Error> {
+    fn handle_event(&mut self, core: &mut Core, ep: Any) -> Result<Any, Error> {
         let event = core.mem(ep);
         let sponsor = event.t();
         let dev = event.x();
@@ -43,8 +43,8 @@ impl Device for IoDevice {
                     // if `read` was synchronous, reply immediately
                     let result = core.reserve(&Quad::pair_t(TRUE, char))?;  // #t,char
                     core.ram_mut(evt).set_y(result);  // msg = result
-                    core.event_enqueue(evt);
                     core.release_stub(stub);
+                    return Ok(evt);
                 }
             } else if data.is_fix() {  // to_cancel,callback,fixnum
                 // write request
@@ -54,10 +54,10 @@ impl Device for IoDevice {
                 // in the current implementation, `write` is synchronous, so we reply immediately
                 let result = core.reserve(&Quad::pair_t(TRUE, UNDEF))?;  // #t,#?
                 let evt = core.reserve_event(sponsor, callback, result)?;
-                core.event_enqueue(evt);
+                return Ok(evt);
             }
         }
         // NOTE: unrecognized messages may be ignored
-        Ok(())  // event handled.
+        Ok(UNDEF)  // no effect
     }
 }

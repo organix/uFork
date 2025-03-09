@@ -10,9 +10,9 @@ impl NullDevice {
     }
 }
 impl Device for NullDevice {
-    fn handle_event(&mut self, core: &mut Core, ep: Any) -> Result<(), Error> {
+    fn handle_event(&mut self, core: &mut Core, ep: Any) -> Result<Any, Error> {
         let _event = core.mem(ep);
-        Ok(())  // event handled.
+        Ok(UNDEF)  // no effect
     }
 }
 
@@ -24,7 +24,7 @@ mod tests {
     fn null_dev_always_succeeds() {
         static mut NULL_DEV: NullDevice = NullDevice::new();
         let mut core = Core::default();
-        assert_eq!((), unsafe { NULL_DEV.handle_event(&mut core, UNDEF) }.unwrap() );
+        assert_eq!(UNDEF, unsafe { NULL_DEV.handle_event(&mut core, UNDEF) }.unwrap() );
         assert_eq!(0, ::core::mem::size_of::<NullDevice>());
     }
 
