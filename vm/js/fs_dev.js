@@ -50,13 +50,13 @@ function fs_dev(
         }
     }
 
-    function h_send(target, message) {
+    function h_send(sender, target, message) {
         const event_ptr = core.h_reserve_ram({
             t: sponsor,
             x: target,
             y: message
         });
-        core.h_wakeup(dev_cap, [event_ptr]);
+        core.h_wakeup(sender, [event_ptr]);
     }
 
     function h_reply_ok(output_value) {
@@ -120,11 +120,12 @@ function fs_dev(
 
         function u_request(file_nr, error_msg, make_requestor, get_output) {
             core.u_defer(function () {
+                const file_cap = event_stub.x;
                 const handle = files[file_nr];
                 if (handle === undefined || locked.has(handle)) {
                     u_trace(`#${file_nr} unavailable`);
                     core.h_release_stub(event_stub_ptr);
-                    return h_send(callback, h_reply_fail());
+                    return h_send(file_cap, callback, h_reply_fail());
                 }
                 const requestor = make_requestor(handle);
                 locked.set(handle, true); // lock
@@ -136,10 +137,10 @@ function fs_dev(
                     core.h_release_stub(event_stub_ptr);
                     if (value === undefined) {
                         u_trace(error_msg, reason);
-                        return h_send(callback, h_reply_fail());
+                        return h_send(file_cap, callback, h_reply_fail());
                     }
                     const output = get_output(value);
-                    return h_send(callback, h_reply_ok(output));
+                    return h_send(file_cap, callback, h_reply_ok(output));
                 });
                 cancels.push(cancel);
             });
@@ -252,7 +253,7 @@ function fs_dev(
                         core.h_release_stub(event_stub_ptr); // release blob
                         if (file_handle === undefined) {
                             u_trace("failed to open file", reason);
-                            return h_send(callback, h_reply_fail());
+                            return h_send(dev_cap, callback, h_reply_fail());
                         }
                         const new_file_nr = files.length;
                         files.push(file_handle);
@@ -262,7 +263,7 @@ function fs_dev(
                             file_tag
                         );
                         u_trace(`#${new_file_nr} opened`);
-                        return h_send(callback, h_reply_ok(file_cap));
+                        return h_send(dev_cap, callback, h_reply_ok(file_cap));
                     },
                     file_path_cap
                 );
@@ -287,10 +288,11 @@ function fs_dev(
                         core.h_release_stub(event_stub_ptr); // release blob
                         if (stats === undefined) {
                             u_trace("failed to stat file", reason);
-                            return h_send(callback, h_reply_fail());
+                            return h_send(dev_cap, callback, h_reply_fail());
                         }
                         if (stats === false) {
                             return h_send(
+                                dev_cap,
                                 callback,
                                 h_reply_ok(ufork.UNDEF_RAW)
                             );
@@ -302,7 +304,11 @@ function fs_dev(
                             z: ufork.NIL_RAW
                         });
                         u_trace(`stat`, stats);
-                        return h_send(callback, h_reply_ok(metadata_dict));
+                        return h_send(
+                            dev_cap,
+                            callback,
+                            h_reply_ok(metadata_dict)
+                        );
                     },
                     meta_path_cap
                 );

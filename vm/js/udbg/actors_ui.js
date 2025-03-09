@@ -166,7 +166,7 @@ const actors_ui = make_ui("actor-ui", function (element, {
         return [
             heading_ui("Effect", 2),
             ...events.map(function (event_ptr) {
-                return print(event_ptr, 1, 0);
+                return print(event_ptr, 1, 1);
             })
         ];
     }

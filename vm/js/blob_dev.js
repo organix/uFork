@@ -97,13 +97,13 @@ function blob_dev(core, make_ddev) {
         }
     }
 
-    function h_send(target, message) {
+    function h_send(sender, target, message) {
         const event_ptr = core.h_reserve_ram({
             t: sponsor,
             x: target,
             y: message
         });
-        core.h_wakeup(dev_cap, [event_ptr]);
+        core.h_wakeup(sender, [event_ptr]);
     }
 
     function h_alloc_blob(size_or_bytes) {
@@ -142,11 +142,12 @@ function blob_dev(core, make_ddev) {
                     return callback(new Uint8Array(byte_array));
                 };
                 const offset = byte_array.length;
-                h_send(blob_cap, core.h_reserve_ram({
+                const message = core.h_reserve_ram({
                     t: ufork.PAIR_T,
                     x: cust_cap,
                     y: ufork.fixnum(offset)
-                }));
+                });
+                h_send(dev_cap, blob_cap, message);
             } catch (exception) {
                 return callback(undefined, exception);
             }
@@ -258,7 +259,7 @@ function blob_dev(core, make_ddev) {
                         y: cust_cap
                     })
                 });
-                h_send(blob_cap, source_req);
+                h_send(dev_cap, blob_cap, source_req);
             } catch (exception) {
                 return callback(undefined, exception);
             }
@@ -306,7 +307,7 @@ function blob_dev(core, make_ddev) {
                 }
                 core.u_defer(function () {
                     core.h_release_stub(event_stub_ptr);
-                    h_send(alloc_cust, h_alloc_blob(size).cap);
+                    h_send(dev_cap, alloc_cust, h_alloc_blob(size).cap);
                 });
                 return ufork.E_OK;
             }
@@ -341,7 +342,6 @@ function blob_dev(core, make_ddev) {
             if (bytes === undefined) {
                 return ufork.E_BOUNDS;
             }
-            let reply;
             if (ufork.is_cap(message)) {
 
 // Size request.
@@ -350,7 +350,7 @@ function blob_dev(core, make_ddev) {
                 const size_reply = ufork.fixnum(bytes.length);
                 core.u_defer(function () {
                     core.h_release_stub(event_stub_ptr);
-                    h_send(size_cust, size_reply);
+                    h_send(blob_cap, size_cust, size_reply);
                 });
                 return ufork.E_OK;
 
@@ -375,7 +375,7 @@ function blob_dev(core, make_ddev) {
                 const take = Math.min(available, length_num);
                 core.u_defer(function () {
                     core.h_release_stub(event_stub_ptr);
-                    h_send(source_cust, core.h_reserve_ram({
+                    const source_reply = core.h_reserve_ram({
                         t: ufork.PAIR_T,
                         x: base,
                         y: core.h_reserve_ram({
@@ -383,7 +383,8 @@ function blob_dev(core, make_ddev) {
                             x: ufork.fixnum(take),
                             y: blob_cap // blob capability
                         })
-                    }));
+                    });
+                    h_send(blob_cap, source_cust, source_reply);
                 });
                 return ufork.E_OK;
             }
@@ -405,7 +406,7 @@ function blob_dev(core, make_ddev) {
                 );
                 core.u_defer(function () {
                     core.h_release_stub(event_stub_ptr);
-                    h_send(customer, read_reply);
+                    h_send(blob_cap, customer, read_reply);
                 });
                 return ufork.E_OK;
             }
@@ -430,7 +431,7 @@ function blob_dev(core, make_ddev) {
             );
             core.u_defer(function () {
                 core.h_release_stub(event_stub_ptr);
-                h_send(customer, write_reply);
+                h_send(blob_cap, customer, write_reply);
             });
             return ufork.E_OK;
         },

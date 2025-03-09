@@ -94,13 +94,13 @@ function tcp_dev(
         }
     }
 
-    function h_send(target, message) {
+    function h_send(sender, target, message) {
         const event_ptr = core.h_reserve_ram({
             t: sponsor,
             x: target,
             y: message
         });
-        core.h_wakeup(dev_cap, [event_ptr]);
+        core.h_wakeup(sender, [event_ptr]);
     }
 
     function h_reply_ok(output_value) {
@@ -150,7 +150,7 @@ function tcp_dev(
                         return;
                     }
                     const conn_cap = h_register(connection);
-                    h_send(on_open_cap, conn_cap);
+                    h_send(dev_cap, on_open_cap, conn_cap);
                 }
             );
             listeners.push({
@@ -193,6 +193,7 @@ function tcp_dev(
         }
 
         if (ufork.is_fix(tag)) {
+            const conn_cap = event_stub.x;
             const {listener_nr, conn_nr} = decode_tag(tag);
             if (listener_nr !== undefined) {
 
@@ -214,7 +215,7 @@ function tcp_dev(
                     if (reading[conn_nr] === true) {
                         core.h_release_stub(event_stub_ptr);
                         u_trace(`#${conn_nr} read busy`);
-                        return h_send(callback, h_reply_fail());
+                        return h_send(conn_cap, callback, h_reply_fail());
                     }
                     reading[conn_nr] = true;
                     const eof = false;
@@ -230,15 +231,19 @@ function tcp_dev(
                         core.h_release_stub(event_stub_ptr);
                         if (chunk === undefined) {
                             u_trace(`#${conn_nr} read fail`, reason);
-                            return h_send(callback, h_reply_fail());
+                            return h_send(conn_cap, callback, h_reply_fail());
                         }
                         if (chunk === eof) {
                             u_trace(`#${conn_nr} read EOF`);
-                            return h_send(callback, h_reply_ok(ufork.NIL_RAW));
+                            return h_send(
+                                conn_cap,
+                                callback,
+                                h_reply_ok(ufork.NIL_RAW)
+                            );
                         }
                         u_trace(`#${conn_nr} read ${chunk.length}B`);
                         const blob = the_blob_dev.h_alloc_blob(chunk);
-                        return h_send(callback, h_reply_ok(blob.cap));
+                        return h_send(conn_cap, callback, h_reply_ok(blob.cap));
                     });
                 });
                 return ufork.E_OK;
@@ -252,7 +257,7 @@ function tcp_dev(
                     if (writing[conn_nr] === true) {
                         core.h_release_stub(event_stub_ptr);
                         u_trace(`#${conn_nr} write busy`);
-                        return h_send(callback, h_reply_fail());
+                        return h_send(conn_cap, callback, h_reply_fail());
                     }
                     writing[conn_nr] = true;
                     parseq.sequence([
@@ -271,14 +276,18 @@ function tcp_dev(
                         core.h_release_stub(event_stub_ptr);
                         if (value === undefined) {
                             u_trace(`#${conn_nr} write failed`, reason);
-                            return h_send(callback, h_reply_fail());
+                            return h_send(conn_cap, callback, h_reply_fail());
                         }
                         u_trace(`#${conn_nr} ` + (
                             is_close
                             ? "close"
                             : "write"
                         ));
-                        return h_send(callback, h_reply_ok(ufork.UNDEF_RAW));
+                        return h_send(
+                            conn_cap,
+                            callback,
+                            h_reply_ok(ufork.UNDEF_RAW)
+                        );
                     });
                 });
                 return ufork.E_OK;
@@ -302,11 +311,11 @@ function tcp_dev(
                         }
                         core.h_release_stub(event_stub_ptr);
                         if (connection !== undefined) {
-                            const conn_cap = h_register(connection);
-                            h_send(callback, h_reply_ok(conn_cap));
+                            const new_conn_cap = h_register(connection);
+                            h_send(dev_cap, callback, h_reply_ok(new_conn_cap));
                         } else {
                             u_trace("connect failed", remote_address, reason);
-                            h_send(callback, h_reply_fail());
+                            h_send(dev_cap, callback, h_reply_fail());
                         }
                     },
                     remote_address
@@ -332,7 +341,7 @@ function tcp_dev(
         core.u_defer(function () {
             core.h_release_stub(event_stub_ptr);
             const reply = h_listen(bind_address, on_open);
-            h_send(callback, reply);
+            h_send(dev_cap, callback, reply);
         });
         return ufork.E_OK;
     }

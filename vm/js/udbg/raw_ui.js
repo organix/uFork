@@ -1,5 +1,5 @@
-// An explorable representation of any 32-bit raw. A raw is a 32-bit unsigned
-// integer representing a uFork value, as described in vm.md.
+// An explorable representation of any 32-bit raw value. A raw is a tagged
+// 32-bit unsigned integer representing a uFork value, as described in vm.md.
 
 /*jslint browser, global */
 

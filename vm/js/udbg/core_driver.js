@@ -289,21 +289,23 @@ function make_driver(core, on_status) {
     }
 
     function wakeup(sender, events) {
-        if (steps !== undefined) {
-
-// It is possible that 'wakeup' was called by 'u_defer' within 'h_run_loop',
-// so defer the call to a future turn to avoid reentry.
-
-            setTimeout(run);
-        } else {
-            publish_state();
-        }
         device_txn = {
             sender,
             events,
             wake: true
         };
-        publish("device_txn");
+        if (steps !== undefined) {
+            if (step_size === "txn") {
+                steps -= 1;
+            }
+
+// It is possible that 'wakeup' was called by 'u_defer' within 'h_run_loop',
+// so defer the call to a future turn to avoid reentry.
+
+            setTimeout(run, interval);
+        } else {
+            publish_state();
+        }
     }
 
     function txn(ep, kp_or_fx) {
