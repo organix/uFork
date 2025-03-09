@@ -378,14 +378,14 @@ function awp_dev({
             store.acquaintances[petname].address,
             function on_receive(connection, frame_buffer) {
                 const frame = OED.decode(frame_buffer);
-                if (core.u_debug !== undefined) {
-                    core.u_debug("connect on_receive");
+                if (core.u_trace !== undefined) {
+                    core.u_trace("connect on_receive");
                 }
                 return receive(store, connection.name(), frame);
             },
             function on_close(connection, reason) {
-                if (core.u_debug !== undefined) {
-                    core.u_debug("connect on_close");
+                if (core.u_trace !== undefined) {
+                    core.u_trace("connect on_close");
                 }
                 unregister(convo_key(
                     store.acquaintances[0].name, // self
@@ -397,14 +397,14 @@ function awp_dev({
             function connected_callback(connection, reason) {
                 delete opening[key];
                 if (connection === undefined) {
-                    if (core.u_debug !== undefined) {
-                        core.u_debug("connect fail", reason);
+                    if (core.u_trace !== undefined) {
+                        core.u_trace("connect fail", reason);
                     }
                     lose(key);
                     return resume();
                 }
-                if (core.u_debug !== undefined) {
-                    core.u_debug("connect open");
+                if (core.u_trace !== undefined) {
+                    core.u_trace("connect open");
                 }
                 register(store, connection);
             }
@@ -553,8 +553,8 @@ function awp_dev({
                 store.acquaintances[petname].name
             );
             add(lost, key, function on_lost() {
-                if (core.u_debug !== undefined) {
-                    core.u_debug("intro fail");
+                if (core.u_trace !== undefined) {
+                    core.u_trace("intro fail");
                 }
                 core.h_event_enqueue(core.h_reserve_ram({
                     t: sponsor,
@@ -645,21 +645,21 @@ function awp_dev({
                 store.identity,
                 store.bind_info,
                 function on_open(connection) {
-                    if (core.u_debug !== undefined) {
-                        core.u_debug("listen on_open");
+                    if (core.u_trace !== undefined) {
+                        core.u_trace("listen on_open");
                     }
                     return register(store, connection);
                 },
                 function on_receive(connection, frame_buffer) {
                     const frame = OED.decode(frame_buffer);
-                    if (core.u_debug !== undefined) {
-                        core.u_debug("listen on_receive");
+                    if (core.u_trace !== undefined) {
+                        core.u_trace("listen on_receive");
                     }
                     return receive(store, connection, frame);
                 },
                 function on_close(connection, reason) {
-                    if (core.u_debug !== undefined) {
-                        core.u_debug("listen on_close", reason);
+                    if (core.u_trace !== undefined) {
+                        core.u_trace("listen on_close", reason);
                     }
                     return unregister(convo_key(
                         store.acquaintances[0].name,
@@ -669,8 +669,8 @@ function awp_dev({
             )(
                 function listening_callback(stop, reason) {
                     if (stop === undefined) {
-                        if (core.u_debug !== undefined) {
-                            core.u_debug("listen fail", reason);
+                        if (core.u_trace !== undefined) {
+                            core.u_trace("listen fail", reason);
                         }
                         return resolve(core.h_reserve_ram({
                             t: ufork.PAIR_T,
@@ -692,8 +692,8 @@ function awp_dev({
                     }
 
                     function safe_stop() {
-                        if (core.u_debug !== undefined) {
-                            core.u_debug("listen stop");
+                        if (core.u_trace !== undefined) {
+                            core.u_trace("listen stop");
                         }
                         const listener = listeners[key];
                         if (listener.greeter !== undefined) {
@@ -973,7 +973,7 @@ if (import.meta.main) {
             )));
         },
         on_log: globalThis.console.log,
-        log_level: ufork.LOG_DEBUG,
+        log_level: ufork.LOG_TRACE,
         import_map: {"https://ufork.org/lib/": lib_url},
         compilers: {asm: assemble}
     });
