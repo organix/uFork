@@ -1439,94 +1439,6 @@ function make_core({
         return print(raw);
     }
 
-    function u_event_as_object(event) {
-
-// Capture event data in a JS object.
-
-        const obj = Object.create(null);
-        let quad = u_read_quad(event);
-        const evt = quad;
-        obj.message = u_pprint(evt.y);
-        quad = u_read_quad(u_cap_to_ptr(evt.x));
-        const prev = quad;
-        obj.target = Object.create(null);
-        obj.target.raw = print(evt.x);
-        if (is_ram(prev.z)) {
-            // actor effect
-            const next = u_read_quad(prev.z);
-            obj.target.code = print(prev.x);
-            obj.target.data = u_pprint(prev.y);
-            obj.become = Object.create(null);
-            obj.become.code = u_pprint(next.x);
-            obj.become.data = u_pprint(next.y);
-            obj.sent = [];
-            let pending = next.z;
-            while (is_ram(pending)) {
-                quad = u_read_quad(pending);
-                obj.sent.push({
-                    target: print(quad.x),
-                    message: u_pprint(quad.y),
-                    sponsor: print(quad.t)
-                });
-                pending = pending.z;
-            }
-        } else {
-            // device effect
-            obj.target.device = print(prev.x);
-            obj.target.data = u_pprint(prev.y);
-        }
-        quad = u_read_quad(evt.t);
-        obj.sponsor = Object.create(null);
-        obj.sponsor.raw = print(evt.t);
-        obj.sponsor.memory = fix_to_i32(quad.t);
-        obj.sponsor.events = fix_to_i32(quad.x);
-        obj.sponsor.cycles = fix_to_i32(quad.y);
-        obj.sponsor.signal = print(quad.z);
-        return obj;
-    }
-
-    function u_log_event(event, log = u_trace) {
-
-// Log event details
-
-        if (log) {
-            if (typeof event === "number") {
-                event = u_event_as_object(event);
-            }
-            if (event.target.device) {
-                // device effect
-                log(event.message
-                    + "->"
-                    + event.target.raw
-                    + " "
-                    + event.target.device
-                    + "."
-                    + event.target.data
-                );
-            } else {
-                // actor effect
-                let messages = [];
-                event.sent.forEach(function ({target, message}) {
-                    messages.push(message + "->" + target);
-                });
-                log(event.message
-                    + "->"
-                    + event.target.raw
-                    + " "
-                    + event.target.code
-                    + "."
-                    + event.target.data
-                    + " => "
-                    + event.become.code
-                    + "."
-                    + event.become.data
-                    + " "
-                    + messages.join(" ")
-                );
-            }
-        }
-    }
-
     function h_boot(instr_ptr = entry_ptr, state_ptr = UNDEF_RAW) {
         if (!is_ptr(instr_ptr)) {
             throw new Error("Not an instruction: " + u_pprint(instr_ptr));
@@ -1771,9 +1683,7 @@ function make_core({
         u_current_continuation,
         u_debug,
         u_disasm,
-        u_event_as_object,
         u_info,
-        u_log_event,
         u_mem_pages,
         u_memory,
         u_next,

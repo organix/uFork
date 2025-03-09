@@ -606,6 +606,84 @@ function on_stdout(char) {
     }
 }
 
+// Capture event data in a JS object.
+function event_as_object(event) {
+    const obj = Object.create(null);
+    let quad = core.u_read_quad(event);
+    const evt = quad;
+    obj.message = core.u_pprint(evt.y);
+    quad = core.u_read_quad(ufork.cap_to_ptr(evt.x));
+    const prev = quad;
+    obj.target = Object.create(null);
+    obj.target.raw = ufork.print(evt.x);
+    if (ufork.is_ram(prev.z)) {
+        // actor effect
+        const next = core.u_read_quad(prev.z);
+        obj.target.code = ufork.print(prev.x);
+        obj.target.data = core.u_pprint(prev.y);
+        obj.become = Object.create(null);
+        obj.become.code = core.u_pprint(next.x);
+        obj.become.data = core.u_pprint(next.y);
+        obj.sent = [];
+        let pending = next.z;
+        while (ufork.is_ram(pending)) {
+            quad = core.u_read_quad(pending);
+            obj.sent.push({
+                target: ufork.print(quad.x),
+                message: core.u_pprint(quad.y),
+                sponsor: ufork.print(quad.t)
+            });
+            pending = pending.z;
+        }
+    } else {
+        // device effect
+        obj.target.device = ufork.print(prev.x);
+        obj.target.data = core.u_pprint(prev.y);
+    }
+    quad = core.u_read_quad(evt.t);
+    obj.sponsor = Object.create(null);
+    obj.sponsor.raw = ufork.print(evt.t);
+    obj.sponsor.memory = ufork.fix_to_i32(quad.t);
+    obj.sponsor.events = ufork.fix_to_i32(quad.x);
+    obj.sponsor.cycles = ufork.fix_to_i32(quad.y);
+    obj.sponsor.signal = ufork.print(quad.z);
+    return obj;
+}
+
+function log_event_object(event) {
+    if (event.target.device) {
+        // device effect
+        console.log(event.message
+            + "->"
+            + event.target.raw
+            + " "
+            + event.target.device
+            + "."
+            + event.target.data
+        );
+    } else {
+        // actor effect
+        let messages = [];
+        event.sent.forEach(function ({target, message}) {
+            messages.push(message + "->" + target);
+        });
+        console.log(event.message
+            + "->"
+            + event.target.raw
+            + " "
+            + event.target.code
+            + "."
+            + event.target.data
+            + " => "
+            + event.become.code
+            + "."
+            + event.become.data
+            + " "
+            + messages.join(" ")
+        );
+    }
+}
+
 core = ufork.make_core({
     wasm_url,
     on_wakeup(device_offset) {
@@ -618,10 +696,10 @@ core = ufork.make_core({
         console.log(level, ...args);
     },
     on_trace(event) {
-        event = core.u_event_as_object(event);
-        //core.u_log_event(event, core.u_debug);
-        core.u_debug(event);
-        //console.log(JSON.stringify(event, undefined, 2));
+        event = event_as_object(event);
+        // log_event_object(event);
+        core.u_trace(event);
+        // console.log(JSON.stringify(event, undefined, 4));
     },
     on_audit(code, evidence, ep, kp) {
         console.error(
@@ -633,7 +711,7 @@ core = ufork.make_core({
         );
         //debugger;
     },
-    log_level: ufork.LOG_DEBUG,
+    log_level: ufork.LOG_TRACE,
     import_map: (
         location.hostname !== "ufork.org"
         ? {"https://ufork.org/lib/": lib_url}
