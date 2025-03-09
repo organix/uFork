@@ -686,8 +686,8 @@ function log_event_object(event) {
 
 core = ufork.make_core({
     wasm_url,
-    on_wakeup(cap, events) {
-        console.log("WAKE:", ufork.print(cap), events.map(core.u_pprint));
+    on_wakeup(sender, events) {
+        console.log("WAKE:", ufork.print(sender), events.map(core.u_pprint));
         //single_step();
         draw_host();
     },

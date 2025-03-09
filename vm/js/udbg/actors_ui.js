@@ -116,6 +116,7 @@ const actors_ui = make_ui("actor-ui", function (element, {
     let isolate_checkbox;
     let graph_element;
     let selected_ofs;
+    let device_txn;
     const shadow = element.attachShadow({mode: "closed"});
     const style = dom("style", `
         :host {
@@ -161,6 +162,27 @@ const actors_ui = make_ui("actor-ui", function (element, {
         return raw_ui({value, depth, expand, ram, rom, rom_debugs});
     }
 
+    function print_effect(events) {
+        return [
+            heading_ui("Effect", 2),
+            ...events.map(function (event_ptr) {
+                return print(event_ptr, 1, 0);
+            })
+        ];
+    }
+
+    function get_effect(actor_ofs) {
+        const actor_quad = ufork.read_quad(ram, actor_ofs);
+        const effect_ptr = actor_quad.z;
+        if (ufork.is_ram(effect_ptr)) {
+            const effect_quad = ufork.read_quad(
+                ram,
+                ufork.rawofs(effect_ptr)
+            );
+            return find_events(ram, effect_quad.z);
+        }
+    }
+
     function invalidate() {
         if (!element.isConnected || ram.length === 0) {
             return;
@@ -175,31 +197,36 @@ const actors_ui = make_ui("actor-ui", function (element, {
             const selected_cap = ufork.ptr_to_cap(ufork.ramptr(selected_ofs));
             details.append(heading_ui("Actor", 1));
             details.append(print(selected_cap, 1, [[3]]));
+            const effect = get_effect(selected_actor_ofs);
+            if (effect !== undefined) {
+                details.append(...print_effect(effect));
+            }
         } else {
+
+// FIXME: There is the possibility that a sync interrupt occurs (i.e. a device
+// transaction completes) during a run-loop iteration that leaves the IP at a
+// commit instruction. In that case, it would be best to show both the current
+// event and the interrupt at the same time. For now, however, the interrupt
+// gets priority.
+
             const cc = ufork.current_continuation(ram);
-            if (cc?.ep !== undefined) {
+            if (device_txn !== undefined) {
+                const chrono = (
+                    device_txn.wake
+                    ? "Async"
+                    : "Sync"
+                );
+                details.append(heading_ui(chrono + " interrupt", 1));
+                details.append(print(device_txn.sender, 1, 0));
+                details.append(...print_effect(device_txn.events));
+                selected_actor_ofs = ufork.rawofs(device_txn.sender);
+            } else if (cc?.ep !== undefined) {
                 const event = ufork.read_quad(ram, ufork.rawofs(cc.ep));
                 details.append(heading_ui("Current event", 1));
                 details.append(print(cc.ep, 1, [[1, 3]]));
-                // details.append(heading_ui("Message", 2));
-                // details.append(print(event.y, 1, 0));
                 const target = event.x;
                 selected_actor_ofs = ufork.rawofs(target);
-            }
-        }
-        if (selected_actor_ofs !== undefined) {
-            const actor_quad = ufork.read_quad(ram, selected_actor_ofs);
-            const effect_ptr = actor_quad.z;
-            if (ufork.is_ram(effect_ptr)) {
-                details.append(heading_ui("Effect", 2));
-                const effect_quad = ufork.read_quad(
-                    ram,
-                    ufork.rawofs(effect_ptr)
-                );
-                const events = find_events(ram, effect_quad.z);
-                details.append(...events.map(function (event_ptr) {
-                    return print(event_ptr, 1, 0);
-                }));
+                details.append(...print_effect(get_effect(selected_actor_ofs)));
             }
         }
         const caps = (
@@ -282,6 +309,15 @@ const actors_ui = make_ui("actor-ui", function (element, {
         graph_element.invalidate();
     }
 
+    function set_device_txn(sender, events, wake) {
+        device_txn = (
+            sender !== undefined
+            ? {sender, events, wake}
+            : undefined
+        );
+        invalidate();
+    }
+
     function set_ram(new_ram) {
         selected_ofs = undefined;  // deselect
         ram = new_ram;
@@ -346,6 +382,7 @@ const actors_ui = make_ui("actor-ui", function (element, {
     shadow.append(style, split_element);
     set_ram(ram);
     set_rom(rom, rom_debugs);
+    element.set_device_txn = set_device_txn;
     element.set_ram = set_ram;
     element.set_rom = set_rom;
     return {
@@ -366,13 +403,23 @@ function demo(log) {
     const element = actors_ui({});
     element.style.position = "fixed";
     element.style.inset = "0";
+    let driver;
     const core = ufork.make_core({
         wasm_url,
+        on_wakeup(...args) {
+            return driver.wakeup(...args);
+        },
         import_map: {"https://ufork.org/lib/": lib_url},
         compilers: {asm: assemble}
     });
-    const driver = make_core_driver(core, function on_status(message) {
-        if (message.kind === "ram") {
+    driver = make_core_driver(core, function on_status(message) {
+        if (message.kind === "device_txn") {
+            element.set_device_txn(
+                message.sender,
+                message.events,
+                message.wake
+            );
+        } else if (message.kind === "ram") {
             element.set_ram(message.bytes);
         } else if (message.kind === "rom") {
             element.set_rom(message.bytes, message.debugs);
@@ -388,6 +435,7 @@ function demo(log) {
         requestorize(function () {
             timer_dev(core);
             core.h_boot();
+            driver.command({kind: "subscribe", topic: "device_txn"});
             driver.command({kind: "subscribe", topic: "rom"});
             driver.command({kind: "subscribe", topic: "ram"});
             driver.command({kind: "subscribe", topic: "playing"});

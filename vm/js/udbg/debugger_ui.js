@@ -9,6 +9,7 @@ import requestorize from "https://ufork.org/lib/rq/requestorize.js";
 import theme from "https://ufork.org/lib/theme.js";
 import make_ui from "https://ufork.org/lib/ui.js";
 import ufork from "../ufork.js";
+import blob_dev from "../blob_dev.js";
 import timer_dev from "../timer_dev.js";
 import make_core_driver from "./core_driver.js";
 import actors_ui from "./actors_ui.js";
@@ -242,6 +243,17 @@ const debugger_ui = make_ui("debugger-ui", function (element, {
         fault_message
     ]);
     const statuses = {
+        device_txn(message) {
+            views.actors.element.set_device_txn(
+                message.sender,
+                message.events,
+                message.wake
+            );
+            if (message.wake) {
+                fault_message.textContent = "wakeup";
+                fault_message.color = "inherit";
+            }
+        },
         interval(message) {
             const is_sliding = (
                 document.activeElement === element
@@ -295,22 +307,22 @@ const debugger_ui = make_ui("debugger-ui", function (element, {
         const was_connected = connected;
         connected = new_connected;
         step_button.disabled = !connected;
-        if (connected) {
-            if (!was_connected) {
-                on_signal(ufork.UNDEF_RAW);
-                send_command({kind: "debug", enabled: true});
-                send_command({kind: "subscribe", topic: "interval", throttle});
-                send_command({kind: "subscribe", topic: "playing", throttle});
-                send_command({kind: "subscribe", topic: "ram", throttle});
-                send_command({kind: "subscribe", topic: "rom", throttle});
-                send_command({kind: "subscribe", topic: "signal", throttle});
-                send_command({kind: "subscribe", topic: "step_size", throttle});
-                send_command({kind: "subscribe", topic: "wakeup", throttle});
-                auto_step_size();
-            }
-        } else {
+        if (!connected) {
             fault_message.textContent = "connecting";
             fault_message.style.color = theme.yellow;
+            return;
+        }
+        if (!was_connected) {
+            on_signal(ufork.UNDEF_RAW);
+            send_command({kind: "debug", enabled: true});
+            send_command({kind: "subscribe", topic: "interval", throttle});
+            send_command({kind: "subscribe", topic: "playing", throttle});
+            send_command({kind: "subscribe", topic: "ram", throttle});
+            send_command({kind: "subscribe", topic: "rom", throttle});
+            send_command({kind: "subscribe", topic: "signal", throttle});
+            send_command({kind: "subscribe", topic: "step_size", throttle});
+            send_command({kind: "subscribe", topic: "device_txn", throttle});
+            auto_step_size();
         }
     }
 
@@ -339,6 +351,9 @@ function demo(log) {
         on_wakeup(...args) {
             driver.wakeup(...args);
         },
+        on_txn(...args) {
+            driver.txn(...args);
+        },
         import_map: {"https://ufork.org/lib/": lib_url},
         compilers: {asm: assemble}
     });
@@ -348,7 +363,9 @@ function demo(log) {
     parseq.sequence([
         core.h_initialize(),
         core.h_import("https://ufork.org/lib/cell.asm"),
+        // core.h_import("https://ufork.org/lib/blob.asm"),
         requestorize(function () {
+            blob_dev(core);
             timer_dev(core);
             core.h_boot();
             element.set_connected(true);

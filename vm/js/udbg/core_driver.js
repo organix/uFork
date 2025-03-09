@@ -89,9 +89,18 @@
 //          - A negative fixnum indicates a fault occurred, e.g. E_FAIL.
 //          - #? indicates that the core hit the step limit, but is not idle.
 
-//  {kind: "wakeup", cap: <raw>, events: <Array>}
+//  {kind: "device_txn", sender: <raw>, events: <Array>, wake: <boolean>}
 
-//      A device has attempted to wake up the core.
+//      The pseudo-transactional effects of a device enqueuing one or more
+//      events and possibly attempting waking up the core.
+
+//      The 'sender' is the capability of the device or proxy that generated the
+//      events. Omitted if no device transaction occurred during the previous
+//      run-loop iteration.
+
+//      The 'events' array contains pointers to each of the generated events.
+
+//      If the device has attempted to wake up the core, 'wake' is true.
 
 //  {kind: "playing", value: <boolean>}
 
@@ -126,6 +135,7 @@ import throttle from "https://ufork.org/lib/throttle.js";
 import parseq from "https://ufork.org/lib/parseq.js";
 import requestorize from "https://ufork.org/lib/rq/requestorize.js";
 import ufork from "../ufork.js";
+import blob_dev from "../blob_dev.js";
 import timer_dev from "../timer_dev.js";
 const lib_url = import.meta.resolve("https://ufork.org/lib/");
 const wasm_url = import.meta.resolve("https://ufork.org/wasm/ufork.debug.wasm");
@@ -136,6 +146,7 @@ const busy = Object.freeze({});
 function make_driver(core, on_status) {
     let auto_refill_enabled = true;
     let debug = false;
+    let device_txn;
     let interval = 0;
     let play_timer;
     let signal;
@@ -152,6 +163,13 @@ function make_driver(core, on_status) {
             callback({kind: "auto_refill", value: auto_refill_enabled});
         } else if (kind === "debug") {
             callback({kind: "debug", enabled: debug});
+        } else if (kind === "device_txn") {
+            callback({
+                kind: "device_txn",
+                sender: device_txn?.sender,
+                events: device_txn?.events,
+                wake: device_txn?.wake
+            });
         } else if (kind === "interval") {
             callback({kind: "interval", milliseconds: interval});
         } else if (kind === "playing") {
@@ -175,6 +193,7 @@ function make_driver(core, on_status) {
     function publish_state() {
         publish("ram");
         publish("signal");
+        publish("device_txn");
     }
 
     function pause() {
@@ -207,6 +226,7 @@ function make_driver(core, on_status) {
 // causing 'run' to be reentered, so we guard against that with a special
 // signal value.
 
+            device_txn = undefined;
             signal = busy;
             signal = core.h_run_loop(
                 (
@@ -254,7 +274,11 @@ function make_driver(core, on_status) {
 
 // Have we completed a step?
 
-            if (step_size === "instr" || ip()?.x === ufork.VM_END) {
+            if (
+                step_size === "instr"
+                || ip()?.x === ufork.VM_END
+                || device_txn !== undefined
+            ) {
                 steps -= 1;
                 if (interval > 0 && steps > 0) {
                     play_timer = setTimeout(run, interval);
@@ -264,7 +288,7 @@ function make_driver(core, on_status) {
         }
     }
 
-    function wakeup(cap, events) {
+    function wakeup(sender, events) {
         if (steps !== undefined) {
 
 // It is possible that 'wakeup' was called by 'u_defer' within 'h_run_loop',
@@ -274,8 +298,27 @@ function make_driver(core, on_status) {
         } else {
             publish_state();
         }
-        if (subscriptions.wakeup !== undefined) {
-            subscriptions.wakeup({kind: "wakeup", cap, events});
+        device_txn = {
+            sender,
+            events,
+            wake: true
+        };
+        publish("device_txn");
+    }
+
+    function txn(ep, kp_or_fx) {
+        const target = core.u_read_quad(ep).x;
+        const is_device_or_proxy = (
+            core.u_read_quad(ufork.cap_to_ptr(target)).t === ufork.PROXY_T
+            || ufork.rawofs(target) < ufork.SPONSOR_OFS
+        );
+        if (is_device_or_proxy) {
+            device_txn = {
+                sender: target,
+                events: [kp_or_fx],
+                wake: false
+            };
+            publish("device_txn");
         }
     }
 
@@ -341,7 +384,7 @@ function make_driver(core, on_status) {
         clearTimeout(play_timer);
     }
 
-    return Object.freeze({command, dispose, wakeup});
+    return Object.freeze({command, dispose, txn, wakeup});
 }
 
 function demo(log) {
@@ -350,6 +393,9 @@ function demo(log) {
         wasm_url,
         on_wakeup(...args) {
             driver.wakeup(...args);
+        },
+        on_txn(...args) {
+            driver.txn(...args);
         },
         import_map: {"https://ufork.org/lib/": lib_url},
         compilers: {asm: assemble}
@@ -363,24 +409,28 @@ function demo(log) {
             ));
         } else {
             log("STATUS " + message.kind);
-            if (message.kind === "wakeup") {
+            if (message.kind === "device_txn" && message.wake) {
                 driver.command({kind: "play"});  // continue
             }
         }
     });
     parseq.sequence([
         core.h_initialize(),
-        core.h_import("https://ufork.org/lib/rq/delay.asm"),
+        // core.h_import("https://ufork.org/lib/rq/delay.asm"),
+        core.h_import("https://ufork.org/lib/blob.asm"),
         requestorize(function () {
+            blob_dev(core);
             timer_dev(core);
             core.h_boot();
             driver.command({kind: "subscribe", topic: "signal", throttle: 50});
-            driver.command({kind: "subscribe", topic: "wakeup"});
+            driver.command({kind: "subscribe", topic: "device_txn"});
             driver.command({kind: "subscribe", topic: "rom"});
             driver.command({kind: "subscribe", topic: "ram", throttle: 1000});
             // driver.command({kind: "subscribe", topic: "rom"});
             // driver.command({kind: "auto_refill", enabled: false});
             driver.command({kind: "refill", resources: {cycles: 3}});
+            // driver.command({kind: "interval", milliseconds: 250});
+            // driver.command({kind: "step_size", value: "txn"});
             driver.command({kind: "play", steps: 30});
             return true;
         })

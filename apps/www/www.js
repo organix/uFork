@@ -59,6 +59,9 @@ core = ufork.make_core({
     on_wakeup(...args) {
         driver.wakeup(...args);
     },
+    on_txn(...args) {
+        driver.txn(...args);
+    },
     on_audit: globalThis.console.error,
     on_log: globalThis.console.error,
     log_level: ufork.LOG_TRACE,

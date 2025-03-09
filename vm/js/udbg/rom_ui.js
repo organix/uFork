@@ -25,6 +25,13 @@ const dummy_bytes = new Uint8Array([
 ]);
 
 function words(bytes) {
+
+// Avoid the exception "RangeError: start offset of Uint32Array should be a
+// multiple of 4".
+
+    if (bytes.byteOffset % 4 !== 0) {
+        bytes = bytes.slice();
+    }
     return new Uint32Array(
         bytes.buffer,
         bytes.byteOffset,

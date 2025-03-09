@@ -46,11 +46,11 @@ function asm_test(module_url, time_limit = 5000) {
 
     core = ufork.make_core({
         wasm_url: wasm_href,
-        on_wakeup(cap, events) {
+        on_wakeup(sender, events) {
             log(
                 ufork.LOG_WARN,
                 "WAKE",
-                ufork.print(cap),
+                ufork.print(sender),
                 ...events.map(core.u_pprint)
             );
             run_ufork();

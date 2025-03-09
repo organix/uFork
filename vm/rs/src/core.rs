@@ -163,7 +163,6 @@ impl Core {
         }
     }
 
-    #[cfg(debug_assertions)]
     fn call_txn_fn(&self, ep: Any, kp_or_fx: Any) {
         if let Some(txn) = &self.txn_fn {
             (txn)(ep, kp_or_fx);
@@ -299,7 +298,6 @@ impl Core {
                 if let Ok(evt) = result {
                     if evt.is_ram() {
                         self.event_enqueue(evt);
-                        #[cfg(debug_assertions)]
                         self.call_txn_fn(ep, evt);  // trace transactional effects
                     }
                 } else if let Err(error) = result {
@@ -723,7 +721,6 @@ impl Core {
                         return Err(E_STOP);  // End::Stop terminated continuation
                     },
                     END_COMMIT => {
-                        #[cfg(debug_assertions)]
                         self.call_txn_fn(self.ep(), self.kp());  // trace transactional effects
                         self.actor_commit(me);
                         UNDEF

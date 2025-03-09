@@ -966,8 +966,8 @@ let core;
 if (import.meta.main) {
     core = ufork.make_core({
         wasm_url,
-        on_wakeup(cap, events) {
-            globalThis.console.log("WAKE:", ufork.print(cap), events.length);
+        on_wakeup(sender, events) {
+            globalThis.console.log("WAKE:", ufork.print(sender), events.length);
             globalThis.console.log("IDLE:", ufork.fault_msg(ufork.fix_to_i32(
                 core.h_run_loop()
             )));
