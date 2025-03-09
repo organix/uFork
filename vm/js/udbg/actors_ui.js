@@ -333,6 +333,7 @@ const actors_ui = make_ui("actor-ui", function (element, {
         split_ui({
             placement: "right",
             divider_color: theme.gray,
+            size: 0,  // set on connect
             divider_width: "3px"
         }),
         {style: {width: "100%", height: "100%"}},
@@ -348,7 +349,9 @@ const actors_ui = make_ui("actor-ui", function (element, {
     element.set_rom = set_rom;
     return {
         connect() {
-            split_element.set_size(0.4 * globalThis.innerWidth);
+            if (split_element.get_size() === 0) {
+                split_element.set_size(0.4 * element.clientWidth);
+            }
             document.addEventListener("keydown", on_keydown);
         },
         disconnect() {
