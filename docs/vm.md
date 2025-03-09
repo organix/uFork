@@ -109,6 +109,8 @@ Quad-cells are used to encode most of the important data-structures in uFork.
 [`#actor_t`, _code'_, _data'_, _events_]| effects, initial _events_=#nil
 [`#dict_t`, _key_, _value_, _next_]     | dictionary binding entry
 [`FREE_T`, `#?`, `#?`, _next_]          | cell in the free-list
+[`PROXY_T`, _device_, _handle_, `#?`]   | reference to remote actor
+[`STUB_T`, _device_, _target_, _next_]  | GC protection for RAM quad
 
 ### Reserved ROM
 
