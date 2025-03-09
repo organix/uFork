@@ -54,6 +54,7 @@ const ram_ui = make_ui("ram-explorer-ui", function (element, {
         :host > label {
             display: flex;
             align-items: center;
+            gap: 2px;
             font-family: ${theme.proportional_font_family};
             font-size: 13px;
             padding: 8px 10px;
@@ -117,8 +118,8 @@ const ram_ui = make_ui("ram-explorer-ui", function (element, {
         }
     });
     const hide_free_label = dom("label", [
-        dom("span", ["Hide ", dom("code", "FREE_T")]),
-        hide_free_checkbox
+        hide_free_checkbox,
+        dom("span", ["Hide ", dom("code", "FREE_T")])
     ]);
     shadow.append(style, dl, hide_free_label);
     set_ram(ram);

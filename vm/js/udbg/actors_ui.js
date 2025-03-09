@@ -144,6 +144,7 @@ const actors_ui = make_ui("actor-ui", function (element, {
         actor_controls > label {
             display: flex;
             align-items: center;
+            gap: 2px;
             font-family: ${theme.proportional_font_family};
             font-size: 13px;
             color: ${theme.white};
@@ -310,7 +311,7 @@ const actors_ui = make_ui("actor-ui", function (element, {
         dom(
             "label",
             {title: "Direct references only (i)"},
-            ["Isolate", isolate_checkbox]
+            [isolate_checkbox, "Isolate"]
         )
     ]);
     const inspector_element = dom("actor_inspector", [
