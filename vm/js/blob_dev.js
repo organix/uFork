@@ -96,6 +96,15 @@ function blob_dev(core, make_ddev) {
         }
     }
 
+    function h_send(target, message) {
+        core.h_event_enqueue(core.h_reserve_ram({
+            t: sponsor,
+            x: target,
+            y: message
+        }));
+        core.h_wakeup(ufork.HOST_DEV_OFS);
+    }
+
     function h_alloc_blob(size_or_bytes) {
         const blob_nr = blobs.length;
         const bytes = (
@@ -131,16 +140,11 @@ function blob_dev(core, make_ddev) {
                     return callback(new Uint8Array(byte_array));
                 };
                 const offset = byte_array.length;
-                core.h_event_enqueue(core.h_reserve_ram({
-                    t: sponsor,
-                    x: blob_cap,
-                    y: core.h_reserve_ram({
-                        t: ufork.PAIR_T,
-                        x: cust_cap,
-                        y: ufork.fixnum(offset)
-                    })
+                h_send(blob_cap, core.h_reserve_ram({
+                    t: ufork.PAIR_T,
+                    x: cust_cap,
+                    y: ufork.fixnum(offset)
                 }));
-                core.h_wakeup(ufork.HOST_DEV_OFS);
             } catch (exception) {
                 return callback(undefined, exception);
             }
@@ -251,12 +255,7 @@ function blob_dev(core, make_ddev) {
                         y: cust_cap
                     })
                 });
-                core.h_event_enqueue(core.h_reserve_ram({
-                    t: sponsor,
-                    x: blob_cap,
-                    y: source_req
-                }));
-                core.h_wakeup(ufork.HOST_DEV_OFS);
+                h_send(blob_cap, source_req);
             } catch (exception) {
                 return callback(undefined, exception);
             }
@@ -304,12 +303,7 @@ function blob_dev(core, make_ddev) {
                 }
                 core.u_defer(function () {
                     core.h_release_stub(event_stub_ptr);
-                    core.h_event_enqueue(core.h_reserve_ram({
-                        t: sponsor,
-                        x: alloc_cust,
-                        y: h_alloc_blob(size).cap
-                    }));
-                    core.h_wakeup(ufork.HOST_DEV_OFS);
+                    h_send(alloc_cust, h_alloc_blob(size).cap);
                 });
                 return ufork.E_OK;
             }
@@ -353,12 +347,7 @@ function blob_dev(core, make_ddev) {
                 const size_reply = ufork.fixnum(bytes.length);
                 core.u_defer(function () {
                     core.h_release_stub(event_stub_ptr);
-                    core.h_event_enqueue(core.h_reserve_ram({
-                        t: sponsor,
-                        x: size_cust,
-                        y: size_reply
-                    }));
-                    core.h_wakeup(ufork.HOST_DEV_OFS);
+                    h_send(size_cust, size_reply);
                 });
                 return ufork.E_OK;
 
@@ -383,20 +372,15 @@ function blob_dev(core, make_ddev) {
                 const take = Math.min(available, length_num);
                 core.u_defer(function () {
                     core.h_release_stub(event_stub_ptr);
-                    core.h_event_enqueue(core.h_reserve_ram({
-                        t: sponsor,
-                        x: source_cust,
+                    h_send(source_cust, core.h_reserve_ram({
+                        t: ufork.PAIR_T,
+                        x: base,
                         y: core.h_reserve_ram({
                             t: ufork.PAIR_T,
-                            x: base,
-                            y: core.h_reserve_ram({
-                                t: ufork.PAIR_T,
-                                x: ufork.fixnum(take),
-                                y: blob_cap // blob capability
-                            })
+                            x: ufork.fixnum(take),
+                            y: blob_cap // blob capability
                         })
                     }));
-                    core.h_wakeup(ufork.HOST_DEV_OFS);
                 });
                 return ufork.E_OK;
             }
@@ -418,12 +402,7 @@ function blob_dev(core, make_ddev) {
                 );
                 core.u_defer(function () {
                     core.h_release_stub(event_stub_ptr);
-                    core.h_event_enqueue(core.h_reserve_ram({
-                        t: sponsor,
-                        x: customer,
-                        y: read_reply
-                    }));
-                    core.h_wakeup(ufork.HOST_DEV_OFS);
+                    h_send(customer, read_reply);
                 });
                 return ufork.E_OK;
             }
@@ -448,12 +427,7 @@ function blob_dev(core, make_ddev) {
             );
             core.u_defer(function () {
                 core.h_release_stub(event_stub_ptr);
-                core.h_event_enqueue(core.h_reserve_ram({
-                    t: sponsor,
-                    x: customer,
-                    y: write_reply
-                }));
-                core.h_wakeup(ufork.HOST_DEV_OFS);
+                h_send(customer, write_reply);
             });
             return ufork.E_OK;
         },

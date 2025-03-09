@@ -265,22 +265,25 @@ function awp_dev({
 
 // Inform the relevant listeners of connection loss.
 
+        let event_ptr_array = [];
         if (lost[key] !== undefined) {
             lost[key].forEach(function (on_lost) {
-                on_lost();
+                event_ptr_array.push(on_lost());
             });
             delete lost[key];
         }
+        return event_ptr_array;
     }
 
-    function resume() {
+    function resume(event_ptrs) {
+        event_ptrs.map(core.h_event_enqueue);
         core.h_wakeup(ufork.HOST_DEV_OFS);
     }
 
     function unregister(key) {
-        lose(key);
         delete outbox[key];
         delete connections[key];
+        return lose(key);
     }
 
     function receive(store, connection, frame) {
@@ -306,7 +309,7 @@ function awp_dev({
 
 // to_cancel,greeting_callback,petname,hello -> greeter
 
-            core.h_event_enqueue(core.h_reserve_ram({
+            const request_event = core.h_reserve_ram({
                 t: sponsor,
                 x: greeter,
                 y: core.h_reserve_ram({
@@ -322,20 +325,20 @@ function awp_dev({
                         })
                     })
                 })
-            }));
-            return resume();
+            });
+            return resume([request_event]);
         }
 
 // The frame is a message addressed to a particular actor (or proxy).
 
         const stub = stubs[hex.encode(frame.target)];
         if (stub !== undefined) {
-            core.h_event_enqueue(core.h_reserve_ram({
+            const message_event = core.h_reserve_ram({
                 t: sponsor,
                 x: core.u_read_quad(stub).y,
                 y: unmarshall(store, frame.message)
-            }));
-            return resume();
+            });
+            return resume([message_event]);
         }
         if (core.u_warn !== undefined) {
             core.u_warn("Missing stub", store, frame);
@@ -387,11 +390,11 @@ function awp_dev({
                 if (core.u_trace !== undefined) {
                     core.u_trace("connect on_close");
                 }
-                unregister(convo_key(
+                const failure_events = unregister(convo_key(
                     store.acquaintances[0].name, // self
                     connection.name()
                 ));
-                return resume();
+                return resume(failure_events);
             }
         )(
             function connected_callback(connection, reason) {
@@ -400,8 +403,8 @@ function awp_dev({
                     if (core.u_trace !== undefined) {
                         core.u_trace("connect fail", reason);
                     }
-                    lose(key);
-                    return resume();
+                    const failure_events = lose(key);
+                    return resume(failure_events);
                 }
                 if (core.u_trace !== undefined) {
                     core.u_trace("connect open");
@@ -515,7 +518,7 @@ function awp_dev({
                 store === undefined
                 || store.acquaintances[petname]?.name === undefined
             ) {
-                core.h_event_enqueue(core.h_reserve_ram({
+                const event_ptr = core.h_reserve_ram({
                     t: sponsor,
                     x: intro_callback,
                     y: core.h_reserve_ram({
@@ -527,8 +530,8 @@ function awp_dev({
                             : E_NO_ACQUAINTANCE
                         )
                     })
-                }));
-                return resume();
+                });
+                return resume([event_ptr]);
             }
             const callback_fwd = ufork.ptr_to_cap(core.h_reserve_ram({
                 t: ufork.ACTOR_T,
@@ -556,7 +559,7 @@ function awp_dev({
                 if (core.u_trace !== undefined) {
                     core.u_trace("intro fail");
                 }
-                core.h_event_enqueue(core.h_reserve_ram({
+                return core.h_reserve_ram({
                     t: sponsor,
                     x: callback_fwd,
                     y: core.h_reserve_ram({
@@ -564,7 +567,7 @@ function awp_dev({
                         x: ufork.FALSE_RAW,
                         y: ufork.fixnum(E_CONNECTION_LOST)
                     })
-                }));
+                });
             });
 
 // TODO send a cancel capability to the to_cancel. Should we also neuter
@@ -623,14 +626,15 @@ function awp_dev({
 
 // ok,stop/error -> listen_callback
 
-            core.h_event_enqueue(core.h_reserve_ram({
+            release_event_stub();
+            const reply_event = core.h_reserve_ram({
                 t: sponsor,
                 x: listen_callback,
                 y: result
-            }));
-            release_event_stub();
-            return resume();
+            });
+            return resume([reply_event]);
         }
+
         core.u_defer(function () {
             const store = stores[ufork.fix_to_i32(store_fix)];
             if (store === undefined) {
