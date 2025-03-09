@@ -68,7 +68,7 @@ const tools_ui = make_ui("tools-ui", function (element, {
     let device_element = document.createComment("placeholder");
     let device_select;
     let lang_select;
-    let run_button;
+    let boot_button;
     let debug_button;
     let test_button;
     let help_button;
@@ -132,8 +132,8 @@ const tools_ui = make_ui("tools-ui", function (element, {
     }
 
     function stop() {
-        run_button.textContent = "▶ Run";
-        run_button.onclick = function (event) {
+        boot_button.textContent = "▶ Boot";
+        boot_button.onclick = function (event) {
             run(text, "boot", event.shiftKey);
         };
         on_detach();
@@ -243,8 +243,8 @@ const tools_ui = make_ui("tools-ui", function (element, {
                 } else {
                     core.h_boot(imported_module[entry]);
                 }
-                run_button.textContent = "⏹ Stop";
-                run_button.onclick = stop;
+                boot_button.textContent = "⏹ Stop";
+                boot_button.onclick = stop;
                 driver.command({kind: "subscribe", topic: "signal"});
                 if (debug) {
                     on_attach();
@@ -292,12 +292,8 @@ const tools_ui = make_ui("tools-ui", function (element, {
             return dom("option", {value: name, textContent: name});
         })
     );
-    run_button = dom("button", {
+    boot_button = dom("button", {
         title: "shift+click to debug"
-    });
-    debug_button = dom("button", {
-        textContent: "⛐ Debug",
-        onclick: on_debug
     });
     test_button = dom("button", {
         textContent: "✔ Test",
@@ -306,14 +302,18 @@ const tools_ui = make_ui("tools-ui", function (element, {
             run(text, "test", event.shiftKey);
         }
     });
+    debug_button = dom("button", {
+        textContent: "⛐ Debug",
+        onclick: on_debug
+    });
     help_button = dom("button", {
         textContent: "﹖ Help",
         onclick: on_help
     });
     const controls_element = dom("tools_controls", [
-        run_button,
-        debug_button,
+        boot_button,
         test_button,
+        debug_button,
         help_button,
         lang_select,
         device_select
