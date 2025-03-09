@@ -711,6 +711,7 @@ impl Core {
                 kip
             },
             VM_END => {
+                self.call_txn_fn(self.ep(), self.kp());  // trace transactional effects
                 let me = self.self_ptr();
                 let rv = match imm {
                     END_ABORT => {
@@ -721,7 +722,6 @@ impl Core {
                         return Err(E_STOP);  // End::Stop terminated continuation
                     },
                     END_COMMIT => {
-                        self.call_txn_fn(self.ep(), self.kp());  // trace transactional effects
                         self.actor_commit(me);
                         UNDEF
                     },

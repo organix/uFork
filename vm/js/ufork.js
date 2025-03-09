@@ -20,8 +20,9 @@
 
 //  on_txn(ep, kp_or_fx)
 
-//      A function that is called right before a transaction's effects are
-//      released into the event queue.
+//      A function that is called at the conclusion of each actor transaction
+//      and device pseudo-transaction. Keep in mind that actor transactions can
+//      be aborted and thus have no effect.
 
 //      The 'ep' parameter is a pointer to the current event.
 
