@@ -5,6 +5,7 @@
 
 import dom from "https://ufork.org/lib/dom.js";
 import make_ui from "https://ufork.org/lib/ui.js";
+import theme from "https://ufork.org/lib/theme.js";
 const asm_href = import.meta.resolve("https://ufork.org/lib/std.asm");
 
 function keep_centered(child, parent) {
@@ -14,10 +15,9 @@ function keep_centered(child, parent) {
     parent.scrollTop = offset - parent_rect.height / 2 + child_rect.height / 2;
 }
 
-const source_monitor_ui = make_ui("source-monitor-ui", function (
-    element,
-    {sourcemap}
-) {
+const source_monitor_ui = make_ui("source-monitor-ui", function (element, {
+    sourcemap
+}) {
 
     function set_sourcemap(new_sourcemap) {
         sourcemap = new_sourcemap;
@@ -42,10 +42,12 @@ const source_monitor_ui = make_ui("source-monitor-ui", function (
     }
 
     element.style.display = "block";
-    element.style.fontFamily = "monospace";
+    element.style.fontFamily = theme.monospace_font_family;
     element.style.whiteSpace = "pre";
     element.style.overflow = "auto";
-    element.style.padding = "10px";
+    element.style.padding = "12px";
+    element.style.background = theme.black;
+    element.style.color = theme.white;
     set_sourcemap(sourcemap);
     element.set_sourcemap = set_sourcemap;
     return {

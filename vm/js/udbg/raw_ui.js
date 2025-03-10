@@ -459,7 +459,7 @@ function raw_ui({
                     ? (
                         t === ufork.PROXY_T
                         ? {type: t, device: x, tag: y}
-                        : {type: t, code: x, data: y, effect: z}
+                        : {type: t, beh: x, state: y, effect: z}
                     )
                     : (
                         t === ufork.STUB_T
@@ -475,7 +475,7 @@ function raw_ui({
                                         t === ufork.ACTOR_T
                                         && !ufork.is_cap(value)
                                     )
-                                    ? {"new code": x, "new data": y, events: z}
+                                    ? {"new beh": x, "new state": y, events: z}
                                     : (
                                         (
                                             ufork.in_mem(t)
@@ -529,7 +529,10 @@ function raw_ui({
                         dl.innerHTML = "";
                     }
                 },
-                style: {whiteSpace: "nowrap"} // forbid linebreak after triangle
+                style: {
+                    whiteSpace: "nowrap",  // forbid linebreak after triangle
+                    color: theme.white  // triangle color
+                }
             },
             [summary, dl]
         );

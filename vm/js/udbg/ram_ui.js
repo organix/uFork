@@ -89,10 +89,6 @@ const ram_ui = make_ui("ram-explorer-ui", function (element, {
         });
     }
 
-    function get_ram() {
-        return ram;
-    }
-
     function set_ram(new_ram) {
         ram = new_ram;
         refresh();
@@ -124,7 +120,6 @@ const ram_ui = make_ui("ram-explorer-ui", function (element, {
     shadow.append(style, dl, hide_free_label);
     set_ram(ram);
     set_hide_free(hide_free);
-    element.get_ram = get_ram;
     element.set_ram = set_ram;
     element.set_rom = set_rom;
 });

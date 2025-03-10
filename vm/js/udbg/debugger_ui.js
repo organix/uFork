@@ -13,9 +13,9 @@ import blob_dev from "../blob_dev.js";
 import timer_dev from "../timer_dev.js";
 import make_core_driver from "./core_driver.js";
 import actors_ui from "./actors_ui.js";
+import continuation_ui from "./continuation_ui.js";
 import ram_ui from "./ram_ui.js";
 import rom_ui from "./rom_ui.js";
-import source_monitor_ui from "./source_monitor_ui.js";
 const lib_url = import.meta.resolve("https://ufork.org/lib/");
 const wasm_url = import.meta.resolve("https://ufork.org/wasm/ufork.debug.wasm");
 
@@ -27,9 +27,7 @@ const debugger_ui = make_ui("debugger-ui", function (element, {
     connected = false,
     view = default_view
 }) {
-    let module_texts = Object.create(null);
     let play_button;
-    let rom_debugs = Object.create(null);
     let step_button;
     let view_select;
     const shadow = element.attachShadow({mode: "closed"});
@@ -119,7 +117,7 @@ const debugger_ui = make_ui("debugger-ui", function (element, {
         },
         source: {
             name: "Source",
-            element: source_monitor_ui({})
+            element: continuation_ui({})
         },
         ram: {
             name: "RAM",
@@ -153,17 +151,6 @@ const debugger_ui = make_ui("debugger-ui", function (element, {
         view_select.value = view;
         shadow.lastChild.replaceWith(views[view].element);
         auto_step_size();
-    }
-
-    function refresh_source() {
-        const cc = ufork.current_continuation(views.ram.element.get_ram());
-        if (cc?.ip !== undefined) {
-            const debug = rom_debugs[ufork.rawofs(cc.ip)];
-            const text = module_texts[debug?.src];
-            views.source.element.set_sourcemap({debug, text});
-        } else {
-            views.source.element.set_sourcemap(undefined);
-        }
     }
 
     function on_keydown(event) {
@@ -279,15 +266,14 @@ const debugger_ui = make_ui("debugger-ui", function (element, {
         ram(message) {
             views.ram.element.set_ram(message.bytes);
             views.actors.element.set_ram(message.bytes);
-            refresh_source();
+            views.source.element.set_ram(message.bytes);
         },
         rom(message) {
-            views.ram.element.set_rom(message.bytes, message.debugs);
-            views.rom.element.set_rom(message.bytes, message.debugs);
-            views.actors.element.set_rom(message.bytes, message.debugs);
-            module_texts = message.module_texts;
-            rom_debugs = message.debugs;
-            refresh_source();
+            const {bytes, debugs, module_texts} = message;
+            views.ram.element.set_rom(bytes, debugs);
+            views.rom.element.set_rom(bytes, debugs);
+            views.actors.element.set_rom(bytes, debugs);
+            views.source.element.set_rom(bytes, debugs, module_texts);
         },
         signal(message) {
             on_signal(message.signal);

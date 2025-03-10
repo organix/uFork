@@ -230,9 +230,10 @@ function make_driver(core, on_status) {
             signal = busy;
             signal = core.h_run_loop(
                 (
-                    debug                   // monitor for VM_DEBUG
-                    || step_size === "txn"  // monitor for VM_END
-                    || interval > 0         // artificial delay
+                    debug                       // monitor for VM_DEBUG
+                    || step_size === "txn"      // monitor for VM_END
+                    || interval > 0             // artificial delay
+                    || Number.isFinite(steps)   // step limit
                 )
                 ? 1
                 : 0
