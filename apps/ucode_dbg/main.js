@@ -199,12 +199,11 @@ function display_machine(state, prog, words) {
     $program_mem.value = memh;
     center_program_view(state.pc);
     function gc_annotation(index) {
-        const base = words.rsvd_rom & 0x0FFF;
         const symbol = [". ", "x ", "y ", "? "];
         const mem_top = state.qram[0].t & 0x0FFF;
         const note = (
             index < mem_top
-            ? symbol[prog[base + index]]
+            ? symbol[state.gcc[index]]
             : "- "
         );
         return (

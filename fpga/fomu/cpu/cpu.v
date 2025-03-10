@@ -41,7 +41,7 @@ the value of `o_status` indicates success (1) or failure (0).
 // Memory Ranges
 `define MEM_UC  (3'h0)      // uCode memory
 `define MEM_PC  (3'h1)      // contents of PC+1 & increment
-`define MEM_ERR (3'h2)      // RESERVED (signals failure)
+`define MEM_GCC (3'h2)      // GC color markers
 `define MEM_DEV (3'h3)      // memory-mapped devices
 `define MEM_Q_T (3'h4)      // uFork quad-memory field T
 `define MEM_Q_X (3'h5)      // uFork quad-memory field X
@@ -115,7 +115,7 @@ module cpu #(
     localparam UC_CALL      = 16'hC000;                 // <addr> ( -- ) ( R: -- pc+1 ) @pc->pc
 
     //
-    // uCode program memory
+    // uCode program memory (inferred BRAM)
     //
 
     wire uc_wr;                                         // write/_read request
@@ -487,16 +487,14 @@ module cpu #(
     wire [3:0] reg_id = tos[3:0];                       // register id (mem_rng == `MEM_DEV)
 
     wire uc_en = (p_alu && mem_op && mem_rng == `MEM_UC);
-    assign uc_wr = (uc_en && mem_wr && !d_gcc);
+    assign uc_wr = (uc_en && mem_wr);
     assign uc_waddr = tos[ADDR_SZ-1:0];
     assign uc_wdata = nos;
     assign uc_raddr =
         ( uc_en ? tos[ADDR_SZ-1:0]
         : pc );
 
-//    wire d_gcc = (tos[DATA_SZ-1:ADDR_SZ] == 4'b1000);   // check top-of-stack for GCC range
-    wire d_gcc = tos[DATA_SZ-1];                        // check top-of-stack for GCC flag
-    wire gcc_en = (uc_en && d_gcc);
+    wire gcc_en = (p_alu && mem_op && mem_rng == `MEM_GCC);
     wire gcc_wr = mem_wr;
     wire [ADDR_SZ-1:0] gcc_addr = tos[ADDR_SZ-1:0];
     wire [1:0] gcc_wdata = nos[1:0];
@@ -515,7 +513,7 @@ module cpu #(
     wire [DATA_SZ-1:0] tors;
 
     wire [DATA_SZ-1:0] mem_out =
-        ( gcc_en ? { {(DATA_SZ-2){1'b0}}, gcc_rdata }
+        ( mem_rng == `MEM_GCC ? { {(DATA_SZ-2){1'b0}}, gcc_rdata }
         : mem_rng == `MEM_DEV && dev_id == 4'h0 ? { {(DATA_SZ-8){uart_rdata[7]}}, uart_rdata }
         : mem_rng == `MEM_DEV && dev_id == 4'hF ? { {(DATA_SZ-8){flash_rdata[7]}}, flash_rdata }
         : quad_op ? quad_rdata

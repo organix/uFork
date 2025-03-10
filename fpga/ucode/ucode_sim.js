@@ -35,7 +35,7 @@ const SE_ALU2 = 0x7;  // drop 2, push 1
 
 const MEM_UC = 0x0;  // uCode memory
 const MEM_PC = 0x1;  // contents of PC+1 & increment
-//const MEM_ERR = 0x2;  // RESERVED (signals failure)
+const MEM_GCC = 0x2;  // GC color markers
 const MEM_DEV = 0x3;  // memory-mapped devices
 const MEM_Q_T = 0x4;  // uFork quad-memory field T
 //const MEM_Q_X = 0x5;  // uFork quad-memory field X
@@ -121,6 +121,7 @@ function make_machine(prog = [], device = []) {
     let pc = 0;
     const dstack = make_stack();
     const rstack = make_stack();
+    const gcc = new Array(1 << 12).fill(0);
     const qram = new Array(1 << 12).fill(0xDEAD).map(function (n) {
         return {t: n, x: n, y: n, z: n};
     });
@@ -134,6 +135,7 @@ function make_machine(prog = [], device = []) {
             dstats: dstack.stats(),
             rstack: rstack.copy(),
             rstats: rstack.stats(),
+            gcc,            // FIXME: can we make a cheap read-only view?
             qram,           // FIXME: can we make a cheap read-only view?
             qrom,           // FIXME: can we make a cheap read-only view?
             pc
@@ -225,6 +227,13 @@ function make_machine(prog = [], device = []) {
         }
         if (range === MEM_PC) {
             return prog[pc];  // writes ignored
+        }
+        if (range === MEM_GCC) {
+            addr &= 0x0FFF;  // 12-bit address space
+            if (wr_en) {
+                gcc[addr] = data;
+            }
+            return gcc[addr];
         }
         if (range === MEM_DEV) {
             const id = (addr & 0xF0) >> 4;

@@ -422,15 +422,8 @@ VARIABLE gc_prev_gen        ( previously active gc generation {y, x} )
 VARIABLE gc_phase           ( current phase in gc state-machine )
 VARIABLE gc_scan_ptr        ( scan-list processing pointer )
 
-( FIXME: re-use rom_image until we have dedicated space for gc colors )
-: GCC@
-: gc_color@ ( qref -- color )
-    ( rom_image + ) 0x0FFF AND MSB| @ ;
 : gc_set_color ( qref color -- )
-    SWAP
-: GCC!
-: gc_color! ( color qref -- )
-    ( rom_image + ) 0x0FFF AND MSB| ! ;
+    SWAP GCC! ;
 
 : gc_dump ( start end -- )
     OVER -                  ( D: start span )
@@ -451,7 +444,7 @@ VARIABLE gc_scan_ptr        ( scan-list processing pointer )
 : gc_init ( -- )
     ( loop to set reserved RAM to gc_free_color )
     gc_free_color 16 ?LOOP-
-        DUP I gc_color!
+        DUP I GCC!
     AGAIN DROP
     gc_genx_color gc_curr_gen !
     gc_geny_color gc_prev_gen ! ;
@@ -465,7 +458,7 @@ VARIABLE gc_scan_ptr        ( scan-list processing pointer )
 : gc_scan ( qref -- )
     gc_valid IF             ( D: addr )
         ( mark quad to-be-scanned )
-        DUP gc_color@ gc_prev_gen @ = IF
+        DUP GCC@ gc_prev_gen @ = IF
             DUP gc_scan_ptr @ < IF
                 DUP gc_scan_ptr !
             THEN
@@ -511,7 +504,7 @@ VARIABLE gc_scan_ptr        ( scan-list processing pointer )
 : gc_phase_2 ( -- )
     gc_scan_ptr @           ( D: addr )
     DUP mem_top@ < IF
-        DUP gc_color@ gc_scan_color = IF
+        DUP GCC@ gc_scan_color = IF
             gc_mark ;
         THEN
         1+ gc_scan_ptr ! ;
@@ -522,7 +515,7 @@ VARIABLE gc_scan_ptr        ( scan-list processing pointer )
     gc_scan_ptr @ 1-        ( D: addr )
     DUP gc_scan_ptr !
     DUP ram_base >= IF
-        DUP gc_color@ gc_prev_gen @ = IF
+        DUP GCC@ gc_prev_gen @ = IF
             release ;
         THEN DROP ;
     THEN DROP
@@ -2204,6 +2197,6 @@ VARIABLE xm_here            ( upload address )
     test_suite
     spif_test
     0 rom_quads spif2qrom   ( init from flash )
-    ufork_boot
     )
+    ufork_boot
     prompt MONITOR ;

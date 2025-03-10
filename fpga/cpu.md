@@ -345,7 +345,7 @@ The top 8 bits are the same as other evaluation instructions.
       ^   ^  \_____/     \_________/ \_/ \_________/
       |   |  00:NONE       000:NONE  0:R   000:UC
       |   |  01:DROP       001:DROP  1:W   001:[PC+1]*
-      |   |  10:PUSH       010:PUSH        010:??
+      |   |  10:PUSH       010:PUSH        010:GCC
       |   |  11:RPLC       011:RPLC        011:DEV
       | R->PC              100:SWAP        100:Q_T
     evaluate               101:ROT3        101:Q_X
@@ -423,5 +423,7 @@ QY@     | ( qref -- data )          | `036F` | `0000_0011_0110_1111`
 QY!     | ( data qref -- )          | `09EF` | `0000_1001_1110_1111`
 QZ@     | ( qref -- data )          | `037F` | `0000_0011_0111_1111`
 QZ!     | ( data qref -- )          | `09FF` | `0000_1001_1111_1111`
+GCC@    | ( addr -- color )         | `032F` | `0000_0011_0010_1111`
+GCC!    | ( color addr -- )         | `09AF` | `0000_1001_1010_1111`
 FAIL    | _illegal instruction_     | `000E` | `0000_0000_0000_1110`
 EXIT    | ( R: addr -- ) addr->PC   | `5000` | `0101_0000_0000_0000`

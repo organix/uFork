@@ -157,6 +157,8 @@ function compile(text, src = "") {
         "QY!": 0x09EF,  // ( data qref -- )
         "QZ@": 0x037F,  // ( qref -- data )
         "QZ!": 0x09FF,  // ( data qref -- )
+        "GCC@": 0x032F,  // ( addr -- color )
+        "GCC!": 0x09AF,  // ( color addr -- )
         ">R": 0x2100,  // ( a -- ) ( R: -- a )
         "R>": 0x1280,  // ( -- a ) ( R: a -- )
         "R@": 0x0280,  // ( -- a ) ( R: a -- a )
