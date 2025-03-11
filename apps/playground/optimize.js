@@ -10,7 +10,7 @@
 
 /*jslint deno */
 
-import collapse from "https://repletejs.org/collapse.js";
+import collapse from "https://ufork.org/lib/collapse.js";
 import import_map from "../../tools/import_map.js";
 const playground_href = import.meta.resolve("./");
 const main_href = import.meta.resolve("./main.js");
