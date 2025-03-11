@@ -127,6 +127,8 @@ Word        | Stack Effect                              | Description
 `QY!`       | ( data qref -- )                          | Store _data_ into _qref_ field `Y`
 `QZ@`       | ( qref -- data )                          | Fetch contents of _qref_ field `Z`
 `QZ!`       | ( data qref -- )                          | Store _data_ into _qref_ field `Z`
+`GCC@`      | ( addr -- color )                         | Fetch GC color of _addr_
+`GCC!`      | ( color addr -- )                         | Store GC _color_ for _addr_
 `>R`        | ( a -- ) ( R: -- a )                      | Move TOS to TORS
 `R>`        | ( -- a ) ( R: a -- )                      | Move TORS to TOS
 `R@`        | ( -- a ) ( R: a -- a )                    | Copy TORS to TOS
