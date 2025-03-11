@@ -15,6 +15,7 @@ const disasm_ui = make_ui("disasm-ui", function (element, {ir}) {
     const style = dom("style", `
         :host {
             display: flex;
+            background: ${theme.black};
         }
         pre {
             flex: 1 1;
@@ -23,6 +24,7 @@ const disasm_ui = make_ui("disasm-ui", function (element, {ir}) {
             font: 17px/1.2 ${theme.monospace_font_family};
             overflow-y: auto;
             scrollbar-color: ${theme.gray} transparent;
+            padding: 0 8px 8px;
         }
     `);
     const pre = dom("pre");
@@ -46,13 +48,14 @@ const disasm_ui = make_ui("disasm-ui", function (element, {ir}) {
 if (import.meta.main) {
     document.documentElement.innerHTML = "";
     const element = disasm_ui({});
+    element.style.position = "fixed";
+    element.style.inset = "0";
     fetch(asm_url).then(function (response) {
         return response.text();
     }).then(function (text) {
         element.set_ir(assemble(text));
     });
     document.head.append(dom("style", theme.monospace_font_css));
-    document.body.style.background = "black";
     document.body.append(element);
 }
 

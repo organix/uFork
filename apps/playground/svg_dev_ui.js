@@ -17,6 +17,7 @@ const svg_dev_ui = make_ui("svg-dev-ui", function (element, {
         :host {
             display: flex;
             flex-direction: column;
+            padding: 0 8px 8px;
         }
         svg {
             border-radius: 2px;

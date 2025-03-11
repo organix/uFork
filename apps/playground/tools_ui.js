@@ -59,7 +59,6 @@ const tools_ui = make_ui("tools-ui", function (element, {
         :host > :last-child { /* device */
             flex: 1 1;
             min-height: 0;
-            margin: 0 8px 8px;
         }
     `);
     let core;
@@ -337,7 +336,6 @@ const tools_ui = make_ui("tools-ui", function (element, {
 
 if (import.meta.main) {
     document.documentElement.innerHTML = "";
-    document.body.style.background = "black";
     const tools = dom(
         tools_ui({
             src: new URL("example.asm", location.href).href,
@@ -351,6 +349,9 @@ if (import.meta.main) {
             on_help: () => globalThis.console.log("on_help")
         }),
         {style: {position: "fixed", inset: "0"}}
+    );
+    document.head.append(
+        dom("meta", {name: "color-scheme", content: "dark"})
     );
     document.body.append(tools);
 }

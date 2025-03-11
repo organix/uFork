@@ -14,6 +14,7 @@ const io_dev_ui = make_ui("io-dev-ui", function (element, {on_input}) {
             display: flex;
             flex-direction: column;
             color: white;
+            padding: 0 8px 8px;
         }
         io_output {
             font-family: ${theme.monospace_font_family};
