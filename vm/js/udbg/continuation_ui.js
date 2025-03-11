@@ -27,6 +27,7 @@ const continuation_ui = make_ui("continuation-ui", function (element, {
     details_element.style.background = theme.black;
     details_element.style.padding = "12px";
     details_element.style.overflowY = "auto";
+    details_element.style.contain = "strict";
 
     function invalidate() {
         details_element.innerHTML = "";
@@ -136,8 +137,9 @@ function demo(log) {
             return true;
         })
     ])(log);
+    document.head.append(dom("style", theme.monospace_font_css));
     document.body.append(element);
-    document.onkeydown = function (event) {
+    document.body.onkeydown = function (event) {
         if (event.key === "s") {
             driver.command({kind: "play", steps: 1});
         }

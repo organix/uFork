@@ -129,6 +129,7 @@ const actors_ui = make_ui("actor-ui", function (element, {
             display: flex;
             flex-direction: column;
             justify-content: space-between;
+            contain: strict;
         }
         actor_details {
             overflow-y: auto;
@@ -446,8 +447,12 @@ function demo(log) {
             return true;
         })
     ])(log);
+    document.head.append(
+        dom("meta", {name: "color-scheme", content: "dark"}),
+        dom("style", theme.monospace_font_css)
+    );
     document.body.append(element);
-    document.onkeydown = function (event) {
+    document.body.onkeydown = function (event) {
         if (event.key === "s") {
             driver.command({kind: "play", steps: 1});
         }

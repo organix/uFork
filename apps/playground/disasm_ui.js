@@ -51,6 +51,7 @@ if (import.meta.main) {
     }).then(function (text) {
         element.set_ir(assemble(text));
     });
+    document.head.append(dom("style", theme.monospace_font_css));
     document.body.style.background = "black";
     document.body.append(element);
 }

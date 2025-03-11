@@ -14,7 +14,6 @@ import ed_wrap_lines from "./ed_wrap_lines.js";
 
 function render_css(theme, ruler = 80) {
     return `
-        ${theme.monospace_font_css}
         :host {
             font-family: ${theme.monospace_font_family};
             font-size: 17px;
@@ -86,7 +85,6 @@ function render_css(theme, ruler = 80) {
 
 const default_theme = {
     gray: "#484848",
-    monospace_font_css: "",
     monospace_font_family: "monospace"
 };
 const editor_ui = make_ui("editor-ui", function (element, {

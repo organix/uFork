@@ -183,6 +183,9 @@ tools = tools_ui({
                 "height=" + globalThis.innerHeight
             ].join(", ");
             udbg_window = globalThis.open(url, "udbg", window_features);
+            if (!udbg_window) {
+                return tools.warn("Debugger popup blocked.");
+            }
             udbg_bridge = make_window_bridge(
                 udbg_window,
                 url.origin,
@@ -279,4 +282,8 @@ addEventListener("resize", function () {
         split.set_size(read_setting("tools_height") ?? default_tools_height);
     }
 });
+document.head.append(
+    dom("meta", {name: "color-scheme", content: "dark"}),
+    dom("style", theme.monospace_font_css)
+);
 document.body.append(split);

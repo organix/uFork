@@ -18,12 +18,29 @@ function keep_centered(child, parent) {
 const source_monitor_ui = make_ui("source-monitor-ui", function (element, {
     sourcemap
 }) {
+    const shadow = element.attachShadow({mode: "closed"});
+    const style = dom("style", `
+        :host {
+            display: flex;
+            contain: strict;
+        }
+        :host > source_text {
+            flex: 1 1;
+            font-family: ${theme.monospace_font_family};
+            white-space: pre;
+            overflow: auto;
+            scrollbar-color: ${theme.gray} transparent;
+            padding: 12px;
+            background: ${theme.black};
+            color: ${theme.white};
+        }
+    `);
+    const source_element = dom("source_text");
 
     function set_sourcemap(new_sourcemap) {
         sourcemap = new_sourcemap;
         if (sourcemap?.text !== undefined) {
-            element.textContent = sourcemap.text;
-            element.title = sourcemap.debug?.src ?? "";
+            source_element.title = sourcemap.debug?.src ?? "";
             if (sourcemap.debug.start !== undefined) {
                 const before = sourcemap.text.slice(0, sourcemap.debug.start);
                 const marked = sourcemap.text.slice(
@@ -31,30 +48,26 @@ const source_monitor_ui = make_ui("source-monitor-ui", function (element, {
                     sourcemap.debug.end
                 );
                 const after = sourcemap.text.slice(sourcemap.debug.end);
-                const mark = dom("mark", {textContent: marked});
-                element.innerHTML = "";
-                element.append(before, mark, after);
-                keep_centered(mark, element);
+                const mark = dom("mark", marked);
+                source_element.innerHTML = "";
+                source_element.append(before, mark, after);
+                keep_centered(mark, source_element);
+            } else {
+                source_element.textContent = sourcemap.text;
             }
             return;
         }
-        element.textContent = "No source available.";
+        source_element.textContent = "No source available.";
     }
 
-    element.style.display = "block";
-    element.style.fontFamily = theme.monospace_font_family;
-    element.style.whiteSpace = "pre";
-    element.style.overflow = "auto";
-    element.style.padding = "12px";
-    element.style.background = theme.black;
-    element.style.color = theme.white;
+    shadow.append(style, source_element);
     set_sourcemap(sourcemap);
     element.set_sourcemap = set_sourcemap;
     return {
         connect() {
-            const mark = element.querySelector("mark");
+            const mark = source_element.querySelector("mark");
             if (mark) {
-                keep_centered(mark, element);
+                keep_centered(mark, source_element);
             }
         }
     };
@@ -74,6 +87,7 @@ function demo() {
         });
         document.body.append(element);
     });
+    document.head.append(dom("style", theme.monospace_font_css));
 }
 
 if (import.meta.main) {

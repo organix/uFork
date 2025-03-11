@@ -493,7 +493,7 @@ const $boot_button = document.getElementById("boot");
 $boot_button.title = "Boot from module (b)";
 
 // Keybindings
-document.onkeydown = function (event) {
+document.body.onkeydown = function (event) {
     if (
         event.metaKey
         || event.ctrlKey

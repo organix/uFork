@@ -160,9 +160,10 @@ const rom_ui = make_ui("rom-ui", function (element, {
         :host {
             display: flex;
             flex-direction: column;
+            background: ${theme.black};
             color: ${theme.white};
+            contain: strict;
         }
-        ${theme.monospace_font_css}
         :host > :nth-child(2) {
             flex: 1 1;
             scrollbar-color: ${theme.gray} transparent;
@@ -336,7 +337,8 @@ function demo(log) {
         })
     ])(log);
     document.head.append(
-        dom("meta", {name: "color-scheme", content: "dark"})
+        dom("meta", {name: "color-scheme", content: "dark"}),
+        dom("style", theme.monospace_font_css)
     );
     document.body.append(element);
 }

@@ -136,7 +136,8 @@ function raw_ui({
         style: {
             color: theme.white,
             fontFamily: theme.monospace_font_family,
-            whiteSpace: "nowrap"
+            whiteSpace: "nowrap",
+            contain: "content"
         }
     });
     if (
@@ -629,13 +630,12 @@ function demo(log) {
             );
             document.body.style.display = "flex";
             document.body.style.alignItems = "flex-start";
+            document.body.style.background = "black";
+            document.body.style.color = "white";
             return true;
         })
     ])(log);
-    document.head.append(
-        dom("meta", {name: "color-scheme", content: "dark"}),
-        dom("style", theme.monospace_font_css)
-    );
+    document.head.append(dom("style", theme.monospace_font_css));
 }
 
 if (import.meta.main) {

@@ -27,6 +27,8 @@ const ram_ui = make_ui("ram-explorer-ui", function (element, {
             display: flex;
             flex-direction: column;
             justify-content: stretch;
+            background: ${theme.black};
+            contain: strict;
         }
         :host > dl {
             margin: 0;
@@ -46,6 +48,7 @@ const ram_ui = make_ui("ram-explorer-ui", function (element, {
             align-items: baseline;
             font-family: ${theme.monospace_font_family};
             white-space: pre;
+            color: ${theme.white};
         }
         :host > dl > dd {
             margin: 0;
@@ -57,6 +60,7 @@ const ram_ui = make_ui("ram-explorer-ui", function (element, {
             gap: 2px;
             font-family: ${theme.proportional_font_family};
             font-size: 13px;
+            color: ${theme.white};
             padding: 8px 10px;
             border-top: 1px solid ${theme.gray};
         }
@@ -146,7 +150,8 @@ function demo(log) {
         })
     ])(log);
     document.head.append(
-        dom("meta", {name: "color-scheme", content: "dark"})
+        dom("meta", {name: "color-scheme", content: "dark"}),
+        dom("style", theme.monospace_font_css)
     );
     document.body.append(element);
 }

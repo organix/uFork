@@ -36,6 +36,7 @@ const debugger_ui = make_ui("debugger-ui", function (element, {
             display: flex;
             flex-direction: column;
             background: ${theme.black};
+            contain: strict;
         }
         :host > :last-child { /* view */
             flex: 1 1;
@@ -365,7 +366,8 @@ function demo(log) {
     element.style.position = "fixed";
     element.style.inset = "0";
     document.head.append(
-        dom("meta", {name: "color-scheme", content: "dark"})
+        dom("meta", {name: "color-scheme", content: "dark"}),
+        dom("style", theme.monospace_font_css)
     );
     document.body.append(element);
 }
