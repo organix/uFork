@@ -28,7 +28,7 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-/*jslint browser, this, long */
+/*jslint browser, this */
 
 function make_node(id, data = {}) {
 
@@ -192,12 +192,12 @@ function make_layout({
     random = Math.random,       // source of randomness
     max_speed = Infinity        // nodes aren't allowed to exceed this speed
 }) {
-    let node_points = Object.create(null);  // points associated with nodes
-    let edge_springs = Object.create(null); // springs associated with edges
+    let points = Object.create(null);   // points associated with nodes
+    let springs = Object.create(null);  // springs associated with edges
 
     function get_point(node) {
-        if (node_points[node.id] === undefined) {
-            node_points[node.id] = {
+        if (points[node.id] === undefined) {
+            points[node.id] = {
                 p: {                                // position
                     x: 10 * (random() - 0.5),
                     y: 10 * (random() - 0.5)
@@ -207,50 +207,19 @@ function make_layout({
                 a: {x: 0, y: 0}                     // acceleration
             };
         }
-        return node_points[node.id];
+        return points[node.id];
     }
 
     function get_spring(edge) {
-        if (edge_springs[edge.id] === undefined) {
-            // TODO what is all this stuff?
-            const forward = graph.edges_between(
-                edge.source_id,
-                edge.target_id
-            ).find(function (an_edge) {
-                return edge_springs[an_edge.id] !== undefined;
-            });
-            if (forward !== undefined) {
-                const forward_spring = edge_springs[forward.id];
-                return {
-                    point1: forward_spring.point1,
-                    point2: forward_spring.point2,
-                    length: 0,
-                    k: 0
-                };
-            }
-            const backward = graph.edges_between(
-                edge.target_id,
-                edge.source_id
-            ).find(function (an_edge) {
-                return edge_springs[an_edge.id] !== undefined;
-            });
-            if (backward !== undefined) {
-                const backward_spring = edge_springs[backward.id];
-                return {
-                    point1: backward_spring.point2,
-                    point2: backward_spring.point1,
-                    length: 0,
-                    k: 0
-                };
-            }
-            edge_springs[edge.id] = {
+        if (springs[edge.id] === undefined) {
+            springs[edge.id] = {
                 point1: get_point(graph.get_node(edge.source_id)),
                 point2: get_point(graph.get_node(edge.target_id)),
                 length: edge.data.length ?? 1,
                 k: stiffness
             };
         }
-        return edge_springs[edge.id];
+        return springs[edge.id];
     }
 
     function get_points() {
@@ -316,8 +285,9 @@ function make_layout({
 
 // Apply force to each end point.
 
-                    apply_force(point_a, divide(multiplication, distance * distance * 0.5));
-                    apply_force(point_b, divide(multiplication, distance * distance * -0.5));
+                    const divisor = distance * distance * 0.5;
+                    apply_force(point_a, divide(multiplication, divisor));
+                    apply_force(point_b, divide(multiplication, -divisor));
                 }
             });
         });
