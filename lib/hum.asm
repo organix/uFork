@@ -15,7 +15,7 @@ msg_op:
 ; and returning one value. A closure is created by prefixing some precompiled
 ; code with an instruction pushing the environment onto the stack.
 
-make_closure:               ; ( code env k -- closure )
+make_closure:               ; ( code env -- closure )
     roll -3                 ; k code env
     push push_op            ; k code env push_op
     push #instr_t           ; k code env push_op #instr_t
@@ -75,13 +75,13 @@ self_tail_call:             ; k env env' code args
 block_t:                    ; [block_t, code, env]
     type_t 2
 
-make_block:                 ; ( env code k -- block )
+make_block:                 ; ( env code -- block )
     roll -3                 ; k env code
     push block_t            ; k env code block_t
     quad 3                  ; k block=[block_t, code, env]
     ref std.return_value
 
-execute_block:              ; ( value k -- )
+execute_block:              ; ( value -- )
     roll -2                 ; k value
     quad -3                 ; k Y X T
     eq block_t              ; k Y X block_t?(T)
@@ -112,7 +112,7 @@ execute_k:
 
 ;   push closure            ; closure
 ;   push hum.beh            ; closure beh
-;   actor become            ; actor=beh.closure
+;   actor create            ; actor=beh.closure
 
 beh:                        ; closure <- msg
     push std.commit         ; commit
@@ -134,7 +134,7 @@ symbol_t:                   ; [symbol_t, string]
 
 ; Construct the top level environment from capabilities in the boot message.
 
-system_code:                ; ( key k {caps} -- cap )
+system_code:                ; args=key k env={caps}
     roll 3                  ; k {caps} key
     dict get                ; k cap
     ref std.return_value
@@ -158,7 +158,7 @@ timer_adapter_beh:          ; timer_dev <- dt,msg,actor
     actor send              ; --
     ref std.commit
 
-prepare_env:                ; ( k -- env )
+prepare_env:                ; ( -- env )
     push #?                 ; k #?
 
     push system_code        ; k #? code=system_code
