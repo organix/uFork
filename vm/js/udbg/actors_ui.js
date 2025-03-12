@@ -155,7 +155,8 @@ const actors_ui = make_ui("actor-ui", function (element, {
     const graph = springy.make_graph();
     const layout = springy.make_layout({
         graph,
-        random: prng(42)
+        random: prng(42),
+        max_speed: 10
     });
     const details = dom("actor_details");
 
