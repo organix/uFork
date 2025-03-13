@@ -390,7 +390,10 @@ const actors_ui = make_ui("actor-ui", function (element, {
     return {
         connect() {
             if (split_element.get_size() === 0) {
-                split_element.set_size(0.4 * element.clientWidth);
+                split_element.set_size(Math.min(
+                    420,
+                    0.8 * element.clientWidth
+                ));
             }
             document.addEventListener("keydown", on_keydown);
         },
