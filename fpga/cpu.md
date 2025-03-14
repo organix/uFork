@@ -327,7 +327,7 @@ ROL8_OP     | `(4'hA)`  | {a[7:0],a[15:8]}
 ASR_OP      | `(4'hB)`  | {a[15],a[15:1]}
 ASR2_OP     | `(4'hC)`  | {a[15],a[15],a[15:2]}
 ASR4_OP     | `(4'hD)`  | {a[15],a[15],a[15],a[15],a[15:4]}
-FAIL        | `(4'hE)`  | illegal instruction
+FAIL_OP     | `(4'hE)`  | illegal instruction
 MEM_OP      | `(4'hF)`  | memory operation
 
 #### Memory Instructions
