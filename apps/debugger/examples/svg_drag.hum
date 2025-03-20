@@ -1,49 +1,49 @@
 # SVG rubber-band demo
 
 DEF svg_key AS 101
-DEF svg_dev AS system(svg_key)
 
 DEF point(x, y) AS ('E', 'M', x, y, 'Z', 'D', 0, 102, 204, 255, 1, 1, 1, NIL)
 DEF line(x, y, x', y') AS ('E', 'M', x, y, 'L', x', y', 'D', 0, 102, 204, 255, 1, 1, 1, NIL)
 DEF cross(x, y) AS ('E', 'M', x, sub(y, 2), 'v', 4, 'm', -2, -2, 'h', 4, 'D', 0, 153, 0, 255, 1, 1, 1, NIL)
 
-DEF on_move AS \(TRUE, x, y, b).[
+DEF on_move(svg_dev) AS \(TRUE, x, y, b).[
     CASE b OF
     0 : [
         SEND (?, SELF, cross(x, y)) TO svg_dev
         BECOME \(TRUE, ?).[
             SEND (?, SELF, ?) TO svg_dev
-            BECOME on_move
+            BECOME on_move(svg_dev)
         ]
     ]
     _ : [
         SEND (?, SELF, point(x, y)) TO svg_dev
         BECOME \(TRUE, ?).[
             SEND (?, SELF, ?) TO svg_dev
-            BECOME on_drag
+            BECOME on_drag(svg_dev, x, y)
         ]
     ]
     END
 ]
 
-DEF on_drag AS \(TRUE, x', y', b').[
+DEF on_drag(svg_dev, x, y) AS \(TRUE, x', y', b').[
     CASE b' OF
     0 : [
         SEND (?, SELF, cross(x', y')) TO svg_dev
         BECOME \(TRUE, ?).[
             SEND (?, SELF, ?) TO svg_dev
-            BECOME on_move
+            BECOME on_move(svg_dev)
         ]
     ]
     _ : [
         SEND (?, SELF, line(x, y, x', y')) TO svg_dev
         BECOME \(TRUE, ?).[
             SEND (?, SELF, ?) TO svg_dev
-            BECOME on_drag
+            BECOME on_drag(svg_dev, x, y)
         ]
     ]
     END
 ]
 
+DEF svg_dev AS system(svg_key)
 SEND (?, SELF, ?) TO svg_dev  # get a pointer event
-BECOME on_move
+BECOME on_move(svg_dev)
