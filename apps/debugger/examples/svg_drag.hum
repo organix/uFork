@@ -24,25 +24,25 @@ DEF on_move AS \(TRUE, x, y, b).[
         ]
     ]
     END
+]
 
-    DEF on_drag AS \(TRUE, x', y', b').[
-        CASE b' OF
-        0 : [
-            SEND (?, SELF, cross(x', y')) TO svg_dev
-            BECOME \(TRUE, ?).[
-                SEND (?, SELF, ?) TO svg_dev
-                BECOME on_move
-            ]
+DEF on_drag AS \(TRUE, x', y', b').[
+    CASE b' OF
+    0 : [
+        SEND (?, SELF, cross(x', y')) TO svg_dev
+        BECOME \(TRUE, ?).[
+            SEND (?, SELF, ?) TO svg_dev
+            BECOME on_move
         ]
-        _ : [
-            SEND (?, SELF, line(x, y, x', y')) TO svg_dev
-            BECOME \(TRUE, ?).[
-                SEND (?, SELF, ?) TO svg_dev
-                BECOME on_drag
-            ]
-        ]
-        END
     ]
+    _ : [
+        SEND (?, SELF, line(x, y, x', y')) TO svg_dev
+        BECOME \(TRUE, ?).[
+            SEND (?, SELF, ?) TO svg_dev
+            BECOME on_drag
+        ]
+    ]
+    END
 ]
 
 SEND (?, SELF, ?) TO svg_dev  # get a pointer event
