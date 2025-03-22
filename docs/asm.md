@@ -66,7 +66,8 @@ This document describes a textual assembly language for uFork.
 
 In many ways, the language is similar to traditional assembly languages:
 
-- At the top level it has directives (such as `.import`), labels and statements.
+- At the top level it has directives (such as `.import`), labels, and
+  statements.
 - Each statement consists of an operator followed by its operands.
 - Linear execution is expressed by writing instruction statements one after
   another.
@@ -81,9 +82,6 @@ In some ways, however, it is quite different:
 - Statements always produce a value. Often the value is an instruction, but it
   can also be a literal, number, or data structure. Values are immutable. Data
   structures can contain instructions.
-- By convention, end-of-line comments often show a picture of the stack
-  after an instruction executes, to clarify the effect. The top of the stack
-  is the right-most element.
 
 ### Statements
 
@@ -260,6 +258,15 @@ _actual_             | `assert` _expect_   | —            | assert _actual_ ==
 
 <sup>*</sup> For conditionals (`if` and `if_not`) the values
 `#f`, `#?`, `#nil`, and `0` are considered "[falsy](https://developer.mozilla.org/en-US/docs/Glossary/Falsy)".
+
+By convention, end-of-line comments often show a picture of the stack after an
+instruction executes, to clarify the effect. The top of the stack is the
+right-most element.
+
+    beh:                        ; state <- msg
+        state 0                 ; state
+        msg 0                   ; state msg
+        pair 1                  ; msg,state
 
 Most instructions take a continuation as their final operand.
 In the following example, the `msg` instruction continues to
