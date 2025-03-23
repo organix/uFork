@@ -9,9 +9,10 @@ import dom from "https://ufork.org/lib/dom.js";
 import parseq from "https://ufork.org/lib/parseq.js";
 import requestorize from "https://ufork.org/lib/rq/requestorize.js";
 import theme from "https://ufork.org/lib/theme.js";
+import ufork from "../ufork.js";
+import make_core from "../core.js";
 import blob_dev from "../blob_dev.js";
 import host_dev from "../host_dev.js";
-import ufork from "../ufork.js";
 const lib_url = import.meta.resolve("https://ufork.org/lib/");
 const wasm_url = import.meta.resolve("https://ufork.org/wasm/ufork.debug.wasm");
 
@@ -566,7 +567,7 @@ function tabulate(caption, rows) {
 
 function demo(log) {
     document.documentElement.innerHTML = "";
-    const core = ufork.make_core({
+    const core = make_core({
         wasm_url,
         import_map: {"https://ufork.org/lib/": lib_url},
         compilers: {asm: assemble, scm: scheme.compile}

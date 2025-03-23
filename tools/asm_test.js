@@ -14,6 +14,7 @@ import import_map from "./import_map.js";
 import parseq from "https://ufork.org/lib/parseq.js";
 import assemble from "https://ufork.org/lib/assemble.js";
 import ufork from "https://ufork.org/js/ufork.js";
+import make_core from "https://ufork.org/js/core.js";
 import host_dev from "https://ufork.org/js/host_dev.js";
 import blob_dev from "https://ufork.org/js/blob_dev.js";
 import clock_dev from "https://ufork.org/js/clock_dev.js";
@@ -44,7 +45,7 @@ function asm_test(module_url, time_limit = 5000) {
         the_callback({pass: false, logs});
     }
 
-    core = ufork.make_core({
+    core = make_core({
         wasm_url: wasm_href,
         on_wakeup(sender, events) {
             log(

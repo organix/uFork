@@ -11,6 +11,7 @@ import theme from "https://ufork.org/lib/theme.js";
 import make_ui from "https://ufork.org/lib/ui.js";
 import ucode from "https://ufork.org/ucode/ucode.js";
 import ufork from "../ufork.js";
+import make_core from "../core.js";
 import raw_ui from "./raw_ui.js";
 const lib_url = import.meta.resolve("https://ufork.org/lib/");
 const wasm_url = import.meta.resolve("https://ufork.org/wasm/ufork.debug.wasm");
@@ -318,7 +319,7 @@ const rom_ui = make_ui("rom-ui", function (element, {
 
 function demo(log) {
     document.documentElement.innerHTML = "";
-    const core = ufork.make_core({
+    const core = make_core({
         wasm_url,
         import_map: {"https://ufork.org/lib/": lib_url},
         compilers: {asm: assemble}

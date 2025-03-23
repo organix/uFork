@@ -22,6 +22,7 @@ import OED from "https://ufork.org/lib/oed.js";
 import parseq from "https://ufork.org/lib/parseq.js";
 import requestorize from "https://ufork.org/lib/rq/requestorize.js";
 import ufork from "./ufork.js";
+import make_core from "./core.js";
 import host_dev from "./host_dev.js";
 const lib_url = import.meta.resolve("https://ufork.org/lib/");
 const wasm_url = import.meta.resolve("https://ufork.org/wasm/ufork.wasm");
@@ -968,7 +969,7 @@ function node_demo(core, log) {
 
 let core;
 if (import.meta.main) {
-    core = ufork.make_core({
+    core = make_core({
         wasm_url,
         on_wakeup(sender, events) {
             globalThis.console.log("WAKE:", ufork.print(sender), events.length);

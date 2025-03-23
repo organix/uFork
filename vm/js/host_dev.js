@@ -9,6 +9,7 @@ import assemble from "https://ufork.org/lib/assemble.js";
 import parseq from "https://ufork.org/lib/parseq.js";
 import requestorize from "https://ufork.org/lib/rq/requestorize.js";
 import ufork from "./ufork.js";
+import make_core from "./core.js";
 const wasm_url = import.meta.resolve("https://ufork.org/wasm/ufork.wasm");
 
 function host_dev(core) {
@@ -181,7 +182,7 @@ function demo(log) {
         log("IDLE:", ufork.fault_msg(ufork.fix_to_i32(core.h_run_loop())));
     }
 
-    core = ufork.make_core({
+    core = make_core({
         wasm_url,
         on_wakeup: run_core,
         on_log: log,

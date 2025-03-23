@@ -24,8 +24,9 @@ import parseq from "https://ufork.org/lib/parseq.js";
 import bind from "https://ufork.org/lib/rq/bind.js";
 import lazy from "https://ufork.org/lib/rq/lazy.js";
 import requestorize from "https://ufork.org/lib/rq/requestorize.js";
-import host_dev from "./host_dev.js";
 import ufork from "./ufork.js";
+import make_core from "./core.js";
+import host_dev from "./host_dev.js";
 const lib_url = import.meta.resolve("https://ufork.org/lib/");
 const wasm_url = import.meta.resolve("https://ufork.org/wasm/ufork.debug.wasm");
 const demo_url = import.meta.resolve("./blob_dev_demo.asm");
@@ -466,7 +467,7 @@ function demo(log, use_static) {
         log("IDLE:", ufork.fault_msg(ufork.fix_to_i32(core.h_run_loop())));
     }
 
-    core = ufork.make_core({
+    core = make_core({
         wasm_url,
         on_wakeup: run_core,
         on_log: log,

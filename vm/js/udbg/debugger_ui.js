@@ -9,6 +9,7 @@ import requestorize from "https://ufork.org/lib/rq/requestorize.js";
 import theme from "https://ufork.org/lib/theme.js";
 import make_ui from "https://ufork.org/lib/ui.js";
 import ufork from "../ufork.js";
+import make_core from "../core.js";
 import blob_dev from "../blob_dev.js";
 import timer_dev from "../timer_dev.js";
 import make_core_driver from "./core_driver.js";
@@ -333,7 +334,7 @@ function demo(log) {
     document.documentElement.innerHTML = "";
     let driver;
     let element;
-    const core = ufork.make_core({
+    const core = make_core({
         wasm_url,
         on_wakeup(...args) {
             driver.wakeup(...args);

@@ -7,6 +7,7 @@ import parseq from "https://ufork.org/lib/parseq.js";
 import requestorize from "https://ufork.org/lib/rq/requestorize.js";
 import assemble from "https://ufork.org/lib/assemble.js";
 import ufork from "https://ufork.org/js/ufork.js";
+import make_core from "https://ufork.org/js/core.js";
 import io_dev from "https://ufork.org/js/io_dev.js";
 import timer_dev from "https://ufork.org/js/timer_dev.js";
 import awp_dev from "https://ufork.org/js/awp_dev.js";
@@ -106,7 +107,7 @@ function save_store(store) {
 
 const $importmap = document.querySelector("[type=importmap]");
 const transport = webrtc_transport(websockets_signaller(), console.log);
-core = ufork.make_core({
+core = make_core({
     wasm_url,
     on_wakeup(...args) {
         driver.wakeup(...args);

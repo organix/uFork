@@ -44,6 +44,7 @@ import unpromise from "https://ufork.org/lib/rq/unpromise.js";
 import blob_dev from "./blob_dev.js";
 import host_dev from "./host_dev.js";
 import ufork from "./ufork.js";
+import make_core from "./core.js";
 import tcp_transport_mock from "./tcp_transport_mock.js";
 const lib_url = import.meta.resolve("https://ufork.org/lib/");
 const wasm_url = import.meta.resolve("https://ufork.org/wasm/ufork.debug.wasm");
@@ -383,7 +384,7 @@ function demo(log, flakiness = 0, max_chunk_size = 16) {
         log("IDLE:", ufork.fault_msg(ufork.fix_to_i32(core.h_run_loop())));
     }
 
-    core = ufork.make_core({
+    core = make_core({
         wasm_url,
         on_wakeup: run_core,
         on_log: log,

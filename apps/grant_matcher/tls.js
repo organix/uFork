@@ -11,6 +11,7 @@ import parseq from "https://ufork.org/lib/parseq.js";
 import requestorize from "https://ufork.org/lib/rq/requestorize.js";
 import assemble from "https://ufork.org/lib/assemble.js";
 import ufork from "https://ufork.org/js/ufork.js";
+import make_core from "https://ufork.org/js/core.js";
 import awp_dev from "https://ufork.org/js/awp_dev.js";
 import host_dev from "https://ufork.org/js/host_dev.js";
 import node_tls_transport from "https://ufork.org/js/node_tls_transport.js";
@@ -87,7 +88,7 @@ const stores = {
     }
 };
 const store_name = process.argv[2];
-const core = ufork.make_core({
+const core = make_core({
     wasm_url,
     on_wakeup() {
         console.log(

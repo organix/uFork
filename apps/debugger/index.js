@@ -11,6 +11,7 @@ import assemble from "https://ufork.org/lib/assemble.js";
 import compile_humus from "https://ufork.org/lib/humus.js";
 import scm from "https://ufork.org/lib/scheme.js";
 import ufork from "https://ufork.org/js/ufork.js";
+import make_core from "https://ufork.org/js/core.js";
 import clock_dev from "https://ufork.org/js/clock_dev.js";
 import random_dev from "https://ufork.org/js/random_dev.js";
 import io_dev from "https://ufork.org/js/io_dev.js";
@@ -684,7 +685,7 @@ function log_event_object(event) {
     }
 }
 
-core = ufork.make_core({
+core = make_core({
     wasm_url,
     on_wakeup(sender, events) {
         console.log("WAKE:", ufork.print(sender), events.map(core.u_pprint));

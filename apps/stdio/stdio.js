@@ -16,6 +16,7 @@ import requestorize from "https://ufork.org/lib/rq/requestorize.js";
 import assemble from "https://ufork.org/lib/assemble.js";
 import scm from "https://ufork.org/lib/scheme.js";
 import ufork from "https://ufork.org/js/ufork.js";
+import make_core from "https://ufork.org/js/core.js";
 import io_dev from "https://ufork.org/js/io_dev.js";
 import make_core_driver from "https://ufork.org/js/udbg/core_driver.js";
 const lib_url = import.meta.resolve("https://ufork.org/lib/");
@@ -32,7 +33,7 @@ if (unqualified_src === undefined || unqualified_src === "") {
 }
 const cwd_dir = toFileUrl(join(Deno.cwd(), "./")); // ensure trailing slash
 const src = new URL(unqualified_src, cwd_dir).href;
-core = ufork.make_core({
+core = make_core({
     wasm_url,
     on_wakeup(...args) {
         driver.wakeup(...args);

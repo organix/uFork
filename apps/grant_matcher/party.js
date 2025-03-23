@@ -5,6 +5,7 @@ import parseq from "https://ufork.org/lib/parseq.js";
 import assemble from "https://ufork.org/lib/assemble.js";
 import requestorize from "https://ufork.org/lib/rq/requestorize.js";
 import ufork from "https://ufork.org/js/ufork.js";
+import make_core from "https://ufork.org/js/core.js";
 import awp_dev from "https://ufork.org/js/awp_dev.js";
 import host_dev from "https://ufork.org/js/host_dev.js";
 import webrtc_transport from "https://ufork.org/js/webrtc_transport.js";
@@ -32,7 +33,7 @@ function party(asm_url, acquaintance_names = []) {
     }
 
     const transport = webrtc_transport(websockets_signaller(), print);
-    const core = ufork.make_core({
+    const core = make_core({
         wasm_url,
         on_wakeup() {
             const sig = core.h_run_loop(0);

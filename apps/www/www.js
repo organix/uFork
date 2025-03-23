@@ -27,6 +27,7 @@ import parseq from "https://ufork.org/lib/parseq.js";
 import requestorize from "https://ufork.org/lib/rq/requestorize.js";
 import assemble from "https://ufork.org/lib/assemble.js";
 import ufork from "https://ufork.org/js/ufork.js";
+import make_core from "https://ufork.org/js/core.js";
 import random_dev from "https://ufork.org/js/random_dev.js";
 import host_dev from "https://ufork.org/js/host_dev.js";
 import blob_dev from "https://ufork.org/js/blob_dev.js";
@@ -54,7 +55,7 @@ if (unqualified_src === undefined || unqualified_src === "") {
 const cwd_dir = toFileUrl(join(Deno.cwd(), "./")); // ensure trailing slash
 const src = new URL(unqualified_src, cwd_dir).href;
 
-core = ufork.make_core({
+core = make_core({
     wasm_url,
     on_wakeup(...args) {
         driver.wakeup(...args);

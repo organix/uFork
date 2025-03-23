@@ -24,9 +24,10 @@ devices.
 
 ```javascript
 import ufork from "https://ufork.org/js/ufork.js";
+import make_core from "https://ufork.org/js/core.js";
 import host_dev from "https://ufork.org/js/host_dev.js";
 
-const core = ufork.make_core(/* ... */);
+const core = make_core(/* ... */);
 const make_ddev = host_dev(core);
 const ddev = make_ddev(on_event_stub, on_drop_proxy);
 ```

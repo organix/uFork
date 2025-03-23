@@ -12,6 +12,7 @@ import theme from "https://ufork.org/lib/theme.js";
 import make_ui from "https://ufork.org/lib/ui.js";
 import make_core_driver from "./core_driver.js";
 import ufork from "../ufork.js";
+import make_core from "../core.js";
 import timer_dev from "../timer_dev.js";
 import raw_ui from "./raw_ui.js";
 import springy from "./springy.js";
@@ -409,7 +410,7 @@ function demo(log) {
     element.style.position = "fixed";
     element.style.inset = "0";
     let driver;
-    const core = ufork.make_core({
+    const core = make_core({
         wasm_url,
         on_wakeup(...args) {
             return driver.wakeup(...args);

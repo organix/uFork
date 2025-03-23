@@ -7,6 +7,7 @@ import make_ui from "https://ufork.org/lib/ui.js";
 import parseq from "https://ufork.org/lib/parseq.js";
 import requestorize from "https://ufork.org/lib/rq/requestorize.js";
 import ufork from "https://ufork.org/js/ufork.js";
+import make_core from "https://ufork.org/js/core.js";
 import clock_dev from "https://ufork.org/js/clock_dev.js";
 import random_dev from "https://ufork.org/js/random_dev.js";
 import blob_dev from "https://ufork.org/js/blob_dev.js";
@@ -161,7 +162,7 @@ const tools_ui = make_ui("tools-ui", function (element, {
         Object.entries(lang_packs).forEach(function ([lang, lang_pack]) {
             compilers[lang] = lang_pack.compile;
         });
-        core = ufork.make_core({
+        core = make_core({
             wasm_url,
             on_wakeup(sender, events) {
                 devices.io.info("WAKE:", ufork.print(sender));

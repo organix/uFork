@@ -11,6 +11,7 @@ import theme from "https://ufork.org/lib/theme.js";
 import make_ui from "https://ufork.org/lib/ui.js";
 import make_core_driver from "./core_driver.js";
 import ufork from "../ufork.js";
+import make_core from "../core.js";
 import raw_ui from "./raw_ui.js";
 import source_monitor_ui from "./source_monitor_ui.js";
 const lib_url = import.meta.resolve("https://ufork.org/lib/");
@@ -111,7 +112,7 @@ function demo(log) {
     const element = continuation_ui({});
     element.style.position = "fixed";
     element.style.inset = "0";
-    const core = ufork.make_core({
+    const core = make_core({
         wasm_url,
         import_map: {"https://ufork.org/lib/": lib_url},
         compilers: {asm: assemble}
