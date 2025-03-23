@@ -486,6 +486,25 @@ function print_quad(quad) {
     return s;
 }
 
+const reserved_rom = Object.freeze([
+    UNDEF_RAW,  UNDEF_RAW,  UNDEF_RAW,  UNDEF_RAW,      // #?
+    UNDEF_RAW,  UNDEF_RAW,  UNDEF_RAW,  UNDEF_RAW,      // #nil
+    UNDEF_RAW,  UNDEF_RAW,  UNDEF_RAW,  UNDEF_RAW,      // #f
+    UNDEF_RAW,  UNDEF_RAW,  UNDEF_RAW,  UNDEF_RAW,      // #t
+    UNDEF_RAW,  UNDEF_RAW,  UNDEF_RAW,  UNDEF_RAW,      // ROM_04
+    PAIR_T,     NIL_RAW,    NIL_RAW,    UNDEF_RAW,      // EMPTY_DQ
+    TYPE_T,     fixnum(1),  UNDEF_RAW,  UNDEF_RAW,      // #type_t
+    TYPE_T,     UNDEF_RAW,  UNDEF_RAW,  UNDEF_RAW,      // #fixnum_t
+    TYPE_T,     fixnum(2),  UNDEF_RAW,  UNDEF_RAW,      // #actor_t
+    TYPE_T,     fixnum(2),  UNDEF_RAW,  UNDEF_RAW,      // PROXY_T
+    TYPE_T,     fixnum(2),  UNDEF_RAW,  UNDEF_RAW,      // STUB_T
+    TYPE_T,     fixnum(3),  UNDEF_RAW,  UNDEF_RAW,      // #instr_t
+    TYPE_T,     fixnum(2),  UNDEF_RAW,  UNDEF_RAW,      // #pair_t
+    TYPE_T,     fixnum(3),  UNDEF_RAW,  UNDEF_RAW,      // #dict_t
+    TYPE_T,     fixnum(-1), UNDEF_RAW,  UNDEF_RAW,      // FWD_REF_T
+    TYPE_T,     fixnum(0),  UNDEF_RAW,  UNDEF_RAW       // FREE_T
+]);
+
 function demo(log) {
     log("fixnum(0) =", fixnum(0), fixnum(0).toString(16), print(fixnum(0)));
     log("fixnum(1) =", fixnum(1), fixnum(1).toString(16), print(fixnum(1)));
@@ -537,6 +556,7 @@ export default Object.freeze({
     crlf_types,
     imm_labels,
     op_labels,
+    reserved_rom,
     MSK_RAW,
     DIR_RAW,
     MUT_RAW,

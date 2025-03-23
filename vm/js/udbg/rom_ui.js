@@ -5,16 +5,12 @@
 import assemble from "https://ufork.org/lib/assemble.js";
 import dom from "https://ufork.org/lib/dom.js";
 import hex from "https://ufork.org/lib/hex.js";
-import parseq from "https://ufork.org/lib/parseq.js";
-import requestorize from "https://ufork.org/lib/rq/requestorize.js";
 import theme from "https://ufork.org/lib/theme.js";
 import make_ui from "https://ufork.org/lib/ui.js";
 import ucode from "https://ufork.org/ucode/ucode.js";
 import ufork from "../ufork.js";
-import make_core from "../core.js";
+import loader from "../loader.js";
 import raw_ui from "./raw_ui.js";
-const lib_url = import.meta.resolve("https://ufork.org/lib/");
-const wasm_url = import.meta.resolve("https://ufork.org/wasm/ufork.debug.wasm");
 
 const bytes_per_word = 4; // 32 bits
 const bytes_per_quad = bytes_per_word * 4;
@@ -317,26 +313,43 @@ const rom_ui = make_ui("rom-ui", function (element, {
     element.set_rom = set_rom;
 });
 
-function demo(log) {
+const demo_module = `
+data:
+    pair_t 42
+    pair_t 1729
+    ref #nil
+beh:
+    state 0
+    actor self
+    actor send
+    end commit
+`;
+
+function demo() {
     document.documentElement.innerHTML = "";
-    const core = make_core({
-        wasm_url,
-        import_map: {"https://ufork.org/lib/": lib_url},
-        compilers: {asm: assemble}
+    let rom_words = new Uint32Array(ufork.QUAD_ROM_MAX * 4);
+    rom_words.set(ufork.reserved_rom);
+    let rom_top = ufork.reserved_rom.length / 4;
+    let rom_debugs = Object.create(null);
+    loader.load({
+        ir: assemble(demo_module),
+        alloc_quad(debug_info) {
+            const ptr = ufork.romptr(rom_top);
+            rom_top += 1;
+            rom_debugs[ptr] = debug_info;
+            return ptr;
+        },
+        read_quad(ptr) {
+            return ufork.read_quad(rom_words, ufork.rawofs(ptr));
+        },
+        write_quad(ptr, quad) {
+            ufork.write_quad(rom_words, ufork.rawofs(ptr), quad);
+        }
     });
     const element = rom_ui({});
     element.style.position = "fixed";
     element.style.inset = "0";
-    parseq.sequence([
-        core.h_initialize(),
-        core.h_import("https://ufork.org/lib/future.asm"),
-        requestorize(function () {
-            core.h_boot();
-            core.h_run_loop(25);
-            element.set_rom(core.h_rom(), core.u_rom_debugs());
-            return true;
-        })
-    ])(log);
+    element.set_rom(rom_words.slice(0, rom_top * 4), rom_debugs);
     document.head.append(
         dom("meta", {name: "color-scheme", content: "dark"}),
         dom("style", theme.monospace_font_css)
