@@ -29,10 +29,17 @@ q       | ( raw -- addr )           | Translate uFork _raw_ to uCode
 ?       | ( start end -- )          | Print data from _start_ thru _end_
 x       | ( -- blks )               | XMODEM upload
 ~       | ( start end -- )          | Dump SPI flash from _start_ thru _end_
+\>      | ( -- )                    | Copy uFork ROM to SPI Flash
+\<      | ( -- )                    | Copy SPI Flash to uFork ROM
 r       | ( addr -- )               | Run (call) procedure at _addr_
 
 `[BACKSPACE]` or `[DELETE]` may be used
 to correct the preceeding word.
+
+`Ctrl-c` leaves _monitor_ mode
+and runs the program in uFork ROM.
+If/when the uFork core becomes idle,
+the monitor regains control.
 
 ## Address Ranges
 
