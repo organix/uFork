@@ -134,6 +134,8 @@
     ELSE
         A-10
     THEN - ;
+: 8LSB&
+    0xFF AND ;
 
 : TX? ( -- ready )
 : EMIT?
@@ -1736,12 +1738,12 @@ VARIABLE saved_sp           ( sp before instruction execution )
 VARIABLE spi_page ( bits [31:16] of SPI address )
 
 : b2c ( msb lsb -- cell )
-    0xFF AND
-    SWAP 8ROL 0xFF00 AND
+    8LSB&
+    SWAP 8LSB& 8ROL
     OR ;
 : c2b ( cell -- msb lsb )
-    DUP 8ROL 0xFF AND
-    SWAP 0xFF AND ;
+    DUP 8ROL 8LSB&
+    SWAP 8LSB& ;
 
 : CS! ( bool -- )
     0xf0 IO! ;              ( assert chip-select )
@@ -1761,7 +1763,7 @@ VARIABLE spi_page ( bits [31:16] of SPI address )
     WAIT_DR DI@ ;
 
 : spi_wake ( -- id )
-    0x04 spi_page !         ( set default base address )
+    0x06 spi_page !         ( set default base address )
     TRUE CS!                ( assert chip-select )
     5 ?LOOP-
         0xAB spi_out        ( "Resume from Deep Power-Down and Read Device ID" command )
@@ -1770,9 +1772,7 @@ VARIABLE spi_page ( bits [31:16] of SPI address )
     FALSE CS! ;             ( deassert chip-select )
 
 : XB. ( byte -- )
-    8ROL
-    4ROL DUP X#
-    4ROL X# ;
+    DUP 4ASR X# X# ;
 : spi_dump ( start end -- )
     OVER -                  ( D: start span )
     DUP 0< IF
@@ -1868,14 +1868,42 @@ VARIABLE spi_page ( bits [31:16] of SPI address )
         spif_cell_in OVER QX!
         spif_cell_in OVER QY!
         spif_cell_in OVER QZ!
-        1+
+        1+                  ( D: qaddr+1 )
     AGAIN
     FALSE CS!               ( deassert chip-select )
     DROP ;
 
-: rom_blks ( -- nblks )
-    ( rom_quads 2ROL ROL 0xFF + 8ROL 0xFF AND ; )
-    rom_quads 0x1F + 4ASR 2/ ;
+: rom_blks ( nquads -- nblks )
+    ( 2ROL ROL 0xFF + 8ROL 0xFF AND ; )
+    0x1F + 4ASR 2/ ;
+: spif_cell_out ( cell -- )
+    c2b SWAP spi_out spi_out ;
+: qrom2spif ( qaddr nquads -- )
+    spif_write_enable
+    6 spif_erase_64k
+    spif_wait
+    rom_blks                ( D: qaddr nblks )
+    ?LOOP-                  ( for each block )
+        DUP ROL 2ROL        ( D: qaddr addr )
+        8ROL 8LSB&          ( D: qaddr msb )
+        spif_write_enable
+        TRUE CS!            ( assert chip-select )
+        0x02 spi_out        ( "Byte/Page Program" command )
+        6 spi_out           ( address[23:16]=page )
+        spi_out             ( address[15:8]=msb )
+        0 spi_out           ( address[7:0]=lsb )
+        32 ?LOOP-           ( for each quad )
+            DUP QT@ spif_cell_out
+            DUP QX@ spif_cell_out
+            DUP QY@ spif_cell_out
+            DUP QZ@ spif_cell_out
+            1+              ( D: qaddr+1 )
+        AGAIN
+        WAIT_DR             ( wait until ready/done )
+        FALSE CS!           ( deassert chip-select )
+        spif_wait
+    AGAIN                   ( D: qaddr' )
+    DROP ;
 
 : spif_test ( -- )
     spif_status X. CR
@@ -1886,7 +1914,7 @@ VARIABLE spi_page ( bits [31:16] of SPI address )
     spif_wait
     spif_status X. CR
     ( rom_image 128 0 0 6 spif_program_block DROP )
-    rom_image rom_blks spif_program_page X. CR
+    rom_image rom_quads rom_blks spif_program_page X. CR ;
 
 ( Debugging Monitor )
 0x21 CONSTANT '!'
@@ -2064,7 +2092,7 @@ VARIABLE xm_here            ( upload address )
 : xm_timed_rcv ( ms -- byte | -1 )
     RX? IF
         DROP RX@            ( D: byte )
-        0xFF AND ;
+        8LSB& ;
     THEN
     DUP IF
         1000 us_delay       ( D: ms )
@@ -2109,12 +2137,12 @@ VARIABLE xm_here            ( upload address )
     DUP MSB& IF
         xm_rcv_try ;        ( try again... )
     THEN
-    DUP xm_pkt @ 0xFF AND = IF
+    DUP xm_pkt @ 8LSB& = IF
         xm_flush_rcv
         ACK EMIT            ( ACK dup packet )
         xm_rcv_soh ;
     THEN
-    xm_pkt @ 1+ 0xFF AND <> IF
+    xm_pkt @ 1+ 8LSB& <> IF
         xm_rcv_failed ;     ( transfer failed )
     THEN
 : xm_rcv_ipkt
@@ -2122,7 +2150,7 @@ VARIABLE xm_here            ( upload address )
     DUP MSB& IF
         xm_rcv_try ;        ( try again... )
     THEN
-    xm_pkt @ 1+ INVERT 0xFF AND <> IF
+    xm_pkt @ 1+ INVERT 8LSB& <> IF
         xm_rcv_try ;        ( try again... )
     THEN
 : xm_rcv_pkt
@@ -2154,7 +2182,7 @@ VARIABLE xm_here            ( upload address )
     DUP MSB& IF
         xm_rcv_bad ;        ( bad packet... )
     THEN
-    2DUP XOR 0xFF AND       ( D: rem' chk' chk (chk'^chk)&0xFF )
+    2DUP XOR 8LSB&          ( D: rem' chk' chk (chk'^chk)&0xFF )
     IF
         xm_rcv_bad ;        ( bad packet... )
     THEN
@@ -2184,16 +2212,16 @@ VARIABLE xm_here            ( upload address )
     cmd @ SWAP              ( D: cmd key )
     ( '<' EMIT OVER X. '.' EMIT DUP X. '>' EMIT )
     DUP BL <= IF
-        OVER ISHEX IF
+        OVER ISHEX IF       ( push accum )
             inp @ push
         THEN
-        OVER '@' = IF
+        OVER '@' = IF       ( fetch )
             pop fetch push
         THEN
-        OVER '.' = IF
+        OVER '.' = IF       ( print )
             pop X. CR
         THEN
-        OVER '!' = IF
+        OVER '!' = IF       ( store )
             pop pop SWAP store
         THEN
         OVER 'q' = IF
@@ -2202,14 +2230,20 @@ VARIABLE xm_here            ( upload address )
         OVER 'p' = IF
             pop parse_qaddr SWAP push push
         THEN
-        OVER '?' = IF
+        OVER '?' = IF       ( dump memory )
             pop pop SWAP dump
         THEN
-        OVER '~' = IF
+        OVER '~' = IF       ( dump flash )
             pop pop SWAP spi_dump
         THEN
-        OVER 'x' = IF
+        OVER 'x' = IF       ( xmodem receive )
             xm_rcv_file push
+        THEN
+        OVER '<' = IF       ( init from flash )
+            0 0x2000 spif2qrom
+        THEN
+        OVER '>' = IF       ( copy to flash )
+            0 0x2000 qrom2spif
         THEN
         OVER 'r' = IF
             pop EXECUTE
