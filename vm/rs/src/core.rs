@@ -123,7 +123,7 @@ impl Core {
         self.quad_rom[FIXNUM_T.ofs()]    = Quad::type_t(UNDEF);
         self.quad_rom[ACTOR_T.ofs()]     = Quad::type_t(PLUS_2);
         self.quad_rom[PROXY_T.ofs()]     = Quad::type_t(PLUS_2);
-        self.quad_rom[STUB_T.ofs()]      = Quad::type_t(PLUS_2);
+        self.quad_rom[STUB_T.ofs()]      = Quad::type_t(PLUS_3);
         self.quad_rom[INSTR_T.ofs()]     = Quad::type_t(PLUS_3);
         self.quad_rom[PAIR_T.ofs()]      = Quad::type_t(PLUS_2);
         self.quad_rom[DICT_T.ofs()]      = Quad::type_t(PLUS_3);

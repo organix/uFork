@@ -126,7 +126,7 @@ Quad-cells are used to encode most of the important data-structures in uFork.
  `#fixnum_t` | `^00000007` | `#type_t` | `#?`   | `#?`   | `#?` | Fixnum Type
  `#actor_t`  | `^00000008` | `#type_t` | `+2`   | `#?`   | `#?` | Actor (ocap) Type
  `PROXY_T`   | `^00000009` | `#type_t` | `+2`   | `#?`   | `#?` | Proxy Type
- `STUB_T`    | `^0000000A` | `#type_t` | `+2`   | `#?`   | `#?` | Stub Type
+ `STUB_T`    | `^0000000A` | `#type_t` | `+3`   | `#?`   | `#?` | Stub Type
  `#instr_t`  | `^0000000B` | `#type_t` | `+3`   | `#?`   | `#?` | Instruction Type
  `#pair_t`   | `^0000000C` | `#type_t` | `+2`   | `#?`   | `#?` | Pair Type
  `#dict_t`   | `^0000000D` | `#type_t` | `+3`   | `#?`   | `#?` | Dictionary Type

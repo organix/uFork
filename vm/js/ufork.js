@@ -497,7 +497,7 @@ const reserved_rom = Object.freeze([
     TYPE_T,     UNDEF_RAW,  UNDEF_RAW,  UNDEF_RAW,      // #fixnum_t
     TYPE_T,     fixnum(2),  UNDEF_RAW,  UNDEF_RAW,      // #actor_t
     TYPE_T,     fixnum(2),  UNDEF_RAW,  UNDEF_RAW,      // PROXY_T
-    TYPE_T,     fixnum(2),  UNDEF_RAW,  UNDEF_RAW,      // STUB_T
+    TYPE_T,     fixnum(3),  UNDEF_RAW,  UNDEF_RAW,      // STUB_T
     TYPE_T,     fixnum(3),  UNDEF_RAW,  UNDEF_RAW,      // #instr_t
     TYPE_T,     fixnum(2),  UNDEF_RAW,  UNDEF_RAW,      // #pair_t
     TYPE_T,     fixnum(3),  UNDEF_RAW,  UNDEF_RAW,      // #dict_t
