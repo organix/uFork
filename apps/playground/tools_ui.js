@@ -207,12 +207,6 @@ const tools_ui = make_ui("tools-ui", function (element, {
             }
             on_status(message);
         });
-        const {compile, stringify_error} = lang_packs[lang_select.value];
-        const ir = compile(text);
-        if (ir.errors !== undefined && ir.errors.length > 0) {
-            const error_messages = ir.errors.map(stringify_error);
-            return warn(error_messages.join("\n"));
-        }
         parseq.sequence([
             core.h_initialize(),
             core.h_import(src, text),

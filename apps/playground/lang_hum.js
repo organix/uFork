@@ -106,15 +106,10 @@ function handle_keydown(editor, event) {
     ed_comment(editor, event, rx_comment, comment_prefix);
 }
 
-function stringify_error(error) {
-    return `[${error.line ?? "?"}:${error.column ?? "?"}] ${error.message}`;
-}
-
 export default Object.freeze({
     compile,
     handle_keydown,
     highlight,
-    stringify_error,
     docs_url: "https://dalnefre.github.io/humus_js/",
     indent
 });

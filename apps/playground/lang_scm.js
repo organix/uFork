@@ -32,7 +32,7 @@ function highlight(element) {
                 text.slice(position, error.start),
                 dom("span", {
                     textContent: text.slice(error.start, error.end),
-                    title: error.error,
+                    title: error.message,
                     style: {
                         borderRadius: "2px",
                         outline: "1px solid " + theme.red
@@ -89,15 +89,10 @@ function handle_keydown(editor, event) {
     ed_comment(editor, event, rx_comment, comment_prefix);
 }
 
-function stringify_error(error) {
-    return error.error;
-}
-
 export default Object.freeze({
     compile: scm.compile,
     handle_keydown,
     highlight,
-    stringify_error,
     docs_url: "https://github.com/organix/uFork/blob/main/docs/scheme.md",
     indent
 });

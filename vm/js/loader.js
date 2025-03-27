@@ -37,6 +37,10 @@ const {
     VM_DEQUE
 } = ufork;
 
+function stringify_error(error) {
+    return `[${error.line}:${error.column}] ${error.message}`;
+}
+
 function load({
     ir,
     imports,
@@ -462,11 +466,12 @@ function import_module({
                 )
             ).then(function (ir) {
                 if (ir.errors !== undefined && ir.errors.length > 0) {
+                    const error_messages = ir.errors.map(stringify_error);
                     return Promise.reject(new Error(
                         "Failed to load '"
                         + src
                         + "':\n"
-                        + JSON.stringify(ir.errors, undefined, 4)
+                        + error_messages.join("\n")
                     ));
                 }
 
