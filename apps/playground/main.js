@@ -203,9 +203,6 @@ tools = tools_ui({
             udbg_window.close();
         }
     },
-    on_debug() {
-        globalThis.open(location.href.replace("playground", "debugger"));
-    },
     on_status(message) {
         if (udbg_bridge !== undefined) {
             udbg_bridge.send(message);

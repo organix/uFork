@@ -5,9 +5,12 @@
 import dom from "https://ufork.org/lib/dom.js";
 import make_ui from "https://ufork.org/lib/ui.js";
 import parseq from "https://ufork.org/lib/parseq.js";
+import lazy from "https://ufork.org/lib/rq/lazy.js";
 import requestorize from "https://ufork.org/lib/rq/requestorize.js";
+import unpromise from "https://ufork.org/lib/rq/unpromise.js";
 import ufork from "https://ufork.org/js/ufork.js";
 import make_core from "https://ufork.org/js/core.js";
+import loader from "https://ufork.org/js/loader.js";
 import clock_dev from "https://ufork.org/js/clock_dev.js";
 import random_dev from "https://ufork.org/js/random_dev.js";
 import blob_dev from "https://ufork.org/js/blob_dev.js";
@@ -18,12 +21,86 @@ import io_dev from "https://ufork.org/js/io_dev.js";
 import host_dev from "https://ufork.org/js/host_dev.js";
 import svg_dev from "https://ufork.org/js/svg_dev.js";
 import make_core_driver from "https://ufork.org/js/udbg/core_driver.js";
+import ucode from "https://ufork.org/ucode/ucode.js";
 import lang_asm from "./lang_asm.js";
 import lang_scm from "./lang_scm.js";
 import io_dev_ui from "./io_dev_ui.js";
 import svg_dev_ui from "./svg_dev_ui.js";
 import disasm_ui from "./disasm_ui.js";
+import upload from "./upload.js";
 const wasm_url = import.meta.resolve("https://ufork.org/wasm/ufork.wasm");
+
+function request_and_open_serial_port() {
+    return navigator.serial.requestPort().then(function (port) {
+        return (
+            port.readable
+            ? port
+            : port.open({baudRate: 115200}).then(function () {
+                return port;
+            })
+        );
+    });
+}
+
+function generate_rom32(src, content, import_map, compilers, on_trace) {
+    let rom_words = new Uint32Array(ufork.QUAD_ROM_MAX * 4);
+    rom_words.set(ufork.reserved_rom);
+    let rom_top = ufork.reserved_rom.length / 4;
+
+    function alloc_quad() {
+        const ptr = ufork.romptr(rom_top);
+        rom_top += 1;
+        return ptr;
+    }
+
+    function read_quad(ptr) {
+        return ufork.read_quad(rom_words, ufork.rawofs(ptr));
+    }
+
+    function write_quad(ptr, quad) {
+        ufork.write_quad(rom_words, ufork.rawofs(ptr), quad);
+    }
+
+    function load(ir, imports) {
+        return loader.load({ir, imports, alloc_quad, read_quad, write_quad});
+    }
+
+    let entry_ptr = alloc_quad();
+    return parseq.sequence([
+        loader.import({src, content, import_map, compilers, load, on_trace}),
+        requestorize(function (module) {
+
+// Jump from the entry point to the boot behavior.
+
+            if (module.boot === undefined) {
+                throw new Error("Missing 'boot' export.");
+            }
+            write_quad(entry_ptr, {
+                t: ufork.INSTR_T,
+                x: ufork.VM_DUP,
+                y: ufork.fixnum(0),
+                z: module.boot
+            });
+
+// Discard unused ROM.
+
+            rom_words = rom_words.slice(0, rom_top * 4);
+            return new Uint8Array(rom_words.buffer);
+        })
+    ]);
+}
+
+function downsize(rom32) {
+
+// Convert a 32-bit ROM to a 16-bit ROM.
+
+    let rom16 = new Uint8Array(rom32.byteLength / 2);
+    let data_view = new DataView(rom16.buffer);
+    new Uint32Array(rom32.buffer).forEach(function (word, addr) {
+        data_view.setUint16(2 * addr, ucode.from_uf(word), false);
+    });
+    return rom16;
+}
 
 const tools_ui = make_ui("tools-ui", function (element, {
     text = "",
@@ -36,7 +113,6 @@ const tools_ui = make_ui("tools-ui", function (element, {
     on_device_change,
     on_attach,
     on_detach,
-    on_debug,
     on_status,
     on_help
 }) {
@@ -69,7 +145,7 @@ const tools_ui = make_ui("tools-ui", function (element, {
     let device_select;
     let lang_select;
     let boot_button;
-    let debug_button;
+    let upload_button;
     let test_button;
     let help_button;
     let h_on_stdin;
@@ -131,6 +207,46 @@ const tools_ui = make_ui("tools-ui", function (element, {
         src = new_src;
     }
 
+    function warn(...args) {
+        set_device("io");
+        on_device_change("io");
+        devices.io.warn(...args);
+    }
+
+    function get_compilers() {
+        let compilers = Object.create(null);
+        Object.entries(lang_packs).forEach(function ([lang, lang_pack]) {
+            compilers[lang] = lang_pack.compile;
+        });
+        return compilers;
+    }
+
+    function upload_rom16() {
+        parseq.sequence([
+            parseq.parallel([
+                unpromise(request_and_open_serial_port),
+                generate_rom32(
+                    src,
+                    text,
+                    import_map,
+                    get_compilers(),
+                    devices.io.info
+                )
+            ]),
+            lazy(function ([port, rom32]) {
+                const rom16 = downsize(rom32);
+                devices.io.info(`Uploading ${rom16.length} bytes...`);
+                return upload(port, rom16);
+            })
+        ])(function (nr_packets, reason) {
+            if (nr_packets === undefined) {
+                warn(reason);
+            } else {
+                devices.io.info(nr_packets + " packets transferred.");
+            }
+        });
+    }
+
     function stop() {
         boot_button.textContent = "▶ Boot";
         boot_button.onclick = function (event) {
@@ -146,22 +262,8 @@ const tools_ui = make_ui("tools-ui", function (element, {
         }
     }
 
-    function warn(...args) {
-        set_device("io");
-        on_device_change("io");
-        devices.io.warn(...args);
-    }
-
     function run(text, entry, debug) {
         stop();
-
-// The module may import modules written in a different language, so provide
-// the core with every compiler we have.
-
-        let compilers = Object.create(null);
-        Object.entries(lang_packs).forEach(function ([lang, lang_pack]) {
-            compilers[lang] = lang_pack.compile;
-        });
         core = make_core({
             wasm_url,
             on_wakeup(sender, events) {
@@ -192,7 +294,7 @@ const tools_ui = make_ui("tools-ui", function (element, {
                 );
             },
             import_map,
-            compilers
+            compilers: get_compilers()
         });
         driver = make_core_driver(core, function (message) {
             if (message.kind === "signal") {
@@ -299,9 +401,10 @@ const tools_ui = make_ui("tools-ui", function (element, {
             run(text, "test", event.shiftKey);
         }
     });
-    debug_button = dom("button", {
-        textContent: "⛐ Debug",
-        onclick: on_debug
+    upload_button = dom("button", {
+        textContent: "▲ Upload",
+        title: "Upload ROM via serial",
+        onclick: upload_rom16
     });
     help_button = dom("button", {
         textContent: "﹖ Help",
@@ -310,7 +413,7 @@ const tools_ui = make_ui("tools-ui", function (element, {
     const controls_element = dom("tools_controls", [
         boot_button,
         test_button,
-        debug_button,
+        upload_button,
         help_button,
         lang_select,
         device_select
@@ -339,7 +442,7 @@ if (import.meta.main) {
             on_device_change: globalThis.console.log,
             on_attach: () => globalThis.console.log("on_attach"),
             on_detach: () => globalThis.console.log("on_detach"),
-            on_debug: () => globalThis.console.log("on_debug"),
+            on_upload: () => globalThis.console.log("on_upload"),
             on_status: () => globalThis.console.log("on_status"),
             on_help: () => globalThis.console.log("on_help")
         }),

@@ -41,7 +41,7 @@ function stringify_error(error) {
     return `[${error.line}:${error.column}] ${error.message}`;
 }
 
-function load({
+function load_module({
     ir,
     imports,
     alloc_quad,
@@ -533,7 +533,7 @@ function demo(log) {
         import_map: {"https://ufork.org/lib/": lib_href},
         compilers: {asm: assemble},
         load(ir, imports) {
-            return load({
+            return load_module({
                 ir,
                 imports,
                 alloc_quad(debug_info) {
@@ -572,5 +572,5 @@ if (import.meta.main) {
 
 export default Object.freeze({
     import: import_module,
-    load
+    load: load_module
 });

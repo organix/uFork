@@ -58,6 +58,7 @@ const io_dev_ui = make_ui("io-dev-ui", function (element, {on_input}) {
         contentEditable: "true",
         spellcheck: false,
         title: "Input and output",
+        className: "show_info",
         onkeydown(event) {
             if (!event.ctrlKey && !event.metaKey) {
                 event.preventDefault();
@@ -101,6 +102,7 @@ const io_dev_ui = make_ui("io-dev-ui", function (element, {on_input}) {
         dom("label", {title: "Show extended trace information"}, [
             dom("input", {
                 type: "checkbox",
+                checked: true,
                 oninput() {
                     text_element.classList.toggle("show_info");
                     scroll_to_bottom(false);
