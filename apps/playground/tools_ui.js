@@ -26,7 +26,7 @@ import lang_scm from "./lang_scm.js";
 import io_dev_ui from "./io_dev_ui.js";
 import svg_dev_ui from "./svg_dev_ui.js";
 import disasm_ui from "./disasm_ui.js";
-import upload from "./upload.js";
+import fomu from "./fomu.js";
 const wasm_url = import.meta.resolve("https://ufork.org/wasm/ufork.wasm");
 
 function request_and_open_serial_port() {
@@ -220,7 +220,7 @@ const tools_ui = make_ui("tools-ui", function (element, {
         return compilers;
     }
 
-    function upload_rom16() {
+    function run_fomu() {
         parseq.sequence([
             parseq.parallel([
                 unpromise(request_and_open_serial_port),
@@ -235,13 +235,24 @@ const tools_ui = make_ui("tools-ui", function (element, {
             lazy(function ([port, rom32]) {
                 const rom16 = downsize(rom32);
                 devices.io.info(`Uploading ${rom16.length} bytes...`);
-                return upload(port, rom16);
+                return parseq.sequence([
+                    fomu.monitor(port),
+                    fomu.upload(port, rom16),
+                    requestorize(function (nr_packets) {
+                        devices.io.info(nr_packets + " packets transferred.");
+                        return true;
+                    }),
+                    fomu.boot(port)
+                ]);
             })
-        ])(function (nr_packets, reason) {
-            if (nr_packets === undefined) {
+        ])(function (raws, reason) {
+            if (raws === undefined) {
                 warn(reason);
             } else {
-                devices.io.info(nr_packets + " packets transferred.");
+                raws.forEach(function (raw) {
+                    devices.io.debug(ufork.print(ufork.from_word16(raw)));
+                });
+                devices.io.info("Fomu idle.");
             }
         });
     }
@@ -400,11 +411,20 @@ const tools_ui = make_ui("tools-ui", function (element, {
             run(text, "test", event.shiftKey);
         }
     });
-    upload_button = dom("button", {
-        textContent: "▲ Upload",
-        title: "Upload ROM via serial",
-        onclick: upload_rom16
-    });
+    upload_button = dom(
+        "button",
+        {
+            title: "Upload and run on Fomu FPGA",
+            onclick: run_fomu
+        },
+        [
+            dom("img", {
+                src: "https://tomu.im/img/logos/fomu.png",
+                style: {width: "16px", height: "15px", margin: "0 4px 0 0"}
+            }),
+            "Fomu"
+        ]
+    );
     help_button = dom("button", {
         textContent: "﹖ Help",
         onclick: on_help

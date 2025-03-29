@@ -1,4 +1,4 @@
-// Upload a uFork ROM to the Fomu over WebSerial.
+// Utilities for uploading and running a uFork ROM on the Fomu, via WebSerial.
 
 /*jslint browser, global */
 
@@ -7,21 +7,34 @@ import bind from "https://ufork.org/lib/rq/bind.js";
 import lazy from "https://ufork.org/lib/rq/lazy.js";
 import requestorize from "https://ufork.org/lib/rq/requestorize.js";
 import xmodem from "https://ufork.org/lib/xmodem.js";
-import hex from "https://ufork.org/lib/hex.js";
 
-function until_fail(requestor, output) {
+function always(requestor) {
 
-// Run a requestor repeatedly until it fails, then produce the 'output', or if
-// that is undefined, the reason for failure.
+// Make a requestor always succeed. It will produce an object like {value} if it
+// succeeds or {reason} if it fails.
 
-    return function until_fail_requestor(callback, value) {
-        requestor(function subcallback(subvalue, reason) {
-            return (
-                subvalue !== undefined
-                ? requestor(subcallback, value)
-                : callback(output ?? reason)
-            );
-        }, value);
+    return function always_requestor(callback, input) {
+        return requestor(function (value, reason) {
+            return callback({value, reason});
+        }, input);
+    };
+}
+
+function until(requestor, predicate) {
+
+// Repeatedly run 'requestor' until the output value satisfies the predicate, or
+// it fails.
+
+    return function until_requestor(callback, input) {
+        return requestor(function subcallback(value, reason) {
+            if (value === undefined) {
+                return callback(undefined, reason);
+            }
+            if (predicate(value)) {
+                return callback(value);
+            }
+            return requestor(subcallback, input);
+        }, input);
     };
 }
 
@@ -136,25 +149,51 @@ function read_with_timeout(port) {
 }
 
 function drain(port) {
-    return until_fail(
-        bind(read_with_timeout(port), 50),
-        true
+    return until(
+        always(bind(read_with_timeout(port), 50)),
+        function predicate(result) {
+            return result.value === undefined;
+        }
     );
 }
 
-const etx = 0x03;   // ^C
-const lf = 0x0A;    // LF (linefeed)
-const cr = 0x0D;    // CR (carriage return)
+function command(port, string) {
 
-function get_monitor(port) {
+// Issue a command to the monitor, producing the output bytes.
+
+    let output_bytes = [];
+    return parseq.sequence([
+        bind(write(port), new TextEncoder().encode(string)),
+        until(
+            always(bind(read_with_timeout(port), 50)),
+            function predicate(result) {
+                const bytes = result.value;
+                if (bytes !== undefined) {
+                    if (new TextDecoder().decode(bytes).endsWith("> ")) {
+                        output_bytes.push(...bytes.slice(0, -4));  // "\r\n> "
+                        return true;
+                    }
+                    output_bytes.push(...bytes);
+                }
+                return false;
+            }
+        ),
+        requestorize(() => new Uint8Array(output_bytes))
+    ]);
+}
+
+function monitor(port) {
+
+// Bring up the monitor.
+
     return parseq.sequence([
         drain(port),
-        bind(write(port), new Uint8Array([cr])),
+        bind(write(port), new TextEncoder().encode("\r")),
         bind(read_with_timeout(port), 50),
-        function get_monitor_requestor(callback, bytes) {
+        function monitor_requestor(callback, bytes) {
             const string = new TextDecoder().decode(bytes);
             return (
-                string === "\r\n> "
+                string.endsWith("> ")
 
 // This is the monitor prompt.
 
@@ -165,28 +204,26 @@ function get_monitor(port) {
 // Initially the device echoes back the hex encoding of each character it
 // receives, one per line. To get the monitor, send ^C.
 
-                    ? parseq.sequence([
-                        bind(write(port), new Uint8Array([etx])),
-                        drain(port)
-                    ])(callback)
-                    : callback(undefined, "Not monitor: " + string + " (" + Array.from(bytes).join(",") + ")")
+                    ? command(port, "\u0003")(callback)
+                    : callback(undefined, (
+                        "Not monitor: " + string
+                        + " (" + Array.from(bytes).join(",") + ")"
+                    ))
                 )
             );
         }
     ]);
 }
 
-function upload(port, file) {
+function upload(port, rom_bytes) {
     const input_requestor = unchunk(read_with_timeout(port));
     const output_requestor = write(port);
-    const expect_packets = Math.ceil(file.length / 128);
+    const expect_packets = Math.ceil(rom_bytes.length / 128);
     return parseq.sequence([
-        get_monitor(port),
         bind(write(port), new TextEncoder().encode("x\r")),
-        bind(xmodem.send(input_requestor, output_requestor), file),
+        bind(xmodem.send(input_requestor, output_requestor), rom_bytes),
         drain(port),
-        bind(write(port), new TextEncoder().encode(".\r")),
-        bind(read_with_timeout(port), 100),
+        command(port, ".\r"),
         requestorize(function (bytes) {
             const hex_output = new TextDecoder().decode(bytes.slice(3, 7));
             const actual_packets = parseInt(hex_output, 16);
@@ -196,6 +233,25 @@ function upload(port, file) {
                 );
             }
             return actual_packets;
+        })
+    ]);
+}
+
+function boot(port) {
+
+// Run the uFork core until idle, producing an array of 16-bit raws representing
+// messages sent to the debug device.
+
+    return parseq.sequence([
+        command(port, "\u0003"),  // ^C
+        requestorize(function (bytes) {
+            return new TextDecoder().decode(bytes).split(
+                "\r\n"
+            ).filter(function (part) {
+                return part.length > 0;
+            }).map(function (part) {
+                return parseInt(part, 16);
+            });
         })
     ]);
 }
@@ -223,12 +279,22 @@ if (import.meta.main) {
     button.textContent = "Connect";
     button.onclick = function () {
         open_port().then(function (port) {
-            const file = new TextEncoder().encode("abcd".repeat(128));
-            upload(port, file)(globalThis.console.log);
+            let rom_bytes = new Uint8Array(512).fill(0);
+            let data_view = new DataView(rom_bytes.buffer);
+            data_view.setUint16(0x80, 0x000B, false);   // #instr_t
+            data_view.setUint16(0x82, 0x800F, false);   // +15 (VM_END)
+            data_view.setUint16(0x84, 0x8001, false);   // +1 (commit)
+            // data_view.setUint16(0x84, 0x8000, false);   // +0 (stop)
+            data_view.setUint16(0x86, 0x0000, false);   // #?
+            parseq.sequence([
+                monitor(port),
+                upload(port, rom_bytes),
+                boot(port)
+            ])(globalThis.console.log);
         });
     };
     document.body.append(button);
     button.onclick();
 }
 
-export default Object.freeze(upload);
+export default Object.freeze({monitor, upload, boot});
