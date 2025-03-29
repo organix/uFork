@@ -344,6 +344,29 @@ function in_mem(ptr) {
     return (ptr > FREE_T) && !is_fix(ptr);
 }
 
+function to_word16(word32) {
+    const lsb13 = (word32 >> 0) & 0x1FFF;
+    const msb3 = (word32 >> 16) & 0xE000;
+    return (msb3 | lsb13);
+}
+
+function from_word16(word16) {
+    const lsb13 = (word16 >> 0) & 0x1FFF;
+    const msb3 = word16 & 0xE000;
+    return ((msb3 << 16) | lsb13) >>> 0;
+}
+
+function test_word16() {
+    if (
+        to_word16(0x60000ABC) !== 0x6ABC
+        || from_word16(0x6ABC) !== 0x60000ABC
+        || to_word16(from_word16(0x802A)) !== 0x802A
+        || from_word16(to_word16(0x8000002A)) !== 0x8000002A
+    ) {
+        throw new Error("FAIL word16");
+    }
+}
+
 function read_quad(mem, ofs) {
     const data_view = new DataView(mem.buffer, mem.byteOffset, mem.byteLength);
     const byte_nr = ofs << 4;
@@ -520,6 +543,7 @@ function demo(log) {
 
 if (import.meta.main) {
     test_read_write_quad();
+    test_word16();
     demo(globalThis.console.log);
 }
 
@@ -532,6 +556,7 @@ export default Object.freeze({
     fault_msg,
     fix_to_i32,
     fixnum,
+    from_word16,
     in_mem,
     instr_parts,
     is_cap,
@@ -548,6 +573,7 @@ export default Object.freeze({
     rawofs,
     read_quad,
     romptr,
+    to_word16,
     write_quad,
 
 // The constants.

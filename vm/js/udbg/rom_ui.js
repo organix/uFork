@@ -7,7 +7,6 @@ import dom from "https://ufork.org/lib/dom.js";
 import hex from "https://ufork.org/lib/hex.js";
 import theme from "https://ufork.org/lib/theme.js";
 import make_ui from "https://ufork.org/lib/ui.js";
-import ucode from "https://ufork.org/ucode/ucode.js";
 import ufork from "../ufork.js";
 import loader from "../loader.js";
 import raw_ui from "./raw_ui.js";
@@ -40,7 +39,7 @@ function bin_dump16(bytes) {
     let bin = new Uint8Array(bytes.byteLength / 2);
     let data_view = new DataView(bin.buffer);
     words(bytes).forEach(function (cell, addr) {
-        data_view.setUint16(addr << 1, ucode.from_uf(cell), false);
+        data_view.setUint16(addr << 1, ufork.to_word16(cell), false);
     });
     return bin;
 }
@@ -84,7 +83,7 @@ function memh_dump16(bytes) {
     let s = "/*   T     X     Y     Z      ADDR */\n";
     //         0123  4567  89AB  CDEF  // ^0000
     cells.forEach(function (cell, addr) {
-        s += "  " + hex.from(ucode.from_uf(cell), 16);
+        s += "  " + hex.from(ufork.to_word16(cell), 16);
         if ((addr & 0x3) === 0x3) {
             s += "  // ^" + hex.from((addr >> 2), 16) + "\n";
         }
@@ -114,7 +113,7 @@ function forth_dump16(bytes) {
     let s = "(    T        X        Y        Z       ADDR )\n";
     //       0x0123 , 0x4567 , 0x89AB , 0xCDEF ,  ( ^0000 )
     cells.forEach(function (cell, addr) {
-        s += "0x" + hex.from(ucode.from_uf(cell), 16);
+        s += "0x" + hex.from(ufork.to_word16(cell), 16);
         s += (
             (addr & 0x3) !== 0x3
             ? " , "

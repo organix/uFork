@@ -21,7 +21,6 @@ import io_dev from "https://ufork.org/js/io_dev.js";
 import host_dev from "https://ufork.org/js/host_dev.js";
 import svg_dev from "https://ufork.org/js/svg_dev.js";
 import make_core_driver from "https://ufork.org/js/udbg/core_driver.js";
-import ucode from "https://ufork.org/ucode/ucode.js";
 import lang_asm from "./lang_asm.js";
 import lang_scm from "./lang_scm.js";
 import io_dev_ui from "./io_dev_ui.js";
@@ -97,7 +96,7 @@ function downsize(rom32) {
     let rom16 = new Uint8Array(rom32.byteLength / 2);
     let data_view = new DataView(rom16.buffer);
     new Uint32Array(rom32.buffer).forEach(function (word, addr) {
-        data_view.setUint16(2 * addr, ucode.from_uf(word), false);
+        data_view.setUint16(2 * addr, ufork.to_word16(word), false);
     });
     return rom16;
 }

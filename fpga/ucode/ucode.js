@@ -618,17 +618,7 @@ function parse_memh(text, src = "") {
     return prog;
 }
 
-// Map 32-bit address space to 16-bits
-
-function from_uf(uf) {
-    const lsb13 = (uf >> 0) & 0x1FFF;
-    const msb3 = (uf >> 16) & 0xE000;
-    return (msb3 | lsb13);
-}
-
 function demo(log) {
-    log(hex.from(from_uf(-1), 16));
-    log(hex.from(from_uf(0x60000002), 16));
 
     log(disasm(0xA252));
     log(disasm(0x5100, {DROP: 0x0100}));
@@ -724,6 +714,5 @@ export default Object.freeze({
     compile,
     disasm,
     print_memh,
-    parse_memh,
-    from_uf
+    parse_memh
 });
