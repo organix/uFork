@@ -23,6 +23,10 @@
 0x7A CONSTANT 'z'
 0x7F CONSTANT DEL
 
+: RESET                     ( clear both D-stack and R-stack )
+( this is a placeholder for a no-op to reset the simulator's stack tracking )
+    EXIT
+
 : @EXECUTE
     @                       ( fallthrough to next definition )
 : EXECUTE
@@ -897,7 +901,9 @@ To Copy fixnum:n of list onto head:
     imm@ #0 = IF
         E_STOP ;
     THEN
-    E_BOUNDS ;
+: end_abort
+    #? self@ qz!            ( make actor ready )
+    #? ;                    ( end continuation )
 
 : op_push ( -- ip' | error )
     sp@ imm@                ( D: sp item )
@@ -1663,6 +1669,24 @@ VARIABLE saved_sp           ( sp before instruction execution )
         FAIL
     THEN ;
 
+VARIABLE ufork_resume       ( address to jump to when ufork is idle )
+: ufork_boot
+    R> ufork_resume !
+    ram_init                ( reset RAM )
+    ( create bootstrap actor and initial event )
+    #nil 0x0010             ( state=#nil beh=boot )
+    #actor_t 2alloc ptr2cap ( D: target=a_boot )
+    DUP 0x6010 =assert      ( bootstrap actor at known address )
+    #nil                    ( D: target msg={} )
+    0x6002 0x8000
+    #dict_t 3alloc          ( D: target msg={0:debug_dev} )
+    SWAP root_spn 2alloc    ( D: event )
+    event_enqueue
+    0 run_loop
+    root_spn spn_signal@ #0 =assert
+    RESET                   ( clear both D-stack and R-stack )
+    ufork_resume @EXECUTE ;
+
 (   --- disable test suite ---
 : ufork_init_test
     mem_free@ ( 0 int2fix ) #0 =assert
@@ -1718,21 +1742,6 @@ VARIABLE saved_sp           ( sp before instruction execution )
     queue_test
     EXIT
 --- disable test suite ---  )
-
-: ufork_boot
-    ram_init                ( reset RAM )
-    ( create bootstrap actor and initial event )
-    #nil 0x0010             ( state=#nil beh=boot )
-    #actor_t 2alloc ptr2cap ( D: target=a_boot )
-    DUP 0x6010 =assert      ( bootstrap actor at known address )
-    #nil                    ( D: target msg={} )
-    0x6002 0x8000
-    #dict_t 3alloc          ( D: target msg={0:debug_dev} )
-    SWAP root_spn 2alloc    ( D: event )
-    event_enqueue
-    0 run_loop
-    root_spn spn_signal@ #0 =assert
-    EXIT
 
 ( SPI Flash Interface )
 VARIABLE spi_page ( bits [31:16] of SPI address )
@@ -2201,7 +2210,9 @@ VARIABLE xm_here            ( upload address )
     xm_rcv_try ;
 : MONITOR
     KEY                     ( D: key )
-    DUP ^C = SKZ EXIT       ( abort! )
+    DUP ^C = IF             ( abort! )
+        DROP ;
+    THEN
     DUP '\b' = IF
         DROP DEL
     THEN

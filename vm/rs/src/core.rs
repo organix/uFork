@@ -991,7 +991,7 @@ impl Core {
         // abort actor transaction
         self.ram_mut(me).set_z(UNDEF);
     }
-    pub fn actor_revert(&mut self) -> bool {
+    pub fn actor_revert(&mut self) -> bool {  // FIXME: unused?
         // revert actor/event to pre-dispatch state
         if let Some(kp) = self.cont_dequeue() {
             let ep = self.ram(kp).y();

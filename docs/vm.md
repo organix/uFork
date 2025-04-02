@@ -160,11 +160,21 @@ Quad-cells are used to encode most of the important data-structures in uFork.
 -------------|------------|-------------|--------------|----------
  `^40000000` | _top addr_ | _next free_ | _free count_ | _GC root_
 
+  * _top addr_ is the top of RAM. Valid addresses are less than this.
+  * _next free_ is the head of the `FREE_T` chain, or `#nil` if empty.
+  * _free count_ is the count of free cells, as a _fixnum_.
+  * _GC root_ is the `STUB_T` chain, or `#nil` if empty.
+
 ### Event and Continuation Queues
 
  Address     | T          | X        | Y        | Z
 -------------|------------|----------|----------|----------
  `^40000001` | _e_head_   | _e_tail_ | _k_head_ | _k_tail_
+
+  * _e_head_ is first element of the event queue, or `#nil` if empty.
+  * _e_tail_ is last element of the event queue, or `#nil` if empty.
+  * _k_head_ is first element of the continuation queue, or `#nil` if empty.
+  * _k_tail_ is last element of the continuation queue, or `#nil` if empty.
 
 ### Root Sponsor
 
@@ -172,13 +182,19 @@ Quad-cells are used to encode most of the important data-structures in uFork.
 -------------|------------|----------|----------|----------
  `^4000000F` | _memory_   | _events_ | _cycles_ | _signal_
 
+  * _memory_ remaining allocation quota, as a _fixnum_.
+  * _events_ remaining dispatch quota, as a _fixnum_.
+  * _cycles_ remaining execution quota, as a _fixnum_.
+  * _signal_ is a _fixnum_ error-code if halted, otherwise `#?`.
+
 ## Object Graph
 
 The diagram below shows a typical graph of quad-cells
 representing the contents of the `e_queue` (event queue)
 and the `k_queue` (continuation queue).
 These two queues, the interrupt-handling actors,
-and the root sponsor form the root-set of objects
+the root sponsor, and every `STUB_T`
+form the root-set of objects
 for [garbage-collection](gc.md).
 
 ```
