@@ -881,6 +881,13 @@ To Copy fixnum:n of list onto head:
     THEN                    ( D: sp )
     update_sp ;
 
+: undef_abort ( -- ip' )
+    #?
+: abort ( reason -- ip' )
+    DROP                    ( FIXME: record "reason" for auditing? )
+    #? self@ qz!            ( make actor ready )
+    #? ;                    ( end continuation )
+
 : op_end ( -- ip' | error )
     imm@ #1 = IF
         self@ DUP QZ@       ( D: self effect )
@@ -898,12 +905,13 @@ To Copy fixnum:n of list onto head:
         release             ( free effect )
         #? ;                ( end continuation )
     THEN
+    imm@ #-1 = IF
+        undef_abort ;
+    THEN
     imm@ #0 = IF
         E_STOP ;
     THEN
-: end_abort
-    #? self@ qz!            ( make actor ready )
-    #? ;                    ( end continuation )
+    E_BOUNDS ;
 
 : op_push ( -- ip' | error )
     sp@ imm@                ( D: sp item )
@@ -1429,7 +1437,7 @@ del_none:                   ; k orig key rev next value' key'
         send_effect         ( D: sp'' )
         update_sp ;
     THEN
-    2DROP k@ ;
+    2DROP E_NOT_CAP abort ;
 : actor_post ( sp -- ip' | error )
     part                    ( D: sp' target )
     DUP is_cap IF
@@ -1444,7 +1452,7 @@ del_none:                   ; k orig key rev next value' key'
         R>                  ( D: sp''' )
         update_sp ;
     THEN
-    2DROP k@ ;
+    2DROP E_NOT_CAP abort ;
 : actor_create ( sp -- ip' | error )
     part                    ( D: sp' beh )
     DUP #instr_t typeq IF
@@ -1455,7 +1463,7 @@ del_none:                   ; k orig key rev next value' key'
         2alloc ptr2cap      ( D: sp'' actor )
         push_result ;
     THEN
-    2DROP k@ ;
+    2DROP E_NOT_EXE abort ;
 : actor_become ( sp -- ip' | error )
     part                    ( D: sp' beh )
     DUP #instr_t typeq IF
@@ -1466,7 +1474,7 @@ del_none:                   ; k orig key rev next value' key'
         qx! qy!             ( D: sp'' )
         update_sp ;
     THEN
-    2DROP k@ ;
+    2DROP E_NOT_EXE abort ;
 : actor_self ( sp -- ip' )
     self@                   ( D: sp self )
     push_result ;
