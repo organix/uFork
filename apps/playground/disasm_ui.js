@@ -21,7 +21,8 @@ const disasm_ui = make_ui("disasm-ui", function (element, {ir}) {
             flex: 1 1;
             margin: 0;
             color: ${theme.white};
-            font: 17px/1.2 ${theme.monospace_font_family};
+            font-family: ${theme.monospace_font_family};
+            line-height: ${theme.monospace_line_height};
             overflow-y: auto;
             scrollbar-color: ${theme.gray} transparent;
             padding: 0 8px 8px;
@@ -55,7 +56,6 @@ if (import.meta.main) {
     }).then(function (text) {
         element.set_ir(assemble(text));
     });
-    document.head.append(dom("style", theme.monospace_font_css));
     document.body.append(element);
 }
 

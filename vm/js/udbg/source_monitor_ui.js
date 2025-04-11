@@ -27,6 +27,7 @@ const source_monitor_ui = make_ui("source-monitor-ui", function (element, {
         :host > source_text {
             flex: 1 1;
             font-family: ${theme.monospace_font_family};
+            line-height: ${theme.monospace_line_height};
             white-space: pre;
             overflow: auto;
             scrollbar-color: ${theme.gray} transparent;
@@ -82,12 +83,15 @@ function demo() {
         return response.text();
     }).then(function (text) {
         element.set_sourcemap({
-            debug: {src: asm_href, start: 1321, end: 1331},
+            debug: {
+                src: asm_href,
+                start: 1321,
+                end: 1331
+            },
             text
         });
         document.body.append(element);
     });
-    document.head.append(dom("style", theme.monospace_font_css));
 }
 
 if (import.meta.main) {

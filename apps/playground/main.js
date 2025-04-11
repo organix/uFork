@@ -279,8 +279,5 @@ addEventListener("resize", function () {
         split.set_size(read_setting("tools_height") ?? default_tools_height);
     }
 });
-document.head.append(
-    dom("meta", {name: "color-scheme", content: "dark"}),
-    dom("style", theme.monospace_font_css)
-);
+document.head.append(dom("meta", {name: "color-scheme", content: "dark"}));
 document.body.append(split);

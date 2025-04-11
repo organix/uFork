@@ -359,7 +359,7 @@ const actors_ui = make_ui("actor-ui", function (element, {
     ]);
     graph_element = springy_ui({
         layout,
-        node_font_size: 18,
+        node_font_size: 14,
         font_family: theme.monospace_font_family,
         background_color: theme.black,
         foreground_color: theme.white,
@@ -452,10 +452,7 @@ function demo(log) {
             return true;
         })
     ])(log);
-    document.head.append(
-        dom("meta", {name: "color-scheme", content: "dark"}),
-        dom("style", theme.monospace_font_css)
-    );
+    document.head.append(dom("meta", {name: "color-scheme", content: "dark"}));
     document.body.append(element);
     document.body.onkeydown = function (event) {
         if (event.key === "s") {

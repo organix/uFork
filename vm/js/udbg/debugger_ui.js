@@ -366,10 +366,7 @@ function demo(log) {
     });
     element.style.position = "fixed";
     element.style.inset = "0";
-    document.head.append(
-        dom("meta", {name: "color-scheme", content: "dark"}),
-        dom("style", theme.monospace_font_css)
-    );
+    document.head.append(dom("meta", {name: "color-scheme", content: "dark"}));
     document.body.append(element);
 }
 

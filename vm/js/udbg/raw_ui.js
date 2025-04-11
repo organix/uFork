@@ -636,7 +636,6 @@ function demo(log) {
             return true;
         })
     ])(log);
-    document.head.append(dom("style", theme.monospace_font_css));
 }
 
 if (import.meta.main) {

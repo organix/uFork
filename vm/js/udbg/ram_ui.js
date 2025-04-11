@@ -50,6 +50,7 @@ const ram_ui = make_ui("ram-explorer-ui", function (element, {
             font-family: ${theme.monospace_font_family};
             white-space: pre;
             color: ${theme.white};
+            padding-top: 3px;
         }
         :host > dl > dd {
             margin: 0;
@@ -150,10 +151,7 @@ function demo(log) {
             return true;
         })
     ])(log);
-    document.head.append(
-        dom("meta", {name: "color-scheme", content: "dark"}),
-        dom("style", theme.monospace_font_css)
-    );
+    document.head.append(dom("meta", {name: "color-scheme", content: "dark"}));
     document.body.append(element);
 }
 

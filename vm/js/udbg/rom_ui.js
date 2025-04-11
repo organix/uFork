@@ -167,8 +167,7 @@ const rom_ui = make_ui("rom-ui", function (element, {
         }
         :host > rom_text {
             font-family: ${theme.monospace_font_family};
-            font-size: 17px;
-            line-height: 1.3;
+            line-height: ${theme.monospace_line_height};
             white-space: pre;
             min-height: 60px;
             color: ${theme.green};
@@ -188,6 +187,7 @@ const rom_ui = make_ui("rom-ui", function (element, {
             align-items: baseline;
             font-family: ${theme.monospace_font_family};
             white-space: pre;
+            padding-top: 3px;
         }
         :host > dl > dd {
             margin: 0;
@@ -349,10 +349,7 @@ function demo() {
     element.style.position = "fixed";
     element.style.inset = "0";
     element.set_rom(rom_words.slice(0, rom_top * 4), rom_debugs);
-    document.head.append(
-        dom("meta", {name: "color-scheme", content: "dark"}),
-        dom("style", theme.monospace_font_css)
-    );
+    document.head.append(dom("meta", {name: "color-scheme", content: "dark"}));
     document.body.append(element);
 }
 

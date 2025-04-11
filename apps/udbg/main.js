@@ -72,6 +72,5 @@ function connect() {
 }
 
 reset();
-document.head.append(dom("style", theme.monospace_font_css));
 document.addEventListener("visibilitychange", connect);
 connect();

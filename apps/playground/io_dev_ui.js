@@ -18,8 +18,7 @@ const io_dev_ui = make_ui("io-dev-ui", function (element, {on_input}) {
         }
         io_output {
             font-family: ${theme.monospace_font_family};
-            font-size: 17px;
-            line-height: 1.3;
+            line-height: ${theme.monospace_line_height};
             white-space: pre;
             min-height: 60px;
             overflow: auto;
@@ -140,7 +139,6 @@ if (import.meta.main) {
         io_dev_ui({on_input: globalThis.console.log}),
         {style: {position: "fixed", inset: "0", background: "black"}}
     );
-    document.head.append(dom("style", theme.monospace_font_css));
     document.body.append(io_dev);
     io_dev.warn("A warning!");
     io_dev.debug("Debuggage...");
