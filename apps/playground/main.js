@@ -166,6 +166,9 @@ tools = tools_ui({
             : undefined // omit default
         ));
     },
+    on_viewbox_size_change(viewbox_size) {
+        write_state("size", viewbox_size);
+    },
     on_attach() {
         if (udbg_window === undefined || udbg_window.closed) {
             if (udbg_bridge !== undefined) {
@@ -251,6 +254,7 @@ if (read_state("src") === undefined && read_state("text") === undefined) {
 const src = read_state("src") || "";
 const src_extension = src.split(".").pop();
 const lang_override = read_state("lang");
+const viewbox_size = parseInt(read_state("size"));
 text_override = read_state("text");
 let lang = lang_override ?? src_extension;
 if (lang_packs[lang] === undefined) {
@@ -261,6 +265,9 @@ tools.set_lang(lang);
 tools.set_device(read_state("dev") || "io");
 tools.set_text(editor.get_text());
 tools.set_src(get_src());
+if (Number.isSafeInteger(viewbox_size) && viewbox_size > 0) {
+    tools.set_viewbox_size(viewbox_size);
+}
 fetch_text().then(function (text) {
     editor.set_text(text);
     tools.set_text(text);

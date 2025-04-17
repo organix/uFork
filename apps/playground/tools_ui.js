@@ -105,11 +105,13 @@ const tools_ui = make_ui("tools-ui", function (element, {
     text = "",
     src,
     device,
+    viewbox_size,
     lang = "asm",
     lang_packs = {},
     import_map,
     on_lang_change,
     on_device_change,
+    on_viewbox_size_change,
     on_attach,
     on_detach,
     on_status,
@@ -159,11 +161,13 @@ const tools_ui = make_ui("tools-ui", function (element, {
     });
     devices.svg = svg_dev_ui({
         background_color: "#ffffff",
+        viewbox_size,
         on_pointer_input(x, y, button_mask) {
             if (h_on_svgin !== undefined) {
                 h_on_svgin(x, y, button_mask);
             }
-        }
+        },
+        on_viewbox_size_change
     });
     devices.disasm = disasm_ui({});
 
@@ -448,6 +452,7 @@ const tools_ui = make_ui("tools-ui", function (element, {
     element.set_lang = set_lang;
     element.set_text = set_text;
     element.set_src = set_src;
+    element.set_viewbox_size = devices.svg.set_viewbox_size;
     element.warn = warn;
 });
 
@@ -459,6 +464,7 @@ if (import.meta.main) {
             lang_packs: {asm: lang_asm, scm: lang_scm},
             on_lang_change: globalThis.console.log,
             on_device_change: globalThis.console.log,
+            on_viewbox_size_change: globalThis.console.log,
             on_attach: () => globalThis.console.log("on_attach"),
             on_detach: () => globalThis.console.log("on_detach"),
             on_upload: () => globalThis.console.log("on_upload"),
@@ -471,6 +477,7 @@ if (import.meta.main) {
         dom("meta", {name: "color-scheme", content: "dark"})
     );
     document.body.append(tools);
+    tools.set_viewbox_size(64);
 }
 
 export default Object.freeze(tools_ui);

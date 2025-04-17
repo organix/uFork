@@ -1,16 +1,18 @@
 // The SVG device. It draws SVG graphics and accepts pointer input.
 
-/*jslint browser, bitwise */
+/*jslint browser, global, bitwise */
 
 import dom from "https://ufork.org/lib/dom.js";
 import theme from "https://ufork.org/lib/theme.js";
 import make_ui from "https://ufork.org/lib/ui.js";
 
+const default_viewbox_size = 32; // slider's halfway position
 const svg_dev_ui = make_ui("svg-dev-ui", function (element, {
-    viewbox_size = 32, // defaults to slider's halfway position
+    viewbox_size = default_viewbox_size,
     max_viewbox_size = 1024,
     background_color = "#ffffff",
-    on_pointer_input
+    on_pointer_input,
+    on_viewbox_size_change
 }) {
     const shadow = element.attachShadow({mode: "closed"});
     const style = dom("style", `
@@ -119,6 +121,11 @@ const svg_dev_ui = make_ui("svg-dev-ui", function (element, {
         oninput() {
             const size = parseFloat(size_input.value);
             set_viewbox_size(Math.round(max_viewbox_size ** size));
+            on_viewbox_size_change(
+                viewbox_size !== default_viewbox_size
+                ? viewbox_size
+                : undefined
+            );
         }
     });
     const controls_element = dom("svg_controls", [
@@ -179,6 +186,9 @@ if (import.meta.main) {
                 svg_dev.draw(`
                     <circle cx="${x}" cy="${y}" r="0.1" fill="${fill}" />
                 `);
+            },
+            on_viewbox_size_change(viewbox_size) {
+                globalThis.console.log("on_viewbox_size_change", viewbox_size);
             }
         }),
         {style: {width: "400px", height: "400px"}}
