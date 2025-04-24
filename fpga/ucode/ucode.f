@@ -1,5 +1,5 @@
 (
-    Base word dictionary for uCode
+    uCode implementation of uFork processor
 )
 
 : PANIC! FAIL PANIC! ;      ( if BOOT returns... )
@@ -179,6 +179,526 @@
     6 * ?LOOP- AGAIN ;      ( FIXME: adjust multiplier if CPU clock-rate changes )
 : ms_delay ( ms -- )
     ?LOOP- 1000 us_delay AGAIN ;
+
+( SPI Flash Interface )
+VARIABLE spi_page ( bits [31:16] of SPI address )
+
+: b2c ( msb lsb -- cell )
+    8LSB&
+    SWAP 8LSB& 8ROL
+    OR ;
+: c2b ( cell -- msb lsb )
+    DUP 8ROL 8LSB&
+    SWAP 8LSB& ;
+
+: CS! ( bool -- )
+    0xf0 IO! ;              ( assert chip-select )
+: DO! ( byte -- )
+    0xf1 IO! ;              ( send data byte )
+: DR? ( -- bool )
+    0xf2 IO@ ;              ( data ready/done )
+: DI@ ( -- byte )
+    0xf3 IO@ ;              ( last byte received )
+: WAIT_DR ( -- )
+    BEGIN DR? UNTIL ;       ( wait until ready/done )
+
+: spi_out ( byte -- )
+    WAIT_DR DO! ;
+: spi_in ( -- byte )
+    -1 spi_out              ( send dummy byte )
+    WAIT_DR DI@ ;
+
+: spi_wake ( -- id )
+    0x06 spi_page !         ( set default base address )
+    TRUE CS!                ( assert chip-select )
+    5 ?LOOP-
+        0xAB spi_out        ( "Resume from Deep Power-Down and Read Device ID" command )
+    AGAIN
+    WAIT_DR DI@             ( id received )
+    FALSE CS! ;             ( deassert chip-select )
+
+: XB. ( byte -- )
+    DUP 4ASR X# X# ;
+: spi_dump ( start end -- )
+    OVER -                  ( D: start span )
+    DUP 0< IF
+        2DROP
+    ELSE
+        OVER                ( D: start span start )
+        TRUE CS!            ( assert chip-select )
+        0x03 spi_out        ( "Read Array" command )
+        spi_page @ spi_out  ( address[23:16] )
+        DUP 8ROL spi_out    ( address[15:8] )
+        spi_out             ( address[7:0] )
+        1+ ?LOOP-
+            spi_in          ( D: addr data )
+            OVER LSB& IF
+                '_' EMIT
+            ELSE
+                OVER 0x7 AND IF
+                    SPACE
+                ELSE
+                    CR
+                THEN
+            THEN
+            XB. 1+          ( D: addr+1 )
+        AGAIN
+        FALSE CS!           ( deassert chip-select )
+        CR DROP
+    THEN ;
+
+: spif_status ( -- status )
+    TRUE CS!                ( assert chip-select )
+    0x05 spi_out            ( "Read Status Register" command )
+    spi_in                  ( status received )
+    FALSE CS! ;             ( deassert chip-select )
+
+: spif_wait ( -- )
+    BEGIN                   ( wait for "busy" status to clear )
+        spif_status LSB& 0=
+    UNTIL ;
+
+: spif_write_enable ( -- )
+    TRUE CS!                ( assert chip-select )
+    0x06 spi_out            ( "Write Enable" command )
+    WAIT_DR                 ( wait until ready/done )
+    FALSE CS! ;             ( deassert chip-select )
+
+: spif_erase_64k ( page -- )
+    TRUE CS!                ( assert chip-select )
+    0xD8 spi_out            ( "Block Erase 64k" command )
+    spi_out                 ( address[23:16]=page )
+    0 spi_out               ( address[15:8] )
+    0 spi_out               ( address[7:0] )
+    WAIT_DR                 ( wait until ready/done )
+    FALSE CS! ;             ( deassert chip-select )
+
+: spif_program_block ( buf n=[1,128] lsb msb page -- buf' )
+    spif_write_enable
+    TRUE CS!                ( assert chip-select )
+    0x02 spi_out            ( "Byte/Page Program" command )
+    spi_out                 ( address[23:16]=page )
+    spi_out                 ( address[15:8]=msb )
+    spi_out                 ( address[7:0]=lsb )
+    ?LOOP-                  ( for each cell )
+        DUP @               ( D: buf cell )
+        DUP 8ROL            ( D: buf lsb msb )
+        spi_out             ( start sending msb )
+        WAIT_DR             ( wait until ready/done )
+        spi_out             ( start sending lsb )
+        1+                  ( D: buf+1 )
+        WAIT_DR             ( wait until ready/done )
+    AGAIN
+    FALSE CS!               ( deassert chip-select )
+    spif_wait ;
+
+: spif_program_page ( buf nblks -- buf' )
+    0 SWAP                  ( D: buf cnt nblks )
+    ?LOOP-                  ( for each block )
+        >R                  ( D: buf ) ( R: I cnt )
+        128 0 R@ 6          ( D: buf n lsb msb page ) ( R: I cnt )
+        spif_program_block  ( D: buf' ) ( R: I cnt )
+        R> 1+               ( D: buf' cnt+1 ) ( R: I )
+    AGAIN DROP ;            ( D: buf' ) ( R: -- )
+
+: spif_cell_in ( -- cell )
+    spi_in spi_in b2c ;
+: spif2qrom ( qaddr nquads -- )
+    TRUE CS!                ( assert chip-select )
+    0x03 spi_out            ( "Read Array" command )
+    6 spi_out               ( address[23:16] )
+    0 spi_out               ( address[15:8] )
+    0 spi_out               ( address[7:0] )
+    ?LOOP-
+        spif_cell_in OVER QT!
+        spif_cell_in OVER QX!
+        spif_cell_in OVER QY!
+        spif_cell_in OVER QZ!
+        1+                  ( D: qaddr+1 )
+    AGAIN
+    FALSE CS!               ( deassert chip-select )
+    DROP ;
+
+: rom_blks ( nquads -- nblks )
+    ( 2ROL ROL 0xFF + 8ROL 0xFF AND ; )
+    0x1F + 4ASR 2/ ;
+: spif_cell_out ( cell -- )
+    c2b SWAP spi_out spi_out ;
+: qrom2spif ( qaddr nquads -- )
+    spif_write_enable
+    6 spif_erase_64k
+    spif_wait
+    rom_blks                ( D: qaddr nblks )
+    ?LOOP-                  ( for each block )
+        DUP ROL 2ROL        ( D: qaddr addr )
+        8ROL 8LSB&          ( D: qaddr msb )
+        spif_write_enable
+        TRUE CS!            ( assert chip-select )
+        0x02 spi_out        ( "Byte/Page Program" command )
+        6 spi_out           ( address[23:16]=page )
+        spi_out             ( address[15:8]=msb )
+        0 spi_out           ( address[7:0]=lsb )
+        32 ?LOOP-           ( for each quad )
+            DUP QT@ spif_cell_out
+            DUP QX@ spif_cell_out
+            DUP QY@ spif_cell_out
+            DUP QZ@ spif_cell_out
+            1+              ( D: qaddr+1 )
+        AGAIN
+        WAIT_DR             ( wait until ready/done )
+        FALSE CS!           ( deassert chip-select )
+        spif_wait
+    AGAIN                   ( D: qaddr' )
+    DROP ;
+
+( Debugging Monitor )
+0x21 CONSTANT '!'
+0x2E CONSTANT '.'
+0x2F CONSTANT '/'
+0x3C CONSTANT '<'
+0x3E CONSTANT '>'
+0x3F CONSTANT '?'
+0x40 CONSTANT '@'
+0x5B CONSTANT '['
+0x5D CONSTANT ']'
+0x70 CONSTANT 'p'
+0x71 CONSTANT 'q'
+0x72 CONSTANT 'r'
+0x78 CONSTANT 'x'
+0x7E CONSTANT '~'
+VARIABLE cmd    ( last command character read )
+VARIABLE inp    ( input data accumulator )
+VARIABLE tos    ( top of stack )
+VARIABLE nos    ( next on stack )
+VARIABLE here   ( upload address )
+: to_qaddr ( raw -- qaddr )
+    DUP MSB& IF
+        0x0FFF AND          ( uCode | fixnum )
+    ELSE
+        2ROL
+        DUP LSB& IF         ( RAM address )
+            0x3FFC AND 0x4000 OR
+        ELSE                ( ROM address )
+            0x7FFC AND MSB|
+        THEN
+    THEN ;
+: parse_qaddr ( qaddr -- field raw )
+        DUP 0x3 AND SWAP    ( D: field addr )
+        DUP MSB& IF
+            2ASR 0x1FFF AND
+        ELSE
+            2ASR 0x0FFF AND
+            0x4000 OR
+        THEN ;              ( D: field raw )
+: fetch ( addr -- data )
+    DUP 0xC000 AND IF
+        parse_qaddr         ( D: field raw )
+        OVER 0x1 = IF
+            QX@             ( D: field data )
+        ELSE
+            OVER 0x2 = IF
+                QY@         ( D: field data )
+            ELSE
+                OVER 0x3 = IF
+                    QZ@     ( D: field data )
+                ELSE
+                    QT@     ( D: field data )
+                THEN
+            THEN
+        THEN
+        NIP                 ( D: data )
+    ELSE
+        DUP 0xF000 AND 0x2000 = IF
+            GCC@            ( D: color )
+        ELSE
+            @               ( D: data )
+        THEN
+    THEN ;
+: store ( data addr -- )
+    DUP 0xC000 AND IF
+        parse_qaddr SWAP    ( D: data raw field )
+        DUP 0x1 = IF
+            DROP QX!
+        ELSE
+            DUP 0x2 = IF
+                DROP QY!
+            ELSE
+                DUP 0x3 = IF
+                    DROP QZ!
+                ELSE
+                    DROP QT!
+                THEN
+            THEN
+        THEN
+    ELSE
+        DUP 0xF000 AND 0x2000 = IF
+            GCC!
+        ELSE
+            !
+        THEN
+    THEN ;
+: push ( a -- )
+    tos @ nos !
+    tos ! ;
+: pop ( -- a )
+    tos @
+    nos @ tos ! ;
+: dump ( start end -- )
+    OVER -                  ( D: start span )
+    DUP 0< IF
+        2DROP
+    ELSE
+        1+ ?LOOP-
+            DUP fetch       ( D: addr data )
+            OVER 0x7 AND IF
+                SPACE
+            ELSE
+                CR
+            THEN
+            X. 1+           ( D: addr+1 )
+        AGAIN CR DROP
+    THEN ;
+: >inp ( key -- )
+    FROMHEX inp @           ( D: nybble accum )
+    4ROL 0xFFF0 AND OR      ( D: accum' )
+    inp ! ;
+: >here ( data -- )
+    here @ store
+    here @1+ ;
+: prompt ( -- )
+    '>' EMIT BL EMIT ;
+: del ( -- )
+    cmd @
+    DUP BL > IF
+        DUP ISHEX IF
+            inp @
+            4ASR 0x0FFF AND
+            DUP IF
+                DUP TOHEX
+            ELSE
+                BL
+            THEN cmd !
+            inp !
+        ELSE
+            BL cmd !
+        THEN
+        '\b' EMIT BL EMIT '\b' EMIT
+    THEN DROP ;
+: eol ( begin -- end )
+    ( EMIT ) KEY
+    DUP '\r' = SKZ EXIT
+    eol ;
+VARIABLE log_addr
+: log_0 ( -- )
+    log_addr @
+    0x7060 OVER QT!
+    -1 OVER QX!
+    -1 OVER QY!
+    R@ OVER QZ!
+    DROP
+    log_addr @1+ ;
+: log_1 ( x -- x )
+    DUP log_addr @          ( D: x addr )
+    0x7061 OVER QT!
+    SWAP OVER QX!           ( D: addr )
+    -1 OVER QY!
+    R@ OVER QZ!
+    DROP
+    log_addr @1+ ;
+: log_2 ( x y -- x y )
+    2DUP log_addr @         ( D: x y addr )
+    0x7062 OVER QT!
+    SWAP OVER QY!           ( D: x addr )
+    SWAP OVER QX!           ( D: addr )
+    R@ OVER QZ!
+    DROP
+    log_addr @1+ ;
+( XMODEM file transfer )
+0x01 CONSTANT SOH           ( Start of Header )
+0x06 CONSTANT ACK           ( Acknowledge )
+0x15 CONSTANT NAK           ( Negative Ack )
+0x04 CONSTANT EOT           ( End of Transmission )
+0x18 CONSTANT CAN           ( Cancel )
+VARIABLE xm_pkt             ( current packet number )
+VARIABLE xm_retry           ( number of retries )
+VARIABLE xm_here            ( upload address )
+: xm_250ms_rcv ( -- byte | -1 )
+    250
+: xm_timed_rcv ( ms -- byte | -1 )
+    RX? IF
+        DROP RX@            ( D: byte )
+        8LSB& ;
+    THEN
+    DUP IF
+        1000 us_delay       ( D: ms )
+        1- xm_timed_rcv ;
+    THEN
+    DROP -1 ;               ( timeout )
+: xm_flush_rcv ( -- )
+    xm_250ms_rcv MSB& IF
+        EXIT
+    THEN xm_flush_rcv ;
+: xm_rcv_failed
+    log_0
+    3 ?LOOP-
+        CAN EMIT
+    AGAIN
+    xm_flush_rcv
+    0 ;
+: xm_rcv_bad                ( D: rem chk data )
+    DROP
+    log_2
+    2DROP                   ( D -- )
+    xm_here @ here !        ( restore starting addr )
+: xm_rcv_try
+    xm_retry @ 0= IF
+        xm_rcv_failed ;
+    THEN
+    xm_retry @1-
+    xm_flush_rcv
+    log_0
+    NAK EMIT                ( send NAK to start or retry )
+: xm_rcv_soh
+    3000 xm_timed_rcv
+    DUP EOT = IF
+        ACK EMIT
+        xm_pkt @ ;          ( successful transfer )
+    THEN
+    SOH <> IF
+        xm_rcv_try ;        ( try again... )
+    THEN
+: xm_rcv_npkt
+    xm_250ms_rcv
+    DUP MSB& IF
+        xm_rcv_try ;        ( try again... )
+    THEN
+    DUP xm_pkt @ 8LSB& = IF
+        xm_flush_rcv
+        ACK EMIT            ( ACK dup packet )
+        xm_rcv_soh ;
+    THEN
+    xm_pkt @ 1+ 8LSB& <> IF
+        xm_rcv_failed ;     ( transfer failed )
+    THEN
+: xm_rcv_ipkt
+    xm_250ms_rcv
+    DUP MSB& IF
+        xm_rcv_try ;        ( try again... )
+    THEN
+    xm_pkt @ 1+ INVERT 8LSB& <> IF
+        xm_rcv_try ;        ( try again... )
+    THEN
+: xm_rcv_pkt
+    here @
+    log_1
+    xm_here !               ( remember starting addr )
+    128 0                   ( D: rem chk )
+: xm_rcv_cell
+    xm_250ms_rcv            ( D: rem chk msb )
+    DUP MSB& IF
+        xm_rcv_bad ;        ( bad packet... )
+    THEN
+    SWAP OVER +             ( D: rem msb chk+msb )
+    xm_250ms_rcv            ( D: rem msb chk+msb lsb )
+    DUP MSB& IF
+        DROP xm_rcv_bad ;   ( bad packet... )
+    THEN
+    SWAP OVER +             ( D: rem msb lsb chk+msb+lsb )
+    -ROT b2c                ( D: rem chk' cell )
+    ( log_2 )
+    >here                   ( D: rem chk' )
+    SWAP 2 - SWAP           ( D: rem-2 chk' )
+    OVER IF
+        xm_rcv_cell ;
+    THEN
+: xm_rcv_chk
+    xm_250ms_rcv            ( D: rem' chk' chk )
+    log_2
+    DUP MSB& IF
+        xm_rcv_bad ;        ( bad packet... )
+    THEN
+    2DUP XOR 8LSB&          ( D: rem' chk' chk (chk'^chk)&0xFF )
+    IF
+        xm_rcv_bad ;        ( bad packet... )
+    THEN
+    2DROP DROP              ( D: -- )
+    xm_pkt @1+
+    10 xm_retry !
+    log_0
+    ACK EMIT                ( ACK good packet )
+    xm_rcv_soh ;
+: xm_rcv_file ( -- npkts )
+    0x1000 log_addr !
+    log_0
+    0 xm_pkt !
+    10 xm_retry !
+    0x8000 here !           ( upload to uFork ROM )
+    xm_rcv_try ;
+: MONITOR
+    KEY                     ( D: key )
+    DUP ^C = IF             ( exit MONITOR )
+        DROP ;
+    THEN
+    DUP '\b' = IF
+        DROP DEL            ( convert backspace to delete )
+    THEN
+    DUP DEL = IF
+        del                 ( delete previous )
+    THEN
+    DUP ECHO
+    cmd @ SWAP              ( D: cmd key )
+    ( '<' EMIT OVER X. '.' EMIT DUP X. '>' EMIT )
+    DUP BL <= IF
+        OVER ISHEX IF       ( push accum )
+            inp @ push
+        THEN
+        OVER '@' = IF       ( fetch )
+            pop fetch push
+        THEN
+        OVER '.' = IF       ( print )
+            pop X. CR
+        THEN
+        OVER '!' = IF       ( store )
+            pop pop SWAP store
+        THEN
+        OVER 'q' = IF
+            pop to_qaddr push
+        THEN
+        OVER 'p' = IF
+            pop parse_qaddr SWAP push push
+        THEN
+        OVER '?' = IF       ( dump memory )
+            pop pop SWAP dump
+        THEN
+        OVER '~' = IF       ( dump flash )
+            pop pop SWAP spi_dump
+        THEN
+        OVER 'x' = IF       ( xmodem receive )
+            xm_rcv_file push
+        THEN
+        OVER '<' = IF       ( init from flash )
+            0 0x2000 spif2qrom
+        THEN
+        OVER '>' = IF       ( copy to flash )
+            0 0x2000 qrom2spif
+        THEN
+        OVER 'r' = IF
+            pop EXECUTE
+        THEN
+        0 inp !             ( clear input accum )
+        DUP '\r' = IF
+            prompt
+        THEN
+    THEN
+    DUP ISHEX IF
+        DUP >inp            ( add digit to accum )
+    THEN
+    DUP DEL = IF
+        2DROP
+    ELSE
+        NIP cmd !           ( key -> cmd )
+    THEN
+    MONITOR ;
 
 ( uFork Virtual Machine )
 : rom_image DATA
@@ -881,10 +1401,11 @@ To Copy fixnum:n of list onto head:
     THEN                    ( D: sp )
     update_sp ;
 
+VARIABLE abort_reason       ( "reason" for most-recent abort )
 : undef_abort ( -- ip' )
     #?
 : abort ( reason -- ip' )
-    DROP                    ( FIXME: record "reason" for auditing? )
+    abort_reason !          ( record abort "reason" for auditing )
     #? self@ qz!            ( make actor ready )
     #? ;                    ( end continuation )
 
@@ -1480,7 +2001,7 @@ del_none:                   ; k orig key rev next value' key'
     push_result ;
 : op_actor ( -- ip' | error )
     sp@ imm@ DUP is_fix IF
-        fix2int             ( imm )
+        fix2int             ( D: sp imm )
         JMPTBL 5 ,
         actor_send          ( 0: send )
         actor_post          ( 1: post )
@@ -1488,6 +2009,8 @@ del_none:                   ; k orig key rev next value' key'
         actor_become        ( 3: become )
         actor_self          ( 4: self )
         DROP                ( default case )
+    ELSE
+        DROP                ( D: sp )
     THEN
     update_sp ;
 
@@ -1677,9 +2200,8 @@ VARIABLE saved_sp           ( sp before instruction execution )
         FAIL
     THEN ;
 
-VARIABLE ufork_resume       ( address to jump to when ufork is idle )
 : ufork_boot
-    R> ufork_resume !
+    RESET                   ( clear both D-stack and R-stack )
     ram_init                ( reset RAM )
     ( create bootstrap actor and initial event )
     #nil 0x0010             ( state=#nil beh=boot )
@@ -1690,10 +2212,12 @@ VARIABLE ufork_resume       ( address to jump to when ufork is idle )
     #dict_t 3alloc          ( D: target msg={0:debug_dev} )
     SWAP root_spn 2alloc    ( D: event )
     event_enqueue
-    0 run_loop
+    0 run_loop              ( FIXME: convert to continuation tail-calls )
+: ufork_idle
     root_spn spn_signal@ #0 =assert
-    RESET                   ( clear both D-stack and R-stack )
-    ufork_resume @EXECUTE ;
+: ufork_run
+    prompt MONITOR
+    ufork_boot ;
 
 (   --- disable test suite ---
 : ufork_init_test
@@ -1751,548 +2275,12 @@ VARIABLE ufork_resume       ( address to jump to when ufork is idle )
     EXIT
 --- disable test suite ---  )
 
-( SPI Flash Interface )
-VARIABLE spi_page ( bits [31:16] of SPI address )
-
-: b2c ( msb lsb -- cell )
-    8LSB&
-    SWAP 8LSB& 8ROL
-    OR ;
-: c2b ( cell -- msb lsb )
-    DUP 8ROL 8LSB&
-    SWAP 8LSB& ;
-
-: CS! ( bool -- )
-    0xf0 IO! ;              ( assert chip-select )
-: DO! ( byte -- )
-    0xf1 IO! ;              ( send data byte )
-: DR? ( -- bool )
-    0xf2 IO@ ;              ( data ready/done )
-: DI@ ( -- byte )
-    0xf3 IO@ ;              ( last byte received )
-: WAIT_DR ( -- )
-    BEGIN DR? UNTIL ;       ( wait until ready/done )
-
-: spi_out ( byte -- )
-    WAIT_DR DO! ;
-: spi_in ( -- byte )
-    -1 spi_out              ( send dummy byte )
-    WAIT_DR DI@ ;
-
-: spi_wake ( -- id )
-    0x06 spi_page !         ( set default base address )
-    TRUE CS!                ( assert chip-select )
-    5 ?LOOP-
-        0xAB spi_out        ( "Resume from Deep Power-Down and Read Device ID" command )
-    AGAIN
-    WAIT_DR DI@             ( id received )
-    FALSE CS! ;             ( deassert chip-select )
-
-: XB. ( byte -- )
-    DUP 4ASR X# X# ;
-: spi_dump ( start end -- )
-    OVER -                  ( D: start span )
-    DUP 0< IF
-        2DROP
-    ELSE
-        OVER                ( D: start span start )
-        TRUE CS!            ( assert chip-select )
-        0x03 spi_out        ( "Read Array" command )
-        spi_page @ spi_out  ( address[23:16] )
-        DUP 8ROL spi_out    ( address[15:8] )
-        spi_out             ( address[7:0] )
-        1+ ?LOOP-
-            spi_in          ( D: addr data )
-            OVER LSB& IF
-                '_' EMIT
-            ELSE
-                OVER 0x7 AND IF
-                    SPACE
-                ELSE
-                    CR
-                THEN
-            THEN
-            XB. 1+          ( D: addr+1 )
-        AGAIN
-        FALSE CS!           ( deassert chip-select )
-        CR DROP
-    THEN ;
-
-: spif_status ( -- status )
-    TRUE CS!                ( assert chip-select )
-    0x05 spi_out            ( "Read Status Register" command )
-    spi_in                  ( status received )
-    FALSE CS! ;             ( deassert chip-select )
-
-: spif_wait ( -- )
-    BEGIN                   ( wait for "busy" status to clear )
-        spif_status LSB& 0=
-    UNTIL ;
-
-: spif_write_enable ( -- )
-    TRUE CS!                ( assert chip-select )
-    0x06 spi_out            ( "Write Enable" command )
-    WAIT_DR                 ( wait until ready/done )
-    FALSE CS! ;             ( deassert chip-select )
-
-: spif_erase_64k ( page -- )
-    TRUE CS!                ( assert chip-select )
-    0xD8 spi_out            ( "Block Erase 64k" command )
-    spi_out                 ( address[23:16]=page )
-    0 spi_out               ( address[15:8] )
-    0 spi_out               ( address[7:0] )
-    WAIT_DR                 ( wait until ready/done )
-    FALSE CS! ;             ( deassert chip-select )
-
-: spif_program_block ( buf n=[1,128] lsb msb page -- buf' )
-    spif_write_enable
-    TRUE CS!                ( assert chip-select )
-    0x02 spi_out            ( "Byte/Page Program" command )
-    spi_out                 ( address[23:16]=page )
-    spi_out                 ( address[15:8]=msb )
-    spi_out                 ( address[7:0]=lsb )
-    ?LOOP-                  ( for each cell )
-        DUP @               ( D: buf cell )
-        DUP 8ROL            ( D: buf lsb msb )
-        spi_out             ( start sending msb )
-        WAIT_DR             ( wait until ready/done )
-        spi_out             ( start sending lsb )
-        1+                  ( D: buf+1 )
-        WAIT_DR             ( wait until ready/done )
-    AGAIN
-    FALSE CS!               ( deassert chip-select )
-    spif_wait ;
-
-: spif_program_page ( buf nblks -- buf' )
-    0 SWAP                  ( D: buf cnt nblks )
-    ?LOOP-                  ( for each block )
-        >R                  ( D: buf ) ( R: I cnt )
-        128 0 R@ 6          ( D: buf n lsb msb page ) ( R: I cnt )
-        spif_program_block  ( D: buf' ) ( R: I cnt )
-        R> 1+               ( D: buf' cnt+1 ) ( R: I )
-    AGAIN DROP ;            ( D: buf' ) ( R: -- )
-
-: spif_cell_in ( -- cell )
-    spi_in spi_in b2c ;
-: spif2qrom ( qaddr nquads -- )
-    TRUE CS!                ( assert chip-select )
-    0x03 spi_out            ( "Read Array" command )
-    6 spi_out               ( address[23:16] )
-    0 spi_out               ( address[15:8] )
-    0 spi_out               ( address[7:0] )
-    ?LOOP-
-        spif_cell_in OVER QT!
-        spif_cell_in OVER QX!
-        spif_cell_in OVER QY!
-        spif_cell_in OVER QZ!
-        1+                  ( D: qaddr+1 )
-    AGAIN
-    FALSE CS!               ( deassert chip-select )
-    DROP ;
-
-: rom_blks ( nquads -- nblks )
-    ( 2ROL ROL 0xFF + 8ROL 0xFF AND ; )
-    0x1F + 4ASR 2/ ;
-: spif_cell_out ( cell -- )
-    c2b SWAP spi_out spi_out ;
-: qrom2spif ( qaddr nquads -- )
-    spif_write_enable
-    6 spif_erase_64k
-    spif_wait
-    rom_blks                ( D: qaddr nblks )
-    ?LOOP-                  ( for each block )
-        DUP ROL 2ROL        ( D: qaddr addr )
-        8ROL 8LSB&          ( D: qaddr msb )
-        spif_write_enable
-        TRUE CS!            ( assert chip-select )
-        0x02 spi_out        ( "Byte/Page Program" command )
-        6 spi_out           ( address[23:16]=page )
-        spi_out             ( address[15:8]=msb )
-        0 spi_out           ( address[7:0]=lsb )
-        32 ?LOOP-           ( for each quad )
-            DUP QT@ spif_cell_out
-            DUP QX@ spif_cell_out
-            DUP QY@ spif_cell_out
-            DUP QZ@ spif_cell_out
-            1+              ( D: qaddr+1 )
-        AGAIN
-        WAIT_DR             ( wait until ready/done )
-        FALSE CS!           ( deassert chip-select )
-        spif_wait
-    AGAIN                   ( D: qaddr' )
-    DROP ;
-
-: spif_test ( -- )
-    spif_status X. CR
-    spif_write_enable
-    spif_status X. CR
-    6 spif_erase_64k
-    spif_status X. CR
-    spif_wait
-    spif_status X. CR
-    ( rom_image 128 0 0 6 spif_program_block DROP )
-    rom_image rom_quads rom_blks spif_program_page X. CR ;
-
-( Debugging Monitor )
-0x21 CONSTANT '!'
-0x2E CONSTANT '.'
-0x2F CONSTANT '/'
-0x3C CONSTANT '<'
-0x3E CONSTANT '>'
-0x3F CONSTANT '?'
-0x40 CONSTANT '@'
-0x5B CONSTANT '['
-0x5D CONSTANT ']'
-0x70 CONSTANT 'p'
-0x71 CONSTANT 'q'
-0x72 CONSTANT 'r'
-0x78 CONSTANT 'x'
-0x7E CONSTANT '~'
-VARIABLE cmd    ( last command character read )
-VARIABLE inp    ( input data accumulator )
-VARIABLE tos    ( top of stack )
-VARIABLE nos    ( next on stack )
-VARIABLE here   ( upload address )
-: to_qaddr ( raw -- qaddr )
-    DUP MSB& IF
-        0x0FFF AND          ( uCode | fixnum )
-    ELSE
-        2ROL
-        DUP LSB& IF         ( RAM address )
-            0x3FFC AND 0x4000 OR
-        ELSE                ( ROM address )
-            0x7FFC AND MSB|
-        THEN
-    THEN ;
-: parse_qaddr ( qaddr -- field raw )
-        DUP 0x3 AND SWAP    ( D: field addr )
-        DUP MSB& IF
-            2ASR 0x1FFF AND
-        ELSE
-            2ASR 0x0FFF AND
-            0x4000 OR
-        THEN ;              ( D: field raw )
-: fetch ( addr -- data )
-    DUP 0xC000 AND IF
-        parse_qaddr         ( D: field raw )
-        OVER 0x1 = IF
-            QX@             ( D: field data )
-        ELSE
-            OVER 0x2 = IF
-                QY@         ( D: field data )
-            ELSE
-                OVER 0x3 = IF
-                    QZ@     ( D: field data )
-                ELSE
-                    QT@     ( D: field data )
-                THEN
-            THEN
-        THEN
-        NIP                 ( D: data )
-    ELSE
-        DUP 0xF000 AND 0x2000 = IF
-            GCC@            ( D: color )
-        ELSE
-            @               ( D: data )
-        THEN
-    THEN ;
-: store ( data addr -- )
-    DUP 0xC000 AND IF
-        parse_qaddr SWAP    ( D: data raw field )
-        DUP 0x1 = IF
-            DROP QX!
-        ELSE
-            DUP 0x2 = IF
-                DROP QY!
-            ELSE
-                DUP 0x3 = IF
-                    DROP QZ!
-                ELSE
-                    DROP QT!
-                THEN
-            THEN
-        THEN
-    ELSE
-        DUP 0xF000 AND 0x2000 = IF
-            GCC!
-        ELSE
-            !
-        THEN
-    THEN ;
-: push ( a -- )
-    tos @ nos !
-    tos ! ;
-: pop ( -- a )
-    tos @
-    nos @ tos ! ;
-: dump ( start end -- )
-    OVER -                  ( D: start span )
-    DUP 0< IF
-        2DROP
-    ELSE
-        1+ ?LOOP-
-            DUP fetch       ( D: addr data )
-            OVER 0x7 AND IF
-                SPACE
-            ELSE
-                CR
-            THEN
-            X. 1+           ( D: addr+1 )
-        AGAIN CR DROP
-    THEN ;
-: >inp ( key -- )
-    FROMHEX inp @           ( D: nybble accum )
-    4ROL 0xFFF0 AND OR      ( D: accum' )
-    inp ! ;
-: >here ( data -- )
-    here @ store
-    here @1+ ;
-: prompt ( -- )
-    '>' EMIT BL EMIT ;
-: del ( -- )
-    cmd @
-    DUP BL > IF
-        DUP ISHEX IF
-            inp @
-            4ASR 0x0FFF AND
-            DUP IF
-                DUP TOHEX
-            ELSE
-                BL
-            THEN cmd !
-            inp !
-        ELSE
-            BL cmd !
-        THEN
-        '\b' EMIT BL EMIT '\b' EMIT
-    THEN DROP ;
-: eol ( begin -- end )
-    ( EMIT ) KEY
-    DUP '\r' = SKZ EXIT
-    eol ;
-VARIABLE log_addr
-: log_0 ( -- )
-    log_addr @
-    0x7060 OVER QT!
-    -1 OVER QX!
-    -1 OVER QY!
-    R@ OVER QZ!
-    DROP
-    log_addr @1+ ;
-: log_1 ( x -- x )
-    DUP log_addr @          ( D: x addr )
-    0x7061 OVER QT!
-    SWAP OVER QX!           ( D: addr )
-    -1 OVER QY!
-    R@ OVER QZ!
-    DROP
-    log_addr @1+ ;
-: log_2 ( x y -- x y )
-    2DUP log_addr @         ( D: x y addr )
-    0x7062 OVER QT!
-    SWAP OVER QY!           ( D: x addr )
-    SWAP OVER QX!           ( D: addr )
-    R@ OVER QZ!
-    DROP
-    log_addr @1+ ;
-( XMODEM file transfer )
-0x01 CONSTANT SOH           ( Start of Header )
-0x06 CONSTANT ACK           ( Acknowledge )
-0x15 CONSTANT NAK           ( Negative Ack )
-0x04 CONSTANT EOT           ( End of Transmission )
-0x18 CONSTANT CAN           ( Cancel )
-VARIABLE xm_pkt             ( current packet number )
-VARIABLE xm_retry           ( number of retries )
-VARIABLE xm_here            ( upload address )
-: xm_250ms_rcv ( -- byte | -1 )
-    250
-: xm_timed_rcv ( ms -- byte | -1 )
-    RX? IF
-        DROP RX@            ( D: byte )
-        8LSB& ;
-    THEN
-    DUP IF
-        1000 us_delay       ( D: ms )
-        1- xm_timed_rcv ;
-    THEN
-    DROP -1 ;               ( timeout )
-: xm_flush_rcv ( -- )
-    xm_250ms_rcv MSB& IF
-        EXIT
-    THEN xm_flush_rcv ;
-: xm_rcv_failed
-    log_0
-    3 ?LOOP-
-        CAN EMIT
-    AGAIN
-    xm_flush_rcv
-    0 ;
-: xm_rcv_bad                ( D: rem chk data )
-    DROP
-    log_2
-    2DROP                   ( D -- )
-    xm_here @ here !        ( restore starting addr )
-: xm_rcv_try
-    xm_retry @ 0= IF
-        xm_rcv_failed ;
-    THEN
-    xm_retry @1-
-    xm_flush_rcv
-    log_0
-    NAK EMIT                ( send NAK to start or retry )
-: xm_rcv_soh
-    3000 xm_timed_rcv
-    DUP EOT = IF
-        ACK EMIT
-        xm_pkt @ ;          ( successful transfer )
-    THEN
-    SOH <> IF
-        xm_rcv_try ;        ( try again... )
-    THEN
-: xm_rcv_npkt
-    xm_250ms_rcv
-    DUP MSB& IF
-        xm_rcv_try ;        ( try again... )
-    THEN
-    DUP xm_pkt @ 8LSB& = IF
-        xm_flush_rcv
-        ACK EMIT            ( ACK dup packet )
-        xm_rcv_soh ;
-    THEN
-    xm_pkt @ 1+ 8LSB& <> IF
-        xm_rcv_failed ;     ( transfer failed )
-    THEN
-: xm_rcv_ipkt
-    xm_250ms_rcv
-    DUP MSB& IF
-        xm_rcv_try ;        ( try again... )
-    THEN
-    xm_pkt @ 1+ INVERT 8LSB& <> IF
-        xm_rcv_try ;        ( try again... )
-    THEN
-: xm_rcv_pkt
-    here @
-    log_1
-    xm_here !               ( remember starting addr )
-    128 0                   ( D: rem chk )
-: xm_rcv_cell
-    xm_250ms_rcv            ( D: rem chk msb )
-    DUP MSB& IF
-        xm_rcv_bad ;        ( bad packet... )
-    THEN
-    SWAP OVER +             ( D: rem msb chk+msb )
-    xm_250ms_rcv            ( D: rem msb chk+msb lsb )
-    DUP MSB& IF
-        DROP xm_rcv_bad ;   ( bad packet... )
-    THEN
-    SWAP OVER +             ( D: rem msb lsb chk+msb+lsb )
-    -ROT b2c                ( D: rem chk' cell )
-    ( log_2 )
-    >here                   ( D: rem chk' )
-    SWAP 2 - SWAP           ( D: rem-2 chk' )
-    OVER IF
-        xm_rcv_cell ;
-    THEN
-: xm_rcv_chk
-    xm_250ms_rcv            ( D: rem' chk' chk )
-    log_2
-    DUP MSB& IF
-        xm_rcv_bad ;        ( bad packet... )
-    THEN
-    2DUP XOR 8LSB&          ( D: rem' chk' chk (chk'^chk)&0xFF )
-    IF
-        xm_rcv_bad ;        ( bad packet... )
-    THEN
-    2DROP DROP              ( D: -- )
-    xm_pkt @1+
-    10 xm_retry !
-    log_0
-    ACK EMIT                ( ACK good packet )
-    xm_rcv_soh ;
-: xm_rcv_file ( -- npkts )
-    0x1000 log_addr !
-    log_0
-    0 xm_pkt !
-    10 xm_retry !
-    0x8000 here !           ( upload to uFork ROM )
-    xm_rcv_try ;
-: MONITOR
-    KEY                     ( D: key )
-    DUP ^C = IF             ( abort! )
-        DROP ;
-    THEN
-    DUP '\b' = IF
-        DROP DEL
-    THEN
-    DUP DEL = IF
-        del                 ( delete previous )
-    THEN
-    DUP ECHO
-    cmd @ SWAP              ( D: cmd key )
-    ( '<' EMIT OVER X. '.' EMIT DUP X. '>' EMIT )
-    DUP BL <= IF
-        OVER ISHEX IF       ( push accum )
-            inp @ push
-        THEN
-        OVER '@' = IF       ( fetch )
-            pop fetch push
-        THEN
-        OVER '.' = IF       ( print )
-            pop X. CR
-        THEN
-        OVER '!' = IF       ( store )
-            pop pop SWAP store
-        THEN
-        OVER 'q' = IF
-            pop to_qaddr push
-        THEN
-        OVER 'p' = IF
-            pop parse_qaddr SWAP push push
-        THEN
-        OVER '?' = IF       ( dump memory )
-            pop pop SWAP dump
-        THEN
-        OVER '~' = IF       ( dump flash )
-            pop pop SWAP spi_dump
-        THEN
-        OVER 'x' = IF       ( xmodem receive )
-            xm_rcv_file push
-        THEN
-        OVER '<' = IF       ( init from flash )
-            0 0x2000 spif2qrom
-        THEN
-        OVER '>' = IF       ( copy to flash )
-            0 0x2000 qrom2spif
-        THEN
-        OVER 'r' = IF
-            pop EXECUTE
-        THEN
-        0 inp !             ( clear input accum )
-        DUP '\r' = IF
-            prompt
-        THEN
-    THEN
-    DUP ISHEX IF
-        DUP >inp            ( add digit to accum )
-    THEN
-    DUP DEL = IF
-        2DROP
-    ELSE
-        NIP cmd !           ( key -> cmd )
-    THEN
-    MONITOR ;
-
 : ECHOLOOP
     KEY
     DUP X. CR
     ( DUP ECHO )
-    ^C = SKZ EXIT           ( abort! )
+    ^C = SKZ EXIT           ( exit ECHOLOOP )
     ECHOLOOP ;
-
-: RUN
-    prompt MONITOR
-    ufork_boot
-    RUN ;
 
 ( WARNING! if BOOT returns we PANIC! )
 : BOOT
@@ -2302,7 +2290,7 @@ VARIABLE xm_here            ( upload address )
     ufork_init
     (
     test_suite
-    spif_test
     0 rom_quads spif2qrom   ( init from flash )
     )
-    RUN ;
+    RDROP                   ( point of no return )
+    ufork_run ;
