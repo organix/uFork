@@ -2103,9 +2103,17 @@ del_none:                   ; k orig key rev next value' key'
     R> cap2ptr qz!          ( D: cont )
     cont_enqueue ;
 
+VARIABLE run_return         ( address to jump to when run_loop is done )
+: run_signal ( error -- )
+    root_spn spn_signal!
+: run_exit
+    ( RESET )
+    run_return @EXECUTE ;
 VARIABLE run_limit          ( number of iterations remaining )
 VARIABLE saved_sp           ( sp before instruction execution )
 : run_loop ( limit -- )
+    R> run_return !
+: run_again ( limit -- )
     run_limit !
     #? root_spn spn_signal!
     k_head@ is_ram IF
@@ -2119,7 +2127,7 @@ VARIABLE saved_sp           ( sp before instruction execution )
                 DUP is_fix IF
                     ( restore `saved_sp` and signal error )
                     saved_sp @ sp!
-                    root_spn spn_signal! ;
+                    run_signal ;
                 THEN        ( D: ip' )
                 DUP #instr_t typeq IF
                     ip!     ( update ip in continuation )
@@ -2132,10 +2140,10 @@ VARIABLE saved_sp           ( sp before instruction execution )
                     gc_collect
                 THEN
             ELSE            ( D: op )
-                E_NOT_FIX root_spn spn_signal! ;
+                ( DROP ) E_NOT_FIX run_signal ;
             THEN
         ELSE                ( D: ip )
-            E_NOT_EXE root_spn spn_signal! ;
+            ( DROP ) E_NOT_EXE run_signal ;
         THEN
         e_head@ is_ram IF
             dispatch_event
@@ -2144,16 +2152,16 @@ VARIABLE saved_sp           ( sp before instruction execution )
         e_head@ is_ram IF
             dispatch_event
         ELSE
-            E_OK root_spn spn_signal! ;
+            E_OK run_signal ;
         THEN
     THEN
     run_limit @ DUP 0> IF
         1- DUP 0= IF
-            DROP ;
+            ( DROP ) run_exit ;
         THEN
     THEN
     ( gc_increment )
-    run_loop ;
+    run_again ;
 
 : rom_init
     rom_quads DUP 2ROL      ( n_quads n_cells )
@@ -2212,8 +2220,7 @@ VARIABLE saved_sp           ( sp before instruction execution )
     #dict_t 3alloc          ( D: target msg={0:debug_dev} )
     SWAP root_spn 2alloc    ( D: event )
     event_enqueue
-    0 run_loop              ( FIXME: convert to continuation tail-calls )
-: ufork_idle
+    0 run_loop              ( run until idle or signal )
     root_spn spn_signal@ #0 =assert
 : ufork_run
     prompt MONITOR
