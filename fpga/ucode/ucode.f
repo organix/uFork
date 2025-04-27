@@ -1432,7 +1432,7 @@ VARIABLE abort_reason       ( "reason" for most-recent abort )
     imm@ #0 = IF
         E_STOP ;
     THEN
-    E_BOUNDS ;
+    E_BOUNDS abort ;
 
 : op_push ( -- ip' | error )
     sp@ imm@                ( D: sp item )
@@ -2109,6 +2109,12 @@ VARIABLE run_return         ( address to jump to when run_loop is done )
 : run_exit
     ( RESET )
     run_return @EXECUTE ;
+: run_abort ( -- )
+    ( free terminated cont & event )
+    cont_dequeue
+    DUP QY@                 ( D: cont event )
+    release release ( 2DROP )
+    ( gc_collect ) ;
 VARIABLE run_limit          ( number of iterations remaining )
 VARIABLE saved_sp           ( sp before instruction execution )
 : run_loop ( limit -- )
@@ -2133,17 +2139,15 @@ VARIABLE saved_sp           ( sp before instruction execution )
                     ip!     ( update ip in continuation )
                     cont_dequeue
                     cont_enqueue
-                ELSE        ( free terminated cont & event )
-                    DROP cont_dequeue
-                    DUP QY@ ( D: cont event )
-                    release release ( 2DROP )
-                    gc_collect
+                ELSE        ( D: ip' )
+                    DROP    ( FIXME: redundant if RESET follows... )
+                    run_abort
                 THEN
             ELSE            ( D: op )
-                ( DROP ) E_NOT_FIX run_signal ;
+                ( DROP ) run_abort
             THEN
         ELSE                ( D: ip )
-            ( DROP ) E_NOT_EXE run_signal ;
+            ( DROP ) run_abort
         THEN
         e_head@ is_ram IF
             dispatch_event
@@ -2155,11 +2159,12 @@ VARIABLE saved_sp           ( sp before instruction execution )
             E_OK run_signal ;
         THEN
     THEN
+    RESET                   ( clear both D-stack and R-stack )
     run_limit @ DUP 0> IF
         1- DUP 0= IF
             ( DROP ) run_exit ;
         THEN
-    THEN
+    THEN                    ( D: limit )
     ( gc_increment )
     run_again ;
 
