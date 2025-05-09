@@ -2,8 +2,6 @@
 
 /*jslint browser, global */
 
-import dom from "https://ufork.org/lib/dom.js";
-import theme from "https://ufork.org/lib/theme.js";
 import websockets_bridge from "https://ufork.org/js/udbg/websockets_bridge.js";
 import window_bridge from "https://ufork.org/js/udbg/window_bridge.js";
 import debugger_ui from "https://ufork.org/js/udbg/debugger_ui.js";
