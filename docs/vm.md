@@ -455,9 +455,9 @@ The semantics of each instruction are detailed below.
 A few general rules apply to all instructions.
 Unless stated otherwise in the description of an instruction:
 
-  * Attempts to execute a non-instruction signals an error (`E_NOT_EXE`)
-  * Unknown instruction op-codes signal an error
-  * Arguments of an invalid type signal an error
+  * An attempt to execute a non-instruction [`aborts`](#end-instruction) the actor-message transaction
+  * Unknown instruction op-codes [`abort`](#end-instruction) the actor-message transaction
+  * Arguments of an invalid type or value [`abort`](#end-instruction) the actor-message transaction
   * Items referenced beyond the bottom of the stack are treated as `#?`
 
 The following functions are used in various instruction descriptions:
