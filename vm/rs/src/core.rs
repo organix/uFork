@@ -374,7 +374,7 @@ impl Core {
         self.count_cpu_cycles(1)?;  // always count at least one "cycle"
         let instr = self.mem(ip);
         if instr.t() != INSTR_T {
-            return Err(E_NOT_EXE);
+            return Ok(self.audit_abort(E_NOT_EXE, ip));
         }
         let opr = instr.x();  // operation code
         let imm = instr.y();  // immediate argument
@@ -457,8 +457,8 @@ impl Core {
                         let d = self.dict_del(dict, key)?;
                         self.stack_push(d)?;
                     },
-                    _ => {
-                        return Err(E_BOUNDS);  // unknown DICT op
+                    _ => {  // unknown DICT op
+                        return Ok(self.audit_abort(E_BOUNDS, ip));
                     }
                 };
                 kip
@@ -504,8 +504,9 @@ impl Core {
                         let n = self.deque_len(deque);
                         self.stack_push(Any::fix(n))?;
                     },
-                    _ => {
-                        return Err(E_BOUNDS);  // unknown DEQUE op
+                    _ => {  // unknown DEQUE op
+                        return Ok(self.audit_abort(E_BOUNDS, ip));
+
                     }
                 };
                 kip
@@ -636,7 +637,7 @@ impl Core {
             VM_JUMP => {
                 let k = self.stack_pop();
                 if !self.typeq(INSTR_T, k) {
-                    return Err(E_NOT_EXE);
+                    return Ok(self.audit_abort(E_NOT_EXE, k));
                 }
                 k  // continue at `k`
             },
@@ -703,9 +704,8 @@ impl Core {
                         let target = self.ram(ep).x();
                         self.stack_push(target)?;
                     },
-                    _ => {
-                        // unknown ACTOR op
-                        return Ok(self.audit_abort(E_BOUNDS, imm));
+                    _ => {  // unknown ACTOR op
+                        return Ok(self.audit_abort(E_BOUNDS, ip));
                     }
                 }
                 kip
@@ -725,8 +725,8 @@ impl Core {
                         self.actor_commit(me);
                         UNDEF
                     },
-                    _ => {
-                        return Err(E_BOUNDS);  // unknown END op
+                    _ => {  // unknown END op
+                        self.audit_abort(E_BOUNDS, ip)
                     }
                 };
                 rv
@@ -813,8 +813,8 @@ impl Core {
                         self.reclaim_sponsor(ctl_spn, per_spn)?;
                         self.set_sponsor_signal(per_spn, ZERO);  // mark sponsor for removal
                     },
-                    _ => {
-                        return Err(E_BOUNDS);  // unknown SPONSOR op
+                    _ => {  // unknown SPONSOR op
+                        return Ok(self.audit_abort(E_BOUNDS, ip));
                     }
                 };
                 kip
@@ -829,8 +829,8 @@ impl Core {
             VM_DEBUG => {
                 kip // no op
             },
-            _ => {
-                return Err(E_BOUNDS);  // illegal instruction
+            _ => {  // illegal instruction
+                return Ok(self.audit_abort(E_BOUNDS, ip));
             }
         };
         Ok(ip_)
