@@ -381,8 +381,8 @@ impl Core {
         let kip = instr.z();  // next instruction
         let ip_ = match opr {
             VM_TYPEQ => {
-                if !self.typeq(TYPE_T, imm) {
-                    return Err(E_NO_TYPE);  // type required
+                if !self.typeq(TYPE_T, imm) {  // type required
+                    return Ok(self.audit_abort(E_NO_TYPE, ip));
                 }
                 let val = self.stack_pop();
                 let r = if self.typeq(imm, val) { TRUE } else { FALSE };
