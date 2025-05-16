@@ -29,6 +29,8 @@ import disasm_ui from "./disasm_ui.js";
 import fomu from "./fomu.js";
 const wasm_url = import.meta.resolve("https://ufork.org/wasm/ufork.wasm");
 
+const rx_extension = /\.\w+$/;
+
 function request_and_open_serial_port() {
     return navigator.serial.requestPort().then(function (port) {
         return (
@@ -195,6 +197,10 @@ const tools_ui = make_ui("tools-ui", function (element, {
         refresh_disasm();
     }
 
+    function get_lang() {
+        return lang_select.value;
+    }
+
     function set_lang(new_lang) {
         lang_select.value = new_lang;
         test_button.disabled = new_lang !== "asm";
@@ -325,7 +331,14 @@ const tools_ui = make_ui("tools-ui", function (element, {
         });
         parseq.sequence([
             core.h_initialize(),
-            core.h_import(src, text),
+
+// Tweak the src extension to ensure h_import uses the correct compiler for the
+// text.
+
+            core.h_import(
+                src.replace(rx_extension, "." + get_lang()),
+                text
+            ),
             requestorize(function (imported_module) {
                 const make_ddev = host_dev(core);
                 clock_dev(core);
