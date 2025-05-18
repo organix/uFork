@@ -32,7 +32,7 @@ s_list:                     ; list <- cust
 
     state -1                ; rest
     push s_list             ; rest s_list
-    actor create            ; next=s_list(rest)
+    actor create            ; next=s_list.rest
     state 1                 ; next token=first
     pair 1                  ; token,next
     msg 0                   ; token,next cust
