@@ -1432,6 +1432,7 @@ VARIABLE abort_reason       ( "reason" for most-recent abort )
     imm@ #0 = IF
         E_STOP ;
     THEN
+: bounds_abort
     E_BOUNDS abort ;
 
 : op_push ( -- ip' | error )
@@ -1506,8 +1507,9 @@ VARIABLE abort_reason       ( "reason" for most-recent abort )
         cmp_le              ( 0004: le )
         cmp_ne              ( 0005: ne )
         DROP                ( default case )
-        E_BOUNDS abort ;
+        bounds_abort ;
     THEN
+: 1_not_fix_abort
     DROP E_NOT_FIX abort ;
 
 : if_truthy                 ( D: sp' )
@@ -1559,7 +1561,7 @@ VARIABLE abort_reason       ( "reason" for most-recent abort )
         THEN
         DROP undef_result ;
     THEN                    ( D: imm )
-    DROP E_NOT_FIX abort ;
+    1_not_fix_abort ;
 
 : op_part ( -- ip' | error )
     imm@ DUP is_fix IF
@@ -1578,7 +1580,7 @@ VARIABLE abort_reason       ( "reason" for most-recent abort )
         THEN
         DROP undef_result ;
     THEN                    ( D: imm )
-    DROP E_NOT_FIX abort ;
+    1_not_fix_abort ;
 
 : op_nth ( -- ip' | error )
     sp@ part imm@           ( D: sp' pair #n )
@@ -1586,7 +1588,7 @@ VARIABLE abort_reason       ( "reason" for most-recent abort )
     DUP is_fix IF           ( D: sp' pair #n )
         fix2int nth push_result ;
     THEN
-    2DROP DROP E_NOT_FIX abort ;
+    2DROP 1_not_fix_abort ;
 
 : op_drop ( -- ip' | error )
     sp@ imm@ DUP is_fix IF  ( D: sp #n )
@@ -1599,7 +1601,7 @@ VARIABLE abort_reason       ( "reason" for most-recent abort )
         AGAIN
         update_sp ;
     THEN
-    2DROP E_NOT_FIX abort ;
+    DROP 1_not_fix_abort ;
 
 : op_dup ( -- ip' | error )
     imm@ #1 = IF
@@ -1625,7 +1627,7 @@ VARIABLE abort_reason       ( "reason" for most-recent abort )
         ROT nth             ( D: sp item )
         push_result ;
     THEN
-    DROP E_NOT_FIX abort ;
+    1_not_fix_abort ;
 
 : op_roll ( -- ip' | error )
     imm@ DUP is_fix IF      ( D: #n )
@@ -1654,7 +1656,7 @@ VARIABLE abort_reason       ( "reason" for most-recent abort )
         THEN                ( D: n )
         DROP k@ ;           ( no-op )
     THEN
-    DROP E_NOT_FIX abort ;
+    1_not_fix_abort ;
 
 : alu_result ( sp n -- ip' )
     int2fix rplc_result ;
@@ -1719,9 +1721,9 @@ VARIABLE abort_reason       ( "reason" for most-recent abort )
         E_BOUNDS            ( 000B: rol )
         E_BOUNDS            ( 000C: ror )
         DROP                ( default case )
-        E_BOUNDS abort ;
+        bounds_abort ;
     THEN
-    DROP E_NOT_FIX abort ;
+    1_not_fix_abort ;
 
 : quad_ZYXT ( sp quad -- ip' )
     SWAP OVER QZ@           ( D: quad sp Z )
@@ -1842,9 +1844,9 @@ VARIABLE abort_reason       ( "reason" for most-recent abort )
         dict_set            ( 3: set )
         dict_del            ( 4: del )
         DROP                ( default case )
-        E_BOUNDS abort ;
+        bounds_abort ;
     THEN
-    DROP E_NOT_FIX abort ;
+    1_not_fix_abort ;
 
 (
     #dict_t operations...
@@ -1962,6 +1964,7 @@ del_none:                   ; k orig key rev next value' key'
         send_effect         ( D: sp'' )
         update_sp ;
     THEN
+: 2_not_cap_abort
     2DROP E_NOT_CAP abort ;
 : actor_post ( sp -- ip' | error )
     part                    ( D: sp' target )
@@ -1977,7 +1980,7 @@ del_none:                   ; k orig key rev next value' key'
         R>                  ( D: sp''' )
         update_sp ;
     THEN
-    2DROP E_NOT_CAP abort ;
+    2_not_cap_abort ;
 : actor_create ( sp -- ip' | error )
     part                    ( D: sp' beh )
     DUP #instr_t typeq IF
@@ -1988,6 +1991,7 @@ del_none:                   ; k orig key rev next value' key'
         2alloc ptr2cap      ( D: sp'' actor )
         push_result ;
     THEN
+: 2_not_exe_abort
     2DROP E_NOT_EXE abort ;
 : actor_become ( sp -- ip' | error )
     part                    ( D: sp' beh )
@@ -1999,7 +2003,7 @@ del_none:                   ; k orig key rev next value' key'
         qx! qy!             ( D: sp'' )
         update_sp ;
     THEN
-    2DROP E_NOT_EXE abort ;
+    2_not_exe_abort ;
 : actor_self ( sp -- ip' )
     self@                   ( D: sp self )
     push_result ;
@@ -2013,10 +2017,9 @@ del_none:                   ; k orig key rev next value' key'
         actor_become        ( 3: become )
         actor_self          ( 4: self )
         2DROP               ( default case )
-        E_BOUNDS abort ;
+        bounds_abort ;
     THEN                    ( D: sp )
-    DROP
-    E_NOT_FIX abort ;
+    1_not_fix_abort ;
 
 : op_msg ( -- ip' | error )
     sp@ msg@ imm@           ( D: sp msg #n )
