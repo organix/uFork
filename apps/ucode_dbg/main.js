@@ -4,12 +4,11 @@
 
 /*jslint browser, bitwise, global */
 
+import base64 from "https://ufork.org/lib/base64.js";
+import hex from "https://ufork.org/lib/hex.js";
+import gzip from "https://ufork.org/lib/gzip.js";
 import ucode from "https://ufork.org/ucode/ucode.js";
 import ucode_sim from "https://ufork.org/ucode/ucode_sim.js";
-import hex from "https://ufork.org/lib/hex.js";
-//import hexdump from "https://ufork.org/lib/hexdump.js";
-//import OED from "https://ufork.org/lib/oed.js";
-//import oed from "https://ufork.org/lib/oed_lite.js";
 const ucode_href = import.meta.resolve("https://ufork.org/ucode/ucode.f");
 
 function $(el) {
@@ -343,11 +342,47 @@ $program_compile.onclick = function () {
     display();
 };
 
-fetch(ucode_href).then(function (response) {
-    if (response.ok) {
-        response.text().then(function (text) {
-            $program_src.textContent = text;
-            $program_compile.onclick();
+function forth_dump16(bytes) {
+    const nr_quads = bytes.byteLength >> 3;
+    let data_view = new DataView(bytes.buffer);
+    return Array.from({length: nr_quads}, function (_, quad_nr) {
+        const quad_addr = quad_nr << 3;
+        return Array.from({length: 4}, function (_, cell_nr) {
+            const cell_addr = quad_addr + (cell_nr << 1);
+            const cell = data_view.getUint16(cell_addr, false);
+            return "0x" + hex.from(cell, 16) + " , ";
+        }).join("");
+    }).join("\n");
+}
+
+const url = new URL(location.href);
+Promise.all([
+    fetch(ucode_href).then(function (response) {
+        return response.text();
+    }),
+    (
+        url.searchParams.has("rom16")
+        ? base64.decode(url.searchParams.get("rom16")).then(gzip.decode)
+        : undefined
+    )
+]).then(function ([text, rom16]) {
+    if (rom16 !== undefined) {
+        // Patch ucode.f by replacing the ROM image with the one provided in the
+        // query string.
+        const lines = text.split("\n");
+        const from = lines.findIndex(function (line) {
+            return line.startsWith(": boot_rom");
         });
+        const to = lines.findIndex(function (line) {
+            return line.includes("CONSTANT rom_quads");
+        });
+        text = [
+            ...lines.slice(0, from + 1),
+            forth_dump16(rom16.slice(1 << 7)),  // skip reserved ROM
+            lines[to].replace(/\d+/, rom16.byteLength >> 3),
+            ...lines.slice(to + 1)
+        ].join("\n");
     }
+    $program_src.textContent = text;
+    $program_compile.onclick();
 });

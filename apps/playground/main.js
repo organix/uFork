@@ -18,6 +18,7 @@ import lang_scm from "./lang_scm.js";
 import tools_ui from "./tools_ui.js";
 import editor_ui from "./editor_ui.js";
 const unqualified_dev_lib_url = import.meta.resolve("https://ufork.org/lib/");
+const ucode_dbg_url = import.meta.resolve("../ucode_dbg/index.html");
 const udbg_url = import.meta.resolve("../udbg/index.html");
 
 const dev_lib_url = new URL(unqualified_dev_lib_url, location.href).href;
@@ -205,6 +206,13 @@ tools = tools_ui({
         if (udbg_window !== undefined) {
             udbg_window.close();
         }
+    },
+    on_simulate(rom16) {
+        gzip.encode(rom16).then(base64.encode).then(function (string) {
+            const url = new URL(ucode_dbg_url, globalThis.origin);
+            url.searchParams.set("rom16", string);
+            globalThis.open(url);
+        });
     },
     on_status(message) {
         if (udbg_bridge !== undefined) {

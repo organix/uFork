@@ -116,6 +116,7 @@ const tools_ui = make_ui("tools-ui", function (element, {
     on_viewbox_size_change,
     on_attach,
     on_detach,
+    on_simulate,
     on_status,
     on_help
 }) {
@@ -228,6 +229,23 @@ const tools_ui = make_ui("tools-ui", function (element, {
             compilers[lang] = lang_pack.compile;
         });
         return compilers;
+    }
+
+    function run_ucode() {
+        generate_rom32(
+            src,
+            text,
+            import_map,
+            get_compilers(),
+            devices.io.info
+        )(function (rom32, reason) {
+            if (rom32 === undefined) {
+                warn(reason);
+            } else {
+                const rom16 = downsize(rom32);
+                on_simulate(rom16);
+            }
+        });
     }
 
     function run_fomu() {
@@ -432,7 +450,13 @@ const tools_ui = make_ui("tools-ui", function (element, {
         "button",
         {
             title: "Upload and run on Fomu FPGA",
-            onclick: run_fomu
+            onclick(event) {
+                return (
+                    event.shiftKey
+                    ? run_ucode()
+                    : run_fomu()
+                );
+            }
         },
         [
             dom("img", {
