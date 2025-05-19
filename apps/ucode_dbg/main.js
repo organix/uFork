@@ -367,8 +367,8 @@ Promise.all([
     )
 ]).then(function ([text, rom16]) {
     if (rom16 !== undefined) {
-        // Patch ucode.f by replacing the ROM image with the one provided in the
-        // query string.
+        // Patch the uCode by replacing the ROM image with the one provided in
+        // the query string.
         const lines = text.split("\n");
         const from = lines.findIndex(function (line) {
             return line.startsWith(": boot_rom");
@@ -376,10 +376,14 @@ Promise.all([
         const to = lines.findIndex(function (line) {
             return line.includes("CONSTANT rom_quads");
         });
+        if (from < 0 || to < 0) {
+            throw new Error("Failed to patch uCode.");
+        }
+        const nr_quads = rom16.byteLength >> 3;
         text = [
             ...lines.slice(0, from + 1),
             forth_dump16(rom16.slice(1 << 7)),  // skip reserved ROM
-            lines[to].replace(/\d+/, rom16.byteLength >> 3),
+            lines[to].replace(/\d+/, nr_quads),
             ...lines.slice(to + 1)
         ].join("\n");
     }
