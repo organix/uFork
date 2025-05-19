@@ -1603,15 +1603,26 @@ VARIABLE abort_reason       ( "reason" for most-recent abort )
     THEN
     DROP 1_not_fix_abort ;
 
+: imm_int ( -- n )
+    imm@ DUP is_fix IF
+        fix2int ;
+    THEN
+    1_not_fix_abort ;
+
 : op_dup ( -- ip' | error )
-    imm@ #1 = IF
-        sp@ DUP first       ( D: sp tos )
+    imm_int                 ( D: n )
+    DUP 1 = IF              ( D: 1 )
+        DROP sp@ DUP first  ( D: sp tos )
         push_result ;
     THEN
-    imm@ fix2int 1 > IF     ( TODO: implement n > 1 )
-        E_BOUNDS ;
+    DUP 1 > IF              ( D: +n )
+        >R sp@              ( D: sp ) ( R: +n )
+        #nil OVER R>        ( D: sp head=#ni list=sp +n )
+        n_copy_onto DROP    ( D: head=sp list=head' )
+        reverse_onto        ( D: sp'=head' )
+        update_sp ;
     THEN
-    k@ ;                    ( no-op )
+    DROP k@ ;               ( no-op )
 
 : op_pick ( -- ip' | error )
     imm@ #0 = IF
