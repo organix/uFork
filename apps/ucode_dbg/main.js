@@ -2,7 +2,7 @@
 // Dale Schumacher
 // created: 2024-07-01
 
-/*jslint browser, bitwise, devel */
+/*jslint browser, bitwise, global */
 
 import ucode from "https://ufork.org/ucode/ucode.js";
 import ucode_sim from "https://ufork.org/ucode/ucode_sim.js";
@@ -28,6 +28,7 @@ const $machine_delay = $("machine-delay");
 const $machine_play = $("machine-play");
 const $machine_code = $("machine-code");
 const $machine_break = $("machine-break");
+const $machine_pc_history = $("machine-pc-history");
 const $machine_dstack = $("machine-dstack");
 const $machine_rstack = $("machine-rstack");
 const $console_out = $("console-out");
@@ -193,7 +194,7 @@ function format_memory(mem, base = 0, annotation = no_annotation) {
     }).join("");
 }
 
-function display_machine(state, prog, words) {
+function display_machine(state, prog, words, pc_history) {
     // display annotated memory image
     const memh = ucode.print_memh(prog, words, state.pc);
     $program_mem.value = memh;
@@ -214,6 +215,17 @@ function display_machine(state, prog, words) {
     }
     $machine_pc.value = hex.from(state.pc, 12);
     $machine_code.value = ucode.disasm(prog[state.pc], words);
+    $machine_pc_history.innerText = "";
+    pc_history.forEach(function (pc) {
+        if (pc !== undefined) {
+            const button = document.createElement("button");
+            button.onclick = function () {
+                center_program_view(pc);
+            };
+            button.textContent = hex.from(pc, 12);
+            $machine_pc_history.append(button);
+        }
+    });
     $machine_dstack.innerText = format_stack(state.dstack, state.dstats);
     $machine_rstack.innerText = format_stack(state.rstack, state.rstats);
     $ufork_ram.value = format_memory(state.qram, 0x4000, gc_annotation);
@@ -256,13 +268,13 @@ $program_compile.onclick = function () {
     devs[0xF] = make_spif();
     const machine = ucode_sim.make_machine(prog, devs);
     let state = machine.copy();
-    display_machine(state, prog, words);
-
+    let pc_ring = new Array(100).fill();
+    let pc_ring_at = 0;
     // add step/play/pause controls
     let step_timer;
     function halt(result) {
         // display error and "halt"
-        console.log("ERROR:", result);
+        globalThis.console.log("ERROR:", result);
         $machine_error.textContent = "ERROR: " + result.error;
         $machine_step.disabled = true;
         $machine_play.textContent = "Play";
@@ -274,13 +286,21 @@ $program_compile.onclick = function () {
         $machine_play.textContent = "Play";
         $machine_step.disabled = false;
     }
+    function display() {
+        const pc_history = pc_ring.slice(pc_ring_at).concat(
+            pc_ring.slice(0, pc_ring_at)
+        );
+        display_machine(state, prog, words, pc_history);
+    }
     function step() {
         const delay = Number($machine_delay.value);
         const begin = Date.now();
         while (true) {
+            pc_ring_at = (pc_ring_at - 1 + pc_ring.length) % pc_ring.length;
+            pc_ring[pc_ring_at] = state.pc;
             const result = machine.step();
             if (result !== undefined) {
-                display_machine(state, prog, words);
+                display();
                 halt(result);
                 return;
             }
@@ -301,7 +321,7 @@ $program_compile.onclick = function () {
                 break;
             }
         }
-        display_machine(state, prog, words);
+        display();
     }
     function play() {
         $machine_play.textContent = "Pause";
@@ -320,6 +340,7 @@ $program_compile.onclick = function () {
             play();
         }
     };
+    display();
 };
 
 fetch(ucode_href).then(function (response) {

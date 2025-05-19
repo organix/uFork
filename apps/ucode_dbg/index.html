@@ -11,6 +11,10 @@ body {
 textarea, input {
     font-family: monospace;
 }
+#machine-pc-history {
+    white-space: nowrap;
+    overflow-x: scroll;
+}
 </style>
 </head>
 <body>
@@ -58,6 +62,9 @@ textarea, input {
         <label for="machine-break">Breakpoint:</label>
         <input id="machine-break" type="text" />
     </p>
+    <h3>PC History</h3>
+    <div id="machine-pc-history">
+    </div>
     <h3>Data Stack</h3>
     <pre id="machine-dstack">
     </pre>
