@@ -11,6 +11,9 @@ body {
 textarea, input {
     font-family: monospace;
 }
+#program-warnings {
+    color: #F00;
+}
 #machine-pc-history {
     white-space: nowrap;
     overflow-x: scroll;
@@ -38,6 +41,7 @@ textarea, input {
     EXIT
 </textarea>
         <button id="program-compile">Compile</button>
+        <pre id="program-warnings"></pre>
     </p>
     <h3>Memory</h3>
     <p>

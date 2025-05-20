@@ -19,6 +19,7 @@ function $(el) {
 }
 const $program_src = $("program-src");
 const $program_compile = $("program-compile");
+const $program_warnings = $("program-warnings");
 const $program_mem = $("program-mem");
 const $machine_error = $("machine-error");
 const $machine_pc = $("machine-pc");
@@ -231,19 +232,20 @@ function display_machine(state, prog, words, pc_history) {
     $ufork_rom.value = format_memory(state.qrom, 0x0000);
 }
 
+function format_error(err) {
+    return "line " + err.line + ": " + err.error;
+}
+
 $program_compile.onclick = function () {
     // compile source program
     const text = $program_src.value;
-    const {errors, words, prog} = ucode.compile(text);
+    const {errors, warnings, words, prog} = ucode.compile(text);
     if (errors !== undefined && errors.length > 0) {
         // report errors
-        let report = "";
-        errors.forEach(function (err) {
-            report += "line " + err.line + ": " + err.error + "\n";
-        });
-        $program_mem.value = report;
+        $program_mem.value = errors.map(format_error).join("\n");
         return;  // early exit
     }
+    $program_warnings.textContent = warnings.map(format_error).join("\n");
 
     // create simluated UART interface
     $console_out.value = "";

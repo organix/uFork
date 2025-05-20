@@ -107,7 +107,8 @@ function compile(text, src = "") {
     const UC_R_FETCH = 0x0280;  // R@ ( -- a ) ( R: a -- a )
     const UC_EXIT = 0x5000;  // EXIT ( -- ) ( R: addr -- ) addr->pc
 
-    const words = {
+    let unused = Object.create(null);
+    let words = {
         "NOP": 0x0000,  // ( -- )
         "DROP": 0x0100,  // ( a -- )
         "DUP": 0x0200,  // ( a -- a a )
@@ -184,6 +185,7 @@ function compile(text, src = "") {
             }
             words[name] = word;  // add word to dictionary
             prog[0] = word;  // update bootstrap entry-point
+            unused[name] = error("unused word:", name);  // unused until used
         },
         ",": function () {
             // allocate raw data
@@ -378,6 +380,7 @@ function compile(text, src = "") {
         if (typeof word === "number") {
             // compile primitive or call
             prog.push(word);
+            delete unused[token];  // mark used
             tail_ctx = (
                 (word & 0xF000) === 0xC000
                 ? TAIL_CALL
@@ -416,9 +419,17 @@ function compile(text, src = "") {
         }
         token = next_token();
     }
+    // The final word is used implicitly as the entry point.
+    const entry = Object.keys(unused).pop();
+    if (entry !== undefined) {
+        delete unused[entry];
+    }
+    // Unused word definitions consume precious space.
+    const warnings = Object.values(unused);
     return {
         words,
-        prog
+        prog,
+        warnings
     };
 }
 
