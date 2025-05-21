@@ -19,7 +19,7 @@ function $(el) {
 }
 const $program_src = $("program-src");
 const $program_compile = $("program-compile");
-const $program_warnings = $("program-warnings");
+const $program_error = $("program-error");
 const $program_mem = $("program-mem");
 const $machine_error = $("machine-error");
 const $machine_pc = $("machine-pc");
@@ -242,10 +242,12 @@ $program_compile.onclick = function () {
     const {errors, warnings, words, prog} = ucode.compile(text);
     if (errors !== undefined && errors.length > 0) {
         // report errors
-        $program_mem.value = errors.map(format_error).join("\n");
+        $program_error.textContent = errors.map(format_error).join("\n");
+        $program_error.style.color = "#F30";
         return;  // early exit
     }
-    $program_warnings.textContent = warnings.map(format_error).join("\n");
+    $program_error.textContent = warnings.map(format_error).join("\n");
+    $program_error.style.color = "#F90";
 
     // create simluated UART interface
     $console_out.value = "";
@@ -290,9 +292,6 @@ $program_compile.onclick = function () {
         $machine_play.textContent = "Play";
         $machine_step.disabled = false;
     }
-    function display() {
-        display_machine(state, prog, words, pc_history);
-    }
     function step() {
         const delay = Number($machine_delay.value);
         const begin = Date.now();
@@ -304,7 +303,7 @@ $program_compile.onclick = function () {
                 result !== undefined
                 || prog[state.pc] === 0x00F0  // DEBUG
             ) {
-                display();
+                display_machine(state, prog, words, pc_history);
                 halt(result);
                 return;
             }
@@ -325,7 +324,7 @@ $program_compile.onclick = function () {
                 break;
             }
         }
-        display();
+        display_machine(state, prog, words, pc_history);
     }
     function play() {
         $machine_play.textContent = "Pause";
@@ -344,7 +343,7 @@ $program_compile.onclick = function () {
             play();
         }
     };
-    display();
+    display_machine(state, prog, words, pc_history);
 };
 
 function forth_dump16(bytes) {

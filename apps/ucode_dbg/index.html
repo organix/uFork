@@ -11,13 +11,6 @@ body {
 textarea, input {
     font-family: monospace;
 }
-#program-warnings {
-    color: #F00;
-}
-#machine-pc-history {
-    white-space: nowrap;
-    overflow-x: scroll;
-}
 </style>
 </head>
 <body>
@@ -41,7 +34,7 @@ textarea, input {
     EXIT
 </textarea>
         <button id="program-compile">Compile</button>
-        <pre id="program-warnings"></pre>
+        <pre id="program-error"></pre>
     </p>
     <h3>Memory</h3>
     <p>
@@ -67,7 +60,7 @@ textarea, input {
         <input id="machine-break" type="text" />
     </p>
     <h3>PC History</h3>
-    <div id="machine-pc-history">
+    <div id="machine-pc-history" style="white-space: nowrap; overflow-x: scroll;">
     </div>
     <h3>Data Stack</h3>
     <pre id="machine-dstack">
