@@ -269,8 +269,7 @@ $program_compile.onclick = function () {
     devs[0xF] = make_spif();
     const machine = ucode_sim.make_machine(prog, devs);
     let state = machine.copy();
-    let pc_ring = new Array(100).fill();
-    let pc_ring_at = 0;
+    let pc_history = [];
     // add step/play/pause controls
     let step_timer;
     function halt(result) {
@@ -288,17 +287,14 @@ $program_compile.onclick = function () {
         $machine_step.disabled = false;
     }
     function display() {
-        const pc_history = pc_ring.slice(pc_ring_at).concat(
-            pc_ring.slice(0, pc_ring_at)
-        );
         display_machine(state, prog, words, pc_history);
     }
     function step() {
         const delay = Number($machine_delay.value);
         const begin = Date.now();
         while (true) {
-            pc_ring_at = (pc_ring_at - 1 + pc_ring.length) % pc_ring.length;
-            pc_ring[pc_ring_at] = state.pc;
+            pc_history.unshift(state.pc);
+            pc_history = pc_history.slice(0, 100);
             const result = machine.step();
             if (result !== undefined) {
                 display();
