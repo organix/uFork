@@ -1403,6 +1403,7 @@ VARIABLE abort_reason       ( "reason" for most-recent abort )
 : undef_abort ( -- ip' )
     #?
 : abort ( reason -- ip' )
+    DEBUG
     abort_reason !          ( record abort "reason" for auditing )
     #? self@ qz!            ( make actor ready )
     #? ;                    ( end continuation )
