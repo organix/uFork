@@ -6,8 +6,6 @@
 
 import hex from "https://ufork.org/lib/hex.js";
 
-const trace = globalThis.console.log;
-
 // Create a position-tracking character-stream.
 
 function make_stream(text, src = "") {
@@ -20,9 +18,6 @@ function make_stream(text, src = "") {
             line,
             error: msg.join(" ")
         };
-        if (import.meta.main) {
-            trace("ERROR!", err);
-        }
         return err;
     }
     function next_char() {
@@ -177,9 +172,6 @@ function compile(text, src = "") {
             // new entry-point
             const word = uc_call(prog.length);
             const name = next_token();
-            if (import.meta.main) {
-                trace("compile_name:", name, "=", hex.from(word, 16));
-            }
             if (words[name] !== undefined) {
                 return error("redefined word:", name);
             }
@@ -208,9 +200,6 @@ function compile(text, src = "") {
             }
             const addr = prog.length - 2;
             const word = uc_call(addr);
-            if (import.meta.main) {
-                trace("compile_const:", name, "=", hex.from(word, 16));
-            }
             prog[addr] = UC_CONST;  // convert (LIT) to (CONST)
             words[name] = word;  // add word to dictionary
             tail_ctx = TAIL_NONE;
@@ -219,9 +208,6 @@ function compile(text, src = "") {
             // new named variable
             const word = uc_call(prog.length);
             const name = next_token();
-            if (import.meta.main) {
-                trace("compile_var:", name, "=", hex.from(word, 16));
-            }
             if (words[name] !== undefined) {
                 return error("redefined word:", name);
             }
@@ -237,9 +223,6 @@ function compile(text, src = "") {
         "BEGIN": function () {                          // ( -- )
             // begin indefinite loop
             const addr = prog.length;
-            if (import.meta.main) {
-                trace("compile_indefinite_loop:", "$" + hex.from(addr, 12));
-            }
             const word = uc_jump(addr);  // placeholder
             ctrl_ctx.push(word);
         },
@@ -266,9 +249,6 @@ function compile(text, src = "") {
             // begin counted loop
             prog.push(UC_TO_R);
             const addr = prog.length;
-            if (import.meta.main) {
-                trace("compile_countdown_loop:", "$" + hex.from(addr, 12));
-            }
             const word = uc_jnz_dec(addr);  // placeholder
             ctrl_ctx.push(word);
             prog.push(word);
@@ -277,9 +257,6 @@ function compile(text, src = "") {
             // begin counted loop
             prog.push(UC_TO_R);
             const addr = prog.length;
-            if (import.meta.main) {
-                trace("compile_countup_loop:", "$" + hex.from(addr, 12));
-            }
             const word = uc_jnz_inc(addr);  // placeholder
             ctrl_ctx.push(word);
             prog.push(word);
@@ -294,9 +271,6 @@ function compile(text, src = "") {
         },
         "AGAIN": function () {                          // ( -- )
             // end infinite or counted loop
-            if (import.meta.main) {
-                trace("compile_again:", "$" + hex.from(prog.length, 12));
-            }
             const word = ctrl_ctx.pop();
             const addr = word & ADDR_MASK;
             if (uc_is_auto(word)) {
@@ -308,18 +282,12 @@ function compile(text, src = "") {
         },
         "IF": function () {                             // ( cond -- )
             // begin conditional
-            if (import.meta.main) {
-                trace("compile_if:", "$" + hex.from(prog.length, 12));
-            }
             const word = uc_jz(prog.length);  // placeholder
             ctrl_ctx.push(word);
             prog.push(word);
         },
         "ELSE": function () {                           // ( -- )
             // begin alternative
-            if (import.meta.main) {
-                trace("compile_else:", "$" + hex.from(prog.length, 12));
-            }
             const addr = ctrl_ctx.pop() & ADDR_MASK;
             prog[addr] = uc_jz(prog.length + 1);  // patch
             const word = uc_jump(prog.length);  // placeholder
@@ -328,9 +296,6 @@ function compile(text, src = "") {
         },
         "THEN": function () {                           // ( -- )
             // end conditional
-            if (import.meta.main) {
-                trace("compile_then:", "$" + hex.from(prog.length, 12));
-            }
             const word = ctrl_ctx.pop();
             const addr = word & ADDR_MASK;
             prog[addr] = uc_fixup(word, prog.length);  // patch
@@ -357,9 +322,6 @@ function compile(text, src = "") {
 
     function compile_comment(token) {
         while (token.length > 0) {
-            if (import.meta.main) {
-                trace("compile_comment:", token);
-            }
             if (token === "(") {
                 token = compile_comment(next_token());
             } else if (token === ")") {
@@ -370,9 +332,6 @@ function compile(text, src = "") {
         return token;
     }
     function compile_word(token) {
-        if (import.meta.main) {
-            trace("compile_word:", token);
-        }
         if (token === "(") {
             return compile_comment(next_token());
         }
