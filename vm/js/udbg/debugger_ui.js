@@ -232,6 +232,18 @@ const debugger_ui = make_ui("debugger-ui", function (element, {
         fault_message
     ]);
     const statuses = {
+        audit(message) {
+            views.actors.element.set_audit(
+                message.code,
+                message.evidence,
+                message.ep,
+                message.kp
+            );
+            if (message.code !== undefined) {
+                fault_message.textContent = "audit";
+                fault_message.style.color = theme.red;
+            }
+        },
         device_txn(message) {
             views.actors.element.set_device_txn(
                 message.sender,
@@ -240,7 +252,7 @@ const debugger_ui = make_ui("debugger-ui", function (element, {
             );
             if (message.wake) {
                 fault_message.textContent = "wakeup";
-                fault_message.color = "inherit";
+                fault_message.style.color = "inherit";
             }
         },
         interval(message) {
@@ -310,6 +322,7 @@ const debugger_ui = make_ui("debugger-ui", function (element, {
             send_command({kind: "subscribe", topic: "signal", throttle});
             send_command({kind: "subscribe", topic: "step_size", throttle});
             send_command({kind: "subscribe", topic: "device_txn", throttle});
+            send_command({kind: "subscribe", topic: "audit", throttle});
             auto_step_size();
         }
     }
@@ -341,6 +354,9 @@ function demo(log) {
         },
         on_txn(...args) {
             driver.txn(...args);
+        },
+        on_audit(...args) {
+            driver.audit(...args);
         },
         import_map: {"https://ufork.org/lib/": lib_url},
         compilers: {asm: assemble}

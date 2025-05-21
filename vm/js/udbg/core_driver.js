@@ -32,8 +32,8 @@
 
 //      The driver will pause when one of the following conditions is met:
 //          - an unrecoverable fault, such as E_FAIL, occurs
-//          - a breakpoint is hit is 'debug' is true
-//          - enough 'steps' have been performed
+//          - a breakpoint is hit and "debug" is enabled
+//          - enough steps have been performed
 
 //  {kind: "pause"}
 
@@ -42,8 +42,8 @@
 //  {kind: "debug", enabled: <boolean>}
 
 //      If enabled, the driver will pause upon encountering a 'debug'
-//      instruction. Note that maximum execution speed will be significantly
-//      reduced. Disabled by default.
+//      instruction or an audit. Note that maximum execution speed will be
+//      significantly reduced. Disabled by default.
 
 //  {kind: "interval", milliseconds: <number>}
 
@@ -88,6 +88,11 @@
 //          - The fixnum 0 (E_OK) indicates that the core is idle.
 //          - A negative fixnum indicates a fault occurred, e.g. E_FAIL.
 //          - #? indicates that the core hit the step limit, but is not idle.
+
+//  {kind: "audit", code: <raw>, evidence: <raw>, ep: <raw>, kp: <raw>}
+
+//      The audit information for the previous step. If there was no
+//      audit, 'kind' is the only property.
 
 //  {kind: "device_txn", sender: <raw>, events: <Array>, wake: <boolean>}
 
@@ -145,6 +150,7 @@ const max_fixnum = ufork.fixnum(2 ** 30 - 1);
 const busy = Object.freeze({});
 
 function make_driver(core, on_status) {
+    let audit_data;
     let auto_refill_enabled = true;
     let debug = false;
     let device_txn;
@@ -160,7 +166,13 @@ function make_driver(core, on_status) {
         if (callback === undefined) {
             return;
         }
-        if (kind === "auto_refill") {
+        if (kind === "audit") {
+            const code = audit_data?.code;
+            const evidence = audit_data?.evidence;
+            const ep = audit_data?.ep;
+            const kp = audit_data?.kp;
+            callback({kind: "audit", code, evidence, ep, kp});
+        } else if (kind === "auto_refill") {
             callback({kind: "auto_refill", value: auto_refill_enabled});
         } else if (kind === "debug") {
             callback({kind: "debug", enabled: debug});
@@ -195,6 +207,7 @@ function make_driver(core, on_status) {
         publish("ram");
         publish("signal");
         publish("device_txn");
+        publish("audit");
     }
 
     function pause() {
@@ -227,6 +240,7 @@ function make_driver(core, on_status) {
 // causing 'run' to be reentered, so we guard against that with a special
 // signal value.
 
+            audit_data = undefined;
             device_txn = undefined;
             signal = busy;
             signal = core.h_run_loop(
@@ -240,9 +254,11 @@ function make_driver(core, on_status) {
                 : 0
             );
 
-// Pause if we have hit a breakpoint.
+// Pause if we have hit a breakpoint or seen an audit.
 
-            if (debug && ip()?.x === ufork.VM_DEBUG) {
+            if (debug && (
+                ip()?.x === ufork.VM_DEBUG || audit_data !== undefined
+            )) {
                 pause();
                 return publish_state();
             }
@@ -326,6 +342,10 @@ function make_driver(core, on_status) {
         }
     }
 
+    function audit(code, evidence, ep, kp) {
+        audit_data = {code, evidence, ep, kp};
+    }
+
     const commands = {
         auto_refill(message) {
             auto_refill_enabled = message.enabled === true;
@@ -388,7 +408,7 @@ function make_driver(core, on_status) {
         clearTimeout(play_timer);
     }
 
-    return Object.freeze({command, dispose, txn, wakeup});
+    return Object.freeze({command, dispose, txn, wakeup, audit});
 }
 
 function demo(log) {
@@ -400,6 +420,9 @@ function demo(log) {
         },
         on_txn(...args) {
             driver.txn(...args);
+        },
+        on_audit(...args) {
+            driver.audit(...args);
         },
         import_map: {"https://ufork.org/lib/": lib_url},
         compilers: {asm: assemble}
@@ -428,6 +451,7 @@ function demo(log) {
             core.h_boot();
             driver.command({kind: "subscribe", topic: "signal", throttle: 50});
             driver.command({kind: "subscribe", topic: "device_txn"});
+            driver.command({kind: "subscribe", topic: "audit"});
             driver.command({kind: "subscribe", topic: "rom"});
             driver.command({kind: "subscribe", topic: "ram", throttle: 1000});
             // driver.command({kind: "subscribe", topic: "rom"});

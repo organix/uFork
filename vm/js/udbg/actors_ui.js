@@ -117,6 +117,7 @@ const actors_ui = make_ui("actor-ui", function (element, {
     let isolate_checkbox;
     let graph_element;
     let selected_ofs;
+    let audit;
     let device_txn;
     const shadow = element.attachShadow({mode: "closed"});
     const style = dom("style", `
@@ -151,6 +152,21 @@ const actors_ui = make_ui("actor-ui", function (element, {
             font-family: ${theme.proportional_font_family};
             font-size: 13px;
             color: ${theme.white};
+        }
+        dl {
+            font-family: ${theme.proportional_font_family};
+            font-size: 13px;
+            color: ${theme.white};
+            display: grid;
+            grid-template-columns: max-content 1fr;
+            gap: 0.2em 0.4em;
+            margin: 0;
+        }
+        dl > dt {
+            text-align: right;
+        }
+        dl > dd {
+            margin: 0;
         }
     `);
     const graph = springy.make_graph();
@@ -193,8 +209,21 @@ const actors_ui = make_ui("actor-ui", function (element, {
 
 // Update inspector panel.
 
-        let selected_actor_ofs;
         details.innerHTML = "";
+        if (audit !== undefined) {
+            details.append(heading_ui("Audit", 1));
+            details.append(dom("dl", [
+                dom("dt", "code:"),
+                dom("dd", ufork.fault_msg(audit.code)),
+                dom("dt", "evidence:"),
+                dom("dd", [print(audit.evidence)]),
+                dom("dt", "ep:"),
+                dom("dd", [print(audit.ep)]),
+                dom("dt", "kp:"),
+                dom("dd", [print(audit.kp)])
+            ]));
+        }
+        let selected_actor_ofs;
         if (selected_ofs !== undefined) {
             selected_actor_ofs = selected_ofs;
             const selected_cap = ufork.ptr_to_cap(ufork.ramptr(selected_ofs));
@@ -312,6 +341,15 @@ const actors_ui = make_ui("actor-ui", function (element, {
         graph_element.invalidate();
     }
 
+    function set_audit(code, evidence, ep, kp) {
+        audit = (
+            code !== undefined
+            ? {code, evidence, ep, kp}
+            : undefined
+        );
+        invalidate();
+    }
+
     function set_device_txn(sender, events, wake) {
         device_txn = (
             sender !== undefined
@@ -385,6 +423,7 @@ const actors_ui = make_ui("actor-ui", function (element, {
     shadow.append(style, split_element);
     set_ram(ram);
     set_rom(rom, rom_debugs);
+    element.set_audit = set_audit;
     element.set_device_txn = set_device_txn;
     element.set_ram = set_ram;
     element.set_rom = set_rom;
@@ -441,6 +480,7 @@ function demo(log) {
         requestorize(function () {
             timer_dev(core);
             core.h_boot();
+            driver.command({kind: "subscribe", topic: "audit"});
             driver.command({kind: "subscribe", topic: "device_txn"});
             driver.command({kind: "subscribe", topic: "rom"});
             driver.command({kind: "subscribe", topic: "ram"});
