@@ -327,7 +327,7 @@ const tools_ui = make_ui("tools-ui", function (element, {
             on_audit(code, evidence) {
                 devices.io.warn(
                     "AUDIT:",
-                    ufork.fault_msg(ufork.fix_to_i32(code)),
+                    ufork.fault_msg(code),
                     core.u_pprint(evidence)
                 );
             },

@@ -705,7 +705,7 @@ core = make_core({
     on_audit(code, evidence, ep, kp) {
         console.error(
             "AUDIT:",
-            ufork.fault_msg(ufork.fix_to_i32(code)),
+            ufork.fault_msg(code),
             core.u_pprint(evidence),
             core.u_pprint(ep),
             core.u_pprint(kp)

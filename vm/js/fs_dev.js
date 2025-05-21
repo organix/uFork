@@ -374,11 +374,7 @@ function demo(log) {
         on_wakeup: run_core,
         on_log: log,
         on_audit(code, evidence) {
-            log(
-                "AUDIT:",
-                ufork.fault_msg(ufork.fix_to_i32(code)),
-                core.u_pprint(evidence)
-            );
+            log("AUDIT:", ufork.fault_msg(code), core.u_pprint(evidence));
         },
         log_level: ufork.LOG_TRACE,
         import_map: {"https://ufork.org/lib/": lib_url},

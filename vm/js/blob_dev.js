@@ -473,11 +473,7 @@ function demo(log, use_static) {
         on_log: log,
         log_level: ufork.LOG_TRACE,
         on_audit(code, evidence) {
-            log(
-                "AUDIT:",
-                ufork.fault_msg(ufork.fix_to_i32(code)),
-                core.u_pprint(evidence)
-            );
+            log("AUDIT:", ufork.fault_msg(code), core.u_pprint(evidence));
         },
         import_map: {"https://ufork.org/lib/": lib_url},
         compilers: {asm: assemble}

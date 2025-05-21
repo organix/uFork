@@ -35,7 +35,7 @@
 //      A function that is called when a non-fatal error (such as an aborted
 //      transaction) occurs. Optional.
 
-//      The 'code' is an error fixnum such as E_ABORT.
+//      The 'code' is an error integer such as E_ABORT.
 //      The 'evidence' is a value associated with the error, such as the reason
 //      provided to the 'end abort' instruction.
 //      The 'ep' points to the current event.
@@ -203,7 +203,12 @@ function make_core({
 
     function u_audit(code, evidence, ep, kp) {
         if (typeof on_audit === "function") {
-            on_audit(code, evidence, ep, kp);
+            on_audit(
+                code,
+                evidence >>> 0,
+                ep >>> 0,
+                kp >>> 0
+            );
         }
     }
 
@@ -858,7 +863,7 @@ function demo(log) {
         on_audit(code, evidence, ep, kp) {
             log(
                 "AUDIT:",
-                fault_msg(fix_to_i32(code)),
+                fault_msg(code),
                 print(evidence),
                 print(ep),
                 print(kp)

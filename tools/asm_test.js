@@ -63,7 +63,7 @@ function asm_test(module_url, time_limit = 5000) {
             log(
                 ufork.LOG_WARN,
                 "AUDIT",
-                ufork.fault_msg(ufork.fix_to_i32(code)),
+                ufork.fault_msg(code),
                 core.u_pprint(evidence)
             );
         },
