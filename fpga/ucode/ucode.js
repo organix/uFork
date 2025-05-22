@@ -105,7 +105,8 @@ function compile(text, src = "") {
     let unused = Object.create(null);
     let words = {
         "NOP": 0x0000,  // ( -- )
-        "DEBUG": 0x00F0,  // ( -- )
+        "DEBUG": 0x00F0,  // ( -- ) debugger breakpoint
+        "RESET": 0x11F0,  // ( -- ) clear D-stack and R-stack usage counts
         "DROP": 0x0100,  // ( a -- )
         "DUP": 0x0200,  // ( a -- a a )
         "SWAP": 0x0400,  // ( a b -- b a )

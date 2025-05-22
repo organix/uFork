@@ -3,7 +3,6 @@
 )
 
 : PANIC! FAIL PANIC! ;      ( if BOOT returns... )
-: TODO 0x05EE , PANIC! ;    ( alternative HALT... )
 
 0x03 CONSTANT ^C
 0x08 CONSTANT '\b'
@@ -22,10 +21,6 @@
 0x66 CONSTANT 'f'
 0x7A CONSTANT 'z'
 0x7F CONSTANT DEL
-
-: RESET                     ( clear both D-stack and R-stack )
-( this is a placeholder for a no-op to reset the simulator's stack tracking )
-    EXIT
 
 : @EXECUTE
     @                       ( fallthrough to next definition )
@@ -548,9 +543,9 @@ VARIABLE xm_here            ( upload address )
 : xm_rcv_bad                ( D: rem chk data )
     DROP
     log_2
-    2DROP                   ( D -- )
+    2DROP                   ( D: -- )
     xm_here @ here !        ( restore starting addr )
-: xm_rcv_try
+: xm_rcv_try                ( D: -- ) ( FIXME: is the stack empty on all calls? )
     xm_retry @ 0= IF
         xm_rcv_failed ;
     THEN

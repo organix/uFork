@@ -68,6 +68,12 @@ function make_stack(depth = 12) {
             max = cnt;
         }
     }
+    function reset() {  // make stack empty
+        stack = new Array(depth);
+        min = 0;
+        cnt = 0;
+        max = 0;
+    }
     function stats() {  // return stack usage statistics
         return {min, cnt, max};
     }
@@ -111,6 +117,7 @@ function make_stack(depth = 12) {
         nos,
         perform,
         copy,
+        reset,
         stats
     };
 }
@@ -381,6 +388,13 @@ function make_machine(prog = [], device = []) {
             }
             dstack.perform(d_se, result);
             rstack.perform(r_se, result);
+        }
+
+        // handle RESET instruction
+        if (instr === 0x11F0) {
+            // treat both D-stack and R-stack as empty
+            dstack.reset();
+            rstack.reset();
         }
     }
 
