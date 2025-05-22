@@ -1412,8 +1412,10 @@ VARIABLE abort_reason       ( "reason" for most-recent abort )
     abort_reason !          ( record abort "reason" for auditing )
     #? self@ qz!            ( make actor ready )
     #? ;                    ( end continuation )
-: invalid ( -- ip' )
-    E_FAIL abort ;
+: 1_bounds_abort ( x -- ip' )
+    DROP
+: bounds_abort ( -- ip' )
+    E_BOUNDS abort ;
 
 : imm_int ( -- n )
     imm@ DUP is_fix IF
@@ -1445,8 +1447,7 @@ VARIABLE abort_reason       ( "reason" for most-recent abort )
     imm@ #0 = IF
         E_STOP ;
     THEN
-: bounds_abort
-    E_BOUNDS abort ;
+    bounds_abort ;
 
 : op_push ( -- ip' | error )
     sp@ imm@                ( D: sp item )
@@ -1518,8 +1519,7 @@ VARIABLE abort_reason       ( "reason" for most-recent abort )
     cmp_lt                  ( 0003: lt )
     cmp_le                  ( 0004: le )
     cmp_ne                  ( 0005: ne )
-    DROP                    ( default case )
-    bounds_abort ;
+    1_bounds_abort ;        ( default case )
 
 : if_truthy                 ( D: sp' )
     sp! imm@ ;              ( continue true )
@@ -1723,8 +1723,7 @@ VARIABLE abort_reason       ( "reason" for most-recent abort )
     E_BOUNDS                ( 000A: asr )
     E_BOUNDS                ( 000B: rol )
     E_BOUNDS                ( 000C: ror )
-    DROP                    ( default case )
-    bounds_abort ;
+    1_bounds_abort ;        ( default case )
 
 : quad_ZYXT ( sp quad -- ip' )
     SWAP OVER QZ@           ( D: quad sp Z )
@@ -1764,7 +1763,7 @@ VARIABLE abort_reason       ( "reason" for most-recent abort )
         quad_YXT
         quad_ZYXT
         2DROP               ( default case )
-        DROP bounds_abort ;
+        1_bounds_abort ;
     THEN                    ( D: +n )
     sp@ part                ( D: +n sp' T )
     DUP #type_t typeq IF
@@ -1779,10 +1778,10 @@ VARIABLE abort_reason       ( "reason" for most-recent abort )
             quad_3
             quad_4
             R> 2DROP        ( default case )
-            DROP bounds_abort ;
+            1_bounds_abort ;
         THEN                ( D: sp' T arity )
         2DROP               ( D: sp' )
-        DROP bounds_abort ;
+        1_bounds_abort ;
     THEN                    ( D: n sp' T )
     2DROP                   ( D: n )
     DROP E_NO_TYPE abort ;
@@ -1841,8 +1840,7 @@ VARIABLE abort_reason       ( "reason" for most-recent abort )
     dict_add                ( 2: add )
     dict_set                ( 3: set )
     dict_del                ( 4: del )
-    DROP                    ( default case )
-    bounds_abort ;
+    1_bounds_abort ;        ( default case )
 
 (
     #dict_t operations...
@@ -2004,18 +2002,16 @@ del_none:                   ; k orig key rev next value' key'
     self@                   ( D: sp self )
     push_result ;
 : op_actor ( -- ip' | error )
-    sp@ imm@ DUP is_fix IF
-        fix2int             ( D: sp imm )
-        JMPTBL 5 ,
-        actor_send          ( 0: send )
-        actor_post          ( 1: post )
-        actor_create        ( 2: create )
-        actor_become        ( 3: become )
-        actor_self          ( 4: self )
-        2DROP               ( default case )
-        bounds_abort ;
-    THEN                    ( D: sp )
-    1_not_fix_abort ;
+    imm_int                 ( D: imm )
+    sp@ SWAP                ( D: sp imm )
+    JMPTBL 5 ,
+    actor_send              ( 0: send )
+    actor_post              ( 1: post )
+    actor_create            ( 2: create )
+    actor_become            ( 3: become )
+    actor_self              ( 4: self )
+    DROP                    ( default case )
+    1_bounds_abort ;
 
 : op_msg ( -- ip' | error )
     sp@ msg@ imm@           ( D: sp msg #n )
@@ -2041,16 +2037,16 @@ del_none:                   ; k orig key rev next value' key'
     op_jump                 ( 0x8001: jump )
     op_push                 ( 0x8002: push )
     op_if                   ( 0x8003: if )
-    invalid                 ( 0x8004: --reserved-- )
+    bounds_abort            ( 0x8004: --reserved-- )
     op_typeq                ( 0x8005: typeq )
     op_eq                   ( 0x8006: eq )
     op_assert               ( 0x8007: assert )
 
-    invalid                 ( 0x8008: sponsor )
+    bounds_abort            ( 0x8008: sponsor )
     op_actor                ( 0x8009: actor )
     op_dict                 ( 0x800A: dict )
-    invalid                 ( 0x800B: deque )
-    invalid                 ( 0x800C: --reserved-- )
+    bounds_abort            ( 0x800B: deque )
+    bounds_abort            ( 0x800C: --reserved-- )
     op_alu                  ( 0x800D: alu )
     op_cmp                  ( 0x800E: cmp )
     op_end                  ( 0x800F: end )
@@ -2066,14 +2062,14 @@ del_none:                   ; k orig key rev next value' key'
 
     op_msg                  ( 0x8018: msg )
     op_state                ( 0x8019: state )
-    invalid                 ( 0x801A: --reserved-- )
-    invalid                 ( 0x801B: --reserved-- )
-    invalid                 ( 0x801C: --reserved-- )
-    invalid                 ( 0x801D: --reserved-- )
-    invalid                 ( 0x801E: --reserved-- )
-    invalid                 ( 0x801F: --reserved-- )
+    bounds_abort            ( 0x801A: --reserved-- )
+    bounds_abort            ( 0x801B: --reserved-- )
+    bounds_abort            ( 0x801C: --reserved-- )
+    bounds_abort            ( 0x801D: --reserved-- )
+    bounds_abort            ( 0x801E: --reserved-- )
+    bounds_abort            ( 0x801F: --reserved-- )
 
-    DROP invalid ;          ( default case )
+    1_bounds_abort ;        ( default case )
 
 : debug_dev                 ( event -- )
     QY@                     ( D: message )
@@ -2091,12 +2087,12 @@ del_none:                   ; k orig key rev next value' key'
         R> QX@ fix2int      ( D: event dev_id )
         JMPTBL 6 ,
         debug_dev           ( 0: debug device )
-        invalid             ( 1: clock device )
-        invalid             ( 2: timer device )
-        invalid             ( 3: i/o device )
-        invalid             ( 4: blob device )
-        invalid             ( 5: random device )
-        DROP invalid ;      ( default case )
+        bounds_abort        ( 1: clock device )
+        bounds_abort        ( 2: timer device )
+        bounds_abort        ( 3: i/o device )
+        bounds_abort        ( 4: blob device )
+        bounds_abort        ( 5: random device )
+        1_bounds_abort ;    ( default case )
     THEN
     #nil OVER qz!           ( D: event ) ( R: target )
     #nil R@ QX@             ( D: ep sp ip ) ( R: target )
