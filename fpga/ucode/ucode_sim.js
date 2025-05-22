@@ -70,9 +70,7 @@ function make_stack(depth = 12) {
     }
     function reset() {  // make stack empty
         stack = new Array(depth);
-        min = 0;
         cnt = 0;
-        max = 0;
     }
     function stats() {  // return stack usage statistics
         return {min, cnt, max};
