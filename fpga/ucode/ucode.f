@@ -1415,6 +1415,13 @@ VARIABLE abort_reason       ( "reason" for most-recent abort )
 : invalid ( -- ip' )
     E_FAIL abort ;
 
+: imm_int ( -- n )
+    imm@ DUP is_fix IF
+        fix2int ;
+    THEN
+: 1_not_fix_abort
+    DROP E_NOT_FIX abort ;
+
 : op_end ( -- ip' | error )
     imm@ #1 = IF
         self@ DUP QZ@       ( D: self effect )
@@ -1503,20 +1510,16 @@ VARIABLE abort_reason       ( "reason" for most-recent abort )
     THEN
     2not_fix ;
 : op_cmp ( -- ip' | error )
-    imm@ DUP is_fix IF
-        fix2int             ( imm )
-        JMPTBL 0x6 ,
-        cmp_eq              ( 0000: eq )
-        cmp_ge              ( 0001: ge )
-        cmp_gt              ( 0002: gt )
-        cmp_lt              ( 0003: lt )
-        cmp_le              ( 0004: le )
-        cmp_ne              ( 0005: ne )
-        DROP                ( default case )
-        bounds_abort ;
-    THEN
-: 1_not_fix_abort
-    DROP E_NOT_FIX abort ;
+    imm_int                 ( D: imm )
+    JMPTBL 6 ,
+    cmp_eq                  ( 0000: eq )
+    cmp_ge                  ( 0001: ge )
+    cmp_gt                  ( 0002: gt )
+    cmp_lt                  ( 0003: lt )
+    cmp_le                  ( 0004: le )
+    cmp_ne                  ( 0005: ne )
+    DROP                    ( default case )
+    bounds_abort ;
 
 : if_truthy                 ( D: sp' )
     sp! imm@ ;              ( continue true )
@@ -1544,49 +1547,45 @@ VARIABLE abort_reason       ( "reason" for most-recent abort )
 : capture_stack             ( D: )
     #nil sp@ push_result ;
 : op_pair ( -- ip' | error )
-    imm@ DUP is_fix IF
-        fix2int DUP 0> IF
-            sp@ SWAP        ( D: sp +n )
-            1- n_rest       ( D: prev )
+    imm_int                 ( D: n )
+    DUP 0> IF
+        sp@ SWAP            ( D: sp +n )
+        1- n_rest           ( D: prev )
+        DUP is_ram IF
+            DUP QY@         ( D: prev last )
             DUP is_ram IF
-                DUP QY@     ( D: prev last )
-                DUP is_ram IF
-                    DUP QX@ ( D: prev last tail )
-                    ROT     ( D: last tail prev )
-                    qy!     ( D: last )
-                    sp@     ( D: last list )
-                    OVER    ( D: last list last )
-                    qx!     ( D: last )
-                    update_sp ;
-                THEN DROP
+                DUP QX@     ( D: prev last tail )
+                ROT         ( D: last tail prev )
+                qy!         ( D: last )
+                sp@         ( D: last list )
+                OVER        ( D: last list last )
+                qx!         ( D: last )
+                update_sp ;
             THEN DROP
-            capture_stack ;
-        THEN                ( D: n )
-        DUP 0= IF
-            DROP k@ ;       ( no effect )
-        THEN
-        DROP undef_result ;
-    THEN                    ( D: imm )
-    1_not_fix_abort ;
+        THEN DROP
+        capture_stack ;
+    THEN                    ( D: n )
+    0= IF                   ( D: -- )
+        k@ ;                ( no effect )
+    THEN                    ( D: -- )
+    undef_result ;
 
 : op_part ( -- ip' | error )
-    imm@ DUP is_fix IF
-        fix2int DUP 0> IF
-            sp@ part        ( D: n sp' list )
-            ROT             ( D: sp' list n )
-            #nil -ROT       ( D: sp' copy=#nil list n )
-            n_copy_onto     ( D: sp' copy' list' )
-            ROT SWAP        ( D: copy' sp' list' )
-            pair SWAP       ( D: sp'' copy' )
-            reverse_onto    ( D: sp''' )
-            update_sp ;
-        THEN                ( D: n )
-        DUP 0= IF
-            DROP k@ ;       ( no effect )
-        THEN
-        DROP undef_result ;
-    THEN                    ( D: imm )
-    1_not_fix_abort ;
+    imm_int                 ( D: n )
+    DUP 0> IF
+        sp@ part            ( D: n sp' list )
+        ROT                 ( D: sp' list n )
+        #nil -ROT           ( D: sp' copy=#nil list n )
+        n_copy_onto         ( D: sp' copy' list' )
+        ROT SWAP            ( D: copy' sp' list' )
+        pair SWAP           ( D: sp'' copy' )
+        reverse_onto        ( D: sp''' )
+        update_sp ;
+    THEN                    ( D: n )
+    0= IF                   ( D: -- )
+        k@ ;                ( no effect )
+    THEN                    ( D: -- )
+    undef_result ;
 
 : op_nth ( -- ip' | error )
     sp@ part imm@           ( D: sp' pair #n )
@@ -1597,23 +1596,15 @@ VARIABLE abort_reason       ( "reason" for most-recent abort )
     2DROP 1_not_fix_abort ;
 
 : op_drop ( -- ip' | error )
-    sp@ imm@ DUP is_fix IF  ( D: sp #n )
-        fix2int             ( D: sp n )
-        DUP MSB& IF         ( D: sp -n )
-            2DROP k@ ;
-        THEN
-        ?LOOP-
-            rest            ( D: sp' )
-        AGAIN
-        update_sp ;
-    THEN
-    DROP 1_not_fix_abort ;
-
-: imm_int ( -- n )
-    imm@ DUP is_fix IF
-        fix2int ;
-    THEN
-    1_not_fix_abort ;
+    imm_int                 ( D: n )
+    sp@ SWAP                ( D: sp n )
+    DUP MSB& IF             ( D: sp -n )
+        2DROP k@ ;
+    THEN                    ( D: sp n )
+    ?LOOP-
+        rest                ( D: sp' )
+    AGAIN
+    update_sp ;
 
 : op_dup ( -- ip' | error )
     imm_int                 ( D: n )
@@ -1631,49 +1622,45 @@ VARIABLE abort_reason       ( "reason" for most-recent abort )
     DROP k@ ;               ( no-op )
 
 : op_pick ( -- ip' | error )
-    imm@ #0 = IF
+    imm_int                 ( D: n )
+    DUP 0= IF
         undef_result ;
     THEN
-    imm@ DUP is_fix IF      ( D: #n )
-        fix2int DUP MSB& IF ( D: -n )
-            sp@ TUCK first  ( D: sp -n item )
-            -ROT 1+ nth     ( D: item prev )
-            insert k@ ;
-        THEN                ( D: +n )
-        sp@ DUP             ( D: +n sp sp )
-        ROT nth             ( D: sp item )
-        push_result ;
-    THEN
-    1_not_fix_abort ;
+    DUP MSB& IF             ( D: -n )
+        sp@ TUCK first      ( D: sp -n item )
+        -ROT 1+ nth         ( D: item prev )
+        insert k@ ;
+    THEN                    ( D: +n )
+    sp@ DUP                 ( D: +n sp sp )
+    ROT nth                 ( D: sp item )
+    push_result ;
 
 : op_roll ( -- ip' | error )
-    imm@ DUP is_fix IF      ( D: #n )
-        fix2int DUP MSB& IF ( D: -n )
-            NEGATE 1-       ( D: n-1 )
-            DUP 0> IF       ( D: n-1 )
-                sp@ part    ( D: n-1 sp' item )
-                >R          ( D: n-1 sp' ) ( R: item )
-                TUCK        ( D: sp' n-1 sp' ) ( R: item )
-                SWAP 1-     ( D: sp' sp' n-2 ) ( R: item )
-                n_rest      ( D: sp' prev ) ( R: item )
-                R> SWAP     ( D: sp' item prev )
-                insert      ( D: sp' )
-                update_sp ;
-            THEN
-        ELSE                ( D: +n )
-            1- DUP 0> IF    ( D: n-1 )
-                1- sp@      ( D: n-2 sp )
-                SWAP n_rest ( D: prev )
-                DUP rest    ( D: prev next )
-                SWAP        ( D: next prev )
-                extract sp@ ( D: next sp )
-                SWAP first  ( D: sp item )
-                push_result ;
-            THEN
-        THEN                ( D: n )
-        DROP k@ ;           ( no-op )
-    THEN
-    1_not_fix_abort ;
+    imm_int                 ( D: n )
+    DUP MSB& IF             ( D: -n )
+        NEGATE 1-           ( D: n-1 )
+        DUP 0> IF           ( D: n-1 )
+            sp@ part        ( D: n-1 sp' item )
+            >R              ( D: n-1 sp' ) ( R: item )
+            TUCK            ( D: sp' n-1 sp' ) ( R: item )
+            SWAP 1-         ( D: sp' sp' n-2 ) ( R: item )
+            n_rest          ( D: sp' prev ) ( R: item )
+            R> SWAP         ( D: sp' item prev )
+            insert          ( D: sp' )
+            update_sp ;
+        THEN
+    ELSE                    ( D: +n )
+        1- DUP 0> IF        ( D: n-1 )
+            1- sp@          ( D: n-2 sp )
+            SWAP n_rest     ( D: prev )
+            DUP rest        ( D: prev next )
+            SWAP            ( D: next prev )
+            extract sp@     ( D: next sp )
+            SWAP first      ( D: sp item )
+            push_result ;
+        THEN
+    THEN                    ( D: n )
+    DROP k@ ;               ( no-op )
 
 : alu_result ( sp n -- ip' )
     int2fix rplc_result ;
@@ -1721,26 +1708,23 @@ VARIABLE abort_reason       ( "reason" for most-recent abort )
     THEN
     2not_fix ;
 : op_alu ( -- ip' | error )
-    imm@ DUP is_fix IF
-        fix2int             ( imm )
-        JMPTBL 0xD ,
-        alu_not             ( 0000: not )
-        alu_and             ( 0001: and )
-        alu_or              ( 0002: or )
-        alu_xor             ( 0003: xor )
-        alu_add             ( 0004: add )
-        alu_sub             ( 0005: sub )
-        alu_mul             ( 0006: mul )
-        E_BOUNDS            ( 0007: -reserved- )
-        E_BOUNDS            ( 0008: lsl )
-        E_BOUNDS            ( 0009: lsr )
-        E_BOUNDS            ( 000A: asr )
-        E_BOUNDS            ( 000B: rol )
-        E_BOUNDS            ( 000C: ror )
-        DROP                ( default case )
-        bounds_abort ;
-    THEN
-    1_not_fix_abort ;
+    imm_int                 ( D: imm )
+    JMPTBL 0xD ,
+    alu_not                 ( 0000: not )
+    alu_and                 ( 0001: and )
+    alu_or                  ( 0002: or )
+    alu_xor                 ( 0003: xor )
+    alu_add                 ( 0004: add )
+    alu_sub                 ( 0005: sub )
+    alu_mul                 ( 0006: mul )
+    E_BOUNDS                ( 0007: -reserved- )
+    E_BOUNDS                ( 0008: lsl )
+    E_BOUNDS                ( 0009: lsr )
+    E_BOUNDS                ( 000A: asr )
+    E_BOUNDS                ( 000B: rol )
+    E_BOUNDS                ( 000C: ror )
+    DROP                    ( default case )
+    bounds_abort ;
 
 : quad_ZYXT ( sp quad -- ip' )
     SWAP OVER QZ@           ( D: quad sp Z )
@@ -1770,40 +1754,38 @@ VARIABLE abort_reason       ( "reason" for most-recent abort )
     R> R> R>                ( D: sp'''' Z Y X T )
     3alloc push_result ;
 : op_quad ( -- ip' | error )
-    imm@ DUP is_fix IF
-        fix2int DUP MSB& IF ( D: -n )
-            sp@ part        ( D: -n sp' quad )
-            ROT ABS 1-      ( D: sp' quad index )
-            JMPTBL 0x4 ,
-            quad_T
-            quad_XT
-            quad_YXT
-            quad_ZYXT
-            2DROP           ( default case )
-            #? push_result ;
-        THEN                ( D: +n )
-        sp@ part            ( D: +n sp' T )
-        DUP #type_t typeq IF
-            ROT 1-          ( D: sp' T arity )
-            2DUP int2fix    ( D: sp' T arity T #a )
-            SWAP QX@        ( D: sp' T arity #a #A )
-            = IF            ( D: sp' T arity )
-                SWAP >R     ( D: sp' arity ) ( R: T )
-                JMPTBL 0x4 ,
-                quad_1
-                quad_2
-                quad_3
-                quad_4
-                R> 2DROP    ( default case )
-                #? push_result ;
-            THEN
-            2DROP           ( D: sp' )
-            #? push_result ;
-        THEN
-        ROT 2DROP           ( D: sp' )
-        #? push_result ;
-    THEN
-    DROP undef_result ;
+    imm_int                 ( D: n )
+    DUP MSB& IF             ( D: -n )
+        sp@ part            ( D: -n sp' quad )
+        ROT ABS 1-          ( D: sp' quad index )
+        JMPTBL 4 ,
+        quad_T
+        quad_XT
+        quad_YXT
+        quad_ZYXT
+        2DROP               ( default case )
+        DROP bounds_abort ;
+    THEN                    ( D: +n )
+    sp@ part                ( D: +n sp' T )
+    DUP #type_t typeq IF
+        ROT 1-              ( D: sp' T arity )
+        2DUP int2fix        ( D: sp' T arity T #a )
+        SWAP QX@            ( D: sp' T arity #a #A )
+        = IF                ( D: sp' T arity )
+            SWAP >R         ( D: sp' arity ) ( R: T )
+            JMPTBL 4 ,
+            quad_1
+            quad_2
+            quad_3
+            quad_4
+            R> 2DROP        ( default case )
+            DROP bounds_abort ;
+        THEN                ( D: sp' T arity )
+        2DROP               ( D: sp' )
+        DROP bounds_abort ;
+    THEN                    ( D: n sp' T )
+    2DROP                   ( D: n )
+    DROP E_NO_TYPE abort ;
 
 : dict_has                  ( D: )
     sp@ part                ( D: sp' key )
@@ -1852,18 +1834,15 @@ VARIABLE abort_reason       ( "reason" for most-recent abort )
 : dict_del                  ( D: )
     E_BOUNDS ;
 : op_dict ( -- ip' | error )
-    imm@ DUP is_fix IF
-        fix2int             ( imm )
-        JMPTBL 5 ,
-        dict_has            ( 0: has )
-        dict_get            ( 1: get )
-        dict_add            ( 2: add )
-        dict_set            ( 3: set )
-        dict_del            ( 4: del )
-        DROP                ( default case )
-        bounds_abort ;
-    THEN
-    1_not_fix_abort ;
+    imm_int                 ( D: imm )
+    JMPTBL 5 ,
+    dict_has                ( 0: has )
+    dict_get                ( 1: get )
+    dict_add                ( 2: add )
+    dict_set                ( 3: set )
+    dict_del                ( 4: del )
+    DROP                    ( default case )
+    bounds_abort ;
 
 (
     #dict_t operations...
