@@ -70,16 +70,18 @@
     < INVERT ;
 : <= ( a b -- a<=b )
     > INVERT ;
+(
 : MAX ( a b -- a | b )
     2DUP < ?: ;
 : MIN ( a b -- a | b )
     2DUP > ?: ;
+: J ( -- j ) ( R: j i -- j i )
+    R> R@ SWAP >R ;
+)
 : @1+ ( addr -- )
     DUP @ 1+ SWAP ! ;
 : @1- ( addr -- )
     DUP @ 1- SWAP ! ;
-: J ( -- j ) ( R: j i -- j i )
-    R> R@ SWAP >R ;
 : JMPTBL ( index -- )
     R>                      ( D: index table )
     2DUP @                  ( D: index table index limit )
@@ -90,6 +92,7 @@
         + 1+                ( D: index table+limit+1 )
     THEN
     >R ;
+(
 : MEMCPY ( dst src count -- )
     ?LOOP-                  ( D: dst src ) ( R: count-1 )
         2DUP                ( D: dst src dst src )
@@ -97,6 +100,7 @@
         SWAP I + !          ( D: dst src )
     AGAIN
     2DROP ;
+)
 
 : INBOUNDS ( n lo hi -- lo<=n&&n<=hi )
     -ROT OVER SWAP -
@@ -152,10 +156,12 @@
     BEGIN RX? UNTIL
 : RX@ ( -- char )
     0x03 IO@ ;
+(
 : SPACES ( n -- )
     ?LOOP-
         SPACE
     AGAIN ;
+)
 : CR ( -- )
     '\r' EMIT '\n' EMIT ;
 : ECHO ( char -- )
@@ -172,8 +178,10 @@
 
 : us_delay ( us -- )
     6 * ?LOOP- AGAIN ;      ( FIXME: adjust multiplier if CPU clock-rate changes )
+(
 : ms_delay ( ms -- )
     ?LOOP- 1000 us_delay AGAIN ;
+)
 
 ( SPI Flash Interface )
 VARIABLE spi_page ( bits [31:16] of SPI address )
@@ -268,6 +276,7 @@ VARIABLE spi_page ( bits [31:16] of SPI address )
     WAIT_DR                 ( wait until ready/done )
     FALSE CS! ;             ( deassert chip-select )
 
+(
 : spif_program_block ( buf n=[1,128] lsb msb page -- buf' )
     spif_write_enable
     TRUE CS!                ( assert chip-select )
@@ -295,6 +304,7 @@ VARIABLE spi_page ( bits [31:16] of SPI address )
         spif_program_block  ( D: buf' ) ( R: I cnt )
         R> 1+               ( D: buf' cnt+1 ) ( R: I )
     AGAIN DROP ;            ( D: buf' ) ( R: -- )
+)
 
 : spif_cell_in ( -- cell )
     spi_in spi_in b2c ;
@@ -2154,16 +2164,13 @@ VARIABLE saved_sp           ( sp before instruction execution )
                     cont_dequeue
                     cont_enqueue
                 ELSE        ( D: ip' )
-                    DROP    ( FIXME: redundant if RESET follows... )
-                    run_abort
+                    DROP run_abort
                 THEN
             ELSE            ( D: op )
-                DROP    ( FIXME: redundant if RESET follows... )
-                run_abort
+                DROP run_abort
             THEN
         ELSE                ( D: ip )
-            DROP    ( FIXME: redundant if RESET follows... )
-            run_abort
+            DROP run_abort
         THEN
         e_head@ is_ram IF
             dispatch_event
@@ -2178,7 +2185,7 @@ VARIABLE saved_sp           ( sp before instruction execution )
     RESET                   ( clear both D-stack and R-stack )
     run_limit @ DUP 0> IF
         1- DUP 0= IF
-            ( DROP ) run_exit ;
+            DROP run_exit ;
         THEN
     THEN                    ( D: limit )
     ( gc_increment )
