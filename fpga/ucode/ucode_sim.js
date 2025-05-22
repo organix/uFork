@@ -304,7 +304,12 @@ function make_machine(prog = [], device = []) {
 
         // execute instruction
         let result = 0;                                 // ALU result (default: 0)
-        if (ctrl) {
+
+        if (instr === 0x11F0) {
+            // RESET instruction
+            dstack.reset();
+            rstack.reset();
+        } else if (ctrl) {
             // control instruction
             const addr = (instr & 0x0FFF);
             if (import.meta.main) {
@@ -386,13 +391,6 @@ function make_machine(prog = [], device = []) {
             }
             dstack.perform(d_se, result);
             rstack.perform(r_se, result);
-        }
-
-        // handle RESET instruction
-        if (instr === 0x11F0) {
-            // treat both D-stack and R-stack as empty
-            dstack.reset();
-            rstack.reset();
         }
     }
 
