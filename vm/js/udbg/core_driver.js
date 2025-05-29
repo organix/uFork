@@ -32,14 +32,15 @@
 
 //      The driver will pause when one of the following conditions is met:
 //          - an unrecoverable fault, such as E_FAIL, occurs
-//          - a breakpoint is hit and "debug" is enabled
 //          - enough steps have been performed
+//          - debugging is enabled and a breakpoint is hit
+//          - debugging is enabled and an audit occurs
 
 //  {kind: "pause"}
 
 //      Stop running the core.
 
-//  {kind: "debug", enabled: <boolean>}
+//  {kind: "debugging", enabled: <boolean>}
 
 //      If enabled, the driver will pause upon encountering a 'debug'
 //      instruction or an audit. Note that maximum execution speed will be
@@ -127,7 +128,7 @@
 //      object contains the source text of each loaded module, keyed by src.
 
 //  {kind: "auto_refill", enabled: <boolean>}
-//  {kind: "debug", enabled: <boolean>}
+//  {kind: "debugging", enabled: <boolean>}
 //  {kind: "interval", milliseconds: <number>}
 //  {kind: "step_size", value: <string>}
 
@@ -152,7 +153,7 @@ const busy = Object.freeze({});
 function make_driver(core, on_status) {
     let audit_data;
     let auto_refill_enabled = true;
-    let debug = false;
+    let debugging = false;
     let device_txn;
     let interval = 0;
     let play_timer;
@@ -174,8 +175,8 @@ function make_driver(core, on_status) {
             callback({kind: "audit", code, evidence, ep, kp});
         } else if (kind === "auto_refill") {
             callback({kind: "auto_refill", value: auto_refill_enabled});
-        } else if (kind === "debug") {
-            callback({kind: "debug", enabled: debug});
+        } else if (kind === "debugging") {
+            callback({kind: "debugging", enabled: debugging});
         } else if (kind === "device_txn") {
             callback({
                 kind: "device_txn",
@@ -245,7 +246,7 @@ function make_driver(core, on_status) {
             signal = busy;
             signal = core.h_run_loop(
                 (
-                    debug                       // monitor for VM_DEBUG
+                    debugging                   // monitor for VM_DEBUG
                     || step_size === "txn"      // monitor for VM_END
                     || interval > 0             // artificial delay
                     || Number.isFinite(steps)   // step limit
@@ -256,7 +257,7 @@ function make_driver(core, on_status) {
 
 // Pause if we have hit a breakpoint or seen an audit.
 
-            if (debug && (
+            if (debugging && (
                 ip()?.x === ufork.VM_DEBUG || audit_data !== undefined
             )) {
                 pause();
@@ -351,9 +352,9 @@ function make_driver(core, on_status) {
             auto_refill_enabled = message.enabled === true;
             publish("auto_refill");
         },
-        debug(message) {
-            debug = message.enabled === true;
-            publish("debug");
+        debugging(message) {
+            debugging = message.enabled === true;
+            publish("debugging");
         },
         interval(message) {
             interval = (

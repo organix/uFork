@@ -314,7 +314,7 @@ const debugger_ui = make_ui("debugger-ui", function (element, {
         }
         if (!was_connected) {
             on_signal(ufork.UNDEF_RAW);
-            send_command({kind: "debug", enabled: true});
+            send_command({kind: "debugging", enabled: true});
             send_command({kind: "subscribe", topic: "interval", throttle});
             send_command({kind: "subscribe", topic: "playing"});
             send_command({kind: "subscribe", topic: "ram", throttle});

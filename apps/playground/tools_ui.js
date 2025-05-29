@@ -311,6 +311,14 @@ const tools_ui = make_ui("tools-ui", function (element, {
             on_txn(...args) {
                 driver.txn(...args);
             },
+            on_audit(code, evidence, ep, kp) {
+                devices.io.warn(
+                    "AUDIT:",
+                    ufork.fault_msg(code),
+                    core.u_pprint(evidence)
+                );
+                driver.audit(code, evidence, ep, kp);
+            },
             log_level: ufork.LOG_TRACE,
             on_log(log_level, ...values) {
                 const logger = (
