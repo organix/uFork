@@ -1,6 +1,6 @@
 // ed.js
 // James Diacono
-// 2024-08-02
+// 2025-06-08
 
 // A code editor for the Web, with support for syntax highlighting, copy/paste,
 // undo/redo, and versioning. Tested on Chrome, Safari, and Firefox.
@@ -88,17 +88,28 @@ function get_selection_range(element) {
             ? element.getRootNode().getSelection() // Chrome
             : document.getSelection() // Firefox
         );
-        const is_shadow = element.getRootNode() !== document;
-        let range = selection.getRangeAt(0);
+        const root = element.getRootNode();
+        const is_shadow = root !== document;
+        let range;
         if (is_shadow && typeof selection.getComposedRanges === "function") {
 
-// Safari's proprietary 'getComposedRanges' method returns a StaticRange.
-// Convert it into a real Range.
+// The newer 'getComposedRanges' method has better support for the Shadow DOM,
+// but returns a StaticRange. Convert it into a real Range.
 
-            const bogus = selection.getComposedRanges(element.getRootNode())[0];
+            const {startContainer, endContainer, startOffset, endOffset} = (
+
+// Safari introduced the 'getComposedRanges' method before it took an options
+// object, so we use the older interface for backwards compatibility.
+
+                navigator.vendor === "Apple Computer, Inc."
+                ? selection.getComposedRanges(root)
+                : selection.getComposedRanges({shadowRoots: [root]})
+            )[0];
             range = document.createRange();
-            range.setStart(bogus.startContainer, bogus.startOffset);
-            range.setEnd(bogus.endContainer, bogus.endOffset);
+            range.setStart(startContainer, startOffset);
+            range.setEnd(endContainer, endOffset);
+        } else {
+            range = selection.getRangeAt(0);
         }
         if (
             element.contains(range.startContainer)
