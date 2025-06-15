@@ -68,7 +68,7 @@ pub struct Core {
     gc_marks:   [GcColor; QUAD_RAM_MAX],
     device:     [Option<Box<dyn Device>>; DEVICE_MAX],
     txn_fn:     Option<Box<dyn Fn(Any, Any)>>,
-    audit_fn:   Option<Box<dyn Fn(Any, Any, Any, Any)>>,
+    audit_fn:   Option<Box<dyn Fn(Any, Any)>>,
 }
 
 impl Default for Core {
@@ -175,12 +175,10 @@ impl Core {
     fn call_audit_fn(&self, error: Error, evidence: Any) {
         if let Some(audit) = &self.audit_fn {
             let code = Any::fix(error as isize);
-            let ep = self.ep();
-            let kp = self.kp();
-            (audit)(code, evidence, ep, kp);
+            (audit)(code, evidence);
         }
     }
-    pub fn set_audit_fn<F: Fn(Any, Any, Any, Any) + 'static>(&mut self, audit_fn: F) {
+    pub fn set_audit_fn<F: Fn(Any, Any) + 'static>(&mut self, audit_fn: F) {
         self.audit_fn = Some(Box::new(audit_fn));
     }
 

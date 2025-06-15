@@ -38,7 +38,7 @@ fn out_of_memory(_: ::core::alloc::Layout) -> ! {
 #[link(wasm_import_module = "capabilities")]
 extern "C" {
     pub fn host_txn(ep: Raw, kp_or_fx: Raw);
-    pub fn host_audit(code: Raw, evidence: Raw, ep: Raw, kp: Raw);
+    pub fn host_audit(code: Raw, evidence: Raw);
 }
 
 /* Static Singleton per Kevin Reid */
@@ -68,9 +68,9 @@ pub fn h_init() {
             host_txn(ep.raw(), kp_or_fx.raw());
         }
     });
-    core.set_audit_fn(|code, evidence, ep, kp| {
+    core.set_audit_fn(|code, evidence| {
         unsafe {
-            host_audit(code.raw(), evidence.raw(), ep.raw(), kp.raw());
+            host_audit(code.raw(), evidence.raw());
         }
     });
 }

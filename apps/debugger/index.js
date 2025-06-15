@@ -702,14 +702,8 @@ core = make_core({
         core.u_trace(event);
         // console.log(JSON.stringify(event, undefined, 4));
     },
-    on_audit(code, evidence, ep, kp) {
-        console.error(
-            "AUDIT:",
-            ufork.fault_msg(code),
-            core.u_pprint(evidence),
-            core.u_pprint(ep),
-            core.u_pprint(kp)
-        );
+    on_audit(code, evidence) {
+        console.error("AUDIT:", ufork.fault_msg(code), core.u_pprint(evidence));
         //debugger;
     },
     log_level: ufork.LOG_TRACE,

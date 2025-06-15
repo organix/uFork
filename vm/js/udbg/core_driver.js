@@ -90,7 +90,7 @@
 //          - A negative fixnum indicates a fault occurred, e.g. E_FAIL.
 //          - #? indicates that the core still has work to do.
 
-//  {kind: "audit", code: <raw>, evidence: <raw>, ep: <raw>, kp: <raw>}
+//  {kind: "audit", code: <raw>, evidence: <raw>}
 
 //      The audit information for the previous step. If there was no
 //      audit, 'kind' is the only property.
@@ -170,9 +170,7 @@ function make_driver(core, on_status) {
         if (kind === "audit") {
             const code = audit_data?.code;
             const evidence = audit_data?.evidence;
-            const ep = audit_data?.ep;
-            const kp = audit_data?.kp;
-            callback({kind: "audit", code, evidence, ep, kp});
+            callback({kind: "audit", code, evidence});
         } else if (kind === "auto_refill") {
             callback({kind: "auto_refill", value: auto_refill_enabled});
         } else if (kind === "debugging") {
@@ -343,8 +341,8 @@ function make_driver(core, on_status) {
         }
     }
 
-    function audit(code, evidence, ep, kp) {
-        audit_data = {code, evidence, ep, kp};
+    function audit(code, evidence) {
+        audit_data = {code, evidence};
     }
 
     const commands = {

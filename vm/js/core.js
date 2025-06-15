@@ -31,15 +31,13 @@
 
 //      Optional.
 
-//  on_audit(code, evidence, ep, kp)
+//  on_audit(code, evidence)
 //      A function that is called when a non-fatal error (such as an aborted
 //      transaction) occurs. Optional.
 
 //      The 'code' is an error integer such as E_ABORT.
 //      The 'evidence' is a value associated with the error, such as the reason
 //      provided to the 'end abort' instruction.
-//      The 'ep' points to the current event.
-//      The 'kp' points to the current continuation, if there is one.
 
 //  log_level
 //      An integer controlling the core's logging verbosity. Each level includes
@@ -201,14 +199,9 @@ function make_core({
         : undefined
     );
 
-    function u_audit(code, evidence, ep, kp) {
+    function u_audit(code, evidence) {
         if (typeof on_audit === "function") {
-            on_audit(
-                code,
-                evidence >>> 0,
-                ep >>> 0,
-                kp >>> 0
-            );
+            on_audit(code, evidence >>> 0);
         }
     }
 
@@ -862,14 +855,8 @@ function demo(log) {
         wasm_url,
         log_level: ufork.LOG_DEBUG,
         on_log: log,
-        on_audit(code, evidence, ep, kp) {
-            log(
-                "AUDIT:",
-                fault_msg(code),
-                print(evidence),
-                print(ep),
-                print(kp)
-            );
+        on_audit(code, evidence) {
+            log("AUDIT:", fault_msg(code), print(evidence));
         },
         import_map: {"https://ufork.org/lib/": lib_url},
         compilers: {asm: assemble}

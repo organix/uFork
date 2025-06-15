@@ -216,11 +216,7 @@ const actors_ui = make_ui("actor-ui", function (element, {
                 dom("dt", "code:"),
                 dom("dd", ufork.fault_msg(audit.code)),
                 dom("dt", "evidence:"),
-                dom("dd", [print(audit.evidence)]),
-                dom("dt", "ep:"),
-                dom("dd", [print(audit.ep)]),
-                dom("dt", "kp:"),
-                dom("dd", [print(audit.kp)])
+                dom("dd", [print(audit.evidence)])
             ]));
         }
         let selected_actor_ofs;
@@ -341,10 +337,10 @@ const actors_ui = make_ui("actor-ui", function (element, {
         graph_element.invalidate();
     }
 
-    function set_audit(code, evidence, ep, kp) {
+    function set_audit(code, evidence) {
         audit = (
             code !== undefined
-            ? {code, evidence, ep, kp}
+            ? {code, evidence}
             : undefined
         );
         invalidate();
