@@ -332,13 +332,6 @@ const tools_ui = make_ui("tools-ui", function (element, {
                 );
                 logger(...values);
             },
-            on_audit(code, evidence) {
-                devices.io.warn(
-                    "AUDIT:",
-                    ufork.fault_msg(code),
-                    core.u_pprint(evidence)
-                );
-            },
             import_map,
             compilers: get_compilers()
         });
