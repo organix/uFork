@@ -304,12 +304,11 @@ const tools_ui = make_ui("tools-ui", function (element, {
         stop();
         core = make_core({
             wasm_url,
-            on_wakeup(sender, events) {
-                devices.io.info("WAKE:", ufork.print(sender));
-                driver.wakeup(sender, events);
-            },
-            on_txn(...args) {
-                driver.txn(...args);
+            on_txn(wake, sender, events) {
+                if (wake === true) {
+                    devices.io.info("WAKE:", ufork.print(sender));
+                }
+                driver.txn(wake, sender, events);
             },
             on_audit(code, evidence) {
                 devices.io.warn(

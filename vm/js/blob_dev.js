@@ -469,7 +469,11 @@ function demo(log, use_static) {
 
     core = make_core({
         wasm_url,
-        on_wakeup: run_core,
+        on_txn(wake) {
+            if (wake === true) {
+                run_core();
+            }
+        },
         on_log: log,
         log_level: ufork.LOG_TRACE,
         on_audit(code, evidence) {

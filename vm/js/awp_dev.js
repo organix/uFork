@@ -971,11 +971,18 @@ let core;
 if (import.meta.main) {
     core = make_core({
         wasm_url,
-        on_wakeup(sender, events) {
-            globalThis.console.log("WAKE:", ufork.print(sender), events.length);
-            globalThis.console.log("IDLE:", ufork.fault_msg(ufork.fix_to_i32(
-                core.h_run_loop()
-            )));
+        on_txn(wake, sender, events) {
+            if (wake === true) {
+                globalThis.console.log(
+                    "WAKE:",
+                    ufork.print(sender),
+                    events.length
+                );
+                globalThis.console.log(
+                    "IDLE:",
+                    ufork.fault_msg(ufork.fix_to_i32(core.h_run_loop()))
+                );
+            }
         },
         on_log: globalThis.console.log,
         log_level: ufork.LOG_TRACE,

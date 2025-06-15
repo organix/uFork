@@ -371,7 +371,11 @@ function demo(log) {
 
     core = make_core({
         wasm_url,
-        on_wakeup: run_core,
+        on_txn(wake) {
+            if (wake === true) {
+                run_core();
+            }
+        },
         on_log: log,
         on_audit(code, evidence) {
             log("AUDIT:", ufork.fault_msg(code), core.u_pprint(evidence));

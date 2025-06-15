@@ -450,8 +450,8 @@ function demo(log) {
         on_audit(...args) {
             return driver.audit(...args);
         },
-        on_wakeup(...args) {
-            return driver.wakeup(...args);
+        on_txn(...args) {
+            return driver.txn(...args);
         },
         import_map: {"https://ufork.org/lib/": lib_url},
         compilers: {asm: assemble}

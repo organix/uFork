@@ -235,7 +235,7 @@ function make_driver(core, on_status) {
                 return publish_state();
             }
 
-// Run the core. It is possible that 'h_run_loop' will call 'wakeup'
+// Run the core. It is possible that 'h_run_loop' will call 'txn'
 // causing 'run' to be reentered, so we guard against that with a special
 // signal value.
 
@@ -305,38 +305,25 @@ function make_driver(core, on_status) {
         }
     }
 
-    function wakeup(sender, events) {
-        device_txn = {
-            sender,
-            events,
-            wake: true
-        };
-        if (steps !== undefined) {
-            if (step_size === "txn") {
-                steps -= 1;
-            }
+    function txn(wake, sender, events) {
+        if (wake === undefined) {
+            return;  // not a device
+        }
+        device_txn = {wake, sender, events};
+        if (wake) {
+            if (steps !== undefined) {
+                if (step_size === "txn") {
+                    steps -= 1;
+                }
 
-// It is possible that 'wakeup' was called by 'u_defer' within 'h_run_loop',
+// It is possible that 'txn' was called by 'u_defer' within 'h_run_loop',
 // so defer the call to a future turn to avoid reentry.
 
-            setTimeout(run, interval);
+                setTimeout(run, interval);
+            } else {
+                publish_state();
+            }
         } else {
-            publish_state();
-        }
-    }
-
-    function txn(ep, kp_or_fx) {
-        const target = core.u_read_quad(ep).x;
-        const is_device_or_proxy = (
-            core.u_read_quad(ufork.cap_to_ptr(target)).t === ufork.PROXY_T
-            || ufork.rawofs(target) < ufork.SPONSOR_OFS
-        );
-        if (is_device_or_proxy) {
-            device_txn = {
-                sender: target,
-                events: [kp_or_fx],
-                wake: false
-            };
             publish("device_txn");
         }
     }
@@ -407,16 +394,13 @@ function make_driver(core, on_status) {
         clearTimeout(play_timer);
     }
 
-    return Object.freeze({command, dispose, txn, wakeup, audit});
+    return Object.freeze({command, dispose, txn, audit});
 }
 
 function demo(log) {
     let driver;
     const core = make_core({
         wasm_url,
-        on_wakeup(...args) {
-            driver.wakeup(...args);
-        },
         on_txn(...args) {
             driver.txn(...args);
         },

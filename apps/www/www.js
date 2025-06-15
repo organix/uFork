@@ -57,9 +57,6 @@ const src = new URL(unqualified_src, cwd_dir).href;
 
 core = make_core({
     wasm_url,
-    on_wakeup(...args) {
-        driver.wakeup(...args);
-    },
     on_txn(...args) {
         driver.txn(...args);
     },

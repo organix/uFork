@@ -349,9 +349,6 @@ function demo(log) {
     let element;
     const core = make_core({
         wasm_url,
-        on_wakeup(...args) {
-            driver.wakeup(...args);
-        },
         on_txn(...args) {
             driver.txn(...args);
         },

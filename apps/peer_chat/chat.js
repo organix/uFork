@@ -109,8 +109,8 @@ const $importmap = document.querySelector("[type=importmap]");
 const transport = webrtc_transport(websockets_signaller(), console.log);
 core = make_core({
     wasm_url,
-    on_wakeup(...args) {
-        driver.wakeup(...args);
+    on_txn(...args) {
+        driver.txn(args);
     },
     import_map: (
         $importmap

@@ -35,10 +35,12 @@ function party(asm_url, acquaintance_names = []) {
     const transport = webrtc_transport(websockets_signaller(), print);
     const core = make_core({
         wasm_url,
-        on_wakeup() {
-            const sig = core.h_run_loop(0);
-            const err = ufork.fix_to_i32(sig);
-            print("WAKE:", ufork.print(sig), ufork.fault_msg(err));
+        on_txn(wake) {
+            if (wake === true) {
+                const sig = core.h_run_loop(0);
+                const err = ufork.fix_to_i32(sig);
+                print("WAKE:", ufork.print(sig), ufork.fault_msg(err));
+            }
         },
         on_log(log_level, ...values) {
             print(log_level, ...values);

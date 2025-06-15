@@ -90,12 +90,14 @@ const stores = {
 const store_name = process.argv[2];
 const core = make_core({
     wasm_url,
-    on_wakeup() {
-        console.log(
-            "IDLE",
-            store_name,
-            ufork.fault_msg(ufork.fix_to_i32(core.h_run_loop()))
-        );
+    on_txn(wake) {
+        if (wake === true) {
+            console.log(
+                "IDLE",
+                store_name,
+                ufork.fault_msg(ufork.fix_to_i32(core.h_run_loop()))
+            );
+        }
     },
     on_log: console.log,
     log_level: ufork.LOG_DEBUG,

@@ -687,20 +687,24 @@ function log_event_object(event) {
 
 core = make_core({
     wasm_url,
-    on_wakeup(sender, events) {
-        console.log("WAKE:", ufork.print(sender), events.map(core.u_pprint));
-        //single_step();
-        draw_host();
-    },
     on_log(level, ...args) {
         //console.log(level + ": " + args.join(" "));
         console.log(level, ...args);
     },
-    on_txn(event) {
-        event = event_as_object(event);
-        // log_event_object(event);
-        core.u_trace(event);
-        // console.log(JSON.stringify(event, undefined, 4));
+    on_txn(wake, sender, events) {
+        if (wake === true) {
+            console.log("WAKE");
+            //single_step();
+            draw_host();
+        } else if (wake === false) {
+            core.u_trace(ufork.print(sender), events.map(core.u_pprint));
+        } else {
+            const cc = core.u_current_continuation();
+            const event = event_as_object(cc.ep);
+            // log_event_object(event);
+            core.u_trace(event);
+            // console.log(JSON.stringify(event, undefined, 4));
+        }
     },
     on_audit(code, evidence) {
         console.error("AUDIT:", ufork.fault_msg(code), core.u_pprint(evidence));
