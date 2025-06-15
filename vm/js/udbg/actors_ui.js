@@ -451,6 +451,9 @@ function demo(log) {
     let driver;
     const core = make_core({
         wasm_url,
+        on_audit(...args) {
+            return driver.audit(...args);
+        },
         on_wakeup(...args) {
             return driver.wakeup(...args);
         },
@@ -458,7 +461,9 @@ function demo(log) {
         compilers: {asm: assemble}
     });
     driver = make_core_driver(core, function on_status(message) {
-        if (message.kind === "device_txn") {
+        if (message.kind === "audit") {
+            element.set_audit(message.code, message.evidence);
+        } else if (message.kind === "device_txn") {
             element.set_device_txn(
                 message.sender,
                 message.events,
@@ -476,15 +481,16 @@ function demo(log) {
     });
     parseq.sequence([
         core.h_initialize(),
-        core.h_import("https://ufork.org/lib/cell.asm"),
+        // core.h_import("https://ufork.org/lib/cell.asm"),
+        core.h_import("https://ufork.org/lib/blob.asm"),
         requestorize(function () {
             timer_dev(core);
             core.h_boot();
             driver.command({kind: "subscribe", topic: "audit"});
             driver.command({kind: "subscribe", topic: "device_txn"});
+            driver.command({kind: "subscribe", topic: "playing"});
             driver.command({kind: "subscribe", topic: "rom"});
             driver.command({kind: "subscribe", topic: "ram"});
-            driver.command({kind: "subscribe", topic: "playing"});
             driver.command({kind: "subscribe", topic: "signal"});
             driver.command({kind: "step_size", value: "txn"});
             driver.command({kind: "interval", milliseconds: 2000});

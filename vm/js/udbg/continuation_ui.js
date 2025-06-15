@@ -1,4 +1,4 @@
-// Visualize the actors within a uFork core.
+// Visualize the current continuation of a uFork core.
 
 /*jslint browser, global */
 
@@ -137,6 +137,7 @@ function demo(log) {
             core.h_boot();
             driver.command({kind: "subscribe", topic: "rom"});
             driver.command({kind: "subscribe", topic: "ram"});
+            driver.command({kind: "step_size", topic: "instr"});
             driver.command({kind: "play", steps: 5});
             return true;
         })

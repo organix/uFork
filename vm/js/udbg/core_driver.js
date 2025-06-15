@@ -1,10 +1,10 @@
 // An asynchronous message-based interface for remotely controlling and
 // monitoring a uFork WASM core. It is intended for use in both production and
-// development scenarios.
+// development.
 
 // Message delivery is assumed to be reliable and in order.
 // Messages are objects with a 'kind' property.
-// The driver receives command messages and emits status messages.
+// The driver accepts command messages and publishes status messages.
 // The protocol follows a publish-subscribe (rather than a request-response)
 // model, in order to mitigate the effects of network latency.
 
@@ -18,7 +18,7 @@
 //      Subscribe or unsubscribe from a particular kind of status message.
 
 //      Specify a 'throttle' in milliseconds ensures that no more than one
-//      status message of that kind is emitted in a given interval.
+//      status message of that kind is published within a given interval.
 
 //  {kind: "play", steps: <number>}
 
@@ -26,11 +26,11 @@
 //      of idleness, automatically continuing when the core is awoken by a
 //      device.
 
-//      The optional 'steps' property dictates how many steps to run before
+//      The optional 'steps' is the maximum number of steps to run before
 //      pausing, where the size of each step is controlled by the "step_size"
 //      command. If omitted, the core will run indefinitely.
 
-//      The driver will pause when one of the following conditions is met:
+//      The driver will pause when any of the following conditions is met:
 //          - an unrecoverable fault, such as E_FAIL, occurs
 //          - enough steps have been performed
 //          - debugging is enabled and a breakpoint is hit
@@ -38,7 +38,7 @@
 
 //  {kind: "pause"}
 
-//      Stop running the core.
+//      Temporarily stop running the core.
 
 //  {kind: "debugging", enabled: <boolean>}
 
@@ -80,25 +80,25 @@
 // STATUS MESSAGES
 
 // Status messages provides real-time updates on the state of the core. Status
-// messages of a particular kind are only emitted if the controller has
-// expressed interest with a "subscribe" command.
+// messages of a particular kind are only published if the client has expressed
+// interest with a "subscribe" command.
 
 //  {kind: "signal", signal: <raw>}
 
 //      The core halted, producing a raw 'signal' value:
 //          - The fixnum 0 (E_OK) indicates that the core is idle.
 //          - A negative fixnum indicates a fault occurred, e.g. E_FAIL.
-//          - #? indicates that the core hit the step limit, but is not idle.
+//          - #? indicates that the core still has work to do.
 
 //  {kind: "audit", code: <raw>, evidence: <raw>, ep: <raw>, kp: <raw>}
 
 //      The audit information for the previous step. If there was no
 //      audit, 'kind' is the only property.
 
-//  {kind: "device_txn", sender: <raw>, events: <Array>, wake: <boolean>}
+//  {kind: "device_txn", sender: <raw>, events: <array>, wake: <boolean>}
 
 //      The pseudo-transactional effects of a device enqueuing one or more
-//      events and possibly attempting waking up the core.
+//      events and possibly attempting to wake up the core.
 
 //      The 'sender' is the capability of the device or proxy that generated the
 //      events. Omitted if no device transaction occurred during the previous
