@@ -26,8 +26,8 @@
 //      A 'wake' value of true indicates that execution of the core can resume
 //      from its idle state.
 
-//      The 'sender' is the capability for the actor, the proxy, or the device
-//      that generated the transaction 'events', an array of pointers.
+//      The 'sender' is the capability for the actor, proxy, or device that
+//      generated the message 'events', an array of pointers.
 
 //      Beware that actor transactions can be aborted and thus have no effect!
 
@@ -131,6 +131,7 @@ const {
     INSTR_T,
     PAIR_T,
     DICT_T,
+    FREE_T,
     VM_JUMP,
     VM_DUP,
     VM_IF,
@@ -384,19 +385,6 @@ function make_core({
         return current_continuation(u_ram());
     }
 
-    function u_flatten(ptr) {
-
-// Flatten a linked list of RAM quads into an array of pointers. The link is
-// assumed to be the quad's z field.
-
-        let ptrs = [];
-        while (ufork.is_ram(ptr)) {
-            ptrs.push(ptr);
-            ptr = u_read_quad(ptr).z;
-        }
-        return ptrs;
-    }
-
     function u_nth(list_ptr, n) {
 
 // Safely extract the 'nth' item from a list of pairs.
@@ -442,6 +430,18 @@ function make_core({
             }
         }
         return UNDEF_RAW;
+    }
+
+    function u_flatten(ptr) {
+
+// Traverse a linked list of quads, returning an array of pointers.
+
+        let ptrs = [];
+        while (is_ptr(ptr) && rawofs(ptr) > FREE_T) {
+            ptrs.push(ptr);
+            ptr = u_next(ptr);
+        }
+        return ptrs;
     }
 
     function u_defer(callback) {
