@@ -1707,6 +1707,58 @@ VARIABLE abort_reason       ( "reason" for most-recent abort )
         * alu_result ;
     THEN
     2not_fix ;
+: alu_lsl                   ( D: )
+    2fix_args IF            ( D: sp' #n #m )
+        2fix2int            ( D: sp' n m )
+        ?LOOP-
+            2ROL ASR
+            0xFFFE AND      ( D: sp' n<<1 )
+        AGAIN
+        alu_result ;
+    THEN
+    2not_fix ;
+: alu_lsr                   ( D: )
+    2fix_args IF            ( D: sp' #n #m )
+        2fix2int            ( D: sp' n m )
+        ?LOOP-
+            0x7FFF AND
+            ASR             ( D: sp' n>>1 )
+        AGAIN
+        alu_result ;
+    THEN
+    2not_fix ;
+: alu_asr                   ( D: )
+    2fix_args IF            ( D: sp' #n #m )
+        2fix2int            ( D: sp' n m )
+        ?LOOP-
+            ASR             ( D: sp' n>>>1 )
+        AGAIN
+        alu_result ;
+    THEN
+    2not_fix ;
+: alu_rol                   ( D: )
+    2fix_args IF            ( D: sp' #n #m )
+        2fix2int            ( D: sp' n m )
+        ?LOOP-
+            2ROL ASR        ( D: sp' n<<>1 )
+        AGAIN
+        alu_result ;
+    THEN
+    2not_fix ;
+: alu_ror                   ( D: )
+    2fix_args IF            ( D: sp' #n #m )
+        2fix2int            ( D: sp' n m )
+        ?LOOP-              ( D: sp' ss...cba )
+            DUP LSB& IF
+                MSB|        ( D: sp' 1s...cb1 )
+            ELSE
+                0x7FFF AND  ( D: sp' 0s...cb0 )
+            THEN
+            ASR             ( D: sp' n<>>1 )
+        AGAIN
+        alu_result ;
+    THEN
+    2not_fix ;
 : op_alu ( -- ip' | error )
     imm_int                 ( D: imm )
     JMPTBL 0xD ,
@@ -1717,12 +1769,12 @@ VARIABLE abort_reason       ( "reason" for most-recent abort )
     alu_add                 ( 0004: add )
     alu_sub                 ( 0005: sub )
     alu_mul                 ( 0006: mul )
-    E_BOUNDS                ( 0007: -reserved- )
-    E_BOUNDS                ( 0008: lsl )
-    E_BOUNDS                ( 0009: lsr )
-    E_BOUNDS                ( 000A: asr )
-    E_BOUNDS                ( 000B: rol )
-    E_BOUNDS                ( 000C: ror )
+    bounds_abort            ( 0007: -reserved- )
+    alu_lsl                 ( 0008: lsl )
+    alu_lsr                 ( 0009: lsr )
+    alu_asr                 ( 000A: asr )
+    alu_rol                 ( 000B: rol )
+    alu_ror                 ( 000C: ror )
     1_bounds_abort ;        ( default case )
 
 : quad_ZYXT ( sp quad -- ip' )
@@ -1829,9 +1881,9 @@ VARIABLE abort_reason       ( "reason" for most-recent abort )
     push_result ;
 
 : dict_set                  ( D: )
-    E_BOUNDS ;
+    bounds_abort ;
 : dict_del                  ( D: )
-    E_BOUNDS ;
+    bounds_abort ;
 : op_dict ( -- ip' | error )
     imm_int                 ( D: imm )
     JMPTBL 5 ,
