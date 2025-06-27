@@ -274,19 +274,6 @@ $program_compile.onclick = function () {
     let pc_history = [];
     // add step/play/pause controls
     let step_timer;
-    function halt(result) {
-        // display error and "halt"
-        if (result !== undefined) {
-            globalThis.console.log("ERROR:", result);
-            $machine_error.textContent = "ERROR: " + result.error;
-        } else {
-            $machine_error.textContent = "Breakpoint hit.";
-        }
-        $machine_step.disabled = true;
-        $machine_play.textContent = "Play";
-        $machine_play.disabled = true;
-        $console_send.disabled = true;
-    }
     function pause() {
         clearTimeout(step_timer);
         $machine_play.textContent = "Play";
@@ -295,19 +282,30 @@ $program_compile.onclick = function () {
     function step() {
         const delay = Number($machine_delay.value);
         const begin = Date.now();
+        $machine_error.textContent = "";
         while (true) {
             pc_history.unshift(state.pc);
             pc_history = pc_history.slice(0, 100);
             const result = machine.step();
-            if (
-                result !== undefined
-                || prog[state.pc] === 0x00F0  // DEBUG
-            ) {
+            if (result !== undefined) {
                 display_machine(state, prog, words, pc_history);
-                halt(result);
+                globalThis.console.log("ERROR:", result);
+                $machine_error.textContent = "ERROR: " + result.error;
+                $machine_step.disabled = true;
+                $machine_play.disabled = true;
+                $console_send.disabled = true;
+                $machine_play.textContent = "Play";
                 return;
             }
             state = machine.copy();
+            if (prog[state.pc] === 0x00F0) {  // DEBUG
+                display_machine(state, prog, words, pc_history);
+                $machine_error.textContent = "Breakpoint hit.";
+                $machine_step.disabled = false;
+                $machine_play.disabled = false;
+                $machine_play.textContent = "Play";
+                return;
+            }
             const breakpoint = Number("0x" + $machine_break.value);
             if (Number.isSafeInteger(breakpoint) && (breakpoint === state.pc)) {
                 pause();
