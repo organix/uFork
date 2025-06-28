@@ -90,7 +90,7 @@
 //          - A negative fixnum indicates a fault occurred, e.g. E_FAIL.
 //          - #? indicates that the core still has work to do.
 
-//  {kind: "audit", code: <raw>, evidence: <raw>}
+//  {kind: "audit", code: <integer>, evidence: <raw>}
 
 //      The audit information for the previous step. If there was no
 //      audit, 'kind' is the only property.
