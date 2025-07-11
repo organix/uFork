@@ -1,18 +1,18 @@
-; A fibonnacci service behavior.
+; Fibonnacci service behavior.
 
-; It expects a message containing a customer and a fixnum. The nth
-; fibonnacci number is calculated and sent to the customer.
+; It expects a message containing a customer and a fixnum.
+; The nth Fibonnacci number is calculated and sent to the customer.
 
 .import
     std: "https://ufork.org/lib/std.asm"
     dev: "https://ufork.org/lib/dev.asm"
     is_eq: "https://ufork.org/lib/testing/is_eq.asm"
 
-;;  DEF fib_beh(m) AS \(cust, n).[
-;;      CASE greater(n, m) OF
+;;  DEF fib_beh AS \(cust, n).[
+;;      CASE greater(n, 1) OF
 ;;      TRUE : [
-;;          SEND (k_fib, sub(n, 1)) TO SELF
-;;          SEND (k_fib, sub(n, 2)) TO SELF
+;;          SEND (k_fib, sub(n, 1)) TO NEW fib_beh
+;;          SEND (k_fib, sub(n, 2)) TO NEW fib_beh
 ;;          CREATE k_fib WITH \a.[
 ;;              BECOME \b.[
 ;;                  SEND add(a, b) TO cust
@@ -26,9 +26,9 @@ beh:
 fib_beh:                    ; _ <- cust,n
     msg -1                  ; n
     dup 1                   ; n n
-    push 2                  ; n n 2
-    cmp lt                  ; n n<2
-    if std.cust_send        ; n
+    push 1                  ; n n 1
+    cmp gt                  ; n n>1
+    if_not std.cust_send    ; n
 
     msg 1                   ; n cust
     push k                  ; n cust k

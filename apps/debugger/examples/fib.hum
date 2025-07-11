@@ -2,8 +2,8 @@
 # Fibonacci example
 #
 
-DEF fib_beh(m) AS \(cust, n).[
-    CASE greater(n, m) OF
+DEF fib_beh AS \(cust, n).[
+    CASE greater(n, 1) OF
     TRUE : [
         SEND (k_fib, sub(n, 1)) TO SELF
         SEND (k_fib, sub(n, 2)) TO SELF
@@ -17,5 +17,5 @@ DEF fib_beh(m) AS \(cust, n).[
     END
 ]
 
-CREATE fib WITH fib_beh(1)
-SEND (println, 6) TO fib  # => 8
+CREATE fib WITH fib_beh
+SEND (println, 9) TO fib  # => 34
