@@ -32,40 +32,40 @@ function make_driver(core, on_status) {
     let step_queue = [];
     let step_size = "txn";
     let steps;
-    let subscriptions = Object.create(null);
+    let subscriptions = [];
 
     function publish(kind) {
-        const callback = subscriptions[kind];
-        if (callback === undefined) {
+        if (!subscriptions.includes(kind)) {
             return;
         }
         if (kind === "auto_refill") {
-            callback({kind: "auto_refill", value: auto_refill_enabled});
+            on_status({kind: "auto_refill", value: auto_refill_enabled});
         } else if (kind === "debugging") {
-            callback({kind: "debugging", enabled: debugging});
+            on_status({kind: "debugging", enabled: debugging});
         } else if (kind === "playing") {
-            callback({kind: "playing", value: steps !== undefined});
+            on_status({kind: "playing", value: steps !== undefined});
         } else if (kind === "ram" && step_queue.length > 0) {
-            callback({kind: "ram", bytes: step_queue[0].ram});
+            on_status({kind: "ram", bytes: step_queue[0].ram});
         } else if (kind === "rom") {
-            callback({
+            on_status({
                 kind: "rom",
                 bytes: core.h_rom(),
                 debugs: core.u_rom_debugs(),
                 module_texts: core.u_module_texts()
             });
+        } else if (kind === "statuses") {
+            on_status({kind: "statuses", value: subscriptions});
         } else if (kind === "step_size") {
-            callback({kind: "step_size", value: step_size});
+            on_status({kind: "step_size", value: step_size});
         }
     }
 
     function publish_step() {
         const kind = step_queue[0].message.kind;
-        const callback = subscriptions[kind];
-        if (callback === undefined) {
+        if (!subscriptions.includes(kind)) {
             return;
         }
-        callback(step_queue[0].message);
+        on_status(step_queue[0].message);
     }
 
     function pause() {
@@ -250,6 +250,12 @@ function make_driver(core, on_status) {
         refill(message) {
             core.h_refill(message.resources);
         },
+        statuses(message) {
+            if (Array.isArray(message.kinds)) {
+                subscriptions = message.kinds;
+                subscriptions.forEach(publish);
+            }
+        },
         step_size(message) {
             step_size = (
                 message.value === "txn"
@@ -257,13 +263,6 @@ function make_driver(core, on_status) {
                 : "instr"
             );
             publish("step_size");
-        },
-        subscribe(message) {
-            subscriptions[message.topic] = on_status;
-            publish(message.topic);
-        },
-        unsubscribe(message) {
-            delete subscriptions[message.topic];
         }
     };
 
@@ -324,14 +323,18 @@ function demo(log) {
             blob_dev(core);
             timer_dev(core);
             core.h_boot();
-            driver.command({kind: "subscribe", topic: "signal"});
-            driver.command({kind: "subscribe", topic: "audit"});
-            driver.command({kind: "subscribe", topic: "device_txn"});
-            driver.command({kind: "subscribe", topic: "playing"});
-            driver.command({kind: "subscribe", topic: "ram"});
-            driver.command({kind: "subscribe", topic: "rom"});
+            driver.command({
+                kind: "statuses",
+                kinds: [
+                    "signal",
+                    "audit",
+                    "device_txn",
+                    "playing",
+                    "ram",
+                    "rom"
+                ]
+            });
             driver.command({kind: "debugging", enabled: true});
-            // TODO broken?
             // driver.command({kind: "auto_refill", enabled: false});
             // driver.command({kind: "refill", resources: {cycles: 3}});
             driver.command({kind: "step_size", value: "instr"});
