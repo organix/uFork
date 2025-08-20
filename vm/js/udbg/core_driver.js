@@ -4,7 +4,7 @@
 
 // The message protocol is described in udbg.md.
 
-/*jslint web, global */
+/*jslint web, global, devel */
 
 import assemble from "https://ufork.org/lib/assemble.js";
 import throttle from "https://ufork.org/lib/throttle.js";
@@ -29,8 +29,6 @@ const running = Object.freeze({});
 function make_driver(core, on_status) {
     let auto_refill_enabled = true;
     let debugging = false;
-    let interval = 0;
-    let play_timer;
     let signal;
     let step_queue = [];
     let step_size = "txn";
@@ -46,8 +44,6 @@ function make_driver(core, on_status) {
             callback({kind: "auto_refill", value: auto_refill_enabled});
         } else if (kind === "debugging") {
             callback({kind: "debugging", enabled: debugging});
-        } else if (kind === "interval") {
-            callback({kind: "interval", milliseconds: interval});
         } else if (kind === "playing") {
             callback({kind: "playing", value: steps !== undefined});
         } else if (kind === "ram" && step_queue.length > 0) {
@@ -78,7 +74,6 @@ function make_driver(core, on_status) {
             return;
         }
         steps = undefined;
-        clearTimeout(play_timer);
         publish("playing");
     }
 
@@ -153,7 +148,6 @@ function make_driver(core, on_status) {
             if (steps <= 0) {
                 return pause();
             }
-            const initial_steps = steps;
 
 // Run the core. It is possible that 'h_run_loop' will call 'txn'
 // causing 'run' to be reentered, so we guard against that with a special
@@ -163,7 +157,6 @@ function make_driver(core, on_status) {
             signal = core.h_run_loop(
                 (
                     debugging                   // monitor for VM_DEBUG
-                    || interval > 0             // artificial delay
                     || Number.isFinite(steps)   // step limit
                 )
                 ? 1
@@ -210,17 +203,6 @@ function make_driver(core, on_status) {
                 if (steps === undefined) {
                     return;
                 }
-
-// Delay the next iteration of the run loop if necessary.
-
-                if (
-                    interval > 0                // an interval is specified
-                    && steps > 0                // there are steps remaining
-                    && steps < initial_steps    // steps have been completed
-                ) {
-                    play_timer = setTimeout(run, interval);
-                    return;
-                }
             }
         }
     }
@@ -236,7 +218,7 @@ function make_driver(core, on_status) {
 // It is possible that 'txn' was called by 'u_defer' within 'h_run_loop',
 // so defer the call to a future turn to avoid reentry.
 
-            setTimeout(run, interval);
+            setTimeout(run, 0);
         }
     }
 
@@ -255,14 +237,6 @@ function make_driver(core, on_status) {
         debugging(message) {
             debugging = message.enabled === true;
             publish("debugging");
-        },
-        interval(message) {
-            interval = (
-                Number.isSafeInteger(message.milliseconds)
-                ? message.milliseconds
-                : 0
-            );
-            publish("interval");
         },
         pause,
         play(message) {
@@ -306,7 +280,7 @@ function make_driver(core, on_status) {
     }
 
     function dispose() {
-        clearTimeout(play_timer);
+        return; // TODO remove this method?
     }
 
     return Object.freeze({command, dispose, txn, audit});
@@ -362,9 +336,9 @@ function demo(log) {
             driver.command({kind: "subscribe", topic: "ram"});
             driver.command({kind: "subscribe", topic: "rom"});
             driver.command({kind: "debugging", enabled: true});
-            // driver.command({kind: "auto_refill", enabled: false}); // TODO broken?
+            // TODO broken?
+            // driver.command({kind: "auto_refill", enabled: false});
             // driver.command({kind: "refill", resources: {cycles: 3}});
-            // driver.command({kind: "interval", milliseconds: 50});
             driver.command({kind: "step_size", value: "instr"});
             driver.command({kind: "play", steps: 300});
             return true;
