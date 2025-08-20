@@ -26,11 +26,10 @@ const resource_signals = resource_error_codes.map(ufork.fixnum);
 const running = Object.freeze({});
 
 function make_driver(core, on_status) {
+    let auto_pause_on = [];
     let auto_refill_enabled = true;
-    let debugging = false;
     let signal;
     let step_queue = [];
-    let step_size = "txn";
     let steps;
     let subscriptions = [];
 
@@ -38,10 +37,10 @@ function make_driver(core, on_status) {
         if (!subscriptions.includes(kind)) {
             return;
         }
-        if (kind === "auto_refill") {
+        if (kind === "auto_pause") {
+            on_status({kind: "auto_pause", on: auto_pause_on});
+        } else if (kind === "auto_refill") {
             on_status({kind: "auto_refill", value: auto_refill_enabled});
-        } else if (kind === "debugging") {
-            on_status({kind: "debugging", enabled: debugging});
         } else if (kind === "playing") {
             on_status({kind: "playing", value: steps !== undefined});
         } else if (kind === "ram" && step_queue.length > 0) {
@@ -55,8 +54,6 @@ function make_driver(core, on_status) {
             });
         } else if (kind === "statuses") {
             on_status({kind: "statuses", value: subscriptions});
-        } else if (kind === "step_size") {
-            on_status({kind: "step_size", value: step_size});
         }
     }
 
@@ -147,6 +144,7 @@ function make_driver(core, on_status) {
             if (steps <= 0) {
                 return pause();
             }
+            const pause_on_debug = auto_pause_on.includes("debug");
 
 // Run the core. It is possible that 'h_run_loop' will call 'txn'
 // causing 'run' to be reentered, so we guard against that with a special
@@ -155,7 +153,7 @@ function make_driver(core, on_status) {
             signal = running;
             signal = core.h_run_loop(
                 (
-                    debugging                   // monitor for VM_DEBUG
+                    pause_on_debug              // monitor for VM_DEBUG
                     || Number.isFinite(steps)   // step limit
                 )
                 ? 1
@@ -174,7 +172,7 @@ function make_driver(core, on_status) {
 
 // Pause on breakpoints.
 
-                if (debugging && ip()?.x === ufork.VM_DEBUG) {
+                if (pause_on_debug && ip()?.x === ufork.VM_DEBUG) {
                     return step(
                         {kind: "signal", signal},
                         true
@@ -191,9 +189,12 @@ function make_driver(core, on_status) {
                     );
                 }
 
-// Have we completed an instruction step?
+// An instruction step has concluded.
 
-                if (step_size === "instr") {
+                if (
+                    auto_pause_on.includes("instr")
+                    || subscriptions.includes("signal")
+                ) {
                     step({kind: "signal", signal});
                 }
 
@@ -224,18 +225,19 @@ function make_driver(core, on_status) {
     function audit(code, evidence) {
         step(
             {kind: "audit", code, evidence},
-            debugging
+            auto_pause_on.includes("audit")
         );
     }
 
     const commands = {
+        auto_pause(message) {
+            if (Array.isArray(message.on)) {
+                auto_pause_on = message.on;
+            }
+        },
         auto_refill(message) {
             auto_refill_enabled = message.enabled === true;
             publish("auto_refill");
-        },
-        debugging(message) {
-            debugging = message.enabled === true;
-            publish("debugging");
         },
         pause,
         play(message) {
@@ -255,14 +257,6 @@ function make_driver(core, on_status) {
                 subscriptions = message.kinds;
                 subscriptions.forEach(publish);
             }
-        },
-        step_size(message) {
-            step_size = (
-                message.value === "txn"
-                ? "txn"
-                : "instr"
-            );
-            publish("step_size");
         }
     };
 
@@ -334,10 +328,12 @@ function demo(log) {
                     "rom"
                 ]
             });
-            driver.command({kind: "debugging", enabled: true});
+            driver.command({
+                kind: "auto_pause",
+                on: ["audit", "debug", "fault", "instr"]
+            });
             // driver.command({kind: "auto_refill", enabled: false});
             // driver.command({kind: "refill", resources: {cycles: 3}});
-            driver.command({kind: "step_size", value: "instr"});
             driver.command({kind: "play", steps: 300});
             return true;
         })
