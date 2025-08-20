@@ -7,7 +7,6 @@
 /*jslint web, global, devel */
 
 import assemble from "https://ufork.org/lib/assemble.js";
-import throttle from "https://ufork.org/lib/throttle.js";
 import parseq from "https://ufork.org/lib/parseq.js";
 import requestorize from "https://ufork.org/lib/rq/requestorize.js";
 import ufork from "../ufork.js";
@@ -260,11 +259,7 @@ function make_driver(core, on_status) {
             publish("step_size");
         },
         subscribe(message) {
-            subscriptions[message.topic] = (
-                message.throttle !== undefined
-                ? throttle(on_status, message.throttle)
-                : on_status
-            );
+            subscriptions[message.topic] = on_status;
             publish(message.topic);
         },
         unsubscribe(message) {
