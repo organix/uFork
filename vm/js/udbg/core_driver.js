@@ -97,8 +97,8 @@ function make_driver(core, on_status) {
             message,
 
 // It is possible for 'step' to be called from within a run loop, so avoid
-// reentrancy in that case. We copy the Uint8Array as it will be mutated in
-// subsequent steps.
+// reentrancy in that case. We make a copy of the Uint8Array to avoid mutation
+// in subsequent steps.
 
             ram: new Uint8Array(
                 signal === running
@@ -151,7 +151,9 @@ function make_driver(core, on_status) {
             signal = core.h_run_loop(
                 (
                     auto_pause_on.includes("debug")     // monitor for VM_DEBUG
-                    || auto_pause_on.includes("instr")  // single step
+                    || verbose.debug === true           // report breakpoints
+                    || auto_pause_on.includes("instr")  // single stepping
+                    || verbose.instr === true           // report instructions
                     || Number.isFinite(steps)           // step limit
                 )
                 ? 1
@@ -170,10 +172,7 @@ function make_driver(core, on_status) {
 
 // Pause on breakpoints.
 
-                if (
-                    auto_pause_on.includes("debug")
-                    && ip()?.x === ufork.VM_DEBUG
-                ) {
+                if (ip()?.x === ufork.VM_DEBUG) {
                     return step({kind: "debug"});
                 }
 
@@ -232,6 +231,10 @@ function make_driver(core, on_status) {
             if (steps !== undefined) {
                 return;
             }
+
+// The 'steps' parameter is undocumented because steps are an implementation
+// detail of the core driver.
+
             steps = (
                 Number.isSafeInteger(message.steps)
                 ? message.steps

@@ -14,13 +14,17 @@ Messages are objects with a `kind` property.
 Specify what kinds of status message will be published and how often. By
 default, no status messages are published.
 
-The `verbose` object is a mapping from status kinds to a verbosity level:
+The `verbose` object is a mapping from status kinds to verbosity levels:
 
 Verbosity   | Meaning
 ------------|---------------------------
 `undefined` | Never published
 `false`     | Published only on pause
 `true`      | Always published
+
+For example, the verbosity object `{idle: true, txn: false}` means that "idle"
+statuses are published in between pauses, "txn" statuses are published only on
+pause, and no other statuses are published.
 
 ### {kind: "play"}
 
