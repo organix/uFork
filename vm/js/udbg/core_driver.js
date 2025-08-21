@@ -188,19 +188,21 @@ function make_driver(core, on_status) {
 // if there was a fault.
 
                 if (ufork.is_fix(signal)) {
-                    return step(
-                        {kind: "signal", signal},
-                        ufork.fix_to_i32(signal) !== ufork.E_OK
+                    const code = ufork.fix_to_i32(signal);
+                    return (
+                        code === ufork.E_OK
+                        ? step({kind: "idle"}, auto_pause_on.includes("idle"))
+                        : step({kind: "fault", code}, true)
                     );
                 }
 
 // An instruction step has concluded.
 
                 if (
-                    subscriptions.includes("signal")
+                    subscriptions.includes("instr")
                     || auto_pause_on.includes("instr")
                 ) {
-                    step({kind: "signal", signal});
+                    step({kind: "instr"});
                 }
             }
         }
@@ -237,7 +239,7 @@ function make_driver(core, on_status) {
         pause,
         play(message) {
             steps = (
-                Number.isSafeInteger(message.steps) // TODO no message.steps?
+                Number.isSafeInteger(message.steps)
                 ? message.steps
                 : Infinity
             );
@@ -285,25 +287,17 @@ function demo(log) {
     driver = make_driver(core, function on_status(message) {
         if (message.kind === "audit") {
             log("audit:", ufork.fault_msg(message.code));
-        } else if (message.kind === "debug") {
-            log("debug:", message);
+        } else if (message.kind === "fault") {
+            log("fault:", ufork.fault_msg(message.code));
+        } else if (message.kind === "playing") {
+            log("playing:", message.value);
         } else if (message.kind === "txn") {
             log("txn:", message);
             if (message.wake) {
                 driver.command({kind: "play"});  // continue
             }
-        } else if (message.kind === "playing") {
-            log("playing:", message.value);
-        } else if (message.kind === "signal") {
-            log("signal:", (
-                message.signal === ufork.UNDEF_RAW
-                ? "step limit reached"
-                : (
-                    ufork.is_fix(message.signal)
-                    ? ufork.fault_msg(ufork.fix_to_i32(message.signal))
-                    : message.signal
-                )
-            ));
+        } else {
+            log(message.kind);
         }
     });
     parseq.sequence([
@@ -317,16 +311,15 @@ function demo(log) {
             driver.command({
                 kind: "statuses",
                 kinds: [
-                    "signal",
                     "audit",
                     "debug",
-                    "txn",
+                    "fault",
+                    "idle",
                     "playing",
                     "ram",
-                    "rom"
+                    "rom",
+                    "txn"
                 ]
-                // TODO
-                // kinds: ["audit", "txn", "playing", "ram", "rom"]
             });
             driver.command({
                 kind: "auto_pause",
@@ -334,7 +327,8 @@ function demo(log) {
             });
             // driver.command({kind: "auto_refill", enabled: false});
             // driver.command({kind: "refill", resources: {cycles: 3}});
-            driver.command({kind: "play", steps: 300});
+            // driver.command({kind: "play", steps: 300});
+            driver.command({kind: "play"});
             return true;
         })
     ])(log);
