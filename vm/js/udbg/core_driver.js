@@ -98,9 +98,10 @@ function make_driver(core, on_status) {
             pause,
 
 // It is possible for 'step' to be called from within a run loop, so avoid
-// reentrancy in that case.
+// reentrancy in that case. We copy the Uint8Array as it will be mutated in
+// subsequent steps.
 
-            ram: (
+            ram: new Uint8Array(
                 signal === running
                 ? core.u_ram() // TODO compact?
                 : core.h_ram()
@@ -133,7 +134,8 @@ function make_driver(core, on_status) {
                 consume_step();
             }
 
-// Bail if the driver was paused whilst consuming steps.
+// Bail if the driver was paused during the previous loop iteration or whilst
+// consuming steps.
 
             if (steps === undefined) {
                 return;
@@ -144,7 +146,6 @@ function make_driver(core, on_status) {
             if (steps <= 0) {
                 return pause();
             }
-            const pause_on_debug = auto_pause_on.includes("debug");
 
 // Run the core. It is possible that 'h_run_loop' will call 'txn'
 // causing 'run' to be reentered, so we guard against that with a special
@@ -153,8 +154,9 @@ function make_driver(core, on_status) {
             signal = running;
             signal = core.h_run_loop(
                 (
-                    pause_on_debug              // monitor for VM_DEBUG
-                    || Number.isFinite(steps)   // step limit
+                    auto_pause_on.includes("debug")     // monitor for VM_DEBUG
+                    || auto_pause_on.includes("instr")  // single step
+                    || Number.isFinite(steps)           // step limit
                 )
                 ? 1
                 : 0
@@ -172,9 +174,12 @@ function make_driver(core, on_status) {
 
 // Pause on breakpoints.
 
-                if (pause_on_debug && ip()?.x === ufork.VM_DEBUG) {
+                if (
+                    auto_pause_on.includes("debug")
+                    && ip()?.x === ufork.VM_DEBUG
+                ) {
                     return step(
-                        {kind: "signal", signal},
+                        {kind: "debug"},
                         true
                     );
                 }
@@ -192,27 +197,17 @@ function make_driver(core, on_status) {
 // An instruction step has concluded.
 
                 if (
-                    auto_pause_on.includes("instr")
-                    || subscriptions.includes("signal")
+                    subscriptions.includes("signal")
+                    || auto_pause_on.includes("instr")
                 ) {
                     step({kind: "signal", signal});
-                }
-
-// Bail if the driver was paused during the run loop.
-
-                if (steps === undefined) {
-                    return;
                 }
             }
         }
     }
 
     function txn(wake, sender, events) {
-        step(
-            wake !== undefined
-            ? {kind: "device_txn", sender, events, wake}
-            : {kind: "signal", signal: ufork.UNDEF_RAW}
-        );
+        step({kind: "txn", sender, events, wake});
         if (wake === true) {
 
 // It is possible that 'txn' was called by 'u_defer' within 'h_run_loop',
@@ -242,7 +237,7 @@ function make_driver(core, on_status) {
         pause,
         play(message) {
             steps = (
-                Number.isSafeInteger(message.steps)
+                Number.isSafeInteger(message.steps) // TODO no message.steps?
                 ? message.steps
                 : Infinity
             );
@@ -290,8 +285,10 @@ function demo(log) {
     driver = make_driver(core, function on_status(message) {
         if (message.kind === "audit") {
             log("audit:", ufork.fault_msg(message.code));
-        } else if (message.kind === "device_txn") {
-            log("device_txn:", message);
+        } else if (message.kind === "debug") {
+            log("debug:", message);
+        } else if (message.kind === "txn") {
+            log("txn:", message);
             if (message.wake) {
                 driver.command({kind: "play"});  // continue
             }
@@ -322,11 +319,14 @@ function demo(log) {
                 kinds: [
                     "signal",
                     "audit",
-                    "device_txn",
+                    "debug",
+                    "txn",
                     "playing",
                     "ram",
                     "rom"
                 ]
+                // TODO
+                // kinds: ["audit", "txn", "playing", "ram", "rom"]
             });
             driver.command({
                 kind: "auto_pause",
