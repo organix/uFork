@@ -80,7 +80,7 @@ function make_driver(core, on_status) {
         publish("ram");
         publish_step();
         const the_step = step_queue.shift();
-        if (the_step.pause) {
+        if (auto_pause_on.includes(the_step.message.kind)) {
             pause();
         }
         if (steps !== undefined) {
@@ -88,14 +88,13 @@ function make_driver(core, on_status) {
         }
     }
 
-    function step(message, pause = false) {
+    function step(message) {
 
 // TODO can we do less work if steps === Infinity and there are no "step"
 // or "ram" subscriptions?
 
         step_queue.push({
             message,
-            pause,
 
 // It is possible for 'step' to be called from within a run loop, so avoid
 // reentrancy in that case. We copy the Uint8Array as it will be mutated in
@@ -178,10 +177,7 @@ function make_driver(core, on_status) {
                     auto_pause_on.includes("debug")
                     && ip()?.x === ufork.VM_DEBUG
                 ) {
-                    return step(
-                        {kind: "debug"},
-                        true
-                    );
+                    return step({kind: "debug"});
                 }
 
 // Stop running the core if it has become idle. Additionally, pause the driver
@@ -191,8 +187,8 @@ function make_driver(core, on_status) {
                     const code = ufork.fix_to_i32(signal);
                     return (
                         code === ufork.E_OK
-                        ? step({kind: "idle"}, auto_pause_on.includes("idle"))
-                        : step({kind: "fault", code}, true)
+                        ? step({kind: "idle"})
+                        : step({kind: "fault", code})
                     );
                 }
 
@@ -220,10 +216,7 @@ function make_driver(core, on_status) {
     }
 
     function audit(code, evidence) {
-        step(
-            {kind: "audit", code, evidence},
-            auto_pause_on.includes("audit")
-        );
+        step({kind: "audit", code, evidence});
     }
 
     const commands = {
@@ -315,6 +308,7 @@ function demo(log) {
                     "debug",
                     "fault",
                     "idle",
+                    "instr",
                     "playing",
                     "ram",
                     "rom",
@@ -323,7 +317,7 @@ function demo(log) {
             });
             driver.command({
                 kind: "auto_pause",
-                on: ["audit", "debug", "fault", "instr"]
+                on: ["audit", "debug", "fault"]
             });
             // driver.command({kind: "auto_refill", enabled: false});
             // driver.command({kind: "refill", resources: {cycles: 3}});
