@@ -4,7 +4,7 @@
 
 // The message protocol is described in udbg.md.
 
-/*jslint web, global, devel */
+/*jslint web, global */
 
 import assemble from "https://ufork.org/lib/assemble.js";
 import parseq from "https://ufork.org/lib/parseq.js";
@@ -31,10 +31,11 @@ function make_driver(core, on_status) {
     let signal;
     let step_queue = [];
     let steps;
-    let subscriptions = [];
+    let verbose = Object.create(null);
+    let wake_timer;
 
     function publish(kind) {
-        if (!subscriptions.includes(kind)) {
+        if (verbose[kind] === undefined) {
             return;
         }
         if (kind === "auto_pause") {
@@ -43,8 +44,8 @@ function make_driver(core, on_status) {
             on_status({kind: "auto_refill", value: auto_refill_enabled});
         } else if (kind === "playing") {
             on_status({kind: "playing", value: steps !== undefined});
-        } else if (kind === "ram" && step_queue.length > 0) {
-            on_status({kind: "ram", bytes: step_queue[0].ram});
+        } else if (kind === "ram") {
+            on_status({kind: "ram", bytes: core.h_ram()});
         } else if (kind === "rom") {
             on_status({
                 kind: "rom",
@@ -53,16 +54,8 @@ function make_driver(core, on_status) {
                 module_texts: core.u_module_texts()
             });
         } else if (kind === "statuses") {
-            on_status({kind: "statuses", value: subscriptions});
+            on_status({kind: "statuses", verbose});
         }
-    }
-
-    function publish_step() {
-        const kind = step_queue[0].message.kind;
-        if (!subscriptions.includes(kind)) {
-            return;
-        }
-        on_status(step_queue[0].message);
     }
 
     function pause() {
@@ -70,6 +63,14 @@ function make_driver(core, on_status) {
             return;
         }
         steps = undefined;
+        const the_step = step_queue[0];
+        if (
+            the_step !== undefined
+            && verbose[the_step.message.kind] !== undefined
+        ) {
+            on_status({kind: "ram", bytes: the_step.ram});
+            on_status(the_step.message);
+        }
         publish("playing");
     }
 
@@ -77,22 +78,21 @@ function make_driver(core, on_status) {
         if (step_queue.length === 0) {
             return;
         }
-        publish("ram");
-        publish_step();
-        const the_step = step_queue.shift();
-        if (auto_pause_on.includes(the_step.message.kind)) {
+        const the_step = step_queue[0];
+        const kind = the_step.message.kind;
+        if (auto_pause_on.includes(kind)) {
             pause();
+        } else if (verbose[kind] === true) {
+            on_status({kind: "ram", bytes: the_step.ram});
+            on_status(the_step.message);
         }
+        step_queue.shift();
         if (steps !== undefined) {
             steps -= 1;
         }
     }
 
     function step(message) {
-
-// TODO can we do less work if steps === Infinity and there are no "step"
-// or "ram" subscriptions?
-
         step_queue.push({
             message,
 
@@ -106,10 +106,7 @@ function make_driver(core, on_status) {
                 : core.h_ram()
             )
         });
-        if (steps === undefined) {
-            return;
-        }
-        if (steps > 0) {
+        if (steps !== undefined && steps > 0) {
             consume_step();
         }
     }
@@ -195,7 +192,7 @@ function make_driver(core, on_status) {
 // An instruction step has concluded.
 
                 if (
-                    subscriptions.includes("instr")
+                    verbose.instr !== undefined
                     || auto_pause_on.includes("instr")
                 ) {
                     step({kind: "instr"});
@@ -211,7 +208,8 @@ function make_driver(core, on_status) {
 // It is possible that 'txn' was called by 'u_defer' within 'h_run_loop',
 // so defer the call to a future turn to avoid reentry.
 
-            setTimeout(run, 0);
+            clearTimeout(wake_timer);
+            wake_timer = setTimeout(run);
         }
     }
 
@@ -231,6 +229,9 @@ function make_driver(core, on_status) {
         },
         pause,
         play(message) {
+            if (steps !== undefined) {
+                return;
+            }
             steps = (
                 Number.isSafeInteger(message.steps)
                 ? message.steps
@@ -243,9 +244,12 @@ function make_driver(core, on_status) {
             core.h_refill(message.resources);
         },
         statuses(message) {
-            if (Array.isArray(message.kinds)) {
-                subscriptions = message.kinds;
-                subscriptions.forEach(publish);
+            if (typeof message.verbose === "object") {
+                verbose = Object.assign(
+                    Object.create(null),
+                    message.verbose
+                );
+                Object.keys(verbose).forEach(publish);
             }
         }
     };
@@ -258,7 +262,7 @@ function make_driver(core, on_status) {
     }
 
     function dispose() {
-        return; // TODO remove this method?
+        clearTimeout(wake_timer);
     }
 
     return Object.freeze({command, dispose, txn, audit});
@@ -266,6 +270,7 @@ function make_driver(core, on_status) {
 
 function demo(log) {
     let driver;
+    let nr_plays_remaining = Infinity;
     const core = make_core({
         wasm_url,
         on_txn(...args) {
@@ -284,11 +289,12 @@ function demo(log) {
             log("fault:", ufork.fault_msg(message.code));
         } else if (message.kind === "playing") {
             log("playing:", message.value);
+            if (message.value === false && nr_plays_remaining > 0) {
+                nr_plays_remaining -= 1;
+                setTimeout(driver.command, 0, {kind: "play"});  // continue
+            }
         } else if (message.kind === "txn") {
             log("txn:", message);
-            if (message.wake) {
-                driver.command({kind: "play"});  // continue
-            }
         } else {
             log(message.kind);
         }
@@ -302,27 +308,25 @@ function demo(log) {
             timer_dev(core);
             core.h_boot();
             driver.command({
-                kind: "statuses",
-                kinds: [
-                    "audit",
-                    "debug",
-                    "fault",
-                    "idle",
-                    "instr",
-                    "playing",
-                    "ram",
-                    "rom",
-                    "txn"
-                ]
-            });
-            driver.command({
                 kind: "auto_pause",
-                on: ["audit", "debug", "fault"]
+                on: ["audit", "debug", "fault", "txn"]
             });
             // driver.command({kind: "auto_refill", enabled: false});
             // driver.command({kind: "refill", resources: {cycles: 3}});
-            // driver.command({kind: "play", steps: 300});
-            driver.command({kind: "play"});
+            driver.command({
+                kind: "statuses",
+                verbose: {
+                    audit: true,
+                    debug: true,
+                    fault: true,
+                    idle: true,
+                    instr: false,
+                    playing: false,
+                    ram: false,
+                    rom: false,
+                    txn: false
+                }
+            });
             return true;
         })
     ])(log);

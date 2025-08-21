@@ -9,10 +9,18 @@ Messages are objects with a `kind` property.
 
 ## Command messages
 
-### {kind: "statuses", kinds: _array_}
+### {kind: "statuses", verbose: _object_}
 
-Specify what kinds of status message will be published. By default, no status
-messages are published.
+Specify what kinds of status message will be published and how often. By
+default, no status messages are published.
+
+The `verbose` object is a mapping from status kinds to a verbosity level:
+
+Verbosity   | Meaning
+------------|---------------------------
+`undefined` | Never published
+`false`     | Published only on pause
+`true`      | Always published
 
 ### {kind: "play"}
 
@@ -87,8 +95,6 @@ The core has become idle, producing the signal `E_OK`.
 ### {kind: "instr"}
 
 An instruction finished executing.
-TODO is this necessary?
-TODO Could the client be overloaded by "instr" statuses?
 
 ### {kind: "txn", sender: _raw_, events: _array_, wake: _boolean_}
 
@@ -118,25 +124,21 @@ object contains the source text of each loaded module, keyed by src.
 
 ### {kind: "auto_pause", on: _array_}
 ### {kind: "auto_refill", enabled: _boolean_}
-### {kind: "statuses", kinds: _array_}
+### {kind: "statuses", verbose: _object_}
 
 Current value as set by the command of the same name.
 
 ## Example conversation
 
-    COMMAND     {kind: "statuses", kinds: ["txn", "fault", "playing", "ram"]}
-    COMMAND     {kind: "auto_pause", on: ["txn", "fault"]}
-    COMMAND     {kind: "play"}
-    STATUS      {kind: "playing", value: true}
-    ...
-    STATUS      {kind: "ram", ...}
-    STATUS      {kind: "txn", ...}
-    STATUS      {kind: "playing", value: false}
-    COMMAND     {kind: "play"}
-    STATUS      {kind: "playing", value: true}
-    ...
-    STATUS      {kind: "ram", ...}
-    STATUS      {kind: "fault", ...}
-    STATUS      {kind: "playing", value: false}
-
-TODO would there actually be "..." or is this the whole convo?
+    COMMAND {kind: "statuses", verbose: {fault/playing/ram/txn: false}
+    COMMAND {kind: "auto_pause", on: ["txn", "fault"]}
+    COMMAND {kind: "play"}
+    STATUS  {kind: "playing", value: true}
+    STATUS  {kind: "ram", ...}
+    STATUS  {kind: "txn", ...}
+    STATUS  {kind: "playing", value: false}
+    COMMAND {kind: "play"}
+    STATUS  {kind: "playing", value: true}
+    STATUS  {kind: "ram", ...}
+    STATUS  {kind: "fault", ...}
+    STATUS  {kind: "playing", value: false}
