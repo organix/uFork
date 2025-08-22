@@ -34,8 +34,6 @@ idleness, automatically continuing when the core is awoken by a device.
 The driver will pause only when a "pause" command is received or an "auto_pause"
 condition is satisfied.
 
-TODO undocumented "steps" parameter
-
 ### {kind: "pause"}
 
 Manually stop running the core.

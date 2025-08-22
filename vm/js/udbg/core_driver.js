@@ -170,14 +170,8 @@ function make_driver(core, on_status) {
                 });
             } else {
 
-// Pause on breakpoints.
-
-                if (ip()?.x === ufork.VM_DEBUG) {
-                    return step({kind: "debug"});
-                }
-
-// Stop running the core if it has become idle. Additionally, pause the driver
-// if there was a fault.
+// Stop running the core if it has become idle or experienced an unrecoverable
+// fault.
 
                 if (ufork.is_fix(signal)) {
                     const code = ufork.fix_to_i32(signal);
@@ -195,6 +189,12 @@ function make_driver(core, on_status) {
                     || auto_pause_on.includes("instr")
                 ) {
                     step({kind: "instr"});
+                }
+
+// Pause if the next instruction is a breakpoint.
+
+                if (ip()?.x === ufork.VM_DEBUG) {
+                    step({kind: "debug"});
                 }
             }
         }
