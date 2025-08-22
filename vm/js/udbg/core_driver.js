@@ -28,6 +28,7 @@ const running = Object.freeze({});
 function make_driver(core, on_status) {
     let auto_pause_on = [];
     let auto_refill_enabled = true;
+    let pause_requested = false;
     let signal;
     let step_queue = [];
     let steps;
@@ -59,6 +60,7 @@ function make_driver(core, on_status) {
     }
 
     function pause() {
+        pause_requested = false;
         if (steps === undefined) {
             return;
         }
@@ -80,7 +82,14 @@ function make_driver(core, on_status) {
         }
         const the_step = step_queue[0];
         const kind = the_step.message.kind;
-        if (auto_pause_on.includes(kind)) {
+        if (
+            auto_pause_on.includes(kind)
+
+// After the driver is manually paused, the core is run until it encounters a
+// step recognizable to the client.
+
+            || (pause_requested && verbose[kind] !== undefined)
+        ) {
             pause();
         } else if (verbose[kind] === true) {
             on_status({kind: "ram", bytes: the_step.ram});
@@ -226,7 +235,9 @@ function make_driver(core, on_status) {
             auto_refill_enabled = message.enabled === true;
             publish("auto_refill");
         },
-        pause,
+        pause() {
+            pause_requested = true;
+        },
         play(message) {
             if (steps !== undefined) {
                 return;
@@ -304,8 +315,8 @@ function demo(log) {
     });
     parseq.sequence([
         core.h_initialize(),
-        // core.h_import("https://ufork.org/lib/rq/delay.asm"),
-        core.h_import("https://ufork.org/lib/blob.asm"),
+        core.h_import("https://ufork.org/lib/rq/delay.asm"),
+        // core.h_import("https://ufork.org/lib/blob.asm"),
         requestorize(function () {
             blob_dev(core);
             timer_dev(core);
@@ -330,6 +341,10 @@ function demo(log) {
                     txn: false
                 }
             });
+            // setTimeout(function () {
+            //     nr_plays_remaining = 0;
+            //     driver.command({kind: "pause"});
+            // }, 500);
             return true;
         })
     ])(log);
