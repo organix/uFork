@@ -24,8 +24,8 @@ is created (and added to the continuation queue)
 to execute instructions in the target actor's behavior.
 If the event target is busy,
 the event is recycled to the tail of the queue.
-Since asynchronous actor messages may be arbitrarily delayed,
-this does not change the message-passing semantics.
+Since actor messages may be arbitrarily delayed,
+this does not change the asynchronous message-passing semantics.
 
 Effects caused by an actor's behavior (_send_, _create_, and _become_)
 are applied to the system in an all-or-nothing transaction.
@@ -33,7 +33,7 @@ The instruction stream defining the actor's behavior
 will end with a "commit" or "abort" instruction,
 at which time transactional effects will either be applied or discarded.
 Since these instructions have no "next instruction" field,
-there is nothing to put on the continuation queue
+there is nothing to put back on the continuation queue
 and the stream ends (the "thread" dies).
 
 The blog post
