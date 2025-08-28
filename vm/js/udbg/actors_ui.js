@@ -10,10 +10,11 @@ import prng from "https://ufork.org/lib/prng.js";
 import split_ui from "https://ufork.org/lib/split_ui.js";
 import theme from "https://ufork.org/lib/theme.js";
 import make_ui from "https://ufork.org/lib/ui.js";
-import make_core_driver from "./core_driver.js";
 import ufork from "../ufork.js";
 import make_core from "../core.js";
 import timer_dev from "../timer_dev.js";
+import make_core_driver from "./core_driver.js";
+import audit_ui from "./audit_ui.js";
 import raw_ui from "./raw_ui.js";
 import springy from "./springy.js";
 import springy_ui from "./springy_ui.js";
@@ -153,21 +154,6 @@ const actors_ui = make_ui("actor-ui", function (element, {
             font-size: 13px;
             color: ${theme.white};
         }
-        dl {
-            font-family: ${theme.proportional_font_family};
-            font-size: 13px;
-            color: ${theme.white};
-            display: grid;
-            grid-template-columns: max-content 1fr;
-            gap: 0.2em 0.4em;
-            margin: 0;
-        }
-        dl > dt {
-            text-align: right;
-        }
-        dl > dd {
-            margin: 0;
-        }
     `);
     const graph = springy.make_graph();
     const layout = springy.make_layout({
@@ -211,13 +197,13 @@ const actors_ui = make_ui("actor-ui", function (element, {
 
         details.innerHTML = "";
         if (audit !== undefined) {
-            details.append(heading_ui("Audit", 1));
-            details.append(dom("dl", [
-                dom("dt", "code:"),
-                dom("dd", ufork.fault_msg(audit.code)),
-                dom("dt", "evidence:"),
-                dom("dd", [print(audit.evidence)])
-            ]));
+            details.append(audit_ui({
+                code: audit.code,
+                evidence: audit.evidence,
+                ram,
+                rom,
+                rom_debugs
+            }));
         }
         let selected_actor_ofs;
         if (selected_ofs !== undefined) {
