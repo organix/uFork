@@ -57,10 +57,9 @@ const src = new URL(unqualified_src, cwd_dir).href;
 
 core = make_core({
     wasm_url,
-    on_txn(...args) {
-        driver.txn(...args);
+    on_audit(...args) {
+        driver.audit(...args);
     },
-    on_audit: globalThis.console.error,
     on_log: globalThis.console.error,
     log_level: ufork.LOG_TRACE,
     compilers: {asm: assemble},

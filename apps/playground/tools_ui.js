@@ -304,19 +304,11 @@ const tools_ui = make_ui("tools-ui", function (element, {
         stop();
         core = make_core({
             wasm_url,
-            on_txn(wake, sender, events) {
-                if (wake === true) {
-                    devices.io.info("WAKE:", ufork.print(sender));
-                }
-                driver.txn(wake, sender, events);
+            on_txn(...args) {
+                driver.txn(...args);
             },
-            on_audit(code, evidence) {
-                devices.io.warn(
-                    "AUDIT:",
-                    ufork.fault_msg(code),
-                    core.u_pprint(evidence)
-                );
-                driver.audit(code, evidence);
+            on_audit(...args) {
+                driver.audit(...args);
             },
             log_level: ufork.LOG_TRACE,
             on_log(log_level, ...values) {
@@ -335,15 +327,19 @@ const tools_ui = make_ui("tools-ui", function (element, {
             compilers: get_compilers()
         });
         driver = make_core_driver(core, function (message) {
-            if (message.kind === "signal") {
-                const error_code = ufork.fix_to_i32(message.signal);
-                const error_text = ufork.fault_msg(error_code);
-                if (error_code === ufork.E_OK) {
-                    devices.io.info("IDLE:", error_text);
-                } else {
-                    devices.io.warn("FAULT:", error_text);
-                    stop();
-                }
+            if (message.kind === "audit") {
+                devices.io.warn(
+                    "AUDIT:",
+                    ufork.fault_msg(message.code),
+                    core.u_pprint(message.evidence)
+                );
+            } else if (message.kind === "fault") {
+                devices.io.warn("FAULT:", ufork.fault_msg(message.code));
+                stop();
+            } else if (message.kind === "idle") {
+                devices.io.info("IDLE");
+            } else if (message.kind === "txn" && message.wake === true) {
+                devices.io.info("WAKE:", ufork.print(message.sender));
             }
             on_status(message);
         });
@@ -389,7 +385,10 @@ const tools_ui = make_ui("tools-ui", function (element, {
                 }
                 boot_button.textContent = "⏹ Stop";
                 boot_button.onclick = stop;
-                driver.command({kind: "subscribe", topic: "signal"});
+                driver.command({
+                    kind: "statuses",
+                    verbose: {audit: true, fault: true, idle: true, txn: true}
+                });
                 if (debug) {
                     on_attach();
                 } else {

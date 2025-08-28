@@ -35,8 +35,8 @@ const cwd_dir = toFileUrl(join(Deno.cwd(), "./")); // ensure trailing slash
 const src = new URL(unqualified_src, cwd_dir).href;
 core = make_core({
     wasm_url,
-    on_txn(...args) {
-        driver.txn(...args);
+    on_audit(...args) {
+        driver.audit(...args);
     },
     on_log: globalThis.console.error,
     log_level: ufork.LOG_WARN,
@@ -44,11 +44,10 @@ core = make_core({
     import_map: {"https://ufork.org/lib/": lib_url}
 });
 driver = make_core_driver(core, function on_status(message) {
-    if (message.kind === "signal") {
-        const error_code = ufork.fix_to_i32(message.signal);
-        if (error_code !== ufork.E_OK) {
-            globalThis.console.error("FAULT", ufork.fault_msg(error_code));
-        }
+    if (message.kind === "audit") {
+        globalThis.console.error("AUDIT", ufork.fault_msg(message.code));
+    } else if (message.kind === "fault") {
+        globalThis.console.error("FAULT", ufork.fault_msg(message.code));
     }
 });
 parseq.sequence([
@@ -69,7 +68,7 @@ parseq.sequence([
             });
         }());
         core.h_boot();
-        driver.command({kind: "subscribe", topic: "signal"});
+        driver.command({kind: "statuses", verbose: {audit: true, fault: true}});
         driver.command({kind: "play"});
         return true;
     })
