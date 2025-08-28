@@ -70,7 +70,10 @@ const ram_ui = make_ui("ram-explorer-ui", function (element, {
     const dl = dom("dl");
     let hide_free_checkbox;
 
-    function refresh() {
+    function invalidate() {
+        if (!element.isConnected) {
+            return;
+        }
         dl.innerHTML = "";
         const nr_quads = Math.floor(ram.byteLength / bytes_per_quad);
         new Array(nr_quads).fill().forEach(function (_, ofs) {
@@ -97,19 +100,19 @@ const ram_ui = make_ui("ram-explorer-ui", function (element, {
 
     function set_ram(new_ram) {
         ram = new_ram;
-        refresh();
+        invalidate();
     }
 
     function set_rom(new_rom, new_rom_debugs = Object.create(null)) {
         rom = new_rom;
         rom_debugs = new_rom_debugs;
-        refresh();
+        invalidate();
     }
 
     function set_hide_free(new_hide_free) {
         hide_free = new_hide_free;
         hide_free_checkbox.checked = hide_free;
-        refresh();
+        invalidate();
     }
 
     hide_free_checkbox = dom("input", {
@@ -128,6 +131,11 @@ const ram_ui = make_ui("ram-explorer-ui", function (element, {
     set_hide_free(hide_free);
     element.set_ram = set_ram;
     element.set_rom = set_rom;
+    return {
+        connect() {
+            invalidate();
+        }
+    };
 });
 
 function demo(log) {

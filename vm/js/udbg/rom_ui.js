@@ -213,7 +213,10 @@ const rom_ui = make_ui("rom-ui", function (element, {
         spellcheck: false
     });
 
-    function refresh() {
+    function invalidate() {
+        if (!element.isConnected) {
+            return;
+        }
         let contents;
         let filename;
         if (format === "bin") {
@@ -269,7 +272,7 @@ const rom_ui = make_ui("rom-ui", function (element, {
     function set_rom(new_rom, new_rom_debugs = Object.create(null)) {
         rom = new_rom;
         rom_debugs = new_rom_debugs;
-        refresh();
+        invalidate();
     }
 
     download_element = dom("a", {title: "Download as file"});
@@ -281,7 +284,7 @@ const rom_ui = make_ui("rom-ui", function (element, {
                 value: format,
                 onchange(event) {
                     format = event.target.value;
-                    refresh();
+                    invalidate();
                 }
             },
             [
@@ -297,7 +300,7 @@ const rom_ui = make_ui("rom-ui", function (element, {
                 value: word_size,
                 onchange(event) {
                     word_size = parseInt(event.target.value);
-                    refresh();
+                    invalidate();
                 }
             },
             [
@@ -310,6 +313,11 @@ const rom_ui = make_ui("rom-ui", function (element, {
     shadow.append(style, text_element, controls_element);
     set_rom(rom, rom_debugs);
     element.set_rom = set_rom;
+    return {
+        connect() {
+            invalidate();
+        }
+    };
 });
 
 const demo_module = `
