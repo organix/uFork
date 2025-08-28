@@ -12,6 +12,7 @@ import theme from "https://ufork.org/lib/theme.js";
 import make_ui from "https://ufork.org/lib/ui.js";
 import ufork from "../ufork.js";
 import make_core from "../core.js";
+import blob_dev from "../blob_dev.js";
 import timer_dev from "../timer_dev.js";
 import make_core_driver from "./core_driver.js";
 import audit_ui from "./audit_ui.js";
@@ -466,6 +467,7 @@ function demo(log) {
         // core.h_import("https://ufork.org/lib/cell.asm"),
         core.h_import("https://ufork.org/lib/blob.asm"),
         requestorize(function () {
+            blob_dev(core);
             timer_dev(core);
             core.h_boot();
             driver.command({kind: "subscribe", topic: "audit"});
