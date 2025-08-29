@@ -20,7 +20,7 @@ import rom_ui from "./rom_ui.js";
 const lib_url = import.meta.resolve("https://ufork.org/lib/");
 const wasm_url = import.meta.resolve("https://ufork.org/wasm/ufork.debug.wasm");
 
-const throttle = 1000 / 24; // limit status-triggered rerenders to 24 FPS
+const pause_statuses = Object.freeze(["audit", "debug", "fault"]);
 const max_play_interval = 1000;
 const default_view = "actors";
 const debugger_ui = make_ui("debugger-ui", function (element, {
@@ -28,8 +28,12 @@ const debugger_ui = make_ui("debugger-ui", function (element, {
     connected = false,
     view = default_view
 }) {
+    let interrupted = true;
+    let interval = 0;
+    let interval_timer;
     let play_button;
     let step_button;
+    let step_select;
     let view_select;
     const shadow = element.attachShadow({mode: "closed"});
     const style = dom("style", `
@@ -64,18 +68,46 @@ const debugger_ui = make_ui("debugger-ui", function (element, {
         }
     `);
 
+    function is_playing() {
+        return play_button.textContent === "Pause";
+    }
+
+    function set_auto_pause_for_play() {
+        const on = (
+            interval > 0
+            ? pause_statuses.concat(step_select.value)
+            : pause_statuses
+        );
+        send_command({kind: "auto_pause", on});
+    }
+
     function toggle_play() {
-        if (play_button.textContent === "Play") {
-            send_command({kind: "play"});
-        } else {
+        if (is_playing()) {
             send_command({kind: "pause"});
+        } else {
+            set_auto_pause_for_play();
+            send_command({kind: "play"});
         }
     }
 
     function step() {
         if (!step_button.disabled) {
-            send_command({kind: "play", steps: 1});
+            send_command({
+                kind: "auto_pause",
+                on: pause_statuses.concat(step_select.value)
+            });
+            send_command({kind: "play"});
         }
+    }
+
+    function set_step_size(new_step_size) {
+        if (is_playing() && interval > 0) {
+            send_command({
+                kind: "auto_pause",
+                on: pause_statuses.concat(new_step_size)
+            });
+        }
+        step_select.value = new_step_size;
     }
 
     step_button = dom("button", {
@@ -98,12 +130,10 @@ const debugger_ui = make_ui("debugger-ui", function (element, {
         step: 0.01,
         oninput() {
             const slowness = 1 - Number(speed_slider.value);
-            send_command({
-                kind: "interval",
-                milliseconds: Math.round(
-                    (max_play_interval + 1) ** slowness
-                ) - 1
-            });
+            interval = Math.round((max_play_interval + 1) ** slowness) - 1;
+            if (is_playing()) {
+                set_auto_pause_for_play();
+            }
         }
     });
     const fault_message = dom("fault_message");
@@ -131,12 +161,8 @@ const debugger_ui = make_ui("debugger-ui", function (element, {
         }
     };
 
-    function set_step_size(step_size) {
-        send_command({kind: "step_size", value: step_size});
-    }
-
     function auto_step_size() {
-        if (connected && play_button.textContent === "Play") {
+        if (connected) {
             if (view === "actors") {
                 set_step_size("txn");
             } else if (view === "source") {
@@ -178,24 +204,12 @@ const debugger_ui = make_ui("debugger-ui", function (element, {
         }
     }
 
-    function on_signal(signal) {
-        fault_message.textContent = (
-            ufork.is_fix(signal)
-            ? ufork.fault_msg(ufork.fix_to_i32(signal))
-            : "..."
-        );
-        fault_message.style.color = (
-            ufork.is_fix(signal)
-            ? (
-                ufork.fix_to_i32(signal) === ufork.E_OK
-                ? theme.green
-                : theme.red
-            )
-            : "inherit"
-        );
+    function on_waiting() {
+        fault_message.textContent = "...";
+        fault_message.style.color = "inherit";
     }
 
-    const step_select = dom(
+    step_select = dom(
         "select",
         {
             title: "Step size",
@@ -233,43 +247,46 @@ const debugger_ui = make_ui("debugger-ui", function (element, {
     ]);
     const statuses = {
         audit(message) {
-            views.actors.element.set_audit(
-                message.code,
-                message.evidence,
-                message.ep,
-                message.kp
-            );
+            views.actors.element.set_audit(message.code, message.evidence);
+            views.source.element.set_audit(message.code, message.evidence);
             if (message.code !== undefined) {
                 fault_message.textContent = "audit";
                 fault_message.style.color = theme.red;
             }
         },
-        device_txn(message) {
-            views.actors.element.set_device_txn(
-                message.sender,
-                message.events,
-                message.wake
-            );
-            if (message.wake) {
-                fault_message.textContent = "wakeup";
-                fault_message.style.color = "inherit";
+        auto_pause(message) {
+            if (message.on.includes("txn")) {
+                step_select.value = "txn";
+            } else if (message.on.includes("instr")) {
+                step_select.value = "instr";
             }
         },
-        interval(message) {
-            const is_sliding = (
-                document.activeElement === element
-                && shadow.activeElement === speed_slider
-                && document.hasFocus()
-            );
-            if (!is_sliding) {
-                const slowness = (
-                    Math.log(message.milliseconds + 1)
-                    / Math.log(max_play_interval)
-                );
-                speed_slider.value = 1 - slowness;
-            }
+        debug() {
+            fault_message.textContent = "breakpoint";
+            fault_message.style.color = "inherit";
+            set_view("source");
+        },
+        fault(message) {
+            fault_message.textContent = ufork.fault_msg(message.code);
+            fault_message.style.color = theme.red;
+        },
+        idle() {
+            fault_message.textContent = "idle";
+            fault_message.style.color = theme.green;
+        },
+        instr() {
+            on_waiting();
         },
         playing(message) {
+            if (!message.value && interval > 0 && !interrupted) {
+                clearTimeout(interval_timer);
+                interval_timer = setTimeout(
+                    send_command,
+                    interval,
+                    {kind: "play"}
+                );
+                return;
+            }
             play_button.textContent = (
                 message.value
                 ? "Pause"
@@ -289,18 +306,41 @@ const debugger_ui = make_ui("debugger-ui", function (element, {
             views.actors.element.set_rom(bytes, debugs);
             views.source.element.set_rom(bytes, debugs, module_texts);
         },
-        signal(message) {
-            on_signal(message.signal);
-        },
-        step_size(message) {
-            step_select.value = message.value;
+        txn(message) {
+            on_waiting();
+            views.actors.element.set_txn(
+                message.sender,
+                message.events,
+                message.wake
+            );
+            if (message.wake === true) {
+                fault_message.textContent = "wakeup";
+                fault_message.style.color = "inherit";
+            }
         }
     };
 
     function receive_status(message) {
         if (Object.hasOwn(statuses, message.kind)) {
+            if (message.kind !== "playing") {
+                views.source.element.set_audit(undefined);
+                views.actors.element.set_audit(undefined);
+                views.actors.element.set_txn(undefined);
+            }
+            if (pause_statuses.includes(message.kind)) {
+                interrupted = true;
+            } else if (message.kind === "instr" || message.kind === "txn") {
+                interrupted = false;
+            }
             statuses[message.kind](message);
         }
+    }
+
+    function set_interval(milliseconds) {
+        const slowness = (
+            Math.log(milliseconds + 1) / Math.log(max_play_interval)
+        );
+        speed_slider.value = 1 - slowness;
     }
 
     function set_connected(new_connected) {
@@ -313,23 +353,30 @@ const debugger_ui = make_ui("debugger-ui", function (element, {
             return;
         }
         if (!was_connected) {
-            on_signal(ufork.UNDEF_RAW);
-            send_command({kind: "debugging", enabled: true});
-            send_command({kind: "subscribe", topic: "interval", throttle});
-            send_command({kind: "subscribe", topic: "playing"});
-            send_command({kind: "subscribe", topic: "ram", throttle});
-            send_command({kind: "subscribe", topic: "rom", throttle});
-            send_command({kind: "subscribe", topic: "signal", throttle});
-            send_command({kind: "subscribe", topic: "step_size", throttle});
-            send_command({kind: "subscribe", topic: "device_txn", throttle});
-            send_command({kind: "subscribe", topic: "audit", throttle});
+            on_waiting();
+            send_command({
+                kind: "statuses",
+                verbose: {
+                    audit: true,
+                    auto_pause: true,
+                    debug: true,
+                    fault: true,
+                    idle: true,
+                    instr: false,
+                    playing: true,
+                    ram: false,
+                    rom: true,
+                    txn: false
+                }
+            });
             auto_step_size();
         }
     }
 
     shadow.append(style, controls, dom("view_placeholder"));
-    on_signal(ufork.UNDEF_RAW);
+    on_waiting();
     set_connected(connected);
+    set_interval(interval);
     set_view(view);
     element.receive_status = receive_status;
     element.set_connected = set_connected;
@@ -359,6 +406,7 @@ function demo(log) {
         compilers: {asm: assemble}
     });
     driver = make_core_driver(core, function on_status(message) {
+        log("status", message);
         element.receive_status(message);
     });
     parseq.sequence([
@@ -374,7 +422,10 @@ function demo(log) {
         })
     ])(log);
     element = debugger_ui({
-        send_command: driver.command,
+        send_command(message) {
+            log("command", message);
+            driver.command(message);
+        },
         connected: false
     });
     element.style.position = "fixed";

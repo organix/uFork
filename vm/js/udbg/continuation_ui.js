@@ -9,9 +9,10 @@ import requestorize from "https://ufork.org/lib/rq/requestorize.js";
 import split_ui from "https://ufork.org/lib/split_ui.js";
 import theme from "https://ufork.org/lib/theme.js";
 import make_ui from "https://ufork.org/lib/ui.js";
-import make_core_driver from "./core_driver.js";
 import ufork from "../ufork.js";
 import make_core from "../core.js";
+import make_core_driver from "./core_driver.js";
+import audit_ui from "./audit_ui.js";
 import raw_ui from "./raw_ui.js";
 import source_monitor_ui from "./source_monitor_ui.js";
 const lib_url = import.meta.resolve("https://ufork.org/lib/");
@@ -23,22 +24,34 @@ const continuation_ui = make_ui("continuation-ui", function (element, {
     rom_debugs = Object.create(null),
     module_texts = Object.create(null)
 }) {
-    const source_element = source_monitor_ui({});
-    const details_element = dom("continuation_details");
-    details_element.style.background = theme.black;
-    details_element.style.padding = "12px";
-    details_element.style.overflowY = "auto";
-    details_element.style.contain = "strict";
+    let audit;
+    const source = source_monitor_ui({});
+    const details = dom("continuation_details");
+    details.style.background = theme.black;
+    details.style.padding = "12px";
+    details.style.overflowY = "auto";
+    details.style.contain = "strict";
+    details.style.display = "flex";
+    details.style.flexDirection = "column";
+    details.style.gap = "12px";
 
     function invalidate() {
-        details_element.innerHTML = "";
-        details_element.append(dom(
+        details.innerHTML = "";
+        if (audit !== undefined) {
+            details.append(audit_ui({
+                code: audit.code,
+                evidence: audit.evidence,
+                ram,
+                rom,
+                rom_debugs
+            }));
+        }
+        details.append(dom(
             "h1",
             {
                 style: {
                     fontFamily: theme.proportional_font_family,
-                    color: theme.white,
-                    margin: "0 0 12px"
+                    margin: "0"
                 }
             },
             "Continuation"
@@ -46,7 +59,7 @@ const continuation_ui = make_ui("continuation-ui", function (element, {
         const dd_quad = ufork.read_quad(ram, ufork.DDEQUE_OFS);
         if (dd_quad !== undefined) {
             const k_first = dd_quad.y;
-            details_element.append(raw_ui({
+            details.append(raw_ui({
                 value: k_first,
                 depth: 1,
                 expand: [[1], [2, 1, 2], [2, 1, 3], [2, 2]],
@@ -59,10 +72,19 @@ const continuation_ui = make_ui("continuation-ui", function (element, {
                 const ip = k_quad.t;
                 const debug = rom_debugs[ufork.rawofs(ip)];
                 const text = module_texts[debug?.src];
-                return source_element.set_sourcemap({debug, text});
+                return source.set_sourcemap({debug, text});
             }
         }
-        source_element.set_sourcemap(undefined);
+        source.set_sourcemap(undefined);
+    }
+
+    function set_audit(code, evidence) {
+        audit = (
+            code !== undefined
+            ? {code, evidence}
+            : undefined
+        );
+        invalidate();
     }
 
     function set_ram(new_ram) {
@@ -86,13 +108,14 @@ const continuation_ui = make_ui("continuation-ui", function (element, {
         }),
         {style: {width: "100%", height: "100%"}},
         [
-            dom(source_element, {slot: "main"}),
-            dom(details_element, {slot: "peripheral"})
+            dom(source, {slot: "main"}),
+            dom(details, {slot: "peripheral"})
         ]
     );
     element.append(split_element);
     set_ram(ram);
     set_rom(rom, rom_debugs, module_texts);
+    element.set_audit = set_audit;
     element.set_ram = set_ram;
     element.set_rom = set_rom;
     return {
@@ -108,17 +131,26 @@ const continuation_ui = make_ui("continuation-ui", function (element, {
 });
 
 function demo(log) {
+    let driver;
     document.documentElement.innerHTML = "";
     const element = continuation_ui({});
     element.style.position = "fixed";
     element.style.inset = "0";
     const core = make_core({
         wasm_url,
+        on_audit(...args) {
+            driver.audit(...args);
+        },
         import_map: {"https://ufork.org/lib/": lib_url},
         compilers: {asm: assemble}
     });
-    const driver = make_core_driver(core, function on_status(message) {
-        if (message.kind === "ram") {
+    driver = make_core_driver(core, function on_status(message) {
+        log(message.kind);
+        if (message.kind === "audit") {
+            element.set_audit(message.code, message.evidence);
+        } else if (message.kind === "instr") {
+            element.set_audit(undefined);
+        } else if (message.kind === "ram") {
             element.set_ram(message.bytes);
         } else if (message.kind === "rom") {
             element.set_rom(
@@ -126,8 +158,6 @@ function demo(log) {
                 message.debugs,
                 message.module_texts
             );
-        } else {
-            log(message);
         }
     });
     parseq.sequence([
@@ -135,17 +165,29 @@ function demo(log) {
         core.h_import("https://ufork.org/lib/fork.asm"),
         requestorize(function () {
             core.h_boot();
-            driver.command({kind: "subscribe", topic: "rom"});
-            driver.command({kind: "subscribe", topic: "ram"});
-            driver.command({kind: "step_size", topic: "instr"});
-            driver.command({kind: "play", steps: 5});
+            driver.command({
+                kind: "statuses",
+                verbose: {
+                    audit: true,
+                    fault: true,
+                    instr: true,
+                    ram: true,
+                    rom: true
+                }
+            });
+            driver.command({
+                kind: "auto_pause",
+                on: ["audit", "fault", "instr"]
+            });
+            driver.command({kind: "play"});
             return true;
         })
     ])(log);
+    document.head.append(dom("meta", {name: "color-scheme", content: "dark"}));
     document.body.append(element);
     document.body.onkeydown = function (event) {
         if (event.key === "s") {
-            driver.command({kind: "play", steps: 1});
+            driver.command({kind: "play"});
         }
     };
 }

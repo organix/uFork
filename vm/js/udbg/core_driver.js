@@ -28,12 +28,24 @@ const running = Object.freeze({});
 function make_driver(core, on_status) {
     let auto_pause_on = [];
     let auto_refill_enabled = true;
-    let pause_requested = false;
     let signal;
     let step_queue = [];
     let steps;
     let verbose = Object.create(null);
     let wake_timer;
+
+    function ram_copy() {
+
+// It is possible for 'step' to be called from within a run loop, so avoid
+// reentrancy in that case. We make a copy of the Uint8Array to avoid mutation
+// in subsequent steps.
+
+        return new Uint8Array(
+            signal === running
+            ? core.u_ram() // TODO compact?
+            : core.h_ram()
+        );
+    }
 
     function publish(kind) {
         if (verbose[kind] === undefined) {
@@ -46,11 +58,11 @@ function make_driver(core, on_status) {
         } else if (kind === "playing") {
             on_status({kind: "playing", value: steps !== undefined});
         } else if (kind === "ram") {
-            on_status({kind: "ram", bytes: core.h_ram()});
+            on_status({kind: "ram", bytes: ram_copy()});
         } else if (kind === "rom") {
             on_status({
                 kind: "rom",
-                bytes: core.h_rom(),
+                bytes: new Uint8Array(core.h_rom()),
                 debugs: core.u_rom_debugs(),
                 module_texts: core.u_module_texts()
             });
@@ -59,38 +71,19 @@ function make_driver(core, on_status) {
         }
     }
 
-    function pause() {
-        pause_requested = false;
-        if (steps === undefined) {
-            return;
-        }
-        steps = undefined;
-        const the_step = step_queue[0];
-        if (
-            the_step !== undefined
-            && verbose[the_step.message.kind] !== undefined
-        ) {
-            on_status({kind: "ram", bytes: the_step.ram});
-            on_status(the_step.message);
-        }
-        publish("playing");
-    }
-
     function consume_step() {
         if (step_queue.length === 0) {
             return;
         }
         const the_step = step_queue[0];
         const kind = the_step.message.kind;
-        if (
-            auto_pause_on.includes(kind)
-
-// After the driver is manually paused, the core is run until it encounters a
-// step recognizable to the client.
-
-            || (pause_requested && verbose[kind] !== undefined)
-        ) {
-            pause();
+        if (auto_pause_on.includes(kind)) {
+            steps = undefined;
+            if (verbose[the_step.message.kind] !== undefined) {
+                on_status({kind: "ram", bytes: the_step.ram});
+                on_status(the_step.message);
+            }
+            publish("playing");
         } else if (verbose[kind] === true) {
             on_status({kind: "ram", bytes: the_step.ram});
             on_status(the_step.message);
@@ -104,16 +97,7 @@ function make_driver(core, on_status) {
     function step(message) {
         step_queue.push({
             message,
-
-// It is possible for 'step' to be called from within a run loop, so avoid
-// reentrancy in that case. We make a copy of the Uint8Array to avoid mutation
-// in subsequent steps.
-
-            ram: new Uint8Array(
-                signal === running
-                ? core.u_ram() // TODO compact?
-                : core.h_ram()
-            )
+            ram: ram_copy()
         });
         if (steps !== undefined && steps > 0) {
             consume_step();
@@ -149,7 +133,8 @@ function make_driver(core, on_status) {
 // Pause if we have reached the step limit.
 
             if (steps <= 0) {
-                return pause();
+                steps = undefined;
+                return publish("playing");
             }
 
 // Run the core. It is possible that 'h_run_loop' will call 'txn'
@@ -236,7 +221,8 @@ function make_driver(core, on_status) {
             publish("auto_refill");
         },
         pause() {
-            pause_requested = true;
+            steps = undefined;
+            publish("playing");
         },
         play(message) {
             if (steps !== undefined) {

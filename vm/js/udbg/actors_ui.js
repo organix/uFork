@@ -120,7 +120,7 @@ const actors_ui = make_ui("actor-ui", function (element, {
     let graph_element;
     let selected_ofs;
     let audit;
-    let device_txn;
+    let txn;
     const shadow = element.attachShadow({mode: "closed"});
     const style = dom("style", `
         :host {
@@ -217,24 +217,29 @@ const actors_ui = make_ui("actor-ui", function (element, {
                 details.append(...print_effect(effect));
             }
         } else {
-
-// FIXME: There is the possibility that a sync interrupt occurs (i.e. a device
-// transaction completes) during a run-loop iteration that leaves the IP at a
-// commit instruction. In that case, it would be best to show both the current
-// event and the interrupt at the same time. For now, however, the interrupt
-// gets priority.
-
             const cc = ufork.current_continuation(ram);
-            if (device_txn !== undefined) {
-                const chrono = (
-                    device_txn.wake
-                    ? "Async"
-                    : "Sync"
-                );
-                details.append(heading_ui(chrono + " interrupt", 1));
-                details.append(print(device_txn.sender, 1, 0));
-                details.append(...print_effect(device_txn.events));
-                selected_actor_ofs = ufork.rawofs(device_txn.sender);
+            if (txn !== undefined) {
+                if (txn.wake === undefined) {
+                    const ip_mem = (
+                        ufork.is_rom(cc.ip)
+                        ? rom
+                        : ram
+                    );
+                    const current_instruction = ufork.read_quad(ip_mem, cc.ip);
+                    const {imm} = ufork.instr_parts(current_instruction);
+                    details.append(heading_ui(`Actor ${imm}`, 1));
+                } else {
+                    const timing = (
+                        txn.wake
+                        ? "Async"
+                        : "Sync"
+                    );
+                    details.append(heading_ui(timing + " interrupt", 1));
+                }
+                details.append(heading_ui("Sender", 2));
+                details.append(print(txn.sender, 1, 0));
+                details.append(...print_effect(txn.events));
+                selected_actor_ofs = ufork.rawofs(txn.sender);
             } else if (cc?.ep !== undefined) {
                 const event = ufork.read_quad(ram, ufork.rawofs(cc.ep));
                 details.append(heading_ui("Current event", 1));
@@ -333,8 +338,8 @@ const actors_ui = make_ui("actor-ui", function (element, {
         invalidate();
     }
 
-    function set_device_txn(sender, events, wake) {
-        device_txn = (
+    function set_txn(sender, events, wake) {
+        txn = (
             sender !== undefined
             ? {sender, events, wake}
             : undefined
@@ -407,7 +412,7 @@ const actors_ui = make_ui("actor-ui", function (element, {
     set_ram(ram);
     set_rom(rom, rom_debugs);
     element.set_audit = set_audit;
-    element.set_device_txn = set_device_txn;
+    element.set_txn = set_txn;
     element.set_ram = set_ram;
     element.set_rom = set_rom;
     return {
@@ -444,20 +449,16 @@ function demo(log) {
         compilers: {asm: assemble}
     });
     driver = make_core_driver(core, function on_status(message) {
+        element.set_txn(undefined);
+        element.set_audit(undefined);
         if (message.kind === "audit") {
             element.set_audit(message.code, message.evidence);
-        } else if (message.kind === "device_txn") {
-            element.set_device_txn(
-                message.sender,
-                message.events,
-                message.wake
-            );
+        } else if (message.kind === "txn") {
+            element.set_txn(message.sender, message.events, message.wake);
         } else if (message.kind === "ram") {
             element.set_ram(message.bytes);
         } else if (message.kind === "rom") {
             element.set_rom(message.bytes, message.debugs);
-        } else if (message.kind === "signal") {
-            log("signal", ufork.print(message.signal));
         } else {
             log(message);
         }
@@ -470,15 +471,21 @@ function demo(log) {
             blob_dev(core);
             timer_dev(core);
             core.h_boot();
-            driver.command({kind: "subscribe", topic: "audit"});
-            driver.command({kind: "subscribe", topic: "device_txn"});
-            driver.command({kind: "subscribe", topic: "playing"});
-            driver.command({kind: "subscribe", topic: "rom"});
-            driver.command({kind: "subscribe", topic: "ram"});
-            driver.command({kind: "subscribe", topic: "signal"});
-            driver.command({kind: "step_size", value: "txn"});
-            driver.command({kind: "interval", milliseconds: 2000});
-            driver.command({kind: "play", steps: 1});
+            driver.command({
+                kind: "statuses",
+                verbose: {
+                    audit: true,
+                    fault: true,
+                    ram: true,
+                    rom: true,
+                    txn: true
+                }
+            });
+            driver.command({
+                kind: "auto_pause",
+                on: ["audit", "fault", "txn"]
+            });
+            driver.command({kind: "play"});
             return true;
         })
     ])(log);
@@ -486,7 +493,7 @@ function demo(log) {
     document.body.append(element);
     document.body.onkeydown = function (event) {
         if (event.key === "s") {
-            driver.command({kind: "play", steps: 1});
+            driver.command({kind: "play"});
         }
     };
 }
