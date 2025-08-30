@@ -122,7 +122,7 @@ intro_cb:
 
     ; build party_out
     push party_out_beh      ; party_tx line_out party_out_beh
-    actor create            ; party_tx party_out=party_out_behline_out
+    actor create            ; party_tx party_out=party_out_beh.line_out
 
     ; become party_rx
     push 1                  ; party_tx party_out seq=1
@@ -303,7 +303,7 @@ party_out_beh:              ; line_out <- party,content
 
 party_lost:
     push txt_lost           ; ... content=txt_lost
-    state 1                 ; ... content line_out
+    state 0                 ; ... content line_out
     ref std.send_msg
 
 room_in_beh:                ; room,tx,party <- content
