@@ -9,6 +9,7 @@ import indexed_db from "./indexed_db.js";
 const db_version = 4; // bump to clear DB
 const transport = webrtc_transport();
 const awp_store_key = "awp_store";
+const max_session_duration = 24 * 60 * 60 * 1000;
 
 function db(...args) {
     return indexed_db(
@@ -34,13 +35,24 @@ function make_chat_db(signaller_origin) {
 
     function get_store() {
 
-// Attempts to read an AWP store object from IndexedDB. If one is not found, a
-// new one is generated and saved.
+// Attempts to read an AWP store object from IndexedDB. If one is not found, or
+// if it is about to expire, a new one is generated and saved.
 
         return parseq.fallback([
-            db(function (db_store) {
-                return db_store.get(awp_store_key);
-            }),
+            parseq.sequence([
+                db(function (db_store) {
+                    return db_store.get(awp_store_key);
+                }),
+                requestorize(function check_certificate_expiry(awp_store) {
+                    if (
+                        awp_store.identity.certificate.expires
+                        < Date.now() + max_session_duration
+                    ) {
+                        throw "old";
+                    }
+                    return awp_store;
+                })
+            ]),
             parseq.sequence([
                 transport.generate_identity(),
                 requestorize(function (identity) {
