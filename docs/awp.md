@@ -22,7 +22,7 @@ The transport is responsible for verifying the name of connecting parties and
 encrypting traffic. Note that network addresses are used solely for routing,
 and should not be relied upon for security.
 
-AWP does not require that the transport deliver messages reliably or in order.
+AWP does not require that the transport deliver frames reliably or in order.
 Because of this, AWP can be used as a very efficient low-level protocol where
 guarantees like reliability and ordering are achieved through message passing.
 If, however, the transport does guarantee reliability or ordering, applications

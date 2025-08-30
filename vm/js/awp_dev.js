@@ -971,6 +971,13 @@ let core;
 if (import.meta.main) {
     core = make_core({
         wasm_url,
+        on_audit(code, evidence) {
+            globalThis.console.log(
+                "AUDIT:",
+                ufork.fault_msg(code),
+                core.u_pprint(evidence)
+            );
+        },
         on_txn(wake, sender, events) {
             if (wake === true) {
                 globalThis.console.log(
