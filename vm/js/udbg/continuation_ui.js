@@ -27,6 +27,7 @@ const continuation_ui = make_ui("continuation-ui", function (element, {
     let audit;
     const source = source_monitor_ui({});
     const details = dom("continuation_details");
+    details.style.color = "white";
     details.style.background = theme.black;
     details.style.padding = "12px";
     details.style.overflowY = "auto";
@@ -185,7 +186,6 @@ function demo(log) {
             return true;
         })
     ])(log);
-    document.head.append(dom("meta", {name: "color-scheme", content: "dark"}));
     document.body.append(element);
     document.body.onkeydown = function (event) {
         if (event.key === "s") {

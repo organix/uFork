@@ -45,7 +45,10 @@ function connect() {
     if (bridge === undefined && document.visibilityState === "visible") {
         if (origin) {
             bridge = window_bridge(
-                globalThis.opener,
+                (
+                    globalThis.opener       // popup
+                    ?? globalThis.parent    // iframe
+                ),
                 origin,
                 session,
                 on_status

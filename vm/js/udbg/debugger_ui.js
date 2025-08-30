@@ -205,7 +205,7 @@ const debugger_ui = make_ui("debugger-ui", function (element, {
 
     function on_waiting() {
         fault_message.textContent = "...";
-        fault_message.style.color = "inherit";
+        fault_message.style.color = "white";
     }
 
     step_select = dom(
@@ -283,7 +283,7 @@ const debugger_ui = make_ui("debugger-ui", function (element, {
             fault_message.style.color = theme.red;
         } else if (message.debug !== undefined) {
             fault_message.textContent = "breakpoint";
-            fault_message.style.color = "inherit";
+            fault_message.style.color = "white";
             set_view("source");
         } else if (message.fault !== undefined) {
             const {code} = message.fault;
@@ -300,7 +300,7 @@ const debugger_ui = make_ui("debugger-ui", function (element, {
             on_waiting();
             if (wake === true) {
                 fault_message.textContent = "wakeup";
-                fault_message.style.color = "inherit";
+                fault_message.style.color = "white";
             }
         }
 
@@ -425,7 +425,7 @@ function demo(log) {
     });
     element.style.position = "fixed";
     element.style.inset = "0";
-    document.head.append(dom("meta", {name: "color-scheme", content: "dark"}));
+    // document.head.append(dom("meta", {name: "color-scheme", content: "dark"}));
     document.body.append(element);
 }
 

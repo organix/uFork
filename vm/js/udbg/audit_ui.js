@@ -20,13 +20,13 @@ const audit_ui = make_ui("audit-ui", function (element, {
         :host {
             display: block;
             font-family: ${theme.proportional_font_family};
+            color: ${theme.white};
         }
         h1 {
             margin: 0 0 12px;
         }
         dl {
             font-size: 13px;
-            color: ${theme.white};
             display: grid;
             grid-template-columns: max-content 1fr;
             gap: 0.2em 0.4em;
@@ -63,7 +63,6 @@ function demo() {
         code: ufork.E_NOT_CAP,
         evidence: ufork.UNDEF_RAW
     });
-    document.head.append(dom("meta", {name: "color-scheme", content: "dark"}));
     document.body.append(element);
 }
 

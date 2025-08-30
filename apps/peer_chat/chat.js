@@ -1,6 +1,6 @@
 // uFork Peer Chat demo.
 
-/*jslint browser, devel */
+/*jslint browser, global */
 
 import hex from "https://ufork.org/lib/hex.js";
 import parseq from "https://ufork.org/lib/parseq.js";
@@ -25,11 +25,16 @@ const default_signaller_origin = (
     ? "wss://"
     : "ws://"
 ) + location.host;
+const debug = new URL(location.href).searchParams.get("debug");
+const log = globalThis.console.log;
+const udbg_style = {width: "100%", height: "600px", marginTop: "2ex"};
 
 let core;
 let driver;
 let h_on_stdin;
 let db = make_chat_db(default_signaller_origin);
+let udbg_on_status;
+let udbg_window;
 
 const $stdin = document.getElementById("stdin");
 const $input_form = document.getElementById("input-form");
@@ -102,16 +107,25 @@ function room_petname(awp_store) {
 }
 
 function save_store(store) {
-    db.set_store()(console.log, store);
+    db.set_store()(log, store);
 }
 
 const $importmap = document.querySelector("[type=importmap]");
-const transport = webrtc_transport(websockets_signaller(), console.log);
+const transport = webrtc_transport(websockets_signaller(), log);
 core = make_core({
     wasm_url,
+    on_txn(...args) {
+        driver.txn(...args);
+    },
     on_audit(...args) {
         driver.audit(...args);
     },
+    on_log: log,
+    log_level: (
+        typeof debug === "string"
+        ? ufork.LOG_TRACE
+        : ufork.LOG_WARN
+    ),
     import_map: (
         $importmap
         ? JSON.parse($importmap.textContent).imports
@@ -120,11 +134,7 @@ core = make_core({
     compilers: {asm: assemble}
 });
 driver = make_core_driver(core, function on_status(message) {
-    if (message.audit !== undefined) {
-        console.error("AUDIT", ufork.fault_msg(message.audit.code));
-    } else if (message.fault !== undefined) {
-        console.error("FAULT", ufork.fault_msg(message.fault.code));
-    }
+    udbg_on_status(message);
 });
 parseq.sequence([
     core.h_initialize(),
@@ -150,8 +160,70 @@ parseq.sequence([
         const petname = room_petname(the_awp_store);
         core.h_install(ufork.fixnum(room_key), ufork.fixnum(petname));
         core.h_boot();
-        driver.command({kind: "statuses", verbose: {audit: true, fault: true}});
-        driver.command({kind: "play"});
-        return true;
+        if (typeof debug !== "string") {
+            driver.command({kind: "play"});
+            return true;
+        }
+
+// Launch the debugger.
+
+        if (debug === "element") {
+            return import(
+                "https://ufork.org/js/udbg/debugger_ui.js"
+            ).then(function (module) {
+                const debugger_ui = module.default;
+                const udbg_element = debugger_ui({
+                    send_command: driver.command
+                });
+                udbg_on_status = udbg_element.receive_status;
+                Object.assign(udbg_element.style, udbg_style);
+                document.body.append(udbg_element);
+                udbg_element.set_connected(true);
+            });
+        }
+        const session = "chat";
+        let url = new URL("https://ufork.org/udbg/");
+        // let url = new URL("http://localhost:3675/apps/udbg/index.html");
+        let params = new URLSearchParams();
+        params.set("origin", globalThis.origin);
+        params.set("session", session);
+        url.hash = params;
+        return import(
+            "https://ufork.org/js/udbg/window_bridge.js"
+        ).then(function (module) {
+            const make_window_bridge = module.default;
+            if (debug === "popup") {
+                udbg_window = globalThis.open(url, "udbg", "popup");
+                if (udbg_window) {
+                    const udbg_bridge = make_window_bridge(
+                        udbg_window,
+                        url.origin,
+                        session,
+                        driver.command
+                    );
+                    udbg_on_status = udbg_bridge.send;
+                    udbg_bridge.send({kind: "reset"}); // reuse
+                } else {
+                    globalThis.alert("Debugger popup blocked.");
+                }
+            } else {
+                const iframe = document.createElement("iframe");
+                iframe.src = url;
+                Object.assign(iframe.style, udbg_style);
+                document.body.append(iframe);
+                udbg_window = iframe.contentWindow;
+                const udbg_bridge = make_window_bridge(
+                    udbg_window,
+                    url.origin,
+                    session,
+                    driver.command
+                );
+                udbg_on_status = udbg_bridge.send;
+            }
+        });
     })
-])(console.log);
+])(function callback(value, reason) {
+    if (value === undefined) {
+        log(reason);
+    }
+});

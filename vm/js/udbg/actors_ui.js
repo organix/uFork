@@ -488,7 +488,6 @@ function demo(log) {
             return true;
         })
     ])(log);
-    document.head.append(dom("meta", {name: "color-scheme", content: "dark"}));
     document.body.append(element);
     document.body.onkeydown = function (event) {
         if (event.key === "s") {

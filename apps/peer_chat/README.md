@@ -46,6 +46,19 @@ To easily host the app for free, run it locally and use a reverse proxy like
 
     $ ngrok http 3528
 
+## Debugging
+
+A debugger can be attached by appending the query string `?debug=<type>` to the
+URL in the browser, where `<type>` controls how the debugger appears:
+
+Type        | Meaning
+------------|------------------
+`element`   | Embedded in the chat app as a custom element (recommended).
+`iframe`    | Embedded in the chat app as an iframe.
+`popup`     | In a popup window (reconnects when the chat app is reloaded).
+
+For example, http://localhost:3528?debug=element.
+
 ## Application Design
 
 The chat application centers around two main components.
