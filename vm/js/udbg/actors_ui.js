@@ -329,12 +329,8 @@ const actors_ui = make_ui("actor-ui", function (element, {
         graph_element.invalidate();
     }
 
-    function set_audit(code, evidence) {
-        audit = (
-            code !== undefined
-            ? {code, evidence}
-            : undefined
-        );
+    function set_audit(new_audit) {
+        audit = new_audit;
         invalidate();
     }
 
@@ -450,18 +446,20 @@ function demo(log) {
         compilers: {asm: assemble}
     });
     driver = make_core_driver(core, function on_status(message) {
+        log("status:", Object.keys(message).join(", "));
         element.set_txn(undefined);
         element.set_audit(undefined);
-        if (message.kind === "audit") {
-            element.set_audit(message.code, message.evidence);
-        } else if (message.kind === "txn") {
-            element.set_txn(message.sender, message.events, message.wake);
-        } else if (message.kind === "ram") {
-            element.set_ram(message.bytes);
-        } else if (message.kind === "rom") {
-            element.set_rom(message.bytes, message.debugs);
-        } else {
-            log(message);
+        if (message.ram !== undefined) {
+            element.set_ram(message.ram.bytes);
+        }
+        if (message.rom !== undefined) {
+            element.set_rom(message.rom.bytes, message.rom.debugs);
+        }
+        if (message.audit !== undefined) {
+            element.set_audit(message.audit);
+        } else if (message.txn !== undefined) {
+            const {sender, events, wake} = message.txn;
+            element.set_txn(sender, events, wake);
         }
     });
     parseq.sequence([

@@ -44,10 +44,10 @@ core = make_core({
     import_map: {"https://ufork.org/lib/": lib_url}
 });
 driver = make_core_driver(core, function on_status(message) {
-    if (message.kind === "audit") {
-        globalThis.console.error("AUDIT", ufork.fault_msg(message.code));
-    } else if (message.kind === "fault") {
-        globalThis.console.error("FAULT", ufork.fault_msg(message.code));
+    if (message.audit !== undefined) {
+        globalThis.console.error("AUDIT:", ufork.fault_msg(message.audit.code));
+    } else if (message.fault !== undefined) {
+        globalThis.console.error("FAULT:", ufork.fault_msg(message.fault.code));
     }
 });
 parseq.sequence([

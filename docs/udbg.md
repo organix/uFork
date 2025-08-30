@@ -5,16 +5,17 @@ uFork core. The protocol follows a publish-subscribe (rather than a
 request-response) model, in order to mitigate the effects of network latency.
 
 Message delivery is assumed to be reliable and in order.
-Messages are objects with a `kind` property.
 
 ## Command messages
 
+Command messages are objects with a `kind` property.
+
 ### {kind: "statuses", verbose: _object_}
 
-Specify what kinds of status message will be published and how often. By
-default, no status messages are published.
+Specify which status properties are published and how often. By default, no
+statuses are published.
 
-The `verbose` object is a mapping from status kinds to verbosity levels:
+The `verbose` object is a mapping from status properties to verbosity levels:
 
 Verbosity   | Meaning
 ------------|---------------------------
@@ -25,6 +26,9 @@ Verbosity   | Meaning
 For example, the verbosity object `{idle: true, txn: false}` means that "idle"
 statuses are published in between pauses, "txn" statuses are published only on
 pause, and no other statuses are published.
+
+This command does not always take effect immediately, there may be a delay of
+one or two steps.
 
 ### {kind: "play"}
 
@@ -50,12 +54,11 @@ The `on` array contains zero or more of the following strings:
     "instr"
     "txn"
 
-Each of these strings correspond to a status message of the same name, which is
-published upon pausing. The status message will be preceeded by a "ram" status
-and followed by a "playing" message.
+Each of these correspond to a status property of the same name, which will be
+included in the status message published upon pausing.
 
 Specifying "debug" or "instr" will cause maximum execution speed to be
-significantly reduced. TODO verify this
+significantly reduced.
 
 ### {kind: "refill", resources: _object_}
 
@@ -70,77 +73,83 @@ sponsor is inexhaustible. Enabled by default.
 
 ## Status messages
 
-Status messages provide real-time updates on the state of the core. Status
-messages of a particular kind are only published if the client has expressed
-interest with a "statuses" command.
+Status messages provide real-time updates on the state of the core. Each status
+message represents the state of the core at a particular moment in time.
 
-Status messages are published in a predictable order. A "ram" status is
-followed by a step status (such as "audit" or "instr"), which is then
-followed by a "playing" status.
+Unlike command messages, status messages do not have a `kind` property. Rather,
+each property represents some aspect of core state, and is only included in the
+status message if the client has expressed interest via a "statuses" command.
 
-### {kind: "audit", code: _integer_, evidence: _raw_}
+For example, the following status message would be published upon the core
+encountering an audit (assuming that "audit" had been specified in
+an "auto_pause" command and "playing", "ram", and "audit" had been specified in
+a "statuses" command).
 
-An audit has occurred. See `on_audit` in core.js.
+    {
+        playing: {value: false},
+        ram: {bytes: ...},
+        audit: {code: ..., evidence: ...}
+    }
 
-### {kind: "debug"}
-
-A breakpoint has been reached.
-
-### {kind: "fault", code: _integer_}
-
-The core halted with a fault signal, for example `E_FAIL`.
-
-### {kind: "idle"}
-
-The core has become idle, producing the signal `E_OK`.
-
-### {kind: "instr"}
-
-An instruction finished executing.
-
-### {kind: "txn", sender: _raw_, events: _array_, wake: _boolean_}
-
-An actor or device transaction has reached its conclusion.
-See `on_txn` in core.js.
-
-TODO how does this work for manual pausing? Does the driver hold on to the last
-of each step statuses and publish them when it receives a "pause" command? Or
-does it wait for an additional step after being told to pause? Maybe start with
-a slow POC where the debugger always proceeds one step at a time.
-
-### {kind: "playing", value: _boolean_}
+### playing: {value: _boolean_}
 
 Whether the driver is currently "playing". This does not necessarily
 mean the core is running, just that the core will run when it is given
 some work. The driver is initially paused (false).
 
-### {kind: "ram", bytes: _Uint8Array_}
+### ram: {bytes: _Uint8Array_}
 
 Current contents of quad RAM.
 
-### {kind: "rom", bytes: _Uint8Array_, debugs: _object_, module_texts: _object_}
+### rom: {bytes: _Uint8Array_, debugs: _object_, module_texts: _object_}
 
 Current contents of quad ROM. The `debugs` object contains debug objects
 like {src, label, start, end}, keyed by pointer. The `module_texts`
 object contains the source text of each loaded module, keyed by src.
 
-### {kind: "auto_pause", on: _array_}
-### {kind: "auto_refill", enabled: _boolean_}
-### {kind: "statuses", verbose: _object_}
+### auto_pause: {on: _array_}
+### auto_refill: {enabled: _boolean_}
+### statuses: {verbose: _object_}
 
 Current value as set by the command of the same name.
 
+The remaining statuses (listed above for the "auto_pause" command) are special
+in that they are mutually exclusive within each status message. For example, it
+is impossible for a status message to contain both `instr` and `audit`
+properties.
+
+### audit: {code: _integer_, evidence: _raw_}
+
+An audit has occurred. See `on_audit` in core.js.
+
+### debug: {}
+
+A breakpoint has been reached.
+
+### fault: {code: _integer_}
+
+The core halted with a fault signal, for example `E_FAIL`.
+
+### idle: {}
+
+The core has become idle, producing the signal `E_OK`.
+
+### instr: {}
+
+An instruction finished executing.
+
+### txn: {sender: _raw_, events: _array_, wake: _boolean_}
+
+An actor or device transaction has reached its conclusion.
+See `on_txn` in core.js.
+
 ## Example conversation
 
-    COMMAND {kind: "statuses", verbose: {fault/playing/ram/txn: false}
-    COMMAND {kind: "auto_pause", on: ["txn", "fault"]}
+    COMMAND {kind: "statuses", verbose: {idle/playing/ram/txn: false}
+    COMMAND {kind: "auto_pause", on: ["txn", "idle"]}
     COMMAND {kind: "play"}
-    STATUS  {kind: "playing", value: true}
-    STATUS  {kind: "ram", ...}
-    STATUS  {kind: "txn", ...}
-    STATUS  {kind: "playing", value: false}
+    STATUS  {playing: {value: true}}
+    STATUS  {playing: {value: false}, ram: {...}, txn: {...}}
     COMMAND {kind: "play"}
-    STATUS  {kind: "playing", value: true}
-    STATUS  {kind: "ram", ...}
-    STATUS  {kind: "fault", ...}
-    STATUS  {kind: "playing", value: false}
+    STATUS  {playing: {value: true}}
+    STATUS  {playing: {value: false}, ram: {...}, idle: {}}

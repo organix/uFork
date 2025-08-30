@@ -81,12 +81,8 @@ const continuation_ui = make_ui("continuation-ui", function (element, {
         source.set_sourcemap(undefined);
     }
 
-    function set_audit(code, evidence) {
-        audit = (
-            code !== undefined
-            ? {code, evidence}
-            : undefined
-        );
+    function set_audit(new_audit) {
+        audit = new_audit;
         invalidate();
     }
 
@@ -149,19 +145,21 @@ function demo(log) {
         compilers: {asm: assemble}
     });
     driver = make_core_driver(core, function on_status(message) {
-        log(message.kind);
-        if (message.kind === "audit") {
-            element.set_audit(message.code, message.evidence);
-        } else if (message.kind === "instr") {
-            element.set_audit(undefined);
-        } else if (message.kind === "ram") {
-            element.set_ram(message.bytes);
-        } else if (message.kind === "rom") {
+        log("status:", Object.keys(message).join(", "));
+        if (message.ram !== undefined) {
+            element.set_ram(message.ram.bytes);
+        }
+        if (message.rom !== undefined) {
             element.set_rom(
-                message.bytes,
-                message.debugs,
-                message.module_texts
+                message.rom.bytes,
+                message.rom.debugs,
+                message.rom.module_texts
             );
+        }
+        if (message.audit !== undefined) {
+            element.set_audit(message.audit);
+        } else if (message.instr !== undefined) {
+            element.set_audit(undefined);
         }
     });
     parseq.sequence([

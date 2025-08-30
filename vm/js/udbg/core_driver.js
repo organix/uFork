@@ -34,71 +34,51 @@ function make_driver(core, on_status) {
     let verbose = Object.create(null);
     let wake_timer;
 
-    function ram_copy() {
-
-// It is possible for 'step' to be called from within a run loop, so avoid
-// reentrancy in that case. We make a copy of the Uint8Array to avoid mutation
-// in subsequent steps.
-
-        return new Uint8Array(
-            signal === running
-            ? core.u_ram() // TODO compact?
-            : core.h_ram()
-        );
-    }
-
-    function publish(kind) {
-        if (verbose[kind] === undefined) {
-            return;
-        }
-        if (kind === "auto_pause") {
-            on_status({kind: "auto_pause", on: auto_pause_on});
-        } else if (kind === "auto_refill") {
-            on_status({kind: "auto_refill", value: auto_refill_enabled});
-        } else if (kind === "playing") {
-            on_status({kind: "playing", value: steps !== undefined});
-        } else if (kind === "ram") {
-            on_status({kind: "ram", bytes: ram_copy()});
-        } else if (kind === "rom") {
-            on_status({
-                kind: "rom",
-                bytes: new Uint8Array(core.h_rom()),
-                debugs: core.u_rom_debugs(),
-                module_texts: core.u_module_texts()
-            });
-        } else if (kind === "statuses") {
-            on_status({kind: "statuses", verbose});
-        }
-    }
-
     function consume_step() {
         if (step_queue.length === 0) {
             return;
         }
-        const the_step = step_queue[0];
-        const kind = the_step.message.kind;
-        if (auto_pause_on.includes(kind)) {
+        const {kind, payload, pause, ram} = step_queue[0];
+        let message = {};
+        if (pause) {
             steps = undefined;
-            if (verbose[the_step.message.kind] !== undefined) {
-                on_status({kind: "ram", bytes: the_step.ram});
-                on_status(the_step.message);
+            if (verbose.playing !== undefined) {
+                message.playing = {value: false};
             }
-            publish("playing");
-        } else if (verbose[kind] === true) {
-            on_status({kind: "ram", bytes: the_step.ram});
-            on_status(the_step.message);
         }
+        if (ram !== undefined) {
+            message.ram = {bytes: ram};
+        }
+        message[kind] = payload;
+        on_status(message);
         step_queue.shift();
         if (steps !== undefined) {
             steps -= 1;
         }
     }
 
-    function step(message) {
-        step_queue.push({
-            message,
-            ram: ram_copy()
-        });
+    function step(kind, payload = {}) {
+        const pause = auto_pause_on.includes(kind);
+
+// Skip steps that the client can not observe.
+
+        if (!pause && verbose[kind] !== true) {
+            return;
+        }
+        let the_step = {kind, payload, pause};
+        if (verbose.ram === true || (pause && verbose.ram === false)) {
+
+// It is possible for 'step' to be called from within a run loop, so avoid
+// reentrancy in that case. We make a copy of the Uint8Array to avoid mutation
+// in subsequent steps.
+
+            the_step.ram = new Uint8Array(
+                signal === running
+                ? core.u_ram() // TODO compact?
+                : core.h_ram()
+            );
+        }
+        step_queue.push(the_step);
         if (steps !== undefined && steps > 0) {
             consume_step();
         }
@@ -134,7 +114,10 @@ function make_driver(core, on_status) {
 
             if (steps <= 0) {
                 steps = undefined;
-                return publish("playing");
+                if (verbose.playing !== undefined) {
+                    on_status({playing: {value: false}});
+                }
+                return;
             }
 
 // Run the core. It is possible that 'h_run_loop' will call 'txn'
@@ -171,31 +154,26 @@ function make_driver(core, on_status) {
                     const code = ufork.fix_to_i32(signal);
                     return (
                         code === ufork.E_OK
-                        ? step({kind: "idle"})
-                        : step({kind: "fault", code})
+                        ? step("idle")
+                        : step("fault", {code})
                     );
                 }
 
 // An instruction step has concluded.
 
-                if (
-                    verbose.instr !== undefined
-                    || auto_pause_on.includes("instr")
-                ) {
-                    step({kind: "instr"});
-                }
+                step("instr");
 
 // Pause if the next instruction is a breakpoint.
 
                 if (ip()?.x === ufork.VM_DEBUG) {
-                    step({kind: "debug"});
+                    step("debug");
                 }
             }
         }
     }
 
     function txn(wake, sender, events) {
-        step({kind: "txn", sender, events, wake});
+        step("txn", {sender, events, wake});
         if (wake === true) {
 
 // It is possible that 'txn' was called by 'u_defer' within 'h_run_loop',
@@ -207,7 +185,41 @@ function make_driver(core, on_status) {
     }
 
     function audit(code, evidence) {
-        step({kind: "audit", code, evidence});
+        step("audit", {code, evidence});
+    }
+
+
+    function publish_state(kinds) {
+        kinds = kinds.filter(function (kind) {
+            return verbose[kind] !== undefined;
+        });
+        if (kinds.length === 0) {
+            return;
+        }
+        let message = {};
+        if (kinds.includes("auto_pause")) {
+            message.auto_pause = {on: auto_pause_on};
+        }
+        if (kinds.includes("auto_refill")) {
+            message.auto_refill = {enabled: auto_refill_enabled};
+        }
+        if (kinds.includes("playing")) {
+            message.playing = {value: steps !== undefined};
+        }
+        if (kinds.includes("ram")) {
+            message.ram = {bytes: new Uint8Array(core.h_ram())};
+        }
+        if (kinds.includes("rom")) {
+            message.rom = {
+                bytes: new Uint8Array(core.h_rom()),
+                debugs: core.u_rom_debugs(),
+                module_texts: core.u_module_texts()
+            };
+        }
+        if (kinds.includes("statuses")) {
+            message.statuses = {verbose};
+        }
+        on_status(message);
     }
 
     const commands = {
@@ -215,14 +227,15 @@ function make_driver(core, on_status) {
             if (Array.isArray(message.on)) {
                 auto_pause_on = message.on;
             }
+            publish_state(["auto_pause"]);
         },
         auto_refill(message) {
             auto_refill_enabled = message.enabled === true;
-            publish("auto_refill");
+            publish_state(["auto_refill"]);
         },
         pause() {
             steps = undefined;
-            publish("playing");
+            publish_state(["playing"]);
         },
         play(message) {
             if (steps !== undefined) {
@@ -237,7 +250,7 @@ function make_driver(core, on_status) {
                 ? message.steps
                 : Infinity
             );
-            publish("playing");
+            publish_state(["playing"]);
             run();
         },
         refill(message) {
@@ -249,7 +262,7 @@ function make_driver(core, on_status) {
                     Object.create(null),
                     message.verbose
                 );
-                Object.keys(verbose).forEach(publish);
+                publish_state(Object.keys(verbose));
             }
         }
     };
@@ -283,20 +296,20 @@ function demo(log) {
         compilers: {asm: assemble}
     });
     driver = make_driver(core, function on_status(message) {
-        if (message.kind === "audit") {
-            log("audit:", ufork.fault_msg(message.code));
-        } else if (message.kind === "fault") {
-            log("fault:", ufork.fault_msg(message.code));
-        } else if (message.kind === "playing") {
-            log("playing:", message.value);
-            if (message.value === false && nr_plays_remaining > 0) {
+        log("STATUS {" + Object.keys(message).join(", ") + "}");
+        if (message.playing !== undefined) {
+            log("playing:", message.playing);
+            if (message.playing.value === false && nr_plays_remaining > 0) {
                 nr_plays_remaining -= 1;
                 setTimeout(driver.command, 0, {kind: "play"});  // continue
             }
-        } else if (message.kind === "txn") {
-            log("txn:", message);
-        } else {
-            log(message.kind);
+        }
+        if (message.audit !== undefined) {
+            log("audit:", ufork.fault_msg(message.audit.code));
+        } else if (message.fault !== undefined) {
+            log("fault:", ufork.fault_msg(message.fault.code));
+        } else if (message.txn !== undefined) {
+            log("txn:", message.txn);
         }
     });
     parseq.sequence([

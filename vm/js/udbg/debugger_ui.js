@@ -28,7 +28,6 @@ const debugger_ui = make_ui("debugger-ui", function (element, {
     connected = false,
     view = default_view
 }) {
-    let interrupted = true;
     let interval = 0;
     let interval_timer;
     let play_button;
@@ -245,40 +244,76 @@ const debugger_ui = make_ui("debugger-ui", function (element, {
         spacer,
         fault_message
     ]);
-    const statuses = {
-        audit(message) {
-            views.actors.element.set_audit(message.code, message.evidence);
-            views.source.element.set_audit(message.code, message.evidence);
-            if (message.code !== undefined) {
-                fault_message.textContent = "audit";
-                fault_message.style.color = theme.red;
-            }
-        },
-        auto_pause(message) {
-            if (message.on.includes("txn")) {
+
+    function receive_status(message) {
+        views.source.element.set_audit(undefined);
+        views.actors.element.set_audit(undefined);
+        views.actors.element.set_txn(undefined);
+
+// State?
+
+        if (message.auto_pause !== undefined) {
+            const {on} = message.auto_pause;
+            if (on.includes("txn")) {
                 step_select.value = "txn";
-            } else if (message.on.includes("instr")) {
+            } else if (on.includes("instr")) {
                 step_select.value = "instr";
             }
-        },
-        debug() {
+        }
+        if (message.rom !== undefined) {
+            const {bytes, debugs, module_texts} = message.rom;
+            views.ram.element.set_rom(bytes, debugs);
+            views.rom.element.set_rom(bytes, debugs);
+            views.actors.element.set_rom(bytes, debugs);
+            views.source.element.set_rom(bytes, debugs, module_texts);
+        }
+        if (message.ram !== undefined) {
+            const {bytes} = message.ram;
+            views.ram.element.set_ram(bytes);
+            views.actors.element.set_ram(bytes);
+            views.source.element.set_ram(bytes);
+        }
+
+// Step?
+
+        if (message.audit !== undefined) {
+            views.actors.element.set_audit(message.audit);
+            views.source.element.set_audit(message.audit);
+            fault_message.textContent = "audit";
+            fault_message.style.color = theme.red;
+        } else if (message.debug !== undefined) {
             fault_message.textContent = "breakpoint";
             fault_message.style.color = "inherit";
             set_view("source");
-        },
-        fault(message) {
-            fault_message.textContent = ufork.fault_msg(message.code);
+        } else if (message.fault !== undefined) {
+            const {code} = message.fault;
+            fault_message.textContent = ufork.fault_msg(code);
             fault_message.style.color = theme.red;
-        },
-        idle() {
+        } else if (message.idle !== undefined) {
             fault_message.textContent = "idle";
             fault_message.style.color = theme.green;
-        },
-        instr() {
+        } else if (message.instr !== undefined) {
             on_waiting();
-        },
-        playing(message) {
-            if (!message.value && interval > 0 && !interrupted) {
+        } else if (message.txn !== undefined) {
+            const {sender, events, wake} = message.txn;
+            views.actors.element.set_txn(sender, events, wake);
+            on_waiting();
+            if (wake === true) {
+                fault_message.textContent = "wakeup";
+                fault_message.style.color = "inherit";
+            }
+        }
+
+// Playing or paused?
+
+        if (message.playing !== undefined) {
+            const {value} = message.playing;
+            const ok_step = message.instr ?? message.txn;
+            if (
+                !value
+                && interval > 0
+                && ok_step !== undefined
+            ) {
                 clearTimeout(interval_timer);
                 interval_timer = setTimeout(
                     send_command,
@@ -288,51 +323,11 @@ const debugger_ui = make_ui("debugger-ui", function (element, {
                 return;
             }
             play_button.textContent = (
-                message.value
+                value
                 ? "Pause"
                 : "Play"
             );
-            step_button.disabled = message.value;
-        },
-        ram(message) {
-            views.ram.element.set_ram(message.bytes);
-            views.actors.element.set_ram(message.bytes);
-            views.source.element.set_ram(message.bytes);
-        },
-        rom(message) {
-            const {bytes, debugs, module_texts} = message;
-            views.ram.element.set_rom(bytes, debugs);
-            views.rom.element.set_rom(bytes, debugs);
-            views.actors.element.set_rom(bytes, debugs);
-            views.source.element.set_rom(bytes, debugs, module_texts);
-        },
-        txn(message) {
-            on_waiting();
-            views.actors.element.set_txn(
-                message.sender,
-                message.events,
-                message.wake
-            );
-            if (message.wake === true) {
-                fault_message.textContent = "wakeup";
-                fault_message.style.color = "inherit";
-            }
-        }
-    };
-
-    function receive_status(message) {
-        if (Object.hasOwn(statuses, message.kind)) {
-            if (message.kind !== "playing") {
-                views.source.element.set_audit(undefined);
-                views.actors.element.set_audit(undefined);
-                views.actors.element.set_txn(undefined);
-            }
-            if (pause_statuses.includes(message.kind)) {
-                interrupted = true;
-            } else if (message.kind === "instr" || message.kind === "txn") {
-                interrupted = false;
-            }
-            statuses[message.kind](message);
+            step_button.disabled = value;
         }
     }
 
@@ -364,7 +359,7 @@ const debugger_ui = make_ui("debugger-ui", function (element, {
                     idle: true,
                     instr: false,
                     playing: true,
-                    ram: false,
+                    ram: true,
                     rom: true,
                     txn: false
                 }

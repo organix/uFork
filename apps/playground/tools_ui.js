@@ -327,19 +327,19 @@ const tools_ui = make_ui("tools-ui", function (element, {
             compilers: get_compilers()
         });
         driver = make_core_driver(core, function (message) {
-            if (message.kind === "audit") {
+            if (message.audit !== undefined) {
                 devices.io.warn(
                     "AUDIT:",
-                    ufork.fault_msg(message.code),
-                    core.u_pprint(message.evidence)
+                    ufork.fault_msg(message.audit.code),
+                    core.u_pprint(message.audit.evidence)
                 );
-            } else if (message.kind === "fault") {
-                devices.io.warn("FAULT:", ufork.fault_msg(message.code));
+            } else if (message.fault !== undefined) {
+                devices.io.warn("FAULT:", ufork.fault_msg(message.fault.code));
                 stop();
-            } else if (message.kind === "idle") {
+            } else if (message.idle !== undefined) {
                 devices.io.info("IDLE");
-            } else if (message.kind === "txn" && message.wake === true) {
-                devices.io.info("WAKE:", ufork.print(message.sender));
+            } else if (message.txn !== undefined && message.txn.wake === true) {
+                devices.io.info("WAKE:", ufork.print(message.txn.sender));
             }
             on_status(message);
         });

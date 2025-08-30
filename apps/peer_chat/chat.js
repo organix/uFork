@@ -120,10 +120,10 @@ core = make_core({
     compilers: {asm: assemble}
 });
 driver = make_core_driver(core, function on_status(message) {
-    if (message.kind === "audit") {
-        console.error("AUDIT", ufork.fault_msg(message.code));
-    } else if (message.kind === "fault") {
-        console.error("FAULT", ufork.fault_msg(message.code));
+    if (message.audit !== undefined) {
+        console.error("AUDIT", ufork.fault_msg(message.audit.code));
+    } else if (message.fault !== undefined) {
+        console.error("FAULT", ufork.fault_msg(message.fault.code));
     }
 });
 parseq.sequence([
