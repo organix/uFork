@@ -38,9 +38,9 @@ function make_driver(core, on_status) {
         if (step_queue.length === 0) {
             return;
         }
-        const {kind, payload, pause, ram} = step_queue[0];
+        const {kind, payload, ram} = step_queue[0];
         let message = {};
-        if (pause) {
+        if (auto_pause_on.includes(kind)) {
             steps = undefined;
             if (verbose.playing !== undefined) {
                 message.playing = {value: false};
@@ -65,7 +65,7 @@ function make_driver(core, on_status) {
         if (!pause && verbose[kind] !== true) {
             return;
         }
-        let the_step = {kind, payload, pause};
+        let the_step = {kind, payload};
         if (verbose.ram === true || (pause && verbose.ram === false)) {
 
 // It is possible for 'step' to be called from within a run loop, so avoid
