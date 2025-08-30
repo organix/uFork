@@ -424,6 +424,7 @@ const actors_ui = make_ui("actor-ui", function (element, {
                 ));
             }
             document.addEventListener("keydown", on_keydown);
+            invalidate();
         },
         disconnect() {
             document.removeEventListener("keydown", on_keydown);

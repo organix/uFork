@@ -36,6 +36,9 @@ const continuation_ui = make_ui("continuation-ui", function (element, {
     details.style.gap = "12px";
 
     function invalidate() {
+        if (!element.isConnected) {
+            return;
+        }
         details.innerHTML = "";
         if (audit !== undefined) {
             details.append(audit_ui({
@@ -126,6 +129,7 @@ const continuation_ui = make_ui("continuation-ui", function (element, {
                     0.8 * element.clientWidth
                 ));
             }
+            invalidate();
         }
     };
 });
