@@ -3,7 +3,7 @@
 Actors with the following message signature are called "requestors". Requestors
 are like services that support cancellation and failure notification. The
 message sent to a requestor is called a "request", which optionally contains an
-_input_ value.
+_input_ value. The value `#?` indicates there is no input.
 
     to_cancel,callback,input -> requestor
 
