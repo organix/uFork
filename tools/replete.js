@@ -17,6 +17,7 @@ import run_replete from "https://deno.land/x/replete@0.0.35/run.js";
 // import {minify} from "https://esm.sh/terser";
 import import_map from "./import_map.js";
 
+const cwd_locator = "file:///";
 const content_types = {
     asm: "text/plain",
     css: "text/css",
@@ -56,7 +57,7 @@ run_replete({
     browser_port: 3675,
     which_node: "node",
     deno_args: ["--allow-all", "--no-lock"],
-    root_locator: "file:///", // cwd
+    root_locator: cwd_locator,
     command(message) {
         if (message.locator !== undefined) {
             message.locator = url_to_locator(message.locator);
@@ -89,7 +90,7 @@ run_replete({
             return {"Content-Type": type};
         }
     },
-    locate(specifier, parent_locator) {
+    locate(specifier, parent_locator = cwd_locator) {
 
 // Consult the import map.
 
