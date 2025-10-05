@@ -395,12 +395,17 @@ impl Core {
                             let x = if n > 1 { self.stack_pop() } else { UNDEF };
                             let y = if n > 2 { self.stack_pop() } else { UNDEF };
                             let z = if n > 3 { self.stack_pop() } else { UNDEF };
-                            if self.typeq(TYPE_T, t) {
-                                let quad = Quad::new(t, x, y, z);
-                                let v = self.alloc(&quad)?;
-                                self.stack_push(v)?;
+                            if t.is_ptr() {
+                                let tq = self.mem(t);
+                                if (tq.t() == TYPE_T) && (tq.x() == Any::fix(n - 1)) {
+                                    let quad = Quad::new(t, x, y, z);
+                                    let v = self.alloc(&quad)?;
+                                    self.stack_push(v)?;
+                                } else {
+                                    self.stack_push(UNDEF)?;  // type/cardinality error
+                                }
                             } else {
-                                self.stack_push(UNDEF)?;  // type required
+                                self.stack_push(UNDEF)?;  // pointer to type required
                             }
                         } else if (n <= -1) && (n >= -4) {
                             let val = self.stack_pop();
