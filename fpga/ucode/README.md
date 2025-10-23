@@ -236,7 +236,7 @@ suppresses any optimizations and compiles a stand-alone `EXIT`.
 Additional labels within the _body_ create callable entry-points
 for tail-segments of the definition.
 
-The uCode machine supports several kinds control transfer
+The uCode machine supports several kinds of control transfers,
 with the target `PC` compiled into the instruction.
 A _jump_ is a basic unconditional transfer of control.
 A _call_ additionally copies `PC+1` to TORS.
