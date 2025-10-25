@@ -456,7 +456,8 @@ module cpu #(
     */
     assign o_running = i_run && o_status && !halt;
 
-    reg [ADDR_SZ-1:0] pc = 0;
+    reg [ADDR_SZ-1:0] pc = 0;                           // program counter
+    wire [ADDR_SZ-1:0] pc_plus_1 = pc + 1'b1;           // program counter incremented
     reg [DATA_SZ-1:0] instr_r = UC_NOP;
     wire [DATA_SZ-1:0] instr =                          // current instruction
         ( p_alu ? uc_rdata
@@ -576,14 +577,14 @@ module cpu #(
             if (!ctrl && r_pc) begin
                 pc <= tors[ADDR_SZ-1:0];                // return from procedure
             end else if (mem_op && mem_rng == `MEM_PC) begin
-                pc <= pc + 1'b1;                        // auto-increment on [PC] access
+                pc <= pc_plus_1;                        // auto-increment on [PC] access
             end else if (ctrl && branch) begin
                 pc <= instr[ADDR_SZ-1:0];               // jump or call procedure
             end
             instr_r <= uc_rdata;
             p_alu <= !p_alu;
         end else if (o_running) begin
-            pc <= pc + 1'b1;                            // default next PC
+            pc <= pc_plus_1;                            // default next PC
             p_alu <= !p_alu;
         end
     end
