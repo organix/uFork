@@ -1,4 +1,4 @@
-// A simplified and modernized version https://github.com/dhotson/springy, a
+// A simplified and modernized version of https://github.com/dhotson/springy, a
 // force directed graphing engine.
 
 /**
@@ -28,7 +28,7 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-/*jslint browser, this */
+/*jslint browser */
 
 function make_node(id, data = {}) {
 
