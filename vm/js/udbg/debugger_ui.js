@@ -82,6 +82,7 @@ const debugger_ui = make_ui("debugger-ui", function (element, {
 
     function toggle_play() {
         if (is_playing()) {
+            clearTimeout(interval_timer);
             send_command({kind: "pause"});
         } else {
             set_auto_pause_for_play();
