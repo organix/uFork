@@ -2,21 +2,20 @@
 
 Actors with the following message signature are called "requestors". Requestors
 are like services that support cancellation and failure notification. The
-message sent to a requestor is called a "request", which optionally contains an
-_input_ value. The value `#?` indicates there is no input.
+message sent to a requestor is called a "request", containing an
+_input_ value. The value `#?` can be used to indicate there is no input.
 
     to_cancel,callback,input -> requestor
 
 The _callback_ actor is sent a "result" like `ok,value/error` once the
 request completes (which could be never).
 
-On success, the result's head is `#t` and its tail is an optional _output_
+On success, the result's head is `#t` and its tail is the _output_
 value. We say that a requestor "produces" its _output_ value.
 
     #t,output -> callback
 
-On failure, the result's head is `#f` and its tail is an optional _error_
-reason.
+On failure, the result's head is `#f` and its tail is the _error_ value.
 
     #f,error -> callback
 
@@ -32,7 +31,7 @@ the _reason_ for the cancellation, and can be any value.
     reason -> cancel
 
 With this terminology in hand, it is possible to specify requestors very
-consisely. Here is an example specification of `double`, a requestor that
+concisely. Here is an example specification of `double`, a requestor that
 doubles its input value.
 
 > The `double` requestor takes a fixnum and produces a fixnum twice the size.
@@ -46,4 +45,4 @@ known to be
     #f,error -> callback
 
 The requestor pattern was invented by Douglas Crockford, and was first
-implemented in JavaScript. See https://crockford.com/parseq.html.
+implemented in JavaScript. See https://www.crockford.com/pronto.html.
