@@ -155,6 +155,7 @@ function demo(log) {
             core.h_boot();
             core.h_run_loop(25);
             element.set_ram(core.h_ram());
+            // element.set_ram(core.u_ram()); // uncompacted
             element.set_rom(core.h_rom(), core.u_rom_debugs());
             return true;
         })

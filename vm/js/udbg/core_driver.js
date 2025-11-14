@@ -10,6 +10,7 @@ import assemble from "https://ufork.org/lib/assemble.js";
 import parseq from "https://ufork.org/lib/parseq.js";
 import requestorize from "https://ufork.org/lib/rq/requestorize.js";
 import ufork from "../ufork.js";
+import compact_memory from "../compact_memory.js";
 import make_core from "../core.js";
 import blob_dev from "../blob_dev.js";
 import timer_dev from "../timer_dev.js";
@@ -72,10 +73,10 @@ function make_driver(core, on_status) {
 // reentrancy in that case. We make a copy of the Uint8Array to avoid mutation
 // in subsequent steps.
 
-            the_step.ram = new Uint8Array(
+            the_step.ram = (
                 signal === running
-                ? core.u_ram() // TODO compact?
-                : core.h_ram()
+                ? compact_memory(core.u_ram())
+                : new Uint8Array(core.h_ram())
             );
         }
         step_queue.push(the_step);
