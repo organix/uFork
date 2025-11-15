@@ -243,14 +243,72 @@ impl Core {
         }
         self.sponsor_signal(SPONSOR)  // return SPONSOR signal
     }
+    /*
+
+    This dispatch strategy searches the queue for a deliverable event.
+    An event is deliverable if the target of the event is ready (not busy).
+
+    */
     fn dispatch_event(&mut self) -> Any {
-        if let Some(ep) = self.event_dequeue() {
+        let mut ep = self.e_first();
+        let mut prev = NIL;
+        while ep.is_ram() {
+            let event = self.ram(ep);
+            let next = event.z();
+            let target = self.event_target(ep);
+            if !self.actor_busy(target) {
+                // found a candidate! remove it from the queue...
+                if prev.is_ram() {
+                    self.ram_mut(prev).set_z(next);
+                } else {
+                    self.set_e_first(next);
+                }
+                if !next.is_ram() {
+                    self.set_e_last(prev)
+                }
+                // ...and attempt to deliver the event
+                return self.deliver_event(ep);
+            }
+            prev = ep;
+            ep = next;
+        }
+        UNDEF  // no deliverable event found
+    }
+    /*
+
+    This dispatch strategy examines only the event at the front of the queue.
+    If the target of the event is busy, recycle the event to the back of the queue.
+    WARNING! This strategy is subject to unfair scheduling due to resonance.
+
+    */
+    fn _dispatch_event(&mut self) -> Any {
+        let ep = self.e_first();
+        if ep.is_ram() {
+            // remove first event from the queue...
+            let event = self.ram(ep);
+            let next = event.z();
+            self.set_e_first(next);
+            if !next.is_ram() {
+                self.set_e_last(NIL)
+            }
+            // ...and attempt to deliver the event
             let target = self.event_target(ep);
             if self.actor_busy(target) {
                 // target actor is busy, retry later...
                 self.event_enqueue(ep);  // move event to back of queue
                 return UNDEF;  // no event dispatched
             }
+            return self.deliver_event(ep);
+        }
+        UNDEF  // event queue empty
+    }
+    /*
+
+    Attempt to deliver a detached event to an available event handler
+    if the sponsor has sufficient quota remaining.
+
+    */
+    fn deliver_event(&mut self, ep: Any) -> Any {
             let sponsor = self.event_sponsor(ep);
             let sig = self.sponsor_signal(sponsor);
             if sig.is_fix() {
@@ -271,7 +329,7 @@ impl Core {
             } else {
                 self.set_sponsor_events(sponsor, Any::fix(limit - 1));  // decrement event limit
                 self.ram_mut(ep).set_z(NIL);  // disconnect event from queue
-                if let Err(error) = self.deliver_event(ep) {
+                if let Err(error) = self.handle_event(ep) {
                     let signal_sent = self.report_error(sponsor, error);
                     self.event_enqueue(ep);  // move event to back of queue
                     if signal_sent {
@@ -280,12 +338,15 @@ impl Core {
                 }
             }
             self.sponsor_signal(sponsor)  // return signal
-        } else {
-            // event queue empty
-            UNDEF
-        }
     }
-    fn deliver_event(&mut self, ep: Any) -> Result<(), Error> {
+    /*
+
+    Invoke the appropriate handler for this event.
+    Devices handle the event synchronously.
+    Actors become busy with a newly-created transaction continuation.
+
+    */
+    fn handle_event(&mut self, ep: Any) -> Result<(), Error> {
         let target = self.event_target(ep);
         if let Ok(id) = self.device_id(target) {
             // synchronous message-event to device
@@ -849,21 +910,6 @@ impl Core {
         }
         self.set_e_last(ep);
     }
-    fn event_dequeue(&mut self) -> Option<Any> {
-        // remove event from the front of the queue
-        let ep = self.e_first();
-        if ep.is_ram() {
-            let event = self.ram(ep);
-            let next = event.z();
-            self.set_e_first(next);
-            if !next.is_ram() {
-                self.set_e_last(NIL)
-            }
-            Some(ep)
-        } else {
-            None
-        }
-    }
     pub fn event_commit(&mut self, events: Any) {
         // move sent-message events to event queue
         if !events.is_ram() {
@@ -962,8 +1008,9 @@ impl Core {
     }
     fn actor_busy(&self, cap: Any) -> bool {
         let ptr = self.cap_to_ptr(cap);
-        let txn = self.mem(ptr).z();
-        txn != UNDEF
+        let quad = self.mem(ptr);
+        // only actors with transaction in progress are "busy"
+        (quad.t() == ACTOR_T) && (quad.z() != UNDEF)
     }
     fn actor_commit(&mut self, me: Any) {
         self.stack_clear(NIL);
