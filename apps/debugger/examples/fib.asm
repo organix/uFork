@@ -1,7 +1,7 @@
-; Fibonnacci service behavior.
+; Fibonacci service behavior.
 
 ; It expects a message containing a customer and a fixnum.
-; The nth Fibonnacci number is calculated and sent to the customer.
+; The nth Fibonacci number is calculated and sent to the customer.
 
 .import
     std: "https://ufork.org/lib/std.asm"

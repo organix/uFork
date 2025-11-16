@@ -4,10 +4,10 @@ This document describes a textual assembly language for uFork.
 
 ## An example
 
-    ; A fibonnacci service behavior.
+    ; A Fibonacci service behavior.
 
     ; It expects a message containing a customer and a fixnum. The nth
-    ; fibonnacci number is calculated and sent to the customer.
+    ; Fibonacci number is calculated and sent to the customer.
 
     .import
         std: "https://ufork.org/lib/std.asm"
