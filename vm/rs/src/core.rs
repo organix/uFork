@@ -60,6 +60,7 @@ pub struct Core {
     quad_rom:   [Quad; QUAD_ROM_MAX],
     quad_ram:   [Quad; QUAD_RAM_MAX],
     rom_top:    Any,
+    e_hint:     Any,
     gc_addr:    Any,
     gc_stride:  u8,
     gc_phase:   GcPhase,
@@ -83,6 +84,7 @@ impl Core {
             quad_rom: [ Quad::empty_t(); QUAD_ROM_MAX ],
             quad_ram: [ Quad::empty_t(); QUAD_RAM_MAX ],
             rom_top: Any::rom(ROM_BASE_OFS),
+            e_hint: NIL,
             gc_addr: Any::ram(RAM_BASE_OFS),
             gc_stride: 32,
             gc_phase: GcPhase::Idle,
@@ -252,6 +254,10 @@ impl Core {
     fn dispatch_event(&mut self) -> Any {
         let mut ep = self.e_first();
         let mut prev = NIL;
+        if self.e_hint.is_ram() {  // IMPORTANT! reset `e_hint` to `NIL` at `END`.
+            prev = self.e_hint;
+            ep = self.ram(prev).z();
+        }
         while ep.is_ram() {
             let event = self.ram(ep);
             let next = event.z();
@@ -264,8 +270,9 @@ impl Core {
                     self.set_e_first(next);
                 }
                 if !next.is_ram() {
-                    self.set_e_last(prev)
+                    self.set_e_last(prev);
                 }
+                self.e_hint = prev;
                 // ...and attempt to deliver the event
                 return self.deliver_event(ep);
             }
@@ -406,6 +413,7 @@ impl Core {
                     // free dead continuation and associated event
                     self.free(ep);
                     self.free(kp);
+                    self.e_hint = NIL;  // reset `e_hint` at `END`
                     if GC_STRATEGY == GcStrategy::FullAtCommit {
                         self.gc_collect_all();  // full GC collection after `end` instruction
                     }
