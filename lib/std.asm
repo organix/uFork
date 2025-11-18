@@ -49,6 +49,9 @@ sink_beh:                   ; _ <- _
 commit:
     end commit
 
+become:                     ; state beh
+    actor become commit     ; --
+
 rv_self:                    ; _ <- cust,_
     actor self cust_send    ; msg=SELF
 
@@ -133,6 +136,7 @@ return_one:                 ; k
     send_msg
     sink_beh
     commit
+    become
     rv_self
     rv_undef
     rv_nil
