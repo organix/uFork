@@ -943,6 +943,30 @@ impl Core {
             prev = ep;
             ep = next;
         }
+        /*
+        // expediate delivery to ready targets
+        let mut last = NIL;
+        ep = prev;
+        while ep.is_ram() {
+            let target = self.ram(ep).x();
+            let next = self.ram(ep).z();
+            if !self.actor_busy(target) {
+                self.deliver_event(ep);  // FIXME: is delivery to devices safe?
+                if last.is_ram() {
+                    self.ram_mut(last).set_z(next);
+                } else {
+                    prev = next;
+                }
+                ep = next;
+            } else {
+                last = ep;
+                ep = next;
+            }
+        }
+        if !prev.is_ram() {
+            return;  // no more events to enqueue
+        }
+        */
         // add events to the back of the queue
         if !self.e_first().is_ram() {
             self.set_e_first(prev);
