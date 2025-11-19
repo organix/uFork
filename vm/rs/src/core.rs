@@ -252,9 +252,12 @@ impl Core {
 
     */
     fn dispatch_event(&mut self) -> Any {
+        if self.e_hint == UNDEF {  // IMPORTANT! reset `e_hint` to `NIL` at `END`.
+            return UNDEF;  // there are no deliverable events in the queue
+        }
         let mut ep = self.e_first();
         let mut prev = NIL;
-        if self.e_hint.is_ram() {  // IMPORTANT! reset `e_hint` to `NIL` at `END`.
+        if self.e_hint.is_ram() {
             prev = self.e_hint;
             ep = self.ram(prev).z();
         }
@@ -279,6 +282,7 @@ impl Core {
             prev = ep;
             ep = next;
         }
+        self.e_hint = UNDEF;  // nothing to dispatch until `END`
         UNDEF  // no deliverable event found
     }
     /*
@@ -421,6 +425,7 @@ impl Core {
             },
             Err(error) => {
                 self.set_sp(sp);  // restore original `sp` on failure
+                self.e_hint = NIL;  // reset `e_hint` on error
                 if self.report_error(sponsor, error) {
                     return UNDEF;  // controller notified
                 }
@@ -913,8 +918,14 @@ impl Core {
         self.ram_mut(ep).set_z(NIL);
         if !self.e_first().is_ram() {
             self.set_e_first(ep);
+            if self.e_hint == UNDEF {  // if waiting, restart scan from first
+                self.e_hint = NIL;
+            }
         } else /* if self.e_last().is_ram() */ {
             self.ram_mut(self.e_last()).set_z(ep);
+            if self.e_hint == UNDEF {  // if waiting, restart scan from last
+                self.e_hint = self.e_last();
+            }
         }
         self.set_e_last(ep);
     }
@@ -939,6 +950,7 @@ impl Core {
             self.ram_mut(self.e_last()).set_z(prev);
         }
         self.set_e_last(events);
+        // NOTE: `e_hint` will be reset when the continuation is terminated
     }
     pub fn event_sponsor(&self, ep: Any) -> Any {
         self.mem(ep).t()
