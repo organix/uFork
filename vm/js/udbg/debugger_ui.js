@@ -308,10 +308,10 @@ const debugger_ui = make_ui("debugger-ui", function (element, {
 // Playing or paused?
 
         if (message.playing !== undefined) {
-            const {value} = message.playing;
+            const playing = message.playing.value;
             const ok_step = message.instr ?? message.txn;
             if (
-                !value
+                !playing
                 && interval > 0
                 && ok_step !== undefined
             ) {
@@ -324,11 +324,11 @@ const debugger_ui = make_ui("debugger-ui", function (element, {
                 return;
             }
             play_button.textContent = (
-                value
+                playing
                 ? "Pause"
                 : "Play"
             );
-            step_button.disabled = value;
+            step_button.disabled = playing;
         }
     }
 
@@ -390,6 +390,8 @@ function demo(log) {
     document.documentElement.innerHTML = "";
     let driver;
     let element;
+    const delay = Math.floor(1000 * (Math.random() ** 3)); // usually smaller
+    log("delay: " + delay + "ms");
     const core = make_core({
         wasm_url,
         on_txn(...args) {
@@ -403,7 +405,8 @@ function demo(log) {
     });
     driver = make_core_driver(core, function on_status(message) {
         log("status", message);
-        element.receive_status(message);
+        setTimeout(element.receive_status, delay, message);
+        // element.receive_status(message);
     });
     parseq.sequence([
         core.h_initialize(),
@@ -426,7 +429,7 @@ function demo(log) {
     });
     element.style.position = "fixed";
     element.style.inset = "0";
-    // document.head.append(dom("meta", {name: "color-scheme", content: "dark"}));
+    document.head.append(dom("meta", {name: "color-scheme", content: "dark"}));
     document.body.append(element);
 }
 
