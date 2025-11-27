@@ -20,6 +20,7 @@ import rom_ui from "./rom_ui.js";
 const lib_url = import.meta.resolve("https://ufork.org/lib/");
 const wasm_url = import.meta.resolve("https://ufork.org/wasm/ufork.debug.wasm");
 
+const quench = Object.freeze({});
 const pause_statuses = Object.freeze(["audit", "debug", "fault"]);
 const max_play_interval = 1000;
 const default_view = "actors";
@@ -29,7 +30,7 @@ const debugger_ui = make_ui("debugger-ui", function (element, {
     view = default_view
 }) {
     let interval = 0;
-    let interval_timer;
+    let interval_timer = quench;
     let play_button;
     let step_button;
     let step_select;
@@ -71,31 +72,39 @@ const debugger_ui = make_ui("debugger-ui", function (element, {
         return play_button.textContent === "Pause";
     }
 
+    function set_auto_pause_for_step() {
+        send_command({
+            kind: "auto_pause",
+            on: pause_statuses.concat(step_select.value)
+        });
+    }
+
     function set_auto_pause_for_play() {
-        const on = (
-            interval > 0
-            ? pause_statuses.concat(step_select.value)
-            : pause_statuses
-        );
-        send_command({kind: "auto_pause", on});
+        if (interval > 0) {
+            set_auto_pause_for_step();
+        } else {
+            send_command({kind: "auto_pause", on: pause_statuses});
+        }
     }
 
     function toggle_play() {
         if (is_playing()) {
             clearTimeout(interval_timer);
+            interval_timer = quench;
             send_command({kind: "pause"});
         } else {
             set_auto_pause_for_play();
+            clearTimeout(interval_timer);
+            interval_timer = true;
             send_command({kind: "play"});
         }
     }
 
     function step() {
         if (!step_button.disabled) {
-            send_command({
-                kind: "auto_pause",
-                on: pause_statuses.concat(step_select.value)
-            });
+            set_auto_pause_for_step();
+            clearTimeout(interval_timer);
+            interval_timer = quench;
             send_command({kind: "play"});
         }
     }
@@ -313,6 +322,7 @@ const debugger_ui = make_ui("debugger-ui", function (element, {
             if (
                 !playing
                 && interval > 0
+                && interval_timer !== quench
                 && ok_step !== undefined
             ) {
                 clearTimeout(interval_timer);
@@ -391,7 +401,6 @@ function demo(log) {
     let driver;
     let element;
     const delay = Math.floor(1000 * (Math.random() ** 3)); // usually smaller
-    log("delay: " + delay + "ms");
     const core = make_core({
         wasm_url,
         on_txn(...args) {
@@ -417,7 +426,7 @@ function demo(log) {
             timer_dev(core);
             core.h_boot();
             element.set_connected(true);
-            return true;
+            return "delay: " + delay + "ms";
         })
     ])(log);
     element = debugger_ui({
