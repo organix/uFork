@@ -10,7 +10,7 @@ function clock_dev(core) {
     const dev_id = core.u_read_quad(dev_ptr).x;
     core.h_install(dev_id, dev_cap, undefined, {
         host_clock() {
-            return performance.now();
+            return Math.floor(performance.now());
         }
     });
 }
