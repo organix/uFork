@@ -17,7 +17,7 @@ import timer_dev from "../timer_dev.js";
 const lib_url = import.meta.resolve("https://ufork.org/lib/");
 const wasm_url = import.meta.resolve("https://ufork.org/wasm/ufork.debug.wasm");
 
-const max_fixnum = ufork.fixnum(2 ** 30 - 1);
+const max_fixnum = ufork.fixnum(0x3FFF); // maximum positive 16-bit fixnum
 const resource_error_codes = Object.freeze([
     ufork.E_MEM_LIM,
     ufork.E_MSG_LIM,
@@ -138,7 +138,9 @@ function make_driver(core, on_status) {
                 : 0
             );
 
-// If the root sponsor is exhausted, refill it and retry.
+// If the root sponsor is exhausted, refill it and retry. We choose a value
+// large enough that it will not impact performance, but not so large that auto
+// refilling is rarely exercised.
 
             if (auto_refill_enabled && resource_signals.includes(signal)) {
                 core.h_refill({
