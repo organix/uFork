@@ -48,7 +48,7 @@ system.
 
 Each _definition_ consists of a _name_ and a _value_. The _name_ can be any
 string. The _value_ is a _literal_, _fixnum_, _type_, _pair_, _dict_, _instr_,
-or _ref_.
+_quad_, or _ref_.
 
 Definitions are private by default. Only definitions whose names are included in
 the `export` array will be accessible by other modules.
@@ -221,7 +221,7 @@ and is not present on "jump" or "end" instructions.
 "pick"          | _fixnum_
 "dup"           | _fixnum_
 "roll"          | _fixnum_
-"alu"           | "not", "and", "or", "xor", "add", "sub", "mul"
+"alu"           | "not", "and", "or", "xor", "add", "sub", "mul", "div", "lsl", "lsr", "asr", "rol", "ror"
 "eq"            | _value_
 "cmp"           | "eq", "ge", "gt", "lt", "le", "ne"
 "msg"           | _fixnum_
