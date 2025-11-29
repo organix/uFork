@@ -195,6 +195,12 @@ _n_ _m_              | `alu` `xor`         | _n_^_m_      | bitwise _n_ exclusiv
 _n_ _m_              | `alu` `add`         | _n_+_m_      | sum of _n_ and _m_
 _n_ _m_              | `alu` `sub`         | _n_-_m_      | difference of _n_ and _m_
 _n_ _m_              | `alu` `mul`         | _n_\*_m_     | product of _n_ and _m_
+_n_ _m_              | `alu` `div`         | _q_ _r_      | Euclidean quotient and remainder/modulus
+_n_ _m_              | `alu` `lsl`         | _n_<<_m_     | logical shift left _n_ by _m_
+_n_ _m_              | `alu` `lsr`         | _n_>>_m_     | logical shift right _n_ by _m_
+_n_ _m_              | `alu` `asr`         | _n_>>>_m_    | arithmetic shift right _n_ by _m_
+_n_ _m_              | `alu` `rol`         | _n_<<>_m_    | rotate left _n_ by _m_
+_n_ _m_              | `alu` `ror`         | _n_<>>_m_    | rotate right _n_ by _m_
 _v_                  | `typeq` _T_         | _bool_       | `#t` if _v_ has type _T_, otherwise `#f`
 _u_                  | `eq` _v_            | _bool_       | `#t` if _u_ == _v_, otherwise `#f`
 _u_ _v_              | `cmp` `eq`          | _bool_       | `#t` if _u_ == _v_, otherwise `#f`
