@@ -39,5 +39,9 @@ pkgs.mkShell {
         then
             ./update.sh
         fi
+
+# Add locally built tools to the PATH.
+
+        PATH=$PATH:$(pwd)/wishbone-utils/wishbone-tool/target/release
     '';
 }

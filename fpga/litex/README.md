@@ -25,7 +25,7 @@ So far, it is possible to build and install a basic LiteX design by running
         --cpu-type None \
         --build
 
-    dfu-util -D build/kosagi_fomu/gateware/kosagi_fomu.bin
+    dfu-util -D build/kosagi_fomu_pvt/gateware/kosagi_fomu_pvt.bin
 
 Alternatively,
 [a MicroPython image](https://workshop.fomu.im/en/latest/python.html) containing
