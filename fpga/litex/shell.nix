@@ -28,9 +28,10 @@ pkgs.mkShell {
     shellHook = ''
 
 # Instead of polluting the site-packages directory at the system or user level,
-# use a dedicated site-packages at the project level.
+# use a Python Virtual Environment.
 
-        export PYTHONPATH="$(pwd)/site-packages/:$PYTHONPATH"
+        python3 -m venv venv
+        source venv/bin/activate
 
 # Take the absence of the Litex source to mean installation is required.
 
@@ -38,14 +39,5 @@ pkgs.mkShell {
         then
             ./update.sh
         fi
-
-# We also shadow site-packages/* with litex_repos/*, because otherwise local
-# module resolution within litex_repos/litex-boards fails, and outdated packages
-# in site-packages override the up-to-date sources in litex_repos.
-
-        for repo in litex_repos/*
-        do
-            export PYTHONPATH="$(pwd)/$repo/:$PYTHONPATH"
-        done
     '';
 }

@@ -4,22 +4,19 @@ set -euo pipefail
 # Update the source code of the various LiteX repositories, or fetch them if
 # missing.
 
-curl -sSfO https://raw.githubusercontent.com/enjoy-digital/litex/master/litex_setup.py
+LITEX_TAG=2025.08
+curl -sSfO https://raw.githubusercontent.com/enjoy-digital/litex/$LITEX_TAG/litex_setup.py
 chmod +x litex_setup.py
+
+# The --dev flag disables auto-update of litex_setup.py, which otherwise thwarts
+# our ability to pin the Litex version.
+
 if test -d litex_repos
 then
-    pushd litex_repos
-    ../litex_setup.py --update
+    PRE_ACTION="--update"
 else
     mkdir litex_repos
-    pushd litex_repos
-    ../litex_setup.py --init
+    PRE_ACTION="--init"
 fi
-
-# Install each LiteX package using Python's 'pip' installer, confining external
-# Python dependencies to the project directory.
-
-for repo in *
-do
-    pip install --upgrade --editable "$repo" --target ../site-packages
-done
+pushd litex_repos
+../litex_setup.py --dev --tag $LITEX_TAG $PRE_ACTION --install
