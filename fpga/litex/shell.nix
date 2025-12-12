@@ -23,6 +23,12 @@ pkgs.mkShell {
         pkgs.python3                      # https://www.python.org/
         pkgs.python39Packages.pip         # https://pypi.org/project/pip/
         pkgs.python39Packages.setuptools  # https://pypi.org/project/setuptools/
+    ] ++ pkgs.lib.optionals pkgs.stdenv.isDarwin [
+
+# These are only required for building wishbone-tool under macOS.
+
+        pkgs.darwin.apple_sdk.frameworks.IOKit
+        pkgs.libiconv
     ];
 
     shellHook = ''
@@ -40,8 +46,12 @@ pkgs.mkShell {
             ./update.sh
         fi
 
-# Add locally built tools to the PATH.
+# Build wishbone-tool from source.
 
+        if ! test -d wishbone-utils
+        then
+            ./install_wishbone.sh
+        fi
         PATH=$PATH:$(pwd)/wishbone-utils/wishbone-tool/target/release
     '';
 }

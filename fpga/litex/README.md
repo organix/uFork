@@ -15,9 +15,7 @@ The preliminary goal is to:
 
 Run `nix-shell` from this directory. It will automatically install some LiteX
 dependencies, pinned to working versions. If necessary, it will then run
-`./update.sh` to install the latest version of LiteX.
-
-LiteX can be updated by running `./update.sh`.
+`./update.sh` to install a working version of LiteX.
 
 So far, it is possible to build and install a basic LiteX design by running
 
@@ -44,9 +42,5 @@ reads and writes from BRAM and SPRAM.
 
 If the design contains a Wishbone USB bridge,
 [it is possible](https://workshop.fomu.im/en/latest/riscv.html) to read and
-write arbitrary memory locations using
-[the `wishbone-tool` command](https://wishbone-utils.readthedocs.io/).
-Unfortunately, `wishbone-tool` does not build on MacOS. However, a prebuilt
-binary for Linux is
-[available on GitHub](https://github.com/litex-hub/wishbone-utils/releases)
-and can be run in a VM if necessary.
+write arbitrary memory locations using the installed
+[`wishbone-tool` command](https://wishbone-utils.readthedocs.io/).
