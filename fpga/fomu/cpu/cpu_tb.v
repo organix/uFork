@@ -51,7 +51,7 @@ module test_bench;
     wire rx = tx;                                       // loop-back from transmitter
     wire tx;
     cpu CPU (
-        .i_clk(clk),
+        .i_clk_12(clk),
         .i_run(!waiting),
         .i_rx(rx),
         .o_tx(tx),

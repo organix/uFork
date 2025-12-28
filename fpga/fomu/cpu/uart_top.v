@@ -6,6 +6,7 @@ Physical Test Bench for uart.v
 
 `default_nettype none
 
+`include "../lib/fifo.v" // required by `uart.v`
 `include "uart.v"
 
 module top (

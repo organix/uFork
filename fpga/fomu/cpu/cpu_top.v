@@ -28,11 +28,6 @@ module top (
 //    parameter CLK_FREQ      = 48_000_000;               // clock frequency (Hz)
     parameter CLK_FREQ      = 12_000_000;               // clock frequency (Hz)
 
-    // disable Fomu USB
-    assign usb_dp = 1'b0;
-    assign usb_dn = 1'b0;
-    assign usb_dp_pu = 1'b0;
-
     // connect system clock (with buffering)
     reg [1:0] clk_div = 2'b00;
     always @(posedge clki) begin
@@ -151,6 +146,62 @@ module top (
     );
     */
 
+    // configure USB pins
+    wire tx_en;
+    wire dp_tx;
+    wire dp_rx;
+    SB_IO #(
+        .PIN_TYPE(6'b101001),
+        .PULLUP(1'b0)
+    ) u_usb_dp (
+        .PACKAGE_PIN(usb_dp),                           // D+
+        .OUTPUT_ENABLE(tx_en),
+        .D_OUT_0(dp_tx),
+        .D_IN_0(dp_rx),
+        .D_OUT_1(1'b0),
+        .D_IN_1(),
+        .CLOCK_ENABLE(1'b0),
+        .LATCH_INPUT_VALUE(1'b0),
+        .INPUT_CLK(1'b0),
+        .OUTPUT_CLK(1'b0)
+    );
+
+    wire dn_rx;
+    wire dn_tx;
+    SB_IO #(
+        .PIN_TYPE(6'b101001),
+        .PULLUP(1'b0)
+    ) u_usb_dn (
+        .PACKAGE_PIN(usb_dn),                           // D-
+        .OUTPUT_ENABLE(tx_en),
+        .D_OUT_0(dn_tx),
+        .D_IN_0(dn_rx),
+        .D_OUT_1(1'b0),
+        .D_IN_1(),
+        .CLOCK_ENABLE(1'b0),
+        .LATCH_INPUT_VALUE(1'b0),
+        .INPUT_CLK(1'b0),
+        .OUTPUT_CLK(1'b0)
+    );
+
+    // drive USB Pullup to 3.3V or to high impedance
+    wire dp_pu;
+    SB_IO #(
+        .PIN_TYPE(6'b101001),
+        .PULLUP(1'b0)
+    ) u_usb_pu (
+        .PACKAGE_PIN(usb_dp_pu),
+        .OUTPUT_ENABLE(dp_pu),
+        .D_OUT_0(1'b1),
+        .D_IN_0(),
+        .D_OUT_1(1'b0),
+        .D_IN_1(),
+        .CLOCK_ENABLE(1'b0),
+        .LATCH_INPUT_VALUE(1'b0),
+        .INPUT_CLK(1'b0),
+        .OUTPUT_CLK(1'b0)
+    );
+
     // start-up delay
     reg run = 1'b0;
     reg [5:0] waiting = 0;
@@ -166,7 +217,7 @@ module top (
     cpu #(
         .CLK_FREQ(CLK_FREQ)
     ) CPU (
-        .i_clk(clk),
+        .i_clk_12(clk),
         .i_run(run),
         .i_rx(serial_rx),
         .o_tx(serial_tx),
@@ -175,7 +226,15 @@ module top (
         .i_cipo(cipo),
         .o_sclk(sclk),
         .o_running(running),
-        .o_status(passed)
+        .o_status(passed),
+
+        .i_clk_48(clki),
+        .i_dp_rx(dp_rx),
+        .i_dn_rx(dn_rx),
+        .o_dp_pu(dp_pu),
+        .o_tx_en(tx_en),
+        .o_dp_tx(dp_tx),
+        .o_dn_tx(dn_tx),
     );
 
     // drive LEDs

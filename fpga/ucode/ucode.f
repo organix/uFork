@@ -195,13 +195,13 @@ VARIABLE spi_page ( bits [31:16] of SPI address )
     SWAP 8LSB& ;
 
 : CS! ( bool -- )
-    0xf0 IO! ;              ( assert chip-select )
+    0xF0 IO! ;              ( assert chip-select )
 : DO! ( byte -- )
-    0xf1 IO! ;              ( send data byte )
+    0xF1 IO! ;              ( send data byte )
 : DR? ( -- bool )
-    0xf2 IO@ ;              ( data ready/done )
+    0xF2 IO@ ;              ( data ready/done )
 : DI@ ( -- byte )
-    0xf3 IO@ ;              ( last byte received )
+    0xF3 IO@ ;              ( last byte received )
 : WAIT_DR ( -- )
     BEGIN DR? UNTIL ;       ( wait until ready/done )
 

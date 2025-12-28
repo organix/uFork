@@ -224,11 +224,17 @@ in a single CPU-instruction cycle.
     |    device ID  |  register ID  |
     *---+---+---+---*---+---+---+---*
 
-  * `0x`: Serial UART
+  * `0x`: Debug UART
     * `00`: TX?
     * `01`: TX!
     * `02`: RX?
     * `03`: RX@
+
+  * `1x`: Console UART
+    * `10`: TX?
+    * `11`: TX!
+    * `12`: RX?
+    * `13`: RX@
 
   * `Fx`: SPI Flash Memory
     * `F0`: CS!

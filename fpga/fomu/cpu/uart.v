@@ -26,7 +26,7 @@ on the previous clock-cycle.
 
 `include "../lib/serial_tx.v"
 `include "../lib/serial_rx.v"
-`include "../lib/fifo.v"
+//`include "../lib/fifo.v" -- included in `cpu.v`
 
 module uart #(
     parameter CLK_FREQ      = 48_000_000,               // clock frequency (Hz)

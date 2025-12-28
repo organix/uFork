@@ -12,8 +12,16 @@ uCode Central Processing Unit (CPU)
     |             o_copi|--->
     |             i_cipo|<---
     |             o_sclk|--->
- +->|i_clk              |
- |  +-------------------+
+    |                   |
+    |            i_dp_rx|<---
+    |            i_dn_rx|<---
+    |            o_dp_pu|--->
+    |            o_tx_en|--->
+    |            o_dp_tx|--->
+    |            o_dn_tx|--->
+    |                   |
+ +->|i_clk_12   i_clk_48|<-+
+ |  +-------------------+  |
 
 The CPU runs when `i_run` is asserted.
 `o_running` is asserted while the CPU is active.
@@ -28,7 +36,6 @@ the value of `o_status` indicates success (1) or failure (0).
 `include "lifo_se.v"
 `include "alu.v"
 //`include "alu_nr.v"
-`include "uart.v"
 `ifdef __ICARUS__
 `include "quad_mem.v"
 `else
@@ -37,12 +44,15 @@ the value of `o_status` indicates success (1) or failure (0).
 `endif
 `include "gcc.v"
 `include "flash.v"
+`include "../lib/fifo.v" // required by `uart.v` and `usb_uart.v`
+`include "uart.v"
+`include "usb_uart.v"
 
 // Memory Ranges
 `define MEM_UC  (3'h0)      // uCode memory
 `define MEM_PC  (3'h1)      // contents of PC+1 & increment
 `define MEM_GCC (3'h2)      // GC color markers
-`define MEM_DEV (3'h3)      // memory-mapped devices
+`define MEM_DEV (3'h3)      // memory-mapped device registers
 `define MEM_Q_T (3'h4)      // uFork quad-memory field T
 `define MEM_Q_X (3'h5)      // uFork quad-memory field X
 `define MEM_Q_Y (3'h6)      // uFork quad-memory field Y
@@ -55,10 +65,12 @@ the value of `o_status` indicates success (1) or failure (0).
 `define UART_RX_DAT (8'h03)
 
 module cpu #(
-    parameter CLK_FREQ      = 48_000_000                // clock frequency (Hz)
+    parameter CLK_FREQ      = 12_000_000                // clock frequency (Hz)
 ) (
-    input                   i_clk,                      // system clock
+    input                   i_clk_12,                   // 12MHz clock
     input                   i_run,                      // run the processor
+    output                  o_running,                  // processor active
+    output reg              o_status,                   // final status
 
     input                   i_rx,                       // serial port transmit
     output                  o_tx,                       // serial port receive
@@ -68,9 +80,15 @@ module cpu #(
     input                   i_cipo,                     // SPI controller input
     output                  o_sclk,                     // SPI controller clock
 
-    output                  o_running,                  // processor active
-    output reg              o_status                    // final status
+    input                   i_clk_48,                   // 48MHz clock
+    input                   i_dp_rx,                    // USB D+ receive
+    input                   i_dn_rx,                    // USB D- receive
+    output                  o_dp_pu,                    // USB D+ pull-up
+    output                  o_tx_en,                    // USB transmit enable
+    output                  o_dp_tx,                    // USB D+ transmit
+    output                  o_dn_tx                     // USB D- transmit
 );
+    wire i_clk = i_clk_12;                              // system clock
 
     initial o_status = 1'b1;                            // default to success
 
@@ -372,25 +390,6 @@ module cpu #(
     );
 
     //
-    // serial UART
-    //
-
-    uart #(
-        .CLK_FREQ(CLK_FREQ)
-    ) UART (
-        .i_clk(i_clk),
-        .i_rx(i_rx),
-        .o_tx(o_tx),
-
-        .i_en(uart_en),
-        .i_wr(uart_wr),
-        .i_addr(uart_addr),
-        .i_data(uart_wdata),
-
-        .o_data(uart_rdata)
-    );
-
-    //
     // uFork quad-cell memory
     //
 
@@ -442,6 +441,46 @@ module cpu #(
         .o_data(flash_rdata)
     );
     
+    //
+    // debug UART
+    //
+
+    uart #(
+        .CLK_FREQ(CLK_FREQ)
+    ) UART (
+        .i_clk(i_clk),
+        .i_rx(i_rx),
+        .o_tx(o_tx),
+
+        .i_en(uart_en),
+        .i_wr(uart_wr),
+        .i_addr(uart_addr),
+        .i_data(uart_wdata),
+
+        .o_data(uart_rdata)
+    );
+
+    //
+    // console UART
+    //
+
+    usb_uart USB_UART (
+        .i_clk_48(i_clk_48),
+        .dp_rx(i_dp_rx),
+        .dn_rx(i_dn_rx),
+        .dp_pu(o_dp_pu),
+        .tx_en(o_tx_en),
+        .dp_tx(o_dp_tx),
+        .dn_tx(o_dn_tx),
+
+        .i_clk_12(i_clk_12),
+        .i_en(usb_en),
+        .i_wr(usb_wr),
+        .i_addr(usb_addr),
+        .i_data(usb_wdata),
+        .o_data(usb_rdata)
+    );
+
     //
     // uCode execution engine
     //
@@ -516,6 +555,7 @@ module cpu #(
     wire [DATA_SZ-1:0] mem_out =
         ( mem_rng == `MEM_GCC ? { {(DATA_SZ-2){1'b0}}, gcc_rdata }
         : mem_rng == `MEM_DEV && dev_id == 4'h0 ? { {(DATA_SZ-8){uart_rdata[7]}}, uart_rdata }
+        : mem_rng == `MEM_DEV && dev_id == 4'h1 ? { {(DATA_SZ-8){usb_rdata[7]}}, usb_rdata }
         : mem_rng == `MEM_DEV && dev_id == 4'hF ? { {(DATA_SZ-8){flash_rdata[7]}}, flash_rdata }
         : quad_op ? quad_rdata
         : uc_rdata );
@@ -545,12 +585,6 @@ module cpu #(
         : tos );
     wire [DATA_SZ-1:0] alu_out;
 
-    wire uart_en = (p_alu && mem_op && mem_rng == `MEM_DEV && dev_id == 4'h0);
-    wire uart_wr = mem_wr;
-    wire [3:0] uart_addr = reg_id;
-    wire [7:0] uart_wdata = nos[7:0];
-    wire [7:0] uart_rdata;
-
     wire quad_en = (p_alu && mem_op && quad_op);
     wire cs_qram = (quad_en && tos[15:14]==2'b01);
     wire cs_qrom0 = (quad_en && tos[15:12]==4'b0000);
@@ -566,6 +600,18 @@ module cpu #(
     wire [3:0] flash_addr = reg_id;
     wire [7:0] flash_wdata = nos[7:0];
     wire [7:0] flash_rdata;
+
+    wire uart_en = (p_alu && mem_op && mem_rng == `MEM_DEV && dev_id == 4'h0);
+    wire uart_wr = mem_wr;
+    wire [3:0] uart_addr = reg_id;
+    wire [7:0] uart_wdata = nos[7:0];
+    wire [7:0] uart_rdata;
+
+    wire usb_en = (p_alu && mem_op && mem_rng == `MEM_DEV && dev_id == 4'h1);
+    wire usb_wr = mem_wr;
+    wire [3:0] usb_addr = reg_id;
+    wire [7:0] usb_wdata = nos[7:0];
+    wire [7:0] usb_rdata;
 
     reg p_alu = 0;                                      // 0: stack-phase, 1: alu-phase
     always @(posedge i_clk) begin
