@@ -234,7 +234,7 @@ module top (
         .o_dp_pu(dp_pu),
         .o_tx_en(tx_en),
         .o_dp_tx(dp_tx),
-        .o_dn_tx(dn_tx),
+        .o_dn_tx(dn_tx)
     );
 
     // drive LEDs
