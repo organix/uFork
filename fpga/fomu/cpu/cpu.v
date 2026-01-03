@@ -498,6 +498,7 @@ module cpu #(
 
     reg [ADDR_SZ-1:0] pc = 0;                           // program counter
     wire [ADDR_SZ-1:0] pc_plus_1 = pc + 1'b1;           // program counter incremented
+    reg [DATA_SZ-1:0] instr_cnt = 0;                    // instruction counter
     reg [DATA_SZ-1:0] instr_r = UC_NOP;
     wire [DATA_SZ-1:0] instr =                          // current instruction
         ( p_alu ? uc_rdata
@@ -557,6 +558,7 @@ module cpu #(
         ( mem_rng == `MEM_GCC ? { {(DATA_SZ-2){1'b0}}, gcc_rdata }
         : mem_rng == `MEM_DEV && dev_id == 4'h0 ? { {(DATA_SZ-8){uart_rdata[7]}}, uart_rdata }
         : mem_rng == `MEM_DEV && dev_id == 4'h1 ? { {(DATA_SZ-8){usb_rdata[7]}}, usb_rdata }
+        : mem_rng == `MEM_DEV && dev_id == 4'hE ? ( reg_id == 4'h0 ? instr_cnt : 0 )
         : mem_rng == `MEM_DEV && dev_id == 4'hF ? { {(DATA_SZ-8){flash_rdata[7]}}, flash_rdata }
         : quad_op ? quad_rdata
         : uc_rdata );
@@ -628,6 +630,7 @@ module cpu #(
             end else if (ctrl && branch) begin
                 pc <= instr[ADDR_SZ-1:0];               // jump or call procedure
             end
+            instr_cnt <= instr_cnt + 1'b1;
             instr_r <= uc_rdata;
             p_alu <= !p_alu;
         end else if (o_running) begin
