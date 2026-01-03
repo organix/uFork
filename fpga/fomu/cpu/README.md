@@ -354,7 +354,7 @@ as the design and implementation evolves.
 ### USB-CDC ACM Serial Bridge
 
     Info: Device utilisation:
-    Info: 	         ICESTORM_LC:  2697/ 5280    51%
+    Info: 	         ICESTORM_LC:  2719/ 5280    51%
     Info: 	        ICESTORM_RAM:    22/   30    73%
     Info: 	               SB_IO:    12/   96    12%
     Info: 	               SB_GB:     8/    8   100%
@@ -369,4 +369,4 @@ as the design and implementation evolves.
     Info: 	         SB_LEDDA_IP:     0/    1     0%
     Info: 	         SB_RGBA_DRV:     1/    1   100%
     Info: 	      ICESTORM_SPRAM:     3/    4    75%
-    Info: Max frequency for clock 'clk': 26.46 MHz (PASS at 12.00 MHz)
+    Info: Max frequency for clock 'clk': 24.91 MHz (PASS at 12.00 MHz)

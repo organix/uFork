@@ -11,7 +11,7 @@ USB UART (USB-CDC ACM serial bridge)
 =8=>|i_data        tx_en|--->
 <=8-|o_data        dp_tx|--->
     |              dn_tx|--->
-    |                   |
+--->|i_rstn             |
  +->|i_clk_12   i_clk_48|<-+
  |  +-------------------+  |
 
@@ -40,6 +40,7 @@ module usb_uart #(
     output                  dp_tx,                      // USB D+ transmit
     output                  dn_tx,                      // USB D- transmit
 
+    input                   i_rstn,                     // reset (active low)
     input                   i_clk_12,                   // 12MHz system clock
     input                   i_en,                       // device enable
     input                   i_wr,                       // {0:read, 1:write}
@@ -68,7 +69,7 @@ module usb_uart #(
         .dp_tx_o(dp_tx),
         .dn_tx_o(dn_tx),
         // application interface (12MHz)
-        .rstn_i(1'b1),  // no reset
+        .rstn_i(i_rstn),
         .app_clk_i(i_clk_12),
         //.frame_o(),
         //.configured_o(),

@@ -473,6 +473,7 @@ module cpu #(
         .dp_tx(o_dp_tx),
         .dn_tx(o_dn_tx),
 
+        .i_rstn(!i_run),
         .i_clk_12(i_clk_12),
         .i_en(usb_en),
         .i_wr(usb_wr),
