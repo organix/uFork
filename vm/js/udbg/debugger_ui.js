@@ -22,7 +22,13 @@ const wasm_url = import.meta.resolve("https://ufork.org/wasm/ufork.debug.wasm");
 
 const quench = Object.freeze({});
 const pause_statuses = Object.freeze(["audit", "debug", "fault"]);
+const resource_error_codes = Object.freeze([
+    ufork.E_MEM_LIM,
+    ufork.E_MSG_LIM,
+    ufork.E_CPU_LIM
+]);
 const max_play_interval = 1000;
+const refill_amount = 1009; // approx 60FPS, prime minimizes resonance
 const default_view = "actors";
 const debugger_ui = make_ui("debugger-ui", function (element, {
     send_command,
@@ -170,6 +176,17 @@ const debugger_ui = make_ui("debugger-ui", function (element, {
         }
     };
 
+    function refill() {
+        send_command({
+            kind: "refill",
+            resources: {
+                memory: refill_amount,
+                events: refill_amount,
+                cycles: refill_amount
+            }
+        });
+    }
+
     function auto_step_size() {
         if (connected) {
             if (view === "actors") {
@@ -297,6 +314,21 @@ const debugger_ui = make_ui("debugger-ui", function (element, {
             set_view("source");
         } else if (message.fault !== undefined) {
             const {code} = message.fault;
+            if (resource_error_codes.includes(code)) {
+
+// If the root sponsor is continually being exhausted then the core might be
+// stuck in an infinite loop. Execution is continued on the next turn so as to
+// avoid blocking the UI.
+
+                refill();
+                const maybe_quench = play_timer;
+                clearTimeout(play_timer);
+                play_timer = setTimeout(function () {
+                    play_timer = maybe_quench;
+                    send_command({kind: "play"});
+                });
+                return;
+            }
             fault_message.textContent = ufork.fault_msg(code);
             fault_message.style.color = theme.red;
         } else if (message.idle !== undefined) {
@@ -375,7 +407,12 @@ const debugger_ui = make_ui("debugger-ui", function (element, {
                     txn: false
                 }
             });
-            send_command({kind: "auto_refill", enabled: true});
+
+// When running at full speed with "auto_refill" enabled, it is possible for the
+// UI to block indefinitely. To avoid this catastrophic scenario, resource
+// limits are used to break up long running execution over multiple turns.
+
+            refill();
             auto_step_size();
         }
     }
@@ -426,13 +463,13 @@ function demo(log) {
     });
     driver = make_core_driver(core, function on_status(message) {
         log("status", message);
-        setTimeout(element.receive_status, delay, message);
-        // element.receive_status(message);
+        // setTimeout(element.receive_status, delay, message);
+        element.receive_status(message);
     });
     parseq.sequence([
         core.h_initialize(),
-        // core.h_import("loop.asm", infinite_loop_asm),
-        core.h_import("https://ufork.org/lib/cell.asm"),
+        core.h_import("loop.asm", infinite_loop_asm),
+        // core.h_import("https://ufork.org/lib/cell.asm"),
         // core.h_import("https://ufork.org/lib/blob.asm"),
         requestorize(function () {
             blob_dev(core);
