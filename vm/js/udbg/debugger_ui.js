@@ -396,6 +396,17 @@ const debugger_ui = make_ui("debugger-ui", function (element, {
     };
 });
 
+const infinite_loop_asm = `
+boot:                       ; _ <- {caps}
+    msg 0                   ; {caps}
+    actor self              ; {caps} SELF
+    actor send
+    end commit
+
+.export
+    boot
+`;
+
 function demo(log) {
     document.documentElement.innerHTML = "";
     let driver;
@@ -419,6 +430,7 @@ function demo(log) {
     });
     parseq.sequence([
         core.h_initialize(),
+        // core.h_import("loop.asm", infinite_loop_asm),
         core.h_import("https://ufork.org/lib/cell.asm"),
         // core.h_import("https://ufork.org/lib/blob.asm"),
         requestorize(function () {
