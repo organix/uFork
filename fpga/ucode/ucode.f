@@ -142,20 +142,20 @@
 
 : TX? ( -- ready )
 : EMIT?
-    0x00 IO@ ;
+    0x10 IO@ ;
 : SPACE ( -- )
     BL
 : EMIT ( char -- )
     BEGIN TX? UNTIL
 : TX! ( char -- )
-    0x01 IO! ;
+    0x11 IO! ;
 : RX? ( -- ready )
 : KEY?
-    0x02 IO@ ;
+    0x12 IO@ ;
 : KEY ( -- char )
     BEGIN RX? UNTIL
 : RX@ ( -- char )
-    0x03 IO@ ;
+    0x13 IO@ ;
 (
 : SPACES ( n -- )
     ?LOOP-
@@ -2160,7 +2160,7 @@ VARIABLE run_return         ( address to jump to when run_loop is done )
 : run_signal ( error -- )
     root_spn spn_signal!
 : run_exit
-    report_instr_cnt
+    ( report_instr_cnt )
     ( RESET )
     run_return @EXECUTE ;
 : run_abort ( -- )
@@ -2173,7 +2173,7 @@ VARIABLE run_limit          ( number of iterations remaining )
 VARIABLE saved_sp           ( sp before instruction execution )
 : run_loop ( limit -- )
     R> run_return !
-    report_instr_cnt
+    ( report_instr_cnt )
 : run_again ( limit -- )
     run_limit !
     #? root_spn spn_signal!
