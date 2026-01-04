@@ -63,7 +63,7 @@ significantly reduced.
 ### {kind: "refill", resources: _object_}
 
 Refill the root sponsor with the given `resources`, an object like
-{memory, events, cycles}.
+`{memory, events, cycles}`.
 
 ### {kind: "auto_refill", enabled: _boolean_}
 

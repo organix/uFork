@@ -30,7 +30,7 @@ const debugger_ui = make_ui("debugger-ui", function (element, {
     view = default_view
 }) {
     let interval = 0;
-    let interval_timer = quench;
+    let play_timer = quench;
     let play_button;
     let step_button;
     let step_select;
@@ -89,13 +89,13 @@ const debugger_ui = make_ui("debugger-ui", function (element, {
 
     function toggle_play() {
         if (is_playing()) {
-            clearTimeout(interval_timer);
-            interval_timer = quench;
+            clearTimeout(play_timer);
+            play_timer = quench;
             send_command({kind: "pause"});
         } else {
             set_auto_pause_for_play();
-            clearTimeout(interval_timer);
-            interval_timer = true;
+            clearTimeout(play_timer);
+            play_timer = true;
             send_command({kind: "play"});
         }
     }
@@ -103,8 +103,8 @@ const debugger_ui = make_ui("debugger-ui", function (element, {
     function step() {
         if (!step_button.disabled) {
             set_auto_pause_for_step();
-            clearTimeout(interval_timer);
-            interval_timer = quench;
+            clearTimeout(play_timer);
+            play_timer = quench;
             send_command({kind: "play"});
         }
     }
@@ -322,11 +322,11 @@ const debugger_ui = make_ui("debugger-ui", function (element, {
             if (
                 !playing
                 && interval > 0
-                && interval_timer !== quench
+                && play_timer !== quench
                 && ok_step !== undefined
             ) {
-                clearTimeout(interval_timer);
-                interval_timer = setTimeout(
+                clearTimeout(play_timer);
+                play_timer = setTimeout(
                     send_command,
                     interval,
                     {kind: "play"}
