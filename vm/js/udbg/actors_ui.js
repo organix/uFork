@@ -480,10 +480,8 @@ function demo(log) {
                     txn: true
                 }
             });
-            driver.command({
-                kind: "auto_pause",
-                on: ["audit", "fault", "txn"]
-            });
+            driver.command({kind: "auto_pause", on: ["audit", "fault", "txn"]});
+            driver.command({kind: "auto_refill", enabled: true});
             driver.command({kind: "play"});
             return true;
         })

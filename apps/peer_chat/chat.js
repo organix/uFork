@@ -161,6 +161,7 @@ parseq.sequence([
         core.h_install(ufork.fixnum(room_key), ufork.fixnum(petname));
         core.h_boot();
         if (typeof debug !== "string") {
+            driver.command({kind: "auto_refill", enabled: true});
             driver.command({kind: "play"});
             return true;
         }

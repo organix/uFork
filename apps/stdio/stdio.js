@@ -69,6 +69,7 @@ parseq.sequence([
         }());
         core.h_boot();
         driver.command({kind: "statuses", verbose: {audit: true, fault: true}});
+        driver.command({kind: "auto_refill", enabled: true});
         driver.command({kind: "play"});
         return true;
     })

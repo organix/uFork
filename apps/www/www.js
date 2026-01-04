@@ -90,6 +90,7 @@ parseq.sequence([
             fs_deno()
         );
         core.h_boot();
+        driver.command({kind: "auto_refill", enabled: true});
         driver.command({kind: "play"});
         return true;
     })

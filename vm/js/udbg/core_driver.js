@@ -28,7 +28,7 @@ const running = Object.freeze({});
 
 function make_driver(core, on_status) {
     let auto_pause_on = [];
-    let auto_refill_enabled = true;
+    let auto_refill_enabled = false;
     let signal;
     let step_queue = [];
     let steps;
@@ -330,8 +330,8 @@ function demo(log) {
                 kind: "auto_pause",
                 on: ["audit", "debug", "fault", "txn"]
             });
-            // driver.command({kind: "auto_refill", enabled: false});
             // driver.command({kind: "refill", resources: {cycles: 3}});
+            // driver.command({kind: "auto_refill", enabled: true});
             driver.command({
                 kind: "statuses",
                 verbose: {

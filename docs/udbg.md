@@ -69,7 +69,7 @@ Refill the root sponsor with the given `resources`, an object like
 
 Enables or disables automatic refilling of the root sponsor.
 When `enabled` is true, the "play" command behaves as if the root
-sponsor is inexhaustible. Enabled by default.
+sponsor is inexhaustible. Disabled by default.
 
 ## Status messages
 

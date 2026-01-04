@@ -182,6 +182,7 @@ function demo(log) {
                 kind: "auto_pause",
                 on: ["audit", "fault", "instr"]
             });
+            driver.command({kind: "auto_refill", enabled: true});
             driver.command({kind: "play"});
             return true;
         })

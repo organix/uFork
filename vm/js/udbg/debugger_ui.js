@@ -375,6 +375,7 @@ const debugger_ui = make_ui("debugger-ui", function (element, {
                     txn: false
                 }
             });
+            send_command({kind: "auto_refill", enabled: true});
             auto_step_size();
         }
     }

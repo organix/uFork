@@ -389,6 +389,7 @@ const tools_ui = make_ui("tools-ui", function (element, {
                     kind: "statuses",
                     verbose: {audit: true, fault: true, idle: true, txn: true}
                 });
+                driver.command({kind: "auto_refill", enabled: true});
                 if (debug) {
                     on_attach();
                 } else {
