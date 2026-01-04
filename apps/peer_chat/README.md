@@ -130,7 +130,7 @@ then discarded.
                  |              |                   |              |
 
 This sequence diagram illustrates the transfer of message _m1_,
-and it's acknowledgment via the timer at the receiving end.
+and its acknowledgment via the timer at the receiving end.
 
 ### Party Configuration
 

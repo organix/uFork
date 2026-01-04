@@ -47,7 +47,7 @@ The address ranges for uFork and uCode are different
 (although both are 16 bits wide).
 uFork cannot address uCode program/data memory.
 uCode must be able to access uFork memory
-as well as it's own uCode program/data space.
+as well as its own uCode program/data space.
 uFork values are type-tagged,
 and include non-address _fixnums_.
 The following table illustrates the mapping

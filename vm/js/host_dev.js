@@ -37,7 +37,7 @@ function host_dev(core) {
 
     function drop_proxy(proxy_raw) {
 
-// A proxy has been garbage collected. Inform it's dynamic device.
+// A proxy has been garbage collected. Inform its dynamic device.
 
         const quad = core.u_read_quad(ufork.cap_to_ptr(proxy_raw));
         const handle = quad.y;

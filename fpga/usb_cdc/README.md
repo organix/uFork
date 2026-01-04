@@ -4,5 +4,5 @@
 
 USB\_CDC is a Verilog implementation of the Full Speed (12Mbit/s) USB communications device class (or USB CDC class). It implements the Abstract Control Model (ACM) subclass.
 
-It has it's own [LICENSE](./LICENSE)
+It has its own [LICENSE](./LICENSE)
 and original [README](./readme/README.md)

@@ -15,7 +15,7 @@ USB UART (USB-CDC ACM serial bridge)
  +->|i_clk_12   i_clk_48|<-+
  |  +-------------------+  |
 
-This component manages a serial tranmitter and receiver,
+This component manages a serial transmitter and receiver,
 providing a "memory-mapped" register interface. When
 `i_en` is asserted, the register selected on `i_addr`
 is written/read based on `i_wr`. `i_data` provides the
