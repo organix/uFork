@@ -21,8 +21,8 @@ module top (
     output                  spi_mosi,                   // SPI controller output
     input                   spi_miso,                   // SPI controller input
     output                  spi_clk,                    // SPI controller clock
-    output                  usb_dp,                     // USB D+
-    output                  usb_dn,                     // USB D-
+    inout                   usb_dp,                     // USB D+
+    inout                   usb_dn,                     // USB D-
     output                  usb_dp_pu                   // USB D+ pull-up
 );
 //    parameter CLK_FREQ      = 48_000_000;               // clock frequency (Hz)
