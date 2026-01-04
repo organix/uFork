@@ -61,9 +61,12 @@ function make_driver(core, on_status) {
     function step(kind, payload = {}) {
         const pause = auto_pause_on.includes(kind);
 
-// Skip steps that the client can not observe.
+// Unobserved steps are discarded, but still count as work.
 
         if (!pause && verbose[kind] !== true) {
+            if (steps !== undefined) {
+                steps -= 1;
+            }
             return;
         }
         let the_step = {kind, payload};
