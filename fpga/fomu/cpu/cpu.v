@@ -464,14 +464,6 @@ module cpu #(
     // console UART
     //
 
-    /*
-    reg [1:0] rstn_sync = 0;
-    wire rstn;
-    assign rstn = rstn_sync[0];
-    always @(posedge i_clk_48) begin                    // FIXME: should this use `i_clk_12`?
-        rstn_sync <= {1'b1, rstn_sync[1]};              // FIXME: should this follow `i_run`?
-    end
-    */
     usb_uart USB_UART (
         .i_clk_48(i_clk_48),
         .dp_rx(i_dp_rx),
@@ -481,7 +473,7 @@ module cpu #(
         .dp_tx(o_dp_tx),
         .dn_tx(o_dn_tx),
 
-        .i_rstn(i_run),                                 // FIXME: should this use `rstn`?
+        .i_rstn(i_run),
         .i_clk_12(i_clk_12),
         .i_en(usb_en),
         .i_wr(usb_wr),

@@ -2154,10 +2154,13 @@ del_none:                   ; k orig key rev next value' key'
     R> cap2ptr qz!          ( D: cont )
     cont_enqueue ;
 
+: report_instr_cnt ( -- )
+    0xE0 IO@ X. CR ;
 VARIABLE run_return         ( address to jump to when run_loop is done )
 : run_signal ( error -- )
     root_spn spn_signal!
 : run_exit
+    report_instr_cnt
     ( RESET )
     run_return @EXECUTE ;
 : run_abort ( -- )
@@ -2170,6 +2173,7 @@ VARIABLE run_limit          ( number of iterations remaining )
 VARIABLE saved_sp           ( sp before instruction execution )
 : run_loop ( limit -- )
     R> run_return !
+    report_instr_cnt
 : run_again ( limit -- )
     run_limit !
     #? root_spn spn_signal!
