@@ -10,7 +10,7 @@
     * Memory Descriptor
     * Event and Continuation Queues
     * Root Sponsor
-  * [Object Graph](#object-graph)
+  * [Object/Memory Graph](#object-memory-graph)
     * Pair-List Indexing
   * [Instructions](#instructions)
     * Instruction Summary
@@ -83,7 +83,7 @@ The resulting type-heirarchy looks like this:
 Direct values (fixnums) are stored in 2's-complement representation,
 where the 2nd MSB is the sign bit of the integer value.
 
-Indirect values (pointers) designate quad-cells (with fields [_T_, _X_, _Y_, _Z_]).
+Indirect values (pointers) designate quad-cells with fields [_T_, _X_, _Y_, _Z_].
 
 Mutable values designate a quad that may be written as well as read.
 Since actor-state is mutable, the quad representing the actor must stored in writable memory.
@@ -97,20 +97,23 @@ The machine-code semantics provide no way to convert between _fixnums_, _ocaps_,
 
 Quad-cells are used to encode most of the important data-structures in uFork.
 
- Structure                              | Description
-----------------------------------------|---------------------------------
-[_sponsor_, _target_, _msg_, _next_]    | message-event queue entry
-[_IP_, _SP_, _EP_, _next_]              | continuation queue entry
-[`#instr_t`, _opcode_, _data_, _next_]  | machine instruction (typical)
-[`#pair_t`, _head_, _tail_, `#?`]       | pair-lists of user data (cons)
-[`#pair_t`, _item_, _rest_, `#?`]       | stack entry holding _item_
-[`#actor_t`, _code_, _data_, `#?`]      | idle actor
-[`#actor_t`, _code_, _data_, _effects_] | busy actor
-[`#actor_t`, _code'_, _data'_, _events_]| effects, initial _events_=#nil
-[`#dict_t`, _key_, _value_, _next_]     | dictionary binding entry
-[`FREE_T`, `#?`, `#?`, _next_]          | cell in the free-list
-[`PROXY_T`, _device_, _handle_, `#?`]   | reference to remote actor
-[`STUB_T`, _device_, _target_, _next_]  | GC protection for RAM quad
+ Structure                                  | Description
+--------------------------------------------|---------------------------------
+[`#actor_t`, _code_, _data_, `#?`]          | idle actor
+[`#actor_t`, _code_, _data_, _inbox_]       | busy actor, initial _inbox_=#nil
+[_sponsor_, _target_, _msg_, _next_]        | message-event queue entry
+[_sponsor_, _target_, _msg_, _effects_]     | message-event in process
+[`#actor_t`, _code'_, _data'_, _outbox_]    | effects, initial _outbox_=#nil
+[`#sponsor_t`, _quota_, _signal_, _waiting_]| resource sponsor
+[_memory_ , _events_, _cycles_, `#?`]       | sponsor quota
+[_IP_, _SP_, _EP_, _next_]                  | continuation queue entry
+[`#instr_t`, _opcode_, _data_, _next_]      | machine instruction (typical)
+[`#pair_t`, _item_, _rest_, `#?`]           | stack entry holding _item_
+[`#pair_t`, _head_, _tail_, `#?`]           | pair-lists of user data (cons)
+[`#dict_t`, _key_, _value_, _next_]         | dictionary binding entry
+[`FREE_T`, `#?`, `#?`, _next_]              | cell in the free-list
+[`PROXY_T`, _device_, _handle_, `#?`]       | reference to remote actor
+[`STUB_T`, _device_, _target_, _next_]      | GC protection for RAM quad
 
 ### Reserved ROM
 
@@ -135,24 +138,24 @@ Quad-cells are used to encode most of the important data-structures in uFork.
 
 ### Reserved RAM
 
- Address     | T          | X        | Y        | Z        | Description
--------------|------------|----------|----------|----------|------------------
- `^40000000` | _top_      | _next_   | _free_   | _root_   | Memory Descriptor
- `^40000001` | _e_head_   | _e_tail_ | _k_head_ | _k_tail_ | Events and Continuations
- `@60000002` | `#actor_t` | `+0`     | `#nil`   | `#?`     | Device Actor #0
- `@60000003` | `#actor_t` | `+1`     | `#nil`   | `#?`     | Device Actor #1
- `@60000004` | `#actor_t` | `+2`     | `#nil`   | `#?`     | Device Actor #2
- `@60000005` | `#actor_t` | `+3`     | `#nil`   | `#?`     | Device Actor #3
- `@60000006` | `#actor_t` | `+4`     | `#nil`   | `#?`     | Device Actor #4
- `@60000007` | `#actor_t` | `+5`     | `#nil`   | `#?`     | Device Actor #5
- `@60000008` | `#actor_t` | `+6`     | `#nil`   | `#?`     | Device Actor #6
- `@60000009` | `#actor_t` | `+7`     | `#nil`   | `#?`     | Device Actor #7
- `@6000000A` | `#actor_t` | `+8`     | `#nil`   | `#?`     | Device Actor #8
- `@6000000B` | `#actor_t` | `+9`     | `#nil`   | `#?`     | Device Actor #9
- `@6000000C` | `#actor_t` | `+10`    | `#nil`   | `#?`     | Device Actor #10
- `@6000000D` | `#actor_t` | `+11`    | `#nil`   | `#?`     | Device Actor #11
- `@6000000E` | `#actor_t` | `+12`    | `#nil`   | `#?`     | Device Actor #12
- `^4000000F` | _memory_   | _events_ | _cycles_ | _signal_ | Root Sponsor
+ Address     | T            | X         | Y         | Z         | Description
+-------------|--------------|-----------|-----------|-----------|------------------
+ `^40000000` | _top_        | _next_    | _free_    | _root_    | Memory Descriptor
+ `^40000001` | _e_head_     | _e_tail_  | _k_head_  | _k_tail_  | Events and Continuations
+ `@60000002` | `#actor_t`   | `+0`      | `#nil`    | `#?`      | Device Actor #0
+ `@60000003` | `#actor_t`   | `+1`      | `#nil`    | `#?`      | Device Actor #1
+ `@60000004` | `#actor_t`   | `+2`      | `#nil`    | `#?`      | Device Actor #2
+ `@60000005` | `#actor_t`   | `+3`      | `#nil`    | `#?`      | Device Actor #3
+ `@60000006` | `#actor_t`   | `+4`      | `#nil`    | `#?`      | Device Actor #4
+ `@60000007` | `#actor_t`   | `+5`      | `#nil`    | `#?`      | Device Actor #5
+ `@60000008` | `#actor_t`   | `+6`      | `#nil`    | `#?`      | Device Actor #6
+ `@60000009` | `#actor_t`   | `+7`      | `#nil`    | `#?`      | Device Actor #7
+ `@6000000A` | `#actor_t`   | `+8`      | `#nil`    | `#?`      | Device Actor #8
+ `@6000000B` | `#actor_t`   | `+9`      | `#nil`    | `#?`      | Device Actor #9
+ `@6000000C` | `#actor_t`   | `+10`     | `#nil`    | `#?`      | Device Actor #10
+ `@6000000D` | `#actor_t`   | `+11`     | `#nil`    | `#?`      | Device Actor #11
+ `^4000000E` | _memory_     | _events_  | _cycles_  | `#?`      | Root Quota
+ `^4000000F` | `#sponsor_t` | _quota_   | _signal_  | _waiting_ | Root Sponsor
 
 ### Memory Descriptor
 
@@ -176,18 +179,27 @@ Quad-cells are used to encode most of the important data-structures in uFork.
   * _k_head_ is first element of the continuation queue, or `#nil` if empty.
   * _k_tail_ is last element of the continuation queue, or `#nil` if empty.
 
-### Root Sponsor
+### Root Quota
 
- Address     | T          | X        | Y        | Z
--------------|------------|----------|----------|----------
- `^4000000F` | _memory_   | _events_ | _cycles_ | _signal_
+ Address     | T            | X         | Y         | Z
+-------------|--------------|-----------|-----------|-----------
+ `^4000000E` | _memory_     | _events_  | _cycles_  | `#?`
 
   * _memory_ remaining allocation quota, as a _fixnum_.
   * _events_ remaining dispatch quota, as a _fixnum_.
   * _cycles_ remaining execution quota, as a _fixnum_.
-  * _signal_ is a _fixnum_ error-code if halted, otherwise `#?`.
 
-## Object Graph
+### Root Sponsor
+
+ Address     | T            | X         | Y         | Z
+-------------|--------------|-----------|-----------|-----------
+ `^4000000F` | `#sponsor_t` | _quota_   | _signal_  | _waiting_
+
+  * _quota_ points to the Root Quota (`^4000000E`).
+  * _signal_ is a _fixnum_ error-code if halted, otherwise `#?`.
+  * _waiting_ events when this sponsor is halted.
+
+## Object/Memory Graph
 
 The diagram below shows a typical graph of quad-cells
 representing the contents of the `e_queue` (event queue)
@@ -198,45 +210,53 @@ form the root-set of objects
 for [garbage-collection](gc.md).
 
 ```
-e_queue: [e_head,e_tail]------------------------+
-          |                                     V
-          +-->[sponsor,to,msg,next]---> ... -->[sponsor,to,msg,#nil]
-                |      |   |
-                |      |   +--> actor message content
-                |      V
-                |     [#actor_t,code,data,#?]
-                V                |    |
-  [memory,events,cycles,signal]  |    +--> actor state
-                                 |
-                                 +--> actor behavior
+e_queue: [e_head,e_tail]-------------------------+
+          |                                      V
+          +--->[sponsor,to,msg,next]---> ... -->[sponsor,to,msg,#nil]
+                 |      |   |
+                 |      |   +--> actor message content
+    +------------+      V
+    |                  [#actor_t,code,data,#?]
+    V                             |    |
+[#sponsor_t,quota,signal,waiting] |    +--> actor state
+             |            |       |
+             |            |       +--> actor behavior
+             |            |
+             |            +--> ... -->[sponsor,to,msg,#nil]
+             V
+           [memory,events,cycles,#?]
+```
 
-k_queue: [k_head,k_tail]----------------+
-          |                             V
-          +-->[ip,sp,ep,kp]---> ... -->[ip,sp,ep,#nil]
-               |  |  |
-               |  |  V
-               |  | [sponsor,to,msg,#nil]
-               |  |          |   |
-               |  |          |   +--> ...
-               |  |          V
-               |  |    [#actor_t,code,data,effect]
-               |  |                         |
-               |  |                         V
-               |  |                   [#actor_t,code',data',events]
-               |  V                                          |
-               | [#pair_t,car,cdr,#?]                        +--> ... -->[sponsor,to,msg,#nil]
-               |           |   |
-               |           |   +--> ... -->[#pair_t,car,#nil,#?]
-               |           V
-               |          item
-               V
-              [#instr_t,"eq",0,k]
-                               |
-                               +--> [#instr_t,"if",t,f]
-                                                   | |
-                                                   | +--> ...
-                                                   V
-                                                   ...
+```
+k_queue: [k_head,k_tail]-----------------+
+          |                              V
+          +--->[ip,sp,ep,kp]---> ... -->[ip,sp,ep,#nil]
+                |  |  |
+                |  |  V
+                |  | [sponsor,to,msg,effect]
+                |  |          |   |   |
+                |  |          |   |   V
+                |  |          |   | [#actor_t,code',data',outbox]
+                |  |          |   |                        |
+                |  |          |   +--> ...                 +--> ... -->[sponsor,to,msg,#nil]
+                |  |          V
+                |  |        [#actor_t,code,data,inbox]
+                |  |                             |
+                |  |                             +--> ... -->[sponsor,to,msg,#nil]
+                |  V
+                | [#pair_t,car,cdr,#?]
+                |           |   |
+                |           |   +--> ... -->[#pair_t,car,#nil,#?]
+                |           V
+                |          item
+                V
+               [#instr_t,"eq",0,k]
+                                |
+                                +--> [#instr_t,"if",t,f]
+                                                    | |
+                                                    | +--> ...
+                                                    V
+                                                    ...
 ```
 
 ### Pair-List Indexing
