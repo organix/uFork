@@ -20,12 +20,12 @@ pub const UNDEF: Any        = Any::rom(0x0);
 pub const NIL: Any          = Any::rom(0x1);
 pub const FALSE: Any        = Any::rom(0x2);
 pub const TRUE: Any         = Any::rom(0x3);
-pub const ROM_04: Any       = Any::rom(0x4);  // RESERVED
-pub const EMPTY_DQ: Any     = Any::rom(0x5);
+pub const EMPTY_DQ: Any     = Any::rom(0x4);
 
 pub const LITERAL_T: Any    = UNDEF;
-pub const TYPE_T: Any       = Any::rom(0x6);
-pub const FIXNUM_T: Any     = Any::rom(0x7);
+pub const TYPE_T: Any       = Any::rom(0x5);
+pub const FIXNUM_T: Any     = Any::rom(0x6);
+pub const SPONSOR_T: Any    = Any::rom(0x7);
 pub const ACTOR_T: Any      = Any::rom(0x8);
 pub const PROXY_T: Any      = Any::rom(0x9);
 pub const STUB_T: Any       = Any::rom(0xA);

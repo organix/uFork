@@ -117,6 +117,7 @@ types are currently supported:
 - `#dict_t`
 - `#instr_t`
 - `#actor_t`
+- `#sponsor_t`
 
 Values can also be referenced by name. In singular form, _name_ expressions
 refer to a labelled statement within the current module. This was used in the
@@ -514,6 +515,7 @@ optional.
         "#dict_t"
         "#instr_t"
         "#actor_t"
+        "#sponsor_t"
 
     ref
         name

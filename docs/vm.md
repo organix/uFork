@@ -120,10 +120,10 @@ Quad-cells are used to encode most of the important data-structures in uFork.
  `#nil`      | `^00000001` | `#?`      | `#?`   | `#?`   | `#?` | Nil (empty list)
  `#f`        | `^00000002` | `#?`      | `#?`   | `#?`   | `#?` | Boolean False
  `#t`        | `^00000003` | `#?`      | `#?`   | `#?`   | `#?` | Boolean True
- --          | `^00000004` | `#?`      | `#?`   | `#?`   | `#?` | --reserved--
- `EMPTY_DQ`  | `^00000005` | `#pair_t` | `#nil` | `#nil` | `#?` | Empty Deque
- `#type_t`   | `^00000006` | `#type_t` | `+1`   | `#?`   | `#?` | Type of Types
- `#fixnum_t` | `^00000007` | `#type_t` | `#?`   | `#?`   | `#?` | Fixnum Type
+ `EMPTY_DQ`  | `^00000004` | `#pair_t` | `#nil` | `#nil` | `#?` | Empty Deque
+ `#type_t`   | `^00000005` | `#type_t` | `+1`   | `#?`   | `#?` | Type of Types
+ `#fixnum_t` | `^00000006` | `#type_t` | `#?`   | `#?`   | `#?` | Fixnum Type
+ `#sponsor_t`| `^00000007` | `#type_t` | `+3`   | `#?`   | `#?` | Sponsor Type
  `#actor_t`  | `^00000008` | `#type_t` | `+2`   | `#?`   | `#?` | Actor (ocap) Type
  `PROXY_T`   | `^00000009` | `#type_t` | `+2`   | `#?`   | `#?` | Proxy Type
  `STUB_T`    | `^0000000A` | `#type_t` | `+2`   | `#?`   | `#?` | Stub Type

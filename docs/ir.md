@@ -275,6 +275,7 @@ the "typeq" instruction.
     {"kind": "type", "name": "dict"}
     {"kind": "type", "name": "instr"}
     {"kind": "type", "name": "actor"}
+    {"kind": "type", "name": "sponsor"}
 
 There are also custom types that can appear in the _t_ field of a quad.
 

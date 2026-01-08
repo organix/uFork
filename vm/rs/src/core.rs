@@ -119,10 +119,10 @@ impl Core {
         self.quad_rom[NIL.ofs()]         = Quad::literal_t();
         self.quad_rom[FALSE.ofs()]       = Quad::literal_t();
         self.quad_rom[TRUE.ofs()]        = Quad::literal_t();
-        self.quad_rom[ROM_04.ofs()]      = Quad::literal_t();
         self.quad_rom[EMPTY_DQ.ofs()]    = Quad::pair_t(NIL, NIL);
         self.quad_rom[TYPE_T.ofs()]      = Quad::type_t(PLUS_1);
         self.quad_rom[FIXNUM_T.ofs()]    = Quad::type_t(UNDEF);
+        self.quad_rom[SPONSOR_T.ofs()]   = Quad::type_t(PLUS_3);
         self.quad_rom[ACTOR_T.ofs()]     = Quad::type_t(PLUS_2);
         self.quad_rom[PROXY_T.ofs()]     = Quad::type_t(PLUS_2);
         self.quad_rom[STUB_T.ofs()]      = Quad::type_t(PLUS_2);

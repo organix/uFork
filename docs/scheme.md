@@ -23,6 +23,7 @@ to the state of actors, managed with `BECOME`.
   * `#literal_t` — type of literal values
   * `#type_t` — type of types
   * `#fixnum_t` — type of _fixnums_ (31-bit signed integers)
+  * `#sponsor_t` — type of resource sponsors
   * `#actor_t` — type of actor reference/capabilities
   * `#instr_t` — type of machine instructions
   * `#pair_t` — type of _pairs_ (`cons` cells)
@@ -103,4 +104,5 @@ to the state of actors, managed with `BECOME`.
   * `(par .  `<_exprs_>`)`
   * `(zip `_formal_` `_value_` `_env_`)`
   * `(gensym)`
+  * `(POST `_sponsor_` `_actor_` `_message_`)`
   * `a-print`

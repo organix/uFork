@@ -15,10 +15,10 @@ const UNDEF_RAW = 0x00000000;
 const NIL_RAW   = 0x00000001;
 const FALSE_RAW = 0x00000002;
 const TRUE_RAW  = 0x00000003;
-//const ROM_04    = 0x00000004;  // reserved
-const EMPTY_DQ  = 0x00000005;
-const TYPE_T    = 0x00000006;
-const FIXNUM_T  = 0x00000007;
+const EMPTY_DQ  = 0x00000004;
+const TYPE_T    = 0x00000005;
+const FIXNUM_T  = 0x00000006;
+const SPONSOR_T = 0x00000007;
 const ACTOR_T   = 0x00000008;
 const PROXY_T   = 0x00000009;
 const STUB_T    = 0x0000000A;
@@ -120,10 +120,10 @@ const rom_label = [
     "#nil",
     "#f",
     "#t",
-    "ROM_04",  // reserved
     "EMPTY_DQ",
     "#type_t",
     "#fixnum_t",
+    "#sponsor_t",
     "#actor_t",
     "PROXY_T",
     "STUB_T",
@@ -269,6 +269,7 @@ const crlf_types = Object.freeze({
     pair: PAIR_T,
     dict: DICT_T,
     instr: INSTR_T,
+    sponsor: SPONSOR_T,
     actor: ACTOR_T
 });
 
@@ -514,10 +515,10 @@ const reserved_rom = Object.freeze([
     UNDEF_RAW,  UNDEF_RAW,  UNDEF_RAW,  UNDEF_RAW,      // #nil
     UNDEF_RAW,  UNDEF_RAW,  UNDEF_RAW,  UNDEF_RAW,      // #f
     UNDEF_RAW,  UNDEF_RAW,  UNDEF_RAW,  UNDEF_RAW,      // #t
-    UNDEF_RAW,  UNDEF_RAW,  UNDEF_RAW,  UNDEF_RAW,      // ROM_04
     PAIR_T,     NIL_RAW,    NIL_RAW,    UNDEF_RAW,      // EMPTY_DQ
     TYPE_T,     fixnum(1),  UNDEF_RAW,  UNDEF_RAW,      // #type_t
     TYPE_T,     UNDEF_RAW,  UNDEF_RAW,  UNDEF_RAW,      // #fixnum_t
+    TYPE_T,     fixnum(3),  UNDEF_RAW,  UNDEF_RAW,      // #sponsor_t
     TYPE_T,     fixnum(2),  UNDEF_RAW,  UNDEF_RAW,      // #actor_t
     TYPE_T,     fixnum(2),  UNDEF_RAW,  UNDEF_RAW,      // PROXY_T
     TYPE_T,     fixnum(2),  UNDEF_RAW,  UNDEF_RAW,      // STUB_T
@@ -594,6 +595,7 @@ export default Object.freeze({
     EMPTY_DQ,
     TYPE_T,
     FIXNUM_T,
+    SPONSOR_T,
     ACTOR_T,
     PROXY_T,
     STUB_T,
