@@ -53,10 +53,10 @@ impl Quad {
         assert!(k.is_ptr());
         Self::new(INSTR_T, op, imm, k)
     }
-    pub fn actor_t(beh: Any, state: Any, events: Any) -> Quad {
+    pub fn actor_t(beh: Any, state: Any, inbox: Any) -> Quad {
         //assert!(beh.is_ptr()); --- moved test to new_actor() so we can create devices
-        assert!(events.is_ptr());
-        Self::new(ACTOR_T, beh, state, events)
+        assert!(inbox.is_ptr());
+        Self::new(ACTOR_T, beh, state, inbox)
     }
     pub fn proxy_t(device: Any, handle: Any) -> Quad {
         assert!(device.is_cap());
@@ -90,11 +90,15 @@ impl Quad {
         assert!(root.is_ptr());
         Self::new(top, next, free, root)
     }
-    pub fn sponsor_t(memory: Any, events: Any, cycles: Any, signal: Any) -> Quad {
+    pub fn quota(memory: Any, events: Any, cycles: Any) -> Quad {
         assert!(memory.is_fix());
         assert!(events.is_fix());
         assert!(cycles.is_fix());
-        Self::new(memory, events, cycles, signal)
+        Self::new(memory, events, cycles, UNDEF)
+    }
+    pub fn sponsor_t(quota: Any, signal: Any) -> Quad {
+        assert!(quota.is_ram());
+        Self::new(SPONSOR_T, quota, signal, NIL)
     }
     pub fn fwd_ref_t(to: Any) -> Quad {
         Self::new(FWD_REF_T, UNDEF, UNDEF, to)

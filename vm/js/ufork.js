@@ -82,7 +82,8 @@ const TIMER_DEV_OFS = 4;
 const IO_DEV_OFS = 5;
 const BLOB_DEV_OFS = 6;
 const RANDOM_DEV_OFS = 7;
-const HOST_DEV_OFS = 14;
+const HOST_DEV_OFS = 13;
+const QUOTA_OFS = 14;
 const SPONSOR_OFS = 15;
 
 // Error codes (from core.rs)
@@ -640,6 +641,7 @@ export default Object.freeze({
     BLOB_DEV_OFS,
     RANDOM_DEV_OFS,
     HOST_DEV_OFS,
+    QUOTA_OFS,
     SPONSOR_OFS,
     E_OK,
     E_FAIL,

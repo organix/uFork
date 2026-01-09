@@ -17,8 +17,8 @@ pub const RSVD_9_DEV: Any   = Any::cap(0x9);
 pub const RSVD_A_DEV: Any   = Any::cap(0xA);
 pub const RSVD_B_DEV: Any   = Any::cap(0xB);
 pub const RSVD_C_DEV: Any   = Any::cap(0xC);
-pub const RSVD_D_DEV: Any   = Any::cap(0xD);
-pub const HOST_DEV: Any     = Any::cap(0xE);
+pub const HOST_DEV: Any     = Any::cap(0xD);
+pub const QUOTA: Any        = Any::ram(0xE);
 pub const SPONSOR: Any      = Any::ram(0xF);
 
 pub const RAM_BASE_OFS: usize = 0x10;  // RAM offsets below this value are reserved
@@ -54,7 +54,7 @@ const QUAD_ROM_MAX: usize = 1<<13;  // 8K quad-cells of ROM (FPGA size)
 //const QUAD_RAM_MAX: usize = 1<<8;  // 256 quad-cells of RAM
 //const QUAD_RAM_MAX: usize = 1<<10;  // 1K quad-cells of RAM
 const QUAD_RAM_MAX: usize = 1<<12;  // 4K quad-cells of RAM (FPGA size)
-const DEVICE_MAX: usize = 13;  // number of Core devices
+const DEVICE_MAX: usize = 12;  // number of Core devices
 
 pub struct Core {
     quad_rom:   [Quad; QUAD_ROM_MAX],
@@ -92,7 +92,6 @@ impl Core {
             gc_prev: GcColor::GenY,
             gc_marks: [ GcColor::Free; QUAD_RAM_MAX ],
             device: [
-                None,
                 None,
                 None,
                 None,
@@ -148,13 +147,12 @@ impl Core {
         self.quad_ram[RSVD_A_DEV.ofs()]  = Quad::actor_t(Any::fix(8), NIL, UNDEF);  // --reserved-- device #8
         self.quad_ram[RSVD_B_DEV.ofs()]  = Quad::actor_t(Any::fix(9), NIL, UNDEF);  // --reserved-- device #9
         self.quad_ram[RSVD_C_DEV.ofs()]  = Quad::actor_t(Any::fix(10), NIL, UNDEF);  // --reserved-- device #10
-        self.quad_ram[RSVD_D_DEV.ofs()]  = Quad::actor_t(Any::fix(11), NIL, UNDEF);  // --reserved-- device #11
-        self.quad_ram[HOST_DEV.ofs()]    = Quad::actor_t(Any::fix(12), NIL, UNDEF);  // host extension device #12
-        self.quad_ram[SPONSOR.ofs()]     = Quad::sponsor_t(
-                                        Any::fix(4096),
-                                        Any::fix(256),
-                                        Any::fix(8192),
-                                        UNDEF);  // root configuration sponsor
+        self.quad_ram[HOST_DEV.ofs()]    = Quad::actor_t(Any::fix(11), NIL, UNDEF);  // host extension device #11
+        self.quad_ram[QUOTA.ofs()]       = Quad::quota(
+                                            Any::fix(4096),
+                                            Any::fix(256),
+                                            Any::fix(8192));  // root sponsor quota
+        self.quad_ram[SPONSOR.ofs()]     = Quad::sponsor_t(QUOTA, UNDEF);  // root configuration sponsor
 
     }
 
@@ -1127,28 +1125,34 @@ impl Core {
         Ok(())
     }
     pub fn sponsor_memory(&self, sponsor: Any) -> Any {
-        self.mem(sponsor).t()
+        let quota = self.ram(sponsor).x();
+        self.ram(quota).t()
     }
     pub fn set_sponsor_memory(&mut self, sponsor: Any, num: Any) {
-        self.ram_mut(sponsor).set_t(num);
+        let quota = self.ram(sponsor).x();
+        self.ram_mut(quota).set_t(num);
     }
     pub fn sponsor_events(&self, sponsor: Any) -> Any {
-        self.mem(sponsor).x()
+        let quota = self.ram(sponsor).x();
+        self.ram(quota).x()
     }
     pub fn set_sponsor_events(&mut self, sponsor: Any, num: Any) {
-        self.ram_mut(sponsor).set_x(num);
+        let quota = self.ram(sponsor).x();
+        self.ram_mut(quota).set_x(num);
     }
     pub fn sponsor_cycles(&self, sponsor: Any) -> Any {
-        self.mem(sponsor).y()
+        let quota = self.ram(sponsor).x();
+        self.ram(quota).y()
     }
     pub fn set_sponsor_cycles(&mut self, sponsor: Any, num: Any) {
-        self.ram_mut(sponsor).set_y(num);
+        let quota = self.ram(sponsor).x();
+        self.ram_mut(quota).set_y(num);
     }
     pub fn sponsor_signal(&self, sponsor: Any) -> Any {
-        self.mem(sponsor).z()
+        self.ram(sponsor).y()
     }
     pub fn set_sponsor_signal(&mut self, sponsor: Any, signal: Any) {
-        self.ram_mut(sponsor).set_z(signal);
+        self.ram_mut(sponsor).set_y(signal);
     }
     fn count_cpu_cycles(&mut self, cost: isize) -> Result<(), Error> {
         let ep = self.ep();
@@ -1366,7 +1370,9 @@ impl Core {
     pub fn memory(&self) -> Any { MEMORY }
 
     fn new_sponsor(&mut self) -> Result<Any, Error> {
-        let spn = Quad::sponsor_t(ZERO, ZERO, ZERO, ZERO);
+        let quad = Quad::quota(ZERO, ZERO, ZERO);
+        let quota = self.alloc(&quad)?;
+        let spn = Quad::sponsor_t(quota, ZERO);
         self.alloc(&spn)
     }
     pub fn new_event(&mut self, sponsor: Any, target: Any, msg: Any) -> Result<Any, Error> {

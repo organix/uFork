@@ -973,6 +973,7 @@ VARIABLE xm_here            ( upload address )
 
 0x4000 CONSTANT mem_desc    ( quad-memory descriptor )
 0x4001 CONSTANT ek_queues   ( event/continuation queues )
+0x400E CONSTANT root_quota  ( root sponsor quota )
 0x400F CONSTANT root_spn    ( root sponsor )
 0x4010 CONSTANT ram_base    ( first allocatable RAM address )
 
@@ -999,13 +1000,13 @@ VARIABLE xm_here            ( upload address )
     ek_queues QZ@ ;
 
 : spn_memory@ ( sponsor -- data )
-    QT@ ;
+    QX@ QT@ ;
 : spn_events@ ( sponsor -- data )
-    QX@ ;
+    QX@ QX@ ;
 : spn_cycles@ ( sponsor -- data )
-    QY@ ;
+    QX@ QY@ ;
 : spn_signal@ ( sponsor -- data )
-    QZ@ ;
+    QY@ ;
 
 ( 2-bit gc color markings )
 0x0 CONSTANT gc_free_color
@@ -1076,7 +1077,7 @@ VARIABLE gc_scan_ptr        ( scan-list processing pointer )
     mem_root@ gc_scan
     e_head@ gc_scan
     k_head@ gc_scan
-    root_spn spn_signal@ gc_scan
+    root_spn gc_scan
     ram_base gc_scan_ptr !  ( start after reserved RAM )
     2 gc_phase ! ;
 
@@ -1161,13 +1162,13 @@ VARIABLE gc_scan_ptr        ( scan-list processing pointer )
     ek_queues qz! ;
 
 : spn_memory! ( data sponsor -- )
-    QT! ;
+    QX@ QT! ;
 : spn_events! ( data sponsor -- )
-    QX! ;
+    QX@ QX! ;
 : spn_cycles! ( data sponsor -- )
-    QY! ;
+    QX@ QY! ;
 : spn_signal! ( data sponsor -- )
-    qz! ;
+    qy! ;
 
 : event_enqueue ( event -- )
     #nil OVER QZ!
@@ -2241,7 +2242,7 @@ VARIABLE saved_sp           ( sp before instruction execution )
     #nil e_tail!
     #nil k_head!
     #nil k_tail!
-    13 ?LOOP-               ( initialize device-actors )
+    12 ?LOOP-               ( initialize device-actors )
         0x4002 I +
         #actor_t OVER QT!
         I int2fix OVER QX!
@@ -2249,6 +2250,10 @@ VARIABLE saved_sp           ( sp before instruction execution )
         #? OVER QZ!
         DROP
     AGAIN
+    root_quota #? QZ!
+    root_spn #sponsor_t QT!
+    root_spn root_quota QX!
+    root_spn #nil QZ!
     0x9000 root_spn spn_memory!
     0x8100 root_spn spn_events!
     0xB000 root_spn spn_cycles!

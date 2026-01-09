@@ -138,6 +138,7 @@ const {
     VM_END,
     QUAD_ROM_MAX,
     QUAD_RAM_MAX,
+    QUOTA_OFS,
     MEMORY_OFS,
     DEBUG_DEV_OFS,
     SPONSOR_OFS
@@ -683,18 +684,18 @@ function make_core({
     }
 
     function h_refill({memory, events, cycles}) {
-        const sponsor_ptr = ramptr(SPONSOR_OFS);
-        const sponsor = u_read_quad(sponsor_ptr);
+        const quota_ptr = ramptr(QUOTA_OFS);
+        const quota = u_read_quad(quota_ptr);
         if (Number.isSafeInteger(memory)) {
-            sponsor.t = fixnum(memory);
+            quota.t = fixnum(memory);
         }
         if (Number.isSafeInteger(events)) {
-            sponsor.x = fixnum(events);
+            quota.x = fixnum(events);
         }
         if (Number.isSafeInteger(cycles)) {
-            sponsor.y = fixnum(cycles);
+            quota.y = fixnum(cycles);
         }
-        u_write_quad(sponsor_ptr, sponsor);
+        u_write_quad(quota_ptr, quota);
     }
 
     function h_initialize() {

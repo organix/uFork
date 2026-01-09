@@ -10,7 +10,7 @@
     * Memory Descriptor
     * Event and Continuation Queues
     * Root Sponsor
-  * [Object/Memory Graph](#object-memory-graph)
+  * [Object/Memory Graph](#objectmemory-graph)
     * Pair-List Indexing
   * [Instructions](#instructions)
     * Instruction Summary
@@ -102,8 +102,8 @@ Quad-cells are used to encode most of the important data-structures in uFork.
 [`#actor_t`, _code_, _data_, `#?`]          | idle actor
 [`#actor_t`, _code_, _data_, _inbox_]       | busy actor, initial _inbox_=#nil
 [_sponsor_, _target_, _msg_, _next_]        | message-event queue entry
-[_sponsor_, _target_, _msg_, _effects_]     | message-event in process
-[`#actor_t`, _code'_, _data'_, _outbox_]    | effects, initial _outbox_=#nil
+[_sponsor_, _target_, _msg_, _effect_]      | message-event in process
+[`#actor_t`, _code'_, _data'_, _outbox_]    | txn effect, initial _outbox_=#nil
 [`#sponsor_t`, _quota_, _signal_, _waiting_]| resource sponsor
 [_memory_ , _events_, _cycles_, `#?`]       | sponsor quota
 [_IP_, _SP_, _EP_, _next_]                  | continuation queue entry
