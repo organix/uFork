@@ -375,11 +375,12 @@ impl Core {
         } else {
             // begin actor-event transaction
             let ptr = self.cap_to_ptr(target);
-            let actor = *self.mem(ptr);  // initial actor state
+            self.ram_mut(ptr).set_z(NIL);  // indicate actor is busy
+            let actor = *self.mem(ptr);  // copy initial actor state
+            let effect = self.reserve(&actor)?;  // event-effect accumulator
+            self.ram_mut(ep).set_z(effect);  // attach effect to event
             let beh = actor.x();
             let kp = self.reserve_cont(beh, NIL, ep)?;  // create continuation
-            let effect = self.reserve(&actor)?;  // event-effect accumulator
-            self.ram_mut(ptr).set_z(effect);  // indicate actor is busy
             self.cont_enqueue(kp);
         }
         Ok(())
@@ -1014,10 +1015,9 @@ impl Core {
         if !self.typeq(ACTOR_T, target) {
             return Err(E_NOT_CAP);
         }
-        let ep = self.new_event(sponsor, target, msg)?;
-        let me = self.self_ptr();
-        let effect = self.ram(me).z();
+        let effect = self.txn_effect();
         let next = self.ram(effect).z();
+        let ep = self.new_event(sponsor, target, msg)?;
         self.ram_mut(ep).set_z(next);
         self.ram_mut(effect).set_z(ep);
         Ok(())
@@ -1034,8 +1034,7 @@ impl Core {
         if !self.typeq(INSTR_T, beh) {
             return Err(E_NOT_EXE);
         }
-        let me = self.self_ptr();
-        let effect = self.ram(me).z();
+        let effect = self.txn_effect();
         let quad = self.ram_mut(effect);
         quad.set_x(beh);  // replace behavior function
         quad.set_y(state);  // replace state data
@@ -1056,7 +1055,7 @@ impl Core {
     }
     fn actor_commit(&mut self, me: Any) {
         self.stack_clear(NIL);
-        let effect = self.ram(me).z();
+        let effect = self.txn_effect();
         let quad = self.ram(effect);
         let beh = quad.x();
         let state = quad.y();
@@ -1070,7 +1069,7 @@ impl Core {
     }
     fn actor_abort(&mut self, me: Any) {
         self.stack_clear(NIL);
-        let effect = self.ram(me).z();
+        let effect = self.txn_effect();
         let mut ep = self.ram(effect).z();
         // free sent-message events
         while ep.is_ram() {
@@ -1095,6 +1094,14 @@ impl Core {
         } else {
             false
         }
+    }
+    fn txn_effect(&self) -> Any {
+        let ep = self.ep();
+        if !ep.is_ram() {
+            return UNDEF;  // no event means no `self`
+        }
+        let effect = self.ram(ep).z();
+        effect
     }
     fn self_ptr(&self) -> Any {
         let ep = self.ep();
@@ -1568,7 +1575,7 @@ impl Core {
         if !kp.is_ram() {
             return UNDEF;
         }
-        let quad = self.mem(kp);
+        let quad = self.ram(kp);
         quad.t()
     }
     pub fn sp(&self) -> Any {  // stack pointer
@@ -1576,7 +1583,7 @@ impl Core {
         if !kp.is_ram() {
             return UNDEF;
         }
-        let quad = self.mem(kp);
+        let quad = self.ram(kp);
         quad.x()
     }
     pub fn ep(&self) -> Any {  // event pointer
@@ -1584,11 +1591,12 @@ impl Core {
         if !kp.is_ram() {
             return UNDEF;
         }
-        let quad = self.mem(kp);
+        let quad = self.ram(kp);
         quad.y()
     }
     fn set_sp(&mut self, ptr: Any) {
-        let quad = self.ram_mut(self.kp());
+        let kp = self.kp();
+        let quad = self.ram_mut(kp);
         quad.set_x(ptr)
     }
 
