@@ -41,7 +41,7 @@ function until(requestor, predicate) {
 function unchunk(requestor) {
 
 // Given a 'requestor' that produces array-like chunks, make a requestor that
-// return each element of each chunk separately.
+// returns each element of each chunk separately.
 
     let queue = [];
     return function unchunk_requestor(callback, value) {
@@ -57,7 +57,7 @@ function unchunk(requestor) {
             } catch (exception) {
                 return callback(undefined, exception);
             }
-            if (subvalue.length === 0) {
+            if (queue.length === 0) {
                 return callback(undefined, "Empty chunk.");
             }
             return unchunk_requestor(callback, value);
