@@ -221,6 +221,9 @@ impl Core {
     */
     pub fn run_loop(&mut self, limit: i32) -> Any {
         self.set_sponsor_signal(SPONSOR, UNDEF);  // enable root sponsor
+        let waiting = self.ram(SPONSOR).z();
+        self.inject_events(waiting);  // drain waiting events
+        self.ram_mut(SPONSOR).set_z(NIL);
         let mut steps = 0;
         while (limit <= 0) || (steps < limit) {
             if !self.k_first().is_ram() && !self.e_first().is_ram() {
@@ -285,9 +288,11 @@ impl Core {
     }
     /*
 
-    This dispatch strategy examines only the event at the front of the queue.
-    If the target of the event is busy, recycle the event to the back of the queue.
-    WARNING! This strategy is subject to unfair scheduling due to resonance.
+    This dispatch strategy processes one event from the front of the queue.
+    If the event's sponsor is suspended, move the event to the sponsor's `waiting`.
+    If the event's target is busy, move the event to the actor's `inbox`.
+    If the event's target is a device, give the event to the device to handle.
+    Otherwise, enqueue a _continuation_ to handle the transaction.
 
     */
     fn _dispatch_event(&mut self) -> Any {
@@ -295,21 +300,65 @@ impl Core {
         if ep.is_ram() {
             // remove first event from the queue...
             let event = self.ram(ep);
+            let sponsor = event.t();
+            let target = event.x();
             let next = event.z();
             self.set_e_first(next);
             if !next.is_ram() {
                 self.set_e_last(NIL)
             }
-            // ...and attempt to deliver the event
-            let target = self.event_target(ep);
-            if self.actor_busy(target) {
-                // target actor is busy, retry later...
-                self.event_enqueue(ep);  // move event to back of queue
-                return UNDEF;  // no event dispatched
+            // check sponsor delivery constraints
+            let sig = self.sponsor_signal(sponsor);
+            if sig.is_fix() {  // sponsor suspended
+                if sig == ZERO {  // sponsor stopped
+                    return UNDEF;  // discard event
+                }
+                return self.waiting_event(ep);  // suspend event
             }
-            return self.deliver_event(ep);
+            let mut limit = self.sponsor_events(sponsor).fix_num().unwrap_or(0);
+            if limit > 0 {
+                limit = limit - 1;  // decrement event limit
+                self.set_sponsor_events(sponsor, Any::fix(limit));
+            }
+            if limit <= 0 {  // sponsor event limit reached
+                let signal_sent = self.report_error(sponsor, E_MSG_LIM);
+                self.waiting_event(ep);  // suspend event
+                if signal_sent {
+                    return UNDEF;  // controller notified
+                }
+                return self.sponsor_signal(sponsor);  // return signal
+            }
+            // check target delivery constraints
+            if self.actor_busy(target) {
+                return self.inbox_event(ep);  // move event to actor inbox
+            }
+            if let Err(error) = self.handle_event(ep) {
+                let signal_sent = self.report_error(sponsor, error);
+                self.waiting_event(ep);  // suspend event
+                if signal_sent {
+                    return UNDEF;  // controller notified
+                }
+                return self.sponsor_signal(sponsor);  // return signal
+            }
         }
         UNDEF  // event queue empty
+    }
+    fn waiting_event(&mut self, ep: Any) -> Any {
+        // link event into sponsor's waiting queue
+        let sponsor = self.event_sponsor(ep);
+        let waiting = self.ram(sponsor).z();
+        self.ram_mut(ep).set_z(waiting);
+        self.ram_mut(sponsor).set_z(ep);
+        UNDEF  // event not delivered
+    }
+    fn inbox_event(&mut self, ep: Any) -> Any {
+        // link event into target's inbox queue
+        let target = self.event_target(ep);
+        let actor = self.cap_to_ptr(target);
+        let inbox = self.ram(actor).z();
+        self.ram_mut(ep).set_z(inbox);
+        self.ram_mut(actor).set_z(ep);
+        UNDEF  // event not delivered
     }
     /*
 
@@ -413,10 +462,29 @@ impl Core {
                     self.ram_mut(kp).set_t(ip_);  // update ip in continuation
                     self.cont_enqueue(kp);  // re-queue updated continuation
                 } else {
-                    // free dead continuation and associated event
-                    self.free(ep);
-                    self.free(kp);
-                    self.e_hint = NIL;  // reset `e_hint` at `END`
+                    // releae or reuse continuation, event, and (empty) effect
+                    let to = self.ram(ep).x();
+                    let target = self.cap_to_ptr(to);
+                    let inbox = self.ram(target).z();
+                    if inbox.is_ram() {  // non-empty inbox
+                        // reuse actor-event transaction
+                        let effect = self.ram(ep).z();
+                        assert_eq!(self.ram(effect).z(), NIL);  // outbox is empty
+                        let rest = self.ram(inbox).z();
+                        self.ram_mut(target).set_z(rest);  // remove event from inbox
+                        let beh = self.ram(target).x();
+                        let cont = self.ram_mut(kp);
+                        cont.set_t(beh);  // new ip
+                        cont.set_x(NIL);  // new sp
+                        cont.set_y(inbox);  // new ep
+                        cont.set_z(effect);  // reuse effect
+                        self.cont_enqueue(kp);
+                    } else {  // empty inbox
+                        self.ram_mut(target).set_z(UNDEF);  // return actor to IDLE state
+                        self.free(ep);
+                        self.free(kp);
+                        self.e_hint = NIL;  // reset `e_hint` at `END`
+                    }
                     if GC_STRATEGY == GcStrategy::FullAtCommit {
                         self.gc_collect_all();  // full GC collection after `end` instruction
                     }
@@ -928,7 +996,7 @@ impl Core {
         }
         self.set_e_last(ep);
     }
-    pub fn event_commit(&mut self, events: Any) {
+    pub fn inject_events(&mut self, events: Any) {
         // move sent-message events to event queue
         if !events.is_ram() {
             return;  // no events to enqueue
@@ -1050,8 +1118,7 @@ impl Core {
     fn actor_busy(&self, cap: Any) -> bool {
         let ptr = self.cap_to_ptr(cap);
         let quad = self.mem(ptr);
-        // only actors with transaction in progress are "busy"
-        (quad.t() == ACTOR_T) && (quad.z() != UNDEF)
+        quad.z() != UNDEF
     }
     fn actor_commit(&mut self, me: Any) {
         self.stack_clear(NIL);
@@ -1059,13 +1126,14 @@ impl Core {
         let quad = self.ram(effect);
         let beh = quad.x();
         let state = quad.y();
-        self.event_commit(quad.z());
-        self.free(effect);
+        let outbox = quad.z();
+        self.inject_events(outbox);
+        self.ram_mut(effect).set_z(NIL);
         // commit actor transaction
         let actor = self.ram_mut(me);
         actor.set_x(beh);
         actor.set_y(state);
-        actor.set_z(UNDEF);
+        //actor.set_z(UNDEF);  // need to keep the `inbox` around for chained dispatch?
     }
     fn actor_abort(&mut self, me: Any) {
         self.stack_clear(NIL);
