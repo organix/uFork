@@ -252,7 +252,7 @@ impl Core {
     An event is deliverable if the target of the event is ready (not busy).
 
     */
-    fn dispatch_event(&mut self) -> Any {
+    fn _dispatch_event(&mut self) -> Any {
         if self.e_hint == UNDEF {  // IMPORTANT! reset `e_hint` to `NIL` at `END`.
             return UNDEF;  // there are no deliverable events in the queue
         }
@@ -295,7 +295,7 @@ impl Core {
     Otherwise, enqueue a _continuation_ to handle the transaction.
 
     */
-    fn _dispatch_event(&mut self) -> Any {
+    fn dispatch_event(&mut self) -> Any {
         let ep = self.e_first();
         if ep.is_ram() {
             // remove first event from the queue...
@@ -319,8 +319,8 @@ impl Core {
             if limit > 0 {
                 limit = limit - 1;  // decrement event limit
                 self.set_sponsor_events(sponsor, Any::fix(limit));
-            }
-            if limit <= 0 {  // sponsor event limit reached
+            } else {
+                // sponsor event limit reached
                 let signal_sent = self.report_error(sponsor, E_MSG_LIM);
                 self.waiting_event(ep);  // suspend event
                 if signal_sent {
@@ -346,18 +346,14 @@ impl Core {
     fn waiting_event(&mut self, ep: Any) -> Any {
         // link event into sponsor's waiting queue
         let sponsor = self.event_sponsor(ep);
-        let waiting = self.ram(sponsor).z();
-        self.ram_mut(ep).set_z(waiting);
-        self.ram_mut(sponsor).set_z(ep);
+        self.z_queue_put(sponsor, ep);
         UNDEF  // event not delivered
     }
     fn inbox_event(&mut self, ep: Any) -> Any {
         // link event into target's inbox queue
         let target = self.event_target(ep);
         let actor = self.cap_to_ptr(target);
-        let inbox = self.ram(actor).z();
-        self.ram_mut(ep).set_z(inbox);
-        self.ram_mut(actor).set_z(ep);
+        self.z_queue_put(actor, ep);
         UNDEF  // event not delivered
     }
     /*
@@ -424,6 +420,8 @@ impl Core {
         } else {
             // begin actor-event transaction
             let ptr = self.cap_to_ptr(target);
+            let inbox = self.ram(ptr).z();
+            assert_eq!(UNDEF, inbox);
             self.ram_mut(ptr).set_z(NIL);  // indicate actor is busy
             let actor = *self.mem(ptr);  // copy initial actor state
             let effect = self.reserve(&actor)?;  // event-effect accumulator
@@ -444,11 +442,13 @@ impl Core {
         let sig = self.sponsor_signal(sponsor);
         if sig.is_fix() {
             // idle sponsor
-            let kp_ = self.cont_dequeue().unwrap();
-            assert_eq!(kp, kp_);
+            let target = self.event_target(ep);
+            let ptr = self.cap_to_ptr(target);
+            let inbox = self.ram(ptr).z();  // grab inbox before revert
             if sig != ZERO {  // if not stopped, retry later...
-                self.cont_enqueue(kp_);  // move continuation to back of queue
+                self.actor_revert();
             }
+            self.inject_events(inbox);
             return UNDEF;  // instruction not executed
         }
         // FIXME: snapshot continuation state so it can be restored on error? or just `sp`?
@@ -462,24 +462,29 @@ impl Core {
                     self.ram_mut(kp).set_t(ip_);  // update ip in continuation
                     self.cont_enqueue(kp);  // re-queue updated continuation
                 } else {
-                    // releae or reuse continuation, event, and (empty) effect
+                    // release or reuse continuation, event, and (empty) effect
                     let to = self.ram(ep).x();
                     let target = self.cap_to_ptr(to);
-                    let inbox = self.ram(target).z();
-                    if inbox.is_ram() {  // non-empty inbox
+                    let next = self.z_queue_take(target);  // pull from inbox
+                    if next.is_ram() {  // non-empty inbox
                         // reuse actor-event transaction
-                        let effect = self.ram(ep).z();
-                        assert_eq!(self.ram(effect).z(), NIL);  // outbox is empty
-                        let rest = self.ram(inbox).z();
-                        self.ram_mut(target).set_z(rest);  // remove event from inbox
-                        let beh = self.ram(target).x();
+                        let actor = *self.ram(target);
+                        let beh = actor.x();
+                        let state = actor.y();
+                        let fx = self.ram(ep).z();
+                        self.ram_mut(next).set_z(fx);  // reuse effect
+                        let effect = self.ram_mut(fx);
+                        effect.set_x(beh);  // initial code
+                        effect.set_y(state);  // initial data
+                        effect.set_z(NIL);  // empty outbox
                         let cont = self.ram_mut(kp);
                         cont.set_t(beh);  // new ip
                         cont.set_x(NIL);  // new sp
-                        cont.set_y(inbox);  // new ep
-                        cont.set_z(effect);  // reuse effect
+                        cont.set_y(next);  // new ep
                         self.cont_enqueue(kp);
                     } else {  // empty inbox
+                        let inbox = self.ram(target).z();
+                        assert_eq!(NIL, inbox);
                         self.ram_mut(target).set_z(UNDEF);  // return actor to IDLE state
                         self.free(ep);
                         self.free(kp);
@@ -1043,6 +1048,28 @@ impl Core {
         self.set_e_last(events);
         // NOTE: `e_hint` will be reset when the continuation is terminated
     }
+    fn z_queue_put(&mut self, z_queue: Any, ep: Any) {
+        // add an event to (the head of) a reversed event list
+        let head = self.ram(z_queue).z();
+        self.ram_mut(ep).set_z(head);
+        self.ram_mut(z_queue).set_z(ep);
+    }
+    fn z_queue_take(&mut self, z_queue: Any) -> Any {
+        // remove an event from (the tail of) a reversed event list
+        let mut prev = z_queue;
+        let mut tail = self.ram(prev).z();
+        if !tail.is_ram() {
+            return UNDEF;  // empty queue
+        }
+        let mut next = self.ram(tail).z();
+        while next.is_ram() {
+            prev = tail;
+            tail = next;
+            next = self.ram(tail).z();
+        }
+        self.ram_mut(prev).set_z(next);
+        return tail;
+    }
     pub fn event_sponsor(&self, ep: Any) -> Any {
         self.mem(ep).t()
     }
@@ -1138,26 +1165,29 @@ impl Core {
     fn actor_abort(&mut self, me: Any) {
         self.stack_clear(NIL);
         let effect = self.txn_effect();
-        let mut ep = self.ram(effect).z();
+        let mut outbox = self.ram(effect).z();
         // free sent-message events
-        while ep.is_ram() {
-            let event = self.ram(ep);
-            let next = event.z();
-            self.free(ep);
-            ep = next;
+        while outbox.is_ram() {
+            let next = self.ram(outbox).z();
+            self.free(outbox);
+            outbox = next;
         }
         self.free(effect);
         // abort actor transaction
         self.ram_mut(me).set_z(UNDEF);
     }
-    pub fn actor_revert(&mut self) -> bool {  // FIXME: unused?
+    pub fn actor_revert(&mut self) -> bool {
         // revert actor/event to pre-dispatch state
         if let Some(kp) = self.cont_dequeue() {
             let ep = self.ram(kp).y();
             let target = self.ram(ep).x();
             let me = self.cap_to_ptr(target);
             self.actor_abort(me);
-            self.event_enqueue(ep);
+            let sponsor = self.event_sponsor(ep);
+            let sig = self.sponsor_signal(sponsor);
+            if sig != ZERO {  // if not stopped, retry later...
+                self.event_enqueue(ep);
+            }
             true
         } else {
             false
