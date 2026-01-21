@@ -1,5 +1,7 @@
 # Garbage Collection
 
+**WARNING! THIS DOCUMENT IS BADLY OUT OF DATE AND DOES NOT MATCH THE CURRENT DESIGN**
+
 Mutable quad-memory (RAM) is subject to machine-level garbage collection.
 The garbage-collected _heap_ ranges from `RAM_BASE` up to (not including) `RAM_TOP`.
 The floor (currently `RAM_BASE`) may be moved upward to include additional "reserved" cells.

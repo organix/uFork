@@ -482,6 +482,7 @@ impl Core {
                         cont.set_x(NIL);  // new sp
                         cont.set_y(next);  // new ep
                         self.cont_enqueue(kp);
+                        self.free(ep);
                     } else {  // empty inbox
                         let inbox = self.ram(target).z();
                         assert_eq!(NIL, inbox);
@@ -1001,13 +1002,13 @@ impl Core {
         }
         self.set_e_last(ep);
     }
-    pub fn inject_events(&mut self, events: Any) {
+    pub fn inject_events(&mut self, z_queue: Any) {
         // move sent-message events to event queue
-        if !events.is_ram() {
+        if !z_queue.is_ram() {
             return;  // no events to enqueue
         }
         // reverse list in place
-        let mut ep = events;
+        let mut ep = z_queue;
         let mut prev = NIL;
         while ep.is_ram() {
             let next = self.ram(ep).z();
@@ -1015,37 +1016,13 @@ impl Core {
             prev = ep;
             ep = next;
         }
-        /*
-        // expediate delivery to ready targets
-        let mut last = NIL;
-        ep = prev;
-        while ep.is_ram() {
-            let target = self.ram(ep).x();
-            let next = self.ram(ep).z();
-            if !self.actor_busy(target) {
-                self.deliver_event(ep);  // FIXME: is delivery to devices safe?
-                if last.is_ram() {
-                    self.ram_mut(last).set_z(next);
-                } else {
-                    prev = next;
-                }
-                ep = next;
-            } else {
-                last = ep;
-                ep = next;
-            }
-        }
-        if !prev.is_ram() {
-            return;  // no more events to enqueue
-        }
-        */
         // add events to the back of the queue
         if !self.e_first().is_ram() {
             self.set_e_first(prev);
         } else /* if self.e_last().is_ram() */ {
             self.ram_mut(self.e_last()).set_z(prev);
         }
-        self.set_e_last(events);
+        self.set_e_last(z_queue);
         // NOTE: `e_hint` will be reset when the continuation is terminated
     }
     fn z_queue_put(&mut self, z_queue: Any, ep: Any) {

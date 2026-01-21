@@ -1,5 +1,7 @@
 # Sponsored Actor Configurations
 
+**WARNING! THIS DOCUMENT IS BADLY OUT OF DATE AND DOES NOT MATCH THE CURRENT DESIGN**
+
 A _Configuration_ is a set of Actors
 and a set of pending Events.
 An _Actor_ in a Configuration
