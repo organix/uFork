@@ -60,7 +60,6 @@ pub struct Core {
     quad_rom:   [Quad; QUAD_ROM_MAX],
     quad_ram:   [Quad; QUAD_RAM_MAX],
     rom_top:    Any,
-    e_hint:     Any,
     gc_addr:    Any,
     gc_stride:  u8,
     gc_phase:   GcPhase,
@@ -84,7 +83,6 @@ impl Core {
             quad_rom: [ Quad::empty_t(); QUAD_ROM_MAX ],
             quad_ram: [ Quad::empty_t(); QUAD_RAM_MAX ],
             rom_top: Any::rom(ROM_BASE_OFS),
-            e_hint: NIL,
             gc_addr: Any::ram(RAM_BASE_OFS),
             gc_stride: 32,
             gc_phase: GcPhase::Idle,
@@ -248,46 +246,6 @@ impl Core {
     }
     /*
 
-    This dispatch strategy searches the queue for a deliverable event.
-    An event is deliverable if the target of the event is ready (not busy).
-
-    */
-    fn _dispatch_event(&mut self) -> Any {
-        if self.e_hint == UNDEF {  // IMPORTANT! reset `e_hint` to `NIL` at `END`.
-            return UNDEF;  // there are no deliverable events in the queue
-        }
-        let mut ep = self.e_first();
-        let mut prev = NIL;
-        if self.e_hint.is_ram() {
-            prev = self.e_hint;
-            ep = self.ram(prev).z();
-        }
-        while ep.is_ram() {
-            let event = self.ram(ep);
-            let next = event.z();
-            let target = self.event_target(ep);
-            if !self.actor_busy(target) {
-                // found a candidate! remove it from the queue...
-                if prev.is_ram() {
-                    self.ram_mut(prev).set_z(next);
-                } else {
-                    self.set_e_first(next);
-                }
-                if !next.is_ram() {
-                    self.set_e_last(prev);
-                }
-                self.e_hint = prev;
-                // ...and attempt to deliver the event
-                return self.deliver_event(ep);
-            }
-            prev = ep;
-            ep = next;
-        }
-        self.e_hint = UNDEF;  // nothing to dispatch until `END`
-        UNDEF  // no deliverable event found
-    }
-    /*
-
     This dispatch strategy processes one event from the front of the queue.
     If the event's sponsor is suspended, move the event to the sponsor's `waiting`.
     If the event's target is busy, move the event to the actor's `inbox`.
@@ -355,43 +313,6 @@ impl Core {
         let actor = self.cap_to_ptr(target);
         self.z_queue_put(actor, ep);
         UNDEF  // event not delivered
-    }
-    /*
-
-    Attempt to deliver a detached event to an available event handler
-    if the sponsor has sufficient quota remaining.
-
-    */
-    fn deliver_event(&mut self, ep: Any) -> Any {
-            let sponsor = self.event_sponsor(ep);
-            let sig = self.sponsor_signal(sponsor);
-            if sig.is_fix() {
-                // idle sponsor
-                if sig != ZERO {  // if not stopped, retry later...
-                    self.event_enqueue(ep);  // move event to back of queue
-                }
-                return UNDEF;  // no event dispatched
-            }
-            let limit = self.sponsor_events(sponsor).fix_num().unwrap_or(0);
-            if limit <= 0 {
-                // sponsor event limit reached
-                let signal_sent = self.report_error(sponsor, E_MSG_LIM);
-                self.event_enqueue(ep);  // move event to back of queue
-                if signal_sent {
-                    return UNDEF;  // controller notified
-                }
-            } else {
-                self.set_sponsor_events(sponsor, Any::fix(limit - 1));  // decrement event limit
-                self.ram_mut(ep).set_z(NIL);  // disconnect event from queue
-                if let Err(error) = self.handle_event(ep) {
-                    let signal_sent = self.report_error(sponsor, error);
-                    self.event_enqueue(ep);  // move event to back of queue
-                    if signal_sent {
-                        return UNDEF;  // controller notified
-                    }
-                }
-            }
-            self.sponsor_signal(sponsor)  // return signal
     }
     /*
 
@@ -489,7 +410,6 @@ impl Core {
                         self.ram_mut(target).set_z(UNDEF);  // return actor to IDLE state
                         self.free(ep);
                         self.free(kp);
-                        self.e_hint = NIL;  // reset `e_hint` at `END`
                     }
                     if GC_STRATEGY == GcStrategy::FullAtCommit {
                         self.gc_collect_all();  // full GC collection after `end` instruction
@@ -498,7 +418,6 @@ impl Core {
             },
             Err(error) => {
                 self.set_sp(sp);  // restore original `sp` on failure
-                self.e_hint = NIL;  // reset `e_hint` on error
                 if self.report_error(sponsor, error) {
                     return UNDEF;  // controller notified
                 }
@@ -991,14 +910,8 @@ impl Core {
         self.ram_mut(ep).set_z(NIL);
         if !self.e_first().is_ram() {
             self.set_e_first(ep);
-            if self.e_hint == UNDEF {  // if waiting, restart scan from first
-                self.e_hint = NIL;
-            }
         } else /* if self.e_last().is_ram() */ {
             self.ram_mut(self.e_last()).set_z(ep);
-            if self.e_hint == UNDEF {  // if waiting, restart scan from last
-                self.e_hint = self.e_last();
-            }
         }
         self.set_e_last(ep);
     }
@@ -1023,7 +936,6 @@ impl Core {
             self.ram_mut(self.e_last()).set_z(prev);
         }
         self.set_e_last(z_queue);
-        // NOTE: `e_hint` will be reset when the continuation is terminated
     }
     fn z_queue_put(&mut self, z_queue: Any, ep: Any) {
         // add an event to (the head of) a reversed event list
