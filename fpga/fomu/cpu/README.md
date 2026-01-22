@@ -6,12 +6,12 @@ that serves as the microcode machine
 for implementing uFork instructions.
 Programs for the machine
 are written in
-[Forth](https://en.wikipedia.org/wiki/Forth_(programming_language)).
+[uCode/Forth](https://en.wikipedia.org/wiki/Forth_(programming_language)).
 
 ## Documentation
 
   * [uCode processor design](../../cpu.md)
-  * [uCode Forth programming language](../../ucode/README.md)
+  * [uCode/Forth programming language](../../ucode/README.md)
   * [Interactive hardware monitor](monitor.md)
 
 ## Sample CPU Trace (Simulated)
@@ -38,8 +38,20 @@ forcing everything to be rebuilt from source:
 
 ## Serial UART Device
 
-This example includes a [serial](https://en.wikipedia.org/wiki/Asynchronous_serial_communication)
-[UART](https://en.wikipedia.org/wiki/Universal_asynchronous_receiver-transmitter) device.
+This design includes two [serial](https://en.wikipedia.org/wiki/Asynchronous_serial_communication)
+[UART](https://en.wikipedia.org/wiki/Universal_asynchronous_receiver-transmitter) devices.
+
+### Console Serial Port
+
+The console serial port is implemented as a USB-to-Serial bridge,
+using the USB pins on the Fomu.
+It enumerates as a serial communication device
+visible to the host computer.
+
+### Debug Serial Port
+
+The debug serial port is implemented in gateware,
+directly connected to the user i/o pads on the edge of the Fomu.
 It operates at a fixed [baud rate](https://en.wikipedia.org/wiki/Baud) of 115200
 with [8N1](https://en.wikipedia.org/wiki/8-N-1) framing and parity.
 
@@ -73,16 +85,16 @@ of a new character (octet).
 ### Serial Terminal Program
 
 You'll have to run a serial terminal program
-to communicate with the serial device.
+to communicate with either serial device.
 
-On a Mac, determine the available devices like this:
+On a Mac, you can determine the available devices like this:
 
     ls /dev/tty.*
 
 Then run the `screen` program to connect
 to the serial port at your desired baud-rate.
 
-    screen /dev/tty.usbserial-AD0JIXTZ 115200
+    screen /dev/tty.usbmodem11101 115200
 
 Use the key sequence `Ctrl-a + k` to kill the terminal session.
 
