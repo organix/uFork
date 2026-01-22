@@ -907,11 +907,11 @@ impl Core {
 
     pub fn event_enqueue(&mut self, ep: Any) {
         // add event to the back of the queue
-        self.ram_mut(ep).set_z(NIL);
+        self.set_z(ep, NIL);
         if !self.e_first().is_ram() {
             self.set_e_first(ep);
         } else /* if self.e_last().is_ram() */ {
-            self.ram_mut(self.e_last()).set_z(ep);
+            self.set_z(self.e_last(), ep);
         }
         self.set_e_last(ep);
     }
@@ -924,8 +924,8 @@ impl Core {
         let mut ep = z_queue;
         let mut prev = NIL;
         while ep.is_ram() {
-            let next = self.ram(ep).z();
-            self.ram_mut(ep).set_z(prev);
+            let next = self.z(ep);
+            self.set_z(ep, prev);
             prev = ep;
             ep = next;
         }
@@ -933,7 +933,7 @@ impl Core {
         if !self.e_first().is_ram() {
             self.set_e_first(prev);
         } else /* if self.e_last().is_ram() */ {
-            self.ram_mut(self.e_last()).set_z(prev);
+            self.set_z(self.e_last(), prev);
         }
         self.set_e_last(z_queue);
     }
@@ -959,23 +959,17 @@ impl Core {
         self.ram_mut(prev).set_z(next);
         return tail;
     }
-    pub fn event_sponsor(&self, ep: Any) -> Any {
-        self.mem(ep).t()
-    }
-    pub fn event_target(&self, ep: Any) -> Any {
-        self.mem(ep).x()
-    }
-    pub fn event_message(&self, ep: Any) -> Any {
-        self.mem(ep).y()
-    }
+    pub fn event_sponsor(&self, ep: Any) -> Any { self.t(ep) }
+    pub fn event_target(&self, ep: Any) -> Any { self.x(ep) }
+    pub fn event_message(&self, ep: Any) -> Any { self.y(ep) }
 
     fn cont_enqueue(&mut self, kp: Any) {
         // add continuation to the back of the queue
-        self.ram_mut(kp).set_z(NIL);
+        self.set_z(kp, NIL);
         if !self.k_first().is_ram() {
             self.set_k_first(kp);
         } else /* if self.k_last().is_ram() */ {
-            self.ram_mut(self.k_last()).set_z(kp);
+            self.set_z(self.k_last(), kp);
         }
         self.set_k_last(kp);
     }
@@ -983,8 +977,7 @@ impl Core {
         // remove continuation from the front of the queue
         let kp = self.k_first();
         if kp.is_ram() {
-            let cont = self.ram(kp);
-            let next = cont.z();
+            let next = self.z(kp);
             self.set_k_first(next);
             if !next.is_ram() {
                 self.set_k_last(NIL)
@@ -1000,10 +993,10 @@ impl Core {
             return Err(E_NOT_CAP);
         }
         let effect = self.txn_effect();
-        let next = self.ram(effect).z();
+        let next = self.z(effect);
         let ep = self.new_event(sponsor, target, msg)?;
-        self.ram_mut(ep).set_z(next);
-        self.ram_mut(effect).set_z(ep);
+        self.set_z(ep, next);
+        self.set_z(effect, ep);
         Ok(())
     }
     fn effect_create(&mut self, beh: Any, state: Any) -> Result<Any, Error> {
@@ -1019,9 +1012,8 @@ impl Core {
             return Err(E_NOT_EXE);
         }
         let effect = self.txn_effect();
-        let quad = self.ram_mut(effect);
-        quad.set_x(beh);  // replace behavior function
-        quad.set_y(state);  // replace state data
+        self.set_x(effect, beh);  // replace behavior function
+        self.set_y(effect, state);  // replace state data
         Ok(())
     }
 
@@ -1087,7 +1079,7 @@ impl Core {
         if !ep.is_ram() {
             return UNDEF;  // no event means no `self`
         }
-        let effect = self.ram(ep).z();
+        let effect = self.z(ep);
         effect
     }
     fn self_ptr(&self) -> Any {
@@ -1095,7 +1087,7 @@ impl Core {
         if !ep.is_ram() {
             return UNDEF;  // no event means no `self`
         }
-        let target = self.ram(ep).x();
+        let target = self.x(ep);
         let a_ptr = self.cap_to_ptr(target);
         a_ptr
     }
@@ -1119,34 +1111,34 @@ impl Core {
         Ok(())
     }
     pub fn sponsor_memory(&self, sponsor: Any) -> Any {
-        let quota = self.ram(sponsor).x();
-        self.ram(quota).t()
+        let quota = self.x(sponsor);
+        self.t(quota)
     }
     pub fn set_sponsor_memory(&mut self, sponsor: Any, num: Any) {
-        let quota = self.ram(sponsor).x();
-        self.ram_mut(quota).set_t(num);
+        let quota = self.x(sponsor);
+        self.set_t(quota, num);
     }
     pub fn sponsor_events(&self, sponsor: Any) -> Any {
-        let quota = self.ram(sponsor).x();
-        self.ram(quota).x()
+        let quota = self.x(sponsor);
+        self.x(quota)
     }
     pub fn set_sponsor_events(&mut self, sponsor: Any, num: Any) {
-        let quota = self.ram(sponsor).x();
-        self.ram_mut(quota).set_x(num);
+        let quota = self.x(sponsor);
+        self.set_x(quota, num);
     }
     pub fn sponsor_cycles(&self, sponsor: Any) -> Any {
-        let quota = self.ram(sponsor).x();
-        self.ram(quota).y()
+        let quota = self.x(sponsor);
+        self.y(quota)
     }
     pub fn set_sponsor_cycles(&mut self, sponsor: Any, num: Any) {
-        let quota = self.ram(sponsor).x();
-        self.ram_mut(quota).set_y(num);
+        let quota = self.x(sponsor);
+        self.set_y(quota, num);
     }
     pub fn sponsor_signal(&self, sponsor: Any) -> Any {
-        self.ram(sponsor).y()
+        self.y(sponsor)
     }
     pub fn set_sponsor_signal(&mut self, sponsor: Any, signal: Any) {
-        self.ram_mut(sponsor).set_y(signal);
+        self.set_y(sponsor, signal);
     }
     fn count_cpu_cycles(&mut self, cost: isize) -> Result<(), Error> {
         let ep = self.ep();
@@ -1341,27 +1333,27 @@ impl Core {
         self.list_len(front) + self.list_len(back)
     }
 
-    fn e_first(&self) -> Any { self.ram(self.ddeque()).t() }
-    fn set_e_first(&mut self, ptr: Any) { self.ram_mut(self.ddeque()).set_t(ptr); }
-    fn e_last(&self) -> Any { self.ram(self.ddeque()).x() }
-    fn set_e_last(&mut self, ptr: Any) { self.ram_mut(self.ddeque()).set_x(ptr); }
-    fn k_first(&self) -> Any { self.ram(self.ddeque()).y() }
-    fn set_k_first(&mut self, ptr: Any) { self.ram_mut(self.ddeque()).set_y(ptr); }
-    fn k_last(&self) -> Any { self.ram(self.ddeque()).z() }
-    fn set_k_last(&mut self, ptr: Any) { self.ram_mut(self.ddeque()).set_z(ptr); }
-    pub fn ddeque(&self) -> Any { DDEQUE }
+    fn e_first(&self) -> Any { self.t(DDEQUE) }
+    fn set_e_first(&mut self, ptr: Any) { self.set_t(DDEQUE, ptr); }
+    fn e_last(&self) -> Any { self.x(DDEQUE) }
+    fn set_e_last(&mut self, ptr: Any) { self.set_x(DDEQUE, ptr); }
+    fn k_first(&self) -> Any { self.y(DDEQUE) }
+    fn set_k_first(&mut self, ptr: Any) { self.set_y(DDEQUE, ptr); }
+    fn k_last(&self) -> Any { self.z(DDEQUE) }
+    fn set_k_last(&mut self, ptr: Any) { self.set_z(DDEQUE, ptr); }
+    pub fn ddeque(&self) -> Any { DDEQUE }  // unused?
 
     pub fn rom_top(&self) -> Any { self.rom_top }
     pub fn set_rom_top(&mut self, ptr: Any) { self.rom_top = ptr }
-    pub fn ram_top(&self) -> Any { self.ram(self.memory()).t() }
-    fn set_ram_top(&mut self, ptr: Any) { self.ram_mut(self.memory()).set_t(ptr); }
-    fn ram_next(&self) -> Any { self.ram(self.memory()).x() }
-    fn set_ram_next(&mut self, ptr: Any) { self.ram_mut(self.memory()).set_x(ptr); }
-    fn ram_free(&self) -> Any { self.ram(self.memory()).y() }
-    fn set_ram_free(&mut self, fix: Any) { self.ram_mut(self.memory()).set_y(fix); }
-    fn ram_root(&self) -> Any { self.ram(self.memory()).z() }
-    fn set_ram_root(&mut self, ptr: Any) { self.ram_mut(self.memory()).set_z(ptr); }
-    pub fn memory(&self) -> Any { MEMORY }
+    pub fn ram_top(&self) -> Any { self.ram(MEMORY).t() }
+    fn set_ram_top(&mut self, ptr: Any) { self.ram_mut(MEMORY).set_t(ptr); }
+    fn ram_next(&self) -> Any { self.ram(MEMORY).x() }
+    fn set_ram_next(&mut self, ptr: Any) { self.ram_mut(MEMORY).set_x(ptr); }
+    fn ram_free(&self) -> Any { self.ram(MEMORY).y() }
+    fn set_ram_free(&mut self, fix: Any) { self.ram_mut(MEMORY).set_y(fix); }
+    fn ram_root(&self) -> Any { self.ram(MEMORY).z() }
+    fn set_ram_root(&mut self, ptr: Any) { self.ram_mut(MEMORY).set_z(ptr); }
+    pub fn memory(&self) -> Any { MEMORY }  // unused?
 
     fn new_sponsor(&mut self) -> Result<Any, Error> {
         let quad = Quad::quota(ZERO, ZERO, ZERO);
@@ -1527,27 +1519,27 @@ impl Core {
     }
     pub fn car(&self, pair: Any) -> Any {
         if self.typeq(PAIR_T, pair) {
-            self.mem(pair).x()
+            self.x(pair)
         } else {
             UNDEF
         }
     }
     pub fn cdr(&self, pair: Any) -> Any {
         if self.typeq(PAIR_T, pair) {
-            self.mem(pair).y()
+            self.y(pair)
         } else {
             UNDEF
         }
     }
-    fn _set_car(&mut self, pair: Any, val: Any) {
+    fn _set_car(&mut self, pair: Any, val: Any) {  // unused
         assert!(self.in_heap(pair));
-        assert!(self.ram(pair).t() == PAIR_T);
-        self.ram_mut(pair).set_x(val);
+        assert!(self.t(pair) == PAIR_T);
+        self.set_x(pair, val);
     }
     fn set_cdr(&mut self, pair: Any, val: Any) {
         assert!(self.in_heap(pair));
-        assert!(self.ram(pair).t() == PAIR_T);
-        self.ram_mut(pair).set_y(val);
+        assert!(self.t(pair) == PAIR_T);
+        self.set_y(pair, val);
     }
 
     pub fn kp(&self) -> Any {  // continuation pointer
@@ -1562,29 +1554,25 @@ impl Core {
         if !kp.is_ram() {
             return UNDEF;
         }
-        let quad = self.ram(kp);
-        quad.t()
+        self.t(kp)
     }
     pub fn sp(&self) -> Any {  // stack pointer
         let kp = self.kp();
         if !kp.is_ram() {
             return UNDEF;
         }
-        let quad = self.ram(kp);
-        quad.x()
+        self.x(kp)
     }
     pub fn ep(&self) -> Any {  // event pointer
         let kp = self.kp();
         if !kp.is_ram() {
             return UNDEF;
         }
-        let quad = self.ram(kp);
-        quad.y()
+        self.y(kp)
     }
-    fn set_sp(&mut self, ptr: Any) {
+    fn set_sp(&mut self, sp: Any) {
         let kp = self.kp();
-        let quad = self.ram_mut(kp);
-        quad.set_x(ptr)
+        self.set_x(kp, sp)
     }
 
     pub fn typeq(&self, typ: Any, val: Any) -> bool {
@@ -1614,8 +1602,10 @@ impl Core {
         val.is_ram() && (val.ofs() < self.ram_top().ofs())
     }
     pub fn ptr_to_cap(&self, ptr: Any) -> Any {
-        let t = self.mem(ptr).t();
+        /*
+        let t = self.t(ptr);
         assert!((t == ACTOR_T) || (t == PROXY_T));
+        */
         let raw = ptr.raw() | OPQ_RAW;
         let cap = Any::new(raw);
         cap
@@ -1623,8 +1613,10 @@ impl Core {
     pub fn cap_to_ptr(&self, cap: Any) -> Any {
         let raw = cap.raw() & !OPQ_RAW;
         let ptr = Any::new(raw);
-        let t = self.mem(ptr).t();
+        /*
+        let t = self.t(ptr);
         assert!((t == ACTOR_T) || (t == PROXY_T));
+        */
         ptr
     }
 
