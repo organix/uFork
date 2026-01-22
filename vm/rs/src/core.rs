@@ -1928,6 +1928,16 @@ impl Core {
             &self.quad_ram[ofs]
         }
     }
+
+    pub fn t(&self, ptr: Any) -> Any { self.mem(ptr).t() }
+    pub fn x(&self, ptr: Any) -> Any { self.mem(ptr).x() }
+    pub fn y(&self, ptr: Any) -> Any { self.mem(ptr).y() }
+    pub fn z(&self, ptr: Any) -> Any { self.mem(ptr).z() }
+    pub fn set_t(&mut self, ptr: Any, v: Any) { self.ram_mut(ptr).set_t(v) }
+    pub fn set_x(&mut self, ptr: Any, v: Any) { self.ram_mut(ptr).set_x(v) }
+    pub fn set_y(&mut self, ptr: Any, v: Any) { self.ram_mut(ptr).set_y(v) }
+    pub fn set_z(&mut self, ptr: Any, v: Any) { self.ram_mut(ptr).set_z(v) }
+
     pub fn mem(&self, ptr: Any) -> &Quad {
         if !ptr.is_ptr() {
             panic!("invalid ptr=${:08x}", ptr.raw());
@@ -2367,17 +2377,6 @@ pub const COUNT_TO: Any = Any { raw: COUNT_TO_OFS as Raw };
         assert_eq!(NIL, core.e_first());
         assert_eq!(NIL, core.k_first());
         assert_eq!(UNDEF, core.kp());
-        /*
-        static mut CORE: Core = Core::default();
-        unsafe {
-            CORE.init();
-            assert_eq!(ZERO, CORE.ram_free());
-            assert_eq!(NIL, CORE.ram_next());
-            assert_eq!(NIL, CORE.e_first());
-            assert_eq!(NIL, CORE.k_first());
-            assert_eq!(UNDEF, CORE.kp());
-        }
-        */
     }
 
     #[test]
