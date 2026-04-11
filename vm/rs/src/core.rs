@@ -2012,43 +2012,27 @@ mod tests {
 
     use super::*;
 
-    fn load_std(core: &mut Core) -> Any {
-        // prepare ROM with library of idioms
-pub const STD_OFS: usize = ROM_BASE_OFS;
+    fn load_sink(core: &mut Core) -> Any {
+        // prepare ROM with a sink behavior
         let quad_rom = &mut core.quad_rom;
 
-pub const SINK_BEH: Any = Any { raw: (STD_OFS+0) as Raw };  // alias for no-op behavior
-pub const COMMIT: Any = Any { raw: (STD_OFS+0) as Raw };
-        quad_rom[COMMIT.ofs()]      = Quad::vm_end_commit();
-pub const SEND_MSG: Any = Any { raw: (STD_OFS+1) as Raw };
-        quad_rom[SEND_MSG.ofs()]      = Quad::vm_actor_send(COMMIT);
-pub const CUST_SEND: Any = Any { raw: (STD_OFS+2) as Raw };
-        quad_rom[CUST_SEND.ofs()]   = Quad::vm_msg(PLUS_1, SEND_MSG);
-pub const RV_SELF: Any = Any { raw: (STD_OFS+3) as Raw };
-        quad_rom[RV_SELF.ofs()]     = Quad::vm_actor_self(CUST_SEND);
-pub const RV_UNDEF: Any = Any { raw: (STD_OFS+4) as Raw };
-        quad_rom[RV_UNDEF.ofs()]    = Quad::vm_push(UNDEF, CUST_SEND);
-pub const RV_NIL: Any = Any { raw: (STD_OFS+5) as Raw };
-        quad_rom[RV_NIL.ofs()]      = Quad::vm_push(NIL, CUST_SEND);
-pub const RV_FALSE: Any = Any { raw: (STD_OFS+6) as Raw };
-        quad_rom[RV_FALSE.ofs()]    = Quad::vm_push(FALSE, CUST_SEND);
-pub const RV_TRUE: Any = Any { raw: (STD_OFS+7) as Raw };
-        quad_rom[RV_TRUE.ofs()]     = Quad::vm_push(TRUE, CUST_SEND);
-pub const RV_ZERO: Any = Any { raw: (STD_OFS+8) as Raw };
-        quad_rom[RV_ZERO.ofs()]     = Quad::vm_push(ZERO, CUST_SEND);
-pub const RV_ONE: Any = Any { raw: (STD_OFS+9) as Raw };
-        quad_rom[RV_ONE.ofs()]      = Quad::vm_push(PLUS_1, CUST_SEND);
-pub const RESEND: Any = Any { raw: (STD_OFS+10) as Raw };
-        quad_rom[RESEND.ofs()+0]    = Quad::vm_msg(ZERO, Any::rom(RESEND.ofs()+1));
-        quad_rom[RESEND.ofs()+1]    = Quad::vm_actor_self(SEND_MSG);
-pub const STOP: Any = Any { raw: (STD_OFS+12) as Raw };
-        quad_rom[STOP.ofs()]        = Quad::vm_end_stop();
-pub const ABORT: Any = Any { raw: (STD_OFS+13) as Raw };
+pub const SINK_BEH: Any = Any { raw: (ROM_BASE_OFS+0) as Raw };
+        quad_rom[SINK_BEH.ofs()]    = Quad::vm_end_commit();
+
+        core.rom_top = Any::rom(ROM_BASE_OFS+1);
+        SINK_BEH
+    }
+
+    fn load_abort(core: &mut Core) -> Any {
+        // prepare ROM with an abort behavior
+        let quad_rom = &mut core.quad_rom;
+
+pub const ABORT: Any = Any { raw: (ROM_BASE_OFS) as Raw };
         quad_rom[ABORT.ofs()+0]     = Quad::vm_push(UNDEF, Any::rom(ABORT.ofs()+1));  // reason=#?
         quad_rom[ABORT.ofs()+1]     = Quad::vm_end_abort();
 
-        core.rom_top = Any::rom(STD_OFS+15);
-        SINK_BEH
+        core.rom_top = Any::rom(ROM_BASE_OFS+2);
+        ABORT
     }
 
     /*
@@ -2392,13 +2376,26 @@ pub const COUNT_TO: Any = Any { raw: COUNT_TO_OFS as Raw };
     fn run_loop_terminates() {
         let mut core = Core::default();
         core.init();
-        let boot_beh = load_std(&mut core);
+        let boot_beh = load_sink(&mut core);
         let boot_ptr = core.reserve(&Quad::new_actor(boot_beh, NIL)).unwrap();
         let a_boot = core.ptr_to_cap(boot_ptr);
         let evt = core.reserve_event(SPONSOR, a_boot, UNDEF);
         core.event_enqueue(evt.unwrap());
         let sig = core.run_loop(0);
         assert_eq!(ZERO, sig);
+    }
+
+    #[test]
+    fn run_loop_aborts() {
+        let mut core = Core::default();
+        core.init();
+        let boot_beh = load_abort(&mut core);
+        let boot_ptr = core.reserve(&Quad::new_actor(boot_beh, NIL)).unwrap();
+        let a_boot = core.ptr_to_cap(boot_ptr);
+        let evt = core.reserve_event(SPONSOR, a_boot, UNDEF);
+        core.event_enqueue(evt.unwrap());
+        let sig = core.run_loop(0);
+        assert_eq!(PLUS_1, sig);
     }
 
     #[test]
