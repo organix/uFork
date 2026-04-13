@@ -239,7 +239,6 @@ function make_core({
     const h_run_loop = wrap_wasm_call(() => wasm_exports.h_run_loop);
     const h_step = wrap_wasm_call(() => wasm_exports.h_step);
     const h_event_enqueue = wrap_wasm_call(() => wasm_exports.h_event_enqueue);
-    const h_revert = wrap_wasm_call(() => wasm_exports.h_revert);
     const h_gc_run = wrap_wasm_call(() => wasm_exports.h_gc_run);
     const h_rom_buffer = wrap_wasm_call(() => wasm_exports.h_rom_buffer);
     const h_rom_top = wrap_wasm_call(() => wasm_exports.h_rom_top);
@@ -825,7 +824,6 @@ function make_core({
         h_reserve_rom,
         h_reserve_stub,
         h_restore,
-        h_revert,
         h_rom,
         h_rom_top,
         h_run_loop,

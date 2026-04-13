@@ -56,7 +56,6 @@ const $state = document.getElementById("state");
 const $msg = document.getElementById("msg");
 
 const $gc_button = document.getElementById("gc-btn");
-const $revert_button = document.getElementById("revert-btn");
 const $next_button = document.getElementById("next-step");
 const $step_button = document.getElementById("single-step");
 const $pause_button = document.getElementById("play-pause");
@@ -359,7 +358,6 @@ function draw_host() {
     update_element_value($sponsor_events, ufork.fix_to_i32(spn_quad.x));
     update_element_value($sponsor_cycles, ufork.fix_to_i32(spn_quad.y));
     update_element_text($sponsor_signal, ufork.print(spn_quad.z));
-    $revert_button.disabled = !fault;
     enable_next();
 }
 function schedule_draw_host() {
@@ -452,14 +450,6 @@ function play_action() {
 
 $gc_button.onclick = gc_host;
 $gc_button.title = "Run garbage collection (g)";
-
-function revert_action() {
-    core.h_revert();  // FIXME: check `bool` result...
-    draw_host();
-}
-$revert_button.disabled = true;
-$revert_button.onclick = revert_action;
-$revert_button.title = "Revert actor message-event";
 
 $next_button.onclick = next_step;
 $next_button.title = "Next instruction for this event (n)";

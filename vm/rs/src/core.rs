@@ -367,13 +367,15 @@ impl Core {
             let ptr = self.cap_to_ptr(target);
             let inbox = self.ram(ptr).z();  // grab inbox before revert
             if sig != ZERO {  // if not stopped, retry later...
-                self.actor_revert();
+                self.actor_abort();  // abandon outbox
+                self.ram_mut(ptr).set_z(UNDEF);  // return actor to IDLE state
+                self.event_enqueue(ep);
             }
             self.inject_events(inbox);
             return UNDEF;  // instruction not executed
         }
         // FIXME: snapshot continuation state so it can be restored on error? or just `sp`?
-        let sp = self.sp();  // remember original `sp` in case of failure
+        let mut sp = self.sp();  // remember original `sp` in case of failure
         let ip = self.ip();
         match self.perform_op(ip) {
             Ok(ip_) => {
@@ -386,6 +388,12 @@ impl Core {
                     // release or reuse continuation, event, and (empty) effect
                     let to = self.ram(ep).x();
                     let target = self.cap_to_ptr(to);
+                    // free the stack
+                    while self.typeq(PAIR_T, sp) {
+                        let p = sp;
+                        sp = self.cdr(p);
+                        self.free(p);  // free pair holding stack item
+                    }
                     let next = self.z_queue_take(target);  // pull from inbox
                     if next.is_ram() {  // non-empty inbox
                         // reuse actor-event transaction
@@ -1018,9 +1026,8 @@ impl Core {
     }
 
     fn audit_abort(&mut self, error: Error, evidence: Any) -> Any {
-        let me = self.self_ptr();
         self.call_audit_fn(error, evidence);
-        self.actor_abort(me);
+        self.actor_abort();
         UNDEF  // end actor transaction
     }
     fn actor_busy(&self, cap: Any) -> bool {
@@ -1029,7 +1036,6 @@ impl Core {
         quad.z() != UNDEF
     }
     fn actor_commit(&mut self, me: Any) {
-        self.stack_clear(NIL);
         let effect = self.txn_effect();
         let quad = self.ram(effect);
         let beh = quad.x();
@@ -1041,10 +1047,8 @@ impl Core {
         let actor = self.ram_mut(me);
         actor.set_x(beh);
         actor.set_y(state);
-        //actor.set_z(UNDEF);  // need to keep the `inbox` around for chained dispatch?
     }
-    fn actor_abort(&mut self, me: Any) {
-        self.stack_clear(NIL);
+    fn actor_abort(&mut self) {
         let effect = self.txn_effect();
         let mut outbox = self.ram(effect).z();
         // free sent-message events
@@ -1054,25 +1058,6 @@ impl Core {
             outbox = next;
         }
         self.free(effect);
-        // abort actor transaction
-        self.ram_mut(me).set_z(UNDEF);
-    }
-    pub fn actor_revert(&mut self) -> bool {
-        // revert actor/event to pre-dispatch state
-        if let Some(kp) = self.cont_dequeue() {
-            let ep = self.ram(kp).y();
-            let target = self.ram(ep).x();
-            let me = self.cap_to_ptr(target);
-            self.actor_abort(me);
-            let sponsor = self.event_sponsor(ep);
-            let sig = self.sponsor_signal(sponsor);
-            if sig != ZERO {  // if not stopped, retry later...
-                self.event_enqueue(ep);
-            }
-            true
-        } else {
-            false
-        }
     }
     fn txn_effect(&self) -> Any {
         let ep = self.ep();
@@ -1469,15 +1454,6 @@ impl Core {
             self.set_sp(sp);
         }
         Ok(())
-    }
-    fn stack_clear(&mut self, top: Any) {
-        let mut sp = self.sp();
-        while sp != top && self.typeq(PAIR_T, sp) {
-            let p = sp;
-            sp = self.cdr(p);
-            self.free(p);  // free pair holding stack item
-        }
-        self.set_sp(sp);
     }
     fn stack_peek(&mut self) -> Any {
         let sp = self.sp();
@@ -2395,7 +2371,7 @@ pub const COUNT_TO: Any = Any { raw: COUNT_TO_OFS as Raw };
         let evt = core.reserve_event(SPONSOR, a_boot, UNDEF);
         core.event_enqueue(evt.unwrap());
         let sig = core.run_loop(0);
-        assert_eq!(PLUS_1, sig);
+        assert_eq!(ZERO, sig);
     }
 
     #[test]

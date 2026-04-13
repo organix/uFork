@@ -89,12 +89,6 @@ pub fn h_event_enqueue(evt: Raw) {
 }
 
 #[no_mangle]
-pub fn h_revert() -> bool {
-    let mut core = the_core().borrow_mut();
-    core.actor_revert()
-}
-
-#[no_mangle]
 pub fn h_gc_run() {
     let mut core = the_core().borrow_mut();
     core.gc_collect_all()
