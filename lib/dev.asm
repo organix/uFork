@@ -18,7 +18,7 @@ blob_key:
 random_key:
     ref 5
 host_key:
-    ref 12
+    ref 11
 
 ; Dynamic devices. These are provided by the host device.
 
