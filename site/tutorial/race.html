@@ -39,6 +39,9 @@
 </p>
 <pre class="code">
 once_beh:                   ; rcvr &lt;- msg
+    msg 0                   ; msg
+    state 0                 ; msg rcvr
+    actor send              ; --
     push #?                 ; data=#?
     push sink_beh           ; data code=sink_beh
     actor become            ; --
