@@ -94,7 +94,7 @@ svc_beh:                    ; _ &lt;- cust,num
     Pair-list indexing is used to access parts of the message
     in the preceeding example.
     The following code fragment demonstrates
-    several pair-manipulation instructions.
+    a few pair-manipulation instructions.
 </p>
 <pre class="code">
     push 3                  ; 3
@@ -118,7 +118,7 @@ svc_beh:                    ; _ &lt;- cust,num
     and distributing device capabilities to actors that need them.
 </p>
 <p>
-    uFork Assembly-Language is organized into modules.
+    uFork code is organized into modules.
     A module can import symbols exported by other modules.
     If a module exports a <code>boot</code> symbol,
     it can provide the behavior for the boot actor.
@@ -168,8 +168,8 @@ boot:                       ; _ &lt;- {caps}
 <p>
     A capability is the address that designates a specific actor
     and confers the ability to send messages to that address.
-    Devices capabilities are indistinguishable from actor capabilities,
-    but are implemented directly by the machine,
+    Device capabilities are indistinguishable from actor capabilities,
+    but are implemented directly by the machine
     rather than in code.
 </p>
 <p>
