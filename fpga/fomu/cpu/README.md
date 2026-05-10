@@ -36,7 +36,7 @@ forcing everything to be rebuilt from source:
 
     make clean
 
-## Serial UART Device
+## Serial UART Devices
 
 This design includes two [serial](https://en.wikipedia.org/wiki/Asynchronous_serial_communication)
 [UART](https://en.wikipedia.org/wiki/Universal_asynchronous_receiver-transmitter) devices.
