@@ -760,11 +760,9 @@ function make_core({
                                 const events = [kp_or_fx];  // sync dev txn
                                 on_txn(false, sender, events);
                             } else {
-                                const busy_actor = u_read_quad(
-                                    ufork.cap_to_ptr(sender)
-                                );
-                                const effect = u_read_quad(busy_actor.z);
-                                const events = u_flatten(effect.z);
+                                const effect = u_read_quad(event.z);
+                                const outbox = effect.z;
+                                const events = u_flatten(outbox);
                                 on_txn(undefined, sender, events);  // actor txn
                             }
                         }

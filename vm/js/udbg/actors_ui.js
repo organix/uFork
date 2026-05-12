@@ -92,13 +92,10 @@ function find_stubs(
     return object;
 }
 
-function find_events(
-    ram,
-    ptr = ufork.read_quad(ram, ufork.DDEQUE_OFS).t  // event queue
-) {
+function flat_ptrs(ram, ptr) {
     if (ufork.is_ram(ptr)) {
         const quad = ufork.read_quad(ram, ufork.rawofs(ptr));
-        return [ptr, ...find_events(ram, quad.z)];
+        return [ptr, ...flat_ptrs(ram, quad.z)];
     }
     return [];
 }
@@ -168,24 +165,39 @@ const actors_ui = make_ui("actor-ui", function (element, {
         return raw_ui({value, depth, expand, ram, rom, rom_debugs});
     }
 
-    function print_effect(events) {
+    function print_outbox(events) {
         return [
-            heading_ui("Effect", 2),
+            heading_ui("Outbox", 3),
             ...events.map(function (event_ptr) {
                 return print(event_ptr, 1, 1);
             })
         ];
     }
 
-    function get_effect(actor_ofs) {
-        const actor_quad = ufork.read_quad(ram, actor_ofs);
-        const effect_ptr = actor_quad.z;
-        if (ufork.is_ram(effect_ptr)) {
-            const effect_quad = ufork.read_quad(
-                ram,
-                ufork.rawofs(effect_ptr)
-            );
-            return find_events(ram, effect_quad.z);
+    function print_effect(effect) {
+        const outbox = effect.z;
+        const events = flat_ptrs(ram, outbox);
+        return [
+            heading_ui("Effect", 2),
+            ...print_outbox(events)
+        ];
+    }
+
+    function find_effect(actor_ofs) {
+        const ddeque = ufork.read_quad(ram, ufork.rawofs(ufork.DDEQUE_OFS));
+        const k_head = ddeque.y;
+        const events = flat_ptrs(ram, k_head).map(function (k_ptr) {
+            const k_quad = ufork.read_quad(ram, ufork.rawofs(k_ptr));
+            const event_ptr = k_quad.y;
+            return ufork.read_quad(ram, ufork.rawofs(event_ptr));
+        });
+        const found_event = events.find(function (event) {
+            const target = event.x;
+            return ufork.rawofs(target) === actor_ofs;
+        });
+        if (found_event !== undefined) {
+            const effect_ptr = found_event.z;
+            return ufork.read_quad(ram, ufork.rawofs(effect_ptr));
         }
     }
 
@@ -212,7 +224,7 @@ const actors_ui = make_ui("actor-ui", function (element, {
             const selected_cap = ufork.ptr_to_cap(ufork.ramptr(selected_ofs));
             details.append(heading_ui("Actor", 1));
             details.append(print(selected_cap, 1, [[3]]));
-            const effect = get_effect(selected_actor_ofs);
+            const effect = find_effect(selected_actor_ofs);
             if (effect !== undefined) {
                 details.append(...print_effect(effect));
             }
@@ -238,7 +250,7 @@ const actors_ui = make_ui("actor-ui", function (element, {
                 }
                 details.append(heading_ui("Sender", 2));
                 details.append(print(txn.sender, 1, 0));
-                details.append(...print_effect(txn.events));
+                details.append(...print_outbox(txn.events));
                 selected_actor_ofs = ufork.rawofs(txn.sender);
             } else if (cc?.ep !== undefined) {
                 const event = ufork.read_quad(ram, ufork.rawofs(cc.ep));
@@ -246,7 +258,8 @@ const actors_ui = make_ui("actor-ui", function (element, {
                 details.append(print(cc.ep, 1, [[1, 3]]));
                 const target = event.x;
                 selected_actor_ofs = ufork.rawofs(target);
-                details.append(...print_effect(get_effect(selected_actor_ofs)));
+                const effect = ufork.read_quad(ram, ufork.rawofs(event.z));
+                details.append(...print_effect(effect));
             }
         }
         const caps = (
@@ -464,8 +477,8 @@ function demo(log) {
     });
     parseq.sequence([
         core.h_initialize(),
-        // core.h_import("https://ufork.org/lib/cell.asm"),
-        core.h_import("https://ufork.org/lib/blob.asm"),
+        core.h_import("https://ufork.org/lib/cell.asm"),
+        // core.h_import("https://ufork.org/lib/blob.asm"),
         requestorize(function () {
             blob_dev(core);
             timer_dev(core);
