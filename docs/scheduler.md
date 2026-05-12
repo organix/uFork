@@ -1,4 +1,4 @@
-# Event/Execution Scheduler
+# Event Scheduler
 
 The blog post "[Memory Safety Simplifies Microprocessor Design](https://dalnefre.com/wp/2022/08/memory-safety-simplifies-microprocessor-design/)"
 describes a scheduling strategy that involves recycling undeliverable events
@@ -11,7 +11,21 @@ that delays a critical message indefinitely.
 
 This document describes a new strategy that keeps events in roughly FIFO order.
 This is not _required_ by the actor model,
-but does _comply_ with the fairness constraint.
+but it does _comply_ with the fairness constraint.
+
+```mermaid
+stateDiagram
+    [*] --> Queued : New Event
+    Queued --> Waiting : Sponsor Suspended
+    Queued --> Inboxed : Target Busy
+    Queued --> Processing : Create Continuation
+    Inboxed --> Waiting : Sponsor Suspended
+    Inboxed --> Processing : Create Continuation
+    Waiting --> Queued : Sponsor Resumed
+    Processing --> Waiting : Sponsor Suspended
+    Processing --> Queued : Commit Transaction
+    Processing --> [*] : Abort Transaction
+```
 
 ## Event Queue
 
@@ -20,8 +34,8 @@ New events enter the system at the tail of this queue.
 When an event is removed from the head of the queue,
 one of three things can happen.
 
-  1. Defer by Sponsor
-  1. Defer by busy target
+  1. Defer due to Sponsor
+  1. Defer due to busy target
   1. Create continuation
 
 If the _sponsor_ of the event determines it is not deliverable,
