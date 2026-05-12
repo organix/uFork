@@ -339,7 +339,7 @@ const tools_ui = make_ui("tools-ui", function (element, {
             } else if (message.idle !== undefined) {
                 devices.io.info("IDLE");
             } else if (message.txn !== undefined && message.txn.wake === true) {
-                devices.io.info("WAKE:", ufork.print(message.txn.sender));
+                devices.io.info("WAKE:", ufork.print(message.txn.target));
             }
             on_status(message);
         });

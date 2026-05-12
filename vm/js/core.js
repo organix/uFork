@@ -10,14 +10,14 @@
 //      An optional callback that is called with values logged by the core
 //      or devices. The 'values' may or may not be strings.
 
-//  on_txn(wake, sender, events)
+//  on_txn(wake, target, events)
 //      An optional callback that is called at the conclusion of every actor
 //      transaction and device pseudo-transaction.
 
 //      The value of 'wake' depends on whether the transaction was completed by
 //      an actor or a device, synchronously or asynchronously:
 
-//          wake        | sender            | asynchronous
+//          wake        | target            | asynchronous
 //          ------------+-------------------+---------------
 //          undefined   | actor             | no
 //          false       | device or proxy   | no
@@ -26,7 +26,7 @@
 //      A 'wake' value of true indicates that execution of the core can resume
 //      from its idle state.
 
-//      The 'sender' is the capability for the actor, proxy, or device that
+//      The 'target' is the capability for the actor, proxy, or device that
 //      generated the message 'events', an array of pointers.
 
 //      Beware that actor transactions can be aborted and thus have no effect!
@@ -754,16 +754,16 @@ function make_core({
                     host_txn(ep, kp_or_fx) {
                         if (typeof on_txn === "function") {
                             const event = u_read_quad(ep);
-                            const sender = event.x;
+                            const target = event.x;
                             const maybe_fx = u_read_quad(kp_or_fx);
                             if (is_cap(maybe_fx.x)) {
                                 const events = [kp_or_fx];  // sync dev txn
-                                on_txn(false, sender, events);
+                                on_txn(false, target, events);
                             } else {
                                 const effect = u_read_quad(event.z);
                                 const outbox = effect.z;
                                 const events = u_flatten(outbox);
-                                on_txn(undefined, sender, events);  // actor txn
+                                on_txn(undefined, target, events);  // actor txn
                             }
                         }
                     },

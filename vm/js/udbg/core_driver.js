@@ -178,8 +178,8 @@ function make_driver(core, on_status) {
         }
     }
 
-    function txn(wake, sender, events) {
-        step("txn", {sender, events, wake});
+    function txn(wake, target, events) {
+        step("txn", {target, events, wake});
         if (wake === true) {
 
 // It is possible that 'txn' was called by 'u_defer' within 'h_run_loop',

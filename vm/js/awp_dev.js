@@ -978,11 +978,11 @@ if (import.meta.main) {
                 core.u_pprint(evidence)
             );
         },
-        on_txn(wake, sender, events) {
+        on_txn(wake, target, events) {
             if (wake === true) {
                 globalThis.console.log(
                     "WAKE:",
-                    ufork.print(sender),
+                    ufork.print(target),
                     events.length
                 );
                 globalThis.console.log(

@@ -248,10 +248,10 @@ const actors_ui = make_ui("actor-ui", function (element, {
                     );
                     details.append(heading_ui(timing + " interrupt", 1));
                 }
-                details.append(heading_ui("Sender", 2));
-                details.append(print(txn.sender, 1, 0));
+                details.append(heading_ui("Target", 2));
+                details.append(print(txn.target, 1, 0));
                 details.append(...print_outbox(txn.events));
-                selected_actor_ofs = ufork.rawofs(txn.sender);
+                selected_actor_ofs = ufork.rawofs(txn.target);
             } else if (cc?.ep !== undefined) {
                 const event = ufork.read_quad(ram, ufork.rawofs(cc.ep));
                 details.append(heading_ui("Current event", 1));
@@ -347,10 +347,10 @@ const actors_ui = make_ui("actor-ui", function (element, {
         invalidate();
     }
 
-    function set_txn(sender, events, wake) {
+    function set_txn(target, events, wake) {
         txn = (
-            sender !== undefined
-            ? {sender, events, wake}
+            target !== undefined
+            ? {target, events, wake}
             : undefined
         );
         invalidate();
@@ -471,8 +471,8 @@ function demo(log) {
         if (message.audit !== undefined) {
             element.set_audit(message.audit);
         } else if (message.txn !== undefined) {
-            const {sender, events, wake} = message.txn;
-            element.set_txn(sender, events, wake);
+            const {target, events, wake} = message.txn;
+            element.set_txn(target, events, wake);
         }
     });
     parseq.sequence([

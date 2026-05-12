@@ -337,8 +337,8 @@ const debugger_ui = make_ui("debugger-ui", function (element, {
         } else if (message.instr !== undefined) {
             on_waiting();
         } else if (message.txn !== undefined) {
-            const {sender, events, wake} = message.txn;
-            views.actors.element.set_txn(sender, events, wake);
+            const {target, events, wake} = message.txn;
+            views.actors.element.set_txn(target, events, wake);
             on_waiting();
             if (wake === true) {
                 fault_message.textContent = "wakeup";

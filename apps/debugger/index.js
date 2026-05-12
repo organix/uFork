@@ -681,13 +681,13 @@ core = make_core({
         //console.log(level + ": " + args.join(" "));
         console.log(level, ...args);
     },
-    on_txn(wake, sender, events) {
+    on_txn(wake, target, events) {
         if (wake === true) {
             console.log("WAKE");
             //single_step();
             draw_host();
         } else if (wake === false) {
-            core.u_trace(ufork.print(sender), events.map(core.u_pprint));
+            core.u_trace(ufork.print(target), events.map(core.u_pprint));
         } else {
             const cc = core.u_current_continuation();
             const event = event_as_object(cc.ep);
