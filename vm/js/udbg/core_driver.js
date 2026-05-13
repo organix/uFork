@@ -178,9 +178,9 @@ function make_driver(core, on_status) {
         }
     }
 
-    function txn(wake, target, events) {
-        step("txn", {target, events, wake});
-        if (wake === true) {
+    function txn(the_txn) {
+        step("txn", the_txn);
+        if (the_txn.wake === true) {
 
 // It is possible that 'txn' was called by 'u_defer' within 'h_run_loop',
 // so defer the call to a future turn to avoid reentry.

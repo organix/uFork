@@ -681,13 +681,16 @@ core = make_core({
         //console.log(level + ": " + args.join(" "));
         console.log(level, ...args);
     },
-    on_txn(wake, target, events) {
-        if (wake === true) {
+    on_txn(txn) {
+        if (txn.wake === true) {
             console.log("WAKE");
             //single_step();
             draw_host();
-        } else if (wake === false) {
-            core.u_trace(ufork.print(target), events.map(core.u_pprint));
+        } else if (txn.wake === false) {
+            core.u_trace(
+                ufork.print(txn.target),
+                txn.events.map(core.u_pprint)
+            );
         } else {
             const cc = core.u_current_continuation();
             const event = event_as_object(cc.ep);

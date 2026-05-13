@@ -386,8 +386,8 @@ function demo(log, flakiness = 0, max_chunk_size = 16) {
 
     core = make_core({
         wasm_url,
-        on_txn(wake) {
-            if (wake === true) {
+        on_txn(txn) {
+            if (txn.wake === true) {
                 run_core();
             }
         },

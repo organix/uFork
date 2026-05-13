@@ -347,12 +347,8 @@ const actors_ui = make_ui("actor-ui", function (element, {
         invalidate();
     }
 
-    function set_txn(target, events, wake) {
-        txn = (
-            target !== undefined
-            ? {target, events, wake}
-            : undefined
-        );
+    function set_txn(new_txn) {
+        txn = new_txn;
         invalidate();
     }
 
@@ -471,8 +467,7 @@ function demo(log) {
         if (message.audit !== undefined) {
             element.set_audit(message.audit);
         } else if (message.txn !== undefined) {
-            const {target, events, wake} = message.txn;
-            element.set_txn(target, events, wake);
+            element.set_txn(message.txn);
         }
     });
     parseq.sequence([

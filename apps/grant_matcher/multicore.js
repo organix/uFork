@@ -68,8 +68,8 @@ parseq.sequence(
     configurations.map(function ({name, store, asm_url}) {
         const core = make_core({
             wasm_url,
-            on_txn(wake) {
-                if (wake === true) {
+            on_txn(txn) {
+                if (txn.wake === true) {
                     globalThis.console.log("IDLE", name, ufork.fault_msg(
                         ufork.fix_to_i32(core.h_run_loop())
                     ));

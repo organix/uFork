@@ -978,12 +978,12 @@ if (import.meta.main) {
                 core.u_pprint(evidence)
             );
         },
-        on_txn(wake, target, events) {
-            if (wake === true) {
+        on_txn(txn) {
+            if (txn.wake === true) {
                 globalThis.console.log(
                     "WAKE:",
-                    ufork.print(target),
-                    events.length
+                    ufork.print(txn.target),
+                    txn.events.length
                 );
                 globalThis.console.log(
                     "IDLE:",

@@ -10,24 +10,25 @@
 //      An optional callback that is called with values logged by the core
 //      or devices. The 'values' may or may not be strings.
 
-//  on_txn(wake, target, events)
+//  on_txn(txn)
 //      An optional callback that is called at the conclusion of every actor
 //      transaction and device pseudo-transaction.
 
-//      The value of 'wake' depends on whether the transaction was completed by
-//      an actor or a device, synchronously or asynchronously:
+//      The value of 'txn.wake' depends on whether the transaction was completed
+//      by an actor or a device, synchronously or asynchronously:
 
-//          wake        | target            | asynchronous
+//          txn.wake    | target            | asynchronous
 //          ------------+-------------------+---------------
 //          undefined   | actor             | no
 //          false       | device or proxy   | no
 //          true        | device or proxy   | yes
 
-//      A 'wake' value of true indicates that execution of the core can resume
-//      from its idle state.
+//      A 'txn.wake' value of true indicates that execution of the core can
+//      resume from its idle state.
 
-//      The 'target' is the capability for the actor, proxy, or device that
-//      generated the message 'events', an array of pointers.
+//      The 'txn.target' is the capability for the actor, proxy, or device that
+//      generated the message events, accessible via 'txn.events' (an array of
+//      pointers).
 
 //      Beware that actor transactions can be aborted and thus have no effect!
 
@@ -678,7 +679,11 @@ function make_core({
     function h_wakeup(sender, events) {
         events.map(h_event_enqueue);
         if (on_txn !== undefined) {
-            on_txn(true, sender, events);
+            on_txn({
+                wake: true,  // async dev txn
+                target: sender,
+                events
+            });
         }
     }
 
@@ -757,13 +762,21 @@ function make_core({
                             const target = event.x;
                             const maybe_fx = u_read_quad(kp_or_fx);
                             if (is_cap(maybe_fx.x)) {
-                                const events = [kp_or_fx];  // sync dev txn
-                                on_txn(false, target, events);
+                                const events = [kp_or_fx];
+                                on_txn({
+                                    wake: false,  // sync dev txn
+                                    target,
+                                    events
+                                });
                             } else {
                                 const effect = u_read_quad(event.z);
                                 const outbox = effect.z;
                                 const events = u_flatten(outbox);
-                                on_txn(undefined, target, events);  // actor txn
+                                on_txn({
+                                    wake: undefined,  // actor txn
+                                    target,
+                                    events
+                                });
                             }
                         }
                     },
@@ -879,6 +892,9 @@ function demo(log) {
         on_log: log,
         on_audit(code, evidence) {
             log("AUDIT:", fault_msg(code), print(evidence));
+        },
+        on_txn(txn) {
+            log("TXN:", txn);
         },
         import_map: {"https://ufork.org/lib/": lib_url},
         compilers: {asm: assemble}

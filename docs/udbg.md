@@ -138,7 +138,7 @@ The core has become idle, producing the signal `E_OK`.
 
 An instruction finished executing.
 
-### txn: {target: _raw_, events: _array_, wake: _boolean_}
+### txn: {target: _raw_, events: _array_, wake: _boolean_, ...}
 
 An actor or device transaction has reached its conclusion.
 See `on_txn` in core.js.

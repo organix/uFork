@@ -337,10 +337,9 @@ const debugger_ui = make_ui("debugger-ui", function (element, {
         } else if (message.instr !== undefined) {
             on_waiting();
         } else if (message.txn !== undefined) {
-            const {target, events, wake} = message.txn;
-            views.actors.element.set_txn(target, events, wake);
+            views.actors.element.set_txn(message.txn);
             on_waiting();
-            if (wake === true) {
+            if (message.txn.wake === true) {
                 fault_message.textContent = "wakeup";
                 fault_message.style.color = "white";
             }

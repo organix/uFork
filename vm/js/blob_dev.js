@@ -469,8 +469,8 @@ function demo(log, use_static) {
 
     core = make_core({
         wasm_url,
-        on_txn(wake) {
-            if (wake === true) {
+        on_txn(txn) {
+            if (txn.wake === true) {
                 run_core();
             }
         },
