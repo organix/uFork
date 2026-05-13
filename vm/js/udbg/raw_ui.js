@@ -443,6 +443,47 @@ function raw_ui({
         }).flat();
     }
 
+    function fieldify() {
+        if (value === ufork.ramptr(ufork.MEMORY_OFS)) {
+            return {
+                "top addr": t,
+                "next free": x,
+                "free count": y,
+                "GC root": z
+            };
+        }
+        if (value === ufork.ramptr(ufork.DDEQUE_OFS)) {
+            return {"e head": t, "e tail": x, "k head": y, "k tail": z};
+        }
+        if (ufork.is_cap(value)) {
+            return (
+                t === ufork.PROXY_T
+                ? {type: t, device: x, tag: y}
+                : {type: t, code: x, data: y, inbox: z}
+            );
+        }
+        if (t === ufork.STUB_T) {
+            return {type: t, device: x, target: y, next: z};
+        }
+        if (ufork.is_ram(t) && ufork.is_cap(x)) {
+            return (
+                read_quad(z)?.t === ufork.ACTOR_T
+                ? {sponsor: t, target: x, message: y, effect: z}  // processing
+                : {sponsor: t, target: x, message: y, next: z}  // queued
+            );
+        }
+        if (ufork.is_fix(t)) {
+            return {memory: t, events: x, cycles: y, signal: z};
+        }
+        if (t === ufork.ACTOR_T && !ufork.is_cap(value)) {
+            return {"new code": x, "new data": y, outbox: z};
+        }
+        if (ufork.in_mem(t) && read_quad(t)?.t === ufork.INSTR_T) {
+            return {ip: t, sp: x, ep: y, next: z};
+        }
+        return quad;
+    }
+
     function entrify() {
         if (t === ufork.DICT_T) {
             return dict_entries(quad);
@@ -450,49 +491,7 @@ function raw_ui({
         if (t === ufork.PAIR_T) {
             return pair_entries(quad, 100);
         }
-        return Object.entries(
-            value === ufork.ramptr(ufork.MEMORY_OFS)
-            ? {"top addr": t, "next free": x, "free count": y, "GC root": z}
-            : (
-                value === ufork.ramptr(ufork.DDEQUE_OFS)
-                ? {"e head": t, "e tail": x, "k head": y, "k tail": z}
-                : (
-                    ufork.is_cap(value)
-                    ? (
-                        t === ufork.PROXY_T
-                        ? {type: t, device: x, tag: y}
-                        : {type: t, beh: x, state: y, effect: z}
-                    )
-                    : (
-                        t === ufork.STUB_T
-                        ? {type: t, device: x, target: y, next: z}
-                        : (
-                            (ufork.is_ram(t) && ufork.is_cap(x))
-                            ? {sponsor: t, target: x, message: y, next: z}
-                            : (
-                                ufork.is_fix(t)
-                                ? {memory: t, events: x, cycles: y, signal: z}
-                                : (
-                                    (
-                                        t === ufork.ACTOR_T
-                                        && !ufork.is_cap(value)
-                                    )
-                                    ? {"new beh": x, "new state": y, events: z}
-                                    : (
-                                        (
-                                            ufork.in_mem(t)
-                                            && read_quad(t)?.t === ufork.INSTR_T
-                                        )
-                                        ? {ip: t, sp: x, ep: y, next: z}
-                                        : quad
-                                    )
-                                )
-                            )
-                        )
-                    )
-                )
-            )
-        );
+        return Object.entries(fieldify());
     }
 
     if (expand !== undefined) {

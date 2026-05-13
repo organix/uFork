@@ -168,11 +168,11 @@ const actors_ui = make_ui("actor-ui", function (element, {
     function print_txn(txn) {
         let nodes = [heading_ui("Effect", 2)];
         if (txn.new_code !== undefined) {
-            nodes.push(heading_ui("Code", 3));
+            nodes.push(heading_ui("New code", 3));
             nodes.push(print(txn.new_code, 1));
         }
         if (txn.new_data !== undefined) {
-            nodes.push(heading_ui("Data", 3));
+            nodes.push(heading_ui("New data", 3));
             nodes.push(print(txn.new_data, 1));
         }
         if (txn.events.length > 0) {
