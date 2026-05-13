@@ -30,6 +30,9 @@
 //      generated the message events, accessible via 'txn.events' (an array of
 //      pointers).
 
+//      If the transaction changes the target's code or data, these are provided
+//      as 'txn.new_code' and 'txn.new_data' respectively.
+
 //      Beware that actor transactions can be aborted and thus have no effect!
 
 //  on_audit(code, evidence)
@@ -771,12 +774,20 @@ function make_core({
                             } else {
                                 const effect = u_read_quad(event.z);
                                 const outbox = effect.z;
+                                const actor = u_read_quad(u_cap_to_ptr(target));
                                 const events = u_flatten(outbox);
-                                on_txn({
+                                let txn = {
                                     wake: undefined,  // actor txn
                                     target,
                                     events
-                                });
+                                };
+                                if (effect.x !== actor.x) {
+                                    txn.new_code = effect.x;
+                                }
+                                if (effect.y !== actor.y) {
+                                    txn.new_data = effect.y;
+                                }
+                                on_txn(txn);
                             }
                         }
                     },

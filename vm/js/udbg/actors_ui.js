@@ -165,22 +165,41 @@ const actors_ui = make_ui("actor-ui", function (element, {
         return raw_ui({value, depth, expand, ram, rom, rom_debugs});
     }
 
-    function print_outbox(events) {
-        return [
-            heading_ui("Outbox", 3),
-            ...events.map(function (event_ptr) {
+    function print_txn(txn) {
+        let nodes = [heading_ui("Effect", 2)];
+        if (txn.new_code !== undefined) {
+            nodes.push(heading_ui("Code", 3));
+            nodes.push(print(txn.new_code, 1));
+        }
+        if (txn.new_data !== undefined) {
+            nodes.push(heading_ui("Data", 3));
+            nodes.push(print(txn.new_data, 1));
+        }
+        if (txn.events.length > 0) {
+            nodes.push(heading_ui("Outbox", 3));
+            nodes.push(...txn.events.map(function (event_ptr) {
                 return print(event_ptr, 1, 1);
-            })
-        ];
+            }));
+        }
+        return nodes;
     }
 
-    function print_effect(effect) {
+    function print_effect(effect, actor_ofs) {
         const outbox = effect.z;
-        const events = flat_ptrs(ram, outbox);
-        return [
-            heading_ui("Effect", 2),
-            ...print_outbox(events)
-        ];
+        const actor = ufork.read_quad(ram, actor_ofs);
+        return print_txn({
+            events: flat_ptrs(ram, outbox),
+            new_code: (
+                effect.x !== actor.x
+                ? effect.x
+                : undefined
+            ),
+            new_data: (
+                effect.y !== actor.y
+                ? effect.y
+                : undefined
+            )
+        });
     }
 
     function find_effect(actor_ofs) {
@@ -226,7 +245,7 @@ const actors_ui = make_ui("actor-ui", function (element, {
             details.append(print(selected_cap, 1, [[3]]));
             const effect = find_effect(selected_actor_ofs);
             if (effect !== undefined) {
-                details.append(...print_effect(effect));
+                details.append(...print_effect(effect, selected_ofs));
             }
         } else {
             const cc = ufork.current_continuation(ram);
@@ -250,7 +269,7 @@ const actors_ui = make_ui("actor-ui", function (element, {
                 }
                 details.append(heading_ui("Target", 2));
                 details.append(print(txn.target, 1, 0));
-                details.append(...print_outbox(txn.events));
+                details.append(...print_txn(txn));
                 selected_actor_ofs = ufork.rawofs(txn.target);
             } else if (cc?.ep !== undefined) {
                 const event = ufork.read_quad(ram, ufork.rawofs(cc.ep));
@@ -259,7 +278,7 @@ const actors_ui = make_ui("actor-ui", function (element, {
                 const target = event.x;
                 selected_actor_ofs = ufork.rawofs(target);
                 const effect = ufork.read_quad(ram, ufork.rawofs(event.z));
-                details.append(...print_effect(effect));
+                details.append(...print_effect(effect, selected_actor_ofs));
             }
         }
         const caps = (
