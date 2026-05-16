@@ -207,21 +207,18 @@ impl Core {
     then the step limit is checked. If the step-limit is reached, the _signal_
     field of the root-sponsor is returned to the host. If both the event-queue
     and the continuation-queue are empty, the root-sponsor _signal_ field is
-    set to `ZERO` (aka `E_OK`), and the same value is returned to the host.
+    set to `ZERO` (aka `Any::fix(E_OK)`), and returned to the host.
 
      Signal   | Root Sponsor | Peripheral Sponsor
     ----------|--------------|--------------------
     `E_OK`    | no more work | sponsor stopped
     +_fixnum_ | error (idle) | error (idle)
     `#?`      | runnable     | —
-    _ctl_cap_ | —            | runnable
+    _ctl_evt_ | —            | runnable
 
     */
     pub fn run_loop(&mut self, limit: i32) -> Any {
-        self.set_sponsor_signal(SPONSOR, UNDEF);  // enable root sponsor
-        let waiting = self.ram(SPONSOR).z();
-        self.inject_events(waiting);  // drain waiting events
-        self.ram_mut(SPONSOR).set_z(NIL);
+        self.resume_sponsor(SPONSOR, UNDEF);
         let mut steps = 0;
         while (limit <= 0) || (steps < limit) {
             if !self.k_first().is_ram() && !self.e_first().is_ram() {
@@ -229,12 +226,10 @@ impl Core {
                 self.set_sponsor_signal(SPONSOR, ZERO);  // processor idle
                 break;  // return signal
             }
-            let sig = self.execute_instruction();
-            if sig.is_fix() {
+            if let Err(_error) = self.execute_instruction() {
                 break;  // return signal
             }
-            let sig = self.dispatch_event();
-            if sig.is_fix() {
+            if let Err(_error) = self.dispatch_event() {
                 break;  // return signal
             }
             if GC_STRATEGY == GcStrategy::Interleaved {
@@ -244,75 +239,83 @@ impl Core {
         }
         self.sponsor_signal(SPONSOR)  // return SPONSOR signal
     }
+    fn resume_sponsor(&mut self, sponsor: Any, signal: Any) {
+        // Requeue any waiting events and enable the sponsor.
+        // `signal` is a pre-allocated control event,
+        // or `UNDEF` for the root sponsor.
+        let waiting = self.z(sponsor);
+        self.inject_events(waiting);  // release any waiting events
+        self.set_z(sponsor, NIL);
+        self.set_sponsor_signal(sponsor, signal);  // enable sponsor
+    }
     /*
 
     This dispatch strategy processes one event from the front of the queue.
     If the event's sponsor is suspended, move the event to the sponsor's `waiting`.
     If the event's target is busy, move the event to the actor's `inbox`.
     If the event's target is a device, give the event to the device to handle.
-    Otherwise, enqueue a _continuation_ to handle the transaction.
+    Otherwise, enqueue a new _continuation_ to handle the transaction.
 
     */
-    fn dispatch_event(&mut self) -> Any {
+    fn dispatch_event(&mut self) -> Result<(), Error> {
         let ep = self.e_first();
-        if ep.is_ram() {
-            // remove first event from the queue...
-            let event = self.ram(ep);
-            let sponsor = event.t();
-            let target = event.x();
-            let next = event.z();
-            self.set_e_first(next);
-            if !next.is_ram() {
-                self.set_e_last(NIL)
+        if !ep.is_ram() {
+            return Ok(());  // event queue empty
+        }
+        // remove first event from the queue...
+        let event = self.ram(ep);
+        let sponsor = event.t();
+        let target = event.x();
+        let next = event.z();
+        self.set_e_first(next);
+        if !next.is_ram() {
+            self.set_e_last(NIL)
+        }
+        // if sponsor is suspended, move event to waiting (or discard)
+        let sig = self.sponsor_signal(sponsor);
+        if sig.is_fix() {  // sponsor suspended
+            if sig != ZERO {  // sponsor not stopped
+                self.waiting_event(ep);  // defer event
             }
-            // check sponsor delivery constraints
-            let sig = self.sponsor_signal(sponsor);
-            if sig.is_fix() {  // sponsor suspended
-                if sig == ZERO {  // sponsor stopped
-                    return UNDEF;  // discard event
-                }
-                return self.waiting_event(ep);  // suspend event
-            }
-            let mut limit = self.sponsor_events(sponsor).fix_num().unwrap_or(0);
-            if limit > 0 {
-                limit = limit - 1;  // decrement event limit
-                self.set_sponsor_events(sponsor, Any::fix(limit));
-            } else {
-                // sponsor event limit reached
-                let signal_sent = self.report_error(sponsor, E_MSG_LIM);
-                self.waiting_event(ep);  // suspend event
-                if signal_sent {
-                    return UNDEF;  // controller notified
-                }
-                return self.sponsor_signal(sponsor);  // return signal
-            }
-            // check target delivery constraints
-            if self.actor_busy(target) {
-                return self.inbox_event(ep);  // move event to actor inbox
-            }
-            if let Err(error) = self.handle_event(ep) {
-                let signal_sent = self.report_error(sponsor, error);
-                self.waiting_event(ep);  // suspend event
-                if signal_sent {
-                    return UNDEF;  // controller notified
-                }
-                return self.sponsor_signal(sponsor);  // return signal
+            return Ok(());
+        }
+        // if target actor is busy, move event to actor inbox
+        let ptr = self.cap_to_ptr(target);
+        if self.z(ptr) != UNDEF {  // actor is busy
+            self.inbox_event(ep);  // defer event
+            return Ok(());
+        }
+        // begin event processing (may create a continuation)
+        if let Err(error) = self.process_event(sponsor, target, ep) {
+            self.waiting_event(ep);  // defer event
+            if !self.report_error(sponsor, error) {
+                return Err(error);  // signal root sponsor
             }
         }
-        UNDEF  // event queue empty
+        Ok(())
     }
-    fn waiting_event(&mut self, ep: Any) -> Any {
+    fn waiting_event(&mut self, ep: Any) {
         // link event into sponsor's waiting queue
         let sponsor = self.event_sponsor(ep);
         self.z_queue_put(sponsor, ep);
-        UNDEF  // event not delivered
     }
-    fn inbox_event(&mut self, ep: Any) -> Any {
+    fn inbox_event(&mut self, ep: Any) {
         // link event into target's inbox queue
         let target = self.event_target(ep);
-        let actor = self.cap_to_ptr(target);
-        self.z_queue_put(actor, ep);
-        UNDEF  // event not delivered
+        let ptr = self.cap_to_ptr(target);
+        self.z_queue_put(ptr, ep);
+    }
+    pub fn report_error(&mut self, sponsor: Any, error: Error) -> bool {
+        // record error in sponsor's signal field,
+        // returning `true` if a control event was released,
+        // otherwise `false` for the root sponsor.
+        let sig = self.sponsor_signal(sponsor);
+        self.set_sponsor_signal(sponsor, Any::fix(error as isize));
+        if sig.is_ram() {
+            self.event_enqueue(sig);
+            return true;  // controller notified
+        }
+        return false;  // root sponsor
     }
     /*
 
@@ -321,8 +324,16 @@ impl Core {
     Actors become busy with a newly-created transaction continuation.
 
     */
-    fn handle_event(&mut self, ep: Any) -> Result<(), Error> {
-        let target = self.event_target(ep);
+    fn process_event(&mut self, sponsor: Any, target: Any, ep: Any) -> Result<(), Error> {
+        // consume event (communication) quota
+        let mut limit = self.sponsor_events(sponsor).fix_num().unwrap_or(0);
+        if limit <= 0 {
+            // sponsor event limit reached
+            return Err(E_MSG_LIM);
+        }
+        limit = limit - 1;  // decrement event limit
+        self.set_sponsor_events(sponsor, Any::fix(limit));
+        // process event
         if let Ok(id) = self.device_id(target) {
             // synchronous message-event to device
             if self.device[id].is_some() {  // ignore unavailable devices
@@ -341,22 +352,28 @@ impl Core {
         } else {
             // begin actor-event transaction
             let ptr = self.cap_to_ptr(target);
-            let inbox = self.ram(ptr).z();
+            let inbox = self.z(ptr);
             assert_eq!(UNDEF, inbox);
-            self.ram_mut(ptr).set_z(NIL);  // indicate actor is busy
+            self.set_z(ptr, NIL);  // indicate actor is busy
             let actor = *self.mem(ptr);  // copy initial actor state
             let effect = self.reserve(&actor)?;  // event-effect accumulator
-            self.ram_mut(ep).set_z(effect);  // attach effect to event
+            self.set_z(ep, effect);  // attach effect to event
             let beh = actor.x();
             let kp = self.reserve_cont(beh, NIL, ep)?;  // create continuation
             self.cont_enqueue(kp);
         }
         Ok(())
     }
-    fn execute_instruction(&mut self) -> Any {
+    /*
+
+    Attempt to execute an instruction from the current continuation.
+    If an error occurs, the transaction is aborted and the event discarded.
+
+    */
+    fn execute_instruction(&mut self) -> Result<(), Error> {
         let kp = self.kp();
         if !kp.is_ram() {
-            return UNDEF;  // continuation queue is empty
+            return Ok(());  // continuation queue is empty
         }
         let ep = self.ep();
         let sponsor = self.event_sponsor(ep);
@@ -372,7 +389,7 @@ impl Core {
                 self.event_enqueue(ep);
             }
             self.inject_events(inbox);
-            return UNDEF;  // instruction not executed
+            return Ok(());  // instruction not executed
         }
         // FIXME: snapshot continuation state so it can be restored on error? or just `sp`?
         let mut sp = self.sp();  // remember original `sp` in case of failure
@@ -426,21 +443,12 @@ impl Core {
             },
             Err(error) => {
                 self.set_sp(sp);  // restore original `sp` on failure
-                if self.report_error(sponsor, error) {
-                    return UNDEF;  // controller notified
+                if !self.report_error(sponsor, error) {
+                    return Err(error);  // signal root sponsor
                 }
             },
         }
-        self.sponsor_signal(sponsor)  // instruction executed, return signal
-    }
-    pub fn report_error(&mut self, sponsor: Any, error: Error) -> bool {
-        let sig = self.sponsor_signal(sponsor);
-        self.set_sponsor_signal(sponsor, Any::fix(error as isize));
-        if sig.is_ram() {
-            self.event_enqueue(sig);
-            return true;  // controller notified
-        }
-        return false;  // root sponsor
+        Ok(())
     }
     fn perform_op(&mut self, ip: Any) -> Result<Any, Error> {
         self.count_cpu_cycles(1)?;  // always count at least one "cycle"
@@ -821,6 +829,9 @@ impl Core {
                             return Err(E_BOUNDS);
                         }
                         let per_spn = self.stack_peek();
+                        if !self.typeq(SPONSOR_T, per_spn) {
+                            return Err(E_BOUNDS)
+                        }
                         let ctl_spn = self.event_sponsor(self.ep());
                         let limit = self.sponsor_memory(ctl_spn).fix_num().unwrap_or(0);
                         if n >= limit {
@@ -837,6 +848,9 @@ impl Core {
                             return Err(E_BOUNDS);
                         }
                         let per_spn = self.stack_peek();
+                        if !self.typeq(SPONSOR_T, per_spn) {
+                            return Err(E_BOUNDS)
+                        }
                         let ctl_spn = self.event_sponsor(self.ep());
                         let limit = self.sponsor_events(ctl_spn).fix_num().unwrap_or(0);
                         if n >= limit {
@@ -853,6 +867,9 @@ impl Core {
                             return Err(E_BOUNDS);
                         }
                         let per_spn = self.stack_peek();
+                        if !self.typeq(SPONSOR_T, per_spn) {
+                            return Err(E_BOUNDS)
+                        }
                         let ctl_spn = self.event_sponsor(self.ep());
                         let limit = self.sponsor_cycles(ctl_spn).fix_num().unwrap_or(0);
                         if n >= limit {
@@ -865,6 +882,9 @@ impl Core {
                     SPONSOR_RECLAIM => {
                         let ctl_spn = self.event_sponsor(self.ep());
                         let per_spn = self.stack_peek();
+                        if !self.typeq(SPONSOR_T, per_spn) {
+                            return Err(E_BOUNDS)
+                        }
                         self.reclaim_sponsor(ctl_spn, per_spn)?;
                     },
                     SPONSOR_START => {
@@ -873,8 +893,8 @@ impl Core {
                             return Err(E_NOT_CAP);
                         }
                         let per_spn = self.stack_pop();
-                        if !per_spn.is_ram() {
-                            return Err(E_NOT_RAM);
+                        if !self.typeq(SPONSOR_T, per_spn) {
+                            return Err(E_BOUNDS)
                         }
                         let sig = self.sponsor_signal(per_spn);
                         if !self.typeq(FIXNUM_T, sig) {
@@ -882,11 +902,14 @@ impl Core {
                         }
                         let ctl_spn = self.event_sponsor(self.ep());
                         let evt = self.new_event(ctl_spn, ctl, per_spn)?;
-                        self.set_sponsor_signal(per_spn, evt);
+                        self.resume_sponsor(per_spn, evt);
                     },
                     SPONSOR_STOP => {
                         let ctl_spn = self.event_sponsor(self.ep());
                         let per_spn = self.stack_pop();
+                        if !self.typeq(SPONSOR_T, per_spn) {
+                            return Err(E_BOUNDS)
+                        }
                         self.reclaim_sponsor(ctl_spn, per_spn)?;
                         self.set_sponsor_signal(per_spn, ZERO);  // mark sponsor for removal
                     },
@@ -1029,11 +1052,6 @@ impl Core {
         self.call_audit_fn(error, evidence);
         self.actor_abort();
         UNDEF  // end actor transaction
-    }
-    fn actor_busy(&self, cap: Any) -> bool {
-        let ptr = self.cap_to_ptr(cap);
-        let quad = self.mem(ptr);
-        quad.z() != UNDEF
     }
     fn actor_commit(&mut self, me: Any) {
         let effect = self.txn_effect();
@@ -1658,7 +1676,7 @@ impl Core {
             let n = self.ram_free().fix_num().unwrap();
             assert!(n > 0);  // number of free cells available
             self.set_ram_free(Any::fix(n - 1));  // decrement cells available
-            self.set_ram_next(self.ram(next).z());  // update free-list
+            self.set_ram_next(self.z(next));  // update free-list
             next
         } else {
             // expand top-of-memory

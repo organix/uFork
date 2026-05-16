@@ -1,6 +1,6 @@
 [package]
 name = "ufork"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["Dale Schumacher <dalnefre@yahoo.com>"]
 edition = "2021"
 description = "uFork VM in Rust"
