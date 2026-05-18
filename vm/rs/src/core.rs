@@ -26,7 +26,7 @@ pub const RAM_BASE_OFS: usize = 0x10;  // RAM offsets below this value are reser
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum GcStrategy {
     Interleaved,
-    FullAtCommit,
+    FullAfterTxn,
 }
 const GC_STRATEGY: GcStrategy = GcStrategy::Interleaved;
 
@@ -226,6 +226,10 @@ impl Core {
                 self.set_sponsor_signal(SPONSOR, ZERO);  // processor idle
                 break;  // return signal
             }
+            // self.execute_instruction();
+            // if self.sponsor_signal(SPONSOR).is_fix() {
+            //     break;
+            // }
             if let Err(_error) = self.execute_instruction() {
                 break;  // return signal
             }
@@ -328,8 +332,7 @@ impl Core {
         // consume event (communication) quota
         let mut limit = self.sponsor_events(sponsor).fix_num().unwrap_or(0);
         if limit <= 0 {
-            // sponsor event limit reached
-            return Err(E_MSG_LIM);
+            return Err(E_MSG_LIM);  // sponsor event limit reached
         }
         limit = limit - 1;  // decrement event limit
         self.set_sponsor_events(sponsor, Any::fix(limit));
@@ -353,9 +356,12 @@ impl Core {
             // begin actor-event transaction
             let ptr = self.cap_to_ptr(target);
             let inbox = self.z(ptr);
-            assert_eq!(UNDEF, inbox);
-            self.set_z(ptr, NIL);  // indicate actor is busy
-            let actor = *self.mem(ptr);  // copy initial actor state
+            assert_eq!(inbox, UNDEF);  // FIXME: simplify this code based on this condition
+            if inbox == UNDEF {
+                self.set_z(ptr, NIL);  // indicate actor is busy
+            }
+            let mut actor = *self.mem(ptr);  // copy initial actor state
+            actor.set_z(NIL);  // empty outbox
             let effect = self.reserve(&actor)?;  // event-effect accumulator
             self.set_z(ep, effect);  // attach effect to event
             let beh = actor.x();
@@ -367,82 +373,52 @@ impl Core {
     /*
 
     Attempt to execute an instruction from the current continuation.
-    If an error occurs, the transaction is aborted and the event discarded.
+    If an error occurs, the transaction is aborted and the event consumed.
 
     */
     fn execute_instruction(&mut self) -> Result<(), Error> {
-        let kp = self.kp();
+        let kp = self.k_first();
         if !kp.is_ram() {
             return Ok(());  // continuation queue is empty
         }
-        let ep = self.ep();
+        let k = self.ram(kp);
+        let ip = k.t();
+        // let sp = k.x();  // FIXME: unused?
+        let ep = k.y();
+        let target = self.event_target(ep);
+        // make sure sponsor is active
         let sponsor = self.event_sponsor(ep);
         let sig = self.sponsor_signal(sponsor);
-        if sig.is_fix() {
-            // idle sponsor
-            let target = self.event_target(ep);
-            let ptr = self.cap_to_ptr(target);
-            let inbox = self.ram(ptr).z();  // grab inbox before revert
-            if sig != ZERO {  // if not stopped, retry later...
-                self.actor_abort();  // abandon outbox
-                self.ram_mut(ptr).set_z(UNDEF);  // return actor to IDLE state
-                self.event_enqueue(ep);
+        if sig.is_fix() {  // sponsor suspended
+            self.actor_abort();
+            if sig != ZERO {  // sponsor not stopped
+                self.waiting_event(ep);  // defer event
+                self.set_ep(UNDEF);  // detach event from continuattion
             }
-            self.inject_events(inbox);
-            return Ok(());  // instruction not executed
+            let kp_ = self.cont_dequeue().unwrap();
+            assert_eq!(kp, kp_);
+            self.end_continuation(kp, target);
+            return Ok(())
         }
-        // FIXME: snapshot continuation state so it can be restored on error? or just `sp`?
-        let mut sp = self.sp();  // remember original `sp` in case of failure
-        let ip = self.ip();
+        // execute current instruction
         match self.perform_op(ip) {
             Ok(ip_) => {
+                self.set_ip(ip_);  // update ip in continuation
                 let kp_ = self.cont_dequeue().unwrap();
                 assert_eq!(kp, kp_);
                 if self.typeq(INSTR_T, ip_) {
-                    self.ram_mut(kp).set_t(ip_);  // update ip in continuation
                     self.cont_enqueue(kp);  // re-queue updated continuation
                 } else {
-                    // release or reuse continuation, event, and (empty) effect
-                    let to = self.ram(ep).x();
-                    let target = self.cap_to_ptr(to);
-                    // free the stack
-                    while self.typeq(PAIR_T, sp) {
-                        let p = sp;
-                        sp = self.cdr(p);
-                        self.free(p);  // free pair holding stack item
-                    }
-                    let next = self.z_queue_take(target);  // pull from inbox
-                    if next.is_ram() {  // non-empty inbox
-                        // reuse actor-event transaction
-                        let actor = *self.ram(target);
-                        let beh = actor.x();
-                        let state = actor.y();
-                        let fx = self.ram(ep).z();
-                        self.ram_mut(next).set_z(fx);  // reuse effect
-                        let effect = self.ram_mut(fx);
-                        effect.set_x(beh);  // initial code
-                        effect.set_y(state);  // initial data
-                        effect.set_z(NIL);  // empty outbox
-                        let cont = self.ram_mut(kp);
-                        cont.set_t(beh);  // new ip
-                        cont.set_x(NIL);  // new sp
-                        cont.set_y(next);  // new ep
-                        self.cont_enqueue(kp);
-                        self.free(ep);
-                    } else {  // empty inbox
-                        let inbox = self.ram(target).z();
-                        assert_eq!(NIL, inbox);
-                        self.ram_mut(target).set_z(UNDEF);  // return actor to IDLE state
-                        self.free(ep);
-                        self.free(kp);
-                    }
-                    if GC_STRATEGY == GcStrategy::FullAtCommit {
-                        self.gc_collect_all();  // full GC collection after `end` instruction
-                    }
+                    self.end_continuation(kp, target);
                 }
             },
             Err(error) => {
-                self.set_sp(sp);  // restore original `sp` on failure
+                self.audit_abort(error, kp);
+                self.waiting_event(ep);  // defer event
+                self.set_ep(UNDEF);  // detach event from continuattion
+                let kp_ = self.cont_dequeue().unwrap();
+                assert_eq!(kp, kp_);
+                self.end_continuation(kp, target);
                 if !self.report_error(sponsor, error) {
                     return Err(error);  // signal root sponsor
                 }
@@ -450,6 +426,44 @@ impl Core {
         }
         Ok(())
     }
+    /*
+
+    End the target actor's message-event transaction and free resources.
+    Assumes the continuation has already been removed from the continuation queue.
+
+    */
+    fn end_continuation(&mut self, kp: Any, target: Any) {
+        // free the stack
+        let mut sp = self.x(kp);
+        while self.typeq(PAIR_T, sp) {
+            let p = sp;
+            sp = self.cdr(p);
+            self.free(p);  // free pair holding stack item
+        }
+        // free the event (if any)
+        let ep = self.y(kp);
+        if ep.is_ram() {
+            self.free(ep);
+        }
+        // free the continuation
+        self.free(kp);
+        if GC_STRATEGY == GcStrategy::FullAfterTxn {
+            self.gc_collect_all();  // full GC collection at end of transaction
+        }
+        // release actor
+        let actor = self.cap_to_ptr(target);
+        let inbox = self.z(actor);
+        self.prepend_events(inbox);
+        self.set_z(actor, UNDEF);  // return actor to IDLE state
+    }
+    /*
+
+    Peform the operation specified by the current instruction-pointer (IP).
+    On success, return the IP of the next instruction to execute.
+    If the IP is `#?`, the continuation will be terminated.
+    On failure, return the code of the error condition detected.
+
+    */
     fn perform_op(&mut self, ip: Any) -> Result<Any, Error> {
         self.count_cpu_cycles(1)?;  // always count at least one "cycle"
         let instr = self.mem(ip);
@@ -598,17 +612,26 @@ impl Core {
             },
             VM_PAIR => {
                 let n = imm.get_fix()?;
+                if n < -32 || n > 31 {  // FIXME: replace with cycle-limit(s) in Sponsor?
+                    return Ok(self.audit_abort(E_BOUNDS, imm));
+                }
                 self.stack_pairs(n)?;
                 kip
             },
             VM_PART => {
                 let n = imm.get_fix()?;
+                if n < -32 || n > 31 {  // FIXME: replace with cycle-limit(s) in Sponsor?
+                    return Ok(self.audit_abort(E_BOUNDS, imm));
+                }
                 self.stack_parts(n)?;
                 kip
             },
             VM_NTH => {
                 let lst = self.stack_pop();
                 let n = imm.get_fix()?;
+                if n < -32 || n > 31 {  // FIXME: replace with cycle-limit(s) in Sponsor?
+                    return Ok(self.audit_abort(E_BOUNDS, imm));
+                }
                 let r = self.extract_nth(lst, n);
                 self.stack_push(r)?;
                 kip
@@ -620,7 +643,9 @@ impl Core {
             },
             VM_DROP => {
                 let mut n = imm.get_fix()?;
-                assert!(n < 64);  // FIXME: replace with cycle-limit(s) in Sponsor
+                if n < -32 || n > 31 {  // FIXME: replace with cycle-limit(s) in Sponsor?
+                    return Ok(self.audit_abort(E_BOUNDS, imm));
+                }
                 while n > 0 {
                     self.stack_pop();
                     n -= 1;
@@ -629,6 +654,9 @@ impl Core {
             },
             VM_PICK => {
                 let n = imm.get_fix()?;
+                if n < -32 || n > 31 {  // FIXME: replace with cycle-limit(s) in Sponsor?
+                    return Ok(self.audit_abort(E_BOUNDS, imm));
+                }
                 let r = if n > 0 {
                     let lst = self.sp();
                     self.extract_nth(lst, n)
@@ -644,11 +672,17 @@ impl Core {
             },
             VM_DUP => {
                 let n = imm.get_fix()?;
+                if n < -32 || n > 31 {  // FIXME: replace with cycle-limit(s) in Sponsor?
+                    return Ok(self.audit_abort(E_BOUNDS, imm));
+                }
                 self.stack_dup(n)?;
                 kip
             },
             VM_ROLL => {
                 let n = imm.get_fix()?;
+                if n < -32 || n > 31 {  // FIXME: replace with cycle-limit(s) in Sponsor?
+                    return Ok(self.audit_abort(E_BOUNDS, imm));
+                }
                 self.stack_roll(n)?;
                 kip
             },
@@ -728,6 +762,9 @@ impl Core {
             },
             VM_MSG => {
                 let n = imm.get_fix()?;
+                if n < -32 || n > 31 {  // FIXME: replace with cycle-limit(s) in Sponsor?
+                    return Ok(self.audit_abort(E_BOUNDS, imm));
+                }
                 let ep = self.ep();
                 let event = self.mem(ep);
                 let msg = event.y();
@@ -737,6 +774,9 @@ impl Core {
             },
             VM_STATE => {
                 let n = imm.get_fix()?;
+                if n < -32 || n > 31 {  // FIXME: replace with cycle-limit(s) in Sponsor?
+                    return Ok(self.audit_abort(E_BOUNDS, imm));
+                }
                 let me = self.self_ptr();
                 let state = self.ram(me).y();
                 let r = self.extract_nth(state, n);
@@ -807,8 +847,7 @@ impl Core {
                         return Err(E_STOP);  // End::Stop terminated continuation
                     },
                     END_COMMIT => {
-                        self.actor_commit(me);
-                        UNDEF
+                        self.actor_commit(me)
                     },
                     _ => {  // unknown END op
                         self.audit_abort(E_BOUNDS, ip)
@@ -937,7 +976,7 @@ impl Core {
     }
 
     pub fn event_enqueue(&mut self, ep: Any) {
-        // add event to the back of the queue
+        // add event to the back of the event queue
         self.set_z(ep, NIL);
         if !self.e_first().is_ram() {
             self.set_e_first(ep);
@@ -947,11 +986,33 @@ impl Core {
         self.set_e_last(ep);
     }
     pub fn inject_events(&mut self, z_queue: Any) {
-        // move sent-message events to event queue
+        // move events to the back of the event queue
         if !z_queue.is_ram() {
             return;  // no events to enqueue
         }
-        // reverse list in place
+        let r_queue = self.z_queue_reverse(z_queue);
+        if !self.e_first().is_ram() {
+            self.set_e_first(r_queue);
+        } else /* if self.e_last().is_ram() */ {
+            self.set_z(self.e_last(), r_queue);
+        }
+        self.set_e_last(z_queue);
+    }
+    fn prepend_events(&mut self, z_queue: Any) {
+        // move events to the front of the event queue
+        if !z_queue.is_ram() {
+            return;  // no events to enqueue
+        }
+        let r_queue = self.z_queue_reverse(z_queue);
+        if !self.e_first().is_ram() {
+            self.set_e_last(z_queue);
+        } else /* if self.e_last().is_ram() */ {
+            self.set_z(z_queue, self.e_first());
+        }
+        self.set_e_first(r_queue);
+    }
+    fn z_queue_reverse(&mut self, z_queue: Any) -> Any {
+        // reverse event list in place
         let mut ep = z_queue;
         let mut prev = NIL;
         while ep.is_ram() {
@@ -960,13 +1021,7 @@ impl Core {
             prev = ep;
             ep = next;
         }
-        // add events to the back of the queue
-        if !self.e_first().is_ram() {
-            self.set_e_first(prev);
-        } else /* if self.e_last().is_ram() */ {
-            self.set_z(self.e_last(), prev);
-        }
-        self.set_e_last(z_queue);
+        prev
     }
     fn z_queue_put(&mut self, z_queue: Any, ep: Any) {
         // add an event to (the head of) a reversed event list
@@ -974,7 +1029,7 @@ impl Core {
         self.ram_mut(ep).set_z(head);
         self.ram_mut(z_queue).set_z(ep);
     }
-    fn z_queue_take(&mut self, z_queue: Any) -> Any {
+    fn _z_queue_take(&mut self, z_queue: Any) -> Any {  // FIXME: unused?
         // remove an event from (the tail of) a reversed event list
         let mut prev = z_queue;
         let mut tail = self.ram(prev).z();
@@ -1047,43 +1102,51 @@ impl Core {
         self.set_y(effect, state);  // replace state data
         Ok(())
     }
+    fn txn_effect(&self) -> Any {
+        let ep = self.ep();
+        assert!(ep.is_ram());  // FIXME: can this really happen?
+        // if !ep.is_ram() {
+        //     return UNDEF;  // no event means no `self`
+        // }
+        let effect = self.z(ep);
+        effect
+    }
 
     fn audit_abort(&mut self, error: Error, evidence: Any) -> Any {
         self.call_audit_fn(error, evidence);
-        self.actor_abort();
-        UNDEF  // end actor transaction
+        self.actor_abort()
     }
-    fn actor_commit(&mut self, me: Any) {
-        let effect = self.txn_effect();
-        let quad = self.ram(effect);
-        let beh = quad.x();
-        let state = quad.y();
-        let outbox = quad.z();
+    fn actor_commit(&mut self, me: Any) -> Any {
+        let ep = self.ep();
+        let effect = self.z(ep);
+        // release pending events
+        let outbox = self.z(effect);
         self.inject_events(outbox);
-        self.ram_mut(effect).set_z(NIL);
-        // commit actor transaction
-        let actor = self.ram_mut(me);
-        actor.set_x(beh);
-        actor.set_y(state);
+        self.set_z(effect, NIL);
+        // apply actor state change
+        let inbox = self.z(me);
+        let mut txn = *self.ram(effect);
+        txn.set_z(inbox);  // preserve inbox
+        *self.ram_mut(me) = txn;
+        // free effect quad
+        self.set_z(ep, UNDEF);
+        self.free(effect);
+        UNDEF  // no continuation IP
     }
-    fn actor_abort(&mut self) {
-        let effect = self.txn_effect();
-        let mut outbox = self.ram(effect).z();
+    fn actor_abort(&mut self) -> Any {
+        let ep = self.ep();
+        let effect = self.z(ep);
+        let mut outbox = self.z(effect);
         // free sent-message events
         while outbox.is_ram() {
-            let next = self.ram(outbox).z();
+            let next = self.z(outbox);
             self.free(outbox);
             outbox = next;
         }
+        // free effect quad
+        self.set_z(ep, UNDEF);
         self.free(effect);
-    }
-    fn txn_effect(&self) -> Any {
-        let ep = self.ep();
-        if !ep.is_ram() {
-            return UNDEF;  // no event means no `self`
-        }
-        let effect = self.z(ep);
-        effect
+        UNDEF  // no continuation IP
     }
     fn self_ptr(&self) -> Any {
         let ep = self.ep();
@@ -1168,7 +1231,6 @@ impl Core {
         let mut nth = lst;
         let mut pred = UNDEF;
         let mut n = n;
-        assert!(n < 64);  // FIXME: replace with cycle-limit(s) in Sponsor
         while n > 1 && self.typeq(PAIR_T, nth) {
             pred = nth;
             nth = self.cdr(nth);
@@ -1190,7 +1252,6 @@ impl Core {
         if n == 0 {  // entire list/message
             v = p;
         } else if n > 0 {  // item at n-th index
-            assert!(n < 64);  // FIXME: replace with cycle-limit(s) in Sponsor
             while self.typeq(PAIR_T, p) {
                 n -= 1;
                 if n <= 0 { break; }
@@ -1200,7 +1261,6 @@ impl Core {
                 v = self.car(p);
             }
         } else {  // `-n` selects the n-th tail
-            assert!(n > -64);  // FIXME: replace with cycle-limit(s) in Sponsor
             while self.typeq(PAIR_T, p) {
                 n += 1;
                 if n >= 0 { break; }
@@ -1384,7 +1444,6 @@ impl Core {
     }
 
     fn stack_pairs(&mut self, n: isize) -> Result<(), Error> {
-        assert!(n < 64);  // FIXME: replace with cycle-limit(s) in Sponsor
         if n > 0 {
             let mut n = n;
             let h = self.stack_pop();
@@ -1406,7 +1465,6 @@ impl Core {
         Ok(())
     }
     fn stack_parts(&mut self, n: isize) -> Result<(), Error> {
-        assert!(n < 64);  // FIXME: replace with cycle-limit(s) in Sponsor
         let mut s = self.stack_pop();  // list to destructure
         if n > 0 {
             let mut n = n;
@@ -1429,7 +1487,6 @@ impl Core {
     }
     fn stack_roll(&mut self, n: isize) -> Result<(), Error> {
         if n > 1 {
-            assert!(n < 64);  // FIXME: replace with cycle-limit(s) in Sponsor
             let sp = self.sp();
             let (pred, nth) = self.split_nth(sp, n);
             if self.typeq(PAIR_T, nth) {
@@ -1440,7 +1497,6 @@ impl Core {
                 self.stack_push(UNDEF)?;  // out of range
             }
         } else if n < -1 {
-            assert!(n > -64);  // FIXME: replace with cycle-limit(s) in Sponsor
             let sp = self.sp();
             let (_, nth) = self.split_nth(sp, -n);
             if self.typeq(PAIR_T, nth) {
@@ -1537,55 +1593,38 @@ impl Core {
     }
 
     pub fn kp(&self) -> Any {  // continuation pointer
-        let kp = self.k_first();
-        if !kp.is_ram() {
-            return UNDEF;
-        }
-        kp
+        self.k_first()
     }
     pub fn ip(&self) -> Any {  // instruction pointer
         let kp = self.kp();
-        if !kp.is_ram() {
-            return UNDEF;
-        }
         self.t(kp)
     }
     pub fn sp(&self) -> Any {  // stack pointer
         let kp = self.kp();
-        if !kp.is_ram() {
-            return UNDEF;
-        }
         self.x(kp)
     }
     pub fn ep(&self) -> Any {  // event pointer
         let kp = self.kp();
-        if !kp.is_ram() {
-            return UNDEF;
-        }
         self.y(kp)
+    }
+    fn set_ip(&mut self, ip: Any) {
+        let kp = self.kp();
+        self.set_t(kp, ip)
     }
     fn set_sp(&mut self, sp: Any) {
         let kp = self.kp();
         self.set_x(kp, sp)
+    }
+    fn set_ep(&mut self, ep: Any) {
+        let kp = self.kp();
+        self.set_y(kp, ep)
     }
 
     pub fn typeq(&self, typ: Any, val: Any) -> bool {
         if typ == FIXNUM_T {
             val.is_fix()
         } else if (typ == ACTOR_T) || (typ == PROXY_T) {
-            if val.is_cap() {
-                // NOTE: we don't use `cap_to_ptr` here to avoid the type assertion.
-                let raw = val.raw() & !OPQ_RAW;  // WARNING: converting Cap to Ptr!
-                let ptr = Any::new(raw);
-                let t = self.mem(ptr).t();
-                if typ == ACTOR_T {
-                    (t == ACTOR_T) || (t == PROXY_T)  // proxies count as actors for message addressing
-                } else {
-                    t == PROXY_T
-                }
-            } else {
-                false
-            }
+            val.is_cap()
         } else if val.is_ptr() {
             self.mem(val).t() == typ
         } else {
@@ -2346,7 +2385,7 @@ pub const COUNT_TO: Any = Any { raw: COUNT_TO_OFS as Raw };
         assert_eq!(NIL, core.ram_next());
         assert_eq!(NIL, core.e_first());
         assert_eq!(NIL, core.k_first());
-        assert_eq!(UNDEF, core.kp());
+        assert_eq!(NIL, core.kp());
     }
 
     #[test]
@@ -2467,6 +2506,7 @@ pub const COUNT_TO: Any = Any { raw: COUNT_TO_OFS as Raw };
         let sig = core.run_loop(256);
         assert_eq!(OUT_OF_MEM, sig);
         core.set_sponsor_memory(SPONSOR, Any::fix(8));
+        core.set_sponsor_events(SPONSOR, PLUS_1);
         core.set_sponsor_cycles(SPONSOR, PLUS_2);
         let sig = core.run_loop(256);
         assert_eq!(OUT_OF_CPU, sig);
