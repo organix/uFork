@@ -32,8 +32,10 @@ Examples include:
 - stack underflow
 - _n_ _d_ `alu div`, where _d_ = 0 (result: `#? #?`)
 
-This makes all functions _total_ and _infallible_
-rather than _partial_ and _fallible_.
+The possibility of a `#?` result
+makes these computations _infallible_
+(they always produce a result)
+and makes all the functions _total_.
 Generally, `#?` as in input produces `#?` as an output.
 However, type and identity tests
 are defined to always return `#t` or `#f`.
@@ -51,12 +53,14 @@ on behalf of a _sponsor_.
 The sponsor maintains quotas for usage of
 memory, processor, and communication resources.
 
-When a quota is depleted, event processing is abandoned
+When a quota is depleted,
+processing of the event is abandoned
 (any pending effects are discarded)
 and the event is re-queued for later delivery.
 Examples include:
 
 - `E_MEM_LIM`, `E_CPU_LIM`, `E_MSG_LIM`
+- `end stop` instruction
 
 If the sponsor chooses to re-start the computation,
 a new continuation is created
@@ -70,8 +74,8 @@ the continuation is aborted.
 The event and all pending effects are discarded.
 Examples include:
 
-- `end abort` instruction
 - `E_BOUNDS`, `E_NOT_FIX`, `E_NOT_CAP`, `E_ASSERT`
+- `end abort` instruction
 
 Note that the actor itself is not terminated,
 and is perfectly capable of processing additional events.
