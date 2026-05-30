@@ -313,6 +313,7 @@ impl Core {
         // record error in sponsor's signal field,
         // returning `true` if a control event was released,
         // otherwise `false` for the root sponsor.
+        assert!(self.is_recoverable(error) || (error == E_NO_MEM));
         let sig = self.sponsor_signal(sponsor);
         self.set_sponsor_signal(sponsor, Any::fix(error as isize));
         if sig.is_ram() {
@@ -320,6 +321,12 @@ impl Core {
             return true;  // controller notified
         }
         return false;  // root sponsor
+    }
+    fn is_recoverable(&self, error: Error) -> bool {
+        (error == E_MEM_LIM) ||
+        (error == E_CPU_LIM) ||
+        (error == E_MSG_LIM) ||
+        (error == E_STOP)
     }
     /*
 
@@ -393,7 +400,7 @@ impl Core {
             self.actor_abort();
             if sig != ZERO {  // sponsor not stopped
                 self.waiting_event(ep);  // defer event
-                self.set_ep(UNDEF);  // detach event from continuattion
+                self.set_ep(UNDEF);  // detach event from continuation
             }
             let kp_ = self.cont_dequeue().unwrap();
             assert_eq!(kp, kp_);
@@ -415,7 +422,7 @@ impl Core {
             Err(error) => {
                 self.audit_abort(error, kp);
                 self.waiting_event(ep);  // defer event
-                self.set_ep(UNDEF);  // detach event from continuattion
+                self.set_ep(UNDEF);  // detach event from continuation
                 let kp_ = self.cont_dequeue().unwrap();
                 assert_eq!(kp, kp_);
                 self.end_continuation(kp, target);
@@ -2514,6 +2521,51 @@ pub const COUNT_TO: Any = Any { raw: COUNT_TO_OFS as Raw };
         core.set_sponsor_cycles(SPONSOR, Any::fix(8));
         let sig = core.run_loop(256);
         assert_eq!(OUT_OF_MSG, sig);
+    }
+
+    #[test]
+    fn instruction_smoke_test() {
+        let mut core = Core::default();
+        core.init();
+        core.set_sponsor_memory(SPONSOR, PLUS_16K);
+        core.set_sponsor_events(SPONSOR, PLUS_16K);
+        core.set_sponsor_cycles(SPONSOR, PLUS_16K);
+
+        // prepare ROM with smoke test behavior
+        let quad_rom = &mut core.quad_rom;
+
+        // quad_rom[ROM_BASE_OFS+0]    = Quad::vm_assert(TRUE, Any::rom(ROM_BASE_OFS+1));  // [E_ASSERT]
+        quad_rom[ROM_BASE_OFS+0]    = Quad::vm_dup(ZERO, Any::rom(ROM_BASE_OFS+1));  // --
+        quad_rom[ROM_BASE_OFS+1]    = Quad::vm_drop(ZERO, Any::rom(ROM_BASE_OFS+2));  // --
+        quad_rom[ROM_BASE_OFS+2]    = Quad::vm_dup(PLUS_1, Any::rom(ROM_BASE_OFS+3));  // --
+        quad_rom[ROM_BASE_OFS+3]    = Quad::vm_drop(PLUS_1, Any::rom(ROM_BASE_OFS+4));  // --
+        quad_rom[ROM_BASE_OFS+4]    = Quad::vm_dup(PLUS_5, Any::rom(ROM_BASE_OFS+5));  // --
+        quad_rom[ROM_BASE_OFS+5]    = Quad::vm_drop(PLUS_5, Any::rom(ROM_BASE_OFS+6));  // --
+        quad_rom[ROM_BASE_OFS+6]    = Quad::vm_dup(MINUS_1, Any::rom(ROM_BASE_OFS+7));  // --
+        quad_rom[ROM_BASE_OFS+7]    = Quad::vm_drop(MINUS_1, Any::rom(ROM_BASE_OFS+8));  // --
+        quad_rom[ROM_BASE_OFS+8]    = Quad::vm_dup(MINUS_3, Any::rom(ROM_BASE_OFS+9));  // --
+        quad_rom[ROM_BASE_OFS+9]    = Quad::vm_drop(MINUS_3, Any::rom(ROM_BASE_OFS+99));  // --
+        // quad_rom[ROM_BASE_OFS+9]    = Quad::vm_drop(Any::fix(32), Any::rom(ROM_BASE_OFS+99));  // [E_BOUNDS]
+        // quad_rom[ROM_BASE_OFS+9]    = Quad::vm_drop(NIL, Any::rom(ROM_BASE_OFS+99));  // [E_NOT_FIX]
+
+        quad_rom[ROM_BASE_OFS+10]   = Quad::vm_push(PLUS_1, Any::rom(ROM_BASE_OFS+11));  // n=1
+        quad_rom[ROM_BASE_OFS+11]   = Quad::vm_dup(PLUS_1, Any::rom(ROM_BASE_OFS+12));  // n n
+        quad_rom[ROM_BASE_OFS+12]   = Quad::vm_push(PLUS_1, Any::rom(ROM_BASE_OFS+13));  // n n 1
+        quad_rom[ROM_BASE_OFS+13]   = Quad::vm_alu_add(Any::rom(ROM_BASE_OFS+11));  // n n+1
+        // ...loop leads to `E_NO_MEM` due to stack growth!
+
+        quad_rom[ROM_BASE_OFS+99]   = Quad::vm_end_commit();
+
+        core.rom_top = Any::rom(ROM_BASE_OFS+100);
+
+        let boot_beh = Any::rom(ROM_BASE_OFS);
+        let boot_ptr = core.reserve(&Quad::new_actor(boot_beh, NIL)).unwrap();
+        let a_boot = core.ptr_to_cap(boot_ptr);
+        let evt = core.reserve_event(SPONSOR, a_boot, UNDEF);
+        core.event_enqueue(evt.unwrap());
+
+        let sig = core.run_loop(0);
+        assert_eq!(ZERO, sig);
     }
 
 }

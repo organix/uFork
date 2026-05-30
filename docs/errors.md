@@ -66,7 +66,7 @@ If the sponsor chooses to re-start the computation,
 a new continuation is created
 to process the event again from the beginning.
 
-## Aborted Errors
+## Aborting Errors
 
 If a processing error occurs
 while an actor is handling an event,

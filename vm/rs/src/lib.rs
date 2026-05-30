@@ -29,7 +29,7 @@ pub const E_MEM_LIM: Error  = -11;  // Sponsor memory limit reached
 pub const E_CPU_LIM: Error  = -12;  // Sponsor instruction limit reached
 pub const E_MSG_LIM: Error  = -13;  // Sponsor event limit reached
 pub const E_ASSERT: Error   = -14;  // assertion failed
-pub const E_STOP: Error     = -15;  // actor stopped
+pub const E_STOP: Error     = -15;  // actor transaction stopped
 pub const E_ABORT: Error    = -16;  // actor transaction aborted
 
 pub type Raw = u32;  // univeral value type

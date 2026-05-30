@@ -3,6 +3,7 @@
 use crate::*;
 
 // literal values (`Any` type)
+pub const MINUS_16K: Any    = Any::fix(-0x3FFF);
 pub const MINUS_4: Any      = Any::fix(-4);
 pub const MINUS_3: Any      = Any::fix(-3);
 pub const MINUS_2: Any      = Any::fix(-2);
@@ -15,6 +16,7 @@ pub const PLUS_4: Any       = Any::fix(4);
 pub const PLUS_5: Any       = Any::fix(5);
 pub const PLUS_6: Any       = Any::fix(6);
 pub const PLUS_7: Any       = Any::fix(7);
+pub const PLUS_16K: Any     = Any::fix(0x3FFF);
 
 pub const UNDEF: Any        = Any::rom(0x0);
 pub const NIL: Any          = Any::rom(0x1);

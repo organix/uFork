@@ -86,7 +86,7 @@ const HOST_DEV_OFS = 13;
 const QUOTA_OFS = 14;
 const SPONSOR_OFS = 15;
 
-// Error codes (from core.rs)
+// Error codes (from rs/src/lib.rs)
 
 const E_OK = 0;
 const E_FAIL = -1;
@@ -150,7 +150,7 @@ const error_messages = [
     "sponsor cycle limit reached",      // E_CPU_LIM = -12
     "sponsor event limit reached",      // E_MSG_LIM = -13
     "assertion failed",                 // E_ASSERT = -14
-    "actor stopped",                    // E_STOP = -15
+    "actor transaction stopped",        // E_STOP = -15
     "actor transaction aborted"         // E_ABORT = -16
 ];
 const gc_labels = [
