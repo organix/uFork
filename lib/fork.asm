@@ -118,14 +118,14 @@ boot:                       ; _ <- {caps}
     push fork_beh           ; cust,h_svc,t_svc fork_beh
     actor create            ; fork.cust,h_svc,t_svc
     push 42                 ; fork 42
-    push -42                ; fork 42 -42
-    pair 1                  ; fork -42,42
-    roll 2                  ; -42,42 fork
+    push -13                ; fork 42 -13
+    pair 1                  ; fork -13,42
+    roll 2                  ; -13,42 fork
     ref std.send_msg
 
-verify:                     ; _ <- 42,-42
-    msg 1                   ; 42
-    assert 42               ; --
+verify:                     ; _ <- 13,-42
+    msg 1                   ; 13
+    assert 13               ; --
     msg -1                  ; -42
     assert -42              ; --
     ref std.commit
