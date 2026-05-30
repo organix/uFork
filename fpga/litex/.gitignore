@@ -3,3 +3,4 @@ litex_repos
 litex_setup.py
 venv
 wishbone-utils
+site-packages
