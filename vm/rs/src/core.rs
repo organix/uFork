@@ -380,7 +380,8 @@ impl Core {
     /*
 
     Attempt to execute an instruction from the current continuation.
-    If an error occurs, the transaction is aborted and the event consumed.
+    If an error occurs, the transaction is aborted.
+    If the error is recoverable, the event is requeued, otherwise the event consumed.
 
     */
     fn execute_instruction(&mut self) -> Result<(), Error> {
@@ -409,10 +410,10 @@ impl Core {
         }
         // execute current instruction
         match self.perform_op(ip) {
-            Ok(ip_) => {
-                self.set_ip(ip_);  // update ip in continuation
+            Ok(()) => {
                 let kp_ = self.cont_dequeue().unwrap();
                 assert_eq!(kp, kp_);
+                let ip_ = self.t(kp);
                 if self.typeq(INSTR_T, ip_) {
                     self.cont_enqueue(kp);  // re-queue updated continuation
                 } else {
@@ -420,14 +421,21 @@ impl Core {
                 }
             },
             Err(error) => {
-                self.audit_abort(error, kp);
-                self.waiting_event(ep);  // defer event
-                self.set_ep(UNDEF);  // detach event from continuation
-                let kp_ = self.cont_dequeue().unwrap();
-                assert_eq!(kp, kp_);
-                self.end_continuation(kp, target);
-                if !self.report_error(sponsor, error) {
-                    return Err(error);  // signal root sponsor
+                if self.is_recoverable(error) {
+                    self.actor_abort();
+                    self.waiting_event(ep);  // defer event
+                    self.set_ep(UNDEF);  // detach event from continuation
+                    let kp_ = self.cont_dequeue().unwrap();
+                    assert_eq!(kp, kp_);
+                    self.end_continuation(kp, target);
+                    if !self.report_error(sponsor, error) {
+                        return Err(error);  // signal root sponsor
+                    }
+                } else {
+                    self.audit_abort(error, kp);
+                    let kp_ = self.cont_dequeue().unwrap();
+                    assert_eq!(kp, kp_);
+                    self.end_continuation(kp, target);
                 }
             },
         }
@@ -466,16 +474,15 @@ impl Core {
     /*
 
     Peform the operation specified by the current instruction-pointer (IP).
-    On success, return the IP of the next instruction to execute.
+    The IP in the continuation is updated to the next instruction to execute.
     If the IP is `#?`, the continuation will be terminated.
-    On failure, return the code of the error condition detected.
 
     */
-    fn perform_op(&mut self, ip: Any) -> Result<Any, Error> {
+    fn perform_op(&mut self, ip: Any) -> Result<(), Error> {
         self.count_cpu_cycles(1)?;  // always count at least one "cycle"
         let instr = self.mem(ip);
         if instr.t() != INSTR_T {
-            return Ok(self.audit_abort(E_NOT_EXE, ip));
+            return Err(E_NOT_EXE);
         }
         let opr = instr.x();  // operation code
         let imm = instr.y();  // immediate argument
@@ -483,7 +490,7 @@ impl Core {
         let ip_ = match opr {
             VM_TYPEQ => {
                 if !self.typeq(TYPE_T, imm) {  // type required
-                    return Ok(self.audit_abort(E_NO_TYPE, ip));
+                    return Err(E_NO_TYPE);
                 }
                 let val = self.stack_pop();
                 let r = if self.typeq(imm, val) { TRUE } else { FALSE };
@@ -564,7 +571,7 @@ impl Core {
                         self.stack_push(d)?;
                     },
                     _ => {  // unknown DICT op
-                        return Ok(self.audit_abort(E_BOUNDS, ip));
+                        return Err(E_BOUNDS);
                     }
                 };
                 kip
@@ -611,8 +618,7 @@ impl Core {
                         self.stack_push(Any::fix(n))?;
                     },
                     _ => {  // unknown DEQUE op
-                        return Ok(self.audit_abort(E_BOUNDS, ip));
-
+                        return Err(E_BOUNDS);
                     }
                 };
                 kip
@@ -620,7 +626,7 @@ impl Core {
             VM_PAIR => {
                 let n = imm.get_fix()?;
                 if n < -32 || n > 31 {  // FIXME: replace with cycle-limit(s) in Sponsor?
-                    return Ok(self.audit_abort(E_BOUNDS, imm));
+                    return Err(E_BOUNDS);
                 }
                 self.stack_pairs(n)?;
                 kip
@@ -628,7 +634,7 @@ impl Core {
             VM_PART => {
                 let n = imm.get_fix()?;
                 if n < -32 || n > 31 {  // FIXME: replace with cycle-limit(s) in Sponsor?
-                    return Ok(self.audit_abort(E_BOUNDS, imm));
+                    return Err(E_BOUNDS);
                 }
                 self.stack_parts(n)?;
                 kip
@@ -637,7 +643,7 @@ impl Core {
                 let lst = self.stack_pop();
                 let n = imm.get_fix()?;
                 if n < -32 || n > 31 {  // FIXME: replace with cycle-limit(s) in Sponsor?
-                    return Ok(self.audit_abort(E_BOUNDS, imm));
+                    return Err(E_BOUNDS);
                 }
                 let r = self.extract_nth(lst, n);
                 self.stack_push(r)?;
@@ -651,7 +657,7 @@ impl Core {
             VM_DROP => {
                 let mut n = imm.get_fix()?;
                 if n < -32 || n > 31 {  // FIXME: replace with cycle-limit(s) in Sponsor?
-                    return Ok(self.audit_abort(E_BOUNDS, imm));
+                    return Err(E_BOUNDS);
                 }
                 while n > 0 {
                     self.stack_pop();
@@ -662,7 +668,7 @@ impl Core {
             VM_PICK => {
                 let n = imm.get_fix()?;
                 if n < -32 || n > 31 {  // FIXME: replace with cycle-limit(s) in Sponsor?
-                    return Ok(self.audit_abort(E_BOUNDS, imm));
+                    return Err(E_BOUNDS);
                 }
                 let r = if n > 0 {
                     let lst = self.sp();
@@ -680,7 +686,7 @@ impl Core {
             VM_DUP => {
                 let n = imm.get_fix()?;
                 if n < -32 || n > 31 {  // FIXME: replace with cycle-limit(s) in Sponsor?
-                    return Ok(self.audit_abort(E_BOUNDS, imm));
+                    return Err(E_BOUNDS);
                 }
                 self.stack_dup(n)?;
                 kip
@@ -688,7 +694,7 @@ impl Core {
             VM_ROLL => {
                 let n = imm.get_fix()?;
                 if n < -32 || n > 31 {  // FIXME: replace with cycle-limit(s) in Sponsor?
-                    return Ok(self.audit_abort(E_BOUNDS, imm));
+                    return Err(E_BOUNDS);
                 }
                 self.stack_roll(n)?;
                 kip
@@ -763,14 +769,14 @@ impl Core {
             VM_JUMP => {
                 let k = self.stack_pop();
                 if !self.typeq(INSTR_T, k) {
-                    return Ok(self.audit_abort(E_NOT_EXE, k));
+                    return Err(E_NOT_EXE);
                 }
                 k  // continue at `k`
             },
             VM_MSG => {
                 let n = imm.get_fix()?;
                 if n < -32 || n > 31 {  // FIXME: replace with cycle-limit(s) in Sponsor?
-                    return Ok(self.audit_abort(E_BOUNDS, imm));
+                    return Err(E_BOUNDS);
                 }
                 let ep = self.ep();
                 let event = self.mem(ep);
@@ -782,7 +788,7 @@ impl Core {
             VM_STATE => {
                 let n = imm.get_fix()?;
                 if n < -32 || n > 31 {  // FIXME: replace with cycle-limit(s) in Sponsor?
-                    return Ok(self.audit_abort(E_BOUNDS, imm));
+                    return Err(E_BOUNDS);
                 }
                 let me = self.self_ptr();
                 let state = self.ram(me).y();
@@ -795,41 +801,40 @@ impl Core {
                     ACTOR_SEND => {
                         let target = self.stack_pop();
                         let msg = self.stack_pop();
-                        if target.is_cap() {
-                            let spn = self.event_sponsor(self.ep());  // implicit sponsor from event
-                            self.effect_send(spn, target, msg)?;
-                        } else {
-                            return Ok(self.audit_abort(E_NOT_CAP, target));
+                        if !target.is_cap() {
+                            return Err(E_NOT_CAP);
                         }
+                        let spn = self.event_sponsor(self.ep());  // implicit sponsor from event
+                        self.effect_send(spn, target, msg)?;
                     },
                     ACTOR_POST => {
                         let target = self.stack_pop();
                         let msg = self.stack_pop();
                         let spn = self.stack_pop();  // explicit sponsor from stack
-                        if target.is_cap() {
-                            self.effect_send(spn, target, msg)?;
-                        } else {
-                            return Ok(self.audit_abort(E_NOT_CAP, target));
+                        if !target.is_cap() {
+                            return Err(E_NOT_CAP);
                         }
+                        if !self.typeq(SPONSOR_T, spn) {
+                            return Err(E_BOUNDS);
+                        }
+                        self.effect_send(spn, target, msg)?;
                     },
                     ACTOR_CREATE => {
                         let beh = self.stack_pop();
                         let state = self.stack_pop();
-                        if self.typeq(INSTR_T, beh) {
-                            let actor = self.effect_create(beh, state)?;
-                            self.stack_push(actor)?;
-                        } else {
-                            return Ok(self.audit_abort(E_NOT_EXE, beh));
+                        if !self.typeq(INSTR_T, beh) {
+                            return Err(E_NOT_EXE);
                         }
+                        let actor = self.effect_create(beh, state)?;
+                        self.stack_push(actor)?;
                     },
                     ACTOR_BECOME => {
                         let beh = self.stack_pop();
                         let state = self.stack_pop();
-                        if self.typeq(INSTR_T, beh) {
-                            self.effect_become(beh, state)?;
-                        } else {
-                            return Ok(self.audit_abort(E_NOT_EXE, beh));
+                        if !self.typeq(INSTR_T, beh) {
+                            return Err(E_NOT_EXE);
                         }
+                        self.effect_become(beh, state)?;
                     },
                     ACTOR_SELF => {
                         let ep = self.ep();
@@ -837,7 +842,7 @@ impl Core {
                         self.stack_push(target)?;
                     },
                     _ => {  // unknown ACTOR op
-                        return Ok(self.audit_abort(E_BOUNDS, ip));
+                        return Err(E_BOUNDS);
                     }
                 }
                 kip
@@ -857,7 +862,7 @@ impl Core {
                         self.actor_commit(me)
                     },
                     _ => {  // unknown END op
-                        self.audit_abort(E_BOUNDS, ip)
+                        return Err(E_BOUNDS);
                     }
                 };
                 rv
@@ -960,7 +965,7 @@ impl Core {
                         self.set_sponsor_signal(per_spn, ZERO);  // mark sponsor for removal
                     },
                     _ => {  // unknown SPONSOR op
-                        return Ok(self.audit_abort(E_BOUNDS, ip));
+                        return Err(E_BOUNDS);
                     }
                 };
                 kip
@@ -976,10 +981,11 @@ impl Core {
                 kip // no op
             },
             _ => {  // illegal instruction
-                return Ok(self.audit_abort(E_BOUNDS, ip));
+                return Err(E_BOUNDS);
             }
         };
-        Ok(ip_)
+        self.set_ip(ip_);  // update ip in continuation
+        Ok(())
     }
 
     pub fn event_enqueue(&mut self, ep: Any) {
@@ -1124,6 +1130,7 @@ impl Core {
         self.actor_abort()
     }
     fn actor_commit(&mut self, me: Any) -> Any {
+        // apply accumulated actor transaction effects
         let ep = self.ep();
         let effect = self.z(ep);
         // release pending events
@@ -1141,6 +1148,7 @@ impl Core {
         UNDEF  // no continuation IP
     }
     fn actor_abort(&mut self) -> Any {
+        // discard any accumulated actor transaction effects
         let ep = self.ep();
         let effect = self.z(ep);
         let mut outbox = self.z(effect);
