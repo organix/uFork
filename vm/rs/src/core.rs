@@ -2533,6 +2533,10 @@ pub const COUNT_TO: Any = Any { raw: COUNT_TO_OFS as Raw };
 
     #[test]
     fn instruction_smoke_test() {
+        fn k(ofs: usize) -> Any { Any::rom(ROM_BASE_OFS+ofs) }
+        // let k_cust_send = k(97);
+        // let k_send_msg = k(98);
+        let k_commit = k(99);
         let mut core = Core::default();
         core.init();
         core.set_sponsor_memory(SPONSOR, PLUS_16K);
@@ -2542,26 +2546,31 @@ pub const COUNT_TO: Any = Any { raw: COUNT_TO_OFS as Raw };
         // prepare ROM with smoke test behavior
         let quad_rom = &mut core.quad_rom;
 
-        // quad_rom[ROM_BASE_OFS+0]    = Quad::vm_assert(TRUE, Any::rom(ROM_BASE_OFS+1));  // [E_ASSERT]
-        quad_rom[ROM_BASE_OFS+0]    = Quad::vm_dup(ZERO, Any::rom(ROM_BASE_OFS+1));  // --
-        quad_rom[ROM_BASE_OFS+1]    = Quad::vm_drop(ZERO, Any::rom(ROM_BASE_OFS+2));  // --
-        quad_rom[ROM_BASE_OFS+2]    = Quad::vm_dup(PLUS_1, Any::rom(ROM_BASE_OFS+3));  // --
-        quad_rom[ROM_BASE_OFS+3]    = Quad::vm_drop(PLUS_1, Any::rom(ROM_BASE_OFS+4));  // --
-        quad_rom[ROM_BASE_OFS+4]    = Quad::vm_dup(PLUS_5, Any::rom(ROM_BASE_OFS+5));  // --
-        quad_rom[ROM_BASE_OFS+5]    = Quad::vm_drop(PLUS_5, Any::rom(ROM_BASE_OFS+6));  // --
-        quad_rom[ROM_BASE_OFS+6]    = Quad::vm_dup(MINUS_1, Any::rom(ROM_BASE_OFS+7));  // --
-        quad_rom[ROM_BASE_OFS+7]    = Quad::vm_drop(MINUS_1, Any::rom(ROM_BASE_OFS+8));  // --
-        quad_rom[ROM_BASE_OFS+8]    = Quad::vm_dup(MINUS_3, Any::rom(ROM_BASE_OFS+9));  // --
-        quad_rom[ROM_BASE_OFS+9]    = Quad::vm_drop(MINUS_3, Any::rom(ROM_BASE_OFS+99));  // --
-        // quad_rom[ROM_BASE_OFS+9]    = Quad::vm_drop(Any::fix(32), Any::rom(ROM_BASE_OFS+99));  // [E_BOUNDS]
-        // quad_rom[ROM_BASE_OFS+9]    = Quad::vm_drop(NIL, Any::rom(ROM_BASE_OFS+99));  // [E_NOT_FIX]
+        // quad_rom[ROM_BASE_OFS+0]    = Quad::vm_assert(TRUE, k(1));  // [E_ASSERT]
+        quad_rom[ROM_BASE_OFS+0]    = Quad::vm_dup(ZERO, k(1));  // --
+        quad_rom[ROM_BASE_OFS+1]    = Quad::vm_drop(ZERO, k(2));  // --
+        quad_rom[ROM_BASE_OFS+2]    = Quad::vm_dup(PLUS_1, k(3));  // --
+        quad_rom[ROM_BASE_OFS+3]    = Quad::vm_drop(PLUS_1, k(4));  // --
+        quad_rom[ROM_BASE_OFS+4]    = Quad::vm_dup(PLUS_5, k(5));  // --
+        quad_rom[ROM_BASE_OFS+5]    = Quad::vm_drop(PLUS_5, k(6));  // --
+        quad_rom[ROM_BASE_OFS+6]    = Quad::vm_dup(MINUS_1, k(7));  // --
+        quad_rom[ROM_BASE_OFS+7]    = Quad::vm_drop(MINUS_1, k(8));  // --
+        quad_rom[ROM_BASE_OFS+8]    = Quad::vm_dup(MINUS_3, k(9));  // --
+        quad_rom[ROM_BASE_OFS+9]    = Quad::vm_drop(MINUS_3, k_commit);  // --
+        // quad_rom[ROM_BASE_OFS+9]    = Quad::vm_drop(Any::fix(32), k_commit);  // [E_BOUNDS]
+        // quad_rom[ROM_BASE_OFS+9]    = Quad::vm_drop(NIL, k_commit);  // [E_NOT_FIX]
 
-        quad_rom[ROM_BASE_OFS+10]   = Quad::vm_push(PLUS_1, Any::rom(ROM_BASE_OFS+11));  // n=1
-        quad_rom[ROM_BASE_OFS+11]   = Quad::vm_dup(PLUS_1, Any::rom(ROM_BASE_OFS+12));  // n n
-        quad_rom[ROM_BASE_OFS+12]   = Quad::vm_push(PLUS_1, Any::rom(ROM_BASE_OFS+13));  // n n 1
-        quad_rom[ROM_BASE_OFS+13]   = Quad::vm_alu_add(Any::rom(ROM_BASE_OFS+11));  // n n+1
+        quad_rom[ROM_BASE_OFS+10]   = Quad::vm_push(PLUS_1, k(11));  // n=1
+        quad_rom[ROM_BASE_OFS+11]   = Quad::vm_dup(PLUS_1, k(12));  // n n
+        quad_rom[ROM_BASE_OFS+12]   = Quad::vm_push(PLUS_1, k(13));  // n n 1
+        quad_rom[ROM_BASE_OFS+13]   = Quad::vm_alu_add(k(11));  // n n+1
         // ...loop leads to `E_NO_MEM` due to stack growth!
 
+        // k_cust_send:
+        quad_rom[ROM_BASE_OFS+97]   = Quad::vm_msg(PLUS_1, k(98));
+        // k_send_msg:
+        quad_rom[ROM_BASE_OFS+98]   = Quad::vm_actor_send(k(99));
+        // k_commit:
         quad_rom[ROM_BASE_OFS+99]   = Quad::vm_end_commit();
 
         core.rom_top = Any::rom(ROM_BASE_OFS+100);
