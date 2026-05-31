@@ -1,5 +1,5 @@
 ; Iterative calculation of Fibonacci numbers.
-; Also a list-iterator for calculating mutliple Fibonacci numbers.
+; Also a list-iterator for calculating multiple Fibonacci numbers.
 
 ; These examples are meant to illustrate some strategies
 ; for implementing functional closure activations
