@@ -381,7 +381,8 @@ impl Core {
 
     Attempt to execute an instruction from the current continuation.
     If an error occurs, the transaction is aborted.
-    If the error is recoverable, the event is requeued, otherwise the event consumed.
+    If the error is recoverable, the event is requeued,
+    otherwise the event is consumed.
 
     */
     fn execute_instruction(&mut self) -> Result<(), Error> {
