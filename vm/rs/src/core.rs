@@ -69,6 +69,7 @@ pub struct Core {
     device:     [Option<Box<dyn Device>>; DEVICE_MAX],
     txn_fn:     Option<Box<dyn Fn(Any, Any)>>,
     audit_fn:   Option<Box<dyn Fn(Any, Any)>>,
+    audit_err:  Option<Error>,
 }
 
 impl Default for Core {
@@ -105,6 +106,7 @@ impl Core {
             ],
             txn_fn: None,
             audit_fn: None,
+            audit_err: None,
         }
     }
 
@@ -170,7 +172,8 @@ impl Core {
         self.txn_fn = Some(Box::new(txn_fn));
     }
 
-    fn call_audit_fn(&self, error: Error, evidence: Any) {
+    fn call_audit_fn(&mut self, error: Error, evidence: Any) {
+        self.audit_err = Some(error);
         if let Some(audit) = &self.audit_fn {
             let code = Any::fix(error as isize);
             (audit)(code, evidence);
@@ -2402,6 +2405,7 @@ pub const COUNT_TO: Any = Any { raw: COUNT_TO_OFS as Raw };
         assert_eq!(NIL, core.e_first());
         assert_eq!(NIL, core.k_first());
         assert_eq!(NIL, core.kp());
+        assert_eq!(None, core.audit_err);
     }
 
     #[test]
@@ -2419,6 +2423,7 @@ pub const COUNT_TO: Any = Any { raw: COUNT_TO_OFS as Raw };
         let top_after = core.ram_top().ofs();
         assert_eq!(3, top_after - top_before);
         assert_eq!(PLUS_1, core.ram_free());
+        assert_eq!(None, core.audit_err);
     }
 
     #[test]
@@ -2432,6 +2437,7 @@ pub const COUNT_TO: Any = Any { raw: COUNT_TO_OFS as Raw };
         core.event_enqueue(evt.unwrap());
         let sig = core.run_loop(0);
         assert_eq!(ZERO, sig);
+        assert_eq!(None, core.audit_err);
     }
 
     #[test]
@@ -2445,6 +2451,7 @@ pub const COUNT_TO: Any = Any { raw: COUNT_TO_OFS as Raw };
         core.event_enqueue(evt.unwrap());
         let sig = core.run_loop(0);
         assert_eq!(ZERO, sig);
+        assert_eq!(Some(E_ABORT), core.audit_err);
     }
 
     #[test]
@@ -2459,6 +2466,7 @@ pub const COUNT_TO: Any = Any { raw: COUNT_TO_OFS as Raw };
         core.gc_collect_all();
         let sig = core.run_loop(1024);
         assert_eq!(ZERO, sig);
+        assert_eq!(None, core.audit_err);
     }
 
     #[test]
@@ -2472,6 +2480,7 @@ pub const COUNT_TO: Any = Any { raw: COUNT_TO_OFS as Raw };
         core.event_enqueue(evt.unwrap());
         let sig = core.run_loop(1024);
         assert_eq!(ZERO, sig);
+        assert_eq!(None, core.audit_err);
     }
 
     #[test]
@@ -2487,6 +2496,7 @@ pub const COUNT_TO: Any = Any { raw: COUNT_TO_OFS as Raw };
         core.event_enqueue(evt.unwrap());
         let sig = core.run_loop(1024);
         assert_eq!(ZERO, sig);
+        assert_eq!(None, core.audit_err);
     }
 
     #[test]
@@ -2502,6 +2512,7 @@ pub const COUNT_TO: Any = Any { raw: COUNT_TO_OFS as Raw };
         core.event_enqueue(evt.unwrap());
         let sig = core.run_loop(1024);
         assert_eq!(ZERO, sig);
+        assert_eq!(None, core.audit_err);
     }
 
     #[test]
@@ -2530,6 +2541,7 @@ pub const COUNT_TO: Any = Any { raw: COUNT_TO_OFS as Raw };
         core.set_sponsor_cycles(SPONSOR, Any::fix(8));
         let sig = core.run_loop(256);
         assert_eq!(OUT_OF_MSG, sig);
+        assert_eq!(None, core.audit_err);
     }
 
     #[test]
@@ -2584,6 +2596,7 @@ pub const COUNT_TO: Any = Any { raw: COUNT_TO_OFS as Raw };
 
         let sig = core.run_loop(0);
         assert_eq!(ZERO, sig);
+        assert_eq!(None, core.audit_err);
     }
 
 }
