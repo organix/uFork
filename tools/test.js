@@ -44,6 +44,7 @@ function test_asm() {
             "run",
             "--allow-read=.",
             asm_runner_href,
+            "test",
             "apps",
             "lib",
             "vm/js"
