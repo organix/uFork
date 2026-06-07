@@ -1,10 +1,10 @@
 ; Self-testing ROM image
 
 boot:                       ; _ <- {caps}
-;    dup 0 test_actors
-    dup 0 test_pairs
+;    assert #t
+;    if_not test_actors
 
-test_pairs:
+test_pairs:                 ; --
     push 422                ; 422
     pair 0                  ; 422
     assert 422              ; --
@@ -25,7 +25,8 @@ test_pairs:
     assert #?               ; 3
     drop 0                  ; 3
     assert 3                ; --
-test_if:
+
+test_if:                    ; --
     part 1                  ; #? #?
     drop 1                  ; #?
     if stop                 ; --
@@ -39,7 +40,8 @@ test_if:
     if stop                 ; --
     push 0                  ; 0
     if stop                 ; --
-test_nth:
+
+test_nth:                   ; --
     push list-0             ; 273,546,819,#nil
     part 1                  ; 546,819,#nil 273
     assert 273              ; 546,819,#nil
@@ -76,7 +78,8 @@ test_nth:
     push list-0             ; 273,546,819,#nil
     nth -4                  ; #?
     assert #?               ; --
-test_pick_and_roll:
+
+test_pick_and_roll:         ; --
     push 3                  ; 3
     push 2                  ; 3 2
     push 1                  ; 3 2 1
@@ -112,8 +115,9 @@ test_pick_and_roll:
     pick 3                  ; 1 #?
     assert #?               ; 1
     roll -2                 ; --
-    assert #?               ; #?
-test_actors:
+    assert #?               ; --
+
+test_actors:                ; --
     push #?                 ; #?
     push cell_beh           ; #? cell_beh
     actor create            ; rcvr=cell_beh.#?
@@ -129,7 +133,8 @@ test_actors:
     pick 2                  ; actor #f actor
     actor send              ; actor
     drop 1                  ; --
-test_fib:
+
+test_fib:                   ; --
 ;    push 6                  ; n=6
 ;    push 8                  ; n fib(n)=8
     push 9                  ; n=9
