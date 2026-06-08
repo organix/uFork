@@ -367,13 +367,13 @@ function raw_ui({
 
 // Event.
 
-        element.append(sub(y));
+        element.append(sub(x, depth));
         element.append(
             depth > 0
-            ? " -> "
-            : "->"
+            ? " <- "
+            : "<-"
         );
-        element.append(sub(x));
+        element.append(sub(y, depth));
         element.title += "\nKind: event";
     } else if (ufork.is_fix(t)) {
 

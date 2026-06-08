@@ -178,7 +178,7 @@ const actors_ui = make_ui("actor-ui", function (element, {
         if (txn.events.length > 0) {
             nodes.push(heading_ui("Outbox", 3));
             nodes.push(...txn.events.map(function (event_ptr) {
-                return print(event_ptr, 1, 1);
+                return print(event_ptr, 1, 0);
             }));
         }
         return nodes;
