@@ -14,6 +14,7 @@ import unpercent from "https://ufork.org/lib/unpercent.js";
 import make_window_bridge from "https://ufork.org/js/udbg/window_bridge.js";
 import lang_asm from "./lang_asm.js";
 import lang_hum from "./lang_hum.js";
+import lang_json from "./lang_json.js";
 import lang_scm from "./lang_scm.js";
 import tools_ui from "./tools_ui.js";
 import editor_ui from "./editor_ui.js";
@@ -28,6 +29,7 @@ const default_tools_height = 200;
 const lang_packs = Object.create(null);
 lang_packs.asm = lang_asm;
 lang_packs.hum = lang_hum;
+lang_packs.json = lang_json;
 lang_packs.scm = lang_scm;
 Object.freeze(lang_packs);
 
