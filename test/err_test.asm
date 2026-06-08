@@ -15,9 +15,11 @@ grow_stack:                 ; n
     alu add                 ; n n+1
     ref grow_stack
 
-dict_test:
-    dict has                ; #f
-    assert #f               ; --
+no_mem_test:                ; ( -- [E_NO_MEM] )
+    push 0                  ; n=0
+    ref grow_stack
+
+dict_test:                  ; ( -- )
     push #nil               ; #nil
     push 0                  ; #nil 0
     push #f                 ; #nil 0 #f
@@ -42,11 +44,69 @@ dict_test:
     assert #?               ; {1:t,0:#t}
 
     roll -10                ; --
-    ref std.commit
+    return
 
 test:                       ; judge <- {caps}
 ;    assert #t               ; [E_ASSERT]
+;    call no_mem_test        ; [E_NO_MEM]
 ;    if_not test_fail        ; --
+
+stack_underflow_test:       ; --
+    assert #?               ; --
+
+    dup 0                   ; --
+    drop 0                  ; --
+    dup 1                   ; #?
+    drop 1                  ; --
+    dup 3                   ; #? #? #?
+    drop 3                  ; --
+
+    typeq #fixnum_t         ; #f
+    drop 31                 ; --
+    typeq foo_t             ; #f
+    assert #f               ; --
+
+    dict has                ; #f
+    assert #f               ; --
+;    assert #f               ; [E_ASSERT]
+    assert #?               ; --
+
+;    if_not ignorable_test   ; --
+    call dict_test          ; --
+    assert #?               ; --
+
+ignorable_test:
+;    drop -1                 ; --
+    quad_4 #instr_t 23 -1
+;    drop -3                 ; --
+    quad_4 #instr_t 23 -3
+;    drop -32                ; --
+    quad_4 #instr_t 23 -32
+
+bounds_test:                ; --
+    drop 31                 ; --
+;    drop 32                 ; [E_BOUNDS]
+;    drop 33                 ; [E_BOUNDS]
+
+;    drop -33                ; [E_BOUNDS]
+;    quad_4 #instr_t 23 -33
+
+not_fix_test:               ; --
+;    dup #?                  ; [E_NOT_FIX]
+;    quad_4 #instr_t 22 #?
+
+no_type_test:               ; --
+;    typeq 0                 ; [E_NO_TYPE]
+;    quad_4 #instr_t 5 0
+
+;    typeq #?                ; [E_NO_TYPE]
+;    quad_4 #instr_t 5 #?
+
+not_cap_test:               ; --
+    push #t                 ; #t
+    push #f                 ; #t #f
+;    actor send              ; [E_NOT_CAP]
+    drop 10                 ; --
 
 test_pass:
     ; trivial case of test success
@@ -61,56 +121,6 @@ test_fail:
     ref std.send_msg
 
 boot:                       ; _ <- {caps}
-;    if_not dict_test
-    ref err_test
-
-err_test:
-;    assert #t               ; [E_ASSERT]
-    assert #?               ; --
-;    dup #?                  ; [E_NOT_FIX]
-;    quad_4 #instr_t 22 #?
-
-    dup 0                   ; --
-    drop 0                  ; --
-    dup 1                   ; #?
-    drop 1                  ; --
-    dup 3                   ; #? #? #?
-    drop 3                  ; --
-
-drop_m1:
-;    drop -1                 ; --
-    quad_4 #instr_t 23 -1
-;    drop -3                 ; --
-    quad_4 #instr_t 23 -3
-;    drop -32                ; --
-    quad_4 #instr_t 23 -32
-;    drop -33                ; [E_BOUNDS]
-;    quad_4 #instr_t 23 -33
-
-;    typeq 0                 ; [E_NO_TYPE]
-;    quad_4 #instr_t 5 0
-
-;    typeq #?                ; [E_NO_TYPE]
-;    quad_4 #instr_t 5 #?
-
-;    assert #f               ; [E_ASSERT]
-
-    typeq #fixnum_t         ; #f
-    typeq foo_t             ; #f
-    drop 31                 ; --
-
-drop_32:
-;    drop 32                 ; [E_BOUNDS]
-;    quad_4 #instr_t 23 32   ; [E_BOUNDS]
-
-;    push #t                 ; #t
-;    push #f                 ; #t #f
-;    actor send              ; [E_NOT_CAP]
-
-;    push 0                  ; 0
-;    push #t                 ; 0 #t
-;    if grow_stack           ; --
-
     call spn_test           ; --
 
     msg 0                   ; {caps}
@@ -176,7 +186,7 @@ boot_refill:
     sponsor start           ; --
     ref std.commit
 
-spn_test:                   ; --
+spn_test:                   ; ( -- )
     sponsor new             ; spn
     push 100                ; spn 100
     sponsor memory          ; spn
