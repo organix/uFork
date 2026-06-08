@@ -377,7 +377,7 @@ function raw_ui({
         element.title += "\nKind: event";
     } else if (ufork.is_fix(t)) {
 
-// Sponsor.
+// Quota.
 
         if (depth > 0) {
             element.append(
@@ -388,14 +388,12 @@ function raw_ui({
                 sub(x),
                 key_ui(" cyc: "),
                 sub(y),
-                key_ui(" sig: "),
-                sub(z),
                 "]"
             );
         } else {
             element.append("[", ufork.print(t), "]");
         }
-        element.title += "\nKind: sponsor";
+        element.title += "\nKind: quota";
     } else {
 
 // Generic quad.
@@ -455,6 +453,9 @@ function raw_ui({
         if (value === ufork.ramptr(ufork.DDEQUE_OFS)) {
             return {"e head": t, "e tail": x, "k head": y, "k tail": z};
         }
+        if (t === ufork.SPONSOR_T) {
+            return {quota: x, signal: y, waiting: z};
+        }
         if (ufork.is_cap(value)) {
             return (
                 t === ufork.PROXY_T
@@ -473,7 +474,7 @@ function raw_ui({
             );
         }
         if (ufork.is_fix(t)) {
-            return {memory: t, events: x, cycles: y, signal: z};
+            return {memory: t, events: x, cycles: y};
         }
         if (t === ufork.ACTOR_T && !ufork.is_cap(value)) {
             return {"new code": x, "new data": y, outbox: z};
