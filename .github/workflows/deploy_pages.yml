@@ -24,6 +24,7 @@ jobs:
 
 # Publish the libs.
 
+      - run: cp -R test _site/test
       - run: cp -R fpga/ucode _site/ucode
       - run: cp -R lib _site/lib
       - run: cp -R vm/js _site/js
