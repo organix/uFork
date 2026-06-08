@@ -26,6 +26,7 @@ import lang_scm from "./lang_scm.js";
 import io_dev_ui from "./io_dev_ui.js";
 import svg_dev_ui from "./svg_dev_ui.js";
 import disasm_ui from "./disasm_ui.js";
+import ir_ui from "./ir_ui.js";
 import fomu from "./fomu.js";
 const wasm_url = import.meta.resolve("https://ufork.org/wasm/ufork.wasm");
 
@@ -173,11 +174,17 @@ const tools_ui = make_ui("tools-ui", function (element, {
         on_viewbox_size_change
     });
     devices.disasm = disasm_ui({});
+    devices.ir = ir_ui({});
 
     function refresh_disasm() {
-        if (device_select.value === "disasm") {
+        if (
+            device_select.value === "disasm"
+            || device_select.value === "ir"
+        ) {
             const lang_pack = lang_packs[lang_select.value];
-            devices.disasm.set_ir(lang_pack.compile(text));
+            const ir = lang_pack.compile(text);
+            devices.disasm.set_ir(ir);
+            devices.ir.set_ir(ir);
         }
     }
 
@@ -420,7 +427,8 @@ const tools_ui = make_ui("tools-ui", function (element, {
         [
             dom("option", {value: "io", textContent: "I/O"}),
             dom("option", {value: "svg", textContent: "SVG"}),
-            dom("option", {value: "disasm", textContent: "Disasm"})
+            dom("option", {value: "disasm", textContent: "Disasm"}),
+            dom("option", {value: "ir", textContent: "IR"})
         ]
     );
     lang_select = dom(
