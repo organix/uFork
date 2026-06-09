@@ -391,7 +391,13 @@ function raw_ui({
                 "]"
             );
         } else {
-            element.append("[", ufork.print(t), "]");
+            element.append(
+                sub(t),
+                "/",
+                sub(x),
+                "/",
+                sub(y)
+            );
         }
         element.title += "\nKind: quota";
     } else {
