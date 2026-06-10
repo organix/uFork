@@ -92,6 +92,7 @@ function handle_keydown(editor, event) {
 }
 
 export default Object.freeze({
+    name: "Assembly",
     compile: assemble,
     handle_keydown,
     highlight,

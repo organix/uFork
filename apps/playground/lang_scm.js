@@ -90,6 +90,7 @@ function handle_keydown(editor, event) {
 }
 
 export default Object.freeze({
+    name: "Scheme",
     compile: scm.compile,
     handle_keydown,
     highlight,

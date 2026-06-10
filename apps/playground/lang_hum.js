@@ -107,6 +107,7 @@ function handle_keydown(editor, event) {
 }
 
 export default Object.freeze({
+    name: "Humus",
     compile,
     handle_keydown,
     highlight,

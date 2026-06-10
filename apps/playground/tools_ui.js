@@ -138,6 +138,9 @@ const tools_ui = make_ui("tools-ui", function (element, {
             margin: 2px;
             white-space: nowrap;
         }
+        tools_controls > select {
+            min-width: 40px;
+        }
         :host > :last-child { /* device */
             flex: 1 1;
             min-height: 0;
@@ -440,8 +443,11 @@ const tools_ui = make_ui("tools-ui", function (element, {
                 on_lang_change(lang_select.value);
             }
         },
-        Object.keys(lang_packs).map(function (name) {
-            return dom("option", {value: name, textContent: name});
+        Object.entries(lang_packs).map(function ([file_extension, lang_pack]) {
+            return dom("option", {
+                value: file_extension,
+                textContent: lang_pack.name
+            });
         })
     );
     boot_button = dom("button", {

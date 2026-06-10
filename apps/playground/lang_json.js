@@ -63,6 +63,7 @@ if (import.meta.main) {
 }
 
 export default Object.freeze({
+    name: "IR",
     compile,
     highlight,
     docs_url: "https://github.com/organix/uFork/blob/main/docs/ir.md",
