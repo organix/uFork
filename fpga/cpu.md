@@ -29,26 +29,26 @@ Each uCode instruction executes
 in 2 clock-cycles.
 The phases are ALU/MEM and STACK.
 
-    :       ALU/MEM phase                               :       STACK phase
-    :                                                   :
-    Instruction ----------+------+------------+-------> Instruction     +---------->
-    :                     |      |            |         :         |     |
-    :                     |      V            |         :         |     |
-    :         +---> %-----|--> Memory --+     |         :         |   Memory
-    :         |     ^     |             |     |         :         |     ^
-    :         |     |     |             |     V         :         |     |
-    PC+1 -----|-----+-----|-------------|---> %-------> PC -------|-----+--> +1 --->
-    :         |     |     |             |     %         :         |
-    :         |     +-----|---> +1 -----|---> %         :         |
-    :         |     |     |             |     ^         :         |
-    :         |     +-----|-------------|-----|----+    :         +-------------+
-    :         |           |             |     |    |    :         |             V
-    R-stack --|-----+-----|-------------|-----+    +--> R-stack --|---> %--> R-stack
-    :         |     |     |             |               :         |     ^
-    :         |     |     |             |               :         +-----|-------+
-    :         |     V     V             V               :               |       V
-    D-stack --+---> %--> ALU ---------> %-------------> Result ---------+--> D-stack
-    :                                                   :
+    :         ALU/MEM phase                           :         STACK phase
+    :                                                 :
+    Instruction --------+-----+-------------+-------> Instruction    +---------->
+    :                   |     |             |         :         |    |
+    :                   |     V             |         :         |    |
+    :         +--> %----|--> Memory ---+    |         :         |  Memory
+    :         |    ^    |              |    |         :         |    ^
+    :         |    |    |              |    V         :         |    |
+    PC+1 -----|----+----|---------+----|--> %-------> PC -------|----+--> +1 --->
+    :         |    |    |         |    |    %         :         |
+    :         |    +----|--> +1 --|----|--> %         :         |
+    :         |         |         |    |    ^         :         |
+    :         |    +----|---------|----|----+         :         +---------+
+    :         |    |    |         |    |              :         |         V
+    R-stack --|----+    |         +----|------------> R-stack --|--> %--> R-stack
+    :         |    |    |              |              :         |    ^
+    :         |    |    |              |              :         +----|----+
+    :         |    V    V              V              :              |    V
+    D-stack --+--> %--> ALU ---------> %------------> Result --------+--> D-stack
+    :                                                 :
 
 ### ALU/MEM phase
 
@@ -86,7 +86,7 @@ is performed on the D-stack in this phase.
 For control-transfer instructions,
 most of the bits are an immediate address
 that may be loaded into the `PC`.
-If the `PRC` bit is set,
+If the `PCR` bit is set,
 `PC+1` is pushed onto the R-stack
 as a return-address (a CALL versus a JUMP).
 If the branch is conditional,
