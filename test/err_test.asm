@@ -9,6 +9,11 @@
 foo_t:
     type_t 1
 
+list_1_2_3:                 ; 1,2,3
+    pair_t 1
+pair_2_3:                   ; 2,3
+    pair_t 2 3
+
 grow_stack:                 ; n
     dup 1                   ; n n
     push 1                  ; n n 1
@@ -18,6 +23,48 @@ grow_stack:                 ; n
 no_mem_test:                ; ( -- [E_NO_MEM] )
     push 0                  ; n=0
     ref grow_stack
+
+list_test:                  ; ( -- )
+    push list_1_2_3         ; 1,2,3
+    nth 0                   ; 1,2,3
+    assert list_1_2_3       ; --
+
+    push list_1_2_3         ; 1,2,3
+    nth 1                   ; 1
+    assert 1                ; --
+
+    push list_1_2_3         ; 1,2,3
+    nth -1                  ; 2,3
+    assert pair_2_3         ; --
+
+    push list_1_2_3         ; 1,2,3
+    nth 2                   ; 2
+    assert 2                ; --
+
+    push list_1_2_3         ; 1,2,3
+    nth -2                  ; 3
+    assert 3                ; --
+
+    push #t                 ; #t
+    push list_1_2_3         ; #t 1,2,3
+    nth 3                   ; #t #?
+    assert #?               ; #t --
+    assert #t               ; --
+
+    push #t                 ; #t
+    push list_1_2_3         ; #t 1,2,3
+    nth -3                  ; #t #?
+    assert #?               ; #t --
+    assert #t               ; --
+
+    push #t                 ; #t
+    push list_1_2_3         ; #t 1,2,3
+;    nth 32                 ; [E_BOUNDS]
+    nth -32                 ; #t #?
+    assert #?               ; #t --
+    assert #t               ; --
+
+    return
 
 dict_test:                  ; ( -- )
     push #nil               ; #nil
@@ -53,6 +100,12 @@ test:                       ; judge <- {caps}
 
 stack_underflow_test:       ; --
     assert #?               ; --
+;    assert #f               ; [E_ASSERT]
+
+    typeq #fixnum_t         ; #f
+    assert #f               ; --
+    typeq foo_t             ; #f
+    assert #f               ; --
 
     dup 0                   ; --
     drop 0                  ; --
@@ -61,17 +114,13 @@ stack_underflow_test:       ; --
     dup 3                   ; #? #? #?
     drop 3                  ; --
 
-    typeq #fixnum_t         ; #f
-    drop 31                 ; --
-    typeq foo_t             ; #f
-    assert #f               ; --
-
     dict has                ; #f
     assert #f               ; --
-;    assert #f               ; [E_ASSERT]
     assert #?               ; --
 
 ;    if_not ignorable_test   ; --
+    call list_test          ; --
+    assert #?               ; --
     call dict_test          ; --
     assert #?               ; --
 
@@ -82,6 +131,30 @@ ignorable_test:
     quad_4 #instr_t 23 -3
 ;    drop -32                ; --
     quad_4 #instr_t 23 -32
+
+    eq #?                   ; #t
+    assert #t               ; --
+
+    push #t                 ; #t
+    push 0                  ; #t 0
+    push #nil               ; #t 0 #nil
+    alu add                 ; #t #?
+    assert #?               ; #t
+    assert #t               ; --
+
+    push #t                 ; #t
+    push #nil               ; #t #nil
+    push 1                  ; #t #nil 1
+    alu add                 ; #t #?
+    assert #?               ; #t
+    assert #t               ; --
+
+    push #t                 ; #t
+    push 0                  ; #t 0
+    push #nil               ; #t 0 #nil
+    cmp lt                  ; #t #?
+    assert #?               ; #t
+    assert #t               ; --
 
 bounds_test:                ; --
     drop 31                 ; --
