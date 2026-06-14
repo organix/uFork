@@ -126,6 +126,9 @@ stack_underflow_test:       ; --
     cmp eq                  ; #t
     assert #t               ; --
 
+    cmp ne                  ; #f
+    assert #f               ; --
+
     push #t                 ; #t
     roll -2                 ; --
     assert #?               ; --
@@ -311,32 +314,32 @@ spn_test:                   ; ( -- )
     dup 1                   ; spn spn
     push 5                  ; spn spn 5
     push 0                  ; spn spn 5 0
-    push hewitt_cnt         ; spn spn 5 0 hewitt_cnt
-    actor create            ; spn spn 5 hewitt_cnt.0
-    pick -3                 ; spn hewitt_cnt.0 spn 5 hewitt_cnt.0
-    actor post              ; spn hewitt_cnt.0
-    pick 2                  ; spn hewitt_cnt.0 spn
-    push -2                 ; spn hewitt_cnt.0 spn -2
-    roll 3                  ; spn spn -2 hewitt_cnt.0
+    push count_beh          ; spn spn 5 0 count_beh
+    actor create            ; spn spn 5 count_beh.0
+    pick -3                 ; spn count_beh.0 spn 5 count_beh.0
+    actor post              ; spn count_beh.0
+    pick 2                  ; spn count_beh.0 spn
+    push -2                 ; spn count_beh.0 spn -2
+    roll 3                  ; spn spn -2 count_beh.0
     actor post              ; spn
 
     actor self              ; spn SELF
     sponsor start           ; --
     return
 
-hewitt_cnt:                 ; cnt <- cust | inc
+count_beh:                  ; cnt <- cust | inc
     msg 0                   ; msg
     typeq #actor_t          ; is_cap(msg)
-    if hewitt_done          ; --
+    if count_done           ; --
     state 0                 ; cnt
     msg 0                   ; cnt inc
     alu add                 ; cnt+inc
-    push hewitt_cnt         ; cnt+inc hewitt_cnt
+    push count_beh          ; cnt+inc count_beh
     actor become            ; --
     msg 0                   ; inc
     actor self              ; inc SELF
     ref std.send_msg
-hewitt_done:                ; --
+count_done:                 ; --
     state 0                 ; cnt
     msg 0                   ; cnt cust
     ref std.send_msg
