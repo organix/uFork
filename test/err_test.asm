@@ -14,14 +14,24 @@ list_1_2_3:                 ; 1,2,3
 pair_2_3:                   ; 2,3
     pair_t 2 3
 
+; This procedure checks for #? on the stack,
+; protecting against an empty stack or
+; nested procedure call.
+assert_undef:               ; ( x -- )
+    push #t                 ; x k #t
+    roll -3                 ; #t x k
+    roll 2                  ; #t k x
+    assert #?               ; #t k
+    roll 2                  ; k #t
+    assert #t               ; k
+    return
+
+no_mem_test:                ; ( -- [E_NO_MEM] )
+    push 0                  ; n=0
 grow_stack:                 ; n
     dup 1                   ; n n
     push 1                  ; n n 1
     alu add                 ; n n+1
-    ref grow_stack
-
-no_mem_test:                ; ( -- [E_NO_MEM] )
-    push 0                  ; n=0
     ref grow_stack
 
 list_test:                  ; ( -- )
@@ -45,25 +55,31 @@ list_test:                  ; ( -- )
     nth -2                  ; 3
     assert 3                ; --
 
-    push #t                 ; #t
-    push list_1_2_3         ; #t 1,2,3
-    nth 3                   ; #t #?
-    assert #?               ; #t --
-    assert #t               ; --
+    push list_1_2_3         ; 1,2,3
+    nth 3                   ; #?
+    call assert_undef       ; --
 
-    push #t                 ; #t
-    push list_1_2_3         ; #t 1,2,3
-    nth -3                  ; #t #?
-    assert #?               ; #t --
-    assert #t               ; --
+    push list_1_2_3         ; 1,2,3
+    nth -3                  ; #?
+    call assert_undef       ; --
 
-    push #t                 ; #t
-    push list_1_2_3         ; #t 1,2,3
+    push list_1_2_3         ; 1,2,3
 ;    nth 32                 ; [E_BOUNDS]
-    nth -32                 ; #t #?
-    assert #?               ; #t --
-    assert #t               ; --
+    nth -32                 ; #?
+    call assert_undef       ; --
 
+    push list_1_2_3         ; 1,2,3
+    part 2                  ; 3 2 1
+    dup 3                   ; 3 2 1 3 2 1
+    assert 1                ; 3 2 1 3 2
+    assert 2                ; 3 2 1 3
+    assert 3                ; 3 2 1
+    pair 2                  ; 1,2,3
+    part 1                  ; 2,3 1
+    assert 1                ; 2,3
+    part 1                  ; 3 2
+    assert 2                ; 3
+    assert 3                ; --
     return
 
 dict_test:                  ; ( -- )
@@ -94,13 +110,36 @@ dict_test:                  ; ( -- )
     return
 
 test:                       ; judge <- {caps}
+;    if_not data_test        ; --
 ;    assert #t               ; [E_ASSERT]
 ;    call no_mem_test        ; [E_NO_MEM]
 ;    if_not test_fail        ; --
+;    return                  ; [E_NOT_EXE]
 
 stack_underflow_test:       ; --
     assert #?               ; --
 ;    assert #f               ; [E_ASSERT]
+
+    eq #?                   ; #t
+    assert #t               ; --
+
+    cmp eq                  ; #t
+    assert #t               ; --
+
+    push #t                 ; #t
+    roll -2                 ; --
+    assert #?               ; --
+;    assert #t               ; --
+
+    push #?                 ; #?
+    call assert_undef       ; --
+
+    alu add                 ; #?
+    call assert_undef       ; --
+
+    push 0                  ; 0
+    alu add                 ; #?
+    call assert_undef       ; --
 
     typeq #fixnum_t         ; #f
     assert #f               ; --
@@ -109,19 +148,23 @@ stack_underflow_test:       ; --
 
     dup 0                   ; --
     drop 0                  ; --
+
     dup 1                   ; #?
-    drop 1                  ; --
+    push #t                 ; #? #t
+    roll -2                 ; #t #?
+    dup 1                   ; #t #? #?
+    assert #?               ; #t #?
+    drop 1                  ; #t
+    assert #t               ; --
+
     dup 3                   ; #? #? #?
-    drop 3                  ; --
+    push #t                 ; #? #? #? #t
+    roll -4                 ; #t #? #? #?
+    drop 3                  ; #t
+    assert #t               ; --
 
     dict has                ; #f
     assert #f               ; --
-    assert #?               ; --
-
-;    if_not ignorable_test   ; --
-    call list_test          ; --
-    assert #?               ; --
-    call dict_test          ; --
     assert #?               ; --
 
 ignorable_test:
@@ -132,29 +175,26 @@ ignorable_test:
 ;    drop -32                ; --
     quad_4 #instr_t 23 -32
 
-    eq #?                   ; #t
-    assert #t               ; --
+    push 1                  ; 1
+    push #nil               ; 1 #nil
+    alu add                 ; #?
+    call assert_undef       ; --
 
-    push #t                 ; #t
-    push 0                  ; #t 0
-    push #nil               ; #t 0 #nil
-    alu add                 ; #t #?
-    assert #?               ; #t
-    assert #t               ; --
+    push #f                 ; #f
+    push -1                 ; #f -1
+    alu add                 ; #?
+    call assert_undef       ; --
 
-    push #t                 ; #t
-    push #nil               ; #t #nil
-    push 1                  ; #t #nil 1
-    alu add                 ; #t #?
-    assert #?               ; #t
-    assert #t               ; --
+    push 0                  ; 0
+    push #nil               ; 0 #nil
+    cmp lt                  ; #?
+    call assert_undef       ; --
 
-    push #t                 ; #t
-    push 0                  ; #t 0
-    push #nil               ; #t 0 #nil
-    cmp lt                  ; #t #?
-    assert #?               ; #t
-    assert #t               ; --
+data_test:
+    call list_test          ; --
+    assert #?               ; --
+    call dict_test          ; --
+    assert #?               ; --
 
 bounds_test:                ; --
     drop 31                 ; --
