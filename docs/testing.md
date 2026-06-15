@@ -19,7 +19,8 @@ Eligible modules export a `test` entrypoint, for example:
          test
 
 The `judge` capability is sent the outcome of the test. Any value other than
-`#t` is considered a failure, and reported to the user.
+`#t` is considered a failure, and reported to the user. If a verdict is not
+received by the judge within 5 seconds, the test fails.
 
 To run only the automated tests for assembly, run
 
