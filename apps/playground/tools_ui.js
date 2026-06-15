@@ -31,6 +31,12 @@ import fomu from "./fomu.js";
 const wasm_url = import.meta.resolve("https://ufork.org/wasm/ufork.wasm");
 
 const rx_extension = /\.\w+$/;
+const resource_error_codes = Object.freeze([
+    ufork.E_MEM_LIM,
+    ufork.E_MSG_LIM,
+    ufork.E_CPU_LIM
+]);
+const refill_amount = 1009; // approx 60FPS, prime minimizes resonance
 
 function request_and_open_serial_port() {
     return navigator.serial.requestPort().then(function (port) {
@@ -148,6 +154,7 @@ const tools_ui = make_ui("tools-ui", function (element, {
     `);
     let core;
     let driver;
+    let play_timer;
     let devices = Object.create(null);
     let device_element = document.createComment("placeholder");
     let device_select;
@@ -239,6 +246,17 @@ const tools_ui = make_ui("tools-ui", function (element, {
             compilers[lang] = lang_pack.compile;
         });
         return compilers;
+    }
+
+    function refill() {
+        driver.command({
+            kind: "refill",
+            resources: {
+                memory: refill_amount,
+                events: refill_amount,
+                cycles: refill_amount
+            }
+        });
     }
 
     function run_ucode() {
@@ -344,7 +362,21 @@ const tools_ui = make_ui("tools-ui", function (element, {
                     core.u_pprint(message.audit.evidence)
                 );
             } else if (message.fault !== undefined) {
-                devices.io.warn("FAULT:", ufork.fault_msg(message.fault.code));
+                const {code} = message.fault;
+                if (resource_error_codes.includes(code)) {
+
+// If the root sponsor is continually being exhausted then the core might be
+// stuck in an infinite loop. Execution is continued on the next turn so as to
+// avoid blocking the UI.
+
+                    refill();
+                    clearTimeout(play_timer);
+                    play_timer = setTimeout(function () {
+                        driver.command({kind: "play"});
+                    });
+                    return;
+                }
+                devices.io.warn("FAULT:", ufork.fault_msg(code));
                 stop();
             } else if (message.idle !== undefined) {
                 devices.io.info("IDLE");
@@ -399,7 +431,12 @@ const tools_ui = make_ui("tools-ui", function (element, {
                     kind: "statuses",
                     verbose: {audit: true, fault: true, idle: true, txn: true}
                 });
-                driver.command({kind: "auto_refill", enabled: true});
+
+// When running at full speed with "auto_refill" enabled, it is possible for the
+// UI to block indefinitely. To avoid this catastrophic scenario, resource
+// limits are used to break up long running execution over multiple turns.
+
+                refill();
                 if (debug) {
                     on_attach();
                 } else {
@@ -415,7 +452,7 @@ const tools_ui = make_ui("tools-ui", function (element, {
     }
 
     function command(message) {
-        driver.command(message);
+        return driver.command(message);
     }
 
     device_select = dom(
@@ -507,11 +544,22 @@ const tools_ui = make_ui("tools-ui", function (element, {
     element.warn = warn;
 });
 
+const infinite_loop_asm = `
+boot:                       ; _ <- {caps}
+    msg 0                   ; {caps}
+    actor self              ; {caps} SELF
+    actor send
+    end commit
+.export
+    boot
+`;
+
 if (import.meta.main) {
     document.documentElement.innerHTML = "";
     const tools = dom(
         tools_ui({
             src: new URL("example.asm", location.href).href,
+            text: infinite_loop_asm,
             lang_packs: {asm: lang_asm, scm: lang_scm},
             on_lang_change: globalThis.console.log,
             on_device_change: globalThis.console.log,
