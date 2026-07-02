@@ -12,6 +12,7 @@
 
 import collapse from "https://ufork.org/lib/collapse.js";
 import import_map from "../../tools/import_map.js";
+const apps_href = import.meta.resolve("../");
 const playground_href = import.meta.resolve("./");
 const main_href = import.meta.resolve("./main.js");
 
@@ -74,6 +75,9 @@ Promise.all([
         const relative_href = href.replace(
             playground_href,
             ""
+        ).replace(
+            apps_href,
+            "../"
         ).replace(
             "https://ufork.org/",
             "../"
