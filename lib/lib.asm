@@ -115,6 +115,40 @@ broadcast_beh:              ; value <- actors
     actor self              ; rest SELF
     ref std.send_msg
 
+;;  DEF race_beh(list) AS \(cust, req).[
+;;  	CREATE once WITH once_beh(cust)
+;;  	send_to_all((once, req), list)
+;;  ]
+;;  DEF send_to_all(msg, list) AS (
+;;  	CASE list OF
+;;  	() : []
+;;  	(first, rest) : [
+;;  		SEND msg TO first
+;;  		send_to_all(msg, rest)
+;;  	]
+;;  	(last) : [ SEND msg TO last ]
+;;  	END
+;;  )
+race_beh:                   ; list <- cust,req
+    msg -1                  ; req
+    msg 1                   ; req rcvr=cust
+    push once_beh           ; req rcvr once_beh
+    actor create            ; req once=once_beh.rcvr
+    pair 1                  ; once,req
+    state 0                 ; msg=once,req list
+send_to_all:                ; msg list
+    dup 1                   ; msg list list
+    eq #nil                 ; msg list list==#nil
+    if std.commit           ; msg list
+    dup 1                   ; msg list list
+    typeq #pair_t           ; msg list is_pair(list)
+    if_not std.send_msg     ; msg list
+    part 1                  ; msg rest first
+    pick 3                  ; msg rest first msg
+    roll 2                  ; msg rest msg first
+    actor send              ; msg list=rest
+    ref send_to_all
+
 .export
     sink_beh
     const_beh
@@ -124,7 +158,7 @@ broadcast_beh:              ; value <- actors
     label_beh
     tag_beh
     once_tag_beh
-;    call_beh                ; semantically `label_beh` with swapped parameters
     relay_beh
     tee_beh
     broadcast_beh
+    race_beh
