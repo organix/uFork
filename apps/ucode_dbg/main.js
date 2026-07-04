@@ -267,7 +267,7 @@ $program_compile.onclick = function () {
     // create new machine with compiled program
     $machine_error.textContent = "";
     $machine_break.textContent = "";
-    const devs = [uart];
+    const devs = [uart, uart];
     devs[0xF] = make_spif();
     const machine = ucode_sim.make_machine(prog, devs);
     let state = machine.copy();

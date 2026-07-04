@@ -173,7 +173,7 @@ Deno.readTextFile(ucode_path).then(function (text) {
 
 // Make a simulator and run it, pausing to handle interrupts every so often.
 
-    const devs = [uart];
+    const devs = [uart, uart];
     devs[0xF] = make_spif();
     const machine = ucode_sim.make_machine(prog, devs);
     return (function step(remaining = 1000) {
