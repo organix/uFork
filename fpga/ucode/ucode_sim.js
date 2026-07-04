@@ -57,7 +57,7 @@ function make_stack(depth = 12) {
     }
     function adjust(delta) {  // adjust usage statistics
         if (cnt < 0 && delta > 0) {
-            cnt = delta;  // reset after underflow (FIXME: what about underflow?)
+            cnt = delta;  // reset after underflow (FIXME: what about overflow?)
         } else {
             cnt += delta;
         }
@@ -124,6 +124,7 @@ function make_stack(depth = 12) {
 
 function make_machine(prog = [], device = []) {
     let pc = 0;
+    let instr_cnt = 0;
     const dstack = make_stack();
     const rstack = make_stack();
     const gcc = new Array(1 << 12).fill(0);
@@ -140,6 +141,7 @@ function make_machine(prog = [], device = []) {
             dstats: dstack.stats(),
             rstack: rstack.copy(),
             rstats: rstack.stats(),
+            instr_cnt,
             gcc,            // FIXME: can we make a cheap read-only view?
             qram,           // FIXME: can we make a cheap read-only view?
             qrom,           // FIXME: can we make a cheap read-only view?
@@ -159,7 +161,6 @@ function make_machine(prog = [], device = []) {
         }
         return err;
     }
-
     // FIXME: warning() should be a machine option
     function warning(...msg) {
         const err = msg.join(" ");
@@ -168,6 +169,22 @@ function make_machine(prog = [], device = []) {
         }
         return err;
     }
+
+    const perf = Object.freeze({  // CPU performance device
+        read(reg) {
+            if (reg === 0x0) {
+                return instr_cnt;
+            }
+            return 0;  // infallible read
+        },
+        write(reg, data) {
+            if (reg === 0x0) {
+                instr_cnt = data & 0xFFFF;
+            }
+            // write ignored
+        }
+    });
+    device[0xE] = perf;  // install CPU performance device
 
     function alu_perform(op, a, b) {
         if (import.meta.main) {
@@ -392,6 +409,8 @@ function make_machine(prog = [], device = []) {
             dstack.perform(d_se, result);
             rstack.perform(r_se, result);
         }
+
+        instr_cnt = (instr_cnt + 1) & 0xFFFF;           // increment instruction counter
     }
 
     return {step, copy};
