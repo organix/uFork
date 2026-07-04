@@ -91,6 +91,35 @@ const uart = Object.freeze({
     }
 });
 
+function make_spif() {
+    let cs = false;
+
+    // 8-bit SPIF register interface
+    const SPI_CS = 0x0;  // chip select
+    const SPI_OUT = 0x1;  // data to transmit
+    const SPI_RDY = 0x2;  // ready to transmit / receive complete
+    const SPI_IN = 0x3;  // data received
+
+    return Object.freeze({
+        read(reg) {
+            if (reg === SPI_RDY) {
+                return uc_bool(cs);  // ready if chip selected
+            }
+            return 0;  // infallible read
+        },
+        write(reg, data) {
+            if (reg === SPI_CS) {
+                cs = (data !== 0);
+            }
+            // ignore unknown writes
+        },
+        SPI_CS,
+        SPI_OUT,
+        SPI_RDY,
+        SPI_IN
+    });
+}
+
 // Read and compile/load the uCode program.
 
 Deno.readTextFile(ucode_path).then(function (text) {
@@ -144,7 +173,9 @@ Deno.readTextFile(ucode_path).then(function (text) {
 
 // Make a simulator and run it, pausing to handle interrupts every so often.
 
-    let machine = ucode_sim.make_machine(prog, [uart]);
+    const devs = [uart];
+    devs[0xF] = make_spif();
+    const machine = ucode_sim.make_machine(prog, devs);
     return (function step(remaining = 1000) {
         const rv = machine.step();
         if (rv !== undefined) {
