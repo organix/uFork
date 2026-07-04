@@ -3,7 +3,7 @@
 
 ; These examples are meant to illustrate some strategies
 ; for implementing functional closure activations
-; and parallel process of a list.
+; and parallel processing of a list.
 
 .import
     std: "https://ufork.org/lib/std.asm"
