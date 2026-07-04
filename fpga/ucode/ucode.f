@@ -1405,6 +1405,10 @@ To Copy fixnum:n of list onto head:
     THEN                    ( D: sp )
     update_sp ;
 
+: op_push ( -- ip' | error )
+    sp@ imm@                ( D: sp item )
+    push_result ;
+
 VARIABLE abort_reason       ( "reason" for most-recent abort )
 : undef_abort ( -- ip' )
     #?
@@ -1449,10 +1453,6 @@ VARIABLE abort_reason       ( "reason" for most-recent abort )
         E_STOP ;
     THEN
     bounds_abort ;
-
-: op_push ( -- ip' | error )
-    sp@ imm@                ( D: sp item )
-    push_result ;
 
 : op_assert ( -- ip' | error )
     sp@ part                ( D: rest first )
@@ -2250,14 +2250,14 @@ VARIABLE saved_sp           ( sp before instruction execution )
         #? OVER QZ!
         DROP
     AGAIN
-    root_quota #? QZ!
-    root_spn #sponsor_t QT!
-    root_spn root_quota QX!
-    root_spn #nil QZ!
+    #sponsor_t root_spn QT!
+    root_quota root_spn QX!
+    #? root_spn spn_signal!
+    #nil root_spn QZ!
     0x9000 root_spn spn_memory!
     0x8100 root_spn spn_events!
     0xB000 root_spn spn_cycles!
-    #? root_spn spn_signal!
+    #? root_quota QZ!
     gc_init ;
 
 : ufork_init
