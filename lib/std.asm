@@ -42,15 +42,32 @@ E_ABORT:                    ; actor transaction aborted
 ; Common Tail-Sequences
 
 cust_send:                  ; msg
-    msg 1                   ; msg cust
-send_msg:                   ; msg cust
+    msg 1                   ; msg actor=cust
+send_msg:                   ; msg actor
     actor send              ; --
 sink_beh:                   ; _ <- _
-commit:
+commit:                     ; ...
     end commit
 
 become:                     ; state beh
-    actor become commit     ; --
+    actor become            ; --
+    ref commit
+
+resend:                     ; _ <- msg
+    msg 0                   ; msg
+self_send:                  ; msg
+    actor self              ; msg actor=SELF
+    ref send_msg
+
+abort:                      ; ...
+    push #?                 ; ... reason=#?
+reason_abort:               ; reason
+    end abort
+
+stop:                       ; ...
+    end stop
+
+; Constant Customer Returns
 
 rv_self:                    ; _ <- cust,_
     actor self cust_send    ; msg=SELF
@@ -72,18 +89,6 @@ rv_zero:                    ; _ <- cust,_
 
 rv_one:                     ; _ <- cust,_
     push 1 cust_send        ; msg=1
-
-resend:                     ; _ <- msg
-    msg 0                   ; msg
-    actor self              ; msg cust=SELF
-    ref send_msg
-
-stop:
-    end stop
-
-abort:
-    push #?
-    end abort
 
 ; Call/Return Procedure Helpers
 
@@ -137,6 +142,11 @@ return_one:                 ; k
     sink_beh
     commit
     become
+    resend
+    self_send
+    abort
+    reason_abort
+    stop
     rv_self
     rv_undef
     rv_nil
@@ -144,9 +154,6 @@ return_one:                 ; k
     rv_true
     rv_zero
     rv_one
-    resend
-    stop
-    abort
     return_value
     return_undef
     return_nil
