@@ -730,6 +730,7 @@ VARIABLE xm_here            ( upload address )
 0x000b , 0x8016 , 0x8000 , 0x0011 ,  ( ^0010 )
 0x000b , 0x8018 , 0x8000 , 0x002b ,  ( ^0011 )
 0x000b , 0x8003 , 0x0031 , 0x0021 ,  ( ^0012 )
+( 0x000b , 0x8007 , 0x0000 , 0x0031 ,  | ^0012 )
 0x000b , 0x8007 , 0x0000 , 0x0032 ,  ( ^0013 )
 0x000b , 0x8017 , 0xffff , 0x0055 ,  ( ^0014 )
 0x000b , 0x8017 , 0x801f , 0x0016 ,  ( ^0015 )
@@ -744,7 +745,7 @@ VARIABLE xm_here            ( upload address )
 0x000b , 0x8018 , 0xffff , 0x0079 ,  ( ^001e )
 0x000b , 0x8018 , 0x8000 , 0x0091 ,  ( ^001f )
 0x000b , 0x8019 , 0xffff , 0x0095 ,  ( ^0020 )
-0x000b , 0x8002 , 0x8009 , 0x0098 ,  ( ^0021 )
+0x000b , 0x8002 , 0x8006 , 0x0098 ,  ( ^0021 )
 0x000b , 0x8018 , 0x8001 , 0x0023 ,  ( ^0022 )
 0x000b , 0x8009 , 0x8000 , 0x0024 ,  ( ^0023 )
 0x000b , 0x800f , 0x8001 , 0x0000 ,  ( ^0024 )
@@ -1354,19 +1355,26 @@ To Copy fixnum:n of list onto head:
         Let n become n-1
 )
 
+: check_sp ( sp' -- sp' | #nil )
+    DUP is_ram IF
+        EXIT
+    THEN
+    DROP #nil ;
 : push_result ( sp' result -- ip' )
-    pair
+    SWAP check_sp
+    SWAP pair
 : update_sp ( sp' -- ip' )
     sp! k@ ;
+: check_new_sp ( sp' -- ip' )
+    check_sp update_sp ;
 : undef_result ( -- ip' )
     sp@ #? push_result ;
 : rplc_result ( sp result -- ip' )
     OVER DUP is_ram IF      ( D: sp result sp )
         qx!                 ( WARNING! stack modified in-place )
-    ELSE
-        2DROP
-    THEN                    ( D: sp )
-    update_sp ;
+        update_sp ;
+    THEN                    ( D: sp result sp )
+    2DROP check_new_sp ;
 
 : op_push ( -- ip' | error )
     sp@ imm@                ( D: sp item )
@@ -1435,9 +1443,9 @@ VARIABLE abort_reason       ( "reason" for most-recent abort )
     bounds_abort ;
 
 : op_assert ( -- ip' | error )
-    sp@ part                ( D: rest first )
-    imm@ = IF               ( D: rest )
-        update_sp ;
+    sp@ part                ( D: sp' tos )
+    imm@ = IF               ( D: sp' )
+        check_new_sp ;
     THEN
     E_ASSERT ;
 
@@ -2265,7 +2273,9 @@ VARIABLE saved_sp           ( sp before instruction execution )
     SWAP root_spn 2alloc    ( D: event )
     event_enqueue
     0 run_loop              ( run until idle or signal )
-    root_spn spn_signal@ #0 =assert
+    root_spn spn_signal@
+    CR X. ( CR )            ( print signal )
+    ( #0 =assert )
 : ufork_run
     prompt MONITOR
     ufork_boot ;
