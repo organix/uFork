@@ -259,6 +259,8 @@ const actors_ui = make_ui("actor-ui", function (element, {
                     const current_instruction = ufork.read_quad(ip_mem, cc.ip);
                     const {imm} = ufork.instr_parts(current_instruction);
                     details.append(heading_ui(`Actor ${imm}`, 1));
+                    details.append(heading_ui("Event", 2));
+                    details.append(print(cc.ep, 1, 0));
                 } else {
                     const timing = (
                         txn.wake
@@ -266,15 +268,15 @@ const actors_ui = make_ui("actor-ui", function (element, {
                         : "Sync"
                     );
                     details.append(heading_ui(timing + " interrupt", 1));
+                    details.append(heading_ui("Target", 2));
+                    details.append(print(txn.target, 1, 0));
                 }
-                details.append(heading_ui("Target", 2));
-                details.append(print(txn.target, 1, 0));
                 details.append(...print_txn(txn));
                 selected_actor_ofs = ufork.rawofs(txn.target);
             } else if (cc?.ep !== undefined) {
                 const event = ufork.read_quad(ram, ufork.rawofs(cc.ep));
                 details.append(heading_ui("Current event", 1));
-                details.append(print(cc.ep, 1, [[1, 3]]));
+                details.append(print(cc.ep, 1, 0));
                 const target = event.x;
                 selected_actor_ofs = ufork.rawofs(target);
                 const effect = ufork.read_quad(ram, ufork.rawofs(event.z));
