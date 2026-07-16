@@ -23,7 +23,6 @@ const ucode_dbg_url = import.meta.resolve("../ucode_dbg/index.html");
 const udbg_url = import.meta.resolve("../udbg/index.html");
 
 const dev_lib_url = new URL(unqualified_dev_lib_url, location.href).href;
-const min_tools_size = 200;
 const default_tools_width = 400;
 const default_tools_height = 200;
 const lang_packs = Object.create(null);
@@ -237,6 +236,8 @@ const split = dom(
             ? read_setting("tools_width") ?? default_tools_width
             : read_setting("tools_height") ?? default_tools_height
         ),
+        min_main_size: 100,
+        min_peripheral_size: 100,
         divider_color: theme.gray,
         divider_width: "3px",
         on_drag(size) {
@@ -248,7 +249,7 @@ const split = dom(
                 ),
                 Math.floor(size)
             );
-            return size >= min_tools_size;
+            return true;
         }
     }),
     {style: {width: "100%", height: "100%"}},
