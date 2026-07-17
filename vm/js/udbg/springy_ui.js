@@ -119,10 +119,9 @@ const springy_ui = make_ui("springy-ui", function (element, {
     function mouse_point(e) {
         const scale_x = canvas.width / canvas.clientWidth;
         const scale_y = canvas.height / canvas.clientHeight;
-        const rect = canvas.getBoundingClientRect();
         return from_screen({
-            x: scale_x * e.clientX - rect.left,
-            y: scale_y * e.clientY - rect.top
+            x: scale_x * e.offsetX,
+            y: scale_y * e.offsetY
         });
     }
 
