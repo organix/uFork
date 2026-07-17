@@ -1984,9 +1984,13 @@ del_none:                   ; k orig key rev next value' key'
 )
 
 : send_effect ( msg target sponsor -- )
-    2alloc >R effect@       ( D: effect ) ( R: event )
-    DUP QZ@ R@ qz!          ( D: effect ) ( R: event )
-    R> SWAP qz! ;           ( D: )
+    2alloc >R               ( D: ) ( R: event )
+    effect@                 ( D: effect ) ( R: event )
+    DUP QZ@                 ( D: effect outbox ) ( R: event )
+    R@                      ( D: effect outbox event ) ( R: event )
+    qz!                     ( D: effect ) ( R: event )
+    R> SWAP                 ( D: event effect )
+    qz! ;                   ( D: )
 : actor_send ( sp -- ip' | error )
     part                    ( D: sp' target )
     DUP is_cap IF
