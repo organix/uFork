@@ -13,11 +13,11 @@ just like [ASM](asm.md) does.
 Syntax      | Meaning
 ------------|--------
 `?`         | undefined value
-`True`      | boolean **true**
-`False`     | boolean **false**
+`True`      | boolean **true** value
+`False`     | boolean **false** value
 `Null`      | type of undefined
-`Bool`      | boolean type (`True` and `False`)
-`Num`       | number type
+`Boolean`   | boolean type (`True` and `False`)
+`Number`    | number type
 `Text`      | text type
 `List`      | list type
 `Dict`      | dictionary type
@@ -25,7 +25,7 @@ Syntax      | Meaning
 `Script`    | script type
 `Type`      | type of types
 
-### `Num` Literals
+### `Number` Literals
 
 Syntax      | Examples
 ------------|--------
