@@ -30,7 +30,7 @@ Syntax      | Meaning
 Syntax      | Examples
 ------------|--------
 <_sign_><_digits_> | 0 12 -345 +6_789
-<_base_>`#`<_digits_> | 16#C0DE 2#1100_0000_1101_1110
+<_base_>`#`<_digits_> | 16#C0de 2#1100_0000_1101_1110
 
 ### `Text` Literals
 
@@ -72,6 +72,7 @@ Syntax      | Effect
 `if `<_expr_>` `<_expr_>` else `<_expr_> | if the condition is `True`, execute the first `Script`, otherwise the second
 `if `<_expr_>` `<_expr_>`elif `<_expr_>` `<_expr_> ... | execute the first `Script` with a `True` condition, otherwise `nothing`
 `if `<_expr_>` `<_expr_>`elif `<_expr_>` `<_expr_> ... ` else `<_expr_> | execute the first `Script` with a `True` condition, otherwise the last
+`do` <_expr_> | execute a `Script` as if it were included here
 
 ### Expressions
 
