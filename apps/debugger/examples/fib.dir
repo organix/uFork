@@ -7,7 +7,6 @@ std: import["std.lib"]
 
 svc:
 fib_svc: // {} <- {"cust", "n"}
-    let msg be
     if @.n > 1
         let k_fib be create fib_k0 with {"cust": @.cust}
         send {"cust": k_fib, "n": (@.n - 1)} to @@
