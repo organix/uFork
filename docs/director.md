@@ -6,6 +6,39 @@ A compiler toolchain (written in JavaScript)
 generates loadable [IR](ir.md)
 just like [ASM](asm.md) does.
 
+## An Example
+
+```
+std: import["std.lib"]
+
+svc:
+fib_svc: // {} <- {"cust", "n"}
+    let msg be
+    if @.n > 1
+        let k_fib be create fib_k0 with {"cust": @.cust}
+        send {"cust": k_fib, "n": (@.n - 1)} to @@
+        send {
+            "cust": k_fib
+            "n": (@.n - 2)
+        } to create fib_svc with {}
+    else
+        send {"value": @.n} to @.cust
+
+fib_k0: // {"cust"} <- {"value"}
+    let value be @.value
+    become fib_k1
+
+fib_k1: // {"cust", "value"} <- {"value"}
+    send {"value": (value + @.value)} to cust
+
+boot: // {} <- {dev_caps}
+    let debug_dev be @["debug"]
+    let fib be create fib_svc with {}
+    send {"cust": debug_dev, "n": 9} to fib
+
+export[boot, svc]
+```
+
 ## Language Syntax
 
 ### Built-In Constants
@@ -36,7 +69,7 @@ Syntax      | Examples
 
 Syntax      | Examples
 ------------|--------
-`"`<_characters_>`"` | "" "foo" "1st" "Say less." "a line of text\n"
+`"`<_characters_>`"` | "" "foo" "1st" "Can't say." "a line of text\n"
 
 ### `List` Literals
 
