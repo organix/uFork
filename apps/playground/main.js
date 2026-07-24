@@ -16,6 +16,7 @@ import lang_asm from "./lang_asm.js";
 import lang_hum from "./lang_hum.js";
 import lang_json from "./lang_json.js";
 import lang_scm from "./lang_scm.js";
+import lang_dir from "./lang_dir.js";
 import tools_ui from "./tools_ui.js";
 import editor_ui from "./editor_ui.js";
 const unqualified_dev_lib_url = import.meta.resolve("https://ufork.org/lib/");
@@ -30,6 +31,7 @@ lang_packs.asm = lang_asm;
 lang_packs.hum = lang_hum;
 lang_packs.json = lang_json;
 lang_packs.scm = lang_scm;
+lang_packs.dir = lang_dir;
 Object.freeze(lang_packs);
 
 let initial_text = "";
