@@ -14,12 +14,12 @@ const styles = {
     comment: {color: theme.silver},
     directive: {color: theme.purple},
     error: {color: theme.red, background: "black"},
-    literal: {color: theme.green, fontStyle: "italic"},
+    literal: {color: theme.orange},
     number: {color: theme.green},
     text: {color: theme.green},
     operator: {color: theme.purple},
     name: {color: theme.yellow},
-    namespace: {color: theme.orange},
+    namespace: {color: theme.orange, fontStyle: "italic"},
     keyword: {color: theme.blue, fontWeight: "bold"},
     warning: {borderRadius: "2px", outline: "1px solid " + theme.red}
 };
