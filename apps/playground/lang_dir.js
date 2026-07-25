@@ -12,17 +12,15 @@ const rx_comment = /^(\s*)(\/\/\u0020?)/;
 const comment_prefix = "//";
 const styles = {
     comment: {color: theme.silver},
-    conditional: {color: theme.purple},
-    data: {color: theme.blue, fontStyle: "italic"},
     directive: {color: theme.purple},
     error: {color: theme.red, background: "black"},
-    literal: {color: theme.blue},
+    literal: {color: theme.green, fontStyle: "italic"},
+    number: {color: theme.green},
+    text: {color: theme.green},
+    operator: {color: theme.purple},
     name: {color: theme.yellow},
     namespace: {color: theme.orange},
-    number: {color: theme.green},
-    operator: {color: theme.blue},
-    text: {color: theme.green},
-    terminal: {color: theme.purple, fontStyle: "italic"},
+    keyword: {color: theme.blue, fontWeight: "bold"},
     warning: {borderRadius: "2px", outline: "1px solid " + theme.red}
 };
 
@@ -80,8 +78,7 @@ function handle_keydown(editor, event) {
         && is_collapsed
         && (
             line_pre.endsWith(":")
-            || line_pre === ".import"
-            || line_pre === ".export"
+            || line_pre === "export"
             || (line_pre.startsWith(indent) && line_pre !== indent)
         )
         && line_post === ""
