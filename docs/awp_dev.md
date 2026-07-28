@@ -199,7 +199,7 @@ failure.
 
 ### Marshalling
 
-uFork quad-space values are marshalled into OED.
+uFork quad-space values are marshalled into [OED](https://github.com/organix/mycelia/blob/master/OED.md).
 
 Each capability found in an incoming message is decoded as a proxy actor.
 Messages sent directly to a proxy actor are sent unreliably to the remote
