@@ -100,10 +100,10 @@ Syntax      | Effect
 `become `<_expr_>` with `<_expr_> | replace the current `Actor`'s `Script` and state `Dict`
 `commit` | end event-processing transaction and release effects
 `abort `<_expr_> | end event-processing transaction (with a reason) and discard effects
-`if `<_expr_>` `<_expr_> | if the condition is `True`, execute the `Script`
-`if `<_expr_>` `<_expr_>` else `<_expr_> | if the condition is `True`, execute the first `Script`, otherwise the second
-`if `<_expr_>` `<_expr_>`elif `<_expr_>` `<_expr_> ... | execute the first `Script` with a `True` condition, otherwise `nothing`
-`if `<_expr_>` `<_expr_>`elif `<_expr_>` `<_expr_> ... ` else `<_expr_> | execute the first `Script` with a `True` condition, otherwise the last
+`if `<_expr_>` `<_script_> | if the condition is `True`, execute the `Script`
+`if `<_expr_>` `<_script_>` else `<_script_> | if the condition is `True`, execute the first `Script`, otherwise the second
+`if `<_expr_>` `<_script_>`elif `<_expr_>` `<_script_> ... | execute the first `Script` with a `True` condition, otherwise `nothing`
+`if `<_expr_>` `<_script_>`elif `<_expr_>` `<_script_> ... ` else `<_script_> | execute the first `Script` with a `True` condition, otherwise the last
 `do` <_expr_> | execute a `Script` as if it were included here
 
 ### Expressions
