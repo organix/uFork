@@ -14,7 +14,7 @@ The processor creates the bootstrap actor,
 the bootstrap message, and the bootstrap event (all in RAM).
 The bootstrap message contains
 a dictionary of device capabilities.
-The sponsor of the bootstrap event
+The [sponsor](sponsor.md) of the bootstrap event
 is the root sponsor of the processor.
 The bootstrap event is added to the event queue,
 and the dispatch loop of the processor begins.

@@ -34,7 +34,7 @@ New events enter the system at the tail of this queue.
 When an event is removed from the head of the queue,
 one of three things can happen.
 
-  1. Defer due to Sponsor
+  1. Defer due to [Sponsor](sponsor.md)
   1. Defer due to busy target
   1. Create continuation
 

@@ -1,157 +1,80 @@
-# Sponsored Actor Configurations
+# Actor Sponsorship
 
-**WARNING! THIS DOCUMENT IS BADLY OUT OF DATE AND DOES NOT MATCH THE CURRENT DESIGN**
+All activity within a _Theater_ of _Actors_
+must be supported by a _Sponsor_.
+The Sponsor enforces quotas
+on three categories of resources:
+Memory (storage),
+Events (communication),
+and Cycles (processor time).
 
-A _Configuration_ is a set of Actors
-and a set of pending Events.
-An _Actor_ in a Configuration
-is a mapping between a _Capability_ (an address)
-that designates the Actor
-and a _Behavior_.
-An _Event_ designates a Sponsor,
-a target Actor,
-and immutable _Message_ data.
-A _Behavior_ defines the _Effects_ caused
-by an Actor processing an Event.
+Since all activity is driven by Events,
+a Sponsor is associated with each Event
+(rather than the target Actor, for example).
+Resources used to process the Event
+are charged to the associated Sponsor.
+By default, further activity (new Events)
+caused by processing the Event
+is associated with the same Sponsor.
+Thus resources are tracked
+along the causal chain of Events.
 
-_Effects_ define a transformation
-from the current Configuration state
-to a new Configuration state.
-The Effects produced by an Actor
-are applied in an all-or-nothing manner,
-as a transaction on the Configuration.
-The Configuration state is consistent
-between Effect commits.
-This can provide a stable checkpoint
-for persistence, suspension, migration, upgrade, and restart.
+When an activity exhausts its Sponsored quota,
+the Sponsor is suspended
+and a message is sent to an Actor
+acting as the Controller for Sponsor.
+This Event, naturally, must have a different Sponsor
+since the current Sponsor has exhausted its quota.
+All activity associated with the suspended Sponsor
+is eventually suspended [Event Scheduler](scheduler.md).
 
-A _Sponsor_ is responsible for
-managing Configuration resources.
-All the resources used by an Actor to handle an Event;
-including processor time, memory, and communications;
-are controlled by a Sponsor.
-Sponsors are associated with Events,
-since Events represent the work to be done,
-regardless of which Actor(s) perform the work.
+The Root Sponsor represents the top-level
+of the sponsorship hierarchy (like an O/S kernel).
+When the Root Sponsor is exhausted,
+there is no "higher-level" Sponsor to handle it.
+If this is a _virtual_ processor,
+the host environment is notified
+and must decide when/if to resume processing.
+If this is a _hardware_ processor,
+the processor will halt with a completion signal
+and the embedded environment
+must decide when/if to resume processing.
+The usual policy for the Root Sponsor
+is to perpertually refill exhausted quotas.
 
 ## Sponsorhip Hierarchy
 
-All work done by a uFork processor
-is driven by actor message-events.
-Each event has a _sponsor_
-representing limits to resources
-that may be consumed
-while processing an event.
+The system is started with a [Bootstrap Event](boot.md)
+which is sponsored by the Root Sponsor.
+This is the root cause of all system activity.
+Any event that wants to exercise
+finer-grained control over resources
+must explicitly create a subordinate Sponsor.
+The subordinate Sponsor is activated
+by providing a Controller Actor
+to handle signals from the subordinate.
+Messages to the Controller will by sponsored
+by the original Sponsor.
 
-The system is started by a bootstrap event.
-The bootstrap event is sponsored
-by the _root_ sponsor.
-The bootstrap behavior creates new actors
-to build a configuration,
-and sends new messages
-to initiate processing.
-By default, new messages use the sponsor
-of the event that caused them to be sent.
-However, the sender may choose
-to designate a specific sponsor
-for any message it sends.
+For security purposes,
+an Actor processing an Event
+does **not** have access
+to the associated Sponsor.
+It cannot examine (or change) its own quota.
+It simply attempts to perform operations
+that consume resources,
+and is suspended if the Sponsor is exhausted.
+This includes creation of a new Sponsor.
 
-An actor's behavior does not have direct access
-to the sponsor for the event it is processing.
-Any resources used to handle an event
-are automatically charged to the sponsor for that event.
-An actor can create a new sponsor
-with a subset of the current sponsor's resources.
-The new sponsor is called the _peripheral_ sponsor.
-The original sponsor is called the _controller_ sponsor.
-Controllers and peripherals form a sponsorship hierarchy.
+When a new Sponsor is created
+it is given a subset of the current Sponsor's resources.
+Thus the sponsorship hierarchy
+transitively enforces quotas.
+The creating Actor/Event then provides this new Sponsor
+explicity when creating a new Event.
+Quota exhaustion is a [Recoverable Error](errors.md).
 
-## Actor Failure
-
-If an actor encounters a condition
-which prevents it from continuing
-to process an event,
-it signals a failure
-to the sponsor of the event.
-This failure signal
-causes all processing
-associated with the sponsor
-to be suspended,
-and the _controller_
-for this _peripheral_
-is notified.
-The controller's signal-handler (an actor)
-handles the signal-message (an event)
-under the sponsorship of the controller.
-
-Resource exhaustion is an obvious cause of failure,
-however there are several other constraint violations
-that may also cause a failure.
-All failures are handled by the same mechanism,
-suspending the _peripheral_
-and notifying the _controller_.
-If the root sponsor fails,
-it is suspended (like any sponsor),
-and the host environment is notified.
-
-## Instruction-Level Sponsorship
-
-Instruction granularity is more
-fine-grained than event granularity.
-Since sponsor limits are checked,
-(and violations reported)
-during instruction execution,
-we need an instruction-level sponsorship model.
-Each instruction is associated with an _event_,
-and each event may have a different _sponsor_.
-
-```
-                                              +-->[memory,events,cycles,#?]
-                                              |
-                                        +-->[sponsor,controller,status,NIL]
-                                        |                        |
-             +-->[memory,events,cycles,signal]<------------------+
-             |
-       +-->[sponsor,to,msg,NIL]
-       |
-[ip,sp,ep,kp]
-```
-
-The _signal_ field of the sponsor
-is either `#?` for top-level events,
-or a pointer to a pre-allocated signal event.
-The signal event is used
-to communicate _status_ to the _controller_.
-
-The pre-allocated signal event
-is not initially part of the event queue.
-When the _peripheral_ needs to signal the _controller_,
-the signal event is added to the event queue.
-The _sponsor_ of the signal event
-is the sponsor of the _controller_.
-The _status_ of the signal event
-is the sponsor of the _peripheral_.
-The _signal_ field of the _peripheral_ sponsor
-is set to a fixnum _error_ code.
-When the _signal_ is a fixnum,
-the sponsor is considered **idle**
-and no events are dispatched
-or instructions executed
-for this sponsor.
-
-```
-                                              +-->[memory,events,cycles,#?]
-                                              |
-                         event_queue ... -->[sponsor,controller,status,NIL]
-                                                                 |
-             +-->[memory,events,cycles,error]<-------------------+
-             |
-       +-->[sponsor,to,msg,NIL]
-       |
-[ip,sp,ep,kp]
-```
-
-### Sponsor Instructions
+## Sponsor Instructions
 
 These instructions are related to sponsorship.
 
@@ -164,6 +87,29 @@ _sponsor_ _n_                 | `sponsor` `cycles`  | _sponsor_    | transfer _n
 _sponsor_                     | `sponsor` `reclaim` | _sponsor_    | reclaim all quotas from _sponsor_
 _sponsor_ _control_           | `sponsor` `start`   | —            | run _sponsor_ under _control_
 _sponsor_                     | `sponsor` `stop`    | —            | reclaim all quotas and remove _sponsor_
+
+A Sponsor occupies two quad-cells in memory,
+the Sponsor and its Quota.
+The fields of the Sponsor are {T: `#sponsor_t`, X: quota, Y: signal, Z: waiting}.
+The fields of the Quota are {T: memory, X: events, Y: cycles, Z: `#?`}, all `fixnum`.
+When the Sponsor is active, the _signal_ is a pre-allocated Event to the Controller.
+When the Sponsor is suspended, the _signal_ field is a `fixnum` error code.
+The Sponsor's _waiting_ field is used to hold suspended Events (maintained by the processor).
+
+The fields of the _signal_ event are {T: sponsor, X: controller, Y: suspended, Z: `#nil`}.
+The _sponsor_ field is the Sponsor of the Controller.
+The _controller_ field is the Actor that will handle the signal.
+The _suspended_ field is the Sponsor that was suspended.
+Note that this is a normal Event structure
+that will be linked into the event queue for eventual dispatch.
+The suspended Sponsor is the message delivered to the Controller,
+from which the Controller can read the `fixnum` error code in the _signal_ field
+and further manipulate the suspended Sponsor.
+
+----
+# WARNING! The rest of this document is OUT OF DATE and does NOT match the current design
+
+_**TODO:** Describe the run-loop semantics elsewhere, referencing the [Event Scheduler](scheduler.md)._
 
 ## Processor Run-Loop
 
