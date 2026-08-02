@@ -13,9 +13,9 @@ a Sponsor is associated with each Event
 (rather than the target Actor, for example).
 Resources used to process the Event
 are charged to the associated Sponsor.
-By default, further activity (new Events)
+By default, further activities (new Events)
 caused by processing the Event
-is associated with the same Sponsor.
+are associated with the same Sponsor.
 Thus resources are tracked
 along the causal chain of Events.
 
@@ -26,9 +26,9 @@ acting as the Controller for Sponsor.
 This Event, naturally, must have a different Sponsor
 since the current Sponsor has exhausted its quota.
 All activity associated with the suspended Sponsor
-is eventually suspended [Event Scheduler](scheduler.md).
+is eventually suspended by the [Event Scheduler](scheduler.md).
 
-The Root Sponsor represents the top-level
+The Root Sponsor represents the top level
 of the sponsorship hierarchy (like an O/S kernel).
 When the Root Sponsor is exhausted,
 there is no "higher-level" Sponsor to handle it.
@@ -41,12 +41,13 @@ and the embedded environment
 must decide when/if to resume processing.
 The usual policy for the Root Sponsor
 is to perpertually refill exhausted quotas.
+_**TODO**: Link to Run Loop documentation._
 
-## Sponsorhip Hierarchy
+## Sponsorship Hierarchy
 
 The system is started with a [Bootstrap Event](boot.md)
 which is sponsored by the Root Sponsor.
-This is the root cause of all system activity.
+This is the root-cause of all system activity.
 Any event that wants to exercise
 finer-grained control over resources
 must explicitly create a subordinate Sponsor.
@@ -67,10 +68,10 @@ and is suspended if the Sponsor is exhausted.
 This includes creation of a new Sponsor.
 
 When a new Sponsor is created
-it is given a subset of the current Sponsor's resources.
-Thus the sponsorship hierarchy
+it is given a subset of the current Sponsor's resources,
+thus the sponsorship hierarchy
 transitively enforces quotas.
-The creating Actor/Event then provides this new Sponsor
+Then the creating Actor/Event can designate this new Sponsor
 explicity when creating a new Event.
 Quota exhaustion is a [Recoverable Error](errors.md).
 
@@ -85,24 +86,24 @@ _sponsor_ _n_                 | `sponsor` `memory`  | _sponsor_    | transfer _n
 _sponsor_ _n_                 | `sponsor` `events`  | _sponsor_    | transfer _n_ events quota to _sponsor_
 _sponsor_ _n_                 | `sponsor` `cycles`  | _sponsor_    | transfer _n_ cycles quota to _sponsor_
 _sponsor_                     | `sponsor` `reclaim` | _sponsor_    | reclaim all quotas from _sponsor_
-_sponsor_ _control_           | `sponsor` `start`   | —            | run _sponsor_ under _control_
+_sponsor_ _control_           | `sponsor` `start`   | —            | activate _sponsor_ under _control_
 _sponsor_                     | `sponsor` `stop`    | —            | reclaim all quotas and remove _sponsor_
 
 A Sponsor occupies two quad-cells in memory,
 the Sponsor and its Quota.
-The fields of the Sponsor are {T: `#sponsor_t`, X: quota, Y: signal, Z: waiting}.
-The fields of the Quota are {T: memory, X: events, Y: cycles, Z: `#?`}, all `fixnum`.
+The fields of the Sponsor are {T: `#sponsor_t`, X: _quota_, Y: _signal_, Z: _waiting_}.
+The fields of the Quota are {T: _memory_, X: _events_, Y: _cycles_, Z: `#?`}.
 When the Sponsor is active, the _signal_ is a pre-allocated Event to the Controller.
 When the Sponsor is suspended, the _signal_ field is a `fixnum` error code.
-The Sponsor's _waiting_ field is used to hold suspended Events (maintained by the processor).
+The Sponsor's _waiting_ field holds suspended Events (maintained by the processor).
 
-The fields of the _signal_ event are {T: sponsor, X: controller, Y: suspended, Z: `#nil`}.
+The fields of the _signal_ event are {T: _sponsor_, X: _controller_, Y: _suspended_, Z: `#nil`}.
 The _sponsor_ field is the Sponsor of the Controller.
 The _controller_ field is the Actor that will handle the signal.
 The _suspended_ field is the Sponsor that was suspended.
 Note that this is a normal Event structure
 that will be linked into the event queue for eventual dispatch.
-The suspended Sponsor is the message delivered to the Controller,
+The _suspended_ Sponsor is the message delivered to the Controller,
 from which the Controller can read the `fixnum` error code in the _signal_ field
 and further manipulate the suspended Sponsor.
 
