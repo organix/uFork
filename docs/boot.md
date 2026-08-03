@@ -39,12 +39,12 @@ which allows the dispatch loop
 to begin executing instructions
 processing the bootstrap event.
 
-If the continuation queue in not empty,
+If the continuation queue is not empty,
 the processor's dispatch loop will execute an instruction
 from the continuation at the head of the queue.
 All of the information needed to execute an instruction
 is reachable through the continuation.
-It represent the entire execution context.
+It represents the entire execution context.
 When the instruction is completed,
 the updated continuation is moved
 to the tail of the continuation queue.

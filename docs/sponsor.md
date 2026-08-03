@@ -22,7 +22,7 @@ along the causal chain of Events.
 When an activity exhausts its Sponsored quota,
 the Sponsor is suspended
 and a message is sent to an Actor
-acting as the Controller for Sponsor.
+acting as the Controller for the Sponsor.
 This Event, naturally, must have a different Sponsor
 since the current Sponsor has exhausted its quota.
 All activity associated with the suspended Sponsor
@@ -73,7 +73,13 @@ thus the sponsorship hierarchy
 transitively enforces quotas.
 Then the creating Actor/Event can designate this new Sponsor
 explicity when creating a new Event.
+
 Quota exhaustion is a [Recoverable Error](errors.md).
+If the Sponsor is reactivated,
+suspended Events are retried.
+Technically, Actors are not suspended, only Events.
+The Actor remains available
+to process Events with active Sponsors.
 
 ## Sponsor Instructions
 
