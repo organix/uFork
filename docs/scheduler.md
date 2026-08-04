@@ -50,8 +50,8 @@ and the target actor is marked busy.
 The _continuation queue_ holds the execution contexts
 for all events currently being processed.
 The target actors remain busy during processing.
-They naturally must be distinct,
-as each actor can only process one event at a time.
+As each actor can only process one event at a time,
+an actor will only appear once in the queue.
 Execution of a continuation can end one of three ways.
 
   1. Transaction abort
