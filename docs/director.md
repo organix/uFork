@@ -12,7 +12,7 @@ just like [ASM](asm.md) does.
 std: import["std.lib"]
 
 svc:
-fib_svc: // {} <- {"cust", "n"}
+fib_svc:  // {} <- {"cust", "n"}
     if @.n > 1
         let k_fib be create fib_k0 with {"cust": @.cust}
         send {"cust": k_fib, "n": (@.n - 1)} to @@
@@ -23,14 +23,14 @@ fib_svc: // {} <- {"cust", "n"}
     else
         send {"value": @.n} to @.cust
 
-fib_k0: // {"cust"} <- {"value"}
+fib_k0:  // {"cust"} <- {"value"}
     let value be @.value
     become fib_k1
 
-fib_k1: // {"cust", "value"} <- {"value"}
+fib_k1:  // {"cust", "value"} <- {"value"}
     send {"value": (value + @.value)} to cust
 
-boot: // {} <- {dev_caps}
+boot:  // {} <- {dev_caps}
     let debug_dev be @["debug"]
     let fib be create fib_svc with {}
     send {"cust": debug_dev, "n": 9} to fib
@@ -40,13 +40,20 @@ export[boot, svc]
 
 ## Language Syntax
 
-### Built-In Constants
+### Literal Constants
+
+#### Values
 
 Syntax      | Meaning
 ------------|--------
 `?`         | undefined value
 `True`      | boolean **true** value
 `False`     | boolean **false** value
+
+#### Types
+
+Syntax      | Meaning
+------------|--------
 `Null`      | type of undefined
 `Boolean`   | boolean type (`True` and `False`)
 `Number`    | number type
@@ -153,10 +160,11 @@ Symbol  | Operator          | Description
 `-`     | `sub[`_n_, …`]`   | `Number` subtraction
 `*`     | `mul[`_n_, …`]`   | `Number` mutiplication
 `/`     | `div[`_n_, …`]`   | `Number` division
-`^`     | `pow[`_n_, …`]`   | `Number` exponentiation
-`^`     | `join[`_s_, …`]`  | Sequence concatenation
-`!`     | `not[`_b_`]`      | `Boolean` "not" (prefix)
-`-`     | `neg[`_n_`]`      | `Number` negation (prefix)
+`^`     | `pow[`_n_, …`]`   | `Number` exponentiation (right binding)
+`^`     | `join[`_s_, …`]`  | Sequence concatenation (right binding)
+`!`     | `not[`_b_`]`      | `Boolean` "not" (prefix, no space)
+`-`     | `neg[`_n_`]`      | `Number` negation (prefix, no space)
+`(` _expr_ `)` | —          | Grouping sub-expression
 
 #### Intrinsic Operators
 
