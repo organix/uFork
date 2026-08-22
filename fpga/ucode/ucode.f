@@ -1131,11 +1131,17 @@ VARIABLE gc_scan_ptr        ( scan-list processing pointer )
 : spn_signal! ( data sponsor -- )
     qy! ;
 
+: spn_memory_1- ( sponsor -- )
+    DUP spn_memory@ 1- SWAP spn_memory! ;
+: spn_events_1- ( sponsor -- )
+    DUP spn_events@ 1- SWAP spn_events! ;
+: spn_cycles_1- ( sponsor -- )
+    DUP spn_cycles@ 1- SWAP spn_cycles! ;
+
 : event_enqueue ( event -- )
-    #nil OVER QZ!
-: event_append
+    #nil OVER qz!
     e_head@ is_ram IF
-        DUP e_tail@ QZ!
+        DUP e_tail@ qz!
     ELSE
         DUP e_head!
     THEN
@@ -1149,10 +1155,54 @@ VARIABLE gc_scan_ptr        ( scan-list processing pointer )
         THEN                ( D: event )
     THEN ;
 
+: zq_put ( event zhead -- )
+    >R                      ( D: event ) ( R: zhead )
+    R@ QZ@                  ( D: event zq ) ( R: zhead )
+    OVER                    ( D: event zq event ) ( R: zhead )
+    qz!                     ( D: event ) ( R: zhead )
+    R>                      ( D: event zhead )
+    qz! ;                   ( D: )
+: zq_reverse ( zq -- zq rq )
+    ( reverse in-place and return both ends )
+    #nil OVER               ( D: zq rq=#nil ep=zq )
+    BEGIN                   ( D: zq rq ep )
+        DUP is_ram
+    WHILE                   ( D: zq rq ep )
+        DUP QZ@ >R          ( D: zq rq ep ) ( R: np )
+        TUCK                ( D: zq ep rq ep ) ( R: np )
+        qz!                 ( D: zq ep ) ( R: np )
+        R>                  ( D: zq rq=ep ep=np )
+    REPEAT
+    DROP ;                  ( D: zq rq )
+: zq_prepend ( zq -- )
+    ( add events to the head of the event queue )
+    DUP is_ram NOT IF
+        DROP ;
+    THEN
+    zq_reverse SWAP         ( D: rq zq )
+    e_head@ is_ram IF
+        e_head@ SWAP qz!    ( D: rq )
+    ELSE
+        e_tail!             ( D: rq )
+    THEN
+    e_head! ;
+: zq_append ( zq -- )
+    ( add events to the tail of the event queue )
+    DUP is_ram NOT IF
+        DROP ;
+    THEN
+    zq_reverse              ( D: zq rq )
+    e_head@ is_ram IF
+        e_tail@ SWAP qz!    ( D: zq )
+    ELSE
+        e_head!             ( D: zq )
+    THEN
+    e_tail! ;
+
 : cont_enqueue ( cont -- )
-    #nil OVER QZ!
+    #nil OVER qz!
     k_head@ is_ram IF
-        DUP k_tail@ QZ!
+        DUP k_tail@ qz!
     ELSE
         DUP k_head!
     THEN
@@ -1380,13 +1430,20 @@ To Copy fixnum:n of list onto head:
     sp@ imm@                ( D: sp item )
     push_result ;
 
+: self_ready ( -- )
+    self@ cap2ptr           ( D: ^self )
+: actor_ready ( ^actor -- )
+    DUP QZ@                 ( D: ^actor inbox )
+    zq_prepend              ( D: ^actor )
+    #? SWAP qz! ;
+
 VARIABLE abort_reason       ( "reason" for most-recent abort )
 : undef_abort ( -- ip' )
     #?
 : abort ( reason -- ip' )
     DEBUG
     abort_reason !          ( record abort "reason" for auditing )
-    #? self@ qz!            ( make actor ready )
+    self_ready              ( make actor ready )
     #? ;                    ( end continuation )
 : 1_bounds_abort ( x -- ip' )
     DROP
@@ -1402,35 +1459,14 @@ VARIABLE abort_reason       ( "reason" for most-recent abort )
 
 : op_end ( -- ip' | error )
     imm@ #1 = IF
-        effect@ DUP QZ@     ( D: effect events )
-        is_ram IF           ( D: effect )
-            ( reverse new event list in place )
-            DUP QZ@ >R      ( D: effect ) ( R: last )
-            #nil R@         ( D: effect prev=#nil ep=last ) ( R: last )
-            BEGIN           ( D: effect prev ep ) ( R: last )
-                DUP is_ram
-            WHILE
-                DUP QZ@     ( D: effect prev ep next ) ( R: last )
-                -ROT        ( D: effect next prev ep ) ( R: last )
-                TUCK        ( D: effect next ep prev ep ) ( R: last )
-                qz!         ( D: effect next ep ) ( R: last )
-                SWAP        ( D: effect ep next ) ( R: last )
-            REPEAT
-            DROP            ( D: effect first ) ( R: last )
-            ( append new events to event queue )
-            e_head@ is_ram IF
-                e_tail@ QZ!
-            ELSE
-                e_head!
-            THEN            ( D: effect ) ( R: last )
-            R> e_tail!      ( D: effect )
-        THEN                ( D: effect )
+        effect@ DUP QZ@     ( D: effect outbox )
+        zq_append           ( D: effect )
         ( update actor )
-        self@ cap2ptr       ( D: effect actor )
+        self@ cap2ptr       ( D: effect ^actor )
         OVER QT@ OVER qt!   ( update type )
         OVER QX@ OVER qx!   ( update code )
         OVER QY@ OVER qy!   ( update data )
-        #? SWAP qz!         ( make actor ready )
+        actor_ready         ( make actor ready )
         release             ( free effect )
         #? ;                ( end continuation )
     THEN
@@ -2120,10 +2156,39 @@ del_none:                   ; k orig key rev next value' key'
 
 : dispatch_event ( -- )
     event_dequeue           ( D: event )
+    ( check sponsor )
+    DUP QT@                 ( D: event sponsor )
+    DUP spn_signal@         ( D: event sponsor signal )
+    is_fix IF               ( D: event sponsor )
+        ( sponsor suspended )
+        zq_put ;            ( D: )
+    THEN                    ( D: event sponsor )
+    DUP spn_events@         ( D: event sponsor events )
+    DUP 0> IF               ( D: event sponsor events )
+        1- SWAP spn_events! ( D: event )
+    ELSE                    ( D: event sponsor events )
+        ( quota exhausted )
+        DROP                ( D: event sponsor )
+        DUP root_spn = IF   ( D: event sponsor )
+            ( root-refill policy )
+            0xBFFF SWAP     ( D: event MAX_FIX sponsor )
+            2DUP spn_memory!
+            2DUP spn_events!
+            spn_cycles!     ( D: event )
+        ELSE                ( D: event sponsor )
+            ( suspend sponsor )
+            DUP spn_signal@ ( D: event sponsor signal )
+            event_enqueue   ( D: event sponsor )
+            E_MSG_LIM OVER  ( D: event sponsor E_MSG_LIM sponsor )
+            spn_signal!     ( D: event sponsor )
+            zq_put ;        ( D: )
+        THEN                ( D: event )
+    THEN                    ( D: event )
+    ( check target )
     DUP QX@ cap2ptr >R      ( D: event ) ( R: target )
     R@ QZ@ IF               ( D: event ) ( R: target )
         ( target is busy )
-        RDROP event_enqueue ;
+        R> zq_put ;         ( D: ) ( R: )
     THEN
     R@ QX@ is_fix IF        ( D: event ) ( R: target )
         ( target is device -- FIXME: handle PROXY_T )
@@ -2151,7 +2216,7 @@ del_none:                   ; k orig key rev next value' key'
     0xE0 IO@ X. CR ;
 VARIABLE run_return         ( address to jump to when run_loop is done )
 : run_signal ( error -- )
-    root_spn spn_signal!
+    root_spn spn_signal!    ( FIXME: not always the root! )
 : run_exit
     ( report_instr_cnt )
     ( RESET )
@@ -2169,7 +2234,7 @@ VARIABLE saved_sp           ( sp before instruction execution )
     ( report_instr_cnt )
 : run_again ( limit -- )
     run_limit !
-    #? root_spn spn_signal!
+    #? root_spn spn_signal! ( FIXME: not always the root! )
     k_head@ is_ram IF
         ( execute instruction )
         ip@ DUP #instr_t typeq IF

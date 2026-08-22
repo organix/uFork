@@ -40,7 +40,7 @@ the processor will halt with a completion signal
 and the embedded environment
 must decide when/if to resume processing.
 The usual policy for the Root Sponsor
-is to perpertually refill exhausted quotas.
+is to perpetually refill exhausted quotas.
 The [Run-Loop](run_loop.md) documentation has more details.
 
 ## Sponsorship Hierarchy
