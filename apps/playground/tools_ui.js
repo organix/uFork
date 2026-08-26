@@ -440,6 +440,7 @@ const tools_ui = make_ui("tools-ui", function (element, {
                 if (debug) {
                     on_attach();
                 } else {
+                    driver.command({kind: "auto_pause", on: ["fault"]});
                     driver.command({kind: "play"});
                 }
                 return true;
