@@ -163,7 +163,9 @@
     AGAIN ;
 )
 : CR ( -- )
-    '\r' EMIT '\n' EMIT ;
+    '\n' '\r'
+: 2EMIT ( 2nd 1st -- )
+    EMIT EMIT ;
 : ECHO ( char -- )
     DUP EMIT
     '\r' = IF
@@ -471,7 +473,7 @@ VARIABLE here   ( upload address )
     here @ store
     here @1+ ;
 : prompt ( -- )
-    '>' EMIT BL EMIT ;
+    BL '>' 2EMIT ;
 : del ( -- )
     cmd @
     DUP BL > IF
@@ -487,7 +489,7 @@ VARIABLE here   ( upload address )
         ELSE
             BL cmd !
         THEN
-        '\b' EMIT BL EMIT '\b' EMIT
+        BL '\b' 2EMIT '\b' EMIT
     THEN DROP ;
 : eol ( begin -- end )
     ( EMIT ) KEY
@@ -527,6 +529,8 @@ VARIABLE log_addr
 VARIABLE xm_pkt             ( current packet number )
 VARIABLE xm_retry           ( number of retries )
 VARIABLE xm_here            ( upload address )
+: ACK.
+    ACK EMIT ;
 : xm_250ms_rcv ( -- byte | -1 )
     250
 : xm_timed_rcv ( ms -- byte | -1 )
@@ -566,7 +570,7 @@ VARIABLE xm_here            ( upload address )
 : xm_rcv_soh
     3000 xm_timed_rcv
     DUP EOT = IF
-        ACK EMIT
+        ACK.
         xm_pkt @ ;          ( successful transfer )
     THEN
     SOH <> IF
@@ -579,7 +583,7 @@ VARIABLE xm_here            ( upload address )
     THEN
     DUP xm_pkt @ 8LSB& = IF
         xm_flush_rcv
-        ACK EMIT            ( ACK dup packet )
+        ACK.                ( ACK dup packet )
         xm_rcv_soh ;
     THEN
     xm_pkt @ 1+ 8LSB& <> IF
@@ -630,7 +634,7 @@ VARIABLE xm_here            ( upload address )
     xm_pkt @1+
     10 xm_retry !
     log_0
-    ACK EMIT                ( ACK good packet )
+    ACK.                    ( ACK good packet )
     xm_rcv_soh ;
 : xm_rcv_file ( -- npkts )
     0x1000 log_addr !
@@ -729,7 +733,7 @@ VARIABLE xm_here            ( upload address )
 (    T        X        Y        Z       ADDR )
 0x000b , 0x8016 , 0x8000 , 0x0011 ,  ( ^0010 )
 0x000b , 0x8018 , 0x8000 , 0x0032 ,  ( ^0011 )
-0x000b , 0x8003 , 0x0019 , 0x0013 ,  ( ^0012 )
+0x000b , 0x8003 , 0x0013 , 0x0028 ,  ( ^0012 )
 0x000b , 0x8002 , 0x8000 , 0x0039 ,  ( ^0013 )
 0x000b , 0x8002 , 0x8000 , 0x004c ,  ( ^0014 )
 0x000b , 0x8017 , 0xffff , 0x0058 ,  ( ^0015 )
@@ -1337,6 +1341,91 @@ VARIABLE gc_scan_ptr        ( scan-list processing pointer )
         rest
     AGAIN ;
 
+0x23 CONSTANT '#'
+0x28 CONSTANT '('
+0x29 CONSTANT ')'
+0x2C CONSTANT ','
+0x2D CONSTANT '-'
+0x3A CONSTANT ':'
+0x5E CONSTANT '^'
+0x74 CONSTANT 't'
+
+: HASH
+    '#' EMIT ;
+: LARROW
+    '-' '<' 2EMIT ;
+: raw. ( raw -- )
+    DUP is_fix IF           ( D: raw )
+        HASH X. ;           ( D: -- )
+    THEN
+    DUP is_cap IF           ( D: raw )
+        '@' EMIT X. ;       ( D: -- )
+    THEN
+    DUP 0= IF               ( D: raw )
+        DROP HASH '?' EMIT ;
+    THEN
+    DUP #nil = IF           ( D: raw )
+        DROP ')' '(' 2EMIT ;
+    THEN
+    DUP #t = IF             ( D: raw )
+        DROP HASH 't' EMIT ;
+    THEN
+    DUP #f = IF             ( D: raw )
+        DROP HASH 'f' EMIT ;
+    THEN
+    DUP is_pair IF          ( D: raw )
+: pair. ( pair -- )
+        3 ?LOOP-
+            DUP QY@ SWAP QX@ ( D: rest first )
+            DUP is_pair IF
+                '(' EMIT
+                pair.
+                ')' EMIT
+            ELSE
+                raw.
+            THEN            ( D: rest )
+            ',' EMIT
+            DUP is_pair IF
+                raw.
+            ELSE
+                raw.
+                RDROP EXIT
+            THEN            ( D: pair=rest )
+        AGAIN
+        DROP
+        '~' ',' 2EMIT ;
+    THEN
+    '^' EMIT X. ;           ( D: -- )
+: actor. ( actor -- )
+    cap2ptr                 ( D: ^actor )
+    DUP QX@                 ( D: ^actor code )
+    raw.                    ( D: ^actor )
+    '.' EMIT
+    QY@                     ( D: data )
+    raw. ;
+: txn. ( event -- )
+    DUP QX@                 ( D: event target )
+    DUP raw.                ( D: event target )
+    ':' EMIT
+    actor.                  ( D: event )
+    LARROW
+    DUP QY@                 ( D: event message )
+    raw.                    ( D: event )
+    SPACE
+    QZ@                     ( D: effect )
+    DUP actor.              ( D: effect )
+    SPACE
+    QZ@                     ( D: outbox )
+: events. ( events -- )
+    DUP is_ram IF           ( D: events )
+        DUP QZ@ SWAP        ( D: next event )
+        DUP QX@ raw.        ( D: next event )
+        LARROW
+        QY@ raw.            ( D: next )
+        SPACE events. ;
+    THEN                    ( D: next )
+    DROP ;                  ( D: -- )
+
 : insert ( item prev -- )
     DUP is_pair IF          ( D: item prev )
         DUP rest            ( D: item prev next )
@@ -1465,6 +1554,7 @@ VARIABLE abort_reason       ( "reason" for most-recent abort )
 
 : op_end ( -- ip' | error )
     imm@ #1 = IF
+        ep@ txn. CR         ( D: -- )
         effect@ DUP QZ@     ( D: effect outbox )
         zq_append           ( D: effect )
         ( update actor )
@@ -1565,18 +1655,6 @@ VARIABLE abort_reason       ( "reason" for most-recent abort )
         if_truthy ;
     THEN
     update_sp ;
-: alt_if ( -- ip' | error )
-    sp@ part                ( D: sp' cond )
-    DUP #f XOR IF           ( D: sp' cond )
-        DUP #? XOR IF
-            DUP #nil XOR IF
-                DUP #0 XOR IF
-                    DROP update_sp ;
-                THEN
-            THEN
-        THEN
-    THEN                    ( D: sp' cond )
-    DROP sp! imm@ ;         ( continue true... )
 
 : op_typeq ( -- ip' | error )
     peek_1arg imm@          ( D: sp value type )
@@ -2170,7 +2248,7 @@ del_none:                   ; k orig key rev next value' key'
 
 : debug_dev                 ( event -- )
     QY@                     ( D: message )
-    X. CR ;                 ( D: -- )
+    raw. CR ;               ( D: -- )
 
 : dispatch_event ( -- )
     event_dequeue           ( D: event )
