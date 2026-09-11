@@ -2251,6 +2251,7 @@ del_none:                   ; k orig key rev next value' key'
     raw. CR ;               ( D: -- )
 
 : dispatch_event ( -- )
+    '[' EMIT SPACE e_head@ events. ']' EMIT CR
     event_dequeue           ( D: event )
     ( check sponsor )
     DUP QT@                 ( D: event sponsor )
