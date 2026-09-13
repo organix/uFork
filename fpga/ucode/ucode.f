@@ -1186,26 +1186,28 @@ VARIABLE gc_scan_ptr        ( scan-list processing pointer )
         R>                  ( D: zq rq=ep ep=np )
     REPEAT
     DROP ;                  ( D: zq rq )
-: zq_prepend ( zq -- )
+: prepend_zq ( zq -- )
     ( add events to the head of the event queue )
     DUP is_ram NOT IF       ( D: zq )
         DROP ;
     THEN
     zq_reverse SWAP         ( D: rq zq )
     e_head@ is_ram IF
-        e_head@ SWAP qz!    ( D: rq )
+        e_head@ SWAP        ( D: rq e_head zq )
+        qz!                 ( D: rq )
     ELSE
         e_tail!             ( D: rq )
     THEN
     e_head! ;
-: zq_append ( zq -- )
+: append_zq ( zq -- )
     ( add events to the tail of the event queue )
     DUP is_ram NOT IF       ( D: zq )
         DROP ;
     THEN
     zq_reverse              ( D: zq rq )
     e_head@ is_ram IF
-        e_tail@ SWAP qz!    ( D: zq )
+        e_tail@             ( D: zq rq e_tail )
+        qz!                 ( D: zq )
     ELSE
         e_head!             ( D: zq )
     THEN
@@ -1539,7 +1541,7 @@ To Copy fixnum:n of list onto head:
     self@ cap2ptr           ( D: ^self )
 : actor_ready ( ^actor -- )
     DUP QZ@                 ( D: ^actor inbox )
-    zq_prepend              ( D: ^actor )
+    prepend_zq              ( D: ^actor )
     #? SWAP qz! ;
 
 VARIABLE abort_reason       ( "reason" for most-recent abort )
@@ -1566,7 +1568,7 @@ VARIABLE abort_reason       ( "reason" for most-recent abort )
     imm@ #1 = IF
         ep@ txn. CR         ( D: -- )
         effect@ DUP QZ@     ( D: effect outbox )
-        zq_append           ( D: effect )
+        append_zq           ( D: effect )
         ( update actor )
         self@ cap2ptr       ( D: effect ^actor )
         OVER QT@ OVER qt!   ( update type )
