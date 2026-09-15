@@ -10,8 +10,8 @@
 
 refill:                     ; memory,events,cycles <- sponsor
     msg 0                   ; sponsor
-    quad -4                 ; error=Z Y X T
-    drop 3                  ; error
+    quad -3                 ; error=Y quota=X #sponsor_t=T
+    drop 2                  ; error
     dup 1                   ; error error
     eq std.E_CPU_LIM        ; error error==E_CPU_LIM
     if refill_0             ; error
