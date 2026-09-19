@@ -897,7 +897,7 @@ VARIABLE xm_here            ( upload address )
 0x000E CONSTANT FWD_REF_T   ( GC "broken heart" )
 0x000F CONSTANT FREE_T      ( GC free quad )
 
-0xBFFF CONSTANT #MAX        ( maximum (positive) fixnum )
+( 0xBFFF CONSTANT #MAX        ( maximum (positive) fixnum ) ... +16383 )
 0x8001 CONSTANT #1          ( fixnum one )
 ( : #0                        ( fixnum zero ) ... ucode.js )
 0x8000 CONSTANT E_OK        ( not an error )
@@ -917,7 +917,11 @@ VARIABLE xm_here            ( upload address )
 0xFFF3 CONSTANT E_MSG_LIM   ( Sponsor event limit reached )
 0xFFF2 CONSTANT E_ASSERT    ( assertion failed )
 0xFFF1 CONSTANT E_STOP      ( actor stopped )
-( 0xC000 CONSTANT #MIN        ( minimum (negative) fixnum ) ... 2MSB )
+( 0xC000 CONSTANT #MIN        ( minimum (negative) fixnum ) ... -16384 )
+
+0x9000 CONSTANT ROOT_MEMORY ( root sponsor memory quota ... +4096 )
+0x8100 CONSTANT ROOT_EVENTS ( root sponsor event quota ... +256 )
+0xB000 CONSTANT ROOT_CYCLES ( root sponsor cycle quota ... +12288 )
 
 : disrupt ( reason -- )
     FAIL disrupt ;
@@ -1141,12 +1145,37 @@ VARIABLE gc_scan_ptr        ( scan-list processing pointer )
 : spn_signal! ( data sponsor -- )
     qy! ;
 
-: spn_memory_1- ( sponsor -- )
-    DUP spn_memory@ 1- SWAP spn_memory! ;
-: spn_events_1- ( sponsor -- )
-    DUP spn_events@ 1- SWAP spn_events! ;
-: spn_cycles_1- ( sponsor -- )
-    DUP spn_cycles@ 1- SWAP spn_cycles! ;
+: consume_memory ( sponsor n_memory -- error )
+    OVER                    ( D: sponsor n_memory sponsor )
+    spn_memory@ fix2int     ( D: sponsor n_memory spn_memory )
+    SWAP -                  ( D: sponsor spn_memory-n_memory )
+    SWAP spn_memory!        ( D: -- )
+    E_OK ;
+
+: consume_events ( sponsor n_events -- error )
+    OVER                    ( D: sponsor n_events sponsor )
+    spn_events@ fix2int     ( D: sponsor n_events spn_events )
+    2DUP < IF               ( D: sponsor n_events spn_events )
+        SWAP -              ( D: sponsor spn_events-n_events )
+        SWAP spn_events!    ( D: -- )
+        E_OK ;
+    THEN                    ( D: sponsor n_events spn_events )
+    2DROP DUP               ( D: sponsor sponsor )
+    root_spn = IF           ( D: sponsor )
+        ( root-refill policy )
+        ROOT_EVENTS SWAP    ( D: ROOT_EVENTS sponsor )
+        spn_events!         ( D: -- )
+        E_OK ;
+    THEN                    ( D: sponsor )
+    DROP                    ( D: -- )
+    E_MEM_LIM ;
+
+: consume_cycles ( sponsor n_cycles -- error )
+    OVER                    ( D: sponsor n_cycles sponsor )
+    spn_cycles@ fix2int     ( D: sponsor n_cycles spn_cycles )
+    SWAP -                  ( D: sponsor spn_cycles-n_cycles )
+    SWAP spn_cycles!        ( D: -- )
+    E_OK ;
 
 : event_enqueue ( event -- )
     #nil OVER qz!
@@ -1550,6 +1579,8 @@ VARIABLE abort_reason       ( "reason" for most-recent abort )
     abort_reason !          ( record abort "reason" for auditing )
     self_ready              ( make actor ready )
     #? ;                    ( end continuation )
+: 2_bounds_abort ( x y -- ip' )
+    DROP
 : 1_bounds_abort ( x -- ip' )
     DROP
 : bounds_abort ( -- ip' )
@@ -2195,8 +2226,7 @@ del_none:                   ; k orig key rev next value' key'
     actor_create            ( 2: create )
     actor_become            ( 3: become )
     actor_self              ( 4: self )
-    DROP                    ( default case )
-    1_bounds_abort ;
+    2_bounds_abort ;        ( default case )
 
 : op_msg ( -- ip' | error )
     sp@ msg@ imm@           ( D: sp msg #n )
@@ -2205,6 +2235,96 @@ del_none:                   ; k orig key rev next value' key'
 : op_state ( -- ip' | error )
     sp@ self@ QY@ imm@      ( D: sp state #n )
     nth_result ;
+
+: tos_pop_int ( sp -- sp' n )
+    part                    ( D: sp' tos )
+    DUP is_fix IF           ( D: sp' tos )
+        fix2int ;           ( D: sp' n )
+    THEN                    ( D: sp' tos )
+: 2_not_fix_abort ( x y -- )
+    2DROP E_NOT_FIX abort ;
+: tos_sponsor ( sp -- sponsor )
+    QX@ DUP                 ( D: sponsor sponsor )
+    #sponsor_t typeq IF     ( D: sponsor )
+        EXIT                ( D: sponsor )
+    THEN                    ( D: sponsor )
+    1_bounds_abort ;
+: nos_sponsor ( sp' n -- sp' n sponsor )
+    OVER QX@ DUP            ( D: sp' n nos nos )
+    #sponsor_t typeq IF     ( D: sp' n sponsor )
+        EXIT                ( D: sp' n sponsor )
+    THEN                    ( D: sp' n nos )
+    DROP 2_bounds_abort ;
+
+: sponsor_new ( sp -- ip' )
+    #nil #?                 ( D: sp waiting signal )
+    #0 #0 #0 2alloc         ( D: sp waiting signal quota )
+    #sponsor_t 3alloc       ( D: sp sponsor )
+    push_result ;
+: sponsor_memory ( sp -- ip' )
+    tos_pop_int             ( D: sp' n )
+    nos_sponsor             ( D: sp' n sponsor )
+    SWAP consume_memory     ( D: sp' error )
+: sponsor_error_check ( sp' error -- ip' )
+    DUP E_OK <> IF          ( D: sp' error )
+        SWAP DROP           ( D: error )
+        abort ;
+    THEN                    ( D: sp' error )
+    DROP update_sp ;
+: sponsor_events ( sp -- ip' )
+    tos_pop_int             ( D: sp' n )
+    nos_sponsor             ( D: sp' n sponsor )
+    SWAP consume_events     ( D: sp' error )
+    sponsor_error_check ;
+: sponsor_cycles ( sp -- ip' )
+    tos_pop_int             ( D: sp' n )
+    nos_sponsor             ( D: sp' n sponsor )
+    SWAP consume_cycles     ( D: sp' error )
+    sponsor_error_check ;
+: sponsor_reclaim ( sp -- ip' )
+    tos_sponsor             ( D: sponsor )
+    sponsor@                ( D: sponsor my_spn )
+    OVER spn_memory@        ( D: sponsor my_spn memory )
+    OVER spn_memory@        ( D: sponsor my_spn memory my_mem )
+    + SWAP                  ( D: sponsor memory+my_mem my_spn )
+    spn_memory!             ( D: sponsor )
+    sponsor@                ( D: sponsor my_spn )
+    OVER spn_events@        ( D: sponsor my_spn events )
+    OVER spn_events@        ( D: sponsor my_spn events my_evt )
+    + SWAP                  ( D: sponsor events+my_evt my_spn )
+    spn_events!             ( D: sponsor )
+    sponsor@                ( D: sponsor my_spn )
+    OVER spn_cycles@        ( D: sponsor my_spn cycles )
+    OVER spn_cycles@        ( D: sponsor my_spn cycles my_cyc )
+    + SWAP                  ( D: sponsor cycles+my_cyc my_spn )
+    spn_cycles!             ( D: sponsor )
+    DROP k@ ;               ( D: ip' )
+: sponsor_start ( sp -- ip' )
+    part                    ( D: sp' ctrl )
+    DUP is_cap IF           ( D: sp' ctrl )
+        nos_sponsor         ( D: sp' ctrl sponsor )
+        DUP ROT             ( D: sp' sponsor sponsor ctrl )
+        #nil -ROT           ( D: sp' sponsor #nil sponsor ctrl )
+        sponsor@            ( D: sp' sponsor #nil sponsor ctrl my_spn )
+        3alloc              ( D: sp' sponsor signal )
+        SWAP spn_signal!    ( D: sp' )
+        update_sp ;
+    THEN                    ( D: sp' ctrl )
+    2_bounds_abort ;
+: sponsor_stop ( sp -- ip' )
+    1_bounds_abort ;
+: op_sponsor ( -- ip' | error )
+    imm_int                 ( D: imm )
+    sp@ SWAP                ( D: sp imm )
+    JMPTBL 7 ,
+    sponsor_new             ( 0: new )
+    sponsor_memory          ( 1: memory )
+    sponsor_events          ( 2: events )
+    sponsor_cycles          ( 3: cycles )
+    sponsor_reclaim         ( 4: reclaim )
+    sponsor_start           ( 5: start )
+    sponsor_stop            ( 6: stop )
+    2_bounds_abort ;        ( default case )
 
 : op_jump ( -- ip' | error )
     sp@ part                ( D: sp' k )
@@ -2227,7 +2347,7 @@ del_none:                   ; k orig key rev next value' key'
     op_eq                   ( 0x8006: eq )
     op_assert               ( 0x8007: assert )
 
-    bounds_abort            ( 0x8008: sponsor )
+    op_sponsor              ( 0x8008: sponsor )
     op_actor                ( 0x8009: actor )
     op_dict                 ( 0x800A: dict )
     bounds_abort            ( 0x800B: deque )
@@ -2268,30 +2388,19 @@ del_none:                   ; k orig key rev next value' key'
     DUP spn_signal@         ( D: event sponsor signal )
     is_fix IF               ( D: event sponsor )
         ( sponsor suspended )
-        zq_put ;            ( D: )
+        zq_put ;            ( D: -- )
     THEN                    ( D: event sponsor )
-    DUP spn_events@ fix2int ( D: event sponsor events )
-    DUP 0> IF               ( D: event sponsor events )
-        1- int2fix          ( D: event sponsor events-1 )
-        SWAP spn_events!    ( D: event )
-    ELSE                    ( D: event sponsor events )
-        ( quota exhausted )
-        DROP                ( D: event sponsor )
-        DUP root_spn = IF   ( D: event sponsor )
-            ( root-refill policy )
-            #MAX SWAP     ( D: event #MAX sponsor )
-            2DUP spn_memory!
-            2DUP spn_events!
-            spn_cycles!     ( D: event )
-        ELSE                ( D: event sponsor )
-            ( suspend sponsor )
-            DUP spn_signal@ ( D: event sponsor signal )
-            event_enqueue   ( D: event sponsor )
-            E_MSG_LIM OVER  ( D: event sponsor E_MSG_LIM sponsor )
-            spn_signal!     ( D: event sponsor )
-            zq_put ;        ( D: )
-        THEN                ( D: event )
-    THEN                    ( D: event )
+
+    DUP 1 consume_events    ( D: event sponsor error )
+    DUP E_OK <> IF          ( D: event sponsor error )
+        ( suspend sponsor )
+        OVER spn_signal@    ( D: event sponsor error signal )
+        event_enqueue       ( D: event sponsor error )
+        SWAP spn_signal!    ( D: event )
+        zq_put ;            ( D: -- )
+    THEN                    ( D: event sponsor error )
+    2DROP                   ( D: event )
+
     ( check target )
     DUP QX@ cap2ptr >R      ( D: event ) ( R: target )
     R@ QX@ is_fix IF        ( D: event ) ( R: target )
@@ -2310,6 +2419,7 @@ del_none:                   ; k orig key rev next value' key'
         ( target is busy )
         R> zq_put ;         ( D: ) ( R: )
     THEN
+
     ( create txn effect )
     #nil R@ qz!             ( D: event ) ( R: target )
     #nil R@ QY@ R@ QX@      ( D: event outbox data code ) ( R: target )
@@ -2420,9 +2530,9 @@ VARIABLE saved_sp           ( sp before instruction execution )
     root_quota root_spn QX!
     #? root_spn spn_signal!
     #nil root_spn QZ!
-    0x9000 root_spn spn_memory!
-    0x8100 root_spn spn_events!
-    0xB000 root_spn spn_cycles!
+    ROOT_MEMORY root_spn spn_memory!
+    ROOT_EVENTS root_spn spn_events!
+    ROOT_CYCLES root_spn spn_cycles!
     #? root_quota QZ!
     gc_init ;
 
