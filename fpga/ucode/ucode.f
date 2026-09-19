@@ -2301,18 +2301,32 @@ del_none:                   ; k orig key rev next value' key'
     DROP k@ ;               ( D: ip' )
 : sponsor_start ( sp -- ip' )
     part                    ( D: sp' ctrl )
-    DUP is_cap IF           ( D: sp' ctrl )
-        nos_sponsor         ( D: sp' ctrl sponsor )
-        DUP ROT             ( D: sp' sponsor sponsor ctrl )
-        #nil -ROT           ( D: sp' sponsor #nil sponsor ctrl )
-        sponsor@            ( D: sp' sponsor #nil sponsor ctrl my_spn )
-        3alloc              ( D: sp' sponsor signal )
-        SWAP spn_signal!    ( D: sp' )
-        update_sp ;
+    DUP is_cap NOT IF       ( D: sp' ctrl )
+        2_bounds_abort ;
     THEN                    ( D: sp' ctrl )
-    2_bounds_abort ;
+    SWAP part DUP           ( D: ctrl sp'' sponsor sponsor )
+    #sponsor_t typeq        ( D: ctrl sp'' sponsor is_sponsor(sponsor) )
+    NOT IF                  ( D: ctrl sp'' sponsor )
+        DROP                ( D: ctrl sp'' )
+        2_bounds_abort ;
+    THEN                    ( D: ctrl sp'' sponsor )
+    ROT OVER                ( D: sp'' sponsor ctrl sponsor )
+    SWAP #nil               ( D: sp'' sponsor sponsor ctrl #nil )
+    -ROT sponsor@           ( D: sp'' sponsor #nil sponsor ctrl my_spn )
+    3alloc                  ( D: sp'' sponsor signal )
+    SWAP spn_signal!        ( D: sp'' )
+    update_sp ;
 : sponsor_stop ( sp -- ip' )
-    1_bounds_abort ;
+    DUP part DUP            ( D: sp sp' sponsor sponsor )
+    #sponsor_t typeq        ( D: sp sp' sponsor is_sponsor(sponsor) )
+    NOT IF                  ( D: sp sp' sponsor )
+        DROP                ( D: sp sp' )
+        2_bounds_abort ;
+    THEN                    ( D: sp sp' sponsor )
+    E_OK SWAP               ( D: sp sp' E_OK sponsor )
+    spn_signal!             ( D: sp sp' )
+    sp!                     ( D: sp )
+    sponsor_reclaim ;
 : op_sponsor ( -- ip' | error )
     imm_int                 ( D: imm )
     sp@ SWAP                ( D: sp imm )
