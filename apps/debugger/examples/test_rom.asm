@@ -189,9 +189,10 @@ fib_beh:                    ; _ <- cust,n
     alu sub                 ; n k n-1
     pick 2                  ; n k n-1 k
     pair 1                  ; n k k,n-1
-    push #?                 ; n k k,n-1 #?
-    push fib_beh            ; n k k,n-1 #? fib_beh
-    actor create            ; n k k,n-1 fib.#?
+    actor self              ; n k k,n-1 SELF
+;    push #?                 ; n k k,n-1 #?
+;    push fib_beh            ; n k k,n-1 #? fib_beh
+;    actor create            ; n k k,n-1 fib.#?
     actor send              ; n k
 
     roll 2                  ; k n
