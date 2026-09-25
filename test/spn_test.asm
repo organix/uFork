@@ -80,15 +80,15 @@ actor_busy_test:            ; judge <- {caps}
 
 spn_test:                   ; judge <- {caps}
     sponsor new             ; sponsor
-    push 8192               ; sponsor memory=8192
+    push 512                ; sponsor memory=512
     sponsor memory          ; sponsor
     push 5                  ; sponsor events=5
     sponsor events          ; sponsor
-    push 8192               ; sponsor cycles=8192
+    push 512                ; sponsor cycles=512
     sponsor cycles          ; sponsor
 
     dup 1                   ; sponsor sponsor
-    push 2                  ; sponsor sponsor msg=2
+    push 4                  ; sponsor sponsor msg=4
     push 0                  ; sponsor sponsor msg cnt=0
     push tree_cnt           ; sponsor sponsor msg cnt tree_cnt
     actor create            ; sponsor sponsor msg actor=tree_cnt.cnt
@@ -112,9 +112,7 @@ spn_ctrl:                   ; judge,subject <- spn
 
     msg 0                   ; spn
     push 13                 ; spn 13
-    sponsor events          ; --
-
-    msg 0                   ; spn
+    sponsor events          ; spn
     actor self              ; spn SELF
     sponsor start           ; --
 
