@@ -1168,7 +1168,7 @@ VARIABLE gc_scan_ptr        ( scan-list processing pointer )
     DUP spn_events@         ( D: n_events sponsor #spn_events )
     fix2int ROT -           ( D: sponsor spn_events-n_events )
     DUP MSB& IF             ( D: sponsor spn_events-n_events )
-        2DROP E_MEM_LIM ;
+        2DROP E_MSG_LIM ;
     THEN
     int2fix SWAP            ( D: #spn_events-n_events sponsor )
     spn_events! E_OK ;
@@ -2316,6 +2316,8 @@ del_none:                   ; k orig key rev next value' key'
         DROP                ( D: ctrl sp'' )
         2_bounds_abort ;
     THEN                    ( D: ctrl sp'' sponsor )
+    DUP QZ@                 ( D: ctrl sp'' sponsor waiting )
+    append_zq               ( D: ctrl sp'' sponsor )
     ROT OVER                ( D: sp'' sponsor ctrl sponsor )
     SWAP #nil               ( D: sp'' sponsor sponsor ctrl #nil )
     -ROT sponsor@           ( D: sp'' sponsor #nil sponsor ctrl my_spn )
@@ -2401,7 +2403,7 @@ del_none:                   ; k orig key rev next value' key'
     raw. CR ;               ( D: -- )
 
 : dispatch_event ( -- )
-    ( '[' EMIT SPACE e_head@ events. ']' EMIT CR ) ( log event )
+    '[' EMIT SPACE e_head@ events. ']' EMIT CR ( log event )
     event_dequeue           ( D: event )
     ( check sponsor )
     DUP QT@                 ( D: event sponsor )
@@ -2448,7 +2450,7 @@ del_none:                   ; k orig key rev next value' key'
     OVER qz!                ( D: event ) ( R: target )
     #nil R> QX@             ( D: ep sp ip )
     2alloc                  ( D: cont )
-    ( DUP cont. CR ) ( log continuation )
+    DUP cont. CR ( log continuation )
     cont_enqueue ;
 
 : report_instr_cnt ( -- )
